@@ -1,1 +1,289 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>FFW – Dokumente bearbeiten</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  :root{--rot:#c9152b;--rotD:#a20f21;--bg:#fafafa;--muted:#6b7280}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:#111}
+  header{background:var(--rot);color:#fff;padding:14px 16px}
+  .bar{max-width:1000px;margin:0 auto;display:flex;gap:12px;align-items:center;justify-content:space-between}
+  h1{margin:0;font-size:20px}
+  .btn{appearance:none;border:0;border-radius:12px;background:#fff;color:var(--rot);padding:9px 14px;font-weight:800;cursor:pointer}
+  .btn.out{background:transparent;border:2px solid #fff;color:#fff}
+  main{max-width:1000px;margin:20px auto;padding:0 14px}
+  .card{background:#fff;border-radius:16px;padding:18px 18px 8px;box-shadow:0 2px 14px rgba(0,0,0,.06)}
+  .tabs{display:flex;gap:10px;margin:8px 0 12px}
+  .tab{border-radius:999px;padding:8px 12px;background:#ffe6ea;color:#9a0e20;font-weight:800;cursor:pointer}
+  .tab.active{background:#fff;color:var(--rot);border:2px solid var(--rot)}
+  table{width:100%;border-collapse:collapse}
+  th,td{padding:12px;border-bottom:1px solid #eee;text-align:left;vertical-align:top}
+  th{color:#444}
+  .muted{color:var(--muted)}
+  .right{display:flex;gap:8px;justify-content:flex-end}
+  .pill{display:inline-block;background:#eef3ff;color:#2b4bb8;border-radius:999px;padding:3px 10px;font-weight:800}
+  .warn{background:#ffecee;color:#8c0b1e;border:1px solid #ffd0d4;border-radius:12px;padding:10px 12px;margin:8px 0;display:none}
+  .btn.sm{padding:6px 10px;border-radius:10px}
 
+  dialog{border:0;border-radius:14px;padding:0;max-width:820px;width:calc(100% - 24px)}
+  dialog::backdrop{background:rgba(0,0,0,.35)}
+  .dlg-h{padding:12px 16px;background:#f6f7fb;border-bottom:1px solid #eee;font-weight:800}
+  .dlg-b{padding:16px}
+  .kv{display:grid;grid-template-columns:180px 1fr;gap:6px 12px}
+  ol{margin:6px 0 0 22px}
+
+  /* Guard Overlay (kein Autoredirect) */
+  .guard{position:fixed;inset:0;background:rgba(255,255,255,.96);backdrop-filter:saturate(120%) blur(2px);
+         display:flex;align-items:center;justify-content:center;padding:20px;z-index:50}
+  .guard .box{max-width:520px;background:#fff;border:1px solid #eee;border-radius:16px;padding:18px;box-shadow:0 2px 14px rgba(0,0,0,.06)}
+  .badge{margin-left:8px;padding:2px 8px;border-radius:999px;background:#ffe9eb;color:#a00;font-weight:800;font-size:12px}
+  a.btnlike{display:inline-block;text-decoration:none}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="bar">
+    <h1>FFW – Dokumente bearbeiten <span id="adminBadge" class="badge" style="display:none"></span></h1>
+    <div>
+      <button id="toDash" class="btn">Dashboard</button>
+      <button id="logout" class="btn out">Logout</button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <section class="card">
+    <h2 style="margin:0 0 8px 0;color:#c9152b">Dokumente</h2>
+
+    <div class="tabs">
+      <button id="tabOpen" class="tab active">Offen</button>
+      <button id="tabArch" class="tab">Archiv (30 Tage)</button>
+    </div>
+
+    <div id="err" class="warn"></div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Typ</th>
+          <th>Titel</th>
+          <th>Erstellt</th>
+          <th class="right">Aktionen</th>
+        </tr>
+      </thead>
+      <tbody id="rows">
+        <tr><td colspan="4" class="muted">Lade …</td></tr>
+      </tbody>
+    </table>
+  </section>
+</main>
+
+<!-- Hinweis-Dialog -->
+<dialog id="dlg">
+  <div class="dlg-h">PDF / Druck</div>
+  <div class="dlg-b">
+    <p class="muted">Das Dokument wird in einem neuen Tab geöffnet. Dort „Als PDF sichern“ wählen.</p>
+    <div style="text-align:right">
+      <button id="dlgClose" class="btn sm">Schließen</button>
+    </div>
+  </div>
+</dialog>
+
+<!-- Login-Overlay (kein Redirect) -->
+<div id="guard" class="guard" hidden>
+  <div class="box">
+    <h3 style="margin:0 0 6px 0;">Anmeldung erforderlich</h3>
+    <p class="muted" style="margin:0 0 12px 0;">
+      Diese Seite ist nur für Admins. Bitte melde dich an. Nach dem Login kommst du hierher zurück.
+    </p>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <a id="goLogin" class="btn a btnlike" href="admin-login.html">Zum Login</a>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ================== 0) Admin-Quick-Switch & Badge ================== */
+(function quickAdmin(){
+  const u = new URL(location.href);
+  if (u.searchParams.get('admin') === '1') {
+    localStorage.setItem('isAdmin','true');
+    u.searchParams.delete('admin');
+    location.replace(u.pathname + (u.hash||''));
+    return;
+  }
+  const isAdmin = localStorage.getItem('isAdmin') === 'true';
+  const b = document.getElementById('adminBadge');
+  b.textContent = isAdmin ? 'Admin ✓' : 'Admin ✗';
+  b.style.display = 'inline-block';
+})();
+
+/* ================== 1) Config & Helpers ================== */
+const GRAPHQL_FN = '/.netlify/functions/graphql'; // ggf. auf '/api/graphql' ändern, falls gemappt
+const OPEN_STATUS = 'offen';
+const DONE_STATUS = 'erledigt';
+
+const $ = s => document.querySelector(s);
+const rowsEl = $('#rows'), errEl = $('#err'), dlg = $('#dlg'), guard = $('#guard');
+let currentTab = 'open';
+
+function fmtDate(s){ if(!s) return '—'; const d=new Date(s); return d.toLocaleDateString('de-DE',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}); }
+function escapeHtml(x=''){ return String(x).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+function showErr(msg){ errEl.textContent = msg; errEl.style.display = 'block'; }
+function clearErr(){ errEl.textContent=''; errEl.style.display='none'; }
+
+/* ================== 2) Guard ohne Redirect ================== */
+function guardCheck(){
+  const isAdmin = localStorage.getItem('isAdmin') === 'true';
+  if (!isAdmin) {
+    const next = encodeURIComponent('dokumente-bearbeiten.html');
+    $('#goLogin').href = `admin-login.html?next=${next}`;
+    guard.hidden = false;
+    return false;
+  }
+  guard.hidden = true;
+  return true;
+}
+
+/* ================== 3) GraphQL via Netlify Function ================== */
+async function gql(query, variables){
+  const res = await fetch(GRAPHQL_FN, {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ query, variables })
+  });
+  if(!res.ok){
+    const t = await res.text().catch(()=> '');
+    throw new Error(`HTTP ${res.status}${t?': '+t:''}`);
+  }
+  const json = await res.json();
+  if(json.errors?.length){
+    throw new Error(json.errors.map(e=>e.message).join(' · '));
+  }
+  return json.data;
+}
+
+/* ================== 4) Laden & Rendern ================== */
+function buildRow(doc){
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
+    <td><span class="pill">${escapeHtml(doc.type||'—')}</span></td>
+    <td>${escapeHtml(doc.title||'—')}</td>
+    <td class="muted">${fmtDate(doc.created_at)}</td>
+    <td class="right">
+      <button class="btn sm" data-pdf="${doc.id}">PDF</button>
+      ${doc.status===OPEN_STATUS ? `<button class="btn sm" data-done="${doc.id}">Erledigt</button>` : ''}
+    </td>`;
+  tr.querySelector('[data-pdf]').addEventListener('click', ()=> printDoc(doc));
+  const btnDone = tr.querySelector('[data-done]');
+  if (btnDone) btnDone.addEventListener('click', ()=> markDone(doc.id));
+  return tr;
+}
+
+async function load(){
+  clearErr();
+  rowsEl.innerHTML = `<tr><td colspan="4" class="muted">Lade …</td></tr>`;
+  try{
+    let query, variables;
+    if(currentTab==='open'){
+      query = `
+        query ($status:String!){
+          documents(where:{status:{_eq:$status}}, order_by:{created_at:desc}){
+            id type title status created_at payload
+          }
+        }`;
+      variables = { status: OPEN_STATUS };
+    } else {
+      const from = new Date(Date.now() - 30*24*60*60*1000).toISOString();
+      query = `
+        query ($status:String!, $from:timestamptz!){
+          documents(where:{ status:{_eq:$status}, created_at:{_gte:$from} }, order_by:{created_at:desc}){
+            id type title status created_at payload
+          }
+        }`;
+      variables = { status: DONE_STATUS, from };
+    }
+
+    const data = await gql(query, variables);
+    const list = data.documents || [];
+    if (!list.length){
+      rowsEl.innerHTML = `<tr><td colspan="4" class="muted">Keine Einträge.</td></tr>`;
+      return;
+    }
+    rowsEl.innerHTML = '';
+    list.forEach(d => rowsEl.appendChild(buildRow(d)));
+  }catch(e){
+    rowsEl.innerHTML = `<tr><td colspan="4" class="muted">Fehler beim Laden.</td></tr>`;
+    showErr(`Fehler: ${e.message}`);
+  }
+}
+
+/* ================== 5) Aktionen ================== */
+async function markDone(id){
+  clearErr();
+  try{
+    const mut = `
+      mutation($id:uuid!, $status:String!){
+        update_documents_by_pk(pk_columns:{id:$id}, _set:{status:$status}){ id status }
+      }`;
+    await gql(mut, { id, status: DONE_STATUS });
+    load();
+  }catch(e){
+    showErr(`Konnte nicht auf „erledigt“ setzen: ${e.message}`);
+  }
+}
+
+function printDoc(doc){
+  const p = doc.payload || {};
+  const pos = Array.isArray(p.positionen)? p.positionen : [];
+  const html = `
+    <!doctype html><html><head>
+      <meta charset="utf-8"><title>${escapeHtml(doc.title||'Dokument')}</title>
+      <style>
+        body{font-family:Arial, sans-serif; padding:24px}
+        h1{margin:0 0 6px 0}
+        .muted{color:#666}
+        .kv{display:grid;grid-template-columns:180px 1fr;gap:6px 12px;margin-top:10px}
+        ol{margin:6px 0 0 22px}
+      </style>
+    </head><body>
+      <h1>${escapeHtml(doc.title||'Dokument')}</h1>
+      <div class="muted">Typ: ${escapeHtml(doc.type||'—')} • Erstellt: ${fmtDate(doc.created_at)}</div>
+      <div class="kv">
+        ${p.einsatznummer?`<div>Einsatznummer</div><div>${escapeHtml(p.einsatznummer)}</div>`:''}
+        ${p.datum?`<div>Datum</div><div>${escapeHtml(p.datum)}</div>`:''}
+        ${(p.ausgetragen_vorname||p.ausgetragen_nachname)?`<div>Ausgetragen von</div><div>${escapeHtml(p.ausgetragen_vorname||'')} ${escapeHtml(p.ausgetragen_nachname||'')}</div>`:''}
+        <div>Positionen</div>
+        <div>${
+          pos.length
+            ? `<ol>${pos.map(i=>`<li>${escapeHtml(i.qty ?? i.q ?? 1)} × ${escapeHtml(i.name ?? i.artikel ?? '')}</li>`).join('')}</ol>`
+            : '—'
+        }</div>
+      </div>
+    </body></html>`;
+  const w = window.open('', '_blank');
+  w.document.write(html); w.document.close(); w.focus();
+  setTimeout(()=>{ try{ w.print(); }catch(_){} }, 250);
+}
+
+/* ================== 6) UI Events ================== */
+document.getElementById('toDash').onclick = ()=> location.href='admin-dashboard.html';
+document.getElementById('logout').onclick  = ()=> { localStorage.removeItem('isAdmin'); location.href='admin-login.html'; };
+document.getElementById('dlgClose').onclick = ()=> dlg.close();
+
+const tabOpen = document.getElementById('tabOpen');
+const tabArch = document.getElementById('tabArch');
+tabOpen.onclick = ()=>{ currentTab='open'; tabOpen.classList.add('active'); tabArch.classList.remove('active'); load(); };
+tabArch.onclick = ()=>{ currentTab='arch'; tabArch.classList.add('active'); tabOpen.classList.remove('active'); load(); };
+
+/* ================== 7) Start ================== */
+(function init(){
+  const ok = guardCheck();          // kein Redirect; zeigt ggf. Overlay
+  if (ok) load(); else rowsEl.innerHTML = `<tr><td colspan="4" class="muted">Anmeldung erforderlich.</td></tr>`;
+})();
+</script>
+</body>
+</html>
