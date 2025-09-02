@@ -6,100 +6,87 @@
   <title>FFW – Dokumente bearbeiten</title>
   <style>
     :root{
-      --rot:#c8102e;
-      --rot-dunkel:#a10d25;
-      --grau:#eef1f4;
-      --text:#1b1f23;
+      --rot:#c8102e; --rot-d:#a10d25; --txt:#1b1f23;
+      --muted:#66727e; --bg:#ffffff; --card:#fafbfc; --line:#eceff2;
+      --chip:#eef3ff; --chip-t:#204fb1; --pdf:#ffe9ec;
     }
     *{box-sizing:border-box}
-    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:var(--text);background:#fff}
-    .topbar{background:var(--rot);color:#fff;padding:14px 16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
-    .topbar .brand{font-size:20px;font-weight:800;line-height:1.2}
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:var(--txt);background:var(--bg)}
+
+    /* Topbar */
+    .topbar{background:var(--rot);color:#fff;padding:14px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+    .brand{font-weight:900;font-size:20px}
     .spacer{flex:1}
-    .btn{appearance:none;border:0;border-radius:14px;padding:10px 14px;background:#fff;color:var(--rot);font-weight:700;cursor:pointer}
-    .btn:hover{filter:brightness(0.95)}
-    .btn-outline{background:transparent;border:2px solid #fff;color:#fff}
+    .btn{appearance:none;border:0;border-radius:14px;padding:10px 14px;font-weight:800;cursor:pointer}
+    .btn-white{background:#fff;color:var(--rot)}
+    .btn-ghost{background:transparent;border:2px solid #fff;color:#fff}
+
     main{padding:16px}
     .card{background:#fff;border-radius:18px;box-shadow:0 2px 14px rgba(0,0,0,.06);padding:18px}
-    h2{margin:0 0 16px 0;font-size:28px;color:var(--rot)}
-    .tabs{display:flex;gap:10px;margin-bottom:10px}
-    .tab{padding:10px 14px;border-radius:16px;background:var(--grau);font-weight:800;cursor:pointer;user-select:none}
-    .tab.active{background:var(--rot);color:#fff}
-    .table{width:100%;border-collapse:collapse}
-    .table th,.table td{padding:12px;border-bottom:1px solid #eee;vertical-align:top}
-    .table th{color:#6d7781;font-weight:800}
-    .chip{display:inline-block;padding:6px 10px;border-radius:999px;background:#ffe9ec;color:var(--rot);font-weight:800;font-size:12px}
-    .chip.pdf{background:#ffe9ec}
-    .chip.link{background:#e9f2ff;color:#2053aa}
-    .chip.secondary{background:#f0f3f5;color:#314453}
-    .actions{display:flex;gap:8px;flex-wrap:wrap}
-    .hidden{display:none!important}
-    .muted{color:#6d7781}
+    h2{margin:0 0 16px 0;color:var(--rot);font-size:28px}
 
-    /* Mobile: Tabellen als Karten darstellen */
-    @media (max-width: 720px){
-      .table{display:block}
-      .table thead{display:none}
-      .table tbody{display:grid;gap:10px}
-      .table tr{display:grid;gap:6px;padding:12px;border-radius:14px;background:#fafbfc;border:1px solid #eee}
-      .table td{display:flex;gap:10px;border:0;padding:0}
-      .table td::before{
-        content:attr(data-label);
-        min-width:96px;
-        font-weight:700;
-        color:#5a6672;
-      }
-      .actions{margin-top:6px}
+    /* Tabs */
+    .tabs{display:flex;gap:10px;margin-bottom:12px}
+    .tab{padding:10px 14px;border-radius:16px;background:#f1f3f5;color:#3a4754;font-weight:800;cursor:pointer;user-select:none}
+    .tab.active{background:var(--rot);color:#fff}
+
+    /* List as mobile cards */
+    .list{display:grid;gap:12px;margin:0;padding:0;list-style:none}
+    .item{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;display:grid;gap:10px}
+    .title{font-size:16px;line-height:1.35;font-weight:800;margin:0}
+    .meta{display:flex;gap:8px;flex-wrap:wrap}
+    .chip{display:inline-block;padding:6px 10px;border-radius:999px;font-weight:800;font-size:12px}
+    .chip.type{background:var(--chip);color:var(--chip-t)}
+    .chip.status{background:#edf7ee;color:#207336}
+    .row-actions{display:flex;gap:10px;flex-wrap:wrap}
+    .pill{appearance:none;border:0;border-radius:999px;padding:10px 14px;font-weight:800;cursor:pointer}
+    .pill.pdf{background:var(--pdf);color:var(--rot)}
+    .pill.done{background:#eaf7ea;color:#1b7a3f}
+    .muted{color:var(--muted)}
+    #loading{margin-top:6px}
+
+    /* Wide screens: tighten a bit */
+    @media (min-width: 900px){
+      main{max-width:980px;margin:0 auto}
     }
   </style>
 </head>
 <body>
-  <header class="topbar">
-    <div class="brand">FFW – Dokumente bearbeiten</div>
-    <div class="spacer"></div>
-    <button id="toDash" class="btn">Dashboard</button>
-    <button id="logout" class="btn btn-outline">Logout</button>
-  </header>
+<header class="topbar">
+  <div class="brand">FFW – Dokumente bearbeiten</div>
+  <div class="spacer"></div>
+  <button id="toDash" class="btn btn-white">Dashboard</button>
+  <button id="logout" class="btn btn-ghost">Logout</button>
+</header>
 
-  <main>
-    <section class="card">
-      <h2>Dokumente</h2>
+<main>
+  <section class="card">
+    <h2>Dokumente</h2>
 
-      <div class="tabs">
-        <div id="tabOpen" class="tab active">Offen</div>
-        <div id="tabArch" class="tab">Archiv (30 Tage)</div>
-      </div>
+    <div class="tabs">
+      <div id="tabOpen" class="tab active">Offen</div>
+      <div id="tabArch" class="tab">Archiv (30 Tage)</div>
+    </div>
 
-      <div id="error" class="hidden" style="margin:8px 0 12px;color:#b00020;font-weight:700"></div>
-      <div id="loading" class="muted">Lade …</div>
+    <div id="error" class="muted" style="color:#b00020;font-weight:800;display:none"></div>
+    <div id="loading" class="muted">Lade …</div>
 
-      <table class="table" id="tbl" aria-live="polite">
-        <thead>
-          <tr>
-            <th style="width:140px">Typ</th>
-            <th>Titel</th>
-            <th style="width:160px">Erstellt</th>
-            <th style="width:220px">Aktionen</th>
-          </tr>
-        </thead>
-        <tbody id="rows"></tbody>
-      </table>
-    </section>
-  </main>
+    <ul id="list" class="list" aria-live="polite"></ul>
+  </section>
+</main>
 
 <script>
-/* --------------------- Config --------------------- */
+/* ---------- Config ---------- */
 const ENDPOINTS = [
-  '/.netlify/functions/graphql',  // Netlify Functions (empfohlen)
-  '/api/graphql'                  // optionaler Fallback (falls via redirects)
+  '/.netlify/functions/graphql', // Netlify function
+  '/api/graphql'                 // optional fallback (redirects)
 ];
 
-/* --------------------- Guard ---------------------- */
-// Leiser Guard: prüft nur Flag & leitet weiter – kein Popup.
-function guard() {
+/* ---------- Quiet Login Guard ---------- */
+function guard(){
   const ok = localStorage.getItem('ffw_admin') === '1' ||
              sessionStorage.getItem('ffw_admin') === '1';
-  if (!ok) {
+  if (!ok){
     const next = encodeURIComponent('dokumente-bearbeiten.html');
     location.replace(`admin-login.html?next=${next}`);
     return false;
@@ -107,47 +94,40 @@ function guard() {
   return true;
 }
 
-/* --------------------- GQL Helper ----------------- */
-async function gql(query, variables = {}) {
-  let lastErr;
-  for (const ep of ENDPOINTS) {
-    try {
-      const res = await fetch(ep, {
-        method: 'POST',
-        headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({ query, variables })
+/* ---------- Fetch helper (tries both endpoints) ---------- */
+async function gql(query, variables={}){
+  let last;
+  for (const ep of ENDPOINTS){
+    try{
+      const r = await fetch(ep, {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({query, variables})
       });
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      const json = await res.json();
-      if (json.errors) throw new Error(json.errors[0]?.message || 'GraphQL error');
-      return json.data;
-    } catch (e) { lastErr = e; /* versuche nächsten EP */ }
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const j = await r.json();
+      if (j.errors) throw new Error(j.errors[0]?.message || 'GraphQL error');
+      return j.data;
+    }catch(e){ last = e; }
   }
-  throw lastErr || new Error('Netzwerkfehler');
+  throw last || new Error('Netzwerkfehler');
 }
 
-/* --------------- Queries & Mutations -------------- */
+/* ---------- GraphQL ---------- */
 const Q_OPEN = `
 query OpenDocs {
   documents(
     where: { _or: [{status: {_is_null: true}}, {status: {_neq: "erledigt"}}] }
     order_by: { created_at: desc }
-  ){
-    id type title created_at status
-  }
+  ){ id type title status }
 }`;
 
 const Q_ARCH = `
-query ArchDocs($since: timestamptz!) {
+query ArchDocs($since: timestamptz!){
   documents(
-    where: {
-      status: {_eq:"erledigt"},
-      created_at: {_gte: $since}
-    }
+    where: { status:{_eq:"erledigt"}, created_at:{_gte:$since} }
     order_by: { created_at: desc }
-  ){
-    id type title created_at status
-  }
+  ){ id type title status }
 }`;
 
 const Q_ONE = `
@@ -160,181 +140,145 @@ mutation Done($id: uuid!){
   update_documents_by_pk(pk_columns:{id:$id}, _set:{status:"erledigt"}){ id }
 }`;
 
-/* --------------------- UI Logic ------------------- */
+/* ---------- UI ---------- */
 let currentTab = 'open';
-
-function fmtDate(iso){
-  try{
-    const d = new Date(iso);
-    return d.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'})
-           + ', ' +
-           d.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
-  }catch(_){ return iso }
-}
-
-function setLoading(v){
-  document.getElementById('loading').classList.toggle('hidden', !v);
-  document.getElementById('tbl').classList.toggle('hidden',  v);
-}
 
 function setError(msg){
   const el = document.getElementById('error');
-  if (!msg){ el.classList.add('hidden'); el.textContent=''; return; }
+  if (!msg){ el.style.display='none'; el.textContent=''; return; }
   el.textContent = 'Fehler: ' + msg;
-  el.classList.remove('hidden');
+  el.style.display = 'block';
+}
+function setLoading(v){
+  document.getElementById('loading').style.display = v ? 'block' : 'none';
 }
 
-function renderRows(items){
-  const tb = document.getElementById('rows');
-  tb.innerHTML = '';
+function escapeHtml(s){
+  return String(s)
+    .replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;')
+    .replaceAll('"','&quot;').replaceAll("'",'&#39;');
+}
+
+function render(items){
+  const ul = document.getElementById('list');
+  ul.innerHTML = '';
   if (!items?.length){
-    const tr = document.createElement('tr');
-    const td = document.createElement('td');
-    td.colSpan = 4;
-    td.className = 'muted';
-    td.textContent = 'Keine Einträge.';
-    tr.appendChild(td);
-    tb.appendChild(tr);
+    const li = document.createElement('li');
+    li.className = 'item';
+    li.innerHTML = '<div class="muted">Keine Einträge.</div>';
+    ul.appendChild(li);
     return;
   }
   for (const d of items){
-    const tr = document.createElement('tr');
+    const li = document.createElement('li');
+    li.className = 'item';
 
-    const tdType = document.createElement('td');
-    tdType.dataset.label = 'Typ';
-    tdType.innerHTML = `<span class="chip secondary">${d.type || '–'}</span>`;
-    tr.appendChild(tdType);
+    const title = escapeHtml(d.title || '(ohne Titel)');
+    const type = escapeHtml(d.type || 'dokument');
 
-    const tdTitle = document.createElement('td');
-    tdTitle.dataset.label = 'Titel';
-    const title = d.title || '(ohne Titel)';
-    tdTitle.innerHTML = `<a class="chip link" href="produktAusgabe.html?id=${d.id}">${title}</a>`;
-    tr.appendChild(tdTitle);
-
-    const tdCreated = document.createElement('td');
-    tdCreated.dataset.label = 'Erstellt';
-    tdCreated.textContent = fmtDate(d.created_at);
-    tr.appendChild(tdCreated);
-
-    const tdAct = document.createElement('td');
-    tdAct.dataset.label = 'Aktionen';
-    tdAct.className = 'actions';
-    const pdfBtn = document.createElement('button');
-    pdfBtn.className = 'chip pdf';
-    pdfBtn.textContent = 'PDF';
-    pdfBtn.onclick = ()=> openPdf(d.id);
-
-    tdAct.appendChild(pdfBtn);
-
-    if ((d.status || '').toLowerCase() !== 'erledigt' && currentTab === 'open'){
-      const doneBtn = document.createElement('button');
-      doneBtn.className = 'chip';
-      doneBtn.textContent = 'Erledigt';
-      doneBtn.onclick = ()=> markDone(d.id);
-      tdAct.appendChild(doneBtn);
-    }
-
-    tr.appendChild(tdAct);
-    tb.appendChild(tr);
+    li.innerHTML = `
+      <div class="meta">
+        <span class="chip type">${type}</span>
+        ${ (d.status||'').toLowerCase()==='erledigt' ? '<span class="chip status">erledigt</span>' : '' }
+      </div>
+      <h3 class="title">${title}</h3>
+      <div class="row-actions">
+        <button class="pill pdf" data-id="${d.id}" data-act="pdf">PDF</button>
+        ${ ((d.status||'').toLowerCase()!=='erledigt' && currentTab==='open')
+            ? `<button class="pill done" data-id="${d.id}" data-act="done">Erledigt</button>`
+            : '' }
+        <a class="pill" style="background:#eef1f4;color:#21303f;text-decoration:none"
+           href="produktAusgabe.html?id=${d.id}">
+           Öffnen
+        </a>
+      </div>
+    `;
+    ul.appendChild(li);
   }
+
+  // actions
+  ul.querySelectorAll('[data-act="pdf"]').forEach(b=>{
+    b.onclick = ()=> openPdf(b.dataset.id);
+  });
+  ul.querySelectorAll('[data-act="done"]').forEach(b=>{
+    b.onclick = ()=> markDone(b.dataset.id);
+  });
 }
 
 async function load(){
   setError('');
   setLoading(true);
   try{
-    if (currentTab === 'open'){
+    if (currentTab==='open'){
       const data = await gql(Q_OPEN);
-      renderRows(data.documents);
+      render(data.documents);
     }else{
-      const since = new Date(Date.now() - 30*24*60*60*1000).toISOString();
-      const data = await gql(Q_ARCH, { since });
-      renderRows(data.documents);
+      const since = new Date(Date.now()-30*24*60*60*1000).toISOString();
+      const data = await gql(Q_ARCH,{since});
+      render(data.documents);
     }
-  }catch(e){
-    setError(e.message || String(e));
-  }finally{
-    setLoading(false);
-  }
+  }catch(e){ setError(e.message||String(e)); }
+  finally{ setLoading(false); }
 }
 
 async function markDone(id){
   try{
-    setError('');
-    await gql(M_DONE, { id });
+    await gql(M_DONE,{id});
     await load();
-  }catch(e){ setError(e.message || String(e)); }
+  }catch(e){ setError(e.message||String(e)); }
 }
 
 async function openPdf(id){
   try{
-    const data = await gql(Q_ONE, { id });
+    const data = await gql(Q_ONE,{id});
     const d = data.documents_by_pk;
     if (!d) return;
 
-    const w = window.open('', '_blank');
-    const created = fmtDate(d.created_at);
+    const w = window.open('','_blank');
     const payload = d.payload || {};
-    const rows = Object.entries(payload)
-      .map(([k,v])=>`<tr><th>${escapeHtml(k)}</th><td>${escapeHtml(
-        typeof v==='object'? JSON.stringify(v): String(v)
-      )}</td></tr>`).join('');
+    const rows = Object.entries(payload).map(([k,v])=>
+      `<tr><th>${escapeHtml(k)}</th><td>${escapeHtml(typeof v==='object'?JSON.stringify(v):v)}</td></tr>`
+    ).join('');
 
-    const html = `<!doctype html>
-<html><head><meta charset="utf-8">
-<title>${escapeHtml(d.title || 'Dokument')}</title>
-<style>
-  body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;margin:24px;}
-  h1{margin:0 0 8px 0}
-  table{border-collapse:collapse;width:100%}
-  th,td{border:1px solid #ddd;padding:8px;vertical-align:top}
-  th{width:200px;text-align:left;background:#fafafa}
-  .muted{color:#666}
-</style></head>
-<body onload="setTimeout(()=>window.print(), 50)">
-  <h1>${escapeHtml(d.type || 'Dokument')}</h1>
-  <div class="muted">${escapeHtml(d.title || '')}</div>
-  <p class="muted">Erstellt: ${created}</p>
-  <table>${rows}</table>
-</body></html>`;
-    w.document.write(html);
+    w.document.write(`<!doctype html><html><head><meta charset="utf-8">
+      <title>${escapeHtml(d.title||'Dokument')}</title>
+      <style>
+        body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;margin:24px}
+        h1{margin:0 0 6px 0}
+        table{border-collapse:collapse;width:100%}
+        th,td{border:1px solid #ddd;padding:8px;vertical-align:top}
+        th{width:200px;text-align:left;background:#fafafa}
+      </style></head>
+      <body onload="setTimeout(()=>print(),50)">
+        <h1>${escapeHtml(d.type || 'Dokument')}</h1>
+        <p style="color:#666;margin-top:0">${escapeHtml(d.title || '')}</p>
+        <table>${rows}</table>
+      </body></html>`);
     w.document.close();
-  }catch(e){ setError(e.message || String(e)); }
+  }catch(e){ setError(e.message||String(e)); }
 }
 
-function escapeHtml(s){
-  return String(s)
-    .replaceAll('&','&amp;')
-    .replaceAll('<','&lt;')
-    .replaceAll('>','&gt;')
-    .replaceAll('"','&quot;')
-    .replaceAll("'",'&#39;');
-}
-
-/* ----------------- Events & Start ----------------- */
+/* ---------- events ---------- */
 document.getElementById('toDash').onclick = ()=> location.href='admin-dashboard.html';
 document.getElementById('logout').onclick = ()=>{
   try{ localStorage.removeItem('ffw_admin'); sessionStorage.removeItem('ffw_admin'); }catch(_){}
   location.href='admin-login.html';
 };
-
 document.getElementById('tabOpen').onclick = ()=>{
-  currentTab = 'open';
+  currentTab='open';
   document.getElementById('tabOpen').classList.add('active');
   document.getElementById('tabArch').classList.remove('active');
   load();
 };
 document.getElementById('tabArch').onclick = ()=>{
-  currentTab = 'arch';
+  currentTab='arch';
   document.getElementById('tabArch').classList.add('active');
   document.getElementById('tabOpen').classList.remove('active');
   load();
 };
 
-(function start(){
-  if (!guard()) return;
-  load();
-})();
+/* ---------- start ---------- */
+(function(){ if (!guard()) return; load(); })();
 </script>
 </body>
 </html>
