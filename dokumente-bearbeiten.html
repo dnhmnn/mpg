@@ -1,304 +1,364 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="de">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>FFW – Dokumente bearbeiten</title>
   <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
   <style>
-    :root { --rot:#c8102e; --rot-hell:#ffe9ed; --grau:#6b7280; }
-    * { box-sizing:border-box }
-    body { margin:0; background:#f6f7f9; font-family:'Atkinson Hyperlegible',system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; color:#111; }
+    :root { --rot:#c8102e; --bg:#f7f7f7; --card:#ffffff; }
+    * { box-sizing: border-box; }
+    html,body { margin:0; background:var(--bg); font-family:'Atkinson Hyperlegible', system-ui, Arial, sans-serif; color:#222; }
 
     /* Header */
-    header { background:var(--rot); color:#fff; padding:12px 14px; display:flex; align-items:center; gap:12px; position:sticky; top:0; z-index:10; }
+    header { background:var(--rot); color:#fff; padding:12px 16px; display:flex; align-items:center; gap:12px; }
     header h1 { margin:0; font-size:1.05rem; font-weight:800; letter-spacing:.2px }
     .spacer { flex:1 }
-    .topbtn { appearance:none; border:0; border-radius:10px; padding:8px 12px; background:#ffffff1a; color:#fff; font-weight:700; text-decoration:none; }
-    .topbtn:hover { background:#ffffff29 }
+    .topbtn { color:#fff; text-decoration:none; font-weight:700; background:#00000022; padding:8px 12px; border-radius:10px; display:inline-block }
+    .topbtn:active { transform:translateY(1px) }
 
-    /* Container & Card */
-    .wrap { max-width:1000px; margin:18px auto; padding:0 14px }
-    .card { background:#fff; border-radius:14px; box-shadow:0 6px 24px rgba(0,0,0,.06); padding:16px; }
+    /* Seite */
+    .wrap { max-width:1000px; margin:18px auto; padding:0 14px; }
+    .card { background:var(--card); border-radius:14px; box-shadow:0 3px 12px rgba(0,0,0,.06); padding:16px; }
+    .card h2 { margin:0 0 12px; color:var(--rot); font-size:1.6rem }
+    .tabs { display:flex; gap:10px; margin-bottom:8px }
+    .tab { border:1px solid #eee; background:#fafafa; padding:8px 14px; border-radius:999px; font-weight:800; cursor:pointer; }
+    .tab.active { color:#fff; background:var(--rot); border-color:var(--rot) }
 
-    h2 { margin:0 0 14px; color:var(--rot); font-size:1.4rem }
-
-    /* Tabs */
-    .tabs { display:flex; gap:10px; margin-bottom:12px }
-    .tab { border:1px solid #eee; background:#f8f8f8; color:#222; padding:8px 14px; border-radius:999px; font-weight:800; cursor:pointer; }
-    .tab.active { background:var(--rot); color:#fff; border-color:var(--rot) }
-
-    /* Table (Desktop) */
-    .table { width:100%; border-collapse:collapse; }
-    .table th, .table td { padding:10px 8px; border-bottom:1px solid #eee; text-align:left; vertical-align:top }
-    .table th { color:#374151; font-size:.95rem }
-
-    /* Badge, Buttons */
-    .badge { display:inline-block; background:#eef2ff; color:#1d4ed8; border:1px solid #c7d2fe; border-radius:999px; padding:2px 10px; font-weight:800; font-size:.88rem }
-    .btn { appearance:none; border:0; border-radius:10px; padding:8px 12px; font-weight:800; cursor:pointer }
-    .btn.red { background:var(--rot); color:#fff }
-    .btn.ghost { background:#f3f4f6; color:#111; border:1px solid #e5e7eb }
-    .btn.small { padding:6px 10px; font-size:.92rem }
-
-    .muted { color:var(--grau) }
-    .msg { margin-top:10px; min-height:1.2em }
-    .ok { color:#1f7a1f } .err { color:var(--rot) }
+    /* Tabelle (für große Screens) */
+    .table-head { display:grid; grid-template-columns: 180px 1fr 140px; gap:10px; padding:10px 4px; color:#6b6b6b; font-weight:800; border-bottom:1px solid #eee; }
+    .table-wrap { display:block; }
+    .row { display:grid; grid-template-columns: 180px 1fr 140px; gap:10px; padding:12px 6px; border-bottom:1px solid #eee; align-items:center; }
+    .row:last-child { border-bottom:none; }
 
     /* Mobile Cards */
-    .list { display:flex; flex-direction:column; gap:10px }
-    .row-card { display:none; }
-    .row-card .line { display:flex; justify-content:space-between; gap:10px }
-    .row-card .title { font-weight:800 }
-    .row-card .actions { display:flex; gap:8px; flex-wrap:wrap; margin-top:8px }
+    .row-card { display:none; background:#fff; border:1px solid #eee; border-radius:12px; padding:12px; margin:10px 0; }
+    .pill { display:inline-block; background:#eef2ff; color:#2a4bbb; font-weight:800; border-radius:999px; padding:4px 10px; }
+    .title { font-size:1.05rem; margin:.6rem 0 .2rem 0; font-weight:800 }
+    .meta { color:#777; font-size:.92rem; }
+    .actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px }
 
-    /* Responsive: unter 860px Cards statt Tabelle */
+    /* Buttons */
+    .btn { background:var(--rot); color:#fff; border:0; border-radius:10px; padding:9px 12px; font-weight:800; cursor:pointer }
+    .btn.ghost { background:#f1f1f1; color:var(--rot); border:1px solid var(--rot) }
+    .btn:active { transform:translateY(1px) }
+
+    /* Force-Mobile via Klasse (um Safari-„Desktopwebsite“ auszutricksen) */
+    .is-mobile .table-wrap { display:none; }
+    .is-mobile .row-card   { display:block; }
+    /* Und zusätzlich normale Media-Query */
     @media (max-width: 860px){
-      .table-wrap { display:none }
-      .row-card { display:block; border:1px solid #eee; border-radius:12px; padding:12px }
-      .col-date { display:none } /* Feld 'Erstellt' mobil ausblenden (Wunsch) */
+      .table-wrap { display:none; }
+      .row-card   { display:block; }
     }
+
+    .msg { margin-top:8px; min-height:1.2em; }
+    .ok { color:#2e7d32 }
+    .err { color:#c8102e }
   </style>
 </head>
 <body>
-  <header>
-    <h1>FFW – Dokumente bearbeiten</h1>
-    <div class="spacer"></div>
-    <a class="topbtn" href="admin-dashboard.html" id="btnDash">Dashboard</a>
-    <a class="topbtn" href="#" id="btnLogout">Logout</a>
-  </header>
 
-  <div class="wrap">
-    <section class="card">
-      <h2>Dokumente</h2>
+<header>
+  <h1>FFW – Dokumente bearbeiten</h1>
+  <div class="spacer"></div>
+  <a class="topbtn" href="admin-dashboard.html">Dashboard</a>
+  <a class="topbtn" href="#" id="logout">Logout</a>
+</header>
 
-      <div class="tabs">
-        <button class="tab active" id="tabOpen">Offen</button>
-        <button class="tab" id="tabArch">Archiv (30 Tage)</button>
+<div class="wrap">
+  <section class="card">
+    <h2>Dokumente</h2>
+    <div class="tabs">
+      <button class="tab active" id="tab-open">Offen</button>
+      <button class="tab" id="tab-arch">Archiv (30 Tage)</button>
+    </div>
+
+    <!-- Desktop-Tabelle -->
+    <div class="table-wrap" id="table">
+      <div class="table-head">
+        <div>Typ</div>
+        <div>Titel</div>
+        <div class="col-date">Aktionen</div>
       </div>
+      <div id="rows"></div>
+    </div>
 
-      <!-- Desktop-Tabelle -->
-      <div class="table-wrap">
-        <table class="table" id="tbl">
-          <thead>
-            <tr>
-              <th>Typ</th>
-              <th>Titel</th>
-              <th class="col-date">Erstellt</th>
-              <th>Aktionen</th>
-            </tr>
-          </thead>
-          <tbody id="tbody">
-            <tr><td colspan="4" class="muted">Lade …</td></tr>
-          </tbody>
-        </table>
-      </div>
+    <!-- Mobile Cards -->
+    <div id="cards"></div>
 
-      <!-- Mobile Cards -->
-      <div class="list" id="cards" aria-hidden="true" hidden>
-        <!-- dynamisch -->
-      </div>
+    <div id="msg" class="msg"></div>
+    <div id="loading" class="meta">Lade …</div>
+  </section>
+</div>
 
-      <div class="msg" id="pageMsg"></div>
-    </section>
-  </div>
+<script type="module">
+  /* ---------- Auth (Login-Guard) ---------- */
+  import { NhostClient } from "https://esm.sh/@nhost/nhost-js@2.2.9";
+  const nhost = new NhostClient({ subdomain:"hpjfrhktprpuuxvvlpsb", region:"eu-central-1" });
 
-  <script type="module">
-    import { NhostClient } from 'https://esm.sh/@nhost/nhost-js@2.2.9';
+  async function guard(){
+    try{
+      const ok = await nhost.auth.isAuthenticatedAsync();
+      if (!ok) { location.href = "admin-login.html"; return false; }
+      return true;
+    }catch(e){ location.href = "admin-login.html"; return false; }
+  }
+  if (!(await guard())) { /* Seite wird eh verlassen */ }
 
-    /* ---------- Auth / Guard ---------- */
-    const nhost = new NhostClient({ subdomain:'hpjfrhktprpuuxvvlpsb', region:'eu-central-1' });
+  document.getElementById('logout').onclick = async (e)=>{
+    e.preventDefault();
+    try{ await nhost.auth.signOut(); }catch(e){}
+    localStorage.clear();
+    location.href = "admin-login.html";
+  };
 
-    async function guard() {
-      try {
-        const ok = await nhost.auth.isAuthenticatedAsync();
-        if (!ok) { location.href = 'admin-login.html'; return false; }
-        return true;
-      } catch (e) {
-        location.href = 'admin-login.html'; return false;
-      }
+  /* ---------- Responsive: Force-Mobile-Klasse ---------- */
+  function setMobileClass() {
+    const isMobile = window.innerWidth <= 860;
+    document.documentElement.classList.toggle('is-mobile', isMobile);
+  }
+  window.addEventListener('resize', setMobileClass);
+  setMobileClass();
+
+  /* ---------- Utilities ---------- */
+  const $ = (sel)=>document.querySelector(sel);
+  const rowsEl  = $('#rows');
+  const cardsEl = $('#cards');
+  const msgEl   = $('#msg');
+  const loading = $('#loading');
+  const tabOpen = $('#tab-open');
+  const tabArch = $('#tab-arch');
+
+  function escapeHtml(s){
+    return String(s ?? '')
+      .replace(/[&<>"'\/]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','/':'&#47;'}[m]));
+  }
+  function fmtDate(ts){
+    try{
+      const d = new Date(ts);
+      return d.toLocaleDateString('de-DE',{ day:'2-digit', month:'2-digit', year:'numeric'}) +
+             ' ' + d.toLocaleTimeString('de-DE',{ hour:'2-digit', minute:'2-digit'});
+    }catch(_){ return ''; }
+  }
+  function parsePayload(p){
+    if (p && typeof p === 'string') {
+      try { return JSON.parse(p); } catch(_) { return {}; }
     }
-    if (!await guard()) { /* sofort raus */ throw new Error('not auth'); }
+    return p || {};
+  }
 
-    document.getElementById('btnLogout')?.addEventListener('click', async (e)=>{
-      e.preventDefault();
-      try { await nhost.auth.signOut(); } catch {}
-      location.href = 'admin-login.html';
+  /* ---------- GraphQL via Netlify-Function ---------- */
+  async function gql(query, variables={}){
+    const res = await fetch('/api/graphql', {
+      method:'POST',
+      headers:{ 'content-type':'application/json' },
+      body: JSON.stringify({ query, variables })
     });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const json = await res.json();
+    if (json.errors && json.errors.length) throw new Error(json.errors[0].message);
+    return json.data;
+  }
 
-    /* ---------- GraphQL via Netlify Function ---------- */
-    const EP_PRIMARY   = '/api/graphql';
-    const EP_FALLBACK  = '/.netlify/functions/graphql';
-    let GRAPHQL_URL = EP_PRIMARY;
-
-    async function gql(query, variables={}){
-      const payload = { query, variables };
-      let res = await fetch(GRAPHQL_URL, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) });
-      if (res.status === 404 && GRAPHQL_URL !== EP_FALLBACK) {
-        GRAPHQL_URL = EP_FALLBACK;
-        res = await fetch(GRAPHQL_URL, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) });
+  const QUERY_OPEN = `
+    query ($limit:Int = 100){
+      documents(
+        where:{ status:{ _neq:"erledigt" } },
+        order_by:{ created_at: desc },
+        limit:$limit
+      ){
+        id type title status created_at payload
       }
-      if (!res.ok) throw new Error('HTTP '+res.status);
-      const json = await res.json();
-      if (json.errors?.length) throw new Error(json.errors[0].message || 'GraphQL error');
-      return json.data;
+    }`;
+
+  const QUERY_ARCH = `
+    query ($since:timestamptz!){
+      documents(
+        where:{
+          status:{ _eq:"erledigt" },
+          created_at:{ _gte:$since }
+        },
+        order_by:{ created_at: desc }
+      ){
+        id type title status created_at payload
+      }
+    }`;
+
+  const MUT_DONE = `
+    mutation($id:uuid!){
+      update_documents_by_pk(pk_columns:{id:$id}, _set:{status:"erledigt"}){
+        id status
+      }
+    }`;
+
+  /* ---------- Render ---------- */
+  async function loadOpen(){
+    setTabs('open');
+    msgEl.textContent = ''; loading.style.display='block';
+    rowsEl.innerHTML = ''; cardsEl.innerHTML = '';
+    try{
+      const data = await gql(QUERY_OPEN, { limit: 100 });
+      renderList(data.documents, true);
+      if (!data.documents.length) msgEl.textContent = 'Keine offenen Dokumente.';
+    }catch(e){
+      msgEl.textContent = 'Fehler: ' + e.message;
+    }finally{
+      loading.style.display='none';
     }
+  }
 
-    /* ---------- Queries & Mutations ---------- */
-    const Q_LIST = `
-      query Docs($arch:Boolean!, $since:timestamptz){
-        open: documents(where:{ status:{_neq:"erledigt"} }, order_by:{created_at:desc}) @skip(if:$arch){
-          id type title status created_at payload
-        }
-        arch: documents(
-          where:{ _and:[ {status:{_eq:"erledigt"}}, {created_at:{_gte:$since}} ] },
-          order_by:{created_at:desc}
-        ) @include(if:$arch){
-          id type title status created_at payload
-        }
-      }`;
-
-    const M_DONE = `
-      mutation Done($id:uuid!){
-        update_documents_by_pk(pk_columns:{id:$id}, _set:{status:"erledigt"}) { id status }
-      }`;
-
-    /* ---------- UI-Refs ---------- */
-    const tbody   = document.getElementById('tbody');
-    const cards   = document.getElementById('cards');
-    const pageMsg = document.getElementById('pageMsg');
-    const tabOpen = document.getElementById('tabOpen');
-    const tabArch = document.getElementById('tabArch');
-
-    let currentTab = 'open';
-
-    tabOpen.onclick = () => { currentTab='open'; tabOpen.classList.add('active'); tabArch.classList.remove('active'); load(); };
-    tabArch.onclick = () => { currentTab='arch'; tabArch.classList.add('active'); tabOpen.classList.remove('active'); load(); };
-
-    /* ---------- Load & Render ---------- */
-    async function load(){
-      pageMsg.textContent = '';
-      tbody.innerHTML = `<tr><td colspan="4" class="muted">Lade …</td></tr>`;
-      cards.hidden = true; cards.innerHTML = '';
-
-      try{
-        const since = new Date(Date.now() - 30*24*60*60*1000).toISOString();
-        const data = await gql(Q_LIST, { arch: currentTab==='arch', since });
-
-        const list = currentTab==='arch' ? (data.arch||[]) : (data.open||[]);
-        render(list);
-      }catch(e){
-        pageMsg.className = 'msg err';
-        pageMsg.textContent = 'Fehler: '+ (e.message||e);
-      }
+  async function loadArch(){
+    setTabs('arch');
+    msgEl.textContent = ''; loading.style.display='block';
+    rowsEl.innerHTML = ''; cardsEl.innerHTML = '';
+    try{
+      const since = new Date(Date.now() - 30*24*60*60*1000).toISOString();
+      const data = await gql(QUERY_ARCH, { since });
+      renderList(data.documents, false);
+      if (!data.documents.length) msgEl.textContent = 'Kein Archiv-Eintrag (letzte 30 Tage).';
+    }catch(e){
+      msgEl.textContent = 'Fehler: ' + e.message;
+    }finally{
+      loading.style.display='none';
     }
+  }
 
-    function render(items){
-      // Desktop table
-      if (items.length===0){
-        tbody.innerHTML = `<tr><td colspan="4" class="muted">Keine Einträge.</td></tr>`;
-      } else {
-        tbody.innerHTML = items.map(doc => `
-          <tr>
-            <td><span class="badge">${escapeHtml(doc.type||'-')}</span></td>
-            <td>${escapeHtml(doc.title||'—')}</td>
-            <td class="col-date">${fmt(doc.created_at)}</td>
-            <td>
-              <button class="btn ghost small" data-pdf="${doc.id}">PDF</button>
-              ${doc.status==='erledigt' ? '' : `<button class="btn red small" data-done="${doc.id}">Erledigt</button>`}
-            </td>
-          </tr>
-        `).join('');
-      }
+  function setTabs(which){
+    if (which==='open'){ tabOpen.classList.add('active'); tabArch.classList.remove('active'); }
+    else { tabArch.classList.add('active'); tabOpen.classList.remove('active'); }
+  }
 
-      // Mobile cards
-      cards.hidden = false;
-      cards.innerHTML = items.map(doc => `
-        <div class="row-card">
-          <div class="line">
-            <div class="badge">${escapeHtml(doc.type||'-')}</div>
-          </div>
-          <div class="title" style="margin-top:6px">${escapeHtml(doc.title||'—')}</div>
-          <div class="muted col-date" style="margin-top:2px">${fmt(doc.created_at)}</div>
+  function renderList(list, isOpen){
+    // Desktop-Zeilen
+    rowsEl.innerHTML = list.map(doc=>{
+      const t = escapeHtml(doc.type || '');
+      const title = escapeHtml(doc.title || '(ohne Titel)');
+      const id = doc.id;
+      const actions = `
+        <button class="btn ghost" data-pdf="${id}">PDF</button>
+        ${isOpen ? `<button class="btn" data-done="${id}">Erledigt</button>` : ``}
+      `;
+      return `
+        <div class="row" data-id="${id}">
+          <div><span class="pill">${t}</span></div>
+          <div>${title}</div>
+          <div class="col-date" style="display:flex;gap:8px;justify-content:flex-end">${actions}</div>
+        </div>`;
+    }).join('');
+
+    // Mobile Cards (ohne „Erstellt“ Spalte, Aktionen unten)
+    cardsEl.innerHTML = list.map(doc=>{
+      const id = doc.id;
+      const t = escapeHtml(doc.type || '');
+      const title = escapeHtml(doc.title || '(ohne Titel)');
+      return `
+        <article class="row-card" data-id="${id}">
+          <div class="pill">${t}</div>
+          <div class="title">${title}</div>
           <div class="actions">
-            <button class="btn ghost small" data-pdf="${doc.id}">PDF</button>
-            ${doc.status==='erledigt' ? '' : `<button class="btn red small" data-done="${doc.id}">Erledigt</button>`}
+            <button class="btn ghost" data-pdf="${id}">PDF</button>
+            ${isOpen ? `<button class="btn" data-done="${id}">Erledigt</button>` : ``}
           </div>
-        </div>
-      `).join('');
+        </article>`;
+    }).join('');
+  }
 
-      // Button Events (delegation)
-      tbody.querySelectorAll('[data-pdf]').forEach(btn=>{
-        btn.onclick = ()=> {
-          const id = btn.getAttribute('data-pdf');
-          const doc = items.find(x=>x.id===id);
-          if (doc) printPdf(doc);
-        };
-      });
-      tbody.querySelectorAll('[data-done]').forEach(btn=>{
-        btn.onclick = ()=> markDone(btn.getAttribute('data-done'));
-      });
-      cards.querySelectorAll('[data-pdf]').forEach(btn=>{
-        btn.onclick = ()=> {
-          const id = btn.getAttribute('data-pdf');
-          const doc = items.find(x=>x.id===id);
-          if (doc) printPdf(doc);
-        };
-      });
-      cards.querySelectorAll('[data-done]').forEach(btn=>{
-        btn.onclick = ()=> markDone(btn.getAttribute('data-done'));
-      });
+  /* ---------- Aktionen ---------- */
+  function getDocFromDom(id){
+    // Sucht im aktuell gerenderten Array per DOM-Attribut
+    // (Wir lesen die Daten einfach aus den Buttons und fragen dann via GraphQL das Detail nochmal ab, damit PDF immer frisch ist)
+    return id;
+  }
+
+  async function markDone(id){
+    try{
+      loading.style.display='block';
+      await gql(MUT_DONE, { id });
+      await loadOpen();
+    }catch(e){
+      alert('Konnte Status nicht setzen: ' + e.message);
+    }finally{
+      loading.style.display='none';
     }
+  }
 
-    /* ---------- Actions ---------- */
-    async function markDone(id){
-      try{
-        pageMsg.className='msg'; pageMsg.textContent='Speichere …';
-        await gql(M_DONE, { id });
-        pageMsg.className='msg ok'; pageMsg.textContent='Gespeichert.';
-        await load();
-      }catch(e){
-        pageMsg.className='msg err'; pageMsg.textContent='Fehler beim Speichern: '+(e.message||e);
-      }
-    }
+  async function openPdf(id){
+    // Detail nochmal holen (robust: sollte in der Liste sein, aber PDF nutzt die frischen Daten)
+    const DETAIL = `
+      query($id:uuid!){
+        documents_by_pk(id:$id){ id type title created_at payload }
+      }`;
+    try{
+      const data = await gql(DETAIL, { id });
+      const doc = data.documents_by_pk;
+      if (!doc) return alert('Dokument nicht gefunden.');
+      const p = parsePayload(doc.payload);
+      const title = doc.title || '(ohne Titel)';
 
-    function printPdf(doc){
+      // Sehr einfacher PDF/Print-View:
       const w = window.open('', '_blank');
-      const p = doc.payload || {};
-      // WICHTIG: </script> escapen, sonst bricht der Browser unser Hauptscript ab.
-      const autoPrint = '<script>window.focus();setTimeout(()=>window.print(),180);<\\/script>';
       const html = `
         <!doctype html><html><head>
           <meta charset="utf-8">
-          <title>${escapeHtml(doc.title||'Dokument')}</title>
+          <title>PDF – ${escapeHtml(title)}</title>
           <style>
-            body{font-family:Arial, sans-serif; padding:24px}
-            h1{margin:0 0 4px}
-            .meta{color:#555;margin-bottom:14px}
-            pre{white-space:pre-wrap;word-break:break-word;background:#f6f6f6;border:1px solid #ddd;border-radius:8px;padding:12px}
-            .muted{color:#666}
+            body{ font-family:system-ui,Arial,sans-serif; margin:24px; }
+            h1{ margin:0 0 6px; }
+            .meta{ color:#555; margin-bottom:14px }
+            table{ width:100%; border-collapse:collapse; margin-top:10px }
+            th,td{ padding:8px; border-bottom:1px solid #ddd; text-align:left }
           </style>
         </head><body>
           <h1>${escapeHtml(doc.type||'Dokument')}</h1>
-          <div class="meta"><strong>Titel:</strong> ${escapeHtml(doc.title||'—')}<br>
-          <strong>Erstellt:</strong> ${fmt(doc.created_at)}</div>
-          <h3>Inhalt (payload)</h3>
-          <pre>${escapeHtml(JSON.stringify(p, null, 2))}</pre>
-          ${autoPrint}
+          <div class="meta"><strong>Titel:</strong> ${escapeHtml(title)}</div>
+          ${renderPayloadForPdf(doc.type, p)}
         </body></html>`;
-      w.document.open(); w.document.write(html); w.document.close();
+      w.document.write(html); w.document.close();
+      // Automatisch Drucken? -> w.print();
+    }catch(e){
+      alert('PDF-Fehler: ' + e.message);
     }
+  }
 
-    /* ---------- Utils ---------- */
-    function fmt(ts){
-      if (!ts) return '—';
-      const d = new Date(ts);
-      return d.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'})+
-             ' '+d.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
+  function renderPayloadForPdf(type, p){
+    // Einfaches Layout speziell für "Produktausgabe"
+    if ((type||'').toLowerCase() === 'produktausgabe'){
+      const pos = Array.isArray(p.positionen) ? p.positionen : [];
+      const rows = pos.map(it=>`
+        <tr><td>${escapeHtml(it.qty ?? it.menge ?? '')}</td><td>${escapeHtml(it.name ?? it.artikel ?? '')}</td></tr>
+      `).join('');
+      return `
+        <div><strong>Einsatznummer:</strong> ${escapeHtml(p.einsatznummer||'')}</div>
+        <div><strong>Datum:</strong> ${escapeHtml(p.datum||'')}</div>
+        <div style="margin-top:10px"><strong>Ausgetragen von:</strong> ${escapeHtml(p.ausgetragen_vorname||'')} ${escapeHtml(p.ausgetragen_nachname||'')}</div>
+        <table>
+          <thead><tr><th>Menge</th><th>Artikel / Beschreibung</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>`;
     }
-    function escapeHtml(s){ return String(s).replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m])); }
+    // Fallback: JSON roh
+    return `<pre>${escapeHtml(JSON.stringify(p, null, 2))}</pre>`;
+  }
 
-    /* ---------- Start ---------- */
-    load();
-  </script>
+  // Delegation für Buttons
+  document.addEventListener('click', (ev)=>{
+    const t = ev.target;
+    if (t.matches('[data-done]')) {
+      const id = t.getAttribute('data-done');
+      markDone(id);
+    } else if (t.matches('[data-pdf]')) {
+      const id = t.getAttribute('data-pdf');
+      openPdf(id);
+    }
+  });
+
+  // Tabs
+  tabOpen.onclick = loadOpen;
+  tabArch.onclick = loadArch;
+
+  // Start
+  await loadOpen();
+</script>
 </body>
 </html>
