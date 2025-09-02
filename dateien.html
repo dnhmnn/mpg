@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"/>
+  <title>FFW – Dateien</title>
+  <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root{--rot:#c8102e;--bg:#f7f7f7;--card:#fff;--ink:#222}
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0;background:var(--bg);font-family:'Atkinson Hyperlegible',system-ui,Arial,sans-serif;color:var(--ink)}
+    header{position:sticky;top:0;background:var(--rot);color:#fff;display:flex;gap:10px;align-items:center;padding:10px 14px;z-index:10}
+    header h1{margin:0;font-size:1.05rem;font-weight:800}
+    .spacer{flex:1}
+    .topbtn{color:#fff;text-decoration:none;background:#0001;padding:10px 12px;border-radius:10px;font-weight:800;display:inline-flex;align-items:center;gap:8px}
+    .wrap{max-width:1100px;margin:14px auto;padding:0 12px}
+    .card{background:var(--card);border-radius:14px;box-shadow:0 3px 12px rgba(0,0,0,.06);padding:14px}
+    .card h2{margin:0 0 10px;color:var(--rot);font-size:1.1rem}
+    .toolbar{display:grid;grid-template-columns:1fr;gap:10px;margin:10px 0}
+    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    .btn{background:var(--rot);color:#fff;border:0;border-radius:12px;padding:12px 14px;font-weight:800;cursor:pointer;touch-action:manipulation}
+    .btn.ghost{background:#f1f1f1;color:var(--rot);border:1px solid var(--rot)}
+    .btn.full{width:100%}
+    input[type="file"]{display:none}
+    .inpf{display:flex;gap:8px}
+    .inpf input{flex:1;padding:12px;border:1px solid #ccc;border-radius:12px;background:#fafafa;min-width:0}
+    .drop{border:2px dashed #d9d9d9;border-radius:12px;padding:16px;text-align:center;background:#fff}
+    .drop.drag{border-color:var(--rot);background:#fff7f8}
+    .hint{color:#666;font-size:.95rem}
+    .search{display:flex;gap:8px;align-items:center;margin:10px 0}
+    .search input{flex:1;padding:12px;border:1px solid #ccc;border-radius:12px;background:#fafafa}
+    .count{color:#777}
+
+    /* Liste Desktop */
+    .group{margin-top:12px;border:1px solid #eee;border-radius:12px;overflow:hidden;background:#fff}
+    .group h3{margin:0;padding:12px 12px;background:#fafafa;border-bottom:1px solid #eee;font-size:1rem}
+    .grid-head,.grid-row{display:grid;grid-template-columns:1.6fr 120px 170px 1fr;gap:10px;align-items:center}
+    .grid-head{color:#757575;font-weight:800;padding:10px 12px;border-bottom:1px solid #eee}
+    .grid-row{padding:12px;border-bottom:1px solid #eee}
+    .grid-row:last-child{border-bottom:none}
+    .tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+    .tag{background:#eef2ff;color:#2a4bbb;border-radius:999px;padding:2px 8px;font-weight:700;font-size:.88rem}
+    .actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+    .msg{min-height:1.2em;margin-top:6px}
+    .ok{color:#2e7d32}.err{color:#c8102e}.muted{color:#777}
+
+    /* Mobile Cards */
+    @media (max-width: 760px){
+      .toolbar{grid-template-columns:1fr}
+      .grid-head{display:none}
+      .grid-row{grid-template-columns:1fr;border:1px solid #eee;border-radius:12px;margin:10px 12px 0;padding:12px}
+      .grid-row > div:nth-child(2),
+      .grid-row > div:nth-child(3){margin-top:6px;color:#555}
+      .actions{justify-content:stretch}
+      .actions .btn{flex:1;padding:12px}
+      .group{border:none;background:transparent}
+      .group h3{border:0;background:transparent;padding:6px 12px 0}
+    }
+
+    /* Modal */
+    .modal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;padding:16px;z-index:9999}
+    .modal.show{display:flex}
+    .box{background:#fff;border-radius:14px;box-shadow:0 6px 26px rgba(0,0,0,.25);max-width:520px;width:96%;padding:14px}
+    .box h4{margin:0 0 8px;color:var(--rot)}
+    .box .field{display:flex;gap:8px;align-items:center;margin:8px 0}
+    .box input{flex:1;padding:12px;border:1px solid #ccc;border-radius:12px;background:#fafafa}
+    .box .foot{display:flex;gap:8px;justify-content:flex-end;margin-top:8px}
+  </style>
+</head>
+<body>
+<header>
+  <h1>FFW – Dateien</h1>
+  <div class="spacer"></div>
+  <a class="topbtn" href="admin-dashboard.html">Dashboard</a>
+  <a class="topbtn" href="#" id="logoutBtn">Logout</a>
+</header>
+
+<div class="wrap">
+  <section class="card">
+    <h2>Dateien hochladen & verwalten</h2>
+
+    <!-- Mobilefreundliche Toolbar -->
+    <div class="toolbar">
+      <div class="row">
+        <label for="fileInput" class="btn">Dateien auswählen</label>
+        <input id="fileInput" type="file" multiple />
+        <button class="btn ghost" id="refreshBtn" title="Liste aktualisieren">Aktualisieren</button>
+        <button class="btn ghost" id="newFolderBtn" title="Ordner erstellen">Ordner erstellen</button>
+      </div>
+      <div class="inpf">
+        <input id="folderInput" placeholder="Ordner (z. B. einsatz/2025-001/)" inputmode="text" />
+      </div>
+      <div class="inpf">
+        <input id="tagsInput" placeholder="Tags, Komma-getrennt (z. B. einsatz,bericht)" inputmode="text" />
+      </div>
+    </div>
+
+    <div id="dropArea" class="drop" aria-label="Drag-and-drop Bereich">
+      Dateien hierher ziehen & ablegen
+      <div class="hint">Ordnerpfad + Tags werden beim Upload gespeichert. Bucket: <b>files</b>.</div>
+    </div>
+    <div id="uploadMsg" class="msg muted"></div>
+
+    <!-- Suche / Filter -->
+    <div class="search">
+      <input id="q" placeholder="Suche (Dateiname, Ordner, Tags)…" inputmode="search">
+      <span id="count" class="count"></span>
+    </div>
+
+    <!-- Listen -->
+    <div id="groups"></div>
+
+    <div id="msg" class="msg"></div>
+  </section>
+</div>
+
+<!-- Modal: Tags bearbeiten -->
+<div class="modal" id="tagModal" aria-hidden="true">
+  <div class="box" role="dialog" aria-modal="true" aria-labelledby="tagModalTitle">
+    <h4 id="tagModalTitle">Tags bearbeiten</h4>
+    <div class="field">
+      <input id="tagEditInput" placeholder="Tags, Komma-getrennt">
+    </div>
+    <div id="tagMsg" class="msg"></div>
+    <div class="foot">
+      <button class="btn ghost" id="tagCancel">Abbrechen</button>
+      <button class="btn" id="tagSave">Speichern</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+  import { NhostClient } from "https://esm.sh/@nhost/nhost-js@2.2.9";
+
+  // ===== Nhost Setup =====
+  const nhost = new NhostClient({ subdomain:"hpjfrhktprpuuxvvlpsb", region:"eu-central-1" });
+  const BUCKET = "files";
+
+  // ===== Admin-Login-Guard + Rollencheck =====
+  async function guard(){
+    try{
+      const ok = await nhost.auth.isAuthenticatedAsync();
+      if (!ok){ location.href = "admin-login.html"; return false; }
+      const claims = nhost.auth.getDecodedToken()?.['https://hasura.io/jwt/claims'] || {};
+      const roles = claims['x-hasura-allowed-roles'] || [];
+      if (!roles.includes('admin')){ location.href = "admin-login.html"; return false; }
+      return true;
+    }catch{ location.href="admin-login.html"; return false; }
+  }
+  if (!(await guard())) {}
+
+  // ===== DOM Refs =====
+  const fileInput   = document.getElementById('fileInput');
+  const dropArea    = document.getElementById('dropArea');
+  const groupsEl    = document.getElementById('groups');
+  const msgEl       = document.getElementById('msg');
+  const upMsgEl     = document.getElementById('uploadMsg');
+  const qInput      = document.getElementById('q');
+  const countEl     = document.getElementById('count');
+  const folderInput = document.getElementById('folderInput');
+  const tagsInput   = document.getElementById('tagsInput');
+  const refreshBtn  = document.getElementById('refreshBtn');
+  const newFolderBtn= document.getElementById('newFolderBtn');
+
+  document.getElementById('logoutBtn')?.addEventListener('click', async (e)=>{
+    e.preventDefault();
+    await nhost.auth.signOut();
+    localStorage.clear();
+    location.href = "admin-login.html";
+  });
+
+  // ===== GraphQL via Netlify-Function (Fallback) =====
+  const ENDPOINTS = ['/api/graphql','/.netlify/functions/graphql']; let endpointIdx = 0;
+  async function gql(query, variables={}){
+    let lastErr;
+    for (let i=0;i<ENDPOINTS.length;i++){
+      const url = ENDPOINTS[(endpointIdx+i)%ENDPOINTS.length];
+      try{
+        const res = await fetch(url, { method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify({query,variables}) });
+        if (res.status===404){ lastErr=new Error('HTTP 404'); continue; }
+        if (!res.ok) throw new Error('HTTP '+res.status);
+        const json = await res.json();
+        if (json.errors?.length) throw new Error(json.errors[0].message);
+        endpointIdx=(endpointIdx+i)%ENDPOINTS.length;
+        return json.data;
+      }catch(e){ lastErr=e }
+    }
+    throw lastErr||new Error('GraphQL fehlgeschlagen');
+  }
+
+  // ===== Hasura-Schema (file_meta) =====
+  // file_meta: file_id(uuid PK), name(text), path(text), tags(text[]), uploader_id(uuid), created_at(timestamptz default now)
+  const Q_META_MANY = `
+    query($ids:[uuid!]!){
+      file_meta(where:{file_id:{_in:$ids}}){
+        file_id name path tags created_at
+      }
+    }`;
+  const M_META_UPSERT = `
+    mutation($obj:file_meta_insert_input!){
+      insert_file_meta_one(object:$obj, on_conflict:{constraint:file_meta_pkey, update_columns:[name,path,tags]}){
+        file_id
+      }
+    }`;
+  const M_META_UPDATE_TAGS = `
+    mutation($id:uuid!,$tags:_text){
+      update_file_meta_by_pk(pk_columns:{file_id:$id}, _set:{tags:$tags}){ file_id }
+    }`;
+  const M_META_DELETE = `
+    mutation($id:uuid!){
+      delete_file_meta_by_pk(file_id:$id){ file_id }
+    }`;
+
+  // ===== Helpers =====
+  const fmtBytes = (b=0)=>{ if (!b) return '0 B'; const u=['B','KB','MB','GB','TB']; const i=Math.floor(Math.log(b)/Math.log(1024)); return (b/Math.pow(1024,i)).toFixed(1)+' '+u[i]; };
+  const fmtDate  = (ts)=> new Date(ts||Date.now()).toLocaleString('de-DE',{dateStyle:'short',timeStyle:'short'});
+  const esc = s=>String(s??'').replace(/[&<>"'\/]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','/':'&#47;'}[m]));
+  function show(t, ok=false){ msgEl.textContent=t||''; msgEl.className='msg '+(ok?'ok':'err'); }
+  function showUp(t, ok=false){ upMsgEl.textContent=t||''; upMsgEl.className='msg '+(ok?'ok':'muted'); }
+
+  async function getFileUrl(file){
+    try{ const r=await nhost.storage.getPublicUrl({fileId:file.id}); if (r?.publicUrl) return r.publicUrl; }catch(_){}
+    try{ const r2=await nhost.storage.getPresignedUrl({fileId:file.id, expiresIn:3600}); if (r2?.presignedUrl) return r2.presignedUrl; if (r2?.url) return r2.url; }catch(_){}
+    return `https://storage.eu-central-1.nhost.run/v1/files/${file.id}`;
+  }
+
+  let ALL_FILES = [];   // aus Storage
+  let META_MAP  = {};   // file_id -> meta
+
+  function normalizePath(p){
+    if (!p) return '';
+    p = p.trim().replace(/^\.\/*/,''); // führende ./ entfernen
+    if (!p) return '';
+    if (!p.endsWith('/')) p += '/';
+    return p;
+  }
+
+  // Dateien + Metadaten laden
+  async function loadAll(){
+    show('');
+    try{
+      const res = await nhost.storage.list({ bucketId: BUCKET });
+      const arr = res?.files || res?.data || res || [];
+      ALL_FILES = Array.isArray(arr) ? arr : [];
+      const ids = ALL_FILES.map(f=>f.id);
+      META_MAP = {};
+      if (ids.length){
+        const meta = await gql(Q_META_MANY, { ids });
+        for (const m of (meta?.file_meta||[])) META_MAP[m.file_id] = m;
+      }
+      render();
+    }catch(e){
+      show('Konnte Dateien nicht laden: '+(e?.message||e));
+    }
+  }
+
+  function currentFolderOf(f){
+    const meta = META_MAP[f.id];
+    if (meta?.path) return meta.path;
+    const nm = f.name||'';
+    if (nm.includes('/')) return nm.split('/').slice(0,-1).join('/') + '/';
+    return '';
+  }
+  function currentNameOf(f){
+    const meta = META_MAP[f.id];
+    if (meta?.name) return meta.name;
+    const nm = f.name||'';
+    if (nm.includes('/')) return nm.split('/').pop();
+    return nm || '(ohne Namen)';
+  }
+  function tagsOf(f){
+    return META_MAP[f.id]?.tags || [];
+  }
+
+  function render(){
+    const q = (qInput.value||'').toLowerCase().trim();
+    const items = ALL_FILES.slice().sort((a,b)=>{
+      const pa=currentFolderOf(a), pb=currentFolderOf(b);
+      if (pa<pb) return -1; if (pa>pb) return 1;
+      const da=+new Date(a.createdAt||a.created_at||0), db=+new Date(b.createdAt||b.created_at||0);
+      return db-da;
+    }).filter(f=>{
+      const name = currentNameOf(f).toLowerCase();
+      const folder = currentFolderOf(f).toLowerCase();
+      const tags = tagsOf(f).join(',').toLowerCase();
+      return !q || name.includes(q) || folder.includes(q) || tags.includes(q);
+    });
+
+    const groups = {};
+    for (const f of items){
+      const folder = currentFolderOf(f) || '(ohne Ordner)/';
+      (groups[folder] ||= []).push(f);
+    }
+
+    const html = Object.keys(groups).sort().map(folder=>{
+      const rows = groups[folder].map(f=>{
+        const name = currentNameOf(f);
+        const tgs  = tagsOf(f);
+        return `
+          <div class="grid-row" data-id="${f.id}">
+            <div>
+              <strong>${esc(name)}</strong>
+              <div class="muted">${esc(f.mimeType||'')}</div>
+              ${tgs.length?`<div class="tags">${tgs.map(t=>`<span class="tag">${esc(t)}</span>`).join('')}</div>`:''}
+            </div>
+            <div>${fmtBytes(f.size)}</div>
+            <div>${fmtDate(f.createdAt||f.created_at)}</div>
+            <div class="actions">
+              <button class="btn ghost" data-open="${f.id}">Öffnen</button>
+              <button class="btn ghost" data-copy="${f.id}">Link kopieren</button>
+              <button class="btn ghost" data-edittags="${f.id}">Tags</button>
+              <button class="btn" data-del="${f.id}">Löschen</button>
+            </div>
+          </div>`;
+      }).join('');
+
+      return `
+        <div class="group">
+          <h3>Ordner: ${esc(folder)}</h3>
+          <div class="grid-head"><div>Datei</div><div>Größe</div><div>Datum</div><div>Aktionen</div></div>
+          ${rows}
+        </div>`;
+    }).join('');
+
+    groupsEl.innerHTML = html || '<div class="muted" style="padding:8px 4px">Keine Dateien gefunden.</div>';
+    countEl.textContent = items.length ? `${items.length} Datei(en)` : '';
+  }
+
+  // Upload (mit Ordner & Tags)
+  async function uploadFiles(files){
+    if (!files || !files.length) return;
+    const path = normalizePath(folderInput.value);
+    const rawTags = (tagsInput.value||'').split(',').map(s=>s.trim()).filter(Boolean);
+    const userId = nhost.auth.getUser()?.id || null;
+
+    showUp(`Lade ${files.length} Datei(en) hoch …`);
+    let ok=0, fail=0;
+
+    for (const file of files){
+      try{
+        const name = path ? (path + file.name) : file.name;
+        const { fileMetadata, error } = await nhost.storage.upload({ file, bucketId: BUCKET, name });
+        if (error) throw error;
+        const fid = fileMetadata?.id || fileMetadata?.file?.id || fileMetadata?.fileId || null;
+        if (fid){
+          // Metadaten in Hasura ablegen/aktualisieren
+          const obj = {
+            file_id: fid,
+            name: file.name,
+            path: path || '',
+            tags: rawTags.length ? rawTags : null,
+            uploader_id: userId
+          };
+          await gql(M_META_UPSERT, { obj }).catch(()=>{});
+        }
+        ok++;
+      }catch(e){
+        console.error(e);
+        fail++;
+      }
+    }
+    showUp(`Fertig: ${ok} erfolgreich, ${fail} fehlgeschlagen.`, fail===0);
+    await loadAll();
+  }
+
+  // Ordner anlegen (Platzhalter .keep)
+  async function createFolder(){
+    let path = normalizePath(prompt("Ordnerpfad anlegen (z. B. einsatz/2025-001/):") || "");
+    if (!path){ show("Kein Ordnerpfad angegeben."); return; }
+    try{
+      const blob = new Blob([""], {type:"text/plain"});
+      const name = `${path}.keep`; // ergibt z. B. einsatz/2025-001/.keep
+      const { fileMetadata, error } = await nhost.storage.upload({ file: blob, bucketId: BUCKET, name });
+      if (error) throw error;
+      const fid = fileMetadata?.id || fileMetadata?.file?.id || fileMetadata?.fileId || null;
+      if (fid){
+        const obj = { file_id: fid, name: ".keep", path, tags: ["folder"], uploader_id: nhost.auth.getUser()?.id || null };
+        await gql(M_META_UPSERT, { obj }).catch(()=>{});
+      }
+      show("Ordner erstellt.", true);
+      await loadAll();
+    }catch(e){
+      show("Ordner konnte nicht erstellt werden: " + (e?.message || e));
+    }
+  }
+
+  // Löschen
+  async function deleteFile(id){
+    if (!confirm('Datei wirklich löschen?')) return;
+    try{
+      await nhost.storage.delete({ fileId: id });
+      await gql(M_META_DELETE, { id }).catch(()=>{});
+      ALL_FILES = ALL_FILES.filter(f=>f.id!==id);
+      delete META_MAP[id];
+      render();
+      show('Datei gelöscht.', true);
+    }catch(e){
+      show('Löschen fehlgeschlagen: ' + (e?.message || e));
+    }
+  }
+
+  // Öffnen/Kopieren
+  async function openFile(id){
+    const f = ALL_FILES.find(x=>x.id===id); if(!f) return;
+    const url = await getFileUrl(f);
+    window.open(url, '_blank');
+  }
+  async function copyLink(id){
+    const f = ALL_FILES.find(x=>x.id===id); if(!f) return;
+    const url = await getFileUrl(f);
+    try{ await navigator.clipboard.writeText(url); show('Link kopiert ✔', true); }catch(_){ show('Konnte Link nicht kopieren'); }
+  }
+
+  // Tags bearbeiten Modal
+  const tagModal = document.getElementById('tagModal');
+  const tagInput = document.getElementById('tagEditInput');
+  const tagMsg   = document.getElementById('tagMsg');
+  let editingId = null;
+
+  function openTagModal(fileId){
+    editingId = fileId;
+    const cur = META_MAP[fileId]?.tags || [];
+    tagInput.value = cur.join(', ');
+    tagMsg.textContent = '';
+    tagMsg.className = 'msg';
+    tagModal.classList.add('show');
+    setTimeout(()=> tagInput.focus(), 10);
+  }
+  function closeTagModal(){ tagModal.classList.remove('show'); editingId=null; }
+
+  document.getElementById('tagCancel').onclick = closeTagModal;
+  document.getElementById('tagSave').onclick = async ()=>{
+    if(!editingId) return;
+    const tags = tagInput.value.split(',').map(s=>s.trim()).filter(Boolean);
+    try{
+      await gql(M_META_UPDATE_TAGS, { id: editingId, tags: tags.length? tags : null });
+      (META_MAP[editingId] ||= { file_id: editingId }).tags = tags.length? tags : null;
+      render();
+      tagMsg.textContent = 'Gespeichert.'; tagMsg.className='msg ok';
+      setTimeout(closeTagModal, 500);
+    }catch(e){
+      tagMsg.textContent = 'Fehler: '+(e?.message||e); tagMsg.className='msg err';
+    }
+  };
+  tagModal.addEventListener('click', (e)=>{ if(e.target===tagModal) closeTagModal(); });
+
+  // Events
+  newFolderBtn.addEventListener('click', createFolder);
+  fileInput.addEventListener('change', e=>uploadFiles(e.target.files));
+
+  ;['dragenter','dragover'].forEach(ev=> dropArea.addEventListener(ev, e=>{
+    e.preventDefault(); e.stopPropagation(); dropArea.classList.add('drag');
+  }));
+  ;['dragleave','drop'].forEach(ev=> dropArea.addEventListener(ev, e=>{
+    e.preventDefault(); e.stopPropagation(); dropArea.classList.remove('drag');
+  }));
+  dropArea.addEventListener('drop', e=> uploadFiles(e.dataTransfer?.files));
+
+  qInput.addEventListener('input', render);
+  refreshBtn.addEventListener('click', loadAll);
+
+  document.addEventListener('click', (e)=>{
+    const t = e.target;
+    if (t.matches('[data-del]')) deleteFile(t.getAttribute('data-del'));
+    if (t.matches('[data-open]')) openFile(t.getAttribute('data-open'));
+    if (t.matches('[data-copy]')) copyLink(t.getAttribute('data-copy'));
+    if (t.matches('[data-edittags]')) openTagModal(t.getAttribute('data-edittags'));
+  });
+
+  // Start
+  await loadAll();
+</script>
+</body>
+</html>
