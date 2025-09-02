@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>FFW – Dokumente bearbeiten</title>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{--rot:#c8102e}
+  *{box-sizing:border-box}
+  body{font-family:'Atkinson Hyperlegible',Arial,sans-serif;background:#f7f7f7;margin:0}
+  header{background:var(--rot);color:#fff;display:flex;align-items:center;gap:12px;padding:10px 14px;position:sticky;top:0;z-index:2}
+  header .title{font-weight:700}
+  header .spacer{flex:1}
+  header a.btn{background:#ffffff26;color:#fff;text-decoration:none;padding:8px 12px;border-radius:10px;font-weight:700}
+  main{max-width:980px;margin:16px auto;padding:0 12px}
+  .card{background:#fff;border-radius:14px;box-shadow:0 4px 14px #0001;margin:12px 0;padding:16px}
+  h1{color:var(--rot);margin:0 0 6px}
+  .tabs{display:flex;gap:10px;margin-top:8px}
+  .tab{background:#eee;color:#444;border-radius:999px;padding:8px 12px;font-weight:700;cursor:pointer}
+  .tab.active{background:var(--rot);color:#fff}
+  table{width:100%;border-collapse:collapse;margin-top:10px}
+  th,td{padding:12px;border-bottom:1px solid #eee;vertical-align:top}
+  th{color:var(--rot);background:#fff}
+  tr:hover{background:#fff8f8}
+  .btn{background:var(--rot);color:#fff;border:0;border-radius:10px;padding:8px 12px;font-weight:700;cursor:pointer}
+  .btn.outline{background:#fff;color:var(--rot);border:2px solid var(--rot)}
+  .row{display:flex;gap:10px;flex-wrap:wrap}
+  .muted{color:#666}
+  .ok{color:#2e7d32}
+  .err{color:#c8102e}
+  /* Details Drawer */
+  .drawer{position:fixed;inset:0;background:#0006;display:none;align-items:flex-end}
+  .drawer .panel{background:#fff;max-height:92vh;width:100%;max-width:980px;margin:0 auto;border-radius:16px 16px 0 0;overflow:auto;padding:14px}
+  .kv{display:grid;grid-template-columns:160px 1fr;gap:6px 12px}
+  .kv b{color:var(--rot)}
+  code.json{display:block;white-space:pre-wrap;background:#fafafa;border:1px solid #eee;border-radius:10px;padding:10px}
+</style>
+</head>
+<body>
+<header>
+  <div class="title">FFW – <span>Dokumente bearbeiten</span></div>
+  <div class="spacer"></div>
+  <a class="btn" href="admin-dashboard.html">Dashboard</a>
+  <a class="btn outline" id="logoutBtn" href="#">Logout</a>
+</header>
+
+<main>
+  <div class="card">
+    <h1>Dokumente</h1>
+    <div class="tabs">
+      <div class="tab active" data-tab="offen">Offen</div>
+      <div class="tab" data-tab="archiv">Archiv (30 Tage)</div>
+    </div>
+    <div id="info" class="muted" style="margin-top:6px"></div>
+    <div id="listWrap" style="margin-top:8px">
+      <table id="tbl">
+        <thead>
+          <tr>
+            <th style="width:120px">Typ</th>
+            <th>Titel</th>
+            <th style="width:160px">Erstellt</th>
+            <th style="width:220px">Aktionen</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</main>
+
+<!-- Details Drawer -->
+<div class="drawer" id="drawer">
+  <div class="panel">
+    <div class="row" style="justify-content:space-between;align-items:center">
+      <h2 style="margin:6px 0;color:var(--rot)" id="dTitle">Dokument</h2>
+      <button class="btn outline" id="closeDrawer">Schließen</button>
+    </div>
+    <div class="kv" style="margin:8px 0 12px">
+      <b>ID</b><div id="dId">—</div>
+      <b>Status</b><div id="dStatus">—</div>
+      <b>Erstellt</b><div id="dCreated">—</div>
+      <b>Typ</b><div id="dType">—</div>
+    </div>
+    <h3 style="margin:8px 0 6px;color:#444">Inhalt</h3>
+    <code class="json" id="dJson">—</code>
+    <div class="row" style="margin-top:12px">
+      <button class="btn" id="btnPdf">Als PDF speichern</button>
+      <button class="btn outline" id="btnDone">Als erledigt markieren</button>
+      <div id="dMsg" class="muted" style="align-self:center"></div>
+    </div>
+  </div>
+</div>
+
+<!-- jsPDF für den PDF-Export -->
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" defer></script>
+
+<script>
+/* =========================
+   1) Login-Guard (ohne Popup)
+   ========================= */
+(function guard(){
+  const isAdmin = localStorage.getItem('isAdmin') === '1';
+  if (!isAdmin) {
+    // stiller Redirect, ohne alert
+    location.replace('admin-login.html?next=dokumente-bearbeiten.html');
+  }
+})();
+
+/* =========================
+   2) Config
+   ========================= */
+const GQL_ENDPOINT = '/.netlify/functions/graphql'; // Netlify-Relay
+const info = document.getElementById('info');
+const tbody = document.getElementById('tbody');
+const tabs = document.querySelectorAll('.tab');
+let activeTab = 'offen';
+let cacheDocs = { offen:[], archiv:[] };
+
+/* =========================
+   3) Helpers
+   ========================= */
+function fmtDate(s){
+  try{ return new Date(s).toLocaleString('de-DE'); }catch(_){ return s||'—'; }
+}
+async function gql(query, variables){
+  const res = await fetch(GQL_ENDPOINT, {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ query, variables })
+  });
+  if (!res.ok) throw new Error('HTTP '+res.status+': '+await res.text());
+  const json = await res.json();
+  if (json.errors) throw new Error(json.errors[0]?.message || 'GraphQL error');
+  return json.data;
+}
+
+/* =========================
+   4) Laden & Rendern
+   ========================= */
+async function loadDocs(){
+  info.textContent = 'Lade Dokumente …';
+  try{
+    // Offen
+    const qOff = `
+      query{
+        documents(where:{status:{_eq:"offen"}}, order_by:{created_at:desc}){
+          id title type status created_at payload archived_until
+        }
+      }`;
+    // Archiv: erledigt & noch innerhalb 30 Tage (per archived_until)
+    const qArc = `
+      query($now: timestamptz!){
+        documents(where:{status:{_eq:"erledigt"}, archived_until:{_gt:$now}}, order_by:{created_at:desc}){
+          id title type status created_at payload archived_until
+        }
+      }`;
+    const nowIso = new Date().toISOString();
+    const [d1, d2] = await Promise.all([gql(qOff), gql(qArc, {now: nowIso})]);
+    cacheDocs.offen = d1.documents || [];
+    cacheDocs.archiv = d2.documents || [];
+    info.textContent = (activeTab==='offen'
+      ? `${cacheDocs.offen.length} offene Dokumente`
+      : `${cacheDocs.archiv.length} im Archiv (letzte 30 Tage)`);
+    renderRows();
+  }catch(err){
+    info.innerHTML = `<span class="err">Fehler: ${err.message}</span>`;
+  }
+}
+
+function renderRows(){
+  const rows = cacheDocs[activeTab];
+  tbody.innerHTML = '';
+  if (!rows.length){
+    tbody.innerHTML = `<tr><td colspan="4" class="muted">Keine Einträge.</td></tr>`;
+    return;
+  }
+  for (const r of rows){
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${r.type||'—'}</td>
+      <td>${escapeHtml(r.title||'—')}</td>
+      <td>${fmtDate(r.created_at)}</td>
+      <td class="row" style="gap:8px">
+        <button class="btn outline" data-open="${r.id}">Öffnen</button>
+        ${activeTab==='offen'
+          ? `<button class="btn" data-done="${r.id}">Erledigt</button>`
+          : `<button class="btn outline" data-open="${r.id}">Details</button>`}
+      </td>`;
+    tbody.appendChild(tr);
+  }
+}
+
+// einfache Escapes
+function escapeHtml(s){ return (s||'').replace(/[&<>"']/g,m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m])); }
+
+/* =========================
+   5) Tabs & Table Actions
+   ========================= */
+tabs.forEach(t=>{
+  t.addEventListener('click', ()=>{
+    tabs.forEach(x=>x.classList.remove('active'));
+    t.classList.add('active');
+    activeTab = t.dataset.tab;
+    info.textContent = activeTab==='offen'
+      ? `${cacheDocs.offen.length} offene Dokumente`
+      : `${cacheDocs.archiv.length} im Archiv (letzte 30 Tage)`;
+    renderRows();
+  });
+});
+
+tbody.addEventListener('click', async (e)=>{
+  const openId = e.target.getAttribute('data-open');
+  const doneId = e.target.getAttribute('data-done');
+  if (openId) openDoc(openId);
+  if (doneId) markDone(doneId);
+});
+
+/* =========================
+   6) Drawer (Details + PDF)
+   ========================= */
+const drawer = document.getElementById('drawer');
+const closeDrawer = document.getElementById('closeDrawer');
+const dTitle = document.getElementById('dTitle');
+const dId = document.getElementById('dId');
+const dStatus = document.getElementById('dStatus');
+const dCreated = document.getElementById('dCreated');
+const dType = document.getElementById('dType');
+const dJson = document.getElementById('dJson');
+const dMsg = document.getElementById('dMsg');
+const btnPdf = document.getElementById('btnPdf');
+const btnDone = document.getElementById('btnDone');
+let currentDoc = null;
+
+function showDrawer(show){ drawer.style.display = show ? 'flex' : 'none'; }
+
+async function openDoc(id){
+  try{
+    const q = `query($id:uuid!){
+      documents_by_pk(id:$id){ id title type status created_at payload }
+    }`;
+    const d = await gql(q, {id});
+    currentDoc = d.documents_by_pk;
+    if (!currentDoc){ return; }
+    dTitle.textContent = currentDoc.title || 'Dokument';
+    dId.textContent = currentDoc.id;
+    dStatus.textContent = currentDoc.status;
+    dCreated.textContent = fmtDate(currentDoc.created_at);
+    dType.textContent = currentDoc.type || '—';
+    dJson.textContent = JSON.stringify(currentDoc.payload || {}, null, 2);
+    btnDone.style.display = currentDoc.status==='offen' ? 'inline-block' : 'none';
+    dMsg.textContent = '';
+    showDrawer(true);
+  }catch(err){
+    alert('Konnte Dokument nicht laden: ' + err.message);
+  }
+}
+
+closeDrawer.addEventListener('click', ()=>showDrawer(false));
+
+btnPdf.addEventListener('click', async ()=>{
+  try{
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit:'pt', format:'a4' });
+    const margin = 40;
+    let y = margin;
+
+    doc.setFont('helvetica','bold'); doc.setFontSize(16);
+    doc.text('FFW – Dokument', margin, y); y += 22;
+
+    doc.setFontSize(12); doc.setFont('helvetica','normal');
+    doc.text(`Titel: ${currentDoc?.title||'-'}`, margin, y); y += 16;
+    doc.text(`Typ: ${currentDoc?.type||'-'}`, margin, y); y += 16;
+    doc.text(`Status: ${currentDoc?.status||'-'}`, margin, y); y += 16;
+    doc.text(`Erstellt: ${fmtDate(currentDoc?.created_at)||'-'}`, margin, y); y += 22;
+
+    const json = JSON.stringify(currentDoc?.payload||{}, null, 2);
+    const lines = doc.splitTextToSize(json, 520);
+    doc.text(lines, margin, y);
+
+    const file = (currentDoc?.title || 'dokument') + '.pdf';
+    doc.save(file);
+  }catch(err){
+    alert('PDF konnte nicht erstellt werden: ' + err.message);
+  }
+});
+
+/* =========================
+   7) Erledigt markieren
+   ========================= */
+async function markDone(id){
+  if (!confirm('Als erledigt markieren und ins Archiv (30 Tage) verschieben?')) return;
+  try{
+    const in30 = new Date(Date.now() + 30*24*60*60*1000).toISOString();
+    const m = `mutation($id:uuid!,$until:timestamptz!){
+      update_documents_by_pk(pk_columns:{id:$id}, _set:{status:"erledigt", archived_until:$until}){
+        id status archived_until
+      }
+    }`;
+    await gql(m, {id, until: in30});
+    await loadDocs();
+    if (drawer.style.display==='flex') showDrawer(false);
+  }catch(err){
+    alert('Konnte Status nicht setzen: ' + err.message);
+  }
+}
+
+/* =========================
+   8) Logout
+   ========================= */
+document.getElementById('logoutBtn').addEventListener('click', (e)=>{
+  e.preventDefault();
+  try{ localStorage.removeItem('isAdmin'); localStorage.removeItem('adminEmail'); }catch(_){}
+  location.href = 'admin-login.html';
+});
+
+/* Start */
+loadDocs();
+</script>
+</body>
+</html>
