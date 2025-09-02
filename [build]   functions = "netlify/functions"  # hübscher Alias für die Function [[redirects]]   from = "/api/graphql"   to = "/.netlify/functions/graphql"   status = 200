@@ -1,0 +1,8 @@
+[build]
+  functions = "netlify/functions"
+
+# hübscher Alias für die Function
+[[redirects]]
+  from = "/api/graphql"
+  to = "/.netlify/functions/graphql"
+  status = 200
