@@ -20,12 +20,10 @@
     .tabs{display:flex;gap:10px;margin-bottom:8px}
     .tab{border:1px solid #eee;background:#fafafa;padding:8px 14px;border-radius:999px;font-weight:800;cursor:pointer}
     .tab.active{color:#fff;background:var(--rot);border-color:var(--rot)}
-    /* Desktop */
     .table-head{display:grid;grid-template-columns:180px 1fr 160px;gap:10px;padding:10px 4px;color:#6b6b6b;font-weight:800;border-bottom:1px solid #eee}
     .table-wrap{display:block}
     .row{display:grid;grid-template-columns:180px 1fr 160px;gap:10px;padding:12px 6px;border-bottom:1px solid #eee;align-items:center}
     .row:last-child{border-bottom:none}
-    /* Mobile Cards */
     .row-card{display:none;background:#fff;border:1px solid #eee;border-radius:12px;padding:12px;margin:10px 0}
     .pill{display:inline-block;background:#eef2ff;color:#2a4bbb;font-weight:800;border-radius:999px;padding:4px 10px}
     .title{font-size:1.05rem;margin:.6rem 0 .2rem 0;font-weight:800}
@@ -34,7 +32,6 @@
     .btn{background:var(--rot);color:#fff;border:0;border-radius:10px;padding:9px 12px;font-weight:800;cursor:pointer}
     .btn.ghost{background:#f1f1f1;color:var(--rot);border:1px solid var(--rot)}
     .btn:active{transform:translateY(1px)}
-    /* Force mobile layout (zusätzlich zur MQ) */
     .is-mobile .table-wrap{display:none}
     .is-mobile .row-card{display:block}
     @media (max-width:860px){.table-wrap{display:none}.row-card{display:block}}
@@ -58,7 +55,6 @@
       <button class="tab" id="tab-arch">Archiv (30 Tage)</button>
     </div>
 
-    <!-- Desktop -->
     <div class="table-wrap" id="table">
       <div class="table-head">
         <div>Typ</div>
@@ -68,7 +64,6 @@
       <div id="rows"></div>
     </div>
 
-    <!-- Mobile -->
     <div id="cards"></div>
 
     <div id="msg" class="msg"></div>
@@ -77,7 +72,7 @@
 </div>
 
 <script type="module">
-  /* ========== Login-Guard ========== */
+  /* ===== Login-Guard ===== */
   import { NhostClient } from "https://esm.sh/@nhost/nhost-js@2.2.9";
   const nhost = new NhostClient({ subdomain:"hpjfrhktprpuuxvvlpsb", region:"eu-central-1" });
 
@@ -86,7 +81,7 @@
       const ok = await nhost.auth.isAuthenticatedAsync();
       if (!ok){ location.href = "admin-login.html"; return false; }
       return true;
-    }catch(_){ location.href="admin-login.html"; return false; }
+    }catch{ location.href="admin-login.html"; return false; }
   }
   if (!(await guard())) { /* stop */ }
 
@@ -97,32 +92,41 @@
     location.href = "admin-login.html";
   };
 
-  /* ========== Responsive helper (erzwingt Card-Layout auf klein) ========== */
+  /* ===== Responsive helper ===== */
   function setMobileClass(){ document.documentElement.classList.toggle('is-mobile', window.innerWidth<=860); }
-  window.addEventListener('resize', setMobileClass); setMobileClass();
+  addEventListener('resize', setMobileClass); setMobileClass();
 
-  /* ========== Utils ========== */
+  /* ===== UI helpers ===== */
   const $ = sel => document.querySelector(sel);
   const rowsEl = $('#rows'), cardsEl = $('#cards'), msgEl = $('#msg'), loadingEl = $('#loading');
   const tabOpen = $('#tab-open'), tabArch = $('#tab-arch');
 
-  function escapeHtml(s){
-    return String(s ?? '')
-      .replace(/[&<>"'\/]/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','/':'&#47;'}[m]));
-  }
-  function parsePayload(p){ if (p && typeof p==='string'){ try{ return JSON.parse(p);}catch{ return {}; } } return p||{}; }
+  const esc = s => String(s ?? '').replace(/[&<>"'\/]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','/':'&#47;'}[m]));
+  const parsePayload = p => (p && typeof p==='string') ? (JSON.parse(p||'{}')||{}) : (p||{});
 
-  /* ========== GraphQL über Netlify-Function /api/graphql ========== */
+  /* ===== GraphQL mit Fallback (/api -> /.netlify/functions) ===== */
+  const ENDPOINTS = ['/api/graphql','/.netlify/functions/graphql'];
+  let endpointIdx = 0;
+
   async function gql(query, variables={}){
-    const res = await fetch('/api/graphql',{
-      method:'POST',
-      headers:{'content-type':'application/json'},
-      body:JSON.stringify({query, variables})
-    });
-    if(!res.ok) throw new Error('HTTP '+res.status);
-    const json = await res.json();
-    if(json.errors?.length) throw new Error(json.errors[0].message);
-    return json.data;
+    let lastErr;
+    for (let i=0;i<ENDPOINTS.length;i++){
+      const url = ENDPOINTS[(endpointIdx + i) % ENDPOINTS.length];
+      try{
+        const res = await fetch(url, {
+          method:'POST',
+          headers:{'content-type':'application/json'},
+          body:JSON.stringify({query, variables})
+        });
+        if (res.status === 404) { lastErr = new Error('HTTP 404'); continue; }
+        if (!res.ok) throw new Error('HTTP '+res.status);
+        const json = await res.json();
+        if (json.errors?.length) throw new Error(json.errors[0].message);
+        endpointIdx = (endpointIdx + i) % ENDPOINTS.length; // funktionierende merken
+        return json.data;
+      }catch(e){ lastErr = e; }
+    }
+    throw lastErr || new Error('Unbekannter Fehler');
   }
 
   const QUERY_OPEN = `
@@ -134,10 +138,7 @@
 
   const QUERY_ARCH = `
     query($since:timestamptz!){
-      documents(
-        where:{ status:{_eq:"erledigt"}, created_at:{_gte:$since} },
-        order_by:{created_at:desc}
-      ){
+      documents(where:{ status:{_eq:"erledigt"}, created_at:{_gte:$since} }, order_by:{created_at:desc}){
         id type title status created_at payload
       }
     }`;
@@ -147,16 +148,14 @@
       update_documents_by_pk(pk_columns:{id:$id}, _set:{status:"erledigt"}){ id status }
     }`;
 
-  /* ========== Render ========== */
   function setTabs(which){
     if(which==='open'){ tabOpen.classList.add('active'); tabArch.classList.remove('active'); }
     else{ tabArch.classList.add('active'); tabOpen.classList.remove('active'); }
   }
 
   function renderList(list, isOpen){
-    // Desktop
     rowsEl.innerHTML = list.map(d=>{
-      const id=d.id, t=escapeHtml(d.type||''), title=escapeHtml(d.title||'(ohne Titel)');
+      const id=d.id, t=esc(d.type||''), title=esc(d.title||'(ohne Titel)');
       return `
         <div class="row" data-id="${id}">
           <div><span class="pill">${t}</span></div>
@@ -168,9 +167,8 @@
         </div>`;
     }).join('');
 
-    // Mobile
     cardsEl.innerHTML = list.map(d=>{
-      const id=d.id, t=escapeHtml(d.type||''), title=escapeHtml(d.title||'(ohne Titel)');
+      const id=d.id, t=esc(d.type||''), title=esc(d.title||'(ohne Titel)');
       return `
         <article class="row-card" data-id="${id}">
           <div class="pill">${t}</div>
@@ -206,7 +204,6 @@
     finally{ loadingEl.style.display='none'; }
   }
 
-  /* ========== Aktionen ========== */
   async function markDone(id){
     try{ loadingEl.style.display='block'; await gql(MUT_DONE,{id}); await loadOpen(); }
     catch(e){ alert('Konnte Status nicht setzen: '+e.message); }
@@ -220,35 +217,31 @@
       const doc = data.documents_by_pk; if(!doc) return alert('Dokument nicht gefunden.');
       const p = parsePayload(doc.payload);
       const rows = Array.isArray(p.positionen)?p.positionen:[];
-      const items = rows.map(it=>`<tr><td>${escapeHtml(it.qty??it.menge??'')}</td><td>${escapeHtml(it.name??it.artikel??'')}</td></tr>`).join('');
+      const items = rows.map(it=>`<tr><td>${esc(it.qty??it.menge??'')}</td><td>${esc(it.name??it.artikel??'')}</td></tr>`).join('');
 
-      const pop = window.open('', '_blank');
-      pop.document.write(
+      const w = window.open('', '_blank');
+      w.document.write(
         '<!doctype html><html><head><meta charset="utf-8"><title>PDF</title>'+
         '<style>body{font-family:system-ui,Arial,sans-serif;margin:24px}h1{margin:0 0 4px}table{width:100%;border-collapse:collapse;margin-top:10px}th,td{padding:8px;border-bottom:1px solid #ddd;text-align:left}</style>'+
         '</head><body>'+
-          '<h1>'+escapeHtml(doc.type||'Dokument')+'</h1>'+
-          '<div><strong>Titel:</strong> '+escapeHtml(doc.title||'(ohne Titel)')+'</div>'+
+          '<h1>'+esc(doc.type||'Dokument')+'</h1>'+
+          '<div><strong>Titel:</strong> '+esc(doc.title||'(ohne Titel)')+'</div>'+
           (rows.length?('<table><thead><tr><th>Menge</th><th>Artikel / Beschreibung</th></tr></thead><tbody>'+items+'</tbody></table>'):'')+
         '</body></html>'
       );
-      pop.document.close();
-      // pop.print(); // optional
+      w.document.close();
     }catch(e){ alert('PDF-Fehler: '+e.message); }
   }
 
-  // Button-Delegation
   document.addEventListener('click',(ev)=>{
     const t = ev.target;
     if (t.matches('[data-done]')) markDone(t.getAttribute('data-done'));
     if (t.matches('[data-pdf]'))  openPdf(t.getAttribute('data-pdf'));
   });
 
-  // Tabs
   tabOpen.onclick = loadOpen;
   tabArch.onclick = loadArch;
 
-  // Start
   await loadOpen();
 </script>
 </body>
