@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8"><title>Dokumente bearbeiten</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{--rot:#c8102e}
+  body{font-family:'Atkinson Hyperlegible',Arial,sans-serif;background:#f7f7f7;margin:0}
+  header{background:var(--rot);color:#fff;padding:12px 16px;font-weight:700}
+  .wrap{max-width:860px;margin:16px auto;padding:0 14px}
+  table{width:100%;border-collapse:collapse;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 3px 12px rgba(0,0,0,.06)}
+  th,td{padding:12px;border-bottom:1px solid #eee;font-size:0.98em;text-align:left}
+  th{color:var(--rot);background:#fff3f5}
+  tr:hover{background:#fff8f9;cursor:pointer}
+  .btn{background:var(--rot);color:#fff;border:none;border-radius:7px;padding:8px 12px;font-weight:700;cursor:pointer}
+</style>
+</head>
+<body>
+<header>Dokumente bearbeiten</header>
+<div class="wrap">
+  <table>
+    <thead><tr><th>Erstellt</th><th>Ersteller</th><th>Status</th><th>Aktion</th></tr></thead>
+    <tbody id="tbody"></tbody>
+  </table>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@nhost/nhost-js@2.2.9/dist/umd/index.min.js"></script>
+<script>
+  const NHOST_SUBDOMAIN='hpjfrhktprpuuxvvlpsb', NHOST_REGION='eu-central-1';
+  const nhost=new window.Nhost.NhostClient({ subdomain:NHOST_SUBDOMAIN, region:NHOST_REGION });
+
+  async function loadDocs(){
+    const { data, error } = await nhost.graphql.request(`
+      query{
+        patient_docs(where:{status:{_neq:"archiviert"}}, order_by:{created_at:desc}){
+          id created_at status created_by
+        }
+      }`);
+    const tb=document.getElementById('tbody'); tb.innerHTML='';
+    if (error){ tb.innerHTML='<tr><td colspan="4">Fehler beim Laden.</td></tr>'; return; }
+    if (!data.patient_docs.length){ tb.innerHTML='<tr><td colspan="4">Keine offenen Dokumente.</td></tr>'; return; }
+    data.patient_docs.forEach(doc=>{
+      const tr=document.createElement('tr');
+      const dt=new Date(doc.created_at).toLocaleString();
+      tr.innerHTML=`<td>${dt}</td><td>${doc.created_by}</td><td>${doc.status}</td>
+                    <td><button class="btn" onclick="openDoc('${doc.id}')">Gegenzeichnen</button></td>`;
+      tr.onclick=()=>openDoc(doc.id);
+      tb.appendChild(tr);
+    });
+  }
+  function openDoc(id){ location.href = 'admin_gegenzeichnen.html?docId='+encodeURIComponent(id); }
+  (async()=>{ await nhost.auth.refreshSession().catch(()=>{}); loadDocs(); })();
+</script>
+</body>
+</html>

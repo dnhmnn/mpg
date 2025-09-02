@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8"><title>CIRS-Meldung</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<style>
+ :root{--rot:#c8102e}
+ body{font-family:'Atkinson Hyperlegible',Arial,sans-serif;background:#f7f7f7;margin:0}
+ header{background:var(--rot);color:#fff;padding:12px 16px;font-weight:700}
+ .wrap{max-width:820px;margin:16px auto;padding:0 12px}
+ .card{background:#fff;border-radius:12px;box-shadow:0 3px 12px rgba(0,0,0,.06);padding:14px;margin-bottom:12px}
+ label{color:var(--rot);font-weight:700;margin-top:8px;display:block}
+ input,select,textarea{width:100%;padding:8px;border:1px solid #ccc;border-radius:8px;background:#fafafa}
+ textarea{min-height:90px}
+ .row{display:flex;gap:10px;flex-wrap:wrap}
+ #sig{width:100%;height:150px;border:2px dashed var(--rot);border-radius:10px;background:#fffafc;touch-action:none}
+ .btn{background:var(--rot);color:#fff;border:none;border-radius:8px;padding:10px 14px;font-weight:700;cursor:pointer}
+ .btn.sec{background:#eee;color:var(--rot);border:1px solid var(--rot)}
+ .msg{color:#2e7d32;min-height:1.2em;margin-top:6px}
+</style>
+</head>
+<body>
+<header>CIRS-Meldung</header>
+<div class="wrap">
+  <div class="card">
+    <div class="row">
+      <div style="flex:1"><label>Datum/Uhrzeit</label><input id="dt" type="datetime-local"></div>
+      <div style="flex:1"><label>Einsatznummer (optional)</label><input id="einsatz"></div>
+    </div>
+    <label>Kategorie</label>
+    <select id="kat">
+      <option>Medikamente</option>
+      <option>Material/Technik</option>
+      <option>Kommunikation</option>
+      <option>Organisation/Prozess</option>
+      <option>Sonstiges</option>
+    </select>
+    <label>Beschreibung (Was ist passiert?)</label>
+    <textarea id="desc"></textarea>
+    <label>Maßnahmen/Vorschläge</label>
+    <textarea id="measures"></textarea>
+  </div>
+
+  <div class="card">
+    <div class="row">
+      <div style="flex:1"><label>Melder-Name</label><input id="melder"></div>
+      <div style="flex:1">
+        <label>Unterschrift</label>
+        <canvas id="sig"></canvas>
+        <div class="row" style="justify-content:flex-end;margin-top:8px">
+          <button class="btn sec" onclick="clearSig()" type="button">Unterschrift zurücksetzen</button>
+        </div>
+      </div>
+    </div>
+    <div class="row">
+      <button class="btn" onclick="submitCIRS()">Absenden</button>
+      <button class="btn sec" onclick="saveDraft()">Zwischenspeichern</button>
+    </div>
+    <div id="msg" class="msg"></div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@nhost/nhost-js@2.2.9/dist/umd/index.min.js"></script>
+<script>
+const NHOST_SUBDOMAIN='hpjfrhktprpuuxvvlpsb', NHOST_REGION='eu-central-1';
+const nhost=new window.Nhost.NhostClient({ subdomain:NHOST_SUBDOMAIN, region:NHOST_REGION });
+
+const canvas=document.getElementById('sig'); const ctx=canvas.getContext('2d'); let drawing=false;
+function resizeCanvas(){ canvas.width=canvas.offsetWidth; canvas.height=150; ctx.lineWidth=2.6; ctx.lineCap='round'; ctx.strokeStyle='#c8102e'; }
+addEventListener('resize',resizeCanvas); resizeCanvas();
+canvas.addEventListener('mousedown',e=>{drawing=true;ctx.beginPath();ctx.moveTo(e.offsetX,e.offsetY);});
+canvas.addEventListener('mousemove',e=>{if(drawing){ctx.lineTo(e.offsetX,e.offsetY);ctx.stroke();}});
+canvas.addEventListener('mouseup',()=>drawing=false); canvas.addEventListener('mouseleave',()=>drawing=false);
+canvas.addEventListener('touchstart',e=>{if(e.touches.length===1){const r=canvas.getBoundingClientRect();ctx.beginPath();ctx.moveTo(e.touches[0].clientX-r.left,e.touches[0].clientY-r.top);drawing=true;}},{passive:false});
+canvas.addEventListener('touchmove',e=>{if(drawing&&e.touches.length===1){const r=canvas.getBoundingClientRect();ctx.lineTo(e.touches[0].clientX-r.left,e.touches[0].clientY-r.top);ctx.stroke();}e.preventDefault();},{passive:false});
+canvas.addEventListener('touchend',()=>drawing=false);
+function clearSig(){ ctx.clearRect(0,0,canvas.width,canvas.height); }
+function getSig(){ const blank=document.createElement('canvas'); blank.width=canvas.width; blank.height=canvas.height; return (canvas.toDataURL()===blank.toDataURL())?null:canvas.toDataURL('image/png'); }
+
+const DRAFT_KEY='draft_cirs';
+function saveDraft(){ const d=collect(); localStorage.setItem(DRAFT_KEY, JSON.stringify(d)); msg.textContent='Entwurf gespeichert'; }
+function loadDraft(){ const raw=localStorage.getItem(DRAFT_KEY); if(!raw) return; try{ const d=JSON.parse(raw);
+  ['dt','einsatz','kat','desc','measures','melder'].forEach(id=>{ if(d[id]!=null) document.getElementById(id).value=d[id]; });
+  if (d.signature){ const img=new Image(); img.onload=()=>ctx.drawImage(img,0,0,canvas.width,canvas.height); img.src=d.signature; }
+}catch(e){} }
+function collect(){ return { dt:dt.value, einsatz:einsatz.value, kat:kat.value, desc:desc.value, measures:measures.value, melder:melder.value, signature:getSig() }; }
+
+async function submitCIRS(){
+  const d=collect();
+  if(!d.melder || !d.signature){ msg.textContent='Bitte Name und Unterschrift setzen.'; msg.style.color='#c8102e'; return; }
+  await nhost.auth.refreshSession().catch(()=>{});
+  const user=await nhost.auth.getUser(); if(!user.user?.id){ msg.textContent='Nicht eingeloggt.'; msg.style.color='#c8102e'; return; }
+
+  const MUT=`mutation($obj:patient_docs_insert_input!){ insert_patient_docs_one(object:$obj){ id } }`;
+  const obj={ created_by:user.user.id, status:'offen', patient_data:{ type:'cirs', ...d } };
+  const { data, error } = await nhost.graphql.request(MUT,{ obj });
+  if (error){ msg.textContent='Fehler: '+error.message; msg.style.color='#c8102e'; return; }
+  localStorage.removeItem(DRAFT_KEY);
+  msg.textContent='CIRS-Meldung gespeichert ✔'; msg.style.color='#2e7d32';
+  setTimeout(()=>location.href='uebersicht.html',900);
+}
+
+const msg=document.getElementById('msg');
+loadDraft();
+</script>
+</body>
+</html>

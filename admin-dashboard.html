@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Admin-Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root { --rot: #c8102e; }
+    * { box-sizing: border-box; }
+    body { font-family: 'Atkinson Hyperlegible', Arial, sans-serif; background:#f7f7f7; margin:0 }
+    header { background: var(--rot); color:#fff; display:flex; align-items:center; gap:12px; padding:10px 14px; }
+    header img { height:42px; width:auto }
+    header h1 { margin:0; font-size:1.15rem; font-weight:700; letter-spacing:.2px }
+    .spacer { flex:1 }
+    .topbtn { color:#fff; text-decoration:none; background:#00000022; padding:7px 10px; border-radius:8px }
+    .wrap { max-width:1050px; margin:16px auto; padding:0 14px; display:grid; grid-template-columns:260px 1fr; gap:16px }
+    aside { background:#fff; border-radius:12px; box-shadow:0 3px 12px rgba(0,0,0,.06); padding:14px }
+    aside h3 { margin:6px 0 12px; color:var(--rot) }
+    .nav a { display:block; padding:10px 12px; margin:6px 0; border-radius:8px; text-decoration:none; color:#222; font-weight:700; border:1px solid #eee }
+    .nav a:hover { background:#fff5f7; border-color:#f2c9d1 }
+    main { display:flex; flex-direction:column; gap:16px }
+    .card { background:#fff; border-radius:12px; box-shadow:0 3px 12px rgba(0,0,0,.06); padding:14px }
+    .card h2 { margin:0 0 10px; color:var(--rot) }
+    .news li { margin:6px 0 }
+    .pill { display:inline-block; background:#fff5f5; color:#8b0e22; border:1px solid #f2c9d1; border-radius:999px; padding:2px 8px; font-size:.82rem; margin-left:6px }
+    .notes-list { max-height:220px; overflow:auto; border:1px solid #eee; border-radius:10px; padding:8px }
+    .note { border-bottom:1px solid #eee; padding:6px 0 }
+    .note:last-child { border-bottom:none }
+    .meta { color:#777; font-size:.9rem }
+    .row { display:flex; gap:10px; flex-wrap:wrap }
+    input,textarea,button { font-family:inherit; font-size:1rem }
+    input,textarea { width:100%; padding:9px 10px; border:1px solid #ccc; border-radius:8px; background:#fafafa }
+    textarea { min-height:70px; resize:vertical }
+    .btn { background:var(--rot); color:#fff; border:0; border-radius:8px; padding:10px 14px; font-weight:700; cursor:pointer }
+    .btn.sec { background:#eee; color:var(--rot); border:1px solid var(--rot) }
+    .ok { color:#2e7d32 }
+    .err { color:#c8102e }
+    .msg { min-height:1.2em }
+    @media (max-width: 800px){ .wrap{ grid-template-columns:1fr } }
+  </style>
+</head>
+<body>
+<header>
+  <img src="logo.png" alt="Logo">
+  <h1>FFW – Admin-Dashboard</h1>
+  <div class="spacer"></div>
+  <a class="topbtn" href="#" id="changePwBtn">Passwort ändern</a>
+  <a class="topbtn" href="#" id="logoutBtn">Logout</a>
+</header>
+
+<div class="wrap">
+  <aside>
+    <h3>Bereiche</h3>
+    <nav class="nav">
+      <a href="dokumente-bearbeiten.html">📋 Dokumente bearbeiten</a>
+      <a href="lagerverwaltung.html">📦 Lagerverwaltung</a>
+      <a href="wartung.html">🛠️ Wartung</a>                 <!-- NEU -->
+      <a href="digitale-dokumente.html">📄 Digitale Dokumente</a> <!-- NEU -->
+      <a href="archiv.html">🗄️ Archiv</a>
+    </nav>
+    <div style="margin-top:14px; font-size:.95rem">
+      Eingeloggt als:<br>
+      <strong id="who">—</strong>
+    </div>
+    <div id="guardMsg" class="err" style="margin-top:8px"></div>
+  </aside>
+
+  <main>
+    <section class="card">
+      <h2>Neuigkeiten</h2>
+      <ul class="news" id="newsList">
+        <li>🆕 Neue Patientendoku #1073 zur Gegenzeichnung <span class="pill">Dokument</span></li>
+        <li>⚠️ Produkt „Glucose“ in 12/1 bald leer <span class="pill">Lager</span></li>
+        <li>⏳ Nächste Wartung am 05.09. <span class="pill">Info</span></li>
+      </ul>
+      <div class="msg" id="newsMsg"></div>
+    </section>
+
+    <section class="card">
+      <h2>Notizen / Admin-Chat</h2>
+      <div class="notes-list" id="notes"></div>
+      <div class="row" style="margin-top:10px">
+        <input id="noteName" placeholder="Dein Name" style="max-width:220px">
+        <textarea id="noteText" placeholder="Bemerkung …"></textarea>
+        <button class="btn" id="addNoteBtn" style="min-width:160px">Hinzufügen</button>
+      </div>
+      <div class="row" style="margin-top:6px; justify-content:flex-end">
+        <button class="btn sec" id="clearNotesBtn">Chat löschen (lokal)</button>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script type="module">
+  import { NhostClient } from "https://esm.sh/@nhost/nhost-js@2.2.9";
+
+  const nhost = new NhostClient({
+    subdomain: "hpjfrhktprpuuxvvlpsb",
+    region: "eu-central-1"
+  });
+
+  const guardMsg = document.getElementById('guardMsg');
+  const whoEl = document.getElementById('who');
+
+  async function guard() {
+    try {
+      const isAuth = await nhost.auth.isAuthenticatedAsync();
+      if (!isAuth) {
+        guardMsg.textContent = "Nicht eingeloggt. Weiterleitung …";
+        setTimeout(()=> location.href = "admin-login.html", 600);
+        return;
+      }
+      const user = nhost.auth.getUser();
+      whoEl.textContent = user?.email || "—";
+      guardMsg.textContent = "";
+    } catch (e) {
+      guardMsg.textContent = "Fehler beim Auth-Check: " + e.message;
+      setTimeout(()=> location.href = "admin-login.html", 1000);
+    }
+  }
+  await guard();
+
+  // Logout
+  document.getElementById('logoutBtn')?.addEventListener('click', async (e)=>{
+    e.preventDefault();
+    await nhost.auth.signOut();
+    localStorage.clear();
+    location.href = "admin-login.html";
+  });
+
+  // Passwort ändern (Modal)
+  document.getElementById('changePwBtn')?.addEventListener('click', (e)=>{
+    e.preventDefault();
+    const html = `
+      <div id="pw-modal" style="position:fixed;inset:0;background:rgba(0,0,0,.5);
+           display:flex;align-items:center;justify-content:center;z-index:9999">
+        <div style="background:#fff;border-radius:12px;padding:16px;max-width:420px;width:92%;
+                    box-shadow:0 6px 24px rgba(0,0,0,.2);font-family:system-ui">
+          <h3 style="margin:.2rem 0 1rem 0">Passwort ändern</h3>
+          <div style="display:grid;gap:.6rem">
+            <input id="pw1" type="password" placeholder="Neues Passwort (min. 8 Zeichen)"
+                   style="padding:.6rem;border:1px solid #ccc;border-radius:8px">
+            <input id="pw2" type="password" placeholder="Neues Passwort wiederholen"
+                   style="padding:.6rem;border:1px solid #ccc;border-radius:8px">
+            <div id="pw-msg" style="min-height:1.2em;color:#c8102e"></div>
+            <div style="display:flex;gap:.5rem;justify-content:flex-end">
+              <button id="pw-cancel" style="padding:.5rem .8rem;border-radius:8px;border:1px solid #ddd;background:#f7f7f7">Abbrechen</button>
+              <button id="pw-save"   style="padding:.5rem .8rem;border-radius:8px;border:0;background:#c8102e;color:#fff;font-weight:700">Speichern</button>
+            </div>
+          </div>
+        </div>
+      </div>`;
+    document.body.insertAdjacentHTML('beforeend', html);
+    const modal = document.getElementById('pw-modal');
+    const msg   = document.getElementById('pw-msg');
+
+    document.getElementById('pw-cancel').onclick = ()=> modal.remove();
+    document.getElementById('pw-save').onclick   = async ()=>{
+      const p1 = (document.getElementById('pw1').value||'').trim();
+      const p2 = (document.getElementById('pw2').value||'').trim();
+      msg.style.color = "#c8102e";
+      if (!p1 || p1.length < 8) { msg.textContent = "Mindestens 8 Zeichen."; return; }
+      if (p1 !== p2) { msg.textContent = "Passwörter stimmen nicht überein."; return; }
+
+      try {
+        await nhost.auth.changePassword(p1);
+        msg.style.color = "#2e7d32";
+        msg.textContent = "Passwort gespeichert.";
+        setTimeout(()=> modal.remove(), 900);
+      } catch (e) {
+        msg.textContent = e?.message || "Fehler beim Ändern.";
+      }
+    };
+  });
+
+  // Notizen (lokal)
+  const NOTES_KEY = 'admin_notes';
+  const notesEl = document.getElementById('notes');
+  const noteName = document.getElementById('noteName');
+  const noteText = document.getElementById('noteText');
+  const addBtn = document.getElementById('addNoteBtn');
+  const clearBtn = document.getElementById('clearNotesBtn');
+
+  function loadNotes() {
+    const raw = localStorage.getItem(NOTES_KEY);
+    const list = raw ? JSON.parse(raw) : [];
+    notesEl.innerHTML = "";
+    list.slice().reverse().forEach(n=>{
+      const div = document.createElement('div');
+      div.className = 'note';
+      div.innerHTML = `<div class="meta">${n.name} – ${n.ts}</div>${n.text}`;
+      notesEl.appendChild(div);
+    });
+  }
+  function saveNote(name,text){
+    const raw = localStorage.getItem(NOTES_KEY);
+    const list = raw ? JSON.parse(raw) : [];
+    list.push({ name, text, ts: ts() });
+    localStorage.setItem(NOTES_KEY, JSON.stringify(list));
+  }
+  function ts(){
+    const d = new Date();
+    const p=n=>String(n).padStart(2,'0');
+    return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+  }
+
+  addBtn.addEventListener('click', ()=>{
+    const name = noteName.value.trim() || "Admin";
+    const text = noteText.value.trim();
+    if (!text) return;
+    saveNote(name, text);
+    noteText.value = "";
+    loadNotes();
+  });
+  clearBtn.addEventListener('click', ()=>{
+    if (confirm('Chat wirklich lokal löschen?')) {
+      localStorage.removeItem(NOTES_KEY);
+      loadNotes();
+    }
+  });
+
+  loadNotes();
+</script>
+</body>
+</html>

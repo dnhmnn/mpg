@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <title>Patientendokumentation</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root { --rot:#c8102e; }
+    body { font-family:'Atkinson Hyperlegible', Arial, sans-serif; background:#f7f7f7; margin:0; }
+    header { background:var(--rot); padding:8px 16px; display:flex; align-items:center; gap:12px; color:#fff; }
+    header img { height:42px; width:auto; }
+    header h1 { font-size:1.1rem; margin:0; font-weight:700; }
+    .wrap { max-width:900px; margin:16px auto; padding:0 12px; }
+    .card { background:#fff; border-radius:12px; box-shadow:0 3px 12px rgba(0,0,0,.06); padding:14px; margin-bottom:12px; }
+    h2 { margin:0 0 8px; color:var(--rot); }
+    label { color:var(--rot); font-weight:700; margin-top:8px; display:block; }
+    input, select, textarea { width:100%; padding:8px; border:1px solid #ccc; border-radius:8px; background:#fafafa; }
+    textarea { min-height:70px; }
+    .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .grid4 { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
+    @media (max-width:700px) { .grid2,.grid4 { grid-template-columns:1fr; } }
+    #sig { width:100%; height:170px; border:2px dashed var(--rot); border-radius:10px; background:#fffafc; touch-action:none; }
+    .row { display:flex; gap:10px; flex-wrap:wrap; }
+    .btn { background:var(--rot); color:#fff; border:none; border-radius:8px; padding:10px 14px; font-weight:700; cursor:pointer; }
+    .btn.sec { background:#eee; color:var(--rot); border:1px solid var(--rot); }
+    .msg { color:var(--rot); min-height:1.2em; margin-top:6px; }
+    .hint { font-size:.9em; color:#666; }
+  </style>
+</head>
+<body>
+<header>
+  <img src="logo.png" alt="Logo">
+  <h1>FFW – Patientendokumentation</h1>
+</header>
+
+<div class="wrap">
+
+  <!-- Stammdaten -->
+  <div class="card">
+    <h2>Stammdaten & Einsatz</h2>
+    <div class="grid2">
+      <div><label>Einsatznummer</label><input id="einsatznr"></div>
+      <div><label>Ausfüller (Name)</label><input id="ausfueller"></div>
+      <div><label>Patient: Name</label><input id="p_name"></div>
+      <div><label>Geburtsdatum</label><input type="date" id="p_dob"></div>
+    </div>
+    <h3 class="hint">Adresse</h3>
+    <div class="grid4">
+      <div><label>Straße</label><input id="addr_str"></div>
+      <div><label>Hausnr.</label><input id="addr_nr"></div>
+      <div><label>PLZ</label><input id="addr_plz"></div>
+      <div><label>Ort</label><input id="addr_ort"></div>
+    </div>
+    <h3 class="hint" style="margin-top:8px">Statuszeiten</h3>
+    <div class="grid4">
+      <div><label>Status 1</label><input type="datetime-local" id="st1"></div>
+      <div><label>Status 2</label><input type="datetime-local" id="st2"></div>
+      <div><label>Status 3</label><input type="datetime-local" id="st3"></div>
+      <div><label>Status 4</label><input type="datetime-local" id="st4"></div>
+    </div>
+  </div>
+
+  <!-- Fahrzeuge -->
+  <div class="card">
+    <h2>Fahrzeuge</h2>
+    <div class="grid2">
+      <div><label>Fahrzeuge RD</label><input id="fz_rd"></div>
+      <div><label>Fahrzeuge FW</label><input id="fz_fw"></div>
+    </div>
+    <div class="grid2">
+      <div><label>Laien-Reanimation vor Eintreffen FW</label>
+        <select id="laien_rea"><option value="nein">nein</option><option value="ja">ja</option></select>
+      </div>
+      <div><label>Defibrillation (AED FW) – Anzahl Schocks</label><input type="number" id="aed_schocks"></div>
+      <div><label>Defibrillierbarer Rhythmus</label>
+        <select id="aed_rhythmus"><option value="nein">nein</option><option value="ja">ja</option></select>
+      </div>
+    </div>
+  </div>
+
+  <!-- Vitalwerte -->
+  <div class="card">
+    <h2>Vitalwerte & Anamnese</h2>
+    <label>Anamnese</label><textarea id="anamnese"></textarea>
+    <label>Vitalwerte</label><textarea id="vital"></textarea>
+
+    <h3 class="hint">GCS</h3>
+    <div class="grid2">
+      <div><label>Auge (E)</label>
+        <select id="gcs_e" onchange="calcGCS()">
+          <option value="4">4 – spontan</option>
+          <option value="3">3 – auf Ansprache</option>
+          <option value="2">2 – Schmerz</option>
+          <option value="1">1 – keiner</option>
+        </select>
+      </div>
+      <div><label>Verbal (V)</label>
+        <select id="gcs_v" onchange="calcGCS()">
+          <option value="5">5 – orientiert</option>
+          <option value="4">4 – konfus</option>
+          <option value="3">3 – unzusammenhängend</option>
+          <option value="2">2 – unverständliche Laute</option>
+          <option value="1">1 – keiner</option>
+        </select>
+      </div>
+      <div><label>Motorik (M)</label>
+        <select id="gcs_m" onchange="calcGCS()">
+          <option value="6">6 – befolgt</option>
+          <option value="5">5 – gezielt</option>
+          <option value="4">4 – zurückziehen</option>
+          <option value="3">3 – Beuge</option>
+          <option value="2">2 – Streck</option>
+          <option value="1">1 – keiner</option>
+        </select>
+      </div>
+      <div><label>GCS Summe</label><input id="gcs_sum" readonly></div>
+    </div>
+  </div>
+
+  <!-- Invasive -->
+  <div class="card">
+    <h2>Invasive Maßnahmen</h2>
+    <div class="grid2">
+      <div><label>Invasive Maßnahmen?</label>
+        <select id="inv_yesno"><option value="nein">nein</option><option value="ja">ja</option></select>
+      </div>
+      <div><label>Dokumentation</label><textarea id="inv_list"></textarea></div>
+    </div>
+  </div>
+
+  <!-- Tätigkeit FW -->
+  <div class="card">
+    <h2>Tätigkeit Feuerwehr</h2>
+    <textarea id="fw_taetigkeit"></textarea>
+  </div>
+
+  <!-- Unterschrift -->
+  <div class="card">
+    <h2>Unterschrift & Senden</h2>
+    <div class="grid2">
+      <div><label>Ausfüller</label><input id="sign_name"></div>
+      <div>
+        <label>Digitale Unterschrift</label>
+        <canvas id="sig"></canvas>
+        <button class="btn sec" type="button" onclick="clearSig()">Zurücksetzen</button>
+      </div>
+    </div>
+    <div class="row">
+      <button class="btn" onclick="submitDoc()">Absenden</button>
+      <button class="btn sec" onclick="saveDraft()">Zwischenspeichern</button>
+    </div>
+    <div id="msg" class="msg"></div>
+  </div>
+
+</div>
+
+<script>
+function calcGCS(){ gcs_sum.value=+gcs_e.value + +gcs_v.value + +gcs_m.value; }
+calcGCS();
+
+// Canvas Unterschrift
+const canvas=document.getElementById('sig');const ctx=canvas.getContext('2d');let drawing=false;
+function resize(){canvas.width=canvas.offsetWidth;canvas.height=170;ctx.lineWidth=2.6;ctx.lineCap='round';ctx.strokeStyle='#c8102e';}
+window.addEventListener('resize',resize);resize();
+canvas.addEventListener('mousedown',e=>{drawing=true;ctx.beginPath();ctx.moveTo(e.offsetX,e.offsetY);});
+canvas.addEventListener('mousemove',e=>{if(drawing){ctx.lineTo(e.offsetX,e.offsetY);ctx.stroke();}});
+canvas.addEventListener('mouseup',()=>drawing=false);
+canvas.addEventListener('mouseleave',()=>drawing=false);
+function clearSig(){ctx.clearRect(0,0,canvas.width,canvas.height);}
+function getSig(){return canvas.toDataURL();}
+
+function saveDraft(){localStorage.setItem('draft',JSON.stringify(collectData()));showMsg('Entwurf gespeichert');}
+function showMsg(t){document.getElementById('msg').textContent=t;}
+function collectData(){return {einsatznr:einsatznr.value,ausfueller:ausfueller.value};}
+function submitDoc(){showMsg('Formular abgesendet ✔');}
+</script>
+</body>
+</html>
