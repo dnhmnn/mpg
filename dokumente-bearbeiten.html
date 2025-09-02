@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Dokumente bearbeiten</title>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{ --rot:#c8102e; --hell:#fff5f5 }
+  *{ box-sizing:border-box }
+  body{ font-family:'Atkinson Hyperlegible',Arial,sans-serif; background:#f7f7f7; margin:0 }
+  header{ background:var(--rot); color:#fff; display:flex; align-items:center; gap:12px; padding:10px 14px }
+  header img{ height:40px }
+  header h1{ margin:0; font-size:1.05rem; font-weight:700 }
+  .spacer{ flex:1 }
+  .topbtn{ background:#ffffff22; color:#fff; text-decoration:none; padding:8px 12px; border-radius:10px; font-weight:700 }
+  .wrap{ max-width:1100px; margin:16px auto; padding:0 14px; display:grid; grid-template-columns:320px 1fr; gap:16px }
+  @media (max-width: 980px){ .wrap{ grid-template-columns:1fr } }
+
+  .card{ background:#fff; border-radius:12px; box-shadow:0 3px 12px rgba(0,0,0,.06); padding:14px }
+  .card h2{ margin:0 0 10px; color:var(--rot) }
+  .tabs{ display:flex; gap:8px; margin-bottom:10px }
+  .tab{ background:#eee; border:0; padding:8px 12px; border-radius:10px; cursor:pointer; font-weight:700 }
+  .tab.active{ background:var(--rot); color:#fff }
+
+  .doclist{ display:flex; flex-direction:column; gap:8px; max-height:70vh; overflow:auto }
+  .docitem{ border:1px solid #eee; border-radius:10px; padding:10px; cursor:pointer; background:#fff }
+  .docitem:hover{ background:#fff9f9 }
+  .doctitle{ font-weight:700 }
+  .docmeta{ color:#666; font-size:.92rem }
+
+  .kv{ display:grid; grid-template-columns:160px 1fr; gap:8px 12px; margin:10px 0 14px }
+  .kv div:nth-child(odd){ color:#666 }
+  .tbl{ width:100%; border-collapse:collapse; margin:8px 0 }
+  .tbl th,.tbl td{ border:1px solid #ddd; padding:8px 10px }
+  .tbl th{ background:#fafafa; text-align:left }
+
+  .btn{ background:var(--rot); color:#fff; border:0; border-radius:10px; padding:10px 14px; cursor:pointer; font-weight:700 }
+  .btn.ghost{ background:#eee; color:var(--rot); border:1px solid var(--rot) }
+  .btn-row{ display:flex; gap:10px; flex-wrap:wrap }
+
+  .badge{ display:inline-block; background:var(--hell); color:#8b0e22; border:1px solid #f2c9d1; border-radius:999px; padding:2px 8px; font-size:.84rem }
+  .hint{ color:#666; font-size:.92rem }
+  .msg{ min-height:1.2em; margin-top:8px }
+  .ok{ color:#2e7d32 } .err{ color:#c8102e }
+  pre.json{ background:#fafafa; border:1px solid #eee; border-radius:10px; padding:10px; overflow:auto; max-height:28vh }
+
+  .metaUser{ font-size:.95rem; opacity:.9 }
+</style>
+</head>
+<body>
+
+<header>
+  <img src="logo.png" onerror="this.src='assets/logo.png'" alt="Logo">
+  <h1>FFW – Dokumente bearbeiten</h1>
+  <div class="spacer"></div>
+  <div class="metaUser" id="who">—</div>
+  <a class="topbtn" href="admin-dashboard.html">Dashboard</a>
+  <a class="topbtn" href="#" id="logoutBtn">Logout</a>
+</header>
+
+<div class="wrap">
+  <!-- Liste -->
+  <section class="card">
+    <h2>Dokumente</h2>
+
+    <div class="tabs">
+      <button class="tab active" data-tab="offen">Offen</button>
+      <button class="tab" data-tab="archiv">Archiv (30 Tage)</button>
+    </div>
+
+    <div id="list-offen"  class="doclist"></div>
+    <div id="list-archiv" class="doclist" style="display:none"></div>
+
+    <div id="listMsg" class="msg"></div>
+  </section>
+
+  <!-- Detail -->
+  <section class="card" id="detailBox">
+    <h2 id="detailTitle">Details</h2>
+
+    <div id="noSel" class="hint">Bitte ein Dokument in der Liste auswählen.</div>
+
+    <div id="detail" style="display:none">
+      <div class="kv">
+        <div>Typ</div>           <div><span id="dType" class="badge">–</span></div>
+        <div>Status</div>        <div id="dStatus">–</div>
+        <div>Erstellt</div>      <div id="dCreated">–</div>
+        <div>Titel</div>         <div id="dTitle">–</div>
+        <div>Einsatznummer</div> <div id="dEinsatz">–</div>
+        <div>Datum</div>         <div id="dDatum">–</div>
+        <div>Ausgetragen von</div><div id="dBy">–</div>
+      </div>
+
+      <h3>Positionen</h3>
+      <table class="tbl" id="posTbl">
+        <thead><tr><th style="width:90px">Menge</th><th>Artikel / Beschreibung</th></tr></thead>
+        <tbody></tbody>
+      </table>
+
+      <div class="btn-row">
+        <button class="btn" id="btnPdf">PDF erstellen</button>
+        <button class="btn ghost" id="btnDone">Als erledigt markieren</button>
+      </div>
+
+      <h3 style="margin-top:16px">Rohdaten</h3>
+      <pre id="raw" class="json">{}</pre>
+
+      <div id="detailMsg" class="msg"></div>
+    </div>
+  </section>
+</div>
+
+<!-- ======= Admin-Login-Guard (Nhost) – MUSS vor dem App-Script stehen ======= -->
+<script type="module">
+  import { NhostClient } from "https://esm.sh/@nhost/nhost-js@2.2.9";
+
+  const nhost = new NhostClient({
+    subdomain: "hpjfrhktprpuuxvvlpsb",
+    region: "eu-central-1"
+  });
+
+  const redirectToLogin = () => {
+    const next = encodeURIComponent(location.pathname.split('/').pop() || 'dokumente-bearbeiten.html');
+    location.href = `admin-login.html?next=${next}`;
+  };
+
+  try { await nhost.auth.refreshSession(); } catch(_) {}
+
+  const sess = await nhost.auth.getSession();
+  if (!sess?.user) {
+    redirectToLogin();
+    throw new Error('no session');
+  }
+
+  // Admin-Rolle aus JWT prüfen
+  let isAdmin = false;
+  try {
+    const payload = JSON.parse(atob(sess.accessToken.split('.')[1]));
+    const claims  = payload["https://hasura.io/jwt/claims"] || {};
+    const roles   = claims["x-hasura-allowed-roles"] || [];
+    const defRole = claims["x-hasura-default-role"] || "";
+    isAdmin = roles.includes("admin") || defRole === "admin";
+  } catch (_) {}
+
+  if (!isAdmin) {
+    alert("Kein Zugriff. Diese Seite ist nur für Admins.");
+    try { await nhost.auth.signOut(); } catch(_){}
+    redirectToLogin();
+    throw new Error('not admin');
+  }
+
+  // Erfolgreich: Flags/Infos bereitstellen
+  window.__ADMIN_OK__ = true;
+  window.__NHOST__ = nhost;
+  window.__ADMIN_EMAIL__ = sess.user.email || "—";
+  document.getElementById('who').textContent = window.__ADMIN_EMAIL__;
+
+  // Logout-Button
+  document.getElementById('logoutBtn')?.addEventListener('click', async (e)=>{
+    e.preventDefault();
+    await nhost.auth.signOut().catch(()=>{});
+    localStorage.clear();
+    redirectToLogin();
+  });
+</script>
+
+<!-- ======= jsPDF + AutoTable ======= -->
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
+
+<!-- ======= App-Script ======= -->
+<script>
+  // Guard respektieren
+  if (!window.__ADMIN_OK__) { /* wird zum Login umgeleitet */ }
+
+  // ---------- Hilfen ----------
+  const $ = sel => document.querySelector(sel);
+  const listMsg = $('#listMsg');
+  const API = '/.netlify/functions/graphql'; // Netlify-Proxy
+
+  const fmtDate = iso => {
+    if(!iso) return '–';
+    const d = new Date(iso);
+    return d.toLocaleDateString('de-DE') + ' ' + d.toLocaleTimeString('de-DE', {hour:'2-digit', minute:'2-digit'});
+  };
+  const fmtShort = iso => {
+    if(!iso) return '–';
+    const d = new Date(iso);
+    return d.toLocaleDateString('de-DE');
+  };
+
+  async function gql(query, variables={}){
+    const res = await fetch(API, {
+      method:'POST',
+      headers:{ 'content-type':'application/json' },
+      body: JSON.stringify({ query, variables })
+    });
+    if(!res.ok){ throw new Error('HTTP '+res.status); }
+    const json = await res.json();
+    if(json.errors){ throw new Error(json.errors[0]?.message || 'GraphQL error'); }
+    return json.data;
+  }
+
+  // ---------- Daten laden ----------
+  let current = null;
+
+  async function loadLists(){
+    listMsg.textContent = 'Lade …';
+    try{
+      const data = await gql(`
+        query Load {
+          offen: documents(
+            where:{ _or:[ {status:{_is_null:true}}, {status:{_neq:"erledigt"}} ] },
+            order_by:{created_at:desc}
+          ){
+            id type title status created_at payload
+          }
+          erledigt: documents(
+            where:{ status:{_eq:"erledigt"} },
+            order_by:{ created_at:desc },
+            limit: 300
+          ){
+            id type title status created_at payload
+          }
+        }
+      `);
+
+      const cutoff = new Date(Date.now() - 30*24*60*60*1000); // 30 Tage
+      const archiv = (data.erledigt || []).filter(d => new Date(d.created_at) >= cutoff);
+
+      renderList('#list-offen',  data.offen || []);
+      renderList('#list-archiv', archiv);
+
+      listMsg.textContent = '';
+    }catch(e){
+      listMsg.textContent = 'Fehler beim Laden: ' + e.message;
+      listMsg.className = 'msg err';
+    }
+  }
+
+  function renderList(sel, items){
+    const box = document.querySelector(sel);
+    box.innerHTML = '';
+    if(!items.length){
+      const div = document.createElement('div');
+      div.className = 'hint';
+      div.textContent = 'Keine Einträge.';
+      box.appendChild(div);
+      return;
+    }
+    items.forEach(d=>{
+      const it = document.createElement('div');
+      it.className = 'docitem';
+      it.innerHTML = `
+        <div class="doctitle">${d.title || '(ohne Titel)'}</div>
+        <div class="docmeta">${d.type || 'Dokument'} • ${fmtDate(d.created_at)}${d.status? ' • Status: '+d.status : ''}</div>
+      `;
+      it.addEventListener('click', ()=> showDetail(d));
+      box.appendChild(it);
+    });
+  }
+
+  // ---------- Detail ----------
+  function showDetail(d){
+    current = d;
+
+    $('#noSel').style.display = 'none';
+    $('#detail').style.display = '';
+
+    $('#detailTitle').textContent = d.title || 'Details';
+    $('#dType').textContent    = d.type || '—';
+    $('#dStatus').textContent  = d.status || '—';
+    $('#dCreated').textContent = fmtDate(d.created_at);
+    $('#dTitle').textContent   = d.title || '—';
+
+    const p = d.payload || {};
+    $('#dEinsatz').textContent = p.einsatznummer || '—';
+    $('#dDatum').textContent   = p.datum ? (typeof p.datum === 'string' && p.datum.length<=10 ? p.datum.split('-').reverse().join('.') : fmtShort(p.datum)) : '—';
+    $('#dBy').textContent      = (p.ausgetragen_vorname || '—') + ' ' + (p.ausgetragen_nachname || '');
+
+    const tb = $('#posTbl tbody');
+    tb.innerHTML = '';
+    (p.positionen || []).forEach(row=>{
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${row.qty ?? ''}</td><td>${row.name ?? ''}</td>`;
+      tb.appendChild(tr);
+    });
+
+    $('#raw').textContent = JSON.stringify(d.payload || {}, null, 2);
+    $('#detailMsg').textContent = '';
+  }
+
+  // ---------- Tabs ----------
+  document.querySelectorAll('.tab').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      const tab = btn.dataset.tab;
+      document.getElementById('list-offen').style.display  = (tab==='offen') ? '' : 'none';
+      document.getElementById('list-archiv').style.display = (tab==='archiv')? '' : 'none';
+    });
+  });
+
+  // ---------- Aktionen ----------
+  // Erledigt
+  document.getElementById('btnDone').addEventListener('click', async ()=>{
+    if(!current) return;
+    if(current.status === 'erledigt'){
+      document.getElementById('detailMsg').textContent = 'Bereits erledigt.';
+      document.getElementById('detailMsg').className = 'msg ok';
+      return;
+    }
+    if(!confirm('Dieses Dokument als „erledigt“ markieren?')) return;
+
+    try{
+      await gql(`
+        mutation Done($id: uuid!) {
+          update_documents_by_pk(pk_columns:{id:$id}, _set:{status:"erledigt"}){ id }
+        }
+      `, { id: current.id });
+
+      document.getElementById('detailMsg').textContent = 'Gespeichert.';
+      document.getElementById('detailMsg').className = 'msg ok';
+      await loadLists();
+      document.querySelector('.tab[data-tab="archiv"]').click();
+    }catch(e){
+      document.getElementById('detailMsg').textContent = 'Fehler: ' + e.message;
+      document.getElementById('detailMsg').className = 'msg err';
+    }
+  });
+
+  // PDF
+  document.getElementById('btnPdf').addEventListener('click', ()=>{
+    if(!current) return;
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit:'pt', format:'a4' });
+
+    const p = current.payload || {};
+    const title = current.title || (current.type || 'Dokument');
+
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(16);
+    doc.text(title, 40, 40);
+
+    doc.setFont('helvetica','normal');
+    doc.setFontSize(11);
+    const meta = [
+      ['Typ', current.type || '—'],
+      ['Status', current.status || '—'],
+      ['Erstellt', fmtDate(current.created_at)],
+      ['Einsatznummer', p.einsatznummer || '—'],
+      ['Datum', p.datum ? (typeof p.datum === 'string' && p.datum.length<=10 ? p.datum.split('-').reverse().join('.') : fmtShort(p.datum)) : '—'],
+      ['Ausgetragen von', (p.ausgetragen_vorname || '—') + ' ' + (p.ausgetragen_nachname || '')],
+    ];
+    let y = 70;
+    meta.forEach(row=>{
+      doc.text(`${row[0]}: `, 40, y);
+      doc.text(String(row[1]), 140, y);
+      y += 18;
+    });
+
+    const rows = (p.positionen || []).map(r => [r.qty ?? '', r.name ?? '']);
+    if(rows.length){
+      doc.autoTable({
+        startY: y + 6,
+        head: [['Menge', 'Artikel / Beschreibung']],
+        body: rows
+      });
+      y = doc.lastAutoTable.finalY + 16;
+    }
+
+    doc.setFontSize(10);
+    doc.text('Erstellt als PDF aus dem Admin-Dashboard', 40, y);
+    const fname = `Dokument_${(p.einsatznummer||current.id)}.pdf`;
+    doc.save(fname);
+  });
+
+  // Start
+  if (window.__ADMIN_OK__) {
+    loadLists();
+  }
+</script>
+
+</body>
+</html>
