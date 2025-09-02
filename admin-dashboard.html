@@ -13,7 +13,7 @@
     header img { height:42px; width:auto }
     header h1 { margin:0; font-size:1.15rem; font-weight:700; letter-spacing:.2px }
     .spacer { flex:1 }
-    .topbtn { color:#fff; text-decoration:none; background:#00000022; padding:7px 10px; border-radius:8px }
+    .topbtn { color:#fff; text-decoration:none; background:#00000022; padding:7px 10px; border-radius:8px; font-weight:700 }
     .wrap { max-width:1050px; margin:16px auto; padding:0 14px; display:grid; grid-template-columns:260px 1fr; gap:16px }
     aside { background:#fff; border-radius:12px; box-shadow:0 3px 12px rgba(0,0,0,.06); padding:14px }
     aside h3 { margin:6px 0 12px; color:var(--rot) }
@@ -37,6 +37,17 @@
     .ok { color:#2e7d32 }
     .err { color:#c8102e }
     .msg { min-height:1.2em }
+
+    /* Passwort-Modal */
+    .modal{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center;z-index:9999;padding:16px}
+    .modal.show{display:flex}
+    .modal-box{background:#fff;border-radius:12px;box-shadow:0 6px 24px rgba(0,0,0,.2);padding:16px;max-width:420px;width:92%}
+    .modal-h{display:flex;gap:10px;align-items:center;margin-bottom:10px}
+    .x{margin-left:auto;border:0;background:#f1f1f1;border-radius:8px;padding:6px 10px;cursor:pointer}
+    .field{display:flex;flex-direction:column;gap:6px;margin:8px 0}
+    .field label{font-weight:700;color:var(--rot)}
+    .field input{padding:10px;border:1px solid #ccc;border-radius:8px;background:#fafafa}
+    .actions{display:flex;gap:8px;justify-content:flex-end;margin-top:8px}
     @media (max-width: 800px){ .wrap{ grid-template-columns:1fr } }
   </style>
 </head>
@@ -55,8 +66,8 @@
     <nav class="nav">
       <a href="dokumente-bearbeiten.html">📋 Dokumente bearbeiten</a>
       <a href="lagerverwaltung.html">📦 Lagerverwaltung</a>
-      <a href="wartung.html">🛠️ Wartung</a>                 <!-- NEU -->
-      <a href="digitale-dokumente.html">📄 Digitale Dokumente</a> <!-- NEU -->
+      <a href="wartung.html">🛠️ Wartung</a>
+      <a href="digitale-dokumente.html">📄 Digitale Dokumente</a>
       <a href="archiv.html">🗄️ Archiv</a>
     </nav>
     <div style="margin-top:14px; font-size:.95rem">
@@ -90,6 +101,33 @@
       </div>
     </section>
   </main>
+</div>
+
+<!-- Passwort-Modal -->
+<div class="modal" id="pwModal">
+  <div class="modal-box">
+    <div class="modal-h">
+      <strong>Passwort ändern</strong>
+      <button class="x" id="pwClose">Schließen</button>
+    </div>
+    <div class="field">
+      <label for="pwCurrent">Aktuelles Passwort</label>
+      <input type="password" id="pwCurrent" autocomplete="current-password" placeholder="••••••••" />
+    </div>
+    <div class="field">
+      <label for="pwNew1">Neues Passwort (min. 8 Zeichen)</label>
+      <input type="password" id="pwNew1" autocomplete="new-password" placeholder="Neues Passwort" />
+    </div>
+    <div class="field">
+      <label for="pwNew2">Neues Passwort wiederholen</label>
+      <input type="password" id="pwNew2" autocomplete="new-password" placeholder="Wiederholen" />
+    </div>
+    <div id="pwMsg" class="msg"></div>
+    <div class="actions">
+      <button class="btn sec" id="pwCancel">Abbrechen</button>
+      <button class="btn" id="pwSave">Speichern</button>
+    </div>
+  </div>
 </div>
 
 <script type="module">
@@ -129,52 +167,88 @@
     location.href = "admin-login.html";
   });
 
-  // Passwort ändern (Modal)
+  // ===== Passwort ändern (mit Re-Auth) =====
+  const pwModal = document.getElementById('pwModal');
+  const pwMsg   = document.getElementById('pwMsg');
+  const pwCurrent = document.getElementById('pwCurrent');
+  const pwNew1    = document.getElementById('pwNew1');
+  const pwNew2    = document.getElementById('pwNew2');
+
+  function showPwMsg(text, ok=false){
+    pwMsg.textContent = text || '';
+    pwMsg.className = 'msg ' + (ok ? 'ok' : 'err');
+  }
+
+  function openPwModal(){
+    pwCurrent.value = '';
+    pwNew1.value = '';
+    pwNew2.value = '';
+    showPwMsg('');
+    pwModal.classList.add('show');
+    setTimeout(()=> pwCurrent.focus(), 10);
+  }
+  function closePwModal(){
+    pwModal.classList.remove('show');
+  }
+
   document.getElementById('changePwBtn')?.addEventListener('click', (e)=>{
     e.preventDefault();
-    const html = `
-      <div id="pw-modal" style="position:fixed;inset:0;background:rgba(0,0,0,.5);
-           display:flex;align-items:center;justify-content:center;z-index:9999">
-        <div style="background:#fff;border-radius:12px;padding:16px;max-width:420px;width:92%;
-                    box-shadow:0 6px 24px rgba(0,0,0,.2);font-family:system-ui">
-          <h3 style="margin:.2rem 0 1rem 0">Passwort ändern</h3>
-          <div style="display:grid;gap:.6rem">
-            <input id="pw1" type="password" placeholder="Neues Passwort (min. 8 Zeichen)"
-                   style="padding:.6rem;border:1px solid #ccc;border-radius:8px">
-            <input id="pw2" type="password" placeholder="Neues Passwort wiederholen"
-                   style="padding:.6rem;border:1px solid #ccc;border-radius:8px">
-            <div id="pw-msg" style="min-height:1.2em;color:#c8102e"></div>
-            <div style="display:flex;gap:.5rem;justify-content:flex-end">
-              <button id="pw-cancel" style="padding:.5rem .8rem;border-radius:8px;border:1px solid #ddd;background:#f7f7f7">Abbrechen</button>
-              <button id="pw-save"   style="padding:.5rem .8rem;border-radius:8px;border:0;background:#c8102e;color:#fff;font-weight:700">Speichern</button>
-            </div>
-          </div>
-        </div>
-      </div>`;
-    document.body.insertAdjacentHTML('beforeend', html);
-    const modal = document.getElementById('pw-modal');
-    const msg   = document.getElementById('pw-msg');
+    openPwModal();
+  });
+  document.getElementById('pwClose').addEventListener('click', closePwModal);
+  document.getElementById('pwCancel').addEventListener('click', closePwModal);
+  pwModal.addEventListener('click', (e)=>{ if (e.target === pwModal) closePwModal(); });
+  document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closePwModal(); });
 
-    document.getElementById('pw-cancel').onclick = ()=> modal.remove();
-    document.getElementById('pw-save').onclick   = async ()=>{
-      const p1 = (document.getElementById('pw1').value||'').trim();
-      const p2 = (document.getElementById('pw2').value||'').trim();
-      msg.style.color = "#c8102e";
-      if (!p1 || p1.length < 8) { msg.textContent = "Mindestens 8 Zeichen."; return; }
-      if (p1 !== p2) { msg.textContent = "Passwörter stimmen nicht überein."; return; }
+  document.getElementById('pwSave').addEventListener('click', async ()=>{
+    try{
+      showPwMsg('');
+      const current = pwCurrent.value.trim();
+      const n1 = pwNew1.value.trim();
+      const n2 = pwNew2.value.trim();
 
+      if (!current){ showPwMsg('Bitte aktuelles Passwort eingeben.'); return; }
+      if (!n1 || n1.length < 8){ showPwMsg('Neues Passwort: mindestens 8 Zeichen.'); return; }
+      if (n1 !== n2){ showPwMsg('Die neuen Passwörter stimmen nicht überein.'); return; }
+
+      const email = nhost.auth.getUser()?.email;
+      if (!email){ showPwMsg('Nicht eingeloggt.'); return; }
+
+      // Re-Auth mit aktuellem Passwort
+      const { error: signErr } = await nhost.auth.signIn({ email, password: current });
+      if (signErr){ showPwMsg('Aktuelles Passwort ist falsch.'); return; }
+
+      // Passwort ändern (zwei mögliche Signaturen – je nach Nhost-Version)
+      let changeError = null;
       try {
-        await nhost.auth.changePassword(p1);
-        msg.style.color = "#2e7d32";
-        msg.textContent = "Passwort gespeichert.";
-        setTimeout(()=> modal.remove(), 900);
-      } catch (e) {
-        msg.textContent = e?.message || "Fehler beim Ändern.";
+        const res1 = await nhost.auth.changePassword(n1);
+        changeError = res1?.error || null;
+      } catch (e1) {
+        try {
+          const res2 = await nhost.auth.changePassword({ newPassword: n1 });
+          changeError = res2?.error || null;
+        } catch (e2) {
+          changeError = e2;
+        }
       }
-    };
+      if (changeError){
+        showPwMsg('Fehler beim Ändern: ' + (changeError.message || changeError));
+        return;
+      }
+
+      showPwMsg('Passwort geändert. Du wirst abgemeldet …', true);
+      setTimeout(async ()=>{
+        closePwModal();
+        await nhost.auth.signOut();
+        localStorage.clear();
+        location.href = "admin-login.html";
+      }, 700);
+    }catch(e){
+      showPwMsg('Unerwarteter Fehler: ' + (e?.message || e));
+    }
   });
 
-  // Notizen (lokal)
+  // ===== Notizen (lokal) =====
   const NOTES_KEY = 'admin_notes';
   const notesEl = document.getElementById('notes');
   const noteName = document.getElementById('noteName');
