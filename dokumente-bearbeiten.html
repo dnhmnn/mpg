@@ -1,284 +1,271 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="de">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>FFW – Dokumente bearbeiten</title>
+  <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
   <style>
-    :root{
-      --rot:#c8102e; --rot-d:#a10d25; --txt:#1b1f23;
-      --muted:#66727e; --bg:#ffffff; --card:#fafbfc; --line:#eceff2;
-      --chip:#eef3ff; --chip-t:#204fb1; --pdf:#ffe9ec;
-    }
+    :root { --rot:#c8102e; --grau:#6b7280; --bg:#f7f7f7; }
     *{box-sizing:border-box}
-    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:var(--txt);background:var(--bg)}
-
-    /* Topbar */
-    .topbar{background:var(--rot);color:#fff;padding:14px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
-    .brand{font-weight:900;font-size:20px}
+    body{margin:0;background:var(--bg);font-family:'Atkinson Hyperlegible',system-ui,Arial}
+    /* Header */
+    header{background:var(--rot);color:#fff;display:flex;align-items:center;gap:.8rem;padding:.7rem .9rem}
+    header h1{margin:0;font-size:1.1rem;font-weight:700}
     .spacer{flex:1}
-    .btn{appearance:none;border:0;border-radius:14px;padding:10px 14px;font-weight:800;cursor:pointer}
-    .btn-white{background:#fff;color:var(--rot)}
-    .btn-ghost{background:transparent;border:2px solid #fff;color:#fff}
-
-    main{padding:16px}
-    .card{background:#fff;border-radius:18px;box-shadow:0 2px 14px rgba(0,0,0,.06);padding:18px}
-    h2{margin:0 0 16px 0;color:var(--rot);font-size:28px}
-
+    .topbtn{color:#fff;text-decoration:none;background:#00000022;padding:.5rem .7rem;border-radius:.6rem;font-weight:700}
+    .topbtn:hover{background:#00000033}
+    /* Container */
+    .wrap{max-width:1000px;margin:16px auto;padding:0 14px}
+    /* Card */
+    .card{background:#fff;border-radius:12px;box-shadow:0 3px 12px rgba(0,0,0,.06);padding:14px}
+    .card h2{margin:.2rem 0 1rem;color:var(--rot)}
     /* Tabs */
-    .tabs{display:flex;gap:10px;margin-bottom:12px}
-    .tab{padding:10px 14px;border-radius:16px;background:#f1f3f5;color:#3a4754;font-weight:800;cursor:pointer;user-select:none}
-    .tab.active{background:var(--rot);color:#fff}
-
-    /* List as mobile cards */
-    .list{display:grid;gap:12px;margin:0;padding:0;list-style:none}
-    .item{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;display:grid;gap:10px}
-    .title{font-size:16px;line-height:1.35;font-weight:800;margin:0}
-    .meta{display:flex;gap:8px;flex-wrap:wrap}
-    .chip{display:inline-block;padding:6px 10px;border-radius:999px;font-weight:800;font-size:12px}
-    .chip.type{background:var(--chip);color:var(--chip-t)}
-    .chip.status{background:#edf7ee;color:#207336}
-    .row-actions{display:flex;gap:10px;flex-wrap:wrap}
-    .pill{appearance:none;border:0;border-radius:999px;padding:10px 14px;font-weight:800;cursor:pointer}
-    .pill.pdf{background:var(--pdf);color:var(--rot)}
-    .pill.done{background:#eaf7ea;color:#1b7a3f}
-    .muted{color:var(--muted)}
-    #loading{margin-top:6px}
-
-    /* Wide screens: tighten a bit */
-    @media (min-width: 900px){
-      main{max-width:980px;margin:0 auto}
+    .tabs{display:flex;gap:.6rem;margin-bottom:.6rem}
+    .tab{border:1px solid #f2c9d1;background:#fff5f5;color:#8b0e22;border-radius:999px;padding:.35rem .8rem;font-weight:700;cursor:pointer}
+    .tab.active{background:var(--rot);border-color:var(--rot);color:#fff}
+    /* List */
+    .list{display:flex;flex-direction:column;gap:.8rem}
+    .doc{background:#fff;border:1px solid #eee;border-radius:12px;padding:.9rem .9rem}
+    /* Content layout: mobile first (stapelt) */
+    .row{display:grid;grid-template-columns:1fr;gap:.35rem}
+    .type{justify-self:start}
+    .badge{display:inline-block;padding:.2rem .55rem;border-radius:999px;background:#eef2ff;color:#233876;font-weight:700}
+    .title{font-size:1.05rem;font-weight:700;color:#111}
+    .meta{color:var(--grau);font-size:.9rem}
+    .actions{display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.4rem}
+    .btn{border:1px solid #e5e7eb;background:#fafafa;border-radius:.6rem;padding:.45rem .7rem;cursor:pointer;font-weight:700}
+    .btn.red{background:var(--rot);border-color:var(--rot);color:#fff}
+    .btn.outline{background:#fff;border-color:#cbd5e1}
+    .empty{color:var(--grau);padding:.7rem}
+    .msg{min-height:1.2em;margin-top:.4rem}
+    /* Desktop / größere Geräte: Typ + Titel nebeneinander, Aktionen rechts */
+    @media (min-width: 800px){
+      .row{grid-template-columns:180px 1fr auto;align-items:center}
+      .actions{justify-content:flex-end;margin-top:0}
+      .title{font-size:1.05rem}
     }
   </style>
 </head>
 <body>
-<header class="topbar">
-  <div class="brand">FFW – Dokumente bearbeiten</div>
+<header>
+  <h1>FFW – Dokumente bearbeiten</h1>
   <div class="spacer"></div>
-  <button id="toDash" class="btn btn-white">Dashboard</button>
-  <button id="logout" class="btn btn-ghost">Logout</button>
+  <a class="topbtn" href="admin-dashboard.html">Dashboard</a>
+  <a class="topbtn" href="#" id="logout">Logout</a>
 </header>
 
-<main>
+<div class="wrap">
   <section class="card">
     <h2>Dokumente</h2>
-
     <div class="tabs">
-      <div id="tabOpen" class="tab active">Offen</div>
-      <div id="tabArch" class="tab">Archiv (30 Tage)</div>
+      <button class="tab active" id="tab-open">Offen</button>
+      <button class="tab" id="tab-arch">Archiv (30 Tage)</button>
     </div>
-
-    <div id="error" class="muted" style="color:#b00020;font-weight:800;display:none"></div>
-    <div id="loading" class="muted">Lade …</div>
-
-    <ul id="list" class="list" aria-live="polite"></ul>
+    <div id="list" class="list">
+      <div class="empty">Lade …</div>
+    </div>
+    <div id="msg" class="msg"></div>
   </section>
-</main>
+</div>
 
-<script>
-/* ---------- Config ---------- */
-const ENDPOINTS = [
-  '/.netlify/functions/graphql', // Netlify function
-  '/api/graphql'                 // optional fallback (redirects)
-];
+<script type="module">
+  /* ---------- Login-Guard (wie im Admin-Dashboard) ---------- */
+  import { NhostClient } from "https://esm.sh/@nhost/nhost-js@2.2.9";
+  const nhost = new NhostClient({ subdomain:"hpjfrhktprpuuxvvlpsb", region:"eu-central-1" });
 
-/* ---------- Quiet Login Guard ---------- */
-function guard(){
-  const ok = localStorage.getItem('ffw_admin') === '1' ||
-             sessionStorage.getItem('ffw_admin') === '1';
-  if (!ok){
-    const next = encodeURIComponent('dokumente-bearbeiten.html');
-    location.replace(`admin-login.html?next=${next}`);
-    return false;
+  async function guard() {
+    const ok = await nhost.auth.isAuthenticatedAsync();
+    if (!ok) { location.href = "admin-login.html"; return false; }
+    return true;
   }
-  return true;
-}
+  if (!await guard()) { /* redirected */ }
 
-/* ---------- Fetch helper (tries both endpoints) ---------- */
-async function gql(query, variables={}){
-  let last;
-  for (const ep of ENDPOINTS){
-    try{
-      const r = await fetch(ep, {
+  document.getElementById('logout').addEventListener('click', async (e)=>{
+    e.preventDefault();
+    try { await nhost.auth.signOut(); } catch(e){}
+    location.href = "admin-login.html";
+  });
+
+  /* ---------- GraphQL via Netlify Function ---------- */
+  let ENDPOINT = '/api/graphql'; // primär
+  async function gql(query, variables={}) {
+    // erster Versuch
+    let r = await fetch(ENDPOINT, {
+      method:'POST',
+      headers:{ 'content-type':'application/json' },
+      body: JSON.stringify({ query, variables })
+    });
+    // Fallback, falls die primäre Route z.B. 404 ist
+    if (r.status === 404) {
+      ENDPOINT = '/.netlify/functions/graphql';
+      r = await fetch(ENDPOINT, {
         method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({query, variables})
+        headers:{ 'content-type':'application/json' },
+        body: JSON.stringify({ query, variables })
       });
-      if (!r.ok) throw new Error('HTTP ' + r.status);
-      const j = await r.json();
-      if (j.errors) throw new Error(j.errors[0]?.message || 'GraphQL error');
-      return j.data;
-    }catch(e){ last = e; }
-  }
-  throw last || new Error('Netzwerkfehler');
-}
-
-/* ---------- GraphQL ---------- */
-const Q_OPEN = `
-query OpenDocs {
-  documents(
-    where: { _or: [{status: {_is_null: true}}, {status: {_neq: "erledigt"}}] }
-    order_by: { created_at: desc }
-  ){ id type title status }
-}`;
-
-const Q_ARCH = `
-query ArchDocs($since: timestamptz!){
-  documents(
-    where: { status:{_eq:"erledigt"}, created_at:{_gte:$since} }
-    order_by: { created_at: desc }
-  ){ id type title status }
-}`;
-
-const Q_ONE = `
-query One($id: uuid!){
-  documents_by_pk(id:$id){ id type title status created_at payload }
-}`;
-
-const M_DONE = `
-mutation Done($id: uuid!){
-  update_documents_by_pk(pk_columns:{id:$id}, _set:{status:"erledigt"}){ id }
-}`;
-
-/* ---------- UI ---------- */
-let currentTab = 'open';
-
-function setError(msg){
-  const el = document.getElementById('error');
-  if (!msg){ el.style.display='none'; el.textContent=''; return; }
-  el.textContent = 'Fehler: ' + msg;
-  el.style.display = 'block';
-}
-function setLoading(v){
-  document.getElementById('loading').style.display = v ? 'block' : 'none';
-}
-
-function escapeHtml(s){
-  return String(s)
-    .replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;')
-    .replaceAll('"','&quot;').replaceAll("'",'&#39;');
-}
-
-function render(items){
-  const ul = document.getElementById('list');
-  ul.innerHTML = '';
-  if (!items?.length){
-    const li = document.createElement('li');
-    li.className = 'item';
-    li.innerHTML = '<div class="muted">Keine Einträge.</div>';
-    ul.appendChild(li);
-    return;
-  }
-  for (const d of items){
-    const li = document.createElement('li');
-    li.className = 'item';
-
-    const title = escapeHtml(d.title || '(ohne Titel)');
-    const type = escapeHtml(d.type || 'dokument');
-
-    li.innerHTML = `
-      <div class="meta">
-        <span class="chip type">${type}</span>
-        ${ (d.status||'').toLowerCase()==='erledigt' ? '<span class="chip status">erledigt</span>' : '' }
-      </div>
-      <h3 class="title">${title}</h3>
-      <div class="row-actions">
-        <button class="pill pdf" data-id="${d.id}" data-act="pdf">PDF</button>
-        ${ ((d.status||'').toLowerCase()!=='erledigt' && currentTab==='open')
-            ? `<button class="pill done" data-id="${d.id}" data-act="done">Erledigt</button>`
-            : '' }
-        <a class="pill" style="background:#eef1f4;color:#21303f;text-decoration:none"
-           href="produktAusgabe.html?id=${d.id}">
-           Öffnen
-        </a>
-      </div>
-    `;
-    ul.appendChild(li);
-  }
-
-  // actions
-  ul.querySelectorAll('[data-act="pdf"]').forEach(b=>{
-    b.onclick = ()=> openPdf(b.dataset.id);
-  });
-  ul.querySelectorAll('[data-act="done"]').forEach(b=>{
-    b.onclick = ()=> markDone(b.dataset.id);
-  });
-}
-
-async function load(){
-  setError('');
-  setLoading(true);
-  try{
-    if (currentTab==='open'){
-      const data = await gql(Q_OPEN);
-      render(data.documents);
-    }else{
-      const since = new Date(Date.now()-30*24*60*60*1000).toISOString();
-      const data = await gql(Q_ARCH,{since});
-      render(data.documents);
     }
-  }catch(e){ setError(e.message||String(e)); }
-  finally{ setLoading(false); }
-}
+    const json = await r.json();
+    if (json.errors) throw new Error(json.errors[0]?.message || 'GraphQL-Fehler');
+    return json.data;
+  }
 
-async function markDone(id){
-  try{
-    await gql(M_DONE,{id});
-    await load();
-  }catch(e){ setError(e.message||String(e)); }
-}
+  /* ---------- Queries / Mutations ---------- */
+  const FIELDS = `id type title status created_at payload`;
+  const Q_OPEN = `
+    query {
+      documents(where:{status:{_eq:"offen"}}, order_by:{created_at:desc}) {
+        ${FIELDS}
+      }
+    }`;
+  const Q_ARCH = `
+    query($now:timestamptz!) {
+      documents(
+        where:{
+          _and:[
+            {status:{_eq:"archiviert"}},
+            {archived_until:{_gt:$now}}
+          ]
+        },
+        order_by:{archived_until:desc}
+      ) { ${FIELDS} archived_until }
+    }`;
+  const M_ARCHIVE = `
+    mutation($id:uuid!, $until:timestamptz!) {
+      update_documents_by_pk(
+        pk_columns:{id:$id},
+        _set:{ status:"archiviert", archived_until:$until }
+      ){ id }
+    }`;
 
-async function openPdf(id){
-  try{
-    const data = await gql(Q_ONE,{id});
-    const d = data.documents_by_pk;
-    if (!d) return;
+  /* ---------- UI ---------- */
+  const listEl = document.getElementById('list');
+  const msgEl  = document.getElementById('msg');
+  const tabOpen = document.getElementById('tab-open');
+  const tabArch = document.getElementById('tab-arch');
+  let currentTab = 'open';
 
-    const w = window.open('','_blank');
-    const payload = d.payload || {};
-    const rows = Object.entries(payload).map(([k,v])=>
-      `<tr><th>${escapeHtml(k)}</th><td>${escapeHtml(typeof v==='object'?JSON.stringify(v):v)}</td></tr>`
-    ).join('');
+  tabOpen.onclick = ()=>{ currentTab='open'; tabOpen.classList.add('active'); tabArch.classList.remove('active'); load(); };
+  tabArch.onclick = ()=>{ currentTab='arch'; tabArch.classList.add('active'); tabOpen.classList.remove('active'); load(); };
 
-    w.document.write(`<!doctype html><html><head><meta charset="utf-8">
-      <title>${escapeHtml(d.title||'Dokument')}</title>
+  function setMsg(t, ok=false){ msgEl.textContent = t || ''; msgEl.style.color = ok ? '#2e7d32' : '#c8102e'; }
+
+  function render(docs){
+    if (!docs || docs.length===0){
+      listEl.innerHTML = `<div class="empty">${currentTab==='open'?'Keine offenen Dokumente.':'Kein Archiv-Eintrag (≤ 30 Tage).'}</div>`;
+      return;
+    }
+    listEl.innerHTML = '';
+    for (const d of docs){
+      const created = new Date(d.created_at);
+      const badge = d.type || 'dokument';
+      const row = document.createElement('div');
+      row.className = 'doc';
+      row.innerHTML = `
+        <div class="row">
+          <div class="type"><span class="badge">${badge}</span></div>
+          <div>
+            <div class="title">${escapeHtml(d.title || '(ohne Titel)')}</div>
+            ${currentTab==='arch' && d.archived_until ? `<div class="meta">im Archiv bis ${fmt(d.archived_until)}</div>`:''}
+          </div>
+          <div class="actions">
+            <button class="btn outline" data-pdf="${d.id}">PDF</button>
+            ${currentTab==='open'
+              ? `<button class="btn red" data-done="${d.id}">Erledigt</button>`
+              : `<button class="btn" data-open="${d.id}">Zurück zu Offen</button>`
+            }
+          </div>
+        </div>`;
+      listEl.appendChild(row);
+    }
+
+    // Events (delegiert)
+    listEl.querySelectorAll('[data-pdf]').forEach(b=> b.onclick = ()=> printPdf(docs.find(x=>x.id===b.dataset.pdf)));
+    listEl.querySelectorAll('[data-done]').forEach(b=> b.onclick = ()=> markDone(b.dataset.done));
+    listEl.querySelectorAll('[data-open]').forEach(b=> b.onclick = ()=> revertToOpen(b.dataset.open));
+  }
+
+  /* ---------- Actions ---------- */
+  async function load(){
+    setMsg('');
+    listEl.innerHTML = `<div class="empty">Lade …</div>`;
+    try{
+      if (currentTab==='open'){
+        const data = await gql(Q_OPEN);
+        render(data.documents);
+      }else{
+        const now = new Date().toISOString();
+        const data = await gql(Q_ARCH, { now });
+        render(data.documents);
+      }
+    }catch(e){
+      setMsg('Fehler: '+(e.message||e), false);
+    }
+  }
+
+  function plusDays(date, n){
+    const d = new Date(date);
+    d.setDate(d.getDate()+n);
+    return d.toISOString();
+  }
+
+  async function markDone(id){
+    if (!confirm('Als erledigt markieren und 30 Tage archivieren?')) return;
+    try{
+      await gql(M_ARCHIVE, { id, until: plusDays(new Date(), 30) });
+      setMsg('Dokument archiviert.', true);
+      load();
+    }catch(e){
+      setMsg('Konnte nicht archivieren: '+(e.message||e), false);
+    }
+  }
+
+  // Optional: zurück zu „offen“ (falls gebraucht)
+  const M_TO_OPEN = `
+    mutation($id:uuid!){
+      update_documents_by_pk(pk_columns:{id:$id}, _set:{status:"offen", archived_until:null}){ id }
+    }`;
+  async function revertToOpen(id){
+    try { await gql(M_TO_OPEN, { id }); setMsg('Zurückgesetzt.', true); load(); }
+    catch(e){ setMsg('Fehler: '+(e.message||e), false); }
+  }
+
+  /* ---------- PDF (druckfreundliches Fenster) ---------- */
+  function printPdf(doc){
+    const w = window.open('', '_blank');
+    const p = doc.payload || {};
+    const html = `
+      <!doctype html><html><head>
+      <meta charset="utf-8">
+      <title>${escapeHtml(doc.title||'Dokument')}</title>
       <style>
-        body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;margin:24px}
-        h1{margin:0 0 6px 0}
-        table{border-collapse:collapse;width:100%}
-        th,td{border:1px solid #ddd;padding:8px;vertical-align:top}
-        th{width:200px;text-align:left;background:#fafafa}
-      </style></head>
-      <body onload="setTimeout(()=>print(),50)">
-        <h1>${escapeHtml(d.type || 'Dokument')}</h1>
-        <p style="color:#666;margin-top:0">${escapeHtml(d.title || '')}</p>
-        <table>${rows}</table>
-      </body></html>`);
+        body{font-family:Arial, sans-serif; padding:20px}
+        h1{margin:0 0 10px}
+        .meta{color:#555;margin-bottom:14px}
+        table{width:100%;border-collapse:collapse;margin-top:10px}
+        th,td{border:1px solid #999;padding:6px;text-align:left}
+      </style>
+      </head><body>
+        <h1>${escapeHtml(doc.type||'Dokument')}</h1>
+        <div class="meta"><strong>Titel:</strong> ${escapeHtml(doc.title||'')}<br>
+        <strong>Erstellt:</strong> ${fmt(doc.created_at)}</div>
+        <h3>Inhalt (payload)</h3>
+        <pre>${escapeHtml(JSON.stringify(p, null, 2))}</pre>
+        <script>window.focus();setTimeout(()=>window.print(),200);</script>
+      </body></html>`;
+    w.document.write(html);
     w.document.close();
-  }catch(e){ setError(e.message||String(e)); }
-}
+  }
 
-/* ---------- events ---------- */
-document.getElementById('toDash').onclick = ()=> location.href='admin-dashboard.html';
-document.getElementById('logout').onclick = ()=>{
-  try{ localStorage.removeItem('ffw_admin'); sessionStorage.removeItem('ffw_admin'); }catch(_){}
-  location.href='admin-login.html';
-};
-document.getElementById('tabOpen').onclick = ()=>{
-  currentTab='open';
-  document.getElementById('tabOpen').classList.add('active');
-  document.getElementById('tabArch').classList.remove('active');
-  load();
-};
-document.getElementById('tabArch').onclick = ()=>{
-  currentTab='arch';
-  document.getElementById('tabArch').classList.add('active');
-  document.getElementById('tabOpen').classList.remove('active');
-  load();
-};
+  function fmt(ts){
+    const d = new Date(ts);
+    return d.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'}) +
+           ' ' + d.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
+  }
+  function escapeHtml(s){ return String(s).replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m])); }
 
-/* ---------- start ---------- */
-(function(){ if (!guard()) return; load(); })();
+  // Start
+  load();
 </script>
 </body>
 </html>
