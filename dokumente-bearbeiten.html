@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>FFW – Dokumente bearbeiten</title>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{--rot:#c8102e}
+  *{box-sizing:border-box}
+  body{font-family:'Atkinson Hyperlegible',Arial,sans-serif;background:#f7f7f7;margin:0}
+  header{background:var(--rot);color:#fff;display:flex;gap:12px;align-items:center;justify-content:space-between;padding:12px 16px}
+  header b{font-size:1.05rem}
+  header .row{display:flex;gap:8px}
+  .btnTop{background:#fff1;border:2px solid #fff3;color:#fff;padding:8px 12px;border-radius:10px;font-weight:700}
+  main{max-width:980px;margin:18px auto;padding:0 12px}
+  .card{background:#fff;border-radius:14px;box-shadow:0 3px 12px #0001;padding:16px}
+  h1{color:var(--rot);margin:0 0 6px}
+  .tabs{display:flex;gap:10px;margin:10px 0 14px}
+  .tab{background:#eee;border-radius:999px;padding:8px 14px;font-weight:700;color:#444}
+  .tab.active{background:var(--rot);color:#fff}
+  table{width:100%;border-collapse:collapse}
+  th,td{padding:12px;border-bottom:1px solid #eee;vertical-align:top}
+  th{color:var(--rot);background:#fff8}
+  .badge{display:inline-block;background:#eee;border-radius:999px;padding:2px 8px;font-size:.85rem}
+  .btn{background:var(--rot);color:#fff;border:0;border-radius:10px;padding:8px 12px;font-weight:700;cursor:pointer}
+  .btn.ghost{background:#fff;color:var(--rot);border:2px solid var(--rot)}
+  .btn.small{padding:6px 9px;font-size:.95rem}
+  .rowbtn{display:flex;gap:6px;flex-wrap:wrap}
+  .muted{color:#666}
+  .msg{margin-top:10px;color:#c8102e}
+</style>
+</head>
+<body>
+<header>
+  <b>FFW – Dokumente bearbeiten</b>
+  <div class="row">
+    <a href="admin-dashboard.html" class="btnTop">Dashboard</a>
+    <button id="logoutBtn" class="btnTop">Logout</button>
+  </div>
+</header>
+
+<main>
+  <div class="card">
+    <h1>Dokumente</h1>
+    <div class="tabs">
+      <button id="tabOpen"  class="tab active">Offen</button>
+      <button id="tabArch"  class="tab">Archiv (30 Tage)</button>
+    </div>
+
+    <div id="error" class="msg"></div>
+    <div class="tableWrap">
+      <table id="tbl">
+        <thead>
+          <tr>
+            <th style="width:120px">Typ</th>
+            <th>Titel</th>
+            <th style="width:150px">Erstellt</th>
+            <th style="width:260px">Aktionen</th>
+          </tr>
+        </thead>
+        <tbody id="tbody">
+          <tr><td colspan="4" class="muted">Lade …</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</main>
+
+<!-- Nhost SDK & jsPDF -->
+<script type="module">
+  import { NhostClient } from "https://esm.sh/@nhost/nhost-js@2.2.9";
+  // jsPDF (UMD)
+  const jspdf = await import('https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.es.min.js');
+
+  const nhost = new NhostClient({ subdomain: "hpjfrhktprpuuxvvlpsb", region: "eu-central-1" });
+
+  const tbody = document.getElementById('tbody');
+  const errEl = document.getElementById('error');
+  const tabOpen = document.getElementById('tabOpen');
+  const tabArch = document.getElementById('tabArch');
+
+  // ---------- Login-Guard (nur Admin) ----------
+  try{
+    const sess = await nhost.auth.getSession();
+    if (!sess?.user) throw new Error('no-session');
+    const roles = (sess.user.roles||[]).map(r=>r.role || r);
+    const isAdmin = roles.includes('admin') || sess.user.defaultRole === 'admin';
+    if (!isAdmin) throw new Error('not-admin');
+  }catch(_){
+    // Nur Guard – keine Extra-Meldung. Leise weiterleiten:
+    location.href = 'admin-login.html';
+  }
+
+  document.getElementById('logoutBtn').addEventListener('click', async ()=>{
+    try{ await nhost.auth.signOut(); }catch(_){}
+    location.href = 'admin-login.html';
+  });
+
+  // ---------- Queries ----------
+  const qOpen = `
+    query{
+      documents(
+        where:{ status:{_eq:"offen"} },
+        order_by:{created_at:desc}
+      ){
+        id type title status created_at payload
+      }
+    }`;
+
+  // Archiv: alles mit archived_until in der Zukunft
+  const qArch = `
+    query($now:timestamptz!){
+      documents(
+        where:{
+          archived_until:{_is_null:false, _gt:$now}
+        },
+        order_by:{created_at:desc}
+      ){
+        id type title status created_at payload archived_until
+      }
+    }`;
+
+  // ---------- Helpers ----------
+  const gql = async (query, variables={})=>{
+    errEl.textContent = '';
+    const { data, error } = await nhost.graphql.request(query, variables);
+    if (error){ throw error; }
+    return data;
+  };
+
+  const fmt = (iso)=>{
+    const d=new Date(iso); const p=(n)=>n.toString().padStart(2,'0');
+    return `${p(d.getDate())}.${p(d.getMonth()+1)}.${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`;
+  };
+
+  const render = (rows, mode)=>{
+    tbody.innerHTML = '';
+    if (!rows.length){
+      const tr=document.createElement('tr');
+      tr.innerHTML = `<td colspan="4" class="muted">${mode==='arch'?'Kein Dokument im Archiv.':'Keine offenen Dokumente.'}</td>`;
+      tbody.appendChild(tr);
+      return;
+    }
+    rows.forEach(r=>{
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><span class="badge">${r.type||'—'}</span></td>
+        <td>${r.title||'—'}</td>
+        <td><span class="muted">${fmt(r.created_at)}</span></td>
+        <td>
+          <div class="rowbtn">
+            <button class="btn small ghost" data-id="${r.id}" data-action="view">Details</button>
+            <button class="btn small" data-id="${r.id}" data-action="pdf">PDF</button>
+            ${mode==='open' ? `<button class="btn small" data-id="${r.id}" data-action="done">Erledigt</button>` : ''}
+          </div>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+  };
+
+  const load = async (mode='open')=>{
+    try{
+      tbody.innerHTML = `<tr><td colspan="4" class="muted">Lade …</td></tr>`;
+      if (mode==='open'){
+        const d = await gql(qOpen);
+        render(d.documents||[], 'open');
+      }else{
+        const now = new Date().toISOString();
+        const d = await gql(qArch, { now });
+        render(d.documents||[], 'arch');
+      }
+    }catch(e){
+      errEl.textContent = 'Fehler: ' + (e.message || e.toString());
+      tbody.innerHTML='';
+    }
+  };
+
+  // ---------- Aktionen ----------
+  tbody.addEventListener('click', async (e)=>{
+    const btn = e.target.closest('button[data-action]');
+    if(!btn) return;
+    const id = btn.dataset.id;
+    const action = btn.dataset.action;
+
+    if (action==='view'){
+      // einfache Detailanzeige
+      const q=`query($id:uuid!){ documents_by_pk(id:$id){ id title type status payload created_at archived_until } }`;
+      const d = await gql(q, { id });
+      const doc = d.documents_by_pk;
+      alert(`${doc.title}\n\nTyp: ${doc.type}\nStatus: ${doc.status}\nErstellt: ${fmt(doc.created_at)}\nArchiv bis: ${doc.archived_until?fmt(doc.archived_until):'—'}\n\nPayload:\n${JSON.stringify(doc.payload,null,2)}`);
+    }
+
+    if (action==='pdf'){
+      const q=`query($id:uuid!){ documents_by_pk(id:$id){ id title type status payload created_at } }`;
+      const d = await gql(q, { id });
+      const doc = d.documents_by_pk;
+
+      const pdf = new jspdf.jsPDF();
+      pdf.setFontSize(16);
+      pdf.text(doc.title || 'Dokument', 14, 18);
+      pdf.setFontSize(11);
+      pdf.text(`Typ: ${doc.type||'—'}`, 14, 28);
+      pdf.text(`Erstellt: ${fmt(doc.created_at)}`, 14, 34);
+      pdf.text(`Status: ${doc.status}`, 14, 40);
+
+      // einfache payload-Ausgabe
+      const payload = doc.payload || {};
+      const lines = JSON.stringify(payload, null, 2).split('\n');
+      let y = 50;
+      pdf.setFontSize(10);
+      for (const line of lines){
+        if (y > 280){ pdf.addPage(); y = 20; }
+        pdf.text(line, 14, y); y += 5;
+      }
+      pdf.save((doc.title||'dokument')+'.pdf');
+    }
+
+    if (action==='done'){
+      if(!confirm('Als erledigt markieren und 30 Tage ins Archiv verschieben?')) return;
+      const in30 = new Date(Date.now() + 30*24*60*60*1000).toISOString();
+      const m = `mutation($id:uuid!,$until:timestamptz!){
+        update_documents_by_pk(pk_columns:{id:$id}, _set:{status:"erledigt", archived_until:$until}){ id }
+      }`;
+      await gql(m, { id, until: in30 });
+      load(activeTab); // refresh
+    }
+  });
+
+  // Tabs
+  let activeTab = 'open';
+  tabOpen.addEventListener('click', ()=>{ activeTab='open'; tabOpen.classList.add('active'); tabArch.classList.remove('active'); load('open'); });
+  tabArch.addEventListener('click', ()=>{ activeTab='arch'; tabArch.classList.add('active'); tabOpen.classList.remove('active'); load('arch'); });
+
+  // initial
+  load('open');
+</script>
+</body>
+</html>
