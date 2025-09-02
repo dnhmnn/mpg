@@ -4,13 +4,24 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Lagerverwaltung</title>
+
+  <!-- NEU: Atkinson Hyperlegible -->
+  <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
 
   <style>
     :root{--primary:#c8102e;--primary-light:#fee2e2;--success:#16a34a;--warning:#f59e0b;
       --bg:#f8fafc;--card:#fff;--text:#1e293b;--text-light:#64748b;--border:#e2e8f0;--low:#2563eb}
     *{box-sizing:border-box}
-    body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--text);padding-bottom:80px}
+    /* NEU: Schriftart auf Atkinson gestellt */
+    body{
+      margin:0;
+      font-family:'Atkinson Hyperlegible', system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+      background:var(--bg);
+      color:var(--text);
+      padding-bottom:80px
+    }
     .app-header{background:var(--primary);color:#fff;padding:1rem;position:sticky;top:0;z-index:10;display:flex;align-items:center;justify-content:space-between}
     .header-title{font-weight:700}
     .main{max-width:600px;margin:0 auto;padding:1rem}
