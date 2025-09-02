@@ -1,257 +1,339 @@
 <!doctype html>
 <html lang="de">
 <head>
-<meta charset="utf-8">
-<title>FFW – Dokumente bearbeiten (Safe Mode)</title>
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<style>
-  :root{--rot:#c9152b;--bg:#f7f7f7;--muted:#6b7280;}
-  *{box-sizing:border-box}
-  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:#111}
-  header{background:var(--rot);color:#fff;padding:14px 16px}
-  .bar{max-width:1000px;margin:0 auto;display:flex;gap:12px;align-items:center;justify-content:space-between}
-  h1{margin:0;font-size:20px}
-  .btn{appearance:none;border:0;border-radius:12px;background:#fff;color:var(--rot);padding:9px 14px;font-weight:800;cursor:pointer}
-  .btn.sm{padding:6px 10px;border-radius:10px}
-  main{max-width:1000px;margin:20px auto;padding:0 14px}
-  .card{background:#fff;border-radius:16px;padding:18px 18px 8px;box-shadow:0 2px 14px rgba(0,0,0,.06)}
-  .tabs{display:flex;gap:10px;margin:8px 0 12px}
-  .tab{border-radius:999px;padding:8px 12px;background:#ffe6ea;color:#9a0e20;font-weight:800;cursor:pointer;border:2px solid transparent}
-  .tab.active{background:#fff;border-color:#c9152b;color:#c9152b}
-  table{width:100%;border-collapse:collapse}
-  th,td{padding:12px;border-bottom:1px solid #eee;text-align:left;vertical-align:top}
-  th{color:#444}
-  .muted{color:var(--muted)}
-  .right{display:flex;gap:8px;justify-content:flex-end}
-  .pill{display:inline-block;background:#eef3ff;color:#2b4bb8;border-radius:999px;padding:3px 10px;font-weight:800}
-  /* Debugbar */
-  .debug{background:#fff5f5;color:#8c0b1e;border:1px solid #ffd0d4;padding:10px 12px;border-radius:12px;margin:10px 0;display:none}
-  .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-  .kbd{font-family:ui-monospace,monospace;background:#f3f4f6;padding:2px 6px;border-radius:6px}
-</style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>FFW – Dokumente bearbeiten</title>
+  <style>
+    :root{
+      --rot:#c8102e;
+      --rot-dunkel:#a10d25;
+      --grau:#eef1f4;
+      --text:#1b1f23;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:var(--text);background:#fff}
+    .topbar{background:var(--rot);color:#fff;padding:14px 16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+    .topbar .brand{font-size:20px;font-weight:800;line-height:1.2}
+    .spacer{flex:1}
+    .btn{appearance:none;border:0;border-radius:14px;padding:10px 14px;background:#fff;color:var(--rot);font-weight:700;cursor:pointer}
+    .btn:hover{filter:brightness(0.95)}
+    .btn-outline{background:transparent;border:2px solid #fff;color:#fff}
+    main{padding:16px}
+    .card{background:#fff;border-radius:18px;box-shadow:0 2px 14px rgba(0,0,0,.06);padding:18px}
+    h2{margin:0 0 16px 0;font-size:28px;color:var(--rot)}
+    .tabs{display:flex;gap:10px;margin-bottom:10px}
+    .tab{padding:10px 14px;border-radius:16px;background:var(--grau);font-weight:800;cursor:pointer;user-select:none}
+    .tab.active{background:var(--rot);color:#fff}
+    .table{width:100%;border-collapse:collapse}
+    .table th,.table td{padding:12px;border-bottom:1px solid #eee;vertical-align:top}
+    .table th{color:#6d7781;font-weight:800}
+    .chip{display:inline-block;padding:6px 10px;border-radius:999px;background:#ffe9ec;color:var(--rot);font-weight:800;font-size:12px}
+    .chip.pdf{background:#ffe9ec}
+    .chip.link{background:#e9f2ff;color:#2053aa}
+    .chip.secondary{background:#f0f3f5;color:#314453}
+    .actions{display:flex;gap:8px;flex-wrap:wrap}
+    .hidden{display:none!important}
+    .muted{color:#6d7781}
+
+    /* Mobile: Tabellen als Karten darstellen */
+    @media (max-width: 720px){
+      .table{display:block}
+      .table thead{display:none}
+      .table tbody{display:grid;gap:10px}
+      .table tr{display:grid;gap:6px;padding:12px;border-radius:14px;background:#fafbfc;border:1px solid #eee}
+      .table td{display:flex;gap:10px;border:0;padding:0}
+      .table td::before{
+        content:attr(data-label);
+        min-width:96px;
+        font-weight:700;
+        color:#5a6672;
+      }
+      .actions{margin-top:6px}
+    }
+  </style>
 </head>
 <body>
-<header>
-  <div class="bar">
-    <h1>FFW – Dokumente bearbeiten (Safe Mode)</h1>
-    <div class="row">
-      <span>Endpoint: <span id="ep" class="kbd">—</span></span>
-      <button id="forceApi" class="btn sm" title="Erzwinge /api/graphql">/api/graphql</button>
-      <button id="forceFn"  class="btn sm" title="Erzwinge /.netlify/functions/graphql">/.netlify/functions/graphql</button>
-    </div>
-  </div>
-</header>
+  <header class="topbar">
+    <div class="brand">FFW – Dokumente bearbeiten</div>
+    <div class="spacer"></div>
+    <button id="toDash" class="btn">Dashboard</button>
+    <button id="logout" class="btn btn-outline">Logout</button>
+  </header>
 
-<main>
-  <div id="debug" class="debug"></div>
+  <main>
+    <section class="card">
+      <h2>Dokumente</h2>
 
-  <section class="card">
-    <h2 style="margin:0 0 8px;color:#c9152b">Dokumente</h2>
+      <div class="tabs">
+        <div id="tabOpen" class="tab active">Offen</div>
+        <div id="tabArch" class="tab">Archiv (30 Tage)</div>
+      </div>
 
-    <div class="tabs">
-      <button id="tabOpen" class="tab active">Offen</button>
-      <button id="tabArch" class="tab">Archiv (30 Tage)</button>
-    </div>
+      <div id="error" class="hidden" style="margin:8px 0 12px;color:#b00020;font-weight:700"></div>
+      <div id="loading" class="muted">Lade …</div>
 
-    <table>
-      <thead>
-        <tr>
-          <th>Typ</th>
-          <th>Titel</th>
-          <th>Erstellt</th>
-          <th class="right">Aktionen</th>
-        </tr>
-      </thead>
-      <tbody id="rows">
-        <tr><td colspan="4" class="muted">Lade …</td></tr>
-      </tbody>
-    </table>
-  </section>
-</main>
+      <table class="table" id="tbl" aria-live="polite">
+        <thead>
+          <tr>
+            <th style="width:140px">Typ</th>
+            <th>Titel</th>
+            <th style="width:160px">Erstellt</th>
+            <th style="width:220px">Aktionen</th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </section>
+  </main>
 
 <script>
-/* ================= Helper & Debug ================= */
-const $ = s => document.querySelector(s);
-const debugEl = $('#debug'), epEl = $('#ep'), rowsEl = $('#rows');
-function showDebug(msg){
-  debugEl.style.display = 'block';
-  debugEl.textContent = String(msg);
+/* --------------------- Config --------------------- */
+const ENDPOINTS = [
+  '/.netlify/functions/graphql',  // Netlify Functions (empfohlen)
+  '/api/graphql'                  // optionaler Fallback (falls via redirects)
+];
+
+/* --------------------- Guard ---------------------- */
+// Leiser Guard: prüft nur Flag & leitet weiter – kein Popup.
+function guard() {
+  const ok = localStorage.getItem('ffw_admin') === '1' ||
+             sessionStorage.getItem('ffw_admin') === '1';
+  if (!ok) {
+    const next = encodeURIComponent('dokumente-bearbeiten.html');
+    location.replace(`admin-login.html?next=${next}`);
+    return false;
+  }
+  return true;
 }
-function clearDebug(){ debugEl.style.display = 'none'; debugEl.textContent = ''; }
-window.addEventListener('error', e => showDebug('JS-Fehler: ' + (e?.message||e)));
-window.addEventListener('unhandledrejection', e => showDebug('Promise-Fehler: ' + (e?.reason?.message || e?.reason || '')));
 
-function fmtDate(s){ if(!s) return '—'; const d=new Date(s); return d.toLocaleDateString('de-DE',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}); }
-function escapeHtml(x=''){ return String(x).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+/* --------------------- GQL Helper ----------------- */
+async function gql(query, variables = {}) {
+  let lastErr;
+  for (const ep of ENDPOINTS) {
+    try {
+      const res = await fetch(ep, {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ query, variables })
+      });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const json = await res.json();
+      if (json.errors) throw new Error(json.errors[0]?.message || 'GraphQL error');
+      return json.data;
+    } catch (e) { lastErr = e; /* versuche nächsten EP */ }
+  }
+  throw lastErr || new Error('Netzwerkfehler');
+}
 
-/* ================= Endpoint-Autodetect ================= */
-const CANDIDATES = ['/api/graphql','/.netlify/functions/graphql'];
-let ACTIVE_ENDPOINT = null;
+/* --------------- Queries & Mutations -------------- */
+const Q_OPEN = `
+query OpenDocs {
+  documents(
+    where: { _or: [{status: {_is_null: true}}, {status: {_neq: "erledigt"}}] }
+    order_by: { created_at: desc }
+  ){
+    id type title created_at status
+  }
+}`;
 
-async function tryEndpoint(url){
+const Q_ARCH = `
+query ArchDocs($since: timestamptz!) {
+  documents(
+    where: {
+      status: {_eq:"erledigt"},
+      created_at: {_gte: $since}
+    }
+    order_by: { created_at: desc }
+  ){
+    id type title created_at status
+  }
+}`;
+
+const Q_ONE = `
+query One($id: uuid!){
+  documents_by_pk(id:$id){ id type title status created_at payload }
+}`;
+
+const M_DONE = `
+mutation Done($id: uuid!){
+  update_documents_by_pk(pk_columns:{id:$id}, _set:{status:"erledigt"}){ id }
+}`;
+
+/* --------------------- UI Logic ------------------- */
+let currentTab = 'open';
+
+function fmtDate(iso){
   try{
-    const res = await fetch(url, {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ query: '{ __typename }' })
-    });
-    if(!res.ok) throw new Error('HTTP '+res.status);
-    const j = await res.json();
-    if (j.data && j.data.__typename) return true;
-    if (j.errors && j.errors.length) return true; // Hasura kann introspection auch erlauben => reicht, Backend antwortet
-    return false;
-  }catch(e){
-    return false;
-  }
-}
-async function pickEndpoint(){
-  clearDebug();
-  for (const url of CANDIDATES){
-    const ok = await tryEndpoint(url);
-    if (ok){ ACTIVE_ENDPOINT = url; epEl.textContent = url; return url; }
-  }
-  ACTIVE_ENDPOINT = null;
-  epEl.textContent = '—';
-  throw new Error('Kein erreichbarer GraphQL-Endpoint (/api/graphql oder /.netlify/functions/graphql).');
-}
-$('#forceApi').onclick = async ()=>{ ACTIVE_ENDPOINT='/api/graphql'; epEl.textContent=ACTIVE_ENDPOINT; load(); };
-$('#forceFn').onclick  = async ()=>{ ACTIVE_ENDPOINT='/.netlify/functions/graphql'; epEl.textContent=ACTIVE_ENDPOINT; load(); };
-
-/* ================= GraphQL Wrapper ================= */
-async function gql(query, variables){
-  if(!ACTIVE_ENDPOINT) await pickEndpoint();
-  const res = await fetch(ACTIVE_ENDPOINT, {
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({ query, variables })
-  });
-  if(!res.ok){
-    const t = await res.text().catch(()=> '');
-    throw new Error(`HTTP ${res.status}${t?': '+t:''}`);
-  }
-  const json = await res.json();
-  if(json.errors?.length){
-    throw new Error(json.errors.map(e=>e.message).join(' · '));
-  }
-  return json.data;
+    const d = new Date(iso);
+    return d.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'})
+           + ', ' +
+           d.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
+  }catch(_){ return iso }
 }
 
-/* ================= UI: Laden & Rendern ================= */
-let currentTab = 'open'; // 'open' | 'arch'
+function setLoading(v){
+  document.getElementById('loading').classList.toggle('hidden', !v);
+  document.getElementById('tbl').classList.toggle('hidden',  v);
+}
 
-function buildRow(doc){
-  const tr = document.createElement('tr');
-  tr.innerHTML = `
-    <td><span class="pill">${escapeHtml(doc.type||'—')}</span></td>
-    <td>${escapeHtml(doc.title||'—')}</td>
-    <td class="muted">${fmtDate(doc.created_at)}</td>
-    <td class="right">
-      <button class="btn sm" data-pdf="${doc.id}">PDF</button>
-      ${doc.status==='offen' ? `<button class="btn sm" data-done="${doc.id}">Erledigt</button>` : ''}
-    </td>`;
-  tr.querySelector('[data-pdf]').addEventListener('click', ()=> printDoc(doc));
-  const btnDone = tr.querySelector('[data-done]');
-  if (btnDone) btnDone.addEventListener('click', ()=> markDone(doc.id));
-  return tr;
+function setError(msg){
+  const el = document.getElementById('error');
+  if (!msg){ el.classList.add('hidden'); el.textContent=''; return; }
+  el.textContent = 'Fehler: ' + msg;
+  el.classList.remove('hidden');
+}
+
+function renderRows(items){
+  const tb = document.getElementById('rows');
+  tb.innerHTML = '';
+  if (!items?.length){
+    const tr = document.createElement('tr');
+    const td = document.createElement('td');
+    td.colSpan = 4;
+    td.className = 'muted';
+    td.textContent = 'Keine Einträge.';
+    tr.appendChild(td);
+    tb.appendChild(tr);
+    return;
+  }
+  for (const d of items){
+    const tr = document.createElement('tr');
+
+    const tdType = document.createElement('td');
+    tdType.dataset.label = 'Typ';
+    tdType.innerHTML = `<span class="chip secondary">${d.type || '–'}</span>`;
+    tr.appendChild(tdType);
+
+    const tdTitle = document.createElement('td');
+    tdTitle.dataset.label = 'Titel';
+    const title = d.title || '(ohne Titel)';
+    tdTitle.innerHTML = `<a class="chip link" href="produktAusgabe.html?id=${d.id}">${title}</a>`;
+    tr.appendChild(tdTitle);
+
+    const tdCreated = document.createElement('td');
+    tdCreated.dataset.label = 'Erstellt';
+    tdCreated.textContent = fmtDate(d.created_at);
+    tr.appendChild(tdCreated);
+
+    const tdAct = document.createElement('td');
+    tdAct.dataset.label = 'Aktionen';
+    tdAct.className = 'actions';
+    const pdfBtn = document.createElement('button');
+    pdfBtn.className = 'chip pdf';
+    pdfBtn.textContent = 'PDF';
+    pdfBtn.onclick = ()=> openPdf(d.id);
+
+    tdAct.appendChild(pdfBtn);
+
+    if ((d.status || '').toLowerCase() !== 'erledigt' && currentTab === 'open'){
+      const doneBtn = document.createElement('button');
+      doneBtn.className = 'chip';
+      doneBtn.textContent = 'Erledigt';
+      doneBtn.onclick = ()=> markDone(d.id);
+      tdAct.appendChild(doneBtn);
+    }
+
+    tr.appendChild(tdAct);
+    tb.appendChild(tr);
+  }
 }
 
 async function load(){
-  clearDebug();
-  rowsEl.innerHTML = `<tr><td colspan="4" class="muted">Lade …</td></tr>`;
+  setError('');
+  setLoading(true);
   try{
-    if(!ACTIVE_ENDPOINT) await pickEndpoint();
-
-    let query, variables;
-    if(currentTab==='open'){
-      query = `
-        query($status:String!){
-          documents(where:{status:{_eq:$status}}, order_by:{created_at:desc}){
-            id type title status created_at payload
-          }
-        }`;
-      variables = { status:'offen' };
-    } else {
-      const from = new Date(Date.now()-30*24*60*60*1000).toISOString();
-      query = `
-        query($status:String!,$from:timestamptz!){
-          documents(where:{status:{_eq:$status}, created_at:{_gte:$from}}, order_by:{created_at:desc}){
-            id type title status created_at payload
-          }
-        }`;
-      variables = { status:'erledigt', from };
+    if (currentTab === 'open'){
+      const data = await gql(Q_OPEN);
+      renderRows(data.documents);
+    }else{
+      const since = new Date(Date.now() - 30*24*60*60*1000).toISOString();
+      const data = await gql(Q_ARCH, { since });
+      renderRows(data.documents);
     }
-
-    const data = await gql(query, variables);
-    const list = data.documents || [];
-    if(!list.length){
-      rowsEl.innerHTML = `<tr><td colspan="4" class="muted">Keine Einträge.</td></tr>`;
-      return;
-    }
-    rowsEl.innerHTML = '';
-    list.forEach(d=> rowsEl.appendChild(buildRow(d)));
   }catch(e){
-    showDebug('Fehler beim Laden: ' + e.message);
-    rowsEl.innerHTML = `<tr><td colspan="4" class="muted">Fehler beim Laden.</td></tr>`;
+    setError(e.message || String(e));
+  }finally{
+    setLoading(false);
   }
 }
 
 async function markDone(id){
-  clearDebug();
   try{
-    await gql(`
-      mutation($id:uuid!){
-        update_documents_by_pk(pk_columns:{id:$id}, _set:{status:"erledigt"}){ id }
-      }`, { id }
-    );
-    load();
-  }catch(e){
-    showDebug('Konnte nicht auf „erledigt“ setzen: ' + e.message);
-  }
+    setError('');
+    await gql(M_DONE, { id });
+    await load();
+  }catch(e){ setError(e.message || String(e)); }
 }
 
-/* ================= PDF / Drucken ================= */
-function printDoc(doc){
-  const p = doc.payload || {};
-  const pos = Array.isArray(p.positionen)? p.positionen : [];
-  const html = `
-    <!doctype html><html><head>
-      <meta charset="utf-8"><title>${escapeHtml(doc.title||'Dokument')}</title>
-      <style>
-        body{font-family:Arial, sans-serif; padding:24px}
-        h1{margin:0 0 6px 0}
-        .muted{color:#666}
-        .kv{display:grid;grid-template-columns:180px 1fr;gap:6px 12px;margin-top:10px}
-        ol{margin:6px 0 0 22px}
-      </style>
-    </head><body>
-      <h1>${escapeHtml(doc.title||'Dokument')}</h1>
-      <div class="muted">Typ: ${escapeHtml(doc.type||'—')} • Erstellt: ${fmtDate(doc.created_at)}</div>
-      <div class="kv">
-        ${p.einsatznummer?`<div>Einsatznummer</div><div>${escapeHtml(p.einsatznummer)}</div>`:''}
-        ${p.datum?`<div>Datum</div><div>${escapeHtml(p.datum)}</div>`:''}
-        ${(p.ausgetragen_vorname||p.ausgetragen_nachname)?`<div>Ausgetragen von</div><div>${escapeHtml(p.ausgetragen_vorname||'')} ${escapeHtml(p.ausgetragen_nachname||'')}</div>`:''}
-        <div>Positionen</div>
-        <div>${
-          pos.length
-            ? `<ol>${pos.map(i=>`<li>${escapeHtml(i.qty ?? i.q ?? 1)} × ${escapeHtml(i.name ?? i.artikel ?? '')}</li>`).join('')}</ol>`
-            : '—'
-        }</div>
-      </div>
-    </body></html>`;
-  const w = window.open('', '_blank');
-  w.document.write(html); w.document.close(); w.focus();
-  setTimeout(()=>{ try{ w.print(); }catch(_){} }, 250);
+async function openPdf(id){
+  try{
+    const data = await gql(Q_ONE, { id });
+    const d = data.documents_by_pk;
+    if (!d) return;
+
+    const w = window.open('', '_blank');
+    const created = fmtDate(d.created_at);
+    const payload = d.payload || {};
+    const rows = Object.entries(payload)
+      .map(([k,v])=>`<tr><th>${escapeHtml(k)}</th><td>${escapeHtml(
+        typeof v==='object'? JSON.stringify(v): String(v)
+      )}</td></tr>`).join('');
+
+    const html = `<!doctype html>
+<html><head><meta charset="utf-8">
+<title>${escapeHtml(d.title || 'Dokument')}</title>
+<style>
+  body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;margin:24px;}
+  h1{margin:0 0 8px 0}
+  table{border-collapse:collapse;width:100%}
+  th,td{border:1px solid #ddd;padding:8px;vertical-align:top}
+  th{width:200px;text-align:left;background:#fafafa}
+  .muted{color:#666}
+</style></head>
+<body onload="setTimeout(()=>window.print(), 50)">
+  <h1>${escapeHtml(d.type || 'Dokument')}</h1>
+  <div class="muted">${escapeHtml(d.title || '')}</div>
+  <p class="muted">Erstellt: ${created}</p>
+  <table>${rows}</table>
+</body></html>`;
+    w.document.write(html);
+    w.document.close();
+  }catch(e){ setError(e.message || String(e)); }
 }
 
-/* ================= Tabs & Init ================= */
-const tabOpen = document.getElementById('tabOpen');
-const tabArch = document.getElementById('tabArch');
-tabOpen.onclick = ()=>{ tabOpen.classList.add('active'); tabArch.classList.remove('active'); currentTab='open'; load(); };
-tabArch.onclick = ()=>{ tabArch.classList.add('active'); tabOpen.classList.remove('active'); currentTab='arch'; load(); };
+function escapeHtml(s){
+  return String(s)
+    .replaceAll('&','&amp;')
+    .replaceAll('<','&lt;')
+    .replaceAll('>','&gt;')
+    .replaceAll('"','&quot;')
+    .replaceAll("'",'&#39;');
+}
 
-(async function start(){
-  // sofort rendern / laden – alle Fehler erscheinen oben in der Debugbox
-  await load();
+/* ----------------- Events & Start ----------------- */
+document.getElementById('toDash').onclick = ()=> location.href='admin-dashboard.html';
+document.getElementById('logout').onclick = ()=>{
+  try{ localStorage.removeItem('ffw_admin'); sessionStorage.removeItem('ffw_admin'); }catch(_){}
+  location.href='admin-login.html';
+};
+
+document.getElementById('tabOpen').onclick = ()=>{
+  currentTab = 'open';
+  document.getElementById('tabOpen').classList.add('active');
+  document.getElementById('tabArch').classList.remove('active');
+  load();
+};
+document.getElementById('tabArch').onclick = ()=>{
+  currentTab = 'arch';
+  document.getElementById('tabArch').classList.add('active');
+  document.getElementById('tabOpen').classList.remove('active');
+  load();
+};
+
+(function start(){
+  if (!guard()) return;
+  load();
 })();
 </script>
 </body>
