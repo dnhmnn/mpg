@@ -4,61 +4,45 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>FFW – Dokumente bearbeiten</title>
-  <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet" />
   <style>
-    :root { --rot:#c8102e; --bg:#f7f7f7; --card:#ffffff; }
-    * { box-sizing: border-box; }
-    html,body { margin:0; background:var(--bg); font-family:'Atkinson Hyperlegible', system-ui, Arial, sans-serif; color:#222; }
-
-    /* Header */
-    header { background:var(--rot); color:#fff; padding:12px 16px; display:flex; align-items:center; gap:12px; }
-    header h1 { margin:0; font-size:1.05rem; font-weight:800; letter-spacing:.2px }
-    .spacer { flex:1 }
-    .topbtn { color:#fff; text-decoration:none; font-weight:700; background:#00000022; padding:8px 12px; border-radius:10px; display:inline-block }
-    .topbtn:active { transform:translateY(1px) }
-
-    /* Seite */
-    .wrap { max-width:1000px; margin:18px auto; padding:0 14px; }
-    .card { background:var(--card); border-radius:14px; box-shadow:0 3px 12px rgba(0,0,0,.06); padding:16px; }
-    .card h2 { margin:0 0 12px; color:var(--rot); font-size:1.6rem }
-    .tabs { display:flex; gap:10px; margin-bottom:8px }
-    .tab { border:1px solid #eee; background:#fafafa; padding:8px 14px; border-radius:999px; font-weight:800; cursor:pointer; }
-    .tab.active { color:#fff; background:var(--rot); border-color:var(--rot) }
-
-    /* Tabelle (für große Screens) */
-    .table-head { display:grid; grid-template-columns: 180px 1fr 140px; gap:10px; padding:10px 4px; color:#6b6b6b; font-weight:800; border-bottom:1px solid #eee; }
-    .table-wrap { display:block; }
-    .row { display:grid; grid-template-columns: 180px 1fr 140px; gap:10px; padding:12px 6px; border-bottom:1px solid #eee; align-items:center; }
-    .row:last-child { border-bottom:none; }
-
+    :root{--rot:#c8102e;--bg:#f7f7f7;--card:#fff}
+    *{box-sizing:border-box}
+    html,body{margin:0;background:var(--bg);font-family:'Atkinson Hyperlegible',system-ui,Arial,sans-serif;color:#222}
+    header{background:var(--rot);color:#fff;padding:12px 16px;display:flex;align-items:center;gap:12px}
+    header h1{margin:0;font-size:1.05rem;font-weight:800;letter-spacing:.2px}
+    .spacer{flex:1}
+    .topbtn{color:#fff;text-decoration:none;font-weight:700;background:#0001;padding:8px 12px;border-radius:10px;display:inline-block}
+    .topbtn:active{transform:translateY(1px)}
+    .wrap{max-width:1000px;margin:18px auto;padding:0 14px}
+    .card{background:var(--card);border-radius:14px;box-shadow:0 3px 12px rgba(0,0,0,.06);padding:16px}
+    .card h2{margin:0 0 12px;color:var(--rot);font-size:1.6rem}
+    .tabs{display:flex;gap:10px;margin-bottom:8px}
+    .tab{border:1px solid #eee;background:#fafafa;padding:8px 14px;border-radius:999px;font-weight:800;cursor:pointer}
+    .tab.active{color:#fff;background:var(--rot);border-color:var(--rot)}
+    /* Desktop */
+    .table-head{display:grid;grid-template-columns:180px 1fr 160px;gap:10px;padding:10px 4px;color:#6b6b6b;font-weight:800;border-bottom:1px solid #eee}
+    .table-wrap{display:block}
+    .row{display:grid;grid-template-columns:180px 1fr 160px;gap:10px;padding:12px 6px;border-bottom:1px solid #eee;align-items:center}
+    .row:last-child{border-bottom:none}
     /* Mobile Cards */
-    .row-card { display:none; background:#fff; border:1px solid #eee; border-radius:12px; padding:12px; margin:10px 0; }
-    .pill { display:inline-block; background:#eef2ff; color:#2a4bbb; font-weight:800; border-radius:999px; padding:4px 10px; }
-    .title { font-size:1.05rem; margin:.6rem 0 .2rem 0; font-weight:800 }
-    .meta { color:#777; font-size:.92rem; }
-    .actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px }
-
-    /* Buttons */
-    .btn { background:var(--rot); color:#fff; border:0; border-radius:10px; padding:9px 12px; font-weight:800; cursor:pointer }
-    .btn.ghost { background:#f1f1f1; color:var(--rot); border:1px solid var(--rot) }
-    .btn:active { transform:translateY(1px) }
-
-    /* Force-Mobile via Klasse (um Safari-„Desktopwebsite“ auszutricksen) */
-    .is-mobile .table-wrap { display:none; }
-    .is-mobile .row-card   { display:block; }
-    /* Und zusätzlich normale Media-Query */
-    @media (max-width: 860px){
-      .table-wrap { display:none; }
-      .row-card   { display:block; }
-    }
-
-    .msg { margin-top:8px; min-height:1.2em; }
-    .ok { color:#2e7d32 }
-    .err { color:#c8102e }
+    .row-card{display:none;background:#fff;border:1px solid #eee;border-radius:12px;padding:12px;margin:10px 0}
+    .pill{display:inline-block;background:#eef2ff;color:#2a4bbb;font-weight:800;border-radius:999px;padding:4px 10px}
+    .title{font-size:1.05rem;margin:.6rem 0 .2rem 0;font-weight:800}
+    .meta{color:#777;font-size:.92rem}
+    .actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+    .btn{background:var(--rot);color:#fff;border:0;border-radius:10px;padding:9px 12px;font-weight:800;cursor:pointer}
+    .btn.ghost{background:#f1f1f1;color:var(--rot);border:1px solid var(--rot)}
+    .btn:active{transform:translateY(1px)}
+    /* Force mobile layout (zusätzlich zur MQ) */
+    .is-mobile .table-wrap{display:none}
+    .is-mobile .row-card{display:block}
+    @media (max-width:860px){.table-wrap{display:none}.row-card{display:block}}
+    .msg{margin-top:8px;min-height:1.2em}
+    .ok{color:#2e7d32}.err{color:#c8102e}
   </style>
 </head>
 <body>
-
 <header>
   <h1>FFW – Dokumente bearbeiten</h1>
   <div class="spacer"></div>
@@ -74,17 +58,17 @@
       <button class="tab" id="tab-arch">Archiv (30 Tage)</button>
     </div>
 
-    <!-- Desktop-Tabelle -->
+    <!-- Desktop -->
     <div class="table-wrap" id="table">
       <div class="table-head">
         <div>Typ</div>
         <div>Titel</div>
-        <div class="col-date">Aktionen</div>
+        <div>Aktionen</div>
       </div>
       <div id="rows"></div>
     </div>
 
-    <!-- Mobile Cards -->
+    <!-- Mobile -->
     <div id="cards"></div>
 
     <div id="msg" class="msg"></div>
@@ -93,93 +77,66 @@
 </div>
 
 <script type="module">
-  /* ---------- Auth (Login-Guard) ---------- */
+  /* ========== Login-Guard ========== */
   import { NhostClient } from "https://esm.sh/@nhost/nhost-js@2.2.9";
   const nhost = new NhostClient({ subdomain:"hpjfrhktprpuuxvvlpsb", region:"eu-central-1" });
 
   async function guard(){
     try{
       const ok = await nhost.auth.isAuthenticatedAsync();
-      if (!ok) { location.href = "admin-login.html"; return false; }
+      if (!ok){ location.href = "admin-login.html"; return false; }
       return true;
-    }catch(e){ location.href = "admin-login.html"; return false; }
+    }catch(_){ location.href="admin-login.html"; return false; }
   }
-  if (!(await guard())) { /* Seite wird eh verlassen */ }
+  if (!(await guard())) { /* stop */ }
 
   document.getElementById('logout').onclick = async (e)=>{
     e.preventDefault();
-    try{ await nhost.auth.signOut(); }catch(e){}
+    try{ await nhost.auth.signOut(); } catch(_){}
     localStorage.clear();
     location.href = "admin-login.html";
   };
 
-  /* ---------- Responsive: Force-Mobile-Klasse ---------- */
-  function setMobileClass() {
-    const isMobile = window.innerWidth <= 860;
-    document.documentElement.classList.toggle('is-mobile', isMobile);
-  }
-  window.addEventListener('resize', setMobileClass);
-  setMobileClass();
+  /* ========== Responsive helper (erzwingt Card-Layout auf klein) ========== */
+  function setMobileClass(){ document.documentElement.classList.toggle('is-mobile', window.innerWidth<=860); }
+  window.addEventListener('resize', setMobileClass); setMobileClass();
 
-  /* ---------- Utilities ---------- */
-  const $ = (sel)=>document.querySelector(sel);
-  const rowsEl  = $('#rows');
-  const cardsEl = $('#cards');
-  const msgEl   = $('#msg');
-  const loading = $('#loading');
-  const tabOpen = $('#tab-open');
-  const tabArch = $('#tab-arch');
+  /* ========== Utils ========== */
+  const $ = sel => document.querySelector(sel);
+  const rowsEl = $('#rows'), cardsEl = $('#cards'), msgEl = $('#msg'), loadingEl = $('#loading');
+  const tabOpen = $('#tab-open'), tabArch = $('#tab-arch');
 
   function escapeHtml(s){
     return String(s ?? '')
-      .replace(/[&<>"'\/]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','/':'&#47;'}[m]));
+      .replace(/[&<>"'\/]/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','/':'&#47;'}[m]));
   }
-  function fmtDate(ts){
-    try{
-      const d = new Date(ts);
-      return d.toLocaleDateString('de-DE',{ day:'2-digit', month:'2-digit', year:'numeric'}) +
-             ' ' + d.toLocaleTimeString('de-DE',{ hour:'2-digit', minute:'2-digit'});
-    }catch(_){ return ''; }
-  }
-  function parsePayload(p){
-    if (p && typeof p === 'string') {
-      try { return JSON.parse(p); } catch(_) { return {}; }
-    }
-    return p || {};
-  }
+  function parsePayload(p){ if (p && typeof p==='string'){ try{ return JSON.parse(p);}catch{ return {}; } } return p||{}; }
 
-  /* ---------- GraphQL via Netlify-Function ---------- */
+  /* ========== GraphQL über Netlify-Function /api/graphql ========== */
   async function gql(query, variables={}){
-    const res = await fetch('/api/graphql', {
+    const res = await fetch('/api/graphql',{
       method:'POST',
-      headers:{ 'content-type':'application/json' },
-      body: JSON.stringify({ query, variables })
+      headers:{'content-type':'application/json'},
+      body:JSON.stringify({query, variables})
     });
-    if (!res.ok) throw new Error('HTTP ' + res.status);
+    if(!res.ok) throw new Error('HTTP '+res.status);
     const json = await res.json();
-    if (json.errors && json.errors.length) throw new Error(json.errors[0].message);
+    if(json.errors?.length) throw new Error(json.errors[0].message);
     return json.data;
   }
 
   const QUERY_OPEN = `
-    query ($limit:Int = 100){
-      documents(
-        where:{ status:{ _neq:"erledigt" } },
-        order_by:{ created_at: desc },
-        limit:$limit
-      ){
+    query($limit:Int=100){
+      documents(where:{status:{_neq:"erledigt"}}, order_by:{created_at:desc}, limit:$limit){
         id type title status created_at payload
       }
     }`;
 
   const QUERY_ARCH = `
-    query ($since:timestamptz!){
+    query($since:timestamptz!){
       documents(
-        where:{
-          status:{ _eq:"erledigt" },
-          created_at:{ _gte:$since }
-        },
-        order_by:{ created_at: desc }
+        where:{ status:{_eq:"erledigt"}, created_at:{_gte:$since} },
+        order_by:{created_at:desc}
       ){
         id type title status created_at payload
       }
@@ -187,170 +144,104 @@
 
   const MUT_DONE = `
     mutation($id:uuid!){
-      update_documents_by_pk(pk_columns:{id:$id}, _set:{status:"erledigt"}){
-        id status
-      }
+      update_documents_by_pk(pk_columns:{id:$id}, _set:{status:"erledigt"}){ id status }
     }`;
 
-  /* ---------- Render ---------- */
-  async function loadOpen(){
-    setTabs('open');
-    msgEl.textContent = ''; loading.style.display='block';
-    rowsEl.innerHTML = ''; cardsEl.innerHTML = '';
-    try{
-      const data = await gql(QUERY_OPEN, { limit: 100 });
-      renderList(data.documents, true);
-      if (!data.documents.length) msgEl.textContent = 'Keine offenen Dokumente.';
-    }catch(e){
-      msgEl.textContent = 'Fehler: ' + e.message;
-    }finally{
-      loading.style.display='none';
-    }
-  }
-
-  async function loadArch(){
-    setTabs('arch');
-    msgEl.textContent = ''; loading.style.display='block';
-    rowsEl.innerHTML = ''; cardsEl.innerHTML = '';
-    try{
-      const since = new Date(Date.now() - 30*24*60*60*1000).toISOString();
-      const data = await gql(QUERY_ARCH, { since });
-      renderList(data.documents, false);
-      if (!data.documents.length) msgEl.textContent = 'Kein Archiv-Eintrag (letzte 30 Tage).';
-    }catch(e){
-      msgEl.textContent = 'Fehler: ' + e.message;
-    }finally{
-      loading.style.display='none';
-    }
-  }
-
+  /* ========== Render ========== */
   function setTabs(which){
-    if (which==='open'){ tabOpen.classList.add('active'); tabArch.classList.remove('active'); }
-    else { tabArch.classList.add('active'); tabOpen.classList.remove('active'); }
+    if(which==='open'){ tabOpen.classList.add('active'); tabArch.classList.remove('active'); }
+    else{ tabArch.classList.add('active'); tabOpen.classList.remove('active'); }
   }
 
   function renderList(list, isOpen){
-    // Desktop-Zeilen
-    rowsEl.innerHTML = list.map(doc=>{
-      const t = escapeHtml(doc.type || '');
-      const title = escapeHtml(doc.title || '(ohne Titel)');
-      const id = doc.id;
-      const actions = `
-        <button class="btn ghost" data-pdf="${id}">PDF</button>
-        ${isOpen ? `<button class="btn" data-done="${id}">Erledigt</button>` : ``}
-      `;
+    // Desktop
+    rowsEl.innerHTML = list.map(d=>{
+      const id=d.id, t=escapeHtml(d.type||''), title=escapeHtml(d.title||'(ohne Titel)');
       return `
         <div class="row" data-id="${id}">
           <div><span class="pill">${t}</span></div>
           <div>${title}</div>
-          <div class="col-date" style="display:flex;gap:8px;justify-content:flex-end">${actions}</div>
+          <div style="display:flex;gap:8px;justify-content:flex-end">
+            <button class="btn ghost" data-pdf="${id}">PDF</button>
+            ${isOpen?`<button class="btn" data-done="${id}">Erledigt</button>`:''}
+          </div>
         </div>`;
     }).join('');
 
-    // Mobile Cards (ohne „Erstellt“ Spalte, Aktionen unten)
-    cardsEl.innerHTML = list.map(doc=>{
-      const id = doc.id;
-      const t = escapeHtml(doc.type || '');
-      const title = escapeHtml(doc.title || '(ohne Titel)');
+    // Mobile
+    cardsEl.innerHTML = list.map(d=>{
+      const id=d.id, t=escapeHtml(d.type||''), title=escapeHtml(d.title||'(ohne Titel)');
       return `
         <article class="row-card" data-id="${id}">
           <div class="pill">${t}</div>
           <div class="title">${title}</div>
           <div class="actions">
             <button class="btn ghost" data-pdf="${id}">PDF</button>
-            ${isOpen ? `<button class="btn" data-done="${id}">Erledigt</button>` : ``}
+            ${isOpen?`<button class="btn" data-done="${id}">Erledigt</button>`:''}
           </div>
         </article>`;
     }).join('');
   }
 
-  /* ---------- Aktionen ---------- */
-  function getDocFromDom(id){
-    // Sucht im aktuell gerenderten Array per DOM-Attribut
-    // (Wir lesen die Daten einfach aus den Buttons und fragen dann via GraphQL das Detail nochmal ab, damit PDF immer frisch ist)
-    return id;
+  async function loadOpen(){
+    setTabs('open'); msgEl.textContent=''; loadingEl.style.display='block';
+    rowsEl.innerHTML=''; cardsEl.innerHTML='';
+    try{
+      const data = await gql(QUERY_OPEN,{limit:100});
+      renderList(data.documents,true);
+      if(!data.documents.length) msgEl.textContent='Keine offenen Dokumente.';
+    }catch(e){ msgEl.textContent='Fehler: '+e.message; }
+    finally{ loadingEl.style.display='none'; }
   }
 
-  async function markDone(id){
+  async function loadArch(){
+    setTabs('arch'); msgEl.textContent=''; loadingEl.style.display='block';
+    rowsEl.innerHTML=''; cardsEl.innerHTML='';
     try{
-      loading.style.display='block';
-      await gql(MUT_DONE, { id });
-      await loadOpen();
-    }catch(e){
-      alert('Konnte Status nicht setzen: ' + e.message);
-    }finally{
-      loading.style.display='none';
-    }
+      const since = new Date(Date.now()-30*24*60*60*1000).toISOString();
+      const data = await gql(QUERY_ARCH,{since});
+      renderList(data.documents,false);
+      if(!data.documents.length) msgEl.textContent='Kein Archiv-Eintrag (letzte 30 Tage).';
+    }catch(e){ msgEl.textContent='Fehler: '+e.message; }
+    finally{ loadingEl.style.display='none'; }
+  }
+
+  /* ========== Aktionen ========== */
+  async function markDone(id){
+    try{ loadingEl.style.display='block'; await gql(MUT_DONE,{id}); await loadOpen(); }
+    catch(e){ alert('Konnte Status nicht setzen: '+e.message); }
+    finally{ loadingEl.style.display='none'; }
   }
 
   async function openPdf(id){
-    // Detail nochmal holen (robust: sollte in der Liste sein, aber PDF nutzt die frischen Daten)
-    const DETAIL = `
-      query($id:uuid!){
-        documents_by_pk(id:$id){ id type title created_at payload }
-      }`;
+    const DETAIL = `query($id:uuid!){ documents_by_pk(id:$id){ id type title payload } }`;
     try{
-      const data = await gql(DETAIL, { id });
-      const doc = data.documents_by_pk;
-      if (!doc) return alert('Dokument nicht gefunden.');
+      const data = await gql(DETAIL,{id});
+      const doc = data.documents_by_pk; if(!doc) return alert('Dokument nicht gefunden.');
       const p = parsePayload(doc.payload);
-      const title = doc.title || '(ohne Titel)';
+      const rows = Array.isArray(p.positionen)?p.positionen:[];
+      const items = rows.map(it=>`<tr><td>${escapeHtml(it.qty??it.menge??'')}</td><td>${escapeHtml(it.name??it.artikel??'')}</td></tr>`).join('');
 
-      // Sehr einfacher PDF/Print-View:
-      const w = window.open('', '_blank');
-      const html = `
-        <!doctype html><html><head>
-          <meta charset="utf-8">
-          <title>PDF – ${escapeHtml(title)}</title>
-          <style>
-            body{ font-family:system-ui,Arial,sans-serif; margin:24px; }
-            h1{ margin:0 0 6px; }
-            .meta{ color:#555; margin-bottom:14px }
-            table{ width:100%; border-collapse:collapse; margin-top:10px }
-            th,td{ padding:8px; border-bottom:1px solid #ddd; text-align:left }
-          </style>
-        </head><body>
-          <h1>${escapeHtml(doc.type||'Dokument')}</h1>
-          <div class="meta"><strong>Titel:</strong> ${escapeHtml(title)}</div>
-          ${renderPayloadForPdf(doc.type, p)}
-        </body></html>`;
-      w.document.write(html); w.document.close();
-      // Automatisch Drucken? -> w.print();
-    }catch(e){
-      alert('PDF-Fehler: ' + e.message);
-    }
+      const pop = window.open('', '_blank');
+      pop.document.write(
+        '<!doctype html><html><head><meta charset="utf-8"><title>PDF</title>'+
+        '<style>body{font-family:system-ui,Arial,sans-serif;margin:24px}h1{margin:0 0 4px}table{width:100%;border-collapse:collapse;margin-top:10px}th,td{padding:8px;border-bottom:1px solid #ddd;text-align:left}</style>'+
+        '</head><body>'+
+          '<h1>'+escapeHtml(doc.type||'Dokument')+'</h1>'+
+          '<div><strong>Titel:</strong> '+escapeHtml(doc.title||'(ohne Titel)')+'</div>'+
+          (rows.length?('<table><thead><tr><th>Menge</th><th>Artikel / Beschreibung</th></tr></thead><tbody>'+items+'</tbody></table>'):'')+
+        '</body></html>'
+      );
+      pop.document.close();
+      // pop.print(); // optional
+    }catch(e){ alert('PDF-Fehler: '+e.message); }
   }
 
-  function renderPayloadForPdf(type, p){
-    // Einfaches Layout speziell für "Produktausgabe"
-    if ((type||'').toLowerCase() === 'produktausgabe'){
-      const pos = Array.isArray(p.positionen) ? p.positionen : [];
-      const rows = pos.map(it=>`
-        <tr><td>${escapeHtml(it.qty ?? it.menge ?? '')}</td><td>${escapeHtml(it.name ?? it.artikel ?? '')}</td></tr>
-      `).join('');
-      return `
-        <div><strong>Einsatznummer:</strong> ${escapeHtml(p.einsatznummer||'')}</div>
-        <div><strong>Datum:</strong> ${escapeHtml(p.datum||'')}</div>
-        <div style="margin-top:10px"><strong>Ausgetragen von:</strong> ${escapeHtml(p.ausgetragen_vorname||'')} ${escapeHtml(p.ausgetragen_nachname||'')}</div>
-        <table>
-          <thead><tr><th>Menge</th><th>Artikel / Beschreibung</th></tr></thead>
-          <tbody>${rows}</tbody>
-        </table>`;
-    }
-    // Fallback: JSON roh
-    return `<pre>${escapeHtml(JSON.stringify(p, null, 2))}</pre>`;
-  }
-
-  // Delegation für Buttons
-  document.addEventListener('click', (ev)=>{
+  // Button-Delegation
+  document.addEventListener('click',(ev)=>{
     const t = ev.target;
-    if (t.matches('[data-done]')) {
-      const id = t.getAttribute('data-done');
-      markDone(id);
-    } else if (t.matches('[data-pdf]')) {
-      const id = t.getAttribute('data-pdf');
-      openPdf(id);
-    }
+    if (t.matches('[data-done]')) markDone(t.getAttribute('data-done'));
+    if (t.matches('[data-pdf]'))  openPdf(t.getAttribute('data-pdf'));
   });
 
   // Tabs
