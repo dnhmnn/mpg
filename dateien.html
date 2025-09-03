@@ -6,344 +6,331 @@
   <title>FFW – Dateien</title>
   <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
   <style>
-    :root{ --rot:#c8102e; --bg:#f7f7f7; --card:#fff; --txt:#1e293b; --mut:#64748b; --brd:#e5e7eb }
+    :root{ --rot:#c8102e; --bg:#f7f7f7; --card:#fff; --border:#e6e6e6; --muted:#6b7280 }
     *{ box-sizing:border-box }
-    body{ margin:0; font-family:'Atkinson Hyperlegible', system-ui, Arial, sans-serif; background:var(--bg); color:var(--txt) }
-    header{ background:var(--rot); color:#fff; display:flex; align-items:center; gap:12px; padding:10px 14px; position:sticky; top:0; z-index:5 }
-    header h1{ margin:0; font-size:1.1rem; font-weight:700 }
-    .sp{ flex:1 }
-    .topbtn{ color:#fff; text-decoration:none; background:#00000022; padding:8px 12px; border-radius:10px; font-weight:700 }
-    .wrap{ max-width:900px; margin:14px auto; padding:0 14px }
+    body{ margin:0; background:var(--bg); font-family:'Atkinson Hyperlegible', system-ui, Arial, sans-serif; color:#111 }
+    header{ background:var(--rot); color:#fff; display:flex; align-items:center; gap:12px; padding:10px 14px }
+    header h1{ margin:0; font-size:1.15rem; font-weight:700 }
+    .spacer{ flex:1 }
+    .topbtn{ color:#fff; text-decoration:none; background:#00000022; padding:7px 10px; border-radius:8px; font-weight:700 }
+    main{ max-width:980px; margin:16px auto; padding:0 14px }
     .card{ background:var(--card); border-radius:12px; box-shadow:0 3px 12px rgba(0,0,0,.06); padding:14px }
     h2{ margin:0 0 10px; color:var(--rot) }
-    .row{ display:flex; gap:10px; flex-wrap:wrap; align-items:center }
+    .row{ display:flex; gap:8px; flex-wrap:wrap; margin:8px 0 }
+    input,button{ font:inherit }
+    input{ width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:10px; background:#fafafa }
     .btn{ background:var(--rot); color:#fff; border:0; border-radius:10px; padding:10px 14px; font-weight:700; cursor:pointer }
-    .btn.sec{ background:#fff; color:var(--rot); border:1px solid var(--rot) }
-    input[type="text"]{ width:100%; padding:10px 12px; border:1px solid var(--brd); border-radius:10px; background:#fafafa }
-    .grid{ display:grid; grid-template-columns:1fr; gap:10px }
-    @media (min-width:680px){ .grid{ grid-template-columns:1fr 1fr } }
-    .drop{ border:2px dashed var(--brd); border-radius:12px; padding:18px; text-align:center; color:var(--mut) }
+    .btn.ghost{ background:#fff; color:var(--rot); border:1px solid var(--rot) }
+    .btn.gray{ background:#eee; color:#333; border:1px solid var(--border) }
+    .muted{ color:var(--muted) }
+    .msg{ margin-top:6px; min-height:1.2em }
+    .msg.err{ color:#c8102e } .msg.ok{ color:#11823b }
+    .drop{ border:2px dashed #d1d5db; border-radius:12px; padding:16px; text-align:center; color:var(--muted) }
+    .drop.drag{ background:#fffaf3; border-color:#f59e0b; color:#92400e }
     .tools{ display:flex; gap:8px; flex-wrap:wrap }
-    .err{ color:#c8102e; background:#fff5f5; border:1px solid #f2c9d1; border-radius:10px; padding:8px; display:none; margin-top:10px }
-    .list{ display:flex; flex-direction:column; gap:10px; margin-top:12px }
-    .item{ background:#fff; border:1px solid var(--brd); border-radius:12px; padding:12px }
-    .it-h{ display:flex; justify-content:space-between; gap:8px; align-items:center; flex-wrap:wrap }
+    .tools .btn{ white-space:nowrap }
+    .list-head{ display:grid; grid-template-columns:1fr auto; align-items:center; gap:10px; margin-top:10px }
+    .search{ position:relative }
+    .search input{ padding-left:36px }
+    .search i{ position:absolute; top:50%; transform:translateY(-50%); left:12px; color:#9ca3af }
+    .file{ display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 0; border-bottom:1px solid #f1f1f1 }
+    .file:last-child{ border-bottom:none }
     .name{ font-weight:700 }
-    .meta{ color:var(--mut); font-size:.92rem }
-    .tags{ display:flex; gap:6px; flex-wrap:wrap; margin-top:4px }
-    .tag{ background:#f3f4f6; color:#374151; border:1px solid #e5e7eb; padding:2px 8px; border-radius:999px; font-size:.8rem }
-    .act{ display:flex; gap:6px; flex-wrap:wrap; margin-top:8px }
-    .mini{ background:#fff; color:var(--rot); border:1px solid var(--rot); padding:6px 10px; border-radius:8px; font-weight:700; cursor:pointer }
-    .muted{ color:var(--mut) }
+    .path{ color:var(--muted); font-size:.95rem }
+    .chips{ display:flex; gap:6px; flex-wrap:wrap; margin-top:4px }
+    .chip{ background:#fff5f5; border:1px solid #f2c9d1; color:#8b0e22; padding:2px 8px; border-radius:999px; font-size:.82rem }
+    .row-ctl{ display:flex; gap:6px; flex-wrap:wrap }
+    .pill{ display:inline-block; background:#eef2ff; color:#3730a3; border:1px solid #e0e7ff; border-radius:999px; padding:2px 8px; font-size:.82rem }
+    @media (max-width:640px){
+      .file{ align-items:flex-start; flex-direction:column }
+      .row-ctl{ width:100% }
+      .list-head{ grid-template-columns:1fr }
+    }
   </style>
 </head>
 <body>
 <header>
   <h1>FFW – Dateien</h1>
-  <div class="sp"></div>
+  <div class="spacer"></div>
   <a class="topbtn" href="admin-dashboard.html">Dashboard</a>
   <a class="topbtn" href="#" id="logoutBtn">Logout</a>
 </header>
 
-<div class="wrap">
+<main>
   <section class="card">
     <h2>Dateien hochladen &amp; verwalten</h2>
 
     <div class="tools">
-      <button class="btn" id="btnPick">Dateien auswählen</button>
-      <button class="btn sec" id="btnRefresh">Aktualisieren</button>
-      <button class="btn sec" id="btnMkFolder">Ordner erstellen</button>
-      <input id="search" type="text" placeholder="Suche (Dateiname …)" style="flex:1; min-width:200px">
+      <button class="btn" id="pickBtn">Dateien auswählen</button>
+      <button class="btn gray" id="reloadBtn">Aktualisieren</button>
+      <button class="btn ghost" id="mkFolderBtn">Ordner erstellen</button>
+      <span class="pill">Bucket: <strong id="bucketName">default</strong></span>
     </div>
 
-    <div class="grid" style="margin-top:10px">
-      <div><input id="path" type="text" placeholder="Ordner (z. B. einsatz/2025-001/)"></div>
-      <div><input id="tags" type="text" placeholder="Tags, Komma-getrennt (z. B. einsatz,bericht)"></div>
+    <div class="row">
+      <input id="inpPath" placeholder="Ordner (z. B. einsatz/2025-001/)" />
+    </div>
+    <div class="row">
+      <input id="inpTags" placeholder="Tags, Komma-getrennt (z. B. einsatz,bericht)" />
     </div>
 
-    <div id="drop" class="drop" style="margin-top:10px">
-      Dateien hierher ziehen &amp; ablegen<br>
-      <span class="muted">Ordnerpfad + Tags werden beim Upload gespeichert. Bucket: <code id="bucketName">files</code>.</span>
+    <div id="drop" class="drop">Dateien hierher ziehen &amp; ablegen<br>
+      <span class="muted">Ordnerpfad + Tags werden beim Upload gespeichert.</span>
     </div>
 
-    <div id="errBox" class="err"></div>
+    <div class="list-head">
+      <div class="search">
+        <i>🔎</i>
+        <input id="q" placeholder="Suche (Dateiname oder Ordner) …" />
+      </div>
+      <div class="muted">Angemeldet als: <span id="who">—</span></div>
+    </div>
 
-    <input id="fileInput" type="file" multiple hidden />
+    <div class="msg" id="msg"></div>
   </section>
 
   <section class="card" style="margin-top:12px">
-    <h2>Übersicht</h2>
-    <div id="list" class="list">
-      <div class="muted">Lade …</div>
-    </div>
+    <div id="list"></div>
+    <div id="empty" class="muted" style="text-align:center; padding:14px; display:none">Keine Dateien gefunden.</div>
   </section>
-</div>
+</main>
+
+<input id="fileInput" type="file" multiple style="display:none" />
 
 <script type="module">
-  import { NhostClient } from "https://esm.sh/@nhost/nhost-js@2.2.9";
+  import { NhostClient } from 'https://esm.sh/@nhost/nhost-js@2.2.9';
 
-  // ======= Konfiguration =======
-  const BUCKET_ID = 'files';   // falls du keinen 'files'-Bucket hast: 'default'
+  // ---------- Nhost Setup ----------
+  const nhost = new NhostClient({
+    subdomain: 'hpjfrhktprpuuxvvlpsb',
+    region: 'eu-central-1'
+  });
+
+  // ---------- Konfiguration (Option A) ----------
+  const BUCKET_ID = 'default';                  // <— Option A: default-Bucket nutzen
   document.getElementById('bucketName').textContent = BUCKET_ID;
 
-  // ======= Nhost & Login-Guard =======
-  const nhost = new NhostClient({ subdomain: "hpjfrhktprpuuxvvlpsb", region: "eu-central-1" });
+  // ---------- Elemente ----------
+  const msg = document.getElementById('msg');
+  const listEl = document.getElementById('list');
+  const emptyEl = document.getElementById('empty');
+  const whoEl = document.getElementById('who');
+  const inpPath = document.getElementById('inpPath');
+  const inpTags = document.getElementById('inpTags');
+  const qEl = document.getElementById('q');
+  const drop = document.getElementById('drop');
 
-  async function guard() {
+  // ---------- Helpers ----------
+  const delay = (ms)=> new Promise(r=>setTimeout(r,ms));
+  const showOk  = (t)=>{ msg.className = 'msg ok';  msg.textContent = t||''; };
+  const showErr = (e)=>{ msg.className = 'msg err'; msg.textContent = typeof e==='string' ? e : (e?.message || JSON.stringify(e)); };
+  const clearMsg= ()=>{ msg.className='msg'; msg.textContent=''; };
+
+  function normPath(p){
+    p = (p||'').trim().replace(/^\/+/,''); // führende / weg
+    if (p && !p.endsWith('/')) p += '/';
+    return p;
+  }
+  function parseTags(txt){
+    const arr = (txt||'').split(',').map(s=>s.trim()).filter(Boolean);
+    // Doppelte entfernen:
+    return [...new Set(arr)];
+  }
+  function esc(s){
+    return String(s??'').replace(/[&<>"']/g,m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));
+  }
+
+  async function guard(){
     const ok = await nhost.auth.isAuthenticatedAsync();
-    if (!ok) {
+    if (!ok){
       const back = encodeURIComponent(location.pathname + location.search);
-      location.href = "admin-login.html?redirect=" + back;
+      location.href = 'admin-login.html?redirect=' + back;
       return false;
     }
+    const u = nhost.auth.getUser();
+    whoEl.textContent = u?.email || '—';
     return true;
   }
-  if (!await guard()) throw new Error("redirect…");
+  if (!await guard()) throw new Error('redirect');
 
-  document.getElementById('logoutBtn')?.addEventListener('click', async (e)=>{
+  document.getElementById('logoutBtn').onclick = async (e)=>{
     e.preventDefault();
     await nhost.auth.signOut();
     localStorage.clear();
-    location.href = "admin-login.html";
-  });
+    location.href = 'admin-login.html';
+  };
 
-  // ======= Helpers =======
-  const $ = sel => document.querySelector(sel);
-  const errBox = $('#errBox');
-  function showError(msg){
-    errBox.textContent = msg;
-    errBox.style.display = 'block';
-  }
-  function hideError(){ errBox.style.display = 'none'; errBox.textContent = ''; }
-
-  const sanitizePath = (p) => (p || '').trim().replace(/\\/g,'/').replace(/^\/+|\/+$/g,'');
-  const parseTags    = (s) => (s||'').split(',').map(t=>t.trim()).filter(Boolean);
-
+  // ---------- GraphQL ----------
   async function gql(q, v){
     const { data, error } = await nhost.graphql.request(q, v);
-    if (error) throw (error.message ? new Error(error.message) : error);
+    if (error) throw new Error(error.message || JSON.stringify(error));
     return data;
   }
 
-  // ======= Upload =======
-  async function uploadFiles(files) {
-    const path = sanitizePath($('#path').value);
-    const tagsArr = parseTags($('#tags').value);
+  // Liste laden (aus Hasura -> public.file_meta)
+  async function loadList(){
+    try{
+      clearMsg();
+      listEl.innerHTML = '';
+      emptyEl.style.display = 'none';
 
-    for (const file of files) {
-      // 1) hochladen (nur String-Metadaten!)
-      const { fileMetadata, error } = await nhost.storage.upload({
-        file,
-        bucketId: BUCKET_ID,
-        name: path ? `${path}/${file.name}` : file.name,
-        metadata: { tags: tagsArr.join(',') }
-      });
-      if (error) throw error;
-      const id = fileMetadata?.id;
-      if (!id) throw new Error('Upload ok, aber keine Datei-ID erhalten.');
-
-      // 2) Metadaten in Hasura/GraphQL
-      await gql(`
-        mutation ($obj: file_meta_insert_input!) {
-          insert_file_meta_one(object:$obj){ file_id }
-        }`,
-        { obj: { file_id:id, name:file.name, path, tags:tagsArr, uploader_id: nhost.auth.getUser()?.id || null } }
-      );
-    }
-  }
-
-  // Ordner als „Marker“ anlegen (.keep)
-  async function makeFolder() {
-    const p = sanitizePath($('#path').value);
-    if (!p) { alert('Bitte zuerst einen Ordnernamen in das Feld „Ordner“ eingeben.'); return; }
-    const keep = new File([new Blob(['keep'])], '.keep', { type:'text/plain' });
-    await uploadFiles([keep]);
-  }
-
-  // ======= Liste laden (nur Hasura) =======
-  async function loadList() {
-    hideError();
-    $('#list').innerHTML = '<div class="muted">Lade …</div>';
-
-    const qStr = ($('#search').value || '').trim();
-    const pathPrefix = sanitizePath($('#path').value);
-    const q = `%${qStr}%`;
-    const prefix = pathPrefix ? `${pathPrefix}%` : '%';
-
-    try {
+      const like = '%' + (qEl.value||'').trim() + '%';
       const data = await gql(`
-        query ($q:String!, $prefix:String!) {
-          file_meta(
-            where: {
-              _and: [
-                { path: { _ilike: $prefix } },
-                { _or: [
-                  { name: { _ilike: $q } },
-                  { path: { _ilike: $q } }
-                ] }
-              ]
-            },
-            order_by: { created_at: desc }
-          ) {
-            file_id
-            name
-            path
-            tags
-            created_at
+        query($like:String!){
+          file_meta(where:{ _or:[ {name:{_ilike:$like}}, {path:{_ilike:$like}} ] },
+                    order_by:{created_at:desc}, limit:400){
+            file_id name path tags created_at
           }
-        }`, { q, prefix });
+        }
+      `,{ like });
 
       const rows = data.file_meta || [];
-      renderList(rows);
-    } catch (e) {
-      console.error(e);
-      showError('Konnte Dateien nicht laden: ' + (e?.message || e));
-      $('#list').innerHTML = '';
-    }
-  }
+      if (!rows.length){ emptyEl.style.display='block'; return; }
 
-  function renderList(rows){
-    const list = $('#list');
-    list.innerHTML = '';
-    if (!rows.length) {
-      list.innerHTML = '<div class="muted">Keine Dateien vorhanden.</div>';
-      return;
-    }
-    for (const r of rows) {
-      const dt = r.created_at ? new Date(r.created_at).toLocaleString('de-DE') : '';
-      list.insertAdjacentHTML('beforeend', `
-        <div class="item">
-          <div class="it-h">
-            <div class="name">${r.name}</div>
-            <div class="meta">${r.path ? '/'+r.path+'/' : '/'} • ${dt}</div>
-          </div>
-          ${r.tags?.length ? `<div class="tags">${r.tags.map(t=>`<span class="tag">${t}</span>`).join('')}</div>` : ''}
-          <div class="act">
-            <button class="mini" data-open="${r.file_id}">Öffnen</button>
-            <button class="mini" data-copy="${r.file_id}">Link kopieren</button>
-            <button class="mini" data-del="${r.file_id}">Löschen</button>
-          </div>
-        </div>
-      `);
-    }
-  }
-
-  // ======= Datei-Aktionen =======
-  async function getAnyUrl(fileId){
-    // Versuche mehrere Wege, je nach Bucket-Setting/SDK-Version
-    try {
-      if (nhost.storage.getPublicUrl) {
-        const res = nhost.storage.getPublicUrl({ fileId });
-        if (res?.url) return res.url;
+      for (const r of rows){
+        const when = new Date(r.created_at).toLocaleString('de-DE');
+        const tags = Array.isArray(r.tags) ? r.tags : [];
+        const html = `
+          <div class="file" data-id="${esc(r.file_id)}">
+            <div style="flex:1">
+              <div class="name">${esc(r.name)}</div>
+              <div class="path">${esc(r.path)} <span class="muted">• ${when}</span></div>
+              ${tags.length ? `<div class="chips">${tags.map(t=>`<span class="chip">#${esc(t)}</span>`).join('')}</div>` : ''}
+            </div>
+            <div class="row-ctl">
+              <button class="btn gray" data-open>Öffnen</button>
+              <button class="btn gray" data-copy>Link kopieren</button>
+              <button class="btn ghost" data-del>Löschen</button>
+            </div>
+          </div>`;
+        listEl.insertAdjacentHTML('beforeend', html);
       }
-    } catch {}
-    try {
-      if (nhost.storage.getUrl) {
-        const res = nhost.storage.getUrl({ fileId });
-        if (res?.url) return res.url;
-      }
-    } catch {}
-    try {
-      if (nhost.storage.getPresignedUrl) {
-        const res = await nhost.storage.getPresignedUrl({ fileId, expiresIn: 60 });
-        const url = res?.presignedUrl?.url || res?.presignedUrl || res?.url;
-        if (url) return url;
-      }
-    } catch {}
-    // Fallback: Info für nicht-öffentliche Buckets
-    throw new Error('Kein öffentlicher Link verfügbar (Bucket vermutlich privat).');
+    }catch(e){ showErr(e); }
   }
 
-  async function handleOpen(id){
-    try {
-      const url = await getAnyUrl(id);
-      window.open(url, '_blank', 'noopener');
-    } catch (e) {
-      showError('Öffnen fehlgeschlagen: ' + (e?.message || e));
-    }
-  }
-  async function handleCopy(id){
-    try {
-      const url = await getAnyUrl(id);
-      await navigator.clipboard.writeText(url);
-      alert('Link kopiert.');
-    } catch (e) {
-      showError('Link konnte nicht erzeugt werden: ' + (e?.message || e));
-    }
-  }
-  async function handleDelete(id){
-    if (!confirm('Datei wirklich löschen?')) return;
-    try {
-      // 1) Storage
-      if (nhost.storage.delete) {
-        const { error } = await nhost.storage.delete({ fileId: id });
-        if (error) throw error;
-      }
-      // 2) Metadaten
-      await gql(`mutation ($id: uuid!) {
-        delete_file_meta(where:{file_id:{_eq:$id}}){ affected_rows }
-      }`, { id });
-      await loadList();
-    } catch (e) {
-      showError('Löschen fehlgeschlagen: ' + (e?.message || e));
-    }
-  }
-
-  // Delegation für Buttons in der Liste
-  document.addEventListener('click', (e)=>{
-    const btn = e.target.closest('button.mini[data-open],button.mini[data-copy],button.mini[data-del]');
-    if (!btn) return;
-    if (btn.dataset.open) handleOpen(btn.dataset.open);
-    else if (btn.dataset.copy) handleCopy(btn.dataset.copy);
-    else if (btn.dataset.del) handleDelete(btn.dataset.del);
-  });
-
-  // ======= UI-Events =======
-  $('#btnPick').addEventListener('click', ()=> $('#fileInput').click());
-  $('#fileInput').addEventListener('change', async (e)=>{
-    hideError();
-    const files = Array.from(e.target.files || []);
-    if (!files.length) return;
+  // URL ermitteln (Public ODER presigned Fallback)
+  async function getFileUrl(fileId){
     try{
-      await uploadFiles(files);
-      await loadList();
-      alert('Upload abgeschlossen.');
-    }catch(err){
-      console.error(err);
-      showError('Upload fehlgeschlagen: ' + (err?.message || err));
-    }finally{
-      e.target.value = '';
-    }
-  });
+      const x = nhost.storage.getPublicUrl({ fileId });
+      if (typeof x === 'string') return x;
+      if (x?.publicUrl) return x.publicUrl;
+    }catch(_){}
+    try{
+      const { presignedUrl, error } = await nhost.storage.getPresignedUrl({ fileId, expiresIn: 600 });
+      if (error) throw error;
+      return presignedUrl;
+    }catch(_){}
+    return null;
+  }
+
+  // ---------- Upload ----------
+  document.getElementById('pickBtn').onclick = ()=> document.getElementById('fileInput').click();
+  document.getElementById('fileInput').onchange = async (e)=>{
+    await handleFiles(e.target.files);
+    e.target.value = '';
+  };
 
   // Drag & Drop
-  const drop = $('#drop');
-  ['dragenter','dragover','dragleave','drop'].forEach(ev=>{
-    drop.addEventListener(ev, (e)=>{ e.preventDefault(); e.stopPropagation(); }, false);
-  });
+  ;['dragenter','dragover'].forEach(ev=>drop.addEventListener(ev, e=>{ e.preventDefault(); drop.classList.add('drag'); }));
+  ;['dragleave','drop'].forEach(ev=>drop.addEventListener(ev, e=>{ e.preventDefault(); drop.classList.remove('drag'); }));
   drop.addEventListener('drop', async (e)=>{
-    hideError();
-    const files = Array.from(e.dataTransfer.files || []);
-    if (!files.length) return;
-    try{
-      await uploadFiles(files);
-      await loadList();
-      alert('Upload abgeschlossen.');
-    }catch(err){
-      console.error(err);
-      showError('Upload fehlgeschlagen: ' + (err?.message || err));
+    const files = [...(e.dataTransfer?.files || [])];
+    if (files.length) await handleFiles(files);
+  });
+
+  async function handleFiles(files){
+    if (!files || !files.length) return;
+    clearMsg();
+    const path = normPath(inpPath.value);
+    const tags = parseTags(inpTags.value);
+    const userId = nhost.auth.getUser()?.id || null;
+
+    for (const file of files){
+      try{
+        // 1) Upload in Storage (Bucket: default)
+        const nameInBucket = path + file.name; // "ordner/datei.pdf"
+        const { fileMetadata, error } = await nhost.storage.upload({
+          file,
+          name: nameInBucket,
+          bucketId: BUCKET_ID
+        });
+        if (error) throw error;
+
+        // 2) Metadaten in Hasura
+        await gql(`
+          mutation($obj:file_meta_insert_input!){
+            insert_file_meta_one(object:$obj){ file_id }
+          }
+        `,{
+          obj: {
+            file_id: fileMetadata.id,
+            name: file.name,
+            path,
+            tags,
+            uploader_id: userId
+          }
+        });
+
+        showOk(`Hochgeladen: ${file.name}`);
+        await delay(50);
+      }catch(e){
+        showErr('Upload fehlgeschlagen: ' + (e?.message || JSON.stringify(e)));
+        // Weiter mit den restlichen Dateien
+      }
+    }
+    await loadList();
+  }
+
+  // „Ordner erstellen“ (virtuell – nur Hinweis)
+  document.getElementById('mkFolderBtn').onclick = ()=>{
+    const p = normPath(inpPath.value);
+    if (!p){ showErr('Bitte zuerst einen Ordnerpfad eintragen, z. B. „einsatz/2025-001/“.'); return; }
+    showOk(`Ordner „${p}“ ist virtuell und wird beim Upload verwendet.`);
+  };
+
+  // Suche / Refresh
+  qEl.addEventListener('input', ()=>{ clearTimeout(window._t); window._t = setTimeout(loadList, 250); });
+  document.getElementById('reloadBtn').onclick = loadList;
+
+  // Klicks in der Liste (Öffnen / Link kopieren / Löschen)
+  listEl.addEventListener('click', async (e)=>{
+    const row = e.target.closest('.file'); if (!row) return;
+    const id = row.dataset.id;
+
+    if (e.target.matches('[data-open]')){
+      try{
+        const url = await getFileUrl(id);
+        if (!url) throw new Error('Konnte URL nicht erzeugen.');
+        window.open(url, '_blank');
+      }catch(err){ showErr(err); }
+    }
+
+    if (e.target.matches('[data-copy]')){
+      try{
+        const url = await getFileUrl(id);
+        if (!url) throw new Error('Konnte URL nicht erzeugen.');
+        await navigator.clipboard.writeText(url);
+        showOk('Link kopiert.');
+      }catch(err){ showErr(err); }
+    }
+
+    if (e.target.matches('[data-del]')){
+      if (!confirm('Datei wirklich löschen?')) return;
+      try{
+        // 1) aus Storage löschen
+        const { error: delErr } = await nhost.storage.delete({ fileId: id });
+        if (delErr) throw delErr;
+        // 2) Metadata löschen
+        await gql(`mutation($id:uuid!){ delete_file_meta_by_pk(file_id:$id){ file_id } }`, { id });
+        // 3) UI aktualisieren
+        row.remove();
+        if (!listEl.children.length) emptyEl.style.display = 'block';
+        showOk('Gelöscht.');
+      }catch(err){ showErr(err); }
     }
   });
 
-  $('#btnRefresh').addEventListener('click', loadList);
-  $('#btnMkFolder').addEventListener('click', async ()=>{
-    try { await makeFolder(); await loadList(); alert('Ordner angelegt.'); }
-    catch(e){ showError('Ordner anlegen fehlgeschlagen: ' + (e?.message || e)); }
-  });
-  $('#search').addEventListener('input', ()=>{ clearTimeout(window._t); window._t=setTimeout(loadList, 250); });
-  $('#path').addEventListener('change', loadList);
-
-  // ======= Start =======
+  // Start
   await loadList();
 </script>
 </body>
