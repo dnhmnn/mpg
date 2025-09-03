@@ -6,45 +6,44 @@
   <title>FFW – Dateien</title>
   <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
   <style>
-    :root{ --rot:#c8102e; --bg:#f7f7f7; --card:#fff; --border:#e6e6e6; --muted:#6b7280 }
+    :root{ --rot:#c8102e; --bg:#f7f7f7; --card:#fff; --bord:#e9e9ee; --text:#1f2937; --muted:#6b7280; }
     *{ box-sizing:border-box }
-    body{ margin:0; background:var(--bg); font-family:'Atkinson Hyperlegible', system-ui, Arial, sans-serif; color:#111 }
-    header{ background:var(--rot); color:#fff; display:flex; align-items:center; gap:12px; padding:10px 14px }
-    header h1{ margin:0; font-size:1.15rem; font-weight:700 }
+    body{ margin:0; font-family:'Atkinson Hyperlegible',system-ui,Arial,sans-serif; background:var(--bg); color:var(--text) }
+
+    header{ background:var(--rot); color:#fff; display:flex; gap:12px; align-items:center; padding:12px 14px; position:sticky; top:0; z-index:5 }
+    header h1{ margin:0; font-size:1.15rem }
     .spacer{ flex:1 }
-    .topbtn{ color:#fff; text-decoration:none; background:#00000022; padding:7px 10px; border-radius:8px; font-weight:700 }
-    main{ max-width:980px; margin:16px auto; padding:0 14px }
-    .card{ background:var(--card); border-radius:12px; box-shadow:0 3px 12px rgba(0,0,0,.06); padding:14px }
-    h2{ margin:0 0 10px; color:var(--rot) }
-    .row{ display:flex; gap:8px; flex-wrap:wrap; margin:8px 0 }
-    input,button{ font:inherit }
-    input{ width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:10px; background:#fafafa }
-    .btn{ background:var(--rot); color:#fff; border:0; border-radius:10px; padding:10px 14px; font-weight:700; cursor:pointer }
+    .topbtn{ background:#00000022; color:#fff; text-decoration:none; padding:8px 12px; border-radius:10px; font-weight:700 }
+
+    .wrap{ max-width:900px; margin:16px auto; padding:0 14px }
+    .card{ background:var(--card); border-radius:14px; box-shadow:0 4px 14px rgba(0,0,0,.06); padding:14px }
+    .h2{ margin:0 0 10px; color:var(--rot); font-size:1.4rem }
+
+    .row{ display:flex; gap:10px; flex-wrap:wrap; align-items:center }
+    .row> *{ flex:1 1 220px }
+    input,button{ font-family:inherit; font-size:1rem }
+    input{ width:100%; padding:10px 12px; border:1px solid var(--bord); border-radius:10px; background:#fafafa }
+    .btn{ background:var(--rot); color:#fff; border:0; padding:10px 14px; border-radius:10px; font-weight:700; cursor:pointer; white-space:nowrap }
     .btn.ghost{ background:#fff; color:var(--rot); border:1px solid var(--rot) }
-    .btn.gray{ background:#eee; color:#333; border:1px solid var(--border) }
-    .muted{ color:var(--muted) }
-    .msg{ margin-top:6px; min-height:1.2em }
-    .msg.err{ color:#c8102e } .msg.ok{ color:#11823b }
-    .drop{ border:2px dashed #d1d5db; border-radius:12px; padding:16px; text-align:center; color:var(--muted) }
-    .drop.drag{ background:#fffaf3; border-color:#f59e0b; color:#92400e }
-    .tools{ display:flex; gap:8px; flex-wrap:wrap }
-    .tools .btn{ white-space:nowrap }
-    .list-head{ display:grid; grid-template-columns:1fr auto; align-items:center; gap:10px; margin-top:10px }
-    .search{ position:relative }
-    .search input{ padding-left:36px }
-    .search i{ position:absolute; top:50%; transform:translateY(-50%); left:12px; color:#9ca3af }
-    .file{ display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 0; border-bottom:1px solid #f1f1f1 }
-    .file:last-child{ border-bottom:none }
+
+    .dz{ border:2px dashed var(--bord); border-radius:12px; padding:20px; text-align:center; color:var(--muted) }
+    .dz.drag{ border-color:var(--rot); color:var(--rot); background:#fff5f7 }
+
+    .hint{ color:var(--muted); font-size:.92rem }
+    .err{ color:#8b0e22; background:#fff5f5; border:1px solid #f2c9d1; padding:10px; border-radius:10px }
+    .ok{ color:#2e7d32 }
+
+    .list{ margin-top:12px }
+    .item{ display:grid; grid-template-columns:1fr auto; gap:8px; padding:10px; border:1px solid var(--bord); border-radius:10px; background:#fff; align-items:center }
     .name{ font-weight:700 }
-    .path{ color:var(--muted); font-size:.95rem }
-    .chips{ display:flex; gap:6px; flex-wrap:wrap; margin-top:4px }
-    .chip{ background:#fff5f5; border:1px solid #f2c9d1; color:#8b0e22; padding:2px 8px; border-radius:999px; font-size:.82rem }
-    .row-ctl{ display:flex; gap:6px; flex-wrap:wrap }
-    .pill{ display:inline-block; background:#eef2ff; color:#3730a3; border:1px solid #e0e7ff; border-radius:999px; padding:2px 8px; font-size:.82rem }
+    .meta{ font-size:.9rem; color:var(--muted) }
+    .acts{ display:flex; gap:8px; flex-wrap:wrap }
+    .abtn{ border:1px solid var(--bord); background:#fff; padding:8px 10px; border-radius:8px; cursor:pointer }
+    .badge{ display:inline-block; padding:2px 8px; border-radius:999px; font-size:.75rem; background:#f3f4f6; color:#374151; margin-left:6px }
+
     @media (max-width:640px){
-      .file{ align-items:flex-start; flex-direction:column }
-      .row-ctl{ width:100% }
-      .list-head{ grid-template-columns:1fr }
+      .item{ grid-template-columns:1fr }
+      .acts{ justify-content:flex-start }
     }
   </style>
 </head>
@@ -53,285 +52,269 @@
   <h1>FFW – Dateien</h1>
   <div class="spacer"></div>
   <a class="topbtn" href="admin-dashboard.html">Dashboard</a>
-  <a class="topbtn" href="#" id="logoutBtn">Logout</a>
+  <a class="topbtn" href="#" id="logout">Logout</a>
 </header>
 
-<main>
+<div class="wrap">
   <section class="card">
-    <h2>Dateien hochladen &amp; verwalten</h2>
+    <h2 class="h2">Dateien hochladen &amp; verwalten</h2>
 
-    <div class="tools">
-      <button class="btn" id="pickBtn">Dateien auswählen</button>
-      <button class="btn gray" id="reloadBtn">Aktualisieren</button>
-      <button class="btn ghost" id="mkFolderBtn">Ordner erstellen</button>
-      <span class="pill">Bucket: <strong id="bucketName">default</strong></span>
+    <div class="row" style="margin-bottom:8px">
+      <button class="btn" id="pick">Dateien auswählen</button>
+      <button class="btn ghost" id="refresh">Aktualisieren</button>
+      <button class="btn ghost" id="mkFolder">Ordner erstellen</button>
+      <input id="search" placeholder="Suche (Dateiname …)" />
     </div>
 
-    <div class="row">
-      <input id="inpPath" placeholder="Ordner (z. B. einsatz/2025-001/)" />
-    </div>
-    <div class="row">
-      <input id="inpTags" placeholder="Tags, Komma-getrennt (z. B. einsatz,bericht)" />
+    <div class="row" style="margin-bottom:8px">
+      <input id="path" placeholder="Ordner (z. B. einsatz/2025-001/)" />
+      <input id="tags" placeholder="Tags, Komma-getrennt (z. B. einsatz,bericht)" />
     </div>
 
-    <div id="drop" class="drop">Dateien hierher ziehen &amp; ablegen<br>
-      <span class="muted">Ordnerpfad + Tags werden beim Upload gespeichert.</span>
+    <div id="dz" class="dz">Dateien hierher ziehen &amp; ablegen<br>
+      <span class="hint">Ordnerpfad + Tags werden beim Upload gespeichert. Bucket: <b id="bucketName">default</b>.</span>
     </div>
 
-    <div class="list-head">
-      <div class="search">
-        <i>🔎</i>
-        <input id="q" placeholder="Suche (Dateiname oder Ordner) …" />
-      </div>
-      <div class="muted">Angemeldet als: <span id="who">—</span></div>
-    </div>
-
-    <div class="msg" id="msg"></div>
+    <div id="msg" style="margin-top:10px"></div>
   </section>
 
-  <section class="card" style="margin-top:12px">
-    <div id="list"></div>
-    <div id="empty" class="muted" style="text-align:center; padding:14px; display:none">Keine Dateien gefunden.</div>
+  <section class="card" style="margin-top:14px">
+    <h2 class="h2">Übersicht</h2>
+    <div class="hint" id="sum">–</div>
+    <div id="list" class="list">
+      <div class="hint">Keine Dateien vorhanden.</div>
+    </div>
   </section>
-</main>
+</div>
 
-<input id="fileInput" type="file" multiple style="display:none" />
+<input type="file" id="file" multiple hidden />
 
 <script type="module">
-  import { NhostClient } from 'https://esm.sh/@nhost/nhost-js@2.2.9';
+  import { NhostClient } from "https://esm.sh/@nhost/nhost-js@2.2.9";
 
-  // ---------- Nhost Setup ----------
-  const nhost = new NhostClient({
-    subdomain: 'hpjfrhktprpuuxvvlpsb',
-    region: 'eu-central-1'
-  });
+  // ---------- Nhost ----------
+  const nhost = new NhostClient({ subdomain: "hpjfrhktprpuuxvvlpsb", region: "eu-central-1" });
 
-  // ---------- Konfiguration (Option A) ----------
-  const BUCKET_ID = 'default';                  // <— Option A: default-Bucket nutzen
+  // Login-Guard (leichte Variante wie im Dashboard)
+  if (!(await nhost.auth.isAuthenticatedAsync())) {
+    const back = encodeURIComponent(location.pathname + location.search);
+    location.href = "admin-login.html?redirect=" + back;
+  }
+
+  // ---------- Config ----------
+  const BUCKET_ID = 'default';   // <- Falls du später "files" nutzt, hier umstellen
   document.getElementById('bucketName').textContent = BUCKET_ID;
 
-  // ---------- Elemente ----------
-  const msg = document.getElementById('msg');
+  // ---------- DOM ----------
+  const pick = document.getElementById('pick');
+  const fileInput = document.getElementById('file');
+  const refreshBtn = document.getElementById('refresh');
+  const mkFolderBtn = document.getElementById('mkFolder');
+  const pathInp = document.getElementById('path');
+  const tagsInp = document.getElementById('tags');
+  const searchInp = document.getElementById('search');
+  const dz = document.getElementById('dz');
   const listEl = document.getElementById('list');
-  const emptyEl = document.getElementById('empty');
-  const whoEl = document.getElementById('who');
-  const inpPath = document.getElementById('inpPath');
-  const inpTags = document.getElementById('inpTags');
-  const qEl = document.getElementById('q');
-  const drop = document.getElementById('drop');
+  const msgEl = document.getElementById('msg');
+  const sumEl = document.getElementById('sum');
 
   // ---------- Helpers ----------
-  const delay = (ms)=> new Promise(r=>setTimeout(r,ms));
-  const showOk  = (t)=>{ msg.className = 'msg ok';  msg.textContent = t||''; };
-  const showErr = (e)=>{ msg.className = 'msg err'; msg.textContent = typeof e==='string' ? e : (e?.message || JSON.stringify(e)); };
-  const clearMsg= ()=>{ msg.className='msg'; msg.textContent=''; };
+  const qp = n => String(n).padStart(2,'0');
+  const ts = d => `${d.getFullYear()}-${qp(d.getMonth()+1)}-${qp(d.getDate())} ${qp(d.getHours())}:${qp(d.getMinutes())}`;
+  const normPath = p => (p||'').trim().replace(/^\/+/,'').replace(/\/+/g,'/').replace(/([^/])$/,'$1/'); // immer mit Slash am Ende
+  const parseTags = s => (s||'').split(',').map(x=>x.trim()).filter(Boolean);
 
-  function normPath(p){
-    p = (p||'').trim().replace(/^\/+/,''); // führende / weg
-    if (p && !p.endsWith('/')) p += '/';
-    return p;
+  function humanError(err){
+    try{
+      if (typeof err === 'string') return err;
+      if (err?.message) return err.message;
+      if (err?.error?.message) return err.error.message;
+      return JSON.stringify(err);
+    }catch{ return String(err); }
   }
-  function parseTags(txt){
-    const arr = (txt||'').split(',').map(s=>s.trim()).filter(Boolean);
-    // Doppelte entfernen:
-    return [...new Set(arr)];
-  }
-  function esc(s){
-    return String(s??'').replace(/[&<>"']/g,m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));
+  function showMsg(html, ok=false){
+    msgEl.innerHTML = html ? `<div class="${ok?'ok':'err'}">${html}</div>` : '';
   }
 
-  async function guard(){
-    const ok = await nhost.auth.isAuthenticatedAsync();
-    if (!ok){
-      const back = encodeURIComponent(location.pathname + location.search);
-      location.href = 'admin-login.html?redirect=' + back;
-      return false;
-    }
-    const u = nhost.auth.getUser();
-    whoEl.textContent = u?.email || '—';
-    return true;
-  }
-  if (!await guard()) throw new Error('redirect');
-
-  document.getElementById('logoutBtn').onclick = async (e)=>{
-    e.preventDefault();
-    await nhost.auth.signOut();
-    localStorage.clear();
-    location.href = 'admin-login.html';
-  };
-
-  // ---------- GraphQL ----------
-  async function gql(q, v){
-    const { data, error } = await nhost.graphql.request(q, v);
-    if (error) throw new Error(error.message || JSON.stringify(error));
+  async function gql(query, variables){
+    const { data, error } = await nhost.graphql.request(query, variables);
+    if (error) throw error;
     return data;
   }
 
-  // Liste laden (aus Hasura -> public.file_meta)
-  async function loadList(){
+  async function fileUrl(fileId){
+    // Versuche zuerst public URL (falls Bucket public ist), sonst presigned.
     try{
-      clearMsg();
-      listEl.innerHTML = '';
-      emptyEl.style.display = 'none';
-
-      const like = '%' + (qEl.value||'').trim() + '%';
-      const data = await gql(`
-        query($like:String!){
-          file_meta(where:{ _or:[ {name:{_ilike:$like}}, {path:{_ilike:$like}} ] },
-                    order_by:{created_at:desc}, limit:400){
-            file_id name path tags created_at
-          }
-        }
-      `,{ like });
-
-      const rows = data.file_meta || [];
-      if (!rows.length){ emptyEl.style.display='block'; return; }
-
-      for (const r of rows){
-        const when = new Date(r.created_at).toLocaleString('de-DE');
-        const tags = Array.isArray(r.tags) ? r.tags : [];
-        const html = `
-          <div class="file" data-id="${esc(r.file_id)}">
-            <div style="flex:1">
-              <div class="name">${esc(r.name)}</div>
-              <div class="path">${esc(r.path)} <span class="muted">• ${when}</span></div>
-              ${tags.length ? `<div class="chips">${tags.map(t=>`<span class="chip">#${esc(t)}</span>`).join('')}</div>` : ''}
-            </div>
-            <div class="row-ctl">
-              <button class="btn gray" data-open>Öffnen</button>
-              <button class="btn gray" data-copy>Link kopieren</button>
-              <button class="btn ghost" data-del>Löschen</button>
-            </div>
-          </div>`;
-        listEl.insertAdjacentHTML('beforeend', html);
-      }
-    }catch(e){ showErr(e); }
-  }
-
-  // URL ermitteln (Public ODER presigned Fallback)
-  async function getFileUrl(fileId){
+      const { publicUrl, error } = await nhost.storage.getPublicUrl({ fileId });
+      if (!error && publicUrl) return publicUrl;
+    }catch{}
     try{
-      const x = nhost.storage.getPublicUrl({ fileId });
-      if (typeof x === 'string') return x;
-      if (x?.publicUrl) return x.publicUrl;
-    }catch(_){}
-    try{
-      const { presignedUrl, error } = await nhost.storage.getPresignedUrl({ fileId, expiresIn: 600 });
-      if (error) throw error;
-      return presignedUrl;
-    }catch(_){}
+      const { presignedUrl, error } = await nhost.storage.getPresignedUrl({ fileId });
+      if (!error && presignedUrl) return presignedUrl;
+    }catch{}
     return null;
   }
 
-  // ---------- Upload ----------
-  document.getElementById('pickBtn').onclick = ()=> document.getElementById('fileInput').click();
-  document.getElementById('fileInput').onchange = async (e)=>{
-    await handleFiles(e.target.files);
-    e.target.value = '';
-  };
+  // ---------- Listing ----------
+  let allRows = [];
+  async function load(){
+    showMsg('');
+    listEl.innerHTML = `<div class="hint">Lade …</div>`;
+    try{
+      const prefix = pathInp.value.trim() ? normPath(pathInp.value) : '';
+      const needle = searchInp.value.trim();
+      const where = {
+        _and: []
+      };
+      if (prefix) where._and.push({ path: { _ilike: prefix + "%" } });
+      if (needle) {
+        const like = `%${needle}%`;
+        where._and.push({ _or: [ { name: { _ilike: like } }, { path: { _ilike: like } } ] });
+      }
+      const data = await gql(`query($w:file_meta_bool_exp){
+        file_meta(where:$w, order_by:[{created_at:desc},{name:asc}], limit: 1000){
+          file_id name path tags created_at uploader_id
+        }
+      }`, { w: where._and.length ? where : {} });
 
-  // Drag & Drop
-  ;['dragenter','dragover'].forEach(ev=>drop.addEventListener(ev, e=>{ e.preventDefault(); drop.classList.add('drag'); }));
-  ;['dragleave','drop'].forEach(ev=>drop.addEventListener(ev, e=>{ e.preventDefault(); drop.classList.remove('drag'); }));
-  drop.addEventListener('drop', async (e)=>{
-    const files = [...(e.dataTransfer?.files || [])];
-    if (files.length) await handleFiles(files);
+      allRows = data.file_meta || [];
+      render();
+    }catch(e){
+      showMsg("Konnte Dateien nicht laden: " + humanError(e));
+      listEl.innerHTML = `<div class="hint">Keine Dateien vorhanden.</div>`;
+      sumEl.textContent = "–";
+    }
+  }
+
+  function render(){
+    if (!allRows.length){
+      listEl.innerHTML = `<div class="hint">Keine Dateien vorhanden.</div>`;
+      sumEl.textContent = "0 Dateien";
+      return;
+    }
+    sumEl.textContent = `${allRows.length} Datei(en)`;
+    listEl.innerHTML = '';
+
+    for (const r of allRows){
+      const when = new Date(r.created_at);
+      const tags = (r.tags||[]).map(t=>`<span class="badge">${t}</span>`).join('');
+      const row = document.createElement('div');
+      row.className = 'item';
+      row.innerHTML = `
+        <div>
+          <div class="name">${r.name}</div>
+          <div class="meta">${r.path}<br>${ts(when)} ${tags}</div>
+        </div>
+        <div class="acts">
+          <button class="abtn" data-open="${r.file_id}">Öffnen</button>
+          <button class="abtn" data-copy="${r.file_id}">Link kopieren</button>
+          <button class="abtn" data-del="${r.file_id}">Löschen</button>
+        </div>`;
+      listEl.appendChild(row);
+    }
+  }
+
+  listEl.addEventListener('click', async (e)=>{
+    const b = e.target.closest('button'); if (!b) return;
+    const openId = b.getAttribute('data-open');
+    const copyId = b.getAttribute('data-copy');
+    const delId  = b.getAttribute('data-del');
+
+    if (openId){
+      const url = await fileUrl(openId);
+      if (!url) return showMsg('Kein Link verfügbar (Bucket ggf. privat).');
+      window.open(url, '_blank');
+    }
+    if (copyId){
+      const url = await fileUrl(copyId);
+      if (!url) return showMsg('Kein Link verfügbar (Bucket ggf. privat).');
+      await navigator.clipboard.writeText(url);
+      showMsg('Link kopiert.', true);
+    }
+    if (delId){
+      const meta = allRows.find(x=>x.file_id===delId);
+      if (!meta) return;
+      if (!confirm(`„${meta.name}“ wirklich löschen?`)) return;
+      try{
+        // Storage löschen (verschiedene SDK-Signaturen abfangen)
+        try{ await nhost.storage.delete({ fileId: delId }); }catch{ await nhost.storage.delete({ id: delId }); }
+        // Metadaten löschen
+        await gql(`mutation($id:uuid!){ delete_file_meta_by_pk(file_id:$id){ file_id } }`, { id: delId });
+        showMsg('Gelöscht.', true);
+        await load();
+      }catch(e){
+        showMsg('Löschen fehlgeschlagen: ' + humanError(e));
+      }
+    }
   });
 
-  async function handleFiles(files){
-    if (!files || !files.length) return;
-    clearMsg();
-    const path = normPath(inpPath.value);
-    const tags = parseTags(inpTags.value);
+  // ---------- Upload ----------
+  pick.onclick = ()=> fileInput.click();
+  fileInput.onchange = ()=> doUpload(fileInput.files);
+
+  dz.addEventListener('dragover', e=>{ e.preventDefault(); dz.classList.add('drag'); });
+  dz.addEventListener('dragleave', ()=> dz.classList.remove('drag'));
+  dz.addEventListener('drop', e=>{
+    e.preventDefault(); dz.classList.remove('drag');
+    const files = e.dataTransfer.files;
+    if (files?.length) doUpload(files);
+  });
+
+  async function doUpload(fileList){
+    showMsg('');
+    if (!fileList || !fileList.length) return;
+    const folder = pathInp.value.trim() ? normPath(pathInp.value) : '';
+    const tags = parseTags(tagsInp.value);
     const userId = nhost.auth.getUser()?.id || null;
 
-    for (const file of files){
+    for (const f of fileList){
       try{
-        // 1) Upload in Storage (Bucket: default)
-        const nameInBucket = path + file.name; // "ordner/datei.pdf"
+        const nameInBucket = folder + f.name;
         const { fileMetadata, error } = await nhost.storage.upload({
-          file,
+          file: f,
           name: nameInBucket,
           bucketId: BUCKET_ID
         });
         if (error) throw error;
 
-        // 2) Metadaten in Hasura
-        await gql(`
-          mutation($obj:file_meta_insert_input!){
-            insert_file_meta_one(object:$obj){ file_id }
-          }
-        `,{
-          obj: {
-            file_id: fileMetadata.id,
-            name: file.name,
-            path,
-            tags,
-            uploader_id: userId
-          }
-        });
+        const fileId = fileMetadata?.id;
+        if (!fileId) throw new Error('Upload ok, aber keine fileId zurückbekommen.');
 
-        showOk(`Hochgeladen: ${file.name}`);
-        await delay(50);
+        await gql(`mutation($obj:file_meta_insert_input!){
+          insert_file_meta_one(object:$obj){ file_id }
+        }`, { obj: { file_id: fileId, name: f.name, path: folder, tags, uploader_id: userId } });
+
+        showMsg(`„${f.name}“ hochgeladen.`, true);
       }catch(e){
-        showErr('Upload fehlgeschlagen: ' + (e?.message || JSON.stringify(e)));
-        // Weiter mit den restlichen Dateien
+        showMsg('Upload fehlgeschlagen: ' + humanError(e));
+        break; // bei Fehler abbrechen, damit Meldung sichtbar bleibt
       }
     }
-    await loadList();
+    await load();
+    fileInput.value = '';
   }
 
-  // „Ordner erstellen“ (virtuell – nur Hinweis)
-  document.getElementById('mkFolderBtn').onclick = ()=>{
-    const p = normPath(inpPath.value);
-    if (!p){ showErr('Bitte zuerst einen Ordnerpfad eintragen, z. B. „einsatz/2025-001/“.'); return; }
-    showOk(`Ordner „${p}“ ist virtuell und wird beim Upload verwendet.`);
+  // ---------- Ordner erstellen ----------
+  mkFolderBtn.onclick = ()=>{
+    const p = normPath(pathInp.value || '');
+    if (!p) {
+      // Vorschlag: einsatz/JJJJ-MMDD/
+      const d = new Date();
+      const sugg = `einsatz/${d.getFullYear()}-${qp(d.getMonth()+1)}${qp(d.getDate())}/`;
+      pathInp.value = sugg;
+    } else {
+      pathInp.value = p; // nur normalisieren
+    }
+    pathInp.focus();
   };
 
-  // Suche / Refresh
-  qEl.addEventListener('input', ()=>{ clearTimeout(window._t); window._t = setTimeout(loadList, 250); });
-  document.getElementById('reloadBtn').onclick = loadList;
+  // ---------- Suche / Refresh / Logout ----------
+  refreshBtn.onclick = load;
+  searchInp.oninput = ()=> { clearTimeout(window._t); window._t = setTimeout(load, 250); };
+  document.getElementById('logout').onclick = async (e)=>{ e.preventDefault(); await nhost.auth.signOut(); location.href='admin-login.html'; };
 
-  // Klicks in der Liste (Öffnen / Link kopieren / Löschen)
-  listEl.addEventListener('click', async (e)=>{
-    const row = e.target.closest('.file'); if (!row) return;
-    const id = row.dataset.id;
-
-    if (e.target.matches('[data-open]')){
-      try{
-        const url = await getFileUrl(id);
-        if (!url) throw new Error('Konnte URL nicht erzeugen.');
-        window.open(url, '_blank');
-      }catch(err){ showErr(err); }
-    }
-
-    if (e.target.matches('[data-copy]')){
-      try{
-        const url = await getFileUrl(id);
-        if (!url) throw new Error('Konnte URL nicht erzeugen.');
-        await navigator.clipboard.writeText(url);
-        showOk('Link kopiert.');
-      }catch(err){ showErr(err); }
-    }
-
-    if (e.target.matches('[data-del]')){
-      if (!confirm('Datei wirklich löschen?')) return;
-      try{
-        // 1) aus Storage löschen
-        const { error: delErr } = await nhost.storage.delete({ fileId: id });
-        if (delErr) throw delErr;
-        // 2) Metadata löschen
-        await gql(`mutation($id:uuid!){ delete_file_meta_by_pk(file_id:$id){ file_id } }`, { id });
-        // 3) UI aktualisieren
-        row.remove();
-        if (!listEl.children.length) emptyEl.style.display = 'block';
-        showOk('Gelöscht.');
-      }catch(err){ showErr(err); }
-    }
-  });
-
-  // Start
-  await loadList();
+  // ---------- Start ----------
+  await load();
 </script>
 </body>
 </html>
