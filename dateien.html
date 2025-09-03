@@ -4,297 +4,260 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>FFW – Dateien</title>
+
+  <!-- Schrift wie in den anderen Seiten -->
   <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+
   <style>
-    :root{--rot:#c8102e;--bg:#f7f7f7;--card:#fff;--border:#e8e8e8;--muted:#6b7280}
-    *{box-sizing:border-box}
-    body{margin:0;font-family:'Atkinson Hyperlegible',Arial,sans-serif;background:var(--bg);color:#111}
-    header{background:var(--rot);color:#fff;display:flex;align-items:center;gap:12px;padding:10px 14px}
-    header h1{margin:0;font-size:1.1rem}
-    .spacer{flex:1}
-    .topbtn{color:#fff;text-decoration:none;background:#00000022;padding:7px 10px;border-radius:8px;font-weight:700}
-
-    .wrap{max-width:980px;margin:16px auto;padding:0 14px}
-    .card{background:var(--card);border-radius:12px;box-shadow:0 3px 12px rgba(0,0,0,.06);padding:14px}
-
-    h2{margin:0 0 10px;color:var(--rot)}
-    .row{display:flex;gap:10px;flex-wrap:wrap}
-    input,button{font-family:inherit;font-size:1rem}
-    input{width:100%;padding:10px;border:1px solid var(--border);border-radius:10px;background:#fafafa}
-    .btn{background:var(--rot);color:#fff;border:0;border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer}
-    .btn.ghost{background:#fff;color:var(--rot);border:1px solid var(--rot)}
-    .pill{display:inline-block;background:#f8e8eb;color:#7f0d21;border:1px solid #efc2cd;padding:4px 10px;border-radius:999px;font-size:.85rem}
-
-    .controls{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
-    .controls .wide{grid-column:1/-1}
-    .drop{border:2px dashed #d7d7d7;border-radius:12px;padding:18px;text-align:center;color:var(--muted);background:#fcfcfc}
-    .drop.drag{background:#fff3f5;border-color:#efc2cd}
-
-    .msg{margin-top:10px;min-height:1.2em}
-    .err{color:#c8102e}
-    .ok{color:#147a2e}
-    .muted{color:var(--muted)}
-
-    .list-head,.file{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center}
-    .list-head{font-weight:700;color:#555;margin-top:10px}
-    .file{padding:10px;border-bottom:1px solid #f0f0f0}
-    .file small{color:#666}
-    .action{display:flex;gap:6px}
-    .link{appearance:none;border:1px solid var(--border);background:#fff;border-radius:8px;padding:7px 10px;cursor:pointer}
-    .warn{background:#fff5f5;border:1px solid #f2c9d1;color:#8b0e22;border-radius:10px;padding:10px}
-    @media (max-width:720px){
-      .controls{grid-template-columns:1fr}
-      .list-head{display:none}
-      .file{grid-template-columns:1fr;gap:6px}
-      .action{justify-content:flex-start}
+    :root{ --rot:#c8102e; --bg:#f7f7f7; --card:#fff; --text:#1e293b; --muted:#6b7280; --border:#e5e7eb; }
+    *{ box-sizing:border-box; }
+    body{ margin:0; font-family:'Atkinson Hyperlegible',system-ui,Arial,sans-serif; background:var(--bg); color:var(--text); }
+    header{ background:var(--rot); color:#fff; display:flex; align-items:center; gap:12px; padding:10px 14px; }
+    header h1{ margin:0; font-size:1.1rem; font-weight:700; }
+    .spacer{ flex:1; }
+    .topbtn{ color:#fff; text-decoration:none; background:#00000022; padding:8px 12px; border-radius:8px; font-weight:700; }
+    main{ max-width:980px; margin:16px auto; padding:0 14px; }
+    .card{ background:var(--card); border-radius:12px; box-shadow:0 3px 12px rgba(0,0,0,.06); padding:16px; }
+    h2{ margin:0 0 12px; color:var(--rot); }
+    .row{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+    .btn{ border:2px solid var(--rot); background:var(--rot); color:#fff; padding:10px 14px; border-radius:12px; font-weight:800; cursor:pointer; }
+    .btn.ghost{ background:#fff; color:var(--rot); }
+    .pill{ display:inline-block; padding:8px 12px; border-radius:12px; background:#f3f4f6; color:#111; border:1px solid var(--border); font-weight:700; }
+    input, .input{ width:100%; padding:12px; border:1px solid var(--border); border-radius:10px; background:#fff; font-size:1rem; }
+    .muted{ color:var(--muted); }
+    .msg{ margin-top:10px; font-weight:700; }
+    .msg.ok{ color:#2e7d32; }
+    .msg.err{ color:#c8102e; }
+    #drop{ border:2px dashed #cbd5e1; border-radius:12px; padding:22px; text-align:center; color:#475569; background:#fafafa; }
+    #drop.drag{ border-color:var(--rot); background:#fff5f5; color:#8b0e22; }
+    .list .file{ display:grid; grid-template-columns:1fr auto auto; gap:10px; align-items:center;
+                 border:1px solid var(--border); border-radius:10px; padding:10px; background:#fff; }
+    .list .file .action button{ margin-left:6px; }
+    .link{ background:#fff; border:1px solid var(--border); padding:8px 10px; border-radius:8px; cursor:pointer; }
+    h3{ margin:0 0 8px; }
+    @media (max-width:700px){
+      .list .file{ grid-template-columns:1fr; }
+      .list .file .action{ display:flex; gap:8px; }
     }
   </style>
 </head>
 <body>
-<header>
-  <h1>FFW – Dateien</h1>
-  <div class="spacer"></div>
-  <a class="topbtn" href="admin-dashboard.html">Dashboard</a>
-  <a class="topbtn" href="#" id="logoutBtn">Logout</a>
-</header>
+  <header>
+    <h1>FFW – Dateien</h1>
+    <div class="spacer"></div>
+    <a class="topbtn" href="dashboard.html">Dashboard</a>
+    <a class="topbtn" href="#" id="logoutBtn">Logout</a>
+  </header>
 
-<div class="wrap">
-  <section class="card">
-    <h2>Dateien hochladen &amp; verwalten</h2>
+  <main>
+    <section class="card">
+      <h2>Dateien hochladen &amp; verwalten</h2>
 
-    <div class="row" style="gap:8px">
-      <input type="file" id="fileInput" multiple hidden />
-      <button class="btn" id="pickBtn">Dateien auswählen</button>
-      <button class="btn ghost" id="refreshBtn">Aktualisieren</button>
-      <span class="pill">Bucket: <strong id="bucketLabel">default</strong></span>
-    </div>
-
-    <div class="controls">
-      <input id="folder" class="wide" placeholder="Ordner (z. B. einsatz/2025-001/)" />
-      <input id="tags" class="wide" placeholder="Tags (optional, Komma-getrennt)" />
-      <div id="drop" class="drop wide">Dateien hierher ziehen &amp; ablegen<br><small>Ordnerpfad + Tags werden beim Upload gespeichert.</small></div>
-      <div class="row wide" style="gap:8px">
-        <div style="position:relative;flex:1">
-          <input id="search" placeholder="Suche (Dateiname oder Ordner) …" />
-          <span class="muted" style="position:absolute;right:10px;top:50%;transform:translateY(-50%)">🔎</span>
-        </div>
-        <button class="btn ghost" id="mkFolderBtn" title="Virtuellen Ordner anlegen">Ordner erstellen</button>
+      <div class="row" style="gap:8px; margin-bottom:10px">
+        <button class="btn" id="pickBtn">Dateien auswählen</button>
+        <button class="btn ghost" id="refreshBtn">Aktualisieren</button>
+        <span class="pill">Bucket: <span id="bucketLabel">default</span></span>
       </div>
-    </div>
 
-    <div class="muted" id="who" style="margin-top:8px"></div>
-    <div class="msg" id="msg"></div>
-  </section>
+      <div class="row" style="gap:8px; margin:8px 0">
+        <input id="folder" class="input" placeholder="Ordner (z. B. einsatz/2025-001/)" />
+      </div>
 
-  <section class="card" id="listCard">
-    <h2>Übersicht</h2>
-    <div id="empty" class="muted">Keine Dateien vorhanden.</div>
-    <div class="list-head">
-      <div>Datei</div><div>Größe</div><div>Aktionen</div>
-    </div>
-    <div id="list"></div>
-  </section>
-</div>
+      <div class="row" style="gap:8px; margin:8px 0">
+        <input id="tags" class="input" placeholder="Tags (optional, Komma-getrennt)" />
+      </div>
 
-<script type="module">
-  import { NhostClient } from "https://esm.sh/@nhost/nhost-js@2.2.9";
-  const nhost = new NhostClient({ subdomain: "hpjfrhktprpuuxvvlpsb", region: "eu-central-1" });
+      <div id="drop" style="margin:8px 0">
+        <strong>Dateien hierher ziehen &amp; ablegen</strong><br>
+        <span class="muted">Ordnerpfad + Tags werden beim Upload gespeichert.</span>
+      </div>
 
-  /* ---------- Helpers ---------- */
-  const $ = (s)=>document.querySelector(s);
-  const msg = $('#msg');
-  function show(text, kind='') { msg.className = 'msg ' + kind; msg.textContent = text || ''; }
-  function fmtSize(b){ if(!b&&b!==0) return ''; const u=['B','KB','MB','GB']; let i=0, n=b; while(n>1024 && i<u.length-1){ n/=1024; i++; } return (Math.round(n*10)/10)+' '+u[i]; }
-  function cleanFolder(v){ v=(v||'').trim().replace(/^\/+/,''); if(v && !v.endsWith('/')) v+='/'; return v; }
-  function toError(e){ return e?.message || (typeof e==='string'?e:JSON.stringify(e)); }
+      <div class="row" style="gap:8px; margin:8px 0">
+        <input id="search" class="input" placeholder="Suche (Dateiname 🔎) …" style="flex:1">
+        <button class="btn ghost" id="mkFolderBtn">Ordner erstellen</button>
+      </div>
 
-  async function gql(q,v){
-    const { data, error, errors } = await nhost.graphql.request(q, v);
-    if (error) throw new Error(error.message || JSON.stringify(error));
-    if (errors?.length) throw new Error(errors[0].message || JSON.stringify(errors));
-    return data;
-  }
+      <div class="muted" id="who" style="margin-top:4px">Angemeldet als: —</div>
+      <div id="msg" class="msg"></div>
+      <input id="fileInput" type="file" multiple hidden />
+    </section>
 
-  /* ---------- Login Guard ---------- */
-  async function guard(){
-    const ok = await nhost.auth.isAuthenticatedAsync();
-    if(!ok){
-      const back = encodeURIComponent(location.pathname + location.search);
-      location.href = "admin-login.html?redirect="+back;
-      return false;
+    <section class="card" style="margin-top:16px">
+      <h2>Übersicht</h2>
+      <div id="empty" class="muted" style="display:none">Keine Dateien gefunden.</div>
+      <div id="list" class="list" style="display:grid; gap:8px"></div>
+    </section>
+  </main>
+
+  <script type="module">
+    import { NhostClient } from "https://esm.sh/@nhost/nhost-js@2.2.9";
+    const nhost = new NhostClient({ subdomain: "hpjfrhktprpuuxvvlpsb", region: "eu-central-1" });
+
+    // ===== kleine Hilfen =====
+    const $ = (s)=>document.querySelector(s);
+    const BUCKET = 'default';
+    const msg = $('#msg');
+    function show(t,k=''){ msg.className='msg '+k; msg.textContent=t||''; }
+    function fmtSize(b){ if(b===0) return '0 B'; if(!b) return ''; const u=['B','KB','MB','GB']; let i=0; let n=b; while(n>1024&&i<u.length-1){n/=1024;i++;} return (Math.round(n*10)/10)+' '+u[i]; }
+    function cleanFolder(v){ v=(v||'').trim().replace(/^\/+/,''); if(v && !v.endsWith('/')) v+='/'; return v; }
+    function toError(e){ return e?.message || (typeof e==='string'?e:JSON.stringify(e)); }
+    async function gql(q,v){ const {data,error,errors}=await nhost.graphql.request(q,v); if(error) throw new Error(error.message||JSON.stringify(error)); if(errors?.length) throw new Error(errors[0].message||JSON.stringify(errors)); return data; }
+
+    // ===== Login-Guard wie im Dashboard =====
+    async function guard(){
+      const ok = await nhost.auth.isAuthenticatedAsync();
+      if(!ok){ const back=encodeURIComponent(location.pathname+location.search); location.href="admin-login.html?redirect="+back; return false; }
+      const u = nhost.auth.getUser(); $('#who').textContent = 'Angemeldet als: ' + (u?.email || '—'); return true;
     }
-    const u = nhost.auth.getUser();
-    $('#who').textContent = 'Angemeldet als: ' + (u?.email || '—');
-    return true;
-  }
-  if(!(await guard())) throw new Error('redirect');
+    if(!(await guard())) throw new Error('redirect');
 
-  /* ---------- UI refs ---------- */
-  const BUCKET = 'default';
-  $('#bucketLabel').textContent = BUCKET;
-  const listEl = $('#list');
-  const emptyEl = $('#empty');
-  const searchEl = $('#search');
-  const folderEl = $('#folder');
-  const tagsEl   = $('#tags');
+    // ===== UI-Refs =====
+    $('#bucketLabel').textContent = BUCKET;
+    const listEl = $('#list'), emptyEl = $('#empty');
+    const searchEl = $('#search'), folderEl = $('#folder'), tagsEl = $('#tags');
 
-  /* ---------- Load list ---------- */
-  async function load(){
-    try{
-      show('Lade …');
-      listEl.innerHTML = '';
-      emptyEl.style.display='none';
-
-      const folder = cleanFolder(folderEl.value);
-      const needle = searchEl.value.trim();
-      const prefix = folder ? folder.replace(/([_%])/g,'\\$1') + '%' : '%';
-      const nameFilter = needle ? `%${needle.replace(/([_%])/g,'\\$1')}%` : '%';
-
+    // ===== Rootfeld automatisch finden: 'storage_files' ODER 'files' =====
+    let FILES_ROOT = localStorage.getItem('FILES_ROOT') || 'storage_files';
+    async function fetchFilesFrom(root, vars){
       const data = await gql(`
         query($b:String!,$p:String!,$n:String!){
-          storage_files(
-            where:{
-              bucket_id:{_eq:$b},
-              name:{_ilike:$p},
-              _and:[{name:{_ilike:$n}}]
-            },
-            order_by:{created_at:desc},
-            limit:500
-          ){
-            id name size mime_type created_at
-          }
-        }`, { b: BUCKET, p: prefix, n: nameFilter });
-
-      const files = (data?.storage_files || []).filter(f=>!f.name.endsWith('.keep'));
-      if(!files.length){
-        emptyEl.style.display='block';
-        show('');
-        return;
-      }
-
-      for(const f of files){
-        const row = document.createElement('div');
-        row.className='file';
-        const created = new Date(f.created_at).toLocaleString('de-DE');
-        row.innerHTML = `
-          <div>
-            <div><strong>${f.name}</strong></div>
-            <small>${created} • ${f.mime_type||'–'}</small>
-          </div>
-          <div>${fmtSize(f.size)}</div>
-          <div class="action">
-            <button class="link" data-open="${f.id}">Öffnen</button>
-            <button class="link" data-del="${f.id}">Löschen</button>
-          </div>`;
-        listEl.appendChild(row);
-      }
-      show('');
-    }catch(e){
-      show('Konnte Dateien nicht laden: '+toError(e),'err');
+          ${root}(
+            where:{ bucket_id:{_eq:$b}, name:{_ilike:$p}, _and:[{name:{_ilike:$n}}] },
+            order_by:{created_at:desc}, limit:500
+          ){ id name size mime_type created_at }
+        }`, vars);
+      return data[root];
     }
-  }
-
-  /* ---------- Open/Delete ---------- */
-  listEl.addEventListener('click', async (e)=>{
-    const id = e.target.dataset.open || e.target.dataset.del;
-    if(!id) return;
-    if(e.target.dataset.open){
-      try{
-        const pub = nhost.storage.getPublicUrl({ fileId:id })?.publicUrl;
-        if(pub){ window.open(pub,'_blank'); return; }
-        const { presignedUrl, error } = await nhost.storage.getPresignedUrl({ fileId:id });
-        if(error) throw error;
-        window.open(presignedUrl,'_blank');
-      }catch(err){ show('Konnte URL nicht erzeugen: '+toError(err),'err'); }
-    }else if(e.target.dataset.del){
-      if(!confirm('Datei wirklich löschen?')) return;
-      try{
-        const { error } = await nhost.storage.delete({ fileId:id });
-        if(error) throw error;
-        await load();
-      }catch(err){ show('Löschen fehlgeschlagen: '+toError(err),'err'); }
-    }
-  });
-
-  /* ---------- Upload ---------- */
-  const fileInput = document.getElementById('fileInput');
-  document.getElementById('pickBtn').onclick = ()=> fileInput.click();
-  fileInput.addEventListener('change', ()=> handleFiles(fileInput.files));
-
-  async function handleFiles(fileList){
-    const files = Array.from(fileList||[]);
-    if(!files.length) return;
-    const folder = cleanFolder(folderEl.value);
-    const tags = (tagsEl.value||'').split(',').map(s=>s.trim()).filter(Boolean);
-    try{
-      show('Lade hoch …');
-      for(const file of files){
-        const name = folder + file.name;
-        const { fileMetadata, error } = await nhost.storage.upload({ file, name, bucketId: BUCKET });
-        if(error) throw error;
-
-        // Optional: in file_meta eintragen, falls vorhanden (ignorieren, wenn es die Tabelle nicht gibt)
-        if(tags.length || folder){
-          try{
-            const userId = nhost.auth.getUser()?.id || null;
-            await gql(`
-              mutation($obj:file_meta_insert_input!){
-                insert_file_meta_one(object:$obj, on_conflict:{constraint:file_meta_pkey, update_columns:[name,path,tags,updated_at]}){
-                  file_id
-                }
-              }`,
-              { obj: { file_id: fileMetadata?.id, name: file.name, path: folder, tags, uploader_id: userId } }
-            );
-          }catch(_){} // still ok
+    async function listFiles(vars){
+      const order = FILES_ROOT==='files' ? ['files','storage_files'] : ['storage_files','files'];
+      let lastErr = null;
+      for(const root of order){
+        try{
+          const rows = await fetchFilesFrom(root, vars);
+          FILES_ROOT = root;
+          localStorage.setItem('FILES_ROOT', root);
+          return rows;
+        }catch(e){
+          const s = String(e);
+          if(s.includes(`field '${root}' not found`) || s.includes('validation-failed')) { lastErr = e; continue; }
+          throw e;
         }
       }
-      show('Upload fertig.','ok');
-      await load();
-    }catch(e){
-      show('Upload fehlgeschlagen: '+toError(e),'err');
-    }finally{
-      fileInput.value='';
+      throw lastErr || new Error('Weder storage_files noch files als GraphQL-Root verfügbar – bitte Tabelle storage.files in Hasura „Track“en.');
     }
-  }
 
-  /* Drag & Drop */
-  const drop = document.getElementById('drop');
-  ;['dragenter','dragover'].forEach(ev=> drop.addEventListener(ev, e=>{ e.preventDefault(); e.stopPropagation(); drop.classList.add('drag'); }));
-  ;['dragleave','drop'].forEach(ev=> drop.addEventListener(ev, e=>{ e.preventDefault(); e.stopPropagation(); drop.classList.remove('drag'); }));
-  drop.addEventListener('drop', e=>{
-    const dt = e.dataTransfer;
-    if(dt?.files?.length) handleFiles(dt.files);
-  });
+    // ===== Liste laden =====
+    async function load(){
+      try{
+        show('Lade …');
+        listEl.innerHTML=''; emptyEl.style.display='none';
+        const folder = cleanFolder(folderEl.value);
+        const prefix = folder ? folder.replace(/([_%])/g,'\\$1')+'%' : '%';
+        const needle = searchEl.value.trim();
+        const nameFilter = needle ? `%${needle.replace(/([_%])/g,'\\$1')}%` : '%';
 
-  /* ---------- Ordner erstellen (virtuell) ---------- */
-  document.getElementById('mkFolderBtn').onclick = async ()=>{
-    const folder = cleanFolder(folderEl.value);
-    if(!folder){ show('Bitte zuerst einen Ordnernamen eingeben.','err'); return; }
-    try{
-      // Leere .keep-Datei hochladen, damit der Ordner sichtbar wird
-      const blob = new Blob([''], { type:'text/plain' });
-      const name = folder + '.keep';
-      const { error } = await nhost.storage.upload({ file: blob, name, bucketId: BUCKET });
-      if(error) throw error;
-      show(`Ordner „${folder}“ erstellt (virtuell).`,'ok');
-      await load();
-    }catch(e){
-      show('Ordner erstellen fehlgeschlagen: '+toError(e),'err');
+        const rows = await listFiles({ b: BUCKET, p: prefix, n: nameFilter });
+        const files = rows.filter(f => !f.name.endsWith('.keep'));
+
+        if(!files.length){ emptyEl.style.display='block'; show(''); return; }
+
+        for(const f of files){
+          const row = document.createElement('div');
+          row.className = 'file';
+          row.innerHTML = `
+            <div>
+              <div><strong>${f.name}</strong></div>
+              <small class="muted">${new Date(f.created_at).toLocaleString('de-DE')} • ${f.mime_type||'–'}</small>
+            </div>
+            <div>${fmtSize(f.size)}</div>
+            <div class="action">
+              <button class="link" data-open="${f.id}">Öffnen</button>
+              <button class="link" data-del="${f.id}">Löschen</button>
+            </div>`;
+          listEl.appendChild(row);
+        }
+        show('');
+      }catch(e){ show('Konnte Dateien nicht laden: '+toError(e),'err'); }
     }
-  };
 
-  /* ---------- Suche & Refresh ---------- */
-  let t; searchEl.addEventListener('input', ()=>{ clearTimeout(t); t=setTimeout(load, 250); });
-  document.getElementById('refreshBtn').onclick = load;
+    // ===== Öffnen / Löschen =====
+    listEl.addEventListener('click', async (e)=>{
+      const id = e.target.dataset.open || e.target.dataset.del; if(!id) return;
+      if(e.target.dataset.open){
+        try{
+          const pub = nhost.storage.getPublicUrl({ fileId:id })?.publicUrl;
+          if(pub){ window.open(pub,'_blank'); return; }
+          const { presignedUrl, error } = await nhost.storage.getPresignedUrl({ fileId:id });
+          if(error) throw error;
+          window.open(presignedUrl,'_blank');
+        }catch(err){ show('Konnte URL nicht erzeugen: '+toError(err),'err'); }
+      }else{
+        if(!confirm('Datei wirklich löschen?')) return;
+        try{ const { error } = await nhost.storage.delete({ fileId:id }); if(error) throw error; await load(); }
+        catch(err){ show('Löschen fehlgeschlagen: '+toError(err),'err'); }
+      }
+    });
 
-  /* ---------- Logout ---------- */
-  document.getElementById('logoutBtn').onclick = async (e)=>{
-    e.preventDefault(); try{ await nhost.auth.signOut(); }catch(_){}
-    localStorage.clear(); location.href='admin-login.html';
-  };
+    // ===== Upload =====
+    const fileInput = document.getElementById('fileInput');
+    document.getElementById('pickBtn').onclick = ()=> fileInput.click();
+    fileInput.addEventListener('change', ()=> handleFiles(fileInput.files));
 
-  /* ---------- Start ---------- */
-  await load();
-</script>
+    async function handleFiles(fileList){
+      const files = Array.from(fileList||[]); if(!files.length) return;
+      const folder = cleanFolder(folderEl.value);
+      const tags = (tagsEl.value||'').split(',').map(s=>s.trim()).filter(Boolean);
+      try{
+        show('Lade hoch …');
+        for(const file of files){
+          const name = folder + file.name;
+          const { fileMetadata, error } = await nhost.storage.upload({ file, name, bucketId: 'default' });
+          if(error) throw error;
+          // optionales file_meta – wird versucht, wenn vorhanden
+          if(tags.length || folder){
+            try{
+              const userId = nhost.auth.getUser()?.id || null;
+              await gql(`mutation($obj:file_meta_insert_input!){
+                insert_file_meta_one(object:$obj,
+                  on_conflict:{constraint:file_meta_pkey, update_columns:[name,path,tags,updated_at]}
+                ){ file_id }
+              }`, { obj: { file_id:fileMetadata?.id, name:file.name, path:folder, tags, uploader_id:userId } });
+            }catch(_){}
+          }
+        }
+        show('Upload fertig.','ok'); await load();
+      }catch(e){ show('Upload fehlgeschlagen: '+toError(e),'err'); }
+      finally{ fileInput.value=''; }
+    }
+
+    // Drag & Drop
+    const drop = document.getElementById('drop');
+    ;['dragenter','dragover'].forEach(ev=> drop.addEventListener(ev, e=>{e.preventDefault(); drop.classList.add('drag');}));
+    ;['dragleave','drop'].forEach(ev=> drop.addEventListener(ev, e=>{e.preventDefault(); drop.classList.remove('drag');}));
+    drop.addEventListener('drop', e=>{ const dt=e.dataTransfer; if(dt?.files?.length) handleFiles(dt.files); });
+
+    // Virtuellen Ordner anlegen (.keep)
+    document.getElementById('mkFolderBtn').onclick = async ()=>{
+      const folder = cleanFolder(folderEl.value);
+      if(!folder){ show('Bitte zuerst einen Ordnernamen eingeben.','err'); return; }
+      try{
+        const blob = new Blob([''], { type:'text/plain' });
+        const name = folder + '.keep';
+        const { error } = await nhost.storage.upload({ file: blob, name, bucketId: 'default' });
+        if(error) throw error;
+        show(`Ordner „${folder}“ erstellt.`,'ok'); await load();
+      }catch(e){ show('Ordner erstellen fehlgeschlagen: '+toError(e),'err'); }
+    };
+
+    // Suche & Refresh
+    let t; searchEl.addEventListener('input', ()=>{ clearTimeout(t); t=setTimeout(load,250); });
+    document.getElementById('refreshBtn').onclick = load;
+
+    // Logout
+    document.getElementById('logoutBtn').onclick = async (e)=>{ e.preventDefault(); try{ await nhost.auth.signOut(); }catch(_){} localStorage.clear(); location.href='admin-login.html'; };
+
+    // Start
+    await load();
+  </script>
 </body>
 </html>
