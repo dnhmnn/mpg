@@ -1,108 +1,218 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-<meta charset="utf-8"><title>CIRS-Meldung</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>CIRS-Meldung</title>
 <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
 <style>
- :root{--rot:#c8102e}
- body{font-family:'Atkinson Hyperlegible',Arial,sans-serif;background:#f7f7f7;margin:0}
- header{background:var(--rot);color:#fff;padding:12px 16px;font-weight:700}
- .wrap{max-width:820px;margin:16px auto;padding:0 12px}
- .card{background:#fff;border-radius:12px;box-shadow:0 3px 12px rgba(0,0,0,.06);padding:14px;margin-bottom:12px}
- label{color:var(--rot);font-weight:700;margin-top:8px;display:block}
- input,select,textarea{width:100%;padding:8px;border:1px solid #ccc;border-radius:8px;background:#fafafa}
- textarea{min-height:90px}
- .row{display:flex;gap:10px;flex-wrap:wrap}
- #sig{width:100%;height:150px;border:2px dashed var(--rot);border-radius:10px;background:#fffafc;touch-action:none}
- .btn{background:var(--rot);color:#fff;border:none;border-radius:8px;padding:10px 14px;font-weight:700;cursor:pointer}
- .btn.sec{background:#eee;color:var(--rot);border:1px solid var(--rot)}
- .msg{color:#2e7d32;min-height:1.2em;margin-top:6px}
+  :root{ --rot:#c8102e; --bg:#f7f7f7; --card:#fff; --border:#e5e7eb; --muted:#6b7280; }
+  *{ box-sizing:border-box }
+  body{ margin:0; background:var(--bg); font-family:'Atkinson Hyperlegible',system-ui,Arial,sans-serif; }
+  header{ background:var(--rot); color:#fff; padding:12px 16px; font-weight:700 }
+  .wrap{ max-width:820px; margin:16px auto; padding:0 12px }
+  .card{ background:var(--card); border-radius:12px; box-shadow:0 3px 12px rgba(0,0,0,.06); padding:14px; margin-bottom:14px }
+  h2{ color:var(--rot); margin:6px 0 12px }
+  label{ color:var(--rot); font-weight:700; margin-top:8px; display:block }
+  input, select, textarea{
+    width:100%; padding:12px; border:1px solid var(--border); border-radius:10px; background:#fafafa; font-size:1rem;
+  }
+  textarea{ min-height:110px; resize:vertical }
+  .row{ display:flex; gap:10px; flex-wrap:wrap }
+  .btn{ background:var(--rot); color:#fff; border:none; border-radius:10px; padding:12px 16px; font-weight:700; cursor:pointer }
+  .btn.ghost{ background:#eee; color:var(--rot); border:1px solid var(--rot) }
+  .hint{ color:var(--muted); font-size:.95rem }
+  .msg{ border-radius:12px; padding:12px; background:#fff5f5; border:1px solid #f2c9d1; color:#b00020; min-height:1.2em }
+  .ok{ background:#eef9f0; border-color:#cfead6; color:#256029 }
+  /* Mobile Tweaks */
+  @media (max-width: 560px){
+    header{ font-size:1.05rem }
+    input,select,textarea{ font-size:1.05rem }
+    .btn{ width:100% }
+  }
 </style>
 </head>
 <body>
 <header>CIRS-Meldung</header>
-<div class="wrap">
-  <div class="card">
-    <div class="row">
-      <div style="flex:1"><label>Datum/Uhrzeit</label><input id="dt" type="datetime-local"></div>
-      <div style="flex:1"><label>Einsatznummer (optional)</label><input id="einsatz"></div>
-    </div>
-    <label>Kategorie</label>
-    <select id="kat">
-      <option>Medikamente</option>
-      <option>Material/Technik</option>
-      <option>Kommunikation</option>
-      <option>Organisation/Prozess</option>
-      <option>Sonstiges</option>
-    </select>
-    <label>Beschreibung (Was ist passiert?)</label>
-    <textarea id="desc"></textarea>
-    <label>Maßnahmen/Vorschläge</label>
-    <textarea id="measures"></textarea>
-  </div>
 
-  <div class="card">
+<div class="wrap">
+
+  <!-- Kopfdaten -->
+  <section class="card">
+    <h2>Kopfdaten</h2>
     <div class="row">
-      <div style="flex:1"><label>Melder-Name</label><input id="melder"></div>
-      <div style="flex:1">
-        <label>Unterschrift</label>
-        <canvas id="sig"></canvas>
-        <div class="row" style="justify-content:flex-end;margin-top:8px">
-          <button class="btn sec" onclick="clearSig()" type="button">Unterschrift zurücksetzen</button>
-        </div>
+      <div style="flex:1;min-width:220px">
+        <label for="dt">Datum & Uhrzeit</label>
+        <input id="dt" type="datetime-local" />
+      </div>
+      <div style="flex:1;min-width:220px">
+        <label for="einsatz">Einsatznummer (optional)</label>
+        <input id="einsatz" placeholder="z. B. 2025-001" />
       </div>
     </div>
+
+    <label for="kat">Kategorie</label>
+    <select id="kat">
+      <!-- „Medikamente“ wurde entfernt -->
+      <option value="Material/Technik">Material/Technik</option>
+      <option value="Kommunikation">Kommunikation</option>
+      <option value="Organisation/Prozess">Organisation/Prozess</option>
+      <option value="Sonstiges">Sonstiges</option>
+    </select>
+
+    <label for="desc">Beschreibung (Was ist passiert?)</label>
+    <textarea id="desc" placeholder="Kurz und prägnant beschreiben …"></textarea>
+
+    <label for="measures">Maßnahmen / Vorschläge</label>
+    <textarea id="measures" placeholder="Was wurde unternommen? Was schlagen Sie vor?"></textarea>
+  </section>
+
+  <!-- Melder -->
+  <section class="card">
+    <h2>Melder</h2>
     <div class="row">
-      <button class="btn" onclick="submitCIRS()">Absenden</button>
-      <button class="btn sec" onclick="saveDraft()">Zwischenspeichern</button>
+      <div style="flex:1;min-width:220px">
+        <label for="melder">Name</label>
+        <input id="melder" placeholder="Ihr Name" />
+      </div>
     </div>
-    <div id="msg" class="msg"></div>
-  </div>
+  </section>
+
+  <!-- Absenden -->
+  <section class="card">
+    <button id="saveBtn" class="btn" type="button">Meldung speichern</button>
+    <button id="draftBtn" class="btn ghost" type="button" style="margin-left:8px">Zwischenspeichern</button>
+    <p class="hint" style="margin-top:10px">Die Meldung erscheint in <strong>Dokumente bearbeiten</strong> (Status: „offen“) und kann dort auf „erledigt“ gesetzt werden. Danach wandert sie 30 Tage ins Archiv.</p>
+    <div id="msg" class="msg" style="margin-top:10px"></div>
+  </section>
+
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@nhost/nhost-js@2.2.9/dist/umd/index.min.js"></script>
 <script>
-const NHOST_SUBDOMAIN='hpjfrhktprpuuxvvlpsb', NHOST_REGION='eu-central-1';
-const nhost=new window.Nhost.NhostClient({ subdomain:NHOST_SUBDOMAIN, region:NHOST_REGION });
+/* -------- Einstellungen -------- */
+const GRAPHQL_FN = '/.netlify/functions/graphql'; // Netlify-Function wie bei Produktausgabe
+const DRAFT_KEY = 'draft_cirs_v1';
 
-const canvas=document.getElementById('sig'); const ctx=canvas.getContext('2d'); let drawing=false;
-function resizeCanvas(){ canvas.width=canvas.offsetWidth; canvas.height=150; ctx.lineWidth=2.6; ctx.lineCap='round'; ctx.strokeStyle='#c8102e'; }
-addEventListener('resize',resizeCanvas); resizeCanvas();
-canvas.addEventListener('mousedown',e=>{drawing=true;ctx.beginPath();ctx.moveTo(e.offsetX,e.offsetY);});
-canvas.addEventListener('mousemove',e=>{if(drawing){ctx.lineTo(e.offsetX,e.offsetY);ctx.stroke();}});
-canvas.addEventListener('mouseup',()=>drawing=false); canvas.addEventListener('mouseleave',()=>drawing=false);
-canvas.addEventListener('touchstart',e=>{if(e.touches.length===1){const r=canvas.getBoundingClientRect();ctx.beginPath();ctx.moveTo(e.touches[0].clientX-r.left,e.touches[0].clientY-r.top);drawing=true;}},{passive:false});
-canvas.addEventListener('touchmove',e=>{if(drawing&&e.touches.length===1){const r=canvas.getBoundingClientRect();ctx.lineTo(e.touches[0].clientX-r.left,e.touches[0].clientY-r.top);ctx.stroke();}e.preventDefault();},{passive:false});
-canvas.addEventListener('touchend',()=>drawing=false);
-function clearSig(){ ctx.clearRect(0,0,canvas.width,canvas.height); }
-function getSig(){ const blank=document.createElement('canvas'); blank.width=canvas.width; blank.height=canvas.height; return (canvas.toDataURL()===blank.toDataURL())?null:canvas.toDataURL('image/png'); }
+/* -------- Helfer -------- */
+const $ = id => document.getElementById(id);
+const msgEl = $('msg');
 
-const DRAFT_KEY='draft_cirs';
-function saveDraft(){ const d=collect(); localStorage.setItem(DRAFT_KEY, JSON.stringify(d)); msg.textContent='Entwurf gespeichert'; }
-function loadDraft(){ const raw=localStorage.getItem(DRAFT_KEY); if(!raw) return; try{ const d=JSON.parse(raw);
-  ['dt','einsatz','kat','desc','measures','melder'].forEach(id=>{ if(d[id]!=null) document.getElementById(id).value=d[id]; });
-  if (d.signature){ const img=new Image(); img.onload=()=>ctx.drawImage(img,0,0,canvas.width,canvas.height); img.src=d.signature; }
-}catch(e){} }
-function collect(){ return { dt:dt.value, einsatz:einsatz.value, kat:kat.value, desc:desc.value, measures:measures.value, melder:melder.value, signature:getSig() }; }
-
-async function submitCIRS(){
-  const d=collect();
-  if(!d.melder || !d.signature){ msg.textContent='Bitte Name und Unterschrift setzen.'; msg.style.color='#c8102e'; return; }
-  await nhost.auth.refreshSession().catch(()=>{});
-  const user=await nhost.auth.getUser(); if(!user.user?.id){ msg.textContent='Nicht eingeloggt.'; msg.style.color='#c8102e'; return; }
-
-  const MUT=`mutation($obj:patient_docs_insert_input!){ insert_patient_docs_one(object:$obj){ id } }`;
-  const obj={ created_by:user.user.id, status:'offen', patient_data:{ type:'cirs', ...d } };
-  const { data, error } = await nhost.graphql.request(MUT,{ obj });
-  if (error){ msg.textContent='Fehler: '+error.message; msg.style.color='#c8102e'; return; }
-  localStorage.removeItem(DRAFT_KEY);
-  msg.textContent='CIRS-Meldung gespeichert ✔'; msg.style.color='#2e7d32';
-  setTimeout(()=>location.href='uebersicht.html',900);
+function showMsg(text, ok=false){
+  msgEl.textContent = text;
+  msgEl.className = 'msg ' + (ok ? 'ok' : '');
 }
 
-const msg=document.getElementById('msg');
-loadDraft();
+function pad(n){ return String(n).padStart(2,'0'); }
+function setNow(){
+  const d = new Date();
+  const val = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  $('dt').value = val;
+}
+
+function collect(){
+  return {
+    dt: $('dt').value,
+    einsatz: ($('einsatz').value || '').trim(),
+    kat: $('kat').value,
+    desc: ($('desc').value || '').trim(),
+    measures: ($('measures').value || '').trim(),
+    melder: ($('melder').value || '').trim()
+  };
+}
+
+/* -------- Draft lokal -------- */
+$('draftBtn').addEventListener('click', ()=>{
+  const d = collect();
+  localStorage.setItem(DRAFT_KEY, JSON.stringify(d));
+  showMsg('Entwurf lokal gespeichert ✔', true);
+});
+(function loadDraft(){
+  const raw = localStorage.getItem(DRAFT_KEY);
+  if(!raw) return;
+  try{
+    const d = JSON.parse(raw);
+    if(d.dt) $('dt').value = d.dt;
+    if(d.einsatz) $('einsatz').value = d.einsatz;
+    if(d.kat) $('kat').value = d.kat;
+    if(d.desc) $('desc').value = d.desc;
+    if(d.measures) $('measures').value = d.measures;
+    if(d.melder) $('melder').value = d.melder;
+  }catch(_){}
+})();
+
+/* -------- Absenden -------- */
+$('saveBtn').addEventListener('click', saveCIRS);
+
+async function saveCIRS(){
+  try{
+    showMsg('Speichere …', true);
+    const d = collect();
+
+    if (!d.desc || !d.melder){
+      showMsg('Bitte mindestens Beschreibung und Name angeben.');
+      return;
+    }
+
+    // Titel wie bei Produktausgabe: "CIRS 46263 (02.09.2025)"
+    const datePart = d.dt ? formatDateDE(d.dt) : formatDateDE(new Date().toISOString());
+    const title = `CIRS${d.einsatz ? ' '+d.einsatz : ''} (${datePart})`;
+
+    // Payload, das in dokumente-bearbeiten angezeigt werden kann
+    const payload = {
+      datetime: d.dt || null,
+      einsatznummer: d.einsatz || null,
+      kategorie: d.kat,
+      beschreibung: d.desc,
+      massnahmen: d.measures,
+      melder: d.melder
+    };
+
+    const query = `
+      mutation InsertCirs($obj: documents_insert_input!) {
+        insert_documents_one(object: $obj) { id }
+      }`;
+
+    const variables = {
+      obj: { type:'cirs', title, status:'offen', payload }
+    };
+
+    const res = await fetch(GRAPHQL_FN, {
+      method: 'POST',
+      headers: { 'Content-Type':'application/json' },
+      body: JSON.stringify({ query, variables })
+    });
+
+    const ctype = (res.headers.get('content-type') || '').toLowerCase();
+    if (!ctype.includes('application/json')) {
+      const text = await res.text();
+      throw new Error(`HTTP ${res.status}: ${text.substring(0,200)}`);
+    }
+    const json = await res.json();
+    if (json.errors) throw new Error(json.errors[0]?.message || 'Unbekannter GraphQL-Fehler');
+
+    // Erfolg
+    localStorage.removeItem(DRAFT_KEY);
+    showMsg('CIRS-Meldung gespeichert ✔', true);
+
+    // Optional: Formular zurücksetzen
+    setTimeout(()=>{
+      $('einsatz').value=''; $('desc').value=''; $('measures').value=''; $('melder').value='';
+      setNow(); showMsg('');
+    }, 800);
+
+  }catch(err){
+    showMsg('Fehler beim Speichern: ' + (err?.message || String(err)));
+  }
+}
+
+function formatDateDE(dtLocal){
+  // dtLocal: "YYYY-MM-DDTHH:MM" oder ISO
+  const d = new Date(dtLocal);
+  return `${pad(d.getDate())}.${pad(d.getMonth()+1)}.${d.getFullYear()}`;
+}
+
+/* -------- Start -------- */
+setNow();
 </script>
 </body>
 </html>
