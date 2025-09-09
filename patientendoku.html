@@ -1,179 +1,988 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-  <meta charset="utf-8">
-  <title>Patientendokumentation</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
-  <style>
-    :root { --rot:#c8102e; }
-    body { font-family:'Atkinson Hyperlegible', Arial, sans-serif; background:#f7f7f7; margin:0; }
-    header { background:var(--rot); padding:8px 16px; display:flex; align-items:center; gap:12px; color:#fff; }
-    header img { height:42px; width:auto; }
-    header h1 { font-size:1.1rem; margin:0; font-weight:700; }
-    .wrap { max-width:900px; margin:16px auto; padding:0 12px; }
-    .card { background:#fff; border-radius:12px; box-shadow:0 3px 12px rgba(0,0,0,.06); padding:14px; margin-bottom:12px; }
-    h2 { margin:0 0 8px; color:var(--rot); }
-    label { color:var(--rot); font-weight:700; margin-top:8px; display:block; }
-    input, select, textarea { width:100%; padding:8px; border:1px solid #ccc; border-radius:8px; background:#fafafa; }
-    textarea { min-height:70px; }
-    .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-    .grid4 { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
-    @media (max-width:700px) { .grid2,.grid4 { grid-template-columns:1fr; } }
-    #sig { width:100%; height:170px; border:2px dashed var(--rot); border-radius:10px; background:#fffafc; touch-action:none; }
-    .row { display:flex; gap:10px; flex-wrap:wrap; }
-    .btn { background:var(--rot); color:#fff; border:none; border-radius:8px; padding:10px 14px; font-weight:700; cursor:pointer; }
-    .btn.sec { background:#eee; color:var(--rot); border:1px solid var(--rot); }
-    .msg { color:var(--rot); min-height:1.2em; margin-top:6px; }
-    .hint { font-size:.9em; color:#666; }
-  </style>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Patientendokumentation – Formular (Akkordeon)</title>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
+
+<style>
+  :root{
+    --primary:#c8102e; --bg:#f8fafc; --card:#fff; --text:#0f172a; --muted:#64748b; --border:#e2e8f0;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;line-height:1.4}
+  header{position:sticky;top:0;background:linear-gradient(90deg,var(--primary),#981b1b);color:#fff;z-index:10}
+  .bar{max-width:1100px;margin:0 auto;padding:.75rem 1rem;display:flex;gap:.5rem;align-items:center;flex-wrap:wrap}
+  h1{font-size:1.05rem;margin:0;font-weight:800}
+  .toolbar{margin-left:auto;display:flex;gap:.5rem;flex-wrap:wrap}
+  .btn{border:1px solid #ffffff55;background:#ffffff1a;color:#fff;padding:.45rem .7rem;border-radius:.5rem;cursor:pointer;font-weight:700}
+  .btn:hover{background:#ffffff2b}
+  .wrap{max-width:1100px;margin:0 auto;padding:1rem}
+  .hint{color:var(--muted);margin:.5rem 0 1rem}
+  /* Sections via details/summary */
+  details{background:var(--card);border:1px solid var(--border);border-radius:.75rem;margin:0 0 .8rem 0;overflow:hidden}
+  summary{list-style:none;padding: .9rem 1rem;cursor:pointer;font-weight:800;display:flex;align-items:center;gap:.6rem}
+  summary::-webkit-details-marker{display:none}
+  details[open] summary{border-bottom:1px solid var(--border);background:#fff7f7}
+  .sec-body{padding:1rem}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:.75rem}
+  .row{display:flex;gap:.75rem;flex-wrap:wrap;margin:.25rem 0}
+  label{font-size:.92rem;color:#111827}
+  input[type="text"],input[type="number"],input[type="datetime-local"],input[type="date"],textarea,select{
+    width:100%;padding:.55rem .6rem;border:1px solid var(--border);border-radius:.5rem;background:#fff;
+  }
+  textarea{min-height:88px;resize:vertical}
+  fieldset{border:1px solid var(--border);border-radius:.6rem;padding:.75rem}
+  fieldset legend{padding:0 .35rem;color:#111827;font-weight:700}
+  .choice{display:flex;gap:.6rem;flex-wrap:wrap}
+  .pill{display:inline-flex;align-items:center;gap:.4rem;border:1px solid var(--border);border-radius:999px;padding:.25rem .55rem;background:#fff}
+  .badge{display:inline-block;padding:.2rem .5rem;border-radius:999px;background:#f1f5f9;color:#0f172a;border:1px solid var(--border);font-size:.8rem}
+  .sum{font-weight:800}
+  table{width:100%;border-collapse:collapse}
+  th,td{border:1px solid var(--border);padding:.5rem;text-align:left}
+  th{background:#f8fafc}
+  .table-actions{display:flex;gap:.5rem}
+  .subbtn{border:1px solid var(--border);background:#fff;padding:.35rem .55rem;border-radius:.45rem;cursor:pointer}
+  .right{margin-left:auto}
+  @media print{
+    header,.hint,.btn,.subbtn{display:none!important}
+    details{border:none;margin:0}
+    summary{background:transparent;border:none}
+    body{background:#fff}
+  }
+</style>
 </head>
 <body>
+
 <header>
-  <img src="logo.png" alt="Logo">
-  <h1>FFW – Patientendokumentation</h1>
+  <div class="bar">
+    <h1><i class="fa-solid fa-file-medical"></i> Patientendokumentation</h1>
+    <div class="toolbar">
+      <button class="btn" onclick="openAll()"><i class="fa-solid fa-plus-square"></i> Alle aufklappen</button>
+      <button class="btn" onclick="closeAll()"><i class="fa-solid fa-minus-square"></i> Alle zuklappen</button>
+      <button class="btn" onclick="saveForm()"><i class="fa-solid fa-floppy-disk"></i> Speichern</button>
+      <button class="btn" onclick="loadForm()"><i class="fa-solid fa-rotate"></i> Laden</button>
+      <button class="btn" onclick="resetFormConfirm()"><i class="fa-solid fa-eraser"></i> Zurücksetzen</button>
+      <button class="btn" onclick="window.print()"><i class="fa-solid fa-print"></i> Drucken</button>
+    </div>
+  </div>
 </header>
 
 <div class="wrap">
+  <div class="hint">Alle Punkte sind aus der Vorlage übernommen. Du kannst jede Sektion ein- oder ausklappen. GCS & qSOFA werden automatisch berechnet.</div>
 
-  <!-- Stammdaten -->
-  <div class="card">
-    <h2>Stammdaten & Einsatz</h2>
-    <div class="grid2">
-      <div><label>Einsatznummer</label><input id="einsatznr"></div>
-      <div><label>Ausfüller (Name)</label><input id="ausfueller"></div>
-      <div><label>Patient: Name</label><input id="p_name"></div>
-      <div><label>Geburtsdatum</label><input type="date" id="p_dob"></div>
-    </div>
-    <h3 class="hint">Adresse</h3>
-    <div class="grid4">
-      <div><label>Straße</label><input id="addr_str"></div>
-      <div><label>Hausnr.</label><input id="addr_nr"></div>
-      <div><label>PLZ</label><input id="addr_plz"></div>
-      <div><label>Ort</label><input id="addr_ort"></div>
-    </div>
-    <h3 class="hint" style="margin-top:8px">Statuszeiten</h3>
-    <div class="grid4">
-      <div><label>Status 1</label><input type="datetime-local" id="st1"></div>
-      <div><label>Status 2</label><input type="datetime-local" id="st2"></div>
-      <div><label>Status 3</label><input type="datetime-local" id="st3"></div>
-      <div><label>Status 4</label><input type="datetime-local" id="st4"></div>
-    </div>
-  </div>
-
-  <!-- Fahrzeuge -->
-  <div class="card">
-    <h2>Fahrzeuge</h2>
-    <div class="grid2">
-      <div><label>Fahrzeuge RD</label><input id="fz_rd"></div>
-      <div><label>Fahrzeuge FW</label><input id="fz_fw"></div>
-    </div>
-    <div class="grid2">
-      <div><label>Laien-Reanimation vor Eintreffen FW</label>
-        <select id="laien_rea"><option value="nein">nein</option><option value="ja">ja</option></select>
+  <!-- Einsatzdaten -->
+  <details open>
+    <summary><i class="fa-solid fa-truck-medical"></i> Einsatzdaten</summary>
+    <div class="sec-body">
+      <div class="grid">
+        <label>Einsatz-Nr.<input name="einsatz_nr" type="text"></label>
+        <label>Pat./Auftrags-Nr.<input name="auftrags_nr" type="text"></label>
+        <label>Rufname<input name="rufname" type="text"></label>
+        <label>Fahrzeug<input name="fahrzeug" type="text" placeholder="z. B. 46/1"></label>
+        <label>Datum/Uhrzeit<input name="zeit_einsatz" type="datetime-local"></label>
       </div>
-      <div><label>Defibrillation (AED FW) – Anzahl Schocks</label><input type="number" id="aed_schocks"></div>
-      <div><label>Defibrillierbarer Rhythmus</label>
-        <select id="aed_rhythmus"><option value="nein">nein</option><option value="ja">ja</option></select>
+      <div class="row">
+        <label style="min-width:240px;flex:1">Einsatz-Art<input name="einsatz_art" type="text" placeholder="z. B. Notfall, Verlegung …"></label>
       </div>
     </div>
-  </div>
+  </details>
 
-  <!-- Vitalwerte -->
-  <div class="card">
-    <h2>Vitalwerte & Anamnese</h2>
-    <label>Anamnese</label><textarea id="anamnese"></textarea>
-    <label>Vitalwerte</label><textarea id="vital"></textarea>
-
-    <h3 class="hint">GCS</h3>
-    <div class="grid2">
-      <div><label>Auge (E)</label>
-        <select id="gcs_e" onchange="calcGCS()">
-          <option value="4">4 – spontan</option>
-          <option value="3">3 – auf Ansprache</option>
-          <option value="2">2 – Schmerz</option>
-          <option value="1">1 – keiner</option>
-        </select>
+  <!-- Pat-Stammdaten -->
+  <details>
+    <summary><i class="fa-solid fa-id-card-clip"></i> Pat-Stammdaten</summary>
+    <div class="sec-body">
+      <div class="grid">
+        <label>Name*<input name="name" type="text"></label>
+        <label>Vorname*<input name="vorname" type="text"></label>
+        <label>Geb.-Datum*<input name="gebdatum" type="date"></label>
+        <label>Alter<input name="alter" type="number" min="0"></label>
+        <label>Telefon<input name="telefon" type="text"></label>
+        <label>Mobil<input name="mobil" type="text"></label>
+        <label>Straße<input name="strasse" type="text"></label>
+        <label>PLZ, Ort<input name="plz_ort" type="text"></label>
+        <label>Kasse / Nr.<input name="kasse" type="text"></label>
+        <label>Vers.-Nr.<input name="versnr" type="text"></label>
+        <label>Hausarzt / Tel.<input name="hausarzt" type="text"></label>
+        <label>Zust. Angehöriger / Tel.<input name="angehoeriger" type="text"></label>
       </div>
-      <div><label>Verbal (V)</label>
-        <select id="gcs_v" onchange="calcGCS()">
-          <option value="5">5 – orientiert</option>
-          <option value="4">4 – konfus</option>
-          <option value="3">3 – unzusammenhängend</option>
-          <option value="2">2 – unverständliche Laute</option>
-          <option value="1">1 – keiner</option>
-        </select>
+      <div class="row">
+        <fieldset style="flex:1;min-width:240px">
+          <legend>Überweisungsschein vorhanden</legend>
+          <div class="choice">
+            <label class="pill"><input type="radio" name="ueberweisung" value="ja"> ja</label>
+            <label class="pill"><input type="radio" name="ueberweisung" value="nein"> nein</label>
+          </div>
+        </fieldset>
+        <label style="flex:2">Informationen / Aspekte (Ethik, BEV, Patientenverfügung, FIT-Status …)
+          <textarea name="infos"></textarea>
+        </label>
       </div>
-      <div><label>Motorik (M)</label>
-        <select id="gcs_m" onchange="calcGCS()">
-          <option value="6">6 – befolgt</option>
-          <option value="5">5 – gezielt</option>
-          <option value="4">4 – zurückziehen</option>
-          <option value="3">3 – Beuge</option>
-          <option value="2">2 – Streck</option>
-          <option value="1">1 – keiner</option>
-        </select>
-      </div>
-      <div><label>GCS Summe</label><input id="gcs_sum" readonly></div>
-    </div>
-  </div>
-
-  <!-- Invasive -->
-  <div class="card">
-    <h2>Invasive Maßnahmen</h2>
-    <div class="grid2">
-      <div><label>Invasive Maßnahmen?</label>
-        <select id="inv_yesno"><option value="nein">nein</option><option value="ja">ja</option></select>
-      </div>
-      <div><label>Dokumentation</label><textarea id="inv_list"></textarea></div>
-    </div>
-  </div>
-
-  <!-- Tätigkeit FW -->
-  <div class="card">
-    <h2>Tätigkeit Feuerwehr</h2>
-    <textarea id="fw_taetigkeit"></textarea>
-  </div>
-
-  <!-- Unterschrift -->
-  <div class="card">
-    <h2>Unterschrift & Senden</h2>
-    <div class="grid2">
-      <div><label>Ausfüller</label><input id="sign_name"></div>
-      <div>
-        <label>Digitale Unterschrift</label>
-        <canvas id="sig"></canvas>
-        <button class="btn sec" type="button" onclick="clearSig()">Zurücksetzen</button>
+      <div class="row">
+        <fieldset style="flex:1">
+          <legend>Vor-Ort / Anfahrt</legend>
+          <div class="choice">
+            <label class="pill"><input type="checkbox" name="hvo"> Helfer vor Ort</label>
+            <label class="pill"><input type="checkbox" name="nef"> NEF</label>
+            <label class="pill"><input type="checkbox" name="rth"> RTH</label>
+            <label class="pill"><input type="checkbox" name="leitstelle"> Leitstelle</label>
+            <label class="pill"><input type="checkbox" name="rtw"> RTW</label>
+            <label class="pill"><input type="checkbox" name="dupliziert"> dupliziert</label>
+          </div>
+        </fieldset>
+        <fieldset style="flex:1">
+          <legend>Auskunft einholen über…</legend>
+          <div class="grid">
+            <label>Name / Funktion<input name="auskunft_name" type="text"></label>
+            <label>Telefon<input name="auskunft_tel" type="text"></label>
+          </div>
+        </fieldset>
       </div>
     </div>
-    <div class="row">
-      <button class="btn" onclick="submitDoc()">Absenden</button>
-      <button class="btn sec" onclick="saveDraft()">Zwischenspeichern</button>
+  </details>
+
+  <!-- Transportziel / Team -->
+  <details>
+    <summary><i class="fa-solid fa-hospital"></i> Transportziel / Team</summary>
+    <div class="sec-body">
+      <div class="grid">
+        <label>Transportziel<input name="transportziel" type="text" placeholder="Zielklinik / Praxis …"></label>
+        <fieldset>
+          <legend>Beteiligte</legend>
+          <div class="choice">
+            <label class="pill"><input type="checkbox" name="notarzt"> Notarzt</label>
+            <label class="pill"><input type="checkbox" name="assistenz"> Assistenz</label>
+            <label class="pill"><input type="checkbox" name="rtw_team"> RTW-Team</label>
+          </div>
+        </fieldset>
+        <fieldset>
+          <legend>Arztqualifikation</legend>
+          <div class="choice">
+            <label class="pill"><input type="checkbox" name="arzt_weiterb"> Arzt in Weiterb.</label>
+            <label class="pill"><input type="checkbox" name="anaesth"> Anästhesie</label>
+            <label class="pill"><input type="checkbox" name="paed"> Pädiatrie</label>
+            <label class="pill"><input type="checkbox" name="chir"> Chirurgie</label>
+            <label class="pill"><input type="checkbox" name="neuro"> Neurologie</label>
+            <label class="pill"><input type="checkbox" name="innere"> Innere</label>
+            <label class="pill"><input type="checkbox" name="allgmed"> Allg. Medizin</label>
+            <label class="pill"><input type="checkbox" name="akutmed"> Klinische Akutmedizin</label>
+            <label class="pill"><input type="checkbox" name="intensiv"> Intensivmedizin</label>
+            <label class="pill"><input type="checkbox" name="andere"> Andere</label>
+          </div>
+        </fieldset>
+      </div>
     </div>
-    <div id="msg" class="msg"></div>
-  </div>
+  </details>
+
+  <!-- Notfallgeschehen -->
+  <details>
+    <summary><i class="fa-solid fa-notes-medical"></i> Notfallgeschehen / Anamnese / Erstbefund / Vormedikation / Vorbehandlung</summary>
+    <div class="sec-body">
+      <textarea name="notfallgeschehen" placeholder="Freitext …"></textarea>
+    </div>
+  </details>
+
+  <!-- Neurologie -->
+  <details>
+    <summary><i class="fa-solid fa-brain"></i> Erstbefunde – Neurologie</summary>
+    <div class="sec-body">
+      <div class="row">
+        <label>Zeitpunkt<input name="neu_zeit" type="datetime-local"></label>
+        <label class="pill"><input type="checkbox" name="neu_unauff"> ohne path. Befund</label>
+      </div>
+      <div class="grid">
+        <fieldset>
+          <legend>Pupillenweite – rechts</legend>
+          <div class="choice">
+            <label class="pill"><input type="radio" name="pw_r" value="eng"> eng</label>
+            <label class="pill"><input type="radio" name="pw_r" value="mittel"> mittel</label>
+            <label class="pill"><input type="radio" name="pw_r" value="weit"> weit</label>
+            <label class="pill"><input type="checkbox" name="pw_r_entrundet"> entrundet</label>
+          </div>
+          <div class="choice"><span class="badge">Lichtreaktion</span>
+            <label class="pill"><input type="radio" name="lr_r" value="prompt"> prompt</label>
+            <label class="pill"><input type="radio" name="lr_r" value="träge"> träge</label>
+            <label class="pill"><input type="radio" name="lr_r" value="keine"> keine</label>
+          </div>
+        </fieldset>
+        <fieldset>
+          <legend>Pupillenweite – links</legend>
+          <div class="choice">
+            <label class="pill"><input type="radio" name="pw_l" value="eng"> eng</label>
+            <label class="pill"><input type="radio" name="pw_l" value="mittel"> mittel</label>
+            <label class="pill"><input type="radio" name="pw_l" value="weit"> weit</label>
+            <label class="pill"><input type="checkbox" name="pw_l_entrundet"> entrundet</label>
+          </div>
+          <div class="choice"><span class="badge">Lichtreaktion</span>
+            <label class="pill"><input type="radio" name="lr_l" value="prompt"> prompt</label>
+            <label class="pill"><input type="radio" name="lr_l" value="träge"> träge</label>
+            <label class="pill"><input type="radio" name="lr_l" value="keine"> keine</label>
+          </div>
+        </fieldset>
+      </div>
+    </div>
+  </details>
+
+  <!-- GCS -->
+  <details>
+    <summary><i class="fa-solid fa-eye"></i> Glasgow Coma Scale (auto)</summary>
+    <div class="sec-body">
+      <div class="grid">
+        <fieldset>
+          <legend>Augenöffnung (E)</legend>
+          <div class="choice">
+            <label class="pill"><input type="radio" name="gcs_e" value="4" onchange="calcGCS()"> spontan (4)</label>
+            <label class="pill"><input type="radio" name="gcs_e" value="3" onchange="calcGCS()"> auf Geräusch (3)</label>
+            <label class="pill"><input type="radio" name="gcs_e" value="2" onchange="calcGCS()"> auf Druck (2)</label>
+            <label class="pill"><input type="radio" name="gcs_e" value="1" onchange="calcGCS()"> nicht vorhanden (1)</label>
+          </div>
+        </fieldset>
+        <fieldset>
+          <legend>Verbale Antwort (V)</legend>
+          <div class="choice">
+            <label class="pill"><input type="radio" name="gcs_v" value="5" onchange="calcGCS()"> orientiert (5)</label>
+            <label class="pill"><input type="radio" name="gcs_v" value="4" onchange="calcGCS()"> verwirrt (4)</label>
+            <label class="pill"><input type="radio" name="gcs_v" value="3" onchange="calcGCS()"> Wörter (3)</label>
+            <label class="pill"><input type="radio" name="gcs_v" value="2" onchange="calcGCS()"> Laute (2)</label>
+            <label class="pill"><input type="radio" name="gcs_v" value="1" onchange="calcGCS()"> keine (1)</label>
+          </div>
+        </fieldset>
+        <fieldset>
+          <legend>Motorische Antwort (M)</legend>
+          <div class="choice">
+            <label class="pill"><input type="radio" name="gcs_m" value="6" onchange="calcGCS()"> folgt Aufforderung (6)</label>
+            <label class="pill"><input type="radio" name="gcs_m" value="5" onchange="calcGCS()"> lokalisiert (5)</label>
+            <label class="pill"><input type="radio" name="gcs_m" value="4" onchange="calcGCS()"> beugt normal (4)</label>
+            <label class="pill"><input type="radio" name="gcs_m" value="3" onchange="calcGCS()"> beugt abnormal (3)</label>
+            <label class="pill"><input type="radio" name="gcs_m" value="2" onchange="calcGCS()"> streckt (2)</label>
+            <label class="pill"><input type="radio" name="gcs_m" value="1" onchange="calcGCS()"> keine (1)</label>
+          </div>
+        </fieldset>
+      </div>
+      <div class="row"><span class="badge">GCS Summe: <span id="gcs_sum" class="sum">—</span></span></div>
+    </div>
+  </details>
+
+  <!-- Haut -->
+  <details>
+    <summary><i class="fa-regular fa-hand"></i> Haut</summary>
+    <div class="sec-body">
+      <div class="choice">
+        <label class="pill"><input type="checkbox" name="haut_nus"> nicht US</label>
+        <label class="pill"><input type="checkbox" name="haut_unauff"> unauffällig</label>
+        <label class="pill"><input type="checkbox" name="haut_falten"> stehende Hautfalten</label>
+        <label class="pill"><input type="checkbox" name="haut_oedeme"> Ödeme</label>
+        <label class="pill"><input type="checkbox" name="haut_patho"> pathologisch</label>
+        <label class="pill"><input type="checkbox" name="haut_dekubitus"> Dekubitus</label>
+        <label class="pill"><input type="checkbox" name="haut_kaltschweissig"> kaltschweißig</label>
+        <label class="pill"><input type="checkbox" name="haut_exanthem"> Exanthem</label>
+      </div>
+    </div>
+  </details>
+
+  <!-- Psyche -->
+  <details>
+    <summary><i class="fa-solid fa-user"></i> Psyche</summary>
+    <div class="sec-body">
+      <div class="choice">
+        <label class="pill"><input type="checkbox" name="psy_nus"> nicht US</label>
+        <label class="pill"><input type="checkbox" name="psy_unauff"> unauffällig</label>
+        <label class="pill"><input type="checkbox" name="psy_erregt"> erregt</label>
+        <label class="pill"><input type="checkbox" name="psy_aggr"> aggressiv</label>
+        <label class="pill"><input type="checkbox" name="psy_verlangsamt"> verlangsamt/stuporös</label>
+        <label class="pill"><input type="checkbox" name="psy_nb"> nicht beurteilbar</label>
+        <label class="pill"><input type="checkbox" name="psy_depressiv"> depressiv</label>
+        <label class="pill"><input type="checkbox" name="psy_aengstlich"> ängstlich</label>
+        <label class="pill"><input type="checkbox" name="psy_euphorisch"> euphorisch</label>
+        <label class="pill"><input type="checkbox" name="psy_wahnhaft"> wahnhaft</label>
+        <label class="pill"><input type="checkbox" name="psy_verwirrt"> verwirrt</label>
+        <label class="pill"><input type="checkbox" name="psy_suizidal"> suizidal</label>
+        <label class="pill"><input type="checkbox" name="psy_motor_unruhig"> motorisch unruhig</label>
+      </div>
+    </div>
+  </details>
+
+  <!-- Messwerte / Atmung (Symptome) -->
+  <details>
+    <summary><i class="fa-solid fa-stethoscope"></i> Messwerte initial / Atmung (Symptome)</summary>
+    <div class="sec-body">
+      <div class="grid">
+        <label>RR syst. (mmHg)<input name="rr_sys" type="number" min="0" oninput="calcQSOFA()"></label>
+        <label>RR diast. (mmHg)<input name="rr_dia" type="number" min="0"></label>
+        <label>HF (bpm)<input name="hf" type="number" min="0"></label>
+        <label>AF (/min)<input name="af" type="number" min="0" oninput="calcQSOFA()"></label>
+        <label>SpO₂ (%)<input name="spo2" type="number" min="0" max="100"></label>
+        <label>etCO₂ (mmHg)<input name="etco2" type="number" min="0"></label>
+        <label>Temp (°C)<input name="temp" type="number" step="0.1"></label>
+        <label>BZ (mg/dl)<input name="bz_mg" type="number" min="0"></label>
+        <label>BZ (mmol/l)<input name="bz_mmol" type="number" step="0.1"></label>
+        <label style="min-width:200px">Schmerz (0–10)<input name="schmerz" type="number" min="0" max="10"></label>
+      </div>
+      <fieldset style="margin-top:.6rem">
+        <legend>Atmung – klinische Zeichen</legend>
+        <div class="choice">
+          <label class="pill"><input type="checkbox" name="atm_unauff"> unauffällig</label>
+          <label class="pill"><input type="checkbox" name="atm_apnoe"> Apnoe</label>
+          <label class="pill"><input type="checkbox" name="atm_stridor"> Stridor</label>
+          <label class="pill"><input type="checkbox" name="atm_hypervent"> Hyperventilation</label>
+          <label class="pill"><input type="checkbox" name="atm_dyspnoe"> Dyspnoe</label>
+          <label class="pill"><input type="checkbox" name="atm_beatmung"> Beatmung</label>
+          <label class="pill"><input type="checkbox" name="atm_zyanose"> Zyanose</label>
+          <label class="pill"><input type="checkbox" name="atm_verlegung"> Atemwegsverlegung</label>
+          <label class="pill"><input type="checkbox" name="atm_schnappatmung"> Schnappatmung</label>
+          <label class="pill"><input type="checkbox" name="atm_spastik"> Spastik</label>
+          <label class="pill"><input type="checkbox" name="atm_rasseln"> Rasselgeräusche</label>
+        </div>
+        <label class="badge" style="margin-top:.4rem">Sonstiges path. Atemmuster (Biot, Cheyne-Stokes etc.)</label>
+        <textarea name="atm_sonst" placeholder="Freitext …"></textarea>
+      </fieldset>
+      <fieldset style="margin-top:.6rem">
+        <legend>O₂-Gabe</legend>
+        <div class="choice">
+          <label class="pill"><input type="radio" name="o2" value="raumluft"> bei Raumluft</label>
+          <label class="pill"><input type="radio" name="o2" value="unter_o2"> unter O₂-Gabe</label>
+          <label class="pill"><input type="checkbox" name="o2_nasal"> Nasensonde</label>
+          <label class="pill"><input type="checkbox" name="o2_maske"> Maske</label>
+          <label class="pill"><input type="checkbox" name="o2_reservoir"> Maske mit Reservoir</label>
+        </div>
+        <div class="grid" style="margin-top:.4rem">
+          <label>Flow (l/min)<input name="o2_flow" type="number" step="0.5" min="0"></label>
+          <label>Kommentar<input name="o2_comment" type="text" placeholder="z. B. Sättigungsentwicklung …"></label>
+        </div>
+      </fieldset>
+    </div>
+  </details>
+
+  <!-- Rhythmus / EKG -->
+  <details>
+    <summary><i class="fa-solid fa-heart-pulse"></i> Rhythmus / EKG</summary>
+    <div class="sec-body">
+      <div class="choice">
+        <label class="pill"><input type="checkbox" name="ekg_none"> kein EKG</label>
+        <label class="pill"><input type="checkbox" name="sr"> Sinusrhythmus</label>
+        <label class="pill"><input type="checkbox" name="schrittmacher"> Schrittmacherrhythmus</label>
+        <label class="pill"><input type="checkbox" name="stemi"> STEMI</label>
+        <label class="pill"><input type="checkbox" name="arrh_abs"> absolute Arrhythmie</label>
+        <label class="pill"><input type="checkbox" name="vf"> Kammerflimmern</label>
+        <label class="pill"><input type="checkbox" name="qrs_tachy_narrow"> schmale QRS-Tachykardie</label>
+        <label class="pill"><input type="checkbox" name="av2"> AV-Block II°</label>
+        <label class="pill"><input type="checkbox" name="pea"> PEA / EMD</label>
+        <label class="pill"><input type="checkbox" name="qrs_tachy_wide"> breite QRS-Tachykardie</label>
+        <label class="pill"><input type="checkbox" name="av3"> AV-Block III°</label>
+        <label class="pill"><input type="checkbox" name="asystole"> Asystolie</label>
+        <label class="pill"><input type="checkbox" name="sves"> SVES / VES monomorph</label>
+        <label class="pill"><input type="checkbox" name="ves_poly"> VES polymorph</label>
+      </div>
+      <div class="grid" style="margin-top:.5rem">
+        <label>Standort<input name="ekg_standort" type="text"></label>
+        <label>Pers Nr.<input name="ekg_persnr" type="text"></label>
+      </div>
+    </div>
+  </details>
+
+  <!-- Verletzungen -->
+  <details>
+    <summary><i class="fa-solid fa-kit-medical"></i> Verletzungen</summary>
+    <div class="sec-body">
+      <div class="choice">
+        <label class="pill"><input type="checkbox" name="verletz_keine"> keine</label>
+        <label class="pill"><input type="checkbox" name="verletz_sport_ja"> sportliche Aktivität: Ja</label>
+        <label class="pill"><input type="checkbox" name="verletz_sport_nein"> sportliche Aktivität: Nein</label>
+        <label class="pill"><input type="checkbox" name="verletz_beruf_ja"> berufliche Aktivität: Ja</label>
+        <label class="pill"><input type="checkbox" name="verletz_beruf_nein"> berufliche Aktivität: Nein</label>
+      </div>
+      <textarea name="verletz_text" placeholder="Beschreibung …"></textarea>
+    </div>
+  </details>
+
+  <!-- Erstdiagnosen -->
+  <details>
+    <summary><i class="fa-solid fa-clipboard-list"></i> Erstdiagnosen (Übersicht)</summary>
+    <div class="sec-body">
+      <div class="grid">
+        <fieldset>
+          <legend>Neuro</legend>
+          <div class="choice">
+            <label class="pill"><input type="checkbox" name="diag_ko"> Bewusstlosigkeit/Koma</label>
+            <label class="pill"><input type="checkbox" name="diag_ausfaelle"> neurologische Ausfälle</label>
+            <label class="pill"><input type="checkbox" name="diag_krampf"> Konvulsionen (Krampf)</label>
+            <label class="pill"><input type="checkbox" name="diag_synkope"> Synkope</label>
+            <label class="pill"><input type="checkbox" name="diag_sht"> Schädel-Hirn-Trauma</label>
+            <label class="pill"><input type="checkbox" name="diag_bws_hws_lws"> BWS-/HWS-/LWS-Syndrom</label>
+            <label class="pill"><input type="checkbox" name="diag_apoplex"> Apoplex</label>
+            <label class="pill"><input type="checkbox" name="diag_sehen_hoeren_sprache"> Störung Sehen/Hören/Sprache</label>
+            <label class="pill"><input type="checkbox" name="diag_verwirrt"> akute Verwirrtheit</label>
+            <label class="pill"><input type="checkbox" name="diag_hirndruck"> hirndruckgefährdet</label>
+            <label class="pill"><input type="checkbox" name="diag_status_ep"> Status epilepticus</label>
+            <label class="pill"><input type="checkbox" name="diag_malign_hirn"> maligner Prozess (Hirn)</label>
+            <label class="pill"><input type="checkbox" name="diag_neurop_schmerz"> neuropath. Schmerz</label>
+            <label class="pill"><input type="checkbox" name="diag_peripher_neuro"> peripher neurologische Symptomatik</label>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Herz-Kreislauf</legend>
+          <div class="choice">
+            <label class="pill"><input type="checkbox" name="diag_acs"> akutes Koronarsyndrom (ACS)</label>
+            <label class="pill"><input type="checkbox" name="diag_insuff"> akute Herzinsuffizienz</label>
+            <label class="pill"><input type="checkbox" name="diag_aortensyndrom"> akutes aort. Syndrom</label>
+            <label class="pill"><input type="checkbox" name="diag_lungenembolie"> Lungenembolie</label>
+            <label class="pill"><input type="checkbox" name="diag_lungenoedem"> Lungenödem</label>
+            <label class="pill"><input type="checkbox" name="diag_hypertensiv"> hypertensiver Notfall/Krise</label>
+            <label class="pill"><input type="checkbox" name="diag_rhythmusstoer"> Herzrhythmusstörung</label>
+            <label class="pill"><input type="checkbox" name="diag_thrombose"> Thrombose</label>
+            <label class="pill"><input type="checkbox" name="diag_tamponade"> Perikardtamponade</label>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Atmung</legend>
+          <div class="choice">
+            <label class="pill"><input type="checkbox" name="diag_resp_insuff"> akute respiratorische Insuffizienz</label>
+            <label class="pill"><input type="checkbox" name="diag_pneumothorax"> (Spannungs-)Pneumothorax</label>
+            <label class="pill"><input type="checkbox" name="diag_pleuritis"> Pleuritis</label>
+            <label class="pill"><input type="checkbox" name="diag_asthma"> Asthma / Status asthmaticus</label>
+            <label class="pill"><input type="checkbox" name="diag_copd"> COPD (Exazerb.)</label>
+            <label class="pill"><input type="checkbox" name="diag_pneumonie"> Pneumonie/Bronchitis</label>
+            <label class="pill"><input type="checkbox" name="diag_hvs"> Hyperventilationssyndrom</label>
+            <label class="pill"><input type="checkbox" name="diag_aspiration"> Aspiration</label>
+            <label class="pill"><input type="checkbox" name="diag_haemoptysen"> Hämoptysen</label>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Abdomen</legend>
+          <div class="choice">
+            <label class="pill"><input type="checkbox" name="diag_akutes_abdomen"> Akutes Abdomen</label>
+            <label class="pill"><input type="checkbox" name="diag_gi_blutung"> GI-Blutung (oben/unten)</label>
+            <label class="pill"><input type="checkbox" name="diag_kolik"> Kolik (Niere/Galle)</label>
+            <label class="pill"><input type="checkbox" name="diag_enteritis"> Enteritis</label>
+            <label class="pill"><input type="checkbox" name="diag_gi_probleme"> GI-Probleme</label>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Psyche / Intox</legend>
+          <div class="choice">
+            <label class="pill"><input type="checkbox" name="diag_psychose_manie"> Akute Psychose/Manie/Erregung</label>
+            <label class="pill"><input type="checkbox" name="diag_intox_alk"> Alkohol-Intox</label>
+            <label class="pill"><input type="checkbox" name="diag_intox_drogen"> Drogen-Intox</label>
+            <label class="pill"><input type="checkbox" name="diag_intox_medi"> Medikamenten-Intox</label>
+            <label class="pill"><input type="checkbox" name="diag_entzug_delir"> Entzug/Delir</label>
+            <label class="pill"><input type="checkbox" name="diag_suizid"> Suizid(versuch)</label>
+            <label class="pill"><input type="checkbox" name="diag_psychosoz_krise"> psychosoziale Krise</label>
+            <label class="pill"><input type="checkbox" name="diag_angst_depr"> Angst/Depression</label>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Stoffwechsel / Schock / Andere</legend>
+          <div class="choice">
+            <label class="pill"><input type="checkbox" name="diag_hypo"> Hypoglykämie</label>
+            <label class="pill"><input type="checkbox" name="diag_hyper"> Hyperglykämie</label>
+            <label class="pill"><input type="checkbox" name="diag_exsiccose"> Exsiccose</label>
+            <label class="pill"><input type="checkbox" name="diag_schock_hypov"> hypovolämischer Schock</label>
+            <label class="pill"><input type="checkbox" name="diag_schock_kardio"> kardiogener Schock</label>
+            <label class="pill"><input type="checkbox" name="diag_schock_neuro"> neurogener Schock</label>
+            <label class="pill"><input type="checkbox" name="diag_schock_ana"> anaphylaktischer Schock</label>
+            <label class="pill"><input type="checkbox" name="diag_schock_sept"> septischer Schock</label>
+            <label class="pill"><input type="checkbox" name="diag_elektrolyt"> Elektrolytstörung</label>
+            <label class="pill"><input type="checkbox" name="diag_anaemie"> Anämie</label>
+            <label class="pill"><input type="checkbox" name="diag_azidose"> metabol. Azidose</label>
+            <label class="pill"><input type="checkbox" name="diag_leberv"> Leberversagen</label>
+            <label class="pill"><input type="checkbox" name="diag_nierenv"> Nierenversagen</label>
+            <label class="pill"><input type="checkbox" name="diag_endo_krise"> Endokrinologische Krise</label>
+            <label class="pill"><input type="checkbox" name="diag_co_rauchgas"> Rauchgas/CO-Intox</label>
+          </div>
+        </fieldset>
+      </div>
+    </div>
+  </details>
+
+  <!-- Bewusstseinslage / AZ / Versorgung -->
+  <details>
+    <summary><i class="fa-solid fa-face-meh"></i> Bewusstseinslage, AZ, Versorgung</summary>
+    <div class="sec-body">
+      <div class="grid">
+        <fieldset>
+          <legend>Bewusstseinslage</legend>
+          <div class="choice">
+            <label class="pill"><input type="checkbox" name="bew_wach"> wach</label>
+            <label class="pill"><input type="checkbox" name="bew_ansprache"> Reakt. auf Ansprache</label>
+            <label class="pill"><input type="checkbox" name="bew_schmerz"> Reakt. auf Schmerzreiz</label>
+            <label class="pill"><input type="checkbox" name="bew_getruebt"> getrübt</label>
+            <label class="pill"><input type="checkbox" name="bew_bewusstlos"> bewusstlos</label>
+            <label class="pill"><input type="checkbox" name="bew_analgosediert"> analgosediert/Narkose</label>
+          </div>
+        </fieldset>
+        <fieldset>
+          <legend>Allgemeinzustand (vor Ereignis)</legend>
+          <div class="choice">
+            <label class="pill"><input type="radio" name="az" value="gesund"> gesund</label>
+            <label class="pill"><input type="radio" name="az" value="leicht"> leicht eingeschränkt</label>
+            <label class="pill"><input type="radio" name="az" value="deutlich"> deutlich eingeschränkt</label>
+            <label class="pill"><input type="radio" name="az" value="akut_lebensg"> akut lebensgefährdet</label>
+            <label class="pill"><input type="radio" name="az" value="moribund"> Moribund</label>
+          </div>
+        </fieldset>
+        <fieldset>
+          <legend>Versorgungssituation</legend>
+          <div class="choice">
+            <label class="pill"><input type="radio" name="versorgung" value="unabhaengig"> unabhängig</label>
+            <label class="pill"><input type="radio" name="versorgung" value="pflege_zuhaus"> Pflege zuhause</label>
+            <label class="pill"><input type="radio" name="versorgung" value="pflege_institution"> Pflege in Institution</label>
+          </div>
+        </fieldset>
+      </div>
+    </div>
+  </details>
+
+  <!-- Maßnahmen: i.v./i.o.-Zugang, Infusionen -->
+  <details>
+    <summary><i class="fa-solid fa-syringe"></i> Maßnahmen – i.v./i.o.-Zugang & Infusionen</summary>
+    <div class="sec-body">
+      <fieldset>
+        <legend>Zugang</legend>
+        <div class="grid">
+          <label>Art
+            <select name="zugang_art">
+              <option value="">—</option>
+              <option value="iv">i.v.</option>
+              <option value="io">i.o.</option>
+            </select>
+          </label>
+          <label>Seite/Region<input name="zugang_region" type="text" placeholder="z. B. re. AC, li. Handrücken …"></label>
+          <label>Größe (G)<input name="zugang_gauge" type="number" step="1" min="14" max="24" placeholder="z. B. 18G"></label>
+          <label>Versuche (#)<input name="zugang_versuche" type="number" min="0"></label>
+          <label>Fixierung/Verband<input name="zugang_fixierung" type="text" placeholder="z. B. Tegaderm …"></label>
+          <label>Zeitpunkt<input name="zugang_zeit" type="datetime-local"></label>
+        </div>
+      </fieldset>
+
+      <fieldset style="margin-top:.75rem">
+        <legend>Infusion</legend>
+        <div class="grid">
+          <label>Art (Kristalloide/Kolloide)<input name="inf_art" type="text" placeholder="z. B. NaCl 0,9%, Ringer …"></label>
+          <label>Menge (ml)<input name="inf_menge" type="number" min="0" step="50"></label>
+          <label>Laufrate (ml/h)<input name="inf_rate" type="number" min="0" step="10"></label>
+          <label>Bemerkung<input name="inf_bem" type="text" placeholder="z. B. Bolus, Druckinfusor …"></label>
+        </div>
+      </fieldset>
+
+      <fieldset style="margin-top:.75rem">
+        <legend>Medikamente (Maßnahmen)</legend>
+        <div class="table-actions">
+          <button class="subbtn" type="button" onclick="addMedRow()"><i class="fa-solid fa-plus"></i> Zeile hinzufügen</button>
+          <div class="right"></div>
+        </div>
+        <div style="overflow:auto;margin-top:.5rem">
+          <table id="medTable">
+            <thead>
+              <tr>
+                <th>#</th><th>Medikament</th><th>Dosis</th><th>Einheit</th><th>Route</th><th>Uhrzeit</th><th>Bemerkung</th><th>Aktion</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- Zeilen werden per JS erzeugt -->
+            </tbody>
+          </table>
+        </div>
+      </fieldset>
+    </div>
+  </details>
+
+  <!-- Beatmung / Atemweg -->
+  <details>
+    <summary><i class="fa-solid fa-wind"></i> Beatmung / Atemweg</summary>
+    <div class="sec-body">
+      <fieldset>
+        <legend>Atemwegshilfen</legend>
+        <div class="choice">
+          <label class="pill"><input type="checkbox" name="aw_guedel"> Guedel</label>
+          <label class="pill"><input type="checkbox" name="aw_larynxtubus"> Larynxtubus</label>
+          <label class="pill"><input type="checkbox" name="aw_lmaske"> Larynxmaske</label>
+          <label class="pill"><input type="checkbox" name="aw_ett"> Endotrachealtubus</label>
+          <label class="pill"><input type="checkbox" name="aw_bvm"> Beutel-Maske (BVM)</label>
+          <label class="pill"><input type="checkbox" name="aw_saugung"> Absaugung</label>
+          <label class="pill"><input type="checkbox" name="aw_cpap"> CPAP</label>
+        </div>
+        <div class="grid" style="margin-top:.5rem">
+          <label>Guedel-Größe<input name="aw_guedel_size" type="text"></label>
+          <label>Larynxtubus-Größe<input name="aw_lt_size" type="text"></label>
+          <label>Larynxmaske-Größe<input name="aw_lm_size" type="text"></label>
+          <label>ETT-Größe (ID, mm)<input name="aw_ett_size" type="number" step="0.5"></label>
+          <label>ETT Tiefe (Zähne, cm)<input name="aw_ett_tiefe" type="number" step="0.5"></label>
+          <label>Cuff-Druck (cmH₂O)<input name="aw_cuff" type="number" step="1"></label>
+          <label>CO₂-Nachweis<input name="aw_co2" type="text" placeholder="z. B. EtCO₂ 35 mmHg, Farbumschlag …"></label>
+          <label>Versuche (#)<input name="aw_versuche" type="number" min="0"></label>
+        </div>
+      </fieldset>
+
+      <fieldset style="margin-top:.75rem">
+        <legend>Beatmungsparameter</legend>
+        <div class="grid">
+          <label>AF (1/min)<input name="vent_af" type="number" min="0"></label>
+          <label>VT (ml)<input name="vent_vt" type="number" min="0" step="10"></label>
+          <label>PEEP (cmH₂O)<input name="vent_peep" type="number" min="0" step="1"></label>
+          <label>FiO₂ (%)<input name="vent_fio2" type="number" min="21" max="100"></label>
+          <label>Gerät/Modus<input name="vent_device" type="text" placeholder="z. B. Hamilton T1 – ASV …"></label>
+          <label>Bemerkung<input name="vent_comment" type="text"></label>
+        </div>
+      </fieldset>
+    </div>
+  </details>
+
+  <!-- Reanimation -->
+  <details>
+    <summary><i class="fa-solid fa-heart-circle-bolt"></i> Reanimation</summary>
+    <div class="sec-body">
+      <div class="grid">
+        <label>Rea-Beginn<input name="rea_beginn" type="datetime-local"></label>
+        <label>Beobachtet (Witnessed)?
+          <select name="rea_witnessed">
+            <option value="">—</option>
+            <option>ja</option><option>nein</option><option>unbekannt</option>
+          </select>
+        </label>
+        <label>Erst-Rhythmus
+          <select name="rea_initial">
+            <option value="">—</option>
+            <option>Asystolie</option><option>PEA</option><option>VF</option><option>pVT</option>
+          </select>
+        </label>
+        <label>Defibrillationen (#)<input name="rea_shocks" type="number" min="0"></label>
+        <label>Energie (J) / Verlauf<input name="rea_energy" type="text" placeholder="z. B. 200–300–360 J …"></label>
+        <label>CPR-Zyklen / Dauer<input name="rea_cpr" type="text" placeholder="z. B. 6 Zyklen / 18 min"></label>
+      </div>
+
+      <fieldset style="margin-top:.6rem">
+        <legend>Rea-Medikation</legend>
+        <div class="choice">
+          <label class="pill"><input type="checkbox" name="rea_adrenalin"> Adrenalin</label>
+          <label class="pill"><input type="checkbox" name="rea_amiodaron"> Amiodaron</label>
+          <label class="pill"><input type="checkbox" name="rea_natriumbic"> Natriumbicarbonat</label>
+          <label class="pill"><input type="checkbox" name="rea_magnesium"> Magnesium</label>
+          <label class="pill"><input type="checkbox" name="rea_kalzium"> Kalzium</label>
+          <label class="pill"><input type="checkbox" name="rea_atropin"> Atropin</label>
+        </div>
+        <div class="grid" style="margin-top:.4rem">
+          <label>Details / Dosen / Zeiten<input name="rea_meds_detail" type="text" placeholder="z. B. Adrenalin 1 mg 12:03/12:07; Amio 300 mg 12:10 …"></label>
+        </div>
+      </fieldset>
+
+      <fieldset style="margin-top:.6rem">
+        <legend>Ergebnis</legend>
+        <div class="grid">
+          <label>ROSC?<select name="rea_rosc"><option value="">—</option><option>ja</option><option>nein</option></select></label>
+          <label>ROSC-Zeit<input name="rea_rosc_time" type="time"></label>
+          <label>Rea-Ende (Uhrzeit)<input name="rea_ende" type="time"></label>
+          <label>Ende-Grund<input name="rea_ende_grund" type="text" placeholder="z. B. ROSC stabil / aussichtslos / Ärztl. Entscheidung …"></label>
+          <label>AED genutzt?<select name="rea_aed"><option value="">—</option><option>ja</option><option>nein</option></select></label>
+        </div>
+      </fieldset>
+    </div>
+  </details>
+
+  <!-- Anaphylaxie -->
+  <details>
+    <summary><i class="fa-solid fa-allergies"></i> Anaphylaktische Reaktion</summary>
+    <div class="sec-body">
+      <div class="grid">
+        <fieldset>
+          <legend>Schweregrad</legend>
+          <div class="choice">
+            <label class="pill"><input type="radio" name="ana_grad" value="I"> I° Hautbeteiligung</label>
+            <label class="pill"><input type="radio" name="ana_grad" value="II"> II° + Angioödem/ÜE/Krämpfe/Hypv.</label>
+            <label class="pill"><input type="radio" name="ana_grad" value="III"> III° Atem-/Kreislaufbeteiligung</label>
+            <label class="pill"><input type="radio" name="ana_grad" value="IV"> IV° Atem-/Kreislaufstillstand</label>
+          </div>
+        </fieldset>
+        <fieldset>
+          <legend>Begleitbefunde</legend>
+          <div class="choice">
+            <label class="pill"><input type="checkbox" name="ana_angio"> Angioödem</label>
+            <label class="pill"><input type="checkbox" name="ana_ue"> Übelkeit/Erbrechen</label>
+            <label class="pill"><input type="checkbox" name="ana_kraempfe"> Krämpfe</label>
+            <label class="pill"><input type="checkbox" name="ana_hypervent"> Hyperventilation</label>
+            <label class="pill"><input type="checkbox" name="ana_dyspnoe"> Dyspnoe</label>
+            <label class="pill"><input type="checkbox" name="ana_bronchosp"> Bronchospasmus</label>
+            <label class="pill"><input type="checkbox" name="ana_zyanose"> Zyanose</label>
+            <label class="pill"><input type="checkbox" name="ana_schock"> Schock</label>
+          </div>
+        </fieldset>
+      </div>
+      <div class="grid">
+        <label>Ankunft (Einsatzort)<input name="zeit_eo" type="datetime-local"></label>
+        <label>Ankunft (am Pat.)<input name="zeit_pat" type="datetime-local"></label>
+        <label>Abfahrt<input name="zeit_abfahrt" type="datetime-local"></label>
+      </div>
+    </div>
+  </details>
+
+  <!-- Übergabe / Transport / Ziel -->
+  <details>
+    <summary><i class="fa-solid fa-people-carry-box"></i> Übergabe / Transport / Ziel</summary>
+    <div class="sec-body">
+      <fieldset>
+        <legend>Übergabe an</legend>
+        <div class="choice">
+          <label class="pill"><input type="checkbox" name="ue_hausarzt"> Hausarzt/KV</label>
+          <label class="pill"><input type="checkbox" name="ue_einsatzstelle"> Einsatzstelle</label>
+          <label class="pill"><input type="checkbox" name="ue_zna"> ZNA/INA</label>
+          <label class="pill"><input type="checkbox" name="ue_schockraum"> Schockraum</label>
+          <label class="pill"><input type="checkbox" name="ue_stroke"> Stroke Unit</label>
+          <label class="pill"><input type="checkbox" name="ue_hkl"> Herzkatheterlabor/CPU</label>
+          <label class="pill"><input type="checkbox" name="ue_its"> Intensivstation</label>
+          <label class="pill"><input type="checkbox" name="ue_allg"> Allgemeinstation</label>
+          <label class="pill"><input type="checkbox" name="ue_op"> OP direkt</label>
+          <label class="pill"><input type="checkbox" name="ue_praxis"> Praxis</label>
+          <label class="pill"><input type="checkbox" name="ue_sonstige"> Sonstige</label>
+        </div>
+      </fieldset>
+      <div class="grid" style="margin-top:.5rem">
+        <label>Übergabe an (Name)<input name="ue_name" type="text"></label>
+        <label>Zeitpunkt Übergabe<input name="ue_zeit" type="datetime-local"></label>
+        <label>Unterschrift Notarzt<input name="ue_unterschrift" type="text"></label>
+        <fieldset>
+          <legend>Kontaktaufnahme</legend>
+          <div class="choice">
+            <label class="pill"><input type="radio" name="kontakt" value="telefonisch"> telefonisch</label>
+            <label class="pill"><input type="radio" name="kontakt" value="persoenlich"> persönlich</label>
+          </div>
+        </fieldset>
+      </div>
+      <div class="row" style="margin-top:.5rem">
+        <fieldset style="flex:1">
+          <legend>Transport</legend>
+          <div class="choice">
+            <label class="pill"><input type="radio" name="transport" value="ja"> ja</label>
+            <label class="pill"><input type="radio" name="transport" value="nein"> nein</label>
+            <label class="pill"><input type="checkbox" name="schutzhalterung"> geeignete Schutzhalterung (z. B. Babyschale)</label>
+          </div>
+        </fieldset>
+        <fieldset style="flex:1">
+          <legend>Transportmittel</legend>
+          <div class="choice">
+            <label class="pill"><input type="checkbox" name="tm_nef"> NEF</label>
+            <label class="pill"><input type="checkbox" name="tm_rtw"> RTW</label>
+            <label class="pill"><input type="checkbox" name="tm_ktw"> KTW</label>
+            <label class="pill"><input type="checkbox" name="tm_seg"> SEG</label>
+            <label class="pill"><input type="checkbox" name="tm_rth"> RTH</label>
+            <label class="pill"><input type="checkbox" name="tm_itw"> ITW</label>
+            <label class="pill"><input type="checkbox" name="tm_naw"> NAW</label>
+          </div>
+        </fieldset>
+      </div>
+      <div class="grid" style="margin-top:.5rem">
+        <fieldset>
+          <legend>Einweisung/Übernahme</legend>
+          <div class="choice">
+            <label class="pill"><input type="checkbox" name="einw_hausarzt"> Hausarzt</label>
+            <label class="pill"><input type="checkbox" name="einw_kvarzt"> KV-Arzt</label>
+            <label class="pill"><input type="checkbox" name="einw_pol_feu"> Polizei/Feuerwehr</label>
+            <label class="pill"><input type="checkbox" name="einw_angehoerige"> Angehörige</label>
+            <label class="pill"><input type="checkbox" name="einw_station"> Station</label>
+            <label class="pill"><input type="checkbox" name="einw_arztpraxis"> Arztpraxis</label>
+            <label class="pill"><input type="checkbox" name="einw_pflegeheim"> Pflegeheim</label>
+            <label class="pill"><input type="checkbox" name="einw_oeff_einr"> öffentl. Einrichtung</label>
+            <label class="pill"><input type="checkbox" name="einw_sonstige"> sonstige</label>
+          </div>
+        </fieldset>
+        <fieldset>
+          <legend>Zielort</legend>
+          <div class="row">
+            <label class="pill"><input type="radio" name="ziel_typ" value="ortsfest"> Zielklinik (ortsfest)</label>
+            <label class="pill"><input type="radio" name="ziel_typ" value="mobil"> Zielklinik (mobil)</label>
+          </div>
+          <div class="grid" style="margin-top:.5rem">
+            <label>Bezeichnung<input name="ziel_bez" type="text"></label>
+            <label>Adresse<input name="ziel_adr" type="text"></label>
+          </div>
+        </fieldset>
+        <fieldset>
+          <legend>Dokumentation</legend>
+          <div class="choice">
+            <label class="pill"><input type="radio" name="doku" value="frei"> frei</label>
+            <label class="pill"><input type="radio" name="doku" value="frueh"> früh</label>
+            <label class="pill"><input type="radio" name="doku" value="spaet"> spät</label>
+          </div>
+          <label style="display:block;margin-top:.5rem">Einsatzende<input name="einsatzende" type="datetime-local"></label>
+        </fieldset>
+      </div>
+      <fieldset style="margin-top:.75rem">
+        <legend>Einsatz endet mit Übergabe an</legend>
+        <div class="choice">
+          <label class="pill"><input type="checkbox" name="end_nota"> Notarzt</label>
+          <label class="pill"><input type="checkbox" name="end_fachabt"> Fachabteilung</label>
+          <label class="pill"><input type="checkbox" name="end_zna"> ZNA/INA</label>
+          <label class="pill"><input type="checkbox" name="end_hausarzt"> Hausarzt/KV-Arzt</label>
+          <label class="pill"><input type="checkbox" name="end_polizei"> Polizei</label>
+          <label class="pill"><input type="checkbox" name="end_angehoerige"> Angehörige/Betreuer</label>
+        </div>
+      </fieldset>
+    </div>
+  </details>
+
+  <!-- qSOFA -->
+  <details>
+    <summary><i class="fa-solid fa-scale-balanced"></i> qSOFA (auto)</summary>
+    <div class="sec-body">
+      <div class="row">
+        <span class="badge">Kriterien (je 1 Punkt): GCS &lt; 15 • AF &gt; 22 • RRsys &lt; 100 mmHg</span>
+      </div>
+      <div class="grid">
+        <label>GCS Summe (auto)<input name="qsofa_gcs" type="number" readonly></label>
+        <label>AF (/min) (aus Messwerte)<input name="qsofa_af" type="number" readonly></label>
+        <label>RR syst. (mmHg) (aus Messwerte)<input name="qsofa_rr" type="number" readonly></label>
+      </div>
+      <div class="row" style="margin-top:.5rem">
+        <span class="badge">qSOFA-Score: <span id="qsofa_sum" class="sum">—</span></span>
+      </div>
+      <div class="muted" style="color:var(--muted);margin-top:.5rem">Zur Summierung der GCS wird nur der Wert der Extremität mit der besten motorischen Reaktion verwendet.</div>
+    </div>
+  </details>
 
 </div>
 
 <script>
-function calcGCS(){ gcs_sum.value=+gcs_e.value + +gcs_v.value + +gcs_m.value; }
-calcGCS();
+  // ===== Akkordeon Steuerung =====
+  function openAll(){ document.querySelectorAll('details').forEach(d=>d.open=true); }
+  function closeAll(){ document.querySelectorAll('details').forEach(d=>d.open=false); }
 
-// Canvas Unterschrift
-const canvas=document.getElementById('sig');const ctx=canvas.getContext('2d');let drawing=false;
-function resize(){canvas.width=canvas.offsetWidth;canvas.height=170;ctx.lineWidth=2.6;ctx.lineCap='round';ctx.strokeStyle='#c8102e';}
-window.addEventListener('resize',resize);resize();
-canvas.addEventListener('mousedown',e=>{drawing=true;ctx.beginPath();ctx.moveTo(e.offsetX,e.offsetY);});
-canvas.addEventListener('mousemove',e=>{if(drawing){ctx.lineTo(e.offsetX,e.offsetY);ctx.stroke();}});
-canvas.addEventListener('mouseup',()=>drawing=false);
-canvas.addEventListener('mouseleave',()=>drawing=false);
-function clearSig(){ctx.clearRect(0,0,canvas.width,canvas.height);}
-function getSig(){return canvas.toDataURL();}
+  // ===== Medikamente-Tabelle (Maßnahmen) =====
+  const medTbody = () => document.querySelector('#medTable tbody');
+  function addMedRow(data={}){
+    const tb = medTbody();
+    const idx = tb.children.length + 1;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${idx}</td>
+      <td><input name="med_name_${idx}" type="text" value="${data.name||''}"></td>
+      <td style="max-width:100px"><input name="med_dose_${idx}" type="text" value="${data.dose||''}"></td>
+      <td style="max-width:100px"><input name="med_unit_${idx}" type="text" value="${data.unit||''}" placeholder="mg/ml/µg"></td>
+      <td>
+        <select name="med_route_${idx}">
+          <option value=""></option>
+          <option ${data.route==='i.v.'?'selected':''}>i.v.</option>
+          <option ${data.route==='i.o.'?'selected':''}>i.o.</option>
+          <option ${data.route==='i.m.'?'selected':''}>i.m.</option>
+          <option ${data.route==='i.n.'?'selected':''}>i.n.</option>
+          <option ${data.route==='p.o.'?'selected':''}>p.o.</option>
+        </select>
+      </td>
+      <td><input name="med_time_${idx}" type="time" value="${data.time||''}"></td>
+      <td><input name="med_note_${idx}" type="text" value="${data.note||''}"></td>
+      <td><button class="subbtn" type="button" onclick="delMedRow(this)">Löschen</button></td>
+    `;
+    tb.appendChild(tr);
+  }
+  function delMedRow(btn){
+    const tr = btn.closest('tr');
+    tr.remove();
+    // Neu nummerieren
+    medTbody().querySelectorAll('tr').forEach((row,i)=>{
+      row.children[0].textContent = i+1;
+    });
+  }
+  // initial 3 Zeilen
+  addMedRow(); addMedRow(); addMedRow();
 
-function saveDraft(){localStorage.setItem('draft',JSON.stringify(collectData()));showMsg('Entwurf gespeichert');}
-function showMsg(t){document.getElementById('msg').textContent=t;}
-function collectData(){return {einsatznr:einsatznr.value,ausfueller:ausfueller.value};}
-function submitDoc(){showMsg('Formular abgesendet ✔');}
+  // ===== GCS & qSOFA =====
+  function calcGCS(){
+    const e = parseInt(document.querySelector('input[name="gcs_e"]:checked')?.value || 0);
+    const v = parseInt(document.querySelector('input[name="gcs_v"]:checked')?.value || 0);
+    const m = parseInt(document.querySelector('input[name="gcs_m"]:checked')?.value || 0);
+    const sum = e+v+m || null;
+    document.getElementById('gcs_sum').textContent = sum ?? '—';
+    document.querySelector('input[name="qsofa_gcs"]').value = sum ?? '';
+    calcQSOFA();
+  }
+  function calcQSOFA(){
+    const gcs = parseInt(document.querySelector('input[name="qsofa_gcs"]').value || 0);
+    const af  = parseInt(document.querySelector('input[name="af"]').value || 0);
+    const rr  = parseInt(document.querySelector('input[name="rr_sys"]').value || 0);
+    document.querySelector('input[name="qsofa_af"]').value = (isNaN(af)?'':af);
+    document.querySelector('input[name="qsofa_rr"]').value = (isNaN(rr)?'':rr);
+    let score = 0;
+    if (gcs && gcs < 15) score++;
+    if (af  && af  > 22) score++;
+    if (rr  && rr  < 100) score++;
+    document.getElementById('qsofa_sum').textContent = score || '0';
+  }
+  document.addEventListener('input',(e)=>{
+    if (['af','rr_sys'].includes(e.target.name)) calcQSOFA();
+    if (['gcs_e','gcs_v','gcs_m'].includes(e.target.name)) calcGCS();
+  });
+
+  // ===== Speichern / Laden / Reset (lokal) =====
+  const STORAGE_KEY = 'patientendoku_v2_acc';
+
+  function serializeMedRows(){
+    const rows = [];
+    medTbody().querySelectorAll('tr').forEach((tr,i)=>{
+      const idx = i+1;
+      const get = n => tr.querySelector(`[name="${n}_${idx}"]`);
+      rows.push({
+        name: get('med_name')?.value || '',
+        dose: get('med_dose')?.value || '',
+        unit: get('med_unit')?.value || '',
+        route: get('med_route')?.value || '',
+        time: get('med_time')?.value || '',
+        note: get('med_note')?.value || ''
+      });
+    });
+    return rows;
+  }
+  function hydrateMedRows(rows){
+    medTbody().innerHTML='';
+    (rows && rows.length? rows : [{},{},{}]).forEach(r=>addMedRow(r));
+  }
+
+  function saveForm(){
+    const data = {};
+    document.querySelectorAll('input, textarea, select').forEach(el=>{
+      if(!el.name) return;
+      if (el.type === 'checkbox') data[el.name] = el.checked;
+      else if (el.type === 'radio'){ if (el.checked) data[el.name] = el.value; }
+      else data[el.name] = el.value;
+    });
+    data.__gcs_sum   = document.getElementById('gcs_sum')?.textContent || '';
+    data.__qsofa_sum = document.getElementById('qsofa_sum')?.textContent || '';
+    data.__med_rows  = serializeMedRows();
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    alert('Formular lokal gespeichert.');
+  }
+
+  function loadForm(){
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw){ alert('Keine gespeicherten Daten gefunden.'); return; }
+    const data = JSON.parse(raw);
+    hydrateMedRows(data.__med_rows);
+    document.querySelectorAll('input, textarea, select').forEach(el=>{
+      if(!(el.name in data)) return;
+      if (el.type === 'checkbox') el.checked = !!data[el.name];
+      else if (el.type === 'radio') el.checked = (data[el.name] === el.value);
+      else el.value = data[el.name];
+    });
+    document.getElementById('gcs_sum').textContent = data.__gcs_sum || '—';
+    document.getElementById('qsofa_sum').textContent = data.__qsofa_sum || '—';
+    calcQSOFA(); // falls AF/RR vorhanden
+    alert('Formular geladen.');
+  }
+
+  function resetFormConfirm(){
+    if (!confirm('Formular wirklich zurücksetzen?')) return;
+    document.querySelectorAll('input, textarea, select').forEach(el=>{
+      if (el.type === 'checkbox' || el.type === 'radio') el.checked = false;
+      else el.value = '';
+    });
+    hydrateMedRows(null);
+    document.getElementById('gcs_sum').textContent = '—';
+    document.getElementById('qsofa_sum').textContent = '—';
+    localStorage.removeItem(STORAGE_KEY);
+  }
 </script>
+
 </body>
 </html>
