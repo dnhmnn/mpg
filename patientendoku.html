@@ -1,4 +1,4 @@
-<<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="de">
 <head>
 <meta charset="UTF-8"/>
@@ -145,7 +145,7 @@
     </div>
   </details>
 
-  <!-- Notfallgeschehen usw. -->
+  <!-- Notfallgeschehen -->
   <details>
     <summary><i class="fa-solid fa-notes-medical"></i> Notfallgeschehen / Anamnese / Erstbefund / Vormedikation / Vorbehandlung</summary>
     <div class="sec-body"><textarea name="notfallgeschehen" placeholder="Freitext …"></textarea></div>
@@ -315,7 +315,7 @@
       </div>
       <div class="grid" style="margin-top:.5rem">
         <label>Standort<input name="ekg_standort" type="text"></label>
-        <label>Pers Nr.<input name="ekg_persnr" type="text"></label>
+        <label>Pers-Nr.<input name="ekg_persnr" type="text"></label>
       </div>
     </div>
   </details>
@@ -657,22 +657,23 @@
       const buf = await pdfBlob.arrayBuffer();
       const b64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
       const rnd = (crypto?.getRandomValues ? crypto.getRandomValues(new Uint32Array(1))[0].toString(16) : Date.now().toString(16));
-      const filename = `PD-${rnd}.pdf`;  // neutral
+      const filename = `PD-${rnd}.pdf`;
 
       const res = await fetch(WORKER_URL, {
         method:'POST',
         headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ file_b64: b64, filename, mime_type: 'application/pdf', expires_in: 86400 }) // 24h
+        body: JSON.stringify({ file_b64: b64, filename, mime_type: 'application/pdf', expires_in: 86400 })
       });
-      if(!res.ok){ const t=await res.text().catch(()=>res.statusText); throw new Error(t); }
-      const { url } = await res.json();
+      const text = await res.clone().text().catch(()=> '');
+      if(!res.ok){ throw new Error(`HTTP ${res.status} – ${text.slice(0,160)}`); }
+      const { url } = JSON.parse(text);
 
       const to = prompt('Empfänger-E-Mail (z. B. zna@klinik.de):') || '';
       const subject = encodeURIComponent('Gesicherter Download-Link');
       const body = encodeURIComponent(`Guten Tag,\n\nhier ist der gesicherte Download-Link (zeitlich befristet):\n${url}\n\nDer Link läuft automatisch ab. Bitte vertraulich behandeln.\n`);
       window.location.href = `mailto:${encodeURIComponent(to)}?subject=${subject}&body=${body}`;
     }catch(e){
-      alert('Fehler beim Link-Erzeugen: ' + (e.message || e));
+      alert('Fehler beim Link-Erzeugen: ' + (e?.message || e));
     }
   }
 </script>
