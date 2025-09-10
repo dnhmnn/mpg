@@ -1,7 +1,8 @@
+'use strict';
+
 // netlify/functions/presign.js
-// Node 18+ empfohlen (Netlify hat fetch/FormData/Blob global).
 // POST JSON: { file_b64, filename?, mime_type?, expires_in? }
-// Antwort: { ok:true, url, id, expires_in } oder { ok:false, error:... }
+// Antwort: { ok:true, url, id, expires_in } oder { ok:false, error }
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -9,7 +10,7 @@ const CORS = {
   'Access-Control-Allow-Headers': 'Content-Type'
 };
 
-const json = (status, body) => ({
+const send = (status, body) => ({
   statusCode: status,
   headers: { 'content-type': 'application/json; charset=utf-8', ...CORS },
   body: JSON.stringify(body)
@@ -18,19 +19,21 @@ const json = (status, body) => ({
 exports.handler = async (event) => {
   try {
     if (event.httpMethod === 'OPTIONS') return { statusCode: 204, headers: CORS };
-    if (event.httpMethod !== 'POST') return json(405, { ok:false, error:'Method Not Allowed' });
+    if (event.httpMethod !== 'POST')    return send(405, { ok:false, error:'Method Not Allowed' });
 
-    // --- Eingabe ---
-    const {
-      file_b64,
-      filename = `patient-doc-${Date.now()}.pdf`,
-      mime_type = 'application/pdf',
-      expires_in = 86400 // 24h
-    } = JSON.parse(event.body || '{}');
+    // ---- Eingabe parsen ----
+    let body;
+    try { body = JSON.parse(event.body || '{}'); }
+    catch { return send(400, { ok:false, error:'Bad JSON payload' }); }
 
-    if (!file_b64) return json(400, { ok:false, error:'file_b64 missing' });
+    const file_b64   = body.file_b64;
+    const filename   = (body.filename || `patient-doc-${Date.now()}.pdf`);
+    const mime_type  = (body.mime_type || 'application/pdf');
+    const expires_in = parseInt(body.expires_in, 10) || 86400;
 
-    // --- ENV & Normalisierung ---
+    if (!file_b64) return send(400, { ok:false, error:'file_b64 missing' });
+
+    // ---- ENV lesen & normalisieren ----
     const STORAGE_BASE = (process.env.NHOST_STORAGE_URL || '').replace(/\/v1\/?$/,'').replace(/\/$/,'');
     const AUTH_BASE    = (process.env.NHOST_AUTH_URL || '').replace(/\/v1\/?$/,'').replace(/\/$/,'');
     const SVC_EMAIL    = process.env.NHOST_SERVICE_EMAIL || '';
@@ -38,13 +41,10 @@ exports.handler = async (event) => {
     const BUCKET       = process.env.PATIENT_DOCS_BUCKET || 'default';
 
     if (!/\.storage\./.test(STORAGE_BASE) || !/\.auth\./.test(AUTH_BASE) || !SVC_EMAIL || !SVC_PASS) {
-      return json(500, {
-        ok:false,
-        error:'Missing NHOST_AUTH_URL / NHOST_STORAGE_URL / NHOST_SERVICE_EMAIL / NHOST_SERVICE_PASSWORD'
-      });
+      return send(500, { ok:false, error:'Missing NHOST_STORAGE_URL / NHOST_AUTH_URL / NHOST_SERVICE_EMAIL / NHOST_SERVICE_PASSWORD' });
     }
 
-    // --- Service-Login ---
+    // ---- Service-Login ----
     const signinUrl = `${AUTH_BASE}/v1/signin/email-password`;
     const loginRes  = await fetch(signinUrl, {
       method: 'POST',
@@ -52,16 +52,16 @@ exports.handler = async (event) => {
       body: JSON.stringify({ email: SVC_EMAIL, password: SVC_PASS })
     });
     const loginTxt = await loginRes.text();
-    if (!loginRes.ok) return json(502, { ok:false, error:`service login failed: ${loginRes.status} ${loginTxt}` });
+    if (!loginRes.ok) return send(502, { ok:false, error:`service login failed: ${loginRes.status} ${loginTxt}` });
 
     let token = null;
     try {
       const lj = JSON.parse(loginTxt);
       token = lj?.session?.accessToken || lj?.accessToken || null;
     } catch {}
-    if (!token) return json(502, { ok:false, error:`service login ok but no accessToken in: ${loginTxt}` });
+    if (!token) return send(502, { ok:false, error:`service login ok but no accessToken in: ${loginTxt}` });
 
-    // --- Datei vorbereiten ---
+    // ---- Datei vorbereiten ----
     const safeName = String(filename).replace(/[^\w.\-]+/g,'_').slice(0,120) || `file-${Date.now()}.pdf`;
     const buffer   = Buffer.from(file_b64, 'base64');
     const fileBlob = new Blob([buffer], { type: mime_type });
@@ -70,13 +70,17 @@ exports.handler = async (event) => {
     form.append('file', fileBlob, safeName);
     form.append('bucketId', BUCKET);
 
-    // --- Upload ---
+    // ---- Upload ----
     const uploadUrl = `${STORAGE_BASE}/v1/files`;
-    const upRes  = await fetch(uploadUrl, { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: form });
+    const upRes  = await fetch(uploadUrl, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: form
+    });
     const upText = await upRes.text();
-    if (!upRes.ok) return json(502, { ok:false, error:`upload failed @ ${uploadUrl}: ${upRes.status} ${upText}` });
+    if (!upRes.ok) return send(502, { ok:false, error:`upload failed @ ${uploadUrl}: ${upRes.status} ${upText}` });
 
-    // --- ID extrahieren (versch. Formate) ---
+    // ---- Datei-ID extrahieren ----
     let uploadedId = null;
     try {
       const j = JSON.parse(upText);
@@ -85,4 +89,23 @@ exports.handler = async (event) => {
       else if (j?.fileMetadata?.[0]?.id) uploadedId = j.fileMetadata[0].id;
       else if (j?.processedFiles?.[0]?.id) uploadedId = j.processedFiles[0].id;
     } catch {}
-    if (!uploadedId) return json(502, { ok:false, error:`
+    if (!uploadedId) return send(502, { ok:false, error:`upload ok but no id found: ${upText}` });
+
+    // ---- Presigned URL ----
+    const exp = Math.max(60, Math.min(expires_in, 7*86400));
+    const presignUrl = `${STORAGE_BASE}/v1/files/${uploadedId}/presignedurl?expiresIn=${exp}`;
+    const preRes  = await fetch(presignUrl, { headers: { Authorization: `Bearer ${token}` } });
+    const preText = await preRes.text();
+    if (!preRes.ok) return send(502, { ok:false, error:`presign failed: ${preRes.status} ${preText}` });
+
+    let url = null;
+    try { const pj = JSON.parse(preText); url = pj.url || pj.presignedUrl || pj.signedUrl || null; } catch {}
+    if (!url && /^https?:\/\//i.test(preText.trim())) url = preText.trim();
+    if (!url) return send(502, { ok:false, error:`presign ok but no url found: ${preText}` });
+
+    return send(200, { ok:true, url, id: uploadedId, expires_in: exp });
+  }
+  catch (err) {
+    return send(500, { ok:false, error: String(err && err.message ? err.message : err) });
+  }
+};
