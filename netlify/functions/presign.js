@@ -1,65 +1,122 @@
-// Netlify Function: presign
-exports.handler = async (event) => {
-  const cors = {
-    'Access-Control-Allow-Origin': '*', // optional: deine Domain eintragen
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type'
-  };
-  if (event.httpMethod === 'OPTIONS') {
-    return { statusCode: 204, headers: cors };
-  }
-  if (event.httpMethod !== 'POST') {
-    return { statusCode: 405, headers: cors, body: 'Method Not Allowed' };
-  }
+// netlify/functions/presign.js
+// Uploadt eine Base64-Datei in Nhost Storage und erzeugt einen befristeten Download-Link.
+// Erwartet POST-JSON: { file_b64, filename, mime_type, expires_in }
 
+exports.handler = async (event) => {
   try {
-    const { file_b64, filename, mime_type = 'application/pdf', expires_in = 86400 } =
-      JSON.parse(event.body || '{}');
-    if (!file_b64 || !filename) {
-      return { statusCode: 400, headers: cors, body: 'file_b64 & filename required' };
+    if (event.httpMethod !== 'POST') {
+      return { statusCode: 405, body: 'Method Not Allowed' };
     }
 
-    const STORAGE_URL  = process.env.NHOST_STORAGE_URL;   // z.B. https://...nhost.run (ohne /v1)
+    const {
+      file_b64,
+      filename = `patient-doc-${Date.now()}.pdf`,
+      mime_type = 'application/pdf',
+      expires_in = 86400 // 24h
+    } = JSON.parse(event.body || '{}');
+
+    if (!file_b64) {
+      return { statusCode: 400, body: JSON.stringify({ ok: false, error: 'file_b64 missing' }) };
+    }
+
+    // --- ENV lesen & robust normalisieren ---
+    const RAW = process.env.NHOST_STORAGE_URL || '';
+    const BASE = RAW.replace(/\/v1\/?$/,'').replace(/\/$/,''); // entfernt evtl. /v1 & trailing /
     const ADMIN_SECRET = process.env.NHOST_ADMIN_SECRET;
-    const BUCKET_ID    = process.env.PATIENT_DOCS_BUCKET || 'patient-docs';
+    const BUCKET = process.env.PATIENT_DOCS_BUCKET || 'default';
 
-    // Upload
-    const bin = Buffer.from(file_b64, 'base64');
+    if (!BASE || !ADMIN_SECRET) {
+      return {
+        statusCode: 500,
+        body: JSON.stringify({ ok: false, error: 'Missing env NHOST_STORAGE_URL or NHOST_ADMIN_SECRET' })
+      };
+    }
+
+    // --- Datei vorbereiten ---
+    const safeName = String(filename).replace(/[^\w.\-]+/g, '_').slice(0, 120) || `file-${Date.now()}.pdf`;
+    const buffer = Buffer.from(file_b64, 'base64');
+
+    // Node 18+: fetch / FormData / Blob sind global vorhanden
     const form = new FormData();
-    form.append('file', new Blob([bin], { type: mime_type }), filename);
-    form.append('bucketId', BUCKET_ID);
+    form.append('file', new Blob([buffer], { type: mime_type }), safeName);
+    form.append('bucketId', BUCKET);
 
-    const up = await fetch(`${STORAGE_URL}/v1/storage/files`, {
+    // --- Upload ---
+    const uploadUrl = `${BASE}/v1/storage/upload`;
+    const upRes = await fetch(uploadUrl, {
       method: 'POST',
       headers: { 'x-hasura-admin-secret': ADMIN_SECRET },
       body: form
     });
-    if (!up.ok) {
-      const t = await up.text();
-      console.error('UPLOAD_FAIL', up.status, t);
-      return { statusCode: 502, headers: cors, body: 'upload failed: ' + t };
-    }
-    const uploaded = await up.json(); // { id, ... }
-    const fileId = uploaded?.id;
 
-    // Presigned URL
-    const ps = await fetch(`${STORAGE_URL}/v1/storage/files/${fileId}/presignedurl?expiresIn=${expires_in}`, {
+    const upText = await upRes.text();
+    if (!upRes.ok) {
+      return {
+        statusCode: 502,
+        body: JSON.stringify({ ok: false, error: `upload failed: ${upRes.status} ${upText}` })
+      };
+    }
+
+    // Verschiedene mögliche Response-Formate abfangen
+    let uploadedId = null;
+    try {
+      const j = JSON.parse(upText);
+      if (Array.isArray(j) && j[0]?.id) uploadedId = j[0].id;
+      else if (j?.id) uploadedId = j.id;
+      else if (j?.fileMetadata?.[0]?.id) uploadedId = j.fileMetadata[0].id;
+      else if (j?.processedFiles?.[0]?.id) uploadedId = j.processedFiles[0].id;
+    } catch (_) { /* ignore */ }
+
+    if (!uploadedId) {
+      return {
+        statusCode: 502,
+        body: JSON.stringify({ ok: false, error: `upload ok but no id found: ${upText}` })
+      };
+    }
+
+    // --- Presigned URL erzeugen ---
+    const exp = Math.max(60, Math.min(parseInt(expires_in, 10) || 86400, 7 * 86400)); // 1min–7T
+    const presignUrl = `${BASE}/v1/storage/files/${uploadedId}/presignedurl?expiresIn=${exp}`;
+
+    const preRes = await fetch(presignUrl, {
       headers: { 'x-hasura-admin-secret': ADMIN_SECRET }
     });
-    if (!ps.ok) {
-      const t = await ps.text();
-      console.error('PRESIGN_FAIL', ps.status, t);
-      return { statusCode: 502, headers: cors, body: 'presign failed: ' + t };
+    const preText = await preRes.text();
+
+    if (!preRes.ok) {
+      return {
+        statusCode: 502,
+        body: JSON.stringify({ ok: false, error: `presign failed: ${preRes.status} ${preText}` })
+      };
     }
-    const { presignedUrl } = await ps.json();
+
+    let url = null;
+    try {
+      const pj = JSON.parse(preText);
+      url = pj.url || pj.presignedUrl || pj.signedUrl || null;
+    } catch (_) { /* ignore */ }
+
+    if (!url) {
+      // Manche Versionen liefern die URL als reinen String
+      if (/^https?:\/\//i.test(preText.trim())) url = preText.trim();
+    }
+
+    if (!url) {
+      return {
+        statusCode: 502,
+        body: JSON.stringify({ ok: false, error: `presign ok but no url found: ${preText}` })
+      };
+    }
 
     return {
       statusCode: 200,
-      headers: { ...cors, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ok: true, url: presignedUrl })
+      headers: { 'Content-Type': 'application/json; charset=utf-8' },
+      body: JSON.stringify({ ok: true, url, id: uploadedId, expires_in: exp })
     };
-  } catch (e) {
-    console.error('FUNCTION_ERROR', e);
-    return { statusCode: 500, headers: cors, body: 'error: ' + (e?.message || String(e)) };
+  } catch (err) {
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ ok: false, error: String(err && err.message || err) })
+    };
   }
 };
