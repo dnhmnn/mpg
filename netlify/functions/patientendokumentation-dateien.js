@@ -1,188 +1,279 @@
-// netlify/functions/patient-docs-admin.js
-export const handler = async (event) => {
-  const cors = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  };
-  if (event.httpMethod === 'OPTIONS') {
-    return { statusCode: 200, headers: cors, body: '' };
+/* ===== Accordion ===== */
+function openAll(){ document.querySelectorAll('details').forEach(d=>d.open=true); }
+function closeAll(){ document.querySelectorAll('details').forEach(d=>d.open=false); }
+
+/* ===== Medikamente-Tabelle ===== */
+const medTbody = () => document.querySelector('#medTable tbody');
+function addMedRow(data={}) {
+  const tb = medTbody(); const idx = tb.children.length + 1;
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
+    <td>${idx}</td>
+    <td><input name="med_name_${idx}" type="text" value="${data.name||''}"></td>
+    <td><input name="med_dose_${idx}" type="text" value="${data.dose||''}"></td>
+    <td><input name="med_unit_${idx}" type="text" value="${data.unit||''}" placeholder="mg/ml/µg"></td>
+    <td>
+      <select name="med_route_${idx}">
+        <option value=""></option>
+        <option ${data.route==='i.v.'?'selected':''}>i.v.</option>
+        <option ${data.route==='i.o.'?'selected':''}>i.o.</option>
+        <option ${data.route==='i.m.'?'selected':''}>i.m.</option>
+        <option ${data.route==='i.n.'?'selected':''}>i.n.</option>
+        <option ${data.route==='p.o.'?'selected':''}>p.o.</option>
+      </select>
+    </td>
+    <td><input name="med_time_${idx}" type="time" value="${data.time||''}"></td>
+    <td><input name="med_note_${idx}" type="text" value="${data.note||''}"></td>
+    <td><button class="subbtn" type="button" onclick="delMedRow(this)">Löschen</button></td>`;
+  tb.appendChild(tr);
+}
+function delMedRow(btn){
+  const tr = btn.closest('tr'); tr.remove();
+  medTbody().querySelectorAll('tr').forEach((row,i)=> row.children[0].textContent = i+1 );
+}
+addMedRow(); addMedRow(); addMedRow();
+
+/* ===== GCS & qSOFA ===== */
+function calcGCS(){
+  const e = +document.querySelector('input[name="gcs_e"]:checked')?.value || 0;
+  const v = +document.querySelector('input[name="gcs_v"]:checked')?.value || 0;
+  const m = +document.querySelector('input[name="gcs_m"]:checked')?.value || 0;
+  const sum = e+v+m || null;
+  document.getElementById('gcs_sum').textContent = sum ?? '—';
+  document.querySelector('input[name="qsofa_gcs"]').value = sum ?? '';
+  document.querySelector('input[name="qsofa_gcs2"]').value = sum ?? '';
+  calcQSOFA();
+}
+function calcQSOFA(){
+  const gcs = parseInt(document.querySelector('input[name="qsofa_gcs"]').value || 0);
+  const af  = parseInt(document.querySelector('input[name="af"]').value || 0);
+  const rr  = parseInt(document.querySelector('input[name="rr_sys"]').value || 0);
+  document.querySelector('input[name="qsofa_af"]').value = isNaN(af)?'':af;
+  document.querySelector('input[name="qsofa_rr"]').value = isNaN(rr)?'':rr;
+  document.querySelector('input[name="qsofa_af2"]').value = isNaN(af)?'':af;
+  document.querySelector('input[name="qsofa_rr2"]').value = isNaN(rr)?'':rr;
+  let score = 0; if (gcs && gcs<15) score++; if (af && af>=22) score++; if (rr && rr<=100) score++;
+  document.getElementById('qsofa_sum').textContent  = String(score||0);
+  document.getElementById('qsofa_sum2').textContent = String(score||0);
+}
+document.addEventListener('input',(e)=>{
+  if (['af','rr_sys'].includes(e.target.name)) calcQSOFA();
+  if (['gcs_e','gcs_v','gcs_m'].includes(e.target.name)) calcGCS();
+});
+
+/* ===== Fotos (lokal, mit stärkerer Kompression) ===== */
+const photoInput = document.getElementById('photoInput');
+const thumbs = document.getElementById('thumbs');
+let photos = []; // dataURLs
+photoInput?.addEventListener('change', async (e)=>{
+  const files = [...e.target.files||[]];
+  for (const f of files){
+    // kleiner + höhere Kompression als zuvor
+    const url = await compressImage(f, 1200, 1200, 0.7);
+    photos.push(url);
   }
-  if (event.httpMethod !== 'POST') {
-    return json({ error: 'Method not allowed' }, 405, cors);
-  }
-
-  try {
-    const body = JSON.parse(event.body || '{}');
-    const action = body.action;
-    if (!action) return json({ error: 'Missing action' }, 400, cors);
-
-    switch (action) {
-      /* ====== PROTOKOLLE ====== */
-      case 'list':            return json(await listProt(body), 200, cors);
-      case 'get':             return json(await getProt(body), 200, cors);
-      case 'approve':         return json(await approveProt(body), 200, cors);
-      case 'insert_manual':   return json(await insertManualProt(body), 200, cors);
-
-      /* ====== NACHERFASSUNG ====== */
-      case 'n_list':          return json(await listNach(body), 200, cors);
-      case 'n_get':           return json(await getNach(body), 200, cors);
-      case 'n_insert':        return json(await insertNach(body), 200, cors);
-
-      default:
-        return json({ error: `Unknown action: ${action}` }, 400, cors);
-    }
-  } catch (e) {
-    return json({ error: e.message || String(e) }, 500, cors);
-  }
-};
-
-/* ================== Helpers ================== */
-const GQL = process.env.HASURA_GRAPHQL_ENDPOINT;
-const ADMIN = process.env.HASURA_ADMIN_SECRET;
-
-async function gql(query, variables = {}) {
-  if (!GQL || !ADMIN) throw new Error('HASURA env not set');
-  const res = await fetch(GQL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-hasura-admin-secret': ADMIN,
-    },
-    body: JSON.stringify({ query, variables }),
+  renderThumbs(); autoSave();
+  photoInput.value='';
+});
+function renderThumbs(){
+  thumbs.innerHTML=''; photos.forEach((src,i)=>{
+    const d=document.createElement('div'); d.className='thumb';
+    const img=new Image(); img.src=src; d.appendChild(img);
+    const b=document.createElement('button'); b.className='rm'; b.innerHTML='&times;';
+    b.onclick=()=>{ photos.splice(i,1); renderThumbs(); autoSave(); };
+    d.appendChild(b); thumbs.appendChild(d);
   });
-  const out = await res.json();
-  if (out.errors?.length) throw new Error(out.errors[0].message);
-  return out.data;
 }
-function json(data, status = 200, headers = {}) {
-  return { statusCode: status, headers: { 'Content-Type': 'application/json', ...headers }, body: JSON.stringify(data) };
-}
-function includesCI(hay, needle) {
-  return (hay || '').toString().toLowerCase().includes((needle || '').toString().toLowerCase());
-}
-
-/* ================== GraphQL ================== */
-const FIELDS_PROT = `
-  id created_at status submitter_name author_signature
-  team_lead_name team_lead_signature approved_at expires_at
-  payload
-`;
-const QUERY_LIST_PROT = `
-  query ($limit:Int!) {
-    patient_docs(order_by:{created_at:desc}, limit:$limit) { ${FIELDS_PROT} }
-  }
-`;
-const QUERY_LIST_PROT_STATUS = `
-  query ($limit:Int!, $status:String!) {
-    patient_docs(order_by:{created_at:desc}, limit:$limit, where:{status:{_eq:$status}}) { ${FIELDS_PROT} }
-  }
-`;
-const QUERY_GET_PROT = `
-  query ($id:uuid!) { patient_docs_by_pk(id:$id){ ${FIELDS_PROT} } }
-`;
-const MUT_APPROVE = `
-  mutation ($id:uuid!, $name:String!, $sig:String!, $ts:timestamptz!) {
-    update_patient_docs_by_pk(
-      pk_columns:{id:$id},
-      _set:{ status:"approved", team_lead_name:$name, team_lead_signature:$sig, approved_at:$ts }
-    ){ id }
-  }
-`;
-const MUT_INSERT_MANUAL = `
-  mutation ($payload:jsonb!, $submitter:String, $authorSig:String) {
-    insert_patient_docs_one(object:{
-      payload:$payload,
-      submitter_name:$submitter,
-      author_signature:$authorSig,
-      status:"submitted"
-    }) { id }
-  }
-`;
-
-/* ===== Nacherfassung ===== */
-const FIELDS_N = ` id created_at expires_at payload `;
-const QUERY_LIST_N = `
-  query ($limit:Int!) {
-    patient_docs_nacherfassung(order_by:{created_at:desc}, limit:$limit){ ${FIELDS_N} }
-  }
-`;
-const QUERY_GET_N = `
-  query ($id:uuid!){
-    patient_docs_nacherfassung_by_pk(id:$id){ ${FIELDS_N} }
-  }
-`;
-const MUT_INSERT_N = `
-  mutation ($payload:jsonb!){
-    insert_patient_docs_nacherfassung_one(object:{ payload:$payload }){ id }
-  }
-`;
-
-/* ================== Actions (Protokolle) ================== */
-async function listProt({ search = '', status = '', limit = 200 }) {
-  const q = status ? QUERY_LIST_PROT_STATUS : QUERY_LIST_PROT;
-  const vars = status ? { limit, status } : { limit };
-  const data = await gql(q, vars);
-  let items = (data.patient_docs || []);
-  if (search) {
-    items = items.filter(it => {
-      const p = it.payload || {};
-      return (
-        includesCI(it.id, search) ||
-        includesCI(it.submitter_name, search) ||
-        includesCI(it.team_lead_name, search) ||
-        includesCI(p.name, search) ||
-        includesCI(p.vorname, search) ||
-        includesCI(p.einsatz_nr, search)
-      );
-    });
-  }
-  return { items };
-}
-async function getProt({ id }) {
-  if (!id) throw new Error('id missing');
-  const data = await gql(QUERY_GET_PROT, { id });
-  if (!data.patient_docs_by_pk) throw new Error('not found');
-  return { item: data.patient_docs_by_pk };
-}
-async function approveProt({ id, name, signature }) {
-  if (!id || !name || !signature) throw new Error('id/name/signature missing');
-  const ts = new Date().toISOString();
-  const data = await gql(MUT_APPROVE, { id, name, sig: signature, ts });
-  return { id: data.update_patient_docs_by_pk?.id };
-}
-async function insertManualProt({ payload, submitterName = null, authorSignature = null }) {
-  if (!payload || typeof payload !== 'object') throw new Error('payload missing');
-  const data = await gql(MUT_INSERT_MANUAL, { payload, submitter: submitterName, authorSig: authorSignature });
-  return { id: data.insert_patient_docs_one?.id };
+function compressImage(file,maxW,maxH,q){
+  return new Promise((res,rej)=>{
+    const r=new FileReader();
+    r.onload=()=>{
+      const img=new Image();
+      img.onload=()=>{
+        const s=Math.min(maxW/img.width, maxH/img.height, 1);
+        const w=img.width*s, h=img.height*s;
+        const c=document.createElement('canvas'); c.width=w; c.height=h;
+        c.getContext('2d').drawImage(img,0,0,w,h);
+        res(c.toDataURL('image/jpeg',q));
+      };
+      img.onerror=rej; img.src=r.result;
+    };
+    r.onerror=rej; r.readAsDataURL(file);
+  });
 }
 
-/* ================== Actions (Nacherfassung) ================== */
-async function listNach({ search = '', limit = 200 }) {
-  const data = await gql(QUERY_LIST_N, { limit });
-  let items = (data.patient_docs_nacherfassung || []);
-  if (search) {
-    items = items.filter(it => {
-      const p = it.payload || {};
-      return (
-        includesCI(it.id, search) ||
-        includesCI(p.n_name, search) ||
-        includesCI(p.n_vorname, search) ||
-        includesCI(p.n_stichwort, search) ||
-        includesCI(p.n_adresse, search)
-      );
-    });
+/* ===== Unterschrift (Canvas) ===== */
+const sig = document.getElementById('sig');
+const sctx = sig.getContext('2d');
+let drawing=false,last={x:0,y:0}, signatureData='';
+function resizeSig(){
+  const dpr = window.devicePixelRatio||1;
+  const w = sig.clientWidth, h = sig.clientHeight;
+  sig.width = Math.floor(w*dpr); sig.height = Math.floor(h*dpr);
+  sctx.setTransform(dpr,0,0,dpr,0,0);
+  sctx.lineWidth=2; sctx.lineJoin='round'; sctx.lineCap='round'; sctx.strokeStyle='#111';
+  if(signatureData){
+    const img=new Image(); img.onload=()=>sctx.drawImage(img,0,0,w,h); img.src=signatureData;
   }
-  return { items };
 }
-async function getNach({ id }) {
-  if (!id) throw new Error('id missing');
-  const data = await gql(QUERY_GET_N, { id });
-  if (!data.patient_docs_nacherfassung_by_pk) throw new Error('not found');
-  return { item: data.patient_docs_nacherfassung_by_pk };
+function pos(ev){
+  const r=sig.getBoundingClientRect();
+  if(ev.touches?.[0]) return {x:ev.touches[0].clientX-r.left,y:ev.touches[0].clientY-r.top};
+  return {x:ev.clientX-r.left,y:ev.clientY-r.top};
 }
-async function insertNach({ payload }) {
-  if (!payload || typeof payload !== 'object') throw new Error('payload missing');
-  const data = await gql(MUT_INSERT_N, { payload });
-  return { id: data.insert_patient_docs_nacherfassung_one?.id };
+function start(ev){ drawing=true; last=pos(ev); ev.preventDefault(); }
+function move(ev){ if(!drawing) return; const p=pos(ev); sctx.beginPath(); sctx.moveTo(last.x,last.y); sctx.lineTo(p.x,p.y); sctx.stroke(); last=p; ev.preventDefault(); autoSaveSig(); }
+function end(){ drawing=false; autoSaveSig(); }
+function autoSaveSig(){
+  try{
+    const w=sig.clientWidth,h=sig.clientHeight;
+    if(w&&h){
+      const tmp=document.createElement('canvas'); tmp.width=w; tmp.height=h;
+      tmp.getContext('2d').drawImage(sig,0,0,w,h);
+      signatureData = tmp.toDataURL('image/png');
+      autoSave();
+    }
+  }catch(_){}
 }
+window.addEventListener('resize', resizeSig);
+sig.addEventListener('mousedown',start);
+sig.addEventListener('mousemove',move);
+sig.addEventListener('mouseup',end);
+sig.addEventListener('mouseleave',end);
+sig.addEventListener('touchstart',start,{passive:false});
+sig.addEventListener('touchmove',move,{passive:false});
+sig.addEventListener('touchend',end);
+document.getElementById('sigClear').addEventListener('click',()=>{
+  sctx.clearRect(0,0,sig.width,sig.height);
+  signatureData=''; autoSave();
+});
+
+/* ===== Speichern / Laden / Reset (lokal) ===== */
+const STORAGE_KEY = 'patientendoku_v3_full';
+function serializeMedRows(){
+  const rows=[]; medTbody().querySelectorAll('tr').forEach((tr,i)=>{
+    const idx=i+1, get=n=> tr.querySelector(`[name="${n}_${idx}"]`);
+    rows.push({name:get('med_name')?.value||'',dose:get('med_dose')?.value||'',unit:get('med_unit')?.value||'',route:get('med_route')?.value||'',time:get('med_time')?.value||'',note:get('med_note')?.value||''});
+  }); return rows;
+}
+function hydrateMedRows(rows){ medTbody().innerHTML=''; (rows && rows.length? rows : [{},{},{}]).forEach(r=>addMedRow(r)); }
+function saveForm(){
+  const data = collectFormData();
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  alert('Formular lokal gespeichert.');
+}
+function autoSave(){ try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(collectFormData())); }catch(_){ } }
+function collectFormData(){
+  const data = {};
+  document.querySelectorAll('input, textarea, select').forEach(el=>{
+    if(!el.name) return;
+    if (el.type==='checkbox') data[el.name]=el.checked;
+    else if (el.type==='radio'){ if(el.checked) data[el.name]=el.value; }
+    else data[el.name]=el.value;
+  });
+  data.__gcs_sum=document.getElementById('gcs_sum')?.textContent||'';
+  data.__qsofa_sum=document.getElementById('qsofa_sum')?.textContent||'';
+  data.__qsofa_sum2=document.getElementById('qsofa_sum2')?.textContent||'';
+  data.__med_rows=serializeMedRows();
+  data.__photos = photos.slice();
+  data.__signature = signatureData||'';
+  return data;
+}
+function loadForm(){
+  const raw=localStorage.getItem(STORAGE_KEY); if(!raw){alert('Keine gespeicherten Daten.');return;}
+  const data=JSON.parse(raw); applyData(data); alert('Formular geladen.');
+}
+function applyData(data){
+  hydrateMedRows(data.__med_rows);
+  document.querySelectorAll('input, textarea, select').forEach(el=>{
+    if(!(el.name in data)) return;
+    if(el.type==='checkbox') el.checked=!!data[el.name];
+    else if(el.type==='radio') el.checked=(data[el.name]===el.value);
+    else el.value=data[el.name];
+  });
+  document.getElementById('gcs_sum').textContent=data.__gcs_sum||'—';
+  document.getElementById('qsofa_sum').textContent=data.__qsofa_sum||'—';
+  document.getElementById('qsofa_sum2').textContent=data.__qsofa_sum2||'—';
+  photos = Array.isArray(data.__photos)? data.__photos.slice() : [];
+  renderThumbs();
+  signatureData = data.__signature||'';
+  resizeSig();
+  calcQSOFA();
+}
+function resetFormConfirm(){
+  if(!confirm('Formular wirklich zurücksetzen?')) return;
+  document.querySelectorAll('input, textarea, select').forEach(el=>{
+    if (el.type==='checkbox'||el.type==='radio') el.checked=false; else el.value='';
+  });
+  hydrateMedRows(null);
+  photos=[]; renderThumbs();
+  signatureData=''; resizeSig();
+  document.getElementById('gcs_sum').textContent='—';
+  document.getElementById('qsofa_sum').textContent='—';
+  document.getElementById('qsofa_sum2').textContent='—';
+  localStorage.removeItem(STORAGE_KEY);
+}
+
+/* ===== ABSENDEN an Backend (mit Fallbacks & Debug) ===== */
+const SUBMIT_ENDPOINTS = [
+  '/.netlify/functions/patientendokumentation-dateien?action=send',
+  '/api/patientendokumentation-dateien?action=send',
+  '/.vercel/functions/patientendokumentation-dateien?action=send',
+  '/.vercel/functions/patientendokumentation?action=send' // zusätzlicher Fallback
+];
+
+async function submitToBackend(){
+  const btn = document.getElementById('sendBtn');
+  try{
+    btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Sende...';
+    const data = collectFormData();
+    const submitterName = data.ausfueller_name || '';
+    const authorSignature = data.__signature || '';
+
+    if(!data.name || !data.vorname){
+      alert('Bitte Name und Vorname des Patienten ausfüllen.');
+      btn.disabled=false; btn.innerHTML='<i class="fa-solid fa-paper-plane"></i> Absenden'; return;
+    }
+
+    // ?endpoint=/eigener/pfad erlaubt Override
+    const override = new URLSearchParams(location.search).get('endpoint');
+    const endpoints = override ? [override] : SUBMIT_ENDPOINTS;
+
+    let lastErr = null, okResp = null, triedUrl = '';
+    for (const url of endpoints){
+      triedUrl = url;
+      try{
+        const res = await fetch(url, {
+          method:'POST',
+          headers:{'Content-Type':'application/json','Accept':'application/json'},
+          body: JSON.stringify({ action:'send', formData: data, submitterName, authorSignature })
+        });
+        const text = await res.text();
+        let out = {};
+        try { out = JSON.parse(text); } catch {}
+        if (res.ok && out?.ok){ okResp = out; break; }
+        lastErr = {status:res.status, body:text.slice(0,400), url};
+      }catch(e){ lastErr = {error:String(e), url}; }
+    }
+
+    if(!okResp){
+      const lines = [
+        'Fehler beim Absenden:',
+        lastErr?.status ? `HTTP ${lastErr.status}` : (lastErr?.error || 'Unbekannter Fehler'),
+        '',
+        `URL: ${lastErr?.url || triedUrl}`,
+        lastErr?.body ? `Antwort (Auszug):\n${lastErr.body}` : ''
+      ].join('\n');
+      alert(lines);
+      return;
+    }
+
+    alert('Einsendung erfolgreich.\nID: '+okResp.id+'\nDie Doku erscheint im Admin-Dashboard unter „Patientendokumentation“.');
+    // resetFormConfirm(); // optional
+  }finally{
+    btn.disabled=false; btn.innerHTML='<i class="fa-solid fa-paper-plane"></i> Absenden';
+  }
+}
+
+/* ===== initial ===== */
+window.addEventListener('load',()=>{ resizeSig(); calcGCS(); calcQSOFA(); });
