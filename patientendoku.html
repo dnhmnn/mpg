@@ -740,11 +740,16 @@
   }
 
   /* ===== ABSENDEN an Backend (nur hierfür minimal ergänzt) ===== */
-  // Fallback-Reihenfolge, damit 404 vermieden wird, wenn ein Provider anders routet:
+  // Fallback-Reihenfolge inkl. absoluter Varianten & alternativer Function-Namen:
   const SUBMIT_ENDPOINTS = [
     '/.netlify/functions/patientendokumentation-dateien',
+    `${location.origin}/.netlify/functions/patientendokumentation-dateien`,
+    '/.netlify/functions/patientendokumentation',
+    `${location.origin}/.netlify/functions/patientendokumentation`,
     '/api/patientendokumentation-dateien',
-    '/.vercel/functions/patientendokumentation-dateien'
+    '/api/patientendokumentation',
+    '/.vercel/functions/patientendokumentation-dateien',
+    '/.vercel/functions/patientendokumentation'
   ];
 
   async function submitToBackend(){
@@ -775,14 +780,17 @@
           const text = await res.text();
           let out = {};
           try { out = JSON.parse(text); } catch {}
-          if (res.ok && out?.ok){ okResp = out; break; }
+          // akzeptiere ok/success/id
+          if (res.ok && (out?.ok || out?.success || typeof out?.id !== 'undefined')){
+            okResp = out || {ok:true,id: out?.id}; break;
+          }
           lastErr = new Error(out?.error || ('HTTP '+res.status+' @ '+url));
         }catch(e){ lastErr = e; }
       }
 
       if(!okResp) throw lastErr || new Error('Unbekannter Fehler');
 
-      alert('Einsendung erfolgreich.\nID: '+okResp.id+'\nDie Doku erscheint im Admin-Dashboard unter „Patientendokumentation“.');
+      alert('Einsendung erfolgreich.\nID: '+(okResp.id ?? '—')+'\nDie Doku erscheint im Admin-Dashboard unter „Patientendokumentation“.');
       // resetFormConfirm(); // optional
     }catch(e){
       alert('Fehler beim Absenden: ' + (e?.message || e));
