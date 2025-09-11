@@ -585,8 +585,8 @@
   photoInput?.addEventListener('change', async (e)=>{
     const files=[...e.target.files||[]];
     for(const f of files){
-      // stärkere Kompression:
-      const url=await compressImage(f,1024,1024,0.65);
+      // noch stärkere Kompression:
+      const url=await compressImage(f,800,800,0.6);
       photos.push(url);
     }
     renderThumbs(); autoSave(); photoInput.value='';
@@ -636,7 +636,7 @@
   /* ===== Speichern / Laden / Reset ===== */
   const STORAGE_KEY='patientendoku_v3_full';
   function serializeMedRows(){ const rows=[]; medTbody().querySelectorAll('tr').forEach((tr,i)=>{ const idx=i+1, get=n=>tr.querySelector(`[name="${n}_${idx}"]`);
-    rows.push({name:get('med_name')?.value||'',dose:get('med_dose')?.value||'',unit:get('med_unit')?.value||'',route:get('med_route')?.value||'',time:get('med_time')?.value||'',note=get('med_note')?.value||''});
+    rows.push({name:get('med_name')?.value||'',dose:get('med_dose')?.value||'',unit:get('med_unit')?.value||'',route:get('med_route')?.value||'',time:get('med_time')?.value||'',note:get('med_note')?.value||''});
   }); return rows; }
   function hydrateMedRows(rows){ medTbody().innerHTML=''; (rows && rows.length? rows : [{},{},{}]).forEach(r=>addMedRow(r)); }
   function saveForm(){ const data=collectFormData(); localStorage.setItem(STORAGE_KEY,JSON.stringify(data)); alert('Formular lokal gespeichert.'); }
