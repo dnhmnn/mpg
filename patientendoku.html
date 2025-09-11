@@ -15,7 +15,7 @@
   .toolbar{margin-left:auto;display:flex;gap:.5rem;flex-wrap:wrap}
   .btn{border:1px solid #ffffff55;background:#ffffff1a;color:#fff;padding:.45rem .7rem;border-radius:.5rem;cursor:pointer;font-weight:700}
   .btn:hover{background:#ffffff2b}
-  .wrap{max-width:1100px;margin:0 auto;padding:1rem}
+  .wrap{max-width:1100px;margin:0 auto;padding:1rem 1rem 100px}
   .hint{color:var(--muted);margin:.5rem 0 1rem}
   details{background:var(--card);border:1px solid var(--border);border-radius:.75rem;margin:0 0 .8rem 0;overflow:hidden}
   summary{list-style:none;padding:.9rem 1rem;cursor:pointer;font-weight:800;display:flex;align-items:center;gap:.6rem}
@@ -40,7 +40,22 @@
   th{background:#f8fafc}
   .table-actions{display:flex;gap:.5rem}
   .subbtn{border:1px solid var(--border);background:#fff;padding:.35rem .55rem;border-radius:.45rem;cursor:pointer}
-  @media print{header,.hint,.btn,.subbtn{display:none!important} body{background:#fff}}
+  .thumbs{display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.5rem}
+  .thumb{position:relative}
+  .thumb img{width:120px;height:120px;object-fit:cover;border:1px solid var(--border);border-radius:.5rem}
+  .thumb .rm{position:absolute;top:6px;right:6px;border:1px solid #0002;background:#0006;color:#fff;border-radius:.35rem;padding:.15rem .35rem;cursor:pointer}
+  .sig-wrap{border:1px dashed var(--border);border-radius:.6rem;padding:.75rem;background:#fff}
+  canvas#sig{width:100%;height:180px;border:1px solid var(--border);border-radius:.5rem;background:#fff;touch-action:none}
+
+  /* Feste Sendeleiste unten */
+  .sendbar{
+    position:fixed;left:0;right:0;bottom:0;background:linear-gradient(90deg,var(--primary),#981b1b);
+    border-top:1px solid #0003; padding:.6rem 1rem; z-index:20;
+  }
+  .sendbar .inner{max-width:1100px;margin:0 auto;display:flex;gap:.6rem;align-items:center;justify-content:flex-end}
+  .sendbtn{border:1px solid #ffffff66;background:#ffffff1a;color:#fff;padding:.55rem .9rem;border-radius:.55rem;font-weight:800;cursor:pointer}
+  .sendbtn:disabled{opacity:.6;cursor:not-allowed}
+  @media print{header,.hint,.btn,.subbtn,.sendbar{display:none!important} body{background:#fff}}
 </style>
 </head>
 <body>
@@ -54,16 +69,13 @@
       <button class="btn" onclick="saveForm()"><i class="fa-solid fa-floppy-disk"></i> Speichern</button>
       <button class="btn" onclick="loadForm()"><i class="fa-solid fa-rotate"></i> Laden</button>
       <button class="btn" onclick="resetFormConfirm()"><i class="fa-solid fa-eraser"></i> Zurücksetzen</button>
-      <button class="btn" onclick="window.print()"><i class="fa-solid fa-print"></i> Drucken</button>
-      <button class="btn" onclick="downloadPdfLocal()"><i class="fa-solid fa-file-pdf"></i> PDF herunterladen</button>
-      <button class="btn" onclick="composeEmail()"><i class="fa-solid fa-envelope"></i> E-Mail öffnen</button>
-      <button class="btn" onclick="createLinkAndEmail_NoLogin()"><i class="fa-solid fa-link"></i> Link erzeugen & E-Mail</button>
+      <!-- Absenden-Button ist unten als feste Leiste -->
     </div>
   </div>
 </header>
 
 <div class="wrap">
-  <div class="hint">Alle Punkte aus der Vorlage – GCS & qSOFA automatisch, Medikamente als Zeilen ergänzbar.</div>
+  <div class="hint">Alle Punkte aus der Vorlage – GCS & qSOFA automatisch, Fotos in Anamnese, Unterschrift am Ende. Daten bleiben lokal (localStorage).</div>
 
   <!-- Einsatzdaten -->
   <details open>
@@ -80,7 +92,7 @@
     </div>
   </details>
 
-  <!-- Pat-Stammdaten -->
+  <!-- Pat-Stammdaten (Überweisungsschein entfernt) -->
   <details>
     <summary><i class="fa-solid fa-id-card-clip"></i> Pat-Stammdaten</summary>
     <div class="sec-body">
@@ -99,64 +111,35 @@
         <label>Zust. Angehöriger / Tel.<input name="angehoeriger" type="text"></label>
       </div>
       <div class="row">
-        <fieldset style="flex:1"><legend>Überweisungsschein vorhanden</legend>
-          <div class="choice">
-            <label class="pill"><input type="radio" name="ueberweisung" value="ja"> ja</label>
-            <label class="pill"><input type="radio" name="ueberweisung" value="nein"> nein</label>
-          </div>
-        </fieldset>
-        <label style="flex:2">Informationen / Aspekte (Ethik, BEV, Patientenverfügung, FIT-Status …)
+        <label style="flex:1">Informationen / Aspekte (Ethik, BEV, Patientenverfügung, FIT-Status …)
           <textarea name="infos"></textarea>
         </label>
       </div>
     </div>
   </details>
 
-  <!-- Transportziel / Team -->
-  <details>
-    <summary><i class="fa-solid fa-hospital"></i> Transportziel / Team</summary>
-    <div class="sec-body">
-      <div class="grid">
-        <label>Transportziel<input name="transportziel" type="text" placeholder="Zielklinik / Praxis …"></label>
-        <fieldset>
-          <legend>Beteiligte</legend>
-          <div class="choice">
-            <label class="pill"><input type="checkbox" name="notarzt"> Notarzt</label>
-            <label class="pill"><input type="checkbox" name="assistenz"> Assistenz</label>
-            <label class="pill"><input type="checkbox" name="rtw_team"> RTW-Team</label>
-          </div>
-        </fieldset>
-        <fieldset>
-          <legend>Arztqualifikation</legend>
-          <div class="choice">
-            <label class="pill"><input type="checkbox" name="arzt_weiterb"> Arzt in Weiterb.</label>
-            <label class="pill"><input type="checkbox" name="anaesth"> Anästhesie</label>
-            <label class="pill"><input type="checkbox" name="paed"> Pädiatrie</label>
-            <label class="pill"><input type="checkbox" name="chir"> Chirurgie</label>
-            <label class="pill"><input type="checkbox" name="neuro"> Neurologie</label>
-            <label class="pill"><input type="checkbox" name="innere"> Innere</label>
-            <label class="pill"><input type="checkbox" name="allgmed"> Allg. Medizin</label>
-            <label class="pill"><input type="checkbox" name="akutmed"> Klinische Akutmedizin</label>
-            <label class="pill"><input type="checkbox" name="intensiv"> Intensivmedizin</label>
-            <label class="pill"><input type="checkbox" name="andere"> Andere</label>
-          </div>
-        </fieldset>
-      </div>
-    </div>
-  </details>
-
-  <!-- Notfallgeschehen -->
+  <!-- Notfallgeschehen / Anamnese (+ Fotos) -->
   <details>
     <summary><i class="fa-solid fa-notes-medical"></i> Notfallgeschehen / Anamnese / Erstbefund / Vormedikation / Vorbehandlung</summary>
-    <div class="sec-body"><textarea name="notfallgeschehen" placeholder="Freitext …"></textarea></div>
+    <div class="sec-body">
+      <textarea name="notfallgeschehen" placeholder="Freitext …"></textarea>
+
+      <div style="margin-top:.75rem">
+        <label><strong>Fotos</strong> (Medikamentenliste, Befunde, Szene)</label>
+        <input id="photoInput" type="file" accept="image/*" capture="environment" multiple>
+        <div class="thumbs" id="thumbs"></div>
+      </div>
+    </div>
   </details>
 
   <!-- Neurologie -->
   <details>
     <summary><i class="fa-solid fa-brain"></i> Erstbefunde – Neurologie</summary>
     <div class="sec-body">
-      <div class="row"><label>Zeitpunkt<input name="neu_zeit" type="datetime-local"></label>
-        <label class="pill"><input type="checkbox" name="neu_unauff"> ohne path. Befund</label></div>
+      <div class="row">
+        <label>Zeitpunkt<input name="neu_zeit" type="datetime-local"></label>
+        <label class="pill"><input type="checkbox" name="neu_unauff"> ohne path. Befund</label>
+      </div>
       <div class="grid">
         <fieldset><legend>Pupillenweite – rechts</legend>
           <div class="choice">
@@ -257,7 +240,7 @@
     </div>
   </details>
 
-  <!-- Messwerte / Atmung -->
+  <!-- Messwerte initial / Atmung + qSOFA -->
   <details>
     <summary><i class="fa-solid fa-stethoscope"></i> Messwerte initial / Atmung</summary>
     <div class="sec-body">
@@ -273,6 +256,18 @@
         <label>BZ (mmol/l)<input name="bz_mmol" type="number" step="0.1"></label>
         <label>Schmerz (0–10)<input name="schmerz" type="number" min="0" max="10"></label>
       </div>
+
+      <fieldset style="margin-top:.8rem"><legend>qSOFA (auto)</legend>
+        <div class="grid">
+          <label>GCS (aus GCS-Block)<input name="qsofa_gcs" type="number" readonly></label>
+          <label>AF (/min)<input name="qsofa_af" type="number" readonly></label>
+          <label>RR syst. (mmHg)<input name="qsofa_rr" type="number" readonly></label>
+        </div>
+        <div class="row" style="margin-top:.4rem">
+          <span class="badge">qSOFA-Score: <span id="qsofa_sum" class="sum">—</span></span>
+        </div>
+      </fieldset>
+
       <fieldset style="margin-top:.6rem"><legend>Atmung – klinische Zeichen</legend>
         <div class="choice">
           <label class="pill"><input type="checkbox" name="atm_apnoe"> Apnoe</label>
@@ -301,7 +296,7 @@
     </div>
   </details>
 
-  <!-- Rhythmus -->
+  <!-- Rhythmus / EKG -->
   <details>
     <summary><i class="fa-solid fa-heart-pulse"></i> Rhythmus / EKG</summary>
     <div class="sec-body">
@@ -363,7 +358,7 @@
     </div>
   </details>
 
-  <!-- Bewusstsein / AZ / Versorgung -->
+  <!-- Bewusstseinslage / AZ / Versorgung -->
   <details>
     <summary><i class="fa-solid fa-face-meh"></i> Bewusstseinslage, AZ, Versorgung</summary>
     <div class="sec-body">
@@ -394,7 +389,7 @@
     </div>
   </details>
 
-  <!-- Maßnahmen – Zugang/Infusion + Medikamente -->
+  <!-- Maßnahmen – Zugang & Infusion / Medikation -->
   <details>
     <summary><i class="fa-solid fa-syringe"></i> Maßnahmen – Zugang & Infusion / Medikation</summary>
     <div class="sec-body">
@@ -437,7 +432,7 @@
     </div>
   </details>
 
-  <!-- Beatmung -->
+  <!-- Beatmung / Atemweg -->
   <details>
     <summary><i class="fa-solid fa-wind"></i> Beatmung / Atemweg</summary>
     <div class="sec-body">
@@ -471,7 +466,7 @@
     </div>
   </details>
 
-  <!-- Übergabe / Transport -->
+  <!-- Übergabe / Transport / Ziel -->
   <details>
     <summary><i class="fa-solid fa-people-carry-box"></i> Übergabe / Transport / Ziel</summary>
     <div class="sec-body">
@@ -485,26 +480,49 @@
     </div>
   </details>
 
-  <!-- qSOFA -->
+  <!-- qSOFA (Zusammenfassung unten optional sichtbar) -->
   <details>
     <summary><i class="fa-solid fa-scale-balanced"></i> qSOFA (auto)</summary>
     <div class="sec-body">
       <div class="grid">
-        <label>GCS Summe (auto)<input name="qsofa_gcs" type="number" readonly></label>
-        <label>AF (/min)<input name="qsofa_af" type="number" readonly></label>
-        <label>RR syst. (mmHg)<input name="qsofa_rr" type="number" readonly></label>
+        <label>GCS Summe (auto)<input name="qsofa_gcs2" type="number" readonly></label>
+        <label>AF (/min)<input name="qsofa_af2" type="number" readonly></label>
+        <label>RR syst. (mmHg)<input name="qsofa_rr2" type="number" readonly></label>
       </div>
-      <div class="row" style="margin-top:.5rem"><span class="badge">qSOFA-Score: <span id="qsofa_sum" class="sum">—</span></span></div>
+      <div class="row" style="margin-top:.5rem"><span class="badge">qSOFA-Score: <span id="qsofa_sum2" class="sum">—</span></span></div>
     </div>
   </details>
 
+  <!-- Ausfüller & digitale Unterschrift -->
+  <details open>
+    <summary><i class="fa-solid fa-signature"></i> Ausfüller & digitale Unterschrift</summary>
+    <div class="sec-body">
+      <div class="grid">
+        <label>Name des Ausfüllers<input name="ausfueller_name" type="text" placeholder="z. B. M. Mustermann"></label>
+        <label>Datum/Uhrzeit<input name="ausfueller_zeit" type="datetime-local"></label>
+      </div>
+      <div class="sig-wrap" style="margin-top:.5rem">
+        <label>Unterschrift (Finger/Maus)</label>
+        <canvas id="sig"></canvas>
+        <div class="row" style="margin-top:.5rem">
+          <button class="subbtn" type="button" id="sigClear"><i class="fa-solid fa-eraser"></i> Signatur löschen</button>
+        </div>
+      </div>
+    </div>
+  </details>
 </div>
 
-<!-- jsPDF -->
-<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<!-- Feste Absende-Leiste unten -->
+<div class="sendbar">
+  <div class="inner">
+    <button id="sendBtn" class="sendbtn" onclick="submitToBackend()">
+      <i class="fa-solid fa-paper-plane"></i> Absenden
+    </button>
+  </div>
+</div>
 
 <script>
-  /* ===== Akkordeon ===== */
+  /* ===== Accordion ===== */
   function openAll(){ document.querySelectorAll('details').forEach(d=>d.open=true); }
   function closeAll(){ document.querySelectorAll('details').forEach(d=>d.open=false); }
 
@@ -546,7 +564,9 @@
     const m = +document.querySelector('input[name="gcs_m"]:checked')?.value || 0;
     const sum = e+v+m || null;
     document.getElementById('gcs_sum').textContent = sum ?? '—';
+    // qSOFA Inputs füllen
     document.querySelector('input[name="qsofa_gcs"]').value = sum ?? '';
+    document.querySelector('input[name="qsofa_gcs2"]').value = sum ?? '';
     calcQSOFA();
   }
   function calcQSOFA(){
@@ -555,16 +575,105 @@
     const rr  = parseInt(document.querySelector('input[name="rr_sys"]').value || 0);
     document.querySelector('input[name="qsofa_af"]').value = isNaN(af)?'':af;
     document.querySelector('input[name="qsofa_rr"]').value = isNaN(rr)?'':rr;
-    let score = 0; if (gcs && gcs<15) score++; if (af && af>22) score++; if (rr && rr<100) score++;
-    document.getElementById('qsofa_sum').textContent = score || '0';
+    document.querySelector('input[name="qsofa_af2"]').value = isNaN(af)?'':af;
+    document.querySelector('input[name="qsofa_rr2"]').value = isNaN(rr)?'':rr;
+    let score = 0; if (gcs && gcs<15) score++; if (af && af>=22) score++; if (rr && rr<=100) score++;
+    document.getElementById('qsofa_sum').textContent  = score || '0';
+    document.getElementById('qsofa_sum2').textContent = score || '0';
   }
   document.addEventListener('input',(e)=>{
     if (['af','rr_sys'].includes(e.target.name)) calcQSOFA();
     if (['gcs_e','gcs_v','gcs_m'].includes(e.target.name)) calcGCS();
   });
 
+  /* ===== Fotos (lokal, mit Kompression) ===== */
+  const photoInput = document.getElementById('photoInput');
+  const thumbs = document.getElementById('thumbs');
+  let photos = []; // dataURLs
+  photoInput?.addEventListener('change', async (e)=>{
+    const files = [...e.target.files||[]];
+    for (const f of files){
+      const url = await compressImage(f, 1600, 1600, 0.85);
+      photos.push(url);
+    }
+    renderThumbs(); autoSave();
+    photoInput.value='';
+  });
+  function renderThumbs(){
+    thumbs.innerHTML=''; photos.forEach((src,i)=>{
+      const d=document.createElement('div'); d.className='thumb';
+      const img=new Image(); img.src=src; d.appendChild(img);
+      const b=document.createElement('button'); b.className='rm'; b.innerHTML='&times;';
+      b.onclick=()=>{ photos.splice(i,1); renderThumbs(); autoSave(); };
+      d.appendChild(b); thumbs.appendChild(d);
+    });
+  }
+  function compressImage(file,maxW,maxH,q){
+    return new Promise((res,rej)=>{
+      const r=new FileReader();
+      r.onload=()=>{
+        const img=new Image();
+        img.onload=()=>{
+          const s=Math.min(maxW/img.width, maxH/img.height, 1);
+          const w=img.width*s, h=img.height*s;
+          const c=document.createElement('canvas'); c.width=w; c.height=h;
+          c.getContext('2d').drawImage(img,0,0,w,h);
+          res(c.toDataURL('image/jpeg',q));
+        };
+        img.onerror=rej; img.src=r.result;
+      };
+      r.onerror=rej; r.readAsDataURL(file);
+    });
+  }
+
+  /* ===== Unterschrift (Canvas) ===== */
+  const sig = document.getElementById('sig');
+  const sctx = sig.getContext('2d');
+  let drawing=false,last={x:0,y:0}, signatureData='';
+  function resizeSig(){
+    const dpr = window.devicePixelRatio||1;
+    const w = sig.clientWidth, h = sig.clientHeight;
+    sig.width = Math.floor(w*dpr); sig.height = Math.floor(h*dpr);
+    sctx.setTransform(dpr,0,0,dpr,0,0);
+    sctx.lineWidth=2; sctx.lineJoin='round'; sctx.lineCap='round'; sctx.strokeStyle='#111';
+    if(signatureData){
+      const img=new Image(); img.onload=()=>sctx.drawImage(img,0,0,w,h); img.src=signatureData;
+    }
+  }
+  function pos(ev){
+    const r=sig.getBoundingClientRect();
+    if(ev.touches?.[0]) return {x:ev.touches[0].clientX-r.left,y:ev.touches[0].clientY-r.top};
+    return {x:ev.clientX-r.left,y:ev.clientY-r.top};
+  }
+  function start(ev){ drawing=true; last=pos(ev); ev.preventDefault(); }
+  function move(ev){ if(!drawing) return; const p=pos(ev); sctx.beginPath(); sctx.moveTo(last.x,last.y); sctx.lineTo(p.x,p.y); sctx.stroke(); last=p; ev.preventDefault(); autoSaveSig(); }
+  function end(){ drawing=false; autoSaveSig(); }
+  function autoSaveSig(){
+    try{
+      const w=sig.clientWidth,h=sig.clientHeight;
+      if(w&&h){
+        const tmp=document.createElement('canvas'); tmp.width=w; tmp.height=h;
+        tmp.getContext('2d').drawImage(sig,0,0,w,h);
+        signatureData = tmp.toDataURL('image/png');
+        autoSave();
+      }
+    }catch(_){}
+  }
+  window.addEventListener('resize', resizeSig);
+  sig.addEventListener('mousedown',start);
+  sig.addEventListener('mousemove',move);
+  sig.addEventListener('mouseup',end);
+  sig.addEventListener('mouseleave',end);
+  sig.addEventListener('touchstart',start,{passive:false});
+  sig.addEventListener('touchmove',move,{passive:false});
+  sig.addEventListener('touchend',end);
+  document.getElementById('sigClear').addEventListener('click',()=>{
+    sctx.clearRect(0,0,sig.width,sig.height);
+    signatureData=''; autoSave();
+  });
+
   /* ===== Speichern / Laden / Reset (lokal) ===== */
-  const STORAGE_KEY = 'patientendoku_v2_acc';
+  const STORAGE_KEY = 'patientendoku_v3_full';
   function serializeMedRows(){
     const rows=[]; medTbody().querySelectorAll('tr').forEach((tr,i)=>{
       const idx=i+1, get=n=> tr.querySelector(`[name="${n}_${idx}"]`);
@@ -572,7 +681,14 @@
     }); return rows;
   }
   function hydrateMedRows(rows){ medTbody().innerHTML=''; (rows && rows.length? rows : [{},{},{}]).forEach(r=>addMedRow(r)); }
+
   function saveForm(){
+    const data = collectFormData();
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    alert('Formular lokal gespeichert.');
+  }
+  function autoSave(){ try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(collectFormData())); }catch(_){ } }
+  function collectFormData(){
     const data = {};
     document.querySelectorAll('input, textarea, select').forEach(el=>{
       if(!el.name) return;
@@ -582,13 +698,18 @@
     });
     data.__gcs_sum=document.getElementById('gcs_sum')?.textContent||'';
     data.__qsofa_sum=document.getElementById('qsofa_sum')?.textContent||'';
+    data.__qsofa_sum2=document.getElementById('qsofa_sum2')?.textContent||'';
     data.__med_rows=serializeMedRows();
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-    alert('Formular lokal gespeichert.');
+    data.__photos = photos.slice();
+    data.__signature = signatureData||'';
+    return data;
   }
   function loadForm(){
     const raw=localStorage.getItem(STORAGE_KEY); if(!raw){alert('Keine gespeicherten Daten.');return;}
-    const data=JSON.parse(raw); hydrateMedRows(data.__med_rows);
+    const data=JSON.parse(raw); applyData(data); alert('Formular geladen.');
+  }
+  function applyData(data){
+    hydrateMedRows(data.__med_rows);
     document.querySelectorAll('input, textarea, select').forEach(el=>{
       if(!(el.name in data)) return;
       if(el.type==='checkbox') el.checked=!!data[el.name];
@@ -597,85 +718,67 @@
     });
     document.getElementById('gcs_sum').textContent=data.__gcs_sum||'—';
     document.getElementById('qsofa_sum').textContent=data.__qsofa_sum||'—';
+    document.getElementById('qsofa_sum2').textContent=data.__qsofa_sum2||'—';
+    photos = Array.isArray(data.__photos)? data.__photos.slice() : [];
+    renderThumbs();
+    signatureData = data.__signature||'';
+    resizeSig();
     calcQSOFA();
-    alert('Formular geladen.');
   }
   function resetFormConfirm(){
     if(!confirm('Formular wirklich zurücksetzen?')) return;
     document.querySelectorAll('input, textarea, select').forEach(el=>{
       if (el.type==='checkbox'||el.type==='radio') el.checked=false; else el.value='';
     });
-    hydrateMedRows(null); document.getElementById('gcs_sum').textContent='—'; document.getElementById('qsofa_sum').textContent='—';
+    hydrateMedRows(null);
+    photos=[]; renderThumbs();
+    signatureData=''; resizeSig();
+    document.getElementById('gcs_sum').textContent='—';
+    document.getElementById('qsofa_sum').textContent='—';
+    document.getElementById('qsofa_sum2').textContent='—';
     localStorage.removeItem(STORAGE_KEY);
   }
 
-  /* ===== PDF + E-Mail (lokal) ===== */
-  async function formToPdfBlob(){
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF({ unit:'pt', format:'a4' });
-    const data = {}; document.querySelectorAll('input, textarea, select').forEach(el=>{
-      if(!el.name) return;
-      if(el.type==='checkbox') data[el.name]=el.checked;
-      else if(el.type==='radio'){ if(el.checked) data[el.name]=el.value; }
-      else data[el.name]=el.value;
-    });
-    data.__gcs_sum=document.getElementById('gcs_sum')?.textContent||'';
-    data.__qsofa_sum=document.getElementById('qsofa_sum')?.textContent||'';
-    const left=40,maxW=515,lh=14; let y=50;
-    doc.setFontSize(12); doc.setFont(undefined,'bold'); doc.text('Patientendokumentation',left,y); y+=18;
-    doc.setFont(undefined,'normal'); doc.setFontSize(10);
-    const kv = Object.entries(data).map(([k,v])=>`${k}: ${typeof v==='boolean'?(v?'ja':'nein'):(v??'')}`).join('\n');
-    const lines = doc.splitTextToSize(kv, maxW);
-    for(const ln of lines){ if(y>800){doc.addPage(); y=50;} doc.text(ln,left,y); y+=lh; }
-    return doc.output('blob');
-  }
-  async function downloadPdfLocal(){
-    try{
-      const blob = await formToPdfBlob();
-      const url  = URL.createObjectURL(blob);
-      const rnd  = (crypto?.getRandomValues ? crypto.getRandomValues(new Uint32Array(1))[0].toString(16) : Math.floor(Math.random()*1e9).toString(16));
-      const filename = `PD-${rnd}.pdf`;
-      const a = document.createElement('a'); a.href=url; a.download=filename; a.click();
-      URL.revokeObjectURL(url); window.__lastPdfFilename = filename;
-      alert('PDF wurde heruntergeladen. Bitte im Mailprogramm anhängen.');
-    }catch(e){ alert('PDF konnte nicht erstellt werden: '+e.message); }
-  }
-  function composeEmail(){
-    const to = prompt('Empfänger-E-Mail (z. B. zna@klinik.de):') || '';
-    const subject = encodeURIComponent('Gesicherter Dokumentenversand');
-    const hint = 'Hinweis: Bitte die heruntergeladene PDF als Anhang hinzufügen.';
-    const ref  = window.__lastPdfFilename ? `\nReferenz: ${window.__lastPdfFilename}` : '';
-    const body = encodeURIComponent(`Guten Tag,\n\nim Anhang finden Sie die Patientendokumentation als PDF.\n${hint}${ref}\n\nBitte vertraulich behandeln.\n`);
-    window.location.href = `mailto:${encodeURIComponent(to)}?subject=${subject}&body=${body}`;
-  }
+  // ===== ABSENDEN an Backend (wie Produktausgabe/CIRS) =====
+  const SUBMIT_URL = '/.netlify/functions/patientendokumentation-dateien';
 
-  /* ===== Ablaufsicherer Link ohne Login (Netlify Function) ===== */
-  const WORKER_URL = '/.netlify/functions/presign';
-  async function createLinkAndEmail_NoLogin(){
+  async function submitToBackend(){
+    const btn = document.getElementById('sendBtn');
     try{
-      const pdfBlob = await formToPdfBlob();
-      const buf = await pdfBlob.arrayBuffer();
-      const b64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
-      const rnd = (crypto?.getRandomValues ? crypto.getRandomValues(new Uint32Array(1))[0].toString(16) : Date.now().toString(16));
-      const filename = `PD-${rnd}.pdf`;
+      btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Sende...';
+      const data = collectFormData();
+      const submitterName = data.ausfueller_name || '';
+      const authorSignature = data.__signature || '';
 
-      const res = await fetch(WORKER_URL, {
+      // Optional: Minimale Plausiprüfung
+      if(!data.name || !data.vorname){
+        alert('Bitte Name und Vorname des Patienten ausfüllen.');
+        btn.disabled=false; btn.innerHTML='<i class="fa-solid fa-paper-plane"></i> Absenden'; return;
+      }
+
+      const res = await fetch(SUBMIT_URL, {
         method:'POST',
         headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ file_b64: b64, filename, mime_type: 'application/pdf', expires_in: 86400 })
+        body: JSON.stringify({ formData: data, submitterName, authorSignature })
       });
-      const text = await res.clone().text().catch(()=> '');
-      if(!res.ok){ throw new Error(`HTTP ${res.status} – ${text.slice(0,160)}`); }
-      const { url } = JSON.parse(text);
 
-      const to = prompt('Empfänger-E-Mail (z. B. zna@klinik.de):') || '';
-      const subject = encodeURIComponent('Gesicherter Download-Link');
-      const body = encodeURIComponent(`Guten Tag,\n\nhier ist der gesicherte Download-Link (zeitlich befristet):\n${url}\n\nDer Link läuft automatisch ab. Bitte vertraulich behandeln.\n`);
-      window.location.href = `mailto:${encodeURIComponent(to)}?subject=${subject}&body=${body}`;
+      const out = await res.json().catch(()=> ({}));
+      if(!res.ok || !out.ok){
+        throw new Error(out?.error || ('HTTP '+res.status));
+      }
+
+      alert('Einsendung erfolgreich.\nID: '+out.id+'\nDie Doku erscheint im Admin-Dashboard unter „Patientendokumentation“.');
+      // Optional: Formular zurücksetzen
+      // resetFormConfirm();
     }catch(e){
-      alert('Fehler beim Link-Erzeugen: ' + (e?.message || e));
+      alert('Fehler beim Absenden: ' + (e?.message || e));
+    }finally{
+      btn.disabled=false; btn.innerHTML='<i class="fa-solid fa-paper-plane"></i> Absenden';
     }
   }
+
+  // initial
+  addEventListener('load',()=>{ resizeSig(); calcGCS(); calcQSOFA(); });
 </script>
 </body>
 </html>
