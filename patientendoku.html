@@ -740,16 +740,10 @@
   }
 
   /* ===== ABSENDEN an Backend (nur hierfür minimal ergänzt) ===== */
-  // Fallback-Reihenfolge inkl. absoluter Varianten & alternativer Function-Namen:
   const SUBMIT_ENDPOINTS = [
     '/.netlify/functions/patientendokumentation-dateien',
-    `${location.origin}/.netlify/functions/patientendokumentation-dateien`,
-    '/.netlify/functions/patientendokumentation',
-    `${location.origin}/.netlify/functions/patientendokumentation`,
     '/api/patientendokumentation-dateien',
-    '/api/patientendokumentation',
-    '/.vercel/functions/patientendokumentation-dateien',
-    '/.vercel/functions/patientendokumentation'
+    '/.vercel/functions/patientendokumentation-dateien'
   ];
 
   async function submitToBackend(){
@@ -765,7 +759,6 @@
         btn.disabled=false; btn.innerHTML='<i class="fa-solid fa-paper-plane"></i> Absenden'; return;
       }
 
-      // Optionaler Query-Override: ?endpoint=/mein/pfad
       const urlOverride = new URLSearchParams(location.search).get('endpoint');
       const endpoints = urlOverride ? [urlOverride] : SUBMIT_ENDPOINTS;
 
@@ -777,20 +770,25 @@
             headers:{'Content-Type':'application/json'},
             body: JSON.stringify({ formData: data, submitterName, authorSignature })
           });
-          const text = await res.text();
-          let out = {};
-          try { out = JSON.parse(text); } catch {}
-          // akzeptiere ok/success/id
-          if (res.ok && (out?.ok || out?.success || typeof out?.id !== 'undefined')){
-            okResp = out || {ok:true,id: out?.id}; break;
+
+          const raw = await res.text();        // kann JSON oder leer sein
+          let out = {}; try { out = JSON.parse(raw); } catch {}
+
+          // >>> Erfolg ab jedem 2xx akzeptieren (nicht mehr zwingend {ok:true} erforderlich)
+          if (res.ok){
+            okResp = { id: out.id || out.requestId || out.key || String(Date.now()) };
+            break;
           }
-          lastErr = new Error(out?.error || ('HTTP '+res.status+' @ '+url));
-        }catch(e){ lastErr = e; }
+
+          lastErr = new Error((out.error || out.message || ('HTTP '+res.status)) + ' @ '+url);
+        }catch(e){
+          lastErr = e;
+        }
       }
 
       if(!okResp) throw lastErr || new Error('Unbekannter Fehler');
 
-      alert('Einsendung erfolgreich.\nID: '+(okResp.id ?? '—')+'\nDie Doku erscheint im Admin-Dashboard unter „Patientendokumentation“.');
+      alert('Einsendung erfolgreich.\nID: '+okResp.id+'\nDie Doku erscheint im Admin-Dashboard unter „Patientendokumentation“.');
       // resetFormConfirm(); // optional
     }catch(e){
       alert('Fehler beim Absenden: ' + (e?.message || e));
