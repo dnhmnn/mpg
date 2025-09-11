@@ -19,15 +19,15 @@ export const handler = async (event) => {
 
     switch (action) {
       /* ====== PROTOKOLLE ====== */
-      case 'list':       return json(await listProt(body), 200, cors);
-      case 'get':        return json(await getProt(body), 200, cors);
-      case 'approve':    return json(await approveProt(body), 200, cors);
-      case 'insert_manual': return json(await insertManualProt(body), 200, cors);
+      case 'list':            return json(await listProt(body), 200, cors);
+      case 'get':             return json(await getProt(body), 200, cors);
+      case 'approve':         return json(await approveProt(body), 200, cors);
+      case 'insert_manual':   return json(await insertManualProt(body), 200, cors);
 
       /* ====== NACHERFASSUNG ====== */
-      case 'n_list':     return json(await listNach(body), 200, cors);
-      case 'n_get':      return json(await getNach(body), 200, cors);
-      case 'n_insert':   return json(await insertNach(body), 200, cors);
+      case 'n_list':          return json(await listNach(body), 200, cors);
+      case 'n_get':           return json(await getNach(body), 200, cors);
+      case 'n_insert':        return json(await insertNach(body), 200, cors);
 
       default:
         return json({ error: `Unknown action: ${action}` }, 400, cors);
@@ -90,10 +90,11 @@ const MUT_APPROVE = `
   }
 `;
 const MUT_INSERT_MANUAL = `
-  mutation ($payload:jsonb!, $submitter:String) {
+  mutation ($payload:jsonb!, $submitter:String, $authorSig:String) {
     insert_patient_docs_one(object:{
       payload:$payload,
       submitter_name:$submitter,
+      author_signature:$authorSig,
       status:"submitted"
     }) { id }
   }
@@ -150,9 +151,9 @@ async function approveProt({ id, name, signature }) {
   const data = await gql(MUT_APPROVE, { id, name, sig: signature, ts });
   return { id: data.update_patient_docs_by_pk?.id };
 }
-async function insertManualProt({ payload, submitterName = null }) {
+async function insertManualProt({ payload, submitterName = null, authorSignature = null }) {
   if (!payload || typeof payload !== 'object') throw new Error('payload missing');
-  const data = await gql(MUT_INSERT_MANUAL, { payload, submitter: submitterName });
+  const data = await gql(MUT_INSERT_MANUAL, { payload, submitter: submitterName, authorSig: authorSignature });
   return { id: data.insert_patient_docs_one?.id };
 }
 
@@ -181,7 +182,6 @@ async function getNach({ id }) {
   return { item: data.patient_docs_nacherfassung_by_pk };
 }
 async function insertNach({ payload }) {
-  // Erwartetes Payload entspricht deinem Nacherfassungsformular (n_* Felder + n_signature)
   if (!payload || typeof payload !== 'object') throw new Error('payload missing');
   const data = await gql(MUT_INSERT_N, { payload });
   return { id: data.insert_patient_docs_nacherfassung_one?.id };
