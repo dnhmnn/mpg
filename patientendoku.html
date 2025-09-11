@@ -738,14 +738,60 @@
     localStorage.removeItem(STORAGE_KEY);
   }
 
+ <script>
   /* ===== ABSENDEN an Backend ===== */
-  // Netlify-Funktionspfad + action (vermeidet „Missing action“):
-  const SUBMIT_URL = '/.netlify/functions/patientendokumentation-dateien?action=submit';
+  // Wir probieren mehrere Pfade (Netlify, Next/Vercel, API-Router)
+  const SUBMIT_ENDPOINTS = [
+    '/.netlify/functions/patientendokumentation-dateien',
+    '/api/patientendokumentation-dateien',
+    '/.vercel/functions/patientendokumentation-dateien'
+  ];
+
+  // Prüft, ob die Antwort „erfolgreich“ ist – tolerant ggü. verschiedenen Backends
+  function isOk(res, out) {
+    if (!res.ok) return false;
+    if (out == null) return true; // 200 ohne JSON
+    if (out.error) return false;
+    return !!(out.ok || out.success || out.id || out.status === 'ok');
+  }
+
+  // Drei Request-Formate: JSON (+Query+Header), x-www-form-urlencoded, multipart/form-data
+  const REQUEST_SHAPES = [
+    // 1) JSON + Query + Header
+    async (url, payload) => fetch(url + '?action=submit', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'X-Action': 'submit'
+      },
+      body: JSON.stringify({ action: 'submit', ...payload })
+    }),
+    // 2) x-www-form-urlencoded
+    async (url, payload) => {
+      const body = new URLSearchParams();
+      body.set('action', 'submit');
+      body.set('json', JSON.stringify(payload));
+      return fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-Action': 'submit' },
+        body
+      });
+    },
+    // 3) multipart/form-data
+    async (url, payload) => {
+      const fd = new FormData();
+      fd.append('action', 'submit');
+      fd.append('json', new Blob([JSON.stringify(payload)], { type: 'application/json' }), 'form.json');
+      return fetch(url, { method: 'POST', body: fd });
+    }
+  ];
 
   async function submitToBackend(){
     const btn = document.getElementById('sendBtn');
     try{
       btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Sende...';
+
       const data = collectFormData();
       const submitterName = data.ausfueller_name || '';
       const authorSignature = data.__signature || '';
@@ -755,21 +801,33 @@
         btn.disabled=false; btn.innerHTML='<i class="fa-solid fa-paper-plane"></i> Absenden'; return;
       }
 
-      const res = await fetch(SUBMIT_URL, {
-        method:'POST',
-        headers:{'Content-Type':'application/json','Accept':'application/json'},
-        // action in Body UND (zur Sicherheit) in der Query
-        body: JSON.stringify({ action:'submit', formData: data, submitterName, authorSignature })
-      });
+      // Falls per URL-Param explizit ein Endpoint übergeben wird (?endpoint=/foo)
+      const urlOverride = new URLSearchParams(location.search).get('endpoint');
+      const endpoints = urlOverride ? [urlOverride] : SUBMIT_ENDPOINTS;
 
-      const text = await res.text();
-      let out = {};
-      try { out = JSON.parse(text); } catch {}
-      if(!res.ok || !out?.ok){
-        throw new Error(out?.error || ('HTTP '+res.status));
+      const payload = { formData: data, submitterName, authorSignature };
+      let okResp = null, lastErr = new Error('Unbekannter Fehler');
+
+      // Alle Endpoints × alle Request-Formate durchprobieren
+      outer:
+      for (const base of endpoints){
+        for (const send of REQUEST_SHAPES){
+          try{
+            const res = await send(base, payload);
+            const raw = await res.text();
+            let out = {}; try { out = raw ? JSON.parse(raw) : {}; } catch(_){}
+            if (isOk(res, out)) { okResp = out || { ok:true }; break outer; }
+            // Wenn explizite Fehlermeldung „Missing action“, als lastErr merken und nächste Form probieren
+            lastErr = new Error(out?.error || raw || ('HTTP '+res.status+' @ '+base));
+          }catch(e){
+            lastErr = e;
+          }
+        }
       }
 
-      alert('Einsendung erfolgreich.\nID: '+out.id+'\nDie Doku erscheint im Admin-Dashboard unter „Patientendokumentation“.');
+      if(!okResp) throw lastErr;
+
+      alert('Einsendung erfolgreich.' + (okResp.id ? '\nID: '+okResp.id : ''));
       // resetFormConfirm(); // optional
     }catch(e){
       alert('Fehler beim Absenden: ' + (e?.message || e));
@@ -778,7 +836,7 @@
     }
   }
 
-  // initial
+  // initial (lass den Rest deines Skripts oben unverändert)
   addEventListener('load',()=>{ resizeSig(); calcGCS(); calcQSOFA(); });
 </script>
 </body>
