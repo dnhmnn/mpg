@@ -92,7 +92,7 @@
     </div>
   </details>
 
-  <!-- Pat-Stammdaten (Überweisungsschein entfernt) -->
+  <!-- Pat-Stammdaten -->
   <details>
     <summary><i class="fa-solid fa-id-card-clip"></i> Pat-Stammdaten</summary>
     <div class="sec-body">
@@ -739,7 +739,7 @@
     localStorage.removeItem(STORAGE_KEY);
   }
 
-  /* ===== ABSENDEN an Backend (nur hierfür minimal ergänzt) ===== */
+  // ===== ABSENDEN an Backend (wie funktionierende Version mit Fallbacks) =====
   const SUBMIT_ENDPOINTS = [
     '/.netlify/functions/patientendokumentation-dateien',
     '/api/patientendokumentation-dateien',
@@ -759,31 +759,23 @@
         btn.disabled=false; btn.innerHTML='<i class="fa-solid fa-paper-plane"></i> Absenden'; return;
       }
 
+      // Optionaler Query-Override: ?endpoint=/dein/pfad
       const urlOverride = new URLSearchParams(location.search).get('endpoint');
       const endpoints = urlOverride ? [urlOverride] : SUBMIT_ENDPOINTS;
 
-      let lastErr = null, okResp = null;
+      let okResp=null, lastErr=null;
       for (const url of endpoints){
         try{
           const res = await fetch(url, {
             method:'POST',
-            headers:{'Content-Type':'application/json'},
+            headers:{'Content-Type':'application/json','Accept':'application/json'},
             body: JSON.stringify({ formData: data, submitterName, authorSignature })
           });
-
-          const raw = await res.text();        // kann JSON oder leer sein
-          let out = {}; try { out = JSON.parse(raw); } catch {}
-
-          // >>> Erfolg ab jedem 2xx akzeptieren (nicht mehr zwingend {ok:true} erforderlich)
-          if (res.ok){
-            okResp = { id: out.id || out.requestId || out.key || String(Date.now()) };
-            break;
-          }
-
-          lastErr = new Error((out.error || out.message || ('HTTP '+res.status)) + ' @ '+url);
-        }catch(e){
-          lastErr = e;
-        }
+          const text = await res.text();
+          let out={}; try{ out=JSON.parse(text);}catch{}
+          if (res.ok && out?.ok){ okResp=out; break; }
+          lastErr = new Error(out?.error || ('HTTP '+res.status+' @ '+url));
+        }catch(e){ lastErr = e; }
       }
 
       if(!okResp) throw lastErr || new Error('Unbekannter Fehler');
