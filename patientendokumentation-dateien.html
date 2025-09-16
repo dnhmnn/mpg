@@ -46,13 +46,9 @@ const nhost = new NhostClient({
   region: "eu-central-1"
 })
 
-// Login-Guard
-try {
-  const session = await nhost.auth.getSession()
-  if (!session) location.href = "/admin-login.html"
-} catch (e) {
-  location.href = "/admin-login.html"
-}
+// ✅ STABILER Login-Guard
+const ok = await nhost.auth.isAuthenticatedAsync()
+if (!ok) location.href = "/admin-login.html"
 
 const accessToken = (await nhost.auth.getAccessToken()) || ""
 const endpoint = "https://hpjfrhktprpuuxvvlpsb.graphql.eu-central-1.nhost.run/v1"
