@@ -2,193 +2,280 @@
 <html lang="de">
 <head>
   <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>FFW – Dokumente bearbeiten</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>FFW – Patientendokumentation</title>
   <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet"/>
   <style>
-    :root{--rot:#c8102e;--bg:#f7f7f7;--card:#fff}
-    *{box-sizing:border-box}
-    html,body{margin:0;background:var(--bg);font-family:'Atkinson Hyperlegible',system-ui,Arial,sans-serif;color:#222}
-    header{background:var(--rot);color:#fff;padding:12px 16px;display:flex;gap:12px;align-items:center}
-    header h1{margin:0;font-size:1.05rem;font-weight:800}
-    .spacer{flex:1}
-    .topbtn{color:#fff;background:#0001;padding:8px 12px;border-radius:10px;font-weight:800;text-decoration:none}
-    .wrap{max-width:1000px;margin:18px auto;padding:0 14px}
-    .card{background:var(--card);border-radius:14px;box-shadow:0 3px 12px rgba(0,0,0,.06);padding:16px}
-    .card h2{margin:0 0 12px;color:var(--rot);font-size:1.6rem}
-    .tabs{display:flex;gap:10px;margin-bottom:8px}
-    .tab{border:1px solid #eee;background:#fafafa;padding:8px 14px;border-radius:999px;font-weight:800;cursor:pointer}
-    .tab.active{color:#fff;background:var(--rot);border-color:var(--rot)}
-    .table-head{display:grid;grid-template-columns:180px 1fr 160px;gap:10px;padding:10px 4px;color:#6b6b6b;font-weight:800;border-bottom:1px solid #eee}
-    .table-wrap{display:block}
-    .row{display:grid;grid-template-columns:180px 1fr 160px;gap:10px;padding:12px 6px;border-bottom:1px solid #eee;align-items:center}
-    .row:last-child{border-bottom:none}
-    .pill{display:inline-block;background:#eef2ff;color:#2a4bbb;font-weight:800;border-radius:999px;padding:4px 10px}
-    .btn{background:var(--rot);color:#fff;border:0;border-radius:10px;padding:9px 12px;font-weight:800;cursor:pointer}
-    .msg{margin-top:8px;min-height:1.2em}
-    .err{color:#c8102e}
-    @media (max-width:860px){
-      .table-wrap{display:block}
-      .table-head, .row{grid-template-columns:1fr}
+    :root {
+      --rot: #c8102e;
+      --bg: #f7f7f7;
+      --card: #fff;
     }
-  
-@media (max-width: 768px) {
-  .tabs { flex-wrap: wrap; gap: 6px; }
-  .table-head, .row {
-    grid-template-columns: 1fr !important;
-    text-align: left;
-    padding: 8px;
-  }
-  .row {
-    background: #fff;
-    border-radius: 10px;
-    margin-bottom: 10px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-  }
-  .row div {
-    padding: 6px 0;
-    font-size: 0.95rem;
-  }
-  .pill {
-    display: inline-block;
-    margin-bottom: 6px;
-    font-size: 0.85rem;
-  }
-  .btn {
-    width: 100%;
-    margin-top: 10px;
-    font-size: 1rem;
-  }
-  .table-wrap {
-    padding-bottom: 1rem;
-  }
-  .card h2 {
-    font-size: 1.4rem;
-  }
-}
-</style>
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      background: var(--bg);
+      font-family: 'Atkinson Hyperlegible', system-ui, Arial, sans-serif;
+      color: #222;
+    }
+    header {
+      background: var(--rot);
+      color: #fff;
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    header h1 { margin: 0; font-size: 1.1rem; font-weight: 800; }
+    .spacer { flex: 1; }
+    .topbtn {
+      color: #fff;
+      background: #0001;
+      padding: 8px 12px;
+      border-radius: 10px;
+      font-weight: 800;
+      text-decoration: none;
+    }
+    .wrap {
+      max-width: 1000px;
+      margin: 18px auto;
+      padding: 0 14px;
+    }
+    .card {
+      background: var(--card);
+      border-radius: 14px;
+      box-shadow: 0 3px 12px rgba(0, 0, 0, .06);
+      padding: 16px;
+    }
+    .card h2 {
+      margin: 0 0 12px;
+      color: var(--rot);
+      font-size: 1.5rem;
+    }
+    .tabs {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 8px;
+      flex-wrap: wrap;
+    }
+    .tab {
+      border: 1px solid #eee;
+      background: #fafafa;
+      padding: 8px 14px;
+      border-radius: 999px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+    .tab.active {
+      color: #fff;
+      background: var(--rot);
+      border-color: var(--rot);
+    }
+    .table-head {
+      display: grid;
+      grid-template-columns: 1fr 2fr 160px;
+      gap: 10px;
+      padding: 10px 4px;
+      color: #6b6b6b;
+      font-weight: 800;
+      border-bottom: 1px solid #eee;
+    }
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 2fr 160px;
+      gap: 10px;
+      padding: 12px 6px;
+      border-bottom: 1px solid #eee;
+      align-items: center;
+    }
+    .pill {
+      background: #eef2ff;
+      color: #2a4bbb;
+      font-weight: 800;
+      border-radius: 999px;
+      padding: 4px 10px;
+      display: inline-block;
+      font-size: 0.85rem;
+    }
+    .btn {
+      background: var(--rot);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      padding: 8px 12px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+    .msg {
+      margin-top: 10px;
+      color: #c8102e;
+      font-weight: bold;
+    }
+    @media (max-width: 768px) {
+      .table-head, .row {
+        grid-template-columns: 1fr !important;
+        padding: 8px;
+      }
+      .row {
+        background: #fff;
+        border-radius: 10px;
+        margin-bottom: 10px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+      }
+      .btn {
+        width: 100%;
+      }
+    }
+  </style>
 </head>
 <body>
-<header>
-  <h1>FFW – Patientendokumentation</h1>
-  <div class="spacer"></div>
-  <a class="topbtn" href="admin-dashboard.html">Dashboard</a>
-  <a class="topbtn" href="#" id="logout">Logout</a>
-</header>
+  <header>
+    <h1>FFW – Patientendokumentation</h1>
+    <div class="spacer"></div>
+    <a class="topbtn" href="admin-dashboard.html">Dashboard</a>
+    <a class="topbtn" href="#" id="logout">Logout</a>
+  </header>
 
-<div class="wrap">
-  <section class="card">
-    <h2>Dokumente</h2>
-    <div class="tabs">
-      <button class="tab active" id="tab-pat">Patientendokus</button>
-      <button class="tab" id="tab-nach">Einsatznacherfassung</button>
-    </div>
-
-    <div id="pat-wrap" class="table-wrap">
-      <div class="table-head">
-        <div>Status</div><div>Patientendokument</div><div>Aktionen</div>
+  <div class="wrap">
+    <section class="card">
+      <h2>Dokumente</h2>
+      <div class="tabs">
+        <button class="tab active" id="tab-pat">Patientendokumentation</button>
+        <button class="tab" id="tab-nach">Einsatznacherfassung</button>
       </div>
-      <div id="pat-rows"></div>
-    </div>
 
-    <div id="nach-wrap" class="table-wrap" style="display:none">
-      <div class="table-head">
-        <div>Status</div><div>Einsatznacherfassung</div><div>Aktionen</div>
+      <div id="pat-wrap">
+        <div class="table-head">
+          <div>Status</div><div>Patient</div><div>Aktionen</div>
+        </div>
+        <div id="pat-rows"></div>
       </div>
-      <div id="nach-rows"></div>
-    </div>
 
-    <div id="msg" class="msg"></div>
-  </section>
-</div>
+      <div id="nach-wrap" style="display:none">
+        <div class="table-head">
+          <div>Status</div><div>Stichwort</div><div>Aktionen</div>
+        </div>
+        <div id="nach-rows"></div>
+      </div>
 
-<script type="module">
-  import { NhostClient } from "https://esm.sh/@nhost/nhost-js@2.2.9";
-  const nhost = new NhostClient({ subdomain:"hpjfrhktprpuuxvvlpsb", region:"eu-central-1" });
+      <div id="msg" class="msg"></div>
+    </section>
+  </div>
 
-  const authed = await nhost.auth.isAuthenticatedAsync();
-  if (!authed) location.href = "/admin-login.html";
+  <script type="module">
+    import { NhostClient } from "https://esm.sh/@nhost/nhost-js@2.2.9";
 
-  document.getElementById("logout").onclick = async (e)=> {
-    e.preventDefault();
-    try { await nhost.auth.signOut(); } catch {}
-    localStorage.clear();
-    location.href = "/admin-login.html";
-  }
+    const nhost = new NhostClient({
+      subdomain: "hpjfrhktprpuuxvvlpsb",
+      region: "eu-central-1"
+    });
 
-  const token = await nhost.auth.getAccessToken();
-  const headers = { "Content-Type":"application/json", "Authorization":"Bearer "+token };
-  const endpoint = "https://hpjfrhktprpuuxvvlpsb.graphql.eu-central-1.nhost.run/v1";
+    const isAuth = await nhost.auth.isAuthenticatedAsync();
+    if (!isAuth) location.href = "/admin-login.html";
 
-  const query = `
-    query {
-      patient_docs(order_by:{created_at:desc}) {
-        id status created_at payload
+    document.getElementById("logout").onclick = async (e) => {
+      e.preventDefault();
+      try { await nhost.auth.signOut(); } catch {}
+      location.href = "/admin-login.html";
+    };
+
+    const token = await nhost.auth.getAccessToken();
+    const headers = {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer " + token
+    };
+    const endpoint = "https://hpjfrhktprpuuxvvlpsb.graphql.eu-central-1.nhost.run/v1";
+
+    const patQuery = `query {
+      patient_docs(order_by: {created_at: desc}) {
+        id
+        patientname
+        status
+        created_at
+        ausgefuellt_von
       }
-      patient_docs_nacherfassung(order_by:{created_at:desc}) {
-        id status created_at payload
+    }`;
+
+    const nachQuery = `query {
+      patient_docs_nacherfassung(order_by: {created_at: desc}) {
+        id
+        stichwort
+        status
+        created_at
+        nacherfasst_von
+      }
+    }`;
+
+    async function fetchData(query) {
+      try {
+        const res = await fetch(endpoint, {
+          method: "POST",
+          headers,
+          body: JSON.stringify({ query })
+        });
+        const json = await res.json();
+        if (!json?.data) throw new Error("Zugriff verweigert oder Daten fehlen.");
+        return json.data;
+      } catch (e) {
+        document.getElementById("msg").textContent = e.message;
+        return null;
       }
     }
-  `;
 
-  const esc = s => String(s||"").replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    const $ = s => document.querySelector(s);
+    const patRows = $("#pat-rows");
+    const nachRows = $("#nach-rows");
 
-  const $ = sel => document.querySelector(sel);
-  const patRows = $("#pat-rows");
-  const nachRows = $("#nach-rows");
-  const msg = $("#msg");
+    const tabPat = $("#tab-pat");
+    const tabNach = $("#tab-nach");
+    const wrapPat = $("#pat-wrap");
+    const wrapNach = $("#nach-wrap");
 
-  const tabPat = $("#tab-pat");
-  const tabNach = $("#tab-nach");
-  const wrapPat = $("#pat-wrap");
-  const wrapNach = $("#nach-wrap");
+    tabPat.onclick = () => {
+      tabPat.classList.add("active");
+      tabNach.classList.remove("active");
+      wrapPat.style.display = "block";
+      wrapNach.style.display = "none";
+      $("#msg").textContent = "";
+    };
 
-  tabPat.onclick = () => {
-    tabPat.classList.add("active"); tabNach.classList.remove("active");
-    wrapPat.style.display = "block"; wrapNach.style.display = "none";
-  }
-  tabNach.onclick = () => {
-    tabNach.classList.add("active"); tabPat.classList.remove("active");
-    wrapNach.style.display = "block"; wrapPat.style.display = "none";
-  }
+    tabNach.onclick = () => {
+      tabNach.classList.add("active");
+      tabPat.classList.remove("active");
+      wrapNach.style.display = "block";
+      wrapPat.style.display = "none";
+      $("#msg").textContent = "";
+    };
 
-  try {
-    const res = await fetch(endpoint, {
-      method: "POST",
-      headers,
-      body: JSON.stringify({ query })
-    });
-    const json = await res.json();
-    const doku = json.data.patient_docs;
-    const nach = json.data.patient_docs_nacherfassung;
+    const renderPat = (doc) => {
+      return `<div class="row">
+        <div><span class="pill">${doc.status || "—"}</span></div>
+        <div>${doc.patientname || "(kein Name)"}<br><small>${doc.ausgefuellt_von || "—"}</small></div>
+        <div><button class="btn" onclick="alert('Details folgen')">Details</button></div>
+      </div>`;
+    };
 
-    doku.forEach(doc => {
-      const p = typeof doc.payload === "string" ? JSON.parse(doc.payload||"{}") : (doc.payload||{});
-      const el = document.createElement("div");
-      el.className = "row";
-      el.innerHTML = `
-        <div><span class="pill">${esc(doc.status||"–")}</span></div>
-        <div>${esc(p.patient_name || p.vorname || "Unbekannt")}<br>
-        <small>${new Date(doc.created_at).toLocaleString("de-DE")}</small></div>
-        <div><button class="btn" onclick="alert('Details später')">Details</button></div>`;
-      patRows.appendChild(el);
-    });
+    const renderNach = (doc) => {
+      return `<div class="row">
+        <div><span class="pill">${doc.status || "—"}</span></div>
+        <div>${doc.stichwort || "(kein Stichwort)"}<br><small>${doc.nacherfasst_von || "—"}</small></div>
+        <div><button class="btn" onclick="alert('Details folgen')">Details</button></div>
+      </div>`;
+    };
 
-    nach.forEach(doc => {
-      const p = typeof doc.payload === "string" ? JSON.parse(doc.payload||"{}") : (doc.payload||{});
-      const el = document.createElement("div");
-      el.className = "row";
-      el.innerHTML = `
-        <div><span class="pill">${esc(doc.status || "–")}</span></div>
-        <div>${esc(p.verantwortlicher || "Einsatz")}<br>
-        <small>${new Date(doc.created_at).toLocaleString("de-DE")}</small></div>
-        <div><button class="btn" onclick="alert('Details später')">Details</button></div>`;
-      nachRows.appendChild(el);
-    });
+    const loadAll = async () => {
+      const pat = await fetchData(patQuery);
+      if (pat?.patient_docs) {
+        patRows.innerHTML = pat.patient_docs.map(renderPat).join("");
+      }
 
-  } catch(e) {
-    msg.innerHTML = '<span class="err">Fehler: '+esc(e.message)+'</span>';
-  }
-</script>
+      const nach = await fetchData(nachQuery);
+      if (nach?.patient_docs_nacherfassung) {
+        nachRows.innerHTML = nach.patient_docs_nacherfassung.map(renderNach).join("");
+      }
+    };
+
+    loadAll();
+  </script>
 </body>
 </html>
