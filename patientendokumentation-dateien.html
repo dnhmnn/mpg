@@ -1,230 +1,200 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Patientendokumentation – Dateien (Admin)</title>
-  <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet"/>
   <style>
+    :root {
+      --rot: #c8102e;
+      --bg: #fdfdfd;
+      --grau: #f3f3f3;
+    }
     body {
       margin: 0;
       font-family: 'Atkinson Hyperlegible', sans-serif;
-      background: #f9f9f9;
+      background: var(--bg);
     }
     header {
-      background: #c8102e;
+      background: var(--rot);
       color: white;
-      padding: 12px 16px;
-      font-weight: bold;
+      padding: 1rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    h1 {
       font-size: 1.2rem;
+      margin: 0;
+    }
+    .wrap {
+      max-width: 1000px;
+      margin: auto;
+      padding: 1rem;
     }
     .tabs {
       display: flex;
-      gap: 8px;
-      margin: 16px;
+      gap: 1rem;
+      margin-bottom: 1rem;
     }
     .tab {
-      padding: 8px 16px;
+      padding: 0.5rem 1rem;
       border: none;
-      border-radius: 20px;
+      background: var(--grau);
       cursor: pointer;
       font-weight: bold;
-      background: #eee;
+      border-radius: 10px;
     }
     .tab.active {
-      background: #c8102e;
+      background: var(--rot);
       color: white;
     }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin: 0 16px;
-      background: white;
-      border-radius: 8px;
-      overflow: hidden;
+    .table-head, .row {
+      display: grid;
+      grid-template-columns: 160px 1fr 120px;
+      gap: 10px;
+      padding: 0.5rem 0;
     }
-    th, td {
-      padding: 10px;
-      border-bottom: 1px solid #ddd;
-      text-align: left;
-      font-size: 0.95rem;
-    }
-    th {
-      background: #f3f3f3;
-    }
-    .error {
-      color: #c8102e;
-      margin: 16px;
+    .table-head {
       font-weight: bold;
+      border-bottom: 1px solid #ccc;
     }
-    @media (max-width: 600px) {
-      table, thead, tbody, th, td, tr {
-        display: block;
-      }
-      th {
-        display: none;
-      }
-      td {
-        border: none;
-        padding: 10px;
-        position: relative;
-      }
-      td::before {
-        content: attr(data-label);
-        font-weight: bold;
-        display: block;
+    .row {
+      border-bottom: 1px solid #eee;
+      align-items: center;
+    }
+    .pill {
+      background: #ececec;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 0.8rem;
+    }
+    button {
+      background: var(--rot);
+      color: white;
+      border: none;
+      padding: 6px 10px;
+      border-radius: 8px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .ghost {
+      background: #eee;
+      color: var(--rot);
+    }
+    @media (max-width: 768px) {
+      .table-head, .row {
+        grid-template-columns: 1fr;
       }
     }
   </style>
 </head>
 <body>
-  <header>Patientendokumentation – Dateien (Admin)</header>
+<header>
+  <h1>📁 Patientendokumentation</h1>
+  <button id="logout">Logout</button>
+</header>
 
+<div class="wrap">
   <div class="tabs">
-    <button class="tab active" id="tab-docs">Patientendokumentation</button>
+    <button class="tab active" id="tab-pat">Patientendokumente</button>
     <button class="tab" id="tab-nach">Einsatznacherfassung</button>
   </div>
 
-  <div id="error" class="error" style="display:none"></div>
+  <div id="table-head" class="table-head">
+    <div>Typ</div>
+    <div>Titel</div>
+    <div>Aktion</div>
+  </div>
+  <div id="rows"></div>
+</div>
 
-  <table id="table-patient" style="display:table">
-    <thead>
-      <tr>
-        <th>Status</th>
-        <th>Erstellt</th>
-        <th>Patient</th>
-        <th>Ausfüller</th>
-        <th>Gegenzeichner</th>
-        <th>Ablauf (10 J.)</th>
-      </tr>
-    </thead>
-    <tbody id="tbody-patient"></tbody>
-  </table>
+<script type="module">
+  import { NhostClient } from "https://esm.sh/@nhost/nhost-js@2.2.9";
 
-  <table id="table-nach" style="display:none">
-    <thead>
-      <tr>
-        <th>Datum</th>
-        <th>Alarmzeit</th>
-        <th>Adresse</th>
-        <th>Stichwort</th>
-        <th>Besatzung</th>
-        <th>Nacherfasser</th>
-      </tr>
-    </thead>
-    <tbody id="tbody-nach"></tbody>
-  </table>
+  const nhost = new NhostClient({
+    subdomain: "hpjfrhktprpuuxvvlpsb",
+    region: "eu-central-1"
+  });
 
-  <script type="module">
-    import { NhostClient } from "https://esm.sh/@nhost/nhost-js@2.2.9";
-    const nhost = new NhostClient({
-      subdomain: "hpjfrhktprpuuxvvlpsb",
-      region: "eu-central-1"
+  async function guard() {
+    const ok = await nhost.auth.isAuthenticatedAsync();
+    if (!ok) location.href = "/admin-login.html";
+  }
+  await guard();
+
+  document.getElementById("logout").onclick = async () => {
+    await nhost.auth.signOut();
+    location.href = "/admin-login.html";
+  };
+
+  const rowsEl = document.getElementById("rows");
+  const tabPat = document.getElementById("tab-pat");
+  const tabNach = document.getElementById("tab-nach");
+
+  function activateTab(which) {
+    tabPat.classList.toggle("active", which === "pat");
+    tabNach.classList.toggle("active", which === "nach");
+  }
+
+  function renderRows(data) {
+    rowsEl.innerHTML = "";
+    data.forEach(d => {
+      const el = document.createElement("div");
+      el.className = "row";
+      el.innerHTML = `
+        <div><span class="pill">${d.status || "-"}</span></div>
+        <div>${d.patient || d.title || "(kein Titel)"}</div>
+        <div><button class="ghost" onclick="alert('Details folgen')">Details</button></div>
+      `;
+      rowsEl.appendChild(el);
     });
+  }
 
-    const guard = async () => {
-      const session = await nhost.auth.getSession();
-      if (!session || !session.accessToken) {
-        location.href = "/admin-login.html";
-        return false;
-      }
-      return true;
-    };
+  async function loadDocs() {
+    const token = await nhost.auth.getAccessToken();
+    const res = await fetch("https://hpjfrhktprpuuxvvlpsb.graphql.eu-central-1.nhost.run/v1", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        query: `query { patient_docs(order_by:{created_at:desc}) { id status patient title } }`
+      })
+    });
+    const json = await res.json();
+    renderRows(json.data.patient_docs || []);
+  }
 
-    if (!(await guard())) return;
+  async function loadNachDocs() {
+    const token = await nhost.auth.getAccessToken();
+    const res = await fetch("https://hpjfrhktprpuuxvvlpsb.graphql.eu-central-1.nhost.run/v1", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        query: `query { patient_docs_nacherfassung(order_by:{created_at:desc}) { id status patient title } }`
+      })
+    });
+    const json = await res.json();
+    renderRows(json.data.patient_docs_nacherfassung || []);
+  }
 
-    const errorEl = document.getElementById('error');
-    const tbodyPatient = document.getElementById('tbody-patient');
-    const tbodyNach = document.getElementById('tbody-nach');
-    const tabDocs = document.getElementById('tab-docs');
-    const tabNach = document.getElementById('tab-nach');
-    const tablePatient = document.getElementById('table-patient');
-    const tableNach = document.getElementById('table-nach');
+  tabPat.onclick = () => {
+    activateTab("pat");
+    loadDocs();
+  };
+  tabNach.onclick = () => {
+    activateTab("nach");
+    loadNachDocs();
+  };
 
-    const fetchDocs = async () => {
-      try {
-        const res = await fetch("https://hpjfrhktprpuuxvvlpsb.graphql.eu-central-1.nhost.run/v1", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${(await nhost.auth.getAccessToken())}`
-          },
-          body: JSON.stringify({
-            query: `{
-              patient_docs(order_by: {created_at: desc}) {
-                id status patient created_at author reviewer
-              }
-            }`
-          })
-        });
-        const json = await res.json();
-        const list = json.data?.patient_docs ?? [];
-        tbodyPatient.innerHTML = list.map(doc => `
-          <tr>
-            <td data-label="Status">${doc.status || '-'}</td>
-            <td data-label="Erstellt">${new Date(doc.created_at).toLocaleString('de-DE')}</td>
-            <td data-label="Patient">${doc.patient || '-'}</td>
-            <td data-label="Ausfüller">${doc.author || '-'}</td>
-            <td data-label="Gegenzeichner">${doc.reviewer || '-'}</td>
-            <td data-label="Ablauf">${new Date(new Date(doc.created_at).setFullYear(new Date(doc.created_at).getFullYear() + 10)).toLocaleDateString('de-DE')}</td>
-          </tr>
-        `).join('');
-      } catch (e) {
-        errorEl.style.display = 'block';
-        errorEl.textContent = "Zugriff verweigert oder Daten fehlen.";
-      }
-    };
-
-    const fetchNach = async () => {
-      try {
-        const res = await fetch("https://hpjfrhktprpuuxvvlpsb.graphql.eu-central-1.nhost.run/v1", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${(await nhost.auth.getAccessToken())}`
-          },
-          body: JSON.stringify({
-            query: `{
-              patient_docs_nacherfassung(order_by: {created_at: desc}) {
-                id datum alarmzeit adresse stichwort nacherfasser fahrzeuge_rd
-              }
-            }`
-          })
-        });
-        const json = await res.json();
-        const list = json.data?.patient_docs_nacherfassung ?? [];
-        tbodyNach.innerHTML = list.map(doc => `
-          <tr>
-            <td data-label="Datum">${doc.datum || '-'}</td>
-            <td data-label="Alarmzeit">${doc.alarmzeit || '-'}</td>
-            <td data-label="Adresse">${doc.adresse || '-'}</td>
-            <td data-label="Stichwort">${doc.stichwort || '-'}</td>
-            <td data-label="Fahrzeuge RD">${doc.fahrzeuge_rd || '-'}</td>
-            <td data-label="Nacherfasser">${doc.nacherfasser || '-'}</td>
-          </tr>
-        `).join('');
-      } catch (e) {
-        errorEl.style.display = 'block';
-        errorEl.textContent = "Zugriff verweigert oder Daten fehlen.";
-      }
-    };
-
-    tabDocs.onclick = () => {
-      tabDocs.classList.add('active');
-      tabNach.classList.remove('active');
-      tablePatient.style.display = 'table';
-      tableNach.style.display = 'none';
-    };
-
-    tabNach.onclick = () => {
-      tabDocs.classList.remove('active');
-      tabNach.classList.add('active');
-      tablePatient.style.display = 'none';
-      tableNach.style.display = 'table';
-    };
-
-    await fetchDocs();
-    await fetchNach();
-  </script>
+  // Beim Start laden
+  loadDocs();
+</script>
 </body>
 </html>
