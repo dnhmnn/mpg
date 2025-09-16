@@ -1,200 +1,233 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Patientendokumentation – Dateien (Admin)</title>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>FFW – Patientendokumentation</title>
   <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet"/>
   <style>
-    :root {
-      --rot: #c8102e;
-      --bg: #fdfdfd;
-      --grau: #f3f3f3;
-    }
+    :root { --rot:#c8102e; --bg:#f7f7f7; --card:#fff; }
+    * { box-sizing: border-box; }
     body {
-      margin: 0;
-      font-family: 'Atkinson Hyperlegible', sans-serif;
-      background: var(--bg);
+      margin: 0; background: var(--bg);
+      font-family: 'Atkinson Hyperlegible', system-ui, Arial, sans-serif;
+      color: #222;
     }
     header {
-      background: var(--rot);
-      color: white;
-      padding: 1rem;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
+      background: var(--rot); color: #fff;
+      padding: 12px 16px; display: flex;
+      align-items: center; gap: 12px;
     }
-    h1 {
-      font-size: 1.2rem;
-      margin: 0;
+    header h1 { margin: 0; font-size: 1rem; font-weight: 800; }
+    .spacer { flex: 1; }
+    .topbtn {
+      background: #0001; color: #fff;
+      padding: 8px 12px; border-radius: 10px;
+      text-decoration: none; font-weight: 800;
     }
-    .wrap {
-      max-width: 1000px;
-      margin: auto;
-      padding: 1rem;
+    .wrap { max-width: 1000px; margin: 18px auto; padding: 0 14px; }
+    .card {
+      background: var(--card); border-radius: 14px;
+      box-shadow: 0 3px 12px rgba(0,0,0,.06); padding: 16px;
     }
-    .tabs {
-      display: flex;
-      gap: 1rem;
-      margin-bottom: 1rem;
-    }
+    .tabs { display: flex; gap: 10px; margin-bottom: 8px; flex-wrap: wrap; }
     .tab {
-      padding: 0.5rem 1rem;
-      border: none;
-      background: var(--grau);
-      cursor: pointer;
-      font-weight: bold;
-      border-radius: 10px;
+      border: 1px solid #eee; background: #fafafa;
+      padding: 8px 14px; border-radius: 999px;
+      font-weight: 800; cursor: pointer;
     }
     .tab.active {
-      background: var(--rot);
-      color: white;
+      color: #fff; background: var(--rot);
+      border-color: var(--rot);
     }
     .table-head, .row {
-      display: grid;
-      grid-template-columns: 160px 1fr 120px;
-      gap: 10px;
-      padding: 0.5rem 0;
+      display: grid; grid-template-columns: 180px 1fr 160px;
+      gap: 10px; padding: 12px 6px; align-items: center;
     }
-    .table-head {
-      font-weight: bold;
-      border-bottom: 1px solid #ccc;
-    }
-    .row {
-      border-bottom: 1px solid #eee;
-      align-items: center;
-    }
+    .table-head { font-weight: 800; color: #666; border-bottom: 1px solid #eee; }
+    .row { border-bottom: 1px solid #eee; }
+    .row:last-child { border-bottom: none; }
     .pill {
-      background: #ececec;
-      padding: 2px 8px;
-      border-radius: 999px;
-      font-size: 0.8rem;
+      display: inline-block;
+      background: #eef2ff; color: #2a4bbb;
+      font-weight: 800; border-radius: 999px;
+      padding: 4px 10px;
     }
-    button {
-      background: var(--rot);
-      color: white;
-      border: none;
-      padding: 6px 10px;
-      border-radius: 8px;
-      font-weight: bold;
-      cursor: pointer;
+    .btn {
+      background: var(--rot); color: #fff;
+      border: 0; border-radius: 10px;
+      padding: 9px 12px; font-weight: 800; cursor: pointer;
     }
-    .ghost {
-      background: #eee;
-      color: var(--rot);
+    .msg { margin-top: 8px; min-height: 1.2em; }
+    .err { color: #c8102e }
+
+    /* Modal */
+    .modal {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.5);
+      display: none; align-items: center; justify-content: center;
+      z-index: 1000;
     }
+    .modal.show { display: flex; }
+    .modal-box {
+      background: #fff; border-radius: 14px;
+      max-width: 700px; width: 100%;
+      max-height: 90vh; overflow: auto;
+      padding: 20px; box-shadow: 0 8px 20px rgba(0,0,0,.2);
+    }
+    .modal-box h3 { margin-top: 0; }
+    .kv { display: grid; grid-template-columns: 150px 1fr; gap: 8px; margin-bottom: 8px; }
+    .kv div:first-child { font-weight: bold; }
+
+    /* Mobil */
     @media (max-width: 768px) {
       .table-head, .row {
-        grid-template-columns: 1fr;
+        grid-template-columns: 1fr !important;
+        padding: 10px;
       }
+      .pill { font-size: 0.9rem; }
+      .btn { width: 100%; margin-top: 8px; }
+      .modal-box { padding: 16px; }
+      .kv { grid-template-columns: 1fr; }
     }
   </style>
 </head>
 <body>
-<header>
-  <h1>📁 Patientendokumentation</h1>
-  <button id="logout">Logout</button>
-</header>
+  <header>
+    <h1>FFW – Patientendokumentation</h1>
+    <div class="spacer"></div>
+    <a class="topbtn" href="admin-dashboard.html">Dashboard</a>
+    <a class="topbtn" href="#" id="logout">Logout</a>
+  </header>
 
-<div class="wrap">
-  <div class="tabs">
-    <button class="tab active" id="tab-pat">Patientendokumente</button>
-    <button class="tab" id="tab-nach">Einsatznacherfassung</button>
+  <div class="wrap">
+    <section class="card">
+      <h2>Dokumente</h2>
+      <div class="tabs">
+        <button class="tab active" id="tab-pat">Patientendokus</button>
+        <button class="tab" id="tab-nach">Einsatznacherfassung</button>
+      </div>
+
+      <div id="pat-wrap" class="table-wrap">
+        <div class="table-head">
+          <div>Status</div><div>Patientendokument</div><div>Aktionen</div>
+        </div>
+        <div id="pat-rows"></div>
+      </div>
+
+      <div id="nach-wrap" class="table-wrap" style="display:none">
+        <div class="table-head">
+          <div>Status</div><div>Einsatznacherfassung</div><div>Aktionen</div>
+        </div>
+        <div id="nach-rows"></div>
+      </div>
+
+      <div id="msg" class="msg"></div>
+    </section>
   </div>
 
-  <div id="table-head" class="table-head">
-    <div>Typ</div>
-    <div>Titel</div>
-    <div>Aktion</div>
+  <!-- Modal -->
+  <div class="modal" id="modal">
+    <div class="modal-box">
+      <h3 id="m-title">Details</h3>
+      <div id="m-body"></div>
+      <div style="text-align:right"><button class="btn" onclick="modal.classList.remove('show')">Schließen</button></div>
+    </div>
   </div>
-  <div id="rows"></div>
-</div>
 
-<script type="module">
-  import { NhostClient } from "https://esm.sh/@nhost/nhost-js@2.2.9";
-
-  const nhost = new NhostClient({
-    subdomain: "hpjfrhktprpuuxvvlpsb",
-    region: "eu-central-1"
-  });
-
-  async function guard() {
-    const ok = await nhost.auth.isAuthenticatedAsync();
-    if (!ok) location.href = "/admin-login.html";
-  }
-  await guard();
-
-  document.getElementById("logout").onclick = async () => {
-    await nhost.auth.signOut();
-    location.href = "/admin-login.html";
-  };
-
-  const rowsEl = document.getElementById("rows");
-  const tabPat = document.getElementById("tab-pat");
-  const tabNach = document.getElementById("tab-nach");
-
-  function activateTab(which) {
-    tabPat.classList.toggle("active", which === "pat");
-    tabNach.classList.toggle("active", which === "nach");
-  }
-
-  function renderRows(data) {
-    rowsEl.innerHTML = "";
-    data.forEach(d => {
-      const el = document.createElement("div");
-      el.className = "row";
-      el.innerHTML = `
-        <div><span class="pill">${d.status || "-"}</span></div>
-        <div>${d.patient || d.title || "(kein Titel)"}</div>
-        <div><button class="ghost" onclick="alert('Details folgen')">Details</button></div>
-      `;
-      rowsEl.appendChild(el);
-    });
-  }
-
-  async function loadDocs() {
+  <script type="module">
+    import { NhostClient } from "https://esm.sh/@nhost/nhost-js@2.2.9";
+    const nhost = new NhostClient({ subdomain: "hpjfrhktprpuuxvvlpsb", region: "eu-central-1" });
+    if (!(await nhost.auth.isAuthenticatedAsync())) location.href = "/admin-login.html";
     const token = await nhost.auth.getAccessToken();
-    const res = await fetch("https://hpjfrhktprpuuxvvlpsb.graphql.eu-central-1.nhost.run/v1", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`
-      },
-      body: JSON.stringify({
-        query: `query { patient_docs(order_by:{created_at:desc}) { id status patient title } }`
-      })
-    });
-    const json = await res.json();
-    renderRows(json.data.patient_docs || []);
-  }
+    const headers = { "Content-Type": "application/json", "Authorization": "Bearer " + token };
+    const endpoint = "https://hpjfrhktprpuuxvvlpsb.graphql.eu-central-1.nhost.run/v1";
 
-  async function loadNachDocs() {
-    const token = await nhost.auth.getAccessToken();
-    const res = await fetch("https://hpjfrhktprpuuxvvlpsb.graphql.eu-central-1.nhost.run/v1", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`
-      },
-      body: JSON.stringify({
-        query: `query { patient_docs_nacherfassung(order_by:{created_at:desc}) { id status patient title } }`
-      })
-    });
-    const json = await res.json();
-    renderRows(json.data.patient_docs_nacherfassung || []);
-  }
+    const modal = document.getElementById("modal");
+    const mTitle = document.getElementById("m-title");
+    const mBody = document.getElementById("m-body");
 
-  tabPat.onclick = () => {
-    activateTab("pat");
-    loadDocs();
-  };
-  tabNach.onclick = () => {
-    activateTab("nach");
-    loadNachDocs();
-  };
+    document.getElementById("logout").onclick = async (e) => {
+      e.preventDefault(); await nhost.auth.signOut(); localStorage.clear(); location.href = "/admin-login.html";
+    };
 
-  // Beim Start laden
-  loadDocs();
-</script>
+    function renderValue(obj) {
+      if (!obj || typeof obj !== "object") return "<em>Keine Daten</em>";
+      return Object.entries(obj).map(([k,v]) =>
+        `<div class="kv"><div>${k}</div><div>${typeof v === 'object' ? JSON.stringify(v) : v}</div></div>`
+      ).join('');
+    }
+
+    function openModal(title, data) {
+      mTitle.textContent = title;
+      mBody.innerHTML = renderValue(data);
+      modal.classList.add("show");
+    }
+
+    async function gql(query) {
+      const res = await fetch(endpoint, { method: "POST", headers, body: JSON.stringify({ query }) });
+      const json = await res.json();
+      return json.data;
+    }
+
+    const patRows = document.getElementById("pat-rows");
+    const nachRows = document.getElementById("nach-rows");
+
+    const queryPat = `query {
+      patient_docs(order_by: {created_at: desc}) {
+        id status created_at dokumenttyp patientname ausgefuellt_von payload
+      }
+    }`;
+
+    const queryNach = `query {
+      patient_docs_nacherfassung(order_by: {created_at: desc}) {
+        id status created_at stichwort nacherfasst_von payload
+      }
+    }`;
+
+    function row(doc, isNach = false) {
+      const name = isNach ? doc.nacherfasst_von : doc.ausgefuellt_von;
+      const title = isNach ? doc.stichwort : doc.patientname;
+      const date = new Date(doc.created_at).toLocaleString("de-DE");
+      const payload = doc.payload || {};
+      return `<div class="row">
+        <div><span class="pill">${doc.status || "-"}</span></div>
+        <div>${title || "(kein Titel)"}<br><small>${name || "—"} · ${date}</small></div>
+        <div><button class="btn" onclick='openModal("${title}", ${JSON.stringify(payload)})'>Details</button></div>
+      </div>`;
+    }
+
+    const tabPat = document.getElementById("tab-pat");
+    const tabNach = document.getElementById("tab-nach");
+    const wrapPat = document.getElementById("pat-wrap");
+    const wrapNach = document.getElementById("nach-wrap");
+    const msg = document.getElementById("msg");
+
+    tabPat.onclick = () => {
+      tabPat.classList.add("active");
+      tabNach.classList.remove("active");
+      wrapPat.style.display = "block";
+      wrapNach.style.display = "none";
+      msg.textContent = "";
+    };
+
+    tabNach.onclick = () => {
+      tabNach.classList.add("active");
+      tabPat.classList.remove("active");
+      wrapNach.style.display = "block";
+      wrapPat.style.display = "none";
+      msg.textContent = "";
+    };
+
+    try {
+      const data = await gql(queryPat);
+      patRows.innerHTML = data.patient_docs.map(d => row(d)).join("");
+    } catch { msg.textContent = "Fehler beim Laden der Patientendokus."; }
+
+    try {
+      const data = await gql(queryNach);
+      nachRows.innerHTML = data.patient_docs_nacherfassung.map(d => row(d, true)).join("");
+    } catch { msg.textContent = "Fehler beim Laden der Einsatznacherfassung."; }
+  </script>
 </body>
 </html>
