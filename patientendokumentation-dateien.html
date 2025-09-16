@@ -1,251 +1,669 @@
-<!-- patientendokumentation-dateien.html -->
 <!DOCTYPE html>
 <html lang="de">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Patientendokumentation – Dateien</title>
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" />
-  <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible&display=swap" rel="stylesheet" />
-  <style>
-    :root {
-      --primary: #c8102e;
-      --bg: #f8fafc;
-      --card: #fff;
-      --text: #0f172a;
-      --muted: #64748b;
-      --border: #e2e8f0;
-    }
-    * { box-sizing: border-box }
-    body {
-      margin: 0;
-      background: var(--bg);
-      color: var(--text);
-      font-family: 'Atkinson Hyperlegible', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
-    }
-    header {
-      position: sticky;
-      top: 0;
-      background: linear-gradient(90deg, var(--primary), #981b1b);
-      color: #fff;
-      z-index: 10;
-    }
-    .bar {
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 1rem;
-      display: flex;
-      gap: 0.6rem;
-      align-items: center;
-      flex-wrap: wrap;
-    }
-    h1 {
-      margin: 0;
-      font-size: 1.1rem;
-      font-weight: 800;
-    }
-    .wrap {
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 1rem;
-    }
-    .tabs {
-      display: flex;
-      gap: 0.5rem;
-      margin-left: auto;
-      flex-wrap: wrap;
-    }
-    .tab {
-      border: 1px solid #ffffff66;
-      background: #ffffff1a;
-      color: #fff;
-      padding: 0.45rem 0.7rem;
-      border-radius: 0.5rem;
-      cursor: pointer;
-      font-weight: 700;
-    }
-    .tab.active {
-      background: #ffffff2b;
-    }
-    .card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 0.75rem;
-      padding: 1rem;
-    }
-    .row {
-      display: flex;
-      gap: 0.6rem;
-      flex-wrap: wrap;
-      align-items: center;
-    }
-    .search {
-      flex: 1;
-      display: flex;
-      gap: 0.5rem;
-      flex-wrap: wrap;
-    }
-    .search input, .search select {
-      padding: 0.55rem 0.7rem;
-      border: 1px solid var(--border);
-      border-radius: 0.5rem;
-      flex: 1 1 auto;
-    }
-    .search select {
-      flex: 0 0 180px;
-    }
-    .btnline {
-      display: flex;
-      gap: 0.5rem;
-      flex-wrap: wrap;
-    }
-    a.btnlink, button.btnlink {
-      border: 1px solid var(--border);
-      background: #fff;
-      padding: 0.4rem 0.6rem;
-      border-radius: 0.45rem;
-      text-decoration: none;
-      color: inherit;
-      cursor: pointer;
-      font-size: 0.95rem;
-    }
-    .table-wrap {
-      overflow-x: auto;
-      margin-top: 0.75rem;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 0.95rem;
-    }
-    th, td {
-      border: 1px solid var(--border);
-      padding: 0.55rem;
-      text-align: left;
-      background: #fff;
-    }
-    th {
-      background: #f8fafc;
-      font-weight: 800;
-    }
-    .status {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.4rem;
-    }
-    .dot {
-      width: 0.6rem;
-      height: 0.6rem;
-      border-radius: 50%;
-    }
-    .dot.submitted {
-      background: #f59e0b;
-    }
-    .dot.approved {
-      background: #16a34a;
-    }
-    .badge {
-      display: inline-block;
-      padding: 0.2rem 0.5rem;
-      border: 1px solid var(--border);
-      border-radius: 999px;
-      background: #f1f5f9;
-      font-size: 0.8rem;
-    }
-    .actions {
-      display: flex;
-      gap: 0.35rem;
-      flex-wrap: wrap;
-    }
-    .abtn {
-      border: 1px solid var(--border);
-      background: #fff;
-      padding: 0.35rem 0.55rem;
-      border-radius: 0.45rem;
-      cursor: pointer;
-      display: inline-flex;
-      gap: 0.35rem;
-      align-items: center;
-      font-size: 0.9rem;
-    }
-    .abtn.primary {
-      border-color: #dc2626;
-      background: #fee2e2;
-    }
-    .muted {
-      color: var(--muted);
-    }
-    .small {
-      font-size: 0.85rem;
-    }
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Patientendokumentation – Dateien (Admin)</title>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
+<style>
+:root{--primary:#c8102e;--bg:#f8fafc;--card:#fff;--text:#0f172a;--muted:#64748b;--border:#e2e8f0}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Arial,sans-serif}
+header{position:sticky;top:0;background:linear-gradient(90deg,var(--primary),#981b1b);color:#fff;z-index:10}
+.bar{max-width:1200px;margin:0 auto;padding:.8rem 1rem;display:flex;gap:.6rem;align-items:center;flex-wrap:wrap}
+h1{margin:0;font-size:1.05rem;font-weight:800}
+.wrap{max-width:1200px;margin:0 auto;padding:1rem}
+.tabs{display:flex;gap:.5rem;margin-bottom:.75rem;flex-wrap:wrap}
+.tab{border:1px solid #ffffff66;background:#ffffff1a;color:#fff;padding:.45rem .7rem;border-radius:.5rem;cursor:pointer;font-weight:700}
+.tab.active{background:#ffffff2b}
+.card{background:var(--card);border:1px solid var(--border);border-radius:.75rem;padding:1rem}
+.row{display:flex;gap:.6rem;flex-wrap:wrap;align-items:center}
+.search{flex:1;display:flex;gap:.5rem}
+.search input,.search select{flex:1;padding:.55rem .7rem;border:1px solid var(--border);border-radius:.5rem}
+.search select{flex:0 0 180px}
+.btnline{display:flex;gap:.5rem}
+a.btnlink,button.btnlink{border:1px solid var(--border);background:#fff;padding:.4rem .6rem;border-radius:.45rem;text-decoration:none;color:inherit;cursor:pointer}
+.table-wrap{overflow:auto;margin-top:.75rem}
+table{width:100%;border-collapse:collapse}
+th,td{border:1px solid var(--border);padding:.55rem;text-align:left;background:#fff;font-size:.95rem}
+th{background:#f8fafc;font-weight:800}
+.status{display:inline-flex;align-items:center;gap:.4rem}
+.dot{width:.6rem;height:.6rem;border-radius:50%}
+.dot.submitted{background:#f59e0b}
+.dot.approved{background:#16a34a}
+.badge{display:inline-block;padding:.2rem .5rem;border:1px solid var(--border);border-radius:999px;background:#f1f5f9;font-size:.8rem}
+.actions{display:flex;gap:.35rem;flex-wrap:wrap}
+.abtn{border:1px solid var(--border);background:#fff;padding:.35rem .55rem;border-radius:.45rem;cursor:pointer;display:inline-flex;gap:.35rem;align-items:center}
+.abtn.primary{border-color:#dc2626;background:#fee2e2}
+.muted{color:var(--muted)}
+.small{font-size:.85rem}
 
-    @media (max-width: 768px) {
-      h1 {
-        font-size: 1rem;
-      }
-      .tabs {
-        flex-direction: column;
-        gap: 0.3rem;
-      }
-      .search {
-        flex-direction: column;
-      }
-      .btnline {
-        flex-direction: column;
-        gap: 0.4rem;
-      }
-      .table-wrap {
-        font-size: 0.85rem;
-      }
-    }
-  </style>
+/* Modal */
+.modal{position:fixed;inset:0;background:#0007;display:none;align-items:center;justify-content:center;z-index:50;padding:1rem}
+.modal.show{display:flex}
+.sheet{width:min(100%,1000px);max-height:92vh;overflow:auto;background:#fff;border-radius:.8rem;border:1px solid var(--border)}
+.sheet header{position:sticky;top:0;background:#fff;border-bottom:1px solid var(--border);color:inherit}
+.sheet .head{display:flex;justify-content:space-between;align-items:center;padding:.8rem 1rem}
+.sheet .body{padding:1rem}
+.close{border:1px solid var(--border);background:#fff;border-radius:.4rem;padding:.3rem .6rem;cursor:pointer}
+.kv{display:grid;grid-template-columns:210px 1fr;gap:.4rem;border:1px solid var(--border);border-radius:.6rem;padding:.6rem;margin:.4rem 0;background:#fff}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:.6rem}
+img.thumb{width:140px;height:140px;object-fit:cover;border:1px solid var(--border);border-radius:.5rem;margin:.2rem}
+.sig{border:1px dashed var(--border);border-radius:.6rem;padding:.6rem;background:#fff}
+canvas.sigpad{width:100%;height:160px;border:1px solid var(--border);border-radius:.5rem;background:#fff;touch-action:none}
+.warn{color:#92400e}
+.ok{color:#065f46}
+
+/* Form nacherfassung */
+label>span{display:block;font-weight:700;margin-bottom:.2rem}
+.input, .textarea, .select {width:100%;padding:.55rem .7rem;border:1px solid var(--border);border-radius:.5rem;background:#fff}
+.textarea{min-height:110px}
+.pill{display:inline-flex;align-items:center;gap:.4rem;border:1px solid var(--border);border-radius:999px;padding:.25rem .6rem;background:#fff}
+.choice{display:flex;gap:.6rem;flex-wrap:wrap}
+</style>
 </head>
 <body>
-  <header>
-    <div class="bar">
-      <h1><i class="fa-solid fa-file-medical"></i> Patientendokumentation – Dateien</h1>
-      <div class="tabs">
-        <button class="tab active"><i class="fa-solid fa-clipboard-list"></i> Protokolle</button>
-        <button class="tab"><i class="fa-solid fa-clock-rotate-left"></i> Nacherfassungen</button>
+<header>
+  <div class="bar">
+    <h1><i class="fa-solid fa-file-medical"></i> Patientendokumentation – Dateien (Admin)</h1>
+    <div class="tabs" style="margin-left:auto">
+      <button class="tab active" id="tab-prot" onclick="switchTab('prot')"><i class="fa-solid fa-clipboard-list"></i> Protokolle</button>
+      <button class="tab" id="tab-nach" onclick="switchTab('nach')"><i class="fa-solid fa-clock-rotate-left"></i> Einsatznacherfassung</button>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <!-- ===== TAB: PROTOKOLLE ===== -->
+  <section id="sec-prot" class="card">
+    <div class="row">
+      <div class="search">
+        <input id="q" type="search" placeholder="Suchen (Name, Vorname, Einsatz-Nr., ID, …)" oninput="debouncedReload()">
+        <select id="status" onchange="reloadList()">
+          <option value="">Alle Status</option>
+          <option value="submitted">Offen (submitted)</option>
+          <option value="approved">Abgezeichnet (approved)</option>
+        </select>
+      </div>
+      <div class="btnline">
+        <button class="btnlink" onclick="reloadList()"><i class="fa-solid fa-rotate"></i> Aktualisieren</button>
       </div>
     </div>
-  </header>
 
-  <div class="wrap">
-    <div class="card">
-      <div class="row">
-        <div class="search">
-          <input type="search" placeholder="Suchen nach Namen, Einsatznummer…" />
-          <select>
-            <option value="">Alle Status</option>
-            <option value="submitted">Offen</option>
-            <option value="approved">Abgezeichnet</option>
-          </select>
-        </div>
-        <div class="btnline">
-          <button class="btnlink"><i class="fa-solid fa-rotate"></i> Aktualisieren</button>
+    <div class="table-wrap">
+      <table id="tbl">
+        <thead>
+          <tr>
+            <th>Status</th>
+            <th>Erstellt</th>
+            <th>Patient</th>
+            <th>Ausfüller</th>
+            <th>Gegenzeichner</th>
+            <th>Ablauf (10 J.)</th>
+            <th>Aktionen</th>
+          </tr>
+        </thead>
+        <tbody><tr><td colspan="7" class="muted">Lade…</td></tr></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ===== TAB: NACHERFASSUNG ===== -->
+  <section id="sec-nach" class="card" style="display:none">
+    <div class="row" style="justify-content:space-between">
+      <div class="search">
+        <input id="nq" type="search" placeholder="Suchen (Name, Vorname, Einsatz-Nr., …)" oninput="debouncedReloadN()">
+      </div>
+      <div class="btnline">
+        <button class="btnlink" onclick="openNacherfassungModal()"><i class="fa-solid fa-plus"></i> Nacherfassung anlegen</button>
+        <button class="btnlink" onclick="reloadNList()"><i class="fa-solid fa-rotate"></i> Aktualisieren</button>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table id="ntbl">
+        <thead>
+          <tr>
+            <th>Erstellt</th>
+            <th>Patient</th>
+            <th>Alarmzeit</th>
+            <th>§630f BGB prot.-pflichtig?</th>
+            <th>Protokoll Besatzung?</th>
+            <th>Nacherfasser</th>
+            <th>Ablauf (10 J.)</th>
+            <th>Aktionen</th>
+          </tr>
+        </thead>
+        <tbody><tr><td colspan="8" class="muted">Lade…</td></tr></tbody>
+      </table>
+    </div>
+  </section>
+
+</div>
+
+<!-- ===== View Modal (Protokoll) ===== -->
+<div id="viewModal" class="modal" aria-hidden="true">
+  <div class="sheet">
+    <header><div class="head">
+      <div><strong>Patientendokumentation</strong> <span class="muted" id="vm-id"></span></div>
+      <div><button class="close" onclick="closeModal('viewModal')">&times;</button></div>
+    </div></header>
+    <div class="body" id="vm-body"></div>
+  </div>
+</div>
+
+<!-- ===== Approve Modal (Protokoll) ===== -->
+<div id="signModal" class="modal" aria-hidden="true">
+  <div class="sheet">
+    <header><div class="head">
+      <div><strong>Abzeichnen (Teamleitung)</strong></div>
+      <div><button class="close" onclick="closeModal('signModal')">&times;</button></div>
+    </div></header>
+    <div class="body">
+      <div class="grid">
+        <label><span>Teamleiter-Name</span>
+          <input id="leadName" class="input" type="text" placeholder="z. B. M. Mustermann">
+        </label>
+      </div>
+      <div class="sig" style="margin-top:.6rem">
+        <label><span>Digitale Signatur</span></label>
+        <canvas id="leadSig" class="sigpad"></canvas>
+        <div class="row" style="margin-top:.5rem">
+          <button class="abtn" onclick="clearLeadSig()"><i class="fa-solid fa-eraser"></i> Löschen</button>
+          <span class="muted small">Bitte unterschreiben (Touch/Maus).</span>
         </div>
       </div>
-
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Status</th>
-              <th>Erstellt</th>
-              <th>Patient</th>
-              <th>Ausfüller</th>
-              <th>Gegenzeichner</th>
-              <th>Ablauf</th>
-              <th>Aktionen</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr><td colspan="7" class="muted">Lade…</td></tr>
-          </tbody>
-        </table>
+      <div class="row" style="margin-top:1rem;justify-content:flex-end">
+        <button class="abtn primary" id="approveBtn" onclick="approveNow()"><i class="fa-solid fa-check"></i> Abzeichnen & Speichern</button>
       </div>
     </div>
   </div>
+</div>
+
+<!-- ===== Nacherfassung – Anlegen ===== -->
+<div id="nachModal" class="modal" aria-hidden="true">
+  <div class="sheet">
+    <header><div class="head">
+      <div><strong>Einsatznacherfassung anlegen</strong> <span class="muted small">(intern)</span></div>
+      <div><button class="close" onclick="closeModal('nachModal')">&times;</button></div>
+    </div></header>
+    <div class="body">
+      <div class="grid">
+        <label><span>Alarmzeit</span><input id="n_alarmzeit" class="input" type="datetime-local"></label>
+        <label><span>Datum</span><input id="n_datum" class="input" type="date"></label>
+        <label><span>Adresse</span><input id="n_adresse" class="input" type="text"></label>
+        <label><span>Stichwort</span><input id="n_stichwort" class="input" type="text"></label>
+        <label><span>Primäreinsatz</span>
+          <div class="choice">
+            <label class="pill"><input type="radio" name="n_prim" value="ja"> ja</label>
+            <label class="pill"><input type="radio" name="n_prim" value="nein"> nein</label>
+          </div>
+        </label>
+        <label><span>Fahrzeuge RD</span><input id="n_fahrzeuge" class="input" type="text" placeholder="z. B. 46/1, 12/1"></label>
+        <label><span>Einsatzende</span><input id="n_einsatzende" class="input" type="datetime-local"></label>
+      </div>
+
+      <div class="grid" style="margin-top:.6rem">
+        <label><span>Patient – Name</span><input id="n_name" class="input" type="text"></label>
+        <label><span>Patient – Vorname</span><input id="n_vorname" class="input" type="text"></label>
+        <label><span>Geburtsdatum</span><input id="n_geb" class="input" type="date"></label>
+      </div>
+
+      <div style="margin-top:.6rem">
+        <label><span>Sachverhalt (Freitext)</span></label>
+        <textarea id="n_sachverhalt" class="textarea" placeholder="Beschreibung des Einsatzverlaufs, Gründe für Nacherfassung …"></textarea>
+      </div>
+
+      <div class="grid" style="margin-top:.6rem">
+        <label>
+          <span><em>War dieser Einsatz gemäß §630f BGB Protokollpflichtig?</em></span>
+          <div class="choice">
+            <label class="pill"><input type="radio" name="n_bgb" value="ja"> ja</label>
+            <label class="pill"><input type="radio" name="n_bgb" value="nein"> nein</label>
+          </div>
+        </label>
+        <label>
+          <span>Wurde durch die Besatzung ein Protokoll erstellt?</span>
+          <div class="choice">
+            <label class="pill"><input type="radio" name="n_bprot" value="ja"> ja</label>
+            <label class="pill"><input type="radio" name="n_bprot" value="nein"> nein</label>
+          </div>
+        </label>
+      </div>
+
+      <div style="margin-top:.4rem">
+        <label><span>Begründung (falls kein Protokoll)</span></label>
+        <textarea id="n_begruendung" class="textarea" placeholder="Begründung …"></textarea>
+      </div>
+
+      <div class="grid" style="margin-top:.6rem">
+        <label><span>Verantwortlicher für die Durchführung des Einsatzes (Name)</span><input id="n_verantw" class="input" type="text"></label>
+        <label><span>Nacherfasst von (Name)</span><input id="n_nacherfasser" class="input" type="text"></label>
+      </div>
+
+      <div class="sig" style="margin-top:.6rem">
+        <label><span>Digitale Unterschrift (Nacherfasser)</span></label>
+        <canvas id="n_sig" class="sigpad"></canvas>
+        <div class="row" style="margin-top:.4rem">
+          <button class="abtn" onclick="nSigClear()"><i class="fa-solid fa-eraser"></i> Signatur löschen</button>
+          <span class="muted small">Bitte unterschreiben (Touch/Maus).</span>
+        </div>
+      </div>
+
+      <div class="row" style="justify-content:flex-end;margin-top:1rem">
+        <button id="n_save" class="abtn primary" onclick="insertNacherfassung()"><i class="fa-solid fa-floppy-disk"></i> Speichern</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Nacherfassung – Ansicht ===== -->
+<div id="nviewModal" class="modal" aria-hidden="true">
+  <div class="sheet">
+    <header><div class="head">
+      <div><strong>Einsatznacherfassung</strong> <span class="muted" id="nvm-id"></span></div>
+      <div><button class="close" onclick="closeModal('nviewModal')">&times;</button></div>
+    </div></header>
+    <div class="body" id="nvm-body"></div>
+  </div>
+</div>
+
+<!-- jsPDF -->
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<script>
+/* ============== Config ============== */
+const ADMIN_FN = '/.netlify/functions/patient-docs-admin'; // ggf. anpassen
+
+/* ============== Helpers ============== */
+const $ = (s, r=document)=> r.querySelector(s);
+const $$ = (s, r=document)=> [...r.querySelectorAll(s)];
+const esc = v => v==null ? '' : String(v);
+const fmtDate = iso => iso ? new Date(iso).toLocaleString() : '—';
+function debounce(fn, ms=400){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a),ms); }; }
+
+/* ============== Tabs ============== */
+function switchTab(which){
+  $('#tab-prot').classList.toggle('active', which==='prot');
+  $('#tab-nach').classList.toggle('active', which==='nach');
+  $('#sec-prot').style.display = which==='prot' ? '' : 'none';
+  $('#sec-nach').style.display = which==='nach' ? '' : 'none';
+  if (which==='prot') reloadList(); else reloadNList();
+}
+
+/* ============== API via Function ============== */
+async function api(action, payload={}){
+  const res = await fetch(ADMIN_FN, {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ action, ...payload })
+  });
+  const text = await res.text();
+  let json={}; try{ json = JSON.parse(text); }catch(_){}
+  if(!res.ok || json.error){ throw new Error(json.error || `HTTP ${res.status} ${text}`); }
+  return json;
+}
+
+/* ============== PROTOKOLLE (bestehend) ============== */
+let currentItems = [];
+const debouncedReload = debounce(()=>reloadList(), 500);
+
+async function reloadList(){
+  try{
+    $('#tbl tbody').innerHTML = `<tr><td colspan="7" class="muted">Lade…</td></tr>`;
+    const search = $('#q').value.trim();
+    const status = $('#status').value;
+    const { items } = await api('list', { search, status, limit: 200 });
+    currentItems = items || [];
+    renderTable();
+  }catch(e){
+    $('#tbl tbody').innerHTML = `<tr><td colspan="7" class="warn">Fehler: ${esc(e.message)}</td></tr>`;
+  }
+}
+function renderTable(){
+  const tb = $('#tbl tbody'); tb.innerHTML='';
+  if(!currentItems.length){ tb.innerHTML = `<tr><td colspan="7" class="muted">Keine Einträge</td></tr>`; return; }
+  for(const it of currentItems){
+    const patName = (it.payload?.name || '') + ' ' + (it.payload?.vorname || '');
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="status"><span class="dot ${it.status}"></span>${esc(it.status)}</td>
+      <td>${fmtDate(it.created_at)}</td>
+      <td>${esc(patName || '—')}</td>
+      <td>${esc(it.submitter_name || '—')}</td>
+      <td>${it.team_lead_name ? `<span class="badge">von ${esc(it.team_lead_name)}</span>` : '—'}</td>
+      <td>${it.expires_at ? new Date(it.expires_at).toLocaleDateString() : '—'}</td>
+      <td class="actions">
+        <button class="abtn" onclick="openView('${it.id}')"><i class="fa-solid fa-eye"></i> Anzeigen</button>
+        ${it.status==='submitted'
+          ? `<button class="abtn primary" onclick="openSign('${it.id}')"><i class="fa-solid fa-pen-fancy"></i> Abzeichnen</button>`
+          : `<button class="abtn" onclick="makePdf('${it.id}')"><i class="fa-solid fa-file-pdf"></i> PDF</button>`
+        }
+      </td>
+    `;
+    tb.appendChild(tr);
+  }
+}
+
+let viewItem = null;
+async function openView(id){
+  try{
+    const { item } = await api('get', { id });
+    viewItem = item;
+    $('#vm-id').textContent = item.id;
+    const b = $('#vm-body'); b.innerHTML = '';
+
+    const head = document.createElement('div');
+    head.className='kv';
+    head.innerHTML = `
+      <div><strong>Erstellt</strong></div><div>${fmtDate(item.created_at)}</div>
+      <div><strong>Status</strong></div><div><span class="dot ${item.status}"></span> ${esc(item.status)}</div>
+      <div><strong>Ausfüller</strong></div><div>${esc(item.submitter_name || '—')}</div>
+      <div><strong>Abgezeichnet</strong></div><div>${item.approved_at ? (fmtDate(item.approved_at)+' – '+esc(item.team_lead_name||'')) : '—'}</div>
+      <div><strong>Ablauf</strong></div><div>${item.expires_at ? new Date(item.expires_at).toLocaleDateString() : '—'}</div>
+    `;
+    b.appendChild(head);
+
+    const pat = document.createElement('div');
+    pat.className='kv';
+    pat.innerHTML = `
+      <div><strong>Patient</strong></div><div>${esc(item.payload?.name||'')} ${esc(item.payload?.vorname||'')}</div>
+      <div><strong>Einsatz-Nr.</strong></div><div>${esc(item.payload?.einsatz_nr||'')}</div>
+    `;
+    b.appendChild(pat);
+
+    const ph = (item.payload?.__photos||[]);
+    if (Array.isArray(ph) && ph.length){
+      const box = document.createElement('div'); box.className='kv';
+      box.innerHTML = `<div><strong>Fotos</strong></div><div id="vm-photos"></div>`;
+      b.appendChild(box);
+      const phc = $('#vm-photos', box);
+      ph.forEach(src=>{ const img=new Image(); img.src=src; img.className='thumb'; phc.appendChild(img); });
+    }
+
+    const sigs = document.createElement('div'); sigs.className='grid';
+    sigs.innerHTML = `
+      <div class="sig"><div><strong>Signatur Ausfüller</strong></div>${item.author_signature ? `<img src="${item.author_signature}" style="max-width:100%;border:1px solid var(--border);border-radius:.5rem;margin-top:.4rem">` : '<div class="muted small">—</div>'}</div>
+      <div class="sig"><div><strong>Signatur Teamleiter</strong></div>${item.team_lead_signature ? `<img src="${item.team_lead_signature}" style="max-width:100%;border:1px solid var(--border);border-radius:.5rem;margin-top:.4rem">` : '<div class="muted small">—</div>'}</div>
+    `;
+    b.appendChild(sigs);
+
+    const raw = document.createElement('pre');
+    raw.style.cssText='white-space:pre-wrap;background:#f8fafc;border:1px solid var(--border);border-radius:.6rem;padding:.6rem;margin-top:.6rem;max-height:300px;overflow:auto';
+    raw.textContent = JSON.stringify(item.payload, null, 2);
+    b.appendChild(raw);
+
+    openModal('viewModal');
+  }catch(e){ alert('Fehler beim Laden: '+e.message); }
+}
+
+function openModal(id){ const m=$('#'+id); if(m){ m.classList.add('show'); m.setAttribute('aria-hidden','false'); } }
+function closeModal(id){ const m=$('#'+id); if(m){ m.classList.remove('show'); m.setAttribute('aria-hidden','true'); } }
+
+/* Approve / Sign */
+let approveTargetId=null, leadSigData='';
+const leadSig = { canvas:null, ctx:null, drawing:false, last:{x:0,y:0} };
+
+function openSign(id){ approveTargetId=id; $('#leadName').value=''; leadSigData=''; setupLeadSig(); openModal('signModal'); }
+function setupLeadSig(){
+  leadSig.canvas = $('#leadSig'); leadSig.ctx = leadSig.canvas.getContext('2d');
+  resizeLeadSig();
+  ['mousedown','touchstart'].forEach(ev=> leadSig.canvas.addEventListener(ev,startDraw,{passive:false}));
+  ['mousemove','touchmove'].forEach(ev=> leadSig.canvas.addEventListener(ev,draw,{passive:false}));
+  ['mouseup','mouseleave','touchend'].forEach(ev=> leadSig.canvas.addEventListener(ev,endDraw,{passive:false}));
+}
+function resizeLeadSig(){
+  const c=leadSig.canvas, ctx=leadSig.ctx, dpr=window.devicePixelRatio||1;
+  const w=c.clientWidth, h=c.clientHeight; c.width=Math.floor(w*dpr); c.height=Math.floor(h*dpr);
+  ctx.setTransform(dpr,0,0,dpr,0,0); ctx.lineWidth=2; ctx.lineJoin='round'; ctx.lineCap='round'; ctx.strokeStyle='#111';
+  if(leadSigData){ const img=new Image(); img.onload=()=>ctx.drawImage(img,0,0,w,h); img.src=leadSigData; }
+}
+window.addEventListener('resize', resizeLeadSig);
+function pos(ev){ const r=leadSig.canvas.getBoundingClientRect(); const t=ev.touches?.[0]; return {x:(t?t.clientX:ev.clientX)-r.left, y:(t?t.clientY:ev.clientY)-r.top}; }
+function startDraw(ev){ leadSig.drawing=true; leadSig.last=pos(ev); ev.preventDefault(); }
+function draw(ev){ if(!leadSig.drawing) return; const p=pos(ev); const ctx=leadSig.ctx; ctx.beginPath(); ctx.moveTo(leadSig.last.x,leadSig.last.y); ctx.lineTo(p.x,p.y); ctx.stroke(); leadSig.last=p; ev.preventDefault(); saveLeadSig(); }
+function endDraw(){ leadSig.drawing=false; saveLeadSig(); }
+function saveLeadSig(){ const w=leadSig.canvas.clientWidth,h=leadSig.canvas.clientHeight; const tmp=document.createElement('canvas'); tmp.width=w; tmp.height=h; tmp.getContext('2d').drawImage(leadSig.canvas,0,0,w,h); leadSigData=tmp.toDataURL('image/png'); }
+function clearLeadSig(){ const c=leadSig.canvas; leadSig.ctx.clearRect(0,0,c.width,c.height); leadSigData=''; }
+
+async function approveNow(){
+  const btn=$('#approveBtn');
+  try{
+    if(!approveTargetId) throw new Error('Kein Datensatz gewählt.');
+    const name=$('#leadName').value.trim(); if(!name){ alert('Bitte Teamleiter-Name eintragen.'); return; }
+    if(!leadSigData){ alert('Bitte unterschreiben.'); return; }
+    btn.disabled=true; btn.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i> Speichere…';
+    await api('approve',{ id:approveTargetId, name, signature:leadSigData });
+    closeModal('signModal'); alert('Abgezeichnet.'); reloadList();
+  }catch(e){ alert('Fehler: '+e.message); }
+  finally{ btn.disabled=false; btn.innerHTML='<i class="fa-solid fa-check"></i> Abzeichnen & Speichern'; }
+}
+
+/* PDF (Protokoll) */
+async function makePdf(id){
+  try{
+    const { item } = await api('get', { id });
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit:'pt', format:'a4' });
+    const left=40,maxW=515,lh=14; let y=50;
+    doc.setFontSize(12); doc.setFont(undefined,'bold'); doc.text('Patientendokumentation (Archiv)',left,y); y+=18;
+    doc.setFont(undefined,'normal'); doc.setFontSize(10);
+    const meta = [
+      `ID: ${item.id}`,
+      `Erstellt: ${fmtDate(item.created_at)}`,
+      `Status: ${item.status}`,
+      `Ausfüller: ${item.submitter_name||'—'}`,
+      `Abgezeichnet: ${item.approved_at? fmtDate(item.approved_at)+' – '+(item.team_lead_name||'') : '—'}`,
+      `Ablauf: ${item.expires_at ? new Date(item.expires_at).toLocaleDateString() : '—'}`
+    ].join('\n');
+    let lines = doc.splitTextToSize(meta, maxW); for(const ln of lines){ if(y>780){doc.addPage(); y=50;} doc.text(ln,left,y); y+=lh; }
+    y+=6;
+    const kv = JSON.stringify(item.payload, null, 2);
+    lines = doc.splitTextToSize(kv, maxW); for(const ln of lines){ if(y>780){doc.addPage(); y=50;} doc.text(ln,left,y); y+=lh; }
+    const addSig = async (dataUrl, caption) => {
+      if(!dataUrl) return; if(y>700){ doc.addPage(); y=50; }
+      doc.text(caption,left,y); y+=10; try{ const img=await toImage(dataUrl); doc.addImage(img,'PNG',left,y,180,90); y+=100; }catch(_){ doc.text('(Signatur)',left,y); y+=14; }
+    };
+    await addSig(item.author_signature,'Signatur Ausfüller:');
+    await addSig(item.team_lead_signature,'Signatur Teamleiter:');
+    doc.save(`PD-${item.id.slice(0,8)}.pdf`);
+  }catch(e){ alert('PDF-Fehler: '+e.message); }
+}
+function toImage(dataUrl){ return new Promise((res,rej)=>{ const img=new Image(); img.onload=()=>res(img); img.onerror=rej; img.src=dataUrl; }); }
+
+/* ============== NACHERFASSUNG (separat) ============== */
+let nItems=[];
+const debouncedReloadN = debounce(()=>reloadNList(), 500);
+
+async function reloadNList(){
+  try{
+    $('#ntbl tbody').innerHTML = `<tr><td colspan="8" class="muted">Lade…</td></tr>`;
+    const search = $('#nq').value.trim();
+    const { items } = await api('n_list', { search, limit: 200 });
+    nItems = items || [];
+    renderNTable();
+  }catch(e){
+    $('#ntbl tbody').innerHTML = `<tr><td colspan="8" class="warn">Fehler: ${esc(e.message)}</td></tr>`;
+  }
+}
+function renderNTable(){
+  const tb=$('#ntbl tbody'); tb.innerHTML='';
+  if(!nItems.length){ tb.innerHTML=`<tr><td colspan="8" class="muted">Keine Einträge</td></tr>`; return; }
+  for(const it of nItems){
+    const pat = `${esc(it.payload?.n_name||'')} ${esc(it.payload?.n_vorname||'')}`.trim();
+    const tr=document.createElement('tr');
+    tr.innerHTML = `
+      <td>${fmtDate(it.created_at)}</td>
+      <td>${pat||'—'}</td>
+      <td>${esc(it.payload?.n_alarmzeit||'—')}</td>
+      <td>${esc(it.payload?.n_bgb||'—')}</td>
+      <td>${esc(it.payload?.n_bprot||'—')}</td>
+      <td>${esc(it.payload?.n_nacherfasser||'—')}</td>
+      <td>${it.expires_at ? new Date(it.expires_at).toLocaleDateString() : '—'}</td>
+      <td class="actions">
+        <button class="abtn" onclick="openNView('${it.id}')"><i class="fa-solid fa-eye"></i> Anzeigen</button>
+        <button class="abtn" onclick="makeNPdf('${it.id}')"><i class="fa-solid fa-file-pdf"></i> PDF</button>
+      </td>
+    `;
+    tb.appendChild(tr);
+  }
+}
+
+/* Nacherfassung: Modal öffnen & Signaturpad */
+function openNacherfassungModal(){ openModal('nachModal'); nSigSetup(); }
+let nSigData=''; const nSigPad={canvas:null,ctx:null,drawing:false,last:{x:0,y:0}};
+function nSigSetup(){
+  nSigPad.canvas = $('#n_sig'); nSigPad.ctx = nSigPad.canvas.getContext('2d');
+  nSigResize();
+  ['mousedown','touchstart'].forEach(ev=> nSigPad.canvas.addEventListener(ev,nStart,{passive:false}));
+  ['mousemove','touchmove'].forEach(ev=> nSigPad.canvas.addEventListener(ev,nMove,{passive:false}));
+  ['mouseup','mouseleave','touchend'].forEach(ev=> nSigPad.canvas.addEventListener(ev,nEnd,{passive:false}));
+}
+function nSigResize(){
+  const c=nSigPad.canvas, ctx=nSigPad.ctx, dpr=window.devicePixelRatio||1;
+  const w=c.clientWidth, h=c.clientHeight; c.width=Math.floor(w*dpr); c.height=Math.floor(h*dpr);
+  ctx.setTransform(dpr,0,0,dpr,0,0); ctx.lineWidth=2; ctx.lineJoin='round'; ctx.lineCap='round'; ctx.strokeStyle='#111';
+  if(nSigData){ const img=new Image(); img.onload=()=>ctx.drawImage(img,0,0,w,h); img.src=nSigData; }
+}
+window.addEventListener('resize', nSigResize);
+function nPos(ev){ const r=nSigPad.canvas.getBoundingClientRect(); const t=ev.touches?.[0]; return {x:(t?t.clientX:ev.clientX)-r.left, y:(t?t.clientY:ev.clientY)-r.top}; }
+function nStart(ev){ nSigPad.drawing=true; nSigPad.last=nPos(ev); ev.preventDefault(); }
+function nMove(ev){ if(!nSigPad.drawing) return; const p=nPos(ev); const ctx=nSigPad.ctx; ctx.beginPath(); ctx.moveTo(nSigPad.last.x,nSigPad.last.y); ctx.lineTo(p.x,p.y); ctx.stroke(); nSigPad.last=p; ev.preventDefault(); nSigSave(); }
+function nEnd(){ nSigPad.drawing=false; nSigSave(); }
+function nSigSave(){ const w=nSigPad.canvas.clientWidth,h=nSigPad.canvas.clientHeight; const tmp=document.createElement('canvas'); tmp.width=w; tmp.height=h; tmp.getContext('2d').drawImage(nSigPad.canvas,0,0,w,h); nSigData=tmp.toDataURL('image/png'); }
+function nSigClear(){ const c=nSigPad.canvas; nSigPad.ctx.clearRect(0,0,c.width,c.height); nSigData=''; }
+
+/* Nacherfassung: Speichern */
+async function insertNacherfassung(){
+  const btn = $('#n_save');
+  try{
+    const data = {
+      n_alarmzeit: $('#n_alarmzeit').value,
+      n_datum: $('#n_datum').value,
+      n_adresse: $('#n_adresse').value,
+      n_stichwort: $('#n_stichwort').value,
+      n_prim: document.querySelector('input[name="n_prim"]:checked')?.value || '',
+      n_fahrzeuge: $('#n_fahrzeuge').value,
+      n_einsatzende: $('#n_einsatzende').value,
+      n_name: $('#n_name').value,
+      n_vorname: $('#n_vorname').value,
+      n_geb: $('#n_geb').value,
+      n_sachverhalt: $('#n_sachverhalt').value,
+      n_bgb: document.querySelector('input[name="n_bgb"]:checked')?.value || '',
+      n_bprot: document.querySelector('input[name="n_bprot"]:checked')?.value || '',
+      n_begruendung: $('#n_begruendung').value,
+      n_verantw: $('#n_verantw').value,
+      n_nacherfasser: $('#n_nacherfasser').value,
+      n_signature: nSigData || ''
+    };
+
+    if(!data.n_name || !data.n_vorname){
+      alert('Bitte Patient Name & Vorname eintragen.'); return;
+    }
+    if(!data.n_nacherfasser){
+      alert('Bitte „Nacherfasst von (Name)“ eintragen.'); return;
+    }
+
+    btn.disabled=true; btn.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i> Speichern…';
+    const { id } = await api('n_insert', { payload: data });
+    closeModal('nachModal');
+    alert('Nacherfassung angelegt. ID: '+id);
+    reloadNList();
+  }catch(e){ alert('Fehler beim Speichern: '+e.message); }
+  finally{ btn.disabled=false; btn.innerHTML='<i class="fa-solid fa-floppy-disk"></i> Speichern'; }
+}
+
+/* Nacherfassung: Anzeigen */
+async function openNView(id){
+  try{
+    const { item } = await api('n_get', { id });
+    $('#nvm-id').textContent = item.id;
+    const b = $('#nvm-body'); b.innerHTML='';
+
+    const head=document.createElement('div'); head.className='kv';
+    head.innerHTML = `
+      <div><strong>Erstellt</strong></div><div>${fmtDate(item.created_at)}</div>
+      <div><strong>Ablauf</strong></div><div>${item.expires_at ? new Date(item.expires_at).toLocaleDateString() : '—'}</div>
+      <div><strong>Nacherfasser</strong></div><div>${esc(item.payload?.n_nacherfasser||'—')}</div>
+      <div><strong>Verantwortlicher</strong></div><div>${esc(item.payload?.n_verantw||'—')}</div>
+    `;
+    b.appendChild(head);
+
+    const kern=document.createElement('div'); kern.className='kv';
+    kern.innerHTML = `
+      <div><strong>Patient</strong></div><div>${esc(item.payload?.n_name||'')} ${esc(item.payload?.n_vorname||'')}</div>
+      <div><strong>Alarmzeit</strong></div><div>${esc(item.payload?.n_alarmzeit||'—')}</div>
+      <div><strong>Adresse</strong></div><div>${esc(item.payload?.n_adresse||'—')}</div>
+      <div><strong>Stichwort</strong></div><div>${esc(item.payload?.n_stichwort||'—')}</div>
+      <div><strong>Primäreinsatz</strong></div><div>${esc(item.payload?.n_prim||'—')}</div>
+      <div><strong>Fahrzeuge RD</strong></div><div>${esc(item.payload?.n_fahrzeuge||'—')}</div>
+      <div><strong>Einsatzende</strong></div><div>${esc(item.payload?.n_einsatzende||'—')}</div>
+      <div><strong>§630f BGB prot.-pflichtig?</strong></div><div>${esc(item.payload?.n_bgb||'—')}</div>
+      <div><strong>Protokoll Besatzung?</strong></div><div>${esc(item.payload?.n_bprot||'—')}</div>
+      <div><strong>Begründung</strong></div><div>${esc(item.payload?.n_begruendung||'—')}</div>
+    `;
+    b.appendChild(kern);
+
+    const sach=document.createElement('div'); sach.className='kv';
+    sach.innerHTML = `<div><strong>Sachverhalt</strong></div><div>${esc(item.payload?.n_sachverhalt||'—')}</div>`;
+    b.appendChild(sach);
+
+    const sig=document.createElement('div'); sig.className='sig';
+    sig.innerHTML = `<div><strong>Signatur Nacherfasser</strong></div>${item.payload?.n_signature ? `<img src="${item.payload.n_signature}" style="max-width:100%;border:1px solid var(--border);border-radius:.5rem;margin-top:.4rem">` : '<div class="muted small">—</div>'}`;
+    b.appendChild(sig);
+
+    openModal('nviewModal');
+  }catch(e){ alert('Fehler beim Laden: '+e.message); }
+}
+
+/* Nacherfassung: PDF */
+async function makeNPdf(id){
+  try{
+    const { item } = await api('n_get', { id });
+    const { jsPDF } = window.jspdf;
+    const doc=new jsPDF({unit:'pt',format:'a4'});
+    const left=40,maxW=515,lh=14; let y=50;
+    doc.setFontSize(12); doc.setFont(undefined,'bold'); doc.text('Einsatznacherfassung (Archiv)',left,y); y+=18;
+    doc.setFont(undefined,'normal'); doc.setFontSize(10);
+    const meta = [
+      `ID: ${item.id}`,
+      `Erstellt: ${fmtDate(item.created_at)}`,
+      `Nacherfasser: ${item.payload?.n_nacherfasser||'—'}`,
+      `Verantwortlicher: ${item.payload?.n_verantw||'—'}`,
+      `Ablauf: ${item.expires_at ? new Date(item.expires_at).toLocaleDateString() : '—'}`
+    ].join('\n');
+    let lines=doc.splitTextToSize(meta,maxW); for(const ln of lines){ if(y>780){doc.addPage(); y=50;} doc.text(ln,left,y); y+=lh; }
+    y+=6;
+    const block = {
+      Patient: `${item.payload?.n_name||''} ${item.payload?.n_vorname||''}`,
+      Geburtsdatum: item.payload?.n_geb||'—',
+      Alarmzeit: item.payload?.n_alarmzeit||'—',
+      Datum: item.payload?.n_datum||'—',
+      Adresse: item.payload?.n_adresse||'—',
+      Stichwort: item.payload?.n_stichwort||'—',
+      Primäreinsatz: item.payload?.n_prim||'—',
+      Fahrzeuge_RD: item.payload?.n_fahrzeuge||'—',
+      Einsatzende: item.payload?.n_einsatzende||'—',
+      '§630f_BGB_protokollpflichtig': item.payload?.n_bgb||'—',
+      'Protokoll_Besatzung': item.payload?.n_bprot||'—',
+      Begründung: item.payload?.n_begruendung||'—',
+      Sachverhalt: item.payload?.n_sachverhalt||'—'
+    };
+    const kv = Object.entries(block).map(([k,v])=>`${k}: ${v}`).join('\n');
+    lines = doc.splitTextToSize(kv,maxW); for(const ln of lines){ if(y>780){doc.addPage(); y=50;} doc.text(ln,left,y); y+=lh; }
+    // Signatur
+    if(item.payload?.n_signature){
+      if(y>700){doc.addPage(); y=50;}
+      doc.text('Signatur Nacherfasser:',left,y); y+=10;
+      try{ const img=await toImage(item.payload.n_signature); doc.addImage(img,'PNG',left,y,180,90); y+=100; }catch(_){ doc.text('(Signatur)',left,y); y+=14; }
+    }
+    doc.save(`NACH-${item.id.slice(0,8)}.pdf`);
+  }catch(e){ alert('PDF-Fehler: '+e.message); }
+}
+
+/* ============== Init ============== */
+switchTab('prot'); // Standard-Tab
+reloadList();
+</script>
 </body>
-</html>
+</html> 
