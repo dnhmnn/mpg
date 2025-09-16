@@ -3,133 +3,80 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Patientendokumentation Übersicht</title>
+  <title>Admin-Bereich – Patientendokumentation</title>
+  <script src="https://unpkg.com/@nhost/nhost-js@2.5.1/dist/umd/index.production.min.js"></script>
   <style>
     body {
       font-family: 'Atkinson Hyperlegible', sans-serif;
-      padding: 1rem;
-      background: #f8f8f8;
+      margin: 0;
+      padding: 2rem;
+      background-color: #f8f8f8;
+      color: #333;
     }
     h1 {
-      font-size: 1.5rem;
-      margin-bottom: 1rem;
+      font-size: 1.8rem;
+      color: #b30000;
     }
-    table {
-      width: 100%;
-      border-collapse: collapse;
+    #admin-content {
+      margin-top: 2rem;
+      padding: 1rem;
       background: white;
-      box-shadow: 0 0 4px rgba(0,0,0,0.1);
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.05);
     }
-    th, td {
-      padding: 0.75rem;
-      border: 1px solid #ccc;
-      text-align: left;
-    }
-    th {
-      background-color: #e60000;
-      color: white;
-    }
-    tr:nth-child(even) {
-      background-color: #f2f2f2;
-    }
-    @media (max-width: 600px) {
-      table, thead, tbody, th, td, tr {
-        display: block;
-      }
-      th {
-        position: sticky;
-        top: 0;
-        background-color: #e60000;
-        color: white;
-      }
-      td {
-        border: none;
-        position: relative;
-        padding-left: 50%;
-        text-align: right;
-      }
-      td::before {
-        content: attr(data-label);
-        position: absolute;
-        left: 0;
-        width: 45%;
-        padding-left: 0.5rem;
-        font-weight: bold;
-        text-align: left;
-      }
+    .hidden {
+      display: none;
     }
   </style>
 </head>
 <body>
 
-  <h1>Patientendokumentation Übersicht</h1>
-  <table id="docsTable">
-    <thead>
-      <tr>
-        <th>ID</th>
-        <th>Status</th>
-        <th>Name</th>
-        <th>Teamleiter</th>
-        <th>Erstellt am</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr><td colspan="5">Daten werden geladen…</td></tr>
-    </tbody>
-  </table>
+  <h1>Admin-Bereich</h1>
+  <p id="status">🔐 Benutzerprüfung läuft…</p>
+
+  <div id="admin-content" class="hidden">
+    <p>✅ Du bist als Admin eingeloggt.</p>
+    <p>Hier kannst du geschützte Inhalte anzeigen, z. B.:</p>
+    <ul>
+      <li>📋 Übersicht über Patientendokumentationen</li>
+      <li>📦 Lagerverwaltung</li>
+      <li>🗃 Archivierte Einsätze</li>
+      <li>📝 Admin-Kommentare & Signaturen</li>
+    </ul>
+  </div>
 
   <script>
-    const GRAPHQL_ENDPOINT = 'https://hpjfrhktprpuuxvvlpsb.graphql.eu-central-1.nhost.run/v1';
+    // Initialisiere Nhost-Client
+    const nhost = new window.Nhost.NhostClient({
+      subdomain: 'hpjfrhktprpuuxvvlpsb',
+      region: 'eu-central-1'
+    });
 
-    fetch(GRAPHQL_ENDPOINT, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        // Optional: 'Authorization': 'Bearer DEIN_TOKEN'
-      },
-      body: JSON.stringify({
-        query: `
-          query {
-            patient_docs(order_by: {created_at: desc}, limit: 50) {
-              id
-              status
-              submitter_name
-              team_lead_name
-              created_at
-            }
-          }
-        `
-      })
-    })
-    .then(res => {
-      if (!res.ok) throw new Error('HTTP-Fehler: ' + res.status);
-      return res.json();
-    })
-    .then(result => {
-      const docs = result.data.patient_docs;
-      const tbody = document.querySelector('#docsTable tbody');
-      tbody.innerHTML = '';
-      if (docs.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5">Keine Einträge gefunden.</td></tr>';
+    // Prüfe Login und Admin-Rechte
+    async function checkAdminAccess() {
+      const isAuthenticated = await nhost.auth.isAuthenticatedAsync();
+      const user = nhost.auth.getUser();
+
+      // Nicht eingeloggt → weiterleiten
+      if (!isAuthenticated || !user) {
+        window.location.href = '/admin-login.html';
         return;
       }
-      docs.forEach(doc => {
-        const row = document.createElement('tr');
-        row.innerHTML = `
-          <td data-label="ID">${doc.id}</td>
-          <td data-label="Status">${doc.status || '-'}</td>
-          <td data-label="Name">${doc.submitter_name || '-'}</td>
-          <td data-label="Teamleiter">${doc.team_lead_name || '-'}</td>
-          <td data-label="Erstellt am">${new Date(doc.created_at).toLocaleString()}</td>
-        `;
-        tbody.appendChild(row);
-      });
-    })
-    .catch(err => {
-      const tbody = document.querySelector('#docsTable tbody');
-      tbody.innerHTML = '<tr><td colspan="5">Fehler beim Laden: ' + err.message + '</td></tr>';
-      console.error('GraphQL-Fehler:', err);
-    });
+
+      // Admin-Prüfung: Nur bestimmte E-Mail-Adresse erlaubt
+      const adminEmail = 'daniel@heilmann.bayern';
+      if (user.email !== adminEmail) {
+        window.location.href = '/admin-login.html';
+        return;
+      }
+
+      // ✅ Zugriff erlaubt
+      document.getElementById('status').textContent = `✅ Eingeloggt als Admin: ${user.email}`;
+      document.getElementById('admin-content').classList.remove('hidden');
+    }
+
+    checkAdminAccess();
   </script>
 
 </body>
