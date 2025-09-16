@@ -2,94 +2,33 @@
 <html lang="de">
 <head>
   <meta charset="UTF-8">
-  <title>Patientendokumentation Übersicht</title>
-  <style>
-    body {
-      font-family: 'Atkinson Hyperlegible', sans-serif;
-      padding: 1rem;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 1rem;
-    }
-    th, td {
-      border: 1px solid #ccc;
-      padding: 0.5rem;
-      text-align: left;
-    }
-    th {
-      background-color: #eee;
-    }
-  </style>
+  <title>GraphQL Verbindungstest</title>
 </head>
 <body>
-
-  <h1>Patientendokumentation Übersicht</h1>
-  <table id="docsTable">
-    <thead>
-      <tr>
-        <th>ID</th>
-        <th>Status</th>
-        <th>Name</th>
-        <th>Teamleiter</th>
-        <th>Erstellt am</th>
-      </tr>
-    </thead>
-    <tbody></tbody>
-  </table>
+  <h1>GraphQL Test</h1>
+  <pre id="output">Lade...</pre>
 
   <script>
-    const GRAPHQL_ENDPOINT = 'https://hpjfhktxpruuuxvlpsb.hasura.eu-central-1.nhost.run/v1/graphql';
+    const endpoint = 'https://hpjfhktxpruuuxvlpsb.hasura.eu-central-1.nhost.run/v1/graphql';
 
-    // Beispiel für öffentlichen Zugriff – ggf. Token einbauen
-    fetch(GRAPHQL_ENDPOINT, {
+    fetch(endpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        // Wenn Auth aktiviert ist:
+        // Wenn du einen Token brauchst, dann HIER einkommentieren:
         // 'Authorization': 'Bearer DEIN_TOKEN'
       },
       body: JSON.stringify({
-        query: `
-          query {
-            patient_docs(order_by: {created_at: desc}) {
-              id
-              status
-              submitter_name
-              team_lead_name
-              created_at
-            }
-          }
-        `
+        query: `query { __typename }`
       })
     })
-    .then(response => {
-      if (!response.ok) {
-        throw new Error(`Fehler: ${response.status}`);
-      }
-      return response.json();
-    })
+    .then(response => response.text())
     .then(result => {
-      const docs = result.data.patient_docs;
-      const tbody = document.querySelector('#docsTable tbody');
-      tbody.innerHTML = '';
-      docs.forEach(doc => {
-        const row = document.createElement('tr');
-        row.innerHTML = `
-          <td>${doc.id}</td>
-          <td>${doc.status || ''}</td>
-          <td>${doc.submitter_name || ''}</td>
-          <td>${doc.team_lead_name || ''}</td>
-          <td>${new Date(doc.created_at).toLocaleString()}</td>
-        `;
-        tbody.appendChild(row);
-      });
+      document.getElementById('output').textContent = result;
     })
     .catch(error => {
-      console.error('GraphQL-Fehler:', error);
+      document.getElementById('output').textContent = 'Fehler: ' + error;
     });
   </script>
-
 </body>
 </html>
