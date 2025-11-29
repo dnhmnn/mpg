@@ -505,7 +505,6 @@ function addDebug(message, data = null) {
   console.log(`[${timestamp}] ${message}`, data || '');
 }
 
-// QR-Key aus URL extrahieren
 function extractQRKey() {
   addDebug('Extracting QR-Key from URL');
   
@@ -553,14 +552,12 @@ async function loadDocument() {
       </div>
     `;
     
-    // 1. QR-Code in localStorage suchen
     addDebug('Reading localStorage...');
     const qrCodesRaw = localStorage.getItem('ffw_qr_codes');
     addDebug('Raw localStorage data', qrCodesRaw ? qrCodesRaw.substring(0, 100) + '...' : 'NULL');
     
     const qrCodes = JSON.parse(qrCodesRaw || '[]');
     addDebug('Total QR Codes in storage', qrCodes.length);
-    addDebug('All QR Codes', qrCodes);
     
     const qrCode = qrCodes.find(q => q.id === qrKey);
     addDebug('Found QR Code', qrCode);
@@ -576,15 +573,15 @@ async function loadDocument() {
     
     if (qrCode.status !== 'assigned') {
       addDebug('❌ ERROR: QR-Code ist nicht zugeordnet!');
-      showDebugWarning('QR-Code noch nicht zugeordnet', 'Dieser QR-Code wurde noch keinem Dokument zugeordnet. Bitte warten Sie auf die Zuordnung durch den Sanitäter.');
+      showDebugWarning('QR-Code noch nicht zugeordnet', 'Dieser QR-Code wurde noch keinem Dokument zugeordnet.');
       return;
     }
     
-    // 2. Dokument aus Nhost laden
+    // KORRIGIERTE QUERY - document statt documents
     addDebug('Loading document from Nhost...', qrCode.assignedTo);
     
     const QUERY = `query($id:uuid!) {
-      documents_by_pk(id:$id) {
+      document(where:{id:{_eq:$id}}) {
         id
         type
         title
@@ -603,11 +600,12 @@ async function loadDocument() {
     
     if (result.error) {
       addDebug('❌ GraphQL Error', result.error);
-      throw new Error(result.error.message);
+      throw new Error(result.error[0]?.message || 'GraphQL Error');
     }
     
-    const doc = result.data.documents_by_pk;
+    const doc = result.data.document ? result.data.document[0] : null;
     addDebug('Document found', doc ? 'YES' : 'NO');
+    addDebug('Document data', doc);
     
     if (!doc) {
       addDebug('❌ ERROR: Dokument nicht in Datenbank gefunden!');
@@ -657,11 +655,6 @@ function showDebugWarning(title, message) {
         <p>${message}</p>
       </div>
       ${renderDebugLog()}
-      <div class="actions">
-        <button class="btn secondary" onclick="copyDebugLog()">
-          <i class="fa-solid fa-copy"></i> Debug-Log kopieren
-        </button>
-      </div>
     </div>
   `;
 }
@@ -690,7 +683,7 @@ window.copyDebugLog = function() {
   navigator.clipboard.writeText(logText).then(() => {
     alert('✅ Debug-Log in Zwischenablage kopiert!');
   }).catch(() => {
-    alert('❌ Fehler beim Kopieren. Bitte manuell aus der Console kopieren.');
+    alert('❌ Fehler beim Kopieren.');
   });
 };
 
@@ -699,23 +692,6 @@ function showError(title, message) {
     <div class="card">
       <div class="status-box error">
         <span class="status-icon">❌</span>
-        <div class="status-title">${title}</div>
-        <p>${message}</p>
-      </div>
-      <div class="actions">
-        <button class="btn secondary" onclick="location.reload()">
-          <i class="fa-solid fa-rotate"></i> Erneut versuchen
-        </button>
-      </div>
-    </div>
-  `;
-}
-
-function showWarning(title, message) {
-  contentDiv.innerHTML = `
-    <div class="card">
-      <div class="status-box warning">
-        <span class="status-icon">⚠️</span>
         <div class="status-title">${title}</div>
         <p>${message}</p>
       </div>
@@ -728,17 +704,6 @@ function renderDocument(doc, qrKey) {
   
   const data = typeof doc.payload === 'string' ? JSON.parse(doc.payload) : doc.payload;
   const createdDate = new Date(doc.created_at).toLocaleString('de-DE');
-  
-  let gcsScore = data.qsofa_gcs || '—';
-  let qsofaScore = '—';
-  
-  if (data.qsofa_gcs || data.af || data.rr_sys) {
-    let score = 0;
-    if (data.qsofa_gcs && data.qsofa_gcs < 15) score++;
-    if (data.af && data.af >= 22) score++;
-    if (data.rr_sys && data.rr_sys <= 100) score++;
-    qsofaScore = score;
-  }
   
   contentDiv.innerHTML = `
     <div class="card">
@@ -771,10 +736,6 @@ function renderDocument(doc, qrKey) {
             <div class="info-label">Geburtsdatum</div>
             <div class="info-value">${new Date(data.gebdatum).toLocaleDateString('de-DE')}</div>
           </div>` : ''}
-          ${data.alter ? `<div class="info-item">
-            <div class="info-label">Alter</div>
-            <div class="info-value">${data.alter} Jahre</div>
-          </div>` : ''}
         </div>
       </div>` : ''}
       
@@ -794,21 +755,6 @@ function renderDocument(doc, qrKey) {
             <div class="vital-value">${data.hf}</div>
             <div class="vital-unit">/min</div>
           </div>` : ''}
-          ${data.af ? `<div class="vital-card">
-            <div class="vital-label">Atemfrequenz</div>
-            <div class="vital-value">${data.af}</div>
-            <div class="vital-unit">/min</div>
-          </div>` : ''}
-        </div>
-      </div>` : ''}
-      
-      ${data.notfallgeschehen ? `
-      <div class="section">
-        <h3 class="section-title">
-          <i class="fa-solid fa-notes-medical"></i> Notfallgeschehen
-        </h3>
-        <div style="background:#f8fafc;padding:1rem;border-radius:8px;border-left:4px solid var(--primary);white-space:pre-wrap">
-${data.notfallgeschehen}
         </div>
       </div>` : ''}
       
@@ -819,15 +765,10 @@ ${data.notfallgeschehen}
       </div>
       
       <div class="access-log">
-        <strong>ℹ️ Hinweis:</strong> Dieser Zugriff wird gemäß DSGVO Art. 9 protokolliert.
-        Zugriffszeitpunkt: ${new Date().toLocaleString('de-DE')}
+        <strong>ℹ️ Hinweis:</strong> Zugriff protokolliert: ${new Date().toLocaleString('de-DE')}
       </div>
-      
-      ${renderDebugLog()}
     </div>
   `;
-  
-  addDebug('✅ Document rendered successfully');
 }
 
 function logAccess(qrKey, docId) {
@@ -835,16 +776,11 @@ function logAccess(qrKey, docId) {
   accessLog.push({
     qrKey: qrKey,
     docId: docId,
-    timestamp: new Date().toISOString(),
-    userAgent: navigator.userAgent
+    timestamp: new Date().toISOString()
   });
   localStorage.setItem('ffw_access_log', JSON.stringify(accessLog));
   addDebug('Access logged', { qrKey, docId });
 }
-
-window.downloadPDF = function() {
-  alert('PDF-Download: In Produktion würde hier eine PDF erstellt.\n\nTipp: Nutzen Sie die Drucken-Funktion und wählen Sie "Als PDF speichern".');
-};
 </script>
 
 </body>
