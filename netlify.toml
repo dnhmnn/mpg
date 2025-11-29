@@ -7,3 +7,24 @@
 
 [build.environment]
   NODE_VERSION = "18"
+
+  [[redirects]]
+  from = "/secure/:key"
+  to = "/secure-document.html?key=:key"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+[build]
+  publish = "."
+
+[[headers]]
+  for = "/secure/*"
+  [headers.values]
+    Cache-Control = "no-cache, no-store, must-revalidate"
+    X-Robots-Tag = "noindex, nofollow"
+
