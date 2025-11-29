@@ -4,73 +4,288 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Patientendokumentation</title>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
 <style>
   :root{--primary:#c8102e;--bg:#f8fafc;--card:#fff;--text:#0f172a;--muted:#64748b;--border:#e2e8f0}
   *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;line-height:1.45}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:'Atkinson Hyperlegible',-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;line-height:1.45}
   header{position:sticky;top:0;background:linear-gradient(90deg,var(--primary),#981b1b);color:#fff;z-index:10}
   .bar{max-width:1100px;margin:0 auto;padding:.75rem 1rem;display:flex;gap:.5rem;align-items:center;flex-wrap:wrap}
   h1{font-size:1.05rem;margin:0;font-weight:800}
   .toolbar{margin-left:auto;display:flex;gap:.5rem;flex-wrap:wrap}
-  .btn{border:1px solid #ffffff55;background:#ffffff1a;color:#fff;padding:.45rem .7rem;border-radius:.5rem;cursor:pointer;font-weight:700}
+  .btn{border:1px solid #ffffff55;background:#ffffff1a;color:#fff;padding:.45rem .7rem;border-radius:.5rem;cursor:pointer;font-weight:700;font-size:.9rem}
   .btn:hover{background:#ffffff2b}
   .wrap{max-width:1100px;margin:0 auto;padding:1rem 1rem 100px}
-  .hint{color:var(--muted);margin:.5rem 0 1rem}
+  .hint{color:var(--muted);margin:.5rem 0 1rem;font-size:.95rem}
   details{background:var(--card);border:1px solid var(--border);border-radius:.75rem;margin:0 0 .8rem 0;overflow:hidden}
-  summary{list-style:none;padding:.9rem 1rem;cursor:pointer;font-weight:800;display:flex;align-items:center;gap:.6rem}
+  summary{list-style:none;padding:.9rem 1rem;cursor:pointer;font-weight:800;display:flex;align-items:center;gap:.6rem;font-size:1rem}
   summary::-webkit-details-marker{display:none}
   details[open] summary{border-bottom:1px solid var(--border);background:#fff7f7}
   .sec-body{padding:1rem}
   .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:.75rem}
   .row{display:flex;gap:.75rem;flex-wrap:wrap;margin:.25rem 0}
-  label{font-size:.92rem;color:#111827}
-  input[type="text"],input[type="number"],input[type="datetime-local"],input[type="date"],textarea,select{
-    width:100%;padding:.55rem .6rem;border:1px solid var(--border);border-radius:.5rem;background:#fff;
+  label{font-size:.92rem;color:#111827;font-weight:600}
+  input[type="text"],input[type="number"],input[type="datetime-local"],input[type="date"],input[type="time"],textarea,select{
+    width:100%;padding:.55rem .6rem;border:1px solid var(--border);border-radius:.5rem;background:#fff;font-size:16px;
   }
   textarea{min-height:88px;resize:vertical}
   fieldset{border:1px solid var(--border);border-radius:.6rem;padding:.75rem}
   fieldset legend{padding:0 .35rem;color:#111827;font-weight:700}
   .choice{display:flex;gap:.6rem;flex-wrap:wrap}
-  .pill{display:inline-flex;align-items:center;gap:.4rem;border:1px solid var(--border);border-radius:999px;padding:.25rem .55rem;background:#fff}
+  .pill{display:inline-flex;align-items:center;gap:.4rem;border:1px solid var(--border);border-radius:999px;padding:.25rem .55rem;background:#fff;font-size:.9rem}
   .badge{display:inline-block;padding:.2rem .5rem;border-radius:999px;background:#f1f5f9;color:#0f172a;border:1px solid var(--border);font-size:.8rem}
   .sum{font-weight:800}
   table{width:100%;border-collapse:collapse}
-  th,td{border:1px solid var(--border);padding:.5rem;text-align:left}
-  th{background:#f8fafc}
+  th,td{border:1px solid var(--border);padding:.5rem;text-align:left;font-size:.9rem}
+  th{background:#f8fafc;font-weight:700}
   .table-actions{display:flex;gap:.5rem}
-  .subbtn{border:1px solid var(--border);background:#fff;padding:.35rem .55rem;border-radius:.45rem;cursor:pointer}
+  .subbtn{border:1px solid var(--border);background:#fff;padding:.35rem .55rem;border-radius:.45rem;cursor:pointer;font-size:.9rem;font-weight:600}
   .thumbs{display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.5rem}
   .thumb{position:relative}
   .thumb img{width:120px;height:120px;object-fit:cover;border:1px solid var(--border);border-radius:.5rem}
-  .thumb .rm{position:absolute;top:6px;right:6px;border:1px solid #0002;background:#0006;color:#fff;border-radius:.35rem;padding:.15rem .35rem;cursor:pointer}
+  .thumb .rm{position:absolute;top:6px;right:6px;border:1px solid #0002;background:#0006;color:#fff;border-radius:.35rem;padding:.15rem .35rem;cursor:pointer;font-weight:700}
   .sig-wrap{border:1px dashed var(--border);border-radius:.6rem;padding:.75rem;background:#fff}
-  canvas#sig{width:100%;height:180px;border:1px solid var(--border);border-radius:.5rem;background:#fff;touch-action:none}
+  canvas#sig{width:100%;height:180px;border:1px solid var(--border);border-radius:.5rem;background:#fff;touch-action:none;cursor:crosshair}
 
   /* Feste Sendeleiste unten */
   .sendbar{position:fixed;left:0;right:0;bottom:0;background:linear-gradient(90deg,var(--primary),#981b1b);
-    border-top:1px solid #0003;padding:.6rem 1rem;z-index:20}
+    border-top:1px solid #0003;padding:.6rem 1rem;z-index:20;box-shadow:0 -2px 10px rgba(0,0,0,.1)}
   .sendbar .inner{max-width:1100px;margin:0 auto;display:flex;gap:.6rem;align-items:center;justify-content:flex-end}
-  .sendbtn{border:1px solid #ffffff66;background:#ffffff1a;color:#fff;padding:.55rem .9rem;border-radius:.55rem;font-weight:800;cursor:pointer}
+  .sendbtn{border:1px solid #ffffff66;background:#ffffff1a;color:#fff;padding:.55rem .9rem;border-radius:.55rem;font-weight:800;cursor:pointer;font-size:1rem}
   .sendbtn:disabled{opacity:.6;cursor:not-allowed}
 
-  /* QR-Code Modal */
-  .modal{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center;z-index:9999;padding:16px}
+  /* QR-Code Modal - MOBILE-OPTIMIERT */
+  .modal{
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,.6);
+    display:none;
+    align-items:flex-start;
+    justify-content:center;
+    z-index:9999;
+    padding:20px 16px;
+    overflow-y:auto;
+  }
   .modal.show{display:flex}
-  .modal-box{background:#fff;border-radius:12px;box-shadow:0 6px 24px rgba(0,0,0,.2);padding:20px;max-width:500px;width:92%}
-  .modal-h{display:flex;gap:10px;align-items:center;margin-bottom:12px;border-bottom:2px solid var(--border);padding-bottom:10px}
-  .modal-h h3{margin:0;color:var(--primary)}
-  .qr-instructions{background:#fff5f5;border:2px solid #f2c9d1;border-radius:8px;padding:12px;margin:12px 0}
-  .qr-instructions ol{margin:8px 0 0 20px;line-height:1.8}
-  .form-group{margin:12px 0}
-  .form-label{display:block;font-weight:700;margin-bottom:6px}
-  .qr-input{width:100%;padding:10px;border:2px solid var(--border);border-radius:8px;font-family:monospace;font-size:1.1rem}
-  .modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
-  .modal-btn{padding:10px 16px;border:0;border-radius:8px;font-weight:700;cursor:pointer}
-  .modal-btn.primary{background:var(--primary);color:#fff}
-  .modal-btn.secondary{background:#eee;color:#333}
+  
+  .modal-box{
+    background:#fff;
+    border-radius:12px;
+    box-shadow:0 6px 24px rgba(0,0,0,.3);
+    padding:20px;
+    max-width:500px;
+    width:100%;
+    max-height:calc(100vh - 40px);
+    overflow-y:auto;
+    margin:auto;
+  }
+  
+  .modal-h{
+    display:flex;
+    gap:10px;
+    align-items:center;
+    margin-bottom:12px;
+    border-bottom:2px solid var(--border);
+    padding-bottom:10px;
+  }
+  
+  .modal-h h3{
+    margin:0;
+    color:var(--primary);
+    font-size:1.2rem;
+    font-weight:800;
+  }
+  
+  .success-box{
+    background:#dcfce7;
+    border:2px solid #16a34a;
+    border-radius:8px;
+    padding:12px;
+    margin-bottom:12px;
+  }
+  
+  .success-box strong{
+    display:block;
+    margin-bottom:4px;
+  }
+  
+  #docIdDisplay{
+    font-family:monospace;
+    font-size:1rem;
+    word-break:break-all;
+    color:#15803d;
+  }
+  
+  .qr-instructions{
+    background:#fff5f5;
+    border:2px solid #f2c9d1;
+    border-radius:8px;
+    padding:12px;
+    margin:12px 0;
+  }
+  
+  .qr-instructions strong{
+    display:block;
+    margin-bottom:6px;
+    color:var(--primary);
+  }
+  
+  .qr-instructions ol{
+    margin:8px 0 0 20px;
+    line-height:1.7;
+    padding-left:0;
+    font-size:.95rem;
+  }
+  
+  .form-group{
+    margin:16px 0;
+  }
+  
+  .form-label{
+    display:block;
+    font-weight:700;
+    margin-bottom:8px;
+    font-size:1rem;
+    color:#111827;
+  }
+  
+  .qr-input{
+    width:100%;
+    padding:14px 12px;
+    border:2px solid var(--border);
+    border-radius:8px;
+    font-family:monospace;
+    font-size:1.1rem;
+    background:#fff;
+    box-sizing:border-box;
+    -webkit-appearance:none;
+    transition:all 0.2s;
+  }
+  
+  .qr-input:focus{
+    outline:none;
+    border-color:var(--primary);
+    box-shadow:0 0 0 3px rgba(200,16,46,0.1);
+  }
+  
+  .qr-input::placeholder{
+    color:#94a3b8;
+  }
+  
+  .input-hint{
+    color:var(--muted);
+    display:block;
+    margin-top:6px;
+    font-size:.85rem;
+  }
+  
+  .modal-actions{
+    display:flex;
+    gap:10px;
+    justify-content:stretch;
+    margin-top:20px;
+  }
+  
+  .modal-btn{
+    flex:1;
+    min-width:120px;
+    padding:14px 16px;
+    border:0;
+    border-radius:8px;
+    font-weight:700;
+    font-size:1rem;
+    cursor:pointer;
+    transition:all 0.2s;
+    font-family:inherit;
+  }
+  
+  .modal-btn.primary{
+    background:var(--primary);
+    color:#fff;
+  }
+  
+  .modal-btn.primary:active{
+    background:#a00d26;
+    transform:scale(0.98);
+  }
+  
+  .modal-btn.secondary{
+    background:#f1f5f9;
+    color:#334155;
+    border:2px solid var(--border);
+  }
+  
+  .modal-btn.secondary:active{
+    background:#e2e8f0;
+    transform:scale(0.98);
+  }
 
-  @media print{header,.hint,.btn,.subbtn,.sendbar,.modal{display:none!important} body{background:#fff}}
+  /* Mobile-Optimierungen */
+  @media (max-width: 600px) {
+    .modal{
+      padding:10px;
+      padding-top:20px;
+    }
+    
+    .modal-box{
+      padding:16px;
+    }
+    
+    .modal-h h3{
+      font-size:1.1rem;
+    }
+    
+    .qr-instructions{
+      padding:10px;
+    }
+    
+    .qr-instructions ol{
+      font-size:0.9rem;
+      line-height:1.6;
+      padding-left:16px;
+    }
+    
+    .qr-input{
+      font-size:16px;
+      padding:12px;
+    }
+    
+    .modal-actions{
+      flex-direction:column;
+      gap:8px;
+    }
+    
+    .modal-btn{
+      width:100%;
+      padding:12px 14px;
+      font-size:0.95rem;
+    }
+    
+    .btn{
+      font-size:.85rem;
+      padding:.4rem .6rem;
+    }
+    
+    h1{
+      font-size:.95rem;
+    }
+  }
+
+  /* Verhindert Zoom bei Input-Focus auf iOS */
+  @media screen and (max-width: 768px) {
+    input, textarea, select {
+      font-size:16px !important;
+    }
+  }
+
+  @media print{
+    header,.hint,.btn,.subbtn,.sendbar,.modal{display:none!important} 
+    body{background:#fff}
+    details{border:none}
+    details summary{display:none}
+    .sec-body{padding:0}
+  }
 </style>
 </head>
 <body>
@@ -79,8 +294,8 @@
   <div class="bar">
     <h1><i class="fa-solid fa-file-medical"></i> Patientendokumentation</h1>
     <div class="toolbar">
-      <button class="btn" onclick="openAll()"><i class="fa-solid fa-plus-square"></i> Alle aufklappen</button>
-      <button class="btn" onclick="closeAll()"><i class="fa-solid fa-minus-square"></i> Alle zuklappen</button>
+      <button class="btn" onclick="openAll()"><i class="fa-solid fa-plus-square"></i> Alle auf</button>
+      <button class="btn" onclick="closeAll()"><i class="fa-solid fa-minus-square"></i> Alle zu</button>
       <button class="btn" onclick="saveForm()"><i class="fa-solid fa-floppy-disk"></i> Speichern</button>
       <button class="btn" onclick="loadForm()"><i class="fa-solid fa-rotate"></i> Laden</button>
       <button class="btn" onclick="resetFormConfirm()"><i class="fa-solid fa-eraser"></i> Zurücksetzen</button>
@@ -89,7 +304,7 @@
 </header>
 
 <div class="wrap">
-  <div class="hint">Alle Punkte aus der Vorlage – GCS & qSOFA automatisch, Fotos in Anamnese, Unterschrift am Ende. Daten bleiben lokal (localStorage).</div>
+  <div class="hint">GCS & qSOFA automatisch berechnet • Fotos möglich • Unterschrift erforderlich • Daten lokal (localStorage)</div>
 
   <!-- Einsatzdaten -->
   <details open>
@@ -535,16 +750,16 @@
   </div>
 </div>
 
-<!-- QR-Code Zuordnungs-Modal -->
+<!-- QR-Code Zuordnungs-Modal - MOBILE-OPTIMIERT -->
 <div class="modal" id="qrModal">
   <div class="modal-box">
     <div class="modal-h">
       <h3>🔑 QR-Code zuordnen</h3>
     </div>
     
-    <div style="background:#dcfce7;border:2px solid #16a34a;border-radius:8px;padding:12px;margin-bottom:12px">
-      <strong>✅ Dokument erfolgreich gespeichert!</strong><br>
-      <span style="font-family:monospace;font-size:1.1rem" id="docIdDisplay"></span>
+    <div class="success-box">
+      <strong>✅ Dokument erfolgreich gespeichert!</strong>
+      <span id="docIdDisplay"></span>
     </div>
     
     <div class="qr-instructions">
@@ -554,24 +769,32 @@
         <li>Gib den Schlüssel ein (z.B. KEY-2025-0042)</li>
         <li>Klicke auf "Zuordnen"</li>
         <li>Übergib den Aufkleber physisch an den Rettungsdienst</li>
-        <li>Der Rettungsdienst kann das Dokument dann sicher abrufen</li>
       </ol>
     </div>
     
     <div class="form-group">
-      <label class="form-label">QR-Code Schlüssel:</label>
-      <input type="text" id="qrKeyInput" class="qr-input" placeholder="KEY-2025-0042" pattern="[A-Z0-9\-]+" style="text-transform:uppercase">
-      <small style="color:var(--muted);display:block;margin-top:4px">
+      <label class="form-label" for="qrKeyInput">QR-Code Schlüssel:</label>
+      <input 
+        type="text" 
+        id="qrKeyInput" 
+        class="qr-input" 
+        placeholder="KEY-2025-0042" 
+        pattern="[A-Z0-9\-]+" 
+        autocomplete="off"
+        autocorrect="off"
+        autocapitalize="characters"
+      >
+      <small class="input-hint">
         Format: KEY-2025-XXXX oder FFW-KEY-2025-XXXX
       </small>
     </div>
     
     <div class="modal-actions">
       <button class="modal-btn secondary" onclick="skipQRAssignment()">
-        <i class="fa-solid fa-forward"></i> Später zuordnen
+        <i class="fa-solid fa-forward"></i> Später
       </button>
       <button class="modal-btn primary" onclick="assignQRCode()">
-        <i class="fa-solid fa-link"></i> QR-Code zuordnen
+        <i class="fa-solid fa-link"></i> Zuordnen
       </button>
     </div>
   </div>
@@ -719,11 +942,11 @@ window.addMedRow = function() {
   const tr = document.createElement('tr');
   tr.innerHTML = `
     <td>${medRowCounter}</td>
-    <td><input type="text" name="med_name_${medRowCounter}" style="width:100%;padding:.3rem"></td>
-    <td><input type="number" name="med_dose_${medRowCounter}" step="0.1" style="width:80px;padding:.3rem"></td>
-    <td><input type="text" name="med_unit_${medRowCounter}" placeholder="mg" style="width:60px;padding:.3rem"></td>
+    <td><input type="text" name="med_name_${medRowCounter}" style="width:100%;padding:.3rem;font-size:14px"></td>
+    <td><input type="number" name="med_dose_${medRowCounter}" step="0.1" style="width:80px;padding:.3rem;font-size:14px"></td>
+    <td><input type="text" name="med_unit_${medRowCounter}" placeholder="mg" style="width:60px;padding:.3rem;font-size:14px"></td>
     <td>
-      <select name="med_route_${medRowCounter}" style="padding:.3rem">
+      <select name="med_route_${medRowCounter}" style="padding:.3rem;font-size:14px">
         <option value=""></option>
         <option value="i.v.">i.v.</option>
         <option value="i.m.">i.m.</option>
@@ -732,8 +955,8 @@ window.addMedRow = function() {
         <option value="inhal.">inhal.</option>
       </select>
     </td>
-    <td><input type="time" name="med_time_${medRowCounter}" style="width:90px;padding:.3rem"></td>
-    <td><input type="text" name="med_note_${medRowCounter}" style="width:100%;padding:.3rem"></td>
+    <td><input type="time" name="med_time_${medRowCounter}" style="width:90px;padding:.3rem;font-size:14px"></td>
+    <td><input type="text" name="med_note_${medRowCounter}" style="width:100%;padding:.3rem;font-size:14px"></td>
     <td><button class="subbtn" type="button" onclick="this.closest('tr').remove()">×</button></td>
   `;
   tbody.appendChild(tr);
@@ -826,7 +1049,7 @@ window.loadForm = function() {
   if (!confirm('Aktuelles Formular mit gespeichertem Entwurf überschreiben?')) return;
   
   const data = JSON.parse(saved);
-  // Restore logic here...
+  // Restore logic würde hier kommen...
   alert('✅ Entwurf geladen!');
 };
 
@@ -889,12 +1112,14 @@ window.submitToBackend = async function() {
     currentDocumentId = result.data.insert_documents_one.id;
     
     // Zeige QR-Modal
-    document.getElementById('docIdDisplay').textContent = `Dokument-ID: PAT-${new Date().getFullYear()}-${currentDocumentId.slice(0,3)}`;
+    const docId = `PAT-${new Date().getFullYear()}-${currentDocumentId.slice(0,8)}`;
+    document.getElementById('docIdDisplay').textContent = `Dokument-ID: ${docId}`;
     document.getElementById('qrModal').classList.add('show');
     
     btn.innerHTML = '<i class="fa-solid fa-check"></i> Gesendet!';
     
   } catch(e) {
+    console.error('Submit error:', e);
     alert('❌ Fehler beim Senden: ' + e.message);
     btn.disabled = false;
     btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Absenden';
@@ -915,14 +1140,13 @@ window.assignQRCode = function() {
     return;
   }
   
-  // In localStorage speichern (verknüpft mit Dokument)
+  // In localStorage speichern
   const qrCodes = JSON.parse(localStorage.getItem('ffw_qr_codes') || '[]');
   const qrCode = qrCodes.find(q => q.id === key);
   
   if (!qrCode) {
     if (!confirm(`QR-Code "${key}" nicht gefunden. Trotzdem zuordnen?`)) return;
   } else {
-    // QR-Code als "assigned" markieren
     qrCode.status = 'assigned';
     qrCode.assignedTo = currentDocumentId;
     qrCode.assignedAt = new Date().toISOString();
@@ -932,7 +1156,6 @@ window.assignQRCode = function() {
   alert(`✅ QR-Code "${key}" erfolgreich zugeordnet!\n\nÜbergib den Aufkleber an den Rettungsdienst.`);
   document.getElementById('qrModal').classList.remove('show');
   
-  // Formular zurücksetzen
   setTimeout(() => {
     if (confirm('Neues Formular starten?')) {
       location.reload();
