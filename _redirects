@@ -1,0 +1,2 @@
+/secure/:key  /secure-document.html?key=:key  200
+/*  /index.html  200
