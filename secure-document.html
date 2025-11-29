@@ -122,6 +122,12 @@
       color:#92400e;
     }
     
+    .status-box.info{
+      background:#dbeafe;
+      border-color:#3b82f6;
+      color:#1e40af;
+    }
+    
     .status-icon{
       font-size:3rem;
       margin-bottom:1rem;
@@ -132,6 +138,33 @@
       font-size:1.3rem;
       font-weight:800;
       margin-bottom:0.5rem;
+    }
+    
+    .debug-box{
+      background:#1e293b;
+      color:#e2e8f0;
+      padding:1rem;
+      border-radius:8px;
+      font-family:'Courier New', monospace;
+      font-size:0.85rem;
+      margin-top:1rem;
+      max-height:300px;
+      overflow-y:auto;
+    }
+    
+    .debug-box pre{
+      margin:0;
+      white-space:pre-wrap;
+      word-wrap:break-word;
+    }
+    
+    .debug-line{
+      padding:4px 0;
+      border-bottom:1px solid #334155;
+    }
+    
+    .debug-line:last-child{
+      border-bottom:none;
     }
     
     .doc-header{
@@ -416,7 +449,7 @@
       body{
         background:#fff;
       }
-      header, footer, .actions, .access-log{
+      header, footer, .actions, .access-log, .debug-box{
         display:none;
       }
       .card{
@@ -440,7 +473,11 @@
 
 <div class="container">
   <div id="content">
-    <!-- Wird dynamisch gefüllt -->
+    <div class="card loading">
+      <div class="spinner"></div>
+      <h2>Lade Dokument...</h2>
+      <p style="color:var(--muted)">Bitte warten...</p>
+    </div>
   </div>
 </div>
 
@@ -459,61 +496,93 @@ const nhost = new NhostClient({
 });
 
 const contentDiv = document.getElementById('content');
+let debugLog = [];
 
-// QR-Key aus URL extrahieren (Netlify Routing)
+function addDebug(message, data = null) {
+  const timestamp = new Date().toLocaleTimeString();
+  const logEntry = { timestamp, message, data };
+  debugLog.push(logEntry);
+  console.log(`[${timestamp}] ${message}`, data || '');
+}
+
+// QR-Key aus URL extrahieren
 function extractQRKey() {
-  // Versuche aus Query-Parameter
+  addDebug('Extracting QR-Key from URL');
+  
   const urlParams = new URLSearchParams(window.location.search);
   let key = urlParams.get('key');
   
-  if (key) return key;
+  if (key) {
+    addDebug('QR-Key found in query parameter', key);
+    return key;
+  }
   
-  // Versuche aus Path (z.B. /secure/KEY-2025-0042)
   const path = window.location.pathname;
-  const match = path.match(/\/secure\/([A-Z0-9\-]+)/i);
-  if (match) return match[1];
+  addDebug('Path:', path);
   
+  const match = path.match(/\/secure\/([A-Z0-9\-]+)/i);
+  if (match) {
+    addDebug('QR-Key found in path', match[1]);
+    return match[1];
+  }
+  
+  addDebug('No QR-Key found!');
   return null;
 }
 
 const qrKey = extractQRKey();
 
-console.log('QR-Key:', qrKey);
+addDebug('Current URL', window.location.href);
+addDebug('Extracted QR-Key', qrKey);
 
 if (!qrKey) {
   showError('Kein QR-Code angegeben', 'Bitte scannen Sie einen gültigen QR-Code oder verwenden Sie einen direkten Link.');
 } else {
-  // Loading anzeigen
-  contentDiv.innerHTML = `
-    <div class="card loading">
-      <div class="spinner"></div>
-      <h2>Lade Dokument...</h2>
-      <p style="color:var(--muted)">QR-Code: <code>${qrKey}</code></p>
-    </div>
-  `;
-  
-  // Dokument laden
   loadDocument();
 }
 
-// Dokument laden
 async function loadDocument() {
   try {
+    addDebug('=== LOAD DOCUMENT START ===');
+    
+    contentDiv.innerHTML = `
+      <div class="card loading">
+        <div class="spinner"></div>
+        <h2>Lade Dokument...</h2>
+        <p style="color:var(--muted)">QR-Code: <code>${qrKey}</code></p>
+      </div>
+    `;
+    
     // 1. QR-Code in localStorage suchen
-    const qrCodes = JSON.parse(localStorage.getItem('ffw_qr_codes') || '[]');
+    addDebug('Reading localStorage...');
+    const qrCodesRaw = localStorage.getItem('ffw_qr_codes');
+    addDebug('Raw localStorage data', qrCodesRaw ? qrCodesRaw.substring(0, 100) + '...' : 'NULL');
+    
+    const qrCodes = JSON.parse(qrCodesRaw || '[]');
+    addDebug('Total QR Codes in storage', qrCodes.length);
+    addDebug('All QR Codes', qrCodes);
+    
     const qrCode = qrCodes.find(q => q.id === qrKey);
+    addDebug('Found QR Code', qrCode);
     
     if (!qrCode) {
-      showError('QR-Code nicht gefunden', `Der QR-Code "${qrKey}" wurde nicht im System gefunden. Bitte kontaktieren Sie die Feuerwehr.`);
+      addDebug('❌ ERROR: QR-Code nicht im localStorage gefunden!');
+      showDebugError('QR-Code nicht gefunden', `Der QR-Code "${qrKey}" wurde nicht im System gefunden.`);
       return;
     }
     
+    addDebug('QR Code Status', qrCode.status);
+    addDebug('Assigned To', qrCode.assignedTo);
+    
     if (qrCode.status !== 'assigned') {
-      showWarning('QR-Code noch nicht zugeordnet', 'Dieser QR-Code wurde noch keinem Dokument zugeordnet. Bitte warten Sie auf die Zuordnung durch den Sanitäter.');
+      addDebug('❌ ERROR: QR-Code ist nicht zugeordnet!');
+      showDebugWarning('QR-Code noch nicht zugeordnet', 'Dieser QR-Code wurde noch keinem Dokument zugeordnet. Bitte warten Sie auf die Zuordnung durch den Sanitäter.');
       return;
     }
     
     // 2. Dokument aus Nhost laden
+    addDebug('Loading document from Nhost...', qrCode.assignedTo);
+    
     const QUERY = `query($id:uuid!) {
       documents_by_pk(id:$id) {
         id
@@ -525,30 +594,105 @@ async function loadDocument() {
       }
     }`;
     
+    addDebug('GraphQL Query', QUERY);
+    addDebug('GraphQL Variables', { id: qrCode.assignedTo });
+    
     const result = await nhost.graphql.request(QUERY, { id: qrCode.assignedTo });
     
+    addDebug('GraphQL Result', result);
+    
     if (result.error) {
+      addDebug('❌ GraphQL Error', result.error);
       throw new Error(result.error.message);
     }
     
     const doc = result.data.documents_by_pk;
+    addDebug('Document found', doc ? 'YES' : 'NO');
     
     if (!doc) {
-      showError('Dokument nicht gefunden', 'Das verknüpfte Dokument konnte nicht geladen werden. Bitte kontaktieren Sie die Feuerwehr.');
+      addDebug('❌ ERROR: Dokument nicht in Datenbank gefunden!');
+      showDebugError('Dokument nicht gefunden', 'Das verknüpfte Dokument konnte nicht geladen werden.');
       return;
     }
     
-    // 3. Zugriff protokollieren
+    addDebug('✅ SUCCESS: Document loaded successfully');
     logAccess(qrKey, doc.id);
-    
-    // 4. Dokument anzeigen
     renderDocument(doc, qrKey);
     
   } catch(e) {
+    addDebug('❌ EXCEPTION', e.message);
+    addDebug('Stack trace', e.stack);
     console.error('Load error:', e);
-    showError('Fehler beim Laden', `Technischer Fehler: ${e.message}`);
+    showDebugError('Fehler beim Laden', `Technischer Fehler: ${e.message}`);
   }
 }
+
+function showDebugError(title, message) {
+  contentDiv.innerHTML = `
+    <div class="card">
+      <div class="status-box error">
+        <span class="status-icon">❌</span>
+        <div class="status-title">${title}</div>
+        <p>${message}</p>
+      </div>
+      ${renderDebugLog()}
+      <div class="actions">
+        <button class="btn secondary" onclick="location.reload()">
+          <i class="fa-solid fa-rotate"></i> Erneut versuchen
+        </button>
+        <button class="btn secondary" onclick="copyDebugLog()">
+          <i class="fa-solid fa-copy"></i> Debug-Log kopieren
+        </button>
+      </div>
+    </div>
+  `;
+}
+
+function showDebugWarning(title, message) {
+  contentDiv.innerHTML = `
+    <div class="card">
+      <div class="status-box warning">
+        <span class="status-icon">⚠️</span>
+        <div class="status-title">${title}</div>
+        <p>${message}</p>
+      </div>
+      ${renderDebugLog()}
+      <div class="actions">
+        <button class="btn secondary" onclick="copyDebugLog()">
+          <i class="fa-solid fa-copy"></i> Debug-Log kopieren
+        </button>
+      </div>
+    </div>
+  `;
+}
+
+function renderDebugLog() {
+  return `
+    <div style="margin-top:1.5rem;">
+      <h3 style="margin:0 0 0.5rem 0; color:var(--text);">🔍 Debug-Informationen</h3>
+      <div class="debug-box">
+        ${debugLog.map(log => `
+          <div class="debug-line">
+            <strong style="color:#60a5fa;">[${log.timestamp}]</strong> ${log.message}
+            ${log.data ? `<br><span style="color:#94a3b8;">${typeof log.data === 'object' ? JSON.stringify(log.data, null, 2) : log.data}</span>` : ''}
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+
+window.copyDebugLog = function() {
+  const logText = debugLog.map(log => 
+    `[${log.timestamp}] ${log.message}${log.data ? '\n' + JSON.stringify(log.data, null, 2) : ''}`
+  ).join('\n\n');
+  
+  navigator.clipboard.writeText(logText).then(() => {
+    alert('✅ Debug-Log in Zwischenablage kopiert!');
+  }).catch(() => {
+    alert('❌ Fehler beim Kopieren. Bitte manuell aus der Console kopieren.');
+  });
+};
 
 function showError(title, message) {
   contentDiv.innerHTML = `
@@ -580,18 +724,14 @@ function showWarning(title, message) {
 }
 
 function renderDocument(doc, qrKey) {
-  const data = typeof doc.payload === 'string' ? JSON.parse(doc.payload) : doc.payload;
+  addDebug('Rendering document...');
   
+  const data = typeof doc.payload === 'string' ? JSON.parse(doc.payload) : doc.payload;
   const createdDate = new Date(doc.created_at).toLocaleString('de-DE');
   
-  // GCS Score berechnen
-  let gcsScore = '—';
-  if (data.qsofa_gcs) {
-    gcsScore = data.qsofa_gcs;
-  }
-  
-  // qSOFA Score berechnen
+  let gcsScore = data.qsofa_gcs || '—';
   let qsofaScore = '—';
+  
   if (data.qsofa_gcs || data.af || data.rr_sys) {
     let score = 0;
     if (data.qsofa_gcs && data.qsofa_gcs < 15) score++;
@@ -617,16 +757,16 @@ function renderDocument(doc, qrKey) {
         </div>
       </div>
       
-      <!-- Patientenstammdaten -->
+      ${data.name ? `
       <div class="section">
         <h3 class="section-title">
           <i class="fa-solid fa-user"></i> Patientendaten
         </h3>
         <div class="info-grid">
-          ${data.name ? `<div class="info-item">
+          <div class="info-item">
             <div class="info-label">Name</div>
             <div class="info-value">${data.vorname || ''} ${data.name}</div>
-          </div>` : ''}
+          </div>
           ${data.gebdatum ? `<div class="info-item">
             <div class="info-label">Geburtsdatum</div>
             <div class="info-value">${new Date(data.gebdatum).toLocaleDateString('de-DE')}</div>
@@ -635,40 +775,10 @@ function renderDocument(doc, qrKey) {
             <div class="info-label">Alter</div>
             <div class="info-value">${data.alter} Jahre</div>
           </div>` : ''}
-          ${data.telefon ? `<div class="info-item">
-            <div class="info-label">Telefon</div>
-            <div class="info-value">${data.telefon}</div>
-          </div>` : ''}
         </div>
-      </div>
+      </div>` : ''}
       
-      <!-- Einsatzdaten -->
-      <div class="section">
-        <h3 class="section-title">
-          <i class="fa-solid fa-truck-medical"></i> Einsatzdaten
-        </h3>
-        <div class="info-grid">
-          ${data.einsatz_nr ? `<div class="info-item">
-            <div class="info-label">Einsatz-Nr.</div>
-            <div class="info-value">${data.einsatz_nr}</div>
-          </div>` : ''}
-          ${data.fahrzeug ? `<div class="info-item">
-            <div class="info-label">Fahrzeug</div>
-            <div class="info-value">${data.fahrzeug}</div>
-          </div>` : ''}
-          ${data.zeit_einsatz ? `<div class="info-item">
-            <div class="info-label">Einsatzzeit</div>
-            <div class="info-value">${new Date(data.zeit_einsatz).toLocaleString('de-DE')}</div>
-          </div>` : ''}
-          ${data.einsatz_art ? `<div class="info-item">
-            <div class="info-label">Einsatz-Art</div>
-            <div class="info-value">${data.einsatz_art}</div>
-          </div>` : ''}
-        </div>
-      </div>
-      
-      <!-- Vitalwerte -->
-      ${(data.rr_sys || data.hf || data.af || data.spo2 || data.temp || data.bz_mg) ? `
+      ${(data.rr_sys || data.hf || data.af) ? `
       <div class="section">
         <h3 class="section-title">
           <i class="fa-solid fa-heart-pulse"></i> Vitalwerte
@@ -689,132 +799,38 @@ function renderDocument(doc, qrKey) {
             <div class="vital-value">${data.af}</div>
             <div class="vital-unit">/min</div>
           </div>` : ''}
-          ${data.spo2 ? `<div class="vital-card">
-            <div class="vital-label">SpO₂</div>
-            <div class="vital-value">${data.spo2}</div>
-            <div class="vital-unit">%</div>
-          </div>` : ''}
-          ${data.temp ? `<div class="vital-card">
-            <div class="vital-label">Temperatur</div>
-            <div class="vital-value">${data.temp}</div>
-            <div class="vital-unit">°C</div>
-          </div>` : ''}
-          ${data.bz_mg ? `<div class="vital-card">
-            <div class="vital-label">Blutzucker</div>
-            <div class="vital-value">${data.bz_mg}</div>
-            <div class="vital-unit">mg/dl</div>
-          </div>` : ''}
         </div>
       </div>` : ''}
       
-      <!-- GCS & qSOFA -->
-      ${(gcsScore !== '—' || qsofaScore !== '—') ? `
-      <div class="section">
-        <h3 class="section-title">
-          <i class="fa-solid fa-brain"></i> Neurologische Scores
-        </h3>
-        <div class="info-grid">
-          ${gcsScore !== '—' ? `<div class="info-item">
-            <div class="info-label">Glasgow Coma Scale (GCS)</div>
-            <div class="info-value">${gcsScore} Punkte</div>
-          </div>` : ''}
-          ${qsofaScore !== '—' ? `<div class="info-item">
-            <div class="info-label">qSOFA Score</div>
-            <div class="info-value">${qsofaScore} ${qsofaScore >= 2 ? '⚠️ Erhöht!' : ''}</div>
-          </div>` : ''}
-        </div>
-      </div>` : ''}
-      
-      <!-- Medikamente -->
-      ${data.medications && data.medications.length > 0 ? `
-      <div class="section">
-        <h3 class="section-title">
-          <i class="fa-solid fa-pills"></i> Verabreichte Medikamente
-        </h3>
-        <table class="medications-table">
-          <thead>
-            <tr>
-              <th>Medikament</th>
-              <th>Dosis</th>
-              <th>Route</th>
-              <th>Uhrzeit</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${data.medications.map(med => `
-              <tr>
-                <td><strong>${med.name}</strong></td>
-                <td>${med.dose} ${med.unit || ''}</td>
-                <td><span class="badge info">${med.route || '—'}</span></td>
-                <td>${med.time || '—'}</td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-      </div>` : ''}
-      
-      <!-- Anamnese / Notfallgeschehen -->
       ${data.notfallgeschehen ? `
       <div class="section">
         <h3 class="section-title">
-          <i class="fa-solid fa-notes-medical"></i> Notfallgeschehen / Anamnese
+          <i class="fa-solid fa-notes-medical"></i> Notfallgeschehen
         </h3>
         <div style="background:#f8fafc;padding:1rem;border-radius:8px;border-left:4px solid var(--primary);white-space:pre-wrap">
 ${data.notfallgeschehen}
         </div>
       </div>` : ''}
       
-      <!-- Fotos -->
-      ${data.photos && data.photos.length > 0 ? `
-      <div class="section">
-        <h3 class="section-title">
-          <i class="fa-solid fa-camera"></i> Dokumentationsfotos
-        </h3>
-        <div class="photo-grid">
-          ${data.photos.map((photo, i) => `
-            <div class="photo-item">
-              <img src="${photo}" alt="Foto ${i+1}" onclick="window.open(this.src, '_blank')">
-            </div>
-          `).join('')}
-        </div>
-      </div>` : ''}
-      
-      <!-- Unterschrift -->
-      ${data.signature ? `
-      <div class="section">
-        <h3 class="section-title">
-          <i class="fa-solid fa-signature"></i> Unterschrift Sanitäter
-        </h3>
-        <div class="signature-box">
-          <div style="margin-bottom:0.5rem">
-            <strong>${data.ausfueller_name || 'Sanitäter'}</strong>
-            ${data.ausfueller_zeit ? ` – ${new Date(data.ausfueller_zeit).toLocaleString('de-DE')}` : ''}
-          </div>
-          <img src="${data.signature}" class="signature-img" alt="Unterschrift">
-        </div>
-      </div>` : ''}
-      
-      <!-- Aktionen -->
       <div class="actions">
         <button class="btn primary" onclick="window.print()">
           <i class="fa-solid fa-print"></i> Drucken
         </button>
-        <button class="btn secondary" onclick="downloadPDF()">
-          <i class="fa-solid fa-file-pdf"></i> Als PDF
-        </button>
       </div>
       
-      <!-- Zugriffs-Log -->
       <div class="access-log">
         <strong>ℹ️ Hinweis:</strong> Dieser Zugriff wird gemäß DSGVO Art. 9 protokolliert.
         Zugriffszeitpunkt: ${new Date().toLocaleString('de-DE')}
       </div>
+      
+      ${renderDebugLog()}
     </div>
   `;
+  
+  addDebug('✅ Document rendered successfully');
 }
 
 function logAccess(qrKey, docId) {
-  // Zugriff in localStorage protokollieren
   const accessLog = JSON.parse(localStorage.getItem('ffw_access_log') || '[]');
   accessLog.push({
     qrKey: qrKey,
@@ -823,8 +839,7 @@ function logAccess(qrKey, docId) {
     userAgent: navigator.userAgent
   });
   localStorage.setItem('ffw_access_log', JSON.stringify(accessLog));
-  
-  console.log('Access logged:', { qrKey, docId, timestamp: new Date().toISOString() });
+  addDebug('Access logged', { qrKey, docId });
 }
 
 window.downloadPDF = function() {
