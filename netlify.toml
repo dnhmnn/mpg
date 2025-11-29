@@ -8,13 +8,13 @@
 [build.environment]
   NODE_VERSION = "18"
 
-  [[redirects]]
+[redirects]
   from = "/secure/:key"
   to = "/secure-document.html?key=:key"
   status = 200
   force = true
 
-[[redirects]]
+[redirects]
   from = "/*"
   to = "/index.html"
   status = 200
@@ -22,7 +22,7 @@
 [build]
   publish = "."
 
-[[headers]]
+[headers]
   for = "/secure/*"
   [headers.values]
     Cache-Control = "no-cache, no-store, must-revalidate"
