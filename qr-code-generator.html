@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>QR-Code Generator – FFW</title>
   <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
-  
   <style>
     :root { --rot: #c8102e; }
     * { box-sizing: border-box; }
@@ -84,11 +83,13 @@
   <div id="guardMsg" class="err"></div>
   <div id="authContent" style="display:none;">
     
+    <!-- Tabs -->
     <div class="tabs">
       <button class="tab active" onclick="showTab('generate')">🔧 Codes generieren</button>
       <button class="tab" onclick="showTab('overview')">📋 Übersicht</button>
     </div>
 
+    <!-- Tab: Generieren -->
     <div id="tab-generate" class="tab-content active">
       <div class="card">
         <h2>QR-Codes erstellen</h2>
@@ -129,6 +130,7 @@
 
         <div id="generateMsg" style="margin-top:10px;"></div>
 
+        <!-- Generierte Codes -->
         <div id="generatedCodes" style="display:none;">
           <div style="display:flex; justify-content:space-between; align-items:center; margin:20px 0 10px;">
             <h3 style="margin:0; color:var(--rot);">Generierte Codes (<span id="generatedCount">0</span>)</h3>
@@ -146,6 +148,7 @@
       </div>
     </div>
 
+    <!-- Tab: Übersicht -->
     <div id="tab-overview" class="tab-content">
       <div class="card">
         <h2>QR-Code Status</h2>
@@ -166,7 +169,9 @@
         </div>
 
         <h3 style="margin:20px 0 12px; color:var(--rot);">Alle QR-Codes</h3>
-        <div class="key-list" id="keyList"></div>
+        <div class="key-list" id="keyList">
+          <!-- Wird dynamisch gefüllt -->
+        </div>
       </div>
     </div>
 
@@ -182,6 +187,7 @@
     region:"eu-central-1" 
   });
 
+  /* ===== Login-Guard ===== */
   async function guard(){
     try{ 
       const ok = await nhost.auth.isAuthenticatedAsync(); 
@@ -198,11 +204,14 @@
   }
   
   if (!(await guard())) {
+    // Redirect passiert, stoppt hier
   } else {
+    // Nur wenn eingeloggt
     document.getElementById('guardMsg').style.display = 'none';
     document.getElementById('authContent').style.display = 'block';
   }
 
+  // Logout
   document.getElementById('logoutBtn')?.addEventListener('click', async (e)=>{
     e.preventDefault();
     try{await nhost.auth.signOut()}catch{};
@@ -210,6 +219,7 @@
     location.href = "admin-login.html";
   });
 
+  /* ===== STORAGE ===== */
   const STORAGE_KEY = 'ffw_qr_codes';
 
   function saveKeysToStorage(newKeys) {
@@ -223,6 +233,7 @@
     return stored ? JSON.parse(stored) : [];
   }
 
+  /* ===== TAB NAVIGATION ===== */
   window.showTab = function(tabName) {
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
     document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
@@ -235,6 +246,7 @@
     }
   };
 
+  /* ===== GENERATE QR CODES ===== */
   let generatedCodesArray = [];
 
   window.generateCodes = async function() {
@@ -257,7 +269,7 @@
         for (let i = 1; i <= count; i++) {
           const num = String(Math.floor(Math.random() * 9999) + 1).padStart(4, '0');
           const keyId = prefix ? `${prefix}-KEY-${year}-${num}` : `KEY-${year}-${num}`;
-          const url = `https://ffw-portal.app/secure/${keyId}`;
+          const url = `https://mpgffrot.netlify.app/secure/${keyId}`; // ← DEINE DOMAIN
           
           const qrItem = document.createElement('div');
           qrItem.className = 'qr-item';
@@ -307,6 +319,7 @@
     }, 100);
   };
 
+  /* ===== OVERVIEW ===== */
   function updateOverview() {
     const keys = getStoredKeys();
     
@@ -330,7 +343,7 @@
         <div class="key-info">
           <div class="key-id">${key.id}</div>
           <div class="key-date">Erstellt: ${new Date(key.generated).toLocaleDateString('de-DE')}</div>
-          ${key.assignedTo ? `<div style="color:#f59e0b; font-size:0.85rem; margin-top:2px;">→ Verknüpft mit ${key.assignedTo}</div>` : ''}
+          ${key.assignedTo ? `<div style="color:#f59e0b; font-size:0.85rem; margin-top:2px;">→ Verknüpft mit ${key.assignedTo.slice(0,8)}</div>` : ''}
         </div>
         <span class="status-badge status-${key.status}">
           ${key.status === 'available' ? '✓ Verfügbar' : '⏱ Zugeordnet'}
@@ -339,10 +352,12 @@
     `).join('');
   }
 
+  /* ===== PDF DOWNLOAD ===== */
   window.downloadPDF = function() {
     alert('PDF-Export: In Produktion würde hier eine PDF mit allen QR-Codes erstellt.\n\nTipp: Nutzen Sie die Drucken-Funktion und wählen Sie "Als PDF speichern".');
   };
 
+  /* ===== INIT ===== */
   updateOverview();
 </script>
 
