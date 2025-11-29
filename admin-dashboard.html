@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+
 <html lang="de">
 <head>
   <meta charset="utf-8" />
@@ -38,17 +39,47 @@
     .err { color:#c8102e }
     .msg { min-height:1.2em }
 
-    /* Passwort-Modal */
-    .modal{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center;z-index:9999;padding:16px}
-    .modal.show{display:flex}
-    .modal-box{background:#fff;border-radius:12px;box-shadow:0 6px 24px rgba(0,0,0,.2);padding:16px;max-width:420px;width:92%}
-    .modal-h{display:flex;gap:10px;align-items:center;margin-bottom:10px}
-    .x{margin-left:auto;border:0;background:#f1f1f1;border-radius:8px;padding:6px 10px;cursor:pointer}
-    .field{display:flex;flex-direction:column;gap:6px;margin:8px 0}
-    .field label{font-weight:700;color:var(--rot)}
-    .field input{padding:10px;border:1px solid #ccc;border-radius:8px;background:#fafafa}
-    .actions{display:flex;gap:8px;justify-content:flex-end;margin-top:8px}
-    @media (max-width: 800px){ .wrap{ grid-template-columns:1fr } }
+```
+/* Stats Grid */
+.stats-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:12px; margin-bottom:16px }
+.stat-box { background:#fff5f5; border:2px solid #f2c9d1; border-radius:10px; padding:14px; text-align:center }
+.stat-num { font-size:2.5rem; font-weight:700; color:var(--rot) }
+.stat-label { font-size:.9rem; color:#555; margin-top:4px }
+.stat-box.warn { background:#fef3c7; border-color:#f59e0b }
+.stat-box.warn .stat-num { color:#d97706 }
+.stat-box.ok { background:#dcfce7; border-color:#16a34a }
+.stat-box.ok .stat-num { color:#16a34a }
+
+/* Inventory Warnings */
+.inventory-list { max-height:300px; overflow-y:auto }
+.inventory-item { display:flex; align-items:center; gap:10px; padding:10px; border:1px solid #eee; border-radius:8px; margin-bottom:8px; border-left:4px solid #f59e0b }
+.inventory-item.expired { border-left-color:var(--rot); background:#fff5f5 }
+.inventory-item.ok { border-left-color:#16a34a; background:#f0fdf4 }
+.inv-icon { font-size:1.5rem; width:40px; text-align:center }
+.inv-info { flex:1 }
+.inv-name { font-weight:700; color:#222 }
+.inv-meta { font-size:.85rem; color:#666; margin-top:2px }
+.inv-badge { padding:3px 8px; border-radius:999px; font-size:.75rem; font-weight:700; text-transform:uppercase }
+.badge-expired { background:#fee2e2; color:var(--rot) }
+.badge-warning { background:#fef3c7; color:#d97706 }
+.badge-ok { background:#dcfce7; color:#16a34a }
+
+/* Document Badges */
+.doc-badge { display:inline-flex; align-items:center; gap:6px; background:#dbeafe; color:#1e40af; padding:4px 10px; border-radius:999px; font-size:.8rem; font-weight:700 }
+
+/* Passwort-Modal */
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center;z-index:9999;padding:16px}
+.modal.show{display:flex}
+.modal-box{background:#fff;border-radius:12px;box-shadow:0 6px 24px rgba(0,0,0,.2);padding:16px;max-width:420px;width:92%}
+.modal-h{display:flex;gap:10px;align-items:center;margin-bottom:10px}
+.x{margin-left:auto;border:0;background:#f1f1f1;border-radius:8px;padding:6px 10px;cursor:pointer}
+.field{display:flex;flex-direction:column;gap:6px;margin:8px 0}
+.field label{font-weight:700;color:var(--rot)}
+.field input{padding:10px;border:1px solid #ccc;border-radius:8px;background:#fafafa}
+.actions{display:flex;gap:8px;justify-content:flex-end;margin-top:8px}
+@media (max-width: 800px){ .wrap{ grid-template-columns:1fr } .stats-grid { grid-template-columns:1fr 1fr } }
+```
+
   </style>
 </head>
 <body>
@@ -69,8 +100,8 @@
       <a href="wartung.html">🛠️ Wartung &amp; Kontrolle</a>
       <a href="dateien.html">📄 Dateien</a>
       <a href="ausbildungen.html">🎓 Ausbildungen</a>
-      <!-- NEU: Patientendokumentation -->
       <a href="patientendokumentation-dateien.html">🧾 Patientendokumentation</a>
+      <a href="qr-code-generator.html">🔑 QR-Code Generator</a>
     </nav>
     <div style="margin-top:14px; font-size:.95rem">
       Eingeloggt als:<br>
@@ -80,32 +111,93 @@
   </aside>
 
   <main>
+    <!-- Live Statistiken -->
     <section class="card">
-      <h2>Neuigkeiten</h2>
-      <ul class="news" id="newsList">
-        <li>🆕 Neue Patientendoku #1073 zur Gegenzeichnung <span class="pill">Dokument</span></li>
-        <li>⚠️ Produkt „Glucose“ in 12/1 bald leer <span class="pill">Lager</span></li>
-        <li>⏳ Nächste Wartung am 05.09. <span class="pill">Info</span></li>
-      </ul>
-      <div class="msg" id="newsMsg"></div>
+      <h2>📊 Live-Übersicht</h2>
+      <div class="stats-grid">
+        <div class="stat-box warn">
+          <div class="stat-num" id="stat-pending-docs">0</div>
+          <div class="stat-label">Dokumente zur Gegenzeichnung</div>
+        </div>
+        <div class="stat-box warn">
+          <div class="stat-num" id="stat-expiring">0</div>
+          <div class="stat-label">Bald ablaufend (30 Tage)</div>
+        </div>
+        <div class="stat-box err" style="background:#fee2e2; border-color:var(--rot)">
+          <div class="stat-num" id="stat-expired">0</div>
+          <div class="stat-label">Abgelaufen</div>
+        </div>
+        <div class="stat-box ok">
+          <div class="stat-num" id="stat-inventory-ok">0</div>
+          <div class="stat-label">Lager in Ordnung</div>
+        </div>
+      </div>
     </section>
 
-    <section class="card">
-      <h2>Notizen / Admin-Chat</h2>
-      <div class="notes-list" id="notes"></div>
-      <div class="row" style="margin-top:10px">
-        <input id="noteName" placeholder="Dein Name" style="max-width:220px">
-        <textarea id="noteText" placeholder="Bemerkung …"></textarea>
-        <button class="btn" id="addNoteBtn" style="min-width:160px">Hinzufügen</button>
-      </div>
-      <div class="row" style="margin-top:6px; justify-content:flex-end">
-        <button class="btn sec" id="clearNotesBtn">Chat löschen (lokal)</button>
-      </div>
-    </section>
+```
+<!-- Kritische Lager-Warnungen -->
+<section class="card">
+  <h2>⚠️ Lager-Warnungen</h2>
+  <div class="inventory-list" id="inventoryWarnings">
+    <div style="text-align:center; padding:20px; color:#999">
+      Lade Lagerdaten...
+    </div>
+  </div>
+</section>
+
+<!-- Neuigkeiten -->
+<section class="card">
+  <h2>🔔 Neuigkeiten</h2>
+  <ul class="news" id="newsList">
+    <li id="news-loading">Lade aktuelle Meldungen...</li>
+  </ul>
+  <div class="msg" id="newsMsg"></div>
+</section>
+
+<!-- QR-Code Übersicht -->
+<section class="card">
+  <h2>🔑 QR-Codes</h2>
+  <div class="stats-grid" style="grid-template-columns:1fr 1fr 1fr">
+    <div class="stat-box ok">
+      <div class="stat-num" id="qr-available">0</div>
+      <div class="stat-label">Verfügbar</div>
+    </div>
+    <div class="stat-box warn">
+      <div class="stat-num" id="qr-assigned">0</div>
+      <div class="stat-label">Zugeordnet</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-num" id="qr-total">0</div>
+      <div class="stat-label">Gesamt</div>
+    </div>
+  </div>
+  <div style="margin-top:12px">
+    <a href="qr-code-generator.html" class="btn">
+      🔑 QR-Code Generator öffnen
+    </a>
+  </div>
+</section>
+
+<!-- Notizen / Admin-Chat -->
+<section class="card">
+  <h2>💬 Notizen / Admin-Chat</h2>
+  <div class="notes-list" id="notes"></div>
+  <div class="row" style="margin-top:10px">
+    <input id="noteName" placeholder="Dein Name" style="max-width:220px">
+    <textarea id="noteText" placeholder="Bemerkung …"></textarea>
+    <button class="btn" id="addNoteBtn" style="min-width:160px">Hinzufügen</button>
+  </div>
+  <div class="row" style="margin-top:6px; justify-content:flex-end">
+    <button class="btn sec" id="clearNotesBtn">Chat löschen (lokal)</button>
+  </div>
+</section>
+```
+
   </main>
 </div>
 
 <!-- Passwort-Modal -->
+
 <div class="modal" id="pwModal">
   <div class="modal-box">
     <div class="modal-h">
@@ -154,6 +246,9 @@
       const user = nhost.auth.getUser();
       whoEl.textContent = user?.email || "—";
       guardMsg.textContent = "";
+      
+      // Load Dashboard Data
+      loadDashboardData();
     } catch (e) {
       guardMsg.textContent = "Fehler beim Auth-Check: " + e.message;
       setTimeout(()=> location.href = "admin-login.html", 1000);
@@ -168,6 +263,137 @@
     localStorage.clear();
     location.href = "admin-login.html";
   });
+
+  // ===== DASHBOARD DATA =====
+  function loadDashboardData() {
+    loadInventoryWarnings();
+    loadPendingDocuments();
+    loadQRStats();
+    updateNews();
+    
+    // Auto-refresh every 30 seconds
+    setInterval(() => {
+      loadInventoryWarnings();
+      loadPendingDocuments();
+      loadQRStats();
+    }, 30000);
+  }
+
+  // Sample Inventory Data (In production: Load from Nhost/Supabase)
+  function getSampleInventory() {
+    return [
+      { id: 1, name: "Adrenalin 1:1000", location: "Rucksack 46/1", quantity: 3, expiry: "2025-01-15", status: "expired" },
+      { id: 2, name: "Morphin 10mg", location: "Rucksack 46/1", quantity: 2, expiry: "2025-02-28", status: "warning" },
+      { id: 3, name: "Glucose 40%", location: "Rucksack 12/1", quantity: 1, expiry: "2025-02-15", status: "warning" },
+      { id: 4, name: "Naloxon", location: "Rucksack 46/1", quantity: 2, expiry: "2025-03-10", status: "warning" },
+      { id: 5, name: "Verbandsmaterial", location: "Lager", quantity: 50, expiry: "2026-05-20", status: "ok" },
+      { id: 6, name: "EKG-Elektroden", location: "Lager", quantity: 40, expiry: "2026-08-15", status: "ok" },
+      { id: 7, name: "Spritzen 10ml", location: "Lager", quantity: 100, expiry: "2026-12-31", status: "ok" },
+    ];
+  }
+
+  function loadInventoryWarnings() {
+    const inventory = getSampleInventory();
+    const container = document.getElementById('inventoryWarnings');
+    
+    // Filter nur Warnungen und abgelaufene
+    const warnings = inventory.filter(item => item.status !== 'ok');
+    
+    // Update Stats
+    const expired = inventory.filter(i => i.status === 'expired').length;
+    const expiring = inventory.filter(i => i.status === 'warning').length;
+    const ok = inventory.filter(i => i.status === 'ok').length;
+    
+    document.getElementById('stat-expired').textContent = expired;
+    document.getElementById('stat-expiring').textContent = expiring;
+    document.getElementById('stat-inventory-ok').textContent = ok;
+    
+    if (warnings.length === 0) {
+      container.innerHTML = '<div style="text-align:center; padding:20px; color:#16a34a; font-weight:700">✅ Alle Produkte in Ordnung!</div>';
+      return;
+    }
+    
+    container.innerHTML = warnings.map(item => {
+      const icon = item.status === 'expired' ? '🔴' : '⚠️';
+      const badgeClass = item.status === 'expired' ? 'badge-expired' : 'badge-warning';
+      const badgeText = item.status === 'expired' ? 'Abgelaufen' : 'Bald fällig';
+      const daysLeft = item.status === 'warning' ? Math.ceil((new Date(item.expiry) - new Date()) / (1000*60*60*24)) : 0;
+      
+      return `
+        <div class="inventory-item ${item.status}">
+          <div class="inv-icon">${icon}</div>
+          <div class="inv-info">
+            <div class="inv-name">${item.name}</div>
+            <div class="inv-meta">
+              📍 ${item.location} • ${item.quantity} Stk. • 
+              ${item.status === 'warning' ? `⏱ ${daysLeft} Tage` : `❌ ${new Date(item.expiry).toLocaleDateString('de-DE')}`}
+            </div>
+          </div>
+          <span class="inv-badge ${badgeClass}">${badgeText}</span>
+        </div>
+      `;
+    }).join('');
+  }
+
+  // Sample Pending Documents
+  function getSamplePendingDocs() {
+    return [
+      { id: "MAT-2025-001", type: "material", created: "2025-01-15T10:30:00", officer: "Anna Schmidt" },
+      { id: "PAT-2025-001", type: "patient", created: "2025-01-15T14:20:00", medic: "Max Mustermann" },
+      { id: "MAT-2025-002", type: "material", created: "2025-01-15T16:45:00", officer: "Thomas Weber" }
+    ];
+  }
+
+  function loadPendingDocuments() {
+    const pending = getSamplePendingDocs();
+    document.getElementById('stat-pending-docs').textContent = pending.length;
+  }
+
+  // QR Code Stats
+  function loadQRStats() {
+    const qrCodes = JSON.parse(localStorage.getItem('ffw_qr_codes') || '[]');
+    const available = qrCodes.filter(q => q.status === 'available').length;
+    const assigned = qrCodes.filter(q => q.status === 'assigned').length;
+    
+    document.getElementById('qr-available').textContent = available;
+    document.getElementById('qr-assigned').textContent = assigned;
+    document.getElementById('qr-total').textContent = qrCodes.length;
+  }
+
+  // Update News dynamically
+  function updateNews() {
+    const inventory = getSampleInventory();
+    const pending = getSamplePendingDocs();
+    const expired = inventory.filter(i => i.status === 'expired');
+    const expiring = inventory.filter(i => i.status === 'warning');
+    
+    const newsItems = [];
+    
+    // Pending Documents
+    if (pending.length > 0) {
+      newsItems.push(`🆕 ${pending.length} Dokumente zur Gegenzeichnung <span class="pill">Dokumente</span>`);
+    }
+    
+    // Expired Items
+    if (expired.length > 0) {
+      expired.forEach(item => {
+        newsItems.push(`❌ "${item.name}" in ${item.location} abgelaufen! <span class="pill">Lager</span>`);
+      });
+    }
+    
+    // Expiring Soon
+    if (expiring.length > 0) {
+      const next = expiring[0];
+      const daysLeft = Math.ceil((new Date(next.expiry) - new Date()) / (1000*60*60*24));
+      newsItems.push(`⚠️ "${next.name}" läuft in ${daysLeft} Tagen ab <span class="pill">Lager</span>`);
+    }
+    
+    // General Info
+    newsItems.push(`⏳ Nächste Wartung am 05.09. <span class="pill">Info</span>`);
+    
+    const newsList = document.getElementById('newsList');
+    newsList.innerHTML = newsItems.map(item => `<li>${item}</li>`).join('');
+  }
 
   // ===== Passwort ändern (mit Re-Auth) =====
   const pwModal = document.getElementById('pwModal');
@@ -220,7 +446,7 @@
       const { error: signErr } = await nhost.auth.signIn({ email, password: current });
       if (signErr){ showPwMsg('Aktuelles Passwort ist falsch.'); return; }
 
-      // Passwort ändern (zwei mögliche Signaturen – je nach Nhost-Version)
+      // Passwort ändern
       let changeError = null;
       try {
         const res1 = await nhost.auth.changePassword(n1);
@@ -298,5 +524,6 @@
 
   loadNotes();
 </script>
+
 </body>
 </html>
