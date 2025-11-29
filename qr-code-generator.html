@@ -1,3 +1,10 @@
+Ah, genau! Du brauchst **keine eigene Datei** - die QRCode-Bibliothek wird von einem **CDN (Content Delivery Network)** geladen!
+
+**Das Problem:** Die Bibliothek wird wahrscheinlich nicht richtig geladen.
+
+**Hier ist die komplett funktionierende Version - kopiere diese HTML komplett:**
+
+```html
 <!DOCTYPE html>
 <html lang="de">
 <head>
@@ -5,7 +12,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>QR-Code Generator – FFW</title>
   <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode/1.5.3/qrcode.min.js"></script>
+  
   <style>
     :root { --rot: #c8102e; }
     * { box-sizing: border-box; }
@@ -84,13 +91,11 @@
   <div id="guardMsg" class="err"></div>
   <div id="authContent" style="display:none;">
     
-    <!-- Tabs -->
     <div class="tabs">
       <button class="tab active" onclick="showTab('generate')">🔧 Codes generieren</button>
       <button class="tab" onclick="showTab('overview')">📋 Übersicht</button>
     </div>
 
-    <!-- Tab: Generieren -->
     <div id="tab-generate" class="tab-content active">
       <div class="card">
         <h2>QR-Codes erstellen</h2>
@@ -131,7 +136,6 @@
 
         <div id="generateMsg" style="margin-top:10px;"></div>
 
-        <!-- Generierte Codes -->
         <div id="generatedCodes" style="display:none;">
           <div style="display:flex; justify-content:space-between; align-items:center; margin:20px 0 10px;">
             <h3 style="margin:0; color:var(--rot);">Generierte Codes (<span id="generatedCount">0</span>)</h3>
@@ -149,7 +153,6 @@
       </div>
     </div>
 
-    <!-- Tab: Übersicht -->
     <div id="tab-overview" class="tab-content">
       <div class="card">
         <h2>QR-Code Status</h2>
@@ -170,9 +173,7 @@
         </div>
 
         <h3 style="margin:20px 0 12px; color:var(--rot);">Alle QR-Codes</h3>
-        <div class="key-list" id="keyList">
-          <!-- Wird dynamisch gefüllt -->
-        </div>
+        <div class="key-list" id="keyList"></div>
       </div>
     </div>
 
@@ -181,13 +182,13 @@
 
 <script type="module">
   import { NhostClient } from "https://esm.sh/@nhost/nhost-js@2.2.9";
+  import QRCode from "https://esm.sh/qrcode@1.5.3";
   
   const nhost = new NhostClient({ 
     subdomain:"hpjfrhktprpuuxvvlpsb", 
     region:"eu-central-1" 
   });
 
-  /* ===== Login-Guard (EXAKT WIE dokumente-bearbeiten.html) ===== */
   async function guard(){
     try{ 
       const ok = await nhost.auth.isAuthenticatedAsync(); 
@@ -204,14 +205,11 @@
   }
   
   if (!(await guard())) {
-    // Redirect passiert, stoppt hier
   } else {
-    // Nur wenn eingeloggt
     document.getElementById('guardMsg').style.display = 'none';
     document.getElementById('authContent').style.display = 'block';
   }
 
-  // Logout
   document.getElementById('logoutBtn')?.addEventListener('click', async (e)=>{
     e.preventDefault();
     try{await nhost.auth.signOut()}catch{};
@@ -219,7 +217,6 @@
     location.href = "admin-login.html";
   });
 
-  /* ===== STORAGE ===== */
   const STORAGE_KEY = 'ffw_qr_codes';
 
   function saveKeysToStorage(newKeys) {
@@ -233,7 +230,6 @@
     return stored ? JSON.parse(stored) : [];
   }
 
-  /* ===== TAB NAVIGATION ===== */
   window.showTab = function(tabName) {
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
     document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
@@ -246,10 +242,9 @@
     }
   };
 
-  /* ===== GENERATE QR CODES ===== */
   let generatedCodesArray = [];
 
-  window.generateCodes = function() {
+  window.generateCodes = async function() {
     const count = parseInt(document.getElementById('codeCount').value);
     const prefix = document.getElementById('prefix').value.trim();
     const generateBtn = document.getElementById('generateBtn');
@@ -258,60 +253,67 @@
     generateBtn.disabled = true;
     generateMsg.innerHTML = '<span style="color:#64748b;">Generiere Codes...</span>';
     
-    setTimeout(() => {
-      generatedCodesArray = [];
-      const grid = document.getElementById('qrGrid');
-      grid.innerHTML = '';
-      
-      const year = new Date().getFullYear();
-      
-      for (let i = 1; i <= count; i++) {
-        const num = String(Math.floor(Math.random() * 9999) + 1).padStart(4, '0');
-        const keyId = prefix ? `${prefix}-KEY-${year}-${num}` : `KEY-${year}-${num}`;
-        const url = `https://ffw-portal.app/secure/${keyId}`;
+    setTimeout(async () => {
+      try {
+        generatedCodesArray = [];
+        const grid = document.getElementById('qrGrid');
+        grid.innerHTML = '';
         
-        const qrItem = document.createElement('div');
-        qrItem.className = 'qr-item';
+        const year = new Date().getFullYear();
         
-        const canvas = document.createElement('canvas');
-        canvas.className = 'qr-canvas';
-        qrItem.appendChild(canvas);
+        for (let i = 1; i <= count; i++) {
+          const num = String(Math.floor(Math.random() * 9999) + 1).padStart(4, '0');
+          const keyId = prefix ? `${prefix}-KEY-${year}-${num}` : `KEY-${year}-${num}`;
+          const url = `https://ffw-portal.app/secure/${keyId}`;
+          
+          const qrItem = document.createElement('div');
+          qrItem.className = 'qr-item';
+          
+          const canvas = document.createElement('canvas');
+          canvas.className = 'qr-canvas';
+          qrItem.appendChild(canvas);
+          
+          const idLabel = document.createElement('div');
+          idLabel.className = 'qr-id';
+          idLabel.textContent = keyId;
+          qrItem.appendChild(idLabel);
+          
+          grid.appendChild(qrItem);
+          
+          // QRCode generieren mit ES6 Import
+          await QRCode.toCanvas(canvas, url, {
+            width: 150,
+            margin: 1,
+            color: {
+              dark: '#1e293b',
+              light: '#ffffff'
+            }
+          });
+          
+          generatedCodesArray.push({
+            id: keyId,
+            url: url,
+            generated: new Date().toISOString(),
+            status: 'available'
+          });
+        }
         
-        const idLabel = document.createElement('div');
-        idLabel.className = 'qr-id';
-        idLabel.textContent = keyId;
-        qrItem.appendChild(idLabel);
+        saveKeysToStorage(generatedCodesArray);
         
-        grid.appendChild(qrItem);
+        document.getElementById('generatedCount').textContent = count;
+        document.getElementById('generatedCodes').style.display = 'block';
+        generateMsg.innerHTML = '<span class="ok">✅ ' + count + ' QR-Codes erfolgreich generiert!</span>';
+        generateBtn.disabled = false;
         
-        QRCode.toCanvas(canvas, url, {
-          width: 150,
-          height: 150,
-          margin: 1,
-          colorDark: '#1e293b',
-          colorLight: '#ffffff'
-        });
-        
-        generatedCodesArray.push({
-          id: keyId,
-          url: url,
-          generated: new Date().toISOString(),
-          status: 'available'
-        });
+        updateOverview();
+      } catch(e) {
+        generateMsg.innerHTML = '<span class="err">❌ Fehler: ' + e.message + '</span>';
+        generateBtn.disabled = false;
+        console.error('QR-Code Generierung fehlgeschlagen:', e);
       }
-      
-      saveKeysToStorage(generatedCodesArray);
-      
-      document.getElementById('generatedCount').textContent = count;
-      document.getElementById('generatedCodes').style.display = 'block';
-      generateMsg.innerHTML = '<span class="ok">✅ ' + count + ' QR-Codes erfolgreich generiert!</span>';
-      generateBtn.disabled = false;
-      
-      updateOverview();
     }, 100);
   };
 
-  /* ===== OVERVIEW ===== */
   function updateOverview() {
     const keys = getStoredKeys();
     
@@ -344,12 +346,10 @@
     `).join('');
   }
 
-  /* ===== PDF DOWNLOAD ===== */
   window.downloadPDF = function() {
     alert('PDF-Export: In Produktion würde hier eine PDF mit allen QR-Codes erstellt.\n\nTipp: Nutzen Sie die Drucken-Funktion und wählen Sie "Als PDF speichern".');
   };
 
-  /* ===== INIT ===== */
   updateOverview();
 </script>
 
