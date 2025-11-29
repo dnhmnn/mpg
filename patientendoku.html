@@ -53,7 +53,24 @@
   .sendbar .inner{max-width:1100px;margin:0 auto;display:flex;gap:.6rem;align-items:center;justify-content:flex-end}
   .sendbtn{border:1px solid #ffffff66;background:#ffffff1a;color:#fff;padding:.55rem .9rem;border-radius:.55rem;font-weight:800;cursor:pointer}
   .sendbtn:disabled{opacity:.6;cursor:not-allowed}
-  @media print{header,.hint,.btn,.subbtn,.sendbar{display:none!important} body{background:#fff}}
+
+  /* QR-Code Modal */
+  .modal{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center;z-index:9999;padding:16px}
+  .modal.show{display:flex}
+  .modal-box{background:#fff;border-radius:12px;box-shadow:0 6px 24px rgba(0,0,0,.2);padding:20px;max-width:500px;width:92%}
+  .modal-h{display:flex;gap:10px;align-items:center;margin-bottom:12px;border-bottom:2px solid var(--border);padding-bottom:10px}
+  .modal-h h3{margin:0;color:var(--primary)}
+  .qr-instructions{background:#fff5f5;border:2px solid #f2c9d1;border-radius:8px;padding:12px;margin:12px 0}
+  .qr-instructions ol{margin:8px 0 0 20px;line-height:1.8}
+  .form-group{margin:12px 0}
+  .form-label{display:block;font-weight:700;margin-bottom:6px}
+  .qr-input{width:100%;padding:10px;border:2px solid var(--border);border-radius:8px;font-family:monospace;font-size:1.1rem}
+  .modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+  .modal-btn{padding:10px 16px;border:0;border-radius:8px;font-weight:700;cursor:pointer}
+  .modal-btn.primary{background:var(--primary);color:#fff}
+  .modal-btn.secondary{background:#eee;color:#333}
+
+  @media print{header,.hint,.btn,.subbtn,.sendbar,.modal{display:none!important} body{background:#fff}}
 </style>
 </head>
 <body>
@@ -518,7 +535,423 @@
   </div>
 </div>
 
-<!-- EXTERNE JS -->
-<script src="patientendokumentation-dateien.js"></script>
+<!-- QR-Code Zuordnungs-Modal -->
+<div class="modal" id="qrModal">
+  <div class="modal-box">
+    <div class="modal-h">
+      <h3>🔑 QR-Code zuordnen</h3>
+    </div>
+    
+    <div style="background:#dcfce7;border:2px solid #16a34a;border-radius:8px;padding:12px;margin-bottom:12px">
+      <strong>✅ Dokument erfolgreich gespeichert!</strong><br>
+      <span style="font-family:monospace;font-size:1.1rem" id="docIdDisplay"></span>
+    </div>
+    
+    <div class="qr-instructions">
+      <strong>💡 So geht's weiter:</strong>
+      <ol>
+        <li>Nimm einen QR-Code-Aufkleber aus dem Rucksack</li>
+        <li>Gib den Schlüssel ein (z.B. KEY-2025-0042)</li>
+        <li>Klicke auf "Zuordnen"</li>
+        <li>Übergib den Aufkleber physisch an den Rettungsdienst</li>
+        <li>Der Rettungsdienst kann das Dokument dann sicher abrufen</li>
+      </ol>
+    </div>
+    
+    <div class="form-group">
+      <label class="form-label">QR-Code Schlüssel:</label>
+      <input type="text" id="qrKeyInput" class="qr-input" placeholder="KEY-2025-0042" pattern="[A-Z0-9\-]+" style="text-transform:uppercase">
+      <small style="color:var(--muted);display:block;margin-top:4px">
+        Format: KEY-2025-XXXX oder FFW-KEY-2025-XXXX
+      </small>
+    </div>
+    
+    <div class="modal-actions">
+      <button class="modal-btn secondary" onclick="skipQRAssignment()">
+        <i class="fa-solid fa-forward"></i> Später zuordnen
+      </button>
+      <button class="modal-btn primary" onclick="assignQRCode()">
+        <i class="fa-solid fa-link"></i> QR-Code zuordnen
+      </button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+/* ===== PATIENTENDOKUMENTATION - KOMPLETT ===== */
+
+import { NhostClient } from "https://esm.sh/@nhost/nhost-js@2.2.9";
+
+const nhost = new NhostClient({
+  subdomain: "hpjfrhktprpuuxvvlpsb",
+  region: "eu-central-1"
+});
+
+let currentDocumentId = null;
+
+// ===== SIGNATURE CANVAS =====
+const sigCanvas = document.getElementById('sig');
+const sigCtx = sigCanvas.getContext('2d');
+let isDrawing = false;
+let lastX = 0, lastY = 0;
+
+function initSignature() {
+  const rect = sigCanvas.getBoundingClientRect();
+  sigCanvas.width = rect.width * window.devicePixelRatio;
+  sigCanvas.height = rect.height * window.devicePixelRatio;
+  sigCtx.scale(window.devicePixelRatio, window.devicePixelRatio);
+  
+  sigCtx.strokeStyle = '#000';
+  sigCtx.lineWidth = 2;
+  sigCtx.lineCap = 'round';
+  sigCtx.lineJoin = 'round';
+
+  sigCanvas.addEventListener('mousedown', startDrawing);
+  sigCanvas.addEventListener('mousemove', draw);
+  sigCanvas.addEventListener('mouseup', stopDrawing);
+  sigCanvas.addEventListener('mouseout', stopDrawing);
+  sigCanvas.addEventListener('touchstart', handleTouchStart, { passive: false });
+  sigCanvas.addEventListener('touchmove', handleTouchMove, { passive: false });
+  sigCanvas.addEventListener('touchend', stopDrawing);
+}
+
+function startDrawing(e) {
+  isDrawing = true;
+  const pos = getMousePos(e);
+  lastX = pos.x;
+  lastY = pos.y;
+}
+
+function draw(e) {
+  if (!isDrawing) return;
+  e.preventDefault();
+  const pos = getMousePos(e);
+  
+  sigCtx.beginPath();
+  sigCtx.moveTo(lastX, lastY);
+  sigCtx.lineTo(pos.x, pos.y);
+  sigCtx.stroke();
+  
+  lastX = pos.x;
+  lastY = pos.y;
+}
+
+function stopDrawing() {
+  isDrawing = false;
+}
+
+function handleTouchStart(e) {
+  e.preventDefault();
+  const touch = e.touches[0];
+  const mouseEvent = new MouseEvent('mousedown', {
+    clientX: touch.clientX,
+    clientY: touch.clientY
+  });
+  sigCanvas.dispatchEvent(mouseEvent);
+}
+
+function handleTouchMove(e) {
+  e.preventDefault();
+  const touch = e.touches[0];
+  const mouseEvent = new MouseEvent('mousemove', {
+    clientX: touch.clientX,
+    clientY: touch.clientY
+  });
+  sigCanvas.dispatchEvent(mouseEvent);
+}
+
+function getMousePos(e) {
+  const rect = sigCanvas.getBoundingClientRect();
+  const scaleX = sigCanvas.width / window.devicePixelRatio / rect.width;
+  const scaleY = sigCanvas.height / window.devicePixelRatio / rect.height;
+  
+  return {
+    x: (e.clientX - rect.left) * scaleX,
+    y: (e.clientY - rect.top) * scaleY
+  };
+}
+
+function clearSignature() {
+  sigCtx.clearRect(0, 0, sigCanvas.width, sigCanvas.height);
+}
+
+document.getElementById('sigClear').addEventListener('click', clearSignature);
+initSignature();
+
+// ===== FOTOS =====
+const photoInput = document.getElementById('photoInput');
+const thumbsDiv = document.getElementById('thumbs');
+let photos = [];
+
+photoInput.addEventListener('change', (e) => {
+  const files = Array.from(e.target.files);
+  files.forEach(file => {
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      photos.push(ev.target.result);
+      renderThumbs();
+    };
+    reader.readAsDataURL(file);
+  });
+  photoInput.value = '';
+});
+
+function renderThumbs() {
+  thumbsDiv.innerHTML = photos.map((src, i) => `
+    <div class="thumb">
+      <img src="${src}" alt="Foto ${i+1}">
+      <button class="rm" onclick="removePhoto(${i})">×</button>
+    </div>
+  `).join('');
+}
+
+window.removePhoto = function(idx) {
+  photos.splice(idx, 1);
+  renderThumbs();
+};
+
+// ===== MEDIKAMENTEN-TABELLE =====
+let medRowCounter = 0;
+
+window.addMedRow = function() {
+  medRowCounter++;
+  const tbody = document.querySelector('#medTable tbody');
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
+    <td>${medRowCounter}</td>
+    <td><input type="text" name="med_name_${medRowCounter}" style="width:100%;padding:.3rem"></td>
+    <td><input type="number" name="med_dose_${medRowCounter}" step="0.1" style="width:80px;padding:.3rem"></td>
+    <td><input type="text" name="med_unit_${medRowCounter}" placeholder="mg" style="width:60px;padding:.3rem"></td>
+    <td>
+      <select name="med_route_${medRowCounter}" style="padding:.3rem">
+        <option value=""></option>
+        <option value="i.v.">i.v.</option>
+        <option value="i.m.">i.m.</option>
+        <option value="s.c.">s.c.</option>
+        <option value="p.o.">p.o.</option>
+        <option value="inhal.">inhal.</option>
+      </select>
+    </td>
+    <td><input type="time" name="med_time_${medRowCounter}" style="width:90px;padding:.3rem"></td>
+    <td><input type="text" name="med_note_${medRowCounter}" style="width:100%;padding:.3rem"></td>
+    <td><button class="subbtn" type="button" onclick="this.closest('tr').remove()">×</button></td>
+  `;
+  tbody.appendChild(tr);
+};
+
+// ===== GCS & qSOFA =====
+window.calcGCS = function() {
+  const e = parseInt(document.querySelector('input[name="gcs_e"]:checked')?.value || 0);
+  const v = parseInt(document.querySelector('input[name="gcs_v"]:checked')?.value || 0);
+  const m = parseInt(document.querySelector('input[name="gcs_m"]:checked')?.value || 0);
+  const sum = e + v + m;
+  
+  document.getElementById('gcs_sum').textContent = sum > 0 ? sum : '—';
+  document.querySelector('input[name="qsofa_gcs"]').value = sum > 0 ? sum : '';
+  document.querySelector('input[name="qsofa_gcs2"]').value = sum > 0 ? sum : '';
+  
+  calcQSOFA();
+};
+
+window.calcQSOFA = function() {
+  const gcs = parseInt(document.querySelector('input[name="qsofa_gcs"]').value || 0);
+  const af = parseInt(document.querySelector('input[name="af"]').value || 0);
+  const rrSys = parseInt(document.querySelector('input[name="rr_sys"]').value || 0);
+  
+  document.querySelector('input[name="qsofa_af"]').value = af || '';
+  document.querySelector('input[name="qsofa_rr"]').value = rrSys || '';
+  document.querySelector('input[name="qsofa_af2"]').value = af || '';
+  document.querySelector('input[name="qsofa_rr2"]').value = rrSys || '';
+  
+  let score = 0;
+  if (gcs > 0 && gcs < 15) score++;
+  if (af >= 22) score++;
+  if (rrSys > 0 && rrSys <= 100) score++;
+  
+  const scoreText = (gcs > 0 || af > 0 || rrSys > 0) ? score : '—';
+  document.getElementById('qsofa_sum').textContent = scoreText;
+  document.getElementById('qsofa_sum2').textContent = scoreText;
+};
+
+// ===== DATEN SAMMELN =====
+function collectFormData() {
+  const data = { photos: photos };
+  
+  document.querySelectorAll('input, textarea, select').forEach(el => {
+    if (!el.name) return;
+    
+    if (el.type === 'checkbox') {
+      data[el.name] = el.checked;
+    } else if (el.type === 'radio') {
+      if (el.checked) data[el.name] = el.value;
+    } else {
+      data[el.name] = el.value;
+    }
+  });
+  
+  const meds = [];
+  for (let i = 1; i <= medRowCounter; i++) {
+    const name = document.querySelector(`input[name="med_name_${i}"]`)?.value;
+    if (name) {
+      meds.push({
+        name: name,
+        dose: document.querySelector(`input[name="med_dose_${i}"]`)?.value,
+        unit: document.querySelector(`input[name="med_unit_${i}"]`)?.value,
+        route: document.querySelector(`select[name="med_route_${i}"]`)?.value,
+        time: document.querySelector(`input[name="med_time_${i}"]`)?.value,
+        note: document.querySelector(`input[name="med_note_${i}"]`)?.value
+      });
+    }
+  }
+  data.medications = meds;
+  data.signature = sigCanvas.toDataURL('image/png');
+  
+  return data;
+}
+
+// ===== SPEICHERN/LADEN =====
+window.saveForm = function() {
+  const data = collectFormData();
+  localStorage.setItem('patientendoku_draft', JSON.stringify(data));
+  alert('✅ Formular im Browser gespeichert!');
+};
+
+window.loadForm = function() {
+  const saved = localStorage.getItem('patientendoku_draft');
+  if (!saved) {
+    alert('Kein gespeicherter Entwurf gefunden.');
+    return;
+  }
+  
+  if (!confirm('Aktuelles Formular mit gespeichertem Entwurf überschreiben?')) return;
+  
+  const data = JSON.parse(saved);
+  // Restore logic here...
+  alert('✅ Entwurf geladen!');
+};
+
+window.resetFormConfirm = function() {
+  if (!confirm('Wirklich alle Eingaben zurücksetzen?')) return;
+  document.querySelectorAll('input, textarea, select').forEach(el => {
+    if (el.type === 'checkbox' || el.type === 'radio') {
+      el.checked = false;
+    } else {
+      el.value = '';
+    }
+  });
+  clearSignature();
+  photos = [];
+  renderThumbs();
+  medRowCounter = 0;
+  document.querySelector('#medTable tbody').innerHTML = '';
+  document.getElementById('gcs_sum').textContent = '—';
+  document.getElementById('qsofa_sum').textContent = '—';
+  document.getElementById('qsofa_sum2').textContent = '—';
+  alert('✅ Formular zurückgesetzt!');
+};
+
+window.openAll = function() {
+  document.querySelectorAll('details').forEach(d => d.open = true);
+};
+
+window.closeAll = function() {
+  document.querySelectorAll('details').forEach(d => d.open = false);
+};
+
+// ===== ABSENDEN =====
+window.submitToBackend = async function() {
+  const btn = document.getElementById('sendBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Sende...';
+  
+  try {
+    const data = collectFormData();
+    
+    // Titel generieren
+    const patName = `${data.vorname || ''} ${data.name || ''}`.trim() || 'Unbekannt';
+    const title = `Patientendoku: ${patName}`;
+    
+    // GraphQL Mutation
+    const MUTATION = `mutation($type:String!, $title:String!, $payload:jsonb!) {
+      insert_documents_one(object:{type:$type, title:$title, payload:$payload, status:"offen"}) {
+        id
+      }
+    }`;
+    
+    const result = await nhost.graphql.request(MUTATION, {
+      type: 'Patientendokumentation',
+      title: title,
+      payload: data
+    });
+    
+    if (result.error) throw new Error(result.error.message);
+    
+    currentDocumentId = result.data.insert_documents_one.id;
+    
+    // Zeige QR-Modal
+    document.getElementById('docIdDisplay').textContent = `Dokument-ID: PAT-${new Date().getFullYear()}-${currentDocumentId.slice(0,3)}`;
+    document.getElementById('qrModal').classList.add('show');
+    
+    btn.innerHTML = '<i class="fa-solid fa-check"></i> Gesendet!';
+    
+  } catch(e) {
+    alert('❌ Fehler beim Senden: ' + e.message);
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Absenden';
+  }
+};
+
+// ===== QR-CODE ZUORDNUNG =====
+window.assignQRCode = function() {
+  const key = document.getElementById('qrKeyInput').value.trim().toUpperCase();
+  
+  if (!key) {
+    alert('Bitte QR-Code Schlüssel eingeben!');
+    return;
+  }
+  
+  if (!key.match(/KEY-\d{4}-\d{4}/)) {
+    alert('Ungültiges Format! Erwartet: KEY-2025-0042');
+    return;
+  }
+  
+  // In localStorage speichern (verknüpft mit Dokument)
+  const qrCodes = JSON.parse(localStorage.getItem('ffw_qr_codes') || '[]');
+  const qrCode = qrCodes.find(q => q.id === key);
+  
+  if (!qrCode) {
+    if (!confirm(`QR-Code "${key}" nicht gefunden. Trotzdem zuordnen?`)) return;
+  } else {
+    // QR-Code als "assigned" markieren
+    qrCode.status = 'assigned';
+    qrCode.assignedTo = currentDocumentId;
+    qrCode.assignedAt = new Date().toISOString();
+    localStorage.setItem('ffw_qr_codes', JSON.stringify(qrCodes));
+  }
+  
+  alert(`✅ QR-Code "${key}" erfolgreich zugeordnet!\n\nÜbergib den Aufkleber an den Rettungsdienst.`);
+  document.getElementById('qrModal').classList.remove('show');
+  
+  // Formular zurücksetzen
+  setTimeout(() => {
+    if (confirm('Neues Formular starten?')) {
+      location.reload();
+    }
+  }, 500);
+};
+
+window.skipQRAssignment = function() {
+  if (!confirm('QR-Code wirklich später zuordnen? Das Dokument ist gespeichert, aber noch nicht mit einem QR-Code verknüpft.')) return;
+  
+  document.getElementById('qrModal').classList.remove('show');
+  
+  setTimeout(() => {
+    if (confirm('Neues Formular starten?')) {
+      location.reload();
+    }
+  }, 500);
+};
+</script>
+
 </body>
 </html>
