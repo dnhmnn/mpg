@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Sicherer Dokumentenzugriff – FFW</title>
+  <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
+  <style>
+    :root{--primary:#c8102e;--success:#16a34a;--bg:#f8fafc;--card:#fff;--text:#0f172a;--muted:#64748b;--border:#e2e8f0}
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      background:linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color:var(--text);
+      font-family:'Atkinson Hyperlegible',-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+      line-height:1.5;
+      min-height:100vh;
+      display:flex;
+      flex-direction:column;
+    }
+    
+    header{
+      background:#fff;
+      box-shadow:0 2px 10px rgba(0,0,0,.1);
+      padding:1rem;
+      text-align:center;
+    }
+    
+    .logo-area{
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:12px;
+      margin-bottom:8px;
+    }
+    
+    .logo{
+      width:50px;
+      height:50px;
+      background:var(--primary);
+      border-radius:50%;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      color:#fff;
+      font-size:1.5rem;
+      font-weight:800;
+    }
+    
+    h1{
+      margin:0;
+      font-size:1.3rem;
+      color:var(--text);
+      font-weight:800;
+    }
+    
+    .subtitle{
+      color:var(--muted);
+      font-size:.9rem;
+      margin-top:4px;
+    }
+    
+    .container{
+      flex:1;
+      max-width:800px;
+      width:100%;
+      margin:0 auto;
+      padding:2rem 1rem;
+    }
+    
+    .card{
+      background:var(--card);
+      border-radius:16px;
+      box-shadow:0 10px 40px rgba(0,0,0,.15);
+      padding:2rem;
+      margin-bottom:1.5rem;
+    }
+    
+    .loading{
+      text-align:center;
+      padding:3rem 1rem;
+    }
+    
+    .spinner{
+      width:60px;
+      height:60px;
+      border:4px solid #f3f3f3;
+      border-top:4px solid var(--primary);
+      border-radius:50%;
+      animation:spin 1s linear infinite;
+      margin:0 auto 1.5rem;
+    }
+    
+    @keyframes spin{
+      0%{transform:rotate(0deg)}
+      100%{transform:rotate(360deg)}
+    }
+    
+    .status-box{
+      padding:1.5rem;
+      border-radius:12px;
+      margin-bottom:1.5rem;
+      border:2px solid;
+    }
+    
+    .status-box.success{
+      background:#dcfce7;
+      border-color:#16a34a;
+      color:#15803d;
+    }
+    
+    .status-box.error{
+      background:#fee2e2;
+      border-color:#dc2626;
+      color:#991b1b;
+    }
+    
+    .status-box.warning{
+      background:#fef3c7;
+      border-color:#f59e0b;
+      color:#92400e;
+    }
+    
+    .status-icon{
+      font-size:3rem;
+      margin-bottom:1rem;
+      display:block;
+    }
+    
+    .status-title{
+      font-size:1.3rem;
+      font-weight:800;
+      margin-bottom:0.5rem;
+    }
+    
+    .doc-header{
+      border-bottom:2px solid var(--border);
+      padding-bottom:1rem;
+      margin-bottom:1.5rem;
+    }
+    
+    .doc-title{
+      font-size:1.4rem;
+      font-weight:800;
+      color:var(--primary);
+      margin:0 0 0.5rem 0;
+    }
+    
+    .doc-meta{
+      color:var(--muted);
+      font-size:0.9rem;
+    }
+    
+    .doc-meta strong{
+      color:var(--text);
+    }
+    
+    .section{
+      margin:1.5rem 0;
+    }
+    
+    .section-title{
+      font-size:1.1rem;
+      font-weight:800;
+      color:var(--text);
+      margin:0 0 1rem 0;
+      display:flex;
+      align-items:center;
+      gap:8px;
+    }
+    
+    .info-grid{
+      display:grid;
+      grid-template-columns:repeat(auto-fit, minmax(250px, 1fr));
+      gap:1rem;
+    }
+    
+    .info-item{
+      background:#f8fafc;
+      padding:1rem;
+      border-radius:8px;
+      border-left:4px solid var(--primary);
+    }
+    
+    .info-label{
+      font-size:0.85rem;
+      color:var(--muted);
+      font-weight:600;
+      margin-bottom:4px;
+      text-transform:uppercase;
+    }
+    
+    .info-value{
+      font-size:1rem;
+      color:var(--text);
+      font-weight:700;
+    }
+    
+    .vital-signs{
+      display:grid;
+      grid-template-columns:repeat(auto-fit, minmax(150px, 1fr));
+      gap:1rem;
+      margin:1rem 0;
+    }
+    
+    .vital-card{
+      background:linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color:#fff;
+      padding:1.5rem;
+      border-radius:12px;
+      text-align:center;
+    }
+    
+    .vital-label{
+      font-size:0.8rem;
+      opacity:0.9;
+      margin-bottom:0.5rem;
+    }
+    
+    .vital-value{
+      font-size:2rem;
+      font-weight:800;
+    }
+    
+    .vital-unit{
+      font-size:0.9rem;
+      opacity:0.8;
+    }
+    
+    .medications-table{
+      width:100%;
+      border-collapse:collapse;
+      margin:1rem 0;
+      overflow-x:auto;
+      display:block;
+    }
+    
+    .medications-table thead,
+    .medications-table tbody{
+      display:table;
+      width:100%;
+    }
+    
+    .medications-table th,
+    .medications-table td{
+      padding:0.75rem;
+      text-align:left;
+      border-bottom:1px solid var(--border);
+    }
+    
+    .medications-table th{
+      background:#f8fafc;
+      font-weight:700;
+      font-size:0.85rem;
+      text-transform:uppercase;
+      color:var(--muted);
+    }
+    
+    .badge{
+      display:inline-block;
+      padding:0.25rem 0.75rem;
+      border-radius:999px;
+      font-size:0.85rem;
+      font-weight:700;
+    }
+    
+    .badge.success{
+      background:#dcfce7;
+      color:#16a34a;
+    }
+    
+    .badge.warning{
+      background:#fef3c7;
+      color:#d97706;
+    }
+    
+    .badge.info{
+      background:#dbeafe;
+      color:#1e40af;
+    }
+    
+    .btn{
+      display:inline-block;
+      padding:0.75rem 1.5rem;
+      border-radius:8px;
+      font-weight:700;
+      text-decoration:none;
+      text-align:center;
+      cursor:pointer;
+      border:0;
+      font-family:inherit;
+      font-size:1rem;
+      transition:all 0.2s;
+    }
+    
+    .btn.primary{
+      background:var(--primary);
+      color:#fff;
+    }
+    
+    .btn.primary:hover{
+      background:#a00d26;
+      transform:translateY(-2px);
+      box-shadow:0 4px 12px rgba(200,16,46,0.3);
+    }
+    
+    .btn.secondary{
+      background:#f1f5f9;
+      color:var(--text);
+      border:2px solid var(--border);
+    }
+    
+    .actions{
+      display:flex;
+      gap:1rem;
+      margin-top:2rem;
+      flex-wrap:wrap;
+    }
+    
+    .signature-box{
+      border:2px dashed var(--border);
+      border-radius:8px;
+      padding:1rem;
+      text-align:center;
+    }
+    
+    .signature-img{
+      max-width:100%;
+      height:auto;
+      border:1px solid var(--border);
+      border-radius:4px;
+      background:#fff;
+    }
+    
+    .photo-grid{
+      display:grid;
+      grid-template-columns:repeat(auto-fill, minmax(150px, 1fr));
+      gap:1rem;
+      margin:1rem 0;
+    }
+    
+    .photo-item img{
+      width:100%;
+      height:150px;
+      object-fit:cover;
+      border-radius:8px;
+      border:2px solid var(--border);
+      cursor:pointer;
+      transition:all 0.2s;
+    }
+    
+    .photo-item img:hover{
+      transform:scale(1.05);
+      box-shadow:0 4px 12px rgba(0,0,0,0.2);
+    }
+    
+    .access-log{
+      background:#fef3c7;
+      border:2px solid #f59e0b;
+      border-radius:8px;
+      padding:1rem;
+      margin-top:2rem;
+      font-size:0.85rem;
+    }
+    
+    .access-log strong{
+      color:#92400e;
+    }
+    
+    footer{
+      background:#fff;
+      padding:1.5rem;
+      text-align:center;
+      color:var(--muted);
+      font-size:0.85rem;
+      border-top:1px solid var(--border);
+    }
+    
+    @media (max-width: 600px) {
+      .container{
+        padding:1rem;
+      }
+      
+      .card{
+        padding:1.5rem;
+      }
+      
+      .info-grid{
+        grid-template-columns:1fr;
+      }
+      
+      .vital-signs{
+        grid-template-columns:repeat(2, 1fr);
+      }
+      
+      .actions{
+        flex-direction:column;
+      }
+      
+      .btn{
+        width:100%;
+      }
+      
+      .medications-table{
+        font-size:0.85rem;
+      }
+      
+      .medications-table th,
+      .medications-table td{
+        padding:0.5rem;
+      }
+    }
+    
+    @media print{
+      body{
+        background:#fff;
+      }
+      header, footer, .actions, .access-log{
+        display:none;
+      }
+      .card{
+        box-shadow:none;
+        border:1px solid #ccc;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo-area">
+    <div class="logo">🚒</div>
+    <div>
+      <h1>Feuerwehr Dokumentenzugriff</h1>
+      <div class="subtitle">Verschlüsselte Patientendokumentation</div>
+    </div>
+  </div>
+</header>
+
+<div class="container">
+  <div id="content">
+    <!-- Wird dynamisch gefüllt -->
+  </div>
+</div>
+
+<footer>
+  <strong>🔒 Sicherer Zugriff</strong><br>
+  Diese Seite verwendet Ende-zu-Ende-Verschlüsselung (TLS/SSL).<br>
+  Der Zugriff wird protokolliert gemäß DSGVO Art. 9.
+</footer>
+
+<script type="module">
+import { NhostClient } from "https://esm.sh/@nhost/nhost-js@2.2.9";
+
+const nhost = new NhostClient({
+  subdomain: "hpjfrhktprpuuxvvlpsb",
+  region: "eu-central-1"
+});
+
+const contentDiv = document.getElementById('content');
+
+// QR-Key aus URL extrahieren (Netlify Routing)
+function extractQRKey() {
+  // Versuche aus Query-Parameter
+  const urlParams = new URLSearchParams(window.location.search);
+  let key = urlParams.get('key');
+  
+  if (key) return key;
+  
+  // Versuche aus Path (z.B. /secure/KEY-2025-0042)
+  const path = window.location.pathname;
+  const match = path.match(/\/secure\/([A-Z0-9\-]+)/i);
+  if (match) return match[1];
+  
+  return null;
+}
+
+const qrKey = extractQRKey();
+
+console.log('QR-Key:', qrKey);
+
+if (!qrKey) {
+  showError('Kein QR-Code angegeben', 'Bitte scannen Sie einen gültigen QR-Code oder verwenden Sie einen direkten Link.');
+} else {
+  // Loading anzeigen
+  contentDiv.innerHTML = `
+    <div class="card loading">
+      <div class="spinner"></div>
+      <h2>Lade Dokument...</h2>
+      <p style="color:var(--muted)">QR-Code: <code>${qrKey}</code></p>
+    </div>
+  `;
+  
+  // Dokument laden
+  loadDocument();
+}
+
+// Dokument laden
+async function loadDocument() {
+  try {
+    // 1. QR-Code in localStorage suchen
+    const qrCodes = JSON.parse(localStorage.getItem('ffw_qr_codes') || '[]');
+    const qrCode = qrCodes.find(q => q.id === qrKey);
+    
+    if (!qrCode) {
+      showError('QR-Code nicht gefunden', `Der QR-Code "${qrKey}" wurde nicht im System gefunden. Bitte kontaktieren Sie die Feuerwehr.`);
+      return;
+    }
+    
+    if (qrCode.status !== 'assigned') {
+      showWarning('QR-Code noch nicht zugeordnet', 'Dieser QR-Code wurde noch keinem Dokument zugeordnet. Bitte warten Sie auf die Zuordnung durch den Sanitäter.');
+      return;
+    }
+    
+    // 2. Dokument aus Nhost laden
+    const QUERY = `query($id:uuid!) {
+      documents_by_pk(id:$id) {
+        id
+        type
+        title
+        created_at
+        payload
+        status
+      }
+    }`;
+    
+    const result = await nhost.graphql.request(QUERY, { id: qrCode.assignedTo });
+    
+    if (result.error) {
+      throw new Error(result.error.message);
+    }
+    
+    const doc = result.data.documents_by_pk;
+    
+    if (!doc) {
+      showError('Dokument nicht gefunden', 'Das verknüpfte Dokument konnte nicht geladen werden. Bitte kontaktieren Sie die Feuerwehr.');
+      return;
+    }
+    
+    // 3. Zugriff protokollieren
+    logAccess(qrKey, doc.id);
+    
+    // 4. Dokument anzeigen
+    renderDocument(doc, qrKey);
+    
+  } catch(e) {
+    console.error('Load error:', e);
+    showError('Fehler beim Laden', `Technischer Fehler: ${e.message}`);
+  }
+}
+
+function showError(title, message) {
+  contentDiv.innerHTML = `
+    <div class="card">
+      <div class="status-box error">
+        <span class="status-icon">❌</span>
+        <div class="status-title">${title}</div>
+        <p>${message}</p>
+      </div>
+      <div class="actions">
+        <button class="btn secondary" onclick="location.reload()">
+          <i class="fa-solid fa-rotate"></i> Erneut versuchen
+        </button>
+      </div>
+    </div>
+  `;
+}
+
+function showWarning(title, message) {
+  contentDiv.innerHTML = `
+    <div class="card">
+      <div class="status-box warning">
+        <span class="status-icon">⚠️</span>
+        <div class="status-title">${title}</div>
+        <p>${message}</p>
+      </div>
+    </div>
+  `;
+}
+
+function renderDocument(doc, qrKey) {
+  const data = typeof doc.payload === 'string' ? JSON.parse(doc.payload) : doc.payload;
+  
+  const createdDate = new Date(doc.created_at).toLocaleString('de-DE');
+  
+  // GCS Score berechnen
+  let gcsScore = '—';
+  if (data.qsofa_gcs) {
+    gcsScore = data.qsofa_gcs;
+  }
+  
+  // qSOFA Score berechnen
+  let qsofaScore = '—';
+  if (data.qsofa_gcs || data.af || data.rr_sys) {
+    let score = 0;
+    if (data.qsofa_gcs && data.qsofa_gcs < 15) score++;
+    if (data.af && data.af >= 22) score++;
+    if (data.rr_sys && data.rr_sys <= 100) score++;
+    qsofaScore = score;
+  }
+  
+  contentDiv.innerHTML = `
+    <div class="card">
+      <div class="status-box success">
+        <span class="status-icon">✅</span>
+        <div class="status-title">Dokument erfolgreich geladen</div>
+        <p>Zugriff via QR-Code: <strong>${qrKey}</strong></p>
+      </div>
+      
+      <div class="doc-header">
+        <h2 class="doc-title">${doc.title || 'Patientendokumentation'}</h2>
+        <div class="doc-meta">
+          <strong>Dokument-ID:</strong> ${doc.id.slice(0, 8)}<br>
+          <strong>Erstellt:</strong> ${createdDate}<br>
+          <strong>Status:</strong> <span class="badge info">${doc.status}</span>
+        </div>
+      </div>
+      
+      <!-- Patientenstammdaten -->
+      <div class="section">
+        <h3 class="section-title">
+          <i class="fa-solid fa-user"></i> Patientendaten
+        </h3>
+        <div class="info-grid">
+          ${data.name ? `<div class="info-item">
+            <div class="info-label">Name</div>
+            <div class="info-value">${data.vorname || ''} ${data.name}</div>
+          </div>` : ''}
+          ${data.gebdatum ? `<div class="info-item">
+            <div class="info-label">Geburtsdatum</div>
+            <div class="info-value">${new Date(data.gebdatum).toLocaleDateString('de-DE')}</div>
+          </div>` : ''}
+          ${data.alter ? `<div class="info-item">
+            <div class="info-label">Alter</div>
+            <div class="info-value">${data.alter} Jahre</div>
+          </div>` : ''}
+          ${data.telefon ? `<div class="info-item">
+            <div class="info-label">Telefon</div>
+            <div class="info-value">${data.telefon}</div>
+          </div>` : ''}
+        </div>
+      </div>
+      
+      <!-- Einsatzdaten -->
+      <div class="section">
+        <h3 class="section-title">
+          <i class="fa-solid fa-truck-medical"></i> Einsatzdaten
+        </h3>
+        <div class="info-grid">
+          ${data.einsatz_nr ? `<div class="info-item">
+            <div class="info-label">Einsatz-Nr.</div>
+            <div class="info-value">${data.einsatz_nr}</div>
+          </div>` : ''}
+          ${data.fahrzeug ? `<div class="info-item">
+            <div class="info-label">Fahrzeug</div>
+            <div class="info-value">${data.fahrzeug}</div>
+          </div>` : ''}
+          ${data.zeit_einsatz ? `<div class="info-item">
+            <div class="info-label">Einsatzzeit</div>
+            <div class="info-value">${new Date(data.zeit_einsatz).toLocaleString('de-DE')}</div>
+          </div>` : ''}
+          ${data.einsatz_art ? `<div class="info-item">
+            <div class="info-label">Einsatz-Art</div>
+            <div class="info-value">${data.einsatz_art}</div>
+          </div>` : ''}
+        </div>
+      </div>
+      
+      <!-- Vitalwerte -->
+      ${(data.rr_sys || data.hf || data.af || data.spo2 || data.temp || data.bz_mg) ? `
+      <div class="section">
+        <h3 class="section-title">
+          <i class="fa-solid fa-heart-pulse"></i> Vitalwerte
+        </h3>
+        <div class="vital-signs">
+          ${data.rr_sys ? `<div class="vital-card">
+            <div class="vital-label">Blutdruck</div>
+            <div class="vital-value">${data.rr_sys}/${data.rr_dia || '—'}</div>
+            <div class="vital-unit">mmHg</div>
+          </div>` : ''}
+          ${data.hf ? `<div class="vital-card">
+            <div class="vital-label">Herzfrequenz</div>
+            <div class="vital-value">${data.hf}</div>
+            <div class="vital-unit">/min</div>
+          </div>` : ''}
+          ${data.af ? `<div class="vital-card">
+            <div class="vital-label">Atemfrequenz</div>
+            <div class="vital-value">${data.af}</div>
+            <div class="vital-unit">/min</div>
+          </div>` : ''}
+          ${data.spo2 ? `<div class="vital-card">
+            <div class="vital-label">SpO₂</div>
+            <div class="vital-value">${data.spo2}</div>
+            <div class="vital-unit">%</div>
+          </div>` : ''}
+          ${data.temp ? `<div class="vital-card">
+            <div class="vital-label">Temperatur</div>
+            <div class="vital-value">${data.temp}</div>
+            <div class="vital-unit">°C</div>
+          </div>` : ''}
+          ${data.bz_mg ? `<div class="vital-card">
+            <div class="vital-label">Blutzucker</div>
+            <div class="vital-value">${data.bz_mg}</div>
+            <div class="vital-unit">mg/dl</div>
+          </div>` : ''}
+        </div>
+      </div>` : ''}
+      
+      <!-- GCS & qSOFA -->
+      ${(gcsScore !== '—' || qsofaScore !== '—') ? `
+      <div class="section">
+        <h3 class="section-title">
+          <i class="fa-solid fa-brain"></i> Neurologische Scores
+        </h3>
+        <div class="info-grid">
+          ${gcsScore !== '—' ? `<div class="info-item">
+            <div class="info-label">Glasgow Coma Scale (GCS)</div>
+            <div class="info-value">${gcsScore} Punkte</div>
+          </div>` : ''}
+          ${qsofaScore !== '—' ? `<div class="info-item">
+            <div class="info-label">qSOFA Score</div>
+            <div class="info-value">${qsofaScore} ${qsofaScore >= 2 ? '⚠️ Erhöht!' : ''}</div>
+          </div>` : ''}
+        </div>
+      </div>` : ''}
+      
+      <!-- Medikamente -->
+      ${data.medications && data.medications.length > 0 ? `
+      <div class="section">
+        <h3 class="section-title">
+          <i class="fa-solid fa-pills"></i> Verabreichte Medikamente
+        </h3>
+        <table class="medications-table">
+          <thead>
+            <tr>
+              <th>Medikament</th>
+              <th>Dosis</th>
+              <th>Route</th>
+              <th>Uhrzeit</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${data.medications.map(med => `
+              <tr>
+                <td><strong>${med.name}</strong></td>
+                <td>${med.dose} ${med.unit || ''}</td>
+                <td><span class="badge info">${med.route || '—'}</span></td>
+                <td>${med.time || '—'}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>` : ''}
+      
+      <!-- Anamnese / Notfallgeschehen -->
+      ${data.notfallgeschehen ? `
+      <div class="section">
+        <h3 class="section-title">
+          <i class="fa-solid fa-notes-medical"></i> Notfallgeschehen / Anamnese
+        </h3>
+        <div style="background:#f8fafc;padding:1rem;border-radius:8px;border-left:4px solid var(--primary);white-space:pre-wrap">
+${data.notfallgeschehen}
+        </div>
+      </div>` : ''}
+      
+      <!-- Fotos -->
+      ${data.photos && data.photos.length > 0 ? `
+      <div class="section">
+        <h3 class="section-title">
+          <i class="fa-solid fa-camera"></i> Dokumentationsfotos
+        </h3>
+        <div class="photo-grid">
+          ${data.photos.map((photo, i) => `
+            <div class="photo-item">
+              <img src="${photo}" alt="Foto ${i+1}" onclick="window.open(this.src, '_blank')">
+            </div>
+          `).join('')}
+        </div>
+      </div>` : ''}
+      
+      <!-- Unterschrift -->
+      ${data.signature ? `
+      <div class="section">
+        <h3 class="section-title">
+          <i class="fa-solid fa-signature"></i> Unterschrift Sanitäter
+        </h3>
+        <div class="signature-box">
+          <div style="margin-bottom:0.5rem">
+            <strong>${data.ausfueller_name || 'Sanitäter'}</strong>
+            ${data.ausfueller_zeit ? ` – ${new Date(data.ausfueller_zeit).toLocaleString('de-DE')}` : ''}
+          </div>
+          <img src="${data.signature}" class="signature-img" alt="Unterschrift">
+        </div>
+      </div>` : ''}
+      
+      <!-- Aktionen -->
+      <div class="actions">
+        <button class="btn primary" onclick="window.print()">
+          <i class="fa-solid fa-print"></i> Drucken
+        </button>
+        <button class="btn secondary" onclick="downloadPDF()">
+          <i class="fa-solid fa-file-pdf"></i> Als PDF
+        </button>
+      </div>
+      
+      <!-- Zugriffs-Log -->
+      <div class="access-log">
+        <strong>ℹ️ Hinweis:</strong> Dieser Zugriff wird gemäß DSGVO Art. 9 protokolliert.
+        Zugriffszeitpunkt: ${new Date().toLocaleString('de-DE')}
+      </div>
+    </div>
+  `;
+}
+
+function logAccess(qrKey, docId) {
+  // Zugriff in localStorage protokollieren
+  const accessLog = JSON.parse(localStorage.getItem('ffw_access_log') || '[]');
+  accessLog.push({
+    qrKey: qrKey,
+    docId: docId,
+    timestamp: new Date().toISOString(),
+    userAgent: navigator.userAgent
+  });
+  localStorage.setItem('ffw_access_log', JSON.stringify(accessLog));
+  
+  console.log('Access logged:', { qrKey, docId, timestamp: new Date().toISOString() });
+}
+
+window.downloadPDF = function() {
+  alert('PDF-Download: In Produktion würde hier eine PDF erstellt.\n\nTipp: Nutzen Sie die Drucken-Funktion und wählen Sie "Als PDF speichern".');
+};
+</script>
+
+</body>
+</html>
