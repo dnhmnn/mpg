@@ -577,11 +577,11 @@ async function loadDocument() {
       return;
     }
     
-    // KORRIGIERTE QUERY - document statt documents
+    // KORRIGIERTE QUERY - patient_docs
     addDebug('Loading document from Nhost...', qrCode.assignedTo);
     
     const QUERY = `query($id:uuid!) {
-      document(where:{id:{_eq:$id}}) {
+      patient_docs(where:{id:{_eq:$id}}) {
         id
         type
         title
@@ -603,7 +603,8 @@ async function loadDocument() {
       throw new Error(result.error[0]?.message || 'GraphQL Error');
     }
     
-    const doc = result.data.document ? result.data.document[0] : null;
+    // KORRIGIERT: patient_docs
+    const doc = result.data.patient_docs ? result.data.patient_docs[0] : null;
     addDebug('Document found', doc ? 'YES' : 'NO');
     addDebug('Document data', doc);
     
@@ -705,6 +706,17 @@ function renderDocument(doc, qrKey) {
   const data = typeof doc.payload === 'string' ? JSON.parse(doc.payload) : doc.payload;
   const createdDate = new Date(doc.created_at).toLocaleString('de-DE');
   
+  let gcsScore = data.qsofa_gcs || '—';
+  let qsofaScore = '—';
+  
+  if (data.qsofa_gcs || data.af || data.rr_sys) {
+    let score = 0;
+    if (data.qsofa_gcs && data.qsofa_gcs < 15) score++;
+    if (data.af && data.af >= 22) score++;
+    if (data.rr_sys && data.rr_sys <= 100) score++;
+    qsofaScore = score;
+  }
+  
   contentDiv.innerHTML = `
     <div class="card">
       <div class="status-box success">
@@ -736,10 +748,43 @@ function renderDocument(doc, qrKey) {
             <div class="info-label">Geburtsdatum</div>
             <div class="info-value">${new Date(data.gebdatum).toLocaleDateString('de-DE')}</div>
           </div>` : ''}
+          ${data.alter ? `<div class="info-item">
+            <div class="info-label">Alter</div>
+            <div class="info-value">${data.alter} Jahre</div>
+          </div>` : ''}
+          ${data.telefon ? `<div class="info-item">
+            <div class="info-label">Telefon</div>
+            <div class="info-value">${data.telefon}</div>
+          </div>` : ''}
         </div>
       </div>` : ''}
       
-      ${(data.rr_sys || data.hf || data.af) ? `
+      ${data.einsatz_nr || data.fahrzeug ? `
+      <div class="section">
+        <h3 class="section-title">
+          <i class="fa-solid fa-truck-medical"></i> Einsatzdaten
+        </h3>
+        <div class="info-grid">
+          ${data.einsatz_nr ? `<div class="info-item">
+            <div class="info-label">Einsatz-Nr.</div>
+            <div class="info-value">${data.einsatz_nr}</div>
+          </div>` : ''}
+          ${data.fahrzeug ? `<div class="info-item">
+            <div class="info-label">Fahrzeug</div>
+            <div class="info-value">${data.fahrzeug}</div>
+          </div>` : ''}
+          ${data.zeit_einsatz ? `<div class="info-item">
+            <div class="info-label">Einsatzzeit</div>
+            <div class="info-value">${new Date(data.zeit_einsatz).toLocaleString('de-DE')}</div>
+          </div>` : ''}
+          ${data.einsatz_art ? `<div class="info-item">
+            <div class="info-label">Einsatz-Art</div>
+            <div class="info-value">${data.einsatz_art}</div>
+          </div>` : ''}
+        </div>
+      </div>` : ''}
+      
+      ${(data.rr_sys || data.hf || data.af || data.spo2 || data.temp || data.bz_mg) ? `
       <div class="section">
         <h3 class="section-title">
           <i class="fa-solid fa-heart-pulse"></i> Vitalwerte
@@ -755,6 +800,108 @@ function renderDocument(doc, qrKey) {
             <div class="vital-value">${data.hf}</div>
             <div class="vital-unit">/min</div>
           </div>` : ''}
+          ${data.af ? `<div class="vital-card">
+            <div class="vital-label">Atemfrequenz</div>
+            <div class="vital-value">${data.af}</div>
+            <div class="vital-unit">/min</div>
+          </div>` : ''}
+          ${data.spo2 ? `<div class="vital-card">
+            <div class="vital-label">SpO₂</div>
+            <div class="vital-value">${data.spo2}</div>
+            <div class="vital-unit">%</div>
+          </div>` : ''}
+          ${data.temp ? `<div class="vital-card">
+            <div class="vital-label">Temperatur</div>
+            <div class="vital-value">${data.temp}</div>
+            <div class="vital-unit">°C</div>
+          </div>` : ''}
+          ${data.bz_mg ? `<div class="vital-card">
+            <div class="vital-label">Blutzucker</div>
+            <div class="vital-value">${data.bz_mg}</div>
+            <div class="vital-unit">mg/dl</div>
+          </div>` : ''}
+        </div>
+      </div>` : ''}
+      
+      ${(gcsScore !== '—' || qsofaScore !== '—') ? `
+      <div class="section">
+        <h3 class="section-title">
+          <i class="fa-solid fa-brain"></i> Neurologische Scores
+        </h3>
+        <div class="info-grid">
+          ${gcsScore !== '—' ? `<div class="info-item">
+            <div class="info-label">Glasgow Coma Scale (GCS)</div>
+            <div class="info-value">${gcsScore} Punkte</div>
+          </div>` : ''}
+          ${qsofaScore !== '—' ? `<div class="info-item">
+            <div class="info-label">qSOFA Score</div>
+            <div class="info-value">${qsofaScore} ${qsofaScore >= 2 ? '⚠️ Erhöht!' : ''}</div>
+          </div>` : ''}
+        </div>
+      </div>` : ''}
+      
+      ${data.medications && data.medications.length > 0 ? `
+      <div class="section">
+        <h3 class="section-title">
+          <i class="fa-solid fa-pills"></i> Verabreichte Medikamente
+        </h3>
+        <table class="medications-table">
+          <thead>
+            <tr>
+              <th>Medikament</th>
+              <th>Dosis</th>
+              <th>Route</th>
+              <th>Uhrzeit</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${data.medications.map(med => `
+              <tr>
+                <td><strong>${med.name}</strong></td>
+                <td>${med.dose} ${med.unit || ''}</td>
+                <td><span class="badge info">${med.route || '—'}</span></td>
+                <td>${med.time || '—'}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>` : ''}
+      
+      ${data.notfallgeschehen ? `
+      <div class="section">
+        <h3 class="section-title">
+          <i class="fa-solid fa-notes-medical"></i> Notfallgeschehen / Anamnese
+        </h3>
+        <div style="background:#f8fafc;padding:1rem;border-radius:8px;border-left:4px solid var(--primary);white-space:pre-wrap">
+${data.notfallgeschehen}
+        </div>
+      </div>` : ''}
+      
+      ${data.photos && data.photos.length > 0 ? `
+      <div class="section">
+        <h3 class="section-title">
+          <i class="fa-solid fa-camera"></i> Dokumentationsfotos
+        </h3>
+        <div class="photo-grid">
+          ${data.photos.map((photo, i) => `
+            <div class="photo-item">
+              <img src="${photo}" alt="Foto ${i+1}" onclick="window.open(this.src, '_blank')">
+            </div>
+          `).join('')}
+        </div>
+      </div>` : ''}
+      
+      ${data.signature ? `
+      <div class="section">
+        <h3 class="section-title">
+          <i class="fa-solid fa-signature"></i> Unterschrift Sanitäter
+        </h3>
+        <div class="signature-box">
+          <div style="margin-bottom:0.5rem">
+            <strong>${data.ausfueller_name || 'Sanitäter'}</strong>
+            ${data.ausfueller_zeit ? ` – ${new Date(data.ausfueller_zeit).toLocaleString('de-DE')}` : ''}
+          </div>
+          <img src="${data.signature}" class="signature-img" alt="Unterschrift">
         </div>
       </div>` : ''}
       
@@ -765,10 +912,13 @@ function renderDocument(doc, qrKey) {
       </div>
       
       <div class="access-log">
-        <strong>ℹ️ Hinweis:</strong> Zugriff protokolliert: ${new Date().toLocaleString('de-DE')}
+        <strong>ℹ️ Hinweis:</strong> Dieser Zugriff wird gemäß DSGVO Art. 9 protokolliert.
+        Zugriffszeitpunkt: ${new Date().toLocaleString('de-DE')}
       </div>
     </div>
   `;
+  
+  addDebug('✅ Document rendered successfully');
 }
 
 function logAccess(qrKey, docId) {
@@ -776,11 +926,16 @@ function logAccess(qrKey, docId) {
   accessLog.push({
     qrKey: qrKey,
     docId: docId,
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    userAgent: navigator.userAgent
   });
   localStorage.setItem('ffw_access_log', JSON.stringify(accessLog));
   addDebug('Access logged', { qrKey, docId });
 }
+
+window.downloadPDF = function() {
+  alert('PDF-Download: In Produktion würde hier eine PDF erstellt.\n\nTipp: Nutzen Sie die Drucken-Funktion und wählen Sie "Als PDF speichern".');
+};
 </script>
 
 </body>
