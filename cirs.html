@@ -2,50 +2,244 @@
 <html lang="de">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
 <title>CIRS-Meldung</title>
 <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
 <style>
   :root{ --rot:#c8102e; --bg:#f7f7f7; --card:#fff; --border:#e5e7eb; --muted:#6b7280; }
   *{ box-sizing:border-box }
-  body{ margin:0; background:var(--bg); font-family:'Atkinson Hyperlegible',system-ui,Arial,sans-serif; }
-  header{ background:var(--rot); color:#fff; padding:12px 16px; font-weight:700 }
-  .wrap{ max-width:820px; margin:16px auto; padding:0 12px }
-  .card{ background:var(--card); border-radius:12px; box-shadow:0 3px 12px rgba(0,0,0,.06); padding:14px; margin-bottom:14px }
-  h2{ color:var(--rot); margin:6px 0 12px }
-  label{ color:var(--rot); font-weight:700; margin-top:8px; display:block }
-  input, select, textarea{
-    width:100%; padding:12px; border:1px solid var(--border); border-radius:10px; background:#fafafa; font-size:1rem;
+  body{ 
+    margin:0; 
+    background:var(--bg); 
+    font-family:'Atkinson Hyperlegible',system-ui,Arial,sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
-  textarea{ min-height:110px; resize:vertical }
-  .row{ display:flex; gap:10px; flex-wrap:wrap }
-  .btn{ background:var(--rot); color:#fff; border:none; border-radius:10px; padding:12px 16px; font-weight:700; cursor:pointer }
-  .btn.ghost{ background:#eee; color:var(--rot); border:1px solid var(--rot) }
-  .hint{ color:var(--muted); font-size:.95rem }
-  .msg{ border-radius:12px; padding:12px; background:#fff5f5; border:1px solid #f2c9d1; color:#b00020; min-height:1.2em }
-  .ok{ background:#eef9f0; border-color:#cfead6; color:#256029 }
-  /* Mobile Tweaks */
-  @media (max-width: 560px){
-    header{ font-size:1.05rem }
-    input,select,textarea{ font-size:1.05rem }
-    .btn{ width:100% }
+  header{ 
+    background:var(--rot); 
+    color:#fff; 
+    padding:16px; 
+    font-weight:700;
+    font-size:1.2rem;
+    text-align:center;
+    box-shadow:0 2px 8px rgba(0,0,0,.1);
+  }
+  .wrap{ 
+    max-width:820px; 
+    margin:0 auto; 
+    padding:16px;
+  }
+  .card{ 
+    background:var(--card); 
+    border-radius:12px; 
+    box-shadow:0 2px 8px rgba(0,0,0,.08); 
+    padding:20px; 
+    margin-bottom:16px;
+  }
+  h2{ 
+    color:var(--rot); 
+    margin:0 0 16px;
+    font-size:1.3rem;
+  }
+  label{ 
+    color:var(--rot); 
+    font-weight:700; 
+    margin-top:12px; 
+    margin-bottom:6px;
+    display:block;
+    font-size:1rem;
+  }
+  input, select, textarea{
+    width:100%; 
+    padding:14px; 
+    border:2px solid var(--border); 
+    border-radius:10px; 
+    background:#fafafa; 
+    font-size:16px;
+    font-family:inherit;
+    transition:border-color 0.2s;
+  }
+  /* Wichtig: datetime-local spezifisch auf gleiche Größe setzen */
+  input[type="datetime-local"]{
+    font-size:16px;
+    padding:14px;
+    line-height:normal;
+    height:auto;
+  }
+  input:focus, select:focus, textarea:focus{
+    outline:none;
+    border-color:var(--rot);
+    background:#fff;
+  }
+  input:disabled{
+    background:#f0f0f0;
+    color:#999;
+    cursor:not-allowed;
+  }
+  textarea{ 
+    min-height:120px; 
+    resize:vertical;
+    line-height:1.5;
+  }
+  .row{ 
+    display:flex; 
+    gap:12px; 
+    flex-wrap:wrap;
+  }
+  .row > div{
+    flex:1;
+    min-width:0;
+  }
+  .checkbox-group{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    margin-top:10px;
+    padding:12px;
+    background:#f9f9f9;
+    border-radius:8px;
+  }
+  .checkbox-group input[type="checkbox"]{
+    width:auto;
+    margin:0;
+    cursor:pointer;
+    width:20px;
+    height:20px;
+  }
+  .checkbox-group label{
+    margin:0;
+    cursor:pointer;
+    font-weight:600;
+    font-size:0.95rem;
+  }
+  .btn-group{
+    display:flex;
+    gap:10px;
+    flex-direction:column;
+    margin-top:16px;
+  }
+  .btn{ 
+    background:var(--rot); 
+    color:#fff; 
+    border:none; 
+    border-radius:10px; 
+    padding:16px 20px; 
+    font-weight:700; 
+    cursor:pointer;
+    font-size:1.05rem;
+    width:100%;
+    transition:background 0.2s, transform 0.1s;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .btn:active{
+    transform:scale(0.98);
+  }
+  .btn:disabled{
+    opacity:0.6;
+    cursor:not-allowed;
+  }
+  .btn.ghost{ 
+    background:#fff; 
+    color:var(--rot); 
+    border:2px solid var(--rot);
+  }
+  .btn.ghost:active{
+    background:#f7f7f7;
+  }
+  .hint{ 
+    color:var(--muted); 
+    font-size:.95rem;
+    line-height:1.5;
+    margin-top:12px;
+  }
+  .msg{ 
+    border-radius:10px; 
+    padding:14px; 
+    background:#fff5f5; 
+    border:2px solid #f2c9d1; 
+    color:#b00020; 
+    min-height:1.2em;
+    margin-top:12px;
+    font-size:.95rem;
+  }
+  .ok{ 
+    background:#eef9f0; 
+    border-color:#cfead6; 
+    color:#256029;
+  }
+  
+  /* Bessere Touch-Targets für Mobile */
+  @media (max-width: 600px){
+    body{
+      font-size:16px;
+    }
+    header{ 
+      font-size:1.1rem;
+      padding:14px;
+    }
+    .wrap{
+      padding:12px;
+    }
+    .card{
+      padding:16px;
+      margin-bottom:12px;
+    }
+    h2{
+      font-size:1.2rem;
+      margin-bottom:14px;
+    }
+    input, select, textarea{
+      font-size:16px;
+      padding:14px 12px;
+    }
+    input[type="datetime-local"]{
+      font-size:16px;
+      padding:14px 12px;
+    }
+    textarea{
+      min-height:100px;
+    }
+    .row{
+      flex-direction:column;
+      gap:0;
+    }
+    .btn{
+      padding:16px;
+      font-size:1rem;
+    }
+  }
+  
+  /* Extra kleine Displays */
+  @media (max-width: 380px){
+    .wrap{
+      padding:10px;
+    }
+    .card{
+      padding:14px;
+    }
+    input, select, textarea{
+      padding:12px 10px;
+    }
+    input[type="datetime-local"]{
+      padding:12px 10px;
+    }
   }
 </style>
 </head>
 <body>
-<header>CIRS-Meldung</header>
+<header>🚑 CIRS-Meldung</header>
 
 <div class="wrap">
 
   <!-- Kopfdaten -->
   <section class="card">
-    <h2>Kopfdaten</h2>
+    <h2>📋 Kopfdaten</h2>
     <div class="row">
-      <div style="flex:1;min-width:220px">
+      <div>
         <label for="dt">Datum & Uhrzeit</label>
         <input id="dt" type="datetime-local" />
       </div>
-      <div style="flex:1;min-width:220px">
+      <div>
         <label for="einsatz">Einsatznummer (optional)</label>
         <input id="einsatz" placeholder="z. B. 2025-001" />
       </div>
@@ -53,7 +247,6 @@
 
     <label for="kat">Kategorie</label>
     <select id="kat">
-      <!-- „Medikamente“ wurde entfernt -->
       <option value="Material/Technik">Material/Technik</option>
       <option value="Kommunikation">Kommunikation</option>
       <option value="Organisation/Prozess">Organisation/Prozess</option>
@@ -69,37 +262,48 @@
 
   <!-- Melder -->
   <section class="card">
-    <h2>Melder</h2>
-    <div class="row">
-      <div style="flex:1;min-width:220px">
-        <label for="melder">Name</label>
-        <input id="melder" placeholder="Ihr Name" />
-      </div>
+    <h2>👤 Melder (optional)</h2>
+    <label for="melder">Name</label>
+    <input id="melder" placeholder="Ihr Name oder leer lassen für anonym" />
+    
+    <div class="checkbox-group">
+      <input type="checkbox" id="anonym" />
+      <label for="anonym">Anonym melden (Name wird gelöscht)</label>
     </div>
+    <p class="hint" style="margin-top:8px">💡 Wenn Sie anonym bleiben möchten, aktivieren Sie die Checkbox. Ihr Name wird dann nicht gespeichert.</p>
   </section>
 
   <!-- Absenden -->
   <section class="card">
-    <button id="saveBtn" class="btn" type="button">Meldung speichern</button>
-    <button id="draftBtn" class="btn ghost" type="button" style="margin-left:8px">Zwischenspeichern</button>
-    <p class="hint" style="margin-top:10px">Die Meldung erscheint in <strong>Dokumente bearbeiten</strong> (Status: „offen“) und kann dort auf „erledigt“ gesetzt werden. Danach wandert sie 30 Tage ins Archiv.</p>
-    <div id="msg" class="msg" style="margin-top:10px"></div>
+    <div class="btn-group">
+      <button id="saveBtn" class="btn" type="button">✅ Meldung speichern</button>
+      <button id="draftBtn" class="btn ghost" type="button">💾 Zwischenspeichern</button>
+    </div>
+    <p class="hint">Die Meldung erscheint in <strong>Dokumente bearbeiten</strong> (Status: „offen") und kann dort auf „erledigt" gesetzt werden.</p>
+    <div id="msg" class="msg" style="display:none"></div>
   </section>
 
 </div>
 
 <script>
 /* -------- Einstellungen -------- */
-const GRAPHQL_FN = '/.netlify/functions/graphql'; // Netlify-Function wie bei Produktausgabe
+const GRAPHQL_FN = '/.netlify/functions/graphql';
 const DRAFT_KEY = 'draft_cirs_v1';
 
 /* -------- Helfer -------- */
 const $ = id => document.getElementById(id);
 const msgEl = $('msg');
+const melderInput = $('melder');
+const anonymCheckbox = $('anonym');
 
 function showMsg(text, ok=false){
   msgEl.textContent = text;
   msgEl.className = 'msg ' + (ok ? 'ok' : '');
+  msgEl.style.display = 'block';
+}
+
+function hideMsg(){
+  msgEl.style.display = 'none';
 }
 
 function pad(n){ return String(n).padStart(2,'0'); }
@@ -110,22 +314,46 @@ function setNow(){
 }
 
 function collect(){
+  const isAnonym = anonymCheckbox.checked;
   return {
     dt: $('dt').value,
     einsatz: ($('einsatz').value || '').trim(),
     kat: $('kat').value,
     desc: ($('desc').value || '').trim(),
     measures: ($('measures').value || '').trim(),
-    melder: ($('melder').value || '').trim()
+    melder: isAnonym ? 'Anonym' : (melderInput.value || '').trim() || 'Anonym'
   };
 }
+
+/* -------- Anonym-Checkbox Logik -------- */
+anonymCheckbox.addEventListener('change', ()=>{
+  if(anonymCheckbox.checked){
+    melderInput.value = '';
+    melderInput.disabled = true;
+    melderInput.placeholder = 'Anonym';
+  } else {
+    melderInput.disabled = false;
+    melderInput.placeholder = 'Ihr Name oder leer lassen für anonym';
+  }
+});
 
 /* -------- Draft lokal -------- */
 $('draftBtn').addEventListener('click', ()=>{
   const d = collect();
-  localStorage.setItem(DRAFT_KEY, JSON.stringify(d));
-  showMsg('Entwurf lokal gespeichert ✔', true);
+  const draftData = {
+    dt: $('dt').value,
+    einsatz: $('einsatz').value,
+    kat: $('kat').value,
+    desc: $('desc').value,
+    measures: $('measures').value,
+    melder: melderInput.value,
+    anonym: anonymCheckbox.checked
+  };
+  localStorage.setItem(DRAFT_KEY, JSON.stringify(draftData));
+  showMsg('✔ Entwurf lokal gespeichert', true);
+  setTimeout(hideMsg, 2000);
 });
+
 (function loadDraft(){
   const raw = localStorage.getItem(DRAFT_KEY);
   if(!raw) return;
@@ -136,7 +364,12 @@ $('draftBtn').addEventListener('click', ()=>{
     if(d.kat) $('kat').value = d.kat;
     if(d.desc) $('desc').value = d.desc;
     if(d.measures) $('measures').value = d.measures;
-    if(d.melder) $('melder').value = d.melder;
+    if(d.melder) melderInput.value = d.melder;
+    if(d.anonym) {
+      anonymCheckbox.checked = true;
+      melderInput.disabled = true;
+      melderInput.placeholder = 'Anonym';
+    }
   }catch(_){}
 })();
 
@@ -145,19 +378,15 @@ $('saveBtn').addEventListener('click', saveCIRS);
 
 async function saveCIRS(){
   try{
-    showMsg('Speichere …', true);
+    showMsg('⏳ Speichere …', true);
+    const btn = $('saveBtn');
+    btn.disabled = true;
+    
     const d = collect();
 
-    if (!d.desc || !d.melder){
-      showMsg('Bitte mindestens Beschreibung und Name angeben.');
-      return;
-    }
-
-    // Titel wie bei Produktausgabe: "CIRS 46263 (02.09.2025)"
     const datePart = d.dt ? formatDateDE(d.dt) : formatDateDE(new Date().toISOString());
     const title = `CIRS${d.einsatz ? ' '+d.einsatz : ''} (${datePart})`;
 
-    // Payload, das in dokumente-bearbeiten angezeigt werden kann
     const payload = {
       datetime: d.dt || null,
       einsatznummer: d.einsatz || null,
@@ -192,21 +421,29 @@ async function saveCIRS(){
 
     // Erfolg
     localStorage.removeItem(DRAFT_KEY);
-    showMsg('CIRS-Meldung gespeichert ✔', true);
+    showMsg('✅ CIRS-Meldung gespeichert!', true);
 
-    // Optional: Formular zurücksetzen
+    // Formular zurücksetzen
     setTimeout(()=>{
-      $('einsatz').value=''; $('desc').value=''; $('measures').value=''; $('melder').value='';
-      setNow(); showMsg('');
-    }, 800);
+      $('einsatz').value=''; 
+      $('desc').value=''; 
+      $('measures').value=''; 
+      melderInput.value='';
+      anonymCheckbox.checked = false;
+      melderInput.disabled = false;
+      melderInput.placeholder = 'Ihr Name oder leer lassen für anonym';
+      setNow(); 
+      hideMsg();
+      btn.disabled = false;
+    }, 1500);
 
   }catch(err){
-    showMsg('Fehler beim Speichern: ' + (err?.message || String(err)));
+    showMsg('❌ Fehler: ' + (err?.message || String(err)));
+    $('saveBtn').disabled = false;
   }
 }
 
 function formatDateDE(dtLocal){
-  // dtLocal: "YYYY-MM-DDTHH:MM" oder ISO
   const d = new Date(dtLocal);
   return `${pad(d.getDate())}.${pad(d.getMonth()+1)}.${d.getFullYear()}`;
 }
