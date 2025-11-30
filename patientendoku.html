@@ -801,7 +801,7 @@
 </div>
 
 <script type="module">
-/* ===== PATIENTENDOKUMENTATION - KOMPLETT ===== */
+/* ===== PATIENTENDOKUMENTATION - patient_docs ===== */
 
 import { NhostClient } from "https://esm.sh/@nhost/nhost-js@2.2.9";
 
@@ -1081,7 +1081,7 @@ window.closeAll = function() {
   document.querySelectorAll('details').forEach(d => d.open = false);
 };
 
-// ===== ABSENDEN - KORRIGIERT =====
+// ===== ABSENDEN - patient_docs =====
 window.submitToBackend = async function() {
   const btn = document.getElementById('sendBtn');
   btn.disabled = true;
@@ -1098,9 +1098,9 @@ window.submitToBackend = async function() {
     
     console.log('Title:', title);
     
-    // KORRIGIERT: insert_document_one statt insert_documents_one
+    // KORRIGIERT: insert_patient_docs_one
     const MUTATION = `mutation($type:String!, $title:String!, $payload:jsonb!) {
-      insert_document_one(object:{type:$type, title:$title, payload:$payload, status:"offen"}) {
+      insert_patient_docs_one(object:{type:$type, title:$title, payload:$payload, status:"offen"}) {
         id
       }
     }`;
@@ -1121,8 +1121,8 @@ window.submitToBackend = async function() {
       throw new Error(result.error[0]?.message || 'GraphQL Error');
     }
     
-    // KORRIGIERT: insert_document_one statt insert_documents_one
-    currentDocumentId = result.data.insert_document_one.id;
+    // KORRIGIERT: insert_patient_docs_one
+    currentDocumentId = result.data.insert_patient_docs_one.id;
     
     console.log('Document ID:', currentDocumentId);
     
