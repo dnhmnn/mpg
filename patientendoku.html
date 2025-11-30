@@ -1081,7 +1081,7 @@ window.closeAll = function() {
   document.querySelectorAll('details').forEach(d => d.open = false);
 };
 
-// ===== ABSENDEN =====
+// ===== ABSENDEN - KORRIGIERT =====
 window.submitToBackend = async function() {
   const btn = document.getElementById('sendBtn');
   btn.disabled = true;
@@ -1090,16 +1090,23 @@ window.submitToBackend = async function() {
   try {
     const data = collectFormData();
     
-    // Titel generieren
+    console.log('=== SUBMIT DEBUG ===');
+    console.log('Collected data:', data);
+    
     const patName = `${data.vorname || ''} ${data.name || ''}`.trim() || 'Unbekannt';
     const title = `Patientendoku: ${patName}`;
     
-    // GraphQL Mutation
+    console.log('Title:', title);
+    
+    // KORRIGIERT: insert_document_one statt insert_documents_one
     const MUTATION = `mutation($type:String!, $title:String!, $payload:jsonb!) {
-      insert_documents_one(object:{type:$type, title:$title, payload:$payload, status:"offen"}) {
+      insert_document_one(object:{type:$type, title:$title, payload:$payload, status:"offen"}) {
         id
       }
     }`;
+    
+    console.log('Mutation:', MUTATION);
+    console.log('Variables:', { type: 'Patientendokumentation', title, payload: data });
     
     const result = await nhost.graphql.request(MUTATION, {
       type: 'Patientendokumentation',
@@ -1107,13 +1114,19 @@ window.submitToBackend = async function() {
       payload: data
     });
     
-    if (result.error) throw new Error(result.error.message);
+    console.log('GraphQL Result:', result);
     
-    currentDocumentId = result.data.insert_documents_one.id;
+    if (result.error) {
+      console.error('GraphQL Error:', result.error);
+      throw new Error(result.error[0]?.message || 'GraphQL Error');
+    }
     
-    // Zeige QR-Modal
-    const docId = `PAT-${new Date().getFullYear()}-${currentDocumentId.slice(0,8)}`;
-    document.getElementById('docIdDisplay').textContent = `Dokument-ID: ${docId}`;
+    // KORRIGIERT: insert_document_one statt insert_documents_one
+    currentDocumentId = result.data.insert_document_one.id;
+    
+    console.log('Document ID:', currentDocumentId);
+    
+    document.getElementById('docIdDisplay').textContent = `Dokument-ID: PAT-${new Date().getFullYear()}-${currentDocumentId.slice(0,8)}`;
     document.getElementById('qrModal').classList.add('show');
     
     btn.innerHTML = '<i class="fa-solid fa-check"></i> Gesendet!';
@@ -1146,12 +1159,23 @@ window.assignQRCode = function() {
   
   if (!qrCode) {
     if (!confirm(`QR-Code "${key}" nicht gefunden. Trotzdem zuordnen?`)) return;
+    // Erstelle QR-Code wenn nicht vorhanden
+    qrCodes.push({
+      id: key,
+      url: `https://mpgffrot.netlify.app/secure/${key}`,
+      generated: new Date().toISOString(),
+      status: 'assigned',
+      assignedTo: currentDocumentId,
+      assignedAt: new Date().toISOString()
+    });
   } else {
+    // QR-Code als "assigned" markieren
     qrCode.status = 'assigned';
     qrCode.assignedTo = currentDocumentId;
     qrCode.assignedAt = new Date().toISOString();
-    localStorage.setItem('ffw_qr_codes', JSON.stringify(qrCodes));
   }
+  
+  localStorage.setItem('ffw_qr_codes', JSON.stringify(qrCodes));
   
   alert(`✅ QR-Code "${key}" erfolgreich zugeordnet!\n\nÜbergib den Aufkleber an den Rettungsdienst.`);
   document.getElementById('qrModal').classList.remove('show');
