@@ -112,6 +112,66 @@
     font-weight:600;
     font-size:0.95rem;
   }
+  
+  /* Dringlichkeit Radio Buttons */
+  .priority-group{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    margin-top:10px;
+  }
+  .priority-option{
+    flex:1;
+    min-width:0;
+  }
+  .priority-option input[type="radio"]{
+    display:none;
+  }
+  .priority-label{
+    display:block;
+    padding:14px;
+    border:2px solid var(--border);
+    border-radius:10px;
+    text-align:center;
+    cursor:pointer;
+    font-weight:700;
+    font-size:0.95rem;
+    transition:all 0.2s;
+    background:#fafafa;
+  }
+  .priority-option input[type="radio"]:checked + .priority-label{
+    border-color:var(--rot);
+    background:#fff;
+    color:var(--rot);
+  }
+  .priority-label.high{
+    border-color:#dc2626;
+    color:#dc2626;
+  }
+  .priority-option input[type="radio"]:checked + .priority-label.high{
+    background:#fef2f2;
+    border-color:#dc2626;
+    color:#dc2626;
+  }
+  .priority-label.medium{
+    border-color:#f59e0b;
+    color:#f59e0b;
+  }
+  .priority-option input[type="radio"]:checked + .priority-label.medium{
+    background:#fffbeb;
+    border-color:#f59e0b;
+    color:#f59e0b;
+  }
+  .priority-label.low{
+    border-color:#10b981;
+    color:#10b981;
+  }
+  .priority-option input[type="radio"]:checked + .priority-label.low{
+    background:#f0fdf4;
+    border-color:#10b981;
+    color:#10b981;
+  }
+  
   .btn-group{
     display:flex;
     gap:10px;
@@ -216,6 +276,12 @@
       flex-direction:column;
       gap:0;
     }
+    .priority-group{
+      flex-direction:column;
+    }
+    .priority-option{
+      flex:none;
+    }
     .btn{
       padding:16px;
       font-size:1rem;
@@ -288,6 +354,23 @@
       <label for="anonym">Anonym melden (Name wird gelöscht)</label>
     </div>
     <p class="hint" style="margin-top:8px">💡 Wenn Sie anonym bleiben möchten, aktivieren Sie die Checkbox. Ihr Name wird dann nicht gespeichert.</p>
+    
+    <!-- Dringlichkeit -->
+    <label style="margin-top:20px">🚨 Dringlichkeit</label>
+    <div class="priority-group">
+      <div class="priority-option">
+        <input type="radio" name="priority" id="priority-high" value="Sehr dringlich" />
+        <label for="priority-high" class="priority-label high">🔴 Sehr dringlich</label>
+      </div>
+      <div class="priority-option">
+        <input type="radio" name="priority" id="priority-medium" value="Dringlich" />
+        <label for="priority-medium" class="priority-label medium">🟡 Dringlich</label>
+      </div>
+      <div class="priority-option">
+        <input type="radio" name="priority" id="priority-low" value="Keine Dringlichkeit" checked />
+        <label for="priority-low" class="priority-label low">🟢 Keine Dringlichkeit</label>
+      </div>
+    </div>
   </section>
 
   <!-- Absenden -->
@@ -335,13 +418,17 @@ function setNow(){
 
 function collect(){
   const isAnonym = anonymCheckbox.checked;
+  const priorityRadio = document.querySelector('input[name="priority"]:checked');
+  const priority = priorityRadio ? priorityRadio.value : 'Keine Dringlichkeit';
+  
   return {
     dt: $('dt').value,
     einsatz: ($('einsatz').value || '').trim(),
     kat: $('kat').value,
     desc: ($('desc').value || '').trim(),
     measures: ($('measures').value || '').trim(),
-    melder: isAnonym ? 'Anonym' : (melderInput.value || '').trim() || 'Anonym'
+    melder: isAnonym ? 'Anonym' : (melderInput.value || '').trim() || 'Anonym',
+    priority: priority
   };
 }
 
@@ -367,7 +454,8 @@ $('draftBtn').addEventListener('click', ()=>{
     desc: $('desc').value,
     measures: $('measures').value,
     melder: melderInput.value,
-    anonym: anonymCheckbox.checked
+    anonym: anonymCheckbox.checked,
+    priority: d.priority
   };
   localStorage.setItem(DRAFT_KEY, JSON.stringify(draftData));
   showMsg('💾 Entwurf lokal gespeichert!', true);
@@ -389,6 +477,10 @@ $('draftBtn').addEventListener('click', ()=>{
       anonymCheckbox.checked = true;
       melderInput.disabled = true;
       melderInput.placeholder = 'Anonym';
+    }
+    if(d.priority){
+      const priorityRadio = document.querySelector(`input[name="priority"][value="${d.priority}"]`);
+      if(priorityRadio) priorityRadio.checked = true;
     }
   }catch(_){}
 })();
@@ -413,7 +505,8 @@ async function saveCIRS(){
       kategorie: d.kat,
       beschreibung: d.desc,
       massnahmen: d.measures,
-      melder: d.melder
+      melder: d.melder,
+      dringlichkeit: d.priority
     };
 
     const query = `
@@ -454,6 +547,7 @@ async function saveCIRS(){
       anonymCheckbox.checked = false;
       melderInput.disabled = false;
       melderInput.placeholder = 'Ihr Name oder leer lassen für anonym';
+      document.getElementById('priority-low').checked = true;
       setNow(); 
       hideMsg();
       btn.disabled = false;
