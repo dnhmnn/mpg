@@ -55,7 +55,7 @@
   .sendbtn{border:1px solid #ffffff66;background:#ffffff1a;color:#fff;padding:.55rem .9rem;border-radius:.55rem;font-weight:800;cursor:pointer;font-size:1rem}
   .sendbtn:disabled{opacity:.6;cursor:not-allowed}
 
-  /* QR-Code Modal - MOBILE-OPTIMIERT */
+  /* QR-Code Modal */
   .modal{
     position:fixed;
     inset:0;
@@ -810,9 +810,7 @@
 </div>
 
 <script>
-/* ===== PATIENTENDOKUMENTATION - OHNE ROLE HEADER ===== */
-
-const GRAPHQL_ENDPOINT = 'https://hpjfrhktprpuuxvvlpsb.hasura.eu-central-1.nhost.run/v1/graphql';
+/* ===== PATIENTENDOKUMENTATION - VIA NETLIFY FUNCTION ===== */
 
 let currentDocumentId = null;
 
@@ -1104,7 +1102,7 @@ window.closeAll = function() {
   document.querySelectorAll('details').forEach(d => d.open = false);
 };
 
-// ===== ABSENDEN - OHNE ROLE HEADER =====
+// ===== ABSENDEN - VIA NETLIFY FUNCTION =====
 window.submitToBackend = async function() {
   const btn = document.getElementById('sendBtn');
   btn.disabled = true;
@@ -1125,39 +1123,21 @@ window.submitToBackend = async function() {
     const title = `Patientendoku: ${patName}`;
     debugLog('✅ Titel erstellt', { title });
     
-    debugLog('📡 GraphQL Endpoint', { endpoint: GRAPHQL_ENDPOINT });
-    
-    const MUTATION = `mutation($title:String!, $payload:jsonb!, $status:String!) {
-      insert_patient_docs_one(object:{title:$title, payload:$payload, status:$status}) {
-        id
-        title
-      }
-    }`;
-    
-    const variables = {
+    const requestData = {
       title: title,
       payload: data,
       status: "offen"
     };
     
-    debugLog('✅ GraphQL Mutation vorbereitet');
+    debugLog('📤 Sende an Netlify Function...');
     
-    // WICHTIG: Kein x-hasura-role Header!
-    const headers = {
-      'Content-Type': 'application/json'
-    };
-    
-    debugLog('✅ Headers gesetzt (OHNE Role)', headers);
-    
-    debugLog('📤 Sende Request...');
-    
-    const response = await fetch(GRAPHQL_ENDPOINT, {
+    // NETLIFY FUNCTION statt direkter Nhost-Zugriff!
+    const response = await fetch('/.netlify/functions/submit-patient-docs', {
       method: 'POST',
-      headers: headers,
-      body: JSON.stringify({
-        query: MUTATION,
-        variables: variables
-      })
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(requestData)
     });
     
     debugLog('✅ Response erhalten', {
@@ -1167,7 +1147,7 @@ window.submitToBackend = async function() {
     });
     
     const responseText = await response.text();
-    debugLog('📥 Response Body (Text)', {
+    debugLog('📥 Response Body', {
       länge: responseText.length,
       vorschau: responseText.substring(0, 500)
     });
@@ -1175,28 +1155,26 @@ window.submitToBackend = async function() {
     let result;
     try {
       result = JSON.parse(responseText);
-      debugLog('✅ JSON geparst');
+      debugLog('✅ JSON geparst', result);
     } catch(parseError) {
       debugLog('❌ JSON Parse Fehler!', {
         error: parseError.message,
         responseText: responseText
       });
-      throw new Error('Response ist kein gültiges JSON: ' + responseText.substring(0, 200));
+      throw new Error('Ungültige Response: ' + responseText.substring(0, 200));
     }
     
-    debugLog('📦 Parsed Result', result);
-    
-    if (result.errors) {
-      debugLog('❌ GraphQL Errors gefunden!', result.errors);
-      throw new Error(result.errors[0]?.message || 'GraphQL Error');
+    if (result.error) {
+      debugLog('❌ Fehler von Server!', result);
+      throw new Error(result.error);
     }
     
-    if (!result.data || !result.data.insert_patient_docs_one) {
-      debugLog('❌ Keine Daten in Response!', result);
-      throw new Error('Keine Daten zurückgegeben');
+    if (!result.success || !result.document) {
+      debugLog('❌ Keine Dokumenten-Daten!', result);
+      throw new Error('Keine Daten vom Server erhalten');
     }
     
-    currentDocumentId = result.data.insert_patient_docs_one.id;
+    currentDocumentId = result.document.id;
     debugLog('✅ ERFOLG! Dokument erstellt', {
       id: currentDocumentId
     });
