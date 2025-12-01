@@ -759,7 +759,7 @@
   </div>
 </div>
 
-<!-- QR-Code Zuordnungs-Modal - MOBILE-OPTIMIERT -->
+<!-- QR-Code Zuordnungs-Modal -->
 <div class="modal" id="qrModal">
   <div class="modal-box">
     <div class="modal-h">
@@ -794,7 +794,7 @@
         autocapitalize="characters"
       >
       <small class="input-hint">
-        Format: KEY-2025-XXXX oder FFW-KEY-2025-XXXX
+        Format: KEY-2025-XXXX
       </small>
     </div>
     
@@ -810,9 +810,8 @@
 </div>
 
 <script>
-/* ===== PATIENTENDOKUMENTATION - MIT DEBUG-LOG ===== */
+/* ===== PATIENTENDOKUMENTATION - OHNE ROLE HEADER ===== */
 
-// DIREKTER GraphQL Endpoint - KEIN Nhost Client!
 const GRAPHQL_ENDPOINT = 'https://hpjfrhktprpuuxvvlpsb.hasura.eu-central-1.nhost.run/v1/graphql';
 
 let currentDocumentId = null;
@@ -834,7 +833,6 @@ function debugLog(message, data = null) {
   logEl.textContent += logText + '\n\n';
   console.log(message, data);
   
-  // Auto-scroll nach unten
   logEl.scrollTop = logEl.scrollHeight;
 }
 
@@ -1106,13 +1104,12 @@ window.closeAll = function() {
   document.querySelectorAll('details').forEach(d => d.open = false);
 };
 
-// ===== ABSENDEN - MIT DEBUG-LOG =====
+// ===== ABSENDEN - OHNE ROLE HEADER =====
 window.submitToBackend = async function() {
   const btn = document.getElementById('sendBtn');
   btn.disabled = true;
   btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Sende...';
   
-  // Log löschen
   document.getElementById('debugLog').textContent = '';
   
   try {
@@ -1145,12 +1142,12 @@ window.submitToBackend = async function() {
     
     debugLog('✅ GraphQL Mutation vorbereitet');
     
+    // WICHTIG: Kein x-hasura-role Header!
     const headers = {
-      'Content-Type': 'application/json',
-      'x-hasura-role': 'anonymous'
+      'Content-Type': 'application/json'
     };
     
-    debugLog('✅ Headers gesetzt', headers);
+    debugLog('✅ Headers gesetzt (OHNE Role)', headers);
     
     debugLog('📤 Sende Request...');
     
