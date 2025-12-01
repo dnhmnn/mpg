@@ -148,7 +148,7 @@
       border-radius:.5rem;background:#fff;font-size:16px;
     }
     textarea{min-height:88px;resize:vertical}
-    fieldset{border:1px solid var(--border);border-radius:.6rem;padding:.75rem;margin-bottom:.75rem}
+    fieldset{border:1px solid var(--border);border-radius:.6rem;padding:.75rem}
     fieldset legend{padding:0 .35rem;color:#111827;font-weight:700}
     .choice{display:flex;gap:.6rem;flex-wrap:wrap}
     .pill-input{
@@ -163,7 +163,7 @@
     }
     .sum{font-weight:800}
     
-    table{width:100%;border-collapse:collapse;margin-top:.5rem}
+    table{width:100%;border-collapse:collapse}
     th,td{border:1px solid var(--border);padding:.5rem;text-align:left;font-size:.9rem}
     th{background:#f8fafc;font-weight:700}
     
@@ -172,10 +172,6 @@
       padding:.35rem .55rem;border-radius:.45rem;cursor:pointer;
       font-size:.9rem;font-weight:600
     }
-    
-    .thumbs{display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.5rem}
-    .thumb{position:relative}
-    .thumb img{width:120px;height:120px;object-fit:cover;border:1px solid var(--border);border-radius:.5rem}
     
     /* Formular */
     .form-grid {
@@ -212,20 +208,15 @@
       font-weight: 600; cursor: pointer;
     }
     
-    /* Signature Canvas - KORRIGIERT */
+    /* Signature Canvas */
     .sig-wrap {
       border: 2px dashed #d1d5db; border-radius: 8px;
       padding: 12px; background: #f9fafb; margin: 16px 0;
     }
     canvas.sig-canvas {
-      width: 100%; 
-      height: 200px; 
-      border: 1px solid #d1d5db;
-      border-radius: 6px; 
-      background: #fff; 
-      cursor: crosshair;
+      width: 100%; height: 150px; border: 1px solid #d1d5db;
+      border-radius: 6px; background: #fff; cursor: crosshair;
       touch-action: none;
-      display: block;
     }
     .sig-actions {
       margin-top: 8px; display: flex; gap: 8px;
@@ -241,14 +232,11 @@
       gap: 12px 20px; margin: 16px 0;
     }
     .details-label { font-weight: 700; color: #6b7280; }
-    .details-value { color: #111827; word-break: break-word; }
+    .details-value { color: #111827; }
     
     .signature-img {
-      max-width: 400px; 
-      max-height: 200px;
-      border: 1px solid #d1d5db;
-      border-radius: 6px; 
-      margin-top: 8px;
+      max-width: 300px; border: 1px solid #d1d5db;
+      border-radius: 6px; margin-top: 8px;
     }
     
     /* Mobile */
@@ -336,19 +324,19 @@
       
       <div style="display:flex;gap:10px;margin-top:20px;justify-content:flex-end;position:sticky;bottom:0;background:#fff;padding-top:16px;border-top:2px solid var(--border)">
         <button class="btn btn-secondary" onclick="closeEditModal()"><i class="fa-solid fa-times"></i> Abbrechen</button>
-        <button class="btn" onclick="saveAndSignPatDoc()"><i class="fa-solid fa-save"></i> Speichern & Gegenzeichnen</button>
+        <button class="btn" onclick="saveAndSignPatDoc()"><i class="fa-solid fa-save"></i> Speichern & Unterschrift</button>
       </div>
     </div>
   </div>
 
   <!-- Admin-Unterschrift Modal -->
   <div class="modal" id="signModal">
-    <div class="modal-box" style="max-width:600px">
-      <h3><i class="fa-solid fa-signature"></i> Verantwortlicher / MPG-Beauftragter</h3>
+    <div class="modal-box">
+      <h3><i class="fa-solid fa-signature"></i> Admin-Unterschrift</h3>
       <p>Dokument wurde geprüft und ist korrekt. Mit Unterschrift wird es ins Archiv verschoben.</p>
       
       <div class="form-group">
-        <label>Name (Verantwortlicher / MPG-Beauftragter):</label>
+        <label>Admin-Name:</label>
         <input type="text" id="adminName" placeholder="Ihr Name">
       </div>
       
@@ -585,15 +573,12 @@
         }`);
         
         const patRows = document.getElementById('pat-rows');
-        patRows.innerHTML = patData.patient_docs.map(doc => {
-          const payload = doc.payload || {};
-          const patName = `${payload.vorname || ''} ${payload.name || ''}`.trim() || 'Unbekannt';
-          return `
+        patRows.innerHTML = patData.patient_docs.map(doc => `
           <div class="row">
             <div><span class="pill offen">${doc.status}</span></div>
             <div>
-              <strong>${doc.title || patName}</strong><br>
-              <small style="color:#6b7280">${payload.einsatz_nr ? 'Einsatz-Nr: ' + payload.einsatz_nr + ' · ' : ''}${new Date(doc.created_at).toLocaleString('de-DE')}</small>
+              <strong>${doc.title || 'Ohne Titel'}</strong><br>
+              <small style="color:#6b7280">${new Date(doc.created_at).toLocaleString('de-DE')}</small>
             </div>
             <div style="display:flex;gap:8px;flex-wrap:wrap">
               <button class="btn btn-icon" onclick="editPatDoc('${doc.id}')">
@@ -601,8 +586,7 @@
               </button>
             </div>
           </div>
-        `;
-        }).join('') || '<p style="padding:20px;color:#999">Keine offenen Patientendokus</p>';
+        `).join('') || '<p style="padding:20px;color:#999">Keine offenen Patientendokus</p>';
 
         // Nacherfassungen (offen)
         const nachData = await gql(`query {
@@ -633,7 +617,7 @@
         // Archiv (beide Typen)
         const archivPat = await gql(`query {
           patient_docs(where: {status: {_eq: "archiviert"}}, order_by: {updated_at: desc}) {
-            id title admin_name admin_datum payload
+            id title admin_name admin_datum
           }
         }`);
         
@@ -647,14 +631,12 @@
         let archivHTML = '';
         
         archivPat.patient_docs.forEach(doc => {
-          const payload = doc.payload || {};
-          const patName = `${payload.vorname || ''} ${payload.name || ''}`.trim() || doc.title || 'Ohne Titel';
           archivHTML += `
             <div class="row">
               <div><span class="pill archiviert">Patientendoku</span></div>
               <div>
-                <strong>${patName}</strong><br>
-                <small style="color:#6b7280">${payload.einsatz_nr ? 'Einsatz-Nr: ' + payload.einsatz_nr + ' · ' : ''}MPG-Verantwortlicher: ${doc.admin_name || '?'} · ${doc.admin_datum ? new Date(doc.admin_datum).toLocaleString('de-DE') : ''}</small>
+                <strong>${doc.title}</strong><br>
+                <small style="color:#6b7280">Admin: ${doc.admin_name || '?'} · ${doc.admin_datum ? new Date(doc.admin_datum).toLocaleString('de-DE') : ''}</small>
               </div>
               <div style="display:flex;gap:8px;flex-wrap:wrap">
                 <button class="btn btn-icon" onclick="viewPatArchiv('${doc.id}')">
@@ -698,7 +680,6 @@
     // Edit Patient Doc - VOLLSTÄNDIGES FORMULAR
     let currentEditId = null;
     let currentEditPayload = null;
-    let medRowCounter = 0;
     
     window.editPatDoc = async (id) => {
       currentEditId = id;
@@ -718,60 +699,17 @@
         // Details öffnen
         document.querySelectorAll('#editFormContainer details').forEach(d => d.open = true);
         
-        // Medikamenten-Counter setzen
-        const meds = currentEditPayload.medications || [];
-        medRowCounter = meds.length;
-        
         document.getElementById('editModal').classList.add('show');
       } catch(e) {
         showMsg('Fehler: ' + e.message, 'error');
       }
     };
 
-    // FORMULAR BUILDER - KOMPLETT MIT ALLEN FELDERN
+    // FORMULAR BUILDER
     function buildEditForm(payload) {
-      const v = (key, fallback = '') => payload[key] !== undefined && payload[key] !== null ? payload[key] : fallback;
+      const v = (key, fallback = '') => payload[key] || fallback;
       const checked = (key) => payload[key] ? 'checked' : '';
       const radioChecked = (key, value) => payload[key] === value ? 'checked' : '';
-      
-      // Medikamente
-      const medications = payload.medications || [];
-      let medRowsHTML = '';
-      medications.forEach((med, idx) => {
-        const i = idx + 1;
-        medRowsHTML += `
-          <tr>
-            <td>${i}</td>
-            <td><input type="text" name="med_name_${i}" value="${med.name || ''}" style="width:100%;padding:.3rem;font-size:14px"></td>
-            <td><input type="number" name="med_dose_${i}" value="${med.dose || ''}" step="0.1" style="width:80px;padding:.3rem;font-size:14px"></td>
-            <td><input type="text" name="med_unit_${i}" value="${med.unit || ''}" placeholder="mg" style="width:60px;padding:.3rem;font-size:14px"></td>
-            <td>
-              <select name="med_route_${i}" style="padding:.3rem;font-size:14px">
-                <option value="">-</option>
-                <option value="i.v." ${med.route === 'i.v.' ? 'selected' : ''}>i.v.</option>
-                <option value="i.m." ${med.route === 'i.m.' ? 'selected' : ''}>i.m.</option>
-                <option value="s.c." ${med.route === 's.c.' ? 'selected' : ''}>s.c.</option>
-                <option value="p.o." ${med.route === 'p.o.' ? 'selected' : ''}>p.o.</option>
-                <option value="inhal." ${med.route === 'inhal.' ? 'selected' : ''}>inhal.</option>
-              </select>
-            </td>
-            <td><input type="time" name="med_time_${i}" value="${med.time || ''}" style="width:90px;padding:.3rem;font-size:14px"></td>
-            <td><input type="text" name="med_note_${i}" value="${med.note || ''}" style="width:100%;padding:.3rem;font-size:14px"></td>
-            <td><button class="subbtn" type="button" onclick="this.closest('tr').remove()">×</button></td>
-          </tr>
-        `;
-      });
-      
-      // Fotos
-      const photos = payload.photos || [];
-      let photosHTML = '';
-      if (photos.length > 0) {
-        photosHTML = '<div class="thumbs">';
-        photos.forEach((photo, idx) => {
-          photosHTML += `<div class="thumb"><img src="${photo}" alt="Foto ${idx+1}"></div>`;
-        });
-        photosHTML += '</div>';
-      }
       
       return `
         <!-- Einsatzdaten -->
@@ -802,67 +740,38 @@
               <label>Mobil<input name="mobil" type="text" value="${v('mobil')}"></label>
               <label>Straße<input name="strasse" type="text" value="${v('strasse')}"></label>
               <label>PLZ, Ort<input name="plz_ort" type="text" value="${v('plz_ort')}"></label>
-              <label>Kasse / Nr.<input name="kasse" type="text" value="${v('kasse')}"></label>
-              <label>Vers.-Nr.<input name="versnr" type="text" value="${v('versnr')}"></label>
-              <label>Hausarzt / Tel.<input name="hausarzt" type="text" value="${v('hausarzt')}"></label>
-              <label>Angehöriger / Tel.<input name="angehoeriger" type="text" value="${v('angehoeriger')}"></label>
             </div>
-            <label>Informationen / Aspekte<textarea name="infos">${v('infos')}</textarea></label>
+            <label>Informationen<textarea name="infos">${v('infos')}</textarea></label>
           </div>
         </details>
 
-        <!-- Notfallgeschehen + Fotos -->
+        <!-- Notfallgeschehen -->
         <details open>
           <summary><i class="fa-solid fa-notes-medical"></i> Notfallgeschehen / Anamnese</summary>
           <div class="sec-body">
             <textarea name="notfallgeschehen">${v('notfallgeschehen')}</textarea>
-            ${photosHTML ? '<div style="margin-top:.75rem"><strong>Fotos:</strong>' + photosHTML + '</div>' : ''}
           </div>
         </details>
 
-        <!-- Neurologie -->
-        <details>
-          <summary><i class="fa-solid fa-brain"></i> Neurologie</summary>
+        <!-- Messwerte -->
+        <details open>
+          <summary><i class="fa-solid fa-stethoscope"></i> Messwerte</summary>
           <div class="sec-body">
             <div class="grid">
-              <label>Zeitpunkt<input name="neu_zeit" type="datetime-local" value="${v('neu_zeit')}"></label>
-              <label class="pill-input"><input type="checkbox" name="neu_unauff" ${checked('neu_unauff')}> ohne path. Befund</label>
-            </div>
-            <div class="grid">
-              <fieldset>
-                <legend>Pupillenweite – rechts</legend>
-                <div class="choice">
-                  <label class="pill-input"><input type="radio" name="pw_r" value="eng" ${radioChecked('pw_r','eng')}> eng</label>
-                  <label class="pill-input"><input type="radio" name="pw_r" value="mittel" ${radioChecked('pw_r','mittel')}> mittel</label>
-                  <label class="pill-input"><input type="radio" name="pw_r" value="weit" ${radioChecked('pw_r','weit')}> weit</label>
-                  <label class="pill-input"><input type="checkbox" name="pw_r_entrundet" ${checked('pw_r_entrundet')}> entrundet</label>
-                </div>
-                <div class="choice" style="margin-top:.5rem"><span class="badge">Lichtreaktion</span>
-                  <label class="pill-input"><input type="radio" name="lr_r" value="prompt" ${radioChecked('lr_r','prompt')}> prompt</label>
-                  <label class="pill-input"><input type="radio" name="lr_r" value="träge" ${radioChecked('lr_r','träge')}> träge</label>
-                  <label class="pill-input"><input type="radio" name="lr_r" value="keine" ${radioChecked('lr_r','keine')}> keine</label>
-                </div>
-              </fieldset>
-              <fieldset>
-                <legend>Pupillenweite – links</legend>
-                <div class="choice">
-                  <label class="pill-input"><input type="radio" name="pw_l" value="eng" ${radioChecked('pw_l','eng')}> eng</label>
-                  <label class="pill-input"><input type="radio" name="pw_l" value="mittel" ${radioChecked('pw_l','mittel')}> mittel</label>
-                  <label class="pill-input"><input type="radio" name="pw_l" value="weit" ${radioChecked('pw_l','weit')}> weit</label>
-                  <label class="pill-input"><input type="checkbox" name="pw_l_entrundet" ${checked('pw_l_entrundet')}> entrundet</label>
-                </div>
-                <div class="choice" style="margin-top:.5rem"><span class="badge">Lichtreaktion</span>
-                  <label class="pill-input"><input type="radio" name="lr_l" value="prompt" ${radioChecked('lr_l','prompt')}> prompt</label>
-                  <label class="pill-input"><input type="radio" name="lr_l" value="träge" ${radioChecked('lr_l','träge')}> träge</label>
-                  <label class="pill-input"><input type="radio" name="lr_l" value="keine" ${radioChecked('lr_l','keine')}> keine</label>
-                </div>
-              </fieldset>
+              <label>RR syst. (mmHg)<input name="rr_sys" type="number" value="${v('rr_sys')}"></label>
+              <label>RR diast. (mmHg)<input name="rr_dia" type="number" value="${v('rr_dia')}"></label>
+              <label>HF (/min)<input name="hf" type="number" value="${v('hf')}"></label>
+              <label>AF (/min)<input name="af" type="number" value="${v('af')}"></label>
+              <label>SpO₂ (%)<input name="spo2" type="number" value="${v('spo2')}"></label>
+              <label>Temp (°C)<input name="temp" type="number" step="0.1" value="${v('temp')}"></label>
+              <label>BZ (mg/dl)<input name="bz_mg" type="number" value="${v('bz_mg')}"></label>
+              <label>Schmerz (0–10)<input name="schmerz" type="number" value="${v('schmerz')}"></label>
             </div>
           </div>
         </details>
 
         <!-- GCS -->
-        <details>
+        <details open>
           <summary><i class="fa-solid fa-eye"></i> Glasgow Coma Scale</summary>
           <div class="sec-body">
             <fieldset>
@@ -874,7 +783,7 @@
                 <label class="pill-input"><input type="radio" name="gcs_e" value="1" ${radioChecked('gcs_e','1')}> keine (1)</label>
               </div>
             </fieldset>
-            <fieldset>
+            <fieldset style="margin-top:.5rem">
               <legend>Verbale Antwort (V)</legend>
               <div class="choice">
                 <label class="pill-input"><input type="radio" name="gcs_v" value="5" ${radioChecked('gcs_v','5')}> orientiert (5)</label>
@@ -884,7 +793,7 @@
                 <label class="pill-input"><input type="radio" name="gcs_v" value="1" ${radioChecked('gcs_v','1')}> keine (1)</label>
               </div>
             </fieldset>
-            <fieldset>
+            <fieldset style="margin-top:.5rem">
               <legend>Motorische Antwort (M)</legend>
               <div class="choice">
                 <label class="pill-input"><input type="radio" name="gcs_m" value="6" ${radioChecked('gcs_m','6')}> folgt (6)</label>
@@ -895,295 +804,14 @@
                 <label class="pill-input"><input type="radio" name="gcs_m" value="1" ${radioChecked('gcs_m','1')}> keine (1)</label>
               </div>
             </fieldset>
-            <div class="badge" style="margin-top:.5rem">GCS Summe: ${calculateGCS(payload)}</div>
-          </div>
-        </details>
-
-        <!-- Haut -->
-        <details>
-          <summary><i class="fa-regular fa-hand"></i> Haut</summary>
-          <div class="sec-body">
-            <div class="choice">
-              <label class="pill-input"><input type="checkbox" name="haut_unauff" ${checked('haut_unauff')}> unauffällig</label>
-              <label class="pill-input"><input type="checkbox" name="haut_falten" ${checked('haut_falten')}> stehende Hautfalten</label>
-              <label class="pill-input"><input type="checkbox" name="haut_oedeme" ${checked('haut_oedeme')}> Ödeme</label>
-              <label class="pill-input"><input type="checkbox" name="haut_dekubitus" ${checked('haut_dekubitus')}> Dekubitus</label>
-              <label class="pill-input"><input type="checkbox" name="haut_kaltschweissig" ${checked('haut_kaltschweissig')}> kaltschweißig</label>
-              <label class="pill-input"><input type="checkbox" name="haut_exanthem" ${checked('haut_exanthem')}> Exanthem</label>
-            </div>
-          </div>
-        </details>
-
-        <!-- Psyche -->
-        <details>
-          <summary><i class="fa-solid fa-user"></i> Psyche</summary>
-          <div class="sec-body">
-            <div class="choice">
-              <label class="pill-input"><input type="checkbox" name="psy_erregt" ${checked('psy_erregt')}> erregt</label>
-              <label class="pill-input"><input type="checkbox" name="psy_aggr" ${checked('psy_aggr')}> aggressiv</label>
-              <label class="pill-input"><input type="checkbox" name="psy_verlangsamt" ${checked('psy_verlangsamt')}> verlangsamt/stuporös</label>
-              <label class="pill-input"><input type="checkbox" name="psy_depressiv" ${checked('psy_depressiv')}> depressiv</label>
-              <label class="pill-input"><input type="checkbox" name="psy_aengstlich" ${checked('psy_aengstlich')}> ängstlich</label>
-              <label class="pill-input"><input type="checkbox" name="psy_euphorisch" ${checked('psy_euphorisch')}> euphorisch</label>
-              <label class="pill-input"><input type="checkbox" name="psy_wahnhaft" ${checked('psy_wahnhaft')}> wahnhaft</label>
-              <label class="pill-input"><input type="checkbox" name="psy_verwirrt" ${checked('psy_verwirrt')}> verwirrt</label>
-              <label class="pill-input"><input type="checkbox" name="psy_suizidal" ${checked('psy_suizidal')}> suizidal</label>
-              <label class="pill-input"><input type="checkbox" name="psy_motor_unruhig" ${checked('psy_motor_unruhig')}> motorisch unruhig</label>
-            </div>
-          </div>
-        </details>
-
-        <!-- Messwerte + qSOFA -->
-        <details open>
-          <summary><i class="fa-solid fa-stethoscope"></i> Messwerte / Atmung</summary>
-          <div class="sec-body">
-            <div class="grid">
-              <label>RR syst. (mmHg)<input name="rr_sys" type="number" value="${v('rr_sys')}"></label>
-              <label>RR diast. (mmHg)<input name="rr_dia" type="number" value="${v('rr_dia')}"></label>
-              <label>HF (/min)<input name="hf" type="number" value="${v('hf')}"></label>
-              <label>AF (/min)<input name="af" type="number" value="${v('af')}"></label>
-              <label>SpO₂ (%)<input name="spo2" type="number" value="${v('spo2')}"></label>
-              <label>etCO₂ (mmHg)<input name="etco2" type="number" value="${v('etco2')}"></label>
-              <label>Temp (°C)<input name="temp" type="number" step="0.1" value="${v('temp')}"></label>
-              <label>BZ (mg/dl)<input name="bz_mg" type="number" value="${v('bz_mg')}"></label>
-              <label>BZ (mmol/l)<input name="bz_mmol" type="number" step="0.1" value="${v('bz_mmol')}"></label>
-              <label>Schmerz (0–10)<input name="schmerz" type="number" min="0" max="10" value="${v('schmerz')}"></label>
-            </div>
-
-            <fieldset>
-              <legend>qSOFA (auto)</legend>
-              <div class="grid">
-                <label>GCS<input name="qsofa_gcs" type="number" value="${v('qsofa_gcs')}" readonly style="background:#f9fafb"></label>
-                <label>AF (/min)<input name="qsofa_af" type="number" value="${v('qsofa_af')}" readonly style="background:#f9fafb"></label>
-                <label>RR syst. (mmHg)<input name="qsofa_rr" type="number" value="${v('qsofa_rr')}" readonly style="background:#f9fafb"></label>
-              </div>
-              <div class="badge" style="margin-top:.5rem">qSOFA-Score: ${calculateQSOFA(payload)}</div>
-            </fieldset>
-
-            <fieldset>
-              <legend>Atmung – klinische Zeichen</legend>
-              <div class="choice">
-                <label class="pill-input"><input type="checkbox" name="atm_apnoe" ${checked('atm_apnoe')}> Apnoe</label>
-                <label class="pill-input"><input type="checkbox" name="atm_stridor" ${checked('atm_stridor')}> Stridor</label>
-                <label class="pill-input"><input type="checkbox" name="atm_hypervent" ${checked('atm_hypervent')}> Hyperventilation</label>
-                <label class="pill-input"><input type="checkbox" name="atm_dyspnoe" ${checked('atm_dyspnoe')}> Dyspnoe</label>
-                <label class="pill-input"><input type="checkbox" name="atm_beatmung" ${checked('atm_beatmung')}> Beatmung</label>
-                <label class="pill-input"><input type="checkbox" name="atm_zyanose" ${checked('atm_zyanose')}> Zyanose</label>
-                <label class="pill-input"><input type="checkbox" name="atm_verlegung" ${checked('atm_verlegung')}> Atemwegsverlegung</label>
-              </div>
-              <textarea name="atm_sonst" placeholder="Sonstiges…">${v('atm_sonst')}</textarea>
-            </fieldset>
-
-            <fieldset>
-              <legend>O₂-Gabe</legend>
-              <div class="choice">
-                <label class="pill-input"><input type="radio" name="o2" value="raumluft" ${radioChecked('o2','raumluft')}> Raumluft</label>
-                <label class="pill-input"><input type="radio" name="o2" value="unter_o2" ${radioChecked('o2','unter_o2')}> unter O₂</label>
-                <label class="pill-input"><input type="checkbox" name="o2_nasal" ${checked('o2_nasal')}> Nasensonde</label>
-                <label class="pill-input"><input type="checkbox" name="o2_maske" ${checked('o2_maske')}> Maske</label>
-                <label class="pill-input"><input type="checkbox" name="o2_reservoir" ${checked('o2_reservoir')}> Maske m. Reservoir</label>
-              </div>
-              <div class="grid" style="margin-top:.5rem">
-                <label>Flow (l/min)<input name="o2_flow" type="number" step="0.5" value="${v('o2_flow')}"></label>
-                <label>Kommentar<input name="o2_comment" type="text" value="${v('o2_comment')}"></label>
-              </div>
-            </fieldset>
-          </div>
-        </details>
-
-        <!-- Rhythmus / EKG -->
-        <details>
-          <summary><i class="fa-solid fa-heart-pulse"></i> Rhythmus / EKG</summary>
-          <div class="sec-body">
-            <div class="choice">
-              <label class="pill-input"><input type="checkbox" name="sr" ${checked('sr')}> Sinusrhythmus</label>
-              <label class="pill-input"><input type="checkbox" name="stemi" ${checked('stemi')}> STEMI</label>
-              <label class="pill-input"><input type="checkbox" name="arrh_abs" ${checked('arrh_abs')}> absolute Arrhythmie</label>
-              <label class="pill-input"><input type="checkbox" name="vf" ${checked('vf')}> Kammerflimmern</label>
-              <label class="pill-input"><input type="checkbox" name="av3" ${checked('av3')}> AV-Block III°</label>
-              <label class="pill-input"><input type="checkbox" name="asystole" ${checked('asystole')}> Asystolie</label>
-            </div>
-            <div class="grid" style="margin-top:.5rem">
-              <label>Standort<input name="ekg_standort" type="text" value="${v('ekg_standort')}"></label>
-              <label>Pers-Nr.<input name="ekg_persnr" type="text" value="${v('ekg_persnr')}"></label>
-            </div>
           </div>
         </details>
 
         <!-- Verletzungen -->
-        <details>
+        <details open>
           <summary><i class="fa-solid fa-kit-medical"></i> Verletzungen</summary>
           <div class="sec-body">
             <textarea name="verletz_text">${v('verletz_text')}</textarea>
-          </div>
-        </details>
-
-        <!-- Erstdiagnosen -->
-        <details>
-          <summary><i class="fa-solid fa-clipboard-list"></i> Erstdiagnosen</summary>
-          <div class="sec-body">
-            <div class="grid">
-              <fieldset>
-                <legend>Neuro</legend>
-                <div class="choice">
-                  <label class="pill-input"><input type="checkbox" name="diag_krampf" ${checked('diag_krampf')}> Konvulsionen</label>
-                  <label class="pill-input"><input type="checkbox" name="diag_synkope" ${checked('diag_synkope')}> Synkope</label>
-                  <label class="pill-input"><input type="checkbox" name="diag_apoplex" ${checked('diag_apoplex')}> Apoplex</label>
-                  <label class="pill-input"><input type="checkbox" name="diag_sht" ${checked('diag_sht')}> SHT</label>
-                </div>
-              </fieldset>
-              <fieldset>
-                <legend>Herz-Kreislauf</legend>
-                <div class="choice">
-                  <label class="pill-input"><input type="checkbox" name="diag_acs" ${checked('diag_acs')}> ACS</label>
-                  <label class="pill-input"><input type="checkbox" name="diag_insuff" ${checked('diag_insuff')}> akute Herzinsuffizienz</label>
-                  <label class="pill-input"><input type="checkbox" name="diag_lungenoedem" ${checked('diag_lungenoedem')}> Lungenödem</label>
-                  <label class="pill-input"><input type="checkbox" name="diag_luembol" ${checked('diag_luembol')}> Lungenembolie</label>
-                </div>
-              </fieldset>
-              <fieldset>
-                <legend>Atmung</legend>
-                <div class="choice">
-                  <label class="pill-input"><input type="checkbox" name="diag_resp_insuff" ${checked('diag_resp_insuff')}> resp. Insuffizienz</label>
-                  <label class="pill-input"><input type="checkbox" name="diag_pneumothorax" ${checked('diag_pneumothorax')}> (Spannungs-)Pneumothorax</label>
-                  <label class="pill-input"><input type="checkbox" name="diag_asthma" ${checked('diag_asthma')}> Asthma/COPD</label>
-                </div>
-              </fieldset>
-              <fieldset>
-                <legend>Stoffwechsel / Schock</legend>
-                <div class="choice">
-                  <label class="pill-input"><input type="checkbox" name="diag_hypo" ${checked('diag_hypo')}> Hypoglykämie</label>
-                  <label class="pill-input"><input type="checkbox" name="diag_sept" ${checked('diag_sept')}> septischer Schock</label>
-                  <label class="pill-input"><input type="checkbox" name="diag_hypovol" ${checked('diag_hypovol')}> hypovolämischer Schock</label>
-                </div>
-              </fieldset>
-            </div>
-          </div>
-        </details>
-
-        <!-- Bewusstseinslage -->
-        <details>
-          <summary><i class="fa-solid fa-face-meh"></i> Bewusstseinslage, AZ, Versorgung</summary>
-          <div class="sec-body">
-            <div class="grid">
-              <fieldset>
-                <legend>Bewusstseinslage</legend>
-                <div class="choice">
-                  <label class="pill-input"><input type="checkbox" name="bew_wach" ${checked('bew_wach')}> wach</label>
-                  <label class="pill-input"><input type="checkbox" name="bew_ansprache" ${checked('bew_ansprache')}> Reaktion auf Ansprache</label>
-                  <label class="pill-input"><input type="checkbox" name="bew_schmerz" ${checked('bew_schmerz')}> Reaktion auf Schmerzreiz</label>
-                  <label class="pill-input"><input type="checkbox" name="bew_bewusstlos" ${checked('bew_bewusstlos')}> bewusstlos</label>
-                </div>
-              </fieldset>
-              <fieldset>
-                <legend>Allgemeinzustand</legend>
-                <div class="choice">
-                  <label class="pill-input"><input type="radio" name="az" value="gesund" ${radioChecked('az','gesund')}> gesund</label>
-                  <label class="pill-input"><input type="radio" name="az" value="leicht" ${radioChecked('az','leicht')}> leicht eingeschränkt</label>
-                  <label class="pill-input"><input type="radio" name="az" value="deutlich" ${radioChecked('az','deutlich')}> deutlich eingeschränkt</label>
-                </div>
-              </fieldset>
-              <fieldset>
-                <legend>Versorgungssituation</legend>
-                <div class="choice">
-                  <label class="pill-input"><input type="radio" name="versorgung" value="unabhaengig" ${radioChecked('versorgung','unabhaengig')}> unabhängig</label>
-                  <label class="pill-input"><input type="radio" name="versorgung" value="pflege_zuhaus" ${radioChecked('versorgung','pflege_zuhaus')}> Pflege zuhause</label>
-                  <label class="pill-input"><input type="radio" name="versorgung" value="pflege_institution" ${radioChecked('versorgung','pflege_institution')}> Pflege in Institution</label>
-                </div>
-              </fieldset>
-            </div>
-          </div>
-        </details>
-
-        <!-- Maßnahmen -->
-        <details open>
-          <summary><i class="fa-solid fa-syringe"></i> Maßnahmen – Zugang & Medikation</summary>
-          <div class="sec-body">
-            <fieldset>
-              <legend>Zugang</legend>
-              <div class="grid">
-                <label>Art
-                  <select name="zugang_art">
-                    <option value="">-</option>
-                    <option value="iv" ${v('zugang_art') === 'iv' ? 'selected' : ''}>i.v.</option>
-                    <option value="io" ${v('zugang_art') === 'io' ? 'selected' : ''}>i.o.</option>
-                  </select>
-                </label>
-                <label>Seite/Region<input name="zugang_region" type="text" value="${v('zugang_region')}"></label>
-                <label>Größe (G)<input name="zugang_gauge" type="number" min="14" max="24" value="${v('zugang_gauge')}"></label>
-                <label>Versuche<input name="zugang_versuche" type="number" min="0" value="${v('zugang_versuche')}"></label>
-                <label>Zeitpunkt<input name="zugang_zeit" type="datetime-local" value="${v('zugang_zeit')}"></label>
-              </div>
-            </fieldset>
-
-            <fieldset>
-              <legend>Infusion</legend>
-              <div class="grid">
-                <label>Art<input name="inf_art" type="text" value="${v('inf_art')}"></label>
-                <label>Menge (ml)<input name="inf_menge" type="number" min="0" step="50" value="${v('inf_menge')}"></label>
-                <label>Laufrate (ml/h)<input name="inf_rate" type="number" min="0" step="10" value="${v('inf_rate')}"></label>
-                <label>Bemerkung<input name="inf_bem" type="text" value="${v('inf_bem')}"></label>
-              </div>
-            </fieldset>
-
-            <fieldset>
-              <legend>Medikamente</legend>
-              <button type="button" class="subbtn" onclick="addMedRowEdit()" style="margin-bottom:.5rem"><i class="fa-solid fa-plus"></i> Zeile hinzufügen</button>
-              <div style="overflow:auto">
-                <table id="medTableEdit">
-                  <thead><tr>
-                    <th>#</th><th>Medikament</th><th>Dosis</th><th>Einheit</th><th>Route</th><th>Uhrzeit</th><th>Bemerkung</th><th>×</th>
-                  </tr></thead>
-                  <tbody>${medRowsHTML}</tbody>
-                </table>
-              </div>
-            </fieldset>
-          </div>
-        </details>
-
-        <!-- Beatmung -->
-        <details>
-          <summary><i class="fa-solid fa-wind"></i> Beatmung / Atemweg</summary>
-          <div class="sec-body">
-            <div class="choice">
-              <label class="pill-input"><input type="checkbox" name="aw_guedel" ${checked('aw_guedel')}> Guedel</label>
-              <label class="pill-input"><input type="checkbox" name="aw_larynxtubus" ${checked('aw_larynxtubus')}> Larynxtubus</label>
-              <label class="pill-input"><input type="checkbox" name="aw_ett" ${checked('aw_ett')}> ETT</label>
-              <label class="pill-input"><input type="checkbox" name="aw_bvm" ${checked('aw_bvm')}> BVM</label>
-            </div>
-            <div class="grid" style="margin-top:.5rem">
-              <label>ETT-Größe<input name="aw_ett_size" type="number" step="0.5" value="${v('aw_ett_size')}"></label>
-              <label>PEEP (cmH₂O)<input name="vent_peep" type="number" step="1" value="${v('vent_peep')}"></label>
-              <label>FiO₂ (%)<input name="vent_fio2" type="number" min="21" max="100" value="${v('vent_fio2')}"></label>
-            </div>
-          </div>
-        </details>
-
-        <!-- Reanimation -->
-        <details>
-          <summary><i class="fa-solid fa-heart-circle-bolt"></i> Reanimation</summary>
-          <div class="sec-body">
-            <div class="grid">
-              <label>Rea-Beginn<input name="rea_beginn" type="datetime-local" value="${v('rea_beginn')}"></label>
-              <label>Erst-Rhythmus
-                <select name="rea_initial">
-                  <option value="">-</option>
-                  <option ${v('rea_initial') === 'Asystolie' ? 'selected' : ''}>Asystolie</option>
-                  <option ${v('rea_initial') === 'PEA' ? 'selected' : ''}>PEA</option>
-                  <option ${v('rea_initial') === 'VF' ? 'selected' : ''}>VF</option>
-                  <option ${v('rea_initial') === 'pVT' ? 'selected' : ''}>pVT</option>
-                </select>
-              </label>
-              <label>Schocks<input name="rea_shocks" type="number" min="0" value="${v('rea_shocks')}"></label>
-              <label>ROSC?
-                <select name="rea_rosc">
-                  <option value="">-</option>
-                  <option ${v('rea_rosc') === 'ja' ? 'selected' : ''}>ja</option>
-                  <option ${v('rea_rosc') === 'nein' ? 'selected' : ''}>nein</option>
-                </select>
-              </label>
-              <label>Rea-Ende<input name="rea_ende" type="time" value="${v('rea_ende')}"></label>
-            </div>
           </div>
         </details>
 
@@ -1195,7 +823,6 @@
               <label>Übergabe an<input name="ue_name" type="text" value="${v('ue_name')}"></label>
               <label>Zeitpunkt<input name="ue_zeit" type="datetime-local" value="${v('ue_zeit')}"></label>
               <label>Ziel<input name="ziel_bez" type="text" value="${v('ziel_bez')}"></label>
-              <label>Adresse<input name="ziel_adr" type="text" value="${v('ziel_adr')}"></label>
               <label>Einsatzende<input name="einsatzende" type="datetime-local" value="${v('einsatzende')}"></label>
             </div>
           </div>
@@ -1203,67 +830,17 @@
 
         <!-- Ausfüller -->
         <details open>
-          <summary><i class="fa-solid fa-signature"></i> Ausfüller & Unterschrift</summary>
+          <summary><i class="fa-solid fa-user"></i> Ausfüller</summary>
           <div class="sec-body">
             <div class="grid">
               <label>Name<input name="ausfueller_name" type="text" value="${v('ausfueller_name')}"></label>
               <label>Zeitpunkt<input name="ausfueller_zeit" type="datetime-local" value="${v('ausfueller_zeit')}"></label>
             </div>
-            ${payload.signature ? `<div style="margin-top:.75rem"><strong>Unterschrift:</strong><br><img src="${payload.signature}" class="signature-img"></div>` : ''}
+            ${payload.signature ? `<div><strong>Unterschrift:</strong><br><img src="${payload.signature}" style="max-width:300px;border:1px solid #ddd;border-radius:6px;margin-top:8px"></div>` : ''}
           </div>
         </details>
       `;
     }
-
-    // Helper: GCS berechnen
-    function calculateGCS(p) {
-      const e = parseInt(p.gcs_e || 0);
-      const v = parseInt(p.gcs_v || 0);
-      const m = parseInt(p.gcs_m || 0);
-      const sum = e + v + m;
-      return sum > 0 ? sum : '—';
-    }
-
-    // Helper: qSOFA berechnen
-    function calculateQSOFA(p) {
-      const gcs = parseInt(p.gcs_e || 0) + parseInt(p.gcs_v || 0) + parseInt(p.gcs_m || 0);
-      const af = parseInt(p.af || 0);
-      const rrSys = parseInt(p.rr_sys || 0);
-      
-      let score = 0;
-      if (gcs > 0 && gcs < 15) score++;
-      if (af >= 22) score++;
-      if (rrSys > 0 && rrSys <= 100) score++;
-      
-      return (gcs > 0 || af > 0 || rrSys > 0) ? score : '—';
-    }
-
-    // Medikament hinzufügen im Edit-Modus
-    window.addMedRowEdit = function() {
-      medRowCounter++;
-      const tbody = document.querySelector('#medTableEdit tbody');
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td>${medRowCounter}</td>
-        <td><input type="text" name="med_name_${medRowCounter}" style="width:100%;padding:.3rem;font-size:14px"></td>
-        <td><input type="number" name="med_dose_${medRowCounter}" step="0.1" style="width:80px;padding:.3rem;font-size:14px"></td>
-        <td><input type="text" name="med_unit_${medRowCounter}" placeholder="mg" style="width:60px;padding:.3rem;font-size:14px"></td>
-        <td>
-          <select name="med_route_${medRowCounter}" style="padding:.3rem;font-size:14px">
-            <option value="">-</option>
-            <option value="i.v.">i.v.</option>
-            <option value="i.m.">i.m.</option>
-            <option value="s.c.">s.c.</option>
-            <option value="p.o.">p.o.</option>
-            <option value="inhal.">inhal.</option>
-          </select>
-        </td>
-        <td><input type="time" name="med_time_${medRowCounter}" style="width:90px;padding:.3rem;font-size:14px"></td>
-        <td><input type="text" name="med_note_${medRowCounter}" style="width:100%;padding:.3rem;font-size:14px"></td>
-        <td><button class="subbtn" type="button" onclick="this.closest('tr').remove()">×</button></td>
-      `;
-      tbody.appendChild(tr);
-    };
 
     window.closeEditModal = () => {
       document.getElementById('editModal').classList.remove('show');
@@ -1287,30 +864,10 @@
           }
         });
 
-        // Medikamente sammeln
-        const meds = [];
-        const medTable = document.querySelector('#medTableEdit tbody');
-        if (medTable) {
-          medTable.querySelectorAll('tr').forEach(tr => {
-            const nameInput = tr.querySelector('input[name^="med_name_"]');
-            if (nameInput && nameInput.value.trim()) {
-              const idx = nameInput.name.split('_')[2];
-              meds.push({
-                name: nameInput.value,
-                dose: tr.querySelector(`input[name="med_dose_${idx}"]`)?.value || '',
-                unit: tr.querySelector(`input[name="med_unit_${idx}"]`)?.value || '',
-                route: tr.querySelector(`select[name="med_route_${idx}"]`)?.value || '',
-                time: tr.querySelector(`input[name="med_time_${idx}"]`)?.value || '',
-                note: tr.querySelector(`input[name="med_note_${idx}"]`)?.value || ''
-              });
-            }
-          });
-        }
-        updatedPayload.medications = meds;
-
         // Original Signature & Photos behalten
         updatedPayload.signature = currentEditPayload.signature;
         updatedPayload.photos = currentEditPayload.photos || [];
+        updatedPayload.medications = currentEditPayload.medications || [];
 
         // Update in DB
         await gql(`mutation($payload: jsonb!) {
@@ -1334,32 +891,23 @@
       }
     };
 
-    // Admin Signature Canvas - KORRIGIERT
+    // Admin Signature Canvas
     let adminSigCanvas, adminSigCtx, adminIsDrawing = false, adminLastX = 0, adminLastY = 0;
     
     function initAdminSigCanvas() {
       adminSigCanvas = document.getElementById('adminSigCanvas');
-      if (!adminSigCanvas) return;
-      
       adminSigCtx = adminSigCanvas.getContext('2d');
       const rect = adminSigCanvas.getBoundingClientRect();
-      
-      // WICHTIG: Canvas-Größe KORREKT setzen
-      adminSigCanvas.width = rect.width;
-      adminSigCanvas.height = 200;
-      
+      adminSigCanvas.width = rect.width * 2;
+      adminSigCanvas.height = rect.height * 2;
+      adminSigCtx.scale(2, 2);
       adminSigCtx.strokeStyle = '#000';
       adminSigCtx.lineWidth = 2;
       adminSigCtx.lineCap = 'round';
-      adminSigCtx.lineJoin = 'round';
       
-      // Mouse Events
       adminSigCanvas.addEventListener('mousedown', startAdminDraw);
       adminSigCanvas.addEventListener('mousemove', drawAdmin);
       adminSigCanvas.addEventListener('mouseup', stopAdminDraw);
-      adminSigCanvas.addEventListener('mouseleave', stopAdminDraw);
-      
-      // Touch Events
       adminSigCanvas.addEventListener('touchstart', handleAdminTouchStart, {passive: false});
       adminSigCanvas.addEventListener('touchmove', handleAdminTouchMove, {passive: false});
       adminSigCanvas.addEventListener('touchend', stopAdminDraw);
@@ -1370,14 +918,14 @@
       const pos = getAdminMousePos(e);
       adminLastX = pos.x;
       adminLastY = pos.y;
-      adminSigCtx.beginPath();
-      adminSigCtx.moveTo(adminLastX, adminLastY);
     }
 
     function drawAdmin(e) {
       if (!adminIsDrawing) return;
       e.preventDefault();
       const pos = getAdminMousePos(e);
+      adminSigCtx.beginPath();
+      adminSigCtx.moveTo(adminLastX, adminLastY);
       adminSigCtx.lineTo(pos.x, pos.y);
       adminSigCtx.stroke();
       adminLastX = pos.x;
@@ -1385,45 +933,31 @@
     }
 
     function stopAdminDraw() {
-      if (adminIsDrawing) {
-        adminSigCtx.closePath();
-        adminIsDrawing = false;
-      }
+      adminIsDrawing = false;
     }
 
     function handleAdminTouchStart(e) {
       e.preventDefault();
       const touch = e.touches[0];
-      const rect = adminSigCanvas.getBoundingClientRect();
-      const mouseEvent = {
-        clientX: touch.clientX,
-        clientY: touch.clientY
-      };
-      startAdminDraw(mouseEvent);
+      startAdminDraw({clientX: touch.clientX, clientY: touch.clientY});
     }
 
     function handleAdminTouchMove(e) {
       e.preventDefault();
-      if (!adminIsDrawing) return;
       const touch = e.touches[0];
-      const mouseEvent = {
-        clientX: touch.clientX,
-        clientY: touch.clientY,
-        preventDefault: () => {}
-      };
-      drawAdmin(mouseEvent);
+      drawAdmin({clientX: touch.clientX, clientY: touch.clientY, preventDefault: () => {}});
     }
 
     function getAdminMousePos(e) {
       const rect = adminSigCanvas.getBoundingClientRect();
       return {
-        x: e.clientX - rect.left,
-        y: e.clientY - rect.top
+        x: (e.clientX - rect.left) * 2,
+        y: (e.clientY - rect.top) * 2
       };
     }
 
     window.clearAdminSig = () => {
-      if (adminSigCtx && adminSigCanvas) {
+      if (adminSigCtx) {
         adminSigCtx.clearRect(0, 0, adminSigCanvas.width, adminSigCanvas.height);
       }
     };
@@ -1435,7 +969,7 @@
     window.archiveWithSignature = async () => {
       const adminName = document.getElementById('adminName').value.trim();
       if (!adminName) {
-        alert('Bitte Name des Verantwortlichen / MPG-Beauftragten eingeben!');
+        alert('Bitte Admin-Name eingeben!');
         return;
       }
       
@@ -1447,7 +981,7 @@
             pk_columns: {id: "${currentEditId}"},
             _set: {
               status: "archiviert",
-              admin_name: "${adminName.replace(/"/g, '\\"')}",
+              admin_name: "${adminName}",
               admin_unterschrift: "${sigData}",
               admin_datum: "now()"
             }
@@ -1465,7 +999,7 @@
       }
     };
 
-    // Nacherfassung - Signature Canvas
+    // Nacherfassung
     document.getElementById('addBtn').onclick = () => {
       document.getElementById('nachModal').classList.add('show');
       initNachSigCanvas();
@@ -1474,30 +1008,28 @@
     window.closeNachModal = () => {
       document.getElementById('nachModal').classList.remove('show');
       document.getElementById('nachForm').reset();
-      if (nachSigCtx && nachSigCanvas) {
+      if (nachSigCtx) {
         nachSigCtx.clearRect(0, 0, nachSigCanvas.width, nachSigCanvas.height);
       }
     };
 
+    // Nacherfassung Signature Canvas
     let nachSigCanvas, nachSigCtx, nachIsDrawing = false, nachLastX = 0, nachLastY = 0;
     
     function initNachSigCanvas() {
       nachSigCanvas = document.getElementById('nachSigCanvas');
-      if (!nachSigCanvas) return;
-      
       nachSigCtx = nachSigCanvas.getContext('2d');
       const rect = nachSigCanvas.getBoundingClientRect();
-      nachSigCanvas.width = rect.width;
-      nachSigCanvas.height = 200;
+      nachSigCanvas.width = rect.width * 2;
+      nachSigCanvas.height = rect.height * 2;
+      nachSigCtx.scale(2, 2);
       nachSigCtx.strokeStyle = '#000';
       nachSigCtx.lineWidth = 2;
       nachSigCtx.lineCap = 'round';
-      nachSigCtx.lineJoin = 'round';
       
       nachSigCanvas.addEventListener('mousedown', startNachDraw);
       nachSigCanvas.addEventListener('mousemove', drawNach);
       nachSigCanvas.addEventListener('mouseup', stopNachDraw);
-      nachSigCanvas.addEventListener('mouseleave', stopNachDraw);
       nachSigCanvas.addEventListener('touchstart', handleNachTouchStart, {passive: false});
       nachSigCanvas.addEventListener('touchmove', handleNachTouchMove, {passive: false});
       nachSigCanvas.addEventListener('touchend', stopNachDraw);
@@ -1508,14 +1040,14 @@
       const pos = getNachMousePos(e);
       nachLastX = pos.x;
       nachLastY = pos.y;
-      nachSigCtx.beginPath();
-      nachSigCtx.moveTo(nachLastX, nachLastY);
     }
 
     function drawNach(e) {
       if (!nachIsDrawing) return;
       e.preventDefault();
       const pos = getNachMousePos(e);
+      nachSigCtx.beginPath();
+      nachSigCtx.moveTo(nachLastX, nachLastY);
       nachSigCtx.lineTo(pos.x, pos.y);
       nachSigCtx.stroke();
       nachLastX = pos.x;
@@ -1523,10 +1055,7 @@
     }
 
     function stopNachDraw() {
-      if (nachIsDrawing) {
-        nachSigCtx.closePath();
-        nachIsDrawing = false;
-      }
+      nachIsDrawing = false;
     }
 
     function handleNachTouchStart(e) {
@@ -1537,7 +1066,6 @@
 
     function handleNachTouchMove(e) {
       e.preventDefault();
-      if (!nachIsDrawing) return;
       const touch = e.touches[0];
       drawNach({clientX: touch.clientX, clientY: touch.clientY, preventDefault: () => {}});
     }
@@ -1545,13 +1073,13 @@
     function getNachMousePos(e) {
       const rect = nachSigCanvas.getBoundingClientRect();
       return {
-        x: e.clientX - rect.left,
-        y: e.clientY - rect.top
+        x: (e.clientX - rect.left) * 2,
+        y: (e.clientY - rect.top) * 2
       };
     }
 
     window.clearNachSig = () => {
-      if (nachSigCtx && nachSigCanvas) {
+      if (nachSigCtx) {
         nachSigCtx.clearRect(0, 0, nachSigCanvas.width, nachSigCanvas.height);
       }
     };
@@ -1593,6 +1121,7 @@
       }
     };
 
+    // Nacherfassung archivieren
     window.archiveNach = async (id) => {
       if (!confirm('Nacherfassung ins Archiv verschieben?')) return;
       
@@ -1635,7 +1164,7 @@
         document.getElementById('detailsBody').innerHTML = `
           <div class="details-grid">
             <div class="details-label">Alarmzeit:</div><div class="details-value">${doc.datum_alarmzeit ? new Date(doc.datum_alarmzeit).toLocaleString('de-DE') : '-'}</div>
-            <div class="details-label">Einsatzende:</div><div class="details-value">${doc.datum_einsatzende ? new Date(​​​​​​​​​​​​​​​​doc.datum_einsatzende).toLocaleString('de-DE') : '-'}</div>
+            <div class="details-label">Einsatzende:</div><div class="details-value">${doc.datum_einsatzende ? new Date(doc.datum_einsatzende).toLocaleString('de-DE') : '-'}</div>
             <div class="details-label">Stichwort:</div><div class="details-value">${doc.stichwort || '-'}</div>
             <div class="details-label">Kategorie:</div><div class="details-value">${doc.kategorie || '-'}</div>
             <div class="details-label">Einsatznummer ILS:</div><div class="details-value">${doc.einsatznummer_ils || '-'}</div>
@@ -1643,30 +1172,17 @@
             <div class="details-label">Adresse:</div><div class="details-value">${doc.adresse || '-'}</div>
             <div class="details-label">Disponierte EM (FW):</div><div class="details-value">${doc.disponierte_em_fw || '-'}</div>
             <div class="details-label">Disponierte EM (RD):</div><div class="details-value">${doc.disponierte_em_rd || '-'}</div>
-            
-            <div class="details-label" style="margin-top:1rem"><strong>Patienten-Daten:</strong></div><div></div>
-            <div class="details-label">Erhoben:</div><div class="details-value">${doc.patienten_daten_erhoben ? 'Ja' : 'Nein'}</div>
-            <div class="details-label">Name:</div><div class="details-value">${doc.patient_name || '-'}</div>
+            <div class="details-label">Patientendaten erhoben:</div><div class="details-value">${doc.patienten_daten_erhoben ? 'Ja' : 'Nein'}</div>
+            <div class="details-label">Patient:</div><div class="details-value">${doc.patient_name || '-'}</div>
             <div class="details-label">Alter/Geburtsdatum:</div><div class="details-value">${doc.patient_alter_geburtsdatum || '-'}</div>
-            <div class="details-label">Pat.-Nummer ILS:</div><div class="details-value">${doc.patient_nummer_ils || '-'}</div>
+            <div class="details-label">Pat.-Nr. ILS:</div><div class="details-value">${doc.patient_nummer_ils || '-'}</div>
             <div class="details-label">Sachverhalt:</div><div class="details-value">${doc.sachverhalt || '-'}</div>
-            
-            <div class="details-label" style="margin-top:1rem"><strong>Protokollpflicht:</strong></div><div></div>
             <div class="details-label">Protokollpflichtig:</div><div class="details-value">${doc.protokollpflichtig ? 'Ja' : 'Nein'}</div>
             <div class="details-label">Begründung:</div><div class="details-value">${doc.protokollpflichtig_begruendung || '-'}</div>
             <div class="details-label">Verantwortlicher unterwiesen:</div><div class="details-value">${doc.verantwortlicher_unterwiesen ? 'Ja' : 'Nein'}</div>
-            
-            <div class="details-label" style="margin-top:1rem"><strong>Verantwortlicher:</strong></div><div></div>
-            <div class="details-label">Name:</div><div class="details-value">${doc.verantwortlicher_name || '-'}</div>
-            <div class="details-label">Qualifikation:</div><div class="details-value">${doc.verantwortlicher_qualifikation || '-'}</div>
-            
-            <div class="details-label" style="margin-top:1rem"><strong>Nacherfassung:</strong></div><div></div>
-            <div class="details-label">Name:</div><div class="details-value">${doc.nacherfasst_von_name || '-'}</div>
-            <div class="details-label">Qualifikation:</div><div class="details-value">${doc.nacherfasst_von_qualifikation || '-'}</div>
-            ${doc.nacherfasst_unterschrift ? `
-              <div class="details-label">Unterschrift:</div>
-              <div class="details-value"><img src="${doc.nacherfasst_unterschrift}" class="signature-img"></div>
-            ` : ''}
+            <div class="details-label">Verantwortlicher:</div><div class="details-value">${doc.verantwortlicher_name || '-'} (${doc.verantwortlicher_qualifikation || '-'})</div>
+            <div class="details-label">Nacherfasst von:</div><div class="details-value">${doc.nacherfasst_von_name || '-'} (${doc.nacherfasst_von_qualifikation || '-'})</div>
+            ${doc.nacherfasst_unterschrift ? `<div class="details-label">Unterschrift:</div><div class="details-value"><img src="${doc.nacherfasst_unterschrift}" class="signature-img"></div>` : ''}
           </div>
         `;
         
@@ -1674,10 +1190,6 @@
       } catch(e) {
         showMsg('Fehler: ' + e.message, 'error');
       }
-    };
-
-    window.viewNachArchiv = async (id) => {
-      await viewNach(id);
     };
 
     window.viewPatArchiv = async (id) => {
@@ -1691,114 +1203,60 @@
         const doc = data.patient_docs_by_pk;
         const p = doc.payload || {};
         
-        document.getElementById('detailsTitle').textContent = 'Patientendoku: ' + (doc.title || `${p.vorname} ${p.name}`);
+        document.getElementById('detailsTitle').textContent = doc.title || 'Patientendokumentation';
+        document.getElementById('detailsBody').innerHTML = `
+          <div class="details-grid">
+            <div class="details-label">Patient:</div><div class="details-value">${p.vorname || ''} ${p.name || ''}</div>
+            <div class="details-label">Geburtsdatum:</div><div class="details-value">${p.gebdatum || '-'}</div>
+            <div class="details-label">Einsatznummer:</div><div class="details-value">${p.einsatz_nr || '-'}</div>
+            <div class="details-label">Fahrzeug:</div><div class="details-value">${p.fahrzeug || '-'}</div>
+            <div class="details-label">RR:</div><div class="details-value">${p.rr_sys || '-'}/${p.rr_dia || '-'} mmHg</div>
+            <div class="details-label">HF:</div><div class="details-value">${p.hf || '-'} /min</div>
+            <div class="details-label">SpO₂:</div><div class="details-value">${p.spo2 || '-'} %</div>
+            <div class="details-label">Notfallgeschehen:</div><div class="details-value">${p.notfallgeschehen || '-'}</div>
+            <div class="details-label">Übergabe an:</div><div class="details-value">${p.ue_name || '-'}</div>
+            <div class="details-label">Ziel:</div><div class="details-value">${p.ziel_bez || '-'}</div>
+            <div class="details-label">Ausfüller:</div><div class="details-value">${p.ausfueller_name || '-'}</div>
+            ${p.signature ? `<div class="details-label">Ausfüller-Unterschrift:</div><div class="details-value"><img src="${p.signature}" class="signature-img"></div>` : ''}
+            <div class="details-label">Admin:</div><div class="details-value">${doc.admin_name || '-'}</div>
+            <div class="details-label">Admin-Datum:</div><div class="details-value">${doc.admin_datum ? new Date(doc.admin_datum).toLocaleString('de-DE') : '-'}</div>
+            ${doc.admin_unterschrift ? `<div class="details-label">Admin-Unterschrift:</div><div class="details-value"><img src="${doc.admin_unterschrift}" class="signature-img"></div>` : ''}
+          </div>
+        `;
         
-        let html = '<div class="details-grid">';
-        
-        // Einsatzdaten
-        html += '<div class="details-label" style="grid-column:1/-1;margin-top:1rem"><strong>Einsatzdaten</strong></div>';
-        if (p.einsatz_nr) html += `<div class="details-label">Einsatz-Nr:</div><div class="details-value">${p.einsatz_nr}</div>`;
-        if (p.auftrags_nr) html += `<div class="details-label">Auftrags-Nr:</div><div class="details-value">${p.auftrags_nr}</div>`;
-        if (p.rufname) html += `<div class="details-label">Rufname:</div><div class="details-value">${p.rufname}</div>`;
-        if (p.fahrzeug) html += `<div class="details-label">Fahrzeug:</div><div class="details-value">${p.fahrzeug}</div>`;
-        if (p.zeit_einsatz) html += `<div class="details-label">Datum/Uhrzeit:</div><div class="details-value">${new Date(p.zeit_einsatz).toLocaleString('de-DE')}</div>`;
-        if (p.einsatz_art) html += `<div class="details-label">Einsatz-Art:</div><div class="details-value">${p.einsatz_art}</div>`;
-        
-        // Stammdaten
-        html += '<div class="details-label" style="grid-column:1/-1;margin-top:1rem"><strong>Pat-Stammdaten</strong></div>';
-        if (p.name) html += `<div class="details-label">Name:</div><div class="details-value">${p.name}</div>`;
-        if (p.vorname) html += `<div class="details-label">Vorname:</div><div class="details-value">${p.vorname}</div>`;
-        if (p.gebdatum) html += `<div class="details-label">Geburtsdatum:</div><div class="details-value">${p.gebdatum}</div>`;
-        if (p.alter) html += `<div class="details-label">Alter:</div><div class="details-value">${p.alter}</div>`;
-        if (p.telefon) html += `<div class="details-label">Telefon:</div><div class="details-value">${p.telefon}</div>`;
-        if (p.strasse) html += `<div class="details-label">Straße:</div><div class="details-value">${p.strasse}</div>`;
-        if (p.plz_ort) html += `<div class="details-label">PLZ, Ort:</div><div class="details-value">${p.plz_ort}</div>`;
-        
-        // Messwerte
-        html += '<div class="details-label" style="grid-column:1/-1;margin-top:1rem"><strong>Messwerte</strong></div>';
-        if (p.rr_sys) html += `<div class="details-label">RR syst.:</div><div class="details-value">${p.rr_sys} mmHg</div>`;
-        if (p.rr_dia) html += `<div class="details-label">RR diast.:</div><div class="details-value">${p.rr_dia} mmHg</div>`;
-        if (p.hf) html += `<div class="details-label">HF:</div><div class="details-value">${p.hf} /min</div>`;
-        if (p.af) html += `<div class="details-label">AF:</div><div class="details-value">${p.af} /min</div>`;
-        if (p.spo2) html += `<div class="details-label">SpO₂:</div><div class="details-value">${p.spo2} %</div>`;
-        if (p.temp) html += `<div class="details-label">Temperatur:</div><div class="details-value">${p.temp} °C</div>`;
-        if (p.bz_mg) html += `<div class="details-label">BZ:</div><div class="details-value">${p.bz_mg} mg/dl</div>`;
-        
-        // GCS
-        const gcs = calculateGCS(p);
-        if (gcs !== '—') {
-          html += '<div class="details-label" style="grid-column:1/-1;margin-top:1rem"><strong>GCS</strong></div>';
-          html += `<div class="details-label">E/V/M:</div><div class="details-value">${p.gcs_e || 0}/${p.gcs_v || 0}/${p.gcs_m || 0} = ${gcs}</div>`;
-        }
-        
-        // Notfallgeschehen
-        if (p.notfallgeschehen) {
-          html += '<div class="details-label" style="grid-column:1/-1;margin-top:1rem"><strong>Notfallgeschehen</strong></div>';
-          html += `<div class="details-value" style="grid-column:1/-1">${p.notfallgeschehen}</div>`;
-        }
-        
-        // Medikamente
-        if (p.medications && p.medications.length > 0) {
-          html += '<div class="details-label" style="grid-column:1/-1;margin-top:1rem"><strong>Medikamente</strong></div>';
-          html += '<div style="grid-column:1/-1"><table style="width:100%"><thead><tr><th>Medikament</th><th>Dosis</th><th>Route</th><th>Zeit</th><th>Bemerkung</th></tr></thead><tbody>';
-          p.medications.forEach(med => {
-            html += `<tr>
-              <td>${med.name || '-'}</td>
-              <td>${med.dose || ''} ${med.unit || ''}</td>
-              <td>${med.route || '-'}</td>
-              <td>${med.time || '-'}</td>
-              <td>${med.note || '-'}</td>
-            </tr>`;
-          });
-          html += '</tbody></table></div>';
-        }
-        
-        // Übergabe
-        html += '<div class="details-label" style="grid-column:1/-1;margin-top:1rem"><strong>Übergabe</strong></div>';
-        if (p.ue_name) html += `<div class="details-label">Übergabe an:</div><div class="details-value">${p.ue_name}</div>`;
-        if (p.ue_zeit) html += `<div class="details-label">Zeitpunkt:</div><div class="details-value">${new Date(p.ue_zeit).toLocaleString('de-DE')}</div>`;
-        if (p.ziel_bez) html += `<div class="details-label">Ziel:</div><div class="details-value">${p.ziel_bez}</div>`;
-        
-        // Ausfüller
-        html += '<div class="details-label" style="grid-column:1/-1;margin-top:1rem"><strong>Ausfüller</strong></div>';
-        if (p.ausfueller_name) html += `<div class="details-label">Name:</div><div class="details-value">${p.ausfueller_name}</div>`;
-        if (p.signature) html += `<div class="details-label">Unterschrift:</div><div class="details-value"><img src="${p.signature}" class="signature-img"></div>`;
-        
-        // Admin
-        html += '<div class="details-label" style="grid-column:1/-1;margin-top:1rem"><strong>MPG-Beauftragter / Verantwortlicher</strong></div>';
-        if (doc.admin_name) html += `<div class="details-label">Name:</div><div class="details-value">${doc.admin_name}</div>`;
-        if (doc.admin_datum) html += `<div class="details-label">Datum:</div><div class="details-value">${new Date(doc.admin_datum).toLocaleString('de-DE')}</div>`;
-        if (doc.admin_unterschrift) html += `<div class="details-label">Unterschrift:</div><div class="details-value"><img src="${doc.admin_unterschrift}" class="signature-img"></div>`;
-        
-        html += '</div>';
-        
-        document.getElementById('detailsBody').innerHTML = html;
         document.getElementById('detailsModal').classList.add('show');
       } catch(e) {
         showMsg('Fehler: ' + e.message, 'error');
       }
     };
 
+    window.viewNachArchiv = (id) => {
+      viewNach(id);
+    };
+
     window.closeDetailsModal = () => {
       document.getElementById('detailsModal').classList.remove('show');
     };
 
-    window.printPatDoc = async (id) => {
-      await viewPatArchiv(id);
-      setTimeout(() => window.print(), 300);
+    // Print Functions
+    window.printPatDoc = (id) => {
+      viewPatArchiv(id).then(() => {
+        setTimeout(() => window.print(), 500);
+      });
     };
 
-    window.printNachDoc = async (id) => {
-      await viewNachArchiv(id);
-      setTimeout(() => window.print(), 300);
+    window.printNachDoc = (id) => {
+      viewNach(id).then(() => {
+        setTimeout(() => window.print(), 500);
+      });
     };
 
     // Message Helper
-    function showMsg(text, type = 'success') {
-      const msgDiv = document.getElementById('msg');
-      msgDiv.className = 'msg ' + type;
-      msgDiv.textContent = text;
-      setTimeout(() => msgDiv.textContent = '', 4000);
+    function showMsg(text, type = 'error') {
+      const msg = document.getElementById('msg');
+      msg.textContent = text;
+      msg.className = 'msg ' + type;
+      setTimeout(() => msg.textContent = '', 5000);
     }
 
     // Initial Load
