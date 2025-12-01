@@ -306,6 +306,15 @@
 <div class="wrap">
   <div class="hint">GCS & qSOFA automatisch berechnet • Fotos möglich • Unterschrift erforderlich • Daten lokal (localStorage)</div>
 
+  <!-- DEBUG BEREICH -->
+  <details style="margin-bottom:1rem;border:2px solid #f59e0b;background:#fffbeb">
+    <summary style="background:#fef3c7;color:#92400e;font-weight:800;padding:1rem">🐛 Debug-Log (zum Fehler finden)</summary>
+    <div style="padding:1rem">
+      <button onclick="document.getElementById('debugLog').textContent=''" style="padding:.5rem 1rem;margin-bottom:.5rem;background:#dc2626;color:#fff;border:none;border-radius:.5rem;cursor:pointer;font-weight:700">Log löschen</button>
+      <pre id="debugLog" style="background:#1e293b;color:#10b981;padding:1rem;border-radius:.5rem;overflow:auto;max-height:400px;font-size:.85rem;white-space:pre-wrap;word-break:break-all;font-family:monospace"></pre>
+    </div>
+  </details>
+
   <!-- Einsatzdaten -->
   <details open>
     <summary><i class="fa-solid fa-truck-medical"></i> Einsatzdaten</summary>
@@ -801,12 +810,33 @@
 </div>
 
 <script>
-/* ===== PATIENTENDOKUMENTATION - PUBLIC ACCESS (OHNE AUTH) ===== */
+/* ===== PATIENTENDOKUMENTATION - MIT DEBUG-LOG ===== */
 
 // DIREKTER GraphQL Endpoint - KEIN Nhost Client!
 const GRAPHQL_ENDPOINT = 'https://hpjfrhktprpuuxvvlpsb.hasura.eu-central-1.nhost.run/v1/graphql';
 
 let currentDocumentId = null;
+
+// ===== DEBUG HELPER =====
+function debugLog(message, data = null) {
+  const logEl = document.getElementById('debugLog');
+  if (!logEl) return;
+  
+  const timestamp = new Date().toLocaleTimeString();
+  let logText = `[${timestamp}] ${message}`;
+  if (data !== null && data !== undefined) {
+    if (typeof data === 'object') {
+      logText += '\n' + JSON.stringify(data, null, 2);
+    } else {
+      logText += '\n' + String(data);
+    }
+  }
+  logEl.textContent += logText + '\n\n';
+  console.log(message, data);
+  
+  // Auto-scroll nach unten
+  logEl.scrollTop = logEl.scrollHeight;
+}
 
 // ===== SIGNATURE CANVAS =====
 const sigCanvas = document.getElementById('sig');
@@ -1076,24 +1106,30 @@ window.closeAll = function() {
   document.querySelectorAll('details').forEach(d => d.open = false);
 };
 
-// ===== ABSENDEN - PUBLIC ACCESS MIT x-hasura-role =====
+// ===== ABSENDEN - MIT DEBUG-LOG =====
 window.submitToBackend = async function() {
   const btn = document.getElementById('sendBtn');
   btn.disabled = true;
   btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Sende...';
   
+  // Log löschen
+  document.getElementById('debugLog').textContent = '';
+  
   try {
-    const data = collectFormData();
+    debugLog('🚀 START: Formular wird gesendet...');
     
-    console.log('=== SUBMIT DEBUG ===');
-    console.log('Collected data:', data);
+    const data = collectFormData();
+    debugLog('✅ Formulardaten gesammelt', {
+      felder: Object.keys(data).length,
+      fotos: data.photos?.length || 0
+    });
     
     const patName = `${data.vorname || ''} ${data.name || ''}`.trim() || 'Unbekannt';
     const title = `Patientendoku: ${patName}`;
+    debugLog('✅ Titel erstellt', { title });
     
-    console.log('Title:', title);
+    debugLog('📡 GraphQL Endpoint', { endpoint: GRAPHQL_ENDPOINT });
     
-    // DIREKTER GraphQL Request OHNE Auth
     const MUTATION = `mutation($title:String!, $payload:jsonb!, $status:String!) {
       insert_patient_docs_one(object:{title:$title, payload:$payload, status:$status}) {
         id
@@ -1107,41 +1143,66 @@ window.submitToBackend = async function() {
       status: "offen"
     };
     
-    console.log('Mutation:', MUTATION);
-    console.log('Variables:', variables);
+    debugLog('✅ GraphQL Mutation vorbereitet');
     
-    // Fetch direkt an Hasura (PUBLIC ACCESS)
+    const headers = {
+      'Content-Type': 'application/json',
+      'x-hasura-role': 'anonymous'
+    };
+    
+    debugLog('✅ Headers gesetzt', headers);
+    
+    debugLog('📤 Sende Request...');
+    
     const response = await fetch(GRAPHQL_ENDPOINT, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-hasura-role': 'anonymous'  // WICHTIG für Public Access!
-      },
+      headers: headers,
       body: JSON.stringify({
         query: MUTATION,
         variables: variables
       })
     });
     
-    console.log('Response Status:', response.status);
+    debugLog('✅ Response erhalten', {
+      status: response.status,
+      statusText: response.statusText,
+      ok: response.ok
+    });
     
-    const result = await response.json();
+    const responseText = await response.text();
+    debugLog('📥 Response Body (Text)', {
+      länge: responseText.length,
+      vorschau: responseText.substring(0, 500)
+    });
     
-    console.log('=== FULL RESULT ===');
-    console.log('Result:', result);
+    let result;
+    try {
+      result = JSON.parse(responseText);
+      debugLog('✅ JSON geparst');
+    } catch(parseError) {
+      debugLog('❌ JSON Parse Fehler!', {
+        error: parseError.message,
+        responseText: responseText
+      });
+      throw new Error('Response ist kein gültiges JSON: ' + responseText.substring(0, 200));
+    }
+    
+    debugLog('📦 Parsed Result', result);
     
     if (result.errors) {
-      console.error('GraphQL Errors:', result.errors);
+      debugLog('❌ GraphQL Errors gefunden!', result.errors);
       throw new Error(result.errors[0]?.message || 'GraphQL Error');
     }
     
     if (!result.data || !result.data.insert_patient_docs_one) {
-      throw new Error('Keine Daten zurückgegeben: ' + JSON.stringify(result));
+      debugLog('❌ Keine Daten in Response!', result);
+      throw new Error('Keine Daten zurückgegeben');
     }
     
     currentDocumentId = result.data.insert_patient_docs_one.id;
-    
-    console.log('Document ID:', currentDocumentId);
+    debugLog('✅ ERFOLG! Dokument erstellt', {
+      id: currentDocumentId
+    });
     
     document.getElementById('docIdDisplay').textContent = `Dokument-ID: PAT-${new Date().getFullYear()}-${currentDocumentId.slice(0,8)}`;
     document.getElementById('qrModal').classList.add('show');
@@ -1149,10 +1210,12 @@ window.submitToBackend = async function() {
     btn.innerHTML = '<i class="fa-solid fa-check"></i> Gesendet!';
     
   } catch(e) {
-    console.error('=== SUBMIT ERROR ===');
-    console.error('Error:', e);
-    console.error('Error message:', e.message);
-    alert('❌ Fehler beim Senden: ' + e.message);
+    debugLog('💥 FEHLER!', {
+      message: e.message,
+      name: e.name,
+      stack: e.stack
+    });
+    alert('❌ Fehler beim Senden: ' + e.message + '\n\nSiehe Debug-Log oben für Details!');
     btn.disabled = false;
     btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Absenden';
   }
