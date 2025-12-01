@@ -1076,7 +1076,7 @@ window.closeAll = function() {
   document.querySelectorAll('details').forEach(d => d.open = false);
 };
 
-// ===== ABSENDEN - PUBLIC ACCESS (OHNE AUTH) =====
+// ===== ABSENDEN - PUBLIC ACCESS MIT x-hasura-role =====
 window.submitToBackend = async function() {
   const btn = document.getElementById('sendBtn');
   btn.disabled = true;
@@ -1114,8 +1114,8 @@ window.submitToBackend = async function() {
     const response = await fetch(GRAPHQL_ENDPOINT, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json'
-        // KEIN Authorization Header!
+        'Content-Type': 'application/json',
+        'x-hasura-role': 'anonymous'  // WICHTIG für Public Access!
       },
       body: JSON.stringify({
         query: MUTATION,
