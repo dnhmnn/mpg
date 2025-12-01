@@ -1,2 +1,5 @@
-/secure/:key  /secure-document.html?key=:key  200
+# Netlify Functions Proxy
+/.netlify/functions/*  /.netlify/functions/:splat  200
+
+# SPA Fallback für Client-Side Routing
 /*  /index.html  200
