@@ -1,6 +1,7 @@
 {
-  "name": "ffw-app",
+  "name": "ffw-medizingruppe-app",
   "version": "1.0.0",
+  "description": "FFW Medizingruppe App mit Patientendokumentation",
   "dependencies": {
     "node-fetch": "^2.6.7"
   }
