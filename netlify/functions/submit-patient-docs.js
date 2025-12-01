@@ -39,14 +39,14 @@ exports.handler = async (event) => {
     }
 
     const GRAPHQL_ENDPOINT = 'https://hpjfrhktprpuuxvvlpsb.hasura.eu-central-1.nhost.run/v1/graphql';
-    const ADMIN_SECRET = process.env.NHOST_ADMIN_SECRET;
+    const ADMIN_SECRET = process.env.HASURA_ADMIN_SECRET;
 
     if (!ADMIN_SECRET) {
-      console.error('NHOST_ADMIN_SECRET not configured!');
+      console.error('HASURA_ADMIN_SECRET not configured!');
       return {
         statusCode: 500,
         headers,
-        body: JSON.stringify({ error: 'Server configuration error' })
+        body: JSON.stringify({ error: 'Server configuration error - Admin Secret missing' })
       };
     }
 
