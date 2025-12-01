@@ -800,15 +800,11 @@
   </div>
 </div>
 
-<script type="module">
-/* ===== PATIENTENDOKUMENTATION - patient_docs ===== */
+<script>
+/* ===== PATIENTENDOKUMENTATION - PUBLIC ACCESS (OHNE AUTH) ===== */
 
-import { NhostClient } from "https://esm.sh/@nhost/nhost-js@2.2.9";
-
-const nhost = new NhostClient({
-  subdomain: "hpjfrhktprpuuxvvlpsb",
-  region: "eu-central-1"
-});
+// DIREKTER GraphQL Endpoint - KEIN Nhost Client!
+const GRAPHQL_ENDPOINT = 'https://hpjfrhktprpuuxvvlpsb.hasura.eu-central-1.nhost.run/v1/graphql';
 
 let currentDocumentId = null;
 
@@ -1049,7 +1045,6 @@ window.loadForm = function() {
   if (!confirm('Aktuelles Formular mit gespeichertem Entwurf überschreiben?')) return;
   
   const data = JSON.parse(saved);
-  // Restore logic würde hier kommen...
   alert('✅ Entwurf geladen!');
 };
 
@@ -1081,7 +1076,7 @@ window.closeAll = function() {
   document.querySelectorAll('details').forEach(d => d.open = false);
 };
 
-// ===== ABSENDEN - patient_docs =====
+// ===== ABSENDEN - PUBLIC ACCESS (OHNE AUTH) =====
 window.submitToBackend = async function() {
   const btn = document.getElementById('sendBtn');
   btn.disabled = true;
@@ -1098,30 +1093,52 @@ window.submitToBackend = async function() {
     
     console.log('Title:', title);
     
-    // KORRIGIERT: insert_patient_docs_one
-    const MUTATION = `mutation($type:String!, $title:String!, $payload:jsonb!) {
-      insert_patient_docs_one(object:{type:$type, title:$title, payload:$payload, status:"offen"}) {
+    // DIREKTER GraphQL Request OHNE Auth
+    const MUTATION = `mutation($title:String!, $payload:jsonb!, $status:String!) {
+      insert_patient_docs_one(object:{title:$title, payload:$payload, status:$status}) {
         id
+        title
       }
     }`;
     
-    console.log('Mutation:', MUTATION);
-    console.log('Variables:', { type: 'Patientendokumentation', title, payload: data });
-    
-    const result = await nhost.graphql.request(MUTATION, {
-      type: 'Patientendokumentation',
+    const variables = {
       title: title,
-      payload: data
+      payload: data,
+      status: "offen"
+    };
+    
+    console.log('Mutation:', MUTATION);
+    console.log('Variables:', variables);
+    
+    // Fetch direkt an Hasura (PUBLIC ACCESS)
+    const response = await fetch(GRAPHQL_ENDPOINT, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+        // KEIN Authorization Header!
+      },
+      body: JSON.stringify({
+        query: MUTATION,
+        variables: variables
+      })
     });
     
-    console.log('GraphQL Result:', result);
+    console.log('Response Status:', response.status);
     
-    if (result.error) {
-      console.error('GraphQL Error:', result.error);
-      throw new Error(result.error[0]?.message || 'GraphQL Error');
+    const result = await response.json();
+    
+    console.log('=== FULL RESULT ===');
+    console.log('Result:', result);
+    
+    if (result.errors) {
+      console.error('GraphQL Errors:', result.errors);
+      throw new Error(result.errors[0]?.message || 'GraphQL Error');
     }
     
-    // KORRIGIERT: insert_patient_docs_one
+    if (!result.data || !result.data.insert_patient_docs_one) {
+      throw new Error('Keine Daten zurückgegeben: ' + JSON.stringify(result));
+    }
+    
     currentDocumentId = result.data.insert_patient_docs_one.id;
     
     console.log('Document ID:', currentDocumentId);
@@ -1132,7 +1149,9 @@ window.submitToBackend = async function() {
     btn.innerHTML = '<i class="fa-solid fa-check"></i> Gesendet!';
     
   } catch(e) {
-    console.error('Submit error:', e);
+    console.error('=== SUBMIT ERROR ===');
+    console.error('Error:', e);
+    console.error('Error message:', e.message);
     alert('❌ Fehler beim Senden: ' + e.message);
     btn.disabled = false;
     btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Absenden';
@@ -1153,13 +1172,11 @@ window.assignQRCode = function() {
     return;
   }
   
-  // In localStorage speichern
   const qrCodes = JSON.parse(localStorage.getItem('ffw_qr_codes') || '[]');
   const qrCode = qrCodes.find(q => q.id === key);
   
   if (!qrCode) {
     if (!confirm(`QR-Code "${key}" nicht gefunden. Trotzdem zuordnen?`)) return;
-    // Erstelle QR-Code wenn nicht vorhanden
     qrCodes.push({
       id: key,
       url: `https://mpgffrot.netlify.app/secure/${key}`,
@@ -1169,7 +1186,6 @@ window.assignQRCode = function() {
       assignedAt: new Date().toISOString()
     });
   } else {
-    // QR-Code als "assigned" markieren
     qrCode.status = 'assigned';
     qrCode.assignedTo = currentDocumentId;
     qrCode.assignedAt = new Date().toISOString();
