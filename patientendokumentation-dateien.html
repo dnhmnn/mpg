@@ -7,243 +7,87 @@
   <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet"/>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
   <style>
-    :root { 
-      --rot:#c8102e; 
-      --bg:#f7f7f7; 
-      --card:#fff; 
-      --border:#e2e8f0;
-      --muted:#64748b;
-    }
-    * { box-sizing: border-box; }
-    body {
-      margin: 0; background: var(--bg);
-      font-family: 'Atkinson Hyperlegible', system-ui, Arial, sans-serif;
-      color: #222; line-height: 1.5;
-    }
-    header {
-      background: var(--rot); color: #fff;
-      padding: 12px 16px; display: flex;
-      align-items: center; gap: 12px;
-    }
-    header h1 { margin: 0; font-size: 1rem; font-weight: 800; }
-    .spacer { flex: 1; }
-    .topbtn {
-      background: #0001; color: #fff;
-      padding: 8px 12px; border-radius: 10px;
-      text-decoration: none; font-weight: 800;
-      font-size: 0.9rem;
-    }
-    .topbtn:hover { background: #0002; }
-    .wrap { max-width: 1200px; margin: 18px auto; padding: 0 14px 100px; }
-    .card {
-      background: var(--card); border-radius: 14px;
-      box-shadow: 0 3px 12px rgba(0,0,0,.06); padding: 20px;
-      margin-bottom: 20px;
-    }
-    .card h2 { margin-top: 0; }
-    .tabs { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
-    .tab {
-      border: 1px solid #eee; background: #fafafa;
-      padding: 10px 16px; border-radius: 999px;
-      font-weight: 800; cursor: pointer; font-size: 0.95rem;
-      transition: all 0.2s;
-    }
-    .tab:hover { background: #f0f0f0; }
-    .tab.active {
-      color: #fff; background: var(--rot);
-      border-color: var(--rot);
-    }
-    .table-head, .row {
-      display: grid; grid-template-columns: 120px 1fr 280px;
-      gap: 12px; padding: 14px 10px; align-items: center;
-      border-bottom: 1px solid #eee;
-    }
-    .table-head { font-weight: 800; color: #666; background: #fafafa; }
-    .row:last-child { border-bottom: none; }
-    .row:hover { background: #f9f9f9; }
-    .pill {
-      display: inline-block;
-      font-weight: 800; border-radius: 999px;
-      padding: 5px 12px; font-size: 0.85rem;
-    }
-    .pill.offen { background: #fef3c7; color: #92400e; }
-    .pill.archiviert { background: #dcfce7; color: #166534; }
-    .btn {
-      background: var(--rot); color: #fff;
-      border: 0; border-radius: 10px;
-      padding: 10px 14px; font-weight: 800; cursor: pointer;
-      font-size: 0.9rem; transition: all 0.2s;
-      display: inline-flex; align-items: center; gap: 6px;
-    }
-    .btn:hover { background: #a00d26; }
-    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-    .btn-secondary {
-      background: #6b7280; color: #fff;
-    }
-    .btn-secondary:hover { background: #4b5563; }
-    .btn-icon {
-      background: transparent; color: var(--rot);
-      border: 1px solid var(--rot); padding: 8px 12px;
-      font-size: 0.85rem;
-    }
-    .btn-icon:hover { background: #fff5f5; }
-    .add-btn {
-      position: fixed; bottom: 30px; right: 30px;
-      width: 60px; height: 60px; border-radius: 50%;
-      background: var(--rot); color: #fff;
-      border: 0; cursor: pointer; font-size: 1.5rem;
-      box-shadow: 0 4px 12px rgba(0,0,0,.2);
-      z-index: 100;
-      transition: transform 0.2s;
-    }
-    .add-btn:hover { transform: scale(1.1); }
-    .modal {
-      position: fixed; inset: 0;
-      background: rgba(0,0,0,.6);
-      display: none; align-items: flex-start; justify-content: center;
-      z-index: 1000; padding: 20px; overflow-y: auto;
-    }
-    .modal.show { display: flex; }
-    .modal-box {
-      background: #fff; border-radius: 14px;
-      max-width: 1000px; width: 100%;
-      max-height: 90vh; overflow-y: auto;
-      padding: 24px; box-shadow: 0 8px 20px rgba(0,0,0,.3);
-      margin: auto;
-    }
-    .modal-box h3 { margin-top: 0; color: var(--rot); }
-    details{
-      background:var(--card);border:1px solid var(--border);
-      border-radius:.75rem;margin:0 0 .8rem 0;overflow:hidden
-    }
-    summary{
-      list-style:none;padding:.9rem 1rem;cursor:pointer;font-weight:800;
-      display:flex;align-items:center;gap:.6rem;font-size:1rem;
-      background: #fafafa;
-    }
+    :root{--primary:#c8102e;--bg:#f8fafc;--card:#fff;--text:#0f172a;--muted:#64748b;--border:#e2e8f0}
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--text);font-family:'Atkinson Hyperlegible',-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;line-height:1.45}
+    header{background:linear-gradient(90deg,var(--primary),#981b1b);color:#fff;padding:12px 16px;display:flex;align-items:center;gap:12px}
+    header h1{margin:0;font-size:1rem;font-weight:800}
+    .spacer{flex:1}
+    .topbtn{background:#ffffff1a;color:#fff;padding:8px 12px;border-radius:10px;text-decoration:none;font-weight:800;font-size:0.9rem;border:1px solid #ffffff55}
+    .topbtn:hover{background:#ffffff2b}
+    .wrap{max-width:1200px;margin:18px auto;padding:0 14px 100px}
+    .card{background:var(--card);border-radius:14px;box-shadow:0 3px 12px rgba(0,0,0,.06);padding:20px;margin-bottom:20px}
+    .card h2{margin-top:0}
+    .tabs{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap}
+    .tab{border:1px solid #eee;background:#fafafa;padding:10px 16px;border-radius:999px;font-weight:800;cursor:pointer;font-size:0.95rem;transition:all 0.2s}
+    .tab:hover{background:#f0f0f0}
+    .tab.active{color:#fff;background:var(--primary);border-color:var(--primary)}
+    .table-head,.row{display:grid;grid-template-columns:120px 1fr 280px;gap:12px;padding:14px 10px;align-items:center;border-bottom:1px solid #eee}
+    .table-head{font-weight:800;color:#666;background:#fafafa}
+    .row:last-child{border-bottom:none}
+    .row:hover{background:#f9f9f9}
+    .pill{display:inline-block;font-weight:800;border-radius:999px;padding:5px 12px;font-size:0.85rem}
+    .pill.offen{background:#fef3c7;color:#92400e}
+    .pill.archiviert{background:#dcfce7;color:#166534}
+    .btn{background:var(--primary);color:#fff;border:0;border-radius:10px;padding:10px 14px;font-weight:800;cursor:pointer;font-size:0.9rem;transition:all 0.2s;display:inline-flex;align-items:center;gap:6px}
+    .btn:hover{background:#a00d26}
+    .btn:disabled{opacity:0.5;cursor:not-allowed}
+    .btn-secondary{background:#6b7280;color:#fff}
+    .btn-secondary:hover{background:#4b5563}
+    .btn-icon{background:transparent;color:var(--primary);border:1px solid var(--primary);padding:8px 12px;font-size:0.85rem}
+    .btn-icon:hover{background:#fff5f5}
+    .add-btn{position:fixed;bottom:30px;right:30px;width:60px;height:60px;border-radius:50%;background:var(--primary);color:#fff;border:0;cursor:pointer;font-size:1.5rem;box-shadow:0 4px 12px rgba(0,0,0,.2);z-index:100;transition:transform 0.2s}
+    .add-btn:hover{transform:scale(1.1)}
+    .modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:flex-start;justify-content:center;z-index:1000;padding:20px;overflow-y:auto}
+    .modal.show{display:flex}
+    .modal-box{background:#fff;border-radius:14px;max-width:1200px;width:100%;max-height:90vh;overflow-y:auto;padding:24px;box-shadow:0 8px 20px rgba(0,0,0,.3);margin:auto}
+    .modal-box h3{margin-top:0;color:var(--primary)}
+    details{background:var(--card);border:1px solid var(--border);border-radius:.75rem;margin:0 0 .8rem 0;overflow:hidden}
+    summary{list-style:none;padding:.9rem 1rem;cursor:pointer;font-weight:800;display:flex;align-items:center;gap:.6rem;font-size:1rem;background:#fafafa}
     summary::-webkit-details-marker{display:none}
     details[open] summary{border-bottom:1px solid var(--border);background:#fff7f7}
     .sec-body{padding:1rem}
-    .grid{
-      display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:.75rem
-    }
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:.75rem}
     .form-row{display:flex;gap:.75rem;flex-wrap:wrap;margin:.25rem 0}
     label{font-size:.92rem;color:#111827;font-weight:600}
-    input[type="text"],input[type="number"],input[type="datetime-local"],
-    input[type="date"],input[type="time"],textarea,select{
-      width:100%;padding:.55rem .6rem;border:1px solid var(--border);
-      border-radius:.5rem;background:#fff;font-size:16px;
-    }
+    input[type="text"],input[type="number"],input[type="datetime-local"],input[type="date"],input[type="time"],textarea,select{width:100%;padding:.55rem .6rem;border:1px solid var(--border);border-radius:.5rem;background:#fff;font-size:16px}
     textarea{min-height:88px;resize:vertical}
     fieldset{border:1px solid var(--border);border-radius:.6rem;padding:.75rem;margin-bottom:.75rem}
     fieldset legend{padding:0 .35rem;color:#111827;font-weight:700}
     .choice{display:flex;gap:.6rem;flex-wrap:wrap}
-    .pill-input{
-      display:inline-flex;align-items:center;gap:.4rem;
-      border:1px solid var(--border);border-radius:999px;
-      padding:.25rem .55rem;background:#fff;font-size:.9rem;
-      cursor: pointer;
-    }
-    .badge{
-      display:inline-block;padding:.2rem .5rem;border-radius:999px;
-      background:#f1f5f9;color:#0f172a;border:1px solid var(--border);font-size:.8rem
-    }
+    .pill-input{display:inline-flex;align-items:center;gap:.4rem;border:1px solid var(--border);border-radius:999px;padding:.25rem .55rem;background:#fff;font-size:.9rem;cursor:pointer}
+    .badge{display:inline-block;padding:.2rem .5rem;border-radius:999px;background:#f1f5f9;color:#0f172a;border:1px solid var(--border);font-size:.8rem}
     .sum{font-weight:800}
     table{width:100%;border-collapse:collapse;margin-top:.5rem}
     th,td{border:1px solid var(--border);padding:.5rem;text-align:left;font-size:.9rem}
     th{background:#f8fafc;font-weight:700}
-    .subbtn{
-      border:1px solid var(--border);background:#fff;
-      padding:.35rem .55rem;border-radius:.45rem;cursor:pointer;
-      font-size:.9rem;font-weight:600
-    }
+    .subbtn{border:1px solid var(--border);background:#fff;padding:.35rem .55rem;border-radius:.45rem;cursor:pointer;font-size:.9rem;font-weight:600}
     .thumbs{display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.5rem}
     .thumb{position:relative}
     .thumb img{width:120px;height:120px;object-fit:cover;border:1px solid var(--border);border-radius:.5rem}
-    .form-grid {
-      display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-      gap: 16px; margin: 16px 0;
-    }
-    .form-group {
-      display: flex; flex-direction: column; gap: 6px;
-    }
-    .form-group label {
-      font-weight: 700; font-size: 0.9rem; color: #374151;
-    }
-    .form-group input,
-    .form-group textarea,
-    .form-group select {
-      padding: 10px 12px; border: 1px solid #d1d5db;
-      border-radius: 8px; font-size: 16px; font-family: inherit;
-    }
-    .form-group input:focus,
-    .form-group textarea:focus,
-    .form-group select:focus {
-      outline: none; border-color: var(--rot);
-      box-shadow: 0 0 0 3px rgba(200,16,46,0.1);
-    }
-    .form-group textarea {
-      min-height: 80px; resize: vertical;
-    }
-    .radio-group {
-      display: flex; gap: 16px; align-items: center;
-    }
-    .radio-group label {
-      display: flex; align-items: center; gap: 6px;
-      font-weight: 600; cursor: pointer;
-    }
-    .sig-wrap {
-      border: 2px dashed #d1d5db; border-radius: 8px;
-      padding: 12px; background: #f9fafb; margin: 16px 0;
-    }
-    canvas.sig-canvas {
-      width: 100%; 
-      height: 200px; 
-      border: 1px solid #d1d5db;
-      border-radius: 6px; 
-      background: #fff; 
-      cursor: crosshair;
-      touch-action: none;
-      display: block;
-    }
-    .sig-actions {
-      margin-top: 8px; display: flex; gap: 8px;
-    }
-    .msg { margin-top: 12px; padding: 12px; border-radius: 8px; }
-    .msg.error { background: #fee; color: #c00; border: 1px solid #fcc; }
-    .msg.success { background: #efe; color: #060; border: 1px solid #cfc; }
-    .details-grid {
-      display: grid; grid-template-columns: 200px 1fr;
-      gap: 12px 20px; margin: 16px 0;
-    }
-    .details-label { font-weight: 700; color: #6b7280; }
-    .details-value { color: #111827; word-break: break-word; }
-    .signature-img {
-      max-width: 400px; 
-      max-height: 200px;
-      border: 1px solid #d1d5db;
-      border-radius: 6px; 
-      margin-top: 8px;
-    }
-    @media (max-width: 768px) {
-      .table-head, .row {
-        grid-template-columns: 1fr !important;
-        gap: 8px;
-      }
-      .modal-box { padding: 16px; }
-      .form-grid { grid-template-columns: 1fr; }
-      .details-grid { grid-template-columns: 1fr; gap: 4px; }
-      .details-label { font-size: 0.85rem; }
-      .add-btn { bottom: 20px; right: 20px; }
-      .grid { grid-template-columns: 1fr; }
-    }
-    @media print {
-      header, .tabs, .btn, .add-btn, .modal { display: none !important; }
-      body { background: #fff; }
-      .card { box-shadow: none; border: 1px solid #ddd; }
-      details { border: none; }
-      summary { display: none; }
-    }
+    .thumb .rm{position:absolute;top:6px;right:6px;border:1px solid #0002;background:#0006;color:#fff;border-radius:.35rem;padding:.15rem .35rem;cursor:pointer;font-weight:700}
+    .form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px;margin:16px 0}
+    .form-group{display:flex;flex-direction:column;gap:6px}
+    .form-group label{font-weight:700;font-size:0.9rem;color:#374151}
+    .form-group input,.form-group textarea,.form-group select{padding:10px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:16px;font-family:inherit}
+    .form-group input:focus,.form-group textarea:focus,.form-group select:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(200,16,46,0.1)}
+    .form-group textarea{min-height:80px;resize:vertical}
+    .radio-group{display:flex;gap:16px;align-items:center}
+    .radio-group label{display:flex;align-items:center;gap:6px;font-weight:600;cursor:pointer}
+    .sig-wrap{border:2px dashed #d1d5db;border-radius:8px;padding:12px;background:#f9fafb;margin:16px 0}
+    canvas.sig-canvas{width:100%;height:200px;border:1px solid #d1d5db;border-radius:6px;background:#fff;cursor:crosshair;touch-action:none;display:block}
+    .sig-actions{margin-top:8px;display:flex;gap:8px}
+    .msg{margin-top:12px;padding:12px;border-radius:8px}
+    .msg.error{background:#fee;color:#c00;border:1px solid #fcc}
+    .msg.success{background:#efe;color:#060;border:1px solid #cfc}
+    .details-grid{display:grid;grid-template-columns:200px 1fr;gap:12px 20px;margin:16px 0}
+    .details-label{font-weight:700;color:#6b7280}
+    .details-value{color:#111827;word-break:break-word}
+    .signature-img{max-width:400px;max-height:200px;border:1px solid #d1d5db;border-radius:6px;margin-top:8px}
+    .photo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-top:10px}
+    .photo-grid img{width:100%;height:150px;object-fit:cover;border:1px solid #ddd;border-radius:6px}
+    @media (max-width:768px){.table-head,.row{grid-template-columns:1fr !important;gap:8px}.modal-box{padding:16px}.form-grid{grid-template-columns:1fr}.details-grid{grid-template-columns:1fr;gap:4px}.details-label{font-size:0.85rem}.add-btn{bottom:20px;right:20px}.grid{grid-template-columns:1fr}}
+    @media print{header,.tabs,.btn,.add-btn,.modal{display:none !important}body{background:#fff}.card{box-shadow:none;border:1px solid #ddd}details{border:none}summary{display:none}}
   </style>
 </head>
 <body>
@@ -374,7 +218,7 @@
             <input type="text" name="disponierte_em_rd">
           </div>
         </div>
-        <h4 style="margin-top:20px;color:var(--rot)">Patienten-Daten</h4>
+        <h4 style="margin-top:20px;color:var(--primary)">Patienten-Daten</h4>
         <div class="form-group">
           <label>Erhoben:</label>
           <div class="radio-group">
@@ -400,7 +244,7 @@
           <label>Sachverhalt vor Ort:</label>
           <textarea name="sachverhalt" rows="4"></textarea>
         </div>
-        <h4 style="margin-top:20px;color:var(--rot)">Protokollpflicht</h4>
+        <h4 style="margin-top:20px;color:var(--primary)">Protokollpflicht</h4>
         <div class="form-group">
           <label>War dieser Einsatz gemäß §630f BGB protokollpflichtig?</label>
           <div class="radio-group">
@@ -419,7 +263,7 @@
             <label><input type="radio" name="verantwortlicher_unterwiesen" value="nein"> Nein</label>
           </div>
         </div>
-        <h4 style="margin-top:20px;color:var(--rot)">Verantwortlicher</h4>
+        <h4 style="margin-top:20px;color:var(--primary)">Verantwortlicher</h4>
         <div class="form-grid">
           <div class="form-group">
             <label>Name:</label>
@@ -430,7 +274,7 @@
             <input type="text" name="verantwortlicher_qualifikation">
           </div>
         </div>
-        <h4 style="margin-top:20px;color:var(--rot)">Nacherfassung</h4>
+        <h4 style="margin-top:20px;color:var(--primary)">Nacherfassung</h4>
         <div class="form-grid">
           <div class="form-group">
             <label>Nacherfasst von (Name):</label>
@@ -466,6 +310,7 @@
       </div>
     </div>
   </div>
+
   <script type="module">
     import { NhostClient } from "https://esm.sh/@nhost/nhost-js@2.2.9";
     const nhost = new NhostClient({ subdomain: "hpjfrhktprpuuxvvlpsb", region: "eu-central-1" });
@@ -506,7 +351,6 @@
       if (json.errors) throw new Error(json.errors[0].message);
       return json.data;
     }
-
     async function loadData() {
       try {
         const patData = await gql(`query {
@@ -671,7 +515,40 @@
         photosHTML += '</div>';
       }
       
-      return `<details open><summary><i class="fa-solid fa-truck-medical"></i> Einsatzdaten</summary><div class="sec-body"><div class="grid"><label>Einsatz-Nr.<input name="einsatz_nr" type="text" value="${v('einsatz_nr')}"></label><label>Pat./Auftrags-Nr.<input name="auftrags_nr" type="text" value="${v('auftrags_nr')}"></label><label>Rufname<input name="rufname" type="text" value="${v('rufname')}"></label><label>Fahrzeug<input name="fahrzeug" type="text" value="${v('fahrzeug')}"></label><label>Datum/Uhrzeit<input name="zeit_einsatz" type="datetime-local" value="${v('zeit_einsatz')}"></label></div><label>Einsatz-Art<input name="einsatz_art" type="text" value="${v('einsatz_art')}"></label></div></details><details open><summary><i class="fa-solid fa-id-card-clip"></i> Pat-Stammdaten</summary><div class="sec-body"><div class="grid"><label>Name<input name="name" type="text" value="${v('name')}"></label><label>Vorname<input name="vorname" type="text" value="${v('vorname')}"></label><label>Geb.-Datum<input name="gebdatum" type="date" value="${v('gebdatum')}"></label><label>Alter<input name="alter" type="number" value="${v('alter')}"></label><label>Telefon<input name="telefon" type="text" value="${v('telefon')}"></label><label>Mobil<input name="mobil" type="text" value="${v('mobil')}"></label><label>Straße<input name="strasse" type="text" value="${v('strasse')}"></label><label>PLZ, Ort<input name="plz_ort" type="text" value="${v('plz_ort')}"></label><label>Kasse / Nr.<input name="kasse" type="text" value="${v('kasse')}"></label><label>Vers.-Nr.<input name="versnr" type="text" value="${v('versnr')}"></label><label>Hausarzt / Tel.<input name="hausarzt" type="text" value="${v('hausarzt')}"></label><label>Angehöriger / Tel.<input name="angehoeriger" type="text" value="${v('angehoeriger')}"></label></div><label>Informationen / Aspekte<textarea name="infos">${v('infos')}</textarea></label></div></details><details open><summary><i class="fa-solid fa-notes-medical"></i> Notfallgeschehen / Anamnese</summary><div class="sec-body"><textarea name="notfallgeschehen">${v('notfallgeschehen')}</textarea>${photosHTML ? '<div style="margin-top:.75rem"><strong>Fotos:</strong>' + photosHTML + '</div>' : ''}</div></details><details><summary><i class="fa-solid fa-brain"></i> Neurologie</summary><div class="sec-body"><div class="grid"><label>Zeitpunkt<input name="neu_zeit" type="datetime-local" value="${v('neu_zeit')}"></label><label class="pill-input"><input type="checkbox" name="neu_unauff" ${checked('neu_unauff')}> ohne path. Befund</label></div><div class="grid"><fieldset><legend>Pupillenweite – rechts</legend><div class="choice"><label class="pill-input"><input type="radio" name="pw_r" value="eng" ${radioChecked('pw_r','eng')}> eng</label><label class="pill-input"><input type="radio" name="pw_r" value="mittel" ${radioChecked('pw_r','mittel')}> mittel</label><label class="pill-input"><input type="radio" name="pw_r" value="weit" ${radioChecked('pw_r','weit')}> weit</label><label class="pill-input"><input type="checkbox" name="pw_r_entrundet" ${checked('pw_r_entrundet')}> entrundet</label></div><div class="choice" style="margin-top:.5rem"><span class="badge">Lichtreaktion</span><label class="pill-input"><input type="radio" name="lr_r" value="prompt" ${radioChecked('lr_r','prompt')}> prompt</label><label class="pill-input"><input type="radio" name="lr_r" value="träge" ${radioChecked('lr_r','träge')}> träge</label><label class="pill-input"><input type="radio" name="lr_r" value="keine" ${radioChecked('lr_r','keine')}> keine</label></div></fieldset><fieldset><legend>Pupillenweite – links</legend><div class="choice"><label class="pill-input"><input type="radio" name="pw_l" value="eng" ${radioChecked('pw_l','eng')}> eng</label><label class="pill-input"><input type="radio" name="pw_l" value="mittel" ${radioChecked('pw_l','mittel')}> mittel</label><label class="pill-input"><input type="radio" name="pw_l" value="weit" ${radioChecked('pw_l','weit')}> weit</label><label class="pill-input"><input type="checkbox" name="pw_l_entrundet" ${checked('pw_l_entrundet')}> entrundet</label></div><div class="choice" style="margin-top:.5rem"><span class="badge">Lichtreaktion</span><label class="pill-input"><input type="radio" name="lr_l" value="prompt" ${radioChecked('lr_l','prompt')}> prompt</label><label class="pill-input"><input type="radio" name="lr_l" value="träge" ${radioChecked('lr_l','träge')}> träge</label><label class="pill-input"><input type="radio" name="lr_l" value="keine" ${radioChecked('lr_l','keine')}> keine</label></div></fieldset></div></div></details><details><summary><i class="fa-solid fa-eye"></i> Glasgow Coma Scale</summary><div class="sec-body"><fieldset><legend>Augenöffnung (E)</legend><div class="choice"><label class="pill-input"><input type="radio" name="gcs_e" value="4" ${radioChecked('gcs_e','4')}> spontan (4)</label><label class="pill-input"><input type="radio" name="gcs_e" value="3" ${radioChecked('gcs_e','3')}> auf Geräusch (3)</label><label class="pill-input"><input type="radio" name="gcs_e" value="2" ${radioChecked('gcs_e','2')}> auf Druck (2)</label><label class="pill-input"><input type="radio" name="gcs_e" value="1" ${radioChecked('gcs_e','1')}> keine (1)</label></div></fieldset><fieldset><legend>Verbale Antwort (V)</legend><div class="choice"><label class="pill-input"><input type="radio" name="gcs_v" value="5" ${radioChecked('gcs_v','5')}> orientiert (5)</label><label class="pill-input"><input type="radio" name="gcs_v" value="4" ${radioChecked('gcs_v','4')}> verwirrt (4)</label><label class="pill-input"><input type="radio" name="gcs_v" value="3" ${radioChecked('gcs_v','3')}> Wörter (3)</label><label class="pill-input"><input type="radio" name="gcs_v" value="2" ${radioChecked('gcs_v','2')}> Laute (2)</label><label class="pill-input"><input type="radio" name="gcs_v" value="1" ${radioChecked('gcs_v','1')}> keine (1)</label></div></fieldset><fieldset><legend>Motorische Antwort (M)</legend><div class="choice"><label class="pill-input"><input type="radio" name="gcs_m" value="6" ${radioChecked('gcs_m','6')}> folgt (6)</label><label class="pill-input"><input type="radio" name="gcs_m" value="5" ${radioChecked('gcs_m','5')}> lokalisiert (5)</label><label class="pill-input"><input type="radio" name="gcs_m" value="4" ${radioChecked('gcs_m','4')}> beugt normal (4)</label><label class="pill-input"><input type="radio" name="gcs_m" value="3" ${radioChecked('gcs_m','3')}> beugt abnormal (3)</label><label class="pill-input"><input type="radio" name="gcs_m" value="2" ${radioChecked('gcs_m','2')}> streckt (2)</label><label class="pill-input"><input type="radio" name="gcs_m" value="1" ${radioChecked('gcs_m','1')}> keine (1)</label></div></fieldset><div class="badge" style="margin-top:.5rem">GCS Summe: ${calculateGCS(payload)}</div></div></details><details open><summary><i class="fa-solid fa-stethoscope"></i> Messwerte / Atmung</summary><div class="sec-body"><div class="grid"><label>RR syst. (mmHg)<input name="rr_sys" type="number" value="${v('rr_sys')}"></label><label>RR diast. (mmHg)<input name="rr_dia" type="number" value="${v('rr_dia')}"></label><label>HF (/min)<input name="hf" type="number" value="${v('hf')}"></label><label>AF (/min)<input name="af" type="number" value="${v('af')}"></label><label>SpO₂ (%)<input name="spo2" type="number" value="${v('spo2')}"></label><label>etCO₂ (mmHg)<input name="etco2" type="number" value="${v('etco2')}"></label><label>Temp (°C)<input name="temp" type="number" step="0.1" value="${v('temp')}"></label><label>BZ (mg/dl)<input name="bz_mg" type="number" value="${v('bz_mg')}"></label><label>BZ (mmol/l)<input name="bz_mmol" type="number" step="0.1" value="${v('bz_mmol')}"></label><label>Schmerz (0–10)<input name="schmerz" type="number" min="0" max="10" value="${v('schmerz')}"></label></div><fieldset><legend>qSOFA (auto)</legend><div class="badge" style="margin-top:.5rem">qSOFA-Score: ${calculateQSOFA(payload)}</div></fieldset></div></details><details open><summary><i class="fa-solid fa-syringe"></i> Maßnahmen – Zugang & Medikation</summary><div class="sec-body"><fieldset><legend>Medikamente</legend><button type="button" class="subbtn" onclick="addMedRowEdit()" style="margin-bottom:.5rem"><i class="fa-solid fa-plus"></i> Zeile hinzufügen</button><div style="overflow:auto"><table id="medTableEdit"><thead><tr><th>#</th><th>Medikament</th><th>Dosis</th><th>Einheit</th><th>Route</th><th>Uhrzeit</th><th>Bemerkung</th><th>×</th></tr></thead><tbody>${medRowsHTML}</tbody></table></div></fieldset></div></details><details open><summary><i class="fa-solid fa-people-carry-box"></i> Übergabe / Transport</summary><div class="sec-body"><div class="grid"><label>Übergabe an<input name="ue_name" type="text" value="${v('ue_name')}"></label><label>Zeitpunkt<input name="ue_zeit" type="datetime-local" value="${v('ue_zeit')}"></label><label>Ziel<input name="ziel_bez" type="text" value="${v('ziel_bez')}"></label><label>Einsatzende<input name="einsatzende" type="datetime-local" value="${v('einsatzende')}"></label></div></div></details><details open><summary><i class="fa-solid fa-signature"></i> Ausfüller & Unterschrift</summary><div class="sec-body"><div class="grid"><label>Name<input name="ausfueller_name" type="text" value="${v('ausfueller_name')}"></label><label>Zeitpunkt<input name="ausfueller_zeit" type="datetime-local" value="${v('ausfueller_zeit')}"></label></div>${payload.signature ? `<div style="margin-top:.75rem"><strong>Unterschrift:</strong><br><img src="${payload.signature}" class="signature-img"></div>` : ''}</div></details>`;
+      return `
+<details open><summary><i class="fa-solid fa-truck-medical"></i> Einsatzdaten</summary><div class="sec-body"><div class="grid"><label>Einsatz-Nr.<input name="einsatz_nr" type="text" value="${v('einsatz_nr')}"></label><label>Pat./Auftrags-Nr.<input name="auftrags_nr" type="text" value="${v('auftrags_nr')}"></label><label>Rufname<input name="rufname" type="text" value="${v('rufname')}"></label><label>Fahrzeug<input name="fahrzeug" type="text" value="${v('fahrzeug')}"></label><label>Datum/Uhrzeit<input name="zeit_einsatz" type="datetime-local" value="${v('zeit_einsatz')}"></label></div><label>Einsatz-Art<input name="einsatz_art" type="text" value="${v('einsatz_art')}"></label></div></details>
+
+<details open><summary><i class="fa-solid fa-id-card-clip"></i> Pat-Stammdaten</summary><div class="sec-body"><div class="grid"><label>Name<input name="name" type="text" value="${v('name')}"></label><label>Vorname<input name="vorname" type="text" value="${v('vorname')}"></label><label>Geb.-Datum<input name="gebdatum" type="date" value="${v('gebdatum')}"></label><label>Alter<input name="alter" type="number" value="${v('alter')}"></label><label>Telefon<input name="telefon" type="text" value="${v('telefon')}"></label><label>Mobil<input name="mobil" type="text" value="${v('mobil')}"></label><label>Straße<input name="strasse" type="text" value="${v('strasse')}"></label><label>PLZ, Ort<input name="plz_ort" type="text" value="${v('plz_ort')}"></label><label>Kasse / Nr.<input name="kasse" type="text" value="${v('kasse')}"></label><label>Vers.-Nr.<input name="versnr" type="text" value="${v('versnr')}"></label><label>Hausarzt / Tel.<input name="hausarzt" type="text" value="${v('hausarzt')}"></label><label>Angehöriger / Tel.<input name="angehoeriger" type="text" value="${v('angehoeriger')}"></label></div><label>Informationen / Aspekte<textarea name="infos">${v('infos')}</textarea></label></div></details>
+
+<details open><summary><i class="fa-solid fa-notes-medical"></i> Notfallgeschehen / Anamnese</summary><div class="sec-body"><textarea name="notfallgeschehen">${v('notfallgeschehen')}</textarea>${photosHTML ? '<div style="margin-top:.75rem"><strong>Fotos:</strong>' + photosHTML + '</div>' : ''}</div></details>
+
+<details><summary><i class="fa-solid fa-brain"></i> Neurologie</summary><div class="sec-body"><div class="grid"><label>Zeitpunkt<input name="neu_zeit" type="datetime-local" value="${v('neu_zeit')}"></label><label class="pill-input"><input type="checkbox" name="neu_unauff" ${checked('neu_unauff')}> ohne path. Befund</label></div><div class="grid"><fieldset><legend>Pupillenweite – rechts</legend><div class="choice"><label class="pill-input"><input type="radio" name="pw_r" value="eng" ${radioChecked('pw_r','eng')}> eng</label><label class="pill-input"><input type="radio" name="pw_r" value="mittel" ${radioChecked('pw_r','mittel')}> mittel</label><label class="pill-input"><input type="radio" name="pw_r" value="weit" ${radioChecked('pw_r','weit')}> weit</label><label class="pill-input"><input type="checkbox" name="pw_r_entrundet" ${checked('pw_r_entrundet')}> entrundet</label></div><div class="choice" style="margin-top:.5rem"><span class="badge">Lichtreaktion</span><label class="pill-input"><input type="radio" name="lr_r" value="prompt" ${radioChecked('lr_r','prompt')}> prompt</label><label class="pill-input"><input type="radio" name="lr_r" value="träge" ${radioChecked('lr_r','träge')}> träge</label><label class="pill-input"><input type="radio" name="lr_r" value="keine" ${radioChecked('lr_r','keine')}> keine</label></div></fieldset><fieldset><legend>Pupillenweite – links</legend><div class="choice"><label class="pill-input"><input type="radio" name="pw_l" value="eng" ${radioChecked('pw_l','eng')}> eng</label><label class="pill-input"><input type="radio" name="pw_l" value="mittel" ${radioChecked('pw_l','mittel')}> mittel</label><label class="pill-input"><input type="radio" name="pw_l" value="weit" ${radioChecked('pw_l','weit')}> weit</label><label class="pill-input"><input type="checkbox" name="pw_l_entrundet" ${checked('pw_l_entrundet')}> entrundet</label></div><div class="choice" style="margin-top:.5rem"><span class="badge">Lichtreaktion</span><label class="pill-input"><input type="radio" name="lr_l" value="prompt" ${radioChecked('lr_l','prompt')}> prompt</label><label class="pill-input"><input type="radio" name="lr_l" value="träge" ${radioChecked('lr_l','träge')}> träge</label><label class="pill-input"><input type="radio" name="lr_l" value="keine" ${radioChecked('lr_l','keine')}> keine</label></div></fieldset></div></div></details>
+
+<details><summary><i class="fa-solid fa-eye"></i> Glasgow Coma Scale</summary><div class="sec-body"><fieldset><legend>Augenöffnung (E)</legend><div class="choice"><label class="pill-input"><input type="radio" name="gcs_e" value="4" ${radioChecked('gcs_e','4')}> spontan (4)</label><label class="pill-input"><input type="radio" name="gcs_e" value="3" ${radioChecked('gcs_e','3')}> auf Geräusch (3)</label><label class="pill-input"><input type="radio" name="gcs_e" value="2" ${radioChecked('gcs_e','2')}> auf Druck (2)</label><label class="pill-input"><input type="radio" name="gcs_e" value="1" ${radioChecked('gcs_e','1')}> keine (1)</label></div></fieldset><fieldset><legend>Verbale Antwort (V)</legend><div class="choice"><label class="pill-input"><input type="radio" name="gcs_v" value="5" ${radioChecked('gcs_v','5')}> orientiert (5)</label><label class="pill-input"><input type="radio" name="gcs_v" value="4" ${radioChecked('gcs_v','4')}> verwirrt (4)</label><label class="pill-input"><input type="radio" name="gcs_v" value="3" ${radioChecked('gcs_v','3')}> Wörter (3)</label><label class="pill-input"><input type="radio" name="gcs_v" value="2" ${radioChecked('gcs_v','2')}> Laute (2)</label><label class="pill-input"><input type="radio" name="gcs_v" value="1" ${radioChecked('gcs_v','1')}> keine (1)</label></div></fieldset><fieldset><legend>Motorische Antwort (M)</legend><div class="choice"><label class="pill-input"><input type="radio" name="gcs_m" value="6" ${radioChecked('gcs_m','6')}> folgt (6)</label><label class="pill-input"><input type="radio" name="gcs_m" value="5" ${radioChecked('gcs_m','5')}> lokalisiert (5)</label><label class="pill-input"><input type="radio" name="gcs_m" value="4" ${radioChecked('gcs_m','4')}> beugt normal (4)</label><label class="pill-input"><input type="radio" name="gcs_m" value="3" ${radioChecked('gcs_m','3')}> beugt abnormal (3)</label><label class="pill-input"><input type="radio" name="gcs_m" value="2" ${radioChecked('gcs_m','2')}> streckt (2)</label><label class="pill-input"><input type="radio" name="gcs_m" value="1" ${radioChecked('gcs_m','1')}> keine (1)</label></div></fieldset><div class="badge" style="margin-top:.5rem">GCS Summe: ${calculateGCS(payload)}</div></div></details>
+
+<details><summary><i class="fa-regular fa-hand"></i> Haut</summary><div class="sec-body"><div class="choice"><label class="pill-input"><input type="checkbox" name="haut_unauff" ${checked('haut_unauff')}> unauffällig</label><label class="pill-input"><input type="checkbox" name="haut_falten" ${checked('haut_falten')}> stehende Hautfalten</label><label class="pill-input"><input type="checkbox" name="haut_oedeme" ${checked('haut_oedeme')}> Ödeme</label><label class="pill-input"><input type="checkbox" name="haut_dekubitus" ${checked('haut_dekubitus')}> Dekubitus</label><label class="pill-input"><input type="checkbox" name="haut_kaltschweissig" ${checked('haut_kaltschweissig')}> kaltschweißig</label><label class="pill-input"><input type="checkbox" name="haut_exanthem" ${checked('haut_exanthem')}> Exanthem</label></div></div></details>
+
+<details><summary><i class="fa-solid fa-user"></i> Psyche</summary><div class="sec-body"><div class="choice"><label class="pill-input"><input type="checkbox" name="psy_erregt" ${checked('psy_erregt')}> erregt</label><label class="pill-input"><input type="checkbox" name="psy_aggr" ${checked('psy_aggr')}> aggressiv</label><label class="pill-input"><input type="checkbox" name="psy_verlangsamt" ${checked('psy_verlangsamt')}> verlangsamt</label><label class="pill-input"><input type="checkbox" name="psy_depressiv" ${checked('psy_depressiv')}> depressiv</label><label class="pill-input"><input type="checkbox" name="psy_aengstlich" ${checked('psy_aengstlich')}> ängstlich</label><label class="pill-input"><input type="checkbox" name="psy_euphorisch" ${checked('psy_euphorisch')}> euphorisch</label><label class="pill-input"><input type="checkbox" name="psy_wahnhaft" ${checked('psy_wahnhaft')}> wahnhaft</label><label class="pill-input"><input type="checkbox" name="psy_verwirrt" ${checked('psy_verwirrt')}> verwirrt</label><label class="pill-input"><input type="checkbox" name="psy_suizidal" ${checked('psy_suizidal')}> suizidal</label><label class="pill-input"><input type="checkbox" name="psy_motor_unruhig" ${checked('psy_motor_unruhig')}> motorisch unruhig</label></div></div></details>
+
+<details open><summary><i class="fa-solid fa-stethoscope"></i> Messwerte / Atmung</summary><div class="sec-body"><div class="grid"><label>RR syst. (mmHg)<input name="rr_sys" type="number" value="${v('rr_sys')}"></label><label>RR diast. (mmHg)<input name="rr_dia" type="number" value="${v('rr_dia')}"></label><label>HF (/min)<input name="hf" type="number" value="${v('hf')}"></label><label>AF (/min)<input name="af" type="number" value="${v('af')}"></label><label>SpO₂ (%)<input name="spo2" type="number" value="${v('spo2')}"></label><label>etCO₂ (mmHg)<input name="etco2" type="number" value="${v('etco2')}"></label><label>Temp (°C)<input name="temp" type="number" step="0.1" value="${v('temp')}"></label><label>BZ (mg/dl)<input name="bz_mg" type="number" value="${v('bz_mg')}"></label><label>BZ (mmol/l)<input name="bz_mmol" type="number" step="0.1" value="${v('bz_mmol')}"></label><label>Schmerz (0–10)<input name="schmerz" type="number" min="0" max="10" value="${v('schmerz')}"></label></div><fieldset style="margin-top:.8rem"><legend>qSOFA (auto)</legend><div class="badge">qSOFA-Score: ${calculateQSOFA(payload)}</div></fieldset><fieldset><legend>Atmung – klinische Zeichen</legend><div class="choice"><label class="pill-input"><input type="checkbox" name="atm_apnoe" ${checked('atm_apnoe')}> Apnoe</label><label class="pill-input"><input type="checkbox" name="atm_stridor" ${checked('atm_stridor')}> Stridor</label><label class="pill-input"><input type="checkbox" name="atm_hypervent" ${checked('atm_hypervent')}> Hyperventilation</label><label class="pill-input"><input type="checkbox" name="atm_dyspnoe" ${checked('atm_dyspnoe')}> Dyspnoe</label><label class="pill-input"><input type="checkbox" name="atm_beatmung" ${checked('atm_beatmung')}> Beatmung</label><label class="pill-input"><input type="checkbox" name="atm_zyanose" ${checked('atm_zyanose')}> Zyanose</label><label class="pill-input"><input type="checkbox" name="atm_verlegung" ${checked('atm_verlegung')}> Atemwegsverlegung</label></div><textarea name="atm_sonst">${v('atm_sonst')}</textarea></fieldset><fieldset><legend>O₂-Gabe</legend><div class="choice"><label class="pill-input"><input type="radio" name="o2" value="raumluft" ${radioChecked('o2','raumluft')}> Raumluft</label><label class="pill-input"><input type="radio" name="o2" value="unter_o2" ${radioChecked('o2','unter_o2')}> unter O₂</label><label class="pill-input"><input type="checkbox" name="o2_nasal" ${checked('o2_nasal')}> Nasensonde</label><label class="pill-input"><input type="checkbox" name="o2_maske" ${checked('o2_maske')}> Maske</label><label class="pill-input"><input type="checkbox" name="o2_reservoir" ${checked('o2_reservoir')}> Maske m. Reservoir</label></div><div class="grid" style="margin-top:.4rem"><label>Flow (l/min)<input name="o2_flow" type="number" step="0.5" value="${v('o2_flow')}"></label><label>Kommentar<input name="o2_comment" type="text" value="${v('o2_comment')}"></label></div></fieldset></div></details>
+
+<details><summary><i class="fa-solid fa-heart-pulse"></i> Rhythmus / EKG</summary><div class="sec-body"><div class="choice"><label class="pill-input"><input type="checkbox" name="sr" ${checked('sr')}> Sinusrhythmus</label><label class="pill-input"><input type="checkbox" name="stemi" ${checked('stemi')}> STEMI</label><label class="pill-input"><input type="checkbox" name="arrh_abs" ${checked('arrh_abs')}> absolute Arrhythmie</label><label class="pill-input"><input type="checkbox" name="vf" ${checked('vf')}> Kammerflimmern</label><label class="pill-input"><input type="checkbox" name="av3" ${checked('av3')}> AV-Block III°</label><label class="pill-input"><input type="checkbox" name="asystole" ${checked('asystole')}> Asystolie</label></div><div class="grid" style="margin-top:.5rem"><label>Standort<input name="ekg_standort" type="text" value="${v('ekg_standort')}"></label><label>Pers-Nr.<input name="ekg_persnr" type="text" value="${v('ekg_persnr')}"></label></div></div></details>
+
+<details><summary><i class="fa-solid fa-kit-medical"></i> Verletzungen</summary><div class="sec-body"><textarea name="verletz_text">${v('verletz_text')}</textarea></div></details>
+
+<details><summary><i class="fa-solid fa-clipboard-list"></i> Erstdiagnosen</summary><div class="sec-body"><div class="grid"><fieldset><legend>Neuro</legend><div class="choice"><label class="pill-input"><input type="checkbox" name="diag_krampf" ${checked('diag_krampf')}> Konvulsionen</label><label class="pill-input"><input type="checkbox" name="diag_synkope" ${checked('diag_synkope')}> Synkope</label><label class="pill-input"><input type="checkbox" name="diag_apoplex" ${checked('diag_apoplex')}> Apoplex</label><label class="pill-input"><input type="checkbox" name="diag_sht" ${checked('diag_sht')}> SHT</label></div></fieldset><fieldset><legend>Herz-Kreislauf</legend><div class="choice"><label class="pill-input"><input type="checkbox" name="diag_acs" ${checked('diag_acs')}> ACS</label><label class="pill-input"><input type="checkbox" name="diag_insuff" ${checked('diag_insuff')}> Herzinsuffizienz</label><label class="pill-input"><input type="checkbox" name="diag_lungenoedem" ${checked('diag_lungenoedem')}> Lungenödem</label><label class="pill-input"><input type="checkbox" name="diag_luembol" ${checked('diag_luembol')}> Lungenembolie</label></div></fieldset><fieldset><legend>Atmung</legend><div class="choice"><label class="pill-input"><input type="checkbox" name="diag_resp_insuff" ${checked('diag_resp_insuff')}> resp. Insuffizienz</label><label class="pill-input"><input type="checkbox" name="diag_pneumothorax" ${checked('diag_pneumothorax')}> Pneumothorax</label><label class="pill-input"><input type="checkbox" name="diag_asthma" ${checked('diag_asthma')}> Asthma/COPD</label></div></fieldset><fieldset><legend>Stoffwechsel / Schock</legend><div class="choice"><label class="pill-input"><input type="checkbox" name="diag_hypo" ${checked('diag_hypo')}> Hypoglykämie</label><label class="pill-input"><input type="checkbox" name="diag_sept" ${checked('diag_sept')}> septischer Schock</label><label class="pill-input"><input type="checkbox" name="diag_hypovol" ${checked('diag_hypovol')}> hypovolämischer Schock</label></div></fieldset></div></div></details>
+
+<details><summary><i class="fa-solid fa-face-meh"></i> Bewusstseinslage, AZ, Versorgung</summary><div class="sec-body"><div class="grid"><fieldset><legend>Bewusstseinslage</legend><div class="choice"><label class="pill-input"><input type="checkbox" name="bew_wach" ${checked('bew_wach')}> wach</label><label class="pill-input"><input type="checkbox" name="bew_ansprache" ${checked('bew_ansprache')}> Reaktion auf Ansprache</label><label class="pill-input"><input type="checkbox" name="bew_schmerz" ${checked('bew_schmerz')}> Reaktion auf Schmerzreiz</label><label class="pill-input"><input type="checkbox" name="bew_bewusstlos" ${checked('bew_bewusstlos')}> bewusstlos</label></div></fieldset><fieldset><legend>Allgemeinzustand</legend><div class="choice"><label class="pill-input"><input type="radio" name="az" value="gesund" ${radioChecked('az','gesund')}> gesund</label><label class="pill-input"><input type="radio" name="az" value="leicht" ${radioChecked('az','leicht')}> leicht eingeschränkt</label><label class="pill-input"><input type="radio" name="az" value="deutlich" ${radioChecked('az','deutlich')}> deutlich eingeschränkt</label></div></fieldset><fieldset><legend>Versorgungssituation</legend><div class="choice"><label class="pill-input"><input type="radio" name="versorgung" value="unabhaengig" ${radioChecked('versorgung','unabhaengig')}> unabhängig</label><label class="pill-input"><input type="radio" name="versorgung" value="pflege_zuhaus" ${radioChecked('versorgung','pflege_zuhaus')}> Pflege zuhause</label><label class="pill-input"><input type="radio" name="versorgung" value="pflege_institution" ${radioChecked('versorgung','pflege_institution')}> Pflege in Institution</label></div></fieldset></div></div></details>
+
+<details open><summary><i class="fa-solid fa-syringe"></i> Maßnahmen – Zugang & Medikation</summary><div class="sec-body"><fieldset><legend>Zugang</legend><div class="grid"><label>Art<select name="zugang_art"><option value="">-</option><option value="iv" ${v('zugang_art')==='iv'?'selected':''}>i.v.</option><option value="io" ${v('zugang_art')==='io'?'selected':''}>i.o.</option></select></label><label>Seite/Region<input name="zugang_region" type="text" value="${v('zugang_region')}"></label><label>Größe (G)<input name="zugang_gauge" type="number" min="14" max="24" value="${v('zugang_gauge')}"></label><label>Versuche<input name="zugang_versuche" type="number" min="0" value="${v('zugang_versuche')}"></label><label>Zeitpunkt<input name="zugang_zeit" type="datetime-local" value="${v('zugang_zeit')}"></label></div></fieldset><fieldset><legend>Infusion</legend><div class="grid"><label>Art<input name="inf_art" type="text" value="${v('inf_art')}"></label><label>Menge (ml)<input name="inf_menge" type="number" min="0" step="50" value="${v('inf_menge')}"></label><label>Laufrate (ml/h)<input name="inf_rate" type="number" min="0" step="10" value="${v('inf_rate')}"></label><label>Bemerkung<input name="inf_bem" type="text" value="${v('inf_bem')}"></label></div></fieldset><fieldset><legend>Medikamente</legend><button type="button" class="subbtn" onclick="addMedRowEdit()" style="margin-bottom:.5rem"><i class="fa-solid fa-plus"></i> Zeile hinzufügen</button><div style="overflow:auto"><table id="medTableEdit"><thead><tr><th>#</th><th>Medikament</th><th>Dosis</th><th>Einheit</th><th>Route</th><th>Uhrzeit</th><th>Bemerkung</th><th>×</th></tr></thead><tbody>${medRowsHTML}</tbody></table></div></fieldset></div></details>
+
+<details><summary><i class="fa-solid fa-wind"></i> Beatmung / Atemweg</summary><div class="sec-body"><div class="choice"><label class="pill-input"><input type="checkbox" name="aw_guedel" ${checked('aw_guedel')}> Guedel</label><label class="pill-input"><input type="checkbox" name="aw_larynxtubus" ${checked('aw_larynxtubus')}> Larynxtubus</label><label class="pill-input"><input type="checkbox" name="aw_ett" ${checked('aw_ett')}> ETT</label><label class="pill-input"><input type="checkbox" name="aw_bvm" ${checked('aw_bvm')}> BVM</label></div><div class="grid" style="margin-top:.5rem"><label>ETT-Größe<input name="aw_ett_size" type="number" step="0.5" value="${v('aw_ett_size')}"></label><label>PEEP (cmH₂O)<input name="vent_peep" type="number" step="1" value="${v('vent_peep')}"></label><label>FiO₂ (%)<input name="vent_fio2" type="number" min="21" max="100" value="${v('vent_fio2')}"></label></div></div></details>
+
+<details><summary><i class="fa-solid fa-heart-circle-bolt"></i> Reanimation</summary><div class="sec-body"><div class="grid"><label>Rea-Beginn<input name="rea_beginn" type="datetime-local" value="${v('rea_beginn')}"></label><label>Erst-Rhythmus<select name="rea_initial"><option value="">-</option><option value="Asystolie" ${v('rea_initial')==='Asystolie'?'selected':''}>Asystolie</option><option value="PEA" ${v('rea_initial')==='PEA'?'selected':''}>PEA</option><option value="VF" ${v('rea_initial')==='VF'?'selected':''}>VF</option><option value="pVT" ${v('rea_initial')==='pVT'?'selected':''}>pVT</option></select></label><label>Schocks<input name="rea_shocks" type="number" min="0" value="${v('rea_shocks')}"></label><label>ROSC<select name="rea_rosc"><option value="">-</option><option value="ja" ${v('rea_rosc')==='ja'?'selected':''}>ja</option><option value="nein" ${v('rea_rosc')==='nein'?'selected':''}>nein</option></select></label><label>Rea-Ende<input name="rea_ende" type="time" value="${v('rea_ende')}"></label></div></div></details>
+
+<details open><summary><i class="fa-solid fa-people-carry-box"></i> Übergabe / Transport</summary><div class="sec-body"><div class="grid"><label>Übergabe an<input name="ue_name" type="text" value="${v('ue_name')}"></label><label>Zeitpunkt<input name="ue_zeit" type="datetime-local" value="${v('ue_zeit')}"></label><label>Ziel<input name="ziel_bez" type="text" value="${v('ziel_bez')}"></label><label>Adresse<input name="ziel_adr" type="text" value="${v('ziel_adr')}"></label><label>Einsatzende<input name="einsatzende" type="datetime-local" value="${v('einsatzende')}"></label></div></div></details>
+
+<details open><summary><i class="fa-solid fa-signature"></i> Ausfüller & Unterschrift</summary><div class="sec-body"><div class="grid"><label>Name<input name="ausfueller_name" type="text" value="${v('ausfueller_name')}"></label><label>Zeitpunkt<input name="ausfueller_zeit" type="datetime-local" value="${v('ausfueller_zeit')}"></label></div>${payload.signature ? `<div style="margin-top:.75rem"><strong>Unterschrift:</strong><br><img src="${payload.signature}" class="signature-img"></div>` : ''}</div></details>`;
     }
 
     function calculateGCS(p) {
@@ -706,7 +583,6 @@
       currentEditId = null;
       currentEditPayload = null;
     };
-
     window.saveAndSignPatDoc = async () => {
       try {
         const updatedPayload = {};
@@ -929,6 +805,7 @@
         nachSigCtx.clearRect(0, 0, nachSigCanvas.width, nachSigCanvas.height);
       }
     };
+
     window.saveNacherfassung = async () => {
       const form = document.getElementById('nachForm');
       const formData = new FormData(form);
@@ -1034,7 +911,6 @@
         showMsg('Fehler: ' + e.message, 'error');
       }
     };
-
     window.viewPatArchiv = async (id) => {
       try {
         const data = await gql(`query {
@@ -1051,12 +927,20 @@
         const gcsM = parseInt(p.gcs_m || 0);
         const gcsSum = gcsE + gcsV + gcsM;
         
+        const gcs = gcsSum > 0 ? gcsSum : 0;
+        const af = parseInt(p.af || 0);
+        const rrSys = parseInt(p.rr_sys || 0);
+        let qsofaScore = 0;
+        if (gcs > 0 && gcs < 15) qsofaScore++;
+        if (af >= 22) qsofaScore++;
+        if (rrSys > 0 && rrSys <= 100) qsofaScore++;
+        
         const medications = p.medications || [];
         let medHTML = '';
         if (medications.length > 0) {
-          medHTML = '<table style="width:100%;margin-top:8px"><thead><tr><th>Medikament</th><th>Dosis</th><th>Route</th><th>Uhrzeit</th></tr></thead><tbody>';
+          medHTML = '<table style="width:100%;margin-top:8px;border-collapse:collapse"><thead><tr><th style="border:1px solid #ddd;padding:8px;background:#f8fafc">Medikament</th><th style="border:1px solid #ddd;padding:8px;background:#f8fafc">Dosis</th><th style="border:1px solid #ddd;padding:8px;background:#f8fafc">Route</th><th style="border:1px solid #ddd;padding:8px;background:#f8fafc">Uhrzeit</th><th style="border:1px solid #ddd;padding:8px;background:#f8fafc">Bemerkung</th></tr></thead><tbody>';
           medications.forEach(med => {
-            medHTML += `<tr><td>${med.name || '-'}</td><td>${med.dose || ''} ${med.unit || ''}</td><td>${med.route || '-'}</td><td>${med.time || '-'}</td></tr>`;
+            medHTML += `<tr><td style="border:1px solid #ddd;padding:8px">${med.name || '-'}</td><td style="border:1px solid #ddd;padding:8px">${med.dose || ''} ${med.unit || ''}</td><td style="border:1px solid #ddd;padding:8px">${med.route || '-'}</td><td style="border:1px solid #ddd;padding:8px">${med.time || '-'}</td><td style="border:1px solid #ddd;padding:8px">${med.note || '-'}</td></tr>`;
           });
           medHTML += '</tbody></table>';
         }
@@ -1064,53 +948,234 @@
         const photos = p.photos || [];
         let photosHTML = '';
         if (photos.length > 0) {
-          photosHTML = '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">';
+          photosHTML = '<div class="photo-grid">';
           photos.forEach((photo, idx) => {
-            photosHTML += `<img src="${photo}" alt="Foto ${idx+1}" style="max-width:150px;max-height:150px;border:1px solid #ddd;border-radius:4px">`;
+            photosHTML += `<img src="${photo}" alt="Foto ${idx+1}">`;
           });
           photosHTML += '</div>';
         }
         
         document.getElementById('detailsTitle').textContent = doc.title || 'Patientendokumentation';
         document.getElementById('detailsBody').innerHTML = `
-          <h4 style="color:var(--rot);margin-top:0">Einsatzdaten</h4>
+          <h4 style="color:var(--primary);margin-top:0;border-bottom:2px solid var(--border);padding-bottom:8px">Einsatzdaten</h4>
           <div class="details-grid">
             <div class="details-label">Einsatz-Nr.:</div><div class="details-value">${p.einsatz_nr || '-'}</div>
+            <div class="details-label">Pat./Auftrags-Nr.:</div><div class="details-value">${p.auftrags_nr || '-'}</div>
             <div class="details-label">Rufname:</div><div class="details-value">${p.rufname || '-'}</div>
             <div class="details-label">Fahrzeug:</div><div class="details-value">${p.fahrzeug || '-'}</div>
             <div class="details-label">Einsatzzeit:</div><div class="details-value">${p.zeit_einsatz ? new Date(p.zeit_einsatz).toLocaleString('de-DE') : '-'}</div>
+            <div class="details-label">Einsatz-Art:</div><div class="details-value">${p.einsatz_art || '-'}</div>
           </div>
-          <h4 style="color:var(--rot);margin-top:20px">Patient</h4>
+          
+          <h4 style="color:var(--primary);margin-top:20px;border-bottom:2px solid var(--border);padding-bottom:8px">Patient - Stammdaten</h4>
           <div class="details-grid">
             <div class="details-label">Name:</div><div class="details-value">${p.vorname || ''} ${p.name || ''}</div>
             <div class="details-label">Geburtsdatum:</div><div class="details-value">${p.gebdatum ? new Date(p.gebdatum).toLocaleDateString('de-DE') : '-'}</div>
             <div class="details-label">Alter:</div><div class="details-value">${p.alter || '-'}</div>
+            <div class="details-label">Telefon:</div><div class="details-value">${p.telefon || '-'}</div>
+            <div class="details-label">Mobil:</div><div class="details-value">${p.mobil || '-'}</div>
+            <div class="details-label">Straße:</div><div class="details-value">${p.strasse || '-'}</div>
+            <div class="details-label">PLZ, Ort:</div><div class="details-value">${p.plz_ort || '-'}</div>
+            <div class="details-label">Kasse / Nr.:</div><div class="details-value">${p.kasse || '-'}</div>
+            <div class="details-label">Vers.-Nr.:</div><div class="details-value">${p.versnr || '-'}</div>
+            <div class="details-label">Hausarzt / Tel.:</div><div class="details-value">${p.hausarzt || '-'}</div>
+            <div class="details-label">Angehöriger / Tel.:</div><div class="details-value">${p.angehoeriger || '-'}</div>
+            <div class="details-label">Informationen / Aspekte:</div><div class="details-value">${p.infos || '-'}</div>
           </div>
-          <h4 style="color:var(--rot);margin-top:20px">Notfallgeschehen</h4>
+          
+          <h4 style="color:var(--primary);margin-top:20px;border-bottom:2px solid var(--border);padding-bottom:8px">Notfallgeschehen / Anamnese</h4>
           <div class="details-grid">
             <div class="details-label">Anamnese:</div><div class="details-value">${p.notfallgeschehen || '-'}</div>
             ${photosHTML ? `<div class="details-label">Fotos:</div><div class="details-value">${photosHTML}</div>` : ''}
           </div>
-          <h4 style="color:var(--rot);margin-top:20px">Vitalparameter</h4>
+          
+          <h4 style="color:var(--primary);margin-top:20px;border-bottom:2px solid var(--border);padding-bottom:8px">Neurologie</h4>
+          <div class="details-grid">
+            <div class="details-label">Zeitpunkt:</div><div class="details-value">${p.neu_zeit ? new Date(p.neu_zeit).toLocaleString('de-DE') : '-'}</div>
+            <div class="details-label">Ohne path. Befund:</div><div class="details-value">${p.neu_unauff ? 'Ja' : 'Nein'}</div>
+            <div class="details-label">Pupillenweite rechts:</div><div class="details-value">${p.pw_r || '-'}${p.pw_r_entrundet ? ' (entrundet)' : ''}</div>
+            <div class="details-label">Lichtreaktion rechts:</div><div class="details-value">${p.lr_r || '-'}</div>
+            <div class="details-label">Pupillenweite links:</div><div class="details-value">${p.pw_l || '-'}${p.pw_l_entrundet ? ' (entrundet)' : ''}</div>
+            <div class="details-label">Lichtreaktion links:</div><div class="details-value">${p.lr_l || '-'}</div>
+          </div>
+          
+          <h4 style="color:var(--primary);margin-top:20px;border-bottom:2px solid var(--border);padding-bottom:8px">Glasgow Coma Scale & qSOFA</h4>
+          <div class="details-grid">
+            <div class="details-label">GCS E (Augen):</div><div class="details-value">${gcsE || '-'}</div>
+            <div class="details-label">GCS V (Verbal):</div><div class="details-value">${gcsV || '-'}</div>
+            <div class="details-label">GCS M (Motorik):</div><div class="details-value">${gcsM || '-'}</div>
+            <div class="details-label">GCS Summe:</div><div class="details-value"><strong>${gcsSum > 0 ? gcsSum : '-'}</strong></div>
+            <div class="details-label">qSOFA-Score:</div><div class="details-value"><strong>${(gcs > 0 || af > 0 || rrSys > 0) ? qsofaScore : '-'}</strong></div>
+          </div>
+          
+          <h4 style="color:var(--primary);margin-top:20px;border-bottom:2px solid var(--border);padding-bottom:8px">Haut & Psyche</h4>
+          <div class="details-grid">
+            <div class="details-label">Haut:</div><div class="details-value">${[
+              p.haut_unauff ? 'unauffällig' : null,
+              p.haut_falten ? 'stehende Hautfalten' : null,
+              p.haut_oedeme ? 'Ödeme' : null,
+              p.haut_dekubitus ? 'Dekubitus' : null,
+              p.haut_kaltschweissig ? 'kaltschweißig' : null,
+              p.haut_exanthem ? 'Exanthem' : null
+            ].filter(x => x).join(', ') || '-'}</div>
+            <div class="details-label">Psyche:</div><div class="details-value">${[
+              p.psy_erregt ? 'erregt' : null,
+              p.psy_aggr ? 'aggressiv' : null,
+              p.psy_verlangsamt ? 'verlangsamt' : null,
+              p.psy_depressiv ? 'depressiv' : null,
+              p.psy_aengstlich ? 'ängstlich' : null,
+              p.psy_euphorisch ? 'euphorisch' : null,
+              p.psy_wahnhaft ? 'wahnhaft' : null,
+              p.psy_verwirrt ? 'verwirrt' : null,
+              p.psy_suizidal ? 'suizidal' : null,
+              p.psy_motor_unruhig ? 'motorisch unruhig' : null
+            ].filter(x => x).join(', ') || '-'}</div>
+          </div>
+          
+          <h4 style="color:var(--primary);margin-top:20px;border-bottom:2px solid var(--border);padding-bottom:8px">Vitalparameter</h4>
           <div class="details-grid">
             <div class="details-label">RR:</div><div class="details-value">${p.rr_sys || '-'}/${p.rr_dia || '-'} mmHg</div>
             <div class="details-label">HF:</div><div class="details-value">${p.hf || '-'} /min</div>
             <div class="details-label">AF:</div><div class="details-value">${p.af || '-'} /min</div>
             <div class="details-label">SpO₂:</div><div class="details-value">${p.spo2 || '-'} %</div>
-            <div class="details-label">GCS:</div><div class="details-value">${gcsSum > 0 ? gcsSum : '-'}</div>
+            <div class="details-label">etCO₂:</div><div class="details-value">${p.etco2 || '-'} mmHg</div>
+            <div class="details-label">Temperatur:</div><div class="details-value">${p.temp || '-'} °C</div>
+            <div class="details-label">BZ:</div><div class="details-value">${p.bz_mg || '-'} mg/dl / ${p.bz_mmol || '-'} mmol/l</div>
+            <div class="details-label">Schmerz:</div><div class="details-value">${p.schmerz || '-'} / 10</div>
           </div>
-          ${medications.length > 0 ? `<h4 style="color:var(--rot);margin-top:20px">Medikamente</h4>${medHTML}` : ''}
-          <h4 style="color:var(--rot);margin-top:20px">Übergabe</h4>
+          
+          <h4 style="color:var(--primary);margin-top:20px;border-bottom:2px solid var(--border);padding-bottom:8px">Atmung</h4>
+          <div class="details-grid">
+            <div class="details-label">Klinische Zeichen:</div><div class="details-value">${[
+              p.atm_apnoe ? 'Apnoe' : null,
+              p.atm_stridor ? 'Stridor' : null,
+              p.atm_hypervent ? 'Hyperventilation' : null,
+              p.atm_dyspnoe ? 'Dyspnoe' : null,
+              p.atm_beatmung ? 'Beatmung' : null,
+              p.atm_zyanose ? 'Zyanose' : null,
+              p.atm_verlegung ? 'Atemwegsverlegung' : null
+            ].filter(x => x).join(', ') || '-'}</div>
+            <div class="details-label">Sonstiges Atemmuster:</div><div class="details-value">${p.atm_sonst || '-'}</div>
+            <div class="details-label">O₂-Gabe:</div><div class="details-value">${p.o2 || '-'}</div>
+            <div class="details-label">O₂-Details:</div><div class="details-value">${[
+              p.o2_nasal ? 'Nasensonde' : null,
+              p.o2_maske ? 'Maske' : null,
+              p.o2_reservoir ? 'Maske m. Reservoir' : null
+            ].filter(x => x).join(', ') || '-'} ${p.o2_flow ? `(Flow: ${p.o2_flow} l/min)` : ''}</div>
+            <div class="details-label">O₂-Kommentar:</div><div class="details-value">${p.o2_comment || '-'}</div>
+          </div>
+          
+          <h4 style="color:var(--primary);margin-top:20px;border-bottom:2px solid var(--border);padding-bottom:8px">Rhythmus / EKG</h4>
+          <div class="details-grid">
+            <div class="details-label">Befund:</div><div class="details-value">${[
+              p.sr ? 'Sinusrhythmus' : null,
+              p.stemi ? 'STEMI' : null,
+              p.arrh_abs ? 'absolute Arrhythmie' : null,
+              p.vf ? 'Kammerflimmern' : null,
+              p.av3 ? 'AV-Block III°' : null,
+              p.asystole ? 'Asystolie' : null
+            ].filter(x => x).join(', ') || '-'}</div>
+            <div class="details-label">Standort:</div><div class="details-value">${p.ekg_standort || '-'}</div>
+            <div class="details-label">Pers-Nr.:</div><div class="details-value">${p.ekg_persnr || '-'}</div>
+          </div>
+          
+          <h4 style="color:var(--primary);margin-top:20px;border-bottom:2px solid var(--border);padding-bottom:8px">Verletzungen</h4>
+          <div class="details-grid">
+            <div class="details-label">Beschreibung:</div><div class="details-value">${p.verletz_text || '-'}</div>
+          </div>
+          
+          <h4 style="color:var(--primary);margin-top:20px;border-bottom:2px solid var(--border);padding-bottom:8px">Erstdiagnosen</h4>
+          <div class="details-grid">
+            <div class="details-label">Neuro:</div><div class="details-value">${[
+              p.diag_krampf ? 'Konvulsionen' : null,
+              p.diag_synkope ? 'Synkope' : null,
+              p.diag_apoplex ? 'Apoplex' : null,
+              p.diag_sht ? 'SHT' : null
+            ].filter(x => x).join(', ') || '-'}</div>
+            <div class="details-label">Herz-Kreislauf:</div><div class="details-value">${[
+              p.diag_acs ? 'ACS' : null,
+              p.diag_insuff ? 'Herzinsuffizienz' : null,
+              p.diag_lungenoedem ? 'Lungenödem' : null,
+              p.diag_luembol ? 'Lungenembolie' : null
+            ].filter(x => x).join(', ') || '-'}</div>
+            <div class="details-label">Atmung:</div><div class="details-value">${[
+              p.diag_resp_insuff ? 'resp. Insuffizienz' : null,
+              p.diag_pneumothorax ? 'Pneumothorax' : null,
+              p.diag_asthma ? 'Asthma/COPD' : null
+            ].filter(x => x).join(', ') || '-'}</div>
+            <div class="details-label">Stoffwechsel / Schock:</div><div class="details-value">${[
+              p.diag_hypo ? 'Hypoglykämie' : null,
+              p.diag_sept ? 'septischer Schock' : null,
+              p.diag_hypovol ? 'hypovolämischer Schock' : null
+            ].filter(x => x).join(', ') || '-'}</div>
+          </div>
+          
+          <h4 style="color:var(--primary);margin-top:20px;border-bottom:2px solid var(--border);padding-bottom:8px">Bewusstseinslage, AZ, Versorgung</h4>
+          <div class="details-grid">
+            <div class="details-label">Bewusstseinslage:</div><div class="details-value">${[
+              p.bew_wach ? 'wach' : null,
+              p.bew_ansprache ? 'Reaktion auf Ansprache' : null,
+              p.bew_schmerz ? 'Reaktion auf Schmerzreiz' : null,
+              p.bew_bewusstlos ? 'bewusstlos' : null
+            ].filter(x => x).join(', ') || '-'}</div>
+            <div class="details-label">Allgemeinzustand:</div><div class="details-value">${p.az || '-'}</div>
+            <div class="details-label">Versorgungssituation:</div><div class="details-value">${p.versorgung || '-'}</div>
+          </div>
+          
+          <h4 style="color:var(--primary);margin-top:20px;border-bottom:2px solid var(--border);padding-bottom:8px">Maßnahmen - Zugang & Infusion</h4>
+          <div class="details-grid">
+            <div class="details-label">Zugang Art:</div><div class="details-value">${p.zugang_art || '-'}</div>
+            <div class="details-label">Seite/Region:</div><div class="details-value">${p.zugang_region || '-'}</div>
+            <div class="details-label">Größe (G):</div><div class="details-value">${p.zugang_gauge || '-'}</div>
+            <div class="details-label">Versuche:</div><div class="details-value">${p.zugang_versuche || '-'}</div>
+            <div class="details-label">Zeitpunkt:</div><div class="details-value">${p.zugang_zeit ? new Date(p.zugang_zeit).toLocaleString('de-DE') : '-'}</div>
+            <div class="details-label">Infusion Art:</div><div class="details-value">${p.inf_art || '-'}</div>
+            <div class="details-label">Menge:</div><div class="details-value">${p.inf_menge || '-'} ml</div>
+            <div class="details-label">Laufrate:</div><div class="details-value">${p.inf_rate || '-'} ml/h</div>
+            <div class="details-label">Bemerkung:</div><div class="details-value">${p.inf_bem || '-'}</div>
+          </div>
+          
+          ${medications.length > 0 ? `<h4 style="color:var(--primary);margin-top:20px;border-bottom:2px solid var(--border);padding-bottom:8px">Medikamente</h4>${medHTML}` : ''}
+          
+          <h4 style="color:var(--primary);margin-top:20px;border-bottom:2px solid var(--border);padding-bottom:8px">Beatmung / Atemweg</h4>
+          <div class="details-grid">
+            <div class="details-label">Atemweg:</div><div class="details-value">${[
+              p.aw_guedel ? 'Guedel' : null,
+              p.aw_larynxtubus ? 'Larynxtubus' : null,
+              p.aw_ett ? 'ETT' : null,
+              p.aw_bvm ? 'BVM' : null
+            ].filter(x => x).join(', ') || '-'}</div>
+            <div class="details-label">ETT-Größe:</div><div class="details-value">${p.aw_ett_size || '-'}</div>
+            <div class="details-label">PEEP:</div><div class="details-value">${p.vent_peep || '-'} cmH₂O</div>
+            <div class="details-label">FiO₂:</div><div class="details-value">${p.vent_fio2 || '-'} %</div>
+          </div>
+          
+          <h4 style="color:var(--primary);margin-top:20px;border-bottom:2px solid var(--border);padding-bottom:8px">Reanimation</h4>
+          <div class="details-grid">
+            <div class="details-label">Rea-Beginn:</div><div class="details-value">${p.rea_beginn ? new Date(p.rea_beginn).toLocaleString('de-DE') : '-'}</div>
+            <div class="details-label">Erst-Rhythmus:</div><div class="details-value">${p.rea_initial || '-'}</div>
+            <div class="details-label">Schocks:</div><div class="details-value">${p.rea_shocks || '-'}</div>
+            <div class="details-label">ROSC:</div><div class="details-value">${p.rea_rosc || '-'}</div>
+            <div class="details-label">Rea-Ende:</div><div class="details-value">${p.rea_ende || '-'}</div>
+          </div>
+          
+          <h4 style="color:var(--primary);margin-top:20px;border-bottom:2px solid var(--border);padding-bottom:8px">Übergabe / Transport</h4>
           <div class="details-grid">
             <div class="details-label">Übergabe an:</div><div class="details-value">${p.ue_name || '-'}</div>
+            <div class="details-label">Zeitpunkt:</div><div class="details-value">${p.ue_zeit ? new Date(p.ue_zeit).toLocaleString('de-DE') : '-'}</div>
             <div class="details-label">Ziel:</div><div class="details-value">${p.ziel_bez || '-'}</div>
+            <div class="details-label">Adresse:</div><div class="details-value">${p.ziel_adr || '-'}</div>
+            <div class="details-label">Einsatzende:</div><div class="details-value">${p.einsatzende ? new Date(p.einsatzende).toLocaleString('de-DE') : '-'}</div>
           </div>
-          <h4 style="color:var(--rot);margin-top:20px">Ausfüller</h4>
+          
+          <h4 style="color:var(--primary);margin-top:20px;border-bottom:2px solid var(--border);padding-bottom:8px">Ausfüller</h4>
           <div class="details-grid">
             <div class="details-label">Name:</div><div class="details-value">${p.ausfueller_name || '-'}</div>
+            <div class="details-label">Zeitpunkt:</div><div class="details-value">${p.ausfueller_zeit ? new Date(p.ausfueller_zeit).toLocaleString('de-DE') : '-'}</div>
             ${p.signature ? `<div class="details-label">Unterschrift:</div><div class="details-value"><img src="${p.signature}" class="signature-img"></div>` : ''}
           </div>
-          <h4 style="color:var(--rot);margin-top:20px">Verantwortlicher / MPG-Beauftragter</h4>
+          
+          <h4 style="color:var(--primary);margin-top:20px;border-bottom:2px solid var(--border);padding-bottom:8px">Verantwortlicher / MPG-Beauftragter</h4>
           <div class="details-grid">
             <div class="details-label">Name:</div><div class="details-value">${doc.admin_name || '-'}</div>
             <div class="details-label">Datum:</div><div class="details-value">${doc.admin_datum ? new Date(doc.admin_datum).toLocaleString('de-DE') : '-'}</div>
@@ -1155,4 +1220,3 @@
   </script>
 </body>
 </html>
-
