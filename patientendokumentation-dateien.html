@@ -1210,276 +1210,443 @@
       const isNach = title.includes('Nacherfassung');
       await generatePDF(isNach ? 'Nacherfassung' : 'Patientendokumentation');
     };
-        async function generatePDF(docType) {
+    async function generatePDF(docType) {
       try {
         showMsg('📄 PDF wird erstellt...', 'success');
         
         const { jsPDF } = window.jspdf;
         const pdf = new jsPDF('p', 'mm', 'a4');
         
+        const title = document.getElementById('detailsTitle').textContent;
         const p = window.currentViewedPayload || {};
         const adminData = window.currentViewedAdmin || {};
         
+        let yPos = 20;
         const pageWidth = 210;
         const pageHeight = 297;
-        const margin = 8;
-        const colWidth = (pageWidth - 4 * margin) / 3; // 3 Spalten
-        
-        // === SEITE 1 ===
+        const margin = 15;
+        const contentWidth = pageWidth - (2 * margin);
         
         // Header
         pdf.setFillColor(200, 16, 46);
-        pdf.rect(0, 0, pageWidth, 20, 'F');
+        pdf.rect(0, 0, pageWidth, 15, 'F');
         pdf.setTextColor(255, 255, 255);
+        pdf.setFontSize(18);
+        pdf.setFont(undefined, 'bold');
+        pdf.text('FFW Medizingruppe', margin, 10);
+        
+        pdf.setTextColor(0, 0, 0);
         pdf.setFontSize(14);
         pdf.setFont(undefined, 'bold');
-        pdf.text('Feuerwehr Rothenburg - DEFI-Schleife', margin, 8);
-        pdf.setFontSize(16);
-        pdf.text('NOTFALLPROTOKOLL', margin, 16);
+        yPos = 25;
+        pdf.text(title, margin, yPos);
         
-        let y = 25;
+        pdf.setFontSize(9);
+        pdf.setFont(undefined, 'normal');
+        pdf.setTextColor(100, 100, 100);
+        yPos += 6;
+        pdf.text('Erstellt am: ' + new Date().toLocaleString('de-DE'), margin, yPos);
         
-        // Funktion für Box mit Titel
-        function drawBox(x, y, width, height, title) {
-          pdf.setDrawColor(200, 16, 46);
-          pdf.setLineWidth(0.5);
-          pdf.rect(x, y, width, height);
-          pdf.setFillColor(200, 16, 46);
-          pdf.rect(x, y, width, 5, 'F');
-          pdf.setTextColor(255, 255, 255);
-          pdf.setFontSize(8);
+        yPos += 10;
+        pdf.setDrawColor(200, 16, 46);
+        pdf.setLineWidth(0.5);
+        pdf.line(margin, yPos, pageWidth - margin, yPos);
+        yPos += 8;
+        
+        // Funktion für Seitenumbruch
+        function checkPageBreak(neededSpace) {
+          if (yPos + neededSpace > pageHeight - 20) {
+            pdf.addPage();
+            yPos = 20;
+            return true;
+          }
+          return false;
+        }
+        
+        // Funktion für Überschriften
+        function addHeading(text) {
+          checkPageBreak(15);
+          pdf.setFontSize(12);
           pdf.setFont(undefined, 'bold');
-          pdf.text(title, x + 1, y + 3.5);
+          pdf.setTextColor(200, 16, 46);
+          pdf.text(text, margin, yPos);
+          yPos += 2;
+          pdf.setDrawColor(226, 232, 240);
+          pdf.setLineWidth(0.3);
+          pdf.line(margin, yPos, pageWidth - margin, yPos);
+          yPos += 8;
           pdf.setTextColor(0, 0, 0);
           pdf.setFont(undefined, 'normal');
-          return y + 6;
         }
         
-        // Funktion für Feld
-        function addField(x, y, label, value, width) {
-          pdf.setFontSize(6);
+        // Funktion für Label-Value Paare
+        function addField(label, value, fullWidth = false) {
+          checkPageBreak(8);
+          pdf.setFontSize(9);
           pdf.setFont(undefined, 'bold');
-          pdf.text(label, x, y);
-          pdf.setFont(undefined, 'normal');
-          const lines = pdf.splitTextToSize(value || '-', width - 2);
-          pdf.text(lines, x, y + 2.5);
-          return y + 2 + (lines.length * 2.5);
+          pdf.setTextColor(107, 114, 128);
+          
+          if (fullWidth) {
+            pdf.text(label, margin, yPos);
+            yPos += 5;
+            pdf.setFont(undefined, 'normal');
+            pdf.setTextColor(0, 0, 0);
+            const lines = pdf.splitTextToSize(value || '-', contentWidth);
+            pdf.text(lines, margin, yPos);
+            yPos += (lines.length * 4) + 3;
+          } else {
+            pdf.text(label, margin, yPos);
+            pdf.setFont(undefined, 'normal');
+            pdf.setTextColor(0, 0, 0);
+            const lines = pdf.splitTextToSize(value || '-', contentWidth - 55);
+            pdf.text(lines, margin + 55, yPos);
+            yPos += Math.max(lines.length * 4, 6);
+          }
         }
         
-        // SPALTE 1: Einsatzdaten & Patient
-        let col1Y = drawBox(margin, y, colWidth, 45, '1. EINSATZDATEN');
-        col1Y = addField(margin + 1, col1Y, 'Einsatz-Nr:', p.einsatz_nr, colWidth);
-        col1Y = addField(margin + 1, col1Y, 'Datum/Zeit:', p.zeit_einsatz ? new Date(p.zeit_einsatz).toLocaleString('de-DE') : '-', colWidth);
-        col1Y = addField(margin + 1, col1Y, 'Fahrzeug:', p.fahrzeug, colWidth);
-        col1Y = addField(margin + 1, col1Y, 'Einsatz-Art:', p.einsatz_art, colWidth);
+        // Funktion für Tabellen
+        function addTable(headers, rows) {
+          checkPageBreak(20);
+          pdf.autoTable({
+            startY: yPos,
+            head: [headers],
+            body: rows,
+            theme: 'grid',
+            headStyles: { fillColor: [248, 250, 252], textColor: [0, 0, 0], fontStyle: 'bold', fontSize: 9 },
+            bodyStyles: { fontSize: 8, cellPadding: 3 },
+            alternateRowStyles: { fillColor: [249, 250, 251] },
+            margin: { left: margin, right: margin },
+            tableWidth: contentWidth
+          });
+          yPos = pdf.lastAutoTable.finalY + 8;
+        }
         
-        y += 47;
-        col1Y = drawBox(margin, y, colWidth, 50, '2. PATIENT');
-        col1Y = addField(margin + 1, col1Y, 'Name:', `${p.vorname || ''} ${p.name || ''}`.trim(), colWidth);
-        col1Y = addField(margin + 1, col1Y, 'Geb.:', p.gebdatum ? new Date(p.gebdatum).toLocaleDateString('de-DE') : '-', colWidth);
-        col1Y = addField(margin + 1, col1Y, 'Alter:', p.alter, colWidth);
-        col1Y = addField(margin + 1, col1Y, 'Adresse:', `${p.strasse || ''}, ${p.plz_ort || ''}`, colWidth);
+        // Funktion für Bilder
+        async function addImages(photos) {
+          if (!photos || photos.length === 0) return;
+          
+          checkPageBreak(50);
+          pdf.setFontSize(9);
+          pdf.setFont(undefined, 'bold');
+          pdf.text('Fotos:', margin, yPos);
+          yPos += 5;
+          
+          const imgSize = 40;
+          const imgGap = 5;
+          let xOffset = margin;
+          
+          for (let i = 0; i < photos.length; i++) {
+            if (xOffset + imgSize > pageWidth - margin) {
+              xOffset = margin;
+              yPos += imgSize + imgGap;
+              checkPageBreak(imgSize + 10);
+            }
+            
+            try {
+              pdf.addImage(photos[i], 'PNG', xOffset, yPos, imgSize, imgSize);
+              xOffset += imgSize + imgGap;
+            } catch(e) {
+              console.error('Bild-Fehler:', e);
+            }
+          }
+          
+          if (xOffset > margin) {
+            yPos += imgSize + 8;
+          }
+        }
         
-        y += 52;
-        col1Y = drawBox(margin, y, colWidth, 40, '3. ANAMNESE');
-        const anamneseLines = pdf.splitTextToSize(p.notfallgeschehen || '-', colWidth - 2);
-        pdf.setFontSize(6);
-        pdf.text(anamneseLines.slice(0, 15), margin + 1, col1Y); // Max 15 Zeilen
+        // === EINSATZDATEN ===
+        addHeading('Einsatzdaten');
+        addField('Einsatz-Nr.:', p.einsatz_nr);
+        addField('Pat./Auftrags-Nr.:', p.auftrags_nr);
+        addField('Rufname:', p.rufname);
+        addField('Fahrzeug:', p.fahrzeug);
+        addField('Einsatzzeit:', p.zeit_einsatz ? new Date(p.zeit_einsatz).toLocaleString('de-DE') : '-');
+        addField('Einsatz-Art:', p.einsatz_art);
+        yPos += 5;
         
-        y += 42;
-        col1Y = drawBox(margin, y, colWidth, 35, '4. ALLERGIEN / VORERKRANKUNGEN');
-        const infosLines = pdf.splitTextToSize(p.infos || '-', colWidth - 2);
-        pdf.setFontSize(6);
-        pdf.text(infosLines.slice(0, 12), margin + 1, col1Y);
+        // === PATIENT - STAMMDATEN ===
+        addHeading('Patient - Stammdaten');
+        addField('Name:', `${p.vorname || ''} ${p.name || ''}`.trim());
+        addField('Geburtsdatum:', p.gebdatum ? new Date(p.gebdatum).toLocaleDateString('de-DE') : '-');
+        addField('Alter:', p.alter);
+        addField('Telefon:', p.telefon);
+        addField('Mobil:', p.mobil);
+        addField('Straße:', p.strasse);
+        addField('PLZ, Ort:', p.plz_ort);
+        addField('Kasse / Nr.:', p.kasse);
+        addField('Vers.-Nr.:', p.versnr);
+        addField('Hausarzt / Tel.:', p.hausarzt);
+        addField('Angehöriger / Tel.:', p.angehoeriger);
+        addField('Informationen:', p.infos, true);
+        yPos += 5;
         
-        y += 37;
-        col1Y = drawBox(margin, y, colWidth, 30, '5. VERLETZUNGEN');
-        const verletzLines = pdf.splitTextToSize(p.verletz_text || '-', colWidth - 2);
-        pdf.setFontSize(6);
-        pdf.text(verletzLines.slice(0, 10), margin + 1, col1Y);
+        // === NOTFALLGESCHEHEN ===
+        addHeading('Notfallgeschehen / Anamnese');
+        addField('Anamnese:', p.notfallgeschehen, true);
+        if (p.photos && p.photos.length > 0) {
+          await addImages(p.photos);
+        }
+        yPos += 5;
         
-        // SPALTE 2: Vitaldaten & Neurologie
-        y = 25;
-        let col2X = margin + colWidth + margin;
-        let col2Y = drawBox(col2X, y, colWidth, 70, '6. VITALPARAMETER');
-        col2Y = addField(col2X + 1, col2Y, 'RR:', `${p.rr_sys || '-'}/${p.rr_dia || '-'} mmHg`, colWidth);
-        col2Y = addField(col2X + 1, col2Y, 'HF:', `${p.hf || '-'} /min`, colWidth);
-        col2Y = addField(col2X + 1, col2Y, 'AF:', `${p.af || '-'} /min`, colWidth);
-        col2Y = addField(col2X + 1, col2Y, 'SpO₂:', `${p.spo2 || '-'} %`, colWidth);
-        col2Y = addField(col2X + 1, col2Y, 'Temp:', `${p.temp || '-'} °C`, colWidth);
-        col2Y = addField(col2X + 1, col2Y, 'BZ:', `${p.bz_mg || '-'} mg/dl`, colWidth);
-        col2Y = addField(col2X + 1, col2Y, 'Schmerz:', `${p.schmerz || '-'} / 10`, colWidth);
-        col2Y = addField(col2X + 1, col2Y, 'etCO₂:', `${p.etco2 || '-'} mmHg`, colWidth);
+        // === NEUROLOGIE ===
+        addHeading('Neurologie');
+        addField('Zeitpunkt:', p.neu_zeit ? new Date(p.neu_zeit).toLocaleString('de-DE') : '-');
+        addField('Ohne path. Befund:', p.neu_unauff ? 'Ja' : 'Nein');
+        addField('Pupillenweite rechts:', `${p.pw_r || '-'}${p.pw_r_entrundet ? ' (entrundet)' : ''}`);
+        addField('Lichtreaktion rechts:', p.lr_r);
+        addField('Pupillenweite links:', `${p.pw_l || '-'}${p.pw_l_entrundet ? ' (entrundet)' : ''}`);
+        addField('Lichtreaktion links:', p.lr_l);
+        yPos += 5;
         
-        y += 72;
-        col2Y = drawBox(col2X, y, colWidth, 40, '7. NEUROLOGIE / GCS');
+        // === GCS & qSOFA ===
+        addHeading('Glasgow Coma Scale & qSOFA');
         const gcsE = parseInt(p.gcs_e || 0);
         const gcsV = parseInt(p.gcs_v || 0);
         const gcsM = parseInt(p.gcs_m || 0);
         const gcsSum = gcsE + gcsV + gcsM;
-        col2Y = addField(col2X + 1, col2Y, 'GCS:', `E${gcsE} V${gcsV} M${gcsM} = ${gcsSum}`, colWidth);
-        col2Y = addField(col2X + 1, col2Y, 'Pupillen R:', `${p.pw_r || '-'} / ${p.lr_r || '-'}`, colWidth);
-        col2Y = addField(col2X + 1, col2Y, 'Pupillen L:', `${p.pw_l || '-'} / ${p.lr_l || '-'}`, colWidth);
-        col2Y = addField(col2X + 1, col2Y, 'Bewusstsein:', [p.bew_wach?'wach':null, p.bew_ansprache?'Ansprache':null, p.bew_schmerz?'Schmerz':null, p.bew_bewusstlos?'bewusstlos':null].filter(x=>x).join(', ') || '-', colWidth);
+        addField('GCS E (Augen):', gcsE || '-');
+        addField('GCS V (Verbal):', gcsV || '-');
+        addField('GCS M (Motorik):', gcsM || '-');
+        addField('GCS Summe:', gcsSum > 0 ? gcsSum : '-');
         
-        y += 42;
-        col2Y = drawBox(col2X, y, colWidth, 35, '8. ATMUNG');
-        const atmZeichen = [p.atm_apnoe?'Apnoe':null, p.atm_stridor?'Stridor':null, p.atm_dyspnoe?'Dyspnoe':null, p.atm_zyanose?'Zyanose':null].filter(x=>x).join(', ');
-        col2Y = addField(col2X + 1, col2Y, 'Zeichen:', atmZeichen || '-', colWidth);
-        col2Y = addField(col2X + 1, col2Y, 'O₂:', p.o2 || '-', colWidth);
-        col2Y = addField(col2X + 1, col2Y, 'O₂-Flow:', `${p.o2_flow || '-'} l/min`, colWidth);
-        col2Y = addField(col2X + 1, col2Y, 'Atemweg:', [p.aw_guedel?'Guedel':null, p.aw_ett?'ETT':null, p.aw_larynxtubus?'LT':null].filter(x=>x).join(', ') || '-', colWidth);
+        const af = parseInt(p.af || 0);
+        const rrSys = parseInt(p.rr_sys || 0);
+        let qsofaScore = 0;
+        if (gcsSum > 0 && gcsSum < 15) qsofaScore++;
+        if (af >= 22) qsofaScore++;
+        if (rrSys > 0 && rrSys <= 100) qsofaScore++;
+        addField('qSOFA-Score:', (gcsSum > 0 || af > 0 || rrSys > 0) ? qsofaScore : '-');
+        yPos += 5;
         
-        y += 37;
-        col2Y = drawBox(col2X, y, colWidth, 30, '9. RHYTHMUS / EKG');
-        const ekgBef = [p.sr?'SR':null, p.stemi?'STEMI':null, p.vf?'VF':null, p.asystole?'Asystolie':null].filter(x=>x).join(', ');
-        col2Y = addField(col2X + 1, col2Y, 'Befund:', ekgBef || '-', colWidth);
-        col2Y = addField(col2X + 1, col2Y, 'Standort:', p.ekg_standort, colWidth);
+        // === HAUT & PSYCHE ===
+        addHeading('Haut & Psyche');
+        const hautBefunde = [
+          p.haut_unauff ? 'unauffällig' : null,
+          p.haut_falten ? 'stehende Hautfalten' : null,
+          p.haut_oedeme ? 'Ödeme' : null,
+          p.haut_dekubitus ? 'Dekubitus' : null,
+          p.haut_kaltschweissig ? 'kaltschweißig' : null,
+          p.haut_exanthem ? 'Exanthem' : null
+        ].filter(x => x).join(', ');
+        addField('Haut:', hautBefunde || '-', true);
         
-        y += 32;
-        col2Y = drawBox(col2X, y, colWidth, 35, '10. DIAGNOSEN');
-        const diagAll = [
-          p.diag_krampf?'Krampf':null, p.diag_synkope?'Synkope':null, p.diag_apoplex?'Apoplex':null,
-          p.diag_acs?'ACS':null, p.diag_insuff?'Herzinsuff.':null,
-          p.diag_resp_insuff?'Resp.Insuff.':null, p.diag_hypo?'Hypoglyk.':null
-        ].filter(x=>x).join(', ');
-        pdf.setFontSize(6);
-        const diagLines = pdf.splitTextToSize(diagAll || '-', colWidth - 2);
-        pdf.text(diagLines, col2X + 1, col2Y);
+        const psycheBefunde = [
+          p.psy_erregt ? 'erregt' : null,
+          p.psy_aggr ? 'aggressiv' : null,
+          p.psy_verlangsamt ? 'verlangsamt' : null,
+          p.psy_depressiv ? 'depressiv' : null,
+          p.psy_aengstlich ? 'ängstlich' : null,
+          p.psy_euphorisch ? 'euphorisch' : null,
+          p.psy_wahnhaft ? 'wahnhaft' : null,
+          p.psy_verwirrt ? 'verwirrt' : null,
+          p.psy_suizidal ? 'suizidal' : null,
+          p.psy_motor_unruhig ? 'motorisch unruhig' : null
+        ].filter(x => x).join(', ');
+        addField('Psyche:', psycheBefunde || '-', true);
+        yPos += 5;
         
-        // SPALTE 3: Maßnahmen & Reanimation
-        y = 25;
-        let col3X = margin + 2 * colWidth + 2 * margin;
-        let col3Y = drawBox(col3X, y, colWidth, 35, '11. ZUGANG / INFUSION');
-        col3Y = addField(col3X + 1, col3Y, 'Zugang:', `${p.zugang_art || '-'} ${p.zugang_gauge || ''}G`, colWidth);
-        col3Y = addField(col3X + 1, col3Y, 'Seite:', p.zugang_region, colWidth);
-        col3Y = addField(col3X + 1, col3Y, 'Versuche:', p.zugang_versuche, colWidth);
-        col3Y = addField(col3X + 1, col3Y, 'Infusion:', `${p.inf_art || '-'} ${p.inf_menge || ''}ml`, colWidth);
+        // === VITALPARAMETER ===
+        addHeading('Vitalparameter');
+        addField('RR:', `${p.rr_sys || '-'}/${p.rr_dia || '-'} mmHg`);
+        addField('HF:', `${p.hf || '-'} /min`);
+        addField('AF:', `${p.af || '-'} /min`);
+        addField('SpO₂:', `${p.spo2 || '-'} %`);
+        addField('etCO₂:', `${p.etco2 || '-'} mmHg`);
+        addField('Temperatur:', `${p.temp || '-'} °C`);
+        addField('BZ:', `${p.bz_mg || '-'} mg/dl / ${p.bz_mmol || '-'} mmol/l`);
+        addField('Schmerz:', `${p.schmerz || '-'} / 10`);
+        yPos += 5;
         
-        y += 37;
-        col3Y = drawBox(col3X, y, colWidth, 60, '12. MEDIKAMENTE');
+        // === ATMUNG ===
+        addHeading('Atmung');
+        const atmungZeichen = [
+          p.atm_apnoe ? 'Apnoe' : null,
+          p.atm_stridor ? 'Stridor' : null,
+          p.atm_hypervent ? 'Hyperventilation' : null,
+          p.atm_dyspnoe ? 'Dyspnoe' : null,
+          p.atm_beatmung ? 'Beatmung' : null,
+          p.atm_zyanose ? 'Zyanose' : null,
+          p.atm_verlegung ? 'Atemwegsverlegung' : null
+        ].filter(x => x).join(', ');
+        addField('Klinische Zeichen:', atmungZeichen || '-', true);
+        addField('Sonstiges:', p.atm_sonst, true);
+        addField('O₂-Gabe:', p.o2);
+        
+        const o2Details = [
+          p.o2_nasal ? 'Nasensonde' : null,
+          p.o2_maske ? 'Maske' : null,
+          p.o2_reservoir ? 'Maske m. Reservoir' : null
+        ].filter(x => x).join(', ');
+        addField('O₂-Details:', `${o2Details || '-'} ${p.o2_flow ? `(Flow: ${p.o2_flow} l/min)` : ''}`, true);
+        addField('O₂-Kommentar:', p.o2_comment, true);
+        yPos += 5;
+        
+        // === RHYTHMUS / EKG ===
+        addHeading('Rhythmus / EKG');
+        const ekgBefund = [
+          p.sr ? 'Sinusrhythmus' : null,
+          p.stemi ? 'STEMI' : null,
+          p.arrh_abs ? 'absolute Arrhythmie' : null,
+          p.vf ? 'Kammerflimmern' : null,
+          p.av3 ? 'AV-Block III°' : null,
+          p.asystole ? 'Asystolie' : null
+        ].filter(x => x).join(', ');
+        addField('Befund:', ekgBefund || '-', true);
+        addField('Standort:', p.ekg_standort);
+        addField('Pers-Nr.:', p.ekg_persnr);
+        yPos += 5;
+        
+        // === VERLETZUNGEN ===
+        addHeading('Verletzungen');
+        addField('Beschreibung:', p.verletz_text, true);
+        yPos += 5;
+        
+        // === ERSTDIAGNOSEN ===
+        addHeading('Erstdiagnosen');
+        const diagNeuro = [
+          p.diag_krampf ? 'Konvulsionen' : null,
+          p.diag_synkope ? 'Synkope' : null,
+          p.diag_apoplex ? 'Apoplex' : null,
+          p.diag_sht ? 'SHT' : null
+        ].filter(x => x).join(', ');
+        addField('Neuro:', diagNeuro || '-', true);
+        
+        const diagHerz = [
+          p.diag_acs ? 'ACS' : null,
+          p.diag_insuff ? 'Herzinsuffizienz' : null,
+          p.diag_lungenoedem ? 'Lungenödem' : null,
+          p.diag_luembol ? 'Lungenembolie' : null
+        ].filter(x => x).join(', ');
+        addField('Herz-Kreislauf:', diagHerz || '-', true);
+        
+        const diagAtmung = [
+          p.diag_resp_insuff ? 'resp. Insuffizienz' : null,
+          p.diag_pneumothorax ? 'Pneumothorax' : null,
+          p.diag_asthma ? 'Asthma/COPD' : null
+        ].filter(x => x).join(', ');
+        addField('Atmung:', diagAtmung || '-', true);
+        
+        const diagStoff = [
+          p.diag_hypo ? 'Hypoglykämie' : null,
+          p.diag_sept ? 'septischer Schock' : null,
+          p.diag_hypovol ? 'hypovolämischer Schock' : null
+        ].filter(x => x).join(', ');
+        addField('Stoffwechsel / Schock:', diagStoff || '-', true);
+        yPos += 5;
+        
+        // === BEWUSSTSEINSLAGE ===
+        addHeading('Bewusstseinslage, AZ, Versorgung');
+        const bewusstsein = [
+          p.bew_wach ? 'wach' : null,
+          p.bew_ansprache ? 'Reaktion auf Ansprache' : null,
+          p.bew_schmerz ? 'Reaktion auf Schmerzreiz' : null,
+          p.bew_bewusstlos ? 'bewusstlos' : null
+        ].filter(x => x).join(', ');
+        addField('Bewusstseinslage:', bewusstsein || '-', true);
+        addField('Allgemeinzustand:', p.az);
+        addField('Versorgung:', p.versorgung);
+        yPos += 5;
+        
+        // === ZUGANG & INFUSION ===
+        addHeading('Maßnahmen - Zugang & Infusion');
+        addField('Zugang Art:', p.zugang_art);
+        addField('Seite/Region:', p.zugang_region);
+        addField('Größe (G):', p.zugang_gauge);
+        addField('Versuche:', p.zugang_versuche);
+        addField('Zeitpunkt:', p.zugang_zeit ? new Date(p.zugang_zeit).toLocaleString('de-DE') : '-');
+        addField('Infusion Art:', p.inf_art);
+        addField('Menge:', `${p.inf_menge || '-'} ml`);
+        addField('Laufrate:', `${p.inf_rate || '-'} ml/h`);
+        addField('Bemerkung:', p.inf_bem, true);
+        yPos += 5;
+        
+        // === MEDIKAMENTE ===
         const medications = p.medications || [];
-        pdf.setFontSize(5.5);
-        let medY = col3Y;
-        medications.slice(0, 12).forEach(med => {
-          pdf.text(`${med.name || '?'}: ${med.dose || ''} ${med.unit || ''} ${med.route || ''} (${med.time || '-'})`, col3X + 1, medY);
-          medY += 3.5;
-        });
-        if (medications.length > 12) {
-          pdf.text('...weitere in Datenbank', col3X + 1, medY);
+        if (medications.length > 0) {
+          addHeading('Medikamente');
+          const medRows = medications.map(med => [
+            med.name || '-',
+            `${med.dose || ''} ${med.unit || ''}`,
+            med.route || '-',
+            med.time || '-',
+            med.note || '-'
+          ]);
+          addTable(['Medikament', 'Dosis', 'Route', 'Uhrzeit', 'Bemerkung'], medRows);
+          yPos += 5;
         }
         
-        y += 62;
-        col3Y = drawBox(col3X, y, colWidth, 50, '13. REANIMATION');
-        col3Y = addField(col3X + 1, col3Y, 'Beginn:', p.rea_beginn ? new Date(p.rea_beginn).toLocaleTimeString('de-DE') : '-', colWidth);
-        col3Y = addField(col3X + 1, col3Y, 'Rhythmus:', p.rea_initial, colWidth);
-        col3Y = addField(col3X + 1, col3Y, 'Schocks:', p.rea_shocks, colWidth);
-        col3Y = addField(col3X + 1, col3Y, 'ROSC:', p.rea_rosc, colWidth);
-        col3Y = addField(col3X + 1, col3Y, 'Ende:', p.rea_ende, colWidth);
-        col3Y = addField(col3X + 1, col3Y, 'Beatmung:', [p.aw_bvm?'BVM':null, p.aw_ett?'ETT':null].filter(x=>x).join(', ') || '-', colWidth);
-        col3Y = addField(col3X + 1, col3Y, 'FiO₂:', `${p.vent_fio2 || '-'} %`, colWidth);
+        // === BEATMUNG ===
+        addHeading('Beatmung / Atemweg');
+        const atemweg = [
+          p.aw_guedel ? 'Guedel' : null,
+          p.aw_larynxtubus ? 'Larynxtubus' : null,
+          p.aw_ett ? 'ETT' : null,
+          p.aw_bvm ? 'BVM' : null
+        ].filter(x => x).join(', ');
+        addField('Atemweg:', atemweg || '-', true);
+        addField('ETT-Größe:', p.aw_ett_size);
+        addField('PEEP:', `${p.vent_peep || '-'} cmH₂O`);
+        addField('FiO₂:', `${p.vent_fio2 || '-'} %`);
+        yPos += 5;
         
-        y += 52;
-        col3Y = drawBox(col3X, y, colWidth, 35, '14. ÜBERGABE');
-        col3Y = addField(col3X + 1, col3Y, 'Übergabe an:', p.ue_name, colWidth);
-        col3Y = addField(col3X + 1, col3Y, 'Zeitpunkt:', p.ue_zeit ? new Date(p.ue_zeit).toLocaleString('de-DE') : '-', colWidth);
-        col3Y = addField(col3X + 1, col3Y, 'Ziel:', p.ziel_bez, colWidth);
-        col3Y = addField(col3X + 1, col3Y, 'Einsatzende:', p.einsatzende ? new Date(p.einsatzende).toLocaleTimeString('de-DE') : '-', colWidth);
+        // === REANIMATION ===
+        addHeading('Reanimation');
+        addField('Rea-Beginn:', p.rea_beginn ? new Date(p.rea_beginn).toLocaleString('de-DE') : '-');
+        addField('Erst-Rhythmus:', p.rea_initial);
+        addField('Schocks:', p.rea_shocks);
+        addField('ROSC:', p.rea_rosc);
+        addField('Rea-Ende:', p.rea_ende);
+        yPos += 5;
         
-        y += 37;
-        col3Y = drawBox(col3X, y, colWidth, 30, '15. BEFUNDE');
-        const hautBef = [p.haut_kaltschweissig?'kaltschw.':null, p.haut_zyanose?'Zyanose':null].filter(x=>x).join(', ');
-        col3Y = addField(col3X + 1, col3Y, 'Haut:', hautBef || 'o.B.', colWidth);
-        const psycheBef = [p.psy_erregt?'erregt':null, p.psy_aggr?'aggr.':null, p.psy_aengstlich?'ängstl.':null].filter(x=>x).join(', ');
-        col3Y = addField(col3X + 1, col3Y, 'Psyche:', psycheBef || 'o.B.', colWidth);
+        // === ÜBERGABE ===
+        addHeading('Übergabe / Transport');
+        addField('Übergabe an:', p.ue_name);
+        addField('Zeitpunkt:', p.ue_zeit ? new Date(p.ue_zeit).toLocaleString('de-DE') : '-');
+        addField('Ziel:', p.ziel_bez);
+        addField('Adresse:', p.ziel_adr, true);
+        addField('Einsatzende:', p.einsatzende ? new Date(p.einsatzende).toLocaleString('de-DE') : '-');
+        yPos += 5;
         
-        // === SEITE 2 ===
-        pdf.addPage();
-        y = 10;
-        
-        // Header Seite 2
-        pdf.setFillColor(200, 16, 46);
-        pdf.rect(0, 0, pageWidth, 12, 'F');
-        pdf.setTextColor(255, 255, 255);
-        pdf.setFontSize(12);
-        pdf.setFont(undefined, 'bold');
-        pdf.text('NOTFALLPROTOKOLL - Seite 2', margin, 8);
-        
-        // Verlaufskurve / Zeitleiste (vereinfacht)
-        y = 20;
-        drawBox(margin, y, pageWidth - 2*margin, 60, '16. VERLAUF / ZEITACHSE');
-        pdf.setFontSize(7);
-        pdf.text('Zeitpunkt | Maßnahme | Werte', margin + 2, y + 10);
-        pdf.setDrawColor(200);
-        pdf.line(margin, y + 12, pageWidth - margin, y + 12);
-        
-        // Beispiel Verlaufsdaten
-        let timeY = y + 17;
-        const events = [
-          { time: p.zeit_einsatz, text: 'Einsatzbeginn' },
-          { time: p.zugang_zeit, text: 'Zugang gelegt' },
-          { time: p.rea_beginn, text: 'Reanimation Start' },
-          { time: p.ue_zeit, text: 'Übergabe' }
-        ].filter(e => e.time);
-        
-        pdf.setFontSize(6);
-        events.forEach(evt => {
-          pdf.text(`${new Date(evt.time).toLocaleTimeString('de-DE')} - ${evt.text}`, margin + 2, timeY);
-          timeY += 4;
-        });
-        
-        // Fotos
-        if (p.photos && p.photos.length > 0) {
-          y += 65;
-          drawBox(margin, y, pageWidth - 2*margin, 80, '17. FOTOS');
-          let photoX = margin + 2;
-          let photoY = y + 8;
-          p.photos.slice(0, 6).forEach((photo, idx) => {
-            try {
-              pdf.addImage(photo, 'PNG', photoX, photoY, 30, 30);
-              photoX += 32;
-              if ((idx + 1) % 6 === 0) {
-                photoX = margin + 2;
-                photoY += 32;
-              }
-            } catch(e) {
-              console.error('Foto-Fehler:', e);
-            }
-          });
-          y += 82;
-        } else {
-          y += 65;
-        }
-        
-        // Unterschriften
-        drawBox(margin, y, (pageWidth - 3*margin)/2, 35, '18. AUSFÜLLER');
-        let sigY = y + 8;
-        pdf.setFontSize(7);
-        pdf.text(`Name: ${p.ausfueller_name || '-'}`, margin + 2, sigY);
-        pdf.text(`Zeit: ${p.ausfueller_zeit ? new Date(p.ausfueller_zeit).toLocaleString('de-DE') : '-'}`, margin + 2, sigY + 5);
+        // === AUSFÜLLER ===
+        addHeading('Ausfüller');
+        addField('Name:', p.ausfueller_name);
+        addField('Zeitpunkt:', p.ausfueller_zeit ? new Date(p.ausfueller_zeit).toLocaleString('de-DE') : '-');
         if (p.signature) {
+          checkPageBreak(50);
+          pdf.setFontSize(9);
+          pdf.setFont(undefined, 'bold');
+          pdf.text('Unterschrift:', margin, yPos);
+          yPos += 5;
           try {
-            pdf.addImage(p.signature, 'PNG', margin + 2, sigY + 10, 40, 20);
-          } catch(e) {}
+            pdf.addImage(p.signature, 'PNG', margin, yPos, 80, 40);
+            yPos += 45;
+          } catch(e) {
+            console.error('Unterschrift-Fehler:', e);
+          }
         }
+        yPos += 5;
         
-        drawBox(margin + (pageWidth - 3*margin)/2 + margin, y, (pageWidth - 3*margin)/2, 35, '19. MPG-BEAUFTRAGTER');
-        sigY = y + 8;
-        pdf.text(`Name: ${adminData.name || '-'}`, margin + (pageWidth - 3*margin)/2 + margin + 2, sigY);
-        pdf.text(`Datum: ${adminData.datum ? new Date(adminData.datum).toLocaleString('de-DE') : '-'}`, margin + (pageWidth - 3*margin)/2 + margin + 2, sigY + 5);
+        // === VERANTWORTLICHER ===
+        addHeading('Verantwortlicher / MPG-Beauftragter');
+        addField('Name:', adminData.name);
+        addField('Datum:', adminData.datum ? new Date(adminData.datum).toLocaleString('de-DE') : '-');
         if (adminData.unterschrift) {
+          checkPageBreak(50);
+          pdf.setFontSize(9);
+          pdf.setFont(undefined, 'bold');
+          pdf.text('Unterschrift:', margin, yPos);
+          yPos += 5;
           try {
-            pdf.addImage(adminData.unterschrift, 'PNG', margin + (pageWidth - 3*margin)/2 + margin + 2, sigY + 10, 40, 20);
-          } catch(e) {}
+            pdf.addImage(adminData.unterschrift, 'PNG', margin, yPos, 80, 40);
+            yPos += 45;
+          } catch(e) {
+            console.error('Admin-Unterschrift-Fehler:', e);
+          }
         }
-        
-        // Footer
-        pdf.setFontSize(6);
-        pdf.setTextColor(150);
-        pdf.text(`Erstellt: ${new Date().toLocaleString('de-DE')} | Einsatz-Nr: ${p.einsatz_nr || 'N/A'}`, margin, pageHeight - 5);
         
         const timestamp = new Date().toISOString().slice(0,10);
-        const filename = `Notfallprotokoll_${p.einsatz_nr || 'unknown'}_${timestamp}.pdf`;
+        const filename = `${docType}_${timestamp}.pdf`;
         pdf.save(filename);
         
         showMsg('✅ PDF erfolgreich erstellt!', 'success');
@@ -1490,7 +1657,7 @@
       }
     }
 
-	function showMsg(text, type = 'error') {
+    function showMsg(text, type = 'error') {
       const msg = document.getElementById('msg');
       msg.textContent = text;
       msg.className = 'msg ' + type;
