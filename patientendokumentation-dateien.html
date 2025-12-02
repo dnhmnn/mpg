@@ -7,7 +7,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet"/>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.6.0/jspdf.plugin.autotable.min.js"></script>
   <style>
     :root{--primary:#c8102e;--bg:#f8fafc;--card:#fff;--text:#0f172a;--muted:#64748b;--border:#e2e8f0}
     *{box-sizing:border-box}
@@ -922,6 +922,14 @@
         const doc = data.patient_docs_by_pk;
         const p = doc.payload || {};
         
+        // Payload und Admin-Daten für PDF speichern
+        window.currentViewedPayload = p;
+        window.currentViewedAdmin = {
+          name: doc.admin_name,
+          datum: doc.admin_datum,
+          unterschrift: doc.admin_unterschrift
+        };
+        
         const gcsE = parseInt(p.gcs_e || 0);
         const gcsV = parseInt(p.gcs_v || 0);
         const gcsM = parseInt(p.gcs_m || 0);
@@ -1202,120 +1210,443 @@
       const isNach = title.includes('Nacherfassung');
       await generatePDF(isNach ? 'Nacherfassung' : 'Patientendokumentation');
     };
-
     async function generatePDF(docType) {
       try {
         showMsg('📄 PDF wird erstellt...', 'success');
         
-        const content = document.getElementById('detailsBody');
-        const title = document.getElementById('detailsTitle').textContent;
-        
-        const pdfContainer = document.createElement('div');
-        pdfContainer.style.position = 'absolute';
-        pdfContainer.style.left = '-9999px';
-        pdfContainer.style.width = '800px';
-        pdfContainer.style.padding = '20px';
-        pdfContainer.style.background = '#fff';
-        pdfContainer.style.fontFamily = 'Arial, sans-serif';
-        
-        pdfContainer.innerHTML = `
-          <div style="border-bottom:3px solid #c8102e;padding-bottom:10px;margin-bottom:20px">
-            <h1 style="margin:0;color:#c8102e;font-size:24px">FFW Medizingruppe</h1>
-            <h2 style="margin:5px 0 0 0;color:#333;font-size:18px">${title}</h2>
-            <p style="margin:5px 0 0 0;color:#666;font-size:12px">Erstellt am: ${new Date().toLocaleString('de-DE')}</p>
-          </div>
-        `;
-        
-        const contentClone = content.cloneNode(true);
-        
-        contentClone.querySelectorAll('img').forEach(img => {
-          img.style.maxWidth = '150px';
-          img.style.maxHeight = '150px';
-          img.style.display = 'block';
-          img.style.marginTop = '5px';
-        });
-        
-        contentClone.querySelectorAll('table').forEach(table => {
-          table.style.width = '100%';
-          table.style.borderCollapse = 'collapse';
-          table.style.fontSize = '11px';
-          table.style.marginTop = '10px';
-        });
-        
-        contentClone.querySelectorAll('th, td').forEach(cell => {
-          cell.style.border = '1px solid #ddd';
-          cell.style.padding = '6px';
-          cell.style.textAlign = 'left';
-        });
-        
-        contentClone.querySelectorAll('th').forEach(th => {
-          th.style.background = '#f8fafc';
-          th.style.fontWeight = 'bold';
-        });
-        
-        contentClone.querySelectorAll('.details-grid').forEach(grid => {
-          grid.style.display = 'grid';
-          grid.style.gridTemplateColumns = '200px 1fr';
-          grid.style.gap = '8px 15px';
-          grid.style.marginBottom = '15px';
-          grid.style.fontSize = '12px';
-        });
-        
-        contentClone.querySelectorAll('.details-label').forEach(label => {
-          label.style.fontWeight = 'bold';
-          label.style.color = '#666';
-        });
-        
-        contentClone.querySelectorAll('.details-value').forEach(value => {
-          value.style.color = '#111';
-          value.style.wordBreak = 'break-word';
-        });
-        
-        contentClone.querySelectorAll('h4').forEach(h4 => {
-          h4.style.color = '#c8102e';
-          h4.style.marginTop = '20px';
-          h4.style.marginBottom = '10px';
-          h4.style.paddingBottom = '5px';
-          h4.style.borderBottom = '2px solid #e2e8f0';
-          h4.style.fontSize = '16px';
-        });
-        
-        pdfContainer.appendChild(contentClone);
-        document.body.appendChild(pdfContainer);
-        
-        const canvas = await html2canvas(pdfContainer, {
-          scale: 2,
-          useCORS: true,
-          logging: false,
-          backgroundColor: '#ffffff'
-        });
-        
-        document.body.removeChild(pdfContainer);
-        
         const { jsPDF } = window.jspdf;
         const pdf = new jsPDF('p', 'mm', 'a4');
         
-        const imgWidth = 210;
+        const title = document.getElementById('detailsTitle').textContent;
+        const p = window.currentViewedPayload || {};
+        const adminData = window.currentViewedAdmin || {};
+        
+        let yPos = 20;
+        const pageWidth = 210;
         const pageHeight = 297;
-        const imgHeight = (canvas.height * imgWidth) / canvas.width;
-        let heightLeft = imgHeight;
-        let position = 0;
+        const margin = 15;
+        const contentWidth = pageWidth - (2 * margin);
         
-        const imgData = canvas.toDataURL('image/png');
+        // Header
+        pdf.setFillColor(200, 16, 46);
+        pdf.rect(0, 0, pageWidth, 15, 'F');
+        pdf.setTextColor(255, 255, 255);
+        pdf.setFontSize(18);
+        pdf.setFont(undefined, 'bold');
+        pdf.text('FFW Medizingruppe', margin, 10);
         
-        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-        heightLeft -= pageHeight;
+        pdf.setTextColor(0, 0, 0);
+        pdf.setFontSize(14);
+        pdf.setFont(undefined, 'bold');
+        yPos = 25;
+        pdf.text(title, margin, yPos);
         
-        while (heightLeft > 0) {
-          position = heightLeft - imgHeight;
-          pdf.addPage();
-          pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-          heightLeft -= pageHeight;
+        pdf.setFontSize(9);
+        pdf.setFont(undefined, 'normal');
+        pdf.setTextColor(100, 100, 100);
+        yPos += 6;
+        pdf.text('Erstellt am: ' + new Date().toLocaleString('de-DE'), margin, yPos);
+        
+        yPos += 10;
+        pdf.setDrawColor(200, 16, 46);
+        pdf.setLineWidth(0.5);
+        pdf.line(margin, yPos, pageWidth - margin, yPos);
+        yPos += 8;
+        
+        // Funktion für Seitenumbruch
+        function checkPageBreak(neededSpace) {
+          if (yPos + neededSpace > pageHeight - 20) {
+            pdf.addPage();
+            yPos = 20;
+            return true;
+          }
+          return false;
+        }
+        
+        // Funktion für Überschriften
+        function addHeading(text) {
+          checkPageBreak(15);
+          pdf.setFontSize(12);
+          pdf.setFont(undefined, 'bold');
+          pdf.setTextColor(200, 16, 46);
+          pdf.text(text, margin, yPos);
+          yPos += 2;
+          pdf.setDrawColor(226, 232, 240);
+          pdf.setLineWidth(0.3);
+          pdf.line(margin, yPos, pageWidth - margin, yPos);
+          yPos += 8;
+          pdf.setTextColor(0, 0, 0);
+          pdf.setFont(undefined, 'normal');
+        }
+        
+        // Funktion für Label-Value Paare
+        function addField(label, value, fullWidth = false) {
+          checkPageBreak(8);
+          pdf.setFontSize(9);
+          pdf.setFont(undefined, 'bold');
+          pdf.setTextColor(107, 114, 128);
+          
+          if (fullWidth) {
+            pdf.text(label, margin, yPos);
+            yPos += 5;
+            pdf.setFont(undefined, 'normal');
+            pdf.setTextColor(0, 0, 0);
+            const lines = pdf.splitTextToSize(value || '-', contentWidth);
+            pdf.text(lines, margin, yPos);
+            yPos += (lines.length * 4) + 3;
+          } else {
+            pdf.text(label, margin, yPos);
+            pdf.setFont(undefined, 'normal');
+            pdf.setTextColor(0, 0, 0);
+            const lines = pdf.splitTextToSize(value || '-', contentWidth - 55);
+            pdf.text(lines, margin + 55, yPos);
+            yPos += Math.max(lines.length * 4, 6);
+          }
+        }
+        
+        // Funktion für Tabellen
+        function addTable(headers, rows) {
+          checkPageBreak(20);
+          pdf.autoTable({
+            startY: yPos,
+            head: [headers],
+            body: rows,
+            theme: 'grid',
+            headStyles: { fillColor: [248, 250, 252], textColor: [0, 0, 0], fontStyle: 'bold', fontSize: 9 },
+            bodyStyles: { fontSize: 8, cellPadding: 3 },
+            alternateRowStyles: { fillColor: [249, 250, 251] },
+            margin: { left: margin, right: margin },
+            tableWidth: contentWidth
+          });
+          yPos = pdf.lastAutoTable.finalY + 8;
+        }
+        
+        // Funktion für Bilder
+        async function addImages(photos) {
+          if (!photos || photos.length === 0) return;
+          
+          checkPageBreak(50);
+          pdf.setFontSize(9);
+          pdf.setFont(undefined, 'bold');
+          pdf.text('Fotos:', margin, yPos);
+          yPos += 5;
+          
+          const imgSize = 40;
+          const imgGap = 5;
+          let xOffset = margin;
+          
+          for (let i = 0; i < photos.length; i++) {
+            if (xOffset + imgSize > pageWidth - margin) {
+              xOffset = margin;
+              yPos += imgSize + imgGap;
+              checkPageBreak(imgSize + 10);
+            }
+            
+            try {
+              pdf.addImage(photos[i], 'PNG', xOffset, yPos, imgSize, imgSize);
+              xOffset += imgSize + imgGap;
+            } catch(e) {
+              console.error('Bild-Fehler:', e);
+            }
+          }
+          
+          if (xOffset > margin) {
+            yPos += imgSize + 8;
+          }
+        }
+        
+        // === EINSATZDATEN ===
+        addHeading('Einsatzdaten');
+        addField('Einsatz-Nr.:', p.einsatz_nr);
+        addField('Pat./Auftrags-Nr.:', p.auftrags_nr);
+        addField('Rufname:', p.rufname);
+        addField('Fahrzeug:', p.fahrzeug);
+        addField('Einsatzzeit:', p.zeit_einsatz ? new Date(p.zeit_einsatz).toLocaleString('de-DE') : '-');
+        addField('Einsatz-Art:', p.einsatz_art);
+        yPos += 5;
+        
+        // === PATIENT - STAMMDATEN ===
+        addHeading('Patient - Stammdaten');
+        addField('Name:', `${p.vorname || ''} ${p.name || ''}`.trim());
+        addField('Geburtsdatum:', p.gebdatum ? new Date(p.gebdatum).toLocaleDateString('de-DE') : '-');
+        addField('Alter:', p.alter);
+        addField('Telefon:', p.telefon);
+        addField('Mobil:', p.mobil);
+        addField('Straße:', p.strasse);
+        addField('PLZ, Ort:', p.plz_ort);
+        addField('Kasse / Nr.:', p.kasse);
+        addField('Vers.-Nr.:', p.versnr);
+        addField('Hausarzt / Tel.:', p.hausarzt);
+        addField('Angehöriger / Tel.:', p.angehoeriger);
+        addField('Informationen:', p.infos, true);
+        yPos += 5;
+        
+        // === NOTFALLGESCHEHEN ===
+        addHeading('Notfallgeschehen / Anamnese');
+        addField('Anamnese:', p.notfallgeschehen, true);
+        if (p.photos && p.photos.length > 0) {
+          await addImages(p.photos);
+        }
+        yPos += 5;
+        
+        // === NEUROLOGIE ===
+        addHeading('Neurologie');
+        addField('Zeitpunkt:', p.neu_zeit ? new Date(p.neu_zeit).toLocaleString('de-DE') : '-');
+        addField('Ohne path. Befund:', p.neu_unauff ? 'Ja' : 'Nein');
+        addField('Pupillenweite rechts:', `${p.pw_r || '-'}${p.pw_r_entrundet ? ' (entrundet)' : ''}`);
+        addField('Lichtreaktion rechts:', p.lr_r);
+        addField('Pupillenweite links:', `${p.pw_l || '-'}${p.pw_l_entrundet ? ' (entrundet)' : ''}`);
+        addField('Lichtreaktion links:', p.lr_l);
+        yPos += 5;
+        
+        // === GCS & qSOFA ===
+        addHeading('Glasgow Coma Scale & qSOFA');
+        const gcsE = parseInt(p.gcs_e || 0);
+        const gcsV = parseInt(p.gcs_v || 0);
+        const gcsM = parseInt(p.gcs_m || 0);
+        const gcsSum = gcsE + gcsV + gcsM;
+        addField('GCS E (Augen):', gcsE || '-');
+        addField('GCS V (Verbal):', gcsV || '-');
+        addField('GCS M (Motorik):', gcsM || '-');
+        addField('GCS Summe:', gcsSum > 0 ? gcsSum : '-');
+        
+        const af = parseInt(p.af || 0);
+        const rrSys = parseInt(p.rr_sys || 0);
+        let qsofaScore = 0;
+        if (gcsSum > 0 && gcsSum < 15) qsofaScore++;
+        if (af >= 22) qsofaScore++;
+        if (rrSys > 0 && rrSys <= 100) qsofaScore++;
+        addField('qSOFA-Score:', (gcsSum > 0 || af > 0 || rrSys > 0) ? qsofaScore : '-');
+        yPos += 5;
+        
+        // === HAUT & PSYCHE ===
+        addHeading('Haut & Psyche');
+        const hautBefunde = [
+          p.haut_unauff ? 'unauffällig' : null,
+          p.haut_falten ? 'stehende Hautfalten' : null,
+          p.haut_oedeme ? 'Ödeme' : null,
+          p.haut_dekubitus ? 'Dekubitus' : null,
+          p.haut_kaltschweissig ? 'kaltschweißig' : null,
+          p.haut_exanthem ? 'Exanthem' : null
+        ].filter(x => x).join(', ');
+        addField('Haut:', hautBefunde || '-', true);
+        
+        const psycheBefunde = [
+          p.psy_erregt ? 'erregt' : null,
+          p.psy_aggr ? 'aggressiv' : null,
+          p.psy_verlangsamt ? 'verlangsamt' : null,
+          p.psy_depressiv ? 'depressiv' : null,
+          p.psy_aengstlich ? 'ängstlich' : null,
+          p.psy_euphorisch ? 'euphorisch' : null,
+          p.psy_wahnhaft ? 'wahnhaft' : null,
+          p.psy_verwirrt ? 'verwirrt' : null,
+          p.psy_suizidal ? 'suizidal' : null,
+          p.psy_motor_unruhig ? 'motorisch unruhig' : null
+        ].filter(x => x).join(', ');
+        addField('Psyche:', psycheBefunde || '-', true);
+        yPos += 5;
+        
+        // === VITALPARAMETER ===
+        addHeading('Vitalparameter');
+        addField('RR:', `${p.rr_sys || '-'}/${p.rr_dia || '-'} mmHg`);
+        addField('HF:', `${p.hf || '-'} /min`);
+        addField('AF:', `${p.af || '-'} /min`);
+        addField('SpO₂:', `${p.spo2 || '-'} %`);
+        addField('etCO₂:', `${p.etco2 || '-'} mmHg`);
+        addField('Temperatur:', `${p.temp || '-'} °C`);
+        addField('BZ:', `${p.bz_mg || '-'} mg/dl / ${p.bz_mmol || '-'} mmol/l`);
+        addField('Schmerz:', `${p.schmerz || '-'} / 10`);
+        yPos += 5;
+        
+        // === ATMUNG ===
+        addHeading('Atmung');
+        const atmungZeichen = [
+          p.atm_apnoe ? 'Apnoe' : null,
+          p.atm_stridor ? 'Stridor' : null,
+          p.atm_hypervent ? 'Hyperventilation' : null,
+          p.atm_dyspnoe ? 'Dyspnoe' : null,
+          p.atm_beatmung ? 'Beatmung' : null,
+          p.atm_zyanose ? 'Zyanose' : null,
+          p.atm_verlegung ? 'Atemwegsverlegung' : null
+        ].filter(x => x).join(', ');
+        addField('Klinische Zeichen:', atmungZeichen || '-', true);
+        addField('Sonstiges:', p.atm_sonst, true);
+        addField('O₂-Gabe:', p.o2);
+        
+        const o2Details = [
+          p.o2_nasal ? 'Nasensonde' : null,
+          p.o2_maske ? 'Maske' : null,
+          p.o2_reservoir ? 'Maske m. Reservoir' : null
+        ].filter(x => x).join(', ');
+        addField('O₂-Details:', `${o2Details || '-'} ${p.o2_flow ? `(Flow: ${p.o2_flow} l/min)` : ''}`, true);
+        addField('O₂-Kommentar:', p.o2_comment, true);
+        yPos += 5;
+        
+        // === RHYTHMUS / EKG ===
+        addHeading('Rhythmus / EKG');
+        const ekgBefund = [
+          p.sr ? 'Sinusrhythmus' : null,
+          p.stemi ? 'STEMI' : null,
+          p.arrh_abs ? 'absolute Arrhythmie' : null,
+          p.vf ? 'Kammerflimmern' : null,
+          p.av3 ? 'AV-Block III°' : null,
+          p.asystole ? 'Asystolie' : null
+        ].filter(x => x).join(', ');
+        addField('Befund:', ekgBefund || '-', true);
+        addField('Standort:', p.ekg_standort);
+        addField('Pers-Nr.:', p.ekg_persnr);
+        yPos += 5;
+        
+        // === VERLETZUNGEN ===
+        addHeading('Verletzungen');
+        addField('Beschreibung:', p.verletz_text, true);
+        yPos += 5;
+        
+        // === ERSTDIAGNOSEN ===
+        addHeading('Erstdiagnosen');
+        const diagNeuro = [
+          p.diag_krampf ? 'Konvulsionen' : null,
+          p.diag_synkope ? 'Synkope' : null,
+          p.diag_apoplex ? 'Apoplex' : null,
+          p.diag_sht ? 'SHT' : null
+        ].filter(x => x).join(', ');
+        addField('Neuro:', diagNeuro || '-', true);
+        
+        const diagHerz = [
+          p.diag_acs ? 'ACS' : null,
+          p.diag_insuff ? 'Herzinsuffizienz' : null,
+          p.diag_lungenoedem ? 'Lungenödem' : null,
+          p.diag_luembol ? 'Lungenembolie' : null
+        ].filter(x => x).join(', ');
+        addField('Herz-Kreislauf:', diagHerz || '-', true);
+        
+        const diagAtmung = [
+          p.diag_resp_insuff ? 'resp. Insuffizienz' : null,
+          p.diag_pneumothorax ? 'Pneumothorax' : null,
+          p.diag_asthma ? 'Asthma/COPD' : null
+        ].filter(x => x).join(', ');
+        addField('Atmung:', diagAtmung || '-', true);
+        
+        const diagStoff = [
+          p.diag_hypo ? 'Hypoglykämie' : null,
+          p.diag_sept ? 'septischer Schock' : null,
+          p.diag_hypovol ? 'hypovolämischer Schock' : null
+        ].filter(x => x).join(', ');
+        addField('Stoffwechsel / Schock:', diagStoff || '-', true);
+        yPos += 5;
+        
+        // === BEWUSSTSEINSLAGE ===
+        addHeading('Bewusstseinslage, AZ, Versorgung');
+        const bewusstsein = [
+          p.bew_wach ? 'wach' : null,
+          p.bew_ansprache ? 'Reaktion auf Ansprache' : null,
+          p.bew_schmerz ? 'Reaktion auf Schmerzreiz' : null,
+          p.bew_bewusstlos ? 'bewusstlos' : null
+        ].filter(x => x).join(', ');
+        addField('Bewusstseinslage:', bewusstsein || '-', true);
+        addField('Allgemeinzustand:', p.az);
+        addField('Versorgung:', p.versorgung);
+        yPos += 5;
+        
+        // === ZUGANG & INFUSION ===
+        addHeading('Maßnahmen - Zugang & Infusion');
+        addField('Zugang Art:', p.zugang_art);
+        addField('Seite/Region:', p.zugang_region);
+        addField('Größe (G):', p.zugang_gauge);
+        addField('Versuche:', p.zugang_versuche);
+        addField('Zeitpunkt:', p.zugang_zeit ? new Date(p.zugang_zeit).toLocaleString('de-DE') : '-');
+        addField('Infusion Art:', p.inf_art);
+        addField('Menge:', `${p.inf_menge || '-'} ml`);
+        addField('Laufrate:', `${p.inf_rate || '-'} ml/h`);
+        addField('Bemerkung:', p.inf_bem, true);
+        yPos += 5;
+        
+        // === MEDIKAMENTE ===
+        const medications = p.medications || [];
+        if (medications.length > 0) {
+          addHeading('Medikamente');
+          const medRows = medications.map(med => [
+            med.name || '-',
+            `${med.dose || ''} ${med.unit || ''}`,
+            med.route || '-',
+            med.time || '-',
+            med.note || '-'
+          ]);
+          addTable(['Medikament', 'Dosis', 'Route', 'Uhrzeit', 'Bemerkung'], medRows);
+          yPos += 5;
+        }
+        
+        // === BEATMUNG ===
+        addHeading('Beatmung / Atemweg');
+        const atemweg = [
+          p.aw_guedel ? 'Guedel' : null,
+          p.aw_larynxtubus ? 'Larynxtubus' : null,
+          p.aw_ett ? 'ETT' : null,
+          p.aw_bvm ? 'BVM' : null
+        ].filter(x => x).join(', ');
+        addField('Atemweg:', atemweg || '-', true);
+        addField('ETT-Größe:', p.aw_ett_size);
+        addField('PEEP:', `${p.vent_peep || '-'} cmH₂O`);
+        addField('FiO₂:', `${p.vent_fio2 || '-'} %`);
+        yPos += 5;
+        
+        // === REANIMATION ===
+        addHeading('Reanimation');
+        addField('Rea-Beginn:', p.rea_beginn ? new Date(p.rea_beginn).toLocaleString('de-DE') : '-');
+        addField('Erst-Rhythmus:', p.rea_initial);
+        addField('Schocks:', p.rea_shocks);
+        addField('ROSC:', p.rea_rosc);
+        addField('Rea-Ende:', p.rea_ende);
+        yPos += 5;
+        
+        // === ÜBERGABE ===
+        addHeading('Übergabe / Transport');
+        addField('Übergabe an:', p.ue_name);
+        addField('Zeitpunkt:', p.ue_zeit ? new Date(p.ue_zeit).toLocaleString('de-DE') : '-');
+        addField('Ziel:', p.ziel_bez);
+        addField('Adresse:', p.ziel_adr, true);
+        addField('Einsatzende:', p.einsatzende ? new Date(p.einsatzende).toLocaleString('de-DE') : '-');
+        yPos += 5;
+        
+        // === AUSFÜLLER ===
+        addHeading('Ausfüller');
+        addField('Name:', p.ausfueller_name);
+        addField('Zeitpunkt:', p.ausfueller_zeit ? new Date(p.ausfueller_zeit).toLocaleString('de-DE') : '-');
+        if (p.signature) {
+          checkPageBreak(50);
+          pdf.setFontSize(9);
+          pdf.setFont(undefined, 'bold');
+          pdf.text('Unterschrift:', margin, yPos);
+          yPos += 5;
+          try {
+            pdf.addImage(p.signature, 'PNG', margin, yPos, 80, 40);
+            yPos += 45;
+          } catch(e) {
+            console.error('Unterschrift-Fehler:', e);
+          }
+        }
+        yPos += 5;
+        
+        // === VERANTWORTLICHER ===
+        addHeading('Verantwortlicher / MPG-Beauftragter');
+        addField('Name:', adminData.name);
+        addField('Datum:', adminData.datum ? new Date(adminData.datum).toLocaleString('de-DE') : '-');
+        if (adminData.unterschrift) {
+          checkPageBreak(50);
+          pdf.setFontSize(9);
+          pdf.setFont(undefined, 'bold');
+          pdf.text('Unterschrift:', margin, yPos);
+          yPos += 5;
+          try {
+            pdf.addImage(adminData.unterschrift, 'PNG', margin, yPos, 80, 40);
+            yPos += 45;
+          } catch(e) {
+            console.error('Admin-Unterschrift-Fehler:', e);
+          }
         }
         
         const timestamp = new Date().toISOString().slice(0,10);
         const filename = `${docType}_${timestamp}.pdf`;
-        
         pdf.save(filename);
         
         showMsg('✅ PDF erfolgreich erstellt!', 'success');
