@@ -1210,7 +1210,7 @@
       const isNach = title.includes('Nacherfassung');
       await generatePDF(isNach ? 'Nacherfassung' : 'Patientendokumentation');
     };
-            async function generatePDF(docType) {
+                async function generatePDF(docType) {
       try {
         showMsg('📄 PDF wird erstellt...', 'success');
         
@@ -1229,6 +1229,7 @@
         const col2X = margin + colWidth + margin;
         
         let currentY = 0;
+        let pageNumber = 1;
         
         // === SEITE 1 ===
         
@@ -1293,16 +1294,17 @@
         function checkPageBreak(neededHeight) {
           if (currentY + neededHeight > pageHeight - 15) {
             pdf.addPage();
+            pageNumber++;
             
             // Mini-Header
             pdf.setFillColor(200, 16, 46);
-            pdf.rect(0, 0, pageWidth, 12, 'F');
+            pdf.rect(0, 0, pageWidth, 20, 'F');
             pdf.setTextColor(255, 255, 255);
-            pdf.setFontSize(14);
+            pdf.setFontSize(16);
             pdf.setFont(undefined, 'bold');
-            pdf.text('NOTFALLPROTOKOLL (Fortsetzung)', margin, 8);
+            pdf.text(`NOTFALLPROTOKOLL - Seite ${pageNumber}`, margin, 13);
             
-            currentY = 17;
+            currentY = 25;
             return true;
           }
           return false;
@@ -1449,20 +1451,12 @@
         
         currentY += 72;
         
-        // === NEUE SEITE ===
-        pdf.addPage();
-        
-        // Header Seite 2
-        pdf.setFillColor(200, 16, 46);
-        pdf.rect(0, 0, pageWidth, 20, 'F');
-        pdf.setTextColor(255, 255, 255);
-        pdf.setFontSize(18);
-        pdf.setFont(undefined, 'bold');
-        pdf.text('NOTFALLPROTOKOLL - Seite 2', margin, 13);
-        
-        currentY = 25;
+        // === NEUE SEITE (automatisch) ===
+        checkPageBreak(10);
         
         // === BOX 9 + 10: RHYTHMUS & DIAGNOSEN (2 SPALTEN) ===
+        checkPageBreak(45);
+        
         // Links: Rhythmus
         boxY = drawBox(col1X, currentY, colWidth, 45, '9. RHYTHMUS / EKG');
         tempY = boxY;
@@ -1473,7 +1467,16 @@
         
         // Rechts: Diagnosen
         boxY = drawBox(col2X, currentY, colWidth, 45, '10. ERSTDIAGNOSEN');
-        const diag = [p.diag_krampf?'Krampf':null, p.diag_synkope?'Synkope':null, p.diag_acs?'ACS':null, p.diag_hypo?'Hypoglyk.':null].filter(x=>x).join(', ');
+        const diag = [
+          p.diag_krampf?'Krampf':null, 
+          p.diag_synkope?'Synkope':null, 
+          p.diag_apoplex?'Apoplex':null,
+          p.diag_sht?'SHT':null,
+          p.diag_acs?'ACS':null, 
+          p.diag_insuff?'Herzinsuff.':null,
+          p.diag_hypo?'Hypoglyk.':null,
+          p.diag_resp_insuff?'Resp.Insuff.':null
+        ].filter(x=>x).join(', ');
         pdf.setFontSize(9);
         const diagLines = pdf.splitTextToSize(diag || '-', colWidth - 6);
         pdf.text(diagLines, col2X + 3, boxY);
@@ -1578,22 +1581,11 @@
         
         currentY += 57;
         
-        // === SEITE 3 ===
-        pdf.addPage();
-        
-        pdf.setFillColor(200, 16, 46);
-        pdf.rect(0, 0, pageWidth, 20, 'F');
-        pdf.setTextColor(255, 255, 255);
-        pdf.setFontSize(18);
-        pdf.setFont(undefined, 'bold');
-        pdf.text('NOTFALLPROTOKOLL - Seite 3', margin, 13);
-        
-        currentY = 25;
-        
-        // === BOX 15: FOTOS (VOLLE BREITE) ===
+        // === BOX 15: FOTOS (VOLLE BREITE - KLEIN) ===
         const photos = p.photos || [];
-        const photoHeight = photos.length > 0 ? 95 : 35;
+        const photoHeight = photos.length > 0 ? 55 : 30;
         
+        checkPageBreak(photoHeight);
         boxY = drawBox(margin, currentY, fullWidth, photoHeight, '15. FOTOS');
         
         if (photos.length > 0) {
@@ -1602,11 +1594,11 @@
           
           photos.slice(0, 6).forEach((photo, idx) => {
             try {
-              pdf.addImage(photo, 'PNG', photoX, photoY, 45, 45);
-              photoX += 48;
-              if ((idx + 1) % 4 === 0) {
+              pdf.addImage(photo, 'PNG', photoX, photoY, 30, 30);
+              photoX += 32;
+              if ((idx + 1) % 6 === 0) {
                 photoX = margin + 3;
-                photoY += 48;
+                photoY += 32;
               }
             } catch(e) {}
           });
@@ -1620,6 +1612,7 @@
         currentY += photoHeight + 2;
         
         // === BOX 16: WEITERE BEFUNDE (VOLLE BREITE) ===
+        checkPageBreak(42);
         boxY = drawBox(margin, currentY, fullWidth, 42, '16. WEITERE BEFUNDE');
         
         const haut = [p.haut_unauff?'unauff.':null, p.haut_kaltschweissig?'kaltschw.':null, p.haut_oedeme?'Ödeme':null].filter(x=>x).join(', ');
@@ -1632,6 +1625,7 @@
         currentY += 44;
         
         // === BOX 17: UNTERSCHRIFTEN (VOLLE BREITE - GROSS) ===
+        checkPageBreak(75);
         boxY = drawBox(margin, currentY, fullWidth, 75, '17. UNTERSCHRIFTEN');
         
         // 2 Spalten für Unterschriften
@@ -1663,7 +1657,7 @@
         // Footer
         pdf.setFontSize(8);
         pdf.setTextColor(120);
-        pdf.text(`Einsatz-Nr: ${p.einsatz_nr || 'N/A'} | Feuerwehr Rothenburg - DEFI-Schleife`, margin, pageHeight - 5);
+        pdf.text(`Einsatz-Nr: ${p.einsatz_nr || 'N/A'} | Feuerwehr Rothenburg - DEFI-Schleife | Seite ${pageNumber}`, margin, pageHeight - 5);
         
         const timestamp = new Date().toISOString().slice(0,10);
         const filename = `Notfallprotokoll_${p.einsatz_nr || 'unknown'}_${timestamp}.pdf`;
