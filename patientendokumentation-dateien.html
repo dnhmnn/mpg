@@ -6,6 +6,8 @@
   <title>FFW – Dokumentenverwaltung</title>
   <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet"/>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <style>
     :root{--primary:#c8102e;--bg:#f8fafc;--card:#fff;--text:#0f172a;--muted:#64748b;--border:#e2e8f0}
     *{box-sizing:border-box}
@@ -304,9 +306,13 @@
     <div class="modal-box">
       <h3 id="detailsTitle">Details</h3>
       <div id="detailsBody"></div>
-      <div style="text-align:right;margin-top:20px">
-        <button class="btn" onclick="closeDetailsModal()">Schließen</button>
-        <button class="btn" onclick="window.print()"><i class="fa-solid fa-print"></i> Drucken</button>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
+        <button class="btn btn-secondary" onclick="closeDetailsModal()">
+          <i class="fa-solid fa-times"></i> Schließen
+        </button>
+        <button class="btn" onclick="generatePDFFromModal()">
+          <i class="fa-solid fa-file-pdf"></i> PDF erstellen
+        </button>
       </div>
     </div>
   </div>
@@ -433,9 +439,6 @@
                 <button class="btn btn-icon" onclick="viewPatArchiv('${doc.id}')">
                   <i class="fa-solid fa-eye"></i> Ansehen
                 </button>
-                <button class="btn btn-icon" onclick="printPatDoc('${doc.id}')">
-                  <i class="fa-solid fa-print"></i> Drucken
-                </button>
               </div>
             </div>
           `;
@@ -452,9 +455,6 @@
               <div style="display:flex;gap:8px;flex-wrap:wrap">
                 <button class="btn btn-icon" onclick="viewNachArchiv('${doc.id}')">
                   <i class="fa-solid fa-eye"></i> Ansehen
-                </button>
-                <button class="btn btn-icon" onclick="printNachDoc('${doc.id}')">
-                  <i class="fa-solid fa-print"></i> Drucken
                 </button>
               </div>
             </div>
@@ -1197,17 +1197,134 @@
       document.getElementById('detailsModal').classList.remove('show');
     };
 
-    window.printPatDoc = (id) => {
-      viewPatArchiv(id).then(() => {
-        setTimeout(() => window.print(), 500);
-      });
+    window.generatePDFFromModal = async () => {
+      const title = document.getElementById('detailsTitle').textContent;
+      const isNach = title.includes('Nacherfassung');
+      await generatePDF(isNach ? 'Nacherfassung' : 'Patientendokumentation');
     };
 
-    window.printNachDoc = (id) => {
-      viewNach(id).then(() => {
-        setTimeout(() => window.print(), 500);
-      });
-    };
+    async function generatePDF(docType) {
+      try {
+        showMsg('📄 PDF wird erstellt...', 'success');
+        
+        const content = document.getElementById('detailsBody');
+        const title = document.getElementById('detailsTitle').textContent;
+        
+        const pdfContainer = document.createElement('div');
+        pdfContainer.style.position = 'absolute';
+        pdfContainer.style.left = '-9999px';
+        pdfContainer.style.width = '800px';
+        pdfContainer.style.padding = '20px';
+        pdfContainer.style.background = '#fff';
+        pdfContainer.style.fontFamily = 'Arial, sans-serif';
+        
+        pdfContainer.innerHTML = `
+          <div style="border-bottom:3px solid #c8102e;padding-bottom:10px;margin-bottom:20px">
+            <h1 style="margin:0;color:#c8102e;font-size:24px">FFW Medizingruppe</h1>
+            <h2 style="margin:5px 0 0 0;color:#333;font-size:18px">${title}</h2>
+            <p style="margin:5px 0 0 0;color:#666;font-size:12px">Erstellt am: ${new Date().toLocaleString('de-DE')}</p>
+          </div>
+        `;
+        
+        const contentClone = content.cloneNode(true);
+        
+        contentClone.querySelectorAll('img').forEach(img => {
+          img.style.maxWidth = '150px';
+          img.style.maxHeight = '150px';
+          img.style.display = 'block';
+          img.style.marginTop = '5px';
+        });
+        
+        contentClone.querySelectorAll('table').forEach(table => {
+          table.style.width = '100%';
+          table.style.borderCollapse = 'collapse';
+          table.style.fontSize = '11px';
+          table.style.marginTop = '10px';
+        });
+        
+        contentClone.querySelectorAll('th, td').forEach(cell => {
+          cell.style.border = '1px solid #ddd';
+          cell.style.padding = '6px';
+          cell.style.textAlign = 'left';
+        });
+        
+        contentClone.querySelectorAll('th').forEach(th => {
+          th.style.background = '#f8fafc';
+          th.style.fontWeight = 'bold';
+        });
+        
+        contentClone.querySelectorAll('.details-grid').forEach(grid => {
+          grid.style.display = 'grid';
+          grid.style.gridTemplateColumns = '200px 1fr';
+          grid.style.gap = '8px 15px';
+          grid.style.marginBottom = '15px';
+          grid.style.fontSize = '12px';
+        });
+        
+        contentClone.querySelectorAll('.details-label').forEach(label => {
+          label.style.fontWeight = 'bold';
+          label.style.color = '#666';
+        });
+        
+        contentClone.querySelectorAll('.details-value').forEach(value => {
+          value.style.color = '#111';
+          value.style.wordBreak = 'break-word';
+        });
+        
+        contentClone.querySelectorAll('h4').forEach(h4 => {
+          h4.style.color = '#c8102e';
+          h4.style.marginTop = '20px';
+          h4.style.marginBottom = '10px';
+          h4.style.paddingBottom = '5px';
+          h4.style.borderBottom = '2px solid #e2e8f0';
+          h4.style.fontSize = '16px';
+        });
+        
+        pdfContainer.appendChild(contentClone);
+        document.body.appendChild(pdfContainer);
+        
+        const canvas = await html2canvas(pdfContainer, {
+          scale: 2,
+          useCORS: true,
+          logging: false,
+          backgroundColor: '#ffffff'
+        });
+        
+        document.body.removeChild(pdfContainer);
+        
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        
+        const imgWidth = 210;
+        const pageHeight = 297;
+        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+        let heightLeft = imgHeight;
+        let position = 0;
+        
+        const imgData = canvas.toDataURL('image/png');
+        
+        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+        
+        while (heightLeft > 0) {
+          position = heightLeft - imgHeight;
+          pdf.addPage();
+          pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+          heightLeft -= pageHeight;
+        }
+        
+        const timestamp = new Date().toISOString().slice(0,10);
+        const filename = `${docType}_${timestamp}.pdf`;
+        
+        pdf.save(filename);
+        
+        showMsg('✅ PDF erfolgreich erstellt!', 'success');
+        
+      } catch(e) {
+        console.error('PDF-Fehler:', e);
+        showMsg('❌ Fehler beim PDF-Erstellen: ' + e.message, 'error');
+      }
+    }
 
     function showMsg(text, type = 'error') {
       const msg = document.getElementById('msg');
