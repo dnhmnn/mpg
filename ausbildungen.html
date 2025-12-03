@@ -28,10 +28,6 @@
     .member-card h3,.schulung-card h3{margin:0 0 8px 0;color:var(--text);font-size:1.1rem}
     .member-card .tags,.schulung-card .meta{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
     .tag{background:#fee;color:var(--primary);padding:4px 10px;border-radius:999px;font-size:0.8rem;font-weight:700}
-    .tag.rs{background:#dbeafe;color:#1e40af}
-    .tag.san-a{background:#fef3c7;color:#92400e}
-    .tag.san-b{background:#d1fae5;color:#065f46}
-    .tag.defi{background:#fee;color:#c8102e}
     .meta-item{font-size:0.85rem;color:var(--muted)}
     .btn{background:var(--primary);color:#fff;border:0;border-radius:10px;padding:10px 14px;font-weight:800;cursor:pointer;font-size:0.9rem;transition:all 0.2s;display:inline-flex;align-items:center;gap:6px}
     .btn:hover{background:#a00d26}
@@ -48,8 +44,11 @@
     .form-group label{font-weight:700;font-size:0.9rem;color:#374151}
     .form-group input,.form-group textarea,.form-group select{padding:10px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:16px;font-family:inherit}
     .form-group input:focus,.form-group textarea:focus,.form-group select:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(200,16,46,0.1)}
-    .checkbox-group{display:flex;gap:12px;flex-wrap:wrap;margin-top:8px}
-    .checkbox-group label{display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:600}
+    .tag-input-wrapper{display:flex;gap:8px;flex-wrap:wrap;padding:8px;border:1px solid #d1d5db;border-radius:8px;min-height:44px;align-items:center;background:#fff}
+    .tag-input-wrapper:focus-within{border-color:var(--primary);box-shadow:0 0 0 3px rgba(200,16,46,0.1)}
+    .tag-input-wrapper .tag{display:flex;align-items:center;gap:4px;background:#fee;color:var(--primary);padding:4px 8px;border-radius:999px;font-size:0.85rem}
+    .tag-input-wrapper .tag .remove-tag{cursor:pointer;font-weight:bold;margin-left:4px}
+    .tag-input-wrapper input{border:none;outline:none;flex:1;min-width:100px;font-size:16px;padding:4px}
     .msg{margin-top:12px;padding:12px;border-radius:8px;font-weight:600}
     .msg.error{background:#fee;color:#c00;border:1px solid #fcc}
     .msg.success{background:#efe;color:#060;border:1px solid #cfc}
@@ -117,14 +116,15 @@
           </div>
         </div>
         <div class="form-group">
-          <label>Qualifikationen</label>
-          <div class="checkbox-group">
-            <label><input type="checkbox" name="qual" value="RS"> RS</label>
-            <label><input type="checkbox" name="qual" value="San A"> San A</label>
-            <label><input type="checkbox" name="qual" value="San B"> San B</label>
-            <label><input type="checkbox" name="qual" value="Defi-Schleife"> Defi-Schleife</label>
-            <label><input type="checkbox" name="qual" value="Erste Hilfe"> Erste Hilfe</label>
+          <label>Qualifikationen / Tags</label>
+          <div class="tag-input-wrapper" id="tagInputWrapper">
+            <input 
+              type="text" 
+              id="tagInput" 
+              placeholder="Tag eingeben und Enter drücken"
+            >
           </div>
+          <small style="color:#6b7280;font-size:0.85rem">Beispiele: RS, San A, San B, Defi-Schleife, Erste Hilfe</small>
         </div>
         <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
           <button type="button" class="btn btn-secondary" onclick="closeMemberModal()">Abbrechen</button>
@@ -202,7 +202,7 @@
       region: "eu-central-1" 
     });
 
-    // ===== AUTH GUARD (KEIN LOOP!) =====
+        // ===== AUTH CHECK (wie bei dokumente-bearbeiten.html) =====
     const authChecked = sessionStorage.getItem('ausbildungen_auth_checked');
     
     if (!authChecked) {
@@ -219,7 +219,7 @@
         location.href = "/admin-login.html";
       }
     }
-    // ===== AUTH GUARD ENDE =====
+    // ===== AUTH CHECK ENDE =====
 
     const token = await nhost.auth.getAccessToken();
     const headers = { 
@@ -228,7 +228,7 @@
     };
     const endpoint = "https://hpjfrhktprpuuxvvlpsb.graphql.eu-central-1.nhost.run/v1";
 
-    document.getElementById("logout").onclick = async (e) => {
+        document.getElementById("logout").onclick = async (e) => {
       e.preventDefault();
       await nhost.auth.signOut();
       sessionStorage.clear();
@@ -248,7 +248,7 @@
       };
     });
 
-    // Add Button: Zeigt unterschiedliche Modals je nach Tab
+    // Add Button
     document.getElementById('addBtn').onclick = () => {
       const activeTab = document.querySelector('.tab.active').dataset.tab;
       if (activeTab === 'team') {
@@ -268,6 +268,54 @@
       if (json.errors) throw new Error(json.errors[0].message);
       return json.data;
     }
+
+    // ===== TAG INPUT SYSTEM =====
+    let currentTags = [];
+
+    function initTagInput() {
+      const wrapper = document.getElementById('tagInputWrapper');
+      const input = document.getElementById('tagInput');
+      
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          const tag = input.value.trim();
+          if (tag && !currentTags.includes(tag)) {
+            currentTags.push(tag);
+            renderTags();
+            input.value = '';
+          }
+        } else if (e.key === 'Backspace' && input.value === '' && currentTags.length > 0) {
+          currentTags.pop();
+          renderTags();
+        }
+      });
+    }
+
+    function renderTags() {
+      const wrapper = document.getElementById('tagInputWrapper');
+      const input = document.getElementById('tagInput');
+      
+      // Alle Tags außer Input entfernen
+      Array.from(wrapper.children).forEach(child => {
+        if (child !== input) child.remove();
+      });
+      
+      // Tags vor dem Input einfügen
+      currentTags.forEach(tag => {
+        const tagEl = document.createElement('span');
+        tagEl.className = 'tag';
+        tagEl.innerHTML = `${tag} <span class="remove-tag" onclick="removeTag('${tag}')">×</span>`;
+        wrapper.insertBefore(tagEl, input);
+      });
+    }
+
+    window.removeTag = (tag) => {
+      currentTags = currentTags.filter(t => t !== tag);
+      renderTags();
+    };
+
+    initTagInput();
     let allMembers = [];
     let allSchulungen = [];
     let currentSchulungId = null;
@@ -321,14 +369,7 @@
       
       grid.innerHTML = allMembers.map(member => {
         const quali = member.qualifikationen || [];
-        const tagsHTML = quali.map(q => {
-          let tagClass = 'tag';
-          if (q === 'RS') tagClass += ' rs';
-          else if (q === 'San A') tagClass += ' san-a';
-          else if (q === 'San B') tagClass += ' san-b';
-          else if (q.includes('Defi')) tagClass += ' defi';
-          return `<span class="${tagClass}">${q}</span>`;
-        }).join('');
+        const tagsHTML = quali.map(q => `<span class="tag">${q}</span>`).join('');
         
         return `
           <div class="member-card" onclick="viewMemberDetails('${member.id}')">
@@ -380,6 +421,7 @@
       editMemberId = memberId;
       const form = document.getElementById('memberForm');
       form.reset();
+      currentTags = [];
       
       if (memberId) {
         const member = allMembers.find(m => m.id === memberId);
@@ -388,10 +430,8 @@
           form.name.value = member.name;
           form.vorname.value = member.vorname;
           
-          const quali = member.qualifikationen || [];
-          document.querySelectorAll('#memberForm input[name="qual"]').forEach(cb => {
-            cb.checked = quali.includes(cb.value);
-          });
+          currentTags = member.qualifikationen || [];
+          renderTags();
         }
       } else {
         document.getElementById('memberModalTitle').innerHTML = '<i class="fa-solid fa-user-plus"></i> Neue Person anlegen';
@@ -403,6 +443,8 @@
     window.closeMemberModal = () => {
       document.getElementById('memberModal').classList.remove('show');
       editMemberId = null;
+      currentTags = [];
+      renderTags();
     };
 
     document.getElementById('memberForm').onsubmit = async (e) => {
@@ -413,10 +455,7 @@
         const name = formData.get('name').trim();
         const vorname = formData.get('vorname').trim();
         
-        const qualifikationen = [];
-        document.querySelectorAll('#memberForm input[name="qual"]:checked').forEach(cb => {
-          qualifikationen.push(cb.value);
-        });
+        const qualifikationen = currentTags;
         
         if (editMemberId) {
           // Update
@@ -571,6 +610,9 @@
         showMsg('Fehler: ' + e.message, 'error');
       }
     };
+
+    window.openMemberModal = openMemberModal;
+    window.openSchulungModal = openSchulungModal;
     // ===== PERSONEN-DETAILS ANZEIGEN =====
     
     window.viewMemberDetails = async (memberId) => {
@@ -581,11 +623,10 @@
           return;
         }
         
-        // Alle Teilnahmen dieser Person laden
+        // KORRIGIERT: Ohne order_by
         const teilnahmenData = await gql(`query($member_id: uuid!) {
           schulung_teilnahme(
-            where: {member_id: {_eq: $member_id}},
-            order_by: {schulung: {datum: desc}}
+            where: {member_id: {_eq: $member_id}}
           ) {
             id
             anwesend
@@ -600,7 +641,10 @@
           }
         }`, { member_id: memberId });
         
-        const teilnahmen = teilnahmenData.schulung_teilnahme;
+        // Manuell sortieren nach Datum (neueste zuerst)
+        const teilnahmen = teilnahmenData.schulung_teilnahme.sort((a, b) => {
+          return new Date(b.schulung.datum) - new Date(a.schulung.datum);
+        });
         
         // Schulungspflicht berechnen (2x jährlich)
         const currentYear = new Date().getFullYear();
@@ -631,14 +675,8 @@
         
         // Qualifikationen
         const quali = member.qualifikationen || [];
-        const tagsHTML = quali.map(q => {
-          let tagClass = 'tag';
-          if (q === 'RS') tagClass += ' rs';
-          else if (q === 'San A') tagClass += ' san-a';
-          else if (q === 'San B') tagClass += ' san-b';
-          else if (q.includes('Defi')) tagClass += ' defi';
-          return `<span class="${tagClass}">${q}</span>`;
-        }).join('') || '<span class="tag" style="background:#eee;color:#999">Keine Qualifikationen</span>';
+        const tagsHTML = quali.map(q => `<span class="tag">${q}</span>`).join('') || 
+          '<span class="tag" style="background:#eee;color:#999">Keine Qualifikationen</span>';
         
         // Anwesenheitstabelle
         let tableHTML = '';
@@ -774,11 +812,10 @@
           return;
         }
         
-        // Alle Teilnahmen für diese Schulung laden
+        // KORRIGIERT: Ohne order_by
         const teilnahmenData = await gql(`query($schulung_id: uuid!) {
           schulung_teilnahme(
-            where: {schulung_id: {_eq: $schulung_id}},
-            order_by: {member: {name: asc}}
+            where: {schulung_id: {_eq: $schulung_id}}
           ) {
             id
             anwesend
@@ -792,7 +829,12 @@
           }
         }`, { schulung_id: schulungId });
         
-        const teilnahmen = teilnahmenData.schulung_teilnahme;
+        // Manuell sortieren nach Name
+        const teilnahmen = teilnahmenData.schulung_teilnahme.sort((a, b) => {
+          const nameA = a.member.name.toLowerCase();
+          const nameB = b.member.name.toLowerCase();
+          return nameA.localeCompare(nameB);
+        });
         
         // Statistik berechnen
         const anwesendCount = teilnahmen.filter(t => t.anwesend).length;
@@ -824,14 +866,9 @@
           
           teilnahmen.forEach((t, idx) => {
             const quali = t.member.qualifikationen || [];
-            const tagsHTML = quali.map(q => {
-              let tagClass = 'tag';
-              if (q === 'RS') tagClass += ' rs';
-              else if (q === 'San A') tagClass += ' san-a';
-              else if (q === 'San B') tagClass += ' san-b';
-              else if (q.includes('Defi')) tagClass += ' defi';
-              return `<span class="${tagClass}" style="font-size:0.75rem;padding:2px 6px">${q}</span>`;
-            }).join('');
+            const tagsHTML = quali.map(q => 
+              `<span class="tag" style="font-size:0.75rem;padding:2px 6px">${q}</span>`
+            ).join('');
             
             tableHTML += `
               <tr>
@@ -902,7 +939,17 @@
           </div>
           
           <div class="details-section">
-            <h4><i class="fa-solid fa-users"></i> Anwesenheitsliste</h4>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+              <h4 style="margin:0"><i class="fa-solid fa-users"></i> Anwesenheitsliste</h4>
+              <div style="display:flex;gap:8px">
+                <button class="btn" style="font-size:0.8rem;padding:6px 10px" onclick="markAllPresent()">
+                  <i class="fa-solid fa-check-double"></i> Alle anwesend
+                </button>
+                <button class="btn btn-secondary" style="font-size:0.8rem;padding:6px 10px" onclick="markAllAbsent()">
+                  <i class="fa-solid fa-times"></i> Alle abwesend
+                </button>
+              </div>
+            </div>
             ${tableHTML}
           </div>
           
@@ -956,8 +1003,9 @@
         }
         
         showMsg('✅ Anwesenheit gespeichert!', 'success');
-        closeSchulungDetailsModal();
-        await loadData();
+        
+        // Modal neu laden um Statistik zu aktualisieren
+        await viewSchulungDetails(currentSchulungId);
         
       } catch(e) {
         showMsg('Fehler beim Speichern: ' + e.message, 'error');
@@ -992,6 +1040,20 @@
         showMsg('Fehler beim Löschen: ' + e.message, 'error');
       }
     };
+
+    // ===== QUICK ACTIONS =====
+    
+    window.markAllPresent = () => {
+      document.querySelectorAll('[data-teilnahme-id]').forEach(cb => {
+        cb.checked = true;
+      });
+    };
+
+    window.markAllAbsent = () => {
+      document.querySelectorAll('[data-teilnahme-id]').forEach(cb => {
+        cb.checked = false;
+      });
+    };
     // ===== HELPER FUNCTIONS =====
     
     function showMsg(text, type = 'success') {
@@ -1003,34 +1065,6 @@
         msgDiv.className = 'msg'; 
       }, 5000);
     }
-
-    // ===== QUICK ACTIONS =====
-    
-    // Schnell alle als anwesend markieren
-    window.markAllPresent = () => {
-      document.querySelectorAll('[data-teilnahme-id]').forEach(cb => {
-        cb.checked = true;
-      });
-    };
-
-    // Schnell alle als abwesend markieren
-    window.markAllAbsent = () => {
-      document.querySelectorAll('[data-teilnahme-id]').forEach(cb => {
-        cb.checked = false;
-      });
-    };
-
-    // ===== EXPORT FUNKTIONEN (OPTIONAL) =====
-    
-    window.exportSchulungToPDF = async (schulungId) => {
-      // TODO: PDF-Export mit jsPDF implementieren
-      showMsg('PDF-Export folgt bald...', 'success');
-    };
-
-    window.exportMemberToPDF = async (memberId) => {
-      // TODO: PDF-Export für Mitglieder-Historie
-      showMsg('PDF-Export folgt bald...', 'success');
-    };
 
     // ===== SUCHE / FILTER (OPTIONAL) =====
     
@@ -1057,14 +1091,7 @@
       
       grid.innerHTML = filtered.map(member => {
         const quali = member.qualifikationen || [];
-        const tagsHTML = quali.map(q => {
-          let tagClass = 'tag';
-          if (q === 'RS') tagClass += ' rs';
-          else if (q === 'San A') tagClass += ' san-a';
-          else if (q === 'San B') tagClass += ' san-b';
-          else if (q.includes('Defi')) tagClass += ' defi';
-          return `<span class="${tagClass}">${q}</span>`;
-        }).join('');
+        const tagsHTML = quali.map(q => `<span class="tag">${q}</span>`).join('');
         
         return `
           <div class="member-card" onclick="viewMemberDetails('${member.id}')">
@@ -1196,19 +1223,78 @@
       return [];
     };
 
-    // ===== GLOBALE WINDOW FUNKTIONEN =====
+    // ===== EXPORT FUNKTIONEN (OPTIONAL - VORBEREITET) =====
     
-    window.openMemberModal = openMemberModal;
-    window.openSchulungModal = openSchulungModal;
+    window.exportSchulungToPDF = async (schulungId) => {
+      showMsg('📄 PDF-Export wird bald implementiert...', 'success');
+      // TODO: PDF-Export mit jsPDF implementieren
+    };
+
+    window.exportMemberToPDF = async (memberId) => {
+      showMsg('📄 PDF-Export wird bald implementiert...', 'success');
+      // TODO: PDF-Export für Mitglieder-Historie
+    };
+
+    // ===== KEYBOARD SHORTCUTS (OPTIONAL) =====
+    
+    document.addEventListener('keydown', (e) => {
+      // ESC = Modals schließen
+      if (e.key === 'Escape') {
+        closeMemberModal();
+        closeSchulungModal();
+        closeMemberDetailsModal();
+        closeSchulungDetailsModal();
+      }
+      
+      // CTRL/CMD + N = Neues Element (je nach aktivem Tab)
+      if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
+        e.preventDefault();
+        const activeTab = document.querySelector('.tab.active').dataset.tab;
+        if (activeTab === 'team') {
+          openMemberModal();
+        } else {
+          openSchulungModal();
+        }
+      }
+    });
+
+    // ===== MODAL CLICK OUTSIDE TO CLOSE =====
+    
+    document.querySelectorAll('.modal').forEach(modal => {
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+          modal.classList.remove('show');
+        }
+      });
+    });
+
+    // ===== AUTO-REFRESH (OPTIONAL) =====
+    
+    // Automatisch alle 5 Minuten neu laden
+    setInterval(() => {
+      loadData();
+      console.log('🔄 Daten automatisch aktualisiert');
+    }, 5 * 60 * 1000);
+
+    // ===== SESSION MONITORING =====
+    
+    // Prüfe alle 30 Sekunden ob Session noch gültig
+    setInterval(async () => {
+      try {
+        const session = nhost.auth.getSession();
+        if (!session) {
+          console.warn('⚠️ Session abgelaufen - Redirect zu Login');
+          window.location.replace("/admin-login.html");
+        }
+      } catch (e) {
+        console.error('Session check error:', e);
+      }
+    }, 30 * 1000);
 
     // ===== INITIAL LOAD =====
     
+    console.log('🚒 FFW Ausbildungs-Management gestartet');
     loadData();
-    
-    // Optional: Alle 5 Minuten neu laden
-    setInterval(() => {
-      loadData();
-    }, 5 * 60 * 1000);
 
   </script>
 </body>
