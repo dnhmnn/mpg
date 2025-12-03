@@ -1,0 +1,1330 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>FFW – Einsatzverwaltung</title>
+  <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet"/>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
+  <style>
+    :root{--primary:#c8102e;--bg:#f8fafc;--card:#fff;--text:#0f172a;--muted:#64748b;--border:#e2e8f0}
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--text);font-family:'Atkinson Hyperlegible',-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;line-height:1.45}
+    header{background:linear-gradient(90deg,var(--primary),#981b1b);color:#fff;padding:12px 16px;display:flex;align-items:center;gap:12px}
+    header h1{margin:0;font-size:1rem;font-weight:800}
+    .spacer{flex:1}
+    .topbtn{background:#ffffff1a;color:#fff;padding:8px 12px;border-radius:10px;text-decoration:none;font-weight:800;font-size:0.9rem;border:1px solid #ffffff55}
+    .topbtn:hover{background:#ffffff2b}
+    .wrap{max-width:1400px;margin:18px auto;padding:0 14px 100px}
+    .card{background:var(--card);border-radius:14px;box-shadow:0 3px 12px rgba(0,0,0,.06);padding:20px;margin-bottom:20px}
+    .card h2{margin-top:0;color:var(--primary)}
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px;margin-top:16px}
+    .einsatz-card{background:#fff;border:2px solid var(--border);border-radius:12px;padding:18px;cursor:pointer;transition:all 0.2s}
+    .einsatz-card:hover{border-color:var(--primary);box-shadow:0 4px 12px rgba(200,16,46,.1);transform:translateY(-2px)}
+    .einsatz-card h3{margin:0 0 8px 0;color:var(--text);font-size:1.1rem}
+    .einsatz-card .meta{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;font-size:0.85rem;color:var(--muted)}
+    .einsatz-card .stats{display:flex;gap:12px;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)}
+    .stat-item{display:flex;align-items:center;gap:4px;font-size:0.85rem}
+    .badge{background:#fee;color:var(--primary);padding:4px 10px;border-radius:999px;font-size:0.8rem;font-weight:700}
+    .btn{background:var(--primary);color:#fff;border:0;border-radius:10px;padding:10px 14px;font-weight:800;cursor:pointer;font-size:0.9rem;transition:all 0.2s;display:inline-flex;align-items:center;gap:6px}
+    .btn:hover{background:#a00d26}
+    .btn:disabled{opacity:0.5;cursor:not-allowed}
+    .btn-secondary{background:#6b7280;color:#fff}
+    .btn-secondary:hover{background:#4b5563}
+    .btn-small{padding:6px 10px;font-size:0.85rem}
+    .add-btn{position:fixed;bottom:30px;right:30px;width:60px;height:60px;border-radius:50%;background:var(--primary);color:#fff;border:0;cursor:pointer;font-size:1.5rem;box-shadow:0 4px 12px rgba(0,0,0,.2);z-index:100;transition:transform 0.2s}
+    .add-btn:hover{transform:scale(1.1)}
+    .modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:flex-start;justify-content:center;z-index:1000;padding:20px;overflow-y:auto}
+    .modal.show{display:flex}
+    .modal-box{background:#fff;border-radius:14px;max-width:900px;width:100%;max-height:90vh;overflow-y:auto;padding:24px;box-shadow:0 8px 20px rgba(0,0,0,.3);margin:auto}
+    .modal-box h3{margin-top:0;color:var(--primary)}
+    .form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px;margin:16px 0}
+    .form-group{display:flex;flex-direction:column;gap:6px}
+    .form-group label{font-weight:700;font-size:0.9rem;color:#374151}
+    .form-group input,.form-group textarea,.form-group select{padding:10px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:16px;font-family:inherit}
+    .form-group input:focus,.form-group textarea:focus,.form-group select:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(200,16,46,0.1)}
+    .form-group textarea{min-height:100px;resize:vertical}
+    .details-section{margin:20px 0;padding:16px;background:#f9fafb;border-radius:8px}
+    .details-section h4{margin:0 0 12px 0;color:var(--primary);font-size:1rem;display:flex;align-items:center;gap:8px}
+    .list-item{display:flex;align-items:center;justify-content:space-between;padding:12px;background:#fff;border:1px solid var(--border);border-radius:8px;margin-bottom:8px}
+    .list-item:hover{background:#f9fafb}
+    .list-item-content{flex:1}
+    .list-item-actions{display:flex;gap:8px}
+    .empty-state{text-align:center;padding:40px 20px;color:var(--muted)}
+    .empty-state i{font-size:3rem;margin-bottom:16px;opacity:0.3}
+    .msg{margin-top:12px;padding:12px;border-radius:8px;font-weight:600}
+    .msg.error{background:#fee;color:#c00;border:1px solid #fcc}
+    .msg.success{background:#efe;color:#060;border:1px solid #cfc}
+    .info-grid{display:grid;grid-template-columns:150px 1fr;gap:8px;margin-top:12px}
+    .info-label{font-weight:700;color:#6b7280}
+    .info-value{color:#111827}
+    @media (max-width:768px){.grid{grid-template-columns:1fr}.form-grid{grid-template-columns:1fr}.modal-box{padding:16px}.add-btn{bottom:20px;right:20px}}
+  </style>
+</head>
+<body>
+  <header>
+    <h1><i class="fa-solid fa-fire-flame-curved"></i> Einsatzverwaltung</h1>
+    <div class="spacer"></div>
+    <a class="topbtn" href="admin-dashboard.html"><i class="fa-solid fa-dashboard"></i> Dashboard</a>
+    <a class="topbtn" href="#" id="logout"><i class="fa-solid fa-right-from-bracket"></i> Logout</a>
+  </header>
+
+  <div class="wrap">
+    <section class="card">
+      <h2>Einsätze</h2>
+      <div class="grid" id="einsaetzeGrid"></div>
+      <div id="msg"></div>
+    </section>
+  </div>
+
+  <button class="add-btn" id="addBtn" title="Neuer Einsatz">
+    <i class="fa-solid fa-plus"></i>
+  </button>
+
+  <!-- Modal: Neuer/Bearbeiten Einsatz -->
+  <div class="modal" id="einsatzModal">
+    <div class="modal-box">
+      <h3 id="einsatzModalTitle"><i class="fa-solid fa-fire-flame-curved"></i> Neuer Einsatz</h3>
+      <form id="einsatzForm">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Einsatz-Nr. *</label>
+            <input type="text" name="einsatz_nr" placeholder="z.B. E-2024-042" required>
+          </div>
+          <div class="form-group">
+            <label>Datum/Uhrzeit *</label>
+            <input type="datetime-local" name="datum" required>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Stichwort</label>
+          <input type="text" name="stichwort" placeholder="z.B. VU mit Person, Brand, etc.">
+        </div>
+        <div class="form-group">
+          <label>Adresse</label>
+          <input type="text" name="adresse" placeholder="Straße, PLZ Ort">
+        </div>
+        <div class="form-group">
+          <label>Interne Vermerke</label>
+          <textarea name="interne_vermerke" placeholder="Notizen, die nicht in offizielle Dokumente gehören..."></textarea>
+        </div>
+        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
+          <button type="button" class="btn btn-secondary" onclick="closeEinsatzModal()">Abbrechen</button>
+          <button type="submit" class="btn"><i class="fa-solid fa-save"></i> Speichern</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Einsatz-Details -->
+  <div class="modal" id="detailsModal">
+    <div class="modal-box">
+      <h3 id="detailsTitle">Einsatz</h3>
+      <div id="detailsBody"></div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
+        <button class="btn btn-secondary" onclick="closeDetailsModal()">Schließen</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Dokument hinzufügen -->
+  <div class="modal" id="dokumentModal">
+    <div class="modal-box" style="max-width:600px">
+      <h3><i class="fa-solid fa-file-circle-plus"></i> Dokument hinzufügen</h3>
+      <form id="dokumentForm">
+        <div class="form-group">
+          <label>Dokument-Typ *</label>
+          <select name="dokument_typ" id="dokumentTyp" required>
+            <option value="">-- Bitte wählen --</option>
+            <option value="patient_doc">Patientendokumentation</option>
+            <option value="cirs">CIRS-Meldung</option>
+            <option value="produkt">Produktausgabe</option>
+            <option value="nacherfassung">Nacherfassung</option>
+          </select>
+        </div>
+        <div class="form-group" id="dokumentSelectGroup" style="display:none">
+          <label>Dokument *</label>
+          <select name="dokument_id" id="dokumentSelect" required>
+            <option value="">-- Bitte wählen --</option>
+          </select>
+        </div>
+        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
+          <button type="button" class="btn btn-secondary" onclick="closeDokumentModal()">Abbrechen</button>
+          <button type="submit" class="btn"><i class="fa-solid fa-plus"></i> Hinzufügen</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Person hinzufügen -->
+  <div class="modal" id="personModal">
+    <div class="modal-box" style="max-width:600px">
+      <h3><i class="fa-solid fa-user-plus"></i> Person hinzufügen</h3>
+      <form id="personForm">
+        <div class="form-group">
+          <label>Person *</label>
+          <select name="member_id" required>
+            <option value="">-- Bitte wählen --</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Rolle (optional)</label>
+          <input type="text" name="rolle" placeholder="z.B. Fahrzeugführer, Melder, etc.">
+        </div>
+        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
+          <button type="button" class="btn btn-secondary" onclick="closePersonModal()">Abbrechen</button>
+          <button type="submit" class="btn"><i class="fa-solid fa-plus"></i> Hinzufügen</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script type="module">
+    import { NhostClient } from "https://esm.sh/@nhost/nhost-js@2.2.9";
+    
+    const nhost = new NhostClient({ 
+      subdomain: "hpjfrhktprpuuxvvlpsb", 
+      region: "eu-central-1" 
+    });
+
+    // ===== AUTH CHECK (wie dokumente-bearbeiten.html) =====
+    if (!(await nhost.auth.isAuthenticatedAsync())) {
+      location.href = "/admin-login.html";
+    }
+    // ===== AUTH CHECK ENDE =====
+
+    const token = await nhost.auth.getAccessToken();
+    const headers = { 
+      "Content-Type": "application/json", 
+      "Authorization": "Bearer " + token 
+    };
+    const endpoint = "https://hpjfrhktprpuuxvvlpsb.graphql.eu-central-1.nhost.run/v1";
+
+    document.getElementById("logout").onclick = async (e) => {
+      e.preventDefault();
+      await nhost.auth.signOut();
+      localStorage.clear();
+      location.href = "/admin-login.html";
+    };
+
+    async function gql(query, variables = {}) {
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ query, variables })
+      });
+      const json = await res.json();
+      if (json.errors) throw new Error(json.errors[0].message);
+      return json.data;
+    }
+    let allEinsaetze = [];
+    let allMembers = [];
+    let currentEinsatzId = null;
+    let editEinsatzId = null;
+
+    async function loadData() {
+      try {
+        // Einsätze laden mit allen Verknüpfungen
+        const einsaetzeData = await gql(`query {
+          einsaetze(order_by: {datum: desc}) {
+            id
+            einsatz_nr
+            datum
+            stichwort
+            adresse
+            interne_vermerke
+            zuordnungen {
+              id
+              dokument_typ
+              dokument_id
+            }
+            personen {
+              id
+              rolle
+              member {
+                id
+                name
+                vorname
+                qualifikationen
+              }
+            }
+          }
+        }`);
+        
+        allEinsaetze = einsaetzeData.einsaetze;
+        
+        // Team-Members für Dropdown laden
+        const membersData = await gql(`query {
+          team_members(where: {aktiv: {_eq: true}}, order_by: {name: asc}) {
+            id
+            name
+            vorname
+            qualifikationen
+          }
+        }`);
+        
+        allMembers = membersData.team_members;
+        
+        renderEinsaetze();
+        
+      } catch(e) {
+        showMsg('Fehler beim Laden: ' + e.message, 'error');
+      }
+    }
+
+    function renderEinsaetze() {
+      const grid = document.getElementById('einsaetzeGrid');
+      
+      if (allEinsaetze.length === 0) {
+        grid.innerHTML = `
+          <div class="empty-state">
+            <i class="fa-solid fa-fire-flame-curved"></i>
+            <p>Noch keine Einsätze erfasst</p>
+          </div>
+        `;
+        return;
+      }
+      
+      grid.innerHTML = allEinsaetze.map(einsatz => {
+        const datum = new Date(einsatz.datum).toLocaleDateString('de-DE', {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+        
+        const dokumenteCount = einsatz.zuordnungen.length;
+        const personenCount = einsatz.personen.length;
+        
+        return `
+          <div class="einsatz-card" onclick="viewEinsatzDetails('${einsatz.id}')">
+            <div class="badge">${einsatz.einsatz_nr}</div>
+            <h3>${einsatz.stichwort || 'Ohne Stichwort'}</h3>
+            <div class="meta">
+              <span><i class="fa-solid fa-calendar"></i> ${datum}</span>
+              ${einsatz.adresse ? `<span><i class="fa-solid fa-location-dot"></i> ${einsatz.adresse}</span>` : ''}
+            </div>
+            <div class="stats">
+              <div class="stat-item">
+                <i class="fa-solid fa-file"></i>
+                <span>${dokumenteCount} Dokument(e)</span>
+              </div>
+              <div class="stat-item">
+                <i class="fa-solid fa-users"></i>
+                <span>${personenCount} Person(en)</span>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // ===== NEUER EINSATZ ANLEGEN =====
+    
+    document.getElementById('addBtn').onclick = () => {
+      openEinsatzModal();
+    };
+
+    function openEinsatzModal(einsatzId = null) {
+      editEinsatzId = einsatzId;
+      const form = document.getElementById('einsatzForm');
+      form.reset();
+      
+      if (einsatzId) {
+        const einsatz = allEinsaetze.find(e => e.id === einsatzId);
+        if (einsatz) {
+          document.getElementById('einsatzModalTitle').innerHTML = '<i class="fa-solid fa-edit"></i> Einsatz bearbeiten';
+          form.einsatz_nr.value = einsatz.einsatz_nr;
+          form.datum.value = einsatz.datum.slice(0, 16); // Format für datetime-local
+          form.stichwort.value = einsatz.stichwort || '';
+          form.adresse.value = einsatz.adresse || '';
+          form.interne_vermerke.value = einsatz.interne_vermerke || '';
+        }
+      } else {
+        document.getElementById('einsatzModalTitle').innerHTML = '<i class="fa-solid fa-fire-flame-curved"></i> Neuer Einsatz';
+        
+        // Aktuelles Datum/Zeit vorausfüllen
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        form.datum.value = `${year}-${month}-${day}T${hours}:${minutes}`;
+      }
+      
+      document.getElementById('einsatzModal').classList.add('show');
+    }
+
+    window.closeEinsatzModal = () => {
+      document.getElementById('einsatzModal').classList.remove('show');
+      editEinsatzId = null;
+    };
+
+    document.getElementById('einsatzForm').onsubmit = async (e) => {
+      e.preventDefault();
+      
+      try {
+        const formData = new FormData(e.target);
+        const einsatz_nr = formData.get('einsatz_nr').trim();
+        const datum = formData.get('datum');
+        const stichwort = formData.get('stichwort').trim();
+        const adresse = formData.get('adresse').trim();
+        const interne_vermerke = formData.get('interne_vermerke').trim();
+        
+        if (editEinsatzId) {
+          // Update
+          await gql(`mutation($id: uuid!, $nr: String!, $datum: timestamptz!, $stichwort: String, $adresse: String, $vermerke: String) {
+            update_einsaetze_by_pk(
+              pk_columns: {id: $id},
+              _set: {
+                einsatz_nr: $nr,
+                datum: $datum,
+                stichwort: $stichwort,
+                adresse: $adresse,
+                interne_vermerke: $vermerke
+              }
+            ) {
+              id
+            }
+          }`, {
+            id: editEinsatzId,
+            nr: einsatz_nr,
+            datum,
+            stichwort,
+            adresse,
+            vermerke: interne_vermerke
+          });
+          
+          showMsg('✅ Einsatz aktualisiert!', 'success');
+        } else {
+          // Insert
+          await gql(`mutation($nr: String!, $datum: timestamptz!, $stichwort: String, $adresse: String, $vermerke: String) {
+            insert_einsaetze_one(object: {
+              einsatz_nr: $nr,
+              datum: $datum,
+              stichwort: $stichwort,
+              adresse: $adresse,
+              interne_vermerke: $vermerke
+            }) {
+              id
+            }
+          }`, {
+            nr: einsatz_nr,
+            datum,
+            stichwort,
+            adresse,
+            vermerke: interne_vermerke
+          });
+          
+          showMsg('✅ Einsatz angelegt!', 'success');
+        }
+        
+        closeEinsatzModal();
+        await loadData();
+        
+      } catch(e) {
+        showMsg('Fehler: ' + e.message, 'error');
+      }
+    };
+
+    window.openEinsatzModal = openEinsatzModal;
+    // ===== EINSATZ-DETAILS ANZEIGEN =====
+    
+    window.viewEinsatzDetails = async (einsatzId) => {
+      try {
+        currentEinsatzId = einsatzId;
+        
+        const einsatz = allEinsaetze.find(e => e.id === einsatzId);
+        if (!einsatz) {
+          showMsg('Einsatz nicht gefunden', 'error');
+          return;
+        }
+        
+        // Datum formatieren
+        const datum = new Date(einsatz.datum).toLocaleDateString('de-DE', {
+          weekday: 'long',
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+        
+        // Dokumente laden (Details für jedes Dokument)
+        let dokumenteHTML = '';
+        if (einsatz.zuordnungen.length > 0) {
+          for (const zuordnung of einsatz.zuordnungen) {
+            const dokInfo = await getDokumentInfo(zuordnung.dokument_typ, zuordnung.dokument_id);
+            const icon = getDokumentIcon(zuordnung.dokument_typ);
+            const typeName = getDokumentTypeName(zuordnung.dokument_typ);
+            
+            dokumenteHTML += `
+              <div class="list-item">
+                <div class="list-item-content">
+                  <div style="display:flex;align-items:center;gap:8px">
+                    <i class="${icon}" style="color:var(--primary)"></i>
+                    <strong>${typeName}</strong>
+                  </div>
+                  <div style="font-size:0.9rem;color:#6b7280;margin-top:4px">${dokInfo}</div>
+                </div>
+                <div class="list-item-actions">
+                  <button class="btn btn-small" onclick="viewDokument('${zuordnung.dokument_typ}', '${zuordnung.dokument_id}')">
+                    <i class="fa-solid fa-eye"></i> Ansehen
+                  </button>
+                  <button class="btn btn-secondary btn-small" onclick="removeDokument('${zuordnung.id}')">
+                    <i class="fa-solid fa-trash"></i>
+                  </button>
+                </div>
+              </div>
+            `;
+          }
+        } else {
+          dokumenteHTML = '<p style="color:#999;text-align:center;padding:20px">Keine Dokumente zugeordnet</p>';
+        }
+        
+        // Personen anzeigen
+        let personenHTML = '';
+        if (einsatz.personen.length > 0) {
+          personenHTML = einsatz.personen.map(p => {
+            const quali = p.member.qualifikationen || [];
+            const tagsHTML = quali.map(q => `<span class="badge" style="font-size:0.75rem;padding:2px 6px">${q}</span>`).join(' ');
+            
+            return `
+              <div class="list-item">
+                <div class="list-item-content">
+                  <div style="display:flex;align-items:center;gap:8px">
+                    <i class="fa-solid fa-user" style="color:var(--primary)"></i>
+                    <strong>${p.member.vorname} ${p.member.name}</strong>
+                    ${p.rolle ? `<span style="color:#6b7280;font-size:0.9rem">(${p.rolle})</span>` : ''}
+                  </div>
+                  ${tagsHTML ? `<div style="margin-top:4px">${tagsHTML}</div>` : ''}
+                </div>
+                <div class="list-item-actions">
+                  <button class="btn btn-secondary btn-small" onclick="removePerson('${p.id}')">
+                    <i class="fa-solid fa-trash"></i>
+                  </button>
+                </div>
+              </div>
+            `;
+          }).join('');
+        } else {
+          personenHTML = '<p style="color:#999;text-align:center;padding:20px">Keine Personen zugeordnet</p>';
+        }
+        
+        // Modal füllen
+        document.getElementById('detailsTitle').innerHTML = 
+          `<i class="fa-solid fa-fire-flame-curved"></i> ${einsatz.einsatz_nr}`;
+        
+        document.getElementById('detailsBody').innerHTML = `
+          <div class="details-section">
+            <h4><i class="fa-solid fa-info-circle"></i> Basisdaten</h4>
+            <div class="info-grid">
+              <div class="info-label">Einsatz-Nr.:</div>
+              <div class="info-value">${einsatz.einsatz_nr}</div>
+              
+              <div class="info-label">Datum/Uhrzeit:</div>
+              <div class="info-value">${datum}</div>
+              
+              <div class="info-label">Stichwort:</div>
+              <div class="info-value">${einsatz.stichwort || '-'}</div>
+              
+              <div class="info-label">Adresse:</div>
+              <div class="info-value">${einsatz.adresse || '-'}</div>
+            </div>
+          </div>
+          
+          ${einsatz.interne_vermerke ? `
+          <div class="details-section">
+            <h4><i class="fa-solid fa-note-sticky"></i> Interne Vermerke</h4>
+            <div style="background:#fff;padding:12px;border-radius:8px;border:1px solid var(--border);white-space:pre-wrap">${einsatz.interne_vermerke}</div>
+          </div>
+          ` : ''}
+          
+          <div class="details-section">
+            <h4>
+              <i class="fa-solid fa-files"></i> 
+              Zugeordnete Dokumente (${einsatz.zuordnungen.length})
+              <button class="btn btn-small" onclick="openDokumentModal()" style="margin-left:auto">
+                <i class="fa-solid fa-plus"></i> Hinzufügen
+              </button>
+            </h4>
+            ${dokumenteHTML}
+          </div>
+          
+          <div class="details-section">
+            <h4>
+              <i class="fa-solid fa-users"></i> 
+              Eingesetzte Personen (${einsatz.personen.length})
+              <button class="btn btn-small" onclick="openPersonModal()" style="margin-left:auto">
+                <i class="fa-solid fa-plus"></i> Hinzufügen
+              </button>
+            </h4>
+            ${personenHTML}
+          </div>
+          
+          <div style="margin-top:20px;display:flex;gap:8px">
+            <button class="btn" onclick="openEinsatzModal('${einsatzId}')">
+              <i class="fa-solid fa-edit"></i> Bearbeiten
+            </button>
+            <button class="btn btn-secondary" onclick="deleteEinsatz('${einsatzId}')">
+              <i class="fa-solid fa-trash"></i> Löschen
+            </button>
+          </div>
+        `;
+        
+        document.getElementById('detailsModal').classList.add('show');
+        
+      } catch(e) {
+        showMsg('Fehler beim Laden: ' + e.message, 'error');
+      }
+    };
+
+    window.closeDetailsModal = () => {
+      document.getElementById('detailsModal').classList.remove('show');
+      currentEinsatzId = null;
+    };
+
+    // Helper-Funktionen für Dokumente
+    function getDokumentIcon(typ) {
+      const icons = {
+        'patient_doc': 'fa-solid fa-file-medical',
+        'cirs': 'fa-solid fa-triangle-exclamation',
+        'produkt': 'fa-solid fa-box',
+        'nacherfassung': 'fa-solid fa-clipboard-list'
+      };
+      return icons[typ] || 'fa-solid fa-file';
+    }
+
+    function getDokumentTypeName(typ) {
+      const names = {
+        'patient_doc': 'Patientendokumentation',
+        'cirs': 'CIRS-Meldung',
+        'produkt': 'Produktausgabe',
+        'nacherfassung': 'Nacherfassung'
+      };
+      return names[typ] || typ;
+    }
+
+    async function getDokumentInfo(typ, id) {
+      try {
+        if (typ === 'patient_doc') {
+          const data = await gql(`query {
+            patient_docs_by_pk(id: "${id}") {
+              title
+              payload
+              created_at
+            }
+          }`);
+          const doc = data.patient_docs_by_pk;
+          if (!doc) return 'Dokument nicht gefunden';
+          const payload = doc.payload || {};
+          const name = `${payload.vorname || ''} ${payload.name || ''}`.trim() || doc.title || 'Unbekannt';
+          return `${name} (${new Date(doc.created_at).toLocaleDateString('de-DE')})`;
+        } 
+        else if (typ === 'nacherfassung') {
+          const data = await gql(`query {
+            patient_docs_nacherfassung_by_pk(id: "${id}") {
+              stichwort
+              created_at
+            }
+          }`);
+          const doc = data.patient_docs_nacherfassung_by_pk;
+          if (!doc) return 'Dokument nicht gefunden';
+          return `${doc.stichwort || 'Ohne Titel'} (${new Date(doc.created_at).toLocaleDateString('de-DE')})`;
+        }
+        else if (typ === 'cirs' || typ === 'produkt') {
+          const data = await gql(`query {
+            documents(where: {id: {_eq: "${id}"}, type: {_eq: "${typ}"}}) {
+              title
+              created_at
+            }
+          }`);
+          if (!data.documents || data.documents.length === 0) return 'Dokument nicht gefunden';
+          const doc = data.documents[0];
+          return `${doc.title || 'Ohne Titel'} (${new Date(doc.created_at).toLocaleDateString('de-DE')})`;
+        }
+        return 'Unbekannter Dokumenttyp';
+      } catch(e) {
+        return 'Fehler beim Laden';
+      }
+    }
+
+    // Einsatz löschen
+    window.deleteEinsatz = async (einsatzId) => {
+      if (!confirm('Einsatz wirklich löschen? Alle Verknüpfungen gehen verloren!')) {
+        return;
+      }
+      
+      try {
+        // Durch CASCADE werden automatisch zuordnungen und personen gelöscht
+        await gql(`mutation($id: uuid!) {
+          delete_einsaetze_by_pk(id: $id) {
+            id
+          }
+        }`, { id: einsatzId });
+        
+        showMsg('✅ Einsatz gelöscht!', 'success');
+        closeDetailsModal();
+        await loadData();
+        
+      } catch(e) {
+        showMsg('Fehler beim Löschen: ' + e.message, 'error');
+      }
+    };
+    // ===== DOKUMENT HINZUFÜGEN =====
+    
+    window.openDokumentModal = () => {
+      if (!currentEinsatzId) {
+        showMsg('Kein Einsatz ausgewählt', 'error');
+        return;
+      }
+      
+      const form = document.getElementById('dokumentForm');
+      form.reset();
+      document.getElementById('dokumentSelectGroup').style.display = 'none';
+      document.getElementById('dokumentModal').classList.add('show');
+    };
+
+    window.closeDokumentModal = () => {
+      document.getElementById('dokumentModal').classList.remove('show');
+    };
+
+    // Dokument-Typ Änderung → Dokumente laden
+    document.getElementById('dokumentTyp').onchange = async (e) => {
+      const typ = e.target.value;
+      const selectGroup = document.getElementById('dokumentSelectGroup');
+      const select = document.getElementById('dokumentSelect');
+      
+      if (!typ) {
+        selectGroup.style.display = 'none';
+        return;
+      }
+      
+      try {
+        selectGroup.style.display = 'block';
+        select.innerHTML = '<option value="">Lade...</option>';
+        
+        let dokumente = [];
+        
+        if (typ === 'patient_doc') {
+          // Patientendokumentationen laden (alle, auch offene)
+          const data = await gql(`query {
+            patient_docs(order_by: {created_at: desc}) {
+              id
+              title
+              payload
+              status
+            }
+          }`);
+          
+          dokumente = data.patient_docs.map(doc => {
+            const payload = doc.payload || {};
+            const name = `${payload.vorname || ''} ${payload.name || ''}`.trim() || doc.title || 'Unbekannt';
+            return {
+              id: doc.id,
+              label: `${name} (${doc.status})`
+            };
+          });
+        } 
+        else if (typ === 'nacherfassung') {
+          // Nacherfassungen laden
+          const data = await gql(`query {
+            patient_docs_nacherfassung(order_by: {created_at: desc}) {
+              id
+              stichwort
+              status
+            }
+          }`);
+          
+          dokumente = data.patient_docs_nacherfassung.map(doc => ({
+            id: doc.id,
+            label: `${doc.stichwort || 'Ohne Titel'} (${doc.status})`
+          }));
+        }
+        else if (typ === 'cirs' || typ === 'produkt') {
+          // CIRS oder Produktausgaben aus documents laden
+          const data = await gql(`query {
+            documents(where: {type: {_eq: "${typ}"}}, order_by: {created_at: desc}) {
+              id
+              title
+              status
+            }
+          }`);
+          
+          dokumente = data.documents.map(doc => ({
+            id: doc.id,
+            label: `${doc.title || 'Ohne Titel'} (${doc.status})`
+          }));
+        }
+        
+        if (dokumente.length === 0) {
+          select.innerHTML = '<option value="">Keine Dokumente verfügbar</option>';
+        } else {
+          select.innerHTML = '<option value="">-- Bitte wählen --</option>' +
+            dokumente.map(d => `<option value="${d.id}">${d.label}</option>`).join('');
+        }
+        
+      } catch(e) {
+        select.innerHTML = '<option value="">Fehler beim Laden</option>';
+        showMsg('Fehler: ' + e.message, 'error');
+      }
+    };
+
+    document.getElementById('dokumentForm').onsubmit = async (e) => {
+      e.preventDefault();
+      
+      try {
+        const formData = new FormData(e.target);
+        const dokument_typ = formData.get('dokument_typ');
+        const dokument_id = formData.get('dokument_id');
+        
+        if (!dokument_typ || !dokument_id) {
+          showMsg('Bitte alle Felder ausfüllen', 'error');
+          return;
+        }
+        
+        // Prüfen ob bereits zugeordnet
+        const existing = await gql(`query {
+          einsatz_zuordnungen(where: {
+            einsatz_id: {_eq: "${currentEinsatzId}"},
+            dokument_typ: {_eq: "${dokument_typ}"},
+            dokument_id: {_eq: "${dokument_id}"}
+          }) {
+            id
+          }
+        }`);
+        
+        if (existing.einsatz_zuordnungen.length > 0) {
+          showMsg('⚠️ Dokument ist bereits zugeordnet', 'error');
+          return;
+        }
+        
+        // Dokument zuordnen
+        await gql(`mutation($einsatz_id: uuid!, $typ: String!, $dok_id: uuid!) {
+          insert_einsatz_zuordnungen_one(object: {
+            einsatz_id: $einsatz_id,
+            dokument_typ: $typ,
+            dokument_id: $dok_id
+          }) {
+            id
+          }
+        }`, {
+          einsatz_id: currentEinsatzId,
+          typ: dokument_typ,
+          dok_id: dokument_id
+        });
+        
+        showMsg('✅ Dokument hinzugefügt!', 'success');
+        closeDokumentModal();
+        await loadData();
+        await viewEinsatzDetails(currentEinsatzId);
+        
+      } catch(e) {
+        showMsg('Fehler: ' + e.message, 'error');
+      }
+    };
+
+    // Dokument entfernen
+    window.removeDokument = async (zuordnungId) => {
+      if (!confirm('Dokument-Zuordnung wirklich entfernen?')) {
+        return;
+      }
+      
+      try {
+        await gql(`mutation($id: uuid!) {
+          delete_einsatz_zuordnungen_by_pk(id: $id) {
+            id
+          }
+        }`, { id: zuordnungId });
+        
+        showMsg('✅ Dokument entfernt!', 'success');
+        await loadData();
+        await viewEinsatzDetails(currentEinsatzId);
+        
+      } catch(e) {
+        showMsg('Fehler: ' + e.message, 'error');
+      }
+    };
+
+    // ===== PERSON HINZUFÜGEN =====
+    
+    window.openPersonModal = () => {
+      if (!currentEinsatzId) {
+        showMsg('Kein Einsatz ausgewählt', 'error');
+        return;
+      }
+      
+      const form = document.getElementById('personForm');
+      form.reset();
+      
+      // Dropdown mit Team-Members füllen
+      const select = form.member_id;
+      select.innerHTML = '<option value="">-- Bitte wählen --</option>' +
+        allMembers.map(m => {
+          const quali = (m.qualifikationen || []).join(', ');
+          return `<option value="${m.id}">${m.vorname} ${m.name}${quali ? ' (' + quali + ')' : ''}</option>`;
+        }).join('');
+      
+      document.getElementById('personModal').classList.add('show');
+    };
+
+    window.closePersonModal = () => {
+      document.getElementById('personModal').classList.remove('show');
+    };
+
+    document.getElementById('personForm').onsubmit = async (e) => {
+      e.preventDefault();
+      
+      try {
+        const formData = new FormData(e.target);
+        const member_id = formData.get('member_id');
+        const rolle = formData.get('rolle').trim();
+        
+        if (!member_id) {
+          showMsg('Bitte Person auswählen', 'error');
+          return;
+        }
+        
+        // Prüfen ob bereits zugeordnet
+        const existing = await gql(`query {
+          einsatz_personen(where: {
+            einsatz_id: {_eq: "${currentEinsatzId}"},
+            member_id: {_eq: "${member_id}"}
+          }) {
+            id
+          }
+        }`);
+        
+        if (existing.einsatz_personen.length > 0) {
+          showMsg('⚠️ Person ist bereits zugeordnet', 'error');
+          return;
+        }
+        
+        // Person zuordnen
+        await gql(`mutation($einsatz_id: uuid!, $member_id: uuid!, $rolle: String) {
+          insert_einsatz_personen_one(object: {
+            einsatz_id: $einsatz_id,
+            member_id: $member_id,
+            rolle: $rolle
+          }) {
+            id
+          }
+        }`, {
+          einsatz_id: currentEinsatzId,
+          member_id,
+          rolle: rolle || null
+        });
+        
+        showMsg('✅ Person hinzugefügt!', 'success');
+        closePersonModal();
+        await loadData();
+        await viewEinsatzDetails(currentEinsatzId);
+        
+      } catch(e) {
+        showMsg('Fehler: ' + e.message, 'error');
+      }
+    };
+
+    // Person entfernen
+    window.removePerson = async (personId) => {
+      if (!confirm('Person wirklich vom Einsatz entfernen?')) {
+        return;
+      }
+      
+      try {
+        await gql(`mutation($id: uuid!) {
+          delete_einsatz_personen_by_pk(id: $id) {
+            id
+          }
+        }`, { id: personId });
+        
+        showMsg('✅ Person entfernt!', 'success');
+        await loadData();
+        await viewEinsatzDetails(currentEinsatzId);
+        
+      } catch(e) {
+        showMsg('Fehler: ' + e.message, 'error');
+      }
+    };
+    // ===== DOKUMENT ANZEIGEN (VORSCHAU) =====
+    
+    window.viewDokument = async (typ, dokId) => {
+      try {
+        let content = '';
+        let title = '';
+        
+        if (typ === 'patient_doc') {
+          // Patientendokumentation laden
+          const data = await gql(`query {
+            patient_docs_by_pk(id: "${dokId}") {
+              title
+              payload
+              status
+              created_at
+            }
+          }`);
+          
+          const doc = data.patient_docs_by_pk;
+          if (!doc) {
+            showMsg('Dokument nicht gefunden', 'error');
+            return;
+          }
+          
+          const p = doc.payload || {};
+          title = `Patientendokumentation: ${p.vorname || ''} ${p.name || ''}`.trim();
+          
+          content = `
+            <div class="details-section">
+              <h4>Patientendaten</h4>
+              <div class="info-grid">
+                <div class="info-label">Name:</div>
+                <div class="info-value">${p.name || '-'}</div>
+                <div class="info-label">Vorname:</div>
+                <div class="info-value">${p.vorname || '-'}</div>
+                <div class="info-label">Geburtsdatum:</div>
+                <div class="info-value">${p.geburtsdatum || '-'}</div>
+                <div class="info-label">Geschlecht:</div>
+                <div class="info-value">${p.geschlecht || '-'}</div>
+              </div>
+            </div>
+            <div class="details-section">
+              <h4>Anamnese</h4>
+              <div style="background:#fff;padding:12px;border-radius:8px;border:1px solid var(--border)">
+                ${p.anamnese || '-'}
+              </div>
+            </div>
+            <div class="details-section">
+              <h4>Befund</h4>
+              <div style="background:#fff;padding:12px;border-radius:8px;border:1px solid var(--border)">
+                ${p.befund || '-'}
+              </div>
+            </div>
+            <div class="details-section">
+              <h4>Massnahmen</h4>
+              <div style="background:#fff;padding:12px;border-radius:8px;border:1px solid var(--border)">
+                ${p.massnahmen || '-'}
+              </div>
+            </div>
+            <p style="color:#6b7280;font-size:0.85rem;margin-top:16px">
+              Status: ${doc.status} | Erstellt: ${new Date(doc.created_at).toLocaleString('de-DE')}
+            </p>
+          `;
+          
+        } else if (typ === 'nacherfassung') {
+          // Nacherfassung laden
+          const data = await gql(`query {
+            patient_docs_nacherfassung_by_pk(id: "${dokId}") {
+              stichwort
+              einsatznummer
+              einsatzdatum
+              anlass
+              massnahmen
+              besonderheiten
+              status
+              created_at
+            }
+          }`);
+          
+          const doc = data.patient_docs_nacherfassung_by_pk;
+          if (!doc) {
+            showMsg('Dokument nicht gefunden', 'error');
+            return;
+          }
+          
+          title = `Nacherfassung: ${doc.stichwort || 'Ohne Titel'}`;
+          
+          content = `
+            <div class="details-section">
+              <h4>Einsatzdaten</h4>
+              <div class="info-grid">
+                <div class="info-label">Stichwort:</div>
+                <div class="info-value">${doc.stichwort || '-'}</div>
+                <div class="info-label">Einsatznummer:</div>
+                <div class="info-value">${doc.einsatznummer || '-'}</div>
+                <div class="info-label">Einsatzdatum:</div>
+                <div class="info-value">${doc.einsatzdatum || '-'}</div>
+              </div>
+            </div>
+            <div class="details-section">
+              <h4>Anlass</h4>
+              <div style="background:#fff;padding:12px;border-radius:8px;border:1px solid var(--border)">
+                ${doc.anlass || '-'}
+              </div>
+            </div>
+            <div class="details-section">
+              <h4>Maßnahmen</h4>
+              <div style="background:#fff;padding:12px;border-radius:8px;border:1px solid var(--border)">
+                ${doc.massnahmen || '-'}
+              </div>
+            </div>
+            ${doc.besonderheiten ? `
+            <div class="details-section">
+              <h4>Besonderheiten</h4>
+              <div style="background:#fff;padding:12px;border-radius:8px;border:1px solid var(--border)">
+                ${doc.besonderheiten}
+              </div>
+            </div>
+            ` : ''}
+            <p style="color:#6b7280;font-size:0.85rem;margin-top:16px">
+              Status: ${doc.status} | Erstellt: ${new Date(doc.created_at).toLocaleString('de-DE')}
+            </p>
+          `;
+          
+        } else if (typ === 'cirs' || typ === 'produkt') {
+          // CIRS oder Produktausgabe aus documents laden
+          const data = await gql(`query {
+            documents(where: {id: {_eq: "${dokId}"}, type: {_eq: "${typ}"}}) {
+              id
+              title
+              content
+              status
+              created_at
+              updated_at
+            }
+          }`);
+          
+          if (!data.documents || data.documents.length === 0) {
+            showMsg('Dokument nicht gefunden', 'error');
+            return;
+          }
+          
+          const doc = data.documents[0];
+          const typeName = typ === 'cirs' ? 'CIRS-Meldung' : 'Produktausgabe';
+          title = `${typeName}: ${doc.title || 'Ohne Titel'}`;
+          
+          // Content als JSON parsen falls möglich
+          let contentData = {};
+          try {
+            contentData = JSON.parse(doc.content || '{}');
+          } catch(e) {
+            contentData = { text: doc.content };
+          }
+          
+          if (typ === 'cirs') {
+            content = `
+              <div class="details-section">
+                <h4>CIRS-Details</h4>
+                <div class="info-grid">
+                  <div class="info-label">Titel:</div>
+                  <div class="info-value">${doc.title || '-'}</div>
+                  <div class="info-label">Kategorie:</div>
+                  <div class="info-value">${contentData.kategorie || '-'}</div>
+                  <div class="info-label">Schweregrad:</div>
+                  <div class="info-value">${contentData.schweregrad || '-'}</div>
+                </div>
+              </div>
+              <div class="details-section">
+                <h4>Beschreibung</h4>
+                <div style="background:#fff;padding:12px;border-radius:8px;border:1px solid var(--border);white-space:pre-wrap">
+                  ${contentData.beschreibung || contentData.text || doc.content || '-'}
+                </div>
+              </div>
+              ${contentData.massnahmen ? `
+              <div class="details-section">
+                <h4>Maßnahmen</h4>
+                <div style="background:#fff;padding:12px;border-radius:8px;border:1px solid var(--border);white-space:pre-wrap">
+                  ${contentData.massnahmen}
+                </div>
+              </div>
+              ` : ''}
+              <p style="color:#6b7280;font-size:0.85rem;margin-top:16px">
+                Status: ${doc.status} | Erstellt: ${new Date(doc.created_at).toLocaleString('de-DE')}
+              </p>
+            `;
+          } else {
+            content = `
+              <div class="details-section">
+                <h4>Produktausgabe-Details</h4>
+                <div class="info-grid">
+                  <div class="info-label">Titel:</div>
+                  <div class="info-value">${doc.title || '-'}</div>
+                  <div class="info-label">Empfänger:</div>
+                  <div class="info-value">${contentData.empfaenger || '-'}</div>
+                  <div class="info-label">Datum:</div>
+                  <div class="info-value">${contentData.datum || '-'}</div>
+                </div>
+              </div>
+              <div class="details-section">
+                <h4>Produkte</h4>
+                <div style="background:#fff;padding:12px;border-radius:8px;border:1px solid var(--border);white-space:pre-wrap">
+                  ${contentData.produkte || contentData.text || doc.content || '-'}
+                </div>
+              </div>
+              ${contentData.bemerkung ? `
+              <div class="details-section">
+                <h4>Bemerkung</h4>
+                <div style="background:#fff;padding:12px;border-radius:8px;border:1px solid var(--border);white-space:pre-wrap">
+                  ${contentData.bemerkung}
+                </div>
+              </div>
+              ` : ''}
+              <p style="color:#6b7280;font-size:0.85rem;margin-top:16px">
+                Status: ${doc.status} | Erstellt: ${new Date(doc.created_at).toLocaleString('de-DE')}
+              </p>
+            `;
+          }
+        }
+        
+        // Vorschau-Modal erstellen (temporär)
+        const previewModal = document.createElement('div');
+        previewModal.className = 'modal show';
+        previewModal.innerHTML = `
+          <div class="modal-box">
+            <h3>${title}</h3>
+            ${content}
+            <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
+              <button class="btn btn-secondary" onclick="this.closest('.modal').remove()">Schließen</button>
+            </div>
+          </div>
+        `;
+        
+        // Click outside to close
+        previewModal.addEventListener('click', (e) => {
+          if (e.target === previewModal) {
+            previewModal.remove();
+          }
+        });
+        
+        document.body.appendChild(previewModal);
+        
+      } catch(e) {
+        showMsg('Fehler beim Laden: ' + e.message, 'error');
+      }
+    };
+
+    // ===== HELPER FUNCTIONS =====
+    
+    function showMsg(text, type = 'success') {
+      const msgDiv = document.getElementById('msg');
+      msgDiv.textContent = text;
+      msgDiv.className = 'msg ' + type;
+      setTimeout(() => { 
+        msgDiv.textContent = ''; 
+        msgDiv.className = 'msg'; 
+      }, 5000);
+    }
+
+    // ===== KEYBOARD SHORTCUTS =====
+    
+    document.addEventListener('keydown', (e) => {
+      // ESC = Modals schließen
+      if (e.key === 'Escape') {
+        closeEinsatzModal();
+        closeDetailsModal();
+        closeDokumentModal();
+        closePersonModal();
+      }
+      
+      // CTRL/CMD + N = Neuer Einsatz
+      if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
+        e.preventDefault();
+        openEinsatzModal();
+      }
+    });
+
+    // ===== MODAL CLICK OUTSIDE TO CLOSE =====
+    
+    document.querySelectorAll('.modal').forEach(modal => {
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+          modal.classList.remove('show');
+        }
+      });
+    });
+
+    // ===== STATISTIKEN (OPTIONAL) =====
+    
+    window.getEinsatzStats = () => {
+      const currentYear = new Date().getFullYear();
+      const thisYear = allEinsaetze.filter(e => 
+        new Date(e.datum).getFullYear() === currentYear
+      );
+      
+      const totalDocs = allEinsaetze.reduce((sum, e) => sum + e.zuordnungen.length, 0);
+      const totalPersonen = allEinsaetze.reduce((sum, e) => sum + e.personen.length, 0);
+      
+      return {
+        total: allEinsaetze.length,
+        thisYear: thisYear.length,
+        totalDocs,
+        totalPersonen,
+        avgDocsPerEinsatz: allEinsaetze.length > 0 ? (totalDocs / allEinsaetze.length).toFixed(1) : 0,
+        avgPersonenPerEinsatz: allEinsaetze.length > 0 ? (totalPersonen / allEinsaetze.length).toFixed(1) : 0
+      };
+    };
+
+    // ===== SUCHE (OPTIONAL) =====
+    
+    window.searchEinsaetze = (query) => {
+      const searchTerm = query.toLowerCase().trim();
+      
+      if (!searchTerm) {
+        renderEinsaetze();
+        return;
+      }
+      
+      const filtered = allEinsaetze.filter(e => {
+        const nr = e.einsatz_nr.toLowerCase();
+        const stichwort = (e.stichwort || '').toLowerCase();
+        const adresse = (e.adresse || '').toLowerCase();
+        const vermerke = (e.interne_vermerke || '').toLowerCase();
+        
+        return nr.includes(searchTerm) || 
+               stichwort.includes(searchTerm) || 
+               adresse.includes(searchTerm) ||
+               vermerke.includes(searchTerm);
+      });
+      
+      // Render gefilterte Einsätze
+      const grid = document.getElementById('einsaetzeGrid');
+      
+      if (filtered.length === 0) {
+        grid.innerHTML = '<div class="empty-state"><p>Keine Ergebnisse gefunden</p></div>';
+        return;
+      }
+      
+      grid.innerHTML = filtered.map(einsatz => {
+        const datum = new Date(einsatz.datum).toLocaleDateString('de-DE', {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+        
+        const dokumenteCount = einsatz.zuordnungen.length;
+        const personenCount = einsatz.personen.length;
+        
+        return `
+          <div class="einsatz-card" onclick="viewEinsatzDetails('${einsatz.id}')">
+            <div class="badge">${einsatz.einsatz_nr}</div>
+            <h3>${einsatz.stichwort || 'Ohne Stichwort'}</h3>
+            <div class="meta">
+              <span><i class="fa-solid fa-calendar"></i> ${datum}</span>
+              ${einsatz.adresse ? `<span><i class="fa-solid fa-location-dot"></i> ${einsatz.adresse}</span>` : ''}
+            </div>
+            <div class="stats">
+              <div class="stat-item">
+                <i class="fa-solid fa-file"></i>
+                <span>${dokumenteCount} Dokument(e)</span>
+              </div>
+              <div class="stat-item">
+                <i class="fa-solid fa-users"></i>
+                <span>${personenCount} Person(en)</span>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    };
+
+    // ===== INITIAL LOAD =====
+    
+    console.log('🚒 FFW Einsatzverwaltung gestartet');
+    loadData();
+
+  </script>
+</body>
+</html>
