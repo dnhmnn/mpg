@@ -1,16 +1,17 @@
 <!DOCTYPE html>
+
 <html lang="de">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Übersicht</title>
+  <title>Admin-Dashboard</title>
   <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400;700&display=swap" rel="stylesheet">
   <style>
     :root { --rot: #c8102e; }
     * { box-sizing: border-box; }
     body { font-family: 'Atkinson Hyperlegible', Arial, sans-serif; background:#f7f7f7; margin:0 }
     header { background: var(--rot); color:#fff; display:flex; align-items:center; gap:12px; padding:10px 14px; }
+    header img { height:42px; width:auto }
     header h1 { margin:0; font-size:1.15rem; font-weight:700; letter-spacing:.2px }
     .spacer { flex:1 }
     .topbtn { color:#fff; text-decoration:none; background:#00000022; padding:7px 10px; border-radius:8px; font-weight:700 }
@@ -22,7 +23,6 @@
     main { display:flex; flex-direction:column; gap:16px }
     .card { background:#fff; border-radius:12px; box-shadow:0 3px 12px rgba(0,0,0,.06); padding:14px }
     .card h2 { margin:0 0 10px; color:var(--rot) }
-    .greeting { font-family: 'Dancing Script', cursive; font-size: 2rem; font-weight: 700; color: var(--rot); margin-bottom: 16px; text-align: center; font-style: italic }
     .news li { margin:6px 0 }
     .pill { display:inline-block; background:#fff5f5; color:#8b0e22; border:1px solid #f2c9d1; border-radius:999px; padding:2px 8px; font-size:.82rem; margin-left:6px }
     .notes-list { max-height:220px; overflow:auto; border:1px solid #eee; border-radius:10px; padding:8px }
@@ -39,69 +39,69 @@
     .err { color:#c8102e }
     .msg { min-height:1.2em }
 
-    /* Stats Grid */
-    .stats-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:12px; margin-bottom:16px }
-    .stat-box { background:#fff5f5; border:2px solid #f2c9d1; border-radius:10px; padding:14px; text-align:center }
-    .stat-num { font-size:2.5rem; font-weight:700; color:var(--rot) }
-    .stat-label { font-size:.9rem; color:#555; margin-top:4px }
-    .stat-box.warn { background:#fef3c7; border-color:#f59e0b }
-    .stat-box.warn .stat-num { color:#d97706 }
-    .stat-box.ok { background:#dcfce7; border-color:#16a34a }
-    .stat-box.ok .stat-num { color:#16a34a }
+```
+/* Stats Grid */
+.stats-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:12px; margin-bottom:16px }
+.stat-box { background:#fff5f5; border:2px solid #f2c9d1; border-radius:10px; padding:14px; text-align:center }
+.stat-num { font-size:2.5rem; font-weight:700; color:var(--rot) }
+.stat-label { font-size:.9rem; color:#555; margin-top:4px }
+.stat-box.warn { background:#fef3c7; border-color:#f59e0b }
+.stat-box.warn .stat-num { color:#d97706 }
+.stat-box.ok { background:#dcfce7; border-color:#16a34a }
+.stat-box.ok .stat-num { color:#16a34a }
 
-    /* Inventory Warnings */
-    .inventory-list { max-height:300px; overflow-y:auto }
-    .inventory-item { display:flex; align-items:center; gap:10px; padding:10px; background:#fff; border:1px solid #eee; border-radius:8px; margin-bottom:8px; transition: all 0.2s }
-    .inventory-item:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.1); transform: translateY(-2px) }
-    .inventory-item.expired { border-left:4px solid var(--rot); background:#fff5f5 }
-    .inventory-item.warning { border-left:4px solid #f59e0b; background:#fefce8 }
-    .inventory-item.ok { border-left:4px solid #16a34a; background:#f0fdf4 }
-    .inv-icon { font-size:1.5rem; width:40px; text-align:center }
-    .inv-info { flex:1 }
-    .inv-name { font-weight:700; color:#222 }
-    .inv-meta { font-size:.85rem; color:#666; margin-top:2px }
-    .inv-badge { padding:3px 8px; border-radius:999px; font-size:.75rem; font-weight:700; text-transform:uppercase }
-    .badge-expired { background:#fee2e2; color:var(--rot) }
-    .badge-warning { background:#fef3c7; color:#d97706 }
-    .badge-ok { background:#dcfce7; color:#16a34a }
+/* Inventory Warnings */
+.inventory-list { max-height:300px; overflow-y:auto }
+.inventory-item { display:flex; align-items:center; gap:10px; padding:10px; border:1px solid #eee; border-radius:8px; margin-bottom:8px; border-left:4px solid #f59e0b }
+.inventory-item.expired { border-left-color:var(--rot); background:#fff5f5 }
+.inventory-item.ok { border-left-color:#16a34a; background:#f0fdf4 }
+.inv-icon { font-size:1.5rem; width:40px; text-align:center }
+.inv-info { flex:1 }
+.inv-name { font-weight:700; color:#222 }
+.inv-meta { font-size:.85rem; color:#666; margin-top:2px }
+.inv-badge { padding:3px 8px; border-radius:999px; font-size:.75rem; font-weight:700; text-transform:uppercase }
+.badge-expired { background:#fee2e2; color:var(--rot) }
+.badge-warning { background:#fef3c7; color:#d97706 }
+.badge-ok { background:#dcfce7; color:#16a34a }
 
-    /* Passwort-Modal */
-    .modal{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center;z-index:9999;padding:16px}
-    .modal.show{display:flex}
-    .modal-box{background:#fff;border-radius:12px;box-shadow:0 6px 24px rgba(0,0,0,.2);padding:16px;max-width:420px;width:92%}
-    .modal-h{display:flex;gap:10px;align-items:center;margin-bottom:10px}
-    .x{margin-left:auto;border:0;background:#f1f1f1;border-radius:8px;padding:6px 10px;cursor:pointer}
-    .field{display:flex;flex-direction:column;gap:6px;margin:8px 0}
-    .field label{font-weight:700;color:var(--rot)}
-    .field input{padding:10px;border:1px solid #ccc;border-radius:8px;background:#fafafa}
-    .actions{display:flex;gap:8px;justify-content:flex-end;margin-top:8px}
-    @media (max-width: 800px){ .wrap{ grid-template-columns:1fr } .stats-grid { grid-template-columns:1fr 1fr } }
+/* Document Badges */
+.doc-badge { display:inline-flex; align-items:center; gap:6px; background:#dbeafe; color:#1e40af; padding:4px 10px; border-radius:999px; font-size:.8rem; font-weight:700 }
+
+/* Passwort-Modal */
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center;z-index:9999;padding:16px}
+.modal.show{display:flex}
+.modal-box{background:#fff;border-radius:12px;box-shadow:0 6px 24px rgba(0,0,0,.2);padding:16px;max-width:420px;width:92%}
+.modal-h{display:flex;gap:10px;align-items:center;margin-bottom:10px}
+.x{margin-left:auto;border:0;background:#f1f1f1;border-radius:8px;padding:6px 10px;cursor:pointer}
+.field{display:flex;flex-direction:column;gap:6px;margin:8px 0}
+.field label{font-weight:700;color:var(--rot)}
+.field input{padding:10px;border:1px solid #ccc;border-radius:8px;background:#fafafa}
+.actions{display:flex;gap:8px;justify-content:flex-end;margin-top:8px}
+@media (max-width: 800px){ .wrap{ grid-template-columns:1fr } .stats-grid { grid-template-columns:1fr 1fr } }
+```
+
   </style>
 </head>
 <body>
 <header>
-  <h1>Übersicht</h1>
+  <img src="logo.png" alt="Logo">
+  <h1>FFW – Admin-Dashboard</h1>
   <div class="spacer"></div>
   <a class="topbtn" href="#" id="changePwBtn">Passwort ändern</a>
   <a class="topbtn" href="#" id="logoutBtn">Logout</a>
 </header>
 
-	
-  <main>
-    <!-- Tagesabhängige Begrüßung -->
-    <div class="greeting" id="greeting">Servus!</div>
-
 <div class="wrap">
   <aside>
     <h3>Bereiche</h3>
     <nav class="nav">
-      <a href="einsaetze.html">🚨 Einsätze</a>
-      <a href="patientendokumentation-dateien.html">🧾Patientendokumentation</a>
-      <a href="dokumente-bearbeiten.html">📋 Vorgänge</a>
-      <a href="ausbildungen.html">🎓 Ausbildungen</a>
+      <a href="dokumente-bearbeiten.html">📋 Dokumente bearbeiten</a>
       <a href="lagerverwaltung.html">📦 Lagerverwaltung</a>
+      <a href="wartung.html">🛠️ Wartung &amp; Kontrolle</a>
       <a href="dateien.html">📄 Dateien</a>
-	  <a href="qr-code-generator.html">📟qr-code Generator</a>
+      <a href="ausbildungen.html">🎓 Ausbildungen</a>
+      <a href="patientendokumentation-dateien.html">🧾 Patientendokumentation</a>
+      <a href="qr-code-generator.html">🔑 QR-Code Generator</a>
     </nav>
     <div style="margin-top:14px; font-size:.95rem">
       Eingeloggt als:<br>
@@ -110,22 +110,14 @@
     <div id="guardMsg" class="err" style="margin-top:8px"></div>
   </aside>
 
-    <!-- Neuigkeiten -->
-    <section class="card">
-      <h2>🔔 Neuigkeiten</h2>
-      <ul class="news" id="newsList">
-        <li id="news-loading">Lade aktuelle Meldungen...</li>
-      </ul>
-      <div class="msg" id="newsMsg"></div>
-    </section>
-
+  <main>
     <!-- Live Statistiken -->
     <section class="card">
       <h2>📊 Live-Übersicht</h2>
       <div class="stats-grid">
         <div class="stat-box warn">
           <div class="stat-num" id="stat-pending-docs">0</div>
-          <div class="stat-label">Offene Vorgänge</div>
+          <div class="stat-label">Dokumente zur Gegenzeichnung</div>
         </div>
         <div class="stat-box warn">
           <div class="stat-num" id="stat-expiring">0</div>
@@ -142,33 +134,70 @@
       </div>
     </section>
 
-    <!-- Kritische Lager-Warnungen -->
-    <section class="card">
-      <h2>⚠️ Lager-Warnungen</h2>
-      <div class="inventory-list" id="inventoryWarnings">
-        <div style="text-align:center; padding:20px; color:#999">
-          Lade Lagerdaten...
-        </div>
-      </div>
-    </section>
+```
+<!-- Kritische Lager-Warnungen -->
+<section class="card">
+  <h2>⚠️ Lager-Warnungen</h2>
+  <div class="inventory-list" id="inventoryWarnings">
+    <div style="text-align:center; padding:20px; color:#999">
+      Lade Lagerdaten...
+    </div>
+  </div>
+</section>
 
-    <!-- Notizen / Admin-Chat -->
-    <section class="card">
-      <h2>💬 Notizen / Admin-Chat</h2>
-      <div class="notes-list" id="notes"></div>
-      <div class="row" style="margin-top:10px">
-        <input id="noteName" placeholder="Dein Name" style="max-width:220px">
-        <textarea id="noteText" placeholder="Bemerkung …"></textarea>
-        <button class="btn" id="addNoteBtn" style="min-width:160px">Hinzufügen</button>
-      </div>
-      <div class="row" style="margin-top:6px; justify-content:flex-end">
-        <button class="btn sec" id="clearNotesBtn">Chat löschen (lokal)</button>
-      </div>
-    </section>
+<!-- Neuigkeiten -->
+<section class="card">
+  <h2>🔔 Neuigkeiten</h2>
+  <ul class="news" id="newsList">
+    <li id="news-loading">Lade aktuelle Meldungen...</li>
+  </ul>
+  <div class="msg" id="newsMsg"></div>
+</section>
+
+<!-- QR-Code Übersicht -->
+<section class="card">
+  <h2>🔑 QR-Codes</h2>
+  <div class="stats-grid" style="grid-template-columns:1fr 1fr 1fr">
+    <div class="stat-box ok">
+      <div class="stat-num" id="qr-available">0</div>
+      <div class="stat-label">Verfügbar</div>
+    </div>
+    <div class="stat-box warn">
+      <div class="stat-num" id="qr-assigned">0</div>
+      <div class="stat-label">Zugeordnet</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-num" id="qr-total">0</div>
+      <div class="stat-label">Gesamt</div>
+    </div>
+  </div>
+  <div style="margin-top:12px">
+    <a href="qr-code-generator.html" class="btn">
+      🔑 QR-Code Generator öffnen
+    </a>
+  </div>
+</section>
+
+<!-- Notizen / Admin-Chat -->
+<section class="card">
+  <h2>💬 Notizen / Admin-Chat</h2>
+  <div class="notes-list" id="notes"></div>
+  <div class="row" style="margin-top:10px">
+    <input id="noteName" placeholder="Dein Name" style="max-width:220px">
+    <textarea id="noteText" placeholder="Bemerkung …"></textarea>
+    <button class="btn" id="addNoteBtn" style="min-width:160px">Hinzufügen</button>
+  </div>
+  <div class="row" style="margin-top:6px; justify-content:flex-end">
+    <button class="btn sec" id="clearNotesBtn">Chat löschen (lokal)</button>
+  </div>
+</section>
+```
+
   </main>
 </div>
 
 <!-- Passwort-Modal -->
+
 <div class="modal" id="pwModal">
   <div class="modal-box">
     <div class="modal-h">
@@ -206,23 +235,6 @@
   const guardMsg = document.getElementById('guardMsg');
   const whoEl = document.getElementById('who');
 
-  // Tagesabhängige Begrüßung
-  function setGreeting() {
-    const hour = new Date().getHours();
-    const greetingEl = document.getElementById('greeting');
-    
-    if (hour >= 5 && hour < 10) {
-      greetingEl.textContent = 'Servus!';
-    } else if (hour >= 10 && hour < 12) {
-      greetingEl.textContent = 'Grüß Gott!';
-    } else if (hour >= 12 && hour < 18) {
-      greetingEl.textContent = 'Mahlzeit!';
-    } else {
-      greetingEl.textContent = 'ab ins Bett!';
-    }
-  }
-  setGreeting();
-
   async function guard() {
     try {
       const isAuth = await nhost.auth.isAuthenticatedAsync();
@@ -235,6 +247,7 @@
       whoEl.textContent = user?.email || "—";
       guardMsg.textContent = "";
       
+      // Load Dashboard Data
       loadDashboardData();
     } catch (e) {
       guardMsg.textContent = "Fehler beim Auth-Check: " + e.message;
@@ -243,6 +256,7 @@
   }
   await guard();
 
+  // Logout
   document.getElementById('logoutBtn')?.addEventListener('click', async (e)=>{
     e.preventDefault();
     await nhost.auth.signOut();
@@ -251,29 +265,11 @@
   });
 
   // ===== DASHBOARD DATA =====
-  const token = await nhost.auth.getAccessToken();
-  const headers = { 
-    "Content-Type": "application/json", 
-    "Authorization": "Bearer " + token 
-  };
-  const endpoint = "https://hpjfrhktprpuuxvvlpsb.graphql.eu-central-1.nhost.run/v1";
-
-  async function gql(query, variables = {}) {
-    const res = await fetch(endpoint, {
-      method: "POST",
-      headers,
-      body: JSON.stringify({ query, variables })
-    });
-    const json = await res.json();
-    if (json.errors) throw new Error(json.errors[0].message);
-    return json.data;
-  }
-
   async function loadDashboardData() {
     console.log('Loading dashboard data...');
     await loadInventoryWarnings();
     await loadPendingDocuments();
-    await loadPatientDocs();
+    await loadQRStats();
     await updateNews();
     
     console.log('Dashboard data loaded successfully');
@@ -282,166 +278,128 @@
     setInterval(() => {
       loadInventoryWarnings();
       loadPendingDocuments();
-      loadPatientDocs();
+      loadQRStats();
       updateNews();
     }, 30000);
   }
 
-  // Load Inventory from Nhost
-  async function loadInventoryWarnings() {
-    try {
-      const data = await gql(`query {
-        inventory_items(order_by: {expiry_date: asc}) {
-          id
-          name
-          location
-          quantity
-          expiry_date
-        }
-      }`);
+  // Sample Inventory Data (In production: Load from Nhost/Supabase)
+  function getSampleInventory() {
+    return [
+      { id: 1, name: "Adrenalin 1:1000", location: "Rucksack 46/1", quantity: 3, expiry: "2025-01-15", status: "expired" },
+      { id: 2, name: "Morphin 10mg", location: "Rucksack 46/1", quantity: 2, expiry: "2025-02-28", status: "warning" },
+      { id: 3, name: "Glucose 40%", location: "Rucksack 12/1", quantity: 1, expiry: "2025-02-15", status: "warning" },
+      { id: 4, name: "Naloxon", location: "Rucksack 46/1", quantity: 2, expiry: "2025-03-10", status: "warning" },
+      { id: 5, name: "Verbandsmaterial", location: "Lager", quantity: 50, expiry: "2026-05-20", status: "ok" },
+      { id: 6, name: "EKG-Elektroden", location: "Lager", quantity: 40, expiry: "2026-08-15", status: "ok" },
+      { id: 7, name: "Spritzen 10ml", location: "Lager", quantity: 100, expiry: "2026-12-31", status: "ok" },
+    ];
+  }
+
+  function loadInventoryWarnings() {
+    const inventory = getSampleInventory();
+    const container = document.getElementById('inventoryWarnings');
+    
+    // Filter nur Warnungen und abgelaufene
+    const warnings = inventory.filter(item => item.status !== 'ok');
+    
+    // Update Stats
+    const expired = inventory.filter(i => i.status === 'expired').length;
+    const expiring = inventory.filter(i => i.status === 'warning').length;
+    const ok = inventory.filter(i => i.status === 'ok').length;
+    
+    document.getElementById('stat-expired').textContent = expired;
+    document.getElementById('stat-expiring').textContent = expiring;
+    document.getElementById('stat-inventory-ok').textContent = ok;
+    
+    if (warnings.length === 0) {
+      container.innerHTML = '<div style="text-align:center; padding:20px; color:#16a34a; font-weight:700">✅ Alle Produkte in Ordnung!</div>';
+      return;
+    }
+    
+    container.innerHTML = warnings.map(item => {
+      const icon = item.status === 'expired' ? '🔴' : '⚠️';
+      const badgeClass = item.status === 'expired' ? 'badge-expired' : 'badge-warning';
+      const badgeText = item.status === 'expired' ? 'Abgelaufen' : 'Bald fällig';
+      const daysLeft = item.status === 'warning' ? Math.ceil((new Date(item.expiry) - new Date()) / (1000*60*60*24)) : 0;
       
-      const inventory = data.inventory_items.map(item => {
-        const expiry = new Date(item.expiry_date);
-        const now = new Date();
-        const daysLeft = Math.ceil((expiry - now) / (1000*60*60*24));
-        
-        let status = 'ok';
-        if (daysLeft < 0) status = 'expired';
-        else if (daysLeft <= 30) status = 'warning';
-        
-        return {
-          ...item,
-          expiry: item.expiry_date,
-          status,
-          daysLeft
-        };
-      });
-      
-      const container = document.getElementById('inventoryWarnings');
-      const warnings = inventory.filter(item => item.status !== 'ok');
-      
-      // Update Stats
-      const expired = inventory.filter(i => i.status === 'expired').length;
-      const expiring = inventory.filter(i => i.status === 'warning').length;
-      const ok = inventory.filter(i => i.status === 'ok').length;
-      
-      document.getElementById('stat-expired').textContent = expired;
-      document.getElementById('stat-expiring').textContent = expiring;
-      document.getElementById('stat-inventory-ok').textContent = ok;
-      
-      if (warnings.length === 0) {
-        container.innerHTML = '<div style="text-align:center; padding:20px; color:#16a34a; font-weight:700">✅ Alle Produkte in Ordnung!</div>';
-        return;
-      }
-      
-      container.innerHTML = warnings.map(item => {
-        const icon = item.status === 'expired' ? '🔴' : '⚠️';
-        const badgeClass = item.status === 'expired' ? 'badge-expired' : 'badge-warning';
-        const badgeText = item.status === 'expired' ? 'Abgelaufen' : 'Bald fällig';
-        
-        return `
-          <div class="inventory-item ${item.status}">
-            <div class="inv-icon">${icon}</div>
-            <div class="inv-info">
-              <div class="inv-name">${item.name}</div>
-              <div class="inv-meta">
-                📍 ${item.location} • ${item.quantity} Stk. • 
-                ${item.status === 'warning' ? `⏱ ${item.daysLeft} Tage` : `❌ ${new Date(item.expiry).toLocaleDateString('de-DE')}`}
-              </div>
+      return `
+        <div class="inventory-item ${item.status}">
+          <div class="inv-icon">${icon}</div>
+          <div class="inv-info">
+            <div class="inv-name">${item.name}</div>
+            <div class="inv-meta">
+              📍 ${item.location} • ${item.quantity} Stk. • 
+              ${item.status === 'warning' ? `⏱ ${daysLeft} Tage` : `❌ ${new Date(item.expiry).toLocaleDateString('de-DE')}`}
             </div>
-            <span class="inv-badge ${badgeClass}">${badgeText}</span>
           </div>
-        `;
-      }).join('');
-    } catch(e) {
-      console.error('Fehler beim Laden der Lagerdaten:', e);
-      document.getElementById('inventoryWarnings').innerHTML = '<div style="padding:20px;color:#999">Keine Lagerdaten verfügbar</div>';
-    }
+          <span class="inv-badge ${badgeClass}">${badgeText}</span>
+        </div>
+      `;
+    }).join('');
   }
 
-  // Load Pending Documents (Vorgänge)
-  async function loadPendingDocuments() {
-    try {
-      const data = await gql(`query {
-        documents(where: {status: {_eq: "offen"}}) {
-          id
-          title
-          type
-        }
-      }`);
-      
-      document.getElementById('stat-pending-docs').textContent = data.documents.length;
-    } catch(e) {
-      console.error('Fehler beim Laden der Vorgänge:', e);
-      document.getElementById('stat-pending-docs').textContent = '0';
-    }
+  // Sample Pending Documents
+  function getSamplePendingDocs() {
+    return [
+      { id: "MAT-2025-001", type: "material", created: "2025-01-15T10:30:00", officer: "Anna Schmidt" },
+      { id: "PAT-2025-001", type: "patient", created: "2025-01-15T14:20:00", medic: "Max Mustermann" },
+      { id: "MAT-2025-002", type: "material", created: "2025-01-15T16:45:00", officer: "Thomas Weber" }
+    ];
   }
 
-  // Load Patient Docs
-  let patientDocsCount = 0;
-  async function loadPatientDocs() {
-    try {
-      const data = await gql(`query {
-        patient_docs(where: {status: {_eq: "offen"}}) {
-          id
-        }
-      }`);
-      patientDocsCount = data.patient_docs.length;
-    } catch(e) {
-      console.error('Fehler beim Laden der Patientendokumentationen:', e);
-    }
+  function loadPendingDocuments() {
+    const pending = getSamplePendingDocs();
+    document.getElementById('stat-pending-docs').textContent = pending.length;
+  }
+
+  // QR Code Stats
+  function loadQRStats() {
+    const qrCodes = JSON.parse(localStorage.getItem('ffw_qr_codes') || '[]');
+    const available = qrCodes.filter(q => q.status === 'available').length;
+    const assigned = qrCodes.filter(q => q.status === 'assigned').length;
+    
+    document.getElementById('qr-available').textContent = available;
+    document.getElementById('qr-assigned').textContent = assigned;
+    document.getElementById('qr-total').textContent = qrCodes.length;
   }
 
   // Update News dynamically
-  async function updateNews() {
-    try {
-      const newsItems = [];
-      
-      // Offene Vorgänge
-      const vorgaengeData = await gql(`query {
-        documents(where: {status: {_eq: "offen"}}, limit: 3, order_by: {created_at: desc}) {
-          title
-          type
-          created_at
-        }
-      }`);
-      
-      vorgaengeData.documents.forEach(doc => {
-        const typeName = doc.type === 'cirs' ? 'CIRS' : doc.type === 'produkt' ? 'Produktausgabe' : 'Dokument';
-        newsItems.push(`📄 Neuer ${typeName}: "${doc.title}" <span class="pill">Vorgänge</span>`);
-      });
-      
-      // Offene Patientendokumentationen
-      if (patientDocsCount > 0) {
-        newsItems.push(`🧾 ${patientDocsCount} offene Patientendokumentation(en) <span class="pill">Patientendoku</span>`);
-      }
-      
-      // Lagerwarnungen
-      const inventoryData = await gql(`query {
-        inventory_items(where: {expiry_date: {_lt: "now()"}}, limit: 2) {
-          name
-          location
-        }
-      }`);
-      
-      inventoryData.inventory_items.forEach(item => {
+  function updateNews() {
+    const inventory = getSampleInventory();
+    const pending = getSamplePendingDocs();
+    const expired = inventory.filter(i => i.status === 'expired');
+    const expiring = inventory.filter(i => i.status === 'warning');
+    
+    const newsItems = [];
+    
+    // Pending Documents
+    if (pending.length > 0) {
+      newsItems.push(`🆕 ${pending.length} Dokumente zur Gegenzeichnung <span class="pill">Dokumente</span>`);
+    }
+    
+    // Expired Items
+    if (expired.length > 0) {
+      expired.forEach(item => {
         newsItems.push(`❌ "${item.name}" in ${item.location} abgelaufen! <span class="pill">Lager</span>`);
       });
-      
-      // Falls keine News
-      if (newsItems.length === 0) {
-        newsItems.push('✅ Alles ruhig – keine neuen Meldungen');
-      }
-      
-      const newsList = document.getElementById('newsList');
-      newsList.innerHTML = newsItems.map(item => `<li>${item}</li>`).join('');
-    } catch(e) {
-      console.error('Fehler beim Laden der Neuigkeiten:', e);
-      document.getElementById('newsList').innerHTML = '<li>Fehler beim Laden der Neuigkeiten</li>';
     }
+    
+    // Expiring Soon
+    if (expiring.length > 0) {
+      const next = expiring[0];
+      const daysLeft = Math.ceil((new Date(next.expiry) - new Date()) / (1000*60*60*24));
+      newsItems.push(`⚠️ "${next.name}" läuft in ${daysLeft} Tagen ab <span class="pill">Lager</span>`);
+    }
+    
+    // General Info
+    newsItems.push(`⏳ Nächste Wartung am 05.09. <span class="pill">Info</span>`);
+    
+    const newsList = document.getElementById('newsList');
+    newsList.innerHTML = newsItems.map(item => `<li>${item}</li>`).join('');
   }
 
-  // ===== Passwort ändern =====
+  // ===== Passwort ändern (mit Re-Auth) =====
   const pwModal = document.getElementById('pwModal');
   const pwMsg   = document.getElementById('pwMsg');
   const pwCurrent = document.getElementById('pwCurrent');
@@ -488,9 +446,11 @@
       const email = nhost.auth.getUser()?.email;
       if (!email){ showPwMsg('Nicht eingeloggt.'); return; }
 
+      // Re-Auth mit aktuellem Passwort
       const { error: signErr } = await nhost.auth.signIn({ email, password: current });
       if (signErr){ showPwMsg('Aktuelles Passwort ist falsch.'); return; }
 
+      // Passwort ändern
       let changeError = null;
       try {
         const res1 = await nhost.auth.changePassword(n1);
