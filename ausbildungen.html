@@ -202,22 +202,9 @@
       region: "eu-central-1" 
     });
 
-        // ===== AUTH CHECK (wie bei dokumente-bearbeiten.html) =====
-    const authChecked = sessionStorage.getItem('ausbildungen_auth_checked');
-    
-    if (!authChecked) {
-      sessionStorage.setItem('ausbildungen_auth_checked', 'true');
-      const isAuth = await nhost.auth.isAuthenticatedAsync();
-      
-      if (!isAuth) {
-        location.href = "/admin-login.html";
-      }
-    } else {
-      const token = await nhost.auth.getAccessToken();
-      if (!token) {
-        sessionStorage.removeItem('ausbildungen_auth_checked');
-        location.href = "/admin-login.html";
-      }
+    // ===== AUTH CHECK (EXAKT wie dokumente-bearbeiten.html) =====
+    if (!(await nhost.auth.isAuthenticatedAsync())) {
+      location.href = "/admin-login.html";
     }
     // ===== AUTH CHECK ENDE =====
 
@@ -228,10 +215,9 @@
     };
     const endpoint = "https://hpjfrhktprpuuxvvlpsb.graphql.eu-central-1.nhost.run/v1";
 
-        document.getElementById("logout").onclick = async (e) => {
+    document.getElementById("logout").onclick = async (e) => {
       e.preventDefault();
       await nhost.auth.signOut();
-      sessionStorage.clear();
       localStorage.clear();
       location.href = "/admin-login.html";
     };
@@ -296,12 +282,10 @@
       const wrapper = document.getElementById('tagInputWrapper');
       const input = document.getElementById('tagInput');
       
-      // Alle Tags außer Input entfernen
       Array.from(wrapper.children).forEach(child => {
         if (child !== input) child.remove();
       });
       
-      // Tags vor dem Input einfügen
       currentTags.forEach(tag => {
         const tagEl = document.createElement('span');
         tagEl.className = 'tag';
@@ -623,7 +607,7 @@
           return;
         }
         
-        // KORRIGIERT: Ohne order_by
+        // Teilnahmen laden (ohne order_by - manuell sortieren)
         const teilnahmenData = await gql(`query($member_id: uuid!) {
           schulung_teilnahme(
             where: {member_id: {_eq: $member_id}}
@@ -812,7 +796,7 @@
           return;
         }
         
-        // KORRIGIERT: Ohne order_by
+        // Teilnahmen laden (ohne order_by - manuell sortieren)
         const teilnahmenData = await gql(`query($schulung_id: uuid!) {
           schulung_teilnahme(
             where: {schulung_id: {_eq: $schulung_id}}
@@ -1275,21 +1259,6 @@
       loadData();
       console.log('🔄 Daten automatisch aktualisiert');
     }, 5 * 60 * 1000);
-
-    // ===== SESSION MONITORING =====
-    
-    // Prüfe alle 30 Sekunden ob Session noch gültig
-    setInterval(async () => {
-      try {
-        const session = nhost.auth.getSession();
-        if (!session) {
-          console.warn('⚠️ Session abgelaufen - Redirect zu Login');
-          window.location.replace("/admin-login.html");
-        }
-      } catch (e) {
-        console.error('Session check error:', e);
-      }
-    }, 30 * 1000);
 
     // ===== INITIAL LOAD =====
     
