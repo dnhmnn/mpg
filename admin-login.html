@@ -20,18 +20,14 @@
       margin: 0;
     }
     
-    /* DUMMY HEADER für Theme Color (unsichtbar, aber Safari sieht ihn) */
-    .theme-bar {
+    /* HEADER GANZ OBEN für Theme Color */
+    .top-spacer {
       background: var(--gradient-start);
-      height: 1px;
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
+      height: 20px;
     }
     
     .wrapper {
-      min-height: 100vh;
+      min-height: calc(100vh - 20px);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -295,8 +291,8 @@
 </head>
 <body>
 
-<!-- Unsichtbarer Theme-Bar für Safari -->
-<div class="theme-bar"></div>
+<!-- Spacer ganz oben für Theme Color -->
+<div class="top-spacer"></div>
 
 <div class="wrapper">
   <div class="login-container">
@@ -383,7 +379,6 @@
 <script type="module">
   import { NhostClient } from "https://esm.sh/@nhost/nhost-js@2.2.9";
 
-  // ===== ORGANISATIONS-MAPPING =====
   const ORG_MAPPING = {
     'ffwrothenburg': {
       name: 'FFW Rothenburg',
