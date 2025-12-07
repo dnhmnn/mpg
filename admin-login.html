@@ -4,13 +4,33 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Login – Responda</title>
+  
+  <!-- Theme Color -->
+  <meta name="theme-color" content="#667eea">
+  
   <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
   <style>
-    :root { --rot: #c8102e; --grau: #64748b; }
+    :root { --rot: #c8102e; --grau: #64748b; --gradient-start: #667eea; --gradient-end: #764ba2; }
     * { box-sizing: border-box; margin: 0; padding: 0; }
+    
     body { 
       font-family: 'Atkinson Hyperlegible', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; 
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: linear-gradient(135deg, var(--gradient-start) 0%, var(--gradient-end) 100%);
+      min-height: 100vh;
+      margin: 0;
+    }
+    
+    /* DUMMY HEADER für Theme Color (unsichtbar, aber Safari sieht ihn) */
+    .theme-bar {
+      background: var(--gradient-start);
+      height: 1px;
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+    }
+    
+    .wrapper {
       min-height: 100vh;
       display: flex;
       align-items: center;
@@ -275,82 +295,87 @@
 </head>
 <body>
 
-<div class="login-container">
-  <div class="login-header">
-    <div class="logo-container">
-      <div class="logo-icon">
-        <div class="logo-plus"></div>
+<!-- Unsichtbarer Theme-Bar für Safari -->
+<div class="theme-bar"></div>
+
+<div class="wrapper">
+  <div class="login-container">
+    <div class="login-header">
+      <div class="logo-container">
+        <div class="logo-icon">
+          <div class="logo-plus"></div>
+        </div>
+        <div class="logo-text">Responda</div>
       </div>
-      <div class="logo-text">Responda</div>
-    </div>
-    <h1>Willkommen</h1>
-    <p>Melde dich an, um fortzufahren</p>
-  </div>
-  
-  <div class="login-body">
-    <div id="msg" class="msg"></div>
-    
-    <!-- Bereits angemeldet -->
-    <div id="alreadyLoggedIn" class="already-logged-in">
-      <h2>✅ Bereits angemeldet</h2>
-      <p style="color:#64748b;margin-bottom:20px">Du bist bereits eingeloggt.</p>
-      <button type="button" class="btn" onclick="goToDashboard()">
-        Zur Übersicht
-      </button>
-      <button type="button" class="btn secondary" onclick="logoutAndContinue()">
-        Abmelden & neu anmelden
-      </button>
+      <h1>Willkommen</h1>
+      <p>Melde dich an, um fortzufahren</p>
     </div>
     
-    <!-- Login Form -->
-    <div id="loginFormContainer">
-      <!-- Organisation Info (wenn gespeichert) -->
-      <div id="orgInfo" class="org-info">
-        <strong>🏢 Organisation</strong>
-        <div class="org-detail" id="orgName">—</div>
-        <button type="button" class="org-change-btn" onclick="changeOrg()">Organisation ändern</button>
+    <div class="login-body">
+      <div id="msg" class="msg"></div>
+      
+      <!-- Bereits angemeldet -->
+      <div id="alreadyLoggedIn" class="already-logged-in">
+        <h2>✅ Bereits angemeldet</h2>
+        <p style="color:#64748b;margin-bottom:20px">Du bist bereits eingeloggt.</p>
+        <button type="button" class="btn" onclick="goToDashboard()">
+          Zur Übersicht
+        </button>
+        <button type="button" class="btn secondary" onclick="logoutAndContinue()">
+          Abmelden & neu anmelden
+        </button>
       </div>
       
-      <form id="loginForm">
-        <!-- Organisation Eingabe (nur wenn nicht gespeichert) -->
-        <div id="orgInputGroup" class="form-group">
-          <label for="orgCode">🏢 Organisation</label>
-          <input 
-            type="text" 
-            id="orgCode" 
-            placeholder="z.B. ffwrothenburg" 
-            autocomplete="off"
-            required 
-          />
-          <small>Gib dein Organisations-Kürzel ein</small>
+      <!-- Login Form -->
+      <div id="loginFormContainer">
+        <!-- Organisation Info (wenn gespeichert) -->
+        <div id="orgInfo" class="org-info">
+          <strong>🏢 Organisation</strong>
+          <div class="org-detail" id="orgName">—</div>
+          <button type="button" class="org-change-btn" onclick="changeOrg()">Organisation ändern</button>
         </div>
         
-        <div class="form-group">
-          <label for="email">📧 E-Mail</label>
-          <input 
-            type="email" 
-            id="email" 
-            placeholder="deine@email.de" 
-            autocomplete="email"
-            required 
-          />
-        </div>
-        
-        <div class="form-group">
-          <label for="password">🔒 Passwort</label>
-          <input 
-            type="password" 
-            id="password" 
-            placeholder="••••••••" 
-            autocomplete="current-password"
-            required 
-          />
-        </div>
-        
-        <button type="submit" class="btn" id="submitBtn">
-          Anmelden
-        </button>
-      </form>
+        <form id="loginForm">
+          <!-- Organisation Eingabe (nur wenn nicht gespeichert) -->
+          <div id="orgInputGroup" class="form-group">
+            <label for="orgCode">🏢 Organisation</label>
+            <input 
+              type="text" 
+              id="orgCode" 
+              placeholder="z.B. ffwrothenburg" 
+              autocomplete="off"
+              required 
+            />
+            <small>Gib dein Organisations-Kürzel ein</small>
+          </div>
+          
+          <div class="form-group">
+            <label for="email">📧 E-Mail</label>
+            <input 
+              type="email" 
+              id="email" 
+              placeholder="deine@email.de" 
+              autocomplete="email"
+              required 
+            />
+          </div>
+          
+          <div class="form-group">
+            <label for="password">🔒 Passwort</label>
+            <input 
+              type="password" 
+              id="password" 
+              placeholder="••••••••" 
+              autocomplete="current-password"
+              required 
+            />
+          </div>
+          
+          <button type="submit" class="btn" id="submitBtn">
+            Anmelden
+          </button>
+        </form>
+      </div>
     </div>
   </div>
 </div>
@@ -359,7 +384,6 @@
   import { NhostClient } from "https://esm.sh/@nhost/nhost-js@2.2.9";
 
   // ===== ORGANISATIONS-MAPPING =====
-  // Hier neue Organisationen hinzufügen
   const ORG_MAPPING = {
     'ffwrothenburg': {
       name: 'FFW Rothenburg',
@@ -376,7 +400,6 @@
       subdomain: 'example-org3',
       region: 'eu-central-1'
     }
-    // Weitere Organisationen hier hinzufügen...
   };
 
   const msgEl = document.getElementById('msg');
@@ -388,7 +411,6 @@
   const alreadyLoggedInEl = document.getElementById('alreadyLoggedIn');
   const loginFormContainerEl = document.getElementById('loginFormContainer');
 
-  // Organisation aus localStorage laden
   const savedOrg = localStorage.getItem('org_config');
   let currentOrg = null;
   let nhost = null;
@@ -398,13 +420,11 @@
       currentOrg = JSON.parse(savedOrg);
       showSavedOrg();
       
-      // Nhost initialisieren mit gespeicherter Organisation
       nhost = new NhostClient({
         subdomain: currentOrg.subdomain,
         region: currentOrg.region
       });
       
-      // Prüfen ob bereits angemeldet
       checkIfAlreadyLoggedIn();
     } catch(e) {
       console.error('Fehler beim Laden der Organisation:', e);
@@ -487,14 +507,11 @@
       const email = document.getElementById('email').value.trim();
       const password = document.getElementById('password').value;
       
-      // Organisation ermitteln
       let orgConfig;
       
       if (currentOrg) {
-        // Gespeicherte Organisation verwenden
         orgConfig = currentOrg;
       } else {
-        // Neue Organisation aus Kürzel
         const orgCode = orgCodeInputEl.value.trim().toLowerCase();
         
         if (!orgCode) {
@@ -504,7 +521,6 @@
           return;
         }
         
-        // Organisation im Mapping suchen
         const mappedOrg = ORG_MAPPING[orgCode];
         
         if (!mappedOrg) {
@@ -521,14 +537,12 @@
           region: mappedOrg.region
         };
         
-        // Nhost neu initialisieren mit gemappter Organisation
         nhost = new NhostClient({
           subdomain: orgConfig.subdomain,
           region: orgConfig.region
         });
       }
       
-      // Prüfen ob bereits angemeldet
       const isAlreadyAuth = await nhost.auth.isAuthenticatedAsync();
       if (isAlreadyAuth) {
         loginFormContainerEl.style.display = 'none';
@@ -538,7 +552,6 @@
         return;
       }
       
-      // Login
       const { session, error } = await nhost.auth.signIn({
         email,
         password
@@ -558,7 +571,6 @@
         return;
       }
       
-      // Organisation speichern (nur beim ersten Mal)
       if (!currentOrg) {
         localStorage.setItem('org_config', JSON.stringify(orgConfig));
       }
@@ -577,7 +589,6 @@
     }
   });
 
-  // Auto-focus
   if (loginFormContainerEl.style.display !== 'none') {
     if (currentOrg) {
       document.getElementById('email').focus();
