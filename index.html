@@ -3,70 +3,266 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>FFW – Übersicht</title>
+  <title>Formulare – Responda</title>
   <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
   <style>
-    :root{ --rot:#c8102e; --bg:#f7f7f7; --card:#fff; --text:#1f2937; --border:#e5e7eb; }
-    *{box-sizing:border-box}
-    body{margin:0;background:var(--bg);color:var(--text);font-family:'Atkinson Hyperlegible',system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif}
-    header{position:sticky;top:0;z-index:5;background:var(--rot);color:#fff;padding:10px 14px;display:flex;justify-content:flex-end}
-    .login-btn{background:#0002;color:#fff;border:0;border-radius:999px;padding:8px 14px;font-weight:700;text-decoration:none}
-    .wrap{max-width:900px;margin:0 auto;padding:18px 14px 28px}
-    .logo-wrap{display:flex;justify-content:center;margin:14px 0 8px}
-    .logo{height:80px;width:auto;object-fit:contain}
-    .title{text-align:center;font-size:1.35rem;font-weight:800;color:var(--rot);margin:6px 0 16px}
-    .grid{display:grid;gap:16px;grid-template-columns:1fr}
-    .card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:18px;box-shadow:0 3px 12px rgba(0,0,0,.06)}
-    .card h3{margin:0 0 12px;font-size:1.3rem;color:var(--rot);text-align:center}
-    .open-btn{display:block;width:100%;text-align:center;font-weight:800;font-size:1.05rem;background:var(--rot);color:#fff;border:0;border-radius:12px;padding:12px 14px;text-decoration:none}
-    .open-btn:active{transform:translateY(1px)}
-    @media (min-width:640px){ .grid{grid-template-columns:1fr 1fr} }
+    :root { --rot: #c8102e; --grau: #64748b; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { 
+      font-family: 'Atkinson Hyperlegible', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; 
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    
+    .container {
+      background: #fff;
+      border-radius: 20px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      max-width: 500px;
+      width: 100%;
+      overflow: hidden;
+      animation: slideIn 0.4s ease-out;
+    }
+    
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(-30px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .header {
+      background: var(--rot);
+      padding: 40px 30px;
+      text-align: center;
+      color: #fff;
+    }
+    
+    .logo-container {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 20px;
+    }
+    
+    .logo-icon {
+      width: 50px;
+      height: 50px;
+      background: #fff;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-right: 12px;
+    }
+    
+    .logo-plus {
+      width: 25px;
+      height: 25px;
+      position: relative;
+    }
+    
+    .logo-plus::before,
+    .logo-plus::after {
+      content: '';
+      position: absolute;
+      background: var(--rot);
+      border-radius: 3px;
+    }
+    
+    .logo-plus::before {
+      width: 25px;
+      height: 8px;
+      top: 8px;
+      left: 0;
+    }
+    
+    .logo-plus::after {
+      width: 8px;
+      height: 25px;
+      top: 0;
+      left: 8px;
+    }
+    
+    .logo-text {
+      font-size: 2rem;
+      font-weight: 900;
+      color: #fff;
+      letter-spacing: -1px;
+    }
+    
+    .header h1 {
+      font-size: 1.6rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    
+    .header p {
+      font-size: 0.95rem;
+      opacity: 0.9;
+    }
+    
+    .body {
+      padding: 40px 30px;
+    }
+    
+    .error-box {
+      background: #fee2e2;
+      color: #991b1b;
+      padding: 20px;
+      border-radius: 12px;
+      text-align: center;
+      font-weight: 600;
+      border: 2px solid #fca5a5;
+    }
+    
+    .grid {
+      display: grid;
+      gap: 16px;
+    }
+    
+    .form-card {
+      background: #f8fafc;
+      border: 2px solid #e2e8f0;
+      border-radius: 16px;
+      padding: 24px;
+      text-decoration: none;
+      color: inherit;
+      transition: all 0.3s;
+      cursor: pointer;
+    }
+    
+    .form-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+      border-color: var(--rot);
+    }
+    
+    .form-icon {
+      width: 60px;
+      height: 60px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.8rem;
+      margin-bottom: 16px;
+    }
+    
+    .form-card h2 {
+      font-size: 1.2rem;
+      color: var(--rot);
+      margin-bottom: 8px;
+    }
+    
+    .form-card p {
+      color: #64748b;
+      font-size: 0.9rem;
+      line-height: 1.5;
+    }
+    
+    footer {
+      text-align: center;
+      color: #fff;
+      font-size: 0.9rem;
+      margin-top: 20px;
+      opacity: 0.8;
+    }
+    
+    @media (max-width: 600px) {
+      .logo-text { font-size: 1.5rem; }
+      .header h1 { font-size: 1.3rem; }
+      .body { padding: 30px 20px; }
+    }
   </style>
 </head>
 <body>
 
-<header>
-  <a class="login-btn" href="admin-login.html">Login</a>
-</header>
-
-<div class="wrap">
-  <!-- Logo mittig – inline eingebettet (JPEG, mobiloptimiert) -->
-  <div class="logo-wrap">
-    <img class="logo" alt="FFW Logo" loading="lazy"
-         src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAoHBwgHBgoICAgLCgoLDhgQDg0NDh0VFhEYIx8lJCIfIiEm
-        LzYwKjUwMEBIQERHR0hOQktVVl5eYGFmZ2hpb3+AgICAgICAgP/wAALCAA8ADwBAREA/8QAHAAAAgMBAQ
-        EAAAAAAAAAAAAABgcEBQMCAQEI/8QAPxAAAQMDAgMGAwYEBwAAAAAAAQIDBAAFEQYSITFBURMiYXGBBxQy
-        QqGx0UJScpLRM1OCktIkU3OD8PEkY3P/xAAaAQEBAQEBAQEAAAAAAAAAAAAAAQIDBAUG/8QAKREAAgICAQ
-        MEAgMAAAAAAAAAAAECEQMhEjEEQVEiMmFxBFGhIjPB/9oADAMBAAIRAxEAPwB8a6Lq1lJtqzQkq1l6m7yH
-        8H5QpGQq2yq2bGvXy3Y3f2e9w0b3j1r3m8mJX9s9eN6pwrQm0CkqgqgKp0Kp0b0B1uM1f3mM8T6bR5eKk5b
-        y0V6q8b8cJ9h7k4i3rC6s5R+M3g0j9nqQkBSpWwFQABWAFQABWAFQABWAFQABWAFQACcS2uZcQ7z3m3v8A
-        jUQ4Hc1b3z3k+7kQf7+q2x7b4qT9xq2l9Jx2R3Otqv8AZ9m0nN1W8SPrtqzq1tYV7mJb8G4xvE+N7b8c6vS
-        Wq1H7lX4N1b6m8v6Vn4t9jNVVx9e1y3X0l0n6m8mE7p6m0mS9vYb1fJ8i6c5Zb9jW1ZfV9XbOKl8zW+8m3
-        B4m7XxD4f5CVY4l7o8e2m1b0nq9quq6e1z2e8d8fG9c4rS0uZQz5mQn0Hqv8AqAFYAVAAFYAVAAFYAVAAF
-        YAWf3n6mY2fT9b5n0aY0f3r6r6m+u1o0b5e3K9uX6d7v/AKr7fE2F7XbO2n2t3e0kqgqgKp0Kp0Kp0Kp0K
-        p0Kp0Kp0Kp//Z" />
+<div class="container">
+  <div class="header">
+    <div class="logo-container">
+      <div class="logo-icon">
+        <div class="logo-plus"></div>
+      </div>
+      <div class="logo-text">Responda</div>
+    </div>
+    <h1 id="orgName">Lade Organisation...</h1>
+    <p>Formulare</p>
   </div>
-
-  <div class="title">Übersicht</div>
-
-  <!-- Drei Kacheln -->
-  <section class="grid">
-    <div class="card">
-      <h3>Patientendokumentation</h3>
-      <a class="open-btn" href="patientendoku.html">Öffnen</a>
+  
+  <div class="body">
+    <div id="errorBox" class="error-box" style="display:none">
+      ❌ Ungültige Organisation
     </div>
-
-    <div class="card">
-      <h3>Produktausgabe</h3>
-      <a class="open-btn" href="produktausgabe.html">Öffnen</a>
+    
+    <div id="formGrid" class="grid" style="display:none">
+      <a href="#" class="form-card" id="patientLink">
+        <div class="form-icon">🧾</div>
+        <h2>Patientendokumentation</h2>
+        <p>Dokumentiere Einsätze und Patienteninformationen</p>
+      </a>
+      
+      <a href="#" class="form-card" id="produktLink">
+        <div class="form-icon">📦</div>
+        <h2>Produktausgabe</h2>
+        <p>Dokumentiere ausgegebene Materialien und Produkte</p>
+      </a>
+      
+      <a href="#" class="form-card" id="cirsLink">
+        <div class="form-icon">⚠️</div>
+        <h2>CIRS-Meldung</h2>
+        <p>Melde kritische Ereignisse und Beinahe-Unfälle</p>
+      </a>
     </div>
-
-    <div class="card">
-      <h3>CIRS-Meldung</h3>
-      <a class="open-btn" href="cirs.html">Öffnen</a>
-    </div>
-  </section>
+  </div>
 </div>
+
+<footer>
+  <p>Powered by Responda</p>
+</footer>
+
+<script>
+  // ===== ORGANISATIONS-MAPPING =====
+  const ORG_MAPPING = {
+    'ffwrothenburg': {
+      name: 'FFW Rothenburg',
+      subdomain: 'hpjfrhktprpuuxvvlpsb',
+      region: 'eu-central-1'
+    },
+    'beispielorg': {
+      name: 'Beispiel Organisation',
+      subdomain: 'example-subdomain',
+      region: 'eu-central-1'
+    }
+    // Weitere Organisationen hier hinzufügen...
+  };
+
+  // Organisation aus URL lesen
+  const urlParams = new URLSearchParams(window.location.search);
+  const orgCode = urlParams.get('org');
+  
+  const orgNameEl = document.getElementById('orgName');
+  const errorBoxEl = document.getElementById('errorBox');
+  const formGridEl = document.getElementById('formGrid');
+  
+  // Organisation validieren
+  if (!orgCode || !ORG_MAPPING[orgCode]) {
+    orgNameEl.textContent = 'Keine Organisation';
+    errorBoxEl.style.display = 'block';
+  } else {
+    const org = ORG_MAPPING[orgCode];
+    orgNameEl.textContent = org.name;
+    formGridEl.style.display = 'grid';
+    
+    // Links setzen (mit ?org= Parameter)
+    document.getElementById('patientLink').href = `patientendoku-public.html?org=${orgCode}`;
+    document.getElementById('produktLink').href = `produktausgabe-public.html?org=${orgCode}`;
+    document.getElementById('cirsLink').href = `cirs-public.html?org=${orgCode}`;
+  }
+</script>
 
 </body>
 </html>
