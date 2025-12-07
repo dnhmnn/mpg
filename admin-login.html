@@ -40,11 +40,57 @@
       color: #fff;
     }
     
-    .logo {
-      width: 200px;
-      height: auto;
+    .logo-container {
+      display: flex;
+      align-items: center;
+      justify-content: center;
       margin-bottom: 20px;
-      filter: brightness(0) invert(1);
+    }
+    
+    .logo-icon {
+      width: 60px;
+      height: 60px;
+      background: #fff;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-right: 15px;
+    }
+    
+    .logo-plus {
+      width: 30px;
+      height: 30px;
+      position: relative;
+    }
+    
+    .logo-plus::before,
+    .logo-plus::after {
+      content: '';
+      position: absolute;
+      background: var(--rot);
+      border-radius: 4px;
+    }
+    
+    .logo-plus::before {
+      width: 30px;
+      height: 10px;
+      top: 10px;
+      left: 0;
+    }
+    
+    .logo-plus::after {
+      width: 10px;
+      height: 30px;
+      top: 0;
+      left: 10px;
+    }
+    
+    .logo-text {
+      font-size: 2.5rem;
+      font-weight: 900;
+      color: #fff;
+      letter-spacing: -1px;
     }
     
     .login-header h1 {
@@ -74,8 +120,7 @@
       font-size: 0.9rem;
     }
     
-    .form-group input,
-    .form-group select {
+    .form-group input {
       width: 100%;
       padding: 14px 16px;
       border: 2px solid #e2e8f0;
@@ -86,12 +131,18 @@
       background: #f8fafc;
     }
     
-    .form-group input:focus,
-    .form-group select:focus {
+    .form-group input:focus {
       outline: none;
       border-color: var(--rot);
       background: #fff;
       box-shadow: 0 0 0 4px rgba(200,16,46,0.1);
+    }
+    
+    .form-group small {
+      display: block;
+      color: #64748b;
+      font-size: 0.85rem;
+      margin-top: 6px;
     }
     
     .org-info {
@@ -110,12 +161,13 @@
     .org-info strong {
       color: #0369a1;
       display: block;
-      margin-bottom: 4px;
+      margin-bottom: 8px;
+      font-size: 1rem;
     }
     
-    .org-info small {
+    .org-detail {
       color: #0369a1;
-      font-size: 0.85rem;
+      font-size: 0.9rem;
     }
     
     .org-change-btn {
@@ -125,7 +177,7 @@
       text-decoration: underline;
       cursor: pointer;
       font-size: 0.85rem;
-      margin-top: 8px;
+      margin-top: 12px;
     }
     
     .btn {
@@ -217,7 +269,7 @@
     @media (max-width: 480px) {
       .login-header { padding: 30px 20px; }
       .login-body { padding: 30px 20px; }
-      .logo { width: 160px; }
+      .logo-text { font-size: 2rem; }
     }
   </style>
 </head>
@@ -225,7 +277,12 @@
 
 <div class="login-container">
   <div class="login-header">
-    <img src="data:image/png;base64,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/xJPof8ST6H/Dk+h/w5Pof8OT6H/Ck+h/wpPof8KT6H/Bk+h/wZPof8GT6H/Ak+h/wJPof8CT6H/Ak+h/z5Pof8+T6H/Ok+h/zpPof86T6H/Nk+h/zZPof82T6H/Mk+h/zJPof8uT6H/Lk+h/ypPof8qT6H/Jk+h/yZPof8iT6H/Ik+h/yJPof8eT6H/Hk+h/x5Pof8aT6H/Gk+h/xpPof8WT6H/Fk+h/xJPof8ST6H/Dk+h/w5Pof8OT6H/Ck+h/wpPof8KT6H/Bk+h/wZPof8GT6H/Ak+h/wJPof8CT6H/Ak+h/z5Pof8+T6H/Ok+h/zpPof86T6H/Nk+h/zZPof82T6H/Mk+h/zJPof8uT6H/Lk+h/ypPof8qT6H/Jk+h/yZPof8iT6H/Ik+h/yJPof8eT6H/Hk+h/x5Pof8aT6H/Gk+h/xpPof8WT6H/Fk+h/xJPof8ST6H/Dk+h/w5Pof8OT6H/Ck+h/wpPof8KT6H/Bk+h/wZPof8GT6H/Ak+h/wJPof8CT6H/Ak+h/z5Pof8+T6H/Ok+h/zpPof86T6H/Nk+h/zZPof82T6H/Mk+h/zJPof8uT6H/Lk+h/ypPof8qT6H/Jk+h/yZPof8iT6H/Ik+h/yJPof8eT6H/Hk+h/x5Pof8aT6H/Gk+h/xpPof8WT6H/Fk+h/xJPof8ST6H/Dk+h/w5Pof8OT6H/Ck+h/wpPof8KT6H/Bk+h/wZPof8GT6H/Ak+h/wJPof8CT6H/Ak+h/z5Pof8+T6H/Ok+h/zpPof86T6H/Nk+h/zZPof82T6H/Mk+h/zJPof8uT6H/Lk+h/ypPof8qT6H/Jk+h/yZPof8iT6H/Ik+h/yJPof8eT6H/Hk+h/x5Pof8aT6H/Gk+h/xpPof8WT6H/Fk+h/xJPof8ST6H/Dk+h/w5Pof8OT6H/Ck+h/wpPof8KT6H/Bk+h/wZPof8GT6H/Ak+h/wJPof8CT6H/Ak+h/z5Pof8+T6H/Ok+h/zpPof86T6H/Nk+h/zZPof82T6H/Mk+h/zJPof8uT6H/Lk+h/ypPof8qT6H/Jk+h/yZPof8iT6H/Ik+h/yJPof8eT6H/Hk+h/x5Pof8aT6H/Gk+h/xpPof8WT6H/Fk+h/xJPof8ST6H/Dk+h/w5Pof8OT6H/Ck+h/wpPof8KT6H/Bk+h/wZPof8GT6H/Ak+h/wJPof8CT6H/Ak+h/z5Pof8+T6H/Ok+h/zpPof86T6H/Nk+h/zZPof82T6H/Mk+h/zJPof8uT6H/Lk+h/ypPof8qT6H/Jk+h/yZPof8iT6H/Ik+h/yJPof8eT6H/Hk+h/x5Pof8aT6H/Gk+h/xpPof8WT6H/Fk+h/xJPof8ST6H/Dk+h/w5Pof8OT6H/Ck+h/wpPof8KT6H/Bk+h/wZPof8GT6H/Ak+h/wJPof8CT6H/Ak+h/z5Pof8+T6H/Ok+h/zpPof86T6H/Nk+h/zZPof82T6H/Mk+h/zJPof8uT6H/Lk+h/ypPof8qT6H/Jk+h/yZPof8iT6H/Ik+h/yJPof8eT6H/Hk+h/x5Pof8aT6H/Gk+h/xpPof8WT6H/Fk+h/xJPof8ST6H/Dk+h/w5Pof8OT6H/Ck+h/wpPof8KT6H/Bk+h/wZPof8GT6H/Ak+h/wJPof8CT6H/Ak+h/z5Pof8+T6H/Ok+h/zpPof86T6H/Nk+h/zZPof82T6H/Mk+h/zJPof8uT6H/Lk+h/ypPof8qT6H/Jk+h/yZPof8iT6H/Ik+h/yJPof8eT6H/Hk+h/x5Pof8aT6H/Gk+h/xpPof8WT6H/Fk+h/xJPof8ST6H/Dk+h/w5Pof8OAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA4P/jfwDbejnj/SJuDgAAAABJRU5ErkJggg==" alt="Responda Logo" class="logo">
+    <div class="logo-container">
+      <div class="logo-icon">
+        <div class="logo-plus"></div>
+      </div>
+      <div class="logo-text">Responda</div>
+    </div>
     <h1>Willkommen</h1>
     <p>Melde dich an, um fortzufahren</p>
   </div>
@@ -250,23 +307,22 @@
       <!-- Organisation Info (wenn gespeichert) -->
       <div id="orgInfo" class="org-info">
         <strong>🏢 Organisation</strong>
-        <div id="orgName">—</div>
+        <div class="org-detail" id="orgName">—</div>
         <button type="button" class="org-change-btn" onclick="changeOrg()">Organisation ändern</button>
       </div>
       
       <form id="loginForm">
-        <!-- Organisation Auswahl (nur wenn nicht gespeichert) -->
-        <div id="orgSelectGroup" class="form-group">
-          <label for="orgSelect">🏢 Organisation</label>
-          <select id="orgSelect" required>
-            <option value="">-- Organisation wählen --</option>
-            <option value="org1" data-subdomain="hpjfrhktprpuuxvvlpsb" data-region="eu-central-1">FFW Rothenburg</option>
-            <option value="org2" data-subdomain="example-org2" data-region="eu-central-1">Beispiel Organisation 2</option>
-            <option value="org3" data-subdomain="example-org3" data-region="eu-central-1">Beispiel Organisation 3</option>
-          </select>
-          <small style="color:#64748b;font-size:0.85rem;display:block;margin-top:6px">
-            Wähle deine Organisation aus. Diese wird nach dem ersten Login gespeichert.
-          </small>
+        <!-- Organisation Eingabe (nur wenn nicht gespeichert) -->
+        <div id="orgInputGroup" class="form-group">
+          <label for="orgCode">🏢 Organisation</label>
+          <input 
+            type="text" 
+            id="orgCode" 
+            placeholder="z.B. ffwrothenburg" 
+            autocomplete="off"
+            required 
+          />
+          <small>Gib dein Organisations-Kürzel ein</small>
         </div>
         
         <div class="form-group">
@@ -302,11 +358,32 @@
 <script type="module">
   import { NhostClient } from "https://esm.sh/@nhost/nhost-js@2.2.9";
 
+  // ===== ORGANISATIONS-MAPPING =====
+  // Hier neue Organisationen hinzufügen
+  const ORG_MAPPING = {
+    'ffwrothenburg': {
+      name: 'FFW Rothenburg',
+      subdomain: 'hpjfrhktprpuuxvvlpsb',
+      region: 'eu-central-1'
+    },
+    'beispiel2': {
+      name: 'Beispiel Organisation 2',
+      subdomain: 'example-org2',
+      region: 'eu-central-1'
+    },
+    'beispiel3': {
+      name: 'Beispiel Organisation 3',
+      subdomain: 'example-org3',
+      region: 'eu-central-1'
+    }
+    // Weitere Organisationen hier hinzufügen...
+  };
+
   const msgEl = document.getElementById('msg');
   const orgInfoEl = document.getElementById('orgInfo');
   const orgNameEl = document.getElementById('orgName');
-  const orgSelectGroupEl = document.getElementById('orgSelectGroup');
-  const orgSelectEl = document.getElementById('orgSelect');
+  const orgInputGroupEl = document.getElementById('orgInputGroup');
+  const orgCodeInputEl = document.getElementById('orgCode');
   const submitBtn = document.getElementById('submitBtn');
   const alreadyLoggedInEl = document.getElementById('alreadyLoggedIn');
   const loginFormContainerEl = document.getElementById('loginFormContainer');
@@ -321,7 +398,7 @@
       currentOrg = JSON.parse(savedOrg);
       showSavedOrg();
       
-      // Nhost initialisieren
+      // Nhost initialisieren mit gespeicherter Organisation
       nhost = new NhostClient({
         subdomain: currentOrg.subdomain,
         region: currentOrg.region
@@ -331,6 +408,8 @@
       checkIfAlreadyLoggedIn();
     } catch(e) {
       console.error('Fehler beim Laden der Organisation:', e);
+      localStorage.removeItem('org_config');
+      showOrgInput();
     }
   }
 
@@ -360,6 +439,7 @@
       alreadyLoggedInEl.classList.remove('show');
       loginFormContainerEl.style.display = 'block';
       showMsg('Abgemeldet. Bitte melde dich neu an.', 'info');
+      document.getElementById('email').focus();
     } catch(e) {
       showMsg('Fehler beim Abmelden: ' + e.message, 'error');
     }
@@ -367,21 +447,26 @@
 
   function showSavedOrg() {
     orgInfoEl.classList.add('show');
-    orgSelectGroupEl.style.display = 'none';
+    orgInputGroupEl.style.display = 'none';
     orgNameEl.textContent = currentOrg.name;
   }
 
-  function showOrgSelect() {
+  function showOrgInput() {
     orgInfoEl.classList.remove('show');
-    orgSelectGroupEl.style.display = 'block';
+    orgInputGroupEl.style.display = 'block';
   }
 
   window.changeOrg = () => {
     if (confirm('Organisation wirklich ändern? Du wirst abgemeldet.')) {
+      if (nhost) {
+        nhost.auth.signOut().catch(e => console.error('Logout-Fehler:', e));
+      }
       localStorage.removeItem('org_config');
       currentOrg = null;
-      showOrgSelect();
-      showMsg('Bitte wähle deine Organisation neu aus.', 'info');
+      nhost = null;
+      showOrgInput();
+      showMsg('Bitte gib dein Organisations-Kürzel neu ein.', 'info');
+      orgCodeInputEl.focus();
     }
   };
 
@@ -409,25 +494,34 @@
         // Gespeicherte Organisation verwenden
         orgConfig = currentOrg;
       } else {
-        // Neue Organisation aus Dropdown
-        const selectedOption = orgSelectEl.selectedOptions[0];
-        if (!selectedOption || !selectedOption.value) {
-          showMsg('Bitte wähle eine Organisation aus.', 'error');
+        // Neue Organisation aus Kürzel
+        const orgCode = orgCodeInputEl.value.trim().toLowerCase();
+        
+        if (!orgCode) {
+          showMsg('Bitte gib dein Organisations-Kürzel ein.', 'error');
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Anmelden';
+          return;
+        }
+        
+        // Organisation im Mapping suchen
+        const mappedOrg = ORG_MAPPING[orgCode];
+        
+        if (!mappedOrg) {
+          showMsg('Unbekannte Organisation. Bitte überprüfe dein Kürzel.', 'error');
           submitBtn.disabled = false;
           submitBtn.textContent = 'Anmelden';
           return;
         }
         
         orgConfig = {
-          id: selectedOption.value,
-          name: selectedOption.text,
-          subdomain: selectedOption.dataset.subdomain,
-          region: selectedOption.dataset.region
+          code: orgCode,
+          name: mappedOrg.name,
+          subdomain: mappedOrg.subdomain,
+          region: mappedOrg.region
         };
-      }
-      
-      // Nhost Client mit Organisation initialisieren (falls noch nicht geschehen)
-      if (!nhost) {
+        
+        // Nhost neu initialisieren mit gemappter Organisation
         nhost = new NhostClient({
           subdomain: orgConfig.subdomain,
           region: orgConfig.region
@@ -483,9 +577,13 @@
     }
   });
 
-  // Auto-focus auf Email (nur wenn Form sichtbar)
+  // Auto-focus
   if (loginFormContainerEl.style.display !== 'none') {
-    document.getElementById('email').focus();
+    if (currentOrg) {
+      document.getElementById('email').focus();
+    } else {
+      orgCodeInputEl.focus();
+    }
   }
 </script>
 
