@@ -9,33 +9,18 @@
     :root { --rot: #c8102e; --grau: #64748b; }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     
-    html, body { 
-      height: 100%;
-      margin: 0;
-      padding: 0;
-    }
-    
     body { 
       font-family: 'Atkinson Hyperlegible', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; 
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      background-attachment: fixed;
       min-height: 100vh;
-    }
-    
-    .wrapper {
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
       padding: 20px;
-      max-width: 500px;
-      margin: 0 auto;
-      width: 100%;
     }
     
     .top-bar {
+      max-width: 500px;
+      margin: 0 auto 20px;
       display: flex;
       justify-content: flex-end;
-      margin-bottom: 20px;
     }
     
     .login-btn {
@@ -48,6 +33,7 @@
       text-decoration: none;
       cursor: pointer;
       transition: all 0.2s;
+      display: inline-block;
     }
     
     .login-btn:hover {
@@ -58,7 +44,8 @@
       background: #fff;
       border-radius: 20px;
       box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-      width: 100%;
+      max-width: 500px;
+      margin: 0 auto;
       overflow: hidden;
       animation: slideIn 0.4s ease-out;
     }
@@ -200,16 +187,20 @@
       line-height: 1.5;
     }
     
-    footer {
+    .footer {
       text-align: center;
       color: #fff;
       font-size: 0.9rem;
-      margin-top: 20px;
+      margin-top: 30px;
       opacity: 0.8;
+      max-width: 500px;
+      margin-left: auto;
+      margin-right: auto;
       padding-bottom: 20px;
     }
     
     @media (max-width: 600px) {
+      body { padding: 15px; }
       .logo-text { font-size: 1.5rem; }
       .header h1 { font-size: 1.3rem; }
       .body { padding: 30px 20px; }
@@ -218,53 +209,51 @@
 </head>
 <body>
 
-<div class="wrapper">
-  <div class="top-bar">
-    <a href="admin-login.html" class="login-btn">Login</a>
+<div class="top-bar">
+  <a href="admin-login.html" class="login-btn">Login</a>
+</div>
+
+<div class="container">
+  <div class="header">
+    <div class="logo-container">
+      <div class="logo-icon">
+        <div class="logo-plus"></div>
+      </div>
+      <div class="logo-text">Responda</div>
+    </div>
+    <h1 id="orgName">Lade Organisation...</h1>
+    <p>Formulare</p>
   </div>
   
-  <div class="container">
-    <div class="header">
-      <div class="logo-container">
-        <div class="logo-icon">
-          <div class="logo-plus"></div>
-        </div>
-        <div class="logo-text">Responda</div>
-      </div>
-      <h1 id="orgName">Lade Organisation...</h1>
-      <p>Formulare</p>
+  <div class="body">
+    <div id="errorBox" class="error-box" style="display:none">
+      ❌ Ungültige Organisation
     </div>
     
-    <div class="body">
-      <div id="errorBox" class="error-box" style="display:none">
-        ❌ Ungültige Organisation
-      </div>
+    <div id="formGrid" class="grid">
+      <a href="#" class="form-card" id="patientLink">
+        <div class="form-icon">🧾</div>
+        <h2>Patientendokumentation</h2>
+        <p>Dokumentiere Einsätze und Patienteninformationen</p>
+      </a>
       
-      <div id="formGrid" class="grid">
-        <a href="#" class="form-card" id="patientLink">
-          <div class="form-icon">🧾</div>
-          <h2>Patientendokumentation</h2>
-          <p>Dokumentiere Einsätze und Patienteninformationen</p>
-        </a>
-        
-        <a href="#" class="form-card" id="produktLink">
-          <div class="form-icon">📦</div>
-          <h2>Produktausgabe</h2>
-          <p>Dokumentiere ausgegebene Materialien und Produkte</p>
-        </a>
-        
-        <a href="#" class="form-card" id="cirsLink">
-          <div class="form-icon">⚠️</div>
-          <h2>CIRS-Meldung</h2>
-          <p>Melde kritische Ereignisse und Beinahe-Unfälle</p>
-        </a>
-      </div>
+      <a href="#" class="form-card" id="produktLink">
+        <div class="form-icon">📦</div>
+        <h2>Produktausgabe</h2>
+        <p>Dokumentiere ausgegebene Materialien und Produkte</p>
+      </a>
+      
+      <a href="#" class="form-card" id="cirsLink">
+        <div class="form-icon">⚠️</div>
+        <h2>CIRS-Meldung</h2>
+        <p>Melde kritische Ereignisse und Beinahe-Unfälle</p>
+      </a>
     </div>
   </div>
-  
-  <footer>
-    <p>Powered by Responda</p>
-  </footer>
+</div>
+
+<div class="footer">
+  <p>Powered by Responda</p>
 </div>
 
 <script>
