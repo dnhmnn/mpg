@@ -745,24 +745,48 @@
   </div>
 </div>
 
-<!-- Success Modal -->
-<div class="modal" id="successModal">
+<!-- QR-Code Zuordnungs-Modal -->
+<div class="modal" id="qrModal">
   <div class="modal-box">
     <div class="modal-h">
-      <h3>✅ Erfolgreich gespeichert!</h3>
+      <h3>🔑 QR-Code zuordnen</h3>
     </div>
     
     <div class="success-box">
-      <strong>Patientendokumentation wurde erfolgreich übermittelt.</strong>
+      <strong>✅ Dokument erfolgreich gespeichert!</strong>
       <span id="docIdDisplay"></span>
     </div>
     
+    <div style="background:#fff5f5;border:2px solid #f2c9d1;border-radius:8px;padding:12px;margin:12px 0">
+      <strong style="display:block;margin-bottom:6px;color:var(--primary)">💡 So geht's weiter:</strong>
+      <ol style="margin:8px 0 0 20px;line-height:1.7;padding-left:0;font-size:.95rem">
+        <li>Nimm einen QR-Code-Aufkleber aus dem Rucksack</li>
+        <li>Gib den Schlüssel ein (z.B. KEY-2025-0042)</li>
+        <li>Klicke auf "Zuordnen"</li>
+        <li>Übergib den Aufkleber physisch an den Rettungsdienst</li>
+      </ol>
+    </div>
+    
+    <div class="form-group">
+      <label class="form-label" for="qrKeyInput">QR-Code Schlüssel:</label>
+      <input 
+        type="text" 
+        id="qrKeyInput" 
+        style="width:100%;padding:14px 12px;border:2px solid var(--border);border-radius:8px;font-family:monospace;font-size:1.1rem;background:#fff" 
+        placeholder="KEY-2025-0042" 
+        autocomplete="off"
+        autocorrect="off"
+        autocapitalize="characters"
+      >
+      <small style="color:var(--muted);display:block;margin-top:6px;font-size:.85rem">Format: KEY-2025-XXXX</small>
+    </div>
+    
     <div class="modal-actions">
-      <button class="modal-btn primary" onclick="location.reload()">
-        <i class="fa-solid fa-plus"></i> Neues Formular
+      <button class="modal-btn secondary" onclick="skipQRAssignment()">
+        <i class="fa-solid fa-forward"></i> Später
       </button>
-      <button class="modal-btn secondary" onclick="closeSuccessModal()">
-        <i class="fa-solid fa-check"></i> Schließen
+      <button class="modal-btn primary" onclick="assignQRCode()">
+        <i class="fa-solid fa-link"></i> Zuordnen
       </button>
     </div>
   </div>
@@ -1032,12 +1056,12 @@ function collectFormData() {
 // ===== SPEICHERN/LADEN =====
 window.saveForm = function() {
   const data = collectFormData();
-  localStorage.setItem('patientendoku_draft', JSON.stringify(data));
+  localStorage.setItem('patientendoku_draft_' + orgCode, JSON.stringify(data));
   alert('✅ Formular im Browser gespeichert!');
 };
 
 window.loadForm = function() {
-  const saved = localStorage.getItem('patientendoku_draft');
+  const saved = localStorage.getItem('patientendoku_draft_' + orgCode);
   if (!saved) {
     alert('Kein gespeicherter Entwurf gefunden.');
     return;
@@ -1101,8 +1125,8 @@ window.submitToBackend = async function() {
     
     currentDocumentId = result.insert_patient_docs_one.id;
     
-    document.getElementById('docIdDisplay').textContent = `Dokument-ID: ${currentDocumentId.slice(0,8)}`;
-    document.getElementById('successModal').classList.add('show');
+    document.getElementById('docIdDisplay').textContent = `Dokument-ID: PAT-${new Date().getFullYear()}-${currentDocumentId.slice(0,8)}`;
+    document.getElementById('qrModal').classList.add('show');
     
     btn.innerHTML = '<i class="fa-solid fa-check"></i> Gesendet!';
     
@@ -1113,8 +1137,64 @@ window.submitToBackend = async function() {
   }
 };
 
-window.closeSuccessModal = function() {
-  document.getElementById('successModal').classList.remove('show');
+// ===== QR-CODE ZUORDNUNG =====
+window.assignQRCode = function() {
+  const key = document.getElementById('qrKeyInput').value.trim().toUpperCase();
+  
+  if (!key) {
+    alert('Bitte QR-Code Schlüssel eingeben!');
+    return;
+  }
+  
+  if (!key.match(/KEY-\d{4}-\d{4}/)) {
+    alert('Ungültiges Format! Erwartet: KEY-2025-0042');
+    return;
+  }
+  
+  // QR-Code in localStorage speichern (organisationsspezifisch)
+  const storageKey = `ffw_qr_codes_${orgCode}`;
+  const qrCodes = JSON.parse(localStorage.getItem(storageKey) || '[]');
+  const qrCode = qrCodes.find(q => q.id === key);
+  
+  if (!qrCode) {
+    if (!confirm(`QR-Code "${key}" nicht gefunden. Trotzdem zuordnen?`)) return;
+    qrCodes.push({
+      id: key,
+      url: `https://app.responda.systems/secure/${key}`,
+      generated: new Date().toISOString(),
+      status: 'assigned',
+      assignedTo: currentDocumentId,
+      assignedAt: new Date().toISOString(),
+      organization: orgCode
+    });
+  } else {
+    qrCode.status = 'assigned';
+    qrCode.assignedTo = currentDocumentId;
+    qrCode.assignedAt = new Date().toISOString();
+  }
+  
+  localStorage.setItem(storageKey, JSON.stringify(qrCodes));
+  
+  alert(`✅ QR-Code "${key}" erfolgreich zugeordnet!\n\nÜbergib den Aufkleber an den Rettungsdienst.`);
+  document.getElementById('qrModal').classList.remove('show');
+  
+  setTimeout(() => {
+    if (confirm('Neues Formular starten?')) {
+      location.reload();
+    }
+  }, 500);
+};
+
+window.skipQRAssignment = function() {
+  if (!confirm('QR-Code wirklich später zuordnen? Das Dokument ist gespeichert, aber noch nicht mit einem QR-Code verknüpft.')) return;
+  
+  document.getElementById('qrModal').classList.remove('show');
+  
+  setTimeout(() => {
+    if (confirm('Neues Formular starten?')) {
+      location.reload();
+    }
+  }, 500);
 };
 </script>
 
