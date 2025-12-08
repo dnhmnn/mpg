@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CIRS-Meldung – Responda</title>
+  
+  <!-- Theme Color -->
+  <meta name="theme-color" content="#667eea">
+  
+  <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root { --rot: #c8102e; --gradient-start: #667eea; --gradient-end: #764ba2; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    body { 
+      font-family: 'Atkinson Hyperlegible', Arial, sans-serif;
+      background: linear-gradient(135deg, var(--gradient-start) 0%, var(--gradient-end) 100%);
+      min-height: 100vh;
+      margin: 0;
+    }
+    
+    /* Header ganz oben */
+    header { 
+      background: var(--gradient-start);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    header h1 { margin: 0; font-size: 1.2rem; font-weight: 700; }
+    .spacer { flex: 1; }
+    .back-btn { 
+      color: #fff;
+      text-decoration: none;
+      background: rgba(255,255,255,0.2);
+      padding: 7px 12px;
+      border-radius: 8px;
+      font-weight: 700;
+      transition: all 0.2s;
+    }
+    .back-btn:hover {
+      background: rgba(255,255,255,0.3);
+    }
+    
+    .wrap { 
+      max-width: 820px;
+      margin: 16px auto;
+      padding: 0 12px;
+    }
+    
+    .card { 
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 3px 12px rgba(0,0,0,.06);
+      padding: 14px;
+      margin-bottom: 14px;
+    }
+    
+    h2 { color: var(--rot); margin: 6px 0 12px; }
+    
+    label { 
+      color: var(--rot);
+      font-weight: 700;
+      margin-top: 8px;
+      display: block;
+    }
+    
+    input, textarea, select { 
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 10px;
+      background: #fafafa;
+      font-size: 1rem;
+      font-family: inherit;
+    }
+    
+    textarea {
+      min-height: 100px;
+      resize: vertical;
+    }
+    
+    .row { display: flex; gap: 10px; flex-wrap: wrap; }
+    
+    .btn { 
+      background: var(--rot);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      padding: 10px 16px;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 0.2s;
+      width: 100%;
+    }
+    .btn:hover {
+      background: #a00d26;
+      transform: translateY(-2px);
+    }
+    .btn:disabled {
+      background: #cbd5e1;
+      cursor: not-allowed;
+      transform: none;
+    }
+    
+    .hint { 
+      color: #6b7280;
+      font-size: .95rem;
+      margin-top: 6px;
+    }
+    
+    .info-box {
+      background: #dbeafe;
+      border: 2px solid #93c5fd;
+      border-radius: 10px;
+      padding: 12px;
+      margin-bottom: 14px;
+      color: #1e40af;
+    }
+    
+    .msg { 
+      border-radius: 12px;
+      padding: 12px;
+      background: #fff5f5;
+      border: 1px solid #f2c9d1;
+      color: #b00020;
+      min-height: 1.2em;
+      margin-top: 10px;
+    }
+    .ok { 
+      background: #eef9f0;
+      border-color: #cfead6;
+      color: #256029;
+    }
+    
+    .error-box {
+      background: #fee2e2;
+      color: #991b1b;
+      padding: 20px;
+      border-radius: 12px;
+      text-align: center;
+      font-weight: 600;
+      border: 2px solid #fca5a5;
+    }
+    
+    @media (max-width: 600px) {
+      .row > div { width: 100%; min-width: 100% !important; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1 id="pageTitle">⚠️ CIRS-Meldung</h1>
+  <div class="spacer"></div>
+  <a href="#" class="back-btn" id="backBtn">← Zurück</a>
+</header>
+
+<div class="wrap">
+  <!-- Fehler bei ungültiger Organisation -->
+  <div id="errorBox" class="card error-box" style="display:none">
+    ❌ Ungültige Organisation
+  </div>
+
+  <div id="formContainer" style="display:none">
+    <!-- Info -->
+    <div class="info-box">
+      <strong>ℹ️ Was ist CIRS?</strong><br>
+      CIRS (Critical Incident Reporting System) dient der anonymen Meldung von kritischen Ereignissen, Beinahe-Unfällen oder Zwischenfällen zur Verbesserung der Sicherheit.
+    </div>
+
+    <!-- Ereignis -->
+    <section class="card">
+      <h2>Ereignis</h2>
+      
+      <label for="datum">Datum des Ereignisses</label>
+      <input id="datum" type="date" required />
+      
+      <label for="ort">Ort</label>
+      <input id="ort" placeholder="z.B. Fahrzeughalle, Einsatzstelle, ..." required />
+      
+      <label for="kategorie">Kategorie</label>
+      <select id="kategorie" required>
+        <option value="">Bitte wählen...</option>
+        <option value="personal">Personal / Besetzung</option>
+        <option value="kommunikation">Kommunikation</option>
+        <option value="material">Material / Ausrüstung</option>
+        <option value="fahrzeug">Fahrzeug</option>
+        <option value="einsatz">Einsatztaktik</option>
+        <option value="organisation">Organisation</option>
+        <option value="sonstiges">Sonstiges</option>
+      </select>
+      
+      <label for="schwere">Schweregrad</label>
+      <select id="schwere" required>
+        <option value="">Bitte wählen...</option>
+        <option value="gering">Gering (keine Gefährdung)</option>
+        <option value="mittel">Mittel (potenzielle Gefährdung)</option>
+        <option value="hoch">Hoch (ernste Gefährdung)</option>
+      </select>
+    </section>
+
+    <!-- Beschreibung -->
+    <section class="card">
+      <h2>Beschreibung</h2>
+      
+      <label for="was">Was ist passiert?</label>
+      <textarea id="was" placeholder="Schildere das Ereignis sachlich und detailliert..." required></textarea>
+      <p class="hint">Beschreibe den Ablauf des Ereignisses chronologisch.</p>
+      
+      <label for="warum">Warum ist es passiert? (vermutete Ursache)</label>
+      <textarea id="warum" placeholder="Was war deiner Meinung nach die Ursache?"></textarea>
+      
+      <label for="folgen">Welche Folgen hatte das Ereignis?</label>
+      <textarea id="folgen" placeholder="Gab es Auswirkungen? Wurden Personen gefährdet?"></textarea>
+    </section>
+
+    <!-- Verbesserungsvorschläge -->
+    <section class="card">
+      <h2>Verbesserungsvorschläge</h2>
+      
+      <label for="vorschlag">Wie könnte man das in Zukunft verhindern?</label>
+      <textarea id="vorschlag" placeholder="Deine Ideen zur Vermeidung solcher Ereignisse..."></textarea>
+      <p class="hint">Deine Vorschläge helfen, die Sicherheit für alle zu verbessern.</p>
+    </section>
+
+    <!-- Melder (optional) -->
+    <section class="card">
+      <h2>Melder (optional & anonym)</h2>
+      <p class="hint" style="margin-bottom:12px">
+        Diese Angaben sind <strong>freiwillig</strong>. CIRS-Meldungen sind grundsätzlich anonym. 
+        Falls du Rückfragen ermöglichen möchtest, kannst du hier deine Kontaktdaten angeben.
+      </p>
+      
+      <div class="row">
+        <div style="flex:1;min-width:220px">
+          <label for="melder_name">Name (optional)</label>
+          <input id="melder_name" placeholder="Vor- und Nachname" />
+        </div>
+        <div style="flex:1;min-width:220px">
+          <label for="melder_kontakt">Kontakt (optional)</label>
+          <input id="melder_kontakt" placeholder="E-Mail oder Telefon" />
+        </div>
+      </div>
+    </section>
+
+    <!-- Absenden -->
+    <section class="card">
+      <button id="saveBtn" class="btn" type="button">Meldung absenden</button>
+      <div id="msg" class="msg" style="display:none"></div>
+    </section>
+  </div>
+</div>
+
+<script type="module">
+  import { NhostClient } from "https://esm.sh/@nhost/nhost-js@2.2.9";
+
+  // ===== ORGANISATIONS-MAPPING =====
+  const ORG_MAPPING = {
+    'ffwrothenburg': {
+      name: 'FFW Rothenburg',
+      subdomain: 'hpjfrhktprpuuxvvlpsb',
+      region: 'eu-central-1'
+    },
+    'beispielorg': {
+      name: 'Beispiel Organisation',
+      subdomain: 'example-subdomain',
+      region: 'eu-central-1'
+    }
+    // Weitere Organisationen hier hinzufügen...
+  };
+
+  // Organisation aus URL lesen
+  const urlParams = new URLSearchParams(window.location.search);
+  const orgCode = urlParams.get('org');
+  
+  const errorBoxEl = document.getElementById('errorBox');
+  const formContainerEl = document.getElementById('formContainer');
+  const pageTitleEl = document.getElementById('pageTitle');
+  const backBtn = document.getElementById('backBtn');
+
+  // Organisation validieren
+  if (!orgCode || !ORG_MAPPING[orgCode]) {
+    errorBoxEl.style.display = 'block';
+    throw new Error('Ungültige Organisation');
+  }
+
+  const org = ORG_MAPPING[orgCode];
+  pageTitleEl.textContent = `⚠️ CIRS-Meldung – ${org.name}`;
+  backBtn.href = `formulare.html?org=${orgCode}`;
+  formContainerEl.style.display = 'block';
+
+  // Nhost initialisieren
+  const nhost = new NhostClient({
+    subdomain: org.subdomain,
+    region: org.region
+  });
+
+  /* -------------------- UI Helfer ------------------------ */
+  const byId = id => document.getElementById(id);
+  const msgEl = byId('msg');
+  
+  function showMsg(text, ok=false){
+    msgEl.textContent = text;
+    msgEl.className = 'msg ' + (ok ? 'ok' : '');
+    msgEl.style.display = 'block';
+  }
+
+  /* -------------------- Datum vorbelegen ----------------- */
+  (function init(){
+    const d = new Date();
+    const pad = n => String(n).padStart(2,'0');
+    byId('datum').value = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+  })();
+
+  /* -------------------- Speichern ------------------------ */
+  byId('saveBtn').addEventListener('click', saveCirs);
+
+  async function saveCirs(){
+    try{
+      showMsg('Meldung wird gespeichert...', true);
+      byId('saveBtn').disabled = true;
+
+      const datum = byId('datum').value;
+      const ort = byId('ort').value.trim();
+      const kategorie = byId('kategorie').value;
+      const schwere = byId('schwere').value;
+      const was = byId('was').value.trim();
+      const warum = byId('warum').value.trim();
+      const folgen = byId('folgen').value.trim();
+      const vorschlag = byId('vorschlag').value.trim();
+      const melder_name = byId('melder_name').value.trim();
+      const melder_kontakt = byId('melder_kontakt').value.trim();
+
+      // Validierung
+      if (!datum || !ort || !kategorie || !schwere || !was) {
+        showMsg('Bitte fülle alle Pflichtfelder aus (Datum, Ort, Kategorie, Schweregrad, Was ist passiert).');
+        byId('saveBtn').disabled = false;
+        return;
+      }
+
+      // Titel generieren
+      const deDate = datum.split('-').reverse().join('.'); // DD.MM.YYYY
+      const title = `CIRS: ${kategorie} (${deDate})`;
+
+      // Payload
+      const payload = {
+        datum,
+        ort,
+        kategorie,
+        schweregrad: schwere,
+        beschreibung_was: was,
+        beschreibung_warum: warum,
+        beschreibung_folgen: folgen,
+        verbesserungsvorschlag: vorschlag,
+        melder_name: melder_name || null,
+        melder_kontakt: melder_kontakt || null
+      };
+
+      // GraphQL Mutation
+      const { data, error } = await nhost.graphql.request(`
+        mutation InsertDocuments($obj: documents_insert_input!) {
+          insert_documents_one(object: $obj) { id created_at }
+        }
+      `, {
+        obj: { type: 'cirs', title, status: 'offen', payload }
+      });
+
+      if (error) {
+        throw new Error(error.message || 'GraphQL-Fehler');
+      }
+
+      showMsg('✅ CIRS-Meldung erfolgreich abgesendet! Vielen Dank für deinen Beitrag zur Sicherheit.', true);
+
+      // Formular zurücksetzen
+      setTimeout(() => {
+        byId('ort').value = '';
+        byId('kategorie').value = '';
+        byId('schwere').value = '';
+        byId('was').value = '';
+        byId('warum').value = '';
+        byId('folgen').value = '';
+        byId('vorschlag').value = '';
+        byId('melder_name').value = '';
+        byId('melder_kontakt').value = '';
+        msgEl.style.display = 'none';
+        byId('saveBtn').disabled = false;
+      }, 3000);
+
+    }catch(err){
+      showMsg('Fehler beim Speichern: ' + (err.message || String(err)));
+      byId('saveBtn').disabled = false;
+    }
+  }
+</script>
+
+</body>
+</html>
