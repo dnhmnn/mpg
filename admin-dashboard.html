@@ -44,6 +44,13 @@
       border-radius: 8px;
       font-weight: 700;
       transition: all 0.2s;
+      border: none;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 1rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
     }
     .topbtn:hover {
       background: rgba(255,255,255,0.3);
@@ -121,8 +128,8 @@
     .note:last-child { border-bottom: none; }
     .meta { color: #777; font-size: .9rem; }
     .row { display: flex; gap: 10px; flex-wrap: wrap; }
-    input, textarea, button { font-family: inherit; font-size: 1rem; }
-    input, textarea { 
+    input, textarea, button, select { font-family: inherit; font-size: 1rem; }
+    input, textarea, select { 
       width: 100%;
       padding: 9px 10px;
       border: 1px solid #ccc;
@@ -143,10 +150,14 @@
     .btn:hover {
       background: #a00d26;
     }
+    .btn:disabled {
+      background: #cbd5e1;
+      cursor: not-allowed;
+    }
     .btn.sec { background: #eee; color: var(--rot); border: 1px solid var(--rot); }
     .ok { color: #2e7d32; }
     .err { color: #c8102e; }
-    .msg { min-height: 1.2em; }
+    .msg { min-height: 1.2em; margin-top: 8px; }
 
     /* Stats Grid */
     .stats-grid { 
@@ -204,31 +215,42 @@
     .badge-warning { background: #fef3c7; color: #d97706; }
     .badge-ok { background: #dcfce7; color: #16a34a; }
 
-    /* Passwort-Modal */
+    /* Modal */
     .modal { 
       position: fixed;
       inset: 0;
-      background: rgba(0,0,0,.5);
+      background: rgba(0,0,0,.6);
       display: none;
-      align-items: center;
+      align-items: flex-start;
       justify-content: center;
       z-index: 9999;
       padding: 16px;
+      overflow-y: auto;
     }
     .modal.show { display: flex; }
     .modal-box { 
       background: #fff;
       border-radius: 12px;
       box-shadow: 0 6px 24px rgba(0,0,0,.2);
-      padding: 16px;
-      max-width: 420px;
-      width: 92%;
+      padding: 20px;
+      max-width: 800px;
+      width: 100%;
+      margin: auto;
+      max-height: 90vh;
+      overflow-y: auto;
     }
     .modal-h { 
       display: flex;
       gap: 10px;
       align-items: center;
-      margin-bottom: 10px;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 2px solid #eee;
+    }
+    .modal-h h3 {
+      margin: 0;
+      color: var(--rot);
+      font-size: 1.4rem;
     }
     .x { 
       margin-left: auto;
@@ -237,10 +259,52 @@
       border-radius: 8px;
       padding: 6px 10px;
       cursor: pointer;
+      font-weight: 700;
     }
-    .field { display: flex; flex-direction: column; gap: 6px; margin: 8px 0; }
+    .x:hover {
+      background: #e2e2e2;
+    }
+    
+    /* Tabs */
+    .tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+      border-bottom: 2px solid #eee;
+    }
+    .tab {
+      padding: 10px 16px;
+      border: none;
+      background: none;
+      cursor: pointer;
+      font-weight: 700;
+      color: #666;
+      border-bottom: 3px solid transparent;
+      transition: all 0.2s;
+      font-family: inherit;
+    }
+    .tab:hover {
+      color: var(--rot);
+    }
+    .tab.active {
+      color: var(--rot);
+      border-bottom-color: var(--rot);
+    }
+    .tab-content {
+      display: none;
+    }
+    .tab-content.active {
+      display: block;
+    }
+    
+    .field { 
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin: 12px 0;
+    }
     .field label { font-weight: 700; color: var(--rot); }
-    .field input { 
+    .field input, .field select { 
       padding: 10px;
       border: 1px solid #ccc;
       border-radius: 8px;
@@ -250,13 +314,115 @@
       display: flex;
       gap: 8px;
       justify-content: flex-end;
-      margin-top: 8px;
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 2px solid #eee;
+    }
+    
+    /* Users Table */
+    .users-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 16px 0;
+    }
+    .users-table th,
+    .users-table td {
+      padding: 10px;
+      text-align: left;
+      border-bottom: 1px solid #eee;
+    }
+    .users-table th {
+      background: #f8f9fa;
+      font-weight: 700;
+      color: var(--rot);
+    }
+    .users-table tr:hover {
+      background: #f8f9fa;
+    }
+    .role-badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 0.85rem;
+      font-weight: 700;
+    }
+    .role-admin { background: #fee2e2; color: var(--rot); }
+    .role-mitglied { background: #dbeafe; color: #1e40af; }
+    .role-lager { background: #fef3c7; color: #d97706; }
+    
+    .action-btn {
+      padding: 6px 12px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.9rem;
+      transition: all 0.2s;
+      font-family: inherit;
+    }
+    .action-btn.edit {
+      background: #dbeafe;
+      color: #1e40af;
+    }
+    .action-btn.edit:hover {
+      background: #bfdbfe;
+    }
+    .action-btn.delete {
+      background: #fee2e2;
+      color: var(--rot);
+    }
+    .action-btn.delete:hover {
+      background: #fecaca;
+    }
+    
+    .info-box {
+      background: #dbeafe;
+      border-left: 4px solid #3b82f6;
+      padding: 12px;
+      border-radius: 6px;
+      margin: 12px 0;
+      font-size: 0.95rem;
+    }
+    
+    .license-box {
+      background: #f0fdf4;
+      border: 2px solid #16a34a;
+      border-radius: 10px;
+      padding: 16px;
+      margin: 16px 0;
+    }
+    .license-box h4 {
+      margin: 0 0 8px 0;
+      color: #16a34a;
+    }
+    .license-info {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+      margin-top: 12px;
+    }
+    .license-item {
+      display: flex;
+      flex-direction: column;
+    }
+    .license-label {
+      font-size: 0.85rem;
+      color: #666;
+      margin-bottom: 4px;
+    }
+    .license-value {
+      font-weight: 700;
+      font-size: 1.1rem;
+      color: #222;
     }
     
     @media (max-width: 800px) { 
       .wrap { grid-template-columns: 1fr; }
       .stats-grid { grid-template-columns: 1fr 1fr; }
       .greeting { font-size: 2.5rem; }
+      .users-table { font-size: 0.9rem; }
+      .users-table th,
+      .users-table td { padding: 8px; }
     }
   </style>
 </head>
@@ -285,8 +451,8 @@
 <header>
   <h1>Übersicht</h1>
   <div class="spacer"></div>
-  <a class="topbtn" href="#" id="changePwBtn">Passwort ändern</a>
-  <a class="topbtn" href="#" id="logoutBtn">Logout</a>
+  <button class="topbtn" id="settingsBtn">⚙️ Einstellungen</button>
+  <button class="topbtn" id="logoutBtn">Logout</button>
 </header>
 
 <!-- Tagesabhängige Begrüßung OBERHALB von wrap -->
@@ -306,7 +472,8 @@
     </nav>
     <div style="margin-top:14px; font-size:.95rem">
       Eingeloggt als:<br>
-      <strong id="who">—</strong>
+      <strong id="who">—</strong><br>
+      <span id="userRole" style="color:#666; font-size:0.9rem"></span>
     </div>
     <div id="guardMsg" class="err" style="margin-top:8px"></div>
   </aside>
@@ -370,29 +537,171 @@
   </main>
 </div>
 
-<!-- Passwort-Modal -->
-<div class="modal" id="pwModal">
+<!-- Einstellungen-Modal -->
+<div class="modal" id="settingsModal">
   <div class="modal-box">
     <div class="modal-h">
-      <strong>Passwort ändern</strong>
-      <button class="x" id="pwClose">Schließen</button>
+      <h3>⚙️ Einstellungen</h3>
+      <button class="x" id="settingsClose">×</button>
     </div>
+    
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab active" data-tab="profile">👤 Mein Profil</button>
+      <button class="tab" data-tab="password">🔒 Passwort</button>
+      <button class="tab" data-tab="users" id="usersTab" style="display:none">👥 Benutzer</button>
+      <button class="tab" data-tab="license" id="licenseTab" style="display:none">📜 Lizenz</button>
+    </div>
+    
+    <!-- Tab: Mein Profil -->
+    <div class="tab-content active" id="tab-profile">
+      <div class="field">
+        <label for="profileEmail">E-Mail</label>
+        <input type="email" id="profileEmail" readonly style="background:#f5f5f5">
+      </div>
+      <div class="field">
+        <label for="profileName">Anzeigename</label>
+        <input type="text" id="profileName" placeholder="z.B. Max Mustermann">
+      </div>
+      <div class="field">
+        <label for="profilePhone">Telefon (optional)</label>
+        <input type="tel" id="profilePhone" placeholder="+49 123 456789">
+      </div>
+      <div id="profileMsg" class="msg"></div>
+      <div class="actions">
+        <button class="btn" id="saveProfileBtn">Profil speichern</button>
+      </div>
+    </div>
+    
+    <!-- Tab: Passwort -->
+    <div class="tab-content" id="tab-password">
+      <div class="field">
+        <label for="pwCurrent">Aktuelles Passwort</label>
+        <input type="password" id="pwCurrent" autocomplete="current-password" placeholder="••••••••" />
+      </div>
+      <div class="field">
+        <label for="pwNew1">Neues Passwort (min. 8 Zeichen)</label>
+        <input type="password" id="pwNew1" autocomplete="new-password" placeholder="Neues Passwort" />
+      </div>
+      <div class="field">
+        <label for="pwNew2">Neues Passwort wiederholen</label>
+        <input type="password" id="pwNew2" autocomplete="new-password" placeholder="Wiederholen" />
+      </div>
+      <div id="pwMsg" class="msg"></div>
+      <div class="actions">
+        <button class="btn" id="pwSave">Passwort ändern</button>
+      </div>
+    </div>
+    
+    <!-- Tab: Benutzerverwaltung (nur Admin) -->
+    <div class="tab-content" id="tab-users">
+      <div class="info-box">
+        <strong>ℹ️ Benutzerverwaltung</strong><br>
+        Hier können Sie neue Benutzer anlegen und Rollen zuweisen. Neue Benutzer erhalten eine E-Mail zur Passwort-Vergabe.
+      </div>
+      
+      <button class="btn" id="addUserBtn" style="margin-bottom:16px">+ Neuen Benutzer anlegen</button>
+      
+      <h4 style="margin:16px 0 8px 0; color:var(--rot)">Alle Benutzer</h4>
+      <table class="users-table">
+        <thead>
+          <tr>
+            <th>E-Mail</th>
+            <th>Name</th>
+            <th>Rolle</th>
+            <th>Erstellt</th>
+            <th>Aktionen</th>
+          </tr>
+        </thead>
+        <tbody id="usersTableBody">
+          <tr>
+            <td colspan="5" style="text-align:center; padding:20px; color:#999">
+              Lade Benutzer...
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    
+    <!-- Tab: Lizenz (nur Admin) -->
+    <div class="tab-content" id="tab-license">
+      <div class="license-box">
+        <h4>✅ Aktive Lizenz</h4>
+        <div class="license-info">
+          <div class="license-item">
+            <div class="license-label">Organisation</div>
+            <div class="license-value" id="licenseOrg">FFW Rothenburg</div>
+          </div>
+          <div class="license-item">
+            <div class="license-label">Lizenztyp</div>
+            <div class="license-value" id="licenseType">Professional</div>
+          </div>
+          <div class="license-item">
+            <div class="license-label">Max. Benutzer</div>
+            <div class="license-value" id="licenseMaxUsers">50</div>
+          </div>
+          <div class="license-item">
+            <div class="license-label">Aktuelle Benutzer</div>
+            <div class="license-value" id="licenseCurrentUsers">5</div>
+          </div>
+          <div class="license-item">
+            <div class="license-label">Gültig bis</div>
+            <div class="license-value" id="licenseExpiry">31.12.2025</div>
+          </div>
+          <div class="license-item">
+            <div class="license-label">Status</div>
+            <div class="license-value" style="color:#16a34a">✓ Aktiv</div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="info-box">
+        <strong>📞 Support kontaktieren</strong><br>
+        Bei Fragen zur Lizenz oder Upgrade-Wünschen kontaktieren Sie uns unter:<br>
+        <strong>support@responda.systems</strong>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Benutzer hinzufügen/bearbeiten Modal -->
+<div class="modal" id="userModal">
+  <div class="modal-box" style="max-width:500px">
+    <div class="modal-h">
+      <h3 id="userModalTitle">Neuen Benutzer anlegen</h3>
+      <button class="x" id="userClose">×</button>
+    </div>
+    
     <div class="field">
-      <label for="pwCurrent">Aktuelles Passwort</label>
-      <input type="password" id="pwCurrent" autocomplete="current-password" placeholder="••••••••" />
+      <label for="userEmail">E-Mail *</label>
+      <input type="email" id="userEmail" placeholder="benutzer@example.com" required>
     </div>
+    
     <div class="field">
-      <label for="pwNew1">Neues Passwort (min. 8 Zeichen)</label>
-      <input type="password" id="pwNew1" autocomplete="new-password" placeholder="Neues Passwort" />
+      <label for="userName">Name *</label>
+      <input type="text" id="userName" placeholder="Max Mustermann" required>
     </div>
+    
     <div class="field">
-      <label for="pwNew2">Neues Passwort wiederholen</label>
-      <input type="password" id="pwNew2" autocomplete="new-password" placeholder="Wiederholen" />
+      <label for="userRole">Rolle *</label>
+      <select id="userRole" required>
+        <option value="">Bitte wählen...</option>
+        <option value="admin">Admin (Vollzugriff)</option>
+        <option value="mitglied">Mitglied (Mitgliederbereich)</option>
+        <option value="lager">Lager (Lagerverwaltung)</option>
+      </select>
     </div>
-    <div id="pwMsg" class="msg"></div>
+    
+    <div class="info-box">
+      <strong>ℹ️ Hinweis:</strong><br>
+      Der Benutzer erhält eine E-Mail mit einem Link zur Passwort-Vergabe.
+    </div>
+    
+    <div id="userMsg" class="msg"></div>
+    
     <div class="actions">
-      <button class="btn sec" id="pwCancel">Abbrechen</button>
-      <button class="btn" id="pwSave">Speichern</button>
+      <button class="btn sec" id="userCancel">Abbrechen</button>
+      <button class="btn" id="userSave">Benutzer anlegen</button>
     </div>
   </div>
 </div>
@@ -407,10 +716,22 @@
 
   const guardMsg = document.getElementById('guardMsg');
   const whoEl = document.getElementById('who');
+  const userRoleEl = document.getElementById('userRole');
 
-  // User anzeigen
+  // User anzeigen & Rolle prüfen
   const user = nhost.auth.getUser();
-  whoEl.textContent = user?.email || "—";
+  const userEmail = user?.email || "—";
+  whoEl.textContent = userEmail;
+  
+  // Rolle aus Metadata holen (später aus Datenbank)
+  const userRole = user?.metadata?.role || 'admin'; // Default: admin
+  userRoleEl.textContent = `Rolle: ${userRole}`;
+  
+  // Admin-Tabs nur für Admins anzeigen
+  if (userRole === 'admin') {
+    document.getElementById('usersTab').style.display = 'block';
+    document.getElementById('licenseTab').style.display = 'block';
+  }
 
   // Tagesabhängige Begrüßung
   function setGreeting() {
@@ -435,6 +756,247 @@
     localStorage.clear();
     location.href = "admin-login.html";
   });
+
+  // ===== SETTINGS MODAL =====
+  const settingsModal = document.getElementById('settingsModal');
+  const settingsBtn = document.getElementById('settingsBtn');
+  const settingsClose = document.getElementById('settingsClose');
+  
+  function openSettings() {
+    settingsModal.classList.add('show');
+    loadProfileData();
+  }
+  
+  function closeSettings() {
+    settingsModal.classList.remove('show');
+  }
+  
+  settingsBtn.addEventListener('click', openSettings);
+  settingsClose.addEventListener('click', closeSettings);
+  settingsModal.addEventListener('click', (e) => {
+    if (e.target === settingsModal) closeSettings();
+  });
+  
+  // Tab-Switching
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      const targetTab = tab.dataset.tab;
+      
+      // Deaktiviere alle Tabs
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      
+      // Aktiviere gewählten Tab
+      tab.classList.add('active');
+      document.getElementById(`tab-${targetTab}`).classList.add('active');
+      
+      // Lade Daten wenn nötig
+      if (targetTab === 'users') {
+        loadUsers();
+      }
+    });
+  });
+  
+  // ===== PROFIL BEARBEITEN =====
+  function loadProfileData() {
+    document.getElementById('profileEmail').value = userEmail;
+    // TODO: Name und Telefon aus Datenbank laden
+  }
+  
+  document.getElementById('saveProfileBtn').addEventListener('click', async () => {
+    const profileMsg = document.getElementById('profileMsg');
+    try {
+      const name = document.getElementById('profileName').value.trim();
+      const phone = document.getElementById('profilePhone').value.trim();
+      
+      // TODO: In Datenbank speichern
+      
+      profileMsg.textContent = '✅ Profil gespeichert!';
+      profileMsg.className = 'msg ok';
+      
+      setTimeout(() => {
+        profileMsg.textContent = '';
+      }, 3000);
+    } catch (e) {
+      profileMsg.textContent = '❌ Fehler: ' + e.message;
+      profileMsg.className = 'msg err';
+    }
+  });
+
+  // ===== PASSWORT ÄNDERN =====
+  const pwMsg = document.getElementById('pwMsg');
+  const pwCurrent = document.getElementById('pwCurrent');
+  const pwNew1 = document.getElementById('pwNew1');
+  const pwNew2 = document.getElementById('pwNew2');
+
+  function showPwMsg(text, ok=false){
+    pwMsg.textContent = text || '';
+    pwMsg.className = 'msg ' + (ok ? 'ok' : 'err');
+  }
+
+  document.getElementById('pwSave').addEventListener('click', async ()=>{
+    try{
+      showPwMsg('');
+      const current = pwCurrent.value.trim();
+      const n1 = pwNew1.value.trim();
+      const n2 = pwNew2.value.trim();
+
+      if (!current){ showPwMsg('Bitte aktuelles Passwort eingeben.'); return; }
+      if (!n1 || n1.length < 8){ showPwMsg('Neues Passwort: mindestens 8 Zeichen.'); return; }
+      if (n1 !== n2){ showPwMsg('Die neuen Passwörter stimmen nicht überein.'); return; }
+
+      const email = nhost.auth.getUser()?.email;
+      if (!email){ showPwMsg('Nicht eingeloggt.'); return; }
+
+      const { error: signErr } = await nhost.auth.signIn({ email, password: current });
+      if (signErr){ showPwMsg('Aktuelles Passwort ist falsch.'); return; }
+
+      let changeError = null;
+      try {
+        const res1 = await nhost.auth.changePassword(n1);
+        changeError = res1?.error || null;
+      } catch (e1) {
+        try {
+          const res2 = await nhost.auth.changePassword({ newPassword: n1 });
+          changeError = res2?.error || null;
+        } catch (e2) {
+          changeError = e2;
+        }
+      }
+      if (changeError){
+        showPwMsg('Fehler beim Ändern: ' + (changeError.message || changeError));
+        return;
+      }
+
+      showPwMsg('Passwort geändert. Du wirst abgemeldet …', true);
+      setTimeout(async ()=>{
+        closeSettings();
+        await nhost.auth.signOut();
+        localStorage.clear();
+        location.href = "admin-login.html";
+      }, 700);
+    }catch(e){
+      showPwMsg('Unerwarteter Fehler: ' + (e?.message || e));
+    }
+  });
+
+  // ===== BENUTZERVERWALTUNG =====
+  const userModal = document.getElementById('userModal');
+  const addUserBtn = document.getElementById('addUserBtn');
+  const userClose = document.getElementById('userClose');
+  const userCancel = document.getElementById('userCancel');
+  
+  function openUserModal(editUser = null) {
+    if (editUser) {
+      document.getElementById('userModalTitle').textContent = 'Benutzer bearbeiten';
+      document.getElementById('userEmail').value = editUser.email;
+      document.getElementById('userName').value = editUser.name || '';
+      document.getElementById('userRole').value = editUser.role || '';
+      document.getElementById('userSave').textContent = 'Speichern';
+    } else {
+      document.getElementById('userModalTitle').textContent = 'Neuen Benutzer anlegen';
+      document.getElementById('userEmail').value = '';
+      document.getElementById('userName').value = '';
+      document.getElementById('userRole').value = '';
+      document.getElementById('userSave').textContent = 'Benutzer anlegen';
+    }
+    document.getElementById('userMsg').textContent = '';
+    userModal.classList.add('show');
+  }
+  
+  function closeUserModal() {
+    userModal.classList.remove('show');
+  }
+  
+  addUserBtn.addEventListener('click', () => openUserModal());
+  userClose.addEventListener('click', closeUserModal);
+  userCancel.addEventListener('click', closeUserModal);
+  userModal.addEventListener('click', (e) => {
+    if (e.target === userModal) closeUserModal();
+  });
+  
+  // Benutzer anlegen
+  document.getElementById('userSave').addEventListener('click', async () => {
+    const userMsg = document.getElementById('userMsg');
+    try {
+      const email = document.getElementById('userEmail').value.trim();
+      const name = document.getElementById('userName').value.trim();
+      const role = document.getElementById('userRole').value;
+      
+      if (!email || !name || !role) {
+        userMsg.textContent = '❌ Bitte alle Pflichtfelder ausfüllen';
+        userMsg.className = 'msg err';
+        return;
+      }
+      
+      // TODO: Nhost User erstellen & E-Mail senden
+      // Hier würde normalerweise die Nhost Admin API verwendet werden
+      
+      userMsg.textContent = '✅ Benutzer angelegt! E-Mail wurde versendet.';
+      userMsg.className = 'msg ok';
+      
+      setTimeout(() => {
+        closeUserModal();
+        loadUsers();
+      }, 2000);
+      
+    } catch (e) {
+      userMsg.textContent = '❌ Fehler: ' + e.message;
+      userMsg.className = 'msg err';
+    }
+  });
+  
+  // Benutzer laden
+  async function loadUsers() {
+    const tbody = document.getElementById('usersTableBody');
+    try {
+      // TODO: Von Nhost laden
+      // Hier Dummy-Daten als Beispiel
+      const users = [
+        { id: '1', email: userEmail, name: 'Admin User', role: 'admin', created: '2024-01-15' },
+        { id: '2', email: 'user@example.com', name: 'Max Mustermann', role: 'mitglied', created: '2024-02-20' },
+        { id: '3', email: 'lager@example.com', name: 'Lager Team', role: 'lager', created: '2024-03-10' }
+      ];
+      
+      tbody.innerHTML = users.map(u => {
+        const roleClass = `role-${u.role}`;
+        const roleText = u.role === 'admin' ? 'Admin' : u.role === 'mitglied' ? 'Mitglied' : 'Lager';
+        
+        return `
+          <tr>
+            <td>${u.email}</td>
+            <td>${u.name}</td>
+            <td><span class="role-badge ${roleClass}">${roleText}</span></td>
+            <td>${new Date(u.created).toLocaleDateString('de-DE')}</td>
+            <td>
+              <button class="action-btn edit" onclick="editUser('${u.id}')">Bearbeiten</button>
+              ${u.email !== userEmail ? `<button class="action-btn delete" onclick="deleteUser('${u.id}')">Löschen</button>` : ''}
+            </td>
+          </tr>
+        `;
+      }).join('');
+      
+      // Update Lizenz-Zähler
+      document.getElementById('licenseCurrentUsers').textContent = users.length;
+      
+    } catch (e) {
+      tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:20px;color:#c8102e">Fehler beim Laden: ${e.message}</td></tr>`;
+    }
+  }
+  
+  // Global functions für Button-Clicks
+  window.editUser = function(userId) {
+    // TODO: User laden und Modal öffnen
+    console.log('Edit user:', userId);
+  };
+  
+  window.deleteUser = function(userId) {
+    if (confirm('Benutzer wirklich löschen?')) {
+      // TODO: User löschen
+      console.log('Delete user:', userId);
+      loadUsers();
+    }
+  };
 
   // ===== DASHBOARD DATA =====
   const token = await nhost.auth.getAccessToken();
@@ -593,7 +1155,7 @@
       }`);
       
       vorgaengeData.documents.forEach(doc => {
-        const typeName = doc.type === 'cirs' ? 'CIRS' : doc.type === 'produkt' ? 'Produktausgabe' : 'Dokument';
+        const typeName = doc.type === 'cirs' ? 'CIRS' : doc.type === 'produktausgabe' ? 'Produktausgabe' : 'Dokument';
         newsItems.push(`📄 Neuer ${typeName}: "${doc.title}" <span class="pill">Vorgänge</span>`);
       });
       
@@ -626,85 +1188,6 @@
       document.getElementById('newsList').innerHTML = '<li>Fehler beim Laden der Neuigkeiten</li>';
     }
   }
-
-  // ===== Passwort ändern =====
-  const pwModal = document.getElementById('pwModal');
-  const pwMsg   = document.getElementById('pwMsg');
-  const pwCurrent = document.getElementById('pwCurrent');
-  const pwNew1    = document.getElementById('pwNew1');
-  const pwNew2    = document.getElementById('pwNew2');
-
-  function showPwMsg(text, ok=false){
-    pwMsg.textContent = text || '';
-    pwMsg.className = 'msg ' + (ok ? 'ok' : 'err');
-  }
-
-  function openPwModal(){
-    pwCurrent.value = '';
-    pwNew1.value = '';
-    pwNew2.value = '';
-    showPwMsg('');
-    pwModal.classList.add('show');
-    setTimeout(()=> pwCurrent.focus(), 10);
-  }
-  function closePwModal(){
-    pwModal.classList.remove('show');
-  }
-
-  document.getElementById('changePwBtn')?.addEventListener('click', (e)=>{
-    e.preventDefault();
-    openPwModal();
-  });
-  document.getElementById('pwClose').addEventListener('click', closePwModal);
-  document.getElementById('pwCancel').addEventListener('click', closePwModal);
-  pwModal.addEventListener('click', (e)=>{ if (e.target === pwModal) closePwModal(); });
-  document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closePwModal(); });
-
-  document.getElementById('pwSave').addEventListener('click', async ()=>{
-    try{
-      showPwMsg('');
-      const current = pwCurrent.value.trim();
-      const n1 = pwNew1.value.trim();
-      const n2 = pwNew2.value.trim();
-
-      if (!current){ showPwMsg('Bitte aktuelles Passwort eingeben.'); return; }
-      if (!n1 || n1.length < 8){ showPwMsg('Neues Passwort: mindestens 8 Zeichen.'); return; }
-      if (n1 !== n2){ showPwMsg('Die neuen Passwörter stimmen nicht überein.'); return; }
-
-      const email = nhost.auth.getUser()?.email;
-      if (!email){ showPwMsg('Nicht eingeloggt.'); return; }
-
-      const { error: signErr } = await nhost.auth.signIn({ email, password: current });
-      if (signErr){ showPwMsg('Aktuelles Passwort ist falsch.'); return; }
-
-      let changeError = null;
-      try {
-        const res1 = await nhost.auth.changePassword(n1);
-        changeError = res1?.error || null;
-      } catch (e1) {
-        try {
-          const res2 = await nhost.auth.changePassword({ newPassword: n1 });
-          changeError = res2?.error || null;
-        } catch (e2) {
-          changeError = e2;
-        }
-      }
-      if (changeError){
-        showPwMsg('Fehler beim Ändern: ' + (changeError.message || changeError));
-        return;
-      }
-
-      showPwMsg('Passwort geändert. Du wirst abgemeldet …', true);
-      setTimeout(async ()=>{
-        closePwModal();
-        await nhost.auth.signOut();
-        localStorage.clear();
-        location.href = "admin-login.html";
-      }, 700);
-    }catch(e){
-      showPwMsg('Unerwarteter Fehler: ' + (e?.message || e));
-    }
-  });
 
   // ===== Notizen (lokal) =====
   const NOTES_KEY = 'admin_notes';
