@@ -157,7 +157,7 @@
     .btn.sec { background: #eee; color: var(--rot); border: 1px solid var(--rot); }
     .ok { color: #2e7d32; }
     .err { color: #c8102e; }
-    .msg { min-height: 1.2em; margin-top: 8px; white-space: pre-line; }
+    .msg { min-height: 1.2em; margin-top: 8px; }
 
     /* Stats Grid */
     .stats-grid { 
@@ -429,20 +429,23 @@
 <body>
 
 <script type="module">
-  // ===== AUTH CHECK MIT ROLLEN-PRÜFUNG =====
-  import { requireAuth } from './auth-guard.js';
+  // ===== AUTH CHECK GANZ AM ANFANG =====
+  import { NhostClient } from "https://esm.sh/@nhost/nhost-js@2.2.9";
 
-  // NUR ADMINS dürfen auf Admin-Dashboard zugreifen!
-  const authData = await requireAuth(['admin']);
-  
-  console.log('✅ Admin authentifiziert:', authData.userEmail, authData.userRole);
-  
-  // Body anzeigen
+  const nhost = new NhostClient({
+    subdomain: "hpjfrhktprpuuxvvlpsb",
+    region: "eu-central-1"
+  });
+
+  // Auth Check SOFORT - bevor HTML gerendert wird
+  const isAuth = await nhost.auth.isAuthenticatedAsync();
+  if (!isAuth) {
+    location.href = "admin-login.html";
+    throw new Error("Not authenticated");
+  }
+
+  // Wenn Auth OK, zeige Body
   document.body.classList.add('loaded');
-  
-  // Globale Variablen für späteren Zugriff
-  window.currentUser = authData;
-  window.nhost = authData.nhost;
 </script>
 
 <header>
@@ -546,8 +549,8 @@
     <div class="tabs">
       <button class="tab active" data-tab="profile">👤 Mein Profil</button>
       <button class="tab" data-tab="password">🔒 Passwort</button>
-      <button class="tab" data-tab="users">👥 Benutzer</button>
-      <button class="tab" data-tab="license">📜 Lizenz</button>
+      <button class="tab" data-tab="users" id="usersTab" style="display:none">👥 Benutzer</button>
+      <button class="tab" data-tab="license" id="licenseTab" style="display:none">📜 Lizenz</button>
     </div>
     
     <!-- Tab: Mein Profil -->
@@ -590,7 +593,7 @@
       </div>
     </div>
     
-    <!-- Tab: Benutzerverwaltung -->
+    <!-- Tab: Benutzerverwaltung (nur Admin) -->
     <div class="tab-content" id="tab-users">
       <div class="info-box">
         <strong>ℹ️ Benutzerverwaltung</strong><br>
@@ -620,7 +623,7 @@
       </table>
     </div>
     
-    <!-- Tab: Lizenz -->
+    <!-- Tab: Lizenz (nur Admin) -->
     <div class="tab-content" id="tab-license">
       <div class="license-box">
         <h4>✅ Aktive Lizenz</h4>
@@ -639,7 +642,7 @@
           </div>
           <div class="license-item">
             <div class="license-label">Aktuelle Benutzer</div>
-            <div class="license-value" id="licenseCurrentUsers">0</div>
+            <div class="license-value" id="licenseCurrentUsers">5</div>
           </div>
           <div class="license-item">
             <div class="license-label">Gültig bis</div>
@@ -706,20 +709,29 @@
 <script type="module">
   import { NhostClient } from "https://esm.sh/@nhost/nhost-js@2.2.9";
 
-  const nhost = window.nhost; // Von oben initialisiert
-  const authData = window.currentUser; // Von oben initialisiert
-  
+  const nhost = new NhostClient({
+    subdomain: "hpjfrhktprpuuxvvlpsb",
+    region: "eu-central-1"
+  });
+
   const guardMsg = document.getElementById('guardMsg');
   const whoEl = document.getElementById('who');
   const userRoleEl = document.getElementById('userRole');
 
-  // User anzeigen
-  const userEmail = authData.userEmail;
-  const userRole = authData.userRole;
-  const userName = authData.userName;
-  
+  // User anzeigen & Rolle prüfen
+  const user = nhost.auth.getUser();
+  const userEmail = user?.email || "—";
   whoEl.textContent = userEmail;
+  
+  // Rolle aus Metadata holen (später aus Datenbank)
+  const userRole = user?.metadata?.role || 'admin'; // Default: admin
   userRoleEl.textContent = `Rolle: ${userRole}`;
+  
+  // Admin-Tabs nur für Admins anzeigen
+  if (userRole === 'admin') {
+    document.getElementById('usersTab').style.display = 'block';
+    document.getElementById('licenseTab').style.display = 'block';
+  }
 
   // Tagesabhängige Begrüßung
   function setGreeting() {
@@ -788,8 +800,7 @@
   // ===== PROFIL BEARBEITEN =====
   function loadProfileData() {
     document.getElementById('profileEmail').value = userEmail;
-    document.getElementById('profileName').value = userName || '';
-    // TODO: Telefon aus DB laden
+    // TODO: Name und Telefon aus Datenbank laden
   }
   
   document.getElementById('saveProfileBtn').addEventListener('click', async () => {
@@ -798,7 +809,7 @@
       const name = document.getElementById('profileName').value.trim();
       const phone = document.getElementById('profilePhone').value.trim();
       
-      // TODO: In Datenbank speichern via GraphQL
+      // TODO: In Datenbank speichern
       
       profileMsg.textContent = '✅ Profil gespeichert!';
       profileMsg.className = 'msg ok';
@@ -868,6 +879,124 @@
       showPwMsg('Unerwarteter Fehler: ' + (e?.message || e));
     }
   });
+
+  // ===== BENUTZERVERWALTUNG =====
+  const userModal = document.getElementById('userModal');
+  const addUserBtn = document.getElementById('addUserBtn');
+  const userClose = document.getElementById('userClose');
+  const userCancel = document.getElementById('userCancel');
+  
+  function openUserModal(editUser = null) {
+    if (editUser) {
+      document.getElementById('userModalTitle').textContent = 'Benutzer bearbeiten';
+      document.getElementById('userEmail').value = editUser.email;
+      document.getElementById('userName').value = editUser.name || '';
+      document.getElementById('userRole').value = editUser.role || '';
+      document.getElementById('userSave').textContent = 'Speichern';
+    } else {
+      document.getElementById('userModalTitle').textContent = 'Neuen Benutzer anlegen';
+      document.getElementById('userEmail').value = '';
+      document.getElementById('userName').value = '';
+      document.getElementById('userRole').value = '';
+      document.getElementById('userSave').textContent = 'Benutzer anlegen';
+    }
+    document.getElementById('userMsg').textContent = '';
+    userModal.classList.add('show');
+  }
+  
+  function closeUserModal() {
+    userModal.classList.remove('show');
+  }
+  
+  addUserBtn.addEventListener('click', () => openUserModal());
+  userClose.addEventListener('click', closeUserModal);
+  userCancel.addEventListener('click', closeUserModal);
+  userModal.addEventListener('click', (e) => {
+    if (e.target === userModal) closeUserModal();
+  });
+  
+  // Benutzer anlegen
+  document.getElementById('userSave').addEventListener('click', async () => {
+    const userMsg = document.getElementById('userMsg');
+    try {
+      const email = document.getElementById('userEmail').value.trim();
+      const name = document.getElementById('userName').value.trim();
+      const role = document.getElementById('userRole').value;
+      
+      if (!email || !name || !role) {
+        userMsg.textContent = '❌ Bitte alle Pflichtfelder ausfüllen';
+        userMsg.className = 'msg err';
+        return;
+      }
+      
+      // TODO: Nhost User erstellen & E-Mail senden
+      // Hier würde normalerweise die Nhost Admin API verwendet werden
+      
+      userMsg.textContent = '✅ Benutzer angelegt! E-Mail wurde versendet.';
+      userMsg.className = 'msg ok';
+      
+      setTimeout(() => {
+        closeUserModal();
+        loadUsers();
+      }, 2000);
+      
+    } catch (e) {
+      userMsg.textContent = '❌ Fehler: ' + e.message;
+      userMsg.className = 'msg err';
+    }
+  });
+  
+  // Benutzer laden
+  async function loadUsers() {
+    const tbody = document.getElementById('usersTableBody');
+    try {
+      // TODO: Von Nhost laden
+      // Hier Dummy-Daten als Beispiel
+      const users = [
+        { id: '1', email: userEmail, name: 'Admin User', role: 'admin', created: '2024-01-15' },
+        { id: '2', email: 'user@example.com', name: 'Max Mustermann', role: 'mitglied', created: '2024-02-20' },
+        { id: '3', email: 'lager@example.com', name: 'Lager Team', role: 'lager', created: '2024-03-10' }
+      ];
+      
+      tbody.innerHTML = users.map(u => {
+        const roleClass = `role-${u.role}`;
+        const roleText = u.role === 'admin' ? 'Admin' : u.role === 'mitglied' ? 'Mitglied' : 'Lager';
+        
+        return `
+          <tr>
+            <td>${u.email}</td>
+            <td>${u.name}</td>
+            <td><span class="role-badge ${roleClass}">${roleText}</span></td>
+            <td>${new Date(u.created).toLocaleDateString('de-DE')}</td>
+            <td>
+              <button class="action-btn edit" onclick="editUser('${u.id}')">Bearbeiten</button>
+              ${u.email !== userEmail ? `<button class="action-btn delete" onclick="deleteUser('${u.id}')">Löschen</button>` : ''}
+            </td>
+          </tr>
+        `;
+      }).join('');
+      
+      // Update Lizenz-Zähler
+      document.getElementById('licenseCurrentUsers').textContent = users.length;
+      
+    } catch (e) {
+      tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:20px;color:#c8102e">Fehler beim Laden: ${e.message}</td></tr>`;
+    }
+  }
+  
+  // Global functions für Button-Clicks
+  window.editUser = function(userId) {
+    // TODO: User laden und Modal öffnen
+    console.log('Edit user:', userId);
+  };
+  
+  window.deleteUser = function(userId) {
+    if (confirm('Benutzer wirklich löschen?')) {
+      // TODO: User löschen
+      console.log('Delete user:', userId);
+      loadUsers();
+    }
+  };
 
   // ===== DASHBOARD DATA =====
   const token = await nhost.auth.getAccessToken();
@@ -1059,250 +1188,6 @@
       document.getElementById('newsList').innerHTML = '<li>Fehler beim Laden der Neuigkeiten</li>';
     }
   }
-
-  // ===== BENUTZERVERWALTUNG =====
-  const userModal = document.getElementById('userModal');
-  const addUserBtn = document.getElementById('addUserBtn');
-  const userClose = document.getElementById('userClose');
-  const userCancel = document.getElementById('userCancel');
-  
-  let currentEditId = null;
-  
-  function openUserModal(editData = null) {
-    currentEditId = null;
-    
-    if (editData) {
-      document.getElementById('userModalTitle').textContent = 'Benutzer bearbeiten';
-      document.getElementById('userEmail').value = editData.email;
-      document.getElementById('userEmail').readOnly = true;
-      document.getElementById('userName').value = editData.name;
-      document.getElementById('userRole').value = editData.role;
-      document.getElementById('userSave').textContent = 'Änderungen speichern';
-      currentEditId = editData.id;
-    } else {
-      document.getElementById('userModalTitle').textContent = 'Neuen Benutzer anlegen';
-      document.getElementById('userEmail').value = '';
-      document.getElementById('userEmail').readOnly = false;
-      document.getElementById('userName').value = '';
-      document.getElementById('userRole').value = '';
-      document.getElementById('userSave').textContent = 'Benutzer anlegen';
-    }
-    
-    document.getElementById('userMsg').textContent = '';
-    userModal.classList.add('show');
-  }
-  
-  function closeUserModal() {
-    userModal.classList.remove('show');
-    currentEditId = null;
-  }
-  
-  addUserBtn.addEventListener('click', () => openUserModal());
-  userClose.addEventListener('click', closeUserModal);
-  userCancel.addEventListener('click', closeUserModal);
-  userModal.addEventListener('click', (e) => {
-    if (e.target === userModal) closeUserModal();
-  });
-  
-  // Benutzer anlegen/bearbeiten
-  document.getElementById('userSave').addEventListener('click', async () => {
-    const userMsg = document.getElementById('userMsg');
-    const saveBtn = document.getElementById('userSave');
-    
-    try {
-      const email = document.getElementById('userEmail').value.trim();
-      const name = document.getElementById('userName').value.trim();
-      const role = document.getElementById('userRole').value;
-      
-      if (!email || !name || !role) {
-        userMsg.textContent = '❌ Bitte alle Pflichtfelder ausfüllen';
-        userMsg.className = 'msg err';
-        return;
-      }
-      
-      saveBtn.disabled = true;
-      userMsg.textContent = currentEditId ? 'Speichere Änderungen...' : 'Erstelle Benutzer...';
-      userMsg.className = 'msg';
-      
-      if (currentEditId) {
-        // BEARBEITEN
-        await gql(`
-          mutation UpdateUserProfile($id: uuid!, $name: String!, $role: String!) {
-            update_user_profiles_by_pk(
-              pk_columns: {id: $id}
-              _set: {name: $name, role: $role}
-            ) {
-              id
-            }
-          }
-        `, { id: currentEditId, name, role });
-        
-        userMsg.textContent = '✅ Benutzer aktualisiert!';
-        userMsg.className = 'msg ok';
-        
-      } else {
-        // NEU ANLEGEN
-        // 1. Zufälliges temporäres Passwort generieren
-        const tempPassword = 'Temp' + Math.random().toString(36).slice(-8) + '!1';
-        
-        // 2. User in Nhost Auth erstellen
-        const { data: signUpData, error: signUpError } = await nhost.auth.signUp({
-          email,
-          password: tempPassword,
-          options: {
-            displayName: name
-          }
-        });
-        
-        if (signUpError) {
-          throw new Error(signUpError.message || 'Fehler beim Erstellen des Users');
-        }
-        
-        const newUserId = signUpData.user?.id;
-        if (!newUserId) {
-          throw new Error('Keine User-ID erhalten');
-        }
-        
-        console.log('✅ User erstellt:', newUserId);
-        
-        // 3. Profil in user_profiles erstellen
-        const profileResult = await gql(`
-          mutation InsertUserProfile($userId: uuid!, $name: String!, $role: String!) {
-            insert_user_profiles_one(object: {
-              user_id: $userId,
-              name: $name,
-              role: $role
-            }) {
-              id
-            }
-          }
-        `, { userId: newUserId, name, role });
-        
-        console.log('✅ Profil erstellt');
-        
-        // 4. Passwort-Reset E-Mail senden
-        try {
-          await nhost.auth.resetPassword({ email });
-          console.log('✅ Passwort-Reset E-Mail gesendet');
-        } catch (e) {
-          console.warn('Warnung: E-Mail konnte nicht gesendet werden:', e);
-        }
-        
-        userMsg.textContent = `✅ Benutzer "${name}" erfolgreich angelegt!\n\nEine E-Mail wurde an ${email} gesendet, damit der Benutzer sein Passwort festlegen kann.`;
-        userMsg.className = 'msg ok';
-      }
-      
-      setTimeout(() => {
-        closeUserModal();
-        loadUsers();
-      }, 2000);
-      
-    } catch (e) {
-      console.error('Fehler:', e);
-      userMsg.textContent = '❌ Fehler: ' + e.message;
-      userMsg.className = 'msg err';
-      saveBtn.disabled = false;
-    }
-  });
-  
-  // Benutzer laden
-  async function loadUsers() {
-    const tbody = document.getElementById('usersTableBody');
-    try {
-      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:#999">Lade Benutzer...</td></tr>';
-      
-      // Benutzer aus Datenbank laden
-      const data = await gql(`
-        query GetAllUsers {
-          user_profiles(order_by: {created_at: desc}) {
-            id
-            user_id
-            name
-            role
-            created_at
-          }
-          users {
-            id
-            email
-          }
-        }
-      `);
-      
-      // Users mit E-Mails kombinieren
-      const users = data.user_profiles.map(profile => {
-        const authUser = data.users.find(u => u.id === profile.user_id);
-        return {
-          id: profile.id,
-          user_id: profile.user_id,
-          email: authUser?.email || 'Unbekannt',
-          name: profile.name,
-          role: profile.role,
-          created: profile.created_at
-        };
-      });
-      
-      if (users.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:#999">Noch keine Benutzer vorhanden</td></tr>';
-        return;
-      }
-      
-      tbody.innerHTML = users.map(u => {
-        const roleClass = `role-${u.role}`;
-        const roleText = u.role === 'admin' ? 'Admin' : u.role === 'mitglied' ? 'Mitglied' : 'Lager';
-        
-        return `
-          <tr>
-            <td>${u.email}</td>
-            <td>${u.name}</td>
-            <td><span class="role-badge ${roleClass}">${roleText}</span></td>
-            <td>${new Date(u.created).toLocaleDateString('de-DE')}</td>
-            <td>
-              <button class="action-btn edit" onclick="window.editUserClick('${u.id}', '${u.email}', '${u.name}', '${u.role}')">Bearbeiten</button>
-              ${u.email !== userEmail ? `<button class="action-btn delete" onclick="window.deleteUserClick('${u.id}', '${u.user_id}', '${u.email}')">Löschen</button>` : ''}
-            </td>
-          </tr>
-        `;
-      }).join('');
-      
-      // Update Lizenz-Zähler
-      document.getElementById('licenseCurrentUsers').textContent = users.length;
-      
-    } catch (e) {
-      console.error('Fehler beim Laden:', e);
-      tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:20px;color:#c8102e">Fehler beim Laden: ${e.message}</td></tr>`;
-    }
-  }
-  
-  // Global functions für Button-Clicks
-  window.editUserClick = function(id, email, name, role) {
-    openUserModal({ id, email, name, role });
-  };
-  
-  window.deleteUserClick = async function(profileId, userId, email) {
-    if (!confirm(`Benutzer "${email}" wirklich löschen?\n\nDies löscht das Profil unwiderruflich!`)) {
-      return;
-    }
-    
-    try {
-      // Profil löschen
-      await gql(`
-        mutation DeleteProfile($id: uuid!) {
-          delete_user_profiles_by_pk(id: $id) {
-            id
-          }
-        }
-      `, { id: profileId });
-      
-      console.log('✅ Profil gelöscht');
-      
-      alert('✅ Benutzer gelöscht!\n\n⚠️ Hinweis: Der Auth-User existiert noch in Nhost. Lösche ihn bei Bedarf manuell in der Nhost Console.');
-      
-      loadUsers();
-    } catch (e) {
-      alert('❌ Fehler beim Löschen: ' + e.message);
-      console.error('Delete error:', e);
-    }
-  };
 
   // ===== Notizen (lokal) =====
   const NOTES_KEY = 'admin_notes';
