@@ -510,23 +510,24 @@
   // Auth Check & Init
   async function init() {
     try {
+      // Check if authenticated
       if (!pb.authStore.isValid) {
-        // Redirect to login if not authenticated
-        window.location.href = 'supervisor-login.html';
+        // Use same login as admin
+        alert('Bitte zuerst einloggen!');
+        window.location.href = 'admin-login.html';
         return;
       }
       
-      // Refresh auth
-      const authData = await pb.collection('users').authRefresh();
+      // Get current user
+      currentUser = pb.authStore.model;
       
-      if (!authData.record.supervisor) {
+      // Check if supervisor
+      if (!currentUser.supervisor) {
         alert('Zugriff verweigert! Nur für Supervisors.');
-        pb.authStore.clear();
-        window.location.href = 'supervisor-login.html';
+        window.location.href = 'admin-dashboard.html';
         return;
       }
       
-      currentUser = authData.record;
       document.getElementById('welcomeText').textContent = currentUser.name;
       
       // Show body
@@ -537,14 +538,15 @@
       
     } catch (error) {
       console.error('Auth error:', error);
-      window.location.href = 'supervisor-login.html';
+      alert('Fehler beim Laden. Bitte neu einloggen.');
+      window.location.href = 'admin-login.html';
     }
   }
 
   // Logout
   document.getElementById('logoutBtn').addEventListener('click', () => {
     pb.authStore.clear();
-    window.location.href = 'supervisor-login.html';
+    window.location.href = 'admin-login.html';
   });
 
   // Load Dashboard Data
@@ -565,6 +567,7 @@
       
     } catch (error) {
       console.error('Fehler beim Laden:', error);
+      document.getElementById('loadingOrgs').innerHTML = '<div style="padding:20px;color:#c8102e;text-align:center">Fehler beim Laden der Daten</div>';
     }
   }
 
@@ -574,7 +577,7 @@
     tbody.innerHTML = '';
     
     if (orgs.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">Keine Organisationen vorhanden</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px">Keine Organisationen vorhanden</td></tr>';
       document.getElementById('loadingOrgs').style.display = 'none';
       document.getElementById('orgsContainer').style.display = 'block';
       return;
@@ -592,7 +595,7 @@
         <td>
           <div class="table-actions">
             <button class="action-btn edit" onclick="editOrg('${org.id}')">✏️</button>
-            <button class="action-btn delete" onclick="deleteOrg('${org.id}', '${org.org_name}')">🗑️</button>
+            <button class="action-btn delete" onclick="deleteOrg('${org.id}', '${org.org_name.replace(/'/g, "\\'")}')">🗑️</button>
           </div>
         </td>
       `;
