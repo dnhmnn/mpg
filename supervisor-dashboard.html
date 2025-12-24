@@ -13,50 +13,61 @@
         }
         
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
             min-height: 100vh;
-            padding: 20px;
+            padding: 10px;
         }
         
         .container {
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
         }
         
         .card {
-            background: white;
-            border-radius: 12px;
-            padding: 30px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
-            margin-bottom: 20px;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            margin-bottom: 15px;
         }
         
         h1 {
-            color: #2d3748;
+            color: #1e3c72;
             margin-bottom: 10px;
+            font-size: clamp(1.5rem, 5vw, 2rem);
+        }
+        
+        h2 {
+            color: #1e3c72;
+            margin-bottom: 15px;
+            font-size: clamp(1.2rem, 4vw, 1.5rem);
         }
         
         .subtitle {
-            color: #718096;
-            margin-bottom: 30px;
+            color: #666;
+            margin-bottom: 20px;
+            font-size: clamp(0.9rem, 3vw, 1rem);
         }
         
         /* Login Form */
         #loginSection {
-            max-width: 400px;
-            margin: 100px auto;
+            max-width: 500px;
+            margin: 50px auto;
+            padding: 0 10px;
         }
         
         .form-group {
-            margin-bottom: 20px;
+            margin-bottom: 15px;
         }
         
         label {
             display: block;
             margin-bottom: 8px;
-            color: #2d3748;
-            font-weight: 500;
+            color: #1e3c72;
+            font-weight: 600;
+            font-size: clamp(0.9rem, 3vw, 1rem);
         }
         
         input[type="email"],
@@ -67,32 +78,34 @@
         select {
             width: 100%;
             padding: 12px 16px;
-            border: 2px solid #e2e8f0;
+            border: 2px solid #ddd;
             border-radius: 8px;
             font-size: 16px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             transition: border-color 0.3s;
         }
         
         input:focus, select:focus {
             outline: none;
-            border-color: #667eea;
+            border-color: #2a5298;
         }
         
         button {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
             color: white;
-            padding: 12px 24px;
+            padding: 12px 20px;
             border: none;
             border-radius: 8px;
-            font-size: 16px;
+            font-size: clamp(0.9rem, 3vw, 1rem);
             font-weight: 600;
             cursor: pointer;
             transition: transform 0.2s, box-shadow 0.2s;
+            width: 100%;
         }
         
         button:hover {
             transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+            box-shadow: 0 8px 20px rgba(30, 60, 114, 0.4);
         }
         
         button:active {
@@ -100,16 +113,15 @@
         }
         
         .btn-secondary {
-            background: #e2e8f0;
-            color: #2d3748;
+            background: #6c757d;
         }
         
         .btn-danger {
-            background: #f56565;
+            background: #dc3545;
         }
         
         .btn-success {
-            background: #48bb78;
+            background: #28a745;
         }
         
         /* Dashboard */
@@ -119,99 +131,131 @@
         
         .header {
             display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 30px;
+            flex-direction: column;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        @media (min-width: 768px) {
+            .header {
+                flex-direction: row;
+                justify-content: space-between;
+                align-items: center;
+            }
         }
         
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
+            grid-template-columns: 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        @media (min-width: 640px) {
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        
+        @media (min-width: 1024px) {
+            .stats-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
         }
         
         .stat-card {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
             color: white;
-            padding: 24px;
+            padding: 20px;
             border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+            box-shadow: 0 4px 12px rgba(30, 60, 114, 0.3);
+            text-align: center;
         }
         
         .stat-value {
-            font-size: 36px;
+            font-size: clamp(2rem, 8vw, 2.5rem);
             font-weight: bold;
             margin-bottom: 8px;
         }
         
         .stat-label {
             opacity: 0.9;
-            font-size: 14px;
+            font-size: clamp(0.85rem, 3vw, 1rem);
         }
         
-        /* Organizations Table */
+        /* Table - Mobile Optimized */
         .table-container {
             overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
         }
         
         table {
             width: 100%;
             border-collapse: collapse;
+            min-width: 800px;
         }
         
         th {
-            background: #f7fafc;
-            padding: 12px 16px;
+            background: #f8f9fa;
+            padding: 12px;
             text-align: left;
             font-weight: 600;
-            color: #2d3748;
-            border-bottom: 2px solid #e2e8f0;
+            color: #1e3c72;
+            border-bottom: 2px solid #dee2e6;
+            font-size: clamp(0.85rem, 2.5vw, 1rem);
+            white-space: nowrap;
         }
         
         td {
-            padding: 12px 16px;
-            border-bottom: 1px solid #e2e8f0;
+            padding: 12px;
+            border-bottom: 1px solid #dee2e6;
+            font-size: clamp(0.85rem, 2.5vw, 0.95rem);
         }
         
         tr:hover {
-            background: #f7fafc;
+            background: #f8f9fa;
         }
         
         .badge {
             display: inline-block;
-            padding: 4px 12px;
+            padding: 4px 10px;
             border-radius: 12px;
-            font-size: 12px;
+            font-size: clamp(0.7rem, 2vw, 0.85rem);
             font-weight: 600;
+            white-space: nowrap;
         }
         
         .badge-active {
-            background: #c6f6d5;
-            color: #22543d;
+            background: #d4edda;
+            color: #155724;
         }
         
         .badge-inactive {
-            background: #fed7d7;
-            color: #742a2a;
+            background: #f8d7da;
+            color: #721c24;
         }
         
         .badge-trial {
-            background: #feebc8;
-            color: #7c2d12;
+            background: #fff3cd;
+            color: #856404;
         }
         
         .badge-basic {
-            background: #bee3f8;
-            color: #2c5282;
+            background: #d1ecf1;
+            color: #0c5460;
         }
         
         .badge-professional {
-            background: #d6bcfa;
-            color: #44337a;
+            background: #e2d9f3;
+            color: #4a148c;
         }
         
-        /* Modal */
+        .badge-enterprise {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        /* Modal - Mobile Optimized */
         .modal {
             display: none;
             position: fixed;
@@ -219,10 +263,12 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0,0,0,0.5);
+            background: rgba(0, 0, 0, 0.6);
             z-index: 1000;
             align-items: center;
             justify-content: center;
+            padding: 10px;
+            overflow-y: auto;
         }
         
         .modal.active {
@@ -231,12 +277,13 @@
         
         .modal-content {
             background: white;
-            border-radius: 12px;
-            padding: 30px;
-            max-width: 500px;
-            width: 90%;
+            border-radius: 15px;
+            padding: 20px;
+            max-width: 600px;
+            width: 100%;
             max-height: 90vh;
             overflow-y: auto;
+            margin: auto;
         }
         
         .modal-header {
@@ -244,48 +291,105 @@
             justify-content: space-between;
             align-items: center;
             margin-bottom: 20px;
+            gap: 10px;
+        }
+        
+        .modal-header h2 {
+            margin: 0;
+            font-size: clamp(1.2rem, 4vw, 1.5rem);
         }
         
         .close-btn {
-            background: none;
-            color: #718096;
+            background: #6c757d;
+            color: white;
             font-size: 24px;
             cursor: pointer;
-            padding: 0;
-            width: 32px;
-            height: 32px;
+            width: 40px;
+            height: 40px;
+            min-width: 40px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
         
         .action-buttons {
             display: flex;
+            flex-direction: column;
             gap: 10px;
+            margin-top: 15px;
+        }
+        
+        @media (min-width: 640px) {
+            .action-buttons {
+                flex-direction: row;
+            }
         }
         
         .action-btn {
-            padding: 6px 12px;
-            font-size: 14px;
+            padding: 8px 12px;
+            font-size: clamp(0.85rem, 2.5vw, 1rem);
+            min-width: 44px;
+            min-height: 44px;
         }
         
         .loading {
             text-align: center;
-            padding: 40px;
-            color: #718096;
+            padding: 40px 20px;
+            color: #666;
+            font-size: clamp(0.9rem, 3vw, 1rem);
         }
         
         .error {
-            background: #fed7d7;
-            color: #742a2a;
+            background: #f8d7da;
+            color: #721c24;
             padding: 12px 16px;
             border-radius: 8px;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
+            font-size: clamp(0.85rem, 2.5vw, 0.95rem);
         }
         
         .success {
-            background: #c6f6d5;
-            color: #22543d;
+            background: #d4edda;
+            color: #155724;
             padding: 12px 16px;
             border-radius: 8px;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
+            font-size: clamp(0.85rem, 2.5vw, 0.95rem);
+        }
+        
+        /* Mobile Action Buttons */
+        .table-actions {
+            display: flex;
+            gap: 5px;
+            flex-wrap: wrap;
+        }
+        
+        /* Responsive padding adjustments */
+        @media (min-width: 768px) {
+            body {
+                padding: 20px;
+            }
+            
+            .card {
+                padding: 30px;
+            }
+            
+            .modal-content {
+                padding: 30px;
+            }
+        }
+        
+        /* Smooth scroll for mobile */
+        html {
+            scroll-behavior: smooth;
+        }
+        
+        /* Touch-friendly inputs */
+        @media (max-width: 640px) {
+            input, select, button {
+                font-size: 16px; /* Prevents zoom on iOS */
+            }
         }
     </style>
 </head>
@@ -309,7 +413,7 @@
                     <input type="password" id="loginPassword" required>
                 </div>
                 
-                <button type="submit" style="width:100%;">Einloggen</button>
+                <button type="submit">Einloggen</button>
             </form>
         </div>
     </div>
@@ -375,8 +479,8 @@
     </div>
 
     <!-- Create/Edit Modal -->
-    <div id="orgModal" class="modal">
-        <div class="modal-content">
+    <div id="orgModal" class="modal" onclick="closeModalOnBackdrop(event)">
+        <div class="modal-content" onclick="event.stopPropagation()">
             <div class="modal-header">
                 <h2 id="modalTitle">Neue Organisation</h2>
                 <button class="close-btn" onclick="closeModal()">&times;</button>
@@ -391,7 +495,7 @@
                 <div class="form-group">
                     <label for="orgCode">Organisations-Code *</label>
                     <input type="text" id="orgCode" pattern="[a-z0-9]+" required 
-                           placeholder="z.B. ffwmuenchen (nur Kleinbuchstaben & Zahlen)">
+                           placeholder="z.B. ffwmuenchen">
                 </div>
                 
                 <div class="form-group">
@@ -533,7 +637,7 @@
                     <td><span class="badge ${org.is_active ? 'badge-active' : 'badge-inactive'}">${org.is_active ? 'Aktiv' : 'Inaktiv'}</span></td>
                     <td>${org.contact_email || '-'}</td>
                     <td>
-                        <div class="action-buttons">
+                        <div class="table-actions">
                             <button class="action-btn btn-secondary" onclick="editOrg('${org.id}')">✏️</button>
                             <button class="action-btn btn-danger" onclick="deleteOrg('${org.id}', '${org.org_name}')">🗑️</button>
                         </div>
@@ -552,7 +656,10 @@
             document.getElementById('orgForm').reset();
             document.getElementById('orgId').value = '';
             document.getElementById('isActive').checked = true;
+            document.getElementById('modalError').style.display = 'none';
+            document.getElementById('modalSuccess').style.display = 'none';
             document.getElementById('orgModal').classList.add('active');
+            document.body.style.overflow = 'hidden'; // Prevent background scroll
         }
 
         // Edit Organization
@@ -571,8 +678,11 @@
                 document.getElementById('contactPerson').value = org.contact_person || '';
                 document.getElementById('contactPhone').value = org.contact_phone || '';
                 document.getElementById('isActive').checked = org.is_active;
+                document.getElementById('modalError').style.display = 'none';
+                document.getElementById('modalSuccess').style.display = 'none';
                 
                 document.getElementById('orgModal').classList.add('active');
+                document.body.style.overflow = 'hidden';
                 
             } catch (error) {
                 alert('Fehler beim Laden der Organisation!');
@@ -606,6 +716,7 @@
                 
                 document.getElementById('modalSuccess').textContent = 'Organisation erfolgreich gespeichert!';
                 document.getElementById('modalSuccess').style.display = 'block';
+                document.getElementById('modalError').style.display = 'none';
                 
                 setTimeout(() => {
                     closeModal();
@@ -615,6 +726,7 @@
             } catch (error) {
                 document.getElementById('modalError').textContent = 'Fehler beim Speichern: ' + error.message;
                 document.getElementById('modalError').style.display = 'block';
+                document.getElementById('modalSuccess').style.display = 'none';
                 console.error(error);
             }
         }
@@ -638,8 +750,16 @@
         // Close Modal
         function closeModal() {
             document.getElementById('orgModal').classList.remove('active');
+            document.body.style.overflow = ''; // Re-enable scroll
             document.getElementById('modalError').style.display = 'none';
             document.getElementById('modalSuccess').style.display = 'none';
+        }
+
+        // Close modal when clicking backdrop
+        function closeModalOnBackdrop(event) {
+            if (event.target.id === 'orgModal') {
+                closeModal();
+            }
         }
 
         // Check if already logged in
