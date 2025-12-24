@@ -104,6 +104,13 @@
       font-size: clamp(1.2rem, 4vw, 1.5rem);
     }
     
+    /* Login Section */
+    #loginSection {
+      max-width: 500px;
+      margin: 100px auto;
+      padding: 0 14px;
+    }
+    
     /* Stats Grid */
     .stats-grid { 
       display: grid;
@@ -374,56 +381,83 @@
 </head>
 <body>
 
-<header>
-  <h1>👑 Supervisor Dashboard</h1>
-  <div class="spacer"></div>
-  <span id="welcomeText" style="font-size:0.9rem"></span>
-  <button class="topbtn" id="logoutBtn">Abmelden</button>
-</header>
-
-<div class="greeting">Servus, Supervisor!</div>
-
-<div class="container">
-  <!-- Statistics -->
-  <div class="stats-grid">
-    <div class="stat-box">
-      <div class="stat-num" id="totalOrgs">0</div>
-      <div class="stat-label">Organisationen</div>
-    </div>
-    <div class="stat-box">
-      <div class="stat-num" id="totalUsers">0</div>
-      <div class="stat-label">Benutzer</div>
-    </div>
-    <div class="stat-box">
-      <div class="stat-num" id="activeOrgs">0</div>
-      <div class="stat-label">Aktive Orgas</div>
-    </div>
-  </div>
-
-  <!-- Organizations -->
+<!-- Login Section -->
+<div id="loginSection">
   <div class="card">
-    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:16px">
-      <h2 style="margin:0">📋 Alle Organisationen</h2>
-      <button class="btn success" onclick="showCreateModal()" style="width:auto">+ Neue Organisation</button>
-    </div>
+    <h2>🔐 Supervisor Login</h2>
+    <p style="color:#666; margin-bottom:20px">Responda System Administration</p>
     
-    <div id="loadingOrgs" class="loading">Lade Organisationen...</div>
-    <div id="orgsContainer" style="display:none;">
-      <div class="table-container">
-        <table>
-          <thead>
-            <tr>
-              <th>Code</th>
-              <th>Name</th>
-              <th>Lizenz</th>
-              <th>Max Users</th>
-              <th>Status</th>
-              <th>Kontakt</th>
-              <th>Aktionen</th>
-            </tr>
-          </thead>
-          <tbody id="orgsTableBody"></tbody>
-        </table>
+    <div id="loginError" class="msg err" style="display:none;"></div>
+    
+    <form id="loginForm" onsubmit="handleLogin(event)">
+      <div class="field">
+        <label for="loginEmail">E-Mail</label>
+        <input type="email" id="loginEmail" value="supervisor@responda.systems" required>
+      </div>
+      
+      <div class="field">
+        <label for="loginPassword">Passwort</label>
+        <input type="password" id="loginPassword" required>
+      </div>
+      
+      <button type="submit" class="btn">Einloggen</button>
+    </form>
+  </div>
+</div>
+
+<!-- Dashboard Section -->
+<div id="dashboardSection" style="display:none">
+  <header>
+    <h1>👑 Supervisor Dashboard</h1>
+    <div class="spacer"></div>
+    <span id="welcomeText" style="font-size:0.9rem"></span>
+    <button class="topbtn" id="logoutBtn">Abmelden</button>
+  </header>
+
+  <div class="greeting">Servus, Supervisor!</div>
+
+  <div class="container">
+    <!-- Statistics -->
+    <div class="stats-grid">
+      <div class="stat-box">
+        <div class="stat-num" id="totalOrgs">0</div>
+        <div class="stat-label">Organisationen</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-num" id="totalUsers">0</div>
+        <div class="stat-label">Benutzer</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-num" id="activeOrgs">0</div>
+        <div class="stat-label">Aktive Orgas</div>
+      </div>
+    </div>
+
+    <!-- Organizations -->
+    <div class="card">
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:16px">
+        <h2 style="margin:0">📋 Alle Organisationen</h2>
+        <button class="btn success" onclick="showCreateModal()" style="width:auto">+ Neue Organisation</button>
+      </div>
+      
+      <div id="loadingOrgs" class="loading">Lade Organisationen...</div>
+      <div id="orgsContainer" style="display:none;">
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Code</th>
+                <th>Name</th>
+                <th>Lizenz</th>
+                <th>Max Users</th>
+                <th>Status</th>
+                <th>Kontakt</th>
+                <th>Aktionen</th>
+              </tr>
+            </thead>
+            <tbody id="orgsTableBody"></tbody>
+          </table>
+        </div>
       </div>
     </div>
   </div>
@@ -507,47 +541,55 @@
   const pb = new PocketBase('https://api.responda.systems');
   let currentUser = null;
 
-  // Auth Check & Init
-  async function init() {
+  // Show body
+  document.body.classList.add('loaded');
+
+  // Login Handler
+  async function handleLogin(event) {
+    event.preventDefault();
+    
+    const email = document.getElementById('loginEmail').value;
+    const password = document.getElementById('loginPassword').value;
+    const errorDiv = document.getElementById('loginError');
+    
     try {
-      // Check if authenticated
-      if (!pb.authStore.isValid) {
-        // Use same login as admin
-        alert('Bitte zuerst einloggen!');
-        window.location.href = 'admin-login.html';
+      const authData = await pb.collection('users').authWithPassword(email, password);
+      
+      if (!authData.record.supervisor) {
+        errorDiv.textContent = 'Zugriff verweigert! Nur für Supervisors.';
+        errorDiv.style.display = 'block';
+        pb.authStore.clear();
         return;
       }
       
-      // Get current user
-      currentUser = pb.authStore.model;
-      
-      // Check if supervisor
-      if (!currentUser.supervisor) {
-        alert('Zugriff verweigert! Nur für Supervisors.');
-        window.location.href = 'admin-dashboard.html';
-        return;
-      }
-      
+      currentUser = authData.record;
+      document.getElementById('loginSection').style.display = 'none';
+      document.getElementById('dashboardSection').style.display = 'block';
       document.getElementById('welcomeText').textContent = currentUser.name;
       
-      // Show body
-      document.body.classList.add('loaded');
-      
-      // Load dashboard
-      await loadDashboard();
+      loadDashboard();
       
     } catch (error) {
-      console.error('Auth error:', error);
-      alert('Fehler beim Laden. Bitte neu einloggen.');
-      window.location.href = 'admin-login.html';
+      errorDiv.textContent = 'Login fehlgeschlagen! Bitte Zugangsdaten prüfen.';
+      errorDiv.style.display = 'block';
+      console.error(error);
     }
   }
 
   // Logout
   document.getElementById('logoutBtn').addEventListener('click', () => {
     pb.authStore.clear();
-    window.location.href = 'admin-login.html';
+    location.reload();
   });
+
+  // Check if already logged in
+  if (pb.authStore.isValid && pb.authStore.model?.supervisor) {
+    currentUser = pb.authStore.model;
+    document.getElementById('loginSection').style.display = 'none';
+    document.getElementById('dashboardSection').style.display = 'block';
+    document.getElementById('welcomeText').textContent = currentUser.name;
+    loadDashboard();
+  }
 
   // Load Dashboard Data
   async function loadDashboard() {
@@ -717,9 +759,6 @@
       closeModal();
     }
   }
-
-  // Initialize
-  init();
 </script>
 
 </body>
