@@ -1089,6 +1089,142 @@
   };
   
   document.getElementById('userSave').addEventListener('click', async () => {
+  const userMsg = document.getElementById('userMsg');
+  const saveBtn = document.getElementById('userSave');
+  
+  saveBtn.disabled = true;
+  saveBtn.textContent = 'Speichere...';
+  
+  try {
+    const email = document.getElementById('userEmail').value.trim();
+    const name = document.getElementById('userName').value.trim();
+    const phone = document.getElementById('userPhone').value.trim();
+    const roleTemplate = document.getElementById('roleTemplate').value;
+    const role = roleTemplate || 'benutzer';  // ← WICHTIG: DEFAULT!
+    
+    console.log('📝 Creating user with role:', role);
+    
+    if (!email || !name) {
+      userMsg.textContent = '❌ Bitte E-Mail und Name ausfüllen';
+      userMsg.className = 'msg err';
+      saveBtn.disabled = false;
+      saveBtn.textContent = editingUserId ? 'Speichern' : 'Benutzer anlegen';
+      return;
+    }
+    
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      userMsg.textContent = '❌ Ungültige E-Mail-Adresse';
+      userMsg.className = 'msg err';
+      saveBtn.disabled = false;
+      saveBtn.textContent = editingUserId ? 'Speichern' : 'Benutzer anlegen';
+      return;
+    }
+    
+    const permissions = {
+      dashboard: true,
+      einsaetze: document.getElementById('perm_einsaetze').checked,
+      lager: document.getElementById('perm_lager').checked,
+      produktausgabe: document.getElementById('perm_produktausgabe').checked,
+      ausbildungen: document.getElementById('perm_ausbildungen').checked,
+      ausbildungen_manage: document.getElementById('perm_ausbildungen_manage').checked,
+      dokumente: document.getElementById('perm_dokumente').checked,
+      patienten: document.getElementById('perm_patienten').checked,
+      dateien: document.getElementById('perm_dateien').checked,
+      qr: document.getElementById('perm_qr').checked,
+      chat: true,
+      users_manage: document.getElementById('perm_users_manage').checked
+    };
+    
+    const userData = {
+      name: name,
+      phone: phone || '',
+      role: role,
+      permissions: permissions,
+      organization_id: user.organization_id,
+      supervisor: false
+    };
+    
+    if (editingUserId) {
+      await pb.collection('users').update(editingUserId, userData);
+      
+      userMsg.textContent = '✅ Benutzer aktualisiert!';
+      userMsg.className = 'msg ok';
+      
+      setTimeout(() => {
+        closeUserModal();
+        loadUsers();
+      }, 1500);
+      
+    } else {
+      // NEUER USER
+      userData.email = email;
+      userData.emailVisibility = true;
+      userData.verified = false;
+      
+      const tempPassword = Array.from({length: 16}, () => 
+        'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$%&*'[Math.floor(Math.random() * 66)]
+      ).join('');
+      
+      userData.password = tempPassword;
+      userData.passwordConfirm = tempPassword;
+      
+      console.log('📤 Creating user with data:', {
+        email: userData.email,
+        name: userData.name,
+        role: userData.role,
+        organization_id: userData.organization_id
+      });
+      
+      const newUser = await pb.collection('users').create(userData);
+      
+      console.log('✅ User created:', newUser.id);
+      
+      try {
+        await pb.collection('users').requestPasswordReset(email);
+        console.log('📧 Password reset email sent to:', email);
+        
+        userMsg.textContent = '✅ Benutzer angelegt! E-Mail mit Passwort-Link wurde an ' + email + ' versendet.';
+      } catch (emailError) {
+        console.error('❌ Email send error:', emailError);
+        userMsg.textContent = '✅ Benutzer angelegt! ABER: E-Mail konnte nicht versendet werden.';
+      }
+      
+      userMsg.className = 'msg ok';
+      
+      setTimeout(() => {
+        closeUserModal();
+        loadUsers();
+      }, 3000);
+    }
+    
+  } catch (e) {
+    console.error('❌ User save error:', e);
+    
+    let errorMsg = 'Fehler: ';
+    
+    if (e.status === 400) {
+      if (e.response?.data?.email) {
+        errorMsg += 'E-Mail bereits vergeben oder ungültig';
+      } else if (e.response?.data?.organization_id) {
+        errorMsg += 'Organisation fehlt oder ungültig';
+      } else if (e.response?.data?.role) {
+        errorMsg += 'Rolle fehlt oder ungültig. Bitte Rolle auswählen!';
+      } else {
+        errorMsg += JSON.stringify(e.response?.data || e.message);
+      }
+    } else {
+      errorMsg += e.message;
+    }
+    
+    userMsg.textContent = '❌ ' + errorMsg;
+    userMsg.className = 'msg err';
+  } finally {
+    saveBtn.disabled = false;
+    saveBtn.textContent = editingUserId ? 'Speichern' : 'Benutzer anlegen';
+  }
+});
+ {
     const userMsg = document.getElementById('userMsg');
     const saveBtn = document.getElementById('userSave');
     
@@ -1317,4 +1453,3 @@
 
 </body>
 </html>
-
