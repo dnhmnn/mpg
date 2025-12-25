@@ -1,0 +1,1439 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Übersicht – Responda</title>
+  
+  <!-- Theme Color -->
+  <meta name="theme-color" content="#667eea">
+  
+  <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root { --rot: #c8102e; --gradient-start: #667eea; --gradient-end: #764ba2; }
+    * { box-sizing: border-box; }
+    body { 
+      font-family: 'Atkinson Hyperlegible', Arial, sans-serif; 
+      background: linear-gradient(135deg, var(--gradient-start) 0%, var(--gradient-end) 100%);
+      min-height: 100vh;
+      margin: 0;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    body.loaded { opacity: 1; }
+    
+    header { 
+      background: var(--gradient-start);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 14px;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      flex-wrap: wrap;
+    }
+    header h1 { 
+      margin: 0; 
+      font-size: clamp(1rem, 4vw, 1.15rem);
+      font-weight: 700; 
+      letter-spacing: .2px; 
+    }
+    .spacer { flex: 1; }
+    .topbtn { 
+      color: #fff;
+      text-decoration: none;
+      background: rgba(255,255,255,0.2);
+      padding: 7px 10px;
+      border-radius: 8px;
+      font-weight: 700;
+      transition: all 0.2s;
+      border: none;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: clamp(0.85rem, 3vw, 1rem);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .topbtn:hover { background: rgba(255,255,255,0.3); }
+    
+    .greeting { 
+      font-family: 'Atkinson Hyperlegible', Arial, sans-serif;
+      font-size: clamp(2rem, 8vw, 3rem);
+      font-weight: 700;
+      color: #fff;
+      text-align: center;
+      margin: 24px 0;
+      letter-spacing: 1px;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+      padding: 0 14px;
+    }
+    
+    .wrap { 
+      max-width: 1050px;
+      margin: 0 auto 16px;
+      padding: 0 14px;
+      display: grid;
+      grid-template-columns: 260px 1fr;
+      gap: 16px;
+    }
+    
+    aside { 
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 3px 12px rgba(0,0,0,.06);
+      padding: 14px;
+    }
+    aside h3 { margin: 6px 0 12px; color: var(--rot); }
+    .nav a { 
+      display: block;
+      padding: 10px 12px;
+      margin: 6px 0;
+      border-radius: 8px;
+      text-decoration: none;
+      color: #222;
+      font-weight: 700;
+      border: 1px solid #eee;
+      transition: all 0.2s;
+    }
+    .nav a:hover { background: #fff5f7; border-color: #f2c9d1; }
+    
+    main { display: flex; flex-direction: column; gap: 16px; }
+    .card { 
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 3px 12px rgba(0,0,0,.06);
+      padding: 20px;
+    }
+    .card h2 { 
+      margin: 0 0 16px; 
+      color: var(--rot); 
+      font-size: clamp(1.2rem, 4vw, 1.5rem);
+    }
+    
+    .news li { margin: 6px 0; }
+    .pill { 
+      display: inline-block;
+      background: #fff5f5;
+      color: #8b0e22;
+      border: 1px solid #f2c9d1;
+      border-radius: 999px;
+      padding: 2px 8px;
+      font-size: .82rem;
+      margin-left: 6px;
+    }
+    
+    /* Chat */
+    .chat-container {
+      background: #f8f9fa;
+      border: 1px solid #eee;
+      border-radius: 10px;
+      padding: 12px;
+      max-height: 400px;
+      overflow-y: auto;
+      scroll-behavior: smooth;
+    }
+    .chat-messages {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .chat-message {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      background: #fff;
+      border: 1px solid #eee;
+      animation: messageSlideIn 0.3s ease-out;
+    }
+    @keyframes messageSlideIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .chat-message.own {
+      background: #fff5f7;
+      border-color: #f2c9d1;
+      margin-left: 40px;
+    }
+    .chat-message.other {
+      background: #f0f7ff;
+      border-color: #dbeafe;
+      margin-right: 40px;
+    }
+    .chat-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 4px;
+    }
+    .chat-user {
+      font-weight: 700;
+      font-size: 0.9rem;
+    }
+    .chat-message.own .chat-user { color: var(--rot); }
+    .chat-message.other .chat-user { color: #1e40af; }
+    .chat-time {
+      font-size: 0.75rem;
+      color: #999;
+    }
+    .chat-text {
+      font-size: 0.95rem;
+      line-height: 1.4;
+      word-wrap: break-word;
+      white-space: pre-wrap;
+    }
+    .chat-status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+      margin-right: 6px;
+    }
+    .chat-status-dot.online {
+      background: #16a34a;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    
+    .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; }
+    input, textarea, button, select { font-family: inherit; font-size: 16px; }
+    input, textarea, select { 
+      width: 100%;
+      padding: 9px 10px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      background: #fafafa;
+    }
+    textarea { min-height: 70px; resize: vertical; }
+    .btn { 
+      background: var(--rot);
+      color: #fff;
+      border: 0;
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+      width: 100%;
+    }
+    .btn:hover { background: #a00d26; }
+    .btn:disabled {
+      background: #cbd5e1;
+      cursor: not-allowed;
+    }
+    .btn.sec { background: #eee; color: var(--rot); border: 1px solid var(--rot); }
+    .ok { color: #2e7d32; }
+    .err { color: #c8102e; }
+    .msg { min-height: 1.2em; margin-top: 8px; }
+
+    /* Modal */
+    .modal { 
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.6);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      padding: 16px;
+      overflow-y: auto;
+    }
+    .modal.show { display: flex; }
+    .modal-box { 
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 6px 24px rgba(0,0,0,.2);
+      padding: 20px;
+      max-width: 800px;
+      width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+    .modal-h { 
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 2px solid #eee;
+    }
+    .modal-h h3 {
+      margin: 0;
+      color: var(--rot);
+      font-size: clamp(1.2rem, 4vw, 1.4rem);
+    }
+    .x { 
+      margin-left: auto;
+      border: 0;
+      background: #f1f1f1;
+      border-radius: 8px;
+      padding: 6px 10px;
+      cursor: pointer;
+      font-weight: 700;
+      min-width: 40px;
+      min-height: 40px;
+      font-size: 24px;
+    }
+    .x:hover { background: #e2e2e2; }
+    
+    /* Tabs */
+    .tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+      border-bottom: 2px solid #eee;
+      flex-wrap: wrap;
+    }
+    .tab {
+      padding: 10px 16px;
+      border: none;
+      background: none;
+      cursor: pointer;
+      font-weight: 700;
+      color: #666;
+      border-bottom: 3px solid transparent;
+      transition: all 0.2s;
+      font-family: inherit;
+      font-size: clamp(0.85rem, 3vw, 1rem);
+    }
+    .tab:hover { color: var(--rot); }
+    .tab.active {
+      color: var(--rot);
+      border-bottom-color: var(--rot);
+    }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    
+    .field { 
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin: 12px 0;
+    }
+    .field label { 
+      font-weight: 700; 
+      color: var(--rot); 
+      font-size: clamp(0.9rem, 3vw, 1rem);
+    }
+    .field input, .field select { 
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      background: #fafafa;
+    }
+    .actions { 
+      display: flex;
+      gap: 8px;
+      flex-direction: column;
+      justify-content: flex-end;
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 2px solid #eee;
+    }
+    
+    /* Permissions Grid */
+    .permissions-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding: 12px;
+      background: #f8f9fa;
+      border: 1px solid #eee;
+      border-radius: 8px;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    .permission-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px;
+      background: #fff;
+      border: 1px solid #eee;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .permission-item:hover {
+      background: #f0f7ff;
+      border-color: #dbeafe;
+    }
+    .permission-item.sub {
+      margin-left: 24px;
+      font-size: 0.9rem;
+    }
+    .permission-item input[type="checkbox"] {
+      width: auto;
+      cursor: pointer;
+    }
+    
+    /* Users Table */
+    .users-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 16px 0;
+      overflow-x: auto;
+      display: block;
+    }
+    .users-table thead,
+    .users-table tbody {
+      display: table;
+      width: 100%;
+      table-layout: fixed;
+    }
+    .users-table th,
+    .users-table td {
+      padding: 10px;
+      text-align: left;
+      border-bottom: 1px solid #eee;
+      font-size: clamp(0.85rem, 2.5vw, 0.95rem);
+    }
+    .users-table th {
+      background: #f8f9fa;
+      font-weight: 700;
+      color: var(--rot);
+    }
+    .users-table tr:hover {
+      background: #f8f9fa;
+    }
+    .role-badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: clamp(0.75rem, 2vw, 0.85rem);
+      font-weight: 700;
+    }
+    .role-mpg { background: #fee2e2; color: var(--rot); }
+    .role-lager { background: #fef3c7; color: #d97706; }
+    .role-ausbildung { background: #dbeafe; color: #1e40af; }
+    .role-qm { background: #e2d9f3; color: #4a148c; }
+    .role-benutzer { background: #f3f4f6; color: #374151; }
+    
+    .action-btn {
+      padding: 6px 12px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: clamp(0.8rem, 2.5vw, 0.9rem);
+      transition: all 0.2s;
+      font-family: inherit;
+      min-width: 44px;
+      min-height: 44px;
+    }
+    .action-btn.edit {
+      background: #dbeafe;
+      color: #1e40af;
+    }
+    .action-btn.edit:hover {
+      background: #bfdbfe;
+    }
+    .action-btn.delete {
+      background: #fee2e2;
+      color: var(--rot);
+    }
+    .action-btn.delete:hover {
+      background: #fecaca;
+    }
+    
+    .info-box {
+      background: #dbeafe;
+      border-left: 4px solid #3b82f6;
+      padding: 12px;
+      border-radius: 6px;
+      margin: 12px 0;
+      font-size: clamp(0.85rem, 2.5vw, 0.95rem);
+    }
+    
+    @media (min-width: 640px) {
+      .actions { flex-direction: row; }
+      .btn { width: auto; }
+      .chat-message.own { margin-left: 40px; }
+      .chat-message.other { margin-right: 40px; }
+    }
+    
+    @media (max-width: 800px) { 
+      .wrap { grid-template-columns: 1fr; }
+      .greeting { font-size: 2.5rem; }
+    }
+    
+    @media (min-width: 768px) {
+      .card { padding: 30px; }
+      .modal-box { padding: 30px; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Übersicht</h1>
+  <div class="spacer"></div>
+  <button class="topbtn" id="settingsBtn">⚙️ Einstellungen</button>
+  <button class="topbtn" id="logoutBtn">Logout</button>
+</header>
+
+<div class="greeting" id="greeting">Servus!</div>
+
+<div class="wrap">
+  <aside>
+    <h3>Bereiche</h3>
+    <nav class="nav" id="mainNav">
+      <a href="einsaetze.html">🚨 Einsätze</a>
+      <a href="patientendokumentation-dateien.html">🧾 Patientendokumentation</a>
+      <a href="dokumente-bearbeiten.html">📋 Vorgänge</a>
+      <a href="ausbildungen.html">🎓 Ausbildungen</a>
+      <a href="lagerverwaltung.html">📦 Lagerverwaltung</a>
+      <a href="dateien.html">📄 Dateien</a>
+      <a href="qr-code-generator.html">📟 QR-Code Generator</a>
+    </nav>
+    <div style="margin-top:14px; font-size:.95rem">
+      Eingeloggt als:<br>
+      <strong id="who">—</strong><br>
+      <span id="userRole" style="color:#666; font-size:0.9rem"></span>
+    </div>
+    <div id="guardMsg" class="err" style="margin-top:8px"></div>
+  </aside>
+
+  <main>
+    <!-- Team-Chat -->
+    <section class="card">
+      <h2>💬 Team-Chat</h2>
+      
+      <div class="chat-container" id="chatContainer">
+        <div class="chat-messages" id="chatMessages">
+          <div style="text-align:center; padding:20px; color:#999">
+            Lade Chat...
+          </div>
+        </div>
+      </div>
+      
+      <div style="display:flex; gap:8px; margin-top:12px; align-items:flex-end">
+        <textarea 
+          id="chatInput" 
+          placeholder="Nachricht schreiben..." 
+          style="flex:1; min-height:44px; max-height:120px; resize:vertical"
+          onkeydown="if(event.key==='Enter' && !event.shiftKey){event.preventDefault();sendMessage();}"
+        ></textarea>
+        <button class="btn" id="sendBtn" onclick="sendMessage()" style="width:auto; min-width:100px">
+          Senden
+        </button>
+      </div>
+      
+      <div id="chatStatus" style="margin-top:8px; font-size:0.85rem; color:#666"></div>
+    </section>
+
+    <!-- Neuigkeiten -->
+    <section class="card">
+      <h2>🔔 Neuigkeiten</h2>
+      <ul class="news" id="newsList">
+        <li>✅ Alles ruhig – keine neuen Meldungen</li>
+      </ul>
+    </section>
+  </main>
+</div>
+
+<!-- Einstellungen Modal -->
+<div class="modal" id="settingsModal">
+  <div class="modal-box">
+    <div class="modal-h">
+      <h3>⚙️ Einstellungen</h3>
+      <button class="x" id="settingsClose">×</button>
+    </div>
+    
+    <div class="tabs">
+      <button class="tab active" data-tab="profile">👤 Mein Profil</button>
+      <button class="tab" data-tab="password">🔒 Passwort</button>
+      <button class="tab" data-tab="users" id="usersTab" style="display:none">👥 Benutzer</button>
+    </div>
+    
+    <!-- Tab: Profil -->
+    <div class="tab-content active" id="tab-profile">
+      <div class="field">
+        <label for="profileEmail">E-Mail</label>
+        <input type="email" id="profileEmail" readonly style="background:#f5f5f5">
+      </div>
+      <div class="field">
+        <label for="profileName">Anzeigename</label>
+        <input type="text" id="profileName" placeholder="z.B. Max Mustermann">
+      </div>
+      <div class="field">
+        <label for="profilePhone">Telefon (optional)</label>
+        <input type="tel" id="profilePhone" placeholder="+49 123 456789">
+      </div>
+      <div id="profileMsg" class="msg"></div>
+      <div class="actions">
+        <button class="btn" id="saveProfileBtn">Profil speichern</button>
+      </div>
+    </div>
+    
+    <!-- Tab: Passwort -->
+    <div class="tab-content" id="tab-password">
+      <div class="field">
+        <label for="pwCurrent">Aktuelles Passwort</label>
+        <input type="password" id="pwCurrent" autocomplete="current-password" placeholder="••••••••" />
+      </div>
+      <div class="field">
+        <label for="pwNew1">Neues Passwort (min. 8 Zeichen)</label>
+        <input type="password" id="pwNew1" autocomplete="new-password" placeholder="Neues Passwort" />
+      </div>
+      <div class="field">
+        <label for="pwNew2">Neues Passwort wiederholen</label>
+        <input type="password" id="pwNew2" autocomplete="new-password" placeholder="Wiederholen" />
+      </div>
+      <div id="pwMsg" class="msg"></div>
+      <div class="actions">
+        <button class="btn" id="pwSave">Passwort ändern</button>
+      </div>
+    </div>
+    
+    <!-- Tab: Benutzer (nur MPG) -->
+    <div class="tab-content" id="tab-users">
+      <div class="info-box">
+        <strong>ℹ️ Benutzerverwaltung</strong><br>
+        Hier können Sie Benutzer verwalten und Berechtigungen individuell anpassen.
+      </div>
+      
+      <button class="btn" id="addUserBtn" style="margin-bottom:16px; width:auto">+ Neuen Benutzer anlegen</button>
+      
+      <h4 style="margin:16px 0 8px 0; color:var(--rot)">Alle Benutzer</h4>
+      <div style="overflow-x:auto">
+        <table class="users-table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>E-Mail</th>
+              <th>Rolle</th>
+              <th>Aktionen</th>
+            </tr>
+          </thead>
+          <tbody id="usersTableBody">
+            <tr>
+              <td colspan="4" style="text-align:center; padding:20px; color:#999">
+                Lade Benutzer...
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- User Modal -->
+<div class="modal" id="userModal">
+  <div class="modal-box" style="max-width:600px">
+    <div class="modal-h">
+      <h3 id="userModalTitle">Neuen Benutzer anlegen</h3>
+      <button class="x" id="userClose">×</button>
+    </div>
+    
+    <div class="field">
+      <label for="userEmail">E-Mail *</label>
+      <input type="email" id="userEmail" placeholder="benutzer@example.com" required>
+    </div>
+    
+    <div class="field">
+      <label for="userName">Name *</label>
+      <input type="text" id="userName" placeholder="Max Mustermann" required>
+    </div>
+    
+    <div class="field">
+      <label for="userPhone">Telefon</label>
+      <input type="tel" id="userPhone" placeholder="+49 123 456789">
+    </div>
+    
+    <div class="field">
+      <label for="roleTemplate">Rollen-Vorlage</label>
+      <select id="roleTemplate" onchange="applyRoleTemplate()">
+        <option value="">-- Individuelle Berechtigungen --</option>
+        <option value="mpg">👑 MPG-Beauftragter</option>
+        <option value="lager">📦 Lagerverwaltung</option>
+        <option value="ausbildung">🎓 Ausbildungen</option>
+        <option value="qm">📋 Qualitätsmanagement</option>
+        <option value="benutzer">👤 Benutzer</option>
+      </select>
+      <small style="color:#666">Vorlage wählen oder individuell anpassen</small>
+    </div>
+    
+    <div class="field">
+      <label>Berechtigungen</label>
+      <div class="permissions-grid">
+        <label class="permission-item">
+          <input type="checkbox" id="perm_dashboard" checked disabled>
+          📊 Dashboard (immer aktiv)
+        </label>
+        <label class="permission-item">
+          <input type="checkbox" id="perm_einsaetze">
+          🚨 Einsätze
+        </label>
+        <label class="permission-item">
+          <input type="checkbox" id="perm_lager">
+          📦 Lagerverwaltung
+        </label>
+        <label class="permission-item">
+          <input type="checkbox" id="perm_produktausgabe">
+          📋 Produktausgabe
+        </label>
+        <label class="permission-item">
+          <input type="checkbox" id="perm_ausbildungen">
+          🎓 Ausbildungen (teilnehmen)
+        </label>
+        <label class="permission-item sub">
+          <input type="checkbox" id="perm_ausbildungen_manage">
+          └─ Ausbildungen verwalten
+        </label>
+        <label class="permission-item">
+          <input type="checkbox" id="perm_dokumente">
+          📄 Vorgänge bearbeiten
+        </label>
+        <label class="permission-item">
+          <input type="checkbox" id="perm_cirs">
+          ⚠️ CIRS
+        </label>
+        <label class="permission-item">
+          <input type="checkbox" id="perm_patienten">
+          🧾 Patientendokumentation
+        </label>
+        <label class="permission-item">
+          <input type="checkbox" id="perm_dateien">
+          📁 Dateien
+        </label>
+        <label class="permission-item">
+          <input type="checkbox" id="perm_qr">
+          📟 QR-Code Generator
+        </label>
+        <label class="permission-item">
+          <input type="checkbox" id="perm_chat" checked disabled>
+          💬 Chat (immer aktiv)
+        </label>
+        <label class="permission-item">
+          <input type="checkbox" id="perm_users_manage">
+          👥 Benutzerverwaltung
+        </label>
+      </div>
+    </div>
+    
+    <div id="userMsg" class="msg"></div>
+    
+    <div class="actions">
+      <button class="btn sec" id="userCancel">Abbrechen</button>
+      <button class="btn" id="userSave">Speichern</button>
+    </div>
+  </div>
+</div>
+<script type="module">
+  import PocketBase from 'https://cdn.jsdelivr.net/npm/pocketbase@0.21.3/dist/pocketbase.es.mjs';
+
+  const pb = new PocketBase('https://api.responda.systems');
+
+  // ===== AUTH CHECK =====
+  let user = null;
+  
+  async function initAuth() {
+    if (!pb.authStore.isValid) {
+      window.location.href = 'mpg-login.html';
+      return;
+    }
+    
+    try {
+      await pb.collection('users').authRefresh();
+      user = pb.authStore.model;
+      
+      if (!user) {
+        window.location.href = 'mpg-login.html';
+        return;
+      }
+      
+      // Show body
+      document.body.classList.add('loaded');
+      
+      // Initialize dashboard
+      initDashboard();
+      
+    } catch (error) {
+      console.error('Auth error:', error);
+      pb.authStore.clear();
+      window.location.href = 'mpg-login.html';
+    }
+  }
+
+  // ===== ROLES & PERMISSIONS =====
+  const ROLE_TEMPLATES = {
+    mpg: {
+      label: 'MPG-Beauftragter',
+      icon: '👑',
+      permissions: {
+        dashboard: true,
+        einsaetze: true,
+        lager: true,
+        produktausgabe: true,
+        ausbildungen: true,
+        ausbildungen_manage: true,
+        dokumente: true,
+        cirs: true,
+        patienten: true,
+        dateien: true,
+        qr: true,
+        chat: true,
+        users_manage: true
+      }
+    },
+    lager: {
+      label: 'Lagerverwaltung',
+      icon: '📦',
+      permissions: {
+        dashboard: true,
+        lager: true,
+        produktausgabe: true,
+        dateien: true,
+        qr: true,
+        chat: true
+      }
+    },
+    ausbildung: {
+      label: 'Ausbildungen',
+      icon: '🎓',
+      permissions: {
+        dashboard: true,
+        einsaetze: true,
+        ausbildungen: true,
+        ausbildungen_manage: true,
+        patienten: true,
+        dateien: true,
+        qr: true,
+        chat: true
+      }
+    },
+    qm: {
+      label: 'Qualitätsmanagement',
+      icon: '📋',
+      permissions: {
+        dashboard: true,
+        dokumente: true,
+        cirs: true,
+        dateien: true,
+        qr: true,
+        chat: true
+      }
+    },
+    benutzer: {
+      label: 'Benutzer',
+      icon: '👤',
+      permissions: {
+        dashboard: true,
+        ausbildungen: true,
+        chat: true
+      }
+    }
+  };
+
+  function canManageUsers(user) {
+    if (user.supervisor) return true;
+    const permissions = user.permissions || {};
+    return permissions.users_manage === true;
+  }
+
+  function getRoleInfo(role) {
+    return ROLE_TEMPLATES[role] || ROLE_TEMPLATES.benutzer;
+  }
+
+  function getRoleLabel(role) {
+    const info = getRoleInfo(role);
+    return `${info.icon} ${info.label}`;
+  }
+
+  // ===== DASHBOARD INIT =====
+  function initDashboard() {
+    const userEmail = user.email || '—';
+    const userRole = user.role || 'benutzer';
+    
+    document.getElementById('who').textContent = user.name || userEmail;
+    document.getElementById('userRole').textContent = getRoleLabel(userRole);
+    
+    // Show user management tab for admins
+    if (canManageUsers(user)) {
+      document.getElementById('usersTab').style.display = 'block';
+    }
+    
+    // Build navigation
+    buildNavigation();
+    
+    // Set greeting
+    setGreeting();
+    
+    // Load chat
+    loadChatMessages();
+    subscribeToChatUpdates();
+    
+    // Request notification permission
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  }
+
+  // ===== GREETING =====
+  function setGreeting() {
+    const hour = new Date().getHours();
+    const greetingEl = document.getElementById('greeting');
+    
+    if (hour >= 5 && hour < 10) {
+      greetingEl.textContent = 'Servus!';
+    } else if (hour >= 10 && hour < 12) {
+      greetingEl.textContent = 'Grüß Gott!';
+    } else if (hour >= 12 && hour < 18) {
+      greetingEl.textContent = 'Mahlzeit!';
+    } else {
+      greetingEl.textContent = 'Ab ins Bett!';
+    }
+  }
+
+  // ===== NAVIGATION =====
+  function buildNavigation() {
+    const nav = document.getElementById('mainNav');
+    const permissions = user.permissions || {};
+    
+    const pages = [
+      { id: 'einsaetze', label: '🚨 Einsätze', url: 'einsaetze.html' },
+      { id: 'patienten', label: '🧾 Patientendokumentation', url: 'patientendokumentation-dateien.html' },
+      { id: 'dokumente', label: '📋 Vorgänge', url: 'dokumente-bearbeiten.html' },
+      { id: 'cirs', label: '⚠️ CIRS', url: 'cirs.html' },
+      { id: 'ausbildungen', label: '🎓 Ausbildungen', url: 'ausbildungen.html' },
+      { id: 'lager', label: '📦 Lagerverwaltung', url: 'lagerverwaltung.html' },
+      { id: 'produktausgabe', label: '📋 Produktausgabe', url: 'produktausgabe.html' },
+      { id: 'dateien', label: '📄 Dateien', url: 'dateien.html' },
+      { id: 'qr', label: '📟 QR-Code Generator', url: 'qr-code-generator.html' }
+    ];
+    
+    const accessiblePages = pages.filter(page => {
+      if (user.supervisor) return true;
+      return permissions[page.id] === true;
+    });
+    
+    if (accessiblePages.length === 0) {
+      nav.innerHTML = '<p style="color:#999; padding:10px">Keine Bereiche verfügbar</p>';
+      return;
+    }
+    
+    nav.innerHTML = accessiblePages
+      .map(page => `<a href="${page.url}">${page.label}</a>`)
+      .join('');
+  }
+
+  // ===== LOGOUT =====
+  document.getElementById('logoutBtn').addEventListener('click', async (e) => {
+    e.preventDefault();
+    unsubscribeFromChat();
+    pb.authStore.clear();
+    localStorage.clear();
+    window.location.href = 'mpg-login.html';
+  });
+
+  // ===== CHAT SYSTEM =====
+  let chatUnsubscribe = null;
+
+  async function loadChatMessages() {
+    try {
+      const messages = await pb.collection('messages').getList(1, 50, {
+        filter: `organization_id = "${user.organization_id}"`,
+        sort: '-created'
+      });
+      
+      displayChatMessages(messages.items.reverse());
+      scrollChatToBottom();
+      
+    } catch (error) {
+      console.error('Fehler beim Laden der Chat-Nachrichten:', error);
+      document.getElementById('chatMessages').innerHTML = 
+        '<div style="text-align:center;padding:20px;color:#c8102e">Fehler beim Laden des Chats</div>';
+    }
+  }
+
+  function displayChatMessages(messages) {
+    const container = document.getElementById('chatMessages');
+    
+    if (messages.length === 0) {
+      container.innerHTML = 
+        '<div style="text-align:center;padding:20px;color:#999">Noch keine Nachrichten. Schreibe die erste Nachricht!</div>';
+      return;
+    }
+    
+    container.innerHTML = messages.map(msg => {
+      const isOwn = msg.user_id === user.id;
+      const userName = msg.user_name || 'Unbekannt';
+      const time = new Date(msg.created).toLocaleTimeString('de-DE', { 
+        hour: '2-digit', 
+        minute: '2-digit' 
+      });
+      
+      return `
+        <div class="chat-message ${isOwn ? 'own' : 'other'}">
+          <div class="chat-header">
+            <span class="chat-user">${escapeHtml(userName)}</span>
+            <span class="chat-time">${time}</span>
+          </div>
+          <div class="chat-text">${escapeHtml(msg.message)}</div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function addMessageToUI(msg) {
+    const container = document.getElementById('chatMessages');
+    
+    // Remove "no messages" placeholder
+    if (container.querySelector('[style*="color:#999"]')) {
+      container.innerHTML = '';
+    }
+    
+    const isOwn = msg.user_id === user.id;
+    const userName = msg.user_name || 'Unbekannt';
+    const time = new Date(msg.created).toLocaleTimeString('de-DE', { 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    });
+    
+    const messageEl = document.createElement('div');
+    messageEl.className = `chat-message ${isOwn ? 'own' : 'other'}`;
+    messageEl.innerHTML = `
+      <div class="chat-header">
+        <span class="chat-user">${escapeHtml(userName)}</span>
+        <span class="chat-time">${time}</span>
+      </div>
+      <div class="chat-text">${escapeHtml(msg.message)}</div>
+    `;
+    
+    container.appendChild(messageEl);
+    scrollChatToBottom();
+    
+    // Show notification if not own message
+    if (!isOwn && 'Notification' in window && Notification.permission === 'granted') {
+      new Notification('Neue Nachricht von ' + userName, {
+        body: msg.message.substring(0, 100),
+        icon: '/favicon.ico'
+      });
+    }
+  }
+
+  window.sendMessage = async function() {
+    const input = document.getElementById('chatInput');
+    const text = input.value.trim();
+    
+    if (!text) return;
+    
+    try {
+      await pb.collection('messages').create({
+        organization_id: user.organization_id,
+        user_id: user.id,
+        user_name: user.name || user.email,
+        message: text,
+        read: false
+      });
+      
+      input.value = '';
+      input.style.height = 'auto';
+      
+    } catch (error) {
+      console.error('Fehler beim Senden der Nachricht:', error);
+      alert('Nachricht konnte nicht gesendet werden: ' + error.message);
+    }
+  };
+
+  function subscribeToChatUpdates() {
+    try {
+      chatUnsubscribe = pb.collection('messages').subscribe('*', function (e) {
+        if (e.action === 'create') {
+          if (e.record.organization_id === user.organization_id) {
+            addMessageToUI(e.record);
+          }
+        }
+      });
+      
+      updateChatStatus(true);
+      
+    } catch (error) {
+      console.error('Fehler beim Chat-Subscribe:', error);
+      updateChatStatus(false);
+    }
+  }
+
+  function unsubscribeFromChat() {
+    if (chatUnsubscribe) {
+      chatUnsubscribe();
+      chatUnsubscribe = null;
+    }
+  }
+
+  function updateChatStatus(online) {
+    const statusEl = document.getElementById('chatStatus');
+    if (online) {
+      statusEl.innerHTML = '<span class="chat-status-dot online"></span>Live-Chat aktiv';
+    } else {
+      statusEl.innerHTML = '<span class="chat-status-dot" style="background:#999"></span>Offline';
+    }
+  }
+
+  function scrollChatToBottom() {
+    const container = document.getElementById('chatContainer');
+    container.scrollTop = container.scrollHeight;
+  }
+
+  function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
+  // Auto-resize textarea
+  document.getElementById('chatInput')?.addEventListener('input', function() {
+    this.style.height = 'auto';
+    this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+  });
+
+  // ===== SETTINGS MODAL =====
+  const settingsModal = document.getElementById('settingsModal');
+  const settingsBtn = document.getElementById('settingsBtn');
+  const settingsClose = document.getElementById('settingsClose');
+  
+  function openSettings() {
+    settingsModal.classList.add('show');
+    loadProfileData();
+  }
+  
+  function closeSettings() {
+    settingsModal.classList.remove('show');
+  }
+  
+  settingsBtn.addEventListener('click', openSettings);
+  settingsClose.addEventListener('click', closeSettings);
+  settingsModal.addEventListener('click', (e) => {
+    if (e.target === settingsModal) closeSettings();
+  });
+  
+  // Tab-Switching
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      const targetTab = tab.dataset.tab;
+      
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      
+      tab.classList.add('active');
+      document.getElementById(`tab-${targetTab}`).classList.add('active');
+      
+      if (targetTab === 'users') {
+        loadUsers();
+      }
+    });
+  });
+  
+  // ===== PROFILE =====
+  function loadProfileData() {
+    document.getElementById('profileEmail').value = user.email;
+    document.getElementById('profileName').value = user.name || '';
+    document.getElementById('profilePhone').value = user.phone || '';
+  }
+  
+  document.getElementById('saveProfileBtn').addEventListener('click', async () => {
+    const profileMsg = document.getElementById('profileMsg');
+    try {
+      const name = document.getElementById('profileName').value.trim();
+      const phone = document.getElementById('profilePhone').value.trim();
+      
+      await pb.collection('users').update(user.id, {
+        name: name,
+        phone: phone
+      });
+      
+      user.name = name;
+      user.phone = phone;
+      
+      document.getElementById('who').textContent = name || user.email;
+      
+      profileMsg.textContent = '✅ Profil gespeichert!';
+      profileMsg.className = 'msg ok';
+      
+      setTimeout(() => {
+        profileMsg.textContent = '';
+      }, 3000);
+    } catch (e) {
+      profileMsg.textContent = '❌ Fehler: ' + e.message;
+      profileMsg.className = 'msg err';
+    }
+  });
+
+  // ===== PASSWORD CHANGE =====
+  const pwMsg = document.getElementById('pwMsg');
+  const pwCurrent = document.getElementById('pwCurrent');
+  const pwNew1 = document.getElementById('pwNew1');
+  const pwNew2 = document.getElementById('pwNew2');
+
+  function showPwMsg(text, ok=false){
+    pwMsg.textContent = text || '';
+    pwMsg.className = 'msg ' + (ok ? 'ok' : 'err');
+  }
+
+  document.getElementById('pwSave').addEventListener('click', async ()=>{
+    try {
+      showPwMsg('');
+      const current = pwCurrent.value.trim();
+      const n1 = pwNew1.value.trim();
+      const n2 = pwNew2.value.trim();
+
+      if (!current) { showPwMsg('Bitte aktuelles Passwort eingeben.'); return; }
+      if (!n1 || n1.length < 8) { showPwMsg('Neues Passwort: mindestens 8 Zeichen.'); return; }
+      if (n1 !== n2) { showPwMsg('Die neuen Passwörter stimmen nicht überein.'); return; }
+
+      // Verify current password
+      try {
+        await pb.collection('users').authWithPassword(user.email, current);
+      } catch (e) {
+        showPwMsg('Aktuelles Passwort ist falsch.');
+        return;
+      }
+
+      // Change password
+      await pb.collection('users').update(user.id, {
+        password: n1,
+        passwordConfirm: n1
+      });
+
+      showPwMsg('✅ Passwort geändert. Du wirst abgemeldet …', true);
+      
+      setTimeout(async () => {
+        closeSettings();
+        unsubscribeFromChat();
+        pb.authStore.clear();
+        localStorage.clear();
+        window.location.href = 'mpg-login.html';
+      }, 2000);
+      
+    } catch(e) {
+      showPwMsg('Fehler: ' + (e?.message || e));
+    }
+  });
+
+  // ===== USER MANAGEMENT =====
+  const userModal = document.getElementById('userModal');
+  const addUserBtn = document.getElementById('addUserBtn');
+  const userClose = document.getElementById('userClose');
+  const userCancel = document.getElementById('userCancel');
+  
+  let editingUserId = null;
+  
+  function openUserModal(editUser = null) {
+    editingUserId = editUser?.id || null;
+    
+    if (editUser) {
+      document.getElementById('userModalTitle').textContent = 'Benutzer bearbeiten';
+      document.getElementById('userEmail').value = editUser.email;
+      document.getElementById('userEmail').disabled = true;
+      document.getElementById('userName').value = editUser.name || '';
+      document.getElementById('userPhone').value = editUser.phone || '';
+      document.getElementById('roleTemplate').value = editUser.role || '';
+      
+      // Set permissions
+      const perms = editUser.permissions || {};
+      Object.keys(perms).forEach(key => {
+        const checkbox = document.getElementById('perm_' + key);
+        if (checkbox && !checkbox.disabled) {
+          checkbox.checked = perms[key];
+        }
+      });
+      
+      document.getElementById('userSave').textContent = 'Speichern';
+    } else {
+      document.getElementById('userModalTitle').textContent = 'Neuen Benutzer anlegen';
+      document.getElementById('userEmail').value = '';
+      document.getElementById('userEmail').disabled = false;
+      document.getElementById('userName').value = '';
+      document.getElementById('userPhone').value = '';
+      document.getElementById('roleTemplate').value = '';
+      
+      // Reset all checkboxes
+      document.querySelectorAll('.permission-item input[type="checkbox"]:not([disabled])').forEach(cb => {
+        cb.checked = false;
+      });
+      
+      document.getElementById('userSave').textContent = 'Benutzer anlegen';
+    }
+    
+    document.getElementById('userMsg').textContent = '';
+    userModal.classList.add('show');
+  }
+  
+  function closeUserModal() {
+    userModal.classList.remove('show');
+    editingUserId = null;
+  }
+  
+  addUserBtn.addEventListener('click', () => openUserModal());
+  userClose.addEventListener('click', closeUserModal);
+  userCancel.addEventListener('click', closeUserModal);
+  userModal.addEventListener('click', (e) => {
+    if (e.target === userModal) closeUserModal();
+  });
+  
+  // Apply role template
+  window.applyRoleTemplate = function() {
+    const template = document.getElementById('roleTemplate').value;
+    
+    if (!template) return;
+    
+    const permissions = ROLE_TEMPLATES[template].permissions;
+    
+    Object.keys(permissions).forEach(key => {
+      const checkbox = document.getElementById('perm_' + key);
+      if (checkbox && !checkbox.disabled) {
+        checkbox.checked = permissions[key];
+      }
+    });
+    
+    alert(`Vorlage "${ROLE_TEMPLATES[template].label}" angewendet. Du kannst jetzt noch individuell anpassen!`);
+  };
+  
+  // Save user
+  document.getElementById('userSave').addEventListener('click', async () => {
+    const userMsg = document.getElementById('userMsg');
+    try {
+      const email = document.getElementById('userEmail').value.trim();
+      const name = document.getElementById('userName').value.trim();
+      const phone = document.getElementById('userPhone').value.trim();
+      const role = document.getElementById('roleTemplate').value || 'benutzer';
+      
+      if (!email || !name) {
+        userMsg.textContent = '❌ Bitte E-Mail und Name ausfüllen';
+        userMsg.className = 'msg err';
+        return;
+      }
+      
+      // Collect permissions
+      const permissions = {
+        dashboard: true,
+        einsaetze: document.getElementById('perm_einsaetze').checked,
+        lager: document.getElementById('perm_lager').checked,
+        produktausgabe: document.getElementById('perm_produktausgabe').checked,
+        ausbildungen: document.getElementById('perm_ausbildungen').checked,
+        ausbildungen_manage: document.getElementById('perm_ausbildungen_manage').checked,
+        dokumente: document.getElementById('perm_dokumente').checked,
+        cirs: document.getElementById('perm_cirs').checked,
+        patienten: document.getElementById('perm_patienten').checked,
+        dateien: document.getElementById('perm_dateien').checked,
+        qr: document.getElementById('perm_qr').checked,
+        chat: true,
+        users_manage: document.getElementById('perm_users_manage').checked
+      };
+      
+      const userData = {
+        name: name,
+        phone: phone,
+        role: role,
+        permissions: permissions,
+        organization_id: user.organization_id
+      };
+      
+      if (editingUserId) {
+        // Update existing user
+        await pb.collection('users').update(editingUserId, userData);
+        userMsg.textContent = '✅ Benutzer aktualisiert!';
+      } else {
+        // Create new user
+        userData.email = email;
+        userData.password = 'TempPass123!';  // Temporary password
+        userData.passwordConfirm = 'TempPass123!';
+        userData.emailVisibility = true;
+        
+        await pb.collection('users').create(userData);
+        
+        userMsg.textContent = '✅ Benutzer angelegt! Temporäres Passwort: TempPass123!';
+      }
+      
+      userMsg.className = 'msg ok';
+      
+      setTimeout(() => {
+        closeUserModal();
+        loadUsers();
+      }, 2000);
+      
+    } catch (e) {
+      userMsg.textContent = '❌ Fehler: ' + e.message;
+      userMsg.className = 'msg err';
+    }
+  });
+  
+  // Load users
+  async function loadUsers() {
+    const tbody = document.getElementById('usersTableBody');
+    try {
+      const users = await pb.collection('users').getFullList({
+        filter: `organization_id = "${user.organization_id}"`,
+        sort: '-created'
+      });
+      
+      if (users.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;color:#999">Keine Benutzer gefunden</td></tr>';
+        return;
+      }
+      
+      tbody.innerHTML = users.map(u => {
+        const roleClass = `role-${u.role || 'benutzer'}`;
+        const roleInfo = getRoleInfo(u.role || 'benutzer');
+        
+        return `
+          <tr>
+            <td>${escapeHtml(u.name || '—')}</td>
+            <td>${escapeHtml(u.email)}</td>
+            <td><span class="role-badge ${roleClass}">${roleInfo.icon} ${roleInfo.label}</span></td>
+            <td>
+              <button class="action-btn edit" onclick="editUserClick('${u.id}')">✏️ Bearbeiten</button>
+              ${u.id !== user.id ? `<button class="action-btn delete" onclick="deleteUserClick('${u.id}', '${escapeHtml(u.name || u.email)}')">🗑️ Löschen</button>` : ''}
+            </td>
+          </tr>
+        `;
+      }).join('');
+      
+    } catch (e) {
+      tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;padding:20px;color:#c8102e">Fehler: ${e.message}</td></tr>`;
+    }
+  }
+  
+  window.editUserClick = async function(userId) {
+    try {
+      const editUser = await pb.collection('users').getOne(userId);
+      openUserModal(editUser);
+    } catch (e) {
+      alert('Fehler beim Laden: ' + e.message);
+    }
+  };
+  
+  window.deleteUserClick = async function(userId, userName) {
+    if (!confirm(`Benutzer "${userName}" wirklich löschen?`)) {
+      return;
+    }
+    
+    try {
+      await pb.collection('users').delete(userId);
+      alert('✅ Benutzer gelöscht!');
+      loadUsers();
+    } catch (e) {
+      alert('❌ Fehler: ' + e.message);
+    }
+  };
+
+  // Cleanup on page unload
+  window.addEventListener('beforeunload', () => {
+    unsubscribeFromChat();
+  });
+
+  // Initialize
+  initAuth();
+</script>
+
+</body>
+</html>
