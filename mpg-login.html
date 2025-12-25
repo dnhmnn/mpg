@@ -338,7 +338,7 @@
             <input 
               type="text" 
               id="orgCode" 
-              placeholder="z.B. ffwrothenburg" 
+              placeholder="z.B. ffwrot" 
               autocomplete="off"
               required 
             />
@@ -394,33 +394,43 @@
   const savedOrg = localStorage.getItem(ORG_STORAGE_KEY);
   let currentOrg = null;
 
+  console.log('🚀 Login-System gestartet');
+  console.log('💾 Gespeicherte Org:', savedOrg);
+
   // Gespeicherte Org laden
   if (savedOrg) {
     try {
       currentOrg = JSON.parse(savedOrg);
+      console.log('✅ Org aus LocalStorage geladen:', currentOrg);
       showSavedOrg();
       checkIfAlreadyLoggedIn();
     } catch(e) {
-      console.error('Fehler beim Laden der Organisation:', e);
+      console.error('❌ Fehler beim Laden der Organisation:', e);
       localStorage.removeItem(ORG_STORAGE_KEY);
       showOrgInput();
     }
+  } else {
+    console.log('ℹ️ Keine gespeicherte Org gefunden');
   }
 
   // Check if already logged in
   async function checkIfAlreadyLoggedIn() {
-    if (!pb.authStore.isValid) return;
+    if (!pb.authStore.isValid) {
+      console.log('ℹ️ Nicht eingeloggt');
+      return;
+    }
     
     try {
       await pb.collection('users').authRefresh();
       const user = pb.authStore.model;
       
       if (user) {
+        console.log('✅ Bereits eingeloggt als:', user.email);
         loginFormContainerEl.style.display = 'none';
         alreadyLoggedInEl.classList.add('show');
       }
     } catch(e) {
-      console.error('Auth-Check Fehler:', e);
+      console.error('❌ Auth-Check Fehler:', e);
       pb.authStore.clear();
     }
   }
@@ -468,7 +478,7 @@
     msgEl.className = 'msg ' + type + ' show';
     setTimeout(() => {
       msgEl.classList.remove('show');
-    }, 5000);
+    }, 8000);
   }
 
   // Login Form Handler
@@ -476,6 +486,8 @@
     e.preventDefault();
     submitBtn.disabled = true;
     submitBtn.textContent = 'Anmeldung läuft...';
+    
+    console.log('🔐 Login-Versuch gestartet');
     
     try {
       const email = document.getElementById('email').value.trim();
@@ -485,6 +497,7 @@
       
       if (currentOrg) {
         // Org bereits gespeichert
+        console.log('✅ Verwende gespeicherte Org:', currentOrg.name);
         orgConfig = currentOrg;
       } else {
         // Neue Org - PRÜFE OB SIE EXISTIERT
@@ -499,9 +512,24 @@
         
         console.log('🔍 Suche Organisation mit Code:', orgCode);
         
-        // SUCHE ORGANISATION IN POCKETBASE
+        // SUCHE ORGANISATION - VEREINFACHT MIT DEBUG
         try {
-          const org = await pb.collection('organizations').getFirstListItem(`org_code = "${orgCode}"`);
+          const allOrgs = await pb.collection('organizations').getFullList();
+          console.log('📋 Alle verfügbaren Organisationen:', allOrgs);
+          console.log('📋 Verfügbare Org-Codes:', allOrgs.map(o => o.org_code));
+          
+          const org = allOrgs.find(o => o.org_code === orgCode);
+          
+          if (!org) {
+            console.error('❌ Organisation nicht gefunden!');
+            console.error('🔍 Gesucht wurde:', orgCode);
+            console.error('📋 Verfügbar sind:', allOrgs.map(o => o.org_code));
+            
+            showMsg('Organisation "' + orgCode + '" nicht gefunden!\n\nVerfügbare Codes:\n' + allOrgs.map(o => o.org_code).join(', '), 'error');
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Anmelden';
+            return;
+          }
           
           console.log('✅ Organisation gefunden:', org.org_name);
           
@@ -512,14 +540,8 @@
           };
           
         } catch (orgError) {
-          console.error('❌ Organisation nicht gefunden:', orgError);
-          
-          if (orgError.status === 404) {
-            showMsg('Organisation nicht gefunden! Bitte überprüfe deinen Code.', 'error');
-          } else {
-            showMsg('Fehler bei der Organisations-Suche: ' + orgError.message, 'error');
-          }
-          
+          console.error('❌ Fehler beim Laden der Organisationen:', orgError);
+          showMsg('Fehler beim Laden der Organisationen: ' + orgError.message, 'error');
           submitBtn.disabled = false;
           submitBtn.textContent = 'Anmelden';
           return;
@@ -527,6 +549,7 @@
       }
       
       console.log('🔐 Versuche Login für:', email);
+      console.log('🏢 Organisation:', orgConfig.name);
       
       // Login with PocketBase
       const authData = await pb.collection('users').authWithPassword(email, password);
@@ -543,9 +566,15 @@
       // PRÜFE OB USER ZUR ORGANISATION GEHÖRT
       const user = authData.record;
       
+      console.log('👤 User-Org-ID:', user.organization_id);
+      console.log('🏢 Erwartete Org-ID:', orgConfig.id);
+      
       if (user.organization_id !== orgConfig.id) {
-        console.error('❌ User gehört nicht zur Organisation');
-        showMsg('Dieser Benutzer gehört nicht zur angegebenen Organisation!', 'error');
+        console.error('❌ User gehört nicht zur Organisation!');
+        console.error('👤 User gehört zu:', user.organization_id);
+        console.error('🏢 Erwartet wurde:', orgConfig.id);
+        
+        showMsg('Dieser Benutzer gehört nicht zur Organisation "' + orgConfig.name + '"!', 'error');
         
         // Logout wieder
         pb.authStore.clear();
@@ -560,6 +589,7 @@
       // Save organization
       if (!currentOrg) {
         localStorage.setItem(ORG_STORAGE_KEY, JSON.stringify(orgConfig));
+        console.log('💾 Organisation gespeichert');
       }
       
       showMsg('✅ Erfolgreich angemeldet! Weiterleitung...', 'success');
