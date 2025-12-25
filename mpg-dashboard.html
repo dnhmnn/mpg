@@ -430,6 +430,7 @@
     }
   </style>
 </head>
+
 <body>
 
 <header>
@@ -700,6 +701,7 @@
     </div>
   </div>
 </div>
+
 <script type="module">
   import PocketBase from 'https://cdn.jsdelivr.net/npm/pocketbase@0.21.3/dist/pocketbase.es.mjs';
 
@@ -885,7 +887,6 @@
     localStorage.clear();
     window.location.href = 'mpg-login.html';
   });
-
   // ===== SETTINGS MODAL =====
   const settingsModal = document.getElementById('settingsModal');
   const settingsBtn = document.getElementById('settingsBtn');
@@ -1012,6 +1013,7 @@
     div.textContent = text;
     return div.innerHTML;
   }
+
   // ===== USER MANAGEMENT =====
   const userModal = document.getElementById('userModal');
   const addUserBtn = document.getElementById('addUserBtn');
@@ -1090,6 +1092,7 @@
     alert(`Vorlage "${ROLE_TEMPLATES[template].label}" angewendet. Du kannst jetzt noch individuell anpassen!`);
   };
   
+  // ===== USER SAVE - MIT SUPER FIX! =====
   document.getElementById('userSave').addEventListener('click', async () => {
     const userMsg = document.getElementById('userMsg');
     const saveBtn = document.getElementById('userSave');
@@ -1101,20 +1104,22 @@
       const email = document.getElementById('userEmail').value.trim();
       const name = document.getElementById('userName').value.trim();
       const phone = document.getElementById('userPhone').value.trim();
-      const roleTemplate = document.getElementById('roleTemplate').value;
-let role = roleTemplate || 'benutzer';
-
-// FORCE DEFAULT wenn leer
-if (!role || role === '') {
-  role = 'benutzer';
-}
-
-console.log('🎭 Selected role template:', roleTemplate);
-console.log('🎭 Final role:', role);
-
-			'benutzer';  // ← WICHTIG: DEFAULT ROLE!
       
-      console.log('📝 Creating user with role:', role);
+      // ROLE - GARANTIERT GÜLTIG
+      let role = document.getElementById('roleTemplate').value;
+      
+      // Wenn leer oder ungültig, setze DEFAULT
+      if (!role || role === '' || role === null || role === undefined) {
+        role = 'benutzer';
+      }
+      
+      // Validiere dass role ein gültiger Wert ist
+      const validRoles = ['mpg', 'lager', 'ausbildung', 'qm', 'benutzer'];
+      if (!validRoles.includes(role)) {
+        role = 'benutzer';
+      }
+      
+      console.log('🎭 Role selected:', role);
       
       if (!email || !name) {
         userMsg.textContent = '❌ Bitte E-Mail und Name ausfüllen';
@@ -1148,16 +1153,17 @@ console.log('🎭 Final role:', role);
         users_manage: document.getElementById('perm_users_manage').checked
       };
       
-      const userData = {
-        name: name,
-        phone: phone || '',
-        role: role,
-        permissions: permissions,
-        organization_id: user.organization_id,
-        supervisor: false
-      };
-      
       if (editingUserId) {
+        // UPDATE EXISTING USER
+        const userData = {
+          name: name,
+          phone: phone || '',
+          role: role,
+          permissions: permissions
+        };
+        
+        console.log('📝 Updating user:', userData);
+        
         await pb.collection('users').update(editingUserId, userData);
         
         userMsg.textContent = '✅ Benutzer aktualisiert!';
@@ -1169,40 +1175,49 @@ console.log('🎭 Final role:', role);
         }, 1500);
         
       } else {
-        // NEUER USER
-        userData.email = email;
-        userData.emailVisibility = true;
-        userData.verified = false;
-        
+        // CREATE NEW USER
         const tempPassword = Array.from({length: 16}, () => 
           'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$%&*'[Math.floor(Math.random() * 66)]
         ).join('');
         
-        userData.password = tempPassword;
-        userData.passwordConfirm = tempPassword;
+        const userData = {
+          email: email,
+          emailVisibility: true,
+          password: tempPassword,
+          passwordConfirm: tempPassword,
+          name: name,
+          phone: phone || '',
+          role: role,
+          permissions: permissions,
+          organization_id: user.organization_id,
+          supervisor: false,
+          verified: false
+        };
         
         console.log('📤 Creating user with data:', {
           email: userData.email,
           name: userData.name,
           role: userData.role,
-          organization_id: userData.organization_id
+          organization_id: userData.organization_id,
+          has_password: !!userData.password
         });
         
         const newUser = await pb.collection('users').create(userData);
         
-        console.log('✅ User created:', newUser.id);
+        console.log('✅ User created successfully:', newUser.id);
         
+        // Send password reset email
         try {
           await pb.collection('users').requestPasswordReset(email);
           console.log('📧 Password reset email sent to:', email);
           
           userMsg.textContent = '✅ Benutzer angelegt! E-Mail mit Passwort-Link wurde an ' + email + ' versendet.';
+          userMsg.className = 'msg ok';
         } catch (emailError) {
           console.error('❌ Email send error:', emailError);
-          userMsg.textContent = '✅ Benutzer angelegt! ABER: E-Mail konnte nicht versendet werden.';
+          userMsg.textContent = '⚠️ Benutzer angelegt, aber E-Mail konnte nicht versendet werden. SMTP prüfen!';
+          userMsg.className = 'msg err';
         }
-        
-        userMsg.className = 'msg ok';
         
         setTimeout(() => {
           closeUserModal();
@@ -1212,24 +1227,29 @@ console.log('🎭 Final role:', role);
       
     } catch (e) {
       console.error('❌ User save error:', e);
+      console.error('Error details:', e.response?.data);
       
-      let errorMsg = 'Fehler: ';
+      let errorMsg = '❌ Fehler: ';
       
-      if (e.status === 400) {
-        if (e.response?.data?.email) {
-          errorMsg += 'E-Mail bereits vergeben oder ungültig';
-        } else if (e.response?.data?.organization_id) {
-          errorMsg += 'Organisation fehlt oder ungültig';
-        } else if (e.response?.data?.role) {
-          errorMsg += 'Rolle fehlt oder ungültig. Bitte Rolle auswählen!';
+      if (e.status === 400 && e.response?.data) {
+        const errors = e.response.data;
+        
+        if (errors.email) {
+          errorMsg += 'E-Mail: ' + JSON.stringify(errors.email);
+        } else if (errors.role) {
+          errorMsg += 'Rolle: ' + JSON.stringify(errors.role);
+        } else if (errors.organization_id) {
+          errorMsg += 'Organisation: ' + JSON.stringify(errors.organization_id);
+        } else if (errors.password) {
+          errorMsg += 'Passwort: ' + JSON.stringify(errors.password);
         } else {
-          errorMsg += JSON.stringify(e.response?.data || e.message);
+          errorMsg += JSON.stringify(errors);
         }
       } else {
         errorMsg += e.message;
       }
       
-      userMsg.textContent = '❌ ' + errorMsg;
+      userMsg.textContent = errorMsg;
       userMsg.className = 'msg err';
     } finally {
       saveBtn.disabled = false;
@@ -1331,6 +1351,7 @@ console.log('🎭 Final role:', role);
       console.error('Fehler beim Laden der Lizenz-Info:', e);
     }
   }
+
   // Initialize
   initAuth();
 </script>
