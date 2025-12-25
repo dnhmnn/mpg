@@ -1,0 +1,1056 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Team-Chat – Responda</title>
+  
+  <meta name="theme-color" content="#667eea">
+  
+  <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root { --rot: #c8102e; --gradient-start: #667eea; --gradient-end: #764ba2; }
+    * { box-sizing: border-box; }
+    body { 
+      font-family: 'Atkinson Hyperlegible', Arial, sans-serif; 
+      background: linear-gradient(135deg, var(--gradient-start) 0%, var(--gradient-end) 100%);
+      min-height: 100vh;
+      margin: 0;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    body.loaded { opacity: 1; }
+    
+    header { 
+      background: var(--gradient-start);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 14px;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      flex-wrap: wrap;
+    }
+    header h1 { 
+      margin: 0; 
+      font-size: clamp(1rem, 4vw, 1.15rem);
+      font-weight: 700; 
+      letter-spacing: .2px; 
+    }
+    .spacer { flex: 1; }
+    .topbtn { 
+      color: #fff;
+      text-decoration: none;
+      background: rgba(255,255,255,0.2);
+      padding: 7px 10px;
+      border-radius: 8px;
+      font-weight: 700;
+      transition: all 0.2s;
+      border: none;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: clamp(0.85rem, 3vw, 1rem);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .topbtn:hover { background: rgba(255,255,255,0.3); }
+    
+    .container {
+      max-width: 1400px;
+      margin: 16px auto;
+      padding: 0 14px;
+      height: calc(100vh - 80px);
+    }
+    
+    .chat-layout {
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      gap: 16px;
+      height: 100%;
+      background: #fff;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 3px 12px rgba(0,0,0,.06);
+    }
+    
+    .chat-sidebar {
+      background: #f8f9fa;
+      display: flex;
+      flex-direction: column;
+      border-right: 2px solid #eee;
+    }
+    
+    .chat-search {
+      padding: 12px;
+      border-bottom: 1px solid #eee;
+    }
+    
+    .chat-search input {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      font-size: 16px;
+      font-family: inherit;
+    }
+    
+    .chat-tabs {
+      display: flex;
+      border-bottom: 2px solid #eee;
+      padding: 0 12px;
+    }
+    
+    .chat-tab {
+      flex: 1;
+      padding: 12px;
+      border: none;
+      background: none;
+      cursor: pointer;
+      font-weight: 700;
+      color: #666;
+      border-bottom: 3px solid transparent;
+      transition: all 0.2s;
+      font-family: inherit;
+      font-size: 0.9rem;
+    }
+    
+    .chat-tab.active {
+      color: var(--rot);
+      border-bottom-color: var(--rot);
+    }
+    
+    .chat-list {
+      flex: 1;
+      overflow-y: auto;
+    }
+    
+    .chat-item {
+      padding: 12px;
+      border-bottom: 1px solid #eee;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    
+    .chat-item:hover {
+      background: #fff;
+    }
+    
+    .chat-item.active {
+      background: #fff;
+      border-left: 4px solid var(--rot);
+    }
+    
+    .chat-avatar {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: var(--gradient-start);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 1.2rem;
+      flex-shrink: 0;
+    }
+    
+    .chat-item-info {
+      flex: 1;
+      min-width: 0;
+    }
+    
+    .chat-item-name {
+      font-weight: 700;
+      font-size: 1rem;
+      color: #222;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    
+    .chat-item-preview {
+      font-size: 0.85rem;
+      color: #666;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-top: 2px;
+    }
+    
+    .chat-item-badge {
+      background: var(--rot);
+      color: #fff;
+      border-radius: 50%;
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+    
+    .chat-main {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    
+    .chat-header {
+      padding: 16px 20px;
+      border-bottom: 2px solid #eee;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    
+    .chat-header-title {
+      flex: 1;
+      font-weight: 700;
+      font-size: 1.2rem;
+      color: #222;
+    }
+    
+    .chat-header-btn {
+      padding: 8px 16px;
+      border: 1px solid #ddd;
+      background: #f8f9fa;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.9rem;
+      transition: all 0.2s;
+      font-family: inherit;
+    }
+    
+    .chat-header-btn:hover {
+      background: #e9ecef;
+    }
+    
+    .chat-messages-container {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    
+    .chat-message {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      max-width: 70%;
+      animation: messageSlideIn 0.3s ease-out;
+    }
+    
+    @keyframes messageSlideIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .chat-message.own {
+      align-self: flex-end;
+    }
+    
+    .chat-message.other {
+      align-self: flex-start;
+    }
+    
+    .chat-message-bubble {
+      padding: 12px 16px;
+      border-radius: 12px;
+      word-wrap: break-word;
+      line-height: 1.5;
+    }
+    
+    .chat-message.own .chat-message-bubble {
+      background: #fff5f7;
+      border: 1px solid #f2c9d1;
+      color: #222;
+    }
+    
+    .chat-message.other .chat-message-bubble {
+      background: #f0f7ff;
+      border: 1px solid #dbeafe;
+      color: #222;
+    }
+    
+    .chat-message-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.75rem;
+      color: #999;
+      padding: 0 4px;
+    }
+    
+    .chat-message.own .chat-message-meta {
+      justify-content: flex-end;
+    }
+    
+    .chat-input-container {
+      padding: 20px;
+      border-top: 2px solid #eee;
+      display: flex;
+      gap: 12px;
+      align-items: flex-end;
+      background: #fff;
+    }
+    
+    .chat-input {
+      flex: 1;
+      padding: 12px 16px;
+      border: 1px solid #ddd;
+      border-radius: 12px;
+      font-size: 16px;
+      font-family: inherit;
+      resize: vertical;
+      min-height: 48px;
+      max-height: 150px;
+    }
+    
+    .chat-send-btn {
+      padding: 12px 24px;
+      background: var(--rot);
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: inherit;
+      min-width: 100px;
+      min-height: 48px;
+      font-size: 1rem;
+    }
+    
+    .chat-send-btn:hover {
+      background: #a00d26;
+    }
+    
+    .chat-empty {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 16px;
+      color: #999;
+      padding: 60px 20px;
+      text-align: center;
+    }
+    
+    .chat-empty-icon {
+      font-size: 5rem;
+    }
+    
+    .btn-new-group {
+      margin: 12px;
+      padding: 12px;
+      background: var(--rot);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: inherit;
+      font-size: 1rem;
+    }
+    
+    .btn-new-group:hover {
+      background: #a00d26;
+    }
+    
+    .modal { 
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.6);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      padding: 16px;
+      overflow-y: auto;
+    }
+    .modal.show { display: flex; }
+    
+    .modal-box { 
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 6px 24px rgba(0,0,0,.2);
+      padding: 30px;
+      max-width: 500px;
+      width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+    
+    .modal-h { 
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 20px;
+      padding-bottom: 16px;
+      border-bottom: 2px solid #eee;
+    }
+    .modal-h h3 {
+      margin: 0;
+      color: var(--rot);
+      font-size: 1.4rem;
+    }
+    .x { 
+      margin-left: auto;
+      border: 0;
+      background: #f1f1f1;
+      border-radius: 8px;
+      padding: 8px 12px;
+      cursor: pointer;
+      font-weight: 700;
+      min-width: 44px;
+      min-height: 44px;
+      font-size: 24px;
+    }
+    .x:hover { background: #e2e2e2; }
+    
+    .field { 
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin: 16px 0;
+    }
+    .field label { 
+      font-weight: 700; 
+      color: var(--rot); 
+      font-size: 1rem;
+    }
+    input, textarea, select { 
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      background: #fafafa;
+      font-size: 16px;
+      font-family: inherit;
+    }
+    
+    .btn { 
+      background: var(--rot);
+      color: #fff;
+      border: 0;
+      border-radius: 8px;
+      padding: 12px 20px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+      width: 100%;
+      font-size: 1rem;
+      font-family: inherit;
+    }
+    .btn:hover { background: #a00d26; }
+    .btn.sec { background: #eee; color: var(--rot); border: 1px solid var(--rot); }
+    .msg { min-height: 1.2em; margin-top: 12px; font-size: 0.95rem; }
+    .ok { color: #2e7d32; }
+    .err { color: #c8102e; }
+    
+    .actions { 
+      display: flex;
+      gap: 12px;
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 2px solid #eee;
+    }
+    
+    @media (max-width: 800px) { 
+      .chat-layout {
+        grid-template-columns: 1fr;
+      }
+      .chat-sidebar {
+        display: none;
+      }
+      .chat-sidebar.mobile-show {
+        display: flex;
+        position: fixed;
+        inset: 0;
+        z-index: 100;
+        border-right: none;
+      }
+      .chat-message { max-width: 85%; }
+      .container { height: calc(100vh - 70px); margin: 8px auto; }
+    }
+    
+    @media (min-width: 640px) {
+      .actions { flex-direction: row; }
+      .btn { width: auto; }
+      .chat-message { max-width: 60%; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>💬 Team-Chat</h1>
+  <div class="spacer"></div>
+  <a href="mpg-dashboard.html" class="topbtn">← Zurück</a>
+  <button class="topbtn" id="logoutBtn">Logout</button>
+</header>
+
+<div class="container">
+  <div class="chat-layout">
+    <!-- Sidebar -->
+    <div class="chat-sidebar" id="chatSidebar">
+      <div class="chat-search">
+        <input type="text" id="chatSearch" placeholder="🔍 Suchen...">
+      </div>
+      
+      <div class="chat-tabs">
+        <button class="chat-tab active" data-chat-tab="direct">Direkt</button>
+        <button class="chat-tab" data-chat-tab="groups">Gruppen</button>
+      </div>
+      
+      <button class="btn-new-group" id="newGroupBtn" style="display:none">+ Neue Gruppe</button>
+      
+      <div class="chat-list" id="chatList">
+        <div style="text-align:center; padding:40px 20px; color:#999">
+          Lade Kontakte...
+        </div>
+      </div>
+    </div>
+    
+    <!-- Main Chat Area -->
+    <div class="chat-main">
+      <div class="chat-empty" id="chatEmpty">
+        <div class="chat-empty-icon">💬</div>
+        <div style="font-size:1.2rem; font-weight:700; margin-bottom:8px">Wähle einen Kontakt</div>
+        <div>Starte eine neue Unterhaltung oder erstelle eine Gruppe</div>
+      </div>
+      
+      <div id="chatActiveContainer" style="display:none; height:100%; display:flex; flex-direction:column">
+        <div class="chat-header">
+          <button class="chat-header-btn" id="showSidebarBtn" style="display:none" onclick="toggleSidebar()">☰</button>
+          <div class="chat-avatar" id="chatActiveAvatar">?</div>
+          <div class="chat-header-title" id="chatActiveTitle">—</div>
+          <button class="chat-header-btn" id="chatInfoBtn" style="display:none">ℹ️ Info</button>
+        </div>
+        
+        <div class="chat-messages-container" id="chatMessagesContainer">
+          <!-- Messages here -->
+        </div>
+        
+        <div class="chat-input-container">
+          <textarea 
+            class="chat-input" 
+            id="chatInput" 
+            placeholder="Nachricht schreiben..."
+            onkeydown="if(event.key==='Enter' && !event.shiftKey){event.preventDefault();sendChatMessage();}"
+          ></textarea>
+          <button class="chat-send-btn" onclick="sendChatMessage()">Senden</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- New Group Modal -->
+<div class="modal" id="groupModal">
+  <div class="modal-box">
+    <div class="modal-h">
+      <h3>Neue Gruppe erstellen</h3>
+      <button class="x" id="groupClose">×</button>
+    </div>
+    
+    <div class="field">
+      <label for="groupName">Gruppenname *</label>
+      <input type="text" id="groupName" placeholder="z.B. Team Alpha" required>
+    </div>
+    
+    <div class="field">
+      <label>Mitglieder auswählen</label>
+      <div id="groupMembersList" style="max-height:300px; overflow-y:auto; border:1px solid #eee; border-radius:8px; padding:8px">
+        <!-- User checkboxes here -->
+      </div>
+    </div>
+    
+    <div id="groupMsg" class="msg"></div>
+    
+    <div class="actions">
+      <button class="btn sec" id="groupCancel">Abbrechen</button>
+      <button class="btn" id="groupSave">Gruppe erstellen</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+  import PocketBase from 'https://cdn.jsdelivr.net/npm/pocketbase@0.21.3/dist/pocketbase.es.mjs';
+
+  const pb = new PocketBase('https://api.responda.systems');
+  let user = null;
+  let currentChatTab = 'direct';
+  let currentChatRoom = null;
+  let chatUnsubscribe = null;
+  let allUsers = [];
+
+  // Auth Check
+  async function initAuth() {
+    if (!pb.authStore.isValid) {
+      window.location.href = 'mpg-login.html';
+      return;
+    }
+    
+    try {
+      await pb.collection('users').authRefresh();
+      user = pb.authStore.model;
+      
+      if (!user) {
+        window.location.href = 'mpg-login.html';
+        return;
+      }
+      
+      document.body.classList.add('loaded');
+      initChatSystem();
+      
+    } catch (error) {
+      console.error('Auth error:', error);
+      pb.authStore.clear();
+      window.location.href = 'mpg-login.html';
+    }
+  }
+
+  // Logout
+  document.getElementById('logoutBtn').addEventListener('click', async (e) => {
+    e.preventDefault();
+    unsubscribeFromChat();
+    pb.authStore.clear();
+    localStorage.clear();
+    window.location.href = 'mpg-login.html';
+  });
+
+  // Mobile sidebar toggle
+  window.toggleSidebar = function() {
+    document.getElementById('chatSidebar').classList.toggle('mobile-show');
+  };
+
+  // Show sidebar button on mobile
+  if (window.innerWidth <= 800) {
+    document.getElementById('showSidebarBtn').style.display = 'block';
+  }
+
+  async function initChatSystem() {
+    try {
+      allUsers = await pb.collection('users').getFullList({
+        filter: `organization_id = "${user.organization_id}"`,
+        sort: 'name'
+      });
+      
+      loadChatList();
+      
+    } catch (error) {
+      console.error('Error loading users:', error);
+    }
+    
+    document.querySelectorAll('.chat-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        switchChatTab(tab.dataset.chatTab);
+      });
+    });
+    
+    document.getElementById('newGroupBtn').addEventListener('click', () => {
+      openGroupModal();
+    });
+    
+    document.getElementById('chatSearch').addEventListener('input', (e) => {
+      filterChatList(e.target.value);
+    });
+    
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  }
+
+  function switchChatTab(tabName) {
+    currentChatTab = tabName;
+    
+    document.querySelectorAll('.chat-tab').forEach(t => t.classList.remove('active'));
+    document.querySelector(`[data-chat-tab="${tabName}"]`).classList.add('active');
+    
+    document.getElementById('newGroupBtn').style.display = tabName === 'groups' ? 'block' : 'none';
+    
+    loadChatList();
+  }
+
+  async function loadChatList() {
+    const listEl = document.getElementById('chatList');
+    
+    if (currentChatTab === 'direct') {
+      const contacts = allUsers.filter(u => u.id !== user.id);
+      
+      if (contacts.length === 0) {
+        listEl.innerHTML = '<div style="text-align:center; padding:40px 20px; color:#999">Keine Kontakte verfügbar</div>';
+        return;
+      }
+      
+      listEl.innerHTML = contacts.map(contact => {
+        const initial = (contact.name || contact.email).charAt(0).toUpperCase();
+        return `
+          <div class="chat-item" onclick="openDirectChat('${contact.id}')">
+            <div class="chat-avatar">${initial}</div>
+            <div class="chat-item-info">
+              <div class="chat-item-name">${escapeHtml(contact.name || contact.email)}</div>
+              <div class="chat-item-preview">${contact.role || 'Benutzer'}</div>
+            </div>
+          </div>
+        `;
+      }).join('');
+      
+    } else {
+      try {
+        const groups = await pb.collection('chat_rooms').getFullList({
+          filter: `organization_id = "${user.organization_id}" && type = "group"`,
+          sort: '-created'
+        });
+        
+        if (groups.length === 0) {
+          listEl.innerHTML = '<div style="text-align:center; padding:40px 20px; color:#999">Keine Gruppen vorhanden<br><small>Erstelle eine neue Gruppe!</small></div>';
+          return;
+        }
+        
+        listEl.innerHTML = groups.map(group => {
+          return `
+            <div class="chat-item" onclick="openGroupChat('${group.id}')">
+              <div class="chat-avatar">👥</div>
+              <div class="chat-item-info">
+                <div class="chat-item-name">${escapeHtml(group.name)}</div>
+                <div class="chat-item-preview">${group.members?.length || 0} Mitglieder</div>
+              </div>
+            </div>
+          `;
+        }).join('');
+        
+      } catch (error) {
+        console.error('Error loading groups:', error);
+        listEl.innerHTML = '<div style="text-align:center; padding:20px; color:#c8102e">Fehler beim Laden</div>';
+      }
+    }
+  }
+
+  function filterChatList(searchTerm) {
+    const items = document.querySelectorAll('.chat-item');
+    const term = searchTerm.toLowerCase();
+    
+    items.forEach(item => {
+      const name = item.querySelector('.chat-item-name').textContent.toLowerCase();
+      item.style.display = name.includes(term) ? 'flex' : 'none';
+    });
+  }
+
+  window.openDirectChat = async function(contactId) {
+    try {
+      const contact = allUsers.find(u => u.id === contactId);
+      if (!contact) return;
+      
+      const existingRooms = await pb.collection('chat_rooms').getFullList({
+        filter: `organization_id = "${user.organization_id}" && type = "direct" && members ~ "${user.id}" && members ~ "${contactId}"`
+      });
+      
+      let room;
+      if (existingRooms.length > 0) {
+        room = existingRooms[0];
+      } else {
+        room = await pb.collection('chat_rooms').create({
+          organization_id: user.organization_id,
+          type: 'direct',
+          members: [user.id, contactId],
+          created_by: user.id
+        });
+      }
+      
+      openChatRoom(room, contact.name || contact.email, (contact.name || contact.email).charAt(0).toUpperCase());
+      
+      // Close sidebar on mobile
+      if (window.innerWidth <= 800) {
+        document.getElementById('chatSidebar').classList.remove('mobile-show');
+      }
+      
+    } catch (error) {
+      console.error('Error opening chat:', error);
+      alert('Fehler: ' + error.message);
+    }
+  };
+
+  window.openGroupChat = async function(groupId) {
+    try {
+      const group = await pb.collection('chat_rooms').getOne(groupId);
+      openChatRoom(group, group.name, '👥');
+      
+      if (window.innerWidth <= 800) {
+        document.getElementById('chatSidebar').classList.remove('mobile-show');
+      }
+      
+    } catch (error) {
+      console.error('Error opening group:', error);
+      alert('Fehler: ' + error.message);
+    }
+  };
+
+  async function openChatRoom(room, title, avatar) {
+    currentChatRoom = room;
+    
+    document.getElementById('chatEmpty').style.display = 'none';
+    document.getElementById('chatActiveContainer').style.display = 'flex';
+    document.getElementById('chatActiveAvatar').textContent = avatar;
+    document.getElementById('chatActiveTitle').textContent = title;
+    
+    document.getElementById('chatInfoBtn').style.display = room.type === 'group' ? 'block' : 'none';
+    
+    document.querySelectorAll('.chat-item').forEach(item => item.classList.remove('active'));
+    
+    await loadChatMessages(room.id);
+    subscribeToChatRoom(room.id);
+  }
+
+  async function loadChatMessages(roomId) {
+    try {
+      const messages = await pb.collection('chat_messages').getFullList({
+        filter: `room_id = "${roomId}"`,
+        sort: 'created',
+        limit: 100
+      });
+      
+      displayChatMessages(messages);
+      scrollChatToBottom();
+      
+    } catch (error) {
+      console.error('Error loading messages:', error);
+      document.getElementById('chatMessagesContainer').innerHTML = 
+        '<div style="text-align:center;padding:20px;color:#c8102e">Fehler beim Laden</div>';
+    }
+  }
+
+  function displayChatMessages(messages) {
+    const container = document.getElementById('chatMessagesContainer');
+    
+    if (messages.length === 0) {
+      container.innerHTML = '<div style="text-align:center;padding:40px;color:#999">Noch keine Nachrichten<br><small>Schreibe die erste Nachricht!</small></div>';
+      return;
+    }
+    
+    container.innerHTML = messages.map(msg => {
+      const isOwn = msg.user_id === user.id;
+      const time = new Date(msg.created).toLocaleTimeString('de-DE', { 
+        hour: '2-digit', 
+        minute: '2-digit' 
+      });
+      
+      return `
+        <div class="chat-message ${isOwn ? 'own' : 'other'}">
+          <div class="chat-message-bubble">
+            ${!isOwn ? `<div style="font-weight:700;font-size:0.85rem;margin-bottom:4px;color:#666">${escapeHtml(msg.user_name)}</div>` : ''}
+            ${escapeHtml(msg.message)}
+          </div>
+          <div class="chat-message-meta">
+            <span>${time}</span>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function addChatMessageToUI(msg) {
+    const container = document.getElementById('chatMessagesContainer');
+    
+    if (container.querySelector('[style*="color:#999"]')) {
+      container.innerHTML = '';
+    }
+    
+    const isOwn = msg.user_id === user.id;
+    const time = new Date(msg.created).toLocaleTimeString('de-DE', { 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    });
+    
+    const messageEl = document.createElement('div');
+    messageEl.className = `chat-message ${isOwn ? 'own' : 'other'}`;
+    messageEl.innerHTML = `
+      <div class="chat-message-bubble">
+        ${!isOwn ? `<div style="font-weight:700;font-size:0.85rem;margin-bottom:4px;color:#666">${escapeHtml(msg.user_name)}</div>` : ''}
+        ${escapeHtml(msg.message)}
+      </div>
+      <div class="chat-message-meta">
+        <span>${time}</span>
+      </div>
+    `;
+    
+    container.appendChild(messageEl);
+    scrollChatToBottom();
+    
+    if (!isOwn && 'Notification' in window && Notification.permission === 'granted') {
+      new Notification('Neue Nachricht von ' + msg.user_name, {
+        body: msg.message.substring(0, 100),
+        icon: '/favicon.ico'
+      });
+    }
+  }
+
+  window.sendChatMessage = async function() {
+    if (!currentChatRoom) return;
+    
+    const input = document.getElementById('chatInput');
+    const text = input.value.trim();
+    
+    if (!text) return;
+    
+    try {
+      await pb.collection('chat_messages').create({
+        room_id: currentChatRoom.id,
+        user_id: user.id,
+        user_name: user.name || user.email,
+        message: text,
+        read_by: [user.id]
+      });
+      
+      input.value = '';
+      input.style.height = 'auto';
+      
+    } catch (error) {
+      console.error('Error sending message:', error);
+      alert('Fehler: ' + error.message);
+    }
+  };
+
+  function subscribeToChatRoom(roomId) {
+    unsubscribeFromChat();
+    
+    try {
+      chatUnsubscribe = pb.collection('chat_messages').subscribe('*', function (e) {
+        if (e.action === 'create' && e.record.room_id === roomId) {
+          addChatMessageToUI(e.record);
+        }
+      }, {
+        filter: `room_id = "${roomId}"`
+      });
+      
+    } catch (error) {
+      console.error('Error subscribing:', error);
+    }
+  }
+
+  function unsubscribeFromChat() {
+    if (chatUnsubscribe) {
+      chatUnsubscribe();
+      chatUnsubscribe = null;
+    }
+  }
+
+  function scrollChatToBottom() {
+    const container = document.getElementById('chatMessagesContainer');
+    container.scrollTop = container.scrollHeight;
+  }
+
+  document.getElementById('chatInput')?.addEventListener('input', function() {
+    this.style.height = 'auto';
+    this.style.height = Math.min(this.scrollHeight, 150) + 'px';
+  });
+
+  // Group Modal
+  const groupModal = document.getElementById('groupModal');
+  
+  function openGroupModal() {
+    document.getElementById('groupName').value = '';
+    document.getElementById('groupMsg').textContent = '';
+    
+    const membersList = document.getElementById('groupMembersList');
+    membersList.innerHTML = allUsers
+      .filter(u => u.id !== user.id)
+      .map(u => `
+        <label style="display:flex;align-items:center;gap:8px;padding:10px;cursor:pointer;border-radius:6px" onmouseover="this.style.background='#f8f9fa'" onmouseout="this.style.background=''">
+          <input type="checkbox" value="${u.id}" style="width:20px;height:20px">
+          <span>${escapeHtml(u.name || u.email)}</span>
+        </label>
+      `)
+      .join('');
+    
+    groupModal.classList.add('show');
+  }
+  
+  function closeGroupModal() {
+    groupModal.classList.remove('show');
+  }
+  
+  document.getElementById('groupClose').addEventListener('click', closeGroupModal);
+  document.getElementById('groupCancel').addEventListener('click', closeGroupModal);
+  groupModal.addEventListener('click', (e) => {
+    if (e.target === groupModal) closeGroupModal();
+  });
+  
+  document.getElementById('groupSave').addEventListener('click', async () => {
+    const groupMsg = document.getElementById('groupMsg');
+    const saveBtn = document.getElementById('groupSave');
+    
+    try {
+      const name = document.getElementById('groupName').value.trim();
+      const checkboxes = document.querySelectorAll('#groupMembersList input:checked');
+      const members = Array.from(checkboxes).map(cb => cb.value);
+      
+      if (!name) {
+        groupMsg.textContent = '❌ Bitte Gruppenname eingeben';
+        groupMsg.className = 'msg err';
+        return;
+      }
+      
+      if (members.length === 0) {
+        groupMsg.textContent = '❌ Bitte mindestens ein Mitglied auswählen';
+        groupMsg.className = 'msg err';
+        return;
+      }
+      
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Erstelle...';
+      
+      members.push(user.id);
+      
+      await pb.collection('chat_rooms').create({
+        organization_id: user.organization_id,
+        name: name,
+        type: 'group',
+        members: members,
+        created_by: user.id
+      });
+      
+      groupMsg.textContent = '✅ Gruppe erstellt!';
+      groupMsg.className = 'msg ok';
+      
+      setTimeout(() => {
+        closeGroupModal();
+        switchChatTab('groups');
+      }, 1000);
+      
+    } catch (error) {
+      groupMsg.textContent = '❌ Fehler: ' + error.message;
+      groupMsg.className = 'msg err';
+    } finally {
+      saveBtn.disabled = false;
+      saveBtn.textContent = 'Gruppe erstellen';
+    }
+  });
+
+  function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
+  window.addEventListener('beforeunload', unsubscribeFromChat);
+
+  initAuth();
+</script>
+
+</body>
+</html>
