@@ -334,7 +334,7 @@
         <form id="loginForm">
           <!-- Organisation Eingabe (nur wenn nicht gespeichert) -->
           <div id="orgInputGroup" class="form-group">
-            <label for="orgCode">🏢 Organisation</label>
+            <label for="orgCode">🏢 Organisations-Code</label>
             <input 
               type="text" 
               id="orgCode" 
@@ -342,7 +342,7 @@
               autocomplete="off"
               required 
             />
-            <small>Gib dein Organisations-Kürzel ein</small>
+            <small>Gib deinen Organisations-Code ein</small>
           </div>
           
           <div class="form-group">
@@ -378,22 +378,6 @@
 
 <script type="module">
   import PocketBase from 'https://cdn.jsdelivr.net/npm/pocketbase@0.21.3/dist/pocketbase.es.mjs';
-
-  // Organisation Mapping (kann später aus PocketBase geladen werden)
-  const ORG_MAPPING = {
-    'ffwrothenburg': {
-      name: 'FFW Rothenburg',
-      id: 'ffwrothenburg'
-    },
-    'beispiel2': {
-      name: 'Beispiel Organisation 2',
-      id: 'beispiel2'
-    },
-    'beispiel3': {
-      name: 'Beispiel Organisation 3',
-      id: 'beispiel3'
-    }
-  };
 
   const pb = new PocketBase('https://api.responda.systems');
   
@@ -474,7 +458,7 @@
       localStorage.removeItem(ORG_STORAGE_KEY);
       currentOrg = null;
       showOrgInput();
-      showMsg('Bitte gib dein Organisations-Kürzel neu ein.', 'info');
+      showMsg('Bitte gib deinen Organisations-Code neu ein.', 'info');
       orgCodeInputEl.focus();
     }
   };
@@ -500,32 +484,49 @@
       let orgConfig;
       
       if (currentOrg) {
+        // Org bereits gespeichert
         orgConfig = currentOrg;
       } else {
+        // Neue Org - PRÜFE OB SIE EXISTIERT
         const orgCode = orgCodeInputEl.value.trim().toLowerCase();
         
         if (!orgCode) {
-          showMsg('Bitte gib dein Organisations-Kürzel ein.', 'error');
+          showMsg('Bitte gib deinen Organisations-Code ein.', 'error');
           submitBtn.disabled = false;
           submitBtn.textContent = 'Anmelden';
           return;
         }
         
-        const mappedOrg = ORG_MAPPING[orgCode];
+        console.log('🔍 Suche Organisation mit Code:', orgCode);
         
-        if (!mappedOrg) {
-          showMsg('Unbekannte Organisation. Bitte überprüfe dein Kürzel.', 'error');
+        // SUCHE ORGANISATION IN POCKETBASE
+        try {
+          const org = await pb.collection('organizations').getFirstListItem(`org_code = "${orgCode}"`);
+          
+          console.log('✅ Organisation gefunden:', org.org_name);
+          
+          orgConfig = {
+            code: orgCode,
+            name: org.org_name,
+            id: org.id
+          };
+          
+        } catch (orgError) {
+          console.error('❌ Organisation nicht gefunden:', orgError);
+          
+          if (orgError.status === 404) {
+            showMsg('Organisation nicht gefunden! Bitte überprüfe deinen Code.', 'error');
+          } else {
+            showMsg('Fehler bei der Organisations-Suche: ' + orgError.message, 'error');
+          }
+          
           submitBtn.disabled = false;
           submitBtn.textContent = 'Anmelden';
           return;
         }
-        
-        orgConfig = {
-          code: orgCode,
-          name: mappedOrg.name,
-          id: mappedOrg.id
-        };
       }
+      
+      console.log('🔐 Versuche Login für:', email);
       
       // Login with PocketBase
       const authData = await pb.collection('users').authWithPassword(email, password);
@@ -537,9 +538,24 @@
         return;
       }
       
-      // Check if user belongs to organization
-      // TODO: Implement organization check when organization system is ready
-      // For now, we allow login for all users
+      console.log('✅ Login erfolgreich');
+      
+      // PRÜFE OB USER ZUR ORGANISATION GEHÖRT
+      const user = authData.record;
+      
+      if (user.organization_id !== orgConfig.id) {
+        console.error('❌ User gehört nicht zur Organisation');
+        showMsg('Dieser Benutzer gehört nicht zur angegebenen Organisation!', 'error');
+        
+        // Logout wieder
+        pb.authStore.clear();
+        
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Anmelden';
+        return;
+      }
+      
+      console.log('✅ User gehört zur Organisation');
       
       // Save organization
       if (!currentOrg) {
@@ -553,7 +569,7 @@
       }, 800);
       
     } catch(e) {
-      console.error('Login-Fehler:', e);
+      console.error('❌ Login-Fehler:', e);
       
       let errorMsg = 'Login fehlgeschlagen: ';
       if (e.status === 400) {
