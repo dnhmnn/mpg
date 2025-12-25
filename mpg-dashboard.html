@@ -626,9 +626,9 @@
       </div>
       
       <div class="field">
-        <label for="roleTemplate">Rollen-Vorlage</label>
+        <label for="roleTemplate">Rollen-Vorlage *</label>
         <select id="roleTemplate" onchange="applyRoleTemplate()">
-          <option value="">-- Individuelle Berechtigungen --</option>
+          <option value="">-- Bitte Rolle wählen --</option>
           <option value="mpg">👑 MPG-Beauftragter</option>
           <option value="lager">📦 Lagerverwaltung</option>
           <option value="ausbildung">🎓 Ausbildungen</option>
@@ -963,7 +963,7 @@
     }
   });
 
-  // ===== PASSWORD CHANGE =====
+  // ===== PASSWORD CHANGE - FIXED! =====
   const pwMsg = document.getElementById('pwMsg');
 
   function showPwMsg(text, ok=false){
@@ -982,28 +982,52 @@
       if (!n1 || n1.length < 8) { showPwMsg('Neues Passwort: mindestens 8 Zeichen.'); return; }
       if (n1 !== n2) { showPwMsg('Die neuen Passwörter stimmen nicht überein.'); return; }
 
+      console.log('🔐 Verifying current password...');
+      
+      // Step 1: Verify current password by logging in
       try {
         await pb.collection('users').authWithPassword(user.email, current);
+        console.log('✅ Current password verified');
       } catch (e) {
+        console.error('❌ Current password wrong:', e);
         showPwMsg('Aktuelles Passwort ist falsch.');
         return;
       }
 
-      await pb.collection('users').update(user.id, {
-        password: n1,
-        passwordConfirm: n1
-      });
-
-      showPwMsg('✅ Passwort geändert. Du wirst abgemeldet …', true);
+      console.log('🔄 Updating password...');
       
-      setTimeout(async () => {
-        closeSettings();
-        pb.authStore.clear();
-        localStorage.clear();
-        window.location.href = 'mpg-login.html';
-      }, 2000);
+      // Step 2: Update password
+      try {
+        await pb.collection('users').update(user.id, {
+          password: n1,
+          passwordConfirm: n1,
+          oldPassword: current  // WICHTIG: Auch altes Passwort mitsenden!
+        });
+        
+        console.log('✅ Password updated successfully');
+        
+        showPwMsg('✅ Passwort geändert. Du wirst abgemeldet …', true);
+        
+        setTimeout(async () => {
+          closeSettings();
+          pb.authStore.clear();
+          localStorage.clear();
+          window.location.href = 'mpg-login.html';
+        }, 2000);
+        
+      } catch (updateError) {
+        console.error('❌ Password update error:', updateError);
+        console.error('Error details:', updateError.response?.data);
+        
+        if (updateError.status === 400) {
+          showPwMsg('Passwort konnte nicht geändert werden. Bitte prüfe deine Eingaben.');
+        } else {
+          showPwMsg('Fehler beim Ändern: ' + (updateError.message || 'Unbekannter Fehler'));
+        }
+      }
       
     } catch(e) {
+      console.error('❌ General error:', e);
       showPwMsg('Fehler: ' + (e?.message || e));
     }
   });
@@ -1092,7 +1116,7 @@
     alert(`Vorlage "${ROLE_TEMPLATES[template].label}" angewendet. Du kannst jetzt noch individuell anpassen!`);
   };
   
-  // ===== USER SAVE - MIT SUPER FIX! =====
+  // ===== USER SAVE - FIXED! =====
   document.getElementById('userSave').addEventListener('click', async () => {
     const userMsg = document.getElementById('userMsg');
     const saveBtn = document.getElementById('userSave');
@@ -1104,25 +1128,44 @@
       const email = document.getElementById('userEmail').value.trim();
       const name = document.getElementById('userName').value.trim();
       const phone = document.getElementById('userPhone').value.trim();
+      const roleTemplate = document.getElementById('roleTemplate').value;
       
-      // ROLE - GARANTIERT GÜLTIG
-      let role = document.getElementById('roleTemplate').value;
+      console.log('📝 Raw form values:', {
+        email,
+        name,
+        phone,
+        roleTemplate,
+        roleTemplateType: typeof roleTemplate,
+        roleTemplateLength: roleTemplate ? roleTemplate.length : 0
+      });
       
-      // Wenn leer oder ungültig, setze DEFAULT
-      if (!role || role === '' || role === null || role === undefined) {
-        role = 'benutzer';
+      // ROLLE - GARANTIERT GÜLTIG UND GESÄUBERT
+      let role = 'benutzer'; // DEFAULT
+      
+      if (roleTemplate && roleTemplate.trim() !== '') {
+        role = roleTemplate.trim();
+        console.log('🎭 Role after trim:', role, 'Length:', role.length);
       }
       
       // Validiere dass role ein gültiger Wert ist
       const validRoles = ['mpg', 'lager', 'ausbildung', 'qm', 'benutzer'];
       if (!validRoles.includes(role)) {
+        console.warn('⚠️ Invalid role detected:', role, 'Using default: benutzer');
         role = 'benutzer';
       }
       
-      console.log('🎭 Role selected:', role);
+      console.log('🎭 Final role to save:', role);
       
       if (!email || !name) {
         userMsg.textContent = '❌ Bitte E-Mail und Name ausfüllen';
+        userMsg.className = 'msg err';
+        saveBtn.disabled = false;
+        saveBtn.textContent = editingUserId ? 'Speichern' : 'Benutzer anlegen';
+        return;
+      }
+      
+      if (!roleTemplate || roleTemplate.trim() === '') {
+        userMsg.textContent = '❌ Bitte Rolle auswählen';
         userMsg.className = 'msg err';
         saveBtn.disabled = false;
         saveBtn.textContent = editingUserId ? 'Speichern' : 'Benutzer anlegen';
@@ -1162,9 +1205,11 @@
           permissions: permissions
         };
         
-        console.log('📝 Updating user:', userData);
+        console.log('📝 Updating user with data:', userData);
         
         await pb.collection('users').update(editingUserId, userData);
+        
+        console.log('✅ User updated successfully');
         
         userMsg.textContent = '✅ Benutzer aktualisiert!';
         userMsg.className = 'msg ok';
@@ -1198,13 +1243,17 @@
           email: userData.email,
           name: userData.name,
           role: userData.role,
+          roleLength: userData.role.length,
           organization_id: userData.organization_id,
-          has_password: !!userData.password
+          has_password: !!userData.password,
+          permissions: userData.permissions
         });
         
         const newUser = await pb.collection('users').create(userData);
         
-        console.log('✅ User created successfully:', newUser.id);
+        console.log('✅ User created successfully!');
+        console.log('✅ Created user ID:', newUser.id);
+        console.log('✅ Saved role:', newUser.role);
         
         // Send password reset email
         try {
@@ -1215,8 +1264,8 @@
           userMsg.className = 'msg ok';
         } catch (emailError) {
           console.error('❌ Email send error:', emailError);
-          userMsg.textContent = '⚠️ Benutzer angelegt, aber E-Mail konnte nicht versendet werden. SMTP prüfen!';
-          userMsg.className = 'msg err';
+          userMsg.textContent = '⚠️ Benutzer angelegt, aber E-Mail konnte nicht versendet werden.';
+          userMsg.className = 'msg ok';
         }
         
         setTimeout(() => {
@@ -1227,7 +1276,8 @@
       
     } catch (e) {
       console.error('❌ User save error:', e);
-      console.error('Error details:', e.response?.data);
+      console.error('Error response:', e.response);
+      console.error('Error data:', e.response?.data);
       
       let errorMsg = '❌ Fehler: ';
       
