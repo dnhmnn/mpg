@@ -1102,7 +1102,17 @@
       const name = document.getElementById('userName').value.trim();
       const phone = document.getElementById('userPhone').value.trim();
       const roleTemplate = document.getElementById('roleTemplate').value;
-      const role = roleTemplate || 'benutzer';  // ← WICHTIG: DEFAULT ROLE!
+let role = roleTemplate || 'benutzer';
+
+// FORCE DEFAULT wenn leer
+if (!role || role === '') {
+  role = 'benutzer';
+}
+
+console.log('🎭 Selected role template:', roleTemplate);
+console.log('🎭 Final role:', role);
+
+			'benutzer';  // ← WICHTIG: DEFAULT ROLE!
       
       console.log('📝 Creating user with role:', role);
       
