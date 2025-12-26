@@ -9,32 +9,67 @@
   <meta name="theme-color" content="#667eea">
   
   <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
+  <script src="https://cdn.jsdelivr.net/npm/pocketbase@0.21.3/dist/pocketbase.umd.js"></script>
+  
   <style>
-    :root { --rot: #c8102e; --gradient-start: #667eea; --gradient-end: #764ba2; }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    
-    body { 
-      font-family: 'Atkinson Hyperlegible', Arial, sans-serif;
-      background: linear-gradient(135deg, var(--gradient-start) 0%, var(--gradient-end) 100%);
-      min-height: 100vh;
-      margin: 0;
+    :root{
+      --primary:#c8102e;
+      --bg:#f8fafc;
+      --card:#fff;
+      --text:#0f172a;
+      --muted:#64748b;
+      --border:#e2e8f0;
+      --gradient-start:#667eea;
+      --gradient-end:#764ba2;
     }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      background:linear-gradient(135deg, var(--gradient-start) 0%, var(--gradient-end) 100%);
+      min-height:100vh;
+      color:var(--text);
+      font-family:'Atkinson Hyperlegible',-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+      line-height:1.45;
+      opacity:0;
+      transition:opacity 0.3s;
+    }
+    
+    body.loaded{opacity:1}
     
     /* Header ganz oben */
-    header { 
-      background: var(--gradient-start);
-      color: #fff;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 12px 16px;
-      position: sticky;
-      top: 0;
-      z-index: 10;
+    header{
+      position:sticky;
+      top:0;
+      background:var(--gradient-start);
+      color:#fff;
+      z-index:10;
     }
-    header h1 { margin: 0; font-size: 1.2rem; font-weight: 700; }
-    .spacer { flex: 1; }
-    .back-btn { 
+    .bar{
+      max-width:1100px;
+      margin:0 auto;
+      padding:.75rem 1rem;
+      display:flex;
+      gap:.5rem;
+      align-items:center;
+      flex-wrap:wrap;
+    }
+    h1{font-size:1.05rem;margin:0;font-weight:800}
+    .toolbar{margin-left:auto;display:flex;gap:.5rem;flex-wrap:wrap}
+    .btn{
+      border:1px solid rgba(255,255,255,0.3);
+      background:rgba(255,255,255,0.1);
+      color:#fff;
+      padding:.45rem .7rem;
+      border-radius:.5rem;
+      cursor:pointer;
+      font-weight:700;
+      font-size:.9rem;
+      transition:all 0.2s;
+    }
+    .btn:hover{background:rgba(255,255,255,0.2)}
+    
+    .back-btn {
       color: #fff;
       text-decoration: none;
       background: rgba(255,255,255,0.2);
@@ -42,105 +77,24 @@
       border-radius: 8px;
       font-weight: 700;
       transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
     }
     .back-btn:hover {
       background: rgba(255,255,255,0.3);
     }
     
-    .wrap { 
-      max-width: 820px;
-      margin: 16px auto;
-      padding: 0 12px;
-    }
-    
-    .card { 
-      background: #fff;
+    .loading-box {
+      background: #dbeafe;
+      color: #1e40af;
+      padding: 20px;
       border-radius: 12px;
-      box-shadow: 0 3px 12px rgba(0,0,0,.06);
-      padding: 14px;
-      margin-bottom: 14px;
-    }
-    
-    h2 { color: var(--rot); margin: 6px 0 12px; }
-    
-    label { 
-      color: var(--rot);
-      font-weight: 700;
-      margin-top: 8px;
-      display: block;
-    }
-    
-    input { 
-      width: 100%;
-      padding: 10px;
-      border: 1px solid #ccc;
-      border-radius: 10px;
-      background: #fafafa;
-      font-size: 1rem;
-      font-family: inherit;
-    }
-    
-    .row { display: flex; gap: 10px; flex-wrap: wrap; }
-    
-    .btn { 
-      background: var(--rot);
-      color: #fff;
-      border: none;
-      border-radius: 10px;
-      padding: 10px 16px;
-      font-weight: 700;
-      cursor: pointer;
-      font-family: inherit;
-      transition: all 0.2s;
-    }
-    .btn:hover {
-      background: #a00d26;
-      transform: translateY(-2px);
-    }
-    .btn:disabled {
-      background: #cbd5e1;
-      cursor: not-allowed;
-      transform: none;
-    }
-    .btn.ghost { 
-      background: #eee;
-      color: #c8102e;
-      border: 1px solid #c8102e;
-    }
-    
-    .pos-row { 
-      display: flex;
-      gap: 10px;
-      align-items: center;
-      margin: 8px 0;
-    }
-    .pos-qty { width: 120px; }
-    .pos-name { flex: 1; }
-    .pos-del { 
-      width: 52px;
-      height: 42px;
-      border-radius: 10px;
-      border: 1px solid #f1c7cf;
-      background: #fff5f7;
-      color: #c8102e;
-      font-weight: 700;
-      cursor: pointer;
-    }
-    
-    .hint { color: #6b7280; font-size: .95rem; }
-    
-    .msg { 
-      border-radius: 12px;
-      padding: 12px;
-      background: #fff5f5;
-      border: 1px solid #f2c9d1;
-      color: #b00020;
-      min-height: 1.2em;
-    }
-    .ok { 
-      background: #eef9f0;
-      border-color: #cfead6;
-      color: #256029;
+      text-align: center;
+      font-weight: 600;
+      border: 2px solid #93c5fd;
+      max-width: 1100px;
+      margin: 20px auto;
     }
     
     .error-box {
@@ -151,225 +105,500 @@
       text-align: center;
       font-weight: 600;
       border: 2px solid #fca5a5;
+      max-width: 1100px;
+      margin: 20px auto;
     }
     
+    .wrap{max-width:1100px;margin:0 auto;padding:1rem 1rem 100px}
+    .hint{color:#fff;margin:.5rem 0 1rem;font-size:.95rem;opacity:0.9}
+    details{background:var(--card);border:1px solid var(--border);border-radius:.75rem;margin:0 0 .8rem 0;overflow:hidden}
+    summary{list-style:none;padding:.9rem 1rem;cursor:pointer;font-weight:800;display:flex;align-items:center;gap:.6rem;font-size:1rem}
+    summary::-webkit-details-marker{display:none}
+    details[open] summary{border-bottom:1px solid var(--border);background:#fff7f7}
+    .sec-body{padding:1rem}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:.75rem}
+    .row{display:flex;gap:.75rem;flex-wrap:wrap;margin:.25rem 0}
+    label{font-size:.92rem;color:#111827;font-weight:600}
+    input[type="text"],input[type="number"],input[type="date"],textarea,select{
+      width:100%;padding:.55rem .6rem;border:1px solid var(--border);border-radius:.5rem;background:#fff;font-size:16px;
+    }
+    textarea{min-height:88px;resize:vertical}
+    
+    .pos-row { 
+      display: flex;
+      gap: .5rem;
+      align-items: center;
+      margin: 8px 0;
+      padding: .5rem;
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: .5rem;
+    }
+    .pos-qty { width: 100px; }
+    .pos-name { flex: 1; }
+    .pos-del { 
+      width: 40px;
+      height: 40px;
+      border-radius: .5rem;
+      border: 1px solid #fca5a5;
+      background: #fee2e2;
+      color: var(--primary);
+      font-weight: 700;
+      cursor: pointer;
+      font-size: 1.2rem;
+    }
+    .pos-del:hover {
+      background: #fecaca;
+    }
+    
+    .addbtn{
+      border:1px solid var(--border);
+      background:#fff;
+      padding:.55rem .75rem;
+      border-radius:.5rem;
+      cursor:pointer;
+      font-size:.9rem;
+      font-weight:700;
+      color:var(--primary);
+      transition:all 0.2s;
+      display:inline-flex;
+      align-items:center;
+      gap:.5rem;
+    }
+    .addbtn:hover{
+      background:#f8fafc;
+    }
+
+    /* Feste Sendeleiste unten */
+    .sendbar{
+      position:fixed;
+      left:0;
+      right:0;
+      bottom:0;
+      background:var(--gradient-start);
+      border-top:1px solid rgba(0,0,0,0.2);
+      padding:.6rem 1rem;
+      z-index:20;
+      box-shadow:0 -2px 10px rgba(0,0,0,.1);
+    }
+    .sendbar .inner{max-width:1100px;margin:0 auto;display:flex;gap:.6rem;align-items:center;justify-content:flex-end}
+    .sendbtn{
+      border:1px solid rgba(255,255,255,0.4);
+      background:rgba(255,255,255,0.1);
+      color:#fff;
+      padding:.55rem .9rem;
+      border-radius:.55rem;
+      font-weight:800;
+      cursor:pointer;
+      font-size:1rem;
+      transition:all 0.2s;
+    }
+    .sendbtn:hover{background:rgba(255,255,255,0.2)}
+    .sendbtn:disabled{opacity:.6;cursor:not-allowed}
+
+    /* Modal */
+    .modal{
+      position:fixed;
+      inset:0;
+      background:rgba(0,0,0,.6);
+      display:none;
+      align-items:flex-start;
+      justify-content:center;
+      z-index:9999;
+      padding:20px 16px;
+      overflow-y:auto;
+    }
+    .modal.show{display:flex}
+    
+    .modal-box{
+      background:#fff;
+      border-radius:12px;
+      box-shadow:0 6px 24px rgba(0,0,0,.3);
+      padding:20px;
+      max-width:500px;
+      width:100%;
+      max-height:calc(100vh - 40px);
+      overflow-y:auto;
+      margin:auto;
+    }
+    
+    .modal-h{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      margin-bottom:12px;
+      border-bottom:2px solid var(--border);
+      padding-bottom:10px;
+    }
+    
+    .modal-h h3{
+      margin:0;
+      color:var(--primary);
+      font-size:1.2rem;
+      font-weight:800;
+    }
+    
+    .success-box{
+      background:#dcfce7;
+      border:2px solid #16a34a;
+      border-radius:8px;
+      padding:12px;
+      margin-bottom:12px;
+    }
+    
+    .success-box strong{
+      display:block;
+      margin-bottom:4px;
+    }
+    
+    #docIdDisplay{
+      font-family:monospace;
+      font-size:1rem;
+      word-break:break-all;
+      color:#15803d;
+    }
+    
+    .modal-actions{
+      display:flex;
+      gap:10px;
+      justify-content:stretch;
+      margin-top:20px;
+    }
+    
+    .modal-btn{
+      flex:1;
+      min-width:120px;
+      padding:14px 16px;
+      border:0;
+      border-radius:8px;
+      font-weight:700;
+      font-size:1rem;
+      cursor:pointer;
+      transition:all 0.2s;
+      font-family:inherit;
+    }
+    
+    .modal-btn.primary{
+      background:var(--primary);
+      color:#fff;
+    }
+    
+    .modal-btn.primary:active{
+      background:#a00d26;
+      transform:scale(0.98);
+    }
+
     @media (max-width: 600px) {
       .pos-row { flex-wrap: wrap; }
       .pos-qty, .pos-name { width: 100%; }
+      .modal{padding:10px;padding-top:20px}
+      .modal-box{padding:16px}
+      .modal-h h3{font-size:1.1rem}
+      .btn{font-size:.85rem;padding:.4rem .6rem}
+      h1{font-size:.95rem}
+    }
+
+    @media screen and (max-width: 768px) {
+      input, textarea, select {
+        font-size:16px !important;
+      }
+    }
+
+    @media print{
+      header,.hint,.btn,.addbtn,.sendbar,.modal{display:none!important} 
+      body{background:#fff}
+      details{border:none}
+      details summary{display:none}
+      .sec-body{padding:0}
     }
   </style>
 </head>
 <body>
 
 <header>
-  <h1 id="pageTitle">📦 Produktausgabe</h1>
-  <div class="spacer"></div>
-  <a href="#" class="back-btn" id="backBtn">← Zurück</a>
+  <div class="bar">
+    <h1 id="pageTitle"><i class="fa-solid fa-box"></i> Produktausgabe</h1>
+    <div class="toolbar">
+      <a href="#" class="back-btn" id="backBtn">← Zurück</a>
+      <button class="btn" onclick="resetFormConfirm()"><i class="fa-solid fa-eraser"></i> Zurücksetzen</button>
+    </div>
+  </div>
 </header>
 
-<div class="wrap">
-  <!-- Fehler bei ungültiger Organisation -->
-  <div id="errorBox" class="card error-box" style="display:none">
-    ❌ Ungültige Organisation
-  </div>
+<!-- Loading -->
+<div id="loadingBox" class="loading-box">
+  🔄 Lade Organisation...
+</div>
 
-  <div id="formContainer" style="display:none">
-    <!-- Kopf -->
-    <section class="card">
-      <h2>Kopfdaten</h2>
-      <div class="row">
-        <div style="flex:1;min-width:220px">
-          <label for="einsatz">Einsatznummer</label>
-          <input id="einsatz" placeholder="z. B. 2025-001" />
-        </div>
-        <div style="flex:1;min-width:220px">
-          <label for="datum">Datum</label>
-          <input id="datum" type="date" />
-        </div>
+<!-- Fehler bei ungültiger Organisation -->
+<div id="errorBox" class="error-box" style="display:none">
+  ❌ <span id="errorText">Ungültige Organisation</span>
+</div>
+
+<div class="wrap" id="formContainer" style="display:none">
+  <div class="hint">Produktausgabe dokumentieren • Mehrere Positionen möglich</div>
+
+  <!-- Kopfdaten -->
+  <details open>
+    <summary><i class="fa-solid fa-clipboard"></i> Kopfdaten</summary>
+    <div class="sec-body">
+      <div class="grid">
+        <label>Einsatznummer<input name="einsatz" type="text" placeholder="z. B. 2025-001"></label>
+        <label>Datum<input name="datum" type="date"></label>
       </div>
-    </section>
+    </div>
+  </details>
 
-    <!-- Positionen -->
-    <section class="card">
-      <h2>Positionen</h2>
+  <!-- Positionen -->
+  <details open>
+    <summary><i class="fa-solid fa-list"></i> Positionen</summary>
+    <div class="sec-body">
       <div id="posList"></div>
-      <button id="addPos" class="btn" type="button">+ Position</button>
-      <p class="hint">Tipp: Mit „+ Position" beliebig viele Zeilen ergänzen.</p>
-    </section>
+      <button class="addbtn" type="button" onclick="addPosRow()">
+        <i class="fa-solid fa-plus"></i> Position hinzufügen
+      </button>
+      <p style="color:#64748b;font-size:.9rem;margin-top:.5rem">
+        Tipp: Mit „Position hinzufügen" beliebig viele Zeilen ergänzen.
+      </p>
+    </div>
+  </details>
 
-    <!-- Ausgetragen von -->
-    <section class="card">
-      <h2>Ausgetragen von</h2>
-      <div class="row">
-        <div style="flex:1;min-width:220px">
-          <label for="vor">Vorname</label>
-          <input id="vor" />
-        </div>
-        <div style="flex:1;min-width:220px">
-          <label for="nach">Nachname</label>
-          <input id="nach" />
-        </div>
+  <!-- Ausgetragen von -->
+  <details open>
+    <summary><i class="fa-solid fa-user"></i> Ausgetragen von</summary>
+    <div class="sec-body">
+      <div class="grid">
+        <label>Vorname<input name="vorname" type="text"></label>
+        <label>Nachname<input name="nachname" type="text"></label>
       </div>
-    </section>
+    </div>
+  </details>
+</div>
 
-    <!-- Absenden -->
-    <section class="card">
-      <button id="saveBtn" class="btn" type="button">Ausgabe speichern</button>
-      <div id="msg" class="msg" style="margin-top:10px"></div>
-    </section>
+<!-- Feste Absende-Leiste unten -->
+<div class="sendbar">
+  <div class="inner">
+    <button id="sendBtn" class="sendbtn" onclick="submitToBackend()">
+      <i class="fa-solid fa-paper-plane"></i> Absenden
+    </button>
   </div>
 </div>
 
-<script type="module">
-  import { NhostClient } from "https://esm.sh/@nhost/nhost-js@2.2.9";
+<!-- Success Modal -->
+<div class="modal" id="successModal">
+  <div class="modal-box">
+    <div class="modal-h">
+      <h3>✅ Erfolgreich gespeichert!</h3>
+    </div>
+    
+    <div class="success-box">
+      <strong>Produktausgabe erfolgreich dokumentiert!</strong>
+      <span id="docIdDisplay"></span>
+    </div>
+    
+    <div class="modal-actions">
+      <button class="modal-btn primary" onclick="location.reload()">
+        <i class="fa-solid fa-plus"></i> Neue Ausgabe
+      </button>
+    </div>
+  </div>
+</div>
 
-  // ===== ORGANISATIONS-MAPPING =====
-  const ORG_MAPPING = {
-    'ffwrothenburg': {
-      name: 'FFW Rothenburg',
-      subdomain: 'hpjfrhktprpuuxvvlpsb',
-      region: 'eu-central-1'
-    },
-    'beispielorg': {
-      name: 'Beispiel Organisation',
-      subdomain: 'example-subdomain',
-      region: 'eu-central-1'
-    }
-    // Weitere Organisationen hier hinzufügen...
-  };
-
+<script>
+  const pb = new PocketBase('https://api.responda.systems');
+  
   // Organisation aus URL lesen
   const urlParams = new URLSearchParams(window.location.search);
   const orgCode = urlParams.get('org');
   
+  const loadingBoxEl = document.getElementById('loadingBox');
   const errorBoxEl = document.getElementById('errorBox');
+  const errorTextEl = document.getElementById('errorText');
   const formContainerEl = document.getElementById('formContainer');
   const pageTitleEl = document.getElementById('pageTitle');
   const backBtn = document.getElementById('backBtn');
-
-  // Organisation validieren
-  if (!orgCode || !ORG_MAPPING[orgCode]) {
-    errorBoxEl.style.display = 'block';
-    throw new Error('Ungültige Organisation');
-  }
-
-  const org = ORG_MAPPING[orgCode];
-  pageTitleEl.textContent = `📦 Produktausgabe – ${org.name}`;
-  backBtn.href = `formulare.html?org=${orgCode}`;
-  formContainerEl.style.display = 'block';
-
-  // Nhost initialisieren
-  const nhost = new NhostClient({
-    subdomain: org.subdomain,
-    region: org.region
-  });
-
-  /* -------------------- UI Helfer ------------------------ */
-  const byId = id => document.getElementById(id);
-  const msgEl = byId('msg');
   
-  function showMsg(text, ok=false){
-    msgEl.textContent = text;
-    msgEl.className = 'msg ' + (ok ? 'ok' : '');
+  let currentOrganization = null;
+  let currentDocumentId = null;
+
+  // Organisation laden
+  async function loadOrganization() {
+    console.log('🔍 Loading organization:', orgCode);
+    
+    if (!orgCode) {
+      showError('Keine Organisation in URL angegeben!');
+      return;
+    }
+    
+    try {
+      const org = await pb.collection('organizations').getFirstListItem(
+        `org_code = "${orgCode}"`
+      );
+      
+      console.log('✅ Organization loaded:', org);
+      
+      if (!org.is_active) {
+        showError('Diese Organisation ist nicht aktiv!');
+        return;
+      }
+      
+      currentOrganization = org;
+      
+      pageTitleEl.textContent = `📦 Produktausgabe – ${org.org_name}`;
+      backBtn.href = `index-public.html?org=${orgCode}`;
+      
+      loadingBoxEl.style.display = 'none';
+      errorBoxEl.style.display = 'none';
+      formContainerEl.style.display = 'block';
+      
+      document.body.classList.add('loaded');
+      
+      // Initial setup
+      initForm();
+      
+    } catch (error) {
+      console.error('❌ Error loading organization:', error);
+      
+      if (error.status === 404) {
+        showError('Organisation nicht gefunden!');
+      } else {
+        showError('Fehler beim Laden: ' + error.message);
+      }
+    }
   }
+  
+  function showError(message) {
+    pageTitleEl.textContent = '📦 Produktausgabe – Fehler';
+    loadingBoxEl.style.display = 'none';
+    errorBoxEl.style.display = 'block';
+    errorTextEl.textContent = message;
+    formContainerEl.style.display = 'none';
+    document.body.classList.add('loaded');
+  }
+  
+  // Beim Laden
+  loadOrganization();
 
-  /* -------------------- Positionen UI -------------------- */
-  const posList = byId('posList');
-  byId('addPos').addEventListener('click', () => addPosRow());
+  // ===== POSITIONEN UI =====
+  const posList = document.getElementById('posList');
 
-  function addPosRow(qty=1, name=''){
+  window.addPosRow = function(qty=1, name='') {
     const row = document.createElement('div');
     row.className = 'pos-row';
     row.innerHTML = `
-      <input class="pos-qty" type="number" min="1" value="${qty}">
-      <input class="pos-name" placeholder="Artikel / Beschreibung" value="${name}">
-      <button class="pos-del" type="button">×</button>
+      <input class="pos-qty" type="number" min="1" value="${qty}" placeholder="Anzahl">
+      <input class="pos-name" type="text" placeholder="Artikel / Beschreibung" value="${name}">
+      <button class="pos-del" type="button" onclick="this.closest('.pos-row').remove()">×</button>
     `;
-    row.querySelector('.pos-del').addEventListener('click', ()=> row.remove());
     posList.appendChild(row);
-  }
+  };
 
-  function readPositions(){
+  function readPositions() {
     const rows = [...posList.querySelectorAll('.pos-row')];
     const list = [];
-    for(const r of rows){
+    for(const r of rows) {
       const q = parseInt(r.querySelector('.pos-qty').value || '0', 10);
       const n = (r.querySelector('.pos-name').value || '').trim();
-      if (q>0 && n) list.push({ qty:q, name:n });
+      if (q > 0 && n) list.push({ qty: q, name: n });
     }
     return list;
   }
 
-  /* -------------------- Datum vorbelegen ----------------- */
-  (function init(){
+  // ===== FORM INIT =====
+  function initForm() {
+    // Datum vorbelegen
     const d = new Date();
     const pad = n => String(n).padStart(2,'0');
-    byId('datum').value = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+    document.querySelector('input[name="datum"]').value = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+    
+    // Erste Position hinzufügen
     addPosRow();
-  })();
+  }
 
-  /* -------------------- Speichern ------------------------ */
-  byId('saveBtn').addEventListener('click', saveAusgabe);
+  // ===== DATEN SAMMELN =====
+  function collectFormData() {
+    const data = {};
+    
+    document.querySelectorAll('input, textarea, select').forEach(el => {
+      if (!el.name) return;
+      data[el.name] = el.value;
+    });
+    
+    data.positionen = readPositions();
+    
+    return data;
+  }
 
-  async function saveAusgabe(){
-    try{
-      showMsg('Speichere …', true);
-      byId('saveBtn').disabled = true;
+  // ===== RESET =====
+  window.resetFormConfirm = function() {
+    if (!confirm('Wirklich alle Eingaben zurücksetzen?')) return;
+    
+    document.querySelectorAll('input, textarea, select').forEach(el => {
+      el.value = '';
+    });
+    
+    posList.innerHTML = '';
+    initForm();
+    
+    alert('✅ Formular zurückgesetzt!');
+  };
 
-      const einsatz = (byId('einsatz').value || '').trim();
-      const isoDate = byId('datum').value; // YYYY-MM-DD
-      const pos = readPositions();
-      const vor = (byId('vor').value || '').trim();
-      const nach = (byId('nach').value || '').trim();
-
-      if (!einsatz || !isoDate || !pos.length || !vor || !nach){
-        showMsg('Bitte Einsatznummer, Datum, mindestens eine Position sowie Vor- und Nachname angeben.');
-        byId('saveBtn').disabled = false;
+  // ===== ABSENDEN =====
+  window.submitToBackend = async function() {
+    if (!currentOrganization) {
+      alert('❌ Keine Organisation geladen!');
+      return;
+    }
+    
+    const btn = document.getElementById('sendBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Sende...';
+    
+    try {
+      const data = collectFormData();
+      
+      // Validierung
+      if (!data.einsatz || !data.datum || !data.positionen.length || !data.vorname || !data.nachname) {
+        alert('❌ Bitte alle Pflichtfelder ausfüllen:\n- Einsatznummer\n- Datum\n- Mindestens eine Position\n- Vor- und Nachname');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Absenden';
         return;
       }
-
-      // Titel & Payload
-      const deDate = isoDate.split('-').reverse().join('.'); // DD.MM.YYYY
-      const title = `Produktausgabe ${einsatz} (${deDate})`;
-      const payload = {
-        einsatznummer: einsatz,
-        datum: isoDate,
-        positionen: pos,
-        ausgetragen_vorname: vor,
-        ausgetragen_nachname: nach
-      };
-
-      // GraphQL Mutation
-      const { data, error } = await nhost.graphql.request(`
-        mutation InsertDocuments($obj: documents_insert_input!) {
-          insert_documents_one(object: $obj) { id created_at }
-        }
-      `, {
-        obj: { type: 'produktausgabe', title, status: 'offen', payload }
+      
+      const deDate = data.datum.split('-').reverse().join('.');
+      const title = `Produktausgabe ${data.einsatz} (${deDate})`;
+      
+      console.log('📤 Submitting product output:', {
+        title,
+        organization_id: currentOrganization.id,
+        org_code: orgCode
       });
-
-      if (error) {
-        throw new Error(error.message || 'GraphQL-Fehler');
-      }
-
-      showMsg('✅ Ausgabe gespeichert!', true);
-
-      // Formular zurücksetzen
-      setTimeout(() => {
-        byId('einsatz').value = '';
-        byId('vor').value = '';
-        byId('nach').value = '';
-        posList.innerHTML = '';
-        addPosRow();
-        showMsg('');
-        byId('saveBtn').disabled = false;
-      }, 2000);
-
-    }catch(err){
-      showMsg('Fehler: ' + (err.message || String(err)));
-      byId('saveBtn').disabled = false;
+      
+      // An PocketBase senden
+      const record = await pb.collection('product_outputs').create({
+        title: title,
+        payload: data,
+        status: 'offen',
+        organization_id: currentOrganization.id
+      });
+      
+      console.log('✅ Document created:', record.id);
+      
+      currentDocumentId = record.id;
+      
+      // Success Modal zeigen
+      document.getElementById('docIdDisplay').textContent = `Dokument-ID: PROD-${new Date().getFullYear()}-${record.id.slice(0,8)}`;
+      document.getElementById('successModal').classList.add('show');
+      
+      btn.innerHTML = '<i class="fa-solid fa-check"></i> Gesendet!';
+      
+    } catch(e) {
+      console.error('❌ Submit error:', e);
+      alert('❌ Fehler beim Senden: ' + e.message);
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Absenden';
     }
-  }
+  };
 </script>
 
 </body>
