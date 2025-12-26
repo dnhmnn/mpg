@@ -3,104 +3,420 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>FFW – Dokumentenverwaltung</title>
+  <title>Dokumentenverwaltung – Responda</title>
   <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet"/>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
+  <script src="https://cdn.jsdelivr.net/npm/pocketbase@0.21.3/dist/pocketbase.umd.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.6.0/jspdf.plugin.autotable.min.js"></script>
   <style>
-    :root{--primary:#c8102e;--bg:#f8fafc;--card:#fff;--text:#0f172a;--muted:#64748b;--border:#e2e8f0}
+    :root{
+      --primary:#c8102e;
+      --bg:#f8fafc;
+      --card:#fff;
+      --text:#0f172a;
+      --muted:#64748b;
+      --border:#e2e8f0;
+      --gradient-start:#667eea;
+      --gradient-end:#764ba2;
+    }
     *{box-sizing:border-box}
-    body{margin:0;background:var(--bg);color:var(--text);font-family:'Atkinson Hyperlegible',-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;line-height:1.45}
-    header{background:linear-gradient(90deg,var(--primary),#981b1b);color:#fff;padding:12px 16px;display:flex;align-items:center;gap:12px}
-    header h1{margin:0;font-size:1rem;font-weight:800}
-    .spacer{flex:1}
-    .topbtn{background:#ffffff1a;color:#fff;padding:8px 12px;border-radius:10px;text-decoration:none;font-weight:800;font-size:0.9rem;border:1px solid #ffffff55}
-    .topbtn:hover{background:#ffffff2b}
-    .wrap{max-width:1200px;margin:18px auto;padding:0 14px 100px}
-    .card{background:var(--card);border-radius:14px;box-shadow:0 3px 12px rgba(0,0,0,.06);padding:20px;margin-bottom:20px}
-    .card h2{margin-top:0}
+    body{
+      margin:0;
+      background:linear-gradient(135deg, var(--gradient-start) 0%, var(--gradient-end) 100%);
+      min-height:100vh;
+      color:var(--text);
+      font-family:'Atkinson Hyperlegible',-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+      line-height:1.45;
+      opacity:0;
+      transition:opacity 0.3s;
+    }
+    body.loaded{opacity:1}
+    
+    header{
+      position:sticky;
+      top:0;
+      background:var(--gradient-start);
+      color:#fff;
+      z-index:10;
+    }
+    .bar{
+      max-width:1200px;
+      margin:0 auto;
+      padding:.75rem 1rem;
+      display:flex;
+      gap:.5rem;
+      align-items:center;
+      flex-wrap:wrap;
+    }
+    h1{font-size:1.05rem;margin:0;font-weight:800}
+    .toolbar{margin-left:auto;display:flex;gap:.5rem;flex-wrap:wrap}
+    .topbtn{
+      border:1px solid rgba(255,255,255,0.3);
+      background:rgba(255,255,255,0.1);
+      color:#fff;
+      padding:.45rem .7rem;
+      border-radius:.5rem;
+      cursor:pointer;
+      font-weight:700;
+      font-size:.9rem;
+      transition:all 0.2s;
+      text-decoration:none;
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+    }
+    .topbtn:hover{background:rgba(255,255,255,0.2)}
+    
+    .wrap{max-width:1200px;margin:1rem auto;padding:0 1rem 100px}
+    .hint{color:#fff;margin:.5rem 0 1rem;font-size:.95rem;opacity:0.9}
+    
+    .card{
+      background:var(--card);
+      border-radius:14px;
+      box-shadow:0 3px 12px rgba(0,0,0,.06);
+      padding:20px;
+      margin-bottom:20px;
+    }
+    .card h2{margin-top:0;color:var(--primary);font-weight:800}
+    
     .tabs{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap}
-    .tab{border:1px solid #eee;background:#fafafa;padding:10px 16px;border-radius:999px;font-weight:800;cursor:pointer;font-size:0.95rem;transition:all 0.2s}
+    .tab{
+      border:1px solid var(--border);
+      background:#fafafa;
+      padding:10px 16px;
+      border-radius:999px;
+      font-weight:800;
+      cursor:pointer;
+      font-size:0.95rem;
+      transition:all 0.2s;
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+    }
     .tab:hover{background:#f0f0f0}
     .tab.active{color:#fff;background:var(--primary);border-color:var(--primary)}
-    .table-head,.row{display:grid;grid-template-columns:120px 1fr 280px;gap:12px;padding:14px 10px;align-items:center;border-bottom:1px solid #eee}
-    .table-head{font-weight:800;color:#666;background:#fafafa}
+    
+    .table-head,.row{
+      display:grid;
+      grid-template-columns:120px 1fr 280px;
+      gap:12px;
+      padding:14px 10px;
+      align-items:center;
+      border-bottom:1px solid var(--border);
+    }
+    .table-head{font-weight:800;color:#666;background:#fafafa;border-radius:8px 8px 0 0}
     .row:last-child{border-bottom:none}
     .row:hover{background:#f9f9f9}
-    .pill{display:inline-block;font-weight:800;border-radius:999px;padding:5px 12px;font-size:0.85rem}
+    
+    .pill{
+      display:inline-block;
+      font-weight:800;
+      border-radius:999px;
+      padding:5px 12px;
+      font-size:0.85rem;
+    }
     .pill.offen{background:#fef3c7;color:#92400e}
     .pill.archiviert{background:#dcfce7;color:#166534}
-    .btn{background:var(--primary);color:#fff;border:0;border-radius:10px;padding:10px 14px;font-weight:800;cursor:pointer;font-size:0.9rem;transition:all 0.2s;display:inline-flex;align-items:center;gap:6px}
-    .btn:hover{background:#a00d26}
-    .btn:disabled{opacity:0.5;cursor:not-allowed}
+    
+    .btn{
+      background:var(--primary);
+      color:#fff;
+      border:0;
+      border-radius:10px;
+      padding:10px 14px;
+      font-weight:800;
+      cursor:pointer;
+      font-size:0.9rem;
+      transition:all 0.2s;
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      font-family:inherit;
+    }
+    .btn:hover{background:#a00d26;transform:translateY(-1px)}
+    .btn:active{transform:translateY(0)}
+    .btn:disabled{opacity:0.5;cursor:not-allowed;transform:none}
+    
     .btn-secondary{background:#6b7280;color:#fff}
     .btn-secondary:hover{background:#4b5563}
-    .btn-icon{background:transparent;color:var(--primary);border:1px solid var(--primary);padding:8px 12px;font-size:0.85rem}
-    .btn-icon:hover{background:#fff5f5}
-    .add-btn{position:fixed;bottom:30px;right:30px;width:60px;height:60px;border-radius:50%;background:var(--primary);color:#fff;border:0;cursor:pointer;font-size:1.5rem;box-shadow:0 4px 12px rgba(0,0,0,.2);z-index:100;transition:transform 0.2s}
+    
+    .btn-icon{
+      background:transparent;
+      color:var(--primary);
+      border:1px solid var(--primary);
+      padding:8px 12px;
+      font-size:0.85rem;
+    }
+    .btn-icon:hover{background:#fff5f5;transform:translateY(-1px)}
+    
+    .add-btn{
+      position:fixed;
+      bottom:30px;
+      right:30px;
+      width:60px;
+      height:60px;
+      border-radius:50%;
+      background:var(--primary);
+      color:#fff;
+      border:0;
+      cursor:pointer;
+      font-size:1.5rem;
+      box-shadow:0 4px 12px rgba(0,0,0,.2);
+      z-index:100;
+      transition:transform 0.2s;
+    }
     .add-btn:hover{transform:scale(1.1)}
-    .modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:flex-start;justify-content:center;z-index:1000;padding:20px;overflow-y:auto}
+    .add-btn:active{transform:scale(0.95)}
+    
+    .modal{
+      position:fixed;
+      inset:0;
+      background:rgba(0,0,0,.6);
+      display:none;
+      align-items:flex-start;
+      justify-content:center;
+      z-index:1000;
+      padding:20px;
+      overflow-y:auto;
+    }
     .modal.show{display:flex}
-    .modal-box{background:#fff;border-radius:14px;max-width:1200px;width:100%;max-height:90vh;overflow-y:auto;padding:24px;box-shadow:0 8px 20px rgba(0,0,0,.3);margin:auto}
-    .modal-box h3{margin-top:0;color:var(--primary)}
-    details{background:var(--card);border:1px solid var(--border);border-radius:.75rem;margin:0 0 .8rem 0;overflow:hidden}
-    summary{list-style:none;padding:.9rem 1rem;cursor:pointer;font-weight:800;display:flex;align-items:center;gap:.6rem;font-size:1rem;background:#fafafa}
+    
+    .modal-box{
+      background:#fff;
+      border-radius:14px;
+      max-width:1200px;
+      width:100%;
+      max-height:90vh;
+      overflow-y:auto;
+      padding:24px;
+      box-shadow:0 8px 20px rgba(0,0,0,.3);
+      margin:auto;
+    }
+    .modal-box h3{margin-top:0;color:var(--primary);font-weight:800}
+    
+    details{
+      background:var(--card);
+      border:1px solid var(--border);
+      border-radius:.75rem;
+      margin:0 0 .8rem 0;
+      overflow:hidden;
+    }
+    summary{
+      list-style:none;
+      padding:.9rem 1rem;
+      cursor:pointer;
+      font-weight:800;
+      display:flex;
+      align-items:center;
+      gap:.6rem;
+      font-size:1rem;
+      background:#fafafa;
+      transition:background 0.2s;
+    }
     summary::-webkit-details-marker{display:none}
+    summary:hover{background:#f0f0f0}
     details[open] summary{border-bottom:1px solid var(--border);background:#fff7f7}
+    
     .sec-body{padding:1rem}
     .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:.75rem}
     .form-row{display:flex;gap:.75rem;flex-wrap:wrap;margin:.25rem 0}
+    
     label{font-size:.92rem;color:#111827;font-weight:600}
-    input[type="text"],input[type="number"],input[type="datetime-local"],input[type="date"],input[type="time"],textarea,select{width:100%;padding:.55rem .6rem;border:1px solid var(--border);border-radius:.5rem;background:#fff;font-size:16px}
+    input[type="text"],input[type="number"],input[type="datetime-local"],input[type="date"],input[type="time"],textarea,select{
+      width:100%;
+      padding:.55rem .6rem;
+      border:1px solid var(--border);
+      border-radius:.5rem;
+      background:#fff;
+      font-size:16px;
+      font-family:inherit;
+      transition:border-color 0.2s;
+    }
+    input:focus,textarea:focus,select:focus{
+      outline:none;
+      border-color:var(--primary);
+      box-shadow:0 0 0 3px rgba(200,16,46,0.1);
+    }
     textarea{min-height:88px;resize:vertical}
-    fieldset{border:1px solid var(--border);border-radius:.6rem;padding:.75rem;margin-bottom:.75rem}
+    
+    fieldset{
+      border:1px solid var(--border);
+      border-radius:.6rem;
+      padding:.75rem;
+      margin-bottom:.75rem;
+    }
     fieldset legend{padding:0 .35rem;color:#111827;font-weight:700}
+    
     .choice{display:flex;gap:.6rem;flex-wrap:wrap}
-    .pill-input{display:inline-flex;align-items:center;gap:.4rem;border:1px solid var(--border);border-radius:999px;padding:.25rem .55rem;background:#fff;font-size:.9rem;cursor:pointer}
-    .badge{display:inline-block;padding:.2rem .5rem;border-radius:999px;background:#f1f5f9;color:#0f172a;border:1px solid var(--border);font-size:.8rem}
-    .sum{font-weight:800}
+    .pill-input{
+      display:inline-flex;
+      align-items:center;
+      gap:.4rem;
+      border:1px solid var(--border);
+      border-radius:999px;
+      padding:.25rem .55rem;
+      background:#fff;
+      font-size:.9rem;
+      cursor:pointer;
+      transition:all 0.2s;
+    }
+    .pill-input:hover{background:#f8fafc;border-color:var(--primary)}
+    
+    .badge{
+      display:inline-block;
+      padding:.2rem .5rem;
+      border-radius:999px;
+      background:#f1f5f9;
+      color:#0f172a;
+      border:1px solid var(--border);
+      font-size:.8rem;
+      font-weight:600;
+    }
+    
     table{width:100%;border-collapse:collapse;margin-top:.5rem}
     th,td{border:1px solid var(--border);padding:.5rem;text-align:left;font-size:.9rem}
     th{background:#f8fafc;font-weight:700}
-    .subbtn{border:1px solid var(--border);background:#fff;padding:.35rem .55rem;border-radius:.45rem;cursor:pointer;font-size:.9rem;font-weight:600}
+    
+    .subbtn{
+      border:1px solid var(--border);
+      background:#fff;
+      padding:.35rem .55rem;
+      border-radius:.45rem;
+      cursor:pointer;
+      font-size:.9rem;
+      font-weight:600;
+      font-family:inherit;
+      transition:all 0.2s;
+    }
+    .subbtn:hover{background:#f8fafc;border-color:var(--primary)}
+    
     .thumbs{display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.5rem}
     .thumb{position:relative}
-    .thumb img{width:120px;height:120px;object-fit:cover;border:1px solid var(--border);border-radius:.5rem}
-    .thumb .rm{position:absolute;top:6px;right:6px;border:1px solid #0002;background:#0006;color:#fff;border-radius:.35rem;padding:.15rem .35rem;cursor:pointer;font-weight:700}
+    .thumb img{
+      width:120px;
+      height:120px;
+      object-fit:cover;
+      border:1px solid var(--border);
+      border-radius:.5rem;
+    }
+    .thumb .rm{
+      position:absolute;
+      top:6px;
+      right:6px;
+      border:1px solid #0002;
+      background:#0006;
+      color:#fff;
+      border-radius:.35rem;
+      padding:.15rem .35rem;
+      cursor:pointer;
+      font-weight:700;
+    }
+    
     .form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px;margin:16px 0}
     .form-group{display:flex;flex-direction:column;gap:6px}
     .form-group label{font-weight:700;font-size:0.9rem;color:#374151}
-    .form-group input,.form-group textarea,.form-group select{padding:10px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:16px;font-family:inherit}
-    .form-group input:focus,.form-group textarea:focus,.form-group select:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(200,16,46,0.1)}
+    .form-group input,.form-group textarea,.form-group select{
+      padding:10px 12px;
+      border:1px solid #d1d5db;
+      border-radius:8px;
+      font-size:16px;
+      font-family:inherit;
+    }
+    .form-group input:focus,.form-group textarea:focus,.form-group select:focus{
+      outline:none;
+      border-color:var(--primary);
+      box-shadow:0 0 0 3px rgba(200,16,46,0.1);
+    }
     .form-group textarea{min-height:80px;resize:vertical}
-    .radio-group{display:flex;gap:16px;align-items:center}
+    
+    .radio-group{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
     .radio-group label{display:flex;align-items:center;gap:6px;font-weight:600;cursor:pointer}
-    .sig-wrap{border:2px dashed #d1d5db;border-radius:8px;padding:12px;background:#f9fafb;margin:16px 0}
-    canvas.sig-canvas{width:100%;height:200px;border:1px solid #d1d5db;border-radius:6px;background:#fff;cursor:crosshair;touch-action:none;display:block}
+    
+    .sig-wrap{
+      border:2px dashed #d1d5db;
+      border-radius:8px;
+      padding:12px;
+      background:#f9fafb;
+      margin:16px 0;
+    }
+    canvas.sig-canvas{
+      width:100%;
+      height:200px;
+      border:1px solid #d1d5db;
+      border-radius:6px;
+      background:#fff;
+      cursor:crosshair;
+      touch-action:none;
+      display:block;
+    }
     .sig-actions{margin-top:8px;display:flex;gap:8px}
+    
     .msg{margin-top:12px;padding:12px;border-radius:8px}
     .msg.error{background:#fee;color:#c00;border:1px solid #fcc}
     .msg.success{background:#efe;color:#060;border:1px solid #cfc}
+    
     .details-grid{display:grid;grid-template-columns:200px 1fr;gap:12px 20px;margin:16px 0}
     .details-label{font-weight:700;color:#6b7280}
     .details-value{color:#111827;word-break:break-word}
-    .signature-img{max-width:400px;max-height:200px;border:1px solid #d1d5db;border-radius:6px;margin-top:8px}
-    .photo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-top:10px}
-    .photo-grid img{width:100%;height:150px;object-fit:cover;border:1px solid #ddd;border-radius:6px}
-    @media (max-width:768px){.table-head,.row{grid-template-columns:1fr !important;gap:8px}.modal-box{padding:16px}.form-grid{grid-template-columns:1fr}.details-grid{grid-template-columns:1fr;gap:4px}.details-label{font-size:0.85rem}.add-btn{bottom:20px;right:20px}.grid{grid-template-columns:1fr}}
-    @media print{header,.tabs,.btn,.add-btn,.modal{display:none !important}body{background:#fff}.card{box-shadow:none;border:1px solid #ddd}details{border:none}summary{display:none}}
+    
+    .signature-img{
+      max-width:400px;
+      max-height:200px;
+      border:1px solid #d1d5db;
+      border-radius:6px;
+      margin-top:8px;
+    }
+    
+    .photo-grid{
+      display:grid;
+      grid-template-columns:repeat(auto-fill,minmax(150px,1fr));
+      gap:10px;
+      margin-top:10px;
+    }
+    .photo-grid img{
+      width:100%;
+      height:150px;
+      object-fit:cover;
+      border:1px solid #ddd;
+      border-radius:6px;
+    }
+    
+    @media (max-width:768px){
+      .table-head,.row{grid-template-columns:1fr !important;gap:8px}
+      .modal-box{padding:16px}
+      .form-grid{grid-template-columns:1fr}
+      .details-grid{grid-template-columns:1fr;gap:4px}
+      .details-label{font-size:0.85rem}
+      .add-btn{bottom:20px;right:20px;width:56px;height:56px;font-size:1.3rem}
+      .grid{grid-template-columns:1fr}
+      h1{font-size:.95rem}
+      .topbtn{font-size:.85rem;padding:.4rem .6rem}
+    }
+    
+    @media print{
+      header,.tabs,.btn,.add-btn,.modal{display:none !important}
+      body{background:#fff}
+      .card{box-shadow:none;border:1px solid #ddd}
+      details{border:none}
+      summary{display:none}
+    }
   </style>
 </head>
 <body>
   <header>
-    <h1><i class="fa-solid fa-file-medical"></i> Patientendokumentation</h1>
-    <div class="spacer"></div>
-    <a class="topbtn" href="admin-dashboard.html"><i class="fa-solid fa-dashboard"></i> Dashboard</a>
-    <a class="topbtn" href="#" id="logout"><i class="fa-solid fa-right-from-bracket"></i> Logout</a>
+    <div class="bar">
+      <h1><i class="fa-solid fa-file-medical"></i> Patientendokumentation</h1>
+      <div class="toolbar">
+        <a class="topbtn" href="mpg-dashboard.html"><i class="fa-solid fa-dashboard"></i> Dashboard</a>
+        <button class="topbtn" id="logout"><i class="fa-solid fa-right-from-bracket"></i> Logout</button>
+      </div>
+    </div>
   </header>
 
   <div class="wrap">
+    <div class="hint">Verwaltung aller Patientendokumentationen und Nacherfassungen</div>
+    
     <section class="card">
       <h2>Dokumentenverwaltung</h2>
       
@@ -138,7 +454,6 @@
   <button class="add-btn" id="addBtn" title="Neue Nacherfassung">
     <i class="fa-solid fa-plus"></i>
   </button>
-
   <div class="modal" id="editModal">
     <div class="modal-box">
       <h3><i class="fa-solid fa-edit"></i> Patientendokumentation bearbeiten</h3>
@@ -316,24 +631,36 @@
       </div>
     </div>
   </div>
-
   <script type="module">
-    import { NhostClient } from "https://esm.sh/@nhost/nhost-js@2.2.9";
-    const nhost = new NhostClient({ subdomain: "hpjfrhktprpuuxvvlpsb", region: "eu-central-1" });
-    
-    if (!(await nhost.auth.isAuthenticatedAsync())) {
-      location.href = "/admin-login.html";
+    const pb = new PocketBase('https://api.responda.systems');
+
+    // Auth Check
+    if (!pb.authStore.isValid) {
+      location.href = "/mpg-login.html";
     }
 
-    const token = await nhost.auth.getAccessToken();
-    const headers = { "Content-Type": "application/json", "Authorization": "Bearer " + token };
-    const endpoint = "https://hpjfrhktprpuuxvvlpsb.graphql.eu-central-1.nhost.run/v1";
+    const currentUser = pb.authStore.model;
+    if (!currentUser || !currentUser.organization_id) {
+      location.href = "/mpg-login.html";
+    }
+
+    // Organisation laden für PDF
+    let currentOrganization = null;
+    async function loadOrganization() {
+      try {
+        currentOrganization = await pb.collection('organizations').getOne(currentUser.organization_id);
+        console.log('✅ Organization loaded:', currentOrganization);
+      } catch(e) {
+        console.error('❌ Error loading organization:', e);
+      }
+    }
+    loadOrganization();
 
     document.getElementById("logout").onclick = async (e) => {
       e.preventDefault();
-      await nhost.auth.signOut();
+      pb.authStore.clear();
       localStorage.clear();
-      location.href = "/admin-login.html";
+      location.href = "/mpg-login.html";
     };
 
     document.querySelectorAll('.tab').forEach(tab => {
@@ -347,26 +674,15 @@
       };
     });
 
-    async function gql(query, variables = {}) {
-      const res = await fetch(endpoint, {
-        method: "POST",
-        headers,
-        body: JSON.stringify({ query, variables })
-      });
-      const json = await res.json();
-      if (json.errors) throw new Error(json.errors[0].message);
-      return json.data;
-    }
     async function loadData() {
       try {
-        const patData = await gql(`query {
-          patient_docs(where: {status: {_eq: "offen"}}, order_by: {created_at: desc}) {
-            id title status created_at payload
-          }
-        }`);
+        const patData = await pb.collection('patients').getFullList({
+          filter: `status = "offen" && organization_id = "${currentUser.organization_id}"`,
+          sort: '-created',
+        });
         
         const patRows = document.getElementById('pat-rows');
-        patRows.innerHTML = patData.patient_docs.map(doc => {
+        patRows.innerHTML = patData.map(doc => {
           const payload = doc.payload || {};
           const patName = `${payload.vorname || ''} ${payload.name || ''}`.trim() || 'Unbekannt';
           return `
@@ -374,7 +690,7 @@
             <div><span class="pill offen">${doc.status}</span></div>
             <div>
               <strong>${doc.title || patName}</strong><br>
-              <small style="color:#6b7280">${payload.einsatz_nr ? 'Einsatz-Nr: ' + payload.einsatz_nr + ' · ' : ''}${new Date(doc.created_at).toLocaleString('de-DE')}</small>
+              <small style="color:#6b7280">${payload.einsatz_nr ? 'Einsatz-Nr: ' + payload.einsatz_nr + ' · ' : ''}${new Date(doc.created).toLocaleString('de-DE')}</small>
             </div>
             <div style="display:flex;gap:8px;flex-wrap:wrap">
               <button class="btn btn-icon" onclick="editPatDoc('${doc.id}')">
@@ -385,19 +701,18 @@
         `;
         }).join('') || '<p style="padding:20px;color:#999">Keine offenen Patientendokus</p>';
 
-        const nachData = await gql(`query {
-          patient_docs_nacherfassung(where: {status: {_eq: "offen"}}, order_by: {created_at: desc}) {
-            id stichwort status created_at nacherfasst_von_name
-          }
-        }`);
+        const nachData = await pb.collection('patient_docs_nacherfassung').getFullList({
+          filter: `status = "offen" && organization_id = "${currentUser.organization_id}"`,
+          sort: '-created',
+        });
         
         const nachRows = document.getElementById('nach-rows');
-        nachRows.innerHTML = nachData.patient_docs_nacherfassung.map(doc => `
+        nachRows.innerHTML = nachData.map(doc => `
           <div class="row">
             <div><span class="pill offen">${doc.status}</span></div>
             <div>
               <strong>${doc.stichwort || 'Ohne Stichwort'}</strong><br>
-              <small style="color:#6b7280">von ${doc.nacherfasst_von_name || '?'} · ${new Date(doc.created_at).toLocaleString('de-DE')}</small>
+              <small style="color:#6b7280">von ${doc.nacherfasst_von_name || '?'} · ${new Date(doc.created).toLocaleString('de-DE')}</small>
             </div>
             <div style="display:flex;gap:8px;flex-wrap:wrap">
               <button class="btn btn-icon" onclick="viewNach('${doc.id}')">
@@ -410,22 +725,20 @@
           </div>
         `).join('') || '<p style="padding:20px;color:#999">Keine offenen Nacherfassungen</p>';
 
-        const archivPat = await gql(`query {
-          patient_docs(where: {status: {_eq: "archiviert"}}, order_by: {updated_at: desc}) {
-            id title admin_name admin_datum payload
-          }
-        }`);
+        const archivPat = await pb.collection('patients').getFullList({
+          filter: `status = "archiviert" && organization_id = "${currentUser.organization_id}"`,
+          sort: '-updated',
+        });
         
-        const archivNach = await gql(`query {
-          patient_docs_nacherfassung(where: {status: {_eq: "archiviert"}}, order_by: {updated_at: desc}) {
-            id stichwort nacherfasst_von_name nacherfasst_datum
-          }
-        }`);
+        const archivNach = await pb.collection('patient_docs_nacherfassung').getFullList({
+          filter: `status = "archiviert" && organization_id = "${currentUser.organization_id}"`,
+          sort: '-updated',
+        });
         
         const archivRows = document.getElementById('archiv-rows');
         let archivHTML = '';
         
-        archivPat.patient_docs.forEach(doc => {
+        archivPat.forEach(doc => {
           const payload = doc.payload || {};
           const patName = `${payload.vorname || ''} ${payload.name || ''}`.trim() || doc.title || 'Ohne Titel';
           archivHTML += `
@@ -444,7 +757,7 @@
           `;
         });
         
-        archivNach.patient_docs_nacherfassung.forEach(doc => {
+        archivNach.forEach(doc => {
           archivHTML += `
             <div class="row">
               <div><span class="pill archiviert">Nacherfassung</span></div>
@@ -475,13 +788,9 @@
     window.editPatDoc = async (id) => {
       currentEditId = id;
       try {
-        const data = await gql(`query {
-          patient_docs_by_pk(id: "${id}") {
-            id title payload
-          }
-        }`);
+        const doc = await pb.collection('patients').getOne(id);
         
-        currentEditPayload = data.patient_docs_by_pk.payload || {};
+        currentEditPayload = doc.payload || {};
         const formHTML = buildEditForm(currentEditPayload);
         document.getElementById('editFormContainer').innerHTML = formHTML;
         document.querySelectorAll('#editFormContainer details').forEach(d => d.open = true);
@@ -583,8 +892,13 @@
       currentEditId = null;
       currentEditPayload = null;
     };
+    
     window.saveAndSignPatDoc = async () => {
       try {
+        showMsg('Daten werden gespeichert...', 'success');
+        const btn = document.querySelector('#editModal .btn:not(.btn-secondary)');
+        btn.disabled = true;
+
         const form = document.getElementById('editFormContainer');
         const formData = new FormData();
         const inputs = form.querySelectorAll('input, textarea, select');
@@ -627,11 +941,9 @@
           payload.signature = currentEditPayload.signature;
         }
 
-        await gql(`mutation($id: uuid!, $payload: jsonb!) {
-          update_patient_docs_by_pk(pk_columns: {id: $id}, _set: {payload: $payload}) {
-            id
-          }
-        }`, { id: currentEditId, payload });
+        await pb.collection('patients').update(currentEditId, {
+          payload: payload
+        });
 
         closeEditModal();
         document.getElementById('signModal').classList.add('show');
@@ -639,6 +951,8 @@
         
       } catch(e) {
         showMsg('Fehler beim Speichern: ' + e.message, 'error');
+        const btn = document.querySelector('#editModal .btn:not(.btn-secondary)');
+        btn.disabled = false;
       }
     };
 
@@ -722,23 +1036,11 @@
 
         const signatureData = adminSigCanvas.toDataURL('image/png');
         
-        await gql(`mutation($id: uuid!, $name: String!, $datum: timestamptz!, $unterschrift: String!) {
-          update_patient_docs_by_pk(
-            pk_columns: {id: $id}, 
-            _set: {
-              status: "archiviert",
-              admin_name: $name,
-              admin_datum: $datum,
-              admin_unterschrift: $unterschrift
-            }
-          ) {
-            id
-          }
-        }`, {
-          id: currentEditId,
-          name: adminName,
-          datum: new Date().toISOString(),
-          unterschrift: signatureData
+        await pb.collection('patients').update(currentEditId, {
+          status: 'archiviert',
+          admin_name: adminName,
+          admin_datum: new Date().toISOString(),
+          admin_unterschrift: signatureData
         });
 
         closeSignModal();
@@ -855,14 +1157,11 @@
           nacherfasst_von_qualifikation: formData.get('nacherfasst_von_qualifikation') || '',
           nacherfasst_datum: new Date().toISOString(),
           nacherfasst_unterschrift: nachSigCanvas.toDataURL('image/png'),
-          status: 'offen'
+          status: 'offen',
+          organization_id: currentUser.organization_id
         };
 
-        await gql(`mutation($data: patient_docs_nacherfassung_insert_input!) {
-          insert_patient_docs_nacherfassung_one(object: $data) {
-            id
-          }
-        }`, { data: nacherfassungData });
+        await pb.collection('patient_docs_nacherfassung').create(nacherfassungData);
 
         closeNachModal();
         showMsg('✅ Nacherfassung gespeichert!', 'success');
@@ -876,14 +1175,9 @@
     window.archiveNach = async (id) => {
       if (!confirm('Nacherfassung ins Archiv verschieben?')) return;
       try {
-        await gql(`mutation($id: uuid!) {
-          update_patient_docs_nacherfassung_by_pk(
-            pk_columns: {id: $id},
-            _set: {status: "archiviert"}
-          ) {
-            id
-          }
-        }`, { id });
+        await pb.collection('patient_docs_nacherfassung').update(id, {
+          status: 'archiviert'
+        });
         
         showMsg('✅ Nacherfassung archiviert!', 'success');
         await loadData();
@@ -891,22 +1185,9 @@
         showMsg('Fehler: ' + e.message, 'error');
       }
     };
-
     window.viewNach = async (id) => {
       try {
-        const data = await gql(`query {
-          patient_docs_nacherfassung_by_pk(id: "${id}") {
-            id stichwort kategorie einsatznummer_ils meldebild adresse
-            disponierte_em_fw disponierte_em_rd
-            patienten_daten_erhoben patient_name patient_alter_geburtsdatum patient_nummer_ils
-            sachverhalt protokollpflichtig protokollpflichtig_begruendung
-            verantwortlicher_unterwiesen verantwortlicher_name verantwortlicher_qualifikation
-            nacherfasst_von_name nacherfasst_von_qualifikation nacherfasst_datum nacherfasst_unterschrift
-            datum_alarmzeit datum_einsatzende
-          }
-        }`);
-        
-        const doc = data.patient_docs_nacherfassung_by_pk;
+        const doc = await pb.collection('patient_docs_nacherfassung').getOne(id);
         
         // Daten für PDF speichern
         window.currentViewedNachData = doc;
@@ -948,15 +1229,11 @@
         showMsg('Fehler: ' + e.message, 'error');
       }
     };
+
     window.viewPatArchiv = async (id) => {
       try {
-        const data = await gql(`query {
-          patient_docs_by_pk(id: "${id}") {
-            id title payload admin_name admin_datum admin_unterschrift
-          }
-        }`);
+        const doc = await pb.collection('patients').getOne(id);
         
-        const doc = data.patient_docs_by_pk;
         const p = doc.payload || {};
         
         // Daten für PDF speichern
@@ -1097,13 +1374,16 @@
         let currentY = 0;
         let pageNumber = 1;
         
+        // Organisation Name für Header
+        const orgName = currentOrganization ? currentOrganization.org_name : 'Organisation';
+        
         pdf.setFillColor(200, 16, 46);
         pdf.rect(0, 0, pageWidth, 30, 'F');
         
         pdf.setTextColor(255, 255, 255);
         pdf.setFontSize(22);
         pdf.setFont(undefined, 'bold');
-        pdf.text('Feuerwehr Rothenburg - DEFI-Schleife', margin, 12);
+        pdf.text(orgName, margin, 12);
         
         pdf.setFontSize(18);
         pdf.text('NOTFALLPROTOKOLL', margin, 22);
@@ -1478,7 +1758,7 @@
         
         pdf.setFontSize(8);
         pdf.setTextColor(120);
-        pdf.text(`Einsatz-Nr: ${p.einsatz_nr || 'N/A'} | Feuerwehr Rothenburg - DEFI-Schleife | Seite ${pageNumber}`, margin, pageHeight - 5);
+        pdf.text(`Einsatz-Nr: ${p.einsatz_nr || 'N/A'} | ${orgName} | Seite ${pageNumber}`, margin, pageHeight - 5);
         
         const timestamp = new Date().toISOString().slice(0,10);
         const filename = `Notfallprotokoll_${p.einsatz_nr || 'unknown'}_${timestamp}.pdf`;
@@ -1510,16 +1790,19 @@
         let currentY = 0;
         let pageNumber = 1;
         
+        // Organisation Name für Header
+        const orgName = currentOrganization ? currentOrganization.org_name : 'Organisation';
+        
         pdf.setFillColor(200, 16, 46);
         pdf.rect(0, 0, pageWidth, 30, 'F');
         
         pdf.setTextColor(255, 255, 255);
         pdf.setFontSize(22);
         pdf.setFont(undefined, 'bold');
-        pdf.text('Feuerwehr Rothenburg - DEFI-Schleife', margin, 12);
+        pdf.text(orgName, margin, 12);
         
         pdf.setFontSize(18);
-        pdf.text('NOTFALLPROTOKOLL', margin, 22);
+        pdf.text('EINSATZNACHERFASSUNG', margin, 22);
         
         pdf.setFontSize(10);
         pdf.setFont(undefined, 'normal');
@@ -1571,7 +1854,7 @@
             pdf.setTextColor(255, 255, 255);
             pdf.setFontSize(16);
             pdf.setFont(undefined, 'bold');
-            pdf.text(`NOTFALLPROTOKOLL - Seite ${pageNumber}`, margin, 13);
+            pdf.text(`EINSATZNACHERFASSUNG - Seite ${pageNumber}`, margin, 13);
             
             currentY = 25;
             return true;
@@ -1689,7 +1972,7 @@
         
         pdf.setFontSize(8);
         pdf.setTextColor(120);
-        pdf.text(`Nacherfassung: ${nachData.stichwort || 'N/A'} | Feuerwehr Rothenburg - DEFI-Schleife | Seite ${pageNumber}`, margin, pageHeight - 5);
+        pdf.text(`Nacherfassung: ${nachData.stichwort || 'N/A'} | ${orgName} | Seite ${pageNumber}`, margin, pageHeight - 5);
         
         const timestamp = new Date().toISOString().slice(0,10);
         const filename = `Nacherfassung_${nachData.stichwort || 'unknown'}_${timestamp}.pdf`;
@@ -1710,7 +1993,13 @@
       setTimeout(() => { msgDiv.textContent = ''; msgDiv.className = 'msg'; }, 5000);
     }
 
+    // Initial load
     loadData();
+    
+    // Body loaded animation
+    setTimeout(() => {
+      document.body.classList.add('loaded');
+    }, 100);
   </script>
 </body>
 </html>
