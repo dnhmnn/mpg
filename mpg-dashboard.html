@@ -812,12 +812,6 @@
     }
   };
 
-  function canManageUsers(user) {
-    if (user.supervisor) return true;
-    const permissions = user.permissions || {};
-    return permissions.users_manage === true;
-  }
-
   function getRoleInfo(role) {
     return ROLE_TEMPLATES[role] || ROLE_TEMPLATES.benutzer;
   }
@@ -835,12 +829,18 @@
     document.getElementById('who').textContent = user.name || userEmail;
     document.getElementById('userRole').textContent = getRoleLabel(userRole);
     
-    const canManage = canManageUsers(user);
-    console.log('🔍 Can manage users?', canManage);
+    // NUR MPG UND SUPERVISOR SEHEN BENUTZER/LIZENZ TABS
+    const isMpgOrSupervisor = user.supervisor || user.role === 'mpg';
+    console.log('🔍 Is MPG or Supervisor?', isMpgOrSupervisor);
+    console.log('🔍 User role:', user.role);
+    console.log('🔍 User supervisor:', user.supervisor);
     
-    if (canManage) {
+    if (isMpgOrSupervisor) {
       document.getElementById('usersTab').style.display = 'block';
       document.getElementById('licenseTab').style.display = 'block';
+      console.log('✅ Showing user management tabs');
+    } else {
+      console.log('❌ Hiding user management tabs (not MPG)');
     }
     
     buildNavigation();
@@ -863,7 +863,7 @@
     }
   }
 
-  // ===== NAVIGATION - MIT ROLE SUPPORT! =====
+  // ===== NAVIGATION =====
   function buildNavigation() {
     const nav = document.getElementById('mainNav');
     const permissions = user.permissions || {};
@@ -1001,7 +1001,7 @@
     }
   });
 
-  // ===== PASSWORD CHANGE - WITH oldPassword! =====
+  // ===== PASSWORD CHANGE =====
   const pwMsg = document.getElementById('pwMsg');
 
   function showPwMsg(text, ok=false){
@@ -1160,7 +1160,7 @@
     alert(`Vorlage "${ROLE_TEMPLATES[template].label}" angewendet. Du kannst jetzt noch individuell anpassen!`);
   };
   
-  // ===== USER SAVE - FINAL VERSION WITH ALL FIXES! =====
+  // ===== USER SAVE =====
   document.getElementById('userSave').addEventListener('click', async () => {
     const userMsg = document.getElementById('userMsg');
     const saveBtn = document.getElementById('userSave');
@@ -1448,4 +1448,4 @@
 </script>
 
 </body>
-</html>
+</html
