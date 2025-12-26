@@ -802,8 +802,18 @@
         await pb.collection('organizations').create(orgData);
       }
       
-      document.getElementById('modalSuccess').textContent = '✅ Organisation erfolgreich gespeichert!';
-      document.getElementById('modalSuccess').style.display = 'block';
+      const newOrgCode = document.getElementById('orgCode').value;
+
+document.getElementById('modalSuccess').innerHTML = `
+  ✅ <strong>Organisation erfolgreich gespeichert!</strong><br><br>
+  <strong>Öffentliche Links:</strong><br>
+  📄 <a href="https://app.responda.systems/index-public.html?org=${newOrgCode}" target="_blank" style="color:#1e40af">Landing Page</a><br>
+  🧾 <a href="https://app.responda.systems/patientendoku-public.html?org=${newOrgCode}" target="_blank" style="color:#1e40af">Patientendoku</a><br>
+  📦 <a href="https://app.responda.systems/produktausgabe-public.html?org=${newOrgCode}" target="_blank" style="color:#1e40af">Produktausgabe</a><br>
+  ⚠️ <a href="https://app.responda.systems/cirs-public.html?org=${newOrgCode}" target="_blank" style="color:#1e40af">CIRS-Meldung</a>
+`;
+document.getElementById('modalSuccess').style.display = 'block';
+
       document.getElementById('modalError').style.display = 'none';
       
       setTimeout(() => {
