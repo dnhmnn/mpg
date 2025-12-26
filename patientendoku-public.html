@@ -10,6 +10,8 @@
 
 <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/pocketbase@0.21.3/dist/pocketbase.umd.js"></script>
+
 <style>
   :root{
     --primary:#c8102e;
@@ -29,7 +31,11 @@
     color:var(--text);
     font-family:'Atkinson Hyperlegible',-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
     line-height:1.45;
+    opacity:0;
+    transition:opacity 0.3s;
   }
+  
+  body.loaded{opacity:1}
   
   /* Header ganz oben */
   header{
@@ -77,6 +83,18 @@
   }
   .back-btn:hover {
     background: rgba(255,255,255,0.3);
+  }
+  
+  .loading-box {
+    background: #dbeafe;
+    color: #1e40af;
+    padding: 20px;
+    border-radius: 12px;
+    text-align: center;
+    font-weight: 600;
+    border: 2px solid #93c5fd;
+    max-width: 1100px;
+    margin: 20px auto;
   }
   
   .error-box {
@@ -306,9 +324,14 @@
   </div>
 </header>
 
+<!-- Loading -->
+<div id="loadingBox" class="loading-box">
+  🔄 Lade Organisation...
+</div>
+
 <!-- Fehler bei ungültiger Organisation -->
 <div id="errorBox" class="error-box" style="display:none">
-  ❌ Ungültige Organisation
+  ❌ <span id="errorText">Ungültige Organisation</span>
 </div>
 
 <div class="wrap" id="formContainer" style="display:none">
@@ -476,7 +499,6 @@
       </div>
     </div>
   </details>
-
   <!-- Messwerte initial / Atmung + qSOFA -->
   <details>
     <summary><i class="fa-solid fa-stethoscope"></i> Messwerte initial / Atmung</summary>
@@ -745,457 +767,429 @@
   </div>
 </div>
 
-<!-- QR-Code Zuordnungs-Modal -->
-<div class="modal" id="qrModal">
+<!-- Success Modal -->
+<div class="modal" id="successModal">
   <div class="modal-box">
     <div class="modal-h">
-      <h3>🔑 QR-Code zuordnen</h3>
+      <h3>✅ Erfolgreich gespeichert!</h3>
     </div>
     
     <div class="success-box">
-      <strong>✅ Dokument erfolgreich gespeichert!</strong>
+      <strong>Dokument erfolgreich übermittelt!</strong>
       <span id="docIdDisplay"></span>
     </div>
     
-    <div style="background:#fff5f5;border:2px solid #f2c9d1;border-radius:8px;padding:12px;margin:12px 0">
-      <strong style="display:block;margin-bottom:6px;color:var(--primary)">💡 So geht's weiter:</strong>
-      <ol style="margin:8px 0 0 20px;line-height:1.7;padding-left:0;font-size:.95rem">
-        <li>Nimm einen QR-Code-Aufkleber aus dem Rucksack</li>
-        <li>Gib den Schlüssel ein (z.B. KEY-2025-0042)</li>
-        <li>Klicke auf "Zuordnen"</li>
-        <li>Übergib den Aufkleber physisch an den Rettungsdienst</li>
-      </ol>
-    </div>
-    
-    <div class="form-group">
-      <label class="form-label" for="qrKeyInput">QR-Code Schlüssel:</label>
-      <input 
-        type="text" 
-        id="qrKeyInput" 
-        style="width:100%;padding:14px 12px;border:2px solid var(--border);border-radius:8px;font-family:monospace;font-size:1.1rem;background:#fff" 
-        placeholder="KEY-2025-0042" 
-        autocomplete="off"
-        autocorrect="off"
-        autocapitalize="characters"
-      >
-      <small style="color:var(--muted);display:block;margin-top:6px;font-size:.85rem">Format: KEY-2025-XXXX</small>
-    </div>
-    
     <div class="modal-actions">
-      <button class="modal-btn secondary" onclick="skipQRAssignment()">
-        <i class="fa-solid fa-forward"></i> Später
-      </button>
-      <button class="modal-btn primary" onclick="assignQRCode()">
-        <i class="fa-solid fa-link"></i> Zuordnen
+      <button class="modal-btn primary" onclick="location.reload()">
+        <i class="fa-solid fa-plus"></i> Neues Formular
       </button>
     </div>
   </div>
 </div>
-
-<script type="module">
-import { NhostClient } from "https://esm.sh/@nhost/nhost-js@2.2.9";
-
-// ===== ORGANISATIONS-MAPPING =====
-const ORG_MAPPING = {
-  'ffwrothenburg': {
-    name: 'FFW Rothenburg',
-    subdomain: 'hpjfrhktprpuuxvvlpsb',
-    region: 'eu-central-1'
-  },
-  'beispielorg': {
-    name: 'Beispiel Organisation',
-    subdomain: 'example-subdomain',
-    region: 'eu-central-1'
-  }
-};
-
-// Organisation aus URL lesen
-const urlParams = new URLSearchParams(window.location.search);
-const orgCode = urlParams.get('org');
-
-const errorBoxEl = document.getElementById('errorBox');
-const formContainerEl = document.getElementById('formContainer');
-const pageTitleEl = document.getElementById('pageTitle');
-const backBtn = document.getElementById('backBtn');
-
-// Organisation validieren
-if (!orgCode || !ORG_MAPPING[orgCode]) {
-  errorBoxEl.style.display = 'block';
-  throw new Error('Ungültige Organisation');
-}
-
-const org = ORG_MAPPING[orgCode];
-pageTitleEl.textContent = `🧾 Patientendokumentation – ${org.name}`;
-backBtn.href = `formulare.html?org=${orgCode}`;
-formContainerEl.style.display = 'block';
-
-// Nhost initialisieren
-const nhost = new NhostClient({
-  subdomain: org.subdomain,
-  region: org.region
-});
-
-let currentDocumentId = null;
-
-// ===== SIGNATURE CANVAS =====
-const sigCanvas = document.getElementById('sig');
-const sigCtx = sigCanvas.getContext('2d');
-let isDrawing = false;
-let lastX = 0, lastY = 0;
-
-function initSignature() {
-  const rect = sigCanvas.getBoundingClientRect();
-  sigCanvas.width = rect.width * window.devicePixelRatio;
-  sigCanvas.height = rect.height * window.devicePixelRatio;
-  sigCtx.scale(window.devicePixelRatio, window.devicePixelRatio);
+<script>
+  const pb = new PocketBase('https://api.responda.systems');
   
-  sigCtx.strokeStyle = '#000';
-  sigCtx.lineWidth = 2;
-  sigCtx.lineCap = 'round';
-  sigCtx.lineJoin = 'round';
-
-  sigCanvas.addEventListener('mousedown', startDrawing);
-  sigCanvas.addEventListener('mousemove', draw);
-  sigCanvas.addEventListener('mouseup', stopDrawing);
-  sigCanvas.addEventListener('mouseout', stopDrawing);
-  sigCanvas.addEventListener('touchstart', handleTouchStart, { passive: false });
-  sigCanvas.addEventListener('touchmove', handleTouchMove, { passive: false });
-  sigCanvas.addEventListener('touchend', stopDrawing);
-}
-
-function startDrawing(e) {
-  isDrawing = true;
-  const pos = getMousePos(e);
-  lastX = pos.x;
-  lastY = pos.y;
-}
-
-function draw(e) {
-  if (!isDrawing) return;
-  e.preventDefault();
-  const pos = getMousePos(e);
+  // Organisation aus URL lesen
+  const urlParams = new URLSearchParams(window.location.search);
+  const orgCode = urlParams.get('org');
   
-  sigCtx.beginPath();
-  sigCtx.moveTo(lastX, lastY);
-  sigCtx.lineTo(pos.x, pos.y);
-  sigCtx.stroke();
+  const loadingBoxEl = document.getElementById('loadingBox');
+  const errorBoxEl = document.getElementById('errorBox');
+  const errorTextEl = document.getElementById('errorText');
+  const formContainerEl = document.getElementById('formContainer');
+  const pageTitleEl = document.getElementById('pageTitle');
+  const backBtn = document.getElementById('backBtn');
   
-  lastX = pos.x;
-  lastY = pos.y;
-}
+  let currentOrganization = null;
+  let currentDocumentId = null;
 
-function stopDrawing() {
-  isDrawing = false;
-}
-
-function handleTouchStart(e) {
-  e.preventDefault();
-  const touch = e.touches[0];
-  const mouseEvent = new MouseEvent('mousedown', {
-    clientX: touch.clientX,
-    clientY: touch.clientY
-  });
-  sigCanvas.dispatchEvent(mouseEvent);
-}
-
-function handleTouchMove(e) {
-  e.preventDefault();
-  const touch = e.touches[0];
-  const mouseEvent = new MouseEvent('mousemove', {
-    clientX: touch.clientX,
-    clientY: touch.clientY
-  });
-  sigCanvas.dispatchEvent(mouseEvent);
-}
-
-function getMousePos(e) {
-  const rect = sigCanvas.getBoundingClientRect();
-  const scaleX = sigCanvas.width / window.devicePixelRatio / rect.width;
-  const scaleY = sigCanvas.height / window.devicePixelRatio / rect.height;
-  
-  return {
-    x: (e.clientX - rect.left) * scaleX,
-    y: (e.clientY - rect.top) * scaleY
-  };
-}
-
-function clearSignature() {
-  sigCtx.clearRect(0, 0, sigCanvas.width, sigCanvas.height);
-}
-
-document.getElementById('sigClear').addEventListener('click', clearSignature);
-initSignature();
-
-// ===== FOTOS =====
-const photoInput = document.getElementById('photoInput');
-const thumbsDiv = document.getElementById('thumbs');
-let photos = [];
-
-photoInput.addEventListener('change', (e) => {
-  const files = Array.from(e.target.files);
-  files.forEach(file => {
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      photos.push(ev.target.result);
-      renderThumbs();
-    };
-    reader.readAsDataURL(file);
-  });
-  photoInput.value = '';
-});
-
-function renderThumbs() {
-  thumbsDiv.innerHTML = photos.map((src, i) => `
-    <div class="thumb">
-      <img src="${src}" alt="Foto ${i+1}">
-      <button class="rm" onclick="removePhoto(${i})">×</button>
-    </div>
-  `).join('');
-}
-
-window.removePhoto = function(idx) {
-  photos.splice(idx, 1);
-  renderThumbs();
-};
-
-// ===== MEDIKAMENTEN-TABELLE =====
-let medRowCounter = 0;
-
-window.addMedRow = function() {
-  medRowCounter++;
-  const tbody = document.querySelector('#medTable tbody');
-  const tr = document.createElement('tr');
-  tr.innerHTML = `
-    <td>${medRowCounter}</td>
-    <td><input type="text" name="med_name_${medRowCounter}" style="width:100%;padding:.3rem;font-size:14px"></td>
-    <td><input type="number" name="med_dose_${medRowCounter}" step="0.1" style="width:80px;padding:.3rem;font-size:14px"></td>
-    <td><input type="text" name="med_unit_${medRowCounter}" placeholder="mg" style="width:60px;padding:.3rem;font-size:14px"></td>
-    <td>
-      <select name="med_route_${medRowCounter}" style="padding:.3rem;font-size:14px">
-        <option value=""></option>
-        <option value="i.v.">i.v.</option>
-        <option value="i.m.">i.m.</option>
-        <option value="s.c.">s.c.</option>
-        <option value="p.o.">p.o.</option>
-        <option value="inhal.">inhal.</option>
-      </select>
-    </td>
-    <td><input type="time" name="med_time_${medRowCounter}" style="width:90px;padding:.3rem;font-size:14px"></td>
-    <td><input type="text" name="med_note_${medRowCounter}" style="width:100%;padding:.3rem;font-size:14px"></td>
-    <td><button class="subbtn" type="button" onclick="this.closest('tr').remove()">×</button></td>
-  `;
-  tbody.appendChild(tr);
-};
-
-// ===== GCS & qSOFA =====
-window.calcGCS = function() {
-  const e = parseInt(document.querySelector('input[name="gcs_e"]:checked')?.value || 0);
-  const v = parseInt(document.querySelector('input[name="gcs_v"]:checked')?.value || 0);
-  const m = parseInt(document.querySelector('input[name="gcs_m"]:checked')?.value || 0);
-  const sum = e + v + m;
-  
-  document.getElementById('gcs_sum').textContent = sum > 0 ? sum : '—';
-  document.querySelector('input[name="qsofa_gcs"]').value = sum > 0 ? sum : '';
-  
-  calcQSOFA();
-};
-
-window.calcQSOFA = function() {
-  const gcs = parseInt(document.querySelector('input[name="qsofa_gcs"]').value || 0);
-  const af = parseInt(document.querySelector('input[name="af"]').value || 0);
-  const rrSys = parseInt(document.querySelector('input[name="rr_sys"]').value || 0);
-  
-  document.querySelector('input[name="qsofa_af"]').value = af || '';
-  document.querySelector('input[name="qsofa_rr"]').value = rrSys || '';
-  
-  let score = 0;
-  if (gcs > 0 && gcs < 15) score++;
-  if (af >= 22) score++;
-  if (rrSys > 0 && rrSys <= 100) score++;
-  
-  const scoreText = (gcs > 0 || af > 0 || rrSys > 0) ? score : '—';
-  document.getElementById('qsofa_sum').textContent = scoreText;
-};
-
-// ===== DATEN SAMMELN =====
-function collectFormData() {
-  const data = { photos: photos };
-  
-  document.querySelectorAll('input, textarea, select').forEach(el => {
-    if (!el.name) return;
+  // Organisation laden
+  async function loadOrganization() {
+    console.log('🔍 Loading organization:', orgCode);
     
-    if (el.type === 'checkbox') {
-      data[el.name] = el.checked;
-    } else if (el.type === 'radio') {
-      if (el.checked) data[el.name] = el.value;
-    } else {
-      data[el.name] = el.value;
+    if (!orgCode) {
+      showError('Keine Organisation in URL angegeben!');
+      return;
     }
-  });
-  
-  const meds = [];
-  for (let i = 1; i <= medRowCounter; i++) {
-    const name = document.querySelector(`input[name="med_name_${i}"]`)?.value;
-    if (name) {
-      meds.push({
-        name: name,
-        dose: document.querySelector(`input[name="med_dose_${i}"]`)?.value,
-        unit: document.querySelector(`input[name="med_unit_${i}"]`)?.value,
-        route: document.querySelector(`select[name="med_route_${i}"]`)?.value,
-        time: document.querySelector(`input[name="med_time_${i}"]`)?.value,
-        note: document.querySelector(`input[name="med_note_${i}"]`)?.value
-      });
-    }
-  }
-  data.medications = meds;
-  data.signature = sigCanvas.toDataURL('image/png');
-  
-  return data;
-}
-
-// ===== SPEICHERN/LADEN =====
-window.saveForm = function() {
-  const data = collectFormData();
-  localStorage.setItem('patientendoku_draft_' + orgCode, JSON.stringify(data));
-  alert('✅ Formular im Browser gespeichert!');
-};
-
-window.loadForm = function() {
-  const saved = localStorage.getItem('patientendoku_draft_' + orgCode);
-  if (!saved) {
-    alert('Kein gespeicherter Entwurf gefunden.');
-    return;
-  }
-  
-  if (!confirm('Aktuelles Formular mit gespeichertem Entwurf überschreiben?')) return;
-  
-  alert('✅ Entwurf geladen!');
-};
-
-window.resetFormConfirm = function() {
-  if (!confirm('Wirklich alle Eingaben zurücksetzen?')) return;
-  document.querySelectorAll('input, textarea, select').forEach(el => {
-    if (el.type === 'checkbox' || el.type === 'radio') {
-      el.checked = false;
-    } else {
-      el.value = '';
-    }
-  });
-  clearSignature();
-  photos = [];
-  renderThumbs();
-  medRowCounter = 0;
-  document.querySelector('#medTable tbody').innerHTML = '';
-  document.getElementById('gcs_sum').textContent = '—';
-  document.getElementById('qsofa_sum').textContent = '—';
-  alert('✅ Formular zurückgesetzt!');
-};
-
-window.openAll = function() {
-  document.querySelectorAll('details').forEach(d => d.open = true);
-};
-
-window.closeAll = function() {
-  document.querySelectorAll('details').forEach(d => d.open = false);
-};
-
-// ===== ABSENDEN =====
-window.submitToBackend = async function() {
-  const btn = document.getElementById('sendBtn');
-  btn.disabled = true;
-  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Sende...';
-  
-  try {
-    const data = collectFormData();
     
-    const patName = `${data.vorname || ''} ${data.name || ''}`.trim() || 'Unbekannt';
-    const title = `Patientendoku: ${patName}`;
-    
-    const { data: result, error } = await nhost.graphql.request(`
-      mutation InsertPatientDocs($obj: patient_docs_insert_input!) {
-        insert_patient_docs_one(object: $obj) { id created_at }
+    try {
+      // Organisation aus PocketBase laden
+      const org = await pb.collection('organizations').getFirstListItem(
+        `org_code = "${orgCode}"`
+      );
+      
+      console.log('✅ Organization loaded:', org);
+      
+      // Prüfen ob Organisation aktiv ist
+      if (!org.is_active) {
+        showError('Diese Organisation ist nicht aktiv!');
+        return;
       }
-    `, {
-      obj: { title, payload: data, status: 'offen' }
-    });
-    
-    if (error) {
-      throw new Error(error.message || 'GraphQL-Fehler');
+      
+      currentOrganization = org;
+      
+      // UI aktualisieren
+      pageTitleEl.textContent = `🧾 Patientendokumentation – ${org.org_name}`;
+      backBtn.href = `index-public.html?org=${orgCode}`;
+      
+      loadingBoxEl.style.display = 'none';
+      errorBoxEl.style.display = 'none';
+      formContainerEl.style.display = 'block';
+      
+      // Zeige Seite
+      document.body.classList.add('loaded');
+      
+    } catch (error) {
+      console.error('❌ Error loading organization:', error);
+      
+      if (error.status === 404) {
+        showError('Organisation nicht gefunden!');
+      } else {
+        showError('Fehler beim Laden: ' + error.message);
+      }
     }
-    
-    currentDocumentId = result.insert_patient_docs_one.id;
-    
-    document.getElementById('docIdDisplay').textContent = `Dokument-ID: PAT-${new Date().getFullYear()}-${currentDocumentId.slice(0,8)}`;
-    document.getElementById('qrModal').classList.add('show');
-    
-    btn.innerHTML = '<i class="fa-solid fa-check"></i> Gesendet!';
-    
-  } catch(e) {
-    alert('❌ Fehler beim Senden: ' + e.message);
-    btn.disabled = false;
-    btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Absenden';
   }
-};
+  
+  function showError(message) {
+    pageTitleEl.textContent = '🧾 Patientendokumentation – Fehler';
+    loadingBoxEl.style.display = 'none';
+    errorBoxEl.style.display = 'block';
+    errorTextEl.textContent = message;
+    formContainerEl.style.display = 'none';
+    document.body.classList.add('loaded');
+  }
+  
+  // Beim Laden
+  loadOrganization();
 
-// ===== QR-CODE ZUORDNUNG =====
-window.assignQRCode = function() {
-  const key = document.getElementById('qrKeyInput').value.trim().toUpperCase();
-  
-  if (!key) {
-    alert('Bitte QR-Code Schlüssel eingeben!');
-    return;
+  // ===== SIGNATURE CANVAS =====
+  const sigCanvas = document.getElementById('sig');
+  const sigCtx = sigCanvas.getContext('2d');
+  let isDrawing = false;
+  let lastX = 0, lastY = 0;
+
+  function initSignature() {
+    const rect = sigCanvas.getBoundingClientRect();
+    sigCanvas.width = rect.width * window.devicePixelRatio;
+    sigCanvas.height = rect.height * window.devicePixelRatio;
+    sigCtx.scale(window.devicePixelRatio, window.devicePixelRatio);
+    
+    sigCtx.strokeStyle = '#000';
+    sigCtx.lineWidth = 2;
+    sigCtx.lineCap = 'round';
+    sigCtx.lineJoin = 'round';
+
+    sigCanvas.addEventListener('mousedown', startDrawing);
+    sigCanvas.addEventListener('mousemove', draw);
+    sigCanvas.addEventListener('mouseup', stopDrawing);
+    sigCanvas.addEventListener('mouseout', stopDrawing);
+    sigCanvas.addEventListener('touchstart', handleTouchStart, { passive: false });
+    sigCanvas.addEventListener('touchmove', handleTouchMove, { passive: false });
+    sigCanvas.addEventListener('touchend', stopDrawing);
   }
-  
-  if (!key.match(/KEY-\d{4}-\d{4}/)) {
-    alert('Ungültiges Format! Erwartet: KEY-2025-0042');
-    return;
+
+  function startDrawing(e) {
+    isDrawing = true;
+    const pos = getMousePos(e);
+    lastX = pos.x;
+    lastY = pos.y;
   }
-  
-  // QR-Code in localStorage speichern (organisationsspezifisch)
-  const storageKey = `ffw_qr_codes_${orgCode}`;
-  const qrCodes = JSON.parse(localStorage.getItem(storageKey) || '[]');
-  const qrCode = qrCodes.find(q => q.id === key);
-  
-  if (!qrCode) {
-    if (!confirm(`QR-Code "${key}" nicht gefunden. Trotzdem zuordnen?`)) return;
-    qrCodes.push({
-      id: key,
-      url: `https://app.responda.systems/secure/${key}`,
-      generated: new Date().toISOString(),
-      status: 'assigned',
-      assignedTo: currentDocumentId,
-      assignedAt: new Date().toISOString(),
-      organization: orgCode
+
+  function draw(e) {
+    if (!isDrawing) return;
+    e.preventDefault();
+    const pos = getMousePos(e);
+    
+    sigCtx.beginPath();
+    sigCtx.moveTo(lastX, lastY);
+    sigCtx.lineTo(pos.x, pos.y);
+    sigCtx.stroke();
+    
+    lastX = pos.x;
+    lastY = pos.y;
+  }
+
+  function stopDrawing() {
+    isDrawing = false;
+  }
+
+  function handleTouchStart(e) {
+    e.preventDefault();
+    const touch = e.touches[0];
+    const mouseEvent = new MouseEvent('mousedown', {
+      clientX: touch.clientX,
+      clientY: touch.clientY
     });
+    sigCanvas.dispatchEvent(mouseEvent);
+  }
+
+  function handleTouchMove(e) {
+    e.preventDefault();
+    const touch = e.touches[0];
+    const mouseEvent = new MouseEvent('mousemove', {
+      clientX: touch.clientX,
+      clientY: touch.clientY
+    });
+    sigCanvas.dispatchEvent(mouseEvent);
+  }
+
+  function getMousePos(e) {
+    const rect = sigCanvas.getBoundingClientRect();
+    const scaleX = sigCanvas.width / window.devicePixelRatio / rect.width;
+    const scaleY = sigCanvas.height / window.devicePixelRatio / rect.height;
+    
+    return {
+      x: (e.clientX - rect.left) * scaleX,
+      y: (e.clientY - rect.top) * scaleY
+    };
+  }
+
+  function clearSignature() {
+    sigCtx.clearRect(0, 0, sigCanvas.width, sigCanvas.height);
+  }
+
+  document.getElementById('sigClear').addEventListener('click', clearSignature);
+  
+  // Warte bis DOM geladen ist
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initSignature);
   } else {
-    qrCode.status = 'assigned';
-    qrCode.assignedTo = currentDocumentId;
-    qrCode.assignedAt = new Date().toISOString();
+    initSignature();
   }
-  
-  localStorage.setItem(storageKey, JSON.stringify(qrCodes));
-  
-  alert(`✅ QR-Code "${key}" erfolgreich zugeordnet!\n\nÜbergib den Aufkleber an den Rettungsdienst.`);
-  document.getElementById('qrModal').classList.remove('show');
-  
-  setTimeout(() => {
-    if (confirm('Neues Formular starten?')) {
-      location.reload();
-    }
-  }, 500);
-};
 
-window.skipQRAssignment = function() {
-  if (!confirm('QR-Code wirklich später zuordnen? Das Dokument ist gespeichert, aber noch nicht mit einem QR-Code verknüpft.')) return;
-  
-  document.getElementById('qrModal').classList.remove('show');
-  
-  setTimeout(() => {
-    if (confirm('Neues Formular starten?')) {
-      location.reload();
+  // ===== FOTOS =====
+  const photoInput = document.getElementById('photoInput');
+  const thumbsDiv = document.getElementById('thumbs');
+  let photos = [];
+
+  photoInput.addEventListener('change', (e) => {
+    const files = Array.from(e.target.files);
+    files.forEach(file => {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        photos.push(ev.target.result);
+        renderThumbs();
+      };
+      reader.readAsDataURL(file);
+    });
+    photoInput.value = '';
+  });
+
+  function renderThumbs() {
+    thumbsDiv.innerHTML = photos.map((src, i) => `
+      <div class="thumb">
+        <img src="${src}" alt="Foto ${i+1}">
+        <button class="rm" onclick="removePhoto(${i})">×</button>
+      </div>
+    `).join('');
+  }
+
+  window.removePhoto = function(idx) {
+    photos.splice(idx, 1);
+    renderThumbs();
+  };
+
+  // ===== MEDIKAMENTEN-TABELLE =====
+  let medRowCounter = 0;
+
+  window.addMedRow = function() {
+    medRowCounter++;
+    const tbody = document.querySelector('#medTable tbody');
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${medRowCounter}</td>
+      <td><input type="text" name="med_name_${medRowCounter}" style="width:100%;padding:.3rem;font-size:14px"></td>
+      <td><input type="number" name="med_dose_${medRowCounter}" step="0.1" style="width:80px;padding:.3rem;font-size:14px"></td>
+      <td><input type="text" name="med_unit_${medRowCounter}" placeholder="mg" style="width:60px;padding:.3rem;font-size:14px"></td>
+      <td>
+        <select name="med_route_${medRowCounter}" style="padding:.3rem;font-size:14px">
+          <option value=""></option>
+          <option value="i.v.">i.v.</option>
+          <option value="i.m.">i.m.</option>
+          <option value="s.c.">s.c.</option>
+          <option value="p.o.">p.o.</option>
+          <option value="inhal.">inhal.</option>
+        </select>
+      </td>
+      <td><input type="time" name="med_time_${medRowCounter}" style="width:90px;padding:.3rem;font-size:14px"></td>
+      <td><input type="text" name="med_note_${medRowCounter}" style="width:100%;padding:.3rem;font-size:14px"></td>
+      <td><button class="subbtn" type="button" onclick="this.closest('tr').remove()">×</button></td>
+    `;
+    tbody.appendChild(tr);
+  };
+
+  // ===== GCS & qSOFA =====
+  window.calcGCS = function() {
+    const e = parseInt(document.querySelector('input[name="gcs_e"]:checked')?.value || 0);
+    const v = parseInt(document.querySelector('input[name="gcs_v"]:checked')?.value || 0);
+    const m = parseInt(document.querySelector('input[name="gcs_m"]:checked')?.value || 0);
+    const sum = e + v + m;
+    
+    document.getElementById('gcs_sum').textContent = sum > 0 ? sum : '—';
+    document.querySelector('input[name="qsofa_gcs"]').value = sum > 0 ? sum : '';
+    
+    calcQSOFA();
+  };
+
+  window.calcQSOFA = function() {
+    const gcs = parseInt(document.querySelector('input[name="qsofa_gcs"]').value || 0);
+    const af = parseInt(document.querySelector('input[name="af"]').value || 0);
+    const rrSys = parseInt(document.querySelector('input[name="rr_sys"]').value || 0);
+    
+    document.querySelector('input[name="qsofa_af"]').value = af || '';
+    document.querySelector('input[name="qsofa_rr"]').value = rrSys || '';
+    
+    let score = 0;
+    if (gcs > 0 && gcs < 15) score++;
+    if (af >= 22) score++;
+    if (rrSys > 0 && rrSys <= 100) score++;
+    
+    const scoreText = (gcs > 0 || af > 0 || rrSys > 0) ? score : '—';
+    document.getElementById('qsofa_sum').textContent = scoreText;
+  };
+
+  // ===== DATEN SAMMELN =====
+  function collectFormData() {
+    const data = { photos: photos };
+    
+    document.querySelectorAll('input, textarea, select').forEach(el => {
+      if (!el.name) return;
+      
+      if (el.type === 'checkbox') {
+        data[el.name] = el.checked;
+      } else if (el.type === 'radio') {
+        if (el.checked) data[el.name] = el.value;
+      } else {
+        data[el.name] = el.value;
+      }
+    });
+    
+    const meds = [];
+    for (let i = 1; i <= medRowCounter; i++) {
+      const name = document.querySelector(`input[name="med_name_${i}"]`)?.value;
+      if (name) {
+        meds.push({
+          name: name,
+          dose: document.querySelector(`input[name="med_dose_${i}"]`)?.value,
+          unit: document.querySelector(`input[name="med_unit_${i}"]`)?.value,
+          route: document.querySelector(`select[name="med_route_${i}"]`)?.value,
+          time: document.querySelector(`input[name="med_time_${i}"]`)?.value,
+          note: document.querySelector(`input[name="med_note_${i}"]`)?.value
+        });
+      }
     }
-  }, 500);
-};
+    data.medications = meds;
+    data.signature = sigCanvas.toDataURL('image/png');
+    
+    return data;
+  }
+
+  // ===== SPEICHERN/LADEN =====
+  window.saveForm = function() {
+    const data = collectFormData();
+    localStorage.setItem('patientendoku_draft_' + orgCode, JSON.stringify(data));
+    alert('✅ Formular im Browser gespeichert!');
+  };
+
+  window.loadForm = function() {
+    const saved = localStorage.getItem('patientendoku_draft_' + orgCode);
+    if (!saved) {
+      alert('Kein gespeicherter Entwurf gefunden.');
+      return;
+    }
+    
+    if (!confirm('Aktuelles Formular mit gespeichertem Entwurf überschreiben?')) return;
+    
+    // TODO: Load form data
+    alert('✅ Entwurf geladen!');
+  };
+
+  window.resetFormConfirm = function() {
+    if (!confirm('Wirklich alle Eingaben zurücksetzen?')) return;
+    document.querySelectorAll('input, textarea, select').forEach(el => {
+      if (el.type === 'checkbox' || el.type === 'radio') {
+        el.checked = false;
+      } else {
+        el.value = '';
+      }
+    });
+    clearSignature();
+    photos = [];
+    renderThumbs();
+    medRowCounter = 0;
+    document.querySelector('#medTable tbody').innerHTML = '';
+    document.getElementById('gcs_sum').textContent = '—';
+    document.getElementById('qsofa_sum').textContent = '—';
+    alert('✅ Formular zurückgesetzt!');
+  };
+
+  window.openAll = function() {
+    document.querySelectorAll('details').forEach(d => d.open = true);
+  };
+
+  window.closeAll = function() {
+    document.querySelectorAll('details').forEach(d => d.open = false);
+  };
+
+  // ===== ABSENDEN =====
+  window.submitToBackend = async function() {
+    if (!currentOrganization) {
+      alert('❌ Keine Organisation geladen!');
+      return;
+    }
+    
+    const btn = document.getElementById('sendBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Sende...';
+    
+    try {
+      const data = collectFormData();
+      
+      // Validierung
+      if (!data.name || !data.vorname || !data.gebdatum) {
+        alert('❌ Bitte Name, Vorname und Geburtsdatum ausfüllen!');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Absenden';
+        return;
+      }
+      
+      const patName = `${data.vorname || ''} ${data.name || ''}`.trim();
+      const title = `Patientendoku: ${patName}`;
+      
+      console.log('📤 Submitting patient document:', {
+        title,
+        organization_id: currentOrganization.id,
+        org_code: orgCode
+      });
+      
+      // An PocketBase senden
+      const record = await pb.collection('patients').create({
+        title: title,
+        payload: data,
+        status: 'offen',
+        organization_id: currentOrganization.id
+      });
+      
+      console.log('✅ Document created:', record.id);
+      
+      currentDocumentId = record.id;
+      
+      // Success Modal zeigen
+      document.getElementById('docIdDisplay').textContent = `Dokument-ID: PAT-${new Date().getFullYear()}-${record.id.slice(0,8)}`;
+      document.getElementById('successModal').classList.add('show');
+      
+      // Entwurf löschen
+      localStorage.removeItem('patientendoku_draft_' + orgCode);
+      
+      btn.innerHTML = '<i class="fa-solid fa-check"></i> Gesendet!';
+      
+    } catch(e) {
+      console.error('❌ Submit error:', e);
+      alert('❌ Fehler beim Senden: ' + e.message);
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Absenden';
+    }
+  };
 </script>
 
 </body>
