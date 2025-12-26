@@ -9,6 +9,8 @@
   <meta name="theme-color" content="#667eea">
   
   <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/pocketbase@0.21.3/dist/pocketbase.umd.js"></script>
+  
   <style>
     :root { --rot: #c8102e; --gradient-start: #667eea; --gradient-end: #764ba2; }
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -18,9 +20,13 @@
       background: linear-gradient(135deg, var(--gradient-start) 0%, var(--gradient-end) 100%);
       min-height: 100vh;
       margin: 0;
+      opacity: 0;
+      transition: opacity 0.3s;
     }
     
-    /* HEADER GANZ OBEN (wie Lagerverwaltung) */
+    body.loaded { opacity: 1; }
+    
+    /* HEADER GANZ OBEN */
     .top-header {
       background: var(--gradient-start);
       padding: 12px 20px;
@@ -143,6 +149,16 @@
       padding: 40px 30px;
     }
     
+    .loading-box {
+      background: #dbeafe;
+      color: #1e40af;
+      padding: 20px;
+      border-radius: 12px;
+      text-align: center;
+      font-weight: 600;
+      border: 2px solid #93c5fd;
+    }
+    
     .error-box {
       background: #fee2e2;
       color: #991b1b;
@@ -218,9 +234,9 @@
 </head>
 <body>
 
-<!-- HEADER GANZ OBEN (sticky wie Lagerverwaltung) -->
+<!-- HEADER GANZ OBEN -->
 <header class="top-header">
-  <a href="admin-login.html" class="login-btn">Login</a>
+  <a href="mpg-login.html" class="login-btn">Login</a>
 </header>
 
 <main class="main">
@@ -237,11 +253,15 @@
     </div>
     
     <div class="body">
-      <div id="errorBox" class="error-box" style="display:none">
-        ❌ Ungültige Organisation
+      <div id="loadingBox" class="loading-box">
+        🔄 Lade Organisation...
       </div>
       
-      <div id="formGrid" class="grid">
+      <div id="errorBox" class="error-box" style="display:none">
+        ❌ <span id="errorText">Ungültige Organisation</span>
+      </div>
+      
+      <div id="formGrid" class="grid" style="display:none">
         <a href="#" class="form-card" id="patientLink">
           <div class="form-icon">🧾</div>
           <h2>Patientendokumentation</h2>
@@ -269,45 +289,77 @@
 </main>
 
 <script>
-  // ===== ORGANISATIONS-MAPPING =====
-  const ORG_MAPPING = {
-    'ffwrothenburg': {
-      name: 'FFW Rothenburg',
-      subdomain: 'hpjfrhktprpuuxvvlpsb',
-      region: 'eu-central-1'
-    },
-    'beispielorg': {
-      name: 'Beispiel Organisation',
-      subdomain: 'example-subdomain',
-      region: 'eu-central-1'
-    }
-    // Weitere Organisationen hier hinzufügen...
-  };
-
+  const pb = new PocketBase('https://api.responda.systems');
+  
   // Organisation aus URL lesen
   const urlParams = new URLSearchParams(window.location.search);
   const orgCode = urlParams.get('org');
   
   const orgNameEl = document.getElementById('orgName');
+  const loadingBoxEl = document.getElementById('loadingBox');
   const errorBoxEl = document.getElementById('errorBox');
+  const errorTextEl = document.getElementById('errorText');
   const formGridEl = document.getElementById('formGrid');
   
-  // Organisation validieren
-  if (!orgCode || !ORG_MAPPING[orgCode]) {
-    orgNameEl.textContent = 'Keine Organisation';
-    errorBoxEl.style.display = 'block';
-    formGridEl.style.display = 'none';
-  } else {
-    const org = ORG_MAPPING[orgCode];
-    orgNameEl.textContent = org.name;
-    errorBoxEl.style.display = 'none';
-    formGridEl.style.display = 'grid';
+  // Organisation laden
+  async function loadOrganization() {
+    console.log('🔍 Loading organization:', orgCode);
     
-    // Links setzen (mit ?org= Parameter)
-    document.getElementById('patientLink').href = `patientendoku-public.html?org=${orgCode}`;
-    document.getElementById('produktLink').href = `produktausgabe-public.html?org=${orgCode}`;
-    document.getElementById('cirsLink').href = `cirs-public.html?org=${orgCode}`;
+    if (!orgCode) {
+      showError('Keine Organisation in URL angegeben!');
+      return;
+    }
+    
+    try {
+      // Organisation aus PocketBase laden
+      const org = await pb.collection('organizations').getFirstListItem(
+        `org_code = "${orgCode}"`
+      );
+      
+      console.log('✅ Organization loaded:', org);
+      
+      // Prüfen ob Organisation aktiv ist
+      if (!org.is_active) {
+        showError('Diese Organisation ist nicht aktiv!');
+        return;
+      }
+      
+      // Organisation anzeigen
+      orgNameEl.textContent = org.org_name;
+      loadingBoxEl.style.display = 'none';
+      errorBoxEl.style.display = 'none';
+      formGridEl.style.display = 'grid';
+      
+      // Links setzen (mit ?org= Parameter)
+      document.getElementById('patientLink').href = `patientendoku-public.html?org=${orgCode}`;
+      document.getElementById('produktLink').href = `produktausgabe-public.html?org=${orgCode}`;
+      document.getElementById('cirsLink').href = `cirs-public.html?org=${orgCode}`;
+      
+      // Zeige Seite
+      document.body.classList.add('loaded');
+      
+    } catch (error) {
+      console.error('❌ Error loading organization:', error);
+      
+      if (error.status === 404) {
+        showError('Organisation nicht gefunden!');
+      } else {
+        showError('Fehler beim Laden: ' + error.message);
+      }
+    }
   }
+  
+  function showError(message) {
+    orgNameEl.textContent = 'Fehler';
+    loadingBoxEl.style.display = 'none';
+    errorBoxEl.style.display = 'block';
+    errorTextEl.textContent = message;
+    formGridEl.style.display = 'none';
+    document.body.classList.add('loaded');
+  }
+  
+  // Beim Laden
+  loadOrganization();
 </script>
 
 </body>
