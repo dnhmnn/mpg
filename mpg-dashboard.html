@@ -725,6 +725,15 @@
         return;
       }
       
+      console.log('👤 Logged in user:', {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        permissions: user.permissions,
+        supervisor: user.supervisor
+      });
+      
       document.body.classList.add('loaded');
       initDashboard();
       
@@ -851,10 +860,19 @@
     }
   }
 
-  // ===== NAVIGATION =====
+  // ===== NAVIGATION - MIT ROLE SUPPORT! =====
   function buildNavigation() {
     const nav = document.getElementById('mainNav');
     const permissions = user.permissions || {};
+    const userRole = user.role || 'benutzer';
+    const roleTemplate = ROLE_TEMPLATES[userRole];
+    
+    console.log('🔍 Building navigation for:', {
+      role: userRole,
+      permissions: permissions,
+      roleTemplate: roleTemplate,
+      supervisor: user.supervisor
+    });
     
     const pages = [
       { id: 'einsaetze', label: '🚨 Einsätze', url: 'einsaetze.html' },
@@ -868,9 +886,30 @@
     ];
     
     const accessiblePages = pages.filter(page => {
-      if (user.supervisor) return true;
-      return permissions[page.id] === true;
+      // Supervisor sieht alles
+      if (user.supervisor) {
+        console.log('✅ Supervisor access:', page.id);
+        return true;
+      }
+      
+      // 1. Prüfe individuelle Permissions
+      if (permissions[page.id] === true) {
+        console.log('✅ Access via permission:', page.id);
+        return true;
+      }
+      
+      // 2. Fallback: Prüfe Rolle
+      if (roleTemplate && roleTemplate.permissions[page.id] === true) {
+        console.log('✅ Access via role:', page.id);
+        return true;
+      }
+      
+      console.log('❌ No access:', page.id);
+      return false;
     });
+    
+    console.log('📊 Total accessible pages:', accessiblePages.length);
+    console.log('📊 Page IDs:', accessiblePages.map(p => p.id));
     
     // Chat ist für ALLE verfügbar
     const navHTML = accessiblePages
@@ -996,12 +1035,11 @@
 
       console.log('🔄 Updating password...');
       
-      // Step 2: Update password
+      // Step 2: Update password (without oldPassword - not needed after verification)
       try {
         await pb.collection('users').update(user.id, {
           password: n1,
-          passwordConfirm: n1,
-          oldPassword: current  // WICHTIG: Auch altes Passwort mitsenden!
+          passwordConfirm: n1
         });
         
         console.log('✅ Password updated successfully');
@@ -1196,6 +1234,9 @@
         users_manage: document.getElementById('perm_users_manage').checked
       };
       
+      console.log('🔍 Current user object:', user);
+      console.log('🔍 User organization_id:', user.organization_id);
+      
       if (editingUserId) {
         // UPDATE EXISTING USER
         const userData = {
@@ -1239,21 +1280,12 @@
           verified: false
         };
         
-        console.log('📤 Creating user with data:', {
-          email: userData.email,
-          name: userData.name,
-          role: userData.role,
-          roleLength: userData.role.length,
-          organization_id: userData.organization_id,
-          has_password: !!userData.password,
-          permissions: userData.permissions
-        });
+        console.log('📤 Creating user with FULL data:', userData);
         
         const newUser = await pb.collection('users').create(userData);
         
         console.log('✅ User created successfully!');
-        console.log('✅ Created user ID:', newUser.id);
-        console.log('✅ Saved role:', newUser.role);
+        console.log('✅ Created user:', newUser);
         
         // Send password reset email
         try {
@@ -1276,8 +1308,9 @@
       
     } catch (e) {
       console.error('❌ User save error:', e);
-      console.error('Error response:', e.response);
-      console.error('Error data:', e.response?.data);
+      console.error('❌ Error status:', e.status);
+      console.error('❌ Error response:', e.response);
+      console.error('❌ Error data:', e.response?.data);
       
       let errorMsg = '❌ Fehler: ';
       
@@ -1295,6 +1328,8 @@
         } else {
           errorMsg += JSON.stringify(errors);
         }
+      } else if (e.status === 404) {
+        errorMsg += 'Resource not found - Prüfe ob role Feld in PocketBase existiert!';
       } else {
         errorMsg += e.message;
       }
