@@ -833,11 +833,17 @@
       backBtn.href = `index-public.html?org=${orgCode}`;
       
       loadingBoxEl.style.display = 'none';
-      errorBoxEl.style.display = 'none';
-      formContainerEl.style.display = 'block';
-      
-      // Zeige Seite
-      document.body.classList.add('loaded');
+			errorBoxEl.style.display = 'none';
+			formContainerEl.style.display = 'block';
+
+			// Zeige Seite
+			document.body.classList.add('loaded');
+
+// JETZT erst Signature Canvas initialisieren
+setTimeout(() => {
+  initSignature();
+}, 100);
+
       
     } catch (error) {
       console.error('❌ Error loading organization:', error);
