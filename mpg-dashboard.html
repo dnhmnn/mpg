@@ -835,7 +835,10 @@
     document.getElementById('who').textContent = user.name || userEmail;
     document.getElementById('userRole').textContent = getRoleLabel(userRole);
     
-    if (canManageUsers(user)) {
+    const canManage = canManageUsers(user);
+    console.log('🔍 Can manage users?', canManage);
+    
+    if (canManage) {
       document.getElementById('usersTab').style.display = 'block';
       document.getElementById('licenseTab').style.display = 'block';
     }
@@ -886,19 +889,16 @@
     ];
     
     const accessiblePages = pages.filter(page => {
-      // Supervisor sieht alles
       if (user.supervisor) {
         console.log('✅ Supervisor access:', page.id);
         return true;
       }
       
-      // 1. Prüfe individuelle Permissions
       if (permissions[page.id] === true) {
         console.log('✅ Access via permission:', page.id);
         return true;
       }
       
-      // 2. Fallback: Prüfe Rolle
       if (roleTemplate && roleTemplate.permissions[page.id] === true) {
         console.log('✅ Access via role:', page.id);
         return true;
@@ -911,7 +911,6 @@
     console.log('📊 Total accessible pages:', accessiblePages.length);
     console.log('📊 Page IDs:', accessiblePages.map(p => p.id));
     
-    // Chat ist für ALLE verfügbar
     const navHTML = accessiblePages
       .map(page => `<a href="${page.url}">${page.label}</a>`)
       .join('');
@@ -926,6 +925,7 @@
     localStorage.clear();
     window.location.href = 'mpg-login.html';
   });
+
   // ===== SETTINGS MODAL =====
   const settingsModal = document.getElementById('settingsModal');
   const settingsBtn = document.getElementById('settingsBtn');
@@ -948,7 +948,6 @@
     if (e.target === settingsModal) closeSettings();
   });
   
-  // Tab-Switching
   document.querySelectorAll('.tabs .tab').forEach(tab => {
     tab.addEventListener('click', () => {
       const targetTab = tab.dataset.tab;
@@ -1002,7 +1001,7 @@
     }
   });
 
-  // ===== PASSWORD CHANGE - FIXED! =====
+  // ===== PASSWORD CHANGE - WITH oldPassword! =====
   const pwMsg = document.getElementById('pwMsg');
 
   function showPwMsg(text, ok=false){
@@ -1023,7 +1022,6 @@
 
       console.log('🔐 Verifying current password...');
       
-      // Step 1: Verify current password by logging in
       try {
         await pb.collection('users').authWithPassword(user.email, current);
         console.log('✅ Current password verified');
@@ -1035,11 +1033,11 @@
 
       console.log('🔄 Updating password...');
       
-      // Step 2: Update password (without oldPassword - not needed after verification)
       try {
         await pb.collection('users').update(user.id, {
           password: n1,
-          passwordConfirm: n1
+          passwordConfirm: n1,
+          oldPassword: current
         });
         
         console.log('✅ Password updated successfully');
@@ -1058,7 +1056,12 @@
         console.error('Error details:', updateError.response?.data);
         
         if (updateError.status === 400) {
-          showPwMsg('Passwort konnte nicht geändert werden. Bitte prüfe deine Eingaben.');
+          const errors = updateError.response?.data;
+          if (errors?.oldPassword) {
+            showPwMsg('Aktuelles Passwort ist erforderlich.');
+          } else {
+            showPwMsg('Passwort konnte nicht geändert werden. Bitte prüfe deine Eingaben.');
+          }
         } else {
           showPwMsg('Fehler beim Ändern: ' + (updateError.message || 'Unbekannter Fehler'));
         }
@@ -1083,9 +1086,11 @@
   const userCancel = document.getElementById('userCancel');
   
   let editingUserId = null;
+  let editingUserCurrentRole = null;
   
   function openUserModal(editUser = null) {
     editingUserId = editUser?.id || null;
+    editingUserCurrentRole = editUser?.role || null;
     
     if (editUser) {
       document.getElementById('userModalTitle').textContent = 'Benutzer bearbeiten';
@@ -1128,6 +1133,7 @@
     userModal.classList.remove('show');
     document.body.style.overflow = '';
     editingUserId = null;
+    editingUserCurrentRole = null;
   }
   
   addUserBtn.addEventListener('click', () => openUserModal());
@@ -1154,7 +1160,7 @@
     alert(`Vorlage "${ROLE_TEMPLATES[template].label}" angewendet. Du kannst jetzt noch individuell anpassen!`);
   };
   
-  // ===== USER SAVE - FIXED! =====
+  // ===== USER SAVE - FINAL VERSION WITH ALL FIXES! =====
   document.getElementById('userSave').addEventListener('click', async () => {
     const userMsg = document.getElementById('userMsg');
     const saveBtn = document.getElementById('userSave');
@@ -1177,15 +1183,16 @@
         roleTemplateLength: roleTemplate ? roleTemplate.length : 0
       });
       
-      // ROLLE - GARANTIERT GÜLTIG UND GESÄUBERT
-      let role = 'benutzer'; // DEFAULT
+      let role = 'benutzer';
       
       if (roleTemplate && roleTemplate.trim() !== '') {
         role = roleTemplate.trim();
         console.log('🎭 Role after trim:', role, 'Length:', role.length);
+      } else if (editingUserId && editingUserCurrentRole) {
+        role = editingUserCurrentRole;
+        console.log('🎭 Keeping current role:', role);
       }
       
-      // Validiere dass role ein gültiger Wert ist
       const validRoles = ['mpg', 'lager', 'ausbildung', 'qm', 'benutzer'];
       if (!validRoles.includes(role)) {
         console.warn('⚠️ Invalid role detected:', role, 'Using default: benutzer');
@@ -1202,11 +1209,11 @@
         return;
       }
       
-      if (!roleTemplate || roleTemplate.trim() === '') {
+      if (!editingUserId && (!roleTemplate || roleTemplate.trim() === '')) {
         userMsg.textContent = '❌ Bitte Rolle auswählen';
         userMsg.className = 'msg err';
         saveBtn.disabled = false;
-        saveBtn.textContent = editingUserId ? 'Speichern' : 'Benutzer anlegen';
+        saveBtn.textContent = 'Benutzer anlegen';
         return;
       }
       
@@ -1287,7 +1294,6 @@
         console.log('✅ User created successfully!');
         console.log('✅ Created user:', newUser);
         
-        // Send password reset email
         try {
           await pb.collection('users').requestPasswordReset(email);
           console.log('📧 Password reset email sent to:', email);
