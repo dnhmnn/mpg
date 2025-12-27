@@ -451,6 +451,7 @@
   <button class="add-btn" id="addBtn" title="Neue Nacherfassung">
     <i class="fa-solid fa-plus"></i>
   </button>
+
   <div class="modal" id="editModal">
     <div class="modal-box">
       <h3><i class="fa-solid fa-edit"></i> Patientendokumentation bearbeiten</h3>
@@ -797,6 +798,7 @@
         showMsg('Fehler: ' + e.message, 'error');
       }
     };
+
     function buildEditForm(payload) {
       const v = (key, fallback = '') => payload[key] !== undefined && payload[key] !== null ? payload[key] : fallback;
       const checked = (key) => payload[key] ? 'checked' : '';
@@ -881,11 +883,13 @@
       tr.innerHTML = `<td>${medRowCounter}</td><td><input type="text" name="med_name_${medRowCounter}" style="width:100%;padding:.3rem;font-size:14px"></td><td><input type="number" name="med_dose_${medRowCounter}" step="0.1" style="width:80px;padding:.3rem;font-size:14px"></td><td><input type="text" name="med_unit_${medRowCounter}" placeholder="mg" style="width:60px;padding:.3rem;font-size:14px"></td><td><select name="med_route_${medRowCounter}" style="padding:.3rem;font-size:14px"><option value="">-</option><option value="i.v.">i.v.</option><option value="i.m.">i.m.</option><option value="s.c.">s.c.</option><option value="p.o.">p.o.</option><option value="inhal.">inhal.</option></select></td><td><input type="time" name="med_time_${medRowCounter}" style="width:90px;padding:.3rem;font-size:14px"></td><td><input type="text" name="med_note_${medRowCounter}" style="width:100%;padding:.3rem;font-size:14px"></td><td><button class="subbtn" type="button" onclick="this.closest('tr').remove()">×</button></td>`;
       tbody.appendChild(tr);
     };
-
     window.closeEditModal = () => {
       document.getElementById('editModal').classList.remove('show');
-      currentEditDoc = null;
-      currentEditPayload = null;
+      // NUR beim echten Abbrechen null setzen, NICHT beim Weiterleiten zum Sign-Modal
+      if (!document.getElementById('signModal').classList.contains('show')) {
+        currentEditDoc = null;
+        currentEditPayload = null;
+      }
     };
     
     window.saveAndSignPatDoc = async () => {
@@ -940,7 +944,8 @@
           payload: payload
         });
 
-        closeEditModal();
+        // Edit-Modal schließen OHNE currentEditDoc zu löschen
+        document.getElementById('editModal').classList.remove('show');
         document.getElementById('signModal').classList.add('show');
         initAdminSigCanvas();
         
@@ -1042,10 +1047,15 @@
         showMsg('✅ Dokument archiviert!', 'success');
         await loadData();
         
+        // JETZT können wir cleanup machen
+        currentEditDoc = null;
+        currentEditPayload = null;
+        
       } catch(e) {
         showMsg('Fehler beim Archivieren: ' + e.message, 'error');
       }
     };
+
     document.getElementById('addBtn').onclick = () => {
       document.getElementById('nachForm').reset();
       document.getElementById('nachModal').classList.add('show');
