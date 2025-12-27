@@ -1189,11 +1189,13 @@
         showMsg('Fehler: ' + e.message, 'error');
       }
     };
+
     window.viewNach = async (id) => {
       try {
         const doc = await pb.collection('patient_docs_nacherfassung').getOne(id);
         
         window.currentViewedNachData = doc;
+        window.currentViewedDocType = 'nacherfassung';
         
         document.getElementById('detailsTitle').textContent = 'Nacherfassung: ' + (doc.stichwort || '?');
         
@@ -1241,7 +1243,6 @@
         showMsg('Fehler: ' + e.message, 'error');
       }
     };
-
     window.viewPatArchiv = async (id) => {
       try {
         const doc = await pb.collection('patients').getOne(id);
@@ -1254,50 +1255,253 @@
           datum: doc.admin_datum,
           unterschrift: doc.admin_unterschrift
         };
+        window.currentViewedDocType = 'patient';
         
         const patName = `${p.vorname || ''} ${p.name || ''}`.trim() || 'Unbekannt';
         document.getElementById('detailsTitle').textContent = 'Patientendokumentation: ' + patName;
         
         let html = '<div class="details-grid">';
-        html += `<div class="details-label"><strong>Einsatz-Nr:</strong></div><div class="details-value">${p.einsatz_nr || '-'}</div>`;
-        html += `<div class="details-label">Patient:</div><div class="details-value">${patName}</div>`;
-        html += `<div class="details-label">Geburtsdatum:</div><div class="details-value">${p.gebdatum ? new Date(p.gebdatum).toLocaleDateString('de-DE') : '-'}</div>`;
-        html += `<div class="details-label">Alter:</div><div class="details-value">${p.alter || '-'}</div>`;
-        html += `<div class="details-label">Einsatzdatum:</div><div class="details-value">${p.zeit_einsatz ? new Date(p.zeit_einsatz).toLocaleString('de-DE') : '-'}</div>`;
-        html += `<div class="details-label">Einsatz-Art:</div><div class="details-value">${p.einsatz_art || '-'}</div>`;
+        
+        // EINSATZDATEN
+        html += `<div class="details-label" style="grid-column:1/-1;margin-top:10px;font-size:1.1rem;color:var(--primary);border-bottom:2px solid var(--primary);padding-bottom:4px"><strong>📋 Einsatzdaten</strong></div>`;
+        html += `<div class="details-label">Einsatz-Nr:</div><div class="details-value"><strong>${p.einsatz_nr || '-'}</strong></div>`;
+        html += `<div class="details-label">Pat./Auftrags-Nr:</div><div class="details-value">${p.auftrags_nr || '-'}</div>`;
         html += `<div class="details-label">Rufname:</div><div class="details-value">${p.rufname || '-'}</div>`;
         html += `<div class="details-label">Fahrzeug:</div><div class="details-value">${p.fahrzeug || '-'}</div>`;
-        html += `<div class="details-label">Anamnese:</div><div class="details-value">${p.notfallgeschehen || '-'}</div>`;
-        html += `<div class="details-label">Vitalparameter:</div><div class="details-value">RR: ${p.rr_sys || '-'}/${p.rr_dia || '-'} mmHg, HF: ${p.hf || '-'}/min, AF: ${p.af || '-'}/min, SpO₂: ${p.spo2 || '-'}%, Temp: ${p.temp || '-'}°C, BZ: ${p.bz_mg || '-'} mg/dl</div>`;
+        html += `<div class="details-label">Datum/Uhrzeit:</div><div class="details-value">${p.zeit_einsatz ? new Date(p.zeit_einsatz).toLocaleString('de-DE') : '-'}</div>`;
+        html += `<div class="details-label">Einsatz-Art:</div><div class="details-value">${p.einsatz_art || '-'}</div>`;
         
-        if (p.gcs_e || p.gcs_v || p.gcs_m) {
-          const gcsSum = (parseInt(p.gcs_e || 0) + parseInt(p.gcs_v || 0) + parseInt(p.gcs_m || 0)) || '-';
-          html += `<div class="details-label">GCS:</div><div class="details-value">E${p.gcs_e || '-'} V${p.gcs_v || '-'} M${p.gcs_m || '-'} = ${gcsSum}</div>`;
+        // PATIENTENDATEN
+        html += `<div class="details-label" style="grid-column:1/-1;margin-top:20px;font-size:1.1rem;color:var(--primary);border-bottom:2px solid var(--primary);padding-bottom:4px"><strong>👤 Patientendaten</strong></div>`;
+        html += `<div class="details-label">Name:</div><div class="details-value"><strong>${p.name || '-'}</strong></div>`;
+        html += `<div class="details-label">Vorname:</div><div class="details-value"><strong>${p.vorname || '-'}</strong></div>`;
+        html += `<div class="details-label">Geburtsdatum:</div><div class="details-value">${p.gebdatum ? new Date(p.gebdatum).toLocaleDateString('de-DE') : '-'}</div>`;
+        html += `<div class="details-label">Alter:</div><div class="details-value">${p.alter || '-'}</div>`;
+        html += `<div class="details-label">Telefon:</div><div class="details-value">${p.telefon || '-'}</div>`;
+        html += `<div class="details-label">Mobil:</div><div class="details-value">${p.mobil || '-'}</div>`;
+        html += `<div class="details-label">Straße:</div><div class="details-value">${p.strasse || '-'}</div>`;
+        html += `<div class="details-label">PLZ, Ort:</div><div class="details-value">${p.plz_ort || '-'}</div>`;
+        html += `<div class="details-label">Kasse/Nr:</div><div class="details-value">${p.kasse || '-'}</div>`;
+        html += `<div class="details-label">Vers.-Nr:</div><div class="details-value">${p.versnr || '-'}</div>`;
+        html += `<div class="details-label">Hausarzt/Tel:</div><div class="details-value">${p.hausarzt || '-'}</div>`;
+        html += `<div class="details-label">Angehöriger/Tel:</div><div class="details-value">${p.angehoeriger || '-'}</div>`;
+        html += `<div class="details-label">Informationen:</div><div class="details-value">${p.infos || '-'}</div>`;
+        
+        // NOTFALLGESCHEHEN
+        html += `<div class="details-label" style="grid-column:1/-1;margin-top:20px;font-size:1.1rem;color:var(--primary);border-bottom:2px solid var(--primary);padding-bottom:4px"><strong>🚨 Notfallgeschehen / Anamnese</strong></div>`;
+        html += `<div class="details-label">Anamnese:</div><div class="details-value">${p.notfallgeschehen || '-'}</div>`;
+        
+        // NEUROLOGIE
+        if (p.neu_zeit || p.neu_unauff || p.pw_r || p.pw_l || p.lr_r || p.lr_l) {
+          html += `<div class="details-label" style="grid-column:1/-1;margin-top:20px;font-size:1.1rem;color:var(--primary);border-bottom:2px solid var(--primary);padding-bottom:4px"><strong>🧠 Neurologie</strong></div>`;
+          html += `<div class="details-label">Zeitpunkt:</div><div class="details-value">${p.neu_zeit ? new Date(p.neu_zeit).toLocaleString('de-DE') : '-'}</div>`;
+          html += `<div class="details-label">Ohne path. Befund:</div><div class="details-value">${p.neu_unauff ? 'Ja' : 'Nein'}</div>`;
+          html += `<div class="details-label">Pupillenweite rechts:</div><div class="details-value">${p.pw_r || '-'}${p.pw_r_entrundet ? ' (entrundet)' : ''}</div>`;
+          html += `<div class="details-label">Lichtreaktion rechts:</div><div class="details-value">${p.lr_r || '-'}</div>`;
+          html += `<div class="details-label">Pupillenweite links:</div><div class="details-value">${p.pw_l || '-'}${p.pw_l_entrundet ? ' (entrundet)' : ''}</div>`;
+          html += `<div class="details-label">Lichtreaktion links:</div><div class="details-value">${p.lr_l || '-'}</div>`;
         }
         
+        // GCS
+        if (p.gcs_e || p.gcs_v || p.gcs_m) {
+          const gcsSum = (parseInt(p.gcs_e || 0) + parseInt(p.gcs_v || 0) + parseInt(p.gcs_m || 0)) || '-';
+          html += `<div class="details-label" style="grid-column:1/-1;margin-top:20px;font-size:1.1rem;color:var(--primary);border-bottom:2px solid var(--primary);padding-bottom:4px"><strong>👁️ Glasgow Coma Scale</strong></div>`;
+          html += `<div class="details-label">GCS:</div><div class="details-value"><strong>E${p.gcs_e || '-'} V${p.gcs_v || '-'} M${p.gcs_m || '-'} = ${gcsSum}</strong></div>`;
+        }
+        
+        // HAUT
+        if (p.haut_unauff || p.haut_falten || p.haut_oedeme || p.haut_dekubitus || p.haut_kaltschweissig || p.haut_exanthem) {
+          html += `<div class="details-label" style="grid-column:1/-1;margin-top:20px;font-size:1.1rem;color:var(--primary);border-bottom:2px solid var(--primary);padding-bottom:4px"><strong>✋ Haut</strong></div>`;
+          let hautBefunde = [];
+          if (p.haut_unauff) hautBefunde.push('unauffällig');
+          if (p.haut_falten) hautBefunde.push('stehende Hautfalten');
+          if (p.haut_oedeme) hautBefunde.push('Ödeme');
+          if (p.haut_dekubitus) hautBefunde.push('Dekubitus');
+          if (p.haut_kaltschweissig) hautBefunde.push('kaltschweißig');
+          if (p.haut_exanthem) hautBefunde.push('Exanthem');
+          html += `<div class="details-label">Befunde:</div><div class="details-value">${hautBefunde.join(', ') || '-'}</div>`;
+        }
+        
+        // PSYCHE
+        if (p.psy_erregt || p.psy_aggr || p.psy_verlangsamt || p.psy_depressiv || p.psy_aengstlich || p.psy_euphorisch || p.psy_wahnhaft || p.psy_verwirrt || p.psy_suizidal || p.psy_motor_unruhig) {
+          html += `<div class="details-label" style="grid-column:1/-1;margin-top:20px;font-size:1.1rem;color:var(--primary);border-bottom:2px solid var(--primary);padding-bottom:4px"><strong>🧘 Psyche</strong></div>`;
+          let psycheBefunde = [];
+          if (p.psy_erregt) psycheBefunde.push('erregt');
+          if (p.psy_aggr) psycheBefunde.push('aggressiv');
+          if (p.psy_verlangsamt) psycheBefunde.push('verlangsamt');
+          if (p.psy_depressiv) psycheBefunde.push('depressiv');
+          if (p.psy_aengstlich) psycheBefunde.push('ängstlich');
+          if (p.psy_euphorisch) psycheBefunde.push('euphorisch');
+          if (p.psy_wahnhaft) psycheBefunde.push('wahnhaft');
+          if (p.psy_verwirrt) psycheBefunde.push('verwirrt');
+          if (p.psy_suizidal) psycheBefunde.push('suizidal');
+          if (p.psy_motor_unruhig) psycheBefunde.push('motorisch unruhig');
+          html += `<div class="details-label">Befunde:</div><div class="details-value">${psycheBefunde.join(', ') || '-'}</div>`;
+        }
+        
+        // VITALPARAMETER
+        html += `<div class="details-label" style="grid-column:1/-1;margin-top:20px;font-size:1.1rem;color:var(--primary);border-bottom:2px solid var(--primary);padding-bottom:4px"><strong>🩺 Vitalparameter</strong></div>`;
+        html += `<div class="details-label">RR:</div><div class="details-value">${p.rr_sys || '-'}/${p.rr_dia || '-'} mmHg</div>`;
+        html += `<div class="details-label">HF:</div><div class="details-value">${p.hf || '-'} /min</div>`;
+        html += `<div class="details-label">AF:</div><div class="details-value">${p.af || '-'} /min</div>`;
+        html += `<div class="details-label">SpO₂:</div><div class="details-value">${p.spo2 || '-'} %</div>`;
+        html += `<div class="details-label">etCO₂:</div><div class="details-value">${p.etco2 || '-'} mmHg</div>`;
+        html += `<div class="details-label">Temperatur:</div><div class="details-value">${p.temp || '-'} °C</div>`;
+        html += `<div class="details-label">BZ:</div><div class="details-value">${p.bz_mg || '-'} mg/dl (${p.bz_mmol || '-'} mmol/l)</div>`;
+        html += `<div class="details-label">Schmerz:</div><div class="details-value">${p.schmerz || '-'} /10</div>`;
+        
+        // qSOFA
+        const qsofa = calculateQSOFA(p);
+        if (qsofa !== '—') {
+          html += `<div class="details-label">qSOFA-Score:</div><div class="details-value"><strong>${qsofa}</strong></div>`;
+        }
+        
+        // ATMUNG
+        if (p.atm_apnoe || p.atm_stridor || p.atm_hypervent || p.atm_dyspnoe || p.atm_beatmung || p.atm_zyanose || p.atm_verlegung || p.atm_sonst) {
+          html += `<div class="details-label" style="grid-column:1/-1;margin-top:20px;font-size:1.1rem;color:var(--primary);border-bottom:2px solid var(--primary);padding-bottom:4px"><strong>🫁 Atmung</strong></div>`;
+          let atmungBefunde = [];
+          if (p.atm_apnoe) atmungBefunde.push('Apnoe');
+          if (p.atm_stridor) atmungBefunde.push('Stridor');
+          if (p.atm_hypervent) atmungBefunde.push('Hyperventilation');
+          if (p.atm_dyspnoe) atmungBefunde.push('Dyspnoe');
+          if (p.atm_beatmung) atmungBefunde.push('Beatmung');
+          if (p.atm_zyanose) atmungBefunde.push('Zyanose');
+          if (p.atm_verlegung) atmungBefunde.push('Atemwegsverlegung');
+          html += `<div class="details-label">Klinische Zeichen:</div><div class="details-value">${atmungBefunde.join(', ') || '-'}</div>`;
+          if (p.atm_sonst) {
+            html += `<div class="details-label">Sonstiges:</div><div class="details-value">${p.atm_sonst}</div>`;
+          }
+        }
+        
+        // O2-GABE
+        if (p.o2 || p.o2_flow) {
+          html += `<div class="details-label">O₂-Gabe:</div><div class="details-value">${p.o2 || '-'}${p.o2_nasal ? ', Nasensonde' : ''}${p.o2_maske ? ', Maske' : ''}${p.o2_reservoir ? ', Maske m. Reservoir' : ''}${p.o2_flow ? `, ${p.o2_flow} l/min` : ''}${p.o2_comment ? ` (${p.o2_comment})` : ''}</div>`;
+        }
+        
+        // EKG/RHYTHMUS
+        if (p.sr || p.stemi || p.arrh_abs || p.vf || p.av3 || p.asystole || p.ekg_standort || p.ekg_persnr) {
+          html += `<div class="details-label" style="grid-column:1/-1;margin-top:20px;font-size:1.1rem;color:var(--primary);border-bottom:2px solid var(--primary);padding-bottom:4px"><strong>❤️ EKG / Rhythmus</strong></div>`;
+          let ekgBefunde = [];
+          if (p.sr) ekgBefunde.push('Sinusrhythmus');
+          if (p.stemi) ekgBefunde.push('STEMI');
+          if (p.arrh_abs) ekgBefunde.push('absolute Arrhythmie');
+          if (p.vf) ekgBefunde.push('Kammerflimmern');
+          if (p.av3) ekgBefunde.push('AV-Block III°');
+          if (p.asystole) ekgBefunde.push('Asystolie');
+          html += `<div class="details-label">Befunde:</div><div class="details-value">${ekgBefunde.join(', ') || '-'}</div>`;
+          if (p.ekg_standort) html += `<div class="details-label">EKG-Standort:</div><div class="details-value">${p.ekg_standort}</div>`;
+          if (p.ekg_persnr) html += `<div class="details-label">Pers-Nr:</div><div class="details-value">${p.ekg_persnr}</div>`;
+        }
+        
+        // VERLETZUNGEN
+        if (p.verletz_text) {
+          html += `<div class="details-label" style="grid-column:1/-1;margin-top:20px;font-size:1.1rem;color:var(--primary);border-bottom:2px solid var(--primary);padding-bottom:4px"><strong>🩹 Verletzungen</strong></div>`;
+          html += `<div class="details-label">Beschreibung:</div><div class="details-value">${p.verletz_text}</div>`;
+        }
+        
+        // DIAGNOSEN
+        if (p.diag_krampf || p.diag_synkope || p.diag_apoplex || p.diag_sht || p.diag_acs || p.diag_insuff || p.diag_lungenoedem || p.diag_luembol || p.diag_resp_insuff || p.diag_pneumothorax || p.diag_asthma || p.diag_hypo || p.diag_sept || p.diag_hypovol) {
+          html += `<div class="details-label" style="grid-column:1/-1;margin-top:20px;font-size:1.1rem;color:var(--primary);border-bottom:2px solid var(--primary);padding-bottom:4px"><strong>📋 Erstdiagnosen</strong></div>`;
+          let diagnosen = [];
+          if (p.diag_krampf) diagnosen.push('Konvulsionen');
+          if (p.diag_synkope) diagnosen.push('Synkope');
+          if (p.diag_apoplex) diagnosen.push('Apoplex');
+          if (p.diag_sht) diagnosen.push('SHT');
+          if (p.diag_acs) diagnosen.push('ACS');
+          if (p.diag_insuff) diagnosen.push('Herzinsuffizienz');
+          if (p.diag_lungenoedem) diagnosen.push('Lungenödem');
+          if (p.diag_luembol) diagnosen.push('Lungenembolie');
+          if (p.diag_resp_insuff) diagnosen.push('resp. Insuffizienz');
+          if (p.diag_pneumothorax) diagnosen.push('Pneumothorax');
+          if (p.diag_asthma) diagnosen.push('Asthma/COPD');
+          if (p.diag_hypo) diagnosen.push('Hypoglykämie');
+          if (p.diag_sept) diagnosen.push('septischer Schock');
+          if (p.diag_hypovol) diagnosen.push('hypovolämischer Schock');
+          html += `<div class="details-label">Diagnosen:</div><div class="details-value">${diagnosen.join(', ')}</div>`;
+        }
+        
+        // BEWUSSTSEIN/AZ/VERSORGUNG
+        if (p.bew_wach || p.bew_ansprache || p.bew_schmerz || p.bew_bewusstlos || p.az || p.versorgung) {
+          html += `<div class="details-label" style="grid-column:1/-1;margin-top:20px;font-size:1.1rem;color:var(--primary);border-bottom:2px solid var(--primary);padding-bottom:4px"><strong>🧑‍⚕️ Bewusstsein / AZ / Versorgung</strong></div>`;
+          let bewusstsein = [];
+          if (p.bew_wach) bewusstsein.push('wach');
+          if (p.bew_ansprache) bewusstsein.push('Reaktion auf Ansprache');
+          if (p.bew_schmerz) bewusstsein.push('Reaktion auf Schmerzreiz');
+          if (p.bew_bewusstlos) bewusstsein.push('bewusstlos');
+          if (bewusstsein.length > 0) html += `<div class="details-label">Bewusstseinslage:</div><div class="details-value">${bewusstsein.join(', ')}</div>`;
+          if (p.az) html += `<div class="details-label">Allgemeinzustand:</div><div class="details-value">${p.az}</div>`;
+          if (p.versorgung) html += `<div class="details-label">Versorgungssituation:</div><div class="details-value">${p.versorgung}</div>`;
+        }
+        
+        // ZUGANG/INFUSION
+        if (p.zugang_art || p.inf_art) {
+          html += `<div class="details-label" style="grid-column:1/-1;margin-top:20px;font-size:1.1rem;color:var(--primary);border-bottom:2px solid var(--primary);padding-bottom:4px"><strong>💉 Zugang & Infusion</strong></div>`;
+          if (p.zugang_art) {
+            html += `<div class="details-label">Zugang:</div><div class="details-value">${p.zugang_art}${p.zugang_region ? ', ' + p.zugang_region : ''}${p.zugang_gauge ? ', ' + p.zugang_gauge + 'G' : ''}${p.zugang_versuche ? ', ' + p.zugang_versuche + ' Versuche' : ''}${p.zugang_zeit ? ', ' + new Date(p.zugang_zeit).toLocaleString('de-DE') : ''}</div>`;
+          }
+          if (p.inf_art) {
+            html += `<div class="details-label">Infusion:</div><div class="details-value">${p.inf_art}${p.inf_menge ? ', ' + p.inf_menge + ' ml' : ''}${p.inf_rate ? ', ' + p.inf_rate + ' ml/h' : ''}${p.inf_bem ? ' (' + p.inf_bem + ')' : ''}</div>`;
+          }
+        }
+        
+        // MEDIKATION
         if (p.medications && p.medications.length > 0) {
-          html += `<div class="details-label">Medikation:</div><div class="details-value">`;
+          html += `<div class="details-label" style="grid-column:1/-1;margin-top:20px;font-size:1.1rem;color:var(--primary);border-bottom:2px solid var(--primary);padding-bottom:4px"><strong>💊 Medikation</strong></div>`;
+          html += `<div class="details-label">Medikamente:</div><div class="details-value">`;
           p.medications.forEach(med => {
-            html += `${med.name} ${med.dose} ${med.unit} (${med.route}) um ${med.time}<br>`;
+            html += `<strong>${med.name}</strong> ${med.dose} ${med.unit} (${med.route}) um ${med.time}${med.note ? ' - ' + med.note : ''}<br>`;
           });
           html += `</div>`;
         }
         
+        // BEATMUNG/ATEMWEG
+        if (p.aw_guedel || p.aw_larynxtubus || p.aw_ett || p.aw_bvm || p.aw_ett_size || p.vent_peep || p.vent_fio2) {
+          html += `<div class="details-label" style="grid-column:1/-1;margin-top:20px;font-size:1.1rem;color:var(--primary);border-bottom:2px solid var(--primary);padding-bottom:4px"><strong>🌬️ Beatmung / Atemweg</strong></div>`;
+          let atemweg = [];
+          if (p.aw_guedel) atemweg.push('Guedel');
+          if (p.aw_larynxtubus) atemweg.push('Larynxtubus');
+          if (p.aw_ett) atemweg.push('ETT');
+          if (p.aw_bvm) atemweg.push('BVM');
+          html += `<div class="details-label">Atemweg:</div><div class="details-value">${atemweg.join(', ') || '-'}</div>`;
+          if (p.aw_ett_size) html += `<div class="details-label">ETT-Größe:</div><div class="details-value">${p.aw_ett_size}</div>`;
+          if (p.vent_peep) html += `<div class="details-label">PEEP:</div><div class="details-value">${p.vent_peep} cmH₂O</div>`;
+          if (p.vent_fio2) html += `<div class="details-label">FiO₂:</div><div class="details-value">${p.vent_fio2} %</div>`;
+        }
+        
+        // REANIMATION
+        if (p.rea_beginn || p.rea_initial || p.rea_shocks || p.rea_rosc || p.rea_ende) {
+          html += `<div class="details-label" style="grid-column:1/-1;margin-top:20px;font-size:1.1rem;color:var(--primary);border-bottom:2px solid var(--primary);padding-bottom:4px"><strong>⚡ Reanimation</strong></div>`;
+          if (p.rea_beginn) html += `<div class="details-label">Rea-Beginn:</div><div class="details-value">${new Date(p.rea_beginn).toLocaleString('de-DE')}</div>`;
+          if (p.rea_initial) html += `<div class="details-label">Erst-Rhythmus:</div><div class="details-value">${p.rea_initial}</div>`;
+          if (p.rea_shocks) html += `<div class="details-label">Schocks:</div><div class="details-value">${p.rea_shocks}</div>`;
+          if (p.rea_rosc) html += `<div class="details-label">ROSC:</div><div class="details-value">${p.rea_rosc}</div>`;
+          if (p.rea_ende) html += `<div class="details-label">Rea-Ende:</div><div class="details-value">${p.rea_ende}</div>`;
+        }
+        
+        // ÜBERGABE/TRANSPORT
+        html += `<div class="details-label" style="grid-column:1/-1;margin-top:20px;font-size:1.1rem;color:var(--primary);border-bottom:2px solid var(--primary);padding-bottom:4px"><strong>🚑 Übergabe / Transport</strong></div>`;
         html += `<div class="details-label">Übergabe an:</div><div class="details-value">${p.ue_name || '-'}</div>`;
         html += `<div class="details-label">Übergabe Zeit:</div><div class="details-value">${p.ue_zeit ? new Date(p.ue_zeit).toLocaleString('de-DE') : '-'}</div>`;
-        html += `<div class="details-label">Ziel:</div><div class="details-value">${p.ziel_bez || '-'} (${p.ziel_adr || '-'})</div>`;
+        html += `<div class="details-label">Ziel:</div><div class="details-value">${p.ziel_bez || '-'}</div>`;
+        html += `<div class="details-label">Ziel-Adresse:</div><div class="details-value">${p.ziel_adr || '-'}</div>`;
         html += `<div class="details-label">Einsatzende:</div><div class="details-value">${p.einsatzende ? new Date(p.einsatzende).toLocaleString('de-DE') : '-'}</div>`;
-        html += `<div class="details-label">Ausfüller:</div><div class="details-value">${p.ausfueller_name || '-'} (${p.ausfueller_zeit ? new Date(p.ausfueller_zeit).toLocaleString('de-DE') : '-'})</div>`;
+        
+        // AUSFÜLLER
+        html += `<div class="details-label" style="grid-column:1/-1;margin-top:20px;font-size:1.1rem;color:var(--primary);border-bottom:2px solid var(--primary);padding-bottom:4px"><strong>✍️ Ausfüller</strong></div>`;
+        html += `<div class="details-label">Ausfüller:</div><div class="details-value">${p.ausfueller_name || '-'}</div>`;
+        html += `<div class="details-label">Zeitpunkt:</div><div class="details-value">${p.ausfueller_zeit ? new Date(p.ausfueller_zeit).toLocaleString('de-DE') : '-'}</div>`;
         
         if (p.signature) {
           html += `<div class="details-label">Unterschrift Ausfüller:</div><div class="details-value"><img src="${p.signature}" class="signature-img"></div>`;
         }
         
-        html += `<div class="details-label" style="margin-top:20px;color:var(--primary)"><strong>MPG-Beauftragter:</strong></div><div class="details-value" style="margin-top:20px"><strong>${doc.admin_name || '-'}</strong></div>`;
+        // MPG-BEAUFTRAGTER
+        html += `<div class="details-label" style="grid-column:1/-1;margin-top:20px;font-size:1.1rem;color:var(--primary);border-bottom:2px solid var(--primary);padding-bottom:4px"><strong>✅ MPG-Beauftragter / Verantwortlicher</strong></div>`;
+        html += `<div class="details-label">Name:</div><div class="details-value"><strong>${doc.admin_name || '-'}</strong></div>`;
         html += `<div class="details-label">Gegengezeichnet am:</div><div class="details-value">${doc.admin_datum ? new Date(doc.admin_datum).toLocaleString('de-DE') : '-'}</div>`;
         
         if (doc.admin_unterschrift) {
-          html += `<div class="details-label">Unterschrift MPG-Beauftragter:</div><div class="details-value"><img src="${doc.admin_unterschrift}" class="signature-img"></div>`;
+          html += `<div class="details-label">Unterschrift:</div><div class="details-value"><img src="${doc.admin_unterschrift}" class="signature-img"></div>`;
         }
         
         html += '</div>';
@@ -1317,9 +1521,405 @@
     window.closeDetailsModal = () => {
       document.getElementById('detailsModal').classList.remove('show');
     };
-
     window.generatePDFFromModal = async () => {
-      showMsg('PDF-Generierung wird noch implementiert', 'error');
+      try {
+        showMsg('PDF wird erstellt...', 'success');
+        
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        
+        let yPos = 20;
+        const lineHeight = 7;
+        const pageHeight = doc.internal.pageSize.height;
+        const margin = 20;
+        
+        // Hilfsfunktion für Seitenumbruch
+        const checkPageBreak = () => {
+          if (yPos > pageHeight - 30) {
+            doc.addPage();
+            yPos = 20;
+          }
+        };
+        
+        // Hilfsfunktion für Überschriften
+        const addHeading = (text) => {
+          checkPageBreak();
+          doc.setFontSize(14);
+          doc.setFont(undefined, 'bold');
+          doc.setTextColor(200, 16, 46);
+          doc.text(text, margin, yPos);
+          yPos += lineHeight + 2;
+          doc.setFont(undefined, 'normal');
+          doc.setFontSize(10);
+          doc.setTextColor(0, 0, 0);
+        };
+        
+        // Hilfsfunktion für Datenzeilen
+        const addDataRow = (label, value) => {
+          checkPageBreak();
+          doc.setFont(undefined, 'bold');
+          doc.text(label + ':', margin, yPos);
+          doc.setFont(undefined, 'normal');
+          const labelWidth = doc.getTextWidth(label + ': ');
+          const maxWidth = 170 - labelWidth;
+          const lines = doc.splitTextToSize(value || '-', maxWidth);
+          doc.text(lines, margin + labelWidth, yPos);
+          yPos += lineHeight * lines.length;
+        };
+        
+        // Header
+        doc.setFontSize(16);
+        doc.setFont(undefined, 'bold');
+        doc.setTextColor(200, 16, 46);
+        
+        if (window.currentViewedDocType === 'patient') {
+          // PATIENTENDOKUMENTATION PDF
+          const p = window.currentViewedPayload;
+          const admin = window.currentViewedAdmin;
+          
+          const patName = `${p.vorname || ''} ${p.name || ''}`.trim() || 'Unbekannt';
+          doc.text('Patientendokumentation', margin, yPos);
+          yPos += 10;
+          
+          doc.setFontSize(12);
+          doc.text(patName, margin, yPos);
+          yPos += 10;
+          
+          doc.setFontSize(10);
+          doc.setFont(undefined, 'normal');
+          doc.setTextColor(0, 0, 0);
+          
+          // EINSATZDATEN
+          addHeading('Einsatzdaten');
+          addDataRow('Einsatz-Nr', p.einsatz_nr);
+          addDataRow('Pat./Auftrags-Nr', p.auftrags_nr);
+          addDataRow('Rufname', p.rufname);
+          addDataRow('Fahrzeug', p.fahrzeug);
+          addDataRow('Datum/Uhrzeit', p.zeit_einsatz ? new Date(p.zeit_einsatz).toLocaleString('de-DE') : '-');
+          addDataRow('Einsatz-Art', p.einsatz_art);
+          yPos += 3;
+          
+          // PATIENTENDATEN
+          addHeading('Patientendaten');
+          addDataRow('Name', p.name);
+          addDataRow('Vorname', p.vorname);
+          addDataRow('Geburtsdatum', p.gebdatum ? new Date(p.gebdatum).toLocaleDateString('de-DE') : '-');
+          addDataRow('Alter', p.alter);
+          addDataRow('Telefon', p.telefon);
+          addDataRow('Mobil', p.mobil);
+          addDataRow('Straße', p.strasse);
+          addDataRow('PLZ, Ort', p.plz_ort);
+          addDataRow('Kasse/Nr', p.kasse);
+          addDataRow('Vers.-Nr', p.versnr);
+          addDataRow('Hausarzt/Tel', p.hausarzt);
+          addDataRow('Angehöriger/Tel', p.angehoeriger);
+          addDataRow('Informationen', p.infos);
+          yPos += 3;
+          
+          // NOTFALLGESCHEHEN
+          addHeading('Notfallgeschehen / Anamnese');
+          addDataRow('Anamnese', p.notfallgeschehen);
+          yPos += 3;
+          
+          // NEUROLOGIE
+          if (p.neu_zeit || p.neu_unauff || p.pw_r || p.pw_l) {
+            addHeading('Neurologie');
+            addDataRow('Zeitpunkt', p.neu_zeit ? new Date(p.neu_zeit).toLocaleString('de-DE') : '-');
+            addDataRow('Ohne path. Befund', p.neu_unauff ? 'Ja' : 'Nein');
+            addDataRow('Pupillenweite rechts', (p.pw_r || '-') + (p.pw_r_entrundet ? ' (entrundet)' : ''));
+            addDataRow('Lichtreaktion rechts', p.lr_r);
+            addDataRow('Pupillenweite links', (p.pw_l || '-') + (p.pw_l_entrundet ? ' (entrundet)' : ''));
+            addDataRow('Lichtreaktion links', p.lr_l);
+            yPos += 3;
+          }
+          
+          // GCS
+          if (p.gcs_e || p.gcs_v || p.gcs_m) {
+            const gcsSum = (parseInt(p.gcs_e || 0) + parseInt(p.gcs_v || 0) + parseInt(p.gcs_m || 0)) || '-';
+            addHeading('Glasgow Coma Scale');
+            addDataRow('GCS', `E${p.gcs_e || '-'} V${p.gcs_v || '-'} M${p.gcs_m || '-'} = ${gcsSum}`);
+            yPos += 3;
+          }
+          
+          // HAUT
+          if (p.haut_unauff || p.haut_falten || p.haut_oedeme || p.haut_dekubitus || p.haut_kaltschweissig || p.haut_exanthem) {
+            let hautBefunde = [];
+            if (p.haut_unauff) hautBefunde.push('unauffällig');
+            if (p.haut_falten) hautBefunde.push('stehende Hautfalten');
+            if (p.haut_oedeme) hautBefunde.push('Ödeme');
+            if (p.haut_dekubitus) hautBefunde.push('Dekubitus');
+            if (p.haut_kaltschweissig) hautBefunde.push('kaltschweißig');
+            if (p.haut_exanthem) hautBefunde.push('Exanthem');
+            addHeading('Haut');
+            addDataRow('Befunde', hautBefunde.join(', '));
+            yPos += 3;
+          }
+          
+          // PSYCHE
+          if (p.psy_erregt || p.psy_aggr || p.psy_verlangsamt || p.psy_depressiv || p.psy_aengstlich || p.psy_euphorisch || p.psy_wahnhaft || p.psy_verwirrt || p.psy_suizidal || p.psy_motor_unruhig) {
+            let psycheBefunde = [];
+            if (p.psy_erregt) psycheBefunde.push('erregt');
+            if (p.psy_aggr) psycheBefunde.push('aggressiv');
+            if (p.psy_verlangsamt) psycheBefunde.push('verlangsamt');
+            if (p.psy_depressiv) psycheBefunde.push('depressiv');
+            if (p.psy_aengstlich) psycheBefunde.push('ängstlich');
+            if (p.psy_euphorisch) psycheBefunde.push('euphorisch');
+            if (p.psy_wahnhaft) psycheBefunde.push('wahnhaft');
+            if (p.psy_verwirrt) psycheBefunde.push('verwirrt');
+            if (p.psy_suizidal) psycheBefunde.push('suizidal');
+            if (p.psy_motor_unruhig) psycheBefunde.push('motorisch unruhig');
+            addHeading('Psyche');
+            addDataRow('Befunde', psycheBefunde.join(', '));
+            yPos += 3;
+          }
+          
+          // VITALPARAMETER
+          addHeading('Vitalparameter');
+          addDataRow('RR', `${p.rr_sys || '-'}/${p.rr_dia || '-'} mmHg`);
+          addDataRow('HF', `${p.hf || '-'} /min`);
+          addDataRow('AF', `${p.af || '-'} /min`);
+          addDataRow('SpO₂', `${p.spo2 || '-'} %`);
+          addDataRow('etCO₂', `${p.etco2 || '-'} mmHg`);
+          addDataRow('Temperatur', `${p.temp || '-'} °C`);
+          addDataRow('BZ', `${p.bz_mg || '-'} mg/dl (${p.bz_mmol || '-'} mmol/l)`);
+          addDataRow('Schmerz', `${p.schmerz || '-'} /10`);
+          const qsofa = calculateQSOFA(p);
+          if (qsofa !== '—') {
+            addDataRow('qSOFA-Score', qsofa.toString());
+          }
+          yPos += 3;
+          
+          // ATMUNG
+          if (p.atm_apnoe || p.atm_stridor || p.atm_hypervent || p.atm_dyspnoe || p.atm_beatmung || p.atm_zyanose || p.atm_verlegung || p.atm_sonst) {
+            let atmungBefunde = [];
+            if (p.atm_apnoe) atmungBefunde.push('Apnoe');
+            if (p.atm_stridor) atmungBefunde.push('Stridor');
+            if (p.atm_hypervent) atmungBefunde.push('Hyperventilation');
+            if (p.atm_dyspnoe) atmungBefunde.push('Dyspnoe');
+            if (p.atm_beatmung) atmungBefunde.push('Beatmung');
+            if (p.atm_zyanose) atmungBefunde.push('Zyanose');
+            if (p.atm_verlegung) atmungBefunde.push('Atemwegsverlegung');
+            addHeading('Atmung');
+            addDataRow('Klinische Zeichen', atmungBefunde.join(', '));
+            if (p.atm_sonst) addDataRow('Sonstiges', p.atm_sonst);
+            yPos += 3;
+          }
+          
+          // O2-GABE
+          if (p.o2 || p.o2_flow) {
+            let o2Text = p.o2 || '-';
+            if (p.o2_nasal) o2Text += ', Nasensonde';
+            if (p.o2_maske) o2Text += ', Maske';
+            if (p.o2_reservoir) o2Text += ', Maske m. Reservoir';
+            if (p.o2_flow) o2Text += `, ${p.o2_flow} l/min`;
+            if (p.o2_comment) o2Text += ` (${p.o2_comment})`;
+            addDataRow('O₂-Gabe', o2Text);
+            yPos += 3;
+          }
+          
+          // EKG/RHYTHMUS
+          if (p.sr || p.stemi || p.arrh_abs || p.vf || p.av3 || p.asystole || p.ekg_standort || p.ekg_persnr) {
+            let ekgBefunde = [];
+            if (p.sr) ekgBefunde.push('Sinusrhythmus');
+            if (p.stemi) ekgBefunde.push('STEMI');
+            if (p.arrh_abs) ekgBefunde.push('absolute Arrhythmie');
+            if (p.vf) ekgBefunde.push('Kammerflimmern');
+            if (p.av3) ekgBefunde.push('AV-Block III°');
+            if (p.asystole) ekgBefunde.push('Asystolie');
+            addHeading('EKG / Rhythmus');
+            addDataRow('Befunde', ekgBefunde.join(', '));
+            if (p.ekg_standort) addDataRow('EKG-Standort', p.ekg_standort);
+            if (p.ekg_persnr) addDataRow('Pers-Nr', p.ekg_persnr);
+            yPos += 3;
+          }
+          
+          // VERLETZUNGEN
+          if (p.verletz_text) {
+            addHeading('Verletzungen');
+            addDataRow('Beschreibung', p.verletz_text);
+            yPos += 3;
+          }
+          
+          // DIAGNOSEN
+          if (p.diag_krampf || p.diag_synkope || p.diag_apoplex || p.diag_sht || p.diag_acs || p.diag_insuff || p.diag_lungenoedem || p.diag_luembol || p.diag_resp_insuff || p.diag_pneumothorax || p.diag_asthma || p.diag_hypo || p.diag_sept || p.diag_hypovol) {
+            let diagnosen = [];
+            if (p.diag_krampf) diagnosen.push('Konvulsionen');
+            if (p.diag_synkope) diagnosen.push('Synkope');
+            if (p.diag_apoplex) diagnosen.push('Apoplex');
+            if (p.diag_sht) diagnosen.push('SHT');
+            if (p.diag_acs) diagnosen.push('ACS');
+            if (p.diag_insuff) diagnosen.push('Herzinsuffizienz');
+            if (p.diag_lungenoedem) diagnosen.push('Lungenödem');
+            if (p.diag_luembol) diagnosen.push('Lungenembolie');
+            if (p.diag_resp_insuff) diagnosen.push('resp. Insuffizienz');
+            if (p.diag_pneumothorax) diagnosen.push('Pneumothorax');
+            if (p.diag_asthma) diagnosen.push('Asthma/COPD');
+            if (p.diag_hypo) diagnosen.push('Hypoglykämie');
+            if (p.diag_sept) diagnosen.push('septischer Schock');
+            if (p.diag_hypovol) diagnosen.push('hypovolämischer Schock');
+            addHeading('Erstdiagnosen');
+            addDataRow('Diagnosen', diagnosen.join(', '));
+            yPos += 3;
+          }
+          
+          // BEWUSSTSEIN/AZ/VERSORGUNG
+          if (p.bew_wach || p.bew_ansprache || p.bew_schmerz || p.bew_bewusstlos || p.az || p.versorgung) {
+            addHeading('Bewusstsein / AZ / Versorgung');
+            let bewusstsein = [];
+            if (p.bew_wach) bewusstsein.push('wach');
+            if (p.bew_ansprache) bewusstsein.push('Reaktion auf Ansprache');
+            if (p.bew_schmerz) bewusstsein.push('Reaktion auf Schmerzreiz');
+            if (p.bew_bewusstlos) bewusstsein.push('bewusstlos');
+            if (bewusstsein.length > 0) addDataRow('Bewusstseinslage', bewusstsein.join(', '));
+            if (p.az) addDataRow('Allgemeinzustand', p.az);
+            if (p.versorgung) addDataRow('Versorgungssituation', p.versorgung);
+            yPos += 3;
+          }
+          
+          // ZUGANG/INFUSION
+          if (p.zugang_art || p.inf_art) {
+            addHeading('Zugang & Infusion');
+            if (p.zugang_art) {
+              let zugangText = p.zugang_art;
+              if (p.zugang_region) zugangText += ', ' + p.zugang_region;
+              if (p.zugang_gauge) zugangText += ', ' + p.zugang_gauge + 'G';
+              if (p.zugang_versuche) zugangText += ', ' + p.zugang_versuche + ' Versuche';
+              if (p.zugang_zeit) zugangText += ', ' + new Date(p.zugang_zeit).toLocaleString('de-DE');
+              addDataRow('Zugang', zugangText);
+            }
+            if (p.inf_art) {
+              let infText = p.inf_art;
+              if (p.inf_menge) infText += ', ' + p.inf_menge + ' ml';
+              if (p.inf_rate) infText += ', ' + p.inf_rate + ' ml/h';
+              if (p.inf_bem) infText += ' (' + p.inf_bem + ')';
+              addDataRow('Infusion', infText);
+            }
+            yPos += 3;
+          }
+          
+          // MEDIKATION
+          if (p.medications && p.medications.length > 0) {
+            addHeading('Medikation');
+            p.medications.forEach((med, idx) => {
+              const medText = `${med.name} ${med.dose} ${med.unit} (${med.route}) um ${med.time}${med.note ? ' - ' + med.note : ''}`;
+              addDataRow(`Med ${idx + 1}`, medText);
+            });
+            yPos += 3;
+          }
+          
+          // BEATMUNG/ATEMWEG
+          if (p.aw_guedel || p.aw_larynxtubus || p.aw_ett || p.aw_bvm || p.aw_ett_size || p.vent_peep || p.vent_fio2) {
+            let atemweg = [];
+            if (p.aw_guedel) atemweg.push('Guedel');
+            if (p.aw_larynxtubus) atemweg.push('Larynxtubus');
+            if (p.aw_ett) atemweg.push('ETT');
+            if (p.aw_bvm) atemweg.push('BVM');
+            addHeading('Beatmung / Atemweg');
+            addDataRow('Atemweg', atemweg.join(', '));
+            if (p.aw_ett_size) addDataRow('ETT-Größe', p.aw_ett_size);
+            if (p.vent_peep) addDataRow('PEEP', p.vent_peep + ' cmH₂O');
+            if (p.vent_fio2) addDataRow('FiO₂', p.vent_fio2 + ' %');
+            yPos += 3;
+          }
+          
+          // REANIMATION
+          if (p.rea_beginn || p.rea_initial || p.rea_shocks || p.rea_rosc || p.rea_ende) {
+            addHeading('Reanimation');
+            if (p.rea_beginn) addDataRow('Rea-Beginn', new Date(p.rea_beginn).toLocaleString('de-DE'));
+            if (p.rea_initial) addDataRow('Erst-Rhythmus', p.rea_initial);
+            if (p.rea_shocks) addDataRow('Schocks', p.rea_shocks);
+            if (p.rea_rosc) addDataRow('ROSC', p.rea_rosc);
+            if (p.rea_ende) addDataRow('Rea-Ende', p.rea_ende);
+            yPos += 3;
+          }
+          
+          // ÜBERGABE/TRANSPORT
+          addHeading('Übergabe / Transport');
+          addDataRow('Übergabe an', p.ue_name);
+          addDataRow('Übergabe Zeit', p.ue_zeit ? new Date(p.ue_zeit).toLocaleString('de-DE') : '-');
+          addDataRow('Ziel', p.ziel_bez);
+          addDataRow('Ziel-Adresse', p.ziel_adr);
+          addDataRow('Einsatzende', p.einsatzende ? new Date(p.einsatzende).toLocaleString('de-DE') : '-');
+          yPos += 3;
+          
+          // AUSFÜLLER
+          addHeading('Ausfüller');
+          addDataRow('Ausfüller', p.ausfueller_name);
+          addDataRow('Zeitpunkt', p.ausfueller_zeit ? new Date(p.ausfueller_zeit).toLocaleString('de-DE') : '-');
+          yPos += 3;
+          
+          // MPG-BEAUFTRAGTER
+          addHeading('MPG-Beauftragter / Verantwortlicher');
+          addDataRow('Name', admin.name);
+          addDataRow('Gegengezeichnet am', admin.datum ? new Date(admin.datum).toLocaleString('de-DE') : '-');
+          
+        } else if (window.currentViewedDocType === 'nacherfassung') {
+          // NACHERFASSUNG PDF
+          const n = window.currentViewedNachData;
+          
+          doc.text('Einsatznacherfassung', margin, yPos);
+          yPos += 10;
+          
+          doc.setFontSize(12);
+          doc.text(n.stichwort || 'Ohne Stichwort', margin, yPos);
+          yPos += 10;
+          
+          doc.setFontSize(10);
+          doc.setFont(undefined, 'normal');
+          doc.setTextColor(0, 0, 0);
+          
+          addHeading('Einsatzdaten');
+          addDataRow('Alarmzeit', n.datum_alarmzeit ? new Date(n.datum_alarmzeit).toLocaleString('de-DE') : '-');
+          addDataRow('Einsatzende', n.datum_einsatzende ? new Date(n.datum_einsatzende).toLocaleString('de-DE') : '-');
+          addDataRow('Stichwort', n.stichwort);
+          addDataRow('Kategorie', n.kategorie);
+          addDataRow('Einsatznummer ILS', n.einsatznummer_ils);
+          addDataRow('Meldebild', n.meldebild);
+          addDataRow('Adresse', n.adresse);
+          addDataRow('Disponierte EM (FW)', n.disponierte_em_fw);
+          addDataRow('Disponierte EM (RD)', n.disponierte_em_rd);
+          yPos += 3;
+          
+          addHeading('Patienten-Daten');
+          addDataRow('Daten erhoben', n.patienten_daten_erhoben ? 'Ja' : 'Nein');
+          if (n.patienten_daten_erhoben) {
+            addDataRow('Patient Name', n.patient_name);
+            addDataRow('Alter/Geburtsdatum', n.patient_alter_geburtsdatum);
+            addDataRow('Pat.-Nummer ILS', n.patient_nummer_ils);
+          }
+          addDataRow('Sachverhalt', n.sachverhalt);
+          yPos += 3;
+          
+          addHeading('Protokollpflicht');
+          addDataRow('Protokollpflichtig', n.protokollpflichtig ? 'Ja' : 'Nein');
+          if (n.protokollpflichtig) {
+            addDataRow('Begründung', n.protokollpflichtig_begruendung);
+          }
+          addDataRow('Verantwortlicher unterwiesen', n.verantwortlicher_unterwiesen ? 'Ja' : 'Nein');
+          yPos += 3;
+          
+          addHeading('Verantwortlicher');
+          addDataRow('Name', n.verantwortlicher_name);
+          addDataRow('Qualifikation', n.verantwortlicher_qualifikation);
+          yPos += 3;
+          
+          addHeading('Nacherfassung');
+          addDataRow('Nacherfasst von', n.nacherfasst_von_name + ' (' + (n.nacherfasst_von_qualifikation || '-') + ')');
+          addDataRow('Nacherfasst am', n.nacherfasst_datum ? new Date(n.nacherfasst_datum).toLocaleString('de-DE') : '-');
+        }
+        
+        // PDF speichern
+        const filename = window.currentViewedDocType === 'patient' 
+          ? `Patientendoku_${window.currentViewedPayload.einsatz_nr || 'unbekannt'}_${new Date().toISOString().split('T')[0]}.pdf`
+          : `Nacherfassung_${window.currentViewedNachData.stichwort || 'unbekannt'}_${new Date().toISOString().split('T')[0]}.pdf`;
+        
+        doc.save(filename);
+        showMsg('✅ PDF erstellt!', 'success');
+        
+      } catch(e) {
+        console.error('PDF Error:', e);
+        showMsg('Fehler bei PDF-Erstellung: ' + e.message, 'error');
+      }
     };
 
     function showMsg(text, type = 'success') {
