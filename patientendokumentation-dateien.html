@@ -133,10 +133,6 @@
     .msg.error{background:#fee;color:#c00;border:1px solid #fcc}
     .msg.success{background:#efe;color:#060;border:1px solid #cfc}
     
-    .details-grid{display:grid;grid-template-columns:200px 1fr;gap:12px 20px;margin:16px 0}
-    .details-label{font-weight:700;color:#6b7280}
-    .details-value{color:#111827;word-break:break-word}
-    
     .signature-img{max-width:400px;max-height:200px;border:1px solid #d1d5db;border-radius:6px;margin-top:8px}
     
     .photo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-top:10px}
@@ -146,8 +142,6 @@
       .table-head,.row{grid-template-columns:1fr !important;gap:8px}
       .modal-box{padding:16px}
       .form-grid{grid-template-columns:1fr}
-      .details-grid{grid-template-columns:1fr;gap:4px}
-      .details-label{font-size:0.85rem}
       .add-btn{bottom:20px;right:20px;width:56px;height:56px;font-size:1.3rem}
       .grid{grid-template-columns:1fr}
       h1{font-size:.95rem}
@@ -186,15 +180,23 @@
       
       <!-- TABS -->
       <div class="tabs">
-        <button class="tab active" data-tab="pat"><i class="fa-solid fa-file-medical"></i> Patientendokus (Offen)</button>
-        <button class="tab" data-tab="nach"><i class="fa-solid fa-clipboard-list"></i> Nacherfassungen (Offen)</button>
-        <button class="tab" data-tab="archiv"><i class="fa-solid fa-box-archive"></i> Archiv</button>
+        <button class="tab active" data-tab="pat">
+          <i class="fa-solid fa-file-medical"></i> Patientendokus (Offen)
+        </button>
+        <button class="tab" data-tab="nach">
+          <i class="fa-solid fa-clipboard-list"></i> Nacherfassungen (Offen)
+        </button>
+        <button class="tab" data-tab="archiv">
+          <i class="fa-solid fa-box-archive"></i> Archiv
+        </button>
       </div>
 
       <!-- TAB: PATIENTENDOKUS (OFFEN) -->
       <div id="tab-pat" class="tab-content">
         <div class="table-head">
-          <div>Status</div><div>Dokument</div><div>Aktionen</div>
+          <div>Status</div>
+          <div>Dokument</div>
+          <div>Aktionen</div>
         </div>
         <div id="pat-rows"></div>
       </div>
@@ -202,7 +204,9 @@
       <!-- TAB: NACHERFASSUNGEN (OFFEN) -->
       <div id="tab-nach" class="tab-content" style="display:none">
         <div class="table-head">
-          <div>Status</div><div>Nacherfassung</div><div>Aktionen</div>
+          <div>Status</div>
+          <div>Nacherfassung</div>
+          <div>Aktionen</div>
         </div>
         <div id="nach-rows"></div>
       </div>
@@ -210,7 +214,9 @@
       <!-- TAB: ARCHIV -->
       <div id="tab-archiv" class="tab-content" style="display:none">
         <div class="table-head">
-          <div>Typ</div><div>Dokument</div><div>Aktionen</div>
+          <div>Typ</div>
+          <div>Dokument</div>
+          <div>Aktionen</div>
         </div>
         <div id="archiv-rows"></div>
       </div>
@@ -232,8 +238,12 @@
       <h3><i class="fa-solid fa-edit"></i> Patientendokumentation bearbeiten</h3>
       <div id="editFormContainer"></div>
       <div style="display:flex;gap:10px;margin-top:20px;justify-content:flex-end;position:sticky;bottom:0;background:#fff;padding-top:16px;border-top:2px solid var(--border)">
-        <button class="btn btn-secondary" onclick="closeEditModal()"><i class="fa-solid fa-times"></i> Abbrechen</button>
-        <button class="btn" onclick="saveAndSignPatDoc()"><i class="fa-solid fa-save"></i> Speichern & Gegenzeichnen</button>
+        <button class="btn btn-secondary" onclick="closeEditModal()">
+          <i class="fa-solid fa-times"></i> Abbrechen
+        </button>
+        <button class="btn" onclick="saveAndSignPatDoc()">
+          <i class="fa-solid fa-save"></i> Speichern & Gegenzeichnen
+        </button>
       </div>
     </div>
   </div>
@@ -252,12 +262,16 @@
         <label style="font-weight:700;margin-bottom:8px;display:block">Unterschrift:</label>
         <canvas id="adminSigCanvas" class="sig-canvas"></canvas>
         <div class="sig-actions">
-          <button class="btn btn-secondary" onclick="clearAdminSig()"><i class="fa-solid fa-eraser"></i> Löschen</button>
+          <button class="btn btn-secondary" onclick="clearAdminSig()">
+            <i class="fa-solid fa-eraser"></i> Löschen
+          </button>
         </div>
       </div>
       <div style="display:flex;gap:10px;margin-top:20px;justify-content:flex-end">
         <button class="btn btn-secondary" onclick="closeSignModal()">Abbrechen</button>
-        <button class="btn" onclick="archiveWithSignature()"><i class="fa-solid fa-check"></i> Unterschreiben & Archivieren</button>
+        <button class="btn" onclick="archiveWithSignature()">
+          <i class="fa-solid fa-check"></i> Unterschreiben & Archivieren
+        </button>
       </div>
     </div>
   </div>
@@ -383,13 +397,17 @@
           <label style="font-weight:700;margin-bottom:8px;display:block">Unterschrift:</label>
           <canvas id="nachSigCanvas" class="sig-canvas"></canvas>
           <div class="sig-actions">
-            <button type="button" class="btn btn-secondary" onclick="clearNachSig()"><i class="fa-solid fa-eraser"></i> Löschen</button>
+            <button type="button" class="btn btn-secondary" onclick="clearNachSig()">
+              <i class="fa-solid fa-eraser"></i> Löschen
+            </button>
           </div>
         </div>
       </form>
       <div style="display:flex;gap:10px;margin-top:20px;justify-content:flex-end">
         <button class="btn btn-secondary" onclick="closeNachModal()">Abbrechen</button>
-        <button class="btn" onclick="saveNacherfassung()"><i class="fa-solid fa-save"></i> Speichern</button>
+        <button class="btn" onclick="saveNacherfassung()">
+          <i class="fa-solid fa-save"></i> Speichern
+        </button>
       </div>
     </div>
   </div>
@@ -472,7 +490,10 @@
       const msgDiv = document.getElementById('msg');
       msgDiv.textContent = text;
       msgDiv.className = 'msg ' + type;
-      setTimeout(() => { msgDiv.textContent = ''; msgDiv.className = 'msg'; }, 5000);
+      setTimeout(() => { 
+        msgDiv.textContent = ''; 
+        msgDiv.className = 'msg'; 
+      }, 5000);
     }
 
     function calculateGCS(p) {
@@ -514,7 +535,10 @@
             <div><span class="pill offen">${doc.status}</span></div>
             <div>
               <strong>${doc.title || patName}</strong><br>
-              <small style="color:#6b7280">${payload.einsatz_nr ? 'Einsatz-Nr: ' + payload.einsatz_nr + ' · ' : ''}${new Date(doc.created).toLocaleString('de-DE')}</small>
+              <small style="color:#6b7280">
+                ${payload.einsatz_nr ? 'Einsatz-Nr: ' + payload.einsatz_nr + ' · ' : ''}
+                ${new Date(doc.created).toLocaleString('de-DE')}
+              </small>
             </div>
             <div style="display:flex;gap:8px;flex-wrap:wrap">
               <button class="btn btn-icon" onclick="editPatDoc('${doc.id}')">
@@ -537,7 +561,10 @@
             <div><span class="pill offen">${doc.status}</span></div>
             <div>
               <strong>${doc.stichwort || 'Ohne Stichwort'}</strong><br>
-              <small style="color:#6b7280">von ${doc.nacherfasst_von_name || '?'} · ${new Date(doc.created).toLocaleString('de-DE')}</small>
+              <small style="color:#6b7280">
+                von ${doc.nacherfasst_von_name || '?'} · 
+                ${new Date(doc.created).toLocaleString('de-DE')}
+              </small>
             </div>
             <div style="display:flex;gap:8px;flex-wrap:wrap">
               <button class="btn btn-icon" onclick="viewNach('${doc.id}')">
@@ -573,7 +600,11 @@
               <div><span class="pill archiviert">Patientendoku</span></div>
               <div>
                 <strong>${patName}</strong><br>
-                <small style="color:#6b7280">${payload.einsatz_nr ? 'Einsatz-Nr: ' + payload.einsatz_nr + ' · ' : ''}MPG-Verantwortlicher: ${doc.admin_name || '?'} · ${doc.admin_datum ? new Date(doc.admin_datum).toLocaleString('de-DE') : ''}</small>
+                <small style="color:#6b7280">
+                  ${payload.einsatz_nr ? 'Einsatz-Nr: ' + payload.einsatz_nr + ' · ' : ''}
+                  MPG-Verantwortlicher: ${doc.admin_name || '?'} · 
+                  ${doc.admin_datum ? new Date(doc.admin_datum).toLocaleString('de-DE') : ''}
+                </small>
               </div>
               <div style="display:flex;gap:8px;flex-wrap:wrap">
                 <button class="btn btn-icon" onclick="viewPatArchiv('${doc.id}')">
@@ -636,8 +667,11 @@
     // SECTION: BUILD EDIT FORM HTML
     // ========================================
     function buildEditForm(payload) {
-      const v = (key, fallback = '') => payload[key] !== undefined && payload[key] !== null ? payload[key] : fallback;
+      const v = (key, fallback = '') => 
+        payload[key] !== undefined && payload[key] !== null ? payload[key] : fallback;
+      
       const checked = (key) => payload[key] ? 'checked' : '';
+      
       const radioChecked = (key, value) => payload[key] === value ? 'checked' : '';
       
       // Build medication rows
@@ -645,7 +679,32 @@
       let medRowsHTML = '';
       medications.forEach((med, idx) => {
         const i = idx + 1;
-        medRowsHTML += `<tr><td>${i}</td><td><input type="text" name="med_name_${i}" value="${med.name || ''}" style="width:100%;padding:.3rem;font-size:14px"></td><td><input type="number" name="med_dose_${i}" value="${med.dose || ''}" step="0.1" style="width:80px;padding:.3rem;font-size:14px"></td><td><input type="text" name="med_unit_${i}" value="${med.unit || ''}" placeholder="mg" style="width:60px;padding:.3rem;font-size:14px"></td><td><select name="med_route_${i}" style="padding:.3rem;font-size:14px"><option value="">-</option><option value="i.v." ${med.route === 'i.v.' ? 'selected' : ''}>i.v.</option><option value="i.m." ${med.route === 'i.m.' ? 'selected' : ''}>i.m.</option><option value="s.c." ${med.route === 's.c.' ? 'selected' : ''}>s.c.</option><option value="p.o." ${med.route === 'p.o.' ? 'selected' : ''}>p.o.</option><option value="inhal." ${med.route === 'inhal.' ? 'selected' : ''}>inhal.</option></select></td><td><input type="time" name="med_time_${i}" value="${med.time || ''}" style="width:90px;padding:.3rem;font-size:14px"></td><td><input type="text" name="med_note_${i}" value="${med.note || ''}" style="width:100%;padding:.3rem;font-size:14px"></td><td><button class="subbtn" type="button" onclick="this.closest('tr').remove()">×</button></td></tr>`;
+        medRowsHTML += `
+          <tr>
+            <td>${i}</td>
+            <td><input type="text" name="med_name_${i}" value="${med.name || ''}" 
+                style="width:100%;padding:.3rem;font-size:14px"></td>
+            <td><input type="number" name="med_dose_${i}" value="${med.dose || ''}" step="0.1" 
+                style="width:80px;padding:.3rem;font-size:14px"></td>
+            <td><input type="text" name="med_unit_${i}" value="${med.unit || ''}" placeholder="mg" 
+                style="width:60px;padding:.3rem;font-size:14px"></td>
+            <td>
+              <select name="med_route_${i}" style="padding:.3rem;font-size:14px">
+                <option value="">-</option>
+                <option value="i.v." ${med.route === 'i.v.' ? 'selected' : ''}>i.v.</option>
+                <option value="i.m." ${med.route === 'i.m.' ? 'selected' : ''}>i.m.</option>
+                <option value="s.c." ${med.route === 's.c.' ? 'selected' : ''}>s.c.</option>
+                <option value="p.o." ${med.route === 'p.o.' ? 'selected' : ''}>p.o.</option>
+                <option value="inhal." ${med.route === 'inhal.' ? 'selected' : ''}>inhal.</option>
+              </select>
+            </td>
+            <td><input type="time" name="med_time_${i}" value="${med.time || ''}" 
+                style="width:90px;padding:.3rem;font-size:14px"></td>
+            <td><input type="text" name="med_note_${i}" value="${med.note || ''}" 
+                style="width:100%;padding:.3rem;font-size:14px"></td>
+            <td><button class="subbtn" type="button" onclick="this.closest('tr').remove()">×</button></td>
+          </tr>
+        `;
       });
       
       // Build photos display
@@ -654,46 +713,625 @@
       if (photos.length > 0) {
         photosHTML = '<div class="thumbs">';
         photos.forEach((photo, idx) => {
-          photosHTML += `<div class="thumb"><img src="${photo}" alt="Foto ${idx+1}"></div>`;
+          photosHTML += `
+            <div class="thumb">
+              <img src="${photo}" alt="Foto ${idx+1}">
+            </div>
+          `;
         });
         photosHTML += '</div>';
       }
       
       // Return complete form HTML
       return `
-<details open><summary><i class="fa-solid fa-truck-medical"></i> Einsatzdaten</summary><div class="sec-body"><div class="grid"><label>Einsatz-Nr.<input name="einsatz_nr" type="text" value="${v('einsatz_nr')}"></label><label>Pat./Auftrags-Nr.<input name="auftrags_nr" type="text" value="${v('auftrags_nr')}"></label><label>Rufname<input name="rufname" type="text" value="${v('rufname')}"></label><label>Fahrzeug<input name="fahrzeug" type="text" value="${v('fahrzeug')}"></label><label>Datum/Uhrzeit<input name="zeit_einsatz" type="datetime-local" value="${v('zeit_einsatz')}"></label></div><label>Einsatz-Art<input name="einsatz_art" type="text" value="${v('einsatz_art')}"></label></div></details>
+<details open>
+  <summary><i class="fa-solid fa-truck-medical"></i> Einsatzdaten</summary>
+  <div class="sec-body">
+    <div class="grid">
+      <label>Einsatz-Nr.<input name="einsatz_nr" type="text" value="${v('einsatz_nr')}"></label>
+      <label>Pat./Auftrags-Nr.<input name="auftrags_nr" type="text" value="${v('auftrags_nr')}"></label>
+      <label>Rufname<input name="rufname" type="text" value="${v('rufname')}"></label>
+      <label>Fahrzeug<input name="fahrzeug" type="text" value="${v('fahrzeug')}"></label>
+      <label>Datum/Uhrzeit<input name="zeit_einsatz" type="datetime-local" value="${v('zeit_einsatz')}"></label>
+    </div>
+    <label>Einsatz-Art<input name="einsatz_art" type="text" value="${v('einsatz_art')}"></label>
+  </div>
+</details>
 
-<details open><summary><i class="fa-solid fa-id-card-clip"></i> Pat-Stammdaten</summary><div class="sec-body"><div class="grid"><label>Name<input name="name" type="text" value="${v('name')}"></label><label>Vorname<input name="vorname" type="text" value="${v('vorname')}"></label><label>Geb.-Datum<input name="gebdatum" type="date" value="${v('gebdatum')}"></label><label>Alter<input name="alter" type="number" value="${v('alter')}"></label><label>Telefon<input name="telefon" type="text" value="${v('telefon')}"></label><label>Mobil<input name="mobil" type="text" value="${v('mobil')}"></label><label>Straße<input name="strasse" type="text" value="${v('strasse')}"></label><label>PLZ, Ort<input name="plz_ort" type="text" value="${v('plz_ort')}"></label><label>Kasse / Nr.<input name="kasse" type="text" value="${v('kasse')}"></label><label>Vers.-Nr.<input name="versnr" type="text" value="${v('versnr')}"></label><label>Hausarzt / Tel.<input name="hausarzt" type="text" value="${v('hausarzt')}"></label><label>Angehöriger / Tel.<input name="angehoeriger" type="text" value="${v('angehoeriger')}"></label></div><label>Informationen / Aspekte<textarea name="infos">${v('infos')}</textarea></label></div></details>
+<details open>
+  <summary><i class="fa-solid fa-id-card-clip"></i> Pat-Stammdaten</summary>
+  <div class="sec-body">
+    <div class="grid">
+      <label>Name<input name="name" type="text" value="${v('name')}"></label>
+      <label>Vorname<input name="vorname" type="text" value="${v('vorname')}"></label>
+      <label>Geb.-Datum<input name="gebdatum" type="date" value="${v('gebdatum')}"></label>
+      <label>Alter<input name="alter" type="number" value="${v('alter')}"></label>
+      <label>Telefon<input name="telefon" type="text" value="${v('telefon')}"></label>
+      <label>Mobil<input name="mobil" type="text" value="${v('mobil')}"></label>
+      <label>Straße<input name="strasse" type="text" value="${v('strasse')}"></label>
+      <label>PLZ, Ort<input name="plz_ort" type="text" value="${v('plz_ort')}"></label>
+      <label>Kasse / Nr.<input name="kasse" type="text" value="${v('kasse')}"></label>
+      <label>Vers.-Nr.<input name="versnr" type="text" value="${v('versnr')}"></label>
+      <label>Hausarzt / Tel.<input name="hausarzt" type="text" value="${v('hausarzt')}"></label>
+      <label>Angehöriger / Tel.<input name="angehoeriger" type="text" value="${v('angehoeriger')}"></label>
+    </div>
+    <label>Informationen / Aspekte<textarea name="infos">${v('infos')}</textarea></label>
+  </div>
+</details>
 
-<details open><summary><i class="fa-solid fa-notes-medical"></i> Notfallgeschehen / Anamnese</summary><div class="sec-body"><textarea name="notfallgeschehen">${v('notfallgeschehen')}</textarea>${photosHTML ? '<div style="margin-top:.75rem"><strong>Fotos:</strong>' + photosHTML + '</div>' : ''}</div></details>
+<details open>
+  <summary><i class="fa-solid fa-notes-medical"></i> Notfallgeschehen / Anamnese</summary>
+  <div class="sec-body">
+    <textarea name="notfallgeschehen">${v('notfallgeschehen')}</textarea>
+    ${photosHTML ? '<div style="margin-top:.75rem"><strong>Fotos:</strong>' + photosHTML + '</div>' : ''}
+  </div>
+</details>
 
-<details><summary><i class="fa-solid fa-brain"></i> Neurologie</summary><div class="sec-body"><div class="grid"><label>Zeitpunkt<input name="neu_zeit" type="datetime-local" value="${v('neu_zeit')}"></label><label class="pill-input"><input type="checkbox" name="neu_unauff" ${checked('neu_unauff')}> ohne path. Befund</label></div><div class="grid"><fieldset><legend>Pupillenweite – rechts</legend><div class="choice"><label class="pill-input"><input type="radio" name="pw_r" value="eng" ${radioChecked('pw_r','eng')}> eng</label><label class="pill-input"><input type="radio" name="pw_r" value="mittel" ${radioChecked('pw_r','mittel')}> mittel</label><label class="pill-input"><input type="radio" name="pw_r" value="weit" ${radioChecked('pw_r','weit')}> weit</label><label class="pill-input"><input type="checkbox" name="pw_r_entrundet" ${checked('pw_r_entrundet')}> entrundet</label></div><div class="choice" style="margin-top:.5rem"><span class="badge">Lichtreaktion</span><label class="pill-input"><input type="radio" name="lr_r" value="prompt" ${radioChecked('lr_r','prompt')}> prompt</label><label class="pill-input"><input type="radio" name="lr_r" value="träge" ${radioChecked('lr_r','träge')}> träge</label><label class="pill-input"><input type="radio" name="lr_r" value="keine" ${radioChecked('lr_r','keine')}> keine</label></div></fieldset><fieldset><legend>Pupillenweite – links</legend><div class="choice"><label class="pill-input"><input type="radio" name="pw_l" value="eng" ${radioChecked('pw_l','eng')}> eng</label><label class="pill-input"><input type="radio" name="pw_l" value="mittel" ${radioChecked('pw_l','mittel')}> mittel</label><label class="pill-input"><input type="radio" name="pw_l" value="weit" ${radioChecked('pw_l','weit')}> weit</label><label class="pill-input"><input type="checkbox" name="pw_l_entrundet" ${checked('pw_l_entrundet')}> entrundet</label></div><div class="choice" style="margin-top:.5rem"><span class="badge">Lichtreaktion</span><label class="pill-input"><input type="radio" name="lr_l" value="prompt" ${radioChecked('lr_l','prompt')}> prompt</label><label class="pill-input"><input type="radio" name="lr_l" value="träge" ${radioChecked('lr_l','träge')}> träge</label><label class="pill-input"><input type="radio" name="lr_l" value="keine" ${radioChecked('lr_l','keine')}> keine</label></div></fieldset></div></div></details>
+<details>
+  <summary><i class="fa-solid fa-brain"></i> Neurologie</summary>
+  <div class="sec-body">
+    <div class="grid">
+      <label>Zeitpunkt<input name="neu_zeit" type="datetime-local" value="${v('neu_zeit')}"></label>
+      <label class="pill-input">
+        <input type="checkbox" name="neu_unauff" ${checked('neu_unauff')}> ohne path. Befund
+      </label>
+    </div>
+    <div class="grid">
+      <fieldset>
+        <legend>Pupillenweite – rechts</legend>
+        <div class="choice">
+          <label class="pill-input">
+            <input type="radio" name="pw_r" value="eng" ${radioChecked('pw_r','eng')}> eng
+          </label>
+          <label class="pill-input">
+            <input type="radio" name="pw_r" value="mittel" ${radioChecked('pw_r','mittel')}> mittel
+          </label>
+          <label class="pill-input">
+            <input type="radio" name="pw_r" value="weit" ${radioChecked('pw_r','weit')}> weit
+          </label>
+          <label class="pill-input">
+            <input type="checkbox" name="pw_r_entrundet" ${checked('pw_r_entrundet')}> entrundet
+          </label>
+        </div>
+        <div class="choice" style="margin-top:.5rem">
+          <span class="badge">Lichtreaktion</span>
+          <label class="pill-input">
+            <input type="radio" name="lr_r" value="prompt" ${radioChecked('lr_r','prompt')}> prompt
+          </label>
+          <label class="pill-input">
+            <input type="radio" name="lr_r" value="träge" ${radioChecked('lr_r','träge')}> träge
+          </label>
+          <label class="pill-input">
+            <input type="radio" name="lr_r" value="keine" ${radioChecked('lr_r','keine')}> keine
+          </label>
+        </div>
+      </fieldset>
+      <fieldset>
+        <legend>Pupillenweite – links</legend>
+        <div class="choice">
+          <label class="pill-input">
+            <input type="radio" name="pw_l" value="eng" ${radioChecked('pw_l','eng')}> eng
+          </label>
+          <label class="pill-input">
+            <input type="radio" name="pw_l" value="mittel" ${radioChecked('pw_l','mittel')}> mittel
+          </label>
+          <label class="pill-input">
+            <input type="radio" name="pw_l" value="weit" ${radioChecked('pw_l','weit')}> weit
+          </label>
+          <label class="pill-input">
+            <input type="checkbox" name="pw_l_entrundet" ${checked('pw_l_entrundet')}> entrundet
+          </label>
+        </div>
+        <div class="choice" style="margin-top:.5rem">
+          <span class="badge">Lichtreaktion</span>
+          <label class="pill-input">
+            <input type="radio" name="lr_l" value="prompt" ${radioChecked('lr_l','prompt')}> prompt
+          </label>
+          <label class="pill-input">
+            <input type="radio" name="lr_l" value="träge" ${radioChecked('lr_l','träge')}> träge
+          </label>
+          <label class="pill-input">
+            <input type="radio" name="lr_l" value="keine" ${radioChecked('lr_l','keine')}> keine
+          </label>
+        </div>
+      </fieldset>
+    </div>
+  </div>
+</details>
 
-<details><summary><i class="fa-solid fa-eye"></i> Glasgow Coma Scale</summary><div class="sec-body"><fieldset><legend>Augenöffnung (E)</legend><div class="choice"><label class="pill-input"><input type="radio" name="gcs_e" value="4" ${radioChecked('gcs_e','4')}> spontan (4)</label><label class="pill-input"><input type="radio" name="gcs_e" value="3" ${radioChecked('gcs_e','3')}> auf Geräusch (3)</label><label class="pill-input"><input type="radio" name="gcs_e" value="2" ${radioChecked('gcs_e','2')}> auf Druck (2)</label><label class="pill-input"><input type="radio" name="gcs_e" value="1" ${radioChecked('gcs_e','1')}> keine (1)</label></div></fieldset><fieldset><legend>Verbale Antwort (V)</legend><div class="choice"><label class="pill-input"><input type="radio" name="gcs_v" value="5" ${radioChecked('gcs_v','5')}> orientiert (5)</label><label class="pill-input"><input type="radio" name="gcs_v" value="4" ${radioChecked('gcs_v','4')}> verwirrt (4)</label><label class="pill-input"><input type="radio" name="gcs_v" value="3" ${radioChecked('gcs_v','3')}> Wörter (3)</label><label class="pill-input"><input type="radio" name="gcs_v" value="2" ${radioChecked('gcs_v','2')}> Laute (2)</label><label class="pill-input"><input type="radio" name="gcs_v" value="1" ${radioChecked('gcs_v','1')}> keine (1)</label></div></fieldset><fieldset><legend>Motorische Antwort (M)</legend><div class="choice"><label class="pill-input"><input type="radio" name="gcs_m" value="6" ${radioChecked('gcs_m','6')}> folgt (6)</label><label class="pill-input"><input type="radio" name="gcs_m" value="5" ${radioChecked('gcs_m','5')}> lokalisiert (5)</label><label class="pill-input"><input type="radio" name="gcs_m" value="4" ${radioChecked('gcs_m','4')}> beugt normal (4)</label><label class="pill-input"><input type="radio" name="gcs_m" value="3" ${radioChecked('gcs_m','3')}> beugt abnormal (3)</label><label class="pill-input"><input type="radio" name="gcs_m" value="2" ${radioChecked('gcs_m','2')}> streckt (2)</label><label class="pill-input"><input type="radio" name="gcs_m" value="1" ${radioChecked('gcs_m','1')}> keine (1)</label></div></fieldset><div class="badge" style="margin-top:.5rem">GCS Summe: ${calculateGCS(payload)}</div></div></details>
+<details>
+  <summary><i class="fa-solid fa-eye"></i> Glasgow Coma Scale</summary>
+  <div class="sec-body">
+    <fieldset>
+      <legend>Augenöffnung (E)</legend>
+      <div class="choice">
+        <label class="pill-input">
+          <input type="radio" name="gcs_e" value="4" ${radioChecked('gcs_e','4')}> spontan (4)
+        </label>
+        <label class="pill-input">
+          <input type="radio" name="gcs_e" value="3" ${radioChecked('gcs_e','3')}> auf Geräusch (3)
+        </label>
+        <label class="pill-input">
+          <input type="radio" name="gcs_e" value="2" ${radioChecked('gcs_e','2')}> auf Druck (2)
+        </label>
+        <label class="pill-input">
+          <input type="radio" name="gcs_e" value="1" ${radioChecked('gcs_e','1')}> keine (1)
+        </label>
+      </div>
+    </fieldset>
+    <fieldset>
+      <legend>Verbale Antwort (V)</legend>
+      <div class="choice">
+        <label class="pill-input">
+          <input type="radio" name="gcs_v" value="5" ${radioChecked('gcs_v','5')}> orientiert (5)
+        </label>
+        <label class="pill-input">
+          <input type="radio" name="gcs_v" value="4" ${radioChecked('gcs_v','4')}> verwirrt (4)
+        </label>
+        <label class="pill-input">
+          <input type="radio" name="gcs_v" value="3" ${radioChecked('gcs_v','3')}> Wörter (3)
+        </label>
+        <label class="pill-input">
+          <input type="radio" name="gcs_v" value="2" ${radioChecked('gcs_v','2')}> Laute (2)
+        </label>
+        <label class="pill-input">
+          <input type="radio" name="gcs_v" value="1" ${radioChecked('gcs_v','1')}> keine (1)
+        </label>
+      </div>
+    </fieldset>
+    <fieldset>
+      <legend>Motorische Antwort (M)</legend>
+      <div class="choice">
+        <label class="pill-input">
+          <input type="radio" name="gcs_m" value="6" ${radioChecked('gcs_m','6')}> folgt (6)
+        </label>
+        <label class="pill-input">
+          <input type="radio" name="gcs_m" value="5" ${radioChecked('gcs_m','5')}> lokalisiert (5)
+        </label>
+        <label class="pill-input">
+          <input type="radio" name="gcs_m" value="4" ${radioChecked('gcs_m','4')}> beugt normal (4)
+        </label>
+        <label class="pill-input">
+          <input type="radio" name="gcs_m" value="3" ${radioChecked('gcs_m','3')}> beugt abnormal (3)
+        </label>
+        <label class="pill-input">
+          <input type="radio" name="gcs_m" value="2" ${radioChecked('gcs_m','2')}> streckt (2)
+        </label>
+        <label class="pill-input">
+          <input type="radio" name="gcs_m" value="1" ${radioChecked('gcs_m','1')}> keine (1)
+        </label>
+      </div>
+    </fieldset>
+    <div class="badge" style="margin-top:.5rem">GCS Summe: ${calculateGCS(payload)}</div>
+  </div>
+</details>
 
-<details><summary><i class="fa-regular fa-hand"></i> Haut</summary><div class="sec-body"><div class="choice"><label class="pill-input"><input type="checkbox" name="haut_unauff" ${checked('haut_unauff')}> unauffällig</label><label class="pill-input"><input type="checkbox" name="haut_falten" ${checked('haut_falten')}> stehende Hautfalten</label><label class="pill-input"><input type="checkbox" name="haut_oedeme" ${checked('haut_oedeme')}> Ödeme</label><label class="pill-input"><input type="checkbox" name="haut_dekubitus" ${checked('haut_dekubitus')}> Dekubitus</label><label class="pill-input"><input type="checkbox" name="haut_kaltschweissig" ${checked('haut_kaltschweissig')}> kaltschweißig</label><label class="pill-input"><input type="checkbox" name="haut_exanthem" ${checked('haut_exanthem')}> Exanthem</label></div></div></details>
+<details>
+  <summary><i class="fa-regular fa-hand"></i> Haut</summary>
+  <div class="sec-body">
+    <div class="choice">
+      <label class="pill-input">
+        <input type="checkbox" name="haut_unauff" ${checked('haut_unauff')}> unauffällig
+      </label>
+      <label class="pill-input">
+        <input type="checkbox" name="haut_falten" ${checked('haut_falten')}> stehende Hautfalten
+      </label>
+      <label class="pill-input">
+        <input type="checkbox" name="haut_oedeme" ${checked('haut_oedeme')}> Ödeme
+      </label>
+      <label class="pill-input">
+        <input type="checkbox" name="haut_dekubitus" ${checked('haut_dekubitus')}> Dekubitus
+      </label>
+      <label class="pill-input">
+        <input type="checkbox" name="haut_kaltschweissig" ${checked('haut_kaltschweissig')}> kaltschweißig
+      </label>
+      <label class="pill-input">
+        <input type="checkbox" name="haut_exanthem" ${checked('haut_exanthem')}> Exanthem
+      </label>
+    </div>
+  </div>
+</details>
 
-<details><summary><i class="fa-solid fa-user"></i> Psyche</summary><div class="sec-body"><div class="choice"><label class="pill-input"><input type="checkbox" name="psy_erregt" ${checked('psy_erregt')}> erregt</label><label class="pill-input"><input type="checkbox" name="psy_aggr" ${checked('psy_aggr')}> aggressiv</label><label class="pill-input"><input type="checkbox" name="psy_verlangsamt" ${checked('psy_verlangsamt')}> verlangsamt</label><label class="pill-input"><input type="checkbox" name="psy_depressiv" ${checked('psy_depressiv')}> depressiv</label><label class="pill-input"><input type="checkbox" name="psy_aengstlich" ${checked('psy_aengstlich')}> ängstlich</label><label class="pill-input"><input type="checkbox" name="psy_euphorisch" ${checked('psy_euphorisch')}> euphorisch</label><label class="pill-input"><input type="checkbox" name="psy_wahnhaft" ${checked('psy_wahnhaft')}> wahnhaft</label><label class="pill-input"><input type="checkbox" name="psy_verwirrt" ${checked('psy_verwirrt')}> verwirrt</label><label class="pill-input"><input type="checkbox" name="psy_suizidal" ${checked('psy_suizidal')}> suizidal</label><label class="pill-input"><input type="checkbox" name="psy_motor_unruhig" ${checked('psy_motor_unruhig')}> motorisch unruhig</label></div></div></details>
+<details>
+  <summary><i class="fa-solid fa-user"></i> Psyche</summary>
+  <div class="sec-body">
+    <div class="choice">
+      <label class="pill-input">
+        <input type="checkbox" name="psy_erregt" ${checked('psy_erregt')}> erregt
+      </label>
+      <label class="pill-input">
+        <input type="checkbox" name="psy_aggr" ${checked('psy_aggr')}> aggressiv
+      </label>
+      <label class="pill-input">
+        <input type="checkbox" name="psy_verlangsamt" ${checked('psy_verlangsamt')}> verlangsamt
+      </label>
+      <label class="pill-input">
+        <input type="checkbox" name="psy_depressiv" ${checked('psy_depressiv')}> depressiv
+      </label>
+      <label class="pill-input">
+        <input type="checkbox" name="psy_aengstlich" ${checked('psy_aengstlich')}> ängstlich
+      </label>
+      <label class="pill-input">
+        <input type="checkbox" name="psy_euphorisch" ${checked('psy_euphorisch')}> euphorisch
+      </label>
+      <label class="pill-input">
+        <input type="checkbox" name="psy_wahnhaft" ${checked('psy_wahnhaft')}> wahnhaft
+      </label>
+      <label class="pill-input">
+        <input type="checkbox" name="psy_verwirrt" ${checked('psy_verwirrt')}> verwirrt
+      </label>
+      <label class="pill-input">
+        <input type="checkbox" name="psy_suizidal" ${checked('psy_suizidal')}> suizidal
+      </label>
+      <label class="pill-input">
+        <input type="checkbox" name="psy_motor_unruhig" ${checked('psy_motor_unruhig')}> motorisch unruhig
+      </label>
+    </div>
+  </div>
+</details>
 
-<details open><summary><i class="fa-solid fa-stethoscope"></i> Messwerte / Atmung</summary><div class="sec-body"><div class="grid"><label>RR syst. (mmHg)<input name="rr_sys" type="number" value="${v('rr_sys')}"></label><label>RR diast. (mmHg)<input name="rr_dia" type="number" value="${v('rr_dia')}"></label><label>HF (/min)<input name="hf" type="number" value="${v('hf')}"></label><label>AF (/min)<input name="af" type="number" value="${v('af')}"></label><label>SpO₂ (%)<input name="spo2" type="number" value="${v('spo2')}"></label><label>etCO₂ (mmHg)<input name="etco2" type="number" value="${v('etco2')}"></label><label>Temp (°C)<input name="temp" type="number" step="0.1" value="${v('temp')}"></label><label>BZ (mg/dl)<input name="bz_mg" type="number" value="${v('bz_mg')}"></label><label>BZ (mmol/l)<input name="bz_mmol" type="number" step="0.1" value="${v('bz_mmol')}"></label><label>Schmerz (0–10)<input name="schmerz" type="number" min="0" max="10" value="${v('schmerz')}"></label></div><fieldset style="margin-top:.8rem"><legend>qSOFA (auto)</legend><div class="badge">qSOFA-Score: ${calculateQSOFA(payload)}</div></fieldset><fieldset><legend>Atmung – klinische Zeichen</legend><div class="choice"><label class="pill-input"><input type="checkbox" name="atm_apnoe" ${checked('atm_apnoe')}> Apnoe</label><label class="pill-input"><input type="checkbox" name="atm_stridor" ${checked('atm_stridor')}> Stridor</label><label class="pill-input"><input type="checkbox" name="atm_hypervent" ${checked('atm_hypervent')}> Hyperventilation</label><label class="pill-input"><input type="checkbox" name="atm_dyspnoe" ${checked('atm_dyspnoe')}> Dyspnoe</label><label class="pill-input"><input type="checkbox" name="atm_beatmung" ${checked('atm_beatmung')}> Beatmung</label><label class="pill-input"><input type="checkbox" name="atm_zyanose" ${checked('atm_zyanose')}> Zyanose</label><label class="pill-input"><input type="checkbox" name="atm_verlegung" ${checked('atm_verlegung')}> Atemwegsverlegung</label></div><textarea name="atm_sonst">${v('atm_sonst')}</textarea></fieldset><fieldset><legend>O₂-Gabe</legend><div class="choice"><label class="pill-input"><input type="radio" name="o2" value="raumluft" ${radioChecked('o2','raumluft')}> Raumluft</label><label class="pill-input"><input type="radio" name="o2" value="unter_o2" ${radioChecked('o2','unter_o2')}> unter O₂</label><label class="pill-input"><input type="checkbox" name="o2_nasal" ${checked('o2_nasal')}> Nasensonde</label><label class="pill-input"><input type="checkbox" name="o2_maske" ${checked('o2_maske')}> Maske</label><label class="pill-input"><input type="checkbox" name="o2_reservoir" ${checked('o2_reservoir')}> Maske m. Reservoir</label></div><div class="grid" style="margin-top:.4rem"><label>Flow (l/min)<input name="o2_flow" type="number" step="0.5" value="${v('o2_flow')}"></label><label>Kommentar<input name="o2_comment" type="text" value="${v('o2_comment')}"></label></div></fieldset></div></details>
+<details open>
+  <summary><i class="fa-solid fa-stethoscope"></i> Messwerte / Atmung</summary>
+  <div class="sec-body">
+    <div class="grid">
+      <label>RR syst. (mmHg)<input name="rr_sys" type="number" value="${v('rr_sys')}"></label>
+      <label>RR diast. (mmHg)<input name="rr_dia" type="number" value="${v('rr_dia')}"></label>
+      <label>HF (/min)<input name="hf" type="number" value="${v('hf')}"></label>
+      <label>AF (/min)<input name="af" type="number" value="${v('af')}"></label>
+      <label>SpO₂ (%)<input name="spo2" type="number" value="${v('spo2')}"></label>
+      <label>etCO₂ (mmHg)<input name="etco2" type="number" value="${v('etco2')}"></label>
+      <label>Temp (°C)<input name="temp" type="number" step="0.1" value="${v('temp')}"></label>
+      <label>BZ (mg/dl)<input name="bz_mg" type="number" value="${v('bz_mg')}"></label>
+      <label>BZ (mmol/l)<input name="bz_mmol" type="number" step="0.1" value="${v('bz_mmol')}"></label>
+      <label>Schmerz (0–10)<input name="schmerz" type="number" min="0" max="10" value="${v('schmerz')}"></label>
+    </div>
+    <fieldset style="margin-top:.8rem">
+      <legend>qSOFA (auto)</legend>
+      <div class="badge">qSOFA-Score: ${calculateQSOFA(payload)}</div>
+    </fieldset>
+    <fieldset>
+      <legend>Atmung – klinische Zeichen</legend>
+      <div class="choice">
+        <label class="pill-input">
+          <input type="checkbox" name="atm_apnoe" ${checked('atm_apnoe')}> Apnoe
+        </label>
+        <label class="pill-input">
+          <input type="checkbox" name="atm_stridor" ${checked('atm_stridor')}> Stridor
+        </label>
+        <label class="pill-input">
+          <input type="checkbox" name="atm_hypervent" ${checked('atm_hypervent')}> Hyperventilation
+        </label>
+        <label class="pill-input">
+          <input type="checkbox" name="atm_dyspnoe" ${checked('atm_dyspnoe')}> Dyspnoe
+        </label>
+        <label class="pill-input">
+          <input type="checkbox" name="atm_beatmung" ${checked('atm_beatmung')}> Beatmung
+        </label>
+        <label class="pill-input">
+          <input type="checkbox" name="atm_zyanose" ${checked('atm_zyanose')}> Zyanose
+        </label>
+        <label class="pill-input">
+          <input type="checkbox" name="atm_verlegung" ${checked('atm_verlegung')}> Atemwegsverlegung
+        </label>
+      </div>
+      <textarea name="atm_sonst">${v('atm_sonst')}</textarea>
+    </fieldset>
+    <fieldset>
+      <legend>O₂-Gabe</legend>
+      <div class="choice">
+        <label class="pill-input">
+          <input type="radio" name="o2" value="raumluft" ${radioChecked('o2','raumluft')}> Raumluft
+        </label>
+        <label class="pill-input">
+          <input type="radio" name="o2" value="unter_o2" ${radioChecked('o2','unter_o2')}> unter O₂
+        </label>
+        <label class="pill-input">
+          <input type="checkbox" name="o2_nasal" ${checked('o2_nasal')}> Nasensonde
+        </label>
+        <label class="pill-input">
+          <input type="checkbox" name="o2_maske" ${checked('o2_maske')}> Maske
+        </label>
+        <label class="pill-input">
+          <input type="checkbox" name="o2_reservoir" ${checked('o2_reservoir')}> Maske m. Reservoir
+        </label>
+      </div>
+      <div class="grid" style="margin-top:.4rem">
+        <label>Flow (l/min)<input name="o2_flow" type="number" step="0.5" value="${v('o2_flow')}"></label>
+        <label>Kommentar<input name="o2_comment" type="text" value="${v('o2_comment')}"></label>
+      </div>
+    </fieldset>
+  </div>
+</details>
 
-<details><summary><i class="fa-solid fa-heart-pulse"></i> Rhythmus / EKG</summary><div class="sec-body"><div class="choice"><label class="pill-input"><input type="checkbox" name="sr" ${checked('sr')}> Sinusrhythmus</label><label class="pill-input"><input type="checkbox" name="stemi" ${checked('stemi')}> STEMI</label><label class="pill-input"><input type="checkbox" name="arrh_abs" ${checked('arrh_abs')}> absolute Arrhythmie</label><label class="pill-input"><input type="checkbox" name="vf" ${checked('vf')}> Kammerflimmern</label><label class="pill-input"><input type="checkbox" name="av3" ${checked('av3')}> AV-Block III°</label><label class="pill-input"><input type="checkbox" name="asystole" ${checked('asystole')}> Asystolie</label></div><div class="grid" style="margin-top:.5rem"><label>Standort<input name="ekg_standort" type="text" value="${v('ekg_standort')}"></label><label>Pers-Nr.<input name="ekg_persnr" type="text" value="${v('ekg_persnr')}"></label></div></div></details>
+<details>
+  <summary><i class="fa-solid fa-heart-pulse"></i> Rhythmus / EKG</summary>
+  <div class="sec-body">
+    <div class="choice">
+      <label class="pill-input">
+        <input type="checkbox" name="sr" ${checked('sr')}> Sinusrhythmus
+      </label>
+      <label class="pill-input">
+        <input type="checkbox" name="stemi" ${checked('stemi')}> STEMI
+      </label>
+      <label class="pill-input">
+        <input type="checkbox" name="arrh_abs" ${checked('arrh_abs')}> absolute Arrhythmie
+      </label>
+      <label class="pill-input">
+        <input type="checkbox" name="vf" ${checked('vf')}> Kammerflimmern
+      </label>
+      <label class="pill-input">
+        <input type="checkbox" name="av3" ${checked('av3')}> AV-Block III°
+      </label>
+      <label class="pill-input">
+        <input type="checkbox" name="asystole" ${checked('asystole')}> Asystolie
+      </label>
+    </div>
+    <div class="grid" style="margin-top:.5rem">
+      <label>Standort<input name="ekg_standort" type="text" value="${v('ekg_standort')}"></label>
+      <label>Pers-Nr.<input name="ekg_persnr" type="text" value="${v('ekg_persnr')}"></label>
+    </div>
+  </div>
+</details>
 
-<details><summary><i class="fa-solid fa-kit-medical"></i> Verletzungen</summary><div class="sec-body"><textarea name="verletz_text">${v('verletz_text')}</textarea></div></details>
+<details>
+  <summary><i class="fa-solid fa-kit-medical"></i> Verletzungen</summary>
+  <div class="sec-body">
+    <textarea name="verletz_text">${v('verletz_text')}</textarea>
+  </div>
+</details>
 
-<details><summary><i class="fa-solid fa-clipboard-list"></i> Erstdiagnosen</summary><div class="sec-body"><div class="grid"><fieldset><legend>Neuro</legend><div class="choice"><label class="pill-input"><input type="checkbox" name="diag_krampf" ${checked('diag_krampf')}> Konvulsionen</label><label class="pill-input"><input type="checkbox" name="diag_synkope" ${checked('diag_synkope')}> Synkope</label><label class="pill-input"><input type="checkbox" name="diag_apoplex" ${checked('diag_apoplex')}> Apoplex</label><label class="pill-input"><input type="checkbox" name="diag_sht" ${checked('diag_sht')}> SHT</label></div></fieldset><fieldset><legend>Herz-Kreislauf</legend><div class="choice"><label class="pill-input"><input type="checkbox" name="diag_acs" ${checked('diag_acs')}> ACS</label><label class="pill-input"><input type="checkbox" name="diag_insuff" ${checked('diag_insuff')}> Herzinsuffizienz</label><label class="pill-input"><input type="checkbox" name="diag_lungenoedem" ${checked('diag_lungenoedem')}> Lungenödem</label><label class="pill-input"><input type="checkbox" name="diag_luembol" ${checked('diag_luembol')}> Lungenembolie</label></div></fieldset><fieldset><legend>Atmung</legend><div class="choice"><label class="pill-input"><input type="checkbox" name="diag_resp_insuff" ${checked('diag_resp_insuff')}> resp. Insuffizienz</label><label class="pill-input"><input type="checkbox" name="diag_pneumothorax" ${checked('diag_pneumothorax')}> Pneumothorax</label><label class="pill-input"><input type="checkbox" name="diag_asthma" ${checked('diag_asthma')}> Asthma/COPD</label></div></fieldset><fieldset><legend>Stoffwechsel / Schock</legend><div class="choice"><label class="pill-input"><input type="checkbox" name="diag_hypo" ${checked('diag_hypo')}> Hypoglykämie</label><label class="pill-input"><input type="checkbox" name="diag_sept" ${checked('diag_sept')}> septischer Schock</label><label class="pill-input"><input type="checkbox" name="diag_hypovol" ${checked('diag_hypovol')}> hypovolämischer Schock</label></div></fieldset></div></div></details>
+<details>
+  <summary><i class="fa-solid fa-clipboard-list"></i> Erstdiagnosen</summary>
+  <div class="sec-body">
+    <div class="grid">
+      <fieldset>
+        <legend>Neuro</legend>
+        <div class="choice">
+          <label class="pill-input">
+            <input type="checkbox" name="diag_krampf" ${checked('diag_krampf')}> Konvulsionen
+          </label>
+          <label class="pill-input">
+            <input type="checkbox" name="diag_synkope" ${checked('diag_synkope')}> Synkope
+          </label>
+          <label class="pill-input">
+            <input type="checkbox" name="diag_apoplex" ${checked('diag_apoplex')}> Apoplex
+          </label>
+          <label class="pill-input">
+            <input type="checkbox" name="diag_sht" ${checked('diag_sht')}> SHT
+          </label>
+        </div>
+      </fieldset>
+      <fieldset>
+        <legend>Herz-Kreislauf</legend>
+        <div class="choice">
+          <label class="pill-input">
+            <input type="checkbox" name="diag_acs" ${checked('diag_acs')}> ACS
+          </label>
+          <label class="pill-input">
+            <input type="checkbox" name="diag_insuff" ${checked('diag_insuff')}> Herzinsuffizienz
+          </label>
+          <label class="pill-input">
+            <input type="checkbox" name="diag_lungenoedem" ${checked('diag_lungenoedem')}> Lungenödem
+          </label>
+          <label class="pill-input">
+            <input type="checkbox" name="diag_luembol" ${checked('diag_luembol')}> Lungenembolie
+          </label>
+        </div>
+      </fieldset>
+      <fieldset>
+        <legend>Atmung</legend>
+        <div class="choice">
+          <label class="pill-input">
+            <input type="checkbox" name="diag_resp_insuff" ${checked('diag_resp_insuff')}> resp. Insuffizienz
+          </label>
+          <label class="pill-input">
+            <input type="checkbox" name="diag_pneumothorax" ${checked('diag_pneumothorax')}> Pneumothorax
+          </label>
+          <label class="pill-input">
+            <input type="checkbox" name="diag_asthma" ${checked('diag_asthma')}> Asthma/COPD
+          </label>
+        </div>
+      </fieldset>
+      <fieldset>
+        <legend>Stoffwechsel / Schock</legend>
+        <div class="choice">
+          <label class="pill-input">
+            <input type="checkbox" name="diag_hypo" ${checked('diag_hypo')}> Hypoglykämie
+          </label>
+          <label class="pill-input">
+            <input type="checkbox" name="diag_sept" ${checked('diag_sept')}> septischer Schock
+          </label>
+          <label class="pill-input">
+            <input type="checkbox" name="diag_hypovol" ${checked('diag_hypovol')}> hypovolämischer Schock
+          </label>
+        </div>
+      </fieldset>
+    </div>
+  </div>
+</details>
 
-<details><summary><i class="fa-solid fa-face-meh"></i> Bewusstseinslage, AZ, Versorgung</summary><div class="sec-body"><div class="grid"><fieldset><legend>Bewusstseinslage</legend><div class="choice"><label class="pill-input"><input type="checkbox" name="bew_wach" ${checked('bew_wach')}> wach</label><label class="pill-input"><input type="checkbox" name="bew_ansprache" ${checked('bew_ansprache')}> Reaktion auf Ansprache</label><label class="pill-input"><input type="checkbox" name="bew_schmerz" ${checked('bew_schmerz')}> Reaktion auf Schmerzreiz</label><label class="pill-input"><input type="checkbox" name="bew_bewusstlos" ${checked('bew_bewusstlos')}> bewusstlos</label></div></fieldset><fieldset><legend>Allgemeinzustand</legend><div class="choice"><label class="pill-input"><input type="radio" name="az" value="gesund" ${radioChecked('az','gesund')}> gesund</label><label class="pill-input"><input type="radio" name="az" value="leicht" ${radioChecked('az','leicht')}> leicht eingeschränkt</label><label class="pill-input"><input type="radio" name="az" value="deutlich" ${radioChecked('az','deutlich')}> deutlich eingeschränkt</label></div></fieldset><fieldset><legend>Versorgungssituation</legend><div class="choice"><label class="pill-input"><input type="radio" name="versorgung" value="unabhaengig" ${radioChecked('versorgung','unabhaengig')}> unabhängig</label><label class="pill-input"><input type="radio" name="versorgung" value="pflege_zuhaus" ${radioChecked('versorgung','pflege_zuhaus')}> Pflege zuhause</label><label class="pill-input"><input type="radio" name="versorgung" value="pflege_institution" ${radioChecked('versorgung','pflege_institution')}> Pflege in Institution</label></div></fieldset></div></div></details>
+<details>
+  <summary><i class="fa-solid fa-face-meh"></i> Bewusstseinslage, AZ, Versorgung</summary>
+  <div class="sec-body">
+    <div class="grid">
+      <fieldset>
+        <legend>Bewusstseinslage</legend>
+        <div class="choice">
+          <label class="pill-input">
+            <input type="checkbox" name="bew_wach" ${checked('bew_wach')}> wach
+          </label>
+          <label class="pill-input">
+            <input type="checkbox" name="bew_ansprache" ${checked('bew_ansprache')}> Reaktion auf Ansprache
+          </label>
+          <label class="pill-input">
+            <input type="checkbox" name="bew_schmerz" ${checked('bew_schmerz')}> Reaktion auf Schmerzreiz
+          </label>
+          <label class="pill-input">
+            <input type="checkbox" name="bew_bewusstlos" ${checked('bew_bewusstlos')}> bewusstlos
+          </label>
+        </div>
+      </fieldset>
+      <fieldset>
+        <legend>Allgemeinzustand</legend>
+        <div class="choice">
+          <label class="pill-input">
+            <input type="radio" name="az" value="gesund" ${radioChecked('az','gesund')}> gesund
+          </label>
+          <label class="pill-input">
+            <input type="radio" name="az" value="leicht" ${radioChecked('az','leicht')}> leicht eingeschränkt
+          </label>
+          <label class="pill-input">
+            <input type="radio" name="az" value="deutlich" ${radioChecked('az','deutlich')}> deutlich eingeschränkt
+          </label>
+        </div>
+      </fieldset>
+      <fieldset>
+        <legend>Versorgungssituation</legend>
+        <div class="choice">
+          <label class="pill-input">
+            <input type="radio" name="versorgung" value="unabhaengig" ${radioChecked('versorgung','unabhaengig')}> unabhängig
+          </label>
+          <label class="pill-input">
+            <input type="radio" name="versorgung" value="pflege_zuhaus" ${radioChecked('versorgung','pflege_zuhaus')}> Pflege zuhause
+          </label>
+          <label class="pill-input">
+            <input type="radio" name="versorgung" value="pflege_institution" ${radioChecked('versorgung','pflege_institution')}> Pflege in Institution
+          </label>
+        </div>
+      </fieldset>
+    </div>
+  </div>
+</details>
 
-<details open><summary><i class="fa-solid fa-syringe"></i> Maßnahmen – Zugang & Medikation</summary><div class="sec-body"><fieldset><legend>Zugang</legend><div class="grid"><label>Art<select name="zugang_art"><option value="">-</option><option value="iv" ${v('zugang_art')==='iv'?'selected':''}>i.v.</option><option value="io" ${v('zugang_art')==='io'?'selected':''}>i.o.</option></select></label><label>Seite/Region<input name="zugang_region" type="text" value="${v('zugang_region')}"></label><label>Größe (G)<input name="zugang_gauge" type="number" min="14" max="24" value="${v('zugang_gauge')}"></label><label>Versuche<input name="zugang_versuche" type="number" min="0" value="${v('zugang_versuche')}"></label><label>Zeitpunkt<input name="zugang_zeit" type="datetime-local" value="${v('zugang_zeit')}"></label></div></fieldset><fieldset><legend>Infusion</legend><div class="grid"><label>Art<input name="inf_art" type="text" value="${v('inf_art')}"></label><label>Menge (ml)<input name="inf_menge" type="number" min="0" step="50" value="${v('inf_menge')}"></label><label>Laufrate (ml/h)<input name="inf_rate" type="number" min="0" step="10" value="${v('inf_rate')}"></label><label>Bemerkung<input name="inf_bem" type="text" value="${v('inf_bem')}"></label></div></fieldset><fieldset><legend>Medikamente</legend><button type="button" class="subbtn" onclick="addMedRowEdit()" style="margin-bottom:.5rem"><i class="fa-solid fa-plus"></i> Zeile hinzufügen</button><div style="overflow:auto"><table id="medTableEdit"><thead><tr><th>#</th><th>Medikament</th><th>Dosis</th><th>Einheit</th><th>Route</th><th>Uhrzeit</th><th>Bemerkung</th><th>×</th></tr></thead><tbody>${medRowsHTML}</tbody></table></div></fieldset></div></details>
+<details open>
+  <summary><i class="fa-solid fa-syringe"></i> Maßnahmen – Zugang & Medikation</summary>
+  <div class="sec-body">
+    <fieldset>
+      <legend>Zugang</legend>
+      <div class="grid">
+        <label>Art
+          <select name="zugang_art">
+            <option value="">-</option>
+            <option value="iv" ${v('zugang_art')==='iv'?'selected':''}>i.v.</option>
+            <option value="io" ${v('zugang_art')==='io'?'selected':''}>i.o.</option>
+          </select>
+        </label>
+        <label>Seite/Region<input name="zugang_region" type="text" value="${v('zugang_region')}"></label>
+        <label>Größe (G)<input name="zugang_gauge" type="number" min="14" max="24" value="${v('zugang_gauge')}"></label>
+        <label>Versuche<input name="zugang_versuche" type="number" min="0" value="${v('zugang_versuche')}"></label>
+        <label>Zeitpunkt<input name="zugang_zeit" type="datetime-local" value="${v('zugang_zeit')}"></label>
+      </div>
+    </fieldset>
+    <fieldset>
+      <legend>Infusion</legend>
+      <div class="grid">
+        <label>Art<input name="inf_art" type="text" value="${v('inf_art')}"></label>
+        <label>Menge (ml)<input name="inf_menge" type="number" min="0" step="50" value="${v('inf_menge')}"></label>
+        <label>Laufrate (ml/h)<input name="inf_rate" type="number" min="0" step="10" value="${v('inf_rate')}"></label>
+        <label>Bemerkung<input name="inf_bem" type="text" value="${v('inf_bem')}"></label>
+      </div>
+    </fieldset>
+    <fieldset>
+      <legend>Medikamente</legend>
+      <button type="button" class="subbtn" onclick="addMedRowEdit()" style="margin-bottom:.5rem">
+        <i class="fa-solid fa-plus"></i> Zeile hinzufügen
+      </button>
+      <div style="overflow:auto">
+        <table id="medTableEdit">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Medikament</th>
+              <th>Dosis</th>
+              <th>Einheit</th>
+              <th>Route</th>
+              <th>Uhrzeit</th>
+              <th>Bemerkung</th>
+              <th>×</th>
+            </tr>
+          </thead>
+          <tbody>${medRowsHTML}</tbody>
+        </table>
+      </div>
+    </fieldset>
+  </div>
+</details>
 
-<details><summary><i class="fa-solid fa-wind"></i> Beatmung / Atemweg</summary><div class="sec-body"><div class="choice"><label class="pill-input"><input type="checkbox" name="aw_guedel" ${checked('aw_guedel')}> Guedel</label><label class="pill-input"><input type="checkbox" name="aw_larynxtubus" ${checked('aw_larynxtubus')}> Larynxtubus</label><label class="pill-input"><input type="checkbox" name="aw_ett" ${checked('aw_ett')}> ETT</label><label class="pill-input"><input type="checkbox" name="aw_bvm" ${checked('aw_bvm')}> BVM</label></div><div class="grid" style="margin-top:.5rem"><label>ETT-Größe<input name="aw_ett_size" type="number" step="0.5" value="${v('aw_ett_size')}"></label><label>PEEP (cmH₂O)<input name="vent_peep" type="number" step="1" value="${v('vent_peep')}"></label><label>FiO₂ (%)<input name="vent_fio2" type="number" min="21" max="100" value="${v('vent_fio2')}"></label></div></div></details>
+<details>
+  <summary><i class="fa-solid fa-wind"></i> Beatmung / Atemweg</summary>
+  <div class="sec-body">
+    <div class="choice">
+      <label class="pill-input">
+        <input type="checkbox" name="aw_guedel" ${checked('aw_guedel')}> Guedel
+      </label>
+      <label class="pill-input">
+        <input type="checkbox" name="aw_larynxtubus" ${checked('aw_larynxtubus')}> Larynxtubus
+      </label>
+      <label class="pill-input">
+        <input type="checkbox" name="aw_ett" ${checked('aw_ett')}> ETT
+      </label>
+      <label class="pill-input">
+        <input type="checkbox" name="aw_bvm" ${checked('aw_bvm')}> BVM
+      </label>
+    </div>
+    <div class="grid" style="margin-top:.5rem">
+      <label>ETT-Größe<input name="aw_ett_size" type="number" step="0.5" value="${v('aw_ett_size')}"></label>
+      <label>PEEP (cmH₂O)<input name="vent_peep" type="number" step="1" value="${v('vent_peep')}"></label>
+      <label>FiO₂ (%)<input name="vent_fio2" type="number" min="21" max="100" value="${v('vent_fio2')}"></label>
+    </div>
+  </div>
+</details>
 
-<details><summary><i class="fa-solid fa-heart-circle-bolt"></i> Reanimation</summary><div class="sec-body"><div class="grid"><label>Rea-Beginn<input name="rea_beginn" type="datetime-local" value="${v('rea_beginn')}"></label><label>Erst-Rhythmus<select name="rea_initial"><option value="">-</option><option value="Asystolie" ${v('rea_initial')==='Asystolie'?'selected':''}>Asystolie</option><option value="PEA" ${v('rea_initial')==='PEA'?'selected':''}>PEA</option><option value="VF" ${v('rea_initial')==='VF'?'selected':''}>VF</option><option value="pVT" ${v('rea_initial')==='pVT'?'selected':''}>pVT</option></select></label><label>Schocks<input name="rea_shocks" type="number" min="0" value="${v('rea_shocks')}"></label><label>ROSC<select name="rea_rosc"><option value="">-</option><option value="ja" ${v('rea_rosc')==='ja'?'selected':''}>ja</option><option value="nein" ${v('rea_rosc')==='nein'?'selected':''}>nein</option></select></label><label>Rea-Ende<input name="rea_ende" type="time" value="${v('rea_ende')}"></label></div></div></details>
+<details>
+  <summary><i class="fa-solid fa-heart-circle-bolt"></i> Reanimation</summary>
+  <div class="sec-body">
+    <div class="grid">
+      <label>Rea-Beginn<input name="rea_beginn" type="datetime-local" value="${v('rea_beginn')}"></label>
+      <label>Erst-Rhythmus
+        <select name="rea_initial">
+          <option value="">-</option>
+          <option value="Asystolie" ${v('rea_initial')==='Asystolie'?'selected':''}>Asystolie</option>
+          <option value="PEA" ${v('rea_initial')==='PEA'?'selected':''}>PEA</option>
+          <option value="VF" ${v('rea_initial')==='VF'?'selected':''}>VF</option>
+          <option value="pVT" ${v('rea_initial')==='pVT'?'selected':''}>pVT</option>
+        </select>
+      </label>
+      <label>Schocks<input name="rea_shocks" type="number" min="0" value="${v('rea_shocks')}"></label>
+      <label>ROSC
+        <select name="rea_rosc">
+          <option value="">-</option>
+          <option value="ja" ${v('rea_rosc')==='ja'?'selected':''}>ja</option>
+          <option value="nein" ${v('rea_rosc')==='nein'?'selected':''}>nein</option>
+        </select>
+      </label>
+      <label>Rea-Ende<input name="rea_ende" type="time" value="${v('rea_ende')}"></label>
+    </div>
+  </div>
+</details>
 
-<details open><summary><i class="fa-solid fa-people-carry-box"></i> Übergabe / Transport</summary><div class="sec-body"><div class="grid"><label>Übergabe an<input name="ue_name" type="text" value="${v('ue_name')}"></label><label>Zeitpunkt<input name="ue_zeit" type="datetime-local" value="${v('ue_zeit')}"></label><label>Ziel<input name="ziel_bez" type="text" value="${v('ziel_bez')}"></label><label>Adresse<input name="ziel_adr" type="text" value="${v('ziel_adr')}"></label><label>Einsatzende<input name="einsatzende" type="datetime-local" value="${v('einsatzende')}"></label></div></div></details>
+<details open>
+  <summary><i class="fa-solid fa-people-carry-box"></i> Übergabe / Transport</summary>
+  <div class="sec-body">
+    <div class="grid">
+      <label>Übergabe an<input name="ue_name" type="text" value="${v('ue_name')}"></label>
+      <label>Zeitpunkt<input name="ue_zeit" type="datetime-local" value="${v('ue_zeit')}"></label>
+      <label>Ziel<input name="ziel_bez" type="text" value="${v('ziel_bez')}"></label>
+      <label>Adresse<input name="ziel_adr" type="text" value="${v('ziel_adr')}"></label>
+      <label>Einsatzende<input name="einsatzende" type="datetime-local" value="${v('einsatzende')}"></label>
+    </div>
+  </div>
+</details>
 
-<details open><summary><i class="fa-solid fa-signature"></i> Ausfüller & Unterschrift</summary><div class="sec-body"><div class="grid"><label>Name<input name="ausfueller_name" type="text" value="${v('ausfueller_name')}"></label><label>Zeitpunkt<input name="ausfueller_zeit" type="datetime-local" value="${v('ausfueller_zeit')}"></label></div>${payload.signature ? `<div style="margin-top:.75rem"><strong>Unterschrift:</strong><br><img src="${payload.signature}" class="signature-img"></div>` : ''}</div></details>`;
+<details open>
+  <summary><i class="fa-solid fa-signature"></i> Ausfüller & Unterschrift</summary>
+  <div class="sec-body">
+    <div class="grid">
+      <label>Name<input name="ausfueller_name" type="text" value="${v('ausfueller_name')}"></label>
+      <label>Zeitpunkt<input name="ausfueller_zeit" type="datetime-local" value="${v('ausfueller_zeit')}"></label>
+    </div>
+    ${payload.signature ? `<div style="margin-top:.75rem"><strong>Unterschrift:</strong><br><img src="${payload.signature}" class="signature-img"></div>` : ''}
+  </div>
+</details>`;
     }
 
     // ========================================
@@ -703,7 +1341,30 @@
       medRowCounter++;
       const tbody = document.querySelector('#medTableEdit tbody');
       const tr = document.createElement('tr');
-      tr.innerHTML = `<td>${medRowCounter}</td><td><input type="text" name="med_name_${medRowCounter}" style="width:100%;padding:.3rem;font-size:14px"></td><td><input type="number" name="med_dose_${medRowCounter}" step="0.1" style="width:80px;padding:.3rem;font-size:14px"></td><td><input type="text" name="med_unit_${medRowCounter}" placeholder="mg" style="width:60px;padding:.3rem;font-size:14px"></td><td><select name="med_route_${medRowCounter}" style="padding:.3rem;font-size:14px"><option value="">-</option><option value="i.v.">i.v.</option><option value="i.m.">i.m.</option><option value="s.c.">s.c.</option><option value="p.o.">p.o.</option><option value="inhal.">inhal.</option></select></td><td><input type="time" name="med_time_${medRowCounter}" style="width:90px;padding:.3rem;font-size:14px"></td><td><input type="text" name="med_note_${medRowCounter}" style="width:100%;padding:.3rem;font-size:14px"></td><td><button class="subbtn" type="button" onclick="this.closest('tr').remove()">×</button></td>`;
+      tr.innerHTML = `
+        <td>${medRowCounter}</td>
+        <td><input type="text" name="med_name_${medRowCounter}" 
+            style="width:100%;padding:.3rem;font-size:14px"></td>
+        <td><input type="number" name="med_dose_${medRowCounter}" step="0.1" 
+            style="width:80px;padding:.3rem;font-size:14px"></td>
+        <td><input type="text" name="med_unit_${medRowCounter}" placeholder="mg" 
+            style="width:60px;padding:.3rem;font-size:14px"></td>
+        <td>
+          <select name="med_route_${medRowCounter}" style="padding:.3rem;font-size:14px">
+            <option value="">-</option>
+            <option value="i.v.">i.v.</option>
+            <option value="i.m.">i.m.</option>
+            <option value="s.c.">s.c.</option>
+            <option value="p.o.">p.o.</option>
+            <option value="inhal.">inhal.</option>
+          </select>
+        </td>
+        <td><input type="time" name="med_time_${medRowCounter}" 
+            style="width:90px;padding:.3rem;font-size:14px"></td>
+        <td><input type="text" name="med_note_${medRowCounter}" 
+            style="width:100%;padding:.3rem;font-size:14px"></td>
+        <td><button class="subbtn" type="button" onclick="this.closest('tr').remove()">×</button></td>
+      `;
       tbody.appendChild(tr);
     };
 
@@ -729,6 +1390,7 @@
         const form = document.getElementById('editFormContainer');
         const formData = new FormData();
         const inputs = form.querySelectorAll('input, textarea, select');
+        
         inputs.forEach(input => {
           if (input.type === 'checkbox') {
             formData.append(input.name, input.checked);
@@ -1036,7 +1698,6 @@
         showMsg('Fehler: ' + e.message, 'error');
       }
     };
-
     // ========================================
     // SECTION: VIEW NACHERFASSUNG DETAILS
     // ========================================
@@ -1103,7 +1764,7 @@
     }
     
     // ========================================
-    // SECTION: VIEW ARCHIVED PATIENT DOCUMENT
+    // SECTION: VIEW ARCHIVED PATIENT DOCUMENT (NEU - MIT FORMULAR-ANSICHT!)
     // ========================================
     window.viewPatArchiv = async (id) => {
       try {
@@ -1122,9 +1783,14 @@
         const patName = `${p.vorname || ''} ${p.name || ''}`.trim() || 'Unbekannt';
         document.getElementById('detailsTitle').textContent = 'Patientendokumentation: ' + patName;
         
-        let html = buildPatDetailsHTML(p, doc);
+        // NEU: Verwende buildEditForm() aber als Read-Only Ansicht
+        let html = buildPatArchiveHTML(p, doc);
         
         document.getElementById('detailsBody').innerHTML = html;
+        
+        // Öffne alle details-Elemente
+        document.querySelectorAll('#detailsBody details').forEach(d => d.open = true);
+        
         document.getElementById('detailsModal').classList.add('show');
         
       } catch(e) {
@@ -1133,89 +1799,406 @@
     };
 
     // ========================================
-    // SECTION: BUILD PATIENT DETAILS HTML
+    // SECTION: BUILD PATIENT ARCHIVE HTML (NEU - IDENTISCH MIT EDIT-FORMULAR!)
     // ========================================
-    function buildPatDetailsHTML(p, doc) {
-      let html = '<div class="details-grid">';
+    function buildPatArchiveHTML(p, doc) {
+      const v = (key, fallback = '') => 
+        p[key] !== undefined && p[key] !== null ? p[key] : fallback;
       
-      html += `<div class="details-label"><strong>Einsatz-Nr:</strong></div><div class="details-value">${p.einsatz_nr || '-'}</div>`;
-      html += `<div class="details-label">Datum/Zeit:</div><div class="details-value">${p.zeit_einsatz ? new Date(p.zeit_einsatz).toLocaleString('de-DE') : '-'}</div>`;
-      html += `<div class="details-label">Fahrzeug:</div><div class="details-value">${p.fahrzeug || '-'}</div>`;
-      html += `<div class="details-label">Einsatz-Art:</div><div class="details-value">${p.einsatz_art || '-'}</div>`;
+      const checked = (key) => p[key] ? '✓' : '';
       
-      const patName = `${p.vorname || ''} ${p.name || ''}`.trim() || 'Unbekannt';
-      html += `<div class="details-label" style="margin-top:12px"><strong>Patient:</strong></div><div class="details-value" style="margin-top:12px">${patName}</div>`;
-      html += `<div class="details-label">Geburtsdatum:</div><div class="details-value">${p.gebdatum ? new Date(p.gebdatum).toLocaleDateString('de-DE') : '-'}</div>`;
-      html += `<div class="details-label">Alter:</div><div class="details-value">${p.alter || '-'}</div>`;
-      html += `<div class="details-label">Adresse:</div><div class="details-value">${p.strasse || ''}, ${p.plz_ort || ''}</div>`;
+      const radioValue = (key) => p[key] || '-';
       
-      html += `<div class="details-label" style="margin-top:12px"><strong>Anamnese:</strong></div><div class="details-value" style="margin-top:12px">${p.notfallgeschehen || '-'}</div>`;
-      
-      if (p.photos && p.photos.length > 0) {
-        html += `<div class="details-label">Fotos:</div><div class="details-value"><div class="photo-grid">`;
-        p.photos.forEach(photo => {
-          html += `<img src="${photo}" alt="Foto">`;
+      // Build medication rows (read-only)
+      const medications = p.medications || [];
+      let medRowsHTML = '';
+      if (medications.length > 0) {
+        medications.forEach((med, idx) => {
+          medRowsHTML += `
+            <tr>
+              <td>${idx + 1}</td>
+              <td>${med.name || '-'}</td>
+              <td>${med.dose || '-'}</td>
+              <td>${med.unit || '-'}</td>
+              <td>${med.route || '-'}</td>
+              <td>${med.time || '-'}</td>
+              <td>${med.note || '-'}</td>
+            </tr>
+          `;
         });
-        html += `</div></div>`;
+      } else {
+        medRowsHTML = '<tr><td colspan="7" style="text-align:center;color:#999">Keine Medikamente dokumentiert</td></tr>';
       }
       
-      html += `<div class="details-label" style="margin-top:12px"><strong>Vitalparameter:</strong></div><div class="details-value" style="margin-top:12px">`;
-      html += `RR: ${p.rr_sys || '-'}/${p.rr_dia || '-'} mmHg, HF: ${p.hf || '-'}/min, AF: ${p.af || '-'}/min, SpO₂: ${p.spo2 || '-'}%, BZ: ${p.bz_mg || '-'} mg/dl, Temp: ${p.temp || '-'}°C, Schmerz: ${p.schmerz || '-'}/10</div>`;
-      
-      const gcsE = parseInt(p.gcs_e || 0);
-      const gcsV = parseInt(p.gcs_v || 0);
-      const gcsM = parseInt(p.gcs_m || 0);
-      const gcsSum = gcsE + gcsV + gcsM;
-      html += `<div class="details-label">GCS:</div><div class="details-value">E${gcsE} + V${gcsV} + M${gcsM} = ${gcsSum > 0 ? gcsSum : '-'}</div>`;
-      
-      html += `<div class="details-label">Pupillen R:</div><div class="details-value">${p.pw_r || '-'} / ${p.lr_r || '-'}</div>`;
-      html += `<div class="details-label">Pupillen L:</div><div class="details-value">${p.pw_l || '-'} / ${p.lr_l || '-'}</div>`;
-      
-      const atmung = [p.atm_apnoe?'Apnoe':null, p.atm_stridor?'Stridor':null, p.atm_dyspnoe?'Dyspnoe':null].filter(x=>x).join(', ');
-      html += `<div class="details-label">Atmung:</div><div class="details-value">${atmung || 'o.B.'}</div>`;
-      html += `<div class="details-label">O₂:</div><div class="details-value">${p.o2 || '-'} (${p.o2_flow || '-'} l/min)</div>`;
-      
-      const rhythmus = [p.sr?'SR':null, p.stemi?'STEMI':null, p.vf?'VF':null, p.asystole?'Asystolie':null].filter(x=>x).join(', ');
-      html += `<div class="details-label">Rhythmus/EKG:</div><div class="details-value">${rhythmus || '-'}</div>`;
-      
-      html += `<div class="details-label">Verletzungen:</div><div class="details-value">${p.verletz_text || '-'}</div>`;
-      
-      const diagnosen = [p.diag_krampf?'Krampf':null, p.diag_synkope?'Synkope':null, p.diag_acs?'ACS':null, p.diag_hypo?'Hypoglyk.':null].filter(x=>x).join(', ');
-      html += `<div class="details-label">Diagnosen:</div><div class="details-value">${diagnosen || '-'}</div>`;
-      
-      html += `<div class="details-label" style="margin-top:12px"><strong>Zugang:</strong></div><div class="details-value" style="margin-top:12px">${p.zugang_art || '-'} ${p.zugang_gauge || ''}G, ${p.zugang_region || '-'}</div>`;
-      html += `<div class="details-label">Infusion:</div><div class="details-value">${p.inf_art || '-'} ${p.inf_menge || ''}ml</div>`;
-      
-      if (p.medications && p.medications.length > 0) {
-        html += `<div class="details-label">Medikamente:</div><div class="details-value"><table style="width:100%;border-collapse:collapse;margin-top:8px"><thead><tr><th style="border:1px solid #ddd;padding:6px;background:#f8fafc">Med</th><th style="border:1px solid #ddd;padding:6px;background:#f8fafc">Dosis</th><th style="border:1px solid #ddd;padding:6px;background:#f8fafc">Route</th><th style="border:1px solid #ddd;padding:6px;background:#f8fafc">Zeit</th></tr></thead><tbody>`;
-        p.medications.forEach(med => {
-          html += `<tr><td style="border:1px solid #ddd;padding:6px">${med.name || '?'}</td><td style="border:1px solid #ddd;padding:6px">${med.dose || ''} ${med.unit || ''}</td><td style="border:1px solid #ddd;padding:6px">${med.route || '-'}</td><td style="border:1px solid #ddd;padding:6px">${med.time || '-'}</td></tr>`;
+      // Build photos display
+      const photos = p.photos || [];
+      let photosHTML = '';
+      if (photos.length > 0) {
+        photosHTML = '<div class="photo-grid">';
+        photos.forEach((photo, idx) => {
+          photosHTML += `<img src="${photo}" alt="Foto ${idx+1}">`;
         });
-        html += `</tbody></table></div>`;
+        photosHTML += '</div>';
       }
       
-      if (p.rea_beginn) {
-        html += `<div class="details-label" style="margin-top:12px"><strong>Reanimation:</strong></div><div class="details-value" style="margin-top:12px">Beginn: ${new Date(p.rea_beginn).toLocaleString('de-DE')}, Rhythmus: ${p.rea_initial || '-'}, Schocks: ${p.rea_shocks || '-'}, ROSC: ${p.rea_rosc || '-'}</div>`;
-      }
-      
-      html += `<div class="details-label" style="margin-top:12px"><strong>Übergabe:</strong></div><div class="details-value" style="margin-top:12px">${p.ue_name || '-'} (${p.ue_zeit ? new Date(p.ue_zeit).toLocaleString('de-DE') : '-'})</div>`;
-      html += `<div class="details-label">Ziel:</div><div class="details-value">${p.ziel_bez || '-'}, ${p.ziel_adr || ''}</div>`;
-      html += `<div class="details-label">Einsatzende:</div><div class="details-value">${p.einsatzende ? new Date(p.einsatzende).toLocaleString('de-DE') : '-'}</div>`;
-      
-      html += `<div class="details-label" style="margin-top:12px"><strong>Ausfüller:</strong></div><div class="details-value" style="margin-top:12px">${p.ausfueller_name || '-'} (${p.ausfueller_zeit ? new Date(p.ausfueller_zeit).toLocaleString('de-DE') : '-'})</div>`;
-      
-      if (p.signature) {
-        html += `<div class="details-label">Unterschrift:</div><div class="details-value"><img src="${p.signature}" class="signature-img"></div>`;
-      }
-      
-      html += `<div class="details-label" style="margin-top:12px"><strong>MPG-Beauftragter:</strong></div><div class="details-value" style="margin-top:12px">${doc.admin_name || '-'} (${doc.admin_datum ? new Date(doc.admin_datum).toLocaleString('de-DE') : '-'})</div>`;
-      
-      if (doc.admin_unterschrift) {
-        html += `<div class="details-label">Unterschrift:</div><div class="details-value"><img src="${doc.admin_unterschrift}" class="signature-img"></div>`;
-      }
-      
-      html += '</div>';
-      return html;
+      // Return complete READONLY form HTML (same structure as edit form!)
+      return `
+<details open>
+  <summary><i class="fa-solid fa-truck-medical"></i> Einsatzdaten</summary>
+  <div class="sec-body">
+    <div class="grid">
+      <div><strong>Einsatz-Nr:</strong><br>${v('einsatz_nr')}</div>
+      <div><strong>Pat./Auftrags-Nr:</strong><br>${v('auftrags_nr')}</div>
+      <div><strong>Rufname:</strong><br>${v('rufname')}</div>
+      <div><strong>Fahrzeug:</strong><br>${v('fahrzeug')}</div>
+      <div><strong>Datum/Uhrzeit:</strong><br>${v('zeit_einsatz') ? new Date(v('zeit_einsatz')).toLocaleString('de-DE') : '-'}</div>
+    </div>
+    <div style="margin-top:12px"><strong>Einsatz-Art:</strong><br>${v('einsatz_art')}</div>
+  </div>
+</details>
+
+<details open>
+  <summary><i class="fa-solid fa-id-card-clip"></i> Pat-Stammdaten</summary>
+  <div class="sec-body">
+    <div class="grid">
+      <div><strong>Name:</strong><br>${v('name')}</div>
+      <div><strong>Vorname:</strong><br>${v('vorname')}</div>
+      <div><strong>Geb.-Datum:</strong><br>${v('gebdatum') ? new Date(v('gebdatum')).toLocaleDateString('de-DE') : '-'}</div>
+      <div><strong>Alter:</strong><br>${v('alter')}</div>
+      <div><strong>Telefon:</strong><br>${v('telefon')}</div>
+      <div><strong>Mobil:</strong><br>${v('mobil')}</div>
+      <div><strong>Straße:</strong><br>${v('strasse')}</div>
+      <div><strong>PLZ, Ort:</strong><br>${v('plz_ort')}</div>
+      <div><strong>Kasse:</strong><br>${v('kasse')}</div>
+      <div><strong>Vers.-Nr:</strong><br>${v('versnr')}</div>
+      <div><strong>Hausarzt:</strong><br>${v('hausarzt')}</div>
+      <div><strong>Angehöriger:</strong><br>${v('angehoeriger')}</div>
+    </div>
+    <div style="margin-top:12px"><strong>Informationen / Aspekte:</strong><br>${v('infos') || '-'}</div>
+  </div>
+</details>
+
+<details open>
+  <summary><i class="fa-solid fa-notes-medical"></i> Notfallgeschehen / Anamnese</summary>
+  <div class="sec-body">
+    <div>${v('notfallgeschehen') || '-'}</div>
+    ${photosHTML ? '<div style="margin-top:12px"><strong>Fotos:</strong>' + photosHTML + '</div>' : ''}
+  </div>
+</details>
+
+<details>
+  <summary><i class="fa-solid fa-brain"></i> Neurologie</summary>
+  <div class="sec-body">
+    <div class="grid">
+      <div><strong>Zeitpunkt:</strong><br>${v('neu_zeit') ? new Date(v('neu_zeit')).toLocaleString('de-DE') : '-'}</div>
+      <div><strong>Ohne path. Befund:</strong> ${checked('neu_unauff')}</div>
+    </div>
+    <div class="grid" style="margin-top:12px">
+      <fieldset>
+        <legend>Pupillenweite – rechts</legend>
+        <div><strong>Weite:</strong> ${radioValue('pw_r')}</div>
+        <div><strong>Entrundet:</strong> ${checked('pw_r_entrundet')}</div>
+        <div><strong>Lichtreaktion:</strong> ${radioValue('lr_r')}</div>
+      </fieldset>
+      <fieldset>
+        <legend>Pupillenweite – links</legend>
+        <div><strong>Weite:</strong> ${radioValue('pw_l')}</div>
+        <div><strong>Entrundet:</strong> ${checked('pw_l_entrundet')}</div>
+        <div><strong>Lichtreaktion:</strong> ${radioValue('lr_l')}</div>
+      </fieldset>
+    </div>
+  </div>
+</details>
+
+<details>
+  <summary><i class="fa-solid fa-eye"></i> Glasgow Coma Scale</summary>
+  <div class="sec-body">
+    <fieldset>
+      <legend>GCS Werte</legend>
+      <div><strong>Augenöffnung (E):</strong> ${v('gcs_e') || '-'}</div>
+      <div><strong>Verbale Antwort (V):</strong> ${v('gcs_v') || '-'}</div>
+      <div><strong>Motorische Antwort (M):</strong> ${v('gcs_m') || '-'}</div>
+      <div class="badge" style="margin-top:8px">GCS Summe: ${calculateGCS(p)}</div>
+    </fieldset>
+  </div>
+</details>
+
+<details>
+  <summary><i class="fa-regular fa-hand"></i> Haut</summary>
+  <div class="sec-body">
+    <div>
+      ${checked('haut_unauff') ? '✓ unauffällig ' : ''}
+      ${checked('haut_falten') ? '✓ stehende Hautfalten ' : ''}
+      ${checked('haut_oedeme') ? '✓ Ödeme ' : ''}
+      ${checked('haut_dekubitus') ? '✓ Dekubitus ' : ''}
+      ${checked('haut_kaltschweissig') ? '✓ kaltschweißig ' : ''}
+      ${checked('haut_exanthem') ? '✓ Exanthem' : ''}
+    </div>
+  </div>
+</details>
+
+<details>
+  <summary><i class="fa-solid fa-user"></i> Psyche</summary>
+  <div class="sec-body">
+    <div>
+      ${checked('psy_erregt') ? '✓ erregt ' : ''}
+      ${checked('psy_aggr') ? '✓ aggressiv ' : ''}
+      ${checked('psy_verlangsamt') ? '✓ verlangsamt ' : ''}
+      ${checked('psy_depressiv') ? '✓ depressiv ' : ''}
+      ${checked('psy_aengstlich') ? '✓ ängstlich ' : ''}
+      ${checked('psy_euphorisch') ? '✓ euphorisch ' : ''}
+      ${checked('psy_wahnhaft') ? '✓ wahnhaft ' : ''}
+      ${checked('psy_verwirrt') ? '✓ verwirrt ' : ''}
+      ${checked('psy_suizidal') ? '✓ suizidal ' : ''}
+      ${checked('psy_motor_unruhig') ? '✓ motorisch unruhig' : ''}
+    </div>
+  </div>
+</details>
+
+<details open>
+  <summary><i class="fa-solid fa-stethoscope"></i> Messwerte / Atmung</summary>
+  <div class="sec-body">
+    <div class="grid">
+      <div><strong>RR syst.:</strong><br>${v('rr_sys')} mmHg</div>
+      <div><strong>RR diast.:</strong><br>${v('rr_dia')} mmHg</div>
+      <div><strong>HF:</strong><br>${v('hf')} /min</div>
+      <div><strong>AF:</strong><br>${v('af')} /min</div>
+      <div><strong>SpO₂:</strong><br>${v('spo2')} %</div>
+      <div><strong>etCO₂:</strong><br>${v('etco2')} mmHg</div>
+      <div><strong>Temp:</strong><br>${v('temp')} °C</div>
+      <div><strong>BZ (mg/dl):</strong><br>${v('bz_mg')}</div>
+      <div><strong>BZ (mmol/l):</strong><br>${v('bz_mmol')}</div>
+      <div><strong>Schmerz:</strong><br>${v('schmerz')} / 10</div>
+    </div>
+    <fieldset style="margin-top:12px">
+      <legend>qSOFA Score</legend>
+      <div class="badge">qSOFA: ${calculateQSOFA(p)}</div>
+    </fieldset>
+    <fieldset>
+      <legend>Atmung – klinische Zeichen</legend>
+      <div>
+        ${checked('atm_apnoe') ? '✓ Apnoe ' : ''}
+        ${checked('atm_stridor') ? '✓ Stridor ' : ''}
+        ${checked('atm_hypervent') ? '✓ Hyperventilation ' : ''}
+        ${checked('atm_dyspnoe') ? '✓ Dyspnoe ' : ''}
+        ${checked('atm_beatmung') ? '✓ Beatmung ' : ''}
+        ${checked('atm_zyanose') ? '✓ Zyanose ' : ''}
+        ${checked('atm_verlegung') ? '✓ Atemwegsverlegung' : ''}
+      </div>
+      ${v('atm_sonst') ? '<div style="margin-top:8px"><strong>Sonstiges:</strong><br>' + v('atm_sonst') + '</div>' : ''}
+    </fieldset>
+    <fieldset>
+      <legend>O₂-Gabe</legend>
+      <div><strong>Art:</strong> ${radioValue('o2')}</div>
+      <div>
+        ${checked('o2_nasal') ? '✓ Nasensonde ' : ''}
+        ${checked('o2_maske') ? '✓ Maske ' : ''}
+        ${checked('o2_reservoir') ? '✓ Maske m. Reservoir' : ''}
+      </div>
+      <div><strong>Flow:</strong> ${v('o2_flow')} l/min</div>
+      ${v('o2_comment') ? '<div><strong>Kommentar:</strong> ' + v('o2_comment') + '</div>' : ''}
+    </fieldset>
+  </div>
+</details>
+
+<details>
+  <summary><i class="fa-solid fa-heart-pulse"></i> Rhythmus / EKG</summary>
+  <div class="sec-body">
+    <div>
+      ${checked('sr') ? '✓ Sinusrhythmus ' : ''}
+      ${checked('stemi') ? '✓ STEMI ' : ''}
+      ${checked('arrh_abs') ? '✓ absolute Arrhythmie ' : ''}
+      ${checked('vf') ? '✓ Kammerflimmern ' : ''}
+      ${checked('av3') ? '✓ AV-Block III° ' : ''}
+      ${checked('asystole') ? '✓ Asystolie' : ''}
+    </div>
+    <div class="grid" style="margin-top:12px">
+      <div><strong>Standort:</strong><br>${v('ekg_standort')}</div>
+      <div><strong>Pers-Nr.:</strong><br>${v('ekg_persnr')}</div>
+    </div>
+  </div>
+</details>
+
+<details>
+  <summary><i class="fa-solid fa-kit-medical"></i> Verletzungen</summary>
+  <div class="sec-body">
+    <div>${v('verletz_text') || '-'}</div>
+  </div>
+</details>
+
+<details>
+  <summary><i class="fa-solid fa-clipboard-list"></i> Erstdiagnosen</summary>
+  <div class="sec-body">
+    <div class="grid">
+      <fieldset>
+        <legend>Neuro</legend>
+        <div>
+          ${checked('diag_krampf') ? '✓ Konvulsionen ' : ''}
+          ${checked('diag_synkope') ? '✓ Synkope ' : ''}
+          ${checked('diag_apoplex') ? '✓ Apoplex ' : ''}
+          ${checked('diag_sht') ? '✓ SHT' : ''}
+        </div>
+      </fieldset>
+      <fieldset>
+        <legend>Herz-Kreislauf</legend>
+        <div>
+          ${checked('diag_acs') ? '✓ ACS ' : ''}
+          ${checked('diag_insuff') ? '✓ Herzinsuffizienz ' : ''}
+          ${checked('diag_lungenoedem') ? '✓ Lungenödem ' : ''}
+          ${checked('diag_luembol') ? '✓ Lungenembolie' : ''}
+        </div>
+      </fieldset>
+      <fieldset>
+        <legend>Atmung</legend>
+        <div>
+          ${checked('diag_resp_insuff') ? '✓ resp. Insuffizienz ' : ''}
+          ${checked('diag_pneumothorax') ? '✓ Pneumothorax ' : ''}
+          ${checked('diag_asthma') ? '✓ Asthma/COPD' : ''}
+        </div>
+      </fieldset>
+      <fieldset>
+        <legend>Stoffwechsel / Schock</legend>
+        <div>
+          ${checked('diag_hypo') ? '✓ Hypoglykämie ' : ''}
+          ${checked('diag_sept') ? '✓ septischer Schock ' : ''}
+          ${checked('diag_hypovol') ? '✓ hypovolämischer Schock' : ''}
+        </div>
+      </fieldset>
+    </div>
+  </div>
+</details>
+
+<details>
+  <summary><i class="fa-solid fa-face-meh"></i> Bewusstseinslage, AZ, Versorgung</summary>
+  <div class="sec-body">
+    <div class="grid">
+      <fieldset>
+        <legend>Bewusstseinslage</legend>
+        <div>
+          ${checked('bew_wach') ? '✓ wach ' : ''}
+          ${checked('bew_ansprache') ? '✓ Reaktion auf Ansprache ' : ''}
+          ${checked('bew_schmerz') ? '✓ Reaktion auf Schmerzreiz ' : ''}
+          ${checked('bew_bewusstlos') ? '✓ bewusstlos' : ''}
+        </div>
+      </fieldset>
+      <fieldset>
+        <legend>Allgemeinzustand</legend>
+        <div><strong>AZ:</strong> ${radioValue('az')}</div>
+      </fieldset>
+      <fieldset>
+        <legend>Versorgungssituation</legend>
+        <div><strong>Versorgung:</strong> ${radioValue('versorgung')}</div>
+      </fieldset>
+    </div>
+  </div>
+</details>
+
+<details open>
+  <summary><i class="fa-solid fa-syringe"></i> Maßnahmen – Zugang & Medikation</summary>
+  <div class="sec-body">
+    <fieldset>
+      <legend>Zugang</legend>
+      <div class="grid">
+        <div><strong>Art:</strong><br>${v('zugang_art')}</div>
+        <div><strong>Seite/Region:</strong><br>${v('zugang_region')}</div>
+        <div><strong>Größe:</strong><br>${v('zugang_gauge')}G</div>
+        <div><strong>Versuche:</strong><br>${v('zugang_versuche')}</div>
+        <div><strong>Zeitpunkt:</strong><br>${v('zugang_zeit') ? new Date(v('zugang_zeit')).toLocaleString('de-DE') : '-'}</div>
+      </div>
+    </fieldset>
+    <fieldset>
+      <legend>Infusion</legend>
+      <div class="grid">
+        <div><strong>Art:</strong><br>${v('inf_art')}</div>
+        <div><strong>Menge:</strong><br>${v('inf_menge')} ml</div>
+        <div><strong>Laufrate:</strong><br>${v('inf_rate')} ml/h</div>
+        <div><strong>Bemerkung:</strong><br>${v('inf_bem')}</div>
+      </div>
+    </fieldset>
+    <fieldset>
+      <legend>Medikamente</legend>
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Medikament</th>
+            <th>Dosis</th>
+            <th>Einheit</th>
+            <th>Route</th>
+            <th>Uhrzeit</th>
+            <th>Bemerkung</th>
+          </tr>
+        </thead>
+        <tbody>${medRowsHTML}</tbody>
+      </table>
+    </fieldset>
+  </div>
+</details>
+
+<details>
+  <summary><i class="fa-solid fa-wind"></i> Beatmung / Atemweg</summary>
+  <div class="sec-body">
+    <div>
+      ${checked('aw_guedel') ? '✓ Guedel ' : ''}
+      ${checked('aw_larynxtubus') ? '✓ Larynxtubus ' : ''}
+      ${checked('aw_ett') ? '✓ ETT ' : ''}
+      ${checked('aw_bvm') ? '✓ BVM' : ''}
+    </div>
+    <div class="grid" style="margin-top:12px">
+      <div><strong>ETT-Größe:</strong><br>${v('aw_ett_size')}</div>
+      <div><strong>PEEP:</strong><br>${v('vent_peep')} cmH₂O</div>
+      <div><strong>FiO₂:</strong><br>${v('vent_fio2')} %</div>
+    </div>
+  </div>
+</details>
+
+<details>
+  <summary><i class="fa-solid fa-heart-circle-bolt"></i> Reanimation</summary>
+  <div class="sec-body">
+    <div class="grid">
+      <div><strong>Rea-Beginn:</strong><br>${v('rea_beginn') ? new Date(v('rea_beginn')).toLocaleString('de-DE') : '-'}</div>
+      <div><strong>Erst-Rhythmus:</strong><br>${v('rea_initial')}</div>
+      <div><strong>Schocks:</strong><br>${v('rea_shocks')}</div>
+      <div><strong>ROSC:</strong><br>${v('rea_rosc')}</div>
+      <div><strong>Rea-Ende:</strong><br>${v('rea_ende')}</div>
+    </div>
+  </div>
+</details>
+
+<details open>
+  <summary><i class="fa-solid fa-people-carry-box"></i> Übergabe / Transport</summary>
+  <div class="sec-body">
+    <div class="grid">
+      <div><strong>Übergabe an:</strong><br>${v('ue_name')}</div>
+      <div><strong>Zeitpunkt:</strong><br>${v('ue_zeit') ? new Date(v('ue_zeit')).toLocaleString('de-DE') : '-'}</div>
+      <div><strong>Ziel:</strong><br>${v('ziel_bez')}</div>
+      <div><strong>Adresse:</strong><br>${v('ziel_adr')}</div>
+      <div><strong>Einsatzende:</strong><br>${v('einsatzende') ? new Date(v('einsatzende')).toLocaleString('de-DE') : '-'}</div>
+    </div>
+  </div>
+</details>
+
+<details open>
+  <summary><i class="fa-solid fa-signature"></i> Ausfüller & Unterschrift</summary>
+  <div class="sec-body">
+    <div class="grid">
+      <div><strong>Name:</strong><br>${v('ausfueller_name')}</div>
+      <div><strong>Zeitpunkt:</strong><br>${v('ausfueller_zeit') ? new Date(v('ausfueller_zeit')).toLocaleString('de-DE') : '-'}</div>
+    </div>
+    ${p.signature ? '<div style="margin-top:12px"><strong>Unterschrift:</strong><br><img src="' + p.signature + '" class="signature-img"></div>' : ''}
+  </div>
+</details>
+
+<details open>
+  <summary><i class="fa-solid fa-user-shield"></i> MPG-Beauftragter</summary>
+  <div class="sec-body">
+    <div class="grid">
+      <div><strong>Name:</strong><br>${doc.admin_name || '-'}</div>
+      <div><strong>Zeitpunkt:</strong><br>${doc.admin_datum ? new Date(doc.admin_datum).toLocaleString('de-DE') : '-'}</div>
+    </div>
+    ${doc.admin_unterschrift ? '<div style="margin-top:12px"><strong>Unterschrift:</strong><br><img src="' + doc.admin_unterschrift + '" class="signature-img"></div>' : ''}
+  </div>
+</details>`;
     }
 
     // ========================================
@@ -1245,7 +2228,7 @@
       }
     };
     // ========================================
-    // SECTION: GENERATE PATIENT PDF - PART 1
+    // SECTION: GENERATE PATIENT PDF - KOMPLETT NEU
     // ========================================
     async function generatePatientPDF() {
       try {
@@ -1256,440 +2239,511 @@
         
         const p = window.currentViewedPayload || {};
         const adminData = window.currentViewedAdmin || {};
-        const orgName = window.currentViewedOrgName || 'Feuerwehr';
+        const orgName = currentOrganization?.name || 'Feuerwehr';
         
         const pageWidth = 210;
         const pageHeight = 297;
-        const margin = 10;
+        const margin = 15;
         const fullWidth = pageWidth - 2 * margin;
-        const colWidth = (pageWidth - 3 * margin) / 2;
-        const col1X = margin;
-        const col2X = margin + colWidth + margin;
         
         let currentY = 0;
-        let pageNumber = 1;
+        let pageNum = 1;
         
-        // PDF Header
-        pdf.setFillColor(200, 16, 46);
-        pdf.rect(0, 0, pageWidth, 30, 'F');
-        
-        pdf.setTextColor(255, 255, 255);
-        pdf.setFontSize(22);
-        pdf.setFont(undefined, 'bold');
-        pdf.text(orgName, margin, 12);
-        
-        pdf.setFontSize(18);
-        pdf.text('NOTFALLPROTOKOLL', margin, 22);
-        
-        pdf.setFontSize(10);
-        pdf.setFont(undefined, 'normal');
-        pdf.text(`Erstellt: ${new Date().toLocaleString('de-DE')}`, pageWidth - margin - 60, 22);
-        
-        currentY = 35;
-        
-        // Helper function: Draw box
-        function drawBox(x, y, width, height, title) {
-          pdf.setFillColor(255, 240, 245);
-          pdf.rect(x, y, width, height, 'F');
+        // ========================================
+        // PDF HEADER FUNCTION
+        // ========================================
+        function addHeader(isFirstPage = false) {
+          pdf.setFillColor(200, 16, 46);
+          pdf.rect(0, 0, pageWidth, isFirstPage ? 35 : 25, 'F');
           
-          pdf.setFillColor(255, 220, 230);
-          pdf.rect(x, y, width, 8, 'F');
-          
-          pdf.setTextColor(200, 16, 46);
-          pdf.setFontSize(11);
+          pdf.setTextColor(255, 255, 255);
+          pdf.setFontSize(isFirstPage ? 20 : 14);
           pdf.setFont(undefined, 'bold');
-          pdf.text(title, x + 3, y + 5.5);
           
-          pdf.setTextColor(0, 0, 0);
-          pdf.setFont(undefined, 'normal');
-          
-          return y + 11;
-        }
-        
-        // Helper function: Add field
-        function addField(x, y, label, value, width) {
-          pdf.setFontSize(10);
-          pdf.setFont(undefined, 'bold');
-          pdf.setTextColor(100, 0, 20);
-          pdf.text(label, x, y);
-          
-          pdf.setFont(undefined, 'normal');
-          pdf.setTextColor(0, 0, 0);
-          pdf.setFontSize(10);
-          
-          const lines = pdf.splitTextToSize(value || '-', width - 6);
-          pdf.text(lines, x, y + 5);
-          
-          return y + 5 + (lines.length * 5) + 2;
-        }
-        
-        // Helper function: Check page break
-        function checkPageBreak(neededHeight) {
-          if (currentY + neededHeight > pageHeight - 15) {
-            pdf.addPage();
-            pageNumber++;
-            
-            pdf.setFillColor(200, 16, 46);
-            pdf.rect(0, 0, pageWidth, 20, 'F');
-            pdf.setTextColor(255, 255, 255);
+          if (isFirstPage) {
+            pdf.text(orgName, margin, 12);
             pdf.setFontSize(16);
-            pdf.setFont(undefined, 'bold');
-            pdf.text(`NOTFALLPROTOKOLL - Seite ${pageNumber}`, margin, 13);
-            
-            currentY = 25;
+            pdf.text('NOTFALLPROTOKOLL', margin, 24);
+            pdf.setFontSize(10);
+            pdf.setFont(undefined, 'normal');
+            pdf.text('Erstellt: ' + new Date().toLocaleString('de-DE', {
+              day: '2-digit',
+              month: '2-digit',
+              year: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit',
+              second: '2-digit'
+            }), pageWidth - margin - 65, 24);
+          } else {
+            pdf.text(`NOTFALLPROTOKOLL - Seite ${pageNum}`, margin, 16);
+          }
+          
+          pdf.setTextColor(0, 0, 0);
+        }
+        
+        // ========================================
+        // HELPER: CHECK PAGE BREAK
+        // ========================================
+        function checkPageBreak(neededHeight) {
+          if (currentY + neededHeight > pageHeight - 20) {
+            pdf.addPage();
+            pageNum++;
+            addHeader(false);
+            currentY = 30;
             return true;
           }
           return false;
         }
         
+        // ========================================
+        // HELPER: DRAW SECTION BOX
+        // ========================================
+        function drawSection(title, height) {
+          pdf.setFillColor(255, 240, 245);
+          pdf.rect(margin, currentY, fullWidth, height, 'F');
+          
+          pdf.setFillColor(255, 220, 235);
+          pdf.rect(margin, currentY, fullWidth, 7, 'F');
+          
+          pdf.setTextColor(200, 16, 46);
+          pdf.setFontSize(11);
+          pdf.setFont(undefined, 'bold');
+          pdf.text(title, margin + 2, currentY + 5);
+          
+          pdf.setTextColor(0, 0, 0);
+          pdf.setFont(undefined, 'normal');
+          
+          return currentY + 9;
+        }
+        
+        // ========================================
+        // HELPER: ADD FIELD
+        // ========================================
+        function addField(x, y, label, value) {
+          pdf.setFontSize(9);
+          pdf.setFont(undefined, 'bold');
+          pdf.text(label, x, y);
+          
+          pdf.setFont(undefined, 'normal');
+          pdf.setFontSize(10);
+          pdf.text(String(value || '-'), x, y + 4);
+          
+          return y + 9;
+        }
+        
+        // ========================================
+        // PAGE 1 START
+        // ========================================
+        addHeader(true);
+        currentY = 40;
+        
         // SECTION 1: EINSATZDATEN
-        checkPageBreak(65);
-        let boxY = drawBox(margin, currentY, fullWidth, 65, '1. EINSATZDATEN');
+        checkPageBreak(38);
+        let boxY = drawSection('1. EINSATZDATEN', 38);
         
-        const col3Width = (fullWidth - 6) / 3;
-        let tempY = boxY;
+        const col3W = (fullWidth - 6) / 3;
+        addField(margin + 2, boxY, 'Einsatz-Nr:', p.einsatz_nr);
+        addField(margin + 2 + col3W + 3, boxY, 'Datum/Uhrzeit:', 
+          p.zeit_einsatz ? new Date(p.zeit_einsatz).toLocaleString('de-DE') : '-');
+        addField(margin + 2 + 2*col3W + 6, boxY, 'Pat./Auftrags-Nr:', p.auftrags_nr);
         
-        let x1 = margin + 3;
-        tempY = boxY;
-        tempY = addField(x1, tempY, 'Einsatz-Nr:', p.einsatz_nr, col3Width);
-        tempY = addField(x1, tempY, 'Fahrzeug:', p.fahrzeug, col3Width);
+        addField(margin + 2, boxY + 12, 'Fahrzeug:', p.fahrzeug);
+        addField(margin + 2 + col3W + 3, boxY + 12, 'Rufname:', p.rufname);
+        addField(margin + 2 + 2*col3W + 6, boxY + 12, 'Einsatz-Art:', p.einsatz_art);
         
-        let x2 = margin + 3 + col3Width + 3;
-        tempY = boxY;
-        tempY = addField(x2, tempY, 'Datum/Uhrzeit:', p.zeit_einsatz ? new Date(p.zeit_einsatz).toLocaleString('de-DE') : '-', col3Width);
-        tempY = addField(x2, tempY, 'Rufname:', p.rufname, col3Width);
-        
-        let x3 = margin + 3 + 2 * col3Width + 6;
-        tempY = boxY;
-        tempY = addField(x3, tempY, 'Pat./Auftrags-Nr:', p.auftrags_nr, col3Width);
-        tempY = addField(x3, tempY, 'Einsatz-Art:', p.einsatz_art, col3Width);
-        
-        currentY += 67;
+        currentY += 40;
         
         // SECTION 2: PATIENT
-        checkPageBreak(75);
-        boxY = drawBox(margin, currentY, fullWidth, 75, '2. PATIENT');
+        checkPageBreak(38);
+        boxY = drawSection('2. PATIENT', 38);
         
-        tempY = boxY;
-        x1 = margin + 3;
-        tempY = addField(x1, tempY, 'Name:', `${p.vorname || ''} ${p.name || ''}`.trim(), col3Width);
-        tempY = addField(x1, tempY, 'Geburtsdatum:', p.gebdatum ? new Date(p.gebdatum).toLocaleDateString('de-DE') : '-', col3Width);
-        tempY = addField(x1, tempY, 'Alter:', p.alter, col3Width);
+        const patName = `${p.vorname || ''} ${p.name || ''}`.trim();
+        addField(margin + 2, boxY, 'Name:', patName);
+        addField(margin + 2 + col3W + 3, boxY, 'Straße:', p.strasse);
+        addField(margin + 2 + 2*col3W + 6, boxY, 'Kasse:', p.kasse);
         
-        x2 = margin + 3 + col3Width + 3;
-        tempY = boxY;
-        tempY = addField(x2, tempY, 'Straße:', p.strasse, col3Width);
-        tempY = addField(x2, tempY, 'PLZ, Ort:', p.plz_ort, col3Width);
-        tempY = addField(x2, tempY, 'Telefon:', p.telefon || p.mobil, col3Width);
+        addField(margin + 2, boxY + 12, 'Geburtsdatum:', 
+          p.gebdatum ? new Date(p.gebdatum).toLocaleDateString('de-DE') : '-');
+        addField(margin + 2 + col3W + 3, boxY + 12, 'PLZ, Ort:', p.plz_ort);
+        addField(margin + 2 + 2*col3W + 6, boxY + 12, 'Vers.-Nr.:', p.versnr);
         
-        x3 = margin + 3 + 2 * col3Width + 6;
-        tempY = boxY;
-        tempY = addField(x3, tempY, 'Kasse:', p.kasse, col3Width);
-        tempY = addField(x3, tempY, 'Vers.-Nr.:', p.versnr, col3Width);
-        tempY = addField(x3, tempY, 'Hausarzt:', p.hausarzt, col3Width);
+        addField(margin + 2, boxY + 24, 'Alter:', p.alter);
+        addField(margin + 2 + col3W + 3, boxY + 24, 'Telefon:', p.telefon || p.mobil);
+        addField(margin + 2 + 2*col3W + 6, boxY + 24, 'Hausarzt:', p.hausarzt);
         
-        currentY += 77;
+        currentY += 40;
         
-        // SECTION 3: ANAMNESE / NOTFALLGESCHEHEN
-        checkPageBreak(80);
-        boxY = drawBox(margin, currentY, fullWidth, 80, '3. ANAMNESE / NOTFALLGESCHEHEN');
-        pdf.setFontSize(10);
-        const anamneseLines = pdf.splitTextToSize(p.notfallgeschehen || '-', fullWidth - 6);
-        pdf.text(anamneseLines.slice(0, 30), margin + 3, boxY);
-        currentY += 82;
+        // SECTION 3: ANAMNESE
+        checkPageBreak(50);
+        boxY = drawSection('3. ANAMNESE / NOTFALLGESCHEHEN', 50);
+        
+        pdf.setFontSize(9.5);
+        const anamLines = pdf.splitTextToSize(p.notfallgeschehen || '-', fullWidth - 4);
+        pdf.text(anamLines.slice(0, 18), margin + 2, boxY);
+        
+        currentY += 52;
+        
+        // ========================================
+        // PAGE 2 START
+        // ========================================
+        checkPageBreak(38);
         
         // SECTION 4 & 5: VORERKRANKUNGEN / VERLETZUNGEN
-        checkPageBreak(65);
+        const col2W = (fullWidth - 3) / 2;
         
-        boxY = drawBox(col1X, currentY, colWidth, 65, '4. VORERKRANKUNGEN / ALLERGIEN');
-        pdf.setFontSize(9.5);
-        const infosLines = pdf.splitTextToSize(p.infos || '-', colWidth - 6);
-        pdf.text(infosLines.slice(0, 24), col1X + 3, boxY);
+        boxY = drawSection('4. VORERKRANKUNGEN / ALLERGIEN', 38);
+        pdf.setFontSize(9);
+        const infosLines = pdf.splitTextToSize(p.infos || '-', col2W - 4);
+        pdf.text(infosLines.slice(0, 12), margin + 2, boxY);
         
-        boxY = drawBox(col2X, currentY, colWidth, 65, '5. VERLETZUNGEN');
-        pdf.setFontSize(9.5);
-        const verletzLines = pdf.splitTextToSize(p.verletz_text || '-', colWidth - 6);
-        pdf.text(verletzLines.slice(0, 24), col2X + 3, boxY);
+        pdf.setFillColor(255, 240, 245);
+        pdf.rect(margin + col2W + 3, currentY, col2W, 38, 'F');
+        pdf.setFillColor(255, 220, 235);
+        pdf.rect(margin + col2W + 3, currentY, col2W, 7, 'F');
+        pdf.setTextColor(200, 16, 46);
+        pdf.setFontSize(11);
+        pdf.setFont(undefined, 'bold');
+        pdf.text('5. VERLETZUNGEN', margin + col2W + 5, currentY + 5);
+        pdf.setTextColor(0, 0, 0);
+        pdf.setFont(undefined, 'normal');
+        pdf.setFontSize(9);
+        const verlLines = pdf.splitTextToSize(p.verletz_text || '-', col2W - 4);
+        pdf.text(verlLines.slice(0, 12), margin + col2W + 5, currentY + 11);
         
-        currentY += 67;
+        currentY += 40;
         
         // SECTION 6: VITALPARAMETER
-        checkPageBreak(55);
-        boxY = drawBox(margin, currentY, fullWidth, 55, '6. VITALPARAMETER');
+        checkPageBreak(33);
+        boxY = drawSection('6. VITALPARAMETER', 33);
         
-        const col4Width = (fullWidth - 12) / 4;
-        tempY = boxY;
+        const col4W = (fullWidth - 9) / 4;
+        addField(margin + 2, boxY, 'RR:', `${p.rr_sys || '-'} / ${p.rr_dia || '-'} mmHg`);
+        addField(margin + 2 + col4W + 3, boxY, 'AF:', `${p.af || '-'} /min`);
+        addField(margin + 2 + 2*col4W + 6, boxY, 'Temp:', `${p.temp || '-'} °C`);
+        addField(margin + 2 + 3*col4W + 9, boxY, 'etCO₂:', `${p.etco2 || '-'} mmHg`);
         
-        x1 = margin + 3;
-        tempY = addField(x1, tempY, 'RR:', `${p.rr_sys || '-'} / ${p.rr_dia || '-'} mmHg`, col4Width);
-        tempY = addField(x1, tempY, 'HF:', `${p.hf || '-'} /min`, col4Width);
+        addField(margin + 2, boxY + 10, 'HF:', `${p.hf || '-'} /min`);
+        addField(margin + 2 + col4W + 3, boxY + 10, 'SpO₂:', `${p.spo2 || '-'} %`);
+        addField(margin + 2 + 2*col4W + 6, boxY + 10, 'BZ:', `${p.bz_mg || '-'} mg/dl`);
+        addField(margin + 2 + 3*col4W + 9, boxY + 10, 'Schmerz:', `${p.schmerz || '-'} / 10`);
         
-        let x2_4 = margin + 3 + col4Width + 3;
-        tempY = boxY;
-        tempY = addField(x2_4, tempY, 'AF:', `${p.af || '-'} /min`, col4Width);
-        tempY = addField(x2_4, tempY, 'SpO₂:', `${p.spo2 || '-'} %`, col4Width);
-        
-        let x3_4 = margin + 3 + 2 * col4Width + 6;
-        tempY = boxY;
-        tempY = addField(x3_4, tempY, 'Temp:', `${p.temp || '-'} °C`, col4Width);
-        tempY = addField(x3_4, tempY, 'BZ:', `${p.bz_mg || '-'} mg/dl`, col4Width);
-        
-        let x4_4 = margin + 3 + 3 * col4Width + 9;
-        tempY = boxY;
-        tempY = addField(x4_4, tempY, 'etCO₂:', `${p.etco2 || '-'} mmHg`, col4Width);
-        tempY = addField(x4_4, tempY, 'Schmerz:', `${p.schmerz || '-'} / 10`, col4Width);
-        
-        currentY += 57;
+        currentY += 35;
         
         // SECTION 7 & 8: NEUROLOGIE / ATMUNG
-        checkPageBreak(70);
+        checkPageBreak(35);
         
         const gcsE = parseInt(p.gcs_e || 0);
         const gcsV = parseInt(p.gcs_v || 0);
         const gcsM = parseInt(p.gcs_m || 0);
         const gcsSum = gcsE + gcsV + gcsM;
         
-        boxY = drawBox(col1X, currentY, colWidth, 70, '7. NEUROLOGIE / GCS');
-        tempY = boxY;
-        tempY = addField(col1X + 3, tempY, 'GCS:', `E${gcsE} + V${gcsV} + M${gcsM} = ${gcsSum > 0 ? gcsSum : '-'}`, colWidth);
-        tempY = addField(col1X + 3, tempY, 'Pupillen R:', `${p.pw_r || '-'} / ${p.lr_r || '-'}`, colWidth);
-        tempY = addField(col1X + 3, tempY, 'Pupillen L:', `${p.pw_l || '-'} / ${p.lr_l || '-'}`, colWidth);
-        const bewusstsein = [p.bew_wach?'wach':null, p.bew_ansprache?'Ansprache':null, p.bew_schmerz?'Schmerz':null, p.bew_bewusstlos?'bewusstlos':null].filter(x=>x).join(', ');
-        tempY = addField(col1X + 3, tempY, 'Bewusstsein:', bewusstsein || '-', colWidth);
+        boxY = drawSection('7. NEUROLOGIE / GCS', 35);
+        addField(margin + 2, boxY, 'GCS:', `E${gcsE} + V${gcsV} + M${gcsM} = ${gcsSum > 0 ? gcsSum : '—'}`);
+        addField(margin + 2, boxY + 10, 'Pupillen R:', `${p.pw_r || '-'} / ${p.lr_r || '-'}`);
+        addField(margin + 2, boxY + 20, 'Pupillen L:', `${p.pw_l || '-'} / ${p.lr_l || '-'}`);
         
-        boxY = drawBox(col2X, currentY, colWidth, 70, '8. ATMUNG');
-        tempY = boxY;
-        const atmung = [p.atm_apnoe?'Apnoe':null, p.atm_stridor?'Stridor':null, p.atm_dyspnoe?'Dyspnoe':null, p.atm_zyanose?'Zyanose':null].filter(x=>x).join(', ');
-        tempY = addField(col2X + 3, tempY, 'Zeichen:', atmung || '-', colWidth);
-        tempY = addField(col2X + 3, tempY, 'O₂-Gabe:', p.o2 || '-', colWidth);
-        const o2Det = [p.o2_nasal?'Nasal':null, p.o2_maske?'Maske':null, p.o2_reservoir?'Reservoir':null].filter(x=>x).join(', ');
-        tempY = addField(col2X + 3, tempY, 'O₂-Details:', `${o2Det || '-'} (${p.o2_flow || '-'} l/min)`, colWidth);
-        const aw = [p.aw_guedel?'Guedel':null, p.aw_ett?'ETT':null, p.aw_larynxtubus?'LT':null, p.aw_bvm?'BVM':null].filter(x=>x).join(', ');
-        tempY = addField(col2X + 3, tempY, 'Atemweg:', aw || '-', colWidth);
+        const bewLines = [
+          p.bew_wach ? 'wach' : null,
+          p.bew_ansprache ? 'Ansprache' : null,
+          p.bew_schmerz ? 'Schmerz' : null,
+          p.bew_bewusstlos ? 'bewusstlos' : null
+        ].filter(x => x).join(', ');
         
-        currentY += 72;
+        pdf.setFillColor(255, 240, 245);
+        pdf.rect(margin + col2W + 3, currentY, col2W, 35, 'F');
+        pdf.setFillColor(255, 220, 235);
+        pdf.rect(margin + col2W + 3, currentY, col2W, 7, 'F');
+        pdf.setTextColor(200, 16, 46);
+        pdf.setFontSize(11);
+        pdf.setFont(undefined, 'bold');
+        pdf.text('8. ATMUNG', margin + col2W + 5, currentY + 5);
+        pdf.setTextColor(0, 0, 0);
+        pdf.setFont(undefined, 'normal');
+        
+        const atmLines = [
+          p.atm_apnoe ? 'Apnoe' : null,
+          p.atm_stridor ? 'Stridor' : null,
+          p.atm_dyspnoe ? 'Dyspnoe' : null,
+          p.atm_zyanose ? 'Zyanose' : null
+        ].filter(x => x).join(', ');
+        
+        addField(margin + col2W + 5, currentY + 11, 'Zeichen:', atmLines || '-');
+        addField(margin + col2W + 5, currentY + 20, 'O₂-Gabe:', p.o2 || '-');
+        
+        const o2Det = [
+          p.o2_nasal ? 'Nasal' : null,
+          p.o2_maske ? 'Maske' : null,
+          p.o2_reservoir ? 'Reservoir' : null
+        ].filter(x => x).join(', ');
+        
+        pdf.setFontSize(9);
+        pdf.text(`${o2Det || '-'} (${p.o2_flow || '-'} l/min)`, margin + col2W + 5, currentY + 29);
+        
+        const awLines = [
+          p.aw_guedel ? 'Guedel' : null,
+          p.aw_ett ? 'ETT' : null,
+          p.aw_larynxtubus ? 'LT' : null,
+          p.aw_bvm ? 'BVM' : null
+        ].filter(x => x).join(', ');
+        
+        currentY += 37;
         
         // SECTION 9 & 10: RHYTHMUS / ERSTDIAGNOSEN
-        checkPageBreak(45);
+        checkPageBreak(30);
         
-        boxY = drawBox(col1X, currentY, colWidth, 45, '9. RHYTHMUS / EKG');
-        tempY = boxY;
-        const rhythmus = [p.sr?'SR':null, p.stemi?'STEMI':null, p.vf?'VF':null, p.asystole?'Asystolie':null].filter(x=>x).join(', ');
-        tempY = addField(col1X + 3, tempY, 'Befund:', rhythmus || '-', colWidth);
-        tempY = addField(col1X + 3, tempY, 'Standort:', p.ekg_standort, colWidth);
-        tempY = addField(col1X + 3, tempY, 'Pers-Nr.:', p.ekg_persnr, colWidth);
+        boxY = drawSection('9. RHYTHMUS / EKG', 30);
         
-        boxY = drawBox(col2X, currentY, colWidth, 45, '10. ERSTDIAGNOSEN');
-        const diag = [
-          p.diag_krampf?'Krampf':null, 
-          p.diag_synkope?'Synkope':null, 
-          p.diag_apoplex?'Apoplex':null,
-          p.diag_sht?'SHT':null,
-          p.diag_acs?'ACS':null, 
-          p.diag_insuff?'Herzinsuff.':null,
-          p.diag_hypo?'Hypoglyk.':null,
-          p.diag_resp_insuff?'Resp.Insuff.':null
-        ].filter(x=>x).join(', ');
+        const rhythmusLines = [
+          p.sr ? 'SR' : null,
+          p.stemi ? 'STEMI' : null,
+          p.vf ? 'VF' : null,
+          p.asystole ? 'Asystolie' : null
+        ].filter(x => x).join(', ');
+        
+        addField(margin + 2, boxY, 'Befund:', rhythmusLines || '-');
+        addField(margin + 2, boxY + 10, 'Standort:', p.ekg_standort);
+        addField(margin + 2, boxY + 20, 'Pers-Nr.:', p.ekg_persnr);
+        
+        pdf.setFillColor(255, 240, 245);
+        pdf.rect(margin + col2W + 3, currentY, col2W, 30, 'F');
+        pdf.setFillColor(255, 220, 235);
+        pdf.rect(margin + col2W + 3, currentY, col2W, 7, 'F');
+        pdf.setTextColor(200, 16, 46);
+        pdf.setFontSize(11);
+        pdf.setFont(undefined, 'bold');
+        pdf.text('10. ERSTDIAGNOSEN', margin + col2W + 5, currentY + 5);
+        pdf.setTextColor(0, 0, 0);
+        pdf.setFont(undefined, 'normal');
+        
+        const diagLines = [
+          p.diag_krampf ? 'Krampf' : null,
+          p.diag_synkope ? 'Synkope' : null,
+          p.diag_apoplex ? 'Apoplex' : null,
+          p.diag_sht ? 'SHT' : null,
+          p.diag_acs ? 'ACS' : null,
+          p.diag_insuff ? 'Herzinsuff.' : null,
+          p.diag_hypo ? 'Hypoglyk.' : null,
+          p.diag_resp_insuff ? 'Resp.Insuff.' : null
+        ].filter(x => x).join(', ');
+        
         pdf.setFontSize(9);
-        const diagLines = pdf.splitTextToSize(diag || '-', colWidth - 6);
-        pdf.text(diagLines, col2X + 3, boxY);
+        const diagText = pdf.splitTextToSize(diagLines || '-', col2W - 4);
+        pdf.text(diagText, margin + col2W + 5, currentY + 11);
         
-        currentY += 47;
-        // SECTION 11: MEDIKAMENTE
-        checkPageBreak(80);
-        boxY = drawBox(margin, currentY, fullWidth, 80, '11. MEDIKAMENTE');
+        currentY += 32;
         
-        if (p.medications && p.medications.length > 0) {
-          pdf.setFontSize(9);
+        // ========================================
+        // PAGE 3 START
+        // ========================================
+        checkPageBreak(55);
+        
+        // SECTION 11: MEDIKAMENTE (KOMPAKT!)
+        boxY = drawSection('11. MEDIKAMENTE', 55);
+        
+        const meds = p.medications || [];
+        if (meds.length > 0) {
+          pdf.setFontSize(8);
           pdf.setFont(undefined, 'bold');
           
-          const medTableX = margin + 3;
-          const medColWidths = [10, 50, 25, 20, 25, 20, 35];
-          let medY = boxY + 2;
+          const medX = margin + 2;
+          let medY = boxY;
           
           // Table header
-          pdf.setFillColor(240, 240, 240);
-          pdf.rect(medTableX, medY - 4, fullWidth - 6, 6, 'F');
+          pdf.setFillColor(245, 245, 245);
+          pdf.rect(medX, medY, fullWidth - 4, 5, 'F');
           
-          pdf.text('#', medTableX + 2, medY);
-          pdf.text('Medikament', medTableX + medColWidths[0] + 2, medY);
-          pdf.text('Dosis', medTableX + medColWidths[0] + medColWidths[1] + 2, medY);
-          pdf.text('Einheit', medTableX + medColWidths[0] + medColWidths[1] + medColWidths[2] + 2, medY);
-          pdf.text('Route', medTableX + medColWidths[0] + medColWidths[1] + medColWidths[2] + medColWidths[3] + 2, medY);
-          pdf.text('Zeit', medTableX + medColWidths[0] + medColWidths[1] + medColWidths[2] + medColWidths[3] + medColWidths[4] + 2, medY);
-          pdf.text('Bemerkung', medTableX + medColWidths[0] + medColWidths[1] + medColWidths[2] + medColWidths[3] + medColWidths[4] + medColWidths[5] + 2, medY);
+          pdf.text('#', medX + 1, medY + 3.5);
+          pdf.text('Medikament', medX + 8, medY + 3.5);
+          pdf.text('Dosis', medX + 60, medY + 3.5);
+          pdf.text('Einh.', medX + 80, medY + 3.5);
+          pdf.text('Route', medX + 100, medY + 3.5);
+          pdf.text('Uhrzeit', medX + 120, medY + 3.5);
+          pdf.text('Bemerkung', medX + 145, medY + 3.5);
           
-          medY += 5;
+          medY += 6;
           pdf.setFont(undefined, 'normal');
           
-          // Table rows
-          p.medications.slice(0, 12).forEach((med, idx) => {
-            if (medY > boxY + 70) return;
-            
-            pdf.text(`${idx + 1}`, medTableX + 2, medY);
-            pdf.text(med.name || '-', medTableX + medColWidths[0] + 2, medY);
-            pdf.text(med.dose || '-', medTableX + medColWidths[0] + medColWidths[1] + 2, medY);
-            pdf.text(med.unit || '-', medTableX + medColWidths[0] + medColWidths[1] + medColWidths[2] + 2, medY);
-            pdf.text(med.route || '-', medTableX + medColWidths[0] + medColWidths[1] + medColWidths[2] + medColWidths[3] + 2, medY);
-            pdf.text(med.time || '-', medTableX + medColWidths[0] + medColWidths[1] + medColWidths[2] + medColWidths[3] + medColWidths[4] + 2, medY);
-            const noteText = pdf.splitTextToSize(med.note || '-', medColWidths[6] - 4);
-            pdf.text(noteText[0] || '-', medTableX + medColWidths[0] + medColWidths[1] + medColWidths[2] + medColWidths[3] + medColWidths[4] + medColWidths[5] + 2, medY);
-            
+          // Table rows (max 5-6 rows to keep it compact!)
+          meds.slice(0, 6).forEach((med, idx) => {
+            pdf.text(`${idx + 1}`, medX + 1, medY);
+            pdf.text(med.name || '-', medX + 8, medY);
+            pdf.text(med.dose || '-', medX + 60, medY);
+            pdf.text(med.unit || '-', medX + 80, medY);
+            pdf.text(med.route || '-', medX + 100, medY);
+            pdf.text(med.time || '-', medX + 120, medY);
+            const noteLines = pdf.splitTextToSize(med.note || '-', 30);
+            pdf.text(noteLines[0] || '-', medX + 145, medY);
             medY += 5;
           });
         } else {
-          pdf.setFontSize(10);
-          pdf.text('Keine Medikamentengabe dokumentiert', margin + 3, boxY + 5);
+          pdf.setFontSize(9);
+          pdf.text('Keine Medikamentengabe dokumentiert', margin + 2, boxY + 5);
         }
         
-        currentY += 82;
+        currentY += 57;
         
         // SECTION 12 & 13: ZUGANG / INFUSION
-        checkPageBreak(45);
+        checkPageBreak(30);
         
-        boxY = drawBox(col1X, currentY, colWidth, 45, '12. ZUGANG');
-        tempY = boxY;
-        tempY = addField(col1X + 3, tempY, 'Art:', p.zugang_art || '-', colWidth);
-        tempY = addField(col1X + 3, tempY, 'Größe:', p.zugang_gauge ? `${p.zugang_gauge}G` : '-', colWidth);
-        tempY = addField(col1X + 3, tempY, 'Region:', p.zugang_region, colWidth);
-        tempY = addField(col1X + 3, tempY, 'Versuche:', p.zugang_versuche, colWidth);
+        boxY = drawSection('12. ZUGANG', 30);
+        addField(margin + 2, boxY, 'Art:', p.zugang_art || '-');
+        addField(margin + 2, boxY + 10, 'Größe:', p.zugang_gauge ? `${p.zugang_gauge}G` : '-');
+        addField(margin + 2, boxY + 20, 'Region:', p.zugang_region);
         
-        boxY = drawBox(col2X, currentY, colWidth, 45, '13. INFUSION');
-        tempY = boxY;
-        tempY = addField(col2X + 3, tempY, 'Art:', p.inf_art, colWidth);
-        tempY = addField(col2X + 3, tempY, 'Menge:', p.inf_menge ? `${p.inf_menge} ml` : '-', colWidth);
-        tempY = addField(col2X + 3, tempY, 'Laufrate:', p.inf_rate ? `${p.inf_rate} ml/h` : '-', colWidth);
-        tempY = addField(col2X + 3, tempY, 'Bemerkung:', p.inf_bem, colWidth);
+        pdf.setFillColor(255, 240, 245);
+        pdf.rect(margin + col2W + 3, currentY, col2W, 30, 'F');
+        pdf.setFillColor(255, 220, 235);
+        pdf.rect(margin + col2W + 3, currentY, col2W, 7, 'F');
+        pdf.setTextColor(200, 16, 46);
+        pdf.setFontSize(11);
+        pdf.setFont(undefined, 'bold');
+        pdf.text('13. INFUSION', margin + col2W + 5, currentY + 5);
+        pdf.setTextColor(0, 0, 0);
+        pdf.setFont(undefined, 'normal');
         
-        currentY += 47;
+        addField(margin + col2W + 5, currentY + 11, 'Art:', p.inf_art);
+        addField(margin + col2W + 5, currentY + 20, 'Menge:', p.inf_menge ? `${p.inf_menge} ml` : '-');
         
-        // SECTION 14: REANIMATION
+        const verfLines = [
+          p.zugang_versuche ? `Versuche: ${p.zugang_versuche}` : null
+        ].filter(x => x).join('');
+        
+        currentY += 32;
+        
+        // SECTION 14: REANIMATION (falls vorhanden)
         if (p.rea_beginn) {
-          checkPageBreak(50);
-          boxY = drawBox(margin, currentY, fullWidth, 50, '14. REANIMATION');
-          tempY = boxY;
+          checkPageBreak(35);
+          boxY = drawSection('14. REANIMATION', 35);
           
-          tempY = addField(margin + 3, tempY, 'Rea-Beginn:', p.rea_beginn ? new Date(p.rea_beginn).toLocaleString('de-DE') : '-', col3Width);
-          tempY = addField(margin + 3, tempY, 'Erst-Rhythmus:', p.rea_initial, col3Width);
+          addField(margin + 2, boxY, 'Beginn:', 
+            p.rea_beginn ? new Date(p.rea_beginn).toLocaleString('de-DE') : '-');
+          addField(margin + 2 + col3W + 3, boxY, 'Initial-Rhythmus:', p.rea_initial);
+          addField(margin + 2 + 2*col3W + 6, boxY, 'Schocks:', p.rea_shocks);
           
-          tempY = boxY;
-          tempY = addField(margin + 3 + col3Width + 3, tempY, 'Schocks:', p.rea_shocks, col3Width);
-          tempY = addField(margin + 3 + col3Width + 3, tempY, 'ROSC:', p.rea_rosc, col3Width);
+          addField(margin + 2, boxY + 12, 'ROSC:', p.rea_rosc);
+          addField(margin + 2 + col3W + 3, boxY + 12, 'Ende:', p.rea_ende);
+          addField(margin + 2 + 2*col3W + 6, boxY + 12, 'Beatmung:', '-');
           
-          tempY = boxY;
-          tempY = addField(margin + 3 + 2 * col3Width + 6, tempY, 'Rea-Ende:', p.rea_ende, col3Width);
+          addField(margin + 2, boxY + 24, 'FiO₂:', p.vent_fio2 ? `${p.vent_fio2} %` : '-');
+          addField(margin + 2 + col3W + 3, boxY + 24, 'PEEP:', p.vent_peep ? `${p.vent_peep} cmH₂O` : '-');
+          addField(margin + 2 + 2*col3W + 6, boxY + 24, 'ETT-Größe:', p.aw_ett_size);
           
-          currentY += 52;
+          currentY += 37;
         }
         
-        // SECTION 15: ÜBERGABE
-        checkPageBreak(50);
-        boxY = drawBox(margin, currentY, fullWidth, 50, '15. ÜBERGABE / TRANSPORT');
-        tempY = boxY;
+        // SECTION 15: ÜBERGABE / TRANSPORT
+        checkPageBreak(30);
+        boxY = drawSection('15. ÜBERGABE / TRANSPORT', 30);
         
-        tempY = addField(margin + 3, tempY, 'Übergabe an:', p.ue_name, col3Width);
-        tempY = addField(margin + 3, tempY, 'Zeitpunkt:', p.ue_zeit ? new Date(p.ue_zeit).toLocaleString('de-DE') : '-', col3Width);
+        addField(margin + 2, boxY, 'Übergabe an:', p.ue_name);
+        addField(margin + 2 + col2W + 3, boxY, 'Zielklinik:', p.ziel_bez);
         
-        tempY = boxY;
-        tempY = addField(margin + 3 + col3Width + 3, tempY, 'Ziel:', p.ziel_bez, col3Width);
-        tempY = addField(margin + 3 + col3Width + 3, tempY, 'Adresse:', p.ziel_adr, col3Width);
+        addField(margin + 2, boxY + 10, 'Zeitpunkt:', 
+          p.ue_zeit ? new Date(p.ue_zeit).toLocaleString('de-DE') : '-');
+        addField(margin + 2 + col2W + 3, boxY + 10, 'Adresse:', p.ziel_adr);
         
-        tempY = boxY;
-        tempY = addField(margin + 3 + 2 * col3Width + 6, tempY, 'Einsatzende:', p.einsatzende ? new Date(p.einsatzende).toLocaleString('de-DE') : '-', col3Width);
+        addField(margin + 2, boxY + 20, 'Einsatzende:', 
+          p.einsatzende ? new Date(p.einsatzende).toLocaleString('de-DE') : '-');
         
-        currentY += 52;
+        currentY += 32;
         
         // SECTION 16: FOTOS
+        checkPageBreak(20);
+        boxY = drawSection('16. FOTOS', 20);
+        
         if (p.photos && p.photos.length > 0) {
-          checkPageBreak(80);
-          boxY = drawBox(margin, currentY, fullWidth, 80, '16. FOTOS');
-          
           pdf.setFontSize(9);
-          pdf.text(`${p.photos.length} Foto(s) dokumentiert`, margin + 3, boxY + 5);
-          
-          let photoX = margin + 3;
-          let photoY = boxY + 10;
-          const photoWidth = 35;
-          const photoHeight = 35;
-          const photoSpacing = 5;
-          
-          for (let i = 0; i < Math.min(p.photos.length, 10); i++) {
-            try {
-              pdf.addImage(p.photos[i], 'JPEG', photoX, photoY, photoWidth, photoHeight);
-              photoX += photoWidth + photoSpacing;
-              
-              if (photoX + photoWidth > pageWidth - margin) {
-                photoX = margin + 3;
-                photoY += photoHeight + photoSpacing;
-              }
-              
-              if (photoY + photoHeight > currentY + 75) break;
-            } catch(e) {
-              console.log('Foto konnte nicht eingefügt werden:', e);
-            }
-          }
-          
-          currentY += 82;
+          pdf.text(`${p.photos.length} Foto(s) vorhanden`, margin + 2, boxY + 5);
+        } else {
+          pdf.setFontSize(9);
+          pdf.text('Keine Fotos vorhanden', margin + 2, boxY + 5);
         }
+        
+        currentY += 22;
+        
+        // ========================================
+        // PAGE 4 START
+        // ========================================
+        checkPageBreak(35);
         
         // SECTION 17: WEITERE BEFUNDE
-        if (p.atm_sonst) {
-          checkPageBreak(40);
-          boxY = drawBox(margin, currentY, fullWidth, 40, '17. WEITERE BEFUNDE');
-          pdf.setFontSize(9.5);
-          const sonstLines = pdf.splitTextToSize(p.atm_sonst, fullWidth - 6);
-          pdf.text(sonstLines, margin + 3, boxY);
-          currentY += 42;
-        }
+        boxY = drawSection('17. WEITERE BEFUNDE', 35);
+        
+        const hautLines = [
+          p.haut_oedeme ? 'Ödeme' : null,
+          p.haut_falten ? 'Hautfalten' : null,
+          p.haut_kaltschweissig ? 'kaltschweißig' : null
+        ].filter(x => x).join(', ');
+        
+        addField(margin + 2, boxY, 'Haut:', hautLines || 'o.B.');
+        
+        const psycheLines = [
+          p.psy_erregt ? 'erregt' : null,
+          p.psy_aggr ? 'aggressiv' : null,
+          p.psy_verwirrt ? 'verwirrt' : null
+        ].filter(x => x).join(', ');
+        
+        addField(margin + 2, boxY + 12, 'Psyche:', psycheLines || 'o.B.');
+        
+        currentY += 37;
         
         // SECTION 18: UNTERSCHRIFTEN
-        checkPageBreak(60);
-        boxY = drawBox(margin, currentY, fullWidth, 60, '18. UNTERSCHRIFTEN');
+        checkPageBreak(40);
+        boxY = drawSection('18. UNTERSCHRIFTEN', 40);
         
-        // Ausfüller
-        tempY = boxY;
-        tempY = addField(margin + 3, tempY, 'Ausfüller:', p.ausfueller_name, colWidth);
-        tempY = addField(margin + 3, tempY, 'Zeitpunkt:', p.ausfueller_zeit ? new Date(p.ausfueller_zeit).toLocaleString('de-DE') : '-', colWidth);
+        addField(margin + 2, boxY, 'Ausfüller:', p.ausfueller_name);
+        pdf.setFontSize(9);
+        pdf.text(p.ausfueller_zeit ? new Date(p.ausfueller_zeit).toLocaleString('de-DE') : '', 
+          margin + 2, boxY + 8);
         
         if (p.signature) {
           try {
-            pdf.addImage(p.signature, 'PNG', margin + 3, tempY, 50, 20);
+            pdf.addImage(p.signature, 'PNG', margin + 2, boxY + 12, 50, 20);
           } catch(e) {
-            pdf.text('(Unterschrift vorhanden)', margin + 3, tempY + 5);
+            pdf.setFontSize(8);
+            pdf.text('(Unterschrift vorhanden)', margin + 2, boxY + 20);
           }
         }
         
-        // MPG-Beauftragter
-        tempY = boxY;
-        tempY = addField(col2X + 3, tempY, 'MPG-Beauftragter:', adminData.name, colWidth);
-        tempY = addField(col2X + 3, tempY, 'Zeitpunkt:', adminData.datum ? new Date(adminData.datum).toLocaleString('de-DE') : '-', colWidth);
+        addField(margin + col2W + 5, boxY, 'MPG-Beauftragter:', adminData.name);
+        pdf.setFontSize(9);
+        pdf.text(adminData.datum ? new Date(adminData.datum).toLocaleString('de-DE') : '', 
+          margin + col2W + 5, boxY + 8);
         
         if (adminData.unterschrift) {
           try {
-            pdf.addImage(adminData.unterschrift, 'PNG', col2X + 3, tempY, 50, 20);
+            pdf.addImage(adminData.unterschrift, 'PNG', margin + col2W + 5, boxY + 12, 50, 20);
           } catch(e) {
-            pdf.text('(Unterschrift vorhanden)', col2X + 3, tempY + 5);
+            pdf.setFontSize(8);
+            pdf.text('(Unterschrift vorhanden)', margin + col2W + 5, boxY + 20);
           }
         }
         
-        currentY += 62;
+        currentY += 42;
         
-        // FOOTER
+        // ========================================
+        // FOOTER ON ALL PAGES
+        // ========================================
         const totalPages = pdf.internal.pages.length - 1;
         for (let i = 1; i <= totalPages; i++) {
           pdf.setPage(i);
           pdf.setFontSize(8);
           pdf.setTextColor(100, 100, 100);
-          pdf.text(`${orgName} - Notfallprotokoll`, margin, pageHeight - 5);
-          pdf.text(`Seite ${i} von ${totalPages}`, pageWidth - margin - 25, pageHeight - 5);
-          pdf.text(`Erstellt: ${new Date().toLocaleString('de-DE')}`, pageWidth / 2 - 30, pageHeight - 5);
+          
+          const einsatzNr = p.einsatz_nr || '?';
+          const footerText = `Einsatz-Nr: ${einsatzNr} | ${orgName} | Seite ${i} von ${totalPages}`;
+          
+          pdf.text(footerText, pageWidth / 2, pageHeight - 5, { align: 'center' });
         }
         
-        // Save PDF
+        // ========================================
+        // SAVE PDF
+        // ========================================
         const patName = `${p.vorname || ''}_${p.name || ''}`.trim() || 'Patient';
         const einsatzNr = p.einsatz_nr || 'ohne_nr';
-        const timestamp = new Date().toISOString().slice(0, 10);
-        pdf.save(`Notfallprotokoll_${patName}_${einsatzNr}_${timestamp}.pdf`);
+        const timestamp = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+        
+        pdf.save(`Notfallprotokoll_${einsatzNr}_${timestamp}.pdf`);
         
         showMsg('✅ PDF erfolgreich erstellt!', 'success');
         
@@ -1776,12 +2830,14 @@
         const col2Width = (fullWidth - 3) / 2;
         let tempY = boxY;
         
-        tempY = addField(margin + 3, tempY, 'Datum/Alarmzeit:', doc.datum_alarmzeit ? new Date(doc.datum_alarmzeit).toLocaleString('de-DE') : '-', col2Width);
+        tempY = addField(margin + 3, tempY, 'Datum/Alarmzeit:', 
+          doc.datum_alarmzeit ? new Date(doc.datum_alarmzeit).toLocaleString('de-DE') : '-', col2Width);
         tempY = addField(margin + 3, tempY, 'Stichwort:', doc.stichwort, col2Width);
         tempY = addField(margin + 3, tempY, 'Einsatznummer ILS:', doc.einsatznummer_ils, col2Width);
         
         tempY = boxY;
-        tempY = addField(margin + 3 + col2Width + 3, tempY, 'Datum/Einsatzende:', doc.datum_einsatzende ? new Date(doc.datum_einsatzende).toLocaleString('de-DE') : '-', col2Width);
+        tempY = addField(margin + 3 + col2Width + 3, tempY, 'Datum/Einsatzende:', 
+          doc.datum_einsatzende ? new Date(doc.datum_einsatzende).toLocaleString('de-DE') : '-', col2Width);
         tempY = addField(margin + 3 + col2Width + 3, tempY, 'Kategorie:', doc.kategorie, col2Width);
         tempY = addField(margin + 3 + col2Width + 3, tempY, 'Meldebild:', doc.meldebild, col2Width);
         
@@ -1827,7 +2883,8 @@
         // SECTION 6: PROTOKOLLPFLICHT
         boxY = drawBox(margin, currentY, fullWidth, 50, '6. PROTOKOLLPFLICHT (§630f BGB)');
         tempY = boxY;
-        tempY = addField(margin + 3, tempY, 'War dieser Einsatz protokollpflichtig?', doc.protokollpflichtig ? 'Ja' : 'Nein', fullWidth);
+        tempY = addField(margin + 3, tempY, 'War dieser Einsatz protokollpflichtig?', 
+          doc.protokollpflichtig ? 'Ja' : 'Nein', fullWidth);
         
         if (doc.protokollpflichtig_begruendung) {
           pdf.setFontSize(9.5);
@@ -1867,7 +2924,8 @@
         tempY = addField(margin + 3, tempY, 'Qualifikation:', doc.nacherfasst_von_qualifikation, col2Width);
         
         tempY = boxY;
-        tempY = addField(margin + 3 + col2Width + 3, tempY, 'Datum:', doc.nacherfasst_datum ? new Date(doc.nacherfasst_datum).toLocaleString('de-DE') : '-', col2Width);
+        tempY = addField(margin + 3 + col2Width + 3, tempY, 'Datum:', 
+          doc.nacherfasst_datum ? new Date(doc.nacherfasst_datum).toLocaleString('de-DE') : '-', col2Width);
         
         currentY += 47;
         
@@ -1892,7 +2950,8 @@
         pdf.setTextColor(80, 80, 80);
         pdf.text('Dieses Dokument wurde gemäß §630f BGB (Dokumentationspflicht) erstellt.', margin + 3, boxY);
         pdf.text('Die Angaben wurden nach bestem Wissen und Gewissen erfasst.', margin + 3, boxY + 5);
-        pdf.text('Fehlerhafte oder unvollständige Angaben können zu rechtlichen Konsequenzen führen.', margin + 3, boxY + 10);
+        pdf.text('Fehlerhafte oder unvollständige Angaben können zu rechtlichen Konsequenzen führen.', 
+          margin + 3, boxY + 10);
         
         currentY += 32;
         
