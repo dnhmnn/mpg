@@ -432,7 +432,7 @@
 <!-- ==================== JAVASCRIPT START ==================== -->
   <script type="module">
     
-    // ========================================
+        // ========================================
     // SECTION: POCKETBASE INITIALIZATION & AUTH
     // ========================================
     const pb = new PocketBase('https://api.responda.systems');
@@ -447,16 +447,23 @@
       location.href = "/mpg-login.html";
     }
 
-    // Load organization data
-    let currentOrganization = null;
+            // Load organization data
+    let currentOrganization = { name: 'Feuerwehr' }; // Default fallback
+    
     async function loadOrganization() {
       try {
+        if (!currentUser.organization_id) {
+          console.warn('⚠️ User has no organization_id');
+          return;
+        }
         currentOrganization = await pb.collection('organizations').getOne(currentUser.organization_id);
         console.log('✅ Organization loaded:', currentOrganization);
       } catch(e) {
-        console.error('❌ Error loading organization:', e);
+        console.warn('⚠️ Could not load organization, using fallback:', e.message);
       }
     }
+    
+    // Start loading (non-blocking)
     loadOrganization();
 
     // ========================================
@@ -1698,7 +1705,8 @@
         showMsg('Fehler: ' + e.message, 'error');
       }
     };
-    // ========================================
+    
+	// ========================================
     // SECTION: VIEW NACHERFASSUNG DETAILS
     // ========================================
     window.viewNach = async (id) => {
@@ -1780,8 +1788,8 @@
         window.currentViewedOrgName = currentOrganization?.name || 'Feuerwehr';
         window.currentViewedDocType = 'patient';
         
-        const patName = `${p.vorname || ''} ${p.name || ''}`.trim() || 'Unbekannt';
-        document.getElementById('detailsTitle').textContent = 'Patientendokumentation: ' + patName;
+        const displayName = `${p.vorname || ''} ${p.name || ''}`.trim() || 'Unbekannt';
+        document.getElementById('detailsTitle').textContent = 'Patientendokumentation: ' + displayName;
         
         // NEU: Verwende buildEditForm() aber als Read-Only Ansicht
         let html = buildPatArchiveHTML(p, doc);
@@ -1798,7 +1806,7 @@
       }
     };
 
-	    // ========================================
+    // ========================================
     // SECTION: BUILD PATIENT ARCHIVE HTML (NEU - IDENTISCH MIT EDIT-FORMULAR!)
     // ========================================
     function buildPatArchiveHTML(p, doc) {
@@ -1840,7 +1848,6 @@
         });
         photosHTML += '</div>';
       }
-
       
       // Return complete READONLY form HTML (same structure as edit form!)
       return `
@@ -2228,6 +2235,7 @@
         await generatePatientPDF();
       }
     };
+
     // ========================================
     // SECTION: GENERATE PATIENT PDF - KOMPLETT NEU
     // ========================================
@@ -2740,7 +2748,7 @@
         // ========================================
         // SAVE PDF
         // ========================================
-        const patName = `${p.vorname || ''}_${p.name || ''}`.trim() || 'Patient';
+        const pdfPatName = `${p.vorname || ''}_${p.name || ''}`.trim() || 'Patient';
         const einsatzNr = p.einsatz_nr || 'ohne_nr';
         const timestamp = new Date().toISOString().slice(0, 10).replace(/-/g, '');
         
