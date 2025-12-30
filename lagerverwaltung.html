@@ -1,61 +1,243 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Lagerverwaltung</title>
-
-  <!-- NEU: Atkinson Hyperlegible -->
-  <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
-
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Lagerverwaltung – Responda</title>
+  <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet"/>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
+  <script src="https://cdn.jsdelivr.net/npm/pocketbase@0.21.3/dist/pocketbase.umd.js"></script>
 
   <style>
-    :root{--primary:#c8102e;--primary-light:#fee2e2;--success:#16a34a;--warning:#f59e0b;
-      --bg:#f8fafc;--card:#fff;--text:#1e293b;--text-light:#64748b;--border:#e2e8f0;--low:#2563eb}
+    :root{
+      --primary:#c8102e;
+      --primary-light:#fee2e2;
+      --success:#16a34a;
+      --warning:#f59e0b;
+      --bg:#f8fafc;
+      --card:#fff;
+      --text:#1e293b;
+      --text-light:#64748b;
+      --border:#e2e8f0;
+      --low:#2563eb;
+    }
     *{box-sizing:border-box}
-    /* NEU: Schriftart auf Atkinson gestellt */
     body{
       margin:0;
-      font-family:'Atkinson Hyperlegible', system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+      font-family:'Atkinson Hyperlegible',system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
       background:var(--bg);
       color:var(--text);
-      padding-bottom:80px
+      padding-bottom:80px;
+      opacity:0;
+      transition:opacity 0.3s;
     }
-    .app-header{background:var(--primary);color:#fff;padding:1rem;position:sticky;top:0;z-index:10;display:flex;align-items:center;justify-content:space-between}
-    .header-title{font-weight:700}
-    .main{max-width:600px;margin:0 auto;padding:1rem}
-    .stats{display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-bottom:1rem}
+    body.loaded{opacity:1}
+    
+    .app-header{
+      background:var(--primary);
+      color:#fff;
+      padding:1rem;
+      position:sticky;
+      top:0;
+      z-index:10;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+    }
+    .header-title{font-weight:700;font-size:1.1rem}
+    .topbtn{
+      border:1px solid rgba(255,255,255,0.3);
+      background:rgba(255,255,255,0.1);
+      color:#fff;
+      padding:.45rem .7rem;
+      border-radius:.5rem;
+      cursor:pointer;
+      font-weight:700;
+      font-size:.9rem;
+      transition:all 0.2s;
+      text-decoration:none;
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+    }
+    .topbtn:hover{background:rgba(255,255,255,0.2)}
+    
+    .main{max-width:1000px;margin:0 auto;padding:1rem}
+    .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:.75rem;margin-bottom:1rem}
     .card{background:var(--card);padding:1rem;border-radius:.75rem;box-shadow:0 2px 4px rgba(0,0,0,.05)}
     .stat-num{font-size:1.4rem;font-weight:700}
-    .ok{color:var(--success)} .warn{color:#d97706} .exp{color:var(--primary)}
+    .ok{color:var(--success)}
+    .warn{color:#d97706}
+    .exp{color:var(--primary)}
+    .zero{color:var(--text-light)}
+    
     .list{display:flex;flex-direction:column;gap:.75rem}
-    .row{background:var(--card);border-left:4px solid;border-radius:.75rem;padding:1rem;box-shadow:0 2px 4px rgba(0,0,0,.05)}
-    .row.ok{border-color:var(--success)} .row.warn{border-color:#f59e0b} .row.exp{border-color:var(--primary)}
-    .rhead{display:flex;justify-content:space-between;margin-bottom:.5rem}
+    .row{
+      background:var(--card);
+      border-left:4px solid;
+      border-radius:.75rem;
+      padding:1rem;
+      box-shadow:0 2px 4px rgba(0,0,0,.05);
+    }
+    .row.ok{border-color:var(--success)}
+    .row.warn{border-color:#f59e0b}
+    .row.exp{border-color:var(--primary)}
+    .row.zero{border-color:var(--text-light);opacity:0.6}
+    
+    .rhead{display:flex;justify-content:space-between;margin-bottom:.5rem;flex-wrap:wrap;gap:.5rem}
     .badge{padding:.25rem .6rem;border-radius:1rem;font-size:.75rem;font-weight:700}
     .qtyline{font-weight:700}
     .qtyline.low{color:var(--low)}
-    .toolbar{display:flex;gap:.5rem;justify-content:space-between;align-items:center;flex-wrap:wrap;margin:.5rem 0}
-    .chip{border:1px solid var(--border);background:#fff;padding:.35rem .6rem;border-radius:999px;font-size:.8rem;cursor:pointer}
+    
+    .toolbar{
+      display:flex;
+      gap:.5rem;
+      justify-content:space-between;
+      align-items:center;
+      flex-wrap:wrap;
+      margin:.5rem 0;
+    }
+    .chip{
+      border:1px solid var(--border);
+      background:#fff;
+      padding:.35rem .6rem;
+      border-radius:999px;
+      font-size:.8rem;
+      cursor:pointer;
+      transition:all 0.2s;
+    }
+    .chip:hover{background:#f9f9f9}
     .chip.active{background:var(--primary-light);color:var(--primary);border-color:var(--primary)}
-    .btn{border:1px solid var(--border);background:#fff;color:var(--text);padding:.5rem .75rem;border-radius:.5rem;cursor:pointer;font-weight:700}
+    
+    .btn{
+      border:1px solid var(--border);
+      background:#fff;
+      color:var(--text);
+      padding:.5rem .75rem;
+      border-radius:.5rem;
+      cursor:pointer;
+      font-weight:700;
+      transition:all 0.2s;
+      font-family:inherit;
+    }
+    .btn:hover{background:#f9f9f9;transform:translateY(-1px)}
+    .btn:disabled{opacity:0.5;cursor:not-allowed;transform:none}
     .bicon{display:inline-flex;align-items:center;gap:.35rem;font-size:.85rem}
-    .nav{position:fixed;bottom:0;left:0;right:0;background:var(--card);border-top:1px solid var(--border);padding:.75rem;z-index:5}
-    .navg{display:grid;grid-template-columns:repeat(6,1fr);gap:.5rem;max-width:600px;margin:0 auto}
-    .nav a{display:flex;flex-direction:column;align-items:center;gap:.25rem;padding:.5rem;color:var(--text-light);font-size:.8rem;font-weight:600;border-radius:.5rem;text-decoration:none}
+    
+    .nav{
+      position:fixed;
+      bottom:0;
+      left:0;
+      right:0;
+      background:var(--card);
+      border-top:1px solid var(--border);
+      padding:.75rem;
+      z-index:5;
+    }
+    .navg{
+      display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(80px,1fr));
+      gap:.5rem;
+      max-width:1000px;
+      margin:0 auto;
+    }
+    .nav a{
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      gap:.25rem;
+      padding:.5rem;
+      color:var(--text-light);
+      font-size:.8rem;
+      font-weight:600;
+      border-radius:.5rem;
+      text-decoration:none;
+      transition:all 0.2s;
+    }
+    .nav a:hover{background:#f9f9f9}
     .nav a.active{color:var(--primary);background:var(--primary-light)}
+    
     .center-muted{color:var(--text-light);text-align:center;padding:1.25rem}
-    .error{background:#fff5f5;border:1px solid #f2c9d1;color:#8b0e22;border-radius:10px;padding:10px}
+    .error{
+      background:#fff5f5;
+      border:1px solid #f2c9d1;
+      color:#8b0e22;
+      border-radius:10px;
+      padding:10px;
+    }
+    .success{
+      background:#f0fdf4;
+      border:1px solid #bbf7d0;
+      color:#166534;
+      border-radius:10px;
+      padding:10px;
+    }
+    
+    .modal{
+      position:fixed;
+      inset:0;
+      background:rgba(0,0,0,.5);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      z-index:999;
+      padding:20px;
+      overflow-y:auto;
+    }
+    .modal.show{display:flex}
+    .modal-box{
+      background:#fff;
+      border-radius:14px;
+      max-width:600px;
+      width:100%;
+      max-height:90vh;
+      overflow-y:auto;
+      padding:24px;
+      box-shadow:0 8px 20px rgba(0,0,0,.3);
+      margin:auto;
+    }
+    .modal-box h3{margin:0 0 1rem 0;color:var(--primary);font-weight:800}
+    
+    .form-grid{display:grid;gap:.75rem}
+    .form-group{display:flex;flex-direction:column;gap:6px}
+    .form-group label{font-weight:700;font-size:0.9rem;color:#374151}
+    .form-group input,
+    .form-group textarea,
+    .form-group select{
+      padding:.55rem .6rem;
+      border:1px solid var(--border);
+      border-radius:.5rem;
+      background:#fff;
+      font-size:16px;
+      font-family:inherit;
+    }
+    .form-group input:focus,
+    .form-group textarea:focus,
+    .form-group select:focus{
+      outline:none;
+      border-color:var(--primary);
+      box-shadow:0 0 0 3px rgba(200,16,46,0.1);
+    }
+    
     .hist{width:100%;border-collapse:collapse;margin-top:.5rem}
     .hist th,.hist td{border:1px solid #eee;padding:.4rem .5rem;font-size:.9rem;text-align:left}
-    .hist th{background:#fafafa}
+    .hist th{background:#fafafa;font-weight:700}
+    
+    @media (max-width:768px){
+      .toolbar{flex-direction:column;align-items:stretch}
+      .navg{grid-template-columns:repeat(3,1fr)}
+    }
   </style>
 </head>
+
 <body>
+
 <header class="app-header">
-  <h1 class="header-title">Lagerverwaltung</h1>
-  <i class="fas fa-warehouse"></i>
+  <h1 class="header-title"><i class="fas fa-warehouse"></i> Lagerverwaltung</h1>
+  <div style="display:flex;gap:.5rem">
+    <a class="topbtn" href="mpg-dashboard.html"><i class="fa-solid fa-dashboard"></i> Dashboard</a>
+    <button class="topbtn" id="logout"><i class="fa-solid fa-right-from-bracket"></i> Logout</button>
+  </div>
 </header>
 
 <main class="main">
@@ -63,10 +245,10 @@
     <div class="card"><div class="stat-num ok" id="s-ok">0</div><div>In Ordnung</div></div>
     <div class="card"><div class="stat-num warn" id="s-warn">0</div><div>Bald fällig</div></div>
     <div class="card"><div class="stat-num exp" id="s-exp">0</div><div>Abgelaufen</div></div>
+    <div class="card"><div class="stat-num zero" id="s-zero">0</div><div>Bestand = 0</div></div>
     <div class="card"><div class="stat-num" id="s-total">0</div><div>Gesamt</div></div>
   </div>
 
-  <!-- Toolbar (Suche + Filter + Einbestellen + Export + Neu) -->
   <div id="toolbar" class="toolbar"></div>
 
   <div id="list" class="list">
@@ -76,357 +258,1018 @@
 
 <nav class="nav">
   <div class="navg" id="navg">
-    <a href="#" class="active" data-loc="Lager"><i class="fas fa-box"></i><span>Lager</span></a>
-    <a href="#" data-loc="46/1"><i class="fas fa-briefcase-medical"></i><span>46/1</span></a>
-    <a href="#" data-loc="12/1"><i class="fas fa-briefcase-medical"></i><span>12/1</span></a>
-    <a href="#" data-loc="40/2"><i class="fas fa-briefcase-medical"></i><span>40/2</span></a>
-    <a href="#" data-loc="30/1"><i class="fas fa-briefcase-medical"></i><span>30/1</span></a>
-    <a href="#" data-loc="14/1"><i class="fas fa-briefcase-medical"></i><span>14/1</span></a>
+    <!-- Wird dynamisch geladen -->
   </div>
 </nav>
 
+<!-- MODALS -->
+<div class="modal" id="editModal">
+  <div class="modal-box">
+    <h3 id="editTitle">Artikel bearbeiten</h3>
+    <div id="editForm"></div>
+  </div>
+</div>
+
+<div class="modal" id="locationModal">
+  <div class="modal-box">
+    <h3>Lager-Standorte verwalten</h3>
+    <div id="locationList"></div>
+    <div style="margin-top:1rem">
+      <input type="text" id="newLocationName" placeholder="Neuer Standort-Name" style="width:100%;padding:.5rem;border:1px solid var(--border);border-radius:.5rem">
+      <button class="btn" style="margin-top:.5rem;background:var(--primary);color:#fff" onclick="addLocation()">
+        <i class="fas fa-plus"></i> Standort hinzufügen
+      </button>
+    </div>
+    <div style="display:flex;justify-content:flex-end;margin-top:1rem">
+      <button class="btn" onclick="closeLocationModal()">Schließen</button>
+    </div>
+  </div>
+</div>
+
 <script type="module">
-  import { NhostClient } from "https://esm.sh/@nhost/nhost-js@2.2.9";
-
-  const nhost = new NhostClient({
-    subdomain: "hpjfrhktprpuuxvvlpsb",
-    region: "eu-central-1"
-  });
-
-  async function guard() {
-    const isAuth = await nhost.auth.isAuthenticatedAsync();
-    if (!isAuth) {
-      const back = encodeURIComponent(location.pathname + location.search);
-      location.href = "admin-login.html?redirect=" + back;
-      return false;
-    }
-    return true;
+  // ========================================
+  // POCKETBASE INITIALIZATION & AUTH
+  // ========================================
+  const pb = new PocketBase('https://api.responda.systems');
+  
+  if (!pb.authStore.isValid) {
+    location.href = "/mpg-login.html";
   }
-  if (!await guard()) throw new Error("redirecting");
 
-  /* ==== STATE ==== */
-  const LOCATIONS = ["Lager","46/1","12/1","40/2","30/1","14/1"];
-  let currentLocation="Lager", items=[], search="", statusFilter="all", lowOnly=false;
+  const currentUser = pb.authStore.model;
+  if (!currentUser || !currentUser.organization_id) {
+    location.href = "/mpg-login.html";
+  }
+
+  let currentOrganization = { name: 'Feuerwehr' };
+  
+  async function loadOrganization() {
+    try {
+      if (!currentUser.organization_id) return;
+      currentOrganization = await pb.collection('organizations').getOne(currentUser.organization_id);
+      console.log('✅ Organization loaded:', currentOrganization);
+    } catch(e) {
+      console.warn('⚠️ Could not load organization:', e.message);
+    }
+  }
+  
+  loadOrganization();
+
+  // ========================================
+  // LOGOUT
+  // ========================================
+  document.getElementById("logout").onclick = async (e) => {
+    e.preventDefault();
+    pb.authStore.clear();
+    localStorage.clear();
+    location.href = "/mpg-login.html";
+  };
+
+  // ========================================
+  // STATE
+  // ========================================
+  let locations = [];
+  let currentLocationId = null;
+  let stockItems = [];
+  let allItems = [];
+  let search = "";
+  let statusFilter = "all";
+  let lowOnly = false;
+  let hideZero = true;
 
   const listEl = document.getElementById('list');
   const toolbarEl = document.getElementById('toolbar');
+  const navgEl = document.getElementById('navg');
 
-  /* ==== HELPERS ==== */
+  // ========================================
+  // HELPERS
+  // ========================================
   function computeExpiryStatus(exp){
     if(!exp) return 'ok';
-    const today=new Date(), base=new Date(today.getFullYear(),today.getMonth(),today.getDate());
-    const diff=(new Date(exp)-base)/86400000;
-    if(diff<0) return 'exp'; if(diff<30) return 'warn'; return 'ok';
+    const today = new Date();
+    const base = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const diff = (new Date(exp) - base) / 86400000;
+    if(diff < 0) return 'exp';
+    if(diff < 30) return 'warn';
+    return 'ok';
   }
-  function qtyIsLow(qty, target){ return (typeof target==='number' && target>0 && qty<target); }
 
-  async function gql(q,v){
-    const {data,error}=await nhost.graphql.request(q,v);
-    if(error){ throw new Error(error.message || JSON.stringify(error)); }
-    return data;
-  }
   function showError(message){
     listEl.innerHTML = `<div class="card error">
-      <strong>Fehler beim Laden der Lagerdaten:</strong><br>${message}<br>
-      <div style="margin-top:6px;font-size:.92rem">
-        Prüfe in Hasura:<br>
-        – Spalte <code>target_qty</code> in <code>inventory_items</code>?<br>
-        – Tabelle <code>inventory_movements</code> vorhanden?<br>
-        – Rollen-Rechte (select/insert/update/delete) gesetzt?
-      </div>
+      <strong>Fehler beim Laden der Lagerdaten:</strong><br>${message}
     </div>`;
-    document.getElementById('s-ok').textContent=0;
-    document.getElementById('s-warn').textContent=0;
-    document.getElementById('s-exp').textContent=0;
-    document.getElementById('s-total').textContent=0;
+    updateStats([], 0);
   }
 
-  /* ==== TOOLBAR ==== */
+  function showMsg(text, type = 'success') {
+    const div = document.createElement('div');
+    div.className = `card ${type}`;
+    div.textContent = text;
+    div.style.marginBottom = '1rem';
+    listEl.insertBefore(div, listEl.firstChild);
+    setTimeout(() => div.remove(), 5000);
+  }
+
+  // ========================================
+  // LOAD LOCATIONS
+  // ========================================
+  async function loadLocations() {
+    try {
+      locations = await pb.collection('inventory_locations').getFullList({
+        filter: `organization_id = "${currentUser.organization_id}"`,
+        sort: 'created',
+      });
+      
+      if (!locations.length) {
+        const defaultLoc = await pb.collection('inventory_locations').create({
+          name: 'Lager',
+          icon: 'box',
+          organization_id: currentUser.organization_id
+        });
+        locations = [defaultLoc];
+      }
+      
+      currentLocationId = locations[0].id;
+      renderNav();
+    } catch(e) {
+      console.error('Error loading locations:', e);
+      showError(e.message);
+    }
+  }
+
+  function renderNav() {
+    navgEl.innerHTML = locations.map((loc, idx) => `
+      <a href="#" data-loc="${loc.id}" class="${idx === 0 ? 'active' : ''}">
+        <i class="fas fa-${loc.icon || 'box'}"></i>
+        <span>${loc.name}</span>
+      </a>
+    `).join('');
+    
+    navgEl.innerHTML += `
+      <a href="#" id="btn-audit">
+        <i class="fas fa-clipboard-check"></i>
+        <span>Inventur</span>
+      </a>
+      <a href="#" id="btn-manage-locations">
+        <i class="fas fa-cog"></i>
+        <span>Verwalten</span>
+      </a>
+    `;
+    
+    navgEl.querySelectorAll('a[data-loc]').forEach(a => {
+      a.onclick = (e) => {
+        e.preventDefault();
+        navgEl.querySelectorAll('a').forEach(x => x.classList.remove('active'));
+        a.classList.add('active');
+        currentLocationId = a.dataset.loc;
+        renderToolbar();
+        loadStock();
+      };
+    });
+    
+    document.getElementById('btn-audit').onclick = (e) => {
+      e.preventDefault();
+      openAuditModal();
+    };
+    
+    document.getElementById('btn-manage-locations').onclick = (e) => {
+      e.preventDefault();
+      openLocationModal();
+    };
+  }
+
+  // ========================================
+  // TOOLBAR
+  // ========================================
   function renderToolbar(){
-    toolbarEl.innerHTML='';
-    const left=document.createElement('div'); left.style.cssText='flex:1;min-width:200px;position:relative';
-    left.innerHTML=`<i class="fas fa-search" style="position:absolute;left:.6rem;top:50%;transform:translateY(-50%);color:var(--text-light)"></i>
-      <input id="q" value="${search}" placeholder="Im Lager „${currentLocation}“ suchen…"
-        style="width:100%;padding:.55rem .75rem .55rem 2rem;border:1px solid var(--border);border-radius:.5rem;background:#fff">`;
-    const right=document.createElement('div'); right.innerHTML=`
-      <button class="chip ${statusFilter==='all'?'active':''}" data-f="all">Alle</button>
-      <button class="chip ${statusFilter==='warning'?'active':''}" data-f="warning">Bald fällig</button>
-      <button class="chip ${statusFilter==='expired'?'active':''}" data-f="expired">Abgelaufen</button>
-
-      <button class="chip ${lowOnly?'active':''}" id="chip-low">
-        <i class="fas fa-truck-moving"></i> Einbestellen
-      </button>
-
-      <button class="btn" id="btn-export-view"><span class="bicon"><i class="fas fa-file-export"></i> Export (Ansicht)</span></button>
-      <button class="btn" id="btn-export-all"><span class="bicon"><i class="fas fa-file-arrow-down"></i> Export (Alle)</span></button>
-      <button class="btn" id="btn-new"><span class="bicon"><i class="fas fa-plus"></i> Neu</span></button>`;
-    toolbarEl.appendChild(left); toolbarEl.appendChild(right);
-
-    left.querySelector('#q').oninput=(e)=>{ search=e.target.value.trim(); clearTimeout(window._qT); window._qT=setTimeout(fetchItems,250); };
-    right.querySelectorAll('button[data-f]').forEach(b=>b.onclick=()=>{ statusFilter=b.dataset.f; renderToolbar(); fetchItems(); });
-    right.querySelector('#btn-new').onclick=()=>openEditor();
-    right.querySelector('#btn-export-view').onclick=exportCurrent;
-    right.querySelector('#btn-export-all').onclick=exportAll;
-    right.querySelector('#chip-low').onclick=()=>{ lowOnly=!lowOnly; renderToolbar(); fetchItems(); };
+    const currentLoc = locations.find(l => l.id === currentLocationId);
+    const locName = currentLoc ? currentLoc.name : 'Lager';
+    
+    toolbarEl.innerHTML = `
+      <div style="flex:1;min-width:200px;position:relative">
+        <i class="fas fa-search" style="position:absolute;left:.6rem;top:50%;transform:translateY(-50%);color:var(--text-light)"></i>
+        <input id="q" value="${search}" placeholder="In „${locName}" suchen…"
+          style="width:100%;padding:.55rem .75rem .55rem 2rem;border:1px solid var(--border);border-radius:.5rem;background:#fff">
+      </div>
+      <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+        <button class="chip ${statusFilter==='all'?'active':''}" data-f="all">Alle</button>
+        <button class="chip ${statusFilter==='warning'?'active':''}" data-f="warning">Bald fällig</button>
+        <button class="chip ${statusFilter==='expired'?'active':''}" data-f="expired">Abgelaufen</button>
+        <button class="chip ${lowOnly?'active':''}" id="chip-low">
+          <i class="fas fa-truck-moving"></i> Einbestellen
+        </button>
+        <button class="chip ${hideZero?'active':''}" id="chip-zero">
+          <i class="fas fa-eye-slash"></i> 0 ausblenden
+        </button>
+        <button class="btn" id="btn-new"><span class="bicon"><i class="fas fa-plus"></i> Neu</span></button>
+      </div>
+    `;
+    
+    document.getElementById('q').oninput = (e) => {
+      search = e.target.value.trim();
+      clearTimeout(window._qT);
+      window._qT = setTimeout(filterAndRender, 250);
+    };
+    
+    toolbarEl.querySelectorAll('button[data-f]').forEach(b => {
+      b.onclick = () => {
+        statusFilter = b.dataset.f;
+        renderToolbar();
+        filterAndRender();
+      };
+    });
+    
+    document.getElementById('chip-low').onclick = () => {
+      lowOnly = !lowOnly;
+      renderToolbar();
+      filterAndRender();
+    };
+    
+    document.getElementById('chip-zero').onclick = () => {
+      hideZero = !hideZero;
+      renderToolbar();
+      filterAndRender();
+    };
+    
+    document.getElementById('btn-new').onclick = () => openEditor();
   }
 
-  /* ==== CSV Export ==== */
-  function toCSV(rows){
-    const headers=["id","name","qty","target_qty","expiry","bemerkung","location"];
-    const esc=v=>`"${String(v??'').replace(/"/g,'""')}"`;
-    const lines=[headers.join(",")];
-    for(const r of rows){ lines.push([r.id,r.name,r.qty,r.target_qty??"",r.expiry||"",r.bemerkung||"",r.location].map(esc).join(",")); }
-    return lines.join("\n");
-  }
-  function download(filename, text, mime='text/csv'){
-    const blob=new Blob([text],{type:mime});
-    const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=filename; a.click();
-    setTimeout(()=>URL.revokeObjectURL(a.href),1000);
-  }
-  function today(){ return new Date().toISOString().slice(0,10); }
-  function exportCurrent(){
-    const csv=toCSV(items);
-    download(`inventory_${currentLocation}_${today()}.csv`, csv);
-  }
-  async function exportAll(){
-    try{
-      const data=await gql(`query{
-        inventory_items(order_by:{location:asc,name:asc}){ id name qty target_qty expiry bemerkung location }
-      }`);
-      const csv=toCSV(data.inventory_items);
-      download(`inventory_all_${today()}.csv`, csv);
-    }catch(e){ showError(e.message||e); }
-  }
-
-  /* ==== FETCH ==== */
-  async function fetchItems(){
-    try{
-      const today=new Date(), base=new Date(today.getFullYear(),today.getMonth(),today.getDate());
-      const in30=new Date(base); in30.setDate(in30.getDate()+30);
-      const t=base.toISOString().slice(0,10), t30=in30.toISOString().slice(0,10);
-      const needle=search?`%${search}%`:'%';
-
-      const where={location:{_eq:currentLocation}, _or:[{name:{_ilike:needle}},{bemerkung:{_ilike:needle}}]};
-      const ands=[];
-      if(statusFilter==='expired') ands.push({expiry:{_lt:t}});
-      if(statusFilter==='warning'){ ands.push({expiry:{_gte:t}}); ands.push({expiry:{_lt:t30}}); }
-      if(ands.length) where._and=ands;
-
-      const data=await gql(`query($w:inventory_items_bool_exp!){
-        inventory_items(where:$w, order_by:{name:asc}){
-          id name qty target_qty expiry bemerkung location
+  // ========================================
+  // LOAD STOCK & ITEMS
+  // ========================================
+  async function loadStock() {
+    try {
+      allItems = await pb.collection('inventory_items').getFullList({
+        filter: `organization_id = "${currentUser.organization_id}"`,
+        sort: 'name',
+      });
+      
+      const stockData = await pb.collection('inventory_stock').getFullList({
+        filter: `location_id = "${currentLocationId}" && organization_id = "${currentUser.organization_id}"`,
+        expand: 'item_id',
+        sort: '-updated',
+      });
+      
+      const itemMap = new Map();
+      
+      for (const stock of stockData) {
+        const item = stock.expand?.item_id;
+        if (!item) continue;
+        
+        if (!itemMap.has(item.id)) {
+          itemMap.set(item.id, {
+            id: item.id,
+            name: item.name,
+            category: item.category,
+            unit: item.unit,
+            min_stock: item.min_stock,
+            qty: 0,
+            expiry_dates: []
+          });
         }
-      }`,{w:where});
-
-      const baseList = data.inventory_items;
-      items = lowOnly ? baseList.filter(it => (it.target_qty ?? 0) > (it.qty ?? 0)) : baseList;
-
-      renderList();
-    }catch(e){
-      console.error(e);
-      showError(e.message || String(e));
+        
+        const entry = itemMap.get(item.id);
+        entry.qty += stock.quantity || 0;
+        if (stock.expiry_date) {
+          entry.expiry_dates.push(stock.expiry_date);
+        }
+      }
+      
+      stockItems = Array.from(itemMap.values()).map(item => ({
+        ...item,
+        expiry: item.expiry_dates.length ? item.expiry_dates.sort()[0] : null,
+        target_qty: item.min_stock || 0
+      }));
+      
+      filterAndRender();
+    } catch(e) {
+      console.error('Error loading stock:', e);
+      showError(e.message);
     }
   }
 
-  /* ==== LISTE & AKTIONEN ==== */
-  function renderList(){
-    const el=document.getElementById('list'); el.innerHTML='';
-    let ok=0,w=0,e=0;
-    if(!items.length){
-      el.insertAdjacentHTML('beforeend','<div class="card center-muted"><i class="fas fa-search"></i> Keine Artikel gefunden</div>');
+  function filterAndRender() {
+    let filtered = stockItems;
+    
+    if (search) {
+      const needle = search.toLowerCase();
+      filtered = filtered.filter(it => 
+        it.name.toLowerCase().includes(needle) ||
+        (it.category || '').toLowerCase().includes(needle)
+      );
     }
-    items.forEach(it=>{
-      const s=computeExpiryStatus(it.expiry);
-      if(s==='ok')ok++; else if(s==='warn')w++; else e++;
-      const low = qtyIsLow(it.qty, it.target_qty);
-      el.insertAdjacentHTML('beforeend',`
-        <div class="row ${s}">
+    
+    if (statusFilter === 'expired') {
+      filtered = filtered.filter(it => computeExpiryStatus(it.expiry) === 'exp');
+    } else if (statusFilter === 'warning') {
+      filtered = filtered.filter(it => computeExpiryStatus(it.expiry) === 'warn');
+    }
+    
+    if (lowOnly) {
+      filtered = filtered.filter(it => it.target_qty > 0 && it.qty < it.target_qty);
+    }
+    
+    if (hideZero) {
+      filtered = filtered.filter(it => it.qty > 0);
+    }
+    
+    renderList(filtered);
+  }
+
+  function updateStats(items, zeroCount) {
+    let ok = 0, warn = 0, exp = 0;
+    
+    items.forEach(it => {
+      const status = computeExpiryStatus(it.expiry);
+      if (status === 'ok') ok++;
+      else if (status === 'warn') warn++;
+      else if (status === 'exp') exp++;
+    });
+    
+    document.getElementById('s-ok').textContent = ok;
+    document.getElementById('s-warn').textContent = warn;
+    document.getElementById('s-exp').textContent = exp;
+    document.getElementById('s-zero').textContent = zeroCount;
+    document.getElementById('s-total').textContent = items.length;
+  }
+
+  function renderList(items) {
+    listEl.innerHTML = '';
+    
+    const zeroItems = stockItems.filter(it => it.qty === 0);
+    updateStats(items, zeroItems.length);
+    
+    if (!items.length) {
+      listEl.innerHTML = '<div class="card center-muted"><i class="fas fa-search"></i> Keine Artikel gefunden</div>';
+      return;
+    }
+    
+    items.forEach(it => {
+      const status = computeExpiryStatus(it.expiry);
+      const isLow = it.target_qty > 0 && it.qty < it.target_qty;
+      const isZero = it.qty === 0;
+      
+      listEl.innerHTML += `
+        <div class="row ${isZero ? 'zero' : status}">
           <div class="rhead">
             <div>
               <b>${it.name}</b>
-              ${it.bemerkung?`<div style="color:var(--text-light);font-size:.9rem">${it.bemerkung}</div>`:''}
+              ${it.category ? `<div style="color:var(--text-light);font-size:.9rem">${it.category}</div>` : ''}
             </div>
-            <div class="qtyline ${low?'low':''}">IST: ${it.qty} / SOLL: ${it.target_qty ?? 0}</div>
+            <div class="qtyline ${isLow ? 'low' : ''}">
+              IST: ${it.qty} ${it.unit || ''} / SOLL: ${it.target_qty}
+            </div>
           </div>
           <div style="display:flex;justify-content:space-between;align-items:center;gap:.5rem;flex-wrap:wrap">
-            <span class="badge ${s}">${it.expiry||'kein Ablaufdatum'}</span>
-            <div>
-              <button class="btn bicon" onclick="adjustQty('${it.id}',-1)"><i class="fas fa-minus"></i> -1</button>
-              <button class="btn bicon" onclick="adjustQty('${it.id}', 1)"><i class="fas fa-plus"></i> +1</button>
-              <button class="btn bicon" onclick="openEditor('${it.id}')"><i class="fas fa-edit"></i> Bearbeiten</button>
-              <button class="btn bicon" onclick="deleteItem('${it.id}')"><i class="fas fa-trash"></i> Löschen</button>
+            <span class="badge ${status}">${it.expiry || 'kein Ablaufdatum'}</span>
+            <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+              <button class="btn bicon" onclick="adjustQty('${it.id}', -1)">
+                <i class="fas fa-minus"></i> -1
+              </button>
+              <button class="btn bicon" onclick="adjustQty('${it.id}', 1)">
+                <i class="fas fa-plus"></i> +1
+              </button>
+              <button class="btn bicon" onclick="openEditor('${it.id}')">
+                <i class="fas fa-edit"></i> Details
+              </button>
             </div>
           </div>
-        </div>`);
+        </div>
+      `;
     });
-    document.getElementById('s-ok').textContent=ok;
-    document.getElementById('s-warn').textContent=w;
-    document.getElementById('s-exp').textContent=e;
-    document.getElementById('s-total').textContent=items.length;
   }
 
-  async function logMovement(itemId, delta, note){
-    try{
-      const user = nhost.auth.getUser();
-      const actor = user?.email || user?.displayName || 'unbekannt';
-      await gql(`mutation($obj:inventory_movements_insert_input!){
-        insert_inventory_movements_one(object:$obj){ id }
-      }`, { obj: { item_id: itemId, delta, actor, note } });
-    }catch(e){
-      console.warn('Bewegungs-Log fehlgeschlagen:', e.message||e);
+  // ========================================
+  // ADJUST QUANTITY
+  // ========================================
+  window.adjustQty = async (itemId, delta) => {
+    const item = stockItems.find(it => it.id === itemId);
+    if (!item) return;
+    
+    if (delta < 0 && item.qty <= 0) {
+      alert('Nicht genügend Bestand');
+      return;
+    }
+    
+    try {
+      const stockList = await pb.collection('inventory_stock').getFullList({
+        filter: `item_id = "${itemId}" && location_id = "${currentLocationId}"`,
+        sort: 'expiry_date',
+      });
+      
+      if (delta > 0) {
+        const expiry = prompt('Ablaufdatum (JJJJ-MM-TT) oder leer lassen:');
+        await pb.collection('inventory_stock').create({
+          item_id: itemId,
+          location_id: currentLocationId,
+          quantity: delta,
+          expiry_date: expiry || null,
+          organization_id: currentUser.organization_id
+        });
+        
+        await pb.collection('inventory_transactions').create({
+          item_id: itemId,
+          location_id: currentLocationId,
+          type: 'einbuchung',
+          quantity: delta,
+          expiry_date: expiry || null,
+          user: currentUser.email || currentUser.id,
+          organization_id: currentUser.organization_id
+        });
+        
+      } else {
+        let remaining = Math.abs(delta);
+        
+        for (const stock of stockList) {
+          if (remaining <= 0) break;
+          
+          const take = Math.min(stock.quantity, remaining);
+          const newQty = stock.quantity - take;
+          
+          if (newQty <= 0) {
+            await pb.collection('inventory_stock').delete(stock.id);
+          } else {
+            await pb.collection('inventory_stock').update(stock.id, {
+              quantity: newQty
+            });
+          }
+          
+          remaining -= take;
+        }
+        
+        await pb.collection('inventory_transactions').create({
+          item_id: itemId,
+          location_id: currentLocationId,
+          type: 'ausbuchung',
+          quantity: delta,
+          user: currentUser.email || currentUser.id,
+          organization_id: currentUser.organization_id
+        });
+      }
+      
+      await loadStock();
+      showMsg(`✅ ${delta > 0 ? 'Eingebucht' : 'Ausgebucht'}: ${Math.abs(delta)} ${item.unit || 'Stück'}`, 'success');
+      
+    } catch(e) {
+      showError(e.message);
+    }
+  };
+
+  // ========================================
+  // EDITOR
+  // ========================================
+  window.openEditor = async (itemId = null) => {
+    const item = itemId ? stockItems.find(it => it.id === itemId) : null;
+    const isNew = !itemId;
+    
+    document.getElementById('editTitle').textContent = isNew ? 'Neuen Artikel anlegen' : `${item.name} – Details`;
+    
+    let historyHTML = '';
+    if (!isNew) {
+      historyHTML = `
+        <div style="margin-top:1rem">
+          <button class="btn" onclick="loadHistory('${itemId}')" style="width:100%">
+            <i class="fas fa-clock"></i> Buchungs-Historie anzeigen
+          </button>
+          <div id="historyContainer" style="display:none;margin-top:1rem"></div>
+        </div>
+      `;
+    }
+    
+    document.getElementById('editForm').innerHTML = `
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Artikelname</label>
+          <input type="text" id="item-name" value="${item?.name || ''}" ${isNew ? '' : 'readonly'}>
+        </div>
+        
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem">
+          <div class="form-group">
+            <label>Kategorie</label>
+            <input type="text" id="item-category" value="${item?.category || ''}" ${isNew ? '' : 'readonly'}>
+          </div>
+          <div class="form-group">
+            <label>Einheit</label>
+            <input type="text" id="item-unit" value="${item?.unit || 'Stück'}" ${isNew ? '' : 'readonly'}>
+          </div>
+        </div>
+        
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem">
+          <div class="form-group">
+            <label>IST-Bestand</label>
+            <input type="number" id="item-qty" value="${item?.qty || 0}" min="0" ${isNew ? '' : 'readonly'}>
+          </div>
+          <div class="form-group">
+            <label>Mindestbestand</label>
+            <input type="number" id="item-min" value="${item?.min_stock || 0}" min="0">
+          </div>
+        </div>
+        
+        ${isNew ? `
+        <div class="form-group">
+          <label>Ablaufdatum (optional)</label>
+          <input type="date" id="item-expiry">
+        </div>
+        ` : ''}
+      </div>
+      
+      ${historyHTML}
+      
+      <div style="display:flex;gap:.5rem;justify-content:flex-end;margin-top:1.5rem;flex-wrap:wrap">
+        ${!isNew ? `<button class="btn" onclick="deleteItem('${itemId}')" style="margin-right:auto">Löschen</button>` : ''}
+        <button class="btn" onclick="closeEditor()">Abbrechen</button>
+        <button class="btn" style="background:var(--primary);color:#fff" onclick="saveItem('${itemId || ''}')">
+          Speichern
+        </button>
+      </div>
+    `;
+    
+    document.getElementById('editModal').classList.add('show');
+  };
+
+  window.closeEditor = () => {
+    document.getElementById('editModal').classList.remove('show');
+  };
+
+  window.saveItem = async (itemId) => {
+    const name = document.getElementById('item-name').value.trim();
+    const category = document.getElementById('item-category').value.trim();
+    const unit = document.getElementById('item-unit').value.trim();
+    const qty = parseInt(document.getElementById('item-qty').value) || 0;
+    const minStock = parseInt(document.getElementById('item-min').value) || 0;
+    
+    if (!name) {
+      alert('Artikelname erforderlich');
+      return;
+    }
+    
+    try {
+      if (itemId) {
+        await pb.collection('inventory_items').update(itemId, {
+          min_stock: minStock
+        });
+      } else {
+        const expiry = document.getElementById('item-expiry').value || null;
+        
+        const newItem = await pb.collection('inventory_items').create({
+          name,
+          category,
+          unit,
+          min_stock: minStock,
+          organization_id: currentUser.organization_id
+        });
+        
+        if (qty > 0) {
+          await pb.collection('inventory_stock').create({
+            item_id: newItem.id,
+            location_id: currentLocationId,
+            quantity: qty,
+            expiry_date: expiry,
+            organization_id: currentUser.organization_id
+          });
+          
+          await pb.collection('inventory_transactions').create({
+            item_id: newItem.id,
+            location_id: currentLocationId,
+            type: 'einbuchung',
+            quantity: qty,
+            expiry_date: expiry,
+            note: 'Neuanlage',
+            user: currentUser.email || currentUser.id,
+            organization_id: currentUser.organization_id
+          });
+        }
+      }
+      
+      closeEditor();
+      await loadStock();
+      showMsg('✅ Gespeichert!', 'success');
+      
+    } catch(e) {
+      showError(e.message);
+    }
+  };
+
+  window.deleteItem = async (itemId) => {
+    if (!confirm('Artikel wirklich löschen? Alle Bestände werden entfernt!')) return;
+    
+    try {
+      const stockList = await pb.collection('inventory_stock').getFullList({
+        filter: `item_id = "${itemId}"`
+      });
+      
+      for (const stock of stockList) {
+        await pb.collection('inventory_stock').delete(stock.id);
+      }
+      
+      await pb.collection('inventory_items').delete(itemId);
+      
+      closeEditor();
+      await loadStock();
+      showMsg('✅ Gelöscht!', 'success');
+      
+    } catch(e) {
+      showError(e.message);
+    }
+  };
+
+  window.loadHistory = async (itemId) => {
+    const container = document.getElementById('historyContainer');
+    container.style.display = 'block';
+    container.innerHTML = '<div class="center-muted">Lade Historie...</div>';
+    
+    try {
+      const transactions = await pb.collection('inventory_transactions').getFullList({
+        filter: `item_id = "${itemId}" && location_id = "${currentLocationId}"`,
+        sort: '-created',
+        limit: 50
+      });
+      
+      if (!transactions.length) {
+        container.innerHTML = '<div class="center-muted">Keine Buchungen vorhanden</div>';
+        return;
+      }
+      
+      container.innerHTML = `
+        <table class="hist">
+          <thead>
+            <tr>
+              <th>Datum</th>
+              <th>Typ</th>
+              <th>Menge</th>
+              <th>Ablauf</th>
+              <th>Bemerkung</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${transactions.map(t => `
+              <tr>
+                <td>${new Date(t.created).toLocaleString('de-DE')}</td>
+                <td>${t.type}</td>
+                <td>${t.quantity > 0 ? '+' : ''}${t.quantity}</td>
+                <td>${t.expiry_date || '-'}</td>
+                <td>${t.note || '-'}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      `;
+    } catch(e) {
+      container.innerHTML = `<div class="error">Fehler: ${e.message}</div>`;
+    }
+  };
+
+  // ========================================
+  // LOCATION MANAGEMENT
+  // ========================================
+  function openLocationModal() {
+    renderLocationList();
+    document.getElementById('locationModal').classList.add('show');
+  }
+
+  window.closeLocationModal = () => {
+    document.getElementById('locationModal').classList.remove('show');
+  };
+
+  function renderLocationList() {
+    document.getElementById('locationList').innerHTML = `
+      <div style="display:flex;flex-direction:column;gap:.5rem">
+        ${locations.map(loc => `
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:.5rem;border:1px solid var(--border);border-radius:.5rem">
+            <div>
+              <i class="fas fa-${loc.icon || 'box'}"></i> ${loc.name}
+            </div>
+            <button class="btn" onclick="deleteLocation('${loc.id}')" ${locations.length <= 1 ? 'disabled' : ''}>
+              <i class="fas fa-trash"></i>
+            </button>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  }
+
+  window.addLocation = async () => {
+    const name = document.getElementById('newLocationName').value.trim();
+    if (!name) {
+      alert('Name erforderlich');
+      return;
+    }
+    
+    try {
+      await pb.collection('inventory_locations').create({
+        name,
+        icon: 'box',
+        organization_id: currentUser.organization_id
+      });
+      
+      document.getElementById('newLocationName').value = '';
+      await loadLocations();
+      renderLocationList();
+      showMsg('✅ Standort hinzugefügt!', 'success');
+      
+    } catch(e) {
+      showError(e.message);
+    }
+  };
+
+  window.deleteLocation = async (locId) => {
+    if (!confirm('Standort löschen? Alle Bestände an diesem Standort gehen verloren!')) return;
+    
+    try {
+      const stockList = await pb.collection('inventory_stock').getFullList({
+        filter: `location_id = "${locId}"`
+      });
+      
+      for (const stock of stockList) {
+        await pb.collection('inventory_stock').delete(stock.id);
+      }
+      
+      await pb.collection('inventory_locations').delete(locId);
+      
+      await loadLocations();
+      renderLocationList();
+      await loadStock();
+      showMsg('✅ Standort gelöscht!', 'success');
+      
+    } catch(e) {
+      showError(e.message);
+    }
+  };
+
+  // ========================================
+  // INVENTORY AUDIT (BESTANDSKORREKTUR/INVENTUR)
+  // ========================================
+  
+  let currentAudit = null;
+  let auditItems = [];
+  let auditIndex = 0;
+
+  window.openAuditModal = async () => {
+    try {
+      const audits = await pb.collection('inventory_audits').getFullList({
+        filter: `organization_id = "${currentUser.organization_id}" && status = "offen"`,
+        sort: '-created',
+        limit: 1
+      });
+      
+      if (audits.length > 0) {
+        currentAudit = audits[0];
+        await loadAuditItems();
+      } else {
+        const confirmStart = confirm('Neue Inventur starten? Dies erstellt eine Prüfung für alle Artikel im aktuellen Lager.');
+        if (!confirmStart) return;
+        
+        await startNewAudit();
+      }
+      
+      showAuditModal();
+      
+    } catch(e) {
+      showError(e.message);
+    }
+  };
+
+  async function startNewAudit() {
+    try {
+      currentAudit = await pb.collection('inventory_audits').create({
+        audit_date: new Date().toISOString(),
+        status: 'offen',
+        organization_id: currentUser.organization_id
+      });
+      
+      for (const item of stockItems) {
+        await pb.collection('inventory_audit_items').create({
+          audit_id: currentAudit.id,
+          item_id: item.id,
+          location_id: currentLocationId,
+          expected_quantity: item.qty,
+          actual_quantity: 0,
+          checked: false,
+          organization_id: currentUser.organization_id
+        });
+      }
+      
+      await loadAuditItems();
+      showMsg('✅ Neue Inventur gestartet!', 'success');
+      
+    } catch(e) {
+      showError(e.message);
     }
   }
 
-  async function adjustQty(id, delta){
-    const it=items.find(i=>i.id===id); if(!it) return;
-    if(delta<0 && it.qty<=0){ alert('Nicht genügend Bestand'); return; }
-    try{
-      await gql(`mutation($id:uuid!,$d:Int!){
-        update_inventory_items_by_pk(pk_columns:{id:$id}, _inc:{qty:$d}){ id }
-      }`,{id,d:delta});
-      await logMovement(id, delta, delta>0? 'Einbuchung': 'Ausbuchung');
-      await fetchItems();
-    }catch(e){ showError(e.message||e); }
+  async function loadAuditItems() {
+    try {
+      auditItems = await pb.collection('inventory_audit_items').getFullList({
+        filter: `audit_id = "${currentAudit.id}" && location_id = "${currentLocationId}"`,
+        expand: 'item_id',
+        sort: 'checked,created'
+      });
+      
+      auditIndex = auditItems.findIndex(ai => !ai.checked);
+      if (auditIndex === -1) auditIndex = 0;
+      
+    } catch(e) {
+      showError(e.message);
+    }
   }
 
-  async function deleteItem(id){
-    const it=items.find(i=>i.id===id); if(!it) return;
-    if(!confirm(`„${it.name}“ löschen?`)) return;
-    try{
-      await gql(`mutation($id:uuid!){ delete_inventory_items_by_pk(id:$id){ id } }`,{id});
-      await logMovement(id, 0, 'Artikel gelöscht');
-      await fetchItems();
-    }catch(e){ showError(e.message||e); }
-  }
-  window.adjustQty=adjustQty;
-  window.deleteItem=deleteItem;
-
-  /* ==== EDITOR + HISTORIE ==== */
-  window.openEditor = async function(id){
-    const it=id? items.find(i=>i.id===id) : {name:'',qty:1,target_qty:0,expiry:'',bemerkung:'',location:currentLocation};
-    const html=`
-    <div id="modal" style="position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:999">
-      <div class="card" style="width:92%;max-width:520px">
-        <h3 style="margin:0 0 .5rem 0">${id?'Artikel bearbeiten':'Neuen Artikel anlegen'}</h3>
-        <div style="display:grid;gap:.5rem">
-          <label>Name <input id="m-name" value="${it.name||''}" style="width:100%;padding:.5rem;border:1px solid var(--border);border-radius:.5rem"></label>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem">
-            <label>IST <input id="m-qty" type="number" min="0" value="${it.qty||0}" style="width:100%;padding:.5rem;border:1px solid var(--border);border-radius:.5rem"></label>
-            <label>SOLL <input id="m-target" type="number" min="0" value="${it.target_qty??0}" style="width:100%;padding:.5rem;border:1px solid var(--border);border-radius:.5rem"></label>
+  function showAuditModal() {
+    if (!auditItems.length) {
+      alert('Keine Artikel für Inventur gefunden');
+      return;
+    }
+    
+    const modal = document.createElement('div');
+    modal.id = 'auditModal';
+    modal.className = 'modal show';
+    modal.innerHTML = `
+      <div class="modal-box" style="max-width:500px">
+        <h3>Inventur ${currentAudit.id.slice(0,8)}</h3>
+        
+        <div style="margin-bottom:1rem">
+          <div style="background:#f0f9ff;padding:.75rem;border-radius:.5rem;border:1px solid #bae6fd">
+            <strong>Fortschritt:</strong> ${auditItems.filter(ai => ai.checked).length} / ${auditItems.length} geprüft
           </div>
-          <label>Ablaufdatum <input id="m-exp" type="date" value="${it.expiry||''}" style="width:100%;padding:.5rem;border:1px solid var(--border);border-radius:.5rem"></label>
-          <label>Lagerort
-            <select id="m-loc" style="width:100%;padding:.5rem;border:1px solid var(--border);border-radius:.5rem">
-              ${LOCATIONS.map(l=>`<option ${l===(it.location||currentLocation)?'selected':''}>${l}</option>`).join('')}
-            </select>
-          </label>
-          <label>Bemerkung <textarea id="m-note" rows="3" style="width:100%;padding:.5rem;border:1px solid var(--border);border-radius:.5rem">${it.bemerkung||''}</textarea></label>
         </div>
-
-        <div id="hist-wrap" style="margin-top:.5rem;display:none">
-          <h4 style="margin:.5rem 0">Historie</h4>
-          <div class="center-muted" id="hist-loading">Lade…</div>
-          <div id="hist-table"></div>
-        </div>
-
-        <div style="display:flex;gap:.5rem;justify-content:space-between;margin-top:.75rem;flex-wrap:wrap">
-          <div style="display:flex;gap:.5rem;flex-wrap:wrap">
-            ${id?`<button class="btn" id="btn-hist"><i class="fas fa-clock"></i> Historie</button>`:''}
-          </div>
-          <div style="display:flex;gap:.5rem;flex-wrap:wrap">
-            ${id?`<button class="btn" onclick="(async()=>{ if(confirm('Wirklich löschen?')){ await deleteItem('${id}'); document.getElementById('modal').remove(); } })()">Löschen</button>`:''}
-            <button class="btn" onclick="document.getElementById('modal').remove()">Abbrechen</button>
-            <button class="btn" style="background:var(--primary);color:#fff;border:none" id="btn-save">Speichern</button>
+        
+        <div id="auditItemContainer"></div>
+        
+        <div style="display:flex;gap:.5rem;justify-content:space-between;margin-top:1.5rem">
+          <button class="btn" onclick="closeAuditModal()">Abbrechen</button>
+          <div style="display:flex;gap:.5rem">
+            <button class="btn" onclick="prevAuditItem()" ${auditIndex === 0 ? 'disabled' : ''}>
+              <i class="fas fa-arrow-left"></i> Zurück
+            </button>
+            <button class="btn" style="background:var(--primary);color:#fff" onclick="saveAuditItem()">
+              ${auditIndex === auditItems.length - 1 ? 'Fertig' : 'Weiter'} <i class="fas fa-arrow-right"></i>
+            </button>
           </div>
         </div>
       </div>
-    </div>`;
-    document.body.insertAdjacentHTML('beforeend', html);
+    `;
+    
+    document.body.appendChild(modal);
+    renderAuditItem();
+  }
 
-    if(id){
-      document.getElementById('btn-hist')?.addEventListener('click', async ()=>{
-        const box=document.getElementById('hist-wrap');
-        box.style.display = box.style.display==='none' ? 'block' : 'none';
-        if(box.style.display==='block'){
-          document.getElementById('hist-loading').style.display='block';
-          document.getElementById('hist-table').innerHTML='';
-          try{
-            const data=await gql(`query($id:uuid!){
-              inventory_movements(where:{item_id:{_eq:$id}}, order_by:{created_at:desc}, limit:50){
-                id delta actor note created_at
-              }
-            }`,{id});
-            const rows=data.inventory_movements;
-            document.getElementById('hist-loading').style.display='none';
-            if(!rows.length){
-              document.getElementById('hist-table').innerHTML='<div class="center-muted">Keine Bewegungen</div>';
-            }else{
-              const html=`
-                <table class="hist">
-                  <thead><tr><th>Zeit</th><th>Delta</th><th>Aktion</th><th>von</th></tr></thead>
-                  <tbody>
-                    ${rows.map(r=>`<tr>
-                      <td>${new Date(r.created_at).toLocaleString()}</td>
-                      <td>${r.delta>0?`+${r.delta}`:r.delta}</td>
-                      <td>${r.note|| (r.delta>0?'Einbuchung':'Ausbuchung')}</td>
-                      <td>${r.actor||''}</td>
-                    </tr>`).join('')}
-                  </tbody>
-                </table>`;
-              document.getElementById('hist-table').innerHTML=html;
+  function renderAuditItem() {
+    const auditItem = auditItems[auditIndex];
+    if (!auditItem) return;
+    
+    const item = auditItem.expand?.item_id;
+    if (!item) return;
+    
+    const container = document.getElementById('auditItemContainer');
+    container.innerHTML = `
+      <div style="background:#fafafa;padding:1rem;border-radius:.5rem;border:1px solid var(--border)">
+        <h4 style="margin:0 0 .5rem 0">${auditIndex + 1}. ${item.name}</h4>
+        <div style="color:var(--text-light);font-size:.9rem;margin-bottom:.5rem">
+          ${item.category || 'Keine Kategorie'} • ${item.unit || 'Stück'}
+        </div>
+        
+        <div style="background:#fff;padding:.75rem;border-radius:.5rem;margin-bottom:.75rem">
+          <div style="color:var(--text-light);font-size:.85rem">Erwarteter Bestand (laut System):</div>
+          <div style="font-size:1.5rem;font-weight:700">${auditItem.expected_quantity} ${item.unit || 'Stück'}</div>
+        </div>
+        
+        <div class="form-group">
+          <label>Tatsächlicher Bestand (gezählt):</label>
+          <input type="number" id="audit-actual" value="${auditItem.actual_quantity}" min="0" 
+            style="font-size:1.2rem;font-weight:700;padding:.75rem" autofocus>
+        </div>
+        
+        <div style="margin-top:.5rem">
+          <label style="display:flex;align-items:center;gap:.5rem;cursor:pointer">
+            <input type="checkbox" id="audit-checked" ${auditItem.checked ? 'checked' : ''}>
+            <span>Als geprüft markieren</span>
+          </label>
+        </div>
+      </div>
+    `;
+    
+    setTimeout(() => {
+      document.getElementById('audit-actual')?.focus();
+      document.getElementById('audit-actual')?.select();
+    }, 100);
+  }
+
+  window.saveAuditItem = async () => {
+    const auditItem = auditItems[auditIndex];
+    const actual = parseInt(document.getElementById('audit-actual').value) || 0;
+    const checked = document.getElementById('audit-checked').checked;
+    
+    try {
+      await pb.collection('inventory_audit_items').update(auditItem.id, {
+        actual_quantity: actual,
+        checked: checked
+      });
+      
+      if (checked && actual !== auditItem.expected_quantity) {
+        const diff = actual - auditItem.expected_quantity;
+        
+        const stockList = await pb.collection('inventory_stock').getFullList({
+          filter: `item_id = "${auditItem.item_id}" && location_id = "${currentLocationId}"`
+        });
+        
+        if (diff > 0) {
+          await pb.collection('inventory_stock').create({
+            item_id: auditItem.item_id,
+            location_id: currentLocationId,
+            quantity: diff,
+            organization_id: currentUser.organization_id
+          });
+        } else if (diff < 0 && stockList.length > 0) {
+          let remaining = Math.abs(diff);
+          for (const stock of stockList) {
+            if (remaining <= 0) break;
+            
+            const take = Math.min(stock.quantity, remaining);
+            const newQty = stock.quantity - take;
+            
+            if (newQty <= 0) {
+              await pb.collection('inventory_stock').delete(stock.id);
+            } else {
+              await pb.collection('inventory_stock').update(stock.id, {
+                quantity: newQty
+              });
             }
-          }catch(e){
-            document.getElementById('hist-loading').style.display='none';
-            document.getElementById('hist-table').innerHTML = `<div class="error">Historie konnte nicht geladen werden: ${e.message||e}</div>`;
+            
+            remaining -= take;
           }
         }
-      });
+        
+        await pb.collection('inventory_transactions').create({
+          item_id: auditItem.item_id,
+          location_id: currentLocationId,
+          type: 'korrektur',
+          quantity: diff,
+          note: `Inventur-Korrektur: ${auditItem.expected_quantity} → ${actual}`,
+          user: currentUser.email || currentUser.id,
+          organization_id: currentUser.organization_id
+        });
+      }
+      
+      if (auditIndex < auditItems.length - 1) {
+        auditIndex++;
+        await loadAuditItems();
+        renderAuditItem();
+        
+        const progressText = `${auditItems.filter(ai => ai.checked).length} / ${auditItems.length} geprüft`;
+        document.querySelector('#auditModal .modal-box > div:first-of-type strong').nextSibling.textContent = ' ' + progressText;
+        
+      } else {
+        await finishAudit();
+      }
+      
+    } catch(e) {
+      showError(e.message);
     }
-
-    document.getElementById('btn-save').onclick = async ()=>{
-      const vName = document.getElementById('m-name').value.trim();
-      const vQty  = parseInt(document.getElementById('m-qty').value,10)||0;
-      const vTgt  = parseInt(document.getElementById('m-target').value,10)||0;
-      const vExp  = document.getElementById('m-exp').value||null;
-      const vLoc  = document.getElementById('m-loc').value;
-      const vNote = document.getElementById('m-note').value.trim();
-      if(!vName){ alert('Name erforderlich'); return; }
-
-      try{
-        if(id){
-          const before = items.find(i=>i.id===id);
-          await gql(`mutation($id:uuid!,$set:inventory_items_set_input!){
-            update_inventory_items_by_pk(pk_columns:{id:$id}, _set:$set){ id }
-          }`,{id,set:{name:vName,qty:vQty,target_qty:vTgt,expiry:vExp,location:vLoc,bemerkung:vNote}});
-          const delta = (vQty - (before?.qty??0));
-          if(delta!==0){ await logMovement(id, delta, 'Menge geändert (Bearbeiten)'); }
-        }else{
-          const res = await gql(`mutation($obj:inventory_items_insert_input!){
-            insert_inventory_items_one(object:$obj){ id }
-          }`,{obj:{name:vName,qty:vQty,target_qty:vTgt,expiry:vExp,location:vLoc,bemerkung:vNote}});
-          const newId = res.insert_inventory_items_one.id;
-          if(vQty!==0){ await logMovement(newId, vQty, 'Neuanlage'); }
-        }
-        document.getElementById('modal').remove();
-        await fetchItems();
-      }catch(e){ showError(e.message||e); }
-    };
   };
 
-  /* ==== NAV ==== */
-  document.getElementById('navg').addEventListener('click',e=>{
-    const a=e.target.closest('a[data-loc]'); if(!a) return;
-    e.preventDefault();
-    document.querySelectorAll('#navg a').forEach(x=>x.classList.remove('active'));
-    a.classList.add('active');
-    currentLocation=a.dataset.loc;
-    renderToolbar();
-    fetchItems();
-  });
+  window.prevAuditItem = () => {
+    if (auditIndex > 0) {
+      auditIndex--;
+      renderAuditItem();
+    }
+  };
 
-  /* ==== START ==== */
+  async function finishAudit() {
+    const allChecked = auditItems.every(ai => ai.checked);
+    
+    if (!allChecked) {
+      const confirm = window.confirm('Nicht alle Artikel wurden geprüft. Inventur trotzdem abschließen?');
+      if (!confirm) return;
+    }
+    
+    try {
+      await pb.collection('inventory_audits').update(currentAudit.id, {
+        status: 'abgeschlossen'
+      });
+      
+      closeAuditModal();
+      await loadStock();
+      showMsg('✅ Inventur abgeschlossen!', 'success');
+      
+    } catch(e) {
+      showError(e.message);
+    }
+  }
+
+  window.closeAuditModal = () => {
+    document.getElementById('auditModal')?.remove();
+  };
+
+  // ========================================
+  // START
+  // ========================================
+  await loadLocations();
   renderToolbar();
-  await fetchItems();
+  await loadStock();
+  
+  setTimeout(() => {
+    document.body.classList.add('loaded');
+  }, 100);
+
 </script>
 </body>
 </html>
