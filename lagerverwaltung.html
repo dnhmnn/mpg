@@ -713,6 +713,22 @@
   </div>
 </div>
 
+<!-- LAGER-AUSWAHL FÜR INVENTUR -->
+<div class="modal" id="auditLocationModal">
+  <div class="modal-box" style="max-width:500px">
+    <h3>Lager für Inventur auswählen</h3>
+    <p style="color:var(--muted);margin-bottom:1rem">Wählen Sie das Lager aus, das Sie inventieren möchten:</p>
+    
+    <div id="auditLocationList" style="display:flex;flex-direction:column;gap:.5rem;margin-bottom:1.5rem">
+      <!-- Wird dynamisch gefüllt -->
+    </div>
+    
+    <div style="display:flex;justify-content:flex-end">
+      <button class="btn" onclick="closeAuditLocationModal()">Abbrechen</button>
+    </div>
+  </div>
+</div>
+
 <!-- ==================== MODALS END ==================== -->
 
 <script type="module">
@@ -1660,7 +1676,7 @@
                 ${audit.totalItems} Artikel geprüft • ${audit.corrections} Korrektur${audit.corrections !== 1 ? 'en' : ''}
               </div>
             </div>
-            <div style="display:flex;gap:.5rem;align-items:center">
+            <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap">
               <span class="audit-status ${statusClass}">
                 <i class="fas fa-${statusIcon}"></i> ${statusText}
               </span>
@@ -1792,6 +1808,7 @@
 
   window.openAuditModal = async () => {
     try {
+      // Prüfe ob offene Inventuren existieren
       const audits = await pb.collection('inventory_audits').getFullList({
         filter: `organization_id = "${currentUser.organization_id}" && status = "offen"`,
         sort: '-created',
@@ -1799,16 +1816,85 @@
       });
       
       if (audits.length > 0) {
+        // Bestehende Inventur fortsetzen
         currentAudit = audits[0];
-        await loadAuditItems();
+        
+        // Lade Items für diese Inventur
+        const items = await pb.collection('inventory_audit_items').getFullList({
+          filter: `audit_id = "${currentAudit.id}"`,
+          limit: 1
+        });
+        
+        if (items.length > 0) {
+          // Setze Location ID auf die Location der Inventur
+          currentLocationId = items[0].location_id;
+          await loadAuditItems();
+          showAuditModal();
+        } else {
+          alert('Fehler: Inventur ohne Artikel gefunden.');
+        }
+        
       } else {
-        const confirmStart = confirm('Neue Inventur starten für Lager "' + (locations.find(l => l.id === currentLocationId)?.name || 'Lager') + '"?');
-        if (!confirmStart) return;
-        await startNewAudit();
+        // Neue Inventur - Lager auswählen lassen
+        showAuditLocationSelector();
       }
       
+    } catch(e) {
+      showError(e.message);
+    }
+  };
+
+  function showAuditLocationSelector() {
+    if (!locations.length) {
+      alert('Keine Lager-Standorte vorhanden! Bitte erst Standorte anlegen.');
+      return;
+    }
+    
+    const listEl = document.getElementById('auditLocationList');
+    listEl.innerHTML = locations.map(loc => `
+      <button class="btn" onclick="startAuditForLocation('${loc.id}')" 
+        style="display:flex;align-items:center;gap:.75rem;padding:1rem;text-align:left;justify-content:flex-start;width:100%">
+        <i class="fas fa-${loc.icon || 'box'}" style="font-size:1.5rem;color:var(--primary)"></i>
+        <div style="flex:1">
+          <div style="font-weight:700;font-size:1.05rem">${loc.name}</div>
+          <div style="font-size:.85rem;color:var(--muted)">Inventur für dieses Lager starten</div>
+        </div>
+        <i class="fas fa-arrow-right" style="color:var(--muted)"></i>
+      </button>
+    `).join('');
+    
+    document.getElementById('auditLocationModal').classList.add('show');
+  }
+
+  window.closeAuditLocationModal = () => {
+    document.getElementById('auditLocationModal').classList.remove('show');
+  };
+
+  window.startAuditForLocation = async (locationId) => {
+    closeAuditLocationModal();
+    
+    // Setze gewähltes Lager
+    currentLocationId = locationId;
+    const loc = locations.find(l => l.id === locationId);
+    
+    // Lade Artikel für dieses Lager
+    await loadStock();
+    
+    if (!stockItems.length) {
+      alert(`Keine Artikel im Lager "${loc?.name || 'Lager'}" vorhanden!\n\nBitte erst Artikel hinzufügen, bevor Sie eine Inventur starten.`);
+      return;
+    }
+    
+    const confirmStart = confirm(
+      `Inventur für "${loc?.name || 'Lager'}" starten?\n\n` +
+      `${stockItems.length} Artikel werden geprüft.`
+    );
+    
+    if (!confirmStart) return;
+    
+    try {
+      await startNewAudit();
       showAuditModal();
-      
     } catch(e) {
       showError(e.message);
     }
