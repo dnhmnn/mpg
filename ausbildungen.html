@@ -19,6 +19,7 @@
       --primary-light:#fee2e2;
       --success:#16a34a;
       --warning:#f59e0b;
+      --info:#3b82f6;
       --bg:#f8fafc;
       --card:#fff;
       --text:#0f172a;
@@ -123,6 +124,8 @@
     .btn:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,.1)}
     .btn.primary{background:var(--primary);color:#fff;border-color:var(--primary)}
     .btn.primary:hover{background:#a80d25}
+    .btn.success{background:var(--success);color:#fff;border-color:var(--success)}
+    .btn.info{background:var(--info);color:#fff;border-color:var(--info)}
     .btn:disabled{opacity:0.5;cursor:not-allowed;transform:none}
     .btn-sm{padding:.4rem .7rem;font-size:.85rem}
     
@@ -331,6 +334,7 @@
       border-bottom:none;
     }
     
+    /* Learning Module Styles */
     .learning-module{
       background:#fff;
       border-radius:.75rem;
@@ -346,64 +350,132 @@
       font-weight:800;
       margin-bottom:.5rem;
     }
+    .learning-stats{
+      display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(120px,1fr));
+      gap:1rem;
+      margin-top:1rem;
+      padding-top:1rem;
+      border-top:1px solid var(--border);
+    }
+    .learning-stat{
+      text-align:center;
+    }
+    .learning-stat-value{
+      font-size:1.5rem;
+      font-weight:800;
+      color:var(--primary);
+    }
+    .learning-stat-label{
+      font-size:.8rem;
+      color:var(--muted);
+    }
+    
+    /* Slide Editor */
+    .slides-list{
+      display:flex;
+      flex-direction:column;
+      gap:.75rem;
+    }
+    .slide-item{
+      background:#f9fafb;
+      padding:1rem;
+      border-radius:.5rem;
+      border-left:4px solid var(--primary);
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      cursor:move;
+      transition:all 0.2s;
+    }
+    .slide-item:hover{
+      background:#f3f4f6;
+      transform:translateX(4px);
+    }
+    .slide-item-info{
+      flex:1;
+    }
+    .slide-item-title{
+      font-weight:700;
+      margin-bottom:.25rem;
+    }
+    .slide-item-meta{
+      font-size:.85rem;
+      color:var(--muted);
+    }
+    .slide-item-actions{
+      display:flex;
+      gap:.5rem;
+    }
+    
+    /* Slide Type Icons */
+    .slide-type-icon{
+      width:40px;
+      height:40px;
+      border-radius:.5rem;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      margin-right:1rem;
+      font-size:1.2rem;
+    }
+    .slide-type-icon.text{background:#dbeafe;color:#1e40af}
+    .slide-type-icon.image{background:#dcfce7;color:#166534}
+    .slide-type-icon.video{background:#fef3c7;color:#92400e}
+    .slide-type-icon.quiz{background:#fee2e2;color:#991b1b}
+    .slide-type-icon.interactive{background:#e0e7ff;color:#4338ca}
     
     /* Quill Editor Styles */
     .ql-container{
       font-family:'Atkinson Hyperlegible',-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
       font-size:1rem;
-      min-height:400px;
+      min-height:300px;
     }
     .ql-editor{
-      min-height:400px;
-    }
-    .ql-editor h1{
-      font-size:2rem;
-      font-weight:800;
-    }
-    .ql-editor h2{
-      font-size:1.5rem;
-      font-weight:800;
-    }
-    .ql-editor h3{
-      font-size:1.2rem;
-      font-weight:700;
+      min-height:300px;
     }
     
-    .quiz-question{
+    /* Quiz Styles */
+    .quiz-question-card{
       background:#f9fafb;
       padding:1.5rem;
-      border-radius:.5rem;
-      margin-bottom:1.5rem;
+      border-radius:.75rem;
+      margin-bottom:1rem;
       border-left:4px solid var(--primary);
+    }
+    .quiz-question-header{
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-start;
+      margin-bottom:1rem;
     }
     .quiz-question-text{
       font-weight:700;
       font-size:1.1rem;
-      margin-bottom:1rem;
+      flex:1;
     }
-    .quiz-options{
+    .quiz-options-list{
       display:flex;
       flex-direction:column;
-      gap:.75rem;
+      gap:.5rem;
     }
-    .quiz-option{
-      padding:1rem;
+    .quiz-option-item{
       background:#fff;
-      border:2px solid var(--border);
+      padding:.75rem;
       border-radius:.5rem;
-      cursor:pointer;
-      transition:all 0.2s;
+      border:2px solid var(--border);
       display:flex;
       align-items:center;
       gap:.75rem;
+      transition:all 0.2s;
     }
-    .quiz-option:hover{
+    .quiz-option-item:hover{
       border-color:var(--primary);
       background:var(--primary-light);
     }
-    .quiz-option.selected{
-      border-color:var(--primary);
-      background:var(--primary-light);
+    .quiz-option-item.correct{
+      border-color:var(--success);
+      background:#dcfce7;
     }
     
     .access-code-box{
@@ -491,6 +563,7 @@
     .center-muted{color:var(--muted);text-align:center;padding:2rem}
     .error{background:#fff5f5;border:1px solid #f2c9d1;color:#8b0e22;border-radius:10px;padding:10px;margin-bottom:1rem}
     .success{background:#f0fdf4;border:1px solid #bbf7d0;color:#166534;border-radius:10px;padding:10px;margin-bottom:1rem}
+    .info{background:#eff6ff;border:1px solid #bfdbfe;color:#1e40af;border-radius:10px;padding:10px;margin-bottom:1rem}
     
     @media (max-width:768px){
       .bar{flex-direction:column;align-items:stretch}
@@ -506,6 +579,7 @@
       .btn{width:100%;justify-content:center}
       .table{font-size:.85rem}
       .table th,.table td{padding:.5rem}
+      .learning-stats{grid-template-columns:repeat(2,1fr)}
     }
   </style>
 </head>
@@ -636,7 +710,7 @@
   </div>
 </div>
 
-<!-- MODALS -->
+<!-- MODALS (Part 1) -->
 
 <!-- New Course Modal -->
 <div class="modal" id="newCourseModal">
@@ -807,41 +881,199 @@
     </div>
   </div>
 </div>
-
-<!-- Learning Module Editor Modal -->
-<div class="modal" id="learningModuleModal">
+<!-- Slide Editor Modal -->
+<div class="modal" id="slideEditorModal">
   <div class="modal-box">
-    <h3 id="learningModuleTitle">Lernmodul bearbeiten</h3>
+    <h3 id="slideEditorTitle">Folien bearbeiten</h3>
     
-    <div style="margin-bottom:1rem">
-      <div id="quill-editor"></div>
+    <div class="info" style="margin-bottom:1rem">
+      <i class="fas fa-info-circle"></i> Erstelle interaktive Lernfolien für dein Modul
     </div>
     
-    <div style="display:flex;gap:.5rem;justify-content:flex-end;margin-top:1.5rem">
-      <button class="btn" onclick="closeLearningModuleModal()">Abbrechen</button>
-      <button class="btn primary" onclick="saveLearningModule()">
-        <i class="fas fa-save"></i> Speichern
+    <div class="actions">
+      <button class="btn primary" onclick="openNewSlideModal()">
+        <i class="fas fa-plus"></i> Neue Folie
       </button>
-      <button class="btn primary" onclick="openQuizEditor()">
-        <i class="fas fa-question-circle"></i> Kompetenzprüfung
+    </div>
+    
+    <div id="slides-list" class="slides-list"></div>
+    
+    <div style="display:flex;gap:.5rem;justify-content:flex-end;margin-top:1.5rem">
+      <button class="btn" onclick="closeSlideEditor()">Schließen</button>
+      <button class="btn success" onclick="previewCourse()">
+        <i class="fas fa-play"></i> Vorschau
       </button>
     </div>
   </div>
 </div>
 
-<!-- Quiz Editor Modal -->
-<div class="modal" id="quizEditorModal">
+<!-- New Slide Modal -->
+<div class="modal" id="newSlideModal">
+  <div class="modal-box">
+    <h3 id="newSlideTitle">Neue Folie</h3>
+    
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Folientyp *</label>
+        <select id="slide-type" onchange="updateSlideTypeFields()">
+          <option value="text">📝 Text-Folie</option>
+          <option value="image">🖼️ Bild-Folie</option>
+          <option value="video">🎥 Video-Folie</option>
+          <option value="quiz">❓ Quiz-Folie</option>
+          <option value="interactive">✨ Interaktive Folie</option>
+        </select>
+      </div>
+      
+      <div class="form-group">
+        <label>Titel *</label>
+        <input type="text" id="slide-title" placeholder="z.B. Einführung in die Reanimation">
+      </div>
+      
+      <div class="form-group" id="slide-duration-group">
+        <label>Geschätzte Dauer (Minuten)</label>
+        <input type="number" id="slide-duration" value="5" min="1">
+      </div>
+      
+      <!-- Text Slide Fields -->
+      <div id="text-slide-fields" class="form-group">
+        <label>Inhalt</label>
+        <div id="slide-content-editor"></div>
+      </div>
+      
+      <!-- Image Slide Fields -->
+      <div id="image-slide-fields" style="display:none">
+        <div class="form-group">
+          <label>Bild-URL</label>
+          <input type="text" id="slide-image-url" placeholder="https://...">
+        </div>
+        <div class="form-group">
+          <label>Bildbeschreibung</label>
+          <textarea id="slide-image-description" rows="3" placeholder="Beschreibung des Bildes"></textarea>
+        </div>
+      </div>
+      
+      <!-- Video Slide Fields -->
+      <div id="video-slide-fields" style="display:none">
+        <div class="form-group">
+          <label>Video-URL (YouTube/Vimeo)</label>
+          <input type="text" id="slide-video-url" placeholder="https://www.youtube.com/watch?v=...">
+        </div>
+        <div class="form-group">
+          <label>Video-Beschreibung</label>
+          <textarea id="slide-video-description" rows="3" placeholder="Was zeigt das Video?"></textarea>
+        </div>
+      </div>
+      
+      <!-- Quiz Slide Fields -->
+      <div id="quiz-slide-fields" style="display:none">
+        <div class="form-group">
+          <label>Frage *</label>
+          <input type="text" id="slide-quiz-question" placeholder="Was ist die richtige Frequenz?">
+        </div>
+        <div class="form-group">
+          <label>Antwortmöglichkeiten</label>
+          <div id="quiz-answers-list"></div>
+          <button class="btn btn-sm" onclick="addQuizAnswer()" type="button">
+            <i class="fas fa-plus"></i> Antwort hinzufügen
+          </button>
+        </div>
+        <div class="form-group">
+          <label>Erklärung (nach Beantwortung)</label>
+          <textarea id="slide-quiz-explanation" rows="2" placeholder="Richtig! Die Frequenz beträgt..."></textarea>
+        </div>
+      </div>
+      
+      <!-- Interactive Slide Fields -->
+      <div id="interactive-slide-fields" style="display:none">
+        <div class="form-group">
+          <label>Interaktiver Inhalt</label>
+          <div id="slide-interactive-editor"></div>
+        </div>
+        <div class="info" style="margin-top:.5rem">
+          <i class="fas fa-lightbulb"></i> Tipp: Erstelle klickbare Bereiche mit versteckten Informationen
+        </div>
+      </div>
+    </div>
+    
+    <div style="display:flex;gap:.5rem;justify-content:flex-end;margin-top:1.5rem">
+      <button class="btn" onclick="closeNewSlideModal()">Abbrechen</button>
+      <button class="btn primary" onclick="saveSlide()">
+        <i class="fas fa-save"></i> Speichern
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Quiz Manager Modal -->
+<div class="modal" id="quizManagerModal">
   <div class="modal-box">
     <h3>Kompetenzprüfung</h3>
+    
+    <div class="info" style="margin-bottom:1rem">
+      <i class="fas fa-trophy"></i> Erstelle eine Abschlussprüfung mit mindestens 5 Fragen
+    </div>
+    
+    <div class="form-group" style="margin-bottom:1.5rem">
+      <label>Bestehensgrenze (%)</label>
+      <input type="number" id="quiz-pass-percentage" value="80" min="0" max="100">
+    </div>
+    
     <div id="quiz-questions-list"></div>
+    
     <div style="margin-top:1rem">
-      <button class="btn" onclick="addQuizQuestion()">
+      <button class="btn primary" onclick="addFinalQuizQuestion()">
         <i class="fas fa-plus"></i> Frage hinzufügen
       </button>
     </div>
+    
     <div style="display:flex;gap:.5rem;justify-content:flex-end;margin-top:1.5rem">
-      <button class="btn" onclick="closeQuizEditor()">Schließen</button>
-      <button class="btn primary" onclick="saveQuiz()">
+      <button class="btn" onclick="closeQuizManager()">Schließen</button>
+      <button class="btn success" onclick="saveFinalQuiz()">
+        <i class="fas fa-save"></i> Prüfung speichern
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Final Quiz Question Modal -->
+<div class="modal" id="finalQuizQuestionModal">
+  <div class="modal-box" style="max-width:600px">
+    <h3>Prüfungsfrage hinzufügen</h3>
+    
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Frage *</label>
+        <input type="text" id="final-quiz-question" placeholder="Frage eingeben">
+      </div>
+      
+      <div class="form-group">
+        <label>Fragetyp</label>
+        <select id="final-quiz-type" onchange="updateFinalQuizFields()">
+          <option value="single">Single Choice (eine Antwort)</option>
+          <option value="multiple">Multiple Choice (mehrere Antworten)</option>
+          <option value="truefalse">Wahr/Falsch</option>
+        </select>
+      </div>
+      
+      <div id="final-quiz-answers-container">
+        <div class="form-group">
+          <label>Antwortmöglichkeiten</label>
+          <div id="final-quiz-answers-list"></div>
+          <button class="btn btn-sm" onclick="addFinalQuizAnswer()" type="button">
+            <i class="fas fa-plus"></i> Antwort hinzufügen
+          </button>
+        </div>
+      </div>
+      
+      <div class="form-group">
+        <label>Erklärung (optional)</label>
+        <textarea id="final-quiz-explanation" rows="2" placeholder="Warum ist diese Antwort richtig?"></textarea>
+      </div>
+    </div>
+    
+    <div style="display:flex;gap:.5rem;justify-content:flex-end;margin-top:1.5rem">
+      <button class="btn" onclick="closeFinalQuizQuestionModal()">Abbrechen</button>
+      <button class="btn primary" onclick="saveFinalQuizQuestion()">
         <i class="fas fa-save"></i> Speichern
       </button>
     </div>
@@ -881,8 +1113,15 @@
   let selectedParticipants = [];
   let currentEditCourse = null;
   let currentLearningCourse = null;
+  let currentEditSlide = null;
   let previewAccessCode = '';
   let quillEditor = null;
+  let slideContentEditor = null;
+  let slideInteractiveEditor = null;
+  let quizAnswers = [];
+  let finalQuizQuestions = [];
+  let currentEditFinalQuestion = null;
+  let finalQuizAnswers = [];
   
   const wordLists = {
     adjectives: ['schnell', 'blau', 'groß', 'klein', 'rot', 'grün', 'gelb', 'hell', 'dunkel', 'stark', 'schwach', 'frisch', 'alt', 'neu', 'warm', 'kalt', 'süß', 'sauer', 'laut', 'leise'],
@@ -950,7 +1189,7 @@
   });
 
   // ========================================
-  // CALENDAR
+  // CALENDAR (unchanged from Teil 1)
   // ========================================
   async function renderCalendar() {
     const monthNames = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
@@ -962,7 +1201,6 @@
     const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
     const today = new Date();
     
-    // Load sessions for this month
     const startDate = new Date(currentYear, currentMonth, 1).toISOString().split('T')[0];
     const endDate = new Date(currentYear, currentMonth + 1, 0).toISOString().split('T')[0];
     
@@ -970,17 +1208,14 @@
     
     let html = '';
     
-    // Day headers
     dayNames.forEach(day => {
       html += `<div class="calendar-day-header">${day}</div>`;
     });
     
-    // Empty cells before first day
     for (let i = 0; i < firstDay; i++) {
       html += '<div class="calendar-day other-month"></div>';
     }
     
-    // Days
     for (let day = 1; day <= daysInMonth; day++) {
       const date = new Date(currentYear, currentMonth, day);
       const dateStr = date.toISOString().split('T')[0];
@@ -1001,7 +1236,6 @@
     
     document.getElementById('calendar-grid').innerHTML = html;
     
-    // Upcoming sessions
     const upcoming = sessions
       .filter(s => new Date(s.date) >= today)
       .sort((a, b) => new Date(a.date) - new Date(b.date))
@@ -1063,7 +1297,7 @@
   };
 
   // ========================================
-  // LOAD COURSES
+  // LOAD COURSES (unchanged)
   // ========================================
   async function loadCourses() {
     try {
@@ -1130,7 +1364,7 @@
   }
 
   // ========================================
-  // NEW/EDIT COURSE
+  // NEW/EDIT COURSE (unchanged)
   // ========================================
   window.openNewCourseModal = () => {
     currentEditCourse = null;
@@ -1191,7 +1425,7 @@
   };
 
   // ========================================
-  // NEW SESSION
+  // SESSIONS (unchanged - keeping existing code)
   // ========================================
   window.openNewSessionModal = async () => {
     const select = document.getElementById('session-course');
@@ -1294,9 +1528,6 @@
     }
   };
 
-  // ========================================
-  // SESSION DETAILS
-  // ========================================
   window.openSessionDetails = async (sessionId) => {
     try {
       const session = await pb.collection('training_sessions').getOne(sessionId);
@@ -1382,9 +1613,8 @@
       alert('Fehler: ' + e.message);
     }
   };
-
   // ========================================
-  // TEAM
+  // TEAM (unchanged)
   // ========================================
   async function loadTeam() {
     try {
@@ -1540,7 +1770,7 @@
   };
 
   // ========================================
-  // STATISTICS
+  // STATISTICS (unchanged)
   // ========================================
   async function loadStatistics() {
     try {
@@ -1554,7 +1784,6 @@
       let html = '<table class="table">';
       html += '<thead><tr><th>Kurs</th><th>Datum</th><th>Teilnehmer</th><th>Anwesend</th><th>Quote</th></tr></thead><tbody>';
       
-      // Group by session
       const sessionGroups = {};
       allParticipants.forEach(p => {
         if (!sessionGroups[p.session_id]) {
@@ -1594,7 +1823,7 @@
   }
 
   // ========================================
-  // LEARNING
+  // LEARNING - NEW RISE ARTICULATE STYLE
   // ========================================
   async function loadLearning() {
     const list = document.getElementById('learning-list');
@@ -1606,161 +1835,575 @@
       return;
     }
     
-    list.innerHTML = onlineCourses.map(course => `
-      <div class="learning-module">
-        <div class="learning-header">
-          <div class="learning-title">${course.title}</div>
-          <div style="color:var(--muted);font-size:.9rem">${course.instructor ? `Dozent: ${course.instructor}` : ''}</div>
-        </div>
-        <button class="btn primary" onclick="editLearningModule('${course.id}')">
-          <i class="fas fa-edit"></i> Lerninhalt bearbeiten
-        </button>
-      </div>
-    `).join('');
+    try {
+      // Load slides for each course
+      const slidesPromises = onlineCourses.map(course => 
+        pb.collection('learning_slides').getFullList({
+          filter: `course_id = "${course.id}"`,
+          sort: 'order'
+        }).catch(() => [])
+      );
+      
+      const allSlides = await Promise.all(slidesPromises);
+      
+      // Load quiz questions for each course
+      const questionsPromises = onlineCourses.map(course => 
+        pb.collection('training_questions').getFullList({
+          filter: `course_id = "${course.id}"`,
+          sort: 'order'
+        }).catch(() => [])
+      );
+      
+      const allQuestions = await Promise.all(questionsPromises);
+      
+      list.innerHTML = onlineCourses.map((course, idx) => {
+        const slides = allSlides[idx] || [];
+        const questions = allQuestions[idx] || [];
+        const totalDuration = slides.reduce((sum, s) => sum + (s.duration || 0), 0);
+        
+        return `
+          <div class="learning-module">
+            <div class="learning-header">
+              <div class="learning-title">${course.title}</div>
+              <div style="color:var(--muted);font-size:.9rem">${course.instructor ? `Dozent: ${course.instructor}` : ''}</div>
+            </div>
+            
+            <div class="learning-stats">
+              <div class="learning-stat">
+                <div class="learning-stat-value">${slides.length}</div>
+                <div class="learning-stat-label">Folien</div>
+              </div>
+              <div class="learning-stat">
+                <div class="learning-stat-value">${questions.length}</div>
+                <div class="learning-stat-label">Prüfungsfragen</div>
+              </div>
+              <div class="learning-stat">
+                <div class="learning-stat-value">${totalDuration}</div>
+                <div class="learning-stat-label">Min. Dauer</div>
+              </div>
+            </div>
+            
+            <div style="display:flex;gap:.5rem;margin-top:1rem;flex-wrap:wrap">
+              <button class="btn primary" onclick="openSlideEditor('${course.id}')">
+                <i class="fas fa-edit"></i> Folien bearbeiten
+              </button>
+              <button class="btn info" onclick="openQuizManager('${course.id}')">
+                <i class="fas fa-question-circle"></i> Kompetenzprüfung
+              </button>
+              <button class="btn success" onclick="previewCourse('${course.id}')">
+                <i class="fas fa-play"></i> Vorschau
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    } catch(e) {
+      console.error('Error:', e);
+      list.innerHTML = `<div class="error">Fehler: ${e.message}</div>`;
+    }
   }
 
-  window.editLearningModule = async (courseId) => {
+  // ========================================
+  // SLIDE EDITOR
+  // ========================================
+  window.openSlideEditor = async (courseId) => {
     currentLearningCourse = courseId;
     const course = courses.find(c => c.id === courseId);
     
-    document.getElementById('learningModuleTitle').textContent = `Lernmodul: ${course ? course.title : ''}`;
+    document.getElementById('slideEditorTitle').textContent = `Folien bearbeiten: ${course ? course.title : ''}`;
     
-    // Initialize Quill Editor
-    if (!quillEditor) {
-      quillEditor = new Quill('#quill-editor', {
+    try {
+      const slides = await pb.collection('learning_slides').getFullList({
+        filter: `course_id = "${courseId}"`,
+        sort: 'order'
+      });
+      
+      renderSlidesList(slides);
+      document.getElementById('slideEditorModal').classList.add('show');
+    } catch(e) {
+      alert('Fehler: ' + e.message);
+    }
+  };
+
+  window.closeSlideEditor = () => {
+    document.getElementById('slideEditorModal').classList.remove('show');
+    loadLearning();
+  };
+
+  function renderSlidesList(slides) {
+    const list = document.getElementById('slides-list');
+    
+    if (!slides.length) {
+      list.innerHTML = '<div style="color:var(--muted);text-align:center;padding:2rem">Noch keine Folien. Erstelle deine erste Folie!</div>';
+      return;
+    }
+    
+    list.innerHTML = slides.map((slide, idx) => {
+      const typeIcons = {
+        text: 'fa-file-lines',
+        image: 'fa-image',
+        video: 'fa-video',
+        quiz: 'fa-question-circle',
+        interactive: 'fa-hand-pointer'
+      };
+      
+      return `
+        <div class="slide-item" draggable="true" data-slide-id="${slide.id}">
+          <div style="display:flex;align-items:center;flex:1">
+            <div class="slide-type-icon ${slide.type}">
+              <i class="fas ${typeIcons[slide.type] || 'fa-file'}"></i>
+            </div>
+            <div class="slide-item-info">
+              <div class="slide-item-title">${idx + 1}. ${slide.title}</div>
+              <div class="slide-item-meta">
+                ${slide.type} • ${slide.duration || 5} Min.
+              </div>
+            </div>
+          </div>
+          <div class="slide-item-actions">
+            <button class="btn btn-sm" onclick="editSlide('${slide.id}')">
+              <i class="fas fa-edit"></i>
+            </button>
+            <button class="btn btn-sm" onclick="deleteSlide('${slide.id}')" style="background:#fee2e2;color:var(--primary);border:none">
+              <i class="fas fa-trash"></i>
+            </button>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  window.openNewSlideModal = () => {
+    currentEditSlide = null;
+    document.getElementById('newSlideTitle').textContent = 'Neue Folie';
+    document.getElementById('slide-type').value = 'text';
+    document.getElementById('slide-title').value = '';
+    document.getElementById('slide-duration').value = 5;
+    
+    // Initialize editors if needed
+    if (!slideContentEditor) {
+      slideContentEditor = new Quill('#slide-content-editor', {
         theme: 'snow',
         modules: {
           toolbar: [
-            [{ 'header': [1, 2, 3, false] }],
-            ['bold', 'italic', 'underline', 'strike'],
+            [{ 'header': [2, 3, false] }],
+            ['bold', 'italic', 'underline'],
             [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-            [{ 'color': [] }, { 'background': [] }],
-            [{ 'align': [] }],
-            ['link', 'image', 'video'],
+            ['link', 'image'],
             ['clean']
           ]
         }
       });
     }
     
-    // Load existing content
-    try {
-      const savedCourse = await pb.collection('training_courses').getOne(courseId);
-      if (savedCourse.learning_content) {
-        quillEditor.root.innerHTML = savedCourse.learning_content;
-      } else {
-        quillEditor.root.innerHTML = '<h2>Willkommen zum Lernmodul</h2><p>Hier kannst du den Lerninhalt gestalten.</p>';
-      }
-    } catch(e) {
-      quillEditor.root.innerHTML = '<h2>Willkommen zum Lernmodul</h2><p>Hier kannst du den Lerninhalt gestalten.</p>';
+    if (!slideInteractiveEditor) {
+      slideInteractiveEditor = new Quill('#slide-interactive-editor', {
+        theme: 'snow',
+        modules: {
+          toolbar: [
+            [{ 'header': [2, 3, false] }],
+            ['bold', 'italic', 'underline'],
+            [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+            ['link'],
+            ['clean']
+          ]
+        }
+      });
     }
     
-    document.getElementById('learningModuleModal').classList.add('show');
+    slideContentEditor.root.innerHTML = '<h2>Überschrift</h2><p>Dein Inhalt hier...</p>';
+    slideInteractiveEditor.root.innerHTML = '<p>Interaktiver Inhalt...</p>';
+    
+    updateSlideTypeFields();
+    quizAnswers = [];
+    
+    document.getElementById('newSlideModal').classList.add('show');
   };
 
-  window.closeLearningModuleModal = () => {
-    document.getElementById('learningModuleModal').classList.remove('show');
+  window.closeNewSlideModal = () => {
+    document.getElementById('newSlideModal').classList.remove('show');
   };
 
-  window.saveLearningModule = async () => {
-    const content = quillEditor.root.innerHTML;
+  window.updateSlideTypeFields = () => {
+    const type = document.getElementById('slide-type').value;
+    
+    // Hide all
+    document.getElementById('text-slide-fields').style.display = 'none';
+    document.getElementById('image-slide-fields').style.display = 'none';
+    document.getElementById('video-slide-fields').style.display = 'none';
+    document.getElementById('quiz-slide-fields').style.display = 'none';
+    document.getElementById('interactive-slide-fields').style.display = 'none';
+    
+    // Show relevant
+    if (type === 'text') {
+      document.getElementById('text-slide-fields').style.display = 'block';
+    } else if (type === 'image') {
+      document.getElementById('image-slide-fields').style.display = 'block';
+    } else if (type === 'video') {
+      document.getElementById('video-slide-fields').style.display = 'block';
+    } else if (type === 'quiz') {
+      document.getElementById('quiz-slide-fields').style.display = 'block';
+      renderQuizAnswers();
+    } else if (type === 'interactive') {
+      document.getElementById('interactive-slide-fields').style.display = 'block';
+    }
+  };
+
+  function renderQuizAnswers() {
+    const list = document.getElementById('quiz-answers-list');
+    
+    if (!quizAnswers.length) {
+      list.innerHTML = '<div style="color:var(--muted);font-size:.85rem;padding:.5rem">Keine Antworten. Füge mindestens 2 hinzu.</div>';
+      return;
+    }
+    
+    list.innerHTML = quizAnswers.map((answer, idx) => `
+      <div class="quiz-option-item" style="margin-bottom:.5rem">
+        <input type="checkbox" ${answer.correct ? 'checked' : ''} 
+          onchange="toggleQuizAnswerCorrect(${idx})" 
+          id="quiz-answer-correct-${idx}">
+        <input type="text" value="${answer.text}" 
+          onchange="updateQuizAnswerText(${idx}, this.value)"
+          style="flex:1;border:1px solid var(--border);padding:.5rem;border-radius:.25rem">
+        <button class="btn btn-sm" onclick="removeQuizAnswer(${idx})" type="button" style="background:#fee2e2;color:var(--primary);border:none">
+          <i class="fas fa-trash"></i>
+        </button>
+      </div>
+    `).join('');
+  }
+
+  window.addQuizAnswer = () => {
+    quizAnswers.push({ text: '', correct: false });
+    renderQuizAnswers();
+  };
+
+  window.removeQuizAnswer = (idx) => {
+    quizAnswers.splice(idx, 1);
+    renderQuizAnswers();
+  };
+
+  window.toggleQuizAnswerCorrect = (idx) => {
+    quizAnswers[idx].correct = !quizAnswers[idx].correct;
+  };
+
+  window.updateQuizAnswerText = (idx, text) => {
+    quizAnswers[idx].text = text;
+  };
+
+  window.saveSlide = async () => {
+    const title = document.getElementById('slide-title').value.trim();
+    const type = document.getElementById('slide-type').value;
+    
+    if (!title) {
+      alert('Bitte Titel eingeben');
+      return;
+    }
+    
+    let content = {};
+    
+    // Build content based on type
+    if (type === 'text') {
+      content.html = slideContentEditor.root.innerHTML;
+    } else if (type === 'image') {
+      content.url = document.getElementById('slide-image-url').value.trim();
+      content.description = document.getElementById('slide-image-description').value.trim();
+    } else if (type === 'video') {
+      content.url = document.getElementById('slide-video-url').value.trim();
+      content.description = document.getElementById('slide-video-description').value.trim();
+    } else if (type === 'quiz') {
+      const question = document.getElementById('slide-quiz-question').value.trim();
+      if (!question || quizAnswers.length < 2) {
+        alert('Bitte Frage und mindestens 2 Antworten eingeben');
+        return;
+      }
+      content.question = question;
+      content.answers = quizAnswers;
+      content.explanation = document.getElementById('slide-quiz-explanation').value.trim();
+    } else if (type === 'interactive') {
+      content.html = slideInteractiveEditor.root.innerHTML;
+    }
     
     try {
-      await pb.collection('training_courses').update(currentLearningCourse, {
-        learning_content: content
+      // Get highest order
+      const slides = await pb.collection('learning_slides').getFullList({
+        filter: `course_id = "${currentLearningCourse}"`,
+        sort: '-order'
       });
       
-      showMsg('✅ Lerninhalt gespeichert!');
-      closeLearningModuleModal();
+      const maxOrder = slides.length > 0 ? slides[0].order : 0;
+      
+      await pb.collection('learning_slides').create({
+        course_id: currentLearningCourse,
+        type,
+        title,
+        content,
+        duration: parseInt(document.getElementById('slide-duration').value) || 5,
+        order: maxOrder + 1,
+        organization_id: currentUser.organization_id
+      });
+      
+      showMsg('✅ Folie erstellt!');
+      closeNewSlideModal();
+      
+      // Reload slides
+      const updatedSlides = await pb.collection('learning_slides').getFullList({
+        filter: `course_id = "${currentLearningCourse}"`,
+        sort: 'order'
+      });
+      renderSlidesList(updatedSlides);
     } catch(e) {
       alert('Fehler: ' + e.message);
     }
   };
 
-  window.openQuizEditor = async () => {
+  window.deleteSlide = async (slideId) => {
+    if (!confirm('Folie wirklich löschen?')) return;
+    
     try {
+      await pb.collection('learning_slides').delete(slideId);
+      showMsg('✅ Folie gelöscht!');
+      
+      const slides = await pb.collection('learning_slides').getFullList({
+        filter: `course_id = "${currentLearningCourse}"`,
+        sort: 'order'
+      });
+      renderSlidesList(slides);
+    } catch(e) {
+      alert('Fehler: ' + e.message);
+    }
+  };
+
+  window.editSlide = async (slideId) => {
+    // TODO: Implement slide editing
+    alert('Slide bearbeiten - kommt in nächster Version!');
+  };
+
+  window.previewCourse = (courseId) => {
+    // Open in new window
+    window.open(`/ausbildungen-player.html?course=${courseId}`, '_blank');
+  };
+
+  // ========================================
+  // QUIZ MANAGER
+  // ========================================
+  window.openQuizManager = async (courseId) => {
+    currentLearningCourse = courseId;
+    
+    try {
+      const questions = await pb.collection('training_questions').getFullList({
+        filter: `course_id = "${courseId}"`,
+        sort: 'order'
+      });
+      
+      finalQuizQuestions = questions;
+      renderFinalQuizQuestions();
+      
+      document.getElementById('quizManagerModal').classList.add('show');
+    } catch(e) {
+      alert('Fehler: ' + e.message);
+    }
+  };
+
+  window.closeQuizManager = () => {
+    document.getElementById('quizManagerModal').classList.remove('show');
+    loadLearning();
+  };
+
+  function renderFinalQuizQuestions() {
+    const list = document.getElementById('quiz-questions-list');
+    
+    if (!finalQuizQuestions.length) {
+      list.innerHTML = '<div style="color:var(--muted);text-align:center;padding:2rem">Noch keine Prüfungsfragen. Füge mindestens 5 Fragen hinzu.</div>';
+      return;
+    }
+    
+    list.innerHTML = finalQuizQuestions.map((q, idx) => {
+      const typeLabels = {
+        single_choice: 'Single Choice',
+        multiple_choice: 'Multiple Choice',
+        text: 'Freitext'
+      };
+      
+      return `
+        <div class="quiz-question-card">
+          <div class="quiz-question-header">
+            <div class="quiz-question-text">${idx + 1}. ${q.question}</div>
+            <button class="btn btn-sm" onclick="deleteFinalQuizQuestion('${q.id}')" style="background:#fee2e2;color:var(--primary);border:none">
+              <i class="fas fa-trash"></i>
+            </button>
+          </div>
+          <div style="font-size:.85rem;color:var(--muted)">
+            ${typeLabels[q.question_type] || q.question_type}
+            ${q.options ? ` • ${q.options.length} Antworten` : ''}
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  window.addFinalQuizQuestion = () => {
+    currentEditFinalQuestion = null;
+    document.getElementById('final-quiz-question').value = '';
+    document.getElementById('final-quiz-type').value = 'single';
+    document.getElementById('final-quiz-explanation').value = '';
+    finalQuizAnswers = [];
+    
+    updateFinalQuizFields();
+    document.getElementById('finalQuizQuestionModal').classList.add('show');
+  };
+
+  window.closeFinalQuizQuestionModal = () => {
+    document.getElementById('finalQuizQuestionModal').classList.remove('show');
+  };
+
+  window.updateFinalQuizFields = () => {
+    const type = document.getElementById('final-quiz-type').value;
+    
+    if (type === 'truefalse') {
+      finalQuizAnswers = [
+        { text: 'Wahr', correct: false },
+        { text: 'Falsch', correct: false }
+      ];
+    } else if (finalQuizAnswers.length === 0) {
+      finalQuizAnswers = [
+        { text: '', correct: false },
+        { text: '', correct: false }
+      ];
+    }
+    
+    renderFinalQuizAnswers();
+  };
+
+  function renderFinalQuizAnswers() {
+    const list = document.getElementById('final-quiz-answers-list');
+    const type = document.getElementById('final-quiz-type').value;
+    
+    list.innerHTML = finalQuizAnswers.map((answer, idx) => `
+      <div class="quiz-option-item" style="margin-bottom:.5rem">
+        <input type="${type === 'single' ? 'radio' : 'checkbox'}" 
+          name="final-quiz-correct" 
+          ${answer.correct ? 'checked' : ''} 
+          onchange="toggleFinalQuizAnswerCorrect(${idx}, '${type}')" 
+          id="final-quiz-answer-correct-${idx}">
+        <input type="text" value="${answer.text}" 
+          onchange="updateFinalQuizAnswerText(${idx}, this.value)"
+          ${type === 'truefalse' ? 'readonly' : ''}
+          placeholder="Antwortmöglichkeit ${idx + 1}"
+          style="flex:1;border:1px solid var(--border);padding:.5rem;border-radius:.25rem">
+        ${type !== 'truefalse' ? `
+          <button class="btn btn-sm" onclick="removeFinalQuizAnswer(${idx})" type="button" style="background:#fee2e2;color:var(--primary);border:none">
+            <i class="fas fa-trash"></i>
+          </button>
+        ` : ''}
+      </div>
+    `).join('');
+  }
+
+  window.addFinalQuizAnswer = () => {
+    finalQuizAnswers.push({ text: '', correct: false });
+    renderFinalQuizAnswers();
+  };
+
+  window.removeFinalQuizAnswer = (idx) => {
+    finalQuizAnswers.splice(idx, 1);
+    renderFinalQuizAnswers();
+  };
+
+  window.toggleFinalQuizAnswerCorrect = (idx, type) => {
+    if (type === 'single') {
+      // Uncheck all others
+      finalQuizAnswers.forEach((a, i) => a.correct = i === idx);
+    } else {
+      finalQuizAnswers[idx].correct = !finalQuizAnswers[idx].correct;
+    }
+    renderFinalQuizAnswers();
+  };
+
+  window.updateFinalQuizAnswerText = (idx, text) => {
+    finalQuizAnswers[idx].text = text;
+  };
+
+  window.saveFinalQuizQuestion = async () => {
+    const question = document.getElementById('final-quiz-question').value.trim();
+    const type = document.getElementById('final-quiz-type').value;
+    
+    if (!question) {
+      alert('Bitte Frage eingeben');
+      return;
+    }
+    
+    const validAnswers = finalQuizAnswers.filter(a => a.text.trim());
+    if (validAnswers.length < 2) {
+      alert('Bitte mindestens 2 Antworten eingeben');
+      return;
+    }
+    
+    const correctAnswers = validAnswers
+      .map((a, idx) => a.correct ? idx : -1)
+      .filter(idx => idx >= 0);
+    
+    if (correctAnswers.length === 0) {
+      alert('Bitte mindestens eine richtige Antwort markieren');
+      return;
+    }
+    
+    try {
+      const maxOrder = finalQuizQuestions.length;
+      
+      const questionType = type === 'single' ? 'single_choice' : 
+                          type === 'multiple' ? 'multiple_choice' : 'text';
+      
+      await pb.collection('training_questions').create({
+        course_id: currentLearningCourse,
+        question,
+        question_type: questionType,
+        options: validAnswers.map(a => a.text),
+        correct_answers: correctAnswers,
+        order: maxOrder + 1,
+        organization_id: currentUser.organization_id
+      });
+      
+      showMsg('✅ Frage hinzugefügt!');
+      closeFinalQuizQuestionModal();
+      
+      // Reload questions
       const questions = await pb.collection('training_questions').getFullList({
         filter: `course_id = "${currentLearningCourse}"`,
         sort: 'order'
       });
-      
-      const list = document.getElementById('quiz-questions-list');
-      
-      if (!questions.length) {
-        list.innerHTML = '<div style="color:var(--muted);text-align:center;padding:1rem">Noch keine Fragen</div>';
-      } else {
-        list.innerHTML = questions.map((q, idx) => `
-          <div class="quiz-question">
-            <div style="display:flex;justify-content:space-between;align-items:flex-start">
-              <div class="quiz-question-text" style="flex:1">${idx + 1}. ${q.question}</div>
-              <button class="btn btn-sm" onclick="deleteQuestion('${q.id}')" style="background:#fee2e2;color:var(--primary);border:none">
-                <i class="fas fa-trash"></i>
-              </button>
-            </div>
-            <div style="font-size:.85rem;color:var(--muted);margin-top:.5rem">
-              Typ: ${q.question_type === 'single_choice' ? 'Single Choice' : q.question_type === 'multiple_choice' ? 'Multiple Choice' : 'Freitext'}
-            </div>
-          </div>
-        `).join('');
-      }
-      
-      document.getElementById('quizEditorModal').classList.add('show');
+      finalQuizQuestions = questions;
+      renderFinalQuizQuestions();
     } catch(e) {
       alert('Fehler: ' + e.message);
     }
   };
 
-  window.closeQuizEditor = () => {
-    document.getElementById('quizEditorModal').classList.remove('show');
-  };
-
-  window.addQuizQuestion = () => {
-    const question = prompt('Frage eingeben:');
-    if (!question) return;
-    
-    const type = confirm('Single Choice (OK) oder Freitext (Abbrechen)?') ? 'single_choice' : 'text';
-    
-    let options = null;
-    let correctAnswers = null;
-    
-    if (type === 'single_choice') {
-      const optionsStr = prompt('Antwortoptionen (mit Komma getrennt):');
-      if (!optionsStr) return;
-      options = optionsStr.split(',').map(s => s.trim());
-      
-      const correctIdx = prompt(`Richtige Antwort (1-${options.length}):`);
-      correctAnswers = [parseInt(correctIdx) - 1];
-    }
-    
-    pb.collection('training_questions').create({
-      course_id: currentLearningCourse,
-      question,
-      question_type: type,
-      options,
-      correct_answers: correctAnswers,
-      order: 999,
-      organization_id: currentUser.organization_id
-    }).then(() => {
-      showMsg('✅ Frage hinzugefügt!');
-      openQuizEditor();
-    }).catch(e => alert('Fehler: ' + e.message));
-  };
-
-  window.deleteQuestion = async (questionId) => {
-    if (!confirm('Frage löschen?')) return;
+  window.deleteFinalQuizQuestion = async (questionId) => {
+    if (!confirm('Frage wirklich löschen?')) return;
     
     try {
       await pb.collection('training_questions').delete(questionId);
       showMsg('✅ Frage gelöscht!');
-      openQuizEditor();
+      
+      const questions = await pb.collection('training_questions').getFullList({
+        filter: `course_id = "${currentLearningCourse}"`,
+        sort: 'order'
+      });
+      finalQuizQuestions = questions;
+      renderFinalQuizQuestions();
     } catch(e) {
       alert('Fehler: ' + e.message);
     }
   };
 
-  window.saveQuiz = () => {
-    closeQuizEditor();
+  window.saveFinalQuiz = () => {
+    if (finalQuizQuestions.length < 5) {
+      alert('Bitte mindestens 5 Fragen für die Prüfung erstellen');
+      return;
+    }
+    
     showMsg('✅ Kompetenzprüfung gespeichert!');
+    closeQuizManager();
   };
 
   // ========================================
@@ -1875,7 +2518,6 @@
   await loadCourses();
   renderCalendar();
   
-  // Initialize preview code
   generatePreviewCode();
   
   setTimeout(() => {
