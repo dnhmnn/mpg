@@ -3,249 +3,547 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>FFW – Dokumente bearbeiten</title>
+  <title>Dokumentenverwaltung – Responda</title>
   <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet"/>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
+  <script src="https://cdn.jsdelivr.net/npm/pocketbase@0.21.3/dist/pocketbase.umd.js"></script>
+
   <style>
-    :root{--rot:#c8102e;--bg:#f7f7f7;--card:#fff}
+    :root{
+      --primary:#c8102e;
+      --bg:#f8fafc;
+      --card:#fff;
+      --text:#0f172a;
+      --muted:#64748b;
+      --border:#e2e8f0;
+      --gradient-start:#667eea;
+      --gradient-end:#764ba2;
+    }
     *{box-sizing:border-box}
-    html,body{margin:0;background:var(--bg);font-family:'Atkinson Hyperlegible',system-ui,Arial,sans-serif;color:#222}
-    header{background:var(--rot);color:#fff;padding:12px 16px;display:flex;gap:12px;align-items:center}
-    header h1{margin:0;font-size:1.05rem;font-weight:800}
-    .spacer{flex:1}
-    .topbtn{color:#fff;background:#0001;padding:8px 12px;border-radius:10px;font-weight:800;text-decoration:none}
-    .wrap{max-width:1000px;margin:18px auto;padding:0 14px}
-    .card{background:var(--card);border-radius:14px;box-shadow:0 3px 12px rgba(0,0,0,.06);padding:16px}
-    .card h2{margin:0 0 12px;color:var(--rot);font-size:1.6rem}
-    .tabs{display:flex;gap:10px;margin-bottom:8px}
-    .tab{border:1px solid #eee;background:#fafafa;padding:8px 14px;border-radius:999px;font-weight:800;cursor:pointer}
-    .tab.active{color:#fff;background:var(--rot);border-color:var(--rot)}
-    .table-head{display:grid;grid-template-columns:180px 1fr 160px;gap:10px;padding:10px 4px;color:#6b6b6b;font-weight:800;border-bottom:1px solid #eee}
-    .table-wrap{display:block}
-    .row{display:grid;grid-template-columns:180px 1fr 160px;gap:10px;padding:12px 6px;border-bottom:1px solid #eee;align-items:center}
+    body{
+      margin:0;
+      background:linear-gradient(135deg, var(--gradient-start) 0%, var(--gradient-end) 100%);
+      min-height:100vh;
+      color:var(--text);
+      font-family:'Atkinson Hyperlegible',-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+      line-height:1.45;
+      opacity:0;
+      transition:opacity 0.3s;
+    }
+    body.loaded{opacity:1}
+    
+    header{position:sticky;top:0;background:var(--gradient-start);color:#fff;z-index:10}
+    .bar{max-width:1200px;margin:0 auto;padding:.75rem 1rem;display:flex;gap:.5rem;align-items:center;flex-wrap:wrap}
+    h1{font-size:1.05rem;margin:0;font-weight:800}
+    .toolbar{margin-left:auto;display:flex;gap:.5rem;flex-wrap:wrap}
+    .topbtn{border:1px solid rgba(255,255,255,0.3);background:rgba(255,255,255,0.1);color:#fff;padding:.45rem .7rem;border-radius:.5rem;cursor:pointer;font-weight:700;font-size:.9rem;transition:all 0.2s;text-decoration:none;display:inline-flex;align-items:center;gap:6px}
+    .topbtn:hover{background:rgba(255,255,255,0.2)}
+    
+    .wrap{max-width:1200px;margin:1rem auto;padding:0 1rem 100px}
+    .card{background:var(--card);border-radius:14px;box-shadow:0 3px 12px rgba(0,0,0,.06);padding:20px;margin-bottom:20px}
+    .card h2{margin-top:0;color:var(--primary);font-weight:800}
+    
+    .tabs{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap}
+    .tab{border:1px solid var(--border);background:#fafafa;padding:10px 16px;border-radius:999px;font-weight:800;cursor:pointer;font-size:0.95rem;transition:all 0.2s;display:inline-flex;align-items:center;gap:6px}
+    .tab:hover{background:#f0f0f0}
+    .tab.active{color:#fff;background:var(--primary);border-color:var(--primary)}
+    
+    .table-head,.row{display:grid;grid-template-columns:120px 1fr 280px;gap:12px;padding:14px 10px;align-items:center;border-bottom:1px solid var(--border)}
+    .table-head{font-weight:800;color:#666;background:#fafafa;border-radius:8px 8px 0 0}
     .row:last-child{border-bottom:none}
-    .row-card{display:none;background:#fff;border:1px solid #eee;border-radius:12px;padding:12px;margin:10px 0}
-    .pill{display:inline-block;background:#eef2ff;color:#2a4bbb;font-weight:800;border-radius:999px;padding:4px 10px}
-    .title{font-size:1.05rem;margin:.6rem 0 .2rem 0;font-weight:800}
-    .actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
-    .btn{background:var(--rot);color:#fff;border:0;border-radius:10px;padding:9px 12px;font-weight:800;cursor:pointer}
-    .btn.ghost{background:#f1f1f1;color:var(--rot);border:1px solid var(--rot)}
-    .msg{margin-top:8px;min-height:1.2em}
-    .ok{color:#2e7d32}.err{color:#c8102e}
-    /* Modal */
-    .modal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;padding:16px;z-index:9999}
+    .row:hover{background:#f9f9f9}
+    
+    .pill{display:inline-block;font-weight:800;border-radius:999px;padding:5px 12px;font-size:0.85rem}
+    .pill.cirs{background:#fef3c7;color:#92400e}
+    .pill.product{background:#dcfce7;color:#166534}
+    
+    .btn{background:var(--primary);color:#fff;border:0;border-radius:10px;padding:10px 14px;font-weight:800;cursor:pointer;font-size:0.9rem;transition:all 0.2s;display:inline-flex;align-items:center;gap:6px;font-family:inherit}
+    .btn:hover{background:#a00d26;transform:translateY(-1px)}
+    .btn:active{transform:translateY(0)}
+    .btn:disabled{opacity:0.5;cursor:not-allowed;transform:none}
+    
+    .btn-secondary{background:#6b7280;color:#fff}
+    .btn-secondary:hover{background:#4b5563}
+    
+    .btn-icon{background:transparent;color:var(--primary);border:1px solid var(--primary);padding:8px 12px;font-size:0.85rem}
+    .btn-icon:hover{background:#fff5f5;transform:translateY(-1px)}
+    
+    .modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:flex-start;justify-content:center;z-index:1000;padding:20px;overflow-y:auto}
     .modal.show{display:flex}
-    .modal-box{background:#fff;border-radius:14px;box-shadow:0 6px 26px rgba(0,0,0,.25);max-width:760px;width:100%;max-height:88vh;overflow:auto;padding:16px}
-    .modal-h{display:flex;gap:10px;align-items:center;border-bottom:1px solid #eee;padding-bottom:8px;margin-bottom:12px}
-    .x{margin-left:auto;border:0;background:#f3f3f3;border-radius:8px;padding:6px 10px;cursor:pointer}
-    .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-    .kv{display:grid;grid-template-columns:180px 1fr;gap:8px;align-items:start}
-    .kv div:first-child{color:#666}
-    table.tbl{width:100%;border-collapse:collapse;margin-top:8px}
-    .tbl th,.tbl td{padding:8px;border-bottom:1px solid #eee;text-align:left}
-    /* Mobil */
-    @media (max-width:860px){.table-wrap{display:none}.row-card{display:block}.grid{grid-template-columns:1fr}.kv{grid-template-columns:130px 1fr}}
+    .modal-box{background:#fff;border-radius:14px;max-width:1000px;width:100%;max-height:90vh;overflow-y:auto;padding:24px;box-shadow:0 8px 20px rgba(0,0,0,.3);margin:auto}
+    .modal-box h3{margin-top:0;color:var(--primary);font-weight:800}
+    
+    .msg{margin-top:12px;padding:12px;border-radius:8px}
+    .msg.error{background:#fee;color:#c00;border:1px solid #fcc}
+    .msg.success{background:#efe;color:#060;border:1px solid #cfc}
+    
+    .details-grid{display:grid;grid-template-columns:200px 1fr;gap:12px;margin:16px 0}
+    .details-label{font-weight:700;color:#374151}
+    .details-value{color:#1f2937}
+    
+    table{width:100%;border-collapse:collapse;margin-top:.5rem}
+    th,td{border:1px solid var(--border);padding:.5rem;text-align:left;font-size:.9rem}
+    th{background:#f8fafc;font-weight:700}
+    
+    @media (max-width:768px){
+      .table-head,.row{grid-template-columns:1fr !important;gap:8px}
+      .modal-box{padding:16px}
+      .details-grid{grid-template-columns:1fr}
+      h1{font-size:.95rem}
+      .topbtn{font-size:.85rem;padding:.4rem .6rem}
+    }
+    
+    @media print{
+      header,.tabs,.btn,.modal{display:none !important}
+      body{background:#fff}
+      .card{box-shadow:none;border:1px solid #ddd}
+    }
   </style>
 </head>
+
 <body>
-<header>
-  <h1>FFW – Dokumente bearbeiten</h1>
-  <div class="spacer"></div>
-  <a class="topbtn" href="admin-dashboard.html">Dashboard</a>
-  <a class="topbtn" href="#" id="logout">Logout</a>
-</header>
 
-<div class="wrap">
-  <section class="card">
-    <h2>Dokumente</h2>
-    <div class="tabs">
-      <button class="tab active" id="tab-open">Offen</button>
-      <button class="tab" id="tab-arch">Archiv (30 Tage)</button>
-    </div>
-
-    <div class="table-wrap" id="table">
-      <div class="table-head">
-        <div>Typ</div><div>Titel</div><div>Aktionen</div>
+<!-- ==================== HEADER START ==================== -->
+  <header>
+    <div class="bar">
+      <h1><i class="fa-solid fa-folder-open"></i> Dokumentenverwaltung</h1>
+      <div class="toolbar">
+        <a class="topbtn" href="mpg-dashboard.html"><i class="fa-solid fa-dashboard"></i> Dashboard</a>
+        <button class="topbtn" id="logout"><i class="fa-solid fa-right-from-bracket"></i> Logout</button>
       </div>
-      <div id="rows"></div>
     </div>
+  </header>
+<!-- ==================== HEADER END ==================== -->
 
-    <div id="cards"></div>
+<!-- ==================== MAIN CONTENT START ==================== -->
+  <div class="wrap">
+    <section class="card">
+      <h2>Dokumente bearbeiten</h2>
+      
+      <!-- TABS -->
+      <div class="tabs">
+        <button class="tab active" data-tab="cirs-open">
+          <i class="fa-solid fa-exclamation-triangle"></i> CIRS (Offen)
+        </button>
+        <button class="tab" data-tab="cirs-arch">
+          <i class="fa-solid fa-box-archive"></i> CIRS (Archiv)
+        </button>
+        <button class="tab" data-tab="product-open">
+          <i class="fa-solid fa-box"></i> Produktausgabe (Offen)
+        </button>
+        <button class="tab" data-tab="product-arch">
+          <i class="fa-solid fa-box-archive"></i> Produktausgabe (Archiv)
+        </button>
+      </div>
 
-    <div id="msg" class="msg"></div>
-    <div id="loading" class="msg">Lade …</div>
-  </section>
-</div>
+      <!-- TAB: CIRS OFFEN -->
+      <div id="tab-cirs-open" class="tab-content">
+        <div class="table-head">
+          <div>Status</div>
+          <div>Titel</div>
+          <div>Aktionen</div>
+        </div>
+        <div id="cirs-open-rows"></div>
+      </div>
 
-<!-- Modal -->
-<div class="modal" id="modal">
-  <div class="modal-box">
-    <div class="modal-h">
-      <strong id="m-title">Details</strong>
-      <button class="x" id="m-close">Schließen</button>
-    </div>
-    <div id="m-body"></div>
+      <!-- TAB: CIRS ARCHIV -->
+      <div id="tab-cirs-arch" class="tab-content" style="display:none">
+        <div class="table-head">
+          <div>Status</div>
+          <div>Titel</div>
+          <div>Aktionen</div>
+        </div>
+        <div id="cirs-arch-rows"></div>
+      </div>
+
+      <!-- TAB: PRODUKTAUSGABE OFFEN -->
+      <div id="tab-product-open" class="tab-content" style="display:none">
+        <div class="table-head">
+          <div>Status</div>
+          <div>Titel</div>
+          <div>Aktionen</div>
+        </div>
+        <div id="product-open-rows"></div>
+      </div>
+
+      <!-- TAB: PRODUKTAUSGABE ARCHIV -->
+      <div id="tab-product-arch" class="tab-content" style="display:none">
+        <div class="table-head">
+          <div>Status</div>
+          <div>Titel</div>
+          <div>Aktionen</div>
+        </div>
+        <div id="product-arch-rows"></div>
+      </div>
+
+      <div id="msg"></div>
+    </section>
   </div>
-</div>
+<!-- ==================== MAIN CONTENT END ==================== -->
 
-<script type="module">
-  /* ===== Login-Guard ===== */
-  import { NhostClient } from "https://esm.sh/@nhost/nhost-js@2.2.9";
-  const nhost = new NhostClient({ subdomain:"hpjfrhktprpuuxvvlpsb", region:"eu-central-1" });
+<!-- ==================== DETAILS MODAL START ==================== -->
+  <div class="modal" id="detailsModal">
+    <div class="modal-box">
+      <h3 id="detailsTitle">Details</h3>
+      <div id="detailsBody"></div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
+        <button class="btn btn-secondary" onclick="closeDetailsModal()">
+          <i class="fa-solid fa-times"></i> Schließen
+        </button>
+      </div>
+    </div>
+  </div>
+<!-- ==================== DETAILS MODAL END ==================== -->
 
-  async function guard(){
-    try{ const ok = await nhost.auth.isAuthenticatedAsync(); if(!ok){ location.href="admin-login.html"; return false } return true }
-    catch{ location.href="admin-login.html"; return false }
-  }
-  if (!(await guard())) {}
-
-  document.getElementById('logout').onclick = async (e)=>{ e.preventDefault(); try{await nhost.auth.signOut()}catch{}_ ; localStorage.clear(); location.href="admin-login.html" };
-
-  /* ===== Helpers ===== */
-  const $ = s=>document.querySelector(s);
-  const rowsEl=$('#rows'), cardsEl=$('#cards'), msgEl=$('#msg'), loadingEl=$('#loading');
-  const tabOpen=$('#tab-open'), tabArch=$('#tab-arch');
-
-  const ENDPOINTS=['/api/graphql','/.netlify/functions/graphql']; let endpointIdx=0;
-  const esc = s=>String(s??'').replace(/[&<>"'\/]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','/':'&#47;'}[m]));
-  const fmtTs = ts => { const d=new Date(ts); return d.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'})+' '+d.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'}) };
-  const parsePayload = p => (p && typeof p==='string') ? (JSON.parse(p||'{}')||{}) : (p||{});
-
-  async function gql(query, variables={}){
-    let lastErr;
-    for(let i=0;i<ENDPOINTS.length;i++){
-      const url=ENDPOINTS[(endpointIdx+i)%ENDPOINTS.length];
-      try{
-        const res=await fetch(url,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({query,variables})});
-        if(res.status===404){lastErr=new Error('HTTP 404');continue}
-        if(!res.ok) throw new Error('HTTP '+res.status);
-        const json=await res.json();
-        if(json.errors?.length) throw new Error(json.errors[0].message);
-        endpointIdx=(endpointIdx+i)%ENDPOINTS.length; return json.data;
-      }catch(e){ lastErr=e }
+<!-- ==================== JAVASCRIPT START ==================== -->
+  <script type="module">
+    
+    // ========================================
+    // SECTION: POCKETBASE INITIALIZATION & AUTH
+    // ========================================
+    const pb = new PocketBase('https://api.responda.systems');
+    
+    // Check if user is logged in
+    if (!pb.authStore.isValid) {
+      location.href = "/mpg-login.html";
     }
-    throw lastErr||new Error('Request fehlgeschlagen');
-  }
 
-  const QUERY_OPEN=`query($limit:Int=100){ documents(where:{status:{_neq:"erledigt"}},order_by:{created_at:desc},limit:$limit){ id type title status created_at payload } }`;
-  const QUERY_ARCH=`query($since:timestamptz!){ documents(where:{status:{_eq:"erledigt"},created_at:{_gte:$since}},order_by:{created_at:desc}){ id type title status created_at payload } }`;
-  const MUT_DONE=`mutation($id:uuid!){ update_documents_by_pk(pk_columns:{id:$id},_set:{status:"erledigt"}){ id } }`;
-  const QUERY_DETAIL=`query($id:uuid!){ documents_by_pk(id:$id){ id type title created_at payload } }`;
+    const currentUser = pb.authStore.model;
+    if (!currentUser || !currentUser.organization_id) {
+      location.href = "/mpg-login.html";
+    }
 
-  function setTabs(which){ if(which==='open'){tabOpen.classList.add('active');tabArch.classList.remove('active')} else {tabArch.classList.add('active');tabOpen.classList.remove('active')} }
-
-  function renderList(list,isOpen){
-    rowsEl.innerHTML=list.map(d=>{
-      const id=d.id,t=esc(d.type||''),title=esc(d.title||'(ohne Titel)');
-      return `<div class="row" data-id="${id}">
-        <div><span class="pill">${t}</span></div>
-        <div>${title}</div>
-        <div style="display:flex;gap:8px;justify-content:flex-end">
-          <button class="btn ghost" data-view="${id}">Details</button>
-          ${isOpen?`<button class="btn" data-done="${id}">Erledigt</button>`:''}
-        </div>
-      </div>`;
-    }).join('');
-
-    cardsEl.innerHTML=list.map(d=>{
-      const id=d.id,t=esc(d.type||''),title=esc(d.title||'(ohne Titel)');
-      return `<article class="row-card" data-id="${id}">
-        <div class="pill">${t}</div>
-        <div class="title">${title}</div>
-        <div class="actions">
-          <button class="btn ghost" data-view="${id}">Details</button>
-          ${isOpen?`<button class="btn" data-done="${id}">Erledigt</button>`:''}
-        </div>
-      </article>`;
-    }).join('');
-  }
-
-  async function loadOpen(){ setTabs('open'); msgEl.textContent=''; loadingEl.style.display='block'; rowsEl.innerHTML=''; cardsEl.innerHTML='';
-    try{ const data=await gql(QUERY_OPEN,{limit:100}); renderList(data.documents,true); if(!data.documents.length) msgEl.textContent='Keine offenen Dokumente.' }
-    catch(e){ msgEl.textContent='Fehler: '+e.message }
-    finally{ loadingEl.style.display='none' }
-  }
-
-  async function loadArch(){ setTabs('arch'); msgEl.textContent=''; loadingEl.style.display='block'; rowsEl.innerHTML=''; cardsEl.innerHTML='';
-    try{ const since=new Date(Date.now()-30*24*60*60*1000).toISOString(); const data=await gql(QUERY_ARCH,{since}); renderList(data.documents,false); if(!data.documents.length) msgEl.textContent='Kein Archiv-Eintrag (letzte 30 Tage).' }
-    catch(e){ msgEl.textContent='Fehler: '+e.message }
-    finally{ loadingEl.style.display='none' }
-  }
-
-  async function markDone(id){ try{ loadingEl.style.display='block'; await gql(MUT_DONE,{id}); await loadOpen() } catch(e){ alert('Konnte Status nicht setzen: '+e.message) } finally{ loadingEl.style.display='none' } }
-
-  /* ===== Details-Modal (statt PDF) ===== */
-  const modal=$('#modal'), mTitle=$('#m-title'), mBody=$('#m-body'); $('#m-close').onclick=()=>modal.classList.remove('show');
-  modal.addEventListener('click',e=>{ if(e.target===modal) modal.classList.remove('show') });
-  document.addEventListener('keydown',e=>{ if(e.key==='Escape') modal.classList.remove('show') });
-
-  function renderValue(v){
-    if (v===null || v===undefined) return '<em>—</em>';
-    if (Array.isArray(v)){
-      if (!v.length) return '<em>(leer)</em>';
-      if (typeof v[0]==='object' && v[0]!==null){
-        // Tabelle für Array von Objekten
-        const cols=[...new Set(v.flatMap(o=>Object.keys(o||{})))];
-        const head='<tr>'+cols.map(c=>`<th>${esc(c)}</th>`).join('')+'</tr>';
-        const rows=v.map(o=>'<tr>'+cols.map(c=>`<td>${esc(o?.[c])}</td>`).join('')+'</tr>').join('');
-        return `<table class="tbl">${head}${rows}</table>`;
-      } else {
-        return '<ul>'+v.map(x=>`<li>${esc(x)}</li>`).join('')+'</ul>';
+    // Load organization data
+    let currentOrganization = { name: 'Feuerwehr' }; // Default fallback
+    
+    async function loadOrganization() {
+      try {
+        if (!currentUser.organization_id) {
+          console.warn('⚠️ User has no organization_id');
+          return;
+        }
+        currentOrganization = await pb.collection('organizations').getOne(currentUser.organization_id);
+        console.log('✅ Organization loaded:', currentOrganization);
+      } catch(e) {
+        console.warn('⚠️ Could not load organization, using fallback:', e.message);
       }
     }
-    if (typeof v==='object'){
-      const rows=Object.entries(v).map(([k,val])=>`
-        <div class="kv"><div>${esc(k)}</div><div>${renderValue(val)}</div></div>`).join('');
-      return `<div class="grid">${rows}</div>`;
+    
+    // Start loading (non-blocking)
+    loadOrganization();
+
+    // ========================================
+    // SECTION: LOGOUT HANDLER
+    // ========================================
+    document.getElementById("logout").onclick = async (e) => {
+      e.preventDefault();
+      pb.authStore.clear();
+      localStorage.clear();
+      location.href = "/mpg-login.html";
+    };
+
+    // ========================================
+    // SECTION: TAB SWITCHING
+    // ========================================
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.onclick = () => {
+        const targetTab = tab.dataset.tab;
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        document.querySelectorAll('.tab-content').forEach(tc => tc.style.display = 'none');
+        document.getElementById('tab-' + targetTab).style.display = 'block';
+        document.getElementById('msg').textContent = '';
+        
+        // Load data when tab is clicked
+        if (targetTab === 'cirs-open') loadCIRSOpen();
+        if (targetTab === 'cirs-arch') loadCIRSArch();
+        if (targetTab === 'product-open') loadProductOpen();
+        if (targetTab === 'product-arch') loadProductArch();
+      };
+    });
+
+    // ========================================
+    // SECTION: UTILITY FUNCTIONS
+    // ========================================
+    function showMsg(text, type = 'success') {
+      const msgDiv = document.getElementById('msg');
+      msgDiv.textContent = text;
+      msgDiv.className = 'msg ' + type;
+      setTimeout(() => { 
+        msgDiv.textContent = ''; 
+        msgDiv.className = 'msg'; 
+      }, 5000);
     }
-    return esc(v);
-  }
 
-  async function openDetails(id){
-    try{
-      const data=await gql(QUERY_DETAIL,{id});
-      const d=data.documents_by_pk; if(!d){ alert('Dokument nicht gefunden'); return; }
-      const p=parsePayload(d.payload);
-      mTitle.textContent=`${d.type||'Dokument'} – ${d.title||'(ohne Titel)'} (${fmtTs(d.created_at)})`;
-      // Bevorzugte Felder hübsch zuerst, Rest generisch
-      const preferred=[];
-      const L=Object.keys(p||{}).reduce((acc,k)=>{ acc[k.toLowerCase()]=k; return acc },{});
-      if (L.einsatznummer || L.einsatznr) preferred.push(['Einsatznummer', p[L.einsatznummer||L.einsatznr]]);
-      if (L.datum) preferred.push(['Datum', p[L.datum]]);
-      if (L.ausgetragen_vorname || L.vorname) preferred.push(['Vorname', p[L.ausgetragen_vorname||L.vorname]]);
-      if (L.ausgetragen_nachname || L.nachname) preferred.push(['Nachname', p[L.ausgetragen_nachname||L.nachname]]);
-      const posKey = L.positionen || L.positions || null;
-
-      let html = '';
-      if (preferred.length){
-        html += '<div class="kv" style="margin-bottom:8px">'+
-          preferred.map(([k,v])=>`<div>${esc(k)}</div><div>${esc(v)}</div>`).join('')+
-        '</div>';
+    // ========================================
+    // SECTION: LOAD CIRS DATA
+    // ========================================
+    async function loadCIRSOpen() {
+      try {
+        const data = await pb.collection('cirs_reports').getFullList({
+          filter: `status != "erledigt" && organization_id = "${currentUser.organization_id}"`,
+          sort: '-created',
+        });
+        
+        const rows = document.getElementById('cirs-open-rows');
+        rows.innerHTML = data.map(doc => {
+          const title = doc.title || 'Ohne Titel';
+          return `
+          <div class="row">
+            <div><span class="pill cirs">CIRS</span></div>
+            <div>
+              <strong>${title}</strong><br>
+              <small style="color:#6b7280">
+                ${new Date(doc.created).toLocaleString('de-DE')}
+              </small>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <button class="btn btn-icon" onclick="viewCIRS('${doc.id}')">
+                <i class="fa-solid fa-eye"></i> Details
+              </button>
+              <button class="btn" onclick="markErledigt('cirs_reports', '${doc.id}')">
+                <i class="fa-solid fa-check"></i> Erledigt
+              </button>
+            </div>
+          </div>
+        `;
+        }).join('') || '<p style="padding:20px;color:#999">Keine offenen CIRS-Meldungen</p>';
+        
+      } catch(e) {
+        showMsg('Fehler beim Laden: ' + e.message, 'error');
       }
-      if (posKey){
-        html += `<h3 style="margin:.6rem 0 .2rem">Positionen</h3>${renderValue(p[posKey])}`;
+    }
+
+    async function loadCIRSArch() {
+      try {
+        const data = await pb.collection('cirs_reports').getFullList({
+          filter: `status = "erledigt" && organization_id = "${currentUser.organization_id}"`,
+          sort: '-updated',
+        });
+        
+        const rows = document.getElementById('cirs-arch-rows');
+        rows.innerHTML = data.map(doc => {
+          const title = doc.title || 'Ohne Titel';
+          return `
+          <div class="row">
+            <div><span class="pill cirs">CIRS</span></div>
+            <div>
+              <strong>${title}</strong><br>
+              <small style="color:#6b7280">
+                ${new Date(doc.updated).toLocaleString('de-DE')}
+              </small>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <button class="btn btn-icon" onclick="viewCIRS('${doc.id}')">
+                <i class="fa-solid fa-eye"></i> Details
+              </button>
+            </div>
+          </div>
+        `;
+        }).join('') || '<p style="padding:20px;color:#999">Kein Archiv vorhanden</p>';
+        
+      } catch(e) {
+        showMsg('Fehler beim Laden: ' + e.message, 'error');
       }
-      // Rest (alles was noch nicht angezeigt ist)
-      const usedKeys = new Set(preferred.map(([_,__],i)=>[L.einsatznummer,L.einsatznr,L.datum,L.ausgetragen_vorname,L.vorname,L.ausgetragen_nachname,L.nachname,posKey].flat()).flat().filter(Boolean).map(k=>String(k)));
-      const rest = {};
-      for (const [k,v] of Object.entries(p||{})){ if(!usedKeys.has(k)) rest[k]=v; }
-      if (Object.keys(rest).length){
-        html += `<h3 style="margin:.8rem 0 .2rem">Weitere Angaben</h3>${renderValue(rest)}`;
+    }
+
+    // ========================================
+    // SECTION: LOAD PRODUCT DATA
+    // ========================================
+    async function loadProductOpen() {
+      try {
+        const data = await pb.collection('product_outputs').getFullList({
+          filter: `organization_id = "${currentUser.organization_id}"`,
+          sort: '-created',
+        });
+        
+        const rows = document.getElementById('product-open-rows');
+        rows.innerHTML = data.map(doc => {
+          const title = doc.title || 'Ohne Titel';
+          return `
+          <div class="row">
+            <div><span class="pill product">Produkt</span></div>
+            <div>
+              <strong>${title}</strong><br>
+              <small style="color:#6b7280">
+                ${new Date(doc.created).toLocaleString('de-DE')}
+              </small>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <button class="btn btn-icon" onclick="viewProduct('${doc.id}')">
+                <i class="fa-solid fa-eye"></i> Details
+              </button>
+            </div>
+          </div>
+        `;
+        }).join('') || '<p style="padding:20px;color:#999">Keine Produktausgaben</p>';
+        
+      } catch(e) {
+        showMsg('Fehler beim Laden: ' + e.message, 'error');
       }
-      if (!html) html = '<em>Keine weiteren Angaben.</em>';
+    }
 
-      mBody.innerHTML = html;
-      modal.classList.add('show');
-    }catch(e){ alert('Details laden fehlgeschlagen: '+e.message) }
-  }
+    async function loadProductArch() {
+      try {
+        // Product_outputs hat kein status Feld, zeige einfach alle
+        const rows = document.getElementById('product-arch-rows');
+        rows.innerHTML = '<p style="padding:20px;color:#999">Produktausgaben haben kein Archiv</p>';
+      } catch(e) {
+        showMsg('Fehler beim Laden: ' + e.message, 'error');
+      }
+    }
 
-  document.addEventListener('click',(ev)=>{
-    const t=ev.target;
-    if (t.matches('[data-done]'))  markDone(t.getAttribute('data-done'));
-    if (t.matches('[data-view]'))  openDetails(t.getAttribute('data-view'));
-  });
+    // ========================================
+    // SECTION: MARK AS ERLEDIGT
+    // ========================================
+    window.markErledigt = async (collection, id) => {
+      if (!confirm('Dokument als erledigt markieren?')) return;
+      
+      try {
+        await pb.collection(collection).update(id, {
+          status: 'erledigt'
+        });
+        
+        showMsg('✅ Dokument als erledigt markiert!', 'success');
+        
+        // Reload current tab
+        if (collection === 'cirs_reports') {
+          loadCIRSOpen();
+        }
+        
+      } catch(e) {
+        showMsg('Fehler: ' + e.message, 'error');
+      }
+    };
 
-  tabOpen.onclick=loadOpen; tabArch.onclick=loadArch;
-  await loadOpen();
-</script>
+    // ========================================
+    // SECTION: VIEW CIRS DETAILS
+    // ========================================
+    window.viewCIRS = async (id) => {
+      try {
+        const doc = await pb.collection('cirs_reports').getOne(id);
+        const payload = doc.payload || {};
+        
+        document.getElementById('detailsTitle').textContent = 'CIRS-Meldung: ' + (doc.title || 'Ohne Titel');
+        
+        let html = '<div class="details-grid">';
+        html += `<div class="details-label">Erstellt:</div><div class="details-value">${new Date(doc.created).toLocaleString('de-DE')}</div>`;
+        html += `<div class="details-label">Status:</div><div class="details-value">${doc.status || 'offen'}</div>`;
+        
+        // Payload Felder anzeigen
+        for (const [key, value] of Object.entries(payload)) {
+          if (Array.isArray(value)) {
+            html += `<div class="details-label">${key}:</div><div class="details-value">`;
+            if (value.length > 0 && typeof value[0] === 'object') {
+              // Array of objects → Tabelle
+              const cols = Object.keys(value[0]);
+              html += '<table><thead><tr>';
+              cols.forEach(col => html += `<th>${col}</th>`);
+              html += '</tr></thead><tbody>';
+              value.forEach(item => {
+                html += '<tr>';
+                cols.forEach(col => html += `<td>${item[col] || '-'}</td>`);
+                html += '</tr>';
+              });
+              html += '</tbody></table>';
+            } else {
+              // Simple array
+              html += value.join(', ');
+            }
+            html += '</div>';
+          } else if (typeof value === 'object' && value !== null) {
+            html += `<div class="details-label">${key}:</div><div class="details-value">${JSON.stringify(value, null, 2)}</div>`;
+          } else {
+            html += `<div class="details-label">${key}:</div><div class="details-value">${value || '-'}</div>`;
+          }
+        }
+        
+        html += '</div>';
+        
+        document.getElementById('detailsBody').innerHTML = html;
+        document.getElementById('detailsModal').classList.add('show');
+        
+      } catch(e) {
+        showMsg('Fehler: ' + e.message, 'error');
+      }
+    };
+
+    // ========================================
+    // SECTION: VIEW PRODUCT DETAILS
+    // ========================================
+    window.viewProduct = async (id) => {
+      try {
+        const doc = await pb.collection('product_outputs').getOne(id);
+        const payload = doc.payload || {};
+        
+        document.getElementById('detailsTitle').textContent = 'Produktausgabe: ' + (doc.title || 'Ohne Titel');
+        
+        let html = '<div class="details-grid">';
+        html += `<div class="details-label">Erstellt:</div><div class="details-value">${new Date(doc.created).toLocaleString('de-DE')}</div>`;
+        
+        if (doc.text) {
+          html += `<div class="details-label">Text:</div><div class="details-value">${doc.text}</div>`;
+        }
+        
+        // Payload Felder anzeigen
+        for (const [key, value] of Object.entries(payload)) {
+          if (Array.isArray(value)) {
+            html += `<div class="details-label">${key}:</div><div class="details-value">`;
+            if (value.length > 0 && typeof value[0] === 'object') {
+              // Array of objects → Tabelle
+              const cols = Object.keys(value[0]);
+              html += '<table><thead><tr>';
+              cols.forEach(col => html += `<th>${col}</th>`);
+              html += '</tr></thead><tbody>';
+              value.forEach(item => {
+                html += '<tr>';
+                cols.forEach(col => html += `<td>${item[col] || '-'}</td>`);
+                html += '</tr>';
+              });
+              html += '</tbody></table>';
+            } else {
+              // Simple array
+              html += value.join(', ');
+            }
+            html += '</div>';
+          } else if (typeof value === 'object' && value !== null) {
+            html += `<div class="details-label">${key}:</div><div class="details-value">${JSON.stringify(value, null, 2)}</div>`;
+          } else {
+            html += `<div class="details-label">${key}:</div><div class="details-value">${value || '-'}</div>`;
+          }
+        }
+        
+        html += '</div>';
+        
+        document.getElementById('detailsBody').innerHTML = html;
+        document.getElementById('detailsModal').classList.add('show');
+        
+      } catch(e) {
+        showMsg('Fehler: ' + e.message, 'error');
+      }
+    };
+
+    // ========================================
+    // SECTION: CLOSE DETAILS MODAL
+    // ========================================
+    window.closeDetailsModal = () => {
+      document.getElementById('detailsModal').classList.remove('show');
+    };
+
+    // ========================================
+    // SECTION: INITIAL DATA LOAD
+    // ========================================
+    loadCIRSOpen();
+    
+    // ========================================
+    // SECTION: FADE IN ANIMATION
+    // ========================================
+    setTimeout(() => {
+      document.body.classList.add('loaded');
+    }, 100);
+
+  </script>
+<!-- ==================== JAVASCRIPT END ==================== -->
+
 </body>
 </html>
