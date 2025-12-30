@@ -16,8 +16,8 @@
       --warning:#f59e0b;
       --bg:#f8fafc;
       --card:#fff;
-      --text:#1e293b;
-      --text-light:#64748b;
+      --text:#0f172a;
+      --muted:#64748b;
       --border:#e2e8f0;
       --low:#2563eb;
       --gradient-start:#667eea;
@@ -26,29 +26,29 @@
     *{box-sizing:border-box}
     body{
       margin:0;
-      font-family:'Atkinson Hyperlegible',system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
-      background:var(--bg);
+      background:linear-gradient(135deg, var(--gradient-start) 0%, var(--gradient-end) 100%);
+      min-height:100vh;
       color:var(--text);
-      padding-bottom:80px;
+      font-family:'Atkinson Hyperlegible',-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+      line-height:1.45;
       opacity:0;
       transition:opacity 0.3s;
+      padding-bottom:80px;
     }
     body.loaded{opacity:1}
     
-    .app-header{
-      background:linear-gradient(135deg, var(--gradient-start) 0%, var(--gradient-end) 100%);
-      color:#fff;
-      padding:1rem;
-      position:sticky;
-      top:0;
-      z-index:10;
+    header{position:sticky;top:0;background:var(--gradient-start);color:#fff;z-index:10}
+    .bar{
+      max-width:1200px;
+      margin:0 auto;
+      padding:.75rem 1rem;
       display:flex;
-      align-items:center;
-      justify-content:space-between;
-      flex-wrap:wrap;
       gap:.5rem;
+      align-items:center;
+      flex-wrap:wrap;
     }
-    .header-title{font-weight:700;font-size:1.1rem}
+    h1{font-size:1.05rem;margin:0;font-weight:800}
+    .toolbar{margin-left:auto;display:flex;gap:.5rem;flex-wrap:wrap}
     .topbtn{
       border:1px solid rgba(255,255,255,0.3);
       background:rgba(255,255,255,0.1);
@@ -68,14 +68,20 @@
     }
     .topbtn:hover{background:rgba(255,255,255,0.2)}
     
-    .main{max-width:1000px;margin:0 auto;padding:1rem}
+    .wrap{max-width:1200px;margin:1rem auto;padding:0 1rem}
+    
     .stats{
       display:grid;
-      grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
+      grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
       gap:.75rem;
       margin-bottom:1rem;
     }
-    .card{background:var(--card);padding:1rem;border-radius:.75rem;box-shadow:0 2px 4px rgba(0,0,0,.05)}
+    .card{
+      background:var(--card);
+      border-radius:14px;
+      box-shadow:0 3px 12px rgba(0,0,0,.06);
+      padding:20px;
+    }
     .stat-num{font-size:1.4rem;font-weight:700}
     .ok{color:var(--success)}
     .warn{color:#d97706}
@@ -92,7 +98,7 @@
     .row.ok{border-color:var(--success)}
     .row.warn{border-color:#f59e0b}
     .row.exp{border-color:var(--primary)}
-    .row.zero{border-color:var(--text-light);opacity:0.6}
+    .row.zero{border-color:var(--muted);opacity:0.6}
     
     .rhead{
       display:flex;
@@ -106,7 +112,7 @@
     .qtyline{font-weight:700;font-size:.95rem}
     .qtyline.low{color:var(--low)}
     
-    .toolbar{
+    .search-toolbar{
       display:flex;
       gap:.5rem;
       justify-content:space-between;
@@ -114,12 +120,12 @@
       flex-wrap:wrap;
       margin:.5rem 0;
     }
-    .toolbar-search{
+    .search-box{
       flex:1;
       min-width:200px;
       position:relative;
     }
-    .toolbar-actions{
+    .filter-actions{
       display:flex;
       gap:.5rem;
       flex-wrap:wrap;
@@ -174,7 +180,7 @@
       display:grid;
       grid-template-columns:repeat(auto-fit,minmax(80px,1fr));
       gap:.5rem;
-      max-width:1000px;
+      max-width:1200px;
       margin:0 auto;
     }
     .nav a{
@@ -183,7 +189,7 @@
       align-items:center;
       gap:.25rem;
       padding:.5rem;
-      color:var(--text-light);
+      color:var(--muted);
       font-size:.8rem;
       font-weight:600;
       border-radius:.5rem;
@@ -193,7 +199,7 @@
     .nav a:hover{background:#f9f9f9}
     .nav a.active{color:var(--primary);background:var(--primary-light)}
     
-    .center-muted{color:var(--text-light);text-align:center;padding:1.25rem}
+    .center-muted{color:var(--muted);text-align:center;padding:1.25rem}
     .error{
       background:#fff5f5;
       border:1px solid #f2c9d1;
@@ -214,11 +220,11 @@
     .modal{
       position:fixed;
       inset:0;
-      background:rgba(0,0,0,.5);
+      background:rgba(0,0,0,.6);
       display:none;
-      align-items:center;
+      align-items:flex-start;
       justify-content:center;
-      z-index:999;
+      z-index:1000;
       padding:20px;
       overflow-y:auto;
     }
@@ -226,7 +232,7 @@
     .modal-box{
       background:#fff;
       border-radius:14px;
-      max-width:600px;
+      max-width:800px;
       width:100%;
       max-height:90vh;
       overflow-y:auto;
@@ -235,6 +241,23 @@
       margin:auto;
     }
     .modal-box h3{margin:0 0 1rem 0;color:var(--primary);font-weight:800}
+    
+    .tabs{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap}
+    .tab{
+      border:1px solid var(--border);
+      background:#fafafa;
+      padding:10px 16px;
+      border-radius:999px;
+      font-weight:800;
+      cursor:pointer;
+      font-size:0.95rem;
+      transition:all 0.2s;
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+    }
+    .tab:hover{background:#f0f0f0}
+    .tab.active{color:#fff;background:var(--primary);border-color:var(--primary)}
     
     .form-grid{display:grid;gap:.75rem}
     .form-group{display:flex;flex-direction:column;gap:6px}
@@ -281,24 +304,33 @@
     .item-card:hover{background:#f9f9f9}
     .item-card-info{flex:1}
     .item-card-name{font-weight:700;margin-bottom:.25rem}
-    .item-card-meta{font-size:.85rem;color:var(--text-light)}
+    .item-card-meta{font-size:.85rem;color:var(--muted)}
     
     /* MOBILE OPTIMIERUNG */
     @media (max-width:768px){
-      .app-header{
+      .bar{
         flex-direction:column;
         align-items:stretch;
       }
-      .header-title{font-size:1rem}
+      h1{font-size:1rem}
       .toolbar{
+        margin-left:0;
+        width:100%;
+        justify-content:space-between;
+      }
+      .topbtn{
+        flex:1;
+        justify-content:center;
+      }
+      .search-toolbar{
         flex-direction:column;
         align-items:stretch;
       }
-      .toolbar-search{
+      .search-box{
         width:100%;
         min-width:auto;
       }
-      .toolbar-actions{
+      .filter-actions{
         justify-content:space-between;
       }
       .chip{
@@ -308,6 +340,16 @@
       }
       .stats{
         grid-template-columns:repeat(2, 1fr);
+        gap:.5rem;
+      }
+      .card{
+        padding:12px;
+      }
+      .stat-num{
+        font-size:1.2rem;
+      }
+      .card > div:last-child{
+        font-size:.85rem;
       }
       .rhead{
         flex-direction:column;
@@ -326,16 +368,20 @@
       .modal-box{
         padding:16px;
       }
-      .form-group input,
-      .form-group select,
-      .form-group textarea{
-        font-size:16px;
-      }
     }
     
     @media (max-width:480px){
       .stats{
-        grid-template-columns:1fr;
+        gap:.4rem;
+      }
+      .card{
+        padding:10px;
+      }
+      .stat-num{
+        font-size:1.1rem;
+      }
+      .card > div:last-child{
+        font-size:.8rem;
       }
       .topbtn{
         font-size:.85rem;
@@ -353,38 +399,53 @@
 
 <body>
 
-<header class="app-header">
-  <h1 class="header-title"><i class="fas fa-warehouse"></i> Lagerverwaltung</h1>
-  <div style="display:flex;gap:.5rem;flex-wrap:wrap">
-    <button class="topbtn" onclick="openItemDBModal()">
-      <i class="fa-solid fa-database"></i> Artikel-DB
-    </button>
-    <button class="topbtn" onclick="openLocationModal()">
-      <i class="fa-solid fa-map-marker-alt"></i> Standorte
-    </button>
-    <a class="topbtn" href="mpg-dashboard.html">
-      <i class="fa-solid fa-dashboard"></i> Dashboard
-    </a>
-    <button class="topbtn" id="logout">
-      <i class="fa-solid fa-right-from-bracket"></i> Logout
-    </button>
+<!-- ==================== HEADER START ==================== -->
+<header>
+  <div class="bar">
+    <h1><i class="fa-solid fa-warehouse"></i> Lagerverwaltung</h1>
+    <div class="toolbar">
+      <button class="topbtn" onclick="openSettingsModal()">
+        <i class="fa-solid fa-cog"></i> Einstellungen
+      </button>
+      <a class="topbtn" href="mpg-dashboard.html">
+        <i class="fa-solid fa-dashboard"></i> Dashboard
+      </a>
+      <button class="topbtn" id="logout">
+        <i class="fa-solid fa-right-from-bracket"></i> Logout
+      </button>
+    </div>
   </div>
 </header>
+<!-- ==================== HEADER END ==================== -->
 
-<main class="main">
+<!-- ==================== MAIN CONTENT START ==================== -->
+<div class="wrap">
   <div class="stats">
-    <div class="card"><div class="stat-num ok" id="s-ok">0</div><div>In Ordnung</div></div>
-    <div class="card"><div class="stat-num warn" id="s-warn">0</div><div>Bald fällig</div></div>
-    <div class="card"><div class="stat-num exp" id="s-exp">0</div><div>Abgelaufen</div></div>
-    <div class="card"><div class="stat-num" id="s-total">0</div><div>Gesamt</div></div>
+    <div class="card">
+      <div class="stat-num ok" id="s-ok">0</div>
+      <div>In Ordnung</div>
+    </div>
+    <div class="card">
+      <div class="stat-num warn" id="s-warn">0</div>
+      <div>Bald fällig</div>
+    </div>
+    <div class="card">
+      <div class="stat-num exp" id="s-exp">0</div>
+      <div>Abgelaufen</div>
+    </div>
+    <div class="card">
+      <div class="stat-num" id="s-total">0</div>
+      <div>Gesamt</div>
+    </div>
   </div>
 
-  <div id="toolbar" class="toolbar"></div>
+  <div id="toolbar" class="search-toolbar"></div>
 
   <div id="list" class="list">
     <div class="card center-muted" id="loading">Lade Lagerdaten…</div>
   </div>
-</main>
+</div>
+<!-- ==================== MAIN CONTENT END ==================== -->
 
 <nav class="nav">
   <div class="navg" id="navg">
@@ -392,11 +453,86 @@
   </div>
 </nav>
 
-<!-- MODALS -->
+<!-- ==================== MODALS START ==================== -->
+
+<!-- EINSTELLUNGEN MODAL -->
+<div class="modal" id="settingsModal">
+  <div class="modal-box">
+    <h3>Einstellungen</h3>
+    
+    <div class="tabs">
+      <button class="tab active" data-tab="items">
+        <i class="fa-solid fa-database"></i> Artikel-Datenbank
+      </button>
+      <button class="tab" data-tab="locations">
+        <i class="fa-solid fa-map-marker-alt"></i> Lager-Standorte
+      </button>
+    </div>
+
+    <!-- TAB: ARTIKEL-DATENBANK -->
+    <div id="tab-items" class="tab-content">
+      <div style="margin-bottom:1rem">
+        <button class="btn" style="background:var(--primary);color:#fff;width:100%" onclick="openNewItemForm()">
+          <i class="fas fa-plus"></i> Neuen Artikel anlegen
+        </button>
+      </div>
+      <div id="itemDBList" class="item-list"></div>
+    </div>
+
+    <!-- TAB: LAGER-STANDORTE -->
+    <div id="tab-locations" class="tab-content" style="display:none">
+      <div id="locationList" style="margin-bottom:1rem"></div>
+      <div>
+        <input type="text" id="newLocationName" placeholder="Neuer Standort-Name" 
+          style="width:100%;padding:.5rem;border:1px solid var(--border);border-radius:.5rem;margin-bottom:.5rem">
+        <button class="btn" style="background:var(--primary);color:#fff;width:100%" onclick="addLocation()">
+          <i class="fas fa-plus"></i> Standort hinzufügen
+        </button>
+      </div>
+    </div>
+
+    <div style="display:flex;justify-content:flex-end;margin-top:1.5rem">
+      <button class="btn" onclick="closeSettingsModal()">Schließen</button>
+    </div>
+  </div>
+</div>
+
+<!-- ARTIKEL ANLEGEN/BEARBEITEN -->
+<div class="modal" id="itemFormModal">
+  <div class="modal-box" style="max-width:500px">
+    <h3 id="itemFormTitle">Artikel anlegen</h3>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Artikelname *</label>
+        <input type="text" id="item-name" placeholder="z.B. Einmalhandschuhe">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem">
+        <div class="form-group">
+          <label>Kategorie</label>
+          <input type="text" id="item-category" placeholder="z.B. Verbandmaterial">
+        </div>
+        <div class="form-group">
+          <label>Einheit</label>
+          <input type="text" id="item-unit" placeholder="z.B. Stück, Box" value="Stück">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Mindestbestand</label>
+        <input type="number" id="item-min" min="0" value="0">
+      </div>
+    </div>
+    <div style="display:flex;gap:.5rem;justify-content:flex-end;margin-top:1.5rem">
+      <button class="btn" onclick="closeItemFormModal()">Abbrechen</button>
+      <button class="btn" style="background:var(--primary);color:#fff" onclick="saveItemToDB()">
+        <i class="fas fa-save"></i> Speichern
+      </button>
+    </div>
+  </div>
+</div>
 
 <!-- ARTIKEL HINZUFÜGEN (mit Suche) -->
 <div class="modal" id="addStockModal">
-  <div class="modal-box">
+  <div class="modal-box" style="max-width:500px">
     <h3>Artikel hinzufügen</h3>
     <div class="form-grid">
       <div class="form-group">
@@ -431,85 +567,13 @@
 
 <!-- ARTIKEL-DETAILS/HISTORIE -->
 <div class="modal" id="detailsModal">
-  <div class="modal-box">
+  <div class="modal-box" style="max-width:600px">
     <h3 id="detailsTitle">Artikel-Details</h3>
     <div id="detailsBody"></div>
   </div>
 </div>
 
-<!-- ARTIKEL-DATENBANK -->
-<div class="modal" id="itemDBModal">
-  <div class="modal-box">
-    <h3>Artikel-Datenbank</h3>
-    
-    <div style="margin-bottom:1rem">
-      <button class="btn" style="background:var(--primary);color:#fff;width:100%" onclick="openNewItemForm()">
-        <i class="fas fa-plus"></i> Neuen Artikel anlegen
-      </button>
-    </div>
-    
-    <div id="itemDBList" class="item-list"></div>
-    
-    <div style="display:flex;justify-content:flex-end;margin-top:1rem">
-      <button class="btn" onclick="closeItemDBModal()">Schließen</button>
-    </div>
-  </div>
-</div>
-
-<!-- ARTIKEL ANLEGEN/BEARBEITEN -->
-<div class="modal" id="itemFormModal">
-  <div class="modal-box">
-    <h3 id="itemFormTitle">Artikel anlegen</h3>
-    <div class="form-grid">
-      <div class="form-group">
-        <label>Artikelname *</label>
-        <input type="text" id="item-name" placeholder="z.B. Einmalhandschuhe">
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem">
-        <div class="form-group">
-          <label>Kategorie</label>
-          <input type="text" id="item-category" placeholder="z.B. Verbandmaterial">
-        </div>
-        <div class="form-group">
-          <label>Einheit</label>
-          <input type="text" id="item-unit" placeholder="z.B. Stück, Box" value="Stück">
-        </div>
-      </div>
-      <div class="form-group">
-        <label>Mindestbestand</label>
-        <input type="number" id="item-min" min="0" value="0">
-      </div>
-    </div>
-    <div style="display:flex;gap:.5rem;justify-content:flex-end;margin-top:1.5rem">
-      <button class="btn" onclick="closeItemFormModal()">Abbrechen</button>
-      <button class="btn" style="background:var(--primary);color:#fff" onclick="saveItemToDB()">
-        <i class="fas fa-save"></i> Speichern
-      </button>
-    </div>
-  </div>
-</div>
-
-<!-- STANDORTE VERWALTEN -->
-<div class="modal" id="locationModal">
-  <div class="modal-box">
-    <h3>Lager-Standorte verwalten</h3>
-    <div id="locationList" style="margin-bottom:1rem"></div>
-    <div style="margin-top:1rem">
-      <input type="text" id="newLocationName" placeholder="Neuer Standort-Name" style="width:100%;padding:.5rem;border:1px solid var(--border);border-radius:.5rem">
-      <button class="btn" style="margin-top:.5rem;background:var(--primary);color:#fff;width:100%" onclick="addLocation()">
-        <i class="fas fa-plus"></i> Standort hinzufügen
-      </button>
-    </div>
-    <div style="display:flex;justify-content:flex-end;margin-top:1rem">
-      <button class="btn" onclick="closeLocationModal()">Schließen</button>
-    </div>
-  </div>
-</div>
-
-<!-- INVENTUR -->
-<div class="modal" id="auditModal">
-  <!-- Wird dynamisch erstellt -->
-</div>
+<!-- ==================== MODALS END ==================== -->
 
 <script type="module">
   // ========================================
@@ -662,12 +726,12 @@
     const locName = currentLoc ? currentLoc.name : 'Lager';
     
     toolbarEl.innerHTML = `
-      <div class="toolbar-search">
-        <i class="fas fa-search" style="position:absolute;left:.6rem;top:50%;transform:translateY(-50%);color:var(--text-light)"></i>
+      <div class="search-box">
+        <i class="fas fa-search" style="position:absolute;left:.6rem;top:50%;transform:translateY(-50%);color:var(--muted)"></i>
         <input id="q" value="${search}" placeholder="In „${locName}" suchen…"
           style="width:100%;padding:.55rem .75rem .55rem 2rem;border:1px solid var(--border);border-radius:.5rem;background:#fff">
       </div>
-      <div class="toolbar-actions">
+      <div class="filter-actions">
         <button class="chip ${statusFilter==='all'?'active':''}" data-f="all">Alle</button>
         <button class="chip ${statusFilter==='warning'?'active':''}" data-f="warning">Bald fällig</button>
         <button class="chip ${statusFilter==='expired'?'active':''}" data-f="expired">Abgelaufen</button>
@@ -711,7 +775,7 @@
   }
 
   // ========================================
-  // LOAD ALL ITEMS (für Dropdown)
+  // LOAD ALL ITEMS
   // ========================================
   async function loadAllItems() {
     try {
@@ -839,7 +903,7 @@
           <div class="rhead">
             <div>
               <b>${it.name}</b>
-              ${it.category ? `<div style="color:var(--text-light);font-size:.9rem">${it.category}</div>` : ''}
+              ${it.category ? `<div style="color:var(--muted);font-size:.9rem">${it.category}</div>` : ''}
             </div>
             <div class="qtyline ${isLow ? 'low' : ''}">
               IST: ${it.qty} ${it.unit || ''} / SOLL: ${it.target_qty}
@@ -939,7 +1003,7 @@
   };
 
   // ========================================
-  // ARTIKEL HINZUFÜGEN MODAL (mit Suche)
+  // ARTIKEL HINZUFÜGEN MODAL
   // ========================================
   window.openAddStockModal = async () => {
     await loadAllItems();
@@ -1044,7 +1108,7 @@
       </button>
       <div id="historyContainer"></div>
       
-      <div style="display:flex;gap:.5rem;justify-content:flex-end;margin-top:1rem">
+      <div style="display:flex;gap:.5rem;justify-content:flex-end;margin-top:1rem;flex-wrap:wrap">
         <button class="btn" style="background:#dc2626;color:#fff" onclick="deleteItemFromStock('${itemId}')">
           <i class="fas fa-trash"></i> Aus Lager entfernen
         </button>
@@ -1126,18 +1190,33 @@
   };
 
   // ========================================
-  // ARTIKEL-DATENBANK MODAL
+  // EINSTELLUNGEN MODAL
   // ========================================
-  window.openItemDBModal = async () => {
+  window.openSettingsModal = async () => {
     await loadAllItems();
     renderItemDBList();
-    document.getElementById('itemDBModal').classList.add('show');
+    renderLocationList();
+    document.getElementById('settingsModal').classList.add('show');
+    
+    // Tab-Switching
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.onclick = () => {
+        const targetTab = tab.dataset.tab;
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        document.querySelectorAll('.tab-content').forEach(tc => tc.style.display = 'none');
+        document.getElementById('tab-' + targetTab).style.display = 'block';
+      };
+    });
   };
 
-  window.closeItemDBModal = () => {
-    document.getElementById('itemDBModal').classList.remove('show');
+  window.closeSettingsModal = () => {
+    document.getElementById('settingsModal').classList.remove('show');
   };
 
+  // ========================================
+  // ARTIKEL-DATENBANK
+  // ========================================
   function renderItemDBList() {
     const list = document.getElementById('itemDBList');
     
@@ -1262,17 +1341,8 @@
   };
 
   // ========================================
-  // STANDORTE VERWALTEN
+  // LAGER-STANDORTE
   // ========================================
-  window.openLocationModal = () => {
-    renderLocationList();
-    document.getElementById('locationModal').classList.add('show');
-  };
-
-  window.closeLocationModal = () => {
-    document.getElementById('locationModal').classList.remove('show');
-  };
-
   function renderLocationList() {
     document.getElementById('locationList').innerHTML = `
       <div style="display:flex;flex-direction:column;gap:.5rem">
@@ -1282,7 +1352,7 @@
               <i class="fas fa-${loc.icon || 'box'}"></i> <strong>${loc.name}</strong>
             </div>
             <button class="btn" onclick="deleteLocation('${loc.id}')" ${locations.length <= 1 ? 'disabled' : ''}>
-              <i class="fas fa-trash"></i>
+              <i class="fas fa-trash"></i> Löschen
             </button>
           </div>
         `).join('')}
@@ -1339,9 +1409,8 @@
   };
 
   // ========================================
-  // INVENTUR (gekürzt - vollständige Version aus vorheriger Datei übernehmen)
+  // INVENTUR (vollständige Version aus vorherigem Code)
   // ========================================
-  
   let currentAudit = null;
   let auditItems = [];
   let auditIndex = 0;
@@ -1464,12 +1533,12 @@
     container.innerHTML = `
       <div style="background:#fafafa;padding:1rem;border-radius:.5rem;border:1px solid var(--border)">
         <h4 style="margin:0 0 .5rem 0">${auditIndex + 1}. ${item.name}</h4>
-        <div style="color:var(--text-light);font-size:.9rem;margin-bottom:.5rem">
+        <div style="color:var(--muted);font-size:.9rem;margin-bottom:.5rem">
           ${item.category || 'Keine Kategorie'} • ${item.unit || 'Stück'}
         </div>
         
         <div style="background:#fff;padding:.75rem;border-radius:.5rem;margin-bottom:.75rem">
-          <div style="color:var(--text-light);font-size:.85rem">Erwarteter Bestand (laut System):</div>
+          <div style="color:var(--muted);font-size:.85rem">Erwarteter Bestand (laut System):</div>
           <div style="font-size:1.5rem;font-weight:700">${auditItem.expected_quantity} ${item.unit || 'Stück'}</div>
         </div>
         
