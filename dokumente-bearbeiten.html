@@ -79,7 +79,7 @@
     
     .details-grid{display:grid;grid-template-columns:200px 1fr;gap:12px;margin:16px 0}
     .details-label{font-weight:700;color:#374151}
-    .details-value{color:#1f2937}
+    .details-value{color:#1f2937;white-space:pre-wrap}
     
     table{width:100%;border-collapse:collapse;margin-top:.5rem}
     th,td{border:1px solid var(--border);padding:.5rem;text-align:left;font-size:.9rem}
@@ -122,58 +122,32 @@
       
       <!-- TABS -->
       <div class="tabs">
-        <button class="tab active" data-tab="cirs-open">
-          <i class="fa-solid fa-exclamation-triangle"></i> CIRS (Offen)
+        <button class="tab active" data-tab="open">
+          <i class="fa-solid fa-folder-open"></i> Offen
         </button>
-        <button class="tab" data-tab="cirs-arch">
-          <i class="fa-solid fa-box-archive"></i> CIRS (Archiv)
-        </button>
-        <button class="tab" data-tab="product-open">
-          <i class="fa-solid fa-box"></i> Produktausgabe (Offen)
-        </button>
-        <button class="tab" data-tab="product-arch">
-          <i class="fa-solid fa-box-archive"></i> Produktausgabe (Archiv)
+        <button class="tab" data-tab="arch">
+          <i class="fa-solid fa-box-archive"></i> Archiv (1 Jahr)
         </button>
       </div>
 
-      <!-- TAB: CIRS OFFEN -->
-      <div id="tab-cirs-open" class="tab-content">
+      <!-- TAB: OFFEN -->
+      <div id="tab-open" class="tab-content">
         <div class="table-head">
-          <div>Status</div>
+          <div>Typ</div>
           <div>Titel</div>
           <div>Aktionen</div>
         </div>
-        <div id="cirs-open-rows"></div>
+        <div id="open-rows"></div>
       </div>
 
-      <!-- TAB: CIRS ARCHIV -->
-      <div id="tab-cirs-arch" class="tab-content" style="display:none">
+      <!-- TAB: ARCHIV -->
+      <div id="tab-arch" class="tab-content" style="display:none">
         <div class="table-head">
-          <div>Status</div>
+          <div>Typ</div>
           <div>Titel</div>
           <div>Aktionen</div>
         </div>
-        <div id="cirs-arch-rows"></div>
-      </div>
-
-      <!-- TAB: PRODUKTAUSGABE OFFEN -->
-      <div id="tab-product-open" class="tab-content" style="display:none">
-        <div class="table-head">
-          <div>Status</div>
-          <div>Titel</div>
-          <div>Aktionen</div>
-        </div>
-        <div id="product-open-rows"></div>
-      </div>
-
-      <!-- TAB: PRODUKTAUSGABE ARCHIV -->
-      <div id="tab-product-arch" class="tab-content" style="display:none">
-        <div class="table-head">
-          <div>Status</div>
-          <div>Titel</div>
-          <div>Aktionen</div>
-        </div>
-        <div id="product-arch-rows"></div>
+        <div id="arch-rows"></div>
       </div>
 
       <div id="msg"></div>
@@ -255,10 +229,8 @@
         document.getElementById('msg').textContent = '';
         
         // Load data when tab is clicked
-        if (targetTab === 'cirs-open') loadCIRSOpen();
-        if (targetTab === 'cirs-arch') loadCIRSArch();
-        if (targetTab === 'product-open') loadProductOpen();
-        if (targetTab === 'product-arch') loadProductArch();
+        if (targetTab === 'open') loadOpen();
+        if (targetTab === 'arch') loadArch();
       };
     });
 
@@ -276,21 +248,38 @@
     }
 
     // ========================================
-    // SECTION: LOAD CIRS DATA
+    // SECTION: LOAD OPEN DOCUMENTS (CIRS + PRODUCT)
     // ========================================
-    async function loadCIRSOpen() {
+    async function loadOpen() {
       try {
-        const data = await pb.collection('cirs_reports').getFullList({
-          filter: `status != "erledigt" && organization_id = "${currentUser.organization_id}"`,
+        // Load CIRS Reports (offen)
+        const cirsData = await pb.collection('cirs_reports').getFullList({
+          filter: `(status = "" || status != "erledigt") && organization_id = "${currentUser.organization_id}"`,
           sort: '-created',
         });
         
-        const rows = document.getElementById('cirs-open-rows');
-        rows.innerHTML = data.map(doc => {
+        // Load Product Outputs (offen)
+        const productData = await pb.collection('product_outputs').getFullList({
+          filter: `(status = "" || status != "erledigt") && organization_id = "${currentUser.organization_id}"`,
+          sort: '-created',
+        });
+        
+        // Combine both arrays
+        const allDocs = [
+          ...cirsData.map(d => ({ ...d, type: 'cirs', collection: 'cirs_reports' })),
+          ...productData.map(d => ({ ...d, type: 'product', collection: 'product_outputs' }))
+        ].sort((a, b) => new Date(b.created) - new Date(a.created));
+        
+        const rows = document.getElementById('open-rows');
+        rows.innerHTML = allDocs.map(doc => {
           const title = doc.title || 'Ohne Titel';
+          const pillClass = doc.type === 'cirs' ? 'cirs' : 'product';
+          const pillText = doc.type === 'cirs' ? 'CIRS' : 'Produkt';
+          const viewFunc = doc.type === 'cirs' ? 'viewCIRS' : 'viewProduct';
+          
           return `
           <div class="row">
-            <div><span class="pill cirs">CIRS</span></div>
+            <div><span class="pill ${pillClass}">${pillText}</span></div>
             <div>
               <strong>${title}</strong><br>
               <small style="color:#6b7280">
@@ -298,96 +287,75 @@
               </small>
             </div>
             <div style="display:flex;gap:8px;flex-wrap:wrap">
-              <button class="btn btn-icon" onclick="viewCIRS('${doc.id}')">
+              <button class="btn btn-icon" onclick="${viewFunc}('${doc.id}')">
                 <i class="fa-solid fa-eye"></i> Details
               </button>
-              <button class="btn" onclick="markErledigt('cirs_reports', '${doc.id}')">
+              <button class="btn" onclick="markErledigt('${doc.collection}', '${doc.id}')">
                 <i class="fa-solid fa-check"></i> Erledigt
               </button>
             </div>
           </div>
         `;
-        }).join('') || '<p style="padding:20px;color:#999">Keine offenen CIRS-Meldungen</p>';
+        }).join('') || '<p style="padding:20px;color:#999">Keine offenen Dokumente</p>';
         
       } catch(e) {
         showMsg('Fehler beim Laden: ' + e.message, 'error');
       }
     }
 
-    async function loadCIRSArch() {
+    // ========================================
+    // SECTION: LOAD ARCHIVE (1 YEAR)
+    // ========================================
+    async function loadArch() {
       try {
-        const data = await pb.collection('cirs_reports').getFullList({
-          filter: `status = "erledigt" && organization_id = "${currentUser.organization_id}"`,
+        // Calculate date 1 year ago
+        const oneYearAgo = new Date();
+        oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+        const filterDate = oneYearAgo.toISOString();
+        
+        // Load CIRS Reports (erledigt, last 1 year)
+        const cirsData = await pb.collection('cirs_reports').getFullList({
+          filter: `status = "erledigt" && organization_id = "${currentUser.organization_id}" && updated >= "${filterDate}"`,
           sort: '-updated',
         });
         
-        const rows = document.getElementById('cirs-arch-rows');
-        rows.innerHTML = data.map(doc => {
-          const title = doc.title || 'Ohne Titel';
-          return `
-          <div class="row">
-            <div><span class="pill cirs">CIRS</span></div>
-            <div>
-              <strong>${title}</strong><br>
-              <small style="color:#6b7280">
-                ${new Date(doc.updated).toLocaleString('de-DE')}
-              </small>
-            </div>
-            <div style="display:flex;gap:8px;flex-wrap:wrap">
-              <button class="btn btn-icon" onclick="viewCIRS('${doc.id}')">
-                <i class="fa-solid fa-eye"></i> Details
-              </button>
-            </div>
-          </div>
-        `;
-        }).join('') || '<p style="padding:20px;color:#999">Kein Archiv vorhanden</p>';
-        
-      } catch(e) {
-        showMsg('Fehler beim Laden: ' + e.message, 'error');
-      }
-    }
-
-    // ========================================
-    // SECTION: LOAD PRODUCT DATA
-    // ========================================
-    async function loadProductOpen() {
-      try {
-        const data = await pb.collection('product_outputs').getFullList({
-          filter: `organization_id = "${currentUser.organization_id}"`,
-          sort: '-created',
+        // Load Product Outputs (erledigt, last 1 year)
+        const productData = await pb.collection('product_outputs').getFullList({
+          filter: `status = "erledigt" && organization_id = "${currentUser.organization_id}" && updated >= "${filterDate}"`,
+          sort: '-updated',
         });
         
-        const rows = document.getElementById('product-open-rows');
-        rows.innerHTML = data.map(doc => {
+        // Combine both arrays
+        const allDocs = [
+          ...cirsData.map(d => ({ ...d, type: 'cirs', collection: 'cirs_reports' })),
+          ...productData.map(d => ({ ...d, type: 'product', collection: 'product_outputs' }))
+        ].sort((a, b) => new Date(b.updated) - new Date(a.updated));
+        
+        const rows = document.getElementById('arch-rows');
+        rows.innerHTML = allDocs.map(doc => {
           const title = doc.title || 'Ohne Titel';
+          const pillClass = doc.type === 'cirs' ? 'cirs' : 'product';
+          const pillText = doc.type === 'cirs' ? 'CIRS' : 'Produkt';
+          const viewFunc = doc.type === 'cirs' ? 'viewCIRS' : 'viewProduct';
+          
           return `
           <div class="row">
-            <div><span class="pill product">Produkt</span></div>
+            <div><span class="pill ${pillClass}">${pillText}</span></div>
             <div>
               <strong>${title}</strong><br>
               <small style="color:#6b7280">
-                ${new Date(doc.created).toLocaleString('de-DE')}
+                Erledigt: ${new Date(doc.updated).toLocaleString('de-DE')}
               </small>
             </div>
             <div style="display:flex;gap:8px;flex-wrap:wrap">
-              <button class="btn btn-icon" onclick="viewProduct('${doc.id}')">
+              <button class="btn btn-icon" onclick="${viewFunc}('${doc.id}')">
                 <i class="fa-solid fa-eye"></i> Details
               </button>
             </div>
           </div>
         `;
-        }).join('') || '<p style="padding:20px;color:#999">Keine Produktausgaben</p>';
+        }).join('') || '<p style="padding:20px;color:#999">Kein Archiv vorhanden (letzte 12 Monate)</p>';
         
-      } catch(e) {
-        showMsg('Fehler beim Laden: ' + e.message, 'error');
-      }
-    }
-
-    async function loadProductArch() {
-      try {
-        // Product_outputs hat kein status Feld, zeige einfach alle
-        const rows = document.getElementById('product-arch-rows');
-        rows.innerHTML = '<p style="padding:20px;color:#999">Produktausgaben haben kein Archiv</p>';
       } catch(e) {
         showMsg('Fehler beim Laden: ' + e.message, 'error');
       }
@@ -405,11 +373,7 @@
         });
         
         showMsg('✅ Dokument als erledigt markiert!', 'success');
-        
-        // Reload current tab
-        if (collection === 'cirs_reports') {
-          loadCIRSOpen();
-        }
+        await loadOpen();
         
       } catch(e) {
         showMsg('Fehler: ' + e.message, 'error');
@@ -432,30 +396,7 @@
         
         // Payload Felder anzeigen
         for (const [key, value] of Object.entries(payload)) {
-          if (Array.isArray(value)) {
-            html += `<div class="details-label">${key}:</div><div class="details-value">`;
-            if (value.length > 0 && typeof value[0] === 'object') {
-              // Array of objects → Tabelle
-              const cols = Object.keys(value[0]);
-              html += '<table><thead><tr>';
-              cols.forEach(col => html += `<th>${col}</th>`);
-              html += '</tr></thead><tbody>';
-              value.forEach(item => {
-                html += '<tr>';
-                cols.forEach(col => html += `<td>${item[col] || '-'}</td>`);
-                html += '</tr>';
-              });
-              html += '</tbody></table>';
-            } else {
-              // Simple array
-              html += value.join(', ');
-            }
-            html += '</div>';
-          } else if (typeof value === 'object' && value !== null) {
-            html += `<div class="details-label">${key}:</div><div class="details-value">${JSON.stringify(value, null, 2)}</div>`;
-          } else {
-            html += `<div class="details-label">${key}:</div><div class="details-value">${value || '-'}</div>`;
-          }
+          html += renderField(key, value);
         }
         
         html += '</div>';
@@ -480,6 +421,7 @@
         
         let html = '<div class="details-grid">';
         html += `<div class="details-label">Erstellt:</div><div class="details-value">${new Date(doc.created).toLocaleString('de-DE')}</div>`;
+        html += `<div class="details-label">Status:</div><div class="details-value">${doc.status || 'offen'}</div>`;
         
         if (doc.text) {
           html += `<div class="details-label">Text:</div><div class="details-value">${doc.text}</div>`;
@@ -487,30 +429,7 @@
         
         // Payload Felder anzeigen
         for (const [key, value] of Object.entries(payload)) {
-          if (Array.isArray(value)) {
-            html += `<div class="details-label">${key}:</div><div class="details-value">`;
-            if (value.length > 0 && typeof value[0] === 'object') {
-              // Array of objects → Tabelle
-              const cols = Object.keys(value[0]);
-              html += '<table><thead><tr>';
-              cols.forEach(col => html += `<th>${col}</th>`);
-              html += '</tr></thead><tbody>';
-              value.forEach(item => {
-                html += '<tr>';
-                cols.forEach(col => html += `<td>${item[col] || '-'}</td>`);
-                html += '</tr>';
-              });
-              html += '</tbody></table>';
-            } else {
-              // Simple array
-              html += value.join(', ');
-            }
-            html += '</div>';
-          } else if (typeof value === 'object' && value !== null) {
-            html += `<div class="details-label">${key}:</div><div class="details-value">${JSON.stringify(value, null, 2)}</div>`;
-          } else {
-            html += `<div class="details-label">${key}:</div><div class="details-value">${value || '-'}</div>`;
-          }
+          html += renderField(key, value);
         }
         
         html += '</div>';
@@ -524,6 +443,40 @@
     };
 
     // ========================================
+    // SECTION: RENDER FIELD HELPER
+    // ========================================
+    function renderField(key, value) {
+      let html = '';
+      
+      if (Array.isArray(value)) {
+        html += `<div class="details-label">${key}:</div><div class="details-value">`;
+        if (value.length > 0 && typeof value[0] === 'object') {
+          // Array of objects → Tabelle
+          const cols = Object.keys(value[0]);
+          html += '<table><thead><tr>';
+          cols.forEach(col => html += `<th>${col}</th>`);
+          html += '</tr></thead><tbody>';
+          value.forEach(item => {
+            html += '<tr>';
+            cols.forEach(col => html += `<td>${item[col] || '-'}</td>`);
+            html += '</tr>';
+          });
+          html += '</tbody></table>';
+        } else {
+          // Simple array
+          html += value.join(', ');
+        }
+        html += '</div>';
+      } else if (typeof value === 'object' && value !== null) {
+        html += `<div class="details-label">${key}:</div><div class="details-value">${JSON.stringify(value, null, 2)}</div>`;
+      } else {
+        html += `<div class="details-label">${key}:</div><div class="details-value">${value || '-'}</div>`;
+      }
+      
+      return html;
+    }
+
+    // ========================================
     // SECTION: CLOSE DETAILS MODAL
     // ========================================
     window.closeDetailsModal = () => {
@@ -533,7 +486,7 @@
     // ========================================
     // SECTION: INITIAL DATA LOAD
     // ========================================
-    loadCIRSOpen();
+    loadOpen();
     
     // ========================================
     // SECTION: FADE IN ANIMATION
