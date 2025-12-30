@@ -834,13 +834,6 @@
       </a>
     `).join('');
     
-    navgEl.innerHTML += `
-      <a href="#" id="btn-audit">
-        <i class="fas fa-clipboard-check"></i>
-        <span>Inventur</span>
-      </a>
-    `;
-    
     navgEl.querySelectorAll('a[data-loc]').forEach(a => {
       a.onclick = (e) => {
         e.preventDefault();
@@ -851,17 +844,40 @@
         loadStock();
       };
     });
-    
-    document.getElementById('btn-audit').onclick = (e) => {
-      e.preventDefault();
-      openAuditModal();
-    };
   }
 
   // ========================================
   // TOOLBAR
   // ========================================
- @request.auth.id != '' && @request.data.organization_id = @request.auth.organization_id
+  function renderToolbar(){
+    const currentLoc = locations.find(l => l.id === currentLocationId);
+    const locName = currentLoc ? currentLoc.name : 'Lager';
+    
+    toolbarEl.innerHTML = `
+      <div class="search-box">
+        <i class="fas fa-search" style="position:absolute;left:.6rem;top:50%;transform:translateY(-50%);color:var(--muted)"></i>
+        <input id="q" value="${search}" placeholder="In „${locName}" suchen…"
+          style="width:100%;padding:.55rem .75rem .55rem 2rem;border:1px solid var(--border);border-radius:.5rem;background:#fff">
+      </div>
+      <div class="filter-actions">
+        <button class="chip ${statusFilter==='all'?'active':''}" data-f="all">Alle</button>
+        <button class="chip ${statusFilter==='warning'?'active':''}" data-f="warning">Bald fällig</button>
+        <button class="chip ${statusFilter==='expired'?'active':''}" data-f="expired">Abgelaufen</button>
+        <button class="chip ${lowOnly?'active':''}" id="chip-low">
+          <i class="fas fa-truck-moving"></i> Einbestellen
+        </button>
+        <button class="chip ${showOnlyZero?'active':''}" id="chip-zero">
+          <i class="fas fa-filter"></i> Nur 0
+        </button>
+        <button class="btn" id="btn-new"><i class="fas fa-plus"></i> Neu</button>
+      </div>
+    `;
+    
+    document.getElementById('q').oninput = (e) => {
+      search = e.target.value.trim();
+      clearTimeout(window._qT);
+      window._qT = setTimeout(filterAndRender, 250);
+    };
     
     toolbarEl.querySelectorAll('button[data-f]').forEach(b => {
       b.onclick = () => {
@@ -1642,7 +1658,6 @@
               <div class="audit-entry-date">${date.toLocaleDateString('de-DE')} ${date.toLocaleTimeString('de-DE', {hour: '2-digit', minute: '2-digit'})}</div>
               <div class="audit-entry-meta">
                 ${audit.totalItems} Artikel geprüft • ${audit.corrections} Korrektur${audit.corrections !== 1 ? 'en' : ''}
-                ${audit.user ? ` • Durchgeführt von ${audit.user}` : ''}
               </div>
             </div>
             <div style="display:flex;gap:.5rem;align-items:center">
