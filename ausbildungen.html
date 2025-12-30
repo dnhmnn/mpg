@@ -6,6 +6,11 @@
   <title>Ausbildungen – Responda</title>
   <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet"/>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
+  
+  <!-- Quill Rich Text Editor -->
+  <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+  <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
+  
   <script src="https://cdn.jsdelivr.net/npm/pocketbase@0.21.3/dist/pocketbase.umd.js"></script>
 
   <style>
@@ -231,7 +236,10 @@
       align-items:center;
       flex-wrap:wrap;
       gap:.5rem;
+      cursor:pointer;
+      transition:background 0.2s;
     }
+    .session-item:hover{background:#f3f4f6}
     .session-date{
       font-weight:700;
     }
@@ -331,45 +339,34 @@
       margin-bottom:1rem;
     }
     .learning-header{
-      text-align:center;
-      margin-bottom:2rem;
+      margin-bottom:1.5rem;
     }
     .learning-title{
-      font-size:1.5rem;
+      font-size:1.3rem;
       font-weight:800;
       margin-bottom:.5rem;
     }
-    .learning-progress{
-      background:#f3f4f6;
-      height:8px;
-      border-radius:999px;
-      overflow:hidden;
-      margin:1rem 0;
+    
+    /* Quill Editor Styles */
+    .ql-container{
+      font-family:'Atkinson Hyperlegible',-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+      font-size:1rem;
+      min-height:400px;
     }
-    .learning-progress-bar{
-      background:var(--primary);
-      height:100%;
-      transition:width 0.3s;
+    .ql-editor{
+      min-height:400px;
     }
-    .learning-content{
-      max-width:800px;
-      margin:0 auto;
-      font-size:1.05rem;
-      line-height:1.7;
+    .ql-editor h1{
+      font-size:2rem;
+      font-weight:800;
     }
-    .learning-content h3{
-      color:var(--primary);
-      margin-top:2rem;
+    .ql-editor h2{
+      font-size:1.5rem;
+      font-weight:800;
     }
-    .learning-content img{
-      max-width:100%;
-      border-radius:.5rem;
-      margin:1rem 0;
-    }
-    .learning-nav{
-      display:flex;
-      justify-content:space-between;
-      margin-top:2rem;
+    .ql-editor h3{
+      font-size:1.2rem;
+      font-weight:700;
     }
     
     .quiz-question{
@@ -408,14 +405,6 @@
       border-color:var(--primary);
       background:var(--primary-light);
     }
-    .quiz-option.correct{
-      border-color:var(--success);
-      background:#dcfce7;
-    }
-    .quiz-option.wrong{
-      border-color:var(--primary);
-      background:var(--primary-light);
-    }
     
     .access-code-box{
       background:#f9fafb;
@@ -447,7 +436,7 @@
     .modal-box{
       background:#fff;
       border-radius:14px;
-      max-width:800px;
+      max-width:1000px;
       width:100%;
       max-height:90vh;
       overflow-y:auto;
@@ -625,11 +614,6 @@
   
   <!-- TAB: LERNBEREICH -->
   <div id="tab-learning" class="tab-content" style="display:none">
-    <div class="actions">
-      <button class="btn primary" onclick="openSelectCourseForLearning()">
-        <i class="fas fa-plus"></i> Lernmodul erstellen
-      </button>
-    </div>
     <div id="learning-list">
       <div class="center-muted">Lade Lernbereiche...</div>
     </div>
@@ -814,12 +798,6 @@
           </button>
         </div>
       </div>
-      <div class="form-group">
-        <label>Zugewiesene Kurse</label>
-        <button class="btn" onclick="openCourseAssignment()">
-          <i class="fas fa-book"></i> Kurse zuweisen (<span id="assigned-courses-count">0</span>)
-        </button>
-      </div>
     </div>
     <div style="display:flex;gap:.5rem;justify-content:flex-end;margin-top:1.5rem">
       <button class="btn" onclick="closeNewAccessModal()">Abbrechen</button>
@@ -830,29 +808,15 @@
   </div>
 </div>
 
-<!-- Course Assignment Modal -->
-<div class="modal" id="courseAssignmentModal">
-  <div class="modal-box" style="max-width:500px">
-    <h3>Kurse zuweisen</h3>
-    <div id="course-assignment-list" style="max-height:400px;overflow-y:auto"></div>
-    <div style="display:flex;gap:.5rem;justify-content:flex-end;margin-top:1.5rem">
-      <button class="btn primary" onclick="closeCourseAssignment()">
-        <i class="fas fa-check"></i> Fertig
-      </button>
-    </div>
-  </div>
-</div>
-
 <!-- Learning Module Editor Modal -->
 <div class="modal" id="learningModuleModal">
   <div class="modal-box">
     <h3 id="learningModuleTitle">Lernmodul bearbeiten</h3>
-    <div class="form-grid">
-      <div class="form-group">
-        <label>Lerninhalt (HTML/Markdown)</label>
-        <textarea id="learning-content-editor" rows="15" placeholder="Inhalt eingeben..."></textarea>
-      </div>
+    
+    <div style="margin-bottom:1rem">
+      <div id="quill-editor"></div>
     </div>
+    
     <div style="display:flex;gap:.5rem;justify-content:flex-end;margin-top:1.5rem">
       <button class="btn" onclick="closeLearningModuleModal()">Abbrechen</button>
       <button class="btn primary" onclick="saveLearningModule()">
@@ -915,10 +879,10 @@
   let currentMonth = new Date().getMonth();
   let currentYear = new Date().getFullYear();
   let selectedParticipants = [];
-  let assignedCourses = [];
   let currentEditCourse = null;
   let currentLearningCourse = null;
   let previewAccessCode = '';
+  let quillEditor = null;
   
   const wordLists = {
     adjectives: ['schnell', 'blau', 'groß', 'klein', 'rot', 'grün', 'gelb', 'hell', 'dunkel', 'stark', 'schwach', 'frisch', 'alt', 'neu', 'warm', 'kalt', 'süß', 'sauer', 'laut', 'leise'],
@@ -1051,12 +1015,12 @@
       upcomingEl.innerHTML = upcoming.map(s => {
         const course = courses.find(c => c.id === s.course_id);
         return `
-          <div class="session-item">
+          <div class="session-item" onclick="openSessionDetails('${s.id}')">
             <div>
               <div class="session-date">${formatDate(s.date)} ${s.start_time ? `• ${formatTime(s.start_time)}` : ''}</div>
               <div class="session-info">${course ? course.title : 'Unbekannt'} ${s.location ? `• ${s.location}` : ''}</div>
             </div>
-            <button class="btn btn-sm" onclick="openSessionDetails('${s.id}')">
+            <button class="btn btn-sm">
               <i class="fas fa-eye"></i> Details
             </button>
           </div>
@@ -1646,6 +1610,7 @@
       <div class="learning-module">
         <div class="learning-header">
           <div class="learning-title">${course.title}</div>
+          <div style="color:var(--muted);font-size:.9rem">${course.instructor ? `Dozent: ${course.instructor}` : ''}</div>
         </div>
         <button class="btn primary" onclick="editLearningModule('${course.id}')">
           <i class="fas fa-edit"></i> Lerninhalt bearbeiten
@@ -1654,16 +1619,42 @@
     `).join('');
   }
 
-  window.openSelectCourseForLearning = () => {
-    alert('Bitte erstelle zuerst einen Kurs mit Typ "Online" oder "Hybrid" im Ausbildungen-Tab.');
-  };
-
-  window.editLearningModule = (courseId) => {
+  window.editLearningModule = async (courseId) => {
     currentLearningCourse = courseId;
     const course = courses.find(c => c.id === courseId);
     
     document.getElementById('learningModuleTitle').textContent = `Lernmodul: ${course ? course.title : ''}`;
-    document.getElementById('learning-content-editor').value = course?.description || '';
+    
+    // Initialize Quill Editor
+    if (!quillEditor) {
+      quillEditor = new Quill('#quill-editor', {
+        theme: 'snow',
+        modules: {
+          toolbar: [
+            [{ 'header': [1, 2, 3, false] }],
+            ['bold', 'italic', 'underline', 'strike'],
+            [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+            [{ 'color': [] }, { 'background': [] }],
+            [{ 'align': [] }],
+            ['link', 'image', 'video'],
+            ['clean']
+          ]
+        }
+      });
+    }
+    
+    // Load existing content
+    try {
+      const savedCourse = await pb.collection('training_courses').getOne(courseId);
+      if (savedCourse.learning_content) {
+        quillEditor.root.innerHTML = savedCourse.learning_content;
+      } else {
+        quillEditor.root.innerHTML = '<h2>Willkommen zum Lernmodul</h2><p>Hier kannst du den Lerninhalt gestalten.</p>';
+      }
+    } catch(e) {
+      quillEditor.root.innerHTML = '<h2>Willkommen zum Lernmodul</h2><p>Hier kannst du den Lerninhalt gestalten.</p>';
+    }
+    
     document.getElementById('learningModuleModal').classList.add('show');
   };
 
@@ -1672,16 +1663,15 @@
   };
 
   window.saveLearningModule = async () => {
-    const content = document.getElementById('learning-content-editor').value.trim();
+    const content = quillEditor.root.innerHTML;
     
     try {
       await pb.collection('training_courses').update(currentLearningCourse, {
-        description: content
+        learning_content: content
       });
       
       showMsg('✅ Lerninhalt gespeichert!');
       closeLearningModuleModal();
-      await loadCourses();
     } catch(e) {
       alert('Fehler: ' + e.message);
     }
@@ -1701,10 +1691,15 @@
       } else {
         list.innerHTML = questions.map((q, idx) => `
           <div class="quiz-question">
-            <div class="quiz-question-text">${idx + 1}. ${q.question}</div>
-            <button class="btn btn-sm" onclick="deleteQuestion('${q.id}')" style="background:#fee2e2;color:var(--primary);border:none">
-              <i class="fas fa-trash"></i>
-            </button>
+            <div style="display:flex;justify-content:space-between;align-items:flex-start">
+              <div class="quiz-question-text" style="flex:1">${idx + 1}. ${q.question}</div>
+              <button class="btn btn-sm" onclick="deleteQuestion('${q.id}')" style="background:#fee2e2;color:var(--primary);border:none">
+                <i class="fas fa-trash"></i>
+              </button>
+            </div>
+            <div style="font-size:.85rem;color:var(--muted);margin-top:.5rem">
+              Typ: ${q.question_type === 'single_choice' ? 'Single Choice' : q.question_type === 'multiple_choice' ? 'Multiple Choice' : 'Freitext'}
+            </div>
           </div>
         `).join('');
       }
@@ -1821,47 +1816,12 @@
     document.getElementById('access-name').value = '';
     document.getElementById('access-email').value = '';
     document.getElementById('access-password').value = '';
-    assignedCourses = [];
     generatePreviewCode();
-    document.getElementById('assigned-courses-count').textContent = '0';
     document.getElementById('newAccessModal').classList.add('show');
   };
 
   window.closeNewAccessModal = () => {
     document.getElementById('newAccessModal').classList.remove('show');
-  };
-
-  window.openCourseAssignment = () => {
-    const list = document.getElementById('course-assignment-list');
-    
-    list.innerHTML = courses.map(course => `
-      <div style="padding:.75rem;border-bottom:1px solid var(--border)">
-        <label style="display:flex;align-items:center;gap:.75rem;cursor:pointer">
-          <input type="checkbox" ${assignedCourses.includes(course.id) ? 'checked' : ''} 
-            onchange="toggleCourseAssignment('${course.id}')">
-          <div>
-            <div style="font-weight:700">${course.title}</div>
-            <div style="font-size:.85rem;color:var(--muted)">${course.type}</div>
-          </div>
-        </label>
-      </div>
-    `).join('');
-    
-    document.getElementById('courseAssignmentModal').classList.add('show');
-  };
-
-  window.closeCourseAssignment = () => {
-    document.getElementById('courseAssignmentModal').classList.remove('show');
-    document.getElementById('assigned-courses-count').textContent = assignedCourses.length;
-  };
-
-  window.toggleCourseAssignment = (courseId) => {
-    const idx = assignedCourses.indexOf(courseId);
-    if (idx >= 0) {
-      assignedCourses.splice(idx, 1);
-    } else {
-      assignedCourses.push(courseId);
-    }
   };
 
   window.saveAccess = async () => {
@@ -1914,6 +1874,9 @@
   // ========================================
   await loadCourses();
   renderCalendar();
+  
+  // Initialize preview code
+  generatePreviewCode();
   
   setTimeout(() => {
     document.body.classList.add('loaded');
