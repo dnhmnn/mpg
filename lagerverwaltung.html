@@ -642,7 +642,7 @@
       </div>
       
       <div style="margin-bottom:1.5rem">
-        <button class="btn" style="background:var(--primary);color:#fff;width:100%" onclick="openAuditModal()">
+        <button class="btn" style="background:var(--primary);color:#fff;width:100%" onclick="startNewAudit()">
           <i class="fas fa-clipboard-check"></i> Neue Inventur starten
         </button>
       </div>
@@ -742,22 +742,6 @@
     <div id="auditDetailsBody"></div>
     <div style="display:flex;justify-content:flex-end;margin-top:1rem">
       <button class="btn" onclick="closeAuditDetailsModal()">Schließen</button>
-    </div>
-  </div>
-</div>
-
-<!-- LAGER-AUSWAHL FÜR INVENTUR -->
-<div class="modal" id="auditLocationModal">
-  <div class="modal-box" style="max-width:500px">
-    <h3>Lager für Inventur auswählen</h3>
-    <p style="color:var(--muted);margin-bottom:1rem">Wählen Sie das Lager aus, das Sie inventieren möchten:</p>
-    
-    <div id="auditLocationList" style="display:flex;flex-direction:column;gap:.5rem;margin-bottom:1.5rem">
-      <!-- Wird dynamisch gefüllt -->
-    </div>
-    
-    <div style="display:flex;justify-content:flex-end">
-      <button class="btn" onclick="closeAuditLocationModal()">Abbrechen</button>
     </div>
   </div>
 </div>
@@ -1075,6 +1059,9 @@
       const isLow = it.target_qty > 0 && it.qty < it.target_qty;
       const isZero = it.qty === 0;
       
+      // Formatiere Ablaufdatum ohne Uhrzeit
+      const expiryDateOnly = it.expiry ? new Date(it.expiry).toLocaleDateString('de-DE') : 'Kein Ablaufdatum';
+      
       listEl.innerHTML += `
         <div class="row ${isZero ? 'zero' : status}">
           <div class="rhead">
@@ -1082,10 +1069,12 @@
               <b>${it.name}</b>
               ${it.category ? `<div style="color:var(--muted);font-size:.9rem">${it.category}</div>` : ''}
             </div>
-            <div class="qtyline ${isLow ? 'low' : ''}">
-              IST: ${it.qty} ${it.unit || ''} / SOLL: ${it.target_qty}
+            <div>
+              <div class="qtyline ${isLow ? 'low' : ''}">
+                IST: ${it.qty} ${it.unit || ''} / SOLL: ${it.target_qty}
+              </div>
+              <div style="font-size:.85rem;color:var(--muted);margin-top:.25rem">${expiryDateOnly}</div>
             </div>
-            <span class="badge ${status}">${it.expiry || 'kein Ablaufdatum'}</span>
           </div>
           <div class="action-btns">
             <button class="btn bicon" onclick="adjustQty('${it.id}', -1)">
@@ -1742,7 +1731,7 @@
     const byLocation = {};
     
     for (const audit of audits) {
-      // Load audit items to get location
+      // Load audit items to get location and user
       const auditItems = await pb.collection('inventory_audit_items').getFullList({
         filter: `audit_id = "${audit.id}"`,
         expand: 'location_id',
@@ -1767,10 +1756,14 @@
       const totalItems = allItems.length;
       const corrections = allItems.filter(ai => ai.expected_quantity !== ai.actual_quantity).length;
       
+      // Get user from audit record
+      const userName = audit.user || 'Unbekannt';
+      
       byLocation[locName].push({
         ...audit,
         totalItems,
-        corrections
+        corrections,
+        userName
       });
     }
     
@@ -1800,7 +1793,7 @@
             <div class="audit-entry-main">
               <div class="audit-entry-date">${date.toLocaleDateString('de-DE')} ${date.toLocaleTimeString('de-DE', {hour: '2-digit', minute: '2-digit'})}</div>
               <div class="audit-entry-meta">
-                ${audit.totalItems} Artikel geprüft • ${audit.corrections} Korrektur${audit.corrections !== 1 ? 'en' : ''}
+                ${audit.totalItems} Artikel geprüft • ${audit.corrections} Korrektur${audit.corrections !== 1 ? 'en' : ''} • Durchgeführt von ${audit.userName}
               </div>
             </div>
             <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap">
@@ -1880,6 +1873,7 @@
               <div style="font-weight:700">${auditItems.filter(ai => ai.expected_quantity !== ai.actual_quantity).length}</div>
             </div>
           </div>
+          ${audit.user ? `<div style="text-align:center;margin-top:.5rem;color:var(--muted);font-size:.85rem">Durchgeführt von ${audit.user}</div>` : ''}
         </div>
         
         <h4 style="margin:1rem 0 .5rem 0">Geprüfte Artikel:</h4>
@@ -1927,88 +1921,102 @@
   };
 
   // ========================================
-  // INVENTUR (DURCHFÜHRUNG)
+  // INVENTUR (DURCHFÜHRUNG) - NEU: LAGER IN KLICKSTRECKE
   // ========================================
   let currentAudit = null;
   let auditItems = [];
   let auditIndex = 0;
+  let selectedAuditLocationId = null;
 
-  window.openAuditModal = async () => {
-    try {
-      // Prüfe ob offene Inventuren existieren
-      const audits = await pb.collection('inventory_audits').getFullList({
-        filter: `organization_id = "${currentUser.organization_id}" && status = "offen"`,
-        sort: '-created',
-        limit: 1
-      });
-      
-      if (audits.length > 0) {
-        // Bestehende Inventur fortsetzen
-        currentAudit = audits[0];
-        
-        // Lade Items für diese Inventur
-        const items = await pb.collection('inventory_audit_items').getFullList({
-          filter: `audit_id = "${currentAudit.id}"`,
-          limit: 1
-        });
-        
-        if (items.length > 0) {
-          // Setze Location ID auf die Location der Inventur
-          currentLocationId = items[0].location_id;
-          
-          // WICHTIG: Lade Stock für diese Location
-          await loadStock();
-          
-          await loadAuditItems();
-          showAuditModal();
-        } else {
-          alert('Fehler: Inventur ohne Artikel gefunden.');
-        }
-        
-      } else {
-        // Neue Inventur - Lager auswählen lassen
-        showAuditLocationSelector();
-      }
-      
-    } catch(e) {
-      showError(e.message);
-    }
-  };
-
-  function showAuditLocationSelector() {
+  window.startNewAudit = () => {
     if (!locations.length) {
       alert('Keine Lager-Standorte vorhanden! Bitte erst Standorte anlegen.');
       return;
     }
     
-    const listEl = document.getElementById('auditLocationList');
-    listEl.innerHTML = locations.map(loc => `
-      <button class="btn" onclick="startAuditForLocation('${loc.id}')" 
-        style="display:flex;align-items:center;gap:.75rem;padding:1rem;text-align:left;justify-content:flex-start;width:100%">
-        <i class="fas fa-${loc.icon || 'box'}" style="font-size:1.5rem;color:var(--primary)"></i>
-        <div style="flex:1">
-          <div style="font-weight:700;font-size:1.05rem">${loc.name}</div>
-          <div style="font-size:.85rem;color:var(--muted)">Inventur für dieses Lager starten</div>
-        </div>
-        <i class="fas fa-arrow-right" style="color:var(--muted)"></i>
-      </button>
-    `).join('');
+    // Schließe Settings-Modal
+    closeSettingsModal();
     
-    document.getElementById('auditLocationModal').classList.add('show');
-  }
-
-  window.closeAuditLocationModal = () => {
-    document.getElementById('auditLocationModal').classList.remove('show');
+    // Starte Inventur-Klickstrecke mit Lager-Auswahl
+    selectedAuditLocationId = null;
+    auditIndex = -1; // -1 = Lager-Auswahl
+    showAuditModal();
   };
 
-  window.startAuditForLocation = async (locationId) => {
-    closeAuditLocationModal();
+  function showAuditModal() {
+    const modal = document.createElement('div');
+    modal.id = 'auditModal';
+    modal.className = 'modal show';
     
-    // Setze gewähltes Lager
-    currentLocationId = locationId;
+    if (auditIndex === -1) {
+      // Schritt 0: Lager auswählen
+      modal.innerHTML = `
+        <div class="modal-box" style="max-width:500px">
+          <h3>Inventur starten</h3>
+          <p style="color:var(--muted);margin-bottom:1rem">Wählen Sie das Lager aus, das Sie inventieren möchten:</p>
+          
+          <div style="display:flex;flex-direction:column;gap:.5rem;margin-bottom:1.5rem">
+            ${locations.map(loc => `
+              <button class="btn" onclick="selectAuditLocation('${loc.id}')" 
+                style="display:flex;align-items:center;gap:.75rem;padding:1rem;text-align:left;justify-content:flex-start;width:100%">
+                <i class="fas fa-${loc.icon || 'box'}" style="font-size:1.5rem;color:var(--primary)"></i>
+                <div style="flex:1">
+                  <div style="font-weight:700;font-size:1.05rem">${loc.name}</div>
+                  <div style="font-size:.85rem;color:var(--muted)">Inventur für dieses Lager starten</div>
+                </div>
+                <i class="fas fa-arrow-right" style="color:var(--muted)"></i>
+              </button>
+            `).join('')}
+          </div>
+          
+          <div style="display:flex;justify-content:flex-end">
+            <button class="btn" onclick="closeAuditModal()">Abbrechen</button>
+          </div>
+        </div>
+      `;
+    } else {
+      // Schritt 1+: Artikel prüfen
+      modal.innerHTML = `
+        <div class="modal-box" style="max-width:500px">
+          <h3>Inventur ${currentAudit ? currentAudit.id.slice(0,8) : ''}</h3>
+          
+          <div style="margin-bottom:1rem">
+            <div style="background:#f0f9ff;padding:.75rem;border-radius:.5rem;border:1px solid #bae6fd">
+              <strong>Fortschritt:</strong> <span id="audit-progress">${auditItems.filter(ai => ai.checked).length} / ${auditItems.length} geprüft</span>
+            </div>
+          </div>
+          
+          <div id="auditItemContainer"></div>
+          
+          <div style="display:flex;gap:.5rem;justify-content:space-between;margin-top:1.5rem;flex-wrap:wrap">
+            <button class="btn" onclick="closeAuditModal()">Abbrechen</button>
+            <div style="display:flex;gap:.5rem">
+              <button class="btn" onclick="prevAuditItem()" ${auditIndex === 0 ? 'disabled' : ''} id="audit-prev">
+                <i class="fas fa-arrow-left"></i> Zurück
+              </button>
+              <button class="btn" style="background:var(--primary);color:#fff" onclick="saveAuditItem()" id="audit-next">
+                ${auditIndex === auditItems.length - 1 ? 'Fertig' : 'Weiter'} <i class="fas fa-arrow-right"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+      
+      setTimeout(() => renderAuditItem(), 100);
+    }
+    
+    document.body.appendChild(modal);
+  }
+
+  window.selectAuditLocation = async (locationId) => {
+    selectedAuditLocationId = locationId;
     const loc = locations.find(l => l.id === locationId);
     
-    // Lade Artikel für dieses Lager
+    // Entferne altes Modal
+    document.getElementById('auditModal')?.remove();
+    
+    // Setze Location und lade Stock
+    currentLocationId = locationId;
     await loadStock();
     
     if (!stockItems.length) {
@@ -2016,34 +2024,21 @@
       return;
     }
     
-    const confirmStart = confirm(
-      `Inventur für "${loc?.name || 'Lager'}" starten?\n\n` +
-      `${stockItems.length} Artikel werden geprüft.`
-    );
-    
-    if (!confirmStart) return;
-    
     try {
-      await startNewAudit();
-      showAuditModal();
-    } catch(e) {
-      showError(e.message);
-    }
-  };
-
-  async function startNewAudit() {
-    try {
+      // Erstelle Inventur
       currentAudit = await pb.collection('inventory_audits').create({
         audit_date: new Date().toISOString(),
         status: 'offen',
+        user: currentUser.email || currentUser.name || currentUser.id,
         organization_id: currentUser.organization_id
       });
       
+      // Erstelle Audit-Items
       for (const item of stockItems) {
         await pb.collection('inventory_audit_items').create({
           audit_id: currentAudit.id,
           item_id: item.id,
-          location_id: currentLocationId,
+          location_id: selectedAuditLocationId,
           expected_quantity: item.qty,
           actual_quantity: 0,
           checked: false,
@@ -2052,66 +2047,29 @@
       }
       
       await loadAuditItems();
-      showMsg('✅ Neue Inventur gestartet!', 'success');
+      auditIndex = 0;
+      showAuditModal();
+      showMsg('✅ Inventur gestartet!', 'success');
       
     } catch(e) {
       showError(e.message);
     }
-  }
+  };
 
   async function loadAuditItems() {
     try {
       auditItems = await pb.collection('inventory_audit_items').getFullList({
-        filter: `audit_id = "${currentAudit.id}" && location_id = "${currentLocationId}"`,
+        filter: `audit_id = "${currentAudit.id}" && location_id = "${selectedAuditLocationId}"`,
         expand: 'item_id',
         sort: 'checked,created'
       });
       
-      auditIndex = auditItems.findIndex(ai => !ai.checked);
-      if (auditIndex === -1) auditIndex = 0;
+      const firstUnchecked = auditItems.findIndex(ai => !ai.checked);
+      if (firstUnchecked >= 0) auditIndex = firstUnchecked;
       
     } catch(e) {
       showError(e.message);
     }
-  }
-
-  function showAuditModal() {
-    if (!auditItems.length) {
-      alert('Keine Artikel für Inventur gefunden');
-      return;
-    }
-    
-    const modal = document.createElement('div');
-    modal.id = 'auditModal';
-    modal.className = 'modal show';
-    modal.innerHTML = `
-      <div class="modal-box" style="max-width:500px">
-        <h3>Inventur ${currentAudit.id.slice(0,8)}</h3>
-        
-        <div style="margin-bottom:1rem">
-          <div style="background:#f0f9ff;padding:.75rem;border-radius:.5rem;border:1px solid #bae6fd">
-            <strong>Fortschritt:</strong> <span id="audit-progress">${auditItems.filter(ai => ai.checked).length} / ${auditItems.length} geprüft</span>
-          </div>
-        </div>
-        
-        <div id="auditItemContainer"></div>
-        
-        <div style="display:flex;gap:.5rem;justify-content:space-between;margin-top:1.5rem;flex-wrap:wrap">
-          <button class="btn" onclick="closeAuditModal()">Abbrechen</button>
-          <div style="display:flex;gap:.5rem">
-            <button class="btn" onclick="prevAuditItem()" ${auditIndex === 0 ? 'disabled' : ''} id="audit-prev">
-              <i class="fas fa-arrow-left"></i> Zurück
-            </button>
-            <button class="btn" style="background:var(--primary);color:#fff" onclick="saveAuditItem()" id="audit-next">
-              ${auditIndex === auditItems.length - 1 ? 'Fertig' : 'Weiter'} <i class="fas fa-arrow-right"></i>
-            </button>
-          </div>
-        </div>
-      </div>
-    `;
-    
-    document.body.appendChild(modal);
-    renderAuditItem();
   }
 
   function renderAuditItem() {
@@ -2170,13 +2128,13 @@
         const diff = actual - auditItem.expected_quantity;
         
         const stockList = await pb.collection('inventory_stock').getFullList({
-          filter: `item_id = "${auditItem.item_id}" && location_id = "${currentLocationId}"`
+          filter: `item_id = "${auditItem.item_id}" && location_id = "${selectedAuditLocationId}"`
         });
         
         if (diff > 0) {
           await pb.collection('inventory_stock').create({
             item_id: auditItem.item_id,
-            location_id: currentLocationId,
+            location_id: selectedAuditLocationId,
             quantity: diff,
             organization_id: currentUser.organization_id
           });
@@ -2202,7 +2160,7 @@
         
         await pb.collection('inventory_transactions').create({
           item_id: auditItem.item_id,
-          location_id: currentLocationId,
+          location_id: selectedAuditLocationId,
           type: 'korrektur',
           quantity: diff,
           note: `Inventur-Korrektur: ${auditItem.expected_quantity} → ${actual}`,
@@ -2253,7 +2211,6 @@
       
       closeAuditModal();
       await loadStock();
-      await loadAuditSettings(); // Reload settings to update next audit date
       showMsg('✅ Inventur abgeschlossen!', 'success');
       
     } catch(e) {
@@ -2263,6 +2220,10 @@
 
   window.closeAuditModal = () => {
     document.getElementById('auditModal')?.remove();
+    currentAudit = null;
+    auditItems = [];
+    auditIndex = 0;
+    selectedAuditLocationId = null;
   };
 
   // ========================================
