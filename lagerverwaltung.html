@@ -306,6 +306,89 @@
     .item-card-name{font-weight:700;margin-bottom:.25rem}
     .item-card-meta{font-size:.85rem;color:var(--muted)}
     
+    /* INVENTUR-HISTORIE */
+    .audit-summary{
+      background:#f0f9ff;
+      padding:1rem;
+      border-radius:.5rem;
+      border:1px solid #bae6fd;
+      margin-bottom:1.5rem;
+    }
+    .audit-summary-grid{
+      display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+      gap:1rem;
+    }
+    .audit-summary-item{
+      text-align:center;
+    }
+    .audit-summary-label{
+      font-size:.85rem;
+      color:#0369a1;
+      margin-bottom:.25rem;
+    }
+    .audit-summary-value{
+      font-size:1.3rem;
+      font-weight:700;
+      color:#0c4a6e;
+    }
+    
+    .location-group{
+      margin-bottom:1.5rem;
+      border:1px solid var(--border);
+      border-radius:.5rem;
+      overflow:hidden;
+    }
+    .location-group-header{
+      background:#f9fafb;
+      padding:.75rem 1rem;
+      font-weight:700;
+      display:flex;
+      align-items:center;
+      gap:.5rem;
+      border-bottom:1px solid var(--border);
+    }
+    .audit-entry{
+      padding:.75rem 1rem;
+      border-bottom:1px solid #f3f4f6;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      flex-wrap:wrap;
+      gap:.5rem;
+    }
+    .audit-entry:last-child{
+      border-bottom:none;
+    }
+    .audit-entry-main{
+      flex:1;
+    }
+    .audit-entry-date{
+      font-weight:700;
+      margin-bottom:.25rem;
+    }
+    .audit-entry-meta{
+      font-size:.85rem;
+      color:var(--muted);
+    }
+    .audit-status{
+      display:inline-flex;
+      align-items:center;
+      gap:.35rem;
+      padding:.25rem .6rem;
+      border-radius:999px;
+      font-size:.8rem;
+      font-weight:700;
+    }
+    .audit-status.completed{
+      background:#dcfce7;
+      color:#166534;
+    }
+    .audit-status.open{
+      background:#fef3c7;
+      color:#92400e;
+    }
+    
     /* MOBILE OPTIMIERUNG */
     @media (max-width:768px){
       .bar{
@@ -367,6 +450,13 @@
       }
       .modal-box{
         padding:16px;
+      }
+      .audit-summary-grid{
+        grid-template-columns:1fr;
+      }
+      .audit-entry{
+        flex-direction:column;
+        align-items:flex-start;
       }
     }
     
@@ -467,6 +557,9 @@
       <button class="tab" data-tab="locations">
         <i class="fa-solid fa-map-marker-alt"></i> Lager-Standorte
       </button>
+      <button class="tab" data-tab="audits">
+        <i class="fa-solid fa-clipboard-check"></i> Inventur-Verwaltung
+      </button>
     </div>
 
     <!-- TAB: ARTIKEL-DATENBANK -->
@@ -489,6 +582,42 @@
           <i class="fas fa-plus"></i> Standort hinzufügen
         </button>
       </div>
+    </div>
+
+    <!-- TAB: INVENTUR-VERWALTUNG -->
+    <div id="tab-audits" class="tab-content" style="display:none">
+      <div class="audit-summary">
+        <div class="audit-summary-grid">
+          <div class="audit-summary-item">
+            <div class="audit-summary-label">Turnus</div>
+            <div class="audit-summary-value">
+              <select id="audit-turnus" style="padding:.5rem;border:1px solid #bae6fd;border-radius:.5rem;background:#fff;font-weight:700">
+                <option value="12">Jährlich</option>
+                <option value="6">Halbjährlich</option>
+                <option value="3">Quartalsweise</option>
+                <option value="1">Monatlich</option>
+              </select>
+            </div>
+          </div>
+          <div class="audit-summary-item">
+            <div class="audit-summary-label">Letzte Inventur</div>
+            <div class="audit-summary-value" id="audit-last">-</div>
+          </div>
+          <div class="audit-summary-item">
+            <div class="audit-summary-label">Nächste fällig</div>
+            <div class="audit-summary-value" id="audit-next">-</div>
+          </div>
+        </div>
+      </div>
+      
+      <div style="margin-bottom:1.5rem">
+        <button class="btn" style="background:var(--primary);color:#fff;width:100%" onclick="openAuditModal()">
+          <i class="fas fa-clipboard-check"></i> Neue Inventur starten
+        </button>
+      </div>
+      
+      <h4 style="margin:0 0 1rem 0">Inventur-Historie (nach Lager)</h4>
+      <div id="auditHistoryList"></div>
     </div>
 
     <div style="display:flex;justify-content:flex-end;margin-top:1.5rem">
@@ -570,6 +699,17 @@
   <div class="modal-box" style="max-width:600px">
     <h3 id="detailsTitle">Artikel-Details</h3>
     <div id="detailsBody"></div>
+  </div>
+</div>
+
+<!-- INVENTUR-DETAILS -->
+<div class="modal" id="auditDetailsModal">
+  <div class="modal-box" style="max-width:700px">
+    <h3 id="auditDetailsTitle">Inventur-Details</h3>
+    <div id="auditDetailsBody"></div>
+    <div style="display:flex;justify-content:flex-end;margin-top:1rem">
+      <button class="btn" onclick="closeAuditDetailsModal()">Schließen</button>
+    </div>
   </div>
 </div>
 
@@ -1196,6 +1336,7 @@
     await loadAllItems();
     renderItemDBList();
     renderLocationList();
+    await loadAuditSettings();
     document.getElementById('settingsModal').classList.add('show');
     
     // Tab-Switching
@@ -1208,6 +1349,9 @@
         document.getElementById('tab-' + targetTab).style.display = 'block';
       };
     });
+    
+    // Turnus change handler
+    document.getElementById('audit-turnus').onchange = saveTurnus;
   };
 
   window.closeSettingsModal = () => {
@@ -1409,7 +1553,251 @@
   };
 
   // ========================================
-  // INVENTUR (vollständige Version aus vorherigem Code)
+  // INVENTUR-VERWALTUNG
+  // ========================================
+  
+  async function loadAuditSettings() {
+    try {
+      // Load settings
+      const settings = await pb.collection('inventory_settings').getFullList({
+        filter: `organization_id = "${currentUser.organization_id}"`,
+        limit: 1
+      });
+      
+      const turnus = settings.length ? settings[0].turnus : 12;
+      document.getElementById('audit-turnus').value = turnus;
+      
+      // Load all audits
+      const audits = await pb.collection('inventory_audits').getFullList({
+        filter: `organization_id = "${currentUser.organization_id}"`,
+        expand: 'location_id',
+        sort: '-audit_date'
+      });
+      
+      // Calculate last and next audit
+      const completedAudits = audits.filter(a => a.status === 'abgeschlossen');
+      
+      if (completedAudits.length > 0) {
+        const lastAudit = completedAudits[0];
+        const lastDate = new Date(lastAudit.audit_date);
+        document.getElementById('audit-last').textContent = lastDate.toLocaleDateString('de-DE');
+        
+        // Calculate next audit
+        const nextDate = new Date(lastDate);
+        nextDate.setMonth(nextDate.getMonth() + parseInt(turnus));
+        document.getElementById('audit-next').textContent = nextDate.toLocaleDateString('de-DE');
+      } else {
+        document.getElementById('audit-last').textContent = '-';
+        document.getElementById('audit-next').textContent = 'Bald fällig';
+      }
+      
+      // Render audit history grouped by location
+      await renderAuditHistory(audits);
+      
+    } catch(e) {
+      console.error('Error loading audit settings:', e);
+    }
+  }
+
+  async function renderAuditHistory(audits) {
+    const container = document.getElementById('auditHistoryList');
+    
+    if (!audits.length) {
+      container.innerHTML = '<div class="center-muted">Noch keine Inventuren durchgeführt</div>';
+      return;
+    }
+    
+    // Group by location
+    const byLocation = {};
+    
+    for (const audit of audits) {
+      // Load audit items to get location
+      const auditItems = await pb.collection('inventory_audit_items').getFullList({
+        filter: `audit_id = "${audit.id}"`,
+        expand: 'location_id',
+        limit: 1
+      });
+      
+      if (!auditItems.length) continue;
+      
+      const locId = auditItems[0].location_id;
+      const loc = locations.find(l => l.id === locId);
+      const locName = loc ? loc.name : 'Unbekannt';
+      
+      if (!byLocation[locName]) {
+        byLocation[locName] = [];
+      }
+      
+      // Count items and corrections
+      const allItems = await pb.collection('inventory_audit_items').getFullList({
+        filter: `audit_id = "${audit.id}"`
+      });
+      
+      const totalItems = allItems.length;
+      const corrections = allItems.filter(ai => ai.expected_quantity !== ai.actual_quantity).length;
+      
+      byLocation[locName].push({
+        ...audit,
+        totalItems,
+        corrections
+      });
+    }
+    
+    // Render
+    let html = '';
+    
+    for (const [locName, auditsForLoc] of Object.entries(byLocation)) {
+      const loc = locations.find(l => l.name === locName);
+      const icon = loc ? loc.icon : 'box';
+      
+      html += `
+        <div class="location-group">
+          <div class="location-group-header">
+            <i class="fas fa-${icon}"></i>
+            <span>${locName}</span>
+          </div>
+      `;
+      
+      for (const audit of auditsForLoc) {
+        const date = new Date(audit.audit_date);
+        const statusClass = audit.status === 'abgeschlossen' ? 'completed' : 'open';
+        const statusText = audit.status === 'abgeschlossen' ? 'Abgeschlossen' : 'Offen';
+        const statusIcon = audit.status === 'abgeschlossen' ? 'check-circle' : 'clock';
+        
+        html += `
+          <div class="audit-entry">
+            <div class="audit-entry-main">
+              <div class="audit-entry-date">${date.toLocaleDateString('de-DE')} ${date.toLocaleTimeString('de-DE', {hour: '2-digit', minute: '2-digit'})}</div>
+              <div class="audit-entry-meta">
+                ${audit.totalItems} Artikel geprüft • ${audit.corrections} Korrektur${audit.corrections !== 1 ? 'en' : ''}
+                ${audit.user ? ` • Durchgeführt von ${audit.user}` : ''}
+              </div>
+            </div>
+            <div style="display:flex;gap:.5rem;align-items:center">
+              <span class="audit-status ${statusClass}">
+                <i class="fas fa-${statusIcon}"></i> ${statusText}
+              </span>
+              <button class="btn" onclick="showAuditDetails('${audit.id}')">
+                <i class="fas fa-eye"></i> Details
+              </button>
+            </div>
+          </div>
+        `;
+      }
+      
+      html += '</div>';
+    }
+    
+    container.innerHTML = html;
+  }
+
+  async function saveTurnus() {
+    const turnus = document.getElementById('audit-turnus').value;
+    
+    try {
+      const settings = await pb.collection('inventory_settings').getFullList({
+        filter: `organization_id = "${currentUser.organization_id}"`,
+        limit: 1
+      });
+      
+      if (settings.length > 0) {
+        await pb.collection('inventory_settings').update(settings[0].id, {
+          turnus: parseInt(turnus)
+        });
+      } else {
+        await pb.collection('inventory_settings').create({
+          turnus: parseInt(turnus),
+          organization_id: currentUser.organization_id
+        });
+      }
+      
+      await loadAuditSettings();
+      showMsg('✅ Turnus gespeichert!', 'success');
+      
+    } catch(e) {
+      console.error('Error saving turnus:', e);
+    }
+  }
+
+  window.showAuditDetails = async (auditId) => {
+    try {
+      const audit = await pb.collection('inventory_audits').getOne(auditId);
+      const auditItems = await pb.collection('inventory_audit_items').getFullList({
+        filter: `audit_id = "${auditId}"`,
+        expand: 'item_id,location_id',
+        sort: 'checked,-created'
+      });
+      
+      const loc = auditItems[0]?.expand?.location_id;
+      const locName = loc ? loc.name : 'Unbekannt';
+      const date = new Date(audit.audit_date);
+      
+      document.getElementById('auditDetailsTitle').textContent = `Inventur ${locName} – ${date.toLocaleDateString('de-DE')}`;
+      
+      let html = `
+        <div style="background:#f9f9f9;padding:1rem;border-radius:.5rem;margin-bottom:1rem">
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;text-align:center">
+            <div>
+              <div style="font-size:.85rem;color:#666">Status</div>
+              <div style="font-weight:700">${audit.status === 'abgeschlossen' ? '✅ Abgeschlossen' : '⏳ Offen'}</div>
+            </div>
+            <div>
+              <div style="font-size:.85rem;color:#666">Artikel</div>
+              <div style="font-weight:700">${auditItems.length}</div>
+            </div>
+            <div>
+              <div style="font-size:.85rem;color:#666">Korrekturen</div>
+              <div style="font-weight:700">${auditItems.filter(ai => ai.expected_quantity !== ai.actual_quantity).length}</div>
+            </div>
+          </div>
+        </div>
+        
+        <h4 style="margin:1rem 0 .5rem 0">Geprüfte Artikel:</h4>
+        <table class="hist">
+          <thead>
+            <tr>
+              <th>Artikel</th>
+              <th>Erwartet</th>
+              <th>Tatsächlich</th>
+              <th>Differenz</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${auditItems.map(ai => {
+              const item = ai.expand?.item_id;
+              const diff = ai.actual_quantity - ai.expected_quantity;
+              const diffText = diff === 0 ? '-' : (diff > 0 ? `+${diff}` : diff);
+              const diffColor = diff === 0 ? '#666' : (diff > 0 ? 'var(--success)' : 'var(--primary)');
+              
+              return `
+                <tr>
+                  <td>${item ? item.name : 'Unbekannt'}</td>
+                  <td>${ai.expected_quantity}</td>
+                  <td>${ai.actual_quantity}</td>
+                  <td style="color:${diffColor};font-weight:700">${diffText}</td>
+                  <td>${ai.checked ? '✅ Geprüft' : '⏳ Offen'}</td>
+                </tr>
+              `;
+            }).join('')}
+          </tbody>
+        </table>
+      `;
+      
+      document.getElementById('auditDetailsBody').innerHTML = html;
+      document.getElementById('auditDetailsModal').classList.add('show');
+      
+    } catch(e) {
+      alert('Fehler beim Laden: ' + e.message);
+    }
+  };
+
+  window.closeAuditDetailsModal = () => {
+    document.getElementById('auditDetailsModal').classList.remove('show');
+  };
+
+  // ========================================
+  // INVENTUR (DURCHFÜHRUNG)
   // ========================================
   let currentAudit = null;
   let auditItems = [];
@@ -1427,7 +1815,7 @@
         currentAudit = audits[0];
         await loadAuditItems();
       } else {
-        const confirmStart = confirm('Neue Inventur starten?');
+        const confirmStart = confirm('Neue Inventur starten für Lager "' + (locations.find(l => l.id === currentLocationId)?.name || 'Lager') + '"?');
         if (!confirmStart) return;
         await startNewAudit();
       }
@@ -1661,6 +2049,7 @@
       
       closeAuditModal();
       await loadStock();
+      await loadAuditSettings(); // Reload settings to update next audit date
       showMsg('✅ Inventur abgeschlossen!', 'success');
       
     } catch(e) {
