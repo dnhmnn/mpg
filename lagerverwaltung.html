@@ -306,6 +306,37 @@
     .item-card-name{font-weight:700;margin-bottom:.25rem}
     .item-card-meta{font-size:.85rem;color:var(--muted)}
     
+    /* AUTOCOMPLETE SEARCH */
+    .autocomplete-container{
+      position:relative;
+    }
+    .autocomplete-results{
+      position:absolute;
+      top:100%;
+      left:0;
+      right:0;
+      background:#fff;
+      border:1px solid var(--border);
+      border-top:none;
+      border-radius:0 0 .5rem .5rem;
+      max-height:200px;
+      overflow-y:auto;
+      z-index:100;
+      display:none;
+    }
+    .autocomplete-results.show{display:block}
+    .autocomplete-item{
+      padding:.75rem;
+      cursor:pointer;
+      border-bottom:1px solid #f3f4f6;
+      transition:background 0.1s;
+    }
+    .autocomplete-item:last-child{border-bottom:none}
+    .autocomplete-item:hover{background:#f9fafb}
+    .autocomplete-item.selected{background:var(--primary-light)}
+    .autocomplete-item-name{font-weight:700;margin-bottom:.15rem}
+    .autocomplete-item-meta{font-size:.85rem;color:var(--muted)}
+    
     /* INVENTUR-HISTORIE */
     .audit-summary{
       background:#f0f9ff;
@@ -659,16 +690,18 @@
   </div>
 </div>
 
-<!-- ARTIKEL HINZUFÜGEN (mit Suche) -->
+<!-- ARTIKEL HINZUFÜGEN (mit Autocomplete) -->
 <div class="modal" id="addStockModal">
   <div class="modal-box" style="max-width:500px">
     <h3>Artikel hinzufügen</h3>
     <div class="form-grid">
       <div class="form-group">
-        <label>Artikel auswählen</label>
-        <select id="stock-item-select" style="font-size:1rem">
-          <option value="">-- Artikel auswählen --</option>
-        </select>
+        <label>Artikel suchen</label>
+        <div class="autocomplete-container">
+          <input type="text" id="stock-item-search" placeholder="Artikelname eingeben..." autocomplete="off">
+          <div class="autocomplete-results" id="stock-item-results"></div>
+        </div>
+        <input type="hidden" id="stock-item-id">
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem">
         <div class="form-group">
@@ -1147,31 +1180,125 @@
   };
 
   // ========================================
-  // ARTIKEL HINZUFÜGEN MODAL
+  // ARTIKEL HINZUFÜGEN MODAL MIT AUTOCOMPLETE
   // ========================================
+  let selectedItemIndex = -1;
+  let filteredItems = [];
+  
   window.openAddStockModal = async () => {
     await loadAllItems();
     
-    const select = document.getElementById('stock-item-select');
-    select.innerHTML = '<option value="">-- Artikel auswählen --</option>';
-    
-    allItems.forEach(item => {
-      select.innerHTML += `<option value="${item.id}">${item.name} (${item.category || 'ohne Kategorie'})</option>`;
-    });
-    
+    document.getElementById('stock-item-search').value = '';
+    document.getElementById('stock-item-id').value = '';
     document.getElementById('stock-qty').value = 1;
     document.getElementById('stock-expiry').value = '';
     document.getElementById('stock-batch').value = '';
     
+    setupAutocomplete();
+    
     document.getElementById('addStockModal').classList.add('show');
+    
+    setTimeout(() => {
+      document.getElementById('stock-item-search').focus();
+    }, 100);
   };
+
+  function setupAutocomplete() {
+    const searchInput = document.getElementById('stock-item-search');
+    const resultsDiv = document.getElementById('stock-item-results');
+    const hiddenInput = document.getElementById('stock-item-id');
+    
+    searchInput.oninput = () => {
+      const query = searchInput.value.toLowerCase().trim();
+      selectedItemIndex = -1;
+      
+      if (!query) {
+        resultsDiv.classList.remove('show');
+        hiddenInput.value = '';
+        return;
+      }
+      
+      filteredItems = allItems.filter(item => 
+        item.name.toLowerCase().includes(query) ||
+        (item.category || '').toLowerCase().includes(query)
+      );
+      
+      if (!filteredItems.length) {
+        resultsDiv.innerHTML = '<div class="autocomplete-item" style="color:var(--muted);cursor:default">Keine Artikel gefunden</div>';
+        resultsDiv.classList.add('show');
+        return;
+      }
+      
+      resultsDiv.innerHTML = filteredItems.map((item, idx) => `
+        <div class="autocomplete-item" data-idx="${idx}" data-id="${item.id}">
+          <div class="autocomplete-item-name">${item.name}</div>
+          <div class="autocomplete-item-meta">${item.category || 'Keine Kategorie'} • ${item.unit || 'Stück'}</div>
+        </div>
+      `).join('');
+      
+      resultsDiv.classList.add('show');
+      
+      resultsDiv.querySelectorAll('.autocomplete-item').forEach(el => {
+        el.onclick = () => selectItem(parseInt(el.dataset.idx));
+      });
+    };
+    
+    searchInput.onkeydown = (e) => {
+      if (!resultsDiv.classList.contains('show')) return;
+      
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        selectedItemIndex = Math.min(selectedItemIndex + 1, filteredItems.length - 1);
+        updateSelection();
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        selectedItemIndex = Math.max(selectedItemIndex - 1, -1);
+        updateSelection();
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        if (selectedItemIndex >= 0) {
+          selectItem(selectedItemIndex);
+        }
+      } else if (e.key === 'Escape') {
+        resultsDiv.classList.remove('show');
+      }
+    };
+    
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.autocomplete-container')) {
+        resultsDiv.classList.remove('show');
+      }
+    });
+  }
+  
+  function updateSelection() {
+    const items = document.querySelectorAll('.autocomplete-item');
+    items.forEach((el, idx) => {
+      el.classList.toggle('selected', idx === selectedItemIndex);
+    });
+    
+    if (selectedItemIndex >= 0 && items[selectedItemIndex]) {
+      items[selectedItemIndex].scrollIntoView({ block: 'nearest' });
+    }
+  }
+  
+  function selectItem(idx) {
+    const item = filteredItems[idx];
+    if (!item) return;
+    
+    document.getElementById('stock-item-search').value = item.name;
+    document.getElementById('stock-item-id').value = item.id;
+    document.getElementById('stock-item-results').classList.remove('show');
+    
+    document.getElementById('stock-qty').focus();
+  }
 
   window.closeAddStockModal = () => {
     document.getElementById('addStockModal').classList.remove('show');
   };
 
   window.saveStock = async () => {
-    const itemId = document.getElementById('stock-item-select').value;
+    const itemId = document.getElementById('stock-item-id').value;
     const qty = parseInt(document.getElementById('stock-qty').value) || 0;
     const expiry = document.getElementById('stock-expiry').value || null;
     const batch = document.getElementById('stock-batch').value.trim();
@@ -1828,6 +1955,10 @@
         if (items.length > 0) {
           // Setze Location ID auf die Location der Inventur
           currentLocationId = items[0].location_id;
+          
+          // WICHTIG: Lade Stock für diese Location
+          await loadStock();
+          
           await loadAuditItems();
           showAuditModal();
         } else {
