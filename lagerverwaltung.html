@@ -20,6 +20,8 @@
       --text-light:#64748b;
       --border:#e2e8f0;
       --low:#2563eb;
+      --gradient-start:#667eea;
+      --gradient-end:#764ba2;
     }
     *{box-sizing:border-box}
     body{
@@ -34,7 +36,7 @@
     body.loaded{opacity:1}
     
     .app-header{
-      background:var(--primary);
+      background:linear-gradient(135deg, var(--gradient-start) 0%, var(--gradient-end) 100%);
       color:#fff;
       padding:1rem;
       position:sticky;
@@ -43,6 +45,8 @@
       display:flex;
       align-items:center;
       justify-content:space-between;
+      flex-wrap:wrap;
+      gap:.5rem;
     }
     .header-title{font-weight:700;font-size:1.1rem}
     .topbtn{
@@ -59,17 +63,23 @@
       display:inline-flex;
       align-items:center;
       gap:6px;
+      border:none;
+      font-family:inherit;
     }
     .topbtn:hover{background:rgba(255,255,255,0.2)}
     
     .main{max-width:1000px;margin:0 auto;padding:1rem}
-    .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:.75rem;margin-bottom:1rem}
+    .stats{
+      display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
+      gap:.75rem;
+      margin-bottom:1rem;
+    }
     .card{background:var(--card);padding:1rem;border-radius:.75rem;box-shadow:0 2px 4px rgba(0,0,0,.05)}
     .stat-num{font-size:1.4rem;font-weight:700}
     .ok{color:var(--success)}
     .warn{color:#d97706}
     .exp{color:var(--primary)}
-    .zero{color:var(--text-light)}
     
     .list{display:flex;flex-direction:column;gap:.75rem}
     .row{
@@ -84,9 +94,16 @@
     .row.exp{border-color:var(--primary)}
     .row.zero{border-color:var(--text-light);opacity:0.6}
     
-    .rhead{display:flex;justify-content:space-between;margin-bottom:.5rem;flex-wrap:wrap;gap:.5rem}
-    .badge{padding:.25rem .6rem;border-radius:1rem;font-size:.75rem;font-weight:700}
-    .qtyline{font-weight:700}
+    .rhead{
+      display:flex;
+      justify-content:space-between;
+      margin-bottom:.5rem;
+      flex-wrap:wrap;
+      gap:.5rem;
+      align-items:center;
+    }
+    .badge{padding:.25rem .6rem;border-radius:1rem;font-size:.75rem;font-weight:700;white-space:nowrap}
+    .qtyline{font-weight:700;font-size:.95rem}
     .qtyline.low{color:var(--low)}
     
     .toolbar{
@@ -97,6 +114,17 @@
       flex-wrap:wrap;
       margin:.5rem 0;
     }
+    .toolbar-search{
+      flex:1;
+      min-width:200px;
+      position:relative;
+    }
+    .toolbar-actions{
+      display:flex;
+      gap:.5rem;
+      flex-wrap:wrap;
+      align-items:center;
+    }
     .chip{
       border:1px solid var(--border);
       background:#fff;
@@ -105,6 +133,7 @@
       font-size:.8rem;
       cursor:pointer;
       transition:all 0.2s;
+      white-space:nowrap;
     }
     .chip:hover{background:#f9f9f9}
     .chip.active{background:var(--primary-light);color:var(--primary);border-color:var(--primary)}
@@ -119,10 +148,17 @@
       font-weight:700;
       transition:all 0.2s;
       font-family:inherit;
+      white-space:nowrap;
     }
     .btn:hover{background:#f9f9f9;transform:translateY(-1px)}
     .btn:disabled{opacity:0.5;cursor:not-allowed;transform:none}
     .bicon{display:inline-flex;align-items:center;gap:.35rem;font-size:.85rem}
+    
+    .action-btns{
+      display:flex;
+      gap:.5rem;
+      flex-wrap:wrap;
+    }
     
     .nav{
       position:fixed;
@@ -164,6 +200,7 @@
       color:#8b0e22;
       border-radius:10px;
       padding:10px;
+      margin-bottom:1rem;
     }
     .success{
       background:#f0fdf4;
@@ -171,6 +208,7 @@
       color:#166534;
       border-radius:10px;
       padding:10px;
+      margin-bottom:1rem;
     }
     
     .modal{
@@ -210,6 +248,7 @@
       background:#fff;
       font-size:16px;
       font-family:inherit;
+      width:100%;
     }
     .form-group input:focus,
     .form-group textarea:focus,
@@ -219,13 +258,95 @@
       box-shadow:0 0 0 3px rgba(200,16,46,0.1);
     }
     
-    .hist{width:100%;border-collapse:collapse;margin-top:.5rem}
-    .hist th,.hist td{border:1px solid #eee;padding:.4rem .5rem;font-size:.9rem;text-align:left}
+    .hist{width:100%;border-collapse:collapse;margin-top:.5rem;font-size:.9rem}
+    .hist th,.hist td{border:1px solid #eee;padding:.4rem .5rem;text-align:left}
     .hist th{background:#fafafa;font-weight:700}
     
+    .item-list{
+      display:flex;
+      flex-direction:column;
+      gap:.5rem;
+      max-height:400px;
+      overflow-y:auto;
+    }
+    .item-card{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      padding:.75rem;
+      border:1px solid var(--border);
+      border-radius:.5rem;
+      transition:all 0.2s;
+    }
+    .item-card:hover{background:#f9f9f9}
+    .item-card-info{flex:1}
+    .item-card-name{font-weight:700;margin-bottom:.25rem}
+    .item-card-meta{font-size:.85rem;color:var(--text-light)}
+    
+    /* MOBILE OPTIMIERUNG */
     @media (max-width:768px){
-      .toolbar{flex-direction:column;align-items:stretch}
-      .navg{grid-template-columns:repeat(3,1fr)}
+      .app-header{
+        flex-direction:column;
+        align-items:stretch;
+      }
+      .header-title{font-size:1rem}
+      .toolbar{
+        flex-direction:column;
+        align-items:stretch;
+      }
+      .toolbar-search{
+        width:100%;
+        min-width:auto;
+      }
+      .toolbar-actions{
+        justify-content:space-between;
+      }
+      .chip{
+        flex:1;
+        text-align:center;
+        justify-content:center;
+      }
+      .stats{
+        grid-template-columns:repeat(2, 1fr);
+      }
+      .rhead{
+        flex-direction:column;
+        align-items:flex-start;
+      }
+      .action-btns{
+        width:100%;
+      }
+      .action-btns .btn{
+        flex:1;
+        justify-content:center;
+      }
+      .navg{
+        grid-template-columns:repeat(3,1fr);
+      }
+      .modal-box{
+        padding:16px;
+      }
+      .form-group input,
+      .form-group select,
+      .form-group textarea{
+        font-size:16px;
+      }
+    }
+    
+    @media (max-width:480px){
+      .stats{
+        grid-template-columns:1fr;
+      }
+      .topbtn{
+        font-size:.85rem;
+        padding:.4rem .6rem;
+      }
+      .action-btns{
+        flex-direction:column;
+      }
+      .action-btns .btn{
+        width:100%;
+      }
     }
   </style>
 </head>
@@ -234,9 +355,19 @@
 
 <header class="app-header">
   <h1 class="header-title"><i class="fas fa-warehouse"></i> Lagerverwaltung</h1>
-  <div style="display:flex;gap:.5rem">
-    <a class="topbtn" href="mpg-dashboard.html"><i class="fa-solid fa-dashboard"></i> Dashboard</a>
-    <button class="topbtn" id="logout"><i class="fa-solid fa-right-from-bracket"></i> Logout</button>
+  <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+    <button class="topbtn" onclick="openItemDBModal()">
+      <i class="fa-solid fa-database"></i> Artikel-DB
+    </button>
+    <button class="topbtn" onclick="openLocationModal()">
+      <i class="fa-solid fa-map-marker-alt"></i> Standorte
+    </button>
+    <a class="topbtn" href="mpg-dashboard.html">
+      <i class="fa-solid fa-dashboard"></i> Dashboard
+    </a>
+    <button class="topbtn" id="logout">
+      <i class="fa-solid fa-right-from-bracket"></i> Logout
+    </button>
   </div>
 </header>
 
@@ -245,7 +376,6 @@
     <div class="card"><div class="stat-num ok" id="s-ok">0</div><div>In Ordnung</div></div>
     <div class="card"><div class="stat-num warn" id="s-warn">0</div><div>Bald fällig</div></div>
     <div class="card"><div class="stat-num exp" id="s-exp">0</div><div>Abgelaufen</div></div>
-    <div class="card"><div class="stat-num zero" id="s-zero">0</div><div>Bestand = 0</div></div>
     <div class="card"><div class="stat-num" id="s-total">0</div><div>Gesamt</div></div>
   </div>
 
@@ -263,20 +393,110 @@
 </nav>
 
 <!-- MODALS -->
-<div class="modal" id="editModal">
+
+<!-- ARTIKEL HINZUFÜGEN (mit Suche) -->
+<div class="modal" id="addStockModal">
   <div class="modal-box">
-    <h3 id="editTitle">Artikel bearbeiten</h3>
-    <div id="editForm"></div>
+    <h3>Artikel hinzufügen</h3>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Artikel auswählen</label>
+        <select id="stock-item-select" style="font-size:1rem">
+          <option value="">-- Artikel auswählen --</option>
+        </select>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem">
+        <div class="form-group">
+          <label>Menge</label>
+          <input type="number" id="stock-qty" min="1" value="1">
+        </div>
+        <div class="form-group">
+          <label>Ablaufdatum</label>
+          <input type="date" id="stock-expiry">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Charge/Bemerkung (optional)</label>
+        <input type="text" id="stock-batch">
+      </div>
+    </div>
+    <div style="display:flex;gap:.5rem;justify-content:flex-end;margin-top:1.5rem">
+      <button class="btn" onclick="closeAddStockModal()">Abbrechen</button>
+      <button class="btn" style="background:var(--primary);color:#fff" onclick="saveStock()">
+        <i class="fas fa-plus"></i> Hinzufügen
+      </button>
+    </div>
   </div>
 </div>
 
+<!-- ARTIKEL-DETAILS/HISTORIE -->
+<div class="modal" id="detailsModal">
+  <div class="modal-box">
+    <h3 id="detailsTitle">Artikel-Details</h3>
+    <div id="detailsBody"></div>
+  </div>
+</div>
+
+<!-- ARTIKEL-DATENBANK -->
+<div class="modal" id="itemDBModal">
+  <div class="modal-box">
+    <h3>Artikel-Datenbank</h3>
+    
+    <div style="margin-bottom:1rem">
+      <button class="btn" style="background:var(--primary);color:#fff;width:100%" onclick="openNewItemForm()">
+        <i class="fas fa-plus"></i> Neuen Artikel anlegen
+      </button>
+    </div>
+    
+    <div id="itemDBList" class="item-list"></div>
+    
+    <div style="display:flex;justify-content:flex-end;margin-top:1rem">
+      <button class="btn" onclick="closeItemDBModal()">Schließen</button>
+    </div>
+  </div>
+</div>
+
+<!-- ARTIKEL ANLEGEN/BEARBEITEN -->
+<div class="modal" id="itemFormModal">
+  <div class="modal-box">
+    <h3 id="itemFormTitle">Artikel anlegen</h3>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Artikelname *</label>
+        <input type="text" id="item-name" placeholder="z.B. Einmalhandschuhe">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem">
+        <div class="form-group">
+          <label>Kategorie</label>
+          <input type="text" id="item-category" placeholder="z.B. Verbandmaterial">
+        </div>
+        <div class="form-group">
+          <label>Einheit</label>
+          <input type="text" id="item-unit" placeholder="z.B. Stück, Box" value="Stück">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Mindestbestand</label>
+        <input type="number" id="item-min" min="0" value="0">
+      </div>
+    </div>
+    <div style="display:flex;gap:.5rem;justify-content:flex-end;margin-top:1.5rem">
+      <button class="btn" onclick="closeItemFormModal()">Abbrechen</button>
+      <button class="btn" style="background:var(--primary);color:#fff" onclick="saveItemToDB()">
+        <i class="fas fa-save"></i> Speichern
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- STANDORTE VERWALTEN -->
 <div class="modal" id="locationModal">
   <div class="modal-box">
     <h3>Lager-Standorte verwalten</h3>
-    <div id="locationList"></div>
+    <div id="locationList" style="margin-bottom:1rem"></div>
     <div style="margin-top:1rem">
       <input type="text" id="newLocationName" placeholder="Neuer Standort-Name" style="width:100%;padding:.5rem;border:1px solid var(--border);border-radius:.5rem">
-      <button class="btn" style="margin-top:.5rem;background:var(--primary);color:#fff" onclick="addLocation()">
+      <button class="btn" style="margin-top:.5rem;background:var(--primary);color:#fff;width:100%" onclick="addLocation()">
         <i class="fas fa-plus"></i> Standort hinzufügen
       </button>
     </div>
@@ -284,6 +504,11 @@
       <button class="btn" onclick="closeLocationModal()">Schließen</button>
     </div>
   </div>
+</div>
+
+<!-- INVENTUR -->
+<div class="modal" id="auditModal">
+  <!-- Wird dynamisch erstellt -->
 </div>
 
 <script type="module">
@@ -335,7 +560,7 @@
   let search = "";
   let statusFilter = "all";
   let lowOnly = false;
-  let hideZero = true;
+  let showOnlyZero = false;
 
   const listEl = document.getElementById('list');
   const toolbarEl = document.getElementById('toolbar');
@@ -358,7 +583,7 @@
     listEl.innerHTML = `<div class="card error">
       <strong>Fehler beim Laden der Lagerdaten:</strong><br>${message}
     </div>`;
-    updateStats([], 0);
+    updateStats([]);
   }
 
   function showMsg(text, type = 'success') {
@@ -410,10 +635,6 @@
         <i class="fas fa-clipboard-check"></i>
         <span>Inventur</span>
       </a>
-      <a href="#" id="btn-manage-locations">
-        <i class="fas fa-cog"></i>
-        <span>Verwalten</span>
-      </a>
     `;
     
     navgEl.querySelectorAll('a[data-loc]').forEach(a => {
@@ -431,11 +652,6 @@
       e.preventDefault();
       openAuditModal();
     };
-    
-    document.getElementById('btn-manage-locations').onclick = (e) => {
-      e.preventDefault();
-      openLocationModal();
-    };
   }
 
   // ========================================
@@ -446,22 +662,22 @@
     const locName = currentLoc ? currentLoc.name : 'Lager';
     
     toolbarEl.innerHTML = `
-      <div style="flex:1;min-width:200px;position:relative">
+      <div class="toolbar-search">
         <i class="fas fa-search" style="position:absolute;left:.6rem;top:50%;transform:translateY(-50%);color:var(--text-light)"></i>
         <input id="q" value="${search}" placeholder="In „${locName}" suchen…"
           style="width:100%;padding:.55rem .75rem .55rem 2rem;border:1px solid var(--border);border-radius:.5rem;background:#fff">
       </div>
-      <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+      <div class="toolbar-actions">
         <button class="chip ${statusFilter==='all'?'active':''}" data-f="all">Alle</button>
         <button class="chip ${statusFilter==='warning'?'active':''}" data-f="warning">Bald fällig</button>
         <button class="chip ${statusFilter==='expired'?'active':''}" data-f="expired">Abgelaufen</button>
         <button class="chip ${lowOnly?'active':''}" id="chip-low">
           <i class="fas fa-truck-moving"></i> Einbestellen
         </button>
-        <button class="chip ${hideZero?'active':''}" id="chip-zero">
-          <i class="fas fa-eye-slash"></i> 0 ausblenden
+        <button class="chip ${showOnlyZero?'active':''}" id="chip-zero">
+          <i class="fas fa-filter"></i> Nur 0
         </button>
-        <button class="btn" id="btn-new"><span class="bicon"><i class="fas fa-plus"></i> Neu</span></button>
+        <button class="btn" id="btn-new"><i class="fas fa-plus"></i> Neu</button>
       </div>
     `;
     
@@ -486,23 +702,34 @@
     };
     
     document.getElementById('chip-zero').onclick = () => {
-      hideZero = !hideZero;
+      showOnlyZero = !showOnlyZero;
       renderToolbar();
       filterAndRender();
     };
     
-    document.getElementById('btn-new').onclick = () => openEditor();
+    document.getElementById('btn-new').onclick = () => openAddStockModal();
   }
 
   // ========================================
-  // LOAD STOCK & ITEMS
+  // LOAD ALL ITEMS (für Dropdown)
   // ========================================
-  async function loadStock() {
+  async function loadAllItems() {
     try {
       allItems = await pb.collection('inventory_items').getFullList({
         filter: `organization_id = "${currentUser.organization_id}"`,
         sort: 'name',
       });
+    } catch(e) {
+      console.error('Error loading items:', e);
+    }
+  }
+
+  // ========================================
+  // LOAD STOCK
+  // ========================================
+  async function loadStock() {
+    try {
+      await loadAllItems();
       
       const stockData = await pb.collection('inventory_stock').getFullList({
         filter: `location_id = "${currentLocationId}" && organization_id = "${currentUser.organization_id}"`,
@@ -569,14 +796,14 @@
       filtered = filtered.filter(it => it.target_qty > 0 && it.qty < it.target_qty);
     }
     
-    if (hideZero) {
-      filtered = filtered.filter(it => it.qty > 0);
+    if (showOnlyZero) {
+      filtered = filtered.filter(it => it.qty === 0);
     }
     
     renderList(filtered);
   }
 
-  function updateStats(items, zeroCount) {
+  function updateStats(items) {
     let ok = 0, warn = 0, exp = 0;
     
     items.forEach(it => {
@@ -589,15 +816,13 @@
     document.getElementById('s-ok').textContent = ok;
     document.getElementById('s-warn').textContent = warn;
     document.getElementById('s-exp').textContent = exp;
-    document.getElementById('s-zero').textContent = zeroCount;
     document.getElementById('s-total').textContent = items.length;
   }
 
   function renderList(items) {
     listEl.innerHTML = '';
     
-    const zeroItems = stockItems.filter(it => it.qty === 0);
-    updateStats(items, zeroItems.length);
+    updateStats(items);
     
     if (!items.length) {
       listEl.innerHTML = '<div class="card center-muted"><i class="fas fa-search"></i> Keine Artikel gefunden</div>';
@@ -619,20 +844,18 @@
             <div class="qtyline ${isLow ? 'low' : ''}">
               IST: ${it.qty} ${it.unit || ''} / SOLL: ${it.target_qty}
             </div>
-          </div>
-          <div style="display:flex;justify-content:space-between;align-items:center;gap:.5rem;flex-wrap:wrap">
             <span class="badge ${status}">${it.expiry || 'kein Ablaufdatum'}</span>
-            <div style="display:flex;gap:.5rem;flex-wrap:wrap">
-              <button class="btn bicon" onclick="adjustQty('${it.id}', -1)">
-                <i class="fas fa-minus"></i> -1
-              </button>
-              <button class="btn bicon" onclick="adjustQty('${it.id}', 1)">
-                <i class="fas fa-plus"></i> +1
-              </button>
-              <button class="btn bicon" onclick="openEditor('${it.id}')">
-                <i class="fas fa-edit"></i> Details
-              </button>
-            </div>
+          </div>
+          <div class="action-btns">
+            <button class="btn bicon" onclick="adjustQty('${it.id}', -1)">
+              <i class="fas fa-minus"></i> -1
+            </button>
+            <button class="btn bicon" onclick="adjustQty('${it.id}', 1)">
+              <i class="fas fa-plus"></i> +1
+            </button>
+            <button class="btn bicon" onclick="openDetailsModal('${it.id}')">
+              <i class="fas fa-info-circle"></i> Details
+            </button>
           </div>
         </div>
       `;
@@ -716,166 +939,128 @@
   };
 
   // ========================================
-  // EDITOR
+  // ARTIKEL HINZUFÜGEN MODAL (mit Suche)
   // ========================================
-  window.openEditor = async (itemId = null) => {
-    const item = itemId ? stockItems.find(it => it.id === itemId) : null;
-    const isNew = !itemId;
+  window.openAddStockModal = async () => {
+    await loadAllItems();
     
-    document.getElementById('editTitle').textContent = isNew ? 'Neuen Artikel anlegen' : `${item.name} – Details`;
+    const select = document.getElementById('stock-item-select');
+    select.innerHTML = '<option value="">-- Artikel auswählen --</option>';
     
-    let historyHTML = '';
-    if (!isNew) {
-      historyHTML = `
-        <div style="margin-top:1rem">
-          <button class="btn" onclick="loadHistory('${itemId}')" style="width:100%">
-            <i class="fas fa-clock"></i> Buchungs-Historie anzeigen
-          </button>
-          <div id="historyContainer" style="display:none;margin-top:1rem"></div>
-        </div>
-      `;
+    allItems.forEach(item => {
+      select.innerHTML += `<option value="${item.id}">${item.name} (${item.category || 'ohne Kategorie'})</option>`;
+    });
+    
+    document.getElementById('stock-qty').value = 1;
+    document.getElementById('stock-expiry').value = '';
+    document.getElementById('stock-batch').value = '';
+    
+    document.getElementById('addStockModal').classList.add('show');
+  };
+
+  window.closeAddStockModal = () => {
+    document.getElementById('addStockModal').classList.remove('show');
+  };
+
+  window.saveStock = async () => {
+    const itemId = document.getElementById('stock-item-select').value;
+    const qty = parseInt(document.getElementById('stock-qty').value) || 0;
+    const expiry = document.getElementById('stock-expiry').value || null;
+    const batch = document.getElementById('stock-batch').value.trim();
+    
+    if (!itemId) {
+      alert('Bitte Artikel auswählen');
+      return;
     }
     
-    document.getElementById('editForm').innerHTML = `
-      <div class="form-grid">
-        <div class="form-group">
-          <label>Artikelname</label>
-          <input type="text" id="item-name" value="${item?.name || ''}" ${isNew ? '' : 'readonly'}>
-        </div>
-        
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem">
-          <div class="form-group">
-            <label>Kategorie</label>
-            <input type="text" id="item-category" value="${item?.category || ''}" ${isNew ? '' : 'readonly'}>
-          </div>
-          <div class="form-group">
-            <label>Einheit</label>
-            <input type="text" id="item-unit" value="${item?.unit || 'Stück'}" ${isNew ? '' : 'readonly'}>
-          </div>
-        </div>
-        
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem">
-          <div class="form-group">
-            <label>IST-Bestand</label>
-            <input type="number" id="item-qty" value="${item?.qty || 0}" min="0" ${isNew ? '' : 'readonly'}>
-          </div>
-          <div class="form-group">
-            <label>Mindestbestand</label>
-            <input type="number" id="item-min" value="${item?.min_stock || 0}" min="0">
-          </div>
-        </div>
-        
-        ${isNew ? `
-        <div class="form-group">
-          <label>Ablaufdatum (optional)</label>
-          <input type="date" id="item-expiry">
-        </div>
-        ` : ''}
-      </div>
-      
-      ${historyHTML}
-      
-      <div style="display:flex;gap:.5rem;justify-content:flex-end;margin-top:1.5rem;flex-wrap:wrap">
-        ${!isNew ? `<button class="btn" onclick="deleteItem('${itemId}')" style="margin-right:auto">Löschen</button>` : ''}
-        <button class="btn" onclick="closeEditor()">Abbrechen</button>
-        <button class="btn" style="background:var(--primary);color:#fff" onclick="saveItem('${itemId || ''}')">
-          Speichern
-        </button>
-      </div>
-    `;
-    
-    document.getElementById('editModal').classList.add('show');
-  };
-
-  window.closeEditor = () => {
-    document.getElementById('editModal').classList.remove('show');
-  };
-
-  window.saveItem = async (itemId) => {
-    const name = document.getElementById('item-name').value.trim();
-    const category = document.getElementById('item-category').value.trim();
-    const unit = document.getElementById('item-unit').value.trim();
-    const qty = parseInt(document.getElementById('item-qty').value) || 0;
-    const minStock = parseInt(document.getElementById('item-min').value) || 0;
-    
-    if (!name) {
-      alert('Artikelname erforderlich');
+    if (qty <= 0) {
+      alert('Menge muss größer 0 sein');
       return;
     }
     
     try {
-      if (itemId) {
-        await pb.collection('inventory_items').update(itemId, {
-          min_stock: minStock
-        });
-      } else {
-        const expiry = document.getElementById('item-expiry').value || null;
-        
-        const newItem = await pb.collection('inventory_items').create({
-          name,
-          category,
-          unit,
-          min_stock: minStock,
-          organization_id: currentUser.organization_id
-        });
-        
-        if (qty > 0) {
-          await pb.collection('inventory_stock').create({
-            item_id: newItem.id,
-            location_id: currentLocationId,
-            quantity: qty,
-            expiry_date: expiry,
-            organization_id: currentUser.organization_id
-          });
-          
-          await pb.collection('inventory_transactions').create({
-            item_id: newItem.id,
-            location_id: currentLocationId,
-            type: 'einbuchung',
-            quantity: qty,
-            expiry_date: expiry,
-            note: 'Neuanlage',
-            user: currentUser.email || currentUser.id,
-            organization_id: currentUser.organization_id
-          });
-        }
-      }
+      await pb.collection('inventory_stock').create({
+        item_id: itemId,
+        location_id: currentLocationId,
+        quantity: qty,
+        expiry_date: expiry,
+        batch: batch || null,
+        organization_id: currentUser.organization_id
+      });
       
-      closeEditor();
+      await pb.collection('inventory_transactions').create({
+        item_id: itemId,
+        location_id: currentLocationId,
+        type: 'einbuchung',
+        quantity: qty,
+        expiry_date: expiry,
+        note: batch || 'Hinzugefügt',
+        user: currentUser.email || currentUser.id,
+        organization_id: currentUser.organization_id
+      });
+      
+      closeAddStockModal();
       await loadStock();
-      showMsg('✅ Gespeichert!', 'success');
+      showMsg(`✅ Artikel hinzugefügt: ${qty} Stück`, 'success');
       
     } catch(e) {
       showError(e.message);
     }
   };
 
-  window.deleteItem = async (itemId) => {
-    if (!confirm('Artikel wirklich löschen? Alle Bestände werden entfernt!')) return;
+  // ========================================
+  // DETAILS MODAL
+  // ========================================
+  window.openDetailsModal = async (itemId) => {
+    const item = stockItems.find(it => it.id === itemId);
+    if (!item) return;
     
-    try {
-      const stockList = await pb.collection('inventory_stock').getFullList({
-        filter: `item_id = "${itemId}"`
-      });
+    document.getElementById('detailsTitle').textContent = item.name;
+    
+    document.getElementById('detailsBody').innerHTML = `
+      <div style="background:#f9f9f9;padding:1rem;border-radius:.5rem;margin-bottom:1rem">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
+          <div>
+            <div style="color:#666;font-size:.9rem">Kategorie</div>
+            <div style="font-weight:700">${item.category || '-'}</div>
+          </div>
+          <div>
+            <div style="color:#666;font-size:.9rem">Einheit</div>
+            <div style="font-weight:700">${item.unit || 'Stück'}</div>
+          </div>
+          <div>
+            <div style="color:#666;font-size:.9rem">IST-Bestand</div>
+            <div style="font-weight:700;font-size:1.2rem;color:var(--primary)">${item.qty}</div>
+          </div>
+          <div>
+            <div style="color:#666;font-size:.9rem">Mindestbestand</div>
+            <div style="font-weight:700">${item.target_qty}</div>
+          </div>
+        </div>
+      </div>
       
-      for (const stock of stockList) {
-        await pb.collection('inventory_stock').delete(stock.id);
-      }
+      <button class="btn" onclick="loadHistory('${itemId}')" style="width:100%;margin-bottom:1rem">
+        <i class="fas fa-clock"></i> Buchungs-Historie anzeigen
+      </button>
+      <div id="historyContainer"></div>
       
-      await pb.collection('inventory_items').delete(itemId);
-      
-      closeEditor();
-      await loadStock();
-      showMsg('✅ Gelöscht!', 'success');
-      
-    } catch(e) {
-      showError(e.message);
-    }
+      <div style="display:flex;gap:.5rem;justify-content:flex-end;margin-top:1rem">
+        <button class="btn" style="background:#dc2626;color:#fff" onclick="deleteItemFromStock('${itemId}')">
+          <i class="fas fa-trash"></i> Aus Lager entfernen
+        </button>
+        <button class="btn" onclick="closeDetailsModal()">Schließen</button>
+      </div>
+    `;
+    
+    document.getElementById('detailsModal').classList.add('show');
+  };
+
+  window.closeDetailsModal = () => {
+    document.getElementById('detailsModal').classList.remove('show');
   };
 
   window.loadHistory = async (itemId) => {
     const container = document.getElementById('historyContainer');
-    container.style.display = 'block';
     container.innerHTML = '<div class="center-muted">Lade Historie...</div>';
     
     try {
@@ -919,13 +1104,170 @@
     }
   };
 
+  window.deleteItemFromStock = async (itemId) => {
+    if (!confirm('Alle Bestände dieses Artikels an diesem Standort löschen?')) return;
+    
+    try {
+      const stockList = await pb.collection('inventory_stock').getFullList({
+        filter: `item_id = "${itemId}" && location_id = "${currentLocationId}"`
+      });
+      
+      for (const stock of stockList) {
+        await pb.collection('inventory_stock').delete(stock.id);
+      }
+      
+      closeDetailsModal();
+      await loadStock();
+      showMsg('✅ Bestände gelöscht!', 'success');
+      
+    } catch(e) {
+      showError(e.message);
+    }
+  };
+
   // ========================================
-  // LOCATION MANAGEMENT
+  // ARTIKEL-DATENBANK MODAL
   // ========================================
-  function openLocationModal() {
+  window.openItemDBModal = async () => {
+    await loadAllItems();
+    renderItemDBList();
+    document.getElementById('itemDBModal').classList.add('show');
+  };
+
+  window.closeItemDBModal = () => {
+    document.getElementById('itemDBModal').classList.remove('show');
+  };
+
+  function renderItemDBList() {
+    const list = document.getElementById('itemDBList');
+    
+    if (!allItems.length) {
+      list.innerHTML = '<div class="center-muted">Keine Artikel vorhanden</div>';
+      return;
+    }
+    
+    list.innerHTML = allItems.map(item => `
+      <div class="item-card">
+        <div class="item-card-info">
+          <div class="item-card-name">${item.name}</div>
+          <div class="item-card-meta">
+            ${item.category || 'Keine Kategorie'} • ${item.unit || 'Stück'} • Min: ${item.min_stock || 0}
+          </div>
+        </div>
+        <div style="display:flex;gap:.5rem">
+          <button class="btn" onclick="editItemInDB('${item.id}')">
+            <i class="fas fa-edit"></i>
+          </button>
+          <button class="btn" onclick="deleteItemFromDB('${item.id}')">
+            <i class="fas fa-trash"></i>
+          </button>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  window.openNewItemForm = () => {
+    document.getElementById('itemFormTitle').textContent = 'Neuen Artikel anlegen';
+    document.getElementById('item-name').value = '';
+    document.getElementById('item-category').value = '';
+    document.getElementById('item-unit').value = 'Stück';
+    document.getElementById('item-min').value = 0;
+    
+    window.currentEditItemId = null;
+    
+    document.getElementById('itemFormModal').classList.add('show');
+  };
+
+  window.editItemInDB = async (itemId) => {
+    const item = allItems.find(it => it.id === itemId);
+    if (!item) return;
+    
+    document.getElementById('itemFormTitle').textContent = 'Artikel bearbeiten';
+    document.getElementById('item-name').value = item.name;
+    document.getElementById('item-category').value = item.category || '';
+    document.getElementById('item-unit').value = item.unit || 'Stück';
+    document.getElementById('item-min').value = item.min_stock || 0;
+    
+    window.currentEditItemId = itemId;
+    
+    document.getElementById('itemFormModal').classList.add('show');
+  };
+
+  window.closeItemFormModal = () => {
+    document.getElementById('itemFormModal').classList.remove('show');
+  };
+
+  window.saveItemToDB = async () => {
+    const name = document.getElementById('item-name').value.trim();
+    const category = document.getElementById('item-category').value.trim();
+    const unit = document.getElementById('item-unit').value.trim();
+    const minStock = parseInt(document.getElementById('item-min').value) || 0;
+    
+    if (!name) {
+      alert('Artikelname erforderlich');
+      return;
+    }
+    
+    try {
+      if (window.currentEditItemId) {
+        await pb.collection('inventory_items').update(window.currentEditItemId, {
+          name,
+          category,
+          unit,
+          min_stock: minStock
+        });
+        showMsg('✅ Artikel aktualisiert!', 'success');
+      } else {
+        await pb.collection('inventory_items').create({
+          name,
+          category,
+          unit,
+          min_stock: minStock,
+          organization_id: currentUser.organization_id
+        });
+        showMsg('✅ Artikel angelegt!', 'success');
+      }
+      
+      closeItemFormModal();
+      await loadAllItems();
+      renderItemDBList();
+      
+    } catch(e) {
+      showError(e.message);
+    }
+  };
+
+  window.deleteItemFromDB = async (itemId) => {
+    if (!confirm('Artikel wirklich aus Datenbank löschen? Alle Bestände gehen verloren!')) return;
+    
+    try {
+      const stockList = await pb.collection('inventory_stock').getFullList({
+        filter: `item_id = "${itemId}"`
+      });
+      
+      for (const stock of stockList) {
+        await pb.collection('inventory_stock').delete(stock.id);
+      }
+      
+      await pb.collection('inventory_items').delete(itemId);
+      
+      await loadAllItems();
+      renderItemDBList();
+      await loadStock();
+      showMsg('✅ Artikel gelöscht!', 'success');
+      
+    } catch(e) {
+      showError(e.message);
+    }
+  };
+
+  // ========================================
+  // STANDORTE VERWALTEN
+  // ========================================
+  window.openLocationModal = () => {
     renderLocationList();
     document.getElementById('locationModal').classList.add('show');
-  }
+  };
 
   window.closeLocationModal = () => {
     document.getElementById('locationModal').classList.remove('show');
@@ -935,9 +1277,9 @@
     document.getElementById('locationList').innerHTML = `
       <div style="display:flex;flex-direction:column;gap:.5rem">
         ${locations.map(loc => `
-          <div style="display:flex;justify-content:space-between;align-items:center;padding:.5rem;border:1px solid var(--border);border-radius:.5rem">
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:.75rem;border:1px solid var(--border);border-radius:.5rem">
             <div>
-              <i class="fas fa-${loc.icon || 'box'}"></i> ${loc.name}
+              <i class="fas fa-${loc.icon || 'box'}"></i> <strong>${loc.name}</strong>
             </div>
             <button class="btn" onclick="deleteLocation('${loc.id}')" ${locations.length <= 1 ? 'disabled' : ''}>
               <i class="fas fa-trash"></i>
@@ -997,7 +1339,7 @@
   };
 
   // ========================================
-  // INVENTORY AUDIT (BESTANDSKORREKTUR/INVENTUR)
+  // INVENTUR (gekürzt - vollständige Version aus vorheriger Datei übernehmen)
   // ========================================
   
   let currentAudit = null;
@@ -1016,9 +1358,8 @@
         currentAudit = audits[0];
         await loadAuditItems();
       } else {
-        const confirmStart = confirm('Neue Inventur starten? Dies erstellt eine Prüfung für alle Artikel im aktuellen Lager.');
+        const confirmStart = confirm('Neue Inventur starten?');
         if (!confirmStart) return;
-        
         await startNewAudit();
       }
       
@@ -1088,19 +1429,19 @@
         
         <div style="margin-bottom:1rem">
           <div style="background:#f0f9ff;padding:.75rem;border-radius:.5rem;border:1px solid #bae6fd">
-            <strong>Fortschritt:</strong> ${auditItems.filter(ai => ai.checked).length} / ${auditItems.length} geprüft
+            <strong>Fortschritt:</strong> <span id="audit-progress">${auditItems.filter(ai => ai.checked).length} / ${auditItems.length} geprüft</span>
           </div>
         </div>
         
         <div id="auditItemContainer"></div>
         
-        <div style="display:flex;gap:.5rem;justify-content:space-between;margin-top:1.5rem">
+        <div style="display:flex;gap:.5rem;justify-content:space-between;margin-top:1.5rem;flex-wrap:wrap">
           <button class="btn" onclick="closeAuditModal()">Abbrechen</button>
           <div style="display:flex;gap:.5rem">
-            <button class="btn" onclick="prevAuditItem()" ${auditIndex === 0 ? 'disabled' : ''}>
+            <button class="btn" onclick="prevAuditItem()" ${auditIndex === 0 ? 'disabled' : ''} id="audit-prev">
               <i class="fas fa-arrow-left"></i> Zurück
             </button>
-            <button class="btn" style="background:var(--primary);color:#fff" onclick="saveAuditItem()">
+            <button class="btn" style="background:var(--primary);color:#fff" onclick="saveAuditItem()" id="audit-next">
               ${auditIndex === auditItems.length - 1 ? 'Fertig' : 'Weiter'} <i class="fas fa-arrow-right"></i>
             </button>
           </div>
@@ -1214,8 +1555,9 @@
         await loadAuditItems();
         renderAuditItem();
         
-        const progressText = `${auditItems.filter(ai => ai.checked).length} / ${auditItems.length} geprüft`;
-        document.querySelector('#auditModal .modal-box > div:first-of-type strong').nextSibling.textContent = ' ' + progressText;
+        document.getElementById('audit-progress').textContent = `${auditItems.filter(ai => ai.checked).length} / ${auditItems.length} geprüft`;
+        document.getElementById('audit-prev').disabled = false;
+        document.getElementById('audit-next').innerHTML = auditIndex === auditItems.length - 1 ? 'Fertig <i class="fas fa-check"></i>' : 'Weiter <i class="fas fa-arrow-right"></i>';
         
       } else {
         await finishAudit();
@@ -1230,6 +1572,8 @@
     if (auditIndex > 0) {
       auditIndex--;
       renderAuditItem();
+      document.getElementById('audit-prev').disabled = auditIndex === 0;
+      document.getElementById('audit-next').innerHTML = 'Weiter <i class="fas fa-arrow-right"></i>';
     }
   };
 
