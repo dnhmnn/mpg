@@ -121,66 +121,123 @@
     .btn:disabled{opacity:0.5;cursor:not-allowed;transform:none}
     .btn-sm{padding:.4rem .7rem;font-size:.85rem}
     
-    .search{
-      flex:1;
-      min-width:200px;
-      position:relative;
+    .calendar{
+      background:#fff;
+      border-radius:.75rem;
+      padding:1.5rem;
+      box-shadow:0 2px 8px rgba(0,0,0,.05);
+      margin-bottom:1.5rem;
     }
-    .search input{
-      width:100%;
-      padding:.6rem 1rem .6rem 2.5rem;
+    .calendar-header{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      margin-bottom:1.5rem;
+    }
+    .calendar-title{
+      font-size:1.3rem;
+      font-weight:800;
+    }
+    .calendar-nav{
+      display:flex;
+      gap:.5rem;
+    }
+    .calendar-grid{
+      display:grid;
+      grid-template-columns:repeat(7,1fr);
+      gap:1px;
+      background:var(--border);
       border:1px solid var(--border);
       border-radius:.5rem;
+      overflow:hidden;
+    }
+    .calendar-day-header{
+      background:#f9fafb;
+      padding:.75rem;
+      text-align:center;
+      font-weight:700;
+      font-size:.85rem;
+      color:var(--muted);
+    }
+    .calendar-day{
       background:#fff;
-      font-size:.9rem;
-      font-family:inherit;
+      padding:.75rem;
+      min-height:100px;
+      position:relative;
+      cursor:pointer;
+      transition:background 0.2s;
     }
-    .search input:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(200,16,46,0.1)}
-    .search i{position:absolute;left:1rem;top:50%;transform:translateY(-50%);color:var(--muted)}
-    
-    .grid{
-      display:grid;
-      grid-template-columns:repeat(auto-fill,minmax(320px,1fr));
-      gap:1rem;
+    .calendar-day:hover{background:#f9fafb}
+    .calendar-day.other-month{opacity:0.3}
+    .calendar-day.today{background:var(--primary-light)}
+    .calendar-day-number{
+      font-weight:700;
+      margin-bottom:.5rem;
+    }
+    .calendar-event{
+      background:var(--primary);
+      color:#fff;
+      padding:.25rem .5rem;
+      border-radius:.25rem;
+      font-size:.75rem;
+      margin-bottom:.25rem;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
     }
     
-    .card{
+    .course-card{
       background:#fff;
       border-radius:.75rem;
       padding:1.5rem;
       box-shadow:0 2px 8px rgba(0,0,0,.05);
       transition:all 0.2s;
       border:2px solid transparent;
+      margin-bottom:1rem;
     }
-    .card.clickable{cursor:pointer}
-    .card.clickable:hover{
+    .course-card:hover{
       transform:translateY(-4px);
       box-shadow:0 8px 20px rgba(0,0,0,.12);
       border-color:var(--primary-light);
     }
-    
-    .card-header{
+    .course-header{
       display:flex;
       justify-content:space-between;
       align-items:flex-start;
       margin-bottom:1rem;
     }
-    .card-title{
+    .course-title{
       font-weight:800;
-      font-size:1.1rem;
+      font-size:1.2rem;
       margin-bottom:.5rem;
-      color:var(--text);
     }
-    .card-meta{
+    .course-meta{
       font-size:.85rem;
       color:var(--muted);
       margin-bottom:1rem;
     }
-    .card-desc{
-      font-size:.9rem;
-      color:var(--text);
-      margin-bottom:1rem;
-      line-height:1.5;
+    .course-sessions{
+      display:flex;
+      flex-direction:column;
+      gap:.5rem;
+      margin-top:1rem;
+    }
+    .session-item{
+      background:#f9fafb;
+      padding:.75rem;
+      border-radius:.5rem;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      flex-wrap:wrap;
+      gap:.5rem;
+    }
+    .session-date{
+      font-weight:700;
+    }
+    .session-info{
+      font-size:.85rem;
+      color:var(--muted);
     }
     
     .badge{
@@ -200,18 +257,179 @@
     .badge.abgesagt{background:#fee2e2;color:#991b1b}
     .badge.eingeladen{background:#e0e7ff;color:#4338ca}
     
-    .competencies{
-      display:flex;
-      flex-wrap:wrap;
-      gap:.5rem;
+    .member-card{
+      background:#fff;
+      border-radius:.75rem;
+      padding:1.5rem;
+      box-shadow:0 2px 8px rgba(0,0,0,.05);
       margin-bottom:1rem;
     }
-    .competency{
+    .member-header{
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-start;
+      margin-bottom:1rem;
+    }
+    .member-name{
+      font-weight:800;
+      font-size:1.1rem;
+    }
+    .member-email{
+      color:var(--muted);
+      font-size:.9rem;
+    }
+    .member-stats{
+      display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(100px,1fr));
+      gap:1rem;
+      margin-top:1rem;
+    }
+    .member-stat{
+      text-align:center;
+    }
+    .member-stat-value{
+      font-size:1.5rem;
+      font-weight:800;
+      color:var(--primary);
+    }
+    .member-stat-label{
+      font-size:.85rem;
+      color:var(--muted);
+    }
+    
+    .table{
+      width:100%;
+      border-collapse:collapse;
+      background:#fff;
+      border-radius:.75rem;
+      overflow:hidden;
+      box-shadow:0 2px 8px rgba(0,0,0,.05);
+    }
+    .table th,
+    .table td{
+      padding:.75rem 1rem;
+      text-align:left;
+      border-bottom:1px solid var(--border);
+    }
+    .table th{
+      background:#f9fafb;
+      font-weight:700;
+      font-size:.9rem;
+    }
+    .table tr:hover{
+      background:#f9fafb;
+    }
+    .table tr:last-child td{
+      border-bottom:none;
+    }
+    
+    .learning-module{
+      background:#fff;
+      border-radius:.75rem;
+      padding:2rem;
+      box-shadow:0 2px 8px rgba(0,0,0,.05);
+      margin-bottom:1rem;
+    }
+    .learning-header{
+      text-align:center;
+      margin-bottom:2rem;
+    }
+    .learning-title{
+      font-size:1.5rem;
+      font-weight:800;
+      margin-bottom:.5rem;
+    }
+    .learning-progress{
       background:#f3f4f6;
-      padding:.25rem .6rem;
+      height:8px;
+      border-radius:999px;
+      overflow:hidden;
+      margin:1rem 0;
+    }
+    .learning-progress-bar{
+      background:var(--primary);
+      height:100%;
+      transition:width 0.3s;
+    }
+    .learning-content{
+      max-width:800px;
+      margin:0 auto;
+      font-size:1.05rem;
+      line-height:1.7;
+    }
+    .learning-content h3{
+      color:var(--primary);
+      margin-top:2rem;
+    }
+    .learning-content img{
+      max-width:100%;
       border-radius:.5rem;
-      font-size:.8rem;
-      color:#4b5563;
+      margin:1rem 0;
+    }
+    .learning-nav{
+      display:flex;
+      justify-content:space-between;
+      margin-top:2rem;
+    }
+    
+    .quiz-question{
+      background:#f9fafb;
+      padding:1.5rem;
+      border-radius:.5rem;
+      margin-bottom:1.5rem;
+      border-left:4px solid var(--primary);
+    }
+    .quiz-question-text{
+      font-weight:700;
+      font-size:1.1rem;
+      margin-bottom:1rem;
+    }
+    .quiz-options{
+      display:flex;
+      flex-direction:column;
+      gap:.75rem;
+    }
+    .quiz-option{
+      padding:1rem;
+      background:#fff;
+      border:2px solid var(--border);
+      border-radius:.5rem;
+      cursor:pointer;
+      transition:all 0.2s;
+      display:flex;
+      align-items:center;
+      gap:.75rem;
+    }
+    .quiz-option:hover{
+      border-color:var(--primary);
+      background:var(--primary-light);
+    }
+    .quiz-option.selected{
+      border-color:var(--primary);
+      background:var(--primary-light);
+    }
+    .quiz-option.correct{
+      border-color:var(--success);
+      background:#dcfce7;
+    }
+    .quiz-option.wrong{
+      border-color:var(--primary);
+      background:var(--primary-light);
+    }
+    
+    .access-code-box{
+      background:#f9fafb;
+      padding:1.5rem;
+      border-radius:.75rem;
+      border:2px dashed var(--primary);
+      text-align:center;
+    }
+    .access-code{
+      font-size:2rem;
+      font-weight:800;
+      font-family:monospace;
+      color:var(--primary);
+      margin:1rem 0;
     }
     
     .modal{
@@ -261,134 +479,6 @@
       box-shadow:0 0 0 3px rgba(200,16,46,0.1);
     }
     
-    .file-list{
-      display:flex;
-      flex-direction:column;
-      gap:.5rem;
-      margin-top:.5rem;
-    }
-    .file-item{
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-      padding:.5rem;
-      background:#f9fafb;
-      border-radius:.5rem;
-      font-size:.85rem;
-    }
-    
-    .session-list{
-      display:flex;
-      flex-direction:column;
-      gap:.75rem;
-    }
-    .session-card{
-      background:#f9fafb;
-      border-radius:.5rem;
-      padding:1rem;
-      border-left:4px solid var(--primary);
-    }
-    .session-date{
-      font-weight:700;
-      margin-bottom:.5rem;
-    }
-    .session-info{
-      font-size:.85rem;
-      color:var(--muted);
-      margin-bottom:.5rem;
-    }
-    .session-actions{
-      display:flex;
-      gap:.5rem;
-      flex-wrap:wrap;
-    }
-    
-    .participant-list{
-      display:flex;
-      flex-direction:column;
-      gap:.5rem;
-    }
-    .participant-row{
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-      padding:.75rem;
-      background:#f9fafb;
-      border-radius:.5rem;
-    }
-    .participant-name{
-      font-weight:700;
-    }
-    .participant-status{
-      font-size:.85rem;
-      color:var(--muted);
-    }
-    
-    .stat-grid{
-      display:grid;
-      grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
-      gap:1rem;
-      margin-bottom:1.5rem;
-    }
-    .stat-card{
-      background:#f9fafb;
-      padding:1rem;
-      border-radius:.5rem;
-      text-align:center;
-    }
-    .stat-value{
-      font-size:2rem;
-      font-weight:800;
-      color:var(--primary);
-    }
-    .stat-label{
-      font-size:.85rem;
-      color:var(--muted);
-    }
-    
-    .table{
-      width:100%;
-      border-collapse:collapse;
-      margin-top:1rem;
-    }
-    .table th,
-    .table td{
-      padding:.75rem;
-      text-align:left;
-      border-bottom:1px solid var(--border);
-    }
-    .table th{
-      background:#f9fafb;
-      font-weight:700;
-      font-size:.9rem;
-    }
-    .table tr:hover{
-      background:#f9fafb;
-    }
-    
-    .question-card{
-      background:#f9fafb;
-      border-radius:.5rem;
-      padding:1rem;
-      margin-bottom:.75rem;
-      border-left:4px solid var(--primary);
-    }
-    .question-text{
-      font-weight:700;
-      margin-bottom:.75rem;
-    }
-    .question-options{
-      display:flex;
-      flex-direction:column;
-      gap:.5rem;
-    }
-    .question-option{
-      padding:.5rem;
-      background:#fff;
-      border-radius:.5rem;
-      border:1px solid var(--border);
-    }
-    
     .copy-box{
       background:#f9fafb;
       padding:.75rem;
@@ -406,7 +496,6 @@
       text-align:center;
       padding:3rem 1rem;
       color:var(--muted);
-      grid-column:1/-1;
     }
     .empty i{font-size:4rem;margin-bottom:1rem;opacity:0.3}
     
@@ -421,11 +510,11 @@
       .topbtn{flex:1;justify-content:center}
       .tabs{padding:.25rem}
       .tab{padding:.5rem 1rem;font-size:.85rem}
+      .calendar-grid{grid-template-columns:repeat(7,1fr);gap:0}
+      .calendar-day{min-height:60px;padding:.5rem}
+      .calendar-event{font-size:.65rem}
       .actions{flex-direction:column}
       .btn{width:100%;justify-content:center}
-      .search{width:100%}
-      .grid{grid-template-columns:1fr}
-      .stat-grid{grid-template-columns:repeat(2,1fr)}
       .table{font-size:.85rem}
       .table th,.table td{padding:.5rem}
     }
@@ -453,97 +542,112 @@
 <div class="wrap">
   <!-- Tabs -->
   <div class="tabs">
-    <button class="tab active" data-tab="courses">
-      <i class="fas fa-book"></i> Kurse
+    <button class="tab active" data-tab="calendar">
+      <i class="fas fa-calendar"></i> Kalender
     </button>
-    <button class="tab" data-tab="sessions">
-      <i class="fas fa-calendar"></i> Termine
-    </button>
-    <button class="tab" data-tab="learning">
-      <i class="fas fa-laptop"></i> Lernbereich
+    <button class="tab" data-tab="courses">
+      <i class="fas fa-book"></i> Ausbildungen
     </button>
     <button class="tab" data-tab="team">
       <i class="fas fa-users"></i> Team
     </button>
     <button class="tab" data-tab="statistics">
-      <i class="fas fa-chart-bar"></i> Statistiken
+      <i class="fas fa-chart-bar"></i> Statistik
+    </button>
+    <button class="tab" data-tab="learning">
+      <i class="fas fa-laptop"></i> Lernbereich
     </button>
     <button class="tab" data-tab="settings">
       <i class="fas fa-cog"></i> Einstellungen
     </button>
   </div>
   
-  <!-- TAB: KURSE -->
-  <div id="tab-courses" class="tab-content">
-    <div class="actions">
-      <div class="search">
-        <i class="fas fa-search"></i>
-        <input type="text" id="search-courses" placeholder="Kurse durchsuchen...">
+  <!-- TAB: KALENDER -->
+  <div id="tab-calendar" class="tab-content">
+    <div class="calendar">
+      <div class="calendar-header">
+        <div class="calendar-title" id="calendar-title">Dezember 2024</div>
+        <div class="calendar-nav">
+          <button class="btn btn-sm" onclick="previousMonth()">
+            <i class="fas fa-chevron-left"></i>
+          </button>
+          <button class="btn btn-sm" onclick="nextMonth()">
+            <i class="fas fa-chevron-right"></i>
+          </button>
+          <button class="btn btn-sm" onclick="today()">
+            Heute
+          </button>
+        </div>
       </div>
+      <div class="calendar-grid" id="calendar-grid">
+        <div class="center-muted">Lade Kalender...</div>
+      </div>
+    </div>
+    
+    <h3 style="margin:0 0 1rem 0">Anstehende Termine</h3>
+    <div id="upcoming-sessions"></div>
+  </div>
+  
+  <!-- TAB: AUSBILDUNGEN -->
+  <div id="tab-courses" class="tab-content" style="display:none">
+    <div class="actions">
       <button class="btn primary" onclick="openNewCourseModal()">
-        <i class="fas fa-plus"></i> Neuer Kurs
+        <i class="fas fa-plus"></i> Neue Ausbildung
+      </button>
+      <button class="btn primary" onclick="openNewSessionModal()">
+        <i class="fas fa-calendar-plus"></i> Neuer Termin
       </button>
     </div>
-    <div id="courses-grid" class="grid">
-      <div class="center-muted">Lade Kurse...</div>
+    <div id="courses-list">
+      <div class="center-muted">Lade Ausbildungen...</div>
     </div>
   </div>
   
-  <!-- TAB: TERMINE -->
-  <div id="tab-sessions" class="tab-content" style="display:none">
+  <!-- TAB: TEAM -->
+  <div id="tab-team" class="tab-content" style="display:none">
     <div class="actions">
-      <div class="search">
-        <i class="fas fa-search"></i>
-        <input type="text" id="search-sessions" placeholder="Termine durchsuchen...">
-      </div>
-      <button class="btn primary" onclick="openNewSessionModal()">
-        <i class="fas fa-plus"></i> Neuer Termin
+      <button class="btn primary" onclick="openNewMemberModal()">
+        <i class="fas fa-user-plus"></i> Neues Mitglied
       </button>
     </div>
-    <div id="sessions-list">
-      <div class="center-muted">Lade Termine...</div>
+    <div id="team-list">
+      <div class="center-muted">Lade Team...</div>
+    </div>
+  </div>
+  
+  <!-- TAB: STATISTIK -->
+  <div id="tab-statistics" class="tab-content" style="display:none">
+    <h3 style="margin:0 0 1rem 0">Lehrgangsteilnehmer-Statistik</h3>
+    <div id="statistics-content">
+      <div class="center-muted">Lade Statistik...</div>
     </div>
   </div>
   
   <!-- TAB: LERNBEREICH -->
   <div id="tab-learning" class="tab-content" style="display:none">
     <div class="actions">
-      <button class="btn primary" onclick="openSelectCourseForQuestions()">
-        <i class="fas fa-plus"></i> Fragen zu Kurs hinzufügen
+      <button class="btn primary" onclick="openSelectCourseForLearning()">
+        <i class="fas fa-plus"></i> Lernmodul erstellen
       </button>
     </div>
-    <div id="learning-content">
+    <div id="learning-list">
       <div class="center-muted">Lade Lernbereiche...</div>
-    </div>
-  </div>
-  
-  <!-- TAB: TEAM -->
-  <div id="tab-team" class="tab-content" style="display:none">
-    <div id="team-content">
-      <div class="center-muted">Lade Team-Übersicht...</div>
-    </div>
-  </div>
-  
-  <!-- TAB: STATISTIKEN -->
-  <div id="tab-statistics" class="tab-content" style="display:none">
-    <div id="statistics-content">
-      <div class="center-muted">Lade Statistiken...</div>
     </div>
   </div>
   
   <!-- TAB: EINSTELLUNGEN -->
   <div id="tab-settings" class="tab-content" style="display:none">
-    <h3 style="margin:0 0 1rem 0">Schüler-Verwaltung</h3>
-    <p style="color:var(--muted);margin-bottom:1rem">Externe Schüler können sich nur bei <strong>ausbildungen-public.html</strong> anmelden und haben keinen Zugriff auf das Hauptsystem.</p>
+    <h3 style="margin:0 0 1rem 0">Externe Zugänge</h3>
+    <p style="color:var(--muted);margin-bottom:1rem">Externe Teilnehmer können sich mit ihrem 3-Wort-Code bei <strong>ausbildungen-public.html</strong> anmelden.</p>
     
-    <div style="margin-bottom:1.5rem">
-      <button class="btn primary" onclick="openNewStudentModal()">
-        <i class="fas fa-user-plus"></i> Neuen Schüler anlegen
+    <div class="actions">
+      <button class="btn primary" onclick="openNewAccessModal()">
+        <i class="fas fa-key"></i> Neuen Zugang erstellen
       </button>
     </div>
     
-    <div id="students-list">
-      <div class="center-muted">Lade Schüler...</div>
+    <div id="access-list">
+      <div class="center-muted">Lade Zugänge...</div>
     </div>
   </div>
 </div>
@@ -553,7 +657,7 @@
 <!-- New Course Modal -->
 <div class="modal" id="newCourseModal">
   <div class="modal-box">
-    <h3 id="courseModalTitle">Neuer Kurs</h3>
+    <h3 id="courseModalTitle">Neue Ausbildung</h3>
     <div class="form-grid">
       <div class="form-group">
         <label>Titel *</label>
@@ -561,11 +665,11 @@
       </div>
       <div class="form-group">
         <label>Beschreibung</label>
-        <textarea id="course-description" rows="3" placeholder="Kurzbeschreibung des Kursinhalts"></textarea>
+        <textarea id="course-description" rows="3" placeholder="Kurzbeschreibung"></textarea>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
         <div class="form-group">
-          <label>Kurstyp</label>
+          <label>Typ</label>
           <select id="course-type">
             <option value="präsenz">Präsenz</option>
             <option value="online">Online</option>
@@ -573,37 +677,9 @@
           </select>
         </div>
         <div class="form-group">
-          <label>Max. Teilnehmer</label>
-          <input type="number" id="course-max" min="0" value="20">
+          <label>Dozent</label>
+          <input type="text" id="course-instructor" placeholder="Name">
         </div>
-      </div>
-      <div class="form-group">
-        <label>Dozent/Trainer</label>
-        <input type="text" id="course-instructor" placeholder="Name des Dozenten">
-      </div>
-      <div class="form-group">
-        <label>Lernziele/Kompetenzen</label>
-        <div style="display:flex;gap:.5rem;margin-bottom:.5rem">
-          <input type="text" id="competency-input" placeholder="z.B. Reanimation" style="flex:1">
-          <button class="btn" onclick="addCompetency()">
-            <i class="fas fa-plus"></i> Hinzufügen
-          </button>
-        </div>
-        <div id="competencies-list" class="competencies"></div>
-      </div>
-      <div class="form-group">
-        <label>Dozenten-Material (aus Dateien)</label>
-        <button class="btn" onclick="openFilePicker('instructor')">
-          <i class="fas fa-folder-open"></i> Dateien auswählen
-        </button>
-        <div id="instructor-files-list" class="file-list"></div>
-      </div>
-      <div class="form-group">
-        <label>Lernmaterial für Teilnehmer</label>
-        <button class="btn" onclick="openFilePicker('student')">
-          <i class="fas fa-folder-open"></i> Dateien auswählen
-        </button>
-        <div id="student-files-list" class="file-list"></div>
       </div>
     </div>
     <div style="display:flex;gap:.5rem;justify-content:flex-end;margin-top:1.5rem">
@@ -615,45 +691,15 @@
   </div>
 </div>
 
-<!-- Course Details Modal -->
-<div class="modal" id="courseDetailsModal">
-  <div class="modal-box">
-    <h3 id="courseDetailsTitle">Kurs-Details</h3>
-    <div id="courseDetailsBody"></div>
-    <div style="display:flex;gap:.5rem;justify-content:flex-end;margin-top:1.5rem">
-      <button class="btn" onclick="closeCourseDetailsModal()">Schließen</button>
-      <button class="btn primary" onclick="editCurrentCourse()">
-        <i class="fas fa-edit"></i> Bearbeiten
-      </button>
-    </div>
-  </div>
-</div>
-
-<!-- File Picker Modal -->
-<div class="modal" id="filePickerModal">
-  <div class="modal-box">
-    <h3>Dateien auswählen</h3>
-    <div id="file-picker-grid" class="grid" style="max-height:400px;overflow-y:auto">
-      <div class="center-muted">Lade Dateien...</div>
-    </div>
-    <div style="display:flex;gap:.5rem;justify-content:flex-end;margin-top:1.5rem">
-      <button class="btn" onclick="closeFilePicker()">Abbrechen</button>
-      <button class="btn primary" onclick="confirmFileSelection()">
-        <i class="fas fa-check"></i> Auswählen
-      </button>
-    </div>
-  </div>
-</div>
-
 <!-- New Session Modal -->
 <div class="modal" id="newSessionModal">
   <div class="modal-box" style="max-width:600px">
     <h3>Neuer Termin</h3>
     <div class="form-grid">
       <div class="form-group">
-        <label>Kurs auswählen *</label>
+        <label>Ausbildung *</label>
         <select id="session-course">
-          <option value="">-- Kurs wählen --</option>
+          <option value="">-- Auswählen --</option>
         </select>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem">
@@ -663,11 +709,11 @@
         </div>
         <div class="form-group">
           <label>Von</label>
-          <input type="time" id="session-start">
+          <input type="time" id="session-start" value="09:00">
         </div>
         <div class="form-group">
           <label>Bis</label>
-          <input type="time" id="session-end">
+          <input type="time" id="session-end" value="17:00">
         </div>
       </div>
       <div class="form-group">
@@ -675,16 +721,16 @@
         <input type="text" id="session-location" placeholder="z.B. Schulungsraum A">
       </div>
       <div class="form-group">
-        <label>Teilnehmer einladen</label>
+        <label>Teilnehmer</label>
         <button class="btn" onclick="openParticipantSelector()">
-          <i class="fas fa-users"></i> Teilnehmer auswählen (<span id="selected-participants-count">0</span>)
+          <i class="fas fa-users"></i> Auswählen (<span id="selected-count">0</span>)
         </button>
       </div>
     </div>
     <div style="display:flex;gap:.5rem;justify-content:flex-end;margin-top:1.5rem">
       <button class="btn" onclick="closeNewSessionModal()">Abbrechen</button>
       <button class="btn primary" onclick="saveSession()">
-        <i class="fas fa-save"></i> Speichern & Einladungen versenden
+        <i class="fas fa-save"></i> Speichern
       </button>
     </div>
   </div>
@@ -694,9 +740,7 @@
 <div class="modal" id="participantSelectorModal">
   <div class="modal-box" style="max-width:500px">
     <h3>Teilnehmer auswählen</h3>
-    <div id="participant-selector-list" style="max-height:400px;overflow-y:auto">
-      <div class="center-muted">Lade Benutzer...</div>
-    </div>
+    <div id="participant-selector-list" style="max-height:400px;overflow-y:auto"></div>
     <div style="display:flex;gap:.5rem;justify-content:flex-end;margin-top:1.5rem">
       <button class="btn primary" onclick="closeParticipantSelector()">
         <i class="fas fa-check"></i> Fertig
@@ -716,84 +760,124 @@
   </div>
 </div>
 
-<!-- Select Course for Questions Modal -->
-<div class="modal" id="selectCourseModal">
+<!-- New Member Modal -->
+<div class="modal" id="newMemberModal">
   <div class="modal-box" style="max-width:500px">
-    <h3>Kurs für Online-Fragen wählen</h3>
-    <div class="form-group">
-      <label>Kurs auswählen</label>
-      <select id="questions-course-select">
-        <option value="">-- Kurs wählen --</option>
-      </select>
-    </div>
-    <div style="display:flex;gap:.5rem;justify-content:flex-end;margin-top:1.5rem">
-      <button class="btn" onclick="closeSelectCourseForQuestions()">Abbrechen</button>
-      <button class="btn primary" onclick="confirmCourseForQuestions()">
-        <i class="fas fa-check"></i> Weiter
-      </button>
-    </div>
-  </div>
-</div>
-
-<!-- Add Question Modal -->
-<div class="modal" id="addQuestionModal">
-  <div class="modal-box" style="max-width:600px">
-    <h3>Frage hinzufügen</h3>
+    <h3>Neues Team-Mitglied</h3>
     <div class="form-grid">
       <div class="form-group">
-        <label>Frage *</label>
-        <textarea id="question-text" rows="3" placeholder="Frage eingeben..."></textarea>
+        <label>Name *</label>
+        <input type="text" id="member-name" placeholder="Max Mustermann">
       </div>
       <div class="form-group">
-        <label>Fragetyp</label>
-        <select id="question-type">
-          <option value="single_choice">Single Choice (eine Antwort)</option>
-          <option value="multiple_choice">Multiple Choice (mehrere Antworten)</option>
-          <option value="text">Freitext</option>
-        </select>
+        <label>E-Mail *</label>
+        <input type="email" id="member-email" placeholder="max@example.com">
       </div>
-      <div id="answer-options-container" class="form-group">
-        <label>Antwortmöglichkeiten</label>
-        <div id="answer-options-list"></div>
-        <button class="btn btn-sm" onclick="addAnswerOption()">
-          <i class="fas fa-plus"></i> Option hinzufügen
-        </button>
+      <div class="form-group">
+        <label>Passwort *</label>
+        <input type="password" id="member-password" placeholder="Mindestens 8 Zeichen">
       </div>
     </div>
     <div style="display:flex;gap:.5rem;justify-content:flex-end;margin-top:1.5rem">
-      <button class="btn" onclick="closeAddQuestionModal()">Abbrechen</button>
-      <button class="btn primary" onclick="saveQuestion()">
+      <button class="btn" onclick="closeNewMemberModal()">Abbrechen</button>
+      <button class="btn primary" onclick="saveMember()">
         <i class="fas fa-save"></i> Speichern
       </button>
     </div>
   </div>
 </div>
 
-<!-- New Student Modal -->
-<div class="modal" id="newStudentModal">
+<!-- New Access Modal -->
+<div class="modal" id="newAccessModal">
   <div class="modal-box" style="max-width:500px">
-    <h3>Neuen Schüler anlegen</h3>
+    <h3>Neuer externer Zugang</h3>
     <div class="form-grid">
       <div class="form-group">
         <label>Name *</label>
-        <input type="text" id="student-name" placeholder="z.B. Max Mustermann">
+        <input type="text" id="access-name" placeholder="Max Mustermann">
       </div>
       <div class="form-group">
         <label>E-Mail *</label>
-        <input type="email" id="student-email" placeholder="max@example.com">
+        <input type="email" id="access-email" placeholder="max@example.com">
       </div>
       <div class="form-group">
         <label>Passwort *</label>
-        <input type="password" id="student-password" placeholder="Mindestens 8 Zeichen">
+        <input type="password" id="access-password" placeholder="Mindestens 8 Zeichen">
       </div>
       <div class="form-group">
-        <label>Zugangscode (optional)</label>
-        <input type="text" id="student-code" placeholder="z.B. 2024-FFW">
+        <label>Zugangscode (wird automatisch generiert)</label>
+        <div class="access-code-box">
+          <div style="color:var(--muted);font-size:.9rem">3-Wort-Code wie:</div>
+          <div class="access-code" id="preview-code">apfel.tisch.mond</div>
+          <button class="btn btn-sm" onclick="generatePreviewCode()">
+            <i class="fas fa-sync"></i> Neu generieren
+          </button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Zugewiesene Kurse</label>
+        <button class="btn" onclick="openCourseAssignment()">
+          <i class="fas fa-book"></i> Kurse zuweisen (<span id="assigned-courses-count">0</span>)
+        </button>
       </div>
     </div>
     <div style="display:flex;gap:.5rem;justify-content:flex-end;margin-top:1.5rem">
-      <button class="btn" onclick="closeNewStudentModal()">Abbrechen</button>
-      <button class="btn primary" onclick="saveStudent()">
+      <button class="btn" onclick="closeNewAccessModal()">Abbrechen</button>
+      <button class="btn primary" onclick="saveAccess()">
+        <i class="fas fa-save"></i> Speichern
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Course Assignment Modal -->
+<div class="modal" id="courseAssignmentModal">
+  <div class="modal-box" style="max-width:500px">
+    <h3>Kurse zuweisen</h3>
+    <div id="course-assignment-list" style="max-height:400px;overflow-y:auto"></div>
+    <div style="display:flex;gap:.5rem;justify-content:flex-end;margin-top:1.5rem">
+      <button class="btn primary" onclick="closeCourseAssignment()">
+        <i class="fas fa-check"></i> Fertig
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Learning Module Editor Modal -->
+<div class="modal" id="learningModuleModal">
+  <div class="modal-box">
+    <h3 id="learningModuleTitle">Lernmodul bearbeiten</h3>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Lerninhalt (HTML/Markdown)</label>
+        <textarea id="learning-content-editor" rows="15" placeholder="Inhalt eingeben..."></textarea>
+      </div>
+    </div>
+    <div style="display:flex;gap:.5rem;justify-content:flex-end;margin-top:1.5rem">
+      <button class="btn" onclick="closeLearningModuleModal()">Abbrechen</button>
+      <button class="btn primary" onclick="saveLearningModule()">
+        <i class="fas fa-save"></i> Speichern
+      </button>
+      <button class="btn primary" onclick="openQuizEditor()">
+        <i class="fas fa-question-circle"></i> Kompetenzprüfung
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Quiz Editor Modal -->
+<div class="modal" id="quizEditorModal">
+  <div class="modal-box">
+    <h3>Kompetenzprüfung</h3>
+    <div id="quiz-questions-list"></div>
+    <div style="margin-top:1rem">
+      <button class="btn" onclick="addQuizQuestion()">
+        <i class="fas fa-plus"></i> Frage hinzufügen
+      </button>
+    </div>
+    <div style="display:flex;gap:.5rem;justify-content:flex-end;margin-top:1.5rem">
+      <button class="btn" onclick="closeQuizEditor()">Schließen</button>
+      <button class="btn primary" onclick="saveQuiz()">
         <i class="fas fa-save"></i> Speichern
       </button>
     </div>
@@ -827,18 +911,20 @@
   let courses = [];
   let sessions = [];
   let allUsers = [];
-  let allFiles = [];
-  let students = [];
-  let currentEditCourse = null;
-  let currentViewCourse = null;
-  let selectedInstructorFiles = [];
-  let selectedStudentFiles = [];
-  let competenciesList = [];
-  let currentFilePickerType = null;
+  let externalAccess = [];
+  let currentMonth = new Date().getMonth();
+  let currentYear = new Date().getFullYear();
   let selectedParticipants = [];
-  let currentQuestionsCourse = null;
-  let answerOptions = [];
-  let correctAnswers = [];
+  let assignedCourses = [];
+  let currentEditCourse = null;
+  let currentLearningCourse = null;
+  let previewAccessCode = '';
+  
+  const wordLists = {
+    adjectives: ['schnell', 'blau', 'groß', 'klein', 'rot', 'grün', 'gelb', 'hell', 'dunkel', 'stark', 'schwach', 'frisch', 'alt', 'neu', 'warm', 'kalt', 'süß', 'sauer', 'laut', 'leise'],
+    nouns: ['apfel', 'baum', 'haus', 'tisch', 'stuhl', 'buch', 'auto', 'berg', 'fluss', 'stern', 'mond', 'sonne', 'blume', 'vogel', 'fisch', 'hund', 'katze', 'pferd', 'wind', 'meer'],
+    verbs: ['laufen', 'springen', 'singen', 'tanzen', 'malen', 'lesen', 'schreiben', 'kochen', 'backen', 'spielen', 'denken', 'träumen', 'lachen', 'weinen', 'fliegen', 'schwimmen', 'klettern', 'hören', 'sehen', 'fühlen']
+  };
 
   // ========================================
   // HELPERS
@@ -863,8 +949,20 @@
 
   function copyToClipboard(text) {
     navigator.clipboard.writeText(text);
-    showMsg('✅ In Zwischenablage kopiert!');
+    showMsg('✅ Kopiert!');
   }
+
+  function generateAccessCode() {
+    const adj = wordLists.adjectives[Math.floor(Math.random() * wordLists.adjectives.length)];
+    const noun = wordLists.nouns[Math.floor(Math.random() * wordLists.nouns.length)];
+    const verb = wordLists.verbs[Math.floor(Math.random() * wordLists.verbs.length)];
+    return `${adj}.${noun}.${verb}`;
+  }
+
+  window.generatePreviewCode = () => {
+    previewAccessCode = generateAccessCode();
+    document.getElementById('preview-code').textContent = previewAccessCode;
+  };
 
   // ========================================
   // TAB SWITCHING
@@ -877,15 +975,128 @@
       document.querySelectorAll('.tab-content').forEach(tc => tc.style.display = 'none');
       document.getElementById('tab-' + tab.dataset.tab).style.display = 'block';
       
-      // Load data for active tab
+      // Load data
+      if (tab.dataset.tab === 'calendar') renderCalendar();
       if (tab.dataset.tab === 'courses') loadCourses();
-      if (tab.dataset.tab === 'sessions') loadSessions();
-      if (tab.dataset.tab === 'learning') loadLearning();
       if (tab.dataset.tab === 'team') loadTeam();
       if (tab.dataset.tab === 'statistics') loadStatistics();
-      if (tab.dataset.tab === 'settings') loadStudents();
+      if (tab.dataset.tab === 'learning') loadLearning();
+      if (tab.dataset.tab === 'settings') loadSettings();
     };
   });
+
+  // ========================================
+  // CALENDAR
+  // ========================================
+  async function renderCalendar() {
+    const monthNames = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
+    const dayNames = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
+    
+    document.getElementById('calendar-title').textContent = `${monthNames[currentMonth]} ${currentYear}`;
+    
+    const firstDay = new Date(currentYear, currentMonth, 1).getDay();
+    const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+    const today = new Date();
+    
+    // Load sessions for this month
+    const startDate = new Date(currentYear, currentMonth, 1).toISOString().split('T')[0];
+    const endDate = new Date(currentYear, currentMonth + 1, 0).toISOString().split('T')[0];
+    
+    const monthSessions = sessions.filter(s => s.date >= startDate && s.date <= endDate);
+    
+    let html = '';
+    
+    // Day headers
+    dayNames.forEach(day => {
+      html += `<div class="calendar-day-header">${day}</div>`;
+    });
+    
+    // Empty cells before first day
+    for (let i = 0; i < firstDay; i++) {
+      html += '<div class="calendar-day other-month"></div>';
+    }
+    
+    // Days
+    for (let day = 1; day <= daysInMonth; day++) {
+      const date = new Date(currentYear, currentMonth, day);
+      const dateStr = date.toISOString().split('T')[0];
+      const isToday = date.toDateString() === today.toDateString();
+      
+      const daySessions = monthSessions.filter(s => s.date === dateStr);
+      
+      html += `
+        <div class="calendar-day ${isToday ? 'today' : ''}" onclick="openDayDetails('${dateStr}')">
+          <div class="calendar-day-number">${day}</div>
+          ${daySessions.map(s => {
+            const course = courses.find(c => c.id === s.course_id);
+            return `<div class="calendar-event">${course ? course.title : 'Termin'}</div>`;
+          }).join('')}
+        </div>
+      `;
+    }
+    
+    document.getElementById('calendar-grid').innerHTML = html;
+    
+    // Upcoming sessions
+    const upcoming = sessions
+      .filter(s => new Date(s.date) >= today)
+      .sort((a, b) => new Date(a.date) - new Date(b.date))
+      .slice(0, 5);
+    
+    const upcomingEl = document.getElementById('upcoming-sessions');
+    
+    if (!upcoming.length) {
+      upcomingEl.innerHTML = '<div class="empty"><i class="fas fa-calendar"></i><div>Keine anstehenden Termine</div></div>';
+    } else {
+      upcomingEl.innerHTML = upcoming.map(s => {
+        const course = courses.find(c => c.id === s.course_id);
+        return `
+          <div class="session-item">
+            <div>
+              <div class="session-date">${formatDate(s.date)} ${s.start_time ? `• ${formatTime(s.start_time)}` : ''}</div>
+              <div class="session-info">${course ? course.title : 'Unbekannt'} ${s.location ? `• ${s.location}` : ''}</div>
+            </div>
+            <button class="btn btn-sm" onclick="openSessionDetails('${s.id}')">
+              <i class="fas fa-eye"></i> Details
+            </button>
+          </div>
+        `;
+      }).join('');
+    }
+  }
+
+  window.previousMonth = () => {
+    currentMonth--;
+    if (currentMonth < 0) {
+      currentMonth = 11;
+      currentYear--;
+    }
+    renderCalendar();
+  };
+
+  window.nextMonth = () => {
+    currentMonth++;
+    if (currentMonth > 11) {
+      currentMonth = 0;
+      currentYear++;
+    }
+    renderCalendar();
+  };
+
+  window.today = () => {
+    const now = new Date();
+    currentMonth = now.getMonth();
+    currentYear = now.getFullYear();
+    renderCalendar();
+  };
+
+  window.openDayDetails = (dateStr) => {
+    const daySessions = sessions.filter(s => s.date === dateStr);
+    if (!daySessions.length) return;
+    if (daySessions.length === 1) {
+      openSessionDetails(daySessions[0].id);
+    }
+  };
 
   // ========================================
   // LOAD COURSES
@@ -897,154 +1108,73 @@
         sort: '-created'
       });
       
+      sessions = await pb.collection('training_sessions').getFullList({
+        filter: `organization_id = "${currentUser.organization_id}"`,
+        sort: '-date'
+      });
+      
       renderCourses();
     } catch(e) {
-      console.error('Error loading courses:', e);
-      document.getElementById('courses-grid').innerHTML = `<div class="error">Fehler: ${e.message}</div>`;
+      console.error('Error:', e);
+      document.getElementById('courses-list').innerHTML = `<div class="error">Fehler: ${e.message}</div>`;
     }
   }
 
   function renderCourses() {
-    const grid = document.getElementById('courses-grid');
+    const list = document.getElementById('courses-list');
     
     if (!courses.length) {
-      grid.innerHTML = `
-        <div class="empty">
-          <i class="fas fa-book"></i>
-          <div style="font-weight:700;margin-bottom:.5rem">Noch keine Kurse</div>
-          <div>Erstelle deinen ersten Schulungskurs</div>
-        </div>
-      `;
+      list.innerHTML = '<div class="empty"><i class="fas fa-book"></i><div>Noch keine Ausbildungen</div></div>';
       return;
     }
     
-    grid.innerHTML = courses.map(course => `
-      <div class="card clickable" onclick="openCourseDetails('${course.id}')">
-        <div class="card-header">
-          <div>
-            <div class="card-title">${course.title}</div>
-            <span class="badge ${course.type}">${course.type}</span>
-          </div>
-        </div>
-        ${course.description ? `<div class="card-desc">${course.description.slice(0, 150)}${course.description.length > 150 ? '...' : ''}</div>` : ''}
-        ${course.instructor ? `<div class="card-meta"><i class="fas fa-user"></i> ${course.instructor}</div>` : ''}
-        ${course.competencies && course.competencies.length ? `
-          <div class="competencies">
-            ${course.competencies.slice(0, 3).map(c => `<span class="competency">${c}</span>`).join('')}
-            ${course.competencies.length > 3 ? `<span class="competency">+${course.competencies.length - 3}</span>` : ''}
-          </div>
-        ` : ''}
-        <div class="card-meta">
-          ${course.max_participants ? `Max. ${course.max_participants} Teilnehmer` : 'Unbegrenzt'}
-          ${course.student_files && course.student_files.length ? ` • ${course.student_files.length} Dateien` : ''}
-        </div>
-      </div>
-    `).join('');
-  }
-
-  // ========================================
-  // COURSE DETAILS
-  // ========================================
-  window.openCourseDetails = async (courseId) => {
-    const course = courses.find(c => c.id === courseId);
-    if (!course) return;
-    
-    currentViewCourse = courseId;
-    
-    document.getElementById('courseDetailsTitle').textContent = course.title;
-    
-    let html = `
-      <div style="background:#f9fafb;padding:1.5rem;border-radius:.75rem;margin-bottom:1.5rem">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem">
-          <div>
-            <div style="font-size:.85rem;color:var(--muted);margin-bottom:.25rem">Typ</div>
-            <div><span class="badge ${course.type}">${course.type}</span></div>
-          </div>
-          <div>
-            <div style="font-size:.85rem;color:var(--muted);margin-bottom:.25rem">Max. Teilnehmer</div>
-            <div style="font-weight:700">${course.max_participants || 'Unbegrenzt'}</div>
-          </div>
-          ${course.instructor ? `
-            <div style="grid-column:1/-1">
-              <div style="font-size:.85rem;color:var(--muted);margin-bottom:.25rem">Dozent</div>
-              <div style="font-weight:700">${course.instructor}</div>
+    list.innerHTML = courses.map(course => {
+      const courseSessions = sessions.filter(s => s.course_id === course.id);
+      
+      return `
+        <div class="course-card">
+          <div class="course-header">
+            <div>
+              <div class="course-title">${course.title}</div>
+              <span class="badge ${course.type}">${course.type}</span>
             </div>
-          ` : ''}
-        </div>
-        ${course.description ? `<div style="color:var(--text)">${course.description}</div>` : ''}
-      </div>
-    `;
-    
-    if (course.competencies && course.competencies.length) {
-      html += `
-        <h4 style="margin:0 0 .75rem 0">Lernziele</h4>
-        <div class="competencies" style="margin-bottom:1.5rem">
-          ${course.competencies.map(c => `<span class="competency">${c}</span>`).join('')}
+            <button class="btn btn-sm" onclick="editCourse('${course.id}')">
+              <i class="fas fa-edit"></i>
+            </button>
+          </div>
+          ${course.description ? `<div class="course-meta">${course.description}</div>` : ''}
+          ${course.instructor ? `<div class="course-meta"><i class="fas fa-user"></i> ${course.instructor}</div>` : ''}
+          
+          <div class="course-sessions">
+            ${courseSessions.length === 0 ? '<div style="color:var(--muted);font-size:.85rem">Keine Termine</div>' : ''}
+            ${courseSessions.slice(0, 3).map(s => `
+              <div class="session-item" onclick="openSessionDetails('${s.id}')">
+                <div>
+                  <div class="session-date">${formatDate(s.date)} ${s.start_time ? `• ${formatTime(s.start_time)}` : ''}</div>
+                  <div class="session-info">${s.location || 'Kein Ort'} • <span class="badge ${s.status}">${s.status}</span></div>
+                </div>
+                <button class="btn btn-sm">
+                  <i class="fas fa-eye"></i>
+                </button>
+              </div>
+            `).join('')}
+            ${courseSessions.length > 3 ? `<div style="color:var(--muted);font-size:.85rem;text-align:center">+${courseSessions.length - 3} weitere Termine</div>` : ''}
+          </div>
         </div>
       `;
-    }
-    
-    if (course.student_files && course.student_files.length) {
-      html += `
-        <h4 style="margin:0 0 .75rem 0">Lernmaterial</h4>
-        <div style="margin-bottom:1.5rem">
-          ${course.student_files.map(fid => {
-            const file = allFiles.find(f => f.id === fid);
-            return file ? `<div class="file-item"><span>${file.name}</span></div>` : '';
-          }).join('')}
-        </div>
-      `;
-    }
-    
-    document.getElementById('courseDetailsBody').innerHTML = html;
-    document.getElementById('courseDetailsModal').classList.add('show');
-  };
-
-  window.closeCourseDetailsModal = () => {
-    document.getElementById('courseDetailsModal').classList.remove('show');
-    currentViewCourse = null;
-  };
-
-  window.editCurrentCourse = () => {
-    if (!currentViewCourse) return;
-    const course = courses.find(c => c.id === currentViewCourse);
-    if (!course) return;
-    
-    closeCourseDetailsModal();
-    
-    currentEditCourse = currentViewCourse;
-    document.getElementById('courseModalTitle').textContent = 'Kurs bearbeiten';
-    document.getElementById('course-title').value = course.title;
-    document.getElementById('course-description').value = course.description || '';
-    document.getElementById('course-type').value = course.type;
-    document.getElementById('course-max').value = course.max_participants || 0;
-    document.getElementById('course-instructor').value = course.instructor || '';
-    competenciesList = course.competencies || [];
-    selectedInstructorFiles = course.instructor_files || [];
-    selectedStudentFiles = course.student_files || [];
-    
-    renderCompetencies();
-    renderSelectedFiles();
-    
-    document.getElementById('newCourseModal').classList.add('show');
-  };
+    }).join('');
+  }
 
   // ========================================
   // NEW/EDIT COURSE
   // ========================================
   window.openNewCourseModal = () => {
     currentEditCourse = null;
-    document.getElementById('courseModalTitle').textContent = 'Neuer Kurs';
+    document.getElementById('courseModalTitle').textContent = 'Neue Ausbildung';
     document.getElementById('course-title').value = '';
     document.getElementById('course-description').value = '';
     document.getElementById('course-type').value = 'präsenz';
-    document.getElementById('course-max').value = '20';
     document.getElementById('course-instructor').value = '';
-    competenciesList = [];
-    selectedInstructorFiles = [];
-    selectedStudentFiles = [];
-    renderCompetencies();
-    renderSelectedFiles();
     document.getElementById('newCourseModal').classList.add('show');
   };
 
@@ -1052,45 +1182,21 @@
     document.getElementById('newCourseModal').classList.remove('show');
   };
 
-  window.addCompetency = () => {
-    const input = document.getElementById('competency-input');
-    const value = input.value.trim();
+  window.editCourse = (courseId) => {
+    const course = courses.find(c => c.id === courseId);
+    if (!course) return;
     
-    if (!value) return;
-    if (competenciesList.includes(value)) {
-      alert('Kompetenz bereits vorhanden');
-      return;
-    }
-    
-    competenciesList.push(value);
-    input.value = '';
-    renderCompetencies();
-  };
-
-  function renderCompetencies() {
-    const list = document.getElementById('competencies-list');
-    
-    if (!competenciesList.length) {
-      list.innerHTML = '<div style="color:var(--muted);font-size:.85rem">Keine Lernziele hinzugefügt</div>';
-      return;
-    }
-    
-    list.innerHTML = competenciesList.map((comp, idx) => `
-      <span class="competency" style="display:inline-flex;align-items:center;gap:.5rem">
-        ${comp}
-        <i class="fas fa-times" onclick="removeCompetency(${idx})" style="cursor:pointer"></i>
-      </span>
-    `).join('');
-  }
-
-  window.removeCompetency = (idx) => {
-    competenciesList.splice(idx, 1);
-    renderCompetencies();
+    currentEditCourse = courseId;
+    document.getElementById('courseModalTitle').textContent = 'Ausbildung bearbeiten';
+    document.getElementById('course-title').value = course.title;
+    document.getElementById('course-description').value = course.description || '';
+    document.getElementById('course-type').value = course.type;
+    document.getElementById('course-instructor').value = course.instructor || '';
+    document.getElementById('newCourseModal').classList.add('show');
   };
 
   window.saveCourse = async () => {
     const title = document.getElementById('course-title').value.trim();
-    
     if (!title) {
       alert('Bitte Titel eingeben');
       return;
@@ -1100,239 +1206,40 @@
       title,
       description: document.getElementById('course-description').value.trim(),
       type: document.getElementById('course-type').value,
-      max_participants: parseInt(document.getElementById('course-max').value) || 0,
       instructor: document.getElementById('course-instructor').value.trim(),
-      competencies: competenciesList,
-      instructor_files: selectedInstructorFiles,
-      student_files: selectedStudentFiles,
       organization_id: currentUser.organization_id
     };
     
     try {
       if (currentEditCourse) {
         await pb.collection('training_courses').update(currentEditCourse, data);
-        showMsg('✅ Kurs aktualisiert!');
+        showMsg('✅ Ausbildung aktualisiert!');
       } else {
         await pb.collection('training_courses').create(data);
-        showMsg('✅ Kurs erstellt!');
+        showMsg('✅ Ausbildung erstellt!');
       }
       
       closeNewCourseModal();
       await loadCourses();
-      
     } catch(e) {
       alert('Fehler: ' + e.message);
     }
   };
 
   // ========================================
-  // FILE PICKER
-  // ========================================
-  window.openFilePicker = async (type) => {
-    currentFilePickerType = type;
-    
-    try {
-      allFiles = await pb.collection('files').getFullList({
-        filter: `organization_id = "${currentUser.organization_id}" && is_folder = false`,
-        sort: 'name'
-      });
-      
-      const grid = document.getElementById('file-picker-grid');
-      
-      if (!allFiles.length) {
-        grid.innerHTML = `
-          <div class="empty" style="grid-column:1/-1">
-            <i class="fas fa-folder-open"></i>
-            <div>Keine Dateien vorhanden</div>
-            <div style="font-size:.85rem;margin-top:.5rem">
-              <a href="dateien.html" style="color:var(--primary)">Zu Dateien wechseln</a>
-            </div>
-          </div>
-        `;
-      } else {
-        const selectedIds = type === 'instructor' ? selectedInstructorFiles : selectedStudentFiles;
-        
-        grid.innerHTML = allFiles.map(file => `
-          <div class="card" style="padding:1rem;cursor:pointer" onclick="toggleFileSelection('${file.id}')">
-            <div style="text-align:center;margin-bottom:.5rem">
-              <i class="fas fa-file" style="font-size:2rem;color:var(--muted)"></i>
-            </div>
-            <div style="font-weight:700;font-size:.85rem;margin-bottom:.25rem;word-break:break-word">${file.name}</div>
-            <div style="font-size:.75rem;color:var(--muted)">
-              ${file.file_size ? Math.round(file.file_size / 1024) + ' KB' : ''}
-            </div>
-            <div style="text-align:center;margin-top:.5rem">
-              <i class="fas fa-${selectedIds.includes(file.id) ? 'check-circle' : 'circle'}" style="color:${selectedIds.includes(file.id) ? 'var(--success)' : 'var(--muted)'}"></i>
-            </div>
-          </div>
-        `).join('');
-      }
-      
-      document.getElementById('filePickerModal').classList.add('show');
-      
-    } catch(e) {
-      alert('Fehler beim Laden der Dateien: ' + e.message);
-    }
-  };
-
-  window.toggleFileSelection = (fileId) => {
-    const selectedIds = currentFilePickerType === 'instructor' ? selectedInstructorFiles : selectedStudentFiles;
-    const idx = selectedIds.indexOf(fileId);
-    
-    if (idx >= 0) {
-      selectedIds.splice(idx, 1);
-    } else {
-      selectedIds.push(fileId);
-    }
-    
-    // Re-render file picker
-    openFilePicker(currentFilePickerType);
-  };
-
-  window.closeFilePicker = () => {
-    document.getElementById('filePickerModal').classList.remove('show');
-    currentFilePickerType = null;
-  };
-
-  window.confirmFileSelection = () => {
-    renderSelectedFiles();
-    closeFilePicker();
-  };
-
-  function renderSelectedFiles() {
-    const instructorList = document.getElementById('instructor-files-list');
-    const studentList = document.getElementById('student-files-list');
-    
-    if (!selectedInstructorFiles.length) {
-      instructorList.innerHTML = '<div style="color:var(--muted);font-size:.85rem">Keine Dateien ausgewählt</div>';
-    } else {
-      instructorList.innerHTML = selectedInstructorFiles.map((fileId, idx) => {
-        const file = allFiles.find(f => f.id === fileId);
-        return file ? `
-          <div class="file-item">
-            <span>${file.name}</span>
-            <i class="fas fa-times" onclick="removeSelectedFile('instructor', ${idx})" style="cursor:pointer;color:var(--primary)"></i>
-          </div>
-        ` : '';
-      }).join('');
-    }
-    
-    if (!selectedStudentFiles.length) {
-      studentList.innerHTML = '<div style="color:var(--muted);font-size:.85rem">Keine Dateien ausgewählt</div>';
-    } else {
-      studentList.innerHTML = selectedStudentFiles.map((fileId, idx) => {
-        const file = allFiles.find(f => f.id === fileId);
-        return file ? `
-          <div class="file-item">
-            <span>${file.name}</span>
-            <i class="fas fa-times" onclick="removeSelectedFile('student', ${idx})" style="cursor:pointer;color:var(--primary)"></i>
-          </div>
-        ` : '';
-      }).join('');
-    }
-  }
-
-  window.removeSelectedFile = (type, idx) => {
-    if (type === 'instructor') {
-      selectedInstructorFiles.splice(idx, 1);
-    } else {
-      selectedStudentFiles.splice(idx, 1);
-    }
-    renderSelectedFiles();
-  };
-
-  // ========================================
-  // LOAD SESSIONS
-  // ========================================
-  async function loadSessions() {
-    try {
-      sessions = await pb.collection('training_sessions').getFullList({
-        filter: `organization_id = "${currentUser.organization_id}"`,
-        expand: 'course_id',
-        sort: '-date'
-      });
-      
-      renderSessions();
-    } catch(e) {
-      console.error('Error loading sessions:', e);
-      document.getElementById('sessions-list').innerHTML = `<div class="error">Fehler: ${e.message}</div>`;
-    }
-  }
-
-  function renderSessions() {
-    const list = document.getElementById('sessions-list');
-    
-    if (!sessions.length) {
-      list.innerHTML = `
-        <div class="empty">
-          <i class="fas fa-calendar"></i>
-          <div style="font-weight:700;margin-bottom:.5rem">Noch keine Termine</div>
-          <div>Erstelle deinen ersten Schulungstermin</div>
-        </div>
-      `;
-      return;
-    }
-    
-    list.innerHTML = '<div class="session-list">' + sessions.map(session => {
-      const course = session.expand?.course_id;
-      const inviteLink = `${window.location.origin}/ausbildungen-invite.html?session=${session.id}`;
-      
-      return `
-        <div class="session-card">
-          <div class="session-date">
-            <i class="fas fa-calendar"></i> ${formatDate(session.date)}
-            ${session.start_time ? ` • ${formatTime(session.start_time)}` : ''}
-            ${session.end_time ? ` - ${formatTime(session.end_time)}` : ''}
-          </div>
-          <div style="font-weight:700;font-size:1.05rem;margin-bottom:.5rem">
-            ${course ? course.title : 'Unbekannter Kurs'}
-          </div>
-          ${session.location ? `<div class="session-info"><i class="fas fa-map-marker-alt"></i> ${session.location}</div>` : ''}
-          <div class="session-info">
-            <span class="badge ${session.status}">${session.status}</span>
-          </div>
-          
-          <div style="margin:1rem 0">
-            <div style="font-size:.85rem;font-weight:700;margin-bottom:.5rem">Einladungslink:</div>
-            <div class="copy-box">
-              <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${inviteLink}</span>
-              <button class="btn btn-sm" onclick="copyToClipboard('${inviteLink}')">
-                <i class="fas fa-copy"></i> Kopieren
-              </button>
-            </div>
-          </div>
-          
-          <div class="session-actions">
-            <button class="btn" onclick="openSessionDetails('${session.id}')">
-              <i class="fas fa-eye"></i> Details
-            </button>
-            ${session.status === 'geplant' ? `
-              <button class="btn" onclick="sendInvitations('${session.id}')">
-                <i class="fas fa-envelope"></i> ${session.invitations_sent ? 'Erneut' : ''} Einladen
-              </button>
-            ` : ''}
-          </div>
-        </div>
-      `;
-    }).join('') + '</div>';
-  }
-
-  // ========================================
   // NEW SESSION
   // ========================================
   window.openNewSessionModal = async () => {
-    // Load courses for dropdown
-    const coursesSelect = document.getElementById('session-course');
-    coursesSelect.innerHTML = '<option value="">-- Kurs wählen --</option>' + 
+    const select = document.getElementById('session-course');
+    select.innerHTML = '<option value="">-- Auswählen --</option>' + 
       courses.map(c => `<option value="${c.id}">${c.title}</option>`).join('');
     
-    // Reset form
     document.getElementById('session-date').value = '';
     document.getElementById('session-start').value = '09:00';
     document.getElementById('session-end').value = '17:00';
     document.getElementById('session-location').value = '';
     selectedParticipants = [];
-    document.getElementById('selected-participants-count').textContent = '0';
+    document.getElementById('selected-count').textContent = '0';
     
     document.getElementById('newSessionModal').classList.add('show');
   };
@@ -1343,37 +1250,34 @@
 
   window.openParticipantSelector = async () => {
     try {
-      // Load all users from organization
       allUsers = await pb.collection('users').getFullList({
         filter: `organization_id = "${currentUser.organization_id}"`,
         sort: 'name'
       });
       
       const list = document.getElementById('participant-selector-list');
-      
-      list.innerHTML = '<div class="participant-list">' + allUsers.map(user => `
-        <div class="participant-row">
-          <label style="display:flex;align-items:center;gap:.75rem;cursor:pointer;flex:1">
+      list.innerHTML = allUsers.map(user => `
+        <div style="padding:.75rem;border-bottom:1px solid var(--border)">
+          <label style="display:flex;align-items:center;gap:.75rem;cursor:pointer">
             <input type="checkbox" ${selectedParticipants.includes(user.id) ? 'checked' : ''} 
               onchange="toggleParticipant('${user.id}')">
             <div>
-              <div class="participant-name">${user.name || user.email}</div>
-              <div class="participant-status">${user.email}</div>
+              <div style="font-weight:700">${user.name || user.email}</div>
+              <div style="font-size:.85rem;color:var(--muted)">${user.email}</div>
             </div>
           </label>
         </div>
-      `).join('') + '</div>';
+      `).join('');
       
       document.getElementById('participantSelectorModal').classList.add('show');
-      
     } catch(e) {
-      alert('Fehler beim Laden der Benutzer: ' + e.message);
+      alert('Fehler: ' + e.message);
     }
   };
 
   window.closeParticipantSelector = () => {
     document.getElementById('participantSelectorModal').classList.remove('show');
-    document.getElementById('selected-participants-count').textContent = selectedParticipants.length;
+    document.getElementById('selected-count').textContent = selectedParticipants.length;
   };
 
   window.toggleParticipant = (userId) => {
@@ -1390,12 +1294,11 @@
     const date = document.getElementById('session-date').value;
     
     if (!courseId || !date) {
-      alert('Bitte Kurs und Datum auswählen');
+      alert('Bitte Ausbildung und Datum auswählen');
       return;
     }
     
     try {
-      // Create session
       const session = await pb.collection('training_sessions').create({
         course_id: courseId,
         date,
@@ -1407,7 +1310,6 @@
         organization_id: currentUser.organization_id
       });
       
-      // Create participant records
       for (const userId of selectedParticipants) {
         await pb.collection('training_participants').create({
           session_id: session.id,
@@ -1420,9 +1322,9 @@
       }
       
       closeNewSessionModal();
-      await loadSessions();
-      showMsg('✅ Termin erstellt und Einladungen versendet!');
-      
+      await loadCourses();
+      renderCalendar();
+      showMsg('✅ Termin erstellt!');
     } catch(e) {
       alert('Fehler: ' + e.message);
     }
@@ -1433,81 +1335,71 @@
   // ========================================
   window.openSessionDetails = async (sessionId) => {
     try {
-      const session = await pb.collection('training_sessions').getOne(sessionId, {
-        expand: 'course_id'
-      });
-      
+      const session = await pb.collection('training_sessions').getOne(sessionId);
+      const course = courses.find(c => c.id === session.course_id);
       const participants = await pb.collection('training_participants').getFullList({
         filter: `session_id = "${sessionId}"`,
         expand: 'user_id'
       });
       
-      const course = session.expand?.course_id;
+      document.getElementById('sessionDetailsTitle').textContent = course ? course.title : 'Termin';
       
-      document.getElementById('sessionDetailsTitle').textContent = course ? course.title : 'Termin-Details';
+      const inviteLink = `${window.location.origin}/ausbildungen-invite.html?session=${sessionId}`;
       
       let html = `
         <div style="background:#f9fafb;padding:1.5rem;border-radius:.75rem;margin-bottom:1.5rem">
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
             <div>
-              <div style="font-size:.85rem;color:var(--muted);margin-bottom:.25rem">Datum & Zeit</div>
+              <div style="font-size:.85rem;color:var(--muted)">Datum</div>
               <div style="font-weight:700">${formatDate(session.date)} ${session.start_time ? `• ${formatTime(session.start_time)} - ${formatTime(session.end_time)}` : ''}</div>
             </div>
             <div>
-              <div style="font-size:.85rem;color:var(--muted);margin-bottom:.25rem">Ort</div>
+              <div style="font-size:.85rem;color:var(--muted)">Ort</div>
               <div style="font-weight:700">${session.location || '-'}</div>
-            </div>
-            <div>
-              <div style="font-size:.85rem;color:var(--muted);margin-bottom:.25rem">Status</div>
-              <div><span class="badge ${session.status}">${session.status}</span></div>
-            </div>
-            <div>
-              <div style="font-size:.85rem;color:var(--muted);margin-bottom:.25rem">Teilnehmer</div>
-              <div style="font-weight:700">${participants.length}</div>
             </div>
           </div>
         </div>
         
-        <h4 style="margin:0 0 1rem 0">Teilnehmer</h4>
+        <div style="margin-bottom:1.5rem">
+          <div style="font-size:.85rem;font-weight:700;margin-bottom:.5rem">Einladungslink:</div>
+          <div class="copy-box">
+            <span style="flex:1;overflow:hidden;text-overflow:ellipsis">${inviteLink}</span>
+            <button class="btn btn-sm" onclick="copyToClipboard('${inviteLink}')">
+              <i class="fas fa-copy"></i>
+            </button>
+          </div>
+        </div>
+        
+        <h4 style="margin:0 0 1rem 0">Teilnehmer (${participants.length})</h4>
       `;
       
       if (!participants.length) {
-        html += '<div style="color:var(--muted);text-align:center;padding:1rem">Keine Teilnehmer eingeladen</div>';
+        html += '<div style="color:var(--muted);text-align:center;padding:1rem">Keine Teilnehmer</div>';
       } else {
-        html += '<div class="participant-list">';
-        
+        html += '<table class="table">';
+        html += '<thead><tr><th>Name</th><th>Status</th><th>Anwesend</th></tr></thead><tbody>';
         participants.forEach(p => {
           const user = p.expand?.user_id;
-          
           html += `
-            <div class="participant-row">
-              <div>
-                <div class="participant-name">${user ? (user.name || user.email) : 'Unbekannt'}</div>
-                <div class="participant-status">
-                  <span class="badge ${p.status}">${p.status}</span>
-                </div>
-              </div>
-              ${session.status === 'abgeschlossen' ? `
-                <div>
-                  <label style="display:flex;align-items:center;gap:.5rem">
-                    <input type="checkbox" ${p.attended ? 'checked' : ''} 
-                      onchange="updateAttendance('${p.id}', this.checked)">
-                    <span style="font-size:.85rem">Teilgenommen</span>
-                  </label>
-                </div>
-              ` : ''}
-            </div>
+            <tr>
+              <td style="font-weight:700">${user ? (user.name || user.email) : 'Unbekannt'}</td>
+              <td><span class="badge ${p.status}">${p.status}</span></td>
+              <td>
+                <label>
+                  <input type="checkbox" ${p.attended ? 'checked' : ''} 
+                    onchange="updateAttendance('${p.id}', this.checked)">
+                </label>
+              </td>
+            </tr>
           `;
         });
-        
-        html += '</div>';
+        html += '</tbody></table>';
       }
       
       document.getElementById('sessionDetailsBody').innerHTML = html;
       document.getElementById('sessionDetailsModal').classList.add('show');
-      
     } catch(e) {
-      alert('Fehler beim Laden: ' + e.message);
+      alert('Fehler: ' + e.message);
     }
   };
 
@@ -1521,443 +1413,163 @@
         attended,
         status: attended ? 'teilgenommen' : 'nicht_erschienen'
       });
-      
-      showMsg('✅ Teilnahme aktualisiert!');
-      
+      showMsg('✅ Aktualisiert!');
     } catch(e) {
       alert('Fehler: ' + e.message);
     }
   };
 
   // ========================================
-  // SEND INVITATIONS
-  // ========================================
-  window.sendInvitations = async (sessionId) => {
-    if (!confirm('Einladungen an alle Teilnehmer versenden?')) return;
-    
-    try {
-      await pb.collection('training_sessions').update(sessionId, {
-        invitations_sent: true
-      });
-      
-      // Update invitation_sent_at for all participants
-      const participants = await pb.collection('training_participants').getFullList({
-        filter: `session_id = "${sessionId}"`
-      });
-      
-      for (const p of participants) {
-        await pb.collection('training_participants').update(p.id, {
-          invitation_sent_at: new Date().toISOString()
-        });
-      }
-      
-      showMsg('✅ Einladungen versendet!');
-      await loadSessions();
-      
-    } catch(e) {
-      alert('Fehler: ' + e.message);
-    }
-  };
-
-  // ========================================
-  // LEARNING AREA
-  // ========================================
-  async function loadLearning() {
-    const content = document.getElementById('learning-content');
-    
-    if (!courses.length) {
-      content.innerHTML = `
-        <div class="empty">
-          <i class="fas fa-laptop"></i>
-          <div style="font-weight:700;margin-bottom:.5rem">Keine Kurse vorhanden</div>
-          <div>Erstelle zuerst einen Kurs im Kurse-Tab</div>
-        </div>
-      `;
-      return;
-    }
-    
-    let html = '';
-    
-    for (const course of courses) {
-      if (course.type !== 'online' && course.type !== 'hybrid') continue;
-      
-      try {
-        const questions = await pb.collection('training_questions').getFullList({
-          filter: `course_id = "${course.id}"`,
-          sort: 'order'
-        });
-        
-        html += `
-          <div class="card" style="margin-bottom:1rem">
-            <div class="card-title">${course.title}</div>
-            <div class="card-meta">${questions.length} Fragen</div>
-            <button class="btn btn-sm" onclick="manageCourseQuestions('${course.id}')">
-              <i class="fas fa-edit"></i> Fragen verwalten
-            </button>
-          </div>
-        `;
-      } catch(e) {
-        console.error('Error loading questions:', e);
-      }
-    }
-    
-    if (!html) {
-      content.innerHTML = `
-        <div class="empty">
-          <i class="fas fa-laptop"></i>
-          <div style="font-weight:700;margin-bottom:.5rem">Keine Online-Kurse</div>
-          <div>Erstelle einen Kurs mit Typ "Online" oder "Hybrid"</div>
-        </div>
-      `;
-    } else {
-      content.innerHTML = html;
-    }
-  }
-
-  window.openSelectCourseForQuestions = () => {
-    const select = document.getElementById('questions-course-select');
-    select.innerHTML = '<option value="">-- Kurs wählen --</option>' + 
-      courses.filter(c => c.type === 'online' || c.type === 'hybrid')
-        .map(c => `<option value="${c.id}">${c.title}</option>`).join('');
-    
-    document.getElementById('selectCourseModal').classList.add('show');
-  };
-
-  window.closeSelectCourseForQuestions = () => {
-    document.getElementById('selectCourseModal').classList.remove('show');
-  };
-
-  window.confirmCourseForQuestions = () => {
-    const courseId = document.getElementById('questions-course-select').value;
-    if (!courseId) {
-      alert('Bitte Kurs auswählen');
-      return;
-    }
-    
-    closeSelectCourseForQuestions();
-    manageCourseQuestions(courseId);
-  };
-
-  window.manageCourseQuestions = async (courseId) => {
-    currentQuestionsCourse = courseId;
-    const course = courses.find(c => c.id === courseId);
-    
-    try {
-      const questions = await pb.collection('training_questions').getFullList({
-        filter: `course_id = "${courseId}"`,
-        sort: 'order'
-      });
-      
-      const content = document.getElementById('learning-content');
-      
-      let html = `
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem">
-          <h3 style="margin:0">${course ? course.title : 'Fragen'}</h3>
-          <button class="btn primary" onclick="openAddQuestionModal()">
-            <i class="fas fa-plus"></i> Frage hinzufügen
-          </button>
-        </div>
-      `;
-      
-      if (!questions.length) {
-        html += `
-          <div class="empty">
-            <i class="fas fa-question-circle"></i>
-            <div style="font-weight:700;margin-bottom:.5rem">Noch keine Fragen</div>
-            <div>Füge die erste Frage hinzu</div>
-          </div>
-        `;
-      } else {
-        questions.forEach((q, idx) => {
-          html += `
-            <div class="question-card">
-              <div style="display:flex;justify-content:between;align-items:flex-start;margin-bottom:.75rem">
-                <div class="question-text" style="flex:1">
-                  ${idx + 1}. ${q.question}
-                  <div style="font-size:.85rem;color:var(--muted);margin-top:.25rem">
-                    Typ: ${q.question_type === 'single_choice' ? 'Single Choice' : q.question_type === 'multiple_choice' ? 'Multiple Choice' : 'Freitext'}
-                  </div>
-                </div>
-                <button class="btn btn-sm" onclick="deleteQuestion('${q.id}')" style="background:#fee2e2;color:var(--primary);border:none">
-                  <i class="fas fa-trash"></i>
-                </button>
-              </div>
-              ${q.options && q.options.length ? `
-                <div class="question-options">
-                  ${q.options.map((opt, oidx) => {
-                    const isCorrect = q.correct_answers && q.correct_answers.includes(oidx);
-                    return `
-                      <div class="question-option" style="border-color:${isCorrect ? 'var(--success)' : 'var(--border)'}">
-                        ${opt} ${isCorrect ? '<i class="fas fa-check" style="color:var(--success)"></i>' : ''}
-                      </div>
-                    `;
-                  }).join('')}
-                </div>
-              ` : ''}
-            </div>
-          `;
-        });
-      }
-      
-      content.innerHTML = html;
-      
-    } catch(e) {
-      alert('Fehler: ' + e.message);
-    }
-  };
-
-  window.openAddQuestionModal = () => {
-    document.getElementById('question-text').value = '';
-    document.getElementById('question-type').value = 'single_choice';
-    answerOptions = [];
-    correctAnswers = [];
-    renderAnswerOptions();
-    
-    document.getElementById('addQuestionModal').classList.add('show');
-  };
-
-  window.closeAddQuestionModal = () => {
-    document.getElementById('addQuestionModal').classList.remove('show');
-  };
-
-  window.addAnswerOption = () => {
-    const text = prompt('Antwortmöglichkeit eingeben:');
-    if (!text) return;
-    
-    answerOptions.push(text);
-    renderAnswerOptions();
-  };
-
-  function renderAnswerOptions() {
-    const list = document.getElementById('answer-options-list');
-    
-    if (!answerOptions.length) {
-      list.innerHTML = '<div style="color:var(--muted);font-size:.85rem;margin-bottom:.5rem">Keine Optionen hinzugefügt</div>';
-      return;
-    }
-    
-    list.innerHTML = answerOptions.map((opt, idx) => `
-      <div class="question-option" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem">
-        <label style="display:flex;align-items:center;gap:.5rem;flex:1;cursor:pointer">
-          <input type="checkbox" ${correctAnswers.includes(idx) ? 'checked' : ''} 
-            onchange="toggleCorrectAnswer(${idx})">
-          <span>${opt}</span>
-        </label>
-        <i class="fas fa-times" onclick="removeAnswerOption(${idx})" style="cursor:pointer;color:var(--primary)"></i>
-      </div>
-    `).join('');
-  }
-
-  window.toggleCorrectAnswer = (idx) => {
-    const i = correctAnswers.indexOf(idx);
-    if (i >= 0) {
-      correctAnswers.splice(i, 1);
-    } else {
-      correctAnswers.push(idx);
-    }
-  };
-
-  window.removeAnswerOption = (idx) => {
-    answerOptions.splice(idx, 1);
-    correctAnswers = correctAnswers.filter(i => i !== idx).map(i => i > idx ? i - 1 : i);
-    renderAnswerOptions();
-  };
-
-  window.saveQuestion = async () => {
-    const text = document.getElementById('question-text').value.trim();
-    const type = document.getElementById('question-type').value;
-    
-    if (!text) {
-      alert('Bitte Frage eingeben');
-      return;
-    }
-    
-    if (type !== 'text' && !answerOptions.length) {
-      alert('Bitte mindestens eine Antwortmöglichkeit hinzufügen');
-      return;
-    }
-    
-    if (type !== 'text' && !correctAnswers.length) {
-      alert('Bitte mindestens eine richtige Antwort markieren');
-      return;
-    }
-    
-    try {
-      const questions = await pb.collection('training_questions').getFullList({
-        filter: `course_id = "${currentQuestionsCourse}"`,
-        sort: '-order',
-        limit: 1
-      });
-      
-      const nextOrder = questions.length ? questions[0].order + 1 : 1;
-      
-      await pb.collection('training_questions').create({
-        course_id: currentQuestionsCourse,
-        question: text,
-        question_type: type,
-        options: type !== 'text' ? answerOptions : null,
-        correct_answers: type !== 'text' ? correctAnswers : null,
-        order: nextOrder,
-        organization_id: currentUser.organization_id
-      });
-      
-      closeAddQuestionModal();
-      await manageCourseQuestions(currentQuestionsCourse);
-      showMsg('✅ Frage hinzugefügt!');
-      
-    } catch(e) {
-      alert('Fehler: ' + e.message);
-    }
-  };
-
-  window.deleteQuestion = async (questionId) => {
-    if (!confirm('Frage wirklich löschen?')) return;
-    
-    try {
-      await pb.collection('training_questions').delete(questionId);
-      await manageCourseQuestions(currentQuestionsCourse);
-      showMsg('✅ Frage gelöscht!');
-    } catch(e) {
-      alert('Fehler: ' + e.message);
-    }
-  };
-
-  // ========================================
-  // TEAM OVERVIEW
+  // TEAM
   // ========================================
   async function loadTeam() {
     try {
-      const allUsers = await pb.collection('users').getFullList({
+      allUsers = await pb.collection('users').getFullList({
         filter: `organization_id = "${currentUser.organization_id}"`,
         sort: 'name'
       });
       
       const allParticipants = await pb.collection('training_participants').getFullList({
-        filter: `organization_id = "${currentUser.organization_id}"`,
-        expand: 'session_id,session_id.course_id'
+        filter: `organization_id = "${currentUser.organization_id}"`
       });
       
-      const content = document.getElementById('team-content');
+      const list = document.getElementById('team-list');
       
-      let html = '<h3 style="margin:0 0 1.5rem 0">Team-Übersicht</h3>';
+      if (!allUsers.length) {
+        list.innerHTML = '<div class="empty"><i class="fas fa-users"></i><div>Noch keine Mitglieder</div></div>';
+        return;
+      }
       
-      html += '<table class="table">';
-      html += `
-        <thead>
-          <tr>
-            <th>Name</th>
-            <th>Teilnahmen</th>
-            <th>Erschienen</th>
-            <th>Quote</th>
-            <th>Aktionen</th>
-          </tr>
-        </thead>
-        <tbody>
-      `;
-      
-      allUsers.forEach(user => {
+      list.innerHTML = allUsers.map(user => {
         const userParticipations = allParticipants.filter(p => p.user_id === user.id);
         const attended = userParticipations.filter(p => p.attended).length;
         const percentage = userParticipations.length > 0 
           ? Math.round(attended / userParticipations.length * 100)
           : 0;
         
-        html += `
-          <tr>
-            <td style="font-weight:700">${user.name || user.email}</td>
-            <td>${userParticipations.length}</td>
-            <td>${attended}</td>
-            <td>
-              <span style="color:${percentage >= 80 ? 'var(--success)' : percentage >= 50 ? 'var(--warning)' : 'var(--primary)'}">
-                ${percentage}%
-              </span>
-            </td>
-            <td>
-              <button class="btn btn-sm" onclick="showUserDetails('${user.id}')">
+        return `
+          <div class="member-card">
+            <div class="member-header">
+              <div>
+                <div class="member-name">${user.name || user.email}</div>
+                <div class="member-email">${user.email}</div>
+              </div>
+              <button class="btn btn-sm" onclick="showMemberDetails('${user.id}')">
                 <i class="fas fa-eye"></i> Details
               </button>
-            </td>
+            </div>
+            <div class="member-stats">
+              <div class="member-stat">
+                <div class="member-stat-value">${userParticipations.length}</div>
+                <div class="member-stat-label">Teilnahmen</div>
+              </div>
+              <div class="member-stat">
+                <div class="member-stat-value">${attended}</div>
+                <div class="member-stat-label">Anwesend</div>
+              </div>
+              <div class="member-stat">
+                <div class="member-stat-value">${percentage}%</div>
+                <div class="member-stat-label">Quote</div>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    } catch(e) {
+      console.error('Error:', e);
+      document.getElementById('team-list').innerHTML = `<div class="error">Fehler: ${e.message}</div>`;
+    }
+  }
+
+  window.showMemberDetails = async (userId) => {
+    try {
+      const user = await pb.collection('users').getOne(userId);
+      const participations = await pb.collection('training_participants').getFullList({
+        filter: `user_id = "${userId}"`,
+        expand: 'session_id',
+        sort: '-created'
+      });
+      
+      let html = `
+        <h3>${user.name || user.email}</h3>
+        <div class="member-stats" style="margin:1.5rem 0">
+          <div class="member-stat">
+            <div class="member-stat-value">${participations.length}</div>
+            <div class="member-stat-label">Teilnahmen</div>
+          </div>
+          <div class="member-stat">
+            <div class="member-stat-value">${participations.filter(p => p.attended).length}</div>
+            <div class="member-stat-label">Anwesend</div>
+          </div>
+        </div>
+        
+        <h4>Historie</h4>
+        <table class="table">
+          <thead><tr><th>Kurs</th><th>Datum</th><th>Status</th></tr></thead>
+          <tbody>
+      `;
+      
+      participations.forEach(p => {
+        const session = p.expand?.session_id;
+        const course = session ? courses.find(c => c.id === session.course_id) : null;
+        
+        html += `
+          <tr>
+            <td>${course ? course.title : 'Unbekannt'}</td>
+            <td>${session ? formatDate(session.date) : '-'}</td>
+            <td><span class="badge ${p.status}">${p.status}</span></td>
           </tr>
         `;
       });
       
       html += '</tbody></table>';
       
-      content.innerHTML = html;
-      
-    } catch(e) {
-      console.error('Error loading team:', e);
-      document.getElementById('team-content').innerHTML = `<div class="error">Fehler: ${e.message}</div>`;
-    }
-  }
-
-  window.showUserDetails = async (userId) => {
-    try {
-      const user = await pb.collection('users').getOne(userId);
-      const participations = await pb.collection('training_participants').getFullList({
-        filter: `user_id = "${userId}"`,
-        expand: 'session_id,session_id.course_id',
-        sort: '-created'
-      });
-      
-      let html = `
-        <h3>${user.name || user.email}</h3>
-        <div class="stat-grid" style="margin:1.5rem 0">
-          <div class="stat-card">
-            <div class="stat-value">${participations.length}</div>
-            <div class="stat-label">Teilnahmen</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-value">${participations.filter(p => p.attended).length}</div>
-            <div class="stat-label">Erschienen</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-value">
-              ${participations.length > 0 ? Math.round(participations.filter(p => p.attended).length / participations.length * 100) : 0}%
-            </div>
-            <div class="stat-label">Quote</div>
-          </div>
-        </div>
-        
-        <h4 style="margin:1.5rem 0 1rem 0">Teilnahme-Historie</h4>
-      `;
-      
-      if (!participations.length) {
-        html += '<div style="color:var(--muted);text-align:center;padding:1rem">Keine Teilnahmen</div>';
-      } else {
-        html += '<table class="table">';
-        html += `
-          <thead>
-            <tr>
-              <th>Kurs</th>
-              <th>Datum</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-        `;
-        
-        participations.forEach(p => {
-          const session = p.expand?.session_id;
-          const course = session?.expand?.course_id;
-          
-          html += `
-            <tr>
-              <td>${course ? course.title : 'Unbekannt'}</td>
-              <td>${session ? formatDate(session.date) : '-'}</td>
-              <td><span class="badge ${p.status}">${p.status}</span></td>
-            </tr>
-          `;
-        });
-        
-        html += '</tbody></table>';
-      }
-      
-      // Show in session details modal
-      document.getElementById('sessionDetailsTitle').textContent = 'Benutzer-Details';
+      document.getElementById('sessionDetailsTitle').textContent = 'Mitglied-Details';
       document.getElementById('sessionDetailsBody').innerHTML = html;
       document.getElementById('sessionDetailsModal').classList.add('show');
+    } catch(e) {
+      alert('Fehler: ' + e.message);
+    }
+  };
+
+  window.openNewMemberModal = () => {
+    document.getElementById('member-name').value = '';
+    document.getElementById('member-email').value = '';
+    document.getElementById('member-password').value = '';
+    document.getElementById('newMemberModal').classList.add('show');
+  };
+
+  window.closeNewMemberModal = () => {
+    document.getElementById('newMemberModal').classList.remove('show');
+  };
+
+  window.saveMember = async () => {
+    const name = document.getElementById('member-name').value.trim();
+    const email = document.getElementById('member-email').value.trim();
+    const password = document.getElementById('member-password').value;
+    
+    if (!name || !email || !password) {
+      alert('Bitte alle Felder ausfüllen');
+      return;
+    }
+    
+    if (password.length < 8) {
+      alert('Passwort muss mindestens 8 Zeichen lang sein');
+      return;
+    }
+    
+    try {
+      await pb.collection('users').create({
+        name,
+        email,
+        password,
+        passwordConfirm: password,
+        organization_id: currentUser.organization_id
+      });
       
+      closeNewMemberModal();
+      await loadTeam();
+      showMsg('✅ Mitglied hinzugefügt!');
     } catch(e) {
       alert('Fehler: ' + e.message);
     }
@@ -1968,167 +1580,297 @@
   // ========================================
   async function loadStatistics() {
     try {
-      const allSessions = await pb.collection('training_sessions').getFullList({
-        filter: `organization_id = "${currentUser.organization_id}"`
-      });
-      
       const allParticipants = await pb.collection('training_participants').getFullList({
-        filter: `organization_id = "${currentUser.organization_id}"`
+        filter: `organization_id = "${currentUser.organization_id}"`,
+        expand: 'session_id,user_id'
       });
       
-      const totalSessions = allSessions.length;
-      const completedSessions = allSessions.filter(s => s.status === 'abgeschlossen').length;
-      const totalParticipants = allParticipants.length;
-      const attendedParticipants = allParticipants.filter(p => p.attended).length;
+      const content = document.getElementById('statistics-content');
       
-      let html = `
-        <div class="stat-grid">
-          <div class="stat-card">
-            <div class="stat-value">${courses.length}</div>
-            <div class="stat-label">Kurse</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-value">${totalSessions}</div>
-            <div class="stat-label">Termine</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-value">${completedSessions}</div>
-            <div class="stat-label">Abgeschlossen</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-value">${totalParticipants}</div>
-            <div class="stat-label">Teilnahmen</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-value">${attendedParticipants}</div>
-            <div class="stat-label">Erschienen</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-value">${totalParticipants > 0 ? Math.round(attendedParticipants / totalParticipants * 100) : 0}%</div>
-            <div class="stat-label">Teilnahmequote</div>
-          </div>
-        </div>
-        
-        <h3 style="margin:2rem 0 1rem 0">Kurs-Details</h3>
-      `;
+      let html = '<table class="table">';
+      html += '<thead><tr><th>Kurs</th><th>Datum</th><th>Teilnehmer</th><th>Anwesend</th><th>Quote</th></tr></thead><tbody>';
       
-      // Course statistics
-      for (const course of courses) {
-        const courseSessions = allSessions.filter(s => s.course_id === course.id);
-        const courseParticipants = allParticipants.filter(p => {
-          const session = allSessions.find(s => s.id === p.session_id);
-          return session && session.course_id === course.id;
-        });
-        const courseAttended = courseParticipants.filter(p => p.attended).length;
+      // Group by session
+      const sessionGroups = {};
+      allParticipants.forEach(p => {
+        if (!sessionGroups[p.session_id]) {
+          sessionGroups[p.session_id] = [];
+        }
+        sessionGroups[p.session_id].push(p);
+      });
+      
+      Object.entries(sessionGroups).forEach(([sessionId, participants]) => {
+        const session = participants[0]?.expand?.session_id;
+        const course = session ? courses.find(c => c.id === session.course_id) : null;
+        const attended = participants.filter(p => p.attended).length;
+        const percentage = Math.round(attended / participants.length * 100);
         
         html += `
-          <div class="card" style="margin-bottom:1rem">
-            <div class="card-title">${course.title}</div>
-            <div class="stat-grid" style="margin-top:1rem">
-              <div class="stat-card">
-                <div class="stat-value" style="font-size:1.5rem">${courseSessions.length}</div>
-                <div class="stat-label">Termine</div>
-              </div>
-              <div class="stat-card">
-                <div class="stat-value" style="font-size:1.5rem">${courseParticipants.length}</div>
-                <div class="stat-label">Teilnehmer</div>
-              </div>
-              <div class="stat-card">
-                <div class="stat-value" style="font-size:1.5rem">${courseAttended}</div>
-                <div class="stat-label">Erschienen</div>
-              </div>
-              <div class="stat-card">
-                <div class="stat-value" style="font-size:1.5rem">${courseParticipants.length > 0 ? Math.round(courseAttended / courseParticipants.length * 100) : 0}%</div>
-                <div class="stat-label">Quote</div>
-              </div>
-            </div>
-          </div>
+          <tr>
+            <td style="font-weight:700">${course ? course.title : 'Unbekannt'}</td>
+            <td>${session ? formatDate(session.date) : '-'}</td>
+            <td>${participants.length}</td>
+            <td>${attended}</td>
+            <td>
+              <span style="color:${percentage >= 80 ? 'var(--success)' : percentage >= 50 ? 'var(--warning)' : 'var(--primary)'}">
+                ${percentage}%
+              </span>
+            </td>
+          </tr>
         `;
-      }
+      });
       
-      document.getElementById('statistics-content').innerHTML = html;
+      html += '</tbody></table>';
       
+      content.innerHTML = html;
     } catch(e) {
-      console.error('Error loading statistics:', e);
+      console.error('Error:', e);
       document.getElementById('statistics-content').innerHTML = `<div class="error">Fehler: ${e.message}</div>`;
     }
   }
 
   // ========================================
-  // STUDENTS
+  // LEARNING
   // ========================================
-  async function loadStudents() {
+  async function loadLearning() {
+    const list = document.getElementById('learning-list');
+    
+    const onlineCourses = courses.filter(c => c.type === 'online' || c.type === 'hybrid');
+    
+    if (!onlineCourses.length) {
+      list.innerHTML = '<div class="empty"><i class="fas fa-laptop"></i><div>Erstelle einen Online- oder Hybrid-Kurs</div></div>';
+      return;
+    }
+    
+    list.innerHTML = onlineCourses.map(course => `
+      <div class="learning-module">
+        <div class="learning-header">
+          <div class="learning-title">${course.title}</div>
+        </div>
+        <button class="btn primary" onclick="editLearningModule('${course.id}')">
+          <i class="fas fa-edit"></i> Lerninhalt bearbeiten
+        </button>
+      </div>
+    `).join('');
+  }
+
+  window.openSelectCourseForLearning = () => {
+    alert('Bitte erstelle zuerst einen Kurs mit Typ "Online" oder "Hybrid" im Ausbildungen-Tab.');
+  };
+
+  window.editLearningModule = (courseId) => {
+    currentLearningCourse = courseId;
+    const course = courses.find(c => c.id === courseId);
+    
+    document.getElementById('learningModuleTitle').textContent = `Lernmodul: ${course ? course.title : ''}`;
+    document.getElementById('learning-content-editor').value = course?.description || '';
+    document.getElementById('learningModuleModal').classList.add('show');
+  };
+
+  window.closeLearningModuleModal = () => {
+    document.getElementById('learningModuleModal').classList.remove('show');
+  };
+
+  window.saveLearningModule = async () => {
+    const content = document.getElementById('learning-content-editor').value.trim();
+    
     try {
-      students = await pb.collection('training_students').getFullList({
+      await pb.collection('training_courses').update(currentLearningCourse, {
+        description: content
+      });
+      
+      showMsg('✅ Lerninhalt gespeichert!');
+      closeLearningModuleModal();
+      await loadCourses();
+    } catch(e) {
+      alert('Fehler: ' + e.message);
+    }
+  };
+
+  window.openQuizEditor = async () => {
+    try {
+      const questions = await pb.collection('training_questions').getFullList({
+        filter: `course_id = "${currentLearningCourse}"`,
+        sort: 'order'
+      });
+      
+      const list = document.getElementById('quiz-questions-list');
+      
+      if (!questions.length) {
+        list.innerHTML = '<div style="color:var(--muted);text-align:center;padding:1rem">Noch keine Fragen</div>';
+      } else {
+        list.innerHTML = questions.map((q, idx) => `
+          <div class="quiz-question">
+            <div class="quiz-question-text">${idx + 1}. ${q.question}</div>
+            <button class="btn btn-sm" onclick="deleteQuestion('${q.id}')" style="background:#fee2e2;color:var(--primary);border:none">
+              <i class="fas fa-trash"></i>
+            </button>
+          </div>
+        `).join('');
+      }
+      
+      document.getElementById('quizEditorModal').classList.add('show');
+    } catch(e) {
+      alert('Fehler: ' + e.message);
+    }
+  };
+
+  window.closeQuizEditor = () => {
+    document.getElementById('quizEditorModal').classList.remove('show');
+  };
+
+  window.addQuizQuestion = () => {
+    const question = prompt('Frage eingeben:');
+    if (!question) return;
+    
+    const type = confirm('Single Choice (OK) oder Freitext (Abbrechen)?') ? 'single_choice' : 'text';
+    
+    let options = null;
+    let correctAnswers = null;
+    
+    if (type === 'single_choice') {
+      const optionsStr = prompt('Antwortoptionen (mit Komma getrennt):');
+      if (!optionsStr) return;
+      options = optionsStr.split(',').map(s => s.trim());
+      
+      const correctIdx = prompt(`Richtige Antwort (1-${options.length}):`);
+      correctAnswers = [parseInt(correctIdx) - 1];
+    }
+    
+    pb.collection('training_questions').create({
+      course_id: currentLearningCourse,
+      question,
+      question_type: type,
+      options,
+      correct_answers: correctAnswers,
+      order: 999,
+      organization_id: currentUser.organization_id
+    }).then(() => {
+      showMsg('✅ Frage hinzugefügt!');
+      openQuizEditor();
+    }).catch(e => alert('Fehler: ' + e.message));
+  };
+
+  window.deleteQuestion = async (questionId) => {
+    if (!confirm('Frage löschen?')) return;
+    
+    try {
+      await pb.collection('training_questions').delete(questionId);
+      showMsg('✅ Frage gelöscht!');
+      openQuizEditor();
+    } catch(e) {
+      alert('Fehler: ' + e.message);
+    }
+  };
+
+  window.saveQuiz = () => {
+    closeQuizEditor();
+    showMsg('✅ Kompetenzprüfung gespeichert!');
+  };
+
+  // ========================================
+  // SETTINGS (EXTERNAL ACCESS)
+  // ========================================
+  async function loadSettings() {
+    try {
+      externalAccess = await pb.collection('training_students').getFullList({
         filter: `organization_id = "${currentUser.organization_id}"`,
         sort: 'name'
       });
       
-      const list = document.getElementById('students-list');
+      const list = document.getElementById('access-list');
       
-      if (!students.length) {
-        list.innerHTML = `
-          <div class="empty">
-            <i class="fas fa-user-graduate"></i>
-            <div style="font-weight:700;margin-bottom:.5rem">Noch keine Schüler</div>
-            <div>Lege den ersten Schüler-Account an</div>
-          </div>
-        `;
+      if (!externalAccess.length) {
+        list.innerHTML = '<div class="empty"><i class="fas fa-key"></i><div>Noch keine externen Zugänge</div></div>';
         return;
       }
       
-      list.innerHTML = '<table class="table">' + `
-        <thead>
-          <tr>
-            <th>Name</th>
-            <th>E-Mail</th>
-            <th>Zugangscode</th>
-            <th>Aktionen</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${students.map(s => `
-            <tr>
-              <td style="font-weight:700">${s.name}</td>
-              <td>${s.email}</td>
-              <td>${s.access_code || '-'}</td>
-              <td>
-                <button class="btn btn-sm" onclick="deleteStudent('${s.id}')" style="background:#fee2e2;color:var(--primary);border:none">
-                  <i class="fas fa-trash"></i> Löschen
-                </button>
-              </td>
-            </tr>
-          `).join('')}
-        </tbody>
-      ` + '</table>';
+      list.innerHTML = '<table class="table">';
+      list.innerHTML += '<thead><tr><th>Name</th><th>E-Mail</th><th>Zugangscode</th><th>Aktionen</th></tr></thead><tbody>';
       
+      externalAccess.forEach(access => {
+        list.innerHTML += `
+          <tr>
+            <td style="font-weight:700">${access.name}</td>
+            <td>${access.email}</td>
+            <td>
+              <div class="copy-box" style="display:inline-flex;width:auto">
+                <span style="font-weight:700;color:var(--primary)">${access.access_code}</span>
+                <button class="btn btn-sm" onclick="copyToClipboard('${access.access_code}')">
+                  <i class="fas fa-copy"></i>
+                </button>
+              </div>
+            </td>
+            <td>
+              <button class="btn btn-sm" onclick="deleteAccess('${access.id}')" style="background:#fee2e2;color:var(--primary);border:none">
+                <i class="fas fa-trash"></i>
+              </button>
+            </td>
+          </tr>
+        `;
+      });
+      
+      list.innerHTML += '</tbody></table>';
     } catch(e) {
-      console.error('Error loading students:', e);
-      document.getElementById('students-list').innerHTML = `<div class="error">Fehler: ${e.message}</div>`;
+      console.error('Error:', e);
+      document.getElementById('access-list').innerHTML = `<div class="error">Fehler: ${e.message}</div>`;
     }
   }
 
-  window.openNewStudentModal = () => {
-    document.getElementById('student-name').value = '';
-    document.getElementById('student-email').value = '';
-    document.getElementById('student-password').value = '';
-    document.getElementById('student-code').value = '';
+  window.openNewAccessModal = () => {
+    document.getElementById('access-name').value = '';
+    document.getElementById('access-email').value = '';
+    document.getElementById('access-password').value = '';
+    assignedCourses = [];
+    generatePreviewCode();
+    document.getElementById('assigned-courses-count').textContent = '0';
+    document.getElementById('newAccessModal').classList.add('show');
+  };
+
+  window.closeNewAccessModal = () => {
+    document.getElementById('newAccessModal').classList.remove('show');
+  };
+
+  window.openCourseAssignment = () => {
+    const list = document.getElementById('course-assignment-list');
     
-    document.getElementById('newStudentModal').classList.add('show');
+    list.innerHTML = courses.map(course => `
+      <div style="padding:.75rem;border-bottom:1px solid var(--border)">
+        <label style="display:flex;align-items:center;gap:.75rem;cursor:pointer">
+          <input type="checkbox" ${assignedCourses.includes(course.id) ? 'checked' : ''} 
+            onchange="toggleCourseAssignment('${course.id}')">
+          <div>
+            <div style="font-weight:700">${course.title}</div>
+            <div style="font-size:.85rem;color:var(--muted)">${course.type}</div>
+          </div>
+        </label>
+      </div>
+    `).join('');
+    
+    document.getElementById('courseAssignmentModal').classList.add('show');
   };
 
-  window.closeNewStudentModal = () => {
-    document.getElementById('newStudentModal').classList.remove('show');
+  window.closeCourseAssignment = () => {
+    document.getElementById('courseAssignmentModal').classList.remove('show');
+    document.getElementById('assigned-courses-count').textContent = assignedCourses.length;
   };
 
-  window.saveStudent = async () => {
-    const name = document.getElementById('student-name').value.trim();
-    const email = document.getElementById('student-email').value.trim();
-    const password = document.getElementById('student-password').value;
-    const code = document.getElementById('student-code').value.trim();
+  window.toggleCourseAssignment = (courseId) => {
+    const idx = assignedCourses.indexOf(courseId);
+    if (idx >= 0) {
+      assignedCourses.splice(idx, 1);
+    } else {
+      assignedCourses.push(courseId);
+    }
+  };
+
+  window.saveAccess = async () => {
+    const name = document.getElementById('access-name').value.trim();
+    const email = document.getElementById('access-email').value.trim();
+    const password = document.getElementById('access-password').value;
     
     if (!name || !email || !password) {
-      alert('Bitte alle Pflichtfelder ausfüllen');
+      alert('Bitte alle Felder ausfüllen');
       return;
     }
     
@@ -2143,26 +1885,25 @@
         email,
         password,
         passwordConfirm: password,
-        access_code: code || null,
+        access_code: previewAccessCode,
         organization_id: currentUser.organization_id
       });
       
-      closeNewStudentModal();
-      await loadStudents();
-      showMsg('✅ Schüler angelegt!');
-      
+      closeNewAccessModal();
+      await loadSettings();
+      showMsg(`✅ Zugang erstellt! Code: ${previewAccessCode}`);
     } catch(e) {
       alert('Fehler: ' + e.message);
     }
   };
 
-  window.deleteStudent = async (studentId) => {
-    if (!confirm('Schüler wirklich löschen?')) return;
+  window.deleteAccess = async (accessId) => {
+    if (!confirm('Zugang wirklich löschen?')) return;
     
     try {
-      await pb.collection('training_students').delete(studentId);
-      await loadStudents();
-      showMsg('✅ Schüler gelöscht!');
+      await pb.collection('training_students').delete(accessId);
+      await loadSettings();
+      showMsg('✅ Zugang gelöscht!');
     } catch(e) {
       alert('Fehler: ' + e.message);
     }
@@ -2172,12 +1913,7 @@
   // START
   // ========================================
   await loadCourses();
-  await pb.collection('files').getFullList({
-    filter: `organization_id = "${currentUser.organization_id}" && is_folder = false`,
-    sort: 'name'
-  }).then(files => {
-    allFiles = files;
-  }).catch(() => {});
+  renderCalendar();
   
   setTimeout(() => {
     document.body.classList.add('loaded');
