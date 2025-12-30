@@ -1,300 +1,762 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>FFW – Dateien</title>
-  <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Dateien – Responda</title>
+  <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet"/>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
+  <script src="https://cdn.jsdelivr.net/npm/pocketbase@0.21.3/dist/pocketbase.umd.js"></script>
+
   <style>
-    :root{--rot:#c8102e;--bg:#f7f7f7;--card:#fff;--border:#e8e8e8;--muted:#6b7280}
+    :root{
+      --primary:#c8102e;
+      --primary-light:#fee2e2;
+      --success:#16a34a;
+      --bg:#f8fafc;
+      --card:#fff;
+      --text:#0f172a;
+      --muted:#64748b;
+      --border:#e2e8f0;
+      --gradient-start:#667eea;
+      --gradient-end:#764ba2;
+    }
     *{box-sizing:border-box}
-    body{margin:0;font-family:'Atkinson Hyperlegible',Arial,sans-serif;background:var(--bg);color:#111}
-    header{background:var(--rot);color:#fff;display:flex;align-items:center;gap:12px;padding:10px 14px}
-    header h1{margin:0;font-size:1.1rem}
-    .spacer{flex:1}
-    .topbtn{color:#fff;text-decoration:none;background:#00000022;padding:7px 10px;border-radius:8px;font-weight:700}
-
-    .wrap{max-width:980px;margin:16px auto;padding:0 14px}
-    .card{background:var(--card);border-radius:12px;box-shadow:0 3px 12px rgba(0,0,0,.06);padding:14px}
-
-    h2{margin:0 0 10px;color:var(--rot)}
-    .row{display:flex;gap:10px;flex-wrap:wrap}
-    input,button{font-family:inherit;font-size:1rem}
-    input{width:100%;padding:10px;border:1px solid var(--border);border-radius:10px;background:#fafafa}
-    .btn{background:var(--rot);color:#fff;border:0;border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer}
-    .btn.ghost{background:#fff;color:var(--rot);border:1px solid var(--rot)}
-    .pill{display:inline-block;background:#f8e8eb;color:#7f0d21;border:1px solid #efc2cd;padding:4px 10px;border-radius:999px;font-size:.85rem}
-
-    .controls{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
-    .controls .wide{grid-column:1/-1}
-    .drop{border:2px dashed #d7d7d7;border-radius:12px;padding:18px;text-align:center;color:var(--muted);background:#fcfcfc}
-    .drop.drag{background:#fff3f5;border-color:#efc2cd}
-
-    .msg{margin-top:10px;min-height:1.2em}
-    .err{color:#c8102e}
-    .ok{color:#147a2e}
-    .muted{color:var(--muted)}
-
-    .list-head,.file{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center}
-    .list-head{font-weight:700;color:#555;margin-top:10px}
-    .file{padding:10px;border-bottom:1px solid #f0f0f0}
-    .file small{color:#666}
-    .action{display:flex;gap:6px}
-    .link{appearance:none;border:1px solid var(--border);background:#fff;border-radius:8px;padding:7px 10px;cursor:pointer}
-    .warn{background:#fff5f5;border:1px solid #f2c9d1;color:#8b0e22;border-radius:10px;padding:10px}
-    @media (max-width:720px){
-      .controls{grid-template-columns:1fr}
-      .list-head{display:none}
-      .file{grid-template-columns:1fr;gap:6px}
-      .action{justify-content:flex-start}
+    body{
+      margin:0;
+      background:linear-gradient(135deg, var(--gradient-start) 0%, var(--gradient-end) 100%);
+      min-height:100vh;
+      color:var(--text);
+      font-family:'Atkinson Hyperlegible',-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+      line-height:1.45;
+      opacity:0;
+      transition:opacity 0.3s;
+    }
+    body.loaded{opacity:1}
+    
+    header{position:sticky;top:0;background:var(--gradient-start);color:#fff;z-index:10;box-shadow:0 2px 8px rgba(0,0,0,.1)}
+    .bar{
+      max-width:1400px;
+      margin:0 auto;
+      padding:.75rem 1rem;
+      display:flex;
+      gap:.5rem;
+      align-items:center;
+      flex-wrap:wrap;
+    }
+    h1{font-size:1.05rem;margin:0;font-weight:800}
+    .toolbar{margin-left:auto;display:flex;gap:.5rem;flex-wrap:wrap}
+    .topbtn{
+      background:rgba(255,255,255,0.1);
+      color:#fff;
+      padding:.45rem .7rem;
+      border-radius:.5rem;
+      cursor:pointer;
+      font-weight:700;
+      font-size:.9rem;
+      transition:all 0.2s;
+      text-decoration:none;
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      border:none;
+      font-family:inherit;
+    }
+    .topbtn:hover{background:rgba(255,255,255,0.2)}
+    
+    .wrap{max-width:1400px;margin:1.5rem auto;padding:0 1rem}
+    
+    .breadcrumbs{
+      display:flex;
+      align-items:center;
+      gap:.5rem;
+      flex-wrap:wrap;
+      margin-bottom:1rem;
+      background:#fff;
+      padding:.75rem 1rem;
+      border-radius:.75rem;
+      box-shadow:0 2px 8px rgba(0,0,0,.05);
+    }
+    .breadcrumb{
+      color:var(--muted);
+      cursor:pointer;
+      transition:color 0.2s;
+      font-weight:600;
+      font-size:.9rem;
+    }
+    .breadcrumb:hover{color:var(--primary)}
+    .breadcrumb.active{color:var(--text);cursor:default}
+    
+    .actions{
+      display:flex;
+      gap:.5rem;
+      margin-bottom:1rem;
+      flex-wrap:wrap;
+    }
+    .btn{
+      background:#fff;
+      color:var(--text);
+      padding:.6rem 1rem;
+      border-radius:.5rem;
+      cursor:pointer;
+      font-weight:700;
+      transition:all 0.2s;
+      font-family:inherit;
+      border:1px solid var(--border);
+      display:inline-flex;
+      align-items:center;
+      gap:.5rem;
+      font-size:.9rem;
+    }
+    .btn:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,.1)}
+    .btn.primary{background:var(--primary);color:#fff;border-color:var(--primary)}
+    .btn.primary:hover{background:#a80d25}
+    
+    .search{
+      flex:1;
+      min-width:200px;
+      position:relative;
+    }
+    .search input{
+      width:100%;
+      padding:.6rem 1rem .6rem 2.5rem;
+      border:1px solid var(--border);
+      border-radius:.5rem;
+      background:#fff;
+      font-size:.9rem;
+      font-family:inherit;
+    }
+    .search input:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(200,16,46,0.1)}
+    .search i{position:absolute;left:1rem;top:50%;transform:translateY(-50%);color:var(--muted)}
+    
+    .grid{
+      display:grid;
+      grid-template-columns:repeat(auto-fill,minmax(200px,1fr));
+      gap:1rem;
+    }
+    
+    .item{
+      background:#fff;
+      border-radius:.75rem;
+      padding:1.25rem;
+      cursor:pointer;
+      transition:all 0.2s;
+      border:2px solid transparent;
+      box-shadow:0 2px 8px rgba(0,0,0,.05);
+      position:relative;
+    }
+    .item:hover{
+      transform:translateY(-4px);
+      box-shadow:0 8px 20px rgba(0,0,0,.12);
+      border-color:var(--primary-light);
+    }
+    .item-icon{
+      font-size:3rem;
+      margin-bottom:.75rem;
+      text-align:center;
+    }
+    .item-name{
+      font-weight:700;
+      font-size:.95rem;
+      margin-bottom:.5rem;
+      word-break:break-word;
+    }
+    .item-meta{
+      font-size:.8rem;
+      color:var(--muted);
+    }
+    
+    .folder{color:#3b82f6}
+    .pdf{color:#ef4444}
+    .image{color:#10b981}
+    .word{color:#2563eb}
+    .excel{color:#16a34a}
+    .file{color:var(--muted)}
+    
+    .menu{
+      position:absolute;
+      top:.5rem;
+      right:.5rem;
+      background:rgba(255,255,255,0.9);
+      backdrop-filter:blur(10px);
+      border-radius:.5rem;
+      padding:.25rem;
+      border:1px solid var(--border);
+      display:none;
+    }
+    .item:hover .menu{display:block}
+    .menu-btn{
+      background:none;
+      border:none;
+      color:var(--muted);
+      cursor:pointer;
+      padding:.35rem .5rem;
+      font-size:.85rem;
+      transition:all 0.2s;
+      border-radius:.25rem;
+    }
+    .menu-btn:hover{background:#f3f4f6;color:var(--text)}
+    
+    .modal{
+      position:fixed;
+      inset:0;
+      background:rgba(0,0,0,.6);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      z-index:1000;
+      padding:20px;
+    }
+    .modal.show{display:flex}
+    .modal-box{
+      background:#fff;
+      border-radius:14px;
+      max-width:600px;
+      width:100%;
+      max-height:90vh;
+      overflow-y:auto;
+      padding:24px;
+      box-shadow:0 8px 20px rgba(0,0,0,.3);
+    }
+    .modal-box h3{margin:0 0 1rem 0;color:var(--primary);font-weight:800}
+    
+    .form-group{margin-bottom:1rem}
+    .form-group label{font-weight:700;font-size:.9rem;color:#374151;display:block;margin-bottom:.5rem}
+    .form-group input{
+      padding:.6rem;
+      border:1px solid var(--border);
+      border-radius:.5rem;
+      background:#fff;
+      font-size:16px;
+      font-family:inherit;
+      width:100%;
+    }
+    .form-group input:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(200,16,46,0.1)}
+    
+    .upload-area{
+      border:2px dashed var(--border);
+      border-radius:.75rem;
+      padding:2rem;
+      text-align:center;
+      cursor:pointer;
+      transition:all 0.2s;
+      background:#fafafa;
+    }
+    .upload-area:hover{border-color:var(--primary);background:#fff}
+    .upload-area.drag-over{border-color:var(--primary);background:var(--primary-light)}
+    
+    .empty{
+      text-align:center;
+      padding:3rem 1rem;
+      color:var(--muted);
+    }
+    .empty i{font-size:4rem;margin-bottom:1rem;opacity:0.3}
+    
+    .center-muted{color:var(--muted);text-align:center;padding:2rem}
+    .error{background:#fff5f5;border:1px solid #f2c9d1;color:#8b0e22;border-radius:10px;padding:10px;margin-bottom:1rem}
+    .success{background:#f0fdf4;border:1px solid #bbf7d0;color:#166534;border-radius:10px;padding:10px;margin-bottom:1rem}
+    
+    @media (max-width:768px){
+      .bar{flex-direction:column;align-items:stretch}
+      h1{font-size:1rem}
+      .toolbar{margin-left:0;width:100%;justify-content:space-between}
+      .topbtn{flex:1;justify-content:center}
+      .actions{flex-direction:column}
+      .btn{width:100%;justify-content:center}
+      .search{width:100%}
+      .grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:.75rem}
+      .item{padding:1rem}
+      .item-icon{font-size:2.5rem}
     }
   </style>
 </head>
+
 <body>
+
+<!-- HEADER -->
 <header>
-  <h1>FFW – Dateien</h1>
-  <div class="spacer"></div>
-  <a class="topbtn" href="admin-dashboard.html">Dashboard</a>
-  <a class="topbtn" href="#" id="logoutBtn">Logout</a>
+  <div class="bar">
+    <h1><i class="fa-solid fa-folder-open"></i> Dateien</h1>
+    <div class="toolbar">
+      <a class="topbtn" href="mpg-dashboard.html">
+        <i class="fa-solid fa-dashboard"></i> Dashboard
+      </a>
+      <button class="topbtn" id="logout">
+        <i class="fa-solid fa-right-from-bracket"></i> Logout
+      </button>
+    </div>
+  </div>
 </header>
 
+<!-- MAIN -->
 <div class="wrap">
-  <section class="card">
-    <h2>Dateien hochladen &amp; verwalten</h2>
-
-    <div class="row" style="gap:8px">
-      <input type="file" id="fileInput" multiple hidden />
-      <button class="btn" id="pickBtn">Dateien auswählen</button>
-      <button class="btn ghost" id="refreshBtn">Aktualisieren</button>
-      <span class="pill">Bucket: <strong id="bucketLabel">default</strong></span>
+  <!-- Breadcrumbs -->
+  <div class="breadcrumbs" id="breadcrumbs"></div>
+  
+  <!-- Actions -->
+  <div class="actions">
+    <div class="search">
+      <i class="fas fa-search"></i>
+      <input type="text" id="search" placeholder="Dateien durchsuchen...">
     </div>
+    <button class="btn primary" onclick="openNewFolderModal()">
+      <i class="fas fa-folder-plus"></i> Neuer Ordner
+    </button>
+    <button class="btn primary" onclick="openUploadModal()">
+      <i class="fas fa-upload"></i> Hochladen
+    </button>
+  </div>
+  
+  <!-- Grid -->
+  <div id="grid" class="grid">
+    <div class="center-muted">Lade Dateien...</div>
+  </div>
+</div>
 
-    <div class="controls">
-      <input id="folder" class="wide" placeholder="Ordner (z. B. einsatz/2025-001/)" />
-      <input id="tags" class="wide" placeholder="Tags (optional, Komma-getrennt)" />
-      <div id="drop" class="drop wide">Dateien hierher ziehen &amp; ablegen<br><small>Ordnerpfad + Tags werden beim Upload gespeichert.</small></div>
-      <div class="row wide" style="gap:8px">
-        <div style="position:relative;flex:1">
-          <input id="search" placeholder="Suche (Dateiname oder Ordner) …" />
-          <span class="muted" style="position:absolute;right:10px;top:50%;transform:translateY(-50%)">🔎</span>
-        </div>
-        <button class="btn ghost" id="mkFolderBtn" title="Virtuellen Ordner anlegen">Ordner erstellen</button>
-      </div>
+<!-- MODALS -->
+
+<!-- New Folder Modal -->
+<div class="modal" id="newFolderModal">
+  <div class="modal-box" style="max-width:400px">
+    <h3>Neuer Ordner</h3>
+    <div class="form-group">
+      <label>Ordnername</label>
+      <input type="text" id="folder-name" placeholder="z.B. Protokolle">
     </div>
-
-    <div class="muted" id="who" style="margin-top:8px"></div>
-    <div class="msg" id="msg"></div>
-  </section>
-
-  <section class="card" id="listCard">
-    <h2>Übersicht</h2>
-    <div id="empty" class="muted">Keine Dateien vorhanden.</div>
-    <div class="list-head">
-      <div>Datei</div><div>Größe</div><div>Aktionen</div>
+    <div style="display:flex;gap:.5rem;justify-content:flex-end;margin-top:1.5rem">
+      <button class="btn" onclick="closeNewFolderModal()">Abbrechen</button>
+      <button class="btn primary" onclick="createFolder()">
+        <i class="fas fa-check"></i> Erstellen
+      </button>
     </div>
-    <div id="list"></div>
-  </section>
+  </div>
+</div>
+
+<!-- Upload Modal -->
+<div class="modal" id="uploadModal">
+  <div class="modal-box">
+    <h3>Dateien hochladen</h3>
+    <div class="upload-area" id="upload-area">
+      <i class="fas fa-cloud-upload-alt" style="font-size:3rem;color:var(--muted);margin-bottom:1rem"></i>
+      <div style="font-weight:700;margin-bottom:.5rem">Dateien hierher ziehen</div>
+      <div style="color:var(--muted);font-size:.9rem">oder klicken zum Auswählen</div>
+      <input type="file" id="file-input" multiple style="display:none">
+    </div>
+    <div id="upload-list" style="margin-top:1rem"></div>
+    <div style="display:flex;gap:.5rem;justify-content:flex-end;margin-top:1.5rem">
+      <button class="btn" onclick="closeUploadModal()">Schließen</button>
+    </div>
+  </div>
+</div>
+
+<!-- Rename Modal -->
+<div class="modal" id="renameModal">
+  <div class="modal-box" style="max-width:400px">
+    <h3>Umbenennen</h3>
+    <div class="form-group">
+      <label>Neuer Name</label>
+      <input type="text" id="rename-input">
+    </div>
+    <div style="display:flex;gap:.5rem;justify-content:flex-end;margin-top:1.5rem">
+      <button class="btn" onclick="closeRenameModal()">Abbrechen</button>
+      <button class="btn primary" onclick="saveRename()">
+        <i class="fas fa-check"></i> Speichern
+      </button>
+    </div>
+  </div>
 </div>
 
 <script type="module">
-  import { NhostClient } from "https://esm.sh/@nhost/nhost-js@2.2.9";
-  const nhost = new NhostClient({ subdomain: "hpjfrhktprpuuxvvlpsb", region: "eu-central-1" });
-
-  /* ---------- Helpers ---------- */
-  const $ = (s)=>document.querySelector(s);
-  const msg = $('#msg');
-  function show(text, kind='') { msg.className = 'msg ' + kind; msg.textContent = text || ''; }
-  function fmtSize(b){ if(!b&&b!==0) return ''; const u=['B','KB','MB','GB']; let i=0, n=b; while(n>1024 && i<u.length-1){ n/=1024; i++; } return (Math.round(n*10)/10)+' '+u[i]; }
-  function cleanFolder(v){ v=(v||'').trim().replace(/^\/+/,''); if(v && !v.endsWith('/')) v+='/'; return v; }
-  function toError(e){ return e?.message || (typeof e==='string'?e:JSON.stringify(e)); }
-
-  async function gql(q,v){
-    const { data, error, errors } = await nhost.graphql.request(q, v);
-    if (error) throw new Error(error.message || JSON.stringify(error));
-    if (errors?.length) throw new Error(errors[0].message || JSON.stringify(errors));
-    return data;
+  // ========================================
+  // POCKETBASE & AUTH
+  // ========================================
+  const pb = new PocketBase('https://api.responda.systems');
+  
+  if (!pb.authStore.isValid) {
+    location.href = "/mpg-login.html";
   }
 
-  /* ---------- Login Guard ---------- */
-  async function guard(){
-    const ok = await nhost.auth.isAuthenticatedAsync();
-    if(!ok){
-      const back = encodeURIComponent(location.pathname + location.search);
-      location.href = "admin-login.html?redirect="+back;
-      return false;
+  const currentUser = pb.authStore.model;
+  if (!currentUser || !currentUser.organization_id) {
+    location.href = "/mpg-login.html";
+  }
+
+  document.getElementById("logout").onclick = () => {
+    pb.authStore.clear();
+    localStorage.clear();
+    location.href = "/mpg-login.html";
+  };
+
+  // ========================================
+  // STATE
+  // ========================================
+  let currentFolderId = null;
+  let folderPath = [];
+  let allFiles = [];
+  let searchQuery = "";
+
+  // ========================================
+  // HELPERS
+  // ========================================
+  function showMsg(text, type = 'success') {
+    const div = document.createElement('div');
+    div.className = type;
+    div.textContent = text;
+    document.querySelector('.wrap').insertBefore(div, document.querySelector('.wrap').firstChild);
+    setTimeout(() => div.remove(), 4000);
+  }
+
+  function getFileIcon(item) {
+    if (item.is_folder) return '<i class="fas fa-folder folder"></i>';
+    
+    const ext = item.name.split('.').pop().toLowerCase();
+    const type = item.file_type || '';
+    
+    if (type.startsWith('image/')) return '<i class="fas fa-file-image image"></i>';
+    if (ext === 'pdf' || type === 'application/pdf') return '<i class="fas fa-file-pdf pdf"></i>';
+    if (['doc', 'docx'].includes(ext)) return '<i class="fas fa-file-word word"></i>';
+    if (['xls', 'xlsx'].includes(ext)) return '<i class="fas fa-file-excel excel"></i>';
+    if (['zip', 'rar', '7z'].includes(ext)) return '<i class="fas fa-file-archive file"></i>';
+    
+    return '<i class="fas fa-file file"></i>';
+  }
+
+  function formatFileSize(bytes) {
+    if (!bytes || bytes === 0) return '-';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+  }
+
+  function formatDate(dateStr) {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('de-DE');
+  }
+
+  // ========================================
+  // LOAD FILES
+  // ========================================
+  async function loadFiles() {
+    try {
+      const filter = `organization_id = "${currentUser.organization_id}" && parent_folder_id ${currentFolderId ? `= "${currentFolderId}"` : '= ""'}`;
+      
+      allFiles = await pb.collection('files').getFullList({
+        filter,
+        sort: '-is_folder,name'
+      });
+      
+      renderBreadcrumbs();
+      renderFiles();
+      
+    } catch(e) {
+      console.error('Error loading files:', e);
+      document.getElementById('grid').innerHTML = `<div class="error">Fehler beim Laden: ${e.message}</div>`;
     }
-    const u = nhost.auth.getUser();
-    $('#who').textContent = 'Angemeldet als: ' + (u?.email || '—');
-    return true;
   }
-  if(!(await guard())) throw new Error('redirect');
 
-  /* ---------- UI refs ---------- */
-  const BUCKET = 'default';
-  $('#bucketLabel').textContent = BUCKET;
-  const listEl = $('#list');
-  const emptyEl = $('#empty');
-  const searchEl = $('#search');
-  const folderEl = $('#folder');
-  const tagsEl   = $('#tags');
+  function renderBreadcrumbs() {
+    const breadcrumbsEl = document.getElementById('breadcrumbs');
+    
+    let html = '<span class="breadcrumb" onclick="navigateToFolder(null)"><i class="fas fa-home"></i> Home</span>';
+    
+    folderPath.forEach((folder, idx) => {
+      html += ' <i class="fas fa-chevron-right" style="color:var(--muted);font-size:.7rem"></i> ';
+      html += `<span class="breadcrumb ${idx === folderPath.length - 1 ? 'active' : ''}" onclick="navigateToFolder('${folder.id}')">${folder.name}</span>`;
+    });
+    
+    breadcrumbsEl.innerHTML = html;
+  }
 
-  /* ---------- Load list ---------- */
-  async function load(){
-    try{
-      show('Lade …');
-      listEl.innerHTML = '';
-      emptyEl.style.display='none';
+  function renderFiles() {
+    const gridEl = document.getElementById('grid');
+    
+    let filtered = allFiles;
+    
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(f => f.name.toLowerCase().includes(query));
+    }
+    
+    if (!filtered.length) {
+      gridEl.innerHTML = `
+        <div class="empty" style="grid-column:1/-1">
+          <i class="fas fa-folder-open"></i>
+          <div style="font-weight:700;margin-bottom:.5rem">Keine Dateien</div>
+          <div>Erstelle einen Ordner oder lade Dateien hoch</div>
+        </div>
+      `;
+      return;
+    }
+    
+    gridEl.innerHTML = filtered.map(item => `
+      <div class="item" onclick="${item.is_folder ? `navigateToFolder('${item.id}', '${item.name}')` : `downloadFile('${item.id}')`}">
+        <div class="menu">
+          <button class="menu-btn" onclick="event.stopPropagation();renameItem('${item.id}', '${item.name}')" title="Umbenennen">
+            <i class="fas fa-edit"></i>
+          </button>
+          <button class="menu-btn" onclick="event.stopPropagation();deleteItem('${item.id}', '${item.name}', ${item.is_folder})" title="Löschen">
+            <i class="fas fa-trash"></i>
+          </button>
+        </div>
+        <div class="item-icon">${getFileIcon(item)}</div>
+        <div class="item-name">${item.name}</div>
+        <div class="item-meta">
+          ${item.is_folder ? 'Ordner' : formatFileSize(item.file_size)} • ${formatDate(item.created)}
+        </div>
+      </div>
+    `).join('');
+  }
 
-      const folder = cleanFolder(folderEl.value);
-      const needle = searchEl.value.trim();
-      const prefix = folder ? folder.replace(/([_%])/g,'\\$1') + '%' : '%';
-      const nameFilter = needle ? `%${needle.replace(/([_%])/g,'\\$1')}%` : '%';
+  // ========================================
+  // NAVIGATION
+  // ========================================
+  window.navigateToFolder = async (folderId, folderName) => {
+    if (folderId === null) {
+      // Navigate to root
+      currentFolderId = null;
+      folderPath = [];
+    } else {
+      // Check if clicking on breadcrumb
+      const idx = folderPath.findIndex(f => f.id === folderId);
+      if (idx >= 0) {
+        currentFolderId = folderId;
+        folderPath = folderPath.slice(0, idx + 1);
+      } else {
+        // Navigate into folder
+        currentFolderId = folderId;
+        folderPath.push({ id: folderId, name: folderName });
+      }
+    }
+    
+    await loadFiles();
+  };
 
-      const data = await gql(`
-        query($b:String!,$p:String!,$n:String!){
-          storage_files(
-            where:{
-              bucket_id:{_eq:$b},
-              name:{_ilike:$p},
-              _and:[{name:{_ilike:$n}}]
-            },
-            order_by:{created_at:desc},
-            limit:500
-          ){
-            id name size mime_type created_at
-          }
-        }`, { b: BUCKET, p: prefix, n: nameFilter });
+  // ========================================
+  // SEARCH
+  // ========================================
+  document.getElementById('search').oninput = (e) => {
+    searchQuery = e.target.value.trim();
+    renderFiles();
+  };
 
-      const files = (data?.storage_files || []).filter(f=>!f.name.endsWith('.keep'));
-      if(!files.length){
-        emptyEl.style.display='block';
-        show('');
+  // ========================================
+  // CREATE FOLDER
+  // ========================================
+  window.openNewFolderModal = () => {
+    document.getElementById('folder-name').value = '';
+    document.getElementById('newFolderModal').classList.add('show');
+    setTimeout(() => document.getElementById('folder-name').focus(), 100);
+  };
+
+  window.closeNewFolderModal = () => {
+    document.getElementById('newFolderModal').classList.remove('show');
+  };
+
+  window.createFolder = async () => {
+    const name = document.getElementById('folder-name').value.trim();
+    
+    if (!name) {
+      alert('Bitte Ordnername eingeben');
+      return;
+    }
+    
+    try {
+      await pb.collection('files').create({
+        name,
+        is_folder: true,
+        parent_folder_id: currentFolderId || '',
+        organization_id: currentUser.organization_id
+      });
+      
+      closeNewFolderModal();
+      await loadFiles();
+      showMsg('✅ Ordner erstellt!');
+      
+    } catch(e) {
+      alert('Fehler: ' + e.message);
+    }
+  };
+
+  // ========================================
+  // UPLOAD FILES
+  // ========================================
+  window.openUploadModal = () => {
+    document.getElementById('uploadModal').classList.add('show');
+    document.getElementById('upload-list').innerHTML = '';
+  };
+
+  window.closeUploadModal = () => {
+    document.getElementById('uploadModal').classList.remove('show');
+  };
+
+  const uploadArea = document.getElementById('upload-area');
+  const fileInput = document.getElementById('file-input');
+
+  uploadArea.onclick = () => fileInput.click();
+
+  uploadArea.ondragover = (e) => {
+    e.preventDefault();
+    uploadArea.classList.add('drag-over');
+  };
+
+  uploadArea.ondragleave = () => {
+    uploadArea.classList.remove('drag-over');
+  };
+
+  uploadArea.ondrop = (e) => {
+    e.preventDefault();
+    uploadArea.classList.remove('drag-over');
+    handleFiles(e.dataTransfer.files);
+  };
+
+  fileInput.onchange = (e) => {
+    handleFiles(e.target.files);
+  };
+
+  async function handleFiles(files) {
+    const listEl = document.getElementById('upload-list');
+    
+    for (const file of files) {
+      const itemEl = document.createElement('div');
+      itemEl.style.cssText = 'padding:.75rem;background:#f9fafb;border-radius:.5rem;margin-top:.5rem;display:flex;justify-content:space-between;align-items:center';
+      itemEl.innerHTML = `
+        <div>
+          <div style="font-weight:700">${file.name}</div>
+          <div style="font-size:.85rem;color:var(--muted)">${formatFileSize(file.size)}</div>
+        </div>
+        <div style="color:var(--muted)">
+          <i class="fas fa-spinner fa-spin"></i>
+        </div>
+      `;
+      listEl.appendChild(itemEl);
+      
+      try {
+        const formData = new FormData();
+        formData.append('name', file.name);
+        formData.append('is_folder', false);
+        formData.append('parent_folder_id', currentFolderId || '');
+        formData.append('file', file);
+        formData.append('file_size', file.size);
+        formData.append('file_type', file.type);
+        formData.append('organization_id', currentUser.organization_id);
+        
+        await pb.collection('files').create(formData);
+        
+        itemEl.querySelector('div:last-child').innerHTML = '<i class="fas fa-check" style="color:var(--success)"></i>';
+        
+      } catch(e) {
+        itemEl.querySelector('div:last-child').innerHTML = '<i class="fas fa-times" style="color:var(--primary)"></i>';
+        console.error('Upload error:', e);
+      }
+    }
+    
+    await loadFiles();
+    showMsg('✅ Dateien hochgeladen!');
+  }
+
+  // ========================================
+  // DOWNLOAD FILE
+  // ========================================
+  window.downloadFile = async (fileId) => {
+    try {
+      const file = await pb.collection('files').getOne(fileId);
+      
+      if (!file.file) {
+        alert('Keine Datei vorhanden');
         return;
       }
-
-      for(const f of files){
-        const row = document.createElement('div');
-        row.className='file';
-        const created = new Date(f.created_at).toLocaleString('de-DE');
-        row.innerHTML = `
-          <div>
-            <div><strong>${f.name}</strong></div>
-            <small>${created} • ${f.mime_type||'–'}</small>
-          </div>
-          <div>${fmtSize(f.size)}</div>
-          <div class="action">
-            <button class="link" data-open="${f.id}">Öffnen</button>
-            <button class="link" data-del="${f.id}">Löschen</button>
-          </div>`;
-        listEl.appendChild(row);
-      }
-      show('');
-    }catch(e){
-      show('Konnte Dateien nicht laden: '+toError(e),'err');
+      
+      const url = pb.files.getUrl(file, file.file);
+      
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = file.name;
+      a.click();
+      
+    } catch(e) {
+      alert('Fehler beim Download: ' + e.message);
     }
-  }
+  };
 
-  /* ---------- Open/Delete ---------- */
-  listEl.addEventListener('click', async (e)=>{
-    const id = e.target.dataset.open || e.target.dataset.del;
-    if(!id) return;
-    if(e.target.dataset.open){
-      try{
-        const pub = nhost.storage.getPublicUrl({ fileId:id })?.publicUrl;
-        if(pub){ window.open(pub,'_blank'); return; }
-        const { presignedUrl, error } = await nhost.storage.getPresignedUrl({ fileId:id });
-        if(error) throw error;
-        window.open(presignedUrl,'_blank');
-      }catch(err){ show('Konnte URL nicht erzeugen: '+toError(err),'err'); }
-    }else if(e.target.dataset.del){
-      if(!confirm('Datei wirklich löschen?')) return;
-      try{
-        const { error } = await nhost.storage.delete({ fileId:id });
-        if(error) throw error;
-        await load();
-      }catch(err){ show('Löschen fehlgeschlagen: '+toError(err),'err'); }
+  // ========================================
+  // RENAME
+  // ========================================
+  let currentRenameId = null;
+
+  window.renameItem = (itemId, currentName) => {
+    currentRenameId = itemId;
+    document.getElementById('rename-input').value = currentName;
+    document.getElementById('renameModal').classList.add('show');
+    setTimeout(() => document.getElementById('rename-input').focus(), 100);
+  };
+
+  window.closeRenameModal = () => {
+    document.getElementById('renameModal').classList.remove('show');
+    currentRenameId = null;
+  };
+
+  window.saveRename = async () => {
+    const newName = document.getElementById('rename-input').value.trim();
+    
+    if (!newName) {
+      alert('Bitte Name eingeben');
+      return;
     }
-  });
+    
+    try {
+      await pb.collection('files').update(currentRenameId, { name: newName });
+      
+      closeRenameModal();
+      await loadFiles();
+      showMsg('✅ Umbenannt!');
+      
+    } catch(e) {
+      alert('Fehler: ' + e.message);
+    }
+  };
 
-  /* ---------- Upload ---------- */
-  const fileInput = document.getElementById('fileInput');
-  document.getElementById('pickBtn').onclick = ()=> fileInput.click();
-  fileInput.addEventListener('change', ()=> handleFiles(fileInput.files));
-
-  async function handleFiles(fileList){
-    const files = Array.from(fileList||[]);
-    if(!files.length) return;
-    const folder = cleanFolder(folderEl.value);
-    const tags = (tagsEl.value||'').split(',').map(s=>s.trim()).filter(Boolean);
-    try{
-      show('Lade hoch …');
-      for(const file of files){
-        const name = folder + file.name;
-        const { fileMetadata, error } = await nhost.storage.upload({ file, name, bucketId: BUCKET });
-        if(error) throw error;
-
-        // Optional: in file_meta eintragen, falls vorhanden (ignorieren, wenn es die Tabelle nicht gibt)
-        if(tags.length || folder){
-          try{
-            const userId = nhost.auth.getUser()?.id || null;
-            await gql(`
-              mutation($obj:file_meta_insert_input!){
-                insert_file_meta_one(object:$obj, on_conflict:{constraint:file_meta_pkey, update_columns:[name,path,tags,updated_at]}){
-                  file_id
-                }
-              }`,
-              { obj: { file_id: fileMetadata?.id, name: file.name, path: folder, tags, uploader_id: userId } }
-            );
-          }catch(_){} // still ok
+  // ========================================
+  // DELETE
+  // ========================================
+  window.deleteItem = async (itemId, itemName, isFolder) => {
+    const type = isFolder ? 'Ordner' : 'Datei';
+    
+    if (!confirm(`${type} "${itemName}" wirklich löschen?${isFolder ? '\n\nAlle Dateien im Ordner gehen verloren!' : ''}`)) {
+      return;
+    }
+    
+    try {
+      if (isFolder) {
+        // Delete all files in folder first
+        const children = await pb.collection('files').getFullList({
+          filter: `parent_folder_id = "${itemId}"`
+        });
+        
+        for (const child of children) {
+          await pb.collection('files').delete(child.id);
         }
       }
-      show('Upload fertig.','ok');
-      await load();
-    }catch(e){
-      show('Upload fehlgeschlagen: '+toError(e),'err');
-    }finally{
-      fileInput.value='';
-    }
-  }
-
-  /* Drag & Drop */
-  const drop = document.getElementById('drop');
-  ;['dragenter','dragover'].forEach(ev=> drop.addEventListener(ev, e=>{ e.preventDefault(); e.stopPropagation(); drop.classList.add('drag'); }));
-  ;['dragleave','drop'].forEach(ev=> drop.addEventListener(ev, e=>{ e.preventDefault(); e.stopPropagation(); drop.classList.remove('drag'); }));
-  drop.addEventListener('drop', e=>{
-    const dt = e.dataTransfer;
-    if(dt?.files?.length) handleFiles(dt.files);
-  });
-
-  /* ---------- Ordner erstellen (virtuell) ---------- */
-  document.getElementById('mkFolderBtn').onclick = async ()=>{
-    const folder = cleanFolder(folderEl.value);
-    if(!folder){ show('Bitte zuerst einen Ordnernamen eingeben.','err'); return; }
-    try{
-      // Leere .keep-Datei hochladen, damit der Ordner sichtbar wird
-      const blob = new Blob([''], { type:'text/plain' });
-      const name = folder + '.keep';
-      const { error } = await nhost.storage.upload({ file: blob, name, bucketId: BUCKET });
-      if(error) throw error;
-      show(`Ordner „${folder}“ erstellt (virtuell).`,'ok');
-      await load();
-    }catch(e){
-      show('Ordner erstellen fehlgeschlagen: '+toError(e),'err');
+      
+      await pb.collection('files').delete(itemId);
+      
+      await loadFiles();
+      showMsg('✅ Gelöscht!');
+      
+    } catch(e) {
+      alert('Fehler: ' + e.message);
     }
   };
 
-  /* ---------- Suche & Refresh ---------- */
-  let t; searchEl.addEventListener('input', ()=>{ clearTimeout(t); t=setTimeout(load, 250); });
-  document.getElementById('refreshBtn').onclick = load;
+  // ========================================
+  // START
+  // ========================================
+  await loadFiles();
+  
+  setTimeout(() => {
+    document.body.classList.add('loaded');
+  }, 100);
 
-  /* ---------- Logout ---------- */
-  document.getElementById('logoutBtn').onclick = async (e)=>{
-    e.preventDefault(); try{ await nhost.auth.signOut(); }catch(_){}
-    localStorage.clear(); location.href='admin-login.html';
-  };
-
-  /* ---------- Start ---------- */
-  await load();
 </script>
 </body>
 </html>
