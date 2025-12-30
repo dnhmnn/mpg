@@ -861,35 +861,7 @@
   // ========================================
   // TOOLBAR
   // ========================================
-  function renderToolbar(){
-    const currentLoc = locations.find(l => l.id === currentLocationId);
-    const locName = currentLoc ? currentLoc.name : 'Lager';
-    
-    toolbarEl.innerHTML = `
-      <div class="search-box">
-        <i class="fas fa-search" style="position:absolute;left:.6rem;top:50%;transform:translateY(-50%);color:var(--muted)"></i>
-        <input id="q" value="${search}" placeholder="In „${locName}" suchen…"
-          style="width:100%;padding:.55rem .75rem .55rem 2rem;border:1px solid var(--border);border-radius:.5rem;background:#fff">
-      </div>
-      <div class="filter-actions">
-        <button class="chip ${statusFilter==='all'?'active':''}" data-f="all">Alle</button>
-        <button class="chip ${statusFilter==='warning'?'active':''}" data-f="warning">Bald fällig</button>
-        <button class="chip ${statusFilter==='expired'?'active':''}" data-f="expired">Abgelaufen</button>
-        <button class="chip ${lowOnly?'active':''}" id="chip-low">
-          <i class="fas fa-truck-moving"></i> Einbestellen
-        </button>
-        <button class="chip ${showOnlyZero?'active':''}" id="chip-zero">
-          <i class="fas fa-filter"></i> Nur 0
-        </button>
-        <button class="btn" id="btn-new"><i class="fas fa-plus"></i> Neu</button>
-      </div>
-    `;
-    
-    document.getElementById('q').oninput = (e) => {
-      search = e.target.value.trim();
-      clearTimeout(window._qT);
-      window._qT = setTimeout(filterAndRender, 250);
-    };
+ @request.auth.id != '' && @request.data.organization_id = @request.auth.organization_id
     
     toolbarEl.querySelectorAll('button[data-f]').forEach(b => {
       b.onclick = () => {
