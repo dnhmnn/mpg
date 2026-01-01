@@ -182,6 +182,9 @@
     .badge.abgeschlossen{background:#f3f4f6;color:#4b5563}
     .badge.anwesend{background:#dcfce7;color:#166534}
     .badge.abwesend{background:#fee2e2;color:#991b1b}
+    .badge.zugesagt{background:#dcfce7;color:#166534}
+    .badge.abgesagt{background:#fee2e2;color:#991b1b}
+    .badge.eingeladen{background:#e0e7ff;color:#4338ca}
     
     .tag{background:#fee;color:var(--primary);padding:4px 10px;border-radius:999px;font-size:0.8rem;font-weight:700;display:inline-block;margin:2px}
     
@@ -470,6 +473,9 @@
     <div class="actions">
       <button class="btn primary" onclick="openMemberModal()">
         <i class="fas fa-user-plus"></i> Neues Mitglied
+      </button>
+      <button class="btn success" onclick="exportAllMembersStats()">
+        <i class="fas fa-chart-bar"></i> Gesamtauswertung
       </button>
     </div>
     <div id="team-list" class="grid">
@@ -936,12 +942,6 @@
 </div>
 
 <script type="module">
-  // JAVASCRIPT FOLGT IN TEIL 3...
-</script>
-
-</body>
-</html>
-<script type="module">
   // ========================================
   // POCKETBASE & AUTH
   // ========================================
@@ -963,6 +963,13 @@
   };
 
   // ========================================
+  // jsPDF für PDF-Export
+  // ========================================
+  const script = document.createElement('script');
+  script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+  document.head.appendChild(script);
+
+  // ========================================
   // STATE
   // ========================================
   let allCourses = [];
@@ -972,6 +979,7 @@
   let allModules = [];
   let currentTags = [];
   let selectedParticipants = [];
+  let selectedParticipantStatus = {}; // memberId -> {status: 'zugesagt'|'abgesagt'|'eingeladen'}
   let selectedAssignments = [];
   let currentEditCourse = null;
   let currentSessionCourse = null;
@@ -1055,16 +1063,20 @@
     
     if (!input) return;
     
-    input.addEventListener('keydown', (e) => {
+    // Remove old listeners
+    const newInput = input.cloneNode(true);
+    input.parentNode.replaceChild(newInput, input);
+    
+    newInput.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
         e.preventDefault();
-        const tag = input.value.trim();
+        const tag = newInput.value.trim();
         if (tag && !currentTags.includes(tag)) {
           currentTags.push(tag);
           renderTags();
-          input.value = '';
+          newInput.value = '';
         }
-      } else if (e.key === 'Backspace' && input.value === '' && currentTags.length > 0) {
+      } else if (e.key === 'Backspace' && newInput.value === '' && currentTags.length > 0) {
         currentTags.pop();
         renderTags();
       }
@@ -1084,7 +1096,7 @@
     currentTags.forEach(tag => {
       const tagEl = document.createElement('span');
       tagEl.className = 'tag';
-      tagEl.innerHTML = `${tag} <span class="remove-tag" onclick="removeTag('${tag}')">×</span>`;
+      tagEl.innerHTML = `${tag} <span class="remove-tag" onclick="removeTag('${tag.replace(/'/g, "\\'")}')">×</span>`;
       wrapper.insertBefore(tagEl, input);
     });
   }
@@ -1094,7 +1106,7 @@
     renderTags();
   };
 
-  // ========================================
+    // ========================================
   // TAB SWITCHING
   // ========================================
   document.querySelectorAll('.tab').forEach(tab => {
@@ -1106,7 +1118,6 @@
       document.getElementById('tab-' + targetTab).style.display = 'block';
       document.getElementById('msg').textContent = '';
       
-      // Load data
       if (targetTab === 'schulungen') loadCourses();
       if (targetTab === 'team') loadTeam();
       if (targetTab === 'lernbereich') loadLernbereich();
@@ -1115,7 +1126,7 @@
   });
 
   // ========================================
-  // LOAD AUSBILDUNGEN
+  // AUSBILDUNGEN
   // ========================================
   async function loadCourses() {
     try {
@@ -1166,9 +1177,6 @@
     }).join('');
   }
 
-  // ========================================
-  // NEUE AUSBILDUNG
-  // ========================================
   window.openSchulungModal = (courseId = null) => {
     currentEditCourse = courseId;
     const form = document.getElementById('schulungForm');
@@ -1226,9 +1234,6 @@
     }
   };
 
-  // ========================================
-  // AUSBILDUNGS-DETAILS
-  // ========================================
   window.viewSchulungDetails = async (courseId) => {
     try {
       const course = allCourses.find(c => c.id === courseId);
@@ -1298,7 +1303,7 @@
         </div>
         
         <div style="margin-top:16px;display:flex;gap:8px">
-          <button class="btn primary" onclick="openSchulungModal('${courseId}')">
+          <button class="btn primary" onclick="closeSchulungDetailsModal();openSchulungModal('${courseId}')">
             <i class="fa-solid fa-edit"></i> Bearbeiten
           </button>
           <button class="btn" onclick="deleteSchul('${courseId}')">
@@ -1323,10 +1328,8 @@
     if (!confirm('Ausbildung wirklich löschen? Alle Termine werden ebenfalls gelöscht!')) return;
     
     try {
-      // Sessions löschen
       const sessions = allSessions.filter(s => s.course_id === courseId);
       for (const session of sessions) {
-        // Participants löschen
         const participants = await pb.collection('schulung_teilnahme').getFullList({
           filter: `session_id = "${session.id}"`
         });
@@ -1336,7 +1339,6 @@
         await pb.collection('training_sessions').delete(session.id);
       }
       
-      // Course löschen
       await pb.collection('training_courses').delete(courseId);
       
       showMsg('✅ Ausbildung gelöscht!');
@@ -1349,7 +1351,7 @@
   };
 
   // ========================================
-  // TERMIN-MANAGEMENT
+  // TERMINE
   // ========================================
   window.openSessionModal = (courseId) => {
     currentSessionCourse = courseId;
@@ -1357,6 +1359,7 @@
     form.reset();
     document.getElementById('session-course-id').value = courseId;
     selectedParticipants = [];
+    selectedParticipantStatus = {};
     document.getElementById('selected-count').textContent = '0';
     document.getElementById('sessionModal').classList.add('show');
   };
@@ -1388,6 +1391,7 @@
         await pb.collection('schulung_teilnahme').create({
           session_id: session.id,
           member_id: memberId,
+          status: selectedParticipantStatus[memberId] || 'eingeladen',
           anwesend: false,
           organization_id: currentUser.organization_id
         });
@@ -1410,18 +1414,31 @@
       });
       
       const list = document.getElementById('participantList');
-      list.innerHTML = allMembers.map(member => `
-        <div style="padding:.75rem;border-bottom:1px solid var(--border)">
-          <label style="display:flex;align-items:center;gap:.75rem;cursor:pointer">
-            <input type="checkbox" ${selectedParticipants.includes(member.id) ? 'checked' : ''} 
-              onchange="toggleParticipant('${member.id}')">
-            <div>
-              <div style="font-weight:700">${member.vorname} ${member.name}</div>
-              <div style="font-size:.85rem;color:var(--muted)">${(member.qualifikationen || []).join(', ')}</div>
-            </div>
-          </label>
-        </div>
-      `).join('');
+      list.innerHTML = allMembers.map(member => {
+        const isSelected = selectedParticipants.includes(member.id);
+        const status = selectedParticipantStatus[member.id] || 'eingeladen';
+        
+        return `
+          <div style="padding:.75rem;border-bottom:1px solid var(--border)">
+            <label style="display:flex;align-items:center;gap:.75rem;cursor:pointer">
+              <input type="checkbox" ${isSelected ? 'checked' : ''} 
+                onchange="toggleParticipant('${member.id}')">
+              <div style="flex:1">
+                <div style="font-weight:700">${member.vorname} ${member.name}</div>
+                <div style="font-size:.85rem;color:var(--muted)">${(member.qualifikationen || []).join(', ')}</div>
+              </div>
+              ${isSelected ? `
+                <select onchange="setParticipantStatus('${member.id}', this.value)" 
+                  style="padding:4px;border:1px solid var(--border);border-radius:4px;font-size:.85rem">
+                  <option value="eingeladen" ${status === 'eingeladen' ? 'selected' : ''}>Eingeladen</option>
+                  <option value="zugesagt" ${status === 'zugesagt' ? 'selected' : ''}>Zugesagt</option>
+                  <option value="abgesagt" ${status === 'abgesagt' ? 'selected' : ''}>Abgesagt</option>
+                </select>
+              ` : ''}
+            </label>
+          </div>
+        `;
+      }).join('');
       
       document.getElementById('participantModal').classList.add('show');
     } catch(e) {
@@ -1438,9 +1455,16 @@
     const idx = selectedParticipants.indexOf(memberId);
     if (idx >= 0) {
       selectedParticipants.splice(idx, 1);
+      delete selectedParticipantStatus[memberId];
     } else {
       selectedParticipants.push(memberId);
+      selectedParticipantStatus[memberId] = 'eingeladen';
     }
+    openParticipantSelector();
+  };
+
+  window.setParticipantStatus = (memberId, status) => {
+    selectedParticipantStatus[memberId] = status;
   };
 
   window.viewSessionDetails = async (sessionId) => {
@@ -1456,8 +1480,13 @@
       document.getElementById('sessionDetailsTitle').textContent = 
         `${course ? course.title : 'Termin'} • ${formatDate(session.date)}`;
       
-      // EINLADUNGSLINK
       const inviteLink = `${window.location.origin}/ausbildungen-invite.html?session=${sessionId}`;
+      
+      // Statistik
+      const zugesagt = participants.filter(p => p.status === 'zugesagt').length;
+      const abgesagt = participants.filter(p => p.status === 'abgesagt').length;
+      const anwesend = participants.filter(p => p.anwesend).length;
+      const abwesend = participants.filter(p => !p.anwesend && p.status !== 'abgesagt').length;
       
       let html = `
         <div class="details-section">
@@ -1482,30 +1511,39 @@
         </div>
         
         <div class="details-section">
-          <h4><i class="fa-solid fa-users"></i> Anwesenheitsliste (${participants.length})</h4>
+          <h4><i class="fa-solid fa-chart-pie"></i> Übersicht</h4>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:1rem 0">
+            <div style="text-align:center;padding:12px;background:#dcfce7;border-radius:8px">
+              <div style="font-size:1.5rem;font-weight:800;color:#065f46">${zugesagt}</div>
+              <div style="font-size:0.85rem;color:#065f46">Zugesagt</div>
+            </div>
+            <div style="text-align:center;padding:12px;background:#fee2e2;border-radius:8px">
+              <div style="font-size:1.5rem;font-weight:800;color:#991b1b">${abgesagt}</div>
+              <div style="font-size:0.85rem;color:#991b1b">Abgesagt</div>
+            </div>
+            <div style="text-align:center;padding:12px;background:#f0fdf4;border-radius:8px">
+              <div style="font-size:1.5rem;font-weight:800;color:#16a34a">${anwesend}</div>
+              <div style="font-size:0.85rem;color:#16a34a">Anwesend</div>
+            </div>
+            <div style="text-align:center;padding:12px;background:#fef3c7;border-radius:8px">
+              <div style="font-size:1.5rem;font-weight:800;color:#92400e">${abwesend}</div>
+              <div style="font-size:0.85rem;color:#92400e">Offen</div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="details-section">
+          <h4><i class="fa-solid fa-users"></i> Teilnehmer (${participants.length})</h4>
       `;
       
       if (participants.length > 0) {
-        const anwesendCount = participants.filter(p => p.anwesend).length;
-        
         html += `
-          <div style="display:flex;gap:20px;margin:1rem 0;padding:12px;background:#f0fdf4;border-radius:8px">
-            <div style="text-align:center;flex:1">
-              <div style="font-size:1.5rem;font-weight:800;color:#065f46">${anwesendCount}</div>
-              <div style="font-size:0.85rem;color:#065f46">Anwesend</div>
-            </div>
-            <div style="text-align:center;flex:1">
-              <div style="font-size:1.5rem;font-weight:800;color:#991b1b">${participants.length - anwesendCount}</div>
-              <div style="font-size:0.85rem;color:#991b1b">Abwesend</div>
-            </div>
-          </div>
-          
-          <table class="table">
+          <table class="table" style="margin-top:1rem">
             <thead>
               <tr>
                 <th>#</th>
                 <th>Name</th>
-                <th>Status</th>
+                <th>Rückmeldung</th>
                 <th style="text-align:center">Anwesend</th>
               </tr>
             </thead>
@@ -1518,13 +1556,18 @@
             <tr>
               <td>${idx + 1}</td>
               <td style="font-weight:700">${member ? `${member.vorname} ${member.name}` : 'Unbekannt'}</td>
-              <td><span class="badge ${p.anwesend ? 'anwesend' : 'abwesend'}">${p.anwesend ? 'Anwesend' : 'Abwesend'}</span></td>
+              <td>
+                <span class="badge ${p.status}">${
+                  p.status === 'zugesagt' ? 'Zugesagt' : 
+                  p.status === 'abgesagt' ? 'Abgesagt' : 'Eingeladen'
+                }</span>
+              </td>
               <td style="text-align:center">
                 <input 
                   type="checkbox" 
-                  id="att_${p.id}" 
                   data-participant-id="${p.id}"
                   ${p.anwesend ? 'checked' : ''}
+                  ${p.status === 'abgesagt' ? 'disabled' : ''}
                   style="width:20px;height:20px;cursor:pointer"
                 >
               </td>
@@ -1585,7 +1628,6 @@
         sort: 'name'
       });
       
-      // Zugänge laden um zu checken wer schon einen hat
       allAccess = await pb.collection('training_students').getFullList({
         filter: `organization_id = "${currentUser.organization_id}"`,
         sort: 'name'
@@ -1609,8 +1651,6 @@
     list.innerHTML = allMembers.map(member => {
       const tags = member.qualifikationen || [];
       const tagsHTML = tags.map(t => `<span class="tag">${t}</span>`).join('');
-      
-      // Check ob Zugang existiert
       const access = allAccess.find(a => a.member_id === member.id);
       
       return `
@@ -1646,14 +1686,16 @@
         form.name.value = member.name || '';
         form.vorname.value = member.vorname || '';
         currentTags = member.qualifikationen || [];
-        renderTags();
       }
     } else {
       document.getElementById('memberModalTitle').innerHTML = '<i class="fa-solid fa-user-plus"></i> Neues Team-Mitglied';
     }
     
     document.getElementById('memberModal').classList.add('show');
-    setTimeout(() => initTagInput(), 100);
+    setTimeout(() => {
+      initTagInput();
+      renderTags();
+    }, 100);
   };
 
   window.closeMemberModal = () => {
@@ -1700,9 +1742,7 @@
         sort: '-created'
       });
       
-      // Zugang checken
       const access = allAccess.find(a => a.member_id === memberId);
-      
       const tags = member.qualifikationen || [];
       const tagsHTML = tags.map(t => `<span class="tag">${t}</span>`).join('') || 
         '<span class="tag" style="background:#eee;color:#999">Keine Qualifikationen</span>';
@@ -1767,28 +1807,39 @@
       
       html += '</div>';
       
-      html += `
-        <div class="details-section">
-          <h4><i class="fa-solid fa-clock-rotate-left"></i> Teilnahmehistorie (${participations.length})</h4>
+      // TEILNAHMEHISTORIE MIT ÜBERSICHT
+      html += `<div class="details-section">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+            <h4 style="margin:0"><i class="fa-solid fa-clock-rotate-left"></i> Teilnahmehistorie (${participations.length})</h4>
+            <button class="btn btn-sm success" onclick="exportMemberPDF('${memberId}')">
+              <i class="fas fa-file-pdf"></i> PDF Export
+            </button>
+          </div>
       `;
       
       if (participations.length > 0) {
-        const attended = participations.filter(p => p.anwesend).length;
-        const percentage = Math.round(attended / participations.length * 100);
+        const zugesagt = participations.filter(p => p.status === 'zugesagt').length;
+        const abgesagt = participations.filter(p => p.status === 'abgesagt').length;
+        const anwesend = participations.filter(p => p.anwesend).length;
+        const abwesend = participations.filter(p => !p.anwesend && p.status !== 'abgesagt').length;
         
         html += `
-          <div style="display:flex;gap:20px;margin:1rem 0">
-            <div style="text-align:center;flex:1;padding:12px;background:#f0fdf4;border-radius:8px">
-              <div style="font-size:1.5rem;font-weight:800;color:#065f46">${attended}</div>
-              <div style="font-size:0.85rem;color:#065f46">Anwesend</div>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:1rem">
+            <div style="text-align:center;padding:12px;background:#dcfce7;border-radius:8px">
+              <div style="font-size:1.5rem;font-weight:800;color:#065f46">${zugesagt}</div>
+              <div style="font-size:0.85rem;color:#065f46">Zugesagt</div>
             </div>
-            <div style="text-align:center;flex:1;padding:12px;background:#fee2e2;border-radius:8px">
-              <div style="font-size:1.5rem;font-weight:800;color:#991b1b">${participations.length - attended}</div>
-              <div style="font-size:0.85rem;color:#991b1b">Abwesend</div>
+            <div style="text-align:center;padding:12px;background:#fee2e2;border-radius:8px">
+              <div style="font-size:1.5rem;font-weight:800;color:#991b1b">${abgesagt}</div>
+              <div style="font-size:0.85rem;color:#991b1b">Abgesagt</div>
             </div>
-            <div style="text-align:center;flex:1;padding:12px;background:#f3f4f6;border-radius:8px">
-              <div style="font-size:1.5rem;font-weight:800;color:#374151">${percentage}%</div>
-              <div style="font-size:0.85rem;color:#374151">Quote</div>
+            <div style="text-align:center;padding:12px;background:#f0fdf4;border-radius:8px">
+              <div style="font-size:1.5rem;font-weight:800;color:#16a34a">${anwesend}</div>
+              <div style="font-size:0.85rem;color:#16a34a">Anwesend</div>
+            </div>
+            <div style="text-align:center;padding:12px;background:#fef3c7;border-radius:8px">
+              <div style="font-size:1.5rem;font-weight:800;color:#92400e">${abwesend}</div>
+              <div style="font-size:0.85rem;color:#92400e">Offen</div>
             </div>
           </div>
           
@@ -1797,7 +1848,8 @@
               <tr>
                 <th>Datum</th>
                 <th>Kurs</th>
-                <th>Status</th>
+                <th>Rückmeldung</th>
+                <th>Anwesenheit</th>
               </tr>
             </thead>
             <tbody>
@@ -1811,7 +1863,17 @@
             <tr>
               <td>${session ? formatDate(session.date) : '-'}</td>
               <td style="font-weight:700">${course ? course.title : 'Unbekannt'}</td>
-              <td><span class="badge ${p.anwesend ? 'anwesend' : 'abwesend'}">${p.anwesend ? 'Anwesend' : 'Abwesend'}</span></td>
+              <td>
+                <span class="badge ${p.status}">${
+                  p.status === 'zugesagt' ? 'Zugesagt' : 
+                  p.status === 'abgesagt' ? 'Abgesagt' : 'Eingeladen'
+                }</span>
+              </td>
+              <td>
+                <span class="badge ${p.anwesend ? 'anwesend' : 'abwesend'}">
+                  ${p.anwesend ? 'Anwesend' : (p.status === 'abgesagt' ? 'Abgesagt' : 'Abwesend')}
+                </span>
+              </td>
             </tr>
           `;
         });
@@ -1825,7 +1887,7 @@
         </div>
         
         <div style="margin-top:16px;display:flex;gap:8px">
-          <button class="btn primary" onclick="openMemberModal('${memberId}')">
+          <button class="btn primary" onclick="closeMemberDetailsModal();openMemberModal('${memberId}')">
             <i class="fa-solid fa-edit"></i> Bearbeiten
           </button>
           <button class="btn" onclick="deleteMember('${memberId}')">
@@ -1850,7 +1912,6 @@
     if (!confirm('Team-Mitglied wirklich löschen? Alle Teilnahmen gehen verloren!')) return;
     
     try {
-      // Participants löschen
       const participants = await pb.collection('schulung_teilnahme').getFullList({
         filter: `member_id = "${memberId}"`
       });
@@ -1858,13 +1919,11 @@
         await pb.collection('schulung_teilnahme').delete(p.id);
       }
       
-      // Zugang löschen falls vorhanden
       const access = allAccess.find(a => a.member_id === memberId);
       if (access) {
         await pb.collection('training_students').delete(access.id);
       }
       
-      // Member deaktivieren (nicht löschen)
       await pb.collection('team_members').update(memberId, { aktiv: false });
       
       showMsg('✅ Mitglied entfernt!');
@@ -1877,7 +1936,111 @@
   };
 
   // ========================================
-  // ZUGANG FÜR TEAM-MITGLIED
+  // PDF-EXPORT
+  // ========================================
+  window.exportMemberPDF = async (memberId) => {
+    try {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      
+      const member = await pb.collection('team_members').getOne(memberId);
+      const participations = await pb.collection('schulung_teilnahme').getFullList({
+        filter: `member_id = "${memberId}"`,
+        expand: 'session_id',
+        sort: '-created'
+      });
+      
+      // Titel
+      doc.setFontSize(18);
+      doc.text(`Teilnahmehistorie: ${member.vorname} ${member.name}`, 20, 20);
+      
+      // Statistik
+      const zugesagt = participations.filter(p => p.status === 'zugesagt').length;
+      const abgesagt = participations.filter(p => p.status === 'abgesagt').length;
+      const anwesend = participations.filter(p => p.anwesend).length;
+      const abwesend = participations.filter(p => !p.anwesend && p.status !== 'abgesagt').length;
+      
+      doc.setFontSize(12);
+      doc.text(`Zugesagt: ${zugesagt}  |  Abgesagt: ${abgesagt}  |  Anwesend: ${anwesend}  |  Offen: ${abwesend}`, 20, 35);
+      
+      // Tabelle
+      let yPos = 50;
+      doc.setFontSize(10);
+      doc.text('Datum', 20, yPos);
+      doc.text('Kurs', 60, yPos);
+      doc.text('Rueckmeldung', 130, yPos);
+      doc.text('Anwesenheit', 170, yPos);
+      
+      yPos += 7;
+      participations.forEach(p => {
+        const session = p.expand?.session_id;
+        const course = session ? allCourses.find(c => c.id === session.course_id) : null;
+        
+        if (yPos > 270) {
+          doc.addPage();
+          yPos = 20;
+        }
+        
+        doc.text(session ? formatDate(session.date) : '-', 20, yPos);
+        doc.text(course ? course.title.substring(0, 25) : 'Unbekannt', 60, yPos);
+        doc.text(p.status === 'zugesagt' ? 'Zugesagt' : p.status === 'abgesagt' ? 'Abgesagt' : 'Eingeladen', 130, yPos);
+        doc.text(p.anwesend ? 'Anwesend' : 'Abwesend', 170, yPos);
+        
+        yPos += 7;
+      });
+      
+      doc.save(`${member.vorname}_${member.name}_Historie.pdf`);
+      showMsg('✅ PDF exportiert!');
+      
+    } catch(e) {
+      showMsg('Fehler: ' + e.message, 'error');
+    }
+  };
+
+  window.exportAllMembersStats = async () => {
+    try {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      
+      doc.setFontSize(18);
+      doc.text('Gesamtauswertung Team', 20, 20);
+      
+      let yPos = 35;
+      doc.setFontSize(10);
+      
+      for (const member of allMembers) {
+        const participations = await pb.collection('schulung_teilnahme').getFullList({
+          filter: `member_id = "${member.id}"`
+        });
+        
+        const zugesagt = participations.filter(p => p.status === 'zugesagt').length;
+        const abgesagt = participations.filter(p => p.status === 'abgesagt').length;
+        const anwesend = participations.filter(p => p.anwesend).length;
+        
+        if (yPos > 270) {
+          doc.addPage();
+          yPos = 20;
+        }
+        
+        doc.setFontSize(12);
+        doc.text(`${member.vorname} ${member.name}`, 20, yPos);
+        yPos += 6;
+        
+        doc.setFontSize(10);
+        doc.text(`Zugesagt: ${zugesagt}  |  Abgesagt: ${abgesagt}  |  Anwesend: ${anwesend}  |  Gesamt: ${participations.length}`, 20, yPos);
+        yPos += 10;
+      }
+      
+      doc.save(`Team_Gesamtauswertung_${new Date().toISOString().split('T')[0]}.pdf`);
+      showMsg('✅ Gesamtauswertung exportiert!');
+      
+    } catch(e) {
+      showMsg('Fehler: ' + e.message, 'error');
+    }
+  };
+
+  // ========================================
+  // ZUGANG FÜR MITGLIED
   // ========================================
   window.openCreateAccessForMember = (memberId) => {
     currentAccessMember = memberId;
@@ -1917,7 +2080,6 @@
       closeCreateAccessForMemberModal();
       await loadTeam();
       
-      // Details neu laden
       if (document.getElementById('memberDetailsModal').classList.contains('show')) {
         await viewMemberDetails(currentAccessMember);
       }
@@ -1934,8 +2096,6 @@
       await pb.collection('training_students').delete(accessId);
       showMsg('✅ Zugang entfernt!');
       await loadTeam();
-      
-      // Details-Modal schließen
       closeMemberDetailsModal();
       
     } catch(e) {
@@ -1943,7 +2103,7 @@
     }
   };
 
-  // ========================================
+    // ========================================
   // ZUGÄNGE - EINZELN & BULK
   // ========================================
   async function loadSettings() {
@@ -2131,7 +2291,6 @@
       closeBulkAccessModal();
       await loadSettings();
       
-      // Codes anzeigen
       if (createdCodes.length > 0) {
         let msg = 'Erstellte Zugänge:\n\n';
         createdCodes.forEach(c => {
@@ -2180,7 +2339,7 @@
     showMsg('✅ CSV exportiert!');
   };
 
-    // ========================================
+  // ========================================
   // LERNBEREICH
   // ========================================
   async function loadLernbereich() {
@@ -2479,7 +2638,7 @@
           <button class="btn primary" onclick="openSlideEditor('${moduleId}')">
             <i class="fa-solid fa-edit"></i> Folien bearbeiten
           </button>
-          <button class="btn" onclick="openModuleModal('${moduleId}')">
+          <button class="btn" onclick="closeModuleDetailsModal();openModuleModal('${moduleId}')">
             <i class="fa-solid fa-cog"></i> Einstellungen
           </button>
           <button class="btn success" onclick="previewModule('${moduleId}')">
@@ -2507,7 +2666,6 @@
     if (!confirm('Lernmodul wirklich löschen? Alle Folien, Zuweisungen und Fortschritte gehen verloren!')) return;
     
     try {
-      // Slides löschen
       const slides = await pb.collection('learning_slides').getFullList({
         filter: `module_id = "${moduleId}"`
       });
@@ -2515,7 +2673,6 @@
         await pb.collection('learning_slides').delete(slide.id);
       }
       
-      // Assignments löschen
       const assignments = await pb.collection('module_assignments').getFullList({
         filter: `module_id = "${moduleId}"`
       });
@@ -2523,7 +2680,6 @@
         await pb.collection('module_assignments').delete(a.id);
       }
       
-      // Progress löschen
       const progress = await pb.collection('module_progress').getFullList({
         filter: `module_id = "${moduleId}"`
       });
@@ -2531,7 +2687,6 @@
         await pb.collection('module_progress').delete(p.id);
       }
       
-      // Quiz attempts löschen
       const attempts = await pb.collection('module_quiz_attempts').getFullList({
         filter: `module_id = "${moduleId}"`
       });
@@ -2539,7 +2694,6 @@
         await pb.collection('module_quiz_attempts').delete(a.id);
       }
       
-      // Module löschen
       await pb.collection('learning_modules').delete(moduleId);
       
       showMsg('✅ Lernmodul gelöscht!');
@@ -2551,7 +2705,7 @@
     }
   };
 
-  // ========================================
+   // ========================================
   // PERSONEN ZUWEISEN
   // ========================================
   window.openAssignMembers = async (moduleId) => {
@@ -2608,7 +2762,6 @@
     if (!currentLearningModule) return;
     
     try {
-      // Alle bisherigen Assignments löschen
       const oldAssignments = await pb.collection('module_assignments').getFullList({
         filter: `module_id = "${currentLearningModule}"`
       });
@@ -2617,7 +2770,6 @@
         await pb.collection('module_assignments').delete(a.id);
       }
       
-      // Neue Assignments erstellen
       for (const memberId of selectedAssignments) {
         await pb.collection('module_assignments').create({
           module_id: currentLearningModule,
@@ -2630,7 +2782,6 @@
       closeAssignMembersModal();
       await loadLernbereich();
       
-      // Details neu laden falls offen
       if (document.getElementById('moduleDetailsModal').classList.contains('show')) {
         await viewModuleDetails(currentLearningModule);
       }
