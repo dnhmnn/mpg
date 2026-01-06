@@ -661,21 +661,21 @@
   </div>
 </div>
 
-<!-- Modal: Neue Schulung (OHNE Typ!) -->
+<!-- Modal: Neue Schulung (OHNE Typ, ALLE Felder sichtbar!) -->
 <div class="modal" id="schulungModal">
   <div class="modal-box" style="max-width:800px">
     <h3 id="schulungModalTitle"><i class="fa-solid fa-book-medical"></i> Neue Schulung erstellen</h3>
     <form id="schulungForm">
       
-      <!-- SCHULUNGS-INFORMATIONEN -->
-      <div style="background:#f9fafb;padding:1rem;border-radius:.5rem;margin-bottom:1rem">
-        <h4 style="margin:0 0 1rem 0;color:var(--primary);font-size:1rem">
+      <!-- SCHULUNGS-INFORMATIONEN (IMMER SICHTBAR!) -->
+      <div style="background:#f9fafb;padding:1.5rem;border-radius:.75rem;margin-bottom:1.5rem">
+        <h4 style="margin:0 0 1rem 0;color:var(--primary);font-size:1.1rem;font-weight:700">
           <i class="fa-solid fa-book"></i> Schulungs-Informationen
         </h4>
         
         <div class="form-group">
           <label>Titel *</label>
-          <input type="text" name="title" required>
+          <input type="text" name="title" required placeholder="z.B. Reanimation Grundkurs">
         </div>
         
         <div class="form-group">
@@ -694,9 +694,9 @@
         </div>
       </div>
       
-      <!-- TERMIN -->
-      <div id="termineSection" style="background:#f0fdf4;padding:1rem;border-radius:.5rem;margin-bottom:1rem">
-        <h4 style="margin:0 0 1rem 0;color:#16a34a;font-size:1rem">
+      <!-- TERMIN (IMMER SICHTBAR!) -->
+      <div style="background:#f0fdf4;padding:1.5rem;border-radius:.75rem;margin-bottom:1.5rem">
+        <h4 style="margin:0 0 1rem 0;color:#16a34a;font-size:1.1rem;font-weight:700">
           <i class="fa-solid fa-calendar"></i> Erster Termin
         </h4>
         
@@ -721,15 +721,18 @@
         </div>
       </div>
       
-      <!-- TEILNEHMER -->
-      <div id="teilnehmerSection" style="background:#eff6ff;padding:1rem;border-radius:.5rem;margin-bottom:1rem">
-        <h4 style="margin:0 0 1rem 0;color:#3b82f6;font-size:1rem">
+      <!-- TEILNEHMER (IMMER SICHTBAR!) -->
+      <div style="background:#eff6ff;padding:1.5rem;border-radius:.75rem;margin-bottom:1.5rem">
+        <h4 style="margin:0 0 1rem 0;color:#3b82f6;font-size:1.1rem;font-weight:700">
           <i class="fa-solid fa-users"></i> Teilnehmer einladen
         </h4>
         
         <button type="button" class="btn" onclick="openParticipantSelector()">
           <i class="fas fa-users"></i> Teilnehmer auswählen (<span id="selected-count">0</span>)
         </button>
+        <p style="font-size:0.875rem;color:var(--muted);margin-top:0.5rem">
+          Optional: Wähle Team-Mitglieder aus, die eingeladen werden sollen
+        </p>
       </div>
       
       <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
@@ -819,7 +822,7 @@
 
 <!-- Modal: Termin-Details -->
 <div class="modal" id="sessionDetailsModal">
-  <div class="modal-box">
+  <div class="modal-box" style="max-width:800px">
     <h3 id="sessionDetailsTitle">Termin-Details</h3>
     <div id="sessionDetailsBody"></div>
     <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
@@ -996,7 +999,7 @@
 
 <!-- Modal: Lernmodul Details -->
 <div class="modal" id="moduleDetailsModal">
-  <div class="modal-box">
+  <div class="modal-box" style="max-width:800px">
     <h3 id="moduleDetailsTitle">Lernmodul</h3>
     <div id="moduleDetailsBody"></div>
     <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
@@ -1007,7 +1010,7 @@
 
 <!-- Modal: Folien-Editor -->
 <div class="modal" id="slideEditorModal">
-  <div class="modal-box" style="max-height:90vh;display:flex;flex-direction:column">
+  <div class="modal-box" style="max-width:900px;max-height:90vh;display:flex;flex-direction:column">
     <h3 id="slideEditorTitle">Folien bearbeiten</h3>
     
     <div class="msg info" style="margin-bottom:1rem">
@@ -1033,7 +1036,7 @@
 
 <!-- Modal: Neue Folie -->
 <div class="modal" id="newSlideModal">
-  <div class="modal-box" style="max-height:85vh;display:flex;flex-direction:column">
+  <div class="modal-box" style="max-width:700px;max-height:85vh;display:flex;flex-direction:column">
     <h3>Neue Folie</h3>
     
     <div style="flex:1;overflow-y:auto;padding-right:1rem">
@@ -1133,6 +1136,30 @@
   </div>
 </div>
 
+<!-- Modal: Modul-Vorschau -->
+<div class="modal" id="modulePreviewModal">
+  <div class="modal-box" style="max-width:900px;max-height:90vh;display:flex;flex-direction:column">
+    <h3 id="previewModuleTitle">Modul-Vorschau</h3>
+    <div id="previewContent" style="flex:1;overflow-y:auto;padding:1.5rem;background:#f9fafb;border-radius:0.75rem"></div>
+    <div style="display:flex;gap:.5rem;justify-content:space-between;margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border)">
+      <button class="btn" id="prevSlideBtn" onclick="prevPreviewSlide()" disabled>
+        <i class="fas fa-arrow-left"></i> Zurück
+      </button>
+      <div style="display:flex;align-items:center;gap:1rem">
+        <span id="slideCounter" style="color:var(--muted);font-weight:700">1 / 1</span>
+      </div>
+      <button class="btn primary" id="nextSlideBtn" onclick="nextPreviewSlide()">
+        Weiter <i class="fas fa-arrow-right"></i>
+      </button>
+    </div>
+    <div style="margin-top:1rem;text-align:center">
+      <button class="btn" onclick="closePreviewModal()">
+        <i class="fas fa-times"></i> Vorschau schließen
+      </button>
+    </div>
+  </div>
+</div>
+
 <script type="module">
   // ========================================
   // POCKETBASE & AUTH (MIT FIX!)
@@ -1212,6 +1239,8 @@
   let pflichtSchulungen = 12;
   let currentSlides = [];
   let currentEditSlide = null;
+  let previewSlides = [];
+  let currentPreviewIndex = 0;
   
   const wordLists = {
     adjectives: ['schnell', 'blau', 'groß', 'klein', 'rot', 'grün', 'gelb', 'hell', 'dunkel', 'stark', 'schwach', 'frisch', 'alt', 'neu', 'warm', 'kalt', 'süß', 'sauer', 'laut', 'leise'],
@@ -1407,23 +1436,8 @@
       renderCourses();
     } catch(e) {
       console.error('❌ Load Courses Error:', e);
-      console.error('Error details:', {
-        type: typeof e,
-        keys: Object.keys(e),
-        data: e.data,
-        message: e.message,
-        full: JSON.stringify(e, Object.getOwnPropertyNames(e), 2)
-      });
       
-      let errorMsg = 'Unbekannter Fehler';
-      
-      if (e.message) {
-        errorMsg = e.message;
-      } else if (e.data) {
-        errorMsg = JSON.stringify(e.data);
-      } else {
-        errorMsg = 'Fehler beim Laden der Schulungen';
-      }
+      let errorMsg = e.message || 'Fehler beim Laden der Schulungen';
       
       document.getElementById('schulungen-list').innerHTML = `
         <div class="empty" style="background:#fff;border-radius:.75rem;padding:2rem">
@@ -1493,8 +1507,6 @@
     selectedParticipants = [];
     selectedParticipantStatus = {};
     document.getElementById('selected-count').textContent = '0';
-    document.getElementById('termineSection').style.display = 'block';
-    document.getElementById('teilnehmerSection').style.display = 'block';
     document.getElementById('schulungModalTitle').innerHTML = '<i class="fa-solid fa-book-medical"></i> Neue Schulung erstellen';
     document.getElementById('schulungModal').classList.add('show');
   };
@@ -1625,7 +1637,7 @@
     selectedParticipantStatus[memberId] = status;
   };
 
-  // ========================================
+    // ========================================
   // SCHULUNGS-DETAILS + BEARBEITEN
   // ========================================
   window.viewSchulungDetails = async (courseId) => {
@@ -1703,7 +1715,7 @@
           <button class="btn primary" onclick="editSchulung('${courseId}')">
             <i class="fa-solid fa-edit"></i> Bearbeiten
           </button>
-          <button class="btn" onclick="deleteSchul('${courseId}')">
+          <button class="btn" onclick="deleteSchulung('${courseId}')">
             <i class="fa-solid fa-trash"></i> Löschen
           </button>
         </div>
@@ -1729,8 +1741,8 @@
     form.max_participants.value = course.max_participants || '';
     form.description.value = course.description || '';
     
-    document.getElementById('termineSection').style.display = 'none';
-    document.getElementById('teilnehmerSection').style.display = 'none';
+    // Datum-Felder ausblenden beim Bearbeiten
+    form.querySelector('[name="date"]').parentElement.parentElement.style.display = 'none';
     
     document.getElementById('schulungModalTitle').innerHTML = '<i class="fa-solid fa-edit"></i> Schulung bearbeiten';
     closeSchulungDetailsModal();
@@ -1739,11 +1751,14 @@
 
   window.closeSchulungDetailsModal = () => {
     document.getElementById('schulungDetailsModal').classList.remove('show');
-    document.getElementById('termineSection').style.display = 'block';
-    document.getElementById('teilnehmerSection').style.display = 'block';
+    // Datum-Felder wieder einblenden
+    const dateField = document.querySelector('#schulungForm [name="date"]');
+    if (dateField) {
+      dateField.parentElement.parentElement.style.display = 'grid';
+    }
   };
 
-  window.deleteSchul = async (courseId) => {
+  window.deleteSchulung = async (courseId) => {
     if (!confirm('Schulung wirklich löschen? Alle Termine und Teilnahmen gehen verloren!')) return;
     
     try {
@@ -3008,6 +3023,9 @@
           <button class="btn primary" onclick="openSlideEditor('${moduleId}')">
             <i class="fa-solid fa-edit"></i> Folien bearbeiten
           </button>
+          <button class="btn success" onclick="previewModule('${moduleId}')">
+            <i class="fas fa-play"></i> Vorschau
+          </button>
           <button class="btn" onclick="closeModuleDetailsModal();openModuleModal('${moduleId}')">
             <i class="fa-solid fa-cog"></i> Einstellungen
           </button>
@@ -3405,8 +3423,148 @@
     }
   };
 
-  window.previewModule = () => {
-    showMsg('📱 Vorschau-Funktion kommt bald!', 'info');
+  // ========================================
+  // MODUL-VORSCHAU (NEU!)
+  // ========================================
+  window.previewModule = async (moduleId) => {
+    try {
+      const module = await pb.collection('learning_modules').getOne(moduleId);
+      previewSlides = await pb.collection('learning_slides').getFullList({
+        filter: `module_id = "${moduleId}"`,
+        sort: 'order'
+      });
+      
+      if (previewSlides.length === 0) {
+        showMsg('Keine Folien zum Anzeigen', 'info');
+        return;
+      }
+      
+      currentPreviewIndex = 0;
+      document.getElementById('previewModuleTitle').textContent = `Vorschau: ${module.title}`;
+      renderPreviewSlide();
+      document.getElementById('modulePreviewModal').classList.add('show');
+      
+    } catch(e) {
+      showMsg('Fehler: ' + e.message, 'error');
+    }
+  };
+
+  function renderPreviewSlide() {
+    const slide = previewSlides[currentPreviewIndex];
+    const content = document.getElementById('previewContent');
+    
+    document.getElementById('slideCounter').textContent = 
+      `${currentPreviewIndex + 1} / ${previewSlides.length}`;
+    
+    document.getElementById('prevSlideBtn').disabled = currentPreviewIndex === 0;
+    document.getElementById('nextSlideBtn').disabled = currentPreviewIndex === previewSlides.length - 1;
+    
+    let html = `
+      <div style="background:white;padding:2rem;border-radius:0.75rem;min-height:400px">
+        <h2 style="color:var(--primary);margin-bottom:1.5rem;font-size:1.75rem">
+          ${slide.title}
+        </h2>
+    `;
+    
+    if (slide.type === 'text') {
+      html += `
+        <div style="line-height:1.8;font-size:1.1rem">
+          ${slide.content.html || ''}
+        </div>
+      `;
+    } else if (slide.type === 'image') {
+      html += `
+        <div style="text-align:center">
+          <img src="${slide.content.url}" alt="${slide.content.description}" 
+            style="max-width:100%;max-height:500px;border-radius:0.75rem;box-shadow:0 4px 12px rgba(0,0,0,0.1)">
+          ${slide.content.description ? `
+            <p style="margin-top:1rem;color:var(--muted);font-style:italic">
+              ${slide.content.description}
+            </p>
+          ` : ''}
+        </div>
+      `;
+    } else if (slide.type === 'video') {
+      const videoId = extractVideoId(slide.content.url);
+      html += `
+        <div style="text-align:center">
+          <div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;border-radius:0.75rem">
+            <iframe 
+              src="https://www.youtube.com/embed/${videoId}" 
+              style="position:absolute;top:0;left:0;width:100%;height:100%;border:0"
+              allowfullscreen>
+            </iframe>
+          </div>
+          ${slide.content.description ? `
+            <p style="margin-top:1rem;color:var(--muted)">
+              ${slide.content.description}
+            </p>
+          ` : ''}
+        </div>
+      `;
+    } else if (slide.type === 'quiz') {
+      html += `
+        <div style="background:#f9fafb;padding:1.5rem;border-radius:0.75rem;margin-bottom:1.5rem">
+          <h3 style="color:var(--text);margin-bottom:1rem;font-size:1.25rem">
+            ${slide.content.question}
+          </h3>
+          <div style="display:flex;flex-direction:column;gap:0.75rem">
+      `;
+      
+      slide.content.answers.forEach((answer, idx) => {
+        html += `
+          <div style="padding:1rem;background:white;border:2px solid ${answer.correct ? '#16a34a' : '#e5e7eb'};border-radius:0.5rem;cursor:pointer;transition:all 0.2s">
+            <div style="display:flex;align-items:center;gap:0.75rem">
+              <div style="width:1.5rem;height:1.5rem;border-radius:50%;background:${answer.correct ? '#16a34a' : '#e5e7eb'};color:white;display:flex;align-items:center;justify-content:center;font-weight:700">
+                ${answer.correct ? '✓' : String.fromCharCode(65 + idx)}
+              </div>
+              <div style="flex:1;font-weight:${answer.correct ? '700' : '400'}">${answer.text}</div>
+            </div>
+          </div>
+        `;
+      });
+      
+      html += `
+          </div>
+          ${slide.content.explanation ? `
+            <div style="margin-top:1rem;padding:1rem;background:#dcfce7;border-left:4px solid #16a34a;border-radius:0.5rem">
+              <div style="font-weight:700;color:#166534;margin-bottom:0.5rem">
+                <i class="fas fa-lightbulb"></i> Erklärung:
+              </div>
+              <div style="color:#166534">${slide.content.explanation}</div>
+            </div>
+          ` : ''}
+        </div>
+      `;
+    }
+    
+    html += '</div>';
+    content.innerHTML = html;
+  }
+
+  function extractVideoId(url) {
+    const match = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\s]+)/);
+    return match ? match[1] : '';
+  }
+
+  window.prevPreviewSlide = () => {
+    if (currentPreviewIndex > 0) {
+      currentPreviewIndex--;
+      renderPreviewSlide();
+    }
+  };
+
+  window.nextPreviewSlide = () => {
+    if (currentPreviewIndex < previewSlides.length - 1) {
+      currentPreviewIndex++;
+      renderPreviewSlide();
+    }
+  };
+
+  window.closePreviewModal = () => {
+    document.getElementById('modulePreviewModal').classList.remove('show');
+    previewSlides = [];
+    currentPreviewIndex = 0;
   };
 
   // ========================================
