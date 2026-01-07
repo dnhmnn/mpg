@@ -641,14 +641,23 @@
   </div>
 </div>
 
-
 <!-- Modal: Schulungs-Details -->
 <div class="modal" id="schulungDetailsModal">
   <div class="modal-box">
     <h3 id="schulungDetailsTitle">Schulung</h3>
     <div id="schulungDetailsBody"></div>
-    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
-      <button class="btn" onclick="closeSchulungDetailsModal()">Schließen</button>
+    <div style="display:flex;gap:10px;justify-content:space-between;margin-top:20px;padding-top:16px;border-top:2px solid var(--border)">
+      <div style="display:flex;gap:8px">
+        <button class="btn primary" onclick="closeSchulungDetailsModal();openSchulungEditModal()">
+          <i class="fa-solid fa-edit"></i> Bearbeiten
+        </button>
+        <button class="btn" onclick="confirmDeleteSchul()">
+          <i class="fa-solid fa-trash"></i> Löschen
+        </button>
+      </div>
+      <button class="btn" onclick="closeSchulungDetailsModal()">
+        <i class="fas fa-times"></i> Schließen
+      </button>
     </div>
   </div>
 </div>
