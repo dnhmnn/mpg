@@ -1474,8 +1474,8 @@
     selectedParticipantStatus[memberId] = status;
   };
 
-  // ========================================
-  // SCHULUNGS-DETAILS (MIT TITEL, DOZENT, BESCHREIBUNG!)
+      // ========================================
+  // SCHULUNGS-DETAILS (OHNE TYP!)
   // ========================================
   window.viewSchulungDetails = async (courseId) => {
     try {
@@ -1490,22 +1490,25 @@
       let html = `
         <div class="details-section">
           <h4><i class="fa-solid fa-info-circle"></i> Informationen</h4>
-          <div style="display:grid;grid-template-columns:150px 1fr;gap:8px">
+          <div style="display:grid;grid-template-columns:150px 1fr;gap:12px;align-items:start">
             <div style="font-weight:700;color:#6b7280">Titel:</div>
             <div style="font-weight:700;font-size:1.1rem">${course.title}</div>
             
-            <div style="font-weight:700;color:#6b7280">Typ:</div>
-            <div><span class="badge ${course.type}">${course.type}</span></div>
-            
             ${course.description ? `
             <div style="font-weight:700;color:#6b7280">Beschreibung:</div>
-            <div>${course.description}</div>
+            <div style="line-height:1.6">${course.description}</div>
             ` : ''}
+            
+            <div style="font-weight:700;color:#6b7280">Erstellt:</div>
+            <div>${formatDate(course.created)}</div>
+            
+            <div style="font-weight:700;color:#6b7280">Termine:</div>
+            <div><span class="badge info">${sessions.length} Termin(e)</span></div>
           </div>
         </div>
         
         <div class="details-section">
-          <div style="display:flex;justify-content:space-between;align-items:center">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
             <h4 style="margin:0"><i class="fa-solid fa-calendar"></i> Termine (${sessions.length})</h4>
             <button class="btn btn-sm primary" onclick="openAddSessionModal('${courseId}')">
               <i class="fas fa-plus"></i> Weiteren Termin hinzufügen
@@ -1514,34 +1517,55 @@
       `;
       
       if (sessions.length > 0) {
-        html += '<div style="margin-top:1rem">';
+        // Sortiere Termine nach Datum (neueste zuerst)
+        sessions.sort((a, b) => new Date(b.date) - new Date(a.date));
+        
         sessions.forEach(s => {
+          const isPast = new Date(s.date) < new Date();
+          
           html += `
-            <div class="slide-item" onclick="viewSessionDetails('${s.id}')" style="cursor:pointer">
-              <div style="display:flex;align-items:center;flex:1">
+            <div class="slide-item" onclick="viewSessionDetails('${s.id}')" style="cursor:pointer;border-left-color:${isPast ? '#94a3b8' : 'var(--primary)'}">
+              <div style="display:flex;align-items:center;flex:1;gap:1rem">
                 <div style="flex:1">
-                  <div style="font-weight:700">${formatDate(s.date)} ${s.start_time ? `• ${formatTime(s.start_time)}-${formatTime(s.end_time)}` : ''}</div>
-                  <div style="font-size:0.85rem;color:var(--muted)">
-                    ${s.location || 'Kein Ort'}
-                    ${s.dozent ? ` • Dozent: ${s.dozent}` : ''}
+                  <div style="font-weight:700;display:flex;align-items:center;gap:8px">
+                    ${formatDate(s.date)}
+                    ${s.start_time ? `<span style="color:var(--muted);font-weight:400">• ${formatTime(s.start_time)} - ${formatTime(s.end_time)}</span>` : ''}
+                    ${isPast ? '<span class="badge" style="background:#f3f4f6;color:#6b7280">Vergangen</span>' : '<span class="badge geplant">Geplant</span>'}
                   </div>
+                  <div style="font-size:0.85rem;color:var(--muted);margin-top:4px">
+                    ${s.location ? `📍 ${s.location}` : '📍 Kein Ort'}
+                    ${s.dozent ? ` • 👤 ${s.dozent}` : ''}
+                  </div>
+                  ${s.beschreibung ? `
+                    <div style="font-size:0.85rem;color:var(--muted);margin-top:4px;font-style:italic">
+                      ${s.beschreibung}
+                    </div>
+                  ` : ''}
                 </div>
               </div>
-              <button class="btn btn-sm" onclick="event.stopPropagation(); viewSessionDetails('${s.id}')">
-                <i class="fas fa-eye"></i>
+              <button class="btn btn-sm primary" onclick="event.stopPropagation(); viewSessionDetails('${s.id}')">
+                <i class="fas fa-eye"></i> Details
               </button>
             </div>
           `;
         });
-        html += '</div>';
       } else {
-        html += '<p style="color:#999;padding:16px;text-align:center">Noch keine Termine</p>';
+        html += `
+          <div style="padding:32px;text-align:center;background:#f9fafb;border-radius:8px;color:var(--muted)">
+            <i class="fas fa-calendar" style="font-size:3rem;opacity:0.3;margin-bottom:1rem"></i>
+            <div style="font-weight:700">Noch keine Termine</div>
+            <div style="font-size:0.85rem;margin-top:4px">Füge den ersten Termin über den Button oben hinzu</div>
+          </div>
+        `;
       }
       
       html += `
         </div>
         
-        <div style="margin-top:16px;display:flex;gap:8px">
+        <div style="margin-top:20px;padding-top:16px;border-top:2px solid var(--border);display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn primary" onclick="closeSchulungDetailsModal();openSchulungModal('${courseId}')">
+            <i class="fa-solid fa-edit"></i> Schulung bearbeiten
+          </button>
           <button class="btn" onclick="deleteSchul('${courseId}')">
             <i class="fa-solid fa-trash"></i> Löschen
           </button>
@@ -1552,39 +1576,11 @@
       document.getElementById('schulungDetailsModal').classList.add('show');
       
     } catch(e) {
+      console.error('Details-Fehler:', e);
       showMsg('Fehler: ' + e.message, 'error');
     }
   };
 
-  window.closeSchulungDetailsModal = () => {
-    document.getElementById('schulungDetailsModal').classList.remove('show');
-  };
-
-  window.deleteSchul = async (courseId) => {
-    if (!confirm('Schulung wirklich löschen? Alle Termine werden ebenfalls gelöscht!')) return;
-    
-    try {
-      const sessions = allSessions.filter(s => s.course_id === courseId);
-      for (const session of sessions) {
-        const participants = await pb.collection('schulung_teilnahme').getFullList({
-          filter: `session_id = "${session.id}"`
-        });
-        for (const p of participants) {
-          await pb.collection('schulung_teilnahme').delete(p.id);
-        }
-        await pb.collection('training_sessions').delete(session.id);
-      }
-      
-      await pb.collection('training_courses').delete(courseId);
-      
-      showMsg('✅ Schulung gelöscht!');
-      closeSchulungDetailsModal();
-      await loadCourses();
-      
-    } catch(e) {
-      showMsg('Fehler: ' + e.message, 'error');
-    }
-  };
 
   // ========================================
   // WEITEREN TERMIN HINZUFÜGEN
