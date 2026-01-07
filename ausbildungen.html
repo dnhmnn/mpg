@@ -566,7 +566,7 @@
     </div>
   </div>
 </div>
-<!-- Modal: Neue Schulung (OHNE MAX TEILNEHMER, MIT BESCHREIBUNG) -->
+<!-- Modal: Neue Schulung (OHNE TYP!) -->
 <div class="modal" id="schulungModal">
   <div class="modal-box" style="max-width:800px">
     <h3 id="schulungModalTitle"><i class="fa-solid fa-book-medical"></i> Neue Schulung erstellen</h3>
@@ -578,19 +578,9 @@
           <i class="fa-solid fa-book"></i> Schulungs-Informationen
         </h4>
         
-        <div class="form-grid">
-          <div class="form-group">
-            <label>Titel *</label>
-            <input type="text" name="title" required>
-          </div>
-          <div class="form-group">
-            <label>Typ *</label>
-            <select name="type" required>
-              <option value="präsenz">Präsenz</option>
-              <option value="online">Online</option>
-              <option value="hybrid">Hybrid</option>
-            </select>
-          </div>
+        <div class="form-group">
+          <label>Titel *</label>
+          <input type="text" name="title" required>
         </div>
         
         <div class="form-group">
@@ -650,6 +640,7 @@
     </form>
   </div>
 </div>
+
 
 <!-- Modal: Schulungs-Details -->
 <div class="modal" id="schulungDetailsModal">
@@ -1318,7 +1309,7 @@
     }
   }
 
-  function renderCourses() {
+    function renderCourses() {
     const list = document.getElementById('schulungen-list');
     
     if (allCourses.length === 0) {
@@ -1333,16 +1324,19 @@
       return `
         <div class="course-card" onclick="viewSchulungDetails('${course.id}')">
           <div class="card-title"><i class="fa-solid fa-book-medical"></i> ${course.title}</div>
-          <div class="card-meta">
-            <span class="badge ${course.type}">${course.type}</span>
-            <span><i class="fa-solid fa-calendar"></i> ${courseSessions.length} Termin(e)</span>
-          </div>
+          
           ${course.description ? `
-            <div style="margin-top:8px;color:var(--muted);font-size:.85rem">${course.description}</div>
+            <div style="margin:8px 0;color:var(--muted);font-size:.9rem;line-height:1.5">${course.description}</div>
           ` : ''}
-          ${nextSession ? `
-            <div style="margin-top:8px;padding:8px;background:#f0fdf4;border-radius:6px;font-size:0.85rem">
-              <i class="fa-solid fa-clock"></i> Nächster Termin: ${formatDate(nextSession.date)}
+          
+          <div style="margin-top:8px;color:var(--muted);font-size:.85rem">
+            <i class="fa-solid fa-calendar"></i> ${courseSessions.length} Termin(e)
+            ${nextSession ? ` • Nächster: ${formatDate(nextSession.date)}` : ''}
+          </div>
+          
+          ${nextSession && nextSession.dozent ? `
+            <div style="margin-top:6px;padding:6px 10px;background:#f0fdf4;border-radius:6px;font-size:0.85rem;color:#16a34a">
+              👤 ${nextSession.dozent}
             </div>
           ` : ''}
         </div>
@@ -1365,16 +1359,15 @@
     document.getElementById('schulungModal').classList.remove('show');
   };
 
-  document.getElementById('schulungForm').onsubmit = async (e) => {
+    document.getElementById('schulungForm').onsubmit = async (e) => {
     e.preventDefault();
     
     try {
       const formData = new FormData(e.target);
       
-      // 1. Schulung erstellen (OHNE max_participants!)
+      // 1. Schulung erstellen (OHNE type!)
       const course = await pb.collection('training_courses').create({
         title: formData.get('title').trim(),
-        type: formData.get('type'),
         description: formData.get('description').trim(),
         organization_id: currentUser.organization_id
       });
@@ -1412,6 +1405,7 @@
       showMsg('Fehler: ' + e.message, 'error');
     }
   };
+
 
   window.openParticipantSelector = async () => {
     try {
@@ -1477,7 +1471,7 @@
       // ========================================
   // SCHULUNGS-DETAILS (OHNE TYP!)
   // ========================================
-  window.viewSchulungDetails = async (courseId) => {
+    window.viewSchulungDetails = async (courseId) => {
     try {
       const course = allCourses.find(c => c.id === courseId);
       if (!course) return;
@@ -1517,7 +1511,6 @@
       `;
       
       if (sessions.length > 0) {
-        // Sortiere Termine nach Datum (neueste zuerst)
         sessions.sort((a, b) => new Date(b.date) - new Date(a.date));
         
         sessions.forEach(s => {
@@ -1527,7 +1520,7 @@
             <div class="slide-item" onclick="viewSessionDetails('${s.id}')" style="cursor:pointer;border-left-color:${isPast ? '#94a3b8' : 'var(--primary)'}">
               <div style="display:flex;align-items:center;flex:1;gap:1rem">
                 <div style="flex:1">
-                  <div style="font-weight:700;display:flex;align-items:center;gap:8px">
+                  <div style="font-weight:700;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
                     ${formatDate(s.date)}
                     ${s.start_time ? `<span style="color:var(--muted);font-weight:400">• ${formatTime(s.start_time)} - ${formatTime(s.end_time)}</span>` : ''}
                     ${isPast ? '<span class="badge" style="background:#f3f4f6;color:#6b7280">Vergangen</span>' : '<span class="badge geplant">Geplant</span>'}
@@ -1559,18 +1552,7 @@
         `;
       }
       
-      html += `
-        </div>
-        
-        <div style="margin-top:20px;padding-top:16px;border-top:2px solid var(--border);display:flex;gap:8px;flex-wrap:wrap">
-          <button class="btn primary" onclick="closeSchulungDetailsModal();openSchulungModal('${courseId}')">
-            <i class="fa-solid fa-edit"></i> Schulung bearbeiten
-          </button>
-          <button class="btn" onclick="deleteSchul('${courseId}')">
-            <i class="fa-solid fa-trash"></i> Löschen
-          </button>
-        </div>
-      `;
+      html += `</div>`;
       
       document.getElementById('schulungDetailsBody').innerHTML = html;
       document.getElementById('schulungDetailsModal').classList.add('show');
