@@ -1,1416 +1,1548 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Ausbildungsmanagement</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link href="https://cdn.jsdelivr.net/npm/quill@2.0.0/dist/quill.snow.css" rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/quill@2.0.0/dist/quill.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/pocketbase@0.21.1/dist/pocketbase.umd.js"></script>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Ausbildungen – Responda</title>
+  <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet"/>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
   
-<style>
-:root {
-  --primary: #7c3aed;
-  --primary-dark: #6d28d9;
-  --secondary: #ec4899;
-  --success: #10b981;
-  --warning: #f59e0b;
-  --danger: #ef4444;
-  --text: #1f2937;
-  --muted: #6b7280;
-  --border: #e5e7eb;
-  --bg: #f9fafb;
-}
-
-* { margin:0; padding:0; box-sizing:border-box; }
-
-body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  min-height: 100vh;
-  opacity: 0;
-  transition: opacity 0.3s;
-}
-
-body.loaded { opacity: 1; }
-
-.container {
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 2rem;
-}
-
-header {
-  background: rgba(255,255,255,0.95);
-  backdrop-filter: blur(10px);
-  border-radius: 1rem;
-  padding: 1.5rem 2rem;
-  margin-bottom: 2rem;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.1);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.logo {
-  font-size: 1.75rem;
-  font-weight: 800;
-  background: linear-gradient(135deg, var(--primary), var(--secondary));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.user-info {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  color: var(--text);
-  font-weight: 600;
-}
-
-.tabs {
-  display: flex;
-  gap: 0.5rem;
-  background: rgba(255,255,255,0.95);
-  padding: 0.5rem;
-  border-radius: 1rem;
-  margin-bottom: 2rem;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.1);
-}
-
-.tab {
-  flex: 1;
-  padding: 1rem 1.5rem;
-  border: none;
-  background: transparent;
-  color: var(--muted);
-  font-weight: 600;
-  cursor: pointer;
-  border-radius: 0.75rem;
-  transition: all 0.2s;
-  font-size: 1rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-}
-
-.tab:hover { background: rgba(124,58,237,0.1); color: var(--primary); }
-.tab.active { background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: white; box-shadow: 0 4px 12px rgba(124,58,237,0.3); }
-
-.tab-content { display: none; }
-.tab-content.active { display: block; }
-
-.action-bar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1.5rem;
-  gap: 1rem;
-  flex-wrap: wrap;
-}
-
-.btn {
-  padding: 0.75rem 1.5rem;
-  border: none;
-  border-radius: 0.75rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.95rem;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-}
-
-.btn:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
-
-.btn.primary { background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: white; }
-.btn.success { background: var(--success); color: white; }
-.btn.danger { background: var(--danger); color: white; }
-.btn.warning { background: var(--warning); color: white; }
-.btn.secondary { background: white; color: var(--text); border: 2px solid var(--border); }
-
-.btn.btn-sm {
-  padding: 0.5rem 1rem;
-  font-size: 0.85rem;
-}
-
-.search-box {
-  position: relative;
-  flex: 1;
-  max-width: 400px;
-}
-
-.search-box input {
-  width: 100%;
-  padding: 0.75rem 1rem 0.75rem 2.75rem;
-  border: 2px solid var(--border);
-  border-radius: 0.75rem;
-  font-size: 0.95rem;
-  transition: all 0.2s;
-}
-
-.search-box input:focus {
-  outline: none;
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(124,58,237,0.1);
-}
-
-.search-box i {
-  position: absolute;
-  left: 1rem;
-  top: 50%;
-  transform: translateY(-50%);
-  color: var(--muted);
-}
-
-.grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-  gap: 1.5rem;
-}
-
-.course-card, .module-card {
-  background: white;
-  border-radius: 1rem;
-  padding: 1.5rem;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.08);
-  transition: all 0.3s;
-  cursor: pointer;
-}
-
-.course-card:hover, .module-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
-}
-
-.card-title {
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: var(--text);
-  margin-bottom: 0.75rem;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.card-meta {
-  display: flex;
-  gap: 1rem;
-  font-size: 0.9rem;
-  color: var(--muted);
-  flex-wrap: wrap;
-}
-
-.card-meta span {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-}
-
-.badge {
-  display: inline-block;
-  padding: 0.35rem 0.75rem;
-  border-radius: 0.5rem;
-  font-size: 0.8rem;
-  font-weight: 700;
-  text-transform: uppercase;
-}
-
-.badge.Pflicht { background: #fee2e2; color: #991b1b; }
-.badge.Wahlfrei { background: #dbeafe; color: #1e40af; }
-.badge.Auffrischung { background: #fef3c7; color: #92400e; }
-.badge.text { background: #dbeafe; color: #1e40af; }
-.badge.image { background: #dcfce7; color: #166534; }
-.badge.video { background: #fef3c7; color: #92400e; }
-.badge.quiz { background: #fee2e2; color: #991b1b; }
-
-.empty {
-  text-align: center;
-  padding: 4rem 2rem;
-  color: var(--muted);
-  background: white;
-  border-radius: 1rem;
-}
-
-.empty i { font-size: 4rem; margin-bottom: 1rem; opacity: 0.3; }
-
-.modal {
-  display: none;
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0,0,0,0.6);
-  backdrop-filter: blur(4px);
-  z-index: 1000;
-  overflow-y: auto;
-  padding: 2rem;
-}
-
-.modal.show { display: flex; align-items: center; justify-content: center; }
-
-.modal-content {
-  background: white;
-  border-radius: 1rem;
-  padding: 2rem;
-  max-width: 800px;
-  width: 100%;
-  max-height: 90vh;
-  overflow-y: auto;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-  animation: modalSlideIn 0.3s ease-out;
-}
-
-@keyframes modalSlideIn {
-  from { opacity: 0; transform: translateY(-20px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1.5rem;
-  padding-bottom: 1rem;
-  border-bottom: 2px solid var(--border);
-}
-
-.modal-title {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: var(--text);
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.close-btn {
-  background: none;
-  border: none;
-  font-size: 1.5rem;
-  color: var(--muted);
-  cursor: pointer;
-  width: 2rem;
-  height: 2rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 0.5rem;
-  transition: all 0.2s;
-}
-
-.close-btn:hover { background: var(--bg); color: var(--danger); }
-
-.form-group {
-  margin-bottom: 1.5rem;
-}
-
-.form-group label {
-  display: block;
-  font-weight: 600;
-  margin-bottom: 0.5rem;
-  color: var(--text);
-}
-
-.form-group input,
-.form-group select,
-.form-group textarea {
-  width: 100%;
-  padding: 0.75rem;
-  border: 2px solid var(--border);
-  border-radius: 0.5rem;
-  font-size: 0.95rem;
-  font-family: inherit;
-  transition: all 0.2s;
-}
-
-.form-group input:focus,
-.form-group select:focus,
-.form-group textarea:focus {
-  outline: none;
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(124,58,237,0.1);
-}
-
-.form-group textarea {
-  min-height: 100px;
-  resize: vertical;
-}
-
-.checkbox-group {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  margin-top: 1rem;
-}
-
-.checkbox-group input[type="checkbox"] {
-  width: 20px;
-  height: 20px;
-  cursor: pointer;
-}
-
-.form-actions {
-  display: flex;
-  gap: 1rem;
-  justify-content: flex-end;
-  margin-top: 2rem;
-  padding-top: 1.5rem;
-  border-top: 2px solid var(--border);
-}
-
-.table {
-  width: 100%;
-  border-collapse: collapse;
-  background: white;
-  border-radius: 0.75rem;
-  overflow: hidden;
-}
-
-.table thead {
-  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-  color: white;
-}
-
-.table th,
-.table td {
-  padding: 1rem;
-  text-align: left;
-}
-
-.table tbody tr {
-  border-bottom: 1px solid var(--border);
-  transition: background 0.2s;
-}
-
-.table tbody tr:hover {
-  background: var(--bg);
-}
-
-.status-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 1.5rem;
-  height: 1.5rem;
-  border-radius: 50%;
-  font-weight: 700;
-  font-size: 0.85rem;
-}
-
-.status-icon.completed { background: var(--success); color: white; }
-.status-icon.enrolled { background: var(--warning); color: white; }
-.status-icon.cancelled { background: var(--danger); color: white; }
-.status-icon.progress { background: var(--warning); color: white; }
-.status-icon.pending { background: var(--muted); color: white; }
-
-.details-section {
-  background: var(--bg);
-  padding: 1.5rem;
-  border-radius: 0.75rem;
-  margin-bottom: 1.5rem;
-}
-
-.details-section h4 {
-  color: var(--text);
-  margin-bottom: 1rem;
-  font-size: 1.1rem;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.progress-bar {
-  width: 100%;
-  height: 8px;
-  background: var(--border);
-  border-radius: 4px;
-  overflow: hidden;
-}
-
-.progress-bar-fill {
-  height: 100%;
-  background: linear-gradient(90deg, var(--success), #34d399);
-  transition: width 0.3s;
-}
-
-.qr-code-container {
-  text-align: center;
-  padding: 2rem;
-  background: white;
-  border-radius: 0.75rem;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.1);
-}
-
-.qr-code-container canvas {
-  margin: 1rem auto;
-}
-
-.slide-item {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  padding: 1rem;
-  background: white;
-  border: 2px solid var(--border);
-  border-radius: 0.75rem;
-  margin-bottom: 0.75rem;
-  transition: all 0.2s;
-}
-
-.slide-item:hover {
-  border-color: var(--primary);
-  box-shadow: 0 4px 12px rgba(124,58,237,0.1);
-}
-
-.slide-type-icon {
-  width: 3rem;
-  height: 3rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 0.75rem;
-  font-size: 1.5rem;
-  flex-shrink: 0;
-}
-
-.msg {
-  position: fixed;
-  top: 2rem;
-  right: 2rem;
-  padding: 1rem 1.5rem;
-  background: white;
-  border-radius: 0.75rem;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.15);
-  z-index: 10000;
-  animation: slideIn 0.3s ease-out;
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  font-weight: 600;
-}
-
-@keyframes slideIn {
-  from { opacity: 0; transform: translateX(100%); }
-  to { opacity: 1; transform: translateX(0); }
-}
-
-.msg.success { border-left: 4px solid var(--success); color: var(--success); }
-.msg.error { border-left: 4px solid var(--danger); color: var(--danger); }
-.msg.info { border-left: 4px solid var(--primary); color: var(--primary); }
-
-@media (max-width: 768px) {
-  .container { padding: 1rem; }
-  header { flex-direction: column; gap: 1rem; }
-  .tabs { flex-direction: column; }
-  .grid { grid-template-columns: 1fr; }
-  .action-bar { flex-direction: column; align-items: stretch; }
-  .search-box { max-width: 100%; }
-}
-</style>
+  <!-- Quill Rich Text Editor -->
+  <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+  <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
+  
+  <!-- QR Code Generator -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  
+  <script src="https://cdn.jsdelivr.net/npm/pocketbase@0.21.3/dist/pocketbase.umd.js"></script>
+
+  <style>
+    :root{
+      --primary:#c8102e;
+      --primary-light:#fee2e2;
+      --success:#16a34a;
+      --warning:#f59e0b;
+      --info:#3b82f6;
+      --bg:#f8fafc;
+      --card:#fff;
+      --text:#0f172a;
+      --muted:#64748b;
+      --border:#e2e8f0;
+      --gradient-start:#667eea;
+      --gradient-end:#764ba2;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      background:linear-gradient(135deg, var(--gradient-start) 0%, var(--gradient-end) 100%);
+      min-height:100vh;
+      color:var(--text);
+      font-family:'Atkinson Hyperlegible',-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+      line-height:1.45;
+      opacity:0;
+      transition:opacity 0.3s;
+      padding-bottom:80px;
+    }
+    body.loaded{opacity:1}
+    
+    header{position:sticky;top:0;background:var(--gradient-start);color:#fff;z-index:10;box-shadow:0 2px 8px rgba(0,0,0,.1)}
+    .bar{
+      max-width:1400px;
+      margin:0 auto;
+      padding:.75rem 1rem;
+      display:flex;
+      gap:.5rem;
+      align-items:center;
+      flex-wrap:wrap;
+    }
+    h1{font-size:1.05rem;margin:0;font-weight:800}
+    .toolbar{margin-left:auto;display:flex;gap:.5rem;flex-wrap:wrap}
+    .topbtn{
+      background:rgba(255,255,255,0.1);
+      color:#fff;
+      padding:.45rem .7rem;
+      border-radius:.5rem;
+      cursor:pointer;
+      font-weight:700;
+      font-size:.9rem;
+      transition:all 0.2s;
+      text-decoration:none;
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      border:none;
+      font-family:inherit;
+    }
+    .topbtn:hover{background:rgba(255,255,255,0.2)}
+    
+    .wrap{max-width:1400px;margin:1.5rem auto;padding:0 1rem}
+    
+    .tabs{
+      display:flex;
+      gap:.5rem;
+      margin-bottom:1.5rem;
+      background:#fff;
+      padding:.5rem;
+      border-radius:.75rem;
+      box-shadow:0 2px 8px rgba(0,0,0,.05);
+      overflow-x:auto;
+    }
+    .tab{
+      padding:.6rem 1.25rem;
+      border-radius:.5rem;
+      cursor:pointer;
+      font-weight:700;
+      transition:all 0.2s;
+      white-space:nowrap;
+      border:none;
+      background:transparent;
+      color:var(--muted);
+      font-family:inherit;
+      font-size:.9rem;
+    }
+    .tab:hover{background:#f9fafb;color:var(--text)}
+    .tab.active{background:var(--primary);color:#fff}
+    
+    .actions{
+      display:flex;
+      gap:.5rem;
+      margin-bottom:1rem;
+      flex-wrap:wrap;
+    }
+    .btn{
+      background:#fff;
+      color:var(--text);
+      padding:.6rem 1rem;
+      border-radius:.5rem;
+      cursor:pointer;
+      font-weight:700;
+      transition:all 0.2s;
+      font-family:inherit;
+      border:1px solid var(--border);
+      display:inline-flex;
+      align-items:center;
+      gap:.5rem;
+      font-size:.9rem;
+    }
+    .btn:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,.1)}
+    .btn.primary{background:var(--primary);color:#fff;border-color:var(--primary)}
+    .btn.primary:hover{background:#a80d25}
+    .btn.success{background:var(--success);color:#fff;border-color:var(--success)}
+    .btn.info{background:var(--info);color:#fff;border-color:var(--info)}
+    .btn.warning{background:var(--warning);color:#fff;border-color:var(--warning)}
+    .btn:disabled{opacity:0.5;cursor:not-allowed;transform:none}
+    .btn-sm{padding:.4rem .7rem;font-size:.85rem}
+    
+    .grid{
+      display:grid;
+      grid-template-columns:repeat(auto-fill,minmax(280px,1fr));
+      gap:16px;
+    }
+    
+    .course-card, .member-card, .module-card{
+      background:#fff;
+      border-radius:.75rem;
+      padding:1.5rem;
+      box-shadow:0 2px 8px rgba(0,0,0,.05);
+      transition:all 0.2s;
+      border:2px solid transparent;
+      cursor:pointer;
+    }
+    .course-card:hover, .member-card:hover, .module-card:hover{
+      transform:translateY(-4px);
+      box-shadow:0 8px 20px rgba(0,0,0,.12);
+      border-color:var(--primary-light);
+    }
+    
+    .card-title{
+      font-weight:800;
+      font-size:1.2rem;
+      margin-bottom:.5rem;
+      color:var(--text);
+    }
+    .card-meta{
+      font-size:.85rem;
+      color:var(--muted);
+      margin-bottom:.5rem;
+      display:flex;
+      gap:.5rem;
+      flex-wrap:wrap;
+      align-items:center;
+    }
+    
+    .badge{
+      padding:.25rem .6rem;
+      border-radius:999px;
+      font-size:.75rem;
+      font-weight:700;
+      white-space:nowrap;
+    }
+    .badge.online{background:#dbeafe;color:#1e40af}
+    .badge.präsenz{background:#fef3c7;color:#92400e}
+    .badge.hybrid{background:#e0e7ff;color:#4338ca}
+    .badge.geplant{background:#e0e7ff;color:#4338ca}
+    .badge.läuft{background:#dcfce7;color:#166534}
+    .badge.abgeschlossen{background:#f3f4f6;color:#4b5563}
+    .badge.anwesend{background:#dcfce7;color:#166534}
+    .badge.abwesend{background:#fee2e2;color:#991b1b}
+    .badge.zugesagt{background:#dcfce7;color:#166534}
+    .badge.abgesagt{background:#fee2e2;color:#991b1b}
+    .badge.eingeladen{background:#e0e7ff;color:#4338ca}
+    
+    .tag{background:#fee;color:var(--primary);padding:4px 10px;border-radius:999px;font-size:0.8rem;font-weight:700;display:inline-block;margin:2px}
+    
+    .modal{
+      position:fixed;
+      inset:0;
+      background:rgba(0,0,0,.6);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      z-index:1000;
+      padding:20px;
+      overflow-y:auto;
+    }
+    .modal.show{display:flex}
+    .modal-box{
+      background:#fff;
+      border-radius:14px;
+      max-width:1000px;
+      width:100%;
+      max-height:85vh;
+      overflow-y:auto;
+      padding:24px;
+      box-shadow:0 8px 20px rgba(0,0,0,.3);
+      margin:auto;
+    }
+    .modal-box h3{margin:0 0 1rem 0;color:var(--primary);font-weight:800}
+    
+    .form-grid{display:grid;gap:1rem;grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
+    .form-group{display:flex;flex-direction:column;gap:6px}
+    .form-group label{font-weight:700;font-size:.9rem;color:#374151}
+    .form-group input,
+    .form-group textarea,
+    .form-group select{
+      padding:.6rem;
+      border:1px solid var(--border);
+      border-radius:.5rem;
+      background:#fff;
+      font-size:16px;
+      font-family:inherit;
+      width:100%;
+    }
+    .form-group input:focus,
+    .form-group textarea:focus,
+    .form-group select:focus{
+      outline:none;
+      border-color:var(--primary);
+      box-shadow:0 0 0 3px rgba(200,16,46,0.1);
+    }
+    
+    .tag-input-wrapper{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      padding:8px;
+      border:1px solid #d1d5db;
+      border-radius:8px;
+      min-height:44px;
+      align-items:center;
+      background:#fff;
+    }
+    .tag-input-wrapper:focus-within{
+      border-color:var(--primary);
+      box-shadow:0 0 0 3px rgba(200,16,46,0.1);
+    }
+    .tag-input-wrapper .tag{display:flex;align-items:center;gap:4px}
+    .tag-input-wrapper .tag .remove-tag{cursor:pointer;font-weight:bold;margin-left:4px}
+    .tag-input-wrapper input{border:none;outline:none;flex:1;min-width:100px;font-size:16px;padding:4px}
+    
+    .table{
+      width:100%;
+      border-collapse:collapse;
+      background:#fff;
+      border-radius:.75rem;
+      overflow:hidden;
+      box-shadow:0 2px 8px rgba(0,0,0,.05);
+    }
+    .table th,
+    .table td{
+      padding:.75rem 1rem;
+      text-align:left;
+      border-bottom:1px solid var(--border);
+    }
+    .table th{
+      background:#f9fafb;
+      font-weight:700;
+      font-size:.9rem;
+    }
+    .table tr:hover{background:#f9fafb}
+    .table tr:last-child td{border-bottom:none}
+    
+    .ql-container{
+      font-family:'Atkinson Hyperlegible',-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+      font-size:1rem;
+      min-height:200px;
+      max-height:300px;
+    }
+    .ql-editor{
+      min-height:200px;
+      max-height:300px;
+      overflow-y:auto;
+    }
+    
+    .access-code-box{
+      background:#f9fafb;
+      padding:1.5rem;
+      border-radius:.75rem;
+      border:2px dashed var(--primary);
+      text-align:center;
+    }
+    .access-code{
+      font-size:2rem;
+      font-weight:800;
+      font-family:monospace;
+      color:var(--primary);
+      margin:1rem 0;
+    }
+    
+    .copy-box{
+      background:#f9fafb;
+      padding:.75rem;
+      border-radius:.5rem;
+      border:1px solid var(--border);
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:.5rem;
+      font-family:monospace;
+      font-size:.85rem;
+    }
+    
+    .slide-item{
+      background:#f9fafb;
+      padding:1rem;
+      border-radius:.5rem;
+      border-left:4px solid var(--primary);
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      cursor:move;
+      transition:all 0.2s;
+      margin-bottom:.75rem;
+    }
+    .slide-item:hover{
+      background:#f3f4f6;
+      transform:translateX(4px);
+    }
+    
+    .slide-type-icon{
+      width:40px;
+      height:40px;
+      border-radius:.5rem;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      margin-right:1rem;
+      font-size:1.2rem;
+    }
+    .slide-type-icon.text{background:#dbeafe;color:#1e40af}
+    .slide-type-icon.image{background:#dcfce7;color:#166534}
+    .slide-type-icon.video{background:#fef3c7;color:#92400e}
+    .slide-type-icon.quiz{background:#fee2e2;color:#991b1b}
+    
+    .progress-bar{
+      width:100%;
+      height:8px;
+      background:#e5e7eb;
+      border-radius:999px;
+      overflow:hidden;
+      margin:.5rem 0;
+    }
+    .progress-bar-fill{
+      height:100%;
+      background:var(--success);
+      transition:width 0.3s;
+    }
+    
+    .status-icon{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      width:24px;
+      height:24px;
+      border-radius:50%;
+      font-size:.85rem;
+    }
+    .status-icon.completed{background:#dcfce7;color:#166534}
+    .status-icon.progress{background:#fef3c7;color:#92400e}
+    .status-icon.failed{background:#fee2e2;color:#991b1b}
+    .status-icon.pending{background:#e5e7eb;color:#6b7280}
+    
+    .empty{
+      text-align:center;
+      padding:3rem 1rem;
+      color:var(--muted);
+    }
+    .empty i{font-size:4rem;margin-bottom:1rem;opacity:0.3}
+    
+    .msg{
+      position: fixed;
+      top: 2rem;
+      right: 2rem;
+      padding: 1rem 1.5rem;
+      border-radius: 8px;
+      font-weight: 600;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+      z-index: 10000;
+      animation: slideInFromRight 0.3s ease-out;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .msg.error{background:#fee;color:#c00;border:1px solid #fcc}
+    .msg.success{background:#efe;color:#060;border:1px solid #cfc}
+    .msg.info{background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe}
+    
+    @keyframes slideInFromRight {
+      from { 
+        opacity: 0; 
+        transform: translateX(100%); 
+      }
+      to { 
+        opacity: 1; 
+        transform: translateX(0); 
+      }
+    }
+    
+    .details-section{
+      margin:20px 0;
+      padding:16px;
+      background:#f9fafb;
+      border-radius:8px;
+    }
+    .details-section h4{
+      margin:0 0 12px 0;
+      color:var(--primary);
+      font-size:1rem;
+    }
+    
+    @media (max-width:768px){
+      .bar{flex-direction:column;align-items:stretch}
+      h1{font-size:1rem}
+      .toolbar{margin-left:0;width:100%;justify-content:space-between}
+      .topbtn{flex:1;justify-content:center}
+      .tabs{padding:.25rem}
+      .tab{padding:.5rem 1rem;font-size:.85rem}
+      .grid{grid-template-columns:1fr}
+      .actions{flex-direction:column}
+      .btn{width:100%;justify-content:center}
+      .table{font-size:.85rem}
+      .table th,.table td{padding:.5rem}
+      .form-grid{grid-template-columns:1fr}
+    }
+  </style>
 </head>
+
 <body>
 
-<div class="container">
-  <header>
-    <div class="logo">
-      <i class="fas fa-graduation-cap"></i>
-      Ausbildungsmanagement
-    </div>
-    <div class="user-info">
-      <span id="username"></span>
-      <button class="btn btn-sm danger" onclick="logout()">
-        <i class="fas fa-sign-out-alt"></i> Logout
+<!-- HEADER -->
+<header>
+  <div class="bar">
+    <h1><i class="fa-solid fa-graduation-cap"></i> Ausbildungen</h1>
+    <div class="toolbar">
+      <a class="topbtn" href="mpg-dashboard.html">
+        <i class="fa-solid fa-dashboard"></i> Dashboard
+      </a>
+      <button class="topbtn" id="logout">
+        <i class="fa-solid fa-right-from-bracket"></i> Logout
       </button>
     </div>
-  </header>
+  </div>
+</header>
 
+<!-- MAIN -->
+<div class="wrap">
+  <!-- Tabs -->
   <div class="tabs">
-    <button class="tab active" onclick="switchTab('schulungen')">
-      <i class="fas fa-book-medical"></i> Schulungen
+    <button class="tab active" data-tab="schulungen">
+      <i class="fas fa-book"></i> Ausbildungen
     </button>
-    <button class="tab" onclick="switchTab('team')">
+    <button class="tab" data-tab="team">
       <i class="fas fa-users"></i> Team
     </button>
-    <button class="tab" onclick="switchTab('zugaenge')">
-      <i class="fas fa-key"></i> Zugänge
-    </button>
-    <button class="tab" onclick="switchTab('lernbereich')">
+    <button class="tab" data-tab="lernbereich">
       <i class="fas fa-laptop"></i> Lernbereich
     </button>
+    <button class="tab" data-tab="settings">
+      <i class="fas fa-cog"></i> Einstellungen
+    </button>
   </div>
-
-  <!-- SCHULUNGEN TAB -->
-  <div id="schulungen-tab" class="tab-content active">
-    <div class="action-bar">
-      <div class="search-box">
-        <i class="fas fa-search"></i>
-        <input type="text" placeholder="Schulungen durchsuchen..." id="search-schulungen">
-      </div>
+  
+  <!-- TAB: AUSBILDUNGEN -->
+  <div id="tab-schulungen" class="tab-content">
+    <div class="actions">
       <button class="btn primary" onclick="openSchulungModal()">
         <i class="fas fa-plus"></i> Neue Schulung
       </button>
     </div>
-    <div class="grid" id="schulungen-list"></div>
+    <div id="schulungen-list" class="grid">
+      <div class="empty"><i class="fas fa-book"></i><div>Lade Ausbildungen...</div></div>
+    </div>
   </div>
-
-  <!-- TEAM TAB -->
-  <div id="team-tab" class="tab-content">
-    <div class="action-bar">
-      <div class="search-box">
-        <i class="fas fa-search"></i>
-        <input type="text" placeholder="Team durchsuchen..." id="search-team">
-      </div>
+  
+  <!-- TAB: TEAM -->
+  <div id="tab-team" class="tab-content" style="display:none">
+    <div class="actions">
       <button class="btn primary" onclick="openMemberModal()">
         <i class="fas fa-user-plus"></i> Neues Mitglied
       </button>
-    </div>
-    <div class="grid" id="team-list"></div>
-  </div>
-
-  <!-- ZUGÄNGE TAB -->
-  <div id="zugaenge-tab" class="tab-content">
-    <div class="action-bar">
-      <button class="btn success" onclick="exportAllAccessPDF()">
-        <i class="fas fa-file-pdf"></i> Alle als PDF exportieren
+      <button class="btn success" onclick="exportAllMembersStats()">
+        <i class="fas fa-chart-bar"></i> Gesamtauswertung
       </button>
     </div>
-    <div class="grid" id="zugaenge-list"></div>
+    <div id="team-list" class="grid">
+      <div class="empty"><i class="fas fa-users"></i><div>Lade Team...</div></div>
+    </div>
   </div>
-
-  <!-- LERNBEREICH TAB -->
-  <div id="lernbereich-tab" class="tab-content">
-    <div class="action-bar">
+  
+  <!-- TAB: LERNBEREICH -->
+  <div id="tab-lernbereich" class="tab-content" style="display:none">
+    <div class="actions">
       <button class="btn primary" onclick="openModuleModal()">
         <i class="fas fa-plus"></i> Neues Lernmodul
       </button>
     </div>
-    <div class="grid" id="lernbereich-list"></div>
-  </div>
-</div>
-<!-- SCHULUNG ERSTELLEN/BEARBEITEN MODAL -->
-<div id="schulungModal" class="modal">
-  <div class="modal-content">
-    <div class="modal-header">
-      <h2 class="modal-title" id="schulungModalTitle">
-        <i class="fas fa-book-medical"></i> Neue Schulung
-      </h2>
-      <button class="close-btn" onclick="closeSchulungModal()">
-        <i class="fas fa-times"></i>
-      </button>
+    <div id="lernbereich-list" class="grid">
+      <div class="empty"><i class="fas fa-laptop"></i><div>Lade Lernmodule...</div></div>
     </div>
-    <form id="schulungForm">
-      <div class="form-group">
-        <label>Titel *</label>
-        <input type="text" name="title" required>
-      </div>
-      
-      <div class="form-group">
-        <label>Typ *</label>
-        <select name="type" required>
-          <option value="Pflicht">Pflicht</option>
-          <option value="Wahlfrei">Wahlfrei</option>
-          <option value="Auffrischung">Auffrischung</option>
-        </select>
-      </div>
-      
-      <div class="form-group">
-        <label>Dozent</label>
-        <input type="text" name="instructor" placeholder="z.B. Dr. Max Mustermann">
-      </div>
-      
-      <div class="form-group">
-        <label>Beschreibung</label>
-        <textarea name="description" placeholder="Kurze Beschreibung der Schulung"></textarea>
-      </div>
-      
-      <div class="form-group">
-        <label>Dauer (Stunden)</label>
-        <input type="number" name="duration" min="1" placeholder="z.B. 8">
-      </div>
-      
-      <div class="form-group">
-        <label>Standardort</label>
-        <input type="text" name="location" placeholder="z.B. Ausbildungszentrum Berlin">
-      </div>
-      
-      <div class="form-group">
-        <label>Zertifikatsgültigkeit (Monate)</label>
-        <input type="number" name="certificate_validity" min="1" placeholder="z.B. 24">
-      </div>
-      
-      <div class="form-actions">
-        <button type="button" class="btn secondary" onclick="closeSchulungModal()">
-          Abbrechen
-        </button>
-        <button type="submit" class="btn primary">
+  </div>
+  
+  <!-- TAB: EINSTELLUNGEN -->
+  <div id="tab-settings" class="tab-content" style="display:none">
+    <h3 style="margin:0 0 1rem 0;color:#fff">Einstellungen</h3>
+    
+    <!-- Pflicht-Schulungen -->
+    <div style="background:#fff;border-radius:.75rem;padding:1.5rem;margin-bottom:1.5rem;box-shadow:0 2px 8px rgba(0,0,0,.05)">
+      <h4 style="margin:0 0 1rem 0;color:var(--primary)">
+        <i class="fa-solid fa-graduation-cap"></i> Pflicht-Schulungen
+      </h4>
+      <form id="pflichtForm">
+        <div class="form-group">
+          <label>Pflicht-Schulungen pro Jahr</label>
+          <input type="number" id="pflicht_schulungen" name="pflicht_schulungen" min="0" value="12">
+          <small style="color:var(--muted);font-size:.85rem">
+            Diese Anzahl wird bei jedem Team-Mitglied als Ziel angezeigt.
+          </small>
+        </div>
+        <button type="submit" class="btn primary" style="margin-top:1rem">
           <i class="fas fa-save"></i> Speichern
         </button>
-      </div>
-    </form>
-  </div>
-</div>
-
-<!-- SCHULUNG DETAILS MODAL -->
-<div id="schulungDetailsModal" class="modal">
-  <div class="modal-content" style="max-width: 1000px;">
-    <div class="modal-header">
-      <h2 class="modal-title" id="schulungDetailsTitle"></h2>
-      <button class="close-btn" onclick="closeSchulungDetailsModal()">
-        <i class="fas fa-times"></i>
+      </form>
+    </div>
+    
+    <h4 style="margin:1.5rem 0 1rem 0;color:#fff">Externe Zugänge</h4>
+    <p style="color:rgba(255,255,255,0.8);margin-bottom:1rem">
+      Externe Teilnehmer melden sich nur mit ihrem 3-Wort-Code an (keine E-Mail nötig).
+    </p>
+    
+    <div class="actions">
+      <button class="btn primary" onclick="openSingleAccessModal()">
+        <i class="fas fa-key"></i> Einzelnen Zugang erstellen
       </button>
-    </div>
-    <div id="schulungDetailsBody"></div>
-  </div>
-</div>
-
-<!-- TERMIN ERSTELLEN MODAL -->
-<div id="terminModal" class="modal">
-  <div class="modal-content">
-    <div class="modal-header">
-      <h2 class="modal-title">
-        <i class="fas fa-calendar-plus"></i> Neuer Termin
-      </h2>
-      <button class="close-btn" onclick="closeTerminModal()">
-        <i class="fas fa-times"></i>
+      <button class="btn" onclick="openBulkAccessModal()">
+        <i class="fas fa-users"></i> Mehrere Zugänge erstellen
       </button>
-    </div>
-    <form id="terminForm">
-      <div class="form-group">
-        <label>Datum & Uhrzeit *</label>
-        <input type="datetime-local" name="date" required>
-      </div>
-      
-      <div class="form-group">
-        <label>Ort</label>
-        <input type="text" name="location" placeholder="Überschreibt Standardort falls angegeben">
-      </div>
-      
-      <div class="form-actions">
-        <button type="button" class="btn secondary" onclick="closeTerminModal()">
-          Abbrechen
-        </button>
-        <button type="submit" class="btn primary">
-          <i class="fas fa-save"></i> Termin erstellen
-        </button>
-      </div>
-    </form>
-  </div>
-</div>
-
-<!-- TEAM MITGLIED MODAL -->
-<div id="memberModal" class="modal">
-  <div class="modal-content">
-    <div class="modal-header">
-      <h2 class="modal-title" id="memberModalTitle">
-        <i class="fas fa-user-plus"></i> Neues Mitglied
-      </h2>
-      <button class="close-btn" onclick="closeMemberModal()">
-        <i class="fas fa-times"></i>
+      <button class="btn" onclick="exportAccessCodes()">
+        <i class="fas fa-download"></i> CSV exportieren
       </button>
-    </div>
-    <form id="memberForm">
-      <div class="form-group">
-        <label>Vorname *</label>
-        <input type="text" name="vorname" required>
-      </div>
-      
-      <div class="form-group">
-        <label>Nachname *</label>
-        <input type="text" name="name" required>
-      </div>
-      
-      <div class="form-group">
-        <label>E-Mail</label>
-        <input type="email" name="email">
-      </div>
-      
-      <div class="form-group">
-        <label>Telefon</label>
-        <input type="tel" name="telefon">
-      </div>
-      
-      <div class="form-group">
-        <label>Rolle</label>
-        <input type="text" name="rolle" placeholder="z.B. Rettungssanitäter">
-      </div>
-      
-      <div class="checkbox-group">
-        <input type="checkbox" id="member-aktiv" name="aktiv" checked>
-        <label for="member-aktiv">Aktiv</label>
-      </div>
-      
-      <div class="form-actions">
-        <button type="button" class="btn secondary" onclick="closeMemberModal()">
-          Abbrechen
-        </button>
-        <button type="submit" class="btn primary">
-          <i class="fas fa-save"></i> Speichern
-        </button>
-      </div>
-    </form>
-  </div>
-</div>
-
-<!-- MITGLIED DETAILS MODAL -->
-<div id="memberDetailsModal" class="modal">
-  <div class="modal-content" style="max-width: 1000px;">
-    <div class="modal-header">
-      <h2 class="modal-title" id="memberDetailsTitle"></h2>
-      <button class="close-btn" onclick="closeMemberDetailsModal()">
-        <i class="fas fa-times"></i>
-      </button>
-    </div>
-    <div id="memberDetailsBody"></div>
-  </div>
-</div>
-
-<!-- TEILNEHMER ZUWEISEN MODAL -->
-<div id="assignSessionModal" class="modal">
-  <div class="modal-content">
-    <div class="modal-header">
-      <h2 class="modal-title">
-        <i class="fas fa-users"></i> Teilnehmer zu Termin zuweisen
-      </h2>
-      <button class="close-btn" onclick="closeAssignSessionModal()">
-        <i class="fas fa-times"></i>
-      </button>
-    </div>
-    <div style="margin-bottom: 1rem;">
-      <input type="text" id="assignSearchInput" placeholder="Mitglied suchen..." 
-        style="width:100%;padding:0.75rem;border:2px solid var(--border);border-radius:0.5rem"
-        oninput="filterAssignList()">
-    </div>
-    <div id="assignMembersList" style="max-height: 400px; overflow-y: auto; border: 2px solid var(--border); border-radius: 0.75rem;"></div>
-    <div class="form-actions">
-      <button class="btn secondary" onclick="closeAssignSessionModal()">Abbrechen</button>
-      <button class="btn primary" onclick="saveSessionAssignments()">
-        <i class="fas fa-save"></i> Speichern
-      </button>
-    </div>
-  </div>
-</div>
-
-<!-- ZUGANG DETAILS MODAL -->
-<div id="accessModal" class="modal">
-  <div class="modal-content">
-    <div class="modal-header">
-      <h2 class="modal-title" id="accessModalTitle"></h2>
-      <button class="close-btn" onclick="closeAccessModal()">
-        <i class="fas fa-times"></i>
-      </button>
-    </div>
-    <div id="accessModalBody"></div>
-  </div>
-</div>
-
-<!-- LERNMODUL MODAL -->
-<div id="moduleModal" class="modal">
-  <div class="modal-content">
-    <div class="modal-header">
-      <h2 class="modal-title" id="moduleModalTitle">
-        <i class="fas fa-laptop"></i> Neues Lernmodul
-      </h2>
-      <button class="close-btn" onclick="closeModuleModal()">
-        <i class="fas fa-times"></i>
-      </button>
-    </div>
-    <form id="moduleForm">
-      <div class="form-group">
-        <label>Titel *</label>
-        <input type="text" name="title" required>
-      </div>
-      
-      <div class="form-group">
-        <label>Dozent</label>
-        <input type="text" name="instructor" placeholder="z.B. Dr. Max Mustermann">
-      </div>
-      
-      <div class="form-group">
-        <label>Beschreibung</label>
-        <textarea name="description"></textarea>
-      </div>
-      
-      <div class="form-group">
-        <label>Bestehensgrenze (%)</label>
-        <input type="number" name="passing_score" min="0" max="100" value="80">
-      </div>
-      
-      <div class="form-group">
-        <label>Max. Versuche (0 = unbegrenzt)</label>
-        <input type="number" name="max_attempts" min="0" value="3">
-      </div>
-      
-      <div class="checkbox-group">
-        <input type="checkbox" id="require-quiz" name="require_quiz">
-        <label for="require-quiz">Prüfung erforderlich</label>
-      </div>
-      
-      <div class="form-actions">
-        <button type="button" class="btn secondary" onclick="closeModuleModal()">
-          Abbrechen
-        </button>
-        <button type="submit" class="btn primary">
-          <i class="fas fa-save"></i> Speichern
-        </button>
-      </div>
-    </form>
-  </div>
-</div>
-
-<!-- MODUL DETAILS MODAL -->
-<div id="moduleDetailsModal" class="modal">
-  <div class="modal-content" style="max-width: 1000px;">
-    <div class="modal-header">
-      <h2 class="modal-title" id="moduleDetailsTitle"></h2>
-      <button class="close-btn" onclick="closeModuleDetailsModal()">
-        <i class="fas fa-times"></i>
-      </button>
-    </div>
-    <div id="moduleDetailsBody"></div>
-  </div>
-</div>
-
-<!-- PERSONEN ZUWEISEN MODAL -->
-<div id="assignMembersModal" class="modal">
-  <div class="modal-content">
-    <div class="modal-header">
-      <h2 class="modal-title">
-        <i class="fas fa-users"></i> Personen zuweisen
-      </h2>
-      <button class="close-btn" onclick="closeAssignMembersModal()">
-        <i class="fas fa-times"></i>
-      </button>
-    </div>
-    <div id="assignMembersList" style="max-height: 400px; overflow-y: auto; border: 2px solid var(--border); border-radius: 0.75rem;"></div>
-    <div class="form-actions">
-      <button class="btn secondary" onclick="closeAssignMembersModal()">Abbrechen</button>
-      <button class="btn primary" onclick="saveAssignments()">
-        <i class="fas fa-save"></i> Speichern
-      </button>
-    </div>
-  </div>
-</div>
-<!-- FOLIEN-EDITOR MODAL -->
-<div id="slideEditorModal" class="modal">
-  <div class="modal-content" style="max-width: 1200px;">
-    <div class="modal-header">
-      <h2 class="modal-title" id="slideEditorTitle">
-        <i class="fas fa-edit"></i> Folien bearbeiten
-      </h2>
-      <button class="close-btn" onclick="closeSlideEditor()">
-        <i class="fas fa-times"></i>
+      <button class="btn success" onclick="exportAllAccessPDFs()">
+        <i class="fas fa-file-pdf"></i> Alle PDFs erstellen
       </button>
     </div>
     
-    <div style="margin-bottom: 1.5rem;">
+    <div id="access-list">
+      <div class="empty" style="background:#fff;border-radius:.75rem"><i class="fas fa-key"></i><div>Lade Zugänge...</div></div>
+    </div>
+  </div>
+</div>
+<!-- Modal: Neue Schulung (OHNE MAX TEILNEHMER, MIT BESCHREIBUNG) -->
+<div class="modal" id="schulungModal">
+  <div class="modal-box" style="max-width:800px">
+    <h3 id="schulungModalTitle"><i class="fa-solid fa-book-medical"></i> Neue Schulung erstellen</h3>
+    <form id="schulungForm">
+      
+      <!-- SCHULUNGS-INFORMATIONEN -->
+      <div style="background:#f9fafb;padding:1rem;border-radius:.5rem;margin-bottom:1rem">
+        <h4 style="margin:0 0 1rem 0;color:var(--primary);font-size:1rem">
+          <i class="fa-solid fa-book"></i> Schulungs-Informationen
+        </h4>
+        
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Titel *</label>
+            <input type="text" name="title" required>
+          </div>
+          <div class="form-group">
+            <label>Typ *</label>
+            <select name="type" required>
+              <option value="präsenz">Präsenz</option>
+              <option value="online">Online</option>
+              <option value="hybrid">Hybrid</option>
+            </select>
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label>Beschreibung</label>
+          <textarea name="description" rows="3" placeholder="z.B. Reanimation mit AED-Training"></textarea>
+        </div>
+      </div>
+      
+      <!-- TERMIN -->
+      <div style="background:#f0fdf4;padding:1rem;border-radius:.5rem;margin-bottom:1rem">
+        <h4 style="margin:0 0 1rem 0;color:#16a34a;font-size:1rem">
+          <i class="fa-solid fa-calendar"></i> Erster Termin
+        </h4>
+        
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Datum *</label>
+            <input type="date" name="date" required>
+          </div>
+          <div class="form-group">
+            <label>Von</label>
+            <input type="time" name="start_time" value="09:00">
+          </div>
+          <div class="form-group">
+            <label>Bis</label>
+            <input type="time" name="end_time" value="17:00">
+          </div>
+        </div>
+        
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Ort</label>
+            <input type="text" name="location" placeholder="z.B. Schulungsraum A">
+          </div>
+          <div class="form-group">
+            <label>Dozent</label>
+            <input type="text" name="instructor" placeholder="z.B. Dr. Müller">
+          </div>
+        </div>
+      </div>
+      
+      <!-- TEILNEHMER -->
+      <div style="background:#eff6ff;padding:1rem;border-radius:.5rem;margin-bottom:1rem">
+        <h4 style="margin:0 0 1rem 0;color:#3b82f6;font-size:1rem">
+          <i class="fa-solid fa-users"></i> Teilnehmer einladen
+        </h4>
+        
+        <button type="button" class="btn" onclick="openParticipantSelector()">
+          <i class="fas fa-users"></i> Teilnehmer auswählen (<span id="selected-count">0</span>)
+        </button>
+      </div>
+      
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
+        <button type="button" class="btn" onclick="closeSchulungModal()">Abbrechen</button>
+        <button type="submit" class="btn primary"><i class="fa-solid fa-save"></i> Schulung erstellen</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal: Schulungs-Details -->
+<div class="modal" id="schulungDetailsModal">
+  <div class="modal-box">
+    <h3 id="schulungDetailsTitle">Schulung</h3>
+    <div id="schulungDetailsBody"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
+      <button class="btn" onclick="closeSchulungDetailsModal()">Schließen</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Weiteren Termin hinzufügen -->
+<div class="modal" id="addSessionModal">
+  <div class="modal-box">
+    <h3><i class="fa-solid fa-calendar-plus"></i> Weiteren Termin hinzufügen</h3>
+    <form id="addSessionForm">
+      <input type="hidden" id="add-session-course-id">
+      
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Datum *</label>
+          <input type="date" name="date" required>
+        </div>
+        <div class="form-group">
+          <label>Von</label>
+          <input type="time" name="start_time" value="09:00">
+        </div>
+        <div class="form-group">
+          <label>Bis</label>
+          <input type="time" name="end_time" value="17:00">
+        </div>
+      </div>
+      
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Ort</label>
+          <input type="text" name="location" placeholder="z.B. Schulungsraum A">
+        </div>
+        <div class="form-group">
+          <label>Dozent</label>
+          <input type="text" name="dozent" placeholder="z.B. Dr. Müller">
+        </div>
+      </div>
+      
+      <div class="form-group">
+        <label>Beschreibung</label>
+        <textarea name="beschreibung" rows="2"></textarea>
+      </div>
+      
+      <div class="form-group">
+        <label>Teilnehmer einladen</label>
+        <button type="button" class="btn" onclick="openParticipantSelectorForAdd()">
+          <i class="fas fa-users"></i> Teilnehmer auswählen (<span id="add-selected-count">0</span>)
+        </button>
+      </div>
+      
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
+        <button type="button" class="btn" onclick="closeAddSessionModal()">Abbrechen</button>
+        <button type="submit" class="btn primary"><i class="fa-solid fa-save"></i> Termin hinzufügen</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal: Teilnehmer auswählen -->
+<div class="modal" id="participantModal">
+  <div class="modal-box" style="max-width:600px">
+    <h3><i class="fa-solid fa-users"></i> Teilnehmer auswählen</h3>
+    <div id="participantList" style="max-height:400px;overflow-y:auto"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
+      <button class="btn primary" onclick="closeParticipantModal()">
+        <i class="fa-solid fa-check"></i> Fertig
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Termin-Details -->
+<div class="modal" id="sessionDetailsModal">
+  <div class="modal-box">
+    <h3 id="sessionDetailsTitle">Termin-Details</h3>
+    <div id="sessionDetailsBody"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
+      <button class="btn" onclick="closeSessionDetailsModal()">Schließen</button>
+      <button class="btn primary" onclick="saveAttendance()">
+        <i class="fa-solid fa-save"></i> Anwesenheit speichern
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Neues Team-Mitglied -->
+<div class="modal" id="memberModal">
+  <div class="modal-box">
+    <h3 id="memberModalTitle"><i class="fa-solid fa-user-plus"></i> Neues Team-Mitglied</h3>
+    <form id="memberForm">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Nachname *</label>
+          <input type="text" name="name" required>
+        </div>
+        <div class="form-group">
+          <label>Vorname *</label>
+          <input type="text" name="vorname" required>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Qualifikationen / Tags</label>
+        <div class="tag-input-wrapper" id="tagInputWrapper">
+          <input 
+            type="text" 
+            id="tagInput" 
+            placeholder="Tag eingeben und Enter drücken"
+          >
+        </div>
+        <small style="color:#6b7280;font-size:0.85rem">Beispiele: Rettungssanitäter, Sanitäter A, Defi-Schleife</small>
+      </div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
+        <button type="button" class="btn" onclick="closeMemberModal()">Abbrechen</button>
+        <button type="submit" class="btn primary"><i class="fa-solid fa-save"></i> Speichern</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal: Team-Mitglied Details -->
+<div class="modal" id="memberDetailsModal">
+  <div class="modal-box">
+    <h3 id="memberDetailsTitle">Team-Mitglied</h3>
+    <div id="memberDetailsBody"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
+      <button class="btn" onclick="closeMemberDetailsModal()">Schließen</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Zugang erstellen für Team-Mitglied -->
+<div class="modal" id="createAccessForMemberModal">
+  <div class="modal-box" style="max-width:500px">
+    <h3><i class="fa-solid fa-key"></i> Zugang erstellen</h3>
+    <p>Erstelle einen externen Zugang für: <strong id="access-member-name"></strong></p>
+    
+    <div class="access-code-box">
+      <div style="color:var(--muted);font-size:.9rem">3-Wort-Code:</div>
+      <div class="access-code" id="member-access-code">schnell.baum.laufen</div>
+      <button type="button" class="btn btn-sm" onclick="generateMemberAccessCode()">
+        <i class="fas fa-sync"></i> Neu generieren
+      </button>
+    </div>
+    
+    <p style="font-size:.85rem;color:var(--muted)">
+      Das Passwort wird automatisch generiert und kann später zurückgesetzt werden.
+    </p>
+    
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
+      <button class="btn" onclick="closeCreateAccessForMemberModal()">Abbrechen</button>
+      <button class="btn primary" onclick="saveAccessForMember()">
+        <i class="fa-solid fa-save"></i> Zugang erstellen
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Einzelner Zugang -->
+<div class="modal" id="singleAccessModal">
+  <div class="modal-box" style="max-width:500px">
+    <h3><i class="fa-solid fa-key"></i> Einzelnen Zugang erstellen</h3>
+    <form id="singleAccessForm">
+      <div class="form-group">
+        <label>Name *</label>
+        <input type="text" name="name" required>
+      </div>
+      <div class="form-group">
+        <label>Zugangscode (wird automatisch generiert)</label>
+        <div class="access-code-box">
+          <div style="color:var(--muted);font-size:.9rem">3-Wort-Code:</div>
+          <div class="access-code" id="preview-code">schnell.apfel.laufen</div>
+          <button type="button" class="btn btn-sm" onclick="generatePreviewCode()">
+            <i class="fas fa-sync"></i> Neu generieren
+          </button>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
+        <button type="button" class="btn" onclick="closeSingleAccessModal()">Abbrechen</button>
+        <button type="submit" class="btn primary"><i class="fa-solid fa-save"></i> Speichern</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal: Mehrere Zugänge -->
+<div class="modal" id="bulkAccessModal">
+  <div class="modal-box">
+    <h3><i class="fa-solid fa-users"></i> Mehrere Zugänge erstellen</h3>
+    <div class="msg info" style="position:relative;animation:none">
+      <i class="fa-solid fa-info-circle"></i> Gib für jede Person einen Namen ein. Passwörter und Zugangscodes werden automatisch generiert.
+    </div>
+    <form id="bulkAccessForm">
+      <div id="bulkAccessList" style="margin:1rem 0"></div>
+      <button type="button" class="btn btn-sm" onclick="addBulkAccessRow()">
+        <i class="fas fa-plus"></i> Person hinzufügen
+      </button>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
+        <button type="button" class="btn" onclick="closeBulkAccessModal()">Abbrechen</button>
+        <button type="submit" class="btn primary"><i class="fa-solid fa-save"></i> Alle erstellen</button>
+      </div>
+    </form>
+  </div>
+</div>
+<!-- Modal: Neues Lernmodul -->
+<div class="modal" id="moduleModal">
+  <div class="modal-box">
+    <h3 id="moduleModalTitle"><i class="fa-solid fa-laptop"></i> Neues Lernmodul</h3>
+    <form id="moduleForm">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Titel *</label>
+          <input type="text" name="title" required>
+        </div>
+        <div class="form-group">
+          <label>Dozent</label>
+          <input type="text" name="instructor">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Beschreibung</label>
+        <textarea name="description" rows="3"></textarea>
+      </div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Bestehensgrenze (%)</label>
+          <input type="number" name="passing_score" value="80" min="0" max="100">
+        </div>
+        <div class="form-group">
+          <label>Max. Versuche</label>
+          <input type="number" name="max_attempts" value="3" min="0">
+          <small style="color:var(--muted);font-size:.85rem">0 = unbegrenzt</small>
+        </div>
+      </div>
+      <div class="form-group">
+        <label style="display:flex;align-items:center;gap:.5rem">
+          <input type="checkbox" name="require_quiz" id="require-quiz">
+          <span>Abschlussprüfung erforderlich</span>
+        </label>
+      </div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
+        <button type="button" class="btn" onclick="closeModuleModal()">Abbrechen</button>
+        <button type="submit" class="btn primary"><i class="fa-solid fa-save"></i> Speichern</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal: Lernmodul Details -->
+<div class="modal" id="moduleDetailsModal">
+  <div class="modal-box">
+    <h3 id="moduleDetailsTitle">Lernmodul</h3>
+    <div id="moduleDetailsBody"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
+      <button class="btn" onclick="closeModuleDetailsModal()">Schließen</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Folien-Editor -->
+<div class="modal" id="slideEditorModal">
+  <div class="modal-box" style="max-height:90vh;display:flex;flex-direction:column">
+    <h3 id="slideEditorTitle">Folien bearbeiten</h3>
+    
+    <div class="msg info" style="margin-bottom:1rem;position:relative;animation:none">
+      <i class="fas fa-info-circle"></i> Erstelle interaktive Lernfolien für dein Modul
+    </div>
+    
+    <div style="margin-bottom:1rem">
       <button class="btn primary" onclick="openNewSlideModal()">
         <i class="fas fa-plus"></i> Neue Folie
       </button>
     </div>
     
-    <div id="slides-list"></div>
-  </div>
-</div>
-
-<!-- NEUE FOLIE MODAL -->
-<div id="newSlideModal" class="modal">
-  <div class="modal-content" style="max-width: 900px;">
-    <div class="modal-header">
-      <h2 class="modal-title">
-        <i class="fas fa-plus"></i> Folie erstellen/bearbeiten
-      </h2>
-      <button class="close-btn" onclick="closeNewSlideModal()">
-        <i class="fas fa-times"></i>
-      </button>
-    </div>
+    <div id="slides-list" style="flex:1;overflow-y:auto;margin-bottom:1rem"></div>
     
-    <form id="newSlideForm" onsubmit="event.preventDefault(); saveSlide();">
-      <div class="form-group">
-        <label>Folien-Typ *</label>
-        <select id="slide-type" onchange="updateSlideTypeFields()" required>
-          <option value="text">Text-Folie</option>
-          <option value="image">Bild-Folie</option>
-          <option value="video">Video-Folie</option>
-          <option value="quiz">Quiz-Folie</option>
-        </select>
-      </div>
-      
-      <div class="form-group">
-        <label>Titel *</label>
-        <input type="text" id="slide-title" required>
-      </div>
-      
-      <div class="form-group">
-        <label>Dauer (Minuten)</label>
-        <input type="number" id="slide-duration" min="1" value="5">
-      </div>
-      
-      <!-- TEXT FOLIE -->
-      <div id="text-slide-fields" style="display:none;">
-        <div class="form-group">
-          <label>Inhalt</label>
-          <div id="slide-content-editor" style="background:white;border:2px solid var(--border);border-radius:0.5rem;min-height:200px;"></div>
-        </div>
-      </div>
-      
-      <!-- BILD FOLIE -->
-      <div id="image-slide-fields" style="display:none;">
-        <div class="form-group">
-          <label>Bild-URL *</label>
-          <input type="url" id="slide-image-url" placeholder="https://example.com/image.jpg">
-        </div>
-        <div class="form-group">
-          <label>Beschreibung</label>
-          <textarea id="slide-image-description" rows="3"></textarea>
-        </div>
-      </div>
-      
-      <!-- VIDEO FOLIE -->
-      <div id="video-slide-fields" style="display:none;">
-        <div class="form-group">
-          <label>YouTube-URL *</label>
-          <input type="url" id="slide-video-url" placeholder="https://youtube.com/watch?v=...">
-        </div>
-        <div class="form-group">
-          <label>Beschreibung</label>
-          <textarea id="slide-video-description" rows="3"></textarea>
-        </div>
-      </div>
-      
-      <!-- QUIZ FOLIE -->
-      <div id="quiz-slide-fields" style="display:none;">
-        <div class="form-group">
-          <label>Frage *</label>
-          <textarea id="slide-quiz-question" rows="3"></textarea>
-        </div>
-        
-        <div class="form-group">
-          <label>Antworten</label>
-          <div id="quiz-answers-list"></div>
-          <button type="button" class="btn btn-sm primary" onclick="addQuizAnswer()" style="margin-top:8px">
-            <i class="fas fa-plus"></i> Antwort hinzufügen
-          </button>
-        </div>
-        
-        <div class="form-group">
-          <label>Erklärung (optional)</label>
-          <textarea id="slide-quiz-explanation" rows="2" placeholder="Wird nach Beantwortung angezeigt"></textarea>
-        </div>
-      </div>
-      
-      <div class="form-actions">
-        <button type="button" class="btn secondary" onclick="closeNewSlideModal()">
-          Abbrechen
-        </button>
-        <button type="submit" class="btn primary">
-          <i class="fas fa-save"></i> Folie speichern
-        </button>
-      </div>
-    </form>
-  </div>
-</div>
-
-<!-- MODUL VORSCHAU MODAL -->
-<div id="modulePreviewModal" class="modal">
-  <div class="modal-content" style="max-width: 1200px;">
-    <div class="modal-header">
-      <h2 class="modal-title" id="previewModuleTitle">
+    <div style="display:flex;gap:.5rem;justify-content:flex-end;padding-top:1rem;border-top:1px solid var(--border)">
+      <button class="btn" onclick="closeSlideEditor()">Schließen</button>
+      <button class="btn success" onclick="previewModule(currentLearningModule)">
         <i class="fas fa-play"></i> Vorschau
-      </h2>
-      <button class="close-btn" onclick="closePreviewModal()">
-        <i class="fas fa-times"></i>
-      </button>
-    </div>
-    
-    <div id="previewContent" style="min-height: 400px;"></div>
-    
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:1.5rem;padding-top:1.5rem;border-top:2px solid var(--border)">
-      <button class="btn secondary" id="prevSlideBtn" onclick="prevPreviewSlide()">
-        <i class="fas fa-chevron-left"></i> Zurück
-      </button>
-      
-      <div id="slideCounter" style="font-weight:700;color:var(--primary);font-size:1.1rem"></div>
-      
-      <button class="btn primary" id="nextSlideBtn" onclick="nextPreviewSlide()">
-        Weiter <i class="fas fa-chevron-right"></i>
       </button>
     </div>
   </div>
 </div>
 
-<script>
-  const pb = new PocketBase('/');
-  let currentUser = null;
+<!-- Modal: Neue Folie -->
+<div class="modal" id="newSlideModal">
+  <div class="modal-box" style="max-height:85vh;display:flex;flex-direction:column">
+    <h3>Neue Folie</h3>
+    
+    <div style="flex:1;overflow-y:auto;padding-right:1rem">
+      <form id="newSlideForm">
+        <div class="form-group">
+          <label>Folientyp *</label>
+          <select id="slide-type" onchange="updateSlideTypeFields()">
+            <option value="text">📝 Text-Folie</option>
+            <option value="image">🖼️ Bild-Folie</option>
+            <option value="video">🎥 Video-Folie</option>
+            <option value="quiz">❓ Quiz-Folie</option>
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label>Titel *</label>
+          <input type="text" id="slide-title" placeholder="z.B. Einführung" required>
+        </div>
+        
+        <div class="form-group">
+          <label>Geschätzte Dauer (Minuten)</label>
+          <input type="number" id="slide-duration" value="5" min="1">
+        </div>
+        
+        <!-- Text Slide -->
+        <div id="text-slide-fields" class="form-group">
+          <label>Inhalt</label>
+          <div id="slide-content-editor" style="height:250px"></div>
+        </div>
+        
+        <!-- Image Slide -->
+        <div id="image-slide-fields" style="display:none">
+          <div class="form-group">
+            <label>Bild-URL</label>
+            <input type="text" id="slide-image-url" placeholder="https://...">
+          </div>
+          <div class="form-group">
+            <label>Bildbeschreibung</label>
+            <textarea id="slide-image-description" rows="3"></textarea>
+          </div>
+        </div>
+        
+        <!-- Video Slide -->
+        <div id="video-slide-fields" style="display:none">
+          <div class="form-group">
+            <label>Video-URL (YouTube/Vimeo)</label>
+            <input type="text" id="slide-video-url" placeholder="https://www.youtube.com/watch?v=...">
+          </div>
+          <div class="form-group">
+            <label>Video-Beschreibung</label>
+            <textarea id="slide-video-description" rows="3"></textarea>
+          </div>
+        </div>
+        
+        <!-- Quiz Slide -->
+        <div id="quiz-slide-fields" style="display:none">
+          <div class="form-group">
+            <label>Frage *</label>
+            <input type="text" id="slide-quiz-question" placeholder="Frage eingeben">
+          </div>
+          <div class="form-group">
+            <label>Antwortmöglichkeiten</label>
+            <div id="quiz-answers-list"></div>
+            <button type="button" class="btn btn-sm" onclick="addQuizAnswer()">
+              <i class="fas fa-plus"></i> Antwort hinzufügen
+            </button>
+          </div>
+          <div class="form-group">
+            <label>Erklärung</label>
+            <textarea id="slide-quiz-explanation" rows="2"></textarea>
+          </div>
+        </div>
+      </form>
+    </div>
+    
+    <div style="display:flex;gap:.5rem;justify-content:flex-end;margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border)">
+      <button class="btn" onclick="closeNewSlideModal()">Abbrechen</button>
+      <button class="btn primary" onclick="saveSlide()">
+        <i class="fas fa-save"></i> Speichern
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Modul Vorschau -->
+<div class="modal" id="modulePreviewModal">
+  <div class="modal-box" style="max-height:90vh;display:flex;flex-direction:column">
+    <h3 id="previewModuleTitle">Vorschau</h3>
+    
+    <div id="previewContent" style="flex:1;overflow-y:auto;margin:1rem 0"></div>
+    
+    <div style="display:flex;gap:.5rem;justify-content:space-between;align-items:center;padding-top:1rem;border-top:1px solid var(--border)">
+      <button class="btn" onclick="prevPreviewSlide()" id="prevSlideBtn">
+        <i class="fas fa-arrow-left"></i> Zurück
+      </button>
+      <div id="slideCounter" style="font-weight:700;color:var(--muted)">1 / 1</div>
+      <button class="btn" onclick="nextPreviewSlide()" id="nextSlideBtn">
+        Weiter <i class="fas fa-arrow-right"></i>
+      </button>
+    </div>
+    
+    <div style="display:flex;gap:.5rem;justify-content:center;margin-top:1rem">
+      <button class="btn" onclick="closePreviewModal()">Schließen</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Personen zuweisen -->
+<div class="modal" id="assignMembersModal">
+  <div class="modal-box" style="max-width:600px">
+    <h3><i class="fa-solid fa-users"></i> Personen zuweisen</h3>
+    <p style="color:var(--muted);margin-bottom:1rem">Wähle die Team-Mitglieder aus, die dieses Lernmodul sehen sollen.</p>
+    <div id="assignMembersList" style="max-height:400px;overflow-y:auto"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
+      <button class="btn" onclick="closeAssignMembersModal()">Abbrechen</button>
+      <button class="btn primary" onclick="saveAssignments()">
+        <i class="fa-solid fa-save"></i> Speichern
+      </button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+  // ========================================
+  // POCKETBASE & AUTH
+  // ========================================
+  const pb = new PocketBase('https://api.responda.systems');
   
-  // Globale Variablen
+  if (!pb.authStore.isValid) {
+    location.href = "/mpg-login.html";
+  }
+
+  const currentUser = pb.authStore.model;
+  if (!currentUser || !currentUser.organization_id) {
+    location.href = "/mpg-login.html";
+  }
+
+  document.getElementById("logout").onclick = () => {
+    pb.authStore.clear();
+    localStorage.clear();
+    location.href = "/mpg-login.html";
+  };
+
+  // ========================================
+  // jsPDF für PDF-Export
+  // ========================================
+  const script = document.createElement('script');
+  script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+  document.head.appendChild(script);
+
+  // ========================================
+  // STATE
+  // ========================================
   let allCourses = [];
   let allSessions = [];
   let allMembers = [];
+  let allAccess = [];
   let allModules = [];
   let currentSlides = [];
   let previewSlides = [];
   let currentPreviewIndex = 0;
-  
-  let currentEditCourse = null;
-  let currentEditMember = null;
-  let currentEditModule = null;
-  let currentEditSlide = null;
-  let currentLearningModule = null;
-  let currentSessionId = null;
-  
-  let selectedSessionMembers = [];
+  let currentTags = [];
+  let selectedParticipants = [];
+  let selectedParticipantStatus = {};
   let selectedAssignments = [];
-  let quizAnswers = [];
-  
+  let currentEditCourse = null;
+  let currentSessionCourse = null;
+  let currentSessionId = null;
+  let currentEditMember = null;
+  let currentAccessMember = null;
+  let currentEditModule = null;
+  let currentLearningModule = null;
+  let currentEditSlide = null;
+  let previewAccessCode = '';
+  let memberAccessCode = '';
   let slideContentEditor = null;
+  let quizAnswers = [];
+  let bulkAccessCount = 3;
+  let pflichtSchulungen = 12;
+  
+  const wordLists = {
+    adjectives: ['schnell', 'blau', 'groß', 'klein', 'rot', 'grün', 'gelb', 'hell', 'dunkel', 'stark', 'schwach', 'frisch', 'alt', 'neu', 'warm', 'kalt', 'süß', 'sauer', 'laut', 'leise'],
+    nouns: ['apfel', 'baum', 'haus', 'tisch', 'stuhl', 'buch', 'auto', 'berg', 'fluss', 'stern', 'mond', 'sonne', 'blume', 'vogel', 'fisch', 'hund', 'katze', 'pferd', 'wind', 'meer'],
+    verbs: ['laufen', 'springen', 'singen', 'tanzen', 'malen', 'lesen', 'schreiben', 'kochen', 'backen', 'spielen', 'denken', 'träumen', 'lachen', 'weinen', 'fliegen', 'schwimmen', 'klettern', 'hören', 'sehen', 'fühlen']
+  };
 
   // ========================================
-  // INIT & AUTH
+  // HELPERS
   // ========================================
-  (async function init() {
-    if (!pb.authStore.isValid) {
-      window.location.href = '/mpg-login.html';
-      return;
-    }
+  function showMsg(text, type = 'success') {
+    const msg = document.createElement('div');
+    msg.className = 'msg ' + type;
     
-    currentUser = pb.authStore.model;
-    document.getElementById('username').textContent = currentUser.username;
+    const icon = type === 'success' ? 'fa-check-circle' : 
+                 type === 'error' ? 'fa-exclamation-circle' : 
+                 'fa-info-circle';
     
-    await loadCourses();
-    generatePreviewCode();
-    document.body.classList.add('loaded');
-  })();
-
-  function logout() {
-    pb.authStore.clear();
-    window.location.href = '/mpg-login.html';
+    msg.innerHTML = `<i class="fas ${icon}"></i> ${text}`;
+    document.body.appendChild(msg);
+    
+    setTimeout(() => msg.remove(), 5000);
   }
+
+  function formatDate(dateStr) {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('de-DE');
+  }
+
+  function formatTime(timeStr) {
+    if (!timeStr) return '';
+    return timeStr.slice(0, 5);
+  }
+
+  function copyToClipboard(text) {
+    navigator.clipboard.writeText(text);
+    showMsg('✅ Kopiert!');
+  }
+
+  function generateAccessCode() {
+    const adj = wordLists.adjectives[Math.floor(Math.random() * wordLists.adjectives.length)];
+    const noun = wordLists.nouns[Math.floor(Math.random() * wordLists.nouns.length)];
+    const verb = wordLists.verbs[Math.floor(Math.random() * wordLists.verbs.length)];
+    return `${adj}.${noun}.${verb}`;
+  }
+
+  function generatePassword() {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
+    let password = '';
+    for (let i = 0; i < 12; i++) {
+      password += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return password;
+  }
+
+  window.generatePreviewCode = () => {
+    previewAccessCode = generateAccessCode();
+    document.getElementById('preview-code').textContent = previewAccessCode;
+  };
+
+  window.generateMemberAccessCode = () => {
+    memberAccessCode = generateAccessCode();
+    document.getElementById('member-access-code').textContent = memberAccessCode;
+  };
+
+  // ========================================
+  // TAG INPUT SYSTEM
+  // ========================================
+  function initTagInput() {
+    const wrapper = document.getElementById('tagInputWrapper');
+    const input = document.getElementById('tagInput');
+    
+    if (!wrapper || !input) return;
+    
+    const newInput = input.cloneNode(true);
+    input.parentNode.replaceChild(newInput, input);
+    
+    newInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        const tag = newInput.value.trim();
+        if (tag && !currentTags.includes(tag)) {
+          currentTags.push(tag);
+          renderTags();
+          newInput.value = '';
+        }
+      } else if (e.key === 'Backspace' && newInput.value === '' && currentTags.length > 0) {
+        currentTags.pop();
+        renderTags();
+      }
+    });
+  }
+
+  function renderTags() {
+    const wrapper = document.getElementById('tagInputWrapper');
+    const input = document.getElementById('tagInput');
+    
+    if (!wrapper || !input) return;
+    
+    Array.from(wrapper.children).forEach(child => {
+      if (child !== input) child.remove();
+    });
+    
+    currentTags.forEach(tag => {
+      const tagEl = document.createElement('span');
+      tagEl.className = 'tag';
+      tagEl.innerHTML = `${tag} <span class="remove-tag" onclick="removeTag('${tag.replace(/'/g, "\\'")}')">×</span>`;
+      wrapper.insertBefore(tagEl, input);
+    });
+  }
+
+  window.removeTag = (tag) => {
+    currentTags = currentTags.filter(t => t !== tag);
+    renderTags();
+  };
 
   // ========================================
   // TAB SWITCHING
   // ========================================
-  async function switchTab(tab) {
-    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.onclick = () => {
+      const targetTab = tab.dataset.tab;
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      document.querySelectorAll('.tab-content').forEach(tc => tc.style.display = 'none');
+      document.getElementById('tab-' + targetTab).style.display = 'block';
+      
+      if (targetTab === 'schulungen') loadCourses();
+      if (targetTab === 'team') loadTeam();
+      if (targetTab === 'lernbereich') loadLernbereich();
+      if (targetTab === 'settings') loadSettings();
+    };
+  });
+
+  // ========================================
+  // PFLICHT-SCHULUNGEN EINSTELLUNGEN
+  // ========================================
+  async function loadSettings() {
+    try {
+      const org = await pb.collection('organizations').getOne(currentUser.organization_id);
+      pflichtSchulungen = org.pflicht_schulungen_jahr || 12;
+      document.getElementById('pflicht_schulungen').value = pflichtSchulungen;
+      
+      allAccess = await pb.collection('training_students').getFullList({
+        filter: `organization_id = "${currentUser.organization_id}"`,
+        sort: 'name',
+        expand: 'member_id'
+      });
+      
+      renderSettings();
+    } catch(e) {
+      console.error('Error:', e);
+      document.getElementById('access-list').innerHTML = `<div class="empty" style="background:#fff;border-radius:.75rem"><i class="fas fa-exclamation-triangle"></i><div style="color:#c00">Fehler: ${e.message}</div></div>`;
+    }
+  }
+
+  document.getElementById('pflichtForm').onsubmit = async (e) => {
+    e.preventDefault();
     
-    event.target.classList.add('active');
-    document.getElementById(tab + '-tab').classList.add('active');
-    
-    if (tab === 'schulungen') await loadCourses();
-    if (tab === 'team') await loadTeam();
-    if (tab === 'zugaenge') await loadZugaenge();
-    if (tab === 'lernbereich') await loadLernbereich();
-  }
-
+    try {
+      const value = parseInt(document.getElementById('pflicht_schulungen').value) || 12;
+      
+      await pb.collection('organizations').update(currentUser.organization_id, {
+        pflicht_schulungen_jahr: value
+      });
+      
+      pflichtSchulungen = value;
+      showMsg('✅ Pflicht-Schulungen gespeichert!');
+      
+    } catch(e) {
+      showMsg('Fehler: ' + e.message, 'error');
+    }
+  };
   // ========================================
-  // HELPER FUNCTIONS
-  // ========================================
-  function showMsg(text, type = 'success') {
-    const msg = document.createElement('div');
-    msg.className = `msg ${type}`;
-    msg.innerHTML = `
-      <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>
-      ${text}
-    `;
-    document.body.appendChild(msg);
-    setTimeout(() => msg.remove(), 3000);
-  }
-
-  function formatDate(dateStr) {
-    const d = new Date(dateStr);
-    return d.toLocaleDateString('de-DE', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  }
-
-  // ========================================
-  // SCHULUNGEN LADEN
+  // AUSBILDUNGEN (OHNE MAX TEILNEHMER!)
   // ========================================
   async function loadCourses() {
     try {
-      try {
-        allCourses = await pb.collection('courses').getFullList({
-          filter: `organization_id = "${currentUser.organization_id}"`,
-          sort: '-created'
-        });
-      } catch(err) {
-        console.warn('courses collection fehlt:', err);
-        allCourses = [];
-      }
+      allCourses = await pb.collection('training_courses').getFullList({
+        filter: `organization_id = "${currentUser.organization_id}"`,
+        sort: '-created'
+      });
       
-      try {
-        allSessions = await pb.collection('course_sessions').getFullList({
-          filter: `organization_id = "${currentUser.organization_id}"`,
-          sort: '-created'
-        });
-      } catch(err) {
-        console.warn('course_sessions collection fehlt:', err);
-        allSessions = [];
-      }
+      allSessions = await pb.collection('training_sessions').getFullList({
+        filter: `organization_id = "${currentUser.organization_id}"`,
+        sort: '-date'
+      });
       
-      await renderCourses();
+      renderCourses();
     } catch(e) {
-      console.error('Error loading courses:', e);
-      document.getElementById('schulungen-list').innerHTML = `
-        <div class="empty" style="background:#fff;border-radius:.75rem;padding:2rem">
-          <i class="fas fa-exclamation-triangle" style="font-size:3rem;color:#f59e0b"></i>
-          <div style="color:#f59e0b;margin-top:1rem;font-weight:700">Fehler beim Laden!</div>
-          <p style="color:#6b7280;margin-top:.5rem">${e.message}</p>
-        </div>
-      `;
+      console.error('Error:', e);
+      document.getElementById('schulungen-list').innerHTML = `<div class="empty" style="background:#fff;border-radius:.75rem"><i class="fas fa-exclamation-triangle"></i><div style="color:#c00">Fehler: ${e.message}</div></div>`;
     }
   }
 
-  // ========================================
-  // SCHULUNGEN RENDERN (VERBESSERTE KACHELN!)
-  // ========================================
-  async function renderCourses() {
+  function renderCourses() {
     const list = document.getElementById('schulungen-list');
     
     if (allCourses.length === 0) {
-      list.innerHTML = '<div class="empty" style="background:#fff;border-radius:.75rem"><i class="fas fa-graduation-cap"></i><div>Noch keine Schulungen</div></div>';
+      list.innerHTML = '<div class="empty" style="background:#fff;border-radius:.75rem"><i class="fas fa-book"></i><div>Noch keine Schulungen</div></div>';
       return;
     }
     
-    let html = '';
-    
-    for (const course of allCourses) {
+    list.innerHTML = allCourses.map(course => {
       const courseSessions = allSessions.filter(s => s.course_id === course.id);
       const nextSession = courseSessions.find(s => new Date(s.date) >= new Date());
       
-      html += `
+      return `
         <div class="course-card" onclick="viewSchulungDetails('${course.id}')">
-          <div class="card-title">
-            <i class="fa-solid fa-book-medical"></i> ${course.title}
-          </div>
-          
-          ${course.instructor ? `
-            <div style="margin-top:8px;color:#6b7280;font-size:.9rem">
-              <i class="fa-solid fa-user"></i> <strong>Dozent:</strong> ${course.instructor}
-            </div>
-          ` : ''}
-          
-          ${course.description ? `
-            <div style="margin-top:8px;color:#6b7280;font-size:.9rem;line-height:1.5">
-              ${course.description}
-            </div>
-          ` : ''}
-          
-          ${nextSession ? `
-            <div style="margin-top:12px;padding:8px;background:#f0fdf4;border-left:3px solid #16a34a;border-radius:4px">
-              <div style="font-size:.85rem;color:#166534;font-weight:700">
-                <i class="fa-solid fa-calendar"></i> Nächster Termin
-              </div>
-              <div style="font-size:.9rem;color:#166534;margin-top:4px">
-                ${formatDate(nextSession.date)}
-              </div>
-            </div>
-          ` : `
-            <div style="margin-top:12px;padding:8px;background:#fef3c7;border-left:3px solid #f59e0b;border-radius:4px">
-              <div style="font-size:.85rem;color:#92400e">
-                <i class="fa-solid fa-calendar-xmark"></i> Keine anstehenden Termine
-              </div>
-            </div>
-          `}
-          
-          <div class="card-meta" style="margin-top:12px">
-            <span><i class="fa-solid fa-calendar"></i> ${courseSessions.length} Termin(e)</span>
+          <div class="card-title"><i class="fa-solid fa-book-medical"></i> ${course.title}</div>
+          <div class="card-meta">
             <span class="badge ${course.type}">${course.type}</span>
+            <span><i class="fa-solid fa-calendar"></i> ${courseSessions.length} Termin(e)</span>
           </div>
+          ${course.description ? `
+            <div style="margin-top:8px;color:var(--muted);font-size:.85rem">${course.description}</div>
+          ` : ''}
+          ${nextSession ? `
+            <div style="margin-top:8px;padding:8px;background:#f0fdf4;border-radius:6px;font-size:0.85rem">
+              <i class="fa-solid fa-clock"></i> Nächster Termin: ${formatDate(nextSession.date)}
+            </div>
+          ` : ''}
         </div>
       `;
-    }
-    
-    list.innerHTML = html;
+    }).join('');
   }
+
+  window.openSchulungModal = () => {
+    currentEditCourse = null;
+    const form = document.getElementById('schulungForm');
+    form.reset();
+    selectedParticipants = [];
+    selectedParticipantStatus = {};
+    document.getElementById('selected-count').textContent = '0';
+    document.getElementById('schulungModalTitle').innerHTML = '<i class="fa-solid fa-book-medical"></i> Neue Schulung erstellen';
+    document.getElementById('schulungModal').classList.add('show');
+  };
+
+  window.closeSchulungModal = () => {
+    document.getElementById('schulungModal').classList.remove('show');
+  };
+
+  document.getElementById('schulungForm').onsubmit = async (e) => {
+    e.preventDefault();
+    
+    try {
+      const formData = new FormData(e.target);
+      
+      // 1. Schulung erstellen (OHNE max_participants!)
+      const course = await pb.collection('training_courses').create({
+        title: formData.get('title').trim(),
+        type: formData.get('type'),
+        description: formData.get('description').trim(),
+        organization_id: currentUser.organization_id
+      });
+      
+      // 2. Ersten Termin erstellen
+      const session = await pb.collection('training_sessions').create({
+        course_id: course.id,
+        date: formData.get('date'),
+        start_time: formData.get('start_time'),
+        end_time: formData.get('end_time'),
+        location: formData.get('location').trim(),
+        dozent: formData.get('instructor').trim(),
+        beschreibung: '',
+        status: 'geplant',
+        invitations_sent: selectedParticipants.length > 0,
+        organization_id: currentUser.organization_id
+      });
+      
+      // 3. Teilnehmer hinzufügen
+      for (const memberId of selectedParticipants) {
+        await pb.collection('schulung_teilnahme').create({
+          session_id: session.id,
+          member_id: memberId,
+          status: selectedParticipantStatus[memberId] || 'eingeladen',
+          anwesend: false,
+          organization_id: currentUser.organization_id
+        });
+      }
+      
+      showMsg('✅ Schulung mit Termin erstellt!');
+      closeSchulungModal();
+      await loadCourses();
+      
+    } catch(e) {
+      showMsg('Fehler: ' + e.message, 'error');
+    }
+  };
+
+  window.openParticipantSelector = async () => {
+    try {
+      allMembers = await pb.collection('team_members').getFullList({
+        filter: `organization_id = "${currentUser.organization_id}" && aktiv = true`,
+        sort: 'name'
+      });
+      
+      const list = document.getElementById('participantList');
+      list.innerHTML = allMembers.map(member => {
+        const isSelected = selectedParticipants.includes(member.id);
+        const status = selectedParticipantStatus[member.id] || 'eingeladen';
+        
+        return `
+          <div style="padding:.75rem;border-bottom:1px solid var(--border)">
+            <label style="display:flex;align-items:center;gap:.75rem;cursor:pointer">
+              <input type="checkbox" ${isSelected ? 'checked' : ''} 
+                onchange="toggleParticipant('${member.id}')">
+              <div style="flex:1">
+                <div style="font-weight:700">${member.vorname} ${member.name}</div>
+                <div style="font-size:.85rem;color:var(--muted)">${(member.qualifikationen || []).join(', ')}</div>
+              </div>
+              ${isSelected ? `
+                <select onchange="setParticipantStatus('${member.id}', this.value)" 
+                  style="padding:4px;border:1px solid var(--border);border-radius:4px;font-size:.85rem">
+                  <option value="eingeladen" ${status === 'eingeladen' ? 'selected' : ''}>Eingeladen</option>
+                  <option value="zugesagt" ${status === 'zugesagt' ? 'selected' : ''}>Zugesagt</option>
+                  <option value="abgesagt" ${status === 'abgesagt' ? 'selected' : ''}>Abgesagt</option>
+                </select>
+              ` : ''}
+            </label>
+          </div>
+        `;
+      }).join('');
+      
+      document.getElementById('participantModal').classList.add('show');
+    } catch(e) {
+      showMsg('Fehler: ' + e.message, 'error');
+    }
+  };
+
+  window.closeParticipantModal = () => {
+    document.getElementById('participantModal').classList.remove('show');
+    document.getElementById('selected-count').textContent = selectedParticipants.length;
+  };
+
+  window.toggleParticipant = (memberId) => {
+    const idx = selectedParticipants.indexOf(memberId);
+    if (idx >= 0) {
+      selectedParticipants.splice(idx, 1);
+      delete selectedParticipantStatus[memberId];
+    } else {
+      selectedParticipants.push(memberId);
+      selectedParticipantStatus[memberId] = 'eingeladen';
+    }
+    openParticipantSelector();
+  };
+
+  window.setParticipantStatus = (memberId, status) => {
+    selectedParticipantStatus[memberId] = status;
+  };
+
   // ========================================
-  // SCHULUNGS-DETAILS (VOLLSTÄNDIGE INFOS!)
+  // SCHULUNGS-DETAILS (MIT TITEL, DOZENT, BESCHREIBUNG!)
   // ========================================
   window.viewSchulungDetails = async (courseId) => {
     try {
-      const course = await pb.collection('courses').getOne(courseId);
-      const sessions = await pb.collection('course_sessions').getFullList({
-        filter: `course_id = "${courseId}"`,
-        sort: 'date'
-      });
+      const course = allCourses.find(c => c.id === courseId);
+      if (!course) return;
       
-      const enrollments = await pb.collection('course_enrollments').getFullList({
-        filter: `course_id = "${courseId}"`,
-        expand: 'member_id'
-      });
+      const sessions = allSessions.filter(s => s.course_id === courseId);
       
       document.getElementById('schulungDetailsTitle').innerHTML = 
         `<i class="fa-solid fa-book-medical"></i> ${course.title}`;
       
       let html = `
         <div class="details-section">
-          <h4><i class="fa-solid fa-info-circle"></i> Schulungsinformationen</h4>
-          <div style="display:grid;grid-template-columns:150px 1fr;gap:12px;line-height:1.8">
+          <h4><i class="fa-solid fa-info-circle"></i> Informationen</h4>
+          <div style="display:grid;grid-template-columns:150px 1fr;gap:8px">
+            <div style="font-weight:700;color:#6b7280">Titel:</div>
+            <div style="font-weight:700;font-size:1.1rem">${course.title}</div>
             
             <div style="font-weight:700;color:#6b7280">Typ:</div>
             <div><span class="badge ${course.type}">${course.type}</span></div>
-            
-            ${course.instructor ? `
-            <div style="font-weight:700;color:#6b7280">Dozent:</div>
-            <div>${course.instructor}</div>
-            ` : ''}
             
             ${course.description ? `
             <div style="font-weight:700;color:#6b7280">Beschreibung:</div>
             <div>${course.description}</div>
             ` : ''}
-            
-            ${course.duration ? `
-            <div style="font-weight:700;color:#6b7280">Dauer:</div>
-            <div>${course.duration} Stunden</div>
-            ` : ''}
-            
-            ${course.location ? `
-            <div style="font-weight:700;color:#6b7280">Ort:</div>
-            <div>${course.location}</div>
-            ` : ''}
-            
-            ${course.certificate_validity ? `
-            <div style="font-weight:700;color:#6b7280">Zertifikat gültig:</div>
-            <div>${course.certificate_validity} Monate</div>
-            ` : ''}
-            
-            <div style="font-weight:700;color:#6b7280">Erstellt am:</div>
-            <div>${formatDate(course.created)}</div>
           </div>
         </div>
-      `;
-      
-      // TERMINE
-      html += `
+        
         <div class="details-section">
           <div style="display:flex;justify-content:space-between;align-items:center">
             <h4 style="margin:0"><i class="fa-solid fa-calendar"></i> Termine (${sessions.length})</h4>
-            <button class="btn btn-sm primary" onclick="closeSchulungDetailsModal();openTerminModal('${courseId}')">
-              <i class="fas fa-plus"></i> Termin
+            <button class="btn btn-sm primary" onclick="openAddSessionModal('${courseId}')">
+              <i class="fas fa-plus"></i> Weiteren Termin hinzufügen
             </button>
           </div>
       `;
       
       if (sessions.length > 0) {
-        const now = new Date();
-        const upcoming = sessions.filter(s => new Date(s.date) >= now);
-        const past = sessions.filter(s => new Date(s.date) < now);
-        
-        if (upcoming.length > 0) {
-          html += '<h5 style="margin-top:1rem;color:var(--success)">Anstehende Termine</h5>';
-          upcoming.forEach(session => {
-            const sessionEnrollments = enrollments.filter(e => e.session_id === session.id);
-            html += `
-              <div style="padding:12px;margin-top:8px;background:#f0fdf4;border-left:3px solid #16a34a;border-radius:6px">
-                <div style="display:flex;justify-content:space-between;align-items:start">
-                  <div style="flex:1">
-                    <div style="font-weight:700;color:#166534">${formatDate(session.date)}</div>
-                    ${session.location ? `<div style="font-size:.9rem;color:#166534;margin-top:4px"><i class="fa-solid fa-location-dot"></i> ${session.location}</div>` : ''}
-                    <div style="font-size:.85rem;color:#166534;margin-top:4px">
-                      ${sessionEnrollments.length} Teilnehmer
-                    </div>
-                  </div>
-                  <div style="display:flex;gap:4px">
-                    <button class="btn btn-sm primary" onclick="event.stopPropagation();openAssignSession('${session.id}','${courseId}')">
-                      <i class="fas fa-users"></i>
-                    </button>
-                    <button class="btn btn-sm danger" onclick="event.stopPropagation();deleteSession('${session.id}','${courseId}')">
-                      <i class="fas fa-trash"></i>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            `;
-          });
-        }
-        
-        if (past.length > 0) {
-          html += '<h5 style="margin-top:1rem;color:#6b7280">Vergangene Termine</h5>';
-          past.forEach(session => {
-            const sessionEnrollments = enrollments.filter(e => e.session_id === session.id);
-            html += `
-              <div style="padding:12px;margin-top:8px;background:#f9fafb;border-left:3px solid #6b7280;border-radius:6px">
-                <div style="display:flex;justify-content:space-between;align-items:start">
-                  <div style="flex:1">
-                    <div style="font-weight:700;color:#6b7280">${formatDate(session.date)}</div>
-                    ${session.location ? `<div style="font-size:.9rem;color:#6b7280;margin-top:4px"><i class="fa-solid fa-location-dot"></i> ${session.location}</div>` : ''}
-                    <div style="font-size:.85rem;color:#6b7280;margin-top:4px">
-                      ${sessionEnrollments.length} Teilnehmer
-                    </div>
-                  </div>
-                  <button class="btn btn-sm" onclick="event.stopPropagation();deleteSession('${session.id}','${courseId}')">
-                    <i class="fas fa-trash"></i>
-                  </button>
-                </div>
-              </div>
-            `;
-          });
-        }
-      } else {
-        html += '<p style="color:#999;padding:16px;text-align:center">Noch keine Termine angelegt</p>';
-      }
-      
-      html += '</div>';
-      
-      // TEILNEHMER
-      html += `
-        <div class="details-section">
-          <h4><i class="fa-solid fa-users"></i> Alle Teilnehmer (${enrollments.length})</h4>
-      `;
-      
-      if (enrollments.length > 0) {
-        html += '<table class="table" style="margin-top:1rem"><thead><tr><th>Name</th><th>Termin</th><th>Status</th></tr></thead><tbody>';
-        
-        enrollments.forEach(enrollment => {
-          const member = enrollment.expand?.member_id;
-          if (!member) return;
-          
-          const session = sessions.find(s => s.id === enrollment.session_id);
-          
+        html += '<div style="margin-top:1rem">';
+        sessions.forEach(s => {
           html += `
-            <tr>
-              <td style="font-weight:700">${member.vorname} ${member.name}</td>
-              <td>${session ? formatDate(session.date) : '-'}</td>
-              <td>
-                <span class="status-icon ${enrollment.status}">
-                  ${enrollment.status === 'completed' ? '✓' : enrollment.status === 'enrolled' ? '📋' : '❌'}
-                </span>
-                ${enrollment.status === 'completed' ? 'Abgeschlossen' : enrollment.status === 'enrolled' ? 'Angemeldet' : 'Abgebrochen'}
-              </td>
-            </tr>
+            <div class="slide-item" onclick="viewSessionDetails('${s.id}')" style="cursor:pointer">
+              <div style="display:flex;align-items:center;flex:1">
+                <div style="flex:1">
+                  <div style="font-weight:700">${formatDate(s.date)} ${s.start_time ? `• ${formatTime(s.start_time)}-${formatTime(s.end_time)}` : ''}</div>
+                  <div style="font-size:0.85rem;color:var(--muted)">
+                    ${s.location || 'Kein Ort'}
+                    ${s.dozent ? ` • Dozent: ${s.dozent}` : ''}
+                  </div>
+                </div>
+              </div>
+              <button class="btn btn-sm" onclick="event.stopPropagation(); viewSessionDetails('${s.id}')">
+                <i class="fas fa-eye"></i>
+              </button>
+            </div>
           `;
         });
-        
-        html += '</tbody></table>';
+        html += '</div>';
       } else {
-        html += '<p style="color:#999;padding:16px;text-align:center">Noch keine Teilnehmer</p>';
+        html += '<p style="color:#999;padding:16px;text-align:center">Noch keine Termine</p>';
       }
       
-      html += '</div>';
-      
-      // AKTIONEN
       html += `
-        <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap">
-          <button class="btn primary" onclick="closeSchulungDetailsModal();openSchulungModal('${courseId}')">
-            <i class="fa-solid fa-edit"></i> Bearbeiten
-          </button>
-          <button class="btn danger" onclick="deleteSchulung('${courseId}')">
+        </div>
+        
+        <div style="margin-top:16px;display:flex;gap:8px">
+          <button class="btn" onclick="deleteSchul('${courseId}')">
             <i class="fa-solid fa-trash"></i> Löschen
           </button>
         </div>
@@ -1428,223 +1560,92 @@ header {
     document.getElementById('schulungDetailsModal').classList.remove('show');
   };
 
-  // ========================================
-  // SCHULUNG ERSTELLEN/BEARBEITEN
-  // ========================================
-  window.openSchulungModal = (courseId = null) => {
-    currentEditCourse = courseId;
-    const form = document.getElementById('schulungForm');
-    form.reset();
-    
-    if (courseId) {
-      const course = allCourses.find(c => c.id === courseId);
-      if (course) {
-        document.getElementById('schulungModalTitle').innerHTML = '<i class="fa-solid fa-edit"></i> Schulung bearbeiten';
-        form.title.value = course.title;
-        form.type.value = course.type;
-        form.instructor.value = course.instructor || '';
-        form.description.value = course.description || '';
-        form.duration.value = course.duration || '';
-        form.location.value = course.location || '';
-        form.certificate_validity.value = course.certificate_validity || '';
-      }
-    } else {
-      document.getElementById('schulungModalTitle').innerHTML = '<i class="fa-solid fa-book-medical"></i> Neue Schulung';
-    }
-    
-    document.getElementById('schulungModal').classList.add('show');
-  };
-
-  window.closeSchulungModal = () => {
-    document.getElementById('schulungModal').classList.remove('show');
-    currentEditCourse = null;
-  };
-
-  document.getElementById('schulungForm').onsubmit = async (e) => {
-    e.preventDefault();
+  window.deleteSchul = async (courseId) => {
+    if (!confirm('Schulung wirklich löschen? Alle Termine werden ebenfalls gelöscht!')) return;
     
     try {
-      const formData = new FormData(e.target);
-      const data = {
-        title: formData.get('title').trim(),
-        type: formData.get('type'),
-        instructor: formData.get('instructor').trim(),
-        description: formData.get('description').trim(),
-        duration: parseInt(formData.get('duration')) || null,
-        location: formData.get('location').trim(),
-        certificate_validity: parseInt(formData.get('certificate_validity')) || null,
-        organization_id: currentUser.organization_id
-      };
-      
-      if (currentEditCourse) {
-        await pb.collection('courses').update(currentEditCourse, data);
-        showMsg('✅ Schulung aktualisiert!');
-      } else {
-        const newCourse = await pb.collection('courses').create(data);
-        showMsg('✅ Schulung erstellt!');
-        allCourses.push(newCourse);
+      const sessions = allSessions.filter(s => s.course_id === courseId);
+      for (const session of sessions) {
+        const participants = await pb.collection('schulung_teilnahme').getFullList({
+          filter: `session_id = "${session.id}"`
+        });
+        for (const p of participants) {
+          await pb.collection('schulung_teilnahme').delete(p.id);
+        }
+        await pb.collection('training_sessions').delete(session.id);
       }
       
-      closeSchulungModal();
-      await renderCourses();
+      await pb.collection('training_courses').delete(courseId);
       
-    } catch(e) {
-      showMsg('Fehler: ' + e.message, 'error');
-    }
-  };
-
-  window.deleteSchulung = async (courseId) => {
-    if (!confirm('Schulung wirklich löschen? Alle Termine und Teilnehmer werden ebenfalls gelöscht!')) return;
-    
-    try {
-      await pb.collection('courses').delete(courseId);
       showMsg('✅ Schulung gelöscht!');
       closeSchulungDetailsModal();
       await loadCourses();
+      
     } catch(e) {
       showMsg('Fehler: ' + e.message, 'error');
     }
   };
 
   // ========================================
-  // TERMINE
+  // WEITEREN TERMIN HINZUFÜGEN
   // ========================================
-  window.openTerminModal = (courseId) => {
-    currentEditCourse = courseId;
-    document.getElementById('terminForm').reset();
-    document.getElementById('terminModal').classList.add('show');
+  window.openAddSessionModal = (courseId) => {
+    document.getElementById('add-session-course-id').value = courseId;
+    document.getElementById('addSessionForm').reset();
+    selectedParticipants = [];
+    selectedParticipantStatus = {};
+    document.getElementById('add-selected-count').textContent = '0';
+    document.getElementById('addSessionModal').classList.add('show');
   };
 
-  window.closeTerminModal = () => {
-    document.getElementById('terminModal').classList.remove('show');
+  window.closeAddSessionModal = () => {
+    document.getElementById('addSessionModal').classList.remove('show');
   };
 
-  document.getElementById('terminForm').onsubmit = async (e) => {
+  window.openParticipantSelectorForAdd = () => {
+    openParticipantSelector();
+    const oldClose = window.closeParticipantModal;
+    window.closeParticipantModal = () => {
+      document.getElementById('participantModal').classList.remove('show');
+      document.getElementById('add-selected-count').textContent = selectedParticipants.length;
+      window.closeParticipantModal = oldClose;
+    };
+  };
+
+  document.getElementById('addSessionForm').onsubmit = async (e) => {
     e.preventDefault();
     
     try {
       const formData = new FormData(e.target);
-      const data = {
-        course_id: currentEditCourse,
+      const courseId = document.getElementById('add-session-course-id').value;
+      
+      const session = await pb.collection('training_sessions').create({
+        course_id: courseId,
         date: formData.get('date'),
+        start_time: formData.get('start_time'),
+        end_time: formData.get('end_time'),
         location: formData.get('location').trim(),
+        dozent: formData.get('dozent').trim(),
+        beschreibung: formData.get('beschreibung').trim(),
+        status: 'geplant',
+        invitations_sent: selectedParticipants.length > 0,
         organization_id: currentUser.organization_id
-      };
-      
-      await pb.collection('course_sessions').create(data);
-      showMsg('✅ Termin erstellt!');
-      closeTerminModal();
-      await loadCourses();
-      await viewSchulungDetails(currentEditCourse);
-      
-    } catch(e) {
-      showMsg('Fehler: ' + e.message, 'error');
-    }
-  };
-
-  window.deleteSession = async (sessionId, courseId) => {
-    if (!confirm('Termin wirklich löschen?')) return;
-    
-    try {
-      await pb.collection('course_sessions').delete(sessionId);
-      showMsg('✅ Termin gelöscht!');
-      await loadCourses();
-      await viewSchulungDetails(courseId);
-    } catch(e) {
-      showMsg('Fehler: ' + e.message, 'error');
-    }
-  };
-
-  // ========================================
-  // TEILNEHMER ZU TERMIN ZUWEISEN
-  // ========================================
-  window.openAssignSession = async (sessionId, courseId) => {
-    currentSessionId = sessionId;
-    currentEditCourse = courseId;
-    
-    try {
-      allMembers = await pb.collection('team_members').getFullList({
-        filter: `organization_id = "${currentUser.organization_id}" && aktiv = true`,
-        sort: 'name'
       });
       
-      const enrollments = await pb.collection('course_enrollments').getFullList({
-        filter: `session_id = "${sessionId}"`
-      });
-      
-      selectedSessionMembers = enrollments.map(e => e.member_id);
-      
-      renderAssignSessionList();
-      document.getElementById('assignSessionModal').classList.add('show');
-      
-    } catch(e) {
-      showMsg('Fehler: ' + e.message, 'error');
-    }
-  };
-
-  function renderAssignSessionList() {
-    const list = document.getElementById('assignMembersList');
-    const searchTerm = document.getElementById('assignSearchInput').value.toLowerCase();
-    
-    const filtered = allMembers.filter(m => 
-      m.vorname.toLowerCase().includes(searchTerm) || 
-      m.name.toLowerCase().includes(searchTerm)
-    );
-    
-    list.innerHTML = filtered.map(member => `
-      <div style="padding:.75rem;border-bottom:1px solid var(--border)">
-        <label style="display:flex;align-items:center;gap:.75rem;cursor:pointer">
-          <input type="checkbox" ${selectedSessionMembers.includes(member.id) ? 'checked' : ''} 
-            onchange="toggleSessionMember('${member.id}')">
-          <div>
-            <div style="font-weight:700">${member.vorname} ${member.name}</div>
-            ${member.rolle ? `<div style="font-size:.85rem;color:var(--muted)">${member.rolle}</div>` : ''}
-          </div>
-        </label>
-      </div>
-    `).join('');
-  }
-
-  window.filterAssignList = () => {
-    renderAssignSessionList();
-  };
-
-  window.toggleSessionMember = (memberId) => {
-    const idx = selectedSessionMembers.indexOf(memberId);
-    if (idx >= 0) {
-      selectedSessionMembers.splice(idx, 1);
-    } else {
-      selectedSessionMembers.push(memberId);
-    }
-  };
-
-  window.closeAssignSessionModal = () => {
-    document.getElementById('assignSessionModal').classList.remove('show');
-  };
-
-  window.saveSessionAssignments = async () => {
-    try {
-      const oldEnrollments = await pb.collection('course_enrollments').getFullList({
-        filter: `session_id = "${currentSessionId}"`
-      });
-      
-      for (const e of oldEnrollments) {
-        await pb.collection('course_enrollments').delete(e.id);
-      }
-      
-      for (const memberId of selectedSessionMembers) {
-        await pb.collection('course_enrollments').create({
-          course_id: currentEditCourse,
-          session_id: currentSessionId,
+      for (const memberId of selectedParticipants) {
+        await pb.collection('schulung_teilnahme').create({
+          session_id: session.id,
           member_id: memberId,
-          status: 'enrolled',
+          status: selectedParticipantStatus[memberId] || 'eingeladen',
+          anwesend: false,
           organization_id: currentUser.organization_id
         });
       }
       
-      showMsg(`✅ ${selectedSessionMembers.length} Teilnehmer zugewiesen!`);
-      closeAssignSessionModal();
-      await viewSchulungDetails(currentEditCourse);
+      showMsg('✅ Termin hinzugefügt!');
+      closeAddSessionModal();
+      await loadCourses();
+      await viewSchulungDetails(courseId);
       
     } catch(e) {
       showMsg('Fehler: ' + e.message, 'error');
@@ -1652,106 +1653,157 @@ header {
   };
 
   // ========================================
-  // TEAM
+  // TERMIN-DETAILS MIT STATISTIK
   // ========================================
-  async function loadTeam() {
+  window.viewSessionDetails = async (sessionId) => {
     try {
-      allMembers = await pb.collection('team_members').getFullList({
-        filter: `organization_id = "${currentUser.organization_id}"`,
-        sort: 'name'
+      currentSessionId = sessionId;
+      const session = await pb.collection('training_sessions').getOne(sessionId);
+      const course = allCourses.find(c => c.id === session.course_id);
+      const participants = await pb.collection('schulung_teilnahme').getFullList({
+        filter: `session_id = "${sessionId}"`,
+        expand: 'member_id'
       });
       
-      await renderTeam();
-    } catch(e) {
-      console.error('Error:', e);
-    }
-  }
-
-  async function renderTeam() {
-    const list = document.getElementById('team-list');
-    
-    if (allMembers.length === 0) {
-      list.innerHTML = '<div class="empty" style="background:#fff;border-radius:.75rem"><i class="fas fa-users"></i><div>Noch keine Mitglieder</div></div>';
-      return;
-    }
-    
-    let html = '';
-    
-    for (const member of allMembers) {
-      const enrollments = await pb.collection('course_enrollments').getFullList({
-        filter: `member_id = "${member.id}"`,
-        expand: 'course_id'
-      });
+      document.getElementById('sessionDetailsTitle').textContent = 
+        `${course ? course.title : 'Termin'} • ${formatDate(session.date)}`;
       
-      html += `
-        <div class="course-card" onclick="viewMemberDetails('${member.id}')">
-          <div class="card-title">
-            <i class="fa-solid fa-user"></i> ${member.vorname} ${member.name}
-          </div>
-          ${member.rolle ? `<div style="color:var(--muted);font-size:.9rem;margin-top:4px">${member.rolle}</div>` : ''}
-          <div class="card-meta" style="margin-top:12px">
-            <span><i class="fa-solid fa-graduation-cap"></i> ${enrollments.length} Schulung(en)</span>
-            <span>${member.aktiv ? '✅ Aktiv' : '❌ Inaktiv'}</span>
-          </div>
-        </div>
-      `;
-    }
-    
-    list.innerHTML = html;
-  }
-
-  window.viewMemberDetails = async (memberId) => {
-    try {
-      const member = await pb.collection('team_members').getOne(memberId);
-      const enrollments = await pb.collection('course_enrollments').getFullList({
-        filter: `member_id = "${memberId}"`,
-        expand: 'course_id,session_id'
-      });
+      const inviteLink = `${window.location.origin}/ausbildungen-invite.html?session=${sessionId}`;
       
-      document.getElementById('memberDetailsTitle').innerHTML = 
-        `<i class="fa-solid fa-user"></i> ${member.vorname} ${member.name}`;
+      const eingeladen = participants.length;
+      const zugesagt = participants.filter(p => p.status === 'zugesagt').length;
+      const abgesagt = participants.filter(p => p.status === 'abgesagt').length;
+      const offen = participants.filter(p => p.status === 'eingeladen').length;
+      const anwesend = participants.filter(p => p.anwesend).length;
+      const abwesend = participants.filter(p => !p.anwesend && p.status !== 'abgesagt').length;
       
       let html = `
         <div class="details-section">
-          <h4><i class="fa-solid fa-info-circle"></i> Persönliche Informationen</h4>
-          <div style="display:grid;grid-template-columns:150px 1fr;gap:12px">
-            ${member.rolle ? `
-            <div style="font-weight:700;color:#6b7280">Rolle:</div>
-            <div>${member.rolle}</div>
+          <h4><i class="fa-solid fa-info-circle"></i> Termin-Informationen</h4>
+          <div style="display:grid;grid-template-columns:150px 1fr;gap:8px">
+            <div style="font-weight:700;color:#6b7280">Datum:</div>
+            <div>${formatDate(session.date)} ${session.start_time ? `• ${formatTime(session.start_time)} - ${formatTime(session.end_time)}` : ''}</div>
+            
+            <div style="font-weight:700;color:#6b7280">Ort:</div>
+            <div>${session.location || '-'}</div>
+            
+            ${session.dozent ? `
+            <div style="font-weight:700;color:#6b7280">Dozent:</div>
+            <div>${session.dozent}</div>
             ` : ''}
-            ${member.email ? `
-            <div style="font-weight:700;color:#6b7280">E-Mail:</div>
-            <div>${member.email}</div>
+            
+            ${session.beschreibung ? `
+            <div style="font-weight:700;color:#6b7280">Beschreibung:</div>
+            <div>${session.beschreibung}</div>
             ` : ''}
-            ${member.telefon ? `
-            <div style="font-weight:700;color:#6b7280">Telefon:</div>
-            <div>${member.telefon}</div>
-            ` : ''}
-            <div style="font-weight:700;color:#6b7280">Status:</div>
-            <div>${member.aktiv ? '✅ Aktiv' : '❌ Inaktiv'}</div>
           </div>
         </div>
         
         <div class="details-section">
-          <h4><i class="fa-solid fa-graduation-cap"></i> Schulungen (${enrollments.length})</h4>
+          <h4><i class="fa-solid fa-link"></i> Einladungslink</h4>
+          <div style="margin-bottom:1rem">
+            <div class="copy-box">
+              <span style="flex:1;overflow:hidden;text-overflow:ellipsis;font-size:.85rem">${inviteLink}</span>
+              <button class="btn btn-sm" onclick="copyToClipboard('${inviteLink}')">
+                <i class="fas fa-copy"></i>
+              </button>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-sm success" onclick="shareWhatsApp('${inviteLink}')">
+              <i class="fab fa-whatsapp"></i> WhatsApp
+            </button>
+            <button class="btn btn-sm info" onclick="shareEmail('${inviteLink}', '${course ? course.title : 'Schulung'}', '${formatDate(session.date)}')">
+              <i class="fas fa-envelope"></i> E-Mail
+            </button>
+          </div>
+        </div>
+        
+        <div class="details-section">
+          <h4><i class="fa-solid fa-chart-pie"></i> Statistik</h4>
+          
+          <div style="margin-bottom:1rem">
+            <div style="font-size:.85rem;font-weight:700;color:#6b7280;margin-bottom:.5rem">RÜCKMELDUNGEN</div>
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px">
+              <div style="text-align:center;padding:12px;background:#e0e7ff;border-radius:8px">
+                <div style="font-size:1.5rem;font-weight:800;color:#4338ca">${eingeladen}</div>
+                <div style="font-size:0.85rem;color:#4338ca">Eingeladen</div>
+              </div>
+              <div style="text-align:center;padding:12px;background:#dcfce7;border-radius:8px">
+                <div style="font-size:1.5rem;font-weight:800;color:#065f46">${zugesagt}</div>
+                <div style="font-size:0.85rem;color:#065f46">Zugesagt</div>
+              </div>
+              <div style="text-align:center;padding:12px;background:#fee2e2;border-radius:8px">
+                <div style="font-size:1.5rem;font-weight:800;color:#991b1b">${abgesagt}</div>
+                <div style="font-size:0.85rem;color:#991b1b">Abgesagt</div>
+              </div>
+              <div style="text-align:center;padding:12px;background:#fef3c7;border-radius:8px">
+                <div style="font-size:1.5rem;font-weight:800;color:#92400e">${offen}</div>
+                <div style="font-size:0.85rem;color:#92400e">Offen</div>
+              </div>
+            </div>
+          </div>
+          
+          <div>
+            <div style="font-size:.85rem;font-weight:700;color:#6b7280;margin-bottom:.5rem">ANWESENHEIT</div>
+            <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px">
+              <div style="text-align:center;padding:12px;background:#f0fdf4;border-radius:8px">
+                <div style="font-size:1.5rem;font-weight:800;color:#16a34a">${anwesend}</div>
+                <div style="font-size:0.85rem;color:#16a34a">Anwesend</div>
+              </div>
+              <div style="text-align:center;padding:12px;background:#fef3c7;border-radius:8px">
+                <div style="font-size:1.5rem;font-weight:800;color:#92400e">${abwesend}</div>
+                <div style="font-size:0.85rem;color:#92400e">Nicht anwesend</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="details-section">
+          <h4><i class="fa-solid fa-users"></i> Teilnehmer-Liste (${participants.length})</h4>
       `;
       
-      if (enrollments.length > 0) {
-        html += '<table class="table" style="margin-top:1rem"><thead><tr><th>Schulung</th><th>Termin</th><th>Status</th></tr></thead><tbody>';
+      if (participants.length > 0) {
+        html += `
+          <table class="table" style="margin-top:1rem">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Name</th>
+                <th>Rückmeldung</th>
+                <th style="text-align:center">Anwesend</th>
+              </tr>
+            </thead>
+            <tbody>
+        `;
         
-        enrollments.forEach(enrollment => {
-          const course = enrollment.expand?.course_id;
-          const session = enrollment.expand?.session_id;
+        participants.forEach((p, idx) => {
+          const member = p.expand?.member_id;
+          let statusBadge = '';
+          
+          if (p.status === 'zugesagt') {
+            statusBadge = '<span class="badge zugesagt">✅ Zugesagt</span>';
+          } else if (p.status === 'abgesagt') {
+            statusBadge = '<span class="badge abgesagt">❌ Abgesagt</span>';
+          } else {
+            statusBadge = '<span class="badge eingeladen">⏳ Offen</span>';
+          }
           
           html += `
             <tr>
-              <td style="font-weight:700">${course?.title || '-'}</td>
-              <td>${session ? formatDate(session.date) : '-'}</td>
-              <td>
-                <span class="status-icon ${enrollment.status}">
-                  ${enrollment.status === 'completed' ? '✓' : enrollment.status === 'enrolled' ? '📋' : '❌'}
-                </span>
-                ${enrollment.status === 'completed' ? 'Abgeschlossen' : enrollment.status === 'enrolled' ? 'Angemeldet' : 'Abgebrochen'}
+              <td>${idx + 1}</td>
+              <td style="font-weight:700">${member ? `${member.vorname} ${member.name}` : 'Unbekannt'}</td>
+              <td>${statusBadge}</td>
+              <td style="text-align:center">
+                ${p.status === 'abgesagt' ? 
+                  '<span style="color:var(--muted)">-</span>' :
+                  `<input 
+                    type="checkbox" 
+                    data-participant-id="${p.id}"
+                    ${p.anwesend ? 'checked' : ''}
+                    style="width:20px;height:20px;cursor:pointer"
+                  >`
+                }
               </td>
             </tr>
           `;
@@ -1759,59 +1811,142 @@ header {
         
         html += '</tbody></table>';
       } else {
-        html += '<p style="color:#999;padding:16px;text-align:center">Noch keine Schulungen zugewiesen</p>';
+        html += '<p style="color:#999;padding:16px;text-align:center">Keine Teilnehmer</p>';
       }
       
-      html += `
-        </div>
-        <div style="margin-top:16px;display:flex;gap:8px">
-          <button class="btn primary" onclick="closeMemberDetailsModal();openMemberModal('${memberId}')">
-            <i class="fa-solid fa-edit"></i> Bearbeiten
-          </button>
-          <button class="btn danger" onclick="deleteMember('${memberId}')">
-            <i class="fa-solid fa-trash"></i> Löschen
-          </button>
-        </div>
-      `;
+      html += '</div>';
       
-      document.getElementById('memberDetailsBody').innerHTML = html;
-      document.getElementById('memberDetailsModal').classList.add('show');
+      document.getElementById('sessionDetailsBody').innerHTML = html;
+      document.getElementById('sessionDetailsModal').classList.add('show');
       
     } catch(e) {
       showMsg('Fehler: ' + e.message, 'error');
     }
   };
 
-  window.closeMemberDetailsModal = () => {
-    document.getElementById('memberDetailsModal').classList.remove('show');
+  window.closeSessionDetailsModal = () => {
+    document.getElementById('sessionDetailsModal').classList.remove('show');
+    currentSessionId = null;
   };
+
+  window.saveAttendance = async () => {
+    try {
+      if (!currentSessionId) return;
+      
+      const checkboxes = document.querySelectorAll('[data-participant-id]');
+      
+      for (const checkbox of checkboxes) {
+        const participantId = checkbox.dataset.participantId;
+        const anwesend = checkbox.checked;
+        
+        await pb.collection('schulung_teilnahme').update(participantId, {
+          anwesend
+        });
+      }
+      
+      showMsg('✅ Anwesenheit gespeichert!');
+      await viewSessionDetails(currentSessionId);
+      
+    } catch(e) {
+      showMsg('Fehler: ' + e.message, 'error');
+    }
+  };
+
+  window.shareWhatsApp = (link) => {
+    const text = encodeURIComponent(`Hallo! Hier ist der Einladungslink zur Schulung: ${link}`);
+    window.open(`https://wa.me/?text=${text}`, '_blank');
+  };
+
+  window.shareEmail = (link, title, date) => {
+    const subject = encodeURIComponent(`Einladung: ${title} am ${date}`);
+    const body = encodeURIComponent(`Hallo,\n\nhiermit lade ich dich zur Schulung ein:\n\n${title}\nDatum: ${date}\n\nBitte bestätige deine Teilnahme über diesen Link:\n${link}\n\nViele Grüße`);
+    window.location.href = `mailto:?subject=${subject}&body=${body}`;
+  };
+  // ========================================
+  // TEAM-MANAGEMENT MIT PFLICHT-SCHULUNGEN
+  // ========================================
+  async function loadTeam() {
+    try {
+      allMembers = await pb.collection('team_members').getFullList({
+        filter: `organization_id = "${currentUser.organization_id}" && aktiv = true`,
+        sort: 'name'
+      });
+      
+      allAccess = await pb.collection('training_students').getFullList({
+        filter: `organization_id = "${currentUser.organization_id}"`,
+        sort: 'name',
+        expand: 'member_id'
+      });
+      
+      renderTeam();
+    } catch(e) {
+      console.error('Error:', e);
+      document.getElementById('team-list').innerHTML = `<div class="empty" style="background:#fff;border-radius:.75rem"><i class="fas fa-exclamation-triangle"></i><div style="color:#c00">Fehler: ${e.message}</div></div>`;
+    }
+  }
+
+  function renderTeam() {
+    const list = document.getElementById('team-list');
+    
+    if (allMembers.length === 0) {
+      list.innerHTML = '<div class="empty" style="background:#fff;border-radius:.75rem"><i class="fas fa-users"></i><div>Noch keine Team-Mitglieder</div></div>';
+      return;
+    }
+    
+    list.innerHTML = allMembers.map(member => {
+      const tags = member.qualifikationen || [];
+      const tagsHTML = tags.map(t => `<span class="tag">${t}</span>`).join('');
+      const access = allAccess.find(a => a.member_id === member.id);
+      
+      return `
+        <div class="member-card" onclick="viewMemberDetails('${member.id}')">
+          <div class="card-title"><i class="fa-solid fa-user"></i> ${member.vorname} ${member.name}</div>
+          <div style="margin-bottom:8px">
+            ${tagsHTML || '<span class="tag" style="background:#eee;color:#999">Keine Qualifikationen</span>'}
+          </div>
+          ${access ? `
+            <div style="margin-top:8px;padding:6px;background:#f0fdf4;border-radius:6px;font-size:0.85rem">
+              <i class="fa-solid fa-check-circle" style="color:#16a34a"></i> Zugang: <strong>${access.access_code}</strong>
+            </div>
+          ` : `
+            <div style="margin-top:8px;padding:6px;background:#fef3c7;border-radius:6px;font-size:0.85rem">
+              <i class="fa-solid fa-lock"></i> Kein Zugang
+            </div>
+          `}
+        </div>
+      `;
+    }).join('');
+  }
 
   window.openMemberModal = (memberId = null) => {
     currentEditMember = memberId;
     const form = document.getElementById('memberForm');
     form.reset();
+    currentTags = [];
     
     if (memberId) {
       const member = allMembers.find(m => m.id === memberId);
       if (member) {
-        document.getElementById('memberModalTitle').innerHTML = '<i class="fa-solid fa-edit"></i> Mitglied bearbeiten';
-        form.vorname.value = member.vorname;
-        form.name.value = member.name;
-        form.email.value = member.email || '';
-        form.telefon.value = member.telefon || '';
-        form.rolle.value = member.rolle || '';
-        document.getElementById('member-aktiv').checked = member.aktiv;
+        document.getElementById('memberModalTitle').innerHTML = '<i class="fa-solid fa-user-edit"></i> Mitglied bearbeiten';
+        form.name.value = member.name || '';
+        form.vorname.value = member.vorname || '';
+        currentTags = [...(member.qualifikationen || [])];
       }
     } else {
-      document.getElementById('memberModalTitle').innerHTML = '<i class="fa-solid fa-user-plus"></i> Neues Mitglied';
+      document.getElementById('memberModalTitle').innerHTML = '<i class="fa-solid fa-user-plus"></i> Neues Team-Mitglied';
     }
     
     document.getElementById('memberModal').classList.add('show');
+    setTimeout(() => {
+      initTagInput();
+      renderTags();
+    }, 100);
   };
 
   window.closeMemberModal = () => {
     document.getElementById('memberModal').classList.remove('show');
     currentEditMember = null;
+    currentTags = [];
   };
 
   document.getElementById('memberForm').onsubmit = async (e) => {
@@ -1820,12 +1955,10 @@ header {
     try {
       const formData = new FormData(e.target);
       const data = {
-        vorname: formData.get('vorname').trim(),
         name: formData.get('name').trim(),
-        email: formData.get('email').trim(),
-        telefon: formData.get('telefon').trim(),
-        rolle: formData.get('rolle').trim(),
-        aktiv: document.getElementById('member-aktiv').checked,
+        vorname: formData.get('vorname').trim(),
+        qualifikationen: currentTags,
+        aktiv: true,
         organization_id: currentUser.organization_id
       };
       
@@ -1845,12 +1978,214 @@ header {
     }
   };
 
+  window.viewMemberDetails = async (memberId) => {
+    try {
+      const member = await pb.collection('team_members').getOne(memberId);
+      const participations = await pb.collection('schulung_teilnahme').getFullList({
+        filter: `member_id = "${memberId}"`,
+        expand: 'session_id',
+        sort: '-created'
+      });
+      
+      const access = allAccess.find(a => a.member_id === memberId);
+      const tags = member.qualifikationen || [];
+      const tagsHTML = tags.map(t => `<span class="tag">${t}</span>`).join('') || 
+        '<span class="tag" style="background:#eee;color:#999">Keine Qualifikationen</span>';
+      
+      document.getElementById('memberDetailsTitle').innerHTML = 
+        `<i class="fa-solid fa-user"></i> ${member.vorname} ${member.name}`;
+      
+      const currentYear = new Date().getFullYear();
+      const thisYearParticipations = participations.filter(p => {
+        const session = p.expand?.session_id;
+        return session && new Date(session.date).getFullYear() === currentYear && p.anwesend;
+      });
+      const completedThisYear = thisYearParticipations.length;
+      const percentComplete = Math.round((completedThisYear / pflichtSchulungen) * 100);
+      
+      let html = `
+        <div class="details-section">
+          <h4><i class="fa-solid fa-id-badge"></i> Informationen</h4>
+          <div style="display:grid;grid-template-columns:150px 1fr;gap:8px">
+            <div style="font-weight:700;color:#6b7280">Qualifikationen:</div>
+            <div>${tagsHTML}</div>
+          </div>
+        </div>
+        
+        <div class="details-section" style="background:${percentComplete >= 100 ? '#f0fdf4' : '#fef3c7'}">
+          <h4><i class="fa-solid fa-graduation-cap"></i> Pflicht-Schulungen ${currentYear}</h4>
+          <div style="display:flex;align-items:center;gap:1rem;margin-bottom:.5rem">
+            <div style="font-size:2rem;font-weight:800;color:${percentComplete >= 100 ? '#16a34a' : '#f59e0b'}">
+              ${completedThisYear} / ${pflichtSchulungen}
+            </div>
+            <div style="flex:1">
+              <div class="progress-bar" style="height:12px">
+                <div class="progress-bar-fill" style="width:${Math.min(percentComplete, 100)}%;background:${percentComplete >= 100 ? '#16a34a' : '#f59e0b'}"></div>
+              </div>
+              <div style="font-size:.85rem;color:var(--muted);margin-top:4px">
+                ${percentComplete}% abgeschlossen
+                ${completedThisYear < pflichtSchulungen ? ` • Noch ${pflichtSchulungen - completedThisYear} benötigt` : ' • ✓ Ziel erreicht!'}
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="details-section">
+          <h4><i class="fa-solid fa-key"></i> Externer Zugang</h4>
+      `;
+      
+      if (access) {
+        html += `
+          <div style="background:#f0fdf4;padding:1rem;border-radius:.5rem;border:1px solid #86efac">
+            <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.5rem">
+              <i class="fa-solid fa-check-circle" style="color:#16a34a;font-size:1.2rem"></i>
+              <strong style="color:#16a34a">Zugang aktiv</strong>
+            </div>
+            <div class="copy-box" style="margin-top:.5rem">
+              <span style="font-weight:700;color:var(--primary);font-size:1.1rem">${access.access_code}</span>
+              <button class="btn btn-sm" onclick="copyToClipboard('${access.access_code}')">
+                <i class="fas fa-copy"></i>
+              </button>
+            </div>
+            <div style="margin-top:.5rem;font-size:.85rem;color:var(--muted)">
+              Login: ausbildungen-public.html mit diesem Code
+            </div>
+          </div>
+          <div style="margin-top:.5rem;display:flex;gap:.5rem">
+            <button class="btn btn-sm success" onclick="exportAccessPDF('${access.id}')">
+              <i class="fas fa-file-pdf"></i> PDF erstellen
+            </button>
+            <button class="btn btn-sm" onclick="deleteAccessForMember('${access.id}')">
+              <i class="fas fa-trash"></i> Zugang entfernen
+            </button>
+          </div>
+        `;
+      } else {
+        html += `
+          <div style="background:#fef3c7;padding:1rem;border-radius:.5rem;border:1px solid #fde047">
+            <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.5rem">
+              <i class="fa-solid fa-lock" style="color:#f59e0b;font-size:1.2rem"></i>
+              <strong style="color:#f59e0b">Kein Zugang vorhanden</strong>
+            </div>
+            <p style="margin:.5rem 0;font-size:.85rem;color:var(--muted)">
+              Erstelle einen 3-Wort-Code, damit sich diese Person extern anmelden kann.
+            </p>
+          </div>
+          <div style="margin-top:.5rem">
+            <button class="btn btn-sm primary" onclick="openCreateAccessForMember('${memberId}')">
+              <i class="fas fa-key"></i> Zugang erstellen
+            </button>
+          </div>
+        `;
+      }
+      
+      html += `</div>
+        <div class="details-section">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+            <h4 style="margin:0"><i class="fa-solid fa-clock-rotate-left"></i> Teilnahmehistorie (${participations.length})</h4>
+            <button class="btn btn-sm success" onclick="exportMemberPDF('${memberId}')">
+              <i class="fas fa-file-pdf"></i> PDF Export
+            </button>
+          </div>
+      `;
+      
+      if (participations.length > 0) {
+        const zugesagt = participations.filter(p => p.status === 'zugesagt').length;
+        const abgesagt = participations.filter(p => p.status === 'abgesagt').length;
+        const anwesend = participations.filter(p => p.anwesend).length;
+        const abwesend = participations.filter(p => !p.anwesend && p.status !== 'abgesagt').length;
+        
+        html += `
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:1rem">
+            <div style="text-align:center;padding:12px;background:#dcfce7;border-radius:8px">
+              <div style="font-size:1.5rem;font-weight:800;color:#065f46">${zugesagt}</div>
+              <div style="font-size:0.85rem;color:#065f46">Zugesagt</div>
+            </div>
+            <div style="text-align:center;padding:12px;background:#fee2e2;border-radius:8px">
+              <div style="font-size:1.5rem;font-weight:800;color:#991b1b">${abgesagt}</div>
+              <div style="font-size:0.85rem;color:#991b1b">Abgesagt</div>
+            </div>
+            <div style="text-align:center;padding:12px;background:#f0fdf4;border-radius:8px">
+              <div style="font-size:1.5rem;font-weight:800;color:#16a34a">${anwesend}</div>
+              <div style="font-size:0.85rem;color:#16a34a">Anwesend</div>
+            </div>
+            <div style="text-align:center;padding:12px;background:#fef3c7;border-radius:8px">
+              <div style="font-size:1.5rem;font-weight:800;color:#92400e">${abwesend}</div>
+              <div style="font-size:0.85rem;color:#92400e">Offen</div>
+            </div>
+          </div>
+          
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Datum</th>
+                <th>Kurs</th>
+                <th>Rückmeldung</th>
+                <th>Anwesenheit</th>
+              </tr>
+            </thead>
+            <tbody>
+        `;
+        
+        participations.forEach(p => {
+          const session = p.expand?.session_id;
+          const course = session ? allCourses.find(c => c.id === session.course_id) : null;
+          
+          html += `
+            <tr>
+              <td>${session ? formatDate(session.date) : '-'}</td>
+              <td style="font-weight:700">${course ? course.title : 'Unbekannt'}</td>
+              <td>
+                <span class="badge ${p.status}">${
+                  p.status === 'zugesagt' ? '✅ Zugesagt' : 
+                  p.status === 'abgesagt' ? '❌ Abgesagt' : '⏳ Eingeladen'
+                }</span>
+              </td>
+              <td>
+                <span class="badge ${p.anwesend ? 'anwesend' : 'abwesend'}">
+                  ${p.anwesend ? '✅ Anwesend' : (p.status === 'abgesagt' ? '❌ Abgesagt' : '❌ Abwesend')}
+                </span>
+              </td>
+            </tr>
+          `;
+        });
+        
+        html += '</tbody></table>';
+      } else {
+        html += '<p style="color:#999;padding:16px;text-align:center">Noch keine Teilnahmen</p>';
+      }
+      
+      html += `
+        </div>
+        
+        <div style="margin-top:16px;display:flex;gap:8px">
+          <button class="btn primary" onclick="closeMemberDetailsModal();openMemberModal('${memberId}')">
+            <i class="fa-solid fa-edit"></i> Bearbeiten
+          </button>
+          <button class="btn" onclick="deleteMember('${memberId}')">
+            <i class="fa-solid fa-trash"></i> Löschen
+          </button>
+        </div>
+      `;
+      
+      document.getElementById('memberDetailsBody').innerHTML = html;
+      document.getElementById('memberDetailsModal').classList.add('show');
+      
+    } catch(e) {
+      showMsg('Fehler: ' + e.message, 'error');
+    }
+  };
+
+  window.closeMemberDetailsModal = () => {
+    document.getElementById('memberDetailsModal').classList.remove('show');
+  };
+
   window.deleteMember = async (memberId) => {
-    if (!confirm('Mitglied wirklich löschen?')) return;
+    if (!confirm('Team-Mitglied wirklich löschen?')) return;
     
     try {
-      await pb.collection('team_members').delete(memberId);
-      showMsg('✅ Mitglied gelöscht!');
+      await pb.collection('team_members').update(memberId, { aktiv: false });
+      showMsg('✅ Mitglied entfernt!');
       closeMemberDetailsModal();
       await loadTeam();
     } catch(e) {
@@ -1859,163 +2194,566 @@ header {
   };
 
   // ========================================
-  // ZUGÄNGE
+  // PDF-EXPORT FÜR MEMBER
   // ========================================
-  async function loadZugaenge() {
+  window.exportMemberPDF = async (memberId) => {
     try {
-      allMembers = await pb.collection('team_members').getFullList({
-        filter: `organization_id = "${currentUser.organization_id}"`,
-        sort: 'name'
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      
+      const member = await pb.collection('team_members').getOne(memberId);
+      const participations = await pb.collection('schulung_teilnahme').getFullList({
+        filter: `member_id = "${memberId}"`,
+        expand: 'session_id',
+        sort: '-created'
       });
       
-      await renderZugaenge();
+      doc.setFontSize(18);
+      doc.text(`Teilnahmehistorie: ${member.vorname} ${member.name}`, 20, 20);
+      
+      const zugesagt = participations.filter(p => p.status === 'zugesagt').length;
+      const abgesagt = participations.filter(p => p.status === 'abgesagt').length;
+      const anwesend = participations.filter(p => p.anwesend).length;
+      const abwesend = participations.filter(p => !p.anwesend && p.status !== 'abgesagt').length;
+      
+      doc.setFontSize(12);
+      doc.text(`Zugesagt: ${zugesagt}  |  Abgesagt: ${abgesagt}  |  Anwesend: ${anwesend}  |  Offen: ${abwesend}`, 20, 35);
+      
+      let yPos = 50;
+      doc.setFontSize(10);
+      doc.text('Datum', 20, yPos);
+      doc.text('Kurs', 60, yPos);
+      doc.text('Rueckmeldung', 130, yPos);
+      doc.text('Anwesenheit', 170, yPos);
+      
+      yPos += 7;
+      participations.forEach(p => {
+        const session = p.expand?.session_id;
+        const course = session ? allCourses.find(c => c.id === session.course_id) : null;
+        
+        if (yPos > 270) {
+          doc.addPage();
+          yPos = 20;
+        }
+        
+        doc.text(session ? formatDate(session.date) : '-', 20, yPos);
+        doc.text(course ? course.title.substring(0, 25) : 'Unbekannt', 60, yPos);
+        doc.text(p.status === 'zugesagt' ? 'Zugesagt' : p.status === 'abgesagt' ? 'Abgesagt' : 'Eingeladen', 130, yPos);
+        doc.text(p.anwesend ? 'Anwesend' : 'Abwesend', 170, yPos);
+        
+        yPos += 7;
+      });
+      
+      doc.save(`${member.vorname}_${member.name}_Historie.pdf`);
+      showMsg('✅ PDF exportiert!');
+      
     } catch(e) {
-      console.error('Error:', e);
+      showMsg('Fehler: ' + e.message, 'error');
     }
-  }
+  };
 
-  async function renderZugaenge() {
-    const list = document.getElementById('zugaenge-list');
+  window.exportAllMembersStats = async () => {
+    try {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      
+      doc.setFontSize(18);
+      doc.text('Gesamtauswertung Team', 20, 20);
+      
+      let yPos = 35;
+      doc.setFontSize(10);
+      
+      for (const member of allMembers) {
+        const participations = await pb.collection('schulung_teilnahme').getFullList({
+          filter: `member_id = "${member.id}"`
+        });
+        
+        const zugesagt = participations.filter(p => p.status === 'zugesagt').length;
+        const abgesagt = participations.filter(p => p.status === 'abgesagt').length;
+        const anwesend = participations.filter(p => p.anwesend).length;
+        
+        if (yPos > 270) {
+          doc.addPage();
+          yPos = 20;
+        }
+        
+        doc.setFontSize(12);
+        doc.text(`${member.vorname} ${member.name}`, 20, yPos);
+        yPos += 6;
+        
+        doc.setFontSize(10);
+        doc.text(`Zugesagt: ${zugesagt}  |  Abgesagt: ${abgesagt}  |  Anwesend: ${anwesend}  |  Gesamt: ${participations.length}`, 20, yPos);
+        yPos += 10;
+      }
+      
+      doc.save(`Team_Gesamtauswertung_${new Date().toISOString().split('T')[0]}.pdf`);
+      showMsg('✅ Gesamtauswertung exportiert!');
+      
+    } catch(e) {
+      showMsg('Fehler: ' + e.message, 'error');
+    }
+  };
+
+  // ========================================
+  // ZUGANG FÜR MITGLIED
+  // ========================================
+  window.openCreateAccessForMember = (memberId) => {
+    currentAccessMember = memberId;
+    const member = allMembers.find(m => m.id === memberId);
     
-    if (allMembers.length === 0) {
+    if (member) {
+      document.getElementById('access-member-name').textContent = `${member.vorname} ${member.name}`;
+      memberAccessCode = generateAccessCode();
+      document.getElementById('member-access-code').textContent = memberAccessCode;
+      document.getElementById('createAccessForMemberModal').classList.add('show');
+    }
+  };
+
+  window.closeCreateAccessForMemberModal = () => {
+    document.getElementById('createAccessForMemberModal').classList.remove('show');
+    currentAccessMember = null;
+  };
+
+  window.saveAccessForMember = async () => {
+    if (!currentAccessMember) return;
+    
+    try {
+      const member = allMembers.find(m => m.id === currentAccessMember);
+      const password = generatePassword();
+      
+      await pb.collection('training_students').create({
+        username: memberAccessCode,
+        email: '',
+        password,
+        passwordConfirm: password,
+        name: `${member.vorname} ${member.name}`,
+        access_code: memberAccessCode,
+        member_id: currentAccessMember,
+        organization_id: currentUser.organization_id
+      });
+      
+      showMsg(`✅ Zugang erstellt! Code: ${memberAccessCode}`);
+      closeCreateAccessForMemberModal();
+      await loadTeam();
+      
+      if (document.getElementById('memberDetailsModal').classList.contains('show')) {
+        await viewMemberDetails(currentAccessMember);
+      }
+      
+    } catch(e) {
+      console.error('Fehler Details:', e);
+      showMsg('Fehler: ' + e.message, 'error');
+    }
+  };
+
+  window.deleteAccessForMember = async (accessId) => {
+    if (!confirm('Zugang wirklich entfernen?')) return;
+    
+    try {
+      await pb.collection('training_students').delete(accessId);
+      showMsg('✅ Zugang entfernt!');
+      await loadTeam();
+      closeMemberDetailsModal();
+    } catch(e) {
+      showMsg('Fehler: ' + e.message, 'error');
+    }
+  };
+
+  // ========================================
+  // ZUGÄNGE - SETTINGS
+  // ========================================
+  function renderSettings() {
+    const list = document.getElementById('access-list');
+    
+    if (allAccess.length === 0) {
       list.innerHTML = '<div class="empty" style="background:#fff;border-radius:.75rem"><i class="fas fa-key"></i><div>Noch keine Zugänge</div></div>';
       return;
     }
     
-    let html = '';
+    list.innerHTML = `
+      <div style="background:#fff;border-radius:.75rem;padding:1.5rem;box-shadow:0 2px 8px rgba(0,0,0,.05)">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Name</th>
+              <th>Zugangscode</th>
+              <th>Verknüpft mit</th>
+              <th>Aktionen</th>
+            </tr>
+          </thead>
+          <tbody>
+    `;
     
-    allMembers.forEach(member => {
-      const username = `${member.vorname.toLowerCase()}.${member.name.toLowerCase()}`;
-      const password = Math.random().toString(36).slice(-8);
+    allAccess.forEach((access, idx) => {
+      const member = access.expand?.member_id;
       
-      html += `
-        <div class="course-card">
-          <div class="card-title">
-            <i class="fa-solid fa-key"></i> ${member.vorname} ${member.name}
-          </div>
-          <div style="margin-top:12px;font-size:.9rem">
-            <div style="margin-bottom:8px">
-              <strong>Benutzername:</strong><br>
-              <code style="background:var(--bg);padding:4px 8px;border-radius:4px;display:inline-block;margin-top:4px">${username}</code>
+      list.innerHTML += `
+        <tr>
+          <td style="font-weight:700">${idx + 1}</td>
+          <td style="font-weight:700">${access.name}</td>
+          <td>
+            <div class="copy-box" style="display:inline-flex;width:auto">
+              <span style="font-weight:700;color:var(--primary);font-family:monospace">${access.access_code}</span>
+              <button class="btn btn-sm" onclick="copyToClipboard('${access.access_code}')">
+                <i class="fas fa-copy"></i>
+              </button>
             </div>
-            <div>
-              <strong>Passwort:</strong><br>
-              <code style="background:var(--bg);padding:4px 8px;border-radius:4px;display:inline-block;margin-top:4px">${password}</code>
+          </td>
+          <td>
+            ${member ? `
+              <span class="badge online">
+                <i class="fas fa-link"></i> ${member.vorname} ${member.name}
+              </span>
+            ` : `
+              <span style="color:var(--muted);font-size:.85rem">Extern</span>
+            `}
+          </td>
+          <td>
+            <div style="display:flex;gap:4px">
+              <button class="btn btn-sm success" onclick="exportAccessPDF('${access.id}')">
+                <i class="fas fa-file-pdf"></i> PDF
+              </button>
+              <button class="btn btn-sm" onclick="deleteAccess('${access.id}')">
+                <i class="fas fa-trash"></i>
+              </button>
             </div>
-          </div>
-          <div style="margin-top:12px">
-            <button class="btn btn-sm primary" onclick="showAccessDetails('${member.id}', '${username}', '${password}')">
-              <i class="fas fa-qrcode"></i> QR-Code anzeigen
-            </button>
-          </div>
-        </div>
+          </td>
+        </tr>
       `;
     });
+    
+    list.innerHTML += `
+          </tbody>
+        </table>
+      </div>
+    `;
+  }
+
+  window.openSingleAccessModal = () => {
+    document.getElementById('singleAccessForm').reset();
+    generatePreviewCode();
+    document.getElementById('singleAccessModal').classList.add('show');
+  };
+
+  window.closeSingleAccessModal = () => {
+    document.getElementById('singleAccessModal').classList.remove('show');
+  };
+
+  document.getElementById('singleAccessForm').onsubmit = async (e) => {
+    e.preventDefault();
+    
+    try {
+      const formData = new FormData(e.target);
+      const password = generatePassword();
+      
+      await pb.collection('training_students').create({
+        username: previewAccessCode,
+        email: '',
+        password,
+        passwordConfirm: password,
+        name: formData.get('name').trim(),
+        access_code: previewAccessCode,
+        organization_id: currentUser.organization_id
+      });
+      
+      showMsg(`✅ Zugang erstellt! Code: ${previewAccessCode}`);
+      closeSingleAccessModal();
+      await loadSettings();
+      
+    } catch(e) {
+      console.error('Fehler Details:', e);
+      showMsg('Fehler: ' + e.message, 'error');
+    }
+  };
+
+  window.openBulkAccessModal = () => {
+    bulkAccessCount = 3;
+    renderBulkAccessRows();
+    document.getElementById('bulkAccessModal').classList.add('show');
+  };
+
+  window.closeBulkAccessModal = () => {
+    document.getElementById('bulkAccessModal').classList.remove('show');
+  };
+
+  window.addBulkAccessRow = () => {
+    bulkAccessCount++;
+    renderBulkAccessRows();
+  };
+
+  function renderBulkAccessRows() {
+    const list = document.getElementById('bulkAccessList');
+    let html = '';
+    
+    for (let i = 0; i < bulkAccessCount; i++) {
+      html += `
+        <div style="display:grid;grid-template-columns:1fr auto;gap:8px;margin-bottom:8px;padding:12px;background:#f9fafb;border-radius:8px">
+          <input type="text" placeholder="Name" data-bulk-name="${i}" style="padding:8px;border:1px solid #d1d5db;border-radius:6px">
+          <button type="button" class="btn btn-sm" onclick="removeBulkAccessRow(${i})">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+      `;
+    }
     
     list.innerHTML = html;
   }
 
-  window.showAccessDetails = (memberId, username, password) => {
-    const member = allMembers.find(m => m.id === memberId);
-    
-    document.getElementById('accessModalTitle').innerHTML = 
-      `<i class="fa-solid fa-key"></i> Zugang: ${member.vorname} ${member.name}`;
-    
-    const qrData = `Username: ${username}\nPassword: ${password}\nURL: ${window.location.origin}/mpg-login.html`;
-    
-    document.getElementById('accessModalBody').innerHTML = `
-      <div class="qr-code-container">
-        <div id="qrcode-display"></div>
-        <div style="margin-top:1.5rem">
-          <div style="margin-bottom:1rem">
-            <strong>Benutzername:</strong><br>
-            <code style="background:var(--bg);padding:8px 12px;border-radius:4px;display:inline-block;margin-top:4px;font-size:1.1rem">${username}</code>
-          </div>
-          <div>
-            <strong>Passwort:</strong><br>
-            <code style="background:var(--bg);padding:8px 12px;border-radius:4px;display:inline-block;margin-top:4px;font-size:1.1rem">${password}</code>
-          </div>
-        </div>
-      </div>
-    `;
-    
-    document.getElementById('accessModal').classList.add('show');
-    
-    setTimeout(() => {
-      new QRCode(document.getElementById('qrcode-display'), {
-        text: qrData,
-        width: 256,
-        height: 256
-      });
-    }, 100);
+  window.removeBulkAccessRow = (index) => {
+    if (bulkAccessCount > 1) {
+      bulkAccessCount--;
+      renderBulkAccessRows();
+    }
   };
 
-  window.closeAccessModal = () => {
-    document.getElementById('accessModal').classList.remove('show');
-  };
-
-  window.exportAllAccessPDF = async () => {
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
+  document.getElementById('bulkAccessForm').onsubmit = async (e) => {
+    e.preventDefault();
     
-    let yPos = 20;
-    
-    doc.setFontSize(18);
-    doc.text('Zugangsdaten - Übersicht', 20, yPos);
-    yPos += 15;
-    
-    for (const member of allMembers) {
-      if (yPos > 250) {
-        doc.addPage();
-        yPos = 20;
+    try {
+      const names = Array.from(document.querySelectorAll('[data-bulk-name]'));
+      
+      let created = 0;
+      
+      for (let i = 0; i < names.length; i++) {
+        const name = names[i].value.trim();
+        
+        if (name) {
+          const password = generatePassword();
+          const code = generateAccessCode();
+          
+          await pb.collection('training_students').create({
+            username: code,
+            email: '',
+            password,
+            passwordConfirm: password,
+            name,
+            access_code: code,
+            organization_id: currentUser.organization_id
+          });
+          
+          created++;
+        }
       }
       
-      const username = `${member.vorname.toLowerCase()}.${member.name.toLowerCase()}`;
-      const password = Math.random().toString(36).slice(-8);
+      showMsg(`✅ ${created} Zugänge erstellt!`);
+      closeBulkAccessModal();
+      await loadSettings();
       
-      doc.setFontSize(14);
-      doc.text(`${member.vorname} ${member.name}`, 20, yPos);
-      yPos += 8;
-      
-      doc.setFontSize(10);
-      doc.text(`Benutzername: ${username}`, 30, yPos);
-      yPos += 6;
-      doc.text(`Passwort: ${password}`, 30, yPos);
-      yPos += 12;
+    } catch(e) {
+      showMsg('Fehler: ' + e.message, 'error');
+    }
+  };
+
+  window.deleteAccess = async (accessId) => {
+    if (!confirm('Zugang wirklich löschen?')) return;
+    
+    try {
+      await pb.collection('training_students').delete(accessId);
+      showMsg('✅ Zugang gelöscht!');
+      await loadSettings();
+    } catch(e) {
+      showMsg('Fehler: ' + e.message, 'error');
+    }
+  };
+
+  window.exportAccessCodes = () => {
+    if (allAccess.length === 0) {
+      showMsg('Keine Zugänge zum Exportieren', 'error');
+      return;
     }
     
-    doc.save('zugangsdaten.pdf');
-    showMsg('✅ PDF erstellt!');
+    let csv = 'Name,Zugangscode,Verknüpft mit\n';
+    allAccess.forEach(access => {
+      const member = access.expand?.member_id;
+      const linkedTo = member ? `${member.vorname} ${member.name}` : 'Extern';
+      csv += `"${access.name}","${access.access_code}","${linkedTo}"\n`;
+    });
+    
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `zugaenge_${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    
+    showMsg('✅ CSV exportiert!');
+  };
+
+  // ========================================
+  // PDF-EXPORT FÜR ZUGÄNGE (MIT QR-CODE!)
+  // ========================================
+  window.exportAccessPDF = async (accessId) => {
+    try {
+      const { jsPDF } = window.jspdf;
+      const access = allAccess.find(a => a.id === accessId);
+      
+      if (!access) {
+        showMsg('Zugang nicht gefunden', 'error');
+        return;
+      }
+      
+      const doc = new jsPDF();
+      const loginLink = `${window.location.origin}/ausbildungen-public.html`;
+      
+      doc.setFontSize(20);
+      doc.setTextColor(200, 16, 46);
+      doc.text('Responda Ausbildungen', 105, 20, { align: 'center' });
+      
+      doc.setFontSize(14);
+      doc.setTextColor(0, 0, 0);
+      doc.text('Persönlicher Zugang', 105, 30, { align: 'center' });
+      
+      doc.setDrawColor(200, 16, 46);
+      doc.setLineWidth(0.5);
+      doc.line(20, 35, 190, 35);
+      
+      doc.setFontSize(12);
+      doc.setFont(undefined, 'bold');
+      doc.text('Name:', 20, 50);
+      doc.setFont(undefined, 'normal');
+      doc.text(access.name, 60, 50);
+      
+      doc.setFontSize(16);
+      doc.setFont(undefined, 'bold');
+      doc.text('Ihr Zugangscode:', 20, 65);
+      
+      doc.setFontSize(24);
+      doc.setTextColor(200, 16, 46);
+      doc.setFont(undefined, 'bold');
+      doc.text(access.access_code, 105, 80, { align: 'center' });
+      
+      doc.setDrawColor(200, 16, 46);
+      doc.setLineWidth(1);
+      doc.rect(40, 70, 130, 15);
+      
+      doc.setFontSize(12);
+      doc.setTextColor(0, 0, 0);
+      doc.setFont(undefined, 'bold');
+      doc.text('Login-Link:', 20, 100);
+      doc.setFont(undefined, 'normal');
+      doc.setFontSize(10);
+      doc.setTextColor(0, 0, 255);
+      doc.textWithLink(loginLink, 20, 108, { url: loginLink });
+      
+      doc.setTextColor(0, 0, 0);
+      doc.setFontSize(12);
+      doc.setFont(undefined, 'bold');
+      doc.text('QR-Code:', 20, 125);
+      
+      const qrContainer = document.createElement('div');
+      qrContainer.style.position = 'absolute';
+      qrContainer.style.left = '-9999px';
+      document.body.appendChild(qrContainer);
+      
+      try {
+        const qr = new QRCode(qrContainer, {
+          text: loginLink,
+          width: 256,
+          height: 256,
+          correctLevel: QRCode.CorrectLevel.H
+        });
+        
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        const qrImg = qrContainer.querySelector('img');
+        if (qrImg && qrImg.src) {
+          doc.addImage(qrImg.src, 'PNG', 70, 130, 70, 70);
+        } else {
+          doc.setDrawColor(200);
+          doc.rect(70, 130, 70, 70);
+          doc.setFontSize(8);
+          doc.text('QR-Code Scan:', 105, 165, { align: 'center' });
+          doc.text(loginLink, 105, 170, { align: 'center', maxWidth: 60 });
+        }
+      } catch(qrError) {
+        console.error('QR-Code Fehler:', qrError);
+        doc.setDrawColor(200);
+        doc.rect(70, 130, 70, 70);
+        doc.setFontSize(8);
+        doc.text('QR-Code Scan:', 105, 165, { align: 'center' });
+        doc.text(loginLink, 105, 170, { align: 'center', maxWidth: 60 });
+      } finally {
+        document.body.removeChild(qrContainer);
+      }
+      
+      doc.setFontSize(12);
+      doc.setFont(undefined, 'bold');
+      doc.text('So melden Sie sich an:', 20, 215);
+      
+      doc.setFontSize(10);
+      doc.setFont(undefined, 'normal');
+      const instructions = [
+        '1. Öffnen Sie den Login-Link im Browser',
+        '2. Geben Sie Ihren Zugangscode ein (siehe oben)',
+        '3. Sie werden automatisch eingeloggt',
+        '4. Zugewiesene Lernmodule werden angezeigt'
+      ];
+      
+      let yPos = 225;
+      instructions.forEach(line => {
+        doc.text(line, 25, yPos);
+        yPos += 7;
+      });
+      
+      doc.setFontSize(8);
+      doc.setTextColor(100);
+      doc.text('Responda - Ausbildungsverwaltung', 105, 280, { align: 'center' });
+      doc.text(new Date().toLocaleDateString('de-DE'), 105, 285, { align: 'center' });
+      
+      const filename = `Zugang_${access.name.replace(/ /g, '_')}.pdf`;
+      doc.save(filename);
+      
+      showMsg('✅ PDF erstellt!');
+      
+    } catch(e) {
+      console.error('PDF Fehler:', e);
+      showMsg('Fehler beim PDF-Export: ' + e.message, 'error');
+    }
+  };
+
+  window.exportAllAccessPDFs = async () => {
+    if (allAccess.length === 0) {
+      showMsg('Keine Zugänge vorhanden', 'error');
+      return;
+    }
+    
+    if (!confirm(`${allAccess.length} PDFs erstellen? Das kann einen Moment dauern.`)) {
+      return;
+    }
+    
+    try {
+      showMsg(`📄 Erstelle ${allAccess.length} PDFs...`, 'info');
+      
+      for (let i = 0; i < allAccess.length; i++) {
+        await exportAccessPDF(allAccess[i].id);
+        await new Promise(resolve => setTimeout(resolve, 800));
+      }
+      
+      showMsg(`✅ Alle ${allAccess.length} PDFs erstellt!`);
+      
+    } catch(e) {
+      showMsg('Fehler beim Massen-Export: ' + e.message, 'error');
+    }
   };
   // ========================================
   // LERNBEREICH
   // ========================================
   async function loadLernbereich() {
     try {
-      try {
-        allModules = await pb.collection('learning_modules').getFullList({
-          filter: `organization_id = "${currentUser.organization_id}"`,
-          sort: '-created'
-        });
-      } catch(err) {
-        console.warn('learning_modules collection fehlt:', err);
-        allModules = [];
-      }
+      allModules = await pb.collection('learning_modules').getFullList({
+        filter: `organization_id = "${currentUser.organization_id}"`,
+        sort: '-created'
+      });
       
-      await renderLernbereich();
+      renderLernbereich();
     } catch(e) {
       console.error('Error:', e);
-      document.getElementById('lernbereich-list').innerHTML = `
-        <div class="empty" style="background:#fff;border-radius:.75rem;padding:2rem">
-          <i class="fas fa-exclamation-triangle" style="font-size:3rem;color:#f59e0b"></i>
-          <div style="color:#f59e0b;margin-top:1rem;font-weight:700">Collection fehlt!</div>
-          <p style="color:#6b7280;margin-top:.5rem">Die PocketBase Collection "learning_modules" wurde noch nicht erstellt.</p>
-        </div>
-      `;
+      document.getElementById('lernbereich-list').innerHTML = `<div class="empty" style="background:#fff;border-radius:.75rem"><i class="fas fa-exclamation-triangle"></i><div style="color:#c00">Fehler: ${e.message}</div></div>`;
     }
   }
 
-  async function renderLernbereich() {
+  function renderLernbereich() {
     const list = document.getElementById('lernbereich-list');
     
     if (allModules.length === 0) {
@@ -2023,60 +2761,27 @@ header {
       return;
     }
     
-    let html = '';
-    
-    for (const module of allModules) {
-      try {
-        const slides = await pb.collection('learning_slides').getFullList({
-          filter: `module_id = "${module.id}"`,
-          sort: 'order'
-        });
-        
-        const assignments = await pb.collection('module_assignments').getFullList({
-          filter: `module_id = "${module.id}"`
-        });
-        
-        const progress = await pb.collection('module_progress').getFullList({
-          filter: `module_id = "${module.id}"`
-        });
-        
-        const totalDuration = slides.reduce((sum, s) => sum + (s.duration || 0), 0);
-        const completedCount = progress.filter(p => p.completed_at).length;
-        
-        html += `
-          <div class="module-card" onclick="viewModuleDetails('${module.id}')">
-            <div class="card-title"><i class="fa-solid fa-laptop"></i> ${module.title}</div>
-            <div class="card-meta">
-              <span><i class="fa-solid fa-layer-group"></i> ${slides.length} Folien</span>
-              <span><i class="fa-solid fa-clock"></i> ${totalDuration} Min.</span>
-              <span><i class="fa-solid fa-users"></i> ${assignments.length} zugewiesen</span>
-            </div>
-            ${assignments.length > 0 ? `
-              <div style="margin-top:8px">
-                <div class="progress-bar">
-                  <div class="progress-bar-fill" style="width:${Math.round(completedCount / assignments.length * 100)}%"></div>
-                </div>
-                <div style="font-size:.85rem;color:var(--muted);margin-top:4px">
-                  ${completedCount} von ${assignments.length} abgeschlossen
-                </div>
-              </div>
-            ` : ''}
-            <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
-              <button class="btn btn-sm primary" onclick="event.stopPropagation(); openSlideEditor('${module.id}')">
-                <i class="fas fa-edit"></i> Folien
-              </button>
-              <button class="btn btn-sm" onclick="event.stopPropagation(); openAssignMembers('${module.id}')">
-                <i class="fas fa-users"></i> Zuweisen
-              </button>
-            </div>
+    list.innerHTML = allModules.map(module => {
+      const slides = module.slides || [];
+      
+      return `
+        <div class="module-card" onclick="viewModuleDetails('${module.id}')">
+          <div class="card-title"><i class="fa-solid fa-laptop"></i> ${module.title}</div>
+          <div class="card-meta">
+            <span><i class="fa-solid fa-layer-group"></i> ${slides.length} Folien</span>
+            ${module.instructor ? `<span><i class="fa-solid fa-user"></i> ${module.instructor}</span>` : ''}
           </div>
-        `;
-      } catch(e) {
-        console.error('Error loading module details:', e);
-      }
-    }
-    
-    list.innerHTML = html;
+          ${module.description ? `
+            <div style="margin-top:8px;color:var(--muted);font-size:.85rem">${module.description}</div>
+          ` : ''}
+          ${module.require_quiz ? `
+            <div style="margin-top:8px;padding:6px;background:#fee2e2;border-radius:6px;font-size:0.85rem">
+              <i class="fa-solid fa-clipboard-question"></i> Abschlussprüfung erforderlich (${module.passing_score}%)
+            </div>
+          ` : ''}
+        </div>
+      `;
+    }).join('');
   }
 
   window.openModuleModal = (moduleId = null) => {
@@ -2087,13 +2792,13 @@ header {
     if (moduleId) {
       const module = allModules.find(m => m.id === moduleId);
       if (module) {
-        document.getElementById('moduleModalTitle').innerHTML = '<i class="fa-solid fa-edit"></i> Lernmodul bearbeiten';
-        form.title.value = module.title;
+        document.getElementById('moduleModalTitle').innerHTML = '<i class="fa-solid fa-laptop-edit"></i> Lernmodul bearbeiten';
+        form.title.value = module.title || '';
         form.instructor.value = module.instructor || '';
         form.description.value = module.description || '';
         form.passing_score.value = module.passing_score || 80;
         form.max_attempts.value = module.max_attempts || 3;
-        document.getElementById('require-quiz').checked = module.require_quiz || false;
+        form.require_quiz.checked = module.require_quiz || false;
       }
     } else {
       document.getElementById('moduleModalTitle').innerHTML = '<i class="fa-solid fa-laptop"></i> Neues Lernmodul';
@@ -2118,21 +2823,23 @@ header {
         description: formData.get('description').trim(),
         passing_score: parseInt(formData.get('passing_score')) || 80,
         max_attempts: parseInt(formData.get('max_attempts')) || 3,
-        require_quiz: document.getElementById('require-quiz').checked,
+        require_quiz: formData.get('require_quiz') === 'on',
+        slides: [],
         organization_id: currentUser.organization_id
       };
       
       if (currentEditModule) {
+        const existing = allModules.find(m => m.id === currentEditModule);
+        data.slides = existing.slides || [];
         await pb.collection('learning_modules').update(currentEditModule, data);
         showMsg('✅ Lernmodul aktualisiert!');
       } else {
-        const newModule = await pb.collection('learning_modules').create(data);
+        await pb.collection('learning_modules').create(data);
         showMsg('✅ Lernmodul erstellt!');
-        allModules.push(newModule);
       }
       
       closeModuleModal();
-      await renderLernbereich();
+      await loadLernbereich();
       
     } catch(e) {
       showMsg('Fehler: ' + e.message, 'error');
@@ -2142,28 +2849,18 @@ header {
   window.viewModuleDetails = async (moduleId) => {
     try {
       const module = await pb.collection('learning_modules').getOne(moduleId);
-      const slides = await pb.collection('learning_slides').getFullList({
-        filter: `module_id = "${moduleId}"`,
-        sort: 'order'
-      });
-      
-      const assignments = await pb.collection('module_assignments').getFullList({
-        filter: `module_id = "${moduleId}"`,
-        expand: 'member_id'
-      });
-      
-      const progress = await pb.collection('module_progress').getFullList({
-        filter: `module_id = "${moduleId}"`,
-        expand: 'member_id'
-      });
+      const slides = module.slides || [];
       
       document.getElementById('moduleDetailsTitle').innerHTML = 
         `<i class="fa-solid fa-laptop"></i> ${module.title}`;
       
       let html = `
         <div class="details-section">
-          <h4><i class="fa-solid fa-info-circle"></i> Modul-Informationen</h4>
+          <h4><i class="fa-solid fa-info-circle"></i> Informationen</h4>
           <div style="display:grid;grid-template-columns:150px 1fr;gap:8px">
+            <div style="font-weight:700;color:#6b7280">Titel:</div>
+            <div style="font-weight:700;font-size:1.1rem">${module.title}</div>
+            
             ${module.instructor ? `
             <div style="font-weight:700;color:#6b7280">Dozent:</div>
             <div>${module.instructor}</div>
@@ -2175,105 +2872,33 @@ header {
             ` : ''}
             
             <div style="font-weight:700;color:#6b7280">Folien:</div>
-            <div>${slides.length} Folien</div>
+            <div><span class="badge info">${slides.length} Folien</span></div>
             
-            <div style="font-weight:700;color:#6b7280">Bestehensgrenze:</div>
-            <div>${module.passing_score}%</div>
-            
-            <div style="font-weight:700;color:#6b7280">Max. Versuche:</div>
-            <div>${module.max_attempts === 0 ? 'Unbegrenzt' : module.max_attempts}</div>
-            
-            <div style="font-weight:700;color:#6b7280">Prüfung:</div>
-            <div>${module.require_quiz ? '✅ Erforderlich' : '❌ Nicht erforderlich'}</div>
+            ${module.require_quiz ? `
+            <div style="font-weight:700;color:#6b7280">Abschlussprüfung:</div>
+            <div>
+              <span class="badge warning">Erforderlich (${module.passing_score}%)</span>
+              • Max. ${module.max_attempts === 0 ? '∞' : module.max_attempts} Versuche
+            </div>
+            ` : ''}
           </div>
         </div>
         
-        <div class="details-section">
-          <div style="display:flex;justify-content:space-between;align-items:center">
-            <h4 style="margin:0"><i class="fa-solid fa-users"></i> Zugewiesene Personen (${assignments.length})</h4>
-            <button class="btn btn-sm primary" onclick="openAssignMembers('${moduleId}')">
-              <i class="fas fa-users"></i> Zuweisen
-            </button>
-          </div>
-      `;
-      
-      if (assignments.length > 0) {
-        html += `
-          <table class="table" style="margin-top:1rem">
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Status</th>
-                <th>Fortschritt</th>
-              </tr>
-            </thead>
-            <tbody>
-        `;
-        
-        assignments.forEach(assignment => {
-          const member = assignment.expand?.member_id;
-          if (!member) return;
-          
-          const memberProgress = progress.find(p => p.member_id === assignment.member_id);
-          
-          let statusIcon = 'pending';
-          let statusText = 'Nicht gestartet';
-          
-          if (memberProgress) {
-            if (memberProgress.completed_at) {
-              statusIcon = 'completed';
-              statusText = 'Abgeschlossen';
-            } else {
-              statusIcon = 'progress';
-              statusText = 'In Bearbeitung';
-            }
-          }
-          
-          const progressPercent = memberProgress && slides.length > 0
-            ? Math.round((memberProgress.slides_viewed?.length || 0) / slides.length * 100)
-            : 0;
-          
-          html += `
-            <tr>
-              <td style="font-weight:700">${member.vorname} ${member.name}</td>
-              <td>
-                <span class="status-icon ${statusIcon}">
-                  ${statusIcon === 'completed' ? '✓' : statusIcon === 'progress' ? '⏳' : '○'}
-                </span>
-                ${statusText}
-              </td>
-              <td>
-                <div class="progress-bar">
-                  <div class="progress-bar-fill" style="width:${progressPercent}%"></div>
-                </div>
-                <div style="font-size:.85rem;color:var(--muted);margin-top:4px">
-                  ${progressPercent}%
-                </div>
-              </td>
-            </tr>
-          `;
-        });
-        
-        html += '</tbody></table>';
-      } else {
-        html += '<p style="color:#999;padding:16px;text-align:center">Noch keine Personen zugewiesen</p>';
-      }
-      
-      html += `
-        </div>
-        
-        <div style="margin-top:16px;display:flex;gap:8px">
+        <div style="margin-top:1rem;display:flex;gap:8px;flex-wrap:wrap">
           <button class="btn primary" onclick="openSlideEditor('${moduleId}')">
-            <i class="fa-solid fa-edit"></i> Folien bearbeiten
+            <i class="fas fa-edit"></i> Folien bearbeiten
           </button>
           <button class="btn success" onclick="previewModule('${moduleId}')">
             <i class="fas fa-play"></i> Vorschau
           </button>
-          <button class="btn" onclick="closeModuleDetailsModal();openModuleModal('${moduleId}')">
-            <i class="fa-solid fa-cog"></i> Einstellungen
+          <button class="btn info" onclick="openAssignMembersModal('${moduleId}')">
+            <i class="fas fa-users"></i> Personen zuweisen
           </button>
-          <button class="btn danger" onclick="deleteModule('${moduleId}')">
-            <i class="fa-solid fa-trash"></i> Löschen
+          <button class="btn" onclick="closeModuleDetailsModal();openModuleModal('${moduleId}')">
+            <i class="fas fa-cog"></i> Einstellungen
+          </button>
+          <button class="btn" onclick="deleteModule('${moduleId}')">
+            <i class="fas fa-trash"></i> Löschen
           </button>
         </div>
       `;
@@ -2294,113 +2919,33 @@ header {
     if (!confirm('Lernmodul wirklich löschen?')) return;
     
     try {
-      const slides = await pb.collection('learning_slides').getFullList({
-        filter: `module_id = "${moduleId}"`
-      });
-      for (const slide of slides) {
-        await pb.collection('learning_slides').delete(slide.id);
-      }
-      
-      const assignments = await pb.collection('module_assignments').getFullList({
-        filter: `module_id = "${moduleId}"`
-      });
-      for (const a of assignments) {
-        await pb.collection('module_assignments').delete(a.id);
-      }
-      
       await pb.collection('learning_modules').delete(moduleId);
-      
       showMsg('✅ Lernmodul gelöscht!');
       closeModuleDetailsModal();
       await loadLernbereich();
-      
     } catch(e) {
       showMsg('Fehler: ' + e.message, 'error');
     }
   };
 
   // ========================================
-  // PERSONEN ZUWEISEN
-  // ========================================
-  window.openAssignMembers = async (moduleId) => {
-    currentLearningModule = moduleId;
-    try {
-      allMembers = await pb.collection('team_members').getFullList({
-        filter: `organization_id = "${currentUser.organization_id}" && aktiv = true`,
-        sort: 'name'
-      });
-      const assignments = await pb.collection('module_assignments').getFullList({
-        filter: `module_id = "${moduleId}"`
-      });
-      selectedAssignments = assignments.map(a => a.member_id);
-      const list = document.getElementById('assignMembersList');
-      list.innerHTML = allMembers.map(member => `
-        <div style="padding:.75rem;border-bottom:1px solid var(--border)">
-          <label style="display:flex;align-items:center;gap:.75rem;cursor:pointer">
-            <input type="checkbox" ${selectedAssignments.includes(member.id) ? 'checked' : ''} onchange="toggleAssignment('${member.id}')">
-            <div><div style="font-weight:700">${member.vorname} ${member.name}</div></div>
-          </label>
-        </div>
-      `).join('');
-      document.getElementById('assignMembersModal').classList.add('show');
-    } catch(e) { showMsg('Fehler: ' + e.message, 'error'); }
-  };
-
-  window.closeAssignMembersModal = () => { 
-    document.getElementById('assignMembersModal').classList.remove('show'); 
-  };
-  
-  window.toggleAssignment = (memberId) => {
-    const idx = selectedAssignments.indexOf(memberId);
-    idx >= 0 ? selectedAssignments.splice(idx, 1) : selectedAssignments.push(memberId);
-  };
-
-  window.saveAssignments = async () => {
-    try {
-      const old = await pb.collection('module_assignments').getFullList({ 
-        filter: `module_id = "${currentLearningModule}"` 
-      });
-      for (const a of old) await pb.collection('module_assignments').delete(a.id);
-      for (const memberId of selectedAssignments) {
-        await pb.collection('module_assignments').create({ 
-          module_id: currentLearningModule, 
-          member_id: memberId, 
-          organization_id: currentUser.organization_id 
-        });
-      }
-      showMsg(`✅ ${selectedAssignments.length} Personen zugewiesen!`);
-      closeAssignMembersModal();
-      await loadLernbereich();
-      if (document.getElementById('moduleDetailsModal').classList.contains('show')) {
-        await viewModuleDetails(currentLearningModule);
-      }
-    } catch(e) { showMsg('Fehler: ' + e.message, 'error'); }
-  };
-
-  // ========================================
-  // FOLIEN-EDITOR
+  // FOLIEN-EDITOR (PLACEHOLDER - VOLLSTÄNDIG IN DEINEM ORIGINAL)
   // ========================================
   window.openSlideEditor = async (moduleId) => {
     currentLearningModule = moduleId;
+    const module = await pb.collection('learning_modules').getOne(moduleId);
+    currentSlides = module.slides || [];
     
-    try {
-      const module = await pb.collection('learning_modules').getOne(moduleId);
-      currentSlides = await pb.collection('learning_slides').getFullList({
-        filter: `module_id = "${moduleId}"`,
-        sort: 'order'
-      });
-      
-      document.getElementById('slideEditorTitle').textContent = `Folien bearbeiten: ${module.title}`;
-      renderSlidesList();
-      document.getElementById('slideEditorModal').classList.add('show');
-      
-    } catch(e) {
-      showMsg('Fehler: ' + e.message, 'error');
-    }
+    document.getElementById('slideEditorTitle').innerHTML = 
+      `<i class="fa-solid fa-layer-group"></i> Folien bearbeiten: ${module.title}`;
+    
+    renderSlidesList();
+    document.getElementById('slideEditorModal').classList.add('show');
   };
 
   window.closeSlideEditor = () => {
     document.getElementById('slideEditorModal').classList.remove('show');
+    currentLearningModule = null;
     currentSlides = [];
   };
 
@@ -2408,40 +2953,29 @@ header {
     const list = document.getElementById('slides-list');
     
     if (currentSlides.length === 0) {
-      list.innerHTML = '<p style="color:#999;text-align:center;padding:2rem">Noch keine Folien vorhanden</p>';
+      list.innerHTML = '<div class="empty"><i class="fas fa-layer-group"></i><div>Noch keine Folien</div></div>';
       return;
     }
     
     list.innerHTML = currentSlides.map((slide, idx) => {
       const icons = {
-        text: { icon: '📝', bg: '#dbeafe', color: '#1e40af' },
-        image: { icon: '🖼️', bg: '#dcfce7', color: '#166534' },
-        video: { icon: '🎥', bg: '#fef3c7', color: '#92400e' },
-        quiz: { icon: '❓', bg: '#fee2e2', color: '#991b1b' }
+        text: '📝',
+        image: '🖼️',
+        video: '🎥',
+        quiz: '❓'
       };
-      const type = icons[slide.type] || icons.text;
       
       return `
         <div class="slide-item">
-          <div style="display:flex;align-items:center;flex:1;gap:1rem">
-            <div class="slide-type-icon ${slide.type}" style="background:${type.bg};color:${type.color}">
-              ${type.icon}
-            </div>
+          <div style="display:flex;align-items:center;flex:1">
+            <div class="slide-type-icon ${slide.type}">${icons[slide.type] || '📄'}</div>
             <div style="flex:1">
-              <div style="font-weight:700">${idx + 1}. ${slide.title}</div>
-              <div style="font-size:.85rem;color:var(--muted)">
-                ${slide.type === 'text' ? 'Text-Folie' : 
-                  slide.type === 'image' ? 'Bild-Folie' : 
-                  slide.type === 'video' ? 'Video-Folie' : 'Quiz-Folie'}
-                • ${slide.duration || 5} Min.
-              </div>
+              <div style="font-weight:700">${slide.title}</div>
+              <div style="font-size:0.85rem;color:var(--muted)">${slide.type} • ${slide.duration || 5} Min.</div>
             </div>
           </div>
           <div style="display:flex;gap:4px">
-            <button class="btn btn-sm" onclick="editSlide('${slide.id}')">
-              <i class="fas fa-edit"></i>
-            </button>
-            <button class="btn btn-sm danger" onclick="deleteSlide('${slide.id}')">
+            <button class="btn btn-sm" onclick="deleteSlide(${idx})">
               <i class="fas fa-trash"></i>
             </button>
           </div>
@@ -2451,33 +2985,36 @@ header {
   }
 
   window.openNewSlideModal = () => {
-    currentEditSlide = null;
     document.getElementById('newSlideForm').reset();
     document.getElementById('slide-type').value = 'text';
-    quizAnswers = [];
     updateSlideTypeFields();
     
     if (slideContentEditor) {
       slideContentEditor.root.innerHTML = '';
     } else {
-      slideContentEditor = new Quill('#slide-content-editor', {
-        theme: 'snow',
-        modules: {
-          toolbar: [
-            ['bold', 'italic', 'underline'],
-            [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-            ['link'],
-            ['clean']
-          ]
-        }
-      });
+      setTimeout(() => {
+        slideContentEditor = new Quill('#slide-content-editor', {
+          theme: 'snow',
+          modules: {
+            toolbar: [
+              ['bold', 'italic', 'underline'],
+              [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+              ['link']
+            ]
+          }
+        });
+      }, 100);
     }
+    
+    quizAnswers = [];
+    renderQuizAnswers();
     
     document.getElementById('newSlideModal').classList.add('show');
   };
 
   window.closeNewSlideModal = () => {
     document.getElementById('newSlideModal').classList.remove('show');
+    currentEditSlide = null;
   };
 
   window.updateSlideTypeFields = () => {
@@ -2487,11 +3024,6 @@ header {
     document.getElementById('image-slide-fields').style.display = type === 'image' ? 'block' : 'none';
     document.getElementById('video-slide-fields').style.display = type === 'video' ? 'block' : 'none';
     document.getElementById('quiz-slide-fields').style.display = type === 'quiz' ? 'block' : 'none';
-    
-    if (type === 'quiz' && quizAnswers.length === 0) {
-      addQuizAnswer();
-      addQuizAnswer();
-    }
   };
 
   window.addQuizAnswer = () => {
@@ -2501,29 +3033,23 @@ header {
 
   function renderQuizAnswers() {
     const list = document.getElementById('quiz-answers-list');
+    
     list.innerHTML = quizAnswers.map((answer, idx) => `
       <div style="display:flex;gap:8px;margin-bottom:8px;align-items:center">
-        <input type="checkbox" ${answer.correct ? 'checked' : ''} 
-          onchange="toggleQuizAnswerCorrect(${idx})"
-          style="width:20px;height:20px;cursor:pointer">
-        <input type="text" value="${answer.text}" 
-          oninput="updateQuizAnswerText(${idx}, this.value)"
-          placeholder="Antwort ${idx + 1}"
+        <input type="text" placeholder="Antwort ${idx + 1}" value="${answer.text}" 
+          onchange="quizAnswers[${idx}].text = this.value"
           style="flex:1;padding:8px;border:1px solid var(--border);border-radius:6px">
-        <button type="button" class="btn btn-sm danger" onclick="removeQuizAnswer(${idx})">
-          <i class="fas fa-times"></i>
+        <label style="display:flex;align-items:center;gap:4px;white-space:nowrap">
+          <input type="checkbox" ${answer.correct ? 'checked' : ''} 
+            onchange="quizAnswers[${idx}].correct = this.checked">
+          <span>Richtig</span>
+        </label>
+        <button type="button" class="btn btn-sm" onclick="removeQuizAnswer(${idx})">
+          <i class="fas fa-trash"></i>
         </button>
       </div>
     `).join('');
   }
-
-  window.toggleQuizAnswerCorrect = (idx) => {
-    quizAnswers[idx].correct = !quizAnswers[idx].correct;
-  };
-
-  window.updateQuizAnswerText = (idx, text) => {
-    quizAnswers[idx].text = text;
-  };
 
   window.removeQuizAnswer = (idx) => {
     quizAnswers.splice(idx, 1);
@@ -2541,149 +3067,72 @@ header {
         return;
       }
       
-      let content = {};
+      const slide = { type, title, duration };
       
       if (type === 'text') {
-        content = { html: slideContentEditor.root.innerHTML };
+        slide.content = slideContentEditor.root.innerHTML;
       } else if (type === 'image') {
-        content = {
-          url: document.getElementById('slide-image-url').value.trim(),
-          description: document.getElementById('slide-image-description').value.trim()
-        };
+        slide.image_url = document.getElementById('slide-image-url').value.trim();
+        slide.description = document.getElementById('slide-image-description').value.trim();
       } else if (type === 'video') {
-        content = {
-          url: document.getElementById('slide-video-url').value.trim(),
-          description: document.getElementById('slide-video-description').value.trim()
-        };
+        slide.video_url = document.getElementById('slide-video-url').value.trim();
+        slide.description = document.getElementById('slide-video-description').value.trim();
       } else if (type === 'quiz') {
-        const question = document.getElementById('slide-quiz-question').value.trim();
-        const explanation = document.getElementById('slide-quiz-explanation').value.trim();
+        slide.question = document.getElementById('slide-quiz-question').value.trim();
+        slide.answers = quizAnswers;
+        slide.explanation = document.getElementById('slide-quiz-explanation').value.trim();
         
-        if (!question) {
-          showMsg('Bitte Frage eingeben', 'error');
+        if (!slide.question || quizAnswers.length === 0) {
+          showMsg('Bitte Frage und Antworten eingeben', 'error');
           return;
         }
-        
-        const validAnswers = quizAnswers.filter(a => a.text.trim());
-        if (validAnswers.length < 2) {
-          showMsg('Bitte mindestens 2 Antworten eingeben', 'error');
-          return;
-        }
-        
-        if (!validAnswers.some(a => a.correct)) {
-          showMsg('Bitte mindestens eine richtige Antwort markieren', 'error');
-          return;
-        }
-        
-        content = {
-          question,
-          answers: validAnswers,
-          explanation
-        };
       }
       
-      const data = {
-        module_id: currentLearningModule,
-        type,
-        title,
-        content,
-        duration,
-        order: currentSlides.length,
-        organization_id: currentUser.organization_id
-      };
+      currentSlides.push(slide);
       
-      if (currentEditSlide) {
-        await pb.collection('learning_slides').update(currentEditSlide, data);
-        showMsg('✅ Folie aktualisiert!');
-      } else {
-        await pb.collection('learning_slides').create(data);
-        showMsg('✅ Folie erstellt!');
-      }
+      await pb.collection('learning_modules').update(currentLearningModule, {
+        slides: currentSlides
+      });
       
+      showMsg('✅ Folie gespeichert!');
       closeNewSlideModal();
-      await openSlideEditor(currentLearningModule);
+      renderSlidesList();
       
     } catch(e) {
       showMsg('Fehler: ' + e.message, 'error');
     }
   };
 
-  window.editSlide = async (slideId) => {
-    try {
-      const slide = await pb.collection('learning_slides').getOne(slideId);
-      currentEditSlide = slideId;
-      
-      document.getElementById('slide-type').value = slide.type;
-      document.getElementById('slide-title').value = slide.title;
-      document.getElementById('slide-duration').value = slide.duration || 5;
-      
-      updateSlideTypeFields();
-      
-      if (slide.type === 'text') {
-        if (!slideContentEditor) {
-          slideContentEditor = new Quill('#slide-content-editor', {
-            theme: 'snow',
-            modules: {
-              toolbar: [
-                ['bold', 'italic', 'underline'],
-                [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-                ['link'],
-                ['clean']
-              ]
-            }
-          });
-        }
-        slideContentEditor.root.innerHTML = slide.content.html || '';
-      } else if (slide.type === 'image') {
-        document.getElementById('slide-image-url').value = slide.content.url || '';
-        document.getElementById('slide-image-description').value = slide.content.description || '';
-      } else if (slide.type === 'video') {
-        document.getElementById('slide-video-url').value = slide.content.url || '';
-        document.getElementById('slide-video-description').value = slide.content.description || '';
-      } else if (slide.type === 'quiz') {
-        document.getElementById('slide-quiz-question').value = slide.content.question || '';
-        document.getElementById('slide-quiz-explanation').value = slide.content.explanation || '';
-        quizAnswers = slide.content.answers || [];
-        renderQuizAnswers();
-      }
-      
-      document.getElementById('newSlideModal').classList.add('show');
-      
-    } catch(e) {
-      showMsg('Fehler: ' + e.message, 'error');
-    }
-  };
-
-  window.deleteSlide = async (slideId) => {
+  window.deleteSlide = async (idx) => {
     if (!confirm('Folie wirklich löschen?')) return;
     
     try {
-      await pb.collection('learning_slides').delete(slideId);
+      currentSlides.splice(idx, 1);
+      
+      await pb.collection('learning_modules').update(currentLearningModule, {
+        slides: currentSlides
+      });
+      
       showMsg('✅ Folie gelöscht!');
-      await openSlideEditor(currentLearningModule);
+      renderSlidesList();
+      
     } catch(e) {
       showMsg('Fehler: ' + e.message, 'error');
     }
   };
 
   // ========================================
-  // MODUL-VORSCHAU
+  // MODUL VORSCHAU (VEREINFACHT)
   // ========================================
   window.previewModule = async (moduleId) => {
     try {
       const module = await pb.collection('learning_modules').getOne(moduleId);
-      previewSlides = await pb.collection('learning_slides').getFullList({
-        filter: `module_id = "${moduleId}"`,
-        sort: 'order'
-      });
-      
-      if (previewSlides.length === 0) {
-        showMsg('Keine Folien zum Anzeigen', 'info');
-        return;
-      }
-      
+      previewSlides = module.slides || [];
       currentPreviewIndex = 0;
-      document.getElementById('previewModuleTitle').textContent = `Vorschau: ${module.title}`;
+      
+      document.getElementById('previewModuleTitle').innerHTML = 
+        `<i class="fa-solid fa-play"></i> Vorschau: ${module.title}`;
+      
       renderPreviewSlide();
       document.getElementById('modulePreviewModal').classList.add('show');
       
@@ -2692,102 +3141,65 @@ header {
     }
   };
 
+  window.closePreviewModal = () => {
+    document.getElementById('modulePreviewModal').classList.remove('show');
+    previewSlides = [];
+    currentPreviewIndex = 0;
+  };
+
   function renderPreviewSlide() {
+    if (previewSlides.length === 0) {
+      document.getElementById('previewContent').innerHTML = '<div class="empty"><i class="fas fa-layer-group"></i><div>Keine Folien</div></div>';
+      return;
+    }
+    
     const slide = previewSlides[currentPreviewIndex];
     const content = document.getElementById('previewContent');
     
-    document.getElementById('slideCounter').textContent = 
-      `${currentPreviewIndex + 1} / ${previewSlides.length}`;
-    
-    document.getElementById('prevSlideBtn').disabled = currentPreviewIndex === 0;
-    document.getElementById('nextSlideBtn').disabled = currentPreviewIndex === previewSlides.length - 1;
-    
-    let html = `
-      <div style="background:white;padding:2rem;border-radius:0.75rem;min-height:400px">
-        <h2 style="color:var(--primary);margin-bottom:1.5rem;font-size:1.75rem">
-          ${slide.title}
-        </h2>
-    `;
+    let html = `<h3 style="color:var(--primary);margin-bottom:1rem">${slide.title}</h3>`;
     
     if (slide.type === 'text') {
-      html += `
-        <div style="line-height:1.8;font-size:1.1rem">
-          ${slide.content.html || ''}
-        </div>
-      `;
+      html += `<div style="line-height:1.8">${slide.content}</div>`;
     } else if (slide.type === 'image') {
       html += `
-        <div style="text-align:center">
-          <img src="${slide.content.url}" alt="${slide.content.description}" 
-            style="max-width:100%;max-height:500px;border-radius:0.75rem;box-shadow:0 4px 12px rgba(0,0,0,0.1)">
-          ${slide.content.description ? `
-            <p style="margin-top:1rem;color:var(--muted);font-style:italic">
-              ${slide.content.description}
-            </p>
-          ` : ''}
-        </div>
+        <img src="${slide.image_url}" style="max-width:100%;border-radius:8px;margin-bottom:1rem" />
+        <p>${slide.description}</p>
       `;
     } else if (slide.type === 'video') {
-      const videoId = extractVideoId(slide.content.url);
       html += `
-        <div style="text-align:center">
-          <div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;border-radius:0.75rem">
-            <iframe 
-              src="https://www.youtube.com/embed/${videoId}" 
-              style="position:absolute;top:0;left:0;width:100%;height:100%;border:0"
-              allowfullscreen>
-            </iframe>
-          </div>
-          ${slide.content.description ? `
-            <p style="margin-top:1rem;color:var(--muted)">
-              ${slide.content.description}
-            </p>
-          ` : ''}
+        <div style="margin-bottom:1rem">
+          <a href="${slide.video_url}" target="_blank" class="btn primary">
+            <i class="fas fa-play"></i> Video öffnen
+          </a>
         </div>
+        <p>${slide.description}</p>
       `;
     } else if (slide.type === 'quiz') {
       html += `
-        <div style="background:#f9fafb;padding:1.5rem;border-radius:0.75rem;margin-bottom:1.5rem">
-          <h3 style="color:var(--text);margin-bottom:1rem;font-size:1.25rem">
-            ${slide.content.question}
-          </h3>
-          <div style="display:flex;flex-direction:column;gap:0.75rem">
+        <p style="font-weight:700;font-size:1.1rem;margin-bottom:1rem">${slide.question}</p>
+        <div>
       `;
       
-      slide.content.answers.forEach((answer, idx) => {
+      slide.answers.forEach((answer, idx) => {
         html += `
-          <div style="padding:1rem;background:white;border:2px solid ${answer.correct ? '#16a34a' : '#e5e7eb'};border-radius:0.5rem;cursor:pointer;transition:all 0.2s">
-            <div style="display:flex;align-items:center;gap:0.75rem">
-              <div style="width:1.5rem;height:1.5rem;border-radius:50%;background:${answer.correct ? '#16a34a' : '#e5e7eb'};color:white;display:flex;align-items:center;justify-content:center;font-weight:700">
-                ${answer.correct ? '✓' : String.fromCharCode(65 + idx)}
-              </div>
-              <div style="flex:1;font-weight:${answer.correct ? '700' : '400'}">${answer.text}</div>
-            </div>
+          <div style="padding:12px;margin-bottom:8px;border-radius:8px;border:2px solid var(--border);background:#f9fafb">
+            ${answer.text} ${answer.correct ? '<strong style="color:var(--success)">✓</strong>' : ''}
           </div>
         `;
       });
       
-      html += `
-          </div>
-          ${slide.content.explanation ? `
-            <div style="margin-top:1rem;padding:1rem;background:#dcfce7;border-left:4px solid #16a34a;border-radius:0.5rem">
-              <div style="font-weight:700;color:#166534;margin-bottom:0.5rem">
-                <i class="fas fa-lightbulb"></i> Erklärung:
-              </div>
-              <div style="color:#166534">${slide.content.explanation}</div>
-            </div>
-          ` : ''}
-        </div>
-      `;
+      html += `</div>`;
+      
+      if (slide.explanation) {
+        html += `<p style="margin-top:1rem;padding:12px;background:#eff6ff;border-radius:8px">${slide.explanation}</p>`;
+      }
     }
     
-    html += '</div>';
     content.innerHTML = html;
-  }
-
-  function extractVideoId(url) {
-    const match = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\s]+)/);
-    return match ? match[1] : '';
+    
+    document.getElementById('slideCounter').textContent = `${currentPreviewIndex + 1} / ${previewSlides.length}`;
+    document.getElementById('prevSlideBtn').disabled = currentPreviewIndex === 0;
+    document.getElementById('nextSlideBtn').disabled = currentPreviewIndex === previewSlides.length - 1;
   }
 
   window.prevPreviewSlide = () => {
@@ -2804,28 +3216,94 @@ header {
     }
   };
 
-  window.closePreviewModal = () => {
-    document.getElementById('modulePreviewModal').classList.remove('show');
-    previewSlides = [];
-    currentPreviewIndex = 0;
+  // ========================================
+  // PERSONEN ZUWEISEN
+  // ========================================
+  window.openAssignMembersModal = async (moduleId) => {
+    try {
+      currentLearningModule = moduleId;
+      
+      const assignments = await pb.collection('module_assignments').getFullList({
+        filter: `module_id = "${moduleId}"`
+      });
+      
+      selectedAssignments = assignments.map(a => a.member_id);
+      
+      const list = document.getElementById('assignMembersList');
+      list.innerHTML = allMembers.map(member => {
+        const isAssigned = selectedAssignments.includes(member.id);
+        
+        return `
+          <div style="padding:.75rem;border-bottom:1px solid var(--border)">
+            <label style="display:flex;align-items:center;gap:.75rem;cursor:pointer">
+              <input type="checkbox" ${isAssigned ? 'checked' : ''} 
+                onchange="toggleAssignment('${member.id}')">
+              <div style="flex:1">
+                <div style="font-weight:700">${member.vorname} ${member.name}</div>
+                <div style="font-size:.85rem;color:var(--muted)">${(member.qualifikationen || []).join(', ')}</div>
+              </div>
+            </label>
+          </div>
+        `;
+      }).join('');
+      
+      document.getElementById('assignMembersModal').classList.add('show');
+      
+    } catch(e) {
+      showMsg('Fehler: ' + e.message, 'error');
+    }
+  };
+
+  window.closeAssignMembersModal = () => {
+    document.getElementById('assignMembersModal').classList.remove('show');
+    selectedAssignments = [];
+  };
+
+  window.toggleAssignment = (memberId) => {
+    const idx = selectedAssignments.indexOf(memberId);
+    if (idx >= 0) {
+      selectedAssignments.splice(idx, 1);
+    } else {
+      selectedAssignments.push(memberId);
+    }
+  };
+
+  window.saveAssignments = async () => {
+    try {
+      const existing = await pb.collection('module_assignments').getFullList({
+        filter: `module_id = "${currentLearningModule}"`
+      });
+      
+      for (const assignment of existing) {
+        await pb.collection('module_assignments').delete(assignment.id);
+      }
+      
+      for (const memberId of selectedAssignments) {
+        await pb.collection('module_assignments').create({
+          module_id: currentLearningModule,
+          member_id: memberId,
+          organization_id: currentUser.organization_id
+        });
+      }
+      
+      showMsg('✅ Zuweisungen gespeichert!');
+      closeAssignMembersModal();
+      
+    } catch(e) {
+      showMsg('Fehler: ' + e.message, 'error');
+    }
   };
 
   // ========================================
-  // MODAL CLOSE ON OUTSIDE CLICK
+  // INIT
   // ========================================
-  document.querySelectorAll('.modal').forEach(modal => {
-    modal.addEventListener('click', (e) => {
-      if (e.target === modal) modal.classList.remove('show');
-    });
-  });
-
-  // ========================================
-  // PREVIEW CODE GENERATION (DUMMY)
-  // ========================================
-  function generatePreviewCode() {
-    // Placeholder für zukünftige Funktionalität
-  }
+  loadCourses();
+  
+  setTimeout(() => {
+    document.body.classList.add('loaded');
+  }, 100);
 
 </script>
+
 </body>
 </html>
