@@ -188,6 +188,7 @@
     .badge.zugesagt{background:#dcfce7;color:#166534}
     .badge.abgesagt{background:#fee2e2;color:#991b1b}
     .badge.eingeladen{background:#e0e7ff;color:#4338ca}
+    .badge.info{background:#dbeafe;color:#1e40af}
     
     .tag{background:#fee;color:var(--primary);padding:4px 10px;border-radius:999px;font-size:0.8rem;font-weight:700;display:inline-block;margin:2px}
     
@@ -646,19 +647,6 @@
   <div class="modal-box">
     <h3 id="schulungDetailsTitle">Schulung</h3>
     <div id="schulungDetailsBody"></div>
-    <div style="display:flex;gap:10px;justify-content:space-between;margin-top:20px;padding-top:16px;border-top:2px solid var(--border)">
-      <div style="display:flex;gap:8px">
-        <button class="btn primary" onclick="closeSchulungDetailsModal();openSchulungEditModal()">
-          <i class="fa-solid fa-edit"></i> Bearbeiten
-        </button>
-        <button class="btn" onclick="confirmDeleteSchul()">
-          <i class="fa-solid fa-trash"></i> Löschen
-        </button>
-      </div>
-      <button class="btn" onclick="closeSchulungDetailsModal()">
-        <i class="fas fa-times"></i> Schließen
-      </button>
-    </div>
   </div>
 </div>
 
@@ -1123,6 +1111,7 @@
   let quizAnswers = [];
   let bulkAccessCount = 3;
   let pflichtSchulungen = 12;
+  let currentViewCourseId = null;
   
   const wordLists = {
     adjectives: ['schnell', 'blau', 'groß', 'klein', 'rot', 'grün', 'gelb', 'hell', 'dunkel', 'stark', 'schwach', 'frisch', 'alt', 'neu', 'warm', 'kalt', 'süß', 'sauer', 'laut', 'leise'],
@@ -1297,7 +1286,7 @@
     }
   };
   // ========================================
-  // AUSBILDUNGEN (OHNE MAX TEILNEHMER!)
+  // AUSBILDUNGEN (OHNE TYP!)
   // ========================================
   async function loadCourses() {
     try {
@@ -1318,7 +1307,7 @@
     }
   }
 
-    function renderCourses() {
+  function renderCourses() {
     const list = document.getElementById('schulungen-list');
     
     if (allCourses.length === 0) {
@@ -1368,7 +1357,7 @@
     document.getElementById('schulungModal').classList.remove('show');
   };
 
-    document.getElementById('schulungForm').onsubmit = async (e) => {
+  document.getElementById('schulungForm').onsubmit = async (e) => {
     e.preventDefault();
     
     try {
@@ -1414,7 +1403,6 @@
       showMsg('Fehler: ' + e.message, 'error');
     }
   };
-
 
   window.openParticipantSelector = async () => {
     try {
@@ -1477,11 +1465,12 @@
     selectedParticipantStatus[memberId] = status;
   };
 
-      // ========================================
-  // SCHULUNGS-DETAILS (OHNE TYP!)
   // ========================================
-    window.viewSchulungDetails = async (courseId) => {
+  // SCHULUNGS-DETAILS (KOMPLETT MIT ALLEN INFOS + FUNKTIONIERENDEN BUTTONS)
+  // ========================================
+  window.viewSchulungDetails = async (courseId) => {
     try {
+      currentViewCourseId = courseId;
       const course = allCourses.find(c => c.id === courseId);
       if (!course) return;
       
@@ -1540,7 +1529,7 @@
                   </div>
                   ${s.beschreibung ? `
                     <div style="font-size:0.85rem;color:var(--muted);margin-top:4px;font-style:italic">
-                      ${s.beschreibung}
+                      "${s.beschreibung}"
                     </div>
                   ` : ''}
                 </div>
@@ -1561,7 +1550,18 @@
         `;
       }
       
-      html += `</div>`;
+      html += `
+        </div>
+        
+        <div style="margin-top:20px;padding-top:16px;border-top:2px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+          <button class="btn" style="background:#dc2626;color:#fff;border-color:#dc2626" onclick="confirmDeleteSchul()">
+            <i class="fa-solid fa-trash"></i> Löschen
+          </button>
+          <button class="btn primary" onclick="closeSchulungDetailsModal()">
+            <i class="fas fa-times"></i> Schließen
+          </button>
+        </div>
+      `;
       
       document.getElementById('schulungDetailsBody').innerHTML = html;
       document.getElementById('schulungDetailsModal').classList.add('show');
@@ -1572,6 +1572,42 @@
     }
   };
 
+  window.closeSchulungDetailsModal = () => {
+    document.getElementById('schulungDetailsModal').classList.remove('show');
+    currentViewCourseId = null;
+  };
+
+  window.confirmDeleteSchul = async () => {
+    if (!currentViewCourseId) return;
+    
+    const course = allCourses.find(c => c.id === currentViewCourseId);
+    if (!course) return;
+    
+    if (confirm(`Schulung "${course.title}" wirklich löschen?\n\nAlle Termine und Teilnehmer werden ebenfalls gelöscht!`)) {
+      try {
+        const sessions = allSessions.filter(s => s.course_id === currentViewCourseId);
+        
+        for (const session of sessions) {
+          const participants = await pb.collection('schulung_teilnahme').getFullList({
+            filter: `session_id = "${session.id}"`
+          });
+          for (const p of participants) {
+            await pb.collection('schulung_teilnahme').delete(p.id);
+          }
+          await pb.collection('training_sessions').delete(session.id);
+        }
+        
+        await pb.collection('training_courses').delete(currentViewCourseId);
+        
+        showMsg('✅ Schulung gelöscht!');
+        closeSchulungDetailsModal();
+        await loadCourses();
+        
+      } catch(e) {
+        showMsg('Fehler: ' + e.message, 'error');
+      }
+    }
+  };
 
   // ========================================
   // WEITEREN TERMIN HINZUFÜGEN
@@ -2916,7 +2952,7 @@
   };
 
   // ========================================
-  // FOLIEN-EDITOR (PLACEHOLDER - VOLLSTÄNDIG IN DEINEM ORIGINAL)
+  // FOLIEN-EDITOR (VEREINFACHT)
   // ========================================
   window.openSlideEditor = async (moduleId) => {
     currentLearningModule = moduleId;
