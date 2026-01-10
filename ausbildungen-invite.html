@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<<!DOCTYPE html>
 <html lang="de">
 <head>
   <meta charset="utf-8"/>
@@ -166,12 +166,13 @@
       border-radius:8px;
       margin-bottom:1.5rem;
       display:flex;
-      align-items:center;
+      align-items:flex-start;
       gap:0.75rem;
       font-weight:600;
     }
     .alert i{
       font-size:1.2rem;
+      margin-top:2px;
     }
     .alert.success{
       background:#dcfce7;
@@ -191,7 +192,7 @@
     .alert.warning{
       background:#fef3c7;
       color:#92400e;
-      border:2px solid:#fde047;
+      border:2px solid #fde047;
     }
     
     .status-card{
@@ -241,35 +242,6 @@
       margin-top:0.5rem;
     }
     
-    .participant-selector{
-      background:#f9fafb;
-      border:2px solid var(--border);
-      border-radius:8px;
-      padding:1rem;
-      max-height:300px;
-      overflow-y:auto;
-    }
-    .participant-option{
-      padding:0.75rem;
-      border-bottom:1px solid var(--border);
-      cursor:pointer;
-      transition:all 0.2s;
-      display:flex;
-      align-items:center;
-      gap:0.75rem;
-    }
-    .participant-option:hover{
-      background:#fff;
-    }
-    .participant-option:last-child{
-      border-bottom:none;
-    }
-    .participant-option input[type="radio"]{
-      width:20px;
-      height:20px;
-      cursor:pointer;
-    }
-    
     @media (max-width:640px){
       .header h1{font-size:1.4rem}
       .content{padding:1.5rem}
@@ -305,7 +277,6 @@
   let session = null;
   let course = null;
   let allParticipants = [];
-  let selectedParticipantId = null;
   
   // ========================================
   // HELPER FUNCTIONS
@@ -336,9 +307,55 @@
     return `
       <div class="alert ${type}">
         <i class="fas ${icons[type]}"></i>
-        <span>${message}</span>
+        <div>${message}</div>
       </div>
     `;
+  }
+  
+  // Verbesserter Namensvergleich
+  function normalizeString(str) {
+    return str
+      .toLowerCase()
+      .trim()
+      .replace(/\s+/g, ' ')
+      .replace(/ä/g, 'a')
+      .replace(/ö/g, 'o')
+      .replace(/ü/g, 'u')
+      .replace(/ß/g, 'ss');
+  }
+  
+  function findMatchingParticipant(inputName) {
+    const inputNorm = normalizeString(inputName);
+    
+    console.log('🔍 Suche nach:', inputName);
+    console.log('📝 Normalisiert:', inputNorm);
+    
+    for (const p of allParticipants) {
+      const member = p.expand?.member_id;
+      if (!member) continue;
+      
+      const fullName1 = normalizeString(`${member.vorname} ${member.name}`);
+      const fullName2 = normalizeString(`${member.name} ${member.vorname}`);
+      const firstName = normalizeString(member.vorname);
+      const lastName = normalizeString(member.name);
+      
+      console.log(`  👤 Prüfe: ${member.vorname} ${member.name}`);
+      console.log(`     - Vollname 1: ${fullName1}`);
+      console.log(`     - Vollname 2: ${fullName2}`);
+      console.log(`     - Status: ${p.status}`);
+      
+      // Prüfe verschiedene Kombinationen
+      if (inputNorm === fullName1 || 
+          inputNorm === fullName2 || 
+          inputNorm === firstName || 
+          inputNorm === lastName) {
+        console.log('✅ MATCH GEFUNDEN!', member);
+        return p;
+      }
+    }
+    
+    console.log('❌ Kein Match gefunden');
+    return null;
   }
   
   // ========================================
@@ -367,12 +384,13 @@
         sort: 'member_id.name'
       });
       
-      console.log('Geladene Teilnehmer:', allParticipants);
+      console.log('📋 Geladene Teilnehmer:', allParticipants);
+      console.log('👥 Anzahl:', allParticipants.length);
       
       renderForm();
       
     } catch(e) {
-      console.error('Fehler:', e);
+      console.error('❌ Fehler:', e);
       app.innerHTML = `
         ${showAlert('Diese Einladung konnte nicht geladen werden.', 'error')}
         <p style="text-align:center;color:var(--muted);margin-top:1rem;font-size:0.9rem">
@@ -444,38 +462,20 @@
       </div>
       
       <div id="response-area">
-        <form id="responseForm">
+        <form id="nameForm">
           <div class="form-group">
-            <label>
-              <i class="fas fa-user"></i> Wählen Sie Ihren Namen *
+            <label for="fullname">
+              <i class="fas fa-user"></i> Ihr vollständiger Name *
             </label>
-            <div class="participant-selector" id="participantList">
-              ${allParticipants.map(p => {
-                const member = p.expand?.member_id;
-                if (!member) return '';
-                
-                const statusBadge = p.status === 'zugesagt' ? '✅ Zugesagt' : 
-                                   p.status === 'abgesagt' ? '❌ Abgesagt' : 
-                                   '⏳ Offen';
-                
-                return `
-                  <label class="participant-option">
-                    <input 
-                      type="radio" 
-                      name="participant" 
-                      value="${p.id}"
-                      ${p.status !== 'eingeladen' ? 'disabled' : ''}
-                    >
-                    <div style="flex:1">
-                      <div style="font-weight:700">${member.vorname} ${member.name}</div>
-                      <div style="font-size:0.85rem;color:var(--muted)">${statusBadge}</div>
-                    </div>
-                  </label>
-                `;
-              }).join('')}
-            </div>
+            <input 
+              type="text" 
+              id="fullname" 
+              placeholder="z.B. Max Mustermann" 
+              required
+              autocomplete="name"
+            >
             <p class="helper-text">
-              Wählen Sie Ihren Namen aus der Liste. Nur offene Einladungen können beantwortet werden.
+              Geben Sie Ihren Namen ein, wie er in der Einladung steht (Groß-/Kleinschreibung egal).
             </p>
           </div>
           
@@ -491,7 +491,7 @@
       </div>
     `;
     
-    const form = document.getElementById('responseForm');
+    const form = document.getElementById('nameForm');
     form.onsubmit = async (e) => {
       e.preventDefault();
       const action = e.submitter.dataset.action;
@@ -500,38 +500,78 @@
   }
   
   async function handleResponse(action) {
-    const selectedRadio = document.querySelector('input[name="participant"]:checked');
+    const nameInput = document.getElementById('fullname');
+    const inputName = nameInput.value.trim();
     
-    if (!selectedRadio) {
+    if (!inputName) {
       document.getElementById('response-area').insertAdjacentHTML(
         'afterbegin',
-        showAlert('Bitte wählen Sie Ihren Namen aus der Liste.', 'error')
+        showAlert('Bitte geben Sie Ihren Namen ein.', 'error')
       );
       setTimeout(() => document.querySelector('.alert')?.remove(), 3000);
       return;
     }
     
-    const participantId = selectedRadio.value;
-    const participant = allParticipants.find(p => p.id === participantId);
+    // Finde passenden Teilnehmer
+    const matchingParticipant = findMatchingParticipant(inputName);
     
-    if (!participant) {
-      document.getElementById('response-area').insertAdjacentHTML(
-        'afterbegin',
-        showAlert('Fehler: Teilnehmer nicht gefunden.', 'error')
-      );
+    if (!matchingParticipant) {
+      const participantNames = allParticipants
+        .filter(p => p.expand?.member_id)
+        .map(p => `${p.expand.member_id.vorname} ${p.expand.member_id.name}`)
+        .join(', ');
+      
+      document.getElementById('response-area').innerHTML = `
+        ${showAlert(`Ihr Name wurde nicht in der Einladungsliste gefunden.<br><br><strong>Eingeladene Personen:</strong><br>${participantNames}`, 'error')}
+        <p style="text-align:center;color:var(--muted);margin-top:1rem">
+          Bitte überprüfen Sie die Schreibweise oder kontaktieren Sie den Organisator.
+        </p>
+        <p style="text-align:center;margin-top:1.5rem">
+          <button class="btn btn-success" onclick="location.reload()">
+            <i class="fas fa-arrow-left"></i> Zurück
+          </button>
+        </p>
+      `;
+      return;
+    }
+    
+    const member = matchingParticipant.expand?.member_id;
+    
+    // Prüfe ob bereits geantwortet
+    if (matchingParticipant.status !== 'eingeladen') {
+      const statusText = matchingParticipant.status === 'zugesagt' ? 'zugesagt' : 'abgesagt';
+      const statusClass = matchingParticipant.status === 'zugesagt' ? 'confirmed' : 'declined';
+      const statusIcon = matchingParticipant.status === 'zugesagt' ? 'fa-check-circle' : 'fa-times-circle';
+      
+      document.getElementById('response-area').innerHTML = `
+        ${showAlert(`Sie haben bereits ${statusText}.`, 'info')}
+        <div class="status-card ${statusClass}">
+          <i class="fas ${statusIcon}"></i>
+          <h3>${member.vorname} ${member.name}</h3>
+          <p style="margin-top:0.5rem;font-size:1.1rem;font-weight:700">
+            ${statusText.toUpperCase()}
+          </p>
+          <p style="margin-top:1rem">Ihre Rückmeldung wurde bereits registriert.</p>
+        </div>
+        <p style="text-align:center;margin-top:1.5rem;color:var(--muted);font-size:0.9rem">
+          Bei Änderungen kontaktieren Sie bitte den Organisator.
+        </p>
+      `;
       return;
     }
     
     // Speichere Antwort
     try {
-      await pb.collection('schulung_teilnahme').update(participant.id, {
+      await pb.collection('schulung_teilnahme').update(matchingParticipant.id, {
         status: action
       });
       
-      showSuccessMessage(action, participant.expand.member_id);
+      console.log('✅ Status aktualisiert:', action);
+      
+      showSuccessMessage(action, member);
       
     } catch(e) {
-      console.error('Fehler:', e);
+      console.error('❌ Fehler beim Speichern:', e);
       document.getElementById('response-area').insertAdjacentHTML(
         'afterbegin',
         showAlert('Ein Fehler ist aufgetreten. Bitte versuchen Sie es erneut.', 'error')
