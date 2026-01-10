@@ -191,7 +191,7 @@
     .alert.warning{
       background:#fef3c7;
       color:#92400e;
-      border:2px solid #fde047;
+      border:2px solid:#fde047;
     }
     
     .status-card{
@@ -241,6 +241,35 @@
       margin-top:0.5rem;
     }
     
+    .participant-selector{
+      background:#f9fafb;
+      border:2px solid var(--border);
+      border-radius:8px;
+      padding:1rem;
+      max-height:300px;
+      overflow-y:auto;
+    }
+    .participant-option{
+      padding:0.75rem;
+      border-bottom:1px solid var(--border);
+      cursor:pointer;
+      transition:all 0.2s;
+      display:flex;
+      align-items:center;
+      gap:0.75rem;
+    }
+    .participant-option:hover{
+      background:#fff;
+    }
+    .participant-option:last-child{
+      border-bottom:none;
+    }
+    .participant-option input[type="radio"]{
+      width:20px;
+      height:20px;
+      cursor:pointer;
+    }
+    
     @media (max-width:640px){
       .header h1{font-size:1.4rem}
       .content{padding:1.5rem}
@@ -270,14 +299,13 @@
 <script type="module">
   const pb = new PocketBase('https://api.responda.systems');
   
-  // URL Parameter auslesen
   const urlParams = new URLSearchParams(window.location.search);
   const sessionId = urlParams.get('session');
   
   let session = null;
   let course = null;
-  let existingResponse = null;
   let allParticipants = [];
+  let selectedParticipantId = null;
   
   // ========================================
   // HELPER FUNCTIONS
@@ -313,31 +341,12 @@
     `;
   }
   
-  // Namensvergleich (normalisiert)
-  function normalizeString(str) {
-    return str
-      .toLowerCase()
-      .trim()
-      .replace(/\s+/g, ' ')
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, ''); // Entfernt Umlaute
-  }
-  
-  function namesMatch(input, dbVorname, dbName) {
-    const inputNorm = normalizeString(input);
-    const fullNameNorm = normalizeString(`${dbVorname} ${dbName}`);
-    const reverseNameNorm = normalizeString(`${dbName} ${dbVorname}`);
-    
-    return inputNorm === fullNameNorm || inputNorm === reverseNameNorm;
-  }
-  
   // ========================================
   // MAIN LOGIC
   // ========================================
   async function init() {
     const app = document.getElementById('app');
     
-    // Prüfe ob Session-ID vorhanden
     if (!sessionId) {
       app.innerHTML = `
         ${showAlert('Ungültiger Link. Bitte verwenden Sie den vollständigen Einladungslink.', 'error')}
@@ -349,17 +358,16 @@
     }
     
     try {
-      // Lade Session-Daten
       session = await pb.collection('training_sessions').getOne(sessionId);
-      
-      // Lade Kurs-Daten
       course = await pb.collection('training_courses').getOne(session.course_id);
       
-      // Lade alle eingeladenen Teilnehmer
       allParticipants = await pb.collection('schulung_teilnahme').getFullList({
         filter: `session_id = "${sessionId}"`,
-        expand: 'member_id'
+        expand: 'member_id',
+        sort: 'member_id.name'
       });
+      
+      console.log('Geladene Teilnehmer:', allParticipants);
       
       renderForm();
       
@@ -436,20 +444,38 @@
       </div>
       
       <div id="response-area">
-        <form id="nameForm">
+        <form id="responseForm">
           <div class="form-group">
-            <label for="fullname">
-              <i class="fas fa-user"></i> Ihr vollständiger Name *
+            <label>
+              <i class="fas fa-user"></i> Wählen Sie Ihren Namen *
             </label>
-            <input 
-              type="text" 
-              id="fullname" 
-              placeholder="z.B. Max Mustermann" 
-              required
-              autocomplete="name"
-            >
+            <div class="participant-selector" id="participantList">
+              ${allParticipants.map(p => {
+                const member = p.expand?.member_id;
+                if (!member) return '';
+                
+                const statusBadge = p.status === 'zugesagt' ? '✅ Zugesagt' : 
+                                   p.status === 'abgesagt' ? '❌ Abgesagt' : 
+                                   '⏳ Offen';
+                
+                return `
+                  <label class="participant-option">
+                    <input 
+                      type="radio" 
+                      name="participant" 
+                      value="${p.id}"
+                      ${p.status !== 'eingeladen' ? 'disabled' : ''}
+                    >
+                    <div style="flex:1">
+                      <div style="font-weight:700">${member.vorname} ${member.name}</div>
+                      <div style="font-size:0.85rem;color:var(--muted)">${statusBadge}</div>
+                    </div>
+                  </label>
+                `;
+              }).join('')}
+            </div>
             <p class="helper-text">
-              Bitte geben Sie Ihren Vor- und Nachnamen ein, genau wie in der Einladung.
+              Wählen Sie Ihren Namen aus der Liste. Nur offene Einladungen können beantwortet werden.
             </p>
           </div>
           
@@ -465,8 +491,7 @@
       </div>
     `;
     
-    // Event-Handler für Formular
-    const form = document.getElementById('nameForm');
+    const form = document.getElementById('responseForm');
     form.onsubmit = async (e) => {
       e.preventDefault();
       const action = e.submitter.dataset.action;
@@ -475,67 +500,35 @@
   }
   
   async function handleResponse(action) {
-    const nameInput = document.getElementById('fullname');
-    const inputName = nameInput.value.trim();
+    const selectedRadio = document.querySelector('input[name="participant"]:checked');
     
-    if (!inputName) {
+    if (!selectedRadio) {
       document.getElementById('response-area').insertAdjacentHTML(
         'afterbegin',
-        showAlert('Bitte geben Sie Ihren Namen ein.', 'error')
+        showAlert('Bitte wählen Sie Ihren Namen aus der Liste.', 'error')
       );
-      setTimeout(() => document.querySelector('.alert').remove(), 3000);
+      setTimeout(() => document.querySelector('.alert')?.remove(), 3000);
       return;
     }
     
-    // Finde passenden Teilnehmer
-    const matchingParticipant = allParticipants.find(p => {
-      const member = p.expand?.member_id;
-      if (!member) return false;
-      return namesMatch(inputName, member.vorname, member.name);
-    });
+    const participantId = selectedRadio.value;
+    const participant = allParticipants.find(p => p.id === participantId);
     
-    if (!matchingParticipant) {
-      document.getElementById('response-area').innerHTML = `
-        ${showAlert('Ihr Name wurde nicht in der Einladungsliste gefunden.', 'error')}
-        <p style="text-align:center;color:var(--muted);margin-top:1rem">
-          Bitte überprüfen Sie die Schreibweise oder kontaktieren Sie den Organisator.
-        </p>
-        <p style="text-align:center;margin-top:1.5rem">
-          <button class="btn btn-success" onclick="location.reload()">
-            <i class="fas fa-arrow-left"></i> Zurück
-          </button>
-        </p>
-      `;
-      return;
-    }
-    
-    // Prüfe ob bereits geantwortet
-    if (matchingParticipant.status !== 'eingeladen') {
-      const statusText = matchingParticipant.status === 'zugesagt' ? 'zugesagt' : 'abgesagt';
-      const statusClass = matchingParticipant.status === 'zugesagt' ? 'confirmed' : 'declined';
-      const statusIcon = matchingParticipant.status === 'zugesagt' ? 'fa-check-circle' : 'fa-times-circle';
-      
-      document.getElementById('response-area').innerHTML = `
-        ${showAlert(`Sie haben bereits ${statusText}.`, 'info')}
-        <div class="status-card ${statusClass}">
-          <i class="fas ${statusIcon}"></i>
-          <h3>Bereits ${statusText}</h3>
-          <p>Ihre Rückmeldung wurde bereits registriert.</p>
-        </div>
-        <p style="text-align:center;margin-top:1.5rem;color:var(--muted);font-size:0.9rem">
-          Bei Änderungen kontaktieren Sie bitte den Organisator.
-        </p>
-      `;
+    if (!participant) {
+      document.getElementById('response-area').insertAdjacentHTML(
+        'afterbegin',
+        showAlert('Fehler: Teilnehmer nicht gefunden.', 'error')
+      );
       return;
     }
     
     // Speichere Antwort
     try {
-      await pb.collection('schulung_teilnahme').update(matchingParticipant.id, {
+      await pb.collection('schulung_teilnahme').update(participant.id, {
         status: action
       });
       
-      showSuccessMessage(action, matchingParticipant.expand.member_id);
+      showSuccessMessage(action, participant.expand.member_id);
       
     } catch(e) {
       console.error('Fehler:', e);
@@ -569,7 +562,6 @@
     `;
   }
   
-  // Start
   init();
 </script>
 
