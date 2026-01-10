@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Schulungs-Einladung – Responda</title>
+  <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet"/>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
+  <script src="https://cdn.jsdelivr.net/npm/pocketbase@0.21.3/dist/pocketbase.umd.js"></script>
+
+  <style>
+    :root{
+      --primary:#c8102e;
+      --primary-light:#fee2e2;
+      --success:#16a34a;
+      --warning:#f59e0b;
+      --info:#3b82f6;
+      --bg:#f8fafc;
+      --card:#fff;
+      --text:#0f172a;
+      --muted:#64748b;
+      --border:#e2e8f0;
+      --gradient-start:#667eea;
+      --gradient-end:#764ba2;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{
+      background:linear-gradient(135deg, var(--gradient-start) 0%, var(--gradient-end) 100%);
+      min-height:100vh;
+      color:var(--text);
+      font-family:'Atkinson Hyperlegible',-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+      line-height:1.6;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:20px;
+    }
+    
+    .container{
+      background:#fff;
+      border-radius:16px;
+      box-shadow:0 20px 60px rgba(0,0,0,0.3);
+      max-width:600px;
+      width:100%;
+      overflow:hidden;
+    }
+    
+    .header{
+      background:var(--primary);
+      color:#fff;
+      padding:2rem;
+      text-align:center;
+    }
+    .header h1{
+      font-size:1.8rem;
+      font-weight:800;
+      margin-bottom:0.5rem;
+    }
+    .header p{
+      opacity:0.9;
+      font-size:1rem;
+    }
+    
+    .content{
+      padding:2rem;
+    }
+    
+    .info-box{
+      background:#f9fafb;
+      border-left:4px solid var(--primary);
+      padding:1.5rem;
+      border-radius:8px;
+      margin-bottom:2rem;
+    }
+    .info-box h2{
+      font-size:1.3rem;
+      margin-bottom:1rem;
+      color:var(--primary);
+    }
+    .info-row{
+      display:flex;
+      gap:1rem;
+      margin-bottom:0.75rem;
+      align-items:center;
+    }
+    .info-row i{
+      width:24px;
+      color:var(--primary);
+      font-size:1.1rem;
+    }
+    .info-row strong{
+      min-width:100px;
+      color:var(--muted);
+    }
+    
+    .form-group{
+      margin-bottom:1.5rem;
+    }
+    .form-group label{
+      display:block;
+      font-weight:700;
+      margin-bottom:0.5rem;
+      color:#374151;
+    }
+    .form-group input{
+      width:100%;
+      padding:0.75rem;
+      border:2px solid var(--border);
+      border-radius:8px;
+      font-size:1rem;
+      font-family:inherit;
+      transition:all 0.2s;
+    }
+    .form-group input:focus{
+      outline:none;
+      border-color:var(--primary);
+      box-shadow:0 0 0 3px rgba(200,16,46,0.1);
+    }
+    
+    .btn-group{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:1rem;
+      margin-top:2rem;
+    }
+    .btn{
+      padding:1rem 2rem;
+      border:none;
+      border-radius:8px;
+      font-size:1.1rem;
+      font-weight:700;
+      cursor:pointer;
+      transition:all 0.2s;
+      font-family:inherit;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:0.5rem;
+    }
+    .btn:hover{
+      transform:translateY(-2px);
+      box-shadow:0 8px 20px rgba(0,0,0,0.15);
+    }
+    .btn:disabled{
+      opacity:0.5;
+      cursor:not-allowed;
+      transform:none;
+    }
+    .btn-success{
+      background:#16a34a;
+      color:#fff;
+    }
+    .btn-success:hover{
+      background:#15803d;
+    }
+    .btn-danger{
+      background:#dc2626;
+      color:#fff;
+    }
+    .btn-danger:hover{
+      background:#b91c1c;
+    }
+    
+    .alert{
+      padding:1rem 1.5rem;
+      border-radius:8px;
+      margin-bottom:1.5rem;
+      display:flex;
+      align-items:center;
+      gap:0.75rem;
+      font-weight:600;
+    }
+    .alert i{
+      font-size:1.2rem;
+    }
+    .alert.success{
+      background:#dcfce7;
+      color:#166534;
+      border:2px solid #86efac;
+    }
+    .alert.error{
+      background:#fee2e2;
+      color:#991b1b;
+      border:2px solid #fca5a5;
+    }
+    .alert.info{
+      background:#dbeafe;
+      color:#1e40af;
+      border:2px solid #93c5fd;
+    }
+    .alert.warning{
+      background:#fef3c7;
+      color:#92400e;
+      border:2px solid #fde047;
+    }
+    
+    .status-card{
+      background:#f0fdf4;
+      border:2px solid #86efac;
+      border-radius:12px;
+      padding:2rem;
+      text-align:center;
+    }
+    .status-card i{
+      font-size:4rem;
+      margin-bottom:1rem;
+    }
+    .status-card.confirmed{
+      background:#dcfce7;
+      border-color:#16a34a;
+      color:#166534;
+    }
+    .status-card.declined{
+      background:#fee2e2;
+      border-color:#dc2626;
+      color:#991b1b;
+    }
+    .status-card h3{
+      font-size:1.5rem;
+      margin-bottom:0.5rem;
+    }
+    
+    .loading{
+      text-align:center;
+      padding:3rem;
+      color:var(--muted);
+    }
+    .loading i{
+      font-size:3rem;
+      animation:spin 1s linear infinite;
+    }
+    
+    @keyframes spin{
+      from{transform:rotate(0deg)}
+      to{transform:rotate(360deg)}
+    }
+    
+    .helper-text{
+      font-size:0.85rem;
+      color:var(--muted);
+      margin-top:0.5rem;
+    }
+    
+    @media (max-width:640px){
+      .header h1{font-size:1.4rem}
+      .content{padding:1.5rem}
+      .btn-group{grid-template-columns:1fr;gap:0.75rem}
+      .info-row{flex-direction:column;align-items:flex-start;gap:0.5rem}
+      .info-row strong{min-width:auto}
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="container">
+  <div class="header">
+    <h1><i class="fas fa-graduation-cap"></i> Schulungs-Einladung</h1>
+    <p>Responda Ausbildungsverwaltung</p>
+  </div>
+  
+  <div class="content" id="app">
+    <div class="loading">
+      <i class="fas fa-spinner"></i>
+      <p style="margin-top:1rem">Lade Einladung...</p>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+  const pb = new PocketBase('https://api.responda.systems');
+  
+  // URL Parameter auslesen
+  const urlParams = new URLSearchParams(window.location.search);
+  const sessionId = urlParams.get('session');
+  
+  let session = null;
+  let course = null;
+  let existingResponse = null;
+  let allParticipants = [];
+  
+  // ========================================
+  // HELPER FUNCTIONS
+  // ========================================
+  function formatDate(dateStr) {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('de-DE', { 
+      weekday: 'long', 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    });
+  }
+  
+  function formatTime(timeStr) {
+    if (!timeStr) return '';
+    return timeStr.slice(0, 5);
+  }
+  
+  function showAlert(message, type = 'info') {
+    const icons = {
+      success: 'fa-check-circle',
+      error: 'fa-exclamation-circle',
+      info: 'fa-info-circle',
+      warning: 'fa-exclamation-triangle'
+    };
+    
+    return `
+      <div class="alert ${type}">
+        <i class="fas ${icons[type]}"></i>
+        <span>${message}</span>
+      </div>
+    `;
+  }
+  
+  // Namensvergleich (normalisiert)
+  function normalizeString(str) {
+    return str
+      .toLowerCase()
+      .trim()
+      .replace(/\s+/g, ' ')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, ''); // Entfernt Umlaute
+  }
+  
+  function namesMatch(input, dbVorname, dbName) {
+    const inputNorm = normalizeString(input);
+    const fullNameNorm = normalizeString(`${dbVorname} ${dbName}`);
+    const reverseNameNorm = normalizeString(`${dbName} ${dbVorname}`);
+    
+    return inputNorm === fullNameNorm || inputNorm === reverseNameNorm;
+  }
+  
+  // ========================================
+  // MAIN LOGIC
+  // ========================================
+  async function init() {
+    const app = document.getElementById('app');
+    
+    // Prüfe ob Session-ID vorhanden
+    if (!sessionId) {
+      app.innerHTML = `
+        ${showAlert('Ungültiger Link. Bitte verwenden Sie den vollständigen Einladungslink.', 'error')}
+        <p style="text-align:center;color:var(--muted);margin-top:2rem">
+          Kontaktieren Sie den Schulungsorganisator für einen gültigen Link.
+        </p>
+      `;
+      return;
+    }
+    
+    try {
+      // Lade Session-Daten
+      session = await pb.collection('training_sessions').getOne(sessionId);
+      
+      // Lade Kurs-Daten
+      course = await pb.collection('training_courses').getOne(session.course_id);
+      
+      // Lade alle eingeladenen Teilnehmer
+      allParticipants = await pb.collection('schulung_teilnahme').getFullList({
+        filter: `session_id = "${sessionId}"`,
+        expand: 'member_id'
+      });
+      
+      renderForm();
+      
+    } catch(e) {
+      console.error('Fehler:', e);
+      app.innerHTML = `
+        ${showAlert('Diese Einladung konnte nicht geladen werden.', 'error')}
+        <p style="text-align:center;color:var(--muted);margin-top:1rem;font-size:0.9rem">
+          ${e.message}
+        </p>
+      `;
+    }
+  }
+  
+  function renderForm() {
+    const app = document.getElementById('app');
+    
+    const isPast = new Date(session.date) < new Date();
+    
+    if (isPast) {
+      app.innerHTML = `
+        ${showAlert('Diese Schulung hat bereits stattgefunden.', 'warning')}
+        <div class="info-box">
+          <h2>${course.title}</h2>
+          <div class="info-row">
+            <i class="fas fa-calendar"></i>
+            <span>${formatDate(session.date)}</span>
+          </div>
+        </div>
+      `;
+      return;
+    }
+    
+    app.innerHTML = `
+      <div class="info-box">
+        <h2>${course.title}</h2>
+        ${course.description ? `<p style="margin-bottom:1rem;color:var(--muted)">${course.description}</p>` : ''}
+        
+        <div class="info-row">
+          <i class="fas fa-calendar"></i>
+          <strong>Datum:</strong>
+          <span>${formatDate(session.date)}</span>
+        </div>
+        
+        ${session.start_time ? `
+        <div class="info-row">
+          <i class="fas fa-clock"></i>
+          <strong>Uhrzeit:</strong>
+          <span>${formatTime(session.start_time)} - ${formatTime(session.end_time)} Uhr</span>
+        </div>
+        ` : ''}
+        
+        ${session.location ? `
+        <div class="info-row">
+          <i class="fas fa-location-dot"></i>
+          <strong>Ort:</strong>
+          <span>${session.location}</span>
+        </div>
+        ` : ''}
+        
+        ${session.dozent ? `
+        <div class="info-row">
+          <i class="fas fa-user"></i>
+          <strong>Dozent:</strong>
+          <span>${session.dozent}</span>
+        </div>
+        ` : ''}
+        
+        ${session.beschreibung ? `
+        <div style="margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border);font-style:italic;color:var(--muted)">
+          ${session.beschreibung}
+        </div>
+        ` : ''}
+      </div>
+      
+      <div id="response-area">
+        <form id="nameForm">
+          <div class="form-group">
+            <label for="fullname">
+              <i class="fas fa-user"></i> Ihr vollständiger Name *
+            </label>
+            <input 
+              type="text" 
+              id="fullname" 
+              placeholder="z.B. Max Mustermann" 
+              required
+              autocomplete="name"
+            >
+            <p class="helper-text">
+              Bitte geben Sie Ihren Vor- und Nachnamen ein, genau wie in der Einladung.
+            </p>
+          </div>
+          
+          <div class="btn-group">
+            <button type="submit" class="btn btn-success" data-action="zugesagt">
+              <i class="fas fa-check"></i> Zusagen
+            </button>
+            <button type="submit" class="btn btn-danger" data-action="abgesagt">
+              <i class="fas fa-times"></i> Absagen
+            </button>
+          </div>
+        </form>
+      </div>
+    `;
+    
+    // Event-Handler für Formular
+    const form = document.getElementById('nameForm');
+    form.onsubmit = async (e) => {
+      e.preventDefault();
+      const action = e.submitter.dataset.action;
+      await handleResponse(action);
+    };
+  }
+  
+  async function handleResponse(action) {
+    const nameInput = document.getElementById('fullname');
+    const inputName = nameInput.value.trim();
+    
+    if (!inputName) {
+      document.getElementById('response-area').insertAdjacentHTML(
+        'afterbegin',
+        showAlert('Bitte geben Sie Ihren Namen ein.', 'error')
+      );
+      setTimeout(() => document.querySelector('.alert').remove(), 3000);
+      return;
+    }
+    
+    // Finde passenden Teilnehmer
+    const matchingParticipant = allParticipants.find(p => {
+      const member = p.expand?.member_id;
+      if (!member) return false;
+      return namesMatch(inputName, member.vorname, member.name);
+    });
+    
+    if (!matchingParticipant) {
+      document.getElementById('response-area').innerHTML = `
+        ${showAlert('Ihr Name wurde nicht in der Einladungsliste gefunden.', 'error')}
+        <p style="text-align:center;color:var(--muted);margin-top:1rem">
+          Bitte überprüfen Sie die Schreibweise oder kontaktieren Sie den Organisator.
+        </p>
+        <p style="text-align:center;margin-top:1.5rem">
+          <button class="btn btn-success" onclick="location.reload()">
+            <i class="fas fa-arrow-left"></i> Zurück
+          </button>
+        </p>
+      `;
+      return;
+    }
+    
+    // Prüfe ob bereits geantwortet
+    if (matchingParticipant.status !== 'eingeladen') {
+      const statusText = matchingParticipant.status === 'zugesagt' ? 'zugesagt' : 'abgesagt';
+      const statusClass = matchingParticipant.status === 'zugesagt' ? 'confirmed' : 'declined';
+      const statusIcon = matchingParticipant.status === 'zugesagt' ? 'fa-check-circle' : 'fa-times-circle';
+      
+      document.getElementById('response-area').innerHTML = `
+        ${showAlert(`Sie haben bereits ${statusText}.`, 'info')}
+        <div class="status-card ${statusClass}">
+          <i class="fas ${statusIcon}"></i>
+          <h3>Bereits ${statusText}</h3>
+          <p>Ihre Rückmeldung wurde bereits registriert.</p>
+        </div>
+        <p style="text-align:center;margin-top:1.5rem;color:var(--muted);font-size:0.9rem">
+          Bei Änderungen kontaktieren Sie bitte den Organisator.
+        </p>
+      `;
+      return;
+    }
+    
+    // Speichere Antwort
+    try {
+      await pb.collection('schulung_teilnahme').update(matchingParticipant.id, {
+        status: action
+      });
+      
+      showSuccessMessage(action, matchingParticipant.expand.member_id);
+      
+    } catch(e) {
+      console.error('Fehler:', e);
+      document.getElementById('response-area').insertAdjacentHTML(
+        'afterbegin',
+        showAlert('Ein Fehler ist aufgetreten. Bitte versuchen Sie es erneut.', 'error')
+      );
+    }
+  }
+  
+  function showSuccessMessage(action, member) {
+    const statusText = action === 'zugesagt' ? 'zugesagt' : 'abgesagt';
+    const statusClass = action === 'zugesagt' ? 'confirmed' : 'declined';
+    const statusIcon = action === 'zugesagt' ? 'fa-check-circle' : 'fa-times-circle';
+    const statusMessage = action === 'zugesagt' 
+      ? 'Vielen Dank für Ihre Zusage! Wir freuen uns auf Sie.' 
+      : 'Schade, dass Sie nicht dabei sein können. Vielen Dank für Ihre Rückmeldung.';
+    
+    document.getElementById('response-area').innerHTML = `
+      ${showAlert(`Erfolgreich ${statusText}!`, 'success')}
+      <div class="status-card ${statusClass}">
+        <i class="fas ${statusIcon}"></i>
+        <h3>${member.vorname} ${member.name}</h3>
+        <p style="margin-top:0.5rem;font-size:1.1rem;font-weight:700">
+          ${statusText.toUpperCase()}
+        </p>
+        <p style="margin-top:1rem;font-size:0.95rem">
+          ${statusMessage}
+        </p>
+      </div>
+    `;
+  }
+  
+  // Start
+  init();
+</script>
+
+</body>
+</html>
