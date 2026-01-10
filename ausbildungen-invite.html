@@ -13,7 +13,6 @@
       --primary:#c8102e;
       --success:#16a34a;
       --warning:#f59e0b;
-      --info:#3b82f6;
       --text:#0f172a;
       --muted:#64748b;
       --border:#e2e8f0;
@@ -132,6 +131,8 @@
     .loading i{font-size:3rem;animation:spin 1s linear infinite}
     @keyframes spin{from{transform:rotate(0deg)} to{transform:rotate(360deg)}}
     
+    .helper-text{font-size:0.85rem;color:var(--muted);margin-top:0.5rem}
+    
     @media (max-width:640px){
       .header h1{font-size:1.4rem}
       .content{padding:1.5rem}
@@ -202,25 +203,20 @@
         sort: 'created'
       });
       
-      console.log('📋 Teilnehmer geladen:', allParticipants);
-      
       // Lade alle Members
       const memberIds = [...new Set(allParticipants.map(p => p.member_id))];
       for (const memberId of memberIds) {
         try {
           const member = await pb.collection('team_members').getOne(memberId);
           memberCache[memberId] = member;
-          console.log('✅ Member:', member.vorname, member.name);
         } catch(e) {
-          console.error('❌ Member-Fehler:', e);
+          console.error('Member-Fehler:', e);
         }
       }
       
-      console.log('👥 Member Cache:', memberCache);
-      
       renderForm();
     } catch(e) {
-      console.error('❌ Init-Fehler:', e);
+      console.error(e);
       app.innerHTML = showAlert('Diese Einladung konnte nicht geladen werden.', 'error') +
         `<p style="text-align:center;color:var(--muted);margin-top:1rem">${e.message}</p>`;
     }
@@ -236,27 +232,16 @@
       return;
     }
     
-    // Dropdown-Optionen erstellen
+    // Dropdown-Optionen
     let options = '<option value="">-- Bitte wählen Sie Ihren Namen --</option>';
-    
-    console.log('🔍 Erstelle Dropdown-Optionen...');
     
     allParticipants.forEach(p => {
       const member = memberCache[p.member_id];
-      if (!member) {
-        console.log('⚠️ Kein Member gefunden für:', p.member_id);
-        return;
-      }
+      if (!member) return;
       
-      console.log(`  Status von ${member.vorname} ${member.name}: "${p.status}"`);
-      
-      const statusText = p.status === 'zugesagt' ? ' (bereits zugesagt)' : 
-                        p.status === 'abgesagt' ? ' (bereits abgesagt)' : '';
-      
-      // NUR deaktivieren wenn Status NICHT "eingeladen" ist
-      const disabled = (p.status !== 'eingeladen') ? 'disabled' : '';
-      
-      console.log(`  → ${disabled ? 'DEAKTIVIERT' : 'AKTIVIERT'}`);
+      const statusText = p.status === 'zugesagt' ? ' ✅ (zugesagt)' : 
+                        p.status === 'abgesagt' ? ' ❌ (abgesagt)' : '';
+      const disabled = p.status !== 'eingeladen' ? 'disabled' : '';
       
       options += `<option value="${p.id}" ${disabled}>${member.vorname} ${member.name}${statusText}</option>`;
     });
@@ -335,7 +320,7 @@
           <p style="margin-top:1rem;font-size:0.95rem">${statusMessage}</p>
         </div>`;
     } catch(e) {
-      console.error('❌ Update-Fehler:', e);
+      console.error(e);
       document.getElementById('app').insertAdjacentHTML('afterbegin', 
         showAlert('Fehler: ' + e.message, 'error'));
     }
