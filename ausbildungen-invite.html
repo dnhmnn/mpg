@@ -1,4 +1,4 @@
-<<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="de">
 <head>
   <meta charset="utf-8"/>
@@ -277,6 +277,7 @@
   let session = null;
   let course = null;
   let allParticipants = [];
+  let memberCache = {};
   
   // ========================================
   // HELPER FUNCTIONS
@@ -331,8 +332,11 @@
     console.log('📝 Normalisiert:', inputNorm);
     
     for (const p of allParticipants) {
-      const member = p.expand?.member_id;
-      if (!member) continue;
+      const member = memberCache[p.member_id];
+      if (!member) {
+        console.log('⚠️ Kein Member gefunden für ID:', p.member_id);
+        continue;
+      }
       
       const fullName1 = normalizeString(`${member.vorname} ${member.name}`);
       const fullName2 = normalizeString(`${member.name} ${member.vorname}`);
@@ -344,13 +348,12 @@
       console.log(`     - Vollname 2: ${fullName2}`);
       console.log(`     - Status: ${p.status}`);
       
-      // Prüfe verschiedene Kombinationen
       if (inputNorm === fullName1 || 
           inputNorm === fullName2 || 
           inputNorm === firstName || 
           inputNorm === lastName) {
         console.log('✅ MATCH GEFUNDEN!', member);
-        return p;
+        return { participant: p, member };
       }
     }
     
@@ -378,14 +381,27 @@
       session = await pb.collection('training_sessions').getOne(sessionId);
       course = await pb.collection('training_courses').getOne(session.course_id);
       
+      // Lade Teilnahmen
       allParticipants = await pb.collection('schulung_teilnahme').getFullList({
         filter: `session_id = "${sessionId}"`,
-        expand: 'member_id',
-        sort: 'member_id.name'
+        sort: 'created'
       });
       
-      console.log('📋 Geladene Teilnehmer:', allParticipants);
-      console.log('👥 Anzahl:', allParticipants.length);
+      console.log('📋 Geladene Teilnehmer-IDs:', allParticipants.map(p => p.member_id));
+      
+      // Lade alle Member separat
+      const memberIds = [...new Set(allParticipants.map(p => p.member_id))];
+      for (const memberId of memberIds) {
+        try {
+          const member = await pb.collection('team_members').getOne(memberId);
+          memberCache[memberId] = member;
+          console.log('✅ Member geladen:', member.vorname, member.name);
+        } catch(e) {
+          console.error('❌ Fehler beim Laden von Member', memberId, e);
+        }
+      }
+      
+      console.log('👥 Member Cache:', memberCache);
       
       renderForm();
       
@@ -512,13 +528,13 @@
       return;
     }
     
-    // Finde passenden Teilnehmer
-    const matchingParticipant = findMatchingParticipant(inputName);
+    const match = findMatchingParticipant(inputName);
     
-    if (!matchingParticipant) {
+    if (!match) {
       const participantNames = allParticipants
-        .filter(p => p.expand?.member_id)
-        .map(p => `${p.expand.member_id.vorname} ${p.expand.member_id.name}`)
+        .map(p => memberCache[p.member_id])
+        .filter(m => m)
+        .map(m => `${m.vorname} ${m.name}`)
         .join(', ');
       
       document.getElementById('response-area').innerHTML = `
@@ -535,13 +551,13 @@
       return;
     }
     
-    const member = matchingParticipant.expand?.member_id;
+    const { participant, member } = match;
     
     // Prüfe ob bereits geantwortet
-    if (matchingParticipant.status !== 'eingeladen') {
-      const statusText = matchingParticipant.status === 'zugesagt' ? 'zugesagt' : 'abgesagt';
-      const statusClass = matchingParticipant.status === 'zugesagt' ? 'confirmed' : 'declined';
-      const statusIcon = matchingParticipant.status === 'zugesagt' ? 'fa-check-circle' : 'fa-times-circle';
+    if (participant.status !== 'eingeladen') {
+      const statusText = participant.status === 'zugesagt' ? 'zugesagt' : 'abgesagt';
+      const statusClass = participant.status === 'zugesagt' ? 'confirmed' : 'declined';
+      const statusIcon = participant.status === 'zugesagt' ? 'fa-check-circle' : 'fa-times-circle';
       
       document.getElementById('response-area').innerHTML = `
         ${showAlert(`Sie haben bereits ${statusText}.`, 'info')}
@@ -562,7 +578,7 @@
     
     // Speichere Antwort
     try {
-      await pb.collection('schulung_teilnahme').update(matchingParticipant.id, {
+      await pb.collection('schulung_teilnahme').update(participant.id, {
         status: action
       });
       
