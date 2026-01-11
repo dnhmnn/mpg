@@ -232,9 +232,27 @@
       margin-bottom:1rem;
       border-left:4px solid #c00;
       display:none;
+      font-weight:700;
     }
     .error-msg.show{
       display:block;
+      animation:shake 0.5s;
+    }
+    
+    @keyframes shake{
+      0%, 100%{transform:translateX(0)}
+      25%{transform:translateX(-10px)}
+      75%{transform:translateX(10px)}
+    }
+    
+    .hint-box{
+      background:#eff6ff;
+      padding:1rem;
+      border-radius:8px;
+      border-left:4px solid #3b82f6;
+      margin-top:1rem;
+      font-size:.9rem;
+      color:#1e40af;
     }
     
     @media (max-width:600px){
@@ -304,8 +322,13 @@
           autocomplete="name"
         >
         <small style="color:var(--muted);font-size:.85rem;display:block;margin-top:.5rem">
-          Bitte gib deinen vollständigen Namen ein (Vor- und Nachname)
+          Bitte gib deinen vollständigen Namen so ein, wie er auf der Einladung steht
         </small>
+      </div>
+      
+      <div class="hint-box">
+        <i class="fa-solid fa-shield-halved"></i> 
+        <strong>Hinweis:</strong> Nur eingeladene Personen können an dieser Schulung teilnehmen. Dein Name wird mit der Teilnehmerliste abgeglichen.
       </div>
     </div>
 
@@ -345,6 +368,7 @@
   let sessionId = null;
   let session = null;
   let course = null;
+  let participants = [];
 
   // ========================================
   // URL PARAMS
@@ -369,6 +393,17 @@
       }
       
       course = await pb.collection('training_courses').getOne(session.course_id);
+      
+      // Lade alle eingeladenen Teilnehmer
+      participants = await pb.collection('schulung_teilnahme').getFullList({
+        filter: `session_id = "${sessionId}"`,
+        expand: 'member_id'
+      });
+      
+      if (participants.length === 0) {
+        showError('Für diese Schulung wurden noch keine Teilnehmer eingeladen.');
+        return;
+      }
       
       document.getElementById('courseTitle').textContent = course.title;
       document.getElementById('sessionDate').textContent = formatDate(session.date);
@@ -400,15 +435,15 @@
   // RESPOND TO SESSION
   // ========================================
   window.respondToSession = async (status) => {
-    const name = document.getElementById('nameInput').value.trim();
+    const nameInput = document.getElementById('nameInput').value.trim();
     
-    if (!name) {
-      showErrorMsg('Bitte gib deinen Namen ein!');
+    if (!nameInput) {
+      showErrorMsg('❌ Bitte gib deinen Namen ein!');
       return;
     }
     
-    if (name.split(' ').length < 2) {
-      showErrorMsg('Bitte gib deinen vollständigen Namen ein (Vor- und Nachname)');
+    if (nameInput.split(' ').length < 2) {
+      showErrorMsg('❌ Bitte gib deinen vollständigen Namen ein (Vor- und Nachname)');
       return;
     }
     
@@ -417,83 +452,69 @@
     document.getElementById('btnAbsagen').disabled = true;
     
     try {
-      // Prüfe ob bereits eine Rückmeldung mit diesem Namen existiert
-      const existing = await pb.collection('schulung_teilnahme').getFullList({
-        filter: `session_id = "${sessionId}" && member_id = ""`,
-        sort: '-created'
+      // Suche nach übereinstimmendem Teilnehmer
+      let foundParticipant = null;
+      
+      for (const participant of participants) {
+        const member = participant.expand?.member_id;
+        if (!member) continue;
+        
+        const fullName = `${member.vorname} ${member.name}`;
+        const fullNameLower = fullName.toLowerCase();
+        const inputLower = nameInput.toLowerCase();
+        
+        // Exakte Übereinstimmung ODER Teilstring-Match
+        if (fullNameLower === inputLower || 
+            fullNameLower.includes(inputLower) || 
+            inputLower.includes(fullNameLower)) {
+          foundParticipant = participant;
+          break;
+        }
+      }
+      
+      if (!foundParticipant) {
+        showErrorMsg('❌ Name nicht gefunden! Du stehst nicht auf der Teilnehmerliste für diese Schulung. Bitte kontaktiere den Organisator.');
+        document.getElementById('btnZusagen').disabled = false;
+        document.getElementById('btnAbsagen').disabled = false;
+        return;
+      }
+      
+      // Prüfe ob bereits geantwortet
+      if (foundParticipant.status !== 'eingeladen') {
+        const oldStatus = foundParticipant.status === 'zugesagt' ? 'zugesagt' : 'abgesagt';
+        if (oldStatus === status) {
+          showErrorMsg(`ℹ️ Du hast bereits ${status}!`);
+          document.getElementById('btnZusagen').disabled = false;
+          document.getElementById('btnAbsagen').disabled = false;
+          return;
+        }
+      }
+      
+      // Update Teilnahme-Status
+      await pb.collection('schulung_teilnahme').update(foundParticipant.id, {
+        status: status
       });
       
-      // Suche nach ähnlichem Namen (case-insensitive)
-      let existingParticipant = null;
-      for (const p of existing) {
-        const existingMember = await pb.collection('team_members').getOne(p.member_id).catch(() => null);
-        if (existingMember) {
-          const existingFullName = `${existingMember.vorname} ${existingMember.name}`.toLowerCase();
-          if (existingFullName === name.toLowerCase()) {
-            existingParticipant = p;
-            break;
-          }
-        }
-      }
-      
-      if (existingParticipant) {
-        // Update bestehende Teilnahme
-        await pb.collection('schulung_teilnahme').update(existingParticipant.id, {
-          status: status
-        });
-      } else {
-        // Neue Teilnahme erstellen
-        // Zuerst prüfen ob Team-Member mit diesem Namen existiert
-        const nameParts = name.split(' ');
-        const vorname = nameParts[0];
-        const nachname = nameParts.slice(1).join(' ');
-        
-        let member = await pb.collection('team_members').getFullList({
-          filter: `vorname ~ "${vorname}" && name ~ "${nachname}" && organization_id = "${session.organization_id}"`
-        });
-        
-        let memberId = '';
-        
-        if (member.length > 0) {
-          memberId = member[0].id;
-        } else {
-          // Erstelle neues Team-Member
-          const newMember = await pb.collection('team_members').create({
-            vorname: vorname,
-            name: nachname,
-            qualifikationen: [],
-            aktiv: true,
-            organization_id: session.organization_id
-          });
-          memberId = newMember.id;
-        }
-        
-        await pb.collection('schulung_teilnahme').create({
-          session_id: sessionId,
-          member_id: memberId,
-          status: status,
-          anwesend: false,
-          organization_id: session.organization_id
-        });
-      }
-      
       // Success Screen anzeigen
+      const member = foundParticipant.expand.member_id;
+      const vorname = member.vorname;
+      
       document.getElementById('mainForm').style.display = 'none';
       document.getElementById('successScreen').style.display = 'block';
       
       if (status === 'zugesagt') {
         document.getElementById('successTitle').textContent = '✅ Zusage erhalten!';
         document.getElementById('successMessage').textContent = 
-          `Vielen Dank ${name.split(' ')[0]}! Wir freuen uns auf deine Teilnahme.`;
+          `Vielen Dank ${vorname}! Wir freuen uns auf deine Teilnahme am ${formatDate(session.date)}.`;
       } else {
         document.getElementById('successTitle').textContent = '📝 Absage erhalten';
         document.getElementById('successMessage').textContent = 
-          `Danke ${name.split(' ')[0]} für deine Rückmeldung. Schade, dass du nicht teilnehmen kannst.`;
+          `Danke ${vorname} für deine Rückmeldung. Schade, dass du nicht teilnehmen kannst.`;
       }
       
     } catch(e) {
       console.error('Fehler:', e);
-      showErrorMsg('Fehler beim Speichern: ' + e.message);
+      showErrorMsg('❌ Fehler beim Speichern: ' + e.message);
       document.getElementById('btnZusagen').disabled = false;
       document.getElementById('btnAbsagen').disabled = false;
     }
