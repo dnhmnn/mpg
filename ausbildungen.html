@@ -186,6 +186,7 @@
     .badge.abgesagt{background:#fee2e2;color:#991b1b}
     .badge.anwesend{background:#dcfce7;color:#166534}
     .badge.abwesend{background:#fee2e2;color:#991b1b}
+		.badge.entschuldigt{background:#fef3c7;color:#92400e}
     .badge.zugesagt{background:#dcfce7;color:#166534}
     .badge.eingeladen{background:#e0e7ff;color:#4338ca}
     .badge.info{background:#dbeafe;color:#1e40af}
@@ -2534,7 +2535,7 @@
     }
   };
 
-  // ========================================
+    // ========================================
   // TERMIN-DETAILS MIT ANWESENHEITSLISTE
   // ========================================
   window.viewSessionDetails = async (sessionId) => {
@@ -2592,16 +2593,22 @@
         
         participants.forEach(p => {
           const member = p.expand?.member_id;
+          
+          // Bestimme aktuellen Anwesenheitsstatus
+          let currentStatus = 'abwesend';
+          if (p.anwesend === true) currentStatus = 'anwesend';
+          if (p.entschuldigt === true) currentStatus = 'entschuldigt';
+          
           html += `
             <tr>
               <td style="font-weight:700">${member ? `${member.vorname} ${member.name}` : 'Unbekannt'}</td>
               <td><span class="badge ${p.status}">${p.status === 'zugesagt' ? '✅ Zugesagt' : p.status === 'abgesagt' ? '❌ Abgesagt' : '⏳ Eingeladen'}</span></td>
               <td>
-                <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
-                  <input type="checkbox" ${p.anwesend ? 'checked' : ''} 
-                    onchange="toggleAttendance('${p.id}', this.checked)">
-                  <span style="font-weight:700">${p.anwesend ? '✅ Anwesend' : '❌ Abwesend'}</span>
-                </label>
+                <select onchange="setAttendanceStatus('${p.id}', this.value)" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-weight:700">
+                  <option value="abwesend" ${currentStatus === 'abwesend' ? 'selected' : ''}>❌ Abwesend</option>
+                  <option value="anwesend" ${currentStatus === 'anwesend' ? 'selected' : ''}>✅ Anwesend</option>
+                  <option value="entschuldigt" ${currentStatus === 'entschuldigt' ? 'selected' : ''}>📝 Entschuldigt</option>
+                </select>
               </td>
             </tr>
           `;
@@ -2632,20 +2639,19 @@
     currentSessionId = null;
   };
 
-  window.toggleAttendance = async (participantId, isPresent) => {
-    try {
-      selectedParticipantStatus[participantId] = isPresent;
-    } catch(e) {
-      showMsg('Fehler: ' + e.message, 'error');
-    }
+  window.setAttendanceStatus = (participantId, status) => {
+    selectedParticipantStatus[participantId] = status;
   };
 
   window.saveAttendance = async () => {
     try {
-      for (const [participantId, isPresent] of Object.entries(selectedParticipantStatus)) {
-        await pb.collection('schulung_teilnahme').update(participantId, {
-          anwesend: isPresent
-        });
+      for (const [participantId, status] of Object.entries(selectedParticipantStatus)) {
+        const updateData = {
+          anwesend: status === 'anwesend',
+          entschuldigt: status === 'entschuldigt'
+        };
+        
+        await pb.collection('schulung_teilnahme').update(participantId, updateData);
       }
       
       showMsg('✅ Anwesenheit gespeichert!');
@@ -2659,6 +2665,7 @@
       showMsg('Fehler: ' + e.message, 'error');
     }
   };
+
 
   // ========================================
   // TEAM
