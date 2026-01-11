@@ -1301,29 +1301,43 @@
   // INIT & AUTH
   // ========================================
   async function checkAuth() {
-    if (!pb.authStore.isValid) {
-      location.href = 'mpg-login.html';
-      return;
-    }
-    
     try {
-      currentUser = await pb.collection('mpg_users').getOne(pb.authStore.model.id);
+      // Prüfe ob Auth vorhanden ist
+      if (!pb.authStore.isValid || !pb.authStore.model) {
+        console.log('❌ Keine gültige Session');
+        location.href = 'mpg-login.html';
+        return false;
+      }
       
+      console.log('✅ Auth Model:', pb.authStore.model);
+      
+      // Versuche User zu laden
+      currentUser = pb.authStore.model;
+      
+      // Wenn User keine organization_id hat, ist es der falsche User-Typ
+      if (!currentUser.organization_id) {
+        console.log('❌ User hat keine organization_id');
+        pb.authStore.clear();
+        location.href = 'mpg-login.html';
+        return false;
+      }
+      
+      // Lade Organisation
       const org = await pb.collection('organizations').getOne(currentUser.organization_id);
       pflichtSchulungen = org.pflicht_schulungen_jahr || 12;
       document.getElementById('pflicht-schulungen-input').value = pflichtSchulungen;
       
+      console.log('✅ Auth erfolgreich:', currentUser.email);
+      return true;
+      
     } catch(e) {
-      console.error('Auth error:', e);
+      console.error('❌ Auth Fehler:', e);
+      pb.authStore.clear();
       location.href = 'mpg-login.html';
+      return false;
     }
   }
-  
-  window.logout = async () => {
-    pb.authStore.clear();
-    location.href = 'mpg-login.html';
-  };
-  
+ 
   // ========================================
   // HELPER FUNCTIONS
   // ========================================
@@ -3296,16 +3310,19 @@
   window.openAssignMembersModal = () => {
     showMsg('Personen-Zuweisung in Entwicklung', 'info');
   };
-  
-  // ========================================
+
+    // ========================================
   // INIT
   // ========================================
-  checkAuth().then(() => {
-    loadCourses();
-    setTimeout(() => {
-      document.body.classList.add('loaded');
-    }, 100);
-  });
+  (async () => {
+    const authOk = await checkAuth();
+    if (authOk) {
+      await loadCourses();
+      setTimeout(() => {
+        document.body.classList.add('loaded');
+      }, 100);
+    }
+  })();
 
 </script>
 
