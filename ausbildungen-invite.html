@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Schulungs-Einladung – Responda</title>
+  <title>Schulungseinladung – Responda</title>
   <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet"/>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
   <script src="https://cdn.jsdelivr.net/npm/pocketbase@0.21.3/dist/pocketbase.umd.js"></script>
@@ -13,320 +13,533 @@
       --primary:#c8102e;
       --success:#16a34a;
       --warning:#f59e0b;
+      --error:#dc2626;
+      --bg:#f8fafc;
       --text:#0f172a;
       --muted:#64748b;
       --border:#e2e8f0;
-      --gradient-start:#667eea;
-      --gradient-end:#764ba2;
     }
-    *{box-sizing:border-box;margin:0;padding:0}
+    *{box-sizing:border-box}
     body{
-      background:linear-gradient(135deg, var(--gradient-start) 0%, var(--gradient-end) 100%);
+      margin:0;
+      background:linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       min-height:100vh;
       color:var(--text);
       font-family:'Atkinson Hyperlegible',-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
-      line-height:1.6;
+      line-height:1.5;
       display:flex;
       align-items:center;
       justify-content:center;
       padding:20px;
     }
-    .container{
+    
+    .card{
       background:#fff;
       border-radius:16px;
-      box-shadow:0 20px 60px rgba(0,0,0,0.3);
-      max-width:600px;
+      padding:2.5rem;
+      max-width:550px;
       width:100%;
-      overflow:hidden;
+      box-shadow:0 20px 60px rgba(0,0,0,.3);
+      animation:slideUp 0.5s ease-out;
     }
-    .header{
-      background:var(--primary);
-      color:#fff;
-      padding:2rem;
+    
+    @keyframes slideUp{
+      from{opacity:0;transform:translateY(30px)}
+      to{opacity:1;transform:translateY(0)}
+    }
+    
+    .logo{
       text-align:center;
-    }
-    .header h1{font-size:1.8rem;font-weight:800;margin-bottom:0.5rem}
-    .header p{opacity:0.9;font-size:1rem}
-    .content{padding:2rem}
-    .info-box{
-      background:#f9fafb;
-      border-left:4px solid var(--primary);
-      padding:1.5rem;
-      border-radius:8px;
       margin-bottom:2rem;
     }
-    .info-box h2{font-size:1.3rem;margin-bottom:1rem;color:var(--primary)}
-    .info-row{display:flex;gap:1rem;margin-bottom:0.75rem;align-items:center}
-    .info-row i{width:24px;color:var(--primary);font-size:1.1rem}
-    .info-row strong{min-width:100px;color:var(--muted)}
+    .logo i{
+      font-size:4rem;
+      color:var(--primary);
+      margin-bottom:.5rem;
+    }
+    .logo h1{
+      margin:0;
+      font-size:1.8rem;
+      color:var(--primary);
+      font-weight:800;
+    }
+    .logo p{
+      margin:.5rem 0 0 0;
+      color:var(--muted);
+      font-size:.95rem;
+    }
     
-    .form-group{margin-bottom:1.5rem}
-    .form-group label{display:block;font-weight:700;margin-bottom:0.5rem;color:#374151}
-    .form-group select{
+    .info-box{
+      background:#f9fafb;
+      padding:1.5rem;
+      border-radius:12px;
+      margin-bottom:2rem;
+      border-left:4px solid var(--primary);
+    }
+    .info-box h3{
+      margin:0 0 1rem 0;
+      color:var(--primary);
+      font-size:1.2rem;
+      display:flex;
+      align-items:center;
+      gap:.5rem;
+    }
+    .info-row{
+      display:flex;
+      justify-content:space-between;
+      padding:.75rem 0;
+      border-bottom:1px solid var(--border);
+    }
+    .info-row:last-child{border-bottom:none}
+    .info-label{
+      font-weight:700;
+      color:var(--muted);
+      display:flex;
+      align-items:center;
+      gap:.5rem;
+    }
+    .info-value{
+      font-weight:700;
+      color:var(--text);
+      text-align:right;
+    }
+    
+    .form-section{
+      background:#fffbeb;
+      padding:1.5rem;
+      border-radius:12px;
+      margin-bottom:1.5rem;
+      border:2px solid #fbbf24;
+    }
+    .form-section h3{
+      margin:0 0 1rem 0;
+      color:#92400e;
+      font-size:1.1rem;
+      display:flex;
+      align-items:center;
+      gap:.5rem;
+    }
+    
+    .form-group{
+      margin-bottom:1.5rem;
+    }
+    .form-group label{
+      display:block;
+      font-weight:700;
+      margin-bottom:.5rem;
+      color:var(--text);
+    }
+    .form-group input{
       width:100%;
-      padding:0.75rem;
+      padding:.85rem;
       border:2px solid var(--border);
       border-radius:8px;
       font-size:1rem;
       font-family:inherit;
       background:#fff;
-      cursor:pointer;
+      transition:all 0.2s;
     }
-    .form-group select:focus{
+    .form-group input:focus{
       outline:none;
       border-color:var(--primary);
       box-shadow:0 0 0 3px rgba(200,16,46,0.1);
     }
+    .form-group input::placeholder{
+      color:#9ca3af;
+    }
     
-    .btn-group{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-top:2rem}
+    .btn-group{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:1rem;
+      margin-top:2rem;
+    }
     .btn{
-      padding:1rem 2rem;
+      padding:1rem 1.5rem;
       border:none;
       border-radius:8px;
-      font-size:1.1rem;
       font-weight:700;
+      font-size:1rem;
       cursor:pointer;
       transition:all 0.2s;
       font-family:inherit;
       display:flex;
       align-items:center;
       justify-content:center;
-      gap:0.5rem;
+      gap:.5rem;
     }
-    .btn:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(0,0,0,0.15)}
-    .btn:disabled{opacity:0.5;cursor:not-allowed;transform:none}
-    .btn-success{background:#16a34a;color:#fff}
-    .btn-success:hover{background:#15803d}
-    .btn-danger{background:#dc2626;color:#fff}
-    .btn-danger:hover{background:#b91c1c}
-    
-    .alert{
-      padding:1rem 1.5rem;
-      border-radius:8px;
-      margin-bottom:1.5rem;
-      display:flex;
-      align-items:flex-start;
-      gap:0.75rem;
-      font-weight:600;
+    .btn:disabled{
+      opacity:0.5;
+      cursor:not-allowed;
+      transform:none;
     }
-    .alert i{font-size:1.2rem;margin-top:2px}
-    .alert.success{background:#dcfce7;color:#166534;border:2px solid #86efac}
-    .alert.error{background:#fee2e2;color:#991b1b;border:2px solid #fca5a5}
-    .alert.info{background:#dbeafe;color:#1e40af;border:2px solid #93c5fd}
-    .alert.warning{background:#fef3c7;color:#92400e;border:2px solid #fde047}
+    .btn:not(:disabled):hover{
+      transform:translateY(-2px);
+      box-shadow:0 4px 12px rgba(0,0,0,.15);
+    }
+    .btn-success{
+      background:var(--success);
+      color:#fff;
+    }
+    .btn-error{
+      background:var(--error);
+      color:#fff;
+    }
     
-    .status-card{
-      background:#f0fdf4;
-      border:2px solid #86efac;
-      border-radius:12px;
-      padding:2rem;
+    .success-screen, .error-screen{
       text-align:center;
+      padding:2rem 0;
     }
-    .status-card i{font-size:4rem;margin-bottom:1rem}
-    .status-card.confirmed{background:#dcfce7;border-color:#16a34a;color:#166534}
-    .status-card.declined{background:#fee2e2;border-color:#dc2626;color:#991b1b}
-    .status-card h3{font-size:1.5rem;margin-bottom:0.5rem}
+    .success-screen i{
+      font-size:5rem;
+      color:var(--success);
+      margin-bottom:1rem;
+    }
+    .error-screen i{
+      font-size:5rem;
+      color:var(--error);
+      margin-bottom:1rem;
+    }
+    .success-screen h2, .error-screen h2{
+      margin:0 0 1rem 0;
+      font-size:1.8rem;
+    }
+    .success-screen p, .error-screen p{
+      color:var(--muted);
+      font-size:1.1rem;
+      margin:0;
+    }
     
-    .loading{text-align:center;padding:3rem;color:var(--muted)}
-    .loading i{font-size:3rem;animation:spin 1s linear infinite}
-    @keyframes spin{from{transform:rotate(0deg)} to{transform:rotate(360deg)}}
+    .loading{
+      text-align:center;
+      padding:3rem 0;
+    }
+    .loading i{
+      font-size:3rem;
+      color:var(--primary);
+      animation:spin 1s linear infinite;
+    }
+    @keyframes spin{
+      from{transform:rotate(0deg)}
+      to{transform:rotate(360deg)}
+    }
     
-    .helper-text{font-size:0.85rem;color:var(--muted);margin-top:0.5rem}
+    .error-msg{
+      background:#fee;
+      color:#c00;
+      padding:1rem;
+      border-radius:8px;
+      margin-bottom:1rem;
+      border-left:4px solid #c00;
+      display:none;
+    }
+    .error-msg.show{
+      display:block;
+    }
     
-    @media (max-width:640px){
-      .header h1{font-size:1.4rem}
-      .content{padding:1.5rem}
+    @media (max-width:600px){
+      .card{padding:1.5rem}
+      .logo h1{font-size:1.5rem}
       .btn-group{grid-template-columns:1fr}
     }
   </style>
 </head>
 
 <body>
-<div class="container">
-  <div class="header">
-    <h1><i class="fas fa-graduation-cap"></i> Schulungs-Einladung</h1>
-    <p>Responda Ausbildungsverwaltung</p>
+
+<div class="card" id="mainCard">
+  
+  <!-- Loading State -->
+  <div class="loading" id="loadingState">
+    <i class="fas fa-spinner"></i>
+    <p style="margin-top:1rem;color:var(--muted)">Lade Schulungsdetails...</p>
   </div>
-  <div class="content" id="app">
-    <div class="loading">
-      <i class="fas fa-spinner"></i>
-      <p style="margin-top:1rem">Lade Einladung...</p>
+
+  <!-- Main Form -->
+  <div id="mainForm" style="display:none">
+    <div class="logo">
+      <i class="fa-solid fa-graduation-cap"></i>
+      <h1>Schulungseinladung</h1>
+      <p>Responda Ausbildungsverwaltung</p>
+    </div>
+
+    <div class="info-box">
+      <h3><i class="fa-solid fa-info-circle"></i> Schulungsdetails</h3>
+      <div class="info-row">
+        <span class="info-label"><i class="fa-solid fa-book"></i> Schulung:</span>
+        <span class="info-value" id="courseTitle">-</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label"><i class="fa-solid fa-calendar"></i> Datum:</span>
+        <span class="info-value" id="sessionDate">-</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label"><i class="fa-solid fa-clock"></i> Uhrzeit:</span>
+        <span class="info-value" id="sessionTime">-</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label"><i class="fa-solid fa-location-dot"></i> Ort:</span>
+        <span class="info-value" id="sessionLocation">-</span>
+      </div>
+      <div class="info-row" id="dozentRow" style="display:none">
+        <span class="info-label"><i class="fa-solid fa-user"></i> Dozent:</span>
+        <span class="info-value" id="sessionDozent">-</span>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <h3><i class="fa-solid fa-user-check"></i> Deine Rückmeldung</h3>
+      
+      <div class="error-msg" id="errorMsg"></div>
+      
+      <div class="form-group">
+        <label for="nameInput">
+          <i class="fa-solid fa-signature"></i> Dein Name *
+        </label>
+        <input 
+          type="text" 
+          id="nameInput" 
+          placeholder="z.B. Max Mustermann" 
+          required
+          autocomplete="name"
+        >
+        <small style="color:var(--muted);font-size:.85rem;display:block;margin-top:.5rem">
+          Bitte gib deinen vollständigen Namen ein (Vor- und Nachname)
+        </small>
+      </div>
+    </div>
+
+    <div class="btn-group">
+      <button class="btn btn-success" onclick="respondToSession('zugesagt')" id="btnZusagen">
+        <i class="fa-solid fa-check"></i> Zusagen
+      </button>
+      <button class="btn btn-error" onclick="respondToSession('abgesagt')" id="btnAbsagen">
+        <i class="fa-solid fa-times"></i> Absagen
+      </button>
     </div>
   </div>
+
+  <!-- Success Screen -->
+  <div id="successScreen" style="display:none">
+    <div class="success-screen">
+      <i class="fa-solid fa-check-circle"></i>
+      <h2 id="successTitle">Vielen Dank!</h2>
+      <p id="successMessage">Deine Rückmeldung wurde gespeichert.</p>
+    </div>
+  </div>
+
+  <!-- Error Screen -->
+  <div id="errorScreen" style="display:none">
+    <div class="error-screen">
+      <i class="fa-solid fa-exclamation-circle"></i>
+      <h2>Fehler</h2>
+      <p id="errorMessage">Ein Fehler ist aufgetreten.</p>
+    </div>
+  </div>
+
 </div>
 
 <script type="module">
   const pb = new PocketBase('https://api.responda.systems');
-  const urlParams = new URLSearchParams(window.location.search);
-  const sessionId = urlParams.get('session');
   
+  let sessionId = null;
   let session = null;
   let course = null;
-  let allParticipants = [];
-  let memberCache = {};
-  
-  function formatDate(dateStr) {
-    return new Date(dateStr).toLocaleDateString('de-DE', { 
-      weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' 
-    });
+
+  // ========================================
+  // URL PARAMS
+  // ========================================
+  const urlParams = new URLSearchParams(window.location.search);
+  sessionId = urlParams.get('session');
+
+  if (!sessionId) {
+    showError('Ungültiger Link - keine Session-ID gefunden');
   }
-  
-  function formatTime(timeStr) {
-    return timeStr ? timeStr.slice(0, 5) : '';
+
+  // ========================================
+  // LOAD SESSION
+  // ========================================
+  async function loadSession() {
+    try {
+      session = await pb.collection('training_sessions').getOne(sessionId);
+      
+      if (session.status === 'abgesagt') {
+        showError('Diese Schulung wurde abgesagt.');
+        return;
+      }
+      
+      course = await pb.collection('training_courses').getOne(session.course_id);
+      
+      document.getElementById('courseTitle').textContent = course.title;
+      document.getElementById('sessionDate').textContent = formatDate(session.date);
+      
+      if (session.start_time && session.end_time) {
+        document.getElementById('sessionTime').textContent = 
+          `${formatTime(session.start_time)} - ${formatTime(session.end_time)} Uhr`;
+      } else {
+        document.getElementById('sessionTime').textContent = 'Ganztägig';
+      }
+      
+      document.getElementById('sessionLocation').textContent = session.location || 'Wird noch bekannt gegeben';
+      
+      if (session.dozent) {
+        document.getElementById('dozentRow').style.display = 'flex';
+        document.getElementById('sessionDozent').textContent = session.dozent;
+      }
+      
+      document.getElementById('loadingState').style.display = 'none';
+      document.getElementById('mainForm').style.display = 'block';
+      
+    } catch(e) {
+      console.error('Fehler:', e);
+      showError('Schulung konnte nicht geladen werden: ' + e.message);
+    }
   }
-  
-  function showAlert(message, type = 'info') {
-    const icons = {
-      success: 'fa-check-circle',
-      error: 'fa-exclamation-circle',
-      info: 'fa-info-circle',
-      warning: 'fa-exclamation-triangle'
-    };
-    return `<div class="alert ${type}"><i class="fas ${icons[type]}"></i><div>${message}</div></div>`;
-  }
-  
-  async function init() {
-    const app = document.getElementById('app');
+
+  // ========================================
+  // RESPOND TO SESSION
+  // ========================================
+  window.respondToSession = async (status) => {
+    const name = document.getElementById('nameInput').value.trim();
     
-    if (!sessionId) {
-      app.innerHTML = showAlert('Ungültiger Link. Bitte verwenden Sie den vollständigen Einladungslink.', 'error') +
-        '<p style="text-align:center;color:var(--muted);margin-top:2rem">Kontaktieren Sie den Schulungsorganisator.</p>';
+    if (!name) {
+      showErrorMsg('Bitte gib deinen Namen ein!');
       return;
     }
     
+    if (name.split(' ').length < 2) {
+      showErrorMsg('Bitte gib deinen vollständigen Namen ein (Vor- und Nachname)');
+      return;
+    }
+    
+    // Buttons deaktivieren
+    document.getElementById('btnZusagen').disabled = true;
+    document.getElementById('btnAbsagen').disabled = true;
+    
     try {
-      session = await pb.collection('training_sessions').getOne(sessionId);
-      course = await pb.collection('training_courses').getOne(session.course_id);
-      
-      allParticipants = await pb.collection('schulung_teilnahme').getFullList({
-        filter: `session_id = "${sessionId}"`,
-        sort: 'created'
+      // Prüfe ob bereits eine Rückmeldung mit diesem Namen existiert
+      const existing = await pb.collection('schulung_teilnahme').getFullList({
+        filter: `session_id = "${sessionId}" && member_id = ""`,
+        sort: '-created'
       });
       
-      // Lade alle Members
-      const memberIds = [...new Set(allParticipants.map(p => p.member_id))];
-      for (const memberId of memberIds) {
-        try {
-          const member = await pb.collection('team_members').getOne(memberId);
-          memberCache[memberId] = member;
-        } catch(e) {
-          console.error('Member-Fehler:', e);
+      // Suche nach ähnlichem Namen (case-insensitive)
+      let existingParticipant = null;
+      for (const p of existing) {
+        const existingMember = await pb.collection('team_members').getOne(p.member_id).catch(() => null);
+        if (existingMember) {
+          const existingFullName = `${existingMember.vorname} ${existingMember.name}`.toLowerCase();
+          if (existingFullName === name.toLowerCase()) {
+            existingParticipant = p;
+            break;
+          }
         }
       }
       
-      renderForm();
-    } catch(e) {
-      console.error(e);
-      app.innerHTML = showAlert('Diese Einladung konnte nicht geladen werden.', 'error') +
-        `<p style="text-align:center;color:var(--muted);margin-top:1rem">${e.message}</p>`;
-    }
-  }
-  
-  function renderForm() {
-    const app = document.getElementById('app');
-    const isPast = new Date(session.date) < new Date();
-    
-    if (isPast) {
-      app.innerHTML = showAlert('Diese Schulung hat bereits stattgefunden.', 'warning') +
-        `<div class="info-box"><h2>${course.title}</h2><div class="info-row"><i class="fas fa-calendar"></i><span>${formatDate(session.date)}</span></div></div>`;
-      return;
-    }
-    
-    // Dropdown-Optionen
-    let options = '<option value="">-- Bitte wählen Sie Ihren Namen --</option>';
-    
-    allParticipants.forEach(p => {
-      const member = memberCache[p.member_id];
-      if (!member) return;
-      
-      const statusText = p.status === 'zugesagt' ? ' ✅ (zugesagt)' : 
-                        p.status === 'abgesagt' ? ' ❌ (abgesagt)' : '';
-      const disabled = p.status !== 'eingeladen' ? 'disabled' : '';
-      
-      options += `<option value="${p.id}" ${disabled}>${member.vorname} ${member.name}${statusText}</option>`;
-    });
-    
-    app.innerHTML = `
-      <div class="info-box">
-        <h2>${course.title}</h2>
-        ${course.description ? `<p style="margin-bottom:1rem;color:var(--muted)">${course.description}</p>` : ''}
-        <div class="info-row"><i class="fas fa-calendar"></i><strong>Datum:</strong><span>${formatDate(session.date)}</span></div>
-        ${session.start_time ? `<div class="info-row"><i class="fas fa-clock"></i><strong>Uhrzeit:</strong><span>${formatTime(session.start_time)} - ${formatTime(session.end_time)} Uhr</span></div>` : ''}
-        ${session.location ? `<div class="info-row"><i class="fas fa-location-dot"></i><strong>Ort:</strong><span>${session.location}</span></div>` : ''}
-        ${session.dozent ? `<div class="info-row"><i class="fas fa-user"></i><strong>Dozent:</strong><span>${session.dozent}</span></div>` : ''}
-        ${session.beschreibung ? `<div style="margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border);font-style:italic;color:var(--muted)">${session.beschreibung}</div>` : ''}
-      </div>
-      
-      <form id="responseForm">
-        <div class="form-group">
-          <label for="personSelect">
-            <i class="fas fa-user"></i> Wählen Sie Ihren Namen *
-          </label>
-          <select id="personSelect" required>
-            ${options}
-          </select>
-          <p class="helper-text">
-            Wählen Sie Ihren Namen aus der Liste. Bereits beantwortete Einladungen sind ausgegraut.
-          </p>
-        </div>
+      if (existingParticipant) {
+        // Update bestehende Teilnahme
+        await pb.collection('schulung_teilnahme').update(existingParticipant.id, {
+          status: status
+        });
+      } else {
+        // Neue Teilnahme erstellen
+        // Zuerst prüfen ob Team-Member mit diesem Namen existiert
+        const nameParts = name.split(' ');
+        const vorname = nameParts[0];
+        const nachname = nameParts.slice(1).join(' ');
         
-        <div class="btn-group">
-          <button type="submit" class="btn btn-success" data-action="zugesagt">
-            <i class="fas fa-check"></i> Zusagen
-          </button>
-          <button type="submit" class="btn btn-danger" data-action="abgesagt">
-            <i class="fas fa-times"></i> Absagen
-          </button>
-        </div>
-      </form>
-    `;
-    
-    document.getElementById('responseForm').onsubmit = async (e) => {
-      e.preventDefault();
-      const action = e.submitter.dataset.action;
-      await handleResponse(action);
-    };
-  }
-  
-  async function handleResponse(action) {
-    const select = document.getElementById('personSelect');
-    const participationId = select.value;
-    
-    if (!participationId) {
-      document.getElementById('app').insertAdjacentHTML('afterbegin', 
-        showAlert('Bitte wählen Sie Ihren Namen aus der Liste.', 'error'));
-      setTimeout(() => document.querySelector('.alert')?.remove(), 3000);
-      return;
-    }
-    
-    const participation = allParticipants.find(p => p.id === participationId);
-    const member = memberCache[participation.member_id];
-    
-    try {
-      await pb.collection('schulung_teilnahme').update(participationId, { status: action });
+        let member = await pb.collection('team_members').getFullList({
+          filter: `vorname ~ "${vorname}" && name ~ "${nachname}" && organization_id = "${session.organization_id}"`
+        });
+        
+        let memberId = '';
+        
+        if (member.length > 0) {
+          memberId = member[0].id;
+        } else {
+          // Erstelle neues Team-Member
+          const newMember = await pb.collection('team_members').create({
+            vorname: vorname,
+            name: nachname,
+            qualifikationen: [],
+            aktiv: true,
+            organization_id: session.organization_id
+          });
+          memberId = newMember.id;
+        }
+        
+        await pb.collection('schulung_teilnahme').create({
+          session_id: sessionId,
+          member_id: memberId,
+          status: status,
+          anwesend: false,
+          organization_id: session.organization_id
+        });
+      }
       
-      const statusText = action === 'zugesagt' ? 'zugesagt' : 'abgesagt';
-      const statusClass = action === 'zugesagt' ? 'confirmed' : 'declined';
-      const statusIcon = action === 'zugesagt' ? 'fa-check-circle' : 'fa-times-circle';
-      const statusMessage = action === 'zugesagt' 
-        ? 'Vielen Dank für Ihre Zusage! Wir freuen uns auf Sie.' 
-        : 'Schade, dass Sie nicht dabei sein können. Vielen Dank für Ihre Rückmeldung.';
+      // Success Screen anzeigen
+      document.getElementById('mainForm').style.display = 'none';
+      document.getElementById('successScreen').style.display = 'block';
       
-      document.getElementById('app').innerHTML = showAlert(`Erfolgreich ${statusText}!`, 'success') +
-        `<div class="status-card ${statusClass}">
-          <i class="fas ${statusIcon}"></i>
-          <h3>${member.vorname} ${member.name}</h3>
-          <p style="margin-top:0.5rem;font-size:1.1rem;font-weight:700">${statusText.toUpperCase()}</p>
-          <p style="margin-top:1rem;font-size:0.95rem">${statusMessage}</p>
-        </div>`;
+      if (status === 'zugesagt') {
+        document.getElementById('successTitle').textContent = '✅ Zusage erhalten!';
+        document.getElementById('successMessage').textContent = 
+          `Vielen Dank ${name.split(' ')[0]}! Wir freuen uns auf deine Teilnahme.`;
+      } else {
+        document.getElementById('successTitle').textContent = '📝 Absage erhalten';
+        document.getElementById('successMessage').textContent = 
+          `Danke ${name.split(' ')[0]} für deine Rückmeldung. Schade, dass du nicht teilnehmen kannst.`;
+      }
+      
     } catch(e) {
-      console.error(e);
-      document.getElementById('app').insertAdjacentHTML('afterbegin', 
-        showAlert('Fehler: ' + e.message, 'error'));
+      console.error('Fehler:', e);
+      showErrorMsg('Fehler beim Speichern: ' + e.message);
+      document.getElementById('btnZusagen').disabled = false;
+      document.getElementById('btnAbsagen').disabled = false;
     }
+  };
+
+  // ========================================
+  // HELPERS
+  // ========================================
+  function formatDate(dateStr) {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('de-DE', { 
+      weekday: 'long', 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    });
   }
-  
-  init();
+
+  function formatTime(timeStr) {
+    if (!timeStr) return '';
+    return timeStr.slice(0, 5);
+  }
+
+  function showError(message) {
+    document.getElementById('loadingState').style.display = 'none';
+    document.getElementById('mainForm').style.display = 'none';
+    document.getElementById('errorScreen').style.display = 'block';
+    document.getElementById('errorMessage').textContent = message;
+  }
+
+  function showErrorMsg(message) {
+    const errorMsg = document.getElementById('errorMsg');
+    errorMsg.textContent = message;
+    errorMsg.classList.add('show');
+    
+    setTimeout(() => {
+      errorMsg.classList.remove('show');
+    }, 5000);
+  }
+
+  // ========================================
+  // INIT
+  // ========================================
+  loadSession();
+
 </script>
+
 </body>
 </html>
