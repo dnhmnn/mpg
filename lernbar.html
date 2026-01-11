@@ -1,0 +1,1124 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Lernbar – Responda</title>
+  <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet"/>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
+  <script src="https://cdn.jsdelivr.net/npm/pocketbase@0.21.3/dist/pocketbase.umd.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/quill@2.0.0/dist/quill.snow.css" rel="stylesheet"/>
+  <script src="https://cdn.jsdelivr.net/npm/quill@2.0.0/dist/quill.js"></script>
+
+  <style>
+    :root{
+      --primary:#c8102e;
+      --success:#16a34a;
+      --warning:#f59e0b;
+      --error:#dc2626;
+      --bg:#f8fafc;
+      --text:#0f172a;
+      --muted:#64748b;
+      --border:#e2e8f0;
+    }
+    
+    *{box-sizing:border-box;margin:0;padding:0}
+    
+    body{
+      font-family:'Atkinson Hyperlegible',-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+      background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);
+      color:var(--text);
+      line-height:1.6;
+      min-height:100vh;
+      padding:0;
+      opacity:0;
+      transition:opacity 0.3s;
+    }
+    body.loaded{opacity:1}
+    
+    /* WELCOME SCREEN */
+    .welcome-screen{
+      position:fixed;
+      top:0;
+      left:0;
+      width:100%;
+      height:100%;
+      background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      z-index:9999;
+      animation:fadeOut 0.5s 2s forwards;
+    }
+    .welcome-content{
+      text-align:center;
+      color:#fff;
+      animation:slideUp 0.6s ease-out;
+    }
+    .welcome-content i{
+      font-size:5rem;
+      margin-bottom:1rem;
+      animation:bounce 1s infinite;
+    }
+    .welcome-content h1{
+      font-size:3rem;
+      margin-bottom:.5rem;
+      font-weight:800;
+    }
+    .welcome-content p{
+      font-size:1.5rem;
+      opacity:.9;
+    }
+    @keyframes fadeOut{
+      to{opacity:0;visibility:hidden}
+    }
+    @keyframes slideUp{
+      from{opacity:0;transform:translateY(30px)}
+      to{opacity:1;transform:translateY(0)}
+    }
+    @keyframes bounce{
+      0%,100%{transform:translateY(0)}
+      50%{transform:translateY(-20px)}
+    }
+    
+    /* HEADER */
+    .header{
+      background:#fff;
+      box-shadow:0 2px 8px rgba(0,0,0,.1);
+      padding:1rem 2rem;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      position:sticky;
+      top:0;
+      z-index:100;
+    }
+    .header h1{
+      font-size:1.5rem;
+      color:var(--primary);
+      display:flex;
+      align-items:center;
+      gap:.75rem;
+    }
+    .header-actions{
+      display:flex;
+      gap:1rem;
+      align-items:center;
+    }
+    .user-info{
+      font-weight:700;
+      color:var(--muted);
+      display:flex;
+      align-items:center;
+      gap:.5rem;
+    }
+    
+    /* CONTAINER */
+    .container{
+      max-width:1400px;
+      margin:0 auto;
+      padding:2rem;
+    }
+    
+    /* TABS */
+    .tabs{
+      display:flex;
+      gap:1rem;
+      margin-bottom:2rem;
+      border-bottom:2px solid rgba(255,255,255,.3);
+      padding-bottom:1rem;
+    }
+    .tab{
+      background:rgba(255,255,255,.9);
+      border:none;
+      padding:.85rem 1.75rem;
+      border-radius:8px 8px 0 0;
+      font-weight:700;
+      font-size:1rem;
+      cursor:pointer;
+      transition:all 0.2s;
+      display:flex;
+      align-items:center;
+      gap:.5rem;
+      color:var(--text);
+    }
+    .tab:hover{
+      background:#fff;
+      transform:translateY(-2px);
+    }
+    .tab.active{
+      background:var(--primary);
+      color:#fff;
+      box-shadow:0 4px 12px rgba(200,16,46,.3);
+    }
+    
+    /* TAB CONTENT */
+    .tab-content{
+      display:none;
+      animation:fadeIn 0.3s;
+    }
+    @keyframes fadeIn{
+      from{opacity:0;transform:translateY(10px)}
+      to{opacity:1;transform:translateY(0)}
+    }
+    
+    /* CARDS */
+    .card-grid{
+      display:grid;
+      grid-template-columns:repeat(auto-fill,minmax(320px,1fr));
+      gap:1.5rem;
+    }
+    
+    .module-card, .session-card{
+      background:#fff;
+      border-radius:12px;
+      padding:1.5rem;
+      box-shadow:0 2px 8px rgba(0,0,0,.1);
+      transition:all 0.2s;
+      cursor:pointer;
+      border-left:4px solid var(--primary);
+    }
+    .module-card:hover, .session-card:hover{
+      transform:translateY(-4px);
+      box-shadow:0 8px 24px rgba(0,0,0,.15);
+    }
+    .card-title{
+      font-size:1.2rem;
+      font-weight:800;
+      color:var(--text);
+      margin-bottom:.75rem;
+      display:flex;
+      align-items:center;
+      gap:.5rem;
+    }
+    .card-meta{
+      display:flex;
+      flex-wrap:wrap;
+      gap:1rem;
+      color:var(--muted);
+      font-size:.9rem;
+      margin-top:1rem;
+    }
+    .card-meta span{
+      display:flex;
+      align-items:center;
+      gap:.35rem;
+    }
+    
+    /* BADGES */
+    .badge{
+      display:inline-flex;
+      align-items:center;
+      gap:.35rem;
+      padding:.35rem .75rem;
+      border-radius:6px;
+      font-weight:700;
+      font-size:.85rem;
+    }
+    .badge.geplant{background:#dbeafe;color:#1e40af}
+    .badge.zugesagt{background:#dcfce7;color:#166534}
+    .badge.abgesagt{background:#fee2e2;color:#991b1b}
+    .badge.eingeladen{background:#fef3c7;color:#92400e}
+    .badge.completed{background:#dcfce7;color:#166534}
+    .badge.in-progress{background:#fef3c7;color:#92400e}
+    .badge.not-started{background:#f3f4f6;color:#6b7280}
+    
+    /* BUTTONS */
+    .btn{
+      padding:.75rem 1.25rem;
+      border:none;
+      border-radius:8px;
+      font-weight:700;
+      font-size:.95rem;
+      cursor:pointer;
+      transition:all 0.2s;
+      font-family:inherit;
+      display:inline-flex;
+      align-items:center;
+      gap:.5rem;
+    }
+    .btn:hover{
+      transform:translateY(-2px);
+      box-shadow:0 4px 12px rgba(0,0,0,.15);
+    }
+    .btn-sm{
+      padding:.5rem .85rem;
+      font-size:.85rem;
+    }
+    .btn.primary{background:var(--primary);color:#fff}
+    .btn.success{background:var(--success);color:#fff}
+    .btn.warning{background:var(--warning);color:#fff}
+    .btn.error{background:var(--error);color:#fff}
+    .btn:disabled{
+      opacity:.5;
+      cursor:not-allowed;
+      transform:none;
+    }
+    
+    /* EMPTY STATE */
+    .empty{
+      text-align:center;
+      padding:4rem 2rem;
+      background:#fff;
+      border-radius:12px;
+      box-shadow:0 2px 8px rgba(0,0,0,.1);
+    }
+    .empty i{
+      font-size:4rem;
+      color:var(--muted);
+      opacity:.3;
+      margin-bottom:1rem;
+    }
+    .empty div{
+      font-weight:700;
+      color:var(--muted);
+      font-size:1.1rem;
+    }
+    
+    /* MODAL */
+    .modal{
+      display:none;
+      position:fixed;
+      top:0;
+      left:0;
+      width:100%;
+      height:100%;
+      background:rgba(0,0,0,.5);
+      z-index:1000;
+      align-items:center;
+      justify-content:center;
+      padding:20px;
+      animation:fadeIn 0.2s;
+    }
+    .modal.show{display:flex}
+    .modal-box{
+      background:#fff;
+      border-radius:12px;
+      padding:2rem;
+      max-width:900px;
+      width:100%;
+      max-height:90vh;
+      overflow-y:auto;
+      box-shadow:0 20px 60px rgba(0,0,0,.3);
+      animation:slideUp 0.3s;
+    }
+    .modal-box h3{
+      margin:0 0 1.5rem 0;
+      font-size:1.5rem;
+      color:var(--primary);
+      display:flex;
+      align-items:center;
+      gap:.5rem;
+    }
+    
+    /* PROGRESS BAR */
+    .progress-bar{
+      width:100%;
+      height:8px;
+      background:#e5e7eb;
+      border-radius:4px;
+      overflow:hidden;
+      margin:.5rem 0;
+    }
+    .progress-bar-fill{
+      height:100%;
+      background:var(--primary);
+      transition:width 0.3s;
+    }
+    
+    /* SLIDE VIEWER */
+    .slide-viewer{
+      background:#f9fafb;
+      border-radius:12px;
+      padding:2rem;
+      margin-bottom:1.5rem;
+      min-height:400px;
+    }
+    .slide-viewer h2{
+      margin:0 0 1.5rem 0;
+      color:var(--primary);
+    }
+    .slide-controls{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      margin-top:2rem;
+      padding-top:1rem;
+      border-top:2px solid var(--border);
+    }
+    .slide-counter{
+      font-weight:700;
+      color:var(--muted);
+      font-size:1rem;
+    }
+    
+    /* QUIZ */
+    .quiz-option{
+      padding:1rem;
+      background:#fff;
+      border:2px solid var(--border);
+      border-radius:8px;
+      margin-bottom:.75rem;
+      cursor:pointer;
+      transition:all 0.2s;
+    }
+    .quiz-option:hover{
+      border-color:var(--primary);
+      background:#fef2f2;
+    }
+    .quiz-option.selected{
+      border-color:var(--primary);
+      background:#fef2f2;
+    }
+    .quiz-option.correct{
+      border-color:var(--success);
+      background:#f0fdf4;
+    }
+    .quiz-option.wrong{
+      border-color:var(--error);
+      background:#fee2e2;
+    }
+    
+    /* MESSAGE */
+    .msg{
+      position:fixed;
+      top:20px;
+      right:20px;
+      background:#fff;
+      padding:1rem 1.5rem;
+      border-radius:8px;
+      box-shadow:0 4px 12px rgba(0,0,0,.15);
+      display:flex;
+      align-items:center;
+      gap:.75rem;
+      font-weight:700;
+      z-index:10000;
+      animation:slideInRight 0.3s;
+    }
+    @keyframes slideInRight{
+      from{transform:translateX(400px);opacity:0}
+      to{transform:translateX(0);opacity:1}
+    }
+    .msg.success{border-left:4px solid var(--success);color:var(--success)}
+    .msg.error{border-left:4px solid var(--error);color:var(--error)}
+    .msg.info{border-left:4px solid #3b82f6;color:#3b82f6}
+    
+    /* SESSION DETAIL */
+    .session-detail{
+      background:#f9fafb;
+      padding:1.5rem;
+      border-radius:12px;
+      margin-bottom:1.5rem;
+    }
+    .detail-row{
+      display:flex;
+      justify-content:space-between;
+      padding:.75rem 0;
+      border-bottom:1px solid var(--border);
+    }
+    .detail-row:last-child{border-bottom:none}
+    .detail-label{
+      font-weight:700;
+      color:var(--muted);
+      display:flex;
+      align-items:center;
+      gap:.5rem;
+    }
+    .detail-value{
+      font-weight:700;
+      color:var(--text);
+    }
+    
+    /* RESPONSIVE */
+    @media (max-width:768px){
+      .header{
+        flex-direction:column;
+        gap:1rem;
+        padding:1rem;
+      }
+      .container{padding:1rem}
+      .tabs{flex-wrap:wrap}
+      .tab{padding:.65rem 1.25rem;font-size:.9rem}
+      .card-grid{grid-template-columns:1fr}
+      .modal-box{padding:1.5rem}
+      .welcome-content h1{font-size:2rem}
+      .welcome-content p{font-size:1.2rem}
+    }
+  </style>
+</head>
+
+<body>
+
+<!-- WELCOME SCREEN -->
+<div class="welcome-screen" id="welcomeScreen">
+  <div class="welcome-content">
+    <i class="fa-solid fa-graduation-cap"></i>
+    <h1 id="welcomeName">Willkommen!</h1>
+    <p>Lade deine Lernbar...</p>
+  </div>
+</div>
+
+<!-- HEADER -->
+<div class="header">
+  <h1>
+    <i class="fa-solid fa-graduation-cap"></i>
+    Lernbar
+  </h1>
+  <div class="header-actions">
+    <div class="user-info">
+      <i class="fa-solid fa-user-circle"></i>
+      <span id="userName">Laden...</span>
+    </div>
+    <button class="btn btn-sm error" id="logout">
+      <i class="fa-solid fa-sign-out-alt"></i> Abmelden
+    </button>
+  </div>
+</div>
+
+<!-- CONTAINER -->
+<div class="container">
+  
+  <!-- TABS -->
+  <div class="tabs">
+    <button class="tab active" data-tab="module">
+      <i class="fa-solid fa-laptop"></i> Meine Module
+    </button>
+    <button class="tab" data-tab="termine">
+      <i class="fa-solid fa-calendar"></i> Meine Termine
+    </button>
+  </div>
+  
+  <!-- TAB: MEINE MODULE -->
+  <div class="tab-content" id="tab-module" style="display:block">
+    <div id="module-list"></div>
+  </div>
+  
+  <!-- TAB: MEINE TERMINE -->
+  <div class="tab-content" id="tab-termine">
+    <div id="termine-list"></div>
+  </div>
+  
+</div>
+
+<!-- MODAL: MODUL ABSOLVIEREN -->
+<div class="modal" id="moduleViewerModal">
+  <div class="modal-box">
+    <h3 id="moduleViewerTitle">Modul</h3>
+    
+    <div class="slide-viewer" id="slideContent"></div>
+    
+    <div class="slide-controls">
+      <button class="btn" onclick="prevSlide()" id="prevBtn">
+        <i class="fas fa-arrow-left"></i> Zurück
+      </button>
+      <div class="slide-counter" id="slideCounter">1 / 1</div>
+      <button class="btn primary" onclick="nextSlide()" id="nextBtn">
+        Weiter <i class="fas fa-arrow-right"></i>
+      </button>
+    </div>
+    
+    <div style="margin-top:1.5rem;display:flex;justify-content:center">
+      <button class="btn" onclick="closeModuleViewer()">
+        <i class="fas fa-times"></i> Schließen
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: TERMIN DETAILS -->
+<div class="modal" id="sessionDetailModal">
+  <div class="modal-box" style="max-width:600px">
+    <h3 id="sessionDetailTitle">Termin-Details</h3>
+    <div id="sessionDetailBody"></div>
+  </div>
+</div>
+
+<script type="module">
+  // ========================================
+  // POCKETBASE & AUTH
+  // ========================================
+  const pb = new PocketBase('https://api.responda.systems');
+  
+  let currentUser = null;
+  let currentMember = null;
+  
+  let allModules = [];
+  let allSlides = [];
+  let allAssignments = [];
+  let allSessions = [];
+  let allParticipations = [];
+  
+  let currentModuleSlides = [];
+  let currentSlideIndex = 0;
+  let currentModuleId = null;
+
+  // ========================================
+  // AUTH CHECK
+  // ========================================
+  async function checkAuth() {
+    try {
+      if (!pb.authStore.isValid || !pb.authStore.model) {
+        console.log('❌ Keine gültige Session');
+        location.href = 'lernbar-login.html';
+        return false;
+      }
+      
+      currentUser = pb.authStore.model;
+      console.log('✅ User:', currentUser);
+      
+      // Lade Member-Daten falls vorhanden
+      if (currentUser.member_id) {
+        currentMember = await pb.collection('team_members').getOne(currentUser.member_id);
+        console.log('✅ Member:', currentMember);
+      }
+      
+      return true;
+      
+    } catch(e) {
+      console.error('❌ Auth Fehler:', e);
+      pb.authStore.clear();
+      location.href = 'lernbar-login.html';
+      return false;
+    }
+  }
+
+  document.getElementById("logout").onclick = () => {
+    pb.authStore.clear();
+    localStorage.clear();
+    location.href = "/lernbar-login.html";
+  };
+
+  // ========================================
+  // WELCOME SCREEN
+  // ========================================
+  function showWelcome() {
+    const name = currentMember ? currentMember.vorname : currentUser.name.split(' ')[0];
+    document.getElementById('welcomeName').textContent = `Willkommen ${name}!`;
+    document.getElementById('userName').textContent = currentMember ? 
+      `${currentMember.vorname} ${currentMember.name}` : 
+      currentUser.name;
+    
+    setTimeout(() => {
+      document.getElementById('welcomeScreen').style.display = 'none';
+      document.body.classList.add('loaded');
+    }, 2500);
+  }
+
+  // ========================================
+  // HELPERS
+  // ========================================
+  function showMsg(text, type = 'success') {
+    const msg = document.createElement('div');
+    msg.className = 'msg ' + type;
+    
+    const icon = type === 'success' ? 'fa-check-circle' : 
+                 type === 'error' ? 'fa-exclamation-circle' : 
+                 'fa-info-circle';
+    
+    msg.innerHTML = `<i class="fas ${icon}"></i> ${text}`;
+    document.body.appendChild(msg);
+    
+    setTimeout(() => msg.remove(), 5000);
+  }
+
+  function formatDate(dateStr) {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('de-DE', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  }
+
+  function formatTime(timeStr) {
+    if (!timeStr) return '';
+    return timeStr.slice(0, 5);
+  }
+
+  // ========================================
+  // TAB SWITCHING
+  // ========================================
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.onclick = () => {
+      const targetTab = tab.dataset.tab;
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      document.querySelectorAll('.tab-content').forEach(tc => tc.style.display = 'none');
+      document.getElementById('tab-' + targetTab).style.display = 'block';
+      
+      if (targetTab === 'module') loadModule();
+      if (targetTab === 'termine') loadTermine();
+    };
+  });
+
+  // ========================================
+  // MEINE MODULE LADEN
+  // ========================================
+  async function loadModule() {
+    try {
+      // Lade alle Assignments für diesen User
+      allAssignments = await pb.collection('module_assignments').getFullList({
+        filter: `member_id = "${currentUser.member_id}"`,
+        expand: 'module_id'
+      });
+      
+      // Lade alle zugewiesenen Module
+      const moduleIds = allAssignments.map(a => a.module_id);
+      
+      if (moduleIds.length === 0) {
+        document.getElementById('module-list').innerHTML = `
+          <div class="empty">
+            <i class="fas fa-laptop"></i>
+            <div>Noch keine Module zugewiesen</div>
+          </div>
+        `;
+        return;
+      }
+      
+      allModules = await pb.collection('learning_modules').getFullList({
+        filter: moduleIds.map(id => `id = "${id}"`).join(' || ')
+      });
+      
+      // Lade alle Slides
+      allSlides = await pb.collection('learning_slides').getFullList({
+        filter: moduleIds.map(id => `module_id = "${id}"`).join(' || '),
+        sort: 'order'
+      });
+      
+      renderModule();
+      
+    } catch(e) {
+      console.error('Fehler:', e);
+      document.getElementById('module-list').innerHTML = `
+        <div class="empty">
+          <i class="fas fa-exclamation-triangle"></i>
+          <div style="color:#dc2626">Fehler: ${e.message}</div>
+        </div>
+      `;
+    }
+  }
+
+  function renderModule() {
+    const list = document.getElementById('module-list');
+    
+    list.innerHTML = `
+      <div class="card-grid">
+        ${allModules.map(module => {
+          const moduleSlides = allSlides.filter(s => s.module_id === module.id);
+          const totalDuration = moduleSlides.reduce((sum, s) => sum + (s.duration || 5), 0);
+          
+          return `
+            <div class="module-card" onclick="openModuleViewer('${module.id}')">
+              <div class="card-title">
+                <i class="fa-solid fa-laptop"></i>
+                ${module.title}
+              </div>
+              
+              ${module.description ? `
+                <div style="color:var(--muted);font-size:.9rem;margin-top:.5rem;line-height:1.5">
+                  ${module.description}
+                </div>
+              ` : ''}
+              
+              <div class="card-meta">
+                <span>
+                  <i class="fas fa-file"></i>
+                  ${moduleSlides.length} Folien
+                </span>
+                <span>
+                  <i class="fas fa-clock"></i>
+                  ~${totalDuration} Min.
+                </span>
+                ${module.instructor ? `
+                  <span>
+                    <i class="fas fa-user"></i>
+                    ${module.instructor}
+                  </span>
+                ` : ''}
+              </div>
+              
+              <div style="margin-top:1rem">
+                <span class="badge not-started">
+                  <i class="fas fa-play"></i> Starten
+                </span>
+              </div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    `;
+  }
+
+  // ========================================
+  // MODUL VIEWER
+  // ========================================
+  window.openModuleViewer = async (moduleId) => {
+    try {
+      currentModuleId = moduleId;
+      const module = allModules.find(m => m.id === moduleId);
+      
+      currentModuleSlides = allSlides.filter(s => s.module_id === moduleId);
+      currentSlideIndex = 0;
+      
+      if (currentModuleSlides.length === 0) {
+        showMsg('Dieses Modul hat noch keine Folien', 'error');
+        return;
+      }
+      
+      document.getElementById('moduleViewerTitle').innerHTML = 
+        `<i class="fa-solid fa-laptop"></i> ${module.title}`;
+      
+      renderSlide();
+      document.getElementById('moduleViewerModal').classList.add('show');
+      
+    } catch(e) {
+      showMsg('Fehler: ' + e.message, 'error');
+    }
+  };
+
+  window.closeModuleViewer = () => {
+    document.getElementById('moduleViewerModal').classList.remove('show');
+    currentModuleId = null;
+  };
+
+  function renderSlide() {
+    const slide = currentModuleSlides[currentSlideIndex];
+    const content = document.getElementById('slideContent');
+    
+    document.getElementById('slideCounter').textContent = 
+      `${currentSlideIndex + 1} / ${currentModuleSlides.length}`;
+    
+    document.getElementById('prevBtn').disabled = currentSlideIndex === 0;
+    
+    if (currentSlideIndex === currentModuleSlides.length - 1) {
+      document.getElementById('nextBtn').innerHTML = '<i class="fas fa-check"></i> Abschließen';
+    } else {
+      document.getElementById('nextBtn').innerHTML = 'Weiter <i class="fas fa-arrow-right"></i>';
+    }
+    
+    let html = `<h2>${slide.title}</h2>`;
+    
+    if (slide.type === 'text') {
+      html += `<div style="line-height:1.8">${slide.content.html}</div>`;
+    } else if (slide.type === 'image') {
+      html += `
+        <img src="${slide.content.url}" style="max-width:100%;border-radius:8px;margin-bottom:1rem" alt="${slide.title}">
+        ${slide.content.description ? `<p style="color:var(--muted)">${slide.content.description}</p>` : ''}
+      `;
+    } else if (slide.type === 'video') {
+      const videoId = extractYouTubeId(slide.content.url);
+      if (videoId) {
+        html += `
+          <div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;margin-bottom:1rem">
+            <iframe src="https://www.youtube.com/embed/${videoId}" 
+              style="position:absolute;top:0;left:0;width:100%;height:100%;border:none;border-radius:8px"
+              allowfullscreen></iframe>
+          </div>
+        `;
+      }
+      if (slide.content.description) {
+        html += `<p style="color:var(--muted)">${slide.content.description}</p>`;
+      }
+    } else if (slide.type === 'quiz') {
+      html += `
+        <div style="background:#fff;padding:1.5rem;border-radius:8px;margin-top:1rem">
+          <div style="font-weight:700;margin-bottom:1rem;font-size:1.1rem">${slide.content.question}</div>
+          ${slide.content.answers.map((a, idx) => `
+            <div class="quiz-option" onclick="selectQuizAnswer(${idx}, ${a.correct})">
+              <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+                <input type="radio" name="quiz-answer">
+                <span>${a.text}</span>
+              </label>
+            </div>
+          `).join('')}
+          ${slide.content.explanation ? `
+            <div id="quizExplanation" style="display:none;margin-top:1rem;padding:1rem;background:#eff6ff;border-radius:6px;border-left:4px solid #3b82f6">
+              <strong>Erklärung:</strong> ${slide.content.explanation}
+            </div>
+          ` : ''}
+        </div>
+      `;
+    }
+    
+    content.innerHTML = html;
+  }
+
+  window.selectQuizAnswer = (index, isCorrect) => {
+    const options = document.querySelectorAll('.quiz-option');
+    options.forEach((opt, idx) => {
+      opt.classList.remove('selected', 'correct', 'wrong');
+      if (idx === index) {
+        opt.classList.add('selected');
+        opt.classList.add(isCorrect ? 'correct' : 'wrong');
+      }
+    });
+    
+    const explanation = document.getElementById('quizExplanation');
+    if (explanation) {
+      explanation.style.display = 'block';
+    }
+    
+    if (isCorrect) {
+      showMsg('✅ Richtig!', 'success');
+    } else {
+      showMsg('❌ Leider falsch', 'error');
+    }
+  };
+
+  function extractYouTubeId(url) {
+    const regex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
+    const match = url.match(regex);
+    return match ? match[1] : null;
+  }
+
+  window.prevSlide = () => {
+    if (currentSlideIndex > 0) {
+      currentSlideIndex--;
+      renderSlide();
+    }
+  };
+
+  window.nextSlide = () => {
+    if (currentSlideIndex < currentModuleSlides.length - 1) {
+      currentSlideIndex++;
+      renderSlide();
+    } else {
+      // Modul abgeschlossen
+      showMsg('🎉 Modul abgeschlossen!', 'success');
+      closeModuleViewer();
+    }
+  };
+
+  // ========================================
+  // MEINE TERMINE LADEN
+  // ========================================
+  async function loadTermine() {
+    try {
+      if (!currentUser.member_id) {
+        document.getElementById('termine-list').innerHTML = `
+          <div class="empty">
+            <i class="fas fa-info-circle"></i>
+            <div>Du bist keinem Team-Mitglied zugeordnet</div>
+          </div>
+        `;
+        return;
+      }
+      
+      // Lade alle Teilnahmen
+      allParticipations = await pb.collection('schulung_teilnahme').getFullList({
+        filter: `member_id = "${currentUser.member_id}"`,
+        expand: 'session_id',
+        sort: '-created'
+      });
+      
+      if (allParticipations.length === 0) {
+        document.getElementById('termine-list').innerHTML = `
+          <div class="empty">
+            <i class="fas fa-calendar"></i>
+            <div>Noch keine Termine</div>
+          </div>
+        `;
+        return;
+      }
+      
+      // Lade Session-Daten
+      const sessionIds = allParticipations.map(p => p.session_id);
+      allSessions = await pb.collection('training_sessions').getFullList({
+        filter: sessionIds.map(id => `id = "${id}"`).join(' || '),
+        sort: '-date',
+        expand: 'course_id'
+      });
+      
+      renderTermine();
+      
+    } catch(e) {
+      console.error('Fehler:', e);
+      document.getElementById('termine-list').innerHTML = `
+        <div class="empty">
+          <i class="fas fa-exclamation-triangle"></i>
+          <div style="color:#dc2626">Fehler: ${e.message}</div>
+        </div>
+      `;
+    }
+  }
+
+  function renderTermine() {
+    const list = document.getElementById('termine-list');
+    
+    list.innerHTML = `
+      <div class="card-grid">
+        ${allSessions.map(session => {
+          const participation = allParticipations.find(p => p.session_id === session.id);
+          const course = session.expand?.course_id;
+          const isPast = new Date(session.date) < new Date();
+          
+          return `
+            <div class="session-card" onclick="viewSessionDetail('${session.id}')">
+              <div class="card-title">
+                <i class="fa-solid fa-calendar"></i>
+                ${course ? course.title : 'Schulung'}
+              </div>
+              
+              <div style="margin-top:.75rem">
+                <div style="font-weight:700;font-size:1.1rem;color:var(--primary)">
+                  ${formatDate(session.date)}
+                </div>
+                ${session.start_time ? `
+                  <div style="color:var(--muted);margin-top:.25rem">
+                    <i class="fas fa-clock"></i>
+                    ${formatTime(session.start_time)} - ${formatTime(session.end_time)} Uhr
+                  </div>
+                ` : ''}
+                ${session.location ? `
+                  <div style="color:var(--muted);margin-top:.25rem">
+                    <i class="fas fa-location-dot"></i>
+                    ${session.location}
+                  </div>
+                ` : ''}
+                ${session.dozent ? `
+                  <div style="color:var(--muted);margin-top:.25rem">
+                    <i class="fas fa-user"></i>
+                    ${session.dozent}
+                  </div>
+                ` : ''}
+              </div>
+              
+              <div style="margin-top:1rem;display:flex;flex-wrap:wrap;gap:.5rem;align-items:center">
+                <span class="badge ${participation.status}">
+                  ${participation.status === 'zugesagt' ? '✅ Zugesagt' : 
+                    participation.status === 'abgesagt' ? '❌ Abgesagt' : 
+                    '⏳ Eingeladen'}
+                </span>
+                ${isPast ? '<span class="badge" style="background:#f3f4f6;color:#6b7280">Vergangen</span>' : ''}
+              </div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    `;
+  }
+
+  // ========================================
+  // SESSION DETAIL
+  // ========================================
+  window.viewSessionDetail = async (sessionId) => {
+    try {
+      const session = allSessions.find(s => s.id === sessionId);
+      const participation = allParticipations.find(p => p.session_id === sessionId);
+      const course = session.expand?.course_id;
+      
+      document.getElementById('sessionDetailTitle').innerHTML = 
+        `<i class="fa-solid fa-calendar"></i> ${course ? course.title : 'Schulung'}`;
+      
+      let html = `
+        <div class="session-detail">
+          <div class="detail-row">
+            <span class="detail-label"><i class="fas fa-calendar"></i> Datum:</span>
+            <span class="detail-value">${formatDate(session.date)}</span>
+          </div>
+          ${session.start_time ? `
+            <div class="detail-row">
+              <span class="detail-label"><i class="fas fa-clock"></i> Uhrzeit:</span>
+              <span class="detail-value">${formatTime(session.start_time)} - ${formatTime(session.end_time)} Uhr</span>
+            </div>
+          ` : ''}
+          ${session.location ? `
+            <div class="detail-row">
+              <span class="detail-label"><i class="fas fa-location-dot"></i> Ort:</span>
+              <span class="detail-value">${session.location}</span>
+            </div>
+          ` : ''}
+          ${session.dozent ? `
+            <div class="detail-row">
+              <span class="detail-label"><i class="fas fa-user"></i> Dozent:</span>
+              <span class="detail-value">${session.dozent}</span>
+            </div>
+          ` : ''}
+          <div class="detail-row">
+            <span class="detail-label"><i class="fas fa-info-circle"></i> Dein Status:</span>
+            <span class="detail-value">
+              <span class="badge ${participation.status}">
+                ${participation.status === 'zugesagt' ? '✅ Zugesagt' : 
+                  participation.status === 'abgesagt' ? '❌ Abgesagt' : 
+                  '⏳ Eingeladen'}
+              </span>
+            </span>
+          </div>
+        </div>
+      `;
+      
+      // Buttons nur wenn Status = 'eingeladen'
+      if (participation.status === 'eingeladen') {
+        html += `
+          <div style="display:flex;gap:.75rem;margin-top:1.5rem">
+            <button class="btn success" style="flex:1" onclick="respondToSession('${participation.id}', 'zugesagt')">
+              <i class="fas fa-check"></i> Zusagen
+            </button>
+            <button class="btn error" style="flex:1" onclick="respondToSession('${participation.id}', 'abgesagt')">
+              <i class="fas fa-times"></i> Absagen
+            </button>
+          </div>
+        `;
+      } else {
+        html += `
+          <div style="background:#eff6ff;padding:1rem;border-radius:8px;margin-top:1rem;text-align:center">
+            <i class="fas fa-info-circle" style="color:#3b82f6"></i>
+            <strong style="color:#1e40af">Du hast bereits geantwortet.</strong>
+          </div>
+        `;
+      }
+      
+      html += `
+        <div style="margin-top:1.5rem;text-align:center">
+          <button class="btn" onclick="closeSessionDetail()">
+            <i class="fas fa-times"></i> Schließen
+          </button>
+        </div>
+      `;
+      
+      document.getElementById('sessionDetailBody').innerHTML = html;
+      document.getElementById('sessionDetailModal').classList.add('show');
+      
+    } catch(e) {
+      showMsg('Fehler: ' + e.message, 'error');
+    }
+  };
+
+  window.closeSessionDetail = () => {
+    document.getElementById('sessionDetailModal').classList.remove('show');
+  };
+
+  window.respondToSession = async (participationId, newStatus) => {
+    try {
+      await pb.collection('schulung_teilnahme').update(participationId, {
+        status: newStatus
+      });
+      
+      showMsg(newStatus === 'zugesagt' ? '✅ Du hast zugesagt!' : '📝 Du hast abgesagt', 'success');
+      
+      closeSessionDetail();
+      await loadTermine();
+      
+    } catch(e) {
+      showMsg('Fehler: ' + e.message, 'error');
+    }
+  };
+
+  // ========================================
+  // INIT
+  // ========================================
+  async function init() {
+    const isAuth = await checkAuth();
+    if (!isAuth) return;
+    
+    showWelcome();
+    await loadModule();
+  }
+
+  init();
+
+</script>
+
+</body>
+</html>
