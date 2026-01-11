@@ -3,14 +3,18 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Ausbildungsverwaltung – Responda</title>
+  <title>Ausbildungen – Responda</title>
   <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet"/>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
-  <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet"/>
+  
+  <!-- Quill Rich Text Editor -->
+  <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+  <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
+  
+  <!-- QR Code Generator -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  
   <script src="https://cdn.jsdelivr.net/npm/pocketbase@0.21.3/dist/pocketbase.umd.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/davidshimjs-qrcodejs@0.0.2/qrcode.min.js"></script>
-  <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
 
   <style>
     :root{
@@ -19,7 +23,6 @@
       --success:#16a34a;
       --warning:#f59e0b;
       --info:#3b82f6;
-      --danger:#dc2626;
       --bg:#f8fafc;
       --card:#fff;
       --text:#0f172a;
@@ -28,1281 +31,1164 @@
       --gradient-start:#667eea;
       --gradient-end:#764ba2;
     }
-    *{box-sizing:border-box;margin:0;padding:0}
+    *{box-sizing:border-box}
     body{
+      margin:0;
       background:linear-gradient(135deg, var(--gradient-start) 0%, var(--gradient-end) 100%);
       min-height:100vh;
       color:var(--text);
       font-family:'Atkinson Hyperlegible',-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
-      line-height:1.6;
+      line-height:1.45;
       opacity:0;
-      transition:opacity 0.3s ease;
+      transition:opacity 0.3s;
+      padding-bottom:80px;
     }
     body.loaded{opacity:1}
     
-    .container{
+    header{position:sticky;top:0;background:var(--gradient-start);color:#fff;z-index:10;box-shadow:0 2px 8px rgba(0,0,0,.1)}
+    .bar{
       max-width:1400px;
       margin:0 auto;
-      padding:20px;
-    }
-    
-    .header{
-      background:rgba(255,255,255,0.95);
-      backdrop-filter:blur(10px);
-      border-radius:16px;
-      padding:1.5rem 2rem;
-      margin-bottom:2rem;
-      box-shadow:0 4px 16px rgba(0,0,0,0.1);
+      padding:.75rem 1rem;
       display:flex;
-      justify-content:space-between;
+      gap:.5rem;
       align-items:center;
       flex-wrap:wrap;
-      gap:1rem;
     }
-    .header h1{
-      font-size:1.8rem;
-      font-weight:800;
-      color:var(--primary);
-      display:flex;
+    h1{font-size:1.05rem;margin:0;font-weight:800}
+    .toolbar{margin-left:auto;display:flex;gap:.5rem;flex-wrap:wrap}
+    .topbtn{
+      background:rgba(255,255,255,0.1);
+      color:#fff;
+      padding:.45rem .7rem;
+      border-radius:.5rem;
+      cursor:pointer;
+      font-weight:700;
+      font-size:.9rem;
+      transition:all 0.2s;
+      text-decoration:none;
+      display:inline-flex;
       align-items:center;
-      gap:0.75rem;
+      gap:6px;
+      border:none;
+      font-family:inherit;
     }
-    .header-actions{
-      display:flex;
-      gap:0.75rem;
-      align-items:center;
-    }
+    .topbtn:hover{background:rgba(255,255,255,0.2)}
+    
+    .wrap{max-width:1400px;margin:1.5rem auto;padding:0 1rem}
     
     .tabs{
-      background:rgba(255,255,255,0.95);
-      backdrop-filter:blur(10px);
-      border-radius:16px;
-      padding:1rem;
-      margin-bottom:2rem;
-      box-shadow:0 4px 16px rgba(0,0,0,0.1);
       display:flex;
-      gap:0.5rem;
+      gap:.5rem;
+      margin-bottom:1.5rem;
+      background:#fff;
+      padding:.5rem;
+      border-radius:.75rem;
+      box-shadow:0 2px 8px rgba(0,0,0,.05);
       overflow-x:auto;
     }
     .tab{
-      padding:0.75rem 1.5rem;
+      padding:.6rem 1.25rem;
+      border-radius:.5rem;
+      cursor:pointer;
+      font-weight:700;
+      transition:all 0.2s;
+      white-space:nowrap;
       border:none;
       background:transparent;
       color:var(--muted);
-      font-weight:700;
-      font-size:1rem;
-      cursor:pointer;
-      border-radius:8px;
-      transition:all 0.2s;
-      white-space:nowrap;
       font-family:inherit;
+      font-size:.9rem;
     }
-    .tab:hover{
-      background:var(--bg);
-      color:var(--text);
-    }
-    .tab.active{
-      background:var(--primary);
-      color:#fff;
-    }
+    .tab:hover{background:#f9fafb;color:var(--text)}
+    .tab.active{background:var(--primary);color:#fff}
     
-    .tab-content{
-      display:none;
-    }
-    .tab-content.active{
-      display:block;
-    }
-    
-    .section-header{
+    .actions{
       display:flex;
-      justify-content:space-between;
-      align-items:center;
-      margin-bottom:1.5rem;
+      gap:.5rem;
+      margin-bottom:1rem;
       flex-wrap:wrap;
-      gap:1rem;
     }
-    .section-header h2{
-      font-size:1.5rem;
-      font-weight:800;
-      color:var(--text);
-    }
-    
     .btn{
-      padding:0.75rem 1.5rem;
-      border:none;
-      border-radius:8px;
-      font-weight:700;
+      background:#fff;
+      color:var(--text);
+      padding:.6rem 1rem;
+      border-radius:.5rem;
       cursor:pointer;
+      font-weight:700;
       transition:all 0.2s;
       font-family:inherit;
-      font-size:1rem;
+      border:1px solid var(--border);
       display:inline-flex;
       align-items:center;
-      gap:0.5rem;
+      gap:.5rem;
+      font-size:.9rem;
     }
-    .btn:hover{
-      transform:translateY(-2px);
-      box-shadow:0 4px 12px rgba(0,0,0,0.15);
-    }
-    .btn.primary{
-      background:var(--primary);
-      color:#fff;
-      border:2px solid var(--primary);
-    }
-    .btn.primary:hover{
-      background:#a50d25;
-    }
-    .btn.success{
-      background:var(--success);
-      color:#fff;
-      border:2px solid var(--success);
-    }
-    .btn.info{
-      background:var(--info);
-      color:#fff;
-      border:2px solid var(--info);
-    }
-    .btn.danger{
-      background:var(--danger);
-      color:#fff;
-      border:2px solid var(--danger);
-    }
-    .btn.btn-sm{
-      padding:0.5rem 1rem;
-      font-size:0.875rem;
-    }
+    .btn:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,.1)}
+    .btn.primary{background:var(--primary);color:#fff;border-color:var(--primary)}
+    .btn.primary:hover{background:#a80d25}
+    .btn.success{background:var(--success);color:#fff;border-color:var(--success)}
+    .btn.info{background:var(--info);color:#fff;border-color:var(--info)}
+    .btn.warning{background:var(--warning);color:#fff;border-color:var(--warning)}
+    .btn:disabled{opacity:0.5;cursor:not-allowed;transform:none}
+    .btn-sm{padding:.4rem .7rem;font-size:.85rem}
     
     .grid{
       display:grid;
-      grid-template-columns:repeat(auto-fill,minmax(350px,1fr));
-      gap:1.5rem;
+      grid-template-columns:repeat(auto-fill,minmax(280px,1fr));
+      gap:16px;
     }
     
-    .course-card,.member-card,.module-card{
+    .course-card, .member-card, .module-card{
       background:#fff;
-      border-radius:12px;
+      border-radius:.75rem;
       padding:1.5rem;
-      box-shadow:0 2px 8px rgba(0,0,0,0.08);
+      box-shadow:0 2px 8px rgba(0,0,0,.05);
       transition:all 0.2s;
-      cursor:pointer;
       border:2px solid transparent;
+      cursor:pointer;
     }
-    .course-card:hover,.member-card:hover,.module-card:hover{
+    .course-card:hover, .member-card:hover, .module-card:hover{
       transform:translateY(-4px);
-      box-shadow:0 8px 24px rgba(0,0,0,0.15);
-      border-color:var(--primary);
+      box-shadow:0 8px 20px rgba(0,0,0,.12);
+      border-color:var(--primary-light);
     }
     
     .card-title{
-      font-size:1.2rem;
       font-weight:800;
+      font-size:1.2rem;
+      margin-bottom:.5rem;
       color:var(--text);
-      margin-bottom:0.75rem;
-      display:flex;
-      align-items:center;
-      gap:0.5rem;
     }
-    .card-title i{
-      color:var(--primary);
-    }
-    
     .card-meta{
-      display:flex;
-      gap:1rem;
-      flex-wrap:wrap;
-      font-size:0.9rem;
+      font-size:.85rem;
       color:var(--muted);
-      margin-top:0.75rem;
-    }
-    .card-meta span{
+      margin-bottom:.5rem;
       display:flex;
+      gap:.5rem;
+      flex-wrap:wrap;
       align-items:center;
-      gap:0.25rem;
     }
     
     .badge{
-      display:inline-block;
-      padding:0.25rem 0.75rem;
-      border-radius:12px;
-      font-size:0.85rem;
+      padding:.25rem .6rem;
+      border-radius:999px;
+      font-size:.75rem;
       font-weight:700;
+      white-space:nowrap;
     }
-    .badge.info{
-      background:#dbeafe;
-      color:#1e40af;
-    }
-    .badge.success{
-      background:#dcfce7;
-      color:#166534;
-    }
-    .badge.warning{
-      background:#fef3c7;
-      color:#92400e;
-    }
-    .badge.danger{
-      background:#fee2e2;
-      color:#991b1b;
-    }
-    .badge.geplant{
-      background:#dbeafe;
-      color:#1e40af;
-    }
-    .badge.eingeladen{
-      background:#fef3c7;
-      color:#92400e;
-    }
-    .badge.zugesagt{
-      background:#dcfce7;
-      color:#166534;
-    }
-    .badge.abgesagt{
-      background:#fee2e2;
-      color:#991b1b;
-    }
-    .badge.anwesend{
-      background:#dcfce7;
-      color:#166534;
-    }
-    .badge.abwesend{
-      background:#fee2e2;
-      color:#991b1b;
-    }
-    .badge.online{
-      background:#dcfce7;
-      color:#166534;
-    }
+    .badge.online{background:#dbeafe;color:#1e40af}
+    .badge.präsenz{background:#fef3c7;color:#92400e}
+    .badge.hybrid{background:#e0e7ff;color:#4338ca}
+    .badge.geplant{background:#e0e7ff;color:#4338ca}
+    .badge.läuft{background:#dcfce7;color:#166534}
+    .badge.abgeschlossen{background:#f3f4f6;color:#4b5563}
+    .badge.abgesagt{background:#fee2e2;color:#991b1b}
+    .badge.anwesend{background:#dcfce7;color:#166534}
+    .badge.abwesend{background:#fee2e2;color:#991b1b}
+    .badge.zugesagt{background:#dcfce7;color:#166534}
+    .badge.eingeladen{background:#e0e7ff;color:#4338ca}
+    .badge.info{background:#dbeafe;color:#1e40af}
+    .badge.warning{background:#fef3c7;color:#92400e}
     
-    .tag{
-      display:inline-block;
-      padding:0.25rem 0.75rem;
-      background:#f3f4f6;
-      border-radius:12px;
-      font-size:0.85rem;
-      color:#4b5563;
-      margin-right:0.5rem;
-      margin-bottom:0.5rem;
-    }
-    
-    .empty{
-      text-align:center;
-      padding:4rem 2rem;
-      color:var(--muted);
-    }
-    .empty i{
-      font-size:4rem;
-      opacity:0.3;
-      margin-bottom:1rem;
-    }
+    .tag{background:#fee;color:var(--primary);padding:4px 10px;border-radius:999px;font-size:0.8rem;font-weight:700;display:inline-block;margin:2px}
     
     .modal{
-      display:none;
       position:fixed;
-      top:0;
-      left:0;
-      width:100%;
-      height:100%;
-      background:rgba(0,0,0,0.6);
-      backdrop-filter:blur(4px);
+      inset:0;
+      background:rgba(0,0,0,.6);
+      display:none;
+      align-items:center;
+      justify-content:center;
       z-index:1000;
       padding:20px;
       overflow-y:auto;
     }
-    .modal.show{
-      display:flex;
-      align-items:center;
-      justify-content:center;
-    }
+    .modal.show{display:flex}
     .modal-box{
       background:#fff;
-      border-radius:16px;
-      max-width:800px;
+      border-radius:14px;
+      max-width:1000px;
       width:100%;
-      max-height:90vh;
+      max-height:85vh;
       overflow-y:auto;
-      box-shadow:0 20px 60px rgba(0,0,0,0.3);
+      padding:24px;
+      box-shadow:0 8px 20px rgba(0,0,0,.3);
+      margin:auto;
     }
-    .modal-header{
-      padding:1.5rem 2rem;
-      border-bottom:2px solid var(--border);
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-    }
-    .modal-header h3{
-      font-size:1.5rem;
-      font-weight:800;
-      color:var(--text);
-      display:flex;
-      align-items:center;
-      gap:0.5rem;
-    }
-    .modal-body{
-      padding:2rem;
-    }
-    .modal-footer{
-      padding:1.5rem 2rem;
-      border-top:2px solid var(--border);
-      display:flex;
-      justify-content:flex-end;
-      gap:0.75rem;
-    }
+    .modal-box h3{margin:0 0 1rem 0;color:var(--primary);font-weight:800}
     
-    .form-group{
-      margin-bottom:1.5rem;
-    }
-    .form-group label{
-      display:block;
-      font-weight:700;
-      margin-bottom:0.5rem;
-      color:#374151;
-    }
-    .form-group input,.form-group select,.form-group textarea{
-      width:100%;
-      padding:0.75rem;
-      border:2px solid var(--border);
-      border-radius:8px;
+    .form-grid{display:grid;gap:1rem;grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
+    .form-group{display:flex;flex-direction:column;gap:6px}
+    .form-group label{font-weight:700;font-size:.9rem;color:#374151}
+    .form-group input,
+    .form-group textarea,
+    .form-group select{
+      padding:.6rem;
+      border:1px solid var(--border);
+      border-radius:.5rem;
+      background:#fff;
+      font-size:16px;
       font-family:inherit;
-      font-size:1rem;
+      width:100%;
     }
-    .form-group input:focus,.form-group select:focus,.form-group textarea:focus{
+    .form-group input:focus,
+    .form-group textarea:focus,
+    .form-group select:focus{
       outline:none;
       border-color:var(--primary);
       box-shadow:0 0 0 3px rgba(200,16,46,0.1);
     }
-    .form-group textarea{
-      resize:vertical;
-      min-height:100px;
-    }
-    
-    .form-row{
-      display:grid;
-      grid-template-columns:1fr 1fr;
-      gap:1rem;
-    }
     
     .tag-input-wrapper{
       display:flex;
+      gap:8px;
       flex-wrap:wrap;
-      gap:0.5rem;
-      padding:0.5rem;
-      border:2px solid var(--border);
+      padding:8px;
+      border:1px solid #d1d5db;
       border-radius:8px;
-      min-height:50px;
-      cursor:text;
+      min-height:44px;
+      align-items:center;
+      background:#fff;
     }
     .tag-input-wrapper:focus-within{
       border-color:var(--primary);
       box-shadow:0 0 0 3px rgba(200,16,46,0.1);
     }
-    .tag-input-wrapper input{
-      flex:1;
-      border:none;
-      outline:none;
-      padding:0.25rem;
-      min-width:150px;
-      font-family:inherit;
-    }
-    .tag-item{
-      display:inline-flex;
-      align-items:center;
-      gap:0.5rem;
-      padding:0.25rem 0.75rem;
-      background:var(--primary);
-      color:#fff;
-      border-radius:12px;
-      font-size:0.85rem;
-    }
-    .tag-item button{
-      background:none;
-      border:none;
-      color:#fff;
-      cursor:pointer;
-      padding:0;
-      font-size:1rem;
-    }
-    
-    .copy-box{
-      display:flex;
-      align-items:center;
-      gap:0.5rem;
-      padding:0.75rem;
-      background:#f9fafb;
-      border:2px solid var(--border);
-      border-radius:8px;
-    }
+    .tag-input-wrapper .tag{display:flex;align-items:center;gap:4px}
+    .tag-input-wrapper .tag .remove-tag{cursor:pointer;font-weight:bold;margin-left:4px}
+    .tag-input-wrapper input{border:none;outline:none;flex:1;min-width:100px;font-size:16px;padding:4px}
     
     .table{
       width:100%;
       border-collapse:collapse;
-      margin-top:1rem;
+      background:#fff;
+      border-radius:.75rem;
+      overflow:hidden;
+      box-shadow:0 2px 8px rgba(0,0,0,.05);
+    }
+    .table th,
+    .table td{
+      padding:.75rem 1rem;
+      text-align:left;
+      border-bottom:1px solid var(--border);
     }
     .table th{
       background:#f9fafb;
-      padding:0.75rem;
-      text-align:left;
       font-weight:700;
-      border-bottom:2px solid var(--border);
+      font-size:.9rem;
     }
-    .table td{
-      padding:0.75rem;
-      border-bottom:1px solid var(--border);
+    .table tr:hover{background:#f9fafb}
+    .table tr:last-child td{border-bottom:none}
+    
+    .ql-container{
+      font-family:'Atkinson Hyperlegible',-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+      font-size:1rem;
+      min-height:200px;
+      max-height:300px;
     }
-    .table tr:hover{
-      background:#f9fafb;
+    .ql-editor{
+      min-height:200px;
+      max-height:300px;
+      overflow-y:auto;
     }
     
-    .details-section{
-      margin-bottom:2rem;
+    .access-code-box{
+      background:#f9fafb;
       padding:1.5rem;
-      background:#f9fafb;
-      border-radius:8px;
+      border-radius:.75rem;
+      border:2px dashed var(--primary);
+      text-align:center;
     }
-    .details-section h4{
-      font-size:1.1rem;
+    .access-code{
+      font-size:2rem;
       font-weight:800;
-      margin-bottom:1rem;
-      color:var(--text);
-      display:flex;
-      align-items:center;
-      gap:0.5rem;
+      font-family:monospace;
+      color:var(--primary);
+      margin:1rem 0;
     }
     
-    .slide-item{
-      padding:1rem;
-      background:#fff;
-      border-left:4px solid var(--primary);
-      border-radius:8px;
-      margin-bottom:0.75rem;
+    .copy-box{
+      background:#f9fafb;
+      padding:.75rem;
+      border-radius:.5rem;
+      border:1px solid var(--border);
       display:flex;
       justify-content:space-between;
       align-items:center;
-      gap:1rem;
+      gap:.5rem;
+      font-family:monospace;
+      font-size:.85rem;
+    }
+    
+    .slide-item{
+      background:#f9fafb;
+      padding:1rem;
+      border-radius:.5rem;
+      border-left:4px solid var(--primary);
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      cursor:move;
+      transition:all 0.2s;
+      margin-bottom:.75rem;
+    }
+    .slide-item:hover{
+      background:#f3f4f6;
+      transform:translateX(4px);
     }
     
     .slide-type-icon{
       width:40px;
       height:40px;
-      border-radius:8px;
+      border-radius:.5rem;
       display:flex;
       align-items:center;
       justify-content:center;
+      margin-right:1rem;
       font-size:1.2rem;
     }
-    .slide-type-icon.text{background:#dbeafe}
-    .slide-type-icon.image{background:#fce7f3}
-    .slide-type-icon.video{background:#fef3c7}
-    .slide-type-icon.quiz{background:#dcfce7}
+    .slide-type-icon.text{background:#dbeafe;color:#1e40af}
+    .slide-type-icon.image{background:#dcfce7;color:#166534}
+    .slide-type-icon.video{background:#fef3c7;color:#92400e}
+    .slide-type-icon.quiz{background:#fee2e2;color:#991b1b}
     
     .progress-bar{
       width:100%;
       height:8px;
       background:#e5e7eb;
-      border-radius:4px;
+      border-radius:999px;
       overflow:hidden;
+      margin:.5rem 0;
     }
     .progress-bar-fill{
       height:100%;
-      background:var(--primary);
+      background:var(--success);
       transition:width 0.3s;
     }
     
-    .message{
-      position:fixed;
-      top:20px;
-      right:-400px;
-      background:#fff;
-      padding:1rem 1.5rem;
+    .status-icon{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      width:24px;
+      height:24px;
+      border-radius:50%;
+      font-size:.85rem;
+    }
+    .status-icon.completed{background:#dcfce7;color:#166534}
+    .status-icon.progress{background:#fef3c7;color:#92400e}
+    .status-icon.failed{background:#fee2e2;color:#991b1b}
+    .status-icon.pending{background:#e5e7eb;color:#6b7280}
+    
+    .empty{
+      text-align:center;
+      padding:3rem 1rem;
+      color:var(--muted);
+    }
+    .empty i{font-size:4rem;margin-bottom:1rem;opacity:0.3}
+    
+    .msg{
+      position: fixed;
+      top: 2rem;
+      right: 2rem;
+      padding: 1rem 1.5rem;
+      border-radius: 8px;
+      font-weight: 600;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+      z-index: 10000;
+      animation: slideInFromRight 0.3s ease-out;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .msg.error{background:#fee;color:#c00;border:1px solid #fcc}
+    .msg.success{background:#efe;color:#060;border:1px solid #cfc}
+    .msg.info{background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe}
+    
+    @keyframes slideInFromRight {
+      from { 
+        opacity: 0; 
+        transform: translateX(100%); 
+      }
+      to { 
+        opacity: 1; 
+        transform: translateX(0); 
+      }
+    }
+    
+    .details-section{
+      margin:20px 0;
+      padding:16px;
+      background:#f9fafb;
       border-radius:8px;
-      box-shadow:0 4px 12px rgba(0,0,0,0.15);
-      z-index:2000;
-      transition:right 0.3s ease;
-      max-width:400px;
-      border-left:4px solid var(--primary);
     }
-    .message.show{
-      right:20px;
-    }
-    .message.error{
-      border-left-color:var(--danger);
+    .details-section h4{
+      margin:0 0 12px 0;
+      color:var(--primary);
+      font-size:1rem;
     }
     
     @media (max-width:768px){
-      .header{
-        padding:1rem;
-      }
-      .header h1{
-        font-size:1.3rem;
-      }
-      .grid{
-        grid-template-columns:1fr;
-      }
-      .form-row{
-        grid-template-columns:1fr;
-      }
-      .tabs{
-        padding:0.5rem;
-      }
-      .tab{
-        padding:0.5rem 1rem;
-        font-size:0.9rem;
-      }
+      .bar{flex-direction:column;align-items:stretch}
+      h1{font-size:1rem}
+      .toolbar{margin-left:0;width:100%;justify-content:space-between}
+      .topbtn{flex:1;justify-content:center}
+      .tabs{padding:.25rem}
+      .tab{padding:.5rem 1rem;font-size:.85rem}
+      .grid{grid-template-columns:1fr}
+      .actions{flex-direction:column}
+      .btn{width:100%;justify-content:center}
+      .table{font-size:.85rem}
+      .table th,.table td{padding:.5rem}
+      .form-grid{grid-template-columns:1fr}
     }
   </style>
 </head>
 
 <body>
 
-<div class="container">
-  <div class="header">
-    <h1><i class="fa-solid fa-graduation-cap"></i> Ausbildungsverwaltung</h1>
-    <div class="header-actions">
-      <button class="btn" onclick="location.href='mpg-dashboard.html'">
-        <i class="fas fa-arrow-left"></i> Dashboard
-      </button>
-      <button class="btn primary" onclick="logout()">
-        <i class="fas fa-sign-out-alt"></i> Abmelden
-      </button>
-    </div>
-  </div>
-  
-  <div class="tabs">
-    <button class="tab active" onclick="switchTab('ausbildungen')">
-      <i class="fa-solid fa-book-medical"></i> Ausbildungen
-    </button>
-    <button class="tab" onclick="switchTab('team')">
-      <i class="fa-solid fa-users"></i> Team
-    </button>
-    <button class="tab" onclick="switchTab('lernbereich')">
-      <i class="fa-solid fa-laptop"></i> Lernbereich
-    </button>
-    <button class="tab" onclick="switchTab('einstellungen')">
-      <i class="fa-solid fa-cog"></i> Einstellungen
-    </button>
-  </div>
-  
-  <!-- AUSBILDUNGEN TAB -->
-  <div id="ausbildungen-tab" class="tab-content active">
-    <div class="section-header">
-      <h2>Schulungen & Termine</h2>
-      <button class="btn primary" onclick="openSchulungModal()">
-        <i class="fas fa-plus"></i> Neue Schulung
+<!-- HEADER -->
+<header>
+  <div class="bar">
+    <h1><i class="fa-solid fa-graduation-cap"></i> Ausbildungen</h1>
+    <div class="toolbar">
+      <a class="topbtn" href="mpg-dashboard.html">
+        <i class="fa-solid fa-dashboard"></i> Dashboard
+      </a>
+      <button class="topbtn" id="logout">
+        <i class="fa-solid fa-right-from-bracket"></i> Logout
       </button>
     </div>
-    <div id="schulungen-list" class="grid">
-      <div class="empty">
-        <i class="fas fa-spinner fa-spin"></i>
-        <div>Lädt...</div>
-      </div>
-    </div>
   </div>
+</header>
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Ausbildungen – Responda</title>
+  <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet"/>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
   
-  <!-- TEAM TAB -->
-  <div id="team-tab" class="tab-content">
-    <div class="section-header">
-      <h2>Team-Mitglieder</h2>
-      <div style="display:flex;gap:0.5rem">
-        <button class="btn success" onclick="exportAllMembersStats()">
-          <i class="fas fa-file-export"></i> Gesamtauswertung
-        </button>
-        <button class="btn primary" onclick="openMemberModal()">
-          <i class="fas fa-user-plus"></i> Mitglied hinzufügen
-        </button>
-      </div>
-    </div>
-    <div id="team-list" class="grid"></div>
-  </div>
+  <!-- Quill Rich Text Editor -->
+  <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+  <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
   
-  <!-- LERNBEREICH TAB -->
-  <div id="lernbereich-tab" class="tab-content">
-    <div class="section-header">
-      <h2>Lernmodule</h2>
-      <button class="btn primary" onclick="openModuleModal()">
-        <i class="fas fa-plus"></i> Neues Modul
-      </button>
-    </div>
-    <div id="lernbereich-list" class="grid"></div>
-  </div>
+  <!-- QR Code Generator -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   
-  <!-- EINSTELLUNGEN TAB -->
-  <div id="einstellungen-tab" class="tab-content">
-    <div class="section-header">
-      <h2>Externe Zugänge</h2>
-      <div style="display:flex;gap:0.5rem">
-        <button class="btn success" onclick="exportAccessCodes()">
-          <i class="fas fa-file-csv"></i> CSV Export
-        </button>
-        <button class="btn info" onclick="openBulkAccessModal()">
-          <i class="fas fa-users"></i> Mehrere erstellen
-        </button>
-        <button class="btn primary" onclick="openSingleAccessModal()">
-          <i class="fas fa-key"></i> Einzelnen erstellen
-        </button>
-      </div>
-    </div>
+  <script src="https://cdn.jsdelivr.net/npm/pocketbase@0.21.3/dist/pocketbase.umd.js"></script>
+
+  <style>
+    :root{
+      --primary:#c8102e;
+      --primary-light:#fee2e2;
+      --success:#16a34a;
+      --warning:#f59e0b;
+      --info:#3b82f6;
+      --bg:#f8fafc;
+      --card:#fff;
+      --text:#0f172a;
+      --muted:#64748b;
+      --border:#e2e8f0;
+      --gradient-start:#667eea;
+      --gradient-end:#764ba2;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      background:linear-gradient(135deg, var(--gradient-start) 0%, var(--gradient-end) 100%);
+      min-height:100vh;
+      color:var(--text);
+      font-family:'Atkinson Hyperlegible',-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+      line-height:1.45;
+      opacity:0;
+      transition:opacity 0.3s;
+      padding-bottom:80px;
+    }
+    body.loaded{opacity:1}
     
-    <div style="background:#fff;border-radius:12px;padding:1.5rem;margin-bottom:2rem;box-shadow:0 2px 8px rgba(0,0,0,0.08)">
-      <h3 style="margin-bottom:1rem">
-        <i class="fa-solid fa-graduation-cap"></i> Pflicht-Schulungen pro Jahr
-      </h3>
-      <div class="form-group">
-        <label>Anzahl der erforderlichen Schulungen</label>
-        <input type="number" id="pflicht-schulungen-input" min="0" value="12">
-      </div>
-      <button class="btn primary" onclick="savePflichtSchulungen()">
-        <i class="fas fa-save"></i> Speichern
-      </button>
-    </div>
+    header{position:sticky;top:0;background:var(--gradient-start);color:#fff;z-index:10;box-shadow:0 2px 8px rgba(0,0,0,.1)}
+    .bar{
+      max-width:1400px;
+      margin:0 auto;
+      padding:.75rem 1rem;
+      display:flex;
+      gap:.5rem;
+      align-items:center;
+      flex-wrap:wrap;
+    }
+    h1{font-size:1.05rem;margin:0;font-weight:800}
+    .toolbar{margin-left:auto;display:flex;gap:.5rem;flex-wrap:wrap}
+    .topbtn{
+      background:rgba(255,255,255,0.1);
+      color:#fff;
+      padding:.45rem .7rem;
+      border-radius:.5rem;
+      cursor:pointer;
+      font-weight:700;
+      font-size:.9rem;
+      transition:all 0.2s;
+      text-decoration:none;
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      border:none;
+      font-family:inherit;
+    }
+    .topbtn:hover{background:rgba(255,255,255,0.2)}
     
-    <div id="access-list"></div>
-  </div>
-</div>
-<!-- SCHULUNG MODAL -->
-<div class="modal" id="schulungModal">
-  <div class="modal-box">
-    <div class="modal-header">
-      <h3 id="schulungModalTitle"><i class="fa-solid fa-book-medical"></i> Neue Schulung erstellen</h3>
-      <button class="btn btn-sm" onclick="closeSchulungModal()">
-        <i class="fas fa-times"></i>
-      </button>
-    </div>
-    <form id="schulungForm">
-      <div class="modal-body">
-        <div class="form-group">
-          <label>Titel *</label>
-          <input type="text" name="title" required placeholder="z.B. Hygieneschulung 2024">
-        </div>
-        
-        <div class="form-group">
-          <label>Beschreibung</label>
-          <textarea name="description" placeholder="Kurze Beschreibung der Schulung"></textarea>
-        </div>
-        
-        <h4 style="margin:2rem 0 1rem;padding-top:1.5rem;border-top:2px solid var(--border)">
-          <i class="fa-solid fa-calendar"></i> Erster Termin
-        </h4>
-        
-        <div class="form-row">
-          <div class="form-group">
-            <label>Datum *</label>
-            <input type="date" name="date" required>
-          </div>
-        </div>
-        
-        <div class="form-row">
-          <div class="form-group">
-            <label>Startzeit</label>
-            <input type="time" name="start_time">
-          </div>
-          <div class="form-group">
-            <label>Endzeit</label>
-            <input type="time" name="end_time">
-          </div>
-        </div>
-        
-        <div class="form-group">
-          <label>Ort</label>
-          <input type="text" name="location" placeholder="z.B. Schulungsraum 1">
-        </div>
-        
-        <div class="form-group">
-          <label>Dozent</label>
-          <input type="text" name="instructor" placeholder="Name des Dozenten">
-        </div>
-        
-        <div class="form-group">
-          <label>Teilnehmer auswählen (<span id="selected-count">0</span> ausgewählt)</label>
-          <button type="button" class="btn info" onclick="openParticipantSelector()">
-            <i class="fas fa-users"></i> Teilnehmer auswählen
-          </button>
-        </div>
-      </div>
-      
-      <div class="modal-footer">
-        <button type="button" class="btn" onclick="closeSchulungModal()">Abbrechen</button>
-        <button type="submit" class="btn primary">
-          <i class="fas fa-save"></i> Erstellen
-        </button>
-      </div>
-    </form>
-  </div>
-</div>
+    .wrap{max-width:1400px;margin:1.5rem auto;padding:0 1rem}
+    
+    .tabs{
+      display:flex;
+      gap:.5rem;
+      margin-bottom:1.5rem;
+      background:#fff;
+      padding:.5rem;
+      border-radius:.75rem;
+      box-shadow:0 2px 8px rgba(0,0,0,.05);
+      overflow-x:auto;
+    }
+    .tab{
+      padding:.6rem 1.25rem;
+      border-radius:.5rem;
+      cursor:pointer;
+      font-weight:700;
+      transition:all 0.2s;
+      white-space:nowrap;
+      border:none;
+      background:transparent;
+      color:var(--muted);
+      font-family:inherit;
+      font-size:.9rem;
+    }
+    .tab:hover{background:#f9fafb;color:var(--text)}
+    .tab.active{background:var(--primary);color:#fff}
+    
+    .actions{
+      display:flex;
+      gap:.5rem;
+      margin-bottom:1rem;
+      flex-wrap:wrap;
+    }
+    .btn{
+      background:#fff;
+      color:var(--text);
+      padding:.6rem 1rem;
+      border-radius:.5rem;
+      cursor:pointer;
+      font-weight:700;
+      transition:all 0.2s;
+      font-family:inherit;
+      border:1px solid var(--border);
+      display:inline-flex;
+      align-items:center;
+      gap:.5rem;
+      font-size:.9rem;
+    }
+    .btn:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,.1)}
+    .btn.primary{background:var(--primary);color:#fff;border-color:var(--primary)}
+    .btn.primary:hover{background:#a80d25}
+    .btn.success{background:var(--success);color:#fff;border-color:var(--success)}
+    .btn.info{background:var(--info);color:#fff;border-color:var(--info)}
+    .btn.warning{background:var(--warning);color:#fff;border-color:var(--warning)}
+    .btn:disabled{opacity:0.5;cursor:not-allowed;transform:none}
+    .btn-sm{padding:.4rem .7rem;font-size:.85rem}
+    
+    .grid{
+      display:grid;
+      grid-template-columns:repeat(auto-fill,minmax(280px,1fr));
+      gap:16px;
+    }
+    
+    .course-card, .member-card, .module-card{
+      background:#fff;
+      border-radius:.75rem;
+      padding:1.5rem;
+      box-shadow:0 2px 8px rgba(0,0,0,.05);
+      transition:all 0.2s;
+      border:2px solid transparent;
+      cursor:pointer;
+    }
+    .course-card:hover, .member-card:hover, .module-card:hover{
+      transform:translateY(-4px);
+      box-shadow:0 8px 20px rgba(0,0,0,.12);
+      border-color:var(--primary-light);
+    }
+    
+    .card-title{
+      font-weight:800;
+      font-size:1.2rem;
+      margin-bottom:.5rem;
+      color:var(--text);
+    }
+    .card-meta{
+      font-size:.85rem;
+      color:var(--muted);
+      margin-bottom:.5rem;
+      display:flex;
+      gap:.5rem;
+      flex-wrap:wrap;
+      align-items:center;
+    }
+    
+    .badge{
+      padding:.25rem .6rem;
+      border-radius:999px;
+      font-size:.75rem;
+      font-weight:700;
+      white-space:nowrap;
+    }
+    .badge.online{background:#dbeafe;color:#1e40af}
+    .badge.präsenz{background:#fef3c7;color:#92400e}
+    .badge.hybrid{background:#e0e7ff;color:#4338ca}
+    .badge.geplant{background:#e0e7ff;color:#4338ca}
+    .badge.läuft{background:#dcfce7;color:#166534}
+    .badge.abgeschlossen{background:#f3f4f6;color:#4b5563}
+    .badge.abgesagt{background:#fee2e2;color:#991b1b}
+    .badge.anwesend{background:#dcfce7;color:#166534}
+    .badge.abwesend{background:#fee2e2;color:#991b1b}
+    .badge.zugesagt{background:#dcfce7;color:#166534}
+    .badge.eingeladen{background:#e0e7ff;color:#4338ca}
+    .badge.info{background:#dbeafe;color:#1e40af}
+    .badge.warning{background:#fef3c7;color:#92400e}
+    
+    .tag{background:#fee;color:var(--primary);padding:4px 10px;border-radius:999px;font-size:0.8rem;font-weight:700;display:inline-block;margin:2px}
+    
+    .modal{
+      position:fixed;
+      inset:0;
+      background:rgba(0,0,0,.6);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      z-index:1000;
+      padding:20px;
+      overflow-y:auto;
+    }
+    .modal.show{display:flex}
+    .modal-box{
+      background:#fff;
+      border-radius:14px;
+      max-width:1000px;
+      width:100%;
+      max-height:85vh;
+      overflow-y:auto;
+      padding:24px;
+      box-shadow:0 8px 20px rgba(0,0,0,.3);
+      margin:auto;
+    }
+    .modal-box h3{margin:0 0 1rem 0;color:var(--primary);font-weight:800}
+    
+    .form-grid{display:grid;gap:1rem;grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
+    .form-group{display:flex;flex-direction:column;gap:6px}
+    .form-group label{font-weight:700;font-size:.9rem;color:#374151}
+    .form-group input,
+    .form-group textarea,
+    .form-group select{
+      padding:.6rem;
+      border:1px solid var(--border);
+      border-radius:.5rem;
+      background:#fff;
+      font-size:16px;
+      font-family:inherit;
+      width:100%;
+    }
+    .form-group input:focus,
+    .form-group textarea:focus,
+    .form-group select:focus{
+      outline:none;
+      border-color:var(--primary);
+      box-shadow:0 0 0 3px rgba(200,16,46,0.1);
+    }
+    
+    .tag-input-wrapper{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      padding:8px;
+      border:1px solid #d1d5db;
+      border-radius:8px;
+      min-height:44px;
+      align-items:center;
+      background:#fff;
+    }
+    .tag-input-wrapper:focus-within{
+      border-color:var(--primary);
+      box-shadow:0 0 0 3px rgba(200,16,46,0.1);
+    }
+    .tag-input-wrapper .tag{display:flex;align-items:center;gap:4px}
+    .tag-input-wrapper .tag .remove-tag{cursor:pointer;font-weight:bold;margin-left:4px}
+    .tag-input-wrapper input{border:none;outline:none;flex:1;min-width:100px;font-size:16px;padding:4px}
+    
+    .table{
+      width:100%;
+      border-collapse:collapse;
+      background:#fff;
+      border-radius:.75rem;
+      overflow:hidden;
+      box-shadow:0 2px 8px rgba(0,0,0,.05);
+    }
+    .table th,
+    .table td{
+      padding:.75rem 1rem;
+      text-align:left;
+      border-bottom:1px solid var(--border);
+    }
+    .table th{
+      background:#f9fafb;
+      font-weight:700;
+      font-size:.9rem;
+    }
+    .table tr:hover{background:#f9fafb}
+    .table tr:last-child td{border-bottom:none}
+    
+    .ql-container{
+      font-family:'Atkinson Hyperlegible',-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+      font-size:1rem;
+      min-height:200px;
+      max-height:300px;
+    }
+    .ql-editor{
+      min-height:200px;
+      max-height:300px;
+      overflow-y:auto;
+    }
+    
+    .access-code-box{
+      background:#f9fafb;
+      padding:1.5rem;
+      border-radius:.75rem;
+      border:2px dashed var(--primary);
+      text-align:center;
+    }
+    .access-code{
+      font-size:2rem;
+      font-weight:800;
+      font-family:monospace;
+      color:var(--primary);
+      margin:1rem 0;
+    }
+    
+    .copy-box{
+      background:#f9fafb;
+      padding:.75rem;
+      border-radius:.5rem;
+      border:1px solid var(--border);
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:.5rem;
+      font-family:monospace;
+      font-size:.85rem;
+    }
+    
+    .slide-item{
+      background:#f9fafb;
+      padding:1rem;
+      border-radius:.5rem;
+      border-left:4px solid var(--primary);
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      cursor:move;
+      transition:all 0.2s;
+      margin-bottom:.75rem;
+    }
+    .slide-item:hover{
+      background:#f3f4f6;
+      transform:translateX(4px);
+    }
+    
+    .slide-type-icon{
+      width:40px;
+      height:40px;
+      border-radius:.5rem;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      margin-right:1rem;
+      font-size:1.2rem;
+    }
+    .slide-type-icon.text{background:#dbeafe;color:#1e40af}
+    .slide-type-icon.image{background:#dcfce7;color:#166534}
+    .slide-type-icon.video{background:#fef3c7;color:#92400e}
+    .slide-type-icon.quiz{background:#fee2e2;color:#991b1b}
+    
+    .progress-bar{
+      width:100%;
+      height:8px;
+      background:#e5e7eb;
+      border-radius:999px;
+      overflow:hidden;
+      margin:.5rem 0;
+    }
+    .progress-bar-fill{
+      height:100%;
+      background:var(--success);
+      transition:width 0.3s;
+    }
+    
+    .status-icon{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      width:24px;
+      height:24px;
+      border-radius:50%;
+      font-size:.85rem;
+    }
+    .status-icon.completed{background:#dcfce7;color:#166534}
+    .status-icon.progress{background:#fef3c7;color:#92400e}
+    .status-icon.failed{background:#fee2e2;color:#991b1b}
+    .status-icon.pending{background:#e5e7eb;color:#6b7280}
+    
+    .empty{
+      text-align:center;
+      padding:3rem 1rem;
+      color:var(--muted);
+    }
+    .empty i{font-size:4rem;margin-bottom:1rem;opacity:0.3}
+    
+    .msg{
+      position: fixed;
+      top: 2rem;
+      right: 2rem;
+      padding: 1rem 1.5rem;
+      border-radius: 8px;
+      font-weight: 600;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+      z-index: 10000;
+      animation: slideInFromRight 0.3s ease-out;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .msg.error{background:#fee;color:#c00;border:1px solid #fcc}
+    .msg.success{background:#efe;color:#060;border:1px solid #cfc}
+    .msg.info{background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe}
+    
+    @keyframes slideInFromRight {
+      from { 
+        opacity: 0; 
+        transform: translateX(100%); 
+      }
+      to { 
+        opacity: 1; 
+        transform: translateX(0); 
+      }
+    }
+    
+    .details-section{
+      margin:20px 0;
+      padding:16px;
+      background:#f9fafb;
+      border-radius:8px;
+    }
+    .details-section h4{
+      margin:0 0 12px 0;
+      color:var(--primary);
+      font-size:1rem;
+    }
+    
+    @media (max-width:768px){
+      .bar{flex-direction:column;align-items:stretch}
+      h1{font-size:1rem}
+      .toolbar{margin-left:0;width:100%;justify-content:space-between}
+      .topbtn{flex:1;justify-content:center}
+      .tabs{padding:.25rem}
+      .tab{padding:.5rem 1rem;font-size:.85rem}
+      .grid{grid-template-columns:1fr}
+      .actions{flex-direction:column}
+      .btn{width:100%;justify-content:center}
+      .table{font-size:.85rem}
+      .table th,.table td{padding:.5rem}
+      .form-grid{grid-template-columns:1fr}
+    }
+  </style>
+</head>
 
-<!-- SCHULUNG DETAILS MODAL -->
-<div class="modal" id="schulungDetailsModal">
-  <div class="modal-box">
-    <div class="modal-header">
-      <h3 id="schulungDetailsTitle">Schulung</h3>
-      <button class="btn btn-sm" onclick="closeSchulungDetailsModal()">
-        <i class="fas fa-times"></i>
-      </button>
-    </div>
-    <div class="modal-body" id="schulungDetailsBody"></div>
-  </div>
-</div>
+<body>
 
-<!-- TERMIN HINZUFÜGEN MODAL -->
-<div class="modal" id="addSessionModal">
-  <div class="modal-box">
-    <div class="modal-header">
-      <h3><i class="fa-solid fa-calendar-plus"></i> Weiteren Termin hinzufügen</h3>
-      <button class="btn btn-sm" onclick="closeAddSessionModal()">
-        <i class="fas fa-times"></i>
-      </button>
-    </div>
-    <form id="addSessionForm">
-      <input type="hidden" id="add-session-course-id">
-      <div class="modal-body">
-        <div class="form-row">
-          <div class="form-group">
-            <label>Datum *</label>
-            <input type="date" name="date" required>
-          </div>
-        </div>
-        
-        <div class="form-row">
-          <div class="form-group">
-            <label>Startzeit</label>
-            <input type="time" name="start_time">
-          </div>
-          <div class="form-group">
-            <label>Endzeit</label>
-            <input type="time" name="end_time">
-          </div>
-        </div>
-        
-        <div class="form-group">
-          <label>Ort</label>
-          <input type="text" name="location" placeholder="z.B. Schulungsraum 1">
-        </div>
-        
-        <div class="form-group">
-          <label>Dozent</label>
-          <input type="text" name="dozent" placeholder="Name des Dozenten">
-        </div>
-        
-        <div class="form-group">
-          <label>Beschreibung</label>
-          <textarea name="beschreibung" placeholder="Zusätzliche Informationen zum Termin"></textarea>
-        </div>
-        
-        <div class="form-group">
-          <label>Teilnehmer auswählen (<span id="add-selected-count">0</span> ausgewählt)</label>
-          <button type="button" class="btn info" onclick="openParticipantSelectorForAdd()">
-            <i class="fas fa-users"></i> Teilnehmer auswählen
-          </button>
-        </div>
-      </div>
-      
-      <div class="modal-footer">
-        <button type="button" class="btn" onclick="closeAddSessionModal()">Abbrechen</button>
-        <button type="submit" class="btn primary">
-          <i class="fas fa-save"></i> Termin hinzufügen
-        </button>
-      </div>
-    </form>
-  </div>
-</div>
-
-<!-- TERMIN BEARBEITEN MODAL -->
-<div class="modal" id="editSessionModal">
-  <div class="modal-box">
-    <div class="modal-header">
-      <h3><i class="fa-solid fa-calendar-edit"></i> Termin bearbeiten</h3>
-      <button class="btn btn-sm" onclick="closeEditSessionModal()">
-        <i class="fas fa-times"></i>
-      </button>
-    </div>
-    <form id="editSessionForm">
-      <input type="hidden" id="edit-session-id">
-      <div class="modal-body">
-        <div class="form-row">
-          <div class="form-group">
-            <label>Datum *</label>
-            <input type="date" id="edit-session-date" required>
-          </div>
-        </div>
-        
-        <div class="form-row">
-          <div class="form-group">
-            <label>Startzeit</label>
-            <input type="time" id="edit-session-start">
-          </div>
-          <div class="form-group">
-            <label>Endzeit</label>
-            <input type="time" id="edit-session-end">
-          </div>
-        </div>
-        
-        <div class="form-group">
-          <label>Ort</label>
-          <input type="text" id="edit-session-location" placeholder="z.B. Schulungsraum 1">
-        </div>
-        
-        <div class="form-group">
-          <label>Dozent</label>
-          <input type="text" id="edit-session-dozent" placeholder="Name des Dozenten">
-        </div>
-        
-        <div class="form-group">
-          <label>Beschreibung</label>
-          <textarea id="edit-session-beschreibung" placeholder="Zusätzliche Informationen"></textarea>
-        </div>
-      </div>
-      
-      <div class="modal-footer">
-        <button type="button" class="btn" onclick="closeEditSessionModal()">Abbrechen</button>
-        <button type="submit" class="btn primary">
-          <i class="fas fa-save"></i> Speichern
-        </button>
-      </div>
-    </form>
-  </div>
-</div>
-
-<!-- TEILNEHMER AUSWAHL MODAL -->
-<div class="modal" id="participantModal">
-  <div class="modal-box">
-    <div class="modal-header">
-      <h3><i class="fa-solid fa-users"></i> Teilnehmer auswählen</h3>
-      <button class="btn btn-sm" onclick="closeParticipantModal()">
-        <i class="fas fa-times"></i>
-      </button>
-    </div>
-    <div class="modal-body">
-      <div id="participantList"></div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn primary" onclick="closeParticipantModal()">
-        <i class="fas fa-check"></i> Fertig
+<!-- HEADER -->
+<header>
+  <div class="bar">
+    <h1><i class="fa-solid fa-graduation-cap"></i> Ausbildungen</h1>
+    <div class="toolbar">
+      <a class="topbtn" href="mpg-dashboard.html">
+        <i class="fa-solid fa-dashboard"></i> Dashboard
+      </a>
+      <button class="topbtn" id="logout">
+        <i class="fa-solid fa-right-from-bracket"></i> Logout
       </button>
     </div>
   </div>
-</div>
-
-<!-- SESSION DETAILS MODAL -->
-<div class="modal" id="sessionDetailsModal">
-  <div class="modal-box">
-    <div class="modal-header">
-      <h3 id="sessionDetailsTitle">Termin-Details</h3>
-      <button class="btn btn-sm" onclick="closeSessionDetailsModal()">
-        <i class="fas fa-times"></i>
-      </button>
-    </div>
-    <div class="modal-body" id="sessionDetailsBody"></div>
-    <div class="modal-footer">
-      <button class="btn success" onclick="saveAttendance()">
-        <i class="fas fa-save"></i> Anwesenheit speichern
-      </button>
-      <button class="btn" onclick="closeSessionDetailsModal()">
-        <i class="fas fa-times"></i> Schließen
-      </button>
-    </div>
-  </div>
-</div>
-
-<!-- TEAM MEMBER MODAL -->
-<div class="modal" id="memberModal">
-  <div class="modal-box">
-    <div class="modal-header">
-      <h3 id="memberModalTitle"><i class="fa-solid fa-user-plus"></i> Neues Team-Mitglied</h3>
-      <button class="btn btn-sm" onclick="closeMemberModal()">
-        <i class="fas fa-times"></i>
-      </button>
-    </div>
-    <form id="memberForm">
-      <div class="modal-body">
-        <div class="form-row">
-          <div class="form-group">
-            <label>Vorname *</label>
-            <input type="text" name="vorname" required>
-          </div>
-          <div class="form-group">
-            <label>Nachname *</label>
-            <input type="text" name="name" required>
-          </div>
-        </div>
-        
-        <div class="form-group">
-          <label>Qualifikationen</label>
-          <div class="tag-input-wrapper" id="tag-input-wrapper">
-            <input type="text" id="tag-input" placeholder="Qualifikation eingeben und Enter drücken">
-          </div>
-        </div>
-      </div>
-      
-      <div class="modal-footer">
-        <button type="button" class="btn" onclick="closeMemberModal()">Abbrechen</button>
-        <button type="submit" class="btn primary">
-          <i class="fas fa-save"></i> Speichern
-        </button>
-      </div>
-    </form>
-  </div>
-</div>
-
-<!-- MEMBER DETAILS MODAL -->
-<div class="modal" id="memberDetailsModal">
-  <div class="modal-box">
-    <div class="modal-header">
-      <h3 id="memberDetailsTitle">Mitglied-Details</h3>
-      <button class="btn btn-sm" onclick="closeMemberDetailsModal()">
-        <i class="fas fa-times"></i>
-      </button>
-    </div>
-    <div class="modal-body" id="memberDetailsBody"></div>
-  </div>
-</div>
-
-<!-- ZUGANG FÜR MEMBER ERSTELLEN -->
-<div class="modal" id="createAccessForMemberModal">
-  <div class="modal-box">
-    <div class="modal-header">
-      <h3><i class="fa-solid fa-key"></i> Zugang erstellen</h3>
-      <button class="btn btn-sm" onclick="closeCreateAccessForMemberModal()">
-        <i class="fas fa-times"></i>
-      </button>
-    </div>
-    <div class="modal-body">
-      <p style="margin-bottom:1.5rem">
-        Zugang erstellen für: <strong id="access-member-name"></strong>
-      </p>
-      
-      <div style="background:#f0fdf4;padding:1.5rem;border-radius:8px;border:2px solid #86efac;text-align:center">
-        <div style="font-size:0.9rem;color:#166534;margin-bottom:0.5rem">Generierter Zugangscode:</div>
-        <div style="font-size:2rem;font-weight:800;color:var(--primary);font-family:monospace" id="member-access-code"></div>
-      </div>
-      
-      <p style="margin-top:1rem;font-size:0.9rem;color:var(--muted)">
-        <i class="fas fa-info-circle"></i> Dieser Code kann für den Login verwendet werden.
-      </p>
-    </div>
-    <div class="modal-footer">
-      <button class="btn" onclick="closeCreateAccessForMemberModal()">Abbrechen</button>
-      <button class="btn primary" onclick="saveAccessForMember()">
-        <i class="fas fa-save"></i> Zugang erstellen
-      </button>
-    </div>
-  </div>
-</div>
-
-<!-- EINZELNER ZUGANG -->
-<div class="modal" id="singleAccessModal">
-  <div class="modal-box">
-    <div class="modal-header">
-      <h3><i class="fa-solid fa-key"></i> Einzelnen Zugang erstellen</h3>
-      <button class="btn btn-sm" onclick="closeSingleAccessModal()">
-        <i class="fas fa-times"></i>
-      </button>
-    </div>
-    <form id="singleAccessForm">
-      <div class="modal-body">
-        <div class="form-group">
-          <label>Name *</label>
-          <input type="text" name="name" required placeholder="Vor- und Nachname">
-        </div>
-        
-        <div style="background:#f0fdf4;padding:1.5rem;border-radius:8px;border:2px solid #86efac;text-align:center;margin-top:1rem">
-          <div style="font-size:0.9rem;color:#166534;margin-bottom:0.5rem">Generierter Zugangscode:</div>
-          <div style="font-size:2rem;font-weight:800;color:var(--primary);font-family:monospace" id="preview-access-code"></div>
-          <button type="button" class="btn btn-sm" onclick="generatePreviewCode()" style="margin-top:0.75rem">
-            <i class="fas fa-refresh"></i> Neuen Code generieren
-          </button>
-        </div>
-      </div>
-      
-      <div class="modal-footer">
-        <button type="button" class="btn" onclick="closeSingleAccessModal()">Abbrechen</button>
-        <button type="submit" class="btn primary">
-          <i class="fas fa-save"></i> Erstellen
-        </button>
-      </div>
-    </form>
-  </div>
-</div>
-
-<!-- MEHRERE ZUGÄNGE -->
-<div class="modal" id="bulkAccessModal">
-  <div class="modal-box">
-    <div class="modal-header">
-      <h3><i class="fa-solid fa-users"></i> Mehrere Zugänge erstellen</h3>
-      <button class="btn btn-sm" onclick="closeBulkAccessModal()">
-        <i class="fas fa-times"></i>
-      </button>
-    </div>
-    <form id="bulkAccessForm">
-      <div class="modal-body">
-        <div id="bulkAccessList"></div>
-        <button type="button" class="btn info" onclick="addBulkAccessRow()" style="margin-top:1rem">
-          <i class="fas fa-plus"></i> Weitere Person hinzufügen
-        </button>
-      </div>
-      
-      <div class="modal-footer">
-        <button type="button" class="btn" onclick="closeBulkAccessModal()">Abbrechen</button>
-        <button type="submit" class="btn primary">
-          <i class="fas fa-save"></i> Alle erstellen
-        </button>
-      </div>
-    </form>
-  </div>
-</div>
-
-<!-- LERNBEREICH MODALS -->
+</header>
+<!-- Modal: Neues Lernmodul -->
 <div class="modal" id="moduleModal">
   <div class="modal-box">
-    <div class="modal-header">
-      <h3 id="moduleModalTitle"><i class="fa-solid fa-laptop"></i> Neues Lernmodul</h3>
-      <button class="btn btn-sm" onclick="closeModuleModal()">
-        <i class="fas fa-times"></i>
-      </button>
-    </div>
+    <h3 id="moduleModalTitle"><i class="fa-solid fa-laptop"></i> Neues Lernmodul</h3>
     <form id="moduleForm">
-      <div class="modal-body">
+      <div class="form-grid">
         <div class="form-group">
           <label>Titel *</label>
           <input type="text" name="title" required>
         </div>
-        
         <div class="form-group">
           <label>Dozent</label>
           <input type="text" name="instructor">
         </div>
-        
+      </div>
+      <div class="form-group">
+        <label>Beschreibung</label>
+        <textarea name="description" rows="3"></textarea>
+      </div>
+      <div class="form-grid">
         <div class="form-group">
-          <label>Beschreibung</label>
-          <textarea name="description"></textarea>
+          <label>Bestehensgrenze (%)</label>
+          <input type="number" name="passing_score" value="80" min="0" max="100">
         </div>
-        
         <div class="form-group">
-          <label>
-            <input type="checkbox" name="require_quiz" style="width:auto;margin-right:0.5rem">
-            Abschlussprüfung erforderlich
-          </label>
-        </div>
-        
-        <div class="form-row">
-          <div class="form-group">
-            <label>Bestehensgrenze (%)</label>
-            <input type="number" name="passing_score" value="80" min="0" max="100">
-          </div>
-          <div class="form-group">
-            <label>Max. Versuche (0 = unbegrenzt)</label>
-            <input type="number" name="max_attempts" value="3" min="0">
-          </div>
+          <label>Max. Versuche</label>
+          <input type="number" name="max_attempts" value="3" min="0">
+          <small style="color:var(--muted);font-size:.85rem">0 = unbegrenzt</small>
         </div>
       </div>
-      
-      <div class="modal-footer">
+      <div class="form-group">
+        <label style="display:flex;align-items:center;gap:.5rem">
+          <input type="checkbox" name="require_quiz" id="require-quiz">
+          <span>Abschlussprüfung erforderlich</span>
+        </label>
+      </div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
         <button type="button" class="btn" onclick="closeModuleModal()">Abbrechen</button>
-        <button type="submit" class="btn primary">
-          <i class="fas fa-save"></i> Speichern
-        </button>
+        <button type="submit" class="btn primary"><i class="fa-solid fa-save"></i> Speichern</button>
       </div>
     </form>
   </div>
 </div>
 
+<!-- Modal: Lernmodul Details -->
 <div class="modal" id="moduleDetailsModal">
   <div class="modal-box">
-    <div class="modal-header">
-      <h3 id="moduleDetailsTitle">Modul-Details</h3>
-      <button class="btn btn-sm" onclick="closeModuleDetailsModal()">
-        <i class="fas fa-times"></i>
-      </button>
+    <h3 id="moduleDetailsTitle">Lernmodul</h3>
+    <div id="moduleDetailsBody"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
+      <button class="btn" onclick="closeModuleDetailsModal()">Schließen</button>
     </div>
-    <div class="modal-body" id="moduleDetailsBody"></div>
   </div>
 </div>
 
+<!-- Modal: Folien-Editor -->
 <div class="modal" id="slideEditorModal">
-  <div class="modal-box" style="max-width:1200px">
-    <div class="modal-header">
-      <h3 id="slideEditorTitle">Folien-Editor</h3>
-      <button class="btn btn-sm" onclick="closeSlideEditor()">
-        <i class="fas fa-times"></i>
+  <div class="modal-box" style="max-height:90vh;display:flex;flex-direction:column">
+    <h3 id="slideEditorTitle">Folien bearbeiten</h3>
+    
+    <div class="msg info" style="margin-bottom:1rem;position:relative;animation:none">
+      <i class="fas fa-info-circle"></i> Erstelle interaktive Lernfolien für dein Modul
+    </div>
+    
+    <div style="margin-bottom:1rem">
+      <button class="btn primary" onclick="openNewSlideModal()">
+        <i class="fas fa-plus"></i> Neue Folie
       </button>
     </div>
-    <div class="modal-body">
-      <div style="margin-bottom:1.5rem">
-        <button class="btn primary" onclick="openNewSlideModal()">
-          <i class="fas fa-plus"></i> Neue Folie
-        </button>
-      </div>
-      <div id="slides-list"></div>
+    
+    <div id="slides-list" style="flex:1;overflow-y:auto;margin-bottom:1rem"></div>
+    
+    <div style="display:flex;gap:.5rem;justify-content:flex-end;padding-top:1rem;border-top:1px solid var(--border)">
+      <button class="btn" onclick="closeSlideEditor()">Schließen</button>
+      <button class="btn success" onclick="previewModule(currentLearningModule)">
+        <i class="fas fa-play"></i> Vorschau
+      </button>
     </div>
   </div>
 </div>
 
+<!-- Modal: Neue Folie -->
 <div class="modal" id="newSlideModal">
-  <div class="modal-box">
-    <div class="modal-header">
-      <h3><i class="fa-solid fa-layer-group"></i> Neue Folie</h3>
-      <button class="btn btn-sm" onclick="closeNewSlideModal()">
-        <i class="fas fa-times"></i>
-      </button>
-    </div>
-    <form id="newSlideForm">
-      <div class="modal-body">
+  <div class="modal-box" style="max-height:85vh;display:flex;flex-direction:column">
+    <h3>Neue Folie</h3>
+    
+    <div style="flex:1;overflow-y:auto;padding-right:1rem">
+      <form id="newSlideForm">
         <div class="form-group">
-          <label>Folien-Typ *</label>
-          <select id="slide-type" onchange="updateSlideTypeFields()" required>
-            <option value="text">📝 Text</option>
-            <option value="image">🖼️ Bild</option>
-            <option value="video">🎥 Video</option>
-            <option value="quiz">❓ Quiz</option>
+          <label>Folientyp *</label>
+          <select id="slide-type" onchange="updateSlideTypeFields()">
+            <option value="text">📝 Text-Folie</option>
+            <option value="image">🖼️ Bild-Folie</option>
+            <option value="video">🎥 Video-Folie</option>
+            <option value="quiz">❓ Quiz-Folie</option>
           </select>
         </div>
         
         <div class="form-group">
           <label>Titel *</label>
-          <input type="text" id="slide-title" required>
+          <input type="text" id="slide-title" placeholder="z.B. Einführung" required>
         </div>
         
         <div class="form-group">
-          <label>Dauer (Minuten)</label>
+          <label>Geschätzte Dauer (Minuten)</label>
           <input type="number" id="slide-duration" value="5" min="1">
         </div>
         
-        <div id="text-slide-fields">
-          <div class="form-group">
-            <label>Inhalt</label>
-            <div id="slide-content-editor" style="height:200px"></div>
-          </div>
+        <!-- Text Slide -->
+        <div id="text-slide-fields" class="form-group">
+          <label>Inhalt</label>
+          <div id="slide-content-editor" style="height:250px"></div>
         </div>
         
+        <!-- Image Slide -->
         <div id="image-slide-fields" style="display:none">
           <div class="form-group">
             <label>Bild-URL</label>
-            <input type="url" id="slide-image-url">
+            <input type="text" id="slide-image-url" placeholder="https://...">
           </div>
           <div class="form-group">
-            <label>Beschreibung</label>
-            <textarea id="slide-image-description"></textarea>
+            <label>Bildbeschreibung</label>
+            <textarea id="slide-image-description" rows="3"></textarea>
           </div>
         </div>
         
+        <!-- Video Slide -->
         <div id="video-slide-fields" style="display:none">
           <div class="form-group">
-            <label>Video-URL</label>
-            <input type="url" id="slide-video-url">
+            <label>Video-URL (YouTube/Vimeo)</label>
+            <input type="text" id="slide-video-url" placeholder="https://www.youtube.com/watch?v=...">
           </div>
           <div class="form-group">
-            <label>Beschreibung</label>
-            <textarea id="slide-video-description"></textarea>
+            <label>Video-Beschreibung</label>
+            <textarea id="slide-video-description" rows="3"></textarea>
           </div>
         </div>
         
+        <!-- Quiz Slide -->
         <div id="quiz-slide-fields" style="display:none">
           <div class="form-group">
-            <label>Frage</label>
-            <textarea id="slide-quiz-question"></textarea>
+            <label>Frage *</label>
+            <input type="text" id="slide-quiz-question" placeholder="Frage eingeben">
           </div>
           <div class="form-group">
-            <label>Antworten</label>
+            <label>Antwortmöglichkeiten</label>
             <div id="quiz-answers-list"></div>
-            <button type="button" class="btn btn-sm info" onclick="addQuizAnswer()">
+            <button type="button" class="btn btn-sm" onclick="addQuizAnswer()">
               <i class="fas fa-plus"></i> Antwort hinzufügen
             </button>
           </div>
           <div class="form-group">
             <label>Erklärung</label>
-            <textarea id="slide-quiz-explanation"></textarea>
+            <textarea id="slide-quiz-explanation" rows="2"></textarea>
           </div>
         </div>
-      </div>
-      
-      <div class="modal-footer">
-        <button type="button" class="btn" onclick="closeNewSlideModal()">Abbrechen</button>
-        <button type="button" class="btn primary" onclick="saveSlide()">
-          <i class="fas fa-save"></i> Speichern
-        </button>
-      </div>
-    </form>
-  </div>
-</div>
-
-<div class="modal" id="modulePreviewModal">
-  <div class="modal-box" style="max-width:1000px">
-    <div class="modal-header">
-      <h3 id="previewModuleTitle">Modul-Vorschau</h3>
-      <button class="btn btn-sm" onclick="closePreviewModal()">
-        <i class="fas fa-times"></i>
-      </button>
+      </form>
     </div>
-    <div class="modal-body">
-      <div id="previewContent"></div>
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:2rem;padding-top:1rem;border-top:2px solid var(--border)">
-        <button class="btn" id="prevSlideBtn" onclick="prevPreviewSlide()">
-          <i class="fas fa-arrow-left"></i> Zurück
-        </button>
-        <span id="slideCounter"></span>
-        <button class="btn primary" id="nextSlideBtn" onclick="nextPreviewSlide()">
-          Weiter <i class="fas fa-arrow-right"></i>
-        </button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<div class="modal" id="assignMembersModal">
-  <div class="modal-box">
-    <div class="modal-header">
-      <h3><i class="fa-solid fa-users"></i> Personen zuweisen</h3>
-      <button class="btn btn-sm" onclick="closeAssignMembersModal()">
-        <i class="fas fa-times"></i>
-      </button>
-    </div>
-    <div class="modal-body">
-      <div id="assignMembersList"></div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn" onclick="closeAssignMembersModal()">Abbrechen</button>
-      <button class="btn primary" onclick="saveAssignments()">
+    
+    <div style="display:flex;gap:.5rem;justify-content:flex-end;margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border)">
+      <button class="btn" onclick="closeNewSlideModal()">Abbrechen</button>
+      <button class="btn primary" onclick="saveSlide()">
         <i class="fas fa-save"></i> Speichern
       </button>
     </div>
   </div>
 </div>
 
-<div class="message" id="message"></div>
+<!-- Modal: Modul Vorschau -->
+<div class="modal" id="modulePreviewModal">
+  <div class="modal-box" style="max-height:90vh;display:flex;flex-direction:column">
+    <h3 id="previewModuleTitle">Vorschau</h3>
+    
+    <div id="previewContent" style="flex:1;overflow-y:auto;margin:1rem 0"></div>
+    
+    <div style="display:flex;gap:.5rem;justify-content:space-between;align-items:center;padding-top:1rem;border-top:1px solid var(--border)">
+      <button class="btn" onclick="prevPreviewSlide()" id="prevSlideBtn">
+        <i class="fas fa-arrow-left"></i> Zurück
+      </button>
+      <div id="slideCounter" style="font-weight:700;color:var(--muted)">1 / 1</div>
+      <button class="btn" onclick="nextPreviewSlide()" id="nextSlideBtn">
+        Weiter <i class="fas fa-arrow-right"></i>
+      </button>
+    </div>
+    
+    <div style="display:flex;gap:.5rem;justify-content:center;margin-top:1rem">
+      <button class="btn" onclick="closePreviewModal()">Schließen</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Personen zuweisen -->
+<div class="modal" id="assignMembersModal">
+  <div class="modal-box" style="max-width:600px">
+    <h3><i class="fa-solid fa-users"></i> Personen zuweisen</h3>
+    <p style="color:var(--muted);margin-bottom:1rem">Wähle die Team-Mitglieder aus, die dieses Lernmodul sehen sollen.</p>
+    <div id="assignMembersList" style="max-height:400px;overflow-y:auto"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
+      <button class="btn" onclick="closeAssignMembersModal()">Abbrechen</button>
+      <button class="btn primary" onclick="saveAssignments()">
+        <i class="fa-solid fa-save"></i> Speichern
+      </button>
+    </div>
+  </div>
+</div>
+
 <script type="module">
+  // ========================================
+  // POCKETBASE & AUTH
+  // ========================================
   const pb = new PocketBase('https://api.responda.systems');
   
   let currentUser = null;
+
+  // ========================================
+  // jsPDF für PDF-Export
+  // ========================================
+  const script = document.createElement('script');
+  script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+  document.head.appendChild(script);
+
+  // ========================================
+  // STATE
+  // ========================================
   let allCourses = [];
   let allSessions = [];
   let allMembers = [];
-  let allModules = [];
   let allAccess = [];
-  
-  let currentEditCourse = null;
-  let currentEditMember = null;
-  let currentEditModule = null;
-  let currentSessionId = null;
-  let currentViewCourseId = null;
-  let currentLearningModule = null;
-  let currentAccessMember = null;
-  
-  let selectedParticipants = [];
-  let selectedParticipantStatus = {};
-  let selectedAssignments = [];
-  let currentTags = [];
+  let allModules = [];
   let currentSlides = [];
   let previewSlides = [];
   let currentPreviewIndex = 0;
-  let quizAnswers = [];
-  let slideContentEditor = null;
-  let memberAccessCode = '';
+  let currentTags = [];
+  let selectedParticipants = [];
+  let selectedParticipantStatus = {};
+  let selectedAssignments = [];
+  let currentEditCourse = null;
+  let currentSessionCourse = null;
+  let currentSessionId = null;
+  let currentEditMember = null;
+  let currentAccessMember = null;
+  let currentEditModule = null;
+  let currentLearningModule = null;
+  let currentEditSlide = null;
   let previewAccessCode = '';
+  let memberAccessCode = '';
+  let slideContentEditor = null;
+  let quizAnswers = [];
   let bulkAccessCount = 3;
   let pflichtSchulungen = 12;
+  let currentViewCourseId = null;
   
+  const wordLists = {
+    adjectives: ['schnell', 'blau', 'groß', 'klein', 'rot', 'grün', 'gelb', 'hell', 'dunkel', 'stark', 'schwach', 'frisch', 'alt', 'neu', 'warm', 'kalt', 'süß', 'sauer', 'laut', 'leise'],
+    nouns: ['apfel', 'baum', 'haus', 'tisch', 'stuhl', 'buch', 'auto', 'berg', 'fluss', 'stern', 'mond', 'sonne', 'blume', 'vogel', 'fisch', 'hund', 'katze', 'pferd', 'wind', 'meer'],
+    verbs: ['laufen', 'springen', 'singen', 'tanzen', 'malen', 'lesen', 'schreiben', 'kochen', 'backen', 'spielen', 'denken', 'träumen', 'lachen', 'weinen', 'fliegen', 'schwimmen', 'klettern', 'hören', 'sehen', 'fühlen']
+  };
+
   // ========================================
-  // INIT & AUTH
+  // AUTH CHECK
   // ========================================
   async function checkAuth() {
     try {
-      // Prüfe ob Auth vorhanden ist
       if (!pb.authStore.isValid || !pb.authStore.model) {
         console.log('❌ Keine gültige Session');
         location.href = 'mpg-login.html';
@@ -1310,11 +1196,8 @@
       }
       
       console.log('✅ Auth Model:', pb.authStore.model);
-      
-      // Versuche User zu laden
       currentUser = pb.authStore.model;
       
-      // Wenn User keine organization_id hat, ist es der falsche User-Typ
       if (!currentUser.organization_id) {
         console.log('❌ User hat keine organization_id');
         pb.authStore.clear();
@@ -1322,10 +1205,8 @@
         return false;
       }
       
-      // Lade Organisation
       const org = await pb.collection('organizations').getOne(currentUser.organization_id);
       pflichtSchulungen = org.pflicht_schulungen_jahr || 12;
-      document.getElementById('pflicht-schulungen-input').value = pflichtSchulungen;
       
       console.log('✅ Auth erfolgreich:', currentUser.email);
       return true;
@@ -1337,144 +1218,149 @@
       return false;
     }
   }
- 
+
+  document.getElementById("logout").onclick = () => {
+    pb.authStore.clear();
+    localStorage.clear();
+    location.href = "/mpg-login.html";
+  };
+
   // ========================================
-  // HELPER FUNCTIONS
+  // HELPERS
   // ========================================
-  function showMsg(msg, type = 'success') {
-    const msgEl = document.getElementById('message');
-    msgEl.textContent = msg;
-    msgEl.className = 'message show';
-    if (type === 'error') msgEl.classList.add('error');
+  function showMsg(text, type = 'success') {
+    const msg = document.createElement('div');
+    msg.className = 'msg ' + type;
     
-    setTimeout(() => {
-      msgEl.classList.remove('show');
-    }, 3000);
+    const icon = type === 'success' ? 'fa-check-circle' : 
+                 type === 'error' ? 'fa-exclamation-circle' : 
+                 'fa-info-circle';
+    
+    msg.innerHTML = `<i class="fas ${icon}"></i> ${text}`;
+    document.body.appendChild(msg);
+    
+    setTimeout(() => msg.remove(), 5000);
   }
-  
+
   function formatDate(dateStr) {
-    if (!dateStr) return '-';
     const date = new Date(dateStr);
-    return date.toLocaleDateString('de-DE', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit'
-    });
+    return date.toLocaleDateString('de-DE');
   }
-  
+
   function formatTime(timeStr) {
     if (!timeStr) return '';
     return timeStr.slice(0, 5);
   }
-  
+
   function copyToClipboard(text) {
-    navigator.clipboard.writeText(text).then(() => {
-      showMsg('✅ In Zwischenablage kopiert!');
-    }).catch(e => {
-      showMsg('Fehler beim Kopieren', 'error');
-    });
+    navigator.clipboard.writeText(text);
+    showMsg('✅ Kopiert!');
   }
-  
-  // ========================================
-  // ACCESS CODE GENERATION
-  // ========================================
-  const words = [
-    'apfel','birne','kirsche','traube','melone','orange','pflaume','erdbeere',
-    'blume','baum','wald','wiese','berg','fluss','see','meer',
-    'sonne','mond','stern','wolke','regen','schnee','wind','sturm',
-    'hund','katze','vogel','fisch','pferd','kuh','schaf','ziege',
-    'rot','blau','gruen','gelb','orange','lila','rosa','weiss',
-    'haus','tuer','fenster','dach','wand','boden','treppe','garten',
-    'tisch','stuhl','bett','sofa','lampe','bild','buch','stift',
-    'auto','bus','zug','flug','schiff','rad','roller','motor'
-  ];
-  
+
   function generateAccessCode() {
-    const w1 = words[Math.floor(Math.random() * words.length)];
-    const w2 = words[Math.floor(Math.random() * words.length)];
-    const w3 = words[Math.floor(Math.random() * words.length)];
-    return `${w1}-${w2}-${w3}`;
+    const adj = wordLists.adjectives[Math.floor(Math.random() * wordLists.adjectives.length)];
+    const noun = wordLists.nouns[Math.floor(Math.random() * wordLists.nouns.length)];
+    const verb = wordLists.verbs[Math.floor(Math.random() * wordLists.verbs.length)];
+    return `${adj}.${noun}.${verb}`;
   }
-  
+
   function generatePassword() {
-    return Math.random().toString(36).slice(-12);
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
+    let password = '';
+    for (let i = 0; i < 12; i++) {
+      password += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return password;
   }
-  
+
   window.generatePreviewCode = () => {
     previewAccessCode = generateAccessCode();
-    document.getElementById('preview-access-code').textContent = previewAccessCode;
+    document.getElementById('preview-code').textContent = previewAccessCode;
   };
-  
+
+  window.generateMemberAccessCode = () => {
+    memberAccessCode = generateAccessCode();
+    document.getElementById('member-access-code').textContent = memberAccessCode;
+  };
+
   // ========================================
   // TAG INPUT SYSTEM
   // ========================================
   function initTagInput() {
-    const wrapper = document.getElementById('tag-input-wrapper');
-    const input = document.getElementById('tag-input');
+    const wrapper = document.getElementById('tagInputWrapper');
+    const input = document.getElementById('tagInput');
     
     if (!wrapper || !input) return;
     
-    wrapper.onclick = () => input.focus();
+    const newInput = input.cloneNode(true);
+    input.parentNode.replaceChild(newInput, input);
     
-    input.onkeydown = (e) => {
-      if (e.key === 'Enter' || e.key === ',') {
+    newInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
         e.preventDefault();
-        const value = input.value.trim();
-        if (value && !currentTags.includes(value)) {
-          currentTags.push(value);
+        const tag = newInput.value.trim();
+        if (tag && !currentTags.includes(tag)) {
+          currentTags.push(tag);
           renderTags();
-          input.value = '';
+          newInput.value = '';
         }
+      } else if (e.key === 'Backspace' && newInput.value === '' && currentTags.length > 0) {
+        currentTags.pop();
+        renderTags();
       }
-    };
+    });
   }
-  
+
   function renderTags() {
-    const wrapper = document.getElementById('tag-input-wrapper');
-    const input = document.getElementById('tag-input');
+    const wrapper = document.getElementById('tagInputWrapper');
+    const input = document.getElementById('tagInput');
     
     if (!wrapper || !input) return;
     
-    const existingTags = wrapper.querySelectorAll('.tag-item');
-    existingTags.forEach(t => t.remove());
+    Array.from(wrapper.children).forEach(child => {
+      if (child !== input) child.remove();
+    });
     
-    currentTags.forEach((tag, idx) => {
-      const tagEl = document.createElement('div');
-      tagEl.className = 'tag-item';
-      tagEl.innerHTML = `
-        ${tag}
-        <button type="button" onclick="removeTag(${idx})">&times;</button>
-      `;
+    currentTags.forEach(tag => {
+      const tagEl = document.createElement('span');
+      tagEl.className = 'tag';
+      tagEl.innerHTML = `${tag} <span class="remove-tag" onclick="removeTag('${tag.replace(/'/g, "\\'")}')">×</span>`;
       wrapper.insertBefore(tagEl, input);
     });
   }
-  
-  window.removeTag = (idx) => {
-    currentTags.splice(idx, 1);
+
+  window.removeTag = (tag) => {
+    currentTags = currentTags.filter(t => t !== tag);
     renderTags();
   };
-  
+
   // ========================================
   // TAB SWITCHING
   // ========================================
-  window.switchTab = (tabName) => {
-    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-    
-    event.target.classList.add('active');
-    document.getElementById(tabName + '-tab').classList.add('active');
-    
-    if (tabName === 'ausbildungen') loadCourses();
-    if (tabName === 'team') loadTeam();
-    if (tabName === 'lernbereich') loadLernbereich();
-    if (tabName === 'einstellungen') loadSettings();
-  };
-  
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.onclick = () => {
+      const targetTab = tab.dataset.tab;
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      document.querySelectorAll('.tab-content').forEach(tc => tc.style.display = 'none');
+      document.getElementById('tab-' + targetTab).style.display = 'block';
+      
+      if (targetTab === 'schulungen') loadCourses();
+      if (targetTab === 'team') loadTeam();
+      if (targetTab === 'lernbereich') loadLernbereich();
+      if (targetTab === 'settings') loadSettings();
+    };
+  });
+
   // ========================================
-  // SETTINGS
+  // PFLICHT-SCHULUNGEN EINSTELLUNGEN
   // ========================================
   async function loadSettings() {
     try {
+      const org = await pb.collection('organizations').getOne(currentUser.organization_id);
+      pflichtSchulungen = org.pflicht_schulungen_jahr || 12;
+      document.getElementById('pflicht_schulungen').value = pflichtSchulungen;
+      
       allAccess = await pb.collection('training_students').getFullList({
         filter: `organization_id = "${currentUser.organization_id}"`,
         sort: 'name',
@@ -1484,25 +1370,27 @@
       renderSettings();
     } catch(e) {
       console.error('Error:', e);
+      document.getElementById('access-list').innerHTML = `<div class="empty" style="background:#fff;border-radius:.75rem"><i class="fas fa-exclamation-triangle"></i><div style="color:#c00">Fehler: ${e.message}</div></div>`;
     }
   }
-  
-  window.savePflichtSchulungen = async () => {
+
+  document.getElementById('pflichtForm').onsubmit = async (e) => {
+    e.preventDefault();
+    
     try {
-      const value = parseInt(document.getElementById('pflicht-schulungen-input').value) || 12;
+      const value = parseInt(document.getElementById('pflicht_schulungen').value) || 12;
       
       await pb.collection('organizations').update(currentUser.organization_id, {
         pflicht_schulungen_jahr: value
       });
       
       pflichtSchulungen = value;
-      showMsg('✅ Einstellung gespeichert!');
+      showMsg('✅ Pflicht-Schulungen gespeichert!');
       
     } catch(e) {
       showMsg('Fehler: ' + e.message, 'error');
     }
   };
-  
   // ========================================
   // AUSBILDUNGEN (OHNE TYP!)
   // ========================================
@@ -1602,14 +1490,12 @@
         organization_id: currentUser.organization_id
       });
       
-      // 3. Teilnehmer hinzufügen - FIX: Setze Status explizit auf "eingeladen"
+      // 3. Teilnehmer hinzufügen mit Status "eingeladen"
       for (const memberId of selectedParticipants) {
-        const status = selectedParticipantStatus[memberId] || 'eingeladen';
-        
         await pb.collection('schulung_teilnahme').create({
           session_id: session.id,
           member_id: memberId,
-          status: status,
+          status: 'eingeladen',
           anwesend: false,
           organization_id: currentUser.organization_id
         });
@@ -1634,7 +1520,6 @@
       const list = document.getElementById('participantList');
       list.innerHTML = allMembers.map(member => {
         const isSelected = selectedParticipants.includes(member.id);
-        const status = selectedParticipantStatus[member.id] || 'eingeladen';
         
         return `
           <div style="padding:.75rem;border-bottom:1px solid var(--border)">
@@ -1645,14 +1530,6 @@
                 <div style="font-weight:700">${member.vorname} ${member.name}</div>
                 <div style="font-size:.85rem;color:var(--muted)">${(member.qualifikationen || []).join(', ')}</div>
               </div>
-              ${isSelected ? `
-                <select onchange="setParticipantStatus('${member.id}', this.value)" 
-                  style="padding:4px;border:1px solid var(--border);border-radius:4px;font-size:.85rem">
-                  <option value="eingeladen" ${status === 'eingeladen' ? 'selected' : ''}>Eingeladen</option>
-                  <option value="zugesagt" ${status === 'zugesagt' ? 'selected' : ''}>Zugesagt</option>
-                  <option value="abgesagt" ${status === 'abgesagt' ? 'selected' : ''}>Abgesagt</option>
-                </select>
-              ` : ''}
             </label>
           </div>
         `;
@@ -1673,19 +1550,14 @@
     const idx = selectedParticipants.indexOf(memberId);
     if (idx >= 0) {
       selectedParticipants.splice(idx, 1);
-      delete selectedParticipantStatus[memberId];
     } else {
       selectedParticipants.push(memberId);
-      selectedParticipantStatus[memberId] = 'eingeladen';
     }
     openParticipantSelector();
   };
 
-  window.setParticipantStatus = (memberId, status) => {
-    selectedParticipantStatus[memberId] = status;
-  };
   // ========================================
-  // SCHULUNGS-DETAILS (KOMPLETT MIT ALLEN INFOS + FUNKTIONIERENDEN BUTTONS)
+  // SCHULUNGS-DETAILS MIT ALLEN TERMINEN
   // ========================================
   window.viewSchulungDetails = async (courseId) => {
     try {
@@ -1732,16 +1604,16 @@
         
         sessions.forEach(s => {
           const isPast = new Date(s.date) < new Date();
-          const isCancelled = s.status === 'abgesagt';
+          const isAbgesagt = s.status === 'abgesagt';
           
           html += `
-            <div class="slide-item" style="border-left-color:${isCancelled ? '#dc2626' : isPast ? '#94a3b8' : 'var(--primary)'};${isCancelled ? 'opacity:0.6;' : ''}">
+            <div class="slide-item" style="cursor:pointer;border-left-color:${isAbgesagt ? '#991b1b' : isPast ? '#94a3b8' : 'var(--primary)'}">
               <div style="display:flex;align-items:center;flex:1;gap:1rem">
                 <div style="flex:1">
                   <div style="font-weight:700;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
                     ${formatDate(s.date)}
                     ${s.start_time ? `<span style="color:var(--muted);font-weight:400">• ${formatTime(s.start_time)} - ${formatTime(s.end_time)}</span>` : ''}
-                    ${isCancelled ? '<span class="badge danger">❌ Abgesagt</span>' : 
+                    ${isAbgesagt ? '<span class="badge abgesagt">Abgesagt</span>' : 
                       isPast ? '<span class="badge" style="background:#f3f4f6;color:#6b7280">Vergangen</span>' : 
                       '<span class="badge geplant">Geplant</span>'}
                   </div>
@@ -1757,27 +1629,24 @@
                 </div>
               </div>
               <div style="display:flex;gap:4px;flex-wrap:wrap">
-                ${!isCancelled ? `
-                  <button class="btn btn-sm primary" onclick="event.stopPropagation(); viewSessionDetails('${s.id}')">
-                    <i class="fas fa-eye"></i>
-                  </button>
-                  <button class="btn btn-sm info" onclick="event.stopPropagation(); openEditSessionModal('${s.id}')">
-                    <i class="fas fa-edit"></i>
-                  </button>
-                  <button class="btn btn-sm warning" onclick="event.stopPropagation(); cancelSession('${s.id}')">
-                    <i class="fas fa-ban"></i>
-                  </button>
-                  <button class="btn btn-sm danger" onclick="event.stopPropagation(); deleteSession('${s.id}')">
-                    <i class="fas fa-trash"></i>
+                <button class="btn btn-sm primary" onclick="event.stopPropagation(); viewSessionDetails('${s.id}')">
+                  <i class="fas fa-eye"></i> Details
+                </button>
+                <button class="btn btn-sm" onclick="event.stopPropagation(); openEditSessionModal('${s.id}')">
+                  <i class="fas fa-edit"></i>
+                </button>
+                ${isAbgesagt ? `
+                  <button class="btn btn-sm success" onclick="event.stopPropagation(); reactivateSession('${s.id}')">
+                    <i class="fas fa-check"></i> Reaktivieren
                   </button>
                 ` : `
-                  <button class="btn btn-sm success" onclick="event.stopPropagation(); reactivateSession('${s.id}')">
-                    <i class="fas fa-redo"></i> Reaktivieren
-                  </button>
-                  <button class="btn btn-sm danger" onclick="event.stopPropagation(); deleteSession('${s.id}')">
-                    <i class="fas fa-trash"></i>
+                  <button class="btn btn-sm warning" onclick="event.stopPropagation(); cancelSession('${s.id}')">
+                    <i class="fas fa-ban"></i> Absagen
                   </button>
                 `}
+                <button class="btn btn-sm" style="background:#dc2626;color:#fff" onclick="event.stopPropagation(); deleteSession('${s.id}')">
+                  <i class="fas fa-trash"></i>
+                </button>
               </div>
             </div>
           `;
@@ -1852,130 +1721,6 @@
   };
 
   // ========================================
-  // TERMIN BEARBEITEN
-  // ========================================
-  window.openEditSessionModal = async (sessionId) => {
-    try {
-      const session = await pb.collection('training_sessions').getOne(sessionId);
-      
-      document.getElementById('edit-session-id').value = sessionId;
-      document.getElementById('edit-session-date').value = session.date;
-      document.getElementById('edit-session-start').value = session.start_time || '';
-      document.getElementById('edit-session-end').value = session.end_time || '';
-      document.getElementById('edit-session-location').value = session.location || '';
-      document.getElementById('edit-session-dozent').value = session.dozent || '';
-      document.getElementById('edit-session-beschreibung').value = session.beschreibung || '';
-      
-      document.getElementById('editSessionModal').classList.add('show');
-    } catch(e) {
-      showMsg('Fehler: ' + e.message, 'error');
-    }
-  };
-
-  window.closeEditSessionModal = () => {
-    document.getElementById('editSessionModal').classList.remove('show');
-  };
-
-  document.getElementById('editSessionForm').onsubmit = async (e) => {
-    e.preventDefault();
-    
-    try {
-      const sessionId = document.getElementById('edit-session-id').value;
-      
-      await pb.collection('training_sessions').update(sessionId, {
-        date: document.getElementById('edit-session-date').value,
-        start_time: document.getElementById('edit-session-start').value,
-        end_time: document.getElementById('edit-session-end').value,
-        location: document.getElementById('edit-session-location').value.trim(),
-        dozent: document.getElementById('edit-session-dozent').value.trim(),
-        beschreibung: document.getElementById('edit-session-beschreibung').value.trim()
-      });
-      
-      showMsg('✅ Termin aktualisiert!');
-      closeEditSessionModal();
-      await loadCourses();
-      if (currentViewCourseId) {
-        await viewSchulungDetails(currentViewCourseId);
-      }
-      
-    } catch(e) {
-      showMsg('Fehler: ' + e.message, 'error');
-    }
-  };
-
-  // ========================================
-  // TERMIN ABSAGEN / REAKTIVIEREN
-  // ========================================
-  window.cancelSession = async (sessionId) => {
-    if (!confirm('Termin wirklich absagen?\n\nAlle eingeladenen Teilnehmer werden benachrichtigt.')) {
-      return;
-    }
-    
-    try {
-      await pb.collection('training_sessions').update(sessionId, {
-        status: 'abgesagt'
-      });
-      
-      showMsg('✅ Termin abgesagt!');
-      await loadCourses();
-      if (currentViewCourseId) {
-        await viewSchulungDetails(currentViewCourseId);
-      }
-      
-    } catch(e) {
-      showMsg('Fehler: ' + e.message, 'error');
-    }
-  };
-
-  window.reactivateSession = async (sessionId) => {
-    try {
-      await pb.collection('training_sessions').update(sessionId, {
-        status: 'geplant'
-      });
-      
-      showMsg('✅ Termin reaktiviert!');
-      await loadCourses();
-      if (currentViewCourseId) {
-        await viewSchulungDetails(currentViewCourseId);
-      }
-      
-    } catch(e) {
-      showMsg('Fehler: ' + e.message, 'error');
-    }
-  };
-
-  // ========================================
-  // TERMIN LÖSCHEN
-  // ========================================
-  window.deleteSession = async (sessionId) => {
-    if (!confirm('Termin wirklich endgültig löschen?\n\nAlle Teilnehmer-Daten werden ebenfalls gelöscht!')) {
-      return;
-    }
-    
-    try {
-      // Lösche alle Teilnehmer
-      const participants = await pb.collection('schulung_teilnahme').getFullList({
-        filter: `session_id = "${sessionId}"`
-      });
-      for (const p of participants) {
-        await pb.collection('schulung_teilnahme').delete(p.id);
-      }
-      
-      // Lösche Termin
-      await pb.collection('training_sessions').delete(sessionId);
-      
-      showMsg('✅ Termin gelöscht!');
-      await loadCourses();
-      if (currentViewCourseId) {
-        await viewSchulungDetails(currentViewCourseId);
-      }
-      
-    } catch(e) {
-      showMsg('Fehler: ' + e.message, 'error');
-    }
-  };
-
-  // ========================================
   // WEITEREN TERMIN HINZUFÜGEN
   // ========================================
   window.openAddSessionModal = (courseId) => {
@@ -2021,14 +1766,11 @@
         organization_id: currentUser.organization_id
       });
       
-      // FIX: Setze Status explizit auf "eingeladen"
       for (const memberId of selectedParticipants) {
-        const status = selectedParticipantStatus[memberId] || 'eingeladen';
-        
         await pb.collection('schulung_teilnahme').create({
           session_id: session.id,
           member_id: memberId,
-          status: status,
+          status: 'eingeladen',
           anwesend: false,
           organization_id: currentUser.organization_id
         });
@@ -2038,6 +1780,128 @@
       closeAddSessionModal();
       await loadCourses();
       await viewSchulungDetails(courseId);
+      
+    } catch(e) {
+      showMsg('Fehler: ' + e.message, 'error');
+    }
+  };
+
+  // ========================================
+  // TERMIN BEARBEITEN
+  // ========================================
+  window.openEditSessionModal = async (sessionId) => {
+    try {
+      const session = await pb.collection('training_sessions').getOne(sessionId);
+      
+      document.getElementById('edit-session-id').value = sessionId;
+      document.getElementById('edit-session-date').value = session.date;
+      document.getElementById('edit-session-start').value = session.start_time || '';
+      document.getElementById('edit-session-end').value = session.end_time || '';
+      document.getElementById('edit-session-location').value = session.location || '';
+      document.getElementById('edit-session-dozent').value = session.dozent || '';
+      document.getElementById('edit-session-beschreibung').value = session.beschreibung || '';
+      
+      document.getElementById('editSessionModal').classList.add('show');
+      
+    } catch(e) {
+      showMsg('Fehler: ' + e.message, 'error');
+    }
+  };
+
+  window.closeEditSessionModal = () => {
+    document.getElementById('editSessionModal').classList.remove('show');
+  };
+
+  document.getElementById('editSessionForm').onsubmit = async (e) => {
+    e.preventDefault();
+    
+    try {
+      const sessionId = document.getElementById('edit-session-id').value;
+      const formData = new FormData(e.target);
+      
+      await pb.collection('training_sessions').update(sessionId, {
+        date: formData.get('date'),
+        start_time: formData.get('start_time'),
+        end_time: formData.get('end_time'),
+        location: formData.get('location').trim(),
+        dozent: formData.get('dozent').trim(),
+        beschreibung: formData.get('beschreibung').trim()
+      });
+      
+      showMsg('✅ Termin aktualisiert!');
+      closeEditSessionModal();
+      await loadCourses();
+      
+      if (currentViewCourseId) {
+        await viewSchulungDetails(currentViewCourseId);
+      }
+      
+    } catch(e) {
+      showMsg('Fehler: ' + e.message, 'error');
+    }
+  };
+
+  // ========================================
+  // TERMIN ABSAGEN / REAKTIVIEREN / LÖSCHEN
+  // ========================================
+  window.cancelSession = async (sessionId) => {
+    if (!confirm('Termin wirklich absagen?')) return;
+    
+    try {
+      await pb.collection('training_sessions').update(sessionId, {
+        status: 'abgesagt'
+      });
+      
+      showMsg('✅ Termin abgesagt!');
+      await loadCourses();
+      
+      if (currentViewCourseId) {
+        await viewSchulungDetails(currentViewCourseId);
+      }
+      
+    } catch(e) {
+      showMsg('Fehler: ' + e.message, 'error');
+    }
+  };
+
+  window.reactivateSession = async (sessionId) => {
+    try {
+      await pb.collection('training_sessions').update(sessionId, {
+        status: 'geplant'
+      });
+      
+      showMsg('✅ Termin reaktiviert!');
+      await loadCourses();
+      
+      if (currentViewCourseId) {
+        await viewSchulungDetails(currentViewCourseId);
+      }
+      
+    } catch(e) {
+      showMsg('Fehler: ' + e.message, 'error');
+    }
+  };
+
+  window.deleteSession = async (sessionId) => {
+    if (!confirm('Termin wirklich löschen?\n\nAlle Teilnehmer werden ebenfalls gelöscht!')) return;
+    
+    try {
+      const participants = await pb.collection('schulung_teilnahme').getFullList({
+        filter: `session_id = "${sessionId}"`
+      });
+      
+      for (const p of participants) {
+        await pb.collection('schulung_teilnahme').delete(p.id);
+      }
+      
+      await pb.collection('training_sessions').delete(sessionId);
+      
+      showMsg('✅ Termin gelöscht!');
+      await loadCourses();
+      
+      if (currentViewCourseId) {
+        await viewSchulungDetails(currentViewCourseId);
+      }
       
     } catch(e) {
       showMsg('Fehler: ' + e.message, 'error');
@@ -3104,8 +2968,32 @@
     }
   };
 
+  window.exportAllAccessPDFs = async () => {
+    if (allAccess.length === 0) {
+      showMsg('Keine Zugänge vorhanden', 'error');
+      return;
+    }
+    
+    if (!confirm(`${allAccess.length} PDFs erstellen? Das kann einen Moment dauern.`)) {
+      return;
+    }
+    
+    try {
+      showMsg(`📄 Erstelle ${allAccess.length} PDFs...`, 'info');
+      
+      for (let i = 0; i < allAccess.length; i++) {
+        await exportAccessPDF(allAccess[i].id);
+        await new Promise(resolve => setTimeout(resolve, 800));
+      }
+      
+      showMsg(`✅ Alle ${allAccess.length} PDFs erstellt!`);
+      
+    } catch(e) {
+      showMsg('Fehler beim Massen-Export: ' + e.message, 'error');
+    }
+  };
   // ========================================
-  // LERNBEREICH (VEREINFACHT)
+  // LERNBEREICH
   // ========================================
   async function loadLernbereich() {
     try {
@@ -3296,22 +3184,373 @@
     }
   };
 
-  // Weitere Lernbereich-Funktionen (Slide Editor, Preview, etc.) sind vereinfacht
-  // und können bei Bedarf ausgebaut werden
-  
-  window.openSlideEditor = () => {
-    showMsg('Folien-Editor in Entwicklung', 'info');
-  };
-  
-  window.previewModule = () => {
-    showMsg('Modul-Vorschau in Entwicklung', 'info');
-  };
-  
-  window.openAssignMembersModal = () => {
-    showMsg('Personen-Zuweisung in Entwicklung', 'info');
+  // ========================================
+  // FOLIEN-EDITOR (VEREINFACHT)
+  // ========================================
+  window.openSlideEditor = async (moduleId) => {
+    currentLearningModule = moduleId;
+    const module = await pb.collection('learning_modules').getOne(moduleId);
+    currentSlides = module.slides || [];
+    
+    document.getElementById('slideEditorTitle').innerHTML = 
+      `<i class="fa-solid fa-layer-group"></i> Folien bearbeiten: ${module.title}`;
+    
+    renderSlidesList();
+    document.getElementById('slideEditorModal').classList.add('show');
   };
 
-    // ========================================
+  window.closeSlideEditor = () => {
+    document.getElementById('slideEditorModal').classList.remove('show');
+    currentLearningModule = null;
+    currentSlides = [];
+  };
+
+  function renderSlidesList() {
+    const list = document.getElementById('slides-list');
+    
+    if (currentSlides.length === 0) {
+      list.innerHTML = '<div class="empty"><i class="fas fa-layer-group"></i><div>Noch keine Folien</div></div>';
+      return;
+    }
+    
+    list.innerHTML = currentSlides.map((slide, idx) => {
+      const icons = {
+        text: '📝',
+        image: '🖼️',
+        video: '🎥',
+        quiz: '❓'
+      };
+      
+      return `
+        <div class="slide-item">
+          <div style="display:flex;align-items:center;flex:1">
+            <div class="slide-type-icon ${slide.type}">${icons[slide.type] || '📄'}</div>
+            <div style="flex:1">
+              <div style="font-weight:700">${slide.title}</div>
+              <div style="font-size:0.85rem;color:var(--muted)">${slide.type} • ${slide.duration || 5} Min.</div>
+            </div>
+          </div>
+          <div style="display:flex;gap:4px">
+            <button class="btn btn-sm" onclick="deleteSlide(${idx})">
+              <i class="fas fa-trash"></i>
+            </button>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  window.openNewSlideModal = () => {
+    document.getElementById('newSlideForm').reset();
+    document.getElementById('slide-type').value = 'text';
+    updateSlideTypeFields();
+    
+    if (slideContentEditor) {
+      slideContentEditor.root.innerHTML = '';
+    } else {
+      setTimeout(() => {
+        slideContentEditor = new Quill('#slide-content-editor', {
+          theme: 'snow',
+          modules: {
+            toolbar: [
+              ['bold', 'italic', 'underline'],
+              [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+              ['link']
+            ]
+          }
+        });
+      }, 100);
+    }
+    
+    quizAnswers = [];
+    renderQuizAnswers();
+    
+    document.getElementById('newSlideModal').classList.add('show');
+  };
+
+  window.closeNewSlideModal = () => {
+    document.getElementById('newSlideModal').classList.remove('show');
+    currentEditSlide = null;
+  };
+
+  window.updateSlideTypeFields = () => {
+    const type = document.getElementById('slide-type').value;
+    
+    document.getElementById('text-slide-fields').style.display = type === 'text' ? 'block' : 'none';
+    document.getElementById('image-slide-fields').style.display = type === 'image' ? 'block' : 'none';
+    document.getElementById('video-slide-fields').style.display = type === 'video' ? 'block' : 'none';
+    document.getElementById('quiz-slide-fields').style.display = type === 'quiz' ? 'block' : 'none';
+  };
+
+  window.addQuizAnswer = () => {
+    quizAnswers.push({ text: '', correct: false });
+    renderQuizAnswers();
+  };
+
+  function renderQuizAnswers() {
+    const list = document.getElementById('quiz-answers-list');
+    
+    list.innerHTML = quizAnswers.map((answer, idx) => `
+      <div style="display:flex;gap:8px;margin-bottom:8px;align-items:center">
+        <input type="text" placeholder="Antwort ${idx + 1}" value="${answer.text}" 
+          onchange="quizAnswers[${idx}].text = this.value"
+          style="flex:1;padding:8px;border:1px solid var(--border);border-radius:6px">
+        <label style="display:flex;align-items:center;gap:4px;white-space:nowrap">
+          <input type="checkbox" ${answer.correct ? 'checked' : ''} 
+            onchange="quizAnswers[${idx}].correct = this.checked">
+          <span>Richtig</span>
+        </label>
+        <button type="button" class="btn btn-sm" onclick="removeQuizAnswer(${idx})">
+          <i class="fas fa-trash"></i>
+        </button>
+      </div>
+    `).join('');
+  }
+
+  window.removeQuizAnswer = (idx) => {
+    quizAnswers.splice(idx, 1);
+    renderQuizAnswers();
+  };
+
+  window.saveSlide = async () => {
+    try {
+      const type = document.getElementById('slide-type').value;
+      const title = document.getElementById('slide-title').value.trim();
+      const duration = parseInt(document.getElementById('slide-duration').value) || 5;
+      
+      if (!title) {
+        showMsg('Bitte Titel eingeben', 'error');
+        return;
+      }
+      
+      const slide = { type, title, duration };
+      
+      if (type === 'text') {
+        slide.content = slideContentEditor.root.innerHTML;
+      } else if (type === 'image') {
+        slide.image_url = document.getElementById('slide-image-url').value.trim();
+        slide.description = document.getElementById('slide-image-description').value.trim();
+      } else if (type === 'video') {
+        slide.video_url = document.getElementById('slide-video-url').value.trim();
+        slide.description = document.getElementById('slide-video-description').value.trim();
+      } else if (type === 'quiz') {
+        slide.question = document.getElementById('slide-quiz-question').value.trim();
+        slide.answers = quizAnswers;
+        slide.explanation = document.getElementById('slide-quiz-explanation').value.trim();
+        
+        if (!slide.question || quizAnswers.length === 0) {
+          showMsg('Bitte Frage und Antworten eingeben', 'error');
+          return;
+        }
+      }
+      
+      currentSlides.push(slide);
+      
+      await pb.collection('learning_modules').update(currentLearningModule, {
+        slides: currentSlides
+      });
+      
+      showMsg('✅ Folie gespeichert!');
+      closeNewSlideModal();
+      renderSlidesList();
+      
+    } catch(e) {
+      showMsg('Fehler: ' + e.message, 'error');
+    }
+  };
+
+  window.deleteSlide = async (idx) => {
+    if (!confirm('Folie wirklich löschen?')) return;
+    
+    try {
+      currentSlides.splice(idx, 1);
+      
+      await pb.collection('learning_modules').update(currentLearningModule, {
+        slides: currentSlides
+      });
+      
+      showMsg('✅ Folie gelöscht!');
+      renderSlidesList();
+      
+    } catch(e) {
+      showMsg('Fehler: ' + e.message, 'error');
+    }
+  };
+
+  // ========================================
+  // MODUL VORSCHAU (VEREINFACHT)
+  // ========================================
+  window.previewModule = async (moduleId) => {
+    try {
+      const module = await pb.collection('learning_modules').getOne(moduleId);
+      previewSlides = module.slides || [];
+      currentPreviewIndex = 0;
+      
+      document.getElementById('previewModuleTitle').innerHTML = 
+        `<i class="fa-solid fa-play"></i> Vorschau: ${module.title}`;
+      
+      renderPreviewSlide();
+      document.getElementById('modulePreviewModal').classList.add('show');
+      
+    } catch(e) {
+      showMsg('Fehler: ' + e.message, 'error');
+    }
+  };
+
+  window.closePreviewModal = () => {
+    document.getElementById('modulePreviewModal').classList.remove('show');
+    previewSlides = [];
+    currentPreviewIndex = 0;
+  };
+
+  function renderPreviewSlide() {
+    if (previewSlides.length === 0) {
+      document.getElementById('previewContent').innerHTML = '<div class="empty"><i class="fas fa-layer-group"></i><div>Keine Folien</div></div>';
+      return;
+    }
+    
+    const slide = previewSlides[currentPreviewIndex];
+    const content = document.getElementById('previewContent');
+    
+    let html = `<h3 style="color:var(--primary);margin-bottom:1rem">${slide.title}</h3>`;
+    
+    if (slide.type === 'text') {
+      html += `<div style="line-height:1.8">${slide.content}</div>`;
+    } else if (slide.type === 'image') {
+      html += `
+        <img src="${slide.image_url}" style="max-width:100%;border-radius:8px;margin-bottom:1rem" />
+        <p>${slide.description}</p>
+      `;
+    } else if (slide.type === 'video') {
+      html += `
+        <div style="margin-bottom:1rem">
+          <a href="${slide.video_url}" target="_blank" class="btn primary">
+            <i class="fas fa-play"></i> Video öffnen
+          </a>
+        </div>
+        <p>${slide.description}</p>
+      `;
+    } else if (slide.type === 'quiz') {
+      html += `
+        <p style="font-weight:700;font-size:1.1rem;margin-bottom:1rem">${slide.question}</p>
+        <div>
+      `;
+      
+      slide.answers.forEach((answer, idx) => {
+        html += `
+          <div style="padding:12px;margin-bottom:8px;border-radius:8px;border:2px solid var(--border);background:#f9fafb">
+            ${answer.text} ${answer.correct ? '<strong style="color:var(--success)">✓</strong>' : ''}
+          </div>
+        `;
+      });
+      
+      html += `</div>`;
+      
+      if (slide.explanation) {
+        html += `<p style="margin-top:1rem;padding:12px;background:#eff6ff;border-radius:8px">${slide.explanation}</p>`;
+      }
+    }
+    
+    content.innerHTML = html;
+    
+    document.getElementById('slideCounter').textContent = `${currentPreviewIndex + 1} / ${previewSlides.length}`;
+    document.getElementById('prevSlideBtn').disabled = currentPreviewIndex === 0;
+    document.getElementById('nextSlideBtn').disabled = currentPreviewIndex === previewSlides.length - 1;
+  }
+
+  window.prevPreviewSlide = () => {
+    if (currentPreviewIndex > 0) {
+      currentPreviewIndex--;
+      renderPreviewSlide();
+    }
+  };
+
+  window.nextPreviewSlide = () => {
+    if (currentPreviewIndex < previewSlides.length - 1) {
+      currentPreviewIndex++;
+      renderPreviewSlide();
+    }
+  };
+
+  // ========================================
+  // PERSONEN ZUWEISEN
+  // ========================================
+  window.openAssignMembersModal = async (moduleId) => {
+    try {
+      currentLearningModule = moduleId;
+      
+      const assignments = await pb.collection('module_assignments').getFullList({
+        filter: `module_id = "${moduleId}"`
+      });
+      
+      selectedAssignments = assignments.map(a => a.member_id);
+      
+      const list = document.getElementById('assignMembersList');
+      list.innerHTML = allMembers.map(member => {
+        const isAssigned = selectedAssignments.includes(member.id);
+        
+        return `
+          <div style="padding:.75rem;border-bottom:1px solid var(--border)">
+            <label style="display:flex;align-items:center;gap:.75rem;cursor:pointer">
+              <input type="checkbox" ${isAssigned ? 'checked' : ''} 
+                onchange="toggleAssignment('${member.id}')">
+              <div style="flex:1">
+                <div style="font-weight:700">${member.vorname} ${member.name}</div>
+                <div style="font-size:.85rem;color:var(--muted)">${(member.qualifikationen || []).join(', ')}</div>
+              </div>
+            </label>
+          </div>
+        `;
+      }).join('');
+      
+      document.getElementById('assignMembersModal').classList.add('show');
+      
+    } catch(e) {
+      showMsg('Fehler: ' + e.message, 'error');
+    }
+  };
+
+  window.closeAssignMembersModal = () => {
+    document.getElementById('assignMembersModal').classList.remove('show');
+    selectedAssignments = [];
+  };
+
+  window.toggleAssignment = (memberId) => {
+    const idx = selectedAssignments.indexOf(memberId);
+    if (idx >= 0) {
+      selectedAssignments.splice(idx, 1);
+    } else {
+      selectedAssignments.push(memberId);
+    }
+  };
+
+  window.saveAssignments = async () => {
+    try {
+      const existing = await pb.collection('module_assignments').getFullList({
+        filter: `module_id = "${currentLearningModule}"`
+      });
+      
+      for (const assignment of existing) {
+        await pb.collection('module_assignments').delete(assignment.id);
+      }
+      
+      for (const memberId of selectedAssignments) {
+        await pb.collection('module_assignments').create({
+          module_id: currentLearningModule,
+          member_id: memberId,
+          organization_id: currentUser.organization_id
+        });
+      }
+      
+      showMsg('✅ Zuweisungen gespeichert!');
+      closeAssignMembersModal();
+      
+    } catch(e) {
+      showMsg('Fehler: ' + e.message, 'error');
+    }
+  };
+
+  // ========================================
   // INIT
   // ========================================
   (async () => {
