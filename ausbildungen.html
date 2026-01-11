@@ -462,470 +462,613 @@
     </div>
   </div>
 </header>
-<!DOCTYPE html>
-<html lang="de">
-<head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Ausbildungen – Responda</title>
-  <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet"/>
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
+<!-- MAIN CONTENT -->
+<div class="wrap">
   
-  <!-- Quill Rich Text Editor -->
-  <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
-  <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
-  
-  <!-- QR Code Generator -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-  
-  <script src="https://cdn.jsdelivr.net/npm/pocketbase@0.21.3/dist/pocketbase.umd.js"></script>
+  <!-- TABS -->
+  <div class="tabs">
+    <button class="tab active" data-tab="schulungen">
+      <i class="fa-solid fa-book-medical"></i> Schulungen
+    </button>
+    <button class="tab" data-tab="team">
+      <i class="fa-solid fa-users"></i> Team
+    </button>
+    <button class="tab" data-tab="lernbereich">
+      <i class="fa-solid fa-laptop"></i> Lernbereich
+    </button>
+    <button class="tab" data-tab="settings">
+      <i class="fa-solid fa-cog"></i> Einstellungen
+    </button>
+  </div>
 
-  <style>
-    :root{
-      --primary:#c8102e;
-      --primary-light:#fee2e2;
-      --success:#16a34a;
-      --warning:#f59e0b;
-      --info:#3b82f6;
-      --bg:#f8fafc;
-      --card:#fff;
-      --text:#0f172a;
-      --muted:#64748b;
-      --border:#e2e8f0;
-      --gradient-start:#667eea;
-      --gradient-end:#764ba2;
-    }
-    *{box-sizing:border-box}
-    body{
-      margin:0;
-      background:linear-gradient(135deg, var(--gradient-start) 0%, var(--gradient-end) 100%);
-      min-height:100vh;
-      color:var(--text);
-      font-family:'Atkinson Hyperlegible',-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
-      line-height:1.45;
-      opacity:0;
-      transition:opacity 0.3s;
-      padding-bottom:80px;
-    }
-    body.loaded{opacity:1}
-    
-    header{position:sticky;top:0;background:var(--gradient-start);color:#fff;z-index:10;box-shadow:0 2px 8px rgba(0,0,0,.1)}
-    .bar{
-      max-width:1400px;
-      margin:0 auto;
-      padding:.75rem 1rem;
-      display:flex;
-      gap:.5rem;
-      align-items:center;
-      flex-wrap:wrap;
-    }
-    h1{font-size:1.05rem;margin:0;font-weight:800}
-    .toolbar{margin-left:auto;display:flex;gap:.5rem;flex-wrap:wrap}
-    .topbtn{
-      background:rgba(255,255,255,0.1);
-      color:#fff;
-      padding:.45rem .7rem;
-      border-radius:.5rem;
-      cursor:pointer;
-      font-weight:700;
-      font-size:.9rem;
-      transition:all 0.2s;
-      text-decoration:none;
-      display:inline-flex;
-      align-items:center;
-      gap:6px;
-      border:none;
-      font-family:inherit;
-    }
-    .topbtn:hover{background:rgba(255,255,255,0.2)}
-    
-    .wrap{max-width:1400px;margin:1.5rem auto;padding:0 1rem}
-    
-    .tabs{
-      display:flex;
-      gap:.5rem;
-      margin-bottom:1.5rem;
-      background:#fff;
-      padding:.5rem;
-      border-radius:.75rem;
-      box-shadow:0 2px 8px rgba(0,0,0,.05);
-      overflow-x:auto;
-    }
-    .tab{
-      padding:.6rem 1.25rem;
-      border-radius:.5rem;
-      cursor:pointer;
-      font-weight:700;
-      transition:all 0.2s;
-      white-space:nowrap;
-      border:none;
-      background:transparent;
-      color:var(--muted);
-      font-family:inherit;
-      font-size:.9rem;
-    }
-    .tab:hover{background:#f9fafb;color:var(--text)}
-    .tab.active{background:var(--primary);color:#fff}
-    
-    .actions{
-      display:flex;
-      gap:.5rem;
-      margin-bottom:1rem;
-      flex-wrap:wrap;
-    }
-    .btn{
-      background:#fff;
-      color:var(--text);
-      padding:.6rem 1rem;
-      border-radius:.5rem;
-      cursor:pointer;
-      font-weight:700;
-      transition:all 0.2s;
-      font-family:inherit;
-      border:1px solid var(--border);
-      display:inline-flex;
-      align-items:center;
-      gap:.5rem;
-      font-size:.9rem;
-    }
-    .btn:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,.1)}
-    .btn.primary{background:var(--primary);color:#fff;border-color:var(--primary)}
-    .btn.primary:hover{background:#a80d25}
-    .btn.success{background:var(--success);color:#fff;border-color:var(--success)}
-    .btn.info{background:var(--info);color:#fff;border-color:var(--info)}
-    .btn.warning{background:var(--warning);color:#fff;border-color:var(--warning)}
-    .btn:disabled{opacity:0.5;cursor:not-allowed;transform:none}
-    .btn-sm{padding:.4rem .7rem;font-size:.85rem}
-    
-    .grid{
-      display:grid;
-      grid-template-columns:repeat(auto-fill,minmax(280px,1fr));
-      gap:16px;
-    }
-    
-    .course-card, .member-card, .module-card{
-      background:#fff;
-      border-radius:.75rem;
-      padding:1.5rem;
-      box-shadow:0 2px 8px rgba(0,0,0,.05);
-      transition:all 0.2s;
-      border:2px solid transparent;
-      cursor:pointer;
-    }
-    .course-card:hover, .member-card:hover, .module-card:hover{
-      transform:translateY(-4px);
-      box-shadow:0 8px 20px rgba(0,0,0,.12);
-      border-color:var(--primary-light);
-    }
-    
-    .card-title{
-      font-weight:800;
-      font-size:1.2rem;
-      margin-bottom:.5rem;
-      color:var(--text);
-    }
-    .card-meta{
-      font-size:.85rem;
-      color:var(--muted);
-      margin-bottom:.5rem;
-      display:flex;
-      gap:.5rem;
-      flex-wrap:wrap;
-      align-items:center;
-    }
-    
-    .badge{
-      padding:.25rem .6rem;
-      border-radius:999px;
-      font-size:.75rem;
-      font-weight:700;
-      white-space:nowrap;
-    }
-    .badge.online{background:#dbeafe;color:#1e40af}
-    .badge.präsenz{background:#fef3c7;color:#92400e}
-    .badge.hybrid{background:#e0e7ff;color:#4338ca}
-    .badge.geplant{background:#e0e7ff;color:#4338ca}
-    .badge.läuft{background:#dcfce7;color:#166534}
-    .badge.abgeschlossen{background:#f3f4f6;color:#4b5563}
-    .badge.abgesagt{background:#fee2e2;color:#991b1b}
-    .badge.anwesend{background:#dcfce7;color:#166534}
-    .badge.abwesend{background:#fee2e2;color:#991b1b}
-    .badge.zugesagt{background:#dcfce7;color:#166534}
-    .badge.eingeladen{background:#e0e7ff;color:#4338ca}
-    .badge.info{background:#dbeafe;color:#1e40af}
-    .badge.warning{background:#fef3c7;color:#92400e}
-    
-    .tag{background:#fee;color:var(--primary);padding:4px 10px;border-radius:999px;font-size:0.8rem;font-weight:700;display:inline-block;margin:2px}
-    
-    .modal{
-      position:fixed;
-      inset:0;
-      background:rgba(0,0,0,.6);
-      display:none;
-      align-items:center;
-      justify-content:center;
-      z-index:1000;
-      padding:20px;
-      overflow-y:auto;
-    }
-    .modal.show{display:flex}
-    .modal-box{
-      background:#fff;
-      border-radius:14px;
-      max-width:1000px;
-      width:100%;
-      max-height:85vh;
-      overflow-y:auto;
-      padding:24px;
-      box-shadow:0 8px 20px rgba(0,0,0,.3);
-      margin:auto;
-    }
-    .modal-box h3{margin:0 0 1rem 0;color:var(--primary);font-weight:800}
-    
-    .form-grid{display:grid;gap:1rem;grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
-    .form-group{display:flex;flex-direction:column;gap:6px}
-    .form-group label{font-weight:700;font-size:.9rem;color:#374151}
-    .form-group input,
-    .form-group textarea,
-    .form-group select{
-      padding:.6rem;
-      border:1px solid var(--border);
-      border-radius:.5rem;
-      background:#fff;
-      font-size:16px;
-      font-family:inherit;
-      width:100%;
-    }
-    .form-group input:focus,
-    .form-group textarea:focus,
-    .form-group select:focus{
-      outline:none;
-      border-color:var(--primary);
-      box-shadow:0 0 0 3px rgba(200,16,46,0.1);
-    }
-    
-    .tag-input-wrapper{
-      display:flex;
-      gap:8px;
-      flex-wrap:wrap;
-      padding:8px;
-      border:1px solid #d1d5db;
-      border-radius:8px;
-      min-height:44px;
-      align-items:center;
-      background:#fff;
-    }
-    .tag-input-wrapper:focus-within{
-      border-color:var(--primary);
-      box-shadow:0 0 0 3px rgba(200,16,46,0.1);
-    }
-    .tag-input-wrapper .tag{display:flex;align-items:center;gap:4px}
-    .tag-input-wrapper .tag .remove-tag{cursor:pointer;font-weight:bold;margin-left:4px}
-    .tag-input-wrapper input{border:none;outline:none;flex:1;min-width:100px;font-size:16px;padding:4px}
-    
-    .table{
-      width:100%;
-      border-collapse:collapse;
-      background:#fff;
-      border-radius:.75rem;
-      overflow:hidden;
-      box-shadow:0 2px 8px rgba(0,0,0,.05);
-    }
-    .table th,
-    .table td{
-      padding:.75rem 1rem;
-      text-align:left;
-      border-bottom:1px solid var(--border);
-    }
-    .table th{
-      background:#f9fafb;
-      font-weight:700;
-      font-size:.9rem;
-    }
-    .table tr:hover{background:#f9fafb}
-    .table tr:last-child td{border-bottom:none}
-    
-    .ql-container{
-      font-family:'Atkinson Hyperlegible',-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
-      font-size:1rem;
-      min-height:200px;
-      max-height:300px;
-    }
-    .ql-editor{
-      min-height:200px;
-      max-height:300px;
-      overflow-y:auto;
-    }
-    
-    .access-code-box{
-      background:#f9fafb;
-      padding:1.5rem;
-      border-radius:.75rem;
-      border:2px dashed var(--primary);
-      text-align:center;
-    }
-    .access-code{
-      font-size:2rem;
-      font-weight:800;
-      font-family:monospace;
-      color:var(--primary);
-      margin:1rem 0;
-    }
-    
-    .copy-box{
-      background:#f9fafb;
-      padding:.75rem;
-      border-radius:.5rem;
-      border:1px solid var(--border);
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-      gap:.5rem;
-      font-family:monospace;
-      font-size:.85rem;
-    }
-    
-    .slide-item{
-      background:#f9fafb;
-      padding:1rem;
-      border-radius:.5rem;
-      border-left:4px solid var(--primary);
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-      cursor:move;
-      transition:all 0.2s;
-      margin-bottom:.75rem;
-    }
-    .slide-item:hover{
-      background:#f3f4f6;
-      transform:translateX(4px);
-    }
-    
-    .slide-type-icon{
-      width:40px;
-      height:40px;
-      border-radius:.5rem;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      margin-right:1rem;
-      font-size:1.2rem;
-    }
-    .slide-type-icon.text{background:#dbeafe;color:#1e40af}
-    .slide-type-icon.image{background:#dcfce7;color:#166534}
-    .slide-type-icon.video{background:#fef3c7;color:#92400e}
-    .slide-type-icon.quiz{background:#fee2e2;color:#991b1b}
-    
-    .progress-bar{
-      width:100%;
-      height:8px;
-      background:#e5e7eb;
-      border-radius:999px;
-      overflow:hidden;
-      margin:.5rem 0;
-    }
-    .progress-bar-fill{
-      height:100%;
-      background:var(--success);
-      transition:width 0.3s;
-    }
-    
-    .status-icon{
-      display:inline-flex;
-      align-items:center;
-      justify-content:center;
-      width:24px;
-      height:24px;
-      border-radius:50%;
-      font-size:.85rem;
-    }
-    .status-icon.completed{background:#dcfce7;color:#166534}
-    .status-icon.progress{background:#fef3c7;color:#92400e}
-    .status-icon.failed{background:#fee2e2;color:#991b1b}
-    .status-icon.pending{background:#e5e7eb;color:#6b7280}
-    
-    .empty{
-      text-align:center;
-      padding:3rem 1rem;
-      color:var(--muted);
-    }
-    .empty i{font-size:4rem;margin-bottom:1rem;opacity:0.3}
-    
-    .msg{
-      position: fixed;
-      top: 2rem;
-      right: 2rem;
-      padding: 1rem 1.5rem;
-      border-radius: 8px;
-      font-weight: 600;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.15);
-      z-index: 10000;
-      animation: slideInFromRight 0.3s ease-out;
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-    }
-    .msg.error{background:#fee;color:#c00;border:1px solid #fcc}
-    .msg.success{background:#efe;color:#060;border:1px solid #cfc}
-    .msg.info{background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe}
-    
-    @keyframes slideInFromRight {
-      from { 
-        opacity: 0; 
-        transform: translateX(100%); 
-      }
-      to { 
-        opacity: 1; 
-        transform: translateX(0); 
-      }
-    }
-    
-    .details-section{
-      margin:20px 0;
-      padding:16px;
-      background:#f9fafb;
-      border-radius:8px;
-    }
-    .details-section h4{
-      margin:0 0 12px 0;
-      color:var(--primary);
-      font-size:1rem;
-    }
-    
-    @media (max-width:768px){
-      .bar{flex-direction:column;align-items:stretch}
-      h1{font-size:1rem}
-      .toolbar{margin-left:0;width:100%;justify-content:space-between}
-      .topbtn{flex:1;justify-content:center}
-      .tabs{padding:.25rem}
-      .tab{padding:.5rem 1rem;font-size:.85rem}
-      .grid{grid-template-columns:1fr}
-      .actions{flex-direction:column}
-      .btn{width:100%;justify-content:center}
-      .table{font-size:.85rem}
-      .table th,.table td{padding:.5rem}
-      .form-grid{grid-template-columns:1fr}
-    }
-  </style>
-</head>
+  <!-- TAB: SCHULUNGEN -->
+  <div class="tab-content" id="tab-schulungen">
+    <div class="actions">
+      <button class="btn primary" onclick="openSchulungModal()">
+        <i class="fas fa-plus"></i> Neue Schulung
+      </button>
+    </div>
+    <div class="grid" id="schulungen-list"></div>
+  </div>
 
-<body>
+  <!-- TAB: TEAM -->
+  <div class="tab-content" id="tab-team" style="display:none">
+    <div class="actions">
+      <button class="btn primary" onclick="openMemberModal()">
+        <i class="fas fa-user-plus"></i> Neues Mitglied
+      </button>
+      <button class="btn success" onclick="exportAllMembersStats()">
+        <i class="fas fa-file-pdf"></i> Team-Statistik PDF
+      </button>
+    </div>
+    <div class="grid" id="team-list"></div>
+  </div>
 
-<!-- HEADER -->
-<header>
-  <div class="bar">
-    <h1><i class="fa-solid fa-graduation-cap"></i> Ausbildungen</h1>
-    <div class="toolbar">
-      <a class="topbtn" href="mpg-dashboard.html">
-        <i class="fa-solid fa-dashboard"></i> Dashboard
-      </a>
-      <button class="topbtn" id="logout">
-        <i class="fa-solid fa-right-from-bracket"></i> Logout
+  <!-- TAB: LERNBEREICH -->
+  <div class="tab-content" id="tab-lernbereich" style="display:none">
+    <div class="actions">
+      <button class="btn primary" onclick="openModuleModal()">
+        <i class="fas fa-plus"></i> Neues Lernmodul
+      </button>
+    </div>
+    <div class="grid" id="lernbereich-list"></div>
+  </div>
+
+  <!-- TAB: EINSTELLUNGEN -->
+  <div class="tab-content" id="tab-settings" style="display:none">
+    
+    <!-- Pflicht-Schulungen -->
+    <div style="background:#fff;border-radius:.75rem;padding:1.5rem;margin-bottom:1.5rem;box-shadow:0 2px 8px rgba(0,0,0,.05)">
+      <h3 style="margin:0 0 1rem 0;color:var(--primary)">
+        <i class="fa-solid fa-graduation-cap"></i> Pflicht-Schulungen pro Jahr
+      </h3>
+      <form id="pflichtForm">
+        <div style="display:flex;gap:1rem;align-items:end;flex-wrap:wrap">
+          <div class="form-group" style="flex:1;min-width:200px">
+            <label>Anzahl Pflicht-Schulungen</label>
+            <input type="number" id="pflicht_schulungen" min="0" max="50" value="12">
+          </div>
+          <button type="submit" class="btn primary">
+            <i class="fas fa-save"></i> Speichern
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Zugänge -->
+    <div style="background:#fff;border-radius:.75rem;padding:1.5rem;box-shadow:0 2px 8px rgba(0,0,0,.05)">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:1rem">
+        <h3 style="margin:0;color:var(--primary)">
+          <i class="fa-solid fa-key"></i> Externe Zugänge
+        </h3>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn primary" onclick="openSingleAccessModal()">
+            <i class="fas fa-plus"></i> Einzelner Zugang
+          </button>
+          <button class="btn primary" onclick="openBulkAccessModal()">
+            <i class="fas fa-users"></i> Mehrere Zugänge
+          </button>
+          <button class="btn success" onclick="exportAccessCodes()">
+            <i class="fas fa-file-csv"></i> CSV Export
+          </button>
+          <button class="btn success" onclick="exportAllAccessPDFs()">
+            <i class="fas fa-file-pdf"></i> Alle PDFs
+          </button>
+        </div>
+      </div>
+      <div id="access-list"></div>
+    </div>
+
+  </div>
+
+</div>
+
+<!-- Modal: Neue Schulung -->
+<div class="modal" id="schulungModal">
+  <div class="modal-box">
+    <h3 id="schulungModalTitle"><i class="fa-solid fa-book-medical"></i> Neue Schulung erstellen</h3>
+    <form id="schulungForm">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Titel *</label>
+          <input type="text" name="title" required>
+        </div>
+        <div class="form-group">
+          <label>Dozent/in</label>
+          <input type="text" name="instructor">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Beschreibung</label>
+        <textarea name="description" rows="3"></textarea>
+      </div>
+      
+      <h4 style="margin:1.5rem 0 1rem 0;color:var(--primary)">
+        <i class="fa-solid fa-calendar"></i> Erster Termin
+      </h4>
+      
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Datum *</label>
+          <input type="date" name="date" required>
+        </div>
+        <div class="form-group">
+          <label>Startzeit</label>
+          <input type="time" name="start_time">
+        </div>
+        <div class="form-group">
+          <label>Endzeit</label>
+          <input type="time" name="end_time">
+        </div>
+        <div class="form-group">
+          <label>Ort</label>
+          <input type="text" name="location">
+        </div>
+      </div>
+      
+      <div class="form-group">
+        <label>Teilnehmer einladen</label>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button type="button" class="btn" onclick="openParticipantSelector()">
+            <i class="fas fa-users"></i> Teilnehmer auswählen
+          </button>
+          <span id="selected-count" style="color:var(--muted);font-weight:700">0 ausgewählt</span>
+        </div>
+      </div>
+      
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
+        <button type="button" class="btn" onclick="closeSchulungModal()">Abbrechen</button>
+        <button type="submit" class="btn primary"><i class="fa-solid fa-save"></i> Schulung erstellen</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal: Teilnehmer auswählen -->
+<div class="modal" id="participantModal">
+  <div class="modal-box" style="max-width:600px">
+    <h3><i class="fa-solid fa-users"></i> Teilnehmer auswählen</h3>
+    <div id="participantList" style="max-height:400px;overflow-y:auto"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
+      <button class="btn primary" onclick="closeParticipantModal()">
+        <i class="fa-solid fa-check"></i> Fertig
       </button>
     </div>
   </div>
-</header>
+</div>
+
+<!-- Modal: Schulungs-Details -->
+<div class="modal" id="schulungDetailsModal">
+  <div class="modal-box" style="max-width:1200px">
+    <h3 id="schulungDetailsTitle">Schulung</h3>
+    <div id="schulungDetailsBody"></div>
+  </div>
+</div>
+
+<!-- Modal: Weiteren Termin hinzufügen -->
+<div class="modal" id="addSessionModal">
+  <div class="modal-box">
+    <h3><i class="fa-solid fa-calendar-plus"></i> Weiteren Termin hinzufügen</h3>
+    <form id="addSessionForm">
+      <input type="hidden" id="add-session-course-id">
+      
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Datum *</label>
+          <input type="date" name="date" required>
+        </div>
+        <div class="form-group">
+          <label>Startzeit</label>
+          <input type="time" name="start_time">
+        </div>
+        <div class="form-group">
+          <label>Endzeit</label>
+          <input type="time" name="end_time">
+        </div>
+        <div class="form-group">
+          <label>Ort</label>
+          <input type="text" name="location">
+        </div>
+      </div>
+      
+      <div class="form-group">
+        <label>Dozent/in</label>
+        <input type="text" name="dozent">
+      </div>
+      
+      <div class="form-group">
+        <label>Beschreibung</label>
+        <textarea name="beschreibung" rows="3"></textarea>
+      </div>
+      
+      <div class="form-group">
+        <label>Teilnehmer einladen</label>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button type="button" class="btn" onclick="openParticipantSelectorForAdd()">
+            <i class="fas fa-users"></i> Teilnehmer auswählen
+          </button>
+          <span id="add-selected-count" style="color:var(--muted);font-weight:700">0 ausgewählt</span>
+        </div>
+      </div>
+      
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
+        <button type="button" class="btn" onclick="closeAddSessionModal()">Abbrechen</button>
+        <button type="submit" class="btn primary"><i class="fa-solid fa-save"></i> Termin hinzufügen</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal: Termin bearbeiten -->
+<div class="modal" id="editSessionModal">
+  <div class="modal-box">
+    <h3><i class="fa-solid fa-edit"></i> Termin bearbeiten</h3>
+    <form id="editSessionForm">
+      <input type="hidden" id="edit-session-id">
+      
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Datum *</label>
+          <input type="date" id="edit-session-date" name="date" required>
+        </div>
+        <div class="form-group">
+          <label>Startzeit</label>
+          <input type="time" id="edit-session-start" name="start_time">
+        </div>
+        <div class="form-group">
+          <label>Endzeit</label>
+          <input type="time" id="edit-session-end" name="end_time">
+        </div>
+        <div class="form-group">
+          <label>Ort</label>
+          <input type="text" id="edit-session-location" name="location">
+        </div>
+      </div>
+      
+      <div class="form-group">
+        <label>Dozent/in</label>
+        <input type="text" id="edit-session-dozent" name="dozent">
+      </div>
+      
+      <div class="form-group">
+        <label>Beschreibung</label>
+        <textarea id="edit-session-beschreibung" name="beschreibung" rows="3"></textarea>
+      </div>
+      
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
+        <button type="button" class="btn" onclick="closeEditSessionModal()">Abbrechen</button>
+        <button type="submit" class="btn primary"><i class="fa-solid fa-save"></i> Speichern</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal: Termin-Details -->
+<div class="modal" id="sessionDetailsModal">
+  <div class="modal-box" style="max-width:1000px">
+    <h3 id="sessionDetailsTitle">Termin-Details</h3>
+    <div id="sessionDetailsBody"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
+      <button class="btn" onclick="closeSessionDetailsModal()">Schließen</button>
+      <button class="btn success" onclick="saveAttendance()">
+        <i class="fas fa-save"></i> Anwesenheit speichern
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Neues Team-Mitglied -->
+<div class="modal" id="memberModal">
+  <div class="modal-box">
+    <h3 id="memberModalTitle"><i class="fa-solid fa-user-plus"></i> Neues Team-Mitglied</h3>
+    <form id="memberForm">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Vorname *</label>
+          <input type="text" name="vorname" required>
+        </div>
+        <div class="form-group">
+          <label>Nachname *</label>
+          <input type="text" name="name" required>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Qualifikationen</label>
+        <div class="tag-input-wrapper" id="tagInputWrapper">
+          <input type="text" id="tagInput" placeholder="Enter drücken zum Hinzufügen">
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
+        <button type="button" class="btn" onclick="closeMemberModal()">Abbrechen</button>
+        <button type="submit" class="btn primary"><i class="fa-solid fa-save"></i> Speichern</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal: Member Details -->
+<div class="modal" id="memberDetailsModal">
+  <div class="modal-box" style="max-width:1000px">
+    <h3 id="memberDetailsTitle">Team-Mitglied</h3>
+    <div id="memberDetailsBody"></div>
+  </div>
+</div>
+
+<!-- Modal: Zugang für Mitglied erstellen -->
+<div class="modal" id="createAccessForMemberModal">
+  <div class="modal-box" style="max-width:600px">
+    <h3><i class="fa-solid fa-key"></i> Zugang erstellen</h3>
+    <p style="margin-bottom:1rem">Erstelle einen Zugang für: <strong id="access-member-name"></strong></p>
+    
+    <div class="access-code-box">
+      <div style="font-size:.9rem;color:var(--muted);margin-bottom:.5rem">Generierter Zugangscode:</div>
+      <div class="access-code" id="member-access-code">wort.wort.wort</div>
+      <button class="btn btn-sm" onclick="generateMemberAccessCode()">
+        <i class="fas fa-sync"></i> Neuen Code generieren
+      </button>
+    </div>
+    
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
+      <button class="btn" onclick="closeCreateAccessForMemberModal()">Abbrechen</button>
+      <button class="btn primary" onclick="saveAccessForMember()">
+        <i class="fa-solid fa-save"></i> Zugang erstellen
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Einzelner Zugang -->
+<div class="modal" id="singleAccessModal">
+  <div class="modal-box" style="max-width:600px">
+    <h3><i class="fa-solid fa-key"></i> Einzelnen Zugang erstellen</h3>
+    
+    <div class="access-code-box" style="margin-bottom:1rem">
+      <div style="font-size:.9rem;color:var(--muted);margin-bottom:.5rem">Generierter Zugangscode:</div>
+      <div class="access-code" id="preview-code">wort.wort.wort</div>
+      <button class="btn btn-sm" onclick="generatePreviewCode()">
+        <i class="fas fa-sync"></i> Neuen Code generieren
+      </button>
+    </div>
+    
+    <form id="singleAccessForm">
+      <div class="form-group">
+        <label>Name der Person *</label>
+        <input type="text" name="name" required placeholder="z.B. Max Mustermann">
+      </div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
+        <button type="button" class="btn" onclick="closeSingleAccessModal()">Abbrechen</button>
+        <button type="submit" class="btn primary"><i class="fa-solid fa-save"></i> Zugang erstellen</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal: Mehrere Zugänge -->
+<div class="modal" id="bulkAccessModal">
+  <div class="modal-box" style="max-width:700px">
+    <h3><i class="fa-solid fa-users"></i> Mehrere Zugänge erstellen</h3>
+    <p style="color:var(--muted);margin-bottom:1rem">Für jeden Namen wird automatisch ein 3-Wort-Code generiert.</p>
+    
+    <form id="bulkAccessForm">
+      <div id="bulkAccessList"></div>
+      
+      <button type="button" class="btn btn-sm" onclick="addBulkAccessRow()" style="margin-top:8px">
+        <i class="fas fa-plus"></i> Weitere Person
+      </button>
+      
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
+        <button type="button" class="btn" onclick="closeBulkAccessModal()">Abbrechen</button>
+        <button type="submit" class="btn primary"><i class="fa-solid fa-save"></i> Alle Zugänge erstellen</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal: Neues Lernmodul -->
+<div class="modal" id="moduleModal">
+  <div class="modal-box">
+    <h3 id="moduleModalTitle"><i class="fa-solid fa-laptop"></i> Neues Lernmodul</h3>
+    <form id="moduleForm">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Titel *</label>
+          <input type="text" name="title" required>
+        </div>
+        <div class="form-group">
+          <label>Dozent</label>
+          <input type="text" name="instructor">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Beschreibung</label>
+        <textarea name="description" rows="3"></textarea>
+      </div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Bestehensgrenze (%)</label>
+          <input type="number" name="passing_score" value="80" min="0" max="100">
+        </div>
+        <div class="form-group">
+          <label>Max. Versuche</label>
+          <input type="number" name="max_attempts" value="3" min="0">
+          <small style="color:var(--muted);font-size:.85rem">0 = unbegrenzt</small>
+        </div>
+      </div>
+      <div class="form-group">
+        <label style="display:flex;align-items:center;gap:.5rem">
+          <input type="checkbox" name="require_quiz" id="require-quiz">
+          <span>Abschlussprüfung erforderlich</span>
+        </label>
+      </div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
+        <button type="button" class="btn" onclick="closeModuleModal()">Abbrechen</button>
+        <button type="submit" class="btn primary"><i class="fa-solid fa-save"></i> Speichern</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal: Lernmodul Details -->
+<div class="modal" id="moduleDetailsModal">
+  <div class="modal-box">
+    <h3 id="moduleDetailsTitle">Lernmodul</h3>
+    <div id="moduleDetailsBody"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
+      <button class="btn" onclick="closeModuleDetailsModal()">Schließen</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Folien-Editor -->
+<div class="modal" id="slideEditorModal">
+  <div class="modal-box" style="max-height:90vh;display:flex;flex-direction:column">
+    <h3 id="slideEditorTitle">Folien bearbeiten</h3>
+    
+    <div class="msg info" style="margin-bottom:1rem;position:relative;animation:none">
+      <i class="fas fa-info-circle"></i> Erstelle interaktive Lernfolien für dein Modul
+    </div>
+    
+    <div style="margin-bottom:1rem">
+      <button class="btn primary" onclick="openNewSlideModal()">
+        <i class="fas fa-plus"></i> Neue Folie
+      </button>
+    </div>
+    
+    <div id="slides-list" style="flex:1;overflow-y:auto;margin-bottom:1rem"></div>
+    
+    <div style="display:flex;gap:.5rem;justify-content:flex-end;padding-top:1rem;border-top:1px solid var(--border)">
+      <button class="btn" onclick="closeSlideEditor()">Schließen</button>
+      <button class="btn success" onclick="previewModule(currentLearningModule)">
+        <i class="fas fa-play"></i> Vorschau
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Neue Folie -->
+<div class="modal" id="newSlideModal">
+  <div class="modal-box" style="max-height:85vh;display:flex;flex-direction:column">
+    <h3>Neue Folie</h3>
+    
+    <div style="flex:1;overflow-y:auto;padding-right:1rem">
+      <form id="newSlideForm">
+        <div class="form-group">
+          <label>Folientyp *</label>
+          <select id="slide-type" onchange="updateSlideTypeFields()">
+            <option value="text">📝 Text-Folie</option>
+            <option value="image">🖼️ Bild-Folie</option>
+            <option value="video">🎥 Video-Folie</option>
+            <option value="quiz">❓ Quiz-Folie</option>
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label>Titel *</label>
+          <input type="text" id="slide-title" placeholder="z.B. Einführung" required>
+        </div>
+        
+        <div class="form-group">
+          <label>Geschätzte Dauer (Minuten)</label>
+          <input type="number" id="slide-duration" value="5" min="1">
+        </div>
+        
+        <!-- Text Slide -->
+        <div id="text-slide-fields" class="form-group">
+          <label>Inhalt</label>
+          <div id="slide-content-editor" style="height:250px"></div>
+        </div>
+        
+        <!-- Image Slide -->
+        <div id="image-slide-fields" style="display:none">
+          <div class="form-group">
+            <label>Bild-URL</label>
+            <input type="text" id="slide-image-url" placeholder="https://...">
+          </div>
+          <div class="form-group">
+            <label>Bildbeschreibung</label>
+            <textarea id="slide-image-description" rows="3"></textarea>
+          </div>
+        </div>
+        
+        <!-- Video Slide -->
+        <div id="video-slide-fields" style="display:none">
+          <div class="form-group">
+            <label>Video-URL (YouTube/Vimeo)</label>
+            <input type="text" id="slide-video-url" placeholder="https://www.youtube.com/watch?v=...">
+          </div>
+          <div class="form-group">
+            <label>Video-Beschreibung</label>
+            <textarea id="slide-video-description" rows="3"></textarea>
+          </div>
+        </div>
+        
+        <!-- Quiz Slide -->
+        <div id="quiz-slide-fields" style="display:none">
+          <div class="form-group">
+            <label>Frage *</label>
+            <input type="text" id="slide-quiz-question" placeholder="Frage eingeben">
+          </div>
+          <div class="form-group">
+            <label>Antwortmöglichkeiten</label>
+            <div id="quiz-answers-list"></div>
+            <button type="button" class="btn btn-sm" onclick="addQuizAnswer()">
+              <i class="fas fa-plus"></i> Antwort hinzufügen
+            </button>
+          </div>
+          <div class="form-group">
+            <label>Erklärung</label>
+            <textarea id="slide-quiz-explanation" rows="2"></textarea>
+          </div>
+        </div>
+      </form>
+    </div>
+    
+    <div style="display:flex;gap:.5rem;justify-content:flex-end;margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border)">
+      <button class="btn" onclick="closeNewSlideModal()">Abbrechen</button>
+      <button class="btn primary" onclick="saveSlide()">
+        <i class="fas fa-save"></i> Speichern
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Modul Vorschau -->
+<div class="modal" id="modulePreviewModal">
+  <div class="modal-box" style="max-height:90vh;display:flex;flex-direction:column">
+    <h3 id="previewModuleTitle">Vorschau</h3>
+    
+    <div id="previewContent" style="flex:1;overflow-y:auto;margin:1rem 0"></div>
+    
+    <div style="display:flex;gap:.5rem;justify-content:space-between;align-items:center;padding-top:1rem;border-top:1px solid var(--border)">
+      <button class="btn" onclick="prevPreviewSlide()" id="prevSlideBtn">
+        <i class="fas fa-arrow-left"></i> Zurück
+      </button>
+      <div id="slideCounter" style="font-weight:700;color:var(--muted)">1 / 1</div>
+      <button class="btn" onclick="nextPreviewSlide()" id="nextSlideBtn">
+        Weiter <i class="fas fa-arrow-right"></i>
+      </button>
+    </div>
+    
+    <div style="display:flex;gap:.5rem;justify-content:center;margin-top:1rem">
+      <button class="btn" onclick="closePreviewModal()">Schließen</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Personen zuweisen -->
+<div class="modal" id="assignMembersModal">
+  <div class="modal-box" style="max-width:600px">
+    <h3><i class="fa-solid fa-users"></i> Personen zuweisen</h3>
+    <p style="color:var(--muted);margin-bottom:1rem">Wähle die Team-Mitglieder aus, die dieses Lernmodul sehen sollen.</p>
+    <div id="assignMembersList" style="max-height:400px;overflow-y:auto"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
+      <button class="btn" onclick="closeAssignMembersModal()">Abbrechen</button>
+      <button class="btn primary" onclick="saveAssignments()">
+        <i class="fa-solid fa-save"></i> Speichern
+      </button>
+    </div>
+  </div>
+</div>
 <!-- Modal: Neues Lernmodul -->
 <div class="modal" id="moduleModal">
   <div class="modal-box">
