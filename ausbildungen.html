@@ -1,1123 +1,875 @@
 <!DOCTYPE html>
 <html lang="de">
-
 <head>
-	<meta charset="utf-8" />
-	<meta name="viewport" content="width=device-width,initial-scale=1" />
-	<title>Ausbildungen – Responda</title>
-	<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet" />
-	<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" />
-
-	<!-- Quill Rich Text Editor -->
-	<link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
-	<script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
-
-	<!-- QR Code Generator -->
-	<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-
-	<script src="https://cdn.jsdelivr.net/npm/pocketbase@0.21.3/dist/pocketbase.umd.js"></script>
-
-	<style>
-		:root {
-			--primary: #c8102e;
-			--primary-light: #fee2e2;
-			--success: #16a34a;
-			--warning: #f59e0b;
-			--info: #3b82f6;
-			--bg: #f8fafc;
-			--card: #fff;
-			--text: #0f172a;
-			--muted: #64748b;
-			--border: #e2e8f0;
-			--gradient-start: #667eea;
-			--gradient-end: #764ba2;
-		}
-
-		* {
-			box-sizing: border-box
-		}
-
-		body {
-			margin: 0;
-			background: linear-gradient(135deg, var(--gradient-start) 0%, var(--gradient-end) 100%);
-			min-height: 100vh;
-			color: var(--text);
-			font-family: 'Atkinson Hyperlegible', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
-			line-height: 1.45;
-			opacity: 0;
-			transition: opacity 0.3s;
-			padding-bottom: 80px;
-		}
-
-		body.loaded {
-			opacity: 1
-		}
-
-		header {
-			position: sticky;
-			top: 0;
-			background: var(--gradient-start);
-			color: #fff;
-			z-index: 10;
-			box-shadow: 0 2px 8px rgba(0, 0, 0, .1)
-		}
-
-		.bar {
-			max-width: 1400px;
-			margin: 0 auto;
-			padding: .75rem 1rem;
-			display: flex;
-			gap: .5rem;
-			align-items: center;
-			flex-wrap: wrap;
-		}
-
-		h1 {
-			font-size: 1.05rem;
-			margin: 0;
-			font-weight: 800
-		}
-
-		.toolbar {
-			margin-left: auto;
-			display: flex;
-			gap: .5rem;
-			flex-wrap: wrap
-		}
-
-		.topbtn {
-			background: rgba(255, 255, 255, 0.1);
-			color: #fff;
-			padding: .45rem .7rem;
-			border-radius: .5rem;
-			cursor: pointer;
-			font-weight: 700;
-			font-size: .9rem;
-			transition: all 0.2s;
-			text-decoration: none;
-			display: inline-flex;
-			align-items: center;
-			gap: 6px;
-			border: none;
-			font-family: inherit;
-		}
-
-		.topbtn:hover {
-			background: rgba(255, 255, 255, 0.2)
-		}
-
-		.wrap {
-			max-width: 1400px;
-			margin: 1.5rem auto;
-			padding: 0 1rem
-		}
-
-		.tabs {
-			display: flex;
-			gap: .5rem;
-			margin-bottom: 1.5rem;
-			background: #fff;
-			padding: .5rem;
-			border-radius: .75rem;
-			box-shadow: 0 2px 8px rgba(0, 0, 0, .05);
-			overflow-x: auto;
-		}
-
-		.tab {
-			padding: .6rem 1.25rem;
-			border-radius: .5rem;
-			cursor: pointer;
-			font-weight: 700;
-			transition: all 0.2s;
-			white-space: nowrap;
-			border: none;
-			background: transparent;
-			color: var(--muted);
-			font-family: inherit;
-			font-size: .9rem;
-		}
-
-		.tab:hover {
-			background: #f9fafb;
-			color: var(--text)
-		}
-
-		.tab.active {
-			background: var(--primary);
-			color: #fff
-		}
-
-		.actions {
-			display: flex;
-			gap: .5rem;
-			margin-bottom: 1rem;
-			flex-wrap: wrap;
-		}
-
-		.btn {
-			background: #fff;
-			color: var(--text);
-			padding: .6rem 1rem;
-			border-radius: .5rem;
-			cursor: pointer;
-			font-weight: 700;
-			transition: all 0.2s;
-			font-family: inherit;
-			border: 1px solid var(--border);
-			display: inline-flex;
-			align-items: center;
-			gap: .5rem;
-			font-size: .9rem;
-		}
-
-		.btn:hover {
-			transform: translateY(-2px);
-			box-shadow: 0 4px 12px rgba(0, 0, 0, .1)
-		}
-
-		.btn.primary {
-			background: var(--primary);
-			color: #fff;
-			border-color: var(--primary)
-		}
-
-		.btn.primary:hover {
-			background: #a80d25
-		}
-
-		.btn.success {
-			background: var(--success);
-			color: #fff;
-			border-color: var(--success)
-		}
-
-		.btn.info {
-			background: var(--info);
-			color: #fff;
-			border-color: var(--info)
-		}
-
-		.btn.warning {
-			background: var(--warning);
-			color: #fff;
-			border-color: var(--warning)
-		}
-
-		.btn:disabled {
-			opacity: 0.5;
-			cursor: not-allowed;
-			transform: none
-		}
-
-		.btn-sm {
-			padding: .4rem .7rem;
-			font-size: .85rem
-		}
-
-		.grid {
-			display: grid;
-			grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-			gap: 16px;
-		}
-
-		.course-card,
-		.member-card,
-		.module-card {
-			background: #fff;
-			border-radius: .75rem;
-			padding: 1.5rem;
-			box-shadow: 0 2px 8px rgba(0, 0, 0, .05);
-			transition: all 0.2s;
-			border: 2px solid transparent;
-			cursor: pointer;
-		}
-
-		.course-card:hover,
-		.member-card:hover,
-		.module-card:hover {
-			transform: translateY(-4px);
-			box-shadow: 0 8px 20px rgba(0, 0, 0, .12);
-			border-color: var(--primary-light);
-		}
-
-		.card-title {
-			font-weight: 800;
-			font-size: 1.2rem;
-			margin-bottom: .5rem;
-			color: var(--text);
-		}
-
-		.card-meta {
-			font-size: .85rem;
-			color: var(--muted);
-			margin-bottom: .5rem;
-			display: flex;
-			gap: .5rem;
-			flex-wrap: wrap;
-			align-items: center;
-		}
-
-		.badge {
-			padding: .25rem .6rem;
-			border-radius: 999px;
-			font-size: .75rem;
-			font-weight: 700;
-			white-space: nowrap;
-		}
-
-		.badge.online {
-			background: #dbeafe;
-			color: #1e40af
-		}
-
-		.badge.präsenz {
-			background: #fef3c7;
-			color: #92400e
-		}
-
-		.badge.hybrid {
-			background: #e0e7ff;
-			color: #4338ca
-		}
-
-		.badge.geplant {
-			background: #e0e7ff;
-			color: #4338ca
-		}
-
-		.badge.läuft {
-			background: #dcfce7;
-			color: #166534
-		}
-
-		.badge.abgeschlossen {
-			background: #f3f4f6;
-			color: #4b5563
-		}
-
-		.badge.abgesagt {
-			background: #fee2e2;
-			color: #991b1b
-		}
-
-		.badge.anwesend {
-			background: #dcfce7;
-			color: #166534
-		}
-
-		.badge.abwesend {
-			background: #fee2e2;
-			color: #991b1b
-		}
-
-		.badge.zugesagt {
-			background: #dcfce7;
-			color: #166534
-		}
-
-		.badge.eingeladen {
-			background: #e0e7ff;
-			color: #4338ca
-		}
-
-		.badge.info {
-			background: #dbeafe;
-			color: #1e40af
-		}
-
-		.badge.warning {
-			background: #fef3c7;
-			color: #92400e
-		}
-
-		.tag {
-			background: #fee;
-			color: var(--primary);
-			padding: 4px 10px;
-			border-radius: 999px;
-			font-size: 0.8rem;
-			font-weight: 700;
-			display: inline-block;
-			margin: 2px
-		}
-
-		.modal {
-			position: fixed;
-			inset: 0;
-			background: rgba(0, 0, 0, .6);
-			display: none;
-			align-items: center;
-			justify-content: center;
-			z-index: 1000;
-			padding: 20px;
-			overflow-y: auto;
-		}
-
-		.modal.show {
-			display: flex
-		}
-
-		.modal-box {
-			background: #fff;
-			border-radius: 14px;
-			max-width: 1000px;
-			width: 100%;
-			max-height: 85vh;
-			overflow-y: auto;
-			padding: 24px;
-			box-shadow: 0 8px 20px rgba(0, 0, 0, .3);
-			margin: auto;
-		}
-
-		.modal-box h3 {
-			margin: 0 0 1rem 0;
-			color: var(--primary);
-			font-weight: 800
-		}
-
-		.form-grid {
-			display: grid;
-			gap: 1rem;
-			grid-template-columns: repeat(auto-fit, minmax(200px, 1fr))
-		}
-
-		.form-group {
-			display: flex;
-			flex-direction: column;
-			gap: 6px
-		}
-
-		.form-group label {
-			font-weight: 700;
-			font-size: .9rem;
-			color: #374151
-		}
-
-		.form-group input,
-		.form-group textarea,
-		.form-group select {
-			padding: .6rem;
-			border: 1px solid var(--border);
-			border-radius: .5rem;
-			background: #fff;
-			font-size: 16px;
-			font-family: inherit;
-			width: 100%;
-		}
-
-		.form-group input:focus,
-		.form-group textarea:focus,
-		.form-group select:focus {
-			outline: none;
-			border-color: var(--primary);
-			box-shadow: 0 0 0 3px rgba(200, 16, 46, 0.1);
-		}
-
-		.tag-input-wrapper {
-			display: flex;
-			gap: 8px;
-			flex-wrap: wrap;
-			padding: 8px;
-			border: 1px solid #d1d5db;
-			border-radius: 8px;
-			min-height: 44px;
-			align-items: center;
-			background: #fff;
-		}
-
-		.tag-input-wrapper:focus-within {
-			border-color: var(--primary);
-			box-shadow: 0 0 0 3px rgba(200, 16, 46, 0.1);
-		}
-
-		.tag-input-wrapper .tag {
-			display: flex;
-			align-items: center;
-			gap: 4px
-		}
-
-		.tag-input-wrapper .tag .remove-tag {
-			cursor: pointer;
-			font-weight: bold;
-			margin-left: 4px
-		}
-
-		.tag-input-wrapper input {
-			border: none;
-			outline: none;
-			flex: 1;
-			min-width: 100px;
-			font-size: 16px;
-			padding: 4px
-		}
-
-		.table {
-			width: 100%;
-			border-collapse: collapse;
-			background: #fff;
-			border-radius: .75rem;
-			overflow: hidden;
-			box-shadow: 0 2px 8px rgba(0, 0, 0, .05);
-		}
-
-		.table th,
-		.table td {
-			padding: .75rem 1rem;
-			text-align: left;
-			border-bottom: 1px solid var(--border);
-		}
-
-		.table th {
-			background: #f9fafb;
-			font-weight: 700;
-			font-size: .9rem;
-		}
-
-		.table tr:hover {
-			background: #f9fafb
-		}
-
-		.table tr:last-child td {
-			border-bottom: none
-		}
-
-		.ql-container {
-			font-family: 'Atkinson Hyperlegible', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
-			font-size: 1rem;
-			min-height: 200px;
-			max-height: 300px;
-		}
-
-		.ql-editor {
-			min-height: 200px;
-			max-height: 300px;
-			overflow-y: auto;
-		}
-
-		.access-code-box {
-			background: #f9fafb;
-			padding: 1.5rem;
-			border-radius: .75rem;
-			border: 2px dashed var(--primary);
-			text-align: center;
-		}
-
-		.access-code {
-			font-size: 2rem;
-			font-weight: 800;
-			font-family: monospace;
-			color: var(--primary);
-			margin: 1rem 0;
-		}
-
-		.copy-box {
-			background: #f9fafb;
-			padding: .75rem;
-			border-radius: .5rem;
-			border: 1px solid var(--border);
-			display: flex;
-			justify-content: space-between;
-			align-items: center;
-			gap: .5rem;
-			font-family: monospace;
-			font-size: .85rem;
-		}
-
-		.slide-item {
-			background: #f9fafb;
-			padding: 1rem;
-			border-radius: .5rem;
-			border-left: 4px solid var(--primary);
-			display: flex;
-			justify-content: space-between;
-			align-items: center;
-			cursor: move;
-			transition: all 0.2s;
-			margin-bottom: .75rem;
-		}
-
-		.slide-item:hover {
-			background: #f3f4f6;
-			transform: translateX(4px);
-		}
-
-		.slide-type-icon {
-			width: 40px;
-			height: 40px;
-			border-radius: .5rem;
-			display: flex;
-			align-items: center;
-			justify-content: center;
-			margin-right: 1rem;
-			font-size: 1.2rem;
-		}
-
-		.slide-type-icon.text {
-			background: #dbeafe;
-			color: #1e40af
-		}
-
-		.slide-type-icon.image {
-			background: #dcfce7;
-			color: #166534
-		}
-
-		.slide-type-icon.video {
-			background: #fef3c7;
-			color: #92400e
-		}
-
-		.slide-type-icon.quiz {
-			background: #fee2e2;
-			color: #991b1b
-		}
-
-		.progress-bar {
-			width: 100%;
-			height: 8px;
-			background: #e5e7eb;
-			border-radius: 999px;
-			overflow: hidden;
-			margin: .5rem 0;
-		}
-
-		.progress-bar-fill {
-			height: 100%;
-			background: var(--success);
-			transition: width 0.3s;
-		}
-
-		.status-icon {
-			display: inline-flex;
-			align-items: center;
-			justify-content: center;
-			width: 24px;
-			height: 24px;
-			border-radius: 50%;
-			font-size: .85rem;
-		}
-
-		.status-icon.completed {
-			background: #dcfce7;
-			color: #166534
-		}
-
-		.status-icon.progress {
-			background: #fef3c7;
-			color: #92400e
-		}
-
-		.status-icon.failed {
-			background: #fee2e2;
-			color: #991b1b
-		}
-
-		.status-icon.pending {
-			background: #e5e7eb;
-			color: #6b7280
-		}
-
-		.empty {
-			text-align: center;
-			padding: 3rem 1rem;
-			color: var(--muted);
-		}
-
-		.empty i {
-			font-size: 4rem;
-			margin-bottom: 1rem;
-			opacity: 0.3
-		}
-
-		.msg {
-			position: fixed;
-			top: 2rem;
-			right: 2rem;
-			padding: 1rem 1.5rem;
-			border-radius: 8px;
-			font-weight: 600;
-			box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
-			z-index: 10000;
-			animation: slideInFromRight 0.3s ease-out;
-			display: flex;
-			align-items: center;
-			gap: 0.75rem;
-		}
-
-		.msg.error {
-			background: #fee;
-			color: #c00;
-			border: 1px solid #fcc
-		}
-
-		.msg.success {
-			background: #efe;
-			color: #060;
-			border: 1px solid #cfc
-		}
-
-		.msg.info {
-			background: #eff6ff;
-			color: #1e40af;
-			border: 1px solid #bfdbfe
-		}
-
-		@keyframes slideInFromRight {
-			from {
-				opacity: 0;
-				transform: translateX(100%);
-			}
-
-			to {
-				opacity: 1;
-				transform: translateX(0);
-			}
-		}
-
-		.details-section {
-			margin: 20px 0;
-			padding: 16px;
-			background: #f9fafb;
-			border-radius: 8px;
-		}
-
-		.details-section h4 {
-			margin: 0 0 12px 0;
-			color: var(--primary);
-			font-size: 1rem;
-		}
-
-		@media (max-width:768px) {
-			.bar {
-				flex-direction: column;
-				align-items: stretch
-			}
-
-			h1 {
-				font-size: 1rem
-			}
-
-			.toolbar {
-				margin-left: 0;
-				width: 100%;
-				justify-content: space-between
-			}
-
-			.topbtn {
-				flex: 1;
-				justify-content: center
-			}
-
-			.tabs {
-				padding: .25rem
-			}
-
-			.tab {
-				padding: .5rem 1rem;
-				font-size: .85rem
-			}
-
-			.grid {
-				grid-template-columns: 1fr
-			}
-
-			.actions {
-				flex-direction: column
-			}
-
-			.btn {
-				width: 100%;
-				justify-content: center
-			}
-
-			.table {
-				font-size: .85rem
-			}
-
-			.table th,
-			.table td {
-				padding: .5rem
-			}
-
-			.form-grid {
-				grid-template-columns: 1fr
-			}
-		}
-	</style>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Ausbildungen – Responda</title>
+  <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet"/>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
+  
+  <!-- Quill Rich Text Editor -->
+  <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+  <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
+  
+  <!-- QR Code Generator -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  
+  <script src="https://cdn.jsdelivr.net/npm/pocketbase@0.21.3/dist/pocketbase.umd.js"></script>
+
+  <style>
+    :root{
+      --primary:#c8102e;
+      --primary-light:#fee2e2;
+      --success:#16a34a;
+      --warning:#f59e0b;
+      --info:#3b82f6;
+      --bg:#f8fafc;
+      --card:#fff;
+      --text:#0f172a;
+      --muted:#64748b;
+      --border:#e2e8f0;
+      --gradient-start:#667eea;
+      --gradient-end:#764ba2;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      background:linear-gradient(135deg, var(--gradient-start) 0%, var(--gradient-end) 100%);
+      min-height:100vh;
+      color:var(--text);
+      font-family:'Atkinson Hyperlegible',-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+      line-height:1.45;
+      opacity:0;
+      transition:opacity 0.3s;
+      padding-bottom:80px;
+    }
+    body.loaded{opacity:1}
+    
+    header{position:sticky;top:0;background:var(--gradient-start);color:#fff;z-index:10;box-shadow:0 2px 8px rgba(0,0,0,.1)}
+    .bar{
+      max-width:1400px;
+      margin:0 auto;
+      padding:.75rem 1rem;
+      display:flex;
+      gap:.5rem;
+      align-items:center;
+      flex-wrap:wrap;
+    }
+    h1{font-size:1.05rem;margin:0;font-weight:800}
+    .toolbar{margin-left:auto;display:flex;gap:.5rem;flex-wrap:wrap}
+    .topbtn{
+      background:rgba(255,255,255,0.1);
+      color:#fff;
+      padding:.45rem .7rem;
+      border-radius:.5rem;
+      cursor:pointer;
+      font-weight:700;
+      font-size:.9rem;
+      transition:all 0.2s;
+      text-decoration:none;
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      border:none;
+      font-family:inherit;
+    }
+    .topbtn:hover{background:rgba(255,255,255,0.2)}
+    
+    .wrap{max-width:1400px;margin:1.5rem auto;padding:0 1rem}
+    
+    .tabs{
+      display:flex;
+      gap:.5rem;
+      margin-bottom:1.5rem;
+      background:#fff;
+      padding:.5rem;
+      border-radius:.75rem;
+      box-shadow:0 2px 8px rgba(0,0,0,.05);
+      overflow-x:auto;
+    }
+    .tab{
+      padding:.6rem 1.25rem;
+      border-radius:.5rem;
+      cursor:pointer;
+      font-weight:700;
+      transition:all 0.2s;
+      white-space:nowrap;
+      border:none;
+      background:transparent;
+      color:var(--muted);
+      font-family:inherit;
+      font-size:.9rem;
+    }
+    .tab:hover{background:#f9fafb;color:var(--text)}
+    .tab.active{background:var(--primary);color:#fff}
+    
+    .actions{
+      display:flex;
+      gap:.5rem;
+      margin-bottom:1rem;
+      flex-wrap:wrap;
+    }
+    .btn{
+      background:#fff;
+      color:var(--text);
+      padding:.6rem 1rem;
+      border-radius:.5rem;
+      cursor:pointer;
+      font-weight:700;
+      transition:all 0.2s;
+      font-family:inherit;
+      border:1px solid var(--border);
+      display:inline-flex;
+      align-items:center;
+      gap:.5rem;
+      font-size:.9rem;
+    }
+    .btn:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,.1)}
+    .btn.primary{background:var(--primary);color:#fff;border-color:var(--primary)}
+    .btn.primary:hover{background:#a80d25}
+    .btn.success{background:var(--success);color:#fff;border-color:var(--success)}
+    .btn.info{background:var(--info);color:#fff;border-color:var(--info)}
+    .btn.warning{background:var(--warning);color:#fff;border-color:var(--warning)}
+    .btn:disabled{opacity:0.5;cursor:not-allowed;transform:none}
+    .btn-sm{padding:.4rem .7rem;font-size:.85rem}
+    
+    .grid{
+      display:grid;
+      grid-template-columns:repeat(auto-fill,minmax(280px,1fr));
+      gap:16px;
+    }
+    
+    .course-card, .member-card, .module-card{
+      background:#fff;
+      border-radius:.75rem;
+      padding:1.5rem;
+      box-shadow:0 2px 8px rgba(0,0,0,.05);
+      transition:all 0.2s;
+      border:2px solid transparent;
+      cursor:pointer;
+    }
+    .course-card:hover, .member-card:hover, .module-card:hover{
+      transform:translateY(-4px);
+      box-shadow:0 8px 20px rgba(0,0,0,.12);
+      border-color:var(--primary-light);
+    }
+    
+    .card-title{
+      font-weight:800;
+      font-size:1.2rem;
+      margin-bottom:.5rem;
+      color:var(--text);
+    }
+    .card-meta{
+      font-size:.85rem;
+      color:var(--muted);
+      margin-bottom:.5rem;
+      display:flex;
+      gap:.5rem;
+      flex-wrap:wrap;
+      align-items:center;
+    }
+    
+    .badge{
+      padding:.25rem .6rem;
+      border-radius:999px;
+      font-size:.75rem;
+      font-weight:700;
+      white-space:nowrap;
+    }
+    .badge.online{background:#dbeafe;color:#1e40af}
+    .badge.präsenz{background:#fef3c7;color:#92400e}
+    .badge.hybrid{background:#e0e7ff;color:#4338ca}
+    .badge.geplant{background:#e0e7ff;color:#4338ca}
+    .badge.läuft{background:#dcfce7;color:#166534}
+    .badge.abgeschlossen{background:#f3f4f6;color:#4b5563}
+    .badge.abgesagt{background:#fee2e2;color:#991b1b}
+    .badge.anwesend{background:#dcfce7;color:#166534}
+    .badge.abwesend{background:#fee2e2;color:#991b1b}
+    .badge.zugesagt{background:#dcfce7;color:#166534}
+    .badge.eingeladen{background:#e0e7ff;color:#4338ca}
+    .badge.info{background:#dbeafe;color:#1e40af}
+    .badge.warning{background:#fef3c7;color:#92400e}
+    
+    .tag{background:#fee;color:var(--primary);padding:4px 10px;border-radius:999px;font-size:0.8rem;font-weight:700;display:inline-block;margin:2px}
+    
+    .modal{
+      position:fixed;
+      inset:0;
+      background:rgba(0,0,0,.6);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      z-index:1000;
+      padding:20px;
+      overflow-y:auto;
+    }
+    .modal.show{display:flex}
+    .modal-box{
+      background:#fff;
+      border-radius:14px;
+      max-width:1000px;
+      width:100%;
+      max-height:85vh;
+      overflow-y:auto;
+      padding:24px;
+      box-shadow:0 8px 20px rgba(0,0,0,.3);
+      margin:auto;
+    }
+    .modal-box h3{margin:0 0 1rem 0;color:var(--primary);font-weight:800}
+    
+    .form-grid{display:grid;gap:1rem;grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
+    .form-group{display:flex;flex-direction:column;gap:6px}
+    .form-group label{font-weight:700;font-size:.9rem;color:#374151}
+    .form-group input,
+    .form-group textarea,
+    .form-group select{
+      padding:.6rem;
+      border:1px solid var(--border);
+      border-radius:.5rem;
+      background:#fff;
+      font-size:16px;
+      font-family:inherit;
+      width:100%;
+    }
+    .form-group input:focus,
+    .form-group textarea:focus,
+    .form-group select:focus{
+      outline:none;
+      border-color:var(--primary);
+      box-shadow:0 0 0 3px rgba(200,16,46,0.1);
+    }
+    
+    .tag-input-wrapper{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      padding:8px;
+      border:1px solid #d1d5db;
+      border-radius:8px;
+      min-height:44px;
+      align-items:center;
+      background:#fff;
+    }
+    .tag-input-wrapper:focus-within{
+      border-color:var(--primary);
+      box-shadow:0 0 0 3px rgba(200,16,46,0.1);
+    }
+    .tag-input-wrapper .tag{display:flex;align-items:center;gap:4px}
+    .tag-input-wrapper .tag .remove-tag{cursor:pointer;font-weight:bold;margin-left:4px}
+    .tag-input-wrapper input{border:none;outline:none;flex:1;min-width:100px;font-size:16px;padding:4px}
+    
+    .table{
+      width:100%;
+      border-collapse:collapse;
+      background:#fff;
+      border-radius:.75rem;
+      overflow:hidden;
+      box-shadow:0 2px 8px rgba(0,0,0,.05);
+    }
+    .table th,
+    .table td{
+      padding:.75rem 1rem;
+      text-align:left;
+      border-bottom:1px solid var(--border);
+    }
+    .table th{
+      background:#f9fafb;
+      font-weight:700;
+      font-size:.9rem;
+    }
+    .table tr:hover{background:#f9fafb}
+    .table tr:last-child td{border-bottom:none}
+    
+    .ql-container{
+      font-family:'Atkinson Hyperlegible',-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+      font-size:1rem;
+      min-height:200px;
+      max-height:300px;
+    }
+    .ql-editor{
+      min-height:200px;
+      max-height:300px;
+      overflow-y:auto;
+    }
+    
+    .access-code-box{
+      background:#f9fafb;
+      padding:1.5rem;
+      border-radius:.75rem;
+      border:2px dashed var(--primary);
+      text-align:center;
+    }
+    .access-code{
+      font-size:2rem;
+      font-weight:800;
+      font-family:monospace;
+      color:var(--primary);
+      margin:1rem 0;
+    }
+    
+    .copy-box{
+      background:#f9fafb;
+      padding:.75rem;
+      border-radius:.5rem;
+      border:1px solid var(--border);
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:.5rem;
+      font-family:monospace;
+      font-size:.85rem;
+    }
+    
+    .slide-item{
+      background:#f9fafb;
+      padding:1rem;
+      border-radius:.5rem;
+      border-left:4px solid var(--primary);
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      cursor:move;
+      transition:all 0.2s;
+      margin-bottom:.75rem;
+    }
+    .slide-item:hover{
+      background:#f3f4f6;
+      transform:translateX(4px);
+    }
+    
+    .slide-type-icon{
+      width:40px;
+      height:40px;
+      border-radius:.5rem;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      margin-right:1rem;
+      font-size:1.2rem;
+    }
+    .slide-type-icon.text{background:#dbeafe;color:#1e40af}
+    .slide-type-icon.image{background:#dcfce7;color:#166534}
+    .slide-type-icon.video{background:#fef3c7;color:#92400e}
+    .slide-type-icon.quiz{background:#fee2e2;color:#991b1b}
+    
+    .progress-bar{
+      width:100%;
+      height:8px;
+      background:#e5e7eb;
+      border-radius:999px;
+      overflow:hidden;
+      margin:.5rem 0;
+    }
+    .progress-bar-fill{
+      height:100%;
+      background:var(--success);
+      transition:width 0.3s;
+    }
+    
+    .status-icon{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      width:24px;
+      height:24px;
+      border-radius:50%;
+      font-size:.85rem;
+    }
+    .status-icon.completed{background:#dcfce7;color:#166534}
+    .status-icon.progress{background:#fef3c7;color:#92400e}
+    .status-icon.failed{background:#fee2e2;color:#991b1b}
+    .status-icon.pending{background:#e5e7eb;color:#6b7280}
+    
+    .empty{
+      text-align:center;
+      padding:3rem 1rem;
+      color:var(--muted);
+    }
+    .empty i{font-size:4rem;margin-bottom:1rem;opacity:0.3}
+    
+    .msg{
+      position: fixed;
+      top: 2rem;
+      right: 2rem;
+      padding: 1rem 1.5rem;
+      border-radius: 8px;
+      font-weight: 600;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+      z-index: 10000;
+      animation: slideInFromRight 0.3s ease-out;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .msg.error{background:#fee;color:#c00;border:1px solid #fcc}
+    .msg.success{background:#efe;color:#060;border:1px solid #cfc}
+    .msg.info{background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe}
+    
+    @keyframes slideInFromRight {
+      from { 
+        opacity: 0; 
+        transform: translateX(100%); 
+      }
+      to { 
+        opacity: 1; 
+        transform: translateX(0); 
+      }
+    }
+    
+    .details-section{
+      margin:20px 0;
+      padding:16px;
+      background:#f9fafb;
+      border-radius:8px;
+    }
+    .details-section h4{
+      margin:0 0 12px 0;
+      color:var(--primary);
+      font-size:1rem;
+    }
+    
+    @media (max-width:768px){
+      .bar{flex-direction:column;align-items:stretch}
+      h1{font-size:1rem}
+      .toolbar{margin-left:0;width:100%;justify-content:space-between}
+      .topbtn{flex:1;justify-content:center}
+      .tabs{padding:.25rem}
+      .tab{padding:.5rem 1rem;font-size:.85rem}
+      .grid{grid-template-columns:1fr}
+      .actions{flex-direction:column}
+      .btn{width:100%;justify-content:center}
+      .table{font-size:.85rem}
+      .table th,.table td{padding:.5rem}
+      .form-grid{grid-template-columns:1fr}
+    }
+  </style>
 </head>
 
 <body>
 
-	<!-- HEADER -->
-	<header>
-		<div class="bar">
-			<h1><i class="fa-solid fa-graduation-cap"></i> Ausbildungen</h1>
-			<div class="toolbar">
-				<a class="topbtn" href="mpg-dashboard.html">
-					<i class="fa-solid fa-dashboard"></i> Dashboard
-				</a>
-				<button class="topbtn" id="logout">
-					<i class="fa-solid fa-right-from-bracket"></i> Logout
-				</button>
-			</div>
-		</div>
-	</header>
-	<!-- MAIN CONTENT -->
-	<div class="wrap">
+<!-- HEADER -->
+<header>
+  <div class="bar">
+    <h1><i class="fa-solid fa-graduation-cap"></i> Ausbildungen</h1>
+    <div class="toolbar">
+      <a class="topbtn" href="mpg-dashboard.html">
+        <i class="fa-solid fa-dashboard"></i> Dashboard
+      </a>
+      <button class="topbtn" id="logout">
+        <i class="fa-solid fa-right-from-bracket"></i> Logout
+      </button>
+    </div>
+  </div>
+</header>
 
-		<!-- TABS -->
-		<div class="tabs">
-			<button class="tab active" data-tab="schulungen">
-				<i class="fa-solid fa-book-medical"></i> Schulungen
-			</button>
-			<button class="tab" data-tab="team">
-				<i class="fa-solid fa-users"></i> Team
-			</button>
-			<button class="tab" data-tab="lernbereich">
-				<i class="fa-solid fa-laptop"></i> Lernbereich
-			</button>
-			<button class="tab" data-tab="settings">
-				<i class="fa-solid fa-cog"></i> Einstellungen
-			</button>
-		</div>
+<!-- MAIN CONTENT -->
+<div class="wrap">
+  
+  <!-- TABS -->
+  <div class="tabs">
+    <button class="tab active" data-tab="schulungen">
+      <i class="fa-solid fa-book-medical"></i> Schulungen
+    </button>
+    <button class="tab" data-tab="team">
+      <i class="fa-solid fa-users"></i> Team
+    </button>
+    <button class="tab" data-tab="lernbereich">
+      <i class="fa-solid fa-laptop"></i> Lernbereich
+    </button>
+    <button class="tab" data-tab="settings">
+      <i class="fa-solid fa-cog"></i> Einstellungen
+    </button>
+  </div>
 
-		<!-- TAB: SCHULUNGEN -->
-		<div class="tab-content" id="tab-schulungen">
-			<div class="actions">
-				<button class="btn primary" onclick="openSchulungModal()">
-					<i class="fas fa-plus"></i> Neue Schulung
-				</button>
-			</div>
-			<div class="grid" id="schulungen-list"></div>
-		</div>
+  <!-- TAB: SCHULUNGEN -->
+  <div class="tab-content" id="tab-schulungen">
+    <div class="actions">
+      <button class="btn primary" onclick="openSchulungModal()">
+        <i class="fas fa-plus"></i> Neue Schulung
+      </button>
+    </div>
+    <div class="grid" id="schulungen-list"></div>
+  </div>
 
-		<!-- TAB: TEAM -->
-		<div class="tab-content" id="tab-team" style="display:none">
-			<div class="actions">
-				<button class="btn primary" onclick="openMemberModal()">
-					<i class="fas fa-user-plus"></i> Neues Mitglied
-				</button>
-				<button class="btn success" onclick="exportAllMembersStats()">
-					<i class="fas fa-file-pdf"></i> Team-Statistik PDF
-				</button>
-			</div>
-			<div class="grid" id="team-list"></div>
-		</div>
+  <!-- TAB: TEAM -->
+  <div class="tab-content" id="tab-team" style="display:none">
+    <div class="actions">
+      <button class="btn primary" onclick="openMemberModal()">
+        <i class="fas fa-user-plus"></i> Neues Mitglied
+      </button>
+      <button class="btn success" onclick="exportAllMembersStats()">
+        <i class="fas fa-file-pdf"></i> Team-Statistik PDF
+      </button>
+    </div>
+    <div class="grid" id="team-list"></div>
+  </div>
 
-		<!-- TAB: LERNBEREICH -->
-		<div class="tab-content" id="tab-lernbereich" style="display:none">
-			<div class="actions">
-				<button class="btn primary" onclick="openModuleModal()">
-					<i class="fas fa-plus"></i> Neues Lernmodul
-				</button>
-			</div>
-			<div class="grid" id="lernbereich-list"></div>
-		</div>
+  <!-- TAB: LERNBEREICH -->
+  <div class="tab-content" id="tab-lernbereich" style="display:none">
+    <div class="actions">
+      <button class="btn primary" onclick="openModuleModal()">
+        <i class="fas fa-plus"></i> Neues Lernmodul
+      </button>
+    </div>
+    <div class="grid" id="lernbereich-list"></div>
+  </div>
 
-		<!-- TAB: EINSTELLUNGEN -->
-		<div class="tab-content" id="tab-settings" style="display:none">
+  <!-- TAB: EINSTELLUNGEN -->
+  <div class="tab-content" id="tab-settings" style="display:none">
+    
+    <!-- Pflicht-Schulungen -->
+    <div style="background:#fff;border-radius:.75rem;padding:1.5rem;margin-bottom:1.5rem;box-shadow:0 2px 8px rgba(0,0,0,.05)">
+      <h3 style="margin:0 0 1rem 0;color:var(--primary)">
+        <i class="fa-solid fa-graduation-cap"></i> Pflicht-Schulungen pro Jahr
+      </h3>
+      <form id="pflichtForm">
+        <div style="display:flex;gap:1rem;align-items:end;flex-wrap:wrap">
+          <div class="form-group" style="flex:1;min-width:200px">
+            <label>Anzahl Pflicht-Schulungen</label>
+            <input type="number" id="pflicht_schulungen" min="0" max="50" value="12">
+          </div>
+          <button type="submit" class="btn primary">
+            <i class="fas fa-save"></i> Speichern
+          </button>
+        </div>
+      </form>
+    </div>
 
-			<!-- Pflicht-Schulungen -->
-			<div style="background:#fff;border-radius:.75rem;padding:1.5rem;margin-bottom:1.5rem;box-shadow:0 2px 8px rgba(0,0,0,.05)">
-				<h3 style="margin:0 0 1rem 0;color:var(--primary)">
-					<i class="fa-solid fa-graduation-cap"></i> Pflicht-Schulungen pro Jahr
-				</h3>
-				<form id="pflichtForm">
-					<div style="display:flex;gap:1rem;align-items:end;flex-wrap:wrap">
-						<div class="form-group" style="flex:1;min-width:200px">
-							<label>Anzahl Pflicht-Schulungen</label>
-							<input type="number" id="pflicht_schulungen" min="0" max="50" value="12">
-						</div>
-						<button type="submit" class="btn primary">
-							<i class="fas fa-save"></i> Speichern
-						</button>
-					</div>
-				</form>
-			</div>
+    <!-- Zugänge -->
+    <div style="background:#fff;border-radius:.75rem;padding:1.5rem;box-shadow:0 2px 8px rgba(0,0,0,.05)">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:1rem">
+        <h3 style="margin:0;color:var(--primary)">
+          <i class="fa-solid fa-key"></i> Externe Zugänge
+        </h3>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn primary" onclick="openSingleAccessModal()">
+            <i class="fas fa-plus"></i> Einzelner Zugang
+          </button>
+          <button class="btn primary" onclick="openBulkAccessModal()">
+            <i class="fas fa-users"></i> Mehrere Zugänge
+          </button>
+          <button class="btn success" onclick="exportAccessCodes()">
+            <i class="fas fa-file-csv"></i> CSV Export
+          </button>
+          <button class="btn success" onclick="exportAllAccessPDFs()">
+            <i class="fas fa-file-pdf"></i> Alle PDFs
+          </button>
+        </div>
+      </div>
+      <div id="access-list"></div>
+    </div>
 
-			<!-- Zugänge -->
-			<div style="background:#fff;border-radius:.75rem;padding:1.5rem;box-shadow:0 2px 8px rgba(0,0,0,.05)">
-				<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:1rem">
-					<h3 style="margin:0;color:var(--primary)">
-						<i class="fa-solid fa-key"></i> Externe Zugänge
-					</h3>
-					<div style="display:flex;gap:8px;flex-wrap:wrap">
-						<button class="btn primary" onclick="openSingleAccessModal()">
-							<i class="fas fa-plus"></i> Einzelner Zugang
-						</button>
-						<button class="btn primary" onclick="openBulkAccessModal()">
-							<i class="fas fa-users"></i> Mehrere Zugänge
-						</button>
-						<button class="btn success" onclick="exportAccessCodes()">
-							<i class="fas fa-file-csv"></i> CSV Export
-						</button>
-						<button class="btn success" onclick="exportAllAccessPDFs()">
-							<i class="fas fa-file-pdf"></i> Alle PDFs
-						</button>
-					</div>
-				</div>
-				<div id="access-list"></div>
-			</div>
+  </div>
 
-		</div>
+</div>
+<!-- Modal: Neue Schulung -->
+<div class="modal" id="schulungModal">
+  <div class="modal-box">
+    <h3 id="schulungModalTitle"><i class="fa-solid fa-book-medical"></i> Neue Schulung erstellen</h3>
+    <form id="schulungForm">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Titel *</label>
+          <input type="text" name="title" required>
+        </div>
+        <div class="form-group">
+          <label>Dozent/in</label>
+          <input type="text" name="instructor">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Beschreibung</label>
+        <textarea name="description" rows="3"></textarea>
+      </div>
+      
+      <h4 style="margin:1.5rem 0 1rem 0;color:var(--primary)">
+        <i class="fa-solid fa-calendar"></i> Erster Termin
+      </h4>
+      
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Datum *</label>
+          <input type="date" name="date" required>
+        </div>
+        <div class="form-group">
+          <label>Startzeit</label>
+          <input type="time" name="start_time">
+        </div>
+        <div class="form-group">
+          <label>Endzeit</label>
+          <input type="time" name="end_time">
+        </div>
+        <div class="form-group">
+          <label>Ort</label>
+          <input type="text" name="location">
+        </div>
+      </div>
+      
+      <div class="form-group">
+        <label>Teilnehmer einladen</label>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button type="button" class="btn" onclick="openParticipantSelector()">
+            <i class="fas fa-users"></i> Teilnehmer auswählen
+          </button>
+          <span id="selected-count" style="color:var(--muted);font-weight:700">0 ausgewählt</span>
+        </div>
+      </div>
+      
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
+        <button type="button" class="btn" onclick="closeSchulungModal()">Abbrechen</button>
+        <button type="submit" class="btn primary"><i class="fa-solid fa-save"></i> Schulung erstellen</button>
+      </div>
+    </form>
+  </div>
+</div>
 
-	</div>
-	<!-- Modal: Neue Schulung -->
-	<div class="modal" id="schulungModal">
-		<div class="modal-box">
-			<h3 id="schulungModalTitle"><i class="fa-solid fa-book-medical"></i> Neue Schulung erstellen</h3>
-			<form id="schulungForm">
-				<div class="form-grid">
-					<div class="form-group">
-						<label>Titel *</label>
-						<input type="text" name="title" required>
-					</div>
-					<div class="form-group">
-						<label>Dozent/in</label>
-						<input type="text" name="instructor">
-					</div>
-				</div>
-				<div class="form-group">
-					<label>Beschreibung</label>
-					<textarea name="description" rows="3"></textarea>
-				</div>
+<!-- Modal: Schulung bearbeiten -->
+<div class="modal" id="editSchulungModal">
+  <div class="modal-box">
+    <h3><i class="fa-solid fa-edit"></i> Schulung bearbeiten</h3>
+    <form id="editSchulungForm">
+      <input type="hidden" id="edit-schulung-id">
+      
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Titel *</label>
+          <input type="text" id="edit-schulung-title" name="title" required>
+        </div>
+      </div>
+      
+      <div class="form-group">
+        <label>Beschreibung</label>
+        <textarea id="edit-schulung-description" name="description" rows="4"></textarea>
+      </div>
+      
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
+        <button type="button" class="btn" onclick="closeEditSchulungModal()">Abbrechen</button>
+        <button type="submit" class="btn primary"><i class="fa-solid fa-save"></i> Speichern</button>
+      </div>
+    </form>
+  </div>
+</div>
 
-				<h4 style="margin:1.5rem 0 1rem 0;color:var(--primary)">
-					<i class="fa-solid fa-calendar"></i> Erster Termin
-				</h4>
+<!-- Modal: Teilnehmer auswählen -->
+<div class="modal" id="participantModal">
+  <div class="modal-box" style="max-width:600px">
+    <h3><i class="fa-solid fa-users"></i> Teilnehmer auswählen</h3>
+    <div id="participantList" style="max-height:400px;overflow-y:auto"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
+      <button class="btn primary" onclick="closeParticipantModal()">
+        <i class="fa-solid fa-check"></i> Fertig
+      </button>
+    </div>
+  </div>
+</div>
 
-				<div class="form-grid">
-					<div class="form-group">
-						<label>Datum *</label>
-						<input type="date" name="date" required>
-					</div>
-					<div class="form-group">
-						<label>Startzeit</label>
-						<input type="time" name="start_time">
-					</div>
-					<div class="form-group">
-						<label>Endzeit</label>
-						<input type="time" name="end_time">
-					</div>
-					<div class="form-group">
-						<label>Ort</label>
-						<input type="text" name="location">
-					</div>
-				</div>
+<!-- Modal: Schulungs-Details -->
+<div class="modal" id="schulungDetailsModal">
+  <div class="modal-box" style="max-width:1200px">
+    <h3 id="schulungDetailsTitle">Schulung</h3>
+    <div id="schulungDetailsBody"></div>
+  </div>
+</div>
 
-				<div class="form-group">
-					<label>Teilnehmer einladen</label>
-					<div style="display:flex;gap:8px;align-items:center">
-						<button type="button" class="btn" onclick="openParticipantSelector()">
-							<i class="fas fa-users"></i> Teilnehmer auswählen
-						</button>
-						<span id="selected-count" style="color:var(--muted);font-weight:700">0 ausgewählt</span>
-					</div>
-				</div>
+<!-- Modal: Weiteren Termin hinzufügen -->
+<div class="modal" id="addSessionModal">
+  <div class="modal-box">
+    <h3><i class="fa-solid fa-calendar-plus"></i> Weiteren Termin hinzufügen</h3>
+    <form id="addSessionForm">
+      <input type="hidden" id="add-session-course-id">
+      
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Datum *</label>
+          <input type="date" name="date" required>
+        </div>
+        <div class="form-group">
+          <label>Startzeit</label>
+          <input type="time" name="start_time">
+        </div>
+        <div class="form-group">
+          <label>Endzeit</label>
+          <input type="time" name="end_time">
+        </div>
+        <div class="form-group">
+          <label>Ort</label>
+          <input type="text" name="location">
+        </div>
+      </div>
+      
+      <div class="form-group">
+        <label>Dozent/in</label>
+        <input type="text" name="dozent">
+      </div>
+      
+      <div class="form-group">
+        <label>Beschreibung</label>
+        <textarea name="beschreibung" rows="3"></textarea>
+      </div>
+      
+      <div class="form-group">
+        <label>Teilnehmer einladen</label>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button type="button" class="btn" onclick="openParticipantSelectorForAdd()">
+            <i class="fas fa-users"></i> Teilnehmer auswählen
+          </button>
+          <span id="add-selected-count" style="color:var(--muted);font-weight:700">0 ausgewählt</span>
+        </div>
+      </div>
+      
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
+        <button type="button" class="btn" onclick="closeAddSessionModal()">Abbrechen</button>
+        <button type="submit" class="btn primary"><i class="fa-solid fa-save"></i> Termin hinzufügen</button>
+      </div>
+    </form>
+  </div>
+</div>
 
-				<div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
-					<button type="button" class="btn" onclick="closeSchulungModal()">Abbrechen</button>
-					<button type="submit" class="btn primary"><i class="fa-solid fa-save"></i> Schulung erstellen</button>
-				</div>
-			</form>
-		</div>
-	</div>
+<!-- Modal: Termin bearbeiten -->
+<div class="modal" id="editSessionModal">
+  <div class="modal-box">
+    <h3><i class="fa-solid fa-edit"></i> Termin bearbeiten</h3>
+    <form id="editSessionForm">
+      <input type="hidden" id="edit-session-id">
+      
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Datum *</label>
+          <input type="date" id="edit-session-date" name="date" required>
+        </div>
+        <div class="form-group">
+          <label>Startzeit</label>
+          <input type="time" id="edit-session-start" name="start_time">
+        </div>
+        <div class="form-group">
+          <label>Endzeit</label>
+          <input type="time" id="edit-session-end" name="end_time">
+        </div>
+        <div class="form-group">
+          <label>Ort</label>
+          <input type="text" id="edit-session-location" name="location">
+        </div>
+      </div>
+      
+      <div class="form-group">
+        <label>Dozent/in</label>
+        <input type="text" id="edit-session-dozent" name="dozent">
+      </div>
+      
+      <div class="form-group">
+        <label>Beschreibung</label>
+        <textarea id="edit-session-beschreibung" name="beschreibung" rows="3"></textarea>
+      </div>
+      
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
+        <button type="button" class="btn" onclick="closeEditSessionModal()">Abbrechen</button>
+        <button type="submit" class="btn primary"><i class="fa-solid fa-save"></i> Speichern</button>
+      </div>
+    </form>
+  </div>
+</div>
 
-	<!-- Modal: Schulung bearbeiten -->
-	<div class="modal" id="editSchulungModal">
-		<div class="modal-box">
-			<h3><i class="fa-solid fa-edit"></i> Schulung bearbeiten</h3>
-			<form id="editSchulungForm">
-				<input type="hidden" id="edit-schulung-id">
+<!-- Modal: Termin-Details -->
+<div class="modal" id="sessionDetailsModal">
+  <div class="modal-box" style="max-width:1000px">
+    <h3 id="sessionDetailsTitle">Termin-Details</h3>
+    <div id="sessionDetailsBody"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
+      <button class="btn" onclick="closeSessionDetailsModal()">Schließen</button>
+      <button class="btn success" onclick="saveAttendance()">
+        <i class="fas fa-save"></i> Anwesenheit speichern
+      </button>
+    </div>
+  </div>
+</div>
 
-				<div class="form-grid">
-					<div class="form-group">
-						<label>Titel *</label>
-						<input type="text" id="edit-schulung-title" name="title" required>
-					</div>
-				</div>
+<!-- Modal: Einladungen verschicken -->
+<div class="modal" id="sendInvitationsModal">
+  <div class="modal-box" style="max-width:700px">
+    <h3><i class="fa-solid fa-envelope"></i> Einladungen verschicken</h3>
+    <p style="color:var(--muted);margin-bottom:1rem" id="invite-session-info"></p>
+    
+    <div class="access-code-box" style="margin-bottom:1.5rem">
+      <div style="font-size:.9rem;color:var(--muted);margin-bottom:.5rem">Einladungslink:</div>
+      <div style="font-family:monospace;font-weight:700;word-break:break-all;font-size:.9rem;margin:1rem 0" id="invitation-link"></div>
+      <button class="btn btn-sm" onclick="copyInvitationLink()">
+        <i class="fas fa-copy"></i> Link kopieren
+      </button>
+    </div>
+    
+    <div style="background:#eff6ff;padding:1rem;border-radius:8px;border-left:4px solid #3b82f6;margin-bottom:1rem">
+      <div style="font-weight:700;margin-bottom:.5rem;color:#1e40af">
+        <i class="fas fa-info-circle"></i> So funktioniert's:
+      </div>
+      <ol style="margin:.5rem 0;padding-left:1.5rem;color:#1e40af">
+        <li>Kopiere den Link oben</li>
+        <li>Verschicke ihn per E-Mail, WhatsApp oder als QR-Code</li>
+        <li>Teilnehmer öffnen den Link, geben ihren Namen ein</li>
+        <li>Sie können direkt zu- oder absagen</li>
+      </ol>
+    </div>
+    
+    <div style="background:#fef3c7;padding:1rem;border-radius:8px;border-left:4px solid #f59e0b">
+      <div style="font-weight:700;color:#92400e">
+        <i class="fas fa-shield-halved"></i> Sicherheit:
+      </div>
+      <div style="font-size:.9rem;color:#92400e;margin-top:.5rem">
+        Nur Personen auf der Teilnehmerliste können antworten. Nach der ersten Antwort ist keine Änderung mehr möglich.
+      </div>
+    </div>
+    
+    <div style="display:flex;gap:10px;justify-content:space-between;margin-top:20px;flex-wrap:wrap">
+      <button class="btn success" onclick="generateInvitationQR()">
+        <i class="fas fa-qrcode"></i> QR-Code generieren
+      </button>
+      <button class="btn primary" onclick="closeSendInvitationsModal()">
+        <i class="fas fa-check"></i> Fertig
+      </button>
+    </div>
+    
+    <div id="qr-code-container" style="text-align:center;margin-top:1.5rem;display:none">
+      <div style="font-weight:700;margin-bottom:1rem">QR-Code zum Scannen:</div>
+      <div id="qr-code-display"></div>
+    </div>
+  </div>
+</div>
 
-				<div class="form-group">
-					<label>Beschreibung</label>
-					<textarea id="edit-schulung-description" name="description" rows="4"></textarea>
-				</div>
+<!-- Modal: Teilnehmer verwalten -->
+<div class="modal" id="manageParticipantsModal">
+  <div class="modal-box" style="max-width:800px">
+    <h3><i class="fa-solid fa-users-cog"></i> Teilnehmer verwalten</h3>
+    <p style="color:var(--muted);margin-bottom:1rem" id="manage-session-info"></p>
+    
+    <div style="display:flex;gap:8px;margin-bottom:1rem">
+      <button class="btn btn-sm primary" onclick="openAddParticipantsToSession()">
+        <i class="fas fa-user-plus"></i> Teilnehmer hinzufügen
+      </button>
+    </div>
+    
+    <div id="currentParticipantsList"></div>
+    
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
+      <button class="btn" onclick="closeManageParticipantsModal()">Schließen</button>
+    </div>
+  </div>
+</div>
 
-				<div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
-					<button type="button" class="btn" onclick="closeEditSchulungModal()">Abbrechen</button>
-					<button type="submit" class="btn primary"><i class="fa-solid fa-save"></i> Speichern</button>
-				</div>
-			</form>
-		</div>
-	</div>
-
-	<!-- Modal: Teilnehmer auswählen -->
-	<div class="modal" id="participantModal">
-		<div class="modal-box" style="max-width:600px">
-			<h3><i class="fa-solid fa-users"></i> Teilnehmer auswählen</h3>
-			<div id="participantList" style="max-height:400px;overflow-y:auto"></div>
-			<div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
-				<button class="btn primary" onclick="closeParticipantModal()">
-					<i class="fa-solid fa-check"></i> Fertig
-				</button>
-			</div>
-		</div>
-	</div>
-
-	<!-- Modal: Schulungs-Details -->
-	<div class="modal" id="schulungDetailsModal">
-		<div class="modal-box" style="max-width:1200px">
-			<h3 id="schulungDetailsTitle">Schulung</h3>
-			<div id="schulungDetailsBody"></div>
-		</div>
-	</div>
-
-	<!-- Modal: Weiteren Termin hinzufügen -->
-	<div class="modal" id="addSessionModal">
-		<div class="modal-box">
-			<h3><i class="fa-solid fa-calendar-plus"></i> Weiteren Termin hinzufügen</h3>
-			<form id="addSessionForm">
-				<input type="hidden" id="add-session-course-id">
-
-				<div class="form-grid">
-					<div class="form-group">
-						<label>Datum *</label>
-						<input type="date" name="date" required>
-					</div>
-					<div class="form-group">
-						<label>Startzeit</label>
-						<input type="time" name="start_time">
-					</div>
-					<div class="form-group">
-						<label>Endzeit</label>
-						<input type="time" name="end_time">
-					</div>
-					<div class="form-group">
-						<label>Ort</label>
-						<input type="text" name="location">
-					</div>
-				</div>
-
-				<div class="form-group">
-					<label>Dozent/in</label>
-					<input type="text" name="dozent">
-				</div>
-
-				<div class="form-group">
-					<label>Beschreibung</label>
-					<textarea name="beschreibung" rows="3"></textarea>
-				</div>
-
-				<div class="form-group">
-					<label>Teilnehmer einladen</label>
-					<div style="display:flex;gap:8px;align-items:center">
-						<button type="button" class="btn" onclick="openParticipantSelectorForAdd()">
-							<i class="fas fa-users"></i> Teilnehmer auswählen
-						</button>
-						<span id="add-selected-count" style="color:var(--muted);font-weight:700">0 ausgewählt</span>
-					</div>
-				</div>
-
-				<div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
-					<button type="button" class="btn" onclick="closeAddSessionModal()">Abbrechen</button>
-					<button type="submit" class="btn primary"><i class="fa-solid fa-save"></i> Termin hinzufügen</button>
-				</div>
-			</form>
-		</div>
-	</div>
-
-	<!-- Modal: Termin bearbeiten -->
-	<div class="modal" id="editSessionModal">
-		<div class="modal-box">
-			<h3><i class="fa-solid fa-edit"></i> Termin bearbeiten</h3>
-			<form id="editSessionForm">
-				<input type="hidden" id="edit-session-id">
-
-				<div class="form-grid">
-					<div class="form-group">
-						<label>Datum *</label>
-						<input type="date" id="edit-session-date" name="date" required>
-					</div>
-					<div class="form-group">
-						<label>Startzeit</label>
-						<input type="time" id="edit-session-start" name="start_time">
-					</div>
-					<div class="form-group">
-						<label>Endzeit</label>
-						<input type="time" id="edit-session-end" name="end_time">
-					</div>
-					<div class="form-group">
-						<label>Ort</label>
-						<input type="text" id="edit-session-location" name="location">
-					</div>
-				</div>
-
-				<div class="form-group">
-					<label>Dozent/in</label>
-					<input type="text" id="edit-session-dozent" name="dozent">
-				</div>
-
-				<div class="form-group">
-					<label>Beschreibung</label>
-					<textarea id="edit-session-beschreibung" name="beschreibung" rows="3"></textarea>
-				</div>
-
-				<div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
-					<button type="button" class="btn" onclick="closeEditSessionModal()">Abbrechen</button>
-					<button type="submit" class="btn primary"><i class="fa-solid fa-save"></i> Speichern</button>
-				</div>
-			</form>
-		</div>
-	</div>
-
-	<!-- Modal: Termin-Details -->
-	<div class="modal" id="sessionDetailsModal">
-		<div class="modal-box" style="max-width:1000px">
-			<h3 id="sessionDetailsTitle">Termin-Details</h3>
-			<div id="sessionDetailsBody"></div>
-			<div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
-				<button class="btn" onclick="closeSessionDetailsModal()">Schließen</button>
-				<button class="btn success" onclick="saveAttendance()">
-					<i class="fas fa-save"></i> Anwesenheit speichern
-				</button>
-			</div>
-		</div>
-	</div>
-
-	<!-- Modal: Teilnehmer verwalten -->
-	<div class="modal" id="manageParticipantsModal">
-		<div class="modal-box" style="max-width:800px">
-			<h3><i class="fa-solid fa-users-cog"></i> Teilnehmer verwalten</h3>
-			<p style="color:var(--muted);margin-bottom:1rem" id="manage-session-info"></p>
-
-			<div style="display:flex;gap:8px;margin-bottom:1rem">
-				<button class="btn btn-sm primary" onclick="openAddParticipantsToSession()">
-					<i class="fas fa-user-plus"></i> Teilnehmer hinzufügen
-				</button>
-			</div>
-
-			<div id="currentParticipantsList"></div>
-
-			<div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
-				<button class="btn" onclick="closeManageParticipantsModal()">Schließen</button>
-			</div>
-		</div>
-	</div>
-
-	<!-- Modal: Teilnehmer zu Session hinzufügen -->
-	<div class="modal" id="addParticipantsToSessionModal">
-		<div class="modal-box" style="max-width:600px">
-			<h3><i class="fa-solid fa-user-plus"></i> Teilnehmer hinzufügen</h3>
-			<p style="color:var(--muted);margin-bottom:1rem">Wähle weitere Personen aus, die zu diesem Termin eingeladen werden sollen.</p>
-			<div id="addParticipantsToSessionList" style="max-height:400px;overflow-y:auto"></div>
-			<div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
-				<button class="btn" onclick="closeAddParticipantsToSessionModal()">Abbrechen</button>
-				<button class="btn primary" onclick="saveAddedParticipants()">
-					<i class="fa-solid fa-save"></i> Hinzufügen
-				</button>
-			</div>
-		</div>
-	</div>
-	<!-- Modal: Neues Team-Mitglied -->
+<!-- Modal: Teilnehmer zu Session hinzufügen -->
+<div class="modal" id="addParticipantsToSessionModal">
+  <div class="modal-box" style="max-width:600px">
+    <h3><i class="fa-solid fa-user-plus"></i> Teilnehmer hinzufügen</h3>
+    <p style="color:var(--muted);margin-bottom:1rem">Wähle weitere Personen aus, die zu diesem Termin eingeladen werden sollen.</p>
+    <div id="addParticipantsToSessionList" style="max-height:400px;overflow-y:auto"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
+      <button class="btn" onclick="closeAddParticipantsToSessionModal()">Abbrechen</button>
+      <button class="btn primary" onclick="saveAddedParticipants()">
+        <i class="fa-solid fa-save"></i> Hinzufügen
+      </button>
+    </div>
+  </div>
+</div>
+<!-- Modal: Neues Team-Mitglied -->
 <div class="modal" id="memberModal">
   <div class="modal-box">
     <h3 id="memberModalTitle"><i class="fa-solid fa-user-plus"></i> Neues Team-Mitglied</h3>
@@ -1273,7 +1025,7 @@
 
 <!-- Modal: Lernmodul Details -->
 <div class="modal" id="moduleDetailsModal">
-  <div class="modal-box">
+  <div class="modal-box" style="max-width:1200px">
     <h3 id="moduleDetailsTitle">Lernmodul</h3>
     <div id="moduleDetailsBody"></div>
     <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
@@ -1432,6 +1184,7 @@
     </div>
   </div>
 </div>
+
 <script type="module">
   // ========================================
   // POCKETBASE & AUTH
@@ -1455,6 +1208,8 @@
   let allMembers = [];
   let allAccess = [];
   let allModules = [];
+  let allSlides = [];
+  let allAssignments = [];
   let currentSlides = [];
   let previewSlides = [];
   let currentPreviewIndex = 0;
@@ -1479,6 +1234,8 @@
   let currentViewCourseId = null;
   let currentManageSessionId = null;
   let newParticipantsForSession = [];
+  let currentInvitationLink = '';
+  let currentInvitationSessionId = null;
   
   const wordLists = {
     adjectives: ['schnell', 'blau', 'groß', 'klein', 'rot', 'grün', 'gelb', 'hell', 'dunkel', 'stark', 'schwach', 'frisch', 'alt', 'neu', 'warm', 'kalt', 'süß', 'sauer', 'laut', 'leise'],
@@ -1693,8 +1450,281 @@
       showMsg('Fehler: ' + e.message, 'error');
     }
   };
+
   // ========================================
-  // AUSBILDUNGEN (OHNE TYP!)
+  // EXTERNE ZUGÄNGE
+  // ========================================
+  function renderSettings() {
+    const list = document.getElementById('access-list');
+    
+    if (allAccess.length === 0) {
+      list.innerHTML = '<div class="empty" style="background:#fff;border-radius:.75rem;margin-top:1rem"><i class="fas fa-key"></i><div>Noch keine Zugänge erstellt</div></div>';
+      return;
+    }
+    
+    list.innerHTML = `
+      <table class="table" style="margin-top:1rem">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Zugangscode</th>
+            <th>Aktionen</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${allAccess.map(acc => {
+            const member = acc.expand?.member_id;
+            return `
+              <tr>
+                <td style="font-weight:700">
+                  ${acc.name}
+                  ${member ? '<span class="badge success" style="margin-left:8px">Team-Mitglied</span>' : ''}
+                </td>
+                <td>
+                  <div class="copy-box">
+                    <code>${acc.access_code}</code>
+                    <button class="btn btn-sm" onclick="copyToClipboard('${acc.access_code}')">
+                      <i class="fas fa-copy"></i>
+                    </button>
+                  </div>
+                </td>
+                <td>
+                  <div style="display:flex;gap:4px;flex-wrap:wrap">
+                    <button class="btn btn-sm success" onclick="exportAccessPDF('${acc.id}')">
+                      <i class="fas fa-file-pdf"></i> PDF
+                    </button>
+                    <button class="btn btn-sm" style="background:#dc2626;color:#fff" onclick="deleteAccess('${acc.id}')">
+                      <i class="fas fa-trash"></i>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            `;
+          }).join('')}
+        </tbody>
+      </table>
+    `;
+  }
+
+  window.openSingleAccessModal = () => {
+    previewAccessCode = generateAccessCode();
+    document.getElementById('preview-code').textContent = previewAccessCode;
+    document.getElementById('singleAccessForm').reset();
+    document.getElementById('singleAccessModal').classList.add('show');
+  };
+
+  window.closeSingleAccessModal = () => {
+    document.getElementById('singleAccessModal').classList.remove('show');
+  };
+
+  document.getElementById('singleAccessForm').onsubmit = async (e) => {
+    e.preventDefault();
+    
+    try {
+      const formData = new FormData(e.target);
+      const tempPassword = generatePassword();
+      
+      await pb.collection('training_students').create({
+        email: `${previewAccessCode}@responda-temp.local`,
+        password: tempPassword,
+        passwordConfirm: tempPassword,
+        name: formData.get('name').trim(),
+        access_code: previewAccessCode,
+        organization_id: currentUser.organization_id
+      });
+      
+      showMsg('✅ Zugang erstellt!');
+      closeSingleAccessModal();
+      await loadSettings();
+      
+    } catch(e) {
+      showMsg('Fehler: ' + e.message, 'error');
+    }
+  };
+
+  window.openBulkAccessModal = () => {
+    bulkAccessCount = 3;
+    renderBulkAccessRows();
+    document.getElementById('bulkAccessModal').classList.add('show');
+  };
+
+  window.closeBulkAccessModal = () => {
+    document.getElementById('bulkAccessModal').classList.remove('show');
+  };
+
+  window.addBulkAccessRow = () => {
+    bulkAccessCount++;
+    renderBulkAccessRows();
+  };
+
+  function renderBulkAccessRows() {
+    const list = document.getElementById('bulkAccessList');
+    list.innerHTML = '';
+    
+    for (let i = 0; i < bulkAccessCount; i++) {
+      const code = generateAccessCode();
+      list.innerHTML += `
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;padding:8px;background:#f9fafb;border-radius:6px">
+          <input type="text" 
+            name="bulk_name_${i}" 
+            placeholder="Name der Person" 
+            required
+            style="flex:1;padding:8px;border:1px solid var(--border);border-radius:4px;font-size:16px">
+          <code style="padding:8px;background:#fff;border:1px solid var(--border);border-radius:4px;font-family:monospace;font-weight:700;white-space:nowrap">${code}</code>
+          <input type="hidden" name="bulk_code_${i}" value="${code}">
+        </div>
+      `;
+    }
+  }
+
+  document.getElementById('bulkAccessForm').onsubmit = async (e) => {
+    e.preventDefault();
+    
+    try {
+      const formData = new FormData(e.target);
+      let count = 0;
+      
+      for (let i = 0; i < bulkAccessCount; i++) {
+        const name = formData.get(`bulk_name_${i}`);
+        const code = formData.get(`bulk_code_${i}`);
+        
+        if (name && name.trim()) {
+          const tempPassword = generatePassword();
+          
+          await pb.collection('training_students').create({
+            email: `${code}@responda-temp.local`,
+            password: tempPassword,
+            passwordConfirm: tempPassword,
+            name: name.trim(),
+            access_code: code,
+            organization_id: currentUser.organization_id
+          });
+          
+          count++;
+        }
+      }
+      
+      showMsg(`✅ ${count} Zugänge erstellt!`);
+      closeBulkAccessModal();
+      await loadSettings();
+      
+    } catch(e) {
+      showMsg('Fehler: ' + e.message, 'error');
+    }
+  };
+
+  window.deleteAccess = async (accessId) => {
+    if (!confirm('Zugang wirklich löschen?')) return;
+    
+    try {
+      await pb.collection('training_students').delete(accessId);
+      showMsg('✅ Zugang gelöscht!');
+      await loadSettings();
+    } catch(e) {
+      showMsg('Fehler: ' + e.message, 'error');
+    }
+  };
+
+  window.exportAccessCodes = () => {
+    let csv = 'Name,Zugangscode\n';
+    allAccess.forEach(acc => {
+      csv += `"${acc.name}","${acc.access_code}"\n`;
+    });
+    
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Zugangscodes-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    
+    showMsg('✅ CSV exportiert!');
+  };
+
+  window.exportAccessPDF = async (accessId) => {
+    try {
+      if (typeof window.jspdf === 'undefined') {
+        showMsg('PDF-Bibliothek wird geladen...', 'info');
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+      
+      const access = allAccess.find(a => a.id === accessId);
+      if (!access) return;
+      
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      
+      doc.setFontSize(24);
+      doc.setFont(undefined, 'bold');
+      doc.text('Responda Schulungszugang', 105, 30, { align: 'center' });
+      
+      doc.setFontSize(14);
+      doc.setFont(undefined, 'normal');
+      doc.text(`Name: ${access.name}`, 20, 60);
+      
+      doc.setFontSize(18);
+      doc.setFont(undefined, 'bold');
+      doc.text('Ihr Zugangscode:', 20, 80);
+      
+      doc.setFontSize(28);
+      doc.setTextColor(200, 16, 46);
+      doc.text(access.access_code, 20, 100);
+      
+      doc.setTextColor(0, 0, 0);
+      doc.setFontSize(12);
+      doc.setFont(undefined, 'normal');
+      doc.text('Anleitung:', 20, 130);
+      doc.text('1. Öffnen Sie die Schulungsplattform', 20, 140);
+      doc.text('2. Geben Sie Ihren Zugangscode ein', 20, 150);
+      doc.text('3. Wählen Sie Ihren Namen aus', 20, 160);
+      
+      const qrDiv = document.createElement('div');
+      qrDiv.style.display = 'none';
+      document.body.appendChild(qrDiv);
+      
+      new QRCode(qrDiv, {
+        text: access.access_code,
+        width: 128,
+        height: 128
+      });
+      
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      const qrImg = qrDiv.querySelector('img');
+      if (qrImg) {
+        doc.addImage(qrImg.src, 'PNG', 150, 60, 40, 40);
+      }
+      
+      document.body.removeChild(qrDiv);
+      
+      doc.save(`Zugangscode-${access.name.replace(/\s+/g, '-')}.pdf`);
+      showMsg('✅ PDF exportiert!');
+      
+    } catch(e) {
+      showMsg('Fehler: ' + e.message, 'error');
+    }
+  };
+
+  window.exportAllAccessPDFs = async () => {
+    if (allAccess.length === 0) {
+      showMsg('Keine Zugänge vorhanden', 'error');
+      return;
+    }
+    
+    try {
+      for (const access of allAccess) {
+        await exportAccessPDF(access.id);
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+      
+      showMsg(`✅ ${allAccess.length} PDFs exportiert!`);
+    } catch(e) {
+      showMsg('Fehler: ' + e.message, 'error');
+    }
+  };
+  // ========================================
+  // SCHULUNGEN
   // ========================================
   async function loadCourses() {
     try {
@@ -1986,6 +2016,9 @@
                 <button class="btn btn-sm info" onclick="event.stopPropagation(); openManageParticipants('${s.id}')">
                   <i class="fas fa-users-cog"></i> Teilnehmer
                 </button>
+                <button class="btn btn-sm success" onclick="event.stopPropagation(); openSendInvitationsModal('${s.id}')">
+                  <i class="fas fa-envelope"></i> Einladungen
+                </button>
                 <button class="btn btn-sm" onclick="event.stopPropagation(); openEditSessionModal('${s.id}')">
                   <i class="fas fa-edit"></i>
                 </button>
@@ -2261,6 +2294,61 @@
       showMsg('Fehler: ' + e.message, 'error');
     }
   };
+  // ========================================
+  // EINLADUNGEN VERSCHICKEN
+  // ========================================
+  window.openSendInvitationsModal = async (sessionId) => {
+    try {
+      currentInvitationSessionId = sessionId;
+      const session = await pb.collection('training_sessions').getOne(sessionId);
+      const course = allCourses.find(c => c.id === session.course_id);
+      
+      document.getElementById('invite-session-info').textContent = 
+        `${course ? course.title : 'Schulung'} • ${formatDate(session.date)}`;
+      
+      // Generiere Einladungslink
+      const baseUrl = window.location.origin;
+      currentInvitationLink = `${baseUrl}/ausbildungen-invite.html?session=${sessionId}`;
+      
+      document.getElementById('invitation-link').textContent = currentInvitationLink;
+      
+      // QR-Code Container zurücksetzen
+      document.getElementById('qr-code-container').style.display = 'none';
+      document.getElementById('qr-code-display').innerHTML = '';
+      
+      document.getElementById('sendInvitationsModal').classList.add('show');
+      
+    } catch(e) {
+      showMsg('Fehler: ' + e.message, 'error');
+    }
+  };
+
+  window.closeSendInvitationsModal = () => {
+    document.getElementById('sendInvitationsModal').classList.remove('show');
+    currentInvitationLink = '';
+    currentInvitationSessionId = null;
+  };
+
+  window.copyInvitationLink = () => {
+    copyToClipboard(currentInvitationLink);
+  };
+
+  window.generateInvitationQR = () => {
+    const container = document.getElementById('qr-code-display');
+    container.innerHTML = '';
+    
+    new QRCode(container, {
+      text: currentInvitationLink,
+      width: 256,
+      height: 256,
+      colorDark: '#c8102e',
+      colorLight: '#ffffff',
+      correctLevel: QRCode.CorrectLevel.H
+    });
+    
+    document.getElementById('qr-code-container').style.display = 'block';
+    showMsg('✅ QR-Code generiert!');
+  };
 
   // ========================================
   // TEILNEHMER VERWALTEN
@@ -2445,6 +2533,7 @@
       showMsg('Fehler: ' + e.message, 'error');
     }
   };
+
   // ========================================
   // TERMIN-DETAILS MIT ANWESENHEITSLISTE
   // ========================================
@@ -2907,289 +2996,765 @@
       showMsg('Fehler: ' + e.message, 'error');
     }
   };
-
   // ========================================
-  // EXTERNE ZUGÄNGE
-  // ========================================
-  function renderSettings() {
-    const list = document.getElementById('access-list');
-    
-    if (allAccess.length === 0) {
-      list.innerHTML = '<div class="empty" style="background:#fff;border-radius:.75rem;margin-top:1rem"><i class="fas fa-key"></i><div>Noch keine Zugänge erstellt</div></div>';
-      return;
-    }
-    
-    list.innerHTML = `
-      <table class="table" style="margin-top:1rem">
-        <thead>
-          <tr>
-            <th>Name</th>
-            <th>Zugangscode</th>
-            <th>Aktionen</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${allAccess.map(acc => {
-            const member = acc.expand?.member_id;
-            return `
-              <tr>
-                <td style="font-weight:700">
-                  ${acc.name}
-                  ${member ? '<span class="badge success" style="margin-left:8px">Team-Mitglied</span>' : ''}
-                </td>
-                <td>
-                  <div class="copy-box">
-                    <code>${acc.access_code}</code>
-                    <button class="btn btn-sm" onclick="copyToClipboard('${acc.access_code}')">
-                      <i class="fas fa-copy"></i>
-                    </button>
-                  </div>
-                </td>
-                <td>
-                  <div style="display:flex;gap:4px;flex-wrap:wrap">
-                    <button class="btn btn-sm success" onclick="exportAccessPDF('${acc.id}')">
-                      <i class="fas fa-file-pdf"></i> PDF
-                    </button>
-                    <button class="btn btn-sm" style="background:#dc2626;color:#fff" onclick="deleteAccess('${acc.id}')">
-                      <i class="fas fa-trash"></i>
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            `;
-          }).join('')}
-        </tbody>
-      </table>
-    `;
-  }
-
-  window.openSingleAccessModal = () => {
-    previewAccessCode = generateAccessCode();
-    document.getElementById('preview-code').textContent = previewAccessCode;
-    document.getElementById('singleAccessForm').reset();
-    document.getElementById('singleAccessModal').classList.add('show');
-  };
-
-  window.closeSingleAccessModal = () => {
-    document.getElementById('singleAccessModal').classList.remove('show');
-  };
-
-  document.getElementById('singleAccessForm').onsubmit = async (e) => {
-    e.preventDefault();
-    
-    try {
-      const formData = new FormData(e.target);
-      const tempPassword = generatePassword();
-      
-      await pb.collection('training_students').create({
-        email: `${previewAccessCode}@responda-temp.local`,
-        password: tempPassword,
-        passwordConfirm: tempPassword,
-        name: formData.get('name').trim(),
-        access_code: previewAccessCode,
-        organization_id: currentUser.organization_id
-      });
-      
-      showMsg('✅ Zugang erstellt!');
-      closeSingleAccessModal();
-      await loadSettings();
-      
-    } catch(e) {
-      showMsg('Fehler: ' + e.message, 'error');
-    }
-  };
-
-  window.openBulkAccessModal = () => {
-    bulkAccessCount = 3;
-    renderBulkAccessRows();
-    document.getElementById('bulkAccessModal').classList.add('show');
-  };
-
-  window.closeBulkAccessModal = () => {
-    document.getElementById('bulkAccessModal').classList.remove('show');
-  };
-
-  window.addBulkAccessRow = () => {
-    bulkAccessCount++;
-    renderBulkAccessRows();
-  };
-
-  function renderBulkAccessRows() {
-    const list = document.getElementById('bulkAccessList');
-    list.innerHTML = '';
-    
-    for (let i = 0; i < bulkAccessCount; i++) {
-      const code = generateAccessCode();
-      list.innerHTML += `
-        <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;padding:8px;background:#f9fafb;border-radius:6px">
-          <input type="text" 
-            name="bulk_name_${i}" 
-            placeholder="Name der Person" 
-            required
-            style="flex:1;padding:8px;border:1px solid var(--border);border-radius:4px;font-size:16px">
-          <code style="padding:8px;background:#fff;border:1px solid var(--border);border-radius:4px;font-family:monospace;font-weight:700;white-space:nowrap">${code}</code>
-          <input type="hidden" name="bulk_code_${i}" value="${code}">
-        </div>
-      `;
-    }
-  }
-
-  document.getElementById('bulkAccessForm').onsubmit = async (e) => {
-    e.preventDefault();
-    
-    try {
-      const formData = new FormData(e.target);
-      let count = 0;
-      
-      for (let i = 0; i < bulkAccessCount; i++) {
-        const name = formData.get(`bulk_name_${i}`);
-        const code = formData.get(`bulk_code_${i}`);
-        
-        if (name && name.trim()) {
-          const tempPassword = generatePassword();
-          
-          await pb.collection('training_students').create({
-            email: `${code}@responda-temp.local`,
-            password: tempPassword,
-            passwordConfirm: tempPassword,
-            name: name.trim(),
-            access_code: code,
-            organization_id: currentUser.organization_id
-          });
-          
-          count++;
-        }
-      }
-      
-      showMsg(`✅ ${count} Zugänge erstellt!`);
-      closeBulkAccessModal();
-      await loadSettings();
-      
-    } catch(e) {
-      showMsg('Fehler: ' + e.message, 'error');
-    }
-  };
-
-  window.deleteAccess = async (accessId) => {
-    if (!confirm('Zugang wirklich löschen?')) return;
-    
-    try {
-      await pb.collection('training_students').delete(accessId);
-      showMsg('✅ Zugang gelöscht!');
-      await loadSettings();
-    } catch(e) {
-      showMsg('Fehler: ' + e.message, 'error');
-    }
-  };
-
-  window.exportAccessCodes = () => {
-    let csv = 'Name,Zugangscode\n';
-    allAccess.forEach(acc => {
-      csv += `"${acc.name}","${acc.access_code}"\n`;
-    });
-    
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `Zugangscodes-${new Date().toISOString().split('T')[0]}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-    
-    showMsg('✅ CSV exportiert!');
-  };
-
-  window.exportAccessPDF = async (accessId) => {
-    try {
-      if (typeof window.jspdf === 'undefined') {
-        showMsg('PDF-Bibliothek wird geladen...', 'info');
-        await new Promise(resolve => setTimeout(resolve, 1000));
-      }
-      
-      const access = allAccess.find(a => a.id === accessId);
-      if (!access) return;
-      
-      const { jsPDF } = window.jspdf;
-      const doc = new jsPDF();
-      
-      doc.setFontSize(24);
-      doc.setFont(undefined, 'bold');
-      doc.text('Responda Schulungszugang', 105, 30, { align: 'center' });
-      
-      doc.setFontSize(14);
-      doc.setFont(undefined, 'normal');
-      doc.text(`Name: ${access.name}`, 20, 60);
-      
-      doc.setFontSize(18);
-      doc.setFont(undefined, 'bold');
-      doc.text('Ihr Zugangscode:', 20, 80);
-      
-      doc.setFontSize(28);
-      doc.setTextColor(200, 16, 46);
-      doc.text(access.access_code, 20, 100);
-      
-      doc.setTextColor(0, 0, 0);
-      doc.setFontSize(12);
-      doc.setFont(undefined, 'normal');
-      doc.text('Anleitung:', 20, 130);
-      doc.text('1. Öffnen Sie die Schulungsplattform', 20, 140);
-      doc.text('2. Geben Sie Ihren Zugangscode ein', 20, 150);
-      doc.text('3. Wählen Sie Ihren Namen aus', 20, 160);
-      
-      const qrDiv = document.createElement('div');
-      qrDiv.style.display = 'none';
-      document.body.appendChild(qrDiv);
-      
-      new QRCode(qrDiv, {
-        text: access.access_code,
-        width: 128,
-        height: 128
-      });
-      
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      const qrImg = qrDiv.querySelector('img');
-      if (qrImg) {
-        doc.addImage(qrImg.src, 'PNG', 150, 60, 40, 40);
-      }
-      
-      document.body.removeChild(qrDiv);
-      
-      doc.save(`Zugangscode-${access.name.replace(/\s+/g, '-')}.pdf`);
-      showMsg('✅ PDF exportiert!');
-      
-    } catch(e) {
-      showMsg('Fehler: ' + e.message, 'error');
-    }
-  };
-
-  window.exportAllAccessPDFs = async () => {
-    if (allAccess.length === 0) {
-      showMsg('Keine Zugänge vorhanden', 'error');
-      return;
-    }
-    
-    try {
-      for (const access of allAccess) {
-        await exportAccessPDF(access.id);
-        await new Promise(resolve => setTimeout(resolve, 500));
-      }
-      
-      showMsg(`✅ ${allAccess.length} PDFs exportiert!`);
-    } catch(e) {
-      showMsg('Fehler: ' + e.message, 'error');
-    }
-  };
-
-  // ========================================
-  // LERNBEREICH (Stub - bereits komplett)
+  // LERNBEREICH
   // ========================================
   async function loadLernbereich() {
-    document.getElementById('lernbereich-list').innerHTML = '<div class="empty" style="background:#fff;border-radius:.75rem"><i class="fas fa-laptop"></i><div>Lernbereich - Noch nicht implementiert</div></div>';
+    try {
+      allModules = await pb.collection('learning_modules').getFullList({
+        filter: `organization_id = "${currentUser.organization_id}"`,
+        sort: '-created'
+      });
+      
+      allSlides = await pb.collection('learning_slides').getFullList({
+        filter: `organization_id = "${currentUser.organization_id}"`,
+        sort: 'order'
+      });
+      
+      allAssignments = await pb.collection('module_assignments').getFullList({
+        filter: `organization_id = "${currentUser.organization_id}"`,
+        expand: 'member_id'
+      });
+      
+      renderLernbereich();
+    } catch(e) {
+      console.error('Error:', e);
+      document.getElementById('lernbereich-list').innerHTML = `<div class="empty" style="background:#fff;border-radius:.75rem"><i class="fas fa-exclamation-triangle"></i><div style="color:#c00">Fehler: ${e.message}</div></div>`;
+    }
+  }
+
+  function renderLernbereich() {
+    const list = document.getElementById('lernbereich-list');
+    
+    if (allModules.length === 0) {
+      list.innerHTML = '<div class="empty" style="background:#fff;border-radius:.75rem"><i class="fas fa-laptop"></i><div>Noch keine Lernmodule</div></div>';
+      return;
+    }
+    
+    list.innerHTML = allModules.map(module => {
+      const moduleSlides = allSlides.filter(s => s.module_id === module.id);
+      const moduleAssignments = allAssignments.filter(a => a.module_id === module.id);
+      
+      return `
+        <div class="module-card" onclick="viewModuleDetails('${module.id}')">
+          <div class="card-title"><i class="fa-solid fa-laptop"></i> ${module.title}</div>
+          
+          ${module.description ? `
+            <div style="margin:8px 0;color:var(--muted);font-size:.9rem;line-height:1.5">${module.description}</div>
+          ` : ''}
+          
+          <div style="margin-top:8px;color:var(--muted);font-size:.85rem">
+            <i class="fa-solid fa-file"></i> ${moduleSlides.length} Folie(n)
+            ${module.instructor ? ` • 👤 ${module.instructor}` : ''}
+          </div>
+          
+          ${moduleAssignments.length > 0 ? `
+            <div style="margin-top:6px;padding:6px 10px;background:#f0fdf4;border-radius:6px;font-size:0.85rem;color:#16a34a">
+              👥 ${moduleAssignments.length} Person(en) zugewiesen
+            </div>
+          ` : ''}
+        </div>
+      `;
+    }).join('');
   }
 
   window.openModuleModal = () => {
-    showMsg('Lernbereich-Feature kommt bald!', 'info');
+    currentEditModule = null;
+    const form = document.getElementById('moduleForm');
+    form.reset();
+    document.getElementById('moduleModalTitle').innerHTML = '<i class="fa-solid fa-laptop"></i> Neues Lernmodul';
+    document.getElementById('moduleModal').classList.add('show');
+  };
+
+  window.closeModuleModal = () => {
+    document.getElementById('moduleModal').classList.remove('show');
+  };
+
+  document.getElementById('moduleForm').onsubmit = async (e) => {
+    e.preventDefault();
+    
+    try {
+      const formData = new FormData(e.target);
+      const data = {
+        title: formData.get('title').trim(),
+        description: formData.get('description').trim(),
+        instructor: formData.get('instructor').trim(),
+        passing_score: parseInt(formData.get('passing_score')) || 80,
+        max_attempts: parseInt(formData.get('max_attempts')) || 3,
+        require_quiz: document.getElementById('require-quiz').checked,
+        organization_id: currentUser.organization_id
+      };
+      
+      if (currentEditModule) {
+        await pb.collection('learning_modules').update(currentEditModule, data);
+        showMsg('✅ Lernmodul aktualisiert!');
+      } else {
+        await pb.collection('learning_modules').create(data);
+        showMsg('✅ Lernmodul erstellt!');
+      }
+      
+      closeModuleModal();
+      await loadLernbereich();
+      
+    } catch(e) {
+      showMsg('Fehler: ' + e.message, 'error');
+    }
+  };
+
+  window.viewModuleDetails = async (moduleId) => {
+    try {
+      const module = await pb.collection('learning_modules').getOne(moduleId);
+      const moduleSlides = allSlides.filter(s => s.module_id === moduleId);
+      const moduleAssignments = allAssignments.filter(a => a.module_id === moduleId);
+      
+      document.getElementById('moduleDetailsTitle').innerHTML = 
+        `<i class="fa-solid fa-laptop"></i> ${module.title}`;
+      
+      let html = `
+        <div class="details-section">
+          <h4><i class="fa-solid fa-info-circle"></i> Informationen</h4>
+          <div style="display:grid;grid-template-columns:150px 1fr;gap:12px">
+            <div style="font-weight:700;color:#6b7280">Titel:</div>
+            <div style="font-weight:700;font-size:1.1rem">${module.title}</div>
+            
+            ${module.description ? `
+            <div style="font-weight:700;color:#6b7280">Beschreibung:</div>
+            <div style="line-height:1.6">${module.description}</div>
+            ` : ''}
+            
+            ${module.instructor ? `
+            <div style="font-weight:700;color:#6b7280">Dozent:</div>
+            <div>👤 ${module.instructor}</div>
+            ` : ''}
+            
+            <div style="font-weight:700;color:#6b7280">Bestehensgrenze:</div>
+            <div>${module.passing_score}%</div>
+            
+            <div style="font-weight:700;color:#6b7280">Max. Versuche:</div>
+            <div>${module.max_attempts === 0 ? 'Unbegrenzt' : module.max_attempts}</div>
+            
+            <div style="font-weight:700;color:#6b7280">Abschlussprüfung:</div>
+            <div>${module.require_quiz ? '✅ Erforderlich' : '❌ Nicht erforderlich'}</div>
+            
+            <div style="font-weight:700;color:#6b7280">Folien:</div>
+            <div><span class="badge info">${moduleSlides.length} Folie(n)</span></div>
+            
+            <div style="font-weight:700;color:#6b7280">Zugewiesen:</div>
+            <div><span class="badge success">${moduleAssignments.length} Person(en)</span></div>
+          </div>
+          
+          <div style="margin-top:1rem;display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-sm" onclick="editModule('${moduleId}')">
+              <i class="fas fa-edit"></i> Bearbeiten
+            </button>
+            <button class="btn btn-sm primary" onclick="openSlideEditor('${moduleId}')">
+              <i class="fas fa-file"></i> Folien bearbeiten (${moduleSlides.length})
+            </button>
+            <button class="btn btn-sm info" onclick="openAssignMembersModal('${moduleId}')">
+              <i class="fas fa-users"></i> Personen zuweisen (${moduleAssignments.length})
+            </button>
+            <button class="btn btn-sm success" onclick="previewModule('${moduleId}')">
+              <i class="fas fa-play"></i> Vorschau
+            </button>
+            <button class="btn btn-sm" style="background:#dc2626;color:#fff" onclick="deleteModule('${moduleId}')">
+              <i class="fas fa-trash"></i> Löschen
+            </button>
+          </div>
+        </div>
+        
+        <div class="details-section">
+          <h4><i class="fa-solid fa-users"></i> Zugewiesene Personen (${moduleAssignments.length})</h4>
+      `;
+      
+      if (moduleAssignments.length > 0) {
+        html += '<div style="display:flex;flex-wrap:wrap;gap:8px">';
+        moduleAssignments.forEach(a => {
+          const member = a.expand?.member_id;
+          if (member) {
+            html += `<span class="tag">${member.vorname} ${member.name}</span>`;
+          }
+        });
+        html += '</div>';
+      } else {
+        html += '<div style="color:var(--muted)">Noch keine Personen zugewiesen</div>';
+      }
+      
+      html += '</div>';
+      
+      document.getElementById('moduleDetailsBody').innerHTML = html;
+      document.getElementById('moduleDetailsModal').classList.add('show');
+      
+    } catch(e) {
+      showMsg('Fehler: ' + e.message, 'error');
+    }
+  };
+
+  window.closeModuleDetailsModal = () => {
+    document.getElementById('moduleDetailsModal').classList.remove('show');
+  };
+
+  window.editModule = async (moduleId) => {
+    try {
+      const module = await pb.collection('learning_modules').getOne(moduleId);
+      
+      currentEditModule = moduleId;
+      
+      const form = document.getElementById('moduleForm');
+      form.elements['title'].value = module.title;
+      form.elements['description'].value = module.description || '';
+      form.elements['instructor'].value = module.instructor || '';
+      form.elements['passing_score'].value = module.passing_score;
+      form.elements['max_attempts'].value = module.max_attempts;
+      document.getElementById('require-quiz').checked = module.require_quiz;
+      
+      document.getElementById('moduleModalTitle').innerHTML = '<i class="fa-solid fa-edit"></i> Lernmodul bearbeiten';
+      document.getElementById('moduleModal').classList.add('show');
+      closeModuleDetailsModal();
+      
+    } catch(e) {
+      showMsg('Fehler: ' + e.message, 'error');
+    }
+  };
+
+  window.deleteModule = async (moduleId) => {
+    if (!confirm('Lernmodul wirklich löschen?\n\nAlle Folien und Zuweisungen werden ebenfalls gelöscht!')) return;
+    
+    try {
+      // Lösche alle Folien
+      const slides = await pb.collection('learning_slides').getFullList({
+        filter: `module_id = "${moduleId}"`
+      });
+      for (const slide of slides) {
+        await pb.collection('learning_slides').delete(slide.id);
+      }
+      
+      // Lösche alle Zuweisungen
+      const assignments = await pb.collection('module_assignments').getFullList({
+        filter: `module_id = "${moduleId}"`
+      });
+      for (const assignment of assignments) {
+        await pb.collection('module_assignments').delete(assignment.id);
+      }
+      
+      // Lösche Modul
+      await pb.collection('learning_modules').delete(moduleId);
+      
+      showMsg('✅ Lernmodul gelöscht!');
+      closeModuleDetailsModal();
+      await loadLernbereich();
+      
+    } catch(e) {
+      showMsg('Fehler: ' + e.message, 'error');
+    }
+  };
+
+  // ========================================
+  // FOLIEN-EDITOR
+  // ========================================
+  window.openSlideEditor = async (moduleId) => {
+    try {
+      currentLearningModule = moduleId;
+      const module = await pb.collection('learning_modules').getOne(moduleId);
+      
+      currentSlides = await pb.collection('learning_slides').getFullList({
+        filter: `module_id = "${moduleId}"`,
+        sort: 'order'
+      });
+      
+      document.getElementById('slideEditorTitle').innerHTML = 
+        `<i class="fa-solid fa-file"></i> Folien bearbeiten - ${module.title}`;
+      
+      renderSlidesList();
+      
+      closeModuleDetailsModal();
+      document.getElementById('slideEditorModal').classList.add('show');
+      
+    } catch(e) {
+      showMsg('Fehler: ' + e.message, 'error');
+    }
+  };
+
+  window.closeSlideEditor = () => {
+    document.getElementById('slideEditorModal').classList.remove('show');
+    currentLearningModule = null;
+  };
+
+  function renderSlidesList() {
+    const list = document.getElementById('slides-list');
+    
+    if (currentSlides.length === 0) {
+      list.innerHTML = `
+        <div style="padding:2rem;text-align:center;background:#f9fafb;border-radius:8px;color:var(--muted)">
+          <i class="fas fa-file" style="font-size:3rem;opacity:0.3;margin-bottom:1rem"></i>
+          <div style="font-weight:700">Noch keine Folien</div>
+          <div style="font-size:0.85rem;margin-top:4px">Erstelle die erste Folie über den Button oben</div>
+        </div>
+      `;
+      return;
+    }
+    
+    list.innerHTML = currentSlides.map((slide, idx) => {
+      const icons = {
+        text: '📝',
+        image: '🖼️',
+        video: '🎥',
+        quiz: '❓'
+      };
+      
+      return `
+        <div class="slide-item">
+          <div style="display:flex;align-items:center;flex:1;gap:1rem">
+            <div class="slide-type-icon ${slide.type}">
+              ${icons[slide.type] || '📄'}
+            </div>
+            <div style="flex:1">
+              <div style="font-weight:700">${idx + 1}. ${slide.title}</div>
+              <div style="font-size:0.85rem;color:var(--muted)">
+                ${slide.type === 'text' ? 'Text-Folie' : 
+                  slide.type === 'image' ? 'Bild-Folie' : 
+                  slide.type === 'video' ? 'Video-Folie' : 'Quiz-Folie'}
+                • ~${slide.duration || 5} Min.
+              </div>
+            </div>
+          </div>
+          <div style="display:flex;gap:4px">
+            ${idx > 0 ? `<button class="btn btn-sm" onclick="moveSlide(${idx}, -1)"><i class="fas fa-arrow-up"></i></button>` : ''}
+            ${idx < currentSlides.length - 1 ? `<button class="btn btn-sm" onclick="moveSlide(${idx}, 1)"><i class="fas fa-arrow-down"></i></button>` : ''}
+            <button class="btn btn-sm" onclick="editSlide('${slide.id}')"><i class="fas fa-edit"></i></button>
+            <button class="btn btn-sm" style="background:#dc2626;color:#fff" onclick="deleteSlide('${slide.id}')"><i class="fas fa-trash"></i></button>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  window.moveSlide = async (index, direction) => {
+    const newIndex = index + direction;
+    if (newIndex < 0 || newIndex >= currentSlides.length) return;
+    
+    try {
+      // Swap order values
+      const slide1 = currentSlides[index];
+      const slide2 = currentSlides[newIndex];
+      
+      await pb.collection('learning_slides').update(slide1.id, { order: newIndex });
+      await pb.collection('learning_slides').update(slide2.id, { order: index });
+      
+      // Reload
+      currentSlides = await pb.collection('learning_slides').getFullList({
+        filter: `module_id = "${currentLearningModule}"`,
+        sort: 'order'
+      });
+      
+      renderSlidesList();
+      
+    } catch(e) {
+      showMsg('Fehler: ' + e.message, 'error');
+    }
+  };
+
+  window.deleteSlide = async (slideId) => {
+    if (!confirm('Folie wirklich löschen?')) return;
+    
+    try {
+      await pb.collection('learning_slides').delete(slideId);
+      
+      currentSlides = await pb.collection('learning_slides').getFullList({
+        filter: `module_id = "${currentLearningModule}"`,
+        sort: 'order'
+      });
+      
+      renderSlidesList();
+      showMsg('✅ Folie gelöscht!');
+      
+    } catch(e) {
+      showMsg('Fehler: ' + e.message, 'error');
+    }
+  };
+
+  // ========================================
+  // NEUE FOLIE / FOLIE BEARBEITEN
+  // ========================================
+  window.openNewSlideModal = () => {
+    currentEditSlide = null;
+    document.getElementById('newSlideForm').reset();
+    document.getElementById('slide-type').value = 'text';
+    quizAnswers = [];
+    
+    // Init Quill Editor
+    if (slideContentEditor) {
+      slideContentEditor = null;
+    }
+    
+    setTimeout(() => {
+      slideContentEditor = new Quill('#slide-content-editor', {
+        theme: 'snow',
+        modules: {
+          toolbar: [
+            ['bold', 'italic', 'underline'],
+            [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+            ['link']
+          ]
+        }
+      });
+    }, 100);
+    
+    updateSlideTypeFields();
+    document.getElementById('newSlideModal').classList.add('show');
+  };
+
+  window.closeNewSlideModal = () => {
+    document.getElementById('newSlideModal').classList.remove('show');
+    slideContentEditor = null;
+  };
+
+  window.updateSlideTypeFields = () => {
+    const type = document.getElementById('slide-type').value;
+    
+    document.getElementById('text-slide-fields').style.display = type === 'text' ? 'block' : 'none';
+    document.getElementById('image-slide-fields').style.display = type === 'image' ? 'block' : 'none';
+    document.getElementById('video-slide-fields').style.display = type === 'video' ? 'block' : 'none';
+    document.getElementById('quiz-slide-fields').style.display = type === 'quiz' ? 'block' : 'none';
+  };
+
+  window.addQuizAnswer = () => {
+    quizAnswers.push({ text: '', correct: false });
+    renderQuizAnswers();
+  };
+
+  function renderQuizAnswers() {
+    const list = document.getElementById('quiz-answers-list');
+    list.innerHTML = quizAnswers.map((answer, idx) => `
+      <div style="display:flex;gap:8px;margin-bottom:8px;align-items:center">
+        <input type="text" 
+          value="${answer.text}" 
+          onchange="quizAnswers[${idx}].text = this.value"
+          placeholder="Antwort ${idx + 1}"
+          style="flex:1;padding:8px;border:1px solid var(--border);border-radius:4px;font-size:16px">
+        <label style="display:flex;align-items:center;gap:4px;white-space:nowrap">
+          <input type="radio" 
+            name="correct-answer" 
+            ${answer.correct ? 'checked' : ''}
+            onchange="quizAnswers.forEach((a,i) => a.correct = i === ${idx})">
+          <span>Richtig</span>
+        </label>
+        <button type="button" class="btn btn-sm" style="background:#dc2626;color:#fff" onclick="removeQuizAnswer(${idx})">
+          <i class="fas fa-trash"></i>
+        </button>
+      </div>
+    `).join('');
+  }
+
+  window.removeQuizAnswer = (idx) => {
+    quizAnswers.splice(idx, 1);
+    renderQuizAnswers();
+  };
+
+  window.saveSlide = async () => {
+    try {
+      const type = document.getElementById('slide-type').value;
+      const title = document.getElementById('slide-title').value.trim();
+      const duration = parseInt(document.getElementById('slide-duration').value) || 5;
+      
+      if (!title) {
+        showMsg('Bitte Titel eingeben', 'error');
+        return;
+      }
+      
+      let content = {};
+      
+      if (type === 'text') {
+        content.html = slideContentEditor.root.innerHTML;
+      } else if (type === 'image') {
+        content.url = document.getElementById('slide-image-url').value.trim();
+        content.description = document.getElementById('slide-image-description').value.trim();
+      } else if (type === 'video') {
+        content.url = document.getElementById('slide-video-url').value.trim();
+        content.description = document.getElementById('slide-video-description').value.trim();
+      } else if (type === 'quiz') {
+        const question = document.getElementById('slide-quiz-question').value.trim();
+        if (!question || quizAnswers.length < 2) {
+          showMsg('Quiz benötigt Frage und mindestens 2 Antworten', 'error');
+          return;
+        }
+        content.question = question;
+        content.answers = quizAnswers;
+        content.explanation = document.getElementById('slide-quiz-explanation').value.trim();
+      }
+      
+      const data = {
+        module_id: currentLearningModule,
+        type: type,
+        title: title,
+        content: content,
+        duration: duration,
+        order: currentSlides.length,
+        organization_id: currentUser.organization_id
+      };
+      
+      if (currentEditSlide) {
+        await pb.collection('learning_slides').update(currentEditSlide, data);
+        showMsg('✅ Folie aktualisiert!');
+      } else {
+        await pb.collection('learning_slides').create(data);
+        showMsg('✅ Folie erstellt!');
+      }
+      
+      currentSlides = await pb.collection('learning_slides').getFullList({
+        filter: `module_id = "${currentLearningModule}"`,
+        sort: 'order'
+      });
+      
+      renderSlidesList();
+      closeNewSlideModal();
+      
+    } catch(e) {
+      showMsg('Fehler: ' + e.message, 'error');
+    }
+  };
+
+  window.editSlide = async (slideId) => {
+    try {
+      currentEditSlide = slideId;
+      const slide = await pb.collection('learning_slides').getOne(slideId);
+      
+      document.getElementById('slide-type').value = slide.type;
+      document.getElementById('slide-title').value = slide.title;
+      document.getElementById('slide-duration').value = slide.duration;
+      
+      updateSlideTypeFields();
+      
+      if (slide.type === 'text') {
+        setTimeout(() => {
+          slideContentEditor = new Quill('#slide-content-editor', {
+            theme: 'snow',
+            modules: {
+              toolbar: [
+                ['bold', 'italic', 'underline'],
+                [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                ['link']
+              ]
+            }
+          });
+          slideContentEditor.root.innerHTML = slide.content.html || '';
+        }, 100);
+      } else if (slide.type === 'image') {
+        document.getElementById('slide-image-url').value = slide.content.url || '';
+        document.getElementById('slide-image-description').value = slide.content.description || '';
+      } else if (slide.type === 'video') {
+        document.getElementById('slide-video-url').value = slide.content.url || '';
+        document.getElementById('slide-video-description').value = slide.content.description || '';
+      } else if (slide.type === 'quiz') {
+        document.getElementById('slide-quiz-question').value = slide.content.question || '';
+        document.getElementById('slide-quiz-explanation').value = slide.content.explanation || '';
+        quizAnswers = slide.content.answers || [];
+        renderQuizAnswers();
+      }
+      
+      document.getElementById('newSlideModal').classList.add('show');
+      
+    } catch(e) {
+      showMsg('Fehler: ' + e.message, 'error');
+    }
+  };
+
+  // ========================================
+  // MODUL VORSCHAU
+  // ========================================
+  window.previewModule = async (moduleId) => {
+    try {
+      const module = await pb.collection('learning_modules').getOne(moduleId);
+      previewSlides = await pb.collection('learning_slides').getFullList({
+        filter: `module_id = "${moduleId}"`,
+        sort: 'order'
+      });
+      
+      if (previewSlides.length === 0) {
+        showMsg('Keine Folien zum Anzeigen', 'error');
+        return;
+      }
+      
+      currentPreviewIndex = 0;
+      
+      document.getElementById('previewModuleTitle').innerHTML = 
+        `<i class="fa-solid fa-play"></i> Vorschau - ${module.title}`;
+      
+      renderPreviewSlide();
+      
+      if (document.getElementById('slideEditorModal').classList.contains('show')) {
+        // Aus Editor heraus
+      } else {
+        closeModuleDetailsModal();
+      }
+      
+      document.getElementById('modulePreviewModal').classList.add('show');
+      
+    } catch(e) {
+      showMsg('Fehler: ' + e.message, 'error');
+    }
+  };
+
+  window.closePreviewModal = () => {
+    document.getElementById('modulePreviewModal').classList.remove('show');
+  };
+
+  function renderPreviewSlide() {
+    const slide = previewSlides[currentPreviewIndex];
+    const content = document.getElementById('previewContent');
+    
+    document.getElementById('slideCounter').textContent = 
+      `${currentPreviewIndex + 1} / ${previewSlides.length}`;
+    
+    document.getElementById('prevSlideBtn').disabled = currentPreviewIndex === 0;
+    document.getElementById('nextSlideBtn').disabled = currentPreviewIndex === previewSlides.length - 1;
+    
+    let html = `<h2 style="margin-bottom:1rem">${slide.title}</h2>`;
+    
+    if (slide.type === 'text') {
+      html += `<div style="line-height:1.8">${slide.content.html}</div>`;
+    } else if (slide.type === 'image') {
+      html += `
+        <img src="${slide.content.url}" style="max-width:100%;border-radius:8px;margin-bottom:1rem" alt="${slide.title}">
+        ${slide.content.description ? `<p style="color:var(--muted)">${slide.content.description}</p>` : ''}
+      `;
+    } else if (slide.type === 'video') {
+      const videoId = extractYouTubeId(slide.content.url);
+      if (videoId) {
+        html += `
+          <div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;margin-bottom:1rem">
+            <iframe src="https://www.youtube.com/embed/${videoId}" 
+              style="position:absolute;top:0;left:0;width:100%;height:100%;border:none;border-radius:8px"
+              allowfullscreen></iframe>
+          </div>
+        `;
+      }
+      if (slide.content.description) {
+        html += `<p style="color:var(--muted)">${slide.content.description}</p>`;
+      }
+    } else if (slide.type === 'quiz') {
+      html += `
+        <div style="background:#f9fafb;padding:1.5rem;border-radius:8px;margin-bottom:1rem">
+          <div style="font-weight:700;margin-bottom:1rem;font-size:1.1rem">${slide.content.question}</div>
+          ${slide.content.answers.map((a, idx) => `
+            <div style="padding:0.75rem;background:#fff;border:2px solid ${a.correct ? '#16a34a' : '#e5e7eb'};border-radius:6px;margin-bottom:8px">
+              <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+                <input type="radio" name="preview-answer">
+                <span>${a.text}</span>
+                ${a.correct ? '<span style="margin-left:auto;color:#16a34a;font-weight:700">✓ Richtig</span>' : ''}
+              </label>
+            </div>
+          `).join('')}
+          ${slide.content.explanation ? `
+            <div style="margin-top:1rem;padding:1rem;background:#eff6ff;border-radius:6px;border-left:4px solid #3b82f6">
+              <strong>Erklärung:</strong> ${slide.content.explanation}
+            </div>
+          ` : ''}
+        </div>
+      `;
+    }
+    
+    content.innerHTML = html;
+  }
+
+  function extractYouTubeId(url) {
+    const regex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
+    const match = url.match(regex);
+    return match ? match[1] : null;
+  }
+
+  window.prevPreviewSlide = () => {
+    if (currentPreviewIndex > 0) {
+      currentPreviewIndex--;
+      renderPreviewSlide();
+    }
+  };
+
+  window.nextPreviewSlide = () => {
+    if (currentPreviewIndex < previewSlides.length - 1) {
+      currentPreviewIndex++;
+      renderPreviewSlide();
+    }
+  };
+
+  // ========================================
+  // PERSONEN ZUWEISEN
+  // ========================================
+  window.openAssignMembersModal = async (moduleId) => {
+    try {
+      currentLearningModule = moduleId;
+      
+      const assignments = await pb.collection('module_assignments').getFullList({
+        filter: `module_id = "${moduleId}"`
+      });
+      
+      selectedAssignments = assignments.map(a => a.member_id);
+      
+      const list = document.getElementById('assignMembersList');
+      list.innerHTML = allMembers.map(member => {
+        const isAssigned = selectedAssignments.includes(member.id);
+        
+        return `
+          <div style="padding:.75rem;border-bottom:1px solid var(--border)">
+            <label style="display:flex;align-items:center;gap:.75rem;cursor:pointer">
+              <input type="checkbox" ${isAssigned ? 'checked' : ''} 
+                onchange="toggleAssignment('${member.id}')">
+              <div style="flex:1">
+                <div style="font-weight:700">${member.vorname} ${member.name}</div>
+                <div style="font-size:.85rem;color:var(--muted)">${(member.qualifikationen || []).join(', ')}</div>
+              </div>
+            </label>
+          </div>
+        `;
+      }).join('');
+      
+      closeModuleDetailsModal();
+      document.getElementById('assignMembersModal').classList.add('show');
+      
+    } catch(e) {
+      showMsg('Fehler: ' + e.message, 'error');
+    }
+  };
+
+  window.closeAssignMembersModal = () => {
+    document.getElementById('assignMembersModal').classList.remove('show');
+  };
+
+  window.toggleAssignment = (memberId) => {
+    const idx = selectedAssignments.indexOf(memberId);
+    if (idx >= 0) {
+      selectedAssignments.splice(idx, 1);
+    } else {
+      selectedAssignments.push(memberId);
+    }
+  };
+
+  window.saveAssignments = async () => {
+    try {
+      // Lösche alle bisherigen Zuweisungen
+      const existingAssignments = await pb.collection('module_assignments').getFullList({
+        filter: `module_id = "${currentLearningModule}"`
+      });
+      
+      for (const assignment of existingAssignments) {
+        await pb.collection('module_assignments').delete(assignment.id);
+      }
+      
+      // Erstelle neue Zuweisungen
+      for (const memberId of selectedAssignments) {
+        await pb.collection('module_assignments').create({
+          module_id: currentLearningModule,
+          member_id: memberId,
+          organization_id: currentUser.organization_id
+        });
+      }
+      
+      showMsg(`✅ ${selectedAssignments.length} Personen zugewiesen!`);
+      closeAssignMembersModal();
+      await loadLernbereich();
+      
+    } catch(e) {
+      showMsg('Fehler: ' + e.message, 'error');
+    }
   };
 
   // ========================================
@@ -3210,4 +3775,3 @@
 
 </body>
 </html>
-
