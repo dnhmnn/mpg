@@ -186,6 +186,34 @@
       color:#fff;
     }
     
+    .already-responded{
+      background:#f0fdf4;
+      border:2px solid #86efac;
+      padding:1.5rem;
+      border-radius:12px;
+      text-align:center;
+      margin-top:1.5rem;
+    }
+    .already-responded.declined{
+      background:#fee2e2;
+      border-color:#fca5a5;
+    }
+    .already-responded i{
+      font-size:3rem;
+      margin-bottom:.5rem;
+    }
+    .already-responded.declined i{
+      color:var(--error);
+    }
+    .already-responded h3{
+      margin:0 0 .5rem 0;
+      font-size:1.3rem;
+    }
+    .already-responded p{
+      margin:0;
+      color:var(--muted);
+    }
+    
     .success-screen, .error-screen{
       text-align:center;
       padding:2rem 0;
@@ -328,7 +356,7 @@
       
       <div class="hint-box">
         <i class="fa-solid fa-shield-halved"></i> 
-        <strong>Hinweis:</strong> Nur eingeladene Personen können an dieser Schulung teilnehmen. Dein Name wird mit der Teilnehmerliste abgeglichen.
+        <strong>Hinweis:</strong> Nur eingeladene Personen können teilnehmen. Nach deiner Rückmeldung kann diese nicht mehr geändert werden.
       </div>
     </div>
 
@@ -339,6 +367,32 @@
       <button class="btn btn-error" onclick="respondToSession('abgesagt')" id="btnAbsagen">
         <i class="fa-solid fa-times"></i> Absagen
       </button>
+    </div>
+  </div>
+
+  <!-- Already Responded -->
+  <div id="alreadyRespondedScreen" style="display:none">
+    <div class="logo">
+      <i class="fa-solid fa-graduation-cap"></i>
+      <h1>Schulungseinladung</h1>
+    </div>
+
+    <div class="info-box">
+      <h3><i class="fa-solid fa-info-circle"></i> Schulungsdetails</h3>
+      <div class="info-row">
+        <span class="info-label"><i class="fa-solid fa-book"></i> Schulung:</span>
+        <span class="info-value" id="courseTitle2">-</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label"><i class="fa-solid fa-calendar"></i> Datum:</span>
+        <span class="info-value" id="sessionDate2">-</span>
+      </div>
+    </div>
+
+    <div class="already-responded" id="alreadyRespondedBox">
+      <i class="fa-solid fa-check-circle" style="color:var(--success)"></i>
+      <h3 id="alreadyRespondedTitle">Du hast bereits zugesagt!</h3>
+      <p id="alreadyRespondedText">Deine Teilnahme ist bestätigt. Wir freuen uns auf dich!</p>
     </div>
   </div>
 
@@ -405,8 +459,11 @@
         return;
       }
       
+      // Fülle Schulungsdetails
       document.getElementById('courseTitle').textContent = course.title;
       document.getElementById('sessionDate').textContent = formatDate(session.date);
+      document.getElementById('courseTitle2').textContent = course.title;
+      document.getElementById('sessionDate2').textContent = formatDate(session.date);
       
       if (session.start_time && session.end_time) {
         document.getElementById('sessionTime').textContent = 
@@ -479,18 +536,15 @@
         return;
       }
       
-      // Prüfe ob bereits geantwortet
+      // KRITISCH: Prüfe ob bereits geantwortet (Status != 'eingeladen')
       if (foundParticipant.status !== 'eingeladen') {
-        const oldStatus = foundParticipant.status === 'zugesagt' ? 'zugesagt' : 'abgesagt';
-        if (oldStatus === status) {
-          showErrorMsg(`ℹ️ Du hast bereits ${status}!`);
-          document.getElementById('btnZusagen').disabled = false;
-          document.getElementById('btnAbsagen').disabled = false;
-          return;
-        }
+        // Zeige "Already Responded" Screen
+        const member = foundParticipant.expand.member_id;
+        showAlreadyResponded(foundParticipant.status, member.vorname);
+        return;
       }
       
-      // Update Teilnahme-Status
+      // Update Teilnahme-Status (NUR wenn Status = 'eingeladen')
       await pb.collection('schulung_teilnahme').update(foundParticipant.id, {
         status: status
       });
@@ -519,6 +573,28 @@
       document.getElementById('btnAbsagen').disabled = false;
     }
   };
+
+  // ========================================
+  // ALREADY RESPONDED SCREEN
+  // ========================================
+  function showAlreadyResponded(status, vorname) {
+    document.getElementById('mainForm').style.display = 'none';
+    document.getElementById('alreadyRespondedScreen').style.display = 'block';
+    
+    const box = document.getElementById('alreadyRespondedBox');
+    
+    if (status === 'zugesagt') {
+      box.classList.remove('declined');
+      document.getElementById('alreadyRespondedTitle').textContent = '✅ Du hast bereits zugesagt!';
+      document.getElementById('alreadyRespondedText').textContent = 
+        `Hallo ${vorname}! Deine Teilnahme ist bereits bestätigt. Wir freuen uns auf dich!`;
+    } else {
+      box.classList.add('declined');
+      document.getElementById('alreadyRespondedTitle').textContent = '❌ Du hast bereits abgesagt';
+      document.getElementById('alreadyRespondedText').textContent = 
+        `Hallo ${vorname}! Du hast für diese Schulung bereits abgesagt. Bei Fragen kontaktiere bitte den Organisator.`;
+    }
+  }
 
   // ========================================
   // HELPERS
