@@ -656,7 +656,7 @@
   }
 
   // ========================================
-  // DOWNLOAD FILE
+  // DOWNLOAD FILE - MIT AUTH TOKEN 🔒
   // ========================================
   window.downloadFile = async (fileId) => {
     try {
@@ -667,14 +667,31 @@
         return;
       }
       
-      const url = pb.files.getUrl(file, file.file);
+      // ✅ FIX: URL mit Authentication Token generieren
+      const url = pb.files.getUrl(file, file.file, {
+        token: pb.authStore.token
+      });
+      
+      // Download mit fetch (damit Token mitgeschickt wird)
+      const response = await fetch(url);
+      
+      if (!response.ok) {
+        throw new Error('Download fehlgeschlagen: ' + response.status);
+      }
+      
+      const blob = await response.blob();
+      const downloadUrl = window.URL.createObjectURL(blob);
       
       const a = document.createElement('a');
-      a.href = url;
+      a.href = downloadUrl;
       a.download = file.name;
       a.click();
       
+      // Cleanup
+      window.URL.revokeObjectURL(downloadUrl);
+      
     } catch(e) {
+      console.error('Download error:', e);
       alert('Fehler beim Download: ' + e.message);
     }
   };
