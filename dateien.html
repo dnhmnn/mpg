@@ -656,7 +656,7 @@
   }
 
   // ========================================
-  // DOWNLOAD FILE - FIXED VERSION 🔒
+  // DOWNLOAD FILE - FINALE VERSION 🔒✅
   // ========================================
   window.downloadFile = async (fileId) => {
     try {
@@ -667,12 +667,12 @@
         return;
       }
       
-      // ✅ KORREKTE URL-GENERIERUNG MIT TOKEN
+      // ✅ KORREKTE URL mit generiertem Dateinamen
       const baseUrl = pb.baseUrl;
       const token = pb.authStore.token;
       
-      // URL Format: /api/files/COLLECTION_ID/RECORD_ID/FILENAME?token=xxx
-      const url = `${baseUrl}/api/files/${file.collectionId}/${file.id}/${file.file}?token=${token}`;
+      // file.file enthält den generierten Dateinamen (z.B. bescheinigung_rea_team_l0q47jnuuk.pdf)
+      const url = `${baseUrl}/api/files/files/${file.id}/${file.file}?token=${token}`;
       
       console.log('Download URL:', url);
       
@@ -692,6 +692,7 @@
       
       const a = document.createElement('a');
       a.href = downloadUrl;
+      // ✅ Verwende file.name für den Download-Namen (ohne das _xyz Suffix)
       a.download = file.name;
       document.body.appendChild(a);
       a.click();
