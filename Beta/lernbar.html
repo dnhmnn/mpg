@@ -1,0 +1,779 @@
+  // ========================================
+  // LERNBEREICH
+  // ========================================
+  async function loadLernbereich() {
+    try {
+      allModules = await pb.collection('learning_modules').getFullList({
+        filter: `organization_id = "${currentUser.organization_id}"`,
+        sort: '-created'
+      });
+      
+      allSlides = await pb.collection('learning_slides').getFullList({
+        filter: `organization_id = "${currentUser.organization_id}"`,
+        sort: 'order'
+      });
+      
+      allAssignments = await pb.collection('module_assignments').getFullList({
+        filter: `organization_id = "${currentUser.organization_id}"`,
+        expand: 'member_id'
+      });
+      
+      renderLernbereich();
+    } catch(e) {
+      console.error('Error:', e);
+      document.getElementById('lernbereich-list').innerHTML = `<div class="empty" style="background:#fff;border-radius:.75rem"><i class="fas fa-exclamation-triangle"></i><div style="color:#c00">Fehler: ${e.message}</div></div>`;
+    }
+  }
+
+  function renderLernbereich() {
+    const list = document.getElementById('lernbereich-list');
+    
+    if (allModules.length === 0) {
+      list.innerHTML = '<div class="empty" style="background:#fff;border-radius:.75rem"><i class="fas fa-laptop"></i><div>Noch keine Lernmodule</div></div>';
+      return;
+    }
+    
+    list.innerHTML = allModules.map(module => {
+      const moduleSlides = allSlides.filter(s => s.module_id === module.id);
+      const moduleAssignments = allAssignments.filter(a => a.module_id === module.id);
+      
+      return `
+        <div class="module-card" onclick="viewModuleDetails('${module.id}')">
+          <div class="card-title"><i class="fa-solid fa-laptop"></i> ${module.title}</div>
+          
+          ${module.description ? `
+            <div style="margin:8px 0;color:var(--muted);font-size:.9rem;line-height:1.5">${module.description}</div>
+          ` : ''}
+          
+          <div style="margin-top:8px;color:var(--muted);font-size:.85rem">
+            <i class="fa-solid fa-file"></i> ${moduleSlides.length} Folie(n)
+            ${module.instructor ? ` • 👤 ${module.instructor}` : ''}
+          </div>
+          
+          ${moduleAssignments.length > 0 ? `
+            <div style="margin-top:6px;padding:6px 10px;background:#f0fdf4;border-radius:6px;font-size:0.85rem;color:#16a34a">
+              👥 ${moduleAssignments.length} Person(en) zugewiesen
+            </div>
+          ` : ''}
+        </div>
+      `;
+    }).join('');
+  }
+
+  window.openModuleModal = () => {
+    currentEditModule = null;
+    const form = document.getElementById('moduleForm');
+    form.reset();
+    document.getElementById('moduleModalTitle').innerHTML = '<i class="fa-solid fa-laptop"></i> Neues Lernmodul';
+    document.getElementById('moduleModal').classList.add('show');
+  };
+
+  window.closeModuleModal = () => {
+    document.getElementById('moduleModal').classList.remove('show');
+  };
+
+  document.getElementById('moduleForm').onsubmit = async (e) => {
+    e.preventDefault();
+    
+    try {
+      const formData = new FormData(e.target);
+      const data = {
+        title: formData.get('title').trim(),
+        description: formData.get('description').trim(),
+        instructor: formData.get('instructor').trim(),
+        passing_score: parseInt(formData.get('passing_score')) || 80,
+        max_attempts: parseInt(formData.get('max_attempts')) || 3,
+        require_quiz: document.getElementById('require-quiz').checked,
+        organization_id: currentUser.organization_id
+      };
+      
+      if (currentEditModule) {
+        await pb.collection('learning_modules').update(currentEditModule, data);
+        showMsg('✅ Lernmodul aktualisiert!');
+      } else {
+        await pb.collection('learning_modules').create(data);
+        showMsg('✅ Lernmodul erstellt!');
+      }
+      
+      closeModuleModal();
+      await loadLernbereich();
+      
+    } catch(e) {
+      showMsg('Fehler: ' + e.message, 'error');
+    }
+  };
+
+  window.viewModuleDetails = async (moduleId) => {
+    try {
+      const module = await pb.collection('learning_modules').getOne(moduleId);
+      const moduleSlides = allSlides.filter(s => s.module_id === moduleId);
+      const moduleAssignments = allAssignments.filter(a => a.module_id === moduleId);
+      
+      document.getElementById('moduleDetailsTitle').innerHTML = 
+        `<i class="fa-solid fa-laptop"></i> ${module.title}`;
+      
+      let html = `
+        <div class="details-section">
+          <h4><i class="fa-solid fa-info-circle"></i> Informationen</h4>
+          <div style="display:grid;grid-template-columns:150px 1fr;gap:12px">
+            <div style="font-weight:700;color:#6b7280">Titel:</div>
+            <div style="font-weight:700;font-size:1.1rem">${module.title}</div>
+            
+            ${module.description ? `
+            <div style="font-weight:700;color:#6b7280">Beschreibung:</div>
+            <div style="line-height:1.6">${module.description}</div>
+            ` : ''}
+            
+            ${module.instructor ? `
+            <div style="font-weight:700;color:#6b7280">Dozent:</div>
+            <div>👤 ${module.instructor}</div>
+            ` : ''}
+            
+            <div style="font-weight:700;color:#6b7280">Bestehensgrenze:</div>
+            <div>${module.passing_score}%</div>
+            
+            <div style="font-weight:700;color:#6b7280">Max. Versuche:</div>
+            <div>${module.max_attempts === 0 ? 'Unbegrenzt' : module.max_attempts}</div>
+            
+            <div style="font-weight:700;color:#6b7280">Abschlussprüfung:</div>
+            <div>${module.require_quiz ? '✅ Erforderlich' : '❌ Nicht erforderlich'}</div>
+            
+            <div style="font-weight:700;color:#6b7280">Folien:</div>
+            <div><span class="badge info">${moduleSlides.length} Folie(n)</span></div>
+            
+            <div style="font-weight:700;color:#6b7280">Zugewiesen:</div>
+            <div><span class="badge success">${moduleAssignments.length} Person(en)</span></div>
+          </div>
+          
+          <div style="margin-top:1rem;display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-sm" onclick="editModule('${moduleId}')">
+              <i class="fas fa-edit"></i> Bearbeiten
+            </button>
+            <button class="btn btn-sm primary" onclick="openSlideEditor('${moduleId}')">
+              <i class="fas fa-file"></i> Folien bearbeiten (${moduleSlides.length})
+            </button>
+            <button class="btn btn-sm info" onclick="openAssignMembersModal('${moduleId}')">
+              <i class="fas fa-users"></i> Personen zuweisen (${moduleAssignments.length})
+            </button>
+            <button class="btn btn-sm success" onclick="previewModule('${moduleId}')">
+              <i class="fas fa-play"></i> Vorschau
+            </button>
+            <button class="btn btn-sm" style="background:#dc2626;color:#fff" onclick="deleteModule('${moduleId}')">
+              <i class="fas fa-trash"></i> Löschen
+            </button>
+          </div>
+        </div>
+        
+        <div class="details-section">
+          <h4><i class="fa-solid fa-users"></i> Zugewiesene Personen (${moduleAssignments.length})</h4>
+      `;
+      
+      if (moduleAssignments.length > 0) {
+        html += '<div style="display:flex;flex-wrap:wrap;gap:8px">';
+        moduleAssignments.forEach(a => {
+          const member = a.expand?.member_id;
+          if (member) {
+            html += `<span class="tag">${member.vorname} ${member.name}</span>`;
+          }
+        });
+        html += '</div>';
+      } else {
+        html += '<div style="color:var(--muted)">Noch keine Personen zugewiesen</div>';
+      }
+      
+      html += '</div>';
+      
+      document.getElementById('moduleDetailsBody').innerHTML = html;
+      document.getElementById('moduleDetailsModal').classList.add('show');
+      
+    } catch(e) {
+      showMsg('Fehler: ' + e.message, 'error');
+    }
+  };
+
+  window.closeModuleDetailsModal = () => {
+    document.getElementById('moduleDetailsModal').classList.remove('show');
+  };
+
+  window.editModule = async (moduleId) => {
+    try {
+      const module = await pb.collection('learning_modules').getOne(moduleId);
+      
+      currentEditModule = moduleId;
+      
+      const form = document.getElementById('moduleForm');
+      form.elements['title'].value = module.title;
+      form.elements['description'].value = module.description || '';
+      form.elements['instructor'].value = module.instructor || '';
+      form.elements['passing_score'].value = module.passing_score;
+      form.elements['max_attempts'].value = module.max_attempts;
+      document.getElementById('require-quiz').checked = module.require_quiz;
+      
+      document.getElementById('moduleModalTitle').innerHTML = '<i class="fa-solid fa-edit"></i> Lernmodul bearbeiten';
+      document.getElementById('moduleModal').classList.add('show');
+      closeModuleDetailsModal();
+      
+    } catch(e) {
+      showMsg('Fehler: ' + e.message, 'error');
+    }
+  };
+
+  window.deleteModule = async (moduleId) => {
+    if (!confirm('Lernmodul wirklich löschen?\n\nAlle Folien und Zuweisungen werden ebenfalls gelöscht!')) return;
+    
+    try {
+      // Lösche alle Folien
+      const slides = await pb.collection('learning_slides').getFullList({
+        filter: `module_id = "${moduleId}"`
+      });
+      for (const slide of slides) {
+        await pb.collection('learning_slides').delete(slide.id);
+      }
+      
+      // Lösche alle Zuweisungen
+      const assignments = await pb.collection('module_assignments').getFullList({
+        filter: `module_id = "${moduleId}"`
+      });
+      for (const assignment of assignments) {
+        await pb.collection('module_assignments').delete(assignment.id);
+      }
+      
+      // Lösche Modul
+      await pb.collection('learning_modules').delete(moduleId);
+      
+      showMsg('✅ Lernmodul gelöscht!');
+      closeModuleDetailsModal();
+      await loadLernbereich();
+      
+    } catch(e) {
+      showMsg('Fehler: ' + e.message, 'error');
+    }
+  };
+
+  // ========================================
+  // FOLIEN-EDITOR
+  // ========================================
+  window.openSlideEditor = async (moduleId) => {
+    try {
+      currentLearningModule = moduleId;
+      const module = await pb.collection('learning_modules').getOne(moduleId);
+      
+      currentSlides = await pb.collection('learning_slides').getFullList({
+        filter: `module_id = "${moduleId}"`,
+        sort: 'order'
+      });
+      
+      document.getElementById('slideEditorTitle').innerHTML = 
+        `<i class="fa-solid fa-file"></i> Folien bearbeiten - ${module.title}`;
+      
+      renderSlidesList();
+      
+      closeModuleDetailsModal();
+      document.getElementById('slideEditorModal').classList.add('show');
+      
+    } catch(e) {
+      showMsg('Fehler: ' + e.message, 'error');
+    }
+  };
+
+  window.closeSlideEditor = () => {
+    document.getElementById('slideEditorModal').classList.remove('show');
+    currentLearningModule = null;
+  };
+
+  function renderSlidesList() {
+    const list = document.getElementById('slides-list');
+    
+    if (currentSlides.length === 0) {
+      list.innerHTML = `
+        <div style="padding:2rem;text-align:center;background:#f9fafb;border-radius:8px;color:var(--muted)">
+          <i class="fas fa-file" style="font-size:3rem;opacity:0.3;margin-bottom:1rem"></i>
+          <div style="font-weight:700">Noch keine Folien</div>
+          <div style="font-size:0.85rem;margin-top:4px">Erstelle die erste Folie über den Button oben</div>
+        </div>
+      `;
+      return;
+    }
+    
+    list.innerHTML = currentSlides.map((slide, idx) => {
+      const icons = {
+        text: '📝',
+        image: '🖼️',
+        video: '🎥',
+        quiz: '❓'
+      };
+      
+      return `
+        <div class="slide-item">
+          <div style="display:flex;align-items:center;flex:1;gap:1rem">
+            <div class="slide-type-icon ${slide.type}">
+              ${icons[slide.type] || '📄'}
+            </div>
+            <div style="flex:1">
+              <div style="font-weight:700">${idx + 1}. ${slide.title}</div>
+              <div style="font-size:0.85rem;color:var(--muted)">
+                ${slide.type === 'text' ? 'Text-Folie' : 
+                  slide.type === 'image' ? 'Bild-Folie' : 
+                  slide.type === 'video' ? 'Video-Folie' : 'Quiz-Folie'}
+                • ~${slide.duration || 5} Min.
+              </div>
+            </div>
+          </div>
+          <div style="display:flex;gap:4px">
+            ${idx > 0 ? `<button class="btn btn-sm" onclick="moveSlide(${idx}, -1)"><i class="fas fa-arrow-up"></i></button>` : ''}
+            ${idx < currentSlides.length - 1 ? `<button class="btn btn-sm" onclick="moveSlide(${idx}, 1)"><i class="fas fa-arrow-down"></i></button>` : ''}
+            <button class="btn btn-sm" onclick="editSlide('${slide.id}')"><i class="fas fa-edit"></i></button>
+            <button class="btn btn-sm" style="background:#dc2626;color:#fff" onclick="deleteSlide('${slide.id}')"><i class="fas fa-trash"></i></button>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  window.moveSlide = async (index, direction) => {
+    const newIndex = index + direction;
+    if (newIndex < 0 || newIndex >= currentSlides.length) return;
+    
+    try {
+      // Swap order values
+      const slide1 = currentSlides[index];
+      const slide2 = currentSlides[newIndex];
+      
+      await pb.collection('learning_slides').update(slide1.id, { order: newIndex });
+      await pb.collection('learning_slides').update(slide2.id, { order: index });
+      
+      // Reload
+      currentSlides = await pb.collection('learning_slides').getFullList({
+        filter: `module_id = "${currentLearningModule}"`,
+        sort: 'order'
+      });
+      
+      renderSlidesList();
+      
+    } catch(e) {
+      showMsg('Fehler: ' + e.message, 'error');
+    }
+  };
+
+  window.deleteSlide = async (slideId) => {
+    if (!confirm('Folie wirklich löschen?')) return;
+    
+    try {
+      await pb.collection('learning_slides').delete(slideId);
+      
+      currentSlides = await pb.collection('learning_slides').getFullList({
+        filter: `module_id = "${currentLearningModule}"`,
+        sort: 'order'
+      });
+      
+      renderSlidesList();
+      showMsg('✅ Folie gelöscht!');
+      
+    } catch(e) {
+      showMsg('Fehler: ' + e.message, 'error');
+    }
+  };
+
+  // ========================================
+  // NEUE FOLIE / FOLIE BEARBEITEN
+  // ========================================
+  window.openNewSlideModal = () => {
+    currentEditSlide = null;
+    document.getElementById('newSlideForm').reset();
+    document.getElementById('slide-type').value = 'text';
+    quizAnswers = [];
+    
+    // Init Quill Editor
+    if (slideContentEditor) {
+      slideContentEditor = null;
+    }
+    
+    setTimeout(() => {
+      slideContentEditor = new Quill('#slide-content-editor', {
+        theme: 'snow',
+        modules: {
+          toolbar: [
+            ['bold', 'italic', 'underline'],
+            [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+            ['link']
+          ]
+        }
+      });
+    }, 100);
+    
+    updateSlideTypeFields();
+    document.getElementById('newSlideModal').classList.add('show');
+  };
+
+  window.closeNewSlideModal = () => {
+    document.getElementById('newSlideModal').classList.remove('show');
+    slideContentEditor = null;
+  };
+
+  window.updateSlideTypeFields = () => {
+    const type = document.getElementById('slide-type').value;
+    
+    document.getElementById('text-slide-fields').style.display = type === 'text' ? 'block' : 'none';
+    document.getElementById('image-slide-fields').style.display = type === 'image' ? 'block' : 'none';
+    document.getElementById('video-slide-fields').style.display = type === 'video' ? 'block' : 'none';
+    document.getElementById('quiz-slide-fields').style.display = type === 'quiz' ? 'block' : 'none';
+  };
+
+  window.addQuizAnswer = () => {
+    quizAnswers.push({ text: '', correct: false });
+    renderQuizAnswers();
+  };
+
+  function renderQuizAnswers() {
+    const list = document.getElementById('quiz-answers-list');
+    list.innerHTML = quizAnswers.map((answer, idx) => `
+      <div style="display:flex;gap:8px;margin-bottom:8px;align-items:center">
+        <input type="text" 
+          value="${answer.text}" 
+          onchange="quizAnswers[${idx}].text = this.value"
+          placeholder="Antwort ${idx + 1}"
+          style="flex:1;padding:8px;border:1px solid var(--border);border-radius:4px;font-size:16px">
+        <label style="display:flex;align-items:center;gap:4px;white-space:nowrap">
+          <input type="radio" 
+            name="correct-answer" 
+            ${answer.correct ? 'checked' : ''}
+            onchange="quizAnswers.forEach((a,i) => a.correct = i === ${idx})">
+          <span>Richtig</span>
+        </label>
+        <button type="button" class="btn btn-sm" style="background:#dc2626;color:#fff" onclick="removeQuizAnswer(${idx})">
+          <i class="fas fa-trash"></i>
+        </button>
+      </div>
+    `).join('');
+  }
+
+  window.removeQuizAnswer = (idx) => {
+    quizAnswers.splice(idx, 1);
+    renderQuizAnswers();
+  };
+
+  window.saveSlide = async () => {
+    try {
+      const type = document.getElementById('slide-type').value;
+      const title = document.getElementById('slide-title').value.trim();
+      const duration = parseInt(document.getElementById('slide-duration').value) || 5;
+      
+      if (!title) {
+        showMsg('Bitte Titel eingeben', 'error');
+        return;
+      }
+      
+      let content = {};
+      
+      if (type === 'text') {
+        content.html = slideContentEditor.root.innerHTML;
+      } else if (type === 'image') {
+        content.url = document.getElementById('slide-image-url').value.trim();
+        content.description = document.getElementById('slide-image-description').value.trim();
+      } else if (type === 'video') {
+        content.url = document.getElementById('slide-video-url').value.trim();
+        content.description = document.getElementById('slide-video-description').value.trim();
+      } else if (type === 'quiz') {
+        const question = document.getElementById('slide-quiz-question').value.trim();
+        if (!question || quizAnswers.length < 2) {
+          showMsg('Quiz benötigt Frage und mindestens 2 Antworten', 'error');
+          return;
+        }
+        content.question = question;
+        content.answers = quizAnswers;
+        content.explanation = document.getElementById('slide-quiz-explanation').value.trim();
+      }
+      
+      const data = {
+        module_id: currentLearningModule,
+        type: type,
+        title: title,
+        content: content,
+        duration: duration,
+        order: currentSlides.length,
+        organization_id: currentUser.organization_id
+      };
+      
+      if (currentEditSlide) {
+        await pb.collection('learning_slides').update(currentEditSlide, data);
+        showMsg('✅ Folie aktualisiert!');
+      } else {
+        await pb.collection('learning_slides').create(data);
+        showMsg('✅ Folie erstellt!');
+      }
+      
+      currentSlides = await pb.collection('learning_slides').getFullList({
+        filter: `module_id = "${currentLearningModule}"`,
+        sort: 'order'
+      });
+      
+      renderSlidesList();
+      closeNewSlideModal();
+      
+    } catch(e) {
+      showMsg('Fehler: ' + e.message, 'error');
+    }
+  };
+
+  window.editSlide = async (slideId) => {
+    try {
+      currentEditSlide = slideId;
+      const slide = await pb.collection('learning_slides').getOne(slideId);
+      
+      document.getElementById('slide-type').value = slide.type;
+      document.getElementById('slide-title').value = slide.title;
+      document.getElementById('slide-duration').value = slide.duration;
+      
+      updateSlideTypeFields();
+      
+      if (slide.type === 'text') {
+        setTimeout(() => {
+          slideContentEditor = new Quill('#slide-content-editor', {
+            theme: 'snow',
+            modules: {
+              toolbar: [
+                ['bold', 'italic', 'underline'],
+                [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                ['link']
+              ]
+            }
+          });
+          slideContentEditor.root.innerHTML = slide.content.html || '';
+        }, 100);
+      } else if (slide.type === 'image') {
+        document.getElementById('slide-image-url').value = slide.content.url || '';
+        document.getElementById('slide-image-description').value = slide.content.description || '';
+      } else if (slide.type === 'video') {
+        document.getElementById('slide-video-url').value = slide.content.url || '';
+        document.getElementById('slide-video-description').value = slide.content.description || '';
+      } else if (slide.type === 'quiz') {
+        document.getElementById('slide-quiz-question').value = slide.content.question || '';
+        document.getElementById('slide-quiz-explanation').value = slide.content.explanation || '';
+        quizAnswers = slide.content.answers || [];
+        renderQuizAnswers();
+      }
+      
+      document.getElementById('newSlideModal').classList.add('show');
+      
+    } catch(e) {
+      showMsg('Fehler: ' + e.message, 'error');
+    }
+  };
+
+  // ========================================
+  // MODUL VORSCHAU
+  // ========================================
+  window.previewModule = async (moduleId) => {
+    try {
+      const module = await pb.collection('learning_modules').getOne(moduleId);
+      previewSlides = await pb.collection('learning_slides').getFullList({
+        filter: `module_id = "${moduleId}"`,
+        sort: 'order'
+      });
+      
+      if (previewSlides.length === 0) {
+        showMsg('Keine Folien zum Anzeigen', 'error');
+        return;
+      }
+      
+      currentPreviewIndex = 0;
+      
+      document.getElementById('previewModuleTitle').innerHTML = 
+        `<i class="fa-solid fa-play"></i> Vorschau - ${module.title}`;
+      
+      renderPreviewSlide();
+      
+      if (document.getElementById('slideEditorModal').classList.contains('show')) {
+        // Aus Editor heraus
+      } else {
+        closeModuleDetailsModal();
+      }
+      
+      document.getElementById('modulePreviewModal').classList.add('show');
+      
+    } catch(e) {
+      showMsg('Fehler: ' + e.message, 'error');
+    }
+  };
+
+  window.closePreviewModal = () => {
+    document.getElementById('modulePreviewModal').classList.remove('show');
+  };
+
+  function renderPreviewSlide() {
+    const slide = previewSlides[currentPreviewIndex];
+    const content = document.getElementById('previewContent');
+    
+    document.getElementById('slideCounter').textContent = 
+      `${currentPreviewIndex + 1} / ${previewSlides.length}`;
+    
+    document.getElementById('prevSlideBtn').disabled = currentPreviewIndex === 0;
+    document.getElementById('nextSlideBtn').disabled = currentPreviewIndex === previewSlides.length - 1;
+    
+    let html = `<h2 style="margin-bottom:1rem">${slide.title}</h2>`;
+    
+    if (slide.type === 'text') {
+      html += `<div style="line-height:1.8">${slide.content.html}</div>`;
+    } else if (slide.type === 'image') {
+      html += `
+        <img src="${slide.content.url}" style="max-width:100%;border-radius:8px;margin-bottom:1rem" alt="${slide.title}">
+        ${slide.content.description ? `<p style="color:var(--muted)">${slide.content.description}</p>` : ''}
+      `;
+    } else if (slide.type === 'video') {
+      const videoId = extractYouTubeId(slide.content.url);
+      if (videoId) {
+        html += `
+          <div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;margin-bottom:1rem">
+            <iframe src="https://www.youtube.com/embed/${videoId}" 
+              style="position:absolute;top:0;left:0;width:100%;height:100%;border:none;border-radius:8px"
+              allowfullscreen></iframe>
+          </div>
+        `;
+      }
+      if (slide.content.description) {
+        html += `<p style="color:var(--muted)">${slide.content.description}</p>`;
+      }
+    } else if (slide.type === 'quiz') {
+      html += `
+        <div style="background:#f9fafb;padding:1.5rem;border-radius:8px;margin-bottom:1rem">
+          <div style="font-weight:700;margin-bottom:1rem;font-size:1.1rem">${slide.content.question}</div>
+          ${slide.content.answers.map((a, idx) => `
+            <div style="padding:0.75rem;background:#fff;border:2px solid ${a.correct ? '#16a34a' : '#e5e7eb'};border-radius:6px;margin-bottom:8px">
+              <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+                <input type="radio" name="preview-answer">
+                <span>${a.text}</span>
+                ${a.correct ? '<span style="margin-left:auto;color:#16a34a;font-weight:700">✓ Richtig</span>' : ''}
+              </label>
+            </div>
+          `).join('')}
+          ${slide.content.explanation ? `
+            <div style="margin-top:1rem;padding:1rem;background:#eff6ff;border-radius:6px;border-left:4px solid #3b82f6">
+              <strong>Erklärung:</strong> ${slide.content.explanation}
+            </div>
+          ` : ''}
+        </div>
+      `;
+    }
+    
+    content.innerHTML = html;
+  }
+
+  function extractYouTubeId(url) {
+    const regex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
+    const match = url.match(regex);
+    return match ? match[1] : null;
+  }
+
+  window.prevPreviewSlide = () => {
+    if (currentPreviewIndex > 0) {
+      currentPreviewIndex--;
+      renderPreviewSlide();
+    }
+  };
+
+  window.nextPreviewSlide = () => {
+    if (currentPreviewIndex < previewSlides.length - 1) {
+      currentPreviewIndex++;
+      renderPreviewSlide();
+    }
+  };
+
+  // ========================================
+  // PERSONEN ZUWEISEN
+  // ========================================
+  window.openAssignMembersModal = async (moduleId) => {
+    try {
+      currentLearningModule = moduleId;
+      
+      const assignments = await pb.collection('module_assignments').getFullList({
+        filter: `module_id = "${moduleId}"`
+      });
+      
+      selectedAssignments = assignments.map(a => a.member_id);
+      
+      const list = document.getElementById('assignMembersList');
+      list.innerHTML = allMembers.map(member => {
+        const isAssigned = selectedAssignments.includes(member.id);
+        
+        return `
+          <div style="padding:.75rem;border-bottom:1px solid var(--border)">
+            <label style="display:flex;align-items:center;gap:.75rem;cursor:pointer">
+              <input type="checkbox" ${isAssigned ? 'checked' : ''} 
+                onchange="toggleAssignment('${member.id}')">
+              <div style="flex:1">
+                <div style="font-weight:700">${member.vorname} ${member.name}</div>
+                <div style="font-size:.85rem;color:var(--muted)">${(member.qualifikationen || []).join(', ')}</div>
+              </div>
+            </label>
+          </div>
+        `;
+      }).join('');
+      
+      closeModuleDetailsModal();
+      document.getElementById('assignMembersModal').classList.add('show');
+      
+    } catch(e) {
+      showMsg('Fehler: ' + e.message, 'error');
+    }
+  };
+
+  window.closeAssignMembersModal = () => {
+    document.getElementById('assignMembersModal').classList.remove('show');
+  };
+
+  window.toggleAssignment = (memberId) => {
+    const idx = selectedAssignments.indexOf(memberId);
+    if (idx >= 0) {
+      selectedAssignments.splice(idx, 1);
+    } else {
+      selectedAssignments.push(memberId);
+    }
+  };
+
+  window.saveAssignments = async () => {
+    try {
+      // Lösche alle bisherigen Zuweisungen
+      const existingAssignments = await pb.collection('module_assignments').getFullList({
+        filter: `module_id = "${currentLearningModule}"`
+      });
+      
+      for (const assignment of existingAssignments) {
+        await pb.collection('module_assignments').delete(assignment.id);
+      }
+      
+      // Erstelle neue Zuweisungen
+      for (const memberId of selectedAssignments) {
+        await pb.collection('module_assignments').create({
+          module_id: currentLearningModule,
+          member_id: memberId,
+          organization_id: currentUser.organization_id
+        });
+      }
+      
+      showMsg(`✅ ${selectedAssignments.length} Personen zugewiesen!`);
+      closeAssignMembersModal();
+      await loadLernbereich();
+      
+    } catch(e) {
+      showMsg('Fehler: ' + e.message, 'error');
+    }
+  };
+
+  // ========================================
+  // INIT
+  // ========================================
+  async function init() {
+    const isAuth = await checkAuth();
+    if (!isAuth) return;
+    
+    await loadCourses();
+    
+    document.body.classList.add('loaded');
+  }
+
+  init();
+
+</script>
+
+</body>
+</html>
