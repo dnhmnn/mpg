@@ -656,7 +656,7 @@
   }
 
   // ========================================
-  // DOWNLOAD FILE - MIT AUTH TOKEN 🔒
+  // DOWNLOAD FILE - FIXED VERSION 🔒
   // ========================================
   window.downloadFile = async (fileId) => {
     try {
@@ -667,16 +667,24 @@
         return;
       }
       
-      // ✅ FIX: URL mit Authentication Token generieren
-      const url = pb.files.getUrl(file, file.file, {
-        token: pb.authStore.token
+      // ✅ KORREKTE URL-GENERIERUNG MIT TOKEN
+      const baseUrl = pb.baseUrl;
+      const token = pb.authStore.token;
+      
+      // URL Format: /api/files/COLLECTION_ID/RECORD_ID/FILENAME?token=xxx
+      const url = `${baseUrl}/api/files/${file.collectionId}/${file.id}/${file.file}?token=${token}`;
+      
+      console.log('Download URL:', url);
+      
+      // Download mit fetch
+      const response = await fetch(url, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
       });
       
-      // Download mit fetch (damit Token mitgeschickt wird)
-      const response = await fetch(url);
-      
       if (!response.ok) {
-        throw new Error('Download fehlgeschlagen: ' + response.status);
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
       
       const blob = await response.blob();
@@ -685,10 +693,12 @@
       const a = document.createElement('a');
       a.href = downloadUrl;
       a.download = file.name;
+      document.body.appendChild(a);
       a.click();
+      document.body.removeChild(a);
       
       // Cleanup
-      window.URL.revokeObjectURL(downloadUrl);
+      setTimeout(() => window.URL.revokeObjectURL(downloadUrl), 100);
       
     } catch(e) {
       console.error('Download error:', e);
