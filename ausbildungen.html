@@ -186,11 +186,12 @@
     .badge.abgesagt{background:#fee2e2;color:#991b1b}
     .badge.anwesend{background:#dcfce7;color:#166534}
     .badge.abwesend{background:#fee2e2;color:#991b1b}
-		.badge.entschuldigt{background:#fef3c7;color:#92400e}
+    .badge.entschuldigt{background:#fef3c7;color:#92400e}
     .badge.zugesagt{background:#dcfce7;color:#166534}
     .badge.eingeladen{background:#e0e7ff;color:#4338ca}
     .badge.info{background:#dbeafe;color:#1e40af}
     .badge.warning{background:#fef3c7;color:#92400e}
+    .badge.success{background:#dcfce7;color:#166534}
     
     .tag{background:#fee;color:var(--primary);padding:4px 10px;border-radius:999px;font-size:0.8rem;font-weight:700;display:inline-block;margin:2px}
     
@@ -538,41 +539,42 @@
     </div>
 
     <!-- Zugänge -->
-<div style="background:#fff;border-radius:.75rem;padding:1.5rem;box-shadow:0 2px 8px rgba(0,0,0,.05)">
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:1rem">
-    <h3 style="margin:0;color:var(--primary)">
-      <i class="fa-solid fa-key"></i> Lernbar-Zugänge
-    </h3>
-    <div style="display:flex;gap:8px;flex-wrap:wrap">
-      <button class="btn success" onclick="exportAccessCodes()">
-        <i class="fas fa-file-csv"></i> CSV Export
-      </button>
+    <div style="background:#fff;border-radius:.75rem;padding:1.5rem;box-shadow:0 2px 8px rgba(0,0,0,.05)">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:1rem">
+        <h3 style="margin:0;color:var(--primary)">
+          <i class="fa-solid fa-key"></i> Lernbar-Zugänge
+        </h3>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn success" onclick="exportAccessCodes()">
+            <i class="fas fa-file-csv"></i> CSV Export
+          </button>
+        </div>
+      </div>
+      
+      <!-- NEUE E-MAIL EINGABE -->
+      <div style="background:#eff6ff;padding:1rem;border-radius:8px;border-left:4px solid #3b82f6;margin-bottom:1rem">
+        <div style="font-weight:700;margin-bottom:.5rem;color:#1e40af">
+          <i class="fas fa-info-circle"></i> Lernbar-Zugang erstellen
+        </div>
+        <div style="font-size:.85rem;color:#1e40af;margin-bottom:.75rem">
+          Gib eine E-Mail ein. Wenn der User existiert, wird der Lernbar-Zugriff aktiviert. Sonst wird ein neuer User angelegt.
+        </div>
+        <form id="createAccessForm" style="display:flex;gap:8px;flex-wrap:wrap">
+          <input type="email" 
+            id="access-email" 
+            placeholder="E-Mail-Adresse eingeben" 
+            required
+            style="flex:1;min-width:250px;padding:8px 12px;border:1px solid var(--border);border-radius:6px;font-size:16px">
+          <button type="submit" class="btn primary">
+            <i class="fas fa-plus"></i> Zugang erstellen
+          </button>
+        </form>
+      </div>
+      
+      <div id="access-list"></div>
     </div>
   </div>
-  
-  <!-- NEUE E-MAIL EINGABE -->
-  <div style="background:#eff6ff;padding:1rem;border-radius:8px;border-left:4px solid #3b82f6;margin-bottom:1rem">
-    <div style="font-weight:700;margin-bottom:.5rem;color:#1e40af">
-      <i class="fas fa-info-circle"></i> Lernbar-Zugang erstellen
-    </div>
-    <div style="font-size:.85rem;color:#1e40af;margin-bottom:.75rem">
-      Gib eine E-Mail ein. Wenn der User existiert, wird der Lernbar-Zugriff aktiviert. Sonst wird ein neuer User angelegt.
-    </div>
-    <form id="createAccessForm" style="display:flex;gap:8px;flex-wrap:wrap">
-      <input type="email" 
-        id="access-email" 
-        placeholder="E-Mail-Adresse eingeben" 
-        required
-        style="flex:1;min-width:250px;padding:8px 12px;border:1px solid var(--border);border-radius:6px;font-size:16px">
-      <button type="submit" class="btn primary">
-        <i class="fas fa-plus"></i> Zugang erstellen
-      </button>
-    </form>
-  </div>
-  
-  <div id="access-list"></div>
 </div>
-
 <!-- Modal: Neue Schulung -->
 <div class="modal" id="schulungModal">
   <div class="modal-box">
@@ -879,6 +881,7 @@
     </div>
   </div>
 </div>
+
 <!-- Modal: Neues Team-Mitglied -->
 <div class="modal" id="memberModal">
   <div class="modal-box">
@@ -916,76 +919,6 @@
     <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
       <button class="btn" onclick="closeMemberDetailsModal()">Schließen</button>
     </div>
-  </div>
-</div>
-
-<!-- Modal: Zugang für Mitglied erstellen -->
-<div class="modal" id="createAccessForMemberModal">
-  <div class="modal-box" style="max-width:600px">
-    <h3><i class="fa-solid fa-key"></i> Zugang erstellen</h3>
-    <p style="margin-bottom:1rem">Erstelle einen Zugang für: <strong id="access-member-name"></strong></p>
-    
-    <div class="access-code-box">
-      <div style="font-size:.9rem;color:var(--muted);margin-bottom:.5rem">Generierter Zugangscode:</div>
-      <div class="access-code" id="member-access-code">wort.wort.wort</div>
-      <button class="btn btn-sm" onclick="generateMemberAccessCode()">
-        <i class="fas fa-sync"></i> Neuen Code generieren
-      </button>
-    </div>
-    
-    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
-      <button class="btn" onclick="closeCreateAccessForMemberModal()">Abbrechen</button>
-      <button class="btn primary" onclick="saveAccessForMember()">
-        <i class="fa-solid fa-save"></i> Zugang erstellen
-      </button>
-    </div>
-  </div>
-</div>
-
-<!-- Modal: Einzelner Zugang -->
-<div class="modal" id="singleAccessModal">
-  <div class="modal-box" style="max-width:600px">
-    <h3><i class="fa-solid fa-key"></i> Einzelnen Zugang erstellen</h3>
-    
-    <div class="access-code-box" style="margin-bottom:1rem">
-      <div style="font-size:.9rem;color:var(--muted);margin-bottom:.5rem">Generierter Zugangscode:</div>
-      <div class="access-code" id="preview-code">wort.wort.wort</div>
-      <button class="btn btn-sm" onclick="generatePreviewCode()">
-        <i class="fas fa-sync"></i> Neuen Code generieren
-      </button>
-    </div>
-    
-    <form id="singleAccessForm">
-      <div class="form-group">
-        <label>Name der Person *</label>
-        <input type="text" name="name" required placeholder="z.B. Max Mustermann">
-      </div>
-      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
-        <button type="button" class="btn" onclick="closeSingleAccessModal()">Abbrechen</button>
-        <button type="submit" class="btn primary"><i class="fa-solid fa-save"></i> Zugang erstellen</button>
-      </div>
-    </form>
-  </div>
-</div>
-
-<!-- Modal: Mehrere Zugänge -->
-<div class="modal" id="bulkAccessModal">
-  <div class="modal-box" style="max-width:700px">
-    <h3><i class="fa-solid fa-users"></i> Mehrere Zugänge erstellen</h3>
-    <p style="color:var(--muted);margin-bottom:1rem">Für jeden Namen wird automatisch ein 3-Wort-Code generiert.</p>
-    
-    <form id="bulkAccessForm">
-      <div id="bulkAccessList"></div>
-      
-      <button type="button" class="btn btn-sm" onclick="addBulkAccessRow()" style="margin-top:8px">
-        <i class="fas fa-plus"></i> Weitere Person
-      </button>
-      
-      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
-        <button type="button" class="btn" onclick="closeBulkAccessModal()">Abbrechen</button>
-        <button type="submit" class="btn primary"><i class="fa-solid fa-save"></i> Alle Zugänge erstellen</button>
-      </div>
-    </form>
   </div>
 </div>
 
@@ -1194,7 +1127,6 @@
     </div>
   </div>
 </div>
-
 <script type="module">
   // ========================================
   // POCKETBASE & AUTH
@@ -1216,7 +1148,7 @@
   let allCourses = [];
   let allSessions = [];
   let allMembers = [];
-  let allUsers = []; // NEU: Alle Users aus der users Collection
+  let allUsers = []; // Alle Users mit lernbar_access
   let allModules = [];
   let allSlides = [];
   let allAssignments = [];
@@ -1231,27 +1163,17 @@
   let currentSessionCourse = null;
   let currentSessionId = null;
   let currentEditMember = null;
-  let currentAccessMember = null;
   let currentEditModule = null;
   let currentLearningModule = null;
   let currentEditSlide = null;
-  let previewAccessCode = '';
-  let memberAccessCode = '';
   let slideContentEditor = null;
   let quizAnswers = [];
-  let bulkAccessCount = 3;
   let pflichtSchulungen = 12;
   let currentViewCourseId = null;
   let currentManageSessionId = null;
   let newParticipantsForSession = [];
   let currentInvitationLink = '';
   let currentInvitationSessionId = null;
-  
-  const wordLists = {
-    adjectives: ['schnell', 'blau', 'groß', 'klein', 'rot', 'grün', 'gelb', 'hell', 'dunkel', 'stark', 'schwach', 'frisch', 'alt', 'neu', 'warm', 'kalt', 'süß', 'sauer', 'laut', 'leise'],
-    nouns: ['apfel', 'baum', 'haus', 'tisch', 'stuhl', 'buch', 'auto', 'berg', 'fluss', 'stern', 'mond', 'sonne', 'blume', 'vogel', 'fisch', 'hund', 'katze', 'pferd', 'wind', 'meer'],
-    verbs: ['laufen', 'springen', 'singen', 'tanzen', 'malen', 'lesen', 'schreiben', 'kochen', 'backen', 'spielen', 'denken', 'träumen', 'lachen', 'weinen', 'fliegen', 'schwimmen', 'klettern', 'hören', 'sehen', 'fühlen']
-  };
 
   // ========================================
   // AUTH CHECK
@@ -1326,13 +1248,6 @@
     showMsg('✅ Kopiert!');
   }
 
-  function generateAccessCode() {
-    const adj = wordLists.adjectives[Math.floor(Math.random() * wordLists.adjectives.length)];
-    const noun = wordLists.nouns[Math.floor(Math.random() * wordLists.nouns.length)];
-    const verb = wordLists.verbs[Math.floor(Math.random() * wordLists.verbs.length)];
-    return `${adj}.${noun}.${verb}`;
-  }
-
   function generatePassword() {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
     let password = '';
@@ -1341,16 +1256,6 @@
     }
     return password;
   }
-
-  window.generatePreviewCode = () => {
-    previewAccessCode = generateAccessCode();
-    document.getElementById('preview-code').textContent = previewAccessCode;
-  };
-
-  window.generateMemberAccessCode = () => {
-    memberAccessCode = generateAccessCode();
-    document.getElementById('member-access-code').textContent = memberAccessCode;
-  };
 
   // ========================================
   // TAG INPUT SYSTEM
@@ -1422,27 +1327,72 @@
   });
 
   // ========================================
-  // PFLICHT-SCHULUNGEN EINSTELLUNGEN
+  // PFLICHT-SCHULUNGEN + LERNBAR-ZUGÄNGE
   // ========================================
-async function loadSettings() {
-  try {
-    const org = await pb.collection('organizations').getOne(currentUser.organization_id);
-    pflichtSchulungen = org.pflicht_schulungen_jahr || 12;
-    document.getElementById('pflicht_schulungen').value = pflichtSchulungen;
-    
-    // Lade alle Users mit lernbar_access
-    allUsers = await pb.collection('users').getFullList({
-      filter: `organization_id = "${currentUser.organization_id}" && lernbar_access = true`,
-      sort: 'email'
-    });
-    
-    renderSettings();
-  } catch(e) {
-    console.error('Error:', e);
-    document.getElementById('access-list').innerHTML = `<div class="empty" style="background:#fff;border-radius:.75rem"><i class="fas fa-exclamation-triangle"></i><div style="color:#c00">Fehler: ${e.message}</div></div>`;
+  async function loadSettings() {
+    try {
+      const org = await pb.collection('organizations').getOne(currentUser.organization_id);
+      pflichtSchulungen = org.pflicht_schulungen_jahr || 12;
+      document.getElementById('pflicht_schulungen').value = pflichtSchulungen;
+      
+      // Lade alle Users mit lernbar_access
+      allUsers = await pb.collection('users').getFullList({
+        filter: `organization_id = "${currentUser.organization_id}" && lernbar_access = true`,
+        sort: 'email'
+      });
+      
+      renderSettings();
+    } catch(e) {
+      console.error('Error:', e);
+      document.getElementById('access-list').innerHTML = `<div class="empty" style="background:#fff;border-radius:.75rem"><i class="fas fa-exclamation-triangle"></i><div style="color:#c00">Fehler: ${e.message}</div></div>`;
+    }
   }
-}
 
+  function renderSettings() {
+    const list = document.getElementById('access-list');
+    
+    if (allUsers.length === 0) {
+      list.innerHTML = '<div class="empty" style="background:#fff;border-radius:.75rem;margin-top:1rem"><i class="fas fa-key"></i><div>Noch keine Lernbar-Zugänge erstellt</div></div>';
+      return;
+    }
+    
+    list.innerHTML = `
+      <table class="table" style="margin-top:1rem">
+        <thead>
+          <tr>
+            <th>E-Mail / Name</th>
+            <th>Typ</th>
+            <th>Aktionen</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${allUsers.map(user => {
+            const isTeamMember = user.name && user.name.trim() !== '';
+            const displayName = isTeamMember ? user.name : user.email;
+            
+            return `
+              <tr>
+                <td style="font-weight:700">
+                  ${displayName}
+                  ${isTeamMember ? '<span class="badge success" style="margin-left:8px"><i class="fas fa-users"></i> Team Member</span>' : '<span class="badge info" style="margin-left:8px"><i class="fas fa-graduation-cap"></i> Nur Lernbar</span>'}
+                </td>
+                <td>
+                  <span class="badge" style="background:#dcfce7;color:#166534">
+                    <i class="fas fa-check-circle"></i> Lernbar-Zugriff
+                  </span>
+                </td>
+                <td>
+                  <button class="btn btn-sm" style="background:#dc2626;color:#fff" onclick="deleteAccess('${user.id}', ${isTeamMember})">
+                    <i class="fas fa-trash"></i> ${isTeamMember ? 'Zugriff entfernen' : 'Löschen'}
+                  </button>
+                </td>
+              </tr>
+            `;
+          }).join('')}
+        </tbody>
+      </table>
+    `;
+  }
 
   document.getElementById('pflichtForm').onsubmit = async (e) => {
     e.preventDefault();
@@ -1462,270 +1412,115 @@ async function loadSettings() {
     }
   };
 
-  // ========================================
-  // EXTERNE ZUGÄNGE
-  // ========================================
-  function renderSettings() {
-  const list = document.getElementById('access-list');
-  
-  if (allUsers.length === 0) {
-    list.innerHTML = '<div class="empty" style="background:#fff;border-radius:.75rem;margin-top:1rem"><i class="fas fa-key"></i><div>Noch keine Lernbar-Zugänge erstellt</div></div>';
-    return;
-  }
-  
-  list.innerHTML = `
-    <table class="table" style="margin-top:1rem">
-      <thead>
-        <tr>
-          <th>E-Mail / Name</th>
-          <th>Typ</th>
-          <th>Aktionen</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${allUsers.map(user => {
-          const isTeamMember = user.name && user.name.trim() !== '';
-          const displayName = isTeamMember ? user.name : user.email;
-          
-          return `
-            <tr>
-              <td style="font-weight:700">
-                ${displayName}
-                ${isTeamMember ? '<span class="badge success" style="margin-left:8px"><i class="fas fa-users"></i> Team Member</span>' : '<span class="badge info" style="margin-left:8px"><i class="fas fa-graduation-cap"></i> Nur Lernbar</span>'}
-              </td>
-              <td>
-                <span class="badge" style="background:#dcfce7;color:#166534">
-                  <i class="fas fa-check-circle"></i> Lernbar-Zugriff
-                </span>
-              </td>
-              <td>
-                <button class="btn btn-sm" style="background:#dc2626;color:#fff" onclick="deleteAccess('${user.id}', ${isTeamMember})">
-                  <i class="fas fa-trash"></i> ${isTeamMember ? 'Zugriff entfernen' : 'Löschen'}
-                </button>
-              </td>
-            </tr>
-          `;
-        }).join('')}
-      </tbody>
-    </table>
-  `;
-}
-
-  window.openSingleAccessModal = () => {
-    previewAccessCode = generateAccessCode();
-    document.getElementById('preview-code').textContent = previewAccessCode;
-    document.getElementById('singleAccessForm').reset();
-    document.getElementById('singleAccessModal').classList.add('show');
-  };
-
-  window.closeSingleAccessModal = () => {
-    document.getElementById('singleAccessModal').classList.remove('show');
-  };
-
-
-    
-    try {
-      const formData = new FormData(e.target);
-      const tempPassword = generatePassword();
-      
-      await pb.collection('training_students').create({
-        email: `${previewAccessCode}@responda-temp.local`,
-        password: tempPassword,
-        passwordConfirm: tempPassword,
-				plain_password: tempPassword,
-        name: formData.get('name').trim(),
-        access_code: previewAccessCode,
-        organization_id: currentUser.organization_id
-      });
-      
-      showMsg('✅ Zugang erstellt!');
-      closeSingleAccessModal();
-      await loadSettings();
-      
-    } catch(e) {
-      showMsg('Fehler: ' + e.message, 'error');
-    }
-
-  window.openBulkAccessModal = () => {
-    bulkAccessCount = 3;
-    renderBulkAccessRows();
-    document.getElementById('bulkAccessModal').classList.add('show');
-  };
-
-  window.closeBulkAccessModal = () => {
-    document.getElementById('bulkAccessModal').classList.remove('show');
-  };
-
-  window.addBulkAccessRow = () => {
-    bulkAccessCount++;
-    renderBulkAccessRows();
-  };
-
-  function renderBulkAccessRows() {
-    const list = document.getElementById('bulkAccessList');
-    list.innerHTML = '';
-    
-    for (let i = 0; i < bulkAccessCount; i++) {
-      const code = generateAccessCode();
-      list.innerHTML += `
-        <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;padding:8px;background:#f9fafb;border-radius:6px">
-          <input type="text" 
-            name="bulk_name_${i}" 
-            placeholder="Name der Person" 
-            required
-            style="flex:1;padding:8px;border:1px solid var(--border);border-radius:4px;font-size:16px">
-          <code style="padding:8px;background:#fff;border:1px solid var(--border);border-radius:4px;font-family:monospace;font-weight:700;white-space:nowrap">${code}</code>
-          <input type="hidden" name="bulk_code_${i}" value="${code}">
-        </div>
-      `;
-    }
-  }
-
-  document.getElementById('bulkAccessForm').onsubmit = async (e) => {
+  // NEUES CREATE ACCESS FORM
+  document.getElementById('createAccessForm').onsubmit = async (e) => {
     e.preventDefault();
     
     try {
-      const formData = new FormData(e.target);
-      let count = 0;
+      const email = document.getElementById('access-email').value.trim().toLowerCase();
       
-      for (let i = 0; i < bulkAccessCount; i++) {
-        const name = formData.get(`bulk_name_${i}`);
-        const code = formData.get(`bulk_code_${i}`);
-        
-        if (name && name.trim()) {
-          const tempPassword = generatePassword();
-          
-          await pb.collection('training_students').create({
-            email: `${code}@responda-temp.local`,
-            password: tempPassword,
-            passwordConfirm: tempPassword,
-            name: name.trim(),
-            access_code: code,
-            organization_id: currentUser.organization_id
-          });
-          
-          count++;
-        }
+      if (!email) {
+        showMsg('Bitte E-Mail eingeben', 'error');
+        return;
       }
       
-      showMsg(`✅ ${count} Zugänge erstellt!`);
-      closeBulkAccessModal();
+      // Prüfe ob User existiert
+      const existingUsers = await pb.collection('users').getFullList({
+        filter: `email = "${email}" && organization_id = "${currentUser.organization_id}"`
+      });
+      
+      if (existingUsers.length > 0) {
+        // User existiert bereits
+        const user = existingUsers[0];
+        
+        if (user.lernbar_access) {
+          showMsg('⚠️ User hat bereits Lernbar-Zugriff!', 'info');
+          return;
+        }
+        
+        // Setze lernbar_access = true
+        await pb.collection('users').update(user.id, {
+          lernbar_access: true
+        });
+        
+        showMsg(`✅ Lernbar-Zugriff für ${user.name || user.email} aktiviert!`);
+        
+      } else {
+        // User existiert NICHT → Neu anlegen
+        const tempPassword = generatePassword();
+        
+        await pb.collection('users').create({
+          email: email,
+          password: tempPassword,
+          passwordConfirm: tempPassword,
+          name: '', // Kein Name = nur Lernbar
+          organization_id: currentUser.organization_id,
+          lernbar_access: true,
+          role: 'lernbar_only',
+          aktiv: true
+        });
+        
+        showMsg(`✅ Neuer Lernbar-Zugang für ${email} erstellt!`);
+      }
+      
+      // Formular zurücksetzen
+      document.getElementById('access-email').value = '';
+      
+      // Liste neu laden
       await loadSettings();
       
     } catch(e) {
+      console.error('Fehler:', e);
       showMsg('Fehler: ' + e.message, 'error');
     }
   };
 
-  window.deleteAccess = async (accessId) => {
-    if (!confirm('Zugang wirklich löschen?')) return;
-    
+  window.deleteAccess = async (userId, isTeamMember) => {
     try {
-      await pb.collection('training_students').delete(accessId);
-      showMsg('✅ Zugang gelöscht!');
+      if (isTeamMember) {
+        // Team Member → Nur lernbar_access entfernen
+        if (!confirm('Lernbar-Zugriff wirklich entfernen?\n\nDer Benutzer bleibt als Team Member erhalten.')) return;
+        
+        await pb.collection('users').update(userId, {
+          lernbar_access: false
+        });
+        
+        showMsg('✅ Lernbar-Zugriff entfernt!');
+        
+      } else {
+        // Nur Lernbar → Komplett löschen
+        if (!confirm('User wirklich löschen?\n\nDieser Benutzer wird komplett gelöscht!')) return;
+        
+        await pb.collection('users').delete(userId);
+        
+        showMsg('✅ User gelöscht!');
+      }
+      
       await loadSettings();
+      
     } catch(e) {
       showMsg('Fehler: ' + e.message, 'error');
     }
   };
 
   window.exportAccessCodes = () => {
-    let csv = 'Name,Zugangscode\n';
-    allAccess.forEach(acc => {
-      csv += `"${acc.name}","${acc.access_code}"\n`;
+    let csv = 'E-Mail,Name,Typ\n';
+    allUsers.forEach(user => {
+      const isTeamMember = user.name && user.name.trim() !== '';
+      const displayName = isTeamMember ? user.name : '-';
+      const typ = isTeamMember ? 'Team Member + Lernbar' : 'Nur Lernbar';
+      csv += `"${user.email}","${displayName}","${typ}"\n`;
     });
     
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `Zugangscodes-${new Date().toISOString().split('T')[0]}.csv`;
+    a.download = `Lernbar-Zugaenge-${new Date().toISOString().split('T')[0]}.csv`;
     a.click();
     URL.revokeObjectURL(url);
     
     showMsg('✅ CSV exportiert!');
-  };
-
-  window.exportAccessPDF = async (accessId) => {
-    try {
-      if (typeof window.jspdf === 'undefined') {
-        showMsg('PDF-Bibliothek wird geladen...', 'info');
-        await new Promise(resolve => setTimeout(resolve, 1000));
-      }
-      
-      const access = allAccess.find(a => a.id === accessId);
-      if (!access) return;
-      
-      const { jsPDF } = window.jspdf;
-      const doc = new jsPDF();
-      
-      doc.setFontSize(24);
-      doc.setFont(undefined, 'bold');
-      doc.text('Responda Schulungszugang', 105, 30, { align: 'center' });
-      
-      doc.setFontSize(14);
-      doc.setFont(undefined, 'normal');
-      doc.text(`Name: ${access.name}`, 20, 60);
-      
-      doc.setFontSize(18);
-      doc.setFont(undefined, 'bold');
-      doc.text('Ihr Zugangscode:', 20, 80);
-      
-      doc.setFontSize(28);
-      doc.setTextColor(200, 16, 46);
-      doc.text(access.access_code, 20, 100);
-      
-      doc.setTextColor(0, 0, 0);
-      doc.setFontSize(12);
-      doc.setFont(undefined, 'normal');
-      doc.text('Anleitung:', 20, 130);
-      doc.text('1. Öffnen Sie die Schulungsplattform', 20, 140);
-      doc.text('2. Geben Sie Ihren Zugangscode ein', 20, 150);
-      doc.text('3. Wählen Sie Ihren Namen aus', 20, 160);
-      
-      const qrDiv = document.createElement('div');
-      qrDiv.style.display = 'none';
-      document.body.appendChild(qrDiv);
-      
-      new QRCode(qrDiv, {
-        text: access.access_code,
-        width: 128,
-        height: 128
-      });
-      
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      const qrImg = qrDiv.querySelector('img');
-      if (qrImg) {
-        doc.addImage(qrImg.src, 'PNG', 150, 60, 40, 40);
-      }
-      
-      document.body.removeChild(qrDiv);
-      
-      doc.save(`Zugangscode-${access.name.replace(/\s+/g, '-')}.pdf`);
-      showMsg('✅ PDF exportiert!');
-      
-    } catch(e) {
-      showMsg('Fehler: ' + e.message, 'error');
-    }
-  };
-
-  window.exportAllAccessPDFs = async () => {
-    if (allAccess.length === 0) {
-      showMsg('Keine Zugänge vorhanden', 'error');
-      return;
-    }
-    
-    try {
-      for (const access of allAccess) {
-        await exportAccessPDF(access.id);
-        await new Promise(resolve => setTimeout(resolve, 500));
-      }
-      
-      showMsg(`✅ ${allAccess.length} PDFs exportiert!`);
-    } catch(e) {
-      showMsg('Fehler: ' + e.message, 'error');
-    }
   };
   // ========================================
   // SCHULUNGEN
@@ -2056,7 +1851,7 @@ async function loadSettings() {
         </div>
         
         <div style="margin-top:20px;padding-top:16px;border-top:2px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
-          <button class="btn" style="background:#dc2626;color:#fff;border-color:#dc2626" onclick="confirmDeleteSchul()">
+          <button class="btn" style="background:#dc2626;color:#fff;border-color:#dc2626" onclick="confirmDeleteSchulung()">
             <i class="fa-solid fa-trash"></i> Schulung löschen
           </button>
           <button class="btn primary" onclick="closeSchulungDetailsModal()">
@@ -2079,7 +1874,7 @@ async function loadSettings() {
     currentViewCourseId = null;
   };
 
-  window.confirmDeleteSchul = async () => {
+  window.confirmDeleteSchulung = async () => {
     if (!currentViewCourseId) return;
     
     const course = allCourses.find(c => c.id === currentViewCourseId);
@@ -2298,8 +2093,9 @@ async function loadSettings() {
       showMsg('Fehler: ' + e.message, 'error');
     }
   };
+
   // ========================================
-  // EINLADUNGEN VERSCHICKEN
+  // EINLADUNGEN + TEILNEHMER VERWALTEN
   // ========================================
   window.openSendInvitationsModal = async (sessionId) => {
     try {
@@ -2310,13 +2106,10 @@ async function loadSettings() {
       document.getElementById('invite-session-info').textContent = 
         `${course ? course.title : 'Schulung'} • ${formatDate(session.date)}`;
       
-      // Generiere Einladungslink
       const baseUrl = window.location.origin;
       currentInvitationLink = `${baseUrl}/ausbildungen-invite.html?session=${sessionId}`;
       
       document.getElementById('invitation-link').textContent = currentInvitationLink;
-      
-      // QR-Code Container zurücksetzen
       document.getElementById('qr-code-container').style.display = 'none';
       document.getElementById('qr-code-display').innerHTML = '';
       
@@ -2354,9 +2147,6 @@ async function loadSettings() {
     showMsg('✅ QR-Code generiert!');
   };
 
-  // ========================================
-  // TEILNEHMER VERWALTEN
-  // ========================================
   window.openManageParticipants = async (sessionId) => {
     try {
       currentManageSessionId = sessionId;
@@ -2538,8 +2328,8 @@ async function loadSettings() {
     }
   };
 
-    // ========================================
-  // TERMIN-DETAILS MIT ANWESENHEITSLISTE
+  // ========================================
+  // TERMIN-DETAILS MIT ANWESENHEIT
   // ========================================
   window.viewSessionDetails = async (sessionId) => {
     try {
@@ -2597,7 +2387,6 @@ async function loadSettings() {
         participants.forEach(p => {
           const member = p.expand?.member_id;
           
-          // Bestimme aktuellen Anwesenheitsstatus
           let currentStatus = 'abwesend';
           if (p.anwesend === true) currentStatus = 'anwesend';
           if (p.entschuldigt === true) currentStatus = 'entschuldigt';
@@ -2668,8 +2457,6 @@ async function loadSettings() {
       showMsg('Fehler: ' + e.message, 'error');
     }
   };
-
-
   // ========================================
   // TEAM
   // ========================================
@@ -2765,8 +2552,6 @@ async function loadSettings() {
       const total = participations.length;
       const percentage = total > 0 ? Math.round((attended / total) * 100) : 0;
       
-      const hasAccess = allAccess.find(a => a.member_id === memberId);
-      
       document.getElementById('memberDetailsTitle').innerHTML = 
         `<i class="fa-solid fa-user"></i> ${member.vorname} ${member.name}`;
       
@@ -2783,24 +2568,12 @@ async function loadSettings() {
                 member.qualifikationen.map(q => `<span class="tag">${q}</span>`).join('') : 
                 '<span style="color:var(--muted)">Keine Qualifikationen</span>'}
             </div>
-            
-            <div style="font-weight:700;color:#6b7280">Externer Zugang:</div>
-            <div>
-              ${hasAccess ? 
-                `<span class="badge success">✅ Aktiv</span> <span style="font-family:monospace;font-weight:700;margin-left:8px">${hasAccess.access_code}</span>` : 
-                `<span class="badge" style="background:#f3f4f6;color:#6b7280">Kein Zugang</span>`}
-            </div>
           </div>
           
           <div style="margin-top:1rem;display:flex;gap:8px;flex-wrap:wrap">
             <button class="btn btn-sm" onclick="editMember('${memberId}')">
               <i class="fas fa-edit"></i> Bearbeiten
             </button>
-            ${!hasAccess ? `
-              <button class="btn btn-sm primary" onclick="openCreateAccessForMember('${memberId}')">
-                <i class="fas fa-key"></i> Zugang erstellen
-              </button>
-            ` : ''}
             <button class="btn btn-sm" style="background:#dc2626;color:#fff" onclick="deleteMember('${memberId}')">
               <i class="fas fa-trash"></i> Löschen
             </button>
@@ -2961,51 +2734,6 @@ async function loadSettings() {
     }
   };
 
-  // ========================================
-  // ZUGANG FÜR MITGLIED
-  // ========================================
-  window.openCreateAccessForMember = (memberId) => {
-    currentAccessMember = memberId;
-    const member = allMembers.find(m => m.id === memberId);
-    
-    document.getElementById('access-member-name').textContent = `${member.vorname} ${member.name}`;
-    
-    memberAccessCode = generateAccessCode();
-    document.getElementById('member-access-code').textContent = memberAccessCode;
-    
-    closeMemberDetailsModal();
-    document.getElementById('createAccessForMemberModal').classList.add('show');
-  };
-
-  window.closeCreateAccessForMemberModal = () => {
-    document.getElementById('createAccessForMemberModal').classList.remove('show');
-    currentAccessMember = null;
-  };
-
-  window.saveAccessForMember = async () => {
-    try {
-      const member = allMembers.find(m => m.id === currentAccessMember);
-      const tempPassword = generatePassword();
-      
-      const student = await pb.collection('training_students').create({
-        email: `${memberAccessCode}@responda-temp.local`,
-        password: tempPassword,
-        passwordConfirm: tempPassword,
-        name: `${member.vorname} ${member.name}`,
-        access_code: memberAccessCode,
-        member_id: currentAccessMember,
-        organization_id: currentUser.organization_id
-      });
-      
-      showMsg('✅ Zugang erstellt!');
-      closeCreateAccessForMemberModal();
-      await loadSettings();
-      await viewMemberDetails(currentAccessMember);
-      
-    } catch(e) {
-      showMsg('Fehler: ' + e.message, 'error');
-    }
-  };
   // ========================================
   // LERNBEREICH
   // ========================================
@@ -3230,7 +2958,6 @@ async function loadSettings() {
     if (!confirm('Lernmodul wirklich löschen?\n\nAlle Folien und Zuweisungen werden ebenfalls gelöscht!')) return;
     
     try {
-      // Lösche alle Folien
       const slides = await pb.collection('learning_slides').getFullList({
         filter: `module_id = "${moduleId}"`
       });
@@ -3238,7 +2965,6 @@ async function loadSettings() {
         await pb.collection('learning_slides').delete(slide.id);
       }
       
-      // Lösche alle Zuweisungen
       const assignments = await pb.collection('module_assignments').getFullList({
         filter: `module_id = "${moduleId}"`
       });
@@ -3246,7 +2972,6 @@ async function loadSettings() {
         await pb.collection('module_assignments').delete(assignment.id);
       }
       
-      // Lösche Modul
       await pb.collection('learning_modules').delete(moduleId);
       
       showMsg('✅ Lernmodul gelöscht!');
@@ -3259,7 +2984,7 @@ async function loadSettings() {
   };
 
   // ========================================
-  // FOLIEN-EDITOR
+  // FOLIEN-EDITOR (VEREINFACHT)
   // ========================================
   window.openSlideEditor = async (moduleId) => {
     try {
@@ -3343,14 +3068,12 @@ async function loadSettings() {
     if (newIndex < 0 || newIndex >= currentSlides.length) return;
     
     try {
-      // Swap order values
       const slide1 = currentSlides[index];
       const slide2 = currentSlides[newIndex];
       
       await pb.collection('learning_slides').update(slide1.id, { order: newIndex });
       await pb.collection('learning_slides').update(slide2.id, { order: index });
       
-      // Reload
       currentSlides = await pb.collection('learning_slides').getFullList({
         filter: `module_id = "${currentLearningModule}"`,
         sort: 'order'
@@ -3382,16 +3105,12 @@ async function loadSettings() {
     }
   };
 
-  // ========================================
-  // NEUE FOLIE / FOLIE BEARBEITEN
-  // ========================================
   window.openNewSlideModal = () => {
     currentEditSlide = null;
     document.getElementById('newSlideForm').reset();
     document.getElementById('slide-type').value = 'text';
     quizAnswers = [];
     
-    // Init Quill Editor
     if (slideContentEditor) {
       slideContentEditor = null;
     }
@@ -3740,7 +3459,6 @@ async function loadSettings() {
 
   window.saveAssignments = async () => {
     try {
-      // Lösche alle bisherigen Zuweisungen
       const existingAssignments = await pb.collection('module_assignments').getFullList({
         filter: `module_id = "${currentLearningModule}"`
       });
@@ -3749,7 +3467,6 @@ async function loadSettings() {
         await pb.collection('module_assignments').delete(assignment.id);
       }
       
-      // Erstelle neue Zuweisungen
       for (const memberId of selectedAssignments) {
         await pb.collection('module_assignments').create({
           module_id: currentLearningModule,
@@ -3766,6 +3483,7 @@ async function loadSettings() {
       showMsg('Fehler: ' + e.message, 'error');
     }
   };
+
 
   // ========================================
   // INIT
