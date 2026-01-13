@@ -472,6 +472,7 @@
     </section>
   </main>
 </div>
+
 <!-- Einstellungen Modal -->
 <div class="modal" id="settingsModal">
   <div class="modal-box">
@@ -658,8 +659,8 @@
             <span>📋 Produktausgabe</span>
           </label>
           <label class="permission-item">
-            <input type="checkbox" id="perm_ausbildungen">
-            <span>🎓 Ausbildungen (teilnehmen)</span>
+            <input type="checkbox" id="perm_lernbar">
+            <span>🎓 Lernbar</span>
           </label>
           <label class="permission-item sub">
             <input type="checkbox" id="perm_ausbildungen_manage">
@@ -731,7 +732,8 @@
         name: user.name,
         role: user.role,
         permissions: user.permissions,
-        supervisor: user.supervisor
+        supervisor: user.supervisor,
+        lernbar_access: user.lernbar_access
       });
       
       document.body.classList.add('loaded');
@@ -754,7 +756,7 @@
         einsaetze: true,
         lager: true,
         produktausgabe: true,
-        ausbildungen: true,
+        lernbar: true,
         ausbildungen_manage: true,
         dokumente: true,
         patienten: true,
@@ -782,7 +784,7 @@
       permissions: {
         dashboard: true,
         einsaetze: true,
-        ausbildungen: true,
+        lernbar: true,
         ausbildungen_manage: true,
         patienten: true,
         dateien: true,
@@ -806,7 +808,7 @@
       icon: '👤',
       permissions: {
         dashboard: true,
-        ausbildungen: true,
+        lernbar: true,
         chat: true
       }
     }
@@ -831,16 +833,10 @@
     
     // NUR MPG UND SUPERVISOR SEHEN BENUTZER/LIZENZ TABS
     const isMpgOrSupervisor = user.supervisor || user.role === 'mpg';
-    console.log('🔍 Is MPG or Supervisor?', isMpgOrSupervisor);
-    console.log('🔍 User role:', user.role);
-    console.log('🔍 User supervisor:', user.supervisor);
     
     if (isMpgOrSupervisor) {
       document.getElementById('usersTab').style.display = 'block';
       document.getElementById('licenseTab').style.display = 'block';
-      console.log('✅ Showing user management tabs');
-    } else {
-      console.log('❌ Hiding user management tabs (not MPG)');
     }
     
     buildNavigation();
@@ -870,18 +866,10 @@
     const userRole = user.role || 'benutzer';
     const roleTemplate = ROLE_TEMPLATES[userRole];
     
-    console.log('🔍 Building navigation for:', {
-      role: userRole,
-      permissions: permissions,
-      roleTemplate: roleTemplate,
-      supervisor: user.supervisor
-    });
-    
     const pages = [
       { id: 'einsaetze', label: '🚨 Einsätze', url: 'einsaetze.html' },
       { id: 'patienten', label: '🧾 Patientendokumentation', url: 'patientendokumentation-dateien.html' },
       { id: 'dokumente', label: '📋 Vorgänge', url: 'dokumente-bearbeiten.html' },
-      { id: 'ausbildungen', label: '🎓 Ausbildungen', url: 'ausbildungen.html' },
       { id: 'lager', label: '📦 Lagerverwaltung', url: 'lagerverwaltung.html' },
       { id: 'produktausgabe', label: '📋 Produktausgabe', url: 'produktausgabe.html' },
       { id: 'dateien', label: '📄 Dateien', url: 'dateien.html' },
@@ -889,33 +877,33 @@
     ];
     
     const accessiblePages = pages.filter(page => {
-      if (user.supervisor) {
-        console.log('✅ Supervisor access:', page.id);
-        return true;
-      }
-      
-      if (permissions[page.id] === true) {
-        console.log('✅ Access via permission:', page.id);
-        return true;
-      }
-      
-      if (roleTemplate && roleTemplate.permissions[page.id] === true) {
-        console.log('✅ Access via role:', page.id);
-        return true;
-      }
-      
-      console.log('❌ No access:', page.id);
+      if (user.supervisor) return true;
+      if (permissions[page.id] === true) return true;
+      if (roleTemplate && roleTemplate.permissions[page.id] === true) return true;
       return false;
     });
     
-    console.log('📊 Total accessible pages:', accessiblePages.length);
-    console.log('📊 Page IDs:', accessiblePages.map(p => p.id));
-    
-    const navHTML = accessiblePages
+    let navHTML = accessiblePages
       .map(page => `<a href="${page.url}">${page.label}</a>`)
       .join('');
     
-    nav.innerHTML = navHTML + '<a href="chat.html">💬 Chats</a>';
+    // LERNBAR & AUSBILDUNGEN
+    const hasLernbar = user.lernbar_access || permissions.lernbar === true || 
+                       (roleTemplate && roleTemplate.permissions.lernbar === true);
+    const hasAusbildungenManage = user.supervisor || permissions.ausbildungen_manage === true || 
+                                  (roleTemplate && roleTemplate.permissions.ausbildungen_manage === true);
+    
+    if (hasLernbar) {
+      navHTML += '<a href="lernbar.html">🎓 Lernbar</a>';
+    }
+    
+    if (hasAusbildungenManage) {
+      navHTML += '<a href="ausbildungen.html" style="padding-left:24px; font-size:0.9rem">└─ Ausbildungen verwalten</a>';
+    }
+    
+    navHTML += '<a href="chat.html">💬 Chats</a>';
+    
+    nav.innerHTML = navHTML;
   }
 
   // ===== LOGOUT =====
@@ -1020,27 +1008,19 @@
       if (!n1 || n1.length < 8) { showPwMsg('Neues Passwort: mindestens 8 Zeichen.'); return; }
       if (n1 !== n2) { showPwMsg('Die neuen Passwörter stimmen nicht überein.'); return; }
 
-      console.log('🔐 Verifying current password...');
-      
       try {
         await pb.collection('users').authWithPassword(user.email, current);
-        console.log('✅ Current password verified');
       } catch (e) {
-        console.error('❌ Current password wrong:', e);
         showPwMsg('Aktuelles Passwort ist falsch.');
         return;
       }
 
-      console.log('🔄 Updating password...');
-      
       try {
         await pb.collection('users').update(user.id, {
           password: n1,
           passwordConfirm: n1,
           oldPassword: current
         });
-        
-        console.log('✅ Password updated successfully');
         
         showPwMsg('✅ Passwort geändert. Du wirst abgemeldet …', true);
         
@@ -1052,9 +1032,6 @@
         }, 2000);
         
       } catch (updateError) {
-        console.error('❌ Password update error:', updateError);
-        console.error('Error details:', updateError.response?.data);
-        
         if (updateError.status === 400) {
           const errors = updateError.response?.data;
           if (errors?.oldPassword) {
@@ -1068,7 +1045,6 @@
       }
       
     } catch(e) {
-      console.error('❌ General error:', e);
       showPwMsg('Fehler: ' + (e?.message || e));
     }
   });
@@ -1174,32 +1150,18 @@
       const phone = document.getElementById('userPhone').value.trim();
       const roleTemplate = document.getElementById('roleTemplate').value;
       
-      console.log('📝 Raw form values:', {
-        email,
-        name,
-        phone,
-        roleTemplate,
-        roleTemplateType: typeof roleTemplate,
-        roleTemplateLength: roleTemplate ? roleTemplate.length : 0
-      });
-      
       let role = 'benutzer';
       
       if (roleTemplate && roleTemplate.trim() !== '') {
         role = roleTemplate.trim();
-        console.log('🎭 Role after trim:', role, 'Length:', role.length);
       } else if (editingUserId && editingUserCurrentRole) {
         role = editingUserCurrentRole;
-        console.log('🎭 Keeping current role:', role);
       }
       
       const validRoles = ['mpg', 'lager', 'ausbildung', 'qm', 'benutzer'];
       if (!validRoles.includes(role)) {
-        console.warn('⚠️ Invalid role detected:', role, 'Using default: benutzer');
         role = 'benutzer';
       }
-      
-      console.log('🎭 Final role to save:', role);
       
       if (!email || !name) {
         userMsg.textContent = '❌ Bitte E-Mail und Name ausfüllen';
@@ -1231,7 +1193,7 @@
         einsaetze: document.getElementById('perm_einsaetze').checked,
         lager: document.getElementById('perm_lager').checked,
         produktausgabe: document.getElementById('perm_produktausgabe').checked,
-        ausbildungen: document.getElementById('perm_ausbildungen').checked,
+        lernbar: document.getElementById('perm_lernbar').checked,
         ausbildungen_manage: document.getElementById('perm_ausbildungen_manage').checked,
         dokumente: document.getElementById('perm_dokumente').checked,
         patienten: document.getElementById('perm_patienten').checked,
@@ -1241,23 +1203,17 @@
         users_manage: document.getElementById('perm_users_manage').checked
       };
       
-      console.log('🔍 Current user object:', user);
-      console.log('🔍 User organization_id:', user.organization_id);
-      
       if (editingUserId) {
         // UPDATE EXISTING USER
         const userData = {
           name: name,
           phone: phone || '',
           role: role,
-          permissions: permissions
+          permissions: permissions,
+          lernbar_access: permissions.lernbar
         };
         
-        console.log('📝 Updating user with data:', userData);
-        
         await pb.collection('users').update(editingUserId, userData);
-        
-        console.log('✅ User updated successfully');
         
         userMsg.textContent = '✅ Benutzer aktualisiert!';
         userMsg.className = 'msg ok';
@@ -1284,24 +1240,17 @@
           permissions: permissions,
           organization_id: user.organization_id,
           supervisor: false,
-          verified: false
+          verified: false,
+          lernbar_access: permissions.lernbar
         };
         
-        console.log('📤 Creating user with FULL data:', userData);
-        
-        const newUser = await pb.collection('users').create(userData);
-        
-        console.log('✅ User created successfully!');
-        console.log('✅ Created user:', newUser);
+        await pb.collection('users').create(userData);
         
         try {
           await pb.collection('users').requestPasswordReset(email);
-          console.log('📧 Password reset email sent to:', email);
-          
           userMsg.textContent = '✅ Benutzer angelegt! E-Mail mit Passwort-Link wurde an ' + email + ' versendet.';
           userMsg.className = 'msg ok';
         } catch (emailError) {
-          console.error('❌ Email send error:', emailError);
           userMsg.textContent = '⚠️ Benutzer angelegt, aber E-Mail konnte nicht versendet werden.';
           userMsg.className = 'msg ok';
         }
@@ -1314,9 +1263,6 @@
       
     } catch (e) {
       console.error('❌ User save error:', e);
-      console.error('❌ Error status:', e.status);
-      console.error('❌ Error response:', e.response);
-      console.error('❌ Error data:', e.response?.data);
       
       let errorMsg = '❌ Fehler: ';
       
@@ -1364,12 +1310,13 @@
       tbody.innerHTML = users.map(u => {
         const roleClass = `role-${u.role || 'benutzer'}`;
         const roleInfo = getRoleInfo(u.role || 'benutzer');
+        const lernbarBadge = u.lernbar_access ? ' <span style="background:#dbeafe;color:#1e40af;padding:2px 6px;border-radius:4px;font-size:0.75rem;margin-left:4px">🎓</span>' : '';
         
         return `
           <tr>
             <td>${escapeHtml(u.name || '—')}</td>
             <td>${escapeHtml(u.email)}</td>
-            <td><span class="role-badge ${roleClass}">${roleInfo.icon} ${roleInfo.label}</span></td>
+            <td><span class="role-badge ${roleClass}">${roleInfo.icon} ${roleInfo.label}</span>${lernbarBadge}</td>
             <td>
               <button class="action-btn edit" onclick="editUserClick('${u.id}')">✏️</button>
               ${u.id !== user.id ? `<button class="action-btn delete" onclick="deleteUserClick('${u.id}', '${escapeHtml(u.name || u.email).replace(/'/g, "\\'")}')">🗑️</button>` : ''}
@@ -1448,4 +1395,4 @@
 </script>
 
 </body>
-</html
+</html>
