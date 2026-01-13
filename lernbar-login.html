@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Login – Lernbar</title>
+  <title>Lernbar Login – Responda</title>
   <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet"/>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
   <script src="https://cdn.jsdelivr.net/npm/pocketbase@0.21.3/dist/pocketbase.umd.js"></script>
@@ -169,15 +169,6 @@
       font-size:1rem;
     }
     
-    .access-code-input{
-      text-align:center;
-      font-size:1.3rem;
-      font-weight:700;
-      letter-spacing:2px;
-      text-transform:lowercase;
-      font-family:monospace;
-    }
-    
     @media (max-width:600px){
       .login-card{
         padding:2rem;
@@ -206,24 +197,32 @@
     <span id="errorText"></span>
   </div>
 
-  <!-- ZUGANGSCODE LOGIN -->
-  <form id="accessCodeForm">
+  <!-- LOGIN FORM -->
+  <form id="loginForm">
     <div class="form-group">
-      <label for="accessCode">
-        <i class="fa-solid fa-key"></i> Dein Zugangscode
+      <label for="email">
+        <i class="fa-solid fa-envelope"></i> E-Mail
       </label>
       <input 
-        type="text" 
-        id="accessCode" 
-        class="access-code-input"
-        placeholder="wort.wort.wort" 
+        type="email" 
+        id="email" 
+        placeholder="deine@email.de" 
         required
-        autocomplete="off"
-        pattern="[a-z]+\.[a-z]+\.[a-z]+"
+        autocomplete="email"
       >
-      <small style="color:var(--muted);font-size:.9rem;display:block;margin-top:.5rem">
-        Format: wort.wort.wort (z.B. schnell.apfel.laufen)
-      </small>
+    </div>
+    
+    <div class="form-group">
+      <label for="password">
+        <i class="fa-solid fa-lock"></i> Passwort
+      </label>
+      <input 
+        type="password" 
+        id="password" 
+        placeholder="Dein Passwort" 
+        required
+        autocomplete="current-password"
+      >
     </div>
 
     <button type="submit" class="btn" id="loginBtn">
@@ -234,88 +233,69 @@
 
   <div class="info-box">
     <strong><i class="fas fa-info-circle"></i> Hinweis:</strong>
-    Du hast deinen Zugangscode von deinem Ausbilder erhalten. Er besteht aus drei deutschen Wörtern, getrennt durch Punkte.
+    Nutze deine normale Responda E-Mail und dein Passwort.
   </div>
 </div>
 
 <script type="module">
   const pb = new PocketBase('https://api.responda.systems');
 
-  // ========================================
-  // CHECK IF ALREADY LOGGED IN
-  // ========================================
+  // Check if already logged in
   if (pb.authStore.isValid && pb.authStore.model) {
     const user = pb.authStore.model;
-    // Prüfe ob es ein Student ist (hat access_code)
-    if (user.access_code) {
-      console.log('✅ Bereits als Student angemeldet');
+    // Prüfe ob Lernbar-Zugriff
+    if (user.lernbar_access || (user.permissions && user.permissions.lernbar)) {
+      console.log('✅ Bereits angemeldet mit Lernbar-Zugriff');
       location.href = '/lernbar.html';
     } else {
-      console.log('⚠️ Angemeldet aber kein Student - logout');
+      console.log('⚠️ Angemeldet aber kein Lernbar-Zugriff');
       pb.authStore.clear();
     }
   }
 
   // ========================================
-  // ACCESS CODE LOGIN
+  // LOGIN
   // ========================================
-  document.getElementById('accessCodeForm').onsubmit = async (e) => {
+  document.getElementById('loginForm').onsubmit = async (e) => {
     e.preventDefault();
     
-    const accessCode = document.getElementById('accessCode').value.trim().toLowerCase();
+    const email = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value;
     const loginBtn = document.getElementById('loginBtn');
     
-    // Validierung
-    if (!accessCode || !accessCode.match(/^[a-z]+\.[a-z]+\.[a-z]+$/)) {
-      showError('❌ Bitte gib einen gültigen Zugangscode ein (z.B. schnell.apfel.laufen)');
-      return;
-    }
-    
-    // Button deaktivieren
     loginBtn.disabled = true;
     loginBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Anmelden...';
     
     try {
-      console.log('🔍 Suche Student mit Access-Code:', accessCode);
+      console.log('🔐 Login Versuch:', email);
       
-      // Suche User mit diesem Zugangscode
-      const students = await pb.collection('training_students').getFullList({
-        filter: `access_code = "${accessCode}"`
-      });
+      // Login
+      await pb.collection('users').authWithPassword(email, password);
       
-      console.log('📊 Gefundene Studenten:', students.length);
-      
-      if (students.length === 0) {
-        showError('❌ Ungültiger Zugangscode. Bitte überprüfe deine Eingabe.');
-        loginBtn.disabled = false;
-        loginBtn.innerHTML = '<i class="fa-solid fa-sign-in-alt"></i> Anmelden';
-        return;
-      }
-      
-      const student = students[0];
-      console.log('👤 Student gefunden:', student.name);
-      console.log('🔑 plain_password vorhanden:', !!student.plain_password);
-      
-      // Prüfe ob plain_password vorhanden ist
-      if (!student.plain_password) {
-        console.error('❌ Kein plain_password vorhanden');
-        showError('❌ Login-Daten nicht vollständig. Bitte kontaktiere deinen Ausbilder.');
-        loginBtn.disabled = false;
-        loginBtn.innerHTML = '<i class="fa-solid fa-sign-in-alt"></i> Anmelden';
-        return;
-      }
-      
-      console.log('🔐 Versuche Login mit Email:', student.email);
-      
-      // Login mit Email und gespeichertem Passwort
-      await pb.collection('training_students').authWithPassword(
-        student.email,
-        student.plain_password
-      );
+      const user = pb.authStore.model;
       
       console.log('✅ Login erfolgreich!');
+      console.log('User:', {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        lernbar_access: user.lernbar_access,
+        permissions: user.permissions
+      });
       
-      // Weiterleitung
+      // Prüfe Lernbar-Zugriff
+      const hasLernbarAccess = user.lernbar_access === true || 
+                               (user.permissions && user.permissions.lernbar === true);
+      
+      if (!hasLernbarAccess) {
+        console.log('❌ Kein Lernbar-Zugriff');
+        pb.authStore.clear();
+        showError('❌ Du hast keine Berechtigung für die Lernbar. Bitte kontaktiere deinen Administrator.');
+        loginBtn.disabled = false;
+        loginBtn.innerHTML = '<i class="fa-solid fa-sign-in-alt"></i> Anmelden';
+        return;
+      }
+      
       loginBtn.innerHTML = '<i class="fas fa-check"></i> Erfolgreich!';
       
       setTimeout(() => {
@@ -324,7 +304,18 @@
       
     } catch(e) {
       console.error('❌ Login Fehler:', e);
-      showError('❌ Anmeldung fehlgeschlagen: ' + e.message);
+      
+      let errorMsg = 'Anmeldung fehlgeschlagen.';
+      
+      if (e.status === 400) {
+        errorMsg = '❌ Falsche E-Mail oder Passwort.';
+      } else if (e.status === 404) {
+        errorMsg = '❌ Benutzer nicht gefunden.';
+      } else {
+        errorMsg = '❌ ' + e.message;
+      }
+      
+      showError(errorMsg);
       loginBtn.disabled = false;
       loginBtn.innerHTML = '<i class="fa-solid fa-sign-in-alt"></i> Anmelden';
     }
@@ -344,11 +335,6 @@
       errorMsg.classList.remove('show');
     }, 8000);
   }
-
-  // Auto-lowercase und Format-Validierung
-  document.getElementById('accessCode').addEventListener('input', (e) => {
-    e.target.value = e.target.value.toLowerCase();
-  });
 
 </script>
 
