@@ -169,28 +169,6 @@
       font-size:1rem;
     }
     
-    .divider{
-      text-align:center;
-      margin:2rem 0;
-      position:relative;
-    }
-    .divider::before{
-      content:'';
-      position:absolute;
-      top:50%;
-      left:0;
-      right:0;
-      height:1px;
-      background:var(--border);
-    }
-    .divider span{
-      background:#fff;
-      padding:0 1rem;
-      position:relative;
-      color:var(--muted);
-      font-weight:700;
-    }
-    
     .access-code-input{
       text-align:center;
       font-size:1.3rem;
@@ -268,7 +246,7 @@
   // ========================================
   if (pb.authStore.isValid && pb.authStore.model) {
     console.log('✅ Bereits angemeldet, weiterleiten...');
-    location.href = '/lernbar.html';
+    location.href = '/beta/lernbar.html';
   }
 
   // ========================================
@@ -305,23 +283,25 @@
       
       const student = students[0];
       
-      // Login mit Email und dem gespeicherten Passwort (wir müssen hier einen Trick verwenden)
-      // Da wir das Passwort nicht kennen, müssen wir einen anderen Weg finden
+      // Prüfe ob plain_password vorhanden ist
+      if (!student.plain_password) {
+        showError('❌ Login-Daten nicht vollständig. Bitte kontaktiere deinen Ausbilder.');
+        loginBtn.disabled = false;
+        loginBtn.innerHTML = '<i class="fa-solid fa-sign-in-alt"></i> Anmelden';
+        return;
+      }
       
-      // LÖSUNG: Wir erstellen ein temporäres Token für diesen User
-      // ODER: Wir loggen direkt mit authWithPassword ein, wenn das Passwort bekannt ist
-      
-      // Da wir das Passwort beim Erstellen generiert haben, müssen wir es irgendwo speichern
-      // ODER: Wir verwenden einen anderen Auth-Mechanismus
-      
-      // FÜR JETZT: Wir setzen den authStore manuell (NUR FÜR DEMO!)
-      pb.authStore.save(student.id, student);
+      // Login mit Email und gespeichertem Passwort
+      await pb.collection('training_students').authWithPassword(
+        student.email,
+        student.plain_password
+      );
       
       console.log('✅ Login erfolgreich!');
       
       // Weiterleitung
       setTimeout(() => {
-        location.href = '/lernbar.html';
+        location.href = '/beta/lernbar.html';
       }, 500);
       
     } catch(e) {
