@@ -359,6 +359,15 @@
       opacity:0.3;
     }
     
+    .error-box{
+      background:#fee2e2;
+      border-left:4px solid var(--primary);
+      padding:1.5rem;
+      border-radius:.75rem;
+      color:var(--primary);
+      font-weight:700;
+    }
+    
     @media (max-width:768px){
       .header-content{
         flex-direction:column;
@@ -407,6 +416,10 @@
       <span>Lernbar</span>
     </div>
     <div class="header-actions">
+      <a href="mpg-dashboard.html" class="header-btn">
+        <i class="fa-solid fa-arrow-left"></i>
+        Zurück zum Dashboard
+      </a>
       <button class="header-btn" id="logoutBtn">
         <i class="fa-solid fa-right-from-bracket"></i>
         Logout
@@ -481,26 +494,54 @@
   // ========================================
   const pb = new PocketBase('https://api.responda.systems');
 
-  // Strenge Auth-Prüfung
+  // ========================================
+  // STRENGE AUTH-PRÜFUNG
+  // ========================================
   if (!pb.authStore.isValid || !pb.authStore.model) {
     console.log('❌ Nicht angemeldet');
-    location.href = "/lernbar-login.html";
+    window.location.href = "mpg-login.html";
   }
 
   const currentUser = pb.authStore.model;
   
-  // Prüfe ob Student (hat access_code)
-  if (!currentUser.access_code) {
-    console.log('❌ Kein Student-Account');
-    pb.authStore.clear();
-    location.href = "/lernbar-login.html";
+  console.log('👤 Current user:', {
+    id: currentUser.id,
+    email: currentUser.email,
+    name: currentUser.name,
+    lernbar_access: currentUser.lernbar_access,
+    permissions: currentUser.permissions
+  });
+  
+  // PRÜFE LERNBAR-BERECHTIGUNG
+  const hasLernbarAccess = currentUser.lernbar_access === true || 
+                           (currentUser.permissions && currentUser.permissions.lernbar === true);
+  
+  console.log('🎓 Lernbar access:', hasLernbarAccess);
+  
+  if (!hasLernbarAccess) {
+    console.log('❌ Kein Lernbar-Zugriff');
+    document.querySelector('.container').innerHTML = `
+      <div class="section">
+        <div class="error-box">
+          <h2 style="margin:0 0 1rem 0">
+            <i class="fa-solid fa-lock"></i> Kein Zugriff
+          </h2>
+          <p style="margin:0">
+            Du hast keine Berechtigung für die Lernbar. 
+            Bitte kontaktiere deinen Administrator.
+          </p>
+          <a href="mpg-dashboard.html" class="header-btn" style="margin-top:1rem; display:inline-flex">
+            <i class="fa-solid fa-arrow-left"></i>
+            Zurück zum Dashboard
+          </a>
+        </div>
+      </div>
+    `;
   }
 
-  console.log('✅ Angemeldet als:', currentUser.name);
-  
   document.getElementById('logoutBtn').onclick = () => {
     pb.authStore.clear();
-    location.href = "/lernbar-login.html";
+    window.location.href = "mpg-login.html";
   };
 
   // ========================================
@@ -523,6 +564,8 @@
   let myTermine = [];
 
   async function loadData() {
+    if (!hasLernbarAccess) return;
+    
     try {
       // MOCK MODULE (bis Collections angelegt sind)
       myModules = [
@@ -669,7 +712,9 @@
   // ========================================
   // INIT
   // ========================================
-  loadData();
+  if (hasLernbarAccess) {
+    loadData();
+  }
 
 </script>
 
