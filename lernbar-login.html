@@ -245,8 +245,15 @@
   // CHECK IF ALREADY LOGGED IN
   // ========================================
   if (pb.authStore.isValid && pb.authStore.model) {
-    console.log('✅ Bereits angemeldet, weiterleiten...');
-    location.href = '/beta/lernbar.html';
+    const user = pb.authStore.model;
+    // Prüfe ob es ein Student ist (hat access_code)
+    if (user.access_code) {
+      console.log('✅ Bereits als Student angemeldet');
+      location.href = '/lernbar.html';
+    } else {
+      console.log('⚠️ Angemeldet aber kein Student - logout');
+      pb.authStore.clear();
+    }
   }
 
   // ========================================
@@ -269,10 +276,14 @@
     loginBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Anmelden...';
     
     try {
+      console.log('🔍 Suche Student mit Access-Code:', accessCode);
+      
       // Suche User mit diesem Zugangscode
       const students = await pb.collection('training_students').getFullList({
         filter: `access_code = "${accessCode}"`
       });
+      
+      console.log('📊 Gefundene Studenten:', students.length);
       
       if (students.length === 0) {
         showError('❌ Ungültiger Zugangscode. Bitte überprüfe deine Eingabe.');
@@ -282,14 +293,19 @@
       }
       
       const student = students[0];
+      console.log('👤 Student gefunden:', student.name);
+      console.log('🔑 plain_password vorhanden:', !!student.plain_password);
       
       // Prüfe ob plain_password vorhanden ist
       if (!student.plain_password) {
+        console.error('❌ Kein plain_password vorhanden');
         showError('❌ Login-Daten nicht vollständig. Bitte kontaktiere deinen Ausbilder.');
         loginBtn.disabled = false;
         loginBtn.innerHTML = '<i class="fa-solid fa-sign-in-alt"></i> Anmelden';
         return;
       }
+      
+      console.log('🔐 Versuche Login mit Email:', student.email);
       
       // Login mit Email und gespeichertem Passwort
       await pb.collection('training_students').authWithPassword(
@@ -300,8 +316,10 @@
       console.log('✅ Login erfolgreich!');
       
       // Weiterleitung
+      loginBtn.innerHTML = '<i class="fas fa-check"></i> Erfolgreich!';
+      
       setTimeout(() => {
-        location.href = '/beta/lernbar.html';
+        location.href = '/lernbar.html';
       }, 500);
       
     } catch(e) {
@@ -324,7 +342,7 @@
     
     setTimeout(() => {
       errorMsg.classList.remove('show');
-    }, 5000);
+    }, 8000);
   }
 
   // Auto-lowercase und Format-Validierung
