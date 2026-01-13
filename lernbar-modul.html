@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Modul – Lernbar</title>
+  <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet"/>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
+  <script src="https://cdn.jsdelivr.net/npm/pocketbase@0.21.3/dist/pocketbase.umd.js"></script>
+
+  <style>
+    :root{
+      --primary:#c8102e;
+      --success:#16a34a;
+      --bg:#f8fafc;
+      --text:#0f172a;
+      --muted:#64748b;
+      --border:#e2e8f0;
+    }
+    
+    *{box-sizing:border-box;margin:0;padding:0}
+    
+    body{
+      font-family:'Atkinson Hyperlegible',-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+      background:var(--bg);
+      color:var(--text);
+      min-height:100vh;
+      display:flex;
+      flex-direction:column;
+    }
+    
+    /* HEADER */
+    header{
+      background:#fff;
+      border-bottom:2px solid var(--border);
+      padding:1rem;
+      position:sticky;
+      top:0;
+      z-index:100;
+      box-shadow:0 2px 8px rgba(0,0,0,.05);
+    }
+    .header-content{
+      max-width:1200px;
+      margin:0 auto;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:1rem;
+    }
+    .back-btn{
+      background:var(--bg);
+      border:none;
+      padding:.6rem 1rem;
+      border-radius:.5rem;
+      cursor:pointer;
+      font-weight:700;
+      display:flex;
+      align-items:center;
+      gap:.5rem;
+      font-family:inherit;
+      color:var(--text);
+      transition:all 0.2s;
+    }
+    .back-btn:hover{
+      background:var(--border);
+    }
+    
+    .module-title-header{
+      font-size:1.1rem;
+      font-weight:800;
+      color:var(--primary);
+    }
+    
+    .progress-header{
+      display:flex;
+      align-items:center;
+      gap:1rem;
+      font-size:.9rem;
+      color:var(--muted);
+      font-weight:700;
+    }
+    
+    /* SLIDE VIEWER */
+    .slide-container{
+      flex:1;
+      display:flex;
+      flex-direction:column;
+      max-width:1200px;
+      margin:0 auto;
+      width:100%;
+      padding:2rem;
+    }
+    
+    .slide{
+      background:#fff;
+      border-radius:1rem;
+      padding:3rem;
+      box-shadow:0 4px 20px rgba(0,0,0,.1);
+      margin-bottom:2rem;
+      min-height:500px;
+      display:flex;
+      flex-direction:column;
+      gap:1.5rem;
+    }
+    
+    .slide h1{
+      font-size:2.5rem;
+      color:var(--primary);
+      font-weight:800;
+      margin-bottom:1rem;
+    }
+    
+    .slide h2{
+      font-size:1.8rem;
+      color:var(--primary);
+      font-weight:700;
+      margin-top:1.5rem;
+      margin-bottom:.75rem;
+    }
+    
+    .slide p{
+      font-size:1.1rem;
+      line-height:1.8;
+      color:var(--text);
+    }
+    
+    .slide img{
+      max-width:100%;
+      height:auto;
+      border-radius:.75rem;
+      box-shadow:0 4px 12px rgba(0,0,0,.1);
+    }
+    
+    .slide video{
+      max-width:100%;
+      border-radius:.75rem;
+      box-shadow:0 4px 12px rgba(0,0,0,.1);
+    }
+    
+    /* QUIZ */
+    .quiz{
+      background:#fafafa;
+      padding:2rem;
+      border-radius:1rem;
+      border-left:4px solid var(--primary);
+    }
+    .quiz h3{
+      font-size:1.3rem;
+      font-weight:800;
+      color:var(--primary);
+      margin-bottom:1.5rem;
+    }
+    .quiz-option{
+      background:#fff;
+      padding:1rem;
+      border-radius:.5rem;
+      margin-bottom:1rem;
+      cursor:pointer;
+      border:2px solid var(--border);
+      transition:all 0.2s;
+      display:flex;
+      align-items:center;
+      gap:.75rem;
+    }
+    .quiz-option:hover{
+      border-color:var(--primary);
+      transform:translateX(5px);
+    }
+    .quiz-option.correct{
+      background:#d1fae5;
+      border-color:var(--success);
+    }
+    .quiz-option.wrong{
+      background:#fee2e2;
+      border-color:var(--primary);
+    }
+    
+    /* NAVIGATION */
+    .slide-nav{
+      display:flex;
+      justify-content:space-between;
+      gap:1rem;
+    }
+    .nav-btn{
+      padding:1rem 2rem;
+      border:none;
+      border-radius:.75rem;
+      font-weight:700;
+      font-size:1rem;
+      cursor:pointer;
+      display:flex;
+      align-items:center;
+      gap:.75rem;
+      transition:all 0.2s;
+      font-family:inherit;
+    }
+    .nav-btn:disabled{
+      opacity:0.4;
+      cursor:not-allowed;
+    }
+    .nav-btn.prev{
+      background:var(--bg);
+      color:var(--text);
+    }
+    .nav-btn.prev:not(:disabled):hover{
+      background:var(--border);
+    }
+    .nav-btn.next{
+      background:var(--primary);
+      color:#fff;
+      margin-left:auto;
+    }
+    .nav-btn.next:not(:disabled):hover{
+      background:#a00d25;
+      transform:translateY(-2px);
+    }
+    
+    .loading{
+      text-align:center;
+      padding:3rem;
+      color:var(--muted);
+    }
+    
+    @media (max-width:768px){
+      .slide-container{
+        padding:1rem;
+      }
+      .slide{
+        padding:1.5rem;
+        min-height:400px;
+      }
+      .slide h1{
+        font-size:1.8rem;
+      }
+      .nav-btn{
+        padding:.75rem 1rem;
+        font-size:.9rem;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="header-content">
+    <button class="back-btn" onclick="location.href='/beta/lernbar.html'">
+      <i class="fa-solid fa-arrow-left"></i>
+      Zurück
+    </button>
+    <div class="module-title-header" id="moduleTitle">Modul</div>
+    <div class="progress-header">
+      <span id="slideProgress">Folie 1 von 1</span>
+    </div>
+  </div>
+</header>
+
+<!-- SLIDE VIEWER -->
+<div class="slide-container">
+  
+  <div class="slide" id="slideContent">
+    <div class="loading">
+      <i class="fas fa-spinner fa-spin" style="font-size:3rem;margin-bottom:1rem"></i>
+      <p>Lade Modul...</p>
+    </div>
+  </div>
+  
+  <div class="slide-nav">
+    <button class="nav-btn prev" id="prevBtn" disabled>
+      <i class="fa-solid fa-chevron-left"></i>
+      Zurück
+    </button>
+    <button class="nav-btn next" id="nextBtn">
+      Weiter
+      <i class="fa-solid fa-chevron-right"></i>
+    </button>
+  </div>
+  
+</div>
+
+<script type="module">
+  // ========================================
+  // POCKETBASE & AUTH
+  // ========================================
+  const pb = new PocketBase('https://api.responda.systems');
+  
+  if (!pb.authStore.isValid) {
+    location.href = "/lernbar-login.html";
+  }
+
+  const currentUser = pb.authStore.model;
+
+  // ========================================
+  // GET MODULE ID
+  // ========================================
+  const urlParams = new URLSearchParams(window.location.search);
+  const moduleId = urlParams.get('id');
+
+  if (!moduleId) {
+    alert('Keine Modul-ID gefunden');
+    location.href = '/beta/lernbar.html';
+  }
+
+  // ========================================
+  // LOAD MODULE
+  // ========================================
+  let currentModule = null;
+  let slides = [];
+  let currentSlideIndex = 0;
+
+  async function loadModule() {
+    try {
+      currentModule = await pb.collection('learning_modules').getOne(moduleId);
+      
+      document.getElementById('moduleTitle').textContent = currentModule.title;
+      
+      // Lade Folien
+      slides = await pb.collection('learning_slides').getFullList({
+        filter: `module_id = "${moduleId}"`,
+        sort: 'order'
+      });
+      
+      if (slides.length === 0) {
+        document.getElementById('slideContent').innerHTML = `
+          <div class="loading">
+            <i class="fas fa-book-open" style="font-size:3rem;margin-bottom:1rem;color:var(--muted)"></i>
+            <p>Keine Folien vorhanden</p>
+          </div>
+        `;
+        return;
+      }
+      
+      renderSlide();
+      
+    } catch(e) {
+      console.error('Error loading module:', e);
+      alert('Fehler beim Laden: ' + e.message);
+    }
+  }
+
+  // ========================================
+  // RENDER SLIDE
+  // ========================================
+  function renderSlide() {
+    const slide = slides[currentSlideIndex];
+    const slideContent = document.getElementById('slideContent');
+    
+    // Update Progress
+    document.getElementById('slideProgress').textContent = `Folie ${currentSlideIndex + 1} von ${slides.length}`;
+    
+    // Update Buttons
+    document.getElementById('prevBtn').disabled = currentSlideIndex === 0;
+    document.getElementById('nextBtn').textContent = currentSlideIndex === slides.length - 1 ? 'Abschließen' : 'Weiter';
+    
+    // Render based on type
+    let html = '';
+    
+    if (slide.type === 'text') {
+      html = `
+        <h1>${slide.title || ''}</h1>
+        <p>${slide.content || ''}</p>
+      `;
+    } else if (slide.type === 'image') {
+      const imageUrl = pb.files.getUrl(slide, slide.image);
+      html = `
+        <h1>${slide.title || ''}</h1>
+        ${slide.content ? `<p>${slide.content}</p>` : ''}
+        <img src="${imageUrl}" alt="${slide.title}">
+      `;
+    } else if (slide.type === 'video') {
+      const videoUrl = slide.video_url || '';
+      html = `
+        <h1>${slide.title || ''}</h1>
+        ${slide.content ? `<p>${slide.content}</p>` : ''}
+        <video controls>
+          <source src="${videoUrl}" type="video/mp4">
+        </video>
+      `;
+    } else if (slide.type === 'quiz') {
+      const quizData = slide.quiz_data || {};
+      html = `
+        <div class="quiz">
+          <h3>${quizData.question || 'Quiz'}</h3>
+          ${(quizData.options || []).map((opt, idx) => `
+            <div class="quiz-option" onclick="checkAnswer(${idx}, ${quizData.correct_answer})">
+              ${String.fromCharCode(65 + idx)}. ${opt}
+            </div>
+          `).join('')}
+        </div>
+      `;
+    }
+    
+    slideContent.innerHTML = html;
+    
+    // Update Progress in DB
+    updateProgress();
+  }
+
+  // ========================================
+  // QUIZ
+  // ========================================
+  window.checkAnswer = (selected, correct) => {
+    const options = document.querySelectorAll('.quiz-option');
+    options.forEach((opt, idx) => {
+      opt.style.pointerEvents = 'none';
+      if (idx === correct) {
+        opt.classList.add('correct');
+      } else if (idx === selected && idx !== correct) {
+        opt.classList.add('wrong');
+      }
+    });
+  };
+
+  // ========================================
+  // NAVIGATION
+  // ========================================
+  document.getElementById('prevBtn').onclick = () => {
+    if (currentSlideIndex > 0) {
+      currentSlideIndex--;
+      renderSlide();
+    }
+  };
+
+  document.getElementById('nextBtn').onclick = async () => {
+    if (currentSlideIndex < slides.length - 1) {
+      currentSlideIndex++;
+      renderSlide();
+    } else {
+      // Modul abschließen
+      await completeModule();
+    }
+  };
+
+  // ========================================
+  // UPDATE PROGRESS
+  // ========================================
+  async function updateProgress() {
+    try {
+      const progress = Math.round(((currentSlideIndex + 1) / slides.length) * 100);
+      
+      // Finde Assignment
+      const assignments = await pb.collection('learning_module_assignments').getFullList({
+        filter: `student_id = "${currentUser.id}" && module_id = "${moduleId}"`
+      });
+      
+      if (assignments.length > 0) {
+        await pb.collection('learning_module_assignments').update(assignments[0].id, {
+          progress: progress
+        });
+      }
+      
+    } catch(e) {
+      console.error('Error updating progress:', e);
+    }
+  }
+
+  // ========================================
+  // COMPLETE MODULE
+  // ========================================
+  async function completeModule() {
+    try {
+      const assignments = await pb.collection('learning_module_assignments').getFullList({
+        filter: `student_id = "${currentUser.id}" && module_id = "${moduleId}"`
+      });
+      
+      if (assignments.length > 0) {
+        await pb.collection('learning_module_assignments').update(assignments[0].id, {
+          completed: true,
+          progress: 100,
+          completed_at: new Date().toISOString()
+        });
+      }
+      
+      alert('🎉 Modul abgeschlossen! Gut gemacht!');
+      location.href = '/beta/lernbar.html';
+      
+    } catch(e) {
+      console.error('Error completing module:', e);
+      alert('Fehler beim Abschließen: ' + e.message);
+    }
+  }
+
+  // ========================================
+  // INIT
+  // ========================================
+  loadModule();
+
+</script>
+
+</body>
+</html>
