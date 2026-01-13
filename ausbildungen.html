@@ -1329,6 +1329,9 @@
   // ========================================
   // PFLICHT-SCHULUNGEN + LERNBAR-ZUGÄNGE
   // ========================================
+    // ========================================
+  // PFLICHT-SCHULUNGEN + LERNBAR-ZUGÄNGE
+  // ========================================
   async function loadSettings() {
     try {
       const org = await pb.collection('organizations').getOne(currentUser.organization_id);
@@ -1341,12 +1344,22 @@
         sort: 'email'
       });
       
+      console.log('✅ Loaded users:', allUsers.length);
+      
+      // ERST JETZT rendern, nachdem allUsers geladen ist
       renderSettings();
+      
     } catch(e) {
-      console.error('Error:', e);
-      document.getElementById('access-list').innerHTML = `<div class="empty" style="background:#fff;border-radius:.75rem"><i class="fas fa-exclamation-triangle"></i><div style="color:#c00">Fehler: ${e.message}</div></div>`;
+      console.error('❌ loadSettings Error:', e);
+      document.getElementById('access-list').innerHTML = `
+        <div class="empty" style="background:#fff;border-radius:.75rem;margin-top:1rem">
+          <i class="fas fa-exclamation-triangle"></i>
+          <div style="color:#c00">Fehler beim Laden: ${e.message}</div>
+        </div>
+      `;
     }
   }
+
 
   function renderSettings() {
     const list = document.getElementById('access-list');
