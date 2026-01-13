@@ -229,6 +229,7 @@
       margin-bottom:1rem;
       font-size:.9rem;
       color:var(--muted);
+      flex-wrap:wrap;
     }
     .module-meta span{
       display:flex;
@@ -324,6 +325,7 @@
       gap:1.5rem;
       font-size:.9rem;
       color:var(--muted);
+      flex-wrap:wrap;
     }
     .termin-details span{
       display:flex;
@@ -390,7 +392,6 @@
       }
       .termin-details{
         justify-content:center;
-        flex-wrap:wrap;
       }
     }
   </style>
@@ -426,11 +427,11 @@
       <div class="welcome-stats">
         <div class="stat">
           <div class="stat-label">Meine Module</div>
-          <div class="stat-value" id="statModules">-</div>
+          <div class="stat-value" id="statModules">0</div>
         </div>
         <div class="stat">
           <div class="stat-label">Abgeschlossen</div>
-          <div class="stat-value" id="statCompleted">-</div>
+          <div class="stat-value" id="statCompleted">0</div>
         </div>
         <div class="stat">
           <div class="stat-label">Nächster Termin</div>
@@ -479,13 +480,23 @@
   // POCKETBASE & AUTH
   // ========================================
   const pb = new PocketBase('https://api.responda.systems');
-  
-  if (!pb.authStore.isValid) {
+
+  // Strenge Auth-Prüfung
+  if (!pb.authStore.isValid || !pb.authStore.model) {
+    console.log('❌ Nicht angemeldet');
     location.href = "/lernbar-login.html";
   }
 
   const currentUser = pb.authStore.model;
-  console.log('Current User:', currentUser);
+  
+  // Prüfe ob Student (hat access_code)
+  if (!currentUser.access_code) {
+    console.log('❌ Kein Student-Account');
+    pb.authStore.clear();
+    location.href = "/lernbar-login.html";
+  }
+
+  console.log('✅ Angemeldet als:', currentUser.name);
   
   document.getElementById('logoutBtn').onclick = () => {
     pb.authStore.clear();
@@ -506,53 +517,62 @@
   document.getElementById('welcomeTitle').textContent = `${getGreeting()}, ${userName}!`;
 
   // ========================================
-  // LOAD DATA
+  // LOAD DATA (MIT MOCK-DATEN FÜR JETZT)
   // ========================================
   let myModules = [];
   let myTermine = [];
 
   async function loadData() {
     try {
-      // Lade zugewiesene Module
-      const assignments = await pb.collection('learning_module_assignments').getFullList({
-        filter: `student_id = "${currentUser.id}"`,
-        expand: 'module_id'
-      });
+      // MOCK MODULE (bis Collections angelegt sind)
+      myModules = [
+        {
+          id: 'mock1',
+          title: 'Einführung in die Erste Hilfe',
+          slide_count: 12,
+          duration: 30,
+          completed: false,
+          progress: 0
+        },
+        {
+          id: 'mock2',
+          title: 'Hygiene im Rettungsdienst',
+          slide_count: 8,
+          duration: 20,
+          completed: false,
+          progress: 45
+        }
+      ];
       
-      myModules = assignments.map(a => ({
-        ...a.expand.module_id,
-        assignment_id: a.id,
-        completed: a.completed || false,
-        progress: a.progress || 0
-      }));
-      
-      // Lade meine Schulungstermine
-      const participations = await pb.collection('schulung_teilnahme').getFullList({
-        filter: `member_id = "${currentUser.id}"`,
-        expand: 'session_id,session_id.course_id'
-      });
-      
-      myTermine = participations.map(p => ({
-        ...p,
-        session: p.expand?.session_id,
-        course: p.expand?.session_id?.expand?.course_id
-      })).filter(t => t.session);
-      
-      // Sortiere nach Datum
-      myTermine.sort((a, b) => new Date(a.session.date) - new Date(b.session.date));
+      // Lade echte Schulungstermine
+      try {
+        const participations = await pb.collection('schulung_teilnahme').getFullList({
+          filter: `member_id = "${currentUser.id}"`,
+          expand: 'session_id,session_id.course_id'
+        });
+        
+        myTermine = participations.map(p => ({
+          ...p,
+          session: p.expand?.session_id,
+          course: p.expand?.session_id?.expand?.course_id
+        })).filter(t => t.session);
+        
+        // Sortiere nach Datum
+        myTermine.sort((a, b) => new Date(a.session.date) - new Date(b.session.date));
+        
+        // Nächster Termin
+        const nextTermin = myTermine.find(t => new Date(t.session.date) >= new Date());
+        if (nextTermin) {
+          const date = new Date(nextTermin.session.date);
+          document.getElementById('statNextDate').textContent = date.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' });
+        }
+      } catch(e) {
+        console.log('⚠️ Keine Termine geladen:', e);
+      }
       
       // Update Stats
       document.getElementById('statModules').textContent = myModules.length;
       document.getElementById('statCompleted').textContent = myModules.filter(m => m.completed).length;
-      
-      // Nächster Termin
-      const nextTermin = myTermine.find(t => new Date(t.session.date) >= new Date());
-      if (nextTermin) {
-        const date = new Date(nextTermin.session.date);
-        document.getElementById('statNextDate').textContent = date.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' });
-      } else {
-        document.getElementById('statNextDate').textContent = '-';
-      }
       
       renderModules();
       renderTermine();
@@ -600,7 +620,8 @@
   }
 
   window.openModule = (moduleId) => {
-    location.href = `/beta/lernbar-modul.html?id=${moduleId}`;
+    alert('Modul-Viewer wird bald verfügbar sein! 🚧\n\nModul ID: ' + moduleId);
+    // location.href = `/lernbar-modul.html?id=${moduleId}`;
   };
 
   // ========================================
