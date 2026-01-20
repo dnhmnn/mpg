@@ -34,7 +34,7 @@
     
     /* Status Bar */
     .status-bar {
-      height: 44px;
+      height: 54px;
       padding-top: env(safe-area-inset-top);
       display: flex;
       align-items: center;
@@ -51,7 +51,15 @@
       z-index: 1000;
     }
     
-    .time { font-feature-settings: "tnum"; }
+    .logo {
+      display: flex;
+      align-items: center;
+      height: 32px;
+    }
+    
+    .logo svg {
+      filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+    }
     
     .logout-btn {
       background: rgba(255, 255, 255, 0.2);
@@ -78,7 +86,7 @@
       height: 100vh;
       overflow-y: auto;
       -webkit-overflow-scrolling: touch;
-      padding-top: calc(44px + env(safe-area-inset-top) + 20px);
+      padding-top: calc(54px + env(safe-area-inset-top) + 30px);
       padding-left: max(20px, env(safe-area-inset-left));
       padding-right: max(20px, env(safe-area-inset-right));
       padding-bottom: calc(120px + env(safe-area-inset-bottom));
@@ -547,7 +555,20 @@
 <!-- Status Bar -->
 
 <div class="status-bar">
-  <div class="time" id="time">9:41</div>
+  <div class="logo">
+    <svg width="120" height="32" viewBox="0 0 560 140">
+      <defs>
+        <linearGradient id="logoGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" style="stop-color:#ffffff;stop-opacity:1" />
+          <stop offset="100%" style="stop-color:#ffffff;stop-opacity:0.9" />
+        </linearGradient>
+      </defs>
+      <rect x="20" y="20" width="100" height="100" rx="26" fill="rgba(255,255,255,0.25)"/>
+      <path d="M45 42 L45 98 L60 98 L60 78 L72 78 L83 98 L100 98 L87 77 Q92 74 92 63 Q92 42 75 42 Z M60 52 L72 52 Q77 52 77 62 Q77 72 72 72 L60 72 Z" 
+            fill="white"/>
+      <text x="140" y="80" font-family="'Inter', sans-serif" font-size="46" font-weight="600" fill="white" letter-spacing="0">Responda</text>
+    </svg>
+  </div>
   <div id="userName">—</div>
   <button class="logout-btn" id="logoutBtn">Abmelden</button>
 </div>
@@ -750,7 +771,7 @@
   
   <div style="background:#f8f8f8; border-radius:12px; padding:20px;">
     <strong style="color:#1a1a1a;">📞 Support kontaktieren</strong><br>
-    <span style="color:#666; font-size:14px;">Bei Fragen zur Lizenz kontaktieren Sie uns unter:<br><strong>support@responda.systems</strong></span>
+    <span style="color:#666; font-size:14px;">Bei Fragen zur Lizenz kontaktieren Sie uns unter:<br><strong><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="c9babcb9b9a6bbbd89bbacbab9a6a7ada8e7bab0babdaca4ba">[email&#160;protected]</a></strong></span>
   </div>
 </div>
 ```
@@ -806,566 +827,597 @@
   </div>
 </div>
 
-<script type="module">
-  import PocketBase from 'https://cdn.jsdelivr.net/npm/pocketbase@0.21.3/dist/pocketbase.es.mjs';
-  const pb = new PocketBase('https://api.responda.systems');
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script type="module">
 
-  // Icons
-  const ICONS = {
-    siren: '<svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5M2 12l10 5 10-5"/></svg>',
-    clipboard: '<svg viewBox="0 0 24 24"><rect x="8" y="2" width="8" height="4" rx="1"/><rect x="4" y="4" width="16" height="18" rx="2"/></svg>',
-    file: '<svg viewBox="0 0 24 24"><path d="M13 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V9l-7-7z"/><path d="M13 2v7h7"/></svg>',
-    package: '<svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5M2 12l10 5 10-5"/></svg>',
-    check: '<svg viewBox="0 0 24 24"><rect x="8" y="2" width="8" height="4" rx="1"/><rect x="4" y="4" width="16" height="18" rx="2"/><path d="M9 11l3 3 6-6"/></svg>',
-    folder: '<svg viewBox="0 0 24 24"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>',
-    qrcode: '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="3" height="3"/><rect x="18" y="14" width="3" height="3"/><rect x="14" y="18" width="3" height="3"/><rect x="18" y="18" width="3" height="3"/></svg>',
-    graduation: '<svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5M22 12v5M6 10v8c0 2 4 4 6 4s6-2 6-4v-8"/></svg>',
-    book: '<svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>',
-    chat: '<svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>',
-    dashboard: '<svg viewBox="0 0 24 24"><path d="M3 3h7v9H3zM14 3h7v5h-7zM14 12h7v9h-7zM3 16h7v5H3z"/></svg>',
-    settings: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v6m5.66-13.66l-4.24 4.24m0 6l4.24 4.24M23 12h-6m-6 0H1m18.66-5.66l-4.24 4.24m0 6l4.24 4.24"/></svg>',
-  };
+import PocketBase from ‘https://cdn.jsdelivr.net/npm/pocketbase@0.21.3/dist/pocketbase.es.mjs’;
+const pb = new PocketBase(‘https://api.responda.systems’);
 
-  // Apps
-  const ALL_APPS = {
-    einsaetze: { id: 'einsaetze', name: 'Einsätze', icon: 'siren', url: 'einsaetze.html', permission: 'einsaetze' },
-    patienten: { id: 'patienten', name: 'Patienten', icon: 'clipboard', url: 'patientendokumentation-dateien.html', permission: 'patienten' },
-    dokumente: { id: 'dokumente', name: 'Vorgänge', icon: 'file', url: 'dokumente-bearbeiten.html', permission: 'dokumente' },
-    lager: { id: 'lager', name: 'Lager', icon: 'package', url: 'lagerverwaltung.html', permission: 'lager' },
-    produktausgabe: { id: 'produktausgabe', name: 'Ausgabe', icon: 'check', url: 'produktausgabe.html', permission: 'produktausgabe' },
-    dateien: { id: 'dateien', name: 'Dateien', icon: 'folder', url: 'dateien.html', permission: 'dateien' },
-    qr: { id: 'qr', name: 'QR-Codes', icon: 'qrcode', url: 'qr-code-generator.html', permission: 'qr' },
-    lernbar: { id: 'lernbar', name: 'Lernbar', icon: 'graduation', url: 'lernbar.html', permission: 'lernbar' },
-    ausbildungen: { id: 'ausbildungen', name: 'Ausbildungen', icon: 'book', url: 'ausbildungen.html', permission: 'ausbildungen_manage' },
-    chat: { id: 'chat', name: 'Chat', icon: 'chat', url: 'chat.html', permission: 'chat' },
-    dashboard: { id: 'dashboard', name: 'Dashboard', icon: 'dashboard', url: 'mpg-dashboard.html', permission: 'dashboard' },
-    settings: { id: 'settings', name: 'Einstellungen', icon: 'settings', url: '#settings', permission: 'dashboard', isInternal: true }
-  };
+// Icons
+const ICONS = {
+siren: ‘<svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5M2 12l10 5 10-5"/></svg>’,
+clipboard: ‘<svg viewBox="0 0 24 24"><rect x="8" y="2" width="8" height="4" rx="1"/><rect x="4" y="4" width="16" height="18" rx="2"/></svg>’,
+file: ‘<svg viewBox="0 0 24 24"><path d="M13 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V9l-7-7z"/><path d="M13 2v7h7"/></svg>’,
+package: ‘<svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5M2 12l10 5 10-5"/></svg>’,
+check: ‘<svg viewBox="0 0 24 24"><rect x="8" y="2" width="8" height="4" rx="1"/><rect x="4" y="4" width="16" height="18" rx="2"/><path d="M9 11l3 3 6-6"/></svg>’,
+folder: ‘<svg viewBox="0 0 24 24"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>’,
+qrcode: ‘<svg viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="3" height="3"/><rect x="18" y="14" width="3" height="3"/><rect x="14" y="18" width="3" height="3"/><rect x="18" y="18" width="3" height="3"/></svg>’,
+graduation: ‘<svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5M22 12v5M6 10v8c0 2 4 4 6 4s6-2 6-4v-8"/></svg>’,
+book: ‘<svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>’,
+chat: ‘<svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>’,
+dashboard: ‘<svg viewBox="0 0 24 24"><path d="M3 3h7v9H3zM14 3h7v5h-7zM14 12h7v9h-7zM3 16h7v5H3z"/></svg>’,
+settings: ‘<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v6m5.66-13.66l-4.24 4.24m0 6l4.24 4.24M23 12h-6m-6 0H1m18.66-5.66l-4.24 4.24m0 6l4.24 4.24"/></svg>’,
+};
 
-  const ROLES = {
-    mpg: { permissions: { dashboard: true, einsaetze: true, lager: true, produktausgabe: true, lernbar: true, ausbildungen_manage: true, dokumente: true, patienten: true, dateien: true, qr: true, chat: true } },
-    lager: { permissions: { dashboard: true, lager: true, produktausgabe: true, dateien: true, qr: true, chat: true } },
-    ausbildung: { permissions: { dashboard: true, einsaetze: true, lernbar: true, ausbildungen_manage: true, patienten: true, dateien: true, qr: true, chat: true } },
-    qm: { permissions: { dashboard: true, dokumente: true, dateien: true, qr: true, chat: true } },
-    benutzer: { permissions: { dashboard: true, lernbar: true, chat: true } }
-  };
+// Apps
+const ALL_APPS = {
+einsaetze: { id: ‘einsaetze’, name: ‘Einsätze’, icon: ‘siren’, url: ‘einsaetze.html’, permission: ‘einsaetze’ },
+patienten: { id: ‘patienten’, name: ‘Patienten’, icon: ‘clipboard’, url: ‘patientendokumentation-dateien.html’, permission: ‘patienten’ },
+dokumente: { id: ‘dokumente’, name: ‘Vorgänge’, icon: ‘file’, url: ‘dokumente-bearbeiten.html’, permission: ‘dokumente’ },
+lager: { id: ‘lager’, name: ‘Lager’, icon: ‘package’, url: ‘lagerverwaltung.html’, permission: ‘lager’ },
+produktausgabe: { id: ‘produktausgabe’, name: ‘Ausgabe’, icon: ‘check’, url: ‘produktausgabe.html’, permission: ‘produktausgabe’ },
+dateien: { id: ‘dateien’, name: ‘Dateien’, icon: ‘folder’, url: ‘dateien.html’, permission: ‘dateien’ },
+qr: { id: ‘qr’, name: ‘QR-Codes’, icon: ‘qrcode’, url: ‘qr-code-generator.html’, permission: ‘qr’ },
+lernbar: { id: ‘lernbar’, name: ‘Lernbar’, icon: ‘graduation’, url: ‘lernbar.html’, permission: ‘lernbar’ },
+ausbildungen: { id: ‘ausbildungen’, name: ‘Ausbildungen’, icon: ‘book’, url: ‘ausbildungen.html’, permission: ‘ausbildungen_manage’ },
+chat: { id: ‘chat’, name: ‘Chat’, icon: ‘chat’, url: ‘chat.html’, permission: ‘chat’ },
+dashboard: { id: ‘dashboard’, name: ‘Dashboard’, icon: ‘dashboard’, url: ‘mpg-dashboard.html’, permission: ‘dashboard’ },
+settings: { id: ‘settings’, name: ‘Einstellungen’, icon: ‘settings’, url: ‘#settings’, permission: ‘dashboard’, isInternal: true }
+};
 
-  let user, userApps = [], availableApps = [], editMode = false;
+const ROLES = {
+mpg: { permissions: { dashboard: true, einsaetze: true, lager: true, produktausgabe: true, lernbar: true, ausbildungen_manage: true, dokumente: true, patienten: true, dateien: true, qr: true, chat: true } },
+lager: { permissions: { dashboard: true, lager: true, produktausgabe: true, dateien: true, qr: true, chat: true } },
+ausbildung: { permissions: { dashboard: true, einsaetze: true, lernbar: true, ausbildungen_manage: true, patienten: true, dateien: true, qr: true, chat: true } },
+qm: { permissions: { dashboard: true, dokumente: true, dateien: true, qr: true, chat: true } },
+benutzer: { permissions: { dashboard: true, lernbar: true, chat: true } }
+};
 
-  async function init() {
-    if (!pb.authStore.isValid) return window.location.href = 'mpg-login.html';
-    try {
-      await pb.collection('users').authRefresh();
-      user = pb.authStore.model;
-      if (!user) return window.location.href = 'mpg-login.html';
-      
-      // Load organization info
-      if (user.organization_id) {
-        try {
-          const org = await pb.collection('organizations').getOne(user.organization_id);
-          user.organization_name = org.org_name;
-          user.organization_logo = org.logo || '🏢';
-        } catch (e) {
-          console.log('Could not load organization:', e);
-        }
-      }
-      
-      document.body.classList.add('loaded');
-      updateTime();
-      setInterval(updateTime, 60000);
-      
-      document.getElementById('userName').textContent = user.name || user.email.split('@')[0];
-      
-      loadPrefs();
-      render();
-    } catch (e) {
-      pb.authStore.clear();
-      window.location.href = 'mpg-login.html';
-    }
-  }
+let user, userApps = [], availableApps = [], editMode = false;
 
-  function updateTime() {
-    const now = new Date();
-    document.getElementById('time').textContent = 
-      `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
-  }
+async function init() {
+if (!pb.authStore.isValid) return window.location.href = ‘mpg-login.html’;
+try {
+await pb.collection(‘users’).authRefresh();
+user = pb.authStore.model;
+if (!user) return window.location.href = ‘mpg-login.html’;
 
-  function hasPermission(perm) {
-    if (user.supervisor) return true;
-    const perms = user.permissions || {};
-    const role = ROLES[user.role || 'benutzer'];
-    if (perms[perm]) return true;
-    if (role?.permissions[perm]) return true;
-    if (perm === 'lernbar' && user.lernbar_access) return true;
-    return false;
-  }
-
-  function loadPrefs() {
-    const saved = localStorage.getItem(`hub_apps_${user.id}`);
-    
-    if (saved) {
-      userApps = JSON.parse(saved);
-      // Ensure settings is always included
-      if (!userApps.includes('settings')) {
-        userApps.push('settings');
-      }
-    } else {
-      // Default apps including settings
-      userApps = Object.keys(ALL_APPS).filter(id => {
-        const app = ALL_APPS[id];
-        return hasPermission(app.permission);
-      });
-    }
-    
-    availableApps = Object.keys(ALL_APPS).filter(id => {
-      const app = ALL_APPS[id];
-      return hasPermission(app.permission) && !userApps.includes(id);
-    });
-  }
-
-  function savePrefs() {
-    localStorage.setItem(`hub_apps_${user.id}`, JSON.stringify(userApps));
-  }
-
-  function render() {
-    renderWidgets();
-    renderApps();
-    renderAvailable();
-  }
-
-  function renderWidgets() {
-    const today = new Date();
-    
-    // Get organization info
-    const orgName = user.organization_name || 'Responda';
-    const orgLogo = user.organization_logo || '🏢'; // Falls kein Logo, Emoji als Fallback
-    
-    document.getElementById('widgets').innerHTML = `
-      <div class="widget">
-        <div class="widget-title">Heute</div>
-        <div class="widget-value">${today.getDate()}</div>
-        <div class="widget-label">${today.toLocaleDateString('de-DE', { weekday: 'long' })}</div>
-      </div>
-      <div class="widget">
-        <div class="widget-title">Organisation</div>
-        <div class="widget-value" style="font-size:40px">${orgLogo}</div>
-        <div class="widget-label">${orgName}</div>
-      </div>
-    `;
-  }
-
-  function renderApps() {
-    document.getElementById('apps').innerHTML = userApps.map(id => {
-      const app = ALL_APPS[id];
-      if (!app) return '';
-      
-      // Settings app opens modal instead of navigating
-      const clickHandler = app.isInternal ? `onclick="openSettings(event)"` : '';
-      const href = app.isInternal ? 'javascript:void(0)' : app.url;
-      
-      return `
-        <a href="${href}" class="app" ${clickHandler}>
-          <div class="remove-btn" onclick="removeApp(event, '${id}')">−</div>
-          <div class="app-icon">${ICONS[app.icon]}</div>
-          <div class="app-name">${app.name}</div>
-        </a>
-      `;
-    }).join('');
-  }
-
-  function renderAvailable() {
-    const availableContainer = document.getElementById('availableApps');
-    
-    // Filter out settings from available apps
-    const appsToShow = availableApps.filter(id => id !== 'settings');
-    
-    if (appsToShow.length === 0) {
-      availableContainer.innerHTML = `
-        <div style="grid-column: 1 / -1; text-align: center; color: #999; padding: 40px 20px;">
-          Alle Apps sind bereits hinzugefügt
-        </div>
-      `;
-      return;
-    }
-
-    availableContainer.innerHTML = appsToShow.map(id => {
-      const app = ALL_APPS[id];
-      if (!app) return '';
-      return `
-        <div class="available-app" onclick="addApp('${id}')">
-          <div class="available-icon">${ICONS[app.icon]}</div>
-          <div class="available-name">${app.name}</div>
-        </div>
-      `;
-    }).join('');
-  }
-
-  window.addApp = function(id) {
-    if (userApps.includes(id)) return;
-    userApps.push(id);
-    availableApps = availableApps.filter(x => x !== id);
-    savePrefs();
-    render();
-    renderAvailable();
-  };
-
-  window.removeApp = function(e, id) {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    // Prevent removing settings
-    if (id === 'settings') {
-      alert('Einstellungen können nicht entfernt werden');
-      return;
-    }
-    
-    userApps = userApps.filter(x => x !== id);
-    if (!availableApps.includes(id)) {
-      availableApps.push(id);
-    }
-    savePrefs();
-    render();
-    renderAvailable();
-  };
-
-  window.closeModal = function(id) {
-    document.getElementById(id).classList.remove('show');
-    if (id === 'appsModal') {
-      editMode = false;
-      document.querySelector('.content').classList.remove('edit-mode');
-    }
-  };
-
-  document.getElementById('editButton').onclick = () => {
-    document.getElementById('editModal').classList.add('show');
-  };
-
-  document.getElementById('editAppsBtn').onclick = () => {
-    closeModal('editModal');
-    editMode = true;
-    document.querySelector('.content').classList.add('edit-mode');
-    document.getElementById('appsModal').classList.add('show');
-  };
-
-  document.getElementById('editWidgetsBtn').onclick = () => {
-    closeModal('editModal');
-    document.getElementById('widgetsModal').classList.add('show');
-  };
-
-  document.getElementById('logoutBtn').onclick = () => {
-    if (confirm('Wirklich abmelden?')) {
-      pb.authStore.clear();
-      localStorage.clear();
-      window.location.href = 'mpg-login.html';
-    }
-  };
-
-  // Settings functions
-  window.openSettings = function(e) {
-    e.preventDefault();
-    document.getElementById('settingsModal').classList.add('show');
-    loadProfileData();
-    
-    // Show users tab only for supervisors/mpg
-    if (user.supervisor || user.role === 'mpg') {
-      document.getElementById('usersTabBtn').style.display = 'block';
-      document.getElementById('licenseTabBtn').style.display = 'block';
-    }
-  };
-
-  window.showSettingsTab = function(tab) {
-    document.querySelectorAll('.settings-tab').forEach(t => t.classList.remove('active'));
-    document.querySelectorAll('.settings-content').forEach(c => c.classList.remove('active'));
-    
-    event.target.classList.add('active');
-    document.getElementById(`settings-${tab}`).classList.add('active');
-    
-    // Load data when switching tabs
-    if (tab === 'users') loadUsers();
-    if (tab === 'license') loadLicense();
-  };
-
-  function loadProfileData() {
-    document.getElementById('profileEmail').value = user.email;
-    document.getElementById('profileName').value = user.name || '';
-    document.getElementById('profilePhone').value = user.phone || '';
-  }
-
-  async function loadUsers() {
-    const tbody = document.getElementById('usersTableBody');
-    try {
-      const users = await pb.collection('users').getFullList({
-        filter: `organization_id = "${user.organization_id}"`,
-        sort: '-created'
-      });
-      
-      if (users.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:40px;color:#999;">Keine Benutzer</td></tr>';
-        return;
-      }
-      
-      tbody.innerHTML = users.map(u => {
-        const roleLabels = {
-          mpg: '👑 MPG',
-          lager: '📦 Lager',
-          ausbildung: '🎓 Ausbildung',
-          qm: '📋 QM',
-          benutzer: '👤 Benutzer'
-        };
-        const roleLabel = roleLabels[u.role] || '👤 Benutzer';
-        
-        return `
-          <tr style="border-bottom:1px solid #e0e0e0;">
-            <td style="padding:12px;">${escapeHtml(u.name || '—')}</td>
-            <td style="padding:12px;">${escapeHtml(u.email)}</td>
-            <td style="padding:12px;">${roleLabel}</td>
-            <td style="padding:12px;">
-              <button onclick="editUser('${u.id}')" style="background:#dbeafe; color:#1e40af; border:none; padding:6px 12px; border-radius:6px; cursor:pointer; margin-right:4px;">✏️</button>
-              ${u.id !== user.id ? `<button onclick="deleteUser('${u.id}', '${escapeHtml(u.name || u.email).replace(/'/g, "\\'")}')}" style="background:#fee2e2; color:#ef4444; border:none; padding:6px 12px; border-radius:6px; cursor:pointer;">🗑️</button>` : ''}
-            </td>
-          </tr>
-        `;
-      }).join('');
-    } catch (e) {
-      tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;padding:40px;color:#ef4444;">Fehler: ${e.message}</td></tr>`;
-    }
-  }
-
-  function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-  }
-
-  let editingUserId = null;
-
-  window.openUserModal = function() {
-    editingUserId = null;
-    document.getElementById('userModalTitle').textContent = 'Neuen Benutzer anlegen';
-    document.getElementById('userEmail').value = '';
-    document.getElementById('userEmail').disabled = false;
-    document.getElementById('userName').value = '';
-    document.getElementById('userPhone').value = '';
-    document.getElementById('userRole').value = '';
-    document.getElementById('userMsg').textContent = '';
-    document.getElementById('saveUserBtn').textContent = 'Speichern';
-    document.getElementById('userModal').classList.add('show');
-  };
-
-  window.editUser = async function(userId) {
-    try {
-      const editUser = await pb.collection('users').getOne(userId);
-      editingUserId = userId;
-      
-      document.getElementById('userModalTitle').textContent = 'Benutzer bearbeiten';
-      document.getElementById('userEmail').value = editUser.email;
-      document.getElementById('userEmail').disabled = true;
-      document.getElementById('userName').value = editUser.name || '';
-      document.getElementById('userPhone').value = editUser.phone || '';
-      document.getElementById('userRole').value = editUser.role || 'benutzer';
-      document.getElementById('userMsg').textContent = '';
-      document.getElementById('saveUserBtn').textContent = 'Aktualisieren';
-      document.getElementById('userModal').classList.add('show');
-    } catch (e) {
-      alert('Fehler beim Laden: ' + e.message);
-    }
-  };
-
-  window.deleteUser = async function(userId, userName) {
-    if (!confirm(`Benutzer "${userName}" wirklich löschen?`)) return;
-    
-    try {
-      await pb.collection('users').delete(userId);
-      alert('✅ Benutzer gelöscht!');
-      loadUsers();
-    } catch (e) {
-      alert('❌ Fehler: ' + e.message);
-    }
-  };
-
-  window.saveUser = async function() {
-    const msg = document.getElementById('userMsg');
-    const saveBtn = document.getElementById('saveUserBtn');
-    
-    saveBtn.disabled = true;
-    saveBtn.textContent = 'Speichere...';
-    
-    try {
-      const email = document.getElementById('userEmail').value.trim();
-      const name = document.getElementById('userName').value.trim();
-      const phone = document.getElementById('userPhone').value.trim();
-      const role = document.getElementById('userRole').value;
-      
-      if (!email || !name || !role) {
-        msg.textContent = '❌ Bitte alle Pflichtfelder ausfüllen';
-        msg.style.color = '#ef4444';
-        saveBtn.disabled = false;
-        saveBtn.textContent = editingUserId ? 'Aktualisieren' : 'Speichern';
-        return;
-      }
-      
-      if (editingUserId) {
-        // Update existing user
-        await pb.collection('users').update(editingUserId, {
-          name,
-          phone: phone || '',
-          role
-        });
-        
-        msg.textContent = '✅ Benutzer aktualisiert!';
-        msg.style.color = '#16a34a';
-        
-        setTimeout(() => {
-          closeModal('userModal');
-          loadUsers();
-        }, 1500);
-      } else {
-        // Create new user
-        const tempPassword = Array.from({length: 16}, () => 
-          'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$%&*'[Math.floor(Math.random() * 66)]
-        ).join('');
-        
-        await pb.collection('users').create({
-          email,
-          emailVisibility: true,
-          password: tempPassword,
-          passwordConfirm: tempPassword,
-          name,
-          phone: phone || '',
-          role,
-          organization_id: user.organization_id,
-          supervisor: false,
-          verified: false,
-          permissions: {}
-        });
-        
-        // Send password reset email
-        try {
-          await pb.collection('users').requestPasswordReset(email);
-          msg.textContent = '✅ Benutzer angelegt! Passwort-E-Mail versendet.';
-        } catch (e) {
-          msg.textContent = '⚠️ Benutzer angelegt, aber E-Mail-Versand fehlgeschlagen.';
-        }
-        msg.style.color = '#16a34a';
-        
-        setTimeout(() => {
-          closeModal('userModal');
-          loadUsers();
-        }, 3000);
-      }
-    } catch (e) {
-      msg.textContent = '❌ Fehler: ' + e.message;
-      msg.style.color = '#ef4444';
-    } finally {
-      saveBtn.disabled = false;
-      saveBtn.textContent = editingUserId ? 'Aktualisieren' : 'Speichern';
-    }
-  };
-
-  async function loadLicense() {
+```
+  // Load organization info
+  if (user.organization_id) {
     try {
       const org = await pb.collection('organizations').getOne(user.organization_id);
-      
-      document.getElementById('licenseOrg').textContent = org.org_name || '—';
-      document.getElementById('licenseType').textContent = (org.license_type || 'standard').charAt(0).toUpperCase() + (org.license_type || 'standard').slice(1);
-      document.getElementById('licenseMaxUsers').textContent = org.max_users || '—';
-      
-      if (org.license_valid_until) {
-        const validUntil = new Date(org.license_valid_until);
-        document.getElementById('licenseExpiry').textContent = validUntil.toLocaleDateString('de-DE');
-        
-        const now = new Date();
-        if (validUntil < now) {
-          document.getElementById('licenseStatus').textContent = '❌ Abgelaufen';
-        }
-      } else {
-        document.getElementById('licenseExpiry').textContent = 'Unbegrenzt';
-      }
-      
-      // Count users
-      const users = await pb.collection('users').getFullList({
-        filter: `organization_id = "${user.organization_id}"`
-      });
-      
-      document.getElementById('licenseCurrentUsers').textContent = users.length;
-      
+      user.organization_name = org.org_name;
+      user.organization_logo = org.logo || '🏢';
     } catch (e) {
-      console.error('Fehler beim Laden der Lizenz:', e);
+      console.log('Could not load organization:', e);
     }
   }
+  
+  document.body.classList.add('loaded');
+  
+  document.getElementById('userName').textContent = user.name || user.email.split('@')[0];
+  
+  loadPrefs();
+  render();
+} catch (e) {
+  pb.authStore.clear();
+  window.location.href = 'mpg-login.html';
+}
+```
 
-  window.saveProfile = async function() {
-    const msg = document.getElementById('profileMsg');
-    try {
-      const name = document.getElementById('profileName').value.trim();
-      const phone = document.getElementById('profilePhone').value.trim();
-      
-      await pb.collection('users').update(user.id, { name, phone });
-      
-      user.name = name;
-      user.phone = phone;
-      document.getElementById('userName').textContent = name || user.email.split('@')[0];
-      
-      msg.textContent = '✅ Profil gespeichert!';
-      msg.style.color = '#16a34a';
-      
-      setTimeout(() => { msg.textContent = ''; }, 3000);
-    } catch (e) {
-      msg.textContent = '❌ Fehler: ' + e.message;
-      msg.style.color = '#ef4444';
-    }
-  };
+}
 
-  window.changePassword = async function() {
-    const msg = document.getElementById('pwMsg');
-    try {
-      const current = document.getElementById('pwCurrent').value.trim();
-      const new1 = document.getElementById('pwNew1').value.trim();
-      const new2 = document.getElementById('pwNew2').value.trim();
+function hasPermission(perm) {
+if (user.supervisor) return true;
+const perms = user.permissions || {};
+const role = ROLES[user.role || ‘benutzer’];
+if (perms[perm]) return true;
+if (role?.permissions[perm]) return true;
+if (perm === ‘lernbar’ && user.lernbar_access) return true;
+return false;
+}
 
-      if (!current) { msg.textContent = '❌ Aktuelles Passwort eingeben'; msg.style.color = '#ef4444'; return; }
-      if (!new1 || new1.length < 8) { msg.textContent = '❌ Neues Passwort: mind. 8 Zeichen'; msg.style.color = '#ef4444'; return; }
-      if (new1 !== new2) { msg.textContent = '❌ Passwörter stimmen nicht überein'; msg.style.color = '#ef4444'; return; }
+function loadPrefs() {
+const saved = localStorage.getItem(`hub_apps_${user.id}`);
 
-      // Verify current password
-      try {
-        await pb.collection('users').authWithPassword(user.email, current);
-      } catch (e) {
-        msg.textContent = '❌ Aktuelles Passwort falsch';
-        msg.style.color = '#ef4444';
-        return;
-      }
-
-      // Update password
-      await pb.collection('users').update(user.id, {
-        password: new1,
-        passwordConfirm: new1,
-        oldPassword: current
-      });
-      
-      msg.textContent = '✅ Passwort geändert! Du wirst abgemeldet...';
-      msg.style.color = '#16a34a';
-      
-      setTimeout(() => {
-        pb.authStore.clear();
-        localStorage.clear();
-        window.location.href = 'mpg-login.html';
-      }, 2000);
-      
-    } catch (e) {
-      msg.textContent = '❌ Fehler: ' + e.message;
-      msg.style.color = '#ef4444';
-    }
-  };
-
-  // Close modals on background click
-  document.querySelectorAll('.modal').forEach(modal => {
-    modal.onclick = (e) => {
-      if (e.target === modal) closeModal(modal.id);
-    };
+```
+if (saved) {
+  userApps = JSON.parse(saved);
+  // Ensure settings is always included
+  if (!userApps.includes('settings')) {
+    userApps.push('settings');
+  }
+} else {
+  // Default apps including settings
+  userApps = Object.keys(ALL_APPS).filter(id => {
+    const app = ALL_APPS[id];
+    return hasPermission(app.permission);
   });
+}
 
-  init();
+availableApps = Object.keys(ALL_APPS).filter(id => {
+  const app = ALL_APPS[id];
+  return hasPermission(app.permission) && !userApps.includes(id);
+});
+```
+
+}
+
+function savePrefs() {
+localStorage.setItem(`hub_apps_${user.id}`, JSON.stringify(userApps));
+}
+
+function render() {
+renderWidgets();
+renderApps();
+renderAvailable();
+}
+
+function renderWidgets() {
+const today = new Date();
+
+```
+// Get organization info
+const orgName = user.organization_name || 'Responda';
+const orgLogo = user.organization_logo || '🏢'; // Falls kein Logo, Emoji als Fallback
+
+document.getElementById('widgets').innerHTML = `
+  <div class="widget">
+    <div class="widget-title">Heute</div>
+    <div class="widget-value">${today.getDate()}</div>
+    <div class="widget-label">${today.toLocaleDateString('de-DE', { weekday: 'long' })}</div>
+  </div>
+  <div class="widget">
+    <div class="widget-title">Organisation</div>
+    <div class="widget-value" style="font-size:40px">${orgLogo}</div>
+    <div class="widget-label">${orgName}</div>
+  </div>
+`;
+```
+
+}
+
+function renderApps() {
+document.getElementById(‘apps’).innerHTML = userApps.map(id => {
+const app = ALL_APPS[id];
+if (!app) return ‘’;
+
+```
+  // Settings app opens modal instead of navigating
+  const clickHandler = app.isInternal ? `onclick="openSettings(event)"` : '';
+  const href = app.isInternal ? 'javascript:void(0)' : app.url;
+  
+  return `
+    <a href="${href}" class="app" ${clickHandler}>
+      <div class="remove-btn" onclick="removeApp(event, '${id}')">−</div>
+      <div class="app-icon">${ICONS[app.icon]}</div>
+      <div class="app-name">${app.name}</div>
+    </a>
+  `;
+}).join('');
+```
+
+}
+
+function renderAvailable() {
+const availableContainer = document.getElementById(‘availableApps’);
+
+```
+// Filter out settings from available apps
+const appsToShow = availableApps.filter(id => id !== 'settings');
+
+if (appsToShow.length === 0) {
+  availableContainer.innerHTML = `
+    <div style="grid-column: 1 / -1; text-align: center; color: #999; padding: 40px 20px;">
+      Alle Apps sind bereits hinzugefügt
+    </div>
+  `;
+  return;
+}
+
+availableContainer.innerHTML = appsToShow.map(id => {
+  const app = ALL_APPS[id];
+  if (!app) return '';
+  return `
+    <div class="available-app" onclick="addApp('${id}')">
+      <div class="available-icon">${ICONS[app.icon]}</div>
+      <div class="available-name">${app.name}</div>
+    </div>
+  `;
+}).join('');
+```
+
+}
+
+window.addApp = function(id) {
+if (userApps.includes(id)) return;
+userApps.push(id);
+availableApps = availableApps.filter(x => x !== id);
+savePrefs();
+render();
+renderAvailable();
+};
+
+window.removeApp = function(e, id) {
+e.preventDefault();
+e.stopPropagation();
+
+```
+// Prevent removing settings
+if (id === 'settings') {
+  alert('Einstellungen können nicht entfernt werden');
+  return;
+}
+
+userApps = userApps.filter(x => x !== id);
+if (!availableApps.includes(id)) {
+  availableApps.push(id);
+}
+savePrefs();
+render();
+renderAvailable();
+```
+
+};
+
+window.closeModal = function(id) {
+document.getElementById(id).classList.remove(‘show’);
+if (id === ‘appsModal’) {
+editMode = false;
+document.querySelector(’.content’).classList.remove(‘edit-mode’);
+}
+};
+
+document.getElementById(‘editButton’).onclick = () => {
+document.getElementById(‘editModal’).classList.add(‘show’);
+};
+
+document.getElementById(‘editAppsBtn’).onclick = () => {
+closeModal(‘editModal’);
+editMode = true;
+document.querySelector(’.content’).classList.add(‘edit-mode’);
+document.getElementById(‘appsModal’).classList.add(‘show’);
+};
+
+document.getElementById(‘editWidgetsBtn’).onclick = () => {
+closeModal(‘editModal’);
+document.getElementById(‘widgetsModal’).classList.add(‘show’);
+};
+
+document.getElementById(‘logoutBtn’).onclick = () => {
+if (confirm(‘Wirklich abmelden?’)) {
+pb.authStore.clear();
+localStorage.clear();
+window.location.href = ‘mpg-login.html’;
+}
+};
+
+// Settings functions
+window.openSettings = function(e) {
+e.preventDefault();
+document.getElementById(‘settingsModal’).classList.add(‘show’);
+loadProfileData();
+
+```
+// Show users tab only for supervisors/mpg
+if (user.supervisor || user.role === 'mpg') {
+  document.getElementById('usersTabBtn').style.display = 'block';
+  document.getElementById('licenseTabBtn').style.display = 'block';
+}
+```
+
+};
+
+window.showSettingsTab = function(tab) {
+document.querySelectorAll(’.settings-tab’).forEach(t => t.classList.remove(‘active’));
+document.querySelectorAll(’.settings-content’).forEach(c => c.classList.remove(‘active’));
+
+```
+event.target.classList.add('active');
+document.getElementById(`settings-${tab}`).classList.add('active');
+
+// Load data when switching tabs
+if (tab === 'users') loadUsers();
+if (tab === 'license') loadLicense();
+```
+
+};
+
+function loadProfileData() {
+document.getElementById(‘profileEmail’).value = user.email;
+document.getElementById(‘profileName’).value = user.name || ‘’;
+document.getElementById(‘profilePhone’).value = user.phone || ‘’;
+}
+
+async function loadUsers() {
+const tbody = document.getElementById(‘usersTableBody’);
+try {
+const users = await pb.collection(‘users’).getFullList({
+filter: `organization_id = "${user.organization_id}"`,
+sort: ‘-created’
+});
+
+```
+  if (users.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:40px;color:#999;">Keine Benutzer</td></tr>';
+    return;
+  }
+  
+  tbody.innerHTML = users.map(u => {
+    const roleLabels = {
+      mpg: '👑 MPG',
+      lager: '📦 Lager',
+      ausbildung: '🎓 Ausbildung',
+      qm: '📋 QM',
+      benutzer: '👤 Benutzer'
+    };
+    const roleLabel = roleLabels[u.role] || '👤 Benutzer';
+    
+    return `
+      <tr style="border-bottom:1px solid #e0e0e0;">
+        <td style="padding:12px;">${escapeHtml(u.name || '—')}</td>
+        <td style="padding:12px;">${escapeHtml(u.email)}</td>
+        <td style="padding:12px;">${roleLabel}</td>
+        <td style="padding:12px;">
+          <button onclick="editUser('${u.id}')" style="background:#dbeafe; color:#1e40af; border:none; padding:6px 12px; border-radius:6px; cursor:pointer; margin-right:4px;">✏️</button>
+          ${u.id !== user.id ? `<button onclick="deleteUser('${u.id}', '${escapeHtml(u.name || u.email).replace(/'/g, "\\'")}')}" style="background:#fee2e2; color:#ef4444; border:none; padding:6px 12px; border-radius:6px; cursor:pointer;">🗑️</button>` : ''}
+        </td>
+      </tr>
+    `;
+  }).join('');
+} catch (e) {
+  tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;padding:40px;color:#ef4444;">Fehler: ${e.message}</td></tr>`;
+}
+```
+
+}
+
+function escapeHtml(text) {
+const div = document.createElement(‘div’);
+div.textContent = text;
+return div.innerHTML;
+}
+
+let editingUserId = null;
+
+window.openUserModal = function() {
+editingUserId = null;
+document.getElementById(‘userModalTitle’).textContent = ‘Neuen Benutzer anlegen’;
+document.getElementById(‘userEmail’).value = ‘’;
+document.getElementById(‘userEmail’).disabled = false;
+document.getElementById(‘userName’).value = ‘’;
+document.getElementById(‘userPhone’).value = ‘’;
+document.getElementById(‘userRole’).value = ‘’;
+document.getElementById(‘userMsg’).textContent = ‘’;
+document.getElementById(‘saveUserBtn’).textContent = ‘Speichern’;
+document.getElementById(‘userModal’).classList.add(‘show’);
+};
+
+window.editUser = async function(userId) {
+try {
+const editUser = await pb.collection(‘users’).getOne(userId);
+editingUserId = userId;
+
+```
+  document.getElementById('userModalTitle').textContent = 'Benutzer bearbeiten';
+  document.getElementById('userEmail').value = editUser.email;
+  document.getElementById('userEmail').disabled = true;
+  document.getElementById('userName').value = editUser.name || '';
+  document.getElementById('userPhone').value = editUser.phone || '';
+  document.getElementById('userRole').value = editUser.role || 'benutzer';
+  document.getElementById('userMsg').textContent = '';
+  document.getElementById('saveUserBtn').textContent = 'Aktualisieren';
+  document.getElementById('userModal').classList.add('show');
+} catch (e) {
+  alert('Fehler beim Laden: ' + e.message);
+}
+```
+
+};
+
+window.deleteUser = async function(userId, userName) {
+if (!confirm(`Benutzer "${userName}" wirklich löschen?`)) return;
+
+```
+try {
+  await pb.collection('users').delete(userId);
+  alert('✅ Benutzer gelöscht!');
+  loadUsers();
+} catch (e) {
+  alert('❌ Fehler: ' + e.message);
+}
+```
+
+};
+
+window.saveUser = async function() {
+const msg = document.getElementById(‘userMsg’);
+const saveBtn = document.getElementById(‘saveUserBtn’);
+
+```
+saveBtn.disabled = true;
+saveBtn.textContent = 'Speichere...';
+
+try {
+  const email = document.getElementById('userEmail').value.trim();
+  const name = document.getElementById('userName').value.trim();
+  const phone = document.getElementById('userPhone').value.trim();
+  const role = document.getElementById('userRole').value;
+  
+  if (!email || !name || !role) {
+    msg.textContent = '❌ Bitte alle Pflichtfelder ausfüllen';
+    msg.style.color = '#ef4444';
+    saveBtn.disabled = false;
+    saveBtn.textContent = editingUserId ? 'Aktualisieren' : 'Speichern';
+    return;
+  }
+  
+  if (editingUserId) {
+    // Update existing user
+    await pb.collection('users').update(editingUserId, {
+      name,
+      phone: phone || '',
+      role
+    });
+    
+    msg.textContent = '✅ Benutzer aktualisiert!';
+    msg.style.color = '#16a34a';
+    
+    setTimeout(() => {
+      closeModal('userModal');
+      loadUsers();
+    }, 1500);
+  } else {
+    // Create new user
+    const tempPassword = Array.from({length: 16}, () => 
+      'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$%&*'[Math.floor(Math.random() * 66)]
+    ).join('');
+    
+    await pb.collection('users').create({
+      email,
+      emailVisibility: true,
+      password: tempPassword,
+      passwordConfirm: tempPassword,
+      name,
+      phone: phone || '',
+      role,
+      organization_id: user.organization_id,
+      supervisor: false,
+      verified: false,
+      permissions: {}
+    });
+    
+    // Send password reset email
+    try {
+      await pb.collection('users').requestPasswordReset(email);
+      msg.textContent = '✅ Benutzer angelegt! Passwort-E-Mail versendet.';
+    } catch (e) {
+      msg.textContent = '⚠️ Benutzer angelegt, aber E-Mail-Versand fehlgeschlagen.';
+    }
+    msg.style.color = '#16a34a';
+    
+    setTimeout(() => {
+      closeModal('userModal');
+      loadUsers();
+    }, 3000);
+  }
+} catch (e) {
+  msg.textContent = '❌ Fehler: ' + e.message;
+  msg.style.color = '#ef4444';
+} finally {
+  saveBtn.disabled = false;
+  saveBtn.textContent = editingUserId ? 'Aktualisieren' : 'Speichern';
+}
+```
+
+};
+
+async function loadLicense() {
+try {
+const org = await pb.collection(‘organizations’).getOne(user.organization_id);
+
+```
+  document.getElementById('licenseOrg').textContent = org.org_name || '—';
+  document.getElementById('licenseType').textContent = (org.license_type || 'standard').charAt(0).toUpperCase() + (org.license_type || 'standard').slice(1);
+  document.getElementById('licenseMaxUsers').textContent = org.max_users || '—';
+  
+  if (org.license_valid_until) {
+    const validUntil = new Date(org.license_valid_until);
+    document.getElementById('licenseExpiry').textContent = validUntil.toLocaleDateString('de-DE');
+    
+    const now = new Date();
+    if (validUntil < now) {
+      document.getElementById('licenseStatus').textContent = '❌ Abgelaufen';
+    }
+  } else {
+    document.getElementById('licenseExpiry').textContent = 'Unbegrenzt';
+  }
+  
+  // Count users
+  const users = await pb.collection('users').getFullList({
+    filter: `organization_id = "${user.organization_id}"`
+  });
+  
+  document.getElementById('licenseCurrentUsers').textContent = users.length;
+  
+} catch (e) {
+  console.error('Fehler beim Laden der Lizenz:', e);
+}
+```
+
+}
+
+window.saveProfile = async function() {
+const msg = document.getElementById(‘profileMsg’);
+try {
+const name = document.getElementById(‘profileName’).value.trim();
+const phone = document.getElementById(‘profilePhone’).value.trim();
+
+```
+  await pb.collection('users').update(user.id, { name, phone });
+  
+  user.name = name;
+  user.phone = phone;
+  document.getElementById('userName').textContent = name || user.email.split('@')[0];
+  
+  msg.textContent = '✅ Profil gespeichert!';
+  msg.style.color = '#16a34a';
+  
+  setTimeout(() => { msg.textContent = ''; }, 3000);
+} catch (e) {
+  msg.textContent = '❌ Fehler: ' + e.message;
+  msg.style.color = '#ef4444';
+}
+```
+
+};
+
+window.changePassword = async function() {
+const msg = document.getElementById(‘pwMsg’);
+try {
+const current = document.getElementById(‘pwCurrent’).value.trim();
+const new1 = document.getElementById(‘pwNew1’).value.trim();
+const new2 = document.getElementById(‘pwNew2’).value.trim();
+
+```
+  if (!current) { msg.textContent = '❌ Aktuelles Passwort eingeben'; msg.style.color = '#ef4444'; return; }
+  if (!new1 || new1.length < 8) { msg.textContent = '❌ Neues Passwort: mind. 8 Zeichen'; msg.style.color = '#ef4444'; return; }
+  if (new1 !== new2) { msg.textContent = '❌ Passwörter stimmen nicht überein'; msg.style.color = '#ef4444'; return; }
+
+  // Verify current password
+  try {
+    await pb.collection('users').authWithPassword(user.email, current);
+  } catch (e) {
+    msg.textContent = '❌ Aktuelles Passwort falsch';
+    msg.style.color = '#ef4444';
+    return;
+  }
+
+  // Update password
+  await pb.collection('users').update(user.id, {
+    password: new1,
+    passwordConfirm: new1,
+    oldPassword: current
+  });
+  
+  msg.textContent = '✅ Passwort geändert! Du wirst abgemeldet...';
+  msg.style.color = '#16a34a';
+  
+  setTimeout(() => {
+    pb.authStore.clear();
+    localStorage.clear();
+    window.location.href = 'mpg-login.html';
+  }, 2000);
+  
+} catch (e) {
+  msg.textContent = '❌ Fehler: ' + e.message;
+  msg.style.color = '#ef4444';
+}
+```
+
+};
+
+init();
 </script>
 
 </body>
