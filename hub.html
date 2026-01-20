@@ -3,7 +3,7 @@
 <html lang="de">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>Responda</title>
@@ -35,13 +35,20 @@
     /* Status Bar */
     .status-bar {
       height: 44px;
+      padding-top: env(safe-area-inset-top);
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 0 24px;
+      padding-left: max(24px, env(safe-area-inset-left));
+      padding-right: max(24px, env(safe-area-inset-right));
       color: #fff;
       font-size: 15px;
       font-weight: 600;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 1000;
     }
     
     .time { font-feature-settings: "tnum"; }
@@ -68,10 +75,13 @@
     
     /* Main Content */
     .content {
-      height: calc(100vh - 44px);
+      height: 100vh;
       overflow-y: auto;
       -webkit-overflow-scrolling: touch;
-      padding: 20px 20px 120px;
+      padding-top: calc(44px + env(safe-area-inset-top) + 20px);
+      padding-left: max(20px, env(safe-area-inset-left));
+      padding-right: max(20px, env(safe-area-inset-right));
+      padding-bottom: calc(120px + env(safe-area-inset-bottom));
     }
     
     /* Widgets */
@@ -204,7 +214,7 @@
     /* Edit Button */
     .edit-button {
       position: fixed;
-      bottom: 20px;
+      bottom: max(20px, env(safe-area-inset-bottom));
       left: 50%;
       transform: translateX(-50%);
       background: rgba(255, 255, 255, 0.2);
