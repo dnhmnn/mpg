@@ -62,6 +62,7 @@
       background: rgba(255, 255, 255, 0.3);
     }
     
+    
     /* Main Content */
     .content {
       height: calc(100vh - 44px);
@@ -200,7 +201,7 @@
     /* Edit Button */
     .edit-button {
       position: fixed;
-      bottom: 80px;
+      bottom: 20px;
       left: 50%;
       transform: translateX(-50%);
       background: rgba(255, 255, 255, 0.2);
@@ -406,51 +407,12 @@
       max-width: 65px;
     }
     
-    /* Dock */
+    /* Dock - REMOVED */
     .dock {
-      position: fixed;
-      bottom: 8px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(255, 255, 255, 0.3);
-      backdrop-filter: blur(40px);
-      -webkit-backdrop-filter: blur(40px);
-      border-radius: 20px;
-      padding: 8px 20px;
-      display: flex;
-      gap: 24px;
-      border: 0.5px solid rgba(255, 255, 255, 0.3);
-      z-index: 100;
+      display: none;
     }
     
-    .dock-icon {
-      width: 56px;
-      height: 56px;
-      background: rgba(255, 255, 255, 0.25);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      border-radius: 12px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: #fff;
-      text-decoration: none;
-      border: 0.5px solid rgba(255, 255, 255, 0.3);
-    }
-    
-    .dock-icon:active {
-      transform: scale(0.9);
-    }
-    
-    .dock-icon svg {
-      width: 26px;
-      height: 26px;
-      stroke: currentColor;
-      fill: none;
-      stroke-width: 2;
-    }
-    
-    /* Widgets Modal */
+    /* Widget Options */
     .widget-options {
       display: grid;
       gap: 12px;
@@ -477,6 +439,77 @@
     .widget-option-desc {
       font-size: 13px;
       color: #666;
+    }
+    
+    /* Settings Tabs */
+    .settings-tab {
+      padding: 10px 16px;
+      border: none;
+      background: #f0f0f0;
+      color: #666;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+    
+    .settings-tab.active {
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: #fff;
+    }
+    
+    .settings-content {
+      display: none;
+    }
+    
+    .settings-content.active {
+      display: block;
+    }
+    
+    .field {
+      margin-bottom: 16px;
+    }
+    
+    .field label {
+      display: block;
+      font-weight: 600;
+      color: #1a1a1a;
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
+    
+    .field input, .field select, .field textarea {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #e0e0e0;
+      border-radius: 10px;
+      font-size: 15px;
+      font-family: inherit;
+      background: #fff;
+    }
+    
+    .field input:focus, .field select:focus, .field textarea:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+    
+    .btn {
+      padding: 12px 20px;
+      border: none;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 15px;
+      cursor: pointer;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: #fff;
+      transition: all 0.2s;
+      font-family: inherit;
+    }
+    
+    .btn:active {
+      transform: scale(0.98);
     }
     
     /* Loading */
@@ -586,10 +619,75 @@
         <div class="widget-option-desc">Zeigt aktuelles Datum und Wochentag</div>
       </div>
       <div class="widget-option">
-        <div class="widget-option-title">Apps-Übersicht</div>
-        <div class="widget-option-desc">Anzahl installierter Apps</div>
+        <div class="widget-option-title">Organisation</div>
+        <div class="widget-option-desc">Logo und Name der Organisation</div>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- Settings Modal -->
+
+<div class="modal" id="settingsModal">
+  <div class="modal-content" style="max-height: 80vh;">
+    <div class="modal-header">
+      <div class="modal-title">Einstellungen</div>
+      <button class="modal-close" onclick="closeModal('settingsModal')">×</button>
+    </div>
+
+```
+<!-- Settings Tabs -->
+<div style="display: flex; gap: 8px; margin-bottom: 20px; overflow-x: auto;">
+  <button class="settings-tab active" onclick="showSettingsTab('profile')">Profil</button>
+  <button class="settings-tab" onclick="showSettingsTab('password')">Passwort</button>
+  <button class="settings-tab" onclick="showSettingsTab('users')" id="usersTabBtn" style="display:none;">Benutzer</button>
+</div>
+
+<!-- Profile Tab -->
+<div class="settings-content active" id="settings-profile">
+  <div class="field">
+    <label>E-Mail</label>
+    <input type="email" id="profileEmail" readonly style="background:#f5f5f5;">
+  </div>
+  <div class="field">
+    <label>Name</label>
+    <input type="text" id="profileName" placeholder="Dein Name">
+  </div>
+  <div class="field">
+    <label>Telefon</label>
+    <input type="tel" id="profilePhone" placeholder="+49 123 456789">
+  </div>
+  <div id="profileMsg" style="margin-top:12px; font-size:14px;"></div>
+  <button class="btn" onclick="saveProfile()" style="margin-top:16px; width:100%;">Profil speichern</button>
+</div>
+
+<!-- Password Tab -->
+<div class="settings-content" id="settings-password">
+  <div class="field">
+    <label>Aktuelles Passwort</label>
+    <input type="password" id="pwCurrent" placeholder="••••••••">
+  </div>
+  <div class="field">
+    <label>Neues Passwort (min. 8 Zeichen)</label>
+    <input type="password" id="pwNew1" placeholder="Neues Passwort">
+  </div>
+  <div class="field">
+    <label>Passwort wiederholen</label>
+    <input type="password" id="pwNew2" placeholder="Wiederholen">
+  </div>
+  <div id="pwMsg" style="margin-top:12px; font-size:14px;"></div>
+  <button class="btn" onclick="changePassword()" style="margin-top:16px; width:100%;">Passwort ändern</button>
+</div>
+
+<!-- Users Tab -->
+<div class="settings-content" id="settings-users">
+  <button class="btn" onclick="alert('Benutzerverwaltung kommt bald!')" style="margin-bottom:16px; width:100%;">+ Neuen Benutzer anlegen</button>
+  <div style="background:#f8f8f8; padding:20px; border-radius:12px; text-align:center; color:#666;">
+    Benutzerverwaltung wird hier integriert
+  </div>
+</div>
+```
+
   </div>
 </div>
 
@@ -625,7 +723,7 @@
     lernbar: { id: 'lernbar', name: 'Lernbar', icon: 'graduation', url: 'lernbar.html', permission: 'lernbar' },
     ausbildungen: { id: 'ausbildungen', name: 'Ausbildungen', icon: 'book', url: 'ausbildungen.html', permission: 'ausbildungen_manage' },
     dashboard: { id: 'dashboard', name: 'Dashboard', icon: 'dashboard', url: 'mpg-dashboard.html', permission: 'dashboard' },
-    settings: { id: 'settings', name: 'Einstellungen', icon: 'settings', url: 'mpg-dashboard.html', permission: 'dashboard' }
+    settings: { id: 'settings', name: 'Einstellungen', icon: 'settings', url: '#settings', permission: 'dashboard', isInternal: true }
   };
 
   const ROLES = {
@@ -636,7 +734,7 @@
     benutzer: { permissions: { dashboard: true, lernbar: true, chat: true } }
   };
 
-  let user, userApps = [], dockApps = ['chat', 'settings'], availableApps = [], editMode = false;
+  let user, userApps = [], availableApps = [], editMode = false;
 
   async function init() {
     if (!pb.authStore.isValid) return window.location.href = 'mpg-login.html';
@@ -688,24 +786,24 @@
 
   function loadPrefs() {
     const saved = localStorage.getItem(`hub_apps_${user.id}`);
-    userApps = saved ? JSON.parse(saved) : Object.keys(ALL_APPS).filter(id => {
-      const app = ALL_APPS[id];
-      return hasPermission(app.permission) && !dockApps.includes(id);
-    });
     
-    // Migration: Update old dock if it has dashboard instead of settings
-    const savedDock = localStorage.getItem(`hub_dock_${user.id}`);
-    if (savedDock) {
-      const oldDock = JSON.parse(savedDock);
-      // Replace dashboard with settings in dock
-      dockApps = oldDock.map(id => id === 'dashboard' ? 'settings' : id);
-      // Save migrated dock
-      localStorage.setItem(`hub_dock_${user.id}`, JSON.stringify(dockApps));
+    if (saved) {
+      userApps = JSON.parse(saved);
+      // Ensure settings is always included
+      if (!userApps.includes('settings')) {
+        userApps.push('settings');
+      }
+    } else {
+      // Default apps including settings
+      userApps = Object.keys(ALL_APPS).filter(id => {
+        const app = ALL_APPS[id];
+        return hasPermission(app.permission);
+      });
     }
     
     availableApps = Object.keys(ALL_APPS).filter(id => {
       const app = ALL_APPS[id];
-      return hasPermission(app.permission) && !userApps.includes(id) && !dockApps.includes(id);
+      return hasPermission(app.permission) && !userApps.includes(id);
     });
   }
 
@@ -716,7 +814,6 @@
   function render() {
     renderWidgets();
     renderApps();
-    renderDock();
     renderAvailable();
   }
 
@@ -745,20 +842,18 @@
     document.getElementById('apps').innerHTML = userApps.map(id => {
       const app = ALL_APPS[id];
       if (!app) return '';
+      
+      // Settings app opens modal instead of navigating
+      const clickHandler = app.isInternal ? `onclick="openSettings(event)"` : '';
+      const href = app.isInternal ? 'javascript:void(0)' : app.url;
+      
       return `
-        <a href="${app.url}" class="app">
+        <a href="${href}" class="app" ${clickHandler}>
           <div class="remove-btn" onclick="removeApp(event, '${id}')">−</div>
           <div class="app-icon">${ICONS[app.icon]}</div>
           <div class="app-name">${app.name}</div>
         </a>
       `;
-    }).join('');
-  }
-
-  function renderDock() {
-    document.getElementById('dock').innerHTML = dockApps.map(id => {
-      const app = ALL_APPS[id];
-      return app ? `<a href="${app.url}" class="dock-icon">${ICONS[app.icon]}</a>` : '';
     }).join('');
   }
 
@@ -786,6 +881,13 @@
   window.removeApp = function(e, id) {
     e.preventDefault();
     e.stopPropagation();
+    
+    // Prevent removing settings
+    if (id === 'settings') {
+      alert('Einstellungen können nicht entfernt werden');
+      return;
+    }
+    
     userApps = userApps.filter(x => x !== id);
     availableApps.push(id);
     savePrefs();
@@ -821,6 +923,96 @@
       pb.authStore.clear();
       localStorage.clear();
       window.location.href = 'mpg-login.html';
+    }
+  };
+
+  // Settings functions
+  window.openSettings = function(e) {
+    e.preventDefault();
+    document.getElementById('settingsModal').classList.add('show');
+    loadProfileData();
+    
+    // Show users tab only for supervisors/mpg
+    if (user.supervisor || user.role === 'mpg') {
+      document.getElementById('usersTabBtn').style.display = 'block';
+    }
+  };
+
+  window.showSettingsTab = function(tab) {
+    document.querySelectorAll('.settings-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.settings-content').forEach(c => c.classList.remove('active'));
+    
+    event.target.classList.add('active');
+    document.getElementById(`settings-${tab}`).classList.add('active');
+  };
+
+  function loadProfileData() {
+    document.getElementById('profileEmail').value = user.email;
+    document.getElementById('profileName').value = user.name || '';
+    document.getElementById('profilePhone').value = user.phone || '';
+  }
+
+  window.saveProfile = async function() {
+    const msg = document.getElementById('profileMsg');
+    try {
+      const name = document.getElementById('profileName').value.trim();
+      const phone = document.getElementById('profilePhone').value.trim();
+      
+      await pb.collection('users').update(user.id, { name, phone });
+      
+      user.name = name;
+      user.phone = phone;
+      document.getElementById('userName').textContent = name || user.email.split('@')[0];
+      
+      msg.textContent = '✅ Profil gespeichert!';
+      msg.style.color = '#16a34a';
+      
+      setTimeout(() => { msg.textContent = ''; }, 3000);
+    } catch (e) {
+      msg.textContent = '❌ Fehler: ' + e.message;
+      msg.style.color = '#ef4444';
+    }
+  };
+
+  window.changePassword = async function() {
+    const msg = document.getElementById('pwMsg');
+    try {
+      const current = document.getElementById('pwCurrent').value.trim();
+      const new1 = document.getElementById('pwNew1').value.trim();
+      const new2 = document.getElementById('pwNew2').value.trim();
+
+      if (!current) { msg.textContent = '❌ Aktuelles Passwort eingeben'; msg.style.color = '#ef4444'; return; }
+      if (!new1 || new1.length < 8) { msg.textContent = '❌ Neues Passwort: mind. 8 Zeichen'; msg.style.color = '#ef4444'; return; }
+      if (new1 !== new2) { msg.textContent = '❌ Passwörter stimmen nicht überein'; msg.style.color = '#ef4444'; return; }
+
+      // Verify current password
+      try {
+        await pb.collection('users').authWithPassword(user.email, current);
+      } catch (e) {
+        msg.textContent = '❌ Aktuelles Passwort falsch';
+        msg.style.color = '#ef4444';
+        return;
+      }
+
+      // Update password
+      await pb.collection('users').update(user.id, {
+        password: new1,
+        passwordConfirm: new1,
+        oldPassword: current
+      });
+      
+      msg.textContent = '✅ Passwort geändert! Du wirst abgemeldet...';
+      msg.style.color = '#16a34a';
+      
+      setTimeout(() => {
+        pb.authStore.clear();
+        localStorage.clear();
+        window.location.href = 'mpg-login.html';
+      }, 2000);
+      
+    } catch (e) {
+      msg.textContent = '❌ Fehler: ' + e.message;
+      msg.style.color = '#ef4444';
     }
   };
 
