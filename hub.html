@@ -208,19 +208,24 @@
       -webkit-backdrop-filter: blur(20px);
       border: 0.5px solid rgba(255, 255, 255, 0.3);
       color: #fff;
-      padding: 12px 24px;
-      border-radius: 20px;
-      font-size: 15px;
+      padding: 8px 16px;
+      border-radius: 16px;
+      font-size: 13px;
       font-weight: 600;
       cursor: pointer;
       transition: all 0.2s;
       z-index: 200;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     }
     
     .edit-button:active {
       transform: translateX(-50%) scale(0.95);
       background: rgba(255, 255, 255, 0.3);
+    }
+    
+    /* Hide page indicator */
+    .page-indicator {
+      display: none;
     }
     
     .edit-options {
@@ -638,6 +643,17 @@
       user = pb.authStore.model;
       if (!user) return window.location.href = 'mpg-login.html';
       
+      // Load organization info
+      if (user.organization_id) {
+        try {
+          const org = await pb.collection('organizations').getOne(user.organization_id);
+          user.organization_name = org.org_name;
+          user.organization_logo = org.logo || '🏢';
+        } catch (e) {
+          console.log('Could not load organization:', e);
+        }
+      }
+      
       document.body.classList.add('loaded');
       updateTime();
       setInterval(updateTime, 60000);
@@ -694,6 +710,11 @@
 
   function renderWidgets() {
     const today = new Date();
+    
+    // Get organization info
+    const orgName = user.organization_name || 'Responda';
+    const orgLogo = user.organization_logo || '🏢'; // Falls kein Logo, Emoji als Fallback
+    
     document.getElementById('widgets').innerHTML = `
       <div class="widget">
         <div class="widget-title">Heute</div>
@@ -701,9 +722,9 @@
         <div class="widget-label">${today.toLocaleDateString('de-DE', { weekday: 'long' })}</div>
       </div>
       <div class="widget">
-        <div class="widget-title">Apps</div>
-        <div class="widget-value">${userApps.length + dockApps.length}</div>
-        <div class="widget-label">Installiert</div>
+        <div class="widget-title">Organisation</div>
+        <div class="widget-value" style="font-size:40px">${orgLogo}</div>
+        <div class="widget-label">${orgName}</div>
       </div>
     `;
   }
@@ -753,7 +774,6 @@
   window.removeApp = function(e, id) {
     e.preventDefault();
     e.stopPropagation();
-    if (!editMode) return;
     userApps = userApps.filter(x => x !== id);
     availableApps.push(id);
     savePrefs();
