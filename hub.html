@@ -12,14 +12,22 @@
 
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
+  <!-- Lucide Icons -->
+
+  <script src="https://unpkg.com/lucide@latest"></script>
+
   <style>
     :root {
       --gradient-start: #667eea;
       --gradient-end: #764ba2;
       --accent: #667eea;
-      --bg-glass: rgba(255, 255, 255, 0.95);
-      --shadow: 0 8px 32px rgba(102, 126, 234, 0.15);
-      --shadow-hover: 0 12px 48px rgba(102, 126, 234, 0.25);
+      --bg-glass: rgba(255, 255, 255, 0.98);
+      --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.04);
+      --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.08);
+      --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.12);
+      --radius-sm: 12px;
+      --radius-md: 16px;
+      --radius-lg: 24px;
     }
     
     * {
@@ -29,15 +37,17 @@
     }
     
     body {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
       background: linear-gradient(135deg, var(--gradient-start) 0%, var(--gradient-end) 100%);
       min-height: 100vh;
       overflow-x: hidden;
       position: relative;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
     }
     
-    /* Animated Background Particles */
-    .bg-particles {
+    /* Animated Background Blur */
+    .bg-blur {
       position: fixed;
       inset: 0;
       overflow: hidden;
@@ -45,73 +55,116 @@
       z-index: 0;
     }
     
-    .particle {
+    .blur-orb {
       position: absolute;
-      background: rgba(255, 255, 255, 0.1);
       border-radius: 50%;
-      animation: float 20s infinite;
+      filter: blur(80px);
+      opacity: 0.3;
+      animation: float-orb 20s infinite ease-in-out;
     }
     
-    @keyframes float {
-      0%, 100% { transform: translateY(0) rotate(0deg); opacity: 0; }
-      10% { opacity: 1; }
-      90% { opacity: 1; }
-      100% { transform: translateY(-100vh) rotate(360deg); opacity: 0; }
+    .blur-orb:nth-child(1) {
+      width: 400px;
+      height: 400px;
+      background: rgba(255, 255, 255, 0.4);
+      top: -100px;
+      left: -100px;
+      animation-delay: 0s;
+    }
+    
+    .blur-orb:nth-child(2) {
+      width: 300px;
+      height: 300px;
+      background: rgba(118, 75, 162, 0.3);
+      bottom: -50px;
+      right: -50px;
+      animation-delay: 5s;
+    }
+    
+    .blur-orb:nth-child(3) {
+      width: 350px;
+      height: 350px;
+      background: rgba(102, 126, 234, 0.3);
+      top: 50%;
+      left: 50%;
+      animation-delay: 10s;
+    }
+    
+    @keyframes float-orb {
+      0%, 100% { transform: translate(0, 0) scale(1); }
+      33% { transform: translate(30px, -30px) scale(1.1); }
+      66% { transform: translate(-30px, 30px) scale(0.9); }
     }
     
     /* Header */
     header {
       position: relative;
       z-index: 100;
-      background: rgba(255, 255, 255, 0.1);
-      backdrop-filter: blur(20px);
-      border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-      padding: 16px 24px;
+      background: rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(40px) saturate(180%);
+      -webkit-backdrop-filter: blur(40px) saturate(180%);
+      border-bottom: 0.5px solid rgba(255, 255, 255, 0.2);
+      padding: 14px 24px;
       display: flex;
       align-items: center;
       gap: 16px;
-      flex-wrap: wrap;
     }
     
     .logo {
-      font-size: 28px;
-      font-weight: 800;
+      font-size: 20px;
+      font-weight: 700;
       color: #fff;
       letter-spacing: -0.5px;
-      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .logo i {
+      width: 24px;
+      height: 24px;
     }
     
     .spacer { flex: 1; }
     
     .header-btn {
-      background: rgba(255, 255, 255, 0.2);
-      border: 1px solid rgba(255, 255, 255, 0.3);
+      background: rgba(255, 255, 255, 0.15);
+      border: 0.5px solid rgba(255, 255, 255, 0.2);
       color: #fff;
-      padding: 10px 18px;
-      border-radius: 12px;
+      padding: 8px 16px;
+      border-radius: 10px;
       font-weight: 600;
       font-size: 14px;
       cursor: pointer;
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      backdrop-filter: blur(10px);
+      transition: all 0.2s ease;
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
       display: inline-flex;
       align-items: center;
-      gap: 8px;
+      gap: 6px;
+    }
+    
+    .header-btn i {
+      width: 16px;
+      height: 16px;
     }
     
     .header-btn:hover {
-      background: rgba(255, 255, 255, 0.3);
-      transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      background: rgba(255, 255, 255, 0.25);
+      transform: translateY(-1px);
+    }
+    
+    .header-btn:active {
+      transform: translateY(0);
     }
     
     /* Main Container */
     .container {
       position: relative;
       z-index: 10;
-      max-width: 1400px;
+      max-width: 1200px;
       margin: 0 auto;
-      padding: 32px 24px 80px;
+      padding: 40px 24px 80px;
     }
     
     /* Greeting */
@@ -133,24 +186,32 @@
     }
     
     .greeting {
-      font-size: clamp(2.5rem, 6vw, 4rem);
-      font-weight: 800;
+      font-size: clamp(2.5rem, 5vw, 3.5rem);
+      font-weight: 700;
       color: #fff;
-      margin-bottom: 12px;
-      text-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
-      letter-spacing: -1px;
+      margin-bottom: 8px;
+      letter-spacing: -1.5px;
     }
     
     .user-info {
-      font-size: 18px;
-      color: rgba(255, 255, 255, 0.9);
+      font-size: 16px;
+      color: rgba(255, 255, 255, 0.85);
       font-weight: 500;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    
+    .user-info i {
+      width: 16px;
+      height: 16px;
     }
     
     /* Layout Grid */
     .hub-layout {
       display: grid;
-      grid-template-columns: 1fr 320px;
+      grid-template-columns: 1fr 300px;
       gap: 24px;
       position: relative;
     }
@@ -158,156 +219,172 @@
     /* Widgets Section */
     .widgets {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: 20px;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
       margin-bottom: 32px;
-      animation: fadeInUp 0.8s ease-out 0.2s both;
+      animation: fadeInUp 0.8s ease-out 0.1s both;
     }
     
     .widget {
       background: var(--bg-glass);
-      backdrop-filter: blur(20px);
-      border-radius: 20px;
-      padding: 24px;
-      box-shadow: var(--shadow);
-      border: 1px solid rgba(255, 255, 255, 0.3);
+      backdrop-filter: blur(20px) saturate(180%);
+      -webkit-backdrop-filter: blur(20px) saturate(180%);
+      border-radius: var(--radius-md);
+      padding: 20px;
+      box-shadow: var(--shadow-sm);
+      border: 0.5px solid rgba(0, 0, 0, 0.04);
       transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      position: relative;
-      overflow: hidden;
-    }
-    
-    .widget::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 4px;
-      background: linear-gradient(90deg, var(--gradient-start), var(--gradient-end));
-      border-radius: 20px 20px 0 0;
     }
     
     .widget:hover {
-      transform: translateY(-4px);
-      box-shadow: var(--shadow-hover);
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+    }
+    
+    .widget-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 16px;
     }
     
     .widget-icon {
-      font-size: 32px;
-      margin-bottom: 12px;
-      display: block;
+      width: 32px;
+      height: 32px;
+      background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+    }
+    
+    .widget-icon i {
+      width: 18px;
+      height: 18px;
     }
     
     .widget-title {
-      font-size: 14px;
+      font-size: 13px;
       font-weight: 600;
       color: #666;
-      margin-bottom: 8px;
       text-transform: uppercase;
       letter-spacing: 0.5px;
     }
     
     .widget-value {
-      font-size: 32px;
-      font-weight: 800;
-      color: var(--accent);
+      font-size: 28px;
+      font-weight: 700;
+      color: #1a1a1a;
       line-height: 1;
+      margin-bottom: 4px;
     }
     
     .widget-label {
       font-size: 13px;
       color: #888;
-      margin-top: 4px;
     }
     
     /* Apps Grid */
     .apps-section {
-      animation: fadeInUp 1s ease-out 0.4s both;
+      animation: fadeInUp 1s ease-out 0.2s both;
     }
     
     .section-title {
-      font-size: 24px;
+      font-size: 20px;
       font-weight: 700;
       color: #fff;
       margin-bottom: 20px;
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 10px;
+      letter-spacing: -0.5px;
+    }
+    
+    .section-title i {
+      width: 24px;
+      height: 24px;
     }
     
     .apps-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-      gap: 20px;
+      grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+      gap: 16px;
     }
     
     .app-card {
       background: var(--bg-glass);
-      backdrop-filter: blur(20px);
-      border-radius: 24px;
-      padding: 24px 20px;
+      backdrop-filter: blur(20px) saturate(180%);
+      -webkit-backdrop-filter: blur(20px) saturate(180%);
+      border-radius: 20px;
+      padding: 20px 16px;
       text-align: center;
       cursor: pointer;
       transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      border: 1px solid rgba(255, 255, 255, 0.3);
-      box-shadow: var(--shadow);
+      border: 0.5px solid rgba(0, 0, 0, 0.04);
+      box-shadow: var(--shadow-sm);
       text-decoration: none;
       color: inherit;
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 12px;
+      gap: 10px;
       position: relative;
       overflow: hidden;
     }
     
-    .app-card::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
-      opacity: 0;
-      transition: opacity 0.3s;
-      border-radius: 24px;
-    }
-    
     .app-card:hover {
-      transform: translateY(-8px) scale(1.02);
-      box-shadow: var(--shadow-hover);
+      transform: translateY(-6px) scale(1.02);
+      box-shadow: var(--shadow-lg);
     }
     
-    .app-card:hover::before {
-      opacity: 0.1;
+    .app-card:active {
+      transform: translateY(-4px) scale(1.01);
     }
     
-    .app-icon {
-      font-size: 48px;
-      position: relative;
-      z-index: 1;
-      filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+    .app-icon-wrapper {
+      width: 56px;
+      height: 56px;
+      background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+      transition: all 0.3s ease;
+    }
+    
+    .app-card:hover .app-icon-wrapper {
+      transform: scale(1.05);
+      box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+    }
+    
+    .app-icon-wrapper i {
+      width: 28px;
+      height: 28px;
     }
     
     .app-name {
-      font-size: 14px;
+      font-size: 13px;
       font-weight: 600;
-      color: #333;
-      position: relative;
-      z-index: 1;
+      color: #1a1a1a;
       line-height: 1.3;
     }
     
     .app-badge {
       position: absolute;
-      top: 12px;
-      right: 12px;
+      top: 8px;
+      right: 8px;
       background: #ef4444;
       color: #fff;
-      font-size: 11px;
+      font-size: 10px;
       font-weight: 700;
-      padding: 4px 8px;
-      border-radius: 12px;
+      padding: 3px 6px;
+      border-radius: 10px;
       z-index: 2;
-      box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4);
+      min-width: 18px;
+      text-align: center;
     }
     
     /* Sidebar */
@@ -315,7 +392,7 @@
       position: sticky;
       top: 100px;
       height: fit-content;
-      animation: fadeInRight 0.8s ease-out 0.6s both;
+      animation: fadeInRight 0.8s ease-out 0.3s both;
     }
     
     @keyframes fadeInRight {
@@ -331,82 +408,109 @@
     
     .sidebar-card {
       background: var(--bg-glass);
-      backdrop-filter: blur(20px);
-      border-radius: 20px;
-      padding: 24px;
-      box-shadow: var(--shadow);
-      border: 1px solid rgba(255, 255, 255, 0.3);
-      margin-bottom: 20px;
+      backdrop-filter: blur(20px) saturate(180%);
+      -webkit-backdrop-filter: blur(20px) saturate(180%);
+      border-radius: var(--radius-md);
+      padding: 20px;
+      box-shadow: var(--shadow-sm);
+      border: 0.5px solid rgba(0, 0, 0, 0.04);
+      margin-bottom: 16px;
     }
     
     .sidebar-title {
-      font-size: 18px;
+      font-size: 15px;
       font-weight: 700;
-      color: var(--accent);
+      color: #1a1a1a;
       margin-bottom: 16px;
       display: flex;
       align-items: center;
       gap: 8px;
+      letter-spacing: -0.3px;
+    }
+    
+    .sidebar-title i {
+      width: 18px;
+      height: 18px;
+      color: var(--accent);
     }
     
     .available-apps {
       display: flex;
       flex-direction: column;
-      gap: 12px;
+      gap: 8px;
+      max-height: 400px;
+      overflow-y: auto;
     }
     
     .available-app {
-      background: rgba(102, 126, 234, 0.05);
-      border: 2px dashed rgba(102, 126, 234, 0.3);
-      border-radius: 12px;
-      padding: 12px 16px;
+      background: rgba(102, 126, 234, 0.04);
+      border: 1px dashed rgba(102, 126, 234, 0.2);
+      border-radius: 10px;
+      padding: 12px;
       cursor: pointer;
-      transition: all 0.3s;
+      transition: all 0.2s ease;
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 10px;
     }
     
     .available-app:hover {
-      background: rgba(102, 126, 234, 0.1);
-      border-color: rgba(102, 126, 234, 0.5);
-      transform: translateX(4px);
+      background: rgba(102, 126, 234, 0.08);
+      border-color: rgba(102, 126, 234, 0.4);
+      transform: translateX(2px);
     }
     
     .available-app-icon {
-      font-size: 24px;
+      width: 36px;
+      height: 36px;
+      background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      flex-shrink: 0;
+    }
+    
+    .available-app-icon i {
+      width: 18px;
+      height: 18px;
     }
     
     .available-app-info {
       flex: 1;
+      min-width: 0;
     }
     
     .available-app-name {
-      font-size: 14px;
+      font-size: 13px;
       font-weight: 600;
-      color: #333;
+      color: #1a1a1a;
       margin-bottom: 2px;
     }
     
     .available-app-desc {
-      font-size: 12px;
+      font-size: 11px;
       color: #666;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
     
     .add-btn {
       background: var(--accent);
       color: #fff;
       border: none;
-      width: 28px;
-      height: 28px;
+      width: 24px;
+      height: 24px;
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
       cursor: pointer;
-      font-size: 18px;
+      font-size: 16px;
       font-weight: 700;
-      transition: all 0.3s;
+      transition: all 0.2s ease;
       flex-shrink: 0;
     }
     
@@ -415,28 +519,33 @@
       box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
     }
     
+    .add-btn:active {
+      transform: scale(1.05);
+    }
+    
     .remove-mode .app-card {
       position: relative;
     }
     
     .remove-btn {
       position: absolute;
-      top: 8px;
-      right: 8px;
+      top: 6px;
+      right: 6px;
       background: #ef4444;
       color: #fff;
       border: 2px solid #fff;
-      width: 28px;
-      height: 28px;
+      width: 24px;
+      height: 24px;
       border-radius: 50%;
       display: none;
       align-items: center;
       justify-content: center;
       cursor: pointer;
-      font-size: 16px;
+      font-size: 14px;
       font-weight: 700;
       z-index: 10;
-      transition: all 0.3s;
+      transition: all 0.2s ease;
+      box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
     }
     
     .remove-mode .remove-btn {
@@ -444,27 +553,31 @@
     }
     
     .remove-btn:hover {
-      transform: scale(1.15);
+      transform: scale(1.1);
       box-shadow: 0 4px 12px rgba(239, 68, 68, 0.5);
     }
     
     .toggle-edit {
-      background: rgba(102, 126, 234, 0.2);
-      border: 2px solid rgba(102, 126, 234, 0.4);
+      background: rgba(102, 126, 234, 0.08);
+      border: 1px solid rgba(102, 126, 234, 0.2);
       color: var(--accent);
-      padding: 12px 20px;
-      border-radius: 12px;
+      padding: 10px 16px;
+      border-radius: 10px;
       font-weight: 600;
-      font-size: 14px;
+      font-size: 13px;
       cursor: pointer;
       width: 100%;
-      transition: all 0.3s;
-      margin-top: 16px;
+      transition: all 0.2s ease;
+      margin-top: 12px;
     }
     
     .toggle-edit:hover {
-      background: rgba(102, 126, 234, 0.3);
-      border-color: rgba(102, 126, 234, 0.6);
+      background: rgba(102, 126, 234, 0.12);
+      border-color: rgba(102, 126, 234, 0.3);
+    }
+    
+    .toggle-edit:active {
+      transform: scale(0.98);
     }
     
     .toggle-edit.active {
@@ -481,23 +594,34 @@
     }
     
     .quick-action {
-      background: rgba(102, 126, 234, 0.1);
-      border: 1px solid rgba(102, 126, 234, 0.2);
+      background: rgba(102, 126, 234, 0.08);
+      border: 1px solid rgba(102, 126, 234, 0.15);
       border-radius: 10px;
-      padding: 12px 16px;
-      font-size: 14px;
+      padding: 12px 14px;
+      font-size: 13px;
       font-weight: 600;
-      color: var(--accent);
+      color: #1a1a1a;
       cursor: pointer;
-      transition: all 0.3s;
+      transition: all 0.2s ease;
       display: flex;
       align-items: center;
       gap: 10px;
+      text-decoration: none;
+    }
+    
+    .quick-action i {
+      width: 18px;
+      height: 18px;
+      color: var(--accent);
     }
     
     .quick-action:hover {
-      background: rgba(102, 126, 234, 0.2);
-      transform: translateX(4px);
+      background: rgba(102, 126, 234, 0.12);
+      transform: translateX(2px);
+    }
+    
+    .quick-action:active {
+      transform: translateX(0);
     }
     
     /* Responsive */
@@ -512,8 +636,7 @@
       }
       
       .apps-grid {
-        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-        gap: 16px;
+        grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
       }
     }
     
@@ -522,21 +645,32 @@
         padding: 24px 16px 60px;
       }
       
+      header {
+        padding: 12px 16px;
+      }
+      
       .widgets {
         grid-template-columns: 1fr;
       }
       
       .apps-grid {
-        grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+        grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
         gap: 12px;
       }
       
       .app-card {
-        padding: 20px 16px;
+        padding: 16px 12px;
       }
       
-      .app-icon {
-        font-size: 40px;
+      .app-icon-wrapper {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+      }
+      
+      .app-icon-wrapper i {
+        width: 24px;
+        height: 24px;
       }
       
       .app-name {
@@ -561,15 +695,22 @@
       color: rgba(255, 255, 255, 0.8);
     }
     
-    .empty-state-icon {
-      font-size: 64px;
-      margin-bottom: 16px;
+    .empty-icon {
+      width: 64px;
+      height: 64px;
+      margin: 0 auto 16px;
       opacity: 0.5;
     }
     
     .empty-state-text {
-      font-size: 18px;
+      font-size: 16px;
       font-weight: 600;
+      margin-bottom: 8px;
+    }
+    
+    .empty-state-hint {
+      font-size: 14px;
+      opacity: 0.7;
     }
   </style>
 
@@ -577,21 +718,28 @@
 
 <body class="loading">
 
-<!-- Background Particles -->
+<!-- Background Blur -->
 
-<div class="bg-particles" id="particles"></div>
+<div class="bg-blur">
+  <div class="blur-orb"></div>
+  <div class="blur-orb"></div>
+  <div class="blur-orb"></div>
+</div>
 
 <!-- Header -->
 
 <header>
-  <div class="logo">Responda</div>
+  <div class="logo">
+    <i data-lucide="layers"></i>
+    <span>Responda</span>
+  </div>
   <div class="spacer"></div>
   <button class="header-btn" id="settingsBtn">
-    <span>⚙️</span>
+    <i data-lucide="settings"></i>
     <span>Einstellungen</span>
   </button>
   <button class="header-btn" id="logoutBtn">
-    <span>🚪</span>
+    <i data-lucide="log-out"></i>
     <span>Logout</span>
   </button>
 </header>
@@ -603,7 +751,9 @@
   <div class="greeting-section">
     <div class="greeting" id="greeting">Servus!</div>
     <div class="user-info">
-      <span id="userName">—</span> • 
+      <i data-lucide="user"></i>
+      <span id="userName">—</span>
+      <span>•</span>
       <span id="userRole">—</span>
     </div>
   </div>
@@ -622,7 +772,7 @@
   <!-- Apps Section -->
   <div class="apps-section">
     <div class="section-title">
-      <span>📱</span>
+      <i data-lucide="grid-3x3"></i>
       <span>Meine Apps</span>
     </div>
     <div class="apps-grid" id="appsGrid">
@@ -636,7 +786,7 @@
   <!-- Available Apps -->
   <div class="sidebar-card">
     <div class="sidebar-title">
-      <span>➕</span>
+      <i data-lucide="plus-circle"></i>
       <span>Verfügbare Apps</span>
     </div>
     <div class="available-apps" id="availableApps">
@@ -648,16 +798,16 @@
   <!-- Quick Actions -->
   <div class="sidebar-card">
     <div class="sidebar-title">
-      <span>⚡</span>
+      <i data-lucide="zap"></i>
       <span>Schnellzugriff</span>
     </div>
     <div class="quick-actions">
       <a href="chat.html" class="quick-action">
-        <span>💬</span>
+        <i data-lucide="message-circle"></i>
         <span>Zum Chat</span>
       </a>
       <a href="lernbar.html" class="quick-action" id="quickLernbar" style="display:none">
-        <span>🎓</span>
+        <i data-lucide="graduation-cap"></i>
         <span>Zur Lernbar</span>
       </a>
     </div>
@@ -678,7 +828,7 @@
     einsaetze: {
       id: 'einsaetze',
       name: 'Einsätze',
-      icon: '🚨',
+      icon: 'siren',
       url: 'einsaetze.html',
       description: 'Einsätze verwalten',
       permission: 'einsaetze'
@@ -686,7 +836,7 @@
     patienten: {
       id: 'patienten',
       name: 'Patienten',
-      icon: '🧾',
+      icon: 'clipboard-list',
       url: 'patientendokumentation-dateien.html',
       description: 'Patientendokumentation',
       permission: 'patienten'
@@ -694,7 +844,7 @@
     dokumente: {
       id: 'dokumente',
       name: 'Vorgänge',
-      icon: '📋',
+      icon: 'file-text',
       url: 'dokumente-bearbeiten.html',
       description: 'Vorgänge bearbeiten',
       permission: 'dokumente'
@@ -702,7 +852,7 @@
     lager: {
       id: 'lager',
       name: 'Lager',
-      icon: '📦',
+      icon: 'package',
       url: 'lagerverwaltung.html',
       description: 'Lagerverwaltung',
       permission: 'lager'
@@ -710,7 +860,7 @@
     produktausgabe: {
       id: 'produktausgabe',
       name: 'Ausgabe',
-      icon: '📋',
+      icon: 'clipboard-check',
       url: 'produktausgabe.html',
       description: 'Produktausgabe',
       permission: 'produktausgabe'
@@ -718,7 +868,7 @@
     dateien: {
       id: 'dateien',
       name: 'Dateien',
-      icon: '📄',
+      icon: 'folder',
       url: 'dateien.html',
       description: 'Dateien verwalten',
       permission: 'dateien'
@@ -726,7 +876,7 @@
     qr: {
       id: 'qr',
       name: 'QR-Codes',
-      icon: '📟',
+      icon: 'qr-code',
       url: 'qr-code-generator.html',
       description: 'QR-Code Generator',
       permission: 'qr'
@@ -734,7 +884,7 @@
     lernbar: {
       id: 'lernbar',
       name: 'Lernbar',
-      icon: '🎓',
+      icon: 'graduation-cap',
       url: 'lernbar.html',
       description: 'Lernplattform',
       permission: 'lernbar'
@@ -742,7 +892,7 @@
     ausbildungen: {
       id: 'ausbildungen',
       name: 'Ausbildungen',
-      icon: '🎓',
+      icon: 'book-open',
       url: 'ausbildungen.html',
       description: 'Ausbildungen verwalten',
       permission: 'ausbildungen_manage'
@@ -750,7 +900,7 @@
     chat: {
       id: 'chat',
       name: 'Chat',
-      icon: '💬',
+      icon: 'message-circle',
       url: 'chat.html',
       description: 'Team-Chat',
       permission: 'chat'
@@ -758,7 +908,7 @@
     dashboard: {
       id: 'dashboard',
       name: 'Dashboard',
-      icon: '📊',
+      icon: 'bar-chart-2',
       url: 'mpg-dashboard.html',
       description: 'MPG-Dashboard',
       permission: 'dashboard'
@@ -768,7 +918,7 @@
   const ROLE_TEMPLATES = {
     mpg: {
       label: 'MPG-Beauftragter',
-      icon: '👑',
+      icon: 'crown',
       permissions: {
         dashboard: true,
         einsaetze: true,
@@ -786,7 +936,7 @@
     },
     lager: {
       label: 'Lagerverwaltung',
-      icon: '📦',
+      icon: 'package',
       permissions: {
         dashboard: true,
         lager: true,
@@ -798,7 +948,7 @@
     },
     ausbildung: {
       label: 'Ausbildungen',
-      icon: '🎓',
+      icon: 'graduation-cap',
       permissions: {
         dashboard: true,
         einsaetze: true,
@@ -812,7 +962,7 @@
     },
     qm: {
       label: 'Qualitätsmanagement',
-      icon: '📋',
+      icon: 'clipboard-check',
       permissions: {
         dashboard: true,
         dokumente: true,
@@ -823,7 +973,7 @@
     },
     benutzer: {
       label: 'Benutzer',
-      icon: '👤',
+      icon: 'user',
       permissions: {
         dashboard: true,
         lernbar: true,
@@ -875,7 +1025,6 @@
     renderWidgets();
     renderApps();
     renderAvailableApps();
-    createParticles();
     
     // Quick action visibility
     if (hasPermission('lernbar')) {
@@ -889,15 +1038,15 @@
     const greetingEl = document.getElementById('greeting');
 
     if (hour >= 5 && hour < 10) {
-      greetingEl.textContent = 'Guten Morgen! ☀️';
+      greetingEl.textContent = 'Guten Morgen!';
     } else if (hour >= 10 && hour < 12) {
-      greetingEl.textContent = 'Servus! 👋';
+      greetingEl.textContent = 'Servus!';
     } else if (hour >= 12 && hour < 18) {
-      greetingEl.textContent = 'Mahlzeit! 🍽️';
+      greetingEl.textContent = 'Mahlzeit!';
     } else if (hour >= 18 && hour < 22) {
-      greetingEl.textContent = 'Guten Abend! 🌙';
+      greetingEl.textContent = 'Guten Abend!';
     } else {
-      greetingEl.textContent = 'Noch wach? 😴';
+      greetingEl.textContent = 'Noch wach?';
     }
   }
 
@@ -908,7 +1057,15 @@
     const roleInfo = ROLE_TEMPLATES[userRole];
 
     document.getElementById('userName').textContent = userName;
-    document.getElementById('userRole').textContent = `${roleInfo.icon} ${roleInfo.label}`;
+    
+    // Create icon element for role
+    const roleEl = document.getElementById('userRole');
+    roleEl.innerHTML = `<i data-lucide="${roleInfo.icon}" style="width:14px;height:14px;display:inline-block;vertical-align:middle;margin-right:4px;"></i>${roleInfo.label}`;
+    
+    // Initialize the new icon
+    if (window.lucide) {
+      lucide.createIcons();
+    }
   }
 
   // ===== PERMISSIONS =====
@@ -957,19 +1114,19 @@
     
     const widgets = [
       {
-        icon: '📱',
+        icon: 'grid-3x3',
         title: 'Meine Apps',
         value: userApps.length,
         label: 'Apps verfügbar'
       },
       {
-        icon: '🎯',
+        icon: 'calendar',
         title: 'Heute',
         value: new Date().toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' }),
         label: new Date().toLocaleDateString('de-DE', { weekday: 'long' })
       },
       {
-        icon: '⚡',
+        icon: 'check-circle',
         title: 'Status',
         value: '✓',
         label: 'Alles bereit'
@@ -978,12 +1135,21 @@
 
     widgetsContainer.innerHTML = widgets.map(widget => `
       <div class="widget">
-        <span class="widget-icon">${widget.icon}</span>
-        <div class="widget-title">${widget.title}</div>
+        <div class="widget-header">
+          <div class="widget-icon">
+            <i data-lucide="${widget.icon}"></i>
+          </div>
+          <div class="widget-title">${widget.title}</div>
+        </div>
         <div class="widget-value">${widget.value}</div>
         <div class="widget-label">${widget.label}</div>
       </div>
     `).join('');
+    
+    // Initialize icons
+    if (window.lucide) {
+      lucide.createIcons();
+    }
   }
 
   // ===== APPS RENDERING =====
@@ -993,13 +1159,17 @@
     if (userApps.length === 0) {
       appsGrid.innerHTML = `
         <div class="empty-state" style="grid-column: 1 / -1;">
-          <div class="empty-state-icon">📱</div>
+          <i data-lucide="grid-3x3" class="empty-icon"></i>
           <div class="empty-state-text">Keine Apps hinzugefügt</div>
-          <div style="margin-top: 8px; font-size: 14px; opacity: 0.7;">
+          <div class="empty-state-hint">
             Füge Apps über die Seitenleiste hinzu →
           </div>
         </div>
       `;
+      
+      if (window.lucide) {
+        lucide.createIcons();
+      }
       return;
     }
 
@@ -1010,11 +1180,18 @@
       return `
         <a href="${app.url}" class="app-card" data-app="${app.id}">
           <button class="remove-btn" onclick="removeApp(event, '${app.id}')">×</button>
-          <div class="app-icon">${app.icon}</div>
+          <div class="app-icon-wrapper">
+            <i data-lucide="${app.icon}"></i>
+          </div>
           <div class="app-name">${app.name}</div>
         </a>
       `;
     }).join('');
+    
+    // Initialize icons
+    if (window.lucide) {
+      lucide.createIcons();
+    }
   }
 
   // ===== AVAILABLE APPS =====
@@ -1036,7 +1213,9 @@
 
       return `
         <div class="available-app" onclick="addApp('${app.id}')">
-          <div class="available-app-icon">${app.icon}</div>
+          <div class="available-app-icon">
+            <i data-lucide="${app.icon}"></i>
+          </div>
           <div class="available-app-info">
             <div class="available-app-name">${app.name}</div>
             <div class="available-app-desc">${app.description}</div>
@@ -1045,6 +1224,11 @@
         </div>
       `;
     }).join('');
+    
+    // Initialize icons
+    if (window.lucide) {
+      lucide.createIcons();
+    }
   }
 
   // ===== ADD APP =====
@@ -1093,27 +1277,6 @@
     }
   });
 
-  // ===== PARTICLES =====
-  function createParticles() {
-    const container = document.getElementById('particles');
-    const particleCount = 20;
-
-    for (let i = 0; i < particleCount; i++) {
-      const particle = document.createElement('div');
-      particle.className = 'particle';
-      
-      const size = Math.random() * 100 + 50;
-      particle.style.width = size + 'px';
-      particle.style.height = size + 'px';
-      particle.style.left = Math.random() * 100 + '%';
-      particle.style.top = Math.random() * 100 + '%';
-      particle.style.animationDelay = Math.random() * 20 + 's';
-      particle.style.animationDuration = (Math.random() * 10 + 15) + 's';
-      
-      container.appendChild(particle);
-    }
-  }
-
   // ===== LOGOUT =====
   document.getElementById('logoutBtn').addEventListener('click', () => {
     pb.authStore.clear();
@@ -1127,7 +1290,12 @@
   });
 
   // ===== INIT =====
-  initAuth();
+  initAuth().then(() => {
+    // Initialize Lucide icons after DOM is ready
+    if (window.lucide) {
+      lucide.createIcons();
+    }
+  });
 </script>
 
 </body>
