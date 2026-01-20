@@ -200,7 +200,7 @@
     /* Edit Button */
     .edit-button {
       position: fixed;
-      bottom: 20px;
+      bottom: 80px;
       left: 50%;
       transform: translateX(-50%);
       background: rgba(255, 255, 255, 0.2);
@@ -692,6 +692,16 @@
       const app = ALL_APPS[id];
       return hasPermission(app.permission) && !dockApps.includes(id);
     });
+    
+    // Migration: Update old dock if it has dashboard instead of settings
+    const savedDock = localStorage.getItem(`hub_dock_${user.id}`);
+    if (savedDock) {
+      const oldDock = JSON.parse(savedDock);
+      // Replace dashboard with settings in dock
+      dockApps = oldDock.map(id => id === 'dashboard' ? 'settings' : id);
+      // Save migrated dock
+      localStorage.setItem(`hub_dock_${user.id}`, JSON.stringify(dockApps));
+    }
     
     availableApps = Object.keys(ALL_APPS).filter(id => {
       const app = ALL_APPS[id];
