@@ -610,6 +610,7 @@
     book: '<svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>',
     chat: '<svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>',
     dashboard: '<svg viewBox="0 0 24 24"><path d="M3 3h7v9H3zM14 3h7v5h-7zM14 12h7v9h-7zM3 16h7v5H3z"/></svg>',
+    settings: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v6m5.66-13.66l-4.24 4.24m0 6l4.24 4.24M23 12h-6m-6 0H1m18.66-5.66l-4.24 4.24m0 6l4.24 4.24"/></svg>',
   };
 
   // Apps
@@ -623,7 +624,8 @@
     qr: { id: 'qr', name: 'QR-Codes', icon: 'qrcode', url: 'qr-code-generator.html', permission: 'qr' },
     lernbar: { id: 'lernbar', name: 'Lernbar', icon: 'graduation', url: 'lernbar.html', permission: 'lernbar' },
     ausbildungen: { id: 'ausbildungen', name: 'Ausbildungen', icon: 'book', url: 'ausbildungen.html', permission: 'ausbildungen_manage' },
-    dashboard: { id: 'dashboard', name: 'Dashboard', icon: 'dashboard', url: 'mpg-dashboard.html', permission: 'dashboard' }
+    dashboard: { id: 'dashboard', name: 'Dashboard', icon: 'dashboard', url: 'mpg-dashboard.html', permission: 'dashboard' },
+    settings: { id: 'settings', name: 'Einstellungen', icon: 'settings', url: 'mpg-dashboard.html', permission: 'dashboard' }
   };
 
   const ROLES = {
@@ -634,7 +636,7 @@
     benutzer: { permissions: { dashboard: true, lernbar: true, chat: true } }
   };
 
-  let user, userApps = [], dockApps = ['chat', 'dashboard'], availableApps = [], editMode = false;
+  let user, userApps = [], dockApps = ['chat', 'settings'], availableApps = [], editMode = false;
 
   async function init() {
     if (!pb.authStore.isValid) return window.location.href = 'mpg-login.html';
