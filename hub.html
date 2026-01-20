@@ -197,70 +197,30 @@
       display: flex;
     }
     
-    /* Edit Section */
-    .edit-section {
+    /* Edit Button */
+    .edit-button {
       position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      background: rgba(255, 255, 255, 0.95);
-      backdrop-filter: blur(40px);
-      -webkit-backdrop-filter: blur(40px);
-      border-radius: 28px 28px 0 0;
-      box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
-      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      z-index: 200;
-    }
-    
-    .edit-section.collapsed {
-      transform: translateY(calc(100% - 70px));
-    }
-    
-    .edit-toggle {
-      padding: 24px 24px 16px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      border-bottom: 1px solid #e0e0e0;
-    }
-    
-    .edit-toggle-text {
-      font-size: 16px;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(255, 255, 255, 0.2);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 0.5px solid rgba(255, 255, 255, 0.3);
+      color: #fff;
+      padding: 12px 24px;
+      border-radius: 20px;
+      font-size: 15px;
       font-weight: 600;
-      color: #667eea;
+      cursor: pointer;
+      transition: all 0.2s;
+      z-index: 200;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     }
     
-    .edit-toggle-icon {
-      width: 20px;
-      height: 20px;
-      color: #667eea;
-      transition: transform 0.3s;
-    }
-    
-    .edit-section.collapsed .edit-toggle-icon {
-      transform: rotate(180deg);
-    }
-    
-    .edit-toggle-icon svg {
-      width: 100%;
-      height: 100%;
-      stroke: currentColor;
-      fill: none;
-      stroke-width: 2;
-    }
-    
-    .edit-content {
-      padding: 0 24px 32px;
-    }
-    
-    .edit-title {
-      font-size: 22px;
-      font-weight: 700;
-      color: #1a1a1a;
-      margin-bottom: 20px;
-      margin-top: 20px;
+    .edit-button:active {
+      transform: translateX(-50%) scale(0.95);
+      background: rgba(255, 255, 255, 0.3);
     }
     
     .edit-options {
@@ -556,17 +516,18 @@
 
 <div class="dock" id="dock"></div>
 
-<!-- Edit Section -->
+<!-- Edit Button -->
 
-<div class="edit-section collapsed" id="editSection">
-  <div class="edit-toggle" id="editToggle">
-    <span class="edit-toggle-text">Hub bearbeiten</span>
-    <div class="edit-toggle-icon">
-      <svg viewBox="0 0 24 24"><path d="M18 15l-6-6-6 6"/></svg>
+<button class="edit-button" id="editButton">Hub bearbeiten</button>
+
+<!-- Edit Modal -->
+
+<div class="modal" id="editModal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <div class="modal-title">Hub bearbeiten</div>
+      <button class="modal-close" onclick="closeModal('editModal')">×</button>
     </div>
-  </div>
-  <div class="edit-content">
-    <div class="edit-title">Optionen</div>
     <div class="edit-options">
       <button class="edit-btn" id="editAppsBtn">
         <div class="edit-btn-left">
@@ -807,13 +768,19 @@
     }
   };
 
+  document.getElementById('editButton').onclick = () => {
+    document.getElementById('editModal').classList.add('show');
+  };
+
   document.getElementById('editAppsBtn').onclick = () => {
+    closeModal('editModal');
     editMode = true;
     document.querySelector('.content').classList.add('edit-mode');
     document.getElementById('appsModal').classList.add('show');
   };
 
   document.getElementById('editWidgetsBtn').onclick = () => {
+    closeModal('editModal');
     document.getElementById('widgetsModal').classList.add('show');
   };
 
@@ -823,10 +790,6 @@
       localStorage.clear();
       window.location.href = 'mpg-login.html';
     }
-  };
-
-  document.getElementById('editToggle').onclick = () => {
-    document.getElementById('editSection').classList.toggle('collapsed');
   };
 
   // Close modals on background click
