@@ -1,0 +1,1134 @@
+<!DOCTYPE html>
+
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Hub – Responda</title>
+
+  <!-- Theme Color -->
+
+  <meta name="theme-color" content="#667eea">
+
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --gradient-start: #667eea;
+      --gradient-end: #764ba2;
+      --accent: #667eea;
+      --bg-glass: rgba(255, 255, 255, 0.95);
+      --shadow: 0 8px 32px rgba(102, 126, 234, 0.15);
+      --shadow-hover: 0 12px 48px rgba(102, 126, 234, 0.25);
+    }
+    
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: linear-gradient(135deg, var(--gradient-start) 0%, var(--gradient-end) 100%);
+      min-height: 100vh;
+      overflow-x: hidden;
+      position: relative;
+    }
+    
+    /* Animated Background Particles */
+    .bg-particles {
+      position: fixed;
+      inset: 0;
+      overflow: hidden;
+      pointer-events: none;
+      z-index: 0;
+    }
+    
+    .particle {
+      position: absolute;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 50%;
+      animation: float 20s infinite;
+    }
+    
+    @keyframes float {
+      0%, 100% { transform: translateY(0) rotate(0deg); opacity: 0; }
+      10% { opacity: 1; }
+      90% { opacity: 1; }
+      100% { transform: translateY(-100vh) rotate(360deg); opacity: 0; }
+    }
+    
+    /* Header */
+    header {
+      position: relative;
+      z-index: 100;
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    
+    .logo {
+      font-size: 28px;
+      font-weight: 800;
+      color: #fff;
+      letter-spacing: -0.5px;
+      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    }
+    
+    .spacer { flex: 1; }
+    
+    .header-btn {
+      background: rgba(255, 255, 255, 0.2);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      color: #fff;
+      padding: 10px 18px;
+      border-radius: 12px;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      backdrop-filter: blur(10px);
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .header-btn:hover {
+      background: rgba(255, 255, 255, 0.3);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+    
+    /* Main Container */
+    .container {
+      position: relative;
+      z-index: 10;
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 32px 24px 80px;
+    }
+    
+    /* Greeting */
+    .greeting-section {
+      text-align: center;
+      margin-bottom: 48px;
+      animation: fadeInUp 0.6s ease-out;
+    }
+    
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    
+    .greeting {
+      font-size: clamp(2.5rem, 6vw, 4rem);
+      font-weight: 800;
+      color: #fff;
+      margin-bottom: 12px;
+      text-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+      letter-spacing: -1px;
+    }
+    
+    .user-info {
+      font-size: 18px;
+      color: rgba(255, 255, 255, 0.9);
+      font-weight: 500;
+    }
+    
+    /* Layout Grid */
+    .hub-layout {
+      display: grid;
+      grid-template-columns: 1fr 320px;
+      gap: 24px;
+      position: relative;
+    }
+    
+    /* Widgets Section */
+    .widgets {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+      margin-bottom: 32px;
+      animation: fadeInUp 0.8s ease-out 0.2s both;
+    }
+    
+    .widget {
+      background: var(--bg-glass);
+      backdrop-filter: blur(20px);
+      border-radius: 20px;
+      padding: 24px;
+      box-shadow: var(--shadow);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .widget::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, var(--gradient-start), var(--gradient-end));
+      border-radius: 20px 20px 0 0;
+    }
+    
+    .widget:hover {
+      transform: translateY(-4px);
+      box-shadow: var(--shadow-hover);
+    }
+    
+    .widget-icon {
+      font-size: 32px;
+      margin-bottom: 12px;
+      display: block;
+    }
+    
+    .widget-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #666;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .widget-value {
+      font-size: 32px;
+      font-weight: 800;
+      color: var(--accent);
+      line-height: 1;
+    }
+    
+    .widget-label {
+      font-size: 13px;
+      color: #888;
+      margin-top: 4px;
+    }
+    
+    /* Apps Grid */
+    .apps-section {
+      animation: fadeInUp 1s ease-out 0.4s both;
+    }
+    
+    .section-title {
+      font-size: 24px;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    
+    .apps-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 20px;
+    }
+    
+    .app-card {
+      background: var(--bg-glass);
+      backdrop-filter: blur(20px);
+      border-radius: 24px;
+      padding: 24px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      box-shadow: var(--shadow);
+      text-decoration: none;
+      color: inherit;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .app-card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
+      opacity: 0;
+      transition: opacity 0.3s;
+      border-radius: 24px;
+    }
+    
+    .app-card:hover {
+      transform: translateY(-8px) scale(1.02);
+      box-shadow: var(--shadow-hover);
+    }
+    
+    .app-card:hover::before {
+      opacity: 0.1;
+    }
+    
+    .app-icon {
+      font-size: 48px;
+      position: relative;
+      z-index: 1;
+      filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+    }
+    
+    .app-name {
+      font-size: 14px;
+      font-weight: 600;
+      color: #333;
+      position: relative;
+      z-index: 1;
+      line-height: 1.3;
+    }
+    
+    .app-badge {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      background: #ef4444;
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 8px;
+      border-radius: 12px;
+      z-index: 2;
+      box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4);
+    }
+    
+    /* Sidebar */
+    .sidebar {
+      position: sticky;
+      top: 100px;
+      height: fit-content;
+      animation: fadeInRight 0.8s ease-out 0.6s both;
+    }
+    
+    @keyframes fadeInRight {
+      from {
+        opacity: 0;
+        transform: translateX(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+    
+    .sidebar-card {
+      background: var(--bg-glass);
+      backdrop-filter: blur(20px);
+      border-radius: 20px;
+      padding: 24px;
+      box-shadow: var(--shadow);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      margin-bottom: 20px;
+    }
+    
+    .sidebar-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--accent);
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .available-apps {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    
+    .available-app {
+      background: rgba(102, 126, 234, 0.05);
+      border: 2px dashed rgba(102, 126, 234, 0.3);
+      border-radius: 12px;
+      padding: 12px 16px;
+      cursor: pointer;
+      transition: all 0.3s;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    
+    .available-app:hover {
+      background: rgba(102, 126, 234, 0.1);
+      border-color: rgba(102, 126, 234, 0.5);
+      transform: translateX(4px);
+    }
+    
+    .available-app-icon {
+      font-size: 24px;
+    }
+    
+    .available-app-info {
+      flex: 1;
+    }
+    
+    .available-app-name {
+      font-size: 14px;
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 2px;
+    }
+    
+    .available-app-desc {
+      font-size: 12px;
+      color: #666;
+    }
+    
+    .add-btn {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 18px;
+      font-weight: 700;
+      transition: all 0.3s;
+      flex-shrink: 0;
+    }
+    
+    .add-btn:hover {
+      transform: scale(1.1);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+    
+    .remove-mode .app-card {
+      position: relative;
+    }
+    
+    .remove-btn {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background: #ef4444;
+      color: #fff;
+      border: 2px solid #fff;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: 700;
+      z-index: 10;
+      transition: all 0.3s;
+    }
+    
+    .remove-mode .remove-btn {
+      display: flex;
+    }
+    
+    .remove-btn:hover {
+      transform: scale(1.15);
+      box-shadow: 0 4px 12px rgba(239, 68, 68, 0.5);
+    }
+    
+    .toggle-edit {
+      background: rgba(102, 126, 234, 0.2);
+      border: 2px solid rgba(102, 126, 234, 0.4);
+      color: var(--accent);
+      padding: 12px 20px;
+      border-radius: 12px;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      width: 100%;
+      transition: all 0.3s;
+      margin-top: 16px;
+    }
+    
+    .toggle-edit:hover {
+      background: rgba(102, 126, 234, 0.3);
+      border-color: rgba(102, 126, 234, 0.6);
+    }
+    
+    .toggle-edit.active {
+      background: #ef4444;
+      border-color: #ef4444;
+      color: #fff;
+    }
+    
+    /* Quick Actions */
+    .quick-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    
+    .quick-action {
+      background: rgba(102, 126, 234, 0.1);
+      border: 1px solid rgba(102, 126, 234, 0.2);
+      border-radius: 10px;
+      padding: 12px 16px;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--accent);
+      cursor: pointer;
+      transition: all 0.3s;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .quick-action:hover {
+      background: rgba(102, 126, 234, 0.2);
+      transform: translateX(4px);
+    }
+    
+    /* Responsive */
+    @media (max-width: 1024px) {
+      .hub-layout {
+        grid-template-columns: 1fr;
+      }
+      
+      .sidebar {
+        position: relative;
+        top: 0;
+      }
+      
+      .apps-grid {
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+        gap: 16px;
+      }
+    }
+    
+    @media (max-width: 640px) {
+      .container {
+        padding: 24px 16px 60px;
+      }
+      
+      .widgets {
+        grid-template-columns: 1fr;
+      }
+      
+      .apps-grid {
+        grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+        gap: 12px;
+      }
+      
+      .app-card {
+        padding: 20px 16px;
+      }
+      
+      .app-icon {
+        font-size: 40px;
+      }
+      
+      .app-name {
+        font-size: 12px;
+      }
+    }
+    
+    /* Loading State */
+    body.loading {
+      opacity: 0;
+    }
+    
+    body.loaded {
+      opacity: 1;
+      transition: opacity 0.5s ease-out;
+    }
+    
+    /* Empty State */
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: rgba(255, 255, 255, 0.8);
+    }
+    
+    .empty-state-icon {
+      font-size: 64px;
+      margin-bottom: 16px;
+      opacity: 0.5;
+    }
+    
+    .empty-state-text {
+      font-size: 18px;
+      font-weight: 600;
+    }
+  </style>
+
+</head>
+
+<body class="loading">
+
+<!-- Background Particles -->
+
+<div class="bg-particles" id="particles"></div>
+
+<!-- Header -->
+
+<header>
+  <div class="logo">Responda</div>
+  <div class="spacer"></div>
+  <button class="header-btn" id="settingsBtn">
+    <span>⚙️</span>
+    <span>Einstellungen</span>
+  </button>
+  <button class="header-btn" id="logoutBtn">
+    <span>🚪</span>
+    <span>Logout</span>
+  </button>
+</header>
+
+<!-- Main Container -->
+
+<div class="container">
+  <!-- Greeting -->
+  <div class="greeting-section">
+    <div class="greeting" id="greeting">Servus!</div>
+    <div class="user-info">
+      <span id="userName">—</span> • 
+      <span id="userRole">—</span>
+    </div>
+  </div>
+
+  <!-- Hub Layout -->
+
+  <div class="hub-layout">
+    <!-- Main Content -->
+    <div>
+      <!-- Widgets -->
+      <div class="widgets" id="widgets">
+        <!-- Widgets werden dynamisch geladen -->
+      </div>
+
+```
+  <!-- Apps Section -->
+  <div class="apps-section">
+    <div class="section-title">
+      <span>📱</span>
+      <span>Meine Apps</span>
+    </div>
+    <div class="apps-grid" id="appsGrid">
+      <!-- Apps werden dynamisch geladen -->
+    </div>
+  </div>
+</div>
+
+<!-- Sidebar -->
+<div class="sidebar">
+  <!-- Available Apps -->
+  <div class="sidebar-card">
+    <div class="sidebar-title">
+      <span>➕</span>
+      <span>Verfügbare Apps</span>
+    </div>
+    <div class="available-apps" id="availableApps">
+      <!-- Verfügbare Apps werden dynamisch geladen -->
+    </div>
+    <button class="toggle-edit" id="toggleEdit">Apps bearbeiten</button>
+  </div>
+
+  <!-- Quick Actions -->
+  <div class="sidebar-card">
+    <div class="sidebar-title">
+      <span>⚡</span>
+      <span>Schnellzugriff</span>
+    </div>
+    <div class="quick-actions">
+      <a href="chat.html" class="quick-action">
+        <span>💬</span>
+        <span>Zum Chat</span>
+      </a>
+      <a href="lernbar.html" class="quick-action" id="quickLernbar" style="display:none">
+        <span>🎓</span>
+        <span>Zur Lernbar</span>
+      </a>
+    </div>
+  </div>
+</div>
+```
+
+  </div>
+</div>
+
+<script type="module">
+  import PocketBase from 'https://cdn.jsdelivr.net/npm/pocketbase@0.21.3/dist/pocketbase.es.mjs';
+
+  const pb = new PocketBase('https://api.responda.systems');
+
+  // ===== APP DEFINITIONS =====
+  const ALL_APPS = {
+    einsaetze: {
+      id: 'einsaetze',
+      name: 'Einsätze',
+      icon: '🚨',
+      url: 'einsaetze.html',
+      description: 'Einsätze verwalten',
+      permission: 'einsaetze'
+    },
+    patienten: {
+      id: 'patienten',
+      name: 'Patienten',
+      icon: '🧾',
+      url: 'patientendokumentation-dateien.html',
+      description: 'Patientendokumentation',
+      permission: 'patienten'
+    },
+    dokumente: {
+      id: 'dokumente',
+      name: 'Vorgänge',
+      icon: '📋',
+      url: 'dokumente-bearbeiten.html',
+      description: 'Vorgänge bearbeiten',
+      permission: 'dokumente'
+    },
+    lager: {
+      id: 'lager',
+      name: 'Lager',
+      icon: '📦',
+      url: 'lagerverwaltung.html',
+      description: 'Lagerverwaltung',
+      permission: 'lager'
+    },
+    produktausgabe: {
+      id: 'produktausgabe',
+      name: 'Ausgabe',
+      icon: '📋',
+      url: 'produktausgabe.html',
+      description: 'Produktausgabe',
+      permission: 'produktausgabe'
+    },
+    dateien: {
+      id: 'dateien',
+      name: 'Dateien',
+      icon: '📄',
+      url: 'dateien.html',
+      description: 'Dateien verwalten',
+      permission: 'dateien'
+    },
+    qr: {
+      id: 'qr',
+      name: 'QR-Codes',
+      icon: '📟',
+      url: 'qr-code-generator.html',
+      description: 'QR-Code Generator',
+      permission: 'qr'
+    },
+    lernbar: {
+      id: 'lernbar',
+      name: 'Lernbar',
+      icon: '🎓',
+      url: 'lernbar.html',
+      description: 'Lernplattform',
+      permission: 'lernbar'
+    },
+    ausbildungen: {
+      id: 'ausbildungen',
+      name: 'Ausbildungen',
+      icon: '🎓',
+      url: 'ausbildungen.html',
+      description: 'Ausbildungen verwalten',
+      permission: 'ausbildungen_manage'
+    },
+    chat: {
+      id: 'chat',
+      name: 'Chat',
+      icon: '💬',
+      url: 'chat.html',
+      description: 'Team-Chat',
+      permission: 'chat'
+    },
+    dashboard: {
+      id: 'dashboard',
+      name: 'Dashboard',
+      icon: '📊',
+      url: 'mpg-dashboard.html',
+      description: 'MPG-Dashboard',
+      permission: 'dashboard'
+    }
+  };
+
+  const ROLE_TEMPLATES = {
+    mpg: {
+      label: 'MPG-Beauftragter',
+      icon: '👑',
+      permissions: {
+        dashboard: true,
+        einsaetze: true,
+        lager: true,
+        produktausgabe: true,
+        lernbar: true,
+        ausbildungen_manage: true,
+        dokumente: true,
+        patienten: true,
+        dateien: true,
+        qr: true,
+        chat: true,
+        users_manage: true
+      }
+    },
+    lager: {
+      label: 'Lagerverwaltung',
+      icon: '📦',
+      permissions: {
+        dashboard: true,
+        lager: true,
+        produktausgabe: true,
+        dateien: true,
+        qr: true,
+        chat: true
+      }
+    },
+    ausbildung: {
+      label: 'Ausbildungen',
+      icon: '🎓',
+      permissions: {
+        dashboard: true,
+        einsaetze: true,
+        lernbar: true,
+        ausbildungen_manage: true,
+        patienten: true,
+        dateien: true,
+        qr: true,
+        chat: true
+      }
+    },
+    qm: {
+      label: 'Qualitätsmanagement',
+      icon: '📋',
+      permissions: {
+        dashboard: true,
+        dokumente: true,
+        dateien: true,
+        qr: true,
+        chat: true
+      }
+    },
+    benutzer: {
+      label: 'Benutzer',
+      icon: '👤',
+      permissions: {
+        dashboard: true,
+        lernbar: true,
+        chat: true
+      }
+    }
+  };
+
+  // ===== STATE =====
+  let user = null;
+  let userApps = [];
+  let availableApps = [];
+  let isEditMode = false;
+
+  // ===== AUTH =====
+  async function initAuth() {
+    if (!pb.authStore.isValid) {
+      window.location.href = 'mpg-login.html';
+      return;
+    }
+
+    try {
+      await pb.collection('users').authRefresh();
+      user = pb.authStore.model;
+
+      if (!user) {
+        window.location.href = 'mpg-login.html';
+        return;
+      }
+
+      console.log('👤 User loaded:', user);
+      
+      document.body.classList.add('loaded');
+      document.body.classList.remove('loading');
+      
+      await initHub();
+    } catch (error) {
+      console.error('Auth error:', error);
+      pb.authStore.clear();
+      window.location.href = 'mpg-login.html';
+    }
+  }
+
+  // ===== HUB INIT =====
+  async function initHub() {
+    setGreeting();
+    updateUserInfo();
+    loadUserPreferences();
+    renderWidgets();
+    renderApps();
+    renderAvailableApps();
+    createParticles();
+    
+    // Quick action visibility
+    if (hasPermission('lernbar')) {
+      document.getElementById('quickLernbar').style.display = 'flex';
+    }
+  }
+
+  // ===== GREETING =====
+  function setGreeting() {
+    const hour = new Date().getHours();
+    const greetingEl = document.getElementById('greeting');
+
+    if (hour >= 5 && hour < 10) {
+      greetingEl.textContent = 'Guten Morgen! ☀️';
+    } else if (hour >= 10 && hour < 12) {
+      greetingEl.textContent = 'Servus! 👋';
+    } else if (hour >= 12 && hour < 18) {
+      greetingEl.textContent = 'Mahlzeit! 🍽️';
+    } else if (hour >= 18 && hour < 22) {
+      greetingEl.textContent = 'Guten Abend! 🌙';
+    } else {
+      greetingEl.textContent = 'Noch wach? 😴';
+    }
+  }
+
+  // ===== USER INFO =====
+  function updateUserInfo() {
+    const userName = user.name || user.email;
+    const userRole = user.role || 'benutzer';
+    const roleInfo = ROLE_TEMPLATES[userRole];
+
+    document.getElementById('userName').textContent = userName;
+    document.getElementById('userRole').textContent = `${roleInfo.icon} ${roleInfo.label}`;
+  }
+
+  // ===== PERMISSIONS =====
+  function hasPermission(permission) {
+    if (user.supervisor) return true;
+    
+    const permissions = user.permissions || {};
+    const userRole = user.role || 'benutzer';
+    const roleTemplate = ROLE_TEMPLATES[userRole];
+
+    if (permissions[permission] === true) return true;
+    if (roleTemplate && roleTemplate.permissions[permission] === true) return true;
+    if (permission === 'lernbar' && user.lernbar_access) return true;
+
+    return false;
+  }
+
+  // ===== USER PREFERENCES =====
+  function loadUserPreferences() {
+    const savedApps = localStorage.getItem(`hub_apps_${user.id}`);
+    
+    if (savedApps) {
+      userApps = JSON.parse(savedApps);
+    } else {
+      // Default apps based on permissions
+      userApps = Object.keys(ALL_APPS).filter(appId => {
+        const app = ALL_APPS[appId];
+        return hasPermission(app.permission);
+      });
+    }
+
+    // Get available apps (has permission but not added to hub)
+    availableApps = Object.keys(ALL_APPS).filter(appId => {
+      const app = ALL_APPS[appId];
+      return hasPermission(app.permission) && !userApps.includes(appId);
+    });
+  }
+
+  function saveUserPreferences() {
+    localStorage.setItem(`hub_apps_${user.id}`, JSON.stringify(userApps));
+  }
+
+  // ===== WIDGETS =====
+  function renderWidgets() {
+    const widgetsContainer = document.getElementById('widgets');
+    
+    const widgets = [
+      {
+        icon: '📱',
+        title: 'Meine Apps',
+        value: userApps.length,
+        label: 'Apps verfügbar'
+      },
+      {
+        icon: '🎯',
+        title: 'Heute',
+        value: new Date().toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' }),
+        label: new Date().toLocaleDateString('de-DE', { weekday: 'long' })
+      },
+      {
+        icon: '⚡',
+        title: 'Status',
+        value: '✓',
+        label: 'Alles bereit'
+      }
+    ];
+
+    widgetsContainer.innerHTML = widgets.map(widget => `
+      <div class="widget">
+        <span class="widget-icon">${widget.icon}</span>
+        <div class="widget-title">${widget.title}</div>
+        <div class="widget-value">${widget.value}</div>
+        <div class="widget-label">${widget.label}</div>
+      </div>
+    `).join('');
+  }
+
+  // ===== APPS RENDERING =====
+  function renderApps() {
+    const appsGrid = document.getElementById('appsGrid');
+
+    if (userApps.length === 0) {
+      appsGrid.innerHTML = `
+        <div class="empty-state" style="grid-column: 1 / -1;">
+          <div class="empty-state-icon">📱</div>
+          <div class="empty-state-text">Keine Apps hinzugefügt</div>
+          <div style="margin-top: 8px; font-size: 14px; opacity: 0.7;">
+            Füge Apps über die Seitenleiste hinzu →
+          </div>
+        </div>
+      `;
+      return;
+    }
+
+    appsGrid.innerHTML = userApps.map(appId => {
+      const app = ALL_APPS[appId];
+      if (!app) return '';
+
+      return `
+        <a href="${app.url}" class="app-card" data-app="${app.id}">
+          <button class="remove-btn" onclick="removeApp(event, '${app.id}')">×</button>
+          <div class="app-icon">${app.icon}</div>
+          <div class="app-name">${app.name}</div>
+        </a>
+      `;
+    }).join('');
+  }
+
+  // ===== AVAILABLE APPS =====
+  function renderAvailableApps() {
+    const availableContainer = document.getElementById('availableApps');
+
+    if (availableApps.length === 0) {
+      availableContainer.innerHTML = `
+        <div style="text-align: center; color: #999; font-size: 13px; padding: 12px;">
+          Alle verfügbaren Apps sind bereits hinzugefügt
+        </div>
+      `;
+      return;
+    }
+
+    availableContainer.innerHTML = availableApps.map(appId => {
+      const app = ALL_APPS[appId];
+      if (!app) return '';
+
+      return `
+        <div class="available-app" onclick="addApp('${app.id}')">
+          <div class="available-app-icon">${app.icon}</div>
+          <div class="available-app-info">
+            <div class="available-app-name">${app.name}</div>
+            <div class="available-app-desc">${app.description}</div>
+          </div>
+          <button class="add-btn">+</button>
+        </div>
+      `;
+    }).join('');
+  }
+
+  // ===== ADD APP =====
+  window.addApp = function(appId) {
+    if (userApps.includes(appId)) return;
+
+    userApps.push(appId);
+    availableApps = availableApps.filter(id => id !== appId);
+
+    saveUserPreferences();
+    renderApps();
+    renderAvailableApps();
+    renderWidgets();
+  };
+
+  // ===== REMOVE APP =====
+  window.removeApp = function(event, appId) {
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (!isEditMode) return;
+
+    userApps = userApps.filter(id => id !== appId);
+    availableApps.push(appId);
+
+    saveUserPreferences();
+    renderApps();
+    renderAvailableApps();
+    renderWidgets();
+  };
+
+  // ===== EDIT MODE =====
+  document.getElementById('toggleEdit').addEventListener('click', () => {
+    isEditMode = !isEditMode;
+    const appsGrid = document.getElementById('appsGrid');
+    const toggleBtn = document.getElementById('toggleEdit');
+
+    if (isEditMode) {
+      appsGrid.classList.add('remove-mode');
+      toggleBtn.classList.add('active');
+      toggleBtn.textContent = '✓ Fertig';
+    } else {
+      appsGrid.classList.remove('remove-mode');
+      toggleBtn.classList.remove('active');
+      toggleBtn.textContent = 'Apps bearbeiten';
+    }
+  });
+
+  // ===== PARTICLES =====
+  function createParticles() {
+    const container = document.getElementById('particles');
+    const particleCount = 20;
+
+    for (let i = 0; i < particleCount; i++) {
+      const particle = document.createElement('div');
+      particle.className = 'particle';
+      
+      const size = Math.random() * 100 + 50;
+      particle.style.width = size + 'px';
+      particle.style.height = size + 'px';
+      particle.style.left = Math.random() * 100 + '%';
+      particle.style.top = Math.random() * 100 + '%';
+      particle.style.animationDelay = Math.random() * 20 + 's';
+      particle.style.animationDuration = (Math.random() * 10 + 15) + 's';
+      
+      container.appendChild(particle);
+    }
+  }
+
+  // ===== LOGOUT =====
+  document.getElementById('logoutBtn').addEventListener('click', () => {
+    pb.authStore.clear();
+    localStorage.clear();
+    window.location.href = 'mpg-login.html';
+  });
+
+  // ===== SETTINGS =====
+  document.getElementById('settingsBtn').addEventListener('click', () => {
+    window.location.href = 'mpg-dashboard.html';
+  });
+
+  // ===== INIT =====
+  initAuth();
+</script>
+
+</body>
+</html>
