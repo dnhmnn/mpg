@@ -3,714 +3,465 @@
 <html lang="de">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Hub – Responda</title>
-
-  <!-- Theme Color -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Responda</title>
 
   <meta name="theme-color" content="#667eea">
 
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-
-  <!-- Lucide Icons -->
-
-  <script src="https://unpkg.com/lucide@latest"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
   <style>
-    :root {
-      --gradient-start: #667eea;
-      --gradient-end: #764ba2;
-      --accent: #667eea;
-      --bg-glass: rgba(255, 255, 255, 0.98);
-      --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.04);
-      --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.08);
-      --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.12);
-      --radius-sm: 12px;
-      --radius-md: 16px;
-      --radius-lg: 24px;
-    }
-    
     * {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
+      -webkit-tap-highlight-color: transparent;
     }
     
     body {
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
-      background: linear-gradient(135deg, var(--gradient-start) 0%, var(--gradient-end) 100%);
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       min-height: 100vh;
-      overflow-x: hidden;
-      position: relative;
-      -webkit-font-smoothing: antialiased;
-      -moz-osx-font-smoothing: grayscale;
-    }
-    
-    /* Animated Background Blur */
-    .bg-blur {
-      position: fixed;
-      inset: 0;
       overflow: hidden;
-      pointer-events: none;
-      z-index: 0;
+      -webkit-font-smoothing: antialiased;
+      user-select: none;
     }
     
-    .blur-orb {
-      position: absolute;
-      border-radius: 50%;
-      filter: blur(80px);
-      opacity: 0.3;
-      animation: float-orb 20s infinite ease-in-out;
-    }
-    
-    .blur-orb:nth-child(1) {
-      width: 400px;
-      height: 400px;
-      background: rgba(255, 255, 255, 0.4);
-      top: -100px;
-      left: -100px;
-      animation-delay: 0s;
-    }
-    
-    .blur-orb:nth-child(2) {
-      width: 300px;
-      height: 300px;
-      background: rgba(118, 75, 162, 0.3);
-      bottom: -50px;
-      right: -50px;
-      animation-delay: 5s;
-    }
-    
-    .blur-orb:nth-child(3) {
-      width: 350px;
-      height: 350px;
-      background: rgba(102, 126, 234, 0.3);
-      top: 50%;
-      left: 50%;
-      animation-delay: 10s;
-    }
-    
-    @keyframes float-orb {
-      0%, 100% { transform: translate(0, 0) scale(1); }
-      33% { transform: translate(30px, -30px) scale(1.1); }
-      66% { transform: translate(-30px, 30px) scale(0.9); }
-    }
-    
-    /* Header */
-    header {
-      position: relative;
-      z-index: 100;
-      background: rgba(255, 255, 255, 0.08);
-      backdrop-filter: blur(40px) saturate(180%);
-      -webkit-backdrop-filter: blur(40px) saturate(180%);
-      border-bottom: 0.5px solid rgba(255, 255, 255, 0.2);
-      padding: 14px 24px;
+    /* Status Bar */
+    .status-bar {
+      height: 44px;
       display: flex;
       align-items: center;
-      gap: 16px;
-    }
-    
-    .logo {
-      font-size: 20px;
-      font-weight: 700;
+      justify-content: space-between;
+      padding: 0 24px;
       color: #fff;
-      letter-spacing: -0.5px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    
-    .logo i {
-      width: 24px;
-      height: 24px;
-    }
-    
-    .spacer { flex: 1; }
-    
-    .header-btn {
-      background: rgba(255, 255, 255, 0.15);
-      border: 0.5px solid rgba(255, 255, 255, 0.2);
-      color: #fff;
-      padding: 8px 16px;
-      border-radius: 10px;
+      font-size: 15px;
       font-weight: 600;
-      font-size: 14px;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
     }
     
-    .header-btn i {
-      width: 16px;
-      height: 16px;
+    .time { font-feature-settings: "tnum"; }
+    
+    /* Main Content */
+    .content {
+      height: calc(100vh - 44px);
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      padding: 20px 20px 120px;
     }
     
-    .header-btn:hover {
-      background: rgba(255, 255, 255, 0.25);
-      transform: translateY(-1px);
-    }
-    
-    .header-btn:active {
-      transform: translateY(0);
-    }
-    
-    /* Main Container */
-    .container {
-      position: relative;
-      z-index: 10;
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 40px 24px 80px;
-    }
-    
-    /* Greeting */
-    .greeting-section {
-      text-align: center;
-      margin-bottom: 48px;
-      animation: fadeInUp 0.6s ease-out;
-    }
-    
-    @keyframes fadeInUp {
-      from {
-        opacity: 0;
-        transform: translateY(20px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-    
-    .greeting {
-      font-size: clamp(2.5rem, 5vw, 3.5rem);
-      font-weight: 700;
-      color: #fff;
-      margin-bottom: 8px;
-      letter-spacing: -1.5px;
-    }
-    
-    .user-info {
-      font-size: 16px;
-      color: rgba(255, 255, 255, 0.85);
-      font-weight: 500;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-    }
-    
-    .user-info i {
-      width: 16px;
-      height: 16px;
-    }
-    
-    /* Layout Grid */
-    .hub-layout {
-      display: grid;
-      grid-template-columns: 1fr 300px;
-      gap: 24px;
-      position: relative;
-    }
-    
-    /* Widgets Section */
+    /* Widgets */
     .widgets {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 16px;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
       margin-bottom: 32px;
-      animation: fadeInUp 0.8s ease-out 0.1s both;
     }
     
     .widget {
-      background: var(--bg-glass);
-      backdrop-filter: blur(20px) saturate(180%);
-      -webkit-backdrop-filter: blur(20px) saturate(180%);
-      border-radius: var(--radius-md);
-      padding: 20px;
-      box-shadow: var(--shadow-sm);
-      border: 0.5px solid rgba(0, 0, 0, 0.04);
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-    
-    .widget:hover {
-      transform: translateY(-2px);
-      box-shadow: var(--shadow-md);
-    }
-    
-    .widget-header {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 16px;
-    }
-    
-    .widget-icon {
-      width: 32px;
-      height: 32px;
-      background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
-      border-radius: 8px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      background: rgba(255, 255, 255, 0.2);
+      backdrop-filter: blur(40px);
+      -webkit-backdrop-filter: blur(40px);
+      border-radius: 20px;
+      padding: 16px;
       color: #fff;
+      min-height: 120px;
+      border: 0.5px solid rgba(255, 255, 255, 0.3);
     }
     
-    .widget-icon i {
-      width: 18px;
-      height: 18px;
+    .widget.large {
+      grid-column: span 2;
     }
     
     .widget-title {
       font-size: 13px;
       font-weight: 600;
-      color: #666;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
+      opacity: 0.8;
+      margin-bottom: 8px;
     }
     
     .widget-value {
       font-size: 28px;
       font-weight: 700;
-      color: #1a1a1a;
-      line-height: 1;
-      margin-bottom: 4px;
     }
     
     .widget-label {
-      font-size: 13px;
-      color: #888;
+      font-size: 14px;
+      opacity: 0.8;
+      margin-top: 4px;
     }
     
     /* Apps Grid */
-    .apps-section {
-      animation: fadeInUp 1s ease-out 0.2s both;
-    }
-    
-    .section-title {
-      font-size: 20px;
-      font-weight: 700;
-      color: #fff;
-      margin-bottom: 20px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      letter-spacing: -0.5px;
-    }
-    
-    .section-title i {
-      width: 24px;
-      height: 24px;
-    }
-    
-    .apps-grid {
+    .apps {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
-      gap: 16px;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 24px 16px;
+      padding: 0 8px;
+      margin-bottom: 48px;
     }
     
-    .app-card {
-      background: var(--bg-glass);
-      backdrop-filter: blur(20px) saturate(180%);
-      -webkit-backdrop-filter: blur(20px) saturate(180%);
-      border-radius: 20px;
-      padding: 20px 16px;
-      text-align: center;
-      cursor: pointer;
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      border: 0.5px solid rgba(0, 0, 0, 0.04);
-      box-shadow: var(--shadow-sm);
-      text-decoration: none;
-      color: inherit;
+    .app {
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 10px;
+      gap: 8px;
+      text-decoration: none;
       position: relative;
-      overflow: hidden;
+      transition: transform 0.2s;
     }
     
-    .app-card:hover {
-      transform: translateY(-6px) scale(1.02);
-      box-shadow: var(--shadow-lg);
+    .app:active { transform: scale(0.9); }
+    
+    .edit-mode .app {
+      animation: wiggle 0.4s ease-in-out infinite;
     }
     
-    .app-card:active {
-      transform: translateY(-4px) scale(1.01);
+    @keyframes wiggle {
+      0%, 100% { transform: rotate(-1deg); }
+      50% { transform: rotate(1deg); }
     }
     
-    .app-icon-wrapper {
-      width: 56px;
-      height: 56px;
-      background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
+    .app-icon {
+      width: 60px;
+      height: 60px;
+      background: rgba(255, 255, 255, 0.25);
+      backdrop-filter: blur(30px);
+      -webkit-backdrop-filter: blur(30px);
       border-radius: 14px;
       display: flex;
       align-items: center;
       justify-content: center;
       color: #fff;
-      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
-      transition: all 0.3s ease;
+      border: 0.5px solid rgba(255, 255, 255, 0.3);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     }
     
-    .app-card:hover .app-icon-wrapper {
-      transform: scale(1.05);
-      box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
-    }
-    
-    .app-icon-wrapper i {
+    .app-icon svg {
       width: 28px;
       height: 28px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 2;
     }
     
     .app-name {
-      font-size: 13px;
-      font-weight: 600;
-      color: #1a1a1a;
-      line-height: 1.3;
-    }
-    
-    .app-badge {
-      position: absolute;
-      top: 8px;
-      right: 8px;
-      background: #ef4444;
+      font-size: 11px;
+      font-weight: 500;
       color: #fff;
-      font-size: 10px;
-      font-weight: 700;
-      padding: 3px 6px;
-      border-radius: 10px;
-      z-index: 2;
-      min-width: 18px;
       text-align: center;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+      max-width: 65px;
+      line-height: 1.2;
     }
     
-    /* Sidebar */
-    .sidebar {
-      position: sticky;
-      top: 100px;
-      height: fit-content;
-      animation: fadeInRight 0.8s ease-out 0.3s both;
+    .remove-btn {
+      position: absolute;
+      top: -5px;
+      left: -5px;
+      width: 20px;
+      height: 20px;
+      background: #ff3b30;
+      border: 2px solid #fff;
+      border-radius: 50%;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      z-index: 10;
     }
     
-    @keyframes fadeInRight {
-      from {
-        opacity: 0;
-        transform: translateX(20px);
-      }
-      to {
-        opacity: 1;
-        transform: translateX(0);
-      }
+    .edit-mode .remove-btn {
+      display: flex;
     }
     
-    .sidebar-card {
-      background: var(--bg-glass);
-      backdrop-filter: blur(20px) saturate(180%);
-      -webkit-backdrop-filter: blur(20px) saturate(180%);
-      border-radius: var(--radius-md);
-      padding: 20px;
-      box-shadow: var(--shadow-sm);
-      border: 0.5px solid rgba(0, 0, 0, 0.04);
-      margin-bottom: 16px;
+    /* Edit Section */
+    .edit-section {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(40px);
+      -webkit-backdrop-filter: blur(40px);
+      border-radius: 28px 28px 0 0;
+      padding: 32px 24px;
+      box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
     }
     
-    .sidebar-title {
-      font-size: 15px;
+    .edit-title {
+      font-size: 22px;
       font-weight: 700;
       color: #1a1a1a;
-      margin-bottom: 16px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      letter-spacing: -0.3px;
+      margin-bottom: 20px;
     }
     
-    .sidebar-title i {
-      width: 18px;
-      height: 18px;
-      color: var(--accent);
-    }
-    
-    .available-apps {
+    .edit-options {
       display: flex;
       flex-direction: column;
-      gap: 8px;
-      max-height: 400px;
-      overflow-y: auto;
+      gap: 12px;
     }
     
-    .available-app {
-      background: rgba(102, 126, 234, 0.04);
-      border: 1px dashed rgba(102, 126, 234, 0.2);
-      border-radius: 10px;
-      padding: 12px;
-      cursor: pointer;
-      transition: all 0.2s ease;
+    .edit-btn {
+      background: #fff;
+      border: 1px solid #e0e0e0;
+      border-radius: 14px;
+      padding: 16px;
       display: flex;
       align-items: center;
-      gap: 10px;
+      justify-content: space-between;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-size: 15px;
+      color: #1a1a1a;
+      font-weight: 500;
     }
     
-    .available-app:hover {
-      background: rgba(102, 126, 234, 0.08);
-      border-color: rgba(102, 126, 234, 0.4);
-      transform: translateX(2px);
+    .edit-btn:active {
+      transform: scale(0.98);
+      background: #f5f5f5;
     }
     
-    .available-app-icon {
-      width: 36px;
-      height: 36px;
-      background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
+    .edit-btn-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    
+    .edit-icon {
+      width: 32px;
+      height: 32px;
+      background: linear-gradient(135deg, #667eea, #764ba2);
       border-radius: 8px;
       display: flex;
       align-items: center;
       justify-content: center;
       color: #fff;
-      flex-shrink: 0;
     }
     
-    .available-app-icon i {
+    .edit-icon svg {
       width: 18px;
       height: 18px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 2;
     }
     
-    .available-app-info {
-      flex: 1;
-      min-width: 0;
+    .edit-arrow {
+      color: #999;
+      font-size: 18px;
     }
     
-    .available-app-name {
-      font-size: 13px;
-      font-weight: 600;
+    /* Modal */
+    .modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.5);
+      display: none;
+      align-items: flex-end;
+      z-index: 1000;
+    }
+    
+    .modal.show {
+      display: flex;
+    }
+    
+    .modal-content {
+      width: 100%;
+      background: #fff;
+      border-radius: 28px 28px 0 0;
+      padding: 24px 24px 40px;
+      max-height: 75vh;
+      overflow-y: auto;
+      animation: slideUp 0.3s ease-out;
+    }
+    
+    @keyframes slideUp {
+      from { transform: translateY(100%); }
+      to { transform: translateY(0); }
+    }
+    
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid #e0e0e0;
+    }
+    
+    .modal-title {
+      font-size: 20px;
+      font-weight: 700;
       color: #1a1a1a;
-      margin-bottom: 2px;
     }
     
-    .available-app-desc {
-      font-size: 11px;
-      color: #666;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    
-    .add-btn {
-      background: var(--accent);
-      color: #fff;
+    .modal-close {
+      width: 32px;
+      height: 32px;
+      background: #f0f0f0;
       border: none;
-      width: 24px;
-      height: 24px;
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
+      font-size: 20px;
+      color: #666;
       cursor: pointer;
-      font-size: 16px;
-      font-weight: 700;
-      transition: all 0.2s ease;
-      flex-shrink: 0;
     }
     
-    .add-btn:hover {
-      transform: scale(1.1);
-      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    /* Available Apps Grid */
+    .available-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 24px 16px;
     }
     
-    .add-btn:active {
-      transform: scale(1.05);
+    .available-app {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
     }
     
-    .remove-mode .app-card {
+    .available-app:active {
+      transform: scale(0.9);
+    }
+    
+    .available-icon {
+      width: 60px;
+      height: 60px;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
       position: relative;
     }
     
-    .remove-btn {
+    .available-icon svg {
+      width: 28px;
+      height: 28px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 2;
+    }
+    
+    .available-icon::after {
+      content: '+';
       position: absolute;
-      top: 6px;
-      right: 6px;
-      background: #ef4444;
-      color: #fff;
-      border: 2px solid #fff;
-      width: 24px;
-      height: 24px;
-      border-radius: 50%;
-      display: none;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      font-size: 14px;
-      font-weight: 700;
-      z-index: 10;
-      transition: all 0.2s ease;
-      box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
-    }
-    
-    .remove-mode .remove-btn {
-      display: flex;
-    }
-    
-    .remove-btn:hover {
-      transform: scale(1.1);
-      box-shadow: 0 4px 12px rgba(239, 68, 68, 0.5);
-    }
-    
-    .toggle-edit {
-      background: rgba(102, 126, 234, 0.08);
-      border: 1px solid rgba(102, 126, 234, 0.2);
-      color: var(--accent);
-      padding: 10px 16px;
-      border-radius: 10px;
-      font-weight: 600;
-      font-size: 13px;
-      cursor: pointer;
-      width: 100%;
-      transition: all 0.2s ease;
-      margin-top: 12px;
-    }
-    
-    .toggle-edit:hover {
-      background: rgba(102, 126, 234, 0.12);
-      border-color: rgba(102, 126, 234, 0.3);
-    }
-    
-    .toggle-edit:active {
-      transform: scale(0.98);
-    }
-    
-    .toggle-edit.active {
-      background: #ef4444;
-      border-color: #ef4444;
-      color: #fff;
-    }
-    
-    /* Quick Actions */
-    .quick-actions {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-    
-    .quick-action {
-      background: rgba(102, 126, 234, 0.08);
-      border: 1px solid rgba(102, 126, 234, 0.15);
-      border-radius: 10px;
-      padding: 12px 14px;
-      font-size: 13px;
-      font-weight: 600;
-      color: #1a1a1a;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      text-decoration: none;
-    }
-    
-    .quick-action i {
+      bottom: -4px;
+      right: -4px;
       width: 18px;
       height: 18px;
-      color: var(--accent);
+      background: #34c759;
+      border: 2px solid #fff;
+      border-radius: 50%;
+      font-size: 12px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
     
-    .quick-action:hover {
-      background: rgba(102, 126, 234, 0.12);
-      transform: translateX(2px);
-    }
-    
-    .quick-action:active {
-      transform: translateX(0);
-    }
-    
-    /* Responsive */
-    @media (max-width: 1024px) {
-      .hub-layout {
-        grid-template-columns: 1fr;
-      }
-      
-      .sidebar {
-        position: relative;
-        top: 0;
-      }
-      
-      .apps-grid {
-        grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-      }
-    }
-    
-    @media (max-width: 640px) {
-      .container {
-        padding: 24px 16px 60px;
-      }
-      
-      header {
-        padding: 12px 16px;
-      }
-      
-      .widgets {
-        grid-template-columns: 1fr;
-      }
-      
-      .apps-grid {
-        grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
-        gap: 12px;
-      }
-      
-      .app-card {
-        padding: 16px 12px;
-      }
-      
-      .app-icon-wrapper {
-        width: 48px;
-        height: 48px;
-        border-radius: 12px;
-      }
-      
-      .app-icon-wrapper i {
-        width: 24px;
-        height: 24px;
-      }
-      
-      .app-name {
-        font-size: 12px;
-      }
-    }
-    
-    /* Loading State */
-    body.loading {
-      opacity: 0;
-    }
-    
-    body.loaded {
-      opacity: 1;
-      transition: opacity 0.5s ease-out;
-    }
-    
-    /* Empty State */
-    .empty-state {
+    .available-name {
+      font-size: 11px;
+      font-weight: 500;
+      color: #1a1a1a;
       text-align: center;
-      padding: 60px 20px;
-      color: rgba(255, 255, 255, 0.8);
+      max-width: 65px;
     }
     
-    .empty-icon {
-      width: 64px;
-      height: 64px;
-      margin: 0 auto 16px;
-      opacity: 0.5;
+    /* Dock */
+    .dock {
+      position: fixed;
+      bottom: 8px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(255, 255, 255, 0.3);
+      backdrop-filter: blur(40px);
+      -webkit-backdrop-filter: blur(40px);
+      border-radius: 20px;
+      padding: 8px 20px;
+      display: flex;
+      gap: 24px;
+      border: 0.5px solid rgba(255, 255, 255, 0.3);
+      z-index: 100;
     }
     
-    .empty-state-text {
-      font-size: 16px;
+    .dock-icon {
+      width: 56px;
+      height: 56px;
+      background: rgba(255, 255, 255, 0.25);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      text-decoration: none;
+      border: 0.5px solid rgba(255, 255, 255, 0.3);
+    }
+    
+    .dock-icon:active {
+      transform: scale(0.9);
+    }
+    
+    .dock-icon svg {
+      width: 26px;
+      height: 26px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 2;
+    }
+    
+    /* Widgets Modal */
+    .widget-options {
+      display: grid;
+      gap: 12px;
+    }
+    
+    .widget-option {
+      background: #f8f8f8;
+      border: 1px solid #e0e0e0;
+      border-radius: 12px;
+      padding: 16px;
+      cursor: pointer;
+    }
+    
+    .widget-option:active {
+      background: #f0f0f0;
+    }
+    
+    .widget-option-title {
       font-weight: 600;
-      margin-bottom: 8px;
+      color: #1a1a1a;
+      margin-bottom: 4px;
     }
     
-    .empty-state-hint {
-      font-size: 14px;
-      opacity: 0.7;
+    .widget-option-desc {
+      font-size: 13px;
+      color: #666;
+    }
+    
+    /* Loading */
+    body.loading { opacity: 0; }
+    body.loaded { 
+      opacity: 1;
+      transition: opacity 0.3s;
+    }
+    
+    @media (min-width: 768px) {
+      .content {
+        max-width: 600px;
+        margin: 0 auto;
+      }
     }
   </style>
 
@@ -718,584 +469,307 @@
 
 <body class="loading">
 
-<!-- Background Blur -->
+<!-- Status Bar -->
 
-<div class="bg-blur">
-  <div class="blur-orb"></div>
-  <div class="blur-orb"></div>
-  <div class="blur-orb"></div>
+<div class="status-bar">
+  <div class="time" id="time">9:41</div>
+  <div id="userName">—</div>
 </div>
 
-<!-- Header -->
+<!-- Main Content -->
 
-<header>
-  <div class="logo">
-    <i data-lucide="layers"></i>
-    <span>Responda</span>
-  </div>
-  <div class="spacer"></div>
-  <button class="header-btn" id="settingsBtn">
-    <i data-lucide="settings"></i>
-    <span>Einstellungen</span>
-  </button>
-  <button class="header-btn" id="logoutBtn">
-    <i data-lucide="log-out"></i>
-    <span>Logout</span>
-  </button>
-</header>
+<div class="content">
+  <!-- Widgets -->
+  <div class="widgets" id="widgets"></div>
 
-<!-- Main Container -->
+  <!-- Apps -->
 
-<div class="container">
-  <!-- Greeting -->
-  <div class="greeting-section">
-    <div class="greeting" id="greeting">Servus!</div>
-    <div class="user-info">
-      <i data-lucide="user"></i>
-      <span id="userName">—</span>
-      <span>•</span>
-      <span id="userRole">—</span>
-    </div>
-  </div>
+  <div class="apps" id="apps"></div>
+</div>
 
-  <!-- Hub Layout -->
+<!-- Dock -->
 
-  <div class="hub-layout">
-    <!-- Main Content -->
-    <div>
-      <!-- Widgets -->
-      <div class="widgets" id="widgets">
-        <!-- Widgets werden dynamisch geladen -->
+<div class="dock" id="dock"></div>
+
+<!-- Edit Section -->
+
+<div class="edit-section">
+  <div class="edit-title">Hub bearbeiten</div>
+  <div class="edit-options">
+    <button class="edit-btn" id="editAppsBtn">
+      <div class="edit-btn-left">
+        <div class="edit-icon">
+          <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+        </div>
+        <span>Apps verwalten</span>
       </div>
+      <span class="edit-arrow">›</span>
+    </button>
 
 ```
-  <!-- Apps Section -->
-  <div class="apps-section">
-    <div class="section-title">
-      <i data-lucide="grid-3x3"></i>
-      <span>Meine Apps</span>
+<button class="edit-btn" id="editWidgetsBtn">
+  <div class="edit-btn-left">
+    <div class="edit-icon">
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
     </div>
-    <div class="apps-grid" id="appsGrid">
-      <!-- Apps werden dynamisch geladen -->
+    <span>Widgets anpassen</span>
+  </div>
+  <span class="edit-arrow">›</span>
+</button>
+
+<button class="edit-btn" id="logoutBtn">
+  <div class="edit-btn-left">
+    <div class="edit-icon">
+      <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg>
     </div>
+    <span>Abmelden</span>
+  </div>
+  <span class="edit-arrow">›</span>
+</button>
+```
+
   </div>
 </div>
 
-<!-- Sidebar -->
-<div class="sidebar">
-  <!-- Available Apps -->
-  <div class="sidebar-card">
-    <div class="sidebar-title">
-      <i data-lucide="plus-circle"></i>
-      <span>Verfügbare Apps</span>
-    </div>
-    <div class="available-apps" id="availableApps">
-      <!-- Verfügbare Apps werden dynamisch geladen -->
-    </div>
-    <button class="toggle-edit" id="toggleEdit">Apps bearbeiten</button>
-  </div>
+<!-- Apps Modal -->
 
-  <!-- Quick Actions -->
-  <div class="sidebar-card">
-    <div class="sidebar-title">
-      <i data-lucide="zap"></i>
-      <span>Schnellzugriff</span>
+<div class="modal" id="appsModal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <div class="modal-title">Apps verwalten</div>
+      <button class="modal-close" onclick="closeModal('appsModal')">×</button>
     </div>
-    <div class="quick-actions">
-      <a href="chat.html" class="quick-action">
-        <i data-lucide="message-circle"></i>
-        <span>Zum Chat</span>
-      </a>
-      <a href="lernbar.html" class="quick-action" id="quickLernbar" style="display:none">
-        <i data-lucide="graduation-cap"></i>
-        <span>Zur Lernbar</span>
-      </a>
-    </div>
+    <div class="available-grid" id="availableApps"></div>
   </div>
 </div>
-```
 
+<!-- Widgets Modal -->
+
+<div class="modal" id="widgetsModal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <div class="modal-title">Widgets anpassen</div>
+      <button class="modal-close" onclick="closeModal('widgetsModal')">×</button>
+    </div>
+    <div class="widget-options">
+      <div class="widget-option">
+        <div class="widget-option-title">Datum & Uhrzeit</div>
+        <div class="widget-option-desc">Zeigt aktuelles Datum und Wochentag</div>
+      </div>
+      <div class="widget-option">
+        <div class="widget-option-title">Apps-Übersicht</div>
+        <div class="widget-option-desc">Anzahl installierter Apps</div>
+      </div>
+    </div>
   </div>
 </div>
 
 <script type="module">
   import PocketBase from 'https://cdn.jsdelivr.net/npm/pocketbase@0.21.3/dist/pocketbase.es.mjs';
-
   const pb = new PocketBase('https://api.responda.systems');
 
-  // ===== APP DEFINITIONS =====
+  // Icons
+  const ICONS = {
+    siren: '<svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5M2 12l10 5 10-5"/></svg>',
+    clipboard: '<svg viewBox="0 0 24 24"><rect x="8" y="2" width="8" height="4" rx="1"/><rect x="4" y="4" width="16" height="18" rx="2"/></svg>',
+    file: '<svg viewBox="0 0 24 24"><path d="M13 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V9l-7-7z"/><path d="M13 2v7h7"/></svg>',
+    package: '<svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5M2 12l10 5 10-5"/></svg>',
+    check: '<svg viewBox="0 0 24 24"><rect x="8" y="2" width="8" height="4" rx="1"/><rect x="4" y="4" width="16" height="18" rx="2"/><path d="M9 11l3 3 6-6"/></svg>',
+    folder: '<svg viewBox="0 0 24 24"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>',
+    qrcode: '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="3" height="3"/><rect x="18" y="14" width="3" height="3"/><rect x="14" y="18" width="3" height="3"/><rect x="18" y="18" width="3" height="3"/></svg>',
+    graduation: '<svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5M22 12v5M6 10v8c0 2 4 4 6 4s6-2 6-4v-8"/></svg>',
+    book: '<svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>',
+    chat: '<svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>',
+    dashboard: '<svg viewBox="0 0 24 24"><path d="M3 3h7v9H3zM14 3h7v5h-7zM14 12h7v9h-7zM3 16h7v5H3z"/></svg>',
+  };
+
+  // Apps
   const ALL_APPS = {
-    einsaetze: {
-      id: 'einsaetze',
-      name: 'Einsätze',
-      icon: 'siren',
-      url: 'einsaetze.html',
-      description: 'Einsätze verwalten',
-      permission: 'einsaetze'
-    },
-    patienten: {
-      id: 'patienten',
-      name: 'Patienten',
-      icon: 'clipboard-list',
-      url: 'patientendokumentation-dateien.html',
-      description: 'Patientendokumentation',
-      permission: 'patienten'
-    },
-    dokumente: {
-      id: 'dokumente',
-      name: 'Vorgänge',
-      icon: 'file-text',
-      url: 'dokumente-bearbeiten.html',
-      description: 'Vorgänge bearbeiten',
-      permission: 'dokumente'
-    },
-    lager: {
-      id: 'lager',
-      name: 'Lager',
-      icon: 'package',
-      url: 'lagerverwaltung.html',
-      description: 'Lagerverwaltung',
-      permission: 'lager'
-    },
-    produktausgabe: {
-      id: 'produktausgabe',
-      name: 'Ausgabe',
-      icon: 'clipboard-check',
-      url: 'produktausgabe.html',
-      description: 'Produktausgabe',
-      permission: 'produktausgabe'
-    },
-    dateien: {
-      id: 'dateien',
-      name: 'Dateien',
-      icon: 'folder',
-      url: 'dateien.html',
-      description: 'Dateien verwalten',
-      permission: 'dateien'
-    },
-    qr: {
-      id: 'qr',
-      name: 'QR-Codes',
-      icon: 'qr-code',
-      url: 'qr-code-generator.html',
-      description: 'QR-Code Generator',
-      permission: 'qr'
-    },
-    lernbar: {
-      id: 'lernbar',
-      name: 'Lernbar',
-      icon: 'graduation-cap',
-      url: 'lernbar.html',
-      description: 'Lernplattform',
-      permission: 'lernbar'
-    },
-    ausbildungen: {
-      id: 'ausbildungen',
-      name: 'Ausbildungen',
-      icon: 'book-open',
-      url: 'ausbildungen.html',
-      description: 'Ausbildungen verwalten',
-      permission: 'ausbildungen_manage'
-    },
-    chat: {
-      id: 'chat',
-      name: 'Chat',
-      icon: 'message-circle',
-      url: 'chat.html',
-      description: 'Team-Chat',
-      permission: 'chat'
-    },
-    dashboard: {
-      id: 'dashboard',
-      name: 'Dashboard',
-      icon: 'bar-chart-2',
-      url: 'mpg-dashboard.html',
-      description: 'MPG-Dashboard',
-      permission: 'dashboard'
-    }
+    einsaetze: { id: 'einsaetze', name: 'Einsätze', icon: 'siren', url: 'einsaetze.html', permission: 'einsaetze' },
+    patienten: { id: 'patienten', name: 'Patienten', icon: 'clipboard', url: 'patientendokumentation-dateien.html', permission: 'patienten' },
+    dokumente: { id: 'dokumente', name: 'Vorgänge', icon: 'file', url: 'dokumente-bearbeiten.html', permission: 'dokumente' },
+    lager: { id: 'lager', name: 'Lager', icon: 'package', url: 'lagerverwaltung.html', permission: 'lager' },
+    produktausgabe: { id: 'produktausgabe', name: 'Ausgabe', icon: 'check', url: 'produktausgabe.html', permission: 'produktausgabe' },
+    dateien: { id: 'dateien', name: 'Dateien', icon: 'folder', url: 'dateien.html', permission: 'dateien' },
+    qr: { id: 'qr', name: 'QR-Codes', icon: 'qrcode', url: 'qr-code-generator.html', permission: 'qr' },
+    lernbar: { id: 'lernbar', name: 'Lernbar', icon: 'graduation', url: 'lernbar.html', permission: 'lernbar' },
+    ausbildungen: { id: 'ausbildungen', name: 'Ausbildungen', icon: 'book', url: 'ausbildungen.html', permission: 'ausbildungen_manage' },
+    dashboard: { id: 'dashboard', name: 'Dashboard', icon: 'dashboard', url: 'mpg-dashboard.html', permission: 'dashboard' }
   };
 
-  const ROLE_TEMPLATES = {
-    mpg: {
-      label: 'MPG-Beauftragter',
-      icon: 'crown',
-      permissions: {
-        dashboard: true,
-        einsaetze: true,
-        lager: true,
-        produktausgabe: true,
-        lernbar: true,
-        ausbildungen_manage: true,
-        dokumente: true,
-        patienten: true,
-        dateien: true,
-        qr: true,
-        chat: true,
-        users_manage: true
-      }
-    },
-    lager: {
-      label: 'Lagerverwaltung',
-      icon: 'package',
-      permissions: {
-        dashboard: true,
-        lager: true,
-        produktausgabe: true,
-        dateien: true,
-        qr: true,
-        chat: true
-      }
-    },
-    ausbildung: {
-      label: 'Ausbildungen',
-      icon: 'graduation-cap',
-      permissions: {
-        dashboard: true,
-        einsaetze: true,
-        lernbar: true,
-        ausbildungen_manage: true,
-        patienten: true,
-        dateien: true,
-        qr: true,
-        chat: true
-      }
-    },
-    qm: {
-      label: 'Qualitätsmanagement',
-      icon: 'clipboard-check',
-      permissions: {
-        dashboard: true,
-        dokumente: true,
-        dateien: true,
-        qr: true,
-        chat: true
-      }
-    },
-    benutzer: {
-      label: 'Benutzer',
-      icon: 'user',
-      permissions: {
-        dashboard: true,
-        lernbar: true,
-        chat: true
-      }
-    }
+  const ROLES = {
+    mpg: { permissions: { dashboard: true, einsaetze: true, lager: true, produktausgabe: true, lernbar: true, ausbildungen_manage: true, dokumente: true, patienten: true, dateien: true, qr: true, chat: true } },
+    lager: { permissions: { dashboard: true, lager: true, produktausgabe: true, dateien: true, qr: true, chat: true } },
+    ausbildung: { permissions: { dashboard: true, einsaetze: true, lernbar: true, ausbildungen_manage: true, patienten: true, dateien: true, qr: true, chat: true } },
+    qm: { permissions: { dashboard: true, dokumente: true, dateien: true, qr: true, chat: true } },
+    benutzer: { permissions: { dashboard: true, lernbar: true, chat: true } }
   };
 
-  // ===== STATE =====
-  let user = null;
-  let userApps = [];
-  let availableApps = [];
-  let isEditMode = false;
+  let user, userApps = [], dockApps = ['chat', 'dashboard'], availableApps = [], editMode = false;
 
-  // ===== AUTH =====
-  async function initAuth() {
-    if (!pb.authStore.isValid) {
-      window.location.href = 'mpg-login.html';
-      return;
-    }
-
+  async function init() {
+    if (!pb.authStore.isValid) return window.location.href = 'mpg-login.html';
     try {
       await pb.collection('users').authRefresh();
       user = pb.authStore.model;
-
-      if (!user) {
-        window.location.href = 'mpg-login.html';
-        return;
-      }
-
-      console.log('👤 User loaded:', user);
+      if (!user) return window.location.href = 'mpg-login.html';
       
       document.body.classList.add('loaded');
-      document.body.classList.remove('loading');
+      updateTime();
+      setInterval(updateTime, 60000);
       
-      await initHub();
-    } catch (error) {
-      console.error('Auth error:', error);
+      document.getElementById('userName').textContent = user.name || user.email.split('@')[0];
+      
+      loadPrefs();
+      render();
+    } catch (e) {
       pb.authStore.clear();
       window.location.href = 'mpg-login.html';
     }
   }
 
-  // ===== HUB INIT =====
-  async function initHub() {
-    setGreeting();
-    updateUserInfo();
-    loadUserPreferences();
-    renderWidgets();
-    renderApps();
-    renderAvailableApps();
-    
-    // Quick action visibility
-    if (hasPermission('lernbar')) {
-      document.getElementById('quickLernbar').style.display = 'flex';
-    }
+  function updateTime() {
+    const now = new Date();
+    document.getElementById('time').textContent = 
+      `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
   }
 
-  // ===== GREETING =====
-  function setGreeting() {
-    const hour = new Date().getHours();
-    const greetingEl = document.getElementById('greeting');
-
-    if (hour >= 5 && hour < 10) {
-      greetingEl.textContent = 'Guten Morgen!';
-    } else if (hour >= 10 && hour < 12) {
-      greetingEl.textContent = 'Servus!';
-    } else if (hour >= 12 && hour < 18) {
-      greetingEl.textContent = 'Mahlzeit!';
-    } else if (hour >= 18 && hour < 22) {
-      greetingEl.textContent = 'Guten Abend!';
-    } else {
-      greetingEl.textContent = 'Noch wach?';
-    }
-  }
-
-  // ===== USER INFO =====
-  function updateUserInfo() {
-    const userName = user.name || user.email;
-    const userRole = user.role || 'benutzer';
-    const roleInfo = ROLE_TEMPLATES[userRole];
-
-    document.getElementById('userName').textContent = userName;
-    
-    // Create icon element for role
-    const roleEl = document.getElementById('userRole');
-    roleEl.innerHTML = `<i data-lucide="${roleInfo.icon}" style="width:14px;height:14px;display:inline-block;vertical-align:middle;margin-right:4px;"></i>${roleInfo.label}`;
-    
-    // Initialize the new icon
-    if (window.lucide) {
-      lucide.createIcons();
-    }
-  }
-
-  // ===== PERMISSIONS =====
-  function hasPermission(permission) {
+  function hasPermission(perm) {
     if (user.supervisor) return true;
-    
-    const permissions = user.permissions || {};
-    const userRole = user.role || 'benutzer';
-    const roleTemplate = ROLE_TEMPLATES[userRole];
-
-    if (permissions[permission] === true) return true;
-    if (roleTemplate && roleTemplate.permissions[permission] === true) return true;
-    if (permission === 'lernbar' && user.lernbar_access) return true;
-
+    const perms = user.permissions || {};
+    const role = ROLES[user.role || 'benutzer'];
+    if (perms[perm]) return true;
+    if (role?.permissions[perm]) return true;
+    if (perm === 'lernbar' && user.lernbar_access) return true;
     return false;
   }
 
-  // ===== USER PREFERENCES =====
-  function loadUserPreferences() {
-    const savedApps = localStorage.getItem(`hub_apps_${user.id}`);
+  function loadPrefs() {
+    const saved = localStorage.getItem(`hub_apps_${user.id}`);
+    userApps = saved ? JSON.parse(saved) : Object.keys(ALL_APPS).filter(id => {
+      const app = ALL_APPS[id];
+      return hasPermission(app.permission) && !dockApps.includes(id);
+    });
     
-    if (savedApps) {
-      userApps = JSON.parse(savedApps);
-    } else {
-      // Default apps based on permissions
-      userApps = Object.keys(ALL_APPS).filter(appId => {
-        const app = ALL_APPS[appId];
-        return hasPermission(app.permission);
-      });
-    }
-
-    // Get available apps (has permission but not added to hub)
-    availableApps = Object.keys(ALL_APPS).filter(appId => {
-      const app = ALL_APPS[appId];
-      return hasPermission(app.permission) && !userApps.includes(appId);
+    availableApps = Object.keys(ALL_APPS).filter(id => {
+      const app = ALL_APPS[id];
+      return hasPermission(app.permission) && !userApps.includes(id) && !dockApps.includes(id);
     });
   }
 
-  function saveUserPreferences() {
+  function savePrefs() {
     localStorage.setItem(`hub_apps_${user.id}`, JSON.stringify(userApps));
   }
 
-  // ===== WIDGETS =====
-  function renderWidgets() {
-    const widgetsContainer = document.getElementById('widgets');
-    
-    const widgets = [
-      {
-        icon: 'grid-3x3',
-        title: 'Meine Apps',
-        value: userApps.length,
-        label: 'Apps verfügbar'
-      },
-      {
-        icon: 'calendar',
-        title: 'Heute',
-        value: new Date().toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' }),
-        label: new Date().toLocaleDateString('de-DE', { weekday: 'long' })
-      },
-      {
-        icon: 'check-circle',
-        title: 'Status',
-        value: '✓',
-        label: 'Alles bereit'
-      }
-    ];
-
-    widgetsContainer.innerHTML = widgets.map(widget => `
-      <div class="widget">
-        <div class="widget-header">
-          <div class="widget-icon">
-            <i data-lucide="${widget.icon}"></i>
-          </div>
-          <div class="widget-title">${widget.title}</div>
-        </div>
-        <div class="widget-value">${widget.value}</div>
-        <div class="widget-label">${widget.label}</div>
-      </div>
-    `).join('');
-    
-    // Initialize icons
-    if (window.lucide) {
-      lucide.createIcons();
-    }
+  function render() {
+    renderWidgets();
+    renderApps();
+    renderDock();
+    renderAvailable();
   }
 
-  // ===== APPS RENDERING =====
+  function renderWidgets() {
+    const today = new Date();
+    document.getElementById('widgets').innerHTML = `
+      <div class="widget">
+        <div class="widget-title">Heute</div>
+        <div class="widget-value">${today.getDate()}</div>
+        <div class="widget-label">${today.toLocaleDateString('de-DE', { weekday: 'long' })}</div>
+      </div>
+      <div class="widget">
+        <div class="widget-title">Apps</div>
+        <div class="widget-value">${userApps.length + dockApps.length}</div>
+        <div class="widget-label">Installiert</div>
+      </div>
+    `;
+  }
+
   function renderApps() {
-    const appsGrid = document.getElementById('appsGrid');
-
-    if (userApps.length === 0) {
-      appsGrid.innerHTML = `
-        <div class="empty-state" style="grid-column: 1 / -1;">
-          <i data-lucide="grid-3x3" class="empty-icon"></i>
-          <div class="empty-state-text">Keine Apps hinzugefügt</div>
-          <div class="empty-state-hint">
-            Füge Apps über die Seitenleiste hinzu →
-          </div>
-        </div>
-      `;
-      
-      if (window.lucide) {
-        lucide.createIcons();
-      }
-      return;
-    }
-
-    appsGrid.innerHTML = userApps.map(appId => {
-      const app = ALL_APPS[appId];
+    document.getElementById('apps').innerHTML = userApps.map(id => {
+      const app = ALL_APPS[id];
       if (!app) return '';
-
       return `
-        <a href="${app.url}" class="app-card" data-app="${app.id}">
-          <button class="remove-btn" onclick="removeApp(event, '${app.id}')">×</button>
-          <div class="app-icon-wrapper">
-            <i data-lucide="${app.icon}"></i>
-          </div>
+        <a href="${app.url}" class="app">
+          <div class="remove-btn" onclick="removeApp(event, '${id}')">−</div>
+          <div class="app-icon">${ICONS[app.icon]}</div>
           <div class="app-name">${app.name}</div>
         </a>
       `;
     }).join('');
-    
-    // Initialize icons
-    if (window.lucide) {
-      lucide.createIcons();
-    }
   }
 
-  // ===== AVAILABLE APPS =====
-  function renderAvailableApps() {
-    const availableContainer = document.getElementById('availableApps');
-
-    if (availableApps.length === 0) {
-      availableContainer.innerHTML = `
-        <div style="text-align: center; color: #999; font-size: 13px; padding: 12px;">
-          Alle verfügbaren Apps sind bereits hinzugefügt
-        </div>
-      `;
-      return;
-    }
-
-    availableContainer.innerHTML = availableApps.map(appId => {
-      const app = ALL_APPS[appId];
-      if (!app) return '';
-
-      return `
-        <div class="available-app" onclick="addApp('${app.id}')">
-          <div class="available-app-icon">
-            <i data-lucide="${app.icon}"></i>
-          </div>
-          <div class="available-app-info">
-            <div class="available-app-name">${app.name}</div>
-            <div class="available-app-desc">${app.description}</div>
-          </div>
-          <button class="add-btn">+</button>
-        </div>
-      `;
+  function renderDock() {
+    document.getElementById('dock').innerHTML = dockApps.map(id => {
+      const app = ALL_APPS[id];
+      return app ? `<a href="${app.url}" class="dock-icon">${ICONS[app.icon]}</a>` : '';
     }).join('');
-    
-    // Initialize icons
-    if (window.lucide) {
-      lucide.createIcons();
-    }
   }
 
-  // ===== ADD APP =====
-  window.addApp = function(appId) {
-    if (userApps.includes(appId)) return;
+  function renderAvailable() {
+    document.getElementById('availableApps').innerHTML = availableApps.length ? availableApps.map(id => {
+      const app = ALL_APPS[id];
+      if (!app) return '';
+      return `
+        <div class="available-app" onclick="addApp('${id}')">
+          <div class="available-icon">${ICONS[app.icon]}</div>
+          <div class="available-name">${app.name}</div>
+        </div>
+      `;
+    }).join('') : '<p style="text-align:center;color:#999;padding:40px">Alle Apps hinzugefügt</p>';
+  }
 
-    userApps.push(appId);
-    availableApps = availableApps.filter(id => id !== appId);
-
-    saveUserPreferences();
-    renderApps();
-    renderAvailableApps();
-    renderWidgets();
+  window.addApp = function(id) {
+    if (userApps.includes(id)) return;
+    userApps.push(id);
+    availableApps = availableApps.filter(x => x !== id);
+    savePrefs();
+    render();
   };
 
-  // ===== REMOVE APP =====
-  window.removeApp = function(event, appId) {
-    event.preventDefault();
-    event.stopPropagation();
-
-    if (!isEditMode) return;
-
-    userApps = userApps.filter(id => id !== appId);
-    availableApps.push(appId);
-
-    saveUserPreferences();
-    renderApps();
-    renderAvailableApps();
-    renderWidgets();
+  window.removeApp = function(e, id) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!editMode) return;
+    userApps = userApps.filter(x => x !== id);
+    availableApps.push(id);
+    savePrefs();
+    render();
   };
 
-  // ===== EDIT MODE =====
-  document.getElementById('toggleEdit').addEventListener('click', () => {
-    isEditMode = !isEditMode;
-    const appsGrid = document.getElementById('appsGrid');
-    const toggleBtn = document.getElementById('toggleEdit');
-
-    if (isEditMode) {
-      appsGrid.classList.add('remove-mode');
-      toggleBtn.classList.add('active');
-      toggleBtn.textContent = '✓ Fertig';
-    } else {
-      appsGrid.classList.remove('remove-mode');
-      toggleBtn.classList.remove('active');
-      toggleBtn.textContent = 'Apps bearbeiten';
+  window.closeModal = function(id) {
+    document.getElementById(id).classList.remove('show');
+    if (id === 'appsModal') {
+      editMode = false;
+      document.querySelector('.content').classList.remove('edit-mode');
     }
-  });
+  };
 
-  // ===== LOGOUT =====
-  document.getElementById('logoutBtn').addEventListener('click', () => {
-    pb.authStore.clear();
-    localStorage.clear();
-    window.location.href = 'mpg-login.html';
-  });
+  document.getElementById('editAppsBtn').onclick = () => {
+    editMode = true;
+    document.querySelector('.content').classList.add('edit-mode');
+    document.getElementById('appsModal').classList.add('show');
+  };
 
-  // ===== SETTINGS =====
-  document.getElementById('settingsBtn').addEventListener('click', () => {
-    window.location.href = 'mpg-dashboard.html';
-  });
+  document.getElementById('editWidgetsBtn').onclick = () => {
+    document.getElementById('widgetsModal').classList.add('show');
+  };
 
-  // ===== INIT =====
-  initAuth().then(() => {
-    // Initialize Lucide icons after DOM is ready
-    if (window.lucide) {
-      lucide.createIcons();
+  document.getElementById('logoutBtn').onclick = () => {
+    if (confirm('Wirklich abmelden?')) {
+      pb.authStore.clear();
+      localStorage.clear();
+      window.location.href = 'mpg-login.html';
     }
+  };
+
+  // Close modals on background click
+  document.querySelectorAll('.modal').forEach(modal => {
+    modal.onclick = (e) => {
+      if (e.target === modal) closeModal(modal.id);
+    };
   });
+
+  init();
 </script>
 
 </body>
