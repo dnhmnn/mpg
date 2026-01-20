@@ -641,6 +641,7 @@
   <button class="settings-tab active" onclick="showSettingsTab('profile')">Profil</button>
   <button class="settings-tab" onclick="showSettingsTab('password')">Passwort</button>
   <button class="settings-tab" onclick="showSettingsTab('users')" id="usersTabBtn" style="display:none;">Benutzer</button>
+  <button class="settings-tab" onclick="showSettingsTab('license')" id="licenseTabBtn" style="display:none;">Lizenz</button>
 </div>
 
 <!-- Profile Tab -->
@@ -681,10 +682,111 @@
 
 <!-- Users Tab -->
 <div class="settings-content" id="settings-users">
-  <button class="btn" onclick="alert('Benutzerverwaltung kommt bald!')" style="margin-bottom:16px; width:100%;">+ Neuen Benutzer anlegen</button>
-  <div style="background:#f8f8f8; padding:20px; border-radius:12px; text-align:center; color:#666;">
-    Benutzerverwaltung wird hier integriert
+  <button class="btn" onclick="openUserModal()" style="margin-bottom:16px; width:100%;">+ Neuen Benutzer anlegen</button>
+  
+  <div style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+    <table style="width:100%; border-collapse: collapse; min-width: 600px;">
+      <thead>
+        <tr style="background:#f8f8f8;">
+          <th style="padding:12px; text-align:left; font-weight:600; color:#1a1a1a; border-bottom:2px solid #e0e0e0;">Name</th>
+          <th style="padding:12px; text-align:left; font-weight:600; color:#1a1a1a; border-bottom:2px solid #e0e0e0;">E-Mail</th>
+          <th style="padding:12px; text-align:left; font-weight:600; color:#1a1a1a; border-bottom:2px solid #e0e0e0;">Rolle</th>
+          <th style="padding:12px; text-align:left; font-weight:600; color:#1a1a1a; border-bottom:2px solid #e0e0e0;">Aktionen</th>
+        </tr>
+      </thead>
+      <tbody id="usersTableBody">
+        <tr>
+          <td colspan="4" style="text-align:center; padding:40px; color:#999;">Lade Benutzer...</td>
+        </tr>
+      </tbody>
+    </table>
   </div>
+</div>
+
+<!-- License Tab -->
+<div class="settings-content" id="settings-license">
+  <div style="background:linear-gradient(135deg, #16a34a, #15803d); border-radius:16px; padding:24px; color:#fff; margin-bottom:20px;">
+    <h3 style="margin:0 0 20px 0; font-size:20px;">✓ Aktive Lizenz</h3>
+    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:16px;">
+      <div>
+        <div style="font-size:12px; opacity:0.8; margin-bottom:4px;">Organisation</div>
+        <div style="font-weight:700; font-size:18px;" id="licenseOrg">—</div>
+      </div>
+      <div>
+        <div style="font-size:12px; opacity:0.8; margin-bottom:4px;">Lizenztyp</div>
+        <div style="font-weight:700; font-size:18px;" id="licenseType">—</div>
+      </div>
+      <div>
+        <div style="font-size:12px; opacity:0.8; margin-bottom:4px;">Max. Benutzer</div>
+        <div style="font-weight:700; font-size:18px;" id="licenseMaxUsers">—</div>
+      </div>
+      <div>
+        <div style="font-size:12px; opacity:0.8; margin-bottom:4px;">Aktuelle Benutzer</div>
+        <div style="font-weight:700; font-size:18px;" id="licenseCurrentUsers">—</div>
+      </div>
+      <div>
+        <div style="font-size:12px; opacity:0.8; margin-bottom:4px;">Gültig bis</div>
+        <div style="font-weight:700; font-size:18px;" id="licenseExpiry">—</div>
+      </div>
+      <div>
+        <div style="font-size:12px; opacity:0.8; margin-bottom:4px;">Status</div>
+        <div style="font-weight:700; font-size:18px;" id="licenseStatus">✓ Aktiv</div>
+      </div>
+    </div>
+  </div>
+  
+  <div style="background:#f8f8f8; border-radius:12px; padding:20px;">
+    <strong style="color:#1a1a1a;">📞 Support kontaktieren</strong><br>
+    <span style="color:#666; font-size:14px;">Bei Fragen zur Lizenz kontaktieren Sie uns unter:<br><strong>support@responda.systems</strong></span>
+  </div>
+</div>
+```
+
+  </div>
+</div>
+
+<!-- User Modal -->
+
+<div class="modal" id="userModal">
+  <div class="modal-content" style="max-height: 80vh;">
+    <div class="modal-header">
+      <div class="modal-title" id="userModalTitle">Neuen Benutzer anlegen</div>
+      <button class="modal-close" onclick="closeModal('userModal')">×</button>
+    </div>
+
+```
+<div class="field">
+  <label>E-Mail *</label>
+  <input type="email" id="userEmail" placeholder="benutzer@example.com" required>
+</div>
+
+<div class="field">
+  <label>Name *</label>
+  <input type="text" id="userName" placeholder="Max Mustermann" required>
+</div>
+
+<div class="field">
+  <label>Telefon</label>
+  <input type="tel" id="userPhone" placeholder="+49 123 456789">
+</div>
+
+<div class="field">
+  <label>Rolle *</label>
+  <select id="userRole" required>
+    <option value="">-- Bitte wählen --</option>
+    <option value="mpg">👑 MPG-Beauftragter</option>
+    <option value="lager">📦 Lagerverwaltung</option>
+    <option value="ausbildung">🎓 Ausbildungen</option>
+    <option value="qm">📋 Qualitätsmanagement</option>
+    <option value="benutzer">👤 Benutzer</option>
+  </select>
+</div>
+
+<div id="userMsg" style="margin:12px 0; font-size:14px;"></div>
+
+<div style="display:flex; gap:8px; margin-top:20px;">
+  <button class="btn" onclick="closeModal('userModal')" style="background:#e0e0e0; color:#666; flex:1;">Abbrechen</button>
+  <button class="btn" onclick="saveUser()" style="flex:1;" id="saveUserBtn">Speichern</button>
 </div>
 ```
 
@@ -935,6 +1037,7 @@
     // Show users tab only for supervisors/mpg
     if (user.supervisor || user.role === 'mpg') {
       document.getElementById('usersTabBtn').style.display = 'block';
+      document.getElementById('licenseTabBtn').style.display = 'block';
     }
   };
 
@@ -944,12 +1047,219 @@
     
     event.target.classList.add('active');
     document.getElementById(`settings-${tab}`).classList.add('active');
+    
+    // Load data when switching tabs
+    if (tab === 'users') loadUsers();
+    if (tab === 'license') loadLicense();
   };
 
   function loadProfileData() {
     document.getElementById('profileEmail').value = user.email;
     document.getElementById('profileName').value = user.name || '';
     document.getElementById('profilePhone').value = user.phone || '';
+  }
+
+  async function loadUsers() {
+    const tbody = document.getElementById('usersTableBody');
+    try {
+      const users = await pb.collection('users').getFullList({
+        filter: `organization_id = "${user.organization_id}"`,
+        sort: '-created'
+      });
+      
+      if (users.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:40px;color:#999;">Keine Benutzer</td></tr>';
+        return;
+      }
+      
+      tbody.innerHTML = users.map(u => {
+        const roleLabels = {
+          mpg: '👑 MPG',
+          lager: '📦 Lager',
+          ausbildung: '🎓 Ausbildung',
+          qm: '📋 QM',
+          benutzer: '👤 Benutzer'
+        };
+        const roleLabel = roleLabels[u.role] || '👤 Benutzer';
+        
+        return `
+          <tr style="border-bottom:1px solid #e0e0e0;">
+            <td style="padding:12px;">${escapeHtml(u.name || '—')}</td>
+            <td style="padding:12px;">${escapeHtml(u.email)}</td>
+            <td style="padding:12px;">${roleLabel}</td>
+            <td style="padding:12px;">
+              <button onclick="editUser('${u.id}')" style="background:#dbeafe; color:#1e40af; border:none; padding:6px 12px; border-radius:6px; cursor:pointer; margin-right:4px;">✏️</button>
+              ${u.id !== user.id ? `<button onclick="deleteUser('${u.id}', '${escapeHtml(u.name || u.email).replace(/'/g, "\\'")}')}" style="background:#fee2e2; color:#ef4444; border:none; padding:6px 12px; border-radius:6px; cursor:pointer;">🗑️</button>` : ''}
+            </td>
+          </tr>
+        `;
+      }).join('');
+    } catch (e) {
+      tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;padding:40px;color:#ef4444;">Fehler: ${e.message}</td></tr>`;
+    }
+  }
+
+  function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
+  let editingUserId = null;
+
+  window.openUserModal = function() {
+    editingUserId = null;
+    document.getElementById('userModalTitle').textContent = 'Neuen Benutzer anlegen';
+    document.getElementById('userEmail').value = '';
+    document.getElementById('userEmail').disabled = false;
+    document.getElementById('userName').value = '';
+    document.getElementById('userPhone').value = '';
+    document.getElementById('userRole').value = '';
+    document.getElementById('userMsg').textContent = '';
+    document.getElementById('saveUserBtn').textContent = 'Speichern';
+    document.getElementById('userModal').classList.add('show');
+  };
+
+  window.editUser = async function(userId) {
+    try {
+      const editUser = await pb.collection('users').getOne(userId);
+      editingUserId = userId;
+      
+      document.getElementById('userModalTitle').textContent = 'Benutzer bearbeiten';
+      document.getElementById('userEmail').value = editUser.email;
+      document.getElementById('userEmail').disabled = true;
+      document.getElementById('userName').value = editUser.name || '';
+      document.getElementById('userPhone').value = editUser.phone || '';
+      document.getElementById('userRole').value = editUser.role || 'benutzer';
+      document.getElementById('userMsg').textContent = '';
+      document.getElementById('saveUserBtn').textContent = 'Aktualisieren';
+      document.getElementById('userModal').classList.add('show');
+    } catch (e) {
+      alert('Fehler beim Laden: ' + e.message);
+    }
+  };
+
+  window.deleteUser = async function(userId, userName) {
+    if (!confirm(`Benutzer "${userName}" wirklich löschen?`)) return;
+    
+    try {
+      await pb.collection('users').delete(userId);
+      alert('✅ Benutzer gelöscht!');
+      loadUsers();
+    } catch (e) {
+      alert('❌ Fehler: ' + e.message);
+    }
+  };
+
+  window.saveUser = async function() {
+    const msg = document.getElementById('userMsg');
+    const saveBtn = document.getElementById('saveUserBtn');
+    
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Speichere...';
+    
+    try {
+      const email = document.getElementById('userEmail').value.trim();
+      const name = document.getElementById('userName').value.trim();
+      const phone = document.getElementById('userPhone').value.trim();
+      const role = document.getElementById('userRole').value;
+      
+      if (!email || !name || !role) {
+        msg.textContent = '❌ Bitte alle Pflichtfelder ausfüllen';
+        msg.style.color = '#ef4444';
+        saveBtn.disabled = false;
+        saveBtn.textContent = editingUserId ? 'Aktualisieren' : 'Speichern';
+        return;
+      }
+      
+      if (editingUserId) {
+        // Update existing user
+        await pb.collection('users').update(editingUserId, {
+          name,
+          phone: phone || '',
+          role
+        });
+        
+        msg.textContent = '✅ Benutzer aktualisiert!';
+        msg.style.color = '#16a34a';
+        
+        setTimeout(() => {
+          closeModal('userModal');
+          loadUsers();
+        }, 1500);
+      } else {
+        // Create new user
+        const tempPassword = Array.from({length: 16}, () => 
+          'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$%&*'[Math.floor(Math.random() * 66)]
+        ).join('');
+        
+        await pb.collection('users').create({
+          email,
+          emailVisibility: true,
+          password: tempPassword,
+          passwordConfirm: tempPassword,
+          name,
+          phone: phone || '',
+          role,
+          organization_id: user.organization_id,
+          supervisor: false,
+          verified: false,
+          permissions: {}
+        });
+        
+        // Send password reset email
+        try {
+          await pb.collection('users').requestPasswordReset(email);
+          msg.textContent = '✅ Benutzer angelegt! Passwort-E-Mail versendet.';
+        } catch (e) {
+          msg.textContent = '⚠️ Benutzer angelegt, aber E-Mail-Versand fehlgeschlagen.';
+        }
+        msg.style.color = '#16a34a';
+        
+        setTimeout(() => {
+          closeModal('userModal');
+          loadUsers();
+        }, 3000);
+      }
+    } catch (e) {
+      msg.textContent = '❌ Fehler: ' + e.message;
+      msg.style.color = '#ef4444';
+    } finally {
+      saveBtn.disabled = false;
+      saveBtn.textContent = editingUserId ? 'Aktualisieren' : 'Speichern';
+    }
+  };
+
+  async function loadLicense() {
+    try {
+      const org = await pb.collection('organizations').getOne(user.organization_id);
+      
+      document.getElementById('licenseOrg').textContent = org.org_name || '—';
+      document.getElementById('licenseType').textContent = (org.license_type || 'standard').charAt(0).toUpperCase() + (org.license_type || 'standard').slice(1);
+      document.getElementById('licenseMaxUsers').textContent = org.max_users || '—';
+      
+      if (org.license_valid_until) {
+        const validUntil = new Date(org.license_valid_until);
+        document.getElementById('licenseExpiry').textContent = validUntil.toLocaleDateString('de-DE');
+        
+        const now = new Date();
+        if (validUntil < now) {
+          document.getElementById('licenseStatus').textContent = '❌ Abgelaufen';
+        }
+      } else {
+        document.getElementById('licenseExpiry').textContent = 'Unbegrenzt';
+      }
+      
+      // Count users
+      const users = await pb.collection('users').getFullList({
+        filter: `organization_id = "${user.organization_id}"`
+      });
+      
+      document.getElementById('licenseCurrentUsers').textContent = users.length;
+      
+    } catch (e) {
+      console.error('Fehler beim Laden der Lizenz:', e);
+    }
   }
 
   window.saveProfile = async function() {
