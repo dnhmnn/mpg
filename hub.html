@@ -974,7 +974,21 @@
   }
 
   function renderAvailable() {
-    document.getElementById('availableApps').innerHTML = availableApps.length ? availableApps.map(id => {
+    const availableContainer = document.getElementById('availableApps');
+    
+    // Filter out settings from available apps
+    const appsToShow = availableApps.filter(id => id !== 'settings');
+    
+    if (appsToShow.length === 0) {
+      availableContainer.innerHTML = `
+        <div style="grid-column: 1 / -1; text-align: center; color: #999; padding: 40px 20px;">
+          Alle Apps sind bereits hinzugefügt
+        </div>
+      `;
+      return;
+    }
+
+    availableContainer.innerHTML = appsToShow.map(id => {
       const app = ALL_APPS[id];
       if (!app) return '';
       return `
@@ -983,7 +997,7 @@
           <div class="available-name">${app.name}</div>
         </div>
       `;
-    }).join('') : '<p style="text-align:center;color:#999;padding:40px">Alle Apps hinzugefügt</p>';
+    }).join('');
   }
 
   window.addApp = function(id) {
@@ -992,6 +1006,7 @@
     availableApps = availableApps.filter(x => x !== id);
     savePrefs();
     render();
+    renderAvailable();
   };
 
   window.removeApp = function(e, id) {
@@ -1005,9 +1020,12 @@
     }
     
     userApps = userApps.filter(x => x !== id);
-    availableApps.push(id);
+    if (!availableApps.includes(id)) {
+      availableApps.push(id);
+    }
     savePrefs();
     render();
+    renderAvailable();
   };
 
   window.closeModal = function(id) {
