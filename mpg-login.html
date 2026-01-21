@@ -13,14 +13,13 @@
     * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
     body { font-family: 'Inter', -apple-system, sans-serif; background: linear-gradient(135deg, #667eea 0%, #f97316 50%, #764ba2 100%); background-attachment: fixed; min-height: 100vh; -webkit-font-smoothing: antialiased; display: flex; align-items: center; justify-content: center; padding: max(20px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right)) max(20px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left)); }
 
-```
-.login-container { background: rgba(255, 255, 255, 0.25); backdrop-filter: blur(40px); -webkit-backdrop-filter: blur(40px); border-radius: 28px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3); max-width: 440px; width: 100%; animation: slideIn 0.4s ease-out; border: 0.5px solid rgba(255, 255, 255, 0.4); }
+.login-container { background: rgba(255, 255, 255, 0.2); backdrop-filter: blur(40px); -webkit-backdrop-filter: blur(40px); border-radius: 28px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3); max-width: 440px; width: 100%; overflow: hidden; animation: slideIn 0.4s ease-out; border: 0.5px solid rgba(255, 255, 255, 0.3); }
 @keyframes slideIn { from { opacity: 0; transform: translateY(-30px); } to { opacity: 1; transform: translateY(0); } }
 
 .login-header { padding: 48px 32px 32px; text-align: center; }
 .logo-container { margin-bottom: 24px; display: flex; justify-content: center; }
-.login-header h1 { font-size: 28px; font-weight: 700; margin-bottom: 8px; color: #fff; text-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-.login-header p { font-size: 15px; color: rgba(255, 255, 255, 0.95); }
+.login-header h1 { font-size: 28px; font-weight: 700; margin-bottom: 8px; color: #fff; }
+.login-header p { font-size: 15px; color: rgba(255, 255, 255, 0.9); }
 
 .login-body { padding: 0 32px 40px; }
 .form-group { margin-bottom: 20px; }
@@ -28,9 +27,9 @@
 .form-group input { width: 100%; padding: 14px 16px; border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 12px; font-size: 16px; font-family: inherit; transition: all 0.2s; background: rgba(255, 255, 255, 0.95); color: #1a1a1a; }
 .form-group input:focus { outline: none; border-color: #fff; box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.2); background: #fff; }
 .form-group input::placeholder { color: #9ca3af; }
-.form-group small { display: block; color: rgba(255, 255, 255, 0.9); font-size: 13px; margin-top: 6px; }
+.form-group small { display: block; color: rgba(255, 255, 255, 0.8); font-size: 13px; margin-top: 6px; }
 
-.org-info { background: rgba(255, 255, 255, 0.2); border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 12px; padding: 16px; margin-bottom: 20px; display: none; }
+.org-info { background: rgba(255, 255, 255, 0.15); border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 12px; padding: 16px; margin-bottom: 20px; display: none; }
 .org-info.show { display: block; }
 .org-info strong { color: #fff; display: block; margin-bottom: 8px; font-size: 15px; font-weight: 700; }
 .org-detail { color: #fff; font-size: 14px; font-weight: 600; }
@@ -41,8 +40,8 @@
 .btn:active { transform: scale(0.98); background: #fff; }
 .btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-.btn.secondary { background: rgba(255, 255, 255, 0.25); color: #fff; border: 1px solid rgba(255, 255, 255, 0.3); }
-.btn.secondary:active { background: rgba(255, 255, 255, 0.35); }
+.btn.secondary { background: rgba(255, 255, 255, 0.2); color: #fff; border: 1px solid rgba(255, 255, 255, 0.3); }
+.btn.secondary:active { background: rgba(255, 255, 255, 0.3); }
 
 .forgot-password { text-align: center; margin-top: 16px; }
 .forgot-password button { background: none; border: none; color: #fff; text-decoration: underline; cursor: pointer; font-size: 14px; font-weight: 600; opacity: 0.9; font-family: inherit; }
