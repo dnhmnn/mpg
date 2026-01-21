@@ -886,6 +886,7 @@
           const org = await pb.collection('organizations').getOne(user.organization_id);
           user.organization_name = org.org_name;
           user.organization_logo = org.logo || '🏢';
+          user.organization = org; // Store complete org for file URL
         } catch (e) {
           console.log('Could not load organization:', e);
         }
@@ -951,12 +952,18 @@
     
     // Get organization info
     const orgName = user.organization_name || 'Responda';
-    const orgLogo = user.organization_logo || '🏢';
+    const orgLogoFile = user.organization_logo || '';
     
-    // Check if orgLogo is a file URL or emoji
-    const logoDisplay = orgLogo.includes('http') || orgLogo.includes('/api/files/') 
-      ? `<img src="${orgLogo}" alt="${orgName}" style="width:80px; height:80px; object-fit:contain; border-radius:12px;">`
-      : `<div style="font-size:80px; line-height:1;">${orgLogo}</div>`;
+    // Generate proper PocketBase file URL if logo exists
+    let logoDisplay;
+    if (orgLogoFile && user.organization && orgLogoFile !== '🏢') {
+      // Build PocketBase file URL
+      const logoUrl = pb.files.getUrl(user.organization, orgLogoFile, { thumb: '500x500' });
+      logoDisplay = `<img src="${logoUrl}" alt="${orgName}" style="width:80px; height:80px; object-fit:contain; border-radius:12px;">`;
+    } else {
+      // Fallback to emoji
+      logoDisplay = `<div style="font-size:80px; line-height:1;">🏢</div>`;
+    }
     
     document.getElementById('widgets').innerHTML = `
       <div class="widget">
