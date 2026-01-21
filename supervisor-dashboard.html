@@ -244,6 +244,10 @@
       background: #fff;
     }
     
+    input::placeholder, textarea::placeholder {
+      color: #9ca3af;
+    }
+    
     /* Table */
     .table-container {
       overflow-x: auto;
@@ -296,6 +300,10 @@
     .badge-basic { background: #dbeafe; color: #1e40af; }
     .badge-professional { background: #e2d9f3; color: #4a148c; }
     .badge-enterprise { background: #fee2e2; color: #dc2626; }
+    .badge-info { background: #dbeafe; color: #1e40af; }
+    .badge-warning { background: #fef3c7; color: #d97706; }
+    .badge-success { background: #dcfce7; color: #16a34a; }
+    .badge-update { background: #e2d9f3; color: #4a148c; }
     
     /* Action Buttons */
     .action-btn {
@@ -589,11 +597,127 @@
   </div>
 </div>
 
-<!-- Org Modal (same as before but with new styling) -->
+<!-- Org Modal -->
 
 <div id="orgModal" class="modal" onclick="closeModalOnBackdrop(event, 'orgModal')">
   <div class="modal-box" onclick="event.stopPropagation()">
-    <!-- Same content as before -->
+    <div class="modal-h">
+      <h3 id="modalTitle">Neue Organisation</h3>
+      <button class="x" onclick="closeOrgModal()">&times;</button>
+    </div>
+
+```
+<div id="modalError" class="msg error" style="display:none;"></div>
+<div id="modalSuccess" class="msg success" style="display:none;"></div>
+
+<form id="orgForm" onsubmit="handleSaveOrg(event)">
+  <input type="hidden" id="orgId">
+  
+  <div class="field">
+    <label for="orgCode">Organisations-Code *</label>
+    <input type="text" id="orgCode" pattern="[a-z0-9]+" required placeholder="z.B. ffwmuenchen">
+  </div>
+  
+  <div class="field">
+    <label for="orgName">Name *</label>
+    <input type="text" id="orgName" required placeholder="z.B. FFW München">
+  </div>
+  
+  <div class="field">
+    <label for="licenseType">Lizenz-Typ *</label>
+    <select id="licenseType" required>
+      <option value="trial">Trial</option>
+      <option value="basic">Basic</option>
+      <option value="professional">Professional</option>
+      <option value="enterprise">Enterprise</option>
+    </select>
+  </div>
+  
+  <div class="field">
+    <label for="licenseValidUntil">Lizenz gültig bis</label>
+    <input type="date" id="licenseValidUntil">
+  </div>
+  
+  <div class="field">
+    <label for="maxUsers">Max. Benutzer *</label>
+    <input type="number" id="maxUsers" value="10" min="1" required>
+  </div>
+  
+  <div class="field">
+    <label for="contactEmail">Kontakt E-Mail</label>
+    <input type="email" id="contactEmail" placeholder="admin@organisation.de">
+  </div>
+  
+  <div class="field">
+    <label for="contactPerson">Kontaktperson</label>
+    <input type="text" id="contactPerson" placeholder="Max Mustermann">
+  </div>
+  
+  <div class="field">
+    <label for="contactPhone">Telefon</label>
+    <input type="text" id="contactPhone" placeholder="0123456789">
+  </div>
+  
+  <div class="field">
+    <label>
+      <input type="checkbox" id="isActive" checked> Aktiv
+    </label>
+  </div>
+  
+  <div class="actions">
+    <button type="button" onclick="closeOrgModal()" class="btn secondary">Abbrechen</button>
+    <button type="submit" class="btn success">Speichern</button>
+  </div>
+</form>
+```
+
+  </div>
+</div>
+
+<!-- User Modal -->
+
+<div id="userModal" class="modal" onclick="closeModalOnBackdrop(event, 'userModal')">
+  <div class="modal-box" onclick="event.stopPropagation()">
+    <div class="modal-h">
+      <h3>Ersten Benutzer anlegen</h3>
+      <button class="x" onclick="closeUserModal()">&times;</button>
+    </div>
+
+```
+<div class="info-box">
+  <strong>Ersten MPG-Beauftragten anlegen</strong><br>
+  Dieser User erhält automatisch die Rolle "MPG-Beauftragter" mit vollen Berechtigungen.
+</div>
+
+<div id="userModalError" class="msg error" style="display:none;"></div>
+<div id="userModalSuccess" class="msg success" style="display:none;"></div>
+
+<form id="userForm" onsubmit="handleCreateFirstUser(event)">
+  <input type="hidden" id="userOrgId">
+  <input type="hidden" id="userOrgName">
+  
+  <div class="field">
+    <label for="userEmail">E-Mail *</label>
+    <input type="email" id="userEmail" required placeholder="admin@organisation.de">
+  </div>
+  
+  <div class="field">
+    <label for="userName">Name *</label>
+    <input type="text" id="userName" required placeholder="Max Mustermann">
+  </div>
+  
+  <div class="field">
+    <label for="userPhone">Telefon (optional)</label>
+    <input type="tel" id="userPhone" placeholder="+49 123 456789">
+  </div>
+  
+  <div class="actions">
+    <button type="button" onclick="closeUserModal()" class="btn secondary">Abbrechen</button>
+    <button type="submit" class="btn success" id="createUserBtn">Benutzer anlegen</button>
+  </div>
+</form>
+```
+
   </div>
 </div>
 
@@ -713,7 +837,7 @@
       const [orgs, users, notifications] = await Promise.all([
         pb.collection('organizations').getFullList(),
         pb.collection('users').getFullList(),
-        pb.collection('hub_notifications').getFullList({ sort: '-created' })
+        pb.collection('hub_notifications').getFullList({ sort: '-created' }).catch(() => [])
       ]);
       
       allOrgs = orgs;
@@ -766,7 +890,8 @@
         <td>
           <div class="table-actions">
             ${!hasUsers ? `<button class="action-btn user" onclick="showCreateUserModal('${org.id}', '${escapeHtml(org.org_name).replace(/'/g, "\\'")}')">User</button>` : ''}
-            <button class="action-btn delete" onclick="deleteOrg('${org.id}', '${escapeHtml(org.org_name).replace(/'/g, "\\'")}')">Löschen</button>
+            <button class="action-btn edit" onclick="editOrg('${org.id}')">Edit</button>
+            <button class="action-btn delete" onclick="deleteOrg('${org.id}', '${escapeHtml(org.org_name).replace(/'/g, "\\'")}')">Del</button>
           </div>
         </td>
       `;
@@ -802,7 +927,7 @@
         <td>${new Date(notif.created).toLocaleDateString('de-DE')}</td>
         <td>
           <div class="table-actions">
-            <button class="action-btn delete" onclick="deleteNotification('${notif.id}')">Löschen</button>
+            <button class="action-btn delete" onclick="deleteNotification('${notif.id}')">Del</button>
           </div>
         </td>
       `;
@@ -824,6 +949,190 @@
       option.textContent = `${org.org_name} (${org.org_code})`;
       select.appendChild(option);
     });
+  }
+
+  // Show Create Org Modal
+  function showCreateModal() {
+    document.getElementById('modalTitle').textContent = 'Neue Organisation';
+    document.getElementById('orgForm').reset();
+    document.getElementById('orgId').value = '';
+    document.getElementById('isActive').checked = true;
+    document.getElementById('modalError').style.display = 'none';
+    document.getElementById('modalSuccess').style.display = 'none';
+    document.getElementById('orgModal').classList.add('show');
+    document.body.style.overflow = 'hidden';
+  }
+
+  // Edit Org
+  async function editOrg(orgId) {
+    try {
+      const org = await pb.collection('organizations').getOne(orgId);
+      
+      document.getElementById('modalTitle').textContent = 'Organisation bearbeiten';
+      document.getElementById('orgId').value = org.id;
+      document.getElementById('orgCode').value = org.org_code;
+      document.getElementById('orgName').value = org.org_name;
+      document.getElementById('licenseType').value = org.license_type;
+      document.getElementById('licenseValidUntil').value = org.license_valid_until || '';
+      document.getElementById('maxUsers').value = org.max_users;
+      document.getElementById('contactEmail').value = org.contact_email || '';
+      document.getElementById('contactPerson').value = org.contact_person || '';
+      document.getElementById('contactPhone').value = org.contact_phone || '';
+      document.getElementById('isActive').checked = org.is_active;
+      document.getElementById('modalError').style.display = 'none';
+      document.getElementById('modalSuccess').style.display = 'none';
+      
+      document.getElementById('orgModal').classList.add('show');
+      document.body.style.overflow = 'hidden';
+      
+    } catch (error) {
+      alert('Fehler beim Laden!');
+      console.error(error);
+    }
+  }
+
+  // Save Org
+  async function handleSaveOrg(event) {
+    event.preventDefault();
+    
+    const orgId = document.getElementById('orgId').value;
+    const orgData = {
+      org_code: document.getElementById('orgCode').value,
+      org_name: document.getElementById('orgName').value,
+      license_type: document.getElementById('licenseType').value,
+      license_valid_until: document.getElementById('licenseValidUntil').value || null,
+      max_users: parseInt(document.getElementById('maxUsers').value),
+      contact_email: document.getElementById('contactEmail').value || null,
+      contact_person: document.getElementById('contactPerson').value || null,
+      contact_phone: document.getElementById('contactPhone').value || null,
+      is_active: document.getElementById('isActive').checked
+    };
+    
+    try {
+      if (orgId) {
+        await pb.collection('organizations').update(orgId, orgData);
+      } else {
+        await pb.collection('organizations').create(orgData);
+      }
+      
+      document.getElementById('modalSuccess').textContent = 'Organisation gespeichert!';
+      document.getElementById('modalSuccess').style.display = 'block';
+      document.getElementById('modalError').style.display = 'none';
+      
+      setTimeout(() => {
+        closeOrgModal();
+        loadDashboard();
+      }, 1500);
+      
+    } catch (error) {
+      document.getElementById('modalError').textContent = 'Fehler: ' + error.message;
+      document.getElementById('modalError').style.display = 'block';
+      console.error(error);
+    }
+  }
+
+  // Delete Org
+  async function deleteOrg(orgId, orgName) {
+    if (!confirm(`Organisation "${orgName}" wirklich löschen?`)) return;
+    
+    try {
+      await pb.collection('organizations').delete(orgId);
+      loadDashboard();
+    } catch (error) {
+      alert('Fehler beim Löschen: ' + error.message);
+      console.error(error);
+    }
+  }
+
+  // Close Org Modal
+  function closeOrgModal() {
+    document.getElementById('orgModal').classList.remove('show');
+    document.body.style.overflow = '';
+  }
+
+  // Show Create User Modal
+  function showCreateUserModal(orgId, orgName) {
+    document.getElementById('userOrgId').value = orgId;
+    document.getElementById('userOrgName').value = orgName;
+    document.getElementById('userForm').reset();
+    document.getElementById('userModalError').style.display = 'none';
+    document.getElementById('userModalSuccess').style.display = 'none';
+    document.getElementById('userModal').classList.add('show');
+    document.body.style.overflow = 'hidden';
+  }
+
+  // Close User Modal
+  function closeUserModal() {
+    document.getElementById('userModal').classList.remove('show');
+    document.body.style.overflow = '';
+  }
+
+  // Create First User
+  async function handleCreateFirstUser(event) {
+    event.preventDefault();
+    
+    const createBtn = document.getElementById('createUserBtn');
+    createBtn.disabled = true;
+    createBtn.textContent = 'Erstelle...';
+    
+    const orgId = document.getElementById('userOrgId').value;
+    const email = document.getElementById('userEmail').value.trim();
+    const name = document.getElementById('userName').value.trim();
+    const phone = document.getElementById('userPhone').value.trim();
+    
+    try {
+      const tempPassword = Array.from({length: 16}, () => 
+        'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$%&*'[Math.floor(Math.random() * 66)]
+      ).join('');
+      
+      const permissions = {
+        dashboard: true,
+        einsaetze: true,
+        lager: true,
+        produktausgabe: true,
+        ausbildungen: true,
+        ausbildungen_manage: true,
+        dokumente: true,
+        patienten: true,
+        dateien: true,
+        qr: true,
+        chat: true,
+        users_manage: true
+      };
+      
+      const userData = {
+        email: email,
+        emailVisibility: true,
+        password: tempPassword,
+        passwordConfirm: tempPassword,
+        name: name,
+        phone: phone || '',
+        role: 'mpg',
+        permissions: permissions,
+        organization_id: orgId,
+        supervisor: false,
+        verified: false
+      };
+      
+      await pb.collection('users').create(userData);
+      await pb.collection('users').requestPasswordReset(email);
+      
+      document.getElementById('userModalSuccess').textContent = 'Benutzer angelegt! Password-Link versendet.';
+      document.getElementById('userModalSuccess').style.display = 'block';
+      
+      setTimeout(() => {
+        closeUserModal();
+        loadDashboard();
+      }, 2000);
+      
+    } catch (error) {
+      document.getElementById('userModalError').textContent = 'Fehler: ' + error.message;
+      document.getElementById('userModalError').style.display = 'block';
+      console.error(error);
+    } finally {
+      createBtn.disabled = false;
+      createBtn.textContent = 'Benutzer anlegen';
+    }
   }
 
   // Show Notification Modal
@@ -860,9 +1169,8 @@
     try {
       await pb.collection('hub_notifications').create(notificationData);
       
-      document.getElementById('notificationModalSuccess').textContent = 'Info-Meldung erfolgreich erstellt!';
+      document.getElementById('notificationModalSuccess').textContent = 'Info-Meldung erstellt!';
       document.getElementById('notificationModalSuccess').style.display = 'block';
-      document.getElementById('notificationModalError').style.display = 'none';
       
       setTimeout(() => {
         closeNotificationModal();
@@ -884,7 +1192,7 @@
       await pb.collection('hub_notifications').delete(notifId);
       loadDashboard();
     } catch (error) {
-      alert('Fehler beim Löschen: ' + error.message);
+      alert('Fehler: ' + error.message);
       console.error(error);
     }
   }
@@ -898,23 +1206,10 @@
 
   function closeModalOnBackdrop(event, modalId) {
     if (event.target.id === modalId) {
-      if (modalId === 'notificationModal') {
-        closeNotificationModal();
-      }
+      if (modalId === 'orgModal') closeOrgModal();
+      else if (modalId === 'userModal') closeUserModal();
+      else if (modalId === 'notificationModal') closeNotificationModal();
     }
-  }
-
-  // Placeholder functions (to be implemented)
-  function showCreateModal() {
-    alert('Org erstellen noch nicht implementiert in dieser Version');
-  }
-
-  function showCreateUserModal(orgId, orgName) {
-    alert('User erstellen noch nicht implementiert in dieser Version');
-  }
-
-  function deleteOrg(orgId, orgName) {
-    alert('Org löschen noch nicht implementiert in dieser Version');
   }
 </script>
 
