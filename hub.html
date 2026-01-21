@@ -951,7 +951,12 @@
     
     // Get organization info
     const orgName = user.organization_name || 'Responda';
-    const orgLogo = user.organization_logo || '🏢'; // Falls kein Logo, Emoji als Fallback
+    const orgLogo = user.organization_logo || '🏢';
+    
+    // Check if orgLogo is a file URL or emoji
+    const logoDisplay = orgLogo.includes('http') || orgLogo.includes('/api/files/') 
+      ? `<img src="${orgLogo}" alt="${orgName}" style="width:80px; height:80px; object-fit:contain; border-radius:12px;">`
+      : `<div style="font-size:80px; line-height:1;">${orgLogo}</div>`;
     
     document.getElementById('widgets').innerHTML = `
       <div class="widget">
@@ -959,10 +964,14 @@
         <div class="widget-value">${today.getDate()}</div>
         <div class="widget-label">${today.toLocaleDateString('de-DE', { weekday: 'long' })}</div>
       </div>
-      <div class="widget">
-        <div class="widget-title">Organisation</div>
-        <div class="widget-value" style="font-size:40px">${orgLogo}</div>
-        <div class="widget-label">${orgName}</div>
+      <div class="widget" style="display:flex; align-items:center; justify-content:center;">
+        ${logoDisplay}
+      </div>
+      <div class="widget large">
+        <div class="widget-title">📰 Neuigkeiten</div>
+        <div style="font-size:14px; line-height:1.6; opacity:0.9; margin-top:8px;">
+          Willkommen zurück! Keine neuen Nachrichten.
+        </div>
       </div>
     `;
   }
