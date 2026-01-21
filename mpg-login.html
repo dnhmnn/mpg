@@ -1,378 +1,193 @@
 <!DOCTYPE html>
+
 <html lang="de">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"/>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>Login – Responda</title>
-  
-  <!-- Theme Color -->
   <meta name="theme-color" content="#667eea">
-  
-  <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
   <style>
-    :root { --rot: #c8102e; --grau: #64748b; --gradient-start: #667eea; --gradient-end: #764ba2; }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    
-    body { 
-      font-family: 'Atkinson Hyperlegible', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; 
-      background: linear-gradient(135deg, var(--gradient-start) 0%, var(--gradient-end) 100%);
-      min-height: 100vh;
-      margin: 0;
-    }
-    
-    /* HEADER GANZ OBEN für Theme Color */
-    .top-spacer {
-      background: var(--gradient-start);
-      height: 20px;
-    }
-    
-    .wrapper {
-      min-height: calc(100vh - 20px);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 20px;
-    }
-    
-    .login-container {
-      background: #fff;
-      border-radius: 20px;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-      max-width: 440px;
-      width: 100%;
-      overflow: hidden;
-      animation: slideIn 0.4s ease-out;
-    }
-    
-    @keyframes slideIn {
-      from { opacity: 0; transform: translateY(-30px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-    
-    .login-header {
-      background: var(--rot);
-      padding: 40px 30px;
-      text-align: center;
-      color: #fff;
-    }
-    
-    .logo-container {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin-bottom: 20px;
-    }
-    
-    .logo-icon {
-      width: 60px;
-      height: 60px;
-      background: #fff;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin-right: 15px;
-    }
-    
-    .logo-plus {
-      width: 30px;
-      height: 30px;
-      position: relative;
-    }
-    
-    .logo-plus::before,
-    .logo-plus::after {
-      content: '';
-      position: absolute;
-      background: var(--rot);
-      border-radius: 4px;
-    }
-    
-    .logo-plus::before {
-      width: 30px;
-      height: 10px;
-      top: 10px;
-      left: 0;
-    }
-    
-    .logo-plus::after {
-      width: 10px;
-      height: 30px;
-      top: 0;
-      left: 10px;
-    }
-    
-    .logo-text {
-      font-size: 2.5rem;
-      font-weight: 900;
-      color: #fff;
-      letter-spacing: -1px;
-    }
-    
-    .login-header h1 {
-      font-size: 1.8rem;
-      font-weight: 700;
-      margin-bottom: 8px;
-    }
-    
-    .login-header p {
-      font-size: 0.95rem;
-      opacity: 0.9;
-    }
-    
-    .login-body {
-      padding: 40px 30px;
-    }
-    
-    .form-group {
-      margin-bottom: 24px;
-    }
-    
-    .form-group label {
-      display: block;
-      font-weight: 700;
-      color: #1e293b;
-      margin-bottom: 8px;
-      font-size: 0.9rem;
-    }
-    
-    .form-group input {
-      width: 100%;
-      padding: 14px 16px;
-      border: 2px solid #e2e8f0;
-      border-radius: 12px;
-      font-size: 1rem;
-      font-family: inherit;
-      transition: all 0.2s;
-      background: #f8fafc;
-    }
-    
-    .form-group input:focus {
-      outline: none;
-      border-color: var(--rot);
-      background: #fff;
-      box-shadow: 0 0 0 4px rgba(200,16,46,0.1);
-    }
-    
-    .form-group small {
-      display: block;
-      color: #64748b;
-      font-size: 0.85rem;
-      margin-top: 6px;
-    }
-    
-    .org-info {
-      background: #f0f9ff;
-      border: 2px solid #bae6fd;
-      border-radius: 12px;
-      padding: 16px;
-      margin-bottom: 20px;
-      display: none;
-    }
-    
-    .org-info.show {
-      display: block;
-    }
-    
-    .org-info strong {
-      color: #0369a1;
-      display: block;
-      margin-bottom: 8px;
-      font-size: 1rem;
-    }
-    
-    .org-detail {
-      color: #0369a1;
-      font-size: 0.9rem;
-    }
-    
-    .org-change-btn {
-      background: none;
-      border: none;
-      color: #0369a1;
-      text-decoration: underline;
-      cursor: pointer;
-      font-size: 0.85rem;
-      margin-top: 12px;
-    }
-    
-    .btn {
-      width: 100%;
-      padding: 16px;
-      background: var(--rot);
-      color: #fff;
-      border: none;
-      border-radius: 12px;
-      font-size: 1.05rem;
-      font-weight: 700;
-      cursor: pointer;
-      transition: all 0.2s;
-      font-family: inherit;
-      margin-bottom: 12px;
-    }
-    
-    .btn:hover {
-      background: #a00d26;
-      transform: translateY(-2px);
-      box-shadow: 0 8px 20px rgba(200,16,46,0.3);
-    }
-    
-    .btn:active {
-      transform: translateY(0);
-    }
-    
-    .btn:disabled {
-      background: #cbd5e1;
-      cursor: not-allowed;
-      transform: none;
-    }
-    
-    .btn.secondary {
-      background: #64748b;
-    }
-    
-    .btn.secondary:hover {
-      background: #475569;
-    }
-    
-    .msg {
-      padding: 14px 16px;
-      border-radius: 12px;
-      margin-bottom: 20px;
-      font-weight: 600;
-      font-size: 0.9rem;
-      display: none;
-    }
-    
-    .msg.show {
-      display: block;
-    }
-    
-    .msg.error {
-      background: #fee2e2;
-      color: #991b1b;
-      border: 2px solid #fca5a5;
-    }
-    
-    .msg.success {
-      background: #d1fae5;
-      color: #065f46;
-      border: 2px solid #6ee7b7;
-    }
-    
-    .msg.info {
-      background: #dbeafe;
-      color: #1e40af;
-      border: 2px solid #93c5fd;
-    }
-    
-    .already-logged-in {
-      display: none;
-      text-align: center;
-      padding: 20px;
-    }
-    
-    .already-logged-in.show {
-      display: block;
-    }
-    
-    .already-logged-in h2 {
-      color: var(--rot);
-      margin-bottom: 20px;
-      font-size: 1.4rem;
-    }
-    
-    @media (max-width: 480px) {
-      .login-header { padding: 30px 20px; }
-      .login-body { padding: 30px 20px; }
-      .logo-text { font-size: 2rem; }
-    }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    body { font-family: 'Inter', -apple-system, sans-serif; background: linear-gradient(135deg, #667eea 0%, #f97316 50%, #764ba2 100%); background-attachment: fixed; min-height: 100vh; -webkit-font-smoothing: antialiased; display: flex; align-items: center; justify-content: center; padding: max(20px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right)) max(20px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left)); }
+
+```
+.icon { display: inline-block; width: 1em; height: 1em; margin-right: 0.5em; vertical-align: -0.125em; }
+.icon svg { width: 100%; height: 100%; fill: currentColor; }
+
+.login-container { background: rgba(255, 255, 255, 0.2); backdrop-filter: blur(40px); -webkit-backdrop-filter: blur(40px); border-radius: 28px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3); max-width: 440px; width: 100%; overflow: hidden; animation: slideIn 0.4s ease-out; border: 0.5px solid rgba(255, 255, 255, 0.3); }
+@keyframes slideIn { from { opacity: 0; transform: translateY(-30px); } to { opacity: 1; transform: translateY(0); } }
+
+.login-header { padding: 48px 32px 32px; text-align: center; }
+.logo-container { margin-bottom: 24px; display: flex; justify-content: center; }
+.login-header h1 { font-size: 28px; font-weight: 700; margin-bottom: 8px; color: #fff; }
+.login-header p { font-size: 15px; color: rgba(255, 255, 255, 0.9); }
+
+.login-body { padding: 0 32px 40px; }
+.form-group { margin-bottom: 20px; }
+.form-group label { display: block; font-weight: 600; color: #fff; margin-bottom: 8px; font-size: 14px; }
+.form-group input { width: 100%; padding: 14px 16px; border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 12px; font-size: 16px; font-family: inherit; transition: all 0.2s; background: rgba(255, 255, 255, 0.95); color: #1a1a1a; }
+.form-group input:focus { outline: none; border-color: #fff; box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.2); background: #fff; }
+.form-group input::placeholder { color: #9ca3af; }
+.form-group small { display: block; color: rgba(255, 255, 255, 0.8); font-size: 13px; margin-top: 6px; }
+
+.org-info { background: rgba(255, 255, 255, 0.15); border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 12px; padding: 16px; margin-bottom: 20px; display: none; }
+.org-info.show { display: block; }
+.org-info strong { color: #fff; display: block; margin-bottom: 8px; font-size: 15px; font-weight: 700; }
+.org-detail { color: #fff; font-size: 14px; font-weight: 600; }
+.org-change-btn { background: none; border: none; color: #fff; text-decoration: underline; cursor: pointer; font-size: 13px; margin-top: 12px; font-weight: 600; opacity: 0.9; }
+.org-change-btn:hover { opacity: 1; }
+
+.btn { width: 100%; padding: 14px; background: rgba(255, 255, 255, 0.95); color: #667eea; border: none; border-radius: 12px; font-size: 15px; font-weight: 700; cursor: pointer; transition: all 0.2s; font-family: inherit; margin-bottom: 12px; }
+.btn:active { transform: scale(0.98); background: #fff; }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.btn.secondary { background: rgba(255, 255, 255, 0.2); color: #fff; border: 1px solid rgba(255, 255, 255, 0.3); }
+.btn.secondary:active { background: rgba(255, 255, 255, 0.3); }
+
+.forgot-password { text-align: center; margin-top: 16px; }
+.forgot-password button { background: none; border: none; color: #fff; text-decoration: underline; cursor: pointer; font-size: 14px; font-weight: 600; opacity: 0.9; }
+.forgot-password button:hover { opacity: 1; }
+
+.msg { padding: 14px 16px; border-radius: 12px; margin-bottom: 20px; font-weight: 600; font-size: 14px; display: none; }
+.msg.show { display: block; }
+.msg.error { background: rgba(254, 226, 226, 0.95); color: #991b1b; border: 1px solid #fca5a5; }
+.msg.success { background: rgba(209, 250, 229, 0.95); color: #065f46; border: 1px solid #6ee7b7; }
+.msg.info { background: rgba(219, 234, 254, 0.95); color: #1e40af; border: 1px solid #93c5fd; }
+
+.already-logged-in { display: none; text-align: center; padding: 20px; }
+.already-logged-in.show { display: block; }
+.already-logged-in h2 { color: #fff; margin-bottom: 12px; font-size: 24px; }
+.already-logged-in p { color: rgba(255, 255, 255, 0.9); margin-bottom: 20px; }
+
+.screen { display: none; }
+.screen.active { display: block; }
+
+@media (max-width: 480px) {
+  body { padding: 16px; }
+  .login-header { padding: 36px 24px 24px; }
+  .login-body { padding: 0 24px 32px; }
+  .login-header h1 { font-size: 24px; }
+  .logo-container svg { width: 200px; height: 50px; }
+}
+```
+
   </style>
 </head>
 <body>
 
-<!-- Spacer ganz oben für Theme Color -->
-<div class="top-spacer"></div>
+<div class="login-container">
+  <div class="login-header">
+    <div class="logo-container">
+      <svg width="280" height="70" viewBox="0 0 2800 700">
+        <defs>
+          <linearGradient id="logoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#fff;stop-opacity:1" />
+            <stop offset="50%" style="stop-color:#fff;stop-opacity:0.95" />
+            <stop offset="100%" style="stop-color:#fff;stop-opacity:0.9" />
+          </linearGradient>
+        </defs>
+        <rect x="50" y="50" width="600" height="600" rx="150" fill="rgba(255,255,255,0.2)"/>
+        <path d="M 175 175 L 175 525 L 287.5 525 L 287.5 400 L 362.5 400 L 437.5 525 L 575 525 L 475 390.625 Q 512.5 371.875 512.5 306.25 Q 512.5 175 431.25 175 Z M 287.5 237.5 L 393.75 237.5 Q 437.5 237.5 437.5 293.75 Q 437.5 350 393.75 350 L 287.5 350 Z" fill="white"/>
+        <text x="750" y="450" font-family="Archivo, sans-serif" font-size="280" font-weight="600" fill="url(#logoGrad)" letter-spacing="-5">Responda</text>
+      </svg>
+    </div>
+    <h1 id="screenTitle">Willkommen</h1>
+    <p id="screenSubtitle">Melde dich an, um fortzufahren</p>
+  </div>
 
-<div class="wrapper">
-  <div class="login-container">
-    <div class="login-header">
-      <div class="logo-container">
-        <div class="logo-icon">
-          <div class="logo-plus"></div>
-        </div>
-        <div class="logo-text">Responda</div>
-      </div>
-      <h1>Willkommen</h1>
-      <p>Melde dich an, um fortzufahren</p>
+  <div class="login-body">
+    <div id="msg" class="msg"></div>
+
+```
+<div id="alreadyLoggedInScreen" class="screen">
+  <div class="already-logged-in show">
+    <h2>
+      <span class="icon">
+        <svg viewBox="0 0 512 512"><path d="M256 512A256 256 0 1 0 256 0a256 256 0 1 0 0 512zM369 209L241 337c-9.4 9.4-24.6 9.4-33.9 0l-64-64c-9.4-9.4-9.4-24.6 0-33.9s24.6-9.4 33.9 0l47 47L335 175c9.4-9.4 24.6-9.4 33.9 0s9.4 24.6 0 33.9z"/></svg>
+      </span>
+      Bereits angemeldet
+    </h2>
+    <p>Du bist bereits eingeloggt.</p>
+    <button type="button" class="btn" onclick="goToHub()">Zum Hub</button>
+    <button type="button" class="btn secondary" onclick="logoutAndContinue()">Abmelden & neu anmelden</button>
+  </div>
+</div>
+
+<div id="loginScreen" class="screen active">
+  <div id="orgInfo" class="org-info">
+    <strong>
+      <span class="icon">
+        <svg viewBox="0 0 384 512"><path d="M48 0C21.5 0 0 21.5 0 48V464c0 26.5 21.5 48 48 48h96V432c0-26.5 21.5-48 48-48s48 21.5 48 48v80h96c26.5 0 48-21.5 48-48V48c0-26.5-21.5-48-48-48H48zM64 240c0-8.8 7.2-16 16-16h32c8.8 0 16 7.2 16 16v32c0 8.8-7.2 16-16 16H80c-8.8 0-16-7.2-16-16V240zm112-16h32c8.8 0 16 7.2 16 16v32c0 8.8-7.2 16-16 16H176c-8.8 0-16-7.2-16-16V240c0-8.8 7.2-16 16-16zm80 16c0-8.8 7.2-16 16-16h32c8.8 0 16 7.2 16 16v32c0 8.8-7.2 16-16 16H272c-8.8 0-16-7.2-16-16V240zM80 96h32c8.8 0 16 7.2 16 16v32c0 8.8-7.2 16-16 16H80c-8.8 0-16-7.2-16-16V112c0-8.8 7.2-16 16-16zm80 16c0-8.8 7.2-16 16-16h32c8.8 0 16 7.2 16 16v32c0 8.8-7.2 16-16 16H176c-8.8 0-16-7.2-16-16V112zM272 96h32c8.8 0 16 7.2 16 16v32c0 8.8-7.2 16-16 16H272c-8.8 0-16-7.2-16-16V112c0-8.8 7.2-16 16-16z"/></svg>
+      </span>
+      Organisation
+    </strong>
+    <div class="org-detail" id="orgName">—</div>
+    <button type="button" class="org-change-btn" onclick="changeOrg()">Organisation ändern</button>
+  </div>
+  
+  <form id="loginForm">
+    <div id="orgInputGroup" class="form-group">
+      <label for="orgCode">
+        <span class="icon">
+          <svg viewBox="0 0 384 512"><path d="M48 0C21.5 0 0 21.5 0 48V464c0 26.5 21.5 48 48 48h96V432c0-26.5 21.5-48 48-48s48 21.5 48 48v80h96c26.5 0 48-21.5 48-48V48c0-26.5-21.5-48-48-48H48zM64 240c0-8.8 7.2-16 16-16h32c8.8 0 16 7.2 16 16v32c0 8.8-7.2 16-16 16H80c-8.8 0-16-7.2-16-16V240zm112-16h32c8.8 0 16 7.2 16 16v32c0 8.8-7.2 16-16 16H176c-8.8 0-16-7.2-16-16V240c0-8.8 7.2-16 16-16zm80 16c0-8.8 7.2-16 16-16h32c8.8 0 16 7.2 16 16v32c0 8.8-7.2 16-16 16H272c-8.8 0-16-7.2-16-16V240zM80 96h32c8.8 0 16 7.2 16 16v32c0 8.8-7.2 16-16 16H80c-8.8 0-16-7.2-16-16V112c0-8.8 7.2-16 16-16zm80 16c0-8.8 7.2-16 16-16h32c8.8 0 16 7.2 16 16v32c0 8.8-7.2 16-16 16H176c-8.8 0-16-7.2-16-16V112zM272 96h32c8.8 0 16 7.2 16 16v32c0 8.8-7.2 16-16 16H272c-8.8 0-16-7.2-16-16V112c0-8.8 7.2-16 16-16z"/></svg>
+        </span>
+        Organisations-Code
+      </label>
+      <input type="text" id="orgCode" placeholder="z.B. ffwrot" autocomplete="off"/>
+      <small>Gib deinen Organisations-Code ein</small>
     </div>
     
-    <div class="login-body">
-      <div id="msg" class="msg"></div>
-      
-      <!-- Bereits angemeldet -->
-      <div id="alreadyLoggedIn" class="already-logged-in">
-        <h2>✅ Bereits angemeldet</h2>
-        <p style="color:#64748b;margin-bottom:20px">Du bist bereits eingeloggt.</p>
-        <button type="button" class="btn" onclick="goToDashboard()">
-          Zur Übersicht
-        </button>
-        <button type="button" class="btn secondary" onclick="logoutAndContinue()">
-          Abmelden & neu anmelden
-        </button>
-      </div>
-      
-      <!-- Login Form -->
-      <div id="loginFormContainer">
-        <!-- Organisation Info (wenn gespeichert) -->
-        <div id="orgInfo" class="org-info">
-          <strong>🏢 Organisation</strong>
-          <div class="org-detail" id="orgName">—</div>
-          <button type="button" class="org-change-btn" onclick="changeOrg()">Organisation ändern</button>
-        </div>
-        
-        <form id="loginForm">
-          <!-- Organisation Eingabe (nur wenn nicht gespeichert) -->
-          <div id="orgInputGroup" class="form-group">
-            <label for="orgCode">🏢 Organisations-Code</label>
-            <input 
-              type="text" 
-              id="orgCode" 
-              placeholder="z.B. ffwrot" 
-              autocomplete="off"
-              required 
-            />
-            <small>Gib deinen Organisations-Code ein</small>
-          </div>
-          
-          <div class="form-group">
-            <label for="email">📧 E-Mail</label>
-            <input 
-              type="email" 
-              id="email" 
-              placeholder="deine@email.de" 
-              autocomplete="email"
-              required 
-            />
-          </div>
-          
-          <div class="form-group">
-            <label for="password">🔒 Passwort</label>
-            <input 
-              type="password" 
-              id="password" 
-              placeholder="••••••••" 
-              autocomplete="current-password"
-              required 
-            />
-          </div>
-          
-          <button type="submit" class="btn" id="submitBtn">
-            Anmelden
-          </button>
-        </form>
-      </div>
+    <div class="form-group">
+      <label for="email">
+        <span class="icon">
+          <svg viewBox="0 0 512 512"><path d="M48 64C21.5 64 0 85.5 0 112c0 15.1 7.1 29.3 19.2 38.4L236.8 313.6c11.4 8.5 27 8.5 38.4 0L492.8 150.4c12.1-9.1 19.2-23.3 19.2-38.4c0-26.5-21.5-48-48-48H48zM0 176V384c0 35.3 28.7 64 64 64H448c35.3 0 64-28.7 64-64V176L294.4 339.2c-22.8 17.1-54 17.1-76.8 0L0 176z"/></svg>
+        </span>
+        E-Mail
+      </label>
+      <input type="email" id="email" placeholder="deine@email.de" autocomplete="email" required/>
     </div>
+    
+    <div class="form-group">
+      <label for="password">
+        <span class="icon">
+          <svg viewBox="0 0 448 512"><path d="M144 144v48H304V144c0-44.2-35.8-80-80-80s-80 35.8-80 80zM80 192V144C80 64.5 144.5 0 224 0s144 64.5 144 144v48h16c35.3 0 64 28.7 64 64V448c0 35.3-28.7 64-64 64H64c-35.3 0-64-28.7-64-64V256c0-35.3 28.7-64 64-64H80z"/></svg>
+        </span>
+        Passwort
+      </label>
+      <input type="password" id="password" placeholder="••••••••" autocomplete="current-password" required/>
+    </div>
+    
+    <button type="submit" class="btn" id="submitBtn">Anmelden</button>
+    
+    <div class="forgot-password">
+      <button type="button" onclick="showPasswordReset()">Passwort vergessen?</button>
+    </div>
+  </form>
+</div>
+
+<div id="passwordResetScreen" class="screen">
+  <form id="passwordResetForm">
+    <div class="form-group">
+      <label for="resetEmail">
+        <span class="icon">
+          <svg viewBox="0 0 512 512"><path d="M48 64C21.5 64 0 85.5 0 112c0 15.1 7.1 29.3 19.2 38.4L236.8 313.6c11.4 8.5 27 8.5 38.4 0L492.8 150.4c12.1-9.1 19.2-23.3 19.2-38.4c0-26.5-21.5-48-48-48H48zM0 176V384c0 35.3 28.7 64 64 64H448c35.3 0 64-28.7 64-64V176L294.4 339.2c-22.8 17.1-54 17.1-76.8 0L0 176z"/></svg>
+        </span>
+        E-Mail
+      </label>
+      <input type="email" id="resetEmail" placeholder="deine@email.de" autocomplete="email" required/>
+      <small>Du erhältst eine E-Mail mit einem Link zum Zurücksetzen</small>
+    </div>
+    
+    <button type="submit" class="btn" id="resetBtn">Zurücksetzen</button>
+    <button type="button" class="btn secondary" onclick="showLogin()">Zurück zum Login</button>
+  </form>
+</div>
+```
+
   </div>
 </div>
 
@@ -387,68 +202,42 @@
   const orgInputGroupEl = document.getElementById('orgInputGroup');
   const orgCodeInputEl = document.getElementById('orgCode');
   const submitBtn = document.getElementById('submitBtn');
-  const alreadyLoggedInEl = document.getElementById('alreadyLoggedIn');
-  const loginFormContainerEl = document.getElementById('loginFormContainer');
+  const resetBtn = document.getElementById('resetBtn');
+  const screenTitle = document.getElementById('screenTitle');
+  const screenSubtitle = document.getElementById('screenSubtitle');
 
   const ORG_STORAGE_KEY = 'responda_org';
   const savedOrg = localStorage.getItem(ORG_STORAGE_KEY);
   let currentOrg = null;
 
-  console.log('🚀 Login-System gestartet');
-  console.log('💾 Gespeicherte Org:', savedOrg);
-
-  // Gespeicherte Org laden
   if (savedOrg) {
     try {
       currentOrg = JSON.parse(savedOrg);
-      console.log('✅ Org aus LocalStorage geladen:', currentOrg);
       showSavedOrg();
       checkIfAlreadyLoggedIn();
     } catch(e) {
-      console.error('❌ Fehler beim Laden der Organisation:', e);
       localStorage.removeItem(ORG_STORAGE_KEY);
       showOrgInput();
     }
-  } else {
-    console.log('ℹ️ Keine gespeicherte Org gefunden');
   }
 
-  // Check if already logged in
   async function checkIfAlreadyLoggedIn() {
-    if (!pb.authStore.isValid) {
-      console.log('ℹ️ Nicht eingeloggt');
-      return;
-    }
-    
+    if (!pb.authStore.isValid) return;
     try {
       await pb.collection('users').authRefresh();
-      const user = pb.authStore.model;
-      
-      if (user) {
-        console.log('✅ Bereits eingeloggt als:', user.email);
-        loginFormContainerEl.style.display = 'none';
-        alreadyLoggedInEl.classList.add('show');
-      }
+      if (pb.authStore.model) showScreen('alreadyLoggedInScreen');
     } catch(e) {
-      console.error('❌ Auth-Check Fehler:', e);
       pb.authStore.clear();
     }
   }
 
-  window.goToDashboard = () => {
-    location.href = 'mpg-dashboard.html';
-  };
+  window.goToHub = () => location.href = 'hub.html';
 
   window.logoutAndContinue = async () => {
-    try {
-      pb.authStore.clear();
-      alreadyLoggedInEl.classList.remove('show');
-      loginFormContainerEl.style.display = 'block';
-      showMsg('Abgemeldet. Bitte melde dich neu an.', 'info');
-      document.getElementById('email').focus();
-    } catch(e) {
-      showMsg('Fehler beim Abmelden: ' + e.message, 'error');
-    }
+    pb.authStore.clear();
+    showScreen('loginScreen');
+    showMsg('Abgemeldet. Bitte melde dich neu an.', 'info');
+    document.getElementById('email').focus();
   };
 
   function showSavedOrg() {
@@ -476,18 +265,39 @@
   function showMsg(text, type = 'error') {
     msgEl.textContent = text;
     msgEl.className = 'msg ' + type + ' show';
-    setTimeout(() => {
-      msgEl.classList.remove('show');
-    }, 8000);
+    setTimeout(() => msgEl.classList.remove('show'), 8000);
   }
 
-  // Login Form Handler
+  function showScreen(screenId) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById(screenId).classList.add('active');
+    
+    if (screenId === 'loginScreen') {
+      screenTitle.textContent = 'Willkommen';
+      screenSubtitle.textContent = 'Melde dich an, um fortzufahren';
+    } else if (screenId === 'passwordResetScreen') {
+      screenTitle.textContent = 'Passwort zurücksetzen';
+      screenSubtitle.textContent = 'Du erhältst eine E-Mail mit einem Link';
+    } else if (screenId === 'alreadyLoggedInScreen') {
+      screenTitle.textContent = 'Willkommen zurück';
+      screenSubtitle.textContent = 'Du bist bereits angemeldet';
+    }
+  }
+
+  window.showPasswordReset = () => {
+    showScreen('passwordResetScreen');
+    document.getElementById('resetEmail').focus();
+  };
+
+  window.showLogin = () => {
+    showScreen('loginScreen');
+    (currentOrg ? document.getElementById('email') : orgCodeInputEl).focus();
+  };
+
   document.getElementById('loginForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     submitBtn.disabled = true;
     submitBtn.textContent = 'Anmeldung läuft...';
-    
-    console.log('🔐 Login-Versuch gestartet');
     
     try {
       const email = document.getElementById('email').value.trim();
@@ -496,11 +306,8 @@
       let orgConfig;
       
       if (currentOrg) {
-        // Org bereits gespeichert
-        console.log('✅ Verwende gespeicherte Org:', currentOrg.name);
         orgConfig = currentOrg;
       } else {
-        // Neue Org - PRÜFE OB SIE EXISTIERT
         const orgCode = orgCodeInputEl.value.trim().toLowerCase();
         
         if (!orgCode) {
@@ -510,120 +317,69 @@
           return;
         }
         
-        console.log('🔍 Suche Organisation mit Code:', orgCode);
+        const allOrgs = await pb.collection('organizations').getFullList();
+        const org = allOrgs.find(o => o.org_code === orgCode);
         
-        // SUCHE ORGANISATION - VEREINFACHT MIT DEBUG
-        try {
-          const allOrgs = await pb.collection('organizations').getFullList();
-          console.log('📋 Alle verfügbaren Organisationen:', allOrgs);
-          console.log('📋 Verfügbare Org-Codes:', allOrgs.map(o => o.org_code));
-          
-          const org = allOrgs.find(o => o.org_code === orgCode);
-          
-          if (!org) {
-            console.error('❌ Organisation nicht gefunden!');
-            console.error('🔍 Gesucht wurde:', orgCode);
-            console.error('📋 Verfügbar sind:', allOrgs.map(o => o.org_code));
-            
-            showMsg('Organisation "' + orgCode + '" nicht gefunden!\n\nVerfügbare Codes:\n' + allOrgs.map(o => o.org_code).join(', '), 'error');
-            submitBtn.disabled = false;
-            submitBtn.textContent = 'Anmelden';
-            return;
-          }
-          
-          console.log('✅ Organisation gefunden:', org.org_name);
-          
-          orgConfig = {
-            code: orgCode,
-            name: org.org_name,
-            id: org.id
-          };
-          
-        } catch (orgError) {
-          console.error('❌ Fehler beim Laden der Organisationen:', orgError);
-          showMsg('Fehler beim Laden der Organisationen: ' + orgError.message, 'error');
+        if (!org) {
+          showMsg('Organisation "' + orgCode + '" nicht gefunden!', 'error');
           submitBtn.disabled = false;
           submitBtn.textContent = 'Anmelden';
           return;
         }
+        
+        orgConfig = { code: orgCode, name: org.org_name, id: org.id };
       }
       
-      console.log('🔐 Versuche Login für:', email);
-      console.log('🏢 Organisation:', orgConfig.name);
-      
-      // Login with PocketBase
       const authData = await pb.collection('users').authWithPassword(email, password);
       
-      if (!authData || !authData.record) {
-        showMsg('Login fehlgeschlagen: Keine Daten erhalten.', 'error');
+      if (!authData?.record) {
+        showMsg('Login fehlgeschlagen.', 'error');
         submitBtn.disabled = false;
         submitBtn.textContent = 'Anmelden';
         return;
       }
       
-      console.log('✅ Login erfolgreich');
-      
-      // PRÜFE OB USER ZUR ORGANISATION GEHÖRT
-      const user = authData.record;
-      
-      console.log('👤 User-Org-ID:', user.organization_id);
-      console.log('🏢 Erwartete Org-ID:', orgConfig.id);
-      
-      if (user.organization_id !== orgConfig.id) {
-        console.error('❌ User gehört nicht zur Organisation!');
-        console.error('👤 User gehört zu:', user.organization_id);
-        console.error('🏢 Erwartet wurde:', orgConfig.id);
-        
+      if (authData.record.organization_id !== orgConfig.id) {
         showMsg('Dieser Benutzer gehört nicht zur Organisation "' + orgConfig.name + '"!', 'error');
-        
-        // Logout wieder
         pb.authStore.clear();
-        
         submitBtn.disabled = false;
         submitBtn.textContent = 'Anmelden';
         return;
       }
       
-      console.log('✅ User gehört zur Organisation');
-      
-      // Save organization
       if (!currentOrg) {
         localStorage.setItem(ORG_STORAGE_KEY, JSON.stringify(orgConfig));
-        console.log('💾 Organisation gespeichert');
       }
       
-      showMsg('✅ Erfolgreich angemeldet! Weiterleitung...', 'success');
-      
-      setTimeout(() => {
-        location.href = 'mpg-dashboard.html';
-      }, 800);
+      showMsg('✓ Erfolgreich angemeldet!', 'success');
+      setTimeout(() => location.href = 'hub.html', 800);
       
     } catch(e) {
-      console.error('❌ Login-Fehler:', e);
-      
-      let errorMsg = 'Login fehlgeschlagen: ';
-      if (e.status === 400) {
-        errorMsg += 'Ungültige E-Mail oder Passwort.';
-      } else if (e.status === 0) {
-        errorMsg += 'Keine Verbindung zum Server.';
-      } else {
-        errorMsg += e.message || 'Unbekannter Fehler';
-      }
-      
+      let errorMsg = e.status === 400 ? 'Ungültige E-Mail oder Passwort.' : ('Login fehlgeschlagen: ' + (e.message || 'Fehler'));
       showMsg(errorMsg, 'error');
       submitBtn.disabled = false;
       submitBtn.textContent = 'Anmelden';
     }
   });
 
-  // Auto-focus
-  if (loginFormContainerEl.style.display !== 'none') {
-    if (currentOrg) {
-      document.getElementById('email').focus();
-    } else {
-      orgCodeInputEl.focus();
+  document.getElementById('passwordResetForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    resetBtn.disabled = true;
+    resetBtn.textContent = 'Sende E-Mail...';
+    
+    try {
+      const email = document.getElementById('resetEmail').value.trim();
+      await pb.collection('users').requestPasswordReset(email);
+      showMsg('✓ E-Mail zum Zurücksetzen wurde gesendet! Prüfe dein Postfach.', 'success');
+      setTimeout(() => showLogin(), 3000);
+    } catch(e) {
+      showMsg('Fehler beim Senden: ' + e.message, 'error');
+      resetBtn.disabled = false;
+      resetBtn.textContent = 'Zurücksetzen';
     }
-  }
+  });
+
+  (currentOrg ? document.getElementById('email') : orgCodeInputEl).focus();
 </script>
 
 </body>
