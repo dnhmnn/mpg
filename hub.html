@@ -542,6 +542,98 @@
       transition: opacity 0.3s;
     }
     
+    @media (max-width: 767px) {
+      .status-bar {
+        padding-left: max(16px, env(safe-area-inset-left));
+        padding-right: max(16px, env(safe-area-inset-right));
+      }
+      
+      .logo svg {
+        width: 90px;
+        height: 24px;
+      }
+      
+      .logout-btn {
+        padding: 5px 10px;
+        font-size: 12px;
+      }
+      
+      .content {
+        padding-left: max(16px, env(safe-area-inset-left));
+        padding-right: max(16px, env(safe-area-inset-right));
+      }
+      
+      .widgets {
+        gap: 10px;
+      }
+      
+      .widget {
+        padding: 14px;
+        min-height: 100px;
+      }
+      
+      .widget-title {
+        font-size: 12px;
+      }
+      
+      .widget-value {
+        font-size: 24px;
+      }
+      
+      .widget-label {
+        font-size: 13px;
+      }
+      
+      .apps {
+        gap: 20px 12px;
+        padding: 0 4px;
+      }
+      
+      .app-icon {
+        width: 56px;
+        height: 56px;
+        border-radius: 13px;
+      }
+      
+      .app-icon svg {
+        width: 26px;
+        height: 26px;
+      }
+      
+      .app-name {
+        font-size: 10px;
+        max-width: 60px;
+      }
+      
+      .edit-button {
+        font-size: 12px;
+        padding: 7px 14px;
+      }
+      
+      .modal-content {
+        padding: 20px;
+        border-radius: 24px 24px 0 0;
+      }
+      
+      .modal-title {
+        font-size: 18px;
+      }
+      
+      .edit-btn {
+        padding: 14px;
+        font-size: 14px;
+      }
+      
+      .edit-icon {
+        width: 28px;
+        height: 28px;
+      }
+      
+      .field input, .field select, .field textarea {
+        font-size: 16px;
+      }
+    }
+    
     @media (min-width: 768px) {
       .content {
         max-width: 600px;
