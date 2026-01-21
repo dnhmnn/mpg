@@ -9,15 +9,11 @@
   <title>Login – Responda</title>
   <meta name="theme-color" content="#667eea">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
     body { font-family: 'Inter', -apple-system, sans-serif; background: linear-gradient(135deg, #667eea 0%, #f97316 50%, #764ba2 100%); background-attachment: fixed; min-height: 100vh; -webkit-font-smoothing: antialiased; display: flex; align-items: center; justify-content: center; padding: max(20px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right)) max(20px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left)); }
 
 ```
-.icon { display: inline-block; width: 1em; height: 1em; margin-right: 0.5em; vertical-align: -0.125em; }
-.icon svg { width: 100%; height: 100%; fill: currentColor; }
-
 .login-container { background: rgba(255, 255, 255, 0.2); backdrop-filter: blur(40px); -webkit-backdrop-filter: blur(40px); border-radius: 28px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3); max-width: 440px; width: 100%; overflow: hidden; animation: slideIn 0.4s ease-out; border: 0.5px solid rgba(255, 255, 255, 0.3); }
 @keyframes slideIn { from { opacity: 0; transform: translateY(-30px); } to { opacity: 1; transform: translateY(0); } }
 
@@ -105,12 +101,7 @@
 ```
 <div id="alreadyLoggedInScreen" class="screen">
   <div class="already-logged-in show">
-    <h2>
-      <span class="icon">
-        <svg viewBox="0 0 512 512"><path d="M256 512A256 256 0 1 0 256 0a256 256 0 1 0 0 512zM369 209L241 337c-9.4 9.4-24.6 9.4-33.9 0l-64-64c-9.4-9.4-9.4-24.6 0-33.9s24.6-9.4 33.9 0l47 47L335 175c9.4-9.4 24.6-9.4 33.9 0s9.4 24.6 0 33.9z"/></svg>
-      </span>
-      Bereits angemeldet
-    </h2>
+    <h2>Bereits angemeldet</h2>
     <p>Du bist bereits eingeloggt.</p>
     <button type="button" class="btn" onclick="goToHub()">Zum Hub</button>
     <button type="button" class="btn secondary" onclick="logoutAndContinue()">Abmelden & neu anmelden</button>
@@ -119,45 +110,25 @@
 
 <div id="loginScreen" class="screen active">
   <div id="orgInfo" class="org-info">
-    <strong>
-      <span class="icon">
-        <svg viewBox="0 0 384 512"><path d="M48 0C21.5 0 0 21.5 0 48V464c0 26.5 21.5 48 48 48h96V432c0-26.5 21.5-48 48-48s48 21.5 48 48v80h96c26.5 0 48-21.5 48-48V48c0-26.5-21.5-48-48-48H48zM64 240c0-8.8 7.2-16 16-16h32c8.8 0 16 7.2 16 16v32c0 8.8-7.2 16-16 16H80c-8.8 0-16-7.2-16-16V240zm112-16h32c8.8 0 16 7.2 16 16v32c0 8.8-7.2 16-16 16H176c-8.8 0-16-7.2-16-16V240c0-8.8 7.2-16 16-16zm80 16c0-8.8 7.2-16 16-16h32c8.8 0 16 7.2 16 16v32c0 8.8-7.2 16-16 16H272c-8.8 0-16-7.2-16-16V240zM80 96h32c8.8 0 16 7.2 16 16v32c0 8.8-7.2 16-16 16H80c-8.8 0-16-7.2-16-16V112c0-8.8 7.2-16 16-16zm80 16c0-8.8 7.2-16 16-16h32c8.8 0 16 7.2 16 16v32c0 8.8-7.2 16-16 16H176c-8.8 0-16-7.2-16-16V112zM272 96h32c8.8 0 16 7.2 16 16v32c0 8.8-7.2 16-16 16H272c-8.8 0-16-7.2-16-16V112c0-8.8 7.2-16 16-16z"/></svg>
-      </span>
-      Organisation
-    </strong>
+    <strong>Organisation</strong>
     <div class="org-detail" id="orgName">—</div>
     <button type="button" class="org-change-btn" onclick="changeOrg()">Organisation ändern</button>
   </div>
   
   <form id="loginForm">
     <div id="orgInputGroup" class="form-group">
-      <label for="orgCode">
-        <span class="icon">
-          <svg viewBox="0 0 384 512"><path d="M48 0C21.5 0 0 21.5 0 48V464c0 26.5 21.5 48 48 48h96V432c0-26.5 21.5-48 48-48s48 21.5 48 48v80h96c26.5 0 48-21.5 48-48V48c0-26.5-21.5-48-48-48H48zM64 240c0-8.8 7.2-16 16-16h32c8.8 0 16 7.2 16 16v32c0 8.8-7.2 16-16 16H80c-8.8 0-16-7.2-16-16V240zm112-16h32c8.8 0 16 7.2 16 16v32c0 8.8-7.2 16-16 16H176c-8.8 0-16-7.2-16-16V240c0-8.8 7.2-16 16-16zm80 16c0-8.8 7.2-16 16-16h32c8.8 0 16 7.2 16 16v32c0 8.8-7.2 16-16 16H272c-8.8 0-16-7.2-16-16V240zM80 96h32c8.8 0 16 7.2 16 16v32c0 8.8-7.2 16-16 16H80c-8.8 0-16-7.2-16-16V112c0-8.8 7.2-16 16-16zm80 16c0-8.8 7.2-16 16-16h32c8.8 0 16 7.2 16 16v32c0 8.8-7.2 16-16 16H176c-8.8 0-16-7.2-16-16V112zM272 96h32c8.8 0 16 7.2 16 16v32c0 8.8-7.2 16-16 16H272c-8.8 0-16-7.2-16-16V112c0-8.8 7.2-16 16-16z"/></svg>
-        </span>
-        Organisations-Code
-      </label>
+      <label for="orgCode">Organisations-Code</label>
       <input type="text" id="orgCode" placeholder="z.B. ffwrot" autocomplete="off"/>
       <small>Gib deinen Organisations-Code ein</small>
     </div>
     
     <div class="form-group">
-      <label for="email">
-        <span class="icon">
-          <svg viewBox="0 0 512 512"><path d="M48 64C21.5 64 0 85.5 0 112c0 15.1 7.1 29.3 19.2 38.4L236.8 313.6c11.4 8.5 27 8.5 38.4 0L492.8 150.4c12.1-9.1 19.2-23.3 19.2-38.4c0-26.5-21.5-48-48-48H48zM0 176V384c0 35.3 28.7 64 64 64H448c35.3 0 64-28.7 64-64V176L294.4 339.2c-22.8 17.1-54 17.1-76.8 0L0 176z"/></svg>
-        </span>
-        E-Mail
-      </label>
+      <label for="email">E-Mail</label>
       <input type="email" id="email" placeholder="deine@email.de" autocomplete="email" required/>
     </div>
     
     <div class="form-group">
-      <label for="password">
-        <span class="icon">
-          <svg viewBox="0 0 448 512"><path d="M144 144v48H304V144c0-44.2-35.8-80-80-80s-80 35.8-80 80zM80 192V144C80 64.5 144.5 0 224 0s144 64.5 144 144v48h16c35.3 0 64 28.7 64 64V448c0 35.3-28.7 64-64 64H64c-35.3 0-64-28.7-64-64V256c0-35.3 28.7-64 64-64H80z"/></svg>
-        </span>
-        Passwort
-      </label>
+      <label for="password">Passwort</label>
       <input type="password" id="password" placeholder="••••••••" autocomplete="current-password" required/>
     </div>
     
@@ -172,12 +143,7 @@
 <div id="passwordResetScreen" class="screen">
   <form id="passwordResetForm">
     <div class="form-group">
-      <label for="resetEmail">
-        <span class="icon">
-          <svg viewBox="0 0 512 512"><path d="M48 64C21.5 64 0 85.5 0 112c0 15.1 7.1 29.3 19.2 38.4L236.8 313.6c11.4 8.5 27 8.5 38.4 0L492.8 150.4c12.1-9.1 19.2-23.3 19.2-38.4c0-26.5-21.5-48-48-48H48zM0 176V384c0 35.3 28.7 64 64 64H448c35.3 0 64-28.7 64-64V176L294.4 339.2c-22.8 17.1-54 17.1-76.8 0L0 176z"/></svg>
-        </span>
-        E-Mail
-      </label>
+      <label for="resetEmail">E-Mail</label>
       <input type="email" id="resetEmail" placeholder="deine@email.de" autocomplete="email" required/>
       <small>Du erhältst eine E-Mail mit einem Link zum Zurücksetzen</small>
     </div>
@@ -321,7 +287,7 @@
         const org = allOrgs.find(o => o.org_code === orgCode);
         
         if (!org) {
-          showMsg('Organisation "' + orgCode + '" nicht gefunden!', 'error');
+          showMsg('Organisation nicht gefunden!', 'error');
           submitBtn.disabled = false;
           submitBtn.textContent = 'Anmelden';
           return;
@@ -340,7 +306,7 @@
       }
       
       if (authData.record.organization_id !== orgConfig.id) {
-        showMsg('Dieser Benutzer gehört nicht zur Organisation "' + orgConfig.name + '"!', 'error');
+        showMsg('Dieser Benutzer gehört nicht zu dieser Organisation!', 'error');
         pb.authStore.clear();
         submitBtn.disabled = false;
         submitBtn.textContent = 'Anmelden';
@@ -351,7 +317,7 @@
         localStorage.setItem(ORG_STORAGE_KEY, JSON.stringify(orgConfig));
       }
       
-      showMsg('✓ Erfolgreich angemeldet!', 'success');
+      showMsg('Erfolgreich angemeldet!', 'success');
       setTimeout(() => location.href = 'hub.html', 800);
       
     } catch(e) {
@@ -370,7 +336,7 @@
     try {
       const email = document.getElementById('resetEmail').value.trim();
       await pb.collection('users').requestPasswordReset(email);
-      showMsg('✓ E-Mail zum Zurücksetzen wurde gesendet! Prüfe dein Postfach.', 'success');
+      showMsg('E-Mail zum Zurücksetzen wurde gesendet!', 'success');
       setTimeout(() => showLogin(), 3000);
     } catch(e) {
       showMsg('Fehler beim Senden: ' + e.message, 'error');
