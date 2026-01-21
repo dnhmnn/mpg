@@ -222,7 +222,7 @@
     /* Edit Button */
     .edit-button {
       position: fixed;
-      bottom: max(20px, env(safe-area-inset-bottom));
+      bottom: max(32px, calc(env(safe-area-inset-bottom) + 12px));
       left: 50%;
       transform: translateX(-50%);
       background: rgba(255, 255, 255, 0.2);
@@ -959,10 +959,10 @@
     if (orgLogoFile && user.organization && orgLogoFile !== '🏢') {
       // Build PocketBase file URL
       const logoUrl = pb.files.getUrl(user.organization, orgLogoFile, { thumb: '500x500' });
-      logoDisplay = `<img src="${logoUrl}" alt="${orgName}" style="width:80px; height:80px; object-fit:contain; border-radius:12px;">`;
+      logoDisplay = `<img src="${logoUrl}" alt="${orgName}" style="width:100px; height:100px; object-fit:contain; border-radius:12px;">`;
     } else {
       // Fallback to emoji
-      logoDisplay = `<div style="font-size:80px; line-height:1;">🏢</div>`;
+      logoDisplay = `<div style="font-size:100px; line-height:1;">🏢</div>`;
     }
     
     document.getElementById('widgets').innerHTML = `
