@@ -36,9 +36,9 @@
     .status-bar {
       height: 54px;
       padding-top: env(safe-area-inset-top);
-      display: flex;
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
       align-items: center;
-      justify-content: space-between;
       padding-left: max(24px, env(safe-area-inset-left));
       padding-right: max(24px, env(safe-area-inset-right));
       color: #fff;
@@ -59,6 +59,13 @@
     
     .logo svg {
       filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+      width: 140px;
+      height: auto;
+    }
+    
+    #userName {
+      text-align: center;
+      justify-self: center;
     }
     
     .logout-btn {
@@ -73,6 +80,7 @@
       transition: all 0.2s;
       backdrop-filter: blur(20px);
       -webkit-backdrop-filter: blur(20px);
+      justify-self: end;
     }
     
     .logout-btn:active {
@@ -218,6 +226,7 @@
     .edit-mode .remove-btn {
       display: flex;
     }
+	
 	
 /* Edit Button */
 .edit-button {
@@ -666,8 +675,8 @@ body.loaded {
   }
   
   .logo svg {
-    width: 90px;
-    height: 24px;
+    width: 110px;
+    height: auto;
   }
   
   .logout-btn {
@@ -802,8 +811,6 @@ body.loaded {
 </div>
 
 <div class="dock" id="dock"></div>
-
-<button class="edit-button" id="editButton">Hub bearbeiten</button>
 
 <div class="modal" id="editModal">
   <div class="modal-content">
@@ -1079,13 +1086,20 @@ body.loaded {
   let currentNotification = null;
 
   async function checkForNotifications() {
-    if (!user || !user.organization_id) return;
+    if (!user || !user.organization_id) {
+      console.log('⚠️ No user or organization_id');
+      return;
+    }
+    
+    console.log('🔍 Checking notifications for:', user.email, 'Org:', user.organization_id);
     
     try {
       const notifications = await pb.collection('hub_notifications').getFullList({
         filter: `organization_id = "${user.organization_id}" && active = true`,
         sort: '-created'
       });
+      
+      console.log('✅ Found', notifications.length, 'active notifications');
       
       if (notifications.length === 0) return;
       
@@ -1095,12 +1109,15 @@ body.loaded {
         });
         
         if (statusRecords.length === 0) {
+          console.log('📢 Showing notification:', notif.title);
           showNotification(notif);
           break;
+        } else {
+          console.log('⏭️ Skipping already dismissed:', notif.title);
         }
       }
     } catch (error) {
-      console.log('Could not check notifications:', error);
+      console.error('❌ Error checking notifications:', error);
     }
   }
 
@@ -1136,6 +1153,7 @@ body.loaded {
         organization_id: user.organization_id
       });
       
+      console.log('✅ Notification dismissed');
       document.getElementById('notificationModal').classList.remove('show');
       currentNotification = null;
     } catch (error) {
@@ -1146,6 +1164,7 @@ body.loaded {
   };
 
   window.remindLaterNotification = function() {
+    console.log('⏰ Reminder set for later');
     document.getElementById('notificationModal').classList.remove('show');
     currentNotification = null;
   };
@@ -1333,10 +1352,6 @@ body.loaded {
       editMode = false;
       document.querySelector('.content').classList.remove('edit-mode');
     }
-  };
-
-  document.getElementById('editButton').onclick = () => {
-    document.getElementById('editModal').classList.add('show');
   };
 
   document.getElementById('editAppsBtn').onclick = () => {
