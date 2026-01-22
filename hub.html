@@ -218,435 +218,564 @@
     .edit-mode .remove-btn {
       display: flex;
     }
-    
-    /* Edit Button */
-    .edit-button {
-      background: rgba(255, 255, 255, 0.2);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      border: 0.5px solid rgba(255, 255, 255, 0.3);
-      color: #fff;
-      padding: 8px 16px;
-      border-radius: 16px;
-      font-size: 13px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.2s;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-      margin: 32px auto 0;
-      display: block;
-      width: fit-content;
-      cursor: pointer;
-      transition: all 0.2s;
-      z-index: 200;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    }
-    
-    .edit-button:active {
-      transform: scale(0.95);
-      background: rgba(255, 255, 255, 0.3);
-    }
-    
-    /* Hide page indicator */
-    .page-indicator {
-      display: none;
-    }
-    
-    .edit-options {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
-    
-    .edit-btn {
-      background: #fff;
-      border: 1px solid #e0e0e0;
-      border-radius: 14px;
-      padding: 16px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      cursor: pointer;
-      transition: all 0.2s;
-      font-size: 15px;
-      color: #1a1a1a;
-      font-weight: 500;
-    }
-    
-    .edit-btn:active {
-      transform: scale(0.98);
-      background: #f5f5f5;
-    }
-    
-    .edit-btn-left {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-    
-    .edit-icon {
-      width: 32px;
-      height: 32px;
-      background: linear-gradient(135deg, #667eea, #764ba2);
-      border-radius: 8px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: #fff;
-    }
-    
-    .edit-icon svg {
-      width: 18px;
-      height: 18px;
-      stroke: currentColor;
-      fill: none;
-      stroke-width: 2;
-    }
-    
-    .edit-arrow {
-      color: #999;
-      font-size: 18px;
-    }
-    
-    /* Modal */
-    .modal {
-      position: fixed;
-      inset: 0;
-      background: rgba(0, 0, 0, 0.5);
-      display: none;
-      align-items: flex-end;
-      z-index: 1000;
-    }
-    
-    .modal.show {
-      display: flex;
-    }
-    
-    .modal-content {
-      width: 100%;
-      background: #fff;
-      border-radius: 28px 28px 0 0;
-      padding: 24px 24px 40px;
-      max-height: 75vh;
-      overflow-y: auto;
-      animation: slideUp 0.3s ease-out;
-    }
-    
-    @keyframes slideUp {
-      from { transform: translateY(100%); }
-      to { transform: translateY(0); }
-    }
-    
-    .modal-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 24px;
-      padding-bottom: 16px;
-      border-bottom: 1px solid #e0e0e0;
-    }
-    
-    .modal-title {
-      font-size: 20px;
-      font-weight: 700;
-      color: #1a1a1a;
-    }
-    
-    .modal-close {
-      width: 32px;
-      height: 32px;
-      background: #f0f0f0;
-      border: none;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 20px;
-      color: #666;
-      cursor: pointer;
-    }
-    
-    /* Available Apps Grid */
-    .available-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 24px 16px;
-    }
-    
-    .available-app {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 8px;
-      cursor: pointer;
-    }
-    
-    .available-app:active {
-      transform: scale(0.9);
-    }
-    
-    .available-icon {
-      width: 60px;
-      height: 60px;
-      background: linear-gradient(135deg, #667eea, #764ba2);
-      border-radius: 14px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: #fff;
-      position: relative;
-    }
-    
-    .available-icon svg {
-      width: 28px;
-      height: 28px;
-      stroke: currentColor;
-      fill: none;
-      stroke-width: 2;
-    }
-    
-    .available-icon::after {
-      content: '+';
-      position: absolute;
-      bottom: -4px;
-      right: -4px;
-      width: 18px;
-      height: 18px;
-      background: #34c759;
-      border: 2px solid #fff;
-      border-radius: 50%;
-      font-size: 12px;
-      font-weight: 700;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    
-    .available-name {
-      font-size: 11px;
-      font-weight: 500;
-      color: #1a1a1a;
-      text-align: center;
-      max-width: 65px;
-    }
-    
-    /* Dock - REMOVED */
-    .dock {
-      display: none;
-    }
-    
-    /* Widget Options */
-    .widget-options {
-      display: grid;
-      gap: 12px;
-    }
-    
-    .widget-option {
-      background: #f8f8f8;
-      border: 1px solid #e0e0e0;
-      border-radius: 12px;
-      padding: 16px;
-      cursor: pointer;
-    }
-    
-    .widget-option:active {
-      background: #f0f0f0;
-    }
-    
-    .widget-option-title {
-      font-weight: 600;
-      color: #1a1a1a;
-      margin-bottom: 4px;
-    }
-    
-    .widget-option-desc {
-      font-size: 13px;
-      color: #666;
-    }
-    
-    /* Settings Tabs */
-    .settings-tab {
-      padding: 10px 16px;
-      border: none;
-      background: #f0f0f0;
-      color: #666;
-      border-radius: 10px;
-      font-weight: 600;
-      font-size: 14px;
-      cursor: pointer;
-      transition: all 0.2s;
-      white-space: nowrap;
-    }
-    
-    .settings-tab.active {
-      background: linear-gradient(135deg, #667eea, #764ba2);
-      color: #fff;
-    }
-    
-    .settings-content {
-      display: none;
-    }
-    
-    .settings-content.active {
-      display: block;
-    }
-    
-    .field {
-      margin-bottom: 16px;
-    }
-    
-    .field label {
-      display: block;
-      font-weight: 600;
-      color: #1a1a1a;
-      margin-bottom: 8px;
-      font-size: 14px;
-    }
-    
-    .field input, .field select, .field textarea {
-      width: 100%;
-      padding: 12px;
-      border: 1px solid #e0e0e0;
-      border-radius: 10px;
-      font-size: 15px;
-      font-family: inherit;
-      background: #fff;
-    }
-    
-    .field input:focus, .field select:focus, .field textarea:focus {
-      outline: none;
-      border-color: #667eea;
-    }
-    
-    .btn {
-      padding: 12px 20px;
-      border: none;
-      border-radius: 10px;
-      font-weight: 600;
-      font-size: 15px;
-      cursor: pointer;
-      background: linear-gradient(135deg, #667eea, #764ba2);
-      color: #fff;
-      transition: all 0.2s;
-      font-family: inherit;
-    }
-    
-    .btn:active {
-      transform: scale(0.98);
-    }
-    
-    /* Loading */
-    body.loading { opacity: 0; }
-    body.loaded { 
-      opacity: 1;
-      transition: opacity 0.3s;
-    }
-    
-    @media (max-width: 767px) {
-      .status-bar {
-        padding-left: max(16px, env(safe-area-inset-left));
-        padding-right: max(16px, env(safe-area-inset-right));
-      }
-      
-      .logo svg {
-        width: 90px;
-        height: 24px;
-      }
-      
-      .logout-btn {
-        padding: 5px 10px;
-        font-size: 12px;
-      }
-      
-      .content {
-        padding-left: max(16px, env(safe-area-inset-left));
-        padding-right: max(16px, env(safe-area-inset-right));
-      }
-      
-      .widgets {
-        gap: 10px;
-      }
-      
-      .widget {
-        padding: 14px;
-        min-height: 100px;
-      }
-      
-      .widget-title {
-        font-size: 12px;
-      }
-      
-      .widget-value {
-        font-size: 24px;
-      }
-      
-      .widget-label {
-        font-size: 13px;
-      }
-      
-      .apps {
-        gap: 20px 12px;
-        padding: 0 4px;
-      }
-      
-      .app-icon {
-        width: 56px;
-        height: 56px;
-        border-radius: 13px;
-      }
-      
-      .app-icon svg {
-        width: 26px;
-        height: 26px;
-      }
-      
-      .app-name {
-        font-size: 10px;
-        max-width: 60px;
-      }
-      
-      .edit-button {
-        font-size: 12px;
-        padding: 7px 14px;
-      }
-      
-      .modal-content {
-        padding: 20px;
-        border-radius: 24px 24px 0 0;
-      }
-      
-      .modal-title {
-        font-size: 18px;
-      }
-      
-      .edit-btn {
-        padding: 14px;
-        font-size: 14px;
-      }
-      
-      .edit-icon {
-        width: 28px;
-        height: 28px;
-      }
-      
-      .field input, .field select, .field textarea {
-        font-size: 16px;
-      }
-    }
-    
-    @media (min-width: 768px) {
-      .content {
-        max-width: 600px;
-        margin: 0 auto;
-      }
-    }
+	
+/* Edit Button */
+.edit-button {
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 0.5px solid rgba(255, 255, 255, 0.3);
+  color: #fff;
+  padding: 8px 16px;
+  border-radius: 16px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  margin: 32px auto 0;
+  display: block;
+  width: fit-content;
+  z-index: 200;
+}
+
+.edit-button:active {
+  transform: scale(0.95);
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.page-indicator { display: none; }
+
+.edit-options {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.edit-btn {
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 14px;
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 15px;
+  color: #1a1a1a;
+  font-weight: 500;
+}
+
+.edit-btn:active {
+  transform: scale(0.98);
+  background: #f5f5f5;
+}
+
+.edit-btn-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.edit-icon {
+  width: 32px;
+  height: 32px;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+}
+
+.edit-icon svg {
+  width: 18px;
+  height: 18px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 2;
+}
+
+.edit-arrow {
+  color: #999;
+  font-size: 18px;
+}
+
+/* Modal */
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: none;
+  align-items: flex-end;
+  z-index: 1000;
+}
+
+.modal.show {
+  display: flex;
+}
+
+.modal-content {
+  width: 100%;
+  background: #fff;
+  border-radius: 28px 28px 0 0;
+  padding: 24px 24px 40px;
+  max-height: 75vh;
+  overflow-y: auto;
+  animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.modal-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #1a1a1a;
+}
+
+.modal-close {
+  width: 32px;
+  height: 32px;
+  background: #f0f0f0;
+  border: none;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  color: #666;
+  cursor: pointer;
+}
+
+.available-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 24px 16px;
+}
+
+.available-app {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.available-app:active {
+  transform: scale(0.9);
+}
+
+.available-icon {
+  width: 60px;
+  height: 60px;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  position: relative;
+}
+
+.available-icon svg {
+  width: 28px;
+  height: 28px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 2;
+}
+
+.available-icon::after {
+  content: '+';
+  position: absolute;
+  bottom: -4px;
+  right: -4px;
+  width: 18px;
+  height: 18px;
+  background: #34c759;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.available-name {
+  font-size: 11px;
+  font-weight: 500;
+  color: #1a1a1a;
+  text-align: center;
+  max-width: 65px;
+}
+
+.dock { display: none; }
+
+.widget-options {
+  display: grid;
+  gap: 12px;
+}
+
+.widget-option {
+  background: #f8f8f8;
+  border: 1px solid #e0e0e0;
+  border-radius: 12px;
+  padding: 16px;
+  cursor: pointer;
+}
+
+.widget-option:active {
+  background: #f0f0f0;
+}
+
+.widget-option-title {
+  font-weight: 600;
+  color: #1a1a1a;
+  margin-bottom: 4px;
+}
+
+.widget-option-desc {
+  font-size: 13px;
+  color: #666;
+}
+
+.settings-tab {
+  padding: 10px 16px;
+  border: none;
+  background: #f0f0f0;
+  color: #666;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.settings-tab.active {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: #fff;
+}
+
+.settings-content {
+  display: none;
+}
+
+.settings-content.active {
+  display: block;
+}
+
+.field {
+  margin-bottom: 16px;
+}
+
+.field label {
+  display: block;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+
+.field input, .field select, .field textarea {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #e0e0e0;
+  border-radius: 10px;
+  font-size: 15px;
+  font-family: inherit;
+  background: #fff;
+}
+
+.field input:focus, .field select:focus, .field textarea:focus {
+  outline: none;
+  border-color: #667eea;
+}
+
+.btn {
+  padding: 12px 20px;
+  border: none;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 15px;
+  cursor: pointer;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: #fff;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+
+.btn:active {
+  transform: scale(0.98);
+}
+
+body.loading { opacity: 0; }
+body.loaded { 
+  opacity: 1;
+  transition: opacity 0.3s;
+}
+
+/* ============================================ */
+/* NOTIFICATION MODAL STYLES */
+/* ============================================ */
+.notification-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  padding: 20px;
+  animation: fadeIn 0.3s ease-out;
+}
+
+.notification-modal.show {
+  display: flex;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.notification-box {
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(40px);
+  -webkit-backdrop-filter: blur(40px);
+  border-radius: 24px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+  padding: 32px;
+  max-width: 500px;
+  width: 100%;
+  border: 0.5px solid rgba(255, 255, 255, 0.3);
+  animation: slideUpNotif 0.4s ease-out;
+  position: relative;
+}
+
+@keyframes slideUpNotif {
+  from { 
+    opacity: 0;
+    transform: translateY(30px) scale(0.95);
+  }
+  to { 
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.notification-icon {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 20px;
+  font-size: 32px;
+}
+
+.notification-icon.info {
+  background: linear-gradient(135deg, #3b82f6, #1e40af);
+}
+
+.notification-icon.warning {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+}
+
+.notification-icon.success {
+  background: linear-gradient(135deg, #10b981, #059669);
+}
+
+.notification-icon.update {
+  background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+}
+
+.notification-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1a1a1a;
+  text-align: center;
+  margin-bottom: 16px;
+}
+
+.notification-message {
+  font-size: 16px;
+  line-height: 1.6;
+  color: #4b5563;
+  text-align: center;
+  margin-bottom: 28px;
+  white-space: pre-wrap;
+}
+
+.notification-actions {
+  display: flex;
+  gap: 12px;
+  flex-direction: column;
+}
+
+.notification-btn {
+  padding: 14px 24px;
+  border: none;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+
+.notification-btn.primary {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: #fff;
+}
+
+.notification-btn.primary:active {
+  transform: scale(0.98);
+}
+
+.notification-btn.secondary {
+  background: rgba(255, 255, 255, 0.5);
+  color: #667eea;
+  border: 1px solid rgba(102, 126, 234, 0.3);
+}
+
+.notification-btn.secondary:active {
+  background: rgba(255, 255, 255, 0.7);
+}
+
+
+@media (max-width: 767px) {
+  .status-bar {
+    padding-left: max(16px, env(safe-area-inset-left));
+    padding-right: max(16px, env(safe-area-inset-right));
+  }
+  
+  .logo svg {
+    width: 90px;
+    height: 24px;
+  }
+  
+  .logout-btn {
+    padding: 5px 10px;
+    font-size: 12px;
+  }
+  
+  .content {
+    padding-left: max(16px, env(safe-area-inset-left));
+    padding-right: max(16px, env(safe-area-inset-right));
+  }
+  
+  .widgets {
+    gap: 10px;
+  }
+  
+  .widget {
+    padding: 14px;
+    min-height: 100px;
+  }
+  
+  .widget-title {
+    font-size: 12px;
+  }
+  
+  .widget-value {
+    font-size: 24px;
+  }
+  
+  .widget-label {
+    font-size: 13px;
+  }
+  
+  .apps {
+    gap: 20px 12px;
+    padding: 0 4px;
+  }
+  
+  .app-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 13px;
+  }
+  
+  .app-icon svg {
+    width: 26px;
+    height: 26px;
+  }
+  
+  .app-name {
+    font-size: 10px;
+    max-width: 60px;
+  }
+  
+  .edit-button {
+    font-size: 12px;
+    padding: 7px 14px;
+  }
+  
+  .modal-content {
+    padding: 20px;
+    border-radius: 24px 24px 0 0;
+  }
+  
+  .modal-title {
+    font-size: 18px;
+  }
+  
+  .edit-btn {
+    padding: 14px;
+    font-size: 14px;
+  }
+  
+  .edit-icon {
+    width: 28px;
+    height: 28px;
+  }
+  
+  .field input, .field select, .field textarea {
+    font-size: 16px;
+  }
+  
+  .notification-box {
+    padding: 24px;
+  }
+  
+  .notification-title {
+    font-size: 20px;
+  }
+  
+  .notification-message {
+    font-size: 15px;
+  }
+}
+
+@media (min-width: 768px) {
+  .content {
+    max-width: 600px;
+    margin: 0 auto;
+  }
+}
+
+
   </style>
 
 </head>
 
 <body class="loading">
-
-<!-- Status Bar -->
 
 <div class="status-bar">
   <div class="logo">
@@ -667,26 +796,14 @@
   <button class="logout-btn" id="logoutBtn">Abmelden</button>
 </div>
 
-<!-- Main Content -->
-
 <div class="content">
-  <!-- Widgets -->
   <div class="widgets" id="widgets"></div>
-
-  <!-- Apps -->
-
   <div class="apps" id="apps"></div>
 </div>
 
-<!-- Dock -->
-
 <div class="dock" id="dock"></div>
 
-<!-- Edit Button -->
-
 <button class="edit-button" id="editButton">Hub bearbeiten</button>
-
-<!-- Edit Modal -->
 
 <div class="modal" id="editModal">
   <div class="modal-content">
@@ -704,24 +821,18 @@
         </div>
         <span class="edit-arrow">›</span>
       </button>
-
-```
-  <button class="edit-btn" id="editWidgetsBtn">
-    <div class="edit-btn-left">
-      <div class="edit-icon">
-        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
-      </div>
-      <span>Widgets anpassen</span>
+      <button class="edit-btn" id="editWidgetsBtn">
+        <div class="edit-btn-left">
+          <div class="edit-icon">
+            <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
+          </div>
+          <span>Widgets anpassen</span>
+        </div>
+        <span class="edit-arrow">›</span>
+      </button>
     </div>
-    <span class="edit-arrow">›</span>
-  </button>
-</div>
-```
-
   </div>
 </div>
-
-<!-- Apps Modal -->
 
 <div class="modal" id="appsModal">
   <div class="modal-content">
@@ -732,8 +843,6 @@
     <div class="available-grid" id="availableApps"></div>
   </div>
 </div>
-
-<!-- Widgets Modal -->
 
 <div class="modal" id="widgetsModal">
   <div class="modal-content">
@@ -754,8 +863,6 @@
   </div>
 </div>
 
-<!-- Settings Modal -->
-
 <div class="modal" id="settingsModal">
   <div class="modal-content" style="max-height: 80vh;">
     <div class="modal-header">
@@ -763,8 +870,7 @@
       <button class="modal-close" onclick="closeModal('settingsModal')">×</button>
     </div>
 
-```
-<!-- Settings Tabs -->
+
 <div style="display: flex; gap: 8px; margin-bottom: 20px; overflow-x: auto;">
   <button class="settings-tab active" onclick="showSettingsTab('profile')">Profil</button>
   <button class="settings-tab" onclick="showSettingsTab('password')">Passwort</button>
@@ -772,7 +878,6 @@
   <button class="settings-tab" onclick="showSettingsTab('license')" id="licenseTabBtn" style="display:none;">Lizenz</button>
 </div>
 
-<!-- Profile Tab -->
 <div class="settings-content active" id="settings-profile">
   <div class="field">
     <label>E-Mail</label>
@@ -790,7 +895,6 @@
   <button class="btn" onclick="saveProfile()" style="margin-top:16px; width:100%;">Profil speichern</button>
 </div>
 
-<!-- Password Tab -->
 <div class="settings-content" id="settings-password">
   <div class="field">
     <label>Aktuelles Passwort</label>
@@ -808,7 +912,6 @@
   <button class="btn" onclick="changePassword()" style="margin-top:16px; width:100%;">Passwort ändern</button>
 </div>
 
-<!-- Users Tab -->
 <div class="settings-content" id="settings-users">
   <button class="btn" onclick="openUserModal()" style="margin-bottom:16px; width:100%;">+ Neuen Benutzer anlegen</button>
   
@@ -831,7 +934,6 @@
   </div>
 </div>
 
-<!-- License Tab -->
 <div class="settings-content" id="settings-license">
   <div style="background:linear-gradient(135deg, #16a34a, #15803d); border-radius:16px; padding:24px; color:#fff; margin-bottom:20px;">
     <h3 style="margin:0 0 20px 0; font-size:20px;">✓ Aktive Lizenz</h3>
@@ -865,15 +967,13 @@
   
   <div style="background:#f8f8f8; border-radius:12px; padding:20px;">
     <strong style="color:#1a1a1a;">📞 Support kontaktieren</strong><br>
-    <span style="color:#666; font-size:14px;">Bei Fragen zur Lizenz kontaktieren Sie uns unter:<br><strong><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="c9babcb9b9a6bbbd89bbacbab9a6a7ada8e7bab0babdaca4ba">[email&#160;protected]</a></strong></span>
-  </div>
-</div>
-```
-
+    <span style="color:#666; font-size:14px;">Bei Fragen zur Lizenz kontaktieren Sie uns unter:<br><strong>support@responda.systems</strong></span>
   </div>
 </div>
 
-<!-- User Modal -->
+
+  </div>
+</div>
 
 <div class="modal" id="userModal">
   <div class="modal-content" style="max-height: 80vh;">
@@ -882,7 +982,7 @@
       <button class="modal-close" onclick="closeModal('userModal')">×</button>
     </div>
 
-```
+
 <div class="field">
   <label>E-Mail *</label>
   <input type="email" id="userEmail" placeholder="benutzer@example.com" required>
@@ -916,8 +1016,20 @@
   <button class="btn" onclick="closeModal('userModal')" style="background:#e0e0e0; color:#666; flex:1;">Abbrechen</button>
   <button class="btn" onclick="saveUser()" style="flex:1;" id="saveUserBtn">Speichern</button>
 </div>
-```
 
+
+  </div>
+</div>
+
+<div class="notification-modal" id="notificationModal">
+  <div class="notification-box">
+    <div class="notification-icon" id="notificationIcon">ℹ️</div>
+    <div class="notification-title" id="notificationTitle">Benachrichtigung</div>
+    <div class="notification-message" id="notificationMessage">Nachricht</div>
+    <div class="notification-actions">
+      <button class="notification-btn primary" onclick="dismissNotification()">Verstanden</button>
+      <button class="notification-btn secondary" onclick="remindLaterNotification()">Später erinnern</button>
+    </div>
   </div>
 </div>
 
@@ -925,7 +1037,6 @@
   import PocketBase from 'https://cdn.jsdelivr.net/npm/pocketbase@0.21.3/dist/pocketbase.es.mjs';
   const pb = new PocketBase('https://api.responda.systems');
 
-  // Icons
   const ICONS = {
     siren: '<svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5M2 12l10 5 10-5"/></svg>',
     clipboard: '<svg viewBox="0 0 24 24"><rect x="8" y="2" width="8" height="4" rx="1"/><rect x="4" y="4" width="16" height="18" rx="2"/></svg>',
@@ -941,7 +1052,6 @@
     settings: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v6m5.66-13.66l-4.24 4.24m0 6l4.24 4.24M23 12h-6m-6 0H1m18.66-5.66l-4.24 4.24m0 6l4.24 4.24"/></svg>',
   };
 
-  // Apps
   const ALL_APPS = {
     einsaetze: { id: 'einsaetze', name: 'Einsätze', icon: 'siren', url: 'einsaetze.html', permission: 'einsaetze' },
     patienten: { id: 'patienten', name: 'Patienten', icon: 'clipboard', url: 'patientendokumentation-dateien.html', permission: 'patienten' },
@@ -966,6 +1076,79 @@
   };
 
   let user, userApps = [], availableApps = [], editMode = false;
+  let currentNotification = null;
+
+  async function checkForNotifications() {
+    if (!user || !user.organization_id) return;
+    
+    try {
+      const notifications = await pb.collection('hub_notifications').getFullList({
+        filter: `organization_id = "${user.organization_id}" && active = true`,
+        sort: '-created'
+      });
+      
+      if (notifications.length === 0) return;
+      
+      for (const notif of notifications) {
+        const statusRecords = await pb.collection('notification_status').getFullList({
+          filter: `notification_id = "${notif.id}" && user_id = "${user.id}" && status = "dismissed"`
+        });
+        
+        if (statusRecords.length === 0) {
+          showNotification(notif);
+          break;
+        }
+      }
+    } catch (error) {
+      console.log('Could not check notifications:', error);
+    }
+  }
+
+  function showNotification(notification) {
+    currentNotification = notification;
+    
+    const iconMap = {
+      info: 'ℹ️',
+      warning: '⚠️',
+      success: '✅',
+      update: '🔔'
+    };
+    
+    const iconEl = document.getElementById('notificationIcon');
+    iconEl.textContent = iconMap[notification.type] || 'ℹ️';
+    iconEl.className = 'notification-icon ' + notification.type;
+    
+    document.getElementById('notificationTitle').textContent = notification.title;
+    document.getElementById('notificationMessage').textContent = notification.message;
+    
+    document.getElementById('notificationModal').classList.add('show');
+  }
+
+  window.dismissNotification = async function() {
+    if (!currentNotification) return;
+    
+    try {
+      await pb.collection('notification_status').create({
+        notification_id: currentNotification.id,
+        user_id: user.id,
+        status: 'dismissed',
+        dismissed_at: new Date().toISOString(),
+        organization_id: user.organization_id
+      });
+      
+      document.getElementById('notificationModal').classList.remove('show');
+      currentNotification = null;
+    } catch (error) {
+      console.error('Error dismissing notification:', error);
+      document.getElementById('notificationModal').classList.remove('show');
+      currentNotification = null;
+    }
+  };
+
+  window.remindLaterNotification = function() {
+    document.getElementById('notificationModal').classList.remove('show');
+    currentNotification = null;
+  };
 
   async function init() {
     if (!pb.authStore.isValid) return window.location.href = 'mpg-login.html';
@@ -974,13 +1157,12 @@
       user = pb.authStore.model;
       if (!user) return window.location.href = 'mpg-login.html';
       
-      // Load organization info
       if (user.organization_id) {
         try {
           const org = await pb.collection('organizations').getOne(user.organization_id);
           user.organization_name = org.org_name;
           user.organization_logo = org.logo || '🏢';
-          user.organization = org; // Store complete org for file URL
+          user.organization = org;
         } catch (e) {
           console.log('Could not load organization:', e);
         }
@@ -992,6 +1174,9 @@
       
       loadPrefs();
       render();
+      
+      await checkForNotifications();
+      
     } catch (e) {
       pb.authStore.clear();
       window.location.href = 'mpg-login.html';
@@ -1013,12 +1198,10 @@
     
     if (saved) {
       userApps = JSON.parse(saved);
-      // Ensure settings is always included
       if (!userApps.includes('settings')) {
         userApps.push('settings');
       }
     } else {
-      // Default apps including settings
       userApps = Object.keys(ALL_APPS).filter(id => {
         const app = ALL_APPS[id];
         return hasPermission(app.permission);
@@ -1044,18 +1227,14 @@
   function renderWidgets() {
     const today = new Date();
     
-    // Get organization info
     const orgName = user.organization_name || 'Responda';
     const orgLogoFile = user.organization_logo || '';
     
-    // Generate proper PocketBase file URL if logo exists
     let logoDisplay;
     if (orgLogoFile && user.organization && orgLogoFile !== '🏢') {
-      // Build PocketBase file URL
       const logoUrl = pb.files.getUrl(user.organization, orgLogoFile, { thumb: '500x500' });
       logoDisplay = `<img src="${logoUrl}" alt="${orgName}" style="width:100px; height:100px; object-fit:contain; border-radius:12px;">`;
     } else {
-      // Fallback to emoji
       logoDisplay = `<div style="font-size:100px; line-height:1;">🏢</div>`;
     }
     
@@ -1082,7 +1261,6 @@
       const app = ALL_APPS[id];
       if (!app) return '';
       
-      // Settings app opens modal instead of navigating
       const clickHandler = app.isInternal ? `onclick="openSettings(event)"` : '';
       const href = app.isInternal ? 'javascript:void(0)' : app.url;
       
@@ -1099,7 +1277,6 @@
   function renderAvailable() {
     const availableContainer = document.getElementById('availableApps');
     
-    // Filter out settings from available apps
     const appsToShow = availableApps.filter(id => id !== 'settings');
     
     if (appsToShow.length === 0) {
@@ -1136,7 +1313,6 @@
     e.preventDefault();
     e.stopPropagation();
     
-    // Prevent removing settings
     if (id === 'settings') {
       alert('Einstellungen können nicht entfernt werden');
       return;
@@ -1183,13 +1359,11 @@
     }
   };
 
-  // Settings functions
   window.openSettings = function(e) {
     e.preventDefault();
     document.getElementById('settingsModal').classList.add('show');
     loadProfileData();
     
-    // Show users tab only for supervisors/mpg
     if (user.supervisor || user.role === 'mpg') {
       document.getElementById('usersTabBtn').style.display = 'block';
       document.getElementById('licenseTabBtn').style.display = 'block';
@@ -1203,7 +1377,6 @@
     event.target.classList.add('active');
     document.getElementById(`settings-${tab}`).classList.add('active');
     
-    // Load data when switching tabs
     if (tab === 'users') loadUsers();
     if (tab === 'license') loadLicense();
   };
@@ -1328,7 +1501,6 @@
       }
       
       if (editingUserId) {
-        // Update existing user
         await pb.collection('users').update(editingUserId, {
           name,
           phone: phone || '',
@@ -1343,7 +1515,6 @@
           loadUsers();
         }, 1500);
       } else {
-        // Create new user
         const tempPassword = Array.from({length: 16}, () => 
           'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$%&*'[Math.floor(Math.random() * 66)]
         ).join('');
@@ -1362,7 +1533,6 @@
           permissions: {}
         });
         
-        // Send password reset email
         try {
           await pb.collection('users').requestPasswordReset(email);
           msg.textContent = '✅ Benutzer angelegt! Passwort-E-Mail versendet.';
@@ -1405,7 +1575,6 @@
         document.getElementById('licenseExpiry').textContent = 'Unbegrenzt';
       }
       
-      // Count users
       const users = await pb.collection('users').getFullList({
         filter: `organization_id = "${user.organization_id}"`
       });
@@ -1450,7 +1619,6 @@
       if (!new1 || new1.length < 8) { msg.textContent = '❌ Neues Passwort: mind. 8 Zeichen'; msg.style.color = '#ef4444'; return; }
       if (new1 !== new2) { msg.textContent = '❌ Passwörter stimmen nicht überein'; msg.style.color = '#ef4444'; return; }
 
-      // Verify current password
       try {
         await pb.collection('users').authWithPassword(user.email, current);
       } catch (e) {
@@ -1459,7 +1627,6 @@
         return;
       }
 
-      // Update password
       await pb.collection('users').update(user.id, {
         password: new1,
         passwordConfirm: new1,
