@@ -7,8 +7,9 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>Patientendokumentation – Responda</title>
   <meta name="theme-color" content="#667eea">
-  
+
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
   <script src="https://cdn.jsdelivr.net/npm/pocketbase@0.21.3/dist/pocketbase.umd.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.6.0/jspdf.plugin.autotable.min.js"></script>
@@ -28,11 +29,16 @@
       min-height: 100vh;
       overflow: hidden;
       -webkit-font-smoothing: antialiased;
-      user-select: none;
+      margin: 0;
+      padding: 0;
+      opacity: 0;
+      transition: opacity 0.3s;
     }
     
+    body.loaded { opacity: 1; }
+    
     .status-bar {
-      height: 44px;
+      height: 54px;
       padding-top: env(safe-area-inset-top);
       display: grid;
       grid-template-columns: 1fr auto 1fr;
@@ -47,6 +53,9 @@
       left: 0;
       right: 0;
       z-index: 1000;
+      background: rgba(102, 126, 234, 0.95);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
     }
     
     .logo {
@@ -64,236 +73,202 @@
     .page-title {
       text-align: center;
       justify-self: center;
-      font-size: 15px;
-      font-weight: 600;
+      font-size: 16px;
+      font-weight: 700;
     }
     
-    .user-name {
-      text-align: right;
+    .toolbar {
       justify-self: end;
-      font-size: 15px;
+      display: flex;
+      gap: 8px;
+    }
+    
+    .topbtn {
+      background: rgba(255, 255, 255, 0.2);
+      border: 0.5px solid rgba(255, 255, 255, 0.3);
+      color: #fff;
+      padding: 6px 12px;
+      border-radius: 12px;
+      font-size: 13px;
       font-weight: 600;
       cursor: pointer;
+      transition: all 0.2s;
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-family: inherit;
+      border-style: solid;
+    }
+    
+    .topbtn:hover, .topbtn:active {
+      transform: scale(0.95);
+      background: rgba(255, 255, 255, 0.3);
     }
     
     .content {
       height: 100vh;
       overflow-y: auto;
       -webkit-overflow-scrolling: touch;
-      padding-top: calc(44px + env(safe-area-inset-top) + 30px);
+      padding-top: calc(54px + env(safe-area-inset-top) + 20px);
       padding-left: max(20px, env(safe-area-inset-left));
       padding-right: max(20px, env(safe-area-inset-right));
-      padding-bottom: calc(120px + env(safe-area-inset-bottom));
+      padding-bottom: max(100px, env(safe-area-inset-bottom));
     }
     
-    .section-header {
-      color: #fff;
-      margin-bottom: 20px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-    
-    .section-title {
-      font-size: 24px;
-      font-weight: 700;
-      letter-spacing: -0.5px;
-    }
-    
-    .section-count {
-      background: rgba(255, 255, 255, 0.2);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      border: 0.5px solid rgba(255, 255, 255, 0.3);
-      color: #fff;
-      padding: 6px 14px;
-      border-radius: 999px;
-      font-size: 13px;
-      font-weight: 700;
-    }
-    
-    .filter-tabs {
-      display: flex;
-      gap: 12px;
-      margin-bottom: 24px;
-      overflow-x: auto;
-      -webkit-overflow-scrolling: touch;
-      padding-bottom: 8px;
-    }
-    
-    .filter-tabs::-webkit-scrollbar {
-      display: none;
-    }
-    
-    .filter-tab {
-      background: rgba(255, 255, 255, 0.15);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      border: 0.5px solid rgba(255, 255, 255, 0.2);
-      color: #fff;
-      padding: 10px 20px;
-      border-radius: 999px;
-      font-weight: 600;
-      cursor: pointer;
-      font-size: 14px;
-      transition: all 0.2s;
-      white-space: nowrap;
-      flex-shrink: 0;
-    }
-    
-    .filter-tab:active {
-      transform: scale(0.95);
-    }
-    
-    .filter-tab.active {
-      background: rgba(255, 255, 255, 0.95);
-      color: #667eea;
-      border-color: rgba(255, 255, 255, 0.5);
-    }
-    
-    .doc-list {
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-    }
-    
-    .doc-card {
+    .card {
       background: rgba(255, 255, 255, 0.95);
       backdrop-filter: blur(40px);
       -webkit-backdrop-filter: blur(40px);
-      border-radius: 18px;
-      padding: 20px;
-      border: 0.5px solid rgba(255, 255, 255, 0.5);
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
-      transition: all 0.2s;
-      position: relative;
-      overflow: hidden;
+      border-radius: 20px;
+      padding: 24px;
+      margin-bottom: 20px;
+      border: 0.5px solid rgba(255, 255, 255, 0.3);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
     }
     
-    .doc-card::before {
-      content: '';
-      position: absolute;
-      left: 0;
-      top: 0;
-      bottom: 0;
-      width: 4px;
-      background: linear-gradient(135deg, #667eea, #764ba2);
-    }
-    
-    .doc-card.offen::before {
-      background: linear-gradient(135deg, #fbbf24, #f97316);
-    }
-    
-    .doc-card.archiviert::before {
-      background: linear-gradient(135deg, #10b981, #059669);
-    }
-    
-    .doc-card:active {
-      transform: scale(0.98);
-    }
-    
-    .doc-card-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      margin-bottom: 12px;
-    }
-    
-    .doc-title {
-      font-size: 17px;
-      font-weight: 700;
-      color: #111827;
-      line-height: 1.3;
-      flex: 1;
-    }
-    
-    .doc-status-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      flex-shrink: 0;
-      margin-top: 6px;
-      margin-left: 12px;
-    }
-    
-    .doc-status-dot.offen {
-      background: #fbbf24;
-      box-shadow: 0 0 8px rgba(251, 191, 36, 0.5);
-    }
-    
-    .doc-status-dot.archiviert {
-      background: #10b981;
-      box-shadow: 0 0 8px rgba(16, 185, 129, 0.5);
-    }
-    
-    .doc-meta {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin-bottom: 16px;
-    }
-    
-    .meta-chip {
-      background: #f3f4f6;
-      color: #6b7280;
-      padding: 4px 12px;
-      border-radius: 6px;
-      font-size: 12px;
-      font-weight: 600;
-      letter-spacing: 0.3px;
-    }
-    
-    .meta-chip.primary {
-      background: rgba(102, 126, 234, 0.1);
+    .card h2 {
+      margin: 0 0 20px 0;
       color: #667eea;
+      font-weight: 800;
+      font-size: 20px;
     }
     
-    .doc-actions {
+    .tabs {
       display: flex;
-      gap: 8px;
+      gap: 10px;
+      margin-bottom: 20px;
       flex-wrap: wrap;
     }
     
-    .action-btn {
-      background: #667eea;
+    .tab {
+      background: rgba(255, 255, 255, 0.3);
+      border: 1px solid rgba(102, 126, 234, 0.2);
+      color: #667eea;
+      padding: 10px 16px;
+      border-radius: 999px;
+      font-weight: 700;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-family: inherit;
+    }
+    
+    .tab:hover {
+      background: rgba(255, 255, 255, 0.5);
+      transform: translateY(-1px);
+    }
+    
+    .tab.active {
+      color: #fff;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      border-color: transparent;
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+    
+    .table-head, .row {
+      display: grid;
+      grid-template-columns: 120px 1fr 280px;
+      gap: 12px;
+      padding: 14px;
+      align-items: center;
+      border-bottom: 1px solid rgba(102, 126, 234, 0.1);
+    }
+    
+    .table-head {
+      font-weight: 800;
+      color: #667eea;
+      background: rgba(102, 126, 234, 0.05);
+      border-radius: 12px 12px 0 0;
+      font-size: 13px;
+    }
+    
+    .row:last-child {
+      border-bottom: none;
+    }
+    
+    .row:hover {
+      background: rgba(102, 126, 234, 0.03);
+      border-radius: 8px;
+    }
+    
+    .pill {
+      display: inline-block;
+      font-weight: 700;
+      border-radius: 999px;
+      padding: 5px 12px;
+      font-size: 12px;
+    }
+    
+    .pill.offen {
+      background: #fef3c7;
+      color: #92400e;
+    }
+    
+    .pill.archiviert {
+      background: #dcfce7;
+      color: #166534;
+    }
+    
+    .btn {
+      background: linear-gradient(135deg, #667eea, #764ba2);
       color: #fff;
       border: 0;
-      border-radius: 10px;
-      padding: 8px 16px;
-      font-weight: 600;
+      border-radius: 12px;
+      padding: 10px 16px;
+      font-weight: 700;
       cursor: pointer;
-      font-size: 13px;
+      font-size: 14px;
       transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
       font-family: inherit;
-      flex: 1;
-      min-width: 100px;
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
     }
     
-    .action-btn:active {
-      transform: scale(0.95);
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
     }
     
-    .action-btn.secondary {
-      background: #f3f4f6;
-      color: #4b5563;
+    .btn:active {
+      transform: translateY(0);
     }
     
-    .empty-state {
-      text-align: center;
-      padding: 60px 20px;
-      color: #fff;
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
     }
     
-    .empty-state-icon {
-      font-size: 64px;
-      opacity: 0.3;
-      margin-bottom: 16px;
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.2);
+      color: #667eea;
+      border: 1px solid rgba(102, 126, 234, 0.3);
+      box-shadow: none;
     }
     
-    .empty-state-text {
-      font-size: 16px;
-      opacity: 0.8;
-      font-weight: 500;
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.3);
+    }
+    
+    .btn-icon {
+      background: transparent;
+      color: #667eea;
+      border: 1px solid #667eea;
+      padding: 8px 12px;
+      font-size: 13px;
+      box-shadow: none;
+    }
+    
+    .btn-icon:hover {
+      background: rgba(102, 126, 234, 0.1);
     }
     
     .add-btn {
@@ -303,12 +278,12 @@
       width: 60px;
       height: 60px;
       border-radius: 50%;
-      background: rgba(255, 255, 255, 0.95);
-      color: #667eea;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: #fff;
       border: 0;
       cursor: pointer;
-      font-size: 28px;
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+      font-size: 24px;
+      box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
       z-index: 100;
       transition: transform 0.2s;
       display: flex;
@@ -316,8 +291,12 @@
       justify-content: center;
     }
     
+    .add-btn:hover {
+      transform: scale(1.1);
+    }
+    
     .add-btn:active {
-      transform: scale(0.9);
+      transform: scale(0.95);
     }
     
     .modal {
@@ -359,7 +338,7 @@
     
     details {
       background: #fff;
-      border: 1px solid #e5e7eb;
+      border: 1px solid rgba(102, 126, 234, 0.2);
       border-radius: 12px;
       margin: 0 0 12px 0;
       overflow: hidden;
@@ -374,7 +353,7 @@
       align-items: center;
       gap: 10px;
       font-size: 15px;
-      background: #f9fafb;
+      background: rgba(102, 126, 234, 0.05);
       transition: background 0.2s;
       color: #667eea;
     }
@@ -383,12 +362,13 @@
       display: none;
     }
     
-    summary:active {
-      background: #f3f4f6;
+    summary:hover {
+      background: rgba(102, 126, 234, 0.1);
     }
     
     details[open] summary {
-      border-bottom: 1px solid #e5e7eb;
+      border-bottom: 1px solid rgba(102, 126, 234, 0.2);
+      background: rgba(102, 126, 234, 0.08);
     }
     
     .sec-body {
@@ -418,7 +398,7 @@
     select {
       width: 100%;
       padding: 10px 12px;
-      border: 1px solid #d1d5db;
+      border: 1px solid rgba(102, 126, 234, 0.2);
       border-radius: 10px;
       background: #fff;
       font-size: 16px;
@@ -440,7 +420,7 @@
     }
     
     fieldset {
-      border: 1px solid #e5e7eb;
+      border: 1px solid rgba(102, 126, 234, 0.2);
       border-radius: 10px;
       padding: 12px;
       margin-bottom: 12px;
@@ -462,7 +442,7 @@
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      border: 1px solid #d1d5db;
+      border: 1px solid rgba(102, 126, 234, 0.2);
       border-radius: 999px;
       padding: 6px 12px;
       background: #fff;
@@ -471,8 +451,8 @@
       transition: all 0.2s;
     }
     
-    .pill-input:active {
-      background: #f9fafb;
+    .pill-input:hover {
+      background: rgba(102, 126, 234, 0.05);
       border-color: #667eea;
     }
     
@@ -480,9 +460,9 @@
       display: inline-block;
       padding: 4px 10px;
       border-radius: 999px;
-      background: #f3f4f6;
+      background: rgba(102, 126, 234, 0.1);
       color: #667eea;
-      border: 1px solid #e5e7eb;
+      border: 1px solid rgba(102, 126, 234, 0.2);
       font-size: 13px;
       font-weight: 600;
     }
@@ -494,20 +474,20 @@
     }
     
     th, td {
-      border: 1px solid #e5e7eb;
+      border: 1px solid rgba(102, 126, 234, 0.2);
       padding: 8px;
       text-align: left;
       font-size: 14px;
     }
     
     th {
-      background: #f9fafb;
+      background: rgba(102, 126, 234, 0.05);
       font-weight: 700;
       color: #667eea;
     }
     
     .subbtn {
-      border: 1px solid #d1d5db;
+      border: 1px solid rgba(102, 126, 234, 0.2);
       background: #fff;
       padding: 6px 10px;
       border-radius: 8px;
@@ -518,8 +498,9 @@
       transition: all 0.2s;
     }
     
-    .subbtn:active {
-      background: #f9fafb;
+    .subbtn:hover {
+      background: rgba(102, 126, 234, 0.05);
+      border-color: #667eea;
     }
     
     .thumbs {
@@ -537,7 +518,7 @@
       width: 120px;
       height: 120px;
       object-fit: cover;
-      border: 1px solid #e5e7eb;
+      border: 1px solid rgba(102, 126, 234, 0.2);
       border-radius: 10px;
     }
     
@@ -545,13 +526,13 @@
       position: absolute;
       top: 6px;
       right: 6px;
+      border: 1px solid rgba(0,0,0,0.2);
       background: rgba(0,0,0,0.6);
       color: #fff;
       border-radius: 6px;
       padding: 4px 8px;
       cursor: pointer;
       font-weight: 700;
-      font-size: 12px;
     }
     
     .form-grid {
@@ -584,17 +565,17 @@
     }
     
     .sig-wrap {
-      border: 2px dashed #d1d5db;
+      border: 2px dashed rgba(102, 126, 234, 0.3);
       border-radius: 12px;
       padding: 16px;
-      background: #f9fafb;
+      background: rgba(102, 126, 234, 0.02);
       margin: 16px 0;
     }
     
     canvas.sig-canvas {
       width: 100%;
       height: 200px;
-      border: 1px solid #d1d5db;
+      border: 1px solid rgba(102, 126, 234, 0.2);
       border-radius: 10px;
       background: #fff;
       cursor: crosshair;
@@ -609,16 +590,10 @@
     }
     
     .msg {
-      position: fixed;
-      top: calc(44px + env(safe-area-inset-top) + 20px);
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 2000;
-      padding: 12px 20px;
-      border-radius: 12px;
+      margin-top: 12px;
+      padding: 12px 16px;
+      border-radius: 10px;
       font-weight: 600;
-      font-size: 14px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
     }
     
     .msg.error {
@@ -636,7 +611,7 @@
     .signature-img {
       max-width: 400px;
       max-height: 200px;
-      border: 1px solid #d1d5db;
+      border: 1px solid rgba(102, 126, 234, 0.2);
       border-radius: 10px;
       margin-top: 8px;
     }
@@ -652,35 +627,11 @@
       width: 100%;
       height: 150px;
       object-fit: cover;
-      border: 1px solid #e5e7eb;
+      border: 1px solid rgba(102, 126, 234, 0.2);
       border-radius: 10px;
     }
     
-    .btn {
-      background: #667eea;
-      color: #fff;
-      border: 0;
-      border-radius: 10px;
-      padding: 10px 16px;
-      font-weight: 600;
-      cursor: pointer;
-      font-size: 14px;
-      transition: all 0.2s;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      font-family: inherit;
-    }
-    
-    .btn:active {
-      transform: scale(0.95);
-    }
-    
-    .btn-secondary {
-      background: #9ca3af;
-    }
-    
-    @media (max-width: 767px) {
+    @media (max-width: 768px) {
       .status-bar {
         padding-left: max(16px, env(safe-area-inset-left));
         padding-right: max(16px, env(safe-area-inset-right));
@@ -690,21 +641,23 @@
         width: 110px;
       }
       
+      .page-title {
+        font-size: 14px;
+      }
+      
+      .topbtn {
+        font-size: 12px;
+        padding: 5px 10px;
+      }
+      
       .content {
         padding-left: max(16px, env(safe-area-inset-left));
         padding-right: max(16px, env(safe-area-inset-right));
       }
       
-      .section-title {
-        font-size: 20px;
-      }
-      
-      .doc-actions {
-        flex-direction: column;
-      }
-      
-      .action-btn {
-        width: 100%;
+      .table-head, .row {
+        grid-template-columns: 1fr;
+        gap: 8px;
       }
       
       .modal-box {
@@ -720,14 +673,28 @@
         right: 20px;
         width: 56px;
         height: 56px;
-        font-size: 24px;
+        font-size: 20px;
       }
       
       .grid {
         grid-template-columns: 1fr;
       }
     }
+    
+    @media print {
+      .status-bar, .tabs, .btn, .add-btn, .modal {
+        display: none !important;
+      }
+      body {
+        background: #fff;
+      }
+      .card {
+        box-shadow: none;
+        border: 1px solid #ddd;
+      }
+    }
   </style>
+
 </head>
 <body>
   <div class="status-bar">
@@ -745,977 +712,1736 @@
         <text x="140" y="80" font-family="Inter, sans-serif" font-size="46" font-weight="600" fill="white" letter-spacing="0">Responda</text>
       </svg>
     </div>
-    <div class="page-title">Patientendokumentation</div>
-    <div class="user-name" id="userName">Laden...</div>
+    <div class="page-title">
+      <i class="fa-solid fa-file-medical"></i> Patientendokumentation
+    </div>
+    <div class="toolbar">
+      <a class="topbtn" href="hub.html"><i class="fa-solid fa-home"></i> Hub</a>
+      <button class="topbtn" id="logout"><i class="fa-solid fa-right-from-bracket"></i></button>
+    </div>
   </div>
 
   <div class="content">
-    <div class="section-header">
-      <div class="section-title">Dokumente</div>
-      <div class="section-count" id="docCount">0</div>
-    </div>
-    
-    <div class="filter-tabs">
-      <button class="filter-tab active" data-tab="pat">Offen</button>
-      <button class="filter-tab" data-tab="nach">Nacherfassungen</button>
-      <button class="filter-tab" data-tab="archiv">Archiv</button>
-    </div>
+    <div class="card">
+      <h2>Dokumentenverwaltung</h2>
 
-    <div id="tab-pat" class="tab-content">
-      <div class="doc-list" id="pat-rows"></div>
-    </div>
+      <div class="tabs">
+        <button class="tab active" data-tab="pat">
+          <i class="fa-solid fa-file-medical"></i> Patientendokus (Offen)
+        </button>
+        <button class="tab" data-tab="nach">
+          <i class="fa-solid fa-clipboard-list"></i> Nacherfassungen (Offen)
+        </button>
+        <button class="tab" data-tab="archiv">
+          <i class="fa-solid fa-box-archive"></i> Archiv
+        </button>
+      </div>
 
-    <div id="tab-nach" class="tab-content" style="display:none">
-      <div class="doc-list" id="nach-rows"></div>
-    </div>
+      <div id="tab-pat" class="tab-content">
+        <div class="table-head">
+          <div>Status</div>
+          <div>Dokument</div>
+          <div>Aktionen</div>
+        </div>
+        <div id="pat-rows"></div>
+      </div>
 
-    <div id="tab-archiv" class="tab-content" style="display:none">
-      <div class="doc-list" id="archiv-rows"></div>
+      <div id="tab-nach" class="tab-content" style="display:none">
+        <div class="table-head">
+          <div>Status</div>
+          <div>Nacherfassung</div>
+          <div>Aktionen</div>
+        </div>
+        <div id="nach-rows"></div>
+      </div>
+
+      <div id="tab-archiv" class="tab-content" style="display:none">
+        <div class="table-head">
+          <div>Typ</div>
+          <div>Dokument</div>
+          <div>Aktionen</div>
+        </div>
+        <div id="archiv-rows"></div>
+      </div>
+
+      <div id="msg"></div>
     </div>
   </div>
 
-  <button class="add-btn" id="addBtn">+</button>
-  <div id="msg"></div>
-<!-- ==================== EDIT MODAL START ==================== -->
-<div class="modal" id="editModal">
-  <div class="modal-box">
-    <h3>Patientendokumentation bearbeiten</h3>
-    <div id="editFormContainer"></div>
-    <div style="display:flex;gap:10px;margin-top:20px;justify-content:flex-end;position:sticky;bottom:0;background:#fff;padding-top:16px;border-top:2px solid #e5e7eb">
-      <button class="btn btn-secondary" onclick="closeEditModal()">
-        Abbrechen
-      </button>
-      <button class="btn" onclick="saveAndSignPatDoc()">
-        Speichern & Gegenzeichnen
-      </button>
-    </div>
-  </div>
-</div>
-<!-- ==================== EDIT MODAL END ==================== -->
+  <button class="add-btn" id="addBtn" title="Neue Nacherfassung">
+    <i class="fa-solid fa-plus"></i>
+  </button>
 
-<!-- ==================== SIGN MODAL START ==================== -->
-<div class="modal" id="signModal">
-  <div class="modal-box" style="max-width:600px">
-    <h3>Verantwortlicher / MPG-Beauftragter</h3>
-    <p>Dokument wurde geprüft und ist korrekt. Mit Unterschrift wird es ins Archiv verschoben.</p>
-    <div class="form-group">
-      <label>Name (Verantwortlicher / MPG-Beauftragter):</label>
-      <input type="text" id="adminName" placeholder="Ihr Name">
-    </div>
-    <div class="sig-wrap">
-      <label style="font-weight:700;margin-bottom:8px;display:block">Unterschrift:</label>
-      <canvas id="adminSigCanvas" class="sig-canvas"></canvas>
-      <div class="sig-actions">
-        <button class="btn btn-secondary" onclick="clearAdminSig()">
-          Löschen
+  <!-- EDIT MODAL -->
+  <div class="modal" id="editModal">
+    <div class="modal-box">
+      <h3><i class="fa-solid fa-edit"></i> Patientendokumentation bearbeiten</h3>
+      <div id="editFormContainer"></div>
+      <div style="display:flex;gap:10px;margin-top:20px;justify-content:flex-end;position:sticky;bottom:0;background:#fff;padding-top:16px;border-top:2px solid rgba(102,126,234,0.2)">
+        <button class="btn btn-secondary" onclick="closeEditModal()">
+          <i class="fa-solid fa-times"></i> Abbrechen
+        </button>
+        <button class="btn" onclick="saveAndSignPatDoc()">
+          <i class="fa-solid fa-save"></i> Speichern & Gegenzeichnen
         </button>
       </div>
     </div>
-    <div style="display:flex;gap:10px;margin-top:20px;justify-content:flex-end">
-      <button class="btn btn-secondary" onclick="closeSignModal()">Abbrechen</button>
-      <button class="btn" onclick="archiveWithSignature()">
-        Unterschreiben & Archivieren
-      </button>
-    </div>
   </div>
-</div>
-<!-- ==================== SIGN MODAL END ==================== -->
 
-<!-- ==================== NACHERFASSUNG MODAL START ==================== -->
-<div class="modal" id="nachModal">
-  <div class="modal-box">
-    <h3>Einsatznacherfassung</h3>
-    <form id="nachForm">
-      <div class="form-grid">
-        <div class="form-group">
-          <label>Datum/Alarmzeit:</label>
-          <input type="datetime-local" name="datum_alarmzeit">
-        </div>
-        <div class="form-group">
-          <label>Datum/Einsatzende:</label>
-          <input type="datetime-local" name="datum_einsatzende">
-        </div>
-      </div>
-      <div class="form-grid">
-        <div class="form-group">
-          <label>Stichwort:</label>
-          <input type="text" name="stichwort">
-        </div>
-        <div class="form-group">
-          <label>Kategorie:</label>
-          <input type="text" name="kategorie">
-        </div>
-      </div>
-      <div class="form-grid">
-        <div class="form-group">
-          <label>Einsatznummer der ILS:</label>
-          <input type="text" name="einsatznummer_ils">
-        </div>
-        <div class="form-group">
-          <label>Meldebild:</label>
-          <input type="text" name="meldebild">
-        </div>
-      </div>
+  <!-- SIGN MODAL -->
+  <div class="modal" id="signModal">
+    <div class="modal-box" style="max-width:600px">
+      <h3><i class="fa-solid fa-signature"></i> Verantwortlicher / MPG-Beauftragter</h3>
+      <p>Dokument wurde geprüft und ist korrekt. Mit Unterschrift wird es ins Archiv verschoben.</p>
       <div class="form-group">
-        <label>Adresse:</label>
-        <textarea name="adresse"></textarea>
-      </div>
-      <div class="form-grid">
-        <div class="form-group">
-          <label>Disponierte EM (FW):</label>
-          <input type="text" name="disponierte_em_fw">
-        </div>
-        <div class="form-group">
-          <label>Disponierte EM (RD):</label>
-          <input type="text" name="disponierte_em_rd">
-        </div>
-      </div>
-      <h4 style="margin-top:20px;color:#667eea">Patienten-Daten</h4>
-      <div class="form-group">
-        <label>Erhoben:</label>
-        <div class="radio-group">
-          <label><input type="radio" name="patienten_daten_erhoben" value="ja"> Ja</label>
-          <label><input type="radio" name="patienten_daten_erhoben" value="nein"> Nein</label>
-        </div>
-      </div>
-      <div class="form-grid">
-        <div class="form-group">
-          <label>Name:</label>
-          <input type="text" name="patient_name">
-        </div>
-        <div class="form-group">
-          <label>Alter/Geburtsdatum:</label>
-          <input type="text" name="patient_alter_geburtsdatum">
-        </div>
-        <div class="form-group">
-          <label>Pat.-Nummer der ILS:</label>
-          <input type="text" name="patient_nummer_ils">
-        </div>
-      </div>
-      <div class="form-group">
-        <label>Sachverhalt vor Ort:</label>
-        <textarea name="sachverhalt" rows="4"></textarea>
-      </div>
-      <h4 style="margin-top:20px;color:#667eea">Protokollpflicht</h4>
-      <div class="form-group">
-        <label>War dieser Einsatz gemäß §630f BGB protokollpflichtig?</label>
-        <div class="radio-group">
-          <label><input type="radio" name="protokollpflichtig" value="ja"> Ja</label>
-          <label><input type="radio" name="protokollpflichtig" value="nein"> Nein</label>
-        </div>
-      </div>
-      <div class="form-group">
-        <label>Begründung:</label>
-        <textarea name="protokollpflichtig_begruendung"></textarea>
-      </div>
-      <div class="form-group">
-        <label>War die verantwortliche Person mit der Thematik der Einsatz-/Patientendokumentation (gem. §630f BGB) unterwiesen?</label>
-        <div class="radio-group">
-          <label><input type="radio" name="verantwortlicher_unterwiesen" value="ja"> Ja</label>
-          <label><input type="radio" name="verantwortlicher_unterwiesen" value="nein"> Nein</label>
-        </div>
-      </div>
-      <h4 style="margin-top:20px;color:#667eea">Verantwortlicher</h4>
-      <div class="form-grid">
-        <div class="form-group">
-          <label>Name:</label>
-          <input type="text" name="verantwortlicher_name">
-        </div>
-        <div class="form-group">
-          <label>Qualifikation:</label>
-          <input type="text" name="verantwortlicher_qualifikation">
-        </div>
-      </div>
-      <h4 style="margin-top:20px;color:#667eea">Nacherfassung</h4>
-      <div class="form-grid">
-        <div class="form-group">
-          <label>Nacherfasst von (Name):</label>
-          <input type="text" name="nacherfasst_von_name" required>
-        </div>
-        <div class="form-group">
-          <label>Qualifikation:</label>
-          <input type="text" name="nacherfasst_von_qualifikation">
-        </div>
+        <label>Name (Verantwortlicher / MPG-Beauftragter):</label>
+        <input type="text" id="adminName" placeholder="Ihr Name">
       </div>
       <div class="sig-wrap">
         <label style="font-weight:700;margin-bottom:8px;display:block">Unterschrift:</label>
-        <canvas id="nachSigCanvas" class="sig-canvas"></canvas>
+        <canvas id="adminSigCanvas" class="sig-canvas"></canvas>
         <div class="sig-actions">
-          <button type="button" class="btn btn-secondary" onclick="clearNachSig()">
-            Löschen
+          <button class="btn btn-secondary" onclick="clearAdminSig()">
+            <i class="fa-solid fa-eraser"></i> Löschen
           </button>
         </div>
       </div>
-    </form>
-    <div style="display:flex;gap:10px;margin-top:20px;justify-content:flex-end">
-      <button class="btn btn-secondary" onclick="closeNachModal()">Abbrechen</button>
-      <button class="btn" onclick="saveNacherfassung()">
-        Speichern
-      </button>
+      <div style="display:flex;gap:10px;margin-top:20px;justify-content:flex-end">
+        <button class="btn btn-secondary" onclick="closeSignModal()">Abbrechen</button>
+        <button class="btn" onclick="archiveWithSignature()">
+          <i class="fa-solid fa-check"></i> Unterschreiben & Archivieren
+        </button>
+      </div>
     </div>
   </div>
-</div>
-<!-- ==================== NACHERFASSUNG MODAL END ==================== -->
 
-<!-- ==================== DETAILS MODAL START ==================== -->
-<div class="modal" id="detailsModal">
-  <div class="modal-box">
-    <h3 id="detailsTitle">Details</h3>
-    <div id="detailsBody"></div>
-    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
-      <button class="btn btn-secondary" onclick="closeDetailsModal()">
-        Schließen
-      </button>
-      <button class="btn" onclick="generatePDFFromModal()">
-        PDF erstellen
-      </button>
+  <!-- NACHERFASSUNG MODAL -->
+  <div class="modal" id="nachModal">
+    <div class="modal-box">
+      <h3><i class="fa-solid fa-clipboard-list"></i> Einsatznacherfassung</h3>
+      <form id="nachForm">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Datum/Alarmzeit:</label>
+            <input type="datetime-local" name="datum_alarmzeit">
+          </div>
+          <div class="form-group">
+            <label>Datum/Einsatzende:</label>
+            <input type="datetime-local" name="datum_einsatzende">
+          </div>
+        </div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Stichwort:</label>
+            <input type="text" name="stichwort">
+          </div>
+          <div class="form-group">
+            <label>Kategorie:</label>
+            <input type="text" name="kategorie">
+          </div>
+        </div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Einsatznummer der ILS:</label>
+            <input type="text" name="einsatznummer_ils">
+          </div>
+          <div class="form-group">
+            <label>Meldebild:</label>
+            <input type="text" name="meldebild">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Adresse:</label>
+          <textarea name="adresse"></textarea>
+        </div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Disponierte EM (FW):</label>
+            <input type="text" name="disponierte_em_fw">
+          </div>
+          <div class="form-group">
+            <label>Disponierte EM (RD):</label>
+            <input type="text" name="disponierte_em_rd">
+          </div>
+        </div>
+        <h4 style="margin-top:20px;color:#667eea">Patienten-Daten</h4>
+        <div class="form-group">
+          <label>Erhoben:</label>
+          <div class="radio-group">
+            <label><input type="radio" name="patienten_daten_erhoben" value="ja"> Ja</label>
+            <label><input type="radio" name="patienten_daten_erhoben" value="nein"> Nein</label>
+          </div>
+        </div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Name:</label>
+            <input type="text" name="patient_name">
+          </div>
+          <div class="form-group">
+            <label>Alter/Geburtsdatum:</label>
+            <input type="text" name="patient_alter_geburtsdatum">
+          </div>
+          <div class="form-group">
+            <label>Pat.-Nummer der ILS:</label>
+            <input type="text" name="patient_nummer_ils">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Sachverhalt vor Ort:</label>
+          <textarea name="sachverhalt" rows="4"></textarea>
+        </div>
+        <h4 style="margin-top:20px;color:#667eea">Protokollpflicht</h4>
+        <div class="form-group">
+          <label>War dieser Einsatz gemäß §630f BGB protokollpflichtig?</label>
+          <div class="radio-group">
+            <label><input type="radio" name="protokollpflichtig" value="ja"> Ja</label>
+            <label><input type="radio" name="protokollpflichtig" value="nein"> Nein</label>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Begründung:</label>
+          <textarea name="protokollpflichtig_begruendung"></textarea>
+        </div>
+        <div class="form-group">
+          <label>War die verantwortliche Person mit der Thematik der Einsatz-/Patientendokumentation (gem. §630f BGB) unterwiesen?</label>
+          <div class="radio-group">
+            <label><input type="radio" name="verantwortlicher_unterwiesen" value="ja"> Ja</label>
+            <label><input type="radio" name="verantwortlicher_unterwiesen" value="nein"> Nein</label>
+          </div>
+        </div>
+        <h4 style="margin-top:20px;color:#667eea">Verantwortlicher</h4>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Name:</label>
+            <input type="text" name="verantwortlicher_name">
+          </div>
+          <div class="form-group">
+            <label>Qualifikation:</label>
+            <input type="text" name="verantwortlicher_qualifikation">
+          </div>
+        </div>
+        <h4 style="margin-top:20px;color:#667eea">Nacherfassung</h4>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Nacherfasst von (Name):</label>
+            <input type="text" name="nacherfasst_von_name" required>
+          </div>
+          <div class="form-group">
+            <label>Qualifikation:</label>
+            <input type="text" name="nacherfasst_von_qualifikation">
+          </div>
+        </div>
+        <div class="sig-wrap">
+          <label style="font-weight:700;margin-bottom:8px;display:block">Unterschrift:</label>
+          <canvas id="nachSigCanvas" class="sig-canvas"></canvas>
+          <div class="sig-actions">
+            <button type="button" class="btn btn-secondary" onclick="clearNachSig()">
+              <i class="fa-solid fa-eraser"></i> Löschen
+            </button>
+          </div>
+        </div>
+      </form>
+      <div style="display:flex;gap:10px;margin-top:20px;justify-content:flex-end">
+        <button class="btn btn-secondary" onclick="closeNachModal()">Abbrechen</button>
+        <button class="btn" onclick="saveNacherfassung()">
+          <i class="fa-solid fa-save"></i> Speichern
+        </button>
+      </div>
     </div>
   </div>
-</div>
-<!-- ==================== DETAILS MODAL END ==================== -->
-<script type="module">
-  // ========================================
-  // POCKETBASE SETUP
-  // ========================================
-  const pb = new PocketBase('https://api.responda.systems');
-  
-  if (!pb.authStore.isValid) {
-    location.href = "/mpg-login.html";
-  }
 
-  const currentUser = pb.authStore.model;
-  if (!currentUser) {
-    location.href = "/mpg-login.html";
-  }
-
-  // Load organization
-  let currentOrganization = { name: 'Feuerwehr' };
-  
-  async function loadOrganization() {
-    try {
-      if (!currentUser.organization_id) return;
-      currentOrganization = await pb.collection('organizations').getOne(currentUser.organization_id);
-    } catch(e) {
-      console.warn('Could not load organization:', e.message);
+  <!-- DETAILS MODAL -->
+  <div class="modal" id="detailsModal">
+    <div class="modal-box">
+      <h3 id="detailsTitle">Details</h3>
+      <div id="detailsBody"></div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
+        <button class="btn btn-secondary" onclick="closeDetailsModal()">
+          <i class="fa-solid fa-times"></i> Schließen
+        </button>
+        <button class="btn" onclick="generatePDFFromModal()">
+          <i class="fa-solid fa-file-pdf"></i> PDF erstellen
+        </button>
+      </div>
+    </div>
+  </div>
+  <script type="module">
+    // POCKETBASE INIT
+    const pb = new PocketBase('https://api.responda.systems');
+    
+    if (!pb.authStore.isValid) {
+      location.href = "/mpg-login.html";
     }
-  }
-  
-  loadOrganization();
 
-  // Set user name
-  document.getElementById('userName').textContent = currentUser.name || currentUser.email || 'User';
-
-  // Hub return
-  document.querySelector('.user-name').onclick = () => {
-    if (confirm('Zum Hub zurückkehren?')) {
-      location.href = 'hub.html';
+    const currentUser = pb.authStore.model;
+    if (!currentUser || !currentUser.organization_id) {
+      location.href = "/mpg-login.html";
     }
-  };
 
-  // ========================================
-  // TAB SWITCHING
-  // ========================================
-  document.querySelectorAll('.filter-tab').forEach(tab => {
-    tab.onclick = () => {
-      const targetTab = tab.dataset.tab;
-      document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
-      tab.classList.add('active');
-      document.querySelectorAll('.tab-content').forEach(tc => tc.style.display = 'none');
-      document.getElementById('tab-' + targetTab).style.display = 'block';
+    let currentOrganization = { name: 'Feuerwehr' };
+    
+    async function loadOrganization() {
+      try {
+        if (!currentUser.organization_id) return;
+        currentOrganization = await pb.collection('organizations').getOne(currentUser.organization_id);
+      } catch(e) {
+        console.warn('Could not load organization:', e.message);
+      }
+    }
+    
+    loadOrganization();
+
+    // LOGOUT
+    document.getElementById("logout").onclick = async (e) => {
+      e.preventDefault();
+      pb.authStore.clear();
+      localStorage.clear();
+      location.href = "/mpg-login.html";
     };
-  });
 
-  // ========================================
-  // UTILITY FUNCTIONS
-  // ========================================
-  function showMsg(text, type = 'success') {
-    const msgDiv = document.getElementById('msg');
-    msgDiv.textContent = text;
-    msgDiv.className = 'msg ' + type;
-    setTimeout(() => { 
-      msgDiv.textContent = ''; 
-      msgDiv.className = 'msg'; 
-    }, 5000);
-  }
-
-  function formatDate(dateStr) {
-    if (!dateStr) return '—';
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('de-DE', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+    // TAB SWITCHING
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.onclick = () => {
+        const targetTab = tab.dataset.tab;
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        document.querySelectorAll('.tab-content').forEach(tc => tc.style.display = 'none');
+        document.getElementById('tab-' + targetTab).style.display = 'block';
+        document.getElementById('msg').textContent = '';
+      };
     });
-  }
 
-  function calculateGCS(p) {
-    const e = parseInt(p.gcs_e || 0);
-    const v = parseInt(p.gcs_v || 0);
-    const m = parseInt(p.gcs_m || 0);
-    const sum = e + v + m;
-    return sum > 0 ? sum : '—';
-  }
+    // UTILITIES
+    function showMsg(text, type = 'success') {
+      const msgDiv = document.getElementById('msg');
+      msgDiv.textContent = text;
+      msgDiv.className = 'msg ' + type;
+      setTimeout(() => { 
+        msgDiv.textContent = ''; 
+        msgDiv.className = 'msg'; 
+      }, 5000);
+    }
 
-  function calculateQSOFA(p) {
-    const gcs = parseInt(p.gcs_e || 0) + parseInt(p.gcs_v || 0) + parseInt(p.gcs_m || 0);
-    const af = parseInt(p.af || 0);
-    const rrSys = parseInt(p.rr_sys || 0);
-    let score = 0;
-    if (gcs > 0 && gcs < 15) score++;
-    if (af >= 22) score++;
-    if (rrSys > 0 && rrSys <= 100) score++;
-    return (gcs > 0 || af > 0 || rrSys > 0) ? score : '—';
-  }
+    function formatDate(dateStr) {
+      if (!dateStr) return '—';
+      return new Date(dateStr).toLocaleString('de-DE');
+    }
 
-  // ========================================
-  // GLOBAL VARIABLES
-  // ========================================
-  let currentEditDoc = null;
-  let currentEditPayload = null;
-  let medRowCounter = 0;
-  
-  window.currentViewedPayload = null;
-  window.currentViewedAdmin = null;
-  window.currentViewedOrgName = null;
-  window.currentViewedDocType = null;
-  window.currentViewedNachData = null;
+    function calculateGCS(p) {
+      const e = parseInt(p.gcs_e || 0);
+      const v = parseInt(p.gcs_v || 0);
+      const m = parseInt(p.gcs_m || 0);
+      const sum = e + v + m;
+      return sum > 0 ? sum : '—';
+    }
 
-  // ========================================
-  // LOAD DATA
-  // ========================================
-  async function loadData() {
-    try {
-      const orgId = currentUser.organization_id || '';
-      
-      // Load open patient documents
-      const patData = await pb.collection('patients').getFullList({
-        filter: 'status = "offen"' + (orgId ? ' && organization_id = "' + orgId + '"' : ''),
-        sort: '-created',
-      });
-      
-      document.getElementById('pat-rows').innerHTML = patData.map(doc => {
-        const payload = doc.payload || {};
-        const patName = (payload.vorname || '') + ' ' + (payload.name || '');
-        const finalName = patName.trim() || 'Unbekannt';
-        const einsatzChip = payload.einsatz_nr ? '<div class="meta-chip primary">Einsatz ' + payload.einsatz_nr + '</div>' : '';
+    function calculateQSOFA(p) {
+      const gcs = parseInt(p.gcs_e || 0) + parseInt(p.gcs_v || 0) + parseInt(p.gcs_m || 0);
+      const af = parseInt(p.af || 0);
+      const rrSys = parseInt(p.rr_sys || 0);
+      let score = 0;
+      if (gcs > 0 && gcs < 15) score++;
+      if (af >= 22) score++;
+      if (rrSys > 0 && rrSys <= 100) score++;
+      return (gcs > 0 || af > 0 || rrSys > 0) ? score : '—';
+    }
+
+    // GLOBAL STATE
+    let currentEditDoc = null;
+    let currentEditPayload = null;
+    let medRowCounter = 0;
+    let currentViewedPayload = null;
+    let currentViewedAdmin = null;
+    let currentViewedOrgName = null;
+    let currentViewedDocType = null;
+    let currentViewedNachData = null;
+
+    // ========================================
+    // LOAD DATA - MIT FIXES! ✅
+    // ========================================
+    async function loadData() {
+      try {
+        const orgId = currentUser.organization_id;
         
-        return '<div class="doc-card offen">' +
-          '<div class="doc-card-header">' +
-            '<div class="doc-title">' + (doc.title || finalName) + '</div>' +
-            '<div class="doc-status-dot offen"></div>' +
-          '</div>' +
-          '<div class="doc-meta">' +
-            einsatzChip +
-            '<div class="meta-chip">' + formatDate(doc.created) + '</div>' +
-          '</div>' +
-          '<div class="doc-actions">' +
-            '<button class="action-btn" onclick="editPatDoc(\'' + doc.id + '\')">Bearbeiten</button>' +
-          '</div>' +
-        '</div>';
-      }).join('') || '<div class="empty-state"><div class="empty-state-icon">📋</div><div class="empty-state-text">Keine offenen Patientendokus</div></div>';
-
-      // Load open Nacherfassungen
-      const nachData = await pb.collection('patient_docs_nacherfassung').getFullList({
-        filter: 'status = "offen"' + (orgId ? ' && organization_id = "' + orgId + '"' : ''),
-        sort: '-created',
-      });
-      
-      document.getElementById('nach-rows').innerHTML = nachData.map(doc => {
-        return '<div class="doc-card offen">' +
-          '<div class="doc-card-header">' +
-            '<div class="doc-title">' + (doc.stichwort || 'Ohne Stichwort') + '</div>' +
-            '<div class="doc-status-dot offen"></div>' +
-          '</div>' +
-          '<div class="doc-meta">' +
-            '<div class="meta-chip">von ' + (doc.nacherfasst_von_name || '?') + '</div>' +
-            '<div class="meta-chip">' + formatDate(doc.created) + '</div>' +
-          '</div>' +
-          '<div class="doc-actions">' +
-            '<button class="action-btn secondary" onclick="viewNach(\'' + doc.id + '\')">Details</button>' +
-            '<button class="action-btn" onclick="archiveNach(\'' + doc.id + '\')">Archivieren</button>' +
-          '</div>' +
-        '</div>';
-      }).join('') || '<div class="empty-state"><div class="empty-state-icon">📋</div><div class="empty-state-text">Keine offenen Nacherfassungen</div></div>';
-
-      // Load archived
-      const archivPat = await pb.collection('patients').getFullList({
-        filter: 'status = "archiviert"' + (orgId ? ' && organization_id = "' + orgId + '"' : ''),
-        sort: '-updated',
-      });
-      
-      const archivNach = await pb.collection('patient_docs_nacherfassung').getFullList({
-        filter: 'status = "archiviert"' + (orgId ? ' && organization_id = "' + orgId + '"' : ''),
-        sort: '-updated',
-      });
-      
-      let archivHTML = '';
-      
-      archivPat.forEach(doc => {
-        const payload = doc.payload || {};
-        const patName = (payload.vorname || '') + ' ' + (payload.name || '');
-        const finalName = patName.trim() || doc.title || 'Ohne Titel';
-        const einsatzChip = payload.einsatz_nr ? '<div class="meta-chip">Einsatz ' + payload.einsatz_nr + '</div>' : '';
+        // FIX! String concatenation statt escaped backticks!
+        const patData = await pb.collection('patients').getFullList({
+          filter: 'status = "offen"' + (orgId ? ' && organization_id = "' + orgId + '"' : ''),
+          sort: '-created',
+        });
         
-        archivHTML += '<div class="doc-card archiviert">' +
-          '<div class="doc-card-header">' +
-            '<div class="doc-title">' + finalName + '</div>' +
-            '<div class="doc-status-dot archiviert"></div>' +
+        const patRows = document.getElementById('pat-rows');
+        patRows.innerHTML = patData.map(doc => {
+          const payload = doc.payload || {};
+          const patName = (payload.vorname || '') + ' ' + (payload.name || '');
+          const finalName = patName.trim() || 'Unbekannt';
+          return '<div class="row">' +
+            '<div><span class="pill offen">' + doc.status + '</span></div>' +
+            '<div>' +
+            '<strong>' + (doc.title || finalName) + '</strong><br>' +
+            '<small style="color:#6b7280">' +
+            (payload.einsatz_nr ? 'Einsatz-Nr: ' + payload.einsatz_nr + ' · ' : '') +
+            new Date(doc.created).toLocaleString('de-DE') +
+            '</small>' +
+            '</div>' +
+            '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
+            '<button class="btn btn-icon" onclick="editPatDoc(\'' + doc.id + '\')">' +
+            '<i class="fa-solid fa-edit"></i> Bearbeiten' +
+            '</button>' +
+            '</div>' +
+            '</div>';
+        }).join('') || '<p style="padding:20px;color:#999">Keine offenen Patientendokus</p>';
+
+        // FIX! String concatenation!
+        const nachData = await pb.collection('patient_docs_nacherfassung').getFullList({
+          filter: 'status = "offen"' + (orgId ? ' && organization_id = "' + orgId + '"' : ''),
+          sort: '-created',
+        });
+        
+        const nachRows = document.getElementById('nach-rows');
+        nachRows.innerHTML = nachData.map(doc => '<div class="row">' +
+          '<div><span class="pill offen">' + doc.status + '</span></div>' +
+          '<div>' +
+          '<strong>' + (doc.stichwort || 'Ohne Stichwort') + '</strong><br>' +
+          '<small style="color:#6b7280">von ' + (doc.nacherfasst_von_name || '?') + ' · ' + 
+          new Date(doc.created).toLocaleString('de-DE') +
+          '</small>' +
           '</div>' +
-          '<div class="doc-meta">' +
-            '<div class="meta-chip primary">Patientendoku</div>' +
-            einsatzChip +
-            '<div class="meta-chip">MPG: ' + (doc.admin_name || '?') + '</div>' +
+          '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
+          '<button class="btn btn-icon" onclick="viewNach(\'' + doc.id + '\')">' +
+          '<i class="fa-solid fa-eye"></i> Details' +
+          '</button>' +
+          '<button class="btn btn-icon" onclick="archiveNach(\'' + doc.id + '\')">' +
+          '<i class="fa-solid fa-box-archive"></i> Archivieren' +
+          '</button>' +
           '</div>' +
-          '<div class="doc-actions">' +
-            '<button class="action-btn secondary" onclick="viewPatArchiv(\'' + doc.id + '\')">Ansehen</button>' +
-          '</div>' +
-        '</div>';
-      });
-      
-      archivNach.forEach(doc => {
-        archivHTML += '<div class="doc-card archiviert">' +
-          '<div class="doc-card-header">' +
-            '<div class="doc-title">' + (doc.stichwort || 'Ohne Titel') + '</div>' +
-            '<div class="doc-status-dot archiviert"></div>' +
-          '</div>' +
-          '<div class="doc-meta">' +
-            '<div class="meta-chip primary">Nacherfassung</div>' +
-            '<div class="meta-chip">von ' + (doc.nacherfasst_von_name || '?') + '</div>' +
-          '</div>' +
-          '<div class="doc-actions">' +
-            '<button class="action-btn secondary" onclick="viewNachArchiv(\'' + doc.id + '\')">Ansehen</button>' +
-          '</div>' +
-        '</div>';
-      });
-      
-      document.getElementById('archiv-rows').innerHTML = archivHTML || '<div class="empty-state"><div class="empty-state-icon">📦</div><div class="empty-state-text">Kein Archiv vorhanden</div></div>';
+          '</div>'
+        ).join('') || '<p style="padding:20px;color:#999">Keine offenen Nacherfassungen</p>';
 
-      // Update count
-      document.getElementById('docCount').textContent = patData.length + nachData.length;
+        // FIX! String concatenation!
+        const archivPat = await pb.collection('patients').getFullList({
+          filter: 'status = "archiviert"' + (orgId ? ' && organization_id = "' + orgId + '"' : ''),
+          sort: '-updated',
+        });
+        
+        // FIX! String concatenation!
+        const archivNach = await pb.collection('patient_docs_nacherfassung').getFullList({
+          filter: 'status = "archiviert"' + (orgId ? ' && organization_id = "' + orgId + '"' : ''),
+          sort: '-updated',
+        });
+        
+        const archivRows = document.getElementById('archiv-rows');
+        let archivHTML = '';
+        
+        archivPat.forEach(doc => {
+          const payload = doc.payload || {};
+          const patName = (payload.vorname || '') + ' ' + (payload.name || '');
+          const finalName = patName.trim() || doc.title || 'Ohne Titel';
+          archivHTML += '<div class="row">' +
+            '<div><span class="pill archiviert">Patientendoku</span></div>' +
+            '<div>' +
+            '<strong>' + finalName + '</strong><br>' +
+            '<small style="color:#6b7280">' +
+            (payload.einsatz_nr ? 'Einsatz-Nr: ' + payload.einsatz_nr + ' · ' : '') +
+            'MPG: ' + (doc.admin_name || '?') + ' · ' +
+            (doc.admin_datum ? new Date(doc.admin_datum).toLocaleString('de-DE') : '') +
+            '</small>' +
+            '</div>' +
+            '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
+            '<button class="btn btn-icon" onclick="viewPatArchiv(\'' + doc.id + '\')">' +
+            '<i class="fa-solid fa-eye"></i> Ansehen' +
+            '</button>' +
+            '</div>' +
+            '</div>';
+        });
+        
+        archivNach.forEach(doc => {
+          archivHTML += '<div class="row">' +
+            '<div><span class="pill archiviert">Nacherfassung</span></div>' +
+            '<div>' +
+            '<strong>' + (doc.stichwort || 'Ohne Titel') + '</strong><br>' +
+            '<small style="color:#6b7280">von ' + (doc.nacherfasst_von_name || '?') + '</small>' +
+            '</div>' +
+            '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
+            '<button class="btn btn-icon" onclick="viewNachArchiv(\'' + doc.id + '\')">' +
+            '<i class="fa-solid fa-eye"></i> Ansehen' +
+            '</button>' +
+            '</div>' +
+            '</div>';
+        });
+        
+        archivRows.innerHTML = archivHTML || '<p style="padding:20px;color:#999">Kein Archiv vorhanden</p>';
 
-    } catch(e) {
-      showMsg('Fehler beim Laden: ' + e.message, 'error');
-      console.error(e);
-    }
-  }
-  // ========================================
-  // EDIT PATIENT DOCUMENT
-  // ========================================
-  window.editPatDoc = async (id) => {
-    try {
-      currentEditDoc = await pb.collection('patients').getOne(id);
-      currentEditPayload = currentEditDoc.payload || {};
-      
-      const formHTML = buildEditForm(currentEditPayload);
-      document.getElementById('editFormContainer').innerHTML = formHTML;
-      document.querySelectorAll('#editFormContainer details').forEach(d => d.open = true);
-      
-      const meds = currentEditPayload.medications || [];
-      medRowCounter = meds.length;
-      
-      document.getElementById('editModal').classList.add('show');
-    } catch(e) {
-      showMsg('Fehler: ' + e.message, 'error');
-    }
-  };
-
-  function buildEditForm(payload) {
-    const v = (key, fallback = '') => 
-      payload[key] !== undefined && payload[key] !== null ? payload[key] : fallback;
-    
-    const checked = (key) => payload[key] ? 'checked' : '';
-    const radioChecked = (key, value) => payload[key] === value ? 'checked' : '';
-    
-    return '<details open>' +
-      '<summary>Einsatzdaten</summary>' +
-      '<div class="sec-body">' +
-        '<div class="grid">' +
-          '<label>Einsatz-Nr.<input name="einsatz_nr" type="text" value="' + v('einsatz_nr') + '"></label>' +
-          '<label>Datum/Uhrzeit<input name="zeit_einsatz" type="datetime-local" value="' + v('zeit_einsatz') + '"></label>' +
-          '<label>Fahrzeug<input name="fahrzeug" type="text" value="' + v('fahrzeug') + '"></label>' +
-        '</div>' +
-      '</div>' +
-    '</details>' +
-    '<details open>' +
-      '<summary>Patient</summary>' +
-      '<div class="sec-body">' +
-        '<div class="grid">' +
-          '<label>Name<input name="name" type="text" value="' + v('name') + '"></label>' +
-          '<label>Vorname<input name="vorname" type="text" value="' + v('vorname') + '"></label>' +
-          '<label>Geb.-Datum<input name="gebdatum" type="date" value="' + v('gebdatum') + '"></label>' +
-          '<label>Alter<input name="alter" type="number" value="' + v('alter') + '"></label>' +
-        '</div>' +
-      '</div>' +
-    '</details>' +
-    '<details open>' +
-      '<summary>Vitalparameter</summary>' +
-      '<div class="sec-body">' +
-        '<div class="grid">' +
-          '<label>RR syst.<input name="rr_sys" type="number" value="' + v('rr_sys') + '"></label>' +
-          '<label>RR diast.<input name="rr_dia" type="number" value="' + v('rr_dia') + '"></label>' +
-          '<label>HF<input name="hf" type="number" value="' + v('hf') + '"></label>' +
-          '<label>AF<input name="af" type="number" value="' + v('af') + '"></label>' +
-          '<label>SpO₂<input name="spo2" type="number" value="' + v('spo2') + '"></label>' +
-          '<label>Temp.<input name="temp" type="number" step="0.1" value="' + v('temp') + '"></label>' +
-        '</div>' +
-      '</div>' +
-    '</details>' +
-    '<details open>' +
-      '<summary>Notfallgeschehen</summary>' +
-      '<div class="sec-body">' +
-        '<textarea name="notfallgeschehen" rows="4">' + v('notfallgeschehen') + '</textarea>' +
-      '</div>' +
-    '</details>' +
-    '<details open>' +
-      '<summary>GCS</summary>' +
-      '<div class="sec-body">' +
-        '<div class="grid">' +
-          '<label>Augen (E)<select name="gcs_e">' +
-            '<option value="">—</option>' +
-            '<option value="4" ' + (v('gcs_e')==='4'?'selected':'') + '>4 - spontan</option>' +
-            '<option value="3" ' + (v('gcs_e')==='3'?'selected':'') + '>3 - auf Ansprache</option>' +
-            '<option value="2" ' + (v('gcs_e')==='2'?'selected':'') + '>2 - auf Schmerzreiz</option>' +
-            '<option value="1" ' + (v('gcs_e')==='1'?'selected':'') + '>1 - keine</option>' +
-          '</select></label>' +
-          '<label>Verbal (V)<select name="gcs_v">' +
-            '<option value="">—</option>' +
-            '<option value="5" ' + (v('gcs_v')==='5'?'selected':'') + '>5 - orientiert</option>' +
-            '<option value="4" ' + (v('gcs_v')==='4'?'selected':'') + '>4 - verwirrt</option>' +
-            '<option value="3" ' + (v('gcs_v')==='3'?'selected':'') + '>3 - unzusammenhängend</option>' +
-            '<option value="2" ' + (v('gcs_v')==='2'?'selected':'') + '>2 - unverständlich</option>' +
-            '<option value="1" ' + (v('gcs_v')==='1'?'selected':'') + '>1 - keine</option>' +
-          '</select></label>' +
-          '<label>Motorik (M)<select name="gcs_m">' +
-            '<option value="">—</option>' +
-            '<option value="6" ' + (v('gcs_m')==='6'?'selected':'') + '>6 - befolgt Aufforderungen</option>' +
-            '<option value="5" ' + (v('gcs_m')==='5'?'selected':'') + '>5 - gezielte Abwehr</option>' +
-            '<option value="4" ' + (v('gcs_m')==='4'?'selected':'') + '>4 - ungezielte Abwehr</option>' +
-            '<option value="3" ' + (v('gcs_m')==='3'?'selected':'') + '>3 - Beugesynergismen</option>' +
-            '<option value="2" ' + (v('gcs_m')==='2'?'selected':'') + '>2 - Strecksynergismen</option>' +
-            '<option value="1" ' + (v('gcs_m')==='1'?'selected':'') + '>1 - keine</option>' +
-          '</select></label>' +
-        '</div>' +
-        '<p style="margin-top:8px;font-weight:700;color:#667eea">GCS-Summe: ' + calculateGCS(payload) + ' | qSOFA: ' + calculateQSOFA(payload) + '</p>' +
-      '</div>' +
-    '</details>' +
-    '<details open>' +
-      '<summary>Maßnahmen</summary>' +
-      '<div class="sec-body">' +
-        '<textarea name="massnahmen" rows="4">' + v('massnahmen') + '</textarea>' +
-      '</div>' +
-    '</details>' +
-    '<details open>' +
-      '<summary>Übergabe</summary>' +
-      '<div class="sec-body">' +
-        '<div class="grid">' +
-          '<label>Übergeben an<input name="uebergabe_an" type="text" value="' + v('uebergabe_an') + '"></label>' +
-          '<label>Zielklinik<input name="zielklinik" type="text" value="' + v('zielklinik') + '"></label>' +
-        '</div>' +
-      '</div>' +
-    '</details>';
-  }
-
-  window.addMedRowEdit = function() {
-    medRowCounter++;
-  };
-
-  window.closeEditModal = () => {
-    document.getElementById('editModal').classList.remove('show');
-    if (!document.getElementById('signModal').classList.contains('show')) {
-      currentEditDoc = null;
-      currentEditPayload = null;
-    }
-  };
-
-  // ========================================
-  // SAVE AND SIGN
-  // ========================================
-  window.saveAndSignPatDoc = async () => {
-    try {
-      showMsg('Daten werden gespeichert...', 'success');
-      
-      const form = document.getElementById('editFormContainer');
-      const formData = new FormData();
-      const inputs = form.querySelectorAll('input, textarea, select');
-      
-      inputs.forEach(input => {
-        if (input.type === 'checkbox') {
-          formData.append(input.name, input.checked);
-        } else if (input.type === 'radio') {
-          if (input.checked) formData.append(input.name, input.value);
-        } else {
-          formData.append(input.name, input.value);
-        }
-      });
-
-      const payload = {};
-      for (let [key, value] of formData.entries()) {
-        if (payload[key] !== undefined) continue;
-        payload[key] = value === 'true' ? true : value === 'false' ? false : value;
+      } catch(e) {
+        showMsg('Fehler beim Laden: ' + e.message, 'error');
       }
-
-      if (currentEditPayload.photos) {
-        payload.photos = currentEditPayload.photos;
+    }
+    // ========================================
+    // EDIT PATIENT DOCUMENT
+    // ========================================
+    window.editPatDoc = async (id) => {
+      try {
+        currentEditDoc = await pb.collection('patients').getOne(id);
+        currentEditPayload = currentEditDoc.payload || {};
+        
+        const formHTML = buildEditForm(currentEditPayload);
+        document.getElementById('editFormContainer').innerHTML = formHTML;
+        document.querySelectorAll('#editFormContainer details').forEach(d => d.open = true);
+        
+        const meds = currentEditPayload.medications || [];
+        medRowCounter = meds.length;
+        
+        document.getElementById('editModal').classList.add('show');
+      } catch(e) {
+        showMsg('Fehler: ' + e.message, 'error');
       }
-      if (currentEditPayload.signature) {
-        payload.signature = currentEditPayload.signature;
-      }
+    };
 
-      await pb.collection('patients').update(currentEditDoc.id, {
-        payload: payload
+    // ========================================
+    // BUILD EDIT FORM - COMPLETE!
+    // ========================================
+    function buildEditForm(payload) {
+      const v = (key, fallback = '') => 
+        payload[key] !== undefined && payload[key] !== null ? payload[key] : fallback;
+      
+      const checked = (key) => payload[key] ? 'checked' : '';
+      
+      const radioChecked = (key, value) => payload[key] === value ? 'checked' : '';
+      
+      // Build medication rows
+      const medications = payload.medications || [];
+      let medRowsHTML = '';
+      medications.forEach((med, idx) => {
+        const i = idx + 1;
+        medRowsHTML += '<tr>' +
+          '<td>' + i + '</td>' +
+          '<td><input type="text" name="med_name_' + i + '" value="' + (med.name || '') + '" style="width:100%;padding:.3rem;font-size:14px"></td>' +
+          '<td><input type="number" name="med_dose_' + i + '" value="' + (med.dose || '') + '" step="0.1" style="width:80px;padding:.3rem;font-size:14px"></td>' +
+          '<td><input type="text" name="med_unit_' + i + '" value="' + (med.unit || '') + '" placeholder="mg" style="width:60px;padding:.3rem;font-size:14px"></td>' +
+          '<td><select name="med_route_' + i + '" style="padding:.3rem;font-size:14px">' +
+          '<option value="">-</option>' +
+          '<option value="i.v." ' + (med.route === 'i.v.' ? 'selected' : '') + '>i.v.</option>' +
+          '<option value="i.m." ' + (med.route === 'i.m.' ? 'selected' : '') + '>i.m.</option>' +
+          '<option value="s.c." ' + (med.route === 's.c.' ? 'selected' : '') + '>s.c.</option>' +
+          '<option value="p.o." ' + (med.route === 'p.o.' ? 'selected' : '') + '>p.o.</option>' +
+          '<option value="inhal." ' + (med.route === 'inhal.' ? 'selected' : '') + '>inhal.</option>' +
+          '</select></td>' +
+          '<td><input type="time" name="med_time_' + i + '" value="' + (med.time || '') + '" style="width:90px;padding:.3rem;font-size:14px"></td>' +
+          '<td><input type="text" name="med_note_' + i + '" value="' + (med.note || '') + '" style="width:100%;padding:.3rem;font-size:14px"></td>' +
+          '<td><button class="subbtn" type="button" onclick="this.closest(\'tr\').remove()">×</button></td>' +
+          '</tr>';
       });
+      
+      // Build photos display
+      const photos = payload.photos || [];
+      let photosHTML = '';
+      if (photos.length > 0) {
+        photosHTML = '<div class="photo-grid">';
+        photos.forEach((photo, idx) => {
+          photosHTML += '<img src="' + photo + '" alt="Foto ' + (idx+1) + '">';
+        });
+        photosHTML += '</div>';
+      }
+      
+      return '<details open>' +
+  '<summary><i class="fa-solid fa-truck-medical"></i> Einsatzdaten</summary>' +
+  '<div class="sec-body">' +
+    '<div class="grid">' +
+      '<label>Einsatz-Nr.<input name="einsatz_nr" type="text" value="' + v('einsatz_nr') + '"></label>' +
+      '<label>Pat./Auftrags-Nr.<input name="auftrags_nr" type="text" value="' + v('auftrags_nr') + '"></label>' +
+      '<label>Rufname<input name="rufname" type="text" value="' + v('rufname') + '"></label>' +
+      '<label>Fahrzeug<input name="fahrzeug" type="text" value="' + v('fahrzeug') + '"></label>' +
+      '<label>Datum/Uhrzeit<input name="zeit_einsatz" type="datetime-local" value="' + v('zeit_einsatz') + '"></label>' +
+    '</div>' +
+    '<label>Einsatz-Art<input name="einsatz_art" type="text" value="' + v('einsatz_art') + '"></label>' +
+  '</div>' +
+'</details>' +
 
+'<details open>' +
+  '<summary><i class="fa-solid fa-id-card-clip"></i> Pat-Stammdaten</summary>' +
+  '<div class="sec-body">' +
+    '<div class="grid">' +
+      '<label>Name<input name="name" type="text" value="' + v('name') + '"></label>' +
+      '<label>Vorname<input name="vorname" type="text" value="' + v('vorname') + '"></label>' +
+      '<label>Geb.-Datum<input name="gebdatum" type="date" value="' + v('gebdatum') + '"></label>' +
+      '<label>Alter<input name="alter" type="number" value="' + v('alter') + '"></label>' +
+      '<label>Telefon<input name="telefon" type="text" value="' + v('telefon') + '"></label>' +
+      '<label>Mobil<input name="mobil" type="text" value="' + v('mobil') + '"></label>' +
+      '<label>Straße<input name="strasse" type="text" value="' + v('strasse') + '"></label>' +
+      '<label>PLZ, Ort<input name="plz_ort" type="text" value="' + v('plz_ort') + '"></label>' +
+      '<label>Kasse / Nr.<input name="kasse" type="text" value="' + v('kasse') + '"></label>' +
+      '<label>Vers.-Nr.<input name="versnr" type="text" value="' + v('versnr') + '"></label>' +
+      '<label>Hausarzt / Tel.<input name="hausarzt" type="text" value="' + v('hausarzt') + '"></label>' +
+      '<label>Angehöriger / Tel.<input name="angehoeriger" type="text" value="' + v('angehoeriger') + '"></label>' +
+    '</div>' +
+    '<label>Informationen / Aspekte<textarea name="infos">' + v('infos') + '</textarea></label>' +
+  '</div>' +
+'</details>' +
+
+'<details open>' +
+  '<summary><i class="fa-solid fa-notes-medical"></i> Notfallgeschehen / Anamnese</summary>' +
+  '<div class="sec-body">' +
+    '<textarea name="notfallgeschehen">' + v('notfallgeschehen') + '</textarea>' +
+    (photosHTML ? '<div style="margin-top:.75rem"><strong>Fotos:</strong>' + photosHTML + '</div>' : '') +
+  '</div>' +
+'</details>' +
+
+'<details>' +
+  '<summary><i class="fa-solid fa-brain"></i> Neurologie</summary>' +
+  '<div class="sec-body">' +
+    '<div class="grid">' +
+      '<label>Zeitpunkt<input name="neu_zeit" type="datetime-local" value="' + v('neu_zeit') + '"></label>' +
+      '<label class="pill-input"><input type="checkbox" name="neu_unauff" ' + checked('neu_unauff') + '> ohne path. Befund</label>' +
+    '</div>' +
+    '<div class="grid">' +
+      '<fieldset>' +
+        '<legend>Pupillenweite – rechts</legend>' +
+        '<div class="choice">' +
+          '<label class="pill-input"><input type="radio" name="pw_r" value="eng" ' + radioChecked('pw_r','eng') + '> eng</label>' +
+          '<label class="pill-input"><input type="radio" name="pw_r" value="mittel" ' + radioChecked('pw_r','mittel') + '> mittel</label>' +
+          '<label class="pill-input"><input type="radio" name="pw_r" value="weit" ' + radioChecked('pw_r','weit') + '> weit</label>' +
+          '<label class="pill-input"><input type="checkbox" name="pw_r_entrundet" ' + checked('pw_r_entrundet') + '> entrundet</label>' +
+        '</div>' +
+        '<div class="choice" style="margin-top:.5rem">' +
+          '<span class="badge">Lichtreaktion</span>' +
+          '<label class="pill-input"><input type="radio" name="lr_r" value="prompt" ' + radioChecked('lr_r','prompt') + '> prompt</label>' +
+          '<label class="pill-input"><input type="radio" name="lr_r" value="träge" ' + radioChecked('lr_r','träge') + '> träge</label>' +
+          '<label class="pill-input"><input type="radio" name="lr_r" value="keine" ' + radioChecked('lr_r','keine') + '> keine</label>' +
+        '</div>' +
+      '</fieldset>' +
+      '<fieldset>' +
+        '<legend>Pupillenweite – links</legend>' +
+        '<div class="choice">' +
+          '<label class="pill-input"><input type="radio" name="pw_l" value="eng" ' + radioChecked('pw_l','eng') + '> eng</label>' +
+          '<label class="pill-input"><input type="radio" name="pw_l" value="mittel" ' + radioChecked('pw_l','mittel') + '> mittel</label>' +
+          '<label class="pill-input"><input type="radio" name="pw_l" value="weit" ' + radioChecked('pw_l','weit') + '> weit</label>' +
+          '<label class="pill-input"><input type="checkbox" name="pw_l_entrundet" ' + checked('pw_l_entrundet') + '> entrundet</label>' +
+        '</div>' +
+        '<div class="choice" style="margin-top:.5rem">' +
+          '<span class="badge">Lichtreaktion</span>' +
+          '<label class="pill-input"><input type="radio" name="lr_l" value="prompt" ' + radioChecked('lr_l','prompt') + '> prompt</label>' +
+          '<label class="pill-input"><input type="radio" name="lr_l" value="träge" ' + radioChecked('lr_l','träge') + '> träge</label>' +
+          '<label class="pill-input"><input type="radio" name="lr_l" value="keine" ' + radioChecked('lr_l','keine') + '> keine</label>' +
+        '</div>' +
+      '</fieldset>' +
+    '</div>' +
+  '</div>' +
+'</details>' +
+
+'<details>' +
+  '<summary><i class="fa-solid fa-eye"></i> Glasgow Coma Scale</summary>' +
+  '<div class="sec-body">' +
+    '<fieldset>' +
+      '<legend>Augenöffnung (E)</legend>' +
+      '<div class="choice">' +
+        '<label class="pill-input"><input type="radio" name="gcs_e" value="4" ' + radioChecked('gcs_e','4') + '> spontan (4)</label>' +
+        '<label class="pill-input"><input type="radio" name="gcs_e" value="3" ' + radioChecked('gcs_e','3') + '> auf Geräusch (3)</label>' +
+        '<label class="pill-input"><input type="radio" name="gcs_e" value="2" ' + radioChecked('gcs_e','2') + '> auf Druck (2)</label>' +
+        '<label class="pill-input"><input type="radio" name="gcs_e" value="1" ' + radioChecked('gcs_e','1') + '> keine (1)</label>' +
+      '</div>' +
+    '</fieldset>' +
+    '<fieldset>' +
+      '<legend>Verbale Antwort (V)</legend>' +
+      '<div class="choice">' +
+        '<label class="pill-input"><input type="radio" name="gcs_v" value="5" ' + radioChecked('gcs_v','5') + '> orientiert (5)</label>' +
+        '<label class="pill-input"><input type="radio" name="gcs_v" value="4" ' + radioChecked('gcs_v','4') + '> verwirrt (4)</label>' +
+        '<label class="pill-input"><input type="radio" name="gcs_v" value="3" ' + radioChecked('gcs_v','3') + '> Wörter (3)</label>' +
+        '<label class="pill-input"><input type="radio" name="gcs_v" value="2" ' + radioChecked('gcs_v','2') + '> Laute (2)</label>' +
+        '<label class="pill-input"><input type="radio" name="gcs_v" value="1" ' + radioChecked('gcs_v','1') + '> keine (1)</label>' +
+      '</div>' +
+    '</fieldset>' +
+    '<fieldset>' +
+      '<legend>Motorische Antwort (M)</legend>' +
+      '<div class="choice">' +
+        '<label class="pill-input"><input type="radio" name="gcs_m" value="6" ' + radioChecked('gcs_m','6') + '> folgt (6)</label>' +
+        '<label class="pill-input"><input type="radio" name="gcs_m" value="5" ' + radioChecked('gcs_m','5') + '> lokalisiert (5)</label>' +
+        '<label class="pill-input"><input type="radio" name="gcs_m" value="4" ' + radioChecked('gcs_m','4') + '> beugt normal (4)</label>' +
+        '<label class="pill-input"><input type="radio" name="gcs_m" value="3" ' + radioChecked('gcs_m','3') + '> beugt abnormal (3)</label>' +
+        '<label class="pill-input"><input type="radio" name="gcs_m" value="2" ' + radioChecked('gcs_m','2') + '> streckt (2)</label>' +
+        '<label class="pill-input"><input type="radio" name="gcs_m" value="1" ' + radioChecked('gcs_m','1') + '> keine (1)</label>' +
+      '</div>' +
+    '</fieldset>' +
+    '<div class="badge" style="margin-top:.5rem">GCS Summe: ' + calculateGCS(payload) + '</div>' +
+  '</div>' +
+'</details>' +
+
+'<details>' +
+  '<summary><i class="fa-regular fa-hand"></i> Haut</summary>' +
+  '<div class="sec-body">' +
+    '<div class="choice">' +
+      '<label class="pill-input"><input type="checkbox" name="haut_unauff" ' + checked('haut_unauff') + '> unauffällig</label>' +
+      '<label class="pill-input"><input type="checkbox" name="haut_falten" ' + checked('haut_falten') + '> stehende Hautfalten</label>' +
+      '<label class="pill-input"><input type="checkbox" name="haut_oedeme" ' + checked('haut_oedeme') + '> Ödeme</label>' +
+      '<label class="pill-input"><input type="checkbox" name="haut_dekubitus" ' + checked('haut_dekubitus') + '> Dekubitus</label>' +
+      '<label class="pill-input"><input type="checkbox" name="haut_kaltschweissig" ' + checked('haut_kaltschweissig') + '> kaltschweißig</label>' +
+      '<label class="pill-input"><input type="checkbox" name="haut_exanthem" ' + checked('haut_exanthem') + '> Exanthem</label>' +
+    '</div>' +
+  '</div>' +
+'</details>' +
+
+'<details>' +
+  '<summary><i class="fa-solid fa-user"></i> Psyche</summary>' +
+  '<div class="sec-body">' +
+    '<div class="choice">' +
+      '<label class="pill-input"><input type="checkbox" name="psy_erregt" ' + checked('psy_erregt') + '> erregt</label>' +
+      '<label class="pill-input"><input type="checkbox" name="psy_aggr" ' + checked('psy_aggr') + '> aggressiv</label>' +
+      '<label class="pill-input"><input type="checkbox" name="psy_verlangsamt" ' + checked('psy_verlangsamt') + '> verlangsamt</label>' +
+      '<label class="pill-input"><input type="checkbox" name="psy_depressiv" ' + checked('psy_depressiv') + '> depressiv</label>' +
+      '<label class="pill-input"><input type="checkbox" name="psy_aengstlich" ' + checked('psy_aengstlich') + '> ängstlich</label>' +
+      '<label class="pill-input"><input type="checkbox" name="psy_euphorisch" ' + checked('psy_euphorisch') + '> euphorisch</label>' +
+      '<label class="pill-input"><input type="checkbox" name="psy_wahnhaft" ' + checked('psy_wahnhaft') + '> wahnhaft</label>' +
+      '<label class="pill-input"><input type="checkbox" name="psy_verwirrt" ' + checked('psy_verwirrt') + '> verwirrt</label>' +
+      '<label class="pill-input"><input type="checkbox" name="psy_suizidal" ' + checked('psy_suizidal') + '> suizidal</label>' +
+      '<label class="pill-input"><input type="checkbox" name="psy_motor_unruhig" ' + checked('psy_motor_unruhig') + '> motorisch unruhig</label>' +
+    '</div>' +
+  '</div>' +
+'</details>' +
+
+'<details open>' +
+  '<summary><i class="fa-solid fa-stethoscope"></i> Messwerte / Atmung</summary>' +
+  '<div class="sec-body">' +
+    '<div class="grid">' +
+      '<label>RR syst. (mmHg)<input name="rr_sys" type="number" value="' + v('rr_sys') + '"></label>' +
+      '<label>RR diast. (mmHg)<input name="rr_dia" type="number" value="' + v('rr_dia') + '"></label>' +
+      '<label>HF (/min)<input name="hf" type="number" value="' + v('hf') + '"></label>' +
+      '<label>AF (/min)<input name="af" type="number" value="' + v('af') + '"></label>' +
+      '<label>SpO₂ (%)<input name="spo2" type="number" value="' + v('spo2') + '"></label>' +
+      '<label>etCO₂ (mmHg)<input name="etco2" type="number" value="' + v('etco2') + '"></label>' +
+      '<label>Temp (°C)<input name="temp" type="number" step="0.1" value="' + v('temp') + '"></label>' +
+      '<label>BZ (mg/dl)<input name="bz_mg" type="number" value="' + v('bz_mg') + '"></label>' +
+      '<label>BZ (mmol/l)<input name="bz_mmol" type="number" step="0.1" value="' + v('bz_mmol') + '"></label>' +
+      '<label>Schmerz (0–10)<input name="schmerz" type="number" min="0" max="10" value="' + v('schmerz') + '"></label>' +
+    '</div>' +
+    '<fieldset style="margin-top:.8rem">' +
+      '<legend>qSOFA (auto)</legend>' +
+      '<div class="badge">qSOFA-Score: ' + calculateQSOFA(payload) + '</div>' +
+    '</fieldset>' +
+    '<fieldset>' +
+      '<legend>Atmung – klinische Zeichen</legend>' +
+      '<div class="choice">' +
+        '<label class="pill-input"><input type="checkbox" name="atm_apnoe" ' + checked('atm_apnoe') + '> Apnoe</label>' +
+        '<label class="pill-input"><input type="checkbox" name="atm_stridor" ' + checked('atm_stridor') + '> Stridor</label>' +
+        '<label class="pill-input"><input type="checkbox" name="atm_hypervent" ' + checked('atm_hypervent') + '> Hyperventilation</label>' +
+        '<label class="pill-input"><input type="checkbox" name="atm_dyspnoe" ' + checked('atm_dyspnoe') + '> Dyspnoe</label>' +
+        '<label class="pill-input"><input type="checkbox" name="atm_beatmung" ' + checked('atm_beatmung') + '> Beatmung</label>' +
+        '<label class="pill-input"><input type="checkbox" name="atm_zyanose" ' + checked('atm_zyanose') + '> Zyanose</label>' +
+        '<label class="pill-input"><input type="checkbox" name="atm_verlegung" ' + checked('atm_verlegung') + '> Atemwegsverlegung</label>' +
+      '</div>' +
+      '<textarea name="atm_sonst">' + v('atm_sonst') + '</textarea>' +
+    '</fieldset>' +
+    '<fieldset>' +
+      '<legend>O₂-Gabe</legend>' +
+      '<div class="choice">' +
+        '<label class="pill-input"><input type="radio" name="o2" value="raumluft" ' + radioChecked('o2','raumluft') + '> Raumluft</label>' +
+        '<label class="pill-input"><input type="radio" name="o2" value="unter_o2" ' + radioChecked('o2','unter_o2') + '> unter O₂</label>' +
+        '<label class="pill-input"><input type="checkbox" name="o2_nasal" ' + checked('o2_nasal') + '> Nasensonde</label>' +
+        '<label class="pill-input"><input type="checkbox" name="o2_maske" ' + checked('o2_maske') + '> Maske</label>' +
+        '<label class="pill-input"><input type="checkbox" name="o2_reservoir" ' + checked('o2_reservoir') + '> Maske m. Reservoir</label>' +
+      '</div>' +
+      '<div class="grid" style="margin-top:.4rem">' +
+        '<label>Flow (l/min)<input name="o2_flow" type="number" step="0.5" value="' + v('o2_flow') + '"></label>' +
+        '<label>Kommentar<input name="o2_comment" type="text" value="' + v('o2_comment') + '"></label>' +
+      '</div>' +
+    '</fieldset>' +
+  '</div>' +
+'</details>' +
+
+'<details>' +
+  '<summary><i class="fa-solid fa-heart-pulse"></i> Rhythmus / EKG</summary>' +
+  '<div class="sec-body">' +
+    '<div class="choice">' +
+      '<label class="pill-input"><input type="checkbox" name="sr" ' + checked('sr') + '> Sinusrhythmus</label>' +
+      '<label class="pill-input"><input type="checkbox" name="stemi" ' + checked('stemi') + '> STEMI</label>' +
+      '<label class="pill-input"><input type="checkbox" name="arrh_abs" ' + checked('arrh_abs') + '> absolute Arrhythmie</label>' +
+      '<label class="pill-input"><input type="checkbox" name="vf" ' + checked('vf') + '> Kammerflimmern</label>' +
+      '<label class="pill-input"><input type="checkbox" name="av3" ' + checked('av3') + '> AV-Block III°</label>' +
+      '<label class="pill-input"><input type="checkbox" name="asystole" ' + checked('asystole') + '> Asystolie</label>' +
+    '</div>' +
+    '<div class="grid" style="margin-top:.5rem">' +
+      '<label>Standort<input name="ekg_standort" type="text" value="' + v('ekg_standort') + '"></label>' +
+      '<label>Pers-Nr.<input name="ekg_persnr" type="text" value="' + v('ekg_persnr') + '"></label>' +
+    '</div>' +
+  '</div>' +
+'</details>' +
+
+'<details>' +
+  '<summary><i class="fa-solid fa-kit-medical"></i> Verletzungen</summary>' +
+  '<div class="sec-body">' +
+    '<textarea name="verletz_text">' + v('verletz_text') + '</textarea>' +
+  '</div>' +
+'</details>' +
+
+'<details>' +
+  '<summary><i class="fa-solid fa-clipboard-list"></i> Erstdiagnosen</summary>' +
+  '<div class="sec-body">' +
+    '<div class="grid">' +
+      '<fieldset>' +
+        '<legend>Neuro</legend>' +
+        '<div class="choice">' +
+          '<label class="pill-input"><input type="checkbox" name="diag_krampf" ' + checked('diag_krampf') + '> Konvulsionen</label>' +
+          '<label class="pill-input"><input type="checkbox" name="diag_synkope" ' + checked('diag_synkope') + '> Synkope</label>' +
+          '<label class="pill-input"><input type="checkbox" name="diag_apoplex" ' + checked('diag_apoplex') + '> Apoplex</label>' +
+          '<label class="pill-input"><input type="checkbox" name="diag_sht" ' + checked('diag_sht') + '> SHT</label>' +
+        '</div>' +
+      '</fieldset>' +
+      '<fieldset>' +
+        '<legend>Herz-Kreislauf</legend>' +
+        '<div class="choice">' +
+          '<label class="pill-input"><input type="checkbox" name="diag_acs" ' + checked('diag_acs') + '> ACS</label>' +
+          '<label class="pill-input"><input type="checkbox" name="diag_insuff" ' + checked('diag_insuff') + '> Herzinsuffizienz</label>' +
+          '<label class="pill-input"><input type="checkbox" name="diag_lungenoedem" ' + checked('diag_lungenoedem') + '> Lungenödem</label>' +
+          '<label class="pill-input"><input type="checkbox" name="diag_luembol" ' + checked('diag_luembol') + '> Lungenembolie</label>' +
+        '</div>' +
+      '</fieldset>' +
+      '<fieldset>' +
+        '<legend>Atmung</legend>' +
+        '<div class="choice">' +
+          '<label class="pill-input"><input type="checkbox" name="diag_resp_insuff" ' + checked('diag_resp_insuff') + '> resp. Insuffizienz</label>' +
+          '<label class="pill-input"><input type="checkbox" name="diag_pneumothorax" ' + checked('diag_pneumothorax') + '> Pneumothorax</label>' +
+          '<label class="pill-input"><input type="checkbox" name="diag_asthma" ' + checked('diag_asthma') + '> Asthma/COPD</label>' +
+        '</div>' +
+      '</fieldset>' +
+      '<fieldset>' +
+        '<legend>Stoffwechsel / Schock</legend>' +
+        '<div class="choice">' +
+          '<label class="pill-input"><input type="checkbox" name="diag_hypo" ' + checked('diag_hypo') + '> Hypoglykämie</label>' +
+          '<label class="pill-input"><input type="checkbox" name="diag_sept" ' + checked('diag_sept') + '> septischer Schock</label>' +
+          '<label class="pill-input"><input type="checkbox" name="diag_hypovol" ' + checked('diag_hypovol') + '> hypovolämischer Schock</label>' +
+        '</div>' +
+      '</fieldset>' +
+    '</div>' +
+  '</div>' +
+'</details>' +
+
+'<details>' +
+  '<summary><i class="fa-solid fa-face-meh"></i> Bewusstseinslage, AZ, Versorgung</summary>' +
+  '<div class="sec-body">' +
+    '<div class="grid">' +
+      '<fieldset>' +
+        '<legend>Bewusstseinslage</legend>' +
+        '<div class="choice">' +
+          '<label class="pill-input"><input type="checkbox" name="bew_wach" ' + checked('bew_wach') + '> wach</label>' +
+          '<label class="pill-input"><input type="checkbox" name="bew_ansprache" ' + checked('bew_ansprache') + '> Reaktion auf Ansprache</label>' +
+          '<label class="pill-input"><input type="checkbox" name="bew_schmerz" ' + checked('bew_schmerz') + '> Reaktion auf Schmerzreiz</label>' +
+          '<label class="pill-input"><input type="checkbox" name="bew_bewusstlos" ' + checked('bew_bewusstlos') + '> bewusstlos</label>' +
+        '</div>' +
+      '</fieldset>' +
+      '<fieldset>' +
+        '<legend>Allgemeinzustand</legend>' +
+        '<div class="choice">' +
+          '<label class="pill-input"><input type="radio" name="az" value="gesund" ' + radioChecked('az','gesund') + '> gesund</label>' +
+          '<label class="pill-input"><input type="radio" name="az" value="leicht" ' + radioChecked('az','leicht') + '> leicht eingeschränkt</label>' +
+          '<label class="pill-input"><input type="radio" name="az" value="deutlich" ' + radioChecked('az','deutlich') + '> deutlich eingeschränkt</label>' +
+        '</div>' +
+      '</fieldset>' +
+      '<fieldset>' +
+        '<legend>Versorgungssituation</legend>' +
+        '<div class="choice">' +
+          '<label class="pill-input"><input type="radio" name="versorgung" value="unabhaengig" ' + radioChecked('versorgung','unabhaengig') + '> unabhängig</label>' +
+          '<label class="pill-input"><input type="radio" name="versorgung" value="pflege_zuhaus" ' + radioChecked('versorgung','pflege_zuhaus') + '> Pflege zuhause</label>' +
+          '<label class="pill-input"><input type="radio" name="versorgung" value="pflege_institution" ' + radioChecked('versorgung','pflege_institution') + '> Pflege in Institution</label>' +
+        '</div>' +
+      '</fieldset>' +
+    '</div>' +
+  '</div>' +
+'</details>' +
+
+'<details open>' +
+  '<summary><i class="fa-solid fa-syringe"></i> Maßnahmen – Zugang & Medikation</summary>' +
+  '<div class="sec-body">' +
+    '<fieldset>' +
+      '<legend>Zugang</legend>' +
+      '<div class="grid">' +
+        '<label>Art<select name="zugang_art"><option value="">-</option><option value="iv" ' + (v('zugang_art')==='iv'?'selected':'') + '>i.v.</option><option value="io" ' + (v('zugang_art')==='io'?'selected':'') + '>i.o.</option></select></label>' +
+        '<label>Seite/Region<input name="zugang_region" type="text" value="' + v('zugang_region') + '"></label>' +
+        '<label>Größe (G)<input name="zugang_gauge" type="number" min="14" max="24" value="' + v('zugang_gauge') + '"></label>' +
+        '<label>Versuche<input name="zugang_versuche" type="number" min="0" value="' + v('zugang_versuche') + '"></label>' +
+        '<label>Zeitpunkt<input name="zugang_zeit" type="datetime-local" value="' + v('zugang_zeit') + '"></label>' +
+      '</div>' +
+    '</fieldset>' +
+    '<fieldset>' +
+      '<legend>Infusion</legend>' +
+      '<div class="grid">' +
+        '<label>Art<input name="inf_art" type="text" value="' + v('inf_art') + '"></label>' +
+        '<label>Menge (ml)<input name="inf_menge" type="number" min="0" step="50" value="' + v('inf_menge') + '"></label>' +
+        '<label>Laufrate (ml/h)<input name="inf_rate" type="number" min="0" step="10" value="' + v('inf_rate') + '"></label>' +
+        '<label>Bemerkung<input name="inf_bem" type="text" value="' + v('inf_bem') + '"></label>' +
+      '</div>' +
+    '</fieldset>' +
+    '<fieldset>' +
+      '<legend>Medikamente</legend>' +
+      '<button type="button" class="subbtn" onclick="addMedRowEdit()" style="margin-bottom:.5rem">Zeile hinzufügen</button>' +
+      '<div style="overflow:auto"><table id="medTableEdit"><thead><tr><th>#</th><th>Medikament</th><th>Dosis</th><th>Einheit</th><th>Route</th><th>Uhrzeit</th><th>Bemerkung</th><th>×</th></tr></thead><tbody>' + medRowsHTML + '</tbody></table></div>' +
+    '</fieldset>' +
+  '</div>' +
+'</details>' +
+
+'<details>' +
+  '<summary><i class="fa-solid fa-wind"></i> Beatmung / Atemweg</summary>' +
+  '<div class="sec-body">' +
+    '<div class="choice">' +
+      '<label class="pill-input"><input type="checkbox" name="aw_guedel" ' + checked('aw_guedel') + '> Guedel</label>' +
+      '<label class="pill-input"><input type="checkbox" name="aw_larynxtubus" ' + checked('aw_larynxtubus') + '> Larynxtubus</label>' +
+      '<label class="pill-input"><input type="checkbox" name="aw_ett" ' + checked('aw_ett') + '> ETT</label>' +
+      '<label class="pill-input"><input type="checkbox" name="aw_bvm" ' + checked('aw_bvm') + '> BVM</label>' +
+    '</div>' +
+    '<div class="grid" style="margin-top:.5rem">' +
+      '<label>ETT-Größe<input name="aw_ett_size" type="number" step="0.5" value="' + v('aw_ett_size') + '"></label>' +
+      '<label>PEEP (cmH₂O)<input name="vent_peep" type="number" step="1" value="' + v('vent_peep') + '"></label>' +
+      '<label>FiO₂ (%)<input name="vent_fio2" type="number" min="21" max="100" value="' + v('vent_fio2') + '"></label>' +
+    '</div>' +
+  '</div>' +
+'</details>' +
+
+'<details>' +
+  '<summary><i class="fa-solid fa-heart-circle-bolt"></i> Reanimation</summary>' +
+  '<div class="sec-body">' +
+    '<div class="grid">' +
+      '<label>Rea-Beginn<input name="rea_beginn" type="datetime-local" value="' + v('rea_beginn') + '"></label>' +
+      '<label>Erst-Rhythmus<select name="rea_initial"><option value="">-</option><option value="Asystolie" ' + (v('rea_initial')==='Asystolie'?'selected':'') + '>Asystolie</option><option value="PEA" ' + (v('rea_initial')==='PEA'?'selected':'') + '>PEA</option><option value="VF" ' + (v('rea_initial')==='VF'?'selected':'') + '>VF</option><option value="pVT" ' + (v('rea_initial')==='pVT'?'selected':'') + '>pVT</option></select></label>' +
+      '<label>Schocks<input name="rea_shocks" type="number" min="0" value="' + v('rea_shocks') + '"></label>' +
+      '<label>ROSC<select name="rea_rosc"><option value="">-</option><option value="ja" ' + (v('rea_rosc')==='ja'?'selected':'') + '>ja</option><option value="nein" ' + (v('rea_rosc')==='nein'?'selected':'') + '>nein</option></select></label>' +
+      '<label>Rea-Ende<input name="rea_ende" type="time" value="' + v('rea_ende') + '"></label>' +
+    '</div>' +
+  '</div>' +
+'</details>' +
+
+'<details open>' +
+  '<summary><i class="fa-solid fa-people-carry-box"></i> Übergabe / Transport</summary>' +
+  '<div class="sec-body">' +
+    '<div class="grid">' +
+      '<label>Übergabe an<input name="ue_name" type="text" value="' + v('ue_name') + '"></label>' +
+      '<label>Zeitpunkt<input name="ue_zeit" type="datetime-local" value="' + v('ue_zeit') + '"></label>' +
+      '<label>Ziel<input name="ziel_bez" type="text" value="' + v('ziel_bez') + '"></label>' +
+      '<label>Adresse<input name="ziel_adr" type="text" value="' + v('ziel_adr') + '"></label>' +
+      '<label>Einsatzende<input name="einsatzende" type="datetime-local" value="' + v('einsatzende') + '"></label>' +
+    '</div>' +
+  '</div>' +
+'</details>' +
+
+'<details open>' +
+  '<summary><i class="fa-solid fa-signature"></i> Ausfüller & Unterschrift</summary>' +
+  '<div class="sec-body">' +
+    '<div class="grid">' +
+      '<label>Name<input name="ausfueller_name" type="text" value="' + v('ausfueller_name') + '"></label>' +
+      '<label>Zeitpunkt<input name="ausfueller_zeit" type="datetime-local" value="' + v('ausfueller_zeit') + '"></label>' +
+    '</div>' +
+    (payload.signature ? '<div style="margin-top:.75rem"><strong>Unterschrift:</strong><br><img src="' + payload.signature + '" class="signature-img"></div>' : '') +
+  '</div>' +
+'</details>';
+    }
+
+    // ADD MEDICATION ROW
+    window.addMedRowEdit = function() {
+      medRowCounter++;
+      const tbody = document.querySelector('#medTableEdit tbody');
+      const tr = document.createElement('tr');
+      tr.innerHTML = '<td>' + medRowCounter + '</td>' +
+        '<td><input type="text" name="med_name_' + medRowCounter + '" style="width:100%;padding:.3rem;font-size:14px"></td>' +
+        '<td><input type="number" name="med_dose_' + medRowCounter + '" step="0.1" style="width:80px;padding:.3rem;font-size:14px"></td>' +
+        '<td><input type="text" name="med_unit_' + medRowCounter + '" placeholder="mg" style="width:60px;padding:.3rem;font-size:14px"></td>' +
+        '<td><select name="med_route_' + medRowCounter + '" style="padding:.3rem;font-size:14px"><option value="">-</option><option value="i.v.">i.v.</option><option value="i.m.">i.m.</option><option value="s.c.">s.c.</option><option value="p.o.">p.o.</option><option value="inhal.">inhal.</option></select></td>' +
+        '<td><input type="time" name="med_time_' + medRowCounter + '" style="width:90px;padding:.3rem;font-size:14px"></td>' +
+        '<td><input type="text" name="med_note_' + medRowCounter + '" style="width:100%;padding:.3rem;font-size:14px"></td>' +
+        '<td><button class="subbtn" type="button" onclick="this.closest(\'tr\').remove()">×</button></td>';
+      tbody.appendChild(tr);
+    };
+
+    // CLOSE EDIT MODAL
+    window.closeEditModal = () => {
       document.getElementById('editModal').classList.remove('show');
-      document.getElementById('signModal').classList.add('show');
-      initAdminSigCanvas();
-      
-    } catch(e) {
-      showMsg('Fehler beim Speichern: ' + e.message, 'error');
-    }
-  };
-  // ========================================
-  // ADMIN SIGNATURE CANVAS
-  // ========================================
-  let adminSigCanvas, adminSigCtx, adminIsDrawing = false;
-
-  function initAdminSigCanvas() {
-    adminSigCanvas = document.getElementById('adminSigCanvas');
-    adminSigCtx = adminSigCanvas.getContext('2d');
-    const rect = adminSigCanvas.getBoundingClientRect();
-    adminSigCanvas.width = rect.width;
-    adminSigCanvas.height = rect.height;
-    adminSigCtx.lineWidth = 2;
-    adminSigCtx.strokeStyle = '#000';
-    adminSigCtx.lineCap = 'round';
-
-    adminSigCanvas.addEventListener('mousedown', startAdminDraw);
-    adminSigCanvas.addEventListener('mousemove', adminDraw);
-    adminSigCanvas.addEventListener('mouseup', stopAdminDraw);
-    adminSigCanvas.addEventListener('mouseleave', stopAdminDraw);
-
-    adminSigCanvas.addEventListener('touchstart', (e) => {
-      e.preventDefault();
-      const touch = e.touches[0];
-      const mouseEvent = new MouseEvent('mousedown', {
-        clientX: touch.clientX,
-        clientY: touch.clientY
-      });
-      adminSigCanvas.dispatchEvent(mouseEvent);
-    });
-
-    adminSigCanvas.addEventListener('touchmove', (e) => {
-      e.preventDefault();
-      const touch = e.touches[0];
-      const mouseEvent = new MouseEvent('mousemove', {
-        clientX: touch.clientX,
-        clientY: touch.clientY
-      });
-      adminSigCanvas.dispatchEvent(mouseEvent);
-    });
-
-    adminSigCanvas.addEventListener('touchend', (e) => {
-      e.preventDefault();
-      const mouseEvent = new MouseEvent('mouseup', {});
-      adminSigCanvas.dispatchEvent(mouseEvent);
-    });
-  }
-
-  function startAdminDraw(e) {
-    adminIsDrawing = true;
-    const rect = adminSigCanvas.getBoundingClientRect();
-    adminSigCtx.beginPath();
-    adminSigCtx.moveTo(e.clientX - rect.left, e.clientY - rect.top);
-  }
-
-  function adminDraw(e) {
-    if (!adminIsDrawing) return;
-    const rect = adminSigCanvas.getBoundingClientRect();
-    adminSigCtx.lineTo(e.clientX - rect.left, e.clientY - rect.top);
-    adminSigCtx.stroke();
-  }
-
-  function stopAdminDraw() {
-    adminIsDrawing = false;
-  }
-
-  window.clearAdminSig = () => {
-    adminSigCtx.clearRect(0, 0, adminSigCanvas.width, adminSigCanvas.height);
-  };
-
-  window.closeSignModal = () => {
-    document.getElementById('signModal').classList.remove('show');
-  };
-
-  window.archiveWithSignature = async () => {
-    try {
-      const adminName = document.getElementById('adminName').value.trim();
-      if (!adminName) {
-        showMsg('Bitte Namen eingeben', 'error');
-        return;
+      if (!document.getElementById('signModal').classList.contains('show')) {
+        currentEditDoc = null;
+        currentEditPayload = null;
       }
+    };
+    // ========================================
+    // SAVE AND SIGN
+    // ========================================
+    window.saveAndSignPatDoc = async () => {
+      try {
+        showMsg('Daten werden gespeichert...', 'success');
+        const btn = document.querySelector('#editModal .btn:not(.btn-secondary)');
+        btn.disabled = true;
 
-      const signatureData = adminSigCanvas.toDataURL('image/png');
-      
-      await pb.collection('patients').update(currentEditDoc.id, {
-        status: 'archiviert',
-        admin_name: adminName,
-        admin_datum: new Date().toISOString(),
-        admin_unterschrift: signatureData
+        const form = document.getElementById('editFormContainer');
+        const formData = new FormData();
+        const inputs = form.querySelectorAll('input, textarea, select');
+        
+        inputs.forEach(input => {
+          if (input.type === 'checkbox') {
+            formData.append(input.name, input.checked);
+          } else if (input.type === 'radio') {
+            if (input.checked) formData.append(input.name, input.value);
+          } else {
+            formData.append(input.name, input.value);
+          }
+        });
+
+        const payload = {};
+        for (let [key, value] of formData.entries()) {
+          if (payload[key] !== undefined) continue;
+          payload[key] = value === 'true' ? true : value === 'false' ? false : value;
+        }
+
+        // Collect medications
+        const medications = [];
+        for (let i = 1; i <= medRowCounter; i++) {
+          const name = form.querySelector('[name="med_name_' + i + '"]')?.value;
+          if (name) {
+            medications.push({
+              name,
+              dose: form.querySelector('[name="med_dose_' + i + '"]')?.value || '',
+              unit: form.querySelector('[name="med_unit_' + i + '"]')?.value || '',
+              route: form.querySelector('[name="med_route_' + i + '"]')?.value || '',
+              time: form.querySelector('[name="med_time_' + i + '"]')?.value || '',
+              note: form.querySelector('[name="med_note_' + i + '"]')?.value || ''
+            });
+          }
+        }
+        payload.medications = medications;
+
+        // Preserve photos and signature
+        if (currentEditPayload.photos) {
+          payload.photos = currentEditPayload.photos;
+        }
+        if (currentEditPayload.signature) {
+          payload.signature = currentEditPayload.signature;
+        }
+
+        await pb.collection('patients').update(currentEditDoc.id, {
+          payload: payload
+        });
+
+        document.getElementById('editModal').classList.remove('show');
+        document.getElementById('signModal').classList.add('show');
+        initAdminSigCanvas();
+        
+      } catch(e) {
+        showMsg('Fehler beim Speichern: ' + e.message, 'error');
+        const btn = document.querySelector('#editModal .btn:not(.btn-secondary)');
+        btn.disabled = false;
+      }
+    };
+
+    // ========================================
+    // ADMIN SIGNATURE CANVAS
+    // ========================================
+    let adminSigCanvas, adminSigCtx, adminIsDrawing = false;
+
+    function initAdminSigCanvas() {
+      adminSigCanvas = document.getElementById('adminSigCanvas');
+      adminSigCtx = adminSigCanvas.getContext('2d');
+      const rect = adminSigCanvas.getBoundingClientRect();
+      adminSigCanvas.width = rect.width;
+      adminSigCanvas.height = rect.height;
+      adminSigCtx.lineWidth = 2;
+      adminSigCtx.strokeStyle = '#000';
+      adminSigCtx.lineCap = 'round';
+
+      adminSigCanvas.addEventListener('mousedown', startAdminDraw);
+      adminSigCanvas.addEventListener('mousemove', adminDraw);
+      adminSigCanvas.addEventListener('mouseup', stopAdminDraw);
+      adminSigCanvas.addEventListener('mouseleave', stopAdminDraw);
+
+      adminSigCanvas.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        const touch = e.touches[0];
+        const mouseEvent = new MouseEvent('mousedown', {
+          clientX: touch.clientX,
+          clientY: touch.clientY
+        });
+        adminSigCanvas.dispatchEvent(mouseEvent);
       });
 
-      closeSignModal();
-      showMsg('✅ Dokument archiviert!', 'success');
-      await loadData();
-      
+      adminSigCanvas.addEventListener('touchmove', (e) => {
+        e.preventDefault();
+        const touch = e.touches[0];
+        const mouseEvent = new MouseEvent('mousemove', {
+          clientX: touch.clientX,
+          clientY: touch.clientY
+        });
+        adminSigCanvas.dispatchEvent(mouseEvent);
+      });
+
+      adminSigCanvas.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        const mouseEvent = new MouseEvent('mouseup', {});
+        adminSigCanvas.dispatchEvent(mouseEvent);
+      });
+    }
+
+    function startAdminDraw(e) {
+      adminIsDrawing = true;
+      const rect = adminSigCanvas.getBoundingClientRect();
+      adminSigCtx.beginPath();
+      adminSigCtx.moveTo(e.clientX - rect.left, e.clientY - rect.top);
+    }
+
+    function adminDraw(e) {
+      if (!adminIsDrawing) return;
+      const rect = adminSigCanvas.getBoundingClientRect();
+      adminSigCtx.lineTo(e.clientX - rect.left, e.clientY - rect.top);
+      adminSigCtx.stroke();
+    }
+
+    function stopAdminDraw() {
+      adminIsDrawing = false;
+    }
+
+    window.clearAdminSig = () => {
+      adminSigCtx.clearRect(0, 0, adminSigCanvas.width, adminSigCanvas.height);
+    };
+
+    window.closeSignModal = () => {
+      document.getElementById('signModal').classList.remove('show');
       currentEditDoc = null;
       currentEditPayload = null;
-      
-    } catch(e) {
-      showMsg('Fehler beim Archivieren: ' + e.message, 'error');
-    }
-  };
+    };
 
-  // ========================================
-  // NACHERFASSUNG SIGNATURE CANVAS
-  // ========================================
-  let nachSigCanvas, nachSigCtx, nachIsDrawing = false;
+    // ========================================
+    // ARCHIVE WITH SIGNATURE
+    // ========================================
+    window.archiveWithSignature = async () => {
+      try {
+        const adminName = document.getElementById('adminName').value.trim();
+        if (!adminName) {
+          showMsg('Bitte Name eingeben', 'error');
+          return;
+        }
 
-  function initNachSigCanvas() {
-    nachSigCanvas = document.getElementById('nachSigCanvas');
-    nachSigCtx = nachSigCanvas.getContext('2d');
-    const rect = nachSigCanvas.getBoundingClientRect();
-    nachSigCanvas.width = rect.width;
-    nachSigCanvas.height = rect.height;
-    nachSigCtx.lineWidth = 2;
-    nachSigCtx.strokeStyle = '#000';
-    nachSigCtx.lineCap = 'round';
+        const sigData = adminSigCanvas.toDataURL('image/png');
+        if (sigData === 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==') {
+          showMsg('Bitte Unterschrift zeichnen', 'error');
+          return;
+        }
 
-    nachSigCanvas.addEventListener('mousedown', startNachDraw);
-    nachSigCanvas.addEventListener('mousemove', nachDraw);
-    nachSigCanvas.addEventListener('mouseup', stopNachDraw);
-    nachSigCanvas.addEventListener('mouseleave', stopNachDraw);
+        await pb.collection('patients').update(currentEditDoc.id, {
+          status: 'archiviert',
+          admin_name: adminName,
+          admin_signature: sigData,
+          admin_datum: new Date().toISOString()
+        });
 
-    nachSigCanvas.addEventListener('touchstart', (e) => {
-      e.preventDefault();
-      const touch = e.touches[0];
-      const mouseEvent = new MouseEvent('mousedown', {
-        clientX: touch.clientX,
-        clientY: touch.clientY
+        showMsg('Dokument wurde archiviert', 'success');
+        document.getElementById('signModal').classList.remove('show');
+        currentEditDoc = null;
+        currentEditPayload = null;
+        await loadData();
+      } catch(e) {
+        showMsg('Fehler: ' + e.message, 'error');
+      }
+    };
+
+    // ========================================
+    // NACHERFASSUNG SIGNATURE CANVAS
+    // ========================================
+    let nachSigCanvas, nachSigCtx, nachIsDrawing = false;
+
+    function initNachSigCanvas() {
+      nachSigCanvas = document.getElementById('nachSigCanvas');
+      nachSigCtx = nachSigCanvas.getContext('2d');
+      const rect = nachSigCanvas.getBoundingClientRect();
+      nachSigCanvas.width = rect.width;
+      nachSigCanvas.height = rect.height;
+      nachSigCtx.lineWidth = 2;
+      nachSigCtx.strokeStyle = '#000';
+      nachSigCtx.lineCap = 'round';
+
+      nachSigCanvas.addEventListener('mousedown', startNachDraw);
+      nachSigCanvas.addEventListener('mousemove', nachDraw);
+      nachSigCanvas.addEventListener('mouseup', stopNachDraw);
+      nachSigCanvas.addEventListener('mouseleave', stopNachDraw);
+
+      nachSigCanvas.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        const touch = e.touches[0];
+        const mouseEvent = new MouseEvent('mousedown', {
+          clientX: touch.clientX,
+          clientY: touch.clientY
+        });
+        nachSigCanvas.dispatchEvent(mouseEvent);
       });
-      nachSigCanvas.dispatchEvent(mouseEvent);
-    });
 
-    nachSigCanvas.addEventListener('touchmove', (e) => {
-      e.preventDefault();
-      const touch = e.touches[0];
-      const mouseEvent = new MouseEvent('mousemove', {
-        clientX: touch.clientX,
-        clientY: touch.clientY
+      nachSigCanvas.addEventListener('touchmove', (e) => {
+        e.preventDefault();
+        const touch = e.touches[0];
+        const mouseEvent = new MouseEvent('mousemove', {
+          clientX: touch.clientX,
+          clientY: touch.clientY
+        });
+        nachSigCanvas.dispatchEvent(mouseEvent);
       });
-      nachSigCanvas.dispatchEvent(mouseEvent);
-    });
 
-    nachSigCanvas.addEventListener('touchend', (e) => {
-      e.preventDefault();
-      const mouseEvent = new MouseEvent('mouseup', {});
-      nachSigCanvas.dispatchEvent(mouseEvent);
-    });
-  }
-
-  function startNachDraw(e) {
-    nachIsDrawing = true;
-    const rect = nachSigCanvas.getBoundingClientRect();
-    nachSigCtx.beginPath();
-    nachSigCtx.moveTo(e.clientX - rect.left, e.clientY - rect.top);
-  }
-
-  function nachDraw(e) {
-    if (!nachIsDrawing) return;
-    const rect = nachSigCanvas.getBoundingClientRect();
-    nachSigCtx.lineTo(e.clientX - rect.left, e.clientY - rect.top);
-    nachSigCtx.stroke();
-  }
-
-  function stopNachDraw() {
-    nachIsDrawing = false;
-  }
-
-  window.clearNachSig = () => {
-    nachSigCtx.clearRect(0, 0, nachSigCanvas.width, nachSigCanvas.height);
-  };
-
-  window.closeNachModal = () => {
-    document.getElementById('nachModal').classList.remove('show');
-  };
-
-  window.saveNacherfassung = async () => {
-    try {
-      const form = document.getElementById('nachForm');
-      const formData = new FormData(form);
-      
-      const nacherfassungData = {
-        datum_alarmzeit: formData.get('datum_alarmzeit') || null,
-        datum_einsatzende: formData.get('datum_einsatzende') || null,
-        stichwort: formData.get('stichwort') || '',
-        kategorie: formData.get('kategorie') || '',
-        einsatznummer_ils: formData.get('einsatznummer_ils') || '',
-        meldebild: formData.get('meldebild') || '',
-        adresse: formData.get('adresse') || '',
-        disponierte_em_fw: formData.get('disponierte_em_fw') || '',
-        disponierte_em_rd: formData.get('disponierte_em_rd') || '',
-        patienten_daten_erhoben: formData.get('patienten_daten_erhoben') === 'ja',
-        patient_name: formData.get('patient_name') || '',
-        patient_alter_geburtsdatum: formData.get('patient_alter_geburtsdatum') || '',
-        patient_nummer_ils: formData.get('patient_nummer_ils') || '',
-        sachverhalt: formData.get('sachverhalt') || '',
-        protokollpflichtig: formData.get('protokollpflichtig') === 'ja',
-        protokollpflichtig_begruendung: formData.get('protokollpflichtig_begruendung') || '',
-        verantwortlicher_unterwiesen: formData.get('verantwortlicher_unterwiesen') === 'ja',
-        verantwortlicher_name: formData.get('verantwortlicher_name') || '',
-        verantwortlicher_qualifikation: formData.get('verantwortlicher_qualifikation') || '',
-        nacherfasst_von_name: formData.get('nacherfasst_von_name') || '',
-        nacherfasst_von_qualifikation: formData.get('nacherfasst_von_qualifikation') || '',
-        nacherfasst_datum: new Date().toISOString(),
-        nacherfasst_unterschrift: nachSigCanvas.toDataURL('image/png'),
-        status: 'offen',
-        organization_id: currentUser.organization_id
-      };
-
-      await pb.collection('patient_docs_nacherfassung').create(nacherfassungData);
-
-      closeNachModal();
-      showMsg('✅ Nacherfassung gespeichert!', 'success');
-      await loadData();
-      
-    } catch(e) {
-      showMsg('Fehler: ' + e.message, 'error');
-    }
-  };
-  // ========================================
-  // ARCHIVE & VIEW FUNCTIONS
-  // ========================================
-  window.archiveNach = async (id) => {
-    if (!confirm('Nacherfassung ins Archiv verschieben?')) return;
-    try {
-      await pb.collection('patient_docs_nacherfassung').update(id, {
-        status: 'archiviert'
+      nachSigCanvas.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        const mouseEvent = new MouseEvent('mouseup', {});
+        nachSigCanvas.dispatchEvent(mouseEvent);
       });
-      
-      showMsg('✅ Nacherfassung archiviert!', 'success');
-      await loadData();
-    } catch(e) {
-      showMsg('Fehler: ' + e.message, 'error');
     }
-  };
 
-  window.viewNach = async (id) => {
-    try {
-      const doc = await pb.collection('patient_docs_nacherfassung').getOne(id);
-      window.currentViewedNachData = doc;
-      window.currentViewedDocType = 'nacherfassung';
-      
-      document.getElementById('detailsTitle').textContent = 'Nacherfassung: ' + (doc.stichwort || '?');
-      
-      const html = '<div style="padding:16px">' +
-        '<h4 style="color:#667eea;margin-bottom:12px">Einsatzdaten</h4>' +
-        '<p><strong>Stichwort:</strong> ' + (doc.stichwort || '—') + '</p>' +
-        '<p><strong>Kategorie:</strong> ' + (doc.kategorie || '—') + '</p>' +
-        '<p><strong>Alarmzeit:</strong> ' + formatDate(doc.datum_alarmzeit) + '</p>' +
-        '<p><strong>Einsatzende:</strong> ' + formatDate(doc.datum_einsatzende) + '</p>' +
-        '<h4 style="color:#667eea;margin:20px 0 12px">Nacherfassung</h4>' +
-        '<p><strong>Erfasst von:</strong> ' + (doc.nacherfasst_von_name || '?') + '</p>' +
-        '<p><strong>Datum:</strong> ' + formatDate(doc.nacherfasst_datum) + '</p>' +
-        (doc.nacherfasst_unterschrift ? '<p style="margin-top:12px"><strong>Unterschrift:</strong></p><img src="' + doc.nacherfasst_unterschrift + '" class="signature-img">' : '') +
-      '</div>';
-      
-      document.getElementById('detailsBody').innerHTML = html;
-      document.getElementById('detailsModal').classList.add('show');
-      
-    } catch(e) {
-      showMsg('Fehler: ' + e.message, 'error');
+    function startNachDraw(e) {
+      nachIsDrawing = true;
+      const rect = nachSigCanvas.getBoundingClientRect();
+      nachSigCtx.beginPath();
+      nachSigCtx.moveTo(e.clientX - rect.left, e.clientY - rect.top);
     }
-  };
 
-  window.viewPatArchiv = async (id) => {
-    try {
-      const doc = await pb.collection('patients').getOne(id);
-      const p = doc.payload || {};
-      
-      window.currentViewedPayload = p;
-      window.currentViewedAdmin = {
-        name: doc.admin_name,
-        datum: doc.admin_datum,
-        unterschrift: doc.admin_unterschrift
-      };
-      window.currentViewedOrgName = currentOrganization?.name || 'Feuerwehr';
-      window.currentViewedDocType = 'patient';
-      
-      const displayName = (p.vorname || '') + ' ' + (p.name || '');
-      const finalDisplayName = displayName.trim() || 'Unbekannt';
-      document.getElementById('detailsTitle').textContent = 'Patientendokumentation: ' + finalDisplayName;
-      
-      const html = '<div style="padding:16px">' +
-        '<h4 style="color:#667eea;margin-bottom:12px">Einsatzdaten</h4>' +
-        '<p><strong>Einsatz-Nr:</strong> ' + (p.einsatz_nr || '—') + '</p>' +
-        '<p><strong>Datum:</strong> ' + formatDate(p.zeit_einsatz) + '</p>' +
-        '<p><strong>Fahrzeug:</strong> ' + (p.fahrzeug || '—') + '</p>' +
-        '<h4 style="color:#667eea;margin:20px 0 12px">Patient</h4>' +
-        '<p><strong>Name:</strong> ' + finalDisplayName + '</p>' +
-        '<p><strong>Geburtsdatum:</strong> ' + (p.gebdatum || '—') + '</p>' +
-        '<p><strong>Alter:</strong> ' + (p.alter || '—') + '</p>' +
-        '<h4 style="color:#667eea;margin:20px 0 12px">Vitalparameter</h4>' +
-        '<p><strong>RR:</strong> ' + (p.rr_sys || '—') + '/' + (p.rr_dia || '—') + ' mmHg</p>' +
-        '<p><strong>HF:</strong> ' + (p.hf || '—') + ' /min</p>' +
-        '<p><strong>AF:</strong> ' + (p.af || '—') + ' /min</p>' +
-        '<p><strong>SpO₂:</strong> ' + (p.spo2 || '—') + ' %</p>' +
-        '<p><strong>GCS:</strong> ' + calculateGCS(p) + '</p>' +
-        '<p><strong>qSOFA:</strong> ' + calculateQSOFA(p) + '</p>' +
-        '<h4 style="color:#667eea;margin:20px 0 12px">Notfallgeschehen</h4>' +
-        '<p>' + (p.notfallgeschehen || '—') + '</p>' +
-        '<h4 style="color:#667eea;margin:20px 0 12px">Maßnahmen</h4>' +
-        '<p>' + (p.massnahmen || '—') + '</p>' +
-        '<h4 style="color:#667eea;margin:20px 0 12px">MPG-Beauftragter</h4>' +
-        '<p><strong>Name:</strong> ' + (doc.admin_name || '?') + '</p>' +
-        '<p><strong>Datum:</strong> ' + formatDate(doc.admin_datum) + '</p>' +
-        (doc.admin_unterschrift ? '<p style="margin-top:12px"><strong>Unterschrift:</strong></p><img src="' + doc.admin_unterschrift + '" class="signature-img">' : '') +
-      '</div>';
-      
-      document.getElementById('detailsBody').innerHTML = html;
-      document.getElementById('detailsModal').classList.add('show');
-      
-    } catch(e) {
-      showMsg('Fehler: ' + e.message, 'error');
+    function nachDraw(e) {
+      if (!nachIsDrawing) return;
+      const rect = nachSigCanvas.getBoundingClientRect();
+      nachSigCtx.lineTo(e.clientX - rect.left, e.clientY - rect.top);
+      nachSigCtx.stroke();
     }
-  };
 
-  window.viewNachArchiv = async (id) => {
-    await viewNach(id);
-  };
+    function stopNachDraw() {
+      nachIsDrawing = false;
+    }
 
-  window.closeDetailsModal = () => {
-    document.getElementById('detailsModal').classList.remove('show');
-  };
+    window.clearNachSig = () => {
+      nachSigCtx.clearRect(0, 0, nachSigCanvas.width, nachSigCanvas.height);
+    };
 
-  window.generatePDFFromModal = async () => {
-    showMsg('PDF-Generation in Entwicklung', 'error');
-  };
+    // ========================================
+    // NACHERFASSUNG FUNCTIONS
+    // ========================================
+    document.getElementById('addBtn').onclick = () => {
+      document.getElementById('nachModal').classList.add('show');
+      document.getElementById('nachForm').reset();
+      setTimeout(() => {
+        initNachSigCanvas();
+      }, 100);
+    };
 
-  // ========================================
-  // ADD BUTTON
-  // ========================================
-  document.getElementById('addBtn').onclick = () => {
-    document.getElementById('nachForm').reset();
-    document.getElementById('nachModal').classList.add('show');
-    setTimeout(() => initNachSigCanvas(), 100);
-  };
+    window.closeNachModal = () => {
+      document.getElementById('nachModal').classList.remove('show');
+    };
 
-  // ========================================
-  // INITIAL LOAD
-  // ========================================
-  loadData();
+    window.saveNacherfassung = async () => {
+      try {
+        const form = document.getElementById('nachForm');
+        const formData = new FormData(form);
+        
+        const nacherfasst_von_name = formData.get('nacherfasst_von_name');
+        if (!nacherfasst_von_name) {
+          showMsg('Bitte Namen eingeben', 'error');
+          return;
+        }
 
-</script>
+        const sigData = nachSigCanvas.toDataURL('image/png');
+        
+        const data = {
+          organization_id: currentUser.organization_id,
+          status: 'offen',
+          datum_alarmzeit: formData.get('datum_alarmzeit') || null,
+          datum_einsatzende: formData.get('datum_einsatzende') || null,
+          stichwort: formData.get('stichwort') || '',
+          kategorie: formData.get('kategorie') || '',
+          einsatznummer_ils: formData.get('einsatznummer_ils') || '',
+          meldebild: formData.get('meldebild') || '',
+          adresse: formData.get('adresse') || '',
+          disponierte_em_fw: formData.get('disponierte_em_fw') || '',
+          disponierte_em_rd: formData.get('disponierte_em_rd') || '',
+          patienten_daten_erhoben: formData.get('patienten_daten_erhoben') || '',
+          patient_name: formData.get('patient_name') || '',
+          patient_alter_geburtsdatum: formData.get('patient_alter_geburtsdatum') || '',
+          patient_nummer_ils: formData.get('patient_nummer_ils') || '',
+          sachverhalt: formData.get('sachverhalt') || '',
+          protokollpflichtig: formData.get('protokollpflichtig') || '',
+          protokollpflichtig_begruendung: formData.get('protokollpflichtig_begruendung') || '',
+          verantwortlicher_unterwiesen: formData.get('verantwortlicher_unterwiesen') || '',
+          verantwortlicher_name: formData.get('verantwortlicher_name') || '',
+          verantwortlicher_qualifikation: formData.get('verantwortlicher_qualifikation') || '',
+          nacherfasst_von_name: nacherfasst_von_name,
+          nacherfasst_von_qualifikation: formData.get('nacherfasst_von_qualifikation') || '',
+          signature: sigData
+        };
+
+        await pb.collection('patient_docs_nacherfassung').create(data);
+        showMsg('Nacherfassung gespeichert', 'success');
+        document.getElementById('nachModal').classList.remove('show');
+        await loadData();
+      } catch(e) {
+        showMsg('Fehler: ' + e.message, 'error');
+      }
+    };
+
+    window.archiveNach = async (id) => {
+      if (!confirm('Nacherfassung archivieren?')) return;
+      try {
+        await pb.collection('patient_docs_nacherfassung').update(id, {
+          status: 'archiviert'
+        });
+        showMsg('Nacherfassung archiviert', 'success');
+        await loadData();
+      } catch(e) {
+        showMsg('Fehler: ' + e.message, 'error');
+      }
+    };
+
+    window.viewNach = async (id) => {
+      try {
+        const doc = await pb.collection('patient_docs_nacherfassung').getOne(id);
+        currentViewedNachData = doc;
+        currentViewedDocType = 'nacherfassung';
+        
+        document.getElementById('detailsTitle').innerHTML = '<i class="fa-solid fa-clipboard-list"></i> Nacherfassung: ' + (doc.stichwort || 'Ohne Titel');
+        
+        let html = '<div style="padding:20px">';
+        html += '<h4>Einsatzdaten</h4>';
+        html += '<p><strong>Alarmzeit:</strong> ' + (doc.datum_alarmzeit ? formatDate(doc.datum_alarmzeit) : '—') + '</p>';
+        html += '<p><strong>Einsatzende:</strong> ' + (doc.datum_einsatzende ? formatDate(doc.datum_einsatzende) : '—') + '</p>';
+        html += '<p><strong>Stichwort:</strong> ' + (doc.stichwort || '—') + '</p>';
+        html += '<p><strong>Kategorie:</strong> ' + (doc.kategorie || '—') + '</p>';
+        html += '<p><strong>Einsatznummer ILS:</strong> ' + (doc.einsatznummer_ils || '—') + '</p>';
+        html += '<p><strong>Meldebild:</strong> ' + (doc.meldebild || '—') + '</p>';
+        html += '<p><strong>Adresse:</strong> ' + (doc.adresse || '—') + '</p>';
+        html += '<p><strong>Disponierte EM (FW):</strong> ' + (doc.disponierte_em_fw || '—') + '</p>';
+        html += '<p><strong>Disponierte EM (RD):</strong> ' + (doc.disponierte_em_rd || '—') + '</p>';
+        
+        html += '<h4 style="margin-top:20px">Patienten-Daten</h4>';
+        html += '<p><strong>Erhoben:</strong> ' + (doc.patienten_daten_erhoben || '—') + '</p>';
+        html += '<p><strong>Name:</strong> ' + (doc.patient_name || '—') + '</p>';
+        html += '<p><strong>Alter/Geburtsdatum:</strong> ' + (doc.patient_alter_geburtsdatum || '—') + '</p>';
+        html += '<p><strong>Pat.-Nummer ILS:</strong> ' + (doc.patient_nummer_ils || '—') + '</p>';
+        html += '<p><strong>Sachverhalt:</strong> ' + (doc.sachverhalt || '—') + '</p>';
+        
+        html += '<h4 style="margin-top:20px">Protokollpflicht</h4>';
+        html += '<p><strong>Protokollpflichtig:</strong> ' + (doc.protokollpflichtig || '—') + '</p>';
+        html += '<p><strong>Begründung:</strong> ' + (doc.protokollpflichtig_begruendung || '—') + '</p>';
+        html += '<p><strong>Verantwortlicher unterwiesen:</strong> ' + (doc.verantwortlicher_unterwiesen || '—') + '</p>';
+        
+        html += '<h4 style="margin-top:20px">Verantwortlicher</h4>';
+        html += '<p><strong>Name:</strong> ' + (doc.verantwortlicher_name || '—') + '</p>';
+        html += '<p><strong>Qualifikation:</strong> ' + (doc.verantwortlicher_qualifikation || '—') + '</p>';
+        
+        html += '<h4 style="margin-top:20px">Nacherfassung</h4>';
+        html += '<p><strong>Nacherfasst von:</strong> ' + (doc.nacherfasst_von_name || '—') + '</p>';
+        html += '<p><strong>Qualifikation:</strong> ' + (doc.nacherfasst_von_qualifikation || '—') + '</p>';
+        
+        if (doc.signature) {
+          html += '<p><strong>Unterschrift:</strong><br><img src="' + doc.signature + '" class="signature-img"></p>';
+        }
+        
+        html += '</div>';
+        
+        document.getElementById('detailsBody').innerHTML = html;
+        document.getElementById('detailsModal').classList.add('show');
+      } catch(e) {
+        showMsg('Fehler: ' + e.message, 'error');
+      }
+    };
+
+    window.viewPatArchiv = async (id) => {
+      try {
+        const doc = await pb.collection('patients').getOne(id);
+        currentViewedPayload = doc.payload || {};
+        currentViewedAdmin = {
+          name: doc.admin_name,
+          signature: doc.admin_signature,
+          datum: doc.admin_datum
+        };
+        currentViewedOrgName = currentOrganization.name;
+        currentViewedDocType = 'patient';
+        
+        const patName = (currentViewedPayload.vorname || '') + ' ' + (currentViewedPayload.name || '');
+        const finalName = patName.trim() || doc.title || 'Ohne Titel';
+        
+        document.getElementById('detailsTitle').innerHTML = '<i class="fa-solid fa-file-medical"></i> Patientendoku: ' + finalName;
+        
+        let html = '<div style="padding:20px">';
+        html += buildArchiveView(currentViewedPayload, currentViewedAdmin);
+        html += '</div>';
+        
+        document.getElementById('detailsBody').innerHTML = html;
+        document.getElementById('detailsModal').classList.add('show');
+      } catch(e) {
+        showMsg('Fehler: ' + e.message, 'error');
+      }
+    };
+
+    window.viewNachArchiv = async (id) => {
+      await viewNach(id);
+    };
+
+    window.closeDetailsModal = () => {
+      document.getElementById('detailsModal').classList.remove('show');
+      currentViewedPayload = null;
+      currentViewedAdmin = null;
+      currentViewedDocType = null;
+      currentViewedNachData = null;
+    };
+    // ========================================
+    // BUILD ARCHIVE VIEW
+    // ========================================
+    function buildArchiveView(payload, admin) {
+      const v = (key) => payload[key] || '—';
+      const yesNo = (key) => payload[key] ? 'Ja' : 'Nein';
+      
+      let html = '';
+      
+      html += '<h4>Einsatzdaten</h4>';
+      html += '<p><strong>Einsatz-Nr:</strong> ' + v('einsatz_nr') + '</p>';
+      html += '<p><strong>Pat./Auftrags-Nr:</strong> ' + v('auftrags_nr') + '</p>';
+      html += '<p><strong>Rufname:</strong> ' + v('rufname') + '</p>';
+      html += '<p><strong>Fahrzeug:</strong> ' + v('fahrzeug') + '</p>';
+      html += '<p><strong>Datum/Uhrzeit:</strong> ' + (payload.zeit_einsatz ? formatDate(payload.zeit_einsatz) : '—') + '</p>';
+      html += '<p><strong>Einsatz-Art:</strong> ' + v('einsatz_art') + '</p>';
+      
+      html += '<h4 style="margin-top:20px">Pat-Stammdaten</h4>';
+      html += '<p><strong>Name:</strong> ' + v('name') + '</p>';
+      html += '<p><strong>Vorname:</strong> ' + v('vorname') + '</p>';
+      html += '<p><strong>Geb.-Datum:</strong> ' + v('gebdatum') + '</p>';
+      html += '<p><strong>Alter:</strong> ' + v('alter') + '</p>';
+      html += '<p><strong>Telefon:</strong> ' + v('telefon') + '</p>';
+      html += '<p><strong>Mobil:</strong> ' + v('mobil') + '</p>';
+      html += '<p><strong>Straße:</strong> ' + v('strasse') + '</p>';
+      html += '<p><strong>PLZ, Ort:</strong> ' + v('plz_ort') + '</p>';
+      html += '<p><strong>Kasse / Nr:</strong> ' + v('kasse') + '</p>';
+      html += '<p><strong>Vers.-Nr:</strong> ' + v('versnr') + '</p>';
+      html += '<p><strong>Hausarzt / Tel:</strong> ' + v('hausarzt') + '</p>';
+      html += '<p><strong>Angehöriger / Tel:</strong> ' + v('angehoeriger') + '</p>';
+      html += '<p><strong>Informationen / Aspekte:</strong> ' + v('infos') + '</p>';
+      
+      html += '<h4 style="margin-top:20px">Notfallgeschehen / Anamnese</h4>';
+      html += '<p>' + v('notfallgeschehen') + '</p>';
+      
+      if (payload.photos && payload.photos.length > 0) {
+        html += '<p><strong>Fotos:</strong></p>';
+        html += '<div class="photo-grid">';
+        payload.photos.forEach((photo, idx) => {
+          html += '<img src="' + photo + '" alt="Foto ' + (idx+1) + '">';
+        });
+        html += '</div>';
+      }
+      
+      html += '<h4 style="margin-top:20px">Neurologie</h4>';
+      html += '<p><strong>Zeitpunkt:</strong> ' + (payload.neu_zeit ? formatDate(payload.neu_zeit) : '—') + '</p>';
+      html += '<p><strong>Ohne path. Befund:</strong> ' + yesNo('neu_unauff') + '</p>';
+      html += '<p><strong>Pupillenweite rechts:</strong> ' + v('pw_r') + (payload.pw_r_entrundet ? ' (entrundet)' : '') + '</p>';
+      html += '<p><strong>Lichtreaktion rechts:</strong> ' + v('lr_r') + '</p>';
+      html += '<p><strong>Pupillenweite links:</strong> ' + v('pw_l') + (payload.pw_l_entrundet ? ' (entrundet)' : '') + '</p>';
+      html += '<p><strong>Lichtreaktion links:</strong> ' + v('lr_l') + '</p>';
+      
+      html += '<h4 style="margin-top:20px">Glasgow Coma Scale</h4>';
+      html += '<p><strong>Augenöffnung (E):</strong> ' + v('gcs_e') + '</p>';
+      html += '<p><strong>Verbale Antwort (V):</strong> ' + v('gcs_v') + '</p>';
+      html += '<p><strong>Motorische Antwort (M):</strong> ' + v('gcs_m') + '</p>';
+      html += '<p><strong>GCS Summe:</strong> ' + calculateGCS(payload) + '</p>';
+      
+      html += '<h4 style="margin-top:20px">Haut</h4>';
+      let hautBefunde = [];
+      if (payload.haut_unauff) hautBefunde.push('unauffällig');
+      if (payload.haut_falten) hautBefunde.push('stehende Hautfalten');
+      if (payload.haut_oedeme) hautBefunde.push('Ödeme');
+      if (payload.haut_dekubitus) hautBefunde.push('Dekubitus');
+      if (payload.haut_kaltschweissig) hautBefunde.push('kaltschweißig');
+      if (payload.haut_exanthem) hautBefunde.push('Exanthem');
+      html += '<p>' + (hautBefunde.length > 0 ? hautBefunde.join(', ') : '—') + '</p>';
+      
+      html += '<h4 style="margin-top:20px">Psyche</h4>';
+      let psycheBefunde = [];
+      if (payload.psy_erregt) psycheBefunde.push('erregt');
+      if (payload.psy_aggr) psycheBefunde.push('aggressiv');
+      if (payload.psy_verlangsamt) psycheBefunde.push('verlangsamt');
+      if (payload.psy_depressiv) psycheBefunde.push('depressiv');
+      if (payload.psy_aengstlich) psycheBefunde.push('ängstlich');
+      if (payload.psy_euphorisch) psycheBefunde.push('euphorisch');
+      if (payload.psy_wahnhaft) psycheBefunde.push('wahnhaft');
+      if (payload.psy_verwirrt) psycheBefunde.push('verwirrt');
+      if (payload.psy_suizidal) psycheBefunde.push('suizidal');
+      if (payload.psy_motor_unruhig) psycheBefunde.push('motorisch unruhig');
+      html += '<p>' + (psycheBefunde.length > 0 ? psycheBefunde.join(', ') : '—') + '</p>';
+      
+      html += '<h4 style="margin-top:20px">Messwerte / Atmung</h4>';
+      html += '<p><strong>RR syst:</strong> ' + v('rr_sys') + ' mmHg</p>';
+      html += '<p><strong>RR diast:</strong> ' + v('rr_dia') + ' mmHg</p>';
+      html += '<p><strong>HF:</strong> ' + v('hf') + ' /min</p>';
+      html += '<p><strong>AF:</strong> ' + v('af') + ' /min</p>';
+      html += '<p><strong>SpO₂:</strong> ' + v('spo2') + ' %</p>';
+      html += '<p><strong>etCO₂:</strong> ' + v('etco2') + ' mmHg</p>';
+      html += '<p><strong>Temp:</strong> ' + v('temp') + ' °C</p>';
+      html += '<p><strong>BZ (mg/dl):</strong> ' + v('bz_mg') + '</p>';
+      html += '<p><strong>BZ (mmol/l):</strong> ' + v('bz_mmol') + '</p>';
+      html += '<p><strong>Schmerz:</strong> ' + v('schmerz') + ' (0–10)</p>';
+      html += '<p><strong>qSOFA-Score:</strong> ' + calculateQSOFA(payload) + '</p>';
+      
+      html += '<p style="margin-top:10px"><strong>Atmung – klinische Zeichen:</strong></p>';
+      let atmBefunde = [];
+      if (payload.atm_apnoe) atmBefunde.push('Apnoe');
+      if (payload.atm_stridor) atmBefunde.push('Stridor');
+      if (payload.atm_hypervent) atmBefunde.push('Hyperventilation');
+      if (payload.atm_dyspnoe) atmBefunde.push('Dyspnoe');
+      if (payload.atm_beatmung) atmBefunde.push('Beatmung');
+      if (payload.atm_zyanose) atmBefunde.push('Zyanose');
+      if (payload.atm_verlegung) atmBefunde.push('Atemwegsverlegung');
+      html += '<p>' + (atmBefunde.length > 0 ? atmBefunde.join(', ') : '—') + '</p>';
+      html += '<p><strong>Sonstiges:</strong> ' + v('atm_sonst') + '</p>';
+      
+      html += '<p style="margin-top:10px"><strong>O₂-Gabe:</strong> ' + v('o2') + '</p>';
+      if (payload.o2_nasal) html += '<p>Nasensonde</p>';
+      if (payload.o2_maske) html += '<p>Maske</p>';
+      if (payload.o2_reservoir) html += '<p>Maske m. Reservoir</p>';
+      html += '<p><strong>Flow:</strong> ' + v('o2_flow') + ' l/min</p>';
+      html += '<p><strong>Kommentar:</strong> ' + v('o2_comment') + '</p>';
+      
+      html += '<h4 style="margin-top:20px">Rhythmus / EKG</h4>';
+      let ekgBefunde = [];
+      if (payload.sr) ekgBefunde.push('Sinusrhythmus');
+      if (payload.stemi) ekgBefunde.push('STEMI');
+      if (payload.arrh_abs) ekgBefunde.push('absolute Arrhythmie');
+      if (payload.vf) ekgBefunde.push('Kammerflimmern');
+      if (payload.av3) ekgBefunde.push('AV-Block III°');
+      if (payload.asystole) ekgBefunde.push('Asystolie');
+      html += '<p>' + (ekgBefunde.length > 0 ? ekgBefunde.join(', ') : '—') + '</p>';
+      html += '<p><strong>Standort:</strong> ' + v('ekg_standort') + '</p>';
+      html += '<p><strong>Pers-Nr:</strong> ' + v('ekg_persnr') + '</p>';
+      
+      html += '<h4 style="margin-top:20px">Verletzungen</h4>';
+      html += '<p>' + v('verletz_text') + '</p>';
+      
+      html += '<h4 style="margin-top:20px">Erstdiagnosen</h4>';
+      let diagnosen = [];
+      if (payload.diag_krampf) diagnosen.push('Konvulsionen');
+      if (payload.diag_synkope) diagnosen.push('Synkope');
+      if (payload.diag_apoplex) diagnosen.push('Apoplex');
+      if (payload.diag_sht) diagnosen.push('SHT');
+      if (payload.diag_acs) diagnosen.push('ACS');
+      if (payload.diag_insuff) diagnosen.push('Herzinsuffizienz');
+      if (payload.diag_lungenoedem) diagnosen.push('Lungenödem');
+      if (payload.diag_luembol) diagnosen.push('Lungenembolie');
+      if (payload.diag_resp_insuff) diagnosen.push('resp. Insuffizienz');
+      if (payload.diag_pneumothorax) diagnosen.push('Pneumothorax');
+      if (payload.diag_asthma) diagnosen.push('Asthma/COPD');
+      if (payload.diag_hypo) diagnosen.push('Hypoglykämie');
+      if (payload.diag_sept) diagnosen.push('septischer Schock');
+      if (payload.diag_hypovol) diagnosen.push('hypovolämischer Schock');
+      html += '<p>' + (diagnosen.length > 0 ? diagnosen.join(', ') : '—') + '</p>';
+      
+      html += '<h4 style="margin-top:20px">Bewusstseinslage, AZ, Versorgung</h4>';
+      let bewusstsein = [];
+      if (payload.bew_wach) bewusstsein.push('wach');
+      if (payload.bew_ansprache) bewusstsein.push('Reaktion auf Ansprache');
+      if (payload.bew_schmerz) bewusstsein.push('Reaktion auf Schmerzreiz');
+      if (payload.bew_bewusstlos) bewusstsein.push('bewusstlos');
+      html += '<p><strong>Bewusstseinslage:</strong> ' + (bewusstsein.length > 0 ? bewusstsein.join(', ') : '—') + '</p>';
+      html += '<p><strong>Allgemeinzustand:</strong> ' + v('az') + '</p>';
+      html += '<p><strong>Versorgungssituation:</strong> ' + v('versorgung') + '</p>';
+      
+      html += '<h4 style="margin-top:20px">Maßnahmen – Zugang & Medikation</h4>';
+      html += '<p><strong>Zugang Art:</strong> ' + v('zugang_art') + '</p>';
+      html += '<p><strong>Seite/Region:</strong> ' + v('zugang_region') + '</p>';
+      html += '<p><strong>Größe (G):</strong> ' + v('zugang_gauge') + '</p>';
+      html += '<p><strong>Versuche:</strong> ' + v('zugang_versuche') + '</p>';
+      html += '<p><strong>Zeitpunkt:</strong> ' + (payload.zugang_zeit ? formatDate(payload.zugang_zeit) : '—') + '</p>';
+      
+      html += '<p style="margin-top:10px"><strong>Infusion Art:</strong> ' + v('inf_art') + '</p>';
+      html += '<p><strong>Menge:</strong> ' + v('inf_menge') + ' ml</p>';
+      html += '<p><strong>Laufrate:</strong> ' + v('inf_rate') + ' ml/h</p>';
+      html += '<p><strong>Bemerkung:</strong> ' + v('inf_bem') + '</p>';
+      
+      if (payload.medications && payload.medications.length > 0) {
+        html += '<p style="margin-top:10px"><strong>Medikamente:</strong></p>';
+        html += '<table style="width:100%;margin-top:8px"><thead><tr><th>Medikament</th><th>Dosis</th><th>Einheit</th><th>Route</th><th>Uhrzeit</th><th>Bemerkung</th></tr></thead><tbody>';
+        payload.medications.forEach(med => {
+          html += '<tr>';
+          html += '<td>' + (med.name || '—') + '</td>';
+          html += '<td>' + (med.dose || '—') + '</td>';
+          html += '<td>' + (med.unit || '—') + '</td>';
+          html += '<td>' + (med.route || '—') + '</td>';
+          html += '<td>' + (med.time || '—') + '</td>';
+          html += '<td>' + (med.note || '—') + '</td>';
+          html += '</tr>';
+        });
+        html += '</tbody></table>';
+      }
+      
+      html += '<h4 style="margin-top:20px">Beatmung / Atemweg</h4>';
+      let atemweg = [];
+      if (payload.aw_guedel) atemweg.push('Guedel');
+      if (payload.aw_larynxtubus) atemweg.push('Larynxtubus');
+      if (payload.aw_ett) atemweg.push('ETT');
+      if (payload.aw_bvm) atemweg.push('BVM');
+      html += '<p>' + (atemweg.length > 0 ? atemweg.join(', ') : '—') + '</p>';
+      html += '<p><strong>ETT-Größe:</strong> ' + v('aw_ett_size') + '</p>';
+      html += '<p><strong>PEEP:</strong> ' + v('vent_peep') + ' cmH₂O</p>';
+      html += '<p><strong>FiO₂:</strong> ' + v('vent_fio2') + ' %</p>';
+      
+      html += '<h4 style="margin-top:20px">Reanimation</h4>';
+      html += '<p><strong>Rea-Beginn:</strong> ' + (payload.rea_beginn ? formatDate(payload.rea_beginn) : '—') + '</p>';
+      html += '<p><strong>Erst-Rhythmus:</strong> ' + v('rea_initial') + '</p>';
+      html += '<p><strong>Schocks:</strong> ' + v('rea_shocks') + '</p>';
+      html += '<p><strong>ROSC:</strong> ' + v('rea_rosc') + '</p>';
+      html += '<p><strong>Rea-Ende:</strong> ' + v('rea_ende') + '</p>';
+      
+      html += '<h4 style="margin-top:20px">Übergabe / Transport</h4>';
+      html += '<p><strong>Übergabe an:</strong> ' + v('ue_name') + '</p>';
+      html += '<p><strong>Zeitpunkt:</strong> ' + (payload.ue_zeit ? formatDate(payload.ue_zeit) : '—') + '</p>';
+      html += '<p><strong>Ziel:</strong> ' + v('ziel_bez') + '</p>';
+      html += '<p><strong>Adresse:</strong> ' + v('ziel_adr') + '</p>';
+      html += '<p><strong>Einsatzende:</strong> ' + (payload.einsatzende ? formatDate(payload.einsatzende) : '—') + '</p>';
+      
+      html += '<h4 style="margin-top:20px">Ausfüller & Unterschrift</h4>';
+      html += '<p><strong>Name:</strong> ' + v('ausfueller_name') + '</p>';
+      html += '<p><strong>Zeitpunkt:</strong> ' + (payload.ausfueller_zeit ? formatDate(payload.ausfueller_zeit) : '—') + '</p>';
+      
+      if (payload.signature) {
+        html += '<p><strong>Unterschrift Ausfüller:</strong><br><img src="' + payload.signature + '" class="signature-img"></p>';
+      }
+      
+      if (admin) {
+        html += '<h4 style="margin-top:20px">MPG-Verantwortlicher</h4>';
+        html += '<p><strong>Name:</strong> ' + (admin.name || '—') + '</p>';
+        html += '<p><strong>Datum:</strong> ' + (admin.datum ? formatDate(admin.datum) : '—') + '</p>';
+        if (admin.signature) {
+          html += '<p><strong>Unterschrift MPG:</strong><br><img src="' + admin.signature + '" class="signature-img"></p>';
+        }
+      }
+      
+      return html;
+    }
+
+    // ========================================
+    // PDF GENERATION
+    // ========================================
+    window.generatePDFFromModal = async () => {
+      try {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        
+        let yPos = 20;
+        const lineHeight = 7;
+        const pageHeight = doc.internal.pageSize.height;
+        const margin = 20;
+        
+        function addText(text, size = 10, bold = false) {
+          if (yPos > pageHeight - margin) {
+            doc.addPage();
+            yPos = margin;
+          }
+          doc.setFontSize(size);
+          doc.setFont('helvetica', bold ? 'bold' : 'normal');
+          doc.text(text, margin, yPos);
+          yPos += lineHeight;
+        }
+        
+        function addSection(title) {
+          yPos += 5;
+          addText(title, 12, true);
+          yPos += 2;
+        }
+        
+        // Header
+        doc.setFontSize(16);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Responda Patientendokumentation', margin, yPos);
+        yPos += 10;
+        
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        doc.text('Erstellt: ' + new Date().toLocaleString('de-DE'), margin, yPos);
+        yPos += 10;
+        
+        if (currentViewedDocType === 'patient' && currentViewedPayload) {
+          const p = currentViewedPayload;
+          
+          addSection('Einsatzdaten');
+          addText('Einsatz-Nr: ' + (p.einsatz_nr || '—'));
+          addText('Pat./Auftrags-Nr: ' + (p.auftrags_nr || '—'));
+          addText('Rufname: ' + (p.rufname || '—'));
+          addText('Fahrzeug: ' + (p.fahrzeug || '—'));
+          addText('Datum/Uhrzeit: ' + (p.zeit_einsatz ? formatDate(p.zeit_einsatz) : '—'));
+          addText('Einsatz-Art: ' + (p.einsatz_art || '—'));
+          
+          addSection('Pat-Stammdaten');
+          addText('Name: ' + (p.name || '—'));
+          addText('Vorname: ' + (p.vorname || '—'));
+          addText('Geb.-Datum: ' + (p.gebdatum || '—'));
+          addText('Alter: ' + (p.alter || '—'));
+          addText('Telefon: ' + (p.telefon || '—'));
+          addText('Mobil: ' + (p.mobil || '—'));
+          addText('Strasse: ' + (p.strasse || '—'));
+          addText('PLZ, Ort: ' + (p.plz_ort || '—'));
+          
+          addSection('Notfallgeschehen');
+          const notfall = p.notfallgeschehen || '—';
+          const notfallLines = doc.splitTextToSize(notfall, 170);
+          notfallLines.forEach(line => addText(line));
+          
+          addSection('Messwerte');
+          addText('RR: ' + (p.rr_sys || '—') + '/' + (p.rr_dia || '—') + ' mmHg');
+          addText('HF: ' + (p.hf || '—') + ' /min');
+          addText('AF: ' + (p.af || '—') + ' /min');
+          addText('SpO2: ' + (p.spo2 || '—') + ' %');
+          addText('Temp: ' + (p.temp || '—') + ' °C');
+          addText('BZ: ' + (p.bz_mg || '—') + ' mg/dl');
+          addText('GCS: ' + calculateGCS(p));
+          addText('qSOFA: ' + calculateQSOFA(p));
+          
+          if (p.medications && p.medications.length > 0) {
+            addSection('Medikamente');
+            p.medications.forEach(med => {
+              addText(med.name + ' ' + (med.dose || '') + (med.unit || '') + ' ' + (med.route || '') + ' (' + (med.time || '') + ')');
+            });
+          }
+          
+          addSection('Übergabe / Transport');
+          addText('Übergabe an: ' + (p.ue_name || '—'));
+          addText('Zeitpunkt: ' + (p.ue_zeit ? formatDate(p.ue_zeit) : '—'));
+          addText('Ziel: ' + (p.ziel_bez || '—'));
+          
+          if (currentViewedAdmin) {
+            addSection('MPG-Verantwortlicher');
+            addText('Name: ' + (currentViewedAdmin.name || '—'));
+            addText('Datum: ' + (currentViewedAdmin.datum ? formatDate(currentViewedAdmin.datum) : '—'));
+          }
+          
+        } else if (currentViewedDocType === 'nacherfassung' && currentViewedNachData) {
+          const n = currentViewedNachData;
+          
+          addSection('Einsatzdaten');
+          addText('Stichwort: ' + (n.stichwort || '—'));
+          addText('Alarmzeit: ' + (n.datum_alarmzeit ? formatDate(n.datum_alarmzeit) : '—'));
+          addText('Einsatzende: ' + (n.datum_einsatzende ? formatDate(n.datum_einsatzende) : '—'));
+          addText('Einsatznummer ILS: ' + (n.einsatznummer_ils || '—'));
+          addText('Adresse: ' + (n.adresse || '—'));
+          
+          addSection('Patienten-Daten');
+          addText('Name: ' + (n.patient_name || '—'));
+          addText('Alter/Geburtsdatum: ' + (n.patient_alter_geburtsdatum || '—'));
+          
+          addSection('Sachverhalt');
+          const sachverhalt = n.sachverhalt || '—';
+          const sachverhaltLines = doc.splitTextToSize(sachverhalt, 170);
+          sachverhaltLines.forEach(line => addText(line));
+          
+          addSection('Verantwortlicher');
+          addText('Name: ' + (n.verantwortlicher_name || '—'));
+          addText('Qualifikation: ' + (n.verantwortlicher_qualifikation || '—'));
+          
+          addSection('Nacherfassung');
+          addText('Nacherfasst von: ' + (n.nacherfasst_von_name || '—'));
+          addText('Qualifikation: ' + (n.nacherfasst_von_qualifikation || '—'));
+        }
+        
+        const patName = currentViewedDocType === 'patient' 
+          ? ((currentViewedPayload.vorname || '') + '_' + (currentViewedPayload.name || '')).replace(/\s+/g, '_')
+          : (currentViewedNachData?.stichwort || 'Nacherfassung').replace(/\s+/g, '_');
+        
+        doc.save('Patientendoku_' + patName + '_' + new Date().toISOString().slice(0,10) + '.pdf');
+        showMsg('PDF erstellt', 'success');
+      } catch(e) {
+        showMsg('PDF-Fehler: ' + e.message, 'error');
+      }
+    };
+
+    // ========================================
+    // INIT & LOAD
+    // ========================================
+    loadData();
+    
+    setTimeout(() => {
+      document.body.classList.add('loaded');
+    }, 100);
+  </script>
 </body>
 </html>
