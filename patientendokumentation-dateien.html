@@ -27,7 +27,7 @@
       margin:0;
       background:linear-gradient(135deg, #667eea 0%, #f97316 50%, #764ba2 100%);
       min-height:100vh;
-      color:var(--text);
+      color:#fff;
       font-family:'Inter',-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
       line-height:1.45;
       opacity:0;
@@ -99,15 +99,15 @@
     
     .wrap{max-width:1200px;margin:0 auto;padding:calc(54px + env(safe-area-inset-top) + 20px) 1rem 100px;padding-left:max(1rem, env(safe-area-inset-left));padding-right:max(1rem, env(safe-area-inset-right))}
     .card{background:rgba(255,255,255,0.25);backdrop-filter:blur(40px);-webkit-backdrop-filter:blur(40px);border:1px solid rgba(255,255,255,0.3);border-radius:14px;box-shadow:0 4px 12px rgba(0,0,0,.1);padding:20px;margin-bottom:20px}
-    .card h2{margin-top:0;color:var(--primary);font-weight:700;font-size:18px}
+    .card h2{margin-top:0;color:#fff;font-weight:700;font-size:18px}
     
     .tabs{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap}
     .tab{border:1px solid rgba(255,255,255,0.3);background:rgba(255,255,255,0.15);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);padding:10px 16px;border-radius:999px;font-weight:700;cursor:pointer;font-size:14px;transition:all 0.2s;display:inline-flex;align-items:center;gap:6px}
     .tab:hover{background:rgba(255,255,255,0.25)}
     .tab.active{color:#fff;background:var(--primary);border-color:var(--primary)}
     
-    .table-head,.row{display:grid;grid-template-columns:120px 1fr 280px;gap:12px;padding:14px 10px;align-items:center;border-bottom:1px solid rgba(255,255,255,0.2)}
-    .table-head{font-weight:800;color:#0f172a;background:rgba(255,255,255,0.3);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-radius:8px 8px 0 0}
+    .table-head,.row{display:grid;grid-template-columns:100px 1fr auto;gap:12px;padding:12px;align-items:center;border-bottom:1px solid rgba(255,255,255,0.15)}
+    .table-head{font-weight:700;color:#fff;background:rgba(255,255,255,0.2);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-radius:8px 8px 0 0}
     .row:last-child{border-bottom:none}
     .row:hover{background:rgba(255,255,255,0.15)}
     
@@ -133,7 +133,7 @@
     .modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:flex-start;justify-content:center;z-index:1000;padding:20px;overflow-y:auto}
     .modal.show{display:flex}
     .modal-box{background:rgba(255,255,255,0.95);backdrop-filter:blur(40px);-webkit-backdrop-filter:blur(40px);border:1px solid rgba(255,255,255,0.5);border-radius:14px;max-width:1200px;width:100%;max-height:90vh;overflow-y:auto;padding:24px;box-shadow:0 8px 20px rgba(0,0,0,.3);margin:auto}
-    .modal-box h3{margin-top:0;color:var(--primary);font-weight:700;font-size:18px}
+    .modal-box h3{margin-top:0;color:#fff;font-weight:700;font-size:18px}
     
     details{background:rgba(255,255,255,0.2);backdrop-filter:blur(30px);-webkit-backdrop-filter:blur(30px);border:1px solid rgba(255,255,255,0.3);border-radius:.75rem;margin:0 0 .8rem 0;overflow:hidden}
     summary{list-style:none;padding:.9rem 1rem;cursor:pointer;font-weight:700;display:flex;align-items:center;gap:.6rem;font-size:15px;background:rgba(255,255,255,0.1);transition:background 0.2s}
@@ -144,19 +144,19 @@
     .sec-body{padding:1rem}
     .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:.75rem}
     
-    label{font-size:14px;color:#111827;font-weight:600}
+    label{font-size:14px;color:#fff;font-weight:600}
     input[type="text"],input[type="number"],input[type="datetime-local"],input[type="date"],input[type="time"],textarea,select{width:100%;padding:.55rem .6rem;border:1px solid rgba(255,255,255,0.4);border-radius:.5rem;background:rgba(255,255,255,0.9);font-size:16px;font-family:inherit;transition:border-color 0.2s}
     input:focus,textarea:focus,select:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(200,16,46,0.1)}
     textarea{min-height:88px;resize:vertical}
     
     fieldset{border:1px solid rgba(255,255,255,0.3);border-radius:.6rem;padding:.75rem;margin-bottom:.75rem}
-    fieldset legend{padding:0 .35rem;color:#111827;font-weight:700}
+    fieldset legend{padding:0 .35rem;color:#fff;font-weight:700}
     
     .choice{display:flex;gap:.6rem;flex-wrap:wrap}
     .pill-input{display:inline-flex;align-items:center;gap:.4rem;border:1px solid rgba(255,255,255,0.3);border-radius:999px;padding:.25rem .55rem;background:rgba(255,255,255,0.2);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);font-size:14px;cursor:pointer;transition:all 0.2s}
     .pill-input:hover{background:rgba(255,255,255,0.3);border-color:var(--primary)}
     
-   .badge{display:inline-block;padding:.2rem .5rem;border-radius:999px;background:rgba(255,255,255,0.2);color:#0f172a;border:1px solid rgba(255,255,255,0.3);font-size:12px;font-weight:600;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)}
+   .badge{display:inline-block;padding:.2rem .5rem;border-radius:999px;background:rgba(255,255,255,0.2);color:#fff;border:1px solid rgba(255,255,255,0.3);font-size:12px;font-weight:600;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)}
     
     table{width:100%;border-collapse:collapse;margin-top:.5rem}
     th,td{border:1px solid rgba(255,255,255,0.2);padding:.5rem;text-align:left;font-size:14px}
@@ -172,7 +172,7 @@
     
     .form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px;margin:16px 0}
     .form-group{display:flex;flex-direction:column;gap:6px}
-    .form-group label{font-weight:700;font-size:14px;color:#374151}
+    .form-group label{font-weight:700;font-size:14px;color:#fff}
     .form-group input,.form-group textarea,.form-group select{padding:10px 12px;border:1px solid rgba(255,255,255,0.4);border-radius:8px;background:rgba(255,255,255,0.9);font-size:16px;font-family:inherit}
     .form-group input:focus,.form-group textarea:focus,.form-group select:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(200,16,46,0.1)}
     .form-group textarea{min-height:80px;resize:vertical}
@@ -239,7 +239,6 @@
 <!-- ==================== MAIN CONTENT START ==================== -->
   <div class="wrap">
     <section class="card">
-      <h2>Dokumentenverwaltung</h2>
       
       <!-- TABS -->
       <div class="tabs">
