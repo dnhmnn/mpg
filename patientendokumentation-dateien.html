@@ -605,7 +605,7 @@
             <div><span class="pill offen">${doc.status}</span></div>
             <div>
               <strong>${doc.title || patName}</strong><br>
-              <small style="color:#6b7280">
+              <small style="color:rgba(255,255,255,0.8)">
                 ${payload.einsatz_nr ? 'Einsatz-Nr: ' + payload.einsatz_nr + ' · ' : ''}
                 ${new Date(doc.created).toLocaleString('de-DE')}
               </small>
@@ -617,7 +617,7 @@
             </div>
           </div>
         `;
-        }).join('') || '<p style="padding:20px;color:#999">Keine offenen Patientendokus</p>';
+       }).join('') || '<p style="padding:20px;color:rgba(255,255,255,0.7)">Keine offenen Patientendokus</p>';
 
         // Load open Nacherfassungen
         const nachData = await pb.collection('patient_docs_nacherfassung').getFullList({
@@ -631,7 +631,7 @@
             <div><span class="pill offen">${doc.status}</span></div>
             <div>
               <strong>${doc.stichwort || 'Ohne Stichwort'}</strong><br>
-              <small style="color:#6b7280">
+              <small style="color:rgba(255,255,255,0.8)">
                 von ${doc.nacherfasst_von_name || '?'} · 
                 ${new Date(doc.created).toLocaleString('de-DE')}
               </small>
@@ -645,7 +645,7 @@
               </button>
             </div>
           </div>
-        `).join('') || '<p style="padding:20px;color:#999">Keine offenen Nacherfassungen</p>';
+        `).join('') || '<p style="padding:20px;color:rgba(255,255,255,0.7)">Keine offenen Nacherfassungen</p>';
 
         // Load archived patient documents
         const archivPat = await pb.collection('patients').getFullList({
@@ -670,7 +670,7 @@
               <div><span class="pill archiviert">Patientendoku</span></div>
               <div>
                 <strong>${patName}</strong><br>
-                <small style="color:#6b7280">
+                <small style="color:rgba(255,255,255,0.8)">
                   ${payload.einsatz_nr ? 'Einsatz-Nr: ' + payload.einsatz_nr + ' · ' : ''}
                   MPG-Verantwortlicher: ${doc.admin_name || '?'} · 
                   ${doc.admin_datum ? new Date(doc.admin_datum).toLocaleString('de-DE') : ''}
@@ -691,7 +691,7 @@
               <div><span class="pill archiviert">Nacherfassung</span></div>
               <div>
                 <strong>${doc.stichwort || 'Ohne Titel'}</strong><br>
-                <small style="color:#6b7280">von ${doc.nacherfasst_von_name || '?'}</small>
+                <small style="color:rgba(255,255,255,0.8)">von ${doc.nacherfasst_von_name || '?'}</small>
               </div>
               <div style="display:flex;gap:8px;flex-wrap:wrap">
                 <button class="btn btn-icon" onclick="viewNachArchiv('${doc.id}')">
@@ -1898,7 +1898,7 @@
           `;
         });
       } else {
-        medRowsHTML = '<tr><td colspan="7" style="text-align:center;color:#999">Keine Medikamente dokumentiert</td></tr>';
+        medRowsHTML = '<tr><td colspan="7" style="text-align:center;color:rgba(255,255,255,0.7)">Keine Medikamente dokumentiert</td></tr>';
       }
       
       // Build photos display
