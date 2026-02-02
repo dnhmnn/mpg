@@ -388,7 +388,7 @@
             <input type="text" name="disponierte_em_rd">
           </div>
         </div>
-        <h4 style="margin-top:20px;color:var(--primary)">Patienten-Daten</h4>
+        <h4 style="margin-top:20px;color:#fff">Patienten-Daten</h4>
         <div class="form-group">
           <label>Erhoben:</label>
           <div class="radio-group">
@@ -414,7 +414,7 @@
           <label>Sachverhalt vor Ort:</label>
           <textarea name="sachverhalt" rows="4"></textarea>
         </div>
-        <h4 style="margin-top:20px;color:var(--primary)">Protokollpflicht</h4>
+        <h4 style="margin-top:20px;color:#fff">Protokollpflicht</h4>
         <div class="form-group">
           <label>War dieser Einsatz gemäß §630f BGB protokollpflichtig?</label>
           <div class="radio-group">
@@ -433,7 +433,7 @@
             <label><input type="radio" name="verantwortlicher_unterwiesen" value="nein"> Nein</label>
           </div>
         </div>
-        <h4 style="margin-top:20px;color:var(--primary)">Verantwortlicher</h4>
+        <h4 style="margin-top:20px;color:#fff">Verantwortlicher</h4>
         <div class="form-grid">
           <div class="form-group">
             <label>Name:</label>
@@ -444,7 +444,7 @@
             <input type="text" name="verantwortlicher_qualifikation">
           </div>
         </div>
-        <h4 style="margin-top:20px;color:var(--primary)">Nacherfassung</h4>
+        <h4 style="margin-top:20px;color:#fff">Nacherfassung</h4>
         <div class="form-grid">
           <div class="form-group">
             <label>Nacherfasst von (Name):</label>
@@ -604,7 +604,7 @@
             <div><span class="pill offen">${doc.status}</span></div>
             <div>
               <strong>${doc.title || patName}</strong><br>
-              <small style="color:#6b7280">
+              <small style="color:rgba(255,255,255,0.8)">
                 ${payload.einsatz_nr ? 'Einsatz-Nr: ' + payload.einsatz_nr + ' · ' : ''}
                 ${new Date(doc.created).toLocaleString('de-DE')}
               </small>
@@ -616,7 +616,7 @@
             </div>
           </div>
         `;
-        }).join('') || '<p style="padding:20px;color:#999">Keine offenen Patientendokus</p>';
+        }).join('') || '<p style="padding:20px;color:rgba(255,255,255,0.7)">Keine offenen Patientendokus</p>';
 
         // Load open Nacherfassungen
         const nachData = await pb.collection('patient_docs_nacherfassung').getFullList({
@@ -630,7 +630,7 @@
             <div><span class="pill offen">${doc.status}</span></div>
             <div>
               <strong>${doc.stichwort || 'Ohne Stichwort'}</strong><br>
-              <small style="color:#6b7280">
+              <small style="color:rgba(255,255,255,0.8)">
                 von ${doc.nacherfasst_von_name || '?'} · 
                 ${new Date(doc.created).toLocaleString('de-DE')}
               </small>
@@ -644,7 +644,7 @@
               </button>
             </div>
           </div>
-        `).join('') || '<p style="padding:20px;color:#999">Keine offenen Nacherfassungen</p>';
+        `).join('') || '<p style="padding:20px;color:rgba(255,255,255,0.7)">Keine offenen Nacherfassungen</p>';
 
         // Load archived patient documents
         const archivPat = await pb.collection('patients').getFullList({
@@ -669,7 +669,7 @@
               <div><span class="pill archiviert">Patientendoku</span></div>
               <div>
                 <strong>${patName}</strong><br>
-                <small style="color:#6b7280">
+                <small style="color:rgba(255,255,255,0.8)">
                   ${payload.einsatz_nr ? 'Einsatz-Nr: ' + payload.einsatz_nr + ' · ' : ''}
                   MPG-Verantwortlicher: ${doc.admin_name || '?'} · 
                   ${doc.admin_datum ? new Date(doc.admin_datum).toLocaleString('de-DE') : ''}
@@ -690,7 +690,7 @@
               <div><span class="pill archiviert">Nacherfassung</span></div>
               <div>
                 <strong>${doc.stichwort || 'Ohne Titel'}</strong><br>
-                <small style="color:#6b7280">von ${doc.nacherfasst_von_name || '?'}</small>
+                <small style="color:rgba(255,255,255,0.8)">von ${doc.nacherfasst_von_name || '?'}</small>
               </div>
               <div style="display:flex;gap:8px;flex-wrap:wrap">
                 <button class="btn btn-icon" onclick="viewNachArchiv('${doc.id}')">
@@ -701,7 +701,7 @@
           `;
         });
         
-        archivRows.innerHTML = archivHTML || '<p style="padding:20px;color:#999">Kein Archiv vorhanden</p>';
+        archivRows.innerHTML = archivHTML || '<p style="padding:20px;color:rgba(255,255,255,0.7)">Kein Archiv vorhanden</p>';
 
       } catch(e) {
         showMsg('Fehler beim Laden: ' + e.message, 'error');
@@ -1897,7 +1897,7 @@
           `;
         });
       } else {
-        medRowsHTML = '<tr><td colspan="7" style="text-align:center;color:#999">Keine Medikamente dokumentiert</td></tr>';
+        medRowsHTML = '<tr><td colspan="7" style="text-align:center;color:rgba(255,255,255,0.7)">Keine Medikamente dokumentiert</td></tr>';
       }
       
       // Build photos display
