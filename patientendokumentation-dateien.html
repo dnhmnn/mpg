@@ -1,1 +1,2425 @@
-.
+<!DOCTYPE html>
+
+<html lang="de">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Dokumentenverwaltung - Responda</title>
+
+  <!-- Fonts & Icons -->
+
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
+
+  <!-- External Libraries -->
+
+  <script src="https://cdn.jsdelivr.net/npm/pocketbase@0.21.3/dist/pocketbase.umd.js"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.6.0/jspdf.plugin.autotable.min.js"></script>
+
+<style>
+/* ============================================ */
+/* HUB-STYLES.CSS - ZENTRALE DESIGN-DATEI     */
+/* Für alle Responda WebApps                  */
+/* ============================================ */
+
+/* RESET & GRUNDLAGEN */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
+  background: linear-gradient(135deg, #667eea 0%, #f97316 50%, #764ba2 100%);
+  background-attachment: fixed;
+  min-height: 100vh;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+  margin: 0;
+  padding: 0;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+body.loaded {
+  opacity: 1;
+}
+
+/* STATUS BAR - 54PX OBEN */
+.status-bar {
+  height: 54px;
+  padding-top: env(safe-area-inset-top);
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  padding-left: max(24px, env(safe-area-inset-left));
+  padding-right: max(24px, env(safe-area-inset-right));
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  height: 32px;
+}
+
+.logo svg {
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+  width: 140px;
+  height: auto;
+}
+
+#userName {
+  text-align: center;
+  justify-self: center;
+}
+
+.logout-btn {
+  background: rgba(255, 255, 255, 0.2);
+  border: 0.5px solid rgba(255, 255, 255, 0.3);
+  color: #fff;
+  padding: 6px 12px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  justify-self: end;
+}
+
+.logout-btn:active {
+  transform: scale(0.95);
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* MAIN CONTENT WRAPPER */
+.content {
+  height: 100vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-top: calc(54px + env(safe-area-inset-top) + 30px);
+  padding-left: max(20px, env(safe-area-inset-left));
+  padding-right: max(20px, env(safe-area-inset-right));
+  padding-bottom: max(40px, env(safe-area-inset-bottom));
+}
+
+@media (min-width: 768px) {
+  .content {
+    max-width: 600px;
+    margin: 0 auto;
+  }
+}
+
+/* TABS */
+.tabs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.tab {
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 0.5px solid rgba(255, 255, 255, 0.3);
+  color: #fff;
+  padding: 10px 16px;
+  border-radius: 16px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: none;
+  font-family: inherit;
+}
+
+.tab:active {
+  transform: scale(0.95);
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.tab.active {
+  background: rgba(255, 255, 255, 0.95);
+  color: #667eea;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* DOCUMENT CARDS / ITEM CARDS */
+.doc-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 48px;
+}
+
+.doc-card {
+  background: rgba(255, 255, 255, 0.25);
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
+  border-radius: 20px;
+  padding: 16px;
+  color: #fff;
+  border: 0.5px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s;
+  cursor: pointer;
+}
+
+.doc-card:active {
+  transform: scale(0.98);
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.doc-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.doc-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: white;
+}
+
+.doc-meta {
+  font-size: 13px;
+  opacity: 0.8;
+  margin-bottom: 12px;
+}
+
+.doc-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* STATUS PILLS / BADGES */
+.pill {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.pill.offen {
+  background: #fbbf24;
+  color: #78350f;
+}
+
+.pill.archiviert {
+  background: #34d399;
+  color: #064e3b;
+}
+
+.pill.verfuegbar {
+  background: #60a5fa;
+  color: #1e3a8a;
+}
+
+.pill.ausgeliehen {
+  background: #f97316;
+  color: #7c2d12;
+}
+
+.pill.wartung {
+  background: #ef4444;
+  color: #7f1d1d;
+}
+
+/* BUTTONS */
+.doc-btn {
+  background: rgba(255, 255, 255, 0.3);
+  border: 0.5px solid rgba(255, 255, 255, 0.4);
+  color: #fff;
+  padding: 8px 14px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: inherit;
+}
+
+.doc-btn:active {
+  transform: scale(0.95);
+  background: rgba(255, 255, 255, 0.4);
+}
+
+.btn {
+  background: white;
+  color: #667eea;
+  border: 0;
+  border-radius: 12px;
+  padding: 10px 16px;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: inherit;
+}
+
+.btn:hover {
+  background: #f8fafc;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.btn:active {
+  transform: translateY(0);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn-secondary {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* FLOATING ACTION BUTTON (FAB) */
+.fab {
+  position: fixed;
+  bottom: max(32px, env(safe-area-inset-bottom) + 16px);
+  right: max(32px, env(safe-area-inset-right) + 16px);
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.95);
+  color: #667eea;
+  border: 0.5px solid rgba(255, 255, 255, 0.3);
+  cursor: pointer;
+  font-size: 28px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  z-index: 100;
+  transition: transform 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+.fab:active {
+  transform: scale(0.9);
+}
+
+/* MODALS */
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(8px);
+  display: none;
+  align-items: flex-start;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+  overflow-y: auto;
+}
+
+.modal.show {
+  display: flex;
+}
+
+.modal-box {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(40px);
+  -webkit-backdrop-filter: blur(40px);
+  border-radius: 24px;
+  max-width: 1200px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: 28px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  margin: auto;
+  border: 0.5px solid rgba(255, 255, 255, 0.3);
+}
+
+.modal-box h3 {
+  margin-top: 0;
+  color: #667eea;
+  font-weight: 800;
+  font-size: 22px;
+}
+
+/* FORM ELEMENTS */
+label {
+  font-size: 14px;
+  color: #1e293b;
+  font-weight: 600;
+}
+
+input[type="text"],
+input[type="number"],
+input[type="datetime-local"],
+input[type="date"],
+input[type="time"],
+input[type="email"],
+input[type="tel"],
+input[type="password"],
+textarea,
+select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  border-radius: 10px;
+  background: white;
+  font-size: 14px;
+  font-family: inherit;
+  transition: all 0.2s;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+textarea {
+  min-height: 88px;
+  resize: vertical;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+  margin: 16px 0;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-group label {
+  font-weight: 700;
+  font-size: 14px;
+  color: #374151;
+}
+
+/* DETAILS / ACCORDION */
+details {
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 14px;
+  margin: 0 0 12px 0;
+  overflow: hidden;
+}
+
+summary {
+  list-style: none;
+  padding: 14px 16px;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.3);
+  transition: background 0.2s;
+}
+
+summary::-webkit-details-marker {
+  display: none;
+}
+
+summary:hover {
+  background: rgba(255, 255, 255, 0.5);
+}
+
+details[open] summary {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  background: rgba(255, 255, 255, 0.4);
+}
+
+.sec-body {
+  padding: 16px;
+}
+
+/* MESSAGES */
+.msg {
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.msg.error {
+  background: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #fca5a5;
+}
+
+.msg.success {
+  background: #d1fae5;
+  color: #065f46;
+  border: 1px solid #6ee7b7;
+}
+
+/* TABLES */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 8px;
+}
+
+th,
+td {
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  padding: 8px;
+  text-align: left;
+  font-size: 13px;
+}
+
+th {
+  background: rgba(102, 126, 234, 0.1);
+  font-weight: 700;
+  color: #667eea;
+}
+
+/* MOBILE RESPONSIVE */
+@media (max-width: 767px) {
+  .status-bar {
+    padding-left: max(16px, env(safe-area-inset-left));
+    padding-right: max(16px, env(safe-area-inset-right));
+  }
+
+  .logo svg {
+    width: 110px;
+  }
+
+  .logout-btn {
+    padding: 5px 10px;
+    font-size: 12px;
+  }
+
+  .content {
+    padding-left: max(16px, env(safe-area-inset-left));
+    padding-right: max(16px, env(safe-area-inset-right));
+  }
+
+  .fab {
+    bottom: max(20px, env(safe-area-inset-bottom) + 12px);
+    right: max(20px, env(safe-area-inset-right) + 12px);
+    width: 56px;
+    height: 56px;
+    font-size: 24px;
+  }
+
+  .modal-box {
+    padding: 20px;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* PRINT */
+@media print {
+  .status-bar,
+  .tabs,
+  .btn,
+  .fab,
+  .modal {
+    display: none !important;
+  }
+
+  body {
+    background: #fff;
+  }
+
+  .doc-card {
+    box-shadow: none;
+    border: 1px solid #ddd;
+  }
+}
+</style>
+
+</head>
+<body class="loading">
+
+<body class="loading">
+
+<!-- ==================== STATUS BAR START ==================== -->
+
+  <div class="status-bar">
+    <div class="logo">
+      <svg width="140" height="32" viewBox="0 0 560 140" fill="white">
+        <text x="10" y="100" font-size="120" font-weight="800" font-family="Inter">Responda</text>
+      </svg>
+    </div>
+    <div id="userName"></div>
+    <button class="logout-btn" id="logout">
+      <i class="fa-solid fa-right-from-bracket"></i> Abmelden
+    </button>
+  </div>
+<!-- ==================== STATUS BAR END ==================== -->
+
+<!-- ==================== MAIN CONTENT START ==================== -->
+
+  <div class="content">
+
+```
+<!-- TABS -->
+<div class="tabs">
+  <button class="tab active" data-tab="pat">
+    <i class="fa-solid fa-file-medical"></i> Patientendokus
+  </button>
+  <button class="tab" data-tab="nach">
+    <i class="fa-solid fa-clipboard-list"></i> Nacherfassungen
+  </button>
+  <button class="tab" data-tab="archiv">
+    <i class="fa-solid fa-box-archive"></i> Archiv
+  </button>
+</div>
+
+<!-- TAB: PATIENTENDOKUS (OFFEN) -->
+<div id="tab-pat" class="tab-content">
+  <div id="pat-rows"></div>
+</div>
+
+<!-- TAB: NACHERFASSUNGEN (OFFEN) -->
+<div id="tab-nach" class="tab-content" style="display:none">
+  <div id="nach-rows"></div>
+</div>
+
+<!-- TAB: ARCHIV -->
+<div id="tab-archiv" class="tab-content" style="display:none">
+  <div id="archiv-rows"></div>
+</div>
+
+<div id="msg"></div>
+```
+
+  </div>
+<!-- ==================== MAIN CONTENT END ==================== -->
+
+<!-- ==================== ADD BUTTON START ==================== -->
+
+  <button class="fab" id="addBtn" title="Neue Nacherfassung">
+    <i class="fa-solid fa-plus"></i>
+  </button>
+<!-- ==================== ADD BUTTON END ==================== -->
+
+<!-- ==================== EDIT MODAL START ==================== -->
+
+  <div class="modal" id="editModal">
+    <div class="modal-box">
+      <h3><i class="fa-solid fa-edit"></i> Patientendokumentation bearbeiten</h3>
+      <div id="editFormContainer"></div>
+      <div style="display:flex;gap:10px;margin-top:20px;justify-content:flex-end;position:sticky;bottom:0;background:#fff;padding-top:16px;border-top:2px solid #e2e8f0">
+        <button class="btn btn-secondary" onclick="closeEditModal()">
+          <i class="fa-solid fa-times"></i> Abbrechen
+        </button>
+        <button class="btn" onclick="saveAndSignPatDoc()">
+          <i class="fa-solid fa-save"></i> Speichern & Gegenzeichnen
+        </button>
+      </div>
+    </div>
+  </div>
+<!-- ==================== EDIT MODAL END ==================== -->
+
+<!-- ==================== SIGN MODAL START ==================== -->
+
+  <div class="modal" id="signModal">
+    <div class="modal-box" style="max-width:600px">
+      <h3><i class="fa-solid fa-signature"></i> Verantwortlicher / MPG-Beauftragter</h3>
+      <p>Dokument wurde geprüft und ist korrekt. Mit Unterschrift wird es ins Archiv verschoben.</p>
+      <div class="form-group">
+        <label>Name (Verantwortlicher / MPG-Beauftragter):</label>
+        <input type="text" id="adminName" placeholder="Ihr Name">
+      </div>
+      <div class="sig-wrap">
+        <label style="font-weight:700;margin-bottom:8px;display:block">Unterschrift:</label>
+        <canvas id="adminSigCanvas" class="sig-canvas"></canvas>
+        <div class="sig-actions">
+          <button class="btn btn-secondary" onclick="clearAdminSig()">
+            <i class="fa-solid fa-eraser"></i> Löschen
+          </button>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:20px;justify-content:flex-end">
+        <button class="btn btn-secondary" onclick="closeSignModal()">Abbrechen</button>
+        <button class="btn" onclick="archiveWithSignature()">
+          <i class="fa-solid fa-check"></i> Unterschreiben & Archivieren
+        </button>
+      </div>
+    </div>
+  </div>
+<!-- ==================== SIGN MODAL END ==================== -->
+
+<!-- ==================== NACHERFASSUNG MODAL START ==================== -->
+
+  <div class="modal" id="nachModal">
+    <div class="modal-box">
+      <h3><i class="fa-solid fa-clipboard-list"></i> Einsatznacherfassung</h3>
+      <form id="nachForm">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Datum/Alarmzeit:</label>
+            <input type="datetime-local" name="datum_alarmzeit">
+          </div>
+          <div class="form-group">
+            <label>Datum/Einsatzende:</label>
+            <input type="datetime-local" name="datum_einsatzende">
+          </div>
+        </div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Stichwort:</label>
+            <input type="text" name="stichwort">
+          </div>
+          <div class="form-group">
+            <label>Kategorie:</label>
+            <input type="text" name="kategorie">
+          </div>
+        </div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Einsatznummer der ILS:</label>
+            <input type="text" name="einsatznummer_ils">
+          </div>
+          <div class="form-group">
+            <label>Meldebild:</label>
+            <input type="text" name="meldebild">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Adresse:</label>
+          <textarea name="adresse"></textarea>
+        </div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Disponierte EM (FW):</label>
+            <input type="text" name="disponierte_em_fw">
+          </div>
+          <div class="form-group">
+            <label>Disponierte EM (RD):</label>
+            <input type="text" name="disponierte_em_rd">
+          </div>
+        </div>
+        <h4 style="margin-top:20px;color:#667eea">Patienten-Daten</h4>
+        <div class="form-group">
+          <label>Erhoben:</label>
+          <div class="radio-group">
+            <label><input type="radio" name="patienten_daten_erhoben" value="ja"> Ja</label>
+            <label><input type="radio" name="patienten_daten_erhoben" value="nein"> Nein</label>
+          </div>
+        </div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Name:</label>
+            <input type="text" name="patient_name">
+          </div>
+          <div class="form-group">
+            <label>Alter/Geburtsdatum:</label>
+            <input type="text" name="patient_alter_geburtsdatum">
+          </div>
+          <div class="form-group">
+            <label>Pat.-Nummer der ILS:</label>
+            <input type="text" name="patient_nummer_ils">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Sachverhalt vor Ort:</label>
+          <textarea name="sachverhalt" rows="4"></textarea>
+        </div>
+        <h4 style="margin-top:20px;color:#667eea">Protokollpflicht</h4>
+        <div class="form-group">
+          <label>War dieser Einsatz gemäß §630f BGB protokollpflichtig?</label>
+          <div class="radio-group">
+            <label><input type="radio" name="protokollpflichtig" value="ja"> Ja</label>
+            <label><input type="radio" name="protokollpflichtig" value="nein"> Nein</label>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Begründung:</label>
+          <textarea name="protokollpflichtig_begruendung"></textarea>
+        </div>
+        <div class="form-group">
+          <label>War die verantwortliche Person mit der Thematik der Einsatz-/Patientendokumentation (gem. §630f BGB) unterwiesen?</label>
+          <div class="radio-group">
+            <label><input type="radio" name="verantwortlicher_unterwiesen" value="ja"> Ja</label>
+            <label><input type="radio" name="verantwortlicher_unterwiesen" value="nein"> Nein</label>
+          </div>
+        </div>
+        <h4 style="margin-top:20px;color:#667eea">Verantwortlicher</h4>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Name:</label>
+            <input type="text" name="verantwortlicher_name">
+          </div>
+          <div class="form-group">
+            <label>Qualifikation:</label>
+            <input type="text" name="verantwortlicher_qualifikation">
+          </div>
+        </div>
+        <h4 style="margin-top:20px;color:#667eea">Nacherfassung</h4>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Nacherfasst von (Name):</label>
+            <input type="text" name="nacherfasst_von_name" required>
+          </div>
+          <div class="form-group">
+            <label>Qualifikation:</label>
+            <input type="text" name="nacherfasst_von_qualifikation">
+          </div>
+        </div>
+        <div class="sig-wrap">
+          <label style="font-weight:700;margin-bottom:8px;display:block">Unterschrift:</label>
+          <canvas id="nachSigCanvas" class="sig-canvas"></canvas>
+          <div class="sig-actions">
+            <button type="button" class="btn btn-secondary" onclick="clearNachSig()">
+              <i class="fa-solid fa-eraser"></i> Löschen
+            </button>
+          </div>
+        </div>
+      </form>
+      <div style="display:flex;gap:10px;margin-top:20px;justify-content:flex-end">
+        <button class="btn btn-secondary" onclick="closeNachModal()">Abbrechen</button>
+        <button class="btn" onclick="saveNacherfassung()">
+          <i class="fa-solid fa-save"></i> Speichern
+        </button>
+      </div>
+    </div>
+  </div>
+<!-- ==================== NACHERFASSUNG MODAL END ==================== -->
+
+<!-- ==================== DETAILS MODAL START ==================== -->
+
+  <div class="modal" id="detailsModal">
+    <div class="modal-box">
+      <h3 id="detailsTitle">Details</h3>
+      <div id="detailsBody"></div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
+        <button class="btn btn-secondary" onclick="closeDetailsModal()">
+          <i class="fa-solid fa-times"></i> Schließen
+        </button>
+        <button class="btn" onclick="generatePDFFromModal()">
+          <i class="fa-solid fa-file-pdf"></i> PDF erstellen
+        </button>
+      </div>
+    </div>
+  </div>
+<!-- ==================== DETAILS MODAL END ==================== -->
+
+<!-- ==================== JAVASCRIPT START ==================== -->
+
+  <script type="module" src="patientendokumentation-dateien.js"></script>
+
+<script type="text/javascript">
+// ========================================
+// PATIENTENDOKUMENTATION-DATEIEN.JS
+// Komplettes JavaScript für die Dokumentenverwaltung
+// ========================================
+
+// ========================================
+// SECTION: POCKETBASE INITIALIZATION & AUTH
+// ========================================
+const pb = new PocketBase('https://api.responda.systems');
+
+// Check if user is logged in
+if (!pb.authStore.isValid) {
+  location.href = "/mpg-login.html";
+}
+
+const currentUser = pb.authStore.model;
+if (!currentUser || !currentUser.organization_id) {
+  location.href = "/mpg-login.html";
+}
+
+// Load organization data
+let currentOrganization = { name: 'Feuerwehr' }; // Default fallback
+
+async function loadOrganization() {
+  try {
+    if (!currentUser.organization_id) {
+      console.warn('⚠️ User has no organization_id');
+      return;
+    }
+    currentOrganization = await pb.collection('organizations').getOne(currentUser.organization_id);
+    console.log('✅ Organization loaded:', currentOrganization);
+  } catch(e) {
+    console.warn('⚠️ Could not load organization, using fallback:', e.message);
+  }
+}
+
+// Start loading (non-blocking)
+loadOrganization();
+
+// ========================================
+// SECTION: LOGOUT HANDLER
+// ========================================
+document.getElementById("logout").onclick = async (e) => {
+  e.preventDefault();
+  pb.authStore.clear();
+  localStorage.clear();
+  location.href = "/mpg-login.html";
+};
+
+// ========================================
+// SECTION: TAB SWITCHING
+// ========================================
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.onclick = () => {
+    const targetTab = tab.dataset.tab;
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    document.querySelectorAll('.tab-content').forEach(tc => tc.style.display = 'none');
+    document.getElementById('tab-' + targetTab).style.display = 'block';
+    document.getElementById('msg').textContent = '';
+  };
+});
+
+// ========================================
+// SECTION: UTILITY FUNCTIONS
+// ========================================
+function showMsg(text, type = 'success') {
+  const msgDiv = document.getElementById('msg');
+  msgDiv.textContent = text;
+  msgDiv.className = 'msg ' + type;
+  setTimeout(() => { 
+    msgDiv.textContent = ''; 
+    msgDiv.className = 'msg'; 
+  }, 5000);
+}
+
+function calculateGCS(p) {
+  const e = parseInt(p.gcs_e || 0);
+  const v = parseInt(p.gcs_v || 0);
+  const m = parseInt(p.gcs_m || 0);
+  const sum = e + v + m;
+  return sum > 0 ? sum : '—';
+}
+
+function calculateQSOFA(p) {
+  const gcs = parseInt(p.gcs_e || 0) + parseInt(p.gcs_v || 0) + parseInt(p.gcs_m || 0);
+  const af = parseInt(p.af || 0);
+  const rrSys = parseInt(p.rr_sys || 0);
+  let score = 0;
+  if (gcs > 0 && gcs < 15) score++;
+  if (af >= 22) score++;
+  if (rrSys > 0 && rrSys <= 100) score++;
+  return (gcs > 0 || af > 0 || rrSys > 0) ? score : '—';
+}
+
+// ========================================
+// SECTION: LOAD DATA FROM DATABASE
+// ========================================
+async function loadData() {
+  try {
+    // Load open patient documents
+    const patData = await pb.collection('patients').getFullList({
+      filter: `status = "offen" && organization_id = "${currentUser.organization_id}"`,
+      sort: '-created',
+    });
+    
+    const patRows = document.getElementById('pat-rows');
+    patRows.innerHTML = patData.map(doc => {
+      const payload = doc.payload || {};
+      const patName = `${payload.vorname || ''} ${payload.name || ''}`.trim() || 'Unbekannt';
+      return `
+      <div class="doc-card" onclick="editPatDoc('${doc.id}')">
+        <div class="doc-header">
+          <span class="pill offen">Offen</span>
+          <span class="doc-title">${doc.title || patName}</span>
+        </div>
+        <div class="doc-meta">
+          ${payload.einsatz_nr ? 'Einsatz-Nr: ' + payload.einsatz_nr + ' · ' : ''}
+          ${new Date(doc.created).toLocaleString('de-DE')}
+        </div>
+      </div>
+    `;
+    }).join('') || '<p style="padding:20px;color:#fff;opacity:0.7">Keine offenen Patientendokus</p>';
+
+    // Load open Nacherfassungen
+    const nachData = await pb.collection('patient_docs_nacherfassung').getFullList({
+      filter: `status = "offen" && organization_id = "${currentUser.organization_id}"`,
+      sort: '-created',
+    });
+    
+    const nachRows = document.getElementById('nach-rows');
+    nachRows.innerHTML = nachData.map(doc => `
+      <div class="doc-card">
+        <div class="doc-header">
+          <span class="pill offen">Offen</span>
+          <span class="doc-title">${doc.stichwort || 'Ohne Stichwort'}</span>
+        </div>
+        <div class="doc-meta">
+          von ${doc.nacherfasst_von_name || '?'} · 
+          ${new Date(doc.created).toLocaleString('de-DE')}
+        </div>
+        <div class="doc-actions">
+          <button class="doc-btn" onclick="event.stopPropagation(); viewNach('${doc.id}')">
+            <i class="fa-solid fa-eye"></i> Details
+          </button>
+          <button class="doc-btn" onclick="event.stopPropagation(); archiveNach('${doc.id}')">
+            <i class="fa-solid fa-box-archive"></i> Archivieren
+          </button>
+        </div>
+      </div>
+    `).join('') || '<p style="padding:20px;color:#fff;opacity:0.7">Keine offenen Nacherfassungen</p>';
+
+    // Load archived patient documents
+    const archivPat = await pb.collection('patients').getFullList({
+      filter: `status = "archiviert" && organization_id = "${currentUser.organization_id}"`,
+      sort: '-updated',
+    });
+    
+    // Load archived Nacherfassungen
+    const archivNach = await pb.collection('patient_docs_nacherfassung').getFullList({
+      filter: `status = "archiviert" && organization_id = "${currentUser.organization_id}"`,
+      sort: '-updated',
+    });
+    
+    const archivRows = document.getElementById('archiv-rows');
+    let archivHTML = '';
+    
+    archivPat.forEach(doc => {
+      const payload = doc.payload || {};
+      const patName = `${payload.vorname || ''} ${payload.name || ''}`.trim() || doc.title || 'Ohne Titel';
+      archivHTML += `
+        <div class="doc-card" onclick="viewPatArchiv('${doc.id}')">
+          <div class="doc-header">
+            <span class="pill archiviert">Patientendoku</span>
+            <span class="doc-title">${patName}</span>
+          </div>
+          <div class="doc-meta">
+            ${payload.einsatz_nr ? 'Einsatz-Nr: ' + payload.einsatz_nr + ' · ' : ''}
+            MPG-Verantwortlicher: ${doc.admin_name || '?'} · 
+            ${doc.admin_datum ? new Date(doc.admin_datum).toLocaleString('de-DE') : ''}
+          </div>
+        </div>
+      `;
+    });
+    
+    archivNach.forEach(doc => {
+      archivHTML += `
+        <div class="doc-card" onclick="viewNachArchiv('${doc.id}')">
+          <div class="doc-header">
+            <span class="pill archiviert">Nacherfassung</span>
+            <span class="doc-title">${doc.stichwort || 'Ohne Titel'}</span>
+          </div>
+          <div class="doc-meta">von ${doc.nacherfasst_von_name || '?'}</div>
+        </div>
+      `;
+    });
+    
+    archivRows.innerHTML = archivHTML || '<p style="padding:20px;color:#fff;opacity:0.7">Kein Archiv vorhanden</p>';
+
+  } catch(e) {
+    showMsg('Fehler beim Laden: ' + e.message, 'error');
+  }
+}
+
+
+// ========================================
+// SECTION: EDIT PATIENT DOCUMENT
+// ========================================
+let currentEditDoc = null;
+let currentEditPayload = null;
+let medRowCounter = 0;
+
+window.editPatDoc = async (id) => {
+  try {
+    currentEditDoc = await pb.collection('patients').getOne(id);
+    currentEditPayload = currentEditDoc.payload || {};
+    
+    const formHTML = buildEditForm(currentEditPayload);
+    document.getElementById('editFormContainer').innerHTML = formHTML;
+    document.querySelectorAll('#editFormContainer details').forEach(d => d.open = true);
+    
+    const meds = currentEditPayload.medications || [];
+    medRowCounter = meds.length;
+    
+    document.getElementById('editModal').classList.add('show');
+  } catch(e) {
+    showMsg('Fehler: ' + e.message, 'error');
+  }
+};
+
+// ========================================
+// SECTION: BUILD EDIT FORM HTML
+// ========================================
+function buildEditForm(payload) {
+  const v = (key, fallback = '') => 
+    payload[key] !== undefined && payload[key] !== null ? payload[key] : fallback;
+  
+  const checked = (key) => payload[key] ? 'checked' : '';
+  
+  const radioChecked = (key, value) => payload[key] === value ? 'checked' : '';
+  
+  // Build medication rows
+  const medications = payload.medications || [];
+  let medRowsHTML = '';
+  medications.forEach((med, idx) => {
+    const i = idx + 1;
+    medRowsHTML += `
+      <tr>
+        <td>${i}</td>
+        <td><input type="text" name="med_name_${i}" value="${med.name || ''}" 
+            style="width:100%;padding:.3rem;font-size:14px"></td>
+        <td><input type="number" name="med_dose_${i}" value="${med.dose || ''}" step="0.1" 
+            style="width:80px;padding:.3rem;font-size:14px"></td>
+        <td><input type="text" name="med_unit_${i}" value="${med.unit || ''}" placeholder="mg" 
+            style="width:60px;padding:.3rem;font-size:14px"></td>
+        <td>
+          <select name="med_route_${i}" style="padding:.3rem;font-size:14px">
+            <option value="">-</option>
+            <option value="i.v." ${med.route === 'i.v.' ? 'selected' : ''}>i.v.</option>
+            <option value="i.m." ${med.route === 'i.m.' ? 'selected' : ''}>i.m.</option>
+            <option value="s.c." ${med.route === 's.c.' ? 'selected' : ''}>s.c.</option>
+            <option value="p.o." ${med.route === 'p.o.' ? 'selected' : ''}>p.o.</option>
+            <option value="inhal." ${med.route === 'inhal.' ? 'selected' : ''}>inhal.</option>
+          </select>
+        </td>
+        <td><input type="time" name="med_time_${i}" value="${med.time || ''}" 
+            style="width:90px;padding:.3rem;font-size:14px"></td>
+        <td><input type="text" name="med_note_${i}" value="${med.note || ''}" 
+            style="width:100%;padding:.3rem;font-size:14px"></td>
+        <td><button class="subbtn" type="button" onclick="this.closest('tr').remove()">×</button></td>
+      </tr>
+    `;
+  });
+  
+  // Build photos display
+  const photos = payload.photos || [];
+  let photosHTML = '';
+  if (photos.length > 0) {
+    photosHTML = '<div class="thumbs">';
+    photos.forEach((photo, idx) => {
+      photosHTML += `
+        <div class="thumb">
+          <img src="${photo}" alt="Foto ${idx+1}">
+        </div>
+      `;
+    });
+    photosHTML += '</div>';
+  }
+  
+  // Return complete form HTML (gekürzt - die komplette Version ist sehr lang!)
+  return `
+<details open>
+  <summary><i class="fa-solid fa-truck-medical"></i> Einsatzdaten</summary>
+  <div class="sec-body">
+    <div class="grid">
+      <label>Einsatz-Nr.<input name="einsatz_nr" type="text" value="${v('einsatz_nr')}"></label>
+      <label>Pat./Auftrags-Nr.<input name="auftrags_nr" type="text" value="${v('auftrags_nr')}"></label>
+      <label>Rufname<input name="rufname" type="text" value="${v('rufname')}"></label>
+      <label>Fahrzeug<input name="fahrzeug" type="text" value="${v('fahrzeug')}"></label>
+      <label>Datum/Uhrzeit<input name="zeit_einsatz" type="datetime-local" value="${v('zeit_einsatz')}"></label>
+    </div>
+    <label>Einsatz-Art<input name="einsatz_art" type="text" value="${v('einsatz_art')}"></label>
+  </div>
+</details>
+
+<details open>
+  <summary><i class="fa-solid fa-id-card-clip"></i> Pat-Stammdaten</summary>
+  <div class="sec-body">
+    <div class="grid">
+      <label>Name<input name="name" type="text" value="${v('name')}"></label>
+      <label>Vorname<input name="vorname" type="text" value="${v('vorname')}"></label>
+      <label>Geb.-Datum<input name="gebdatum" type="date" value="${v('gebdatum')}"></label>
+      <label>Alter<input name="alter" type="number" value="${v('alter')}"></label>
+      <label>Telefon<input name="telefon" type="text" value="${v('telefon')}"></label>
+      <label>Mobil<input name="mobil" type="text" value="${v('mobil')}"></label>
+      <label>Straße<input name="strasse" type="text" value="${v('strasse')}"></label>
+      <label>PLZ, Ort<input name="plz_ort" type="text" value="${v('plz_ort')}"></label>
+      <label>Kasse / Nr.<input name="kasse" type="text" value="${v('kasse')}"></label>
+      <label>Vers.-Nr.<input name="versnr" type="text" value="${v('versnr')}"></label>
+      <label>Hausarzt / Tel.<input name="hausarzt" type="text" value="${v('hausarzt')}"></label>
+      <label>Angehöriger / Tel.<input name="angehoeriger" type="text" value="${v('angehoeriger')}"></label>
+    </div>
+    <label>Informationen / Aspekte<textarea name="infos">${v('infos')}</textarea></label>
+
+  </div>
+</details>
+
+<details open>
+  <summary><i class="fa-solid fa-notes-medical"></i> Notfallgeschehen / Anamnese</summary>
+  <div class="sec-body">
+    <textarea name="notfallgeschehen">${v('notfallgeschehen')}</textarea>
+    ${photosHTML ? '<div style="margin-top:.75rem"><strong>Fotos:</strong>' + photosHTML + '</div>' : ''}
+  </div>
+</details>
+
+<details open>
+  <summary><i class="fa-solid fa-stethoscope"></i> Messwerte / Atmung</summary>
+  <div class="sec-body">
+    <div class="grid">
+      <label>RR syst. (mmHg)<input name="rr_sys" type="number" value="${v('rr_sys')}"></label>
+      <label>RR diast. (mmHg)<input name="rr_dia" type="number" value="${v('rr_dia')}"></label>
+      <label>HF (/min)<input name="hf" type="number" value="${v('hf')}"></label>
+      <label>AF (/min)<input name="af" type="number" value="${v('af')}"></label>
+      <label>SpO₂ (%)<input name="spo2" type="number" value="${v('spo2')}"></label>
+      <label>etCO₂ (mmHg)<input name="etco2" type="number" value="${v('etco2')}"></label>
+      <label>Temp (°C)<input name="temp" type="number" step="0.1" value="${v('temp')}"></label>
+      <label>BZ (mg/dl)<input name="bz_mg" type="number" value="${v('bz_mg')}"></label>
+      <label>BZ (mmol/l)<input name="bz_mmol" type="number" step="0.1" value="${v('bz_mmol')}"></label>
+      <label>Schmerz (0–10)<input name="schmerz" type="number" min="0" max="10" value="${v('schmerz')}"></label>
+    </div>
+    <fieldset style="margin-top:.8rem">
+      <legend>qSOFA (auto)</legend>
+      <div class="badge">qSOFA-Score: ${calculateQSOFA(payload)}</div>
+    </fieldset>
+  </div>
+</details>
+
+<details open>
+  <summary><i class="fa-solid fa-syringe"></i> Maßnahmen – Zugang & Medikation</summary>
+  <div class="sec-body">
+    <fieldset>
+      <legend>Medikamente</legend>
+      <button type="button" class="subbtn" onclick="addMedRowEdit()" style="margin-bottom:.5rem">
+        <i class="fa-solid fa-plus"></i> Zeile hinzufügen
+      </button>
+      <div style="overflow:auto">
+        <table id="medTableEdit">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Medikament</th>
+              <th>Dosis</th>
+              <th>Einheit</th>
+              <th>Route</th>
+              <th>Uhrzeit</th>
+              <th>Bemerkung</th>
+              <th>×</th>
+            </tr>
+          </thead>
+          <tbody>${medRowsHTML}</tbody>
+        </table>
+      </div>
+    </fieldset>
+  </div>
+</details>
+
+<details open>
+  <summary><i class="fa-solid fa-signature"></i> Ausfüller & Unterschrift</summary>
+  <div class="sec-body">
+    <div class="grid">
+      <label>Name<input name="ausfueller_name" type="text" value="${v('ausfueller_name')}"></label>
+      <label>Zeitpunkt<input name="ausfueller_zeit" type="datetime-local" value="${v('ausfueller_zeit')}"></label>
+    </div>
+    ${payload.signature ? `<div style="margin-top:.75rem"><strong>Unterschrift:</strong><br><img src="${payload.signature}" class="signature-img"></div>` : ''}
+  </div>
+</details>`;
+}
+
+// ========================================
+// SECTION: ADD MEDICATION ROW TO TABLE
+// ========================================
+window.addMedRowEdit = function() {
+medRowCounter++;
+const tbody = document.querySelector(’#medTableEdit tbody’);
+const tr = document.createElement(‘tr’);
+tr.innerHTML = `<td>${medRowCounter}</td> <td><input type="text" name="med_name_${medRowCounter}"  style="width:100%;padding:.3rem;font-size:14px"></td> <td><input type="number" name="med_dose_${medRowCounter}" step="0.1"  style="width:80px;padding:.3rem;font-size:14px"></td> <td><input type="text" name="med_unit_${medRowCounter}" placeholder="mg"  style="width:60px;padding:.3rem;font-size:14px"></td> <td> <select name="med_route_${medRowCounter}" style="padding:.3rem;font-size:14px"> <option value="">-</option> <option value="i.v.">i.v.</option> <option value="i.m.">i.m.</option> <option value="s.c.">s.c.</option> <option value="p.o.">p.o.</option> <option value="inhal.">inhal.</option> </select> </td> <td><input type="time" name="med_time_${medRowCounter}"  style="width:90px;padding:.3rem;font-size:14px"></td> <td><input type="text" name="med_note_${medRowCounter}"  style="width:100%;padding:.3rem;font-size:14px"></td> <td><button class="subbtn" type="button" onclick="this.closest('tr').remove()">×</button></td>`;
+tbody.appendChild(tr);
+};
+
+// ========================================
+// SECTION: CLOSE EDIT MODAL
+// ========================================
+window.closeEditModal = () => {
+document.getElementById(‘editModal’).classList.remove(‘show’);
+if (!document.getElementById(‘signModal’).classList.contains(‘show’)) {
+currentEditDoc = null;
+currentEditPayload = null;
+}
+};
+
+// ========================================
+// SECTION: SAVE AND SIGN PATIENT DOCUMENT
+// ========================================
+window.saveAndSignPatDoc = async () => {
+try {
+showMsg(‘Daten werden gespeichert…’, ‘success’);
+const btn = document.querySelector(’#editModal .btn:not(.btn-secondary)’);
+btn.disabled = true;
+
+```
+const form = document.getElementById('editFormContainer');
+const formData = new FormData();
+const inputs = form.querySelectorAll('input, textarea, select');
+
+inputs.forEach(input => {
+  if (input.type === 'checkbox') {
+    formData.append(input.name, input.checked);
+  } else if (input.type === 'radio') {
+    if (input.checked) formData.append(input.name, input.value);
+  } else {
+    formData.append(input.name, input.value);
+  }
+});
+
+const payload = {};
+for (let [key, value] of formData.entries()) {
+  if (payload[key] !== undefined) continue;
+  payload[key] = value === 'true' ? true : value === 'false' ? false : value;
+}
+
+// Collect medications
+const medications = [];
+for (let i = 1; i <= medRowCounter; i++) {
+  const name = form.querySelector(`[name="med_name_${i}"]`)?.value;
+  if (name) {
+    medications.push({
+      name,
+      dose: form.querySelector(`[name="med_dose_${i}"]`)?.value || '',
+      unit: form.querySelector(`[name="med_unit_${i}"]`)?.value || '',
+      route: form.querySelector(`[name="med_route_${i}"]`)?.value || '',
+      time: form.querySelector(`[name="med_time_${i}"]`)?.value || '',
+      note: form.querySelector(`[name="med_note_${i}"]`)?.value || ''
+    });
+  }
+}
+payload.medications = medications;
+
+// Preserve photos and signature
+if (currentEditPayload.photos) {
+  payload.photos = currentEditPayload.photos;
+}
+if (currentEditPayload.signature) {
+  payload.signature = currentEditPayload.signature;
+}
+
+await pb.collection('patients').update(currentEditDoc.id, {
+  payload: payload
+});
+
+document.getElementById('editModal').classList.remove('show');
+document.getElementById('signModal').classList.add('show');
+initAdminSigCanvas();
+```
+
+} catch(e) {
+showMsg(‘Fehler beim Speichern: ’ + e.message, ‘error’);
+const btn = document.querySelector(’#editModal .btn:not(.btn-secondary)’);
+btn.disabled = false;
+}
+};
+
+// ========================================
+// SECTION: ADMIN SIGNATURE CANVAS
+// ========================================
+let adminSigCanvas, adminSigCtx, adminIsDrawing = false;
+
+function initAdminSigCanvas() {
+adminSigCanvas = document.getElementById(‘adminSigCanvas’);
+adminSigCtx = adminSigCanvas.getContext(‘2d’);
+const rect = adminSigCanvas.getBoundingClientRect();
+adminSigCanvas.width = rect.width;
+adminSigCanvas.height = rect.height;
+adminSigCtx.lineWidth = 2;
+adminSigCtx.strokeStyle = ‘#000’;
+adminSigCtx.lineCap = ‘round’;
+
+// Mouse events
+adminSigCanvas.addEventListener(‘mousedown’, startAdminDraw);
+adminSigCanvas.addEventListener(‘mousemove’, adminDraw);
+adminSigCanvas.addEventListener(‘mouseup’, stopAdminDraw);
+adminSigCanvas.addEventListener(‘mouseleave’, stopAdminDraw);
+
+// Touch events
+adminSigCanvas.addEventListener(‘touchstart’, (e) => {
+e.preventDefault();
+const touch = e.touches[0];
+const mouseEvent = new MouseEvent(‘mousedown’, {
+clientX: touch.clientX,
+clientY: touch.clientY
+});
+adminSigCanvas.dispatchEvent(mouseEvent);
+});
+
+adminSigCanvas.addEventListener(‘touchmove’, (e) => {
+e.preventDefault();
+const touch = e.touches[0];
+const mouseEvent = new MouseEvent(‘mousemove’, {
+clientX: touch.clientX,
+clientY: touch.clientY
+});
+adminSigCanvas.dispatchEvent(mouseEvent);
+});
+
+adminSigCanvas.addEventListener(‘touchend’, (e) => {
+e.preventDefault();
+const mouseEvent = new MouseEvent(‘mouseup’, {});
+adminSigCanvas.dispatchEvent(mouseEvent);
+});
+}
+
+function startAdminDraw(e) {
+adminIsDrawing = true;
+const rect = adminSigCanvas.getBoundingClientRect();
+adminSigCtx.beginPath();
+adminSigCtx.moveTo(e.clientX - rect.left, e.clientY - rect.top);
+}
+
+function adminDraw(e) {
+if (!adminIsDrawing) return;
+const rect = adminSigCanvas.getBoundingClientRect();
+adminSigCtx.lineTo(e.clientX - rect.left, e.clientY - rect.top);
+adminSigCtx.stroke();
+}
+
+function stopAdminDraw() {
+adminIsDrawing = false;
+}
+
+window.clearAdminSig = () => {
+adminSigCtx.clearRect(0, 0, adminSigCanvas.width, adminSigCanvas.height);
+};
+
+window.closeSignModal = () => {
+document.getElementById(‘signModal’).classList.remove(‘show’);
+};
+
+// ========================================
+// SECTION: ARCHIVE WITH SIGNATURE
+// ========================================
+window.archiveWithSignature = async () => {
+try {
+const adminName = document.getElementById(‘adminName’).value.trim();
+if (!adminName) {
+showMsg(‘Bitte Namen eingeben’, ‘error’);
+return;
+}
+
+```
+const signatureData = adminSigCanvas.toDataURL('image/png');
+
+await pb.collection('patients').update(currentEditDoc.id, {
+  status: 'archiviert',
+  admin_name: adminName,
+  admin_datum: new Date().toISOString(),
+  admin_unterschrift: signatureData
+});
+
+closeSignModal();
+showMsg('✅ Dokument archiviert!', 'success');
+await loadData();
+
+currentEditDoc = null;
+currentEditPayload = null;
+```
+
+} catch(e) {
+showMsg(’Fehler beim Archivieren: ’ + e.message, ‘error’);
+}
+};
+
+// ========================================
+// SECTION: NACHERFASSUNG MODAL & SIGNATURE
+// ========================================
+document.getElementById(‘addBtn’).onclick = () => {
+document.getElementById(‘nachForm’).reset();
+document.getElementById(‘nachModal’).classList.add(‘show’);
+initNachSigCanvas();
+};
+
+window.closeNachModal = () => {
+document.getElementById(‘nachModal’).classList.remove(‘show’);
+};
+
+let nachSigCanvas, nachSigCtx, nachIsDrawing = false;
+
+function initNachSigCanvas() {
+nachSigCanvas = document.getElementById(‘nachSigCanvas’);
+nachSigCtx = nachSigCanvas.getContext(‘2d’);
+const rect = nachSigCanvas.getBoundingClientRect();
+nachSigCanvas.width = rect.width;
+nachSigCanvas.height = rect.height;
+nachSigCtx.lineWidth = 2;
+nachSigCtx.strokeStyle = ‘#000’;
+nachSigCtx.lineCap = ‘round’;
+
+// Mouse events
+nachSigCanvas.addEventListener(‘mousedown’, startNachDraw);
+nachSigCanvas.addEventListener(‘mousemove’, nachDraw);
+nachSigCanvas.addEventListener(‘mouseup’, stopNachDraw);
+nachSigCanvas.addEventListener(‘mouseleave’, stopNachDraw);
+
+// Touch events
+nachSigCanvas.addEventListener(‘touchstart’, (e) => {
+e.preventDefault();
+const touch = e.touches[0];
+const mouseEvent = new MouseEvent(‘mousedown’, {
+clientX: touch.clientX,
+clientY: touch.clientY
+});
+nachSigCanvas.dispatchEvent(mouseEvent);
+});
+
+nachSigCanvas.addEventListener(‘touchmove’, (e) => {
+e.preventDefault();
+const touch = e.touches[0];
+const mouseEvent = new MouseEvent(‘mousemove’, {
+clientX: touch.clientX,
+clientY: touch.clientY
+});
+nachSigCanvas.dispatchEvent(mouseEvent);
+});
+
+nachSigCanvas.addEventListener(‘touchend’, (e) => {
+e.preventDefault();
+const mouseEvent = new MouseEvent(‘mouseup’, {});
+nachSigCanvas.dispatchEvent(mouseEvent);
+});
+}
+
+function startNachDraw(e) {
+nachIsDrawing = true;
+const rect = nachSigCanvas.getBoundingClientRect();
+nachSigCtx.beginPath();
+nachSigCtx.moveTo(e.clientX - rect.left, e.clientY - rect.top);
+}
+
+function nachDraw(e) {
+if (!nachIsDrawing) return;
+const rect = nachSigCanvas.getBoundingClientRect();
+nachSigCtx.lineTo(e.clientX - rect.left, e.clientY - rect.top);
+nachSigCtx.stroke();
+}
+
+function stopNachDraw() {
+nachIsDrawing = false;
+}
+
+window.clearNachSig = () => {
+nachSigCtx.clearRect(0, 0, nachSigCanvas.width, nachSigCanvas.height);
+};
+
+// ========================================
+// SECTION: SAVE NACHERFASSUNG
+// ========================================
+window.saveNacherfassung = async () => {
+try {
+const form = document.getElementById(‘nachForm’);
+const formData = new FormData(form);
+
+```
+const nacherfassungData = {
+  datum_alarmzeit: formData.get('datum_alarmzeit') || null,
+  datum_einsatzende: formData.get('datum_einsatzende') || null,
+  stichwort: formData.get('stichwort') || '',
+  kategorie: formData.get('kategorie') || '',
+  einsatznummer_ils: formData.get('einsatznummer_ils') || '',
+  meldebild: formData.get('meldebild') || '',
+  adresse: formData.get('adresse') || '',
+  disponierte_em_fw: formData.get('disponierte_em_fw') || '',
+  disponierte_em_rd: formData.get('disponierte_em_rd') || '',
+  patienten_daten_erhoben: formData.get('patienten_daten_erhoben') === 'ja',
+  patient_name: formData.get('patient_name') || '',
+  patient_alter_geburtsdatum: formData.get('patient_alter_geburtsdatum') || '',
+  patient_nummer_ils: formData.get('patient_nummer_ils') || '',
+  sachverhalt: formData.get('sachverhalt') || '',
+  protokollpflichtig: formData.get('protokollpflichtig') === 'ja',
+  protokollpflichtig_begruendung: formData.get('protokollpflichtig_begruendung') || '',
+  verantwortlicher_unterwiesen: formData.get('verantwortlicher_unterwiesen') === 'ja',
+  verantwortlicher_name: formData.get('verantwortlicher_name') || '',
+  verantwortlicher_qualifikation: formData.get('verantwortlicher_qualifikation') || '',
+  nacherfasst_von_name: formData.get('nacherfasst_von_name') || '',
+  nacherfasst_von_qualifikation: formData.get('nacherfasst_von_qualifikation') || '',
+  nacherfasst_datum: new Date().toISOString(),
+  nacherfasst_unterschrift: nachSigCanvas.toDataURL('image/png'),
+  status: 'offen',
+  organization_id: currentUser.organization_id
+};
+
+await pb.collection('patient_docs_nacherfassung').create(nacherfassungData);
+
+closeNachModal();
+showMsg('✅ Nacherfassung gespeichert!', 'success');
+await loadData();
+```
+
+} catch(e) {
+showMsg(’Fehler: ’ + e.message, ‘error’);
+}
+};
+
+// ========================================
+// SECTION: ARCHIVE NACHERFASSUNG
+// ========================================
+window.archiveNach = async (id) => {
+if (!confirm(‘Nacherfassung ins Archiv verschieben?’)) return;
+try {
+await pb.collection(‘patient_docs_nacherfassung’).update(id, {
+status: ‘archiviert’
+});
+
+```
+showMsg('✅ Nacherfassung archiviert!', 'success');
+await loadData();
+```
+
+} catch(e) {
+showMsg(’Fehler: ’ + e.message, ‘error’);
+}
+};
+
+// ========================================
+// SECTION: VIEW NACHERFASSUNG DETAILS
+// ========================================
+window.viewNach = async (id) => {
+try {
+const doc = await pb.collection(‘patient_docs_nacherfassung’).getOne(id);
+
+```
+window.currentViewedNachData = doc;
+window.currentViewedDocType = 'nacherfassung';
+
+document.getElementById('detailsTitle').textContent = 'Nacherfassung: ' + (doc.stichwort || '?');
+
+let html = buildNachDetailsHTML(doc);
+
+document.getElementById('detailsBody').innerHTML = html;
+document.getElementById('detailsModal').classList.add('show');
+```
+
+} catch(e) {
+showMsg(’Fehler: ’ + e.message, ‘error’);
+}
+};
+
+// ========================================
+// SECTION: BUILD NACHERFASSUNG DETAILS HTML
+// ========================================
+function buildNachDetailsHTML(doc) {
+let html = ‘<div style="display:grid;grid-template-columns:200px 1fr;gap:12px 24px;padding:12px 0">’;
+html += `<div style="font-weight:700;color:#667eea">Alarmzeit:</div><div>${doc.datum_alarmzeit ? new Date(doc.datum_alarmzeit).toLocaleString('de-DE') : '-'}</div>`;
+html += `<div style="font-weight:700;color:#667eea">Einsatzende:</div><div>${doc.datum_einsatzende ? new Date(doc.datum_einsatzende).toLocaleString('de-DE') : '-'}</div>`;
+html += `<div style="font-weight:700;color:#667eea">Stichwort:</div><div>${doc.stichwort || '-'}</div>`;
+html += `<div style="font-weight:700;color:#667eea">Kategorie:</div><div>${doc.kategorie || '-'}</div>`;
+html += `<div style="font-weight:700;color:#667eea">Einsatznummer ILS:</div><div>${doc.einsatznummer_ils || '-'}</div>`;
+html += `<div style="font-weight:700;color:#667eea">Meldebild:</div><div>${doc.meldebild || '-'}</div>`;
+html += `<div style="font-weight:700;color:#667eea">Adresse:</div><div>${doc.adresse || '-'}</div>`;
+html += `<div style="font-weight:700;color:#667eea">Disponierte EM (FW):</div><div>${doc.disponierte_em_fw || '-'}</div>`;
+html += `<div style="font-weight:700;color:#667eea">Disponierte EM (RD):</div><div>${doc.disponierte_em_rd || '-'}</div>`;
+html += `<div style="font-weight:700;color:#667eea">Patienten-Daten erhoben:</div><div>${doc.patienten_daten_erhoben ? 'Ja' : 'Nein'}</div>`;
+
+if (doc.patienten_daten_erhoben) {
+html += `<div style="font-weight:700;color:#667eea">Patient Name:</div><div>${doc.patient_name || '-'}</div>`;
+html += `<div style="font-weight:700;color:#667eea">Alter/Geburtsdatum:</div><div>${doc.patient_alter_geburtsdatum || '-'}</div>`;
+html += `<div style="font-weight:700;color:#667eea">Pat.-Nummer ILS:</div><div>${doc.patient_nummer_ils || '-'}</div>`;
+}
+
+html += `<div style="font-weight:700;color:#667eea">Sachverhalt:</div><div>${doc.sachverhalt || '-'}</div>`;
+html += `<div style="font-weight:700;color:#667eea">Protokollpflichtig:</div><div>${doc.protokollpflichtig ? 'Ja' : 'Nein'}</div>`;
+
+if (doc.protokollpflichtig) {
+html += `<div style="font-weight:700;color:#667eea">Begründung:</div><div>${doc.protokollpflichtig_begruendung || '-'}</div>`;
+}
+
+html += `<div style="font-weight:700;color:#667eea">Verantwortlicher unterwiesen:</div><div>${doc.verantwortlicher_unterwiesen ? 'Ja' : 'Nein'}</div>`;
+html += `<div style="font-weight:700;color:#667eea">Verantwortlicher Name:</div><div>${doc.verantwortlicher_name || '-'}</div>`;
+html += `<div style="font-weight:700;color:#667eea">Verantwortlicher Qualifikation:</div><div>${doc.verantwortlicher_qualifikation || '-'}</div>`;
+html += `<div style="font-weight:700;color:#667eea">Nacherfasst von:</div><div>${doc.nacherfasst_von_name || '-'} (${doc.nacherfasst_von_qualifikation || '-'})</div>`;
+html += `<div style="font-weight:700;color:#667eea">Nacherfasst am:</div><div>${doc.nacherfasst_datum ? new Date(doc.nacherfasst_datum).toLocaleString('de-DE') : '-'}</div>`;
+
+if (doc.nacherfasst_unterschrift) {
+html += `<div style="font-weight:700;color:#667eea">Unterschrift:</div><div><img src="${doc.nacherfasst_unterschrift}" class="signature-img"></div>`;
+}
+
+html += ‘</div>’;
+return html;
+}
+
+// ========================================
+// SECTION: VIEW ARCHIVED PATIENT DOCUMENT
+// ========================================
+window.viewPatArchiv = async (id) => {
+try {
+const doc = await pb.collection(‘patients’).getOne(id);
+const p = doc.payload || {};
+
+```
+window.currentViewedPayload = p;
+window.currentViewedAdmin = {
+  name: doc.admin_name,
+  datum: doc.admin_datum,
+  unterschrift: doc.admin_unterschrift
+};
+window.currentViewedOrgName = currentOrganization?.name || 'Feuerwehr';
+window.currentViewedDocType = 'patient';
+
+const displayName = `${p.vorname || ''} ${p.name || ''}`.trim() || 'Unbekannt';
+document.getElementById('detailsTitle').textContent = 'Patientendokumentation: ' + displayName;
+
+let html = buildPatArchiveHTML(p, doc);
+
+document.getElementById('detailsBody').innerHTML = html;
+
+// Öffne alle details-Elemente
+document.querySelectorAll('#detailsBody details').forEach(d => d.open = true);
+
+document.getElementById('detailsModal').classList.add('show');
+```
+
+} catch(e) {
+showMsg(’Fehler: ’ + e.message, ‘error’);
+}
+};
+
+// Diese Funktion ist sehr lang - ich erstelle sie in der nächsten Nachricht
+function buildPatArchiveHTML(p, doc) {
+// Platzhalter - wird in Teil 4 vervollständigt
+return ‘<p>Patientendaten werden geladen…</p>’;
+}
+
+// ========================================
+// SECTION: VIEW ARCHIVED NACHERFASSUNG
+// ========================================
+window.viewNachArchiv = async (id) => {
+await viewNach(id);
+};
+
+// ========================================
+// SECTION: CLOSE DETAILS MODAL
+// ========================================
+window.closeDetailsModal = () => {
+document.getElementById(‘detailsModal’).classList.remove(‘show’);
+};
+
+// ========================================
+// SECTION: GENERATE PDF FROM MODAL
+// ========================================
+window.generatePDFFromModal = async () => {
+const docType = window.currentViewedDocType;
+
+if (docType === ‘nacherfassung’) {
+await generateNacherfassungPDF(window.currentViewedNachData || {});
+} else {
+await generatePatientPDF();
+}
+};
+
+// ========================================
+// SECTION: INITIAL DATA LOAD
+// ========================================
+loadData();
+
+// ========================================
+// SECTION: FADE IN ANIMATION
+// ========================================
+setTimeout(() => {
+document.body.classList.add(‘loaded’);
+}, 100);
+
+// ========================================
+// SECTION: BUILD PATIENT ARCHIVE HTML (VOLLSTÄNDIG!)
+// ========================================
+function buildPatArchiveHTML(p, doc) {
+const v = (key, fallback = ‘’) =>
+p[key] !== undefined && p[key] !== null ? p[key] : fallback;
+
+const checked = (key) => p[key] ? ‘✓’ : ‘’;
+
+const radioValue = (key) => p[key] || ‘-’;
+
+// Build medication rows (read-only)
+const medications = p.medications || [];
+let medRowsHTML = ‘’;
+if (medications.length > 0) {
+medications.forEach((med, idx) => {
+medRowsHTML += `<tr> <td>${idx + 1}</td> <td>${med.name || '-'}</td> <td>${med.dose || '-'}</td> <td>${med.unit || '-'}</td> <td>${med.route || '-'}</td> <td>${med.time || '-'}</td> <td>${med.note || '-'}</td> </tr>`;
+});
+} else {
+medRowsHTML = ‘<tr><td colspan="7" style="text-align:center;color:#999">Keine Medikamente dokumentiert</td></tr>’;
+}
+
+// Build photos display
+const photos = p.photos || [];
+let photosHTML = ‘’;
+if (photos.length > 0) {
+photosHTML = ‘<div class="photo-grid">’;
+photos.forEach((photo, idx) => {
+photosHTML += `<img src="${photo}" alt="Foto ${idx+1}">`;
+});
+photosHTML += ‘</div>’;
+}
+
+// Return complete READONLY form HTML
+return `
+
+<details open>
+  <summary><i class="fa-solid fa-truck-medical"></i> Einsatzdaten</summary>
+  <div class="sec-body">
+    <div class="grid">
+      <div><strong>Einsatz-Nr:</strong><br>${v('einsatz_nr')}</div>
+      <div><strong>Pat./Auftrags-Nr:</strong><br>${v('auftrags_nr')}</div>
+      <div><strong>Rufname:</strong><br>${v('rufname')}</div>
+      <div><strong>Fahrzeug:</strong><br>${v('fahrzeug')}</div>
+      <div><strong>Datum/Uhrzeit:</strong><br>${v('zeit_einsatz') ? new Date(v('zeit_einsatz')).toLocaleString('de-DE') : '-'}</div>
+    </div>
+    <div style="margin-top:12px"><strong>Einsatz-Art:</strong><br>${v('einsatz_art')}</div>
+  </div>
+</details>
+
+<details open>
+  <summary><i class="fa-solid fa-id-card-clip"></i> Pat-Stammdaten</summary>
+  <div class="sec-body">
+    <div class="grid">
+      <div><strong>Name:</strong><br>${v('name')}</div>
+      <div><strong>Vorname:</strong><br>${v('vorname')}</div>
+      <div><strong>Geb.-Datum:</strong><br>${v('gebdatum') ? new Date(v('gebdatum')).toLocaleDateString('de-DE') : '-'}</div>
+      <div><strong>Alter:</strong><br>${v('alter')}</div>
+      <div><strong>Telefon:</strong><br>${v('telefon')}</div>
+      <div><strong>Mobil:</strong><br>${v('mobil')}</div>
+      <div><strong>Straße:</strong><br>${v('strasse')}</div>
+      <div><strong>PLZ, Ort:</strong><br>${v('plz_ort')}</div>
+      <div><strong>Kasse:</strong><br>${v('kasse')}</div>
+      <div><strong>Vers.-Nr:</strong><br>${v('versnr')}</div>
+      <div><strong>Hausarzt:</strong><br>${v('hausarzt')}</div>
+      <div><strong>Angehöriger:</strong><br>${v('angehoeriger')}</div>
+    </div>
+    <div style="margin-top:12px"><strong>Informationen / Aspekte:</strong><br>${v('infos') || '-'}</div>
+  </div>
+</details>
+
+<details open>
+  <summary><i class="fa-solid fa-notes-medical"></i> Notfallgeschehen / Anamnese</summary>
+  <div class="sec-body">
+    <div>${v('notfallgeschehen') || '-'}</div>
+    ${photosHTML ? '<div style="margin-top:12px"><strong>Fotos:</strong>' + photosHTML + '</div>' : ''}
+  </div>
+</details>
+
+<details open>
+  <summary><i class="fa-solid fa-stethoscope"></i> Messwerte / Atmung</summary>
+  <div class="sec-body">
+    <div class="grid">
+      <div><strong>RR syst.:</strong><br>${v('rr_sys')} mmHg</div>
+      <div><strong>RR diast.:</strong><br>${v('rr_dia')} mmHg</div>
+      <div><strong>HF:</strong><br>${v('hf')} /min</div>
+      <div><strong>AF:</strong><br>${v('af')} /min</div>
+      <div><strong>SpO₂:</strong><br>${v('spo2')} %</div>
+      <div><strong>etCO₂:</strong><br>${v('etco2')} mmHg</div>
+      <div><strong>Temp:</strong><br>${v('temp')} °C</div>
+      <div><strong>BZ (mg/dl):</strong><br>${v('bz_mg')}</div>
+      <div><strong>BZ (mmol/l):</strong><br>${v('bz_mmol')}</div>
+      <div><strong>Schmerz:</strong><br>${v('schmerz')} / 10</div>
+    </div>
+    <fieldset style="margin-top:12px">
+      <legend>qSOFA Score</legend>
+      <div class="badge">qSOFA: ${calculateQSOFA(p)}</div>
+    </fieldset>
+  </div>
+</details>
+
+<details open>
+  <summary><i class="fa-solid fa-syringe"></i> Maßnahmen – Zugang & Medikation</summary>
+  <div class="sec-body">
+    <fieldset>
+      <legend>Medikamente</legend>
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Medikament</th>
+            <th>Dosis</th>
+            <th>Einheit</th>
+            <th>Route</th>
+            <th>Uhrzeit</th>
+            <th>Bemerkung</th>
+          </tr>
+        </thead>
+        <tbody>${medRowsHTML}</tbody>
+      </table>
+    </fieldset>
+  </div>
+</details>
+
+<details open>
+  <summary><i class="fa-solid fa-signature"></i> Ausfüller & Unterschrift</summary>
+  <div class="sec-body">
+    <div class="grid">
+      <div><strong>Name:</strong><br>${v('ausfueller_name')}</div>
+      <div><strong>Zeitpunkt:</strong><br>${v('ausfueller_zeit') ? new Date(v('ausfueller_zeit')).toLocaleString('de-DE') : '-'}</div>
+    </div>
+    ${p.signature ? '<div style="margin-top:12px"><strong>Unterschrift:</strong><br><img src="' + p.signature + '" class="signature-img"></div>' : ''}
+  </div>
+</details>
+
+<details open>
+  <summary><i class="fa-solid fa-user-shield"></i> MPG-Beauftragter</summary>
+  <div class="sec-body">
+    <div class="grid">
+      <div><strong>Name:</strong><br>${doc.admin_name || '-'}</div>
+      <div><strong>Zeitpunkt:</strong><br>${doc.admin_datum ? new Date(doc.admin_datum).toLocaleString('de-DE') : '-'}</div>
+    </div>
+    ${doc.admin_unterschrift ? '<div style="margin-top:12px"><strong>Unterschrift:</strong><br><img src="' + doc.admin_unterschrift + '" class="signature-img"></div>' : ''}
+  </div>
+</details>`;
+}
+
+// ========================================
+// SECTION: GENERATE PATIENT PDF - KOMPLETT!
+// ========================================
+async function generatePatientPDF() {
+try {
+showMsg(‘📄 PDF wird erstellt…’, ‘success’);
+
+```
+const { jsPDF } = window.jspdf;
+const pdf = new jsPDF('p', 'mm', 'a4');
+
+const p = window.currentViewedPayload || {};
+const adminData = window.currentViewedAdmin || {};
+const orgName = currentOrganization?.name || 'Feuerwehr';
+
+const pageWidth = 210;
+const pageHeight = 297;
+const margin = 15;
+const fullWidth = pageWidth - 2 * margin;
+
+let currentY = 0;
+let pageNum = 1;
+
+// ========================================
+// PDF HEADER FUNCTION
+// ========================================
+function addHeader(isFirstPage = false) {
+  pdf.setFillColor(102, 126, 234);
+  pdf.rect(0, 0, pageWidth, isFirstPage ? 35 : 25, 'F');
+  
+  pdf.setTextColor(255, 255, 255);
+  pdf.setFontSize(isFirstPage ? 20 : 14);
+  pdf.setFont(undefined, 'bold');
+  
+  if (isFirstPage) {
+    pdf.text(orgName, margin, 12);
+    pdf.setFontSize(16);
+    pdf.text('NOTFALLPROTOKOLL', margin, 24);
+    pdf.setFontSize(10);
+    pdf.setFont(undefined, 'normal');
+    pdf.text('Erstellt: ' + new Date().toLocaleString('de-DE', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    }), pageWidth - margin - 65, 24);
+  } else {
+    pdf.text(`NOTFALLPROTOKOLL - Seite ${pageNum}`, margin, 16);
+  }
+  
+  pdf.setTextColor(0, 0, 0);
+}
+
+// ========================================
+// HELPER: CHECK PAGE BREAK
+// ========================================
+function checkPageBreak(neededHeight) {
+  if (currentY + neededHeight > pageHeight - 20) {
+    pdf.addPage();
+    pageNum++;
+    addHeader(false);
+    currentY = 30;
+    return true;
+  }
+  return false;
+}
+
+// ========================================
+// HELPER: DRAW SECTION BOX
+// ========================================
+function drawSection(title, height) {
+  pdf.setFillColor(245, 247, 250);
+  pdf.rect(margin, currentY, fullWidth, height, 'F');
+  
+  pdf.setFillColor(102, 126, 234);
+  pdf.rect(margin, currentY, fullWidth, 7, 'F');
+  
+  pdf.setTextColor(255, 255, 255);
+  pdf.setFontSize(11);
+  pdf.setFont(undefined, 'bold');
+  pdf.text(title, margin + 2, currentY + 5);
+  
+  pdf.setTextColor(0, 0, 0);
+  pdf.setFont(undefined, 'normal');
+  
+  return currentY + 9;
+}
+
+// ========================================
+// HELPER: ADD FIELD
+// ========================================
+function addField(x, y, label, value) {
+  pdf.setFontSize(9);
+  pdf.setFont(undefined, 'bold');
+  pdf.text(label, x, y);
+  
+  pdf.setFont(undefined, 'normal');
+  pdf.setFontSize(10);
+  pdf.text(String(value || '-'), x, y + 4);
+  
+  return y + 9;
+}
+
+// ========================================
+// PAGE 1 START
+// ========================================
+addHeader(true);
+currentY = 40;
+
+// SECTION 1: EINSATZDATEN
+checkPageBreak(38);
+let boxY = drawSection('1. EINSATZDATEN', 38);
+
+const col3W = (fullWidth - 6) / 3;
+addField(margin + 2, boxY, 'Einsatz-Nr:', p.einsatz_nr);
+addField(margin + 2 + col3W + 3, boxY, 'Datum/Uhrzeit:', 
+  p.zeit_einsatz ? new Date(p.zeit_einsatz).toLocaleString('de-DE') : '-');
+addField(margin + 2 + 2*col3W + 6, boxY, 'Pat./Auftrags-Nr:', p.auftrags_nr);
+
+addField(margin + 2, boxY + 12, 'Fahrzeug:', p.fahrzeug);
+addField(margin + 2 + col3W + 3, boxY + 12, 'Rufname:', p.rufname);
+addField(margin + 2 + 2*col3W + 6, boxY + 12, 'Einsatz-Art:', p.einsatz_art);
+
+currentY += 40;
+
+// SECTION 2: PATIENT
+checkPageBreak(38);
+boxY = drawSection('2. PATIENT', 38);
+
+const patName = `${p.vorname || ''} ${p.name || ''}`.trim();
+addField(margin + 2, boxY, 'Name:', patName);
+addField(margin + 2 + col3W + 3, boxY, 'Straße:', p.strasse);
+addField(margin + 2 + 2*col3W + 6, boxY, 'Kasse:', p.kasse);
+
+addField(margin + 2, boxY + 12, 'Geburtsdatum:', 
+  p.gebdatum ? new Date(p.gebdatum).toLocaleDateString('de-DE') : '-');
+addField(margin + 2 + col3W + 3, boxY + 12, 'PLZ, Ort:', p.plz_ort);
+addField(margin + 2 + 2*col3W + 6, boxY + 12, 'Vers.-Nr.:', p.versnr);
+
+addField(margin + 2, boxY + 24, 'Alter:', p.alter);
+addField(margin + 2 + col3W + 3, boxY + 24, 'Telefon:', p.telefon || p.mobil);
+addField(margin + 2 + 2*col3W + 6, boxY + 24, 'Hausarzt:', p.hausarzt);
+
+currentY += 40;
+
+// SECTION 3: ANAMNESE
+checkPageBreak(50);
+boxY = drawSection('3. ANAMNESE / NOTFALLGESCHEHEN', 50);
+
+pdf.setFontSize(9.5);
+const anamLines = pdf.splitTextToSize(p.notfallgeschehen || '-', fullWidth - 4);
+pdf.text(anamLines.slice(0, 18), margin + 2, boxY);
+
+currentY += 52;
+
+// SECTION 4: VITALPARAMETER
+checkPageBreak(33);
+boxY = drawSection('4. VITALPARAMETER', 33);
+
+const col4W = (fullWidth - 9) / 4;
+addField(margin + 2, boxY, 'RR:', `${p.rr_sys || '-'} / ${p.rr_dia || '-'} mmHg`);
+addField(margin + 2 + col4W + 3, boxY, 'AF:', `${p.af || '-'} /min`);
+addField(margin + 2 + 2*col4W + 6, boxY, 'Temp:', `${p.temp || '-'} °C`);
+addField(margin + 2 + 3*col4W + 9, boxY, 'etCO₂:', `${p.etco2 || '-'} mmHg`);
+
+addField(margin + 2, boxY + 10, 'HF:', `${p.hf || '-'} /min`);
+addField(margin + 2 + col4W + 3, boxY + 10, 'SpO₂:', `${p.spo2 || '-'} %`);
+addField(margin + 2 + 2*col4W + 6, boxY + 10, 'BZ:', `${p.bz_mg || '-'} mg/dl`);
+addField(margin + 2 + 3*col4W + 9, boxY + 10, 'Schmerz:', `${p.schmerz || '-'} / 10`);
+
+addField(margin + 2, boxY + 20, 'qSOFA:', calculateQSOFA(p));
+
+currentY += 35;
+
+// SECTION 5: MEDIKAMENTE
+checkPageBreak(55);
+boxY = drawSection('5. MEDIKAMENTE', 55);
+
+const meds = p.medications || [];
+if (meds.length > 0) {
+  pdf.setFontSize(8);
+  pdf.setFont(undefined, 'bold');
+  
+  const medX = margin + 2;
+  let medY = boxY;
+  
+  // Table header
+  pdf.setFillColor(245, 245, 245);
+  pdf.rect(medX, medY, fullWidth - 4, 5, 'F');
+  
+  pdf.text('#', medX + 1, medY + 3.5);
+  pdf.text('Medikament', medX + 8, medY + 3.5);
+  pdf.text('Dosis', medX + 60, medY + 3.5);
+  pdf.text('Einh.', medX + 80, medY + 3.5);
+  pdf.text('Route', medX + 100, medY + 3.5);
+  pdf.text('Uhrzeit', medX + 120, medY + 3.5);
+  pdf.text('Bemerkung', medX + 145, medY + 3.5);
+  
+  medY += 6;
+  pdf.setFont(undefined, 'normal');
+  
+  // Table rows
+  meds.slice(0, 6).forEach((med, idx) => {
+    pdf.text(`${idx + 1}`, medX + 1, medY);
+    pdf.text(med.name || '-', medX + 8, medY);
+    pdf.text(med.dose || '-', medX + 60, medY);
+    pdf.text(med.unit || '-', medX + 80, medY);
+    pdf.text(med.route || '-', medX + 100, medY);
+    pdf.text(med.time || '-', medX + 120, medY);
+    const noteLines = pdf.splitTextToSize(med.note || '-', 30);
+    pdf.text(noteLines[0] || '-', medX + 145, medY);
+    medY += 5;
+  });
+} else {
+  pdf.setFontSize(9);
+  pdf.text('Keine Medikamentengabe dokumentiert', margin + 2, boxY + 5);
+}
+
+currentY += 57;
+
+// SECTION 6: UNTERSCHRIFTEN
+checkPageBreak(40);
+boxY = drawSection('6. UNTERSCHRIFTEN', 40);
+
+const col2W = (fullWidth - 3) / 2;
+
+addField(margin + 2, boxY, 'Ausfüller:', p.ausfueller_name);
+pdf.setFontSize(9);
+pdf.text(p.ausfueller_zeit ? new Date(p.ausfueller_zeit).toLocaleString('de-DE') : '', 
+  margin + 2, boxY + 8);
+
+if (p.signature) {
+  try {
+    pdf.addImage(p.signature, 'PNG', margin + 2, boxY + 12, 50, 20);
+  } catch(e) {
+    pdf.setFontSize(8);
+    pdf.text('(Unterschrift vorhanden)', margin + 2, boxY + 20);
+  }
+}
+
+addField(margin + col2W + 5, boxY, 'MPG-Beauftragter:', adminData.name);
+pdf.setFontSize(9);
+pdf.text(adminData.datum ? new Date(adminData.datum).toLocaleString('de-DE') : '', 
+  margin + col2W + 5, boxY + 8);
+
+if (adminData.unterschrift) {
+  try {
+    pdf.addImage(adminData.unterschrift, 'PNG', margin + col2W + 5, boxY + 12, 50, 20);
+  } catch(e) {
+    pdf.setFontSize(8);
+    pdf.text('(Unterschrift vorhanden)', margin + col2W + 5, boxY + 20);
+  }
+}
+
+currentY += 42;
+
+// ========================================
+// FOOTER ON ALL PAGES
+// ========================================
+const totalPages = pdf.internal.pages.length - 1;
+for (let i = 1; i <= totalPages; i++) {
+  pdf.setPage(i);
+  pdf.setFontSize(8);
+  pdf.setTextColor(100, 100, 100);
+  
+  const einsatzNr = p.einsatz_nr || '?';
+  const footerText = `Einsatz-Nr: ${einsatzNr} | ${orgName} | Seite ${i} von ${totalPages}`;
+  
+  pdf.text(footerText, pageWidth / 2, pageHeight - 5, { align: 'center' });
+}
+
+// ========================================
+// SAVE PDF
+// ========================================
+const pdfPatName = `${p.vorname || ''}_${p.name || ''}`.trim() || 'Patient';
+const einsatzNr = p.einsatz_nr || 'ohne_nr';
+const timestamp = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+
+pdf.save(`Notfallprotokoll_${einsatzNr}_${timestamp}.pdf`);
+
+showMsg('✅ PDF erfolgreich erstellt!', 'success');
+```
+
+} catch(e) {
+console.error(‘PDF Error:’, e);
+showMsg(’❌ Fehler beim PDF-Export: ’ + e.message, ‘error’);
+}
+}
+
+// ========================================
+// SECTION: GENERATE NACHERFASSUNG PDF
+// ========================================
+async function generateNacherfassungPDF(doc) {
+try {
+showMsg(‘📄 PDF wird erstellt…’, ‘success’);
+
+```
+const { jsPDF } = window.jspdf;
+const pdf = new jsPDF('p', 'mm', 'a4');
+
+const orgName = currentOrganization?.name || 'Feuerwehr';
+const pageWidth = 210;
+const pageHeight = 297;
+const margin = 10;
+const fullWidth = pageWidth - 2 * margin;
+
+let currentY = 0;
+
+// PDF Header
+pdf.setFillColor(102, 126, 234);
+pdf.rect(0, 0, pageWidth, 30, 'F');
+
+pdf.setTextColor(255, 255, 255);
+pdf.setFontSize(22);
+pdf.setFont(undefined, 'bold');
+pdf.text(orgName, margin, 12);
+
+pdf.setFontSize(18);
+pdf.text('EINSATZNACHERFASSUNG', margin, 22);
+
+pdf.setFontSize(10);
+pdf.setFont(undefined, 'normal');
+pdf.text(`Erstellt: ${new Date().toLocaleString('de-DE')}`, pageWidth - margin - 60, 22);
+
+currentY = 35;
+
+// Helper function: Draw box
+function drawBox(x, y, width, height, title) {
+  pdf.setFillColor(245, 247, 250);
+  pdf.rect(x, y, width, height, 'F');
+  
+  pdf.setFillColor(102, 126, 234);
+  pdf.rect(x, y, width, 8, 'F');
+  
+  pdf.setTextColor(255, 255, 255);
+  pdf.setFontSize(11);
+  pdf.setFont(undefined, 'bold');
+  pdf.text(title, x + 3, y + 5.5);
+  
+  pdf.setTextColor(0, 0, 0);
+  pdf.setFont(undefined, 'normal');
+  
+  return y + 11;
+}
+
+// Helper function: Add field
+function addField(x, y, label, value, width) {
+  pdf.setFontSize(10);
+  pdf.setFont(undefined, 'bold');
+  pdf.setTextColor(102, 126, 234);
+  pdf.text(label, x, y);
+  
+  pdf.setFont(undefined, 'normal');
+  pdf.setTextColor(0, 0, 0);
+  pdf.setFontSize(10);
+  
+  const lines = pdf.splitTextToSize(value || '-', width - 6);
+  pdf.text(lines, x, y + 5);
+  
+  return y + 5 + (lines.length * 5) + 2;
+}
+
+// SECTION 1: EINSATZDATEN
+let boxY = drawBox(margin, currentY, fullWidth, 55, '1. EINSATZDATEN');
+
+const col2Width = (fullWidth - 3) / 2;
+let tempY = boxY;
+
+tempY = addField(margin + 3, tempY, 'Datum/Alarmzeit:', 
+  doc.datum_alarmzeit ? new Date(doc.datum_alarmzeit).toLocaleString('de-DE') : '-', col2Width);
+tempY = addField(margin + 3, tempY, 'Stichwort:', doc.stichwort, col2Width);
+tempY = addField(margin + 3, tempY, 'Einsatznummer ILS:', doc.einsatznummer_ils, col2Width);
+
+tempY = boxY;
+tempY = addField(margin + 3 + col2Width + 3, tempY, 'Datum/Einsatzende:', 
+  doc.datum_einsatzende ? new Date(doc.datum_einsatzende).toLocaleString('de-DE') : '-', col2Width);
+tempY = addField(margin + 3 + col2Width + 3, tempY, 'Kategorie:', doc.kategorie, col2Width);
+tempY = addField(margin + 3 + col2Width + 3, tempY, 'Meldebild:', doc.meldebild, col2Width);
+
+currentY += 57;
+
+// SECTION 2: EINSATZORT
+boxY = drawBox(margin, currentY, fullWidth, 35, '2. EINSATZORT');
+pdf.setFontSize(10);
+const adresseLines = pdf.splitTextToSize(doc.adresse || '-', fullWidth - 6);
+pdf.text(adresseLines, margin + 3, boxY);
+currentY += 37;
+
+// SECTION 3: EINSATZMITTEL
+boxY = drawBox(margin, currentY, fullWidth, 35, '3. EINSATZMITTEL');
+tempY = boxY;
+tempY = addField(margin + 3, tempY, 'Disponierte EM (FW):', doc.disponierte_em_fw, col2Width);
+tempY = boxY;
+tempY = addField(margin + 3 + col2Width + 3, tempY, 'Disponierte EM (RD):', doc.disponierte_em_rd, col2Width);
+currentY += 37;
+
+// SECTION 4: PATIENTEN-DATEN
+boxY = drawBox(margin, currentY, fullWidth, 55, '4. PATIENTEN-DATEN');
+tempY = boxY;
+tempY = addField(margin + 3, tempY, 'Erhoben:', doc.patienten_daten_erhoben ? 'Ja' : 'Nein', fullWidth);
+
+if (doc.patienten_daten_erhoben) {
+  tempY = addField(margin + 3, tempY, 'Name:', doc.patient_name, col2Width);
+  tempY = addField(margin + 3, tempY, 'Alter/Geburtsdatum:', doc.patient_alter_geburtsdatum, col2Width);
+  
+  tempY = boxY + 20;
+  tempY = addField(margin + 3 + col2Width + 3, tempY, 'Pat.-Nummer ILS:', doc.patient_nummer_ils, col2Width);
+}
+
+currentY += 57;
+
+// SECTION 5: SACHVERHALT
+boxY = drawBox(margin, currentY, fullWidth, 60, '5. SACHVERHALT VOR ORT');
+pdf.setFontSize(10);
+const sachverhaltLines = pdf.splitTextToSize(doc.sachverhalt || '-', fullWidth - 6);
+pdf.text(sachverhaltLines, margin + 3, boxY);
+currentY += 62;
+
+// SECTION 6: PROTOKOLLPFLICHT
+boxY = drawBox(margin, currentY, fullWidth, 50, '6. PROTOKOLLPFLICHT (§630f BGB)');
+tempY = boxY;
+tempY = addField(margin + 3, tempY, 'War dieser Einsatz protokollpflichtig?', 
+  doc.protokollpflichtig ? 'Ja' : 'Nein', fullWidth);
+
+if (doc.protokollpflichtig_begruendung) {
+  pdf.setFontSize(9.5);
+  pdf.setFont(undefined, 'bold');
+  pdf.text('Begründung:', margin + 3, tempY);
+  pdf.setFont(undefined, 'normal');
+  const begruendungLines = pdf.splitTextToSize(doc.protokollpflichtig_begruendung, fullWidth - 6);
+  pdf.text(begruendungLines, margin + 3, tempY + 5);
+}
+
+currentY += 52;
+
+// SECTION 7: VERANTWORTLICHER
+boxY = drawBox(margin, currentY, fullWidth, 45, '7. VERANTWORTLICHER');
+tempY = boxY;
+tempY = addField(margin + 3, tempY, 'Name:', doc.verantwortlicher_name, col2Width);
+tempY = addField(margin + 3, tempY, 'Qualifikation:', doc.verantwortlicher_qualifikation, col2Width);
+
+tempY = boxY;
+tempY = addField(margin + 3 + col2Width + 3, tempY, 'War die verantwortliche Person mit der', '', col2Width);
+pdf.setFontSize(9);
+pdf.text('Thematik der Einsatz-/Patientendokumentation', margin + 3 + col2Width + 3, tempY);
+tempY += 5;
+pdf.text('(gem. §630f BGB) unterwiesen?', margin + 3 + col2Width + 3, tempY);
+tempY += 5;
+pdf.setFontSize(10);
+pdf.setFont(undefined, 'bold');
+pdf.text(doc.verantwortlicher_unterwiesen ? 'Ja' : 'Nein', margin + 3 + col2Width + 3, tempY);
+pdf.setFont(undefined, 'normal');
+
+currentY += 47;
+
+// SECTION 8: NACHERFASSUNG
+boxY = drawBox(margin, currentY, fullWidth, 45, '8. NACHERFASSUNG');
+tempY = boxY;
+tempY = addField(margin + 3, tempY, 'Nacherfasst von:', doc.nacherfasst_von_name, col2Width);
+tempY = addField(margin + 3, tempY, 'Qualifikation:', doc.nacherfasst_von_qualifikation, col2Width);
+
+tempY = boxY;
+tempY = addField(margin + 3 + col2Width + 3, tempY, 'Datum:', 
+  doc.nacherfasst_datum ? new Date(doc.nacherfasst_datum).toLocaleString('de-DE') : '-', col2Width);
+
+currentY += 47;
+
+// SECTION 9: UNTERSCHRIFT
+boxY = drawBox(margin, currentY, fullWidth, 40, '9. UNTERSCHRIFT');
+
+if (doc.nacherfasst_unterschrift) {
+  try {
+    pdf.addImage(doc.nacherfasst_unterschrift, 'PNG', margin + 3, boxY, 60, 25);
+  } catch(e) {
+    pdf.text('(Unterschrift vorhanden)', margin + 3, boxY + 5);
+  }
+} else {
+  pdf.text('Keine Unterschrift vorhanden', margin + 3, boxY + 5);
+}
+
+currentY += 42;
+
+// SECTION 10: HINWEISE
+boxY = drawBox(margin, currentY, fullWidth, 30, '10. RECHTLICHE HINWEISE');
+pdf.setFontSize(8);
+pdf.setTextColor(80, 80, 80);
+pdf.text('Dieses Dokument wurde gemäß §630f BGB (Dokumentationspflicht) erstellt.', margin + 3, boxY);
+pdf.text('Die Angaben wurden nach bestem Wissen und Gewissen erfasst.', margin + 3, boxY + 5);
+pdf.text('Fehlerhafte oder unvollständige Angaben können zu rechtlichen Konsequenzen führen.', 
+  margin + 3, boxY + 10);
+
+currentY += 32;
+
+// FOOTER
+pdf.setFontSize(8);
+pdf.setTextColor(100, 100, 100);
+pdf.text(`${orgName} - Einsatznacherfassung`, margin, pageHeight - 5);
+pdf.text(`Seite 1 von 1`, pageWidth - margin - 25, pageHeight - 5);
+pdf.text(`Erstellt: ${new Date().toLocaleString('de-DE')}`, pageWidth / 2 - 30, pageHeight - 5);
+
+// Save PDF
+const stichwort = doc.stichwort ? doc.stichwort.replace(/[^a-zA-Z0-9]/g, '_') : 'Nacherfassung';
+const timestamp = new Date().toISOString().slice(0, 10);
+pdf.save(`Nacherfassung_${stichwort}_${timestamp}.pdf`);
+
+showMsg('✅ PDF erfolgreich erstellt!', 'success');
+```
+
+} catch(e) {
+console.error(‘PDF Error:’, e);
+showMsg(’❌ Fehler beim PDF-Export: ’ + e.message, ‘error’);
+}
+}
+
+console.log(‘✅ patientendokumentation-dateien.js erfolgreich geladen!’);
+
+</script>
+
+</body>
+</html>
