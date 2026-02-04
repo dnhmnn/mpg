@@ -581,11 +581,10 @@ th {
     border: 1px solid #ddd;
   }
 }
+
 </style>
 
 </head>
-<body class="loading">
-
 <body class="loading">
 
 <!-- ==================== STATUS BAR START ==================== -->
@@ -672,7 +671,7 @@ th {
   <div class="modal" id="signModal">
     <div class="modal-box" style="max-width:600px">
       <h3><i class="fa-solid fa-signature"></i> Verantwortlicher / MPG-Beauftragter</h3>
-      <p>Dokument wurde geprüft und ist korrekt. Mit Unterschrift wird es ins Archiv verschoben.</p>
+      <p>Dokument wurde geprueft und ist korrekt. Mit Unterschrift wird es ins Archiv verschoben.</p>
       <div class="form-group">
         <label>Name (Verantwortlicher / MPG-Beauftragter):</label>
         <input type="text" id="adminName" placeholder="Ihr Name">
@@ -682,7 +681,7 @@ th {
         <canvas id="adminSigCanvas" class="sig-canvas"></canvas>
         <div class="sig-actions">
           <button class="btn btn-secondary" onclick="clearAdminSig()">
-            <i class="fa-solid fa-eraser"></i> Löschen
+            <i class="fa-solid fa-eraser"></i> Loeschen
           </button>
         </div>
       </div>
@@ -774,18 +773,18 @@ th {
         </div>
         <h4 style="margin-top:20px;color:#667eea">Protokollpflicht</h4>
         <div class="form-group">
-          <label>War dieser Einsatz gemäß §630f BGB protokollpflichtig?</label>
+          <label>War dieser Einsatz gemaess Paragraph 630f BGB protokollpflichtig?</label>
           <div class="radio-group">
             <label><input type="radio" name="protokollpflichtig" value="ja"> Ja</label>
             <label><input type="radio" name="protokollpflichtig" value="nein"> Nein</label>
           </div>
         </div>
         <div class="form-group">
-          <label>Begründung:</label>
+          <label>Begruendung:</label>
           <textarea name="protokollpflichtig_begruendung"></textarea>
         </div>
         <div class="form-group">
-          <label>War die verantwortliche Person mit der Thematik der Einsatz-/Patientendokumentation (gem. §630f BGB) unterwiesen?</label>
+          <label>War die verantwortliche Person mit der Thematik der Einsatz-/Patientendokumentation (gem. Paragraph 630f BGB) unterwiesen?</label>
           <div class="radio-group">
             <label><input type="radio" name="verantwortlicher_unterwiesen" value="ja"> Ja</label>
             <label><input type="radio" name="verantwortlicher_unterwiesen" value="nein"> Nein</label>
@@ -818,7 +817,7 @@ th {
           <canvas id="nachSigCanvas" class="sig-canvas"></canvas>
           <div class="sig-actions">
             <button type="button" class="btn btn-secondary" onclick="clearNachSig()">
-              <i class="fa-solid fa-eraser"></i> Löschen
+              <i class="fa-solid fa-eraser"></i> Loeschen
             </button>
           </div>
         </div>
@@ -841,7 +840,7 @@ th {
       <div id="detailsBody"></div>
       <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
         <button class="btn btn-secondary" onclick="closeDetailsModal()">
-          <i class="fa-solid fa-times"></i> Schließen
+          <i class="fa-solid fa-times"></i> Schliessen
         </button>
         <button class="btn" onclick="generatePDFFromModal()">
           <i class="fa-solid fa-file-pdf"></i> PDF erstellen
@@ -850,10 +849,6 @@ th {
     </div>
   </div>
 <!-- ==================== DETAILS MODAL END ==================== -->
-
-<!-- ==================== JAVASCRIPT START ==================== -->
-
-  <script type="module" src="patientendokumentation-dateien.js"></script>
 
 <script type="text/javascript">
 // ========================================
@@ -937,7 +932,7 @@ function calculateGCS(p) {
   const v = parseInt(p.gcs_v || 0);
   const m = parseInt(p.gcs_m || 0);
   const sum = e + v + m;
-  return sum > 0 ? sum : '—';
+  return sum > 0 ? sum : '-';
 }
 
 function calculateQSOFA(p) {
@@ -948,7 +943,7 @@ function calculateQSOFA(p) {
   if (gcs > 0 && gcs < 15) score++;
   if (af >= 22) score++;
   if (rrSys > 0 && rrSys <= 100) score++;
-  return (gcs > 0 || af > 0 || rrSys > 0) ? score : '—';
+  return (gcs > 0 || af > 0 || rrSys > 0) ? score : '-';
 }
 
 // ========================================
@@ -1204,7 +1199,7 @@ function buildEditForm(payload) {
       <label>Temp (°C)<input name="temp" type="number" step="0.1" value="${v('temp')}"></label>
       <label>BZ (mg/dl)<input name="bz_mg" type="number" value="${v('bz_mg')}"></label>
       <label>BZ (mmol/l)<input name="bz_mmol" type="number" step="0.1" value="${v('bz_mmol')}"></label>
-      <label>Schmerz (0–10)<input name="schmerz" type="number" min="0" max="10" value="${v('schmerz')}"></label>
+      <label>Schmerz (0-10)<input name="schmerz" type="number" min="0" max="10" value="${v('schmerz')}"></label>
     </div>
     <fieldset style="margin-top:.8rem">
       <legend>qSOFA (auto)</legend>
@@ -1214,7 +1209,7 @@ function buildEditForm(payload) {
 </details>
 
 <details open>
-  <summary><i class="fa-solid fa-syringe"></i> Maßnahmen – Zugang & Medikation</summary>
+  <summary><i class="fa-solid fa-syringe"></i> Maßnahmen - Zugang & Medikation</summary>
   <div class="sec-body">
     <fieldset>
       <legend>Medikamente</legend>
@@ -1856,7 +1851,7 @@ return `
 </details>
 
 <details open>
-  <summary><i class="fa-solid fa-syringe"></i> Maßnahmen – Zugang & Medikation</summary>
+  <summary><i class="fa-solid fa-syringe"></i> Maßnahmen - Zugang & Medikation</summary>
   <div class="sec-body">
     <fieldset>
       <legend>Medikamente</legend>
