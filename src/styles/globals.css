@@ -7,7 +7,7 @@
 
 body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
-  background: linear-gradient(135deg, #c8102e 0%, #ffffff 50%, #c8102e 100%);
+  background: linear-gradient(135deg, #ffffff 0%, #c8102e 50%, #8b0000 100%);
   background-attachment: fixed;
   min-height: 100vh;
   overflow: hidden;
