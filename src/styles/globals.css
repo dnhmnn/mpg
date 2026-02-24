@@ -7,7 +7,7 @@
 
 body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
-  background: linear-gradient(135deg, #ffffff 0%, #c8102e 50%, #8b0000 100%);
+  background: linear-gradient(135deg, #ff6b35 0%, #c8102e 50%, #4a0404 100%);
   background-attachment: fixed;
   min-height: 100vh;
   overflow: hidden;
@@ -278,7 +278,7 @@ body {
   font-weight: 600;
   font-size: 15px;
   cursor: pointer;
-  background: linear-gradient(135deg, #c8102e, #8b0000);
+  background: linear-gradient(135deg, #ff6b35, #c8102e);
   color: #fff;
   transition: all 0.2s;
   font-family: inherit;
@@ -409,7 +409,7 @@ body.loaded {
 }
 
 .settings-tab.active {
-  background: linear-gradient(135deg, #c8102e, #8b0000);
+  background: linear-gradient(135deg, #ff6b35, #c8102e);
   color: #fff;
 }
 
