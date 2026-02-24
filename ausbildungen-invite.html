@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Schulungseinladung – Responda</title>
+  <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet"/>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
+  <script src="https://cdn.jsdelivr.net/npm/pocketbase@0.21.3/dist/pocketbase.umd.js"></script>
+
+  <style>
+    :root{
+      --primary:#c8102e;
+      --success:#16a34a;
+      --warning:#f59e0b;
+      --error:#dc2626;
+      --bg:#f8fafc;
+      --text:#0f172a;
+      --muted:#64748b;
+      --border:#e2e8f0;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      background:linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height:100vh;
+      color:var(--text);
+      font-family:'Atkinson Hyperlegible',-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+      line-height:1.5;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:20px;
+    }
+    
+    .card{
+      background:#fff;
+      border-radius:16px;
+      padding:2.5rem;
+      max-width:550px;
+      width:100%;
+      box-shadow:0 20px 60px rgba(0,0,0,.3);
+      animation:slideUp 0.5s ease-out;
+    }
+    
+    @keyframes slideUp{
+      from{opacity:0;transform:translateY(30px)}
+      to{opacity:1;transform:translateY(0)}
+    }
+    
+    .logo{
+      text-align:center;
+      margin-bottom:2rem;
+    }
+    .logo i{
+      font-size:4rem;
+      color:var(--primary);
+      margin-bottom:.5rem;
+    }
+    .logo h1{
+      margin:0;
+      font-size:1.8rem;
+      color:var(--primary);
+      font-weight:800;
+    }
+    .logo p{
+      margin:.5rem 0 0 0;
+      color:var(--muted);
+      font-size:.95rem;
+    }
+    
+    .info-box{
+      background:#f9fafb;
+      padding:1.5rem;
+      border-radius:12px;
+      margin-bottom:2rem;
+      border-left:4px solid var(--primary);
+    }
+    .info-box h3{
+      margin:0 0 1rem 0;
+      color:var(--primary);
+      font-size:1.2rem;
+      display:flex;
+      align-items:center;
+      gap:.5rem;
+    }
+    .info-row{
+      display:flex;
+      justify-content:space-between;
+      padding:.75rem 0;
+      border-bottom:1px solid var(--border);
+    }
+    .info-row:last-child{border-bottom:none}
+    .info-label{
+      font-weight:700;
+      color:var(--muted);
+      display:flex;
+      align-items:center;
+      gap:.5rem;
+    }
+    .info-value{
+      font-weight:700;
+      color:var(--text);
+      text-align:right;
+    }
+    
+    .form-section{
+      background:#fffbeb;
+      padding:1.5rem;
+      border-radius:12px;
+      margin-bottom:1.5rem;
+      border:2px solid #fbbf24;
+    }
+    .form-section h3{
+      margin:0 0 1rem 0;
+      color:#92400e;
+      font-size:1.1rem;
+      display:flex;
+      align-items:center;
+      gap:.5rem;
+    }
+    
+    .form-group{
+      margin-bottom:1.5rem;
+    }
+    .form-group label{
+      display:block;
+      font-weight:700;
+      margin-bottom:.5rem;
+      color:var(--text);
+    }
+    .form-group input{
+      width:100%;
+      padding:.85rem;
+      border:2px solid var(--border);
+      border-radius:8px;
+      font-size:1rem;
+      font-family:inherit;
+      background:#fff;
+      transition:all 0.2s;
+    }
+    .form-group input:focus{
+      outline:none;
+      border-color:var(--primary);
+      box-shadow:0 0 0 3px rgba(200,16,46,0.1);
+    }
+    .form-group input::placeholder{
+      color:#9ca3af;
+    }
+    
+    .btn-group{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:1rem;
+      margin-top:2rem;
+    }
+    .btn{
+      padding:1rem 1.5rem;
+      border:none;
+      border-radius:8px;
+      font-weight:700;
+      font-size:1rem;
+      cursor:pointer;
+      transition:all 0.2s;
+      font-family:inherit;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:.5rem;
+    }
+    .btn:disabled{
+      opacity:0.5;
+      cursor:not-allowed;
+      transform:none;
+    }
+    .btn:not(:disabled):hover{
+      transform:translateY(-2px);
+      box-shadow:0 4px 12px rgba(0,0,0,.15);
+    }
+    .btn-success{
+      background:var(--success);
+      color:#fff;
+    }
+    .btn-error{
+      background:var(--error);
+      color:#fff;
+    }
+    
+    .already-responded{
+      background:#f0fdf4;
+      border:2px solid #86efac;
+      padding:1.5rem;
+      border-radius:12px;
+      text-align:center;
+      margin-top:1.5rem;
+    }
+    .already-responded.declined{
+      background:#fee2e2;
+      border-color:#fca5a5;
+    }
+    .already-responded i{
+      font-size:3rem;
+      margin-bottom:.5rem;
+    }
+    .already-responded.declined i{
+      color:var(--error);
+    }
+    .already-responded h3{
+      margin:0 0 .5rem 0;
+      font-size:1.3rem;
+    }
+    .already-responded p{
+      margin:0;
+      color:var(--muted);
+    }
+    
+    .success-screen, .error-screen{
+      text-align:center;
+      padding:2rem 0;
+    }
+    .success-screen i{
+      font-size:5rem;
+      color:var(--success);
+      margin-bottom:1rem;
+    }
+    .error-screen i{
+      font-size:5rem;
+      color:var(--error);
+      margin-bottom:1rem;
+    }
+    .success-screen h2, .error-screen h2{
+      margin:0 0 1rem 0;
+      font-size:1.8rem;
+    }
+    .success-screen p, .error-screen p{
+      color:var(--muted);
+      font-size:1.1rem;
+      margin:0;
+    }
+    
+    .loading{
+      text-align:center;
+      padding:3rem 0;
+    }
+    .loading i{
+      font-size:3rem;
+      color:var(--primary);
+      animation:spin 1s linear infinite;
+    }
+    @keyframes spin{
+      from{transform:rotate(0deg)}
+      to{transform:rotate(360deg)}
+    }
+    
+    .error-msg{
+      background:#fee;
+      color:#c00;
+      padding:1rem;
+      border-radius:8px;
+      margin-bottom:1rem;
+      border-left:4px solid #c00;
+      display:none;
+      font-weight:700;
+    }
+    .error-msg.show{
+      display:block;
+      animation:shake 0.5s;
+    }
+    
+    @keyframes shake{
+      0%, 100%{transform:translateX(0)}
+      25%{transform:translateX(-10px)}
+      75%{transform:translateX(10px)}
+    }
+    
+    .hint-box{
+      background:#eff6ff;
+      padding:1rem;
+      border-radius:8px;
+      border-left:4px solid #3b82f6;
+      margin-top:1rem;
+      font-size:.9rem;
+      color:#1e40af;
+    }
+    
+    @media (max-width:600px){
+      .card{padding:1.5rem}
+      .logo h1{font-size:1.5rem}
+      .btn-group{grid-template-columns:1fr}
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="card" id="mainCard">
+  
+  <!-- Loading State -->
+  <div class="loading" id="loadingState">
+    <i class="fas fa-spinner"></i>
+    <p style="margin-top:1rem;color:var(--muted)">Lade Schulungsdetails...</p>
+  </div>
+
+  <!-- Main Form -->
+  <div id="mainForm" style="display:none">
+    <div class="logo">
+      <i class="fa-solid fa-graduation-cap"></i>
+      <h1>Schulungseinladung</h1>
+      <p>Responda Ausbildungsverwaltung</p>
+    </div>
+
+    <div class="info-box">
+      <h3><i class="fa-solid fa-info-circle"></i> Schulungsdetails</h3>
+      <div class="info-row">
+        <span class="info-label"><i class="fa-solid fa-book"></i> Schulung:</span>
+        <span class="info-value" id="courseTitle">-</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label"><i class="fa-solid fa-calendar"></i> Datum:</span>
+        <span class="info-value" id="sessionDate">-</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label"><i class="fa-solid fa-clock"></i> Uhrzeit:</span>
+        <span class="info-value" id="sessionTime">-</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label"><i class="fa-solid fa-location-dot"></i> Ort:</span>
+        <span class="info-value" id="sessionLocation">-</span>
+      </div>
+      <div class="info-row" id="dozentRow" style="display:none">
+        <span class="info-label"><i class="fa-solid fa-user"></i> Dozent:</span>
+        <span class="info-value" id="sessionDozent">-</span>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <h3><i class="fa-solid fa-user-check"></i> Deine Rückmeldung</h3>
+      
+      <div class="error-msg" id="errorMsg"></div>
+      
+      <div class="form-group">
+        <label for="nameInput">
+          <i class="fa-solid fa-signature"></i> Dein Name *
+        </label>
+        <input 
+          type="text" 
+          id="nameInput" 
+          placeholder="z.B. Max Mustermann" 
+          required
+          autocomplete="name"
+        >
+        <small style="color:var(--muted);font-size:.85rem;display:block;margin-top:.5rem">
+          Bitte gib deinen vollständigen Namen so ein, wie er auf der Einladung steht
+        </small>
+      </div>
+      
+      <div class="hint-box">
+        <i class="fa-solid fa-shield-halved"></i> 
+        <strong>Hinweis:</strong> Nur eingeladene Personen können teilnehmen. Nach deiner Rückmeldung kann diese nicht mehr geändert werden.
+      </div>
+    </div>
+
+    <div class="btn-group">
+      <button class="btn btn-success" onclick="respondToSession('zugesagt')" id="btnZusagen">
+        <i class="fa-solid fa-check"></i> Zusagen
+      </button>
+      <button class="btn btn-error" onclick="respondToSession('abgesagt')" id="btnAbsagen">
+        <i class="fa-solid fa-times"></i> Absagen
+      </button>
+    </div>
+  </div>
+
+  <!-- Already Responded -->
+  <div id="alreadyRespondedScreen" style="display:none">
+    <div class="logo">
+      <i class="fa-solid fa-graduation-cap"></i>
+      <h1>Schulungseinladung</h1>
+    </div>
+
+    <div class="info-box">
+      <h3><i class="fa-solid fa-info-circle"></i> Schulungsdetails</h3>
+      <div class="info-row">
+        <span class="info-label"><i class="fa-solid fa-book"></i> Schulung:</span>
+        <span class="info-value" id="courseTitle2">-</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label"><i class="fa-solid fa-calendar"></i> Datum:</span>
+        <span class="info-value" id="sessionDate2">-</span>
+      </div>
+    </div>
+
+    <div class="already-responded" id="alreadyRespondedBox">
+      <i class="fa-solid fa-check-circle" style="color:var(--success)"></i>
+      <h3 id="alreadyRespondedTitle">Du hast bereits zugesagt!</h3>
+      <p id="alreadyRespondedText">Deine Teilnahme ist bestätigt. Wir freuen uns auf dich!</p>
+    </div>
+  </div>
+
+  <!-- Success Screen -->
+  <div id="successScreen" style="display:none">
+    <div class="success-screen">
+      <i class="fa-solid fa-check-circle"></i>
+      <h2 id="successTitle">Vielen Dank!</h2>
+      <p id="successMessage">Deine Rückmeldung wurde gespeichert.</p>
+    </div>
+  </div>
+
+  <!-- Error Screen -->
+  <div id="errorScreen" style="display:none">
+    <div class="error-screen">
+      <i class="fa-solid fa-exclamation-circle"></i>
+      <h2>Fehler</h2>
+      <p id="errorMessage">Ein Fehler ist aufgetreten.</p>
+    </div>
+  </div>
+
+</div>
+
+<script type="module">
+  const pb = new PocketBase('https://api.responda.systems');
+  
+  let sessionId = null;
+  let session = null;
+  let course = null;
+  let participants = [];
+
+  // ========================================
+  // URL PARAMS
+  // ========================================
+  const urlParams = new URLSearchParams(window.location.search);
+  sessionId = urlParams.get('session');
+
+  if (!sessionId) {
+    showError('Ungültiger Link - keine Session-ID gefunden');
+  }
+
+  // ========================================
+  // LOAD SESSION
+  // ========================================
+  async function loadSession() {
+    try {
+      session = await pb.collection('training_sessions').getOne(sessionId);
+      
+      if (session.status === 'abgesagt') {
+        showError('Diese Schulung wurde abgesagt.');
+        return;
+      }
+      
+      course = await pb.collection('training_courses').getOne(session.course_id);
+      
+      // Lade alle eingeladenen Teilnehmer
+      participants = await pb.collection('schulung_teilnahme').getFullList({
+        filter: `session_id = "${sessionId}"`,
+        expand: 'member_id'
+      });
+      
+      if (participants.length === 0) {
+        showError('Für diese Schulung wurden noch keine Teilnehmer eingeladen.');
+        return;
+      }
+      
+      // Fülle Schulungsdetails
+      document.getElementById('courseTitle').textContent = course.title;
+      document.getElementById('sessionDate').textContent = formatDate(session.date);
+      document.getElementById('courseTitle2').textContent = course.title;
+      document.getElementById('sessionDate2').textContent = formatDate(session.date);
+      
+      if (session.start_time && session.end_time) {
+        document.getElementById('sessionTime').textContent = 
+          `${formatTime(session.start_time)} - ${formatTime(session.end_time)} Uhr`;
+      } else {
+        document.getElementById('sessionTime').textContent = 'Ganztägig';
+      }
+      
+      document.getElementById('sessionLocation').textContent = session.location || 'Wird noch bekannt gegeben';
+      
+      if (session.dozent) {
+        document.getElementById('dozentRow').style.display = 'flex';
+        document.getElementById('sessionDozent').textContent = session.dozent;
+      }
+      
+      document.getElementById('loadingState').style.display = 'none';
+      document.getElementById('mainForm').style.display = 'block';
+      
+    } catch(e) {
+      console.error('Fehler:', e);
+      showError('Schulung konnte nicht geladen werden: ' + e.message);
+    }
+  }
+
+  // ========================================
+  // RESPOND TO SESSION
+  // ========================================
+  window.respondToSession = async (status) => {
+    const nameInput = document.getElementById('nameInput').value.trim();
+    
+    if (!nameInput) {
+      showErrorMsg('❌ Bitte gib deinen Namen ein!');
+      return;
+    }
+    
+    if (nameInput.split(' ').length < 2) {
+      showErrorMsg('❌ Bitte gib deinen vollständigen Namen ein (Vor- und Nachname)');
+      return;
+    }
+    
+    // Buttons deaktivieren
+    document.getElementById('btnZusagen').disabled = true;
+    document.getElementById('btnAbsagen').disabled = true;
+    
+    try {
+      // Suche nach übereinstimmendem Teilnehmer
+      let foundParticipant = null;
+      
+      for (const participant of participants) {
+        const member = participant.expand?.member_id;
+        if (!member) continue;
+        
+        const fullName = `${member.vorname} ${member.name}`;
+        const fullNameLower = fullName.toLowerCase();
+        const inputLower = nameInput.toLowerCase();
+        
+        // Exakte Übereinstimmung ODER Teilstring-Match
+        if (fullNameLower === inputLower || 
+            fullNameLower.includes(inputLower) || 
+            inputLower.includes(fullNameLower)) {
+          foundParticipant = participant;
+          break;
+        }
+      }
+      
+      if (!foundParticipant) {
+        showErrorMsg('❌ Name nicht gefunden! Du stehst nicht auf der Teilnehmerliste für diese Schulung. Bitte kontaktiere den Organisator.');
+        document.getElementById('btnZusagen').disabled = false;
+        document.getElementById('btnAbsagen').disabled = false;
+        return;
+      }
+      
+      // KRITISCH: Prüfe ob bereits geantwortet (Status != 'eingeladen')
+      if (foundParticipant.status !== 'eingeladen') {
+        // Zeige "Already Responded" Screen
+        const member = foundParticipant.expand.member_id;
+        showAlreadyResponded(foundParticipant.status, member.vorname);
+        return;
+      }
+      
+      // Update Teilnahme-Status (NUR wenn Status = 'eingeladen')
+      await pb.collection('schulung_teilnahme').update(foundParticipant.id, {
+        status: status
+      });
+      
+      // Success Screen anzeigen
+      const member = foundParticipant.expand.member_id;
+      const vorname = member.vorname;
+      
+      document.getElementById('mainForm').style.display = 'none';
+      document.getElementById('successScreen').style.display = 'block';
+      
+      if (status === 'zugesagt') {
+        document.getElementById('successTitle').textContent = '✅ Zusage erhalten!';
+        document.getElementById('successMessage').textContent = 
+          `Vielen Dank ${vorname}! Wir freuen uns auf deine Teilnahme am ${formatDate(session.date)}.`;
+      } else {
+        document.getElementById('successTitle').textContent = '📝 Absage erhalten';
+        document.getElementById('successMessage').textContent = 
+          `Danke ${vorname} für deine Rückmeldung. Schade, dass du nicht teilnehmen kannst.`;
+      }
+      
+    } catch(e) {
+      console.error('Fehler:', e);
+      showErrorMsg('❌ Fehler beim Speichern: ' + e.message);
+      document.getElementById('btnZusagen').disabled = false;
+      document.getElementById('btnAbsagen').disabled = false;
+    }
+  };
+
+  // ========================================
+  // ALREADY RESPONDED SCREEN
+  // ========================================
+  function showAlreadyResponded(status, vorname) {
+    document.getElementById('mainForm').style.display = 'none';
+    document.getElementById('alreadyRespondedScreen').style.display = 'block';
+    
+    const box = document.getElementById('alreadyRespondedBox');
+    
+    if (status === 'zugesagt') {
+      box.classList.remove('declined');
+      document.getElementById('alreadyRespondedTitle').textContent = '✅ Du hast bereits zugesagt!';
+      document.getElementById('alreadyRespondedText').textContent = 
+        `Hallo ${vorname}! Deine Teilnahme ist bereits bestätigt. Wir freuen uns auf dich!`;
+    } else {
+      box.classList.add('declined');
+      document.getElementById('alreadyRespondedTitle').textContent = '❌ Du hast bereits abgesagt';
+      document.getElementById('alreadyRespondedText').textContent = 
+        `Hallo ${vorname}! Du hast für diese Schulung bereits abgesagt. Bei Fragen kontaktiere bitte den Organisator.`;
+    }
+  }
+
+  // ========================================
+  // HELPERS
+  // ========================================
+  function formatDate(dateStr) {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('de-DE', { 
+      weekday: 'long', 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    });
+  }
+
+  function formatTime(timeStr) {
+    if (!timeStr) return '';
+    return timeStr.slice(0, 5);
+  }
+
+  function showError(message) {
+    document.getElementById('loadingState').style.display = 'none';
+    document.getElementById('mainForm').style.display = 'none';
+    document.getElementById('errorScreen').style.display = 'block';
+    document.getElementById('errorMessage').textContent = message;
+  }
+
+  function showErrorMsg(message) {
+    const errorMsg = document.getElementById('errorMsg');
+    errorMsg.textContent = message;
+    errorMsg.classList.add('show');
+    
+    setTimeout(() => {
+      errorMsg.classList.remove('show');
+    }, 5000);
+  }
+
+  // ========================================
+  // INIT
+  // ========================================
+  loadSession();
+
+</script>
+
+</body>
+</html>

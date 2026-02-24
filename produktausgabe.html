@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Produktausgabe</title>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<style>
+ :root{--rot:#c8102e}
+ *{box-sizing:border-box}
+ body{font-family:'Atkinson Hyperlegible',Arial,sans-serif;background:#f7f7f7;margin:0}
+ header{background:var(--rot);color:#fff;padding:12px 16px;font-weight:700}
+ .wrap{max-width:820px;margin:16px auto;padding:0 12px}
+ .card{background:#fff;border-radius:12px;box-shadow:0 3px 12px rgba(0,0,0,.06);padding:14px;margin-bottom:14px}
+ h2{color:var(--rot);margin:6px 0 12px}
+ label{color:var(--rot);font-weight:700;margin-top:8px;display:block}
+ input{width:100%;padding:10px;border:1px solid #ccc;border-radius:10px;background:#fafafa;font-size:1rem}
+ .row{display:flex;gap:10px;flex-wrap:wrap}
+ .btn{background:var(--rot);color:#fff;border:none;border-radius:10px;padding:10px 16px;font-weight:700;cursor:pointer}
+ .btn.ghost{background:#eee;color:#c8102e;border:1px solid #c8102e}
+ .pos-row{display:flex;gap:10px;align-items:center;margin:8px 0}
+ .pos-qty{width:120px}
+ .pos-name{flex:1}
+ .pos-del{width:52px;height:42px;border-radius:10px;border:1px solid #f1c7cf;background:#fff5f7;color:#c8102e;font-weight:700}
+ .hint{color:#6b7280;font-size:.95rem}
+ .msg{border-radius:12px;padding:12px;background:#fff5f5;border:1px solid #f2c9d1;color:#b00020;min-height:1.2em}
+ .ok{background:#eef9f0;border-color:#cfead6;color:#256029}
+</style>
+</head>
+<body>
+<header>Produktausgabe</header>
+
+<div class="wrap">
+
+  <!-- Kopf -->
+  <section class="card">
+    <h2>Kopfdaten</h2>
+    <div class="row">
+      <div style="flex:1;min-width:220px">
+        <label for="einsatz">Einsatznummer</label>
+        <input id="einsatz" placeholder="z. B. 2025-001" />
+      </div>
+      <div style="flex:1;min-width:220px">
+        <label for="datum">Datum</label>
+        <input id="datum" type="date" />
+      </div>
+    </div>
+  </section>
+
+  <!-- Positionen -->
+  <section class="card">
+    <h2>Positionen</h2>
+    <div id="posList"></div>
+    <button id="addPos" class="btn" type="button">+ Position</button>
+    <p class="hint">Tipp: Mit „+ Position“ beliebig viele Zeilen ergänzen.</p>
+  </section>
+
+  <!-- Ausgetragen von -->
+  <section class="card">
+    <h2>Ausgetragen von</h2>
+    <div class="row">
+      <div style="flex:1;min-width:220px">
+        <label for="vor">Vorname</label>
+        <input id="vor" />
+      </div>
+      <div style="flex:1;min-width:220px">
+        <label for="nach">Nachname</label>
+        <input id="nach" />
+      </div>
+    </div>
+  </section>
+
+  <!-- Absenden -->
+  <section class="card">
+    <button id="saveBtn" class="btn" type="button">Ausgabe speichern</button>
+    <div id="msg" class="msg" style="margin-top:10px"></div>
+  </section>
+
+</div>
+
+<script>
+/* -------------------- Einstellungen -------------------- */
+const GRAPHQL_FN = '/.netlify/functions/graphql'; // Netlify-Function
+
+/* -------------------- UI Helfer ------------------------ */
+const byId = id => document.getElementById(id);
+const msgEl = byId('msg');
+function showMsg(text, ok=false){
+  msgEl.textContent = text;
+  msgEl.className = 'msg ' + (ok ? 'ok' : '');
+}
+
+/* -------------------- Positionen UI -------------------- */
+const posList = byId('posList');
+byId('addPos').addEventListener('click', addPosRow);
+
+function addPosRow(qty=1, name=''){
+  const row = document.createElement('div');
+  row.className = 'pos-row';
+  row.innerHTML = `
+    <input class="pos-qty" type="number" min="1" value="${qty}">
+    <input class="pos-name" placeholder="Artikel / Beschreibung" value="${name}">
+    <button class="pos-del" type="button">×</button>
+  `;
+  row.querySelector('.pos-del').addEventListener('click', ()=> row.remove());
+  posList.appendChild(row);
+}
+
+function readPositions(){
+  const rows = [...posList.querySelectorAll('.pos-row')];
+  const list = [];
+  for(const r of rows){
+    const q = parseInt(r.querySelector('.pos-qty').value || '0', 10);
+    const n = (r.querySelector('.pos-name').value || '').trim();
+    if (q>0 && n) list.push({ qty:q, name:n });
+  }
+  return list;
+}
+
+/* -------------------- Datum vorbelegen ----------------- */
+(function init(){
+  const d = new Date();
+  const pad = n => String(n).padStart(2,'0');
+  byId('datum').value = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+  addPosRow();
+})();
+
+/* -------------------- Speichern ------------------------ */
+byId('saveBtn').addEventListener('click', saveAusgabe);
+
+async function saveAusgabe(){
+  try{
+    showMsg('Speichere …', true);
+
+    const einsatz = (byId('einsatz').value || '').trim();
+    const isoDate = byId('datum').value; // YYYY-MM-DD
+    const pos = readPositions();
+    const vor = (byId('vor').value || '').trim();
+    const nach = (byId('nach').value || '').trim();
+
+    if (!einsatz || !isoDate || !pos.length || !vor || !nach){
+      showMsg('Bitte Einsatznummer, Datum, mindestens eine Position sowie Vor- und Nachname angeben.');
+      return;
+    }
+
+    // Titel & Payload
+    const deDate = isoDate.split('-').reverse().join('.'); // DD.MM.YYYY
+    const title = `Produktausgabe ${einsatz} (${deDate})`;
+    const payload = {
+      einsatznummer: einsatz,
+      datum: isoDate,
+      positionen: pos,
+      ausgetragen_vorname: vor,
+      ausgetragen_nachname: nach
+    };
+
+    const query = `
+      mutation InsertDocuments($obj: documents_insert_input!) {
+        insert_documents_one(object: $obj) { id created_at }
+      }`;
+
+    const variables = {
+      obj: { type:'produktausgabe', title, status:'offen', payload }
+    };
+
+    const body = { query, variables };
+
+    // -------- Mini-Patch: robuster Fetch mit Content-Type-Check
+    const res = await fetch(GRAPHQL_FN, {
+      method: 'POST',
+      headers: { 'Content-Type':'application/json' },
+      body: JSON.stringify(body)
+    });
+
+    const ctype = (res.headers.get('content-type') || '').toLowerCase();
+    if (!ctype.includes('application/json')) {
+      const text = await res.text();
+      throw new Error(`HTTP ${res.status}: ${text.substring(0,200)}`);
+    }
+
+    const json = await res.json();
+    if (json.errors) {
+      throw new Error(json.errors[0]?.message || 'Unbekannter GraphQL-Fehler');
+    }
+
+    showMsg('Ausgabe gespeichert ✔', true);
+
+    // Formular zurücksetzen (optional)
+    posList.innerHTML = '';
+    addPosRow();
+  }catch(err){
+    showMsg('Netzwerkfehler: ' + (err.message || String(err)));
+  }
+}
+</script>
+</body>
+</html>

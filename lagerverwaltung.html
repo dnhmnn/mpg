@@ -1,0 +1,2242 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Lagerverwaltung – Responda</title>
+  <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet"/>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
+  <script src="https://cdn.jsdelivr.net/npm/pocketbase@0.21.3/dist/pocketbase.umd.js"></script>
+
+  <style>
+    :root{
+      --primary:#c8102e;
+      --primary-light:#fee2e2;
+      --success:#16a34a;
+      --warning:#f59e0b;
+      --bg:#f8fafc;
+      --card:#fff;
+      --text:#0f172a;
+      --muted:#64748b;
+      --border:#e2e8f0;
+      --low:#2563eb;
+      --gradient-start:#667eea;
+      --gradient-end:#764ba2;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      background:linear-gradient(135deg, var(--gradient-start) 0%, var(--gradient-end) 100%);
+      min-height:100vh;
+      color:var(--text);
+      font-family:'Atkinson Hyperlegible',-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+      line-height:1.45;
+      opacity:0;
+      transition:opacity 0.3s;
+      padding-bottom:80px;
+    }
+    body.loaded{opacity:1}
+    
+    header{position:sticky;top:0;background:var(--gradient-start);color:#fff;z-index:10}
+    .bar{
+      max-width:1200px;
+      margin:0 auto;
+      padding:.75rem 1rem;
+      display:flex;
+      gap:.5rem;
+      align-items:center;
+      flex-wrap:wrap;
+    }
+    h1{font-size:1.05rem;margin:0;font-weight:800}
+    .toolbar{margin-left:auto;display:flex;gap:.5rem;flex-wrap:wrap}
+    .topbtn{
+      border:1px solid rgba(255,255,255,0.3);
+      background:rgba(255,255,255,0.1);
+      color:#fff;
+      padding:.45rem .7rem;
+      border-radius:.5rem;
+      cursor:pointer;
+      font-weight:700;
+      font-size:.9rem;
+      transition:all 0.2s;
+      text-decoration:none;
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      border:none;
+      font-family:inherit;
+    }
+    .topbtn:hover{background:rgba(255,255,255,0.2)}
+    
+    .wrap{max-width:1200px;margin:1rem auto;padding:0 1rem}
+    
+    .stats{
+      display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
+      gap:.75rem;
+      margin-bottom:1rem;
+    }
+    .card{
+      background:var(--card);
+      border-radius:14px;
+      box-shadow:0 3px 12px rgba(0,0,0,.06);
+      padding:20px;
+    }
+    .stat-num{font-size:1.4rem;font-weight:700}
+    .ok{color:var(--success)}
+    .warn{color:#d97706}
+    .exp{color:var(--primary)}
+    
+    .list{display:flex;flex-direction:column;gap:.75rem}
+    .row{
+      background:var(--card);
+      border-left:4px solid;
+      border-radius:.75rem;
+      padding:1rem;
+      box-shadow:0 2px 4px rgba(0,0,0,.05);
+    }
+    .row.ok{border-color:var(--success)}
+    .row.warn{border-color:#f59e0b}
+    .row.exp{border-color:var(--primary)}
+    .row.zero{border-color:var(--muted);opacity:0.6}
+    
+    .rhead{
+      display:flex;
+      justify-content:space-between;
+      margin-bottom:.5rem;
+      flex-wrap:wrap;
+      gap:.5rem;
+      align-items:center;
+    }
+    .badge{padding:.25rem .6rem;border-radius:1rem;font-size:.75rem;font-weight:700;white-space:nowrap}
+    .qtyline{font-weight:700;font-size:.95rem}
+    .qtyline.low{color:var(--low)}
+    
+    .search-toolbar{
+      display:flex;
+      gap:.5rem;
+      justify-content:space-between;
+      align-items:center;
+      flex-wrap:wrap;
+      margin:.5rem 0;
+    }
+    .search-box{
+      flex:1;
+      min-width:200px;
+      position:relative;
+    }
+    .filter-actions{
+      display:flex;
+      gap:.5rem;
+      flex-wrap:wrap;
+      align-items:center;
+    }
+    .chip{
+      border:1px solid var(--border);
+      background:#fff;
+      padding:.35rem .6rem;
+      border-radius:999px;
+      font-size:.8rem;
+      cursor:pointer;
+      transition:all 0.2s;
+      white-space:nowrap;
+    }
+    .chip:hover{background:#f9f9f9}
+    .chip.active{background:var(--primary-light);color:var(--primary);border-color:var(--primary)}
+    
+    .btn{
+      border:1px solid var(--border);
+      background:#fff;
+      color:var(--text);
+      padding:.5rem .75rem;
+      border-radius:.5rem;
+      cursor:pointer;
+      font-weight:700;
+      transition:all 0.2s;
+      font-family:inherit;
+      white-space:nowrap;
+    }
+    .btn:hover{background:#f9f9f9;transform:translateY(-1px)}
+    .btn:disabled{opacity:0.5;cursor:not-allowed;transform:none}
+    .bicon{display:inline-flex;align-items:center;gap:.35rem;font-size:.85rem}
+    
+    .action-btns{
+      display:flex;
+      gap:.5rem;
+      flex-wrap:wrap;
+    }
+    
+    .nav{
+      position:fixed;
+      bottom:0;
+      left:0;
+      right:0;
+      background:var(--card);
+      border-top:1px solid var(--border);
+      padding:.75rem;
+      z-index:5;
+    }
+    .navg{
+      display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(80px,1fr));
+      gap:.5rem;
+      max-width:1200px;
+      margin:0 auto;
+    }
+    .nav a{
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      gap:.25rem;
+      padding:.5rem;
+      color:var(--muted);
+      font-size:.8rem;
+      font-weight:600;
+      border-radius:.5rem;
+      text-decoration:none;
+      transition:all 0.2s;
+    }
+    .nav a:hover{background:#f9f9f9}
+    .nav a.active{color:var(--primary);background:var(--primary-light)}
+    
+    .center-muted{color:var(--muted);text-align:center;padding:1.25rem}
+    .error{
+      background:#fff5f5;
+      border:1px solid #f2c9d1;
+      color:#8b0e22;
+      border-radius:10px;
+      padding:10px;
+      margin-bottom:1rem;
+    }
+    .success{
+      background:#f0fdf4;
+      border:1px solid #bbf7d0;
+      color:#166534;
+      border-radius:10px;
+      padding:10px;
+      margin-bottom:1rem;
+    }
+    
+    .modal{
+      position:fixed;
+      inset:0;
+      background:rgba(0,0,0,.6);
+      display:none;
+      align-items:flex-start;
+      justify-content:center;
+      z-index:1000;
+      padding:20px;
+      overflow-y:auto;
+    }
+    .modal.show{display:flex}
+    .modal-box{
+      background:#fff;
+      border-radius:14px;
+      max-width:800px;
+      width:100%;
+      max-height:90vh;
+      overflow-y:auto;
+      padding:24px;
+      box-shadow:0 8px 20px rgba(0,0,0,.3);
+      margin:auto;
+    }
+    .modal-box h3{margin:0 0 1rem 0;color:var(--primary);font-weight:800}
+    
+    .tabs{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap}
+    .tab{
+      border:1px solid var(--border);
+      background:#fafafa;
+      padding:10px 16px;
+      border-radius:999px;
+      font-weight:800;
+      cursor:pointer;
+      font-size:0.95rem;
+      transition:all 0.2s;
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+    }
+    .tab:hover{background:#f0f0f0}
+    .tab.active{color:#fff;background:var(--primary);border-color:var(--primary)}
+    
+    .form-grid{display:grid;gap:.75rem}
+    .form-group{display:flex;flex-direction:column;gap:6px}
+    .form-group label{font-weight:700;font-size:0.9rem;color:#374151}
+    .form-group input,
+    .form-group textarea,
+    .form-group select{
+      padding:.55rem .6rem;
+      border:1px solid var(--border);
+      border-radius:.5rem;
+      background:#fff;
+      font-size:16px;
+      font-family:inherit;
+      width:100%;
+    }
+    .form-group input:focus,
+    .form-group textarea:focus,
+    .form-group select:focus{
+      outline:none;
+      border-color:var(--primary);
+      box-shadow:0 0 0 3px rgba(200,16,46,0.1);
+    }
+    
+    .hist{width:100%;border-collapse:collapse;margin-top:.5rem;font-size:.9rem}
+    .hist th,.hist td{border:1px solid #eee;padding:.4rem .5rem;text-align:left}
+    .hist th{background:#fafafa;font-weight:700}
+    
+    .item-list{
+      display:flex;
+      flex-direction:column;
+      gap:.5rem;
+      max-height:400px;
+      overflow-y:auto;
+    }
+    .item-card{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      padding:.75rem;
+      border:1px solid var(--border);
+      border-radius:.5rem;
+      transition:all 0.2s;
+    }
+    .item-card:hover{background:#f9f9f9}
+    .item-card-info{flex:1}
+    .item-card-name{font-weight:700;margin-bottom:.25rem}
+    .item-card-meta{font-size:.85rem;color:var(--muted)}
+    
+    /* AUTOCOMPLETE SEARCH */
+    .autocomplete-container{
+      position:relative;
+    }
+    .autocomplete-results{
+      position:absolute;
+      top:100%;
+      left:0;
+      right:0;
+      background:#fff;
+      border:1px solid var(--border);
+      border-top:none;
+      border-radius:0 0 .5rem .5rem;
+      max-height:200px;
+      overflow-y:auto;
+      z-index:100;
+      display:none;
+    }
+    .autocomplete-results.show{display:block}
+    .autocomplete-item{
+      padding:.75rem;
+      cursor:pointer;
+      border-bottom:1px solid #f3f4f6;
+      transition:background 0.1s;
+    }
+    .autocomplete-item:last-child{border-bottom:none}
+    .autocomplete-item:hover{background:#f9fafb}
+    .autocomplete-item.selected{background:var(--primary-light)}
+    .autocomplete-item-name{font-weight:700;margin-bottom:.15rem}
+    .autocomplete-item-meta{font-size:.85rem;color:var(--muted)}
+    
+    /* INVENTUR-HISTORIE */
+    .audit-summary{
+      background:#f0f9ff;
+      padding:1rem;
+      border-radius:.5rem;
+      border:1px solid #bae6fd;
+      margin-bottom:1.5rem;
+    }
+    .audit-summary-grid{
+      display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+      gap:1rem;
+    }
+    .audit-summary-item{
+      text-align:center;
+    }
+    .audit-summary-label{
+      font-size:.85rem;
+      color:#0369a1;
+      margin-bottom:.25rem;
+    }
+    .audit-summary-value{
+      font-size:1.3rem;
+      font-weight:700;
+      color:#0c4a6e;
+    }
+    
+    .location-group{
+      margin-bottom:1.5rem;
+      border:1px solid var(--border);
+      border-radius:.5rem;
+      overflow:hidden;
+    }
+    .location-group-header{
+      background:#f9fafb;
+      padding:.75rem 1rem;
+      font-weight:700;
+      display:flex;
+      align-items:center;
+      gap:.5rem;
+      border-bottom:1px solid var(--border);
+    }
+    .audit-entry{
+      padding:.75rem 1rem;
+      border-bottom:1px solid #f3f4f6;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      flex-wrap:wrap;
+      gap:.5rem;
+    }
+    .audit-entry:last-child{
+      border-bottom:none;
+    }
+    .audit-entry-main{
+      flex:1;
+    }
+    .audit-entry-date{
+      font-weight:700;
+      margin-bottom:.25rem;
+    }
+    .audit-entry-meta{
+      font-size:.85rem;
+      color:var(--muted);
+    }
+    .audit-status{
+      display:inline-flex;
+      align-items:center;
+      gap:.35rem;
+      padding:.25rem .6rem;
+      border-radius:999px;
+      font-size:.8rem;
+      font-weight:700;
+    }
+    .audit-status.completed{
+      background:#dcfce7;
+      color:#166534;
+    }
+    .audit-status.open{
+      background:#fef3c7;
+      color:#92400e;
+    }
+    
+    /* MOBILE OPTIMIERUNG */
+    @media (max-width:768px){
+      .bar{
+        flex-direction:column;
+        align-items:stretch;
+      }
+      h1{font-size:1rem}
+      .toolbar{
+        margin-left:0;
+        width:100%;
+        justify-content:space-between;
+      }
+      .topbtn{
+        flex:1;
+        justify-content:center;
+      }
+      .search-toolbar{
+        flex-direction:column;
+        align-items:stretch;
+      }
+      .search-box{
+        width:100%;
+        min-width:auto;
+      }
+      .filter-actions{
+        justify-content:space-between;
+      }
+      .chip{
+        flex:1;
+        text-align:center;
+        justify-content:center;
+      }
+      .stats{
+        grid-template-columns:repeat(2, 1fr);
+        gap:.5rem;
+      }
+      .card{
+        padding:12px;
+      }
+      .stat-num{
+        font-size:1.2rem;
+      }
+      .card > div:last-child{
+        font-size:.85rem;
+      }
+      .rhead{
+        flex-direction:column;
+        align-items:flex-start;
+      }
+      .action-btns{
+        width:100%;
+      }
+      .action-btns .btn{
+        flex:1;
+        justify-content:center;
+      }
+      .navg{
+        grid-template-columns:repeat(3,1fr);
+      }
+      .modal-box{
+        padding:16px;
+      }
+      .audit-summary-grid{
+        grid-template-columns:1fr;
+      }
+      .audit-entry{
+        flex-direction:column;
+        align-items:flex-start;
+      }
+    }
+    
+    @media (max-width:480px){
+      .stats{
+        gap:.4rem;
+      }
+      .card{
+        padding:10px;
+      }
+      .stat-num{
+        font-size:1.1rem;
+      }
+      .card > div:last-child{
+        font-size:.8rem;
+      }
+      .topbtn{
+        font-size:.85rem;
+        padding:.4rem .6rem;
+      }
+      .action-btns{
+        flex-direction:column;
+      }
+      .action-btns .btn{
+        width:100%;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+<!-- ==================== HEADER START ==================== -->
+<header>
+  <div class="bar">
+    <h1><i class="fa-solid fa-warehouse"></i> Lagerverwaltung</h1>
+    <div class="toolbar">
+      <button class="topbtn" onclick="openSettingsModal()">
+        <i class="fa-solid fa-cog"></i> Einstellungen
+      </button>
+      <a class="topbtn" href="mpg-dashboard.html">
+        <i class="fa-solid fa-dashboard"></i> Dashboard
+      </a>
+      <button class="topbtn" id="logout">
+        <i class="fa-solid fa-right-from-bracket"></i> Logout
+      </button>
+    </div>
+  </div>
+</header>
+<!-- ==================== HEADER END ==================== -->
+
+<!-- ==================== MAIN CONTENT START ==================== -->
+<div class="wrap">
+  <div class="stats">
+    <div class="card">
+      <div class="stat-num ok" id="s-ok">0</div>
+      <div>In Ordnung</div>
+    </div>
+    <div class="card">
+      <div class="stat-num warn" id="s-warn">0</div>
+      <div>Bald fällig</div>
+    </div>
+    <div class="card">
+      <div class="stat-num exp" id="s-exp">0</div>
+      <div>Abgelaufen</div>
+    </div>
+    <div class="card">
+      <div class="stat-num" id="s-total">0</div>
+      <div>Gesamt</div>
+    </div>
+  </div>
+
+  <div id="toolbar" class="search-toolbar"></div>
+
+  <div id="list" class="list">
+    <div class="card center-muted" id="loading">Lade Lagerdaten…</div>
+  </div>
+</div>
+<!-- ==================== MAIN CONTENT END ==================== -->
+
+<nav class="nav">
+  <div class="navg" id="navg">
+    <!-- Wird dynamisch geladen -->
+  </div>
+</nav>
+
+<!-- ==================== MODALS START ==================== -->
+
+<!-- EINSTELLUNGEN MODAL -->
+<div class="modal" id="settingsModal">
+  <div class="modal-box">
+    <h3>Einstellungen</h3>
+    
+    <div class="tabs">
+      <button class="tab active" data-tab="items">
+        <i class="fa-solid fa-database"></i> Artikel-Datenbank
+      </button>
+      <button class="tab" data-tab="locations">
+        <i class="fa-solid fa-map-marker-alt"></i> Lager-Standorte
+      </button>
+      <button class="tab" data-tab="audits">
+        <i class="fa-solid fa-clipboard-check"></i> Inventur-Verwaltung
+      </button>
+    </div>
+
+    <!-- TAB: ARTIKEL-DATENBANK -->
+    <div id="tab-items" class="tab-content">
+      <div style="margin-bottom:1rem">
+        <button class="btn" style="background:var(--primary);color:#fff;width:100%" onclick="openNewItemForm()">
+          <i class="fas fa-plus"></i> Neuen Artikel anlegen
+        </button>
+      </div>
+      <div id="itemDBList" class="item-list"></div>
+    </div>
+
+    <!-- TAB: LAGER-STANDORTE -->
+    <div id="tab-locations" class="tab-content" style="display:none">
+      <div id="locationList" style="margin-bottom:1rem"></div>
+      <div>
+        <input type="text" id="newLocationName" placeholder="Neuer Standort-Name" 
+          style="width:100%;padding:.5rem;border:1px solid var(--border);border-radius:.5rem;margin-bottom:.5rem">
+        <button class="btn" style="background:var(--primary);color:#fff;width:100%" onclick="addLocation()">
+          <i class="fas fa-plus"></i> Standort hinzufügen
+        </button>
+      </div>
+    </div>
+
+    <!-- TAB: INVENTUR-VERWALTUNG -->
+    <div id="tab-audits" class="tab-content" style="display:none">
+      <div class="audit-summary">
+        <div class="audit-summary-grid">
+          <div class="audit-summary-item">
+            <div class="audit-summary-label">Turnus</div>
+            <div class="audit-summary-value">
+              <select id="audit-turnus" style="padding:.5rem;border:1px solid #bae6fd;border-radius:.5rem;background:#fff;font-weight:700">
+                <option value="12">Jährlich</option>
+                <option value="6">Halbjährlich</option>
+                <option value="3">Quartalsweise</option>
+                <option value="1">Monatlich</option>
+              </select>
+            </div>
+          </div>
+          <div class="audit-summary-item">
+            <div class="audit-summary-label">Letzte Inventur</div>
+            <div class="audit-summary-value" id="audit-last">-</div>
+          </div>
+          <div class="audit-summary-item">
+            <div class="audit-summary-label">Nächste fällig</div>
+            <div class="audit-summary-value" id="audit-next">-</div>
+          </div>
+        </div>
+      </div>
+      
+      <div style="margin-bottom:1.5rem">
+        <button class="btn" style="background:var(--primary);color:#fff;width:100%" onclick="startNewAudit()">
+          <i class="fas fa-clipboard-check"></i> Neue Inventur starten
+        </button>
+      </div>
+      
+      <h4 style="margin:0 0 1rem 0">Inventur-Historie (nach Lager)</h4>
+      <div id="auditHistoryList"></div>
+    </div>
+
+    <div style="display:flex;justify-content:flex-end;margin-top:1.5rem">
+      <button class="btn" onclick="closeSettingsModal()">Schließen</button>
+    </div>
+  </div>
+</div>
+
+<!-- ARTIKEL ANLEGEN/BEARBEITEN -->
+<div class="modal" id="itemFormModal">
+  <div class="modal-box" style="max-width:500px">
+    <h3 id="itemFormTitle">Artikel anlegen</h3>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Artikelname *</label>
+        <input type="text" id="item-name" placeholder="z.B. Einmalhandschuhe">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem">
+        <div class="form-group">
+          <label>Kategorie</label>
+          <input type="text" id="item-category" placeholder="z.B. Verbandmaterial">
+        </div>
+        <div class="form-group">
+          <label>Einheit</label>
+          <input type="text" id="item-unit" placeholder="z.B. Stück, Box" value="Stück">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Mindestbestand</label>
+        <input type="number" id="item-min" min="0" value="0">
+      </div>
+    </div>
+    <div style="display:flex;gap:.5rem;justify-content:flex-end;margin-top:1.5rem">
+      <button class="btn" onclick="closeItemFormModal()">Abbrechen</button>
+      <button class="btn" style="background:var(--primary);color:#fff" onclick="saveItemToDB()">
+        <i class="fas fa-save"></i> Speichern
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ARTIKEL HINZUFÜGEN (mit Autocomplete) -->
+<div class="modal" id="addStockModal">
+  <div class="modal-box" style="max-width:500px">
+    <h3>Artikel hinzufügen</h3>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Artikel suchen</label>
+        <div class="autocomplete-container">
+          <input type="text" id="stock-item-search" placeholder="Artikelname eingeben..." autocomplete="off">
+          <div class="autocomplete-results" id="stock-item-results"></div>
+        </div>
+        <input type="hidden" id="stock-item-id">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem">
+        <div class="form-group">
+          <label>Menge</label>
+          <input type="number" id="stock-qty" min="1" value="1">
+        </div>
+        <div class="form-group">
+          <label>Ablaufdatum</label>
+          <input type="date" id="stock-expiry">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Charge/Bemerkung (optional)</label>
+        <input type="text" id="stock-batch">
+      </div>
+    </div>
+    <div style="display:flex;gap:.5rem;justify-content:flex-end;margin-top:1.5rem">
+      <button class="btn" onclick="closeAddStockModal()">Abbrechen</button>
+      <button class="btn" style="background:var(--primary);color:#fff" onclick="saveStock()">
+        <i class="fas fa-plus"></i> Hinzufügen
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ARTIKEL-DETAILS/HISTORIE -->
+<div class="modal" id="detailsModal">
+  <div class="modal-box" style="max-width:600px">
+    <h3 id="detailsTitle">Artikel-Details</h3>
+    <div id="detailsBody"></div>
+  </div>
+</div>
+
+<!-- INVENTUR-DETAILS -->
+<div class="modal" id="auditDetailsModal">
+  <div class="modal-box" style="max-width:700px">
+    <h3 id="auditDetailsTitle">Inventur-Details</h3>
+    <div id="auditDetailsBody"></div>
+    <div style="display:flex;justify-content:flex-end;margin-top:1rem">
+      <button class="btn" onclick="closeAuditDetailsModal()">Schließen</button>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== MODALS END ==================== -->
+
+<script type="module">
+  // ========================================
+  // POCKETBASE INITIALIZATION & AUTH
+  // ========================================
+  const pb = new PocketBase('https://api.responda.systems');
+  
+  if (!pb.authStore.isValid) {
+    location.href = "/mpg-login.html";
+  }
+
+  const currentUser = pb.authStore.model;
+  if (!currentUser || !currentUser.organization_id) {
+    location.href = "/mpg-login.html";
+  }
+
+  let currentOrganization = { name: 'Feuerwehr' };
+  
+  async function loadOrganization() {
+    try {
+      if (!currentUser.organization_id) return;
+      currentOrganization = await pb.collection('organizations').getOne(currentUser.organization_id);
+      console.log('✅ Organization loaded:', currentOrganization);
+    } catch(e) {
+      console.warn('⚠️ Could not load organization:', e.message);
+    }
+  }
+  
+  loadOrganization();
+
+  // ========================================
+  // LOGOUT
+  // ========================================
+  document.getElementById("logout").onclick = async (e) => {
+    e.preventDefault();
+    pb.authStore.clear();
+    localStorage.clear();
+    location.href = "/mpg-login.html";
+  };
+
+  // ========================================
+  // STATE
+  // ========================================
+  let locations = [];
+  let currentLocationId = null;
+  let stockItems = [];
+  let allItems = [];
+  let search = "";
+  let statusFilter = "all";
+  let lowOnly = false;
+  let showOnlyZero = false;
+
+  const listEl = document.getElementById('list');
+  const toolbarEl = document.getElementById('toolbar');
+  const navgEl = document.getElementById('navg');
+
+  // ========================================
+  // HELPERS
+  // ========================================
+  function computeExpiryStatus(exp){
+    if(!exp) return 'ok';
+    const today = new Date();
+    const base = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const diff = (new Date(exp) - base) / 86400000;
+    if(diff < 0) return 'exp';
+    if(diff < 30) return 'warn';
+    return 'ok';
+  }
+
+  function showError(message){
+    listEl.innerHTML = `<div class="card error">
+      <strong>Fehler beim Laden der Lagerdaten:</strong><br>${message}
+    </div>`;
+    updateStats([]);
+  }
+
+  function showMsg(text, type = 'success') {
+    const div = document.createElement('div');
+    div.className = `card ${type}`;
+    div.textContent = text;
+    div.style.marginBottom = '1rem';
+    listEl.insertBefore(div, listEl.firstChild);
+    setTimeout(() => div.remove(), 5000);
+  }
+
+  // ========================================
+  // LOAD LOCATIONS
+  // ========================================
+  async function loadLocations() {
+    try {
+      locations = await pb.collection('inventory_locations').getFullList({
+        filter: `organization_id = "${currentUser.organization_id}"`,
+        sort: 'created',
+      });
+      
+      if (!locations.length) {
+        const defaultLoc = await pb.collection('inventory_locations').create({
+          name: 'Lager',
+          icon: 'box',
+          organization_id: currentUser.organization_id
+        });
+        locations = [defaultLoc];
+      }
+      
+      currentLocationId = locations[0].id;
+      renderNav();
+    } catch(e) {
+      console.error('Error loading locations:', e);
+      showError(e.message);
+    }
+  }
+
+  function renderNav() {
+    navgEl.innerHTML = locations.map((loc, idx) => `
+      <a href="#" data-loc="${loc.id}" class="${idx === 0 ? 'active' : ''}">
+        <i class="fas fa-${loc.icon || 'box'}"></i>
+        <span>${loc.name}</span>
+      </a>
+    `).join('');
+    
+    navgEl.querySelectorAll('a[data-loc]').forEach(a => {
+      a.onclick = (e) => {
+        e.preventDefault();
+        navgEl.querySelectorAll('a').forEach(x => x.classList.remove('active'));
+        a.classList.add('active');
+        currentLocationId = a.dataset.loc;
+        renderToolbar();
+        loadStock();
+      };
+    });
+  }
+
+  // ========================================
+  // TOOLBAR
+  // ========================================
+  function renderToolbar(){
+    const currentLoc = locations.find(l => l.id === currentLocationId);
+    const locName = currentLoc ? currentLoc.name : 'Lager';
+    
+    toolbarEl.innerHTML = `
+      <div class="search-box">
+        <i class="fas fa-search" style="position:absolute;left:.6rem;top:50%;transform:translateY(-50%);color:var(--muted)"></i>
+        <input id="q" value="${search}" placeholder="In „${locName}" suchen…"
+          style="width:100%;padding:.55rem .75rem .55rem 2rem;border:1px solid var(--border);border-radius:.5rem;background:#fff">
+      </div>
+      <div class="filter-actions">
+        <button class="chip ${statusFilter==='all'?'active':''}" data-f="all">Alle</button>
+        <button class="chip ${statusFilter==='warning'?'active':''}" data-f="warning">Bald fällig</button>
+        <button class="chip ${statusFilter==='expired'?'active':''}" data-f="expired">Abgelaufen</button>
+        <button class="chip ${lowOnly?'active':''}" id="chip-low">
+          <i class="fas fa-truck-moving"></i> Einbestellen
+        </button>
+        <button class="chip ${showOnlyZero?'active':''}" id="chip-zero">
+          <i class="fas fa-filter"></i> Nur 0
+        </button>
+        <button class="btn" id="btn-new"><i class="fas fa-plus"></i> Neu</button>
+      </div>
+    `;
+    
+    document.getElementById('q').oninput = (e) => {
+      search = e.target.value.trim();
+      clearTimeout(window._qT);
+      window._qT = setTimeout(filterAndRender, 250);
+    };
+    
+    toolbarEl.querySelectorAll('button[data-f]').forEach(b => {
+      b.onclick = () => {
+        statusFilter = b.dataset.f;
+        renderToolbar();
+        filterAndRender();
+      };
+    });
+    
+    document.getElementById('chip-low').onclick = () => {
+      lowOnly = !lowOnly;
+      renderToolbar();
+      filterAndRender();
+    };
+    
+    document.getElementById('chip-zero').onclick = () => {
+      showOnlyZero = !showOnlyZero;
+      renderToolbar();
+      filterAndRender();
+    };
+    
+    document.getElementById('btn-new').onclick = () => openAddStockModal();
+  }
+
+  // ========================================
+  // LOAD ALL ITEMS
+  // ========================================
+  async function loadAllItems() {
+    try {
+      allItems = await pb.collection('inventory_items').getFullList({
+        filter: `organization_id = "${currentUser.organization_id}"`,
+        sort: 'name',
+      });
+    } catch(e) {
+      console.error('Error loading items:', e);
+    }
+  }
+
+  // ========================================
+  // LOAD STOCK
+  // ========================================
+  async function loadStock() {
+    try {
+      await loadAllItems();
+      
+      const stockData = await pb.collection('inventory_stock').getFullList({
+        filter: `location_id = "${currentLocationId}" && organization_id = "${currentUser.organization_id}"`,
+        expand: 'item_id',
+        sort: '-updated',
+      });
+      
+      const itemMap = new Map();
+      
+      for (const stock of stockData) {
+        const item = stock.expand?.item_id;
+        if (!item) continue;
+        
+        if (!itemMap.has(item.id)) {
+          itemMap.set(item.id, {
+            id: item.id,
+            name: item.name,
+            category: item.category,
+            unit: item.unit,
+            min_stock: item.min_stock,
+            qty: 0,
+            expiry_dates: []
+          });
+        }
+        
+        const entry = itemMap.get(item.id);
+        entry.qty += stock.quantity || 0;
+        if (stock.expiry_date) {
+          entry.expiry_dates.push(stock.expiry_date);
+        }
+      }
+      
+      stockItems = Array.from(itemMap.values()).map(item => ({
+        ...item,
+        expiry: item.expiry_dates.length ? item.expiry_dates.sort()[0] : null,
+        target_qty: item.min_stock || 0
+      }));
+      
+      filterAndRender();
+    } catch(e) {
+      console.error('Error loading stock:', e);
+      showError(e.message);
+    }
+  }
+
+  function filterAndRender() {
+    let filtered = stockItems;
+    
+    if (search) {
+      const needle = search.toLowerCase();
+      filtered = filtered.filter(it => 
+        it.name.toLowerCase().includes(needle) ||
+        (it.category || '').toLowerCase().includes(needle)
+      );
+    }
+    
+    if (statusFilter === 'expired') {
+      filtered = filtered.filter(it => computeExpiryStatus(it.expiry) === 'exp');
+    } else if (statusFilter === 'warning') {
+      filtered = filtered.filter(it => computeExpiryStatus(it.expiry) === 'warn');
+    }
+    
+    if (lowOnly) {
+      filtered = filtered.filter(it => it.target_qty > 0 && it.qty < it.target_qty);
+    }
+    
+    if (showOnlyZero) {
+      filtered = filtered.filter(it => it.qty === 0);
+    }
+    
+    renderList(filtered);
+  }
+
+  function updateStats(items) {
+    let ok = 0, warn = 0, exp = 0;
+    
+    items.forEach(it => {
+      const status = computeExpiryStatus(it.expiry);
+      if (status === 'ok') ok++;
+      else if (status === 'warn') warn++;
+      else if (status === 'exp') exp++;
+    });
+    
+    document.getElementById('s-ok').textContent = ok;
+    document.getElementById('s-warn').textContent = warn;
+    document.getElementById('s-exp').textContent = exp;
+    document.getElementById('s-total').textContent = items.length;
+  }
+
+  function renderList(items) {
+    listEl.innerHTML = '';
+    
+    updateStats(items);
+    
+    if (!items.length) {
+      listEl.innerHTML = '<div class="card center-muted"><i class="fas fa-search"></i> Keine Artikel gefunden</div>';
+      return;
+    }
+    
+    items.forEach(it => {
+      const status = computeExpiryStatus(it.expiry);
+      const isLow = it.target_qty > 0 && it.qty < it.target_qty;
+      const isZero = it.qty === 0;
+      
+      // Formatiere Ablaufdatum ohne Uhrzeit
+      const expiryDateOnly = it.expiry ? new Date(it.expiry).toLocaleDateString('de-DE') : 'Kein Ablaufdatum';
+      
+      listEl.innerHTML += `
+        <div class="row ${isZero ? 'zero' : status}">
+          <div class="rhead">
+            <div>
+              <b>${it.name}</b>
+              ${it.category ? `<div style="color:var(--muted);font-size:.9rem">${it.category}</div>` : ''}
+            </div>
+            <div>
+              <div class="qtyline ${isLow ? 'low' : ''}">
+                IST: ${it.qty} ${it.unit || ''} / SOLL: ${it.target_qty}
+              </div>
+              <div style="font-size:.85rem;color:var(--muted);margin-top:.25rem">${expiryDateOnly}</div>
+            </div>
+          </div>
+          <div class="action-btns">
+            <button class="btn bicon" onclick="adjustQty('${it.id}', -1)">
+              <i class="fas fa-minus"></i> -1
+            </button>
+            <button class="btn bicon" onclick="adjustQty('${it.id}', 1)">
+              <i class="fas fa-plus"></i> +1
+            </button>
+            <button class="btn bicon" onclick="openDetailsModal('${it.id}')">
+              <i class="fas fa-info-circle"></i> Details
+            </button>
+          </div>
+        </div>
+      `;
+    });
+  }
+
+  // ========================================
+  // ADJUST QUANTITY
+  // ========================================
+  window.adjustQty = async (itemId, delta) => {
+    const item = stockItems.find(it => it.id === itemId);
+    if (!item) return;
+    
+    if (delta < 0 && item.qty <= 0) {
+      alert('Nicht genügend Bestand');
+      return;
+    }
+    
+    try {
+      const stockList = await pb.collection('inventory_stock').getFullList({
+        filter: `item_id = "${itemId}" && location_id = "${currentLocationId}"`,
+        sort: 'expiry_date',
+      });
+      
+      if (delta > 0) {
+        const expiry = prompt('Ablaufdatum (JJJJ-MM-TT) oder leer lassen:');
+        await pb.collection('inventory_stock').create({
+          item_id: itemId,
+          location_id: currentLocationId,
+          quantity: delta,
+          expiry_date: expiry || null,
+          organization_id: currentUser.organization_id
+        });
+        
+        await pb.collection('inventory_transactions').create({
+          item_id: itemId,
+          location_id: currentLocationId,
+          type: 'einbuchung',
+          quantity: delta,
+          expiry_date: expiry || null,
+          user: currentUser.email || currentUser.id,
+          organization_id: currentUser.organization_id
+        });
+        
+      } else {
+        let remaining = Math.abs(delta);
+        
+        for (const stock of stockList) {
+          if (remaining <= 0) break;
+          
+          const take = Math.min(stock.quantity, remaining);
+          const newQty = stock.quantity - take;
+          
+          if (newQty <= 0) {
+            await pb.collection('inventory_stock').delete(stock.id);
+          } else {
+            await pb.collection('inventory_stock').update(stock.id, {
+              quantity: newQty
+            });
+          }
+          
+          remaining -= take;
+        }
+        
+        await pb.collection('inventory_transactions').create({
+          item_id: itemId,
+          location_id: currentLocationId,
+          type: 'ausbuchung',
+          quantity: delta,
+          user: currentUser.email || currentUser.id,
+          organization_id: currentUser.organization_id
+        });
+      }
+      
+      await loadStock();
+      showMsg(`✅ ${delta > 0 ? 'Eingebucht' : 'Ausgebucht'}: ${Math.abs(delta)} ${item.unit || 'Stück'}`, 'success');
+      
+    } catch(e) {
+      showError(e.message);
+    }
+  };
+
+  // ========================================
+  // ARTIKEL HINZUFÜGEN MODAL MIT AUTOCOMPLETE
+  // ========================================
+  let selectedItemIndex = -1;
+  let filteredItems = [];
+  
+  window.openAddStockModal = async () => {
+    await loadAllItems();
+    
+    document.getElementById('stock-item-search').value = '';
+    document.getElementById('stock-item-id').value = '';
+    document.getElementById('stock-qty').value = 1;
+    document.getElementById('stock-expiry').value = '';
+    document.getElementById('stock-batch').value = '';
+    
+    setupAutocomplete();
+    
+    document.getElementById('addStockModal').classList.add('show');
+    
+    setTimeout(() => {
+      document.getElementById('stock-item-search').focus();
+    }, 100);
+  };
+
+  function setupAutocomplete() {
+    const searchInput = document.getElementById('stock-item-search');
+    const resultsDiv = document.getElementById('stock-item-results');
+    const hiddenInput = document.getElementById('stock-item-id');
+    
+    searchInput.oninput = () => {
+      const query = searchInput.value.toLowerCase().trim();
+      selectedItemIndex = -1;
+      
+      if (!query) {
+        resultsDiv.classList.remove('show');
+        hiddenInput.value = '';
+        return;
+      }
+      
+      filteredItems = allItems.filter(item => 
+        item.name.toLowerCase().includes(query) ||
+        (item.category || '').toLowerCase().includes(query)
+      );
+      
+      if (!filteredItems.length) {
+        resultsDiv.innerHTML = '<div class="autocomplete-item" style="color:var(--muted);cursor:default">Keine Artikel gefunden</div>';
+        resultsDiv.classList.add('show');
+        return;
+      }
+      
+      resultsDiv.innerHTML = filteredItems.map((item, idx) => `
+        <div class="autocomplete-item" data-idx="${idx}" data-id="${item.id}">
+          <div class="autocomplete-item-name">${item.name}</div>
+          <div class="autocomplete-item-meta">${item.category || 'Keine Kategorie'} • ${item.unit || 'Stück'}</div>
+        </div>
+      `).join('');
+      
+      resultsDiv.classList.add('show');
+      
+      resultsDiv.querySelectorAll('.autocomplete-item').forEach(el => {
+        el.onclick = () => selectItem(parseInt(el.dataset.idx));
+      });
+    };
+    
+    searchInput.onkeydown = (e) => {
+      if (!resultsDiv.classList.contains('show')) return;
+      
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        selectedItemIndex = Math.min(selectedItemIndex + 1, filteredItems.length - 1);
+        updateSelection();
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        selectedItemIndex = Math.max(selectedItemIndex - 1, -1);
+        updateSelection();
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        if (selectedItemIndex >= 0) {
+          selectItem(selectedItemIndex);
+        }
+      } else if (e.key === 'Escape') {
+        resultsDiv.classList.remove('show');
+      }
+    };
+    
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.autocomplete-container')) {
+        resultsDiv.classList.remove('show');
+      }
+    });
+  }
+  
+  function updateSelection() {
+    const items = document.querySelectorAll('.autocomplete-item');
+    items.forEach((el, idx) => {
+      el.classList.toggle('selected', idx === selectedItemIndex);
+    });
+    
+    if (selectedItemIndex >= 0 && items[selectedItemIndex]) {
+      items[selectedItemIndex].scrollIntoView({ block: 'nearest' });
+    }
+  }
+  
+  function selectItem(idx) {
+    const item = filteredItems[idx];
+    if (!item) return;
+    
+    document.getElementById('stock-item-search').value = item.name;
+    document.getElementById('stock-item-id').value = item.id;
+    document.getElementById('stock-item-results').classList.remove('show');
+    
+    document.getElementById('stock-qty').focus();
+  }
+
+  window.closeAddStockModal = () => {
+    document.getElementById('addStockModal').classList.remove('show');
+  };
+
+  window.saveStock = async () => {
+    const itemId = document.getElementById('stock-item-id').value;
+    const qty = parseInt(document.getElementById('stock-qty').value) || 0;
+    const expiry = document.getElementById('stock-expiry').value || null;
+    const batch = document.getElementById('stock-batch').value.trim();
+    
+    if (!itemId) {
+      alert('Bitte Artikel auswählen');
+      return;
+    }
+    
+    if (qty <= 0) {
+      alert('Menge muss größer 0 sein');
+      return;
+    }
+    
+    try {
+      await pb.collection('inventory_stock').create({
+        item_id: itemId,
+        location_id: currentLocationId,
+        quantity: qty,
+        expiry_date: expiry,
+        batch: batch || null,
+        organization_id: currentUser.organization_id
+      });
+      
+      await pb.collection('inventory_transactions').create({
+        item_id: itemId,
+        location_id: currentLocationId,
+        type: 'einbuchung',
+        quantity: qty,
+        expiry_date: expiry,
+        note: batch || 'Hinzugefügt',
+        user: currentUser.email || currentUser.id,
+        organization_id: currentUser.organization_id
+      });
+      
+      closeAddStockModal();
+      await loadStock();
+      showMsg(`✅ Artikel hinzugefügt: ${qty} Stück`, 'success');
+      
+    } catch(e) {
+      showError(e.message);
+    }
+  };
+
+  // ========================================
+  // DETAILS MODAL
+  // ========================================
+  window.openDetailsModal = async (itemId) => {
+    const item = stockItems.find(it => it.id === itemId);
+    if (!item) return;
+    
+    document.getElementById('detailsTitle').textContent = item.name;
+    
+    document.getElementById('detailsBody').innerHTML = `
+      <div style="background:#f9f9f9;padding:1rem;border-radius:.5rem;margin-bottom:1rem">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
+          <div>
+            <div style="color:#666;font-size:.9rem">Kategorie</div>
+            <div style="font-weight:700">${item.category || '-'}</div>
+          </div>
+          <div>
+            <div style="color:#666;font-size:.9rem">Einheit</div>
+            <div style="font-weight:700">${item.unit || 'Stück'}</div>
+          </div>
+          <div>
+            <div style="color:#666;font-size:.9rem">IST-Bestand</div>
+            <div style="font-weight:700;font-size:1.2rem;color:var(--primary)">${item.qty}</div>
+          </div>
+          <div>
+            <div style="color:#666;font-size:.9rem">Mindestbestand</div>
+            <div style="font-weight:700">${item.target_qty}</div>
+          </div>
+        </div>
+      </div>
+      
+      <button class="btn" onclick="loadHistory('${itemId}')" style="width:100%;margin-bottom:1rem">
+        <i class="fas fa-clock"></i> Buchungs-Historie anzeigen
+      </button>
+      <div id="historyContainer"></div>
+      
+      <div style="display:flex;gap:.5rem;justify-content:flex-end;margin-top:1rem;flex-wrap:wrap">
+        <button class="btn" style="background:#dc2626;color:#fff" onclick="deleteItemFromStock('${itemId}')">
+          <i class="fas fa-trash"></i> Aus Lager entfernen
+        </button>
+        <button class="btn" onclick="closeDetailsModal()">Schließen</button>
+      </div>
+    `;
+    
+    document.getElementById('detailsModal').classList.add('show');
+  };
+
+  window.closeDetailsModal = () => {
+    document.getElementById('detailsModal').classList.remove('show');
+  };
+
+  window.loadHistory = async (itemId) => {
+    const container = document.getElementById('historyContainer');
+    container.innerHTML = '<div class="center-muted">Lade Historie...</div>';
+    
+    try {
+      const transactions = await pb.collection('inventory_transactions').getFullList({
+        filter: `item_id = "${itemId}" && location_id = "${currentLocationId}"`,
+        sort: '-created',
+        limit: 50
+      });
+      
+      if (!transactions.length) {
+        container.innerHTML = '<div class="center-muted">Keine Buchungen vorhanden</div>';
+        return;
+      }
+      
+      container.innerHTML = `
+        <table class="hist">
+          <thead>
+            <tr>
+              <th>Datum</th>
+              <th>Typ</th>
+              <th>Menge</th>
+              <th>Ablauf</th>
+              <th>Bemerkung</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${transactions.map(t => `
+              <tr>
+                <td>${new Date(t.created).toLocaleString('de-DE')}</td>
+                <td>${t.type}</td>
+                <td>${t.quantity > 0 ? '+' : ''}${t.quantity}</td>
+                <td>${t.expiry_date || '-'}</td>
+                <td>${t.note || '-'}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      `;
+    } catch(e) {
+      container.innerHTML = `<div class="error">Fehler: ${e.message}</div>`;
+    }
+  };
+
+  window.deleteItemFromStock = async (itemId) => {
+    if (!confirm('Alle Bestände dieses Artikels an diesem Standort löschen?')) return;
+    
+    try {
+      const stockList = await pb.collection('inventory_stock').getFullList({
+        filter: `item_id = "${itemId}" && location_id = "${currentLocationId}"`
+      });
+      
+      for (const stock of stockList) {
+        await pb.collection('inventory_stock').delete(stock.id);
+      }
+      
+      closeDetailsModal();
+      await loadStock();
+      showMsg('✅ Bestände gelöscht!', 'success');
+      
+    } catch(e) {
+      showError(e.message);
+    }
+  };
+
+  // ========================================
+  // EINSTELLUNGEN MODAL
+  // ========================================
+  window.openSettingsModal = async () => {
+    await loadAllItems();
+    renderItemDBList();
+    renderLocationList();
+    await loadAuditSettings();
+    document.getElementById('settingsModal').classList.add('show');
+    
+    // Tab-Switching
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.onclick = () => {
+        const targetTab = tab.dataset.tab;
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        document.querySelectorAll('.tab-content').forEach(tc => tc.style.display = 'none');
+        document.getElementById('tab-' + targetTab).style.display = 'block';
+      };
+    });
+    
+    // Turnus change handler
+    document.getElementById('audit-turnus').onchange = saveTurnus;
+  };
+
+  window.closeSettingsModal = () => {
+    document.getElementById('settingsModal').classList.remove('show');
+  };
+
+  // ========================================
+  // ARTIKEL-DATENBANK
+  // ========================================
+  function renderItemDBList() {
+    const list = document.getElementById('itemDBList');
+    
+    if (!allItems.length) {
+      list.innerHTML = '<div class="center-muted">Keine Artikel vorhanden</div>';
+      return;
+    }
+    
+    list.innerHTML = allItems.map(item => `
+      <div class="item-card">
+        <div class="item-card-info">
+          <div class="item-card-name">${item.name}</div>
+          <div class="item-card-meta">
+            ${item.category || 'Keine Kategorie'} • ${item.unit || 'Stück'} • Min: ${item.min_stock || 0}
+          </div>
+        </div>
+        <div style="display:flex;gap:.5rem">
+          <button class="btn" onclick="editItemInDB('${item.id}')">
+            <i class="fas fa-edit"></i>
+          </button>
+          <button class="btn" onclick="deleteItemFromDB('${item.id}')">
+            <i class="fas fa-trash"></i>
+          </button>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  window.openNewItemForm = () => {
+    document.getElementById('itemFormTitle').textContent = 'Neuen Artikel anlegen';
+    document.getElementById('item-name').value = '';
+    document.getElementById('item-category').value = '';
+    document.getElementById('item-unit').value = 'Stück';
+    document.getElementById('item-min').value = 0;
+    
+    window.currentEditItemId = null;
+    
+    document.getElementById('itemFormModal').classList.add('show');
+  };
+
+  window.editItemInDB = async (itemId) => {
+    const item = allItems.find(it => it.id === itemId);
+    if (!item) return;
+    
+    document.getElementById('itemFormTitle').textContent = 'Artikel bearbeiten';
+    document.getElementById('item-name').value = item.name;
+    document.getElementById('item-category').value = item.category || '';
+    document.getElementById('item-unit').value = item.unit || 'Stück';
+    document.getElementById('item-min').value = item.min_stock || 0;
+    
+    window.currentEditItemId = itemId;
+    
+    document.getElementById('itemFormModal').classList.add('show');
+  };
+
+  window.closeItemFormModal = () => {
+    document.getElementById('itemFormModal').classList.remove('show');
+  };
+
+  window.saveItemToDB = async () => {
+    const name = document.getElementById('item-name').value.trim();
+    const category = document.getElementById('item-category').value.trim();
+    const unit = document.getElementById('item-unit').value.trim();
+    const minStock = parseInt(document.getElementById('item-min').value) || 0;
+    
+    if (!name) {
+      alert('Artikelname erforderlich');
+      return;
+    }
+    
+    try {
+      if (window.currentEditItemId) {
+        await pb.collection('inventory_items').update(window.currentEditItemId, {
+          name,
+          category,
+          unit,
+          min_stock: minStock
+        });
+        showMsg('✅ Artikel aktualisiert!', 'success');
+      } else {
+        await pb.collection('inventory_items').create({
+          name,
+          category,
+          unit,
+          min_stock: minStock,
+          organization_id: currentUser.organization_id
+        });
+        showMsg('✅ Artikel angelegt!', 'success');
+      }
+      
+      closeItemFormModal();
+      await loadAllItems();
+      renderItemDBList();
+      
+    } catch(e) {
+      showError(e.message);
+    }
+  };
+
+  window.deleteItemFromDB = async (itemId) => {
+    if (!confirm('Artikel wirklich aus Datenbank löschen? Alle Bestände gehen verloren!')) return;
+    
+    try {
+      const stockList = await pb.collection('inventory_stock').getFullList({
+        filter: `item_id = "${itemId}"`
+      });
+      
+      for (const stock of stockList) {
+        await pb.collection('inventory_stock').delete(stock.id);
+      }
+      
+      await pb.collection('inventory_items').delete(itemId);
+      
+      await loadAllItems();
+      renderItemDBList();
+      await loadStock();
+      showMsg('✅ Artikel gelöscht!', 'success');
+      
+    } catch(e) {
+      showError(e.message);
+    }
+  };
+
+  // ========================================
+  // LAGER-STANDORTE
+  // ========================================
+  function renderLocationList() {
+    document.getElementById('locationList').innerHTML = `
+      <div style="display:flex;flex-direction:column;gap:.5rem">
+        ${locations.map(loc => `
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:.75rem;border:1px solid var(--border);border-radius:.5rem">
+            <div>
+              <i class="fas fa-${loc.icon || 'box'}"></i> <strong>${loc.name}</strong>
+            </div>
+            <button class="btn" onclick="deleteLocation('${loc.id}')" ${locations.length <= 1 ? 'disabled' : ''}>
+              <i class="fas fa-trash"></i> Löschen
+            </button>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  }
+
+  window.addLocation = async () => {
+    const name = document.getElementById('newLocationName').value.trim();
+    if (!name) {
+      alert('Name erforderlich');
+      return;
+    }
+    
+    try {
+      await pb.collection('inventory_locations').create({
+        name,
+        icon: 'box',
+        organization_id: currentUser.organization_id
+      });
+      
+      document.getElementById('newLocationName').value = '';
+      await loadLocations();
+      renderLocationList();
+      showMsg('✅ Standort hinzugefügt!', 'success');
+      
+    } catch(e) {
+      showError(e.message);
+    }
+  };
+
+  window.deleteLocation = async (locId) => {
+    if (!confirm('Standort löschen? Alle Bestände an diesem Standort gehen verloren!')) return;
+    
+    try {
+      const stockList = await pb.collection('inventory_stock').getFullList({
+        filter: `location_id = "${locId}"`
+      });
+      
+      for (const stock of stockList) {
+        await pb.collection('inventory_stock').delete(stock.id);
+      }
+      
+      await pb.collection('inventory_locations').delete(locId);
+      
+      await loadLocations();
+      renderLocationList();
+      await loadStock();
+      showMsg('✅ Standort gelöscht!', 'success');
+      
+    } catch(e) {
+      showError(e.message);
+    }
+  };
+
+  // ========================================
+  // INVENTUR-VERWALTUNG
+  // ========================================
+  
+  async function loadAuditSettings() {
+    try {
+      // Load settings
+      const settings = await pb.collection('inventory_settings').getFullList({
+        filter: `organization_id = "${currentUser.organization_id}"`,
+        limit: 1
+      });
+      
+      const turnus = settings.length ? settings[0].turnus : 12;
+      document.getElementById('audit-turnus').value = turnus;
+      
+      // Load all audits
+      const audits = await pb.collection('inventory_audits').getFullList({
+        filter: `organization_id = "${currentUser.organization_id}"`,
+        expand: 'location_id',
+        sort: '-audit_date'
+      });
+      
+      // Calculate last and next audit
+      const completedAudits = audits.filter(a => a.status === 'abgeschlossen');
+      
+      if (completedAudits.length > 0) {
+        const lastAudit = completedAudits[0];
+        const lastDate = new Date(lastAudit.audit_date);
+        document.getElementById('audit-last').textContent = lastDate.toLocaleDateString('de-DE');
+        
+        // Calculate next audit
+        const nextDate = new Date(lastDate);
+        nextDate.setMonth(nextDate.getMonth() + parseInt(turnus));
+        document.getElementById('audit-next').textContent = nextDate.toLocaleDateString('de-DE');
+      } else {
+        document.getElementById('audit-last').textContent = '-';
+        document.getElementById('audit-next').textContent = 'Bald fällig';
+      }
+      
+      // Render audit history grouped by location
+      await renderAuditHistory(audits);
+      
+    } catch(e) {
+      console.error('Error loading audit settings:', e);
+    }
+  }
+
+  async function renderAuditHistory(audits) {
+    const container = document.getElementById('auditHistoryList');
+    
+    if (!audits.length) {
+      container.innerHTML = '<div class="center-muted">Noch keine Inventuren durchgeführt</div>';
+      return;
+    }
+    
+    // Group by location
+    const byLocation = {};
+    
+    for (const audit of audits) {
+      // Load audit items to get location and user
+      const auditItems = await pb.collection('inventory_audit_items').getFullList({
+        filter: `audit_id = "${audit.id}"`,
+        expand: 'location_id',
+        limit: 1
+      });
+      
+      if (!auditItems.length) continue;
+      
+      const locId = auditItems[0].location_id;
+      const loc = locations.find(l => l.id === locId);
+      const locName = loc ? loc.name : 'Unbekannt';
+      
+      if (!byLocation[locName]) {
+        byLocation[locName] = [];
+      }
+      
+      // Count items and corrections
+      const allItems = await pb.collection('inventory_audit_items').getFullList({
+        filter: `audit_id = "${audit.id}"`
+      });
+      
+      const totalItems = allItems.length;
+      const corrections = allItems.filter(ai => ai.expected_quantity !== ai.actual_quantity).length;
+      
+      // Get user from audit record
+      const userName = audit.user || 'Unbekannt';
+      
+      byLocation[locName].push({
+        ...audit,
+        totalItems,
+        corrections,
+        userName
+      });
+    }
+    
+    // Render
+    let html = '';
+    
+    for (const [locName, auditsForLoc] of Object.entries(byLocation)) {
+      const loc = locations.find(l => l.name === locName);
+      const icon = loc ? loc.icon : 'box';
+      
+      html += `
+        <div class="location-group">
+          <div class="location-group-header">
+            <i class="fas fa-${icon}"></i>
+            <span>${locName}</span>
+          </div>
+      `;
+      
+      for (const audit of auditsForLoc) {
+        const date = new Date(audit.audit_date);
+        const statusClass = audit.status === 'abgeschlossen' ? 'completed' : 'open';
+        const statusText = audit.status === 'abgeschlossen' ? 'Abgeschlossen' : 'Offen';
+        const statusIcon = audit.status === 'abgeschlossen' ? 'check-circle' : 'clock';
+        
+        html += `
+          <div class="audit-entry">
+            <div class="audit-entry-main">
+              <div class="audit-entry-date">${date.toLocaleDateString('de-DE')} ${date.toLocaleTimeString('de-DE', {hour: '2-digit', minute: '2-digit'})}</div>
+              <div class="audit-entry-meta">
+                ${audit.totalItems} Artikel geprüft • ${audit.corrections} Korrektur${audit.corrections !== 1 ? 'en' : ''} • Durchgeführt von ${audit.userName}
+              </div>
+            </div>
+            <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap">
+              <span class="audit-status ${statusClass}">
+                <i class="fas fa-${statusIcon}"></i> ${statusText}
+              </span>
+              <button class="btn" onclick="showAuditDetails('${audit.id}')">
+                <i class="fas fa-eye"></i> Details
+              </button>
+            </div>
+          </div>
+        `;
+      }
+      
+      html += '</div>';
+    }
+    
+    container.innerHTML = html;
+  }
+
+  async function saveTurnus() {
+    const turnus = document.getElementById('audit-turnus').value;
+    
+    try {
+      const settings = await pb.collection('inventory_settings').getFullList({
+        filter: `organization_id = "${currentUser.organization_id}"`,
+        limit: 1
+      });
+      
+      if (settings.length > 0) {
+        await pb.collection('inventory_settings').update(settings[0].id, {
+          turnus: parseInt(turnus)
+        });
+      } else {
+        await pb.collection('inventory_settings').create({
+          turnus: parseInt(turnus),
+          organization_id: currentUser.organization_id
+        });
+      }
+      
+      await loadAuditSettings();
+      showMsg('✅ Turnus gespeichert!', 'success');
+      
+    } catch(e) {
+      console.error('Error saving turnus:', e);
+    }
+  }
+
+  window.showAuditDetails = async (auditId) => {
+    try {
+      const audit = await pb.collection('inventory_audits').getOne(auditId);
+      const auditItems = await pb.collection('inventory_audit_items').getFullList({
+        filter: `audit_id = "${auditId}"`,
+        expand: 'item_id,location_id',
+        sort: 'checked,-created'
+      });
+      
+      const loc = auditItems[0]?.expand?.location_id;
+      const locName = loc ? loc.name : 'Unbekannt';
+      const date = new Date(audit.audit_date);
+      
+      document.getElementById('auditDetailsTitle').textContent = `Inventur ${locName} – ${date.toLocaleDateString('de-DE')}`;
+      
+      let html = `
+        <div style="background:#f9f9f9;padding:1rem;border-radius:.5rem;margin-bottom:1rem">
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;text-align:center">
+            <div>
+              <div style="font-size:.85rem;color:#666">Status</div>
+              <div style="font-weight:700">${audit.status === 'abgeschlossen' ? '✅ Abgeschlossen' : '⏳ Offen'}</div>
+            </div>
+            <div>
+              <div style="font-size:.85rem;color:#666">Artikel</div>
+              <div style="font-weight:700">${auditItems.length}</div>
+            </div>
+            <div>
+              <div style="font-size:.85rem;color:#666">Korrekturen</div>
+              <div style="font-weight:700">${auditItems.filter(ai => ai.expected_quantity !== ai.actual_quantity).length}</div>
+            </div>
+          </div>
+          ${audit.user ? `<div style="text-align:center;margin-top:.5rem;color:var(--muted);font-size:.85rem">Durchgeführt von ${audit.user}</div>` : ''}
+        </div>
+        
+        <h4 style="margin:1rem 0 .5rem 0">Geprüfte Artikel:</h4>
+        <table class="hist">
+          <thead>
+            <tr>
+              <th>Artikel</th>
+              <th>Erwartet</th>
+              <th>Tatsächlich</th>
+              <th>Differenz</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${auditItems.map(ai => {
+              const item = ai.expand?.item_id;
+              const diff = ai.actual_quantity - ai.expected_quantity;
+              const diffText = diff === 0 ? '-' : (diff > 0 ? `+${diff}` : diff);
+              const diffColor = diff === 0 ? '#666' : (diff > 0 ? 'var(--success)' : 'var(--primary)');
+              
+              return `
+                <tr>
+                  <td>${item ? item.name : 'Unbekannt'}</td>
+                  <td>${ai.expected_quantity}</td>
+                  <td>${ai.actual_quantity}</td>
+                  <td style="color:${diffColor};font-weight:700">${diffText}</td>
+                  <td>${ai.checked ? '✅ Geprüft' : '⏳ Offen'}</td>
+                </tr>
+              `;
+            }).join('')}
+          </tbody>
+        </table>
+      `;
+      
+      document.getElementById('auditDetailsBody').innerHTML = html;
+      document.getElementById('auditDetailsModal').classList.add('show');
+      
+    } catch(e) {
+      alert('Fehler beim Laden: ' + e.message);
+    }
+  };
+
+  window.closeAuditDetailsModal = () => {
+    document.getElementById('auditDetailsModal').classList.remove('show');
+  };
+
+  // ========================================
+  // INVENTUR (DURCHFÜHRUNG) - NEU: LAGER IN KLICKSTRECKE
+  // ========================================
+  let currentAudit = null;
+  let auditItems = [];
+  let auditIndex = 0;
+  let selectedAuditLocationId = null;
+
+  window.startNewAudit = () => {
+    if (!locations.length) {
+      alert('Keine Lager-Standorte vorhanden! Bitte erst Standorte anlegen.');
+      return;
+    }
+    
+    // Schließe Settings-Modal
+    closeSettingsModal();
+    
+    // Starte Inventur-Klickstrecke mit Lager-Auswahl
+    selectedAuditLocationId = null;
+    auditIndex = -1; // -1 = Lager-Auswahl
+    showAuditModal();
+  };
+
+  function showAuditModal() {
+    const modal = document.createElement('div');
+    modal.id = 'auditModal';
+    modal.className = 'modal show';
+    
+    if (auditIndex === -1) {
+      // Schritt 0: Lager auswählen
+      modal.innerHTML = `
+        <div class="modal-box" style="max-width:500px">
+          <h3>Inventur starten</h3>
+          <p style="color:var(--muted);margin-bottom:1rem">Wählen Sie das Lager aus, das Sie inventieren möchten:</p>
+          
+          <div style="display:flex;flex-direction:column;gap:.5rem;margin-bottom:1.5rem">
+            ${locations.map(loc => `
+              <button class="btn" onclick="selectAuditLocation('${loc.id}')" 
+                style="display:flex;align-items:center;gap:.75rem;padding:1rem;text-align:left;justify-content:flex-start;width:100%">
+                <i class="fas fa-${loc.icon || 'box'}" style="font-size:1.5rem;color:var(--primary)"></i>
+                <div style="flex:1">
+                  <div style="font-weight:700;font-size:1.05rem">${loc.name}</div>
+                  <div style="font-size:.85rem;color:var(--muted)">Inventur für dieses Lager starten</div>
+                </div>
+                <i class="fas fa-arrow-right" style="color:var(--muted)"></i>
+              </button>
+            `).join('')}
+          </div>
+          
+          <div style="display:flex;justify-content:flex-end">
+            <button class="btn" onclick="closeAuditModal()">Abbrechen</button>
+          </div>
+        </div>
+      `;
+    } else {
+      // Schritt 1+: Artikel prüfen
+      modal.innerHTML = `
+        <div class="modal-box" style="max-width:500px">
+          <h3>Inventur ${currentAudit ? currentAudit.id.slice(0,8) : ''}</h3>
+          
+          <div style="margin-bottom:1rem">
+            <div style="background:#f0f9ff;padding:.75rem;border-radius:.5rem;border:1px solid #bae6fd">
+              <strong>Fortschritt:</strong> <span id="audit-progress">${auditItems.filter(ai => ai.checked).length} / ${auditItems.length} geprüft</span>
+            </div>
+          </div>
+          
+          <div id="auditItemContainer"></div>
+          
+          <div style="display:flex;gap:.5rem;justify-content:space-between;margin-top:1.5rem;flex-wrap:wrap">
+            <button class="btn" onclick="closeAuditModal()">Abbrechen</button>
+            <div style="display:flex;gap:.5rem">
+              <button class="btn" onclick="prevAuditItem()" ${auditIndex === 0 ? 'disabled' : ''} id="audit-prev">
+                <i class="fas fa-arrow-left"></i> Zurück
+              </button>
+              <button class="btn" style="background:var(--primary);color:#fff" onclick="saveAuditItem()" id="audit-next">
+                ${auditIndex === auditItems.length - 1 ? 'Fertig' : 'Weiter'} <i class="fas fa-arrow-right"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+      
+      setTimeout(() => renderAuditItem(), 100);
+    }
+    
+    document.body.appendChild(modal);
+  }
+
+  window.selectAuditLocation = async (locationId) => {
+    selectedAuditLocationId = locationId;
+    const loc = locations.find(l => l.id === locationId);
+    
+    // Entferne altes Modal
+    document.getElementById('auditModal')?.remove();
+    
+    // Setze Location und lade Stock
+    currentLocationId = locationId;
+    await loadStock();
+    
+    if (!stockItems.length) {
+      alert(`Keine Artikel im Lager "${loc?.name || 'Lager'}" vorhanden!\n\nBitte erst Artikel hinzufügen, bevor Sie eine Inventur starten.`);
+      return;
+    }
+    
+    try {
+      // Erstelle Inventur
+      currentAudit = await pb.collection('inventory_audits').create({
+        audit_date: new Date().toISOString(),
+        status: 'offen',
+        user: currentUser.email || currentUser.name || currentUser.id,
+        organization_id: currentUser.organization_id
+      });
+      
+      // Erstelle Audit-Items
+      for (const item of stockItems) {
+        await pb.collection('inventory_audit_items').create({
+          audit_id: currentAudit.id,
+          item_id: item.id,
+          location_id: selectedAuditLocationId,
+          expected_quantity: item.qty,
+          actual_quantity: 0,
+          checked: false,
+          organization_id: currentUser.organization_id
+        });
+      }
+      
+      await loadAuditItems();
+      auditIndex = 0;
+      showAuditModal();
+      showMsg('✅ Inventur gestartet!', 'success');
+      
+    } catch(e) {
+      showError(e.message);
+    }
+  };
+
+  async function loadAuditItems() {
+    try {
+      auditItems = await pb.collection('inventory_audit_items').getFullList({
+        filter: `audit_id = "${currentAudit.id}" && location_id = "${selectedAuditLocationId}"`,
+        expand: 'item_id',
+        sort: 'checked,created'
+      });
+      
+      const firstUnchecked = auditItems.findIndex(ai => !ai.checked);
+      if (firstUnchecked >= 0) auditIndex = firstUnchecked;
+      
+    } catch(e) {
+      showError(e.message);
+    }
+  }
+
+  function renderAuditItem() {
+    const auditItem = auditItems[auditIndex];
+    if (!auditItem) return;
+    
+    const item = auditItem.expand?.item_id;
+    if (!item) return;
+    
+    const container = document.getElementById('auditItemContainer');
+    container.innerHTML = `
+      <div style="background:#fafafa;padding:1rem;border-radius:.5rem;border:1px solid var(--border)">
+        <h4 style="margin:0 0 .5rem 0">${auditIndex + 1}. ${item.name}</h4>
+        <div style="color:var(--muted);font-size:.9rem;margin-bottom:.5rem">
+          ${item.category || 'Keine Kategorie'} • ${item.unit || 'Stück'}
+        </div>
+        
+        <div style="background:#fff;padding:.75rem;border-radius:.5rem;margin-bottom:.75rem">
+          <div style="color:var(--muted);font-size:.85rem">Erwarteter Bestand (laut System):</div>
+          <div style="font-size:1.5rem;font-weight:700">${auditItem.expected_quantity} ${item.unit || 'Stück'}</div>
+        </div>
+        
+        <div class="form-group">
+          <label>Tatsächlicher Bestand (gezählt):</label>
+          <input type="number" id="audit-actual" value="${auditItem.actual_quantity}" min="0" 
+            style="font-size:1.2rem;font-weight:700;padding:.75rem" autofocus>
+        </div>
+        
+        <div style="margin-top:.5rem">
+          <label style="display:flex;align-items:center;gap:.5rem;cursor:pointer">
+            <input type="checkbox" id="audit-checked" ${auditItem.checked ? 'checked' : ''}>
+            <span>Als geprüft markieren</span>
+          </label>
+        </div>
+      </div>
+    `;
+    
+    setTimeout(() => {
+      document.getElementById('audit-actual')?.focus();
+      document.getElementById('audit-actual')?.select();
+    }, 100);
+  }
+
+  window.saveAuditItem = async () => {
+    const auditItem = auditItems[auditIndex];
+    const actual = parseInt(document.getElementById('audit-actual').value) || 0;
+    const checked = document.getElementById('audit-checked').checked;
+    
+    try {
+      await pb.collection('inventory_audit_items').update(auditItem.id, {
+        actual_quantity: actual,
+        checked: checked
+      });
+      
+      if (checked && actual !== auditItem.expected_quantity) {
+        const diff = actual - auditItem.expected_quantity;
+        
+        const stockList = await pb.collection('inventory_stock').getFullList({
+          filter: `item_id = "${auditItem.item_id}" && location_id = "${selectedAuditLocationId}"`
+        });
+        
+        if (diff > 0) {
+          await pb.collection('inventory_stock').create({
+            item_id: auditItem.item_id,
+            location_id: selectedAuditLocationId,
+            quantity: diff,
+            organization_id: currentUser.organization_id
+          });
+        } else if (diff < 0 && stockList.length > 0) {
+          let remaining = Math.abs(diff);
+          for (const stock of stockList) {
+            if (remaining <= 0) break;
+            
+            const take = Math.min(stock.quantity, remaining);
+            const newQty = stock.quantity - take;
+            
+            if (newQty <= 0) {
+              await pb.collection('inventory_stock').delete(stock.id);
+            } else {
+              await pb.collection('inventory_stock').update(stock.id, {
+                quantity: newQty
+              });
+            }
+            
+            remaining -= take;
+          }
+        }
+        
+        await pb.collection('inventory_transactions').create({
+          item_id: auditItem.item_id,
+          location_id: selectedAuditLocationId,
+          type: 'korrektur',
+          quantity: diff,
+          note: `Inventur-Korrektur: ${auditItem.expected_quantity} → ${actual}`,
+          user: currentUser.email || currentUser.id,
+          organization_id: currentUser.organization_id
+        });
+      }
+      
+      if (auditIndex < auditItems.length - 1) {
+        auditIndex++;
+        await loadAuditItems();
+        renderAuditItem();
+        
+        document.getElementById('audit-progress').textContent = `${auditItems.filter(ai => ai.checked).length} / ${auditItems.length} geprüft`;
+        document.getElementById('audit-prev').disabled = false;
+        document.getElementById('audit-next').innerHTML = auditIndex === auditItems.length - 1 ? 'Fertig <i class="fas fa-check"></i>' : 'Weiter <i class="fas fa-arrow-right"></i>';
+        
+      } else {
+        await finishAudit();
+      }
+      
+    } catch(e) {
+      showError(e.message);
+    }
+  };
+
+  window.prevAuditItem = () => {
+    if (auditIndex > 0) {
+      auditIndex--;
+      renderAuditItem();
+      document.getElementById('audit-prev').disabled = auditIndex === 0;
+      document.getElementById('audit-next').innerHTML = 'Weiter <i class="fas fa-arrow-right"></i>';
+    }
+  };
+
+  async function finishAudit() {
+    const allChecked = auditItems.every(ai => ai.checked);
+    
+    if (!allChecked) {
+      const confirm = window.confirm('Nicht alle Artikel wurden geprüft. Inventur trotzdem abschließen?');
+      if (!confirm) return;
+    }
+    
+    try {
+      await pb.collection('inventory_audits').update(currentAudit.id, {
+        status: 'abgeschlossen'
+      });
+      
+      closeAuditModal();
+      await loadStock();
+      showMsg('✅ Inventur abgeschlossen!', 'success');
+      
+    } catch(e) {
+      showError(e.message);
+    }
+  }
+
+  window.closeAuditModal = () => {
+    document.getElementById('auditModal')?.remove();
+    currentAudit = null;
+    auditItems = [];
+    auditIndex = 0;
+    selectedAuditLocationId = null;
+  };
+
+  // ========================================
+  // START
+  // ========================================
+  await loadLocations();
+  renderToolbar();
+  await loadStock();
+  
+  setTimeout(() => {
+    document.body.classList.add('loaded');
+  }, 100);
+
+</script>
+</body>
+</html>

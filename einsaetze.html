@@ -1,0 +1,880 @@
+<!DOCTYPE html>
+
+<html lang="de">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"/>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Einsätze – Responda</title>
+
+  <meta name="theme-color" content="#667eea">
+
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
+
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif; background: linear-gradient(135deg, #667eea 0%, #f97316 50%, #764ba2 100%); background-attachment: fixed; min-height: 100vh; overflow: hidden; -webkit-font-smoothing: antialiased; user-select: none; margin: 0; padding: 0; color: #fff; }
+    .status-bar { height: 44px; padding-top: env(safe-area-inset-top); display: flex; align-items: center; justify-content: space-between; padding-left: max(24px, env(safe-area-inset-left)); padding-right: max(24px, env(safe-area-inset-right)); color: #fff; font-size: 15px; font-weight: 600; position: fixed; top: 0; left: 0; right: 0; z-index: 1000; }
+    .logo { display: flex; align-items: center; height: 32px; }
+    .logo svg { filter: drop-shadow(0 1px 3px rgba(0,0,0,0.2)); }
+    .back-btn { background: rgba(255, 255, 255, 0.2); border: 0.5px solid rgba(255, 255, 255, 0.3); color: #fff; padding: 6px 12px; border-radius: 12px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s; backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
+    .back-btn:active { transform: scale(0.95); background: rgba(255, 255, 255, 0.3); }
+    .content { height: 100vh; overflow-y: auto; -webkit-overflow-scrolling: touch; padding-top: calc(44px + env(safe-area-inset-top) + 20px); padding-left: max(20px, env(safe-area-inset-left)); padding-right: max(20px, env(safe-area-inset-right)); padding-bottom: max(40px, env(safe-area-inset-bottom)); }
+    .einsatz-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; margin-bottom: 32px; }
+    .einsatz-card { background: rgba(255, 255, 255, 0.2); backdrop-filter: blur(40px); -webkit-backdrop-filter: blur(40px); border-radius: 20px; padding: 20px; border: 0.5px solid rgba(255, 255, 255, 0.3); cursor: pointer; transition: all 0.2s; }
+    .einsatz-card:active { transform: scale(0.98); background: rgba(255, 255, 255, 0.25); }
+    .einsatz-badge { background: rgba(255, 255, 255, 0.3); color: #fff; padding: 6px 12px; border-radius: 12px; font-size: 12px; font-weight: 700; display: inline-block; margin-bottom: 12px; }
+    .einsatz-card h3 { margin: 0 0 12px 0; font-size: 18px; font-weight: 600; }
+    .einsatz-meta { display: flex; flex-direction: column; gap: 8px; font-size: 14px; opacity: 0.9; margin-bottom: 16px; }
+    .einsatz-meta-item { display: flex; align-items: center; gap: 8px; }
+    .einsatz-stats { display: flex; gap: 16px; padding-top: 16px; border-top: 1px solid rgba(255, 255, 255, 0.2); font-size: 13px; }
+    .stat-item { display: flex; align-items: center; gap: 6px; }
+    .add-btn { background: rgba(255, 255, 255, 0.2); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 0.5px solid rgba(255, 255, 255, 0.3); color: #fff; padding: 12px 20px; border-radius: 16px; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); margin: 32px auto 0; display: flex; align-items: center; gap: 8px; width: fit-content; border: none; }
+    .add-btn:active { transform: scale(0.95); background: rgba(255, 255, 255, 0.3); }
+    .modal { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.6); display: none; align-items: center; justify-content: center; z-index: 2000; padding: 20px; overflow-y: auto; }
+    .modal.show { display: flex; }
+    .modal-box { background: #fff; border-radius: 24px; max-width: 900px; width: 100%; max-height: 85vh; overflow-y: auto; padding: 28px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4); color: #1a1a1a; margin: auto; }
+    .modal-box.small { max-width: 600px; }
+    .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid #e0e0e0; }
+    .modal-title { font-size: 22px; font-weight: 700; color: #1a1a1a; display: flex; align-items: center; gap: 10px; }
+    .modal-close { width: 32px; height: 32px; background: #f0f0f0; border: none; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; color: #666; cursor: pointer; transition: all 0.2s; }
+    .modal-close:hover { background: #e0e0e0; }
+    .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px; margin-bottom: 16px; }
+    .form-group { display: flex; flex-direction: column; gap: 8px; }
+    .form-group label { font-weight: 600; font-size: 14px; color: #374151; }
+    .form-group input, .form-group textarea, .form-group select { padding: 12px; border: 1px solid #d1d5db; border-radius: 12px; font-size: 15px; font-family: inherit; transition: all 0.2s; }
+    .form-group input:focus, .form-group textarea:focus, .form-group select:focus { outline: none; border-color: #667eea; box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1); }
+    .form-group textarea { min-height: 100px; resize: vertical; }
+    .btn { padding: 12px 20px; border: none; border-radius: 12px; font-weight: 600; font-size: 15px; cursor: pointer; background: linear-gradient(135deg, #667eea, #764ba2); color: #fff; transition: all 0.2s; font-family: inherit; display: inline-flex; align-items: center; gap: 8px; }
+    .btn:active { transform: scale(0.98); }
+    .btn-secondary { background: #6b7280; }
+    .btn-secondary:active { background: #4b5563; }
+    .btn-small { padding: 8px 14px; font-size: 13px; }
+    .btn-group { display: flex; gap: 10px; justify-content: flex-end; margin-top: 24px; }
+    .details-section { margin-bottom: 24px; padding: 20px; background: #f9fafb; border-radius: 16px; }
+    .details-section h4 { margin: 0 0 16px 0; color: #667eea; font-size: 16px; font-weight: 700; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .section-header { display: flex; align-items: center; gap: 8px; flex: 1; }
+    .info-grid { display: grid; grid-template-columns: 140px 1fr; gap: 12px 16px; }
+    .info-label { font-weight: 600; color: #6b7280; font-size: 14px; }
+    .info-value { color: #111827; font-size: 14px; }
+    .list-item { display: flex; align-items: center; justify-content: space-between; padding: 14px; background: #fff; border: 1px solid #e0e0e0; border-radius: 12px; margin-bottom: 10px; transition: all 0.2s; }
+    .list-item:hover { background: #f9fafb; border-color: #667eea; }
+    .list-item-content { flex: 1; }
+    .list-item-title { display: flex; align-items: center; gap: 8px; font-weight: 600; color: #111827; margin-bottom: 4px; }
+    .list-item-subtitle { font-size: 13px; color: #6b7280; }
+    .list-item-actions { display: flex; gap: 8px; }
+    .badge-small { background: rgba(102, 126, 234, 0.1); color: #667eea; padding: 4px 8px; border-radius: 8px; font-size: 11px; font-weight: 600; }
+    .empty-state { text-align: center; padding: 60px 20px; opacity: 0.7; }
+    .empty-state i { font-size: 48px; margin-bottom: 16px; opacity: 0.5; }
+    .empty-list { text-align: center; padding: 30px 20px; color: #999; font-size: 14px; }
+    .msg { margin: 16px 0; padding: 14px 18px; border-radius: 12px; font-weight: 600; font-size: 14px; display: none; }
+    .msg.show { display: block; }
+    .msg.error { background: #fee; color: #c00; border: 1px solid #fcc; }
+    .msg.success { background: #efe; color: #060; border: 1px solid #cfc; }
+    body.loading { opacity: 0; }
+    body.loaded { opacity: 1; transition: opacity 0.3s; }
+    @media (max-width: 768px) {
+      .status-bar {
+        padding-left: max(16px, env(safe-area-inset-left));
+        padding-right: max(16px, env(safe-area-inset-right));
+        font-size: 14px;
+      }
+      
+      .logo svg {
+        width: 90px;
+        height: 24px;
+      }
+      
+      .back-btn {
+        padding: 5px 10px;
+        font-size: 12px;
+      }
+      
+      .content {
+        padding-left: max(16px, env(safe-area-inset-left));
+        padding-right: max(16px, env(safe-area-inset-right));
+      }
+      
+      .einsatz-grid { 
+        grid-template-columns: 1fr;
+        gap: 12px;
+      }
+      
+      .einsatz-card {
+        padding: 16px;
+      }
+      
+      .einsatz-card h3 {
+        font-size: 16px;
+      }
+      
+      .einsatz-meta {
+        font-size: 13px;
+      }
+      
+      .einsatz-stats {
+        font-size: 12px;
+        gap: 12px;
+      }
+      
+      .add-btn {
+        font-size: 14px;
+        padding: 10px 18px;
+      }
+      
+      .modal {
+        padding: 0;
+        align-items: flex-end;
+      }
+      
+      .modal-box {
+        max-width: 100%;
+        max-height: 90vh;
+        border-radius: 24px 24px 0 0;
+        padding: 20px;
+      }
+      
+      .modal-box.small {
+        max-width: 100%;
+      }
+      
+      .modal-title {
+        font-size: 18px;
+      }
+      
+      .form-grid { 
+        grid-template-columns: 1fr;
+      }
+      
+      .form-group input,
+      .form-group textarea,
+      .form-group select {
+        font-size: 16px;
+      }
+      
+      .btn-group {
+        flex-direction: column-reverse;
+      }
+      
+      .btn-group .btn {
+        width: 100%;
+        justify-content: center;
+      }
+      
+      .info-grid { 
+        grid-template-columns: 1fr;
+        gap: 8px;
+      }
+      
+      .info-label { 
+        font-weight: 700;
+      }
+      
+      .details-section {
+        padding: 16px;
+      }
+      
+      .details-section h4 {
+        font-size: 15px;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+      }
+      
+      .section-header {
+        width: 100%;
+      }
+      
+      .details-section h4 .btn {
+        width: 100%;
+      }
+      
+      .list-item { 
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+        padding: 12px;
+      }
+      
+      .list-item-title {
+        font-size: 14px;
+      }
+      
+      .list-item-subtitle {
+        font-size: 12px;
+      }
+      
+      .list-item-actions { 
+        width: 100%;
+        justify-content: flex-end;
+      }
+    }
+  </style>
+
+</head>
+
+<body class="loading">
+
+<div class="status-bar">
+  <div class="logo">
+    <svg width="120" height="32" viewBox="0 0 560 140">
+      <rect x="20" y="20" width="100" height="100" rx="26" fill="rgba(255,255,255,0.25)"/>
+      <path d="M45 42 L45 98 L60 98 L60 78 L72 78 L83 98 L100 98 L87 77 Q92 74 92 63 Q92 42 75 42 Z M60 52 L72 52 Q77 52 77 62 Q77 72 72 72 L60 72 Z" fill="white"/>
+      <text x="140" y="80" font-family="Inter, sans-serif" font-size="46" font-weight="600" fill="white" letter-spacing="0">Responda</text>
+    </svg>
+  </div>
+  <div style="font-size: 15px; font-weight: 600;">Einsätze</div>
+  <a class="back-btn" href="hub.html"><i class="fa-solid fa-arrow-left"></i> Hub</a>
+</div>
+
+<div class="content">
+  <div class="einsatz-grid" id="einsaetzeGrid"></div>
+  <div id="msg" class="msg"></div>
+  <button class="add-btn" id="addBtn"><i class="fa-solid fa-plus"></i> Neuer Einsatz</button>
+</div>
+
+<!-- Modal: Einsatz erstellen/bearbeiten -->
+
+<div class="modal" id="einsatzModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-title" id="modalTitle"><i class="fa-solid fa-fire-flame-curved"></i> Neuer Einsatz</div>
+      <button class="modal-close" onclick="closeModal('einsatzModal')">×</button>
+    </div>
+    <form id="einsatzForm">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Einsatz-Nr. *</label>
+          <input type="text" name="einsatz_nr" placeholder="z.B. E-2025-001" required>
+        </div>
+        <div class="form-group">
+          <label>Datum/Uhrzeit *</label>
+          <input type="datetime-local" name="datum" required>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Stichwort</label>
+        <input type="text" name="stichwort" placeholder="z.B. Brand, VU mit Person, etc.">
+      </div>
+      <div class="form-group">
+        <label>Adresse</label>
+        <input type="text" name="adresse" placeholder="Straße, PLZ Ort">
+      </div>
+      <div class="form-group">
+        <label>Interne Vermerke</label>
+        <textarea name="interne_vermerke" placeholder="Notizen, die nicht in offizielle Dokumente gehören..."></textarea>
+      </div>
+      <div class="btn-group">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('einsatzModal')">Abbrechen</button>
+        <button type="submit" class="btn"><i class="fa-solid fa-save"></i> Speichern</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal: Einsatz Details -->
+
+<div class="modal" id="detailsModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-title" id="detailsTitle"><i class="fa-solid fa-fire-flame-curved"></i> Einsatz Details</div>
+      <button class="modal-close" onclick="closeModal('detailsModal')">×</button>
+    </div>
+    <div id="detailsBody"></div>
+    <div class="btn-group">
+      <button class="btn btn-secondary" onclick="closeModal('detailsModal')">Schließen</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Dokument hinzufügen -->
+
+<div class="modal" id="dokumentModal">
+  <div class="modal-box small">
+    <div class="modal-header">
+      <div class="modal-title"><i class="fa-solid fa-file-circle-plus"></i> Dokument zuordnen</div>
+      <button class="modal-close" onclick="closeModal('dokumentModal')">×</button>
+    </div>
+    <form id="dokumentForm">
+      <div class="form-group">
+        <label>Dokument-Typ *</label>
+        <select name="dokument_typ" id="dokumentTyp" required>
+          <option value="">-- Bitte wählen --</option>
+          <option value="patient_doc">Patientendokumentation</option>
+          <option value="cirs">CIRS-Meldung</option>
+          <option value="produkt">Produktausgabe</option>
+          <option value="nacherfassung">Nacherfassung</option>
+        </select>
+      </div>
+      <div class="form-group" id="dokumentSelectGroup" style="display:none">
+        <label>Dokument *</label>
+        <select name="dokument_id" id="dokumentSelect" required>
+          <option value="">-- Bitte wählen --</option>
+        </select>
+      </div>
+      <div class="btn-group">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('dokumentModal')">Abbrechen</button>
+        <button type="submit" class="btn"><i class="fa-solid fa-plus"></i> Zuordnen</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal: Person hinzufügen -->
+
+<div class="modal" id="personModal">
+  <div class="modal-box small">
+    <div class="modal-header">
+      <div class="modal-title"><i class="fa-solid fa-user-plus"></i> Person zuordnen</div>
+      <button class="modal-close" onclick="closeModal('personModal')">×</button>
+    </div>
+    <form id="personForm">
+      <div class="form-group">
+        <label>Person *</label>
+        <select name="user_id" id="personSelect" required>
+          <option value="">-- Bitte wählen --</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Rolle (optional)</label>
+        <input type="text" name="rolle" placeholder="z.B. Fahrzeugführer, Melder, etc.">
+      </div>
+      <div class="btn-group">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('personModal')">Abbrechen</button>
+        <button type="submit" class="btn"><i class="fa-solid fa-plus"></i> Zuordnen</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script type="module">
+  import PocketBase from 'https://cdn.jsdelivr.net/npm/pocketbase@0.21.3/dist/pocketbase.es.mjs';
+  
+  const pb = new PocketBase('https://api.responda.systems');
+  
+  if (!pb.authStore.isValid) {
+    window.location.href = 'mpg-login.html';
+  }
+  
+  let user = pb.authStore.model;
+  let allEinsaetze = [];
+  let allUsers = [];
+  let currentEinsatzId = null;
+  let editingEinsatzId = null;
+  
+  async function init() {
+    try {
+      await pb.collection('users').authRefresh();
+      user = pb.authStore.model;
+      document.body.classList.add('loaded');
+      
+      // Load users for person dropdown
+      allUsers = await pb.collection('users').getFullList({
+        filter: `organization_id = "${user.organization_id}"`,
+        sort: 'name'
+      });
+      
+      await loadEinsaetze();
+    } catch(e) {
+      console.error('Init error:', e);
+      showMsg('Fehler beim Laden: ' + e.message, 'error');
+    }
+  }
+  
+  async function loadEinsaetze() {
+    try {
+      allEinsaetze = await pb.collection('einsaetze').getFullList({
+        filter: `organization_id = "${user.organization_id}"`,
+        sort: '-datum',
+        expand: 'created_by'
+      });
+      
+      // Load zuordnungen und personen für jedes einsatz
+      for (let einsatz of allEinsaetze) {
+        einsatz.zuordnungen = await pb.collection('einsatz_zuordnungen').getFullList({
+          filter: `einsatz_id = "${einsatz.id}"`
+        });
+        
+        einsatz.personen = await pb.collection('einsatz_personen').getFullList({
+          filter: `einsatz_id = "${einsatz.id}"`,
+          expand: 'user_id'
+        });
+      }
+      
+      renderEinsaetze();
+    } catch(e) {
+      console.error('Load error:', e);
+      showMsg('Fehler beim Laden der Einsätze: ' + e.message, 'error');
+    }
+  }
+  
+  function renderEinsaetze() {
+    const grid = document.getElementById('einsaetzeGrid');
+    
+    if (allEinsaetze.length === 0) {
+      grid.innerHTML = `
+        <div class="empty-state">
+          <i class="fa-solid fa-fire-flame-curved"></i>
+          <p>Noch keine Einsätze erfasst</p>
+        </div>
+      `;
+      return;
+    }
+    
+    grid.innerHTML = allEinsaetze.map(einsatz => {
+      const datum = new Date(einsatz.datum).toLocaleDateString('de-DE', {
+        year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
+      });
+      
+      const dokumenteCount = einsatz.zuordnungen?.length || 0;
+      const personenCount = einsatz.personen?.length || 0;
+      
+      return `
+        <div class="einsatz-card" onclick="viewEinsatz('${einsatz.id}')">
+          <div class="einsatz-badge">${einsatz.einsatz_nr}</div>
+          <h3>${einsatz.stichwort || 'Ohne Stichwort'}</h3>
+          <div class="einsatz-meta">
+            <div class="einsatz-meta-item">
+              <i class="fa-solid fa-calendar"></i>
+              <span>${datum}</span>
+            </div>
+            ${einsatz.adresse ? `
+            <div class="einsatz-meta-item">
+              <i class="fa-solid fa-location-dot"></i>
+              <span>${einsatz.adresse}</span>
+            </div>
+            ` : ''}
+          </div>
+          <div class="einsatz-stats">
+            <div class="stat-item">
+              <i class="fa-solid fa-file"></i>
+              <span>${dokumenteCount}</span>
+            </div>
+            <div class="stat-item">
+              <i class="fa-solid fa-users"></i>
+              <span>${personenCount}</span>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+  
+  window.openEinsatzModal = function(einsatzId = null) {
+    editingEinsatzId = einsatzId;
+    const form = document.getElementById('einsatzForm');
+    form.reset();
+    
+    if (einsatzId) {
+      const einsatz = allEinsaetze.find(e => e.id === einsatzId);
+      if (einsatz) {
+        document.getElementById('modalTitle').innerHTML = '<i class="fa-solid fa-edit"></i> Einsatz bearbeiten';
+        form.einsatz_nr.value = einsatz.einsatz_nr;
+        form.datum.value = einsatz.datum.slice(0, 16);
+        form.stichwort.value = einsatz.stichwort || '';
+        form.adresse.value = einsatz.adresse || '';
+        form.interne_vermerke.value = einsatz.interne_vermerke || '';
+      }
+    } else {
+      document.getElementById('modalTitle').innerHTML = '<i class="fa-solid fa-fire-flame-curved"></i> Neuer Einsatz';
+      const now = new Date();
+      const offset = now.getTimezoneOffset();
+      const localDate = new Date(now.getTime() - (offset * 60 * 1000));
+      form.datum.value = localDate.toISOString().slice(0, 16);
+    }
+    
+    document.getElementById('einsatzModal').classList.add('show');
+  };
+  
+  window.closeModal = function(modalId) {
+    document.getElementById(modalId).classList.remove('show');
+    if (modalId === 'einsatzModal') editingEinsatzId = null;
+    if (modalId === 'detailsModal') currentEinsatzId = null;
+  };
+  
+  document.getElementById('addBtn').onclick = () => openEinsatzModal();
+  
+  document.getElementById('einsatzForm').onsubmit = async (e) => {
+    e.preventDefault();
+    
+    try {
+      const formData = new FormData(e.target);
+      const data = {
+        einsatz_nr: formData.get('einsatz_nr').trim(),
+        datum: formData.get('datum'),
+        stichwort: formData.get('stichwort').trim(),
+        adresse: formData.get('adresse').trim(),
+        interne_vermerke: formData.get('interne_vermerke').trim(),
+        organization_id: user.organization_id,
+        created_by: user.id
+      };
+      
+      if (editingEinsatzId) {
+        await pb.collection('einsaetze').update(editingEinsatzId, data);
+        showMsg('✅ Einsatz aktualisiert!', 'success');
+      } else {
+        await pb.collection('einsaetze').create(data);
+        showMsg('✅ Einsatz erstellt!', 'success');
+      }
+      
+      closeModal('einsatzModal');
+      await loadEinsaetze();
+    } catch(e) {
+      console.error('Save error:', e);
+      showMsg('Fehler beim Speichern: ' + e.message, 'error');
+    }
+  };
+  
+  window.viewEinsatz = async function(einsatzId) {
+    try {
+      currentEinsatzId = einsatzId;
+      const einsatz = allEinsaetze.find(e => e.id === einsatzId);
+      if (!einsatz) return;
+      
+      const datum = new Date(einsatz.datum).toLocaleDateString('de-DE', {
+        weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
+      });
+      
+      document.getElementById('detailsTitle').innerHTML = `<i class="fa-solid fa-fire-flame-curved"></i> ${einsatz.einsatz_nr}`;
+      
+      let dokumenteHTML = '';
+      if (einsatz.zuordnungen?.length > 0) {
+        for (const zuordnung of einsatz.zuordnungen) {
+          const typeName = getDokumentTypeName(zuordnung.dokument_typ);
+          const icon = getDokumentIcon(zuordnung.dokument_typ);
+          
+          dokumenteHTML += `
+            <div class="list-item">
+              <div class="list-item-content">
+                <div class="list-item-title">
+                  <i class="${icon}"></i>
+                  <span>${typeName}</span>
+                </div>
+                <div class="list-item-subtitle">ID: ${zuordnung.dokument_id.slice(0, 8)}...</div>
+              </div>
+              <div class="list-item-actions">
+                <button class="btn btn-secondary btn-small" onclick="removeDokument('${zuordnung.id}')">
+                  <i class="fa-solid fa-trash"></i>
+                </button>
+              </div>
+            </div>
+          `;
+        }
+      } else {
+        dokumenteHTML = '<div class="empty-list">Keine Dokumente zugeordnet</div>';
+      }
+      
+      let personenHTML = '';
+      if (einsatz.personen?.length > 0) {
+        personenHTML = einsatz.personen.map(p => {
+          const userInfo = p.expand?.user_id;
+          return `
+            <div class="list-item">
+              <div class="list-item-content">
+                <div class="list-item-title">
+                  <i class="fa-solid fa-user"></i>
+                  <span>${userInfo?.name || 'Unbekannt'}</span>
+                  ${p.rolle ? `<span class="badge-small">${p.rolle}</span>` : ''}
+                </div>
+                <div class="list-item-subtitle">${userInfo?.email || ''}</div>
+              </div>
+              <div class="list-item-actions">
+                <button class="btn btn-secondary btn-small" onclick="removePerson('${p.id}')">
+                  <i class="fa-solid fa-trash"></i>
+                </button>
+              </div>
+            </div>
+          `;
+        }).join('');
+      } else {
+        personenHTML = '<div class="empty-list">Keine Personen zugeordnet</div>';
+      }
+      
+      document.getElementById('detailsBody').innerHTML = `
+        <div class="details-section">
+          <h4><i class="fa-solid fa-info-circle"></i> Basisdaten</h4>
+          <div class="info-grid">
+            <div class="info-label">Einsatz-Nr.:</div>
+            <div class="info-value">${einsatz.einsatz_nr}</div>
+            <div class="info-label">Datum/Uhrzeit:</div>
+            <div class="info-value">${datum}</div>
+            <div class="info-label">Stichwort:</div>
+            <div class="info-value">${einsatz.stichwort || '-'}</div>
+            <div class="info-label">Adresse:</div>
+            <div class="info-value">${einsatz.adresse || '-'}</div>
+            <div class="info-label">Erfasst von:</div>
+            <div class="info-value">${einsatz.expand?.created_by?.name || 'System'}</div>
+          </div>
+        </div>
+        
+        ${einsatz.interne_vermerke ? `
+        <div class="details-section">
+          <h4><i class="fa-solid fa-note-sticky"></i> Interne Vermerke</h4>
+          <div style="background:#fff;padding:14px;border-radius:12px;border:1px solid #e0e0e0;white-space:pre-wrap">${einsatz.interne_vermerke}</div>
+        </div>
+        ` : ''}
+        
+        <div class="details-section">
+          <h4>
+            <span class="section-header">
+              <i class="fa-solid fa-files"></i> 
+              Zugeordnete Dokumente (${einsatz.zuordnungen?.length || 0})
+            </span>
+            <button class="btn btn-small" onclick="openDokumentModal()">
+              <i class="fa-solid fa-plus"></i> Hinzufügen
+            </button>
+          </h4>
+          ${dokumenteHTML}
+        </div>
+        
+        <div class="details-section">
+          <h4>
+            <span class="section-header">
+              <i class="fa-solid fa-users"></i> 
+              Eingesetzte Personen (${einsatz.personen?.length || 0})
+            </span>
+            <button class="btn btn-small" onclick="openPersonModal()">
+              <i class="fa-solid fa-plus"></i> Hinzufügen
+            </button>
+          </h4>
+          ${personenHTML}
+        </div>
+        
+        <div style="display:flex;gap:10px;margin-top:24px">
+          <button class="btn" onclick="openEinsatzModal('${einsatzId}')">
+            <i class="fa-solid fa-edit"></i> Bearbeiten
+          </button>
+          <button class="btn btn-secondary" onclick="deleteEinsatz('${einsatzId}')">
+            <i class="fa-solid fa-trash"></i> Löschen
+          </button>
+        </div>
+      `;
+      
+      document.getElementById('detailsModal').classList.add('show');
+    } catch(e) {
+      console.error('View error:', e);
+      showMsg('Fehler beim Laden: ' + e.message, 'error');
+    }
+  };
+  
+  window.deleteEinsatz = async function(einsatzId) {
+    if (!confirm('Einsatz wirklich löschen? Alle Verknüpfungen gehen verloren!')) return;
+    
+    try {
+      await pb.collection('einsaetze').delete(einsatzId);
+      showMsg('✅ Einsatz gelöscht!', 'success');
+      closeModal('detailsModal');
+      await loadEinsaetze();
+    } catch(e) {
+      console.error('Delete error:', e);
+      showMsg('Fehler beim Löschen: ' + e.message, 'error');
+    }
+  };
+  
+  // Dokumente
+  window.openDokumentModal = function() {
+    if (!currentEinsatzId) return;
+    const form = document.getElementById('dokumentForm');
+    form.reset();
+    document.getElementById('dokumentSelectGroup').style.display = 'none';
+    document.getElementById('dokumentModal').classList.add('show');
+  };
+  
+  document.getElementById('dokumentTyp').onchange = async (e) => {
+    const typ = e.target.value;
+    const selectGroup = document.getElementById('dokumentSelectGroup');
+    const select = document.getElementById('dokumentSelect');
+    
+    if (!typ) {
+      selectGroup.style.display = 'none';
+      return;
+    }
+    
+    try {
+      selectGroup.style.display = 'block';
+      select.innerHTML = '<option value="">Lade...</option>';
+      
+      let collection = typ;
+      let dokumente = await pb.collection(collection).getFullList({
+        filter: `organization_id = "${user.organization_id}"`,
+        sort: '-created'
+      });
+      
+      if (dokumente.length === 0) {
+        select.innerHTML = '<option value="">Keine Dokumente verfügbar</option>';
+      } else {
+        select.innerHTML = '<option value="">-- Bitte wählen --</option>' +
+          dokumente.map(d => {
+            const label = d.title || d.stichwort || d.einsatz_nr || 'Ohne Titel';
+            return `<option value="${d.id}">${label}</option>`;
+          }).join('');
+      }
+    } catch(e) {
+      select.innerHTML = '<option value="">Fehler beim Laden</option>';
+      console.error('Load dokumente error:', e);
+    }
+  };
+  
+  document.getElementById('dokumentForm').onsubmit = async (e) => {
+    e.preventDefault();
+    
+    try {
+      const formData = new FormData(e.target);
+      const data = {
+        einsatz_id: currentEinsatzId,
+        dokument_typ: formData.get('dokument_typ'),
+        dokument_id: formData.get('dokument_id'),
+        organization_id: user.organization_id
+      };
+      
+      // Check if already exists
+      const existing = await pb.collection('einsatz_zuordnungen').getFullList({
+        filter: `einsatz_id = "${currentEinsatzId}" && dokument_typ = "${data.dokument_typ}" && dokument_id = "${data.dokument_id}"`
+      });
+      
+      if (existing.length > 0) {
+        showMsg('⚠️ Dokument ist bereits zugeordnet', 'error');
+        return;
+      }
+      
+      await pb.collection('einsatz_zuordnungen').create(data);
+      showMsg('✅ Dokument zugeordnet!', 'success');
+      closeModal('dokumentModal');
+      await loadEinsaetze();
+      await viewEinsatz(currentEinsatzId);
+    } catch(e) {
+      console.error('Zuordnung error:', e);
+      showMsg('Fehler: ' + e.message, 'error');
+    }
+  };
+  
+  window.removeDokument = async function(zuordnungId) {
+    if (!confirm('Zuordnung wirklich entfernen?')) return;
+    
+    try {
+      await pb.collection('einsatz_zuordnungen').delete(zuordnungId);
+      showMsg('✅ Zuordnung entfernt!', 'success');
+      await loadEinsaetze();
+      await viewEinsatz(currentEinsatzId);
+    } catch(e) {
+      console.error('Remove error:', e);
+      showMsg('Fehler: ' + e.message, 'error');
+    }
+  };
+  
+  // Personen
+  window.openPersonModal = function() {
+    if (!currentEinsatzId) return;
+    const form = document.getElementById('personForm');
+    form.reset();
+    
+    const select = document.getElementById('personSelect');
+    select.innerHTML = '<option value="">-- Bitte wählen --</option>' +
+      allUsers.map(u => `<option value="${u.id}">${u.name} ${u.email ? '(' + u.email + ')' : ''}</option>`).join('');
+    
+    document.getElementById('personModal').classList.add('show');
+  };
+  
+  document.getElementById('personForm').onsubmit = async (e) => {
+    e.preventDefault();
+    
+    try {
+      const formData = new FormData(e.target);
+      const data = {
+        einsatz_id: currentEinsatzId,
+        user_id: formData.get('user_id'),
+        rolle: formData.get('rolle').trim() || null,
+        organization_id: user.organization_id
+      };
+      
+      // Check if already exists
+      const existing = await pb.collection('einsatz_personen').getFullList({
+        filter: `einsatz_id = "${currentEinsatzId}" && user_id = "${data.user_id}"`
+      });
+      
+      if (existing.length > 0) {
+        showMsg('⚠️ Person ist bereits zugeordnet', 'error');
+        return;
+      }
+      
+      await pb.collection('einsatz_personen').create(data);
+      showMsg('✅ Person zugeordnet!', 'success');
+      closeModal('personModal');
+      await loadEinsaetze();
+      await viewEinsatz(currentEinsatzId);
+    } catch(e) {
+      console.error('Zuordnung error:', e);
+      showMsg('Fehler: ' + e.message, 'error');
+    }
+  };
+  
+  window.removePerson = async function(personId) {
+    if (!confirm('Person wirklich entfernen?')) return;
+    
+    try {
+      await pb.collection('einsatz_personen').delete(personId);
+      showMsg('✅ Person entfernt!', 'success');
+      await loadEinsaetze();
+      await viewEinsatz(currentEinsatzId);
+    } catch(e) {
+      console.error('Remove error:', e);
+      showMsg('Fehler: ' + e.message, 'error');
+    }
+  };
+  
+  function getDokumentTypeName(typ) {
+    const names = {
+      patient_doc: 'Patientendokumentation',
+      cirs: 'CIRS-Meldung',
+      produkt: 'Produktausgabe',
+      nacherfassung: 'Nacherfassung'
+    };
+    return names[typ] || typ;
+  }
+  
+  function getDokumentIcon(typ) {
+    const icons = {
+      patient_doc: 'fa-solid fa-file-medical',
+      cirs: 'fa-solid fa-triangle-exclamation',
+      produkt: 'fa-solid fa-box',
+      nacherfassung: 'fa-solid fa-clipboard-list'
+    };
+    return icons[typ] || 'fa-solid fa-file';
+  }
+  
+  function showMsg(text, type = 'success') {
+    const msgDiv = document.getElementById('msg');
+    msgDiv.textContent = text;
+    msgDiv.className = 'msg show ' + type;
+    setTimeout(() => { msgDiv.className = 'msg'; }, 5000);
+  }
+  
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      closeModal('einsatzModal');
+      closeModal('detailsModal');
+      closeModal('dokumentModal');
+      closeModal('personModal');
+    }
+    if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
+      e.preventDefault();
+      openEinsatzModal();
+    }
+  });
+  
+  document.querySelectorAll('.modal').forEach(modal => {
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        modal.classList.remove('show');
+      }
+    });
+  });
+  
+  console.log('🚒 Einsatzverwaltung geladen');
+  init();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8"><title>Archiv</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<style>
+ :root{--rot:#c8102e}
+ body{font-family:'Atkinson Hyperlegible',Arial,sans-serif;background:#f7f7f7;margin:0}
+ header{background:var(--rot);color:#fff;padding:12px 16px;font-weight:700}
+ .wrap{max-width:860px;margin:16px auto;padding:0 14px}
+ table{width:100%;border-collapse:collapse;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 3px 12px rgba(0,0,0,.06)}
+ th,td{padding:12px;border-bottom:1px solid #eee}
+ th{background:#fff3f5;color:var(--rot)}
+ a{color:var(--rot);text-decoration:none}
+</style>
+</head>
+<body>
+<header>Archivierte Dokumente</header>
+<div class="wrap">
+  <table>
+    <thead><tr><th>ID</th><th>finalisiert</th><th>PDF</th></tr></thead>
+    <tbody id="tb"></tbody>
+  </table>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/@nhost/nhost-js@2.2.9/dist/umd/index.min.js"></script>
+<script>
+  const NHOST_SUBDOMAIN='hpjfrhktprpuuxvvlpsb', NHOST_REGION='eu-central-1';
+  const nhost=new window.Nhost.NhostClient({ subdomain:NHOST_SUBDOMAIN, region:NHOST_REGION });
+
+  async function loadArchived(){
+    const { data } = await nhost.graphql.request(`
+      query{
+        patient_docs(where:{status:{_eq:"archiviert"}}, order_by:{finalized_at:desc}){
+          id finalized_at
+        }
+      }`);
+    const tb=document.getElementById('tb'); tb.innerHTML='';
+    (data?.patient_docs||[]).forEach(d=>{
+      const tr=document.createElement('tr');
+      const dt=d.finalized_at?new Date(d.finalized_at).toLocaleString():'-';
+      tr.innerHTML=`<td>${d.id}</td><td>${dt}</td><td><a href="#" onclick="alert('PDF-Generierung wird noch angebunden');return false;">PDF</a></td>`;
+      tb.appendChild(tr);
+    });
+  }
+  (async()=>{ await nhost.auth.refreshSession().catch(()=>{}); loadArchived(); })();
+</script>
+</body>
+</html>

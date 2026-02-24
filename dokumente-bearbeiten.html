@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Dokumentenverwaltung – Responda</title>
+  <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet"/>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
+  <script src="https://cdn.jsdelivr.net/npm/pocketbase@0.21.3/dist/pocketbase.umd.js"></script>
+
+  <style>
+    :root{
+      --primary:#c8102e;
+      --bg:#f8fafc;
+      --card:#fff;
+      --text:#0f172a;
+      --muted:#64748b;
+      --border:#e2e8f0;
+      --gradient-start:#667eea;
+      --gradient-end:#764ba2;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      background:linear-gradient(135deg, var(--gradient-start) 0%, var(--gradient-end) 100%);
+      min-height:100vh;
+      color:var(--text);
+      font-family:'Atkinson Hyperlegible',-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+      line-height:1.45;
+      opacity:0;
+      transition:opacity 0.3s;
+    }
+    body.loaded{opacity:1}
+    
+    header{position:sticky;top:0;background:var(--gradient-start);color:#fff;z-index:10}
+    .bar{max-width:1200px;margin:0 auto;padding:.75rem 1rem;display:flex;gap:.5rem;align-items:center;flex-wrap:wrap}
+    h1{font-size:1.05rem;margin:0;font-weight:800}
+    .toolbar{margin-left:auto;display:flex;gap:.5rem;flex-wrap:wrap}
+    .topbtn{border:1px solid rgba(255,255,255,0.3);background:rgba(255,255,255,0.1);color:#fff;padding:.45rem .7rem;border-radius:.5rem;cursor:pointer;font-weight:700;font-size:.9rem;transition:all 0.2s;text-decoration:none;display:inline-flex;align-items:center;gap:6px}
+    .topbtn:hover{background:rgba(255,255,255,0.2)}
+    
+    .wrap{max-width:1200px;margin:1rem auto;padding:0 1rem 100px}
+    .card{background:var(--card);border-radius:14px;box-shadow:0 3px 12px rgba(0,0,0,.06);padding:20px;margin-bottom:20px}
+    .card h2{margin-top:0;color:var(--primary);font-weight:800}
+    
+    .tabs{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap}
+    .tab{border:1px solid var(--border);background:#fafafa;padding:10px 16px;border-radius:999px;font-weight:800;cursor:pointer;font-size:0.95rem;transition:all 0.2s;display:inline-flex;align-items:center;gap:6px}
+    .tab:hover{background:#f0f0f0}
+    .tab.active{color:#fff;background:var(--primary);border-color:var(--primary)}
+    
+    .table-head,.row{display:grid;grid-template-columns:120px 1fr 280px;gap:12px;padding:14px 10px;align-items:center;border-bottom:1px solid var(--border)}
+    .table-head{font-weight:800;color:#666;background:#fafafa;border-radius:8px 8px 0 0}
+    .row:last-child{border-bottom:none}
+    .row:hover{background:#f9f9f9}
+    
+    .pill{display:inline-block;font-weight:800;border-radius:999px;padding:5px 12px;font-size:0.85rem}
+    .pill.cirs{background:#fef3c7;color:#92400e}
+    .pill.product{background:#dcfce7;color:#166534}
+    
+    .btn{background:var(--primary);color:#fff;border:0;border-radius:10px;padding:10px 14px;font-weight:800;cursor:pointer;font-size:0.9rem;transition:all 0.2s;display:inline-flex;align-items:center;gap:6px;font-family:inherit}
+    .btn:hover{background:#a00d26;transform:translateY(-1px)}
+    .btn:active{transform:translateY(0)}
+    .btn:disabled{opacity:0.5;cursor:not-allowed;transform:none}
+    
+    .btn-secondary{background:#6b7280;color:#fff}
+    .btn-secondary:hover{background:#4b5563}
+    
+    .btn-icon{background:transparent;color:var(--primary);border:1px solid var(--primary);padding:8px 12px;font-size:0.85rem}
+    .btn-icon:hover{background:#fff5f5;transform:translateY(-1px)}
+    
+    .modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:flex-start;justify-content:center;z-index:1000;padding:20px;overflow-y:auto}
+    .modal.show{display:flex}
+    .modal-box{background:#fff;border-radius:14px;max-width:1000px;width:100%;max-height:90vh;overflow-y:auto;padding:24px;box-shadow:0 8px 20px rgba(0,0,0,.3);margin:auto}
+    .modal-box h3{margin-top:0;color:var(--primary);font-weight:800}
+    
+    .msg{margin-top:12px;padding:12px;border-radius:8px}
+    .msg.error{background:#fee;color:#c00;border:1px solid #fcc}
+    .msg.success{background:#efe;color:#060;border:1px solid #cfc}
+    
+    .details-grid{display:grid;grid-template-columns:200px 1fr;gap:12px;margin:16px 0}
+    .details-label{font-weight:700;color:#374151}
+    .details-value{color:#1f2937;white-space:pre-wrap}
+    
+    table{width:100%;border-collapse:collapse;margin-top:.5rem}
+    th,td{border:1px solid var(--border);padding:.5rem;text-align:left;font-size:.9rem}
+    th{background:#f8fafc;font-weight:700}
+    
+    @media (max-width:768px){
+      .table-head,.row{grid-template-columns:1fr !important;gap:8px}
+      .modal-box{padding:16px}
+      .details-grid{grid-template-columns:1fr}
+      h1{font-size:.95rem}
+      .topbtn{font-size:.85rem;padding:.4rem .6rem}
+    }
+    
+    @media print{
+      header,.tabs,.btn,.modal{display:none !important}
+      body{background:#fff}
+      .card{box-shadow:none;border:1px solid #ddd}
+    }
+  </style>
+</head>
+
+<body>
+
+<!-- ==================== HEADER START ==================== -->
+  <header>
+    <div class="bar">
+      <h1><i class="fa-solid fa-folder-open"></i> Dokumentenverwaltung</h1>
+      <div class="toolbar">
+        <a class="topbtn" href="mpg-dashboard.html"><i class="fa-solid fa-dashboard"></i> Dashboard</a>
+        <button class="topbtn" id="logout"><i class="fa-solid fa-right-from-bracket"></i> Logout</button>
+      </div>
+    </div>
+  </header>
+<!-- ==================== HEADER END ==================== -->
+
+<!-- ==================== MAIN CONTENT START ==================== -->
+  <div class="wrap">
+    <section class="card">
+      <h2>Dokumente bearbeiten</h2>
+      
+      <!-- TABS -->
+      <div class="tabs">
+        <button class="tab active" data-tab="open">
+          <i class="fa-solid fa-folder-open"></i> Offen
+        </button>
+        <button class="tab" data-tab="arch">
+          <i class="fa-solid fa-box-archive"></i> Archiv (1 Jahr)
+        </button>
+      </div>
+
+      <!-- TAB: OFFEN -->
+      <div id="tab-open" class="tab-content">
+        <div class="table-head">
+          <div>Typ</div>
+          <div>Titel</div>
+          <div>Aktionen</div>
+        </div>
+        <div id="open-rows"></div>
+      </div>
+
+      <!-- TAB: ARCHIV -->
+      <div id="tab-arch" class="tab-content" style="display:none">
+        <div class="table-head">
+          <div>Typ</div>
+          <div>Titel</div>
+          <div>Aktionen</div>
+        </div>
+        <div id="arch-rows"></div>
+      </div>
+
+      <div id="msg"></div>
+    </section>
+  </div>
+<!-- ==================== MAIN CONTENT END ==================== -->
+
+<!-- ==================== DETAILS MODAL START ==================== -->
+  <div class="modal" id="detailsModal">
+    <div class="modal-box">
+      <h3 id="detailsTitle">Details</h3>
+      <div id="detailsBody"></div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
+        <button class="btn btn-secondary" onclick="closeDetailsModal()">
+          <i class="fa-solid fa-times"></i> Schließen
+        </button>
+      </div>
+    </div>
+  </div>
+<!-- ==================== DETAILS MODAL END ==================== -->
+
+<!-- ==================== JAVASCRIPT START ==================== -->
+  <script type="module">
+    
+    // ========================================
+    // SECTION: POCKETBASE INITIALIZATION & AUTH
+    // ========================================
+    const pb = new PocketBase('https://api.responda.systems');
+    
+    // Check if user is logged in
+    if (!pb.authStore.isValid) {
+      location.href = "/mpg-login.html";
+    }
+
+    const currentUser = pb.authStore.model;
+    if (!currentUser || !currentUser.organization_id) {
+      location.href = "/mpg-login.html";
+    }
+
+    // Load organization data
+    let currentOrganization = { name: 'Feuerwehr' }; // Default fallback
+    
+    async function loadOrganization() {
+      try {
+        if (!currentUser.organization_id) {
+          console.warn('⚠️ User has no organization_id');
+          return;
+        }
+        currentOrganization = await pb.collection('organizations').getOne(currentUser.organization_id);
+        console.log('✅ Organization loaded:', currentOrganization);
+      } catch(e) {
+        console.warn('⚠️ Could not load organization, using fallback:', e.message);
+      }
+    }
+    
+    // Start loading (non-blocking)
+    loadOrganization();
+
+    // ========================================
+    // SECTION: LOGOUT HANDLER
+    // ========================================
+    document.getElementById("logout").onclick = async (e) => {
+      e.preventDefault();
+      pb.authStore.clear();
+      localStorage.clear();
+      location.href = "/mpg-login.html";
+    };
+
+    // ========================================
+    // SECTION: TAB SWITCHING
+    // ========================================
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.onclick = () => {
+        const targetTab = tab.dataset.tab;
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        document.querySelectorAll('.tab-content').forEach(tc => tc.style.display = 'none');
+        document.getElementById('tab-' + targetTab).style.display = 'block';
+        document.getElementById('msg').textContent = '';
+        
+        // Load data when tab is clicked
+        if (targetTab === 'open') loadOpen();
+        if (targetTab === 'arch') loadArch();
+      };
+    });
+
+    // ========================================
+    // SECTION: UTILITY FUNCTIONS
+    // ========================================
+    function showMsg(text, type = 'success') {
+      const msgDiv = document.getElementById('msg');
+      msgDiv.textContent = text;
+      msgDiv.className = 'msg ' + type;
+      setTimeout(() => { 
+        msgDiv.textContent = ''; 
+        msgDiv.className = 'msg'; 
+      }, 5000);
+    }
+
+    // ========================================
+    // SECTION: LOAD OPEN DOCUMENTS (CIRS + PRODUCT)
+    // ========================================
+    async function loadOpen() {
+      try {
+        // Load CIRS Reports (offen)
+        const cirsData = await pb.collection('cirs_reports').getFullList({
+          filter: `(status = "" || status != "erledigt") && organization_id = "${currentUser.organization_id}"`,
+          sort: '-created',
+        });
+        
+        // Load Product Outputs (offen)
+        const productData = await pb.collection('product_outputs').getFullList({
+          filter: `(status = "" || status != "erledigt") && organization_id = "${currentUser.organization_id}"`,
+          sort: '-created',
+        });
+        
+        // Combine both arrays
+        const allDocs = [
+          ...cirsData.map(d => ({ ...d, type: 'cirs', collection: 'cirs_reports' })),
+          ...productData.map(d => ({ ...d, type: 'product', collection: 'product_outputs' }))
+        ].sort((a, b) => new Date(b.created) - new Date(a.created));
+        
+        const rows = document.getElementById('open-rows');
+        rows.innerHTML = allDocs.map(doc => {
+          const title = doc.title || 'Ohne Titel';
+          const pillClass = doc.type === 'cirs' ? 'cirs' : 'product';
+          const pillText = doc.type === 'cirs' ? 'CIRS' : 'Produkt';
+          const viewFunc = doc.type === 'cirs' ? 'viewCIRS' : 'viewProduct';
+          
+          return `
+          <div class="row">
+            <div><span class="pill ${pillClass}">${pillText}</span></div>
+            <div>
+              <strong>${title}</strong><br>
+              <small style="color:#6b7280">
+                ${new Date(doc.created).toLocaleString('de-DE')}
+              </small>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <button class="btn btn-icon" onclick="${viewFunc}('${doc.id}')">
+                <i class="fa-solid fa-eye"></i> Details
+              </button>
+              <button class="btn" onclick="markErledigt('${doc.collection}', '${doc.id}')">
+                <i class="fa-solid fa-check"></i> Erledigt
+              </button>
+            </div>
+          </div>
+        `;
+        }).join('') || '<p style="padding:20px;color:#999">Keine offenen Dokumente</p>';
+        
+      } catch(e) {
+        showMsg('Fehler beim Laden: ' + e.message, 'error');
+      }
+    }
+
+    // ========================================
+    // SECTION: LOAD ARCHIVE (1 YEAR)
+    // ========================================
+    async function loadArch() {
+      try {
+        // Calculate date 1 year ago
+        const oneYearAgo = new Date();
+        oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+        const filterDate = oneYearAgo.toISOString();
+        
+        // Load CIRS Reports (erledigt, last 1 year)
+        const cirsData = await pb.collection('cirs_reports').getFullList({
+          filter: `status = "erledigt" && organization_id = "${currentUser.organization_id}" && updated >= "${filterDate}"`,
+          sort: '-updated',
+        });
+        
+        // Load Product Outputs (erledigt, last 1 year)
+        const productData = await pb.collection('product_outputs').getFullList({
+          filter: `status = "erledigt" && organization_id = "${currentUser.organization_id}" && updated >= "${filterDate}"`,
+          sort: '-updated',
+        });
+        
+        // Combine both arrays
+        const allDocs = [
+          ...cirsData.map(d => ({ ...d, type: 'cirs', collection: 'cirs_reports' })),
+          ...productData.map(d => ({ ...d, type: 'product', collection: 'product_outputs' }))
+        ].sort((a, b) => new Date(b.updated) - new Date(a.updated));
+        
+        const rows = document.getElementById('arch-rows');
+        rows.innerHTML = allDocs.map(doc => {
+          const title = doc.title || 'Ohne Titel';
+          const pillClass = doc.type === 'cirs' ? 'cirs' : 'product';
+          const pillText = doc.type === 'cirs' ? 'CIRS' : 'Produkt';
+          const viewFunc = doc.type === 'cirs' ? 'viewCIRS' : 'viewProduct';
+          
+          return `
+          <div class="row">
+            <div><span class="pill ${pillClass}">${pillText}</span></div>
+            <div>
+              <strong>${title}</strong><br>
+              <small style="color:#6b7280">
+                Erledigt: ${new Date(doc.updated).toLocaleString('de-DE')}
+              </small>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <button class="btn btn-icon" onclick="${viewFunc}('${doc.id}')">
+                <i class="fa-solid fa-eye"></i> Details
+              </button>
+            </div>
+          </div>
+        `;
+        }).join('') || '<p style="padding:20px;color:#999">Kein Archiv vorhanden (letzte 12 Monate)</p>';
+        
+      } catch(e) {
+        showMsg('Fehler beim Laden: ' + e.message, 'error');
+      }
+    }
+
+    // ========================================
+    // SECTION: MARK AS ERLEDIGT
+    // ========================================
+    window.markErledigt = async (collection, id) => {
+      if (!confirm('Dokument als erledigt markieren?')) return;
+      
+      try {
+        await pb.collection(collection).update(id, {
+          status: 'erledigt'
+        });
+        
+        showMsg('✅ Dokument als erledigt markiert!', 'success');
+        await loadOpen();
+        
+      } catch(e) {
+        showMsg('Fehler: ' + e.message, 'error');
+      }
+    };
+
+    // ========================================
+    // SECTION: VIEW CIRS DETAILS
+    // ========================================
+    window.viewCIRS = async (id) => {
+      try {
+        const doc = await pb.collection('cirs_reports').getOne(id);
+        const payload = doc.payload || {};
+        
+        document.getElementById('detailsTitle').textContent = 'CIRS-Meldung: ' + (doc.title || 'Ohne Titel');
+        
+        let html = '<div class="details-grid">';
+        html += `<div class="details-label">Erstellt:</div><div class="details-value">${new Date(doc.created).toLocaleString('de-DE')}</div>`;
+        html += `<div class="details-label">Status:</div><div class="details-value">${doc.status || 'offen'}</div>`;
+        
+        // Payload Felder anzeigen
+        for (const [key, value] of Object.entries(payload)) {
+          html += renderField(key, value);
+        }
+        
+        html += '</div>';
+        
+        document.getElementById('detailsBody').innerHTML = html;
+        document.getElementById('detailsModal').classList.add('show');
+        
+      } catch(e) {
+        showMsg('Fehler: ' + e.message, 'error');
+      }
+    };
+
+    // ========================================
+    // SECTION: VIEW PRODUCT DETAILS
+    // ========================================
+    window.viewProduct = async (id) => {
+      try {
+        const doc = await pb.collection('product_outputs').getOne(id);
+        const payload = doc.payload || {};
+        
+        document.getElementById('detailsTitle').textContent = 'Produktausgabe: ' + (doc.title || 'Ohne Titel');
+        
+        let html = '<div class="details-grid">';
+        html += `<div class="details-label">Erstellt:</div><div class="details-value">${new Date(doc.created).toLocaleString('de-DE')}</div>`;
+        html += `<div class="details-label">Status:</div><div class="details-value">${doc.status || 'offen'}</div>`;
+        
+        if (doc.text) {
+          html += `<div class="details-label">Text:</div><div class="details-value">${doc.text}</div>`;
+        }
+        
+        // Payload Felder anzeigen
+        for (const [key, value] of Object.entries(payload)) {
+          html += renderField(key, value);
+        }
+        
+        html += '</div>';
+        
+        document.getElementById('detailsBody').innerHTML = html;
+        document.getElementById('detailsModal').classList.add('show');
+        
+      } catch(e) {
+        showMsg('Fehler: ' + e.message, 'error');
+      }
+    };
+
+    // ========================================
+    // SECTION: RENDER FIELD HELPER
+    // ========================================
+    function renderField(key, value) {
+      let html = '';
+      
+      if (Array.isArray(value)) {
+        html += `<div class="details-label">${key}:</div><div class="details-value">`;
+        if (value.length > 0 && typeof value[0] === 'object') {
+          // Array of objects → Tabelle
+          const cols = Object.keys(value[0]);
+          html += '<table><thead><tr>';
+          cols.forEach(col => html += `<th>${col}</th>`);
+          html += '</tr></thead><tbody>';
+          value.forEach(item => {
+            html += '<tr>';
+            cols.forEach(col => html += `<td>${item[col] || '-'}</td>`);
+            html += '</tr>';
+          });
+          html += '</tbody></table>';
+        } else {
+          // Simple array
+          html += value.join(', ');
+        }
+        html += '</div>';
+      } else if (typeof value === 'object' && value !== null) {
+        html += `<div class="details-label">${key}:</div><div class="details-value">${JSON.stringify(value, null, 2)}</div>`;
+      } else {
+        html += `<div class="details-label">${key}:</div><div class="details-value">${value || '-'}</div>`;
+      }
+      
+      return html;
+    }
+
+    // ========================================
+    // SECTION: CLOSE DETAILS MODAL
+    // ========================================
+    window.closeDetailsModal = () => {
+      document.getElementById('detailsModal').classList.remove('show');
+    };
+
+    // ========================================
+    // SECTION: INITIAL DATA LOAD
+    // ========================================
+    loadOpen();
+    
+    // ========================================
+    // SECTION: FADE IN ANIMATION
+    // ========================================
+    setTimeout(() => {
+      document.body.classList.add('loaded');
+    }, 100);
+
+  </script>
+<!-- ==================== JAVASCRIPT END ==================== -->
+
+</body>
+</html>

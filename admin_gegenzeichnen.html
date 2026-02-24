@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8"><title>Admin Gegenzeichnen</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{--rot:#c8102e}
+  body{font-family:'Atkinson Hyperlegible',Arial,sans-serif;background:#f7f7f7;margin:0}
+  .wrap{max-width:820px;margin:18px auto;padding:0 12px}
+  .card{background:#fff;border-radius:12px;box-shadow:0 3px 12px rgba(0,0,0,.06);padding:14px;margin-bottom:12px}
+  h1{color:var(--rot);margin:6px 4px 10px}
+  label{color:var(--rot);font-weight:700;margin-top:8px;display:block}
+  input,textarea{width:100%;padding:8px;border:1px solid #ccc;border-radius:8px;background:#fafafa}
+  .grid{display:grid;grid-template-columns:1fr;gap:10px}
+  #sig{width:100%;height:170px;border:2px dashed var(--rot);border-radius:10px;background:#fffafc;touch-action:none}
+  .row{display:flex;gap:10px;flex-wrap:wrap}
+  .btn{background:var(--rot);color:#fff;border:none;border-radius:8px;padding:10px 14px;font-weight:700;cursor:pointer}
+  .btn.sec{background:#eee;color:var(--rot);border:1px solid var(--rot)}
+  .msg{color:var(--rot);min-height:1.2em;margin-top:6px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card"><h1>Admin-Review & Gegenzeichnung</h1><div id="meta"></div></div>
+
+  <div class="card">
+    <h2 style="color:#c8102e;margin:0 0 8px">Formulardaten</h2>
+    <div id="fields" class="grid"></div>
+  </div>
+
+  <div class="row">
+    <div class="card" style="flex:1 1 300px">
+      <label>Admin-Kommentar</label>
+      <textarea id="admin_comment" rows="3" placeholder="Korrekturen / Hinweise"></textarea>
+      <label>Admin-Name</label>
+      <input id="admin_name" placeholder="Vorname Nachname" />
+    </div>
+    <div class="card" style="flex:1 1 300px">
+      <label>Digitale Unterschrift</label>
+      <canvas id="sig"></canvas>
+      <div class="row" style="justify-content:flex-end;margin-top:8px">
+        <button class="btn sec" type="button" onclick="clearSig()">Unterschrift zurücksetzen</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="row">
+      <button class="btn" onclick="finalizeDoc()">Korrigieren & Gegenzeichnen → Archivieren</button>
+      <button class="btn sec" onclick="saveDraft()">Zwischenspeichern</button>
+    </div>
+    <div class="msg" id="msg"></div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@nhost/nhost-js@2.2.9/dist/umd/index.min.js"></script>
+<script>
+const NHOST_SUBDOMAIN='hpjfrhktprpuuxvvlpsb', NHOST_REGION='eu-central-1';
+const nhost=new window.Nhost.NhostClient({ subdomain:NHOST_SUBDOMAIN, region:NHOST_REGION });
+
+const params=new URLSearchParams(location.search);
+const docId=params.get('docId');
+let originalData={};
+
+const DRAFT_KEY=(id)=>`draft_patient_doc_${id}`;
+
+function showMsg(t,err=false){ const e=document.getElementById('msg'); e.textContent=t; e.style.color=err?'#c8102e':'#2e7d32'; }
+
+function fieldRow(key,val){
+  const d=document.createElement('div');
+  d.innerHTML=`<label>${key}</label><input data-key="${key}" value="${val??''}">`;
+  return d;
+}
+
+function renderFields(data){
+  const box=document.getElementById('fields'); box.innerHTML='';
+  Object.keys(data||{}).forEach(k=>{
+    const v=data[k];
+    if (['string','number','boolean'].includes(typeof v)||v==null){
+      box.appendChild(fieldRow(k, v ?? ''));
+    }
+  });
+}
+
+function collectEditedData(){
+  const out={...originalData};
+  document.querySelectorAll('#fields input[data-key]').forEach(inp=>{
+    const k=inp.getAttribute('data-key'); let v=inp.value;
+    if (!isNaN(v)&&v.trim()!=='') v=Number(v);
+    out[k]=v;
+  });
+  const c=document.getElementById('admin_comment').value.trim();
+  if (c) out._admin_comment=c;
+  return out;
+}
+
+/* Canvas Signatur */
+const canvas=document.getElementById('sig'); const ctx=canvas.getContext('2d'); let drawing=false;
+function resizeCanvas(){ canvas.width=canvas.offsetWidth; canvas.height=170; ctx.lineWidth=2.6; ctx.lineCap='round'; ctx.strokeStyle='#c8102e'; }
+addEventListener('resize', resizeCanvas); resizeCanvas();
+canvas.addEventListener('mousedown',e=>{drawing=true;ctx.beginPath();ctx.moveTo(e.offsetX,e.offsetY);});
+canvas.addEventListener('mousemove',e=>{if(drawing){ctx.lineTo(e.offsetX,e.offsetY);ctx.stroke();}});
+canvas.addEventListener('mouseup',()=>drawing=false); canvas.addEventListener('mouseleave',()=>drawing=false);
+canvas.addEventListener('touchstart',e=>{if(e.touches.length===1){const r=canvas.getBoundingClientRect();ctx.beginPath();ctx.moveTo(e.touches[0].clientX-r.left,e.touches[0].clientY-r.top);drawing=true;}},{passive:false});
+canvas.addEventListener('touchmove',e=>{if(drawing&&e.touches.length===1){const r=canvas.getBoundingClientRect();ctx.lineTo(e.touches[0].clientX-r.left,e.touches[0].clientY-r.top);ctx.stroke();}e.preventDefault();},{passive:false});
+canvas.addEventListener('touchend',()=>drawing=false);
+function clearSig(){ ctx.clearRect(0,0,canvas.width,canvas.height); }
+function getSig(){ const blank=document.createElement('canvas'); blank.width=canvas.width; blank.height=canvas.height; return (canvas.toDataURL()===blank.toDataURL())?null:canvas.toDataURL('image/png'); }
+
+/* Autosave */
+function collectState(){ return { data:collectEditedData(), admin_name:document.getElementById('admin_name').value.trim(), admin_comment:document.getElementById('admin_comment').value.trim(), signature_png:getSig() }; }
+function saveDraft(){ if(!docId) return; localStorage.setItem(DRAFT_KEY(docId), JSON.stringify(collectState())); showMsg('Entwurf gespeichert'); }
+function loadDraft(){ if(!docId) return; const raw=localStorage.getItem(DRAFT_KEY(docId)); if(!raw) return; try{ const st=JSON.parse(raw);
+  // Daten
+  if (st.data){ Object.entries(st.data).forEach(([k,v])=>{ const inp=document.querySelector(`#fields input[data-key="${CSS.escape(k)}"]`); if(inp) inp.value=(v??''); }); }
+  if (st.admin_name) document.getElementById('admin_name').value=st.admin_name;
+  if (st.admin_comment) document.getElementById('admin_comment').value=st.admin_comment;
+  if (st.signature_png){ const img=new Image(); img.onload=()=>ctx.drawImage(img,0,0,canvas.width,canvas.height); img.src=st.signature_png; }
+} catch(e){ console.warn('Draft load fail',e); } }
+function clearDraft(){ if(!docId) return; localStorage.removeItem(DRAFT_KEY(docId)); }
+function wireAutosave(){ document.getElementById('fields').addEventListener('input', saveDraft); document.getElementById('admin_comment').addEventListener('input', saveDraft); document.getElementById('admin_name').addEventListener('input', saveDraft); canvas.addEventListener('mouseup', saveDraft); canvas.addEventListener('touchend', saveDraft); }
+
+/* Laden */
+async function loadDoc(){
+  if(!docId){ showMsg('Fehlende docId.',true); return; }
+  await nhost.auth.refreshSession().catch(()=>{});
+  const { data, error } = await nhost.graphql.request(`query($id:uuid!){ patient_docs_by_pk(id:$id){ id created_at status patient_data } }`, { id:docId });
+  if (error || !data.patient_docs_by_pk){ showMsg('Dokument nicht gefunden.',true); return; }
+  const d=data.patient_docs_by_pk; originalData=d.patient_data||{};
+  document.getElementById('meta').textContent = `ID: ${d.id} · Status: ${d.status} · Erstellt: ${new Date(d.created_at).toLocaleString()}`;
+  renderFields(originalData);
+  loadDraft();
+  wireAutosave();
+}
+
+/* Finalisieren */
+async function finalizeDoc(){
+  const adminName=document.getElementById('admin_name').value.trim();
+  if(!adminName){ showMsg('Bitte Admin-Name eintragen.',true); return; }
+  const sig=getSig(); if(!sig){ showMsg('Bitte unterschreiben.',true); return; }
+  const edited=collectEditedData(); edited._finalized_by_name=adminName;
+  const vars={ id:docId, patient_data:edited, signature_admin:sig, finalized_at:new Date().toISOString(), status:'archiviert' };
+  const MUT=`mutation($id:uuid!,$patient_data:jsonb!,$signature_admin:String!,$finalized_at:timestamptz!,$status:String!){
+    update_patient_docs_by_pk(pk_columns:{id:$id}, _set:{patient_data:$patient_data, signature_admin:$signature_admin, finalized_at:$finalized_at, status:$status}) { id status finalized_at }
+  }`;
+  const { error } = await nhost.graphql.request(MUT, vars);
+  if (error){ showMsg('Fehler beim Archivieren: '+error.message,true); return; }
+  clearDraft();
+  showMsg('Archiviert ✔');
+  setTimeout(()=>location.href='dokumente-bearbeiten.html',900);
+}
+
+loadDoc();
+</script>
+</body>
+</html>

@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Login – Responda</title>
+  
+  <!-- Theme Color -->
+  <meta name="theme-color" content="#667eea">
+  
+  <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root { --rot: #c8102e; --grau: #64748b; --gradient-start: #667eea; --gradient-end: #764ba2; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    body { 
+      font-family: 'Atkinson Hyperlegible', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; 
+      background: linear-gradient(135deg, var(--gradient-start) 0%, var(--gradient-end) 100%);
+      min-height: 100vh;
+      margin: 0;
+    }
+    
+    /* HEADER GANZ OBEN für Theme Color */
+    .top-spacer {
+      background: var(--gradient-start);
+      height: 20px;
+    }
+    
+    .wrapper {
+      min-height: calc(100vh - 20px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    
+    .login-container {
+      background: #fff;
+      border-radius: 20px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      max-width: 440px;
+      width: 100%;
+      overflow: hidden;
+      animation: slideIn 0.4s ease-out;
+    }
+    
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(-30px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .login-header {
+      background: var(--rot);
+      padding: 40px 30px;
+      text-align: center;
+      color: #fff;
+    }
+    
+    .logo-container {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 20px;
+    }
+    
+    .logo-icon {
+      width: 60px;
+      height: 60px;
+      background: #fff;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-right: 15px;
+    }
+    
+    .logo-plus {
+      width: 30px;
+      height: 30px;
+      position: relative;
+    }
+    
+    .logo-plus::before,
+    .logo-plus::after {
+      content: '';
+      position: absolute;
+      background: var(--rot);
+      border-radius: 4px;
+    }
+    
+    .logo-plus::before {
+      width: 30px;
+      height: 10px;
+      top: 10px;
+      left: 0;
+    }
+    
+    .logo-plus::after {
+      width: 10px;
+      height: 30px;
+      top: 0;
+      left: 10px;
+    }
+    
+    .logo-text {
+      font-size: 2.5rem;
+      font-weight: 900;
+      color: #fff;
+      letter-spacing: -1px;
+    }
+    
+    .login-header h1 {
+      font-size: 1.8rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    
+    .login-header p {
+      font-size: 0.95rem;
+      opacity: 0.9;
+    }
+    
+    .login-body {
+      padding: 40px 30px;
+    }
+    
+    .form-group {
+      margin-bottom: 24px;
+    }
+    
+    .form-group label {
+      display: block;
+      font-weight: 700;
+      color: #1e293b;
+      margin-bottom: 8px;
+      font-size: 0.9rem;
+    }
+    
+    .form-group input {
+      width: 100%;
+      padding: 14px 16px;
+      border: 2px solid #e2e8f0;
+      border-radius: 12px;
+      font-size: 1rem;
+      font-family: inherit;
+      transition: all 0.2s;
+      background: #f8fafc;
+    }
+    
+    .form-group input:focus {
+      outline: none;
+      border-color: var(--rot);
+      background: #fff;
+      box-shadow: 0 0 0 4px rgba(200,16,46,0.1);
+    }
+    
+    .form-group small {
+      display: block;
+      color: #64748b;
+      font-size: 0.85rem;
+      margin-top: 6px;
+    }
+    
+    .org-info {
+      background: #f0f9ff;
+      border: 2px solid #bae6fd;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 20px;
+      display: none;
+    }
+    
+    .org-info.show {
+      display: block;
+    }
+    
+    .org-info strong {
+      color: #0369a1;
+      display: block;
+      margin-bottom: 8px;
+      font-size: 1rem;
+    }
+    
+    .org-detail {
+      color: #0369a1;
+      font-size: 0.9rem;
+    }
+    
+    .org-change-btn {
+      background: none;
+      border: none;
+      color: #0369a1;
+      text-decoration: underline;
+      cursor: pointer;
+      font-size: 0.85rem;
+      margin-top: 12px;
+    }
+    
+    .btn {
+      width: 100%;
+      padding: 16px;
+      background: var(--rot);
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      font-size: 1.05rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: inherit;
+      margin-bottom: 12px;
+    }
+    
+    .btn:hover {
+      background: #a00d26;
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(200,16,46,0.3);
+    }
+    
+    .btn:active {
+      transform: translateY(0);
+    }
+    
+    .btn:disabled {
+      background: #cbd5e1;
+      cursor: not-allowed;
+      transform: none;
+    }
+    
+    .btn.secondary {
+      background: #64748b;
+    }
+    
+    .btn.secondary:hover {
+      background: #475569;
+    }
+    
+    .msg {
+      padding: 14px 16px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      display: none;
+    }
+    
+    .msg.show {
+      display: block;
+    }
+    
+    .msg.error {
+      background: #fee2e2;
+      color: #991b1b;
+      border: 2px solid #fca5a5;
+    }
+    
+    .msg.success {
+      background: #d1fae5;
+      color: #065f46;
+      border: 2px solid #6ee7b7;
+    }
+    
+    .msg.info {
+      background: #dbeafe;
+      color: #1e40af;
+      border: 2px solid #93c5fd;
+    }
+    
+    .already-logged-in {
+      display: none;
+      text-align: center;
+      padding: 20px;
+    }
+    
+    .already-logged-in.show {
+      display: block;
+    }
+    
+    .already-logged-in h2 {
+      color: var(--rot);
+      margin-bottom: 20px;
+      font-size: 1.4rem;
+    }
+    
+    @media (max-width: 480px) {
+      .login-header { padding: 30px 20px; }
+      .login-body { padding: 30px 20px; }
+      .logo-text { font-size: 2rem; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Spacer ganz oben für Theme Color -->
+<div class="top-spacer"></div>
+
+<div class="wrapper">
+  <div class="login-container">
+    <div class="login-header">
+      <div class="logo-container">
+        <div class="logo-icon">
+          <div class="logo-plus"></div>
+        </div>
+        <div class="logo-text">Responda</div>
+      </div>
+      <h1>Willkommen</h1>
+      <p>Melde dich an, um fortzufahren</p>
+    </div>
+    
+    <div class="login-body">
+      <div id="msg" class="msg"></div>
+      
+      <!-- Bereits angemeldet -->
+      <div id="alreadyLoggedIn" class="already-logged-in">
+        <h2>✅ Bereits angemeldet</h2>
+        <p style="color:#64748b;margin-bottom:20px">Du bist bereits eingeloggt.</p>
+        <button type="button" class="btn" onclick="goToDashboard()">
+          Zur Übersicht
+        </button>
+        <button type="button" class="btn secondary" onclick="logoutAndContinue()">
+          Abmelden & neu anmelden
+        </button>
+      </div>
+      
+      <!-- Login Form -->
+      <div id="loginFormContainer">
+        <!-- Organisation Info (wenn gespeichert) -->
+        <div id="orgInfo" class="org-info">
+          <strong>🏢 Organisation</strong>
+          <div class="org-detail" id="orgName">—</div>
+          <button type="button" class="org-change-btn" onclick="changeOrg()">Organisation ändern</button>
+        </div>
+        
+        <form id="loginForm">
+          <!-- Organisation Eingabe (nur wenn nicht gespeichert) -->
+          <div id="orgInputGroup" class="form-group">
+            <label for="orgCode">🏢 Organisation</label>
+            <input 
+              type="text" 
+              id="orgCode" 
+              placeholder="z.B. ffwrothenburg" 
+              autocomplete="off"
+              required 
+            />
+            <small>Gib dein Organisations-Kürzel ein</small>
+          </div>
+          
+          <div class="form-group">
+            <label for="email">📧 E-Mail</label>
+            <input 
+              type="email" 
+              id="email" 
+              placeholder="deine@email.de" 
+              autocomplete="email"
+              required 
+            />
+          </div>
+          
+          <div class="form-group">
+            <label for="password">🔒 Passwort</label>
+            <input 
+              type="password" 
+              id="password" 
+              placeholder="••••••••" 
+              autocomplete="current-password"
+              required 
+            />
+          </div>
+          
+          <button type="submit" class="btn" id="submitBtn">
+            Anmelden
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+  import { NhostClient } from "https://esm.sh/@nhost/nhost-js@2.2.9";
+
+  const ORG_MAPPING = {
+    'ffwrothenburg': {
+      name: 'FFW Rothenburg',
+      subdomain: 'hpjfrhktprpuuxvvlpsb',
+      region: 'eu-central-1'
+    },
+    'beispiel2': {
+      name: 'Beispiel Organisation 2',
+      subdomain: 'example-org2',
+      region: 'eu-central-1'
+    },
+    'beispiel3': {
+      name: 'Beispiel Organisation 3',
+      subdomain: 'example-org3',
+      region: 'eu-central-1'
+    }
+  };
+
+  const msgEl = document.getElementById('msg');
+  const orgInfoEl = document.getElementById('orgInfo');
+  const orgNameEl = document.getElementById('orgName');
+  const orgInputGroupEl = document.getElementById('orgInputGroup');
+  const orgCodeInputEl = document.getElementById('orgCode');
+  const submitBtn = document.getElementById('submitBtn');
+  const alreadyLoggedInEl = document.getElementById('alreadyLoggedIn');
+  const loginFormContainerEl = document.getElementById('loginFormContainer');
+
+  const savedOrg = localStorage.getItem('org_config');
+  let currentOrg = null;
+  let nhost = null;
+
+  if (savedOrg) {
+    try {
+      currentOrg = JSON.parse(savedOrg);
+      showSavedOrg();
+      
+      nhost = new NhostClient({
+        subdomain: currentOrg.subdomain,
+        region: currentOrg.region
+      });
+      
+      checkIfAlreadyLoggedIn();
+    } catch(e) {
+      console.error('Fehler beim Laden der Organisation:', e);
+      localStorage.removeItem('org_config');
+      showOrgInput();
+    }
+  }
+
+  async function checkIfAlreadyLoggedIn() {
+    if (!nhost) return;
+    
+    try {
+      const isAuth = await nhost.auth.isAuthenticatedAsync();
+      if (isAuth) {
+        loginFormContainerEl.style.display = 'none';
+        alreadyLoggedInEl.classList.add('show');
+      }
+    } catch(e) {
+      console.error('Auth-Check Fehler:', e);
+    }
+  }
+
+  window.goToDashboard = () => {
+    location.href = 'admin-dashboard.html';
+  };
+
+  window.logoutAndContinue = async () => {
+    if (!nhost) return;
+    
+    try {
+      await nhost.auth.signOut();
+      alreadyLoggedInEl.classList.remove('show');
+      loginFormContainerEl.style.display = 'block';
+      showMsg('Abgemeldet. Bitte melde dich neu an.', 'info');
+      document.getElementById('email').focus();
+    } catch(e) {
+      showMsg('Fehler beim Abmelden: ' + e.message, 'error');
+    }
+  };
+
+  function showSavedOrg() {
+    orgInfoEl.classList.add('show');
+    orgInputGroupEl.style.display = 'none';
+    orgNameEl.textContent = currentOrg.name;
+  }
+
+  function showOrgInput() {
+    orgInfoEl.classList.remove('show');
+    orgInputGroupEl.style.display = 'block';
+  }
+
+  window.changeOrg = () => {
+    if (confirm('Organisation wirklich ändern? Du wirst abgemeldet.')) {
+      if (nhost) {
+        nhost.auth.signOut().catch(e => console.error('Logout-Fehler:', e));
+      }
+      localStorage.removeItem('org_config');
+      currentOrg = null;
+      nhost = null;
+      showOrgInput();
+      showMsg('Bitte gib dein Organisations-Kürzel neu ein.', 'info');
+      orgCodeInputEl.focus();
+    }
+  };
+
+  function showMsg(text, type = 'error') {
+    msgEl.textContent = text;
+    msgEl.className = 'msg ' + type + ' show';
+    setTimeout(() => {
+      msgEl.classList.remove('show');
+    }, 5000);
+  }
+
+  document.getElementById('loginForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Anmeldung läuft...';
+    
+    try {
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+      
+      let orgConfig;
+      
+      if (currentOrg) {
+        orgConfig = currentOrg;
+      } else {
+        const orgCode = orgCodeInputEl.value.trim().toLowerCase();
+        
+        if (!orgCode) {
+          showMsg('Bitte gib dein Organisations-Kürzel ein.', 'error');
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Anmelden';
+          return;
+        }
+        
+        const mappedOrg = ORG_MAPPING[orgCode];
+        
+        if (!mappedOrg) {
+          showMsg('Unbekannte Organisation. Bitte überprüfe dein Kürzel.', 'error');
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Anmelden';
+          return;
+        }
+        
+        orgConfig = {
+          code: orgCode,
+          name: mappedOrg.name,
+          subdomain: mappedOrg.subdomain,
+          region: mappedOrg.region
+        };
+        
+        nhost = new NhostClient({
+          subdomain: orgConfig.subdomain,
+          region: orgConfig.region
+        });
+      }
+      
+      const isAlreadyAuth = await nhost.auth.isAuthenticatedAsync();
+      if (isAlreadyAuth) {
+        loginFormContainerEl.style.display = 'none';
+        alreadyLoggedInEl.classList.add('show');
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Anmelden';
+        return;
+      }
+      
+      const { session, error } = await nhost.auth.signIn({
+        email,
+        password
+      });
+      
+      if (error) {
+        showMsg('Login fehlgeschlagen: ' + error.message, 'error');
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Anmelden';
+        return;
+      }
+      
+      if (!session) {
+        showMsg('Login fehlgeschlagen: Keine Session erstellt.', 'error');
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Anmelden';
+        return;
+      }
+      
+      if (!currentOrg) {
+        localStorage.setItem('org_config', JSON.stringify(orgConfig));
+      }
+      
+      showMsg('✅ Erfolgreich angemeldet! Weiterleitung...', 'success');
+      
+      setTimeout(() => {
+        location.href = 'admin-dashboard.html';
+      }, 800);
+      
+    } catch(e) {
+      console.error('Login-Fehler:', e);
+      showMsg('Unerwarteter Fehler: ' + e.message, 'error');
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Anmelden';
+    }
+  });
+
+  if (loginFormContainerEl.style.display !== 'none') {
+    if (currentOrg) {
+      document.getElementById('email').focus();
+    } else {
+      orgCodeInputEl.focus();
+    }
+  }
+</script>
+
+</body>
+</html>

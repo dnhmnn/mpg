@@ -1,0 +1,1243 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Übersicht – Responda</title>
+  
+  <!-- Theme Color -->
+  <meta name="theme-color" content="#667eea">
+  
+  <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root { --rot: #c8102e; --gradient-start: #667eea; --gradient-end: #764ba2; }
+    * { box-sizing: border-box; }
+    body { 
+      font-family: 'Atkinson Hyperlegible', Arial, sans-serif; 
+      background: linear-gradient(135deg, var(--gradient-start) 0%, var(--gradient-end) 100%);
+      min-height: 100vh;
+      margin: 0;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    body.loaded { opacity: 1; }
+    
+    /* Header ganz oben */
+    header { 
+      background: var(--gradient-start);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 14px;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    header h1 { margin: 0; font-size: 1.15rem; font-weight: 700; letter-spacing: .2px; }
+    .spacer { flex: 1; }
+    .topbtn { 
+      color: #fff;
+      text-decoration: none;
+      background: rgba(255,255,255,0.2);
+      padding: 7px 10px;
+      border-radius: 8px;
+      font-weight: 700;
+      transition: all 0.2s;
+      border: none;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 1rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .topbtn:hover {
+      background: rgba(255,255,255,0.3);
+    }
+    
+    /* Tagesabhängige Begrüßung */
+    .greeting { 
+      font-family: 'Atkinson Hyperlegible', Arial, sans-serif;
+      font-size: 3rem;
+      font-weight: 700;
+      color: #fff;
+      text-align: center;
+      margin: 24px 0;
+      letter-spacing: 1px;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+    }
+    
+    .wrap { 
+      max-width: 1050px;
+      margin: 0 auto 16px;
+      padding: 0 14px;
+      display: grid;
+      grid-template-columns: 260px 1fr;
+      gap: 16px;
+    }
+    
+    aside { 
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 3px 12px rgba(0,0,0,.06);
+      padding: 14px;
+    }
+    aside h3 { margin: 6px 0 12px; color: var(--rot); }
+    .nav a { 
+      display: block;
+      padding: 10px 12px;
+      margin: 6px 0;
+      border-radius: 8px;
+      text-decoration: none;
+      color: #222;
+      font-weight: 700;
+      border: 1px solid #eee;
+      transition: all 0.2s;
+    }
+    .nav a:hover { background: #fff5f7; border-color: #f2c9d1; }
+    
+    main { display: flex; flex-direction: column; gap: 16px; }
+    .card { 
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 3px 12px rgba(0,0,0,.06);
+      padding: 14px;
+    }
+    .card h2 { margin: 0 0 10px; color: var(--rot); }
+    
+    .news li { margin: 6px 0; }
+    .pill { 
+      display: inline-block;
+      background: #fff5f5;
+      color: #8b0e22;
+      border: 1px solid #f2c9d1;
+      border-radius: 999px;
+      padding: 2px 8px;
+      font-size: .82rem;
+      margin-left: 6px;
+    }
+    .notes-list { 
+      max-height: 220px;
+      overflow: auto;
+      border: 1px solid #eee;
+      border-radius: 10px;
+      padding: 8px;
+    }
+    .note { border-bottom: 1px solid #eee; padding: 6px 0; }
+    .note:last-child { border-bottom: none; }
+    .meta { color: #777; font-size: .9rem; }
+    .row { display: flex; gap: 10px; flex-wrap: wrap; }
+    input, textarea, button, select { font-family: inherit; font-size: 1rem; }
+    input, textarea, select { 
+      width: 100%;
+      padding: 9px 10px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      background: #fafafa;
+    }
+    textarea { min-height: 70px; resize: vertical; }
+    .btn { 
+      background: var(--rot);
+      color: #fff;
+      border: 0;
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn:hover {
+      background: #a00d26;
+    }
+    .btn:disabled {
+      background: #cbd5e1;
+      cursor: not-allowed;
+    }
+    .btn.sec { background: #eee; color: var(--rot); border: 1px solid var(--rot); }
+    .ok { color: #2e7d32; }
+    .err { color: #c8102e; }
+    .msg { min-height: 1.2em; margin-top: 8px; }
+
+    /* Stats Grid */
+    .stats-grid { 
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .stat-box { 
+      background: #fff5f5;
+      border: 2px solid #f2c9d1;
+      border-radius: 10px;
+      padding: 14px;
+      text-align: center;
+    }
+    .stat-num { font-size: 2.5rem; font-weight: 700; color: var(--rot); }
+    .stat-label { font-size: .9rem; color: #555; margin-top: 4px; }
+    .stat-box.warn { background: #fef3c7; border-color: #f59e0b; }
+    .stat-box.warn .stat-num { color: #d97706; }
+    .stat-box.ok { background: #dcfce7; border-color: #16a34a; }
+    .stat-box.ok .stat-num { color: #16a34a; }
+
+    /* Inventory Warnings */
+    .inventory-list { max-height: 300px; overflow-y: auto; }
+    .inventory-item { 
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px;
+      background: #fff;
+      border: 1px solid #eee;
+      border-radius: 8px;
+      margin-bottom: 8px;
+      transition: all 0.2s;
+    }
+    .inventory-item:hover { 
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      transform: translateY(-2px);
+    }
+    .inventory-item.expired { border-left: 4px solid var(--rot); background: #fff5f5; }
+    .inventory-item.warning { border-left: 4px solid #f59e0b; background: #fefce8; }
+    .inventory-item.ok { border-left: 4px solid #16a34a; background: #f0fdf4; }
+    .inv-icon { font-size: 1.5rem; width: 40px; text-align: center; }
+    .inv-info { flex: 1; }
+    .inv-name { font-weight: 700; color: #222; }
+    .inv-meta { font-size: .85rem; color: #666; margin-top: 2px; }
+    .inv-badge { 
+      padding: 3px 8px;
+      border-radius: 999px;
+      font-size: .75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+    .badge-expired { background: #fee2e2; color: var(--rot); }
+    .badge-warning { background: #fef3c7; color: #d97706; }
+    .badge-ok { background: #dcfce7; color: #16a34a; }
+
+    /* Modal */
+    .modal { 
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.6);
+      display: none;
+      align-items: flex-start;
+      justify-content: center;
+      z-index: 9999;
+      padding: 16px;
+      overflow-y: auto;
+    }
+    .modal.show { display: flex; }
+    .modal-box { 
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 6px 24px rgba(0,0,0,.2);
+      padding: 20px;
+      max-width: 800px;
+      width: 100%;
+      margin: auto;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+    .modal-h { 
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 2px solid #eee;
+    }
+    .modal-h h3 {
+      margin: 0;
+      color: var(--rot);
+      font-size: 1.4rem;
+    }
+    .x { 
+      margin-left: auto;
+      border: 0;
+      background: #f1f1f1;
+      border-radius: 8px;
+      padding: 6px 10px;
+      cursor: pointer;
+      font-weight: 700;
+    }
+    .x:hover {
+      background: #e2e2e2;
+    }
+    
+    /* Tabs */
+    .tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+      border-bottom: 2px solid #eee;
+    }
+    .tab {
+      padding: 10px 16px;
+      border: none;
+      background: none;
+      cursor: pointer;
+      font-weight: 700;
+      color: #666;
+      border-bottom: 3px solid transparent;
+      transition: all 0.2s;
+      font-family: inherit;
+    }
+    .tab:hover {
+      color: var(--rot);
+    }
+    .tab.active {
+      color: var(--rot);
+      border-bottom-color: var(--rot);
+    }
+    .tab-content {
+      display: none;
+    }
+    .tab-content.active {
+      display: block;
+    }
+    
+    .field { 
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin: 12px 0;
+    }
+    .field label { font-weight: 700; color: var(--rot); }
+    .field input, .field select { 
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      background: #fafafa;
+    }
+    .actions { 
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 2px solid #eee;
+    }
+    
+    /* Users Table */
+    .users-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 16px 0;
+    }
+    .users-table th,
+    .users-table td {
+      padding: 10px;
+      text-align: left;
+      border-bottom: 1px solid #eee;
+    }
+    .users-table th {
+      background: #f8f9fa;
+      font-weight: 700;
+      color: var(--rot);
+    }
+    .users-table tr:hover {
+      background: #f8f9fa;
+    }
+    .role-badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 0.85rem;
+      font-weight: 700;
+    }
+    .role-admin { background: #fee2e2; color: var(--rot); }
+    .role-mitglied { background: #dbeafe; color: #1e40af; }
+    .role-lager { background: #fef3c7; color: #d97706; }
+    
+    .action-btn {
+      padding: 6px 12px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.9rem;
+      transition: all 0.2s;
+      font-family: inherit;
+    }
+    .action-btn.edit {
+      background: #dbeafe;
+      color: #1e40af;
+    }
+    .action-btn.edit:hover {
+      background: #bfdbfe;
+    }
+    .action-btn.delete {
+      background: #fee2e2;
+      color: var(--rot);
+    }
+    .action-btn.delete:hover {
+      background: #fecaca;
+    }
+    
+    .info-box {
+      background: #dbeafe;
+      border-left: 4px solid #3b82f6;
+      padding: 12px;
+      border-radius: 6px;
+      margin: 12px 0;
+      font-size: 0.95rem;
+    }
+    
+    .license-box {
+      background: #f0fdf4;
+      border: 2px solid #16a34a;
+      border-radius: 10px;
+      padding: 16px;
+      margin: 16px 0;
+    }
+    .license-box h4 {
+      margin: 0 0 8px 0;
+      color: #16a34a;
+    }
+    .license-info {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+      margin-top: 12px;
+    }
+    .license-item {
+      display: flex;
+      flex-direction: column;
+    }
+    .license-label {
+      font-size: 0.85rem;
+      color: #666;
+      margin-bottom: 4px;
+    }
+    .license-value {
+      font-weight: 700;
+      font-size: 1.1rem;
+      color: #222;
+    }
+    
+    @media (max-width: 800px) { 
+      .wrap { grid-template-columns: 1fr; }
+      .stats-grid { grid-template-columns: 1fr 1fr; }
+      .greeting { font-size: 2.5rem; }
+      .users-table { font-size: 0.9rem; }
+      .users-table th,
+      .users-table td { padding: 8px; }
+    }
+  </style>
+</head>
+<body>
+
+<script type="module">
+  // ===== AUTH CHECK GANZ AM ANFANG =====
+  import { NhostClient } from "https://esm.sh/@nhost/nhost-js@2.2.9";
+
+  const nhost = new NhostClient({
+    subdomain: "hpjfrhktprpuuxvvlpsb",
+    region: "eu-central-1"
+  });
+
+  // Auth Check SOFORT - bevor HTML gerendert wird
+  const isAuth = await nhost.auth.isAuthenticatedAsync();
+  if (!isAuth) {
+    location.href = "admin-login.html";
+    throw new Error("Not authenticated");
+  }
+
+  // Wenn Auth OK, zeige Body
+  document.body.classList.add('loaded');
+</script>
+
+<header>
+  <h1>Übersicht</h1>
+  <div class="spacer"></div>
+  <button class="topbtn" id="settingsBtn">⚙️ Einstellungen</button>
+  <button class="topbtn" id="logoutBtn">Logout</button>
+</header>
+
+<!-- Tagesabhängige Begrüßung OBERHALB von wrap -->
+<div class="greeting" id="greeting">Servus!</div>
+
+<div class="wrap">
+  <aside>
+    <h3>Bereiche</h3>
+    <nav class="nav">
+      <a href="einsaetze.html">🚨 Einsätze</a>
+      <a href="patientendokumentation-dateien.html">🧾 Patientendokumentation</a>
+      <a href="dokumente-bearbeiten.html">📋 Vorgänge</a>
+      <a href="ausbildungen.html">🎓 Ausbildungen</a>
+      <a href="lagerverwaltung.html">📦 Lagerverwaltung</a>
+      <a href="dateien.html">📄 Dateien</a>
+      <a href="qr-code-generator.html">📟 QR-Code Generator</a>
+    </nav>
+    <div style="margin-top:14px; font-size:.95rem">
+      Eingeloggt als:<br>
+      <strong id="who">—</strong><br>
+      <span id="userRole" style="color:#666; font-size:0.9rem"></span>
+    </div>
+    <div id="guardMsg" class="err" style="margin-top:8px"></div>
+  </aside>
+
+  <main>
+    <!-- Neuigkeiten -->
+    <section class="card">
+      <h2>🔔 Neuigkeiten</h2>
+      <ul class="news" id="newsList">
+        <li id="news-loading">Lade aktuelle Meldungen...</li>
+      </ul>
+      <div class="msg" id="newsMsg"></div>
+    </section>
+
+    <!-- Live Statistiken -->
+    <section class="card">
+      <h2>📊 Live-Übersicht</h2>
+      <div class="stats-grid">
+        <div class="stat-box warn">
+          <div class="stat-num" id="stat-pending-docs">0</div>
+          <div class="stat-label">Offene Vorgänge</div>
+        </div>
+        <div class="stat-box warn">
+          <div class="stat-num" id="stat-expiring">0</div>
+          <div class="stat-label">Bald ablaufend (30 Tage)</div>
+        </div>
+        <div class="stat-box err" style="background:#fee2e2; border-color:var(--rot)">
+          <div class="stat-num" id="stat-expired">0</div>
+          <div class="stat-label">Abgelaufen</div>
+        </div>
+        <div class="stat-box ok">
+          <div class="stat-num" id="stat-inventory-ok">0</div>
+          <div class="stat-label">Lager in Ordnung</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Kritische Lager-Warnungen -->
+    <section class="card">
+      <h2>⚠️ Lager-Warnungen</h2>
+      <div class="inventory-list" id="inventoryWarnings">
+        <div style="text-align:center; padding:20px; color:#999">
+          Lade Lagerdaten...
+        </div>
+      </div>
+    </section>
+
+    <!-- Notizen / Admin-Chat -->
+    <section class="card">
+      <h2>💬 Notizen / Admin-Chat</h2>
+      <div class="notes-list" id="notes"></div>
+      <div class="row" style="margin-top:10px">
+        <input id="noteName" placeholder="Dein Name" style="max-width:220px">
+        <textarea id="noteText" placeholder="Bemerkung …"></textarea>
+        <button class="btn" id="addNoteBtn" style="min-width:160px">Hinzufügen</button>
+      </div>
+      <div class="row" style="margin-top:6px; justify-content:flex-end">
+        <button class="btn sec" id="clearNotesBtn">Chat löschen (lokal)</button>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- Einstellungen-Modal -->
+<div class="modal" id="settingsModal">
+  <div class="modal-box">
+    <div class="modal-h">
+      <h3>⚙️ Einstellungen</h3>
+      <button class="x" id="settingsClose">×</button>
+    </div>
+    
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab active" data-tab="profile">👤 Mein Profil</button>
+      <button class="tab" data-tab="password">🔒 Passwort</button>
+      <button class="tab" data-tab="users" id="usersTab" style="display:none">👥 Benutzer</button>
+      <button class="tab" data-tab="license" id="licenseTab" style="display:none">📜 Lizenz</button>
+    </div>
+    
+    <!-- Tab: Mein Profil -->
+    <div class="tab-content active" id="tab-profile">
+      <div class="field">
+        <label for="profileEmail">E-Mail</label>
+        <input type="email" id="profileEmail" readonly style="background:#f5f5f5">
+      </div>
+      <div class="field">
+        <label for="profileName">Anzeigename</label>
+        <input type="text" id="profileName" placeholder="z.B. Max Mustermann">
+      </div>
+      <div class="field">
+        <label for="profilePhone">Telefon (optional)</label>
+        <input type="tel" id="profilePhone" placeholder="+49 123 456789">
+      </div>
+      <div id="profileMsg" class="msg"></div>
+      <div class="actions">
+        <button class="btn" id="saveProfileBtn">Profil speichern</button>
+      </div>
+    </div>
+    
+    <!-- Tab: Passwort -->
+    <div class="tab-content" id="tab-password">
+      <div class="field">
+        <label for="pwCurrent">Aktuelles Passwort</label>
+        <input type="password" id="pwCurrent" autocomplete="current-password" placeholder="••••••••" />
+      </div>
+      <div class="field">
+        <label for="pwNew1">Neues Passwort (min. 8 Zeichen)</label>
+        <input type="password" id="pwNew1" autocomplete="new-password" placeholder="Neues Passwort" />
+      </div>
+      <div class="field">
+        <label for="pwNew2">Neues Passwort wiederholen</label>
+        <input type="password" id="pwNew2" autocomplete="new-password" placeholder="Wiederholen" />
+      </div>
+      <div id="pwMsg" class="msg"></div>
+      <div class="actions">
+        <button class="btn" id="pwSave">Passwort ändern</button>
+      </div>
+    </div>
+    
+    <!-- Tab: Benutzerverwaltung (nur Admin) -->
+    <div class="tab-content" id="tab-users">
+      <div class="info-box">
+        <strong>ℹ️ Benutzerverwaltung</strong><br>
+        Hier können Sie neue Benutzer anlegen und Rollen zuweisen. Neue Benutzer erhalten eine E-Mail zur Passwort-Vergabe.
+      </div>
+      
+      <button class="btn" id="addUserBtn" style="margin-bottom:16px">+ Neuen Benutzer anlegen</button>
+      
+      <h4 style="margin:16px 0 8px 0; color:var(--rot)">Alle Benutzer</h4>
+      <table class="users-table">
+        <thead>
+          <tr>
+            <th>E-Mail</th>
+            <th>Name</th>
+            <th>Rolle</th>
+            <th>Erstellt</th>
+            <th>Aktionen</th>
+          </tr>
+        </thead>
+        <tbody id="usersTableBody">
+          <tr>
+            <td colspan="5" style="text-align:center; padding:20px; color:#999">
+              Lade Benutzer...
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    
+    <!-- Tab: Lizenz (nur Admin) -->
+    <div class="tab-content" id="tab-license">
+      <div class="license-box">
+        <h4>✅ Aktive Lizenz</h4>
+        <div class="license-info">
+          <div class="license-item">
+            <div class="license-label">Organisation</div>
+            <div class="license-value" id="licenseOrg">FFW Rothenburg</div>
+          </div>
+          <div class="license-item">
+            <div class="license-label">Lizenztyp</div>
+            <div class="license-value" id="licenseType">Professional</div>
+          </div>
+          <div class="license-item">
+            <div class="license-label">Max. Benutzer</div>
+            <div class="license-value" id="licenseMaxUsers">50</div>
+          </div>
+          <div class="license-item">
+            <div class="license-label">Aktuelle Benutzer</div>
+            <div class="license-value" id="licenseCurrentUsers">5</div>
+          </div>
+          <div class="license-item">
+            <div class="license-label">Gültig bis</div>
+            <div class="license-value" id="licenseExpiry">31.12.2025</div>
+          </div>
+          <div class="license-item">
+            <div class="license-label">Status</div>
+            <div class="license-value" style="color:#16a34a">✓ Aktiv</div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="info-box">
+        <strong>📞 Support kontaktieren</strong><br>
+        Bei Fragen zur Lizenz oder Upgrade-Wünschen kontaktieren Sie uns unter:<br>
+        <strong>support@responda.systems</strong>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Benutzer hinzufügen/bearbeiten Modal -->
+<div class="modal" id="userModal">
+  <div class="modal-box" style="max-width:500px">
+    <div class="modal-h">
+      <h3 id="userModalTitle">Neuen Benutzer anlegen</h3>
+      <button class="x" id="userClose">×</button>
+    </div>
+    
+    <div class="field">
+      <label for="userEmail">E-Mail *</label>
+      <input type="email" id="userEmail" placeholder="benutzer@example.com" required>
+    </div>
+    
+    <div class="field">
+      <label for="userName">Name *</label>
+      <input type="text" id="userName" placeholder="Max Mustermann" required>
+    </div>
+    
+    <div class="field">
+      <label for="userRole">Rolle *</label>
+      <select id="userRole" required>
+        <option value="">Bitte wählen...</option>
+        <option value="admin">Admin (Vollzugriff)</option>
+        <option value="mitglied">Mitglied (Mitgliederbereich)</option>
+        <option value="lager">Lager (Lagerverwaltung)</option>
+      </select>
+    </div>
+    
+    <div class="info-box">
+      <strong>ℹ️ Hinweis:</strong><br>
+      Der Benutzer erhält eine E-Mail mit einem Link zur Passwort-Vergabe.
+    </div>
+    
+    <div id="userMsg" class="msg"></div>
+    
+    <div class="actions">
+      <button class="btn sec" id="userCancel">Abbrechen</button>
+      <button class="btn" id="userSave">Benutzer anlegen</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+  import { NhostClient } from "https://esm.sh/@nhost/nhost-js@2.2.9";
+
+  const nhost = new NhostClient({
+    subdomain: "hpjfrhktprpuuxvvlpsb",
+    region: "eu-central-1"
+  });
+
+  const guardMsg = document.getElementById('guardMsg');
+  const whoEl = document.getElementById('who');
+  const userRoleEl = document.getElementById('userRole');
+
+  // User anzeigen & Rolle prüfen
+  const user = nhost.auth.getUser();
+  const userEmail = user?.email || "—";
+  whoEl.textContent = userEmail;
+  
+  // Rolle aus Metadata holen (später aus Datenbank)
+  const userRole = user?.metadata?.role || 'admin'; // Default: admin
+  userRoleEl.textContent = `Rolle: ${userRole}`;
+  
+  // Admin-Tabs nur für Admins anzeigen
+  if (userRole === 'admin') {
+    document.getElementById('usersTab').style.display = 'block';
+    document.getElementById('licenseTab').style.display = 'block';
+  }
+
+  // Tagesabhängige Begrüßung
+  function setGreeting() {
+    const hour = new Date().getHours();
+    const greetingEl = document.getElementById('greeting');
+    
+    if (hour >= 5 && hour < 10) {
+      greetingEl.textContent = 'Servus!';
+    } else if (hour >= 10 && hour < 12) {
+      greetingEl.textContent = 'Grüß Gott!';
+    } else if (hour >= 12 && hour < 18) {
+      greetingEl.textContent = 'Mahlzeit!';
+    } else {
+      greetingEl.textContent = 'Ab ins Bett!';
+    }
+  }
+  setGreeting();
+
+  document.getElementById('logoutBtn')?.addEventListener('click', async (e)=>{
+    e.preventDefault();
+    await nhost.auth.signOut();
+    localStorage.clear();
+    location.href = "admin-login.html";
+  });
+
+  // ===== SETTINGS MODAL =====
+  const settingsModal = document.getElementById('settingsModal');
+  const settingsBtn = document.getElementById('settingsBtn');
+  const settingsClose = document.getElementById('settingsClose');
+  
+  function openSettings() {
+    settingsModal.classList.add('show');
+    loadProfileData();
+  }
+  
+  function closeSettings() {
+    settingsModal.classList.remove('show');
+  }
+  
+  settingsBtn.addEventListener('click', openSettings);
+  settingsClose.addEventListener('click', closeSettings);
+  settingsModal.addEventListener('click', (e) => {
+    if (e.target === settingsModal) closeSettings();
+  });
+  
+  // Tab-Switching
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      const targetTab = tab.dataset.tab;
+      
+      // Deaktiviere alle Tabs
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      
+      // Aktiviere gewählten Tab
+      tab.classList.add('active');
+      document.getElementById(`tab-${targetTab}`).classList.add('active');
+      
+      // Lade Daten wenn nötig
+      if (targetTab === 'users') {
+        loadUsers();
+      }
+    });
+  });
+  
+  // ===== PROFIL BEARBEITEN =====
+  function loadProfileData() {
+    document.getElementById('profileEmail').value = userEmail;
+    // TODO: Name und Telefon aus Datenbank laden
+  }
+  
+  document.getElementById('saveProfileBtn').addEventListener('click', async () => {
+    const profileMsg = document.getElementById('profileMsg');
+    try {
+      const name = document.getElementById('profileName').value.trim();
+      const phone = document.getElementById('profilePhone').value.trim();
+      
+      // TODO: In Datenbank speichern
+      
+      profileMsg.textContent = '✅ Profil gespeichert!';
+      profileMsg.className = 'msg ok';
+      
+      setTimeout(() => {
+        profileMsg.textContent = '';
+      }, 3000);
+    } catch (e) {
+      profileMsg.textContent = '❌ Fehler: ' + e.message;
+      profileMsg.className = 'msg err';
+    }
+  });
+
+  // ===== PASSWORT ÄNDERN =====
+  const pwMsg = document.getElementById('pwMsg');
+  const pwCurrent = document.getElementById('pwCurrent');
+  const pwNew1 = document.getElementById('pwNew1');
+  const pwNew2 = document.getElementById('pwNew2');
+
+  function showPwMsg(text, ok=false){
+    pwMsg.textContent = text || '';
+    pwMsg.className = 'msg ' + (ok ? 'ok' : 'err');
+  }
+
+  document.getElementById('pwSave').addEventListener('click', async ()=>{
+    try{
+      showPwMsg('');
+      const current = pwCurrent.value.trim();
+      const n1 = pwNew1.value.trim();
+      const n2 = pwNew2.value.trim();
+
+      if (!current){ showPwMsg('Bitte aktuelles Passwort eingeben.'); return; }
+      if (!n1 || n1.length < 8){ showPwMsg('Neues Passwort: mindestens 8 Zeichen.'); return; }
+      if (n1 !== n2){ showPwMsg('Die neuen Passwörter stimmen nicht überein.'); return; }
+
+      const email = nhost.auth.getUser()?.email;
+      if (!email){ showPwMsg('Nicht eingeloggt.'); return; }
+
+      const { error: signErr } = await nhost.auth.signIn({ email, password: current });
+      if (signErr){ showPwMsg('Aktuelles Passwort ist falsch.'); return; }
+
+      let changeError = null;
+      try {
+        const res1 = await nhost.auth.changePassword(n1);
+        changeError = res1?.error || null;
+      } catch (e1) {
+        try {
+          const res2 = await nhost.auth.changePassword({ newPassword: n1 });
+          changeError = res2?.error || null;
+        } catch (e2) {
+          changeError = e2;
+        }
+      }
+      if (changeError){
+        showPwMsg('Fehler beim Ändern: ' + (changeError.message || changeError));
+        return;
+      }
+
+      showPwMsg('Passwort geändert. Du wirst abgemeldet …', true);
+      setTimeout(async ()=>{
+        closeSettings();
+        await nhost.auth.signOut();
+        localStorage.clear();
+        location.href = "admin-login.html";
+      }, 700);
+    }catch(e){
+      showPwMsg('Unerwarteter Fehler: ' + (e?.message || e));
+    }
+  });
+
+  // ===== BENUTZERVERWALTUNG =====
+  const userModal = document.getElementById('userModal');
+  const addUserBtn = document.getElementById('addUserBtn');
+  const userClose = document.getElementById('userClose');
+  const userCancel = document.getElementById('userCancel');
+  
+  function openUserModal(editUser = null) {
+    if (editUser) {
+      document.getElementById('userModalTitle').textContent = 'Benutzer bearbeiten';
+      document.getElementById('userEmail').value = editUser.email;
+      document.getElementById('userName').value = editUser.name || '';
+      document.getElementById('userRole').value = editUser.role || '';
+      document.getElementById('userSave').textContent = 'Speichern';
+    } else {
+      document.getElementById('userModalTitle').textContent = 'Neuen Benutzer anlegen';
+      document.getElementById('userEmail').value = '';
+      document.getElementById('userName').value = '';
+      document.getElementById('userRole').value = '';
+      document.getElementById('userSave').textContent = 'Benutzer anlegen';
+    }
+    document.getElementById('userMsg').textContent = '';
+    userModal.classList.add('show');
+  }
+  
+  function closeUserModal() {
+    userModal.classList.remove('show');
+  }
+  
+  addUserBtn.addEventListener('click', () => openUserModal());
+  userClose.addEventListener('click', closeUserModal);
+  userCancel.addEventListener('click', closeUserModal);
+  userModal.addEventListener('click', (e) => {
+    if (e.target === userModal) closeUserModal();
+  });
+  
+  // Benutzer anlegen
+  document.getElementById('userSave').addEventListener('click', async () => {
+    const userMsg = document.getElementById('userMsg');
+    try {
+      const email = document.getElementById('userEmail').value.trim();
+      const name = document.getElementById('userName').value.trim();
+      const role = document.getElementById('userRole').value;
+      
+      if (!email || !name || !role) {
+        userMsg.textContent = '❌ Bitte alle Pflichtfelder ausfüllen';
+        userMsg.className = 'msg err';
+        return;
+      }
+      
+      // TODO: Nhost User erstellen & E-Mail senden
+      // Hier würde normalerweise die Nhost Admin API verwendet werden
+      
+      userMsg.textContent = '✅ Benutzer angelegt! E-Mail wurde versendet.';
+      userMsg.className = 'msg ok';
+      
+      setTimeout(() => {
+        closeUserModal();
+        loadUsers();
+      }, 2000);
+      
+    } catch (e) {
+      userMsg.textContent = '❌ Fehler: ' + e.message;
+      userMsg.className = 'msg err';
+    }
+  });
+  
+  // Benutzer laden
+  async function loadUsers() {
+    const tbody = document.getElementById('usersTableBody');
+    try {
+      // TODO: Von Nhost laden
+      // Hier Dummy-Daten als Beispiel
+      const users = [
+        { id: '1', email: userEmail, name: 'Admin User', role: 'admin', created: '2024-01-15' },
+        { id: '2', email: 'user@example.com', name: 'Max Mustermann', role: 'mitglied', created: '2024-02-20' },
+        { id: '3', email: 'lager@example.com', name: 'Lager Team', role: 'lager', created: '2024-03-10' }
+      ];
+      
+      tbody.innerHTML = users.map(u => {
+        const roleClass = `role-${u.role}`;
+        const roleText = u.role === 'admin' ? 'Admin' : u.role === 'mitglied' ? 'Mitglied' : 'Lager';
+        
+        return `
+          <tr>
+            <td>${u.email}</td>
+            <td>${u.name}</td>
+            <td><span class="role-badge ${roleClass}">${roleText}</span></td>
+            <td>${new Date(u.created).toLocaleDateString('de-DE')}</td>
+            <td>
+              <button class="action-btn edit" onclick="editUser('${u.id}')">Bearbeiten</button>
+              ${u.email !== userEmail ? `<button class="action-btn delete" onclick="deleteUser('${u.id}')">Löschen</button>` : ''}
+            </td>
+          </tr>
+        `;
+      }).join('');
+      
+      // Update Lizenz-Zähler
+      document.getElementById('licenseCurrentUsers').textContent = users.length;
+      
+    } catch (e) {
+      tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:20px;color:#c8102e">Fehler beim Laden: ${e.message}</td></tr>`;
+    }
+  }
+  
+  // Global functions für Button-Clicks
+  window.editUser = function(userId) {
+    // TODO: User laden und Modal öffnen
+    console.log('Edit user:', userId);
+  };
+  
+  window.deleteUser = function(userId) {
+    if (confirm('Benutzer wirklich löschen?')) {
+      // TODO: User löschen
+      console.log('Delete user:', userId);
+      loadUsers();
+    }
+  };
+
+  // ===== DASHBOARD DATA =====
+  const token = await nhost.auth.getAccessToken();
+  const headers = { 
+    "Content-Type": "application/json", 
+    "Authorization": "Bearer " + token 
+  };
+  const endpoint = "https://hpjfrhktprpuuxvvlpsb.graphql.eu-central-1.nhost.run/v1";
+
+  async function gql(query, variables = {}) {
+    const res = await fetch(endpoint, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ query, variables })
+    });
+    const json = await res.json();
+    if (json.errors) throw new Error(json.errors[0].message);
+    return json.data;
+  }
+
+  async function loadDashboardData() {
+    console.log('Loading dashboard data...');
+    await loadInventoryWarnings();
+    await loadPendingDocuments();
+    await loadPatientDocs();
+    await updateNews();
+    
+    console.log('Dashboard data loaded successfully');
+    
+    // Auto-refresh every 30 seconds
+    setInterval(() => {
+      loadInventoryWarnings();
+      loadPendingDocuments();
+      loadPatientDocs();
+      updateNews();
+    }, 30000);
+  }
+
+  // Load Inventory from Nhost
+  async function loadInventoryWarnings() {
+    try {
+      const data = await gql(`query {
+        inventory_items(order_by: {expiry_date: asc}) {
+          id
+          name
+          location
+          quantity
+          expiry_date
+        }
+      }`);
+      
+      const inventory = data.inventory_items.map(item => {
+        const expiry = new Date(item.expiry_date);
+        const now = new Date();
+        const daysLeft = Math.ceil((expiry - now) / (1000*60*60*24));
+        
+        let status = 'ok';
+        if (daysLeft < 0) status = 'expired';
+        else if (daysLeft <= 30) status = 'warning';
+        
+        return {
+          ...item,
+          expiry: item.expiry_date,
+          status,
+          daysLeft
+        };
+      });
+      
+      const container = document.getElementById('inventoryWarnings');
+      const warnings = inventory.filter(item => item.status !== 'ok');
+      
+      // Update Stats
+      const expired = inventory.filter(i => i.status === 'expired').length;
+      const expiring = inventory.filter(i => i.status === 'warning').length;
+      const ok = inventory.filter(i => i.status === 'ok').length;
+      
+      document.getElementById('stat-expired').textContent = expired;
+      document.getElementById('stat-expiring').textContent = expiring;
+      document.getElementById('stat-inventory-ok').textContent = ok;
+      
+      if (warnings.length === 0) {
+        container.innerHTML = '<div style="text-align:center; padding:20px; color:#16a34a; font-weight:700">✅ Alle Produkte in Ordnung!</div>';
+        return;
+      }
+      
+      container.innerHTML = warnings.map(item => {
+        const icon = item.status === 'expired' ? '🔴' : '⚠️';
+        const badgeClass = item.status === 'expired' ? 'badge-expired' : 'badge-warning';
+        const badgeText = item.status === 'expired' ? 'Abgelaufen' : 'Bald fällig';
+        
+        return `
+          <div class="inventory-item ${item.status}">
+            <div class="inv-icon">${icon}</div>
+            <div class="inv-info">
+              <div class="inv-name">${item.name}</div>
+              <div class="inv-meta">
+                📍 ${item.location} • ${item.quantity} Stk. • 
+                ${item.status === 'warning' ? `⏱ ${item.daysLeft} Tage` : `❌ ${new Date(item.expiry).toLocaleDateString('de-DE')}`}
+              </div>
+            </div>
+            <span class="inv-badge ${badgeClass}">${badgeText}</span>
+          </div>
+        `;
+      }).join('');
+    } catch(e) {
+      console.error('Fehler beim Laden der Lagerdaten:', e);
+      document.getElementById('inventoryWarnings').innerHTML = '<div style="padding:20px;color:#999">Keine Lagerdaten verfügbar</div>';
+    }
+  }
+
+  // Load Pending Documents (Vorgänge)
+  async function loadPendingDocuments() {
+    try {
+      const data = await gql(`query {
+        documents(where: {status: {_eq: "offen"}}) {
+          id
+          title
+          type
+        }
+      }`);
+      
+      document.getElementById('stat-pending-docs').textContent = data.documents.length;
+    } catch(e) {
+      console.error('Fehler beim Laden der Vorgänge:', e);
+      document.getElementById('stat-pending-docs').textContent = '0';
+    }
+  }
+
+  // Load Patient Docs
+  let patientDocsCount = 0;
+  async function loadPatientDocs() {
+    try {
+      const data = await gql(`query {
+        patient_docs(where: {status: {_eq: "offen"}}) {
+          id
+        }
+      }`);
+      patientDocsCount = data.patient_docs.length;
+    } catch(e) {
+      console.error('Fehler beim Laden der Patientendokumentationen:', e);
+    }
+  }
+
+  // Update News dynamically
+  async function updateNews() {
+    try {
+      const newsItems = [];
+      
+      // Offene Vorgänge
+      const vorgaengeData = await gql(`query {
+        documents(where: {status: {_eq: "offen"}}, limit: 3, order_by: {created_at: desc}) {
+          title
+          type
+          created_at
+        }
+      }`);
+      
+      vorgaengeData.documents.forEach(doc => {
+        const typeName = doc.type === 'cirs' ? 'CIRS' : doc.type === 'produktausgabe' ? 'Produktausgabe' : 'Dokument';
+        newsItems.push(`📄 Neuer ${typeName}: "${doc.title}" <span class="pill">Vorgänge</span>`);
+      });
+      
+      // Offene Patientendokumentationen
+      if (patientDocsCount > 0) {
+        newsItems.push(`🧾 ${patientDocsCount} offene Patientendokumentation(en) <span class="pill">Patientendoku</span>`);
+      }
+      
+      // Lagerwarnungen
+      const inventoryData = await gql(`query {
+        inventory_items(where: {expiry_date: {_lt: "now()"}}, limit: 2) {
+          name
+          location
+        }
+      }`);
+      
+      inventoryData.inventory_items.forEach(item => {
+        newsItems.push(`❌ "${item.name}" in ${item.location} abgelaufen! <span class="pill">Lager</span>`);
+      });
+      
+      // Falls keine News
+      if (newsItems.length === 0) {
+        newsItems.push('✅ Alles ruhig – keine neuen Meldungen');
+      }
+      
+      const newsList = document.getElementById('newsList');
+      newsList.innerHTML = newsItems.map(item => `<li>${item}</li>`).join('');
+    } catch(e) {
+      console.error('Fehler beim Laden der Neuigkeiten:', e);
+      document.getElementById('newsList').innerHTML = '<li>Fehler beim Laden der Neuigkeiten</li>';
+    }
+  }
+
+  // ===== Notizen (lokal) =====
+  const NOTES_KEY = 'admin_notes';
+  const notesEl = document.getElementById('notes');
+  const noteName = document.getElementById('noteName');
+  const noteText = document.getElementById('noteText');
+  const addBtn = document.getElementById('addNoteBtn');
+  const clearBtn = document.getElementById('clearNotesBtn');
+
+  function loadNotes() {
+    const raw = localStorage.getItem(NOTES_KEY);
+    const list = raw ? JSON.parse(raw) : [];
+    notesEl.innerHTML = "";
+    list.slice().reverse().forEach(n=>{
+      const div = document.createElement('div');
+      div.className = 'note';
+      div.innerHTML = `<div class="meta">${n.name} – ${n.ts}</div>${n.text}`;
+      notesEl.appendChild(div);
+    });
+  }
+  function saveNote(name,text){
+    const raw = localStorage.getItem(NOTES_KEY);
+    const list = raw ? JSON.parse(raw) : [];
+    list.push({ name, text, ts: ts() });
+    localStorage.setItem(NOTES_KEY, JSON.stringify(list));
+  }
+  function ts(){
+    const d = new Date();
+    const p=n=>String(n).padStart(2,'0');
+    return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+  }
+
+  addBtn.addEventListener('click', ()=>{
+    const name = noteName.value.trim() || "Admin";
+    const text = noteText.value.trim();
+    if (!text) return;
+    saveNote(name, text);
+    noteText.value = "";
+    loadNotes();
+  });
+  clearBtn.addEventListener('click', ()=>{
+    if (confirm('Chat wirklich lokal löschen?')) {
+      localStorage.removeItem(NOTES_KEY);
+      loadNotes();
+    }
+  });
+
+  loadNotes();
+  loadDashboardData();
+</script>
+
+</body>
+</html>

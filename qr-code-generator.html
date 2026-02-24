@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>QR-Code Generator – FFW</title>
+  <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root { --rot: #c8102e; }
+    * { box-sizing: border-box; }
+    body { font-family: 'Atkinson Hyperlegible', Arial, sans-serif; background:#f7f7f7; margin:0 }
+    header { background: var(--rot); color:#fff; display:flex; align-items:center; gap:12px; padding:10px 14px; }
+    header img { height:42px; width:auto }
+    header h1 { margin:0; font-size:1.15rem; font-weight:700; letter-spacing:.2px }
+    .spacer { flex:1 }
+    .topbtn { color:#fff; text-decoration:none; background:#00000022; padding:7px 10px; border-radius:8px; font-weight:700 }
+    
+    .container { max-width:1200px; margin:20px auto; padding:0 14px; }
+    .card { background:#fff; border-radius:12px; box-shadow:0 3px 12px rgba(0,0,0,.06); padding:20px; margin-bottom:20px; }
+    .card h2 { margin:0 0 16px; color:var(--rot); font-size:1.4rem; }
+    
+    .tabs { display:flex; gap:8px; border-bottom:2px solid #eee; margin-bottom:20px; }
+    .tab { padding:12px 20px; border:0; background:none; font-family:inherit; font-size:1rem; font-weight:700; cursor:pointer; border-bottom:3px solid transparent; color:#666; }
+    .tab.active { color:var(--rot); border-bottom-color:var(--rot); }
+    
+    .tab-content { display:none; }
+    .tab-content.active { display:block; }
+    
+    .info-box { background:#fff5f5; border:2px solid #f2c9d1; border-radius:10px; padding:16px; margin-bottom:20px; }
+    .info-box h3 { margin:0 0 10px; color:var(--rot); font-size:1.1rem; }
+    .info-box ol { margin:8px 0 0 20px; color:#555; line-height:1.8; }
+    
+    .form-group { margin-bottom:16px; }
+    .form-label { display:block; font-weight:700; margin-bottom:6px; color:#222; }
+    input, select { font-family:inherit; font-size:1rem; width:100%; padding:10px; border:1px solid #ccc; border-radius:8px; background:#fafafa; }
+    
+    .btn { background:var(--rot); color:#fff; border:0; border-radius:8px; padding:12px 20px; font-family:inherit; font-size:1rem; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:8px; }
+    .btn:hover { background:#a00d26; }
+    .btn.sec { background:#eee; color:var(--rot); border:1px solid var(--rot); }
+    .btn:disabled { opacity:0.5; cursor:not-allowed; }
+    
+    .qr-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:16px; margin-top:20px; }
+    .qr-item { border:2px dashed #cbd5e1; border-radius:10px; padding:16px; text-align:center; background:#f8fafc; }
+    .qr-canvas { background:#fff; padding:10px; border-radius:8px; margin:0 auto 10px; display:block; }
+    .qr-id { font-family:'Courier New', monospace; font-weight:700; color:var(--rot); font-size:0.95rem; }
+    
+    .stats { display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:12px; margin-bottom:20px; }
+    .stat-card { background:#f8fafc; padding:16px; border-radius:10px; text-align:center; border:1px solid #e2e8f0; }
+    .stat-num { font-size:2rem; font-weight:700; color:var(--rot); }
+    .stat-label { font-size:0.9rem; color:#64748b; margin-top:4px; }
+    
+    .key-list { max-height:400px; overflow-y:auto; }
+    .key-item { display:flex; align-items:center; gap:12px; padding:12px; border:1px solid #e2e8f0; border-radius:8px; margin-bottom:8px; }
+    .key-qr-mini { width:60px; height:60px; background:#fff; border:2px solid #e2e8f0; border-radius:6px; display:flex; align-items:center; justify-content:center; font-size:2rem; }
+    .key-info { flex:1; }
+    .key-id { font-family:'Courier New', monospace; font-weight:700; font-size:1.1rem; }
+    .key-date { color:#64748b; font-size:0.85rem; }
+    .status-badge { padding:4px 10px; border-radius:999px; font-size:0.8rem; font-weight:700; text-transform:uppercase; }
+    .status-available { background:#dcfce7; color:#16a34a; }
+    .status-assigned { background:#fef3c7; color:#d97706; }
+    
+    .err { color:var(--rot); margin:10px 0; }
+    .ok { color:#2e7d32; margin:10px 0; }
+    
+    @media print {
+      header, .tabs, .topbtn { display:none; }
+      .card { box-shadow:none; page-break-inside:avoid; }
+      .qr-grid { grid-template-columns:repeat(3, 1fr); }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <img src="logo.png" alt="Logo" onerror="this.style.display='none'">
+  <h1>FFW – QR-Code Generator</h1>
+  <div class="spacer"></div>
+  <a class="topbtn" href="admin-dashboard.html">← Dashboard</a>
+  <a class="topbtn" href="#" id="logoutBtn">Logout</a>
+</header>
+
+<div class="container">
+  <div id="guardMsg" class="err"></div>
+  <div id="authContent" style="display:none;">
+    
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab active" onclick="showTab('generate')">🔧 Codes generieren</button>
+      <button class="tab" onclick="showTab('overview')">📋 Übersicht</button>
+    </div>
+
+    <!-- Tab: Generieren -->
+    <div id="tab-generate" class="tab-content active">
+      <div class="card">
+        <h2>QR-Codes erstellen</h2>
+        
+        <div class="info-box">
+          <h3>💡 So funktioniert's</h3>
+          <ol>
+            <li>QR-Codes werden im Voraus generiert</li>
+            <li>Als Aufkleber oder Karten gedruckt</li>
+            <li>In Rucksäcken 46/1 und 12/1 vorgehalten</li>
+            <li>Bei Einsatz einem Dokument zugeordnet</li>
+            <li>Physisch an Rettungsdienst übergeben</li>
+          </ol>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Anzahl der Codes</label>
+          <select id="codeCount">
+            <option value="10">10 Codes</option>
+            <option value="25">25 Codes</option>
+            <option value="50">50 Codes</option>
+            <option value="100">100 Codes</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Präfix (optional)</label>
+          <input type="text" id="prefix" placeholder="z.B. FFW oder leer lassen" maxlength="10">
+          <small style="color:#64748b; display:block; margin-top:4px;">
+            Standard-Format: KEY-2025-0001 oder mit Präfix: FFW-KEY-2025-0001
+          </small>
+        </div>
+
+        <button class="btn" id="generateBtn" onclick="generateCodes()">
+          <span>🎯</span>
+          QR-Codes generieren
+        </button>
+
+        <div id="generateMsg" style="margin-top:10px;"></div>
+
+        <!-- Generierte Codes -->
+        <div id="generatedCodes" style="display:none;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin:20px 0 10px;">
+            <h3 style="margin:0; color:var(--rot);">Generierte Codes (<span id="generatedCount">0</span>)</h3>
+            <div style="display:flex; gap:8px;">
+              <button class="btn sec" onclick="downloadPDF()">
+                <span>📄</span> PDF herunterladen
+              </button>
+              <button class="btn" onclick="window.print()">
+                <span>🖨️</span> Drucken
+              </button>
+            </div>
+          </div>
+          <div class="qr-grid" id="qrGrid"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab: Übersicht -->
+    <div id="tab-overview" class="tab-content">
+      <div class="card">
+        <h2>QR-Code Status</h2>
+        
+        <div class="stats">
+          <div class="stat-card">
+            <div class="stat-num" id="stat-available">0</div>
+            <div class="stat-label">Verfügbar</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-num" id="stat-assigned">0</div>
+            <div class="stat-label">Zugeordnet</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-num" id="stat-total">0</div>
+            <div class="stat-label">Gesamt</div>
+          </div>
+        </div>
+
+        <h3 style="margin:20px 0 12px; color:var(--rot);">Alle QR-Codes</h3>
+        <div class="key-list" id="keyList">
+          <!-- Wird dynamisch gefüllt -->
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script type="module">
+  import { NhostClient } from "https://esm.sh/@nhost/nhost-js@2.2.9";
+  import QRCode from "https://esm.sh/qrcode@1.5.3";
+  
+  const nhost = new NhostClient({ 
+    subdomain:"hpjfrhktprpuuxvvlpsb", 
+    region:"eu-central-1" 
+  });
+
+  /* ===== Login-Guard ===== */
+  async function guard(){
+    try{ 
+      const ok = await nhost.auth.isAuthenticatedAsync(); 
+      if(!ok){ 
+        location.href="admin-login.html"; 
+        return false 
+      } 
+      return true 
+    }
+    catch{ 
+      location.href="admin-login.html"; 
+      return false 
+    }
+  }
+  
+  if (!(await guard())) {
+    // Redirect passiert, stoppt hier
+  } else {
+    // Nur wenn eingeloggt
+    document.getElementById('guardMsg').style.display = 'none';
+    document.getElementById('authContent').style.display = 'block';
+  }
+
+  // Logout
+  document.getElementById('logoutBtn')?.addEventListener('click', async (e)=>{
+    e.preventDefault();
+    try{await nhost.auth.signOut()}catch{};
+    localStorage.clear();
+    location.href = "admin-login.html";
+  });
+
+  /* ===== STORAGE ===== */
+  const STORAGE_KEY = 'ffw_qr_codes';
+
+  function saveKeysToStorage(newKeys) {
+    const existing = getStoredKeys();
+    const combined = [...existing, ...newKeys];
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(combined));
+  }
+
+  function getStoredKeys() {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    return stored ? JSON.parse(stored) : [];
+  }
+
+  /* ===== TAB NAVIGATION ===== */
+  window.showTab = function(tabName) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
+    
+    event.target.classList.add('active');
+    document.getElementById('tab-' + tabName).classList.add('active');
+    
+    if (tabName === 'overview') {
+      updateOverview();
+    }
+  };
+
+  /* ===== GENERATE QR CODES ===== */
+  let generatedCodesArray = [];
+
+  window.generateCodes = async function() {
+    const count = parseInt(document.getElementById('codeCount').value);
+    const prefix = document.getElementById('prefix').value.trim();
+    const generateBtn = document.getElementById('generateBtn');
+    const generateMsg = document.getElementById('generateMsg');
+    
+    generateBtn.disabled = true;
+    generateMsg.innerHTML = '<span style="color:#64748b;">Generiere Codes...</span>';
+    
+    setTimeout(async () => {
+      try {
+        generatedCodesArray = [];
+        const grid = document.getElementById('qrGrid');
+        grid.innerHTML = '';
+        
+        const year = new Date().getFullYear();
+        
+        for (let i = 1; i <= count; i++) {
+          const num = String(Math.floor(Math.random() * 9999) + 1).padStart(4, '0');
+          const keyId = prefix ? `${prefix}-KEY-${year}-${num}` : `KEY-${year}-${num}`;
+          const url = `https://mpgffrot.netlify.app/secure/${keyId}`; // ← DEINE DOMAIN
+          
+          const qrItem = document.createElement('div');
+          qrItem.className = 'qr-item';
+          
+          const canvas = document.createElement('canvas');
+          canvas.className = 'qr-canvas';
+          qrItem.appendChild(canvas);
+          
+          const idLabel = document.createElement('div');
+          idLabel.className = 'qr-id';
+          idLabel.textContent = keyId;
+          qrItem.appendChild(idLabel);
+          
+          grid.appendChild(qrItem);
+          
+          // QRCode generieren mit ES6 Import
+          await QRCode.toCanvas(canvas, url, {
+            width: 150,
+            margin: 1,
+            color: {
+              dark: '#1e293b',
+              light: '#ffffff'
+            }
+          });
+          
+          generatedCodesArray.push({
+            id: keyId,
+            url: url,
+            generated: new Date().toISOString(),
+            status: 'available'
+          });
+        }
+        
+        saveKeysToStorage(generatedCodesArray);
+        
+        document.getElementById('generatedCount').textContent = count;
+        document.getElementById('generatedCodes').style.display = 'block';
+        generateMsg.innerHTML = '<span class="ok">✅ ' + count + ' QR-Codes erfolgreich generiert!</span>';
+        generateBtn.disabled = false;
+        
+        updateOverview();
+      } catch(e) {
+        generateMsg.innerHTML = '<span class="err">❌ Fehler: ' + e.message + '</span>';
+        generateBtn.disabled = false;
+        console.error('QR-Code Generierung fehlgeschlagen:', e);
+      }
+    }, 100);
+  };
+
+  /* ===== OVERVIEW ===== */
+  function updateOverview() {
+    const keys = getStoredKeys();
+    
+    const available = keys.filter(k => k.status === 'available').length;
+    const assigned = keys.filter(k => k.status === 'assigned').length;
+    
+    document.getElementById('stat-available').textContent = available;
+    document.getElementById('stat-assigned').textContent = assigned;
+    document.getElementById('stat-total').textContent = keys.length;
+    
+    const keyList = document.getElementById('keyList');
+    
+    if (keys.length === 0) {
+      keyList.innerHTML = '<div style="text-align:center; padding:40px; color:#64748b;">Noch keine QR-Codes generiert</div>';
+      return;
+    }
+    
+    keyList.innerHTML = keys.map(key => `
+      <div class="key-item">
+        <div class="key-qr-mini">🔑</div>
+        <div class="key-info">
+          <div class="key-id">${key.id}</div>
+          <div class="key-date">Erstellt: ${new Date(key.generated).toLocaleDateString('de-DE')}</div>
+          ${key.assignedTo ? `<div style="color:#f59e0b; font-size:0.85rem; margin-top:2px;">→ Verknüpft mit ${key.assignedTo.slice(0,8)}</div>` : ''}
+        </div>
+        <span class="status-badge status-${key.status}">
+          ${key.status === 'available' ? '✓ Verfügbar' : '⏱ Zugeordnet'}
+        </span>
+      </div>
+    `).join('');
+  }
+
+  /* ===== PDF DOWNLOAD ===== */
+  window.downloadPDF = function() {
+    alert('PDF-Export: In Produktion würde hier eine PDF mit allen QR-Codes erstellt.\n\nTipp: Nutzen Sie die Drucken-Funktion und wählen Sie "Als PDF speichern".');
+  };
+
+  /* ===== INIT ===== */
+  updateOverview();
+</script>
+
+</body>
+</html>

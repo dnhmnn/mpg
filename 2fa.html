@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8"><title>2FA prüfen</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{--rot:#c8102e}
+  body{font-family:'Atkinson Hyperlegible',Arial,sans-serif;background:#f6f6f6;margin:0;display:flex;min-height:100vh;align-items:center;justify-content:center}
+  .card{background:#fff;border-radius:12px;box-shadow:0 4px 14px rgba(0,0,0,.1);padding:24px;max-width:360px;width:92vw;text-align:center}
+  h1{color:var(--rot);margin:0 0 12px}
+  input{width:100%;padding:12px;border:1px solid #ccc;border-radius:8px;letter-spacing:4px;text-align:center;font-size:1.2em}
+  button{width:100%;background:var(--rot);color:#fff;border:none;border-radius:8px;padding:12px;margin-top:12px;font-weight:700;cursor:pointer}
+  .msg{color:var(--rot);margin-top:10px;min-height:1.2em}
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>2FA-Code</h1>
+  <p>Wir haben dir einen 6-stelligen Code per E-Mail gesendet.</p>
+  <input id="code" maxlength="6" inputmode="numeric" placeholder="••••••" />
+  <button id="btn">Bestätigen</button>
+  <div id="msg" class="msg"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@nhost/nhost-js@2.2.9/dist/umd/index.min.js"></script>
+<script>
+  const NHOST_SUBDOMAIN = 'hpjfrhktprpuuxvvlpsb';
+  const NHOST_REGION    = 'eu-central-1';
+  const nhost = new window.Nhost.NhostClient({ subdomain: NHOST_SUBDOMAIN, region: NHOST_REGION });
+  const email = new URLSearchParams(location.search).get('email');
+
+  // Demo-Prüfung (ersetzbar durch echte Function / OTP-Check)
+  async function checkCode() {
+    const code = document.getElementById('code').value.trim();
+    const msg  = document.getElementById('msg');
+    // TODO: echte Prüfung (Function / verify)
+    if (code !== '123456') { msg.textContent = 'Code ungültig oder abgelaufen.'; return; }
+    // Erfolgreich: ab ins Dashboard
+    localStorage.setItem('admin2fa', '1');
+    location.href = 'admin-dashboard.html';
+  }
+  document.getElementById('btn').onclick = checkCode;
+</script>
+</body>
+</html>
