@@ -53,6 +53,14 @@ body {
   justify-self: center;
 }
 
+.org-logo {
+  text-align: center;
+  justify-self: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .logout-btn {
   background: rgba(255, 255, 255, 0.2);
   border: 0.5px solid rgba(255, 255, 255, 0.3);
@@ -432,51 +440,10 @@ body.loaded {
 .index-page {
   min-height: 100vh;
   padding: 20px;
+  padding-top: calc(54px + env(safe-area-inset-top) + 20px);
   display: flex;
   flex-direction: column;
   align-items: center;
-}
-
-/* Top Header */
-.index-top-header {
-  width: 100%;
-  max-width: 500px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px 0;
-  margin-bottom: 20px;
-}
-
-.index-logo {
-  display: flex;
-  align-items: center;
-}
-
-.index-logo svg {
-  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
-  width: 140px;
-  height: auto;
-}
-
-.index-login-btn {
-  background: rgba(255, 255, 255, 0.2);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  color: #fff;
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  padding: 10px 20px;
-  border-radius: 12px;
-  font-weight: 600;
-  text-decoration: none;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  font-size: 0.9rem;
-}
-
-.index-login-btn:hover {
-  background: rgba(255, 255, 255, 0.3);
-  transform: translateY(-2px);
 }
 
 .index-container {

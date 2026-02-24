@@ -6,6 +6,7 @@ interface Organization {
   org_name: string
   is_active: boolean
   org_code: string
+  logo?: string
 }
 
 export default function Index() {
@@ -14,7 +15,6 @@ export default function Index() {
   const [error, setError] = useState('')
 
   useEffect(() => {
-    // Organisation aus URL lesen
     const urlParams = new URLSearchParams(window.location.search)
     const orgCode = urlParams.get('org')
 
@@ -51,6 +51,21 @@ export default function Index() {
     loadOrganization()
   }, [])
 
+  // Build organization logo URL
+  let logoDisplay: JSX.Element | null = null
+  if (org?.logo) {
+    const logoUrl = pb.files.getUrl(org, org.logo, { thumb: '200x200' })
+    logoDisplay = (
+      <img
+        src={logoUrl}
+        alt={org.org_name}
+        style={{ width: '100px', height: '100px', objectFit: 'contain', borderRadius: '12px' }}
+      />
+    )
+  } else {
+    logoDisplay = <div style={{ fontSize: '60px', lineHeight: 1 }}>🏢</div>
+  }
+
   if (loading) {
     return (
       <div className="index-page">
@@ -73,9 +88,9 @@ export default function Index() {
 
   return (
     <div className="index-page">
-      {/* Header */}
-      <div className="index-top-header">
-        <div className="index-logo">
+      {/* Status Bar - Same as Hub */}
+      <div className="status-bar">
+        <div className="logo">
           <svg width="120" height="32" viewBox="0 0 560 140">
             <defs>
               <linearGradient id="logoGrad" x1="0%" y1="0%" x2="100%" y2="0%">
@@ -88,7 +103,10 @@ export default function Index() {
             <text x="140" y="80" fontFamily="Inter, sans-serif" fontSize="46" fontWeight="600" fill="white" letterSpacing="0">Responda</text>
           </svg>
         </div>
-        <Link to="/login" className="index-login-btn">Login</Link>
+        <div className="org-logo">{logoDisplay}</div>
+        <Link to="/login" className="logout-btn">
+          Login
+        </Link>
       </div>
 
       <div className="index-container">
