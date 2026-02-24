@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Formulare – Responda</title>
+
+  <!-- Theme Color -->
+  <meta name="theme-color" content="#0f172a">
+
+  <!-- Google Fonts - Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <script src="https://cdn.jsdelivr.net/npm/pocketbase@0.21.3/dist/pocketbase.umd.js"></script>
+
+  <style>
+    :root {
+      --rot: #c8102e;
+      --gradient-start: #667eea;
+      --gradient-end: #764ba2;
+      --glass-bg: rgba(255, 255, 255, 0.08);
+      --glass-border: rgba(255, 255, 255, 0.15);
+      --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0f172a;
+      min-height: 100vh;
+      margin: 0;
+      opacity: 0;
+      transition: opacity 0.4s ease;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    body.loaded { opacity: 1; }
+
+    /* Animated Background Gradient Orbs */
+    .bg-orbs {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 0;
+      overflow: hidden;
+    }
+
+    .orb {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(80px);
+      opacity: 0.6;
+      animation: float 20s ease-in-out infinite;
+    }
+
+    .orb-1 {
+      width: 600px;
+      height: 600px;
+      background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%);
+      top: -200px;
+      right: -100px;
+      animation-delay: 0s;
+    }
+
+    .orb-2 {
+      width: 500px;
+      height: 500px;
+      background: linear-gradient(135deg, #06b6d4 0%, #22d3ee 100%);
+      bottom: -150px;
+      left: -100px;
+      animation-delay: -5s;
+    }
+
+    .orb-3 {
+      width: 400px;
+      height: 400px;
+      background: linear-gradient(135deg, #db2777 0%, #f472b6 100%);
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      animation-delay: -10s;
+    }
+
+    @keyframes float {
+      0%, 100% {
+        transform: translate(0, 0) scale(1);
+      }
+      25% {
+        transform: translate(30px, -30px) scale(1.05);
+      }
+      50% {
+        transform: translate(-20px, 20px) scale(0.95);
+      }
+      75% {
+        transform: translate(-30px, -20px) scale(1.02);
+      }
+    }
+
+    /* HEADER - Glassmorphism */
+    .top-header {
+      background: rgba(15, 23, 42, 0.7);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--glass-border);
+      padding: 16px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    /* Logo Top Left */
+    .logo-container {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo-icon {
+      width: 40px;
+      height: 40px;
+      background: linear-gradient(135deg, #7c3aed 0%, #db2777 100%);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 15px rgba(124, 58, 237, 0.4);
+    }
+
+    .logo-plus {
+      width: 18px;
+      height: 18px;
+      position: relative;
+    }
+
+    .logo-plus::before,
+    .logo-plus::after {
+      content: '';
+      position: absolute;
+      background: #fff;
+      border-radius: 3px;
+    }
+
+    .logo-plus::before {
+      width: 18px;
+      height: 6px;
+      top: 6px;
+      left: 0;
+    }
+
+    .logo-plus::after {
+      width: 6px;
+      height: 18px;
+      top: 0;
+      left: 6px;
+    }
+
+    .logo-text {
+      font-size: 1.4rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, #fff 0%, #e2e8f0 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      letter-spacing: -0.5px;
+    }
+
+    .login-btn {
+      background: var(--glass-bg);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      color: #fff;
+      border: 1px solid var(--glass-border);
+      padding: 10px 20px;
+      border-radius: 12px;
+      font-weight: 600;
+      text-decoration: none;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      font-size: 0.9rem;
+    }
+
+    .login-btn:hover {
+      background: rgba(255, 255, 255, 0.15);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 20px rgba(124, 58, 237, 0.3);
+    }
+
+    /* Main Content */
+    .main {
+      padding: 40px 20px;
+      max-width: 600px;
+      margin: 0 auto;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Glass Container */
+    .container {
+      background: var(--glass-bg);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border: 1px solid var(--glass-border);
+      border-radius: 28px;
+      box-shadow: var(--glass-shadow);
+      overflow: hidden;
+      animation: slideIn 0.5s ease-out;
+    }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(-30px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Header Section */
+    .header {
+      background: linear-gradient(135deg, rgba(124, 58, 237, 0.3) 0%, rgba(219, 39, 119, 0.3) 100%);
+      padding: 50px 30px;
+      text-align: center;
+      position: relative;
+    }
+
+    .header::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(180deg, rgba(255,255,255,0.1) 0%, transparent 100%);
+      pointer-events: none;
+    }
+
+    .header h1 {
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 8px;
+      position: relative;
+      letter-spacing: -0.5px;
+    }
+
+    .header p {
+      font-size: 1rem;
+      color: rgba(255, 255, 255, 0.8);
+      font-weight: 500;
+      position: relative;
+    }
+
+    /* Body Section */
+    .body {
+      padding: 40px 30px;
+    }
+
+    .loading-box {
+      background: rgba(59, 130, 246, 0.15);
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      color: #60a5fa;
+      padding: 24px;
+      border-radius: 16px;
+      text-align: center;
+      font-weight: 600;
+      font-size: 1rem;
+    }
+
+    .error-box {
+      background: rgba(239, 68, 68, 0.15);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      color: #fca5a5;
+      padding: 24px;
+      border-radius: 16px;
+      text-align: center;
+      font-weight: 600;
+      font-size: 1rem;
+    }
+
+    .grid {
+      display: grid;
+      gap: 20px;
+    }
+
+    /* Glass Form Cards */
+    .form-card {
+      background: var(--glass-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--glass-border);
+      border-radius: 20px;
+      padding: 28px;
+      text-decoration: none;
+      color: inherit;
+      transition: all 0.3s ease;
+      cursor: pointer;
+      display: block;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .form-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, transparent 50%);
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .form-card:hover {
+      transform: translateY(-6px);
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+      border-color: rgba(124, 58, 237, 0.5);
+      background: rgba(255, 255, 255, 0.12);
+    }
+
+    .form-card:hover::before {
+      opacity: 1;
+    }
+
+    .form-icon {
+      width: 56px;
+      height: 56px;
+      background: linear-gradient(135deg, #7c3aed 0%, #db2777 100%);
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.6rem;
+      margin-bottom: 20px;
+      box-shadow: 0 8px 20px rgba(124, 58, 237, 0.4);
+    }
+
+    .form-card h2 {
+      font-size: 1.25rem;
+      color: #fff;
+      margin-bottom: 10px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+    }
+
+    .form-card p {
+      color: rgba(255, 255, 255, 0.7);
+      font-size: 0.95rem;
+      line-height: 1.6;
+    }
+
+    .footer {
+      text-align: center;
+      color: rgba(255, 255, 255, 0.6);
+      font-size: 0.875rem;
+      margin-top: 30px;
+      padding-bottom: 20px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .footer a {
+      color: rgba(255, 255, 255, 0.8);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+
+    .footer a:hover {
+      color: #fff;
+    }
+
+    /* Responsive */
+    @media (max-width: 600px) {
+      .top-header {
+        padding: 12px 16px;
+      }
+
+      .logo-text {
+        font-size: 1.2rem;
+      }
+
+      .logo-icon {
+        width: 36px;
+        height: 36px;
+      }
+
+      .header {
+        padding: 40px 20px;
+      }
+
+      .header h1 {
+        font-size: 1.5rem;
+      }
+
+      .body {
+        padding: 30px 20px;
+      }
+
+      .form-card {
+        padding: 24px;
+      }
+
+      .form-card h2 {
+        font-size: 1.1rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Animated Background -->
+<div class="bg-orbs">
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+  <div class="orb orb-3"></div>
+</div>
+
+<!-- HEADER - Logo Top Left -->
+<header class="top-header">
+  <div class="logo-container">
+    <div class="logo-icon">
+      <div class="logo-plus"></div>
+    </div>
+    <div class="logo-text">Responda</div>
+  </div>
+  <a href="mpg-login.html" class="login-btn">Login</a>
+</header>
+
+<main class="main">
+  <div class="container">
+    <div class="header">
+      <h1 id="orgName">Lade Organisation...</h1>
+      <p>Formulare</p>
+    </div>
+
+    <div class="body">
+      <div id="loadingBox" class="loading-box">
+        <span style="display: inline-block; margin-right: 8px;">🔄</span> Lade Organisation...
+      </div>
+
+      <div id="errorBox" class="error-box" style="display:none">
+        <span style="display: inline-block; margin-right: 8px;">❌</span> <span id="errorText">Ungültige Organisation</span>
+      </div>
+
+      <div id="formGrid" class="grid" style="display:none">
+        <a href="#" class="form-card" id="patientLink">
+          <div class="form-icon">🧾</div>
+          <h2>Patientendokumentation</h2>
+          <p>Dokumentiere Einsätze und Patienteninformationen</p>
+        </a>
+
+        <a href="#" class="form-card" id="produktLink">
+          <div class="form-icon">📦</div>
+          <h2>Produktausgabe</h2>
+          <p>Dokumentiere ausgegebene Materialien und Produkte</p>
+        </a>
+
+        <a href="#" class="form-card" id="cirsLink">
+          <div class="form-icon">⚠️</div>
+          <h2>CIRS-Meldung</h2>
+          <p>Melde kritische Ereignisse und Beinahe-Unfälle</p>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <p>Powered by <a href="#">Responda</a></p>
+  </div>
+</main>
+
+<script>
+  const pb = new PocketBase('https://api.responda.systems');
+
+  // Organisation aus URL lesen
+  const urlParams = new URLSearchParams(window.location.search);
+  const orgCode = urlParams.get('org');
+
+  const orgNameEl = document.getElementById('orgName');
+  const loadingBoxEl = document.getElementById('loadingBox');
+  const errorBoxEl = document.getElementById('errorBox');
+  const errorTextEl = document.getElementById('errorText');
+  const formGridEl = document.getElementById('formGrid');
+
+  // Organisation laden
+  async function loadOrganization() {
+    console.log('🔍 Loading organization:', orgCode);
+
+    if (!orgCode) {
+      showError('Keine Organisation in URL angegeben!');
+      return;
+    }
+
+    try {
+      // Organisation aus PocketBase laden
+      const org = await pb.collection('organizations').getFirstListItem(
+        `org_code = "${orgCode}"`
+      );
+
+      console.log('✅ Organization loaded:', org);
+
+      // Prüfen ob Organisation aktiv ist
+      if (!org.is_active) {
+        showError('Diese Organisation ist nicht aktiv!');
+        return;
+      }
+
+      // Organisation anzeigen
+      orgNameEl.textContent = org.org_name;
+      loadingBoxEl.style.display = 'none';
+      errorBoxEl.style.display = 'none';
+      formGridEl.style.display = 'grid';
+
+      // Links setzen (mit ?org= Parameter)
+      document.getElementById('patientLink').href = `patientendoku-public.html?org=${orgCode}`;
+      document.getElementById('produktLink').href = `produktausgabe-public.html?org=${orgCode}`;
+      document.getElementById('cirsLink').href = `cirs-public.html?org=${orgCode}`;
+
+      // Zeige Seite
+      document.body.classList.add('loaded');
+
+    } catch (error) {
+      console.error('❌ Error loading organization:', error);
+
+      if (error.status === 404) {
+        showError('Organisation nicht gefunden!');
+      } else {
+        showError('Fehler beim Laden: ' + error.message);
+      }
+    }
+  }
+
+  function showError(message) {
+    orgNameEl.textContent = 'Fehler';
+    loadingBoxEl.style.display = 'none';
+    errorBoxEl.style.display = 'block';
+    errorTextEl.textContent = message;
+    formGridEl.style.display = 'none';
+    document.body.classList.add('loaded');
+  }
+
+  // Beim Laden
+  loadOrganization();
+</script>
+
+</body>
+</html>
