@@ -29,6 +29,16 @@ export default function SettingsPage({ user }: SettingsPageProps) {
   const [users, setUsers] = useState<any[]>([])
   const [loadingUsers, setLoadingUsers] = useState(false)
 
+  // User modal
+  const [showUserModal, setShowUserModal] = useState(false)
+  const [editingUser, setEditingUser] = useState<any>(null)
+  const [userFormName, setUserFormName] = useState('')
+  const [userFormEmail, setUserFormEmail] = useState('')
+  const [userFormPassword, setUserFormPassword] = useState('')
+  const [userFormRole, setUserFormRole] = useState('benutzer')
+  const [userFormMsg, setUserFormMsg] = useState('')
+  const [savingUser, setSavingUser] = useState(false)
+
   // License tab
   const [license, setLicense] = useState<any>(null)
 
@@ -123,6 +133,94 @@ export default function SettingsPage({ user }: SettingsPageProps) {
     }
   }
 
+  // User management functions
+  function openAddUser() {
+    setEditingUser(null)
+    setUserFormName('')
+    setUserFormEmail('')
+    setUserFormPassword('')
+    setUserFormRole('benutzer')
+    setUserFormMsg('')
+    setShowUserModal(true)
+  }
+
+  function openEditUser(u: any) {
+    setEditingUser(u)
+    setUserFormName(u.name || '')
+    setUserFormEmail(u.email)
+    setUserFormPassword('')
+    setUserFormRole(u.role || 'benutzer')
+    setUserFormMsg('')
+    setShowUserModal(true)
+  }
+
+  async function saveUser() {
+    if (!user?.organization_id) return
+    setUserFormMsg('')
+    setSavingUser(true)
+
+    if (!userFormEmail || !userFormEmail.includes('@')) {
+      setUserFormMsg('❌ Gültige E-Mail eingeben')
+      setSavingUser(false)
+      return
+    }
+
+    try {
+      if (editingUser) {
+        // Edit existing user
+        const updateData: any = {
+          name: userFormName,
+          role: userFormRole
+        }
+
+        if (userFormPassword) {
+          updateData.password = userFormPassword
+          updateData.passwordConfirm = userFormPassword
+        }
+
+        await pb.collection('users').update(editingUser.id, updateData)
+        setUserFormMsg('✅ Benutzer aktualisiert!')
+      } else {
+        // Create new user
+        if (!userFormPassword || userFormPassword.length < 8) {
+          setUserFormMsg('❌ Passwort: mind. 8 Zeichen')
+          setSavingUser(false)
+          return
+        }
+
+        await pb.collection('users').create({
+          email: userFormEmail,
+          name: userFormName,
+          role: userFormRole,
+          password: userFormPassword,
+          passwordConfirm: userFormPassword,
+          organization_id: user.organization_id
+        })
+        setUserFormMsg('✅ Benutzer erstellt!')
+      }
+
+      setTimeout(() => {
+        setShowUserModal(false)
+        loadUsers()
+      }, 1500)
+    } catch (e: any) {
+      setUserFormMsg('❌ Fehler: ' + e.message)
+    } finally {
+      setSavingUser(false)
+    }
+  }
+
+  async function deleteUser(userId: string) {
+    if (!confirm('Möchten Sie diesen Benutzer wirklich löschen?')) return
+
+    try {
+      await pb.collection('users').delete(userId)
+      loadUsers()
+    } catch (e: any) {
+      alert('Fehler beim Löschen: ' + e.message)
+    }
+  }
+
   const canManageUsers = user?.supervisor || user?.role === 'mpg'
 
   // iOS-style settings items
@@ -133,6 +231,22 @@ export default function SettingsPage({ user }: SettingsPageProps) {
       { id: 'users', label: 'Benutzer', icon: 'people', tab: 'users' as Tab },
       { id: 'license', label: 'Lizenz', icon: 'key', tab: 'license' as Tab }
     ] : [])
+  ]
+
+  const roleLabels: Record<string, string> = {
+    mpg: 'MPG',
+    lager: 'Lager',
+    ausbildung: 'Ausbildung',
+    qm: 'QM',
+    benutzer: 'Benutzer'
+  }
+
+  const roleOptions = [
+    { value: 'benutzer', label: 'Benutzer' },
+    { value: 'lager', label: 'Lager' },
+    { value: 'ausbildung', label: 'Ausbildung' },
+    { value: 'qm', label: 'QM' },
+    { value: 'mpg', label: 'MPG' }
   ]
 
   return (
@@ -287,7 +401,26 @@ export default function SettingsPage({ user }: SettingsPageProps) {
           {/* Users Tab */}
           {activeTab === 'users' && (
             <div className="settings-section">
-              <div className="settings-section-header">BENUTZER</div>
+              <div className="settings-section-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span>BENUTZER</span>
+                {canManageUsers && (
+                  <button
+                    onClick={openAddUser}
+                    style={{
+                      background: 'linear-gradient(135deg, #ff6b35, #c8102e)',
+                      border: 'none',
+                      borderRadius: '8px',
+                      padding: '6px 12px',
+                      color: '#fff',
+                      fontSize: '13px',
+                      fontWeight: '600',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    + Hinzufügen
+                  </button>
+                )}
+              </div>
               <div className="settings-section-content">
                 {loadingUsers ? (
                   <div style={{ textAlign: 'center', padding: '40px', color: 'rgba(255,255,255,0.5)' }}>
@@ -298,27 +431,42 @@ export default function SettingsPage({ user }: SettingsPageProps) {
                     Keine Benutzer gefunden
                   </div>
                 ) : (
-                  users.map((u) => {
-                    const roleLabels: Record<string, string> = {
-                      mpg: 'MPG',
-                      lager: 'Lager',
-                      ausbildung: 'Ausbildung',
-                      qm: 'QM',
-                      benutzer: 'Benutzer'
-                    }
-                    return (
-                      <div key={u.id} className="user-row">
-                        <div className="user-avatar">
-                          {(u.name || u.email)[0].toUpperCase()}
-                        </div>
-                        <div className="user-info">
-                          <div className="user-name">{u.name || '—'}</div>
-                          <div className="user-email">{u.email}</div>
-                        </div>
-                        <div className="user-role">{roleLabels[u.role] || 'Benutzer'}</div>
+                  users.map((u) => (
+                    <div key={u.id} className="user-row">
+                      <div className="user-avatar">
+                        {(u.name || u.email)[0].toUpperCase()}
                       </div>
-                    )
-                  })
+                      <div className="user-info">
+                        <div className="user-name">{u.name || '—'}</div>
+                        <div className="user-email">{u.email}</div>
+                      </div>
+                      <div className="user-role">{roleLabels[u.role] || 'Benutzer'}</div>
+                      {canManageUsers && u.id !== user?.id && (
+                        <div className="user-actions">
+                          <button
+                            onClick={() => openEditUser(u)}
+                            className="user-action-btn edit"
+                            title="Bearbeiten"
+                          >
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                            </svg>
+                          </button>
+                          <button
+                            onClick={() => deleteUser(u.id)}
+                            className="user-action-btn delete"
+                            title="Löschen"
+                          >
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <polyline points="3 6 5 6 21 6"/>
+                              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                            </svg>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ))
                 )}
               </div>
             </div>
@@ -360,6 +508,89 @@ export default function SettingsPage({ user }: SettingsPageProps) {
           )}
         </div>
       </div>
+
+      {/* User Modal */}
+      {showUserModal && (
+        <div className="modal-overlay" onClick={() => setShowUserModal(false)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>{editingUser ? 'Benutzer bearbeiten' : 'Benutzer hinzufügen'}</h3>
+              <button className="modal-close" onClick={() => setShowUserModal(false)}>×</button>
+            </div>
+            <div className="modal-body">
+              <div className="ios-field">
+                <label>Name</label>
+                <input
+                  type="text"
+                  value={userFormName}
+                  onChange={(e) => setUserFormName(e.target.value)}
+                  placeholder="Name eingeben"
+                />
+              </div>
+              <div className="ios-field">
+                <label>E-Mail {editingUser && '(nicht änderbar)'}</label>
+                <input
+                  type="email"
+                  value={userFormEmail}
+                  onChange={(e) => setUserFormEmail(e.target.value)}
+                  placeholder="email@beispiel.de"
+                  disabled={!!editingUser}
+                  style={editingUser ? { background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.4)' } : {}}
+                />
+              </div>
+              {!editingUser && (
+                <div className="ios-field">
+                  <label>Passwort {editingUser && '(optional)'}</label>
+                  <input
+                    type="password"
+                    value={userFormPassword}
+                    onChange={(e) => setUserFormPassword(e.target.value)}
+                    placeholder={editingUser ? 'Neues Passwort (optional)' : 'Mind. 8 Zeichen'}
+                  />
+                </div>
+              )}
+              <div className="ios-field">
+                <label>Rolle</label>
+                <select
+                  value={userFormRole}
+                  onChange={(e) => setUserFormRole(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '12px 14px',
+                    background: 'rgba(255, 255, 255, 0.1)',
+                    border: '0.5px solid rgba(255, 255, 255, 0.2)',
+                    borderRadius: '10px',
+                    color: '#fff',
+                    fontSize: '16px',
+                    outline: 'none',
+                    appearance: 'none',
+                    cursor: 'pointer'
+                  }}
+                >
+                  {roleOptions.map(opt => (
+                    <option key={opt.value} value={opt.value} style={{ background: '#1a1a1a' }}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              {userFormMsg && (
+                <div style={{ marginTop: '12px', fontSize: '14px', color: userFormMsg.includes('✅') ? '#34c759' : '#ff3b30' }}>
+                  {userFormMsg}
+                </div>
+              )}
+              <button
+                className="ios-button"
+                onClick={saveUser}
+                disabled={savingUser}
+                style={{ opacity: savingUser ? 0.7 : 1 }}
+              >
+                {savingUser ? 'Speichern...' : (editingUser ? 'Änderungen speichern' : 'Benutzer erstellen')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

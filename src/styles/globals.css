@@ -1041,3 +1041,102 @@ body.loaded {
     height: 20px;
   }
 }
+
+/* User actions */
+.user-actions {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.user-action-btn {
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.user-action-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.user-action-btn.edit {
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+}
+
+.user-action-btn.edit:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.user-action-btn.delete {
+  background: rgba(255, 59, 48, 0.2);
+  color: #ff3b30;
+}
+
+.user-action-btn.delete:hover {
+  background: rgba(255, 59, 48, 0.3);
+}
+
+/* Modal */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.modal-content {
+  background: rgba(30, 30, 30, 0.95);
+  backdrop-filter: blur(40px);
+  -webkit-backdrop-filter: blur(40px);
+  border: 0.5px solid rgba(255, 255, 255, 0.2);
+  border-radius: 20px;
+  width: 100%;
+  max-width: 400px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  border-bottom: 0.5px solid rgba(255, 255, 255, 0.1);
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.modal-close {
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 50%;
+  color: #fff;
+  font-size: 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-body {
+  padding: 20px;
+}
