@@ -33,30 +33,6 @@ interface TrainingSession {
 }
 
 // Calendar helper functions
-function addDays(date: Date, days: number): Date {
-  const result = new Date(date)
-  result.setDate(result.getDate() + days)
-  return result
-}
-
-function isSameDay(date1: Date, date2: Date): boolean {
-  return date1.toISOString().split('T')[0] === date2.toISOString().split('T')[0]
-}
-
-function getWeekDays(date: Date): Date[] {
-  const days: Date[] = []
-  const startOfWeek = new Date(date)
-  const day = startOfWeek.getDay()
-  const diff = startOfWeek.getDate() - day + (day === 0 ? -6 : 1) // Adjust for Monday start
-  startOfWeek.setDate(diff)
-
-  for (let i = 0; i < 7; i++) {
-    days.push(new Date(startOfWeek))
-    startOfWeek.setDate(startOfWeek.getDate() + 1)
-  }
-  return days
-}
-
 function getDayName(date: Date, short = false): string {
   const days = short
     ? ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So']
@@ -107,10 +83,7 @@ export default function Ausbildungen({ user }: AusbildungenProps) {
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
 
-  // Calendar state
-  const [calendarView, setCalendarView] = useState<'calendar' | 'list'>('calendar')
-  const [selectedDate, setSelectedDate] = useState(new Date())
-  const [currentTime, setCurrentTime] = useState(new Date())
+  // Calendar state - removed unused
 
   // Modal states
   const [showCourseModal, setShowCourseModal] = useState(false)
@@ -156,14 +129,6 @@ export default function Ausbildungen({ user }: AusbildungenProps) {
     if (!user) return
     loadAllData()
   }, [user, activeTab])
-
-  // Update current time every minute
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentTime(new Date())
-    }, 60000)
-    return () => clearInterval(interval)
-  }, [])
 
   async function loadAllData() {
     if (!user?.organization_id) return
@@ -525,210 +490,72 @@ export default function Ausbildungen({ user }: AusbildungenProps) {
         {/* Schulungen Tab */}
         {activeTab === 'schulungen' && (
           <div className="tab-content">
-            {/* Calendar Header */}
-            <div className="calendar-header">
-              <div className="calendar-nav">
-                <button className="calendar-nav-btn" onClick={() => setSelectedDate(addDays(selectedDate, -1))}>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <polyline points="15 18 9 12 15 6"/>
-                  </svg>
-                </button>
-                <button className="today-btn" onClick={() => setSelectedDate(new Date())}>Heute</button>
-                <button className="calendar-nav-btn" onClick={() => setSelectedDate(addDays(selectedDate, 1))}>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <polyline points="9 18 15 12 9 6"/>
-                  </svg>
-                </button>
-              </div>
-              <div className="calendar-date">
-                <span className="calendar-day-name">{getDayName(selectedDate)}</span>
-                <span className="calendar-date-number">{selectedDate.getDate()}.</span>
-                <span className="calendar-month">{getMonthName(selectedDate)}</span>
-              </div>
-              <div className="calendar-view-toggle">
-                <button
-                  className={`view-toggle-btn ${calendarView === 'calendar' ? 'active' : ''}`}
-                  onClick={() => setCalendarView('calendar')}
-                >
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-                    <line x1="16" y1="2" x2="16" y2="6"/>
-                    <line x1="8" y1="2" x2="8" y2="6"/>
-                    <line x1="3" y1="10" x2="21" y2="10"/>
-                  </svg>
-                </button>
-                <button
-                  className={`view-toggle-btn ${calendarView === 'list' ? 'active' : ''}`}
-                  onClick={() => setCalendarView('list')}
-                >
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <line x1="8" y1="6" x2="21" y2="6"/>
-                    <line x1="8" y1="12" x2="21" y2="12"/>
-                    <line x1="8" y1="18" x2="21" y2="18"/>
-                    <line x1="3" y1="6" x2="3.01" y2="6"/>
-                    <line x1="3" y1="12" x2="3.01" y2="12"/>
-                    <line x1="3" y1="18" x2="3.01" y2="18"/>
-                  </svg>
-                </button>
-              </div>
-            </div>
+            {/* Simple chronological list - no calendar navigation */}
+            <div className="appointments-list">
+              <h2 className="section-title">Alle Termine</h2>
 
-            {/* Week Strip */}
-            <div className="week-strip">
-              {getWeekDays(selectedDate).map((day, index) => (
-                <button
-                  key={index}
-                  className={`week-day ${isSameDay(day, selectedDate) ? 'selected' : ''} ${isSameDay(day, new Date()) ? 'today' : ''}`}
-                  onClick={() => setSelectedDate(day)}
-                >
-                  <span className="week-day-name">{getDayName(day, true)}</span>
-                  <span className="week-day-number">{day.getDate()}</span>
-                </button>
-              ))}
-            </div>
-
-            {loading ? (
-              <div className="loading">Lade Schulungen...</div>
-            ) : calendarView === 'calendar' ? (
-              /* Timeline View - Chronological Day Schedule */
-              <div className="timeline-view">
-                {/* Timeline header with hours */}
-                <div className="timeline-header">
-                  <span className="timeline-date-label">{getDayName(selectedDate)}, {selectedDate.getDate()}. {getMonthName(selectedDate)}</span>
+              {loading ? (
+                <div className="loading">Lade Schulungen...</div>
+              ) : sessions.length === 0 ? (
+                <div className="empty-state">
+                  <p>Noch keine Schulungen vorhanden.</p>
+                  {canManage && <button className="action-btn primary" onClick={openAddCourse}>+ Termin hinzufügen</button>}
                 </div>
-
-                {/* Timeline events - sorted by time */}
-                {sessions
-                  .filter(session => {
-                    const sessionDate = new Date(session.date)
-                    return isSameDay(sessionDate, selectedDate)
-                  })
+              ) : (
+                /* All sessions sorted chronologically */
+                sessions
                   .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-                  .length === 0 ? (
-                  <div className="empty-state">
-                    <p>Keine Schulungen an diesem Tag.</p>
-                    {canManage && <button className="action-btn primary" onClick={openAddCourse}>+ Termin hinzufügen</button>}
-                  </div>
-                ) : (
-                  <div className="timeline-events">
-                    {/* Current time indicator */}
-                    {isSameDay(selectedDate, new Date()) && (
-                      <div className="timeline-now">
-                        <span className="timeline-now-dot" />
-                        <span className="timeline-now-time">
-                          Jetzt ({currentTime.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })})
-                        </span>
-                      </div>
-                    )}
-
-                    {sessions
-                      .filter(session => {
-                        const sessionDate = new Date(session.date)
-                        return isSameDay(sessionDate, selectedDate)
-                      })
-                      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-                      .map((session) => {
-                        const sessionDate = new Date(session.date)
-                        const course = courses.find(c => c.id === session.course_id)
-                        const duration = session.duration_minutes || 60
-                        const endTime = new Date(sessionDate.getTime() + duration * 60000)
-
-                        // Check if event is in the past, present, or future
-                        const now = new Date()
-                        const isPast = sessionDate.getTime() < now.getTime()
-                        const isCurrent = sessionDate.getTime() <= now.getTime() && endTime.getTime() > now.getTime()
-
-                        return (
-                          <div key={session.id} className={`timeline-event ${isCurrent ? 'current' : ''} ${isPast ? 'past' : ''} ${course?.type || 'online'}`}>
-                            {/* Timeline line */}
-                            <div className="timeline-line">
-                              <div className="timeline-dot" />
-                            </div>
-
-                            {/* Event content */}
-                            <div className="timeline-event-content" onClick={() => course && openEditCourse(course)}>
-                              <div className="timeline-time">
-                                <span className="timeline-start">{sessionDate.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}</span>
-                                <span className="timeline-duration">- {endTime.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}</span>
-                                <span className="timeline-length">({duration} Min.)</span>
-                              </div>
-                              <div className="timeline-event-title">{course?.title || 'Schulung'}</div>
-                              <div className="timeline-event-meta">
-                                <span className="timeline-location">
-                                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14">
-                                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
-                                    <circle cx="12" cy="10" r="3"/>
-                                  </svg>
-                                  {session.location}
-                                </span>
-                                <span className={`timeline-status badge ${session.status}`}>{session.status}</span>
-                                {course?.is_mandatory && <span className="badge mandatory">Pflicht</span>}
-                              </div>
-                              {course?.description && (
-                                <div className="timeline-description">{course.description}</div>
-                              )}
-                              {canManage && course && (
-                                <div className="timeline-actions" onClick={(e) => e.stopPropagation()}>
-                                  <button onClick={() => openAddSession(course)}>+ Termin</button>
-                                  <button onClick={() => openEditCourse(course)}>Bearbeiten</button>
-                                  <button onClick={() => deleteCourse(course.id)} className="delete">Löschen</button>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        )
-                      })}
-                  </div>
-                )}
-              </div>
-            ) : (
-              /* List View */
-              <div className="list-view">
-                {sessions
-                  .filter(session => {
+                  .map((session) => {
                     const sessionDate = new Date(session.date)
-                    return isSameDay(sessionDate, selectedDate)
-                  })
-                  .length === 0 ? (
-                  <div className="empty-state">
-                    <p>Keine Schulungen an diesem Tag.</p>
-                    {canManage && <button className="action-btn primary" onClick={() => {}}>+ Termin hinzufügen</button>}
-                  </div>
-                ) : (
-                  sessions
-                    .filter(session => {
-                      const sessionDate = new Date(session.date)
-                      return isSameDay(sessionDate, selectedDate)
-                    })
-                    .map(session => {
-                      const sessionDate = new Date(session.date)
-                      const course = courses.find(c => c.id === session.course_id)
+                    const course = courses.find(c => c.id === session.course_id)
+                    const duration = session.duration_minutes || 60
+                    const endTime = new Date(sessionDate.getTime() + duration * 60000)
 
-                      return (
-                        <div key={session.id} className="list-event">
-                          <div className="list-event-time">
-                            {sessionDate.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}
-                          </div>
-                          <div className="list-event-content">
-                            <div className="list-event-title">{course?.title || 'Schulung'}</div>
-                            <div className="list-event-details">
-                              <span>{session.location}</span>
-                              <span className={`badge ${session.status}`}>{session.status}</span>
-                              {canManage && course && (
-                                <>
-                                  <button className="btn-sm" onClick={() => openAddSession(course)}>+ Termin</button>
-                                  <button className="btn-sm" onClick={() => openEditCourse(course)}>Bearbeiten</button>
-                                  <button className="btn-sm delete" onClick={() => deleteCourse(course.id)}>Löschen</button>
-                                </>
-                              )}
-                            </div>
-                          </div>
+                    const now = new Date()
+                    const isPast = sessionDate.getTime() < now.getTime()
+                    const isCurrent = sessionDate.getTime() <= now.getTime() && endTime.getTime() > now.getTime()
+
+                    return (
+                      <div key={session.id} className={`appointment-item ${isCurrent ? 'current' : ''} ${isPast ? 'past' : ''}`}>
+                        <div className="appointment-date">
+                          <span className="appointment-day">{sessionDate.getDate()}</span>
+                          <span className="appointment-month">{getMonthName(sessionDate)}</span>
+                          <span className="appointment-weekday">{getDayName(sessionDate)}</span>
                         </div>
-                      )
-                    })
-                )}
-              </div>
-            )}
+                        <div className="appointment-time">
+                          <span className="time-start">{sessionDate.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}</span>
+                          <span className="time-end">- {endTime.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}</span>
+                        </div>
+                        <div className="appointment-details">
+                          <div className="appointment-title">{course?.title || 'Schulung'}</div>
+                          <div className="appointment-meta">
+                            <span className="appointment-location">
+                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14">
+                                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                                <circle cx="12" cy="10" r="3"/>
+                              </svg>
+                              {session.location}
+                            </span>
+                            <span className={`appointment-status badge ${session.status}`}>{session.status}</span>
+                            {course?.is_mandatory && <span className="badge mandatory">Pflicht</span>}
+                            <span className="badge type">{course?.type || 'online'}</span>
+                          </div>
+                          {course?.description && (
+                            <div className="appointment-description">{course.description}</div>
+                          )}
+                          {canManage && course && (
+                            <div className="appointment-actions">
+                              <button onClick={() => openAddSession(course)}>+ Termin</button>
+                              <button onClick={() => openEditCourse(course)}>Bearbeiten</button>
+                              <button onClick={() => deleteCourse(course.id)} className="delete">Löschen</button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })
+              )}
+            </div>
 
             {/* Add buttons */}
             {canManage && (
