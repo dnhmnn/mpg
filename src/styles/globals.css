@@ -1481,6 +1481,101 @@ body.loaded {
   transform: scale(0.95);
 }
 
+/* Course Detail Modal */
+.course-detail-modal {
+  max-width: 600px;
+  max-height: 85vh;
+  overflow-y: auto;
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  gap: 12px;
+  align-items: start;
+}
+
+.info-grid .info-label {
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.info-grid .info-value {
+  font-weight: 600;
+  font-size: 1.1rem;
+  color: #fff;
+}
+
+.sessions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.session-item {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 14px;
+  border-left: 4px solid #ff6b35;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.session-info-main {
+  flex: 1;
+  min-width: 200px;
+}
+
+.session-date-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.session-date {
+  font-weight: 600;
+  color: #fff;
+}
+
+.session-time {
+  color: rgba(255, 255, 255, 0.6);
+  font-weight: 400;
+}
+
+.session-meta {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.6);
+  margin-top: 4px;
+}
+
+.session-description {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.5);
+  margin-top: 4px;
+  font-style: italic;
+}
+
+.session-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.appointment-dozent {
+  font-size: 12px;
+  color: #2ecc71;
+  margin-top: 4px;
+  padding: 4px 8px;
+  background: rgba(46, 204, 113, 0.15);
+  border-radius: 6px;
+  display: inline-block;
+}
+
 /* Session Detail Modal */
 .session-detail-modal {
   max-width: 500px;

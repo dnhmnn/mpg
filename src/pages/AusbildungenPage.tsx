@@ -20,13 +20,18 @@ interface TrainingCourse {
   duration_minutes: number
   valid_for_months: number
   is_mandatory: boolean
+  created?: string
 }
 
 interface TrainingSession {
   id: string
   course_id: string
   date: string
+  start_time?: string
+  end_time?: string
   location: string
+  dozent?: string
+  beschreibung?: string
   max_participants: number
   status: 'geplant' | 'läuft' | 'abgeschlossen' | 'abgesagt'
   duration_minutes?: number
@@ -122,6 +127,11 @@ export default function Ausbildungen({ user }: AusbildungenProps) {
   const [editingSlide, setEditingSlide] = useState<LearningSlide | null>(null)
   const [selectedModule, setSelectedModule] = useState<LearningModule | null>(null)
 
+  // Course detail modal (shows all sessions for a course)
+  const [showCourseDetail, setShowCourseDetail] = useState(false)
+  const [selectedCourseForDetail, setSelectedCourseForDetail] = useState<TrainingCourse | null>(null)
+  const [courseSessions, setCourseSessions] = useState<TrainingSession[]>([])
+
   // Session detail modal
   const [showSessionDetail, setShowSessionDetail] = useState(false)
   const [selectedSession, setSelectedSession] = useState<TrainingSession | null>(null)
@@ -136,7 +146,7 @@ export default function Ausbildungen({ user }: AusbildungenProps) {
     duration_minutes: 60, valid_for_months: 12, is_mandatory: false
   })
   const [sessionForm, setSessionForm] = useState({
-    date: '', location: '', max_participants: 10, status: 'geplant' as 'geplant' | 'läuft' | 'abgeschlossen' | 'abgesagt'
+    date: '', start_time: '', end_time: '', location: '', dozent: '', beschreibung: '', max_participants: 10, status: 'geplant' as 'geplant' | 'läuft' | 'abgeschlossen' | 'abgesagt'
   })
   const [teamForm, setTeamForm] = useState({
     name: '', email: '', role: '', phone: ''
@@ -282,8 +292,16 @@ export default function Ausbildungen({ user }: AusbildungenProps) {
   function openAddSession(course: TrainingCourse) {
     setSelectedCourse(course)
     setEditingSession(null)
-    setSessionForm({ date: '', location: '', max_participants: 10, status: 'geplant' })
+    setSessionForm({ date: '', start_time: '', end_time: '', location: '', dozent: '', beschreibung: '', max_participants: 10, status: 'geplant' })
     setShowSessionModal(true)
+  }
+
+  // Open course detail view - shows all sessions for this course
+  function openCourseDetail(course: TrainingCourse) {
+    const courseSessionsList = sessions.filter(s => s.course_id === course.id)
+    setSelectedCourseForDetail(course)
+    setCourseSessions(courseSessionsList)
+    setShowCourseDetail(true)
   }
 
   async function openSessionDetail(session: TrainingSession) {
@@ -685,33 +703,44 @@ export default function Ausbildungen({ user }: AusbildungenProps) {
           </div>
         )}
 
-        {/* Schulungen Tab */}
+        {/* Schulungen Tab - Shows all courses (Schulungen) */}
         {activeTab === 'schulungen' && (
           <div className="tab-content">
             <div className="appointments-list">
-              <h2 className="section-title">Alle Termine</h2>
+              <h2 className="section-title">Alle Schulungen</h2>
 
               {loading ? (
                 <div className="loading">Lade Schulungen...</div>
-              ) : sessions.length === 0 ? (
+              ) : courses.length === 0 ? (
                 <div className="empty-state">
                   <p>Noch keine Schulungen vorhanden.</p>
-                  {canManage && <button className="action-btn primary" onClick={openAddCourse}>+ Termin hinzufügen</button>}
+                  {canManage && <button className="action-btn primary" onClick={openAddCourse}>+ Schulung erstellen</button>}
                 </div>
               ) : (
-                /* All sessions sorted chronologically */
-                sessions
-                  .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-                  .map((session) => {
-                    const course = courses.find(c => c.id === session.course_id)
-                    const sessionDate = new Date(session.date)
+                courses
+                  .sort((a, b) => new Date(b.created || 0).getTime() - new Date(a.created || 0).getTime())
+                  .map((course) => {
+                    const courseSessionsList = sessions.filter(s => s.course_id === course.id)
+                    const nextSession = courseSessionsList.find(s => new Date(s.date) >= new Date())
+                    const nextDate = nextSession ? new Date(nextSession.date) : null
 
                     return (
-                      <div key={session.id} className="appointment-item" onClick={() => openSessionDetail(session)}>
-                        <div className="appointment-title">{course?.title || 'Schulung'}</div>
+                      <div key={course.id} className="appointment-item" onClick={() => openCourseDetail(course)}>
+                        <div className="appointment-title">{course.title}</div>
+                        {course.description && (
+                          <div className="appointment-description">{course.description}</div>
+                        )}
                         <div className="appointment-date">
-                          {sessionDate.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })} • {sessionDate.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} Uhr
+                          {courseSessionsList.length} Termin(e)
+                          {nextDate && (
+                            <> • Nächster: {nextDate.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}</>
+                          )}
                         </div>
+                        {nextSession?.dozent && (
+                          <div className="appointment-dozent">
+                            👤 {nextSession.dozent}
+                          </div>
+                        )}
                       </div>
                     )
                   })
@@ -944,11 +973,29 @@ export default function Ausbildungen({ user }: AusbildungenProps) {
             <div className="modal-body">
               <div className="form-field">
                 <label>Datum</label>
-                <input type="datetime-local" value={sessionForm.date} onChange={e => setSessionForm({...sessionForm, date: e.target.value})} />
+                <input type="date" value={sessionForm.date ? sessionForm.date.split('T')[0] : ''} onChange={e => setSessionForm({...sessionForm, date: e.target.value})} />
+              </div>
+              <div className="form-row">
+                <div className="form-field">
+                  <label>Startzeit</label>
+                  <input type="time" value={sessionForm.start_time} onChange={e => setSessionForm({...sessionForm, start_time: e.target.value})} />
+                </div>
+                <div className="form-field">
+                  <label>Endzeit</label>
+                  <input type="time" value={sessionForm.end_time} onChange={e => setSessionForm({...sessionForm, end_time: e.target.value})} />
+                </div>
               </div>
               <div className="form-field">
                 <label>Ort</label>
                 <input type="text" value={sessionForm.location} onChange={e => setSessionForm({...sessionForm, location: e.target.value})} />
+              </div>
+              <div className="form-field">
+                <label>Dozent</label>
+                <input type="text" value={sessionForm.dozent} onChange={e => setSessionForm({...sessionForm, dozent: e.target.value})} />
+              </div>
+              <div className="form-field">
+                <label>Beschreibung</label>
+                <textarea value={sessionForm.beschreibung} onChange={e => setSessionForm({...sessionForm, beschreibung: e.target.value})} />
               </div>
               <div className="form-field">
                 <label>Max. Teilnehmer</label>
@@ -1051,6 +1098,112 @@ export default function Ausbildungen({ user }: AusbildungenProps) {
                 <textarea value={slideForm.content} onChange={e => setSlideForm({...slideForm, content: e.target.value})} rows={6} />
               </div>
               <button className="action-btn primary" onClick={saveSlide}>Speichern</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Course Detail Modal - Shows all sessions for a course */}
+      {showCourseDetail && selectedCourseForDetail && (
+        <div className="modal-overlay" onClick={() => setShowCourseDetail(false)}>
+          <div className="modal-content course-detail-modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>{selectedCourseForDetail.title}</h3>
+              <button className="modal-close" onClick={() => setShowCourseDetail(false)}>×</button>
+            </div>
+            <div className="modal-body">
+              {/* Course Info */}
+              <div className="detail-section">
+                <h4>Informationen</h4>
+                <div className="info-grid">
+                  <div className="info-label">Titel:</div>
+                  <div className="info-value">{selectedCourseForDetail.title}</div>
+
+                  {selectedCourseForDetail.description && (
+                    <>
+                      <div className="info-label">Beschreibung:</div>
+                      <div className="info-value">{selectedCourseForDetail.description}</div>
+                    </>
+                  )}
+
+                  <div className="info-label">Termine:</div>
+                  <div className="info-value">
+                    <span className="badge info">{courseSessions.length} Termin(e)</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Sessions List */}
+              <div className="detail-section">
+                <div className="section-header">
+                  <h4>Termine ({courseSessions.length})</h4>
+                  {canManage && (
+                    <button className="action-btn primary small" onClick={() => { setShowCourseDetail(false); openAddSession(selectedCourseForDetail); }}>
+                      + Weiteren Termin hinzufügen
+                    </button>
+                  )}
+                </div>
+
+                {courseSessions.length === 0 ? (
+                  <div className="empty-state small">
+                    <p>Noch keine Termine für diese Schulung.</p>
+                  </div>
+                ) : (
+                  <div className="sessions-list">
+                    {courseSessions
+                      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                      .map(session => {
+                        const sessionDate = new Date(session.date)
+                        const isPast = sessionDate < new Date()
+                        const isAbgesagt = session.status === 'abgesagt'
+
+                        return (
+                          <div key={session.id} className="session-item" style={{ borderLeftColor: isAbgesagt ? '#991b1b' : isPast ? '#94a3b8' : '#ff6b35' }}>
+                            <div className="session-info-main">
+                              <div className="session-date-row">
+                                <span className="session-date">
+                                  {sessionDate.toLocaleDateString('de-DE', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' })}
+                                </span>
+                                {session.start_time && (
+                                  <span className="session-time">
+                                    • {session.start_time} - {session.end_time || session.start_time}
+                                  </span>
+                                )}
+                                <span className={`badge ${session.status}`}>
+                                  {session.status === 'geplant' ? 'Geplant' :
+                                   session.status === 'abgesagt' ? 'Abgesagt' :
+                                   session.status === 'abgeschlossen' ? 'Abgeschlossen' : 'Läuft'}
+                                </span>
+                              </div>
+                              <div className="session-meta">
+                                {session.location ? <>📍 {session.location}</> : '📍 Kein Ort'}
+                                {session.dozent && <> • 👤 {session.dozent}</>}
+                              </div>
+                              {session.beschreibung && (
+                                <div className="session-description">"{session.beschreibung}"</div>
+                              )}
+                            </div>
+                            <div className="session-actions">
+                              <button className="action-btn primary small" onClick={() => openSessionDetail(session)}>
+                                Details
+                              </button>
+                              <button className="action-btn info small" onClick={() => { setShowCourseDetail(false); openSessionDetail(session); }}>
+                                Teilnehmer
+                              </button>
+                            </div>
+                          </div>
+                        )
+                      })}
+                  </div>
+                )}
+              </div>
+
+              {/* Close Button */}
+              <div className="modal-footer">
+                <button className="action-btn" onClick={() => setShowCourseDetail(false)}>
+                  Schließen
+                </button>
+              </div>
             </div>
           </div>
         </div>
