@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom'
 import AppIcon from './AppIcon'
 import type { App } from '../types'
 
@@ -18,28 +19,29 @@ const ALL_APPS: Record<string, App> = {
   ausbildungen: { id: 'ausbildungen', name: 'Ausbildungen', icon: 'book', url: '/ausbildungen.html', permission: 'ausbildungen_manage' },
   chat: { id: 'chat', name: 'Chat', icon: 'chat', url: '/chat.html', permission: 'chat' },
   dashboard: { id: 'dashboard', name: 'Dashboard', icon: 'dashboard', url: '/mpg-dashboard.html', permission: 'dashboard' },
-  settings: { id: 'settings', name: 'Einstellungen', icon: 'settings', url: '#settings', permission: 'dashboard', isInternal: true }
+  settings: { id: 'settings', name: 'Einstellungen', icon: 'settings', url: '/settings', permission: 'dashboard', isInternal: true }
 }
 
 export default function AppGrid({ userApps, onRemoveApp }: AppGridProps) {
+  const navigate = useNavigate()
+
   function handleRemoveApp(e: React.MouseEvent, id: string) {
     e.preventDefault()
     e.stopPropagation()
-    
+
     if (id === 'settings') {
       alert('Einstellungen können nicht entfernt werden')
       return
     }
-    
+
     onRemoveApp(id)
   }
 
   function handleAppClick(e: React.MouseEvent, app: App) {
     if (app.isInternal) {
       e.preventDefault()
-      // Trigger settings modal
-      const event = new CustomEvent('openSettings')
-      window.dispatchEvent(event)
+      // Navigate to settings page
+      navigate('/settings')
     }
   }
 
@@ -48,7 +50,7 @@ export default function AppGrid({ userApps, onRemoveApp }: AppGridProps) {
       {userApps.map(id => {
         const app = ALL_APPS[id]
         if (!app) return null
-        
+
         return (
           <a
             key={id}
@@ -56,8 +58,8 @@ export default function AppGrid({ userApps, onRemoveApp }: AppGridProps) {
             className="app"
             onClick={(e) => handleAppClick(e, app)}
           >
-            <div 
-              className="remove-btn" 
+            <div
+              className="remove-btn"
               onClick={(e) => handleRemoveApp(e, id)}
             >
               −
