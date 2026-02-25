@@ -1513,6 +1513,387 @@ body.loaded {
   justify-content: center;
 }
 
+/* Calendar Styles - Apple iOS Style */
+.calendar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 0;
+  margin-bottom: 8px;
+}
+
+.calendar-nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.calendar-nav-btn {
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 50%;
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.calendar-nav-btn:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.calendar-nav-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+.today-btn {
+  padding: 8px 16px;
+  background: rgba(255, 255, 255, 0.15);
+  border: none;
+  border-radius: 20px;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.today-btn:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.calendar-date {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.calendar-day-name {
+  color: #fff;
+  font-size: 18px;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.calendar-date-number {
+  color: #fff;
+  font-size: 32px;
+  font-weight: 700;
+}
+
+.calendar-month {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.calendar-view-toggle {
+  display: flex;
+  gap: 4px;
+}
+
+.view-toggle-btn {
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  color: rgba(255, 255, 255, 0.6);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.view-toggle-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+.view-toggle-btn.active {
+  background: linear-gradient(135deg, #ff6b35, #c8102e);
+  color: #fff;
+}
+
+/* Week Strip */
+.week-strip {
+  display: flex;
+  gap: 4px;
+  padding: 12px 0;
+  overflow-x: auto;
+  margin-bottom: 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.week-day {
+  flex: 1;
+  min-width: 45px;
+  padding: 10px 8px;
+  background: transparent;
+  border: none;
+  border-radius: 12px;
+  color: rgba(255, 255, 255, 0.6);
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.week-day:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.week-day.selected {
+  background: #fff;
+  color: #1a1a1a;
+}
+
+.week-day.today:not(.selected) {
+  color: #ff6b35;
+}
+
+.week-day-name {
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.week-day-number {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+/* Calendar View */
+.calendar-view {
+  display: flex;
+  position: relative;
+  height: 1440px;
+  overflow-y: auto;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 16px;
+}
+
+.time-axis {
+  width: 50px;
+  flex-shrink: 0;
+  padding-top: 0;
+}
+
+.time-slot {
+  height: 60px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  padding-right: 8px;
+}
+
+.time-label {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 11px;
+  font-weight: 500;
+  transform: translateY(-6px);
+}
+
+.events-grid {
+  flex: 1;
+  position: relative;
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.hour-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.current-time-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: #ff3b30;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+}
+
+.current-time-dot {
+  width: 10px;
+  height: 10px;
+  background: #ff3b30;
+  border-radius: 50%;
+  margin-left: -5px;
+}
+
+/* Calendar Events */
+.calendar-event {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  background: rgba(0, 122, 255, 0.2);
+  border-left: 4px solid #007aff;
+  border-radius: 8px;
+  padding: 8px;
+  cursor: pointer;
+  overflow: hidden;
+  transition: all 0.2s;
+  min-height: 30px;
+}
+
+.calendar-event:hover {
+  background: rgba(0, 122, 255, 0.3);
+  transform: scale(1.02);
+  z-index: 5;
+}
+
+.calendar-event.online {
+  background: rgba(0, 122, 255, 0.2);
+  border-left-color: #007aff;
+}
+
+.calendar-event.präsenz {
+  background: rgba(52, 199, 89, 0.2);
+  border-left-color: #34c759;
+}
+
+.calendar-event.hybrid {
+  background: rgba(88, 86, 214, 0.2);
+  border-left-color: #5856d6;
+}
+
+.event-time {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.event-title {
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  margin: 2px 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.event-location {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 12px;
+}
+
+.event-status {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+}
+
+/* List View */
+.list-view {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.list-event {
+  display: flex;
+  gap: 16px;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+}
+
+.list-event-time {
+  width: 60px;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.list-event-content {
+  flex: 1;
+}
+
+.list-event-title {
+  color: #fff;
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.list-event-details {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 13px;
+}
+
+.calendar-actions {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.event-actions {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  display: flex;
+  gap: 2px;
+}
+
+.event-actions button {
+  width: 20px;
+  height: 20px;
+  border: none;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  color: #fff;
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.event-actions button:hover {
+  background: rgba(255, 255, 255, 0.4);
+}
+
+.event-actions button.delete:hover {
+  background: rgba(255, 59, 48, 0.5);
+}
+
+.btn-sm {
+  padding: 4px 8px;
+  background: rgba(255, 255, 255, 0.15);
+  border: none;
+  border-radius: 6px;
+  color: #fff;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.btn-sm:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.btn-sm.delete {
+  color: #ff453a;
+}
+
 .modal-body {
   padding: 20px;
 }
