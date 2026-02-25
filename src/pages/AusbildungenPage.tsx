@@ -36,7 +36,7 @@ interface TrainingSession {
 interface SessionParticipant {
   id: string
   session_id: string
-  user_id: string
+  team_member_id: string
   user_name?: string
   user_email?: string
   status: 'eingeladen' | 'zugesagt' | 'abgesagt' | 'entschuldigt'
@@ -165,11 +165,19 @@ export default function Ausbildungen({ user }: AusbildungenProps) {
 
     try {
       if (activeTab === 'schulungen') {
-        const [coursesData, sessionsData] = await Promise.all([
+        // Load courses, sessions, team members, lernbar users AND all users for the two-column layout
+        const [coursesData, sessionsData, teamData, orgData, usersData] = await Promise.all([
           pb.collection('training_courses').getFullList({
             filter: `organization_id = "${user.organization_id}"`
           }),
-          pb.collection('training_sessions').getFullList()
+          pb.collection('training_sessions').getFullList(),
+          pb.collection('team_members').getFullList({
+            filter: `organization_id = "${user.organization_id}"`
+          }),
+          pb.collection('organizations').getOne(user.organization_id),
+          pb.collection('users').getFullList({
+            filter: `organization_id = "${user.organization_id}"`
+          })
         ])
         const courses = coursesData as unknown as TrainingCourse[]
         const sessions = (sessionsData as unknown as TrainingSession[]).map(session => {
@@ -181,6 +189,9 @@ export default function Ausbildungen({ user }: AusbildungenProps) {
         })
         setCourses(courses)
         setSessions(sessions)
+        setTeamMembers(teamData as unknown as TeamMember[])
+        setLernbarUsers(orgData?.lernbar_users || [])
+        setAllUsers(usersData)
       } else if (activeTab === 'team') {
         const membersData = await pb.collection('team_members').getFullList({
           filter: `organization_id = "${user.organization_id}"`
@@ -288,16 +299,18 @@ export default function Ausbildungen({ user }: AusbildungenProps) {
       })
       const participants = participantsData as unknown as SessionParticipant[]
 
-      // Get user details for each participant
-      const usersData = await pb.collection('users').getFullList()
-      const usersMap = new Map(usersData.map((u: any) => [u.id, u]))
+      // Get team member details for each participant
+      const teamData = await pb.collection('team_members').getFullList({
+        filter: `organization_id = "${user?.organization_id}"`
+      })
+      const teamMap = new Map(teamData.map((m: any) => [m.id, m]))
 
       const participantsWithUser = participants.map((p: any) => {
-        const user = usersMap.get(p.user_id)
+        const member = teamMap.get(p.team_member_id)
         return {
           ...p,
-          user_name: user?.name || user?.email || 'Unbekannt',
-          user_email: user?.email || ''
+          user_name: member?.name || 'Unbekannt',
+          user_email: member?.email || ''
         }
       })
       setSessionParticipants(participantsWithUser)
@@ -317,28 +330,61 @@ export default function Ausbildungen({ user }: AusbildungenProps) {
       setSessionMaterials([])
     }
 
-    // Load available users for adding participants
+    // Load available team members for adding participants
     try {
-      const usersData = await pb.collection('users').getFullList({
+      const teamData = await pb.collection('team_members').getFullList({
         filter: `organization_id = "${user?.organization_id}"`
       })
-      setAvailableUsers(usersData)
+      setAvailableUsers(teamData)
     } catch (e) {
       setAvailableUsers([])
     }
   }
 
-  // Add participant to session
-  async function addParticipant(userId: string) {
+  // Add participant to session (using team_member_id)
+  async function addParticipant(teamMemberId: string) {
     if (!selectedSession) return
     try {
       await pb.collection('session_participants').create({
         session_id: selectedSession.id,
-        user_id: userId,
+        team_member_id: teamMemberId,
         status: 'eingeladen'
       })
       openSessionDetail(selectedSession) // Refresh
       setMessage('✅ Teilnehmer eingeladen!')
+    } catch (e: any) {
+      setMessage('❌ Fehler: ' + e.message)
+    }
+  }
+
+  // Upload material
+  async function uploadMaterial(file: File, title: string, fileType: 'dozent' | 'teilnehmer') {
+    if (!selectedSession) return
+    try {
+      // Create FormData for file upload
+      const formData = new FormData()
+      formData.append('session_id', selectedSession.id)
+      formData.append('title', title)
+      formData.append('file', file)
+      formData.append('file_type', fileType)
+
+      await pb.collection('session_materials').create(formData)
+      openSessionDetail(selectedSession) // Refresh
+      setMessage('✅ Datei hochgeladen!')
+    } catch (e: any) {
+      setMessage('❌ Fehler: ' + e.message)
+    }
+  }
+
+  // Delete material
+  async function deleteMaterial(materialId: string) {
+    if (!confirm('Möchten Sie diese Datei wirklich löschen?')) return
+    try {
+      await pb.collection('session_materials').delete(materialId)
+      if (selectedSession) {
+        openSessionDetail(selectedSession)
+      }
+      setMessage('✅ Datei gelöscht!')
     } catch (e: any) {
       setMessage('❌ Fehler: ' + e.message)
     }
@@ -639,44 +685,101 @@ export default function Ausbildungen({ user }: AusbildungenProps) {
           </div>
         )}
 
-        {/* Schulungen Tab */}
+        {/* Schulungen Tab - Two Column Layout */}
         {activeTab === 'schulungen' && (
-          <div className="tab-content">
-            {/* Simple chronological list - no calendar navigation */}
-            <div className="appointments-list">
-              <h2 className="section-title">Alle Termine</h2>
+          <div className="tab-content two-column-layout">
+            {/* Left Column - Schulungen */}
+            <div className="column-left">
+              <div className="appointments-list">
+                <h2 className="section-title">Alle Termine</h2>
 
-              {loading ? (
-                <div className="loading">Lade Schulungen...</div>
-              ) : sessions.length === 0 ? (
-                <div className="empty-state">
-                  <p>Noch keine Schulungen vorhanden.</p>
-                  {canManage && <button className="action-btn primary" onClick={openAddCourse}>+ Termin hinzufügen</button>}
+                {loading ? (
+                  <div className="loading">Lade Schulungen...</div>
+                ) : sessions.length === 0 ? (
+                  <div className="empty-state">
+                    <p>Noch keine Schulungen vorhanden.</p>
+                    {canManage && <button className="action-btn primary" onClick={openAddCourse}>+ Termin hinzufügen</button>}
+                  </div>
+                ) : (
+                  /* All sessions sorted chronologically */
+                  sessions
+                    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+                    .map((session) => {
+                      const course = courses.find(c => c.id === session.course_id)
+                      const sessionDate = new Date(session.date)
+
+                      return (
+                        <div key={session.id} className="appointment-item" onClick={() => openSessionDetail(session)}>
+                          <div className="appointment-title">{course?.title || 'Schulung'}</div>
+                          <div className="appointment-date">
+                            {sessionDate.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })} • {sessionDate.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} Uhr
+                          </div>
+                        </div>
+                      )
+                    })
+                )}
+              </div>
+
+              {/* Add buttons */}
+              {canManage && (
+                <div className="calendar-actions">
+                  <button className="action-btn primary" onClick={openAddCourse}>
+                    + Neue Schulung
+                  </button>
                 </div>
-              ) : (
-                /* All sessions sorted chronologically */
-                sessions
-                  .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-                  .map((session) => {
-                    const course = courses.find(c => c.id === session.course_id)
-
-                    return (
-                      <div key={session.id} className="appointment-item" onClick={() => openSessionDetail(session)}>
-                        <div className="appointment-title">{course?.title || 'Schulung'}</div>
-                      </div>
-                    )
-                  })
               )}
             </div>
 
-            {/* Add buttons */}
-            {canManage && (
-              <div className="calendar-actions">
-                <button className="action-btn primary" onClick={openAddCourse}>
-                  + Neue Schulung
-                </button>
+            {/* Right Column - Team */}
+            <div className="column-right">
+              <div className="team-sidebar">
+                <div className="sidebar-header">
+                  <h3>Team</h3>
+                  {canManage && (
+                    <button className="action-btn small" onClick={openAddMember}>
+                      + Neu
+                    </button>
+                  )}
+                </div>
+
+                {loading ? (
+                  <div className="loading">Lade Team...</div>
+                ) : teamMembers.length === 0 ? (
+                  <div className="empty-state small">
+                    <p>Keine Teammitglieder</p>
+                  </div>
+                ) : (
+                  <div className="team-list">
+                    {teamMembers.map(member => {
+                      // Check if this team member has Lernbar access
+                      const matchingUser = allUsers.find((u: any) => u.email === member.email)
+                      const hasLernbar = matchingUser && lernbarUsers.includes(matchingUser.id)
+                      // Split name into first and last name
+                      const nameParts = member.name ? member.name.trim().split(' ') : []
+                      const firstName = nameParts[0] || ''
+                      const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : ''
+
+                      return (
+                        <div key={member.id} className="team-item" onClick={() => { setEditingMember(member); setShowTeamModal(true); }}>
+                          <div className="team-avatar">
+                            {(firstName || '?').charAt(0).toUpperCase()}
+                          </div>
+                          <div className="team-info">
+                            <span className="team-name">
+                              {firstName} {lastName}
+                            </span>
+                            <span className="team-role">{member.role}</span>
+                            <span className={`lernbar-badge ${hasLernbar ? 'active' : 'inactive'}`}>
+                              {hasLernbar ? 'Lernbar' : 'Kein Lernbar'}
+                            </span>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
               </div>
-            )}
+            </div>
           </div>
         )}
 
@@ -1117,7 +1220,7 @@ export default function Ausbildungen({ user }: AusbildungenProps) {
                     >
                       <option value="">+ Teilnehmer hinzufügen...</option>
                       {availableUsers
-                        .filter(u => !sessionParticipants.some(p => p.user_id === u.id))
+                        .filter(u => !sessionParticipants.some(p => p.team_member_id === u.id))
                         .map(u => (
                           <option key={u.id} value={u.id}>{u.name || u.email}</option>
                         ))
@@ -1131,32 +1234,95 @@ export default function Ausbildungen({ user }: AusbildungenProps) {
               <div className="detail-section">
                 <h4>Unterlagen</h4>
 
-                {sessionMaterials.length === 0 ? (
-                  <p className="empty-text">Noch keine Unterlagen hochgeladen.</p>
-                ) : (
-                  <div className="materials-list">
-                    {sessionMaterials.map(material => (
-                      <div key={material.id} className="material-item">
-                        <div className="material-info">
-                          <span className="material-title">{material.title}</span>
-                          <span className={`material-type badge ${material.file_type}`}>
-                            {material.file_type === 'dozent' ? 'Dozent' : 'Teilnehmer'}
-                          </span>
+                {/* Dozent Materials */}
+                <div className="materials-subsection">
+                  <h5>Für Dozent</h5>
+                  {sessionMaterials.filter(m => m.file_type === 'dozent').length === 0 ? (
+                    <p className="empty-text small">Keine Unterlagen</p>
+                  ) : (
+                    <div className="materials-list">
+                      {sessionMaterials.filter(m => m.file_type === 'dozent').map(material => (
+                        <div key={material.id} className="material-item">
+                          <div className="material-info">
+                            <span className="material-title">{material.title}</span>
+                          </div>
+                          <div className="material-actions">
+                            <a href={material.file_url} target="_blank" rel="noopener noreferrer" className="material-download">
+                              Öffnen
+                            </a>
+                            {canManage && (
+                              <button onClick={() => deleteMaterial(material.id)} className="delete-btn">×</button>
+                            )}
+                          </div>
                         </div>
-                        <a href={material.file_url} target="_blank" rel="noopener noreferrer" className="material-download">
-                          Öffnen
-                        </a>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                      ))}
+                    </div>
+                  )}
+                  {canManage && (
+                    <div className="upload-form">
+                      <input
+                        type="file"
+                        id="dozent-file"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0]
+                          if (file) {
+                            uploadMaterial(file, file.name, 'dozent')
+                            e.target.value = ''
+                          }
+                        }}
+                        style={{ display: 'none' }}
+                      />
+                      <label htmlFor="dozent-file" className="upload-btn">
+                        + Datei hochladen
+                      </label>
+                    </div>
+                  )}
+                </div>
 
-                {/* Add Material (placeholder - would need file upload implementation) */}
-                {canManage && (
-                  <div className="add-material">
-                    <p className="hint-text">Dateien können über die PocketBase Admin-Oberfläche hochgeladen werden.</p>
-                  </div>
-                )}
+                {/* Teilnehmer Materials */}
+                <div className="materials-subsection">
+                  <h5>Für Teilnehmer</h5>
+                  {sessionMaterials.filter(m => m.file_type === 'teilnehmer').length === 0 ? (
+                    <p className="empty-text small">Keine Unterlagen</p>
+                  ) : (
+                    <div className="materials-list">
+                      {sessionMaterials.filter(m => m.file_type === 'teilnehmer').map(material => (
+                        <div key={material.id} className="material-item">
+                          <div className="material-info">
+                            <span className="material-title">{material.title}</span>
+                          </div>
+                          <div className="material-actions">
+                            <a href={material.file_url} target="_blank" rel="noopener noreferrer" className="material-download">
+                              Öffnen
+                            </a>
+                            {canManage && (
+                              <button onClick={() => deleteMaterial(material.id)} className="delete-btn">×</button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {canManage && (
+                    <div className="upload-form">
+                      <input
+                        type="file"
+                        id="teilnehmer-file"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0]
+                          if (file) {
+                            uploadMaterial(file, file.name, 'teilnehmer')
+                            e.target.value = ''
+                          }
+                        }}
+                        style={{ display: 'none' }}
+                      />
+                      <label htmlFor="teilnehmer-file" className="upload-btn">
+                        + Datei hochladen
+                      </label>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>

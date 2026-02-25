@@ -1182,6 +1182,120 @@ body.loaded {
   animation: fadeIn 0.3s ease;
 }
 
+/* Two Column Layout for Schulungen Tab */
+.two-column-layout {
+  display: flex;
+  gap: 20px;
+}
+
+.column-left {
+  flex: 1;
+  min-width: 0;
+}
+
+.column-right {
+  width: 280px;
+  flex-shrink: 0;
+}
+
+.team-sidebar {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  padding: 16px;
+  backdrop-filter: blur(10px);
+}
+
+.sidebar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.sidebar-header h3 {
+  color: #fff;
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.team-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: calc(100vh - 300px);
+  overflow-y: auto;
+}
+
+.team-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.team-item:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.team-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #ff6b35 0%, #c8102e 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-weight: 600;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.team-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.team-name {
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.team-role {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 12px;
+}
+
+.lernbar-badge {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 600;
+  margin-top: 2px;
+  display: inline-block;
+}
+
+.lernbar-badge.active {
+  background: rgba(46, 204, 113, 0.2);
+  color: #2ecc71;
+}
+
+.lernbar-badge.inactive {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.5);
+}
+
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
@@ -1300,6 +1414,12 @@ body.loaded {
   font-size: 18px;
   font-weight: 600;
   color: #fff;
+}
+
+.appointment-date {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.6);
+  margin-top: 2px;
 }
 
 .appointment-meta {
@@ -1621,6 +1741,71 @@ body.loaded {
   padding: 20px;
 }
 
+.empty-text.small {
+  font-size: 12px;
+  padding: 10px;
+}
+
+/* Materials Subsection */
+.materials-subsection {
+  margin-bottom: 16px;
+}
+
+.materials-subsection h5 {
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.8);
+  margin-bottom: 8px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.material-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.delete-btn {
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 6px;
+  background: rgba(255, 59, 48, 0.3);
+  color: #ff3b30;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.delete-btn:hover {
+  background: rgba(255, 59, 48, 0.5);
+}
+
+/* Upload Form */
+.upload-form {
+  margin-top: 8px;
+}
+
+.upload-btn {
+  display: inline-block;
+  padding: 8px 14px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px dashed rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.upload-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
 .action-btn {
   padding: 10px 18px;
   border-radius: 12px;
@@ -1639,6 +1824,11 @@ body.loaded {
 .action-btn.success {
   background: linear-gradient(135deg, #34c759, #30d158);
   color: #fff;
+}
+
+.action-btn.small {
+  padding: 6px 12px;
+  font-size: 12px;
 }
 
 .action-btn:active {
