@@ -580,10 +580,10 @@ body.loaded {
 .login-container {
   flex: 1;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   padding: 20px;
-  padding-top: calc(54px + env(safe-area-inset-top) + 10px);
+  padding-top: calc(54px + env(safe-area-inset-top));
   padding-left: max(20px, env(safe-area-inset-left));
   padding-right: max(20px, env(safe-area-inset-right));
   padding-bottom: max(40px, env(safe-area-inset-bottom));
