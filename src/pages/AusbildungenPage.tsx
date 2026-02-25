@@ -590,72 +590,96 @@ export default function Ausbildungen({ user }: AusbildungenProps) {
             {loading ? (
               <div className="loading">Lade Schulungen...</div>
             ) : calendarView === 'calendar' ? (
-              /* Calendar Day View */
-              <div className="calendar-view">
-                <div className="time-axis">
-                  {Array.from({ length: 24 }, (_, i) => (
-                    <div key={i} className="time-slot">
-                      <span className="time-label">{i.toString().padStart(2, '0')}:00</span>
-                    </div>
-                  ))}
+              /* Timeline View - Chronological Day Schedule */
+              <div className="timeline-view">
+                {/* Timeline header with hours */}
+                <div className="timeline-header">
+                  <span className="timeline-date-label">{getDayName(selectedDate)}, {selectedDate.getDate()}. {getMonthName(selectedDate)}</span>
                 </div>
-                <div className="events-grid">
-                  {/* Hour lines */}
-                  {Array.from({ length: 24 }, (_, i) => (
-                    <div key={i} className="hour-line" style={{ top: i * 60 }} />
-                  ))}
 
-                  {/* Current time indicator */}
-                  {isSameDay(selectedDate, new Date()) && (
-                    <div
-                      className="current-time-line"
-                      style={{ top: currentTime.getHours() * 60 + currentTime.getMinutes() }}
-                    >
-                      <span className="current-time-dot" />
-                    </div>
-                  )}
+                {/* Timeline events - sorted by time */}
+                {sessions
+                  .filter(session => {
+                    const sessionDate = new Date(session.date)
+                    return isSameDay(sessionDate, selectedDate)
+                  })
+                  .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+                  .length === 0 ? (
+                  <div className="empty-state">
+                    <p>Keine Schulungen an diesem Tag.</p>
+                    {canManage && <button className="action-btn primary" onClick={openAddCourse}>+ Termin hinzufügen</button>}
+                  </div>
+                ) : (
+                  <div className="timeline-events">
+                    {/* Current time indicator */}
+                    {isSameDay(selectedDate, new Date()) && (
+                      <div className="timeline-now">
+                        <span className="timeline-now-dot" />
+                        <span className="timeline-now-time">
+                          Jetzt ({currentTime.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })})
+                        </span>
+                      </div>
+                    )}
 
-                  {/* Events */}
-                  {sessions
-                    .filter(session => {
-                      const sessionDate = new Date(session.date)
-                      return isSameDay(sessionDate, selectedDate)
-                    })
-                    .map(session => {
-                      const sessionDate = new Date(session.date)
-                      const course = courses.find(c => c.id === session.course_id)
-                      const startMinutes = sessionDate.getHours() * 60 + sessionDate.getMinutes()
-                      const duration = session.duration_minutes || 60
+                    {sessions
+                      .filter(session => {
+                        const sessionDate = new Date(session.date)
+                        return isSameDay(sessionDate, selectedDate)
+                      })
+                      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+                      .map((session) => {
+                        const sessionDate = new Date(session.date)
+                        const course = courses.find(c => c.id === session.course_id)
+                        const duration = session.duration_minutes || 60
+                        const endTime = new Date(sessionDate.getTime() + duration * 60000)
 
-                      return (
-                        <div
-                          key={session.id}
-                          className={`calendar-event ${course?.type || 'online'}`}
-                          style={{
-                            top: startMinutes,
-                            height: duration
-                          }}
-                          onClick={() => {
-                            if (course) openEditCourse(course)
-                          }}
-                        >
-                          <div className="event-time">
-                            {sessionDate.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}
-                          </div>
-                          <div className="event-title">{course?.title || 'Schulung'}</div>
-                          <div className="event-location">{session.location}</div>
-                          {canManage && course && (
-                            <div className="event-actions" onClick={(e) => e.stopPropagation()}>
-                              <button onClick={() => openAddSession(course)}>+</button>
-                              <button onClick={() => openEditCourse(course)}>✎</button>
-                              <button onClick={() => deleteCourse(course.id)}>×</button>
+                        // Check if event is in the past, present, or future
+                        const now = new Date()
+                        const isPast = sessionDate.getTime() < now.getTime()
+                        const isCurrent = sessionDate.getTime() <= now.getTime() && endTime.getTime() > now.getTime()
+
+                        return (
+                          <div key={session.id} className={`timeline-event ${isCurrent ? 'current' : ''} ${isPast ? 'past' : ''} ${course?.type || 'online'}`}>
+                            {/* Timeline line */}
+                            <div className="timeline-line">
+                              <div className="timeline-dot" />
                             </div>
-                          )}
-                          <span className={`event-status badge ${session.status}`}>{session.status}</span>
-                        </div>
-                      )
-                    })}
-                </div>
+
+                            {/* Event content */}
+                            <div className="timeline-event-content" onClick={() => course && openEditCourse(course)}>
+                              <div className="timeline-time">
+                                <span className="timeline-start">{sessionDate.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}</span>
+                                <span className="timeline-duration">- {endTime.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}</span>
+                                <span className="timeline-length">({duration} Min.)</span>
+                              </div>
+                              <div className="timeline-event-title">{course?.title || 'Schulung'}</div>
+                              <div className="timeline-event-meta">
+                                <span className="timeline-location">
+                                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14">
+                                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                                    <circle cx="12" cy="10" r="3"/>
+                                  </svg>
+                                  {session.location}
+                                </span>
+                                <span className={`timeline-status badge ${session.status}`}>{session.status}</span>
+                                {course?.is_mandatory && <span className="badge mandatory">Pflicht</span>}
+                              </div>
+                              {course?.description && (
+                                <div className="timeline-description">{course.description}</div>
+                              )}
+                              {canManage && course && (
+                                <div className="timeline-actions" onClick={(e) => e.stopPropagation()}>
+                                  <button onClick={() => openAddSession(course)}>+ Termin</button>
+                                  <button onClick={() => openEditCourse(course)}>Bearbeiten</button>
+                                  <button onClick={() => deleteCourse(course.id)} className="delete">Löschen</button>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )
+                      })}
+                  </div>
+                )}
               </div>
             ) : (
               /* List View */
