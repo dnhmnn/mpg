@@ -583,7 +583,7 @@ body.loaded {
   align-items: center;
   justify-content: center;
   padding: 20px;
-  padding-top: calc(54px + env(safe-area-inset-top) + 30px);
+  padding-top: calc(54px + env(safe-area-inset-top) + 10px);
   padding-left: max(20px, env(safe-area-inset-left));
   padding-right: max(20px, env(safe-area-inset-right));
   padding-bottom: max(40px, env(safe-area-inset-bottom));
