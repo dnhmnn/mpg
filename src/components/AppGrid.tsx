@@ -40,8 +40,8 @@ export default function AppGrid({ userApps, onRemoveApp }: AppGridProps) {
   function handleAppClick(e: React.MouseEvent, app: App) {
     if (app.isInternal) {
       e.preventDefault()
-      // Navigate to settings page
-      navigate('/settings')
+      // Navigate to the app's URL
+      navigate(app.url)
     }
   }
 
