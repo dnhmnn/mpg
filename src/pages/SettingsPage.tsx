@@ -181,28 +181,29 @@ export default function SettingsPage({ user }: SettingsPageProps) {
         await pb.collection('users').update(editingUser.id, updateData)
         setUserFormMsg('✅ Benutzer aktualisiert!')
       } else {
-        // Create new user
-        if (!userFormPassword || userFormPassword.length < 8) {
-          setUserFormMsg('❌ Passwort: mind. 8 Zeichen')
-          setSavingUser(false)
-          return
-        }
+        // Create new user - PocketBase requires a password, but user will get email to set their own
+        // Generate a random temporary password
+        const tempPassword = Math.random().toString(36).slice(-12) + 'A1!'
 
         await pb.collection('users').create({
           email: userFormEmail,
           name: userFormName,
           role: userFormRole,
-          password: userFormPassword,
-          passwordConfirm: userFormPassword,
+          password: tempPassword,
+          passwordConfirm: tempPassword,
           organization_id: user.organization_id
         })
-        setUserFormMsg('✅ Benutzer erstellt!')
+
+        // Request password reset so user can set their own password via email
+        await pb.collection('users').requestPasswordReset(userFormEmail)
+
+        setUserFormMsg('✅ Benutzer erstellt! E-Mail zur Passwortfestlegung wurde gesendet.')
       }
 
       setTimeout(() => {
         setShowUserModal(false)
         loadUsers()
-      }, 1500)
+      }, 2000)
     } catch (e: any) {
       setUserFormMsg('❌ Fehler: ' + e.message)
     } finally {
@@ -538,14 +539,14 @@ export default function SettingsPage({ user }: SettingsPageProps) {
                   style={editingUser ? { background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.4)' } : {}}
                 />
               </div>
-              {!editingUser && (
+              {editingUser && (
                 <div className="ios-field">
-                  <label>Passwort {editingUser && '(optional)'}</label>
+                  <label>Neues Passwort (optional)</label>
                   <input
                     type="password"
                     value={userFormPassword}
                     onChange={(e) => setUserFormPassword(e.target.value)}
-                    placeholder={editingUser ? 'Neues Passwort (optional)' : 'Mind. 8 Zeichen'}
+                    placeholder="Leer lassen für kein Passwort"
                   />
                 </div>
               )}
