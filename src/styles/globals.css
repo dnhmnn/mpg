@@ -435,3 +435,137 @@ body.loaded {
   transition: all 0.2s;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
+
+/* Index Page Styles */
+.index-content {
+  padding: 20px;
+  padding-top: calc(54px + env(safe-area-inset-top) + 30px);
+  padding-left: max(20px, env(safe-area-inset-left));
+  padding-right: max(20px, env(safe-area-inset-right));
+  padding-bottom: max(40px, env(safe-area-inset-bottom));
+}
+
+.index-logo-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 32px;
+}
+
+.index-logo-section img,
+.index-logo-section > div {
+  margin-bottom: 16px;
+}
+
+.index-org-name {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #fff;
+  text-align: center;
+}
+
+.index-forms {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.index-form-card {
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(40px);
+  -webkit-backdrop-filter: blur(40px);
+  border: 0.5px solid rgba(255, 255, 255, 0.3);
+  border-radius: 20px;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  text-decoration: none;
+  color: inherit;
+  transition: all 0.2s;
+}
+
+.index-form-card:active {
+  transform: scale(0.98);
+}
+
+.index-form-icon {
+  width: 56px;
+  height: 56px;
+  background: linear-gradient(135deg, #ff6b35, #c8102e);
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.index-form-icon svg {
+  width: 28px;
+  height: 28px;
+  stroke: #fff;
+  fill: none;
+  stroke-width: 2;
+}
+
+.index-form-text h2 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #fff;
+  margin-bottom: 4px;
+}
+
+.index-form-text p {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.8);
+  line-height: 1.4;
+}
+
+/* Responsive */
+@media (max-width: 767px) {
+  .index-content {
+    padding-left: max(16px, env(safe-area-inset-left));
+    padding-right: max(16px, env(safe-area-inset-right));
+  }
+
+  .index-logo-section img,
+  .index-logo-section > div {
+    width: 100px;
+    height: 100px;
+  }
+
+  .index-org-name {
+    font-size: 1.3rem;
+  }
+
+  .index-form-card {
+    padding: 16px;
+    gap: 12px;
+  }
+
+  .index-form-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+  }
+
+  .index-form-icon svg {
+    width: 24px;
+    height: 24px;
+  }
+
+  .index-form-text h2 {
+    font-size: 1rem;
+  }
+
+  .index-form-text p {
+    font-size: 0.8rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .index-content {
+    max-width: 600px;
+    margin: 0 auto;
+  }
+}
