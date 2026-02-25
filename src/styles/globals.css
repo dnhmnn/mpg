@@ -2848,6 +2848,146 @@ body.loaded {
   box-shadow: 0 8px 24px rgba(41, 151, 255, 0.4);
 }
 
+/* Wizard Modal - Apple-style */
+.wizard-modal {
+  max-width: 500px;
+}
+
+.wizard-progress {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.2);
+  border-bottom: 0.5px solid rgba(255, 255, 255, 0.1);
+}
+
+.wizard-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.step-number {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 600;
+  transition: all 0.3s;
+}
+
+.wizard-step.active .step-number {
+  background: linear-gradient(135deg, #2997ff 0%, #0071e3 100%);
+  color: #fff;
+}
+
+.step-label {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.5);
+  font-weight: 500;
+}
+
+.wizard-step.active .step-label {
+  color: #2997ff;
+}
+
+.wizard-line {
+  width: 40px;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.1);
+  margin: 0 8px;
+  margin-bottom: 20px;
+}
+
+.wizard-step-content {
+  padding: 10px 0;
+}
+
+.wizard-step-content h4 {
+  color: #fff;
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.wizard-buttons {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.wizard-buttons .action-btn {
+  flex: 1;
+}
+
+.action-btn.secondary {
+  background: rgba(255, 255, 255, 0.1) !important;
+  border: 0.5px solid rgba(255, 255, 255, 0.2) !important;
+  color: #fff !important;
+}
+
+.action-btn.secondary:hover {
+  background: rgba(255, 255, 255, 0.2) !important;
+}
+
+.action-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Session Header with Presentation */
+.session-header {
+  display: flex !important;
+  justify-content: space-between;
+  align-items: flex-start !important;
+  gap: 16px;
+}
+
+.session-title-area {
+  flex: 1;
+}
+
+.session-title-area h3 {
+  margin-bottom: 8px;
+}
+
+.session-meta-badges {
+  display: flex;
+  gap: 8px;
+}
+
+.session-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.presentation-launch-btn {
+  padding: 8px 16px;
+  background: linear-gradient(135deg, #5856d6 0%, #4341a8 100%);
+  border: none;
+  border-radius: 10px;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+}
+
+.presentation-launch-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 16px rgba(88, 86, 214, 0.4);
+}
+
 /* Attendance List - Apple-style */
 .attendance-checkbox {
   display: flex;

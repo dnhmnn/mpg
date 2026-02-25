@@ -127,6 +127,7 @@ export default function Ausbildungen({ user }: AusbildungenProps) {
   // Modal states
   const [showCourseModal, setShowCourseModal] = useState(false)
   const [editingCourse, setEditingCourse] = useState<TrainingCourse | null>(null)
+  const [courseWizardStep, setCourseWizardStep] = useState(1)
   const [showSessionModal, setShowSessionModal] = useState(false)
   const [editingSession, setEditingSession] = useState<TrainingSession | null>(null)
   const [selectedCourse, setSelectedCourse] = useState<TrainingCourse | null>(null)
@@ -314,6 +315,7 @@ export default function Ausbildungen({ user }: AusbildungenProps) {
   function openAddCourse() {
     setEditingCourse(null)
     setCourseForm({ title: '', description: '', category: '', type: 'online', duration_minutes: 60, valid_for_months: 12, is_mandatory: false })
+    setCourseWizardStep(1)
     setShowCourseModal(true)
   }
 
@@ -1449,49 +1451,172 @@ export default function Ausbildungen({ user }: AusbildungenProps) {
       {/* Course Modal */}
       {showCourseModal && (
         <div className="modal-overlay" onClick={() => setShowCourseModal(false)}>
-          <div className="modal-content" onClick={e => e.stopPropagation()}>
+          <div className="modal-content wizard-modal" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>{editingCourse ? 'Schulung bearbeiten' : 'Neue Schulung'}</h3>
+              <h3>{editingCourse ? 'Schulung bearbeiten' : 'Neue Schulung erstellen'}</h3>
               <button className="modal-close" onClick={() => setShowCourseModal(false)}>×</button>
             </div>
+
+            {/* Wizard Progress */}
+            {!editingCourse && (
+              <div className="wizard-progress">
+                <div className={`wizard-step ${courseWizardStep >= 1 ? 'active' : ''}`}>
+                  <span className="step-number">1</span>
+                  <span className="step-label">Titel</span>
+                </div>
+                <div className="wizard-line"></div>
+                <div className={`wizard-step ${courseWizardStep >= 2 ? 'active' : ''}`}>
+                  <span className="step-number">2</span>
+                  <span className="step-label">Beschreibung</span>
+                </div>
+                <div className="wizard-line"></div>
+                <div className={`wizard-step ${courseWizardStep >= 3 ? 'active' : ''}`}>
+                  <span className="step-number">3</span>
+                  <span className="step-label">Details</span>
+                </div>
+              </div>
+            )}
+
             <div className="modal-body">
-              <div className="form-field">
-                <label>Titel</label>
-                <input type="text" value={courseForm.title} onChange={e => setCourseForm({...courseForm, title: e.target.value})} />
-              </div>
-              <div className="form-field">
-                <label>Beschreibung</label>
-                <textarea value={courseForm.description} onChange={e => setCourseForm({...courseForm, description: e.target.value})} />
-              </div>
-              <div className="form-field">
-                <label>Kategorie</label>
-                <input type="text" value={courseForm.category} onChange={e => setCourseForm({...courseForm, category: e.target.value})} />
-              </div>
-              <div className="form-field">
-                <label>Typ</label>
-                <select value={courseForm.type} onChange={e => setCourseForm({...courseForm, type: e.target.value as any})}>
-                  <option value="online">Online</option>
-                  <option value="präsenz">Präsenz</option>
-                  <option value="hybrid">Hybrid</option>
-                </select>
-              </div>
-              <div className="form-row">
-                <div className="form-field">
-                  <label>Dauer (Min.)</label>
-                  <input type="number" value={courseForm.duration_minutes} onChange={e => setCourseForm({...courseForm, duration_minutes: parseInt(e.target.value)})} />
-                </div>
-                <div className="form-field">
-                  <label>Gültig (Monate)</label>
-                  <input type="number" value={courseForm.valid_for_months} onChange={e => setCourseForm({...courseForm, valid_for_months: parseInt(e.target.value)})} />
-                </div>
-              </div>
-              <div className="form-field checkbox">
-                <label>
-                  <input type="checkbox" checked={courseForm.is_mandatory} onChange={e => setCourseForm({...courseForm, is_mandatory: e.target.checked})} />
-                  Pflichtschulung
-                </label>
-              </div>
-              <button className="action-btn primary" onClick={saveCourse}>Speichern</button>
+              {editingCourse ? (
+                // Edit mode - show all fields
+                <>
+                  <div className="form-field">
+                    <label>Titel</label>
+                    <input type="text" value={courseForm.title} onChange={e => setCourseForm({...courseForm, title: e.target.value})} />
+                  </div>
+                  <div className="form-field">
+                    <label>Beschreibung</label>
+                    <textarea value={courseForm.description} onChange={e => setCourseForm({...courseForm, description: e.target.value})} />
+                  </div>
+                  <div className="form-field">
+                    <label>Kategorie</label>
+                    <input type="text" value={courseForm.category} onChange={e => setCourseForm({...courseForm, category: e.target.value})} />
+                  </div>
+                  <div className="form-field">
+                    <label>Typ</label>
+                    <select value={courseForm.type} onChange={e => setCourseForm({...courseForm, type: e.target.value as any})}>
+                      <option value="online">Online</option>
+                      <option value="präsenz">Präsenz</option>
+                      <option value="hybrid">Hybrid</option>
+                    </select>
+                  </div>
+                  <div className="form-row">
+                    <div className="form-field">
+                      <label>Dauer (Min.)</label>
+                      <input type="number" value={courseForm.duration_minutes} onChange={e => setCourseForm({...courseForm, duration_minutes: parseInt(e.target.value)})} />
+                    </div>
+                    <div className="form-field">
+                      <label>Gültig (Monate)</label>
+                      <input type="number" value={courseForm.valid_for_months} onChange={e => setCourseForm({...courseForm, valid_for_months: parseInt(e.target.value)})} />
+                    </div>
+                  </div>
+                  <div className="form-field checkbox">
+                    <label>
+                      <input type="checkbox" checked={courseForm.is_mandatory} onChange={e => setCourseForm({...courseForm, is_mandatory: e.target.checked})} />
+                      Pflichtschulung
+                    </label>
+                  </div>
+                  <button className="action-btn primary" onClick={saveCourse}>Speichern</button>
+                </>
+              ) : (
+                // Wizard mode - step by step
+                <>
+                  {courseWizardStep === 1 && (
+                    <div className="wizard-step-content">
+                      <h4>Schritt 1: Titel</h4>
+                      <div className="form-field">
+                        <label>Wie soll die Schulung heißen?</label>
+                        <input
+                          type="text"
+                          value={courseForm.title}
+                          onChange={e => setCourseForm({...courseForm, title: e.target.value})}
+                          placeholder="z.B. Brandschutz-Grundlagen"
+                          autoFocus
+                        />
+                      </div>
+                      <div className="wizard-buttons">
+                        <button
+                          className="action-btn primary"
+                          disabled={!courseForm.title.trim()}
+                          onClick={() => setCourseWizardStep(2)}
+                        >
+                          Weiter →
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {courseWizardStep === 2 && (
+                    <div className="wizard-step-content">
+                      <h4>Schritt 2: Beschreibung</h4>
+                      <div className="form-field">
+                        <label>Was lernen die Teilnehmer in dieser Schulung?</label>
+                        <textarea
+                          value={courseForm.description}
+                          onChange={e => setCourseForm({...courseForm, description: e.target.value})}
+                          placeholder="Beschreiben Sie den Inhalt und die Lernziele..."
+                          rows={4}
+                          autoFocus
+                        />
+                      </div>
+                      <div className="wizard-buttons">
+                        <button className="action-btn secondary" onClick={() => setCourseWizardStep(1)}>
+                          ← Zurück
+                        </button>
+                        <button
+                          className="action-btn primary"
+                          onClick={() => setCourseWizardStep(3)}
+                        >
+                          Weiter →
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {courseWizardStep === 3 && (
+                    <div className="wizard-step-content">
+                      <h4>Schritt 3: Details</h4>
+                      <div className="form-field">
+                        <label>Kategorie</label>
+                        <input type="text" value={courseForm.category} onChange={e => setCourseForm({...courseForm, category: e.target.value})} placeholder="z.B. Arbeitsschutz" />
+                      </div>
+                      <div className="form-field">
+                        <label>Typ</label>
+                        <select value={courseForm.type} onChange={e => setCourseForm({...courseForm, type: e.target.value as any})}>
+                          <option value="online">Online</option>
+                          <option value="präsenz">Präsenz</option>
+                          <option value="hybrid">Hybrid</option>
+                        </select>
+                      </div>
+                      <div className="form-row">
+                        <div className="form-field">
+                          <label>Dauer (Min.)</label>
+                          <input type="number" value={courseForm.duration_minutes} onChange={e => setCourseForm({...courseForm, duration_minutes: parseInt(e.target.value)})} />
+                        </div>
+                        <div className="form-field">
+                          <label>Gültig (Monate)</label>
+                          <input type="number" value={courseForm.valid_for_months} onChange={e => setCourseForm({...courseForm, valid_for_months: parseInt(e.target.value)})} />
+                        </div>
+                      </div>
+                      <div className="form-field checkbox">
+                        <label>
+                          <input type="checkbox" checked={courseForm.is_mandatory} onChange={e => setCourseForm({...courseForm, is_mandatory: e.target.checked})} />
+                          Pflichtschulung
+                        </label>
+                      </div>
+                      <div className="wizard-buttons">
+                        <button className="action-btn secondary" onClick={() => setCourseWizardStep(2)}>
+                          ← Zurück
+                        </button>
+                        <button className="action-btn primary" onClick={saveCourse}>
+                          ✓ Schulung erstellen
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -1748,9 +1873,26 @@ export default function Ausbildungen({ user }: AusbildungenProps) {
       {showSessionDetail && selectedSession && selectedSessionCourse && (
         <div className="modal-overlay" onClick={() => setShowSessionDetail(false)}>
           <div className="modal-content session-detail-modal" onClick={e => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>{selectedSessionCourse.title}</h3>
-              <button className="modal-close" onClick={() => setShowSessionDetail(false)}>×</button>
+            <div className="modal-header session-header">
+              <div className="session-title-area">
+                <h3>{selectedSessionCourse.title}</h3>
+                <div className="session-meta-badges">
+                  <span className="badge">{selectedSessionCourse.type}</span>
+                  <span className="badge info">{selectedSession.status}</span>
+                </div>
+              </div>
+              <div className="session-header-actions">
+                {sessionMaterials.filter(m => m.file_type === 'dozent').length > 0 && (
+                  <button
+                    className="presentation-launch-btn"
+                    onClick={() => startPresentation(sessionMaterials)}
+                    title="Präsentation starten"
+                  >
+                    📺 Präsentation
+                  </button>
+                )}
+                <button className="modal-close" onClick={() => setShowSessionDetail(false)}>×</button>
+              </div>
             </div>
             <div className="modal-body">
               {/* Session Info */}
