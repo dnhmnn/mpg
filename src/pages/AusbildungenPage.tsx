@@ -8,7 +8,7 @@ interface AusbildungenProps {
   user: User | null
 }
 
-type Tab = 'schulungen' | 'team' | 'lernbereich' | 'einstellungen'
+type Tab = 'dashboard' | 'schulungen' | 'team' | 'lernbereich' | 'einstellungen'
 
 // Types
 interface TrainingCourse {
@@ -73,10 +73,12 @@ function getMonthName(date: Date): string {
 
 interface TeamMember {
   id: string
+  vorname?: string
   name: string
   email: string
   role: string
   phone?: string
+  qualifikationen?: string[]
 }
 
 interface LearningModule {
@@ -97,7 +99,7 @@ interface LearningSlide {
 
 export default function Ausbildungen({ user }: AusbildungenProps) {
   const navigate = useNavigate()
-  const [activeTab, setActiveTab] = useState<Tab>('schulungen')
+  const [activeTab, setActiveTab] = useState<Tab>('dashboard')
 
   // Data states
   const [courses, setCourses] = useState<TrainingCourse[]>([])
@@ -105,6 +107,7 @@ export default function Ausbildungen({ user }: AusbildungenProps) {
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([])
   const [modules, setModules] = useState<LearningModule[]>([])
   const [slides, setSlides] = useState<LearningSlide[]>([])
+  const [allParticipants, setAllParticipants] = useState<SessionParticipant[]>([])
 
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
@@ -139,6 +142,8 @@ export default function Ausbildungen({ user }: AusbildungenProps) {
   const [sessionParticipants, setSessionParticipants] = useState<SessionParticipant[]>([])
   const [sessionMaterials, setSessionMaterials] = useState<CourseMaterial[]>([])
   const [availableUsers, setAvailableUsers] = useState<any[]>([])
+  const [showAddParticipants, setShowAddParticipants] = useState(false)
+  const [selectedParticipants, setSelectedParticipants] = useState<string[]>([])
 
   // Form states
   const [courseForm, setCourseForm] = useState({
@@ -174,9 +179,9 @@ export default function Ausbildungen({ user }: AusbildungenProps) {
     setLoading(true)
 
     try {
-      if (activeTab === 'schulungen') {
-        // Load courses, sessions, team members, lernbar users AND all users for the two-column layout
-        const [coursesData, sessionsData, teamData, orgData, usersData] = await Promise.all([
+      if (activeTab === 'dashboard') {
+        // Load all data for dashboard - courses, sessions, team, participants
+        const [coursesData, sessionsData, teamData, participantsData, orgData, usersData] = await Promise.all([
           pb.collection('training_courses').getFullList({
             filter: `organization_id = "${user.organization_id}"`
           }),
@@ -184,6 +189,7 @@ export default function Ausbildungen({ user }: AusbildungenProps) {
           pb.collection('team_members').getFullList({
             filter: `organization_id = "${user.organization_id}"`
           }),
+          pb.collection('session_participants').getFullList(),
           pb.collection('organizations').getOne(user.organization_id),
           pb.collection('users').getFullList({
             filter: `organization_id = "${user.organization_id}"`
@@ -200,6 +206,37 @@ export default function Ausbildungen({ user }: AusbildungenProps) {
         setCourses(courses)
         setSessions(sessions)
         setTeamMembers(teamData as unknown as TeamMember[])
+        setAllParticipants(participantsData as unknown as SessionParticipant[])
+        setLernbarUsers(orgData?.lernbar_users || [])
+        setAllUsers(usersData)
+      } else if (activeTab === 'schulungen') {
+        // Load courses, sessions, team members, lernbar users AND all users
+        const [coursesData, sessionsData, teamData, participantsData, orgData, usersData] = await Promise.all([
+          pb.collection('training_courses').getFullList({
+            filter: `organization_id = "${user.organization_id}"`
+          }),
+          pb.collection('training_sessions').getFullList(),
+          pb.collection('team_members').getFullList({
+            filter: `organization_id = "${user.organization_id}"`
+          }),
+          pb.collection('session_participants').getFullList(),
+          pb.collection('organizations').getOne(user.organization_id),
+          pb.collection('users').getFullList({
+            filter: `organization_id = "${user.organization_id}"`
+          })
+        ])
+        const courses = coursesData as unknown as TrainingCourse[]
+        const sessions = (sessionsData as unknown as TrainingSession[]).map(session => {
+          const course = courses.find(c => c.id === session.course_id)
+          return {
+            ...session,
+            duration_minutes: course?.duration_minutes || 60
+          }
+        })
+        setCourses(courses)
+        setSessions(sessions)
+        setTeamMembers(teamData as unknown as TeamMember[])
+        setAllParticipants(participantsData as unknown as SessionParticipant[])
         setLernbarUsers(orgData?.lernbar_users || [])
         setAllUsers(usersData)
       } else if (activeTab === 'team') {
@@ -653,6 +690,18 @@ export default function Ausbildungen({ user }: AusbildungenProps) {
         {/* Tabs */}
         <div className="tabs-container">
           <button
+            className={`tab-btn ${activeTab === 'dashboard' ? 'active' : ''}`}
+            onClick={() => setActiveTab('dashboard')}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <rect x="3" y="3" width="7" height="7"/>
+              <rect x="14" y="3" width="7" height="7"/>
+              <rect x="14" y="14" width="7" height="7"/>
+              <rect x="3" y="14" width="7" height="7"/>
+            </svg>
+            Dashboard
+          </button>
+          <button
             className={`tab-btn ${activeTab === 'schulungen' ? 'active' : ''}`}
             onClick={() => setActiveTab('schulungen')}
           >
@@ -700,6 +749,144 @@ export default function Ausbildungen({ user }: AusbildungenProps) {
         {message && (
           <div className={`message ${message.includes('✅') ? 'success' : 'error'}`}>
             {message}
+          </div>
+        )}
+
+        {/* Dashboard Tab - Overview */}
+        {activeTab === 'dashboard' && (
+          <div className="tab-content">
+            <div className="dashboard-overview">
+              <h2 className="section-title">Ausbildungs-Übersicht</h2>
+
+              {loading ? (
+                <div className="loading">Lade Daten...</div>
+              ) : (
+                <>
+                  {/* Statistics Cards */}
+                  <div className="stats-grid">
+                    <div className="stat-card">
+                      <div className="stat-icon">📚</div>
+                      <div className="stat-value">{courses.length}</div>
+                      <div className="stat-label">Schulungen</div>
+                    </div>
+                    <div className="stat-card">
+                      <div className="stat-icon">📅</div>
+                      <div className="stat-value">{sessions.length}</div>
+                      <div className="stat-label">Termine</div>
+                    </div>
+                    <div className="stat-card">
+                      <div className="stat-icon">👥</div>
+                      <div className="stat-value">{teamMembers.length}</div>
+                      <div className="stat-label">Teammitglieder</div>
+                    </div>
+                    <div className="stat-card">
+                      <div className="stat-icon">✉️</div>
+                      <div className="stat-value">{allParticipants.filter(p => p.status === 'eingeladen').length}</div>
+                      <div className="stat-label">Ausstehende Einladungen</div>
+                    </div>
+                  </div>
+
+                  {/* Participant Status Overview */}
+                  <div className="dashboard-section">
+                    <h3>Teilnehmer-Status</h3>
+                    <div className="status-overview">
+                      <div className="status-item zugesagt">
+                        <span className="status-count">{allParticipants.filter(p => p.status === 'zugesagt').length}</span>
+                        <span className="status-label">Zugesagt</span>
+                      </div>
+                      <div className="status-item eingeladen">
+                        <span className="status-count">{allParticipants.filter(p => p.status === 'eingeladen').length}</span>
+                        <span className="status-label">Eingeladen</span>
+                      </div>
+                      <div className="status-item abgesagt">
+                        <span className="status-count">{allParticipants.filter(p => p.status === 'abgesagt').length}</span>
+                        <span className="status-label">Abgesagt</span>
+                      </div>
+                      <div className="status-item entschuldigt">
+                        <span className="status-count">{allParticipants.filter(p => p.status === 'entschuldigt').length}</span>
+                        <span className="status-label">Entschuldigt</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Upcoming Sessions */}
+                  <div className="dashboard-section">
+                    <h3>Anstehende Termine</h3>
+                    {sessions.filter(s => new Date(s.date) >= new Date() && s.status === 'geplant').length === 0 ? (
+                      <div className="empty-state small">
+                        <p>Keine anstehenden Termine</p>
+                      </div>
+                    ) : (
+                      <div className="upcoming-sessions">
+                        {sessions
+                          .filter(s => new Date(s.date) >= new Date() && s.status === 'geplant')
+                          .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+                          .slice(0, 5)
+                          .map(session => {
+                            const course = courses.find(c => c.id === session.course_id)
+                            const sessionDate = new Date(session.date)
+                            const participants = allParticipants.filter(p => p.session_id === session.id)
+                            const zugesagt = participants.filter(p => p.status === 'zugesagt').length
+
+                            return (
+                              <div key={session.id} className="upcoming-session-item" onClick={() => openSessionDetail(session)}>
+                                <div className="upcoming-session-date">
+                                  <span className="day">{sessionDate.getDate()}</span>
+                                  <span className="month">{sessionDate.toLocaleDateString('de-DE', { month: 'short' })}</span>
+                                </div>
+                                <div className="upcoming-session-info">
+                                  <div className="upcoming-session-title">{course?.title || 'Schulung'}</div>
+                                  <div className="upcoming-session-meta">
+                                    {session.start_time && <span>🕐 {session.start_time}</span>}
+                                    {session.location && <span>📍 {session.location}</span>}
+                                    <span>👥 {zugesagt} Zusagen</span>
+                                  </div>
+                                </div>
+                              </div>
+                            )
+                          })}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Required Trainings */}
+                  {courses.filter(c => c.is_mandatory).length > 0 && (
+                    <div className="dashboard-section">
+                      <h3>Pflicht-Schulungen</h3>
+                      <div className="mandatory-trainings">
+                        {courses.filter(c => c.is_mandatory).map(course => {
+                          const courseSessionCount = sessions.filter(s => s.course_id === course.id && s.status !== 'abgesagt').length
+
+                          return (
+                            <div key={course.id} className="mandatory-training-item" onClick={() => openCourseDetail(course)}>
+                              <div className="mandatory-training-info">
+                                <span className="mandatory-training-title">{course.title}</span>
+                                <span className="mandatory-training-meta">
+                                  {courseSessionCount} Termin(e) • {course.type}
+                                </span>
+                              </div>
+                              <span className="badge warning">Pflicht</span>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Quick Actions */}
+                  {canManage && (
+                    <div className="dashboard-section">
+                      <h3>Schnellaktionen</h3>
+                      <div className="quick-actions">
+                        <button className="action-btn primary" onClick={openAddCourse}>
+                          + Neue Schulung
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
           </div>
         )}
 
@@ -1273,59 +1460,82 @@ export default function Ausbildungen({ user }: AusbildungenProps) {
 
               {/* Participants Section */}
               <div className="detail-section">
-                <h4>Teilnehmer ({sessionParticipants.length})</h4>
+                <div className="section-header">
+                  <h4>Teilnehmer ({sessionParticipants.length})</h4>
+                  {canManage && availableUsers.length > 0 && (
+                    <button className="action-btn primary small" onClick={() => setShowAddParticipants(true)}>
+                      + Teilnehmer hinzufügen
+                    </button>
+                  )}
+                </div>
 
                 {sessionParticipants.length === 0 ? (
-                  <p className="empty-text">Noch keine Teilnehmer eingeladen.</p>
+                  <div className="empty-state small">
+                    <p>Noch keine Teilnehmer eingeladen.</p>
+                    <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)' }}>Füge Teilnehmer über den Button oben hinzu</p>
+                  </div>
                 ) : (
-                  <div className="participants-list">
-                    {sessionParticipants.map(participant => (
-                      <div key={participant.id} className="participant-item">
-                        <div className="participant-info">
-                          <span className="participant-name">{participant.user_name}</span>
-                          <span className={`participant-status badge ${participant.status}`}>
-                            {participant.status === 'eingeladen' ? 'Eingeladen' :
-                             participant.status === 'zugesagt' ? 'Zugesagt' :
-                             participant.status === 'abgesagt' ? 'Abgesagt' : 'Entschuldigt'}
-                          </span>
-                        </div>
-                        {canManage && (
-                          <div className="participant-actions">
-                            <button onClick={() => updateParticipantStatus(participant.id, 'zugesagt')} title="Zusagen">
-                              ✓
-                            </button>
-                            <button onClick={() => updateParticipantStatus(participant.id, 'abgesagt')} title="Absagen">
-                              ✗
-                            </button>
-                            <button onClick={() => updateParticipantStatus(participant.id, 'entschuldigt')} title="Entschuldigen">
-                              E
-                            </button>
-                            <button onClick={() => removeParticipant(participant.id)} className="delete" title="Entfernen">
-                              🗑
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
+                  <table className="participants-table">
+                    <thead>
+                      <tr>
+                        <th>Name</th>
+                        <th>Status</th>
+                        {canManage && <th>Aktionen</th>}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {sessionParticipants.map(participant => {
+                        const member = availableUsers.find((u: any) => u.id === participant.team_member_id)
+                        const fullName = member ? `${member.vorname || ''} ${member.name || ''}`.trim() : participant.user_name || 'Unbekannt'
+                        const qualifikationen = member?.qualifikationen as string[] | undefined
 
-                {/* Add Participant */}
-                {canManage && availableUsers.length > 0 && (
-                  <div className="add-participant">
-                    <select
-                      onChange={(e) => { if (e.target.value) { addParticipant(e.target.value); e.target.value = ''; } }}
-                      defaultValue=""
-                    >
-                      <option value="">+ Teilnehmer hinzufügen...</option>
-                      {availableUsers
-                        .filter(u => !sessionParticipants.some(p => p.team_member_id === u.id))
-                        .map(u => (
-                          <option key={u.id} value={u.id}>{u.name || u.email}</option>
-                        ))
-                      }
-                    </select>
-                  </div>
+                        return (
+                          <tr key={participant.id}>
+                            <td>
+                              <div className="participant-name-cell">
+                                <span className="participant-fullname">{fullName}</span>
+                                {qualifikationen && qualifikationen.length > 0 && (
+                                  <span className="participant-qualifikationen">
+                                    {qualifikationen.join(', ')}
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+                            <td>
+                              {canManage ? (
+                                <select
+                                  className={`status-select ${participant.status}`}
+                                  value={participant.status}
+                                  onChange={(e) => updateParticipantStatus(participant.id, e.target.value as any)}
+                                >
+                                  <option value="eingeladen">⏳ Eingeladen</option>
+                                  <option value="zugesagt">✅ Zugesagt</option>
+                                  <option value="abgesagt">❌ Abgesagt</option>
+                                  <option value="entschuldigt">📋 Entschuldigt</option>
+                                </select>
+                              ) : (
+                                <span className={`participant-status badge ${participant.status}`}>
+                                  {participant.status === 'eingeladen' ? '⏳ Eingeladen' :
+                                   participant.status === 'zugesagt' ? '✅ Zugesagt' :
+                                   participant.status === 'abgesagt' ? '❌ Abgesagt' : '📋 Entschuldigt'}
+                                </span>
+                              )}
+                            </td>
+                            {canManage && (
+                              <td>
+                                <button
+                                  className="action-btn danger small"
+                                  onClick={() => removeParticipant(participant.id)}
+                                >
+                                  Entfernen
+                                </button>
+                              </td>
+                            )}
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
                 )}
               </div>
 
@@ -1422,6 +1632,86 @@ export default function Ausbildungen({ user }: AusbildungenProps) {
                     </div>
                   )}
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Participants Modal */}
+      {showAddParticipants && selectedSession && (
+        <div className="modal-overlay" onClick={() => { setShowAddParticipants(false); setSelectedParticipants([]); }}>
+          <div className="modal-content" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Teilnehmer hinzufügen</h3>
+              <button className="modal-close" onClick={() => { setShowAddParticipants(false); setSelectedParticipants([]); }}>×</button>
+            </div>
+            <div className="modal-body">
+              <p style={{ marginBottom: '16px', color: 'rgba(255,255,255,0.7)' }}>
+                Wähle die Teammitglieder aus, die du zur Schulung einladen möchtest:
+              </p>
+
+              <div className="participants-selection-list">
+                {availableUsers
+                  .filter((u: any) => !sessionParticipants.some(p => p.team_member_id === u.id))
+                  .map(member => {
+                    const fullName = `${member.vorname || ''} ${member.name || ''}`.trim()
+                    const qualifikationen = member.qualifikationen as string[] | undefined
+                    const isSelected = selectedParticipants.includes(member.id)
+
+                    return (
+                      <div
+                        key={member.id}
+                        className={`participant-select-item ${isSelected ? 'selected' : ''}`}
+                        onClick={() => {
+                          if (isSelected) {
+                            setSelectedParticipants(selectedParticipants.filter(id => id !== member.id))
+                          } else {
+                            setSelectedParticipants([...selectedParticipants, member.id])
+                          }
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => {}}
+                        />
+                        <div className="participant-select-info">
+                          <span className="participant-select-name">{fullName}</span>
+                          {qualifikationen && qualifikationen.length > 0 && (
+                            <span className="participant-select-qualifikationen">
+                              {qualifikationen.join(', ')}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+              </div>
+
+              {availableUsers.filter((u: any) => !sessionParticipants.some(p => p.team_member_id === u.id)).length === 0 && (
+                <div className="empty-state small">
+                  <p>Alle Team-Mitglieder bereits eingeladen</p>
+                </div>
+              )}
+
+              <div style={{ marginTop: '20px', display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                <button className="action-btn" onClick={() => { setShowAddParticipants(false); setSelectedParticipants([]); }}>
+                  Abbrechen
+                </button>
+                <button
+                  className="action-btn primary"
+                  disabled={selectedParticipants.length === 0}
+                  onClick={async () => {
+                    for (const memberId of selectedParticipants) {
+                      await addParticipant(memberId)
+                    }
+                    setShowAddParticipants(false)
+                    setSelectedParticipants([])
+                  }}
+                >
+                  {selectedParticipants.length} Teilnehmer einladen
+                </button>
               </div>
             </div>
           </div>
