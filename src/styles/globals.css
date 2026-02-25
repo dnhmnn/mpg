@@ -1534,6 +1534,228 @@ body.loaded {
   flex-wrap: wrap;
 }
 
+/* Teilnehmer Tab Styles */
+.teilnehmer-overview {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.compliance-stats {
+  margin-top: 8px;
+}
+
+.compliance-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr;
+  gap: 12px;
+}
+
+.compliance-card {
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+  padding: 16px;
+  text-align: center;
+}
+
+.compliance-card.overall {
+  background: linear-gradient(135deg, #ff6b35 0%, #c8102e 100%);
+}
+
+.compliance-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.compliance-label {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.8);
+  margin-top: 4px;
+}
+
+.mandatory-overview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+}
+
+.mandatory-overview-card {
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+  padding: 14px;
+}
+
+.mandatory-overview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.mandatory-overview-title {
+  color: #fff;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.mandatory-overview-badge {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+
+.mandatory-overview-badge.complete {
+  background: rgba(46, 204, 113, 0.2);
+  color: #2ecc71;
+}
+
+.mandatory-overview-badge.partial {
+  background: rgba(241, 196, 15, 0.2);
+  color: #f1c40f;
+}
+
+.mandatory-overview-badge.pending {
+  background: rgba(231, 76, 60, 0.2);
+  color: #e74c3c;
+}
+
+.mandatory-overview-bar {
+  height: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.mandatory-overview-progress {
+  height: 100%;
+  background: linear-gradient(90deg, #ff6b35 0%, #c8102e 100%);
+  border-radius: 3px;
+  transition: width 0.3s;
+}
+
+.participant-progress-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.participant-progress-item {
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.participant-progress-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.participant-progress-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #ff6b35 0%, #c8102e 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-weight: 600;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.participant-progress-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.participant-progress-name {
+  color: #fff;
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.participant-progress-role {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 12px;
+}
+
+.participant-progress-badge {
+  font-size: 16px;
+  font-weight: 700;
+  padding: 6px 12px;
+  border-radius: 8px;
+}
+
+.participant-progress-badge.complete {
+  background: rgba(46, 204, 113, 0.2);
+  color: #2ecc71;
+}
+
+.participant-progress-badge.partial {
+  background: rgba(241, 196, 15, 0.2);
+  color: #f1c40f;
+}
+
+.participant-progress-badge.pending {
+  background: rgba(231, 76, 60, 0.2);
+  color: #e74c3c;
+}
+
+.participant-progress-details {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.progress-completed,
+.progress-pending {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.progress-label {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.5);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.progress-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.progress-tag {
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+.progress-tag.complete {
+  background: rgba(46, 204, 113, 0.15);
+  color: #2ecc71;
+}
+
+.progress-tag.pending {
+  background: rgba(231, 76, 60, 0.15);
+  color: #e74c3c;
+}
+
+.progress-tag.none {
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.4);
+}
+
 /* Appointments List - Simple chronological list */
 .section-title {
   color: #fff;
@@ -2365,8 +2587,297 @@ body.loaded {
   color: #fff;
   font-size: 13px;
   font-weight: 500;
+}
+
+/* Team Qualifications - Apple-inspired */
+.team-card {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.qualifications-section {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 0.5px solid rgba(255, 255, 255, 0.12);
+}
+
+.qualifications-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.qualifications-header h4 {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.edit-qual-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  color: #2997ff;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 4px 10px;
+  border-radius: 6px;
+}
+
+.edit-qual-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.qualifications-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.qual-tag {
+  background: linear-gradient(135deg, #2997ff 0%, #0071e3 100%);
+  color: #fff;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.no-quals {
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 12px;
+  font-style: italic;
+}
+
+.qualifications-edit {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.qualifications-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.qual-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  padding: 6px 8px;
+  border-radius: 8px;
+  transition: background 0.2s;
+}
+
+.qual-checkbox:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.qual-checkbox input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: #2997ff;
+  cursor: pointer;
+}
+
+.qual-checkbox span {
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 12px;
+}
+
+.save-qual-btn {
+  width: 100%;
+  padding: 10px;
+  background: linear-gradient(135deg, #30d158 0%, #248e3d 100%);
+  border: none;
+  border-radius: 10px;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.save-qual-btn:hover {
+  transform: scale(1.02);
+  box-shadow: 0 4px 12px rgba(48, 209, 88, 0.3);
+}
+
+/* Presentation Cockpit - Apple-style */
+.presentation-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: #000;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+}
+
+.presentation-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 24px;
+  background: rgba(28, 28, 30, 0.95);
+  border-bottom: 0.5px solid rgba(255, 255, 255, 0.1);
+}
+
+.presentation-header h3 {
+  color: #fff;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.presentation-controls {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.presentation-controls button {
+  padding: 8px 16px;
+  background: rgba(255, 255, 255, 0.15);
+  border: none;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
+}
+
+.presentation-controls button:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.presentation-controls button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.close-presentation {
+  background: #ff453a !important;
+}
+
+.slide-counter {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 14px;
+  font-weight: 500;
+  min-width: 60px;
+  text-align: center;
+}
+
+.presentation-content {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  overflow: hidden;
+}
+
+.presentation-content img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: 8px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+.presentation-thumbnails {
+  display: flex;
+  gap: 8px;
+  padding: 16px 24px;
+  background: rgba(28, 28, 30, 0.95);
+  overflow-x: auto;
+  justify-content: center;
+}
+
+.thumbnail {
+  width: 48px;
+  height: 36px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 2px solid transparent;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.thumbnail:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.thumbnail.active {
+  border-color: #2997ff;
+  background: rgba(41, 151, 255, 0.2);
+}
+
+.thumbnail span {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.start-presentation-btn {
+  width: 100%;
+  padding: 14px;
+  background: linear-gradient(135deg, #2997ff 0%, #0071e3 100%) !important;
+  border: none !important;
+  border-radius: 12px;
+  color: #fff !important;
+  font-size: 15px !important;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.start-presentation-btn:hover {
+  transform: scale(1.02);
+  box-shadow: 0 8px 24px rgba(41, 151, 255, 0.4);
+}
+
+/* Attendance List - Apple-style */
+.attendance-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.attendance-checkbox input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: #30d158;
+  cursor: pointer;
+}
+
+.attendance-badge {
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.attendance-badge.present {
+  background: linear-gradient(135deg, #30d158 0%, #248e3d 100%);
+  color: #fff;
+}
+
+.attendance-badge.absent {
+  background: rgba(255, 69, 58, 0.2);
+  color: #ff453a;
 }
 
 .card-actions button:hover {

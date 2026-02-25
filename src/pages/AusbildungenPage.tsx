@@ -8,7 +8,7 @@ interface AusbildungenProps {
   user: User | null
 }
 
-type Tab = 'dashboard' | 'schulungen' | 'team' | 'lernbereich' | 'einstellungen'
+type Tab = 'dashboard' | 'schulungen' | 'teilnehmer' | 'team' | 'lernbereich' | 'einstellungen'
 
 // Types
 interface TrainingCourse {
@@ -46,6 +46,7 @@ interface SessionParticipant {
   user_email?: string
   status: 'eingeladen' | 'zugesagt' | 'abgesagt' | 'entschuldigt'
   response_date?: string
+  anwesend?: boolean // For attendance list
 }
 
 // Course materials
@@ -109,6 +110,15 @@ export default function Ausbildungen({ user }: AusbildungenProps) {
   const [slides, setSlides] = useState<LearningSlide[]>([])
   const [allParticipants, setAllParticipants] = useState<SessionParticipant[]>([])
 
+  // Team qualifications
+  const [availableQualifications, setAvailableQualifications] = useState<string[]>([
+    'Erste Hilfe', 'Brandschutz', 'Forklift', 'PSA', 'Gabelstapler',
+    'Arbeitsschutz', 'Gefahrstoffe', 'Ladungssicherung', 'Hebezeuge',
+    'Elektrische Geräte', 'Atemschutz', 'Notfallmanager'
+  ])
+  const [memberQualifications, setMemberQualifications] = useState<Record<string, string[]>>({})
+  const [editingQualifications, setEditingQualifications] = useState<string | null>(null)
+
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
 
@@ -144,6 +154,11 @@ export default function Ausbildungen({ user }: AusbildungenProps) {
   const [availableUsers, setAvailableUsers] = useState<any[]>([])
   const [showAddParticipants, setShowAddParticipants] = useState(false)
   const [selectedParticipants, setSelectedParticipants] = useState<string[]>([])
+
+  // Presentation cockpit state
+  const [showPresentation, setShowPresentation] = useState(false)
+  const [presentationSlides, setPresentationSlides] = useState<string[]>([])
+  const [currentSlide, setCurrentSlide] = useState(0)
 
   // Form states
   const [courseForm, setCourseForm] = useState({
@@ -239,11 +254,34 @@ export default function Ausbildungen({ user }: AusbildungenProps) {
         setAllParticipants(participantsData as unknown as SessionParticipant[])
         setLernbarUsers(orgData?.lernbar_users || [])
         setAllUsers(usersData)
+      } else if (activeTab === 'teilnehmer') {
+        // Load all data for participant management - team, participants, courses, sessions
+        const [teamData, participantsData, coursesData, sessionsData] = await Promise.all([
+          pb.collection('team_members').getFullList({
+            filter: `organization_id = "${user.organization_id}"`
+          }),
+          pb.collection('session_participants').getFullList(),
+          pb.collection('training_courses').getFullList({
+            filter: `organization_id = "${user.organization_id}"`
+          }),
+          pb.collection('training_sessions').getFullList()
+        ])
+        setTeamMembers(teamData as unknown as TeamMember[])
+        setAllParticipants(participantsData as unknown as SessionParticipant[])
+        setCourses(coursesData as unknown as TrainingCourse[])
+        setSessions(sessionsData as unknown as TrainingSession[])
       } else if (activeTab === 'team') {
         const membersData = await pb.collection('team_members').getFullList({
           filter: `organization_id = "${user.organization_id}"`
         })
         setTeamMembers(membersData as unknown as TeamMember[])
+
+        // Load qualifications for each member
+        const quals: Record<string, string[]> = {}
+        membersData.forEach((m: any) => {
+          quals[m.id] = m.qualifikationen || []
+        })
+        setMemberQualifications(quals)
       } else if (activeTab === 'lernbereich') {
         const [modulesData, slidesData] = await Promise.all([
           pb.collection('learning_modules').getFullList({
@@ -461,6 +499,37 @@ export default function Ausbildungen({ user }: AusbildungenProps) {
     }
   }
 
+  // Update attendance (Anwesenheit)
+  async function updateAttendance(participantId: string, anwesend: boolean) {
+    try {
+      await pb.collection('session_participants').update(participantId, {
+        anwesend
+      })
+      // Update local state
+      setSessionParticipants(prev => prev.map(p =>
+        p.id === participantId ? { ...p, anwesend } : p
+      ))
+      setMessage('✅ Anwesenheit aktualisiert!')
+    } catch (e: any) {
+      setMessage('❌ Fehler: ' + e.message)
+    }
+  }
+
+  // Start presentation cockpit
+  function startPresentation(materials: CourseMaterial[]) {
+    // Get all dozent materials as presentation slides
+    const slides = materials
+      .filter(m => m.file_type === 'dozent')
+      .map(m => m.file_url)
+    if (slides.length > 0) {
+      setPresentationSlides(slides)
+      setCurrentSlide(0)
+      setShowPresentation(true)
+    } else {
+      setMessage('❌ Keine Präsentationen für Dozent vorhanden')
+    }
+  }
+
   // Remove participant
   async function removeParticipant(participantId: string) {
     if (!confirm('Möchten Sie diesen Teilnehmer entfernen?')) return
@@ -571,6 +640,27 @@ export default function Ausbildungen({ user }: AusbildungenProps) {
     } catch (e: any) {
       setMessage('❌ Fehler: ' + e.message)
     }
+  }
+
+  async function saveMemberQualifications(memberId: string, qualifications: string[]) {
+    try {
+      await pb.collection('team_members').update(memberId, {
+        qualifikationen: qualifications
+      })
+      setMemberQualifications(prev => ({ ...prev, [memberId]: qualifications }))
+      setEditingQualifications(null)
+      setMessage('✅ Qualifikationen gespeichert!')
+    } catch (e: any) {
+      setMessage('❌ Fehler: ' + e.message)
+    }
+  }
+
+  function toggleQualification(memberId: string, qualification: string) {
+    const current = memberQualifications[memberId] || []
+    const updated = current.includes(qualification)
+      ? current.filter(q => q !== qualification)
+      : [...current, qualification]
+    setMemberQualifications(prev => ({ ...prev, [memberId]: updated }))
   }
 
   // Module functions
@@ -710,6 +800,18 @@ export default function Ausbildungen({ user }: AusbildungenProps) {
               <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
             </svg>
             Schulungen
+          </button>
+          <button
+            className={`tab-btn ${activeTab === 'teilnehmer' ? 'active' : ''}`}
+            onClick={() => setActiveTab('teilnehmer')}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+              <circle cx="9" cy="7" r="4"/>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+            </svg>
+            Teilnehmer
           </button>
           <button
             className={`tab-btn ${activeTab === 'team' ? 'active' : ''}`}
@@ -945,6 +1047,203 @@ export default function Ausbildungen({ user }: AusbildungenProps) {
           </div>
         )}
 
+        {/* Teilnehmer Tab - User-based training progress */}
+        {activeTab === 'teilnehmer' && (
+          <div className="tab-content">
+            <div className="teilnehmer-overview">
+              <h2 className="section-title">Teilnehmer-Übersicht</h2>
+
+              {loading ? (
+                <div className="loading">Lade Daten...</div>
+              ) : (
+                <>
+                  {/* Compliance Overview */}
+                  <div className="dashboard-section">
+                    <h3>Compliance-Übersicht</h3>
+                    <div className="compliance-stats">
+                      {(() => {
+                        const mandatoryCourses = courses.filter(c => c.is_mandatory)
+                        if (mandatoryCourses.length === 0) {
+                          return <p style={{ color: 'rgba(255,255,255,0.6)' }}>Keine Pflicht-Schulungen definiert</p>
+                        }
+
+                        const teamWithProgress = teamMembers.map(member => {
+                          const memberParticipants = allParticipants.filter(p =>
+                            p.team_member_id === member.id &&
+                            p.status === 'zugesagt'
+                          )
+
+                          // Get completed course IDs for this member
+                          const completedCourseIds = new Set<string>()
+                          memberParticipants.forEach(p => {
+                            const session = sessions.find(s => s.id === p.session_id)
+                            if (session && session.status === 'abgeschlossen') {
+                              const course = courses.find(c => c.id === session.course_id)
+                              if (course) completedCourseIds.add(course.id)
+                            }
+                          })
+
+                          const completed = mandatoryCourses.filter(c => completedCourseIds.has(c.id)).length
+                          const total = mandatoryCourses.length
+                          const percentage = total > 0 ? Math.round((completed / total) * 100) : 0
+
+                          return { member, completed, total, percentage }
+                        })
+
+                        const avgCompliance = teamWithProgress.length > 0
+                          ? Math.round(teamWithProgress.reduce((sum, t) => sum + t.percentage, 0) / teamWithProgress.length)
+                          : 0
+
+                        return (
+                          <div className="compliance-grid">
+                            <div className="compliance-card overall">
+                              <div className="compliance-value">{avgCompliance}%</div>
+                              <div className="compliance-label">Gesamt-Compliance</div>
+                            </div>
+                            <div className="compliance-card">
+                              <div className="compliance-value">{teamWithProgress.filter(t => t.percentage === 100).length}</div>
+                              <div className="compliance-label">Vollständig</div>
+                            </div>
+                            <div className="compliance-card">
+                              <div className="compliance-value">{teamWithProgress.filter(t => t.percentage > 0 && t.percentage < 100).length}</div>
+                              <div className="compliance-label">Teilweise</div>
+                            </div>
+                            <div className="compliance-card">
+                              <div className="compliance-value">{teamWithProgress.filter(t => t.percentage === 0).length}</div>
+                              <div className="compliance-label">Ausstehend</div>
+                            </div>
+                          </div>
+                        )
+                      })()}
+                    </div>
+                  </div>
+
+                  {/* Mandatory Trainings Overview */}
+                  <div className="dashboard-section">
+                    <h3>Pflicht-Schulungen Status</h3>
+                    {courses.filter(c => c.is_mandatory).length === 0 ? (
+                      <div className="empty-state small">
+                        <p>Keine Pflicht-Schulungen definiert</p>
+                      </div>
+                    ) : (
+                      <div className="mandatory-overview-grid">
+                        {courses.filter(c => c.is_mandatory).map(course => {
+                          const completedCount = teamMembers.filter(member => {
+                            const memberParticipants = allParticipants.filter(p =>
+                              p.team_member_id === member.id &&
+                              p.status === 'zugesagt'
+                            )
+                            return memberParticipants.some(p => {
+                              const session = sessions.find(s => s.id === p.session_id)
+                              return session && session.course_id === course.id && session.status === 'abgeschlossen'
+                            })
+                          }).length
+
+                          const totalCount = teamMembers.length
+                          const percentage = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0
+
+                          return (
+                            <div key={course.id} className="mandatory-overview-card">
+                              <div className="mandatory-overview-header">
+                                <span className="mandatory-overview-title">{course.title}</span>
+                                <span className={`mandatory-overview-badge ${percentage === 100 ? 'complete' : percentage > 0 ? 'partial' : 'pending'}`}>
+                                  {completedCount}/{totalCount}
+                                </span>
+                              </div>
+                              <div className="mandatory-overview-bar">
+                                <div
+                                  className="mandatory-overview-progress"
+                                  style={{ width: `${percentage}%` }}
+                                />
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Individual Participant Progress */}
+                  <div className="dashboard-section">
+                    <h3>Fortschritt pro Person</h3>
+                    {teamMembers.length === 0 ? (
+                      <div className="empty-state small">
+                        <p>Keine Teammitglieder vorhanden</p>
+                      </div>
+                    ) : (
+                      <div className="participant-progress-list">
+                        {teamMembers.map(member => {
+                          const memberParticipants = allParticipants.filter(p =>
+                            p.team_member_id === member.id &&
+                            p.status === 'zugesagt'
+                          )
+
+                          // Get completed course IDs
+                          const completedCourseIds = new Set<string>()
+                          memberParticipants.forEach(p => {
+                            const session = sessions.find(s => s.id === p.session_id)
+                            if (session && session.status === 'abgeschlossen') {
+                              completedCourseIds.add(session.course_id)
+                            }
+                          })
+
+                          const mandatoryCourses = courses.filter(c => c.is_mandatory)
+                          const completedMandatory = mandatoryCourses.filter(c => completedCourseIds.has(c.id))
+                          const pendingMandatory = mandatoryCourses.filter(c => !completedCourseIds.has(c.id))
+
+                          const percentage = mandatoryCourses.length > 0
+                            ? Math.round((completedMandatory.length / mandatoryCourses.length) * 100)
+                            : 100
+
+                          return (
+                            <div key={member.id} className="participant-progress-item">
+                              <div className="participant-progress-header">
+                                <div className="participant-progress-avatar">
+                                  {(member.name || '?').charAt(0).toUpperCase()}
+                                </div>
+                                <div className="participant-progress-info">
+                                  <span className="participant-progress-name">{member.name}</span>
+                                  <span className="participant-progress-role">{member.role}</span>
+                                </div>
+                                <div className={`participant-progress-badge ${percentage === 100 ? 'complete' : percentage > 0 ? 'partial' : 'pending'}`}>
+                                  {percentage}%
+                                </div>
+                              </div>
+
+                              {mandatoryCourses.length > 0 && (
+                                <div className="participant-progress-details">
+                                  <div className="progress-completed">
+                                    <span className="progress-label">Erledigt:</span>
+                                    <div className="progress-tags">
+                                      {completedMandatory.map(c => (
+                                        <span key={c.id} className="progress-tag complete">{c.title}</span>
+                                      ))}
+                                      {completedMandatory.length === 0 && <span className="progress-tag none">-</span>}
+                                    </div>
+                                  </div>
+                                  <div className="progress-pending">
+                                    <span className="progress-label">Ausstehend:</span>
+                                    <div className="progress-tags">
+                                      {pendingMandatory.map(c => (
+                                        <span key={c.id} className="progress-tag pending">{c.title}</span>
+                                      ))}
+                                      {pendingMandatory.length === 0 && <span className="progress-tag none">Alle erledigt</span>}
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Team Tab */}
         {activeTab === 'team' && (
           <div className="tab-content">
@@ -967,13 +1266,62 @@ export default function Ausbildungen({ user }: AusbildungenProps) {
             ) : (
               <div className="cards-grid">
                 {teamMembers.map(member => (
-                  <div key={member.id} className="card">
+                  <div key={member.id} className="card team-card">
                     <div className="card-header">
-                      <h3>{member.name}</h3>
+                      <h3>{member.vorname ? `${member.vorname} ${member.name}` : member.name}</h3>
                       <span className="badge info">{member.role}</span>
                     </div>
                     <p className="card-meta">{member.email}</p>
                     {member.phone && <p className="card-meta">{member.phone}</p>}
+
+                    {/* Qualifications Section */}
+                    <div className="qualifications-section">
+                      <div className="qualifications-header">
+                        <h4>Qualifikationen</h4>
+                        {canManage && (
+                          <button
+                            className="edit-qual-btn"
+                            onClick={() => setEditingQualifications(editingQualifications === member.id ? null : member.id)}
+                          >
+                            {editingQualifications === member.id ? 'Schließen' : 'Bearbeiten'}
+                          </button>
+                        )}
+                      </div>
+
+                      {editingQualifications === member.id ? (
+                        <div className="qualifications-edit">
+                          <div className="qualifications-grid">
+                            {availableQualifications.map(qual => (
+                              <label key={qual} className="qual-checkbox">
+                                <input
+                                  type="checkbox"
+                                  checked={(memberQualifications[member.id] || []).includes(qual)}
+                                  onChange={() => toggleQualification(member.id, qual)}
+                                />
+                                <span>{qual}</span>
+                              </label>
+                            ))}
+                          </div>
+                          <button
+                            className="save-qual-btn"
+                            onClick={() => saveMemberQualifications(member.id, memberQualifications[member.id] || [])}
+                          >
+                            Speichern
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="qualifications-tags">
+                          {(memberQualifications[member.id] || member.qualifikationen || []).length > 0 ? (
+                            (memberQualifications[member.id] || member.qualifikationen || []).map(qual => (
+                              <span key={qual} className="qual-tag">{qual}</span>
+                            ))
+                          ) : (
+                            <span className="no-quals">Keine Qualifikationen</span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
                     {canManage && (
                       <div className="card-actions">
                         <button onClick={() => openEditMember(member)}>Bearbeiten</button>
@@ -1480,6 +1828,7 @@ export default function Ausbildungen({ user }: AusbildungenProps) {
                       <tr>
                         <th>Name</th>
                         <th>Status</th>
+                        <th>Anwesenheit</th>
                         {canManage && <th>Aktionen</th>}
                       </tr>
                     </thead>
@@ -1488,6 +1837,7 @@ export default function Ausbildungen({ user }: AusbildungenProps) {
                         const member = availableUsers.find((u: any) => u.id === participant.team_member_id)
                         const fullName = member ? `${member.vorname || ''} ${member.name || ''}`.trim() : participant.user_name || 'Unbekannt'
                         const qualifikationen = member?.qualifikationen as string[] | undefined
+                        const showAttendance = participant.status === 'zugesagt'
 
                         return (
                           <tr key={participant.id}>
@@ -1521,6 +1871,22 @@ export default function Ausbildungen({ user }: AusbildungenProps) {
                                 </span>
                               )}
                             </td>
+                            <td>
+                              {showAttendance || participant.anwesend !== undefined ? (
+                                <label className="attendance-checkbox">
+                                  <input
+                                    type="checkbox"
+                                    checked={participant.anwesend || false}
+                                    onChange={(e) => updateAttendance(participant.id, e.target.checked)}
+                                  />
+                                  <span className={`attendance-badge ${participant.anwesend ? 'present' : 'absent'}`}>
+                                    {participant.anwesend ? '✅ Anwesend' : '❌ Abwesend'}
+                                  </span>
+                                </label>
+                              ) : (
+                                <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '12px' }}>-</span>
+                              )}
+                            </td>
                             {canManage && (
                               <td>
                                 <button
@@ -1538,6 +1904,18 @@ export default function Ausbildungen({ user }: AusbildungenProps) {
                   </table>
                 )}
               </div>
+
+              {/* Presentation Start Button */}
+              {sessionMaterials.filter(m => m.file_type === 'dozent').length > 0 && (
+                <div className="detail-section">
+                  <button
+                    className="action-btn primary start-presentation-btn"
+                    onClick={() => startPresentation(sessionMaterials)}
+                  >
+                    📺 Präsentation starten
+                  </button>
+                </div>
+              )}
 
               {/* Course Materials Section */}
               <div className="detail-section">
@@ -1634,6 +2012,43 @@ export default function Ausbildungen({ user }: AusbildungenProps) {
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Presentation Cockpit Modal */}
+      {showPresentation && (
+        <div className="presentation-modal">
+          <div className="presentation-header">
+            <h3>Präsentations-Cockpit</h3>
+            <div className="presentation-controls">
+              <button onClick={() => setCurrentSlide(Math.max(0, currentSlide - 1))} disabled={currentSlide === 0}>
+                ← Zurück
+              </button>
+              <span className="slide-counter">{currentSlide + 1} / {presentationSlides.length}</span>
+              <button onClick={() => setCurrentSlide(Math.min(presentationSlides.length - 1, currentSlide + 1))} disabled={currentSlide === presentationSlides.length - 1}>
+                Weiter →
+              </button>
+              <button className="close-presentation" onClick={() => setShowPresentation(false)}>
+                Beenden
+              </button>
+            </div>
+          </div>
+          <div className="presentation-content">
+            {presentationSlides[currentSlide] && (
+              <img src={presentationSlides[currentSlide]} alt={`Slide ${currentSlide + 1}`} />
+            )}
+          </div>
+          <div className="presentation-thumbnails">
+            {presentationSlides.map((slide, idx) => (
+              <div
+                key={idx}
+                className={`thumbnail ${idx === currentSlide ? 'active' : ''}`}
+                onClick={() => setCurrentSlide(idx)}
+              >
+                <span>{idx + 1}</span>
+              </div>
+            ))}
           </div>
         </div>
       )}
