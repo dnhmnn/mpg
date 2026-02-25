@@ -685,101 +685,47 @@ export default function Ausbildungen({ user }: AusbildungenProps) {
           </div>
         )}
 
-        {/* Schulungen Tab - Two Column Layout */}
+        {/* Schulungen Tab */}
         {activeTab === 'schulungen' && (
-          <div className="tab-content two-column-layout">
-            {/* Left Column - Schulungen */}
-            <div className="column-left">
-              <div className="appointments-list">
-                <h2 className="section-title">Alle Termine</h2>
+          <div className="tab-content">
+            <div className="appointments-list">
+              <h2 className="section-title">Alle Termine</h2>
 
-                {loading ? (
-                  <div className="loading">Lade Schulungen...</div>
-                ) : sessions.length === 0 ? (
-                  <div className="empty-state">
-                    <p>Noch keine Schulungen vorhanden.</p>
-                    {canManage && <button className="action-btn primary" onClick={openAddCourse}>+ Termin hinzufügen</button>}
-                  </div>
-                ) : (
-                  /* All sessions sorted chronologically */
-                  sessions
-                    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-                    .map((session) => {
-                      const course = courses.find(c => c.id === session.course_id)
-                      const sessionDate = new Date(session.date)
-
-                      return (
-                        <div key={session.id} className="appointment-item" onClick={() => openSessionDetail(session)}>
-                          <div className="appointment-title">{course?.title || 'Schulung'}</div>
-                          <div className="appointment-date">
-                            {sessionDate.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })} • {sessionDate.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} Uhr
-                          </div>
-                        </div>
-                      )
-                    })
-                )}
-              </div>
-
-              {/* Add buttons */}
-              {canManage && (
-                <div className="calendar-actions">
-                  <button className="action-btn primary" onClick={openAddCourse}>
-                    + Neue Schulung
-                  </button>
+              {loading ? (
+                <div className="loading">Lade Schulungen...</div>
+              ) : sessions.length === 0 ? (
+                <div className="empty-state">
+                  <p>Noch keine Schulungen vorhanden.</p>
+                  {canManage && <button className="action-btn primary" onClick={openAddCourse}>+ Termin hinzufügen</button>}
                 </div>
+              ) : (
+                /* All sessions sorted chronologically */
+                sessions
+                  .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+                  .map((session) => {
+                    const course = courses.find(c => c.id === session.course_id)
+                    const sessionDate = new Date(session.date)
+
+                    return (
+                      <div key={session.id} className="appointment-item" onClick={() => openSessionDetail(session)}>
+                        <div className="appointment-title">{course?.title || 'Schulung'}</div>
+                        <div className="appointment-date">
+                          {sessionDate.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })} • {sessionDate.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} Uhr
+                        </div>
+                      </div>
+                    )
+                  })
               )}
             </div>
 
-            {/* Right Column - Team */}
-            <div className="column-right">
-              <div className="team-sidebar">
-                <div className="sidebar-header">
-                  <h3>Team</h3>
-                  {canManage && (
-                    <button className="action-btn small" onClick={openAddMember}>
-                      + Neu
-                    </button>
-                  )}
-                </div>
-
-                {loading ? (
-                  <div className="loading">Lade Team...</div>
-                ) : teamMembers.length === 0 ? (
-                  <div className="empty-state small">
-                    <p>Keine Teammitglieder</p>
-                  </div>
-                ) : (
-                  <div className="team-list">
-                    {teamMembers.map(member => {
-                      // Check if this team member has Lernbar access
-                      const matchingUser = allUsers.find((u: any) => u.email === member.email)
-                      const hasLernbar = matchingUser && lernbarUsers.includes(matchingUser.id)
-                      // Split name into first and last name
-                      const nameParts = member.name ? member.name.trim().split(' ') : []
-                      const firstName = nameParts[0] || ''
-                      const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : ''
-
-                      return (
-                        <div key={member.id} className="team-item" onClick={() => { setEditingMember(member); setShowTeamModal(true); }}>
-                          <div className="team-avatar">
-                            {(firstName || '?').charAt(0).toUpperCase()}
-                          </div>
-                          <div className="team-info">
-                            <span className="team-name">
-                              {firstName} {lastName}
-                            </span>
-                            <span className="team-role">{member.role}</span>
-                            <span className={`lernbar-badge ${hasLernbar ? 'active' : 'inactive'}`}>
-                              {hasLernbar ? 'Lernbar' : 'Kein Lernbar'}
-                            </span>
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                )}
+            {/* Add buttons */}
+            {canManage && (
+              <div className="calendar-actions">
+                <button className="action-btn primary" onClick={openAddCourse}>
+                  + Neue Schulung
+                </button>
               </div>
-            </div>
+            )}
           </div>
         )}
 
