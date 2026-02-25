@@ -20,7 +20,7 @@ const ALL_APPS: Record<string, App> = {
   dateien: { id: 'dateien', name: 'Dateien', icon: 'folder', url: '/dateien.html', permission: 'dateien' },
   qr: { id: 'qr', name: 'QR-Codes', icon: 'qrcode', url: '/qr-code-generator.html', permission: 'qr' },
   lernbar: { id: 'lernbar', name: 'Lernbar', icon: 'graduation', url: '/lernbar.html', permission: 'lernbar' },
-  ausbildungen: { id: 'ausbildungen', name: 'Ausbildungen', icon: 'book', url: '/ausbildungen.html', permission: 'ausbildungen_manage' },
+  ausbildungen: { id: 'ausbildungen', name: 'Ausbildungen', icon: 'book', url: '/ausbildungen', permission: 'ausbildungen_manage', isInternal: true },
   chat: { id: 'chat', name: 'Chat', icon: 'chat', url: '/chat.html', permission: 'chat' },
   dashboard: { id: 'dashboard', name: 'Dashboard', icon: 'dashboard', url: '/mpg-dashboard.html', permission: 'dashboard' },
   settings: { id: 'settings', name: 'Einstellungen', icon: 'settings', url: '#settings', permission: 'dashboard', isInternal: true }
