@@ -1219,16 +1219,18 @@ body.loaded {
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border-radius: 14px;
-  padding: 14px;
-  display: grid;
-  grid-template-columns: 50px 1fr;
-  gap: 12px;
+  padding: 16px;
   border: 0.5px solid rgba(255, 255, 255, 0.2);
-  transition: transform 0.2s;
+  transition: transform 0.2s, background 0.2s;
+  cursor: pointer;
 }
 
 .appointment-item:active {
   transform: scale(0.98);
+}
+
+.appointment-item:hover {
+  background: rgba(255, 255, 255, 0.18);
 }
 
 .appointment-item.past {
@@ -1295,7 +1297,7 @@ body.loaded {
 }
 
 .appointment-title {
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 600;
   color: #fff;
 }
@@ -1357,6 +1359,266 @@ body.loaded {
 
 .appointment-actions button:active {
   transform: scale(0.95);
+}
+
+/* Session Detail Modal */
+.session-detail-modal {
+  max-width: 500px;
+  max-height: 85vh;
+  overflow-y: auto;
+}
+
+.session-info {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.info-row:last-child {
+  border-bottom: none;
+}
+
+.info-label {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.info-value {
+  font-size: 13px;
+  color: #fff;
+  font-weight: 500;
+  text-align: right;
+}
+
+.detail-section {
+  margin-bottom: 20px;
+}
+
+.detail-section h4 {
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* Share Buttons */
+.share-buttons {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.share-btn {
+  flex: 1;
+  min-width: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border: none;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.share-btn:active {
+  transform: scale(0.95);
+}
+
+.share-btn.whatsapp {
+  background: #25D366;
+  color: #fff;
+}
+
+.share-btn.email {
+  background: #4285F4;
+  color: #fff;
+}
+
+.share-btn.link {
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+}
+
+/* Participants */
+.participants-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.participant-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.08);
+  padding: 12px;
+  border-radius: 10px;
+}
+
+.participant-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.participant-name {
+  font-size: 14px;
+  color: #fff;
+  font-weight: 500;
+}
+
+.participant-status {
+  font-size: 10px;
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+
+.participant-status.eingeladen {
+  background: rgba(255, 149, 0, 0.3);
+  color: #FF9500;
+}
+
+.participant-status.zugesagt {
+  background: rgba(52, 199, 89, 0.3);
+  color: #34c759;
+}
+
+.participant-status.abgesagt {
+  background: rgba(255, 59, 48, 0.3);
+  color: #ff3b30;
+}
+
+.participant-status.entschuldigt {
+  background: rgba(0, 122, 255, 0.3);
+  color: #007AFF;
+}
+
+.participant-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.participant-actions button {
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.participant-actions button:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.participant-actions button.delete {
+  background: rgba(255, 59, 48, 0.3);
+}
+
+.add-participant {
+  margin-top: 12px;
+}
+
+.add-participant select {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  font-size: 14px;
+}
+
+.add-participant select option {
+  background: #1a1a2e;
+  color: #fff;
+}
+
+/* Materials */
+.materials-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.material-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.08);
+  padding: 12px;
+  border-radius: 10px;
+}
+
+.material-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.material-title {
+  font-size: 14px;
+  color: #fff;
+}
+
+.material-type {
+  font-size: 10px;
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+
+.material-type.dozent {
+  background: rgba(255, 149, 0, 0.3);
+  color: #FF9500;
+}
+
+.material-type.teilnehmer {
+  background: rgba(0, 122, 255, 0.3);
+  color: #007AFF;
+}
+
+.material-download {
+  padding: 6px 12px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  color: #fff;
+  font-size: 12px;
+  text-decoration: none;
+}
+
+.material-download:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.hint-text {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.5);
+  text-align: center;
+  margin-top: 12px;
+}
+
+.empty-text {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.5);
+  text-align: center;
+  padding: 20px;
 }
 
 .action-btn {

@@ -32,6 +32,27 @@ interface TrainingSession {
   duration_minutes?: number
 }
 
+// Participant types
+interface SessionParticipant {
+  id: string
+  session_id: string
+  user_id: string
+  user_name?: string
+  user_email?: string
+  status: 'eingeladen' | 'zugesagt' | 'abgesagt' | 'entschuldigt'
+  response_date?: string
+}
+
+// Course materials
+interface CourseMaterial {
+  id: string
+  session_id: string
+  title: string
+  file_url: string
+  file_type: 'dozent' | 'teilnehmer'
+  uploaded_at: string
+}
+
 // Calendar helper functions
 function getDayName(date: Date, short = false): string {
   const days = short
@@ -100,6 +121,14 @@ export default function Ausbildungen({ user }: AusbildungenProps) {
   const [showSlideModal, setShowSlideModal] = useState(false)
   const [editingSlide, setEditingSlide] = useState<LearningSlide | null>(null)
   const [selectedModule, setSelectedModule] = useState<LearningModule | null>(null)
+
+  // Session detail modal
+  const [showSessionDetail, setShowSessionDetail] = useState(false)
+  const [selectedSession, setSelectedSession] = useState<TrainingSession | null>(null)
+  const [selectedSessionCourse, setSelectedSessionCourse] = useState<TrainingCourse | null>(null)
+  const [sessionParticipants, setSessionParticipants] = useState<SessionParticipant[]>([])
+  const [sessionMaterials, setSessionMaterials] = useState<CourseMaterial[]>([])
+  const [availableUsers, setAvailableUsers] = useState<any[]>([])
 
   // Form states
   const [courseForm, setCourseForm] = useState({
@@ -244,6 +273,129 @@ export default function Ausbildungen({ user }: AusbildungenProps) {
     setEditingSession(null)
     setSessionForm({ date: '', location: '', max_participants: 10, status: 'geplant' })
     setShowSessionModal(true)
+  }
+
+  async function openSessionDetail(session: TrainingSession) {
+    const course = courses.find(c => c.id === session.course_id)
+    setSelectedSession(session)
+    setSelectedSessionCourse(course || null)
+    setShowSessionDetail(true)
+
+    // Load participants
+    try {
+      const participantsData = await pb.collection('session_participants').getFullList({
+        filter: `session_id = "${session.id}"`
+      })
+      const participants = participantsData as unknown as SessionParticipant[]
+
+      // Get user details for each participant
+      const usersData = await pb.collection('users').getFullList()
+      const usersMap = new Map(usersData.map((u: any) => [u.id, u]))
+
+      const participantsWithUser = participants.map((p: any) => {
+        const user = usersMap.get(p.user_id)
+        return {
+          ...p,
+          user_name: user?.name || user?.email || 'Unbekannt',
+          user_email: user?.email || ''
+        }
+      })
+      setSessionParticipants(participantsWithUser)
+    } catch (e) {
+      console.log('No participants yet')
+      setSessionParticipants([])
+    }
+
+    // Load materials
+    try {
+      const materialsData = await pb.collection('session_materials').getFullList({
+        filter: `session_id = "${session.id}"`
+      })
+      setSessionMaterials(materialsData as unknown as CourseMaterial[])
+    } catch (e) {
+      console.log('No materials yet')
+      setSessionMaterials([])
+    }
+
+    // Load available users for adding participants
+    try {
+      const usersData = await pb.collection('users').getFullList({
+        filter: `organization_id = "${user?.organization_id}"`
+      })
+      setAvailableUsers(usersData)
+    } catch (e) {
+      setAvailableUsers([])
+    }
+  }
+
+  // Add participant to session
+  async function addParticipant(userId: string) {
+    if (!selectedSession) return
+    try {
+      await pb.collection('session_participants').create({
+        session_id: selectedSession.id,
+        user_id: userId,
+        status: 'eingeladen'
+      })
+      openSessionDetail(selectedSession) // Refresh
+      setMessage('✅ Teilnehmer eingeladen!')
+    } catch (e: any) {
+      setMessage('❌ Fehler: ' + e.message)
+    }
+  }
+
+  // Update participant status
+  async function updateParticipantStatus(participantId: string, status: 'zugesagt' | 'abgesagt' | 'entschuldigt') {
+    try {
+      await pb.collection('session_participants').update(participantId, {
+        status,
+        response_date: new Date().toISOString()
+      })
+      if (selectedSession) {
+        openSessionDetail(selectedSession) // Refresh
+      }
+      setMessage('✅ Status aktualisiert!')
+    } catch (e: any) {
+      setMessage('❌ Fehler: ' + e.message)
+    }
+  }
+
+  // Remove participant
+  async function removeParticipant(participantId: string) {
+    if (!confirm('Möchten Sie diesen Teilnehmer entfernen?')) return
+    try {
+      await pb.collection('session_participants').delete(participantId)
+      if (selectedSession) {
+        openSessionDetail(selectedSession) // Refresh
+      }
+      setMessage('✅ Teilnehmer entfernt!')
+    } catch (e: any) {
+      setMessage('❌ Fehler: ' + e.message)
+    }
+  }
+
+  // Get share link
+  function getShareLink() {
+    if (!selectedSession || !selectedSessionCourse) return ''
+    const baseUrl = window.location.origin
+    return `${baseUrl}/schulung/${selectedSession.id}`
+  }
+
+  // Share via WhatsApp
+  function shareViaWhatsApp() {
+    if (!selectedSession || !selectedSessionCourse) return
+    const link = getShareLink()
+    const text = `${selectedSessionCourse.title}\nDatum: ${new Date(selectedSession.date).toLocaleDateString('de-DE')}\nOrt: ${selectedSession.location}\n${link}`
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank')
+  }
+
+  // Share via Email
+  function shareViaEmail() {
+    if (!selectedSession || !selectedSessionCourse) return
+    const link = getShareLink()
+    const subject = encodeURIComponent(`Schulung: ${selectedSessionCourse.title}`)
+    const body = encodeURIComponent(`${selectedSessionCourse.title}\n\nDatum: ${new Date(selectedSession.date).toLocaleDateString('de-DE')}\nUhrzeit: ${new Date(selectedSession.date).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}\nOrt: ${selectedSession.location}\n\n${selectedSessionCourse.description || ''}\n\nLink: ${link}`)
+    window.location.href = `mailto:?subject=${subject}&body=${body}`
   }
 
   async function saveSession() {
@@ -506,51 +658,11 @@ export default function Ausbildungen({ user }: AusbildungenProps) {
                 sessions
                   .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
                   .map((session) => {
-                    const sessionDate = new Date(session.date)
                     const course = courses.find(c => c.id === session.course_id)
-                    const duration = session.duration_minutes || 60
-                    const endTime = new Date(sessionDate.getTime() + duration * 60000)
-
-                    const now = new Date()
-                    const isPast = sessionDate.getTime() < now.getTime()
-                    const isCurrent = sessionDate.getTime() <= now.getTime() && endTime.getTime() > now.getTime()
 
                     return (
-                      <div key={session.id} className={`appointment-item ${isCurrent ? 'current' : ''} ${isPast ? 'past' : ''}`}>
-                        <div className="appointment-date">
-                          <span className="appointment-day">{sessionDate.getDate()}</span>
-                          <span className="appointment-month">{getMonthName(sessionDate)}</span>
-                          <span className="appointment-weekday">{getDayName(sessionDate)}</span>
-                        </div>
-                        <div className="appointment-time">
-                          <span className="time-start">{sessionDate.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}</span>
-                          <span className="time-end">- {endTime.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}</span>
-                        </div>
-                        <div className="appointment-details">
-                          <div className="appointment-title">{course?.title || 'Schulung'}</div>
-                          <div className="appointment-meta">
-                            <span className="appointment-location">
-                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14">
-                                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
-                                <circle cx="12" cy="10" r="3"/>
-                              </svg>
-                              {session.location}
-                            </span>
-                            <span className={`appointment-status badge ${session.status}`}>{session.status}</span>
-                            {course?.is_mandatory && <span className="badge mandatory">Pflicht</span>}
-                            <span className="badge type">{course?.type || 'online'}</span>
-                          </div>
-                          {course?.description && (
-                            <div className="appointment-description">{course.description}</div>
-                          )}
-                          {canManage && course && (
-                            <div className="appointment-actions">
-                              <button onClick={() => openAddSession(course)}>+ Termin</button>
-                              <button onClick={() => openEditCourse(course)}>Bearbeiten</button>
-                              <button onClick={() => deleteCourse(course.id)} className="delete">Löschen</button>
-                            </div>
-                          )}
-                        </div>
+                      <div key={session.id} className="appointment-item" onClick={() => openSessionDetail(session)}>
+                        <div className="appointment-title">{course?.title || 'Schulung'}</div>
                       </div>
                     )
                   })
@@ -890,6 +1002,162 @@ export default function Ausbildungen({ user }: AusbildungenProps) {
                 <textarea value={slideForm.content} onChange={e => setSlideForm({...slideForm, content: e.target.value})} rows={6} />
               </div>
               <button className="action-btn primary" onClick={saveSlide}>Speichern</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Session Detail Modal */}
+      {showSessionDetail && selectedSession && selectedSessionCourse && (
+        <div className="modal-overlay" onClick={() => setShowSessionDetail(false)}>
+          <div className="modal-content session-detail-modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>{selectedSessionCourse.title}</h3>
+              <button className="modal-close" onClick={() => setShowSessionDetail(false)}>×</button>
+            </div>
+            <div className="modal-body">
+              {/* Session Info */}
+              <div className="session-info">
+                <div className="info-row">
+                  <span className="info-label">Datum:</span>
+                  <span className="info-value">{new Date(selectedSession.date).toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</span>
+                </div>
+                <div className="info-row">
+                  <span className="info-label">Uhrzeit:</span>
+                  <span className="info-value">{new Date(selectedSession.date).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}</span>
+                </div>
+                <div className="info-row">
+                  <span className="info-label">Ort:</span>
+                  <span className="info-value">{selectedSession.location}</span>
+                </div>
+                <div className="info-row">
+                  <span className="info-label">Typ:</span>
+                  <span className="info-value badge">{selectedSessionCourse.type}</span>
+                </div>
+                {selectedSessionCourse.description && (
+                  <div className="info-row">
+                    <span className="info-label">Beschreibung:</span>
+                    <span className="info-value">{selectedSessionCourse.description}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Share Section */}
+              <div className="detail-section">
+                <h4>Teilen</h4>
+                <div className="share-buttons">
+                  <button className="share-btn whatsapp" onClick={shareViaWhatsApp}>
+                    <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+                      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+                    </svg>
+                    WhatsApp
+                  </button>
+                  <button className="share-btn email" onClick={shareViaEmail}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="20" height="20">
+                      <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                      <polyline points="22,6 12,13 2,6"/>
+                    </svg>
+                    E-Mail
+                  </button>
+                  <button className="share-btn link" onClick={() => { navigator.clipboard.writeText(getShareLink()); setMessage('✅ Link kopiert!'); }}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="20" height="20">
+                      <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+                      <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+                    </svg>
+                    Link kopieren
+                  </button>
+                </div>
+              </div>
+
+              {/* Participants Section */}
+              <div className="detail-section">
+                <h4>Teilnehmer ({sessionParticipants.length})</h4>
+
+                {sessionParticipants.length === 0 ? (
+                  <p className="empty-text">Noch keine Teilnehmer eingeladen.</p>
+                ) : (
+                  <div className="participants-list">
+                    {sessionParticipants.map(participant => (
+                      <div key={participant.id} className="participant-item">
+                        <div className="participant-info">
+                          <span className="participant-name">{participant.user_name}</span>
+                          <span className={`participant-status badge ${participant.status}`}>
+                            {participant.status === 'eingeladen' ? 'Eingeladen' :
+                             participant.status === 'zugesagt' ? 'Zugesagt' :
+                             participant.status === 'abgesagt' ? 'Abgesagt' : 'Entschuldigt'}
+                          </span>
+                        </div>
+                        {canManage && (
+                          <div className="participant-actions">
+                            <button onClick={() => updateParticipantStatus(participant.id, 'zugesagt')} title="Zusagen">
+                              ✓
+                            </button>
+                            <button onClick={() => updateParticipantStatus(participant.id, 'abgesagt')} title="Absagen">
+                              ✗
+                            </button>
+                            <button onClick={() => updateParticipantStatus(participant.id, 'entschuldigt')} title="Entschuldigen">
+                              E
+                            </button>
+                            <button onClick={() => removeParticipant(participant.id)} className="delete" title="Entfernen">
+                              🗑
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Add Participant */}
+                {canManage && availableUsers.length > 0 && (
+                  <div className="add-participant">
+                    <select
+                      onChange={(e) => { if (e.target.value) { addParticipant(e.target.value); e.target.value = ''; } }}
+                      defaultValue=""
+                    >
+                      <option value="">+ Teilnehmer hinzufügen...</option>
+                      {availableUsers
+                        .filter(u => !sessionParticipants.some(p => p.user_id === u.id))
+                        .map(u => (
+                          <option key={u.id} value={u.id}>{u.name || u.email}</option>
+                        ))
+                      }
+                    </select>
+                  </div>
+                )}
+              </div>
+
+              {/* Course Materials Section */}
+              <div className="detail-section">
+                <h4>Unterlagen</h4>
+
+                {sessionMaterials.length === 0 ? (
+                  <p className="empty-text">Noch keine Unterlagen hochgeladen.</p>
+                ) : (
+                  <div className="materials-list">
+                    {sessionMaterials.map(material => (
+                      <div key={material.id} className="material-item">
+                        <div className="material-info">
+                          <span className="material-title">{material.title}</span>
+                          <span className={`material-type badge ${material.file_type}`}>
+                            {material.file_type === 'dozent' ? 'Dozent' : 'Teilnehmer'}
+                          </span>
+                        </div>
+                        <a href={material.file_url} target="_blank" rel="noopener noreferrer" className="material-download">
+                          Öffnen
+                        </a>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Add Material (placeholder - would need file upload implementation) */}
+                {canManage && (
+                  <div className="add-material">
+                    <p className="hint-text">Dateien können über die PocketBase Admin-Oberfläche hochgeladen werden.</p>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
