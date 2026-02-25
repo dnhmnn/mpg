@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { pb } from '../lib/pocketbase'
 
 export default function Login() {
@@ -16,10 +16,10 @@ export default function Login() {
 
     try {
       await pb.collection('users').authWithPassword(email, password)
-      
+
       // Erfolgreich eingeloggt - zum Hub
-      navigate('/')
-    } catch (err: any) {
+      navigate('/hub')
+    } catch (err: unknown) {
       console.error('Login error:', err)
       setError('E-Mail oder Passwort falsch')
     } finally {
@@ -28,187 +28,75 @@ export default function Login() {
   }
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      background: 'linear-gradient(135deg, #667eea 0%, #f97316 50%, #764ba2 100%)',
-      padding: '20px'
-    }}>
-      <div style={{
-        width: '100%',
-        maxWidth: '400px',
-        background: 'rgba(255, 255, 255, 0.95)',
-        backdropFilter: 'blur(20px)',
-        WebkitBackdropFilter: 'blur(20px)',
-        borderRadius: '24px',
-        padding: '40px',
-        boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
-        border: '0.5px solid rgba(255, 255, 255, 0.3)'
-      }}>
-        {/* Logo */}
-        <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-          <svg width="120" height="32" viewBox="0 0 560 140" style={{ margin: '0 auto' }}>
-            <defs>
-              <linearGradient id="loginLogoGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%" style={{ stopColor: '#667eea', stopOpacity: 1 }} />
-                <stop offset="100%" style={{ stopColor: '#764ba2', stopOpacity: 1 }} />
-              </linearGradient>
-            </defs>
-            <rect x="20" y="20" width="100" height="100" rx="26" fill="url(#loginLogoGrad)"/>
-            <path d="M45 42 L45 98 L60 98 L60 78 L72 78 L83 98 L100 98 L87 77 Q92 74 92 63 Q92 42 75 42 Z M60 52 L72 52 Q77 52 77 62 Q77 72 72 72 L60 72 Z" 
-                  fill="white"/>
-            <text x="140" y="80" fontFamily="Inter, sans-serif" fontSize="46" fontWeight="600" fill="url(#loginLogoGrad)" letterSpacing="0">Responda</text>
+    <div className="login-page">
+      {/* Status Bar */}
+      <div className="status-bar">
+        <Link to="/" className="logo">
+          <svg width="120" height="32" viewBox="0 0 560 140">
+            <rect x="20" y="20" width="100" height="100" rx="26" fill="rgba(255,255,255,0.25)"/>
+            <path d="M45 42 L45 98 L60 98 L60 78 L72 78 L83 98 L100 98 L87 77 Q92 74 92 63 Q92 42 75 42 Z M60 52 L72 52 Q77 52 77 62 Q77 72 72 72 L60 72 Z" fill="white"/>
+            <text x="140" y="80" fontFamily="Inter, sans-serif" fontSize="46" fontWeight="600" fill="white" letterSpacing="0">Responda</text>
           </svg>
-          <h1 style={{ 
-            fontSize: '24px', 
-            fontWeight: 700, 
-            color: '#1a1a1a', 
-            marginTop: '24px',
-            marginBottom: '8px'
-          }}>
-            Willkommen zurück
-          </h1>
-          <p style={{ 
-            fontSize: '14px', 
-            color: '#666',
-            margin: 0
-          }}>
-            Melde dich an um fortzufahren
-          </p>
-        </div>
+        </Link>
+        <div></div>
+        <div></div>
+      </div>
 
-        {/* Form */}
-        <form onSubmit={handleLogin}>
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{
-              display: 'block',
-              fontSize: '14px',
-              fontWeight: 600,
-              color: '#1a1a1a',
-              marginBottom: '8px'
-            }}>
-              E-Mail
-            </label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="deine@email.de"
-              required
-              style={{
-                width: '100%',
-                padding: '12px 16px',
-                border: '1px solid #e0e0e0',
-                borderRadius: '12px',
-                fontSize: '15px',
-                fontFamily: 'inherit',
-                background: '#fff',
-                transition: 'border-color 0.2s'
-              }}
-              onFocus={(e) => e.target.style.borderColor = '#667eea'}
-              onBlur={(e) => e.target.style.borderColor = '#e0e0e0'}
-            />
+      {/* Login Form */}
+      <div className="login-container">
+        <div className="login-card">
+          {/* Header */}
+          <div className="login-header">
+            <h1>Willkommen zurück</h1>
+            <p>Melde dich an um fortzufahren</p>
           </div>
 
-          <div style={{ marginBottom: '24px' }}>
-            <label style={{
-              display: 'block',
-              fontSize: '14px',
-              fontWeight: 600,
-              color: '#1a1a1a',
-              marginBottom: '8px'
-            }}>
-              Passwort
-            </label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              required
-              style={{
-                width: '100%',
-                padding: '12px 16px',
-                border: '1px solid #e0e0e0',
-                borderRadius: '12px',
-                fontSize: '15px',
-                fontFamily: 'inherit',
-                background: '#fff',
-                transition: 'border-color 0.2s'
-              }}
-              onFocus={(e) => e.target.style.borderColor = '#667eea'}
-              onBlur={(e) => e.target.style.borderColor = '#e0e0e0'}
-            />
-          </div>
-
-          {error && (
-            <div style={{
-              padding: '12px',
-              background: '#fee2e2',
-              borderRadius: '10px',
-              marginBottom: '20px',
-              fontSize: '14px',
-              color: '#ef4444',
-              textAlign: 'center'
-            }}>
-              {error}
+          {/* Form */}
+          <form onSubmit={handleLogin} className="login-form">
+            <div className="field">
+              <label>E-Mail</label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="deine@email.de"
+                required
+              />
             </div>
-          )}
 
-          <button
-            type="submit"
-            disabled={loading}
-            style={{
-              width: '100%',
-              padding: '14px',
-              border: 'none',
-              borderRadius: '12px',
-              fontSize: '16px',
-              fontWeight: 600,
-              color: '#fff',
-              background: loading 
-                ? '#ccc' 
-                : 'linear-gradient(135deg, #667eea, #764ba2)',
-              cursor: loading ? 'not-allowed' : 'pointer',
-              transition: 'transform 0.2s',
-              fontFamily: 'inherit'
-            }}
-            onMouseDown={(e) => {
-              if (!loading) {
-                (e.target as HTMLButtonElement).style.transform = 'scale(0.98)'
-              }
-            }}
-            onMouseUp={(e) => {
-              (e.target as HTMLButtonElement).style.transform = 'scale(1)'
-            }}
-            onMouseLeave={(e) => {
-              (e.target as HTMLButtonElement).style.transform = 'scale(1)'
-            }}
-          >
-            {loading ? 'Anmeldung läuft...' : 'Anmelden'}
-          </button>
-        </form>
+            <div className="field">
+              <label>Passwort</label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                required
+              />
+            </div>
 
-        {/* Footer */}
-        <div style={{
-          marginTop: '24px',
-          textAlign: 'center',
-          fontSize: '13px',
-          color: '#999'
-        }}>
-          Passwort vergessen?{' '}
-          <a 
-            href="mailto:support@responda.systems" 
-            style={{ 
-              color: '#667eea', 
-              textDecoration: 'none',
-              fontWeight: 600
-            }}
-          >
-            Support kontaktieren
-          </a>
+            {error && (
+              <div className="login-error">
+                {error}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="login-btn"
+            >
+              {loading ? 'Anmeldung läuft...' : 'Anmelden'}
+            </button>
+          </form>
+
+          {/* Footer */}
+          <div className="login-footer">
+            Passwort vergessen?{' '}
+            <a href="mailto:support@responda.systems">
+              Support kontaktieren
+            </a>
+          </div>
         </div>
       </div>
     </div>
