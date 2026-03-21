@@ -1,57 +1,49 @@
-import { useState } from ‘react’
-import { useNavigate, Link } from ‘react-router-dom’
-import { pb } from ‘../lib/pocketbase’
+import { useState } from “react”
+import { useNavigate, Link } from “react-router-dom”
+import { pb } from “../lib/pocketbase”
 
 export default function Login() {
 const navigate = useNavigate()
-const [email, setEmail] = useState(’’)
-const [password, setPassword] = useState(’’)
-const [error, setError] = useState(’’)
+const [email, setEmail] = useState(””)
+const [password, setPassword] = useState(””)
+const [error, setError] = useState(””)
 const [loading, setLoading] = useState(false)
 
-async function handleLogin(e: React.FormEvent) {
+async function handleLogin(e) {
 e.preventDefault()
-setError(’’)
+setError(””)
 setLoading(true)
 
-// TIMEOUT SCHUTZ - verhindert Aufhängen!
+```
 const timeoutId = setTimeout(() => {
   setLoading(false)
-  setError('Zeitüberschreitung - Bitte versuche es erneut')
-}, 10000) // 10 Sekunden
+  setError("Zeitüberschreitung - Bitte versuche es erneut")
+}, 10000)
 
 try {
-  // Login mit PocketBase
-  await pb.collection('users').authWithPassword(email, password)
-  
-  // Timeout abbrechen wenn erfolgreich
+  await pb.collection("users").authWithPassword(email, password)
   clearTimeout(timeoutId)
-
-  // Erfolgreich eingeloggt - zum Hub
-  navigate('/hub', { replace: true })
-} catch (err: any) {
-  // Timeout abbrechen bei Fehler
+  navigate("/hub", { replace: true })
+} catch (err) {
   clearTimeout(timeoutId)
+  console.error("Login error:", err)
   
-  console.error('Login error:', err)
-  
-  // Bessere Fehlermeldungen
   if (err?.status === 400) {
-    setError('E-Mail oder Passwort falsch')
-  } else if (err?.message?.includes('Failed to fetch')) {
-    setError('Keine Verbindung zum Server - Bitte Internetverbindung prüfen')
+    setError("E-Mail oder Passwort falsch")
+  } else if (err?.message?.includes("Failed to fetch")) {
+    setError("Keine Verbindung zum Server")
   } else {
-    setError('Anmeldung fehlgeschlagen - Bitte versuche es erneut')
+    setError("Anmeldung fehlgeschlagen")
   }
 } finally {
   setLoading(false)
 }
+```
 
 }
 
 return (
 <div className="login-page">
-{/* Status Bar */}
 <div className="status-bar">
 <Link to="/" className="logo">
 <svg width="120" height="32" viewBox="0 0 560 140">
@@ -64,16 +56,14 @@ return (
 <div></div>
 </div>
 
-  {/* Login Form */}
+```
   <div className="login-container">
     <div className="login-card">
-      {/* Header */}
       <div className="login-header">
         <h1>Willkommen zurück</h1>
         <p>Melde dich an um fortzufahren</p>
       </div>
 
-      {/* Form */}
       <form onSubmit={handleLogin} className="login-form">
         <div className="field">
           <label>E-Mail</label>
@@ -110,13 +100,12 @@ return (
           disabled={loading}
           className="login-btn"
         >
-          {loading ? 'Anmeldung läuft...' : 'Anmelden'}
+          {loading ? "Anmeldung läuft..." : "Anmelden"}
         </button>
       </form>
 
-      {/* Footer */}
       <div className="login-footer">
-        Passwort vergessen?{' '}
+        Passwort vergessen?{" "}
         <a href="mailto:support@responda.systems">
           Support kontaktieren
         </a>
@@ -127,7 +116,7 @@ return (
   <style>{`
     .login-page {
       min-height: 100vh;
-      background: #f5f5f7; /* KEIN GRADIENT - nur einfarbig! */
+      background: #f5f5f7;
       display: flex;
       flex-direction: column;
     }
@@ -282,6 +271,7 @@ return (
     }
   `}</style>
 </div>
+```
 
 )
 }
