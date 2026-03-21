@@ -44,65 +44,75 @@ export default function Login() {
       <div className="status-bar">
         <Link to="/" className="logo">
           <svg width="120" height="32" viewBox="0 0 560 140">
-            <rect x="20" y="20" width="100" height="100" rx="26" fill="rgba(0,113,227,0.2)"/>
-            <path d="M45 42 L45 98 L60 98 L60 78 L72 78 L83 98 L100 98 L87 77 Q92 74 92 63 Q92 42 75 42 Z M60 52 L72 52 Q77 52 77 62 Q77 72 72 72 L60 72 Z" fill="#0071e3"/>
+            <rect x="20" y="20" width="100" height="100" rx="26" fill="#1e3a8a" opacity="0.15"/>
+            <path d="M45 42 L45 98 L60 98 L60 78 L72 78 L83 98 L100 98 L87 77 Q92 74 92 63 Q92 42 75 42 Z M60 52 L72 52 Q77 52 77 62 Q77 72 72 72 L60 72 Z" fill="#1e3a8a"/>
             <text x="140" y="80" fontFamily="Inter, sans-serif" fontSize="46" fontWeight="600" fill="#1d1d1f" letterSpacing="0">Responda</text>
           </svg>
         </Link>
       </div>
 
       <div className="login-container">
-        <div className="login-card">
-          <div className="login-header">
-            <h1>Willkommen zurück</h1>
-            <p>Melde dich an um fortzufahren</p>
+        <div className="login-content">
+          <div className="login-logo-section">
+            <svg width="180" height="48" viewBox="0 0 560 140" className="login-logo">
+              <rect x="20" y="20" width="100" height="100" rx="26" fill="#1e3a8a" opacity="0.2"/>
+              <path d="M45 42 L45 98 L60 98 L60 78 L72 78 L83 98 L100 98 L87 77 Q92 74 92 63 Q92 42 75 42 Z M60 52 L72 52 Q77 52 77 62 Q77 72 72 72 L60 72 Z" fill="#1e3a8a"/>
+              <text x="140" y="80" fontFamily="Inter, sans-serif" fontSize="46" fontWeight="700" fill="#1d1d1f" letterSpacing="0">Responda</text>
+            </svg>
           </div>
 
-          <form onSubmit={handleLogin} className="login-form">
-            <div className="field">
-              <label>E-Mail</label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="deine@email.de"
-                required
-                disabled={loading}
-              />
+          <div className="login-card">
+            <div className="login-header">
+              <h1>Willkommen zurück</h1>
+              <p>Melde dich an um fortzufahren</p>
             </div>
 
-            <div className="field">
-              <label>Passwort</label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                required
-                disabled={loading}
-              />
-            </div>
-
-            {error && (
-              <div className="login-error">
-                {error}
+            <form onSubmit={handleLogin} className="login-form">
+              <div className="field">
+                <label>E-Mail</label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="deine@email.de"
+                  required
+                  disabled={loading}
+                />
               </div>
-            )}
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="login-btn"
-            >
-              {loading ? 'Anmeldung läuft...' : 'Anmelden'}
-            </button>
-          </form>
+              <div className="field">
+                <label>Passwort</label>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  required
+                  disabled={loading}
+                />
+              </div>
 
-          <div className="login-footer">
-            Passwort vergessen?{' '}
-            <a href="mailto:support@responda.systems">
-              Support kontaktieren
-            </a>
+              {error && (
+                <div className="login-error">
+                  {error}
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="login-btn"
+              >
+                {loading ? 'Anmeldung läuft...' : 'Anmelden'}
+              </button>
+            </form>
+
+            <div className="login-footer">
+              Passwort vergessen?{' '}
+              <a href="mailto:support@responda.systems">
+                Support kontaktieren
+              </a>
+            </div>
           </div>
         </div>
       </div>
@@ -143,6 +153,34 @@ export default function Login() {
           padding: 40px 20px;
         }
 
+        .login-content {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          width: 100%;
+          max-width: 440px;
+        }
+
+        .login-logo-section {
+          margin-bottom: 48px;
+          animation: fadeInDown 0.6s ease-out;
+        }
+
+        .login-logo {
+          filter: drop-shadow(0 4px 12px rgba(30, 58, 138, 0.15));
+        }
+
+        @keyframes fadeInDown {
+          from {
+            opacity: 0;
+            transform: translateY(-20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
         .login-card {
           background: rgba(255, 255, 255, 0.95);
           backdrop-filter: blur(20px);
@@ -150,10 +188,21 @@ export default function Login() {
           border-radius: 20px;
           padding: 48px;
           width: 100%;
-          max-width: 440px;
           box-shadow: 
             0 4px 20px rgba(0, 0, 0, 0.08),
             0 0 0 1px rgba(255, 255, 255, 0.5) inset;
+          animation: fadeInUp 0.6s ease-out;
+        }
+
+        @keyframes fadeInUp {
+          from {
+            opacity: 0;
+            transform: translateY(20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
         }
 
         .login-header {
@@ -204,8 +253,8 @@ export default function Login() {
 
         .field input:focus {
           outline: none;
-          border-color: #0071e3;
-          box-shadow: 0 0 0 4px rgba(0, 113, 227, 0.1);
+          border-color: #1e3a8a;
+          box-shadow: 0 0 0 4px rgba(30, 58, 138, 0.1);
           background: white;
         }
 
@@ -217,10 +266,10 @@ export default function Login() {
 
         .login-error {
           padding: 12px 16px;
-          background: #fff3f3;
-          border: 1px solid #ffdddd;
+          background: #fef2f2;
+          border: 1px solid #fecaca;
           border-radius: 10px;
-          color: #d70015;
+          color: #b91c1c;
           font-size: 14px;
           text-align: center;
         }
@@ -230,7 +279,7 @@ export default function Login() {
           font-size: 16px;
           font-weight: 500;
           color: white;
-          background: #0071e3;
+          background: #1e3a8a;
           border: none;
           border-radius: 10px;
           cursor: pointer;
@@ -239,9 +288,9 @@ export default function Login() {
         }
 
         .login-btn:hover:not(:disabled) {
-          background: #0077ed;
+          background: #2563eb;
           transform: translateY(-1px);
-          box-shadow: 0 4px 12px rgba(0, 113, 227, 0.3);
+          box-shadow: 0 4px 12px rgba(30, 58, 138, 0.3);
         }
 
         .login-btn:active:not(:disabled) {
@@ -262,7 +311,7 @@ export default function Login() {
         }
 
         .login-footer a {
-          color: #0071e3;
+          color: #1e3a8a;
           text-decoration: none;
           font-weight: 500;
         }
@@ -278,6 +327,15 @@ export default function Login() {
 
           .login-header h1 {
             font-size: 24px;
+          }
+
+          .login-logo-section {
+            margin-bottom: 32px;
+          }
+
+          .login-logo {
+            width: 140px;
+            height: auto;
           }
         }
       `}</style>
