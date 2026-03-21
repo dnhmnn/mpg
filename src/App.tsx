@@ -4,6 +4,7 @@ import Login from './pages/Login'
 import Index from './pages/Index'
 import SettingsPage from './pages/SettingsPage'
 import AusbildungenPage from './pages/AusbildungenPage'
+import Files from './pages/Files'
 import './styles/globals.css'
 
 function App() {
@@ -15,6 +16,7 @@ function App() {
         <Route path="/hub" element={<Hub />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/ausbildungen" element={<AusbildungenPage />} />
+        <Route path="/files" element={<Files />} />
       </Routes>
     </BrowserRouter>
   )
