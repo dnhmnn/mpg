@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import type { User } from '../types'
 
 interface StatusBarProps {
@@ -5,9 +6,11 @@ interface StatusBarProps {
   onLogout: () => void
   showBackButton?: boolean
   onBackClick?: () => void
+  pageName?: string
+  showHubLink?: boolean
 }
 
-export default function StatusBar({ user, onLogout, showBackButton, onBackClick }: StatusBarProps) {
+export default function StatusBar({ user, onLogout, showBackButton, onBackClick, pageName, showHubLink }: StatusBarProps) {
   const userName = user?.name || user?.email?.split('@')[0] || '—'
 
   return (
@@ -34,6 +37,19 @@ export default function StatusBar({ user, onLogout, showBackButton, onBackClick 
           </svg>
         </div>
       )}
+      <div className="user-name">{pageName || userName}</div>
+      {showHubLink ? (
+        <Link to="/hub" className="logout-btn">
+          Hub
+        </Link>
+      ) : (
+        <button className="logout-btn" onClick={onLogout}>
+          Abmelden
+        </button>
+      )}
+    </div>
+  )
+}
       <div className="user-name">{userName}</div>
       <button className="logout-btn" onClick={onLogout}>
         Abmelden
