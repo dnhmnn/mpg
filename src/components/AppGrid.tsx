@@ -13,7 +13,7 @@ const ALL_APPS: Record<string, App> = {
   dokumente: { id: 'dokumente', name: 'Vorgänge', icon: 'file', url: '/dokumente-bearbeiten.html', permission: 'dokumente' },
   lager: { id: 'lager', name: 'Lager', icon: 'package', url: '/lagerverwaltung.html', permission: 'lager' },
   produktausgabe: { id: 'produktausgabe', name: 'Ausgabe', icon: 'check', url: '/produktausgabe.html', permission: 'produktausgabe' },
-  dateien: { id: 'dateien', name: 'Dateien', icon: 'folder', url: '/dateien.html', permission: 'dateien' },
+  dateien: { id: 'dateien', name: 'Dateien', icon: 'folder', url: '/files', permission: 'dateien' },
   qr: { id: 'qr', name: 'QR-Codes', icon: 'qrcode', url: '/qr-code-generator.html', permission: 'qr' },
   lernbar: { id: 'lernbar', name: 'Lernbar', icon: 'graduation', url: '/lernbar.html', permission: 'lernbar' },
   ausbildungen: { id: 'ausbildungen', name: 'Ausbildungen', icon: 'book', url: '/ausbildungen', permission: 'ausbildungen_manage', isInternal: true },
