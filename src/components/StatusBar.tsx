@@ -49,6 +49,21 @@ export default function StatusBar({ user, onLogout, showBackButton, onBackClick,
     </div>
   )
 }
+        </div>
+      )}
+      <div className="user-name">{pageName || userName}</div>
+      {showHubLink ? (
+        <Link to="/hub" className="logout-btn">
+          Hub
+        </Link>
+      ) : (
+        <button className="logout-btn" onClick={onLogout}>
+          Abmelden
+        </button>
+      )}
+    </div>
+  )
+}
           </svg>
         </div>
       )}
