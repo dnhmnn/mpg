@@ -50,10 +50,3 @@ export default function StatusBar({ user, onLogout, showBackButton, onBackClick,
     </div>
   )
 }
-      <div className="user-name">{userName}</div>
-      <button className="logout-btn" onClick={onLogout}>
-        Abmelden
-      </button>
-    </div>
-  )
-}
