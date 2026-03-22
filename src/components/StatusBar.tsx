@@ -32,38 +32,7 @@ export default function StatusBar({ user, onLogout, showBackButton, onBackClick,
                   strokeLinecap="round" 
                   strokeLinejoin="round" 
                   fill="none"/>
-            <text x="31" y="22" fill="#1d1d1f" fontSize="18" fontWeight="800" fontFamily="Atkinson Hyperlegible, sans-serif">Responda</text>
-          </svg>
-        </div>
-      )}
-      <div className="user-name">{pageName || userName}</div>
-      {showHubLink ? (
-        <Link to="/hub" className="logout-btn">
-          Hub
-        </Link>
-      ) : (
-        <button className="logout-btn" onClick={onLogout}>
-          Abmelden
-        </button>
-      )}
-    </div>
-  )
-}
-        </div>
-      )}
-      <div className="user-name">{pageName || userName}</div>
-      {showHubLink ? (
-        <Link to="/hub" className="logout-btn">
-          Hub
-        </Link>
-      ) : (
-        <button className="logout-btn" onClick={onLogout}>
-          Abmelden
-        </button>
-      )}
-    </div>
-  )
-}
+            <text x="31" y="22" fill="#1d1d1f" fontSize="18" fontWeight="800" fontFamily="Inter, sans-serif">Responda</text>
           </svg>
         </div>
       )}
