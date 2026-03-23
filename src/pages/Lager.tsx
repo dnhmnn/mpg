@@ -1970,16 +1970,7 @@ export default function Lager() {
         }
 
         @media (max-width: 768px) {
-          .status-bar {
-            flex-wrap: wrap;
-          }
-
-          .user-name {
-            order: 2;
-            width: 100%;
-            margin-top: 8px;
-          }
-
+  
           .logo {
             order: 1;
           }
