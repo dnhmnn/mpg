@@ -1145,18 +1145,17 @@ export default function Lager() {
           </div>
         </div>
       )}
-      <style>{`
+           <style>{`
         .status-bar {
           background: #fff;
-          border-bottom: 1px solid rgba(0,0,0,0.08);
-          padding: 12px 20px;
+          border-bottom: 1px solid #e5e7eb;
+          padding: 0.75rem 1rem;
           display: flex;
+          gap: 0.5rem;
           align-items: center;
-          gap: 16px;
           position: sticky;
           top: 0;
           z-index: 100;
-          box-shadow: 0 2px 4px rgba(0,0,0,0.04);
         }
 
         .logo svg {
@@ -1164,44 +1163,46 @@ export default function Lager() {
         }
 
         .user-name {
-          font-weight: 700;
           font-size: 1.05rem;
+          margin: 0;
+          font-weight: 400;
+          flex: 1;
+          text-align: center;
           color: #1d1d1f;
         }
 
         .status-actions {
-          margin-left: auto;
           display: flex;
-          gap: 8px;
-          align-items: center;
+          gap: 0.5rem;
         }
 
         .logout-btn {
-          background: #fff;
+          border: 1px solid rgba(0,0,0,0.1);
+          background: rgba(0,0,0,0.03);
           color: #1d1d1f;
-          border: 1px solid rgba(0,0,0,0.08);
-          padding: 8px 16px;
-          border-radius: 8px;
-          font-size: 14px;
-          font-weight: 700;
+          padding: 0.45rem 0.7rem;
+          border-radius: 0.5rem;
           cursor: pointer;
+          font-weight: 700;
+          font-size: 0.9rem;
           transition: all 0.2s;
           text-decoration: none;
           display: inline-flex;
           align-items: center;
-          justify-content: center;
-          font-family: inherit;
           gap: 6px;
+          font-family: inherit;
         }
 
         .logout-btn:hover {
-          background: #f9f9f9;
-          transform: translateY(-1px);
-          box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+          background: rgba(0,0,0,0.06);
         }
 
         .logout-btn svg {
           flex-shrink: 0;
+        }
+
+        a.logout-btn {
+          text-decoration: underline;
         }
 
         .content {
@@ -1714,13 +1715,11 @@ export default function Lager() {
         @media (max-width: 768px) {
           .status-bar {
             flex-wrap: wrap;
-            padding: 12px;
           }
 
           .user-name {
             order: 2;
             width: 100%;
-            text-align: center;
             margin-top: 8px;
           }
 
@@ -1731,21 +1730,20 @@ export default function Lager() {
           .status-actions {
             order: 3;
             width: 100%;
-            margin-left: 0;
             margin-top: 8px;
             justify-content: space-between;
           }
 
           .logout-btn {
             flex: 1;
-            font-size: 12px;
-            padding: 8px 8px;
+            font-size: 11px;
+            padding: 0.4rem 0.5rem;
             min-width: 0;
           }
 
           .logout-btn svg {
-            width: 14px;
-            height: 14px;
+            width: 12px;
+            height: 12px;
           }
 
           .toolbar {
