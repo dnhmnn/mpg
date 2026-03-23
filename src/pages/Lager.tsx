@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { pb } from '../lib/pocketbase'
 import { useAuth } from '../hooks/useAuth'
+import type { User } from '../types'
 
 interface InventoryItem {
   id: string
@@ -41,6 +42,20 @@ interface DisplayItem {
   status: 'ok' | 'warn' | 'exp'
 }
 
+interface AuditItem {
+  id: string
+  audit_id: string
+  item_id: string
+  location_id: string
+  expected_quantity: number
+  actual_quantity: number
+  checked: boolean
+  organization_id: string
+  expand?: {
+    item_id?: InventoryItem
+  }
+}
+
 export default function Lager() {
   const { user, loading: authLoading, logout } = useAuth()
   
@@ -64,7 +79,6 @@ export default function Lager() {
   const [showBuchungModal, setShowBuchungModal] = useState(false)
   const [buchungType, setBuchungType] = useState<'ein' | 'aus'>('ein')
   
-  const [settingsTab, setSettingsTab] = useState<'locations'>('locations')
   const [showAddItemModal, setShowAddItemModal] = useState(false)
   
   const [itemFormData, setItemFormData] = useState({
@@ -76,6 +90,17 @@ export default function Lager() {
   const [editingItemId, setEditingItemId] = useState<string | null>(null)
   
   const [newLocationName, setNewLocationName] = useState('')
+  
+  // Inventur state
+  const [currentAudit, setCurrentAudit] = useState<any>(null)
+  const [auditItems, setAuditItems] = useState<AuditItem[]>([])
+  const [auditIndex, setAuditIndex] = useState(0)
+  
+  // Buchung state
+  const [selectedBuchungItem, setSelectedBuchungItem] = useState<string>('')
+  const [buchungQty, setBuchungQty] = useState(1)
+  const [buchungExpiry, setBuchungExpiry] = useState('')
+  const [buchungBatch, setBuchungBatch] = useState('')
 
   useEffect(() => {
     if (user?.organization_id) {
@@ -374,6 +399,172 @@ export default function Lager() {
     }
   }
 
+  // INVENTUR FUNKTIONEN
+  async function startInventur() {
+    if (!currentLocationId) return
+    
+    try {
+      const audit = await pb.collection('inventory_audits').create({
+        audit_date: new Date().toISOString(),
+        status: 'offen',
+        user: user?.email || user?.name || user?.id,
+        organization_id: user?.organization_id
+      })
+      
+      for (const item of displayItems) {
+        await pb.collection('inventory_audit_items').create({
+          audit_id: audit.id,
+          item_id: item.id,
+          location_id: currentLocationId,
+          expected_quantity: item.qty,
+          actual_quantity: 0,
+          checked: false,
+          organization_id: user?.organization_id
+        })
+      }
+      
+      setCurrentAudit(audit)
+      await loadAuditItems(audit.id)
+      setAuditIndex(0)
+      showMsg('✅ Inventur gestartet!', 'success')
+      
+    } catch(e: any) {
+      alert('Fehler: ' + e.message)
+    }
+  }
+
+  async function loadAuditItems(auditId: string) {
+    try {
+      const items = await pb.collection('inventory_audit_items').getFullList<AuditItem>({
+        filter: `audit_id = "${auditId}" && location_id = "${currentLocationId}"`,
+        expand: 'item_id',
+        sort: 'checked,created'
+      })
+      
+      setAuditItems(items)
+      
+      const firstUnchecked = items.findIndex(ai => !ai.checked)
+      if (firstUnchecked >= 0) setAuditIndex(firstUnchecked)
+      
+    } catch(e: any) {
+      console.error('Error loading audit items:', e)
+    }
+  }
+
+  async function saveAuditItem(actual: number, checked: boolean) {
+    if (!currentAudit || auditIndex >= auditItems.length) return
+    
+    const auditItem = auditItems[auditIndex]
+    
+    try {
+      await pb.collection('inventory_audit_items').update(auditItem.id, {
+        actual_quantity: actual,
+        checked: checked
+      })
+      
+      if (checked && actual !== auditItem.expected_quantity) {
+        const diff = actual - auditItem.expected_quantity
+        
+        const stockList = await pb.collection('inventory_stock').getFullList({
+          filter: `item_id = "${auditItem.item_id}" && location_id = "${currentLocationId}"`
+        })
+        
+        if (diff > 0) {
+          await pb.collection('inventory_stock').create({
+            item_id: auditItem.item_id,
+            location_id: currentLocationId,
+            quantity: diff,
+            organization_id: user?.organization_id
+          })
+        } else if (diff < 0 && stockList.length > 0) {
+          let remaining = Math.abs(diff)
+          for (const stock of stockList) {
+            if (remaining <= 0) break
+            
+            const take = Math.min(stock.quantity, remaining)
+            const newQty = stock.quantity - take
+            
+            if (newQty <= 0) {
+              await pb.collection('inventory_stock').delete(stock.id)
+            } else {
+              await pb.collection('inventory_stock').update(stock.id, {
+                quantity: newQty
+              })
+            }
+            
+            remaining -= take
+          }
+        }
+        
+        await pb.collection('inventory_transactions').create({
+          item_id: auditItem.item_id,
+          location_id: currentLocationId,
+          type: 'korrektur',
+          quantity: diff,
+          note: `Inventur-Korrektur: ${auditItem.expected_quantity} → ${actual}`,
+          user: user?.email || user?.id,
+          organization_id: user?.organization_id
+        })
+      }
+      
+      if (auditIndex < auditItems.length - 1) {
+        setAuditIndex(auditIndex + 1)
+        await loadAuditItems(currentAudit.id)
+      } else {
+        await finishInventur()
+      }
+      
+    } catch(e: any) {
+      alert('Fehler: ' + e.message)
+    }
+  }
+
+  async function finishInventur() {
+    if (!currentAudit) return
+    
+    try {
+      await pb.collection('inventory_audits').update(currentAudit.id, {
+        status: 'abgeschlossen'
+      })
+      
+      setShowInventoryModal(false)
+      setCurrentAudit(null)
+      setAuditItems([])
+      setAuditIndex(0)
+      await loadStock()
+      showMsg('✅ Inventur abgeschlossen!', 'success')
+      
+    } catch(e: any) {
+      alert('Fehler: ' + e.message)
+    }
+  }
+
+  // BUCHUNG FUNKTIONEN
+  async function saveBuchung() {
+    if (!selectedBuchungItem || !currentLocationId) {
+      alert('Bitte Artikel auswählen')
+      return
+    }
+    
+    if (buchungQty <= 0) {
+      alert('Menge muss größer 0 sein')
+      return
+    }
+    
+    const delta = buchungType === 'ein' ? buchungQty : -buchungQty
+    
+    try {
+      await adjustQty(selectedBuchungItem, delta)
+      setShowBuchungModal(false)
+      setSelectedBuchungItem('')
+      setBuchungQty(1)
+      setBuchungExpiry('')
+      setBuchungBatch('')
+    } catch(e: any) {
+      alert('Fehler: ' + e.message)
+    }
+  }
+
   const filteredItems = displayItems.filter(item => {
     if (searchQuery) {
       const needle = searchQuery.toLowerCase()
@@ -403,10 +594,9 @@ export default function Lager() {
   }
 
   const userName = user?.name || user?.email?.split('@')[0] || '—'
-
   return (
     <>
-      {/* CUSTOM STATUSBAR MIT ZUSÄTZLICHEN BUTTONS */}
+      {/* STATUSBAR WIE HUB/FILES */}
       <div className="status-bar">
         <div className="logo">
           <svg width="120" height="32" viewBox="0 0 560 140">
@@ -416,29 +606,39 @@ export default function Lager() {
           </svg>
         </div>
         <div className="user-name">Lager</div>
-        <div className="status-buttons">
-          <button className="status-btn" onClick={() => setShowItemsModal(true)} title="Artikel-Datenbank">
-            DB
+        <div className="status-actions">
+          <button className="logout-btn" onClick={() => setShowItemsModal(true)} title="Artikel-Datenbank">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <rect x="3" y="3" width="7" height="7"/>
+              <rect x="14" y="3" width="7" height="7"/>
+              <rect x="3" y="14" width="7" height="7"/>
+              <rect x="14" y="14" width="7" height="7"/>
+            </svg>
           </button>
-          <button className="status-btn" onClick={() => {
-            setBuchungType('ein')
-            setShowBuchungModal(true)
-          }} title="Einbuchen">
-            +
+          <button className="logout-btn" onClick={() => { setBuchungType('ein'); setShowBuchungModal(true) }} title="Einbuchen">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <line x1="12" y1="5" x2="12" y2="19"/>
+              <line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
           </button>
-          <button className="status-btn" onClick={() => {
-            setBuchungType('aus')
-            setShowBuchungModal(true)
-          }} title="Ausbuchen">
-            −
+          <button className="logout-btn" onClick={() => { setBuchungType('aus'); setShowBuchungModal(true) }} title="Ausbuchen">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
           </button>
-          <button className="status-btn" onClick={() => setShowInventoryModal(true)} title="Inventur">
-            Inventur
+          <button className="logout-btn" onClick={() => setShowInventoryModal(true)} title="Inventur">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+              <path d="M9 12h6m-6 4h6"/>
+            </svg>
           </button>
-          <button className="status-btn" onClick={() => setShowSettingsModal(true)} title="Einstellungen">
-            ⚙️
+          <button className="logout-btn" onClick={() => setShowSettingsModal(true)} title="Einstellungen">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="12" cy="12" r="3"/>
+              <path d="M12 1v6m0 6v6M5.64 5.64l4.24 4.24m4.24 4.24l4.24 4.24M1 12h6m6 0h6M5.64 18.36l4.24-4.24m4.24-4.24l4.24-4.24"/>
+            </svg>
           </button>
-          <Link to="/hub" className="status-btn">
+          <Link to="/hub" className="logout-btn">
             Hub
           </Link>
         </div>
@@ -682,7 +882,7 @@ export default function Lager() {
         </div>
       )}
 
-      {/* EINSTELLUNGEN MODAL (NUR LAGER-STANDORTE) */}
+      {/* EINSTELLUNGEN MODAL (LAGER-STANDORTE) */}
       {showSettingsModal && (
         <div className="modal" onClick={() => setShowSettingsModal(false)}>
           <div className="modal-box" onClick={(e) => e.stopPropagation()}>
@@ -730,14 +930,90 @@ export default function Lager() {
           <div className="modal-box" onClick={(e) => e.stopPropagation()}>
             <h3>Inventur</h3>
             
-            <div className="empty-state">
-              <div style={{fontSize: '48px', marginBottom: '16px'}}>📋</div>
-              <div style={{fontWeight: 700, marginBottom: '8px'}}>Inventur-Funktion</div>
-              <div>Kommt bald!</div>
-            </div>
+            {!currentAudit ? (
+              <div>
+                <div className="empty-state" style={{marginBottom: '24px'}}>
+                  <div style={{fontSize: '48px', marginBottom: '16px'}}>📋</div>
+                  <div style={{fontWeight: 700, marginBottom: '8px'}}>Inventur durchführen</div>
+                  <div>Zählen Sie alle Artikel und korrigieren Sie Bestände</div>
+                </div>
+                
+                <button 
+                  className="btn primary" 
+                  style={{width: '100%'}}
+                  onClick={startInventur}
+                >
+                  Inventur starten
+                </button>
+              </div>
+            ) : (
+              <div>
+                <div style={{background: '#f0f9ff', padding: '12px', borderRadius: '8px', marginBottom: '16px'}}>
+                  <strong>Fortschritt:</strong> {auditItems.filter(ai => ai.checked).length} / {auditItems.length} geprüft
+                </div>
+                
+                {auditIndex < auditItems.length && (
+                  <div>
+                    <div style={{background: '#fafafa', padding: '16px', borderRadius: '8px', marginBottom: '16px'}}>
+                      <h4 style={{margin: '0 0 8px 0'}}>{auditIndex + 1}. {auditItems[auditIndex]?.expand?.item_id?.name}</h4>
+                      <div style={{color: '#64748b', fontSize: '0.9rem', marginBottom: '8px'}}>
+                        {auditItems[auditIndex]?.expand?.item_id?.category || 'Keine Kategorie'} • {auditItems[auditIndex]?.expand?.item_id?.unit || 'Stück'}
+                      </div>
+                      
+                      <div style={{background: '#fff', padding: '12px', borderRadius: '8px', marginBottom: '12px'}}>
+                        <div style={{color: '#64748b', fontSize: '0.85rem'}}>Erwarteter Bestand (laut System):</div>
+                        <div style={{fontSize: '1.5rem', fontWeight: 700}}>{auditItems[auditIndex]?.expected_quantity} {auditItems[auditIndex]?.expand?.item_id?.unit || 'Stück'}</div>
+                      </div>
+                      
+                      <div className="form-group">
+                        <label>Tatsächlicher Bestand (gezählt):</label>
+                        <input
+                          type="number"
+                          id="audit-actual"
+                          defaultValue={auditItems[auditIndex]?.actual_quantity || 0}
+                          min="0"
+                          style={{fontSize: '1.2rem', fontWeight: 700}}
+                        />
+                      </div>
+                      
+                      <div style={{marginTop: '12px'}}>
+                        <label style={{display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer'}}>
+                          <input type="checkbox" id="audit-checked" defaultChecked={auditItems[auditIndex]?.checked || false} />
+                          <span>Als geprüft markieren</span>
+                        </label>
+                      </div>
+                    </div>
+                    
+                    <div style={{display: 'flex', gap: '8px', justifyContent: 'space-between'}}>
+                      <button 
+                        className="btn" 
+                        onClick={() => setAuditIndex(Math.max(0, auditIndex - 1))}
+                        disabled={auditIndex === 0}
+                      >
+                        Zurück
+                      </button>
+                      <button 
+                        className="btn primary"
+                        onClick={() => {
+                          const actual = parseInt((document.getElementById('audit-actual') as HTMLInputElement)?.value || '0')
+                          const checked = (document.getElementById('audit-checked') as HTMLInputElement)?.checked || false
+                          saveAuditItem(actual, checked)
+                        }}
+                      >
+                        {auditIndex === auditItems.length - 1 ? 'Fertig' : 'Weiter'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             <div style={{display: 'flex', justifyContent: 'flex-end', marginTop: '24px'}}>
-              <button className="btn" onClick={() => setShowInventoryModal(false)}>
+              <button className="btn" onClick={() => {
+                setShowInventoryModal(false)
+                setCurrentAudit(null)
+                setAuditItems([])
+              }}>
                 Schließen
               </button>
             </div>
@@ -749,21 +1025,62 @@ export default function Lager() {
       {showBuchungModal && (
         <div className="modal" onClick={() => setShowBuchungModal(false)}>
           <div className="modal-box small" onClick={(e) => e.stopPropagation()}>
-            <h3>{buchungType === 'ein' ? 'Einbuchen' : 'Ausbuchen'}</h3>
+            <h3>{buchungType === 'ein' ? 'Artikel einbuchen' : 'Artikel ausbuchen'}</h3>
             
-            <div className="empty-state">
-              <div style={{fontSize: '48px', marginBottom: '16px'}}>
-                {buchungType === 'ein' ? '➕' : '➖'}
-              </div>
-              <div style={{fontWeight: 700, marginBottom: '8px'}}>
-                {buchungType === 'ein' ? 'Artikel einbuchen' : 'Artikel ausbuchen'}
-              </div>
-              <div>Nutzen Sie das 3-Punkte-Menü bei jedem Artikel</div>
+            <div className="form-group">
+              <label>Artikel auswählen *</label>
+              <select 
+                value={selectedBuchungItem}
+                onChange={(e) => setSelectedBuchungItem(e.target.value)}
+              >
+                <option value="">-- Artikel wählen --</option>
+                {allItems.map(item => (
+                  <option key={item.id} value={item.id}>
+                    {item.name} ({item.category || 'Keine Kategorie'})
+                  </option>
+                ))}
+              </select>
             </div>
-
-            <div style={{display: 'flex', justifyContent: 'flex-end', marginTop: '24px'}}>
+            
+            <div className="form-group">
+              <label>Menge *</label>
+              <input
+                type="number"
+                value={buchungQty}
+                onChange={(e) => setBuchungQty(parseInt(e.target.value) || 1)}
+                min="1"
+              />
+            </div>
+            
+            {buchungType === 'ein' && (
+              <>
+                <div className="form-group">
+                  <label>Ablaufdatum (optional)</label>
+                  <input
+                    type="date"
+                    value={buchungExpiry}
+                    onChange={(e) => setBuchungExpiry(e.target.value)}
+                  />
+                </div>
+                
+                <div className="form-group">
+                  <label>Charge/Bemerkung (optional)</label>
+                  <input
+                    type="text"
+                    value={buchungBatch}
+                    onChange={(e) => setBuchungBatch(e.target.value)}
+                    placeholder="z.B. Charge 12345"
+                  />
+                </div>
+              </>
+            )}
+            
+            <div style={{display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '24px'}}>
               <button className="btn" onClick={() => setShowBuchungModal(false)}>
-                Schließen
+                Abbrechen
+              </button>
+              <button className="btn primary" onClick={saveBuchung}>
+                {buchungType === 'ein' ? 'Einbuchen' : 'Ausbuchen'}
               </button>
             </div>
           </div>
@@ -828,7 +1145,6 @@ export default function Lager() {
           </div>
         </div>
       )}
-
       <style>{`
         .status-bar {
           background: #fff;
@@ -853,14 +1169,14 @@ export default function Lager() {
           color: #1d1d1f;
         }
 
-        .status-buttons {
+        .status-actions {
           margin-left: auto;
           display: flex;
           gap: 8px;
           align-items: center;
         }
 
-        .status-btn {
+        .logout-btn {
           background: #fff;
           color: #1d1d1f;
           border: 1px solid rgba(0,0,0,0.08);
@@ -875,13 +1191,17 @@ export default function Lager() {
           align-items: center;
           justify-content: center;
           font-family: inherit;
-          min-width: 44px;
+          gap: 6px;
         }
 
-        .status-btn:hover {
+        .logout-btn:hover {
           background: #f9f9f9;
           transform: translateY(-1px);
           box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .logout-btn svg {
+          flex-shrink: 0;
         }
 
         .content {
@@ -1036,6 +1356,12 @@ export default function Lager() {
 
         .btn.primary:hover {
           background: #dc2626;
+        }
+
+        .btn:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+          transform: none;
         }
 
         .btn-small {
@@ -1294,6 +1620,11 @@ export default function Lager() {
           font-weight: 800;
         }
 
+        .modal-box h4 {
+          margin: 0 0 0.5rem 0;
+          color: #1d1d1f;
+        }
+
         .form-group {
           display: flex;
           flex-direction: column;
@@ -1383,19 +1714,38 @@ export default function Lager() {
         @media (max-width: 768px) {
           .status-bar {
             flex-wrap: wrap;
+            padding: 12px;
           }
 
-          .status-buttons {
+          .user-name {
+            order: 2;
+            width: 100%;
+            text-align: center;
+            margin-top: 8px;
+          }
+
+          .logo {
+            order: 1;
+          }
+
+          .status-actions {
+            order: 3;
             width: 100%;
             margin-left: 0;
+            margin-top: 8px;
             justify-content: space-between;
           }
 
-          .status-btn {
+          .logout-btn {
             flex: 1;
-            min-width: 60px;
             font-size: 12px;
-            padding: 8px 12px;
+            padding: 8px 8px;
+            min-width: 0;
+          }
+
+          .logout-btn svg {
+            width: 14px;
+            height: 14px;
           }
 
           .toolbar {
