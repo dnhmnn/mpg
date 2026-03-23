@@ -58,10 +58,20 @@ export default function Lager() {
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<{text: string, type: 'success' | 'error'} | null>(null)
   
+  const [showSettingsModal, setShowSettingsModal] = useState(false)
+  const [settingsTab, setSettingsTab] = useState<'items' | 'locations' | 'audits'>('items')
   const [showAddItemModal, setShowAddItemModal] = useState(false)
   const [showAddStockModal, setShowAddStockModal] = useState(false)
-  const [showDetailsModal, setShowDetailsModal] = useState(false)
-  const [selectedItemId, setSelectedItemId] = useState<string | null>(null)
+  
+  const [itemFormData, setItemFormData] = useState({
+    name: '',
+    category: '',
+    unit: 'Stück',
+    min_stock: 0
+  })
+  const [editingItemId, setEditingItemId] = useState<string | null>(null)
+  
+  const [newLocationName, setNewLocationName] = useState('')
 
   useEffect(() => {
     if (user?.organization_id) {
@@ -260,9 +270,104 @@ export default function Lager() {
     }
   }
 
-  function openDetails(itemId: string) {
-    setSelectedItemId(itemId)
-    setShowDetailsModal(true)
+  async function saveItem() {
+    if (!itemFormData.name.trim()) {
+      alert('Artikelname erforderlich')
+      return
+    }
+    
+    try {
+      if (editingItemId) {
+        await pb.collection('inventory_items').update(editingItemId, {
+          ...itemFormData,
+          organization_id: user?.organization_id
+        })
+        showMsg('✅ Artikel aktualisiert!', 'success')
+      } else {
+        await pb.collection('inventory_items').create({
+          ...itemFormData,
+          organization_id: user?.organization_id
+        })
+        showMsg('✅ Artikel angelegt!', 'success')
+      }
+      
+      setShowAddItemModal(false)
+      setEditingItemId(null)
+      setItemFormData({ name: '', category: '', unit: 'Stück', min_stock: 0 })
+      await loadStock()
+      
+    } catch(e: any) {
+      alert('Fehler: ' + e.message)
+    }
+  }
+
+  async function deleteItem(itemId: string) {
+    if (!confirm('Artikel wirklich löschen? Alle Bestände gehen verloren!')) return
+    
+    try {
+      const stockList = await pb.collection('inventory_stock').getFullList({
+        filter: `item_id = "${itemId}"`
+      })
+      
+      for (const stock of stockList) {
+        await pb.collection('inventory_stock').delete(stock.id)
+      }
+      
+      await pb.collection('inventory_items').delete(itemId)
+      await loadStock()
+      showMsg('✅ Artikel gelöscht!', 'success')
+      
+    } catch(e: any) {
+      alert('Fehler: ' + e.message)
+    }
+  }
+
+  async function addLocation() {
+    if (!newLocationName.trim()) {
+      alert('Name erforderlich')
+      return
+    }
+    
+    try {
+      await pb.collection('inventory_locations').create({
+        name: newLocationName,
+        icon: 'box',
+        organization_id: user?.organization_id
+      })
+      
+      setNewLocationName('')
+      await loadLocations()
+      showMsg('✅ Standort hinzugefügt!', 'success')
+      
+    } catch(e: any) {
+      alert('Fehler: ' + e.message)
+    }
+  }
+
+  async function deleteLocation(locId: string) {
+    if (locations.length <= 1) {
+      alert('Der letzte Standort kann nicht gelöscht werden')
+      return
+    }
+    
+    if (!confirm('Standort löschen? Alle Bestände gehen verloren!')) return
+    
+    try {
+      const stockList = await pb.collection('inventory_stock').getFullList({
+        filter: `location_id = "${locId}"`
+      })
+      
+      for (const stock of stockList) {
+        await pb.collection('inventory_stock').delete(stock.id)
+      }
+      
+      await pb.collection('inventory_locations').delete(locId)
+      await loadLocations()
+      showMsg('✅ Standort gelöscht!', 'success')
+      
+    } catch(e: any) {
+      alert('Fehler: ' + e.message)
+    }
   }
 
   const filteredItems = displayItems.filter(item => {
@@ -364,8 +469,8 @@ export default function Lager() {
               Nur 0
             </button>
           </div>
-          <button className="btn primary" onClick={() => setShowAddStockModal(true)}>
-            Neu
+          <button className="btn primary" onClick={() => setShowSettingsModal(true)}>
+            Einstellungen
           </button>
         </div>
 
@@ -430,15 +535,6 @@ export default function Lager() {
                       >
                         Ausbuchen (-1)
                       </button>
-                      <button 
-                        className="menu-item"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          openDetails(item.id)
-                        }}
-                      >
-                        Details
-                      </button>
                     </div>
                   </div>
 
@@ -465,25 +561,219 @@ export default function Lager() {
             })
           )}
         </div>
-
-        <div className="location-tabs">
-          {locations.map(loc => (
-            <button
-              key={loc.id}
-              className={`location-tab ${currentLocationId === loc.id ? 'active' : ''}`}
-              onClick={() => setCurrentLocationId(loc.id)}
-            >
-              {loc.name}
-            </button>
-          ))}
-        </div>
       </div>
+
+      {/* FIXED LOCATION TABS */}
+      <div className="location-tabs-fixed">
+        {locations.map(loc => (
+          <button
+            key={loc.id}
+            className={`location-tab ${currentLocationId === loc.id ? 'active' : ''}`}
+            onClick={() => setCurrentLocationId(loc.id)}
+          >
+            {loc.name}
+          </button>
+        ))}
+      </div>
+
+      {/* SETTINGS MODAL */}
+      {showSettingsModal && (
+        <div className="modal" onClick={() => setShowSettingsModal(false)}>
+          <div className="modal-box" onClick={(e) => e.stopPropagation()}>
+            <h3>Einstellungen</h3>
+            
+            <div className="tabs">
+              <button 
+                className={`tab ${settingsTab === 'items' ? 'active' : ''}`}
+                onClick={() => setSettingsTab('items')}
+              >
+                Artikel-Datenbank
+              </button>
+              <button 
+                className={`tab ${settingsTab === 'locations' ? 'active' : ''}`}
+                onClick={() => setSettingsTab('locations')}
+              >
+                Lager-Standorte
+              </button>
+              <button 
+                className={`tab ${settingsTab === 'audits' ? 'active' : ''}`}
+                onClick={() => setSettingsTab('audits')}
+              >
+                Inventur
+              </button>
+            </div>
+
+            {settingsTab === 'items' && (
+              <div className="tab-content">
+                <button 
+                  className="btn primary" 
+                  style={{width: '100%', marginBottom: '16px'}}
+                  onClick={() => {
+                    setItemFormData({ name: '', category: '', unit: 'Stück', min_stock: 0 })
+                    setEditingItemId(null)
+                    setShowAddItemModal(true)
+                  }}
+                >
+                  Neuen Artikel anlegen
+                </button>
+                
+                <div className="item-list">
+                  {allItems.length === 0 ? (
+                    <div className="empty-state">Keine Artikel vorhanden</div>
+                  ) : (
+                    allItems.map(item => (
+                      <div key={item.id} className="item-card">
+                        <div className="item-card-info">
+                          <div className="item-card-name">{item.name}</div>
+                          <div className="item-card-meta">
+                            {item.category || 'Keine Kategorie'} • {item.unit || 'Stück'} • Min: {item.min_stock || 0}
+                          </div>
+                        </div>
+                        <div style={{display: 'flex', gap: '8px'}}>
+                          <button 
+                            className="btn-small"
+                            onClick={() => {
+                              setItemFormData({
+                                name: item.name,
+                                category: item.category,
+                                unit: item.unit,
+                                min_stock: item.min_stock
+                              })
+                              setEditingItemId(item.id)
+                              setShowAddItemModal(true)
+                            }}
+                          >
+                            Bearbeiten
+                          </button>
+                          <button 
+                            className="btn-small danger"
+                            onClick={() => deleteItem(item.id)}
+                          >
+                            Löschen
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+
+            {settingsTab === 'locations' && (
+              <div className="tab-content">
+                <div className="location-list">
+                  {locations.map(loc => (
+                    <div key={loc.id} className="location-card">
+                      <div>{loc.name}</div>
+                      <button 
+                        className="btn-small danger"
+                        onClick={() => deleteLocation(loc.id)}
+                        disabled={locations.length <= 1}
+                      >
+                        Löschen
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                
+                <div className="form-group" style={{marginTop: '16px'}}>
+                  <input
+                    type="text"
+                    placeholder="Neuer Standort-Name"
+                    value={newLocationName}
+                    onChange={(e) => setNewLocationName(e.target.value)}
+                  />
+                  <button className="btn primary" onClick={addLocation}>
+                    Standort hinzufügen
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {settingsTab === 'audits' && (
+              <div className="tab-content">
+                <div className="empty-state">
+                  <div style={{fontSize: '48px', marginBottom: '16px'}}>📋</div>
+                  <div style={{fontWeight: 700, marginBottom: '8px'}}>Inventur-Funktion</div>
+                  <div>Kommt bald!</div>
+                </div>
+              </div>
+            )}
+
+            <div style={{display: 'flex', justifyContent: 'flex-end', marginTop: '24px'}}>
+              <button className="btn" onClick={() => setShowSettingsModal(false)}>
+                Schließen
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ADD ITEM MODAL */}
+      {showAddItemModal && (
+        <div className="modal" onClick={() => setShowAddItemModal(false)}>
+          <div className="modal-box small" onClick={(e) => e.stopPropagation()}>
+            <h3>{editingItemId ? 'Artikel bearbeiten' : 'Artikel anlegen'}</h3>
+            
+            <div className="form-group">
+              <label>Artikelname *</label>
+              <input
+                type="text"
+                value={itemFormData.name}
+                onChange={(e) => setItemFormData({...itemFormData, name: e.target.value})}
+                placeholder="z.B. Einmalhandschuhe"
+              />
+            </div>
+            
+            <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px'}}>
+              <div className="form-group">
+                <label>Kategorie</label>
+                <input
+                  type="text"
+                  value={itemFormData.category}
+                  onChange={(e) => setItemFormData({...itemFormData, category: e.target.value})}
+                  placeholder="z.B. Verbandmaterial"
+                />
+              </div>
+              
+              <div className="form-group">
+                <label>Einheit</label>
+                <input
+                  type="text"
+                  value={itemFormData.unit}
+                  onChange={(e) => setItemFormData({...itemFormData, unit: e.target.value})}
+                />
+              </div>
+            </div>
+            
+            <div className="form-group">
+              <label>Mindestbestand</label>
+              <input
+                type="number"
+                value={itemFormData.min_stock}
+                onChange={(e) => setItemFormData({...itemFormData, min_stock: parseInt(e.target.value) || 0})}
+                min="0"
+              />
+            </div>
+            
+            <div style={{display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '24px'}}>
+              <button className="btn" onClick={() => setShowAddItemModal(false)}>
+                Abbrechen
+              </button>
+              <button className="btn primary" onClick={saveItem}>
+                Speichern
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <style>{`
         .content {
           max-width: 1200px;
           margin: 0 auto;
           padding: 1rem;
+          padding-bottom: 100px;
         }
 
         .message {
@@ -630,6 +920,25 @@ export default function Lager() {
 
         .btn.primary:hover {
           background: #dc2626;
+        }
+
+        .btn-small {
+          background: #fff;
+          border: 1px solid rgba(0,0,0,0.08);
+          padding: 6px 12px;
+          border-radius: 6px;
+          font-size: 13px;
+          font-weight: 600;
+          cursor: pointer;
+          font-family: inherit;
+        }
+
+        .btn-small:hover {
+          background: #f9f9f9;
+        }
+
+        .btn-small.danger {
+          color: #b91c1c;
         }
 
         .items-list {
@@ -788,12 +1097,19 @@ export default function Lager() {
           margin-top: 0.25rem;
         }
 
-        .location-tabs {
-          display: flex;
-          gap: 0.5rem;
-          flex-wrap: wrap;
-          padding: 1rem 0;
+        .location-tabs-fixed {
+          position: fixed;
+          bottom: 0;
+          left: 0;
+          right: 0;
+          background: #fff;
           border-top: 1px solid rgba(0,0,0,0.08);
+          padding: 12px;
+          display: flex;
+          gap: 8px;
+          justify-content: center;
+          z-index: 100;
+          box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
         }
 
         .location-tab {
@@ -823,6 +1139,155 @@ export default function Lager() {
           color: #64748b;
           background: #fff;
           border-radius: 12px;
+        }
+
+        .modal {
+          position: fixed;
+          inset: 0;
+          background: rgba(0,0,0,0.6);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 1000;
+          padding: 20px;
+        }
+
+        .modal-box {
+          background: #fff;
+          border-radius: 14px;
+          max-width: 800px;
+          width: 100%;
+          max-height: 90vh;
+          overflow-y: auto;
+          padding: 24px;
+          box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+        }
+
+        .modal-box.small {
+          max-width: 500px;
+        }
+
+        .modal-box h3 {
+          margin: 0 0 1rem 0;
+          color: #b91c1c;
+          font-weight: 800;
+        }
+
+        .tabs {
+          display: flex;
+          gap: 10px;
+          margin-bottom: 16px;
+          flex-wrap: wrap;
+        }
+
+        .tab {
+          border: 1px solid rgba(0,0,0,0.08);
+          background: #fafafa;
+          padding: 10px 16px;
+          border-radius: 999px;
+          font-weight: 800;
+          cursor: pointer;
+          font-size: 0.95rem;
+          transition: all 0.2s;
+          font-family: inherit;
+        }
+
+        .tab:hover {
+          background: #f0f0f0;
+        }
+
+        .tab.active {
+          color: #fff;
+          background: #b91c1c;
+          border-color: #b91c1c;
+        }
+
+        .tab-content {
+          margin-top: 16px;
+        }
+
+        .form-group {
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+        }
+
+        .form-group label {
+          font-weight: 700;
+          font-size: 0.9rem;
+          color: #374151;
+        }
+
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+          padding: 10px 12px;
+          border: 1px solid rgba(0,0,0,0.08);
+          border-radius: 8px;
+          background: #fff;
+          font-size: 14px;
+          font-family: inherit;
+          width: 100%;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus,
+        .form-group select:focus {
+          outline: none;
+          border-color: #b91c1c;
+          box-shadow: 0 0 0 3px rgba(185,28,28,0.1);
+        }
+
+        .item-list {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+          max-height: 400px;
+          overflow-y: auto;
+        }
+
+        .item-card {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 12px;
+          border: 1px solid rgba(0,0,0,0.08);
+          border-radius: 8px;
+          transition: all 0.2s;
+        }
+
+        .item-card:hover {
+          background: #f9f9f9;
+        }
+
+        .item-card-info {
+          flex: 1;
+        }
+
+        .item-card-name {
+          font-weight: 700;
+          margin-bottom: 4px;
+        }
+
+        .item-card-meta {
+          font-size: 0.85rem;
+          color: #64748b;
+        }
+
+        .location-list {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+          margin-bottom: 16px;
+        }
+
+        .location-card {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 12px;
+          border: 1px solid rgba(0,0,0,0.08);
+          border-radius: 8px;
         }
 
         @media (max-width: 768px) {
@@ -858,12 +1323,13 @@ export default function Lager() {
             text-align: left;
           }
 
-          .location-tabs {
-            justify-content: space-between;
+          .location-tabs-fixed {
+            flex-wrap: wrap;
           }
 
           .location-tab {
             flex: 1;
+            min-width: 100px;
             text-align: center;
           }
         }
