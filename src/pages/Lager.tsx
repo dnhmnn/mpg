@@ -42,6 +42,22 @@ interface DisplayItem {
   status: 'ok' | 'warn' | 'exp'
 }
 
+interface Transaction {
+  id: string
+  item_id: string
+  location_id: string
+  type: string
+  quantity: number
+  expiry_date?: string
+  note?: string
+  user: string
+  created: string
+  expand?: {
+    item_id?: InventoryItem
+    location_id?: Location
+  }
+}
+
 interface AuditItem {
   id: string
   audit_id: string
@@ -54,6 +70,14 @@ interface AuditItem {
   expand?: {
     item_id?: InventoryItem
   }
+}
+
+interface Audit {
+  id: string
+  audit_date: string
+  status: string
+  user: string
+  organization_id: string
 }
 
 export default function Lager() {
@@ -73,6 +97,7 @@ export default function Lager() {
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<{text: string, type: 'success' | 'error'} | null>(null)
   
+  const [showLogModal, setShowLogModal] = useState(false)
   const [showSettingsModal, setShowSettingsModal] = useState(false)
   const [showItemsModal, setShowItemsModal] = useState(false)
   const [showInventoryModal, setShowInventoryModal] = useState(false)
@@ -91,10 +116,15 @@ export default function Lager() {
   
   const [newLocationName, setNewLocationName] = useState('')
   
+  // Log/Transaction state
+  const [transactions, setTransactions] = useState<Transaction[]>([])
+  
   // Inventur state
-  const [currentAudit, setCurrentAudit] = useState<any>(null)
+  const [inventoryTab, setInventoryTab] = useState<'new' | 'history'>('new')
+  const [currentAudit, setCurrentAudit] = useState<Audit | null>(null)
   const [auditItems, setAuditItems] = useState<AuditItem[]>([])
   const [auditIndex, setAuditIndex] = useState(0)
+  const [auditHistory, setAuditHistory] = useState<Audit[]>([])
   
   // Buchung state
   const [selectedBuchungItem, setSelectedBuchungItem] = useState<string>('')
@@ -224,6 +254,22 @@ export default function Lager() {
   function showMsg(text: string, type: 'success' | 'error' = 'success') {
     setMessage({ text, type })
     setTimeout(() => setMessage(null), 4000)
+  }
+
+  // LOG FUNKTIONEN
+  async function loadTransactions() {
+    try {
+      const txns = await pb.collection('inventory_transactions').getFullList<Transaction>({
+        filter: `organization_id = "${user?.organization_id}"`,
+        expand: 'item_id,location_id',
+        sort: '-created',
+        limit: 100
+      })
+      
+      setTransactions(txns)
+    } catch(e: any) {
+      console.error('Error loading transactions:', e)
+    }
   }
 
   async function adjustQty(itemId: string, delta: number) {
@@ -400,6 +446,20 @@ export default function Lager() {
   }
 
   // INVENTUR FUNKTIONEN
+  async function loadAuditHistory() {
+    try {
+      const audits = await pb.collection('inventory_audits').getFullList<Audit>({
+        filter: `organization_id = "${user?.organization_id}"`,
+        sort: '-audit_date',
+        limit: 50
+      })
+      
+      setAuditHistory(audits)
+    } catch(e: any) {
+      console.error('Error loading audit history:', e)
+    }
+  }
+
   async function startInventur() {
     if (!currentLocationId) return
     
@@ -426,6 +486,7 @@ export default function Lager() {
       setCurrentAudit(audit)
       await loadAuditItems(audit.id)
       setAuditIndex(0)
+      setInventoryTab('new')
       showMsg('✅ Inventur gestartet!', 'success')
       
     } catch(e: any) {
@@ -527,10 +588,11 @@ export default function Lager() {
         status: 'abgeschlossen'
       })
       
-      setShowInventoryModal(false)
       setCurrentAudit(null)
       setAuditItems([])
       setAuditIndex(0)
+      setInventoryTab('history')
+      await loadAuditHistory()
       await loadStock()
       showMsg('✅ Inventur abgeschlossen!', 'success')
       
@@ -592,11 +654,9 @@ export default function Lager() {
   if (authLoading) {
     return null
   }
-
-  const userName = user?.name || user?.email?.split('@')[0] || '—'
   return (
     <>
-      {/* STATUSBAR WIE HUB/FILES */}
+      {/* STATUSBAR WIE FILES - NUR LOGO, LAGER, HUB */}
       <div className="status-bar">
         <div className="logo">
           <svg width="120" height="32" viewBox="0 0 560 140">
@@ -606,42 +666,50 @@ export default function Lager() {
           </svg>
         </div>
         <div className="user-name">Lager</div>
-        <div className="status-actions">
-          <button className="logout-btn" onClick={() => setShowItemsModal(true)} title="Artikel-Datenbank">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <rect x="3" y="3" width="7" height="7"/>
-              <rect x="14" y="3" width="7" height="7"/>
-              <rect x="3" y="14" width="7" height="7"/>
-              <rect x="14" y="14" width="7" height="7"/>
-            </svg>
-          </button>
-          <button className="logout-btn" onClick={() => { setBuchungType('ein'); setShowBuchungModal(true) }} title="Einbuchen">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <line x1="12" y1="5" x2="12" y2="19"/>
-              <line x1="5" y1="12" x2="19" y2="12"/>
-            </svg>
-          </button>
-          <button className="logout-btn" onClick={() => { setBuchungType('aus'); setShowBuchungModal(true) }} title="Ausbuchen">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <line x1="5" y1="12" x2="19" y2="12"/>
-            </svg>
-          </button>
-          <button className="logout-btn" onClick={() => setShowInventoryModal(true)} title="Inventur">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
-              <path d="M9 12h6m-6 4h6"/>
-            </svg>
-          </button>
-          <button className="logout-btn" onClick={() => setShowSettingsModal(true)} title="Einstellungen">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <circle cx="12" cy="12" r="3"/>
-              <path d="M12 1v6m0 6v6M5.64 5.64l4.24 4.24m4.24 4.24l4.24 4.24M1 12h6m6 0h6M5.64 18.36l4.24-4.24m4.24-4.24l4.24-4.24"/>
-            </svg>
-          </button>
-          <Link to="/hub" className="logout-btn">
-            Hub
-          </Link>
-        </div>
+        <Link to="/hub" className="logout-btn">
+          Hub
+        </Link>
+      </div>
+
+      {/* ICON-TOOLBAR UNTER STATUSBAR */}
+      <div className="action-toolbar">
+        <button className="action-btn" onClick={() => { loadTransactions(); setShowLogModal(true) }} title="Logbuch">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <circle cx="12" cy="12" r="10"/>
+            <polyline points="12 6 12 12 16 14"/>
+          </svg>
+        </button>
+        <button className="action-btn" onClick={() => setShowItemsModal(true)} title="Artikel-Datenbank">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <rect x="3" y="3" width="7" height="7"/>
+            <rect x="14" y="3" width="7" height="7"/>
+            <rect x="3" y="14" width="7" height="7"/>
+            <rect x="14" y="14" width="7" height="7"/>
+          </svg>
+        </button>
+        <button className="action-btn" onClick={() => { setBuchungType('ein'); setShowBuchungModal(true) }} title="Einbuchen">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <line x1="12" y1="5" x2="12" y2="19"/>
+            <line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+        </button>
+        <button className="action-btn" onClick={() => { setBuchungType('aus'); setShowBuchungModal(true) }} title="Ausbuchen">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+        </button>
+        <button className="action-btn" onClick={() => { loadAuditHistory(); setShowInventoryModal(true) }} title="Inventur">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+            <path d="M9 12h6m-6 4h6"/>
+          </svg>
+        </button>
+        <button className="action-btn" onClick={() => setShowSettingsModal(true)} title="Einstellungen">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M12 1v6m0 6v6M5.64 5.64l4.24 4.24m4.24 4.24l4.24 4.24M1 12h6m6 0h6M5.64 18.36l4.24-4.24m4.24-4.24l4.24-4.24"/>
+          </svg>
+        </button>
       </div>
       
       <div className="content">
@@ -815,6 +883,49 @@ export default function Lager() {
         ))}
       </div>
 
+      {/* LOGBUCH MODAL */}
+      {showLogModal && (
+        <div className="modal" onClick={() => setShowLogModal(false)}>
+          <div className="modal-box" onClick={(e) => e.stopPropagation()}>
+            <h3>Logbuch - Alle Transaktionen</h3>
+            
+            <div className="log-list">
+              {transactions.length === 0 ? (
+                <div className="empty-state">Keine Transaktionen vorhanden</div>
+              ) : (
+                transactions.map(txn => (
+                  <div key={txn.id} className="log-entry">
+                    <div className="log-header">
+                      <div className="log-date">
+                        {new Date(txn.created).toLocaleString('de-DE')}
+                      </div>
+                      <div className={`log-type ${txn.type}`}>
+                        {txn.type === 'einbuchung' ? '➕ Einbuchung' : 
+                         txn.type === 'ausbuchung' ? '➖ Ausbuchung' : 
+                         '✏️ Korrektur'}
+                      </div>
+                    </div>
+                    <div className="log-details">
+                      <div><strong>Artikel:</strong> {txn.expand?.item_id?.name || 'Unbekannt'}</div>
+                      <div><strong>Standort:</strong> {txn.expand?.location_id?.name || 'Unbekannt'}</div>
+                      <div><strong>Menge:</strong> {txn.quantity > 0 ? '+' : ''}{txn.quantity} {txn.expand?.item_id?.unit || 'Stück'}</div>
+                      <div><strong>Benutzer:</strong> {txn.user}</div>
+                      {txn.note && <div><strong>Notiz:</strong> {txn.note}</div>}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            <div style={{display: 'flex', justifyContent: 'flex-end', marginTop: '24px'}}>
+              <button className="btn" onClick={() => setShowLogModal(false)}>
+                Schließen
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ARTIKEL-DATENBANK MODAL */}
       {showItemsModal && (
         <div className="modal" onClick={() => setShowItemsModal(false)}>
@@ -882,7 +993,7 @@ export default function Lager() {
         </div>
       )}
 
-      {/* EINSTELLUNGEN MODAL (LAGER-STANDORTE) */}
+      {/* EINSTELLUNGEN MODAL */}
       {showSettingsModal && (
         <div className="modal" onClick={() => setShowSettingsModal(false)}>
           <div className="modal-box" onClick={(e) => e.stopPropagation()}>
@@ -924,86 +1035,126 @@ export default function Lager() {
         </div>
       )}
 
-      {/* INVENTUR MODAL */}
+      {/* INVENTUR MODAL MIT TABS */}
       {showInventoryModal && (
         <div className="modal" onClick={() => setShowInventoryModal(false)}>
           <div className="modal-box" onClick={(e) => e.stopPropagation()}>
             <h3>Inventur</h3>
             
-            {!currentAudit ? (
-              <div>
-                <div className="empty-state" style={{marginBottom: '24px'}}>
-                  <div style={{fontSize: '48px', marginBottom: '16px'}}>📋</div>
-                  <div style={{fontWeight: 700, marginBottom: '8px'}}>Inventur durchführen</div>
-                  <div>Zählen Sie alle Artikel und korrigieren Sie Bestände</div>
-                </div>
-                
-                <button 
-                  className="btn primary" 
-                  style={{width: '100%'}}
-                  onClick={startInventur}
-                >
-                  Inventur starten
-                </button>
-              </div>
-            ) : (
-              <div>
-                <div style={{background: '#f0f9ff', padding: '12px', borderRadius: '8px', marginBottom: '16px'}}>
-                  <strong>Fortschritt:</strong> {auditItems.filter(ai => ai.checked).length} / {auditItems.length} geprüft
-                </div>
-                
-                {auditIndex < auditItems.length && (
-                  <div>
-                    <div style={{background: '#fafafa', padding: '16px', borderRadius: '8px', marginBottom: '16px'}}>
-                      <h4 style={{margin: '0 0 8px 0'}}>{auditIndex + 1}. {auditItems[auditIndex]?.expand?.item_id?.name}</h4>
-                      <div style={{color: '#64748b', fontSize: '0.9rem', marginBottom: '8px'}}>
-                        {auditItems[auditIndex]?.expand?.item_id?.category || 'Keine Kategorie'} • {auditItems[auditIndex]?.expand?.item_id?.unit || 'Stück'}
-                      </div>
-                      
-                      <div style={{background: '#fff', padding: '12px', borderRadius: '8px', marginBottom: '12px'}}>
-                        <div style={{color: '#64748b', fontSize: '0.85rem'}}>Erwarteter Bestand (laut System):</div>
-                        <div style={{fontSize: '1.5rem', fontWeight: 700}}>{auditItems[auditIndex]?.expected_quantity} {auditItems[auditIndex]?.expand?.item_id?.unit || 'Stück'}</div>
-                      </div>
-                      
-                      <div className="form-group">
-                        <label>Tatsächlicher Bestand (gezählt):</label>
-                        <input
-                          type="number"
-                          id="audit-actual"
-                          defaultValue={auditItems[auditIndex]?.actual_quantity || 0}
-                          min="0"
-                          style={{fontSize: '1.2rem', fontWeight: 700}}
-                        />
-                      </div>
-                      
-                      <div style={{marginTop: '12px'}}>
-                        <label style={{display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer'}}>
-                          <input type="checkbox" id="audit-checked" defaultChecked={auditItems[auditIndex]?.checked || false} />
-                          <span>Als geprüft markieren</span>
-                        </label>
-                      </div>
-                    </div>
-                    
-                    <div style={{display: 'flex', gap: '8px', justifyContent: 'space-between'}}>
-                      <button 
-                        className="btn" 
-                        onClick={() => setAuditIndex(Math.max(0, auditIndex - 1))}
-                        disabled={auditIndex === 0}
-                      >
-                        Zurück
-                      </button>
-                      <button 
-                        className="btn primary"
-                        onClick={() => {
-                          const actual = parseInt((document.getElementById('audit-actual') as HTMLInputElement)?.value || '0')
-                          const checked = (document.getElementById('audit-checked') as HTMLInputElement)?.checked || false
-                          saveAuditItem(actual, checked)
-                        }}
-                      >
-                        {auditIndex === auditItems.length - 1 ? 'Fertig' : 'Weiter'}
-                      </button>
-                    </div>
+            {/* TABS */}
+            <div className="tabs">
+              <button 
+                className={`tab ${inventoryTab === 'new' ? 'active' : ''}`}
+                onClick={() => setInventoryTab('new')}
+              >
+                Neue Inventur
+              </button>
+              <button 
+                className={`tab ${inventoryTab === 'history' ? 'active' : ''}`}
+                onClick={() => setInventoryTab('history')}
+              >
+                Historie
+              </button>
+            </div>
+            
+            {inventoryTab === 'new' ? (
+              !currentAudit ? (
+                <div>
+                  <div className="empty-state" style={{marginBottom: '24px'}}>
+                    <div style={{fontSize: '48px', marginBottom: '16px'}}>📋</div>
+                    <div style={{fontWeight: 700, marginBottom: '8px'}}>Inventur durchführen</div>
+                    <div>Zählen Sie alle Artikel und korrigieren Sie Bestände</div>
                   </div>
+                  
+                  <button 
+                    className="btn primary" 
+                    style={{width: '100%'}}
+                    onClick={startInventur}
+                  >
+                    Inventur starten
+                  </button>
+                </div>
+              ) : (
+                <div>
+                  <div style={{background: '#f0f9ff', padding: '12px', borderRadius: '8px', marginBottom: '16px'}}>
+                    <strong>Fortschritt:</strong> {auditItems.filter(ai => ai.checked).length} / {auditItems.length} geprüft
+                  </div>
+                  
+                  {auditIndex < auditItems.length && (
+                    <div>
+                      <div style={{background: '#fafafa', padding: '16px', borderRadius: '8px', marginBottom: '16px'}}>
+                        <h4 style={{margin: '0 0 8px 0'}}>{auditIndex + 1}. {auditItems[auditIndex]?.expand?.item_id?.name}</h4>
+                        <div style={{color: '#64748b', fontSize: '0.9rem', marginBottom: '8px'}}>
+                          {auditItems[auditIndex]?.expand?.item_id?.category || 'Keine Kategorie'} • {auditItems[auditIndex]?.expand?.item_id?.unit || 'Stück'}
+                        </div>
+                        
+                        <div style={{background: '#fff', padding: '12px', borderRadius: '8px', marginBottom: '12px'}}>
+                          <div style={{color: '#64748b', fontSize: '0.85rem'}}>Erwarteter Bestand (laut System):</div>
+                          <div style={{fontSize: '1.5rem', fontWeight: 700}}>{auditItems[auditIndex]?.expected_quantity} {auditItems[auditIndex]?.expand?.item_id?.unit || 'Stück'}</div>
+                        </div>
+                        
+                        <div className="form-group">
+                          <label>Tatsächlicher Bestand (gezählt):</label>
+                          <input
+                            type="number"
+                            id="audit-actual"
+                            defaultValue={auditItems[auditIndex]?.actual_quantity || 0}
+                            min="0"
+                            style={{fontSize: '1.2rem', fontWeight: 700}}
+                          />
+                        </div>
+                        
+                        <div style={{marginTop: '12px'}}>
+                          <label style={{display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer'}}>
+                            <input type="checkbox" id="audit-checked" defaultChecked={auditItems[auditIndex]?.checked || false} />
+                            <span>Als geprüft markieren</span>
+                          </label>
+                        </div>
+                      </div>
+                      
+                      <div style={{display: 'flex', gap: '8px', justifyContent: 'space-between'}}>
+                        <button 
+                          className="btn" 
+                          onClick={() => setAuditIndex(Math.max(0, auditIndex - 1))}
+                          disabled={auditIndex === 0}
+                        >
+                          Zurück
+                        </button>
+                        <button 
+                          className="btn primary"
+                          onClick={() => {
+                            const actual = parseInt((document.getElementById('audit-actual') as HTMLInputElement)?.value || '0')
+                            const checked = (document.getElementById('audit-checked') as HTMLInputElement)?.checked || false
+                            saveAuditItem(actual, checked)
+                          }}
+                        >
+                          {auditIndex === auditItems.length - 1 ? 'Fertig' : 'Weiter'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )
+            ) : (
+              <div className="audit-history-list">
+                {auditHistory.length === 0 ? (
+                  <div className="empty-state">Keine Inventuren vorhanden</div>
+                ) : (
+                  auditHistory.map(audit => (
+                    <div key={audit.id} className="audit-card">
+                      <div className="audit-card-header">
+                        <div className="audit-date">
+                          {new Date(audit.audit_date).toLocaleString('de-DE')}
+                        </div>
+                        <div className={`audit-status ${audit.status}`}>
+                          {audit.status === 'abgeschlossen' ? '✓ Abgeschlossen' : '⏳ Offen'}
+                        </div>
+                      </div>
+                      <div className="audit-user">
+                        <strong>Durchgeführt von:</strong> {audit.user}
+                      </div>
+                    </div>
+                  ))
                 )}
               </div>
             )}
@@ -1145,7 +1296,7 @@ export default function Lager() {
           </div>
         </div>
       )}
-           <style>{`
+      <style>{`
         .status-bar {
           background: #fff;
           border-bottom: 1px solid #e5e7eb;
@@ -1171,11 +1322,6 @@ export default function Lager() {
           color: #1d1d1f;
         }
 
-        .status-actions {
-          display: flex;
-          gap: 0.5rem;
-        }
-
         .logout-btn {
           border: 1px solid rgba(0,0,0,0.1);
           background: rgba(0,0,0,0.03);
@@ -1186,7 +1332,7 @@ export default function Lager() {
           font-weight: 700;
           font-size: 0.9rem;
           transition: all 0.2s;
-          text-decoration: none;
+          text-decoration: underline;
           display: inline-flex;
           align-items: center;
           gap: 6px;
@@ -1197,12 +1343,40 @@ export default function Lager() {
           background: rgba(0,0,0,0.06);
         }
 
-        .logout-btn svg {
-          flex-shrink: 0;
+        .action-toolbar {
+          background: #fff;
+          border-bottom: 1px solid #e5e7eb;
+          padding: 0.5rem 1rem;
+          display: flex;
+          gap: 0.5rem;
+          justify-content: center;
+          position: sticky;
+          top: 60px;
+          z-index: 99;
         }
 
-        a.logout-btn {
-          text-decoration: underline;
+        .action-btn {
+          border: 1px solid rgba(0,0,0,0.1);
+          background: rgba(0,0,0,0.03);
+          color: #1d1d1f;
+          padding: 0.5rem;
+          border-radius: 0.5rem;
+          cursor: pointer;
+          transition: all 0.2s;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          font-family: inherit;
+          min-width: 44px;
+          height: 44px;
+        }
+
+        .action-btn:hover {
+          background: rgba(0,0,0,0.06);
+        }
+
+        .action-btn svg {
+          flex-shrink: 0;
         }
 
         .content {
@@ -1626,6 +1800,142 @@ export default function Lager() {
           color: #1d1d1f;
         }
 
+        .tabs {
+          display: flex;
+          gap: 8px;
+          margin-bottom: 16px;
+          border-bottom: 2px solid #e5e7eb;
+        }
+
+        .tab {
+          background: none;
+          border: none;
+          padding: 10px 16px;
+          cursor: pointer;
+          font-weight: 600;
+          font-size: 0.95rem;
+          color: #64748b;
+          transition: all 0.2s;
+          border-bottom: 2px solid transparent;
+          margin-bottom: -2px;
+          font-family: inherit;
+        }
+
+        .tab:hover {
+          color: #1d1d1f;
+        }
+
+        .tab.active {
+          color: #b91c1c;
+          border-bottom-color: #b91c1c;
+        }
+
+        .log-list {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+          max-height: 500px;
+          overflow-y: auto;
+        }
+
+        .log-entry {
+          background: #fafafa;
+          border-radius: 8px;
+          padding: 12px;
+          border-left: 3px solid #64748b;
+        }
+
+        .log-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 8px;
+        }
+
+        .log-date {
+          font-size: 0.9rem;
+          color: #64748b;
+          font-weight: 600;
+        }
+
+        .log-type {
+          font-size: 0.85rem;
+          font-weight: 700;
+          padding: 4px 8px;
+          border-radius: 4px;
+        }
+
+        .log-type.einbuchung {
+          background: #dcfce7;
+          color: #166534;
+        }
+
+        .log-type.ausbuchung {
+          background: #fee2e2;
+          color: #b91c1c;
+        }
+
+        .log-type.korrektur {
+          background: #fef3c7;
+          color: #92400e;
+        }
+
+        .log-details {
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+          font-size: 0.9rem;
+        }
+
+        .audit-history-list {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+          max-height: 400px;
+          overflow-y: auto;
+        }
+
+        .audit-card {
+          background: #fafafa;
+          border-radius: 8px;
+          padding: 12px;
+          border-left: 3px solid #2563eb;
+        }
+
+        .audit-card-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 8px;
+        }
+
+        .audit-date {
+          font-weight: 700;
+          font-size: 0.95rem;
+        }
+
+        .audit-status {
+          font-size: 0.85rem;
+          font-weight: 700;
+          padding: 4px 8px;
+          border-radius: 4px;
+        }
+
+        .audit-status.abgeschlossen {
+          background: #dcfce7;
+          color: #166534;
+        }
+
+        .audit-status.offen {
+          background: #fef3c7;
+          color: #92400e;
+        }
+
+        .audit-user {
+          font-size: 0.9rem;
+          color: #64748b;
+        }
+
         .form-group {
           display: flex;
           flex-direction: column;
@@ -1727,23 +2037,25 @@ export default function Lager() {
             order: 1;
           }
 
-          .status-actions {
-            order: 3;
-            width: 100%;
-            margin-top: 8px;
-            justify-content: space-between;
-          }
-
           .logout-btn {
-            flex: 1;
-            font-size: 11px;
-            padding: 0.4rem 0.5rem;
-            min-width: 0;
+            order: 3;
+            margin-left: auto;
           }
 
-          .logout-btn svg {
-            width: 12px;
-            height: 12px;
+          .action-toolbar {
+            flex-wrap: wrap;
+            gap: 0.4rem;
+          }
+
+          .action-btn {
+            flex: 1;
+            min-width: 40px;
+            height: 40px;
+          }
+
+          .action-btn svg {
+            width: 16px;
+            height: 16px;
           }
 
           .toolbar {
@@ -1792,3 +2104,5 @@ export default function Lager() {
     </>
   )
 }
+
+export default Lager
