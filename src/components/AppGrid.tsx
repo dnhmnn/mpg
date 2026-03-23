@@ -11,7 +11,7 @@ const ALL_APPS: Record<string, App> = {
   einsaetze: { id: 'einsaetze', name: 'Einsätze', icon: 'siren', url: '/einsaetze.html', permission: 'einsaetze' },
   patienten: { id: 'patienten', name: 'Patienten', icon: 'clipboard', url: '/patientendokumentation-dateien.html', permission: 'patienten' },
   dokumente: { id: 'dokumente', name: 'Vorgänge', icon: 'file', url: '/dokumente-bearbeiten.html', permission: 'dokumente' },
-  lager: { id: 'lager', name: 'Lager', icon: 'package', url: '/lager.tsx', permission: 'lager' },
+  lager: { id: 'lager', name: 'Lager', icon: 'package', url: '/lager', permission: 'lager' },
   produktausgabe: { id: 'produktausgabe', name: 'Ausgabe', icon: 'check', url: '/produktausgabe.html', permission: 'produktausgabe' },
   dateien: { id: 'dateien', name: 'Dateien', icon: 'folder', url: '/files', permission: 'dateien' },
   qr: { id: 'qr', name: 'QR-Codes', icon: 'qrcode', url: '/qr-code-generator.html', permission: 'qr' },
