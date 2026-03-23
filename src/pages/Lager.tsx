@@ -2104,5 +2104,3 @@ export default function Lager() {
     </>
   )
 }
-
-export default Lager
