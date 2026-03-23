@@ -1295,8 +1295,6 @@ export default function Lager() {
           display: flex;
           gap: 0.5rem;
           justify-content: center;
-          position: sticky;
-          top: 60px;
           z-index: 99;
         }
 
