@@ -5,6 +5,7 @@ import Index from './pages/Index'
 import SettingsPage from './pages/SettingsPage'
 import AusbildungenPage from './pages/AusbildungenPage'
 import Files from './pages/Files'
+import Lager from './pages/Lager'
 import './styles/globals.css'
 
 function App() {
