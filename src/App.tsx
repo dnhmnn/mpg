@@ -17,6 +17,7 @@ function App() {
         <Route path="/hub" element={<Hub />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/ausbildungen" element={<AusbildungenPage />} />
+        <Route path="/lager" element={<Lager />} />
         <Route path="/files" element={<Files />} />
       </Routes>
     </BrowserRouter>
