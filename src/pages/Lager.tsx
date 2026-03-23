@@ -1289,14 +1289,17 @@ export default function Lager() {
       <style>{`
       
         .action-toolbar {
-          background: #fff;
-          border-bottom: 1px solid #e5e7eb;
-          padding: 0.5rem 1rem;
-          display: flex;
-          gap: 0.5rem;
-          justify-content: center;
-          z-index: 99;
-        }
+  background: #fff;
+  border-bottom: 1px solid #e5e7eb;
+  padding: 0.5rem 1rem;
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+  position: sticky;
+  top: 60px;
+  z-index: 99;
+}
+
 
         .action-btn {
           border: 1px solid rgba(0,0,0,0.1);
