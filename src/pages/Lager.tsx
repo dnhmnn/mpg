@@ -1328,7 +1328,7 @@ export default function Lager() {
           max-width: 1200px;
           margin: 0 auto;
           padding: 1rem;
-          padding-top: 140px;  /* ← DIESE ZEILE ÄNDERN */
+          padding-top: 100px;  /* ← DIESE ZEILE ÄNDERN */
           padding-bottom: 100px;
         }
 
