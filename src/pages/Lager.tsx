@@ -1287,52 +1287,7 @@ export default function Lager() {
         </div>
       )}
       <style>{`
-        .status-bar {
-          background: #fff;
-          border-bottom: 1px solid #e5e7eb;
-          padding: 0.75rem 1rem;
-          display: flex;
-          gap: 0.5rem;
-          align-items: center;
-          position: sticky;
-          top: 0;
-          z-index: 100;
-        }
-
-        .logo svg {
-          display: block;
-        }
-
-        .user-name {
-          font-size: 1.05rem;
-          margin: 0;
-          font-weight: 400;
-          flex: 1;
-          text-align: center;
-          color: #1d1d1f;
-        }
-
-        .logout-btn {
-          border: 1px solid rgba(0,0,0,0.1);
-          background: rgba(0,0,0,0.03);
-          color: #1d1d1f;
-          padding: 0.45rem 0.7rem;
-          border-radius: 0.5rem;
-          cursor: pointer;
-          font-weight: 700;
-          font-size: 0.9rem;
-          transition: all 0.2s;
-          text-decoration: underline;
-          display: inline-flex;
-          align-items: center;
-          gap: 6px;
-          font-family: inherit;
-        }
-
-        .logout-btn:hover {
-          background: rgba(0,0,0,0.06);
-        }
-
+      
         .action-toolbar {
           background: #fff;
           border-bottom: 1px solid #e5e7eb;
