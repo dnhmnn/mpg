@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import { pb } from '../lib/pocketbase'
 import { useAuth } from '../hooks/useAuth'
-import StatusBar from '../components/StatusBar'
 
 interface InventoryItem {
   id: string
@@ -59,9 +59,13 @@ export default function Lager() {
   const [message, setMessage] = useState<{text: string, type: 'success' | 'error'} | null>(null)
   
   const [showSettingsModal, setShowSettingsModal] = useState(false)
-  const [settingsTab, setSettingsTab] = useState<'items' | 'locations' | 'audits'>('items')
+  const [showItemsModal, setShowItemsModal] = useState(false)
+  const [showInventoryModal, setShowInventoryModal] = useState(false)
+  const [showBuchungModal, setShowBuchungModal] = useState(false)
+  const [buchungType, setBuchungType] = useState<'ein' | 'aus'>('ein')
+  
+  const [settingsTab, setSettingsTab] = useState<'locations'>('locations')
   const [showAddItemModal, setShowAddItemModal] = useState(false)
-  const [showAddStockModal, setShowAddStockModal] = useState(false)
   
   const [itemFormData, setItemFormData] = useState({
     name: '',
@@ -398,9 +402,47 @@ export default function Lager() {
     return null
   }
 
+  const userName = user?.name || user?.email?.split('@')[0] || '—'
+
   return (
     <>
-      <StatusBar user={user} onLogout={logout} pageName="Lager" showHubLink={true} />
+      {/* CUSTOM STATUSBAR MIT ZUSÄTZLICHEN BUTTONS */}
+      <div className="status-bar">
+        <div className="logo">
+          <svg width="120" height="32" viewBox="0 0 560 140">
+            <rect x="20" y="20" width="100" height="100" rx="26" fill="#1e3a8a" opacity="0.15"/>
+            <path d="M45 42 L45 98 L60 98 L60 78 L72 78 L83 98 L100 98 L87 77 Q92 74 92 63 Q92 42 75 42 Z M60 52 L72 52 Q77 52 77 62 Q77 72 72 72 L60 72 Z" fill="#1e3a8a"/>
+            <text x="140" y="80" fontFamily="Inter, sans-serif" fontSize="46" fontWeight="600" fill="#1d1d1f" letterSpacing="0">Responda</text>
+          </svg>
+        </div>
+        <div className="user-name">Lager</div>
+        <div className="status-buttons">
+          <button className="status-btn" onClick={() => setShowItemsModal(true)} title="Artikel-Datenbank">
+            DB
+          </button>
+          <button className="status-btn" onClick={() => {
+            setBuchungType('ein')
+            setShowBuchungModal(true)
+          }} title="Einbuchen">
+            +
+          </button>
+          <button className="status-btn" onClick={() => {
+            setBuchungType('aus')
+            setShowBuchungModal(true)
+          }} title="Ausbuchen">
+            −
+          </button>
+          <button className="status-btn" onClick={() => setShowInventoryModal(true)} title="Inventur">
+            Inventur
+          </button>
+          <button className="status-btn" onClick={() => setShowSettingsModal(true)} title="Einstellungen">
+            ⚙️
+          </button>
+          <Link to="/hub" className="status-btn">
+            Hub
+          </Link>
+        </div>
+      </div>
       
       <div className="content">
         {message && (
@@ -469,9 +511,6 @@ export default function Lager() {
               Nur 0
             </button>
           </div>
-          <button className="btn primary" onClick={() => setShowSettingsModal(true)}>
-            Einstellungen
-          </button>
         </div>
 
         {error && (
@@ -576,132 +615,154 @@ export default function Lager() {
         ))}
       </div>
 
-      {/* SETTINGS MODAL */}
-      {showSettingsModal && (
-        <div className="modal" onClick={() => setShowSettingsModal(false)}>
+      {/* ARTIKEL-DATENBANK MODAL */}
+      {showItemsModal && (
+        <div className="modal" onClick={() => setShowItemsModal(false)}>
           <div className="modal-box" onClick={(e) => e.stopPropagation()}>
-            <h3>Einstellungen</h3>
+            <h3>Artikel-Datenbank</h3>
             
-            <div className="tabs">
-              <button 
-                className={`tab ${settingsTab === 'items' ? 'active' : ''}`}
-                onClick={() => setSettingsTab('items')}
-              >
-                Artikel-Datenbank
-              </button>
-              <button 
-                className={`tab ${settingsTab === 'locations' ? 'active' : ''}`}
-                onClick={() => setSettingsTab('locations')}
-              >
-                Lager-Standorte
-              </button>
-              <button 
-                className={`tab ${settingsTab === 'audits' ? 'active' : ''}`}
-                onClick={() => setSettingsTab('audits')}
-              >
-                Inventur
-              </button>
-            </div>
-
-            {settingsTab === 'items' && (
-              <div className="tab-content">
-                <button 
-                  className="btn primary" 
-                  style={{width: '100%', marginBottom: '16px'}}
-                  onClick={() => {
-                    setItemFormData({ name: '', category: '', unit: 'Stück', min_stock: 0 })
-                    setEditingItemId(null)
-                    setShowAddItemModal(true)
-                  }}
-                >
-                  Neuen Artikel anlegen
-                </button>
-                
-                <div className="item-list">
-                  {allItems.length === 0 ? (
-                    <div className="empty-state">Keine Artikel vorhanden</div>
-                  ) : (
-                    allItems.map(item => (
-                      <div key={item.id} className="item-card">
-                        <div className="item-card-info">
-                          <div className="item-card-name">{item.name}</div>
-                          <div className="item-card-meta">
-                            {item.category || 'Keine Kategorie'} • {item.unit || 'Stück'} • Min: {item.min_stock || 0}
-                          </div>
-                        </div>
-                        <div style={{display: 'flex', gap: '8px'}}>
-                          <button 
-                            className="btn-small"
-                            onClick={() => {
-                              setItemFormData({
-                                name: item.name,
-                                category: item.category,
-                                unit: item.unit,
-                                min_stock: item.min_stock
-                              })
-                              setEditingItemId(item.id)
-                              setShowAddItemModal(true)
-                            }}
-                          >
-                            Bearbeiten
-                          </button>
-                          <button 
-                            className="btn-small danger"
-                            onClick={() => deleteItem(item.id)}
-                          >
-                            Löschen
-                          </button>
-                        </div>
+            <button 
+              className="btn primary" 
+              style={{width: '100%', marginBottom: '16px'}}
+              onClick={() => {
+                setItemFormData({ name: '', category: '', unit: 'Stück', min_stock: 0 })
+                setEditingItemId(null)
+                setShowAddItemModal(true)
+              }}
+            >
+              Neuen Artikel anlegen
+            </button>
+            
+            <div className="item-list">
+              {allItems.length === 0 ? (
+                <div className="empty-state">Keine Artikel vorhanden</div>
+              ) : (
+                allItems.map(item => (
+                  <div key={item.id} className="item-card">
+                    <div className="item-card-info">
+                      <div className="item-card-name">{item.name}</div>
+                      <div className="item-card-meta">
+                        {item.category || 'Keine Kategorie'} • {item.unit || 'Stück'} • Min: {item.min_stock || 0}
                       </div>
-                    ))
-                  )}
-                </div>
-              </div>
-            )}
-
-            {settingsTab === 'locations' && (
-              <div className="tab-content">
-                <div className="location-list">
-                  {locations.map(loc => (
-                    <div key={loc.id} className="location-card">
-                      <div>{loc.name}</div>
+                    </div>
+                    <div style={{display: 'flex', gap: '8px'}}>
+                      <button 
+                        className="btn-small"
+                        onClick={() => {
+                          setItemFormData({
+                            name: item.name,
+                            category: item.category,
+                            unit: item.unit,
+                            min_stock: item.min_stock
+                          })
+                          setEditingItemId(item.id)
+                          setShowAddItemModal(true)
+                        }}
+                      >
+                        Bearbeiten
+                      </button>
                       <button 
                         className="btn-small danger"
-                        onClick={() => deleteLocation(loc.id)}
-                        disabled={locations.length <= 1}
+                        onClick={() => deleteItem(item.id)}
                       >
                         Löschen
                       </button>
                     </div>
-                  ))}
-                </div>
-                
-                <div className="form-group" style={{marginTop: '16px'}}>
-                  <input
-                    type="text"
-                    placeholder="Neuer Standort-Name"
-                    value={newLocationName}
-                    onChange={(e) => setNewLocationName(e.target.value)}
-                  />
-                  <button className="btn primary" onClick={addLocation}>
-                    Standort hinzufügen
+                  </div>
+                ))
+              )}
+            </div>
+
+            <div style={{display: 'flex', justifyContent: 'flex-end', marginTop: '24px'}}>
+              <button className="btn" onClick={() => setShowItemsModal(false)}>
+                Schließen
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* EINSTELLUNGEN MODAL (NUR LAGER-STANDORTE) */}
+      {showSettingsModal && (
+        <div className="modal" onClick={() => setShowSettingsModal(false)}>
+          <div className="modal-box" onClick={(e) => e.stopPropagation()}>
+            <h3>Lager-Standorte</h3>
+            
+            <div className="location-list">
+              {locations.map(loc => (
+                <div key={loc.id} className="location-card">
+                  <div>{loc.name}</div>
+                  <button 
+                    className="btn-small danger"
+                    onClick={() => deleteLocation(loc.id)}
+                    disabled={locations.length <= 1}
+                  >
+                    Löschen
                   </button>
                 </div>
-              </div>
-            )}
-
-            {settingsTab === 'audits' && (
-              <div className="tab-content">
-                <div className="empty-state">
-                  <div style={{fontSize: '48px', marginBottom: '16px'}}>📋</div>
-                  <div style={{fontWeight: 700, marginBottom: '8px'}}>Inventur-Funktion</div>
-                  <div>Kommt bald!</div>
-                </div>
-              </div>
-            )}
+              ))}
+            </div>
+            
+            <div className="form-group" style={{marginTop: '16px'}}>
+              <input
+                type="text"
+                placeholder="Neuer Standort-Name"
+                value={newLocationName}
+                onChange={(e) => setNewLocationName(e.target.value)}
+              />
+              <button className="btn primary" onClick={addLocation}>
+                Standort hinzufügen
+              </button>
+            </div>
 
             <div style={{display: 'flex', justifyContent: 'flex-end', marginTop: '24px'}}>
               <button className="btn" onClick={() => setShowSettingsModal(false)}>
+                Schließen
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* INVENTUR MODAL */}
+      {showInventoryModal && (
+        <div className="modal" onClick={() => setShowInventoryModal(false)}>
+          <div className="modal-box" onClick={(e) => e.stopPropagation()}>
+            <h3>Inventur</h3>
+            
+            <div className="empty-state">
+              <div style={{fontSize: '48px', marginBottom: '16px'}}>📋</div>
+              <div style={{fontWeight: 700, marginBottom: '8px'}}>Inventur-Funktion</div>
+              <div>Kommt bald!</div>
+            </div>
+
+            <div style={{display: 'flex', justifyContent: 'flex-end', marginTop: '24px'}}>
+              <button className="btn" onClick={() => setShowInventoryModal(false)}>
+                Schließen
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* BUCHUNG MODAL */}
+      {showBuchungModal && (
+        <div className="modal" onClick={() => setShowBuchungModal(false)}>
+          <div className="modal-box small" onClick={(e) => e.stopPropagation()}>
+            <h3>{buchungType === 'ein' ? 'Einbuchen' : 'Ausbuchen'}</h3>
+            
+            <div className="empty-state">
+              <div style={{fontSize: '48px', marginBottom: '16px'}}>
+                {buchungType === 'ein' ? '➕' : '➖'}
+              </div>
+              <div style={{fontWeight: 700, marginBottom: '8px'}}>
+                {buchungType === 'ein' ? 'Artikel einbuchen' : 'Artikel ausbuchen'}
+              </div>
+              <div>Nutzen Sie das 3-Punkte-Menü bei jedem Artikel</div>
+            </div>
+
+            <div style={{display: 'flex', justifyContent: 'flex-end', marginTop: '24px'}}>
+              <button className="btn" onClick={() => setShowBuchungModal(false)}>
                 Schließen
               </button>
             </div>
@@ -769,10 +830,65 @@ export default function Lager() {
       )}
 
       <style>{`
+        .status-bar {
+          background: #fff;
+          border-bottom: 1px solid rgba(0,0,0,0.08);
+          padding: 12px 20px;
+          display: flex;
+          align-items: center;
+          gap: 16px;
+          position: sticky;
+          top: 0;
+          z-index: 100;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+        }
+
+        .logo svg {
+          display: block;
+        }
+
+        .user-name {
+          font-weight: 700;
+          font-size: 1.05rem;
+          color: #1d1d1f;
+        }
+
+        .status-buttons {
+          margin-left: auto;
+          display: flex;
+          gap: 8px;
+          align-items: center;
+        }
+
+        .status-btn {
+          background: #fff;
+          color: #1d1d1f;
+          border: 1px solid rgba(0,0,0,0.08);
+          padding: 8px 16px;
+          border-radius: 8px;
+          font-size: 14px;
+          font-weight: 700;
+          cursor: pointer;
+          transition: all 0.2s;
+          text-decoration: none;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          font-family: inherit;
+          min-width: 44px;
+        }
+
+        .status-btn:hover {
+          background: #f9f9f9;
+          transform: translateY(-1px);
+          box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
         .content {
           max-width: 1200px;
           margin: 0 auto;
           padding: 1rem;
+          padding-top: 20px;
           padding-bottom: 100px;
         }
 
@@ -939,6 +1055,11 @@ export default function Lager() {
 
         .btn-small.danger {
           color: #b91c1c;
+        }
+
+        .btn-small:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
         }
 
         .items-list {
@@ -1173,43 +1294,11 @@ export default function Lager() {
           font-weight: 800;
         }
 
-        .tabs {
-          display: flex;
-          gap: 10px;
-          margin-bottom: 16px;
-          flex-wrap: wrap;
-        }
-
-        .tab {
-          border: 1px solid rgba(0,0,0,0.08);
-          background: #fafafa;
-          padding: 10px 16px;
-          border-radius: 999px;
-          font-weight: 800;
-          cursor: pointer;
-          font-size: 0.95rem;
-          transition: all 0.2s;
-          font-family: inherit;
-        }
-
-        .tab:hover {
-          background: #f0f0f0;
-        }
-
-        .tab.active {
-          color: #fff;
-          background: #b91c1c;
-          border-color: #b91c1c;
-        }
-
-        .tab-content {
-          margin-top: 16px;
-        }
-
         .form-group {
           display: flex;
           flex-direction: column;
           gap: 6px;
+          margin-bottom: 12px;
         }
 
         .form-group label {
@@ -1288,9 +1377,27 @@ export default function Lager() {
           padding: 12px;
           border: 1px solid rgba(0,0,0,0.08);
           border-radius: 8px;
+          font-weight: 600;
         }
 
         @media (max-width: 768px) {
+          .status-bar {
+            flex-wrap: wrap;
+          }
+
+          .status-buttons {
+            width: 100%;
+            margin-left: 0;
+            justify-content: space-between;
+          }
+
+          .status-btn {
+            flex: 1;
+            min-width: 60px;
+            font-size: 12px;
+            padding: 8px 12px;
+          }
+
           .toolbar {
             flex-direction: column;
           }
