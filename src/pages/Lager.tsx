@@ -1971,15 +1971,6 @@ export default function Lager() {
 
         @media (max-width: 768px) {
   
-          .logo {
-            order: 1;
-          }
-
-          .logout-btn {
-            order: 3;
-            margin-left: auto;
-          }
-
           .action-toolbar {
             flex-wrap: wrap;
             gap: 0.4rem;
