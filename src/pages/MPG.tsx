@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import PocketBase from 'pocketbase'
+import StatusBar from '../components/StatusBar'
+import { useAuth } from '../hooks/useAuth'
 
 const pb = new PocketBase('https://api.responda.systems')
 
@@ -119,7 +121,8 @@ const defaultChecklists: Record<string, string[]> = {
 }
 
 export default function MPG() {
-  const [user, setUser] = useState<any>(null)
+  const { user, loading: authLoading, logout } = useAuth()
+  
   const [devices, setDevices] = useState<Device[]>([])
   const [inspections, setInspections] = useState<Inspection[]>([])
   const [checklists, setChecklists] = useState<Checklist[]>([])
@@ -163,17 +166,17 @@ export default function MPG() {
   const [statusFilter, setStatusFilter] = useState<'all' | 'ok' | 'warning' | 'overdue'>('all')
 
   useEffect(() => {
-    const authData = pb.authStore.model
-    if (!authData) {
-      window.location.href = '/login'
-      return
+    if (user?.organization_id) {
+      loadData()
     }
-    setUser(authData)
-    loadData()
-  }, [])
+  }, [user])
+
+  if (authLoading) {
+    return null
+  }
 
   async function loadData() {
-    if (!pb.authStore.model) return
+    if (!user?.organization_id) return
     
     try {
       setLoading(true)
@@ -192,7 +195,7 @@ export default function MPG() {
 
   async function loadDevices() {
     const records = await pb.collection('mpg_devices').getFullList({
-      filter: `organization_id = "${pb.authStore.model?.organization_id}"`,
+      filter: `organization_id = "${user?.organization_id}"`,
       sort: '-created'
     })
     setDevices(records)
@@ -200,7 +203,7 @@ export default function MPG() {
 
   async function loadInspections() {
     const records = await pb.collection('mpg_inspections').getFullList({
-      filter: `organization_id = "${pb.authStore.model?.organization_id}"`,
+      filter: `organization_id = "${user?.organization_id}"`,
       sort: '-inspection_date'
     })
     setInspections(records)
@@ -208,11 +211,11 @@ export default function MPG() {
 
   async function loadOrCreateChecklists() {
     console.log('📋 Lade Prüfvorlagen...')
-    console.log('  Organization ID:', pb.authStore.model?.organization_id)
+    console.log('  Organization ID:', user?.organization_id)
     
     try {
       const records = await pb.collection('mpg_checklists').getFullList({
-        filter: `organization_id = "${pb.authStore.model?.organization_id}"`
+        filter: `organization_id = "${user?.organization_id}"`
       })
       
       console.log('  ✅ Gefundene Checklisten:', records.length)
@@ -225,7 +228,7 @@ export default function MPG() {
           const created = await pb.collection('mpg_checklists').create({
             device_type: type,
             items: items,
-            organization_id: pb.authStore.model?.organization_id
+            organization_id: user?.organization_id
           })
           newChecklists.push(created)
           console.log(`    ✓ ${type}: ${items.length} Punkte`)
@@ -551,6 +554,7 @@ export default function MPG() {
 
   return (
     <>
+      <StatusBar user={user} onLogout={logout} pageName="MPG" showHubLink={true} />
       
       {/* ICON TOOLBAR */}
       <div className="action-toolbar">
@@ -1272,7 +1276,7 @@ export default function MPG() {
           max-width: 1200px;
           margin: 0 auto;
           padding: 1rem;
-          padding-top: 80px;
+          padding-top: 140px;
           padding-bottom: 100px;
         }
 
@@ -1303,8 +1307,8 @@ export default function MPG() {
           gap: 0.5rem;
           justify-content: center;
           position: sticky;
-          top: 0;
-          z-index: 999;
+          top: 60px;
+          z-index: 99;
         }
 
         .action-btn {
@@ -2074,7 +2078,7 @@ export default function MPG() {
           }
 
           .content {
-            padding-top: 100px;
+            padding-top: 160px;
           }
         }
       `}</style>
