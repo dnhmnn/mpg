@@ -354,14 +354,27 @@ export default function MPG() {
 
   function startInspection(device: Device) {
     console.log('🔍 Starte Prüfung für:', device.name, '(', device.type, ')')
+    console.log('  Device Type (exakt):', JSON.stringify(device.type))
     console.log('  Verfügbare Templates:', checklists.length)
     
-    const template = checklists.find(c => c.device_type === device.type) || 
-                     checklists.find(c => c.device_type === 'Sonstiges')
+    // Zeige alle verfügbaren Templates
+    checklists.forEach(c => {
+      console.log(`    - Template: "${c.device_type}" (${c.items.length} Items)`)
+    })
     
-    const items = template?.items || defaultChecklists['Sonstiges']
+    const template = checklists.find(c => c.device_type === device.type)
+    console.log('  Template gefunden?', template ? 'JA' : 'NEIN')
     
-    console.log('  Gefundenes Template:', template?.device_type || 'Sonstiges (Default)')
+    if (!template) {
+      console.log('  ⚠️  KEIN TEMPLATE GEFUNDEN! Suche "Sonstiges"...')
+      const sonstigesTemplate = checklists.find(c => c.device_type === 'Sonstiges')
+      console.log('  Sonstiges gefunden?', sonstigesTemplate ? 'JA' : 'NEIN')
+    }
+    
+    const finalTemplate = template || checklists.find(c => c.device_type === 'Sonstiges')
+    const items = finalTemplate?.items || defaultChecklists['Sonstiges']
+    
+    console.log('  Verwendetes Template:', finalTemplate?.device_type || 'Default Sonstiges')
     console.log('  Anzahl Prüfpunkte:', items.length)
     console.log('  Prüfpunkte:', items)
     
@@ -1259,7 +1272,7 @@ export default function MPG() {
           max-width: 1200px;
           margin: 0 auto;
           padding: 1rem;
-          padding-top: 140px;
+          padding-top: 80px;
           padding-bottom: 100px;
         }
 
@@ -1290,8 +1303,8 @@ export default function MPG() {
           gap: 0.5rem;
           justify-content: center;
           position: sticky;
-          top: 60px;
-          z-index: 99;
+          top: 0;
+          z-index: 999;
         }
 
         .action-btn {
@@ -2061,7 +2074,7 @@ export default function MPG() {
           }
 
           .content {
-            padding-top: 160px;
+            padding-top: 100px;
           }
         }
       `}</style>
