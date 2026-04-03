@@ -85,6 +85,13 @@ export default function MPG() {
     currentStep: 0
   })
   
+  // Settings form
+  const [settingsForm, setSettingsForm] = useState({
+    selectedType: 'AED',
+    items: [] as string[],
+    newItem: ''
+  })
+  
   const [selectedDevice, setSelectedDevice] = useState<Device | null>(null)
   const [message, setMessage] = useState<{text: string, type: 'success' | 'error'} | null>(null)
 
@@ -252,6 +259,7 @@ export default function MPG() {
     setMessage({ text, type })
     setTimeout(() => setMessage(null), 4000)
   }
+  }
 
   // ==================== DEVICE MANAGEMENT ====================
 
@@ -412,6 +420,88 @@ export default function MPG() {
     setShowDeviceDetailModal(true)
   }
 
+  // ==================== SETTINGS / CHECKLIST TEMPLATES ====================
+
+  function openSettings() {
+    const template = checklists.find(c => c.device_type === 'AED')
+    setSettingsForm({
+      selectedType: 'AED',
+      items: template?.items || defaultChecklists['AED'],
+      newItem: ''
+    })
+    setShowSettingsModal(true)
+  }
+
+  function loadChecklistForType(deviceType: string) {
+    const template = checklists.find(c => c.device_type === deviceType)
+    setSettingsForm({
+      selectedType: deviceType,
+      items: template?.items || defaultChecklists[deviceType] || [],
+      newItem: ''
+    })
+  }
+
+  function addChecklistItem() {
+    if (!settingsForm.newItem.trim()) return
+    
+    setSettingsForm({
+      ...settingsForm,
+      items: [...settingsForm.items, settingsForm.newItem.trim()],
+      newItem: ''
+    })
+  }
+
+  function removeChecklistItem(index: number) {
+    const updated = [...settingsForm.items]
+    updated.splice(index, 1)
+    setSettingsForm({ ...settingsForm, items: updated })
+  }
+
+  function moveChecklistItem(index: number, direction: 'up' | 'down') {
+    const updated = [...settingsForm.items]
+    const newIndex = direction === 'up' ? index - 1 : index + 1
+    
+    if (newIndex < 0 || newIndex >= updated.length) return
+    
+    const temp = updated[index]
+    updated[index] = updated[newIndex]
+    updated[newIndex] = temp
+    
+    setSettingsForm({ ...settingsForm, items: updated })
+  }
+
+  async function saveChecklistTemplate() {
+    if (!user?.organization_id) return
+    
+    try {
+      const existing = checklists.find(c => c.device_type === settingsForm.selectedType)
+      
+      if (existing) {
+        await pb.collection('mpg_checklists').update(existing.id, {
+          items: settingsForm.items
+        })
+      } else {
+        await pb.collection('mpg_checklists').create({
+          device_type: settingsForm.selectedType,
+          items: settingsForm.items,
+          organization_id: user.organization_id
+        })
+      }
+      
+      showMessage('Prüfvorlage gespeichert!')
+      await loadOrCreateChecklists()
+    } catch(e: any) {
+      alert('Fehler: ' + e.message)
+    }
+  }
+
+  async function resetChecklistTemplate() {
+    if (!confirm('Prüfvorlage auf Standard zurücksetzen?')) return
+    
+    const defaultItems = defaultChecklists[settingsForm.selectedType] || []
+    setSettingsForm({ ...settingsForm, items: defaultItems })
+  }
+
   // ==================== RENDERING ====================
 
   const stats = {
@@ -439,6 +529,7 @@ export default function MPG() {
   if (authLoading) {
     return null
   }
+
   return (
     <>
       <StatusBar user={user} onLogout={logout} pageName="MPG" showHubLink={true} />
@@ -460,7 +551,7 @@ export default function MPG() {
             <polyline points="10 9 9 9 8 9"/>
           </svg>
         </button>
-        <button className="action-btn" onClick={() => setShowSettingsModal(true)} title="Einstellungen">
+        <button className="action-btn" onClick={openSettings} title="Prüfvorlagen">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <circle cx="12" cy="12" r="3"/>
             <path d="M12 1v6m0 6v6M5.6 5.6l4.2 4.2m4.2 4.2l4.2 4.2M1 12h6m6 0h6M5.6 18.4l4.2-4.2m4.2-4.2l4.2-4.2"/>
@@ -478,18 +569,42 @@ export default function MPG() {
         {/* STATISTICS */}
         <div className="stats-grid">
           <div className="stat-card ok">
+            <div className="stat-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+            </div>
             <div className="stat-number">{stats.ok}</div>
-            <div className="stat-label">✅ Geprüft</div>
+            <div className="stat-label">Geprüft</div>
           </div>
           <div className="stat-card warning">
+            <div className="stat-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                <line x1="12" y1="9" x2="12" y2="13"/>
+                <line x1="12" y1="17" x2="12.01" y2="17"/>
+              </svg>
+            </div>
             <div className="stat-number">{stats.warning}</div>
-            <div className="stat-label">⚠️ Bald fällig</div>
+            <div className="stat-label">Bald fällig</div>
           </div>
           <div className="stat-card overdue">
+            <div className="stat-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="15" y1="9" x2="9" y2="15"/>
+                <line x1="9" y1="9" x2="15" y2="15"/>
+              </svg>
+            </div>
             <div className="stat-number">{stats.overdue}</div>
-            <div className="stat-label">❌ Überfällig</div>
+            <div className="stat-label">Überfällig</div>
           </div>
           <div className="stat-card total">
+            <div className="stat-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+              </svg>
+            </div>
             <div className="stat-number">{stats.total}</div>
             <div className="stat-label">Gesamt</div>
           </div>
@@ -515,19 +630,19 @@ export default function MPG() {
               className={`filter-btn ${statusFilter === 'ok' ? 'active' : ''}`}
               onClick={() => setStatusFilter('ok')}
             >
-              ✅ Geprüft
+              Geprüft
             </button>
             <button 
               className={`filter-btn ${statusFilter === 'warning' ? 'active' : ''}`}
               onClick={() => setStatusFilter('warning')}
             >
-              ⚠️ Bald fällig
+              Bald fällig
             </button>
             <button 
               className={`filter-btn ${statusFilter === 'overdue' ? 'active' : ''}`}
               onClick={() => setStatusFilter('overdue')}
             >
-              ❌ Überfällig
+              Überfällig
             </button>
           </div>
         </div>
@@ -537,7 +652,9 @@ export default function MPG() {
           <div className="empty-state">Lade Geräte...</div>
         ) : filteredDevices.length === 0 ? (
           <div className="empty-state">
-            <div style={{fontSize: '48px', marginBottom: '16px', opacity: 0.3}}>🏥</div>
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{opacity: 0.3, marginBottom: '16px'}}>
+              <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+            </svg>
             <div style={{fontWeight: 700, marginBottom: '8px'}}>Keine Geräte</div>
             <div>Füge dein erstes Prüfgerät hinzu</div>
           </div>
@@ -600,13 +717,38 @@ export default function MPG() {
                   <div className="device-name">{device.name}</div>
                   <div className="device-meta">
                     {device.serial_number && <div>S/N: {device.serial_number}</div>}
-                    {device.location && <div>📍 {device.location}</div>}
+                    {device.location && <div>{device.location}</div>}
                   </div>
                   
                   <div className="device-status-info">
-                    {status === 'ok' && <div className="status-badge ok">✅ In Ordnung</div>}
-                    {status === 'warning' && <div className="status-badge warning">⚠️ Bald fällig</div>}
-                    {status === 'overdue' && <div className="status-badge overdue">❌ Überfällig</div>}
+                    {status === 'ok' && (
+                      <div className="status-badge ok">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                          <polyline points="20 6 9 17 4 12"/>
+                        </svg>
+                        <span>In Ordnung</span>
+                      </div>
+                    )}
+                    {status === 'warning' && (
+                      <div className="status-badge warning">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                          <line x1="12" y1="9" x2="12" y2="13"/>
+                          <line x1="12" y1="17" x2="12.01" y2="17"/>
+                        </svg>
+                        <span>Bald fällig</span>
+                      </div>
+                    )}
+                    {status === 'overdue' && (
+                      <div className="status-badge overdue">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                          <circle cx="12" cy="12" r="10"/>
+                          <line x1="15" y1="9" x2="9" y2="15"/>
+                          <line x1="9" y1="9" x2="15" y2="15"/>
+                        </svg>
+                        <span>Überfällig</span>
+                      </div>
+                    )}
                   </div>
                   
                   <div className="device-dates">
@@ -742,15 +884,15 @@ export default function MPG() {
                     onClick={prevInspectionStep}
                     disabled={inspectionForm.currentStep === 0}
                   >
-                    ← Zurück
+                    Zurück
                   </button>
                   <button 
                     className="btn primary"
                     onClick={nextInspectionStep}
                   >
                     {inspectionForm.currentStep === inspectionForm.checklist_results.length - 1 
-                      ? 'Zur Zusammenfassung →' 
-                      : 'Weiter →'}
+                      ? 'Zur Zusammenfassung' 
+                      : 'Weiter'}
                   </button>
                 </div>
               </>
@@ -763,7 +905,16 @@ export default function MPG() {
                     {inspectionForm.checklist_results.map((result, idx) => (
                       <div key={idx} className="review-item">
                         <span className={result.checked ? 'check-ok' : 'check-fail'}>
-                          {result.checked ? '✓' : '✗'}
+                          {result.checked ? (
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                              <polyline points="20 6 9 17 4 12"/>
+                            </svg>
+                          ) : (
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                              <line x1="18" y1="6" x2="6" y2="18"/>
+                              <line x1="6" y1="6" x2="18" y2="18"/>
+                            </svg>
+                          )}
                         </span>
                         <span>{result.item}</span>
                       </div>
@@ -786,7 +937,7 @@ export default function MPG() {
                     className="btn"
                     onClick={prevInspectionStep}
                   >
-                    ← Zurück zur Prüfung
+                    Zurück zur Prüfung
                   </button>
                   <button 
                     className="btn danger"
@@ -798,7 +949,7 @@ export default function MPG() {
                     className="btn primary"
                     onClick={() => saveInspection(true)}
                   >
-                    Bestanden ✓
+                    Bestanden
                   </button>
                 </div>
               </>
@@ -815,7 +966,10 @@ export default function MPG() {
             
             {inspections.length === 0 ? (
               <div className="empty-state">
-                <div style={{fontSize: '48px', marginBottom: '16px', opacity: 0.3}}>📋</div>
+                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{opacity: 0.3, marginBottom: '16px'}}>
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                  <polyline points="14 2 14 8 20 8"/>
+                </svg>
                 <div>Noch keine Prüfungen durchgeführt</div>
               </div>
             ) : (
@@ -836,7 +990,22 @@ export default function MPG() {
                         </div>
                       </div>
                       <div className={`status-badge ${inspection.passed ? 'passed' : 'failed'}`}>
-                        {inspection.passed ? '✓ Bestanden' : '✗ Nicht bestanden'}
+                        {inspection.passed ? (
+                          <>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                              <polyline points="20 6 9 17 4 12"/>
+                            </svg>
+                            <span>Bestanden</span>
+                          </>
+                        ) : (
+                          <>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                              <line x1="18" y1="6" x2="6" y2="18"/>
+                              <line x1="6" y1="6" x2="18" y2="18"/>
+                            </svg>
+                            <span>Nicht bestanden</span>
+                          </>
+                        )}
                       </div>
                     </div>
                     
@@ -853,7 +1022,16 @@ export default function MPG() {
                           {inspection.checklist_results.map((result, idx) => (
                             <div key={idx} className="result-item">
                               <span className={result.checked ? 'check-ok' : 'check-fail'}>
-                                {result.checked ? '✓' : '✗'}
+                                {result.checked ? (
+                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                                    <polyline points="20 6 9 17 4 12"/>
+                                  </svg>
+                                ) : (
+                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                                    <line x1="18" y1="6" x2="6" y2="18"/>
+                                    <line x1="6" y1="6" x2="18" y2="18"/>
+                                  </svg>
+                                )}
                               </span>
                               <span>{result.item}</span>
                             </div>
@@ -905,7 +1083,22 @@ export default function MPG() {
                         </div>
                       </div>
                       <div className={`status-badge ${inspection.passed ? 'passed' : 'failed'}`}>
-                        {inspection.passed ? '✓ Bestanden' : '✗ Nicht bestanden'}
+                        {inspection.passed ? (
+                          <>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                              <polyline points="20 6 9 17 4 12"/>
+                            </svg>
+                            <span>Bestanden</span>
+                          </>
+                        ) : (
+                          <>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                              <line x1="18" y1="6" x2="6" y2="18"/>
+                              <line x1="6" y1="6" x2="18" y2="18"/>
+                            </svg>
+                            <span>Nicht bestanden</span>
+                          </>
+                        )}
                       </div>
                     </div>
                     
@@ -928,27 +1121,102 @@ export default function MPG() {
         </div>
       )}
 
-      {/* SETTINGS MODAL */}
+      {/* SETTINGS MODAL - CHECKLIST TEMPLATES */}
       {showSettingsModal && (
         <div className="modal show" onClick={() => setShowSettingsModal(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <h3>MPG Einstellungen</h3>
+          <div className="modal-content large" onClick={(e) => e.stopPropagation()}>
+            <h3>Prüfvorlagen verwalten</h3>
             
-            <div style={{padding: '24px 0'}}>
-              <h4 style={{marginBottom: '16px'}}>Prüfvorlagen verwalten</h4>
-              <p style={{color: '#64748b', fontSize: '14px'}}>
-                Hier können bald individuelle Prüfvorlagen für jeden Gerätetyp angepasst werden.
-              </p>
+            <div className="field">
+              <label>Gerätetyp</label>
+              <select 
+                value={settingsForm.selectedType}
+                onChange={(e) => loadChecklistForType(e.target.value)}
+              >
+                {deviceTypes.map(type => (
+                  <option key={type} value={type}>{type}</option>
+                ))}
+              </select>
+            </div>
+            
+            <div style={{marginTop: '24px'}}>
+              <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px'}}>
+                <label style={{fontWeight: 700, fontSize: '14px', margin: 0}}>Prüfpunkte</label>
+                <button className="btn-small" onClick={resetChecklistTemplate}>
+                  Auf Standard zurücksetzen
+                </button>
+              </div>
+              
+              <div className="checklist-editor">
+                {settingsForm.items.map((item, idx) => (
+                  <div key={idx} className="checklist-item">
+                    <div className="item-controls">
+                      <button 
+                        className="btn-icon"
+                        onClick={() => moveChecklistItem(idx, 'up')}
+                        disabled={idx === 0}
+                        title="Nach oben"
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <polyline points="18 15 12 9 6 15"/>
+                        </svg>
+                      </button>
+                      <button 
+                        className="btn-icon"
+                        onClick={() => moveChecklistItem(idx, 'down')}
+                        disabled={idx === settingsForm.items.length - 1}
+                        title="Nach unten"
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <polyline points="6 9 12 15 18 9"/>
+                        </svg>
+                      </button>
+                      <button 
+                        className="btn-icon danger"
+                        onClick={() => removeChecklistItem(idx)}
+                        title="Löschen"
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <line x1="18" y1="6" x2="6" y2="18"/>
+                          <line x1="6" y1="6" x2="18" y2="18"/>
+                        </svg>
+                      </button>
+                    </div>
+                    <div className="item-text">{item}</div>
+                  </div>
+                ))}
+              </div>
+              
+              <div className="add-item-box">
+                <input
+                  type="text"
+                  value={settingsForm.newItem}
+                  onChange={(e) => setSettingsForm({ ...settingsForm, newItem: e.target.value })}
+                  placeholder="Neuen Prüfpunkt hinzufügen..."
+                  onKeyPress={(e) => e.key === 'Enter' && addChecklistItem()}
+                />
+                <button className="btn primary" onClick={addChecklistItem}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <line x1="12" y1="5" x2="12" y2="19"/>
+                    <line x1="5" y1="12" x2="19" y2="12"/>
+                  </svg>
+                  Hinzufügen
+                </button>
+              </div>
             </div>
             
             <div className="modal-actions">
               <button className="btn" onClick={() => setShowSettingsModal(false)}>
-                Schließen
+                Abbrechen
+              </button>
+              <button className="btn primary" onClick={saveChecklistTemplate}>
+                Speichern
               </button>
             </div>
           </div>
         </div>
       )}
+
       <style>{`
         .content {
           max-width: 1200px;
@@ -1043,6 +1311,27 @@ export default function MPG() {
         .stat-card:hover {
           transform: translateY(-2px);
           box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+
+        .stat-icon {
+          margin-bottom: 12px;
+          opacity: 0.6;
+        }
+
+        .stat-icon svg {
+          display: block;
+        }
+
+        .stat-card.ok .stat-icon {
+          color: #16a34a;
+        }
+
+        .stat-card.warning .stat-icon {
+          color: #ca8a04;
+        }
+
+        .stat-card.overdue .stat-icon {
+          color: #dc2626;
         }
 
         .stat-number {
@@ -1252,11 +1541,17 @@ export default function MPG() {
         }
 
         .status-badge {
-          display: inline-block;
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
           padding: 6px 12px;
           border-radius: 6px;
           font-size: 12px;
           font-weight: 700;
+        }
+
+        .status-badge svg {
+          flex-shrink: 0;
         }
 
         .status-badge.ok {
@@ -1425,6 +1720,9 @@ export default function MPG() {
           background: #b91c1c;
           color: #fff;
           border-color: #b91c1c;
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
         }
 
         .btn.primary:hover {
@@ -1439,6 +1737,51 @@ export default function MPG() {
 
         .btn.danger:hover {
           background: #ef4444;
+        }
+
+        .btn-small {
+          background: rgba(255, 255, 255, 0.9);
+          color: #1d1d1f;
+          padding: 6px 12px;
+          border-radius: 6px;
+          cursor: pointer;
+          font-weight: 600;
+          transition: all 0.2s;
+          font-family: inherit;
+          border: 1px solid rgba(0, 0, 0, 0.08);
+          font-size: 12px;
+        }
+
+        .btn-small:hover {
+          background: #f3f4f6;
+        }
+
+        .btn-icon {
+          background: none;
+          border: none;
+          cursor: pointer;
+          padding: 4px;
+          color: #64748b;
+          transition: all 0.2s;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 4px;
+        }
+
+        .btn-icon:hover {
+          background: #f3f4f6;
+          color: #1d1d1f;
+        }
+
+        .btn-icon:disabled {
+          opacity: 0.3;
+          cursor: not-allowed;
+        }
+
+        .btn-icon.danger:hover {
+          background: #fee2e2;
+          color: #dc2626;
         }
 
         .inspection-progress {
@@ -1507,14 +1850,14 @@ export default function MPG() {
 
         .check-ok {
           color: #16a34a;
-          font-weight: 700;
-          font-size: 18px;
+          display: flex;
+          align-items: center;
         }
 
         .check-fail {
           color: #dc2626;
-          font-weight: 700;
-          font-size: 18px;
+          display: flex;
+          align-items: center;
         }
 
         .logbook-list {
@@ -1592,6 +1935,59 @@ export default function MPG() {
           gap: 12px;
           padding: 6px 0;
           font-size: 14px;
+        }
+
+        .checklist-editor {
+          background: #f9fafb;
+          border: 1px solid rgba(0, 0, 0, 0.08);
+          border-radius: 8px;
+          padding: 12px;
+          max-height: 400px;
+          overflow-y: auto;
+        }
+
+        .checklist-item {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 10px;
+          background: #fff;
+          border-radius: 6px;
+          margin-bottom: 8px;
+          border: 1px solid rgba(0, 0, 0, 0.05);
+        }
+
+        .item-controls {
+          display: flex;
+          gap: 4px;
+          flex-shrink: 0;
+        }
+
+        .item-text {
+          flex: 1;
+          font-size: 14px;
+          line-height: 1.5;
+        }
+
+        .add-item-box {
+          display: flex;
+          gap: 8px;
+          margin-top: 16px;
+        }
+
+        .add-item-box input {
+          flex: 1;
+          padding: 10px;
+          border: 1px solid rgba(0, 0, 0, 0.15);
+          border-radius: 8px;
+          font-size: 14px;
+          font-family: inherit;
+        }
+
+        .add-item-box input:focus {
+          outline: none;
+          border-color: #b91c1c;
+          box-shadow: 0 0 0 3px rgba(185, 28, 28, 0.1);
         }
 
         @media (max-width: 768px) {
