@@ -195,32 +195,44 @@ export default function MPG() {
   }
 
   async function loadOrCreateChecklists() {
-    if (!user?.organization_id) return
+    if (!user?.organization_id) {
+      console.warn('❌ Keine organization_id gefunden')
+      return
+    }
     
     try {
+      console.log('🔍 Lade Checklisten für Organization:', user.organization_id)
+      
       const existing = await pb.collection('mpg_checklists').getFullList<ChecklistTemplate>({
         filter: `organization_id = "${user.organization_id}"`
       })
       
+      console.log('✅ Gefundene Checklisten:', existing.length)
       setChecklists(existing)
       
       // Create default checklists if none exist
       if (existing.length === 0) {
+        console.log('📝 Erstelle Default-Checklisten...')
+        
         for (const [deviceType, items] of Object.entries(defaultChecklists)) {
+          console.log(`  → Erstelle ${deviceType} mit ${items.length} Items`)
           await pb.collection('mpg_checklists').create({
             device_type: deviceType,
             items: items,
             organization_id: user.organization_id
           })
         }
+        
         // Reload
         const updated = await pb.collection('mpg_checklists').getFullList<ChecklistTemplate>({
           filter: `organization_id = "${user.organization_id}"`
         })
+        console.log('✅ Checklisten erstellt:', updated.length)
         setChecklists(updated)
       }
-    } catch(e) {
-      console.error('Error with checklists:', e)
+    } catch(e: any) {
+      console.error('❌ Error with checklists:', e)
+      showMessage('Fehler beim Laden der Checklisten: ' + e.message, 'error')
     }
   }
 
@@ -259,8 +271,6 @@ export default function MPG() {
     setMessage({ text, type })
     setTimeout(() => setMessage(null), 4000)
   }
-  }
-
   // ==================== DEVICE MANAGEMENT ====================
 
   function openAddDevice() {
@@ -423,7 +433,17 @@ export default function MPG() {
   // ==================== SETTINGS / CHECKLIST TEMPLATES ====================
 
   function openSettings() {
+    console.log('⚙️ Öffne Settings Modal')
+    console.log('  Verfügbare Checklisten:', checklists.length)
+    
     const template = checklists.find(c => c.device_type === 'AED')
+    
+    if (template) {
+      console.log('  ✅ AED Template gefunden:', template.items.length, 'Items')
+    } else {
+      console.log('  ⚠️ AED Template nicht gefunden, nutze Defaults')
+    }
+    
     setSettingsForm({
       selectedType: 'AED',
       items: template?.items || defaultChecklists['AED'],
@@ -471,16 +491,25 @@ export default function MPG() {
   }
 
   async function saveChecklistTemplate() {
-    if (!user?.organization_id) return
+    if (!user?.organization_id) {
+      console.warn('❌ Keine organization_id für Speichern')
+      alert('Fehler: Nicht eingeloggt')
+      return
+    }
+    
+    console.log('💾 Speichere Prüfvorlage:', settingsForm.selectedType)
+    console.log('  Items:', settingsForm.items.length)
     
     try {
       const existing = checklists.find(c => c.device_type === settingsForm.selectedType)
       
       if (existing) {
+        console.log('  → Update existierende Vorlage:', existing.id)
         await pb.collection('mpg_checklists').update(existing.id, {
           items: settingsForm.items
         })
       } else {
+        console.log('  → Erstelle neue Vorlage')
         await pb.collection('mpg_checklists').create({
           device_type: settingsForm.selectedType,
           items: settingsForm.items,
@@ -488,9 +517,11 @@ export default function MPG() {
         })
       }
       
+      console.log('✅ Prüfvorlage gespeichert!')
       showMessage('Prüfvorlage gespeichert!')
       await loadOrCreateChecklists()
     } catch(e: any) {
+      console.error('❌ Fehler beim Speichern:', e)
       alert('Fehler: ' + e.message)
     }
   }
@@ -680,7 +711,11 @@ export default function MPG() {
                         menu?.classList.toggle('show')
                       }}
                     >
-                      ⋮
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                        <circle cx="12" cy="12" r="1"/>
+                        <circle cx="12" cy="5" r="1"/>
+                        <circle cx="12" cy="19" r="1"/>
+                      </svg>
                     </button>
                     <div id={`menu-${device.id}`} className="device-menu-dropdown">
                       <button 
