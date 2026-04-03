@@ -1,10 +1,7 @@
-import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
-import { pb } from '../lib/pocketbase'
-import { useAuth } from '../hooks/useAuth'
-import StatusBar from '../components/StatusBar'
+import React, { useState, useEffect } from 'react'
+import PocketBase from 'pocketbase'
 
-// ==================== INTERFACES ====================
+const pb = new PocketBase('https://api.responda.systems')
 
 interface Device {
   id: string
@@ -14,6 +11,7 @@ interface Device {
   location: string
   interval: 'daily' | 'weekly' | 'monthly' | 'yearly'
   last_inspection?: string
+  last_inspection_passed?: boolean
   next_inspection_due: string
   organization_id: string
   created: string
@@ -22,242 +20,239 @@ interface Device {
 interface Inspection {
   id: string
   device_id: string
-  device_name?: string
-  device_type?: string
+  device_name: string
+  device_type: string
   user_name: string
   inspection_date: string
   passed: boolean
   notes: string
   checklist_results: ChecklistResult[]
-  organization_id: string
-  created: string
 }
 
 interface ChecklistResult {
   item: string
   checked: boolean
+  note: string
 }
 
-interface ChecklistTemplate {
-  id: string
+interface Checklist {
+  id?: string
   device_type: string
   items: string[]
-  organization_id: string
+  organization_id?: string
 }
 
-// ==================== MAIN COMPONENT ====================
+interface DeviceForm {
+  id?: string
+  name: string
+  type: string
+  serial_number: string
+  location: string
+  interval: 'daily' | 'weekly' | 'monthly' | 'yearly'
+}
+
+interface InspectionForm {
+  device_id: string
+  device_name: string
+  device_type: string
+  checklist_items: string[]
+  checklist_results: ChecklistResult[]
+  notes: string
+  currentStep: number
+}
+
+interface SettingsForm {
+  selectedType: string
+  items: string[]
+  newItem: string
+}
+
+const deviceTypes = [
+  'AED',
+  'BZ-Gerät',
+  'Absaugpumpe',
+  'Beatmungsgerät',
+  'Sauerstoffgerät',
+  'Pulsoximeter',
+  'Blutdruckmessgerät',
+  'Defibrillator',
+  'Sonstiges'
+]
+
+const defaultChecklists: Record<string, string[]> = {
+  'AED': [
+    'Gerät auf äußere Beschädigungen prüfen',
+    'Status-Anzeige kontrollieren (OK-Symbol)',
+    'Batterie-Anzeige kontrollieren',
+    'Elektroden Verfallsdatum prüfen',
+    'Elektroden auf Beschädigungen prüfen',
+    'Selbsttest-Funktion überprüfen',
+    'Zubehör vollständig (Schere, Rasierer, Handschuhe)',
+    'Standort und Beschilderung kontrollieren'
+  ],
+  'BZ-Gerät': [
+    'Gerät auf äußere Beschädigungen prüfen',
+    'Batteriestand kontrollieren',
+    'Display-Funktion testen',
+    'Teststreifen Verfallsdatum prüfen',
+    'Kontrolllösung Verfallsdatum prüfen',
+    'Funktionstest mit Kontrolllösung durchführen',
+    'Stechhilfe auf Funktion prüfen',
+    'Ausreichend Lanzetten vorhanden'
+  ],
+  'Absaugpumpe': [
+    'Gerät auf äußere Beschädigungen prüfen',
+    'Stromversorgung/Akkustand kontrollieren',
+    'Saugschlauch auf Risse und Beschädigungen prüfen',
+    'Saugkraft testen (Handfläche)',
+    'Auffangbehälter leer und sauber',
+    'Auffangbehälter auf Dichtigkeit prüfen',
+    'Filter kontrollieren und ggf. wechseln',
+    'Einwegmaterial vollständig und steril'
+  ],
+  'Sonstiges': [
+    'Sichtprüfung auf Beschädigungen',
+    'Funktionsprüfung durchführen',
+    'Zubehör und Verbrauchsmaterial prüfen',
+    'Reinigung und Desinfektion durchgeführt'
+  ]
+}
 
 export default function MPG() {
-  const { user, loading: authLoading, logout } = useAuth()
-  
+  const [user, setUser] = useState<any>(null)
   const [devices, setDevices] = useState<Device[]>([])
   const [inspections, setInspections] = useState<Inspection[]>([])
-  const [checklists, setChecklists] = useState<ChecklistTemplate[]>([])
-  
+  const [checklists, setChecklists] = useState<Checklist[]>([])
   const [loading, setLoading] = useState(true)
-  const [searchQuery, setSearchQuery] = useState('')
-  const [statusFilter, setStatusFilter] = useState<'all' | 'ok' | 'warning' | 'overdue'>('all')
+  const [message, setMessage] = useState<{text: string, type: 'success' | 'error'} | null>(null)
   
-  // Modals
   const [showAddDeviceModal, setShowAddDeviceModal] = useState(false)
   const [showInspectionModal, setShowInspectionModal] = useState(false)
   const [showLogbookModal, setShowLogbookModal] = useState(false)
-  const [showSettingsModal, setShowSettingsModal] = useState(false)
   const [showDeviceDetailModal, setShowDeviceDetailModal] = useState(false)
+  const [showSettingsModal, setShowSettingsModal] = useState(false)
   
-  // Forms
-  const [deviceForm, setDeviceForm] = useState({
-    id: '',
+  const [deviceForm, setDeviceForm] = useState<DeviceForm>({
     name: '',
     type: 'AED',
     serial_number: '',
     location: '',
-    interval: 'monthly' as 'daily' | 'weekly' | 'monthly' | 'yearly'
+    interval: 'monthly'
   })
   
-  const [inspectionForm, setInspectionForm] = useState({
+  const [inspectionForm, setInspectionForm] = useState<InspectionForm>({
     device_id: '',
     device_name: '',
     device_type: '',
-    checklist_items: [] as string[],
-    checklist_results: [] as ChecklistResult[],
+    checklist_items: [],
+    checklist_results: [],
     notes: '',
     currentStep: 0
   })
   
-  // Settings form
-  const [settingsForm, setSettingsForm] = useState({
+  const [settingsForm, setSettingsForm] = useState<SettingsForm>({
     selectedType: 'AED',
-    items: [] as string[],
+    items: [],
     newItem: ''
   })
   
   const [selectedDevice, setSelectedDevice] = useState<Device | null>(null)
-  const [message, setMessage] = useState<{text: string, type: 'success' | 'error'} | null>(null)
-
-  // Device types
-  const deviceTypes = [
-    'AED',
-    'BZ-Gerät',
-    'Absaugpumpe',
-    'Beatmungsgerät',
-    'Sauerstoffgerät',
-    'Pulsoximeter',
-    'Blutdruckmessgerät',
-    'Defibrillator',
-    'Sonstiges'
-  ]
-
-  // Default checklists
-  const defaultChecklists: Record<string, string[]> = {
-    'AED': [
-      'Gerät auf äußere Beschädigungen prüfen',
-      'Status-Anzeige überprüfen (grün/bereit)',
-      'Batteriestand kontrollieren',
-      'Elektroden-Haltbarkeitsdatum prüfen',
-      'Elektroden auf Beschädigungen prüfen',
-      'Selbsttest durchführen',
-      'Zubehör vollständig (Rasierer, Schere, Handschuhe)',
-      'Standort zugänglich und beschildert'
-    ],
-    'BZ-Gerät': [
-      'Gerät auf Beschädigungen prüfen',
-      'Batteriestand kontrollieren',
-      'Display lesbar und funktionsfähig',
-      'Teststreifen-Haltbarkeitsdatum prüfen',
-      'Kontrolllösung-Haltbarkeitsdatum prüfen',
-      'Funktionstest mit Kontrolllösung durchführen',
-      'Stechhilfe funktionsfähig',
-      'Lanzetten vorhanden und steril verpackt'
-    ],
-    'Absaugpumpe': [
-      'Äußere Beschädigungen prüfen',
-      'Stromversorgung sicherstellen',
-      'Saugschlauch auf Risse/Beschädigungen prüfen',
-      'Saugkraft testen',
-      'Auffangbehälter leer und sauber',
-      'Auffangbehälter dicht verschließbar',
-      'Filter überprüfen',
-      'Einwegmaterial vorhanden'
-    ],
-    'Sonstiges': [
-      'Sichtprüfung auf Beschädigungen',
-      'Funktionsprüfung durchführen',
-      'Zubehör vollständig',
-      'Reinigung/Desinfektion durchgeführt'
-    ]
-  }
+  const [deviceInspections, setDeviceInspections] = useState<Inspection[]>([])
+  
+  const [searchQuery, setSearchQuery] = useState('')
+  const [statusFilter, setStatusFilter] = useState<'all' | 'ok' | 'warning' | 'overdue'>('all')
 
   useEffect(() => {
-    if (user?.organization_id) {
-      loadData()
+    const authData = pb.authStore.model
+    if (!authData) {
+      window.location.href = '/login'
+      return
     }
-  }, [user])
+    setUser(authData)
+    loadData()
+  }, [])
 
   async function loadData() {
-    if (!user?.organization_id) return
+    if (!pb.authStore.model) return
     
     try {
       setLoading(true)
-      
-      // Load devices
-      const devicesData = await pb.collection('mpg_devices').getFullList<Device>({
-        filter: `organization_id = "${user.organization_id}"`,
-        sort: '-created'
-      })
-      
-      // Calculate next inspection dates
-      const devicesWithDates = devicesData.map(device => ({
-        ...device,
-        next_inspection_due: calculateNextInspection(device.last_inspection || device.created, device.interval)
-      }))
-      
-      setDevices(devicesWithDates)
-      
-      // Load inspections
-      const inspectionsData = await pb.collection('mpg_inspections').getFullList<Inspection>({
-        filter: `organization_id = "${user.organization_id}"`,
-        sort: '-inspection_date',
-        expand: 'device_id'
-      })
-      
-      setInspections(inspectionsData)
-      
-      // Load or create default checklists
-      await loadOrCreateChecklists()
-      
+      await Promise.all([
+        loadDevices(),
+        loadInspections(),
+        loadOrCreateChecklists()
+      ])
     } catch(e: any) {
-      console.error('Error loading MPG data:', e)
-      showMessage('Fehler beim Laden: ' + e.message, 'error')
+      console.error('Fehler beim Laden:', e)
+      showMessage('Fehler beim Laden der Daten', 'error')
     } finally {
       setLoading(false)
     }
   }
 
+  async function loadDevices() {
+    const records = await pb.collection('mpg_devices').getFullList({
+      filter: `organization_id = "${pb.authStore.model?.organization_id}"`,
+      sort: '-created'
+    })
+    setDevices(records)
+  }
+
+  async function loadInspections() {
+    const records = await pb.collection('mpg_inspections').getFullList({
+      filter: `organization_id = "${pb.authStore.model?.organization_id}"`,
+      sort: '-inspection_date'
+    })
+    setInspections(records)
+  }
+
   async function loadOrCreateChecklists() {
-    if (!user?.organization_id) {
-      console.warn('❌ Keine organization_id gefunden')
-      return
-    }
+    console.log('📋 Lade Prüfvorlagen...')
+    console.log('  Organization ID:', pb.authStore.model?.organization_id)
     
     try {
-      console.log('🔍 Lade Checklisten für Organization:', user.organization_id)
-      
-      const existing = await pb.collection('mpg_checklists').getFullList<ChecklistTemplate>({
-        filter: `organization_id = "${user.organization_id}"`
+      const records = await pb.collection('mpg_checklists').getFullList({
+        filter: `organization_id = "${pb.authStore.model?.organization_id}"`
       })
       
-      console.log('✅ Gefundene Checklisten:', existing.length)
-      setChecklists(existing)
+      console.log('  ✅ Gefundene Checklisten:', records.length)
       
-      // Create default checklists if none exist
-      if (existing.length === 0) {
-        console.log('📝 Erstelle Default-Checklisten...')
+      if (records.length === 0) {
+        console.log('  ⚠️  Keine Checklisten gefunden, erstelle Defaults...')
         
-        for (const [deviceType, items] of Object.entries(defaultChecklists)) {
-          console.log(`  → Erstelle ${deviceType} mit ${items.length} Items`)
-          await pb.collection('mpg_checklists').create({
-            device_type: deviceType,
+        const newChecklists: Checklist[] = []
+        for (const [type, items] of Object.entries(defaultChecklists)) {
+          const created = await pb.collection('mpg_checklists').create({
+            device_type: type,
             items: items,
-            organization_id: user.organization_id
+            organization_id: pb.authStore.model?.organization_id
           })
+          newChecklists.push(created)
+          console.log(`    ✓ ${type}: ${items.length} Punkte`)
         }
-        
-        // Reload
-        const updated = await pb.collection('mpg_checklists').getFullList<ChecklistTemplate>({
-          filter: `organization_id = "${user.organization_id}"`
+        setChecklists(newChecklists)
+      } else {
+        setChecklists(records)
+        records.forEach(c => {
+          console.log(`    ✓ ${c.device_type}: ${c.items.length} Punkte`)
         })
-        console.log('✅ Checklisten erstellt:', updated.length)
-        setChecklists(updated)
       }
     } catch(e: any) {
-      console.error('❌ Error with checklists:', e)
-      showMessage('Fehler beim Laden der Checklisten: ' + e.message, 'error')
+      console.error('  ❌ Error with checklists:', e)
     }
   }
 
-  function calculateNextInspection(lastDate: string, interval: string): string {
-    const date = new Date(lastDate)
-    
-    switch(interval) {
-      case 'daily':
-        date.setDate(date.getDate() + 1)
-        break
-      case 'weekly':
-        date.setDate(date.getDate() + 7)
-        break
-      case 'monthly':
-        date.setMonth(date.getMonth() + 1)
-        break
-      case 'yearly':
-        date.setFullYear(date.getFullYear() + 1)
-        break
-    }
-    
-    return date.toISOString()
+  function showMessage(text: string, type: 'success' | 'error') {
+    setMessage({ text, type })
+    setTimeout(() => setMessage(null), 3000)
   }
 
   function getDeviceStatus(device: Device): 'ok' | 'warning' | 'overdue' {
+    // Wenn letzte Prüfung nicht bestanden wurde, immer als überfällig markieren
+    if (device.last_inspection_passed === false) {
+      return 'overdue'
+    }
+    
     const now = new Date()
     const dueDate = new Date(device.next_inspection_due)
     const diffDays = Math.floor((dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
@@ -267,15 +262,27 @@ export default function MPG() {
     return 'ok'
   }
 
-  function showMessage(text: string, type: 'success' | 'error' = 'success') {
-    setMessage({ text, type })
-    setTimeout(() => setMessage(null), 4000)
+  const stats = {
+    total: devices.length,
+    ok: devices.filter(d => getDeviceStatus(d) === 'ok').length,
+    warning: devices.filter(d => getDeviceStatus(d) === 'warning').length,
+    overdue: devices.filter(d => getDeviceStatus(d) === 'overdue').length
   }
-  // ==================== DEVICE MANAGEMENT ====================
+
+  const filteredDevices = devices.filter(device => {
+    const matchesSearch = 
+      device.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      device.type.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      device.location?.toLowerCase().includes(searchQuery.toLowerCase())
+    
+    const matchesStatus = 
+      statusFilter === 'all' || getDeviceStatus(device) === statusFilter
+    
+    return matchesSearch && matchesStatus
+  })
 
   function openAddDevice() {
     setDeviceForm({
-      id: '',
       name: '',
       type: 'AED',
       serial_number: '',
@@ -298,67 +305,72 @@ export default function MPG() {
   }
 
   async function saveDevice() {
-    if (!deviceForm.name || !deviceForm.type) {
-      alert('Bitte Name und Typ eingeben')
+    if (!deviceForm.name) {
+      alert('Bitte Bezeichnung eingeben')
       return
     }
-    
+
     try {
+      const nextDue = new Date()
+      switch (deviceForm.interval) {
+        case 'daily': nextDue.setDate(nextDue.getDate() + 1); break
+        case 'weekly': nextDue.setDate(nextDue.getDate() + 7); break
+        case 'monthly': nextDue.setMonth(nextDue.getMonth() + 1); break
+        case 'yearly': nextDue.setFullYear(nextDue.getFullYear() + 1); break
+      }
+
       const data = {
-        name: deviceForm.name,
-        type: deviceForm.type,
-        serial_number: deviceForm.serial_number,
-        location: deviceForm.location,
-        interval: deviceForm.interval,
+        ...deviceForm,
+        next_inspection_due: nextDue.toISOString(),
         organization_id: user?.organization_id
       }
-      
+
       if (deviceForm.id) {
         await pb.collection('mpg_devices').update(deviceForm.id, data)
-        showMessage('Gerät aktualisiert!')
+        showMessage('Gerät aktualisiert', 'success')
       } else {
-        await pb.collection('mpg_devices').create({
-          ...data,
-          next_inspection_due: calculateNextInspection(new Date().toISOString(), deviceForm.interval)
-        })
-        showMessage('Gerät hinzugefügt!')
+        await pb.collection('mpg_devices').create(data)
+        showMessage('Gerät hinzugefügt', 'success')
       }
-      
+
       setShowAddDeviceModal(false)
-      await loadData()
+      await loadDevices()
     } catch(e: any) {
-      alert('Fehler: ' + e.message)
+      alert('Fehler beim Speichern: ' + e.message)
     }
   }
 
-  async function deleteDevice(deviceId: string, deviceName: string) {
-    if (!confirm(`Gerät "${deviceName}" wirklich löschen?\n\nAlle Prüfungen zu diesem Gerät bleiben erhalten.`)) {
-      return
-    }
-    
+  async function deleteDevice(id: string, name: string) {
+    if (!confirm(`Gerät "${name}" wirklich löschen?`)) return
+
     try {
-      await pb.collection('mpg_devices').delete(deviceId)
-      showMessage('Gerät gelöscht!')
-      await loadData()
+      await pb.collection('mpg_devices').delete(id)
+      showMessage('Gerät gelöscht', 'success')
+      await loadDevices()
     } catch(e: any) {
-      alert('Fehler: ' + e.message)
+      alert('Fehler beim Löschen: ' + e.message)
     }
   }
-
-  // ==================== INSPECTION WORKFLOW ====================
 
   function startInspection(device: Device) {
+    console.log('🔍 Starte Prüfung für:', device.name, '(', device.type, ')')
+    console.log('  Verfügbare Templates:', checklists.length)
+    
     const template = checklists.find(c => c.device_type === device.type) || 
                      checklists.find(c => c.device_type === 'Sonstiges')
     
     const items = template?.items || defaultChecklists['Sonstiges']
+    
+    console.log('  Gefundenes Template:', template?.device_type || 'Sonstiges (Default)')
+    console.log('  Anzahl Prüfpunkte:', items.length)
+    console.log('  Prüfpunkte:', items)
     
     setInspectionForm({
       device_id: device.id,
       device_name: device.name,
       device_type: device.type,
       checklist_items: items,
-      checklist_results: items.map(item => ({ item, checked: false })),
+      checklist_results: items.map(item => ({ item, checked: false, note: '' })),
       notes: '',
       currentStep: 0
     })
@@ -372,28 +384,24 @@ export default function MPG() {
     setInspectionForm({ ...inspectionForm, checklist_results: updated })
   }
 
+  function updateChecklistItemNote(index: number, note: string) {
+    const updated = [...inspectionForm.checklist_results]
+    updated[index].note = note
+    setInspectionForm({ ...inspectionForm, checklist_results: updated })
+  }
+
   function nextInspectionStep() {
-    if (inspectionForm.currentStep < inspectionForm.checklist_results.length - 1) {
-      setInspectionForm({ 
-        ...inspectionForm, 
-        currentStep: inspectionForm.currentStep + 1 
-      })
-    } else {
-      // All steps done, go to summary
-      setInspectionForm({ 
-        ...inspectionForm, 
-        currentStep: inspectionForm.checklist_results.length 
-      })
-    }
+    setInspectionForm({ 
+      ...inspectionForm, 
+      currentStep: inspectionForm.currentStep + 1 
+    })
   }
 
   function prevInspectionStep() {
-    if (inspectionForm.currentStep > 0) {
-      setInspectionForm({ 
-        ...inspectionForm, 
-        currentStep: inspectionForm.currentStep - 1 
-      })
-    }
+    setInspectionForm({ 
+      ...inspectionForm, 
+      currentStep: inspectionForm.currentStep - 1 
+    })
   }
 
   async function saveInspection(passed: boolean) {
@@ -412,9 +420,10 @@ export default function MPG() {
       
       await pb.collection('mpg_inspections').create(inspectionData)
       
-      // Update device last_inspection
+      // Update device last_inspection and status
       await pb.collection('mpg_devices').update(inspectionForm.device_id, {
-        last_inspection: new Date().toISOString()
+        last_inspection: new Date().toISOString(),
+        last_inspection_passed: passed
       })
       
       setShowInspectionModal(false)
@@ -425,40 +434,41 @@ export default function MPG() {
     }
   }
 
-  function viewDeviceHistory(device: Device) {
+  async function viewDeviceHistory(device: Device) {
     setSelectedDevice(device)
+    const deviceInspections = inspections.filter(i => i.device_id === device.id)
+    setDeviceInspections(deviceInspections)
     setShowDeviceDetailModal(true)
   }
 
-  // ==================== SETTINGS / CHECKLIST TEMPLATES ====================
-
   function openSettings() {
-    console.log('⚙️ Öffne Settings Modal')
+    console.log('⚙️ Öffne Einstellungen...')
     console.log('  Verfügbare Checklisten:', checklists.length)
     
-    const template = checklists.find(c => c.device_type === 'AED')
-    
-    if (template) {
-      console.log('  ✅ AED Template gefunden:', template.items.length, 'Items')
-    } else {
-      console.log('  ⚠️ AED Template nicht gefunden, nutze Defaults')
-    }
-    
-    setSettingsForm({
-      selectedType: 'AED',
-      items: template?.items || defaultChecklists['AED'],
-      newItem: ''
-    })
+    loadChecklistForType('AED')
     setShowSettingsModal(true)
   }
 
-  function loadChecklistForType(deviceType: string) {
-    const template = checklists.find(c => c.device_type === deviceType)
-    setSettingsForm({
-      selectedType: deviceType,
-      items: template?.items || defaultChecklists[deviceType] || [],
-      newItem: ''
-    })
+  function loadChecklistForType(type: string) {
+    console.log('📋 Lade Template für:', type)
+    
+    const template = checklists.find(c => c.device_type === type)
+    
+    if (template) {
+      console.log('  ✅ Template gefunden:', template.items.length, 'Items')
+      setSettingsForm({
+        selectedType: type,
+        items: [...template.items],
+        newItem: ''
+      })
+    } else {
+      console.log('  ⚠️  Template nicht gefunden, nutze Default')
+      setSettingsForm({
+        selectedType: type,
+        items: [...(defaultChecklists[type] || defaultChecklists['Sonstiges'])],
+        newItem: ''
+      })
+    }
   }
 
   function addChecklistItem() {
@@ -472,8 +482,7 @@ export default function MPG() {
   }
 
   function removeChecklistItem(index: number) {
-    const updated = [...settingsForm.items]
-    updated.splice(index, 1)
+    const updated = settingsForm.items.filter((_, i) => i !== index)
     setSettingsForm({ ...settingsForm, items: updated })
   }
 
@@ -483,87 +492,52 @@ export default function MPG() {
     
     if (newIndex < 0 || newIndex >= updated.length) return
     
-    const temp = updated[index]
-    updated[index] = updated[newIndex]
-    updated[newIndex] = temp
-    
+    [updated[index], updated[newIndex]] = [updated[newIndex], updated[index]]
     setSettingsForm({ ...settingsForm, items: updated })
   }
 
   async function saveChecklistTemplate() {
-    if (!user?.organization_id) {
-      console.warn('❌ Keine organization_id für Speichern')
-      alert('Fehler: Nicht eingeloggt')
-      return
-    }
-    
-    console.log('💾 Speichere Prüfvorlage:', settingsForm.selectedType)
+    console.log('💾 Speichere Template:', settingsForm.selectedType)
     console.log('  Items:', settingsForm.items.length)
     
     try {
       const existing = checklists.find(c => c.device_type === settingsForm.selectedType)
       
       if (existing) {
-        console.log('  → Update existierende Vorlage:', existing.id)
-        await pb.collection('mpg_checklists').update(existing.id, {
+        console.log('  → Update existierendes Template')
+        await pb.collection('mpg_checklists').update(existing.id!, {
           items: settingsForm.items
         })
       } else {
-        console.log('  → Erstelle neue Vorlage')
+        console.log('  → Erstelle neues Template')
         await pb.collection('mpg_checklists').create({
           device_type: settingsForm.selectedType,
           items: settingsForm.items,
-          organization_id: user.organization_id
+          organization_id: user?.organization_id
         })
       }
       
-      console.log('✅ Prüfvorlage gespeichert!')
-      showMessage('Prüfvorlage gespeichert!')
       await loadOrCreateChecklists()
+      showMessage('Prüfvorlage gespeichert', 'success')
+      setShowSettingsModal(false)
     } catch(e: any) {
-      console.error('❌ Fehler beim Speichern:', e)
-      alert('Fehler: ' + e.message)
+      console.error('  ❌ Fehler:', e)
+      alert('Fehler beim Speichern: ' + e.message)
     }
   }
 
-  async function resetChecklistTemplate() {
-    if (!confirm('Prüfvorlage auf Standard zurücksetzen?')) return
+  function resetChecklistTemplate() {
+    if (!confirm('Vorlage auf Standard zurücksetzen?')) return
     
-    const defaultItems = defaultChecklists[settingsForm.selectedType] || []
-    setSettingsForm({ ...settingsForm, items: defaultItems })
-  }
-
-  // ==================== RENDERING ====================
-
-  const stats = {
-    ok: devices.filter(d => getDeviceStatus(d) === 'ok').length,
-    warning: devices.filter(d => getDeviceStatus(d) === 'warning').length,
-    overdue: devices.filter(d => getDeviceStatus(d) === 'overdue').length,
-    total: devices.length
-  }
-
-  const filteredDevices = devices.filter(device => {
-    const matchesSearch = device.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         device.type.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         device.location.toLowerCase().includes(searchQuery.toLowerCase())
-    
-    if (!matchesSearch) return false
-    
-    if (statusFilter === 'all') return true
-    return getDeviceStatus(device) === statusFilter
-  })
-
-  const deviceInspections = selectedDevice 
-    ? inspections.filter(i => i.device_id === selectedDevice.id)
-    : []
-
-  if (authLoading) {
-    return null
+    const defaultItems = defaultChecklists[settingsForm.selectedType] || defaultChecklists['Sonstiges']
+    setSettingsForm({
+      ...settingsForm,
+      items: [...defaultItems]
+    })
   }
 
   return (
     <>
-      <StatusBar user={user} onLogout={logout} pageName="MPG" showHubLink={true} />
       
       {/* ICON TOOLBAR */}
       <div className="action-toolbar">
@@ -911,6 +885,16 @@ export default function MPG() {
                       {inspectionForm.checklist_results[inspectionForm.currentStep].item}
                     </label>
                   </div>
+                  
+                  <div className="field" style={{marginTop: '20px'}}>
+                    <label>Bemerkung zu diesem Prüfpunkt (optional)</label>
+                    <textarea
+                      value={inspectionForm.checklist_results[inspectionForm.currentStep].note}
+                      onChange={(e) => updateChecklistItemNote(inspectionForm.currentStep, e.target.value)}
+                      rows={3}
+                      placeholder="z.B. Kleine Beschädigung an der Ecke, Batterie bei 80%, etc."
+                    />
+                  </div>
                 </div>
                 
                 <div className="inspection-nav">
@@ -939,19 +923,28 @@ export default function MPG() {
                   <div className="checklist-review">
                     {inspectionForm.checklist_results.map((result, idx) => (
                       <div key={idx} className="review-item">
-                        <span className={result.checked ? 'check-ok' : 'check-fail'}>
-                          {result.checked ? (
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-                              <polyline points="20 6 9 17 4 12"/>
-                            </svg>
-                          ) : (
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-                              <line x1="18" y1="6" x2="6" y2="18"/>
-                              <line x1="6" y1="6" x2="18" y2="18"/>
-                            </svg>
-                          )}
-                        </span>
-                        <span>{result.item}</span>
+                        <div style={{display: 'flex', alignItems: 'flex-start', gap: '12px', flex: 1}}>
+                          <span className={result.checked ? 'check-ok' : 'check-fail'}>
+                            {result.checked ? (
+                              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                                <polyline points="20 6 9 17 4 12"/>
+                              </svg>
+                            ) : (
+                              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                                <line x1="18" y1="6" x2="6" y2="18"/>
+                                <line x1="6" y1="6" x2="18" y2="18"/>
+                              </svg>
+                            )}
+                          </span>
+                          <div style={{flex: 1}}>
+                            <div>{result.item}</div>
+                            {result.note && (
+                              <div style={{fontSize: '13px', color: '#64748b', marginTop: '4px', fontStyle: 'italic'}}>
+                                → {result.note}
+                              </div>
+                            )}
+                          </div>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -1056,19 +1049,28 @@ export default function MPG() {
                         <div className="checklist-results">
                           {inspection.checklist_results.map((result, idx) => (
                             <div key={idx} className="result-item">
-                              <span className={result.checked ? 'check-ok' : 'check-fail'}>
-                                {result.checked ? (
-                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-                                    <polyline points="20 6 9 17 4 12"/>
-                                  </svg>
-                                ) : (
-                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-                                    <line x1="18" y1="6" x2="6" y2="18"/>
-                                    <line x1="6" y1="6" x2="18" y2="18"/>
-                                  </svg>
-                                )}
-                              </span>
-                              <span>{result.item}</span>
+                              <div style={{display: 'flex', alignItems: 'flex-start', gap: '12px', flex: 1}}>
+                                <span className={result.checked ? 'check-ok' : 'check-fail'}>
+                                  {result.checked ? (
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                                      <polyline points="20 6 9 17 4 12"/>
+                                    </svg>
+                                  ) : (
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                                      <line x1="18" y1="6" x2="6" y2="18"/>
+                                      <line x1="6" y1="6" x2="18" y2="18"/>
+                                    </svg>
+                                  )}
+                                </span>
+                                <div style={{flex: 1}}>
+                                  <div>{result.item}</div>
+                                  {result.note && (
+                                    <div style={{fontSize: '12px', color: '#64748b', marginTop: '2px', fontStyle: 'italic'}}>
+                                      → {result.note}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
                             </div>
                           ))}
                         </div>
