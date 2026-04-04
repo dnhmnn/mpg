@@ -1,2279 +1,4704 @@
-import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { pb } from '../lib/pocketbase'
-import type { User } from '../types'
+import React, { useState, useEffect } from 'react'
+import PocketBase from 'pocketbase'
 import StatusBar from '../components/StatusBar'
+import { useAuth } from '../hooks/useAuth'
 
-interface AusbildungenProps {
-  user: User | null
-}
+const pb = new PocketBase('https://api.responda.systems')
 
-type Tab = 'dashboard' | 'schulungen' | 'teilnehmer' | 'team' | 'lernbereich' | 'einstellungen'
-
-// Types
-interface TrainingCourse {
+interface Termin {
   id: string
-  title: string
-  description: string
-  category: string
-  type: 'online' | 'präsenz' | 'hybrid'
-  duration_minutes: number
-  valid_for_months: number
-  is_mandatory: boolean
-  created?: string
-}
-
-interface TrainingSession {
-  id: string
-  course_id: string
-  date: string
-  start_time?: string
-  end_time?: string
-  location: string
-  dozent?: string
-  beschreibung?: string
-  max_participants: number
-  status: 'geplant' | 'läuft' | 'abgeschlossen' | 'abgesagt'
-  duration_minutes?: number
-}
-
-// Participant types
-interface SessionParticipant {
-  id: string
-  session_id: string
-  team_member_id: string
-  user_name?: string
-  user_email?: string
-  status: 'eingeladen' | 'zugesagt' | 'abgesagt' | 'entschuldigt'
-  response_date?: string
-  anwesend?: boolean // For attendance list
-}
-
-// Course materials
-interface CourseMaterial {
-  id: string
-  session_id: string
-  title: string
-  file_url: string
-  file_type: 'dozent' | 'teilnehmer'
-  uploaded_at: string
-}
-
-// Calendar helper functions
-function getDayName(date: Date, short = false): string {
-  const days = short
-    ? ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So']
-    : ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag']
-  return days[date.getDay() === 0 ? 6 : date.getDay() - 1]
-}
-
-function getMonthName(date: Date): string {
-  const months = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember']
-  return months[date.getMonth()]
-}
-
-interface TeamMember {
-  id: string
-  vorname?: string
   name: string
-  email: string
-  role: string
-  phone?: string
-  qualifikationen?: string[]
-}
-
-interface LearningModule {
-  id: string
-  title: string
   description: string
-  category: string
-  is_active: boolean
+  start_datetime: string
+  end_datetime: string
+  location: string
+  dozent: string
+  max_teilnehmer: number
+  status: 'geplant' | 'laufend' | 'abgeschlossen' | 'abgesagt'
+  organization_id: string
+  created: string
+  updated: string
 }
 
-interface LearningSlide {
+interface Teilnehmer {
   id: string
-  module_id: string
-  title: string
-  content: string
-  order: number
+  vorname: string
+  nachname: string
+  email: string
+  telefon: string
+  whatsapp: string
+  notizen: string
+  lernbar_zugang_aktiv: boolean
+  lernbar_email: string
+  lernbar_passwort: string
+  organization_id: string
+  created: string
 }
 
-export default function Ausbildungen({ user }: AusbildungenProps) {
-  const navigate = useNavigate()
-  const [activeTab, setActiveTab] = useState<Tab>('dashboard')
+interface TerminTeilnehmer {
+  id: string
+  termin_id: string
+  teilnehmer_id: string
+  status: 'eingeladen' | 'zugesagt' | 'abgesagt' | 'entschuldigt'
+  eingeladen_am: string
+  eingeladen_via: 'email' | 'whatsapp' | 'persönlich' | 'telefon'
+  anwesend: boolean
+  notizen: string
+  organization_id: string
+  expand?: {
+    teilnehmer_id?: Teilnehmer
+  }
+}
 
-  // Data states
-  const [courses, setCourses] = useState<TrainingCourse[]>([])
-  const [sessions, setSessions] = useState<TrainingSession[]>([])
-  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([])
-  const [modules, setModules] = useState<LearningModule[]>([])
-  const [slides, setSlides] = useState<LearningSlide[]>([])
-  const [allParticipants, setAllParticipants] = useState<SessionParticipant[]>([])
+interface Dokument {
+  id: string
+  termin_id: string
+  name: string
+  typ: 'dozent' | 'teilnehmer'
+  datei?: string
+  oder_dateien_id?: string
+  beschreibung: string
+  organization_id: string
+  created: string
+}
 
-  // Team qualifications
-  const [availableQualifications, setAvailableQualifications] = useState<string[]>([
-    'Erste Hilfe', 'Brandschutz', 'Forklift', 'PSA', 'Gabelstapler',
-    'Arbeitsschutz', 'Gefahrstoffe', 'Ladungssicherung', 'Hebezeuge',
-    'Elektrische Geräte', 'Atemschutz', 'Notfallmanager'
-  ])
-  const [memberQualifications, setMemberQualifications] = useState<Record<string, string[]>>({})
-  const [editingQualifications, setEditingQualifications] = useState<string | null>(null)
+interface Modul {
+  id: string
+  name: string
+  beschreibung: string
+  inhalte: ModulInhalt[]
+  dauer_minuten: number
+  organization_id: string
+  created: string
+}
 
-  const [loading, setLoading] = useState(false)
-  const [message, setMessage] = useState('')
+interface ModulInhalt {
+  typ: 'text' | 'video' | 'quiz' | 'datei'
+  titel: string
+  inhalt: string
+  reihenfolge: number
+}
 
-  // Calendar state - removed unused
+interface ModulTermin {
+  id: string
+  modul_id: string
+  termin_id: string
+  pflicht: boolean
+  frist_datum: string
+  organization_id: string
+  expand?: {
+    modul_id?: Modul
+  }
+}
 
-  // Modal states
-  const [showCourseModal, setShowCourseModal] = useState(false)
-  const [editingCourse, setEditingCourse] = useState<TrainingCourse | null>(null)
-  const [courseWizardStep, setCourseWizardStep] = useState(1)
-  const [showSessionModal, setShowSessionModal] = useState(false)
-  const [editingSession, setEditingSession] = useState<TrainingSession | null>(null)
-  const [selectedCourse, setSelectedCourse] = useState<TrainingCourse | null>(null)
+interface ModulProgress {
+  id: string
+  modul_id: string
+  teilnehmer_id: string
+  termin_id?: string
+  fortschritt_prozent: number
+  gestartet_am?: string
+  abgeschlossen_am?: string
+  notizen: string
+  organization_id: string
+}
 
-  const [showTeamModal, setShowTeamModal] = useState(false)
-  const [editingMember, setEditingMember] = useState<TeamMember | null>(null)
+interface TerminForm {
+  id?: string
+  name: string
+  description: string
+  start_datetime: string
+  end_datetime: string
+  location: string
+  dozent: string
+  max_teilnehmer: number
+  status: 'geplant' | 'laufend' | 'abgeschlossen' | 'abgesagt'
+}
 
-  const [showModuleModal, setShowModuleModal] = useState(false)
-  const [editingModule, setEditingModule] = useState<LearningModule | null>(null)
-  const [showSlideModal, setShowSlideModal] = useState(false)
-  const [editingSlide, setEditingSlide] = useState<LearningSlide | null>(null)
-  const [selectedModule, setSelectedModule] = useState<LearningModule | null>(null)
+interface TeilnehmerForm {
+  id?: string
+  vorname: string
+  nachname: string
+  email: string
+  telefon: string
+  whatsapp: string
+  notizen: string
+  lernbar_zugang_aktiv: boolean
+}
 
-  // Course detail modal (shows all sessions for a course)
-  const [showCourseDetail, setShowCourseDetail] = useState(false)
-  const [selectedCourseForDetail, setSelectedCourseForDetail] = useState<TrainingCourse | null>(null)
-  const [courseSessions, setCourseSessions] = useState<TrainingSession[]>([])
+interface ModulForm {
+  id?: string
+  name: string
+  beschreibung: string
+  inhalte: ModulInhalt[]
+  dauer_minuten: number
+}
 
-  // Session detail modal
-  const [showSessionDetail, setShowSessionDetail] = useState(false)
-  const [selectedSession, setSelectedSession] = useState<TrainingSession | null>(null)
-  const [selectedSessionCourse, setSelectedSessionCourse] = useState<TrainingCourse | null>(null)
-  const [sessionParticipants, setSessionParticipants] = useState<SessionParticipant[]>([])
-  const [sessionMaterials, setSessionMaterials] = useState<CourseMaterial[]>([])
-  const [availableUsers, setAvailableUsers] = useState<any[]>([])
-  const [showAddParticipants, setShowAddParticipants] = useState(false)
-  const [selectedParticipants, setSelectedParticipants] = useState<string[]>([])
-
-  // Presentation cockpit state
-  const [showPresentation, setShowPresentation] = useState(false)
-  const [presentationSlides, setPresentationSlides] = useState<string[]>([])
-  const [currentSlide, setCurrentSlide] = useState(0)
-
-  // Form states
-  const [courseForm, setCourseForm] = useState({
-    title: '', description: '', category: '', type: 'online' as 'online' | 'präsenz' | 'hybrid',
-    duration_minutes: 60, valid_for_months: 12, is_mandatory: false
+export default function Ausbildungen() {
+  const { user, loading: authLoading, logout } = useAuth()
+  
+  const [termine, setTermine] = useState<Termin[]>([])
+  const [teilnehmer, setTeilnehmer] = useState<Teilnehmer[]>([])
+  const [terminTeilnehmer, setTerminTeilnehmer] = useState<TerminTeilnehmer[]>([])
+  const [dokumente, setDokumente] = useState<Dokument[]>([])
+  const [module, setModule] = useState<Modul[]>([])
+  const [modulTermine, setModulTermine] = useState<ModulTermin[]>([])
+  const [modulProgress, setModulProgress] = useState<ModulProgress[]>([])
+  
+  const [loading, setLoading] = useState(true)
+  const [message, setMessage] = useState<{text: string, type: 'success' | 'error'} | null>(null)
+  
+  const [showAddTerminModal, setShowAddTerminModal] = useState(false)
+  const [showTerminDetailModal, setShowTerminDetailModal] = useState(false)
+  const [showAddTeilnehmerModal, setShowAddTeilnehmerModal] = useState(false)
+  const [showTeilnehmerDetailModal, setShowTeilnehmerDetailModal] = useState(false)
+  const [showAddModulModal, setShowAddModulModal] = useState(false)
+  const [showUploadDokumentModal, setShowUploadDokumentModal] = useState(false)
+  const [showAssignModulModal, setShowAssignModulModal] = useState(false)
+  
+  const [terminForm, setTerminForm] = useState<TerminForm>({
+    name: '',
+    description: '',
+    start_datetime: '',
+    end_datetime: '',
+    location: '',
+    dozent: '',
+    max_teilnehmer: 20,
+    status: 'geplant'
   })
-  const [sessionForm, setSessionForm] = useState({
-    date: '', start_time: '', end_time: '', location: '', dozent: '', beschreibung: '', max_participants: 10, status: 'geplant' as 'geplant' | 'läuft' | 'abgeschlossen' | 'abgesagt'
+  
+  const [teilnehmerForm, setTeilnehmerForm] = useState<TeilnehmerForm>({
+    vorname: '',
+    nachname: '',
+    email: '',
+    telefon: '',
+    whatsapp: '',
+    notizen: '',
+    lernbar_zugang_aktiv: false
   })
-  const [teamForm, setTeamForm] = useState({
-    name: '', email: '', role: '', phone: ''
+  
+  const [modulForm, setModulForm] = useState<ModulForm>({
+    name: '',
+    beschreibung: '',
+    inhalte: [],
+    dauer_minuten: 60
   })
-  const [moduleForm, setModuleForm] = useState({
-    title: '', description: '', category: '', is_active: true
-  })
-  const [slideForm, setSlideForm] = useState({
-    title: '', content: ''
-  })
-
-  // Settings state
-  const [, setOrgSettings] = useState<any>(null)
-  const [mandatoryCourses, setMandatoryCourses] = useState<string[]>([])
-  const [lernbarUsers, setLernbarUsers] = useState<string[]>([])
-  const [allUsers, setAllUsers] = useState<any[]>([])
+  
+  const [selectedTermin, setSelectedTermin] = useState<Termin | null>(null)
+  const [selectedTeilnehmer, setSelectedTeilnehmer] = useState<Teilnehmer | null>(null)
+  const [currentTerminTab, setCurrentTerminTab] = useState<'uebersicht' | 'teilnehmer' | 'dokumente' | 'module'>('uebersicht')
+  
+  const [searchQuery, setSearchQuery] = useState('')
+  const [statusFilter, setStatusFilter] = useState<'all' | 'geplant' | 'laufend' | 'abgeschlossen'>('all')
+  const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module'>('termine')
+  
+  const [uploadFile, setUploadFile] = useState<File | null>(null)
+  const [uploadTyp, setUploadTyp] = useState<'dozent' | 'teilnehmer'>('teilnehmer')
+  const [uploadBeschreibung, setUploadBeschreibung] = useState('')
 
   useEffect(() => {
-    if (!user) return
-    loadAllData()
-  }, [user, activeTab])
+    if (user?.organization_id) {
+      loadData()
+    }
+  }, [user])
 
-  async function loadAllData() {
+  if (authLoading) {
+    return null
+  }
+
+  async function loadData() {
     if (!user?.organization_id) return
-    setLoading(true)
-
+    
     try {
-      if (activeTab === 'dashboard') {
-        // Load all data for dashboard - courses, sessions, team, participants
-        const [coursesData, sessionsData, teamData, participantsData, orgData, usersData] = await Promise.all([
-          pb.collection('training_courses').getFullList({
-            filter: `organization_id = "${user.organization_id}"`
-          }),
-          pb.collection('training_sessions').getFullList(),
-          pb.collection('team_members').getFullList({
-            filter: `organization_id = "${user.organization_id}"`
-          }),
-          pb.collection('session_participants').getFullList(),
-          pb.collection('organizations').getOne(user.organization_id),
-          pb.collection('users').getFullList({
-            filter: `organization_id = "${user.organization_id}"`
-          })
-        ])
-        const courses = coursesData as unknown as TrainingCourse[]
-        const sessions = (sessionsData as unknown as TrainingSession[]).map(session => {
-          const course = courses.find(c => c.id === session.course_id)
-          return {
-            ...session,
-            duration_minutes: course?.duration_minutes || 60
-          }
-        })
-        setCourses(courses)
-        setSessions(sessions)
-        setTeamMembers(teamData as unknown as TeamMember[])
-        setAllParticipants(participantsData as unknown as SessionParticipant[])
-        setLernbarUsers(orgData?.lernbar_users || [])
-        setAllUsers(usersData)
-      } else if (activeTab === 'schulungen') {
-        // Load courses, sessions, team members, lernbar users AND all users
-        const [coursesData, sessionsData, teamData, participantsData, orgData, usersData] = await Promise.all([
-          pb.collection('training_courses').getFullList({
-            filter: `organization_id = "${user.organization_id}"`
-          }),
-          pb.collection('training_sessions').getFullList(),
-          pb.collection('team_members').getFullList({
-            filter: `organization_id = "${user.organization_id}"`
-          }),
-          pb.collection('session_participants').getFullList(),
-          pb.collection('organizations').getOne(user.organization_id),
-          pb.collection('users').getFullList({
-            filter: `organization_id = "${user.organization_id}"`
-          })
-        ])
-        const courses = coursesData as unknown as TrainingCourse[]
-        const sessions = (sessionsData as unknown as TrainingSession[]).map(session => {
-          const course = courses.find(c => c.id === session.course_id)
-          return {
-            ...session,
-            duration_minutes: course?.duration_minutes || 60
-          }
-        })
-        setCourses(courses)
-        setSessions(sessions)
-        setTeamMembers(teamData as unknown as TeamMember[])
-        setAllParticipants(participantsData as unknown as SessionParticipant[])
-        setLernbarUsers(orgData?.lernbar_users || [])
-        setAllUsers(usersData)
-      } else if (activeTab === 'teilnehmer') {
-        // Load all data for participant management - team, participants, courses, sessions
-        const [teamData, participantsData, coursesData, sessionsData] = await Promise.all([
-          pb.collection('team_members').getFullList({
-            filter: `organization_id = "${user.organization_id}"`
-          }),
-          pb.collection('session_participants').getFullList(),
-          pb.collection('training_courses').getFullList({
-            filter: `organization_id = "${user.organization_id}"`
-          }),
-          pb.collection('training_sessions').getFullList()
-        ])
-        setTeamMembers(teamData as unknown as TeamMember[])
-        setAllParticipants(participantsData as unknown as SessionParticipant[])
-        setCourses(coursesData as unknown as TrainingCourse[])
-        setSessions(sessionsData as unknown as TrainingSession[])
-      } else if (activeTab === 'team') {
-        const membersData = await pb.collection('team_members').getFullList({
-          filter: `organization_id = "${user.organization_id}"`
-        })
-        setTeamMembers(membersData as unknown as TeamMember[])
-
-        // Load qualifications for each member
-        const quals: Record<string, string[]> = {}
-        membersData.forEach((m: any) => {
-          quals[m.id] = m.qualifikationen || []
-        })
-        setMemberQualifications(quals)
-      } else if (activeTab === 'lernbereich') {
-        const [modulesData, slidesData] = await Promise.all([
-          pb.collection('learning_modules').getFullList({
-            filter: `organization_id = "${user.organization_id}"`
-          }),
-          pb.collection('learning_slides').getFullList()
-        ])
-        setModules(modulesData as unknown as LearningModule[])
-        setSlides(slidesData as unknown as LearningSlide[])
-      } else if (activeTab === 'einstellungen') {
-        const [orgData, usersData] = await Promise.all([
-          pb.collection('organizations').getOne(user.organization_id),
-          pb.collection('users').getFullList({
-            filter: `organization_id = "${user.organization_id}"`
-          })
-        ])
-        setOrgSettings(orgData)
-        setAllUsers(usersData)
-        setMandatoryCourses(orgData?.mandatory_trainings || [])
-        setLernbarUsers(orgData?.lernbar_users || [])
-      }
-    } catch (e) {
-      console.error('Error loading data:', e)
+      setLoading(true)
+      await Promise.all([
+        loadTermine(),
+        loadTeilnehmer(),
+        loadTerminTeilnehmer(),
+        loadDokumente(),
+        loadModule(),
+        loadModulTermine(),
+        loadModulProgress()
+      ])
+    } catch(e: any) {
+      console.error('Fehler beim Laden:', e)
+      showMessage('Fehler beim Laden der Daten', 'error')
     } finally {
       setLoading(false)
     }
   }
 
-  // Course functions
-  function openAddCourse() {
-    setEditingCourse(null)
-    setCourseForm({ title: '', description: '', category: '', type: 'online', duration_minutes: 60, valid_for_months: 12, is_mandatory: false })
-    setCourseWizardStep(1)
-    setShowCourseModal(true)
-  }
-
-  function openEditCourse(course: TrainingCourse) {
-    setEditingCourse(course)
-    setCourseForm({
-      title: course.title,
-      description: course.description,
-      category: course.category,
-      type: course.type,
-      duration_minutes: course.duration_minutes,
-      valid_for_months: course.valid_for_months,
-      is_mandatory: course.is_mandatory
+  async function loadTermine() {
+    const records = await pb.collection('ausbildungen_termine').getFullList({
+      filter: `organization_id = "${user?.organization_id}"`,
+      sort: '-start_datetime'
     })
-    setShowCourseModal(true)
+    setTermine(records)
   }
 
-  async function saveCourse() {
-    if (!user?.organization_id) return
+  async function loadTeilnehmer() {
+    const records = await pb.collection('ausbildungen_teilnehmer').getFullList({
+      filter: `organization_id = "${user?.organization_id}"`,
+      sort: 'nachname,vorname'
+    })
+    setTeilnehmer(records)
+  }
+
+  async function loadTerminTeilnehmer() {
+    const records = await pb.collection('ausbildungen_termine_teilnehmer').getFullList({
+      filter: `organization_id = "${user?.organization_id}"`,
+      expand: 'teilnehmer_id'
+    })
+    setTerminTeilnehmer(records)
+  }
+
+  async function loadDokumente() {
+    const records = await pb.collection('ausbildungen_dokumente').getFullList({
+      filter: `organization_id = "${user?.organization_id}"`
+    })
+    setDokumente(records)
+  }
+
+  async function loadModule() {
+    const records = await pb.collection('ausbildungen_module').getFullList({
+      filter: `organization_id = "${user?.organization_id}"`,
+      sort: '-created'
+    })
+    setModule(records)
+  }
+
+  async function loadModulTermine() {
+    const records = await pb.collection('ausbildungen_module_termine').getFullList({
+      filter: `organization_id = "${user?.organization_id}"`,
+      expand: 'modul_id'
+    })
+    setModulTermine(records)
+  }
+
+  async function loadModulProgress() {
+    const records = await pb.collection('ausbildungen_module_progress').getFullList({
+      filter: `organization_id = "${user?.organization_id}"`
+    })
+    setModulProgress(records)
+  }
+
+  function showMessage(text: string, type: 'success' | 'error') {
+    setMessage({ text, type })
+    setTimeout(() => setMessage(null), 3000)
+  }
+
+  // TERMIN FUNCTIONS
+
+  function openAddTermin() {
+    const now = new Date()
+    const tomorrow = new Date(now)
+    tomorrow.setDate(tomorrow.getDate() + 1)
+    tomorrow.setHours(9, 0, 0, 0)
+    
+    const endTime = new Date(tomorrow)
+    endTime.setHours(17, 0, 0, 0)
+    
+    setTerminForm({
+      name: '',
+      description: '',
+      start_datetime: tomorrow.toISOString().slice(0, 16),
+      end_datetime: endTime.toISOString().slice(0, 16),
+      location: '',
+      dozent: '',
+      max_teilnehmer: 20,
+      status: 'geplant'
+    })
+    setShowAddTerminModal(true)
+  }
+
+  function openEditTermin(termin: Termin) {
+    setTerminForm({
+      id: termin.id,
+      name: termin.name,
+      description: termin.description,
+      start_datetime: new Date(termin.start_datetime).toISOString().slice(0, 16),
+      end_datetime: new Date(termin.end_datetime).toISOString().slice(0, 16),
+      location: termin.location,
+      dozent: termin.dozent,
+      max_teilnehmer: termin.max_teilnehmer,
+      status: termin.status
+    })
+    setShowAddTerminModal(true)
+  }
+
+  async function saveTermin() {
+    if (!terminForm.name || !terminForm.start_datetime || !terminForm.end_datetime) {
+      alert('Bitte Name, Start- und Enddatum eingeben')
+      return
+    }
+
     try {
       const data = {
-        ...courseForm,
-        organization_id: user.organization_id
+        name: terminForm.name,
+        description: terminForm.description,
+        start_datetime: new Date(terminForm.start_datetime).toISOString(),
+        end_datetime: new Date(terminForm.end_datetime).toISOString(),
+        location: terminForm.location,
+        dozent: terminForm.dozent,
+        max_teilnehmer: terminForm.max_teilnehmer,
+        status: terminForm.status,
+        organization_id: user?.organization_id
       }
 
-      if (editingCourse) {
-        await pb.collection('training_courses').update(editingCourse.id, data)
-        setMessage('✅ Schulung aktualisiert!')
+      if (terminForm.id) {
+        await pb.collection('ausbildungen_termine').update(terminForm.id, data)
+        showMessage('Termin aktualisiert', 'success')
       } else {
-        await pb.collection('training_courses').create(data)
-        setMessage('✅ Schulung erstellt!')
+        await pb.collection('ausbildungen_termine').create(data)
+        showMessage('Termin erstellt', 'success')
       }
-      setTimeout(() => setShowCourseModal(false), 1000)
-      loadAllData()
-    } catch (e: any) {
-      setMessage('❌ Fehler: ' + e.message)
+
+      setShowAddTerminModal(false)
+      await loadTermine()
+    } catch(e: any) {
+      alert('Fehler beim Speichern: ' + e.message)
     }
   }
 
-  async function deleteCourse(courseId: string) {
-    if (!confirm('Möchten Sie diese Schulung wirklich löschen?')) return
+  async function deleteTermin(id: string, name: string) {
+    if (!confirm(`Termin "${name}" wirklich löschen? Alle Teilnehmer-Zuordnungen werden ebenfalls gelöscht.`)) return
+
     try {
-      await pb.collection('training_courses').delete(courseId)
-      setMessage('✅ Schulung gelöscht!')
-      loadAllData()
-    } catch (e: any) {
-      setMessage('❌ Fehler: ' + e.message)
+      await pb.collection('ausbildungen_termine').delete(id)
+      showMessage('Termin gelöscht', 'success')
+      await loadData()
+    } catch(e: any) {
+      alert('Fehler beim Löschen: ' + e.message)
     }
   }
 
-  function openAddSession(course: TrainingCourse) {
-    setSelectedCourse(course)
-    setEditingSession(null)
-    setSessionForm({ date: '', start_time: '', end_time: '', location: '', dozent: '', beschreibung: '', max_participants: 10, status: 'geplant' })
-    setShowSessionModal(true)
+  function openTerminDetail(termin: Termin) {
+    setSelectedTermin(termin)
+    setCurrentTerminTab('uebersicht')
+    setShowTerminDetailModal(true)
   }
 
-  // Open course detail view - shows all sessions for this course
-  function openCourseDetail(course: TrainingCourse) {
-    const courseSessionsList = sessions.filter(s => s.course_id === course.id)
-    setSelectedCourseForDetail(course)
-    setCourseSessions(courseSessionsList)
-    setShowCourseDetail(true)
+  // TEILNEHMER FUNCTIONS
+
+  function openAddTeilnehmer() {
+    setTeilnehmerForm({
+      vorname: '',
+      nachname: '',
+      email: '',
+      telefon: '',
+      whatsapp: '',
+      notizen: '',
+      lernbar_zugang_aktiv: false
+    })
+    setShowAddTeilnehmerModal(true)
   }
 
-  async function openSessionDetail(session: TrainingSession) {
-    const course = courses.find(c => c.id === session.course_id)
-    setSelectedSession(session)
-    setSelectedSessionCourse(course || null)
-    setShowSessionDetail(true)
-
-    // Load participants
-    try {
-      const participantsData = await pb.collection('session_participants').getFullList({
-        filter: `session_id = "${session.id}"`
-      })
-      const participants = participantsData as unknown as SessionParticipant[]
-
-      // Get team member details for each participant
-      const teamData = await pb.collection('team_members').getFullList({
-        filter: `organization_id = "${user?.organization_id}"`
-      })
-      const teamMap = new Map(teamData.map((m: any) => [m.id, m]))
-
-      const participantsWithUser = participants.map((p: any) => {
-        const member = teamMap.get(p.team_member_id)
-        return {
-          ...p,
-          user_name: member?.name || 'Unbekannt',
-          user_email: member?.email || ''
-        }
-      })
-      setSessionParticipants(participantsWithUser)
-    } catch (e) {
-      console.log('No participants yet')
-      setSessionParticipants([])
-    }
-
-    // Load materials
-    try {
-      const materialsData = await pb.collection('session_materials').getFullList({
-        filter: `session_id = "${session.id}"`
-      })
-      setSessionMaterials(materialsData as unknown as CourseMaterial[])
-    } catch (e) {
-      console.log('No materials yet')
-      setSessionMaterials([])
-    }
-
-    // Load available team members for adding participants
-    try {
-      const teamData = await pb.collection('team_members').getFullList({
-        filter: `organization_id = "${user?.organization_id}"`
-      })
-      setAvailableUsers(teamData)
-    } catch (e) {
-      setAvailableUsers([])
-    }
+  function openEditTeilnehmer(teilnehmer: Teilnehmer) {
+    setTeilnehmerForm({
+      id: teilnehmer.id,
+      vorname: teilnehmer.vorname,
+      nachname: teilnehmer.nachname,
+      email: teilnehmer.email,
+      telefon: teilnehmer.telefon,
+      whatsapp: teilnehmer.whatsapp,
+      notizen: teilnehmer.notizen,
+      lernbar_zugang_aktiv: teilnehmer.lernbar_zugang_aktiv
+    })
+    setShowAddTeilnehmerModal(true)
   }
 
-  // Add participant to session (using team_member_id)
-  async function addParticipant(teamMemberId: string) {
-    if (!selectedSession) return
+  async function saveTeilnehmer() {
+    if (!teilnehmerForm.vorname || !teilnehmerForm.nachname || !teilnehmerForm.email) {
+      alert('Bitte Vorname, Nachname und E-Mail eingeben')
+      return
+    }
+
     try {
-      await pb.collection('session_participants').create({
-        session_id: selectedSession.id,
-        team_member_id: teamMemberId,
-        status: 'eingeladen'
-      })
-      openSessionDetail(selectedSession) // Refresh
-      setMessage('✅ Teilnehmer eingeladen!')
-    } catch (e: any) {
-      setMessage('❌ Fehler: ' + e.message)
+      const data: any = {
+        vorname: teilnehmerForm.vorname,
+        nachname: teilnehmerForm.nachname,
+        email: teilnehmerForm.email,
+        telefon: teilnehmerForm.telefon,
+        whatsapp: teilnehmerForm.whatsapp,
+        notizen: teilnehmerForm.notizen,
+        lernbar_zugang_aktiv: teilnehmerForm.lernbar_zugang_aktiv,
+        organization_id: user?.organization_id
+      }
+
+      // Lernbar-Zugang generieren wenn aktiviert und noch nicht vorhanden
+      if (teilnehmerForm.lernbar_zugang_aktiv && !teilnehmerForm.id) {
+        data.lernbar_email = teilnehmerForm.email
+        data.lernbar_passwort = generatePassword()
+      }
+
+      if (teilnehmerForm.id) {
+        await pb.collection('ausbildungen_teilnehmer').update(teilnehmerForm.id, data)
+        showMessage('Teilnehmer aktualisiert', 'success')
+      } else {
+        await pb.collection('ausbildungen_teilnehmer').create(data)
+        showMessage('Teilnehmer erstellt', 'success')
+      }
+
+      setShowAddTeilnehmerModal(false)
+      await loadTeilnehmer()
+    } catch(e: any) {
+      alert('Fehler beim Speichern: ' + e.message)
     }
   }
 
-  // Upload material
-  async function uploadMaterial(file: File, title: string, fileType: 'dozent' | 'teilnehmer') {
-    if (!selectedSession) return
+  async function deleteTeilnehmer(id: string, name: string) {
+    if (!confirm(`Teilnehmer "${name}" wirklich löschen?`)) return
+
     try {
-      // Create FormData for file upload
+      await pb.collection('ausbildungen_teilnehmer').delete(id)
+      showMessage('Teilnehmer gelöscht', 'success')
+      await loadData()
+    } catch(e: any) {
+      alert('Fehler beim Löschen: ' + e.message)
+    }
+  }
+
+  function openTeilnehmerDetail(teilnehmer: Teilnehmer) {
+    setSelectedTeilnehmer(teilnehmer)
+    setShowTeilnehmerDetailModal(true)
+  }
+
+  function generatePassword(): string {
+    const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+    let password = ''
+    for (let i = 0; i < 12; i++) {
+      password += chars.charAt(Math.floor(Math.random() * chars.length))
+    }
+    return password
+  }
+
+  async function toggleLernbarZugang(teilnehmer: Teilnehmer) {
+    try {
+      const neuerStatus = !teilnehmer.lernbar_zugang_aktiv
+      const data: any = {
+        lernbar_zugang_aktiv: neuerStatus
+      }
+
+      if (neuerStatus && !teilnehmer.lernbar_email) {
+        data.lernbar_email = teilnehmer.email
+        data.lernbar_passwort = generatePassword()
+      }
+
+      await pb.collection('ausbildungen_teilnehmer').update(teilnehmer.id, data)
+      showMessage(neuerStatus ? 'Lernbar-Zugang aktiviert' : 'Lernbar-Zugang deaktiviert', 'success')
+      await loadTeilnehmer()
+    } catch(e: any) {
+      alert('Fehler: ' + e.message)
+    }
+  }
+  // TERMIN-TEILNEHMER FUNCTIONS
+
+  async function addTeilnehmerToTermin(terminId: string, teilnehmerId: string, via: 'email' | 'whatsapp' | 'persönlich' | 'telefon') {
+    try {
+      await pb.collection('ausbildungen_termine_teilnehmer').create({
+        termin_id: terminId,
+        teilnehmer_id: teilnehmerId,
+        status: 'eingeladen',
+        eingeladen_am: new Date().toISOString(),
+        eingeladen_via: via,
+        anwesend: false,
+        notizen: '',
+        organization_id: user?.organization_id
+      })
+      showMessage('Teilnehmer hinzugefügt', 'success')
+      await loadTerminTeilnehmer()
+    } catch(e: any) {
+      alert('Fehler: ' + e.message)
+    }
+  }
+
+  async function updateTeilnehmerStatus(ttId: string, newStatus: 'eingeladen' | 'zugesagt' | 'abgesagt' | 'entschuldigt') {
+    try {
+      await pb.collection('ausbildungen_termine_teilnehmer').update(ttId, {
+        status: newStatus
+      })
+      showMessage('Status aktualisiert', 'success')
+      await loadTerminTeilnehmer()
+    } catch(e: any) {
+      alert('Fehler: ' + e.message)
+    }
+  }
+
+  async function toggleAnwesenheit(ttId: string, currentStatus: boolean) {
+    try {
+      await pb.collection('ausbildungen_termine_teilnehmer').update(ttId, {
+        anwesend: !currentStatus
+      })
+      await loadTerminTeilnehmer()
+    } catch(e: any) {
+      alert('Fehler: ' + e.message)
+    }
+  }
+
+  async function removeTeilnehmerFromTermin(ttId: string) {
+    if (!confirm('Teilnehmer vom Termin entfernen?')) return
+    
+    try {
+      await pb.collection('ausbildungen_termine_teilnehmer').delete(ttId)
+      showMessage('Teilnehmer entfernt', 'success')
+      await loadTerminTeilnehmer()
+    } catch(e: any) {
+      alert('Fehler: ' + e.message)
+    }
+  }
+
+  function sendEinladungEmail(termin: Termin, teilnehmer: Teilnehmer) {
+    const subject = encodeURIComponent(`Einladung: ${termin.name}`)
+    const body = encodeURIComponent(`Hallo ${teilnehmer.vorname},\n\ndu bist eingeladen zu:\n\n${termin.name}\nDatum: ${new Date(termin.start_datetime).toLocaleString('de-DE')}\nOrt: ${termin.location}\n\nBitte bestätige deine Teilnahme.\n\nViele Grüße`)
+    window.open(`mailto:${teilnehmer.email}?subject=${subject}&body=${body}`)
+  }
+
+  function sendEinladungWhatsApp(termin: Termin, teilnehmer: Teilnehmer) {
+    const text = encodeURIComponent(`Hallo ${teilnehmer.vorname}, du bist eingeladen zu: ${termin.name} am ${new Date(termin.start_datetime).toLocaleString('de-DE')} in ${termin.location}`)
+    const phone = teilnehmer.whatsapp || teilnehmer.telefon
+    if (!phone) {
+      alert('Keine WhatsApp/Telefonnummer vorhanden')
+      return
+    }
+    window.open(`https://wa.me/${phone.replace(/\D/g, '')}?text=${text}`)
+  }
+
+  // DOKUMENT FUNCTIONS
+
+  function openUploadDokument(termin: Termin) {
+    setSelectedTermin(termin)
+    setUploadFile(null)
+    setUploadTyp('teilnehmer')
+    setUploadBeschreibung('')
+    setShowUploadDokumentModal(true)
+  }
+
+  async function uploadDokument() {
+    if (!uploadFile || !selectedTermin) {
+      alert('Bitte Datei auswählen')
+      return
+    }
+
+    try {
       const formData = new FormData()
-      formData.append('session_id', selectedSession.id)
-      formData.append('title', title)
-      formData.append('file', file)
-      formData.append('file_type', fileType)
+      formData.append('termin_id', selectedTermin.id)
+      formData.append('name', uploadFile.name)
+      formData.append('typ', uploadTyp)
+      formData.append('datei', uploadFile)
+      formData.append('beschreibung', uploadBeschreibung)
+      formData.append('organization_id', user?.organization_id || '')
 
-      await pb.collection('session_materials').create(formData)
-      openSessionDetail(selectedSession) // Refresh
-      setMessage('✅ Datei hochgeladen!')
-    } catch (e: any) {
-      setMessage('❌ Fehler: ' + e.message)
+      await pb.collection('ausbildungen_dokumente').create(formData)
+      showMessage('Dokument hochgeladen', 'success')
+      setShowUploadDokumentModal(false)
+      await loadDokumente()
+    } catch(e: any) {
+      alert('Fehler beim Hochladen: ' + e.message)
     }
   }
 
-  // Delete material
-  async function deleteMaterial(materialId: string) {
-    if (!confirm('Möchten Sie diese Datei wirklich löschen?')) return
+  async function deleteDokument(id: string, name: string) {
+    if (!confirm(`Dokument "${name}" wirklich löschen?`)) return
+
     try {
-      await pb.collection('session_materials').delete(materialId)
-      if (selectedSession) {
-        openSessionDetail(selectedSession)
-      }
-      setMessage('✅ Datei gelöscht!')
-    } catch (e: any) {
-      setMessage('❌ Fehler: ' + e.message)
+      await pb.collection('ausbildungen_dokumente').delete(id)
+      showMessage('Dokument gelöscht', 'success')
+      await loadDokumente()
+    } catch(e: any) {
+      alert('Fehler: ' + e.message)
     }
   }
 
-  // Update participant status
-  async function updateParticipantStatus(participantId: string, status: 'zugesagt' | 'abgesagt' | 'entschuldigt') {
-    try {
-      await pb.collection('session_participants').update(participantId, {
-        status,
-        response_date: new Date().toISOString()
-      })
-      if (selectedSession) {
-        openSessionDetail(selectedSession) // Refresh
-      }
-      setMessage('✅ Status aktualisiert!')
-    } catch (e: any) {
-      setMessage('❌ Fehler: ' + e.message)
+  function getDokumentURL(dokument: Dokument): string {
+    if (!dokument.datei) return ''
+    return pb.files.getUrl(dokument as any, dokument.datei)
+  }
+
+  // MODUL FUNCTIONS
+
+  function openAddModul() {
+    setModulForm({
+      name: '',
+      beschreibung: '',
+      inhalte: [],
+      dauer_minuten: 60
+    })
+    setShowAddModulModal(true)
+  }
+
+  function openEditModul(modul: Modul) {
+    setModulForm({
+      id: modul.id,
+      name: modul.name,
+      beschreibung: modul.beschreibung,
+      inhalte: modul.inhalte,
+      dauer_minuten: modul.dauer_minuten
+    })
+    setShowAddModulModal(true)
+  }
+
+  async function saveModul() {
+    if (!modulForm.name) {
+      alert('Bitte Modulname eingeben')
+      return
     }
-  }
 
-  // Update attendance (Anwesenheit)
-  async function updateAttendance(participantId: string, anwesend: boolean) {
-    try {
-      await pb.collection('session_participants').update(participantId, {
-        anwesend
-      })
-      // Update local state
-      setSessionParticipants(prev => prev.map(p =>
-        p.id === participantId ? { ...p, anwesend } : p
-      ))
-      setMessage('✅ Anwesenheit aktualisiert!')
-    } catch (e: any) {
-      setMessage('❌ Fehler: ' + e.message)
-    }
-  }
-
-  // Start presentation cockpit
-  function startPresentation(materials: CourseMaterial[]) {
-    // Get all dozent materials as presentation slides
-    const slides = materials
-      .filter(m => m.file_type === 'dozent')
-      .map(m => m.file_url)
-    if (slides.length > 0) {
-      setPresentationSlides(slides)
-      setCurrentSlide(0)
-      setShowPresentation(true)
-    } else {
-      setMessage('❌ Keine Präsentationen für Dozent vorhanden')
-    }
-  }
-
-  // Remove participant
-  async function removeParticipant(participantId: string) {
-    if (!confirm('Möchten Sie diesen Teilnehmer entfernen?')) return
-    try {
-      await pb.collection('session_participants').delete(participantId)
-      if (selectedSession) {
-        openSessionDetail(selectedSession) // Refresh
-      }
-      setMessage('✅ Teilnehmer entfernt!')
-    } catch (e: any) {
-      setMessage('❌ Fehler: ' + e.message)
-    }
-  }
-
-  // Get share link
-  function getShareLink() {
-    if (!selectedSession || !selectedSessionCourse) return ''
-    const baseUrl = window.location.origin
-    return `${baseUrl}/schulung/${selectedSession.id}`
-  }
-
-  // Share via WhatsApp
-  function shareViaWhatsApp() {
-    if (!selectedSession || !selectedSessionCourse) return
-    const link = getShareLink()
-    const text = `${selectedSessionCourse.title}\nDatum: ${new Date(selectedSession.date).toLocaleDateString('de-DE')}\nOrt: ${selectedSession.location}\n${link}`
-    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank')
-  }
-
-  // Share via Email
-  function shareViaEmail() {
-    if (!selectedSession || !selectedSessionCourse) return
-    const link = getShareLink()
-    const subject = encodeURIComponent(`Schulung: ${selectedSessionCourse.title}`)
-    const body = encodeURIComponent(`${selectedSessionCourse.title}\n\nDatum: ${new Date(selectedSession.date).toLocaleDateString('de-DE')}\nUhrzeit: ${new Date(selectedSession.date).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}\nOrt: ${selectedSession.location}\n\n${selectedSessionCourse.description || ''}\n\nLink: ${link}`)
-    window.location.href = `mailto:?subject=${subject}&body=${body}`
-  }
-
-  async function saveSession() {
-    if (!selectedCourse) return
     try {
       const data = {
-        ...sessionForm,
-        course_id: selectedCourse.id,
+        name: modulForm.name,
+        beschreibung: modulForm.beschreibung,
+        inhalte: modulForm.inhalte,
+        dauer_minuten: modulForm.dauer_minuten,
         organization_id: user?.organization_id
       }
 
-      if (editingSession) {
-        await pb.collection('training_sessions').update(editingSession.id, data)
-        setMessage('✅ Termin aktualisiert!')
+      if (modulForm.id) {
+        await pb.collection('ausbildungen_module').update(modulForm.id, data)
+        showMessage('Modul aktualisiert', 'success')
       } else {
-        await pb.collection('training_sessions').create(data)
-        setMessage('✅ Termin erstellt!')
+        await pb.collection('ausbildungen_module').create(data)
+        showMessage('Modul erstellt', 'success')
       }
-      setTimeout(() => setShowSessionModal(false), 1000)
-      loadAllData()
-    } catch (e: any) {
-      setMessage('❌ Fehler: ' + e.message)
+
+      setShowAddModulModal(false)
+      await loadModule()
+    } catch(e: any) {
+      alert('Fehler beim Speichern: ' + e.message)
     }
   }
 
-  // Team functions
-  function openAddMember() {
-    setEditingMember(null)
-    setTeamForm({ name: '', email: '', role: '', phone: '' })
-    setShowTeamModal(true)
+  async function deleteModul(id: string, name: string) {
+    if (!confirm(`Modul "${name}" wirklich löschen?`)) return
+
+    try {
+      await pb.collection('ausbildungen_module').delete(id)
+      showMessage('Modul gelöscht', 'success')
+      await loadData()
+    } catch(e: any) {
+      alert('Fehler: ' + e.message)
+    }
   }
 
-  function openEditMember(member: TeamMember) {
-    setEditingMember(member)
-    setTeamForm({
-      name: member.name,
-      email: member.email,
-      role: member.role,
-      phone: member.phone || ''
+  function addModulInhalt(typ: 'text' | 'video' | 'quiz' | 'datei') {
+    const newInhalt: ModulInhalt = {
+      typ: typ,
+      titel: '',
+      inhalt: '',
+      reihenfolge: modulForm.inhalte.length
+    }
+    setModulForm({
+      ...modulForm,
+      inhalte: [...modulForm.inhalte, newInhalt]
     })
-    setShowTeamModal(true)
   }
 
-  async function saveMember() {
-    if (!user?.organization_id) return
+  function removeModulInhalt(index: number) {
+    const updated = modulForm.inhalte.filter((_, i) => i !== index)
+    setModulForm({ ...modulForm, inhalte: updated })
+  }
+
+  function updateModulInhalt(index: number, field: keyof ModulInhalt, value: any) {
+    const updated = [...modulForm.inhalte]
+    updated[index] = { ...updated[index], [field]: value }
+    setModulForm({ ...modulForm, inhalte: updated })
+  }
+
+  async function assignModulToTermin(modulId: string, terminId: string, pflicht: boolean, frist?: string) {
     try {
-      const data = {
-        ...teamForm,
-        organization_id: user.organization_id
-      }
-
-      if (editingMember) {
-        await pb.collection('team_members').update(editingMember.id, data)
-        setMessage('✅ Teammitglied aktualisiert!')
-      } else {
-        await pb.collection('team_members').create(data)
-        setMessage('✅ Teammitglied hinzugefügt!')
-      }
-      setTimeout(() => setShowTeamModal(false), 1000)
-      loadAllData()
-    } catch (e: any) {
-      setMessage('❌ Fehler: ' + e.message)
-    }
-  }
-
-  async function deleteMember(memberId: string) {
-    if (!confirm('Möchten Sie dieses Teammitglied wirklich löschen?')) return
-    try {
-      await pb.collection('team_members').delete(memberId)
-      setMessage('✅ Teammitglied gelöscht!')
-      loadAllData()
-    } catch (e: any) {
-      setMessage('❌ Fehler: ' + e.message)
-    }
-  }
-
-  async function saveMemberQualifications(memberId: string, qualifications: string[]) {
-    try {
-      await pb.collection('team_members').update(memberId, {
-        qualifikationen: qualifications
-      })
-      setMemberQualifications(prev => ({ ...prev, [memberId]: qualifications }))
-      setEditingQualifications(null)
-      setMessage('✅ Qualifikationen gespeichert!')
-    } catch (e: any) {
-      setMessage('❌ Fehler: ' + e.message)
-    }
-  }
-
-  function toggleQualification(memberId: string, qualification: string) {
-    const current = memberQualifications[memberId] || []
-    const updated = current.includes(qualification)
-      ? current.filter(q => q !== qualification)
-      : [...current, qualification]
-    setMemberQualifications(prev => ({ ...prev, [memberId]: updated }))
-  }
-
-  // Module functions
-  function openAddModule() {
-    setEditingModule(null)
-    setModuleForm({ title: '', description: '', category: '', is_active: true })
-    setShowModuleModal(true)
-  }
-
-  function openEditModule(module: LearningModule) {
-    setEditingModule(module)
-    setModuleForm({
-      title: module.title,
-      description: module.description,
-      category: module.category,
-      is_active: module.is_active
-    })
-    setShowModuleModal(true)
-  }
-
-  async function saveModule() {
-    if (!user?.organization_id) return
-    try {
-      const data = {
-        ...moduleForm,
-        organization_id: user.organization_id
-      }
-
-      if (editingModule) {
-        await pb.collection('learning_modules').update(editingModule.id, data)
-        setMessage('✅ Modul aktualisiert!')
-      } else {
-        await pb.collection('learning_modules').create(data)
-        setMessage('✅ Modul erstellt!')
-      }
-      setTimeout(() => setShowModuleModal(false), 1000)
-      loadAllData()
-    } catch (e: any) {
-      setMessage('❌ Fehler: ' + e.message)
-    }
-  }
-
-  async function deleteModule(moduleId: string) {
-    if (!confirm('Möchten Sie dieses Modul wirklich löschen?')) return
-    try {
-      await pb.collection('learning_modules').delete(moduleId)
-      setMessage('✅ Modul gelöscht!')
-      loadAllData()
-    } catch (e: any) {
-      setMessage('❌ Fehler: ' + e.message)
-    }
-  }
-
-  function openAddSlide(module: LearningModule) {
-    setSelectedModule(module)
-    setEditingSlide(null)
-    setSlideForm({ title: '', content: '' })
-    setShowSlideModal(true)
-  }
-
-  async function saveSlide() {
-    if (!selectedModule) return
-    try {
-      const moduleSlides = slides.filter(s => s.module_id === selectedModule.id)
-      const data = {
-        ...slideForm,
-        module_id: selectedModule.id,
-        order: moduleSlides.length,
+      await pb.collection('ausbildungen_module_termine').create({
+        modul_id: modulId,
+        termin_id: terminId,
+        pflicht: pflicht,
+        frist_datum: frist || '',
         organization_id: user?.organization_id
-      }
-
-      if (editingSlide) {
-        await pb.collection('learning_slides').update(editingSlide.id, data)
-        setMessage('✅ Folie aktualisiert!')
-      } else {
-        await pb.collection('learning_slides').create(data)
-        setMessage('✅ Folie erstellt!')
-      }
-      setTimeout(() => setShowSlideModal(false), 1000)
-      loadAllData()
-    } catch (e: any) {
-      setMessage('❌ Fehler: ' + e.message)
-    }
-  }
-
-  // Settings functions
-  async function saveSettings() {
-    if (!user?.organization_id) return
-    try {
-      await pb.collection('organizations').update(user.organization_id, {
-        mandatory_trainings: mandatoryCourses,
-        lernbar_users: lernbarUsers
       })
-      setMessage('✅ Einstellungen gespeichert!')
-      setTimeout(() => setMessage(''), 3000)
-    } catch (e: any) {
-      setMessage('❌ Fehler: ' + e.message)
+      showMessage('Modul zugeordnet', 'success')
+      await loadModulTermine()
+    } catch(e: any) {
+      alert('Fehler: ' + e.message)
     }
   }
 
-  const canManage = user?.supervisor || user?.role === 'mpg' || user?.role === 'ausbildung'
+  async function removeModulFromTermin(mtId: string) {
+    if (!confirm('Modulzuordnung entfernen?')) return
+
+    try {
+      await pb.collection('ausbildungen_module_termine').delete(mtId)
+      showMessage('Modul entfernt', 'success')
+      await loadModulTermine()
+    } catch(e: any) {
+      alert('Fehler: ' + e.message)
+    }
+  }
+
+  // HELPER FUNCTIONS
+
+  function getTerminTeilnehmerByTermin(terminId: string): TerminTeilnehmer[] {
+    return terminTeilnehmer.filter(tt => tt.termin_id === terminId)
+  }
+
+  function getDokumenteByTermin(terminId: string): Dokument[] {
+    return dokumente.filter(d => d.termin_id === terminId)
+  }
+
+  function getModuleByTermin(terminId: string): ModulTermin[] {
+    return modulTermine.filter(mt => mt.termin_id === terminId)
+  }
+
+  function getTeilnehmerTermine(teilnehmerId: string): TerminTeilnehmer[] {
+    return terminTeilnehmer.filter(tt => tt.teilnehmer_id === teilnehmerId)
+  }
+
+  function getTeilnehmerModulProgress(teilnehmerId: string): ModulProgress[] {
+    return modulProgress.filter(mp => mp.teilnehmer_id === teilnehmerId)
+  }
+
+  const stats = {
+    termine_gesamt: termine.length,
+    termine_geplant: termine.filter(t => t.status === 'geplant').length,
+    termine_laufend: termine.filter(t => t.status === 'laufend').length,
+    teilnehmer_gesamt: teilnehmer.length,
+    teilnehmer_lernbar: teilnehmer.filter(t => t.lernbar_zugang_aktiv).length,
+    module_gesamt: module.length
+  }
+
+  const filteredTermine = termine.filter(termin => {
+    const matchesSearch = 
+      termin.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      termin.dozent?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      termin.location?.toLowerCase().includes(searchQuery.toLowerCase())
+    
+    const matchesStatus = 
+      statusFilter === 'all' || termin.status === statusFilter
+    
+    return matchesSearch && matchesStatus
+  })
+
+  const filteredTeilnehmer = teilnehmer.filter(t => {
+    const fullName = `${t.vorname} ${t.nachname}`.toLowerCase()
+    return fullName.includes(searchQuery.toLowerCase()) ||
+           t.email.toLowerCase().includes(searchQuery.toLowerCase())
+  })
+
+  const filteredModule = module.filter(m => {
+    return m.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+           m.beschreibung.toLowerCase().includes(searchQuery.toLowerCase())
+  })
 
   return (
-    <div className="ausbildungen-page">
-      <StatusBar
-        user={user}
-        onLogout={() => {
-          pb.authStore.clear()
-          localStorage.clear()
-          navigate('/login')
-        }}
-        showBackButton={true}
-        onBackClick={() => navigate('/hub')}
-      />
+    <>
+      <StatusBar user={user} onLogout={logout} pageName="Ausbildungen" showHubLink={true} />
 
-      <div className="ausbildungen-content">
-        {/* Tabs */}
-        <div className="tabs-container">
-          <button
-            className={`tab-btn ${activeTab === 'dashboard' ? 'active' : ''}`}
-            onClick={() => setActiveTab('dashboard')}
+
+      {/* ICON TOOLBAR */}
+      <div className="action-toolbar">
+        <button className="action-btn" onClick={openAddTermin} title="Termin hinzufügen">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+            <line x1="16" y1="2" x2="16" y2="6"/>
+            <line x1="8" y1="2" x2="8" y2="6"/>
+            <line x1="3" y1="10" x2="21" y2="10"/>
+            <line x1="12" y1="14" x2="12" y2="18"/>
+            <line x1="10" y1="16" x2="14" y2="16"/>
+          </svg>
+        </button>
+        <button className="action-btn" onClick={openAddTeilnehmer} title="Teilnehmer hinzufügen">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+            <circle cx="9" cy="7" r="4"/>
+            <line x1="19" y1="8" x2="19" y2="14"/>
+            <line x1="22" y1="11" x2="16" y2="11"/>
+          </svg>
+        </button>
+        <button className="action-btn" onClick={openAddModul} title="Modul erstellen">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
+            <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
+            <line x1="12" y1="10" x2="12" y2="14"/>
+            <line x1="10" y1="12" x2="14" y2="12"/>
+          </svg>
+        </button>
+      </div>
+
+      <div className="content">
+        {message && (
+          <div className={`message ${message.type}`}>
+            {message.text}
+          </div>
+        )}
+
+        {/* VIEW MODE TABS */}
+        <div className="view-tabs">
+          <button 
+            className={`tab-btn ${viewMode === 'termine' ? 'active' : ''}`}
+            onClick={() => setViewMode('termine')}
           >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <rect x="3" y="3" width="7" height="7"/>
-              <rect x="14" y="3" width="7" height="7"/>
-              <rect x="14" y="14" width="7" height="7"/>
-              <rect x="3" y="14" width="7" height="7"/>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+              <line x1="16" y1="2" x2="16" y2="6"/>
+              <line x1="8" y1="2" x2="8" y2="6"/>
+              <line x1="3" y1="10" x2="21" y2="10"/>
             </svg>
-            Dashboard
+            Termine ({stats.termine_gesamt})
           </button>
-          <button
-            className={`tab-btn ${activeTab === 'schulungen' ? 'active' : ''}`}
-            onClick={() => setActiveTab('schulungen')}
+          <button 
+            className={`tab-btn ${viewMode === 'teilnehmer' ? 'active' : ''}`}
+            onClick={() => setViewMode('teilnehmer')}
           >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
-              <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
-            </svg>
-            Schulungen
-          </button>
-          <button
-            className={`tab-btn ${activeTab === 'teilnehmer' ? 'active' : ''}`}
-            onClick={() => setActiveTab('teilnehmer')}
-          >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
               <circle cx="9" cy="7" r="4"/>
-              <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-              <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+              <line x1="19" y1="8" x2="19" y2="14"/>
             </svg>
-            Teilnehmer
+            Teilnehmer ({stats.teilnehmer_gesamt})
           </button>
-          <button
-            className={`tab-btn ${activeTab === 'team' ? 'active' : ''}`}
-            onClick={() => setActiveTab('team')}
+          <button 
+            className={`tab-btn ${viewMode === 'module' ? 'active' : ''}`}
+            onClick={() => setViewMode('module')}
           >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-              <circle cx="9" cy="7" r="4"/>
-              <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-              <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-            </svg>
-            Team
-          </button>
-          <button
-            className={`tab-btn ${activeTab === 'lernbereich' ? 'active' : ''}`}
-            onClick={() => setActiveTab('lernbereich')}
-          >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
               <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
             </svg>
-            Lernbereich
-          </button>
-          <button
-            className={`tab-btn ${activeTab === 'einstellungen' ? 'active' : ''}`}
-            onClick={() => setActiveTab('einstellungen')}
-          >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <circle cx="12" cy="12" r="3"/>
-              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-            </svg>
-            Einstellungen
+            Module ({stats.module_gesamt})
           </button>
         </div>
 
-        {/* Message */}
-        {message && (
-          <div className={`message ${message.includes('✅') ? 'success' : 'error'}`}>
-            {message}
-          </div>
-        )}
-
-        {/* Dashboard Tab - Overview */}
-        {activeTab === 'dashboard' && (
-          <div className="tab-content">
-            <div className="dashboard-overview">
-              <h2 className="section-title">Ausbildungs-Übersicht</h2>
-
-              {loading ? (
-                <div className="loading">Lade Daten...</div>
-              ) : (
-                <>
-                  {/* Statistics Cards */}
-                  <div className="stats-grid">
-                    <div className="stat-card">
-                      <div className="stat-icon">📚</div>
-                      <div className="stat-value">{courses.length}</div>
-                      <div className="stat-label">Schulungen</div>
-                    </div>
-                    <div className="stat-card">
-                      <div className="stat-icon">📅</div>
-                      <div className="stat-value">{sessions.length}</div>
-                      <div className="stat-label">Termine</div>
-                    </div>
-                    <div className="stat-card">
-                      <div className="stat-icon">👥</div>
-                      <div className="stat-value">{teamMembers.length}</div>
-                      <div className="stat-label">Teammitglieder</div>
-                    </div>
-                    <div className="stat-card">
-                      <div className="stat-icon">✉️</div>
-                      <div className="stat-value">{allParticipants.filter(p => p.status === 'eingeladen').length}</div>
-                      <div className="stat-label">Ausstehende Einladungen</div>
-                    </div>
-                  </div>
-
-                  {/* Participant Status Overview */}
-                  <div className="dashboard-section">
-                    <h3>Teilnehmer-Status</h3>
-                    <div className="status-overview">
-                      <div className="status-item zugesagt">
-                        <span className="status-count">{allParticipants.filter(p => p.status === 'zugesagt').length}</span>
-                        <span className="status-label">Zugesagt</span>
-                      </div>
-                      <div className="status-item eingeladen">
-                        <span className="status-count">{allParticipants.filter(p => p.status === 'eingeladen').length}</span>
-                        <span className="status-label">Eingeladen</span>
-                      </div>
-                      <div className="status-item abgesagt">
-                        <span className="status-count">{allParticipants.filter(p => p.status === 'abgesagt').length}</span>
-                        <span className="status-label">Abgesagt</span>
-                      </div>
-                      <div className="status-item entschuldigt">
-                        <span className="status-count">{allParticipants.filter(p => p.status === 'entschuldigt').length}</span>
-                        <span className="status-label">Entschuldigt</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Upcoming Sessions */}
-                  <div className="dashboard-section">
-                    <h3>Anstehende Termine</h3>
-                    {sessions.filter(s => new Date(s.date) >= new Date() && s.status === 'geplant').length === 0 ? (
-                      <div className="empty-state small">
-                        <p>Keine anstehenden Termine</p>
-                      </div>
-                    ) : (
-                      <div className="upcoming-sessions">
-                        {sessions
-                          .filter(s => new Date(s.date) >= new Date() && s.status === 'geplant')
-                          .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-                          .slice(0, 5)
-                          .map(session => {
-                            const course = courses.find(c => c.id === session.course_id)
-                            const sessionDate = new Date(session.date)
-                            const participants = allParticipants.filter(p => p.session_id === session.id)
-                            const zugesagt = participants.filter(p => p.status === 'zugesagt').length
-
-                            return (
-                              <div key={session.id} className="upcoming-session-item" onClick={() => openSessionDetail(session)}>
-                                <div className="upcoming-session-date">
-                                  <span className="day">{sessionDate.getDate()}</span>
-                                  <span className="month">{sessionDate.toLocaleDateString('de-DE', { month: 'short' })}</span>
-                                </div>
-                                <div className="upcoming-session-info">
-                                  <div className="upcoming-session-title">{course?.title || 'Schulung'}</div>
-                                  <div className="upcoming-session-meta">
-                                    {session.start_time && <span>🕐 {session.start_time}</span>}
-                                    {session.location && <span>📍 {session.location}</span>}
-                                    <span>👥 {zugesagt} Zusagen</span>
-                                  </div>
-                                </div>
-                              </div>
-                            )
-                          })}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Required Trainings */}
-                  {courses.filter(c => c.is_mandatory).length > 0 && (
-                    <div className="dashboard-section">
-                      <h3>Pflicht-Schulungen</h3>
-                      <div className="mandatory-trainings">
-                        {courses.filter(c => c.is_mandatory).map(course => {
-                          const courseSessionCount = sessions.filter(s => s.course_id === course.id && s.status !== 'abgesagt').length
-
-                          return (
-                            <div key={course.id} className="mandatory-training-item" onClick={() => openCourseDetail(course)}>
-                              <div className="mandatory-training-info">
-                                <span className="mandatory-training-title">{course.title}</span>
-                                <span className="mandatory-training-meta">
-                                  {courseSessionCount} Termin(e) • {course.type}
-                                </span>
-                              </div>
-                              <span className="badge warning">Pflicht</span>
-                            </div>
-                          )
-                        })}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Quick Actions */}
-                  {canManage && (
-                    <div className="dashboard-section">
-                      <h3>Schnellaktionen</h3>
-                      <div className="quick-actions">
-                        <button className="action-btn primary" onClick={openAddCourse}>
-                          + Neue Schulung
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </>
-              )}
+        {/* STATISTICS */}
+        <div className="stats-grid" key={termine.length}>
+          <div className="stat-card">
+            <div className="stat-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                <line x1="16" y1="2" x2="16" y2="6"/>
+                <line x1="8" y1="2" x2="8" y2="6"/>
+                <line x1="3" y1="10" x2="21" y2="10"/>
+              </svg>
             </div>
+            <div className="stat-number">{stats.termine_geplant}</div>
+            <div className="stat-label">Geplante Termine</div>
           </div>
-        )}
-
-        {/* Schulungen Tab - Shows all courses (Schulungen) */}
-        {activeTab === 'schulungen' && (
-          <div className="tab-content">
-            <div className="appointments-list">
-              <h2 className="section-title">Alle Schulungen</h2>
-
-              {loading ? (
-                <div className="loading">Lade Schulungen...</div>
-              ) : courses.length === 0 ? (
-                <div className="empty-state">
-                  <p>Noch keine Schulungen vorhanden.</p>
-                  {canManage && <button className="action-btn primary" onClick={openAddCourse}>+ Schulung erstellen</button>}
-                </div>
-              ) : (
-                courses
-                  .sort((a, b) => new Date(b.created || 0).getTime() - new Date(a.created || 0).getTime())
-                  .map((course) => {
-                    const courseSessionsList = sessions.filter(s => s.course_id === course.id)
-                    const nextSession = courseSessionsList.find(s => new Date(s.date) >= new Date())
-                    const nextDate = nextSession ? new Date(nextSession.date) : null
-
-                    return (
-                      <div key={course.id} className="appointment-item" onClick={() => openCourseDetail(course)}>
-                        <div className="appointment-title">{course.title}</div>
-                        {course.description && (
-                          <div className="appointment-description">{course.description}</div>
-                        )}
-                        <div className="appointment-date">
-                          {courseSessionsList.length} Termin(e)
-                          {nextDate && (
-                            <> • Nächster: {nextDate.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}</>
-                          )}
-                        </div>
-                        {nextSession?.dozent && (
-                          <div className="appointment-dozent">
-                            👤 {nextSession.dozent}
-                          </div>
-                        )}
-                      </div>
-                    )
-                  })
-              )}
+          <div className="stat-card">
+            <div className="stat-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="10"/>
+                <polyline points="12 6 12 12 16 14"/>
+              </svg>
             </div>
-
-            {/* Add buttons */}
-            {canManage && (
-              <div className="calendar-actions">
-                <button className="action-btn primary" onClick={openAddCourse}>
-                  + Neue Schulung
-                </button>
-              </div>
-            )}
+            <div className="stat-number">{stats.termine_laufend}</div>
+            <div className="stat-label">Laufende Termine</div>
           </div>
-        )}
-
-        {/* Teilnehmer Tab - User-based training progress */}
-        {activeTab === 'teilnehmer' && (
-          <div className="tab-content">
-            <div className="teilnehmer-overview">
-              <h2 className="section-title">Teilnehmer-Übersicht</h2>
-
-              {loading ? (
-                <div className="loading">Lade Daten...</div>
-              ) : (
-                <>
-                  {/* Compliance Overview */}
-                  <div className="dashboard-section">
-                    <h3>Compliance-Übersicht</h3>
-                    <div className="compliance-stats">
-                      {(() => {
-                        const mandatoryCourses = courses.filter(c => c.is_mandatory)
-                        if (mandatoryCourses.length === 0) {
-                          return <p style={{ color: 'rgba(255,255,255,0.6)' }}>Keine Pflicht-Schulungen definiert</p>
-                        }
-
-                        const teamWithProgress = teamMembers.map(member => {
-                          const memberParticipants = allParticipants.filter(p =>
-                            p.team_member_id === member.id &&
-                            p.status === 'zugesagt'
-                          )
-
-                          // Get completed course IDs for this member
-                          const completedCourseIds = new Set<string>()
-                          memberParticipants.forEach(p => {
-                            const session = sessions.find(s => s.id === p.session_id)
-                            if (session && session.status === 'abgeschlossen') {
-                              const course = courses.find(c => c.id === session.course_id)
-                              if (course) completedCourseIds.add(course.id)
-                            }
-                          })
-
-                          const completed = mandatoryCourses.filter(c => completedCourseIds.has(c.id)).length
-                          const total = mandatoryCourses.length
-                          const percentage = total > 0 ? Math.round((completed / total) * 100) : 0
-
-                          return { member, completed, total, percentage }
-                        })
-
-                        const avgCompliance = teamWithProgress.length > 0
-                          ? Math.round(teamWithProgress.reduce((sum, t) => sum + t.percentage, 0) / teamWithProgress.length)
-                          : 0
-
-                        return (
-                          <div className="compliance-grid">
-                            <div className="compliance-card overall">
-                              <div className="compliance-value">{avgCompliance}%</div>
-                              <div className="compliance-label">Gesamt-Compliance</div>
-                            </div>
-                            <div className="compliance-card">
-                              <div className="compliance-value">{teamWithProgress.filter(t => t.percentage === 100).length}</div>
-                              <div className="compliance-label">Vollständig</div>
-                            </div>
-                            <div className="compliance-card">
-                              <div className="compliance-value">{teamWithProgress.filter(t => t.percentage > 0 && t.percentage < 100).length}</div>
-                              <div className="compliance-label">Teilweise</div>
-                            </div>
-                            <div className="compliance-card">
-                              <div className="compliance-value">{teamWithProgress.filter(t => t.percentage === 0).length}</div>
-                              <div className="compliance-label">Ausstehend</div>
-                            </div>
-                          </div>
-                        )
-                      })()}
-                    </div>
-                  </div>
-
-                  {/* Mandatory Trainings Overview */}
-                  <div className="dashboard-section">
-                    <h3>Pflicht-Schulungen Status</h3>
-                    {courses.filter(c => c.is_mandatory).length === 0 ? (
-                      <div className="empty-state small">
-                        <p>Keine Pflicht-Schulungen definiert</p>
-                      </div>
-                    ) : (
-                      <div className="mandatory-overview-grid">
-                        {courses.filter(c => c.is_mandatory).map(course => {
-                          const completedCount = teamMembers.filter(member => {
-                            const memberParticipants = allParticipants.filter(p =>
-                              p.team_member_id === member.id &&
-                              p.status === 'zugesagt'
-                            )
-                            return memberParticipants.some(p => {
-                              const session = sessions.find(s => s.id === p.session_id)
-                              return session && session.course_id === course.id && session.status === 'abgeschlossen'
-                            })
-                          }).length
-
-                          const totalCount = teamMembers.length
-                          const percentage = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0
-
-                          return (
-                            <div key={course.id} className="mandatory-overview-card">
-                              <div className="mandatory-overview-header">
-                                <span className="mandatory-overview-title">{course.title}</span>
-                                <span className={`mandatory-overview-badge ${percentage === 100 ? 'complete' : percentage > 0 ? 'partial' : 'pending'}`}>
-                                  {completedCount}/{totalCount}
-                                </span>
-                              </div>
-                              <div className="mandatory-overview-bar">
-                                <div
-                                  className="mandatory-overview-progress"
-                                  style={{ width: `${percentage}%` }}
-                                />
-                              </div>
-                            </div>
-                          )
-                        })}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Individual Participant Progress */}
-                  <div className="dashboard-section">
-                    <h3>Fortschritt pro Person</h3>
-                    {teamMembers.length === 0 ? (
-                      <div className="empty-state small">
-                        <p>Keine Teammitglieder vorhanden</p>
-                      </div>
-                    ) : (
-                      <div className="participant-progress-list">
-                        {teamMembers.map(member => {
-                          const memberParticipants = allParticipants.filter(p =>
-                            p.team_member_id === member.id &&
-                            p.status === 'zugesagt'
-                          )
-
-                          // Get completed course IDs
-                          const completedCourseIds = new Set<string>()
-                          memberParticipants.forEach(p => {
-                            const session = sessions.find(s => s.id === p.session_id)
-                            if (session && session.status === 'abgeschlossen') {
-                              completedCourseIds.add(session.course_id)
-                            }
-                          })
-
-                          const mandatoryCourses = courses.filter(c => c.is_mandatory)
-                          const completedMandatory = mandatoryCourses.filter(c => completedCourseIds.has(c.id))
-                          const pendingMandatory = mandatoryCourses.filter(c => !completedCourseIds.has(c.id))
-
-                          const percentage = mandatoryCourses.length > 0
-                            ? Math.round((completedMandatory.length / mandatoryCourses.length) * 100)
-                            : 100
-
-                          return (
-                            <div key={member.id} className="participant-progress-item">
-                              <div className="participant-progress-header">
-                                <div className="participant-progress-avatar">
-                                  {(member.name || '?').charAt(0).toUpperCase()}
-                                </div>
-                                <div className="participant-progress-info">
-                                  <span className="participant-progress-name">{member.name}</span>
-                                  <span className="participant-progress-role">{member.role}</span>
-                                </div>
-                                <div className={`participant-progress-badge ${percentage === 100 ? 'complete' : percentage > 0 ? 'partial' : 'pending'}`}>
-                                  {percentage}%
-                                </div>
-                              </div>
-
-                              {mandatoryCourses.length > 0 && (
-                                <div className="participant-progress-details">
-                                  <div className="progress-completed">
-                                    <span className="progress-label">Erledigt:</span>
-                                    <div className="progress-tags">
-                                      {completedMandatory.map(c => (
-                                        <span key={c.id} className="progress-tag complete">{c.title}</span>
-                                      ))}
-                                      {completedMandatory.length === 0 && <span className="progress-tag none">-</span>}
-                                    </div>
-                                  </div>
-                                  <div className="progress-pending">
-                                    <span className="progress-label">Ausstehend:</span>
-                                    <div className="progress-tags">
-                                      {pendingMandatory.map(c => (
-                                        <span key={c.id} className="progress-tag pending">{c.title}</span>
-                                      ))}
-                                      {pendingMandatory.length === 0 && <span className="progress-tag none">Alle erledigt</span>}
-                                    </div>
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                          )
-                        })}
-                      </div>
-                    )}
-                  </div>
-                </>
-              )}
+          <div className="stat-card">
+            <div className="stat-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                <circle cx="9" cy="7" r="4"/>
+                <line x1="19" y1="8" x2="19" y2="14"/>
+              </svg>
             </div>
+            <div className="stat-number">{stats.teilnehmer_gesamt}</div>
+            <div className="stat-label">Teilnehmer</div>
           </div>
-        )}
-
-        {/* Team Tab */}
-        {activeTab === 'team' && (
-          <div className="tab-content">
-            <div className="section-header">
-              <h2>Team</h2>
-              {canManage && (
-                <button className="action-btn primary" onClick={openAddMember}>
-                  + Neues Mitglied
-                </button>
-              )}
+          <div className="stat-card">
+            <div className="stat-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+              </svg>
             </div>
+            <div className="stat-number">{stats.teilnehmer_lernbar}</div>
+            <div className="stat-label">Lernbar-Zugänge</div>
+          </div>
+        </div>
 
+        {/* SEARCH AND FILTERS */}
+        <div className="filter-bar">
+          <input
+            type="text"
+            className="search-input"
+            placeholder={
+              viewMode === 'termine' ? 'Termine durchsuchen...' :
+              viewMode === 'teilnehmer' ? 'Teilnehmer durchsuchen...' :
+              'Module durchsuchen...'
+            }
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+          {viewMode === 'termine' && (
+            <div className="filter-buttons">
+              <button 
+                className={`filter-btn ${statusFilter === 'all' ? 'active' : ''}`}
+                onClick={() => setStatusFilter('all')}
+              >
+                Alle
+              </button>
+              <button 
+                className={`filter-btn ${statusFilter === 'geplant' ? 'active' : ''}`}
+                onClick={() => setStatusFilter('geplant')}
+              >
+                Geplant
+              </button>
+              <button 
+                className={`filter-btn ${statusFilter === 'laufend' ? 'active' : ''}`}
+                onClick={() => setStatusFilter('laufend')}
+              >
+                Laufend
+              </button>
+              <button 
+                className={`filter-btn ${statusFilter === 'abgeschlossen' ? 'active' : ''}`}
+                onClick={() => setStatusFilter('abgeschlossen')}
+              >
+                Abgeschlossen
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* TERMINE VIEW */}
+        {viewMode === 'termine' && (
+          <>
             {loading ? (
-              <div className="loading">Lade Team...</div>
-            ) : teamMembers.length === 0 ? (
+              <div className="empty-state">Lade Termine...</div>
+            ) : filteredTermine.length === 0 ? (
               <div className="empty-state">
-                <p>Noch keine Teammitglieder vorhanden.</p>
-                {canManage && <button className="action-btn primary" onClick={openAddMember}>Erstes Mitglied hinzufügen</button>}
+                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{opacity: 0.3, marginBottom: '16px'}}>
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                  <line x1="16" y1="2" x2="16" y2="6"/>
+                  <line x1="8" y1="2" x2="8" y2="6"/>
+                  <line x1="3" y1="10" x2="21" y2="10"/>
+                </svg>
+                <div style={{fontWeight: 700, marginBottom: '8px'}}>Keine Termine</div>
+                <div>Erstelle deinen ersten Ausbildungstermin</div>
               </div>
             ) : (
-              <div className="cards-grid">
-                {teamMembers.map(member => (
-                  <div key={member.id} className="card team-card">
-                    <div className="card-header">
-                      <h3>{member.vorname ? `${member.vorname} ${member.name}` : member.name}</h3>
-                      <span className="badge info">{member.role}</span>
-                    </div>
-                    <p className="card-meta">{member.email}</p>
-                    {member.phone && <p className="card-meta">{member.phone}</p>}
-
-                    {/* Qualifications Section */}
-                    <div className="qualifications-section">
-                      <div className="qualifications-header">
-                        <h4>Qualifikationen</h4>
-                        {canManage && (
-                          <button
-                            className="edit-qual-btn"
-                            onClick={() => setEditingQualifications(editingQualifications === member.id ? null : member.id)}
-                          >
-                            {editingQualifications === member.id ? 'Schließen' : 'Bearbeiten'}
-                          </button>
-                        )}
-                      </div>
-
-                      {editingQualifications === member.id ? (
-                        <div className="qualifications-edit">
-                          <div className="qualifications-grid">
-                            {availableQualifications.map(qual => (
-                              <label key={qual} className="qual-checkbox">
-                                <input
-                                  type="checkbox"
-                                  checked={(memberQualifications[member.id] || []).includes(qual)}
-                                  onChange={() => toggleQualification(member.id, qual)}
-                                />
-                                <span>{qual}</span>
-                              </label>
-                            ))}
-                          </div>
-                          <button
-                            className="save-qual-btn"
-                            onClick={() => saveMemberQualifications(member.id, memberQualifications[member.id] || [])}
-                          >
-                            Speichern
-                          </button>
-                        </div>
-                      ) : (
-                        <div className="qualifications-tags">
-                          {(memberQualifications[member.id] || member.qualifikationen || []).length > 0 ? (
-                            (memberQualifications[member.id] || member.qualifikationen || []).map(qual => (
-                              <span key={qual} className="qual-tag">{qual}</span>
-                            ))
-                          ) : (
-                            <span className="no-quals">Keine Qualifikationen</span>
-                          )}
-                        </div>
-                      )}
-                    </div>
-
-                    {canManage && (
-                      <div className="card-actions">
-                        <button onClick={() => openEditMember(member)}>Bearbeiten</button>
-                        <button onClick={() => deleteMember(member.id)} className="delete">Löschen</button>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Lernbereich Tab */}
-        {activeTab === 'lernbereich' && (
-          <div className="tab-content">
-            <div className="section-header">
-              <h2>Lernbereich</h2>
-              {canManage && (
-                <button className="action-btn primary" onClick={openAddModule}>
-                  + Neues Modul
-                </button>
-              )}
-            </div>
-
-            {loading ? (
-              <div className="loading">Lade Module...</div>
-            ) : modules.length === 0 ? (
-              <div className="empty-state">
-                <p>Noch keine Lernmodule vorhanden.</p>
-                {canManage && <button className="action-btn primary" onClick={openAddModule}>Erstes Modul erstellen</button>}
-              </div>
-            ) : (
-              <div className="cards-grid">
-                {modules.map(module => {
-                  const moduleSlides = slides.filter(s => s.module_id === module.id)
+              <div className="termine-grid">
+                {filteredTermine.map(termin => {
+                  const teilnehmerCount = getTerminTeilnehmerByTermin(termin.id).length
+                  const zugesagtCount = getTerminTeilnehmerByTermin(termin.id).filter(tt => tt.status === 'zugesagt').length
+                  
                   return (
-                    <div key={module.id} className="card">
-                      <div className="card-header">
-                        <h3>{module.title}</h3>
-                        <span className={`badge ${module.is_active ? 'success' : 'warning'}`}>
-                          {module.is_active ? 'Aktiv' : 'Inaktiv'}
-                        </span>
+                    <div 
+                      key={termin.id} 
+                      className={`termin-card status-${termin.status}`}
+                      onClick={() => openTerminDetail(termin)}
+                    >
+                      <div className="termin-status-badge">{termin.status}</div>
+                      
+                      <div className="termin-date">
+                        {new Date(termin.start_datetime).toLocaleDateString('de-DE', {
+                          day: '2-digit',
+                          month: 'short',
+                          year: 'numeric'
+                        })}
                       </div>
-                      <p className="card-description">{module.description}</p>
-                      <div className="card-meta">
-                        <span><i className="fas fa-file-alt"></i> {moduleSlides.length} Folien</span>
-                        <span><i className="fas fa-folder"></i> {module.category}</span>
+                      
+                      <div className="termin-time">
+                        {new Date(termin.start_datetime).toLocaleTimeString('de-DE', {
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })} - {new Date(termin.end_datetime).toLocaleTimeString('de-DE', {
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
                       </div>
-                      {canManage && (
-                        <div className="card-actions">
-                          <button onClick={() => openAddSlide(module)}>+ Folie</button>
-                          <button onClick={() => openEditModule(module)}>Bearbeiten</button>
-                          <button onClick={() => deleteModule(module.id)} className="delete">Löschen</button>
+                      
+                      <div className="termin-name">{termin.name}</div>
+                      
+                      {termin.dozent && (
+                        <div className="termin-meta">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                            <circle cx="12" cy="7" r="4"/>
+                          </svg>
+                          {termin.dozent}
                         </div>
                       )}
+                      
+                      {termin.location && (
+                        <div className="termin-meta">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                            <circle cx="12" cy="10" r="3"/>
+                          </svg>
+                          {termin.location}
+                        </div>
+                      )}
+                      
+                      <div className="termin-participants">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                          <circle cx="9" cy="7" r="4"/>
+                          <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                          <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                        </svg>
+                        {zugesagtCount}/{teilnehmerCount} zugesagt
+                      </div>
                     </div>
                   )
                 })}
               </div>
             )}
-          </div>
+          </>
         )}
 
-        {/* Einstellungen Tab */}
-        {activeTab === 'einstellungen' && canManage && (
-          <div className="tab-content">
-            <div className="section-header">
-              <h2>Einstellungen</h2>
-            </div>
+        {/* TEILNEHMER VIEW */}
+        {viewMode === 'teilnehmer' && (
+          <>
+            {loading ? (
+              <div className="empty-state">Lade Teilnehmer...</div>
+            ) : filteredTeilnehmer.length === 0 ? (
+              <div className="empty-state">
+                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{opacity: 0.3, marginBottom: '16px'}}>
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                  <circle cx="9" cy="7" r="4"/>
+                </svg>
+                <div style={{fontWeight: 700, marginBottom: '8px'}}>Keine Teilnehmer</div>
+                <div>Füge den ersten Teilnehmer hinzu</div>
+              </div>
+            ) : (
+              <div className="teilnehmer-list">
+                {filteredTeilnehmer.map(teilnehmer => {
+                  const teilnehmerTermine = getTeilnehmerTermine(teilnehmer.id)
+                  
+                  return (
+                    <div 
+                      key={teilnehmer.id} 
+                      className="teilnehmer-row"
+                      onClick={() => openTeilnehmerDetail(teilnehmer)}
+                    >
+                      <div className="teilnehmer-avatar">
+                        {teilnehmer.vorname.charAt(0)}{teilnehmer.nachname.charAt(0)}
+                      </div>
+                      
+                      <div className="teilnehmer-info">
+                        <div className="teilnehmer-name">
+                          {teilnehmer.vorname} {teilnehmer.nachname}
+                        </div>
+                        <div className="teilnehmer-email">{teilnehmer.email}</div>
+                      </div>
+                      
+                      <div className="teilnehmer-badges">
+                        {teilnehmer.lernbar_zugang_aktiv && (
+                          <div className="badge lernbar">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                              <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                            </svg>
+                            Lernbar
+                          </div>
+                        )}
+                        {teilnehmerTermine.length > 0 && (
+                          <div className="badge termine">
+                            {teilnehmerTermine.length} Termine
+                          </div>
+                        )}
+                      </div>
+                      
+                      <div className="teilnehmer-actions" onClick={(e) => e.stopPropagation()}>
+                        <button 
+                          className="btn-icon"
+                          onClick={() => openEditTeilnehmer(teilnehmer)}
+                          title="Bearbeiten"
+                        >
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </>
+        )}
 
-            <div className="settings-section">
-              <h3>Pflicht-Schulungen</h3>
-              <p className="settings-description">Wählen Sie aus, welche Schulungen für alle Mitglieder pflichtig sind.</p>
-              <div className="checkbox-list">
-                {courses.map(course => (
-                  <label key={course.id} className="checkbox-item">
-                    <input
-                      type="checkbox"
-                      checked={mandatoryCourses.includes(course.id)}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          setMandatoryCourses([...mandatoryCourses, course.id])
-                        } else {
-                          setMandatoryCourses(mandatoryCourses.filter(id => id !== course.id))
-                        }
-                      }}
-                    />
-                    <span>{course.title}</span>
-                  </label>
+        {/* MODULE VIEW */}
+        {viewMode === 'module' && (
+          <>
+            {loading ? (
+              <div className="empty-state">Lade Module...</div>
+            ) : filteredModule.length === 0 ? (
+              <div className="empty-state">
+                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{opacity: 0.3, marginBottom: '16px'}}>
+                  <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
+                  <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
+                </svg>
+                <div style={{fontWeight: 700, marginBottom: '8px'}}>Keine Module</div>
+                <div>Erstelle dein erstes Online-Modul</div>
+              </div>
+            ) : (
+              <div className="module-grid">
+                {filteredModule.map(modul => (
+                  <div key={modul.id} className="modul-card">
+                    <div className="modul-header">
+                      <div className="modul-name">{modul.name}</div>
+                      <div className="modul-duration">{modul.dauer_minuten} Min.</div>
+                    </div>
+                    
+                    {modul.beschreibung && (
+                      <div className="modul-description" dangerouslySetInnerHTML={{ __html: modul.beschreibung.substring(0, 150) + '...' }} />
+                    )}
+                    
+                    <div className="modul-stats">
+                      <div className="modul-stat">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <polyline points="9 11 12 14 22 4"/>
+                          <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+                        </svg>
+                        {modul.inhalte.length} Lektionen
+                      </div>
+                    </div>
+                    
+                    <div className="modul-actions">
+                      <button className="btn" onClick={() => openEditModul(modul)}>
+                        Bearbeiten
+                      </button>
+                      <button className="btn danger" onClick={() => deleteModul(modul.id, modul.name)}>
+                        Löschen
+                      </button>
+                    </div>
+                  </div>
                 ))}
               </div>
-            </div>
-
-            <div className="settings-section">
-              <h3>Lernbar-Zugriff</h3>
-              <p className="settings-description">Wählen Sie aus, welche Benutzer Zugriff auf Lernbar haben.</p>
-              <div className="checkbox-list">
-                {allUsers.map(u => (
-                  <label key={u.id} className="checkbox-item">
-                    <input
-                      type="checkbox"
-                      checked={lernbarUsers.includes(u.id)}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          setLernbarUsers([...lernbarUsers, u.id])
-                        } else {
-                          setLernbarUsers(lernbarUsers.filter(id => id !== u.id))
-                        }
-                      }}
-                    />
-                    <span>{u.name || u.email}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            <button className="action-btn success" onClick={saveSettings}>
-              Einstellungen speichern
-            </button>
-          </div>
+            )}
+          </>
         )}
       </div>
 
-      {/* Course Modal */}
-      {showCourseModal && (
-        <div className="modal-overlay" onClick={() => setShowCourseModal(false)}>
-          <div className="modal-content wizard-modal" onClick={e => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>{editingCourse ? 'Schulung bearbeiten' : 'Neue Schulung erstellen'}</h3>
-              <button className="modal-close" onClick={() => setShowCourseModal(false)}>×</button>
+      {/* ADD/EDIT TERMIN MODAL */}
+      {showAddTerminModal && (
+        <div className="modal show" onClick={() => setShowAddTerminModal(false)}>
+          <div className="modal-content large" onClick={(e) => e.stopPropagation()}>
+            <h3>{terminForm.id ? 'Termin bearbeiten' : 'Termin erstellen'}</h3>
+            
+            <div className="field">
+              <label>Titel *</label>
+              <input
+                type="text"
+                value={terminForm.name}
+                onChange={(e) => setTerminForm({ ...terminForm, name: e.target.value })}
+                placeholder="z.B. Erste-Hilfe Grundkurs"
+                autoFocus
+              />
             </div>
-
-            {/* Wizard Progress */}
-            {!editingCourse && (
-              <div className="wizard-progress">
-                <div className={`wizard-step ${courseWizardStep >= 1 ? 'active' : ''}`}>
-                  <span className="step-number">1</span>
-                  <span className="step-label">Titel</span>
-                </div>
-                <div className="wizard-line"></div>
-                <div className={`wizard-step ${courseWizardStep >= 2 ? 'active' : ''}`}>
-                  <span className="step-number">2</span>
-                  <span className="step-label">Beschreibung</span>
-                </div>
-                <div className="wizard-line"></div>
-                <div className={`wizard-step ${courseWizardStep >= 3 ? 'active' : ''}`}>
-                  <span className="step-number">3</span>
-                  <span className="step-label">Details</span>
-                </div>
-              </div>
-            )}
-
-            <div className="modal-body">
-              {editingCourse ? (
-                // Edit mode - show all fields
-                <>
-                  <div className="form-field">
-                    <label>Titel</label>
-                    <input type="text" value={courseForm.title} onChange={e => setCourseForm({...courseForm, title: e.target.value})} />
-                  </div>
-                  <div className="form-field">
-                    <label>Beschreibung</label>
-                    <textarea value={courseForm.description} onChange={e => setCourseForm({...courseForm, description: e.target.value})} />
-                  </div>
-                  <div className="form-field">
-                    <label>Kategorie</label>
-                    <input type="text" value={courseForm.category} onChange={e => setCourseForm({...courseForm, category: e.target.value})} />
-                  </div>
-                  <div className="form-field">
-                    <label>Typ</label>
-                    <select value={courseForm.type} onChange={e => setCourseForm({...courseForm, type: e.target.value as any})}>
-                      <option value="online">Online</option>
-                      <option value="präsenz">Präsenz</option>
-                      <option value="hybrid">Hybrid</option>
-                    </select>
-                  </div>
-                  <div className="form-row">
-                    <div className="form-field">
-                      <label>Dauer (Min.)</label>
-                      <input type="number" value={courseForm.duration_minutes} onChange={e => setCourseForm({...courseForm, duration_minutes: parseInt(e.target.value)})} />
-                    </div>
-                    <div className="form-field">
-                      <label>Gültig (Monate)</label>
-                      <input type="number" value={courseForm.valid_for_months} onChange={e => setCourseForm({...courseForm, valid_for_months: parseInt(e.target.value)})} />
-                    </div>
-                  </div>
-                  <div className="form-field checkbox">
-                    <label>
-                      <input type="checkbox" checked={courseForm.is_mandatory} onChange={e => setCourseForm({...courseForm, is_mandatory: e.target.checked})} />
-                      Pflichtschulung
-                    </label>
-                  </div>
-                  <button className="action-btn primary" onClick={saveCourse}>Speichern</button>
-                </>
-              ) : (
-                // Wizard mode - step by step
-                <>
-                  {courseWizardStep === 1 && (
-                    <div className="wizard-step-content">
-                      <h4>Schritt 1: Titel</h4>
-                      <div className="form-field">
-                        <label>Wie soll die Schulung heißen?</label>
-                        <input
-                          type="text"
-                          value={courseForm.title}
-                          onChange={e => setCourseForm({...courseForm, title: e.target.value})}
-                          placeholder="z.B. Brandschutz-Grundlagen"
-                          autoFocus
-                        />
-                      </div>
-                      <div className="wizard-buttons">
-                        <button
-                          className="action-btn primary"
-                          disabled={!courseForm.title.trim()}
-                          onClick={() => setCourseWizardStep(2)}
-                        >
-                          Weiter →
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  {courseWizardStep === 2 && (
-                    <div className="wizard-step-content">
-                      <h4>Schritt 2: Beschreibung</h4>
-                      <div className="form-field">
-                        <label>Was lernen die Teilnehmer in dieser Schulung?</label>
-                        <textarea
-                          value={courseForm.description}
-                          onChange={e => setCourseForm({...courseForm, description: e.target.value})}
-                          placeholder="Beschreiben Sie den Inhalt und die Lernziele..."
-                          rows={4}
-                          autoFocus
-                        />
-                      </div>
-                      <div className="wizard-buttons">
-                        <button className="action-btn secondary" onClick={() => setCourseWizardStep(1)}>
-                          ← Zurück
-                        </button>
-                        <button
-                          className="action-btn primary"
-                          onClick={() => setCourseWizardStep(3)}
-                        >
-                          Weiter →
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  {courseWizardStep === 3 && (
-                    <div className="wizard-step-content">
-                      <h4>Schritt 3: Details</h4>
-                      <div className="form-field">
-                        <label>Kategorie</label>
-                        <input type="text" value={courseForm.category} onChange={e => setCourseForm({...courseForm, category: e.target.value})} placeholder="z.B. Arbeitsschutz" />
-                      </div>
-                      <div className="form-field">
-                        <label>Typ</label>
-                        <select value={courseForm.type} onChange={e => setCourseForm({...courseForm, type: e.target.value as any})}>
-                          <option value="online">Online</option>
-                          <option value="präsenz">Präsenz</option>
-                          <option value="hybrid">Hybrid</option>
-                        </select>
-                      </div>
-                      <div className="form-row">
-                        <div className="form-field">
-                          <label>Dauer (Min.)</label>
-                          <input type="number" value={courseForm.duration_minutes} onChange={e => setCourseForm({...courseForm, duration_minutes: parseInt(e.target.value)})} />
-                        </div>
-                        <div className="form-field">
-                          <label>Gültig (Monate)</label>
-                          <input type="number" value={courseForm.valid_for_months} onChange={e => setCourseForm({...courseForm, valid_for_months: parseInt(e.target.value)})} />
-                        </div>
-                      </div>
-                      <div className="form-field checkbox">
-                        <label>
-                          <input type="checkbox" checked={courseForm.is_mandatory} onChange={e => setCourseForm({...courseForm, is_mandatory: e.target.checked})} />
-                          Pflichtschulung
-                        </label>
-                      </div>
-                      <div className="wizard-buttons">
-                        <button className="action-btn secondary" onClick={() => setCourseWizardStep(2)}>
-                          ← Zurück
-                        </button>
-                        <button className="action-btn primary" onClick={saveCourse}>
-                          ✓ Schulung erstellen
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </>
-              )}
+            
+            <div className="field">
+              <label>Beschreibung</label>
+              <textarea
+                value={terminForm.description}
+                onChange={(e) => setTerminForm({ ...terminForm, description: e.target.value })}
+                rows={4}
+                placeholder="Details zum Termin..."
+              />
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* Session Modal */}
-      {showSessionModal && selectedCourse && (
-        <div className="modal-overlay" onClick={() => setShowSessionModal(false)}>
-          <div className="modal-content" onClick={e => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>Neuer Termin für {selectedCourse.title}</h3>
-              <button className="modal-close" onClick={() => setShowSessionModal(false)}>×</button>
+            
+            <div className="field-row">
+              <div className="field">
+                <label>Start *</label>
+                <input
+                  type="datetime-local"
+                  value={terminForm.start_datetime}
+                  onChange={(e) => setTerminForm({ ...terminForm, start_datetime: e.target.value })}
+                />
+              </div>
+              
+              <div className="field">
+                <label>Ende *</label>
+                <input
+                  type="datetime-local"
+                  value={terminForm.end_datetime}
+                  onChange={(e) => setTerminForm({ ...terminForm, end_datetime: e.target.value })}
+                />
+              </div>
             </div>
-            <div className="modal-body">
-              <div className="form-field">
-                <label>Datum</label>
-                <input type="date" value={sessionForm.date ? sessionForm.date.split('T')[0] : ''} onChange={e => setSessionForm({...sessionForm, date: e.target.value})} />
-              </div>
-              <div className="form-row">
-                <div className="form-field">
-                  <label>Startzeit</label>
-                  <input type="time" value={sessionForm.start_time} onChange={e => setSessionForm({...sessionForm, start_time: e.target.value})} />
-                </div>
-                <div className="form-field">
-                  <label>Endzeit</label>
-                  <input type="time" value={sessionForm.end_time} onChange={e => setSessionForm({...sessionForm, end_time: e.target.value})} />
-                </div>
-              </div>
-              <div className="form-field">
-                <label>Ort</label>
-                <input type="text" value={sessionForm.location} onChange={e => setSessionForm({...sessionForm, location: e.target.value})} />
-              </div>
-              <div className="form-field">
-                <label>Dozent</label>
-                <input type="text" value={sessionForm.dozent} onChange={e => setSessionForm({...sessionForm, dozent: e.target.value})} />
-              </div>
-              <div className="form-field">
-                <label>Beschreibung</label>
-                <textarea value={sessionForm.beschreibung} onChange={e => setSessionForm({...sessionForm, beschreibung: e.target.value})} />
-              </div>
-              <div className="form-field">
+            
+            <div className="field">
+              <label>Ort</label>
+              <input
+                type="text"
+                value={terminForm.location}
+                onChange={(e) => setTerminForm({ ...terminForm, location: e.target.value })}
+                placeholder="z.B. Schulungsraum 1"
+              />
+            </div>
+            
+            <div className="field">
+              <label>Dozent</label>
+              <input
+                type="text"
+                value={terminForm.dozent}
+                onChange={(e) => setTerminForm({ ...terminForm, dozent: e.target.value })}
+                placeholder="z.B. Max Mustermann"
+              />
+            </div>
+            
+            <div className="field-row">
+              <div className="field">
                 <label>Max. Teilnehmer</label>
-                <input type="number" value={sessionForm.max_participants} onChange={e => setSessionForm({...sessionForm, max_participants: parseInt(e.target.value)})} />
+                <input
+                  type="number"
+                  value={terminForm.max_teilnehmer}
+                  onChange={(e) => setTerminForm({ ...terminForm, max_teilnehmer: parseInt(e.target.value) || 0 })}
+                  min="1"
+                />
               </div>
-              <div className="form-field">
+              
+              <div className="field">
                 <label>Status</label>
-                <select value={sessionForm.status} onChange={e => setSessionForm({...sessionForm, status: e.target.value as any})}>
+                <select 
+                  value={terminForm.status}
+                  onChange={(e) => setTerminForm({ ...terminForm, status: e.target.value as any })}
+                >
                   <option value="geplant">Geplant</option>
-                  <option value="läuft">Läuft</option>
+                  <option value="laufend">Laufend</option>
                   <option value="abgeschlossen">Abgeschlossen</option>
                   <option value="abgesagt">Abgesagt</option>
                 </select>
               </div>
-              <button className="action-btn primary" onClick={saveSession}>Speichern</button>
+            </div>
+            
+            <div className="modal-actions">
+              <button className="btn" onClick={() => setShowAddTerminModal(false)}>
+                Abbrechen
+              </button>
+              <button className="btn primary" onClick={saveTermin}>
+                {terminForm.id ? 'Speichern' : 'Erstellen'}
+              </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Team Modal */}
-      {showTeamModal && (
-        <div className="modal-overlay" onClick={() => setShowTeamModal(false)}>
-          <div className="modal-content" onClick={e => e.stopPropagation()}>
+      {/* TERMIN DETAIL MODAL */}
+      {showTerminDetailModal && selectedTermin && (
+        <div className="modal show" onClick={() => setShowTerminDetailModal(false)}>
+          <div className="modal-content xlarge" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>{editingMember ? 'Mitglied bearbeiten' : 'Neues Mitglied'}</h3>
-              <button className="modal-close" onClick={() => setShowTeamModal(false)}>×</button>
-            </div>
-            <div className="modal-body">
-              <div className="form-field">
-                <label>Name</label>
-                <input type="text" value={teamForm.name} onChange={e => setTeamForm({...teamForm, name: e.target.value})} />
-              </div>
-              <div className="form-field">
-                <label>E-Mail</label>
-                <input type="email" value={teamForm.email} onChange={e => setTeamForm({...teamForm, email: e.target.value})} />
-              </div>
-              <div className="form-field">
-                <label>Rolle</label>
-                <input type="text" value={teamForm.role} onChange={e => setTeamForm({...teamForm, role: e.target.value})} />
-              </div>
-              <div className="form-field">
-                <label>Telefon</label>
-                <input type="tel" value={teamForm.phone} onChange={e => setTeamForm({...teamForm, phone: e.target.value})} />
-              </div>
-              <button className="action-btn primary" onClick={saveMember}>Speichern</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Module Modal */}
-      {showModuleModal && (
-        <div className="modal-overlay" onClick={() => setShowModuleModal(false)}>
-          <div className="modal-content" onClick={e => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>{editingModule ? 'Modul bearbeiten' : 'Neues Modul'}</h3>
-              <button className="modal-close" onClick={() => setShowModuleModal(false)}>×</button>
-            </div>
-            <div className="modal-body">
-              <div className="form-field">
-                <label>Titel</label>
-                <input type="text" value={moduleForm.title} onChange={e => setModuleForm({...moduleForm, title: e.target.value})} />
-              </div>
-              <div className="form-field">
-                <label>Beschreibung</label>
-                <textarea value={moduleForm.description} onChange={e => setModuleForm({...moduleForm, description: e.target.value})} />
-              </div>
-              <div className="form-field">
-                <label>Kategorie</label>
-                <input type="text" value={moduleForm.category} onChange={e => setModuleForm({...moduleForm, category: e.target.value})} />
-              </div>
-              <div className="form-field checkbox">
-                <label>
-                  <input type="checkbox" checked={moduleForm.is_active} onChange={e => setModuleForm({...moduleForm, is_active: e.target.checked})} />
-                  Aktiv
-                </label>
-              </div>
-              <button className="action-btn primary" onClick={saveModule}>Speichern</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Slide Modal */}
-      {showSlideModal && selectedModule && (
-        <div className="modal-overlay" onClick={() => setShowSlideModal(false)}>
-          <div className="modal-content" onClick={e => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>Neue Folie für {selectedModule.title}</h3>
-              <button className="modal-close" onClick={() => setShowSlideModal(false)}>×</button>
-            </div>
-            <div className="modal-body">
-              <div className="form-field">
-                <label>Titel</label>
-                <input type="text" value={slideForm.title} onChange={e => setSlideForm({...slideForm, title: e.target.value})} />
-              </div>
-              <div className="form-field">
-                <label>Inhalt</label>
-                <textarea value={slideForm.content} onChange={e => setSlideForm({...slideForm, content: e.target.value})} rows={6} />
-              </div>
-              <button className="action-btn primary" onClick={saveSlide}>Speichern</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Course Detail Modal - Shows all sessions for a course */}
-      {showCourseDetail && selectedCourseForDetail && (
-        <div className="modal-overlay" onClick={() => setShowCourseDetail(false)}>
-          <div className="modal-content course-detail-modal" onClick={e => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>{selectedCourseForDetail.title}</h3>
-              <button className="modal-close" onClick={() => setShowCourseDetail(false)}>×</button>
-            </div>
-            <div className="modal-body">
-              {/* Course Info */}
-              <div className="detail-section">
-                <h4>Informationen</h4>
-                <div className="info-grid">
-                  <div className="info-label">Titel:</div>
-                  <div className="info-value">{selectedCourseForDetail.title}</div>
-
-                  {selectedCourseForDetail.description && (
-                    <>
-                      <div className="info-label">Beschreibung:</div>
-                      <div className="info-value">{selectedCourseForDetail.description}</div>
-                    </>
-                  )}
-
-                  <div className="info-label">Termine:</div>
-                  <div className="info-value">
-                    <span className="badge info">{courseSessions.length} Termin(e)</span>
-                  </div>
+              <div>
+                <h3>{selectedTermin.name}</h3>
+                <div className="termin-detail-meta">
+                  {new Date(selectedTermin.start_datetime).toLocaleString('de-DE')} - {new Date(selectedTermin.end_datetime).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}
+                  {selectedTermin.location && ` • ${selectedTermin.location}`}
                 </div>
               </div>
-
-              {/* Sessions List */}
-              <div className="detail-section">
-                <div className="section-header">
-                  <h4>Termine ({courseSessions.length})</h4>
-                  {canManage && (
-                    <button className="action-btn primary small" onClick={() => { setShowCourseDetail(false); openAddSession(selectedCourseForDetail); }}>
-                      + Weiteren Termin hinzufügen
-                    </button>
+              <button 
+                className="btn"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  openEditTermin(selectedTermin)
+                }}
+              >
+                Bearbeiten
+              </button>
+            </div>
+            
+            {/* TABS */}
+            <div className="detail-tabs">
+              <button 
+                className={`detail-tab ${currentTerminTab === 'uebersicht' ? 'active' : ''}`}
+                onClick={() => setCurrentTerminTab('uebersicht')}
+              >
+                Übersicht
+              </button>
+              <button 
+                className={`detail-tab ${currentTerminTab === 'teilnehmer' ? 'active' : ''}`}
+                onClick={() => setCurrentTerminTab('teilnehmer')}
+              >
+                Teilnehmer ({getTerminTeilnehmerByTermin(selectedTermin.id).length})
+              </button>
+              <button 
+                className={`detail-tab ${currentTerminTab === 'dokumente' ? 'active' : ''}`}
+                onClick={() => setCurrentTerminTab('dokumente')}
+              >
+                Dokumente ({getDokumenteByTermin(selectedTermin.id).length})
+              </button>
+              <button 
+                className={`detail-tab ${currentTerminTab === 'module' ? 'active' : ''}`}
+                onClick={() => setCurrentTerminTab('module')}
+              >
+                Module ({getModuleByTermin(selectedTermin.id).length})
+              </button>
+            </div>
+            
+            <div className="detail-content">
+              {/* ÜBERSICHT TAB */}
+              {currentTerminTab === 'uebersicht' && (
+                <div className="uebersicht-content">
+                  {selectedTermin.description && (
+                    <div className="info-section">
+                      <h4>Beschreibung</h4>
+                      <div className="description-text" dangerouslySetInnerHTML={{ __html: selectedTermin.description }} />
+                    </div>
                   )}
-                </div>
-
-                {courseSessions.length === 0 ? (
-                  <div className="empty-state small">
-                    <p>Noch keine Termine für diese Schulung.</p>
+                  
+                  <div className="info-section">
+                    <h4>Details</h4>
+                    <div className="info-grid">
+                      <div className="info-item">
+                        <div className="info-label">Dozent</div>
+                        <div className="info-value">{selectedTermin.dozent || '-'}</div>
+                      </div>
+                      <div className="info-item">
+                        <div className="info-label">Max. Teilnehmer</div>
+                        <div className="info-value">{selectedTermin.max_teilnehmer}</div>
+                      </div>
+                      <div className="info-item">
+                        <div className="info-label">Status</div>
+                        <div className="info-value">
+                          <span className={`status-pill ${selectedTermin.status}`}>
+                            {selectedTermin.status}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                ) : (
-                  <div className="sessions-list">
-                    {courseSessions
-                      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-                      .map(session => {
-                        const sessionDate = new Date(session.date)
-                        const isPast = sessionDate < new Date()
-                        const isAbgesagt = session.status === 'abgesagt'
-
+                  
+                  <div className="info-section">
+                    <h4>Teilnehmer-Status</h4>
+                    <div className="status-overview">
+                      {(() => {
+                        const tt = getTerminTeilnehmerByTermin(selectedTermin.id)
                         return (
-                          <div key={session.id} className="session-item" style={{ borderLeftColor: isAbgesagt ? '#991b1b' : isPast ? '#94a3b8' : '#ff6b35' }}>
-                            <div className="session-info-main">
-                              <div className="session-date-row">
-                                <span className="session-date">
-                                  {sessionDate.toLocaleDateString('de-DE', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' })}
-                                </span>
-                                {session.start_time && (
-                                  <span className="session-time">
-                                    • {session.start_time} - {session.end_time || session.start_time}
-                                  </span>
-                                )}
-                                <span className={`badge ${session.status}`}>
-                                  {session.status === 'geplant' ? 'Geplant' :
-                                   session.status === 'abgesagt' ? 'Abgesagt' :
-                                   session.status === 'abgeschlossen' ? 'Abgeschlossen' : 'Läuft'}
-                                </span>
-                              </div>
-                              <div className="session-meta">
-                                {session.location ? <>📍 {session.location}</> : '📍 Kein Ort'}
-                                {session.dozent && <> • 👤 {session.dozent}</>}
-                              </div>
-                              {session.beschreibung && (
-                                <div className="session-description">"{session.beschreibung}"</div>
-                              )}
+                          <>
+                            <div className="status-count">
+                              <div className="count-number">{tt.filter(t => t.status === 'eingeladen').length}</div>
+                              <div className="count-label">Eingeladen</div>
                             </div>
-                            <div className="session-actions">
-                              <button className="action-btn primary small" onClick={() => openSessionDetail(session)}>
-                                Details
-                              </button>
-                              <button className="action-btn info small" onClick={() => { setShowCourseDetail(false); openSessionDetail(session); }}>
-                                Teilnehmer
-                              </button>
+                            <div className="status-count success">
+                              <div className="count-number">{tt.filter(t => t.status === 'zugesagt').length}</div>
+                              <div className="count-label">Zugesagt</div>
                             </div>
-                          </div>
+                            <div className="status-count danger">
+                              <div className="count-number">{tt.filter(t => t.status === 'abgesagt').length}</div>
+                              <div className="count-label">Abgesagt</div>
+                            </div>
+                            <div className="status-count warning">
+                              <div className="count-number">{tt.filter(t => t.status === 'entschuldigt').length}</div>
+                              <div className="count-label">Entschuldigt</div>
+                            </div>
+                          </>
                         )
-                      })}
+                      })()}
+                    </div>
                   </div>
-                )}
-              </div>
-
-              {/* Close Button */}
-              <div className="modal-footer">
-                <button className="action-btn" onClick={() => setShowCourseDetail(false)}>
-                  Schließen
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Session Detail Modal */}
-      {showSessionDetail && selectedSession && selectedSessionCourse && (
-        <div className="modal-overlay" onClick={() => setShowSessionDetail(false)}>
-          <div className="modal-content session-detail-modal" onClick={e => e.stopPropagation()}>
-            <div className="modal-header session-header">
-              <div className="session-title-area">
-                <h3>{selectedSessionCourse.title}</h3>
-                <div className="session-meta-badges">
-                  <span className="badge">{selectedSessionCourse.type}</span>
-                  <span className="badge info">{selectedSession.status}</span>
-                </div>
-              </div>
-              <div className="session-header-actions">
-                {sessionMaterials.filter(m => m.file_type === 'dozent').length > 0 && (
-                  <button
-                    className="presentation-launch-btn"
-                    onClick={() => startPresentation(sessionMaterials)}
-                    title="Präsentation starten"
-                  >
-                    📺 Präsentation
-                  </button>
-                )}
-                <button className="modal-close" onClick={() => setShowSessionDetail(false)}>×</button>
-              </div>
-            </div>
-            <div className="modal-body">
-              {/* Session Info */}
-              <div className="session-info">
-                <div className="info-row">
-                  <span className="info-label">Datum:</span>
-                  <span className="info-value">{new Date(selectedSession.date).toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</span>
-                </div>
-                <div className="info-row">
-                  <span className="info-label">Uhrzeit:</span>
-                  <span className="info-value">{new Date(selectedSession.date).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}</span>
-                </div>
-                <div className="info-row">
-                  <span className="info-label">Ort:</span>
-                  <span className="info-value">{selectedSession.location}</span>
-                </div>
-                <div className="info-row">
-                  <span className="info-label">Typ:</span>
-                  <span className="info-value badge">{selectedSessionCourse.type}</span>
-                </div>
-                {selectedSessionCourse.description && (
-                  <div className="info-row">
-                    <span className="info-label">Beschreibung:</span>
-                    <span className="info-value">{selectedSessionCourse.description}</span>
-                  </div>
-                )}
-              </div>
-
-              {/* Share Section */}
-              <div className="detail-section">
-                <h4>Teilen</h4>
-                <div className="share-buttons">
-                  <button className="share-btn whatsapp" onClick={shareViaWhatsApp}>
-                    <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
-                      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
-                    </svg>
-                    WhatsApp
-                  </button>
-                  <button className="share-btn email" onClick={shareViaEmail}>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="20" height="20">
-                      <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
-                      <polyline points="22,6 12,13 2,6"/>
-                    </svg>
-                    E-Mail
-                  </button>
-                  <button className="share-btn link" onClick={() => { navigator.clipboard.writeText(getShareLink()); setMessage('✅ Link kopiert!'); }}>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="20" height="20">
-                      <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
-                      <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
-                    </svg>
-                    Link kopieren
-                  </button>
-                </div>
-              </div>
-
-              {/* Participants Section */}
-              <div className="detail-section">
-                <div className="section-header">
-                  <h4>Teilnehmer ({sessionParticipants.length})</h4>
-                  {canManage && availableUsers.length > 0 && (
-                    <button className="action-btn primary small" onClick={() => setShowAddParticipants(true)}>
-                      + Teilnehmer hinzufügen
-                    </button>
-                  )}
-                </div>
-
-                {sessionParticipants.length === 0 ? (
-                  <div className="empty-state small">
-                    <p>Noch keine Teilnehmer eingeladen.</p>
-                    <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)' }}>Füge Teilnehmer über den Button oben hinzu</p>
-                  </div>
-                ) : (
-                  <table className="participants-table">
-                    <thead>
-                      <tr>
-                        <th>Name</th>
-                        <th>Status</th>
-                        <th>Anwesenheit</th>
-                        {canManage && <th>Aktionen</th>}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {sessionParticipants.map(participant => {
-                        const member = availableUsers.find((u: any) => u.id === participant.team_member_id)
-                        const fullName = member ? `${member.vorname || ''} ${member.name || ''}`.trim() : participant.user_name || 'Unbekannt'
-                        const qualifikationen = member?.qualifikationen as string[] | undefined
-                        const showAttendance = participant.status === 'zugesagt'
-
-                        return (
-                          <tr key={participant.id}>
-                            <td>
-                              <div className="participant-name-cell">
-                                <span className="participant-fullname">{fullName}</span>
-                                {qualifikationen && qualifikationen.length > 0 && (
-                                  <span className="participant-qualifikationen">
-                                    {qualifikationen.join(', ')}
-                                  </span>
-                                )}
-                              </div>
-                            </td>
-                            <td>
-                              {canManage ? (
-                                <select
-                                  className={`status-select ${participant.status}`}
-                                  value={participant.status}
-                                  onChange={(e) => updateParticipantStatus(participant.id, e.target.value as any)}
-                                >
-                                  <option value="eingeladen">⏳ Eingeladen</option>
-                                  <option value="zugesagt">✅ Zugesagt</option>
-                                  <option value="abgesagt">❌ Abgesagt</option>
-                                  <option value="entschuldigt">📋 Entschuldigt</option>
-                                </select>
-                              ) : (
-                                <span className={`participant-status badge ${participant.status}`}>
-                                  {participant.status === 'eingeladen' ? '⏳ Eingeladen' :
-                                   participant.status === 'zugesagt' ? '✅ Zugesagt' :
-                                   participant.status === 'abgesagt' ? '❌ Abgesagt' : '📋 Entschuldigt'}
-                                </span>
-                              )}
-                            </td>
-                            <td>
-                              {showAttendance || participant.anwesend !== undefined ? (
-                                <label className="attendance-checkbox">
-                                  <input
-                                    type="checkbox"
-                                    checked={participant.anwesend || false}
-                                    onChange={(e) => updateAttendance(participant.id, e.target.checked)}
-                                  />
-                                  <span className={`attendance-badge ${participant.anwesend ? 'present' : 'absent'}`}>
-                                    {participant.anwesend ? '✅ Anwesend' : '❌ Abwesend'}
-                                  </span>
-                                </label>
-                              ) : (
-                                <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '12px' }}>-</span>
-                              )}
-                            </td>
-                            {canManage && (
-                              <td>
-                                <button
-                                  className="action-btn danger small"
-                                  onClick={() => removeParticipant(participant.id)}
-                                >
-                                  Entfernen
-                                </button>
-                              </td>
-                            )}
-                          </tr>
-                        )
-                      })}
-                    </tbody>
-                  </table>
-                )}
-              </div>
-
-              {/* Presentation Start Button */}
-              {sessionMaterials.filter(m => m.file_type === 'dozent').length > 0 && (
-                <div className="detail-section">
-                  <button
-                    className="action-btn primary start-presentation-btn"
-                    onClick={() => startPresentation(sessionMaterials)}
-                  >
-                    📺 Präsentation starten
-                  </button>
                 </div>
               )}
-
-              {/* Course Materials Section */}
-              <div className="detail-section">
-                <h4>Unterlagen</h4>
-
-                {/* Dozent Materials */}
-                <div className="materials-subsection">
-                  <h5>Für Dozent</h5>
-                  {sessionMaterials.filter(m => m.file_type === 'dozent').length === 0 ? (
-                    <p className="empty-text small">Keine Unterlagen</p>
-                  ) : (
-                    <div className="materials-list">
-                      {sessionMaterials.filter(m => m.file_type === 'dozent').map(material => (
-                        <div key={material.id} className="material-item">
-                          <div className="material-info">
-                            <span className="material-title">{material.title}</span>
-                          </div>
-                          <div className="material-actions">
-                            <a href={material.file_url} target="_blank" rel="noopener noreferrer" className="material-download">
-                              Öffnen
-                            </a>
-                            {canManage && (
-                              <button onClick={() => deleteMaterial(material.id)} className="delete-btn">×</button>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  {canManage && (
-                    <div className="upload-form">
-                      <input
-                        type="file"
-                        id="dozent-file"
+              
+              {/* TEILNEHMER TAB */}
+              {currentTerminTab === 'teilnehmer' && (
+                <div className="teilnehmer-content">
+                  <div className="content-header">
+                    <h4>Teilnehmerverwaltung</h4>
+                    <div className="header-actions">
+                      <select 
+                        className="select-compact"
                         onChange={(e) => {
-                          const file = e.target.files?.[0]
-                          if (file) {
-                            uploadMaterial(file, file.name, 'dozent')
+                          if (e.target.value) {
+                            addTeilnehmerToTermin(selectedTermin.id, e.target.value, 'persönlich')
                             e.target.value = ''
-                          }
-                        }}
-                        style={{ display: 'none' }}
-                      />
-                      <label htmlFor="dozent-file" className="upload-btn">
-                        + Datei hochladen
-                      </label>
-                    </div>
-                  )}
-                </div>
-
-                {/* Teilnehmer Materials */}
-                <div className="materials-subsection">
-                  <h5>Für Teilnehmer</h5>
-                  {sessionMaterials.filter(m => m.file_type === 'teilnehmer').length === 0 ? (
-                    <p className="empty-text small">Keine Unterlagen</p>
-                  ) : (
-                    <div className="materials-list">
-                      {sessionMaterials.filter(m => m.file_type === 'teilnehmer').map(material => (
-                        <div key={material.id} className="material-item">
-                          <div className="material-info">
-                            <span className="material-title">{material.title}</span>
-                          </div>
-                          <div className="material-actions">
-                            <a href={material.file_url} target="_blank" rel="noopener noreferrer" className="material-download">
-                              Öffnen
-                            </a>
-                            {canManage && (
-                              <button onClick={() => deleteMaterial(material.id)} className="delete-btn">×</button>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  {canManage && (
-                    <div className="upload-form">
-                      <input
-                        type="file"
-                        id="teilnehmer-file"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0]
-                          if (file) {
-                            uploadMaterial(file, file.name, 'teilnehmer')
-                            e.target.value = ''
-                          }
-                        }}
-                        style={{ display: 'none' }}
-                      />
-                      <label htmlFor="teilnehmer-file" className="upload-btn">
-                        + Datei hochladen
-                      </label>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Presentation Cockpit Modal */}
-      {showPresentation && (
-        <div className="presentation-modal">
-          <div className="presentation-header">
-            <h3>Präsentations-Cockpit</h3>
-            <div className="presentation-controls">
-              <button onClick={() => setCurrentSlide(Math.max(0, currentSlide - 1))} disabled={currentSlide === 0}>
-                ← Zurück
-              </button>
-              <span className="slide-counter">{currentSlide + 1} / {presentationSlides.length}</span>
-              <button onClick={() => setCurrentSlide(Math.min(presentationSlides.length - 1, currentSlide + 1))} disabled={currentSlide === presentationSlides.length - 1}>
-                Weiter →
-              </button>
-              <button className="close-presentation" onClick={() => setShowPresentation(false)}>
-                Beenden
-              </button>
-            </div>
-          </div>
-          <div className="presentation-content">
-            {presentationSlides[currentSlide] && (
-              <img src={presentationSlides[currentSlide]} alt={`Slide ${currentSlide + 1}`} />
-            )}
-          </div>
-          <div className="presentation-thumbnails">
-            {presentationSlides.map((slide, idx) => (
-              <div
-                key={idx}
-                className={`thumbnail ${idx === currentSlide ? 'active' : ''}`}
-                onClick={() => setCurrentSlide(idx)}
-              >
-                <span>{idx + 1}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Add Participants Modal */}
-      {showAddParticipants && selectedSession && (
-        <div className="modal-overlay" onClick={() => { setShowAddParticipants(false); setSelectedParticipants([]); }}>
-          <div className="modal-content" onClick={e => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>Teilnehmer hinzufügen</h3>
-              <button className="modal-close" onClick={() => { setShowAddParticipants(false); setSelectedParticipants([]); }}>×</button>
-            </div>
-            <div className="modal-body">
-              <p style={{ marginBottom: '16px', color: 'rgba(255,255,255,0.7)' }}>
-                Wähle die Teammitglieder aus, die du zur Schulung einladen möchtest:
-              </p>
-
-              <div className="participants-selection-list">
-                {availableUsers
-                  .filter((u: any) => !sessionParticipants.some(p => p.team_member_id === u.id))
-                  .map(member => {
-                    const fullName = `${member.vorname || ''} ${member.name || ''}`.trim()
-                    const qualifikationen = member.qualifikationen as string[] | undefined
-                    const isSelected = selectedParticipants.includes(member.id)
-
-                    return (
-                      <div
-                        key={member.id}
-                        className={`participant-select-item ${isSelected ? 'selected' : ''}`}
-                        onClick={() => {
-                          if (isSelected) {
-                            setSelectedParticipants(selectedParticipants.filter(id => id !== member.id))
-                          } else {
-                            setSelectedParticipants([...selectedParticipants, member.id])
                           }
                         }}
                       >
-                        <input
-                          type="checkbox"
-                          checked={isSelected}
-                          onChange={() => {}}
-                        />
-                        <div className="participant-select-info">
-                          <span className="participant-select-name">{fullName}</span>
-                          {qualifikationen && qualifikationen.length > 0 && (
-                            <span className="participant-select-qualifikationen">
-                              {qualifikationen.join(', ')}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    )
-                  })}
-              </div>
-
-              {availableUsers.filter((u: any) => !sessionParticipants.some(p => p.team_member_id === u.id)).length === 0 && (
-                <div className="empty-state small">
-                  <p>Alle Team-Mitglieder bereits eingeladen</p>
+                        <option value="">+ Teilnehmer hinzufügen</option>
+                        {teilnehmer
+                          .filter(t => !getTerminTeilnehmerByTermin(selectedTermin.id).find(tt => tt.teilnehmer_id === t.id))
+                          .map(t => (
+                            <option key={t.id} value={t.id}>
+                              {t.vorname} {t.nachname}
+                            </option>
+                          ))
+                        }
+                      </select>
+                    </div>
+                  </div>
+                  
+                  {getTerminTeilnehmerByTermin(selectedTermin.id).length === 0 ? (
+                    <div className="empty-state-small">Noch keine Teilnehmer</div>
+                  ) : (
+                    <div className="teilnehmer-table">
+                      <table>
+                        <thead>
+                          <tr>
+                            <th>Name</th>
+                            <th>Status</th>
+                            <th>Eingeladen</th>
+                            <th>Anwesend</th>
+                            <th>Aktionen</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {getTerminTeilnehmerByTermin(selectedTermin.id).map(tt => {
+                            const t = teilnehmer.find(teiln => teiln.id === tt.teilnehmer_id)
+                            if (!t) return null
+                            
+                            return (
+                              <tr key={tt.id}>
+                                <td>
+                                  <div className="table-person">
+                                    <div className="person-avatar-small">
+                                      {t.vorname.charAt(0)}{t.nachname.charAt(0)}
+                                    </div>
+                                    <div>
+                                      <div className="person-name">{t.vorname} {t.nachname}</div>
+                                      <div className="person-email">{t.email}</div>
+                                    </div>
+                                  </div>
+                                </td>
+                                <td>
+                                  <select
+                                    className="status-select"
+                                    value={tt.status}
+                                    onChange={(e) => updateTeilnehmerStatus(tt.id, e.target.value as any)}
+                                  >
+                                    <option value="eingeladen">Eingeladen</option>
+                                    <option value="zugesagt">Zugesagt</option>
+                                    <option value="abgesagt">Abgesagt</option>
+                                    <option value="entschuldigt">Entschuldigt</option>
+                                  </select>
+                                </td>
+                                <td>
+                                  <div className="einladung-info">
+                                    {new Date(tt.eingeladen_am).toLocaleDateString('de-DE')}
+                                    <span className="einladung-via">{tt.eingeladen_via}</span>
+                                  </div>
+                                </td>
+                                <td>
+                                  <input
+                                    type="checkbox"
+                                    checked={tt.anwesend}
+                                    onChange={() => toggleAnwesenheit(tt.id, tt.anwesend)}
+                                    className="anwesenheit-checkbox"
+                                  />
+                                </td>
+                                <td>
+                                  <div className="table-actions">
+                                    <button
+                                      className="btn-icon-small"
+                                      onClick={() => sendEinladungEmail(selectedTermin, t)}
+                                      title="Email senden"
+                                    >
+                                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                                        <polyline points="22,6 12,13 2,6"/>
+                                      </svg>
+                                    </button>
+                                    <button
+                                      className="btn-icon-small"
+                                      onClick={() => sendEinladungWhatsApp(selectedTermin, t)}
+                                      title="WhatsApp senden"
+                                    >
+                                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                        <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
+                                      </svg>
+                                    </button>
+                                    <button
+                                      className="btn-icon-small danger"
+                                      onClick={() => removeTeilnehmerFromTermin(tt.id)}
+                                      title="Entfernen"
+                                    >
+                                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                        <line x1="18" y1="6" x2="6" y2="18"/>
+                                        <line x1="6" y1="6" x2="18" y2="18"/>
+                                      </svg>
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            )
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
                 </div>
               )}
 
-              <div style={{ marginTop: '20px', display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-                <button className="action-btn" onClick={() => { setShowAddParticipants(false); setSelectedParticipants([]); }}>
-                  Abbrechen
-                </button>
-                <button
-                  className="action-btn primary"
-                  disabled={selectedParticipants.length === 0}
-                  onClick={async () => {
-                    for (const memberId of selectedParticipants) {
-                      await addParticipant(memberId)
-                    }
-                    setShowAddParticipants(false)
-                    setSelectedParticipants([])
-                  }}
-                >
-                  {selectedParticipants.length} Teilnehmer einladen
-                </button>
-              </div>
+              {/* DOKUMENTE TAB */}
+              {currentTerminTab === 'dokumente' && (
+                <div className="dokumente-content">
+                  <div className="content-header">
+                    <h4>Dokumente & Material</h4>
+                    <button 
+                      className="btn primary"
+                      onClick={() => openUploadDokument(selectedTermin)}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                        <polyline points="17 8 12 3 7 8"/>
+                        <line x1="12" y1="3" x2="12" y2="15"/>
+                      </svg>
+                      Hochladen
+                    </button>
+                  </div>
+                  
+                  {getDokumenteByTermin(selectedTermin.id).length === 0 ? (
+                    <div className="empty-state-small">Noch keine Dokumente hochgeladen</div>
+                  ) : (
+                    <div className="dokumente-sections">
+                      {/* DOZENTEN-MATERIAL */}
+                      <div className="dokument-section">
+                        <h5>
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                            <circle cx="12" cy="7" r="4"/>
+                          </svg>
+                          Dozenten-Material
+                        </h5>
+                        <div className="dokumente-list">
+                          {getDokumenteByTermin(selectedTermin.id)
+                            .filter(d => d.typ === 'dozent')
+                            .map(dok => (
+                              <div key={dok.id} className="dokument-item">
+                                <div className="dokument-icon">
+                                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/>
+                                    <polyline points="13 2 13 9 20 9"/>
+                                  </svg>
+                                </div>
+                                <div className="dokument-info">
+                                  <div className="dokument-name">{dok.name}</div>
+                                  {dok.beschreibung && (
+                                    <div className="dokument-desc">{dok.beschreibung}</div>
+                                  )}
+                                </div>
+                                <div className="dokument-actions">
+                                  {dok.datei && (
+                                    <a 
+                                      href={getDokumentURL(dok)}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="btn-icon-small"
+                                      title="Öffnen"
+                                    >
+                                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+                                        <polyline points="15 3 21 3 21 9"/>
+                                        <line x1="10" y1="14" x2="21" y2="3"/>
+                                      </svg>
+                                    </a>
+                                  )}
+                                  <button
+                                    className="btn-icon-small danger"
+                                    onClick={() => deleteDokument(dok.id, dok.name)}
+                                    title="Löschen"
+                                  >
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                      <polyline points="3 6 5 6 21 6"/>
+                                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                                    </svg>
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                          {getDokumenteByTermin(selectedTermin.id).filter(d => d.typ === 'dozent').length === 0 && (
+                            <div className="empty-hint">Keine Dozenten-Materialien</div>
+                          )}
+                        </div>
+                      </div>
+                      
+                      {/* TEILNEHMER-MATERIAL */}
+                      <div className="dokument-section">
+                        <h5>
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                            <circle cx="9" cy="7" r="4"/>
+                            <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                          </svg>
+                          Teilnehmer-Material (in Lernbar sichtbar)
+                        </h5>
+                        <div className="dokumente-list">
+                          {getDokumenteByTermin(selectedTermin.id)
+                            .filter(d => d.typ === 'teilnehmer')
+                            .map(dok => (
+                              <div key={dok.id} className="dokument-item">
+                                <div className="dokument-icon">
+                                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/>
+                                    <polyline points="13 2 13 9 20 9"/>
+                                  </svg>
+                                </div>
+                                <div className="dokument-info">
+                                  <div className="dokument-name">{dok.name}</div>
+                                  {dok.beschreibung && (
+                                    <div className="dokument-desc">{dok.beschreibung}</div>
+                                  )}
+                                </div>
+                                <div className="dokument-actions">
+                                  {dok.datei && (
+                                    <a 
+                                      href={getDokumentURL(dok)}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="btn-icon-small"
+                                      title="Öffnen"
+                                    >
+                                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+                                        <polyline points="15 3 21 3 21 9"/>
+                                        <line x1="10" y1="14" x2="21" y2="3"/>
+                                      </svg>
+                                    </a>
+                                  )}
+                                  <button
+                                    className="btn-icon-small danger"
+                                    onClick={() => deleteDokument(dok.id, dok.name)}
+                                    title="Löschen"
+                                  >
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                      <polyline points="3 6 5 6 21 6"/>
+                                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                                    </svg>
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                          {getDokumenteByTermin(selectedTermin.id).filter(d => d.typ === 'teilnehmer').length === 0 && (
+                            <div className="empty-hint">Keine Teilnehmer-Materialien</div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+              
+              {/* MODULE TAB */}
+              {currentTerminTab === 'module' && (
+                <div className="module-content">
+                  <div className="content-header">
+                    <h4>Zugeordnete Module</h4>
+                    <select 
+                      className="select-compact"
+                      onChange={(e) => {
+                        if (e.target.value) {
+                          setSelectedTermin(selectedTermin)
+                          setShowAssignModulModal(true)
+                        }
+                      }}
+                    >
+                      <option value="">+ Modul zuordnen</option>
+                      {module
+                        .filter(m => !getModuleByTermin(selectedTermin.id).find(mt => mt.modul_id === m.id))
+                        .map(m => (
+                          <option key={m.id} value={m.id}>
+                            {m.name}
+                          </option>
+                        ))
+                      }
+                    </select>
+                  </div>
+                  
+                  {getModuleByTermin(selectedTermin.id).length === 0 ? (
+                    <div className="empty-state-small">Noch keine Module zugeordnet</div>
+                  ) : (
+                    <div className="assigned-module-list">
+                      {getModuleByTermin(selectedTermin.id).map(mt => {
+                        const modul = module.find(m => m.id === mt.modul_id)
+                        if (!modul) return null
+                        
+                        return (
+                          <div key={mt.id} className="assigned-modul-item">
+                            <div className="modul-item-icon">
+                              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
+                                <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
+                              </svg>
+                            </div>
+                            <div className="modul-item-info">
+                              <div className="modul-item-name">{modul.name}</div>
+                              <div className="modul-item-meta">
+                                {modul.dauer_minuten} Min. • {modul.inhalte.length} Lektionen
+                                {mt.pflicht && <span className="pflicht-badge">Pflicht</span>}
+                              </div>
+                              {mt.frist_datum && (
+                                <div className="modul-item-frist">
+                                  Frist: {new Date(mt.frist_datum).toLocaleDateString('de-DE')}
+                                </div>
+                              )}
+                            </div>
+                            <button
+                              className="btn-icon-small danger"
+                              onClick={() => removeModulFromTermin(mt.id)}
+                              title="Entfernen"
+                            >
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <line x1="18" y1="6" x2="6" y2="18"/>
+                                <line x1="6" y1="6" x2="18" y2="18"/>
+                              </svg>
+                            </button>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+            
+            <div className="modal-actions">
+              <button className="btn danger" onClick={() => deleteTermin(selectedTermin.id, selectedTermin.name)}>
+                Termin löschen
+              </button>
+              <button className="btn" onClick={() => setShowTerminDetailModal(false)}>
+                Schließen
+              </button>
             </div>
           </div>
         </div>
       )}
-    </div>
+
+      {/* ADD/EDIT TEILNEHMER MODAL */}
+      {showAddTeilnehmerModal && (
+        <div className="modal show" onClick={() => setShowAddTeilnehmerModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <h3>{teilnehmerForm.id ? 'Teilnehmer bearbeiten' : 'Teilnehmer hinzufügen'}</h3>
+            
+            <div className="field-row">
+              <div className="field">
+                <label>Vorname *</label>
+                <input
+                  type="text"
+                  value={teilnehmerForm.vorname}
+                  onChange={(e) => setTeilnehmerForm({ ...teilnehmerForm, vorname: e.target.value })}
+                  placeholder="Max"
+                  autoFocus
+                />
+              </div>
+              
+              <div className="field">
+                <label>Nachname *</label>
+                <input
+                  type="text"
+                  value={teilnehmerForm.nachname}
+                  onChange={(e) => setTeilnehmerForm({ ...teilnehmerForm, nachname: e.target.value })}
+                  placeholder="Mustermann"
+                />
+              </div>
+            </div>
+            
+            <div className="field">
+              <label>E-Mail *</label>
+              <input
+                type="email"
+                value={teilnehmerForm.email}
+                onChange={(e) => setTeilnehmerForm({ ...teilnehmerForm, email: e.target.value })}
+                placeholder="max@example.com"
+              />
+            </div>
+            
+            <div className="field-row">
+              <div className="field">
+                <label>Telefon</label>
+                <input
+                  type="tel"
+                  value={teilnehmerForm.telefon}
+                  onChange={(e) => setTeilnehmerForm({ ...teilnehmerForm, telefon: e.target.value })}
+                  placeholder="+49 123 456789"
+                />
+              </div>
+              
+              <div className="field">
+                <label>WhatsApp</label>
+                <input
+                  type="tel"
+                  value={teilnehmerForm.whatsapp}
+                  onChange={(e) => setTeilnehmerForm({ ...teilnehmerForm, whatsapp: e.target.value })}
+                  placeholder="+49 123 456789"
+                />
+              </div>
+            </div>
+            
+            <div className="field">
+              <label>Notizen</label>
+              <textarea
+                value={teilnehmerForm.notizen}
+                onChange={(e) => setTeilnehmerForm({ ...teilnehmerForm, notizen: e.target.value })}
+                rows={3}
+                placeholder="Zusätzliche Informationen..."
+              />
+            </div>
+            
+            <div className="field">
+              <label className="checkbox-label">
+                <input
+                  type="checkbox"
+                  checked={teilnehmerForm.lernbar_zugang_aktiv}
+                  onChange={(e) => setTeilnehmerForm({ ...teilnehmerForm, lernbar_zugang_aktiv: e.target.checked })}
+                />
+                <span>Lernbar-Zugang aktivieren</span>
+              </label>
+              <div className="field-hint">
+                Teilnehmer erhält Zugang zur Lernbar (nur Module, keine Systemfunktionen)
+              </div>
+            </div>
+            
+            <div className="modal-actions">
+              <button className="btn" onClick={() => setShowAddTeilnehmerModal(false)}>
+                Abbrechen
+              </button>
+              <button className="btn primary" onClick={saveTeilnehmer}>
+                {teilnehmerForm.id ? 'Speichern' : 'Hinzufügen'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TEILNEHMER DETAIL MODAL */}
+      {showTeilnehmerDetailModal && selectedTeilnehmer && (
+        <div className="modal show" onClick={() => setShowTeilnehmerDetailModal(false)}>
+          <div className="modal-content large" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <div>
+                <h3>{selectedTeilnehmer.vorname} {selectedTeilnehmer.nachname}</h3>
+                <div className="teilnehmer-detail-meta">
+                  {selectedTeilnehmer.email}
+                  {selectedTeilnehmer.telefon && ` • ${selectedTeilnehmer.telefon}`}
+                </div>
+              </div>
+              <button 
+                className="btn"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  openEditTeilnehmer(selectedTeilnehmer)
+                }}
+              >
+                Bearbeiten
+              </button>
+            </div>
+            
+            <div className="detail-sections">
+              {/* LERNBAR-ZUGANG */}
+              <div className="info-section">
+                <h4>Lernbar-Zugang</h4>
+                <div className="lernbar-status">
+                  <div className="lernbar-toggle">
+                    <label className="switch">
+                      <input
+                        type="checkbox"
+                        checked={selectedTeilnehmer.lernbar_zugang_aktiv}
+                        onChange={() => toggleLernbarZugang(selectedTeilnehmer)}
+                      />
+                      <span className="slider"></span>
+                    </label>
+                    <span className="toggle-label">
+                      {selectedTeilnehmer.lernbar_zugang_aktiv ? 'Zugang aktiv' : 'Zugang inaktiv'}
+                    </span>
+                  </div>
+                  
+                  {selectedTeilnehmer.lernbar_zugang_aktiv && selectedTeilnehmer.lernbar_email && (
+                    <div className="lernbar-credentials">
+                      <div className="credential-row">
+                        <div className="credential-label">E-Mail:</div>
+                        <div className="credential-value">{selectedTeilnehmer.lernbar_email}</div>
+                      </div>
+                      <div className="credential-row">
+                        <div className="credential-label">Passwort:</div>
+                        <div className="credential-value">
+                          <code>{selectedTeilnehmer.lernbar_passwort}</code>
+                          <button
+                            className="btn-icon-small"
+                            onClick={() => {
+                              navigator.clipboard.writeText(selectedTeilnehmer.lernbar_passwort)
+                              showMessage('Passwort kopiert', 'success')
+                            }}
+                            title="Kopieren"
+                          >
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+              
+              {/* TERMINE */}
+              <div className="info-section">
+                <h4>Termine ({getTeilnehmerTermine(selectedTeilnehmer.id).length})</h4>
+                {getTeilnehmerTermine(selectedTeilnehmer.id).length === 0 ? (
+                  <div className="empty-hint">Noch keinen Terminen zugeordnet</div>
+                ) : (
+                  <div className="termine-list-compact">
+                    {getTeilnehmerTermine(selectedTeilnehmer.id).map(tt => {
+                      const termin = termine.find(t => t.id === tt.termin_id)
+                      if (!termin) return null
+                      
+                      return (
+                        <div key={tt.id} className="termin-compact-item">
+                          <div className="termin-compact-date">
+                            {new Date(termin.start_datetime).toLocaleDateString('de-DE', {
+                              day: '2-digit',
+                              month: 'short'
+                            })}
+                          </div>
+                          <div className="termin-compact-info">
+                            <div className="termin-compact-name">{termin.name}</div>
+                            <div className="termin-compact-status">
+                              <span className={`status-dot ${tt.status}`}></span>
+                              {tt.status}
+                              {tt.anwesend && (
+                                <span className="anwesend-badge">
+                                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                                    <polyline points="20 6 9 17 4 12"/>
+                                  </svg>
+                                  Anwesend
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+              
+              {/* MODUL-FORTSCHRITT */}
+              <div className="info-section">
+                <h4>Modul-Fortschritt</h4>
+                {getTeilnehmerModulProgress(selectedTeilnehmer.id).length === 0 ? (
+                  <div className="empty-hint">Noch keine Module bearbeitet</div>
+                ) : (
+                  <div className="progress-list">
+                    {getTeilnehmerModulProgress(selectedTeilnehmer.id).map(mp => {
+                      const modul = module.find(m => m.id === mp.modul_id)
+                      if (!modul) return null
+                      
+                      return (
+                        <div key={mp.id} className="progress-item">
+                          <div className="progress-info">
+                            <div className="progress-name">{modul.name}</div>
+                            <div className="progress-meta">
+                              {mp.gestartet_am && `Gestartet: ${new Date(mp.gestartet_am).toLocaleDateString('de-DE')}`}
+                              {mp.abgeschlossen_am && ` • Abgeschlossen: ${new Date(mp.abgeschlossen_am).toLocaleDateString('de-DE')}`}
+                            </div>
+                          </div>
+                          <div className="progress-bar-container">
+                            <div className="progress-bar">
+                              <div 
+                                className="progress-fill"
+                                style={{ width: `${mp.fortschritt_prozent}%` }}
+                              />
+                            </div>
+                            <div className="progress-percent">{mp.fortschritt_prozent}%</div>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+              
+              {/* NOTIZEN */}
+              {selectedTeilnehmer.notizen && (
+                <div className="info-section">
+                  <h4>Notizen</h4>
+                  <div className="notizen-text">{selectedTeilnehmer.notizen}</div>
+                </div>
+              )}
+            </div>
+            
+            <div className="modal-actions">
+              <button className="btn danger" onClick={() => deleteTeilnehmer(selectedTeilnehmer.id, `${selectedTeilnehmer.vorname} ${selectedTeilnehmer.nachname}`)}>
+                Teilnehmer löschen
+              </button>
+              <button className="btn" onClick={() => setShowTeilnehmerDetailModal(false)}>
+                Schließen
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* UPLOAD DOKUMENT MODAL */}
+      {showUploadDokumentModal && selectedTermin && (
+        <div className="modal show" onClick={() => setShowUploadDokumentModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <h3>Dokument hochladen</h3>
+            <div className="upload-termin-info">
+              Termin: <strong>{selectedTermin.name}</strong>
+            </div>
+            
+            <div className="field">
+              <label>Typ *</label>
+              <select 
+                value={uploadTyp}
+                onChange={(e) => setUploadTyp(e.target.value as any)}
+              >
+                <option value="teilnehmer">Teilnehmer-Material (in Lernbar sichtbar)</option>
+                <option value="dozent">Dozenten-Material (nur für Dozenten)</option>
+              </select>
+            </div>
+            
+            <div className="field">
+              <label>Datei *</label>
+              <input
+                type="file"
+                onChange={(e) => setUploadFile(e.target.files?.[0] || null)}
+                className="file-input"
+              />
+              {uploadFile && (
+                <div className="file-preview">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/>
+                    <polyline points="13 2 13 9 20 9"/>
+                  </svg>
+                  {uploadFile.name}
+                </div>
+              )}
+            </div>
+            
+            <div className="field">
+              <label>Beschreibung</label>
+              <textarea
+                value={uploadBeschreibung}
+                onChange={(e) => setUploadBeschreibung(e.target.value)}
+                rows={3}
+                placeholder="Optional: Was enthält dieses Dokument?"
+              />
+            </div>
+            
+            <div className="modal-actions">
+              <button className="btn" onClick={() => setShowUploadDokumentModal(false)}>
+                Abbrechen
+              </button>
+              <button className="btn primary" onClick={uploadDokument}>
+                Hochladen
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ADD/EDIT MODUL MODAL */}
+      {showAddModulModal && (
+        <div className="modal show" onClick={() => setShowAddModulModal(false)}>
+          <div className="modal-content xlarge" onClick={(e) => e.stopPropagation()}>
+            <h3>{modulForm.id ? 'Modul bearbeiten' : 'Online-Modul erstellen'}</h3>
+            
+            <div className="field">
+              <label>Modulname *</label>
+              <input
+                type="text"
+                value={modulForm.name}
+                onChange={(e) => setModulForm({ ...modulForm, name: e.target.value })}
+                placeholder="z.B. Reanimation Grundlagen"
+                autoFocus
+              />
+            </div>
+            
+            <div className="field">
+              <label>Beschreibung</label>
+              <textarea
+                value={modulForm.beschreibung}
+                onChange={(e) => setModulForm({ ...modulForm, beschreibung: e.target.value })}
+                rows={3}
+                placeholder="Was lernen die Teilnehmer in diesem Modul?"
+              />
+            </div>
+            
+            <div className="field">
+              <label>Geschätzte Dauer (Minuten)</label>
+              <input
+                type="number"
+                value={modulForm.dauer_minuten}
+                onChange={(e) => setModulForm({ ...modulForm, dauer_minuten: parseInt(e.target.value) || 0 })}
+                min="1"
+              />
+            </div>
+            
+            <div className="modul-inhalte-section">
+              <div className="section-header">
+                <h4>Lektionen</h4>
+                <div className="add-lektion-buttons">
+                  <button 
+                    className="btn-small"
+                    onClick={() => addModulInhalt('text')}
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                      <polyline points="14 2 14 8 20 8"/>
+                      <line x1="16" y1="13" x2="8" y2="13"/>
+                      <line x1="16" y1="17" x2="8" y2="17"/>
+                      <polyline points="10 9 9 9 8 9"/>
+                    </svg>
+                    Text
+                  </button>
+                  <button 
+                    className="btn-small"
+                    onClick={() => addModulInhalt('video')}
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <polygon points="23 7 16 12 23 17 23 7"/>
+                      <rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
+                    </svg>
+                    Video
+                  </button>
+                  <button 
+                    className="btn-small"
+                    onClick={() => addModulInhalt('quiz')}
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <circle cx="12" cy="12" r="10"/>
+                      <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+                      <line x1="12" y1="17" x2="12.01" y2="17"/>
+                    </svg>
+                    Quiz
+                  </button>
+                  <button 
+                    className="btn-small"
+                    onClick={() => addModulInhalt('datei')}
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/>
+                      <polyline points="13 2 13 9 20 9"/>
+                    </svg>
+                    Datei
+                  </button>
+                </div>
+              </div>
+              
+              {modulForm.inhalte.length === 0 ? (
+                <div className="empty-hint">Noch keine Lektionen. Füge Text, Videos, Quiz oder Dateien hinzu.</div>
+              ) : (
+                <div className="inhalte-list">
+                  {modulForm.inhalte.map((inhalt, index) => (
+                    <div key={index} className="inhalt-item">
+                      <div className="inhalt-header">
+                        <div className="inhalt-typ-icon">
+                          {inhalt.typ === 'text' && (
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                              <polyline points="14 2 14 8 20 8"/>
+                              <line x1="16" y1="13" x2="8" y2="13"/>
+                              <line x1="16" y1="17" x2="8" y2="17"/>
+                            </svg>
+                          )}
+                          {inhalt.typ === 'video' && (
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <polygon points="23 7 16 12 23 17 23 7"/>
+                              <rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
+                            </svg>
+                          )}
+                          {inhalt.typ === 'quiz' && (
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <circle cx="12" cy="12" r="10"/>
+                              <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+                              <line x1="12" y1="17" x2="12.01" y2="17"/>
+                            </svg>
+                          )}
+                          {inhalt.typ === 'datei' && (
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/>
+                              <polyline points="13 2 13 9 20 9"/>
+                            </svg>
+                          )}
+                        </div>
+                        <span className="inhalt-typ-label">{inhalt.typ}</span>
+                        <button
+                          className="btn-icon-small danger"
+                          onClick={() => removeModulInhalt(index)}
+                          title="Entfernen"
+                        >
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <line x1="18" y1="6" x2="6" y2="18"/>
+                            <line x1="6" y1="6" x2="18" y2="18"/>
+                          </svg>
+                        </button>
+                      </div>
+                      
+                      <div className="inhalt-fields">
+                        <input
+                          type="text"
+                          value={inhalt.titel}
+                          onChange={(e) => updateModulInhalt(index, 'titel', e.target.value)}
+                          placeholder="Titel der Lektion"
+                          className="inhalt-input"
+                        />
+                        <textarea
+                          value={inhalt.inhalt}
+                          onChange={(e) => updateModulInhalt(index, 'inhalt', e.target.value)}
+                          placeholder={
+                            inhalt.typ === 'text' ? 'Text-Inhalt...' :
+                            inhalt.typ === 'video' ? 'Video-URL (z.B. YouTube)' :
+                            inhalt.typ === 'quiz' ? 'Quiz-Fragen als JSON' :
+                            'Datei-URL oder Beschreibung'
+                          }
+                          rows={3}
+                          className="inhalt-textarea"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            
+            <div className="modal-actions">
+              <button className="btn" onClick={() => setShowAddModulModal(false)}>
+                Abbrechen
+              </button>
+              <button className="btn primary" onClick={saveModul}>
+                {modulForm.id ? 'Speichern' : 'Erstellen'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ASSIGN MODUL TO TERMIN MODAL */}
+      {showAssignModulModal && selectedTermin && (
+        <div className="modal show" onClick={() => setShowAssignModulModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <h3>Modul zuordnen</h3>
+            <div className="upload-termin-info">
+              Termin: <strong>{selectedTermin.name}</strong>
+            </div>
+            
+            <div className="field">
+              <label>Modul auswählen *</label>
+              <select 
+                id="assign-modul-select"
+                defaultValue=""
+              >
+                <option value="">Modul wählen...</option>
+                {module
+                  .filter(m => !getModuleByTermin(selectedTermin.id).find(mt => mt.modul_id === m.id))
+                  .map(m => (
+                    <option key={m.id} value={m.id}>
+                      {m.name} ({m.dauer_minuten} Min.)
+                    </option>
+                  ))
+                }
+              </select>
+            </div>
+            
+            <div className="field">
+              <label className="checkbox-label">
+                <input
+                  type="checkbox"
+                  id="assign-pflicht"
+                  defaultChecked={true}
+                />
+                <span>Pflichtmodul</span>
+              </label>
+            </div>
+            
+            <div className="field">
+              <label>Frist (optional)</label>
+              <input
+                type="date"
+                id="assign-frist"
+                className="date-input"
+              />
+            </div>
+            
+            <div className="modal-actions">
+              <button className="btn" onClick={() => setShowAssignModulModal(false)}>
+                Abbrechen
+              </button>
+              <button 
+                className="btn primary" 
+                onClick={() => {
+                  const modulSelect = document.getElementById('assign-modul-select') as HTMLSelectElement
+                  const pflichtCheckbox = document.getElementById('assign-pflicht') as HTMLInputElement
+                  const fristInput = document.getElementById('assign-frist') as HTMLInputElement
+                  
+                  if (modulSelect.value) {
+                    assignModulToTermin(
+                      modulSelect.value,
+                      selectedTermin.id,
+                      pflichtCheckbox.checked,
+                      fristInput.value
+                    )
+                    setShowAssignModulModal(false)
+                  } else {
+                    alert('Bitte Modul auswählen')
+                  }
+                }}
+              >
+                Zuordnen
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <style>{`
+        /* BASE STYLES */
+        .content {
+          max-width: 1400px;
+          margin: 0 auto;
+          padding: 1rem;
+          padding-top: 140px;
+          padding-bottom: 100px;
+        }
+
+        .message {
+          padding: 12px 16px;
+          border-radius: 10px;
+          margin-bottom: 16px;
+          font-weight: 600;
+        }
+
+        .message.success {
+          background: #f0fdf4;
+          border: 1px solid #bbf7d0;
+          color: #166534;
+        }
+
+        .message.error {
+          background: #fef2f2;
+          border: 1px solid #fecaca;
+          color: #b91c1c;
+        }
+
+        /* ACTION TOOLBAR */
+        .action-toolbar {
+          background: #fff;
+          border-bottom: 1px solid #e5e7eb;
+          padding: 0.5rem 1rem;
+          display: flex;
+          gap: 0.5rem;
+          justify-content: center;
+          position: sticky;
+          top: 60px;
+          z-index: 99;
+        }
+
+        .action-btn {
+          border: 1px solid rgba(0,0,0,0.1);
+          background: rgba(0,0,0,0.03);
+          color: #1d1d1f;
+          padding: 0.6rem;
+          border-radius: 0.5rem;
+          cursor: pointer;
+          transition: all 0.2s;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          font-family: inherit;
+          min-width: 44px;
+          height: 44px;
+        }
+
+        .action-btn:hover {
+          background: #f3f4f6;
+          transform: translateY(-2px);
+        }
+
+        /* VIEW TABS */
+        .view-tabs {
+          display: flex;
+          gap: 8px;
+          margin-bottom: 24px;
+          border-bottom: 2px solid #e5e7eb;
+          padding-bottom: 0;
+        }
+
+        .tab-btn {
+          background: none;
+          border: none;
+          padding: 12px 20px;
+          cursor: pointer;
+          font-weight: 600;
+          font-size: 14px;
+          color: #64748b;
+          transition: all 0.2s;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          border-bottom: 3px solid transparent;
+          margin-bottom: -2px;
+        }
+
+        .tab-btn:hover {
+          color: #1d1d1f;
+          background: rgba(0, 0, 0, 0.02);
+        }
+
+        .tab-btn.active {
+          color: #b91c1c;
+          border-bottom-color: #b91c1c;
+        }
+
+        /* STATISTICS */
+        .stats-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+          gap: 16px;
+          margin-bottom: 24px;
+        }
+
+        .stat-card {
+          background: rgba(255, 255, 255, 0.9);
+          backdrop-filter: blur(20px);
+          -webkit-backdrop-filter: blur(20px);
+          padding: 20px;
+          border-radius: 12px;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+          border: 2px solid rgba(185, 28, 28, 0.1);
+          transition: all 0.2s;
+        }
+
+        .stat-card:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+
+        .stat-icon {
+          margin-bottom: 12px;
+          opacity: 0.6;
+          color: #b91c1c;
+        }
+
+        .stat-icon svg {
+          display: block;
+        }
+
+        .stat-number {
+          font-size: 32px;
+          font-weight: 800;
+          color: #1d1d1f;
+          margin-bottom: 8px;
+        }
+
+        .stat-label {
+          font-size: 14px;
+          font-weight: 600;
+          color: #64748b;
+        }
+
+        /* FILTER BAR */
+        .filter-bar {
+          display: flex;
+          gap: 12px;
+          margin-bottom: 24px;
+          flex-wrap: wrap;
+        }
+
+        .search-input {
+          flex: 1;
+          min-width: 200px;
+          padding: 10px 16px;
+          border: 1px solid rgba(0, 0, 0, 0.08);
+          border-radius: 8px;
+          background: rgba(255, 255, 255, 0.9);
+          font-size: 14px;
+          font-family: inherit;
+        }
+
+        .search-input:focus {
+          outline: none;
+          border-color: #b91c1c;
+          box-shadow: 0 0 0 3px rgba(185, 28, 28, 0.1);
+        }
+
+        .filter-buttons {
+          display: flex;
+          gap: 8px;
+          flex-wrap: wrap;
+        }
+
+        .filter-btn {
+          padding: 8px 16px;
+          border: 1px solid rgba(0, 0, 0, 0.1);
+          background: rgba(255, 255, 255, 0.9);
+          border-radius: 8px;
+          cursor: pointer;
+          font-weight: 600;
+          font-size: 14px;
+          transition: all 0.2s;
+          font-family: inherit;
+        }
+
+        .filter-btn:hover {
+          background: #f3f4f6;
+        }
+
+        .filter-btn.active {
+          background: #b91c1c;
+          color: #fff;
+          border-color: #b91c1c;
+        }
+
+        /* EMPTY STATE */
+        .empty-state {
+          text-align: center;
+          padding: 48px 16px;
+          color: #64748b;
+        }
+
+        .empty-state-small {
+          text-align: center;
+          padding: 32px 16px;
+          color: #64748b;
+          font-size: 14px;
+        }
+
+        .empty-hint {
+          padding: 16px;
+          background: #f9fafb;
+          border-radius: 8px;
+          color: #64748b;
+          font-size: 14px;
+          text-align: center;
+        }
+
+        /* BUTTONS */
+        .btn {
+          background: rgba(255, 255, 255, 0.9);
+          color: #1d1d1f;
+          padding: 10px 20px;
+          border-radius: 8px;
+          cursor: pointer;
+          font-weight: 700;
+          transition: all 0.2s;
+          font-family: inherit;
+          border: 1px solid rgba(0, 0, 0, 0.08);
+          font-size: 14px;
+        }
+
+        .btn:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+          transform: none;
+        }
+
+        .btn.primary {
+          background: #b91c1c;
+          color: #fff;
+          border-color: #b91c1c;
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+        }
+
+        .btn.primary:hover {
+          background: #dc2626;
+        }
+
+        .btn.danger {
+          background: #dc2626;
+          color: #fff;
+          border-color: #dc2626;
+        }
+
+        .btn.danger:hover {
+          background: #ef4444;
+        }
+
+        .btn-small {
+          background: rgba(255, 255, 255, 0.9);
+          color: #1d1d1f;
+          padding: 6px 12px;
+          border-radius: 6px;
+          cursor: pointer;
+          font-weight: 600;
+          transition: all 0.2s;
+          font-family: inherit;
+          border: 1px solid rgba(0, 0, 0, 0.08);
+          font-size: 12px;
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+        }
+
+        .btn-small:hover {
+          background: #f3f4f6;
+        }
+
+        .btn-icon {
+          background: none;
+          border: none;
+          cursor: pointer;
+          padding: 8px;
+          color: #64748b;
+          transition: all 0.2s;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 6px;
+        }
+
+        .btn-icon:hover {
+          background: #f3f4f6;
+          color: #1d1d1f;
+        }
+
+        .btn-icon.danger:hover {
+          background: #fee2e2;
+          color: #dc2626;
+        }
+
+        .btn-icon-small {
+          background: none;
+          border: none;
+          cursor: pointer;
+          padding: 4px;
+          color: #64748b;
+          transition: all 0.2s;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 4px;
+        }
+
+        .btn-icon-small:hover {
+          background: #f3f4f6;
+          color: #1d1d1f;
+        }
+
+        .btn-icon-small.danger:hover {
+          background: #fee2e2;
+          color: #dc2626;
+        }
+
+        /* TERMINE GRID */
+        .termine-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+          gap: 16px;
+        }
+
+        .termin-card {
+          background: rgba(255, 255, 255, 0.9);
+          backdrop-filter: blur(20px);
+          -webkit-backdrop-filter: blur(20px);
+          border-radius: 12px;
+          padding: 20px;
+          border: 2px solid transparent;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+          position: relative;
+          transition: all 0.2s;
+          cursor: pointer;
+        }
+
+        .termin-card:hover {
+          transform: translateY(-4px);
+          box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .termin-card.status-geplant {
+          border-color: rgba(59, 130, 246, 0.2);
+        }
+
+        .termin-card.status-laufend {
+          border-color: rgba(234, 179, 8, 0.2);
+        }
+
+        .termin-card.status-abgeschlossen {
+          border-color: rgba(34, 197, 94, 0.2);
+        }
+
+        .termin-card.status-abgesagt {
+          border-color: rgba(239, 68, 68, 0.2);
+        }
+
+        .termin-status-badge {
+          position: absolute;
+          top: 12px;
+          right: 12px;
+          padding: 4px 10px;
+          border-radius: 6px;
+          font-size: 11px;
+          font-weight: 700;
+          text-transform: uppercase;
+          background: #f3f4f6;
+          color: #64748b;
+        }
+
+        .termin-card.status-geplant .termin-status-badge {
+          background: #dbeafe;
+          color: #1e40af;
+        }
+
+        .termin-card.status-laufend .termin-status-badge {
+          background: #fef3c7;
+          color: #92400e;
+        }
+
+        .termin-card.status-abgeschlossen .termin-status-badge {
+          background: #d1fae5;
+          color: #065f46;
+        }
+
+        .termin-card.status-abgesagt .termin-status-badge {
+          background: #fee2e2;
+          color: #991b1b;
+        }
+
+        .termin-date {
+          font-size: 13px;
+          font-weight: 700;
+          color: #b91c1c;
+          text-transform: uppercase;
+          margin-bottom: 4px;
+          letter-spacing: 0.5px;
+        }
+
+        .termin-time {
+          font-size: 14px;
+          color: #64748b;
+          margin-bottom: 12px;
+        }
+
+        .termin-name {
+          font-weight: 700;
+          font-size: 18px;
+          margin-bottom: 12px;
+          color: #1d1d1f;
+        }
+
+        .termin-meta {
+          font-size: 13px;
+          color: #64748b;
+          margin-bottom: 8px;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+        }
+
+        .termin-participants {
+          font-size: 13px;
+          font-weight: 600;
+          color: #64748b;
+          margin-top: 12px;
+          padding-top: 12px;
+          border-top: 1px solid rgba(0, 0, 0, 0.05);
+          display: flex;
+          align-items: center;
+          gap: 6px;
+        }
+
+        /* TEILNEHMER LIST */
+        .teilnehmer-list {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+        }
+
+        .teilnehmer-row {
+          background: rgba(255, 255, 255, 0.9);
+          backdrop-filter: blur(20px);
+          border-radius: 12px;
+          padding: 16px;
+          border: 1px solid rgba(0, 0, 0, 0.05);
+          display: flex;
+          align-items: center;
+          gap: 16px;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+
+        .teilnehmer-row:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+
+        .teilnehmer-avatar {
+          width: 48px;
+          height: 48px;
+          border-radius: 50%;
+          background: linear-gradient(135deg, #b91c1c 0%, #dc2626 100%);
+          color: #fff;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-weight: 700;
+          font-size: 16px;
+          flex-shrink: 0;
+        }
+
+        .teilnehmer-info {
+          flex: 1;
+        }
+
+        .teilnehmer-name {
+          font-weight: 700;
+          font-size: 15px;
+          color: #1d1d1f;
+          margin-bottom: 4px;
+        }
+
+        .teilnehmer-email {
+          font-size: 13px;
+          color: #64748b;
+        }
+
+        .teilnehmer-badges {
+          display: flex;
+          gap: 8px;
+          align-items: center;
+        }
+
+        .badge {
+          padding: 4px 10px;
+          border-radius: 6px;
+          font-size: 12px;
+          font-weight: 600;
+          display: flex;
+          align-items: center;
+          gap: 4px;
+        }
+
+        .badge.lernbar {
+          background: #f0fdf4;
+          color: #166534;
+        }
+
+        .badge.termine {
+          background: #f3f4f6;
+          color: #374151;
+        }
+
+        .teilnehmer-actions {
+          display: flex;
+          gap: 4px;
+        }
+
+        /* MODULE GRID */
+        .module-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+          gap: 16px;
+        }
+
+        .modul-card {
+          background: rgba(255, 255, 255, 0.9);
+          backdrop-filter: blur(20px);
+          border-radius: 12px;
+          padding: 20px;
+          border: 2px solid rgba(185, 28, 28, 0.1);
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+          transition: all 0.2s;
+        }
+
+        .modul-card:hover {
+          transform: translateY(-4px);
+          box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .modul-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          margin-bottom: 12px;
+        }
+
+        .modul-name {
+          font-weight: 700;
+          font-size: 16px;
+          color: #1d1d1f;
+          flex: 1;
+        }
+
+        .modul-duration {
+          font-size: 12px;
+          font-weight: 600;
+          color: #b91c1c;
+          background: rgba(185, 28, 28, 0.1);
+          padding: 4px 8px;
+          border-radius: 4px;
+        }
+
+        .modul-description {
+          font-size: 14px;
+          color: #64748b;
+          line-height: 1.6;
+          margin-bottom: 16px;
+        }
+
+        .modul-stats {
+          display: flex;
+          gap: 16px;
+          margin-bottom: 16px;
+          padding-top: 12px;
+          border-top: 1px solid rgba(0, 0, 0, 0.05);
+        }
+
+        .modul-stat {
+          font-size: 13px;
+          color: #64748b;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+        }
+
+        .modul-actions {
+          display: flex;
+          gap: 8px;
+        }
+
+        /* MODALS */
+        .modal {
+          position: fixed;
+          inset: 0;
+          background: rgba(0, 0, 0, 0.6);
+          display: none;
+          align-items: center;
+          justify-content: center;
+          z-index: 1000;
+          padding: 20px;
+        }
+
+        .modal.show {
+          display: flex;
+        }
+
+        .modal-content {
+          background: rgba(255, 255, 255, 0.98);
+          backdrop-filter: blur(40px);
+          -webkit-backdrop-filter: blur(40px);
+          border-radius: 14px;
+          max-width: 500px;
+          width: 100%;
+          max-height: 90vh;
+          overflow-y: auto;
+          padding: 24px;
+          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        }
+
+        .modal-content.large {
+          max-width: 700px;
+        }
+
+        .modal-content.xlarge {
+          max-width: 1000px;
+        }
+
+        .modal-content h3 {
+          margin: 0 0 16px 0;
+          color: #b91c1c;
+          font-weight: 800;
+        }
+
+        .modal-content h4 {
+          margin: 0 0 12px 0;
+          color: #1d1d1f;
+          font-weight: 700;
+          font-size: 16px;
+        }
+
+        .modal-content h5 {
+          margin: 0 0 12px 0;
+          color: #374151;
+          font-weight: 700;
+          font-size: 14px;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .modal-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          gap: 16px;
+          margin-bottom: 24px;
+          padding-bottom: 16px;
+          border-bottom: 2px solid #e5e7eb;
+        }
+
+        .termin-detail-meta,
+        .teilnehmer-detail-meta {
+          font-size: 14px;
+          color: #64748b;
+          margin-top: 4px;
+        }
+
+        /* FORM FIELDS */
+        .field {
+          margin-bottom: 16px;
+        }
+
+        .field label {
+          font-weight: 700;
+          font-size: 14px;
+          color: #374151;
+          display: block;
+          margin-bottom: 8px;
+        }
+
+        .field input,
+        .field select,
+        .field textarea {
+          padding: 10px;
+          border: 1px solid rgba(0, 0, 0, 0.15);
+          border-radius: 8px;
+          background: #fff;
+          font-size: 16px;
+          font-family: inherit;
+          width: 100%;
+        }
+
+        .field input:focus,
+        .field select:focus,
+        .field textarea:focus {
+          outline: none;
+          border-color: #b91c1c;
+          box-shadow: 0 0 0 3px rgba(185, 28, 28, 0.1);
+        }
+
+        .field-row {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 12px;
+        }
+
+        .field-hint {
+          font-size: 12px;
+          color: #64748b;
+          margin-top: 4px;
+        }
+
+        .checkbox-label {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          cursor: pointer;
+          font-weight: 600;
+        }
+
+        .checkbox-label input[type="checkbox"] {
+          width: auto;
+          cursor: pointer;
+        }
+
+        .select-compact {
+          padding: 8px 12px;
+          border: 1px solid rgba(0, 0, 0, 0.15);
+          border-radius: 8px;
+          background: #fff;
+          font-size: 14px;
+          font-family: inherit;
+          font-weight: 600;
+        }
+
+        .select-compact:focus {
+          outline: none;
+          border-color: #b91c1c;
+          box-shadow: 0 0 0 3px rgba(185, 28, 28, 0.1);
+        }
+
+        .file-input {
+          padding: 8px;
+          font-size: 14px;
+        }
+
+        .file-preview {
+          margin-top: 8px;
+          padding: 8px 12px;
+          background: #f3f4f6;
+          border-radius: 6px;
+          font-size: 13px;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .date-input {
+          cursor: pointer;
+        }
+
+        .modal-actions {
+          display: flex;
+          gap: 8px;
+          justify-content: flex-end;
+          margin-top: 24px;
+        }
+
+        .upload-termin-info {
+          padding: 12px;
+          background: #f9fafb;
+          border-radius: 8px;
+          margin-bottom: 16px;
+          font-size: 14px;
+          color: #374151;
+        }
+
+        /* DETAIL TABS */
+        .detail-tabs {
+          display: flex;
+          gap: 4px;
+          margin-bottom: 24px;
+          border-bottom: 2px solid #e5e7eb;
+        }
+
+        .detail-tab {
+          background: none;
+          border: none;
+          padding: 10px 16px;
+          cursor: pointer;
+          font-weight: 600;
+          font-size: 14px;
+          color: #64748b;
+          transition: all 0.2s;
+          border-bottom: 3px solid transparent;
+          margin-bottom: -2px;
+        }
+
+        .detail-tab:hover {
+          color: #1d1d1f;
+        }
+
+        .detail-tab.active {
+          color: #b91c1c;
+          border-bottom-color: #b91c1c;
+        }
+
+        .detail-content {
+          min-height: 300px;
+        }
+
+        /* ÜBERSICHT CONTENT */
+        .uebersicht-content {
+          display: flex;
+          flex-direction: column;
+          gap: 24px;
+        }
+
+        .info-section {
+          padding: 16px 0;
+        }
+
+        .info-section:not(:last-child) {
+          border-bottom: 1px solid #e5e7eb;
+        }
+
+        .description-text {
+          font-size: 14px;
+          line-height: 1.7;
+          color: #374151;
+        }
+
+        .info-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+          gap: 16px;
+        }
+
+        .info-item {
+          padding: 12px;
+          background: #f9fafb;
+          border-radius: 8px;
+        }
+
+        .info-label {
+          font-size: 12px;
+          font-weight: 700;
+          color: #64748b;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          margin-bottom: 4px;
+        }
+
+        .info-value {
+          font-size: 15px;
+          font-weight: 600;
+          color: #1d1d1f;
+        }
+
+        .status-pill {
+          padding: 4px 12px;
+          border-radius: 6px;
+          font-size: 12px;
+          font-weight: 700;
+          text-transform: uppercase;
+          display: inline-block;
+        }
+
+        .status-pill.geplant {
+          background: #dbeafe;
+          color: #1e40af;
+        }
+
+        .status-pill.laufend {
+          background: #fef3c7;
+          color: #92400e;
+        }
+
+        .status-pill.abgeschlossen {
+          background: #d1fae5;
+          color: #065f46;
+        }
+
+        .status-pill.abgesagt {
+          background: #fee2e2;
+          color: #991b1b;
+        }
+
+        .status-overview {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+          gap: 16px;
+        }
+
+        .status-count {
+          text-align: center;
+          padding: 16px;
+          background: #f9fafb;
+          border-radius: 10px;
+          border: 2px solid #e5e7eb;
+        }
+
+        .status-count.success {
+          background: #f0fdf4;
+          border-color: #bbf7d0;
+        }
+
+        .status-count.danger {
+          background: #fef2f2;
+          border-color: #fecaca;
+        }
+
+        .status-count.warning {
+          background: #fefce8;
+          border-color: #fef08a;
+        }
+
+        .count-number {
+          font-size: 28px;
+          font-weight: 800;
+          color: #1d1d1f;
+          margin-bottom: 4px;
+        }
+
+        .count-label {
+          font-size: 12px;
+          font-weight: 600;
+          color: #64748b;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+
+        /* TEILNEHMER CONTENT */
+        .teilnehmer-content,
+        .dokumente-content,
+        .module-content {
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+        }
+
+        .content-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 8px;
+        }
+
+        .header-actions {
+          display: flex;
+          gap: 8px;
+        }
+
+        /* TABLES */
+        .teilnehmer-table {
+          overflow-x: auto;
+        }
+
+        .teilnehmer-table table {
+          width: 100%;
+          border-collapse: collapse;
+        }
+
+        .teilnehmer-table th {
+          text-align: left;
+          padding: 12px;
+          background: #f9fafb;
+          font-size: 12px;
+          font-weight: 700;
+          color: #64748b;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          border-bottom: 2px solid #e5e7eb;
+        }
+
+        .teilnehmer-table td {
+          padding: 12px;
+          border-bottom: 1px solid #e5e7eb;
+          font-size: 14px;
+        }
+
+        .teilnehmer-table tr:hover {
+          background: #f9fafb;
+        }
+
+        .table-person {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+
+        .person-avatar-small {
+          width: 36px;
+          height: 36px;
+          border-radius: 50%;
+          background: linear-gradient(135deg, #b91c1c 0%, #dc2626 100%);
+          color: #fff;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-weight: 700;
+          font-size: 13px;
+          flex-shrink: 0;
+        }
+
+        .person-name {
+          font-weight: 600;
+          color: #1d1d1f;
+          margin-bottom: 2px;
+        }
+
+        .person-email {
+          font-size: 12px;
+          color: #64748b;
+        }
+
+        .status-select {
+          padding: 6px 10px;
+          border: 1px solid rgba(0, 0, 0, 0.15);
+          border-radius: 6px;
+          background: #fff;
+          font-size: 13px;
+          font-weight: 600;
+          cursor: pointer;
+        }
+
+        .status-select:focus {
+          outline: none;
+          border-color: #b91c1c;
+          box-shadow: 0 0 0 2px rgba(185, 28, 28, 0.1);
+        }
+
+        .einladung-info {
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+        }
+
+        .einladung-via {
+          font-size: 11px;
+          color: #64748b;
+          text-transform: uppercase;
+          letter-spacing: 0.3px;
+        }
+
+        .anwesenheit-checkbox {
+          width: 20px;
+          height: 20px;
+          cursor: pointer;
+        }
+
+        .table-actions {
+          display: flex;
+          gap: 4px;
+        }
+
+        /* DOKUMENTE */
+        .dokumente-sections {
+          display: flex;
+          flex-direction: column;
+          gap: 24px;
+        }
+
+        .dokument-section {
+          padding: 16px;
+          background: #f9fafb;
+          border-radius: 10px;
+        }
+
+        .dokumente-list {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+          margin-top: 12px;
+        }
+
+        .dokument-item {
+          background: #fff;
+          padding: 12px;
+          border-radius: 8px;
+          border: 1px solid #e5e7eb;
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          transition: all 0.2s;
+        }
+
+        .dokument-item:hover {
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .dokument-icon {
+          color: #b91c1c;
+          flex-shrink: 0;
+        }
+
+        .dokument-info {
+          flex: 1;
+        }
+
+        .dokument-name {
+          font-weight: 600;
+          font-size: 14px;
+          color: #1d1d1f;
+          margin-bottom: 2px;
+        }
+
+        .dokument-desc {
+          font-size: 12px;
+          color: #64748b;
+        }
+
+        .dokument-actions {
+          display: flex;
+          gap: 4px;
+        }
+
+        /* ASSIGNED MODULE */
+        .assigned-module-list {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+        }
+
+        .assigned-modul-item {
+          background: #f9fafb;
+          padding: 16px;
+          border-radius: 10px;
+          border: 2px solid #e5e7eb;
+          display: flex;
+          align-items: center;
+          gap: 16px;
+        }
+
+        .modul-item-icon {
+          color: #b91c1c;
+          flex-shrink: 0;
+        }
+
+        .modul-item-info {
+          flex: 1;
+        }
+
+        .modul-item-name {
+          font-weight: 700;
+          font-size: 15px;
+          color: #1d1d1f;
+          margin-bottom: 4px;
+        }
+
+        .modul-item-meta {
+          font-size: 13px;
+          color: #64748b;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          flex-wrap: wrap;
+        }
+
+        .pflicht-badge {
+          padding: 2px 8px;
+          background: #fee2e2;
+          color: #991b1b;
+          border-radius: 4px;
+          font-size: 11px;
+          font-weight: 700;
+          text-transform: uppercase;
+        }
+
+        .modul-item-frist {
+          font-size: 12px;
+          color: #b91c1c;
+          margin-top: 4px;
+          font-weight: 600;
+        }
+
+        /* DETAIL SECTIONS */
+        .detail-sections {
+          display: flex;
+          flex-direction: column;
+          gap: 24px;
+        }
+
+        /* LERNBAR STATUS */
+        .lernbar-status {
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+        }
+
+        .lernbar-toggle {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+
+        .switch {
+          position: relative;
+          display: inline-block;
+          width: 48px;
+          height: 24px;
+        }
+
+        .switch input {
+          opacity: 0;
+          width: 0;
+          height: 0;
+        }
+
+        .slider {
+          position: absolute;
+          cursor: pointer;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background-color: #cbd5e1;
+          transition: 0.3s;
+          border-radius: 24px;
+        }
+
+        .slider:before {
+          position: absolute;
+          content: "";
+          height: 18px;
+          width: 18px;
+          left: 3px;
+          bottom: 3px;
+          background-color: white;
+          transition: 0.3s;
+          border-radius: 50%;
+        }
+
+        input:checked + .slider {
+          background-color: #16a34a;
+        }
+
+        input:checked + .slider:before {
+          transform: translateX(24px);
+        }
+
+        .toggle-label {
+          font-weight: 600;
+          color: #374151;
+        }
+
+        .lernbar-credentials {
+          padding: 16px;
+          background: #f0fdf4;
+          border: 1px solid #bbf7d0;
+          border-radius: 8px;
+        }
+
+        .credential-row {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          margin-bottom: 8px;
+        }
+
+        .credential-row:last-child {
+          margin-bottom: 0;
+        }
+
+        .credential-label {
+          font-size: 13px;
+          font-weight: 700;
+          color: #166534;
+          min-width: 80px;
+        }
+
+        .credential-value {
+          font-size: 14px;
+          color: #166534;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .credential-value code {
+          background: #fff;
+          padding: 4px 8px;
+          border-radius: 4px;
+          font-family: 'Courier New', monospace;
+          font-weight: 600;
+        }
+
+        /* TERMINE LIST COMPACT */
+        .termine-list-compact {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+
+        .termin-compact-item {
+          background: #fff;
+          padding: 12px;
+          border-radius: 8px;
+          border: 1px solid #e5e7eb;
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+
+        .termin-compact-date {
+          font-size: 13px;
+          font-weight: 700;
+          color: #b91c1c;
+          text-transform: uppercase;
+          min-width: 60px;
+        }
+
+        .termin-compact-info {
+          flex: 1;
+        }
+
+        .termin-compact-name {
+          font-weight: 600;
+          font-size: 14px;
+          color: #1d1d1f;
+          margin-bottom: 4px;
+        }
+
+        .termin-compact-status {
+          font-size: 12px;
+          color: #64748b;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+        }
+
+        .status-dot {
+          width: 8px;
+          height: 8px;
+          border-radius: 50%;
+          display: inline-block;
+        }
+
+        .status-dot.eingeladen {
+          background: #94a3b8;
+        }
+
+        .status-dot.zugesagt {
+          background: #22c55e;
+        }
+
+        .status-dot.abgesagt {
+          background: #ef4444;
+        }
+
+        .status-dot.entschuldigt {
+          background: #f59e0b;
+        }
+
+        .anwesend-badge {
+          padding: 2px 8px;
+          background: #d1fae5;
+          color: #065f46;
+          border-radius: 4px;
+          font-size: 11px;
+          font-weight: 700;
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+        }
+
+        /* PROGRESS */
+        .progress-list {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+        }
+
+        .progress-item {
+          background: #fff;
+          padding: 12px;
+          border-radius: 8px;
+          border: 1px solid #e5e7eb;
+        }
+
+        .progress-info {
+          margin-bottom: 8px;
+        }
+
+        .progress-name {
+          font-weight: 600;
+          font-size: 14px;
+          color: #1d1d1f;
+          margin-bottom: 2px;
+        }
+
+        .progress-meta {
+          font-size: 12px;
+          color: #64748b;
+        }
+
+        .progress-bar-container {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+
+        .progress-bar {
+          flex: 1;
+          height: 8px;
+          background: #e5e7eb;
+          border-radius: 4px;
+          overflow: hidden;
+        }
+
+        .progress-fill {
+          height: 100%;
+          background: linear-gradient(90deg, #b91c1c 0%, #dc2626 100%);
+          transition: width 0.3s;
+        }
+
+        .progress-percent {
+          font-size: 13px;
+          font-weight: 700;
+          color: #b91c1c;
+          min-width: 40px;
+          text-align: right;
+        }
+
+        .notizen-text {
+          padding: 12px;
+          background: #f9fafb;
+          border-radius: 8px;
+          font-size: 14px;
+          color: #374151;
+          line-height: 1.6;
+        }
+
+        /* MODUL INHALTE SECTION */
+        .modul-inhalte-section {
+          margin-top: 24px;
+          padding-top: 24px;
+          border-top: 2px solid #e5e7eb;
+        }
+
+        .section-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 16px;
+        }
+
+        .add-lektion-buttons {
+          display: flex;
+          gap: 8px;
+        }
+
+        .inhalte-list {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+        }
+
+        .inhalt-item {
+          background: #f9fafb;
+          border: 2px solid #e5e7eb;
+          border-radius: 10px;
+          padding: 16px;
+          transition: all 0.2s;
+        }
+
+        .inhalt-item:hover {
+          border-color: #cbd5e1;
+        }
+
+        .inhalt-header {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          margin-bottom: 12px;
+        }
+
+        .inhalt-typ-icon {
+          color: #b91c1c;
+          flex-shrink: 0;
+        }
+
+        .inhalt-typ-label {
+          font-size: 12px;
+          font-weight: 700;
+          color: #64748b;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          flex: 1;
+        }
+
+        .inhalt-fields {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+
+        .inhalt-input,
+        .inhalt-textarea {
+          padding: 10px;
+          border: 1px solid rgba(0, 0, 0, 0.15);
+          border-radius: 8px;
+          background: #fff;
+          font-size: 14px;
+          font-family: inherit;
+          width: 100%;
+        }
+
+        .inhalt-input:focus,
+        .inhalt-textarea:focus {
+          outline: none;
+          border-color: #b91c1c;
+          box-shadow: 0 0 0 3px rgba(185, 28, 28, 0.1);
+        }
+
+        .inhalt-input::placeholder,
+        .inhalt-textarea::placeholder {
+          color: #94a3b8;
+        }
+
+        /* RESPONSIVE */
+        @media (max-width: 1024px) {
+          .termine-grid {
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+          }
+
+          .module-grid {
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+          }
+
+          .field-row {
+            grid-template-columns: 1fr;
+          }
+
+          .info-grid {
+            grid-template-columns: 1fr;
+          }
+
+          .status-overview {
+            grid-template-columns: repeat(2, 1fr);
+          }
+
+          .modal-content.xlarge {
+            max-width: 90vw;
+          }
+        }
+
+        @media (max-width: 768px) {
+          .action-toolbar {
+            flex-wrap: wrap;
+            padding: 0.5rem;
+            gap: 0.4rem;
+          }
+
+          .action-btn {
+            flex: 1;
+            min-width: 40px;
+            height: 40px;
+          }
+
+          .view-tabs {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+          }
+
+          .tab-btn {
+            white-space: nowrap;
+          }
+
+          .stats-grid {
+            grid-template-columns: repeat(2, 1fr);
+          }
+
+          .filter-bar {
+            flex-direction: column;
+          }
+
+          .filter-buttons {
+            width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+          }
+
+          .filter-btn {
+            white-space: nowrap;
+          }
+
+          .termine-grid {
+            grid-template-columns: 1fr;
+          }
+
+          .module-grid {
+            grid-template-columns: 1fr;
+          }
+
+          .content {
+            padding-top: 160px;
+          }
+
+          .modal-content {
+            max-width: 95vw;
+            max-height: 85vh;
+          }
+
+          .modal-content.large,
+          .modal-content.xlarge {
+            max-width: 95vw;
+          }
+
+          .modal-header {
+            flex-direction: column;
+            align-items: flex-start;
+          }
+
+          .detail-tabs {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+          }
+
+          .detail-tab {
+            white-space: nowrap;
+          }
+
+          .teilnehmer-table {
+            font-size: 13px;
+          }
+
+          .teilnehmer-table th,
+          .teilnehmer-table td {
+            padding: 8px;
+          }
+
+          .person-avatar-small {
+            width: 32px;
+            height: 32px;
+            font-size: 12px;
+          }
+
+          .table-actions {
+            flex-direction: column;
+          }
+
+          .status-overview {
+            grid-template-columns: 1fr;
+          }
+
+          .add-lektion-buttons {
+            flex-wrap: wrap;
+          }
+
+          .section-header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 12px;
+          }
+
+          .content-header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 12px;
+          }
+
+          .header-actions {
+            width: 100%;
+          }
+
+          .header-actions .select-compact {
+            width: 100%;
+          }
+        }
+
+        @media (max-width: 480px) {
+          .stats-grid {
+            grid-template-columns: 1fr;
+          }
+
+          .teilnehmer-row {
+            flex-direction: column;
+            align-items: flex-start;
+          }
+
+          .teilnehmer-badges {
+            width: 100%;
+            justify-content: flex-start;
+          }
+
+          .teilnehmer-actions {
+            width: 100%;
+            justify-content: flex-end;
+          }
+
+          .modul-header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 8px;
+          }
+
+          .modul-actions {
+            width: 100%;
+          }
+
+          .modul-actions .btn {
+            flex: 1;
+          }
+
+          .termin-status-badge {
+            position: static;
+            display: inline-block;
+            margin-bottom: 8px;
+          }
+        }
+
+        /* UTILITIES */
+        .text-center {
+          text-align: center;
+        }
+
+        .font-bold {
+          font-weight: 700;
+        }
+
+        .text-sm {
+          font-size: 14px;
+        }
+
+        .text-xs {
+          font-size: 12px;
+        }
+
+        .mt-4 {
+          margin-top: 16px;
+        }
+
+        .mb-4 {
+          margin-bottom: 16px;
+        }
+
+        .p-4 {
+          padding: 16px;
+        }
+
+        .flex {
+          display: flex;
+        }
+
+        .flex-col {
+          flex-direction: column;
+        }
+
+        .items-center {
+          align-items: center;
+        }
+
+        .justify-between {
+          justify-content: space-between;
+        }
+
+        .gap-2 {
+          gap: 8px;
+        }
+
+        .gap-4 {
+          gap: 16px;
+        }
+
+        .rounded {
+          border-radius: 8px;
+        }
+
+        .shadow {
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+        }
+
+        .bg-white {
+          background: #fff;
+        }
+
+        .bg-gray-50 {
+          background: #f9fafb;
+        }
+
+        .border {
+          border: 1px solid #e5e7eb;
+        }
+
+        .text-gray-500 {
+          color: #64748b;
+        }
+
+        .text-gray-900 {
+          color: #1d1d1f;
+        }
+
+        .text-red-600 {
+          color: #b91c1c;
+        }
+
+        /* SCROLLBAR STYLING */
+        .teilnehmer-table::-webkit-scrollbar,
+        .detail-tabs::-webkit-scrollbar,
+        .filter-buttons::-webkit-scrollbar,
+        .view-tabs::-webkit-scrollbar {
+          height: 6px;
+        }
+
+        .teilnehmer-table::-webkit-scrollbar-track,
+        .detail-tabs::-webkit-scrollbar-track,
+        .filter-buttons::-webkit-scrollbar-track,
+        .view-tabs::-webkit-scrollbar-track {
+          background: #f1f5f9;
+          border-radius: 3px;
+        }
+
+        .teilnehmer-table::-webkit-scrollbar-thumb,
+        .detail-tabs::-webkit-scrollbar-thumb,
+        .filter-buttons::-webkit-scrollbar-thumb,
+        .view-tabs::-webkit-scrollbar-thumb {
+          background: #cbd5e1;
+          border-radius: 3px;
+        }
+
+        .teilnehmer-table::-webkit-scrollbar-thumb:hover,
+        .detail-tabs::-webkit-scrollbar-thumb:hover,
+        .filter-buttons::-webkit-scrollbar-thumb:hover,
+        .view-tabs::-webkit-scrollbar-thumb:hover {
+          background: #94a3b8;
+        }
+
+        /* MODAL SCROLLBAR */
+        .modal-content::-webkit-scrollbar {
+          width: 8px;
+        }
+
+        .modal-content::-webkit-scrollbar-track {
+          background: #f1f5f9;
+          border-radius: 4px;
+        }
+
+        .modal-content::-webkit-scrollbar-thumb {
+          background: #cbd5e1;
+          border-radius: 4px;
+        }
+
+        .modal-content::-webkit-scrollbar-thumb:hover {
+          background: #94a3b8;
+        }
+
+        /* ANIMATIONS */
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+            transform: translateY(10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        .modal.show .modal-content {
+          animation: fadeIn 0.2s ease-out;
+        }
+
+        .termin-card,
+        .teilnehmer-row,
+        .modul-card {
+          animation: fadeIn 0.3s ease-out;
+        }
+
+        /* PRINT STYLES */
+        @media print {
+          .action-toolbar,
+          .filter-bar,
+          .view-tabs,
+          .modal-actions,
+          .btn,
+          .btn-icon,
+          .btn-icon-small {
+            display: none !important;
+          }
+
+          .content {
+            padding-top: 0;
+          }
+
+          .modal {
+            position: relative;
+            background: none;
+          }
+
+          .modal-content {
+            max-height: none;
+            box-shadow: none;
+            page-break-inside: avoid;
+          }
+
+          .termin-card,
+          .teilnehmer-row,
+          .modul-card {
+            page-break-inside: avoid;
+            box-shadow: none;
+            border: 1px solid #e5e7eb;
+          }
+
+          .stats-grid {
+            grid-template-columns: repeat(4, 1fr);
+          }
+        }
+
+        /* ACCESSIBILITY */
+        .btn:focus-visible,
+        .action-btn:focus-visible,
+        .filter-btn:focus-visible,
+        .tab-btn:focus-visible,
+        .detail-tab:focus-visible {
+          outline: 3px solid #b91c1c;
+          outline-offset: 2px;
+        }
+
+        input:focus-visible,
+        select:focus-visible,
+        textarea:focus-visible {
+          outline: 3px solid #b91c1c;
+          outline-offset: 2px;
+        }
+
+        .sr-only {
+          position: absolute;
+          width: 1px;
+          height: 1px;
+          padding: 0;
+          margin: -1px;
+          overflow: hidden;
+          clip: rect(0, 0, 0, 0);
+          white-space: nowrap;
+          border-width: 0;
+        }
+
+        /* HIGH CONTRAST MODE */
+        @media (prefers-contrast: high) {
+          .termin-card,
+          .teilnehmer-row,
+          .modul-card {
+            border-width: 3px;
+          }
+
+          .btn {
+            border-width: 2px;
+          }
+
+          .stat-card {
+            border-width: 3px;
+          }
+        }
+
+        /* REDUCED MOTION */
+        @media (prefers-reduced-motion: reduce) {
+          *,
+          *::before,
+          *::after {
+            animation-duration: 0.01ms !important;
+            animation-iteration-count: 1 !important;
+            transition-duration: 0.01ms !important;
+          }
+        }
+
+        /* DARK MODE PREPARATION (optional) */
+        @media (prefers-color-scheme: dark) {
+          /* 
+          Hier könnten Dark Mode Styles hin, falls gewünscht
+          .content { background: #1a1a1a; }
+          etc.
+          */
+        }
+
+        /* LOADING STATES */
+        .loading-spinner {
+          display: inline-block;
+          width: 20px;
+          height: 20px;
+          border: 3px solid rgba(185, 28, 28, 0.1);
+          border-radius: 50%;
+          border-top-color: #b91c1c;
+          animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+
+        .skeleton {
+          background: linear-gradient(
+            90deg,
+            #f1f5f9 0%,
+            #e2e8f0 50%,
+            #f1f5f9 100%
+          );
+          background-size: 200% 100%;
+          animation: shimmer 1.5s ease-in-out infinite;
+          border-radius: 8px;
+        }
+
+        @keyframes shimmer {
+          0% { background-position: -200% 0; }
+          100% { background-position: 200% 0; }
+        }
+
+        .skeleton-text {
+          height: 12px;
+          margin-bottom: 8px;
+        }
+
+        .skeleton-title {
+          height: 20px;
+          width: 60%;
+          margin-bottom: 12px;
+        }
+
+        .skeleton-card {
+          height: 200px;
+        }
+
+        /* ERROR STATES */
+        .error-banner {
+          background: #fef2f2;
+          border: 2px solid #fecaca;
+          border-radius: 10px;
+          padding: 16px;
+          margin-bottom: 16px;
+          display: flex;
+          align-items: flex-start;
+          gap: 12px;
+        }
+
+        .error-icon {
+          color: #dc2626;
+          flex-shrink: 0;
+        }
+
+        .error-content {
+          flex: 1;
+        }
+
+        .error-title {
+          font-weight: 700;
+          color: #991b1b;
+          margin-bottom: 4px;
+        }
+
+        .error-message {
+          font-size: 14px;
+          color: #b91c1c;
+        }
+
+        /* TOOLTIP */
+        [data-tooltip] {
+          position: relative;
+          cursor: help;
+        }
+
+        [data-tooltip]:hover::after {
+          content: attr(data-tooltip);
+          position: absolute;
+          bottom: 100%;
+          left: 50%;
+          transform: translateX(-50%);
+          padding: 6px 10px;
+          background: #1d1d1f;
+          color: #fff;
+          font-size: 12px;
+          white-space: nowrap;
+          border-radius: 6px;
+          margin-bottom: 6px;
+          z-index: 1000;
+          pointer-events: none;
+        }
+
+        [data-tooltip]:hover::before {
+          content: '';
+          position: absolute;
+          bottom: 100%;
+          left: 50%;
+          transform: translateX(-50%);
+          border: 5px solid transparent;
+          border-top-color: #1d1d1f;
+          z-index: 1000;
+          pointer-events: none;
+        }
+
+        /* BADGE VARIATIONS */
+        .badge-new {
+          background: #dbeafe;
+          color: #1e40af;
+        }
+
+        .badge-urgent {
+          background: #fee2e2;
+          color: #991b1b;
+        }
+
+        .badge-info {
+          background: #e0e7ff;
+          color: #3730a3;
+        }
+
+        .badge-success {
+          background: #d1fae5;
+          color: #065f46;
+        }
+
+        /* NOTIFICATION DOT */
+        .notification-dot {
+          position: absolute;
+          top: -4px;
+          right: -4px;
+          width: 8px;
+          height: 8px;
+          background: #ef4444;
+          border: 2px solid #fff;
+          border-radius: 50%;
+        }
+
+        /* DRAG AND DROP STATES */
+        .drag-over {
+          border: 2px dashed #b91c1c;
+          background: rgba(185, 28, 28, 0.05);
+        }
+
+        .dragging {
+          opacity: 0.5;
+          cursor: move;
+        }
+
+        /* FOCUS TRAP */
+        .modal.show {
+          overflow: hidden;
+        }
+
+        body.modal-open {
+          overflow: hidden;
+        }
+
+        /* CARD HOVER EFFECTS */
+        .termin-card::before,
+        .teilnehmer-row::before,
+        .modul-card::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          border-radius: 12px;
+          opacity: 0;
+          transition: opacity 0.2s;
+          pointer-events: none;
+        }
+
+        .termin-card:hover::before {
+          opacity: 1;
+          box-shadow: 0 0 0 3px rgba(185, 28, 28, 0.1);
+        }
+
+        /* INTERACTIVE STATES */
+        .interactive-row {
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+
+        .interactive-row:hover {
+          background: rgba(185, 28, 28, 0.02);
+        }
+
+        .interactive-row:active {
+          transform: scale(0.99);
+        }
+
+        /* STATUS INDICATORS */
+        .status-indicator {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          padding: 4px 10px;
+          border-radius: 6px;
+          font-size: 12px;
+          font-weight: 600;
+        }
+
+        .status-indicator.active {
+          background: #d1fae5;
+          color: #065f46;
+        }
+
+        .status-indicator.inactive {
+          background: #f3f4f6;
+          color: #6b7280;
+        }
+
+        .status-indicator.pending {
+          background: #fef3c7;
+          color: #92400e;
+        }
+
+        /* COMPACT LAYOUT */
+        .compact-mode .termin-card,
+        .compact-mode .modul-card {
+          padding: 12px;
+        }
+
+        .compact-mode .stat-card {
+          padding: 12px;
+        }
+
+        .compact-mode .stat-number {
+          font-size: 24px;
+        }
+
+        /* SELECTION HIGHLIGHT */
+        .selectable {
+          transition: all 0.2s;
+        }
+
+        .selectable:hover {
+          background: rgba(185, 28, 28, 0.03);
+        }
+
+        .selectable.selected {
+          background: rgba(185, 28, 28, 0.08);
+          border-color: #b91c1c;
+        }
+
+        /* Z-INDEX LAYERS */
+        .z-base { z-index: 1; }
+        .z-dropdown { z-index: 100; }
+        .z-sticky { z-index: 99; }
+        .z-modal { z-index: 1000; }
+        .z-toast { z-index: 1100; }
+        .z-tooltip { z-index: 1200; }
+
+        /* PERFORMANCE HINTS */
+        .gpu-accelerated {
+          transform: translateZ(0);
+          will-change: transform;
+        }
+
+        /* OVERFLOW HANDLING */
+        .overflow-ellipsis {
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .line-clamp-2 {
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+        }
+
+        .line-clamp-3 {
+          display: -webkit-box;
+          -webkit-line-clamp: 3;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+        }
+
+        /* CUSTOM CHECKBOX/RADIO */
+        .custom-checkbox {
+          appearance: none;
+          width: 18px;
+          height: 18px;
+          border: 2px solid #cbd5e1;
+          border-radius: 4px;
+          background: #fff;
+          cursor: pointer;
+          position: relative;
+          transition: all 0.2s;
+        }
+
+        .custom-checkbox:checked {
+          background: #b91c1c;
+          border-color: #b91c1c;
+        }
+
+        .custom-checkbox:checked::after {
+          content: '';
+          position: absolute;
+          left: 5px;
+          top: 2px;
+          width: 4px;
+          height: 8px;
+          border: solid white;
+          border-width: 0 2px 2px 0;
+          transform: rotate(45deg);
+        }
+
+        .custom-checkbox:focus {
+          outline: 2px solid #b91c1c;
+          outline-offset: 2px;
+        }
+
+        /* PRIORITY COLORS */
+        .priority-high {
+          color: #dc2626;
+          font-weight: 700;
+        }
+
+        .priority-medium {
+          color: #f59e0b;
+          font-weight: 600;
+        }
+
+        .priority-low {
+          color: #64748b;
+        }
+
+        /* COMPLETION STATES */
+        .completed {
+          text-decoration: line-through;
+          opacity: 0.6;
+        }
+
+        .in-progress {
+          font-weight: 600;
+          color: #b91c1c;
+        }
+
+        /* DIVIDERS */
+        .divider {
+          height: 1px;
+          background: #e5e7eb;
+          margin: 16px 0;
+        }
+
+        .divider-vertical {
+          width: 1px;
+          background: #e5e7eb;
+          margin: 0 16px;
+        }
+
+        /* SPACING HELPERS */
+        .space-y-2 > * + * { margin-top: 8px; }
+        .space-y-4 > * + * { margin-top: 16px; }
+        .space-y-6 > * + * { margin-top: 24px; }
+        .space-x-2 > * + * { margin-left: 8px; }
+        .space-x-4 > * + * { margin-left: 16px; }
+      `}</style>
+    </>
   )
 }
