@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect } from 'react'
 import PocketBase from 'pocketbase'
 import StatusBar from '../components/StatusBar'
 import { useAuth } from '../hooks/useAuth'
@@ -264,14 +264,14 @@ export default function MPG() {
     return 'ok'
   }
 
-  const stats = useMemo(() => ({
+  const stats = {
     total: devices.length,
     ok: devices.filter(d => getDeviceStatus(d) === 'ok').length,
     warning: devices.filter(d => getDeviceStatus(d) === 'warning').length,
     overdue: devices.filter(d => getDeviceStatus(d) === 'overdue').length
-  }), [devices])
+  }
 
-  const filteredDevices = useMemo(() => devices.filter(device => {
+  const filteredDevices = devices.filter(device => {
     const matchesSearch = 
       device.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       device.type.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -281,7 +281,7 @@ export default function MPG() {
       statusFilter === 'all' || getDeviceStatus(device) === statusFilter
     
     return matchesSearch && matchesStatus
-  }), [devices, searchQuery, statusFilter])
+  })
 
   function openAddDevice() {
     setDeviceForm({
@@ -586,7 +586,7 @@ export default function MPG() {
         )}
 
         {/* STATISTICS - MIT KEY FÜR KORREKTES RE-RENDERING */}
-        <div className="stats-grid" key={`stats-${stats.total}-${stats.ok}-${stats.warning}-${stats.overdue}`}>
+        <div className="stats-grid" key={devices.length}>
           <div className="stat-card ok">
             <div className="stat-icon">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
