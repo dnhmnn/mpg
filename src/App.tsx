@@ -3,7 +3,7 @@ import Hub from './pages/Hub'
 import Login from './pages/Login'
 import Index from './pages/Index'
 import SettingsPage from './pages/SettingsPage'
-import AusbildungenPage from './pages/Ausbildungen'
+import Ausbildungen from './pages/ausbildungen/Ausbildungen'  // ← GEÄNDERT
 import Files from './pages/Files'
 import Lager from './pages/Lager'
 import MPG from './pages/MPG'
