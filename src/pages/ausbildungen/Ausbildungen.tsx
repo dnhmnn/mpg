@@ -808,8 +808,6 @@ export default function Ausbildungen() {
     </div>
   )
 }
-  )
-}
 
 // ← Hier diese Zeile hinzufügen, falls sie fehlt:
 export default Ausbildungen
