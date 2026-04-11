@@ -16,7 +16,7 @@ import AddModulModal from './components/modals/AddModulModal'
 
 import './Ausbildungen.css'
 
-export default function Ausbildungen() {
+function Ausbildungen() {
   const { user } = useAuth()
 
   // ============================================
@@ -569,7 +569,6 @@ export default function Ausbildungen() {
               <tbody>
                 {filteredTeilnehmer.map(t => {
                   const termine = helpers.getTeilnehmerTermine(t.id, terminTeilnehmer)
-                  const progress = helpers.getTeilnehmerModulProgress(t.id, modulProgress)
 
                   return (
                     <tr key={t.id} onClick={() => openTeilnehmerDetail(t)}>
@@ -809,5 +808,4 @@ export default function Ausbildungen() {
   )
 }
 
-// ← Hier diese Zeile hinzufügen, falls sie fehlt:
 export default Ausbildungen
