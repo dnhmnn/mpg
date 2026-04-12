@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import PocketBase from 'pocketbase'
-import StatusBar from '../components/StatusBar'
+import StatusBar from '../../components/StatusBar'  // ← HIER ÄNDERN
 import { useAuth } from '../hooks/useAuth'
 
 const pb = new PocketBase('https://api.responda.systems')
