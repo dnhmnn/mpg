@@ -1,4 +1,4 @@
-import PocketBase from 'pocketbase'
+import { pb } from '../../../lib/pocketbase'
 import { TerminForm, TeilnehmerForm, ModulForm } from '../types/ausbildungen.types'
 import { generatePassword } from '../utils/helpers'
 
