@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { useAuth } from '../../hooks/useAuth'
+import StatusBar from '../../components/StatusBar'
 import * as types from './types/ausbildungen.types'
 import * as helpers from './utils/helpers'
 import { useAusbildungenData } from './hooks/useAusbildungenData'
@@ -14,10 +15,8 @@ import TerminDetailModal from './components/modals/TerminDetailModal'
 import TeilnehmerDetailModal from './components/modals/TeilnehmerDetailModal'
 import AddModulModal from './components/modals/AddModulModal'
 
-import './Ausbildungen.css'
-
 function Ausbildungen() {
-  const { user } = useAuth()
+  const { user, logout } = useAuth()
 
   const {
     termine,
@@ -105,7 +104,7 @@ function Ausbildungen() {
 
   function showMessage(text: string, type: types.MessageType) {
     setMessage({ text, type })
-    setTimeout(() => setMessage(null), 3000)
+    setTimeout(() => setMessage(null), 4000)
   }
 
   function openAddTermin() {
@@ -229,206 +228,126 @@ function Ausbildungen() {
 
   if (loading) {
     return (
-      <div className="ausbildungen-page">
-        <div className="loading-state">
-          <div className="spinner"></div>
-          <p>Lade Ausbildungsdaten...</p>
+      <>
+        <StatusBar user={user} onLogout={logout} pageName="Ausbildungen" showHubLink={true} />
+        <div className="content">
+          <div className="empty-state">Lade Ausbildungsdaten...</div>
         </div>
-      </div>
+      </>
     )
   }
 
   return (
-    <div className="ausbildungen-page">
-      {message && (
-        <div className={`message-toast ${message.type}`}>
-          {message.text}
-        </div>
-      )}
+    <>
+      <StatusBar user={user} onLogout={logout} pageName="Ausbildungen" showHubLink={true} />
+      
+      <div className="content">
+        {message && (
+          <div className={`message ${message.type}`}>
+            {message.text}
+          </div>
+        )}
 
-      <div className="page-header">
-        <h1>Ausbildungen</h1>
-        <div className="header-actions">
+        <div className="stats-grid">
+          <div className="stat-card">
+            <div className="stat-value">{stats.termine_gesamt}</div>
+            <div className="stat-label">Termine</div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-value">{stats.termine_geplant}</div>
+            <div className="stat-label">Geplant</div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-value">{stats.teilnehmer_gesamt}</div>
+            <div className="stat-label">Teilnehmer</div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-value">{stats.module_gesamt}</div>
+            <div className="stat-label">Module</div>
+          </div>
+        </div>
+
+        <div className="view-tabs">
+          <button
+            className={`view-tab ${viewMode === 'termine' ? 'active' : ''}`}
+            onClick={() => setViewMode('termine')}
+          >
+            Termine
+          </button>
+          <button
+            className={`view-tab ${viewMode === 'teilnehmer' ? 'active' : ''}`}
+            onClick={() => setViewMode('teilnehmer')}
+          >
+            Teilnehmer
+          </button>
+          <button
+            className={`view-tab ${viewMode === 'module' ? 'active' : ''}`}
+            onClick={() => setViewMode('module')}
+          >
+            Module
+          </button>
+        </div>
+
+        <div className="actions-bar">
+          <div className="search-box">
+            <input
+              type="text"
+              placeholder="Suchen..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+
           {viewMode === 'termine' && (
-            <button className="btn primary" onClick={openAddTermin}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <line x1="12" y1="5" x2="12" y2="19"/>
-                <line x1="5" y1="12" x2="19" y2="12"/>
-              </svg>
-              Termin erstellen
-            </button>
+            <>
+              <select
+                className="filter-select"
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value as types.StatusFilter)}
+              >
+                <option value="all">Alle Status</option>
+                <option value="geplant">Geplant</option>
+                <option value="laufend">Laufend</option>
+                <option value="abgeschlossen">Abgeschlossen</option>
+              </select>
+              <button className="btn primary" onClick={openAddTermin}>
+                Termin erstellen
+              </button>
+            </>
           )}
+
           {viewMode === 'teilnehmer' && (
             <button className="btn primary" onClick={openAddTeilnehmer}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <line x1="12" y1="5" x2="12" y2="19"/>
-                <line x1="5" y1="12" x2="19" y2="12"/>
-              </svg>
               Teilnehmer hinzufügen
             </button>
           )}
+
           {viewMode === 'module' && (
             <button className="btn primary" onClick={openAddModul}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <line x1="12" y1="5" x2="12" y2="19"/>
-                <line x1="5" y1="12" x2="19" y2="12"/>
-              </svg>
               Modul erstellen
             </button>
           )}
         </div>
-      </div>
-
-      <div className="stats-grid">
-        <div className="stat-card">
-          <div className="stat-icon">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-              <line x1="16" y1="2" x2="16" y2="6"/>
-              <line x1="8" y1="2" x2="8" y2="6"/>
-              <line x1="3" y1="10" x2="21" y2="10"/>
-            </svg>
-          </div>
-          <div className="stat-content">
-            <div className="stat-value">{stats.termine_gesamt}</div>
-            <div className="stat-label">Termine gesamt</div>
-          </div>
-        </div>
-
-        <div className="stat-card">
-          <div className="stat-icon success">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <polyline points="20 6 9 17 4 12"/>
-            </svg>
-          </div>
-          <div className="stat-content">
-            <div className="stat-value">{stats.termine_geplant}</div>
-            <div className="stat-label">Geplant</div>
-          </div>
-        </div>
-
-        <div className="stat-card">
-          <div className="stat-icon">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-              <circle cx="9" cy="7" r="4"/>
-              <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-              <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-            </svg>
-          </div>
-          <div className="stat-content">
-            <div className="stat-value">{stats.teilnehmer_gesamt}</div>
-            <div className="stat-label">Teilnehmer</div>
-          </div>
-        </div>
-
-        <div className="stat-card">
-          <div className="stat-icon primary">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
-              <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
-            </svg>
-          </div>
-          <div className="stat-content">
-            <div className="stat-value">{stats.module_gesamt}</div>
-            <div className="stat-label">Online-Module</div>
-          </div>
-        </div>
-      </div>
-
-      <div className="view-tabs">
-        <button
-          className={`view-tab ${viewMode === 'termine' ? 'active' : ''}`}
-          onClick={() => setViewMode('termine')}
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-            <line x1="16" y1="2" x2="16" y2="6"/>
-            <line x1="8" y1="2" x2="8" y2="6"/>
-            <line x1="3" y1="10" x2="21" y2="10"/>
-          </svg>
-          Termine
-        </button>
-        <button
-          className={`view-tab ${viewMode === 'teilnehmer' ? 'active' : ''}`}
-          onClick={() => setViewMode('teilnehmer')}
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-            <circle cx="9" cy="7" r="4"/>
-            <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-          </svg>
-          Teilnehmer
-        </button>
-        <button
-          className={`view-tab ${viewMode === 'module' ? 'active' : ''}`}
-          onClick={() => setViewMode('module')}
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
-            <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
-          </svg>
-          Online-Module
-        </button>
-      </div>
-
-      <div className="controls-bar">
-        <div className="search-box">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <circle cx="11" cy="11" r="8"/>
-            <path d="m21 21-4.35-4.35"/>
-          </svg>
-          <input
-            type="text"
-            placeholder="Suchen..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </div>
 
         {viewMode === 'termine' && (
-          <select
-            className="filter-select"
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value as types.StatusFilter)}
-          >
-            <option value="all">Alle Status</option>
-            <option value="geplant">Geplant</option>
-            <option value="laufend">Laufend</option>
-            <option value="abgeschlossen">Abgeschlossen</option>
-          </select>
-        )}
-      </div>
+          <div className="termine-grid">
+            {filteredTermine.length === 0 ? (
+              <div className="empty-state">
+                <div style={{fontSize: '48px', marginBottom: '16px', opacity: 0.3}}>📅</div>
+                <div style={{fontWeight: 700, marginBottom: '8px'}}>Keine Termine</div>
+                <div>Erstelle deinen ersten Ausbildungstermin</div>
+              </div>
+            ) : (
+              filteredTermine.map(termin => {
+                const ttList = helpers.getTerminTeilnehmerByTermin(termin.id, terminTeilnehmer)
+                const anwesend = ttList.filter(tt => tt.anwesend).length
 
-      {viewMode === 'termine' && (
-        <div className="termine-grid">
-          {filteredTermine.length === 0 ? (
-            <div className="empty-state">
-              <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1">
-                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-                <line x1="16" y1="2" x2="16" y2="6"/>
-                <line x1="8" y1="2" x2="8" y2="6"/>
-                <line x1="3" y1="10" x2="21" y2="10"/>
-              </svg>
-              <h3>Noch keine Termine</h3>
-              <p>Erstelle deinen ersten Ausbildungstermin</p>
-              <button className="btn primary" onClick={openAddTermin}>
-                Termin erstellen
-              </button>
-            </div>
-          ) : (
-            filteredTermine.map(termin => {
-              const ttList = helpers.getTerminTeilnehmerByTermin(termin.id, terminTeilnehmer)
-              const anwesend = ttList.filter(tt => tt.anwesend).length
-
-              return (
-                <div
-                  key={termin.id}
-                  className="termin-card"
-                  onClick={() => openTerminDetail(termin)}
-                >
-                  <div className="termin-header">
+                return (
+                  <div
+                    key={termin.id}
+                    className="termin-card"
+                    onClick={() => openTerminDetail(termin)}
+                  >
                     <div className="termin-date">
                       <div className="date-day">
                         {new Date(termin.start_datetime).toLocaleDateString('de-DE', { day: '2-digit' })}
@@ -437,226 +356,110 @@ function Ausbildungen() {
                         {new Date(termin.start_datetime).toLocaleDateString('de-DE', { month: 'short' })}
                       </div>
                     </div>
-                    <div className="termin-info">
-                      <h3>{termin.name}</h3>
+                    <div className="termin-content">
+                      <div className="termin-name">{termin.name}</div>
                       <div className="termin-meta">
-                        <span>
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <circle cx="12" cy="12" r="10"/>
-                            <polyline points="12 6 12 12 16 14"/>
-                          </svg>
-                          {new Date(termin.start_datetime).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}
-                        </span>
-                        {termin.location && (
-                          <span>
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
-                              <circle cx="12" cy="10" r="3"/>
-                            </svg>
-                            {termin.location}
-                          </span>
-                        )}
+                        {new Date(termin.start_datetime).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}
+                        {termin.location && ` • ${termin.location}`}
+                      </div>
+                      <div className="termin-stats">
+                        {ttList.length}/{termin.max_teilnehmer} Teilnehmer
+                        {ttList.length > 0 && ` • ${anwesend} anwesend`}
+                      </div>
+                      <div className={`termin-status ${termin.status}`}>
+                        {termin.status}
                       </div>
                     </div>
                   </div>
+                )
+              })
+            )}
+          </div>
+        )}
 
-                  <div className="termin-stats">
-                    <div className="termin-stat">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-                        <circle cx="9" cy="7" r="4"/>
-                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-                        <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-                      </svg>
-                      {ttList.length}/{termin.max_teilnehmer} Teilnehmer
+        {viewMode === 'teilnehmer' && (
+          <div className="teilnehmer-grid">
+            {filteredTeilnehmer.length === 0 ? (
+              <div className="empty-state">
+                <div style={{fontSize: '48px', marginBottom: '16px', opacity: 0.3}}>👥</div>
+                <div style={{fontWeight: 700, marginBottom: '8px'}}>Keine Teilnehmer</div>
+                <div>Füge deinen ersten Teilnehmer hinzu</div>
+              </div>
+            ) : (
+              filteredTeilnehmer.map(t => {
+                const termine = helpers.getTeilnehmerTermine(t.id, terminTeilnehmer)
+
+                return (
+                  <div
+                    key={t.id}
+                    className="teilnehmer-card"
+                    onClick={() => openTeilnehmerDetail(t)}
+                  >
+                    <div className="person-avatar">
+                      {t.vorname.charAt(0)}{t.nachname.charAt(0)}
                     </div>
-                    {ttList.length > 0 && (
-                      <div className="termin-stat">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <polyline points="20 6 9 17 4 12"/>
-                        </svg>
-                        {anwesend} anwesend
-                      </div>
+                    <div className="person-name">{t.vorname} {t.nachname}</div>
+                    <div className="person-email">{t.email}</div>
+                    <div className="person-stats">
+                      {termine.length} Termine
+                      {t.lernbar_zugang_aktiv && <span className="lernbar-badge">Lernbar</span>}
+                    </div>
+                  </div>
+                )
+              })
+            )}
+          </div>
+        )}
+
+        {viewMode === 'module' && (
+          <div className="module-grid">
+            {filteredModule.length === 0 ? (
+              <div className="empty-state">
+                <div style={{fontSize: '48px', marginBottom: '16px', opacity: 0.3}}>📚</div>
+                <div style={{fontWeight: 700, marginBottom: '8px'}}>Keine Module</div>
+                <div>Erstelle dein erstes Online-Modul</div>
+              </div>
+            ) : (
+              filteredModule.map(modul => {
+                const zuordnungen = modulTermine.filter(mt => mt.modul_id === modul.id)
+
+                return (
+                  <div key={modul.id} className="modul-card">
+                    <div className="modul-name">{modul.name}</div>
+                    {modul.beschreibung && (
+                      <div className="modul-description">{modul.beschreibung}</div>
                     )}
+                    <div className="modul-meta">
+                      {modul.dauer_minuten} Min • {modul.inhalte.length} Lektionen
+                      {zuordnungen.length > 0 && ` • ${zuordnungen.length} Termine`}
+                    </div>
+                    <div className="modul-actions">
+                      <button
+                        className="btn-small"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          openEditModul(modul)
+                        }}
+                      >
+                        Bearbeiten
+                      </button>
+                      <button
+                        className="btn-small danger"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          actions.deleteModul(modul.id, modul.name)
+                        }}
+                      >
+                        Löschen
+                      </button>
+                    </div>
                   </div>
-
-                  <div className="termin-footer">
-                    <span className={`status-badge ${termin.status}`}>
-                      {termin.status}
-                    </span>
-                    {termin.dozent && (
-                      <span className="dozent-badge">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                          <circle cx="12" cy="7" r="4"/>
-                        </svg>
-                        {termin.dozent}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              )
-            })
-          )}
-        </div>
-      )}
-
-      {viewMode === 'teilnehmer' && (
-        <div className="teilnehmer-list">
-          {filteredTeilnehmer.length === 0 ? (
-            <div className="empty-state">
-              <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1">
-                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-                <circle cx="9" cy="7" r="4"/>
-                <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-                <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-              </svg>
-              <h3>Noch keine Teilnehmer</h3>
-              <p>Füge deinen ersten Teilnehmer hinzu</p>
-              <button className="btn primary" onClick={openAddTeilnehmer}>
-                Teilnehmer hinzufügen
-              </button>
-            </div>
-          ) : (
-            <table className="teilnehmer-table">
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>Kontakt</th>
-                  <th>Termine</th>
-                  <th>Lernbar</th>
-                  <th>Aktionen</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredTeilnehmer.map(t => {
-                  const termine = helpers.getTeilnehmerTermine(t.id, terminTeilnehmer)
-
-                  return (
-                    <tr key={t.id} onClick={() => openTeilnehmerDetail(t)}>
-                      <td>
-                        <div className="person-cell">
-                          <div className="person-avatar">
-                            {t.vorname.charAt(0)}{t.nachname.charAt(0)}
-                          </div>
-                          <div>
-                            <div className="person-name">{t.vorname} {t.nachname}</div>
-                          </div>
-                        </div>
-                      </td>
-                      <td>
-                        <div className="contact-cell">
-                          <div>{t.email}</div>
-                          {t.telefon && <div className="contact-sub">{t.telefon}</div>}
-                        </div>
-                      </td>
-                      <td>
-                        <span className="count-badge">{termine.length}</span>
-                      </td>
-                      <td>
-                        {t.lernbar_zugang_aktiv ? (
-                          <span className="badge success">Aktiv</span>
-                        ) : (
-                          <span className="badge">Inaktiv</span>
-                        )}
-                      </td>
-                      <td>
-                        <button
-                          className="btn-small"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            openEditTeilnehmer(t)
-                          }}
-                        >
-                          Bearbeiten
-                        </button>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          )}
-        </div>
-      )}
-
-      {viewMode === 'module' && (
-        <div className="module-grid">
-          {filteredModule.length === 0 ? (
-            <div className="empty-state">
-              <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1">
-                <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
-                <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
-              </svg>
-              <h3>Noch keine Module</h3>
-              <p>Erstelle dein erstes Online-Modul für die Lernbar</p>
-              <button className="btn primary" onClick={openAddModul}>
-                Modul erstellen
-              </button>
-            </div>
-          ) : (
-            filteredModule.map(modul => {
-              const zuordnungen = modulTermine.filter(mt => mt.modul_id === modul.id)
-
-              return (
-                <div key={modul.id} className="modul-card">
-                  <div className="modul-icon">
-                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
-                      <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
-                    </svg>
-                  </div>
-                  <h3>{modul.name}</h3>
-                  {modul.beschreibung && (
-                    <p className="modul-description">{modul.beschreibung}</p>
-                  )}
-                  <div className="modul-meta">
-                    <span>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <circle cx="12" cy="12" r="10"/>
-                        <polyline points="12 6 12 12 16 14"/>
-                      </svg>
-                      {modul.dauer_minuten} Min.
-                    </span>
-                    <span>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                        <polyline points="14 2 14 8 20 8"/>
-                      </svg>
-                      {modul.inhalte.length} Lektionen
-                    </span>
-                    {zuordnungen.length > 0 && (
-                      <span>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-                          <line x1="16" y1="2" x2="16" y2="6"/>
-                          <line x1="8" y1="2" x2="8" y2="6"/>
-                          <line x1="3" y1="10" x2="21" y2="10"/>
-                        </svg>
-                        {zuordnungen.length} Termine
-                      </span>
-                    )}
-                  </div>
-                  <div className="modul-actions">
-                    <button
-                      className="btn-small"
-                      onClick={() => openEditModul(modul)}
-                    >
-                      Bearbeiten
-                    </button>
-                    <button
-                      className="btn-small danger"
-                      onClick={() => actions.deleteModul(modul.id, modul.name)}
-                    >
-                      Löschen
-                    </button>
-                  </div>
-                </div>
-              )
-            })
-          )}
-        </div>
-      )}
+                )
+              })
+            )}
+          </div>
+        )}
+      </div>
 
       <AddTerminModal
         show={showAddTerminModal}
@@ -764,7 +567,358 @@ function Ausbildungen() {
         onRemoveInhalt={removeModulInhalt}
         onUpdateInhalt={updateModulInhalt}
       />
-    </div>
+
+      <style>{`
+        .message {
+          padding: 12px 16px;
+          border-radius: 10px;
+          margin-bottom: 16px;
+          font-weight: 600;
+        }
+
+        .message.success {
+          background: #f0fdf4;
+          border: 1px solid #bbf7d0;
+          color: #166534;
+        }
+
+        .message.error {
+          background: #fef2f2;
+          border: 1px solid #fecaca;
+          color: #b91c1c;
+        }
+
+        .stats-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+          gap: 12px;
+          margin-bottom: 16px;
+        }
+
+        .stat-card {
+          background: rgba(255, 255, 255, 0.9);
+          backdrop-filter: blur(20px);
+          -webkit-backdrop-filter: blur(20px);
+          border-radius: 12px;
+          padding: 20px;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+          transition: transform 0.2s;
+        }
+
+        .stat-card:hover {
+          transform: translateY(-2px);
+        }
+
+        .stat-value {
+          font-size: 32px;
+          font-weight: 800;
+          color: #b91c1c;
+          margin-bottom: 4px;
+        }
+
+        .stat-label {
+          font-size: 14px;
+          color: #64748b;
+          font-weight: 600;
+        }
+
+        .view-tabs {
+          display: flex;
+          gap: 8px;
+          margin-bottom: 16px;
+          background: rgba(255, 255, 255, 0.9);
+          backdrop-filter: blur(20px);
+          padding: 8px;
+          border-radius: 12px;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+        }
+
+        .view-tab {
+          flex: 1;
+          padding: 10px 16px;
+          background: none;
+          border: none;
+          border-radius: 8px;
+          cursor: pointer;
+          font-weight: 700;
+          font-size: 14px;
+          color: #64748b;
+          transition: all 0.2s;
+          font-family: inherit;
+        }
+
+        .view-tab:hover {
+          background: rgba(185, 28, 28, 0.1);
+          color: #b91c1c;
+        }
+
+        .view-tab.active {
+          background: #b91c1c;
+          color: #fff;
+        }
+
+        .actions-bar {
+          display: flex;
+          gap: 8px;
+          margin-bottom: 16px;
+          flex-wrap: wrap;
+        }
+
+        .search-box {
+          flex: 1;
+          min-width: 200px;
+        }
+
+        .search-box input {
+          width: 100%;
+          padding: 10px 16px;
+          border: 1px solid rgba(0, 0, 0, 0.08);
+          border-radius: 8px;
+          background: rgba(255, 255, 255, 0.9);
+          font-size: 14px;
+          font-family: inherit;
+        }
+
+        .search-box input:focus {
+          outline: none;
+          border-color: #b91c1c;
+          box-shadow: 0 0 0 3px rgba(185, 28, 28, 0.1);
+        }
+
+        .filter-select {
+          padding: 10px 16px;
+          border: 1px solid rgba(0, 0, 0, 0.08);
+          border-radius: 8px;
+          background: rgba(255, 255, 255, 0.9);
+          font-size: 14px;
+          font-weight: 700;
+          font-family: inherit;
+          cursor: pointer;
+        }
+
+        .btn {
+          background: rgba(255, 255, 255, 0.9);
+          color: #1d1d1f;
+          padding: 10px 20px;
+          border-radius: 8px;
+          cursor: pointer;
+          font-weight: 700;
+          transition: all 0.2s;
+          font-family: inherit;
+          border: 1px solid rgba(0, 0, 0, 0.08);
+          font-size: 14px;
+        }
+
+        .btn:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn.primary {
+          background: #b91c1c;
+          color: #fff;
+          border-color: #b91c1c;
+        }
+
+        .btn.primary:hover {
+          background: #dc2626;
+        }
+
+        .btn-small {
+          background: rgba(255, 255, 255, 0.9);
+          color: #1d1d1f;
+          padding: 6px 12px;
+          border-radius: 6px;
+          cursor: pointer;
+          font-weight: 700;
+          transition: all 0.2s;
+          font-family: inherit;
+          border: 1px solid rgba(0, 0, 0, 0.08);
+          font-size: 12px;
+        }
+
+        .btn-small:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn-small.danger {
+          color: #b91c1c;
+        }
+
+        .termine-grid,
+        .teilnehmer-grid,
+        .module-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+          gap: 16px;
+        }
+
+        .termin-card,
+        .teilnehmer-card,
+        .modul-card {
+          background: rgba(255, 255, 255, 0.9);
+          backdrop-filter: blur(20px);
+          -webkit-backdrop-filter: blur(20px);
+          border-radius: 12px;
+          padding: 20px;
+          cursor: pointer;
+          transition: all 0.2s;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+          border: 2px solid transparent;
+        }
+
+        .termin-card:hover,
+        .teilnehmer-card:hover,
+        .modul-card:hover {
+          transform: translateY(-4px);
+          box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+          border-color: rgba(185, 28, 28, 0.2);
+        }
+
+        .termin-date {
+          display: inline-flex;
+          flex-direction: column;
+          align-items: center;
+          background: #b91c1c;
+          color: #fff;
+          padding: 8px 12px;
+          border-radius: 8px;
+          margin-bottom: 12px;
+        }
+
+        .date-day {
+          font-size: 24px;
+          font-weight: 800;
+          line-height: 1;
+        }
+
+        .date-month {
+          font-size: 11px;
+          text-transform: uppercase;
+          opacity: 0.9;
+        }
+
+        .termin-name,
+        .person-name,
+        .modul-name {
+          font-weight: 700;
+          font-size: 16px;
+          margin-bottom: 8px;
+          color: #1d1d1f;
+        }
+
+        .termin-meta,
+        .person-email,
+        .modul-meta {
+          font-size: 13px;
+          color: #64748b;
+          margin-bottom: 8px;
+        }
+
+        .termin-stats,
+        .person-stats {
+          font-size: 12px;
+          color: #64748b;
+          margin-top: 8px;
+        }
+
+        .termin-status {
+          display: inline-block;
+          padding: 4px 12px;
+          border-radius: 6px;
+          font-size: 11px;
+          font-weight: 700;
+          text-transform: uppercase;
+          margin-top: 8px;
+        }
+
+        .termin-status.geplant {
+          background: rgba(59, 130, 246, 0.1);
+          color: #3b82f6;
+        }
+
+        .termin-status.laufend {
+          background: rgba(16, 185, 129, 0.1);
+          color: #10b981;
+        }
+
+        .termin-status.abgeschlossen {
+          background: rgba(107, 114, 128, 0.1);
+          color: #6b7280;
+        }
+
+        .person-avatar {
+          width: 48px;
+          height: 48px;
+          border-radius: 12px;
+          background: #b91c1c;
+          color: #fff;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-weight: 700;
+          font-size: 18px;
+          margin-bottom: 12px;
+        }
+
+        .lernbar-badge {
+          display: inline-block;
+          padding: 2px 8px;
+          background: rgba(16, 185, 129, 0.1);
+          color: #10b981;
+          border-radius: 4px;
+          font-size: 10px;
+          font-weight: 700;
+          margin-left: 8px;
+        }
+
+        .modul-description {
+          font-size: 14px;
+          color: #64748b;
+          margin-bottom: 12px;
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+        }
+
+        .modul-actions {
+          display: flex;
+          gap: 8px;
+          margin-top: 12px;
+          padding-top: 12px;
+          border-top: 1px solid rgba(0, 0, 0, 0.05);
+        }
+
+        .empty-state {
+          grid-column: 1 / -1;
+          text-align: center;
+          padding: 48px 16px;
+          color: #64748b;
+        }
+
+        @media (max-width: 768px) {
+          .stats-grid {
+            grid-template-columns: repeat(2, 1fr);
+          }
+
+          .actions-bar {
+            flex-direction: column;
+          }
+
+          .search-box {
+            width: 100%;
+          }
+
+          .termine-grid,
+          .teilnehmer-grid,
+          .module-grid {
+            grid-template-columns: 1fr;
+          }
+        }
+      `}</style>
+    </>
   )
 }
 
