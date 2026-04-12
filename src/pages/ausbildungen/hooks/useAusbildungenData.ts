@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react'
 import { pb } from '../../../lib/pocketbase'
 import { Termin, Teilnehmer, TerminTeilnehmer, Dokument, Modul, ModulTermin, ModulProgress } from '../types/ausbildungen.types'
 
-const pb = new PocketBase('https://api.responda.systems')
 
 export function useAusbildungenData(organizationId: string | undefined) {
   const [termine, setTermine] = useState<Termin[]>([])
