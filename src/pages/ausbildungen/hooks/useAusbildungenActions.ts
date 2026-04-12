@@ -2,7 +2,6 @@ import { pb } from '../../../lib/pocketbase'
 import { TerminForm, TeilnehmerForm, ModulForm } from '../types/ausbildungen.types'
 import { generatePassword } from '../utils/helpers'
 
-const pb = new PocketBase('https://api.responda.systems')
 
 interface UseActionsParams {
   organizationId: string | undefined
