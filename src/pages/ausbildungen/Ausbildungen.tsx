@@ -230,8 +230,7 @@ export default function Ausbildungen() {
   const [selectedKonzept, setSelectedKonzept] = useState<Ausbildungskonzept | null>(null)
   const [currentTerminTab, setCurrentTerminTab] = useState<'uebersicht' | 'teilnehmer' | 'dokumente' | 'module'>('uebersicht')
   
-  const [statusFilter, setStatusFilter] = useState<'all' | 'geplant' | 'laufend' | 'abgeschlossen'>('all')
-  const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | 'konzepte'>('termine')
+const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | 'konzepte'>('termine')
   
   const [uploadFile, setUploadFile] = useState<File | null>(null)
   const [uploadTyp, setUploadTyp] = useState<'dozent' | 'teilnehmer'>('teilnehmer')
@@ -422,10 +421,7 @@ export default function Ausbildungen() {
     setTimeout(() => setMessage(null), 3000)
   }
 
-  const filteredTermine = termine.filter(termin =>
-    statusFilter === 'all' || termin.status === statusFilter
-  )
-
+  const filteredTermine = termine
   const filteredTeilnehmer = teilnehmer
   const filteredModule = module
   const filteredKonzepte = konzepte
@@ -1101,37 +1097,6 @@ export default function Ausbildungen() {
           </div>
         )}
 
-        {/* FILTERS */}
-        <div className="filter-bar">
-          {viewMode === 'termine' && (
-            <div className="filter-buttons">
-              <button 
-                className={`filter-btn ${statusFilter === 'all' ? 'active' : ''}`}
-                onClick={() => setStatusFilter('all')}
-              >
-                Alle
-              </button>
-              <button 
-                className={`filter-btn ${statusFilter === 'geplant' ? 'active' : ''}`}
-                onClick={() => setStatusFilter('geplant')}
-              >
-                Geplant
-              </button>
-              <button 
-                className={`filter-btn ${statusFilter === 'laufend' ? 'active' : ''}`}
-                onClick={() => setStatusFilter('laufend')}
-              >
-                Laufend
-              </button>
-              <button 
-                className={`filter-btn ${statusFilter === 'abgeschlossen' ? 'active' : ''}`}
-                onClick={() => setStatusFilter('abgeschlossen')}
-              >
-                Abgeschlossen
-              </button>
-            </div>
-          )}
-        </div>
 
         {/* TERMINE VIEW */}
         {viewMode === 'termine' && (
@@ -2574,49 +2539,6 @@ export default function Ausbildungen() {
           background: #dc2626;
         }
 
-        .filter-bar {
-          display: flex;
-          gap: 12px;
-          margin-bottom: 24px;
-          flex-wrap: wrap;
-          background: #fff;
-          padding: 12px 16px;
-          border-bottom: 1px solid #e5e7eb;
-          position: sticky;
-          top: 104px;
-          z-index: 98;
-          border-radius: 0;
-          margin-top: -145px;
-        }
-
-        .filter-buttons {
-          display: flex;
-          gap: 8px;
-          flex-wrap: wrap;
-        }
-
-        .filter-btn {
-          padding: 8px 16px;
-          border: 1px solid rgba(0, 0, 0, 0.1);
-          background: rgba(255, 255, 255, 0.9);
-          border-radius: 8px;
-          cursor: pointer;
-          font-weight: 600;
-          font-size: 14px;
-          transition: all 0.2s;
-          font-family: inherit;
-        }
-
-        .filter-btn:hover {
-          background: #f3f4f6;
-        }
-
-        .filter-btn.active {
-          background: #b91c1c;
-          color: #fff;
-          border-color: #b91c1c;
-        }
-
         .cards-grid {
           display: grid;
           grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -3113,20 +3035,6 @@ export default function Ausbildungen() {
             flex: 1;
             min-width: 40px;
             height: 40px;
-          }
-
-          .filter-bar {
-            flex-direction: column;
-            top: 124px;
-            margin-top: -145px;
-          }
-
-          .filter-buttons {
-            width: 100%;
-          }
-
-          .filter-btn {
-            flex: 1;
           }
 
           .cards-grid {
