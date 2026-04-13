@@ -636,28 +636,17 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
 
       await pb.collection('users').update(teilnehmerForm.id, updateData)
 
-      // Email separat aktualisieren, nur wenn sie sich geändert hat
       const newEmail = teilnehmerForm.email || ''
-      if (newEmail && newEmail !== originalEmail) {
-        try {
-          await pb.collection('users').update(teilnehmerForm.id, {
-            email: newEmail,
-            emailVisibility: true
-          })
-        } catch(emailErr: any) {
-          showMessage('Gespeichert, aber Email konnte nicht geändert werden: ' + emailErr.message, 'error')
-          setShowAddTeilnehmerModal(false)
-          await loadTeilnehmer()
-          return
-        }
-      }
+      const emailGeaendert = newEmail && newEmail !== originalEmail
 
-      showMessage('Teilnehmer aktualisiert', 'success')
+      showMessage('Teilnehmer aktualisiert' + (emailGeaendert ? ' (Email-Änderung: bitte im PocketBase Admin vornehmen)' : ''), 'success')
 
       const oldTeilnehmer = teilnehmer.find(t => t.id === teilnehmerForm.id)
-      if (teilnehmerForm.lernbar_zugang_aktiv && !oldTeilnehmer?.lernbar_zugang_aktiv && newEmail && !newEmail.includes('@kein-email.intern')) {
+      // Password-Reset nur wenn Lernbar neu aktiviert und echte (nicht Platzhalter) Email vorhanden
+      const aktivEmail = emailGeaendert ? newEmail : originalEmail
+      if (teilnehmerForm.lernbar_zugang_aktiv && !oldTeilnehmer?.lernbar_zugang_aktiv && aktivEmail && !aktivEmail.includes('@kein-email.intern')) {
         try {
-          await pb.collection('users').requestPasswordReset(newEmail)
+          await pb.collection('users').requestPasswordReset(aktivEmail)
           showMessage('Lernbar aktiviert – Password-Reset Email gesendet', 'success')
         } catch(e: any) {
           console.error('Password Reset Fehler:', e)
@@ -1828,6 +1817,11 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
             
             <div className="field">
               <label>Email {teilnehmerForm.lernbar_zugang_aktiv && '*'}</label>
+              {teilnehmerForm.id && originalEmail.includes('@kein-email.intern') && (
+                <div style={{fontSize: '12px', color: '#d97706', background: '#fef9c3', padding: '6px 10px', borderRadius: '6px', marginBottom: '6px'}}>
+                  Platzhalter-Email aktiv. Zum Ändern: PocketBase Admin → users → Datensatz bearbeiten.
+                </div>
+              )}
               <input
                 type="email"
                 value={teilnehmerForm.email}
