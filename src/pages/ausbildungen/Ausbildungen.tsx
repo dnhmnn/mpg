@@ -689,19 +689,14 @@ export default function Ausbildungen() {
       }
     }
 
-} catch(e: any) {
-  console.error('Kompletter Fehler:', e)
-  console.error('Response Data:', e.response)
-  console.error('Error Data:', e.data)
-  alert('Fehler beim Speichern: ' + JSON.stringify(e.data || e.message))
-}
-    
     setShowAddTeilnehmerModal(false)
     setExistingUserDetected(null)
     await loadTeilnehmer()
   } catch(e: any) {
-    console.error('Fehler:', e)
-    alert('Fehler beim Speichern: ' + e.message)
+    console.error('Kompletter Fehler:', e)
+    console.error('Response Data:', e.response)
+    console.error('Error Data:', e.data)
+    alert('Fehler beim Speichern: ' + JSON.stringify(e.data || e.message))
   }
 }
   async function deleteTeilnehmer(id: string, name: string) {
