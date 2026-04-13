@@ -560,54 +560,111 @@ export default function Ausbildungen() {
   }
 
   async function saveTeilnehmer() {
-    if (!teilnehmerForm.vorname || !teilnehmerForm.nachname) {
-      alert('Bitte Vor- und Nachname eingeben')
-      return
+  if (!teilnehmerForm.vorname || !teilnehmerForm.nachname) {
+    alert('Bitte Vor- und Nachname eingeben')
+    return
+  }
+
+  if (teilnehmerForm.lernbar_zugang_aktiv && !teilnehmerForm.email) {
+    alert('Email erforderlich für Lernbar-Zugang')
+    return
+  }
+
+  try {
+    const fullName = `${teilnehmerForm.vorname} ${teilnehmerForm.nachname}`
+    
+    const permissions = {
+      ausbildungen_manage: false,
+      chat: false,
+      dashboard: false,
+      dateien: false,
+      dokumente: false,
+      einsaetze: false,
+      lager: false,
+      lernbar: teilnehmerForm.lernbar_zugang_aktiv,
+      patienten: false,
+      produktausgabe: false,
+      qr: false,
+      users_manage: false
     }
 
-    if (teilnehmerForm.lernbar_zugang_aktiv && !teilnehmerForm.email) {
-      alert('Email erforderlich für Lernbar-Zugang')
-      return
+    const userData = {
+      name: fullName,
+      email: teilnehmerForm.email || '',
+      phone: teilnehmerForm.telefon || '',
+      whatsapp: teilnehmerForm.whatsapp || '',
+      ausbildung_typ: teilnehmerForm.ausbildung_typ || '',
+      notizen: teilnehmerForm.notizen || '',
+      role: 'teilnehmer',
+      permissions: permissions,
+      emailVisibility: true,
+      verified: false,
+      organization_id: user?.organization_id
     }
 
-    try {
-      const fullName = `${teilnehmerForm.vorname} ${teilnehmerForm.nachname}`
-      
-      const permissions = {
-        ausbildungen_manage: false,
-        chat: false,
-        dashboard: false,
-        dateien: false,
-        dokumente: false,
-        einsaetze: false,
-        lager: false,
-        lernbar: teilnehmerForm.lernbar_zugang_aktiv,
-        patienten: false,
-        produktausgabe: false,
-        qr: false,
-        users_manage: false
-      }
-
-      const userData = {
+    if (teilnehmerForm.id) {
+      // UPDATE bestehender Teilnehmer
+      const updateData = {
         name: fullName,
         email: teilnehmerForm.email || '',
         phone: teilnehmerForm.telefon || '',
         whatsapp: teilnehmerForm.whatsapp || '',
         ausbildung_typ: teilnehmerForm.ausbildung_typ || '',
         notizen: teilnehmerForm.notizen || '',
-        role: 'teilnehmer',
-        permissions: permissions,
-        emailVisibility: true,
-        verified: false,
-        organization_id: user?.organization_id
+        permissions: permissions
+      }
+      
+      await pb.collection('users').update(teilnehmerForm.id, updateData)
+      showMessage('Teilnehmer aktualisiert', 'success')
+      
+      const oldTeilnehmer = teilnehmer.find(t => t.id === teilnehmerForm.id)
+      if (teilnehmerForm.lernbar_zugang_aktiv && !oldTeilnehmer?.lernbar_zugang_aktiv && teilnehmerForm.email) {
+        try {
+          await pb.collection('users').requestPasswordReset(teilnehmerForm.email)
+          showMessage('Password-Reset Email gesendet', 'success')
+        } catch(e: any) {
+          console.error('Password Reset Fehler:', e)
+        }
+      }
+    } else {
+      // CREATE: Prüfe zuerst ob User mit Email existiert
+      let existingUser = null
+      
+      if (teilnehmerForm.email) {
+        try {
+          const existingUsers = await pb.collection('users').getFullList({
+            filter: `email = "${teilnehmerForm.email}" && organization_id = "${user?.organization_id}"`
+          })
+          if (existingUsers.length > 0) {
+            existingUser = existingUsers[0]
+          }
+        } catch(e) {
+          console.log('Keine existierenden User gefunden')
+        }
       }
 
-      if (teilnehmerForm.id) {
-        await pb.collection('users').update(teilnehmerForm.id, userData)
-        showMessage('Teilnehmer aktualisiert', 'success')
+      if (existingUser) {
+        // BESTEHENDEN USER AKTUALISIEREN
+        console.log('✅ Bestehender User gefunden:', existingUser.email)
         
-        const oldTeilnehmer = teilnehmer.find(t => t.id === teilnehmerForm.id)
-        if (teilnehmerForm.lernbar_zugang_aktiv && !oldTeilnehmer?.lernbar_zugang_aktiv && teilnehmerForm.email) {
+        const mergedPermissions = {
+          ...existingUser.permissions,
+          lernbar: teilnehmerForm.lernbar_zugang_aktiv
+        }
+        
+        const updateData = {
+          name: fullName,
+          phone: teilnehmerForm.telefon || '',
+          whatsapp: teilnehmerForm.whatsapp || '',
+          ausbildung_typ: teilnehmerForm.ausbildung_typ || '',
+          notizen: teilnehmerForm.notizen || '',
+          permissions: mergedPermissions
+        }
+        
+        await pb.collection('users').update(existingUser.id, updateData)
+        showMessage('Bestehender User verknüpft!', 'success')
+        
+        if (teilnehmerForm.lernbar_zugang_aktiv && teilnehmerForm.email) {
           try {
             await pb.collection('users').requestPasswordReset(teilnehmerForm.email)
             showMessage('Password-Reset Email gesendet', 'success')
@@ -616,68 +673,30 @@ export default function Ausbildungen() {
           }
         }
       } else {
-        let existingUser = null
+        // NEUEN USER ERSTELLEN
+        console.log('➕ Erstelle neuen User')
+        await pb.collection('users').create(userData)
+        showMessage('Neuer Teilnehmer erstellt', 'success')
         
-        if (teilnehmerForm.email) {
+        if (teilnehmerForm.lernbar_zugang_aktiv && teilnehmerForm.email) {
           try {
-            const existingUsers = await pb.collection('users').getFullList({
-              filter: `email = "${teilnehmerForm.email}" && organization_id = "${user?.organization_id}"`
-            })
-            if (existingUsers.length > 0) {
-              existingUser = existingUsers[0]
-            }
-          } catch(e) {
-            console.log('Keine existierenden User gefunden')
-          }
-        }
-
-        if (existingUser) {
-          console.log('✅ Bestehender User gefunden:', existingUser.email)
-          
-          const mergedPermissions = {
-            ...existingUser.permissions,
-            lernbar: teilnehmerForm.lernbar_zugang_aktiv
-          }
-          
-          await pb.collection('users').update(existingUser.id, {
-            ...userData,
-            permissions: mergedPermissions
-          })
-          
-          showMessage('Bestehender User verknüpft!', 'success')
-          
-          if (teilnehmerForm.lernbar_zugang_aktiv && teilnehmerForm.email) {
-            try {
-              await pb.collection('users').requestPasswordReset(teilnehmerForm.email)
-              showMessage('Password-Reset Email gesendet', 'success')
-            } catch(e: any) {
-              console.error('Password Reset Fehler:', e)
-            }
-          }
-        } else {
-          console.log('➕ Erstelle neuen User')
-          await pb.collection('users').create(userData)
-          showMessage('Neuer Teilnehmer erstellt', 'success')
-          
-          if (teilnehmerForm.lernbar_zugang_aktiv && teilnehmerForm.email) {
-            try {
-              await pb.collection('users').requestPasswordReset(teilnehmerForm.email)
-              showMessage('Password-Reset Email gesendet', 'success')
-            } catch(e: any) {
-              console.error('Password Reset Fehler:', e)
-            }
+            await pb.collection('users').requestPasswordReset(teilnehmerForm.email)
+            showMessage('Password-Reset Email gesendet', 'success')
+          } catch(e: any) {
+            console.error('Password Reset Fehler:', e)
           }
         }
       }
-
-      setShowAddTeilnehmerModal(false)
-      setExistingUserDetected(null)
-      await loadTeilnehmer()
-    } catch(e: any) {
-      alert('Fehler beim Speichern: ' + e.message)
     }
-  }
 
+    setShowAddTeilnehmerModal(false)
+    setExistingUserDetected(null)
+    await loadTeilnehmer()
+  } catch(e: any) {
+    console.error('Fehler:', e)
+    alert('Fehler beim Speichern: ' + e.message)
+  }
+}
   async function deleteTeilnehmer(id: string, name: string) {
     if (!confirm(`Teilnehmer "${name}" wirklich löschen?`)) return
 
