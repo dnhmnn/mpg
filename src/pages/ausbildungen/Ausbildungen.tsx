@@ -528,11 +528,6 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
     return
   }
 
-  if (!teilnehmerForm.email) {
-    alert('Bitte Email eingeben')
-    return
-  }
-
   if (teilnehmerForm.lernbar_zugang_aktiv && !teilnehmerForm.email) {
     alert('Email erforderlich für Lernbar-Zugang')
     return
@@ -557,10 +552,11 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
     }
 
     const randomPassword = Math.random().toString(36).slice(-10) + Math.random().toString(36).toUpperCase().slice(-6) + '!'
+    const placeholderEmail = teilnehmerForm.email || `${teilnehmerForm.vorname.toLowerCase()}.${teilnehmerForm.nachname.toLowerCase()}.${Math.random().toString(36).slice(-6)}@kein-email.intern`
 
     const userData = {
       name: fullName,
-      email: teilnehmerForm.email || '',
+      email: placeholderEmail,
       phone: teilnehmerForm.telefon || '',
       whatsapp: teilnehmerForm.whatsapp || '',
       ausbildung_typ: teilnehmerForm.ausbildung_typ || '',
