@@ -38,7 +38,8 @@ interface Teilnehmer {
   id: string
   vorname: string
   nachname: string
-  email: string
+  email: string          // PocketBase Auth-Email (Platzhalter, nicht änderbar via API)
+  contact_email: string  // Echte Email (normales Text-Feld, frei änderbar)
   telefon: string
   whatsapp: string
   notizen: string
@@ -146,7 +147,7 @@ interface TeilnehmerForm {
   id?: string
   vorname: string
   nachname: string
-  email: string
+  email: string         // contact_email (echte Email)
   telefon: string
   whatsapp: string
   ausbildung_typ: string
@@ -318,7 +319,8 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
         id: u.id,
         vorname: u.name?.split(' ')[0] || '',
         nachname: u.name?.split(' ').slice(1).join(' ') || '',
-        email: u.email || '',
+        email: u.contact_email || '',   // contact_email ist die echte Email (frei änderbar)
+        contact_email: u.contact_email || '',
         telefon: u.phone || '',
         whatsapp: u.whatsapp || '',
         notizen: u.notizen || '',
@@ -604,11 +606,13 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
     }
 
     const randomPassword = Math.random().toString(36).slice(-10) + Math.random().toString(36).toUpperCase().slice(-6) + '!'
-    const placeholderEmail = teilnehmerForm.email || `${teilnehmerForm.vorname.toLowerCase()}.${teilnehmerForm.nachname.toLowerCase()}.${Math.random().toString(36).slice(-6)}@kein-email.intern`
+    // Auth-Email: immer Platzhalter (wird für PocketBase-Auth verwendet, nicht änderbar via API)
+    const placeholderEmail = `${teilnehmerForm.vorname.toLowerCase()}.${teilnehmerForm.nachname.toLowerCase()}.${Math.random().toString(36).slice(-6)}@kein-email.intern`
 
     const userData = {
       name: fullName,
-      email: placeholderEmail,
+      email: placeholderEmail,           // PocketBase Auth-Email (Platzhalter)
+      contact_email: teilnehmerForm.email || '', // Echte Email (normales Feld, frei änderbar)
       phone: teilnehmerForm.telefon || '',
       whatsapp: teilnehmerForm.whatsapp || '',
       ausbildung_typ: teilnehmerForm.ausbildung_typ || '',
@@ -624,9 +628,10 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
 
     if (teilnehmerForm.id) {
       // UPDATE bestehender Teilnehmer
-      // Email wird NICHT im Haupt-Update mitgeschickt (PocketBase wirft sonst validation_values_mismatch)
+      // contact_email ist ein normales Text-Feld → kann direkt aktualisiert werden
       const updateData = {
         name: fullName,
+        contact_email: teilnehmerForm.email || '',
         phone: teilnehmerForm.telefon || '',
         whatsapp: teilnehmerForm.whatsapp || '',
         ausbildung_typ: teilnehmerForm.ausbildung_typ || '',
@@ -635,19 +640,16 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
       }
 
       await pb.collection('users').update(teilnehmerForm.id, updateData)
-
-      const newEmail = teilnehmerForm.email || ''
-      const emailGeaendert = newEmail && newEmail !== originalEmail
-
-      showMessage('Teilnehmer aktualisiert' + (emailGeaendert ? ' (Email-Änderung: bitte im PocketBase Admin vornehmen)' : ''), 'success')
+      showMessage('Teilnehmer aktualisiert', 'success')
 
       const oldTeilnehmer = teilnehmer.find(t => t.id === teilnehmerForm.id)
-      // Password-Reset nur wenn Lernbar neu aktiviert und echte (nicht Platzhalter) Email vorhanden
-      const aktivEmail = emailGeaendert ? newEmail : originalEmail
-      if (teilnehmerForm.lernbar_zugang_aktiv && !oldTeilnehmer?.lernbar_zugang_aktiv && aktivEmail && !aktivEmail.includes('@kein-email.intern')) {
+      const kontaktEmail = teilnehmerForm.email || ''
+      if (teilnehmerForm.lernbar_zugang_aktiv && !oldTeilnehmer?.lernbar_zugang_aktiv && kontaktEmail) {
         try {
-          await pb.collection('users').requestPasswordReset(aktivEmail)
-          showMessage('Lernbar aktiviert – Password-Reset Email gesendet', 'success')
+          // Password-Reset an die contact_email senden
+          // (PocketBase requestPasswordReset braucht die auth-email, daher über admins-Umweg nicht möglich)
+          // Stattdessen: Info-Meldung
+          showMessage('Lernbar aktiviert – bitte Password-Reset in PocketBase Admin auslösen', 'success')
         } catch(e: any) {
           console.error('Password Reset Fehler:', e)
         }
@@ -1817,11 +1819,6 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
             
             <div className="field">
               <label>Email {teilnehmerForm.lernbar_zugang_aktiv && '*'}</label>
-              {teilnehmerForm.id && originalEmail.includes('@kein-email.intern') && (
-                <div style={{fontSize: '12px', color: '#d97706', background: '#fef9c3', padding: '6px 10px', borderRadius: '6px', marginBottom: '6px'}}>
-                  Platzhalter-Email aktiv. Zum Ändern: PocketBase Admin → users → Datensatz bearbeiten.
-                </div>
-              )}
               <input
                 type="email"
                 value={teilnehmerForm.email}
