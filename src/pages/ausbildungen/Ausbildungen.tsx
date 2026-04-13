@@ -319,7 +319,8 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
         id: u.id,
         vorname: u.name?.split(' ')[0] || '',
         nachname: u.name?.split(' ').slice(1).join(' ') || '',
-        email: u.contact_email || '',   // contact_email ist die echte Email (frei änderbar)
+        // contact_email bevorzugen; falls leer, normale email nehmen (wenn kein Platzhalter)
+        email: u.contact_email || (u.email?.includes('@kein-email.intern') ? '' : (u.email || '')),
         contact_email: u.contact_email || '',
         telefon: u.phone || '',
         whatsapp: u.whatsapp || '',
