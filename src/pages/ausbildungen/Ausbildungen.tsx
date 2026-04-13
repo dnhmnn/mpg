@@ -244,9 +244,13 @@ export default function Ausbildungen() {
   const [newLinkTitel, setNewLinkTitel] = useState('')
   const [newLinkUrl, setNewLinkUrl] = useState('')
 
+  const [allUsers, setAllUsers] = useState<any[]>([])
+  const [existingUserDetected, setExistingUserDetected] = useState<any>(null)
+
   useEffect(() => {
     if (user?.organization_id) {
       loadData()
+      loadAllUsers()
     }
   }, [user])
 
@@ -367,6 +371,51 @@ export default function Ausbildungen() {
       sort: '-created'
     })
     setKonzepte(records)
+  }
+
+  async function loadAllUsers() {
+    try {
+      const users = await pb.collection('users').getFullList({
+        filter: `organization_id = "${user?.organization_id}"`
+      })
+      setAllUsers(users)
+    } catch(e) {
+      console.error('Fehler beim Laden der User:', e)
+    }
+  }
+
+  async function checkExistingUser(email: string) {
+    if (!email || !email.includes('@')) {
+      setExistingUserDetected(null)
+      return
+    }
+
+    try {
+      const existingUsers = await pb.collection('users').getFullList({
+        filter: `email = "${email}" && organization_id = "${user?.organization_id}"`
+      })
+      
+      if (existingUsers.length > 0) {
+        const existing = existingUsers[0]
+        setExistingUserDetected(existing)
+        
+        setTeilnehmerForm({
+          ...teilnehmerForm,
+          vorname: existing.name?.split(' ')[0] || teilnehmerForm.vorname,
+          nachname: existing.name?.split(' ').slice(1).join(' ') || teilnehmerForm.nachname,
+          telefon: existing.phone || teilnehmerForm.telefon,
+          whatsapp: existing.whatsapp || teilnehmerForm.whatsapp,
+          ausbildung_typ: existing.ausbildung_typ || teilnehmerForm.ausbildung_typ,
+          notizen: existing.notizen || teilnehmerForm.notizen,
+          lernbar_zugang_aktiv: existing.permissions?.lernbar || teilnehmerForm.lernbar_zugang_aktiv
+        })
+      } else {
+        setExistingUserDetected(null)
+      }
+    } catch(e) {
+      console.error('Fehler beim Prüfen:', e)
+      setExistingUserDetected(null)
+    }
   }
 
   function showMessage(text: string, type: 'success' | 'error') {
@@ -490,6 +539,7 @@ export default function Ausbildungen() {
       notizen: '',
       lernbar_zugang_aktiv: false
     })
+    setExistingUserDetected(null)
     setShowAddTeilnehmerModal(true)
   }
 
@@ -505,6 +555,7 @@ export default function Ausbildungen() {
       notizen: teilnehmer.notizen,
       lernbar_zugang_aktiv: teilnehmer.lernbar_zugang_aktiv
     })
+    setExistingUserDetected(null)
     setShowAddTeilnehmerModal(true)
   }
 
@@ -565,20 +616,62 @@ export default function Ausbildungen() {
           }
         }
       } else {
-        const newUser = await pb.collection('users').create(userData)
-        showMessage('Teilnehmer erstellt', 'success')
+        let existingUser = null
         
-        if (teilnehmerForm.lernbar_zugang_aktiv && teilnehmerForm.email) {
+        if (teilnehmerForm.email) {
           try {
-            await pb.collection('users').requestPasswordReset(teilnehmerForm.email)
-            showMessage('Password-Reset Email gesendet', 'success')
-          } catch(e: any) {
-            console.error('Password Reset Fehler:', e)
+            const existingUsers = await pb.collection('users').getFullList({
+              filter: `email = "${teilnehmerForm.email}" && organization_id = "${user?.organization_id}"`
+            })
+            if (existingUsers.length > 0) {
+              existingUser = existingUsers[0]
+            }
+          } catch(e) {
+            console.log('Keine existierenden User gefunden')
+          }
+        }
+
+        if (existingUser) {
+          console.log('✅ Bestehender User gefunden:', existingUser.email)
+          
+          const mergedPermissions = {
+            ...existingUser.permissions,
+            lernbar: teilnehmerForm.lernbar_zugang_aktiv
+          }
+          
+          await pb.collection('users').update(existingUser.id, {
+            ...userData,
+            permissions: mergedPermissions
+          })
+          
+          showMessage('Bestehender User verknüpft!', 'success')
+          
+          if (teilnehmerForm.lernbar_zugang_aktiv && teilnehmerForm.email) {
+            try {
+              await pb.collection('users').requestPasswordReset(teilnehmerForm.email)
+              showMessage('Password-Reset Email gesendet', 'success')
+            } catch(e: any) {
+              console.error('Password Reset Fehler:', e)
+            }
+          }
+        } else {
+          console.log('➕ Erstelle neuen User')
+          await pb.collection('users').create(userData)
+          showMessage('Neuer Teilnehmer erstellt', 'success')
+          
+          if (teilnehmerForm.lernbar_zugang_aktiv && teilnehmerForm.email) {
+            try {
+              await pb.collection('users').requestPasswordReset(teilnehmerForm.email)
+              showMessage('Password-Reset Email gesendet', 'success')
+            } catch(e: any) {
+              console.error('Password Reset Fehler:', e)
+            }
           }
         }
       }
 
       setShowAddTeilnehmerModal(false)
+      setExistingUserDetected(null)
       await loadTeilnehmer()
     } catch(e: any) {
       alert('Fehler beim Speichern: ' + e.message)
@@ -1531,9 +1624,40 @@ export default function Ausbildungen() {
               <input
                 type="email"
                 value={teilnehmerForm.email}
-                onChange={(e) => setTeilnehmerForm({ ...teilnehmerForm, email: e.target.value })}
+                onChange={(e) => {
+                  setTeilnehmerForm({ ...teilnehmerForm, email: e.target.value })
+                  if (!teilnehmerForm.id) {
+                    checkExistingUser(e.target.value)
+                  }
+                }}
                 placeholder={teilnehmerForm.lernbar_zugang_aktiv ? 'Erforderlich für Lernbar' : 'Optional'}
+                style={{
+                  borderColor: existingUserDetected ? '#22c55e' : undefined,
+                  borderWidth: existingUserDetected ? '2px' : undefined
+                }}
               />
+              {existingUserDetected && !teilnehmerForm.id && (
+                <div style={{
+                  background: '#f0fdf4',
+                  border: '1px solid #86efac',
+                  borderRadius: '6px',
+                  padding: '10px',
+                  marginTop: '8px',
+                  fontSize: '13px',
+                  color: '#166534',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <polyline points="20 6 9 17 4 12"/>
+                  </svg>
+                  <div>
+                    <strong>Bestehender User gefunden!</strong><br/>
+                    {existingUserDetected.name} wird verknüpft (nicht neu erstellt)
+                  </div>
+                </div>
+              )}
             </div>
             
             <div className="field">
@@ -1610,15 +1734,28 @@ export default function Ausbildungen() {
       {showTerminDetailModal && selectedTermin && (
         <div className="modal show" onClick={() => setShowTerminDetailModal(false)}>
           <div className="modal-content large" onClick={(e) => e.stopPropagation()}>
-            <h3>{selectedTermin.name}</h3>
-            <div style={{fontSize: '14px', color: '#64748b', marginBottom: '24px'}}>
-              {new Date(selectedTermin.start_datetime).toLocaleDateString('de-DE', { 
-                day: '2-digit', 
-                month: '2-digit', 
-                year: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
-              })} • {selectedTermin.location}
+            <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px'}}>
+              <div>
+                <h3 style={{margin: 0}}>{selectedTermin.name}</h3>
+                <div style={{fontSize: '14px', color: '#64748b', marginTop: '8px'}}>
+                  {new Date(selectedTermin.start_datetime).toLocaleDateString('de-DE', { 
+                    day: '2-digit', 
+                    month: '2-digit', 
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  })} • {selectedTermin.location}
+                </div>
+              </div>
+              <button 
+                className="btn"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  openEditTermin(selectedTermin)
+                }}
+              >
+                Bearbeiten
+              </button>
             </div>
             
             <div className="tabs">
@@ -1649,6 +1786,7 @@ export default function Ausbildungen() {
             </div>
             
             <div className="tab-content">
+              {/* ÜBERSICHT TAB */}
               {currentTerminTab === 'uebersicht' && (
                 <div>
                   {selectedTermin.description && (
@@ -1658,9 +1796,18 @@ export default function Ausbildungen() {
                     </div>
                   )}
                   <div style={{display: 'grid', gap: '12px'}}>
-                    <div><strong>Status:</strong> {selectedTermin.status}</div>
+                    <div>
+                      <strong>Status:</strong>{' '}
+                      <span className={`status-badge ${selectedTermin.status}`}>
+                        {selectedTermin.status === 'geplant' && 'Geplant'}
+                        {selectedTermin.status === 'laufend' && 'Laufend'}
+                        {selectedTermin.status === 'abgeschlossen' && 'Abgeschlossen'}
+                        {selectedTermin.status === 'abgesagt' && 'Abgesagt'}
+                      </span>
+                    </div>
                     <div><strong>Dozent:</strong> {selectedTermin.dozent || '-'}</div>
                     <div><strong>Max. Teilnehmer:</strong> {selectedTermin.max_teilnehmer}</div>
+                    <div><strong>Aktuell angemeldet:</strong> {getTerminTeilnehmerCount(selectedTermin.id)}</div>
                     {selectedTermin.end_datetime && (
                       <div><strong>Ende:</strong> {new Date(selectedTermin.end_datetime).toLocaleDateString('de-DE', { 
                         day: '2-digit', 
@@ -1674,42 +1821,148 @@ export default function Ausbildungen() {
                 </div>
               )}
               
+              {/* TEILNEHMER TAB */}
               {currentTerminTab === 'teilnehmer' && (
                 <div>
-                  <div style={{marginBottom: '16px'}}>
-                    <button className="btn primary" onClick={() => {/* Add Teilnehmer */}}>
-                      Teilnehmer hinzufügen
+                  {/* Teilnehmer hinzufügen Dropdown */}
+                  <div style={{marginBottom: '16px', display: 'flex', gap: '8px'}}>
+                    <select 
+                      className="add-teilnehmer-select"
+                      onChange={(e) => {
+                        if (e.target.value) {
+                          addTeilnehmerToTermin(selectedTermin.id, e.target.value)
+                          e.target.value = ''
+                        }
+                      }}
+                      style={{
+                        flex: 1,
+                        padding: '10px',
+                        border: '1px solid rgba(0, 0, 0, 0.15)',
+                        borderRadius: '8px',
+                        fontSize: '14px',
+                        fontFamily: 'inherit'
+                      }}
+                    >
+                      <option value="">Teilnehmer hinzufügen...</option>
+                      {teilnehmer
+                        .filter(t => !terminTeilnehmer.some(tt => 
+                          tt.termin_id === selectedTermin.id && tt.teilnehmer_id === t.id
+                        ))
+                        .map(t => (
+                          <option key={t.id} value={t.id}>
+                            {t.vorname} {t.nachname} {t.email && `(${t.email})`}
+                          </option>
+                        ))
+                      }
+                    </select>
+                    <button 
+                      className="btn primary"
+                      onClick={() => {
+                        const link = `${window.location.origin}/ausbildungen/einladung/${selectedTermin.id}`
+                        navigator.clipboard.writeText(link)
+                        showMessage('Einladungslink kopiert!', 'success')
+                      }}
+                      title="Einladungslink kopieren"
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+                        <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+                      </svg>
+                      Link
                     </button>
                   </div>
+
+                  {/* Anwesenheitsliste */}
                   {terminTeilnehmer.filter(tt => tt.termin_id === selectedTermin.id).length === 0 ? (
                     <div className="empty-state">Noch keine Teilnehmer zugewiesen</div>
                   ) : (
-                    <div style={{display: 'flex', flexDirection: 'column', gap: '8px'}}>
+                    <div className="teilnehmer-list">
+                      <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: '1fr auto 120px 100px',
+                        gap: '12px',
+                        padding: '10px 12px',
+                        fontWeight: 700,
+                        fontSize: '13px',
+                        color: '#64748b',
+                        borderBottom: '2px solid #e5e7eb',
+                        marginBottom: '8px'
+                      }}>
+                        <div>Name</div>
+                        <div>Status</div>
+                        <div style={{textAlign: 'center'}}>Anwesend</div>
+                        <div></div>
+                      </div>
+                      
                       {terminTeilnehmer
                         .filter(tt => tt.termin_id === selectedTermin.id)
                         .map(tt => {
                           const t = teilnehmer.find(teiln => teiln.id === tt.teilnehmer_id)
                           if (!t) return null
                           return (
-                            <div key={tt.id} style={{
-                              background: '#f9fafb',
-                              padding: '12px',
-                              borderRadius: '8px',
-                              display: 'flex',
-                              justifyContent: 'space-between',
-                              alignItems: 'center'
-                            }}>
+                            <div 
+                              key={tt.id} 
+                              className="teilnehmer-row"
+                              style={{
+                                display: 'grid',
+                                gridTemplateColumns: '1fr auto 120px 100px',
+                                gap: '12px',
+                                padding: '12px',
+                                background: '#f9fafb',
+                                borderRadius: '8px',
+                                marginBottom: '8px',
+                                alignItems: 'center'
+                              }}
+                            >
                               <div>
                                 <div style={{fontWeight: 600}}>{t.vorname} {t.nachname}</div>
-                                <div style={{fontSize: '13px', color: '#64748b'}}>
-                                  Status: {tt.status} • Anwesend: {tt.anwesend ? 'Ja' : 'Nein'}
-                                </div>
+                                <div style={{fontSize: '13px', color: '#64748b'}}>{t.email}</div>
                               </div>
-                              <button 
-                                className="btn-small"
-                                onClick={() => toggleAnwesenheit(tt.id, tt.anwesend)}
+                              
+                              <select
+                                value={tt.status}
+                                onChange={(e) => updateTeilnehmerStatus(tt.id, e.target.value)}
+                                style={{
+                                  padding: '6px 10px',
+                                  border: '1px solid rgba(0, 0, 0, 0.15)',
+                                  borderRadius: '6px',
+                                  fontSize: '13px',
+                                  fontFamily: 'inherit'
+                                }}
                               >
-                                {tt.anwesend ? 'Abwesend' : 'Anwesend'}
+                                <option value="eingeladen">Eingeladen</option>
+                                <option value="zugesagt">Zugesagt</option>
+                                <option value="abgesagt">Abgesagt</option>
+                                <option value="entschuldigt">Entschuldigt</option>
+                              </select>
+                              
+                              <div style={{textAlign: 'center'}}>
+                                <button
+                                  className={tt.anwesend ? 'anwesend-btn active' : 'anwesend-btn'}
+                                  onClick={() => toggleAnwesenheit(tt.id, tt.anwesend)}
+                                  style={{
+                                    padding: '6px 12px',
+                                    borderRadius: '6px',
+                                    border: '1px solid',
+                                    borderColor: tt.anwesend ? '#22c55e' : 'rgba(0, 0, 0, 0.15)',
+                                    background: tt.anwesend ? '#f0fdf4' : '#fff',
+                                    color: tt.anwesend ? '#166534' : '#64748b',
+                                    fontWeight: 600,
+                                    fontSize: '13px',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s',
+                                    fontFamily: 'inherit'
+                                  }}
+                                >
+                                  {tt.anwesend ? '✓ Ja' : 'Nein'}
+                                </button>
+                              </div>
+                              
+                              <button 
+                                className="btn-small danger"
+                                onClick={() => removeTeilnehmerFromTermin(tt.id)}
+                              >
+                                Entfernen
                               </button>
                             </div>
                           )
@@ -1719,54 +1972,170 @@ export default function Ausbildungen() {
                 </div>
               )}
               
+              {/* DOKUMENTE TAB */}
               {currentTerminTab === 'dokumente' && (
                 <div>
                   <div style={{marginBottom: '16px'}}>
                     <button className="btn primary" onClick={() => setShowUploadDokumentModal(true)}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                        <polyline points="17 8 12 3 7 8"/>
+                        <line x1="12" y1="3" x2="12" y2="15"/>
+                      </svg>
                       Dokument hochladen
                     </button>
                   </div>
+                  
                   {dokumente.filter(d => d.termin_id === selectedTermin.id).length === 0 ? (
                     <div className="empty-state">Noch keine Dokumente hochgeladen</div>
                   ) : (
-                    <div style={{display: 'flex', flexDirection: 'column', gap: '8px'}}>
-                      {dokumente
-                        .filter(d => d.termin_id === selectedTermin.id)
-                        .map(d => (
-                          <div key={d.id} style={{
-                            background: '#f9fafb',
-                            padding: '12px',
-                            borderRadius: '8px',
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center'
-                          }}>
-                            <div>
-                              <div style={{fontWeight: 600}}>{d.name}</div>
-                              <div style={{fontSize: '13px', color: '#64748b'}}>
-                                Typ: {d.typ} {d.beschreibung && `• ${d.beschreibung}`}
-                              </div>
-                            </div>
-                            <button 
-                              className="btn-small danger"
-                              onClick={() => deleteDokument(d.id, d.name)}
-                            >
-                              Löschen
-                            </button>
+                    <>
+                      {/* Dozenten-Dokumente */}
+                      {dokumente.filter(d => d.termin_id === selectedTermin.id && d.typ === 'dozent').length > 0 && (
+                        <div style={{marginBottom: '24px'}}>
+                          <h4 style={{fontSize: '14px', fontWeight: 700, marginBottom: '12px', color: '#b91c1c'}}>
+                            📚 Dozenten-Unterlagen
+                          </h4>
+                          <div style={{display: 'flex', flexDirection: 'column', gap: '8px'}}>
+                            {dokumente
+                              .filter(d => d.termin_id === selectedTermin.id && d.typ === 'dozent')
+                              .map(d => (
+                                <div key={d.id} className="dokument-item">
+                                  <div style={{flex: 1}}>
+                                    <div style={{fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px'}}>
+                                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                        <polyline points="14 2 14 8 20 8"/>
+                                      </svg>
+                                      {d.name}
+                                    </div>
+                                    {d.beschreibung && (
+                                      <div style={{fontSize: '13px', color: '#64748b', marginTop: '4px'}}>
+                                        {d.beschreibung}
+                                      </div>
+                                    )}
+                                    <div style={{fontSize: '12px', color: '#94a3b8', marginTop: '4px'}}>
+                                      {new Date(d.created).toLocaleDateString('de-DE')}
+                                    </div>
+                                  </div>
+                                  <div style={{display: 'flex', gap: '8px'}}>
+                                    {d.datei && (
+                                      <a 
+                                        href={pb.files.getUrl(d, d.datei)}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="btn-small"
+                                        onClick={(e) => e.stopPropagation()}
+                                      >
+                                        Download
+                                      </a>
+                                    )}
+                                    <button 
+                                      className="btn-small danger"
+                                      onClick={() => deleteDokument(d.id, d.name)}
+                                    >
+                                      Löschen
+                                    </button>
+                                  </div>
+                                </div>
+                              ))}
                           </div>
-                        ))}
-                    </div>
+                        </div>
+                      )}
+                      
+                      {/* Teilnehmer-Dokumente */}
+                      {dokumente.filter(d => d.termin_id === selectedTermin.id && d.typ === 'teilnehmer').length > 0 && (
+                        <div>
+                          <h4 style={{fontSize: '14px', fontWeight: 700, marginBottom: '12px', color: '#059669'}}>
+                            👥 Teilnehmer-Unterlagen
+                          </h4>
+                          <div style={{display: 'flex', flexDirection: 'column', gap: '8px'}}>
+                            {dokumente
+                              .filter(d => d.termin_id === selectedTermin.id && d.typ === 'teilnehmer')
+                              .map(d => (
+                                <div key={d.id} className="dokument-item">
+                                  <div style={{flex: 1}}>
+                                    <div style={{fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px'}}>
+                                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                        <polyline points="14 2 14 8 20 8"/>
+                                      </svg>
+                                      {d.name}
+                                    </div>
+                                    {d.beschreibung && (
+                                      <div style={{fontSize: '13px', color: '#64748b', marginTop: '4px'}}>
+                                        {d.beschreibung}
+                                      </div>
+                                    )}
+                                    <div style={{fontSize: '12px', color: '#94a3b8', marginTop: '4px'}}>
+                                      {new Date(d.created).toLocaleDateString('de-DE')}
+                                    </div>
+                                  </div>
+                                  <div style={{display: 'flex', gap: '8px'}}>
+                                    {d.datei && (
+                                      <a 
+                                        href={pb.files.getUrl(d, d.datei)}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="btn-small"
+                                        onClick={(e) => e.stopPropagation()}
+                                      >
+                                        Download
+                                      </a>
+                                    )}
+                                    <button 
+                                      className="btn-small danger"
+                                      onClick={() => deleteDokument(d.id, d.name)}
+                                    >
+                                      Löschen
+                                    </button>
+                                  </div>
+                                </div>
+                              ))}
+                          </div>
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               )}
               
+              {/* MODULE TAB */}
               {currentTerminTab === 'module' && (
                 <div>
                   <div style={{marginBottom: '16px'}}>
-                    <button className="btn primary" onClick={() => setShowAssignModulModal(true)}>
-                      Modul zuweisen
-                    </button>
+                    <select 
+                      onChange={(e) => {
+                        if (e.target.value) {
+                          const frist = new Date()
+                          frist.setDate(frist.getDate() + 14)
+                          assignModulToTermin(e.target.value, selectedTermin.id, false, frist.toISOString())
+                          e.target.value = ''
+                        }
+                      }}
+                      style={{
+                        padding: '10px',
+                        border: '1px solid rgba(0, 0, 0, 0.15)',
+                        borderRadius: '8px',
+                        fontSize: '14px',
+                        fontFamily: 'inherit',
+                        width: '100%'
+                      }}
+                    >
+                      <option value="">Modul zuweisen...</option>
+                      {module
+                        .filter(m => !modulTermine.some(mt => 
+                          mt.termin_id === selectedTermin.id && mt.modul_id === m.id
+                        ))
+                        .map(m => (
+                          <option key={m.id} value={m.id}>
+                            {m.name} ({m.dauer_minuten} Min.)
+                          </option>
+                        ))
+                      }
+                    </select>
                   </div>
+                  
                   {modulTermine.filter(mt => mt.termin_id === selectedTermin.id).length === 0 ? (
                     <div className="empty-state">Noch keine Module zugewiesen</div>
                   ) : (
@@ -1777,14 +2146,14 @@ export default function Ausbildungen() {
                           const m = module.find(mod => mod.id === mt.modul_id)
                           if (!m) return null
                           return (
-                            <div key={mt.id} style={{
-                              background: '#f9fafb',
-                              padding: '12px',
-                              borderRadius: '8px'
-                            }}>
-                              <div style={{fontWeight: 600}}>{m.name}</div>
-                              <div style={{fontSize: '13px', color: '#64748b'}}>
-                                {mt.pflicht ? 'Pflicht' : 'Optional'} • Frist: {new Date(mt.frist_datum).toLocaleDateString('de-DE')}
+                            <div key={mt.id} className="modul-item">
+                              <div style={{flex: 1}}>
+                                <div style={{fontWeight: 600}}>{m.name}</div>
+                                <div style={{fontSize: '13px', color: '#64748b', marginTop: '4px'}}>
+                                  {mt.pflicht ? '⚠️ Pflicht' : '📌 Optional'} • 
+                                  Frist: {new Date(mt.frist_datum).toLocaleDateString('de-DE')} • 
+                                  Dauer: {m.dauer_minuten} Min.
+                                </div>
                               </div>
                             </div>
                           )
@@ -2146,7 +2515,7 @@ export default function Ausbildungen() {
           max-width: 1200px;
           margin: 0 auto;
           padding: 1rem;
-          padding-top: 110px;
+          padding-top: 165px;
           padding-bottom: 100px;
         }
 
@@ -2230,6 +2599,7 @@ export default function Ausbildungen() {
           top: 104px;
           z-index: 98;
           border-radius: 0;
+          margin-top: -145px;
         }
 
         .search-input {
@@ -2574,6 +2944,9 @@ export default function Ausbildungen() {
           font-family: inherit;
           border: 1px solid rgba(0, 0, 0, 0.08);
           font-size: 14px;
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
         }
 
         .btn:hover {
@@ -2602,6 +2975,8 @@ export default function Ausbildungen() {
           font-family: inherit;
           border: 1px solid rgba(0, 0, 0, 0.08);
           font-size: 12px;
+          text-decoration: none;
+          display: inline-block;
         }
 
         .btn-small:hover {
@@ -2727,6 +3102,36 @@ export default function Ausbildungen() {
           font-family: inherit;
         }
 
+        .teilnehmer-list {
+          border: 1px solid #e5e7eb;
+          border-radius: 8px;
+          padding: 12px;
+          background: #fff;
+        }
+
+        .dokument-item {
+          background: #f9fafb;
+          padding: 12px;
+          border-radius: 8px;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          gap: 12px;
+          border: 1px solid #e5e7eb;
+        }
+
+        .modul-item {
+          background: #f9fafb;
+          padding: 12px;
+          border-radius: 8px;
+          border: 1px solid #e5e7eb;
+        }
+
+        .anwesend-btn:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
         @media (max-width: 768px) {
           .action-toolbar {
             flex-wrap: wrap;
@@ -2743,6 +3148,7 @@ export default function Ausbildungen() {
           .filter-bar {
             flex-direction: column;
             top: 124px;
+            margin-top: -145px;
           }
 
           .filter-buttons {
@@ -2758,7 +3164,7 @@ export default function Ausbildungen() {
           }
 
           .content {
-            padding-top: 130px;
+            padding-top: 185px;
           }
 
           .tabs {
