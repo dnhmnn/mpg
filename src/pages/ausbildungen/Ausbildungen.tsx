@@ -528,6 +528,11 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
     return
   }
 
+  if (!teilnehmerForm.email) {
+    alert('Bitte Email eingeben')
+    return
+  }
+
   if (teilnehmerForm.lernbar_zugang_aktiv && !teilnehmerForm.email) {
     alert('Email erforderlich für Lernbar-Zugang')
     return
@@ -558,7 +563,6 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
       email: teilnehmerForm.email || '',
       phone: teilnehmerForm.telefon || '',
       whatsapp: teilnehmerForm.whatsapp || '',
-      ausbildung_typ: teilnehmerForm.ausbildung_typ || '',
       notizen: teilnehmerForm.notizen || '',
       role: 'teilnehmer',
       permissions: permissions,
@@ -576,7 +580,6 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
         email: teilnehmerForm.email || '',
         phone: teilnehmerForm.telefon || '',
         whatsapp: teilnehmerForm.whatsapp || '',
-        ausbildung_typ: teilnehmerForm.ausbildung_typ || '',
         notizen: teilnehmerForm.notizen || '',
         permissions: permissions
       }
@@ -623,7 +626,6 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
           name: fullName,
           phone: teilnehmerForm.telefon || '',
           whatsapp: teilnehmerForm.whatsapp || '',
-          ausbildung_typ: teilnehmerForm.ausbildung_typ || '',
           notizen: teilnehmerForm.notizen || '',
           permissions: mergedPermissions
         }
