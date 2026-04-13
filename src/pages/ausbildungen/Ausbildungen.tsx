@@ -288,22 +288,11 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
   }
 
   async function loadTeilnehmer() {
-    const termineUser = await pb.collection('ausbildungen_termine_user').getFullList({
-      filter: `organization_id = "${user?.organization_id}"`,
-      expand: 'teilnehmer_id'
-    })
-    
-    const userIds = [...new Set(termineUser.map(tu => tu.teilnehmer_id))]
-    
-    if (userIds.length === 0) {
-      setTeilnehmer([])
-      return
-    }
-    
     const userRecords = await pb.collection('users').getFullList({
-      filter: userIds.map(id => `id = "${id}"`).join(' || ')
+      filter: `organization_id = "${user?.organization_id}" && role = "teilnehmer"`,
+      sort: 'name'
     })
-    
+
     const teilnehmerData = userRecords.map(u => ({
       id: u.id,
       vorname: u.name?.split(' ')[0] || '',
@@ -317,7 +306,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
       organization_id: u.organization_id,
       created: u.created
     }))
-    
+
     setTeilnehmer(teilnehmerData)
   }
 
@@ -562,6 +551,8 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
       users_manage: false
     }
 
+    const randomPassword = Math.random().toString(36).slice(-10) + Math.random().toString(36).toUpperCase().slice(-6) + '!'
+
     const userData = {
       name: fullName,
       email: teilnehmerForm.email || '',
@@ -573,7 +564,9 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
       permissions: permissions,
       emailVisibility: true,
       verified: false,
-      organization_id: user?.organization_id
+      organization_id: user?.organization_id,
+      password: randomPassword,
+      passwordConfirm: randomPassword
     }
 
     if (teilnehmerForm.id) {
