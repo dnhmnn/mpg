@@ -321,9 +321,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
   async function loadTerminTeilnehmer() {
     try {
       const records = await pb.collection('ausbildungen_termine_user').getFullList({
-        filter: `organization_id = "${user?.organization_id}"`,
-        expand: 'teilnehmer_id',
-        sort: '-created',
+        sort: 'created',
         requestKey: 'loadTerminTeilnehmer'
       })
       setTerminTeilnehmer(records)
