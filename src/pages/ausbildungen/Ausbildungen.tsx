@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import PocketBase from 'pocketbase'
-import StatusBar from '../../components/StatusBar'  // ✅ 2 Ebenen hoch
-import { useAuth } from '../../hooks/useAuth'       // ✅ 2 Ebenen hoch
+import StatusBar from '../../components/StatusBar'
+import { useAuth } from '../../hooks/useAuth'
 
 const pb = new PocketBase('https://api.responda.systems')
 
@@ -102,6 +102,20 @@ interface ModulProgress {
   organization_id: string
 }
 
+interface Ausbildungskonzept {
+  id: string
+  name: string
+  beschreibung: string
+  lernziele: string[]
+  handlungen: string[]
+  koennen: string[]
+  wissensanhang_links: {titel: string, url: string}[]
+  verknuepfte_module: string[]
+  verknuepfte_termine: string[]
+  organization_id: string
+  created: string
+}
+
 interface TerminForm {
   id?: string
   name: string
@@ -134,6 +148,18 @@ interface ModulForm {
   dauer_minuten: number
 }
 
+interface KonzeptForm {
+  id?: string
+  name: string
+  beschreibung: string
+  lernziele: string[]
+  handlungen: string[]
+  koennen: string[]
+  wissensanhang_links: {titel: string, url: string}[]
+  verknuepfte_module: string[]
+  verknuepfte_termine: string[]
+}
+
 export default function Ausbildungen() {
   const { user, loading: authLoading, logout } = useAuth()
   
@@ -144,6 +170,7 @@ export default function Ausbildungen() {
   const [module, setModule] = useState<Modul[]>([])
   const [modulTermine, setModulTermine] = useState<ModulTermin[]>([])
   const [modulProgress, setModulProgress] = useState<ModulProgress[]>([])
+  const [konzepte, setKonzepte] = useState<Ausbildungskonzept[]>([])
   
   const [loading, setLoading] = useState(true)
   const [message, setMessage] = useState<{text: string, type: 'success' | 'error'} | null>(null)
@@ -155,6 +182,8 @@ export default function Ausbildungen() {
   const [showAddModulModal, setShowAddModulModal] = useState(false)
   const [showUploadDokumentModal, setShowUploadDokumentModal] = useState(false)
   const [showAssignModulModal, setShowAssignModulModal] = useState(false)
+  const [showAddKonzeptModal, setShowAddKonzeptModal] = useState(false)
+  const [showKonzeptDetailModal, setShowKonzeptDetailModal] = useState(false)
   
   const [terminForm, setTerminForm] = useState<TerminForm>({
     name: '',
@@ -184,18 +213,36 @@ export default function Ausbildungen() {
     inhalte: [],
     dauer_minuten: 60
   })
+
+  const [konzeptForm, setKonzeptForm] = useState<KonzeptForm>({
+    name: '',
+    beschreibung: '',
+    lernziele: [],
+    handlungen: [],
+    koennen: [],
+    wissensanhang_links: [],
+    verknuepfte_module: [],
+    verknuepfte_termine: []
+  })
   
   const [selectedTermin, setSelectedTermin] = useState<Termin | null>(null)
   const [selectedTeilnehmer, setSelectedTeilnehmer] = useState<Teilnehmer | null>(null)
+  const [selectedKonzept, setSelectedKonzept] = useState<Ausbildungskonzept | null>(null)
   const [currentTerminTab, setCurrentTerminTab] = useState<'uebersicht' | 'teilnehmer' | 'dokumente' | 'module'>('uebersicht')
   
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<'all' | 'geplant' | 'laufend' | 'abgeschlossen'>('all')
-  const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module'>('termine')
+  const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | 'konzepte'>('termine')
   
   const [uploadFile, setUploadFile] = useState<File | null>(null)
   const [uploadTyp, setUploadTyp] = useState<'dozent' | 'teilnehmer'>('teilnehmer')
   const [uploadBeschreibung, setUploadBeschreibung] = useState('')
+
+  const [newLernziel, setNewLernziel] = useState('')
+  const [newHandlung, setNewHandlung] = useState('')
+  const [newKoennen, setNewKoennen] = useState('')
+  const [newLinkTitel, setNewLinkTitel] = useState('')
+  const [newLinkUrl, setNewLinkUrl] = useState('')
 
   useEffect(() => {
     if (user?.organization_id) {
@@ -206,6 +253,7 @@ export default function Ausbildungen() {
   if (authLoading) {
     return null
   }
+
   async function loadData() {
     if (!user?.organization_id) return
     
@@ -218,7 +266,8 @@ export default function Ausbildungen() {
         loadDokumente(),
         loadModule(),
         loadModulTermine(),
-        loadModulProgress()
+        loadModulProgress(),
+        loadKonzepte()
       ])
     } catch(e: any) {
       console.error('Fehler beim Laden:', e)
@@ -237,13 +286,11 @@ export default function Ausbildungen() {
   }
 
   async function loadTeilnehmer() {
-    // NUR Teilnehmer laden, die in Events zugewiesen sind
     const termineUser = await pb.collection('ausbildungen_termine_user').getFullList({
       filter: `organization_id = "${user?.organization_id}"`,
       expand: 'teilnehmer_id'
     })
     
-    // Einzigartige User-IDs extrahieren
     const userIds = [...new Set(termineUser.map(tu => tu.teilnehmer_id))]
     
     if (userIds.length === 0) {
@@ -251,12 +298,10 @@ export default function Ausbildungen() {
       return
     }
     
-    // Users laden
     const userRecords = await pb.collection('users').getFullList({
       filter: userIds.map(id => `id = "${id}"`).join(' || ')
     })
     
-    // In Teilnehmer-Format konvertieren
     const teilnehmerData = userRecords.map(u => ({
       id: u.id,
       vorname: u.name?.split(' ')[0] || '',
@@ -316,12 +361,19 @@ export default function Ausbildungen() {
     setModulProgress(records)
   }
 
+  async function loadKonzepte() {
+    const records = await pb.collection('ausbildungen_konzepte').getFullList({
+      filter: `organization_id = "${user?.organization_id}"`,
+      sort: '-created'
+    })
+    setKonzepte(records)
+  }
+
   function showMessage(text: string, type: 'success' | 'error') {
     setMessage({ text, type })
     setTimeout(() => setMessage(null), 3000)
   }
 
-  // FILTER LOGIC
   const filteredTermine = termine.filter(termin => {
     const matchesSearch = 
       termin.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -345,6 +397,12 @@ export default function Ausbildungen() {
     return m.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
            m.beschreibung?.toLowerCase().includes(searchQuery.toLowerCase())
   })
+
+  const filteredKonzepte = konzepte.filter(k => {
+    return k.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+           k.beschreibung?.toLowerCase().includes(searchQuery.toLowerCase())
+  })
+
   // TERMIN FUNCTIONS
   function openAddTermin() {
     setTerminForm({
@@ -419,6 +477,7 @@ export default function Ausbildungen() {
     setCurrentTerminTab('uebersicht')
     setShowTerminDetailModal(true)
   }
+
   // TEILNEHMER FUNCTIONS
   function openAddTeilnehmer() {
     setTeilnehmerForm({
@@ -455,7 +514,6 @@ export default function Ausbildungen() {
       return
     }
 
-    // Email-Pflicht wenn Lernbar aktiv
     if (teilnehmerForm.lernbar_zugang_aktiv && !teilnehmerForm.email) {
       alert('Email erforderlich für Lernbar-Zugang')
       return
@@ -494,11 +552,9 @@ export default function Ausbildungen() {
       }
 
       if (teilnehmerForm.id) {
-        // UPDATE
         await pb.collection('users').update(teilnehmerForm.id, userData)
         showMessage('Teilnehmer aktualisiert', 'success')
         
-        // Wenn Lernbar aktiviert wurde, Password Reset senden
         const oldTeilnehmer = teilnehmer.find(t => t.id === teilnehmerForm.id)
         if (teilnehmerForm.lernbar_zugang_aktiv && !oldTeilnehmer?.lernbar_zugang_aktiv && teilnehmerForm.email) {
           try {
@@ -509,11 +565,9 @@ export default function Ausbildungen() {
           }
         }
       } else {
-        // CREATE
         const newUser = await pb.collection('users').create(userData)
         showMessage('Teilnehmer erstellt', 'success')
         
-        // Wenn Lernbar aktiv, Password Reset senden
         if (teilnehmerForm.lernbar_zugang_aktiv && teilnehmerForm.email) {
           try {
             await pb.collection('users').requestPasswordReset(teilnehmerForm.email)
@@ -591,6 +645,7 @@ export default function Ausbildungen() {
     setSelectedTeilnehmer(teilnehmer)
     setShowTeilnehmerDetailModal(true)
   }
+
   // TERMIN-TEILNEHMER FUNCTIONS
   async function addTeilnehmerToTermin(terminId: string, teilnehmerId: string) {
     try {
@@ -737,6 +792,118 @@ export default function Ausbildungen() {
     }
   }
 
+  // KONZEPT FUNCTIONS
+  function openAddKonzept() {
+    setKonzeptForm({
+      name: '',
+      beschreibung: '',
+      lernziele: [],
+      handlungen: [],
+      koennen: [],
+      wissensanhang_links: [],
+      verknuepfte_module: [],
+      verknuepfte_termine: []
+    })
+    setShowAddKonzeptModal(true)
+  }
+
+  function openEditKonzept(konzept: Ausbildungskonzept) {
+    setKonzeptForm({
+      id: konzept.id,
+      name: konzept.name,
+      beschreibung: konzept.beschreibung,
+      lernziele: konzept.lernziele || [],
+      handlungen: konzept.handlungen || [],
+      koennen: konzept.koennen || [],
+      wissensanhang_links: konzept.wissensanhang_links || [],
+      verknuepfte_module: konzept.verknuepfte_module || [],
+      verknuepfte_termine: konzept.verknuepfte_termine || []
+    })
+    setShowAddKonzeptModal(true)
+  }
+
+  async function saveKonzept() {
+    if (!konzeptForm.name) {
+      alert('Bitte Name eingeben')
+      return
+    }
+
+    try {
+      const data = {
+        ...konzeptForm,
+        organization_id: user?.organization_id
+      }
+
+      if (konzeptForm.id) {
+        await pb.collection('ausbildungen_konzepte').update(konzeptForm.id, data)
+        showMessage('Konzept aktualisiert', 'success')
+      } else {
+        await pb.collection('ausbildungen_konzepte').create(data)
+        showMessage('Konzept erstellt', 'success')
+      }
+
+      setShowAddKonzeptModal(false)
+      await loadKonzepte()
+    } catch(e: any) {
+      alert('Fehler beim Speichern: ' + e.message)
+    }
+  }
+
+  async function deleteKonzept(id: string, name: string) {
+    if (!confirm(`Konzept "${name}" wirklich löschen?`)) return
+
+    try {
+      await pb.collection('ausbildungen_konzepte').delete(id)
+      showMessage('Konzept gelöscht', 'success')
+      await loadKonzepte()
+    } catch(e: any) {
+      alert('Fehler beim Löschen: ' + e.message)
+    }
+  }
+
+  function viewKonzeptDetail(konzept: Ausbildungskonzept) {
+    setSelectedKonzept(konzept)
+    setShowKonzeptDetailModal(true)
+  }
+
+  function addKonzeptItem(field: 'lernziele' | 'handlungen' | 'koennen') {
+    let value = ''
+    if (field === 'lernziele') value = newLernziel
+    if (field === 'handlungen') value = newHandlung
+    if (field === 'koennen') value = newKoennen
+    
+    if (!value.trim()) return
+    
+    setKonzeptForm({
+      ...konzeptForm,
+      [field]: [...konzeptForm[field], value.trim()]
+    })
+    
+    if (field === 'lernziele') setNewLernziel('')
+    if (field === 'handlungen') setNewHandlung('')
+    if (field === 'koennen') setNewKoennen('')
+  }
+
+  function removeKonzeptItem(field: 'lernziele' | 'handlungen' | 'koennen', index: number) {
+    const updated = konzeptForm[field].filter((_, i) => i !== index)
+    setKonzeptForm({ ...konzeptForm, [field]: updated })
+  }
+
+  function addWissensLink() {
+    if (!newLinkTitel.trim() || !newLinkUrl.trim()) return
+    setKonzeptForm({
+      ...konzeptForm,
+      wissensanhang_links: [...konzeptForm.wissensanhang_links, {titel: newLinkTitel.trim(), url: newLinkUrl.trim()}]
+    })
+    setNewLinkTitel('')
+    setNewLinkUrl('')
+  }
+
+  function removeWissensLink(index: number) {
+    const updated = konzeptForm.wissensanhang_links.filter((_, i) => i !== index)
+    setKonzeptForm({ ...konzeptForm, wissensanhang_links: updated })
+  }
+
   // HELPER FUNCTIONS
   function getTerminTeilnehmerCount(terminId: string): number {
     return terminTeilnehmer.filter(tt => tt.termin_id === terminId).length
@@ -790,6 +957,16 @@ export default function Ausbildungen() {
             <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
           </svg>
         </button>
+        <button 
+          className={`action-btn ${viewMode === 'konzepte' ? 'active' : ''}`}
+          onClick={() => setViewMode('konzepte')} 
+          title="Ausbildungskonzepte"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+            <path d="M2 17l10 5 10-5M2 12l10 5 10-5"/>
+          </svg>
+        </button>
         <div style={{flex: 1}} />
         {viewMode === 'termine' && (
           <button className="action-btn primary" onClick={openAddTermin} title="Termin hinzufügen">
@@ -815,6 +992,14 @@ export default function Ausbildungen() {
             </svg>
           </button>
         )}
+        {viewMode === 'konzepte' && (
+          <button className="action-btn primary" onClick={openAddKonzept} title="Konzept hinzufügen">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <line x1="12" y1="5" x2="12" y2="19"/>
+              <line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+          </button>
+        )}
       </div>
 
       <div className="content">
@@ -832,7 +1017,8 @@ export default function Ausbildungen() {
             placeholder={
               viewMode === 'termine' ? 'Termine durchsuchen...' :
               viewMode === 'teilnehmer' ? 'Teilnehmer durchsuchen...' :
-              'Module durchsuchen...'
+              viewMode === 'module' ? 'Module durchsuchen...' :
+              'Konzepte durchsuchen...'
             }
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -1116,6 +1302,96 @@ export default function Ausbildungen() {
                         <polyline points="12 6 12 12 16 14"/>
                       </svg>
                       <span>{m.inhalte?.length || 0} Inhalte</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )
+        )}
+
+        {/* KONZEPTE VIEW */}
+        {viewMode === 'konzepte' && (
+          loading ? (
+            <div className="empty-state">Lade Konzepte...</div>
+          ) : filteredKonzepte.length === 0 ? (
+            <div className="empty-state">
+              <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{opacity: 0.3, marginBottom: '16px'}}>
+                <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                <path d="M2 17l10 5 10-5M2 12l10 5 10-5"/>
+              </svg>
+              <div style={{fontWeight: 700, marginBottom: '8px'}}>Keine Konzepte</div>
+              <div>Erstelle dein erstes Ausbildungskonzept</div>
+            </div>
+          ) : (
+            <div className="cards-grid">
+              {filteredKonzepte.map(k => (
+                <div 
+                  key={k.id} 
+                  className="card"
+                  onClick={() => viewKonzeptDetail(k)}
+                >
+                  <div className="card-menu-container">
+                    <button 
+                      className="menu-dots"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        const menuId = `menu-${k.id}`
+                        const menu = document.getElementById(menuId)
+                        const allMenus = document.querySelectorAll('.card-menu-dropdown')
+                        allMenus.forEach(m => {
+                          if (m.id !== menuId) m.classList.remove('show')
+                        })
+                        menu?.classList.toggle('show')
+                      }}
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                        <circle cx="12" cy="12" r="1"/>
+                        <circle cx="12" cy="5" r="1"/>
+                        <circle cx="12" cy="19" r="1"/>
+                      </svg>
+                    </button>
+                    <div id={`menu-${k.id}`} className="card-menu-dropdown">
+                      <button 
+                        className="menu-item"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          openEditKonzept(k)
+                        }}
+                      >
+                        Bearbeiten
+                      </button>
+                      <button 
+                        className="menu-item danger"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          deleteKonzept(k.id, k.name)
+                        }}
+                      >
+                        Löschen
+                      </button>
+                    </div>
+                  </div>
+                  
+                  <div className="card-type">Konzept</div>
+                  <div className="card-name">{k.name}</div>
+                  <div className="card-meta">
+                    {k.beschreibung && <div>{k.beschreibung}</div>}
+                  </div>
+                  <div className="card-stats">
+                    <div className="stat-item">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                        <polyline points="22 4 12 14.01 9 11.01"/>
+                      </svg>
+                      <span>{k.lernziele?.length || 0} Lernziele</span>
+                    </div>
+                    <div className="stat-item">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <polyline points="9 11 12 14 22 4"/>
+                        <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+                      </svg>
+                      <span>{k.handlungen?.length || 0} Handlungen</span>
                     </div>
                   </div>
                 </div>
@@ -1628,12 +1904,249 @@ export default function Ausbildungen() {
         </div>
       )}
 
+      {/* ADD/EDIT KONZEPT MODAL */}
+      {showAddKonzeptModal && (
+        <div className="modal show" onClick={() => setShowAddKonzeptModal(false)}>
+          <div className="modal-content large" onClick={(e) => e.stopPropagation()}>
+            <h3>{konzeptForm.id ? 'Konzept bearbeiten' : 'Konzept erstellen'}</h3>
+            
+            <div className="field">
+              <label>Name *</label>
+              <input
+                type="text"
+                value={konzeptForm.name}
+                onChange={(e) => setKonzeptForm({ ...konzeptForm, name: e.target.value })}
+                placeholder="z.B. San A - Modul 1"
+                autoFocus
+              />
+            </div>
+            
+            <div className="field">
+              <label>Beschreibung</label>
+              <textarea
+                value={konzeptForm.beschreibung}
+                onChange={(e) => setKonzeptForm({ ...konzeptForm, beschreibung: e.target.value })}
+                rows={2}
+                placeholder="Kurze Beschreibung des Konzepts"
+              />
+            </div>
+
+            <div style={{marginTop: '24px'}}>
+              <h4 style={{marginBottom: '12px', fontSize: '16px'}}>Lernziele</h4>
+              <div className="list-editor">
+                {konzeptForm.lernziele.map((lz, idx) => (
+                  <div key={idx} className="list-item">
+                    <span>{lz}</span>
+                    <button className="btn-icon danger" onClick={() => removeKonzeptItem('lernziele', idx)}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <line x1="18" y1="6" x2="6" y2="18"/>
+                        <line x1="6" y1="6" x2="18" y2="18"/>
+                      </svg>
+                    </button>
+                  </div>
+                ))}
+                <div className="add-item">
+                  <input
+                    type="text"
+                    value={newLernziel}
+                    onChange={(e) => setNewLernziel(e.target.value)}
+                    placeholder="Neues Lernziel hinzufügen..."
+                    onKeyPress={(e) => e.key === 'Enter' && addKonzeptItem('lernziele')}
+                  />
+                  <button className="btn-small primary" onClick={() => addKonzeptItem('lernziele')}>+</button>
+                </div>
+              </div>
+            </div>
+
+            <div style={{marginTop: '24px'}}>
+              <h4 style={{marginBottom: '12px', fontSize: '16px'}}>Handlungen</h4>
+              <div className="list-editor">
+                {konzeptForm.handlungen.map((h, idx) => (
+                  <div key={idx} className="list-item">
+                    <span>{h}</span>
+                    <button className="btn-icon danger" onClick={() => removeKonzeptItem('handlungen', idx)}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <line x1="18" y1="6" x2="6" y2="18"/>
+                        <line x1="6" y1="6" x2="18" y2="18"/>
+                      </svg>
+                    </button>
+                  </div>
+                ))}
+                <div className="add-item">
+                  <input
+                    type="text"
+                    value={newHandlung}
+                    onChange={(e) => setNewHandlung(e.target.value)}
+                    placeholder="Neue Handlung hinzufügen..."
+                    onKeyPress={(e) => e.key === 'Enter' && addKonzeptItem('handlungen')}
+                  />
+                  <button className="btn-small primary" onClick={() => addKonzeptItem('handlungen')}>+</button>
+                </div>
+              </div>
+            </div>
+
+            <div style={{marginTop: '24px'}}>
+              <h4 style={{marginBottom: '12px', fontSize: '16px'}}>Das Können</h4>
+              <div className="list-editor">
+                {konzeptForm.koennen.map((k, idx) => (
+                  <div key={idx} className="list-item">
+                    <span>{k}</span>
+                    <button className="btn-icon danger" onClick={() => removeKonzeptItem('koennen', idx)}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <line x1="18" y1="6" x2="6" y2="18"/>
+                        <line x1="6" y1="6" x2="18" y2="18"/>
+                      </svg>
+                    </button>
+                  </div>
+                ))}
+                <div className="add-item">
+                  <input
+                    type="text"
+                    value={newKoennen}
+                    onChange={(e) => setNewKoennen(e.target.value)}
+                    placeholder="Neue Kompetenz hinzufügen..."
+                    onKeyPress={(e) => e.key === 'Enter' && addKonzeptItem('koennen')}
+                  />
+                  <button className="btn-small primary" onClick={() => addKonzeptItem('koennen')}>+</button>
+                </div>
+              </div>
+            </div>
+
+            <div style={{marginTop: '24px'}}>
+              <h4 style={{marginBottom: '12px', fontSize: '16px'}}>Wissensanhang (Links)</h4>
+              <div className="list-editor">
+                {konzeptForm.wissensanhang_links.map((link, idx) => (
+                  <div key={idx} className="list-item">
+                    <div>
+                      <div style={{fontWeight: 600}}>{link.titel}</div>
+                      <div style={{fontSize: '12px', color: '#64748b'}}>{link.url}</div>
+                    </div>
+                    <button className="btn-icon danger" onClick={() => removeWissensLink(idx)}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <line x1="18" y1="6" x2="6" y2="18"/>
+                        <line x1="6" y1="6" x2="18" y2="18"/>
+                      </svg>
+                    </button>
+                  </div>
+                ))}
+                <div className="add-link">
+                  <input
+                    type="text"
+                    value={newLinkTitel}
+                    onChange={(e) => setNewLinkTitel(e.target.value)}
+                    placeholder="Titel"
+                    style={{flex: 1}}
+                  />
+                  <input
+                    type="url"
+                    value={newLinkUrl}
+                    onChange={(e) => setNewLinkUrl(e.target.value)}
+                    placeholder="URL"
+                    style={{flex: 2}}
+                  />
+                  <button className="btn-small primary" onClick={addWissensLink}>+</button>
+                </div>
+              </div>
+            </div>
+            
+            <div className="modal-actions">
+              <button className="btn" onClick={() => setShowAddKonzeptModal(false)}>
+                Abbrechen
+              </button>
+              <button className="btn primary" onClick={saveKonzept}>
+                {konzeptForm.id ? 'Speichern' : 'Erstellen'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* KONZEPT DETAIL MODAL */}
+      {showKonzeptDetailModal && selectedKonzept && (
+        <div className="modal show" onClick={() => setShowKonzeptDetailModal(false)}>
+          <div className="modal-content large" onClick={(e) => e.stopPropagation()}>
+            <h3>{selectedKonzept.name}</h3>
+            {selectedKonzept.beschreibung && (
+              <div style={{fontSize: '14px', color: '#64748b', marginBottom: '24px'}}>
+                {selectedKonzept.beschreibung}
+              </div>
+            )}
+
+            {selectedKonzept.lernziele && selectedKonzept.lernziele.length > 0 && (
+              <div style={{marginBottom: '20px'}}>
+                <h4 style={{fontSize: '16px', marginBottom: '12px'}}>🎯 Lernziele</h4>
+                <ul style={{marginLeft: '20px', lineHeight: '1.8'}}>
+                  {selectedKonzept.lernziele.map((lz, idx) => (
+                    <li key={idx}>{lz}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {selectedKonzept.handlungen && selectedKonzept.handlungen.length > 0 && (
+              <div style={{marginBottom: '20px'}}>
+                <h4 style={{fontSize: '16px', marginBottom: '12px'}}>✋ Handlungen</h4>
+                <ul style={{marginLeft: '20px', lineHeight: '1.8'}}>
+                  {selectedKonzept.handlungen.map((h, idx) => (
+                    <li key={idx}>{h}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {selectedKonzept.koennen && selectedKonzept.koennen.length > 0 && (
+              <div style={{marginBottom: '20px'}}>
+                <h4 style={{fontSize: '16px', marginBottom: '12px'}}>💪 Das Können</h4>
+                <ul style={{marginLeft: '20px', lineHeight: '1.8'}}>
+                  {selectedKonzept.koennen.map((k, idx) => (
+                    <li key={idx}>{k}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {selectedKonzept.wissensanhang_links && selectedKonzept.wissensanhang_links.length > 0 && (
+              <div style={{marginBottom: '20px'}}>
+                <h4 style={{fontSize: '16px', marginBottom: '12px'}}>📚 Wissensanhang</h4>
+                <div style={{display: 'flex', flexDirection: 'column', gap: '8px'}}>
+                  {selectedKonzept.wissensanhang_links.map((link, idx) => (
+                    <a 
+                      key={idx} 
+                      href={link.url} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      style={{
+                        background: '#f9fafb',
+                        padding: '12px',
+                        borderRadius: '8px',
+                        textDecoration: 'none',
+                        color: '#1d1d1f',
+                        display: 'block'
+                      }}
+                    >
+                      <div style={{fontWeight: 600}}>{link.titel}</div>
+                      <div style={{fontSize: '12px', color: '#64748b', marginTop: '4px'}}>{link.url}</div>
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="modal-actions">
+              <button className="btn" onClick={() => setShowKonzeptDetailModal(false)}>
+                Schließen
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <style>{`
         .content {
           max-width: 1200px;
           margin: 0 auto;
           padding: 1rem;
-          padding-top: 140px;
+          padding-top: 110px;
           padding-bottom: 100px;
         }
 
@@ -1710,6 +2223,13 @@ export default function Ausbildungen() {
           gap: 12px;
           margin-bottom: 24px;
           flex-wrap: wrap;
+          background: #fff;
+          padding: 12px 16px;
+          border-bottom: 1px solid #e5e7eb;
+          position: sticky;
+          top: 104px;
+          z-index: 98;
+          border-radius: 0;
         }
 
         .search-input {
@@ -1998,6 +2518,12 @@ export default function Ausbildungen() {
           font-weight: 800;
         }
 
+        .modal-content h4 {
+          margin: 0 0 12px 0;
+          color: #1d1d1f;
+          font-weight: 700;
+        }
+
         .field {
           margin-bottom: 16px;
         }
@@ -2090,6 +2616,35 @@ export default function Ausbildungen() {
           background: #fee2e2;
         }
 
+        .btn-small.primary {
+          background: #b91c1c;
+          color: #fff;
+          border-color: #b91c1c;
+        }
+
+        .btn-icon {
+          background: none;
+          border: none;
+          cursor: pointer;
+          padding: 4px;
+          color: #64748b;
+          transition: all 0.2s;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 4px;
+        }
+
+        .btn-icon:hover {
+          background: #f3f4f6;
+          color: #1d1d1f;
+        }
+
+        .btn-icon.danger:hover {
+          background: #fee2e2;
+          color: #dc2626;
+        }
+
         .tabs {
           display: flex;
           gap: 4px;
@@ -2123,6 +2678,55 @@ export default function Ausbildungen() {
           min-height: 200px;
         }
 
+        .list-editor {
+          background: #f9fafb;
+          border: 1px solid rgba(0, 0, 0, 0.08);
+          border-radius: 8px;
+          padding: 12px;
+        }
+
+        .list-item {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          background: #fff;
+          padding: 10px 12px;
+          border-radius: 6px;
+          margin-bottom: 8px;
+          gap: 12px;
+        }
+
+        .list-item:last-of-type {
+          margin-bottom: 12px;
+        }
+
+        .add-item {
+          display: flex;
+          gap: 8px;
+        }
+
+        .add-item input {
+          flex: 1;
+          padding: 8px 12px;
+          border: 1px solid rgba(0, 0, 0, 0.15);
+          border-radius: 6px;
+          font-size: 14px;
+          font-family: inherit;
+        }
+
+        .add-link {
+          display: flex;
+          gap: 8px;
+        }
+
+        .add-link input {
+          padding: 8px 12px;
+          border: 1px solid rgba(0, 0, 0, 0.15);
+          border-radius: 6px;
+          font-size: 14px;
+          font-family: inherit;
+        }
+
         @media (max-width: 768px) {
           .action-toolbar {
             flex-wrap: wrap;
@@ -2138,6 +2742,7 @@ export default function Ausbildungen() {
 
           .filter-bar {
             flex-direction: column;
+            top: 124px;
           }
 
           .filter-buttons {
@@ -2153,7 +2758,7 @@ export default function Ausbildungen() {
           }
 
           .content {
-            padding-top: 160px;
+            padding-top: 130px;
           }
 
           .tabs {
