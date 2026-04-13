@@ -280,84 +280,122 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
   }
 
   async function loadTermine() {
-    const records = await pb.collection('ausbildungen_termine').getFullList({
-      filter: `organization_id = "${user?.organization_id}"`,
-      sort: '-start_datetime'
-    })
-    setTermine(records)
+    try {
+      const records = await pb.collection('ausbildungen_termine').getFullList({
+        filter: `organization_id = "${user?.organization_id}"`,
+        sort: '-start_datetime',
+        requestKey: 'loadTermine'
+      })
+      setTermine(records)
+    } catch(e: any) {
+      if (e?.status !== 404) console.error('loadTermine:', e)
+    }
   }
 
   async function loadTeilnehmer() {
-    const userRecords = await pb.collection('users').getFullList({
-      filter: `organization_id = "${user?.organization_id}" && role = "teilnehmer"`,
-      sort: 'name'
-    })
-
-    const teilnehmerData = userRecords.map(u => ({
-      id: u.id,
-      vorname: u.name?.split(' ')[0] || '',
-      nachname: u.name?.split(' ').slice(1).join(' ') || '',
-      email: u.email || '',
-      telefon: u.phone || '',
-      whatsapp: u.whatsapp || '',
-      notizen: u.notizen || '',
-      ausbildung_typ: u.ausbildung_typ || '',
-      lernbar_zugang_aktiv: u.permissions?.lernbar || false,
-      organization_id: u.organization_id,
-      created: u.created
-    }))
-
-    setTeilnehmer(teilnehmerData)
+    try {
+      const userRecords = await pb.collection('users').getFullList({
+        filter: `organization_id = "${user?.organization_id}" && role = "teilnehmer"`,
+        sort: 'name',
+        requestKey: 'loadTeilnehmer'
+      })
+      const teilnehmerData = userRecords.map(u => ({
+        id: u.id,
+        vorname: u.name?.split(' ')[0] || '',
+        nachname: u.name?.split(' ').slice(1).join(' ') || '',
+        email: u.email || '',
+        telefon: u.phone || '',
+        whatsapp: u.whatsapp || '',
+        notizen: u.notizen || '',
+        ausbildung_typ: u.ausbildung_typ || '',
+        lernbar_zugang_aktiv: u.permissions?.lernbar || false,
+        organization_id: u.organization_id,
+        created: u.created
+      }))
+      setTeilnehmer(teilnehmerData)
+    } catch(e: any) {
+      if (e?.status !== 404) console.error('loadTeilnehmer:', e)
+    }
   }
 
   async function loadTerminTeilnehmer() {
-    const records = await pb.collection('ausbildungen_termine_user').getFullList({
-      filter: `organization_id = "${user?.organization_id}"`,
-      expand: 'teilnehmer_id',
-      sort: '-created'
-    })
-    setTerminTeilnehmer(records)
+    try {
+      const records = await pb.collection('ausbildungen_termine_user').getFullList({
+        filter: `organization_id = "${user?.organization_id}"`,
+        expand: 'teilnehmer_id',
+        sort: '-created',
+        requestKey: 'loadTerminTeilnehmer'
+      })
+      setTerminTeilnehmer(records)
+    } catch(e: any) {
+      if (e?.status !== 404) console.error('loadTerminTeilnehmer:', e)
+    }
   }
 
   async function loadDokumente() {
-    const records = await pb.collection('ausbildungen_dokumente').getFullList({
-      filter: `organization_id = "${user?.organization_id}"`,
-      sort: '-created'
-    })
-    setDokumente(records)
+    try {
+      const records = await pb.collection('ausbildungen_dokumente').getFullList({
+        filter: `organization_id = "${user?.organization_id}"`,
+        sort: '-created',
+        requestKey: 'loadDokumente'
+      })
+      setDokumente(records)
+    } catch(e: any) {
+      if (e?.status !== 404) console.error('loadDokumente:', e)
+    }
   }
 
   async function loadModule() {
-    const records = await pb.collection('ausbildungen_module').getFullList({
-      filter: `organization_id = "${user?.organization_id}"`,
-      sort: 'name'
-    })
-    setModule(records)
+    try {
+      const records = await pb.collection('ausbildungen_module').getFullList({
+        filter: `organization_id = "${user?.organization_id}"`,
+        sort: 'name',
+        requestKey: 'loadModule'
+      })
+      setModule(records)
+    } catch(e: any) {
+      if (e?.status !== 404) console.error('loadModule:', e)
+    }
   }
 
   async function loadModulTermine() {
-    const records = await pb.collection('ausbildungen_module_termine').getFullList({
-      filter: `organization_id = "${user?.organization_id}"`,
-      expand: 'modul_id',
-      sort: '-created'
-    })
-    setModulTermine(records)
+    try {
+      const records = await pb.collection('ausbildungen_module_termine').getFullList({
+        filter: `organization_id = "${user?.organization_id}"`,
+        expand: 'modul_id',
+        sort: '-created',
+        requestKey: 'loadModulTermine'
+      })
+      setModulTermine(records)
+    } catch(e: any) {
+      if (e?.status !== 404) console.error('loadModulTermine:', e)
+    }
   }
 
   async function loadModulProgress() {
-    const records = await pb.collection('ausbildungen_module_progress').getFullList({
-      filter: `organization_id = "${user?.organization_id}"`,
-      sort: '-updated'
-    })
-    setModulProgress(records)
+    try {
+      const records = await pb.collection('ausbildungen_module_progress').getFullList({
+        filter: `organization_id = "${user?.organization_id}"`,
+        sort: '-updated',
+        requestKey: 'loadModulProgress'
+      })
+      setModulProgress(records)
+    } catch(e: any) {
+      if (e?.status !== 404) console.error('loadModulProgress:', e)
+    }
   }
 
   async function loadKonzepte() {
-    const records = await pb.collection('ausbildungen_konzepte').getFullList({
-      filter: `organization_id = "${user?.organization_id}"`,
-      sort: '-created'
-    })
-    setKonzepte(records)
+    try {
+      const records = await pb.collection('ausbildungen_konzepte').getFullList({
+        filter: `organization_id = "${user?.organization_id}"`,
+        sort: '-created',
+        requestKey: 'loadKonzepte'
+      })
+      setKonzepte(records)
+    } catch(e: any) {
+      if (e?.status !== 404) console.error('loadKonzepte:', e)
+    }
   }
 
   async function loadAllUsers() {
