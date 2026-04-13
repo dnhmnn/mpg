@@ -782,7 +782,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
       showMessage('Teilnehmer hinzugefügt', 'success')
       await loadTerminTeilnehmer()
     } catch(e: any) {
-      alert('Fehler: ' + e.message)
+      alert('Fehler: ' + e.message + '\nStatus: ' + e.status + '\nDetails: ' + JSON.stringify(e.data))
     }
   }
 
