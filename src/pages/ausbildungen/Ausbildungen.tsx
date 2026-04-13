@@ -230,7 +230,7 @@ export default function Ausbildungen() {
   const [selectedKonzept, setSelectedKonzept] = useState<Ausbildungskonzept | null>(null)
   const [currentTerminTab, setCurrentTerminTab] = useState<'uebersicht' | 'teilnehmer' | 'dokumente' | 'module'>('uebersicht')
   
-const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | 'konzepte'>('termine')
+const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | 'konzepte' | 'jahresuebersicht'>('termine')
   
   const [uploadFile, setUploadFile] = useState<File | null>(null)
   const [uploadTyp, setUploadTyp] = useState<'dozent' | 'teilnehmer'>('teilnehmer')
@@ -774,12 +774,41 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
         teilnehmer_id: teilnehmerId,
         status: 'eingeladen',
         eingeladen_am: new Date().toISOString(),
-        eingeladen_via: 'persönlich',
+        eingeladen_via: 'email',
         anwesend: false,
         notizen: '',
         organization_id: user?.organization_id
       })
       showMessage('Teilnehmer hinzugefügt', 'success')
+      await loadTerminTeilnehmer()
+    } catch(e: any) {
+      alert('Fehler: ' + e.message)
+    }
+  }
+
+  async function addAlleTeilnehmerToTermin(terminId: string) {
+    const bereitsZugewiesen = terminTeilnehmer
+      .filter(tt => tt.termin_id === terminId)
+      .map(tt => tt.teilnehmer_id)
+    const fehlende = teilnehmer.filter(t => !bereitsZugewiesen.includes(t.id))
+    if (fehlende.length === 0) {
+      showMessage('Alle Teilnehmer bereits zugewiesen', 'success')
+      return
+    }
+    try {
+      await Promise.all(fehlende.map(t =>
+        pb.collection('ausbildungen_termine_user').create({
+          termin_id: terminId,
+          teilnehmer_id: t.id,
+          status: 'eingeladen',
+          eingeladen_am: new Date().toISOString(),
+          eingeladen_via: 'email',
+          anwesend: false,
+          notizen: '',
+          organization_id: user?.organization_id
+        })
+      ))
+      showMessage(`${fehlende.length} Teilnehmer hinzugefügt`, 'success')
       await loadTerminTeilnehmer()
     } catch(e: any) {
       alert('Fehler: ' + e.message)
@@ -801,17 +830,17 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
   async function updateTeilnehmerStatus(terminTeilnehmerId: string, status: string) {
     try {
       await pb.collection('ausbildungen_termine_user').update(terminTeilnehmerId, { status })
-      showMessage('Status aktualisiert', 'success')
       await loadTerminTeilnehmer()
     } catch(e: any) {
       alert('Fehler: ' + e.message)
     }
   }
 
-  async function toggleAnwesenheit(terminTeilnehmerId: string, currentStatus: boolean) {
+  async function updateAnwesenheit(terminTeilnehmerId: string, anwesenheit: 'da' | 'krank' | 'entschuldigt' | 'fehlend' | '') {
     try {
-      await pb.collection('ausbildungen_termine_user').update(terminTeilnehmerId, { 
-        anwesend: !currentStatus 
+      await pb.collection('ausbildungen_termine_user').update(terminTeilnehmerId, {
+        status: anwesenheit || 'eingeladen',
+        anwesend: anwesenheit === 'da'
       })
       await loadTerminTeilnehmer()
     } catch(e: any) {
@@ -1037,6 +1066,18 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
     return modulTermine.filter(mt => mt.termin_id === terminId).length
   }
 
+  const aktuellesJahr = new Date().getFullYear()
+  const jahresTermine = termine
+    .filter(t => new Date(t.start_datetime).getFullYear() === aktuellesJahr)
+    .sort((a, b) => new Date(a.start_datetime).getTime() - new Date(b.start_datetime).getTime())
+
+  const anwesenheitsfarben: {[k: string]: {bg: string, label: string, color: string}} = {
+    da:           {bg: '#dcfce7', label: 'Da', color: '#166534'},
+    krank:        {bg: '#fef9c3', label: 'Kr', color: '#92400e'},
+    entschuldigt: {bg: '#dbeafe', label: 'En', color: '#1e40af'},
+    fehlend:      {bg: '#fee2e2', label: 'Fe', color: '#991b1b'},
+  }
+
   return (
     <>
       <StatusBar user={user} onLogout={logout} pageName="Ausbildungen" showHubLink={true} />
@@ -1077,14 +1118,24 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
             <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
           </svg>
         </button>
-        <button 
+        <button
           className={`action-btn ${viewMode === 'konzepte' ? 'active' : ''}`}
-          onClick={() => setViewMode('konzepte')} 
+          onClick={() => setViewMode('konzepte')}
           title="Ausbildungskonzepte"
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M12 2L2 7l10 5 10-5-10-5z"/>
             <path d="M2 17l10 5 10-5M2 12l10 5 10-5"/>
+          </svg>
+        </button>
+        <button
+          className={`action-btn ${viewMode === 'jahresuebersicht' ? 'active' : ''}`}
+          onClick={() => setViewMode('jahresuebersicht')}
+          title="Jahresübersicht"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+            <rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
           </svg>
         </button>
         <div style={{flex: 1}} />
@@ -1152,9 +1203,10 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                 const dokumenteCount = getTerminDokumenteCount(termin.id)
                 const moduleCount = getTerminModuleCount(termin.id)
                 
+                const anwesendCount = terminTeilnehmer.filter(tt => tt.termin_id === termin.id && tt.status === 'da').length
                 return (
-                  <div 
-                    key={termin.id} 
+                  <div
+                    key={termin.id}
                     className={`card status-${termin.status}`}
                     onClick={() => viewTerminDetail(termin)}
                   >
@@ -1230,6 +1282,14 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                         </svg>
                         <span>{teilnehmerCount}/{termin.max_teilnehmer}</span>
                       </div>
+                      {anwesendCount > 0 && (
+                        <div className="stat-item" style={{color: '#16a34a'}}>
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <polyline points="20 6 9 17 4 12"/>
+                          </svg>
+                          <span>{anwesendCount} Da</span>
+                        </div>
+                      )}
                       <div className="stat-item">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                           <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
@@ -1477,6 +1537,119 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
           )
         )}
       </div>
+
+      {/* JAHRESÜBERSICHT VIEW */}
+      {viewMode === 'jahresuebersicht' && (
+        <div className="content" style={{padding: '24px'}}>
+          <h2 style={{marginBottom: '8px'}}>Jahresübersicht {aktuellesJahr}</h2>
+          <p style={{color: '#64748b', fontSize: '14px', marginBottom: '24px'}}>
+            Anwesenheit aller Teilnehmer bei allen Terminen im Jahr {aktuellesJahr}
+          </p>
+
+          {teilnehmer.length === 0 || jahresTermine.length === 0 ? (
+            <div className="empty-state">Keine Daten vorhanden</div>
+          ) : (
+            <div>
+              <div>
+                {/* Matrix-Tabelle */}
+                <div style={{overflowX: 'auto', marginBottom: '32px'}}>
+                  <table style={{borderCollapse: 'collapse', width: '100%', fontSize: '13px'}}>
+                    <thead>
+                      <tr>
+                        <th style={{textAlign: 'left', padding: '10px 12px', background: '#f1f5f9', borderBottom: '2px solid #e2e8f0', position: 'sticky', left: 0, zIndex: 1, minWidth: '160px'}}>
+                          Teilnehmer
+                        </th>
+                        {jahresTermine.map(t => (
+                          <th key={t.id} style={{padding: '10px 8px', background: '#f1f5f9', borderBottom: '2px solid #e2e8f0', textAlign: 'center', minWidth: '80px', fontWeight: 600}}>
+                            <div>{new Date(t.start_datetime).toLocaleDateString('de-DE', {day:'2-digit', month:'2-digit'})}</div>
+                            <div style={{fontWeight: 400, color: '#64748b', fontSize: '11px', maxWidth: '80px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>{t.name}</div>
+                          </th>
+                        ))}
+                        <th style={{padding: '10px 12px', background: '#f1f5f9', borderBottom: '2px solid #e2e8f0', textAlign: 'center', minWidth: '80px'}}>
+                          Gesamt
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {teilnehmer.map((t, idx) => {
+                        let daCount = 0
+                        return (
+                          <tr key={t.id} style={{background: idx % 2 === 0 ? '#fff' : '#f8fafc'}}>
+                            <td style={{padding: '10px 12px', fontWeight: 600, borderBottom: '1px solid #e2e8f0', position: 'sticky', left: 0, background: idx % 2 === 0 ? '#fff' : '#f8fafc', zIndex: 1}}>
+                              {t.vorname} {t.nachname}
+                              {t.ausbildung_typ && <div style={{fontSize: '11px', color: '#94a3b8', fontWeight: 400}}>{t.ausbildung_typ}</div>}
+                            </td>
+                            {jahresTermine.map(termin => {
+                              const tt = terminTeilnehmer.find(tt => tt.termin_id === termin.id && tt.teilnehmer_id === t.id)
+                              const status = tt?.status as string | undefined
+                              if (status === 'da') daCount++
+                              const cfg = status ? anwesenheitsfarben[status] : null
+                              return (
+                                <td key={termin.id} style={{padding: '10px 8px', textAlign: 'center', borderBottom: '1px solid #e2e8f0'}}>
+                                  {cfg ? (
+                                    <span style={{display: 'inline-block', padding: '2px 8px', borderRadius: '4px', background: cfg.bg, color: cfg.color, fontWeight: 700, fontSize: '11px'}}>
+                                      {cfg.label}
+                                    </span>
+                                  ) : (
+                                    tt ? <span style={{color: '#94a3b8', fontSize: '11px'}}>–</span>
+                                       : <span style={{color: '#e2e8f0', fontSize: '11px'}}>·</span>
+                                  )}
+                                </td>
+                              )
+                            })}
+                            <td style={{padding: '10px 12px', textAlign: 'center', borderBottom: '1px solid #e2e8f0', fontWeight: 700}}>
+                              <span style={{color: daCount > 0 ? '#16a34a' : '#94a3b8'}}>
+                                {daCount}/{jahresTermine.length}
+                              </span>
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Gesamtauswertung */}
+                <h3 style={{marginBottom: '16px'}}>Gesamtauswertung</h3>
+                <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '12px'}}>
+                  {teilnehmer.map(t => {
+                    const ttList = terminTeilnehmer.filter(tt => tt.teilnehmer_id === t.id && jahresTermine.some(jt => jt.id === tt.termin_id))
+                    const da = ttList.filter(tt => (tt.status as string) === 'da').length
+                    const krank = ttList.filter(tt => (tt.status as string) === 'krank').length
+                    const entschuldigt = ttList.filter(tt => (tt.status as string) === 'entschuldigt').length
+                    const fehlend = ttList.filter(tt => (tt.status as string) === 'fehlend').length
+                    const prozent = jahresTermine.length > 0 ? Math.round((da / jahresTermine.length) * 100) : 0
+                    const erreicht = prozent >= 80
+                    return (
+                      <div key={t.id} style={{background: '#fff', border: `2px solid ${erreicht ? '#22c55e' : '#e2e8f0'}`, borderRadius: '10px', padding: '16px'}}>
+                        <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px'}}>
+                          <div>
+                            <div style={{fontWeight: 700}}>{t.vorname} {t.nachname}</div>
+                            {t.ausbildung_typ && <div style={{fontSize: '12px', color: '#64748b'}}>{t.ausbildung_typ}</div>}
+                          </div>
+                          <span style={{padding: '4px 10px', borderRadius: '6px', background: erreicht ? '#dcfce7' : '#fee2e2', color: erreicht ? '#166534' : '#991b1b', fontWeight: 700, fontSize: '12px'}}>
+                            {erreicht ? '✓ Erreicht' : '✗ Nicht erreicht'}
+                          </span>
+                        </div>
+                        <div style={{background: '#f1f5f9', borderRadius: '6px', height: '8px', marginBottom: '8px'}}>
+                          <div style={{background: prozent >= 80 ? '#22c55e' : prozent >= 50 ? '#eab308' : '#ef4444', borderRadius: '6px', height: '8px', width: `${Math.min(prozent, 100)}%`, transition: 'width 0.3s'}} />
+                        </div>
+                        <div style={{fontSize: '13px', color: '#64748b', display: 'flex', gap: '12px', flexWrap: 'wrap'}}>
+                          <span style={{color: '#16a34a'}}><b>{da}</b> Da</span>
+                          <span style={{color: '#d97706'}}><b>{krank}</b> Krank</span>
+                          <span style={{color: '#2563eb'}}><b>{entschuldigt}</b> Entsch.</span>
+                          <span style={{color: '#dc2626'}}><b>{fehlend}</b> Fehlend</span>
+                          <span style={{marginLeft: 'auto', fontWeight: 700}}>{prozent}%</span>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ADD/EDIT TERMIN MODAL */}
       {showAddTerminModal && (
@@ -1810,146 +1983,91 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
               {/* TEILNEHMER TAB */}
               {currentTerminTab === 'teilnehmer' && (
                 <div>
-                  {/* Teilnehmer hinzufügen Dropdown */}
-                  <div style={{marginBottom: '16px', display: 'flex', gap: '8px'}}>
-                    <select 
-                      className="add-teilnehmer-select"
+                  {/* Teilnehmer hinzufügen */}
+                  <div style={{marginBottom: '16px', display: 'flex', gap: '8px', flexWrap: 'wrap'}}>
+                    <select
                       onChange={(e) => {
                         if (e.target.value) {
                           addTeilnehmerToTermin(selectedTermin.id, e.target.value)
                           e.target.value = ''
                         }
                       }}
-                      style={{
-                        flex: 1,
-                        padding: '10px',
-                        border: '1px solid rgba(0, 0, 0, 0.15)',
-                        borderRadius: '8px',
-                        fontSize: '14px',
-                        fontFamily: 'inherit'
-                      }}
+                      style={{flex: 1, minWidth: '200px', padding: '10px', border: '1px solid rgba(0,0,0,0.15)', borderRadius: '8px', fontSize: '14px', fontFamily: 'inherit'}}
                     >
                       <option value="">Teilnehmer hinzufügen...</option>
                       {teilnehmer
-                        .filter(t => !terminTeilnehmer.some(tt => 
-                          tt.termin_id === selectedTermin.id && tt.teilnehmer_id === t.id
-                        ))
+                        .filter(t => !terminTeilnehmer.some(tt => tt.termin_id === selectedTermin.id && tt.teilnehmer_id === t.id))
                         .map(t => (
-                          <option key={t.id} value={t.id}>
-                            {t.vorname} {t.nachname} {t.email && `(${t.email})`}
-                          </option>
+                          <option key={t.id} value={t.id}>{t.vorname} {t.nachname}</option>
                         ))
                       }
                     </select>
-                    <button 
+                    <button
                       className="btn primary"
-                      onClick={() => {
-                        const link = `${window.location.origin}/ausbildungen/einladung/${selectedTermin.id}`
-                        navigator.clipboard.writeText(link)
-                        showMessage('Einladungslink kopiert!', 'success')
-                      }}
-                      title="Einladungslink kopieren"
+                      onClick={() => addAlleTeilnehmerToTermin(selectedTermin.id)}
+                      title="Alle Teilnehmer hinzufügen"
                     >
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
-                        <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
-                      </svg>
-                      Link
+                      Alle hinzufügen
                     </button>
                   </div>
+
+                  {/* Statistik-Zeile */}
+                  {terminTeilnehmer.filter(tt => tt.termin_id === selectedTermin.id).length > 0 && (() => {
+                    const ttList = terminTeilnehmer.filter(tt => tt.termin_id === selectedTermin.id)
+                    const da = ttList.filter(tt => tt.status === 'da').length
+                    const krank = ttList.filter(tt => tt.status === 'krank').length
+                    const entschuldigt = ttList.filter(tt => tt.status === 'entschuldigt').length
+                    const fehlend = ttList.filter(tt => tt.status === 'fehlend').length
+                    return (
+                      <div style={{display: 'flex', gap: '16px', marginBottom: '16px', padding: '12px', background: '#f8fafc', borderRadius: '8px', fontSize: '13px', flexWrap: 'wrap'}}>
+                        <span><strong>{ttList.length}</strong> Eingeladen</span>
+                        <span style={{color: '#16a34a'}}><strong>{da}</strong> Da</span>
+                        <span style={{color: '#d97706'}}><strong>{krank}</strong> Krank</span>
+                        <span style={{color: '#2563eb'}}><strong>{entschuldigt}</strong> Entschuldigt</span>
+                        <span style={{color: '#dc2626'}}><strong>{fehlend}</strong> Fehlend</span>
+                      </div>
+                    )
+                  })()}
 
                   {/* Anwesenheitsliste */}
                   {terminTeilnehmer.filter(tt => tt.termin_id === selectedTermin.id).length === 0 ? (
                     <div className="empty-state">Noch keine Teilnehmer zugewiesen</div>
                   ) : (
-                    <div className="teilnehmer-list">
-                      <div style={{
-                        display: 'grid',
-                        gridTemplateColumns: '1fr auto 120px 100px',
-                        gap: '12px',
-                        padding: '10px 12px',
-                        fontWeight: 700,
-                        fontSize: '13px',
-                        color: '#64748b',
-                        borderBottom: '2px solid #e5e7eb',
-                        marginBottom: '8px'
-                      }}>
-                        <div>Name</div>
-                        <div>Status</div>
-                        <div style={{textAlign: 'center'}}>Anwesend</div>
-                        <div></div>
-                      </div>
-                      
+                    <div style={{display: 'flex', flexDirection: 'column', gap: '8px'}}>
                       {terminTeilnehmer
                         .filter(tt => tt.termin_id === selectedTermin.id)
                         .map(tt => {
                           const t = teilnehmer.find(teiln => teiln.id === tt.teilnehmer_id)
                           if (!t) return null
+                          const anw = tt.status as string
                           return (
-                            <div 
-                              key={tt.id} 
-                              className="teilnehmer-row"
-                              style={{
-                                display: 'grid',
-                                gridTemplateColumns: '1fr auto 120px 100px',
-                                gap: '12px',
-                                padding: '12px',
-                                background: '#f9fafb',
-                                borderRadius: '8px',
-                                marginBottom: '8px',
-                                alignItems: 'center'
-                              }}
-                            >
-                              <div>
+                            <div key={tt.id} style={{display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', background: '#f9fafb', borderRadius: '8px', flexWrap: 'wrap'}}>
+                              <div style={{flex: 1, minWidth: '120px'}}>
                                 <div style={{fontWeight: 600}}>{t.vorname} {t.nachname}</div>
-                                <div style={{fontSize: '13px', color: '#64748b'}}>{t.email}</div>
+                                {t.ausbildung_typ && <div style={{fontSize: '12px', color: '#64748b'}}>{t.ausbildung_typ}</div>}
                               </div>
-                              
-                              <select
-                                value={tt.status}
-                                onChange={(e) => updateTeilnehmerStatus(tt.id, e.target.value)}
-                                style={{
-                                  padding: '6px 10px',
-                                  border: '1px solid rgba(0, 0, 0, 0.15)',
-                                  borderRadius: '6px',
-                                  fontSize: '13px',
-                                  fontFamily: 'inherit'
-                                }}
-                              >
-                                <option value="eingeladen">Eingeladen</option>
-                                <option value="zugesagt">Zugesagt</option>
-                                <option value="abgesagt">Abgesagt</option>
-                                <option value="entschuldigt">Entschuldigt</option>
-                              </select>
-                              
-                              <div style={{textAlign: 'center'}}>
-                                <button
-                                  className={tt.anwesend ? 'anwesend-btn active' : 'anwesend-btn'}
-                                  onClick={() => toggleAnwesenheit(tt.id, tt.anwesend)}
-                                  style={{
-                                    padding: '6px 12px',
-                                    borderRadius: '6px',
-                                    border: '1px solid',
-                                    borderColor: tt.anwesend ? '#22c55e' : 'rgba(0, 0, 0, 0.15)',
-                                    background: tt.anwesend ? '#f0fdf4' : '#fff',
-                                    color: tt.anwesend ? '#166534' : '#64748b',
-                                    fontWeight: 600,
-                                    fontSize: '13px',
-                                    cursor: 'pointer',
-                                    transition: 'all 0.2s',
-                                    fontFamily: 'inherit'
-                                  }}
-                                >
-                                  {tt.anwesend ? '✓ Ja' : 'Nein'}
-                                </button>
+                              <div style={{display: 'flex', gap: '6px', flexWrap: 'wrap'}}>
+                                {(['da', 'krank', 'entschuldigt', 'fehlend'] as const).map(opt => {
+                                  const colors: Record<string, {bg: string, color: string, border: string}> = {
+                                    da:           {bg: anw === 'da'           ? '#dcfce7' : '#fff', color: anw === 'da'           ? '#166534' : '#64748b', border: anw === 'da'           ? '#22c55e' : 'rgba(0,0,0,0.12)'},
+                                    krank:        {bg: anw === 'krank'        ? '#fef9c3' : '#fff', color: anw === 'krank'        ? '#92400e' : '#64748b', border: anw === 'krank'        ? '#eab308' : 'rgba(0,0,0,0.12)'},
+                                    entschuldigt: {bg: anw === 'entschuldigt' ? '#dbeafe' : '#fff', color: anw === 'entschuldigt' ? '#1e40af' : '#64748b', border: anw === 'entschuldigt' ? '#3b82f6' : 'rgba(0,0,0,0.12)'},
+                                    fehlend:      {bg: anw === 'fehlend'      ? '#fee2e2' : '#fff', color: anw === 'fehlend'      ? '#991b1b' : '#64748b', border: anw === 'fehlend'      ? '#ef4444' : 'rgba(0,0,0,0.12)'},
+                                  }
+                                  const c = colors[opt]
+                                  const labels: Record<string, string> = {da: 'Da', krank: 'Krank', entschuldigt: 'Entschuldigt', fehlend: 'Fehlend'}
+                                  return (
+                                    <button
+                                      key={opt}
+                                      onClick={() => updateAnwesenheit(tt.id, anw === opt ? '' : opt)}
+                                      style={{padding: '5px 10px', borderRadius: '6px', border: `1px solid ${c.border}`, background: c.bg, color: c.color, fontWeight: 600, fontSize: '12px', cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s'}}
+                                    >
+                                      {labels[opt]}
+                                    </button>
+                                  )
+                                })}
                               </div>
-                              
-                              <button 
-                                className="btn-small danger"
-                                onClick={() => removeTeilnehmerFromTermin(tt.id)}
-                              >
-                                Entfernen
-                              </button>
+                              <button className="btn-small danger" onClick={() => removeTeilnehmerFromTermin(tt.id)}>✕</button>
                             </div>
                           )
                         })}
