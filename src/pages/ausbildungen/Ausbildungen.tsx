@@ -432,24 +432,24 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
     }
 
     try {
+      // Suche in BEIDEN Email-Feldern: auth email UND contact_email
       const existingUsers = await pb.collection('users').getFullList({
-        filter: `email = "${email}" && organization_id = "${user?.organization_id}"`
+        filter: `organization_id = "${user?.organization_id}" && (email = "${email}" || contact_email = "${email}")`
       })
-      
+
       if (existingUsers.length > 0) {
         const existing = existingUsers[0]
         setExistingUserDetected(existing)
-        
-        setTeilnehmerForm({
-          ...teilnehmerForm,
-          vorname: existing.name?.split(' ')[0] || teilnehmerForm.vorname,
-          nachname: existing.name?.split(' ').slice(1).join(' ') || teilnehmerForm.nachname,
-          telefon: existing.phone || teilnehmerForm.telefon,
-          whatsapp: existing.whatsapp || teilnehmerForm.whatsapp,
-          ausbildung_typ: existing.ausbildung_typ || teilnehmerForm.ausbildung_typ,
-          notizen: existing.notizen || teilnehmerForm.notizen,
-          lernbar_zugang_aktiv: existing.permissions?.lernbar || teilnehmerForm.lernbar_zugang_aktiv
-        })
+        setTeilnehmerForm(prev => ({
+          ...prev,
+          vorname: existing.name?.split(' ')[0] || prev.vorname,
+          nachname: existing.name?.split(' ').slice(1).join(' ') || prev.nachname,
+          telefon: existing.phone || prev.telefon,
+          whatsapp: existing.whatsapp || prev.whatsapp,
+          ausbildung_typ: existing.ausbildung_typ || prev.ausbildung_typ,
+          notizen: existing.notizen || prev.notizen,
+          lernbar_zugang_aktiv: existing.permissions?.lernbar || prev.lernbar_zugang_aktiv
+        }))
       } else {
         setExistingUserDetected(null)
       }
@@ -656,65 +656,41 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
         }
       }
     } else {
-      // CREATE: Prüfe zuerst ob User mit Email existiert
-      let existingUser = null
-      
+      // CREATE: Prüfe ob User bereits existiert (in auth-email ODER contact_email)
+      let existingUser: any = null
+
       if (teilnehmerForm.email) {
         try {
-          const existingUsers = await pb.collection('users').getFullList({
-            filter: `email = "${teilnehmerForm.email}" && organization_id = "${user?.organization_id}"`
+          const found = await pb.collection('users').getFullList({
+            filter: `organization_id = "${user?.organization_id}" && (email = "${teilnehmerForm.email}" || contact_email = "${teilnehmerForm.email}")`
           })
-          if (existingUsers.length > 0) {
-            existingUser = existingUsers[0]
-          }
+          if (found.length > 0) existingUser = found[0]
         } catch(e) {
-          console.log('Keine existierenden User gefunden')
+          // ignorieren
         }
       }
 
       if (existingUser) {
-        // BESTEHENDEN USER AKTUALISIEREN
-        console.log('✅ Bestehender User gefunden:', existingUser.email)
-        
+        // BESTEHENDEN USER ALS TEILNEHMER VERKNÜPFEN
+        // Kein neuer Login — nur Teilnehmer-Rolle + ggf. Lernbar-Zugang hinzufügen
         const mergedPermissions = {
           ...existingUser.permissions,
-          lernbar: teilnehmerForm.lernbar_zugang_aktiv
+          lernbar: teilnehmerForm.lernbar_zugang_aktiv || existingUser.permissions?.lernbar || false
         }
-        
-        const updateData = {
-          name: fullName,
-          phone: teilnehmerForm.telefon || '',
-          whatsapp: teilnehmerForm.whatsapp || '',
-          ausbildung_typ: teilnehmerForm.ausbildung_typ || '',
-          notizen: teilnehmerForm.notizen || '',
+        await pb.collection('users').update(existingUser.id, {
+          role: 'teilnehmer',
+          contact_email: teilnehmerForm.email || existingUser.contact_email || '',
+          phone: teilnehmerForm.telefon || existingUser.phone || '',
+          whatsapp: teilnehmerForm.whatsapp || existingUser.whatsapp || '',
+          ausbildung_typ: teilnehmerForm.ausbildung_typ || existingUser.ausbildung_typ || '',
+          notizen: teilnehmerForm.notizen || existingUser.notizen || '',
           permissions: mergedPermissions
-        }
-        
-        await pb.collection('users').update(existingUser.id, updateData)
-        showMessage('Bestehender User verknüpft!', 'success')
-        
-        if (teilnehmerForm.lernbar_zugang_aktiv && teilnehmerForm.email) {
-          try {
-            await pb.collection('users').requestPasswordReset(teilnehmerForm.email)
-            showMessage('Password-Reset Email gesendet', 'success')
-          } catch(e: any) {
-            console.error('Password Reset Fehler:', e)
-          }
-        }
+        })
+        showMessage('Bestehender User als Teilnehmer verknüpft', 'success')
       } else {
-        // NEUEN USER ERSTELLEN
-        console.log('➕ Erstelle neuen User')
+        // NEUEN USER MIT PLATZHALTER-EMAIL ERSTELLEN
         await pb.collection('users').create(userData)
         showMessage('Neuer Teilnehmer erstellt', 'success')
-        
-        if (teilnehmerForm.lernbar_zugang_aktiv && teilnehmerForm.email) {
-          try {
-            await pb.collection('users').requestPasswordReset(teilnehmerForm.email)
-            showMessage('Password-Reset Email gesendet', 'success')
-          } catch(e: any) {
-            console.error('Password Reset Fehler:', e)
-          }
-        }
       }
     }
 
