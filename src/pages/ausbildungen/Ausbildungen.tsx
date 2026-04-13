@@ -552,10 +552,11 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
     }
 
     const randomPassword = Math.random().toString(36).slice(-10) + Math.random().toString(36).toUpperCase().slice(-6) + '!'
+    const placeholderEmail = teilnehmerForm.email || `${teilnehmerForm.vorname.toLowerCase()}.${teilnehmerForm.nachname.toLowerCase()}.${Math.random().toString(36).slice(-6)}@kein-email.intern`
 
     const userData = {
       name: fullName,
-      email: teilnehmerForm.email || '',
+      email: placeholderEmail,
       phone: teilnehmerForm.telefon || '',
       whatsapp: teilnehmerForm.whatsapp || '',
       ausbildung_typ: teilnehmerForm.ausbildung_typ || '',
@@ -1630,11 +1631,13 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                 onChange={(e) => setTeilnehmerForm({ ...teilnehmerForm, ausbildung_typ: e.target.value })}
               >
                 <option value="">Bitte wählen</option>
-                <option value="San A">San A</option>
-                <option value="San B">San B</option>
-                <option value="San C">San C</option>
-                <option value="RS">RS</option>
-                <option value="NFS">NFS</option>
+                <option value="SAN A/B">SAN A/B</option>
+                <option value="Rettungssanitäter">Rettungssanitäter</option>
+                <option value="Notfallsanitäter">Notfallsanitäter</option>
+                <option value="GuKP">GuKP</option>
+                <option value="Kommandant">Kommandant</option>
+                <option value="Gerätewart">Gerätewart</option>
+                <option value="Erste-Hilfe">Erste-Hilfe</option>
                 <option value="Sonstiges">Sonstiges</option>
               </select>
             </div>
