@@ -5,6 +5,20 @@ import { useAuth } from '../../hooks/useAuth'
 
 const pb = new PocketBase('https://api.responda.systems')
 
+// PocketBase stores dates as "2026-01-15 14:00:00.000Z" (space instead of T)
+// new Date() needs ISO format with T, so we normalize first
+function parseDate(str: string | null | undefined): Date {
+  if (!str) return new Date(NaN)
+  return new Date(str.replace(' ', 'T'))
+}
+
+function formatDateForInput(str: string | null | undefined): string {
+  if (!str) return ''
+  const d = parseDate(str)
+  if (isNaN(d.getTime())) return ''
+  return d.toISOString().slice(0, 16)
+}
+
 interface Termin {
   id: string
   name: string
@@ -321,9 +335,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
   async function loadTerminTeilnehmer() {
     try {
       const records = await pb.collection('ausbildungen_termine_user').getFullList({
-        filter: `organization_id = "${user?.organization_id}"`,
-        expand: 'teilnehmer_id',
-        sort: '-created',
+        sort: 'created',
         requestKey: 'loadTerminTeilnehmer'
       })
       setTerminTeilnehmer(records)
@@ -473,8 +485,8 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
       id: termin.id,
       name: termin.name,
       description: termin.description,
-      start_datetime: termin.start_datetime,
-      end_datetime: termin.end_datetime,
+      start_datetime: formatDateForInput(termin.start_datetime),
+      end_datetime: formatDateForInput(termin.end_datetime),
       location: termin.location,
       dozent: termin.dozent,
       max_teilnehmer: termin.max_teilnehmer,
@@ -1068,8 +1080,8 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
 
   const aktuellesJahr = new Date().getFullYear()
   const jahresTermine = termine
-    .filter(t => new Date(t.start_datetime).getFullYear() === aktuellesJahr)
-    .sort((a, b) => new Date(a.start_datetime).getTime() - new Date(b.start_datetime).getTime())
+    .filter(t => parseDate(t.start_datetime).getFullYear() === aktuellesJahr)
+    .sort((a, b) => parseDate(a.start_datetime).getTime() - parseDate(b.start_datetime).getTime())
 
   const anwesenheitsfarben: {[k: string]: {bg: string, label: string, color: string}} = {
     da:           {bg: '#dcfce7', label: 'Da', color: '#166534'},
@@ -1253,7 +1265,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                     </div>
                     
                     <div className="card-type">
-                      {new Date(termin.start_datetime).toLocaleDateString('de-DE', { 
+                      {parseDate(termin.start_datetime).toLocaleDateString('de-DE', { 
                         day: '2-digit', 
                         month: '2-digit', 
                         year: 'numeric' 
@@ -1390,7 +1402,26 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                     {t.email && <div>{t.email}</div>}
                     {t.telefon && <div>{t.telefon}</div>}
                   </div>
-                  
+
+                  {/* Persönliche Übersicht */}
+                  {(() => {
+                    const ttList = terminTeilnehmer.filter(tt => tt.teilnehmer_id === t.id && jahresTermine.some(jt => jt.id === tt.termin_id))
+                    const da = ttList.filter(tt => tt.status === 'da').length
+                    const prozent = jahresTermine.length > 0 ? Math.round((da / jahresTermine.length) * 100) : 0
+                    if (ttList.length === 0) return null
+                    return (
+                      <div style={{marginTop: '10px'}}>
+                        <div style={{display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#64748b', marginBottom: '4px'}}>
+                          <span>{da} / {jahresTermine.length} Termine besucht</span>
+                          <span style={{fontWeight: 700, color: prozent >= 80 ? '#16a34a' : prozent >= 50 ? '#d97706' : '#dc2626'}}>{prozent}%</span>
+                        </div>
+                        <div style={{background: '#e2e8f0', borderRadius: '4px', height: '5px'}}>
+                          <div style={{background: prozent >= 80 ? '#22c55e' : prozent >= 50 ? '#eab308' : '#ef4444', borderRadius: '4px', height: '5px', width: `${Math.min(prozent, 100)}%`}} />
+                        </div>
+                      </div>
+                    )
+                  })()}
+
                   {t.lernbar_zugang_aktiv && (
                     <div className="card-status-info">
                       <div className="status-badge lernbar">
@@ -1561,7 +1592,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                         </th>
                         {jahresTermine.map(t => (
                           <th key={t.id} style={{padding: '10px 8px', background: '#f1f5f9', borderBottom: '2px solid #e2e8f0', textAlign: 'center', minWidth: '80px', fontWeight: 600}}>
-                            <div>{new Date(t.start_datetime).toLocaleDateString('de-DE', {day:'2-digit', month:'2-digit'})}</div>
+                            <div>{parseDate(t.start_datetime).toLocaleDateString('de-DE', {day:'2-digit', month:'2-digit'})}</div>
                             <div style={{fontWeight: 400, color: '#64748b', fontSize: '11px', maxWidth: '80px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>{t.name}</div>
                           </th>
                         ))}
@@ -1897,7 +1928,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
               <div>
                 <h3 style={{margin: 0}}>{selectedTermin.name}</h3>
                 <div style={{fontSize: '14px', color: '#64748b', marginTop: '8px'}}>
-                  {new Date(selectedTermin.start_datetime).toLocaleDateString('de-DE', { 
+                  {parseDate(selectedTermin.start_datetime).toLocaleDateString('de-DE', { 
                     day: '2-digit', 
                     month: '2-digit', 
                     year: 'numeric',
@@ -1968,7 +1999,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                     <div><strong>Max. Teilnehmer:</strong> {selectedTermin.max_teilnehmer}</div>
                     <div><strong>Aktuell angemeldet:</strong> {getTerminTeilnehmerCount(selectedTermin.id)}</div>
                     {selectedTermin.end_datetime && (
-                      <div><strong>Ende:</strong> {new Date(selectedTermin.end_datetime).toLocaleDateString('de-DE', { 
+                      <div><strong>Ende:</strong> {parseDate(selectedTermin.end_datetime).toLocaleDateString('de-DE', { 
                         day: '2-digit', 
                         month: '2-digit', 
                         year: 'numeric',
