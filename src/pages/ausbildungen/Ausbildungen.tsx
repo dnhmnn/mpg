@@ -230,7 +230,6 @@ export default function Ausbildungen() {
   const [selectedKonzept, setSelectedKonzept] = useState<Ausbildungskonzept | null>(null)
   const [currentTerminTab, setCurrentTerminTab] = useState<'uebersicht' | 'teilnehmer' | 'dokumente' | 'module'>('uebersicht')
   
-  const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<'all' | 'geplant' | 'laufend' | 'abgeschlossen'>('all')
   const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | 'konzepte'>('termine')
   
@@ -423,34 +422,13 @@ export default function Ausbildungen() {
     setTimeout(() => setMessage(null), 3000)
   }
 
-  const filteredTermine = termine.filter(termin => {
-    const matchesSearch = 
-      termin.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      termin.location?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      termin.dozent?.toLowerCase().includes(searchQuery.toLowerCase())
-    
-    const matchesStatus = 
-      statusFilter === 'all' || termin.status === statusFilter
-    
-    return matchesSearch && matchesStatus
-  })
+  const filteredTermine = termine.filter(termin =>
+    statusFilter === 'all' || termin.status === statusFilter
+  )
 
-  const filteredTeilnehmer = teilnehmer.filter(t => {
-    const fullName = `${t.vorname} ${t.nachname}`.toLowerCase()
-    return fullName.includes(searchQuery.toLowerCase()) ||
-           t.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-           t.telefon?.includes(searchQuery)
-  })
-
-  const filteredModule = module.filter(m => {
-    return m.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-           m.beschreibung?.toLowerCase().includes(searchQuery.toLowerCase())
-  })
-
-  const filteredKonzepte = konzepte.filter(k => {
-    return k.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-           k.beschreibung?.toLowerCase().includes(searchQuery.toLowerCase())
-  })
+  const filteredTeilnehmer = teilnehmer
+  const filteredModule = module
+  const filteredKonzepte = konzepte
 
   // TERMIN FUNCTIONS
   function openAddTermin() {
@@ -689,19 +667,14 @@ export default function Ausbildungen() {
       }
     }
 
-} catch(e: any) {
-  console.error('Kompletter Fehler:', e)
-  console.error('Response Data:', e.response)
-  console.error('Error Data:', e.data)
-  alert('Fehler beim Speichern: ' + JSON.stringify(e.data || e.message))
-}
-    
     setShowAddTeilnehmerModal(false)
     setExistingUserDetected(null)
     await loadTeilnehmer()
   } catch(e: any) {
-    console.error('Fehler:', e)
-    alert('Fehler beim Speichern: ' + e.message)
+    console.error('Kompletter Fehler:', e)
+    console.error('Response Data:', e.response)
+    console.error('Error Data:', e.data)
+    alert('Fehler beim Speichern: ' + JSON.stringify(e.data || e.message))
   }
 }
   async function deleteTeilnehmer(id: string, name: string) {
@@ -1128,20 +1101,8 @@ export default function Ausbildungen() {
           </div>
         )}
 
-        {/* SEARCH AND FILTERS */}
+        {/* FILTERS */}
         <div className="filter-bar">
-          <input
-            type="text"
-            className="search-input"
-            placeholder={
-              viewMode === 'termine' ? 'Termine durchsuchen...' :
-              viewMode === 'teilnehmer' ? 'Teilnehmer durchsuchen...' :
-              viewMode === 'module' ? 'Module durchsuchen...' :
-              'Konzepte durchsuchen...'
-            }
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
           {viewMode === 'termine' && (
             <div className="filter-buttons">
               <button 
@@ -2626,23 +2587,6 @@ export default function Ausbildungen() {
           z-index: 98;
           border-radius: 0;
           margin-top: -145px;
-        }
-
-        .search-input {
-          flex: 1;
-          min-width: 200px;
-          padding: 10px 16px;
-          border: 1px solid rgba(0, 0, 0, 0.08);
-          border-radius: 8px;
-          background: rgba(255, 255, 255, 0.9);
-          font-size: 14px;
-          font-family: inherit;
-        }
-
-        .search-input:focus {
-          outline: none;
-          border-color: #b91c1c;
-          box-shadow: 0 0 0 3px rgba(185, 28, 28, 0.1);
         }
 
         .filter-buttons {
