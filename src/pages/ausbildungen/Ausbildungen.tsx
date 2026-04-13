@@ -220,6 +220,7 @@ export default function Ausbildungen() {
     notizen: '',
     lernbar_zugang_aktiv: false
   })
+  const [originalEmail, setOriginalEmail] = useState('')
   
   const [modulForm, setModulForm] = useState<ModulForm>({
     name: '',
@@ -557,6 +558,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
   }
 
   function openEditTeilnehmer(teilnehmer: Teilnehmer) {
+    setOriginalEmail(teilnehmer.email)
     setTeilnehmerForm({
       id: teilnehmer.id,
       vorname: teilnehmer.vorname,
@@ -622,24 +624,41 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
 
     if (teilnehmerForm.id) {
       // UPDATE bestehender Teilnehmer
+      // Email wird NICHT im Haupt-Update mitgeschickt (PocketBase wirft sonst validation_values_mismatch)
       const updateData = {
         name: fullName,
-        email: teilnehmerForm.email || '',
         phone: teilnehmerForm.telefon || '',
         whatsapp: teilnehmerForm.whatsapp || '',
         ausbildung_typ: teilnehmerForm.ausbildung_typ || '',
         notizen: teilnehmerForm.notizen || '',
         permissions: permissions
       }
-      
+
       await pb.collection('users').update(teilnehmerForm.id, updateData)
-      showMessage('Teilnehmer aktualisiert', 'success')
-      
-      const oldTeilnehmer = teilnehmer.find(t => t.id === teilnehmerForm.id)
-      if (teilnehmerForm.lernbar_zugang_aktiv && !oldTeilnehmer?.lernbar_zugang_aktiv && teilnehmerForm.email) {
+
+      // Email separat aktualisieren, nur wenn sie sich geändert hat
+      const newEmail = teilnehmerForm.email || ''
+      if (newEmail && newEmail !== originalEmail) {
         try {
-          await pb.collection('users').requestPasswordReset(teilnehmerForm.email)
-          showMessage('Password-Reset Email gesendet', 'success')
+          await pb.collection('users').update(teilnehmerForm.id, {
+            email: newEmail,
+            emailVisibility: true
+          })
+        } catch(emailErr: any) {
+          showMessage('Gespeichert, aber Email konnte nicht geändert werden: ' + emailErr.message, 'error')
+          setShowAddTeilnehmerModal(false)
+          await loadTeilnehmer()
+          return
+        }
+      }
+
+      showMessage('Teilnehmer aktualisiert', 'success')
+
+      const oldTeilnehmer = teilnehmer.find(t => t.id === teilnehmerForm.id)
+      if (teilnehmerForm.lernbar_zugang_aktiv && !oldTeilnehmer?.lernbar_zugang_aktiv && newEmail && !newEmail.includes('@kein-email.intern')) {
+        try {
+          await pb.collection('users').requestPasswordReset(newEmail)
+          showMessage('Lernbar aktiviert – Password-Reset Email gesendet', 'success')
         } catch(e: any) {
           console.error('Password Reset Fehler:', e)
         }
