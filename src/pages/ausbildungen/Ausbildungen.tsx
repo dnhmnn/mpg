@@ -3326,12 +3326,6 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                 const unassignedTeilnehmer = teilnehmer.filter(t => !assigned.some(p => p.teilnehmer_id === t.id))
                 return (
                   <div>
-                    <div style={{background: '#fef9c3', border: '1px solid #fde68a', borderRadius: '8px', padding: '10px 12px', marginBottom: '12px', fontSize: '11px', color: '#92400e', fontFamily: 'monospace', wordBreak: 'break-all'}}>
-                      <div>assigned: {assigned.length} | teilnehmer im State: {teilnehmer.length}</div>
-                      <div>teilnehmer[0].id: {teilnehmer[0]?.id ?? '–'}</div>
-                      <div>progress[0].teilnehmer_id: {assigned[0]?.teilnehmer_id ?? '–'}</div>
-                      <div>match: {teilnehmer[0]?.id === assigned[0]?.teilnehmer_id ? 'JA' : 'NEIN'}</div>
-                    </div>
                     {/* Summary bar */}
                     <div style={{
                       display: 'flex', alignItems: 'center', gap: '16px',
