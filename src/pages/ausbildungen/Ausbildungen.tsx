@@ -2142,6 +2142,47 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                       <div style={{fontSize: '11px', color: '#94a3b8', marginTop: '4px'}}>Wird automatisch gespeichert wenn du das Feld verlässt</div>
                     </div>
 
+                    {/* RSVP-Liste */}
+                    {(() => {
+                      const ttList = terminTeilnehmer.filter(tt => tt.termin_id === selectedTermin.id)
+                      if (ttList.length === 0) return null
+                      const zugesagt = ttList.filter(tt => tt.status === 'zugesagt')
+                      const abgesagt = ttList.filter(tt => tt.status === 'abgesagt')
+                      const ausstehend = ttList.filter(tt => tt.status === 'eingeladen' || !tt.status)
+                      return (
+                        <div style={{background: '#f8fafc', borderRadius: '10px', padding: '14px'}}>
+                          <div style={{fontWeight: 700, fontSize: '13px', marginBottom: '10px', color: '#374151'}}>
+                            Zu-/Absagen
+                            <span style={{marginLeft: '8px', fontWeight: 400, color: '#64748b', fontSize: '12px'}}>
+                              {zugesagt.length} zugesagt · {abgesagt.length} abgesagt · {ausstehend.length} ausstehend
+                            </span>
+                          </div>
+                          <div style={{display: 'flex', flexDirection: 'column', gap: '6px'}}>
+                            {ttList.map(tt => {
+                              const t = teilnehmer.find(tn => tn.id === tt.teilnehmer_id)
+                              if (!t) return null
+                              const s = tt.status as string
+                              return (
+                                <div key={tt.id} style={{display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 10px', background: '#fff', borderRadius: '8px', border: '1px solid #e2e8f0'}}>
+                                  <div style={{flex: 1, fontSize: '14px', fontWeight: 500}}>{t.vorname} {t.nachname}</div>
+                                  <div style={{display: 'flex', gap: '4px'}}>
+                                    <button
+                                      onClick={() => pb.collection('ausbildungen_termine_user').update(tt.id, { status: s === 'zugesagt' ? 'eingeladen' : 'zugesagt' }).then(() => loadTerminTeilnehmer())}
+                                      style={{padding: '4px 10px', borderRadius: '6px', border: '1px solid', fontSize: '12px', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', background: s === 'zugesagt' ? '#dcfce7' : '#fff', color: s === 'zugesagt' ? '#166534' : '#64748b', borderColor: s === 'zugesagt' ? '#22c55e' : '#e2e8f0'}}
+                                    >✓ Zugesagt</button>
+                                    <button
+                                      onClick={() => pb.collection('ausbildungen_termine_user').update(tt.id, { status: s === 'abgesagt' ? 'eingeladen' : 'abgesagt' }).then(() => loadTerminTeilnehmer())}
+                                      style={{padding: '4px 10px', borderRadius: '6px', border: '1px solid', fontSize: '12px', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', background: s === 'abgesagt' ? '#fee2e2' : '#fff', color: s === 'abgesagt' ? '#991b1b' : '#64748b', borderColor: s === 'abgesagt' ? '#ef4444' : '#e2e8f0'}}
+                                    >✕ Abgesagt</button>
+                                  </div>
+                                </div>
+                              )
+                            })}
+                          </div>
+                        </div>
+                      )
+                    })()}
+
                   </div>
                 )
               })()}
