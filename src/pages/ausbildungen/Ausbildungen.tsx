@@ -89,10 +89,16 @@ interface Modul {
 }
 
 interface ModulInhalt {
-  typ: 'text' | 'video' | 'quiz' | 'datei'
+  typ: 'text' | 'quiz'
   titel: string
   inhalt: string
   reihenfolge: number
+}
+
+interface QuizFrage {
+  frage: string
+  antworten: string[]
+  richtige: number
 }
 
 interface ModulTermin {
@@ -251,8 +257,16 @@ export default function Ausbildungen() {
   const [selectedTermin, setSelectedTermin] = useState<Termin | null>(null)
   const [selectedTeilnehmer, setSelectedTeilnehmer] = useState<Teilnehmer | null>(null)
   const [selectedKonzept, setSelectedKonzept] = useState<Ausbildungskonzept | null>(null)
+  const [selectedModul, setSelectedModul] = useState<Modul | null>(null)
+  const [showModulDetailModal, setShowModulDetailModal] = useState(false)
+  const [selectedModulTab, setSelectedModulTab] = useState<'inhalt' | 'teilnehmer'>('inhalt')
   const [currentTerminTab, setCurrentTerminTab] = useState<'uebersicht' | 'teilnehmer' | 'dokumente' | 'module'>('uebersicht')
   const [selectedTeilnehmerDetail, setSelectedTeilnehmerDetail] = useState<Teilnehmer | null>(null)
+  const [addModulTeilnehmerId, setAddModulTeilnehmerId] = useState('')
+  const [editingQuizBlock, setEditingQuizBlock] = useState<number | null>(null)
+  const [newQuizFrage, setNewQuizFrage] = useState('')
+  const [newQuizAntworten, setNewQuizAntworten] = useState(['', '', '', ''])
+  const [newQuizRichtige, setNewQuizRichtige] = useState(0)
   
 const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | 'konzepte' | 'jahresuebersicht' | 'archiv'>('termine')
   
@@ -972,6 +986,149 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
     }
   }
 
+  function openEditModul(m: Modul) {
+    setModulForm({
+      id: m.id,
+      name: m.name,
+      beschreibung: m.beschreibung,
+      inhalte: m.inhalte ? [...m.inhalte] : [],
+      dauer_minuten: m.dauer_minuten
+    })
+    setShowAddModulModal(true)
+  }
+
+  async function deleteModul(id: string, name: string) {
+    if (!confirm(`Modul "${name}" wirklich löschen?`)) return
+    try {
+      await pb.collection('ausbildungen_module').delete(id)
+      showMessage('Modul gelöscht', 'success')
+      await loadModule()
+    } catch(e: any) {
+      alert('Fehler: ' + e.message)
+    }
+  }
+
+  function openModulDetail(m: Modul) {
+    setSelectedModul(m)
+    setSelectedModulTab('inhalt')
+    setAddModulTeilnehmerId('')
+    setShowModulDetailModal(true)
+  }
+
+  async function assignTeilnehmerToModul(modulId: string, teilnehmerId: string) {
+    if (!teilnehmerId) return
+    const already = modulProgress.some(p => p.modul_id === modulId && p.teilnehmer_id === teilnehmerId)
+    if (already) return
+    try {
+      await pb.collection('ausbildungen_module_progress').create({
+        modul_id: modulId,
+        teilnehmer_id: teilnehmerId,
+        fortschritt_prozent: 0,
+        notizen: '',
+        organization_id: user?.organization_id
+      })
+      await loadModulProgress()
+    } catch(e: any) {
+      alert('Fehler: ' + e.message)
+    }
+  }
+
+  async function assignAllTeilnehmerToModul(modulId: string) {
+    const unassigned = teilnehmer.filter(t => !modulProgress.some(p => p.modul_id === modulId && p.teilnehmer_id === t.id))
+    if (unassigned.length === 0) { showMessage('Alle bereits zugewiesen', 'success'); return }
+    try {
+      await Promise.all(unassigned.map(t =>
+        pb.collection('ausbildungen_module_progress').create({
+          modul_id: modulId,
+          teilnehmer_id: t.id,
+          fortschritt_prozent: 0,
+          notizen: '',
+          organization_id: user?.organization_id
+        })
+      ))
+      await loadModulProgress()
+      showMessage(`${unassigned.length} Teilnehmer hinzugefügt`, 'success')
+    } catch(e: any) {
+      alert('Fehler: ' + e.message)
+    }
+  }
+
+  async function removeModulTeilnehmer(progressId: string) {
+    try {
+      await pb.collection('ausbildungen_module_progress').delete(progressId)
+      await loadModulProgress()
+    } catch(e: any) {
+      alert('Fehler: ' + e.message)
+    }
+  }
+
+  async function toggleModulAbgeschlossen(progressId: string, currentlyDone: boolean) {
+    try {
+      await pb.collection('ausbildungen_module_progress').update(progressId, {
+        abgeschlossen_am: currentlyDone ? null : new Date().toISOString(),
+        fortschritt_prozent: currentlyDone ? 0 : 100
+      })
+      await loadModulProgress()
+    } catch(e: any) {
+      alert('Fehler: ' + e.message)
+    }
+  }
+
+  function addInhaltBlock(typ: 'text' | 'quiz') {
+    setModulForm(prev => ({
+      ...prev,
+      inhalte: [...prev.inhalte, {
+        typ,
+        titel: '',
+        inhalt: typ === 'quiz' ? JSON.stringify({ fragen: [] }) : '',
+        reihenfolge: prev.inhalte.length
+      }]
+    }))
+  }
+
+  function removeInhaltBlock(idx: number) {
+    setModulForm(prev => ({ ...prev, inhalte: prev.inhalte.filter((_, i) => i !== idx) }))
+  }
+
+  function updateInhaltBlock(idx: number, field: 'titel' | 'inhalt', value: string) {
+    setModulForm(prev => {
+      const inhalte = [...prev.inhalte]
+      inhalte[idx] = { ...inhalte[idx], [field]: value }
+      return { ...prev, inhalte }
+    })
+  }
+
+  function addQuizFrage(inhaltIdx: number) {
+    if (!newQuizFrage.trim()) return
+    const answers = newQuizAntworten.filter(a => a.trim())
+    if (answers.length < 2) { alert('Mindestens 2 Antworten angeben'); return }
+    setModulForm(prev => {
+      const inhalte = [...prev.inhalte]
+      const block = inhalte[inhaltIdx]
+      let quizData: { fragen: QuizFrage[] } = { fragen: [] }
+      try { quizData = JSON.parse(block.inhalt) } catch {}
+      quizData.fragen = [...quizData.fragen, { frage: newQuizFrage, antworten: answers, richtige: newQuizRichtige }]
+      inhalte[inhaltIdx] = { ...block, inhalt: JSON.stringify(quizData) }
+      return { ...prev, inhalte }
+    })
+    setNewQuizFrage('')
+    setNewQuizAntworten(['', '', '', ''])
+    setNewQuizRichtige(0)
+    setEditingQuizBlock(null)
+  }
+
+  function removeQuizFrage(inhaltIdx: number, frageIdx: number) {
+    setModulForm(prev => {
+      const inhalte = [...prev.inhalte]
+      const block = inhalte[inhaltIdx]
+      let quizData: { fragen: QuizFrage[] } = { fragen: [] }
+      try { quizData = JSON.parse(block.inhalt) } catch {}
+      quizData.fragen = quizData.fragen.filter((_, i) => i !== frageIdx)
+      inhalte[inhaltIdx] = { ...block, inhalt: JSON.stringify(quizData) }
+      return { ...prev, inhalte }
+    })
+  }
+
   async function assignModulToTermin(modulId: string, terminId: string, pflicht: boolean, frist: string) {
     try {
       await pb.collection('ausbildungen_module_termine').create({
@@ -1504,26 +1661,64 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
             </div>
           ) : (
             <div className="cards-grid">
-              {filteredModule.map(m => (
-                <div key={m.id} className="card">
-                  <div className="card-type">
-                    {m.dauer_minuten} Min.
-                  </div>
-                  <div className="card-name">{m.name}</div>
-                  <div className="card-meta">
-                    {m.beschreibung && <div>{m.beschreibung}</div>}
-                  </div>
-                  <div className="card-stats">
-                    <div className="stat-item">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <circle cx="12" cy="12" r="10"/>
-                        <polyline points="12 6 12 12 16 14"/>
-                      </svg>
-                      <span>{m.inhalte?.length || 0} Inhalte</span>
+              {filteredModule.map(m => {
+                const assigned = modulProgress.filter(p => p.modul_id === m.id)
+                const done = assigned.filter(p => p.abgeschlossen_am)
+                return (
+                  <div key={m.id} className="card" onClick={() => openModulDetail(m)}>
+                    <div className="card-menu-container">
+                      <button
+                        className="menu-dots"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          const menuId = `menu-m-${m.id}`
+                          const menu = document.getElementById(menuId)
+                          document.querySelectorAll('.card-menu-dropdown').forEach(el => {
+                            if (el.id !== menuId) el.classList.remove('show')
+                          })
+                          menu?.classList.toggle('show')
+                        }}
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                          <circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/>
+                        </svg>
+                      </button>
+                      <div id={`menu-m-${m.id}`} className="card-menu-dropdown">
+                        <button className="menu-item" onClick={(e) => { e.stopPropagation(); openEditModul(m) }}>Bearbeiten</button>
+                        <button className="menu-item danger" onClick={(e) => { e.stopPropagation(); deleteModul(m.id, m.name) }}>Löschen</button>
+                      </div>
                     </div>
+                    <div className="card-type">{m.dauer_minuten} Min.</div>
+                    <div className="card-name">{m.name}</div>
+                    <div className="card-meta">{m.beschreibung && <div>{m.beschreibung}</div>}</div>
+                    <div className="card-stats">
+                      <div className="stat-item">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
+                          <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
+                        </svg>
+                        <span>{m.inhalte?.length || 0} Blöcke</span>
+                      </div>
+                      <div className="stat-item">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                          <circle cx="9" cy="7" r="4"/>
+                          <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                          <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                        </svg>
+                        <span>{done.length}/{assigned.length} abgeschlossen</span>
+                      </div>
+                    </div>
+                    {assigned.length > 0 && (
+                      <div style={{marginTop: '10px'}}>
+                        <div style={{height: '4px', background: '#e2e8f0', borderRadius: '2px', overflow: 'hidden'}}>
+                          <div style={{height: '100%', background: '#10b981', borderRadius: '2px', width: `${Math.round((done.length / assigned.length) * 100)}%`, transition: 'width 0.3s'}} />
+                        </div>
+                      </div>
+                    )}
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           )
         )}
@@ -2700,53 +2895,526 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
       )}
 
       {/* TEILNEHMER DETAIL MODAL */}
-      {showTeilnehmerDetailModal && selectedTeilnehmer && (
-        <div className="modal show" onClick={() => setShowTeilnehmerDetailModal(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <h3>{selectedTeilnehmer.vorname} {selectedTeilnehmer.nachname}</h3>
-            
-            <div style={{display: 'grid', gap: '12px', marginTop: '16px'}}>
-              {selectedTeilnehmer.ausbildung_typ && (
-                <div><strong>Ausbildungstyp:</strong> {selectedTeilnehmer.ausbildung_typ}</div>
-              )}
-              {selectedTeilnehmer.email && (
-                <div><strong>Email:</strong> {selectedTeilnehmer.email}</div>
-              )}
-              {selectedTeilnehmer.telefon && (
-                <div><strong>Telefon:</strong> {selectedTeilnehmer.telefon}</div>
-              )}
-              {selectedTeilnehmer.whatsapp && (
-                <div><strong>WhatsApp:</strong> {selectedTeilnehmer.whatsapp}</div>
-              )}
-              {selectedTeilnehmer.notizen && (
-                <div>
-                  <strong>Notizen:</strong>
-                  <div style={{marginTop: '8px', color: '#64748b'}}>{selectedTeilnehmer.notizen}</div>
-                </div>
-              )}
-              <div>
-                <strong>Lernbar-Zugang:</strong> {selectedTeilnehmer.lernbar_zugang_aktiv ? 'Aktiv' : 'Inaktiv'}
-              </div>
-              {selectedTeilnehmer.lernbar_zugang_aktiv && (
+      {showTeilnehmerDetailModal && selectedTeilnehmer && (() => {
+        const myProgress = modulProgress.filter(p => p.teilnehmer_id === selectedTeilnehmer.id)
+        const myDone = myProgress.filter(p => p.abgeschlossen_am)
+        return (
+          <div className="modal show" onClick={() => setShowTeilnehmerDetailModal(false)}>
+            <div className="modal-content large" onClick={(e) => e.stopPropagation()} style={{padding: 0, overflow: 'hidden'}}>
+              {/* Header */}
+              <div style={{background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)', padding: '24px 28px', color: '#fff', position: 'relative'}}>
                 <div style={{
-                  background: '#eff6ff',
-                  border: '1px solid #bfdbfe',
-                  borderRadius: '8px',
-                  padding: '12px',
-                  fontSize: '13px',
-                  color: '#1e40af'
+                  width: '44px', height: '44px', borderRadius: '50%', background: 'rgba(255,255,255,0.15)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontWeight: 700, fontSize: '18px', marginBottom: '10px'
                 }}>
-                  <strong>Login-Info:</strong><br/>
-                  Der Teilnehmer hat eine Password-Reset Email erhalten und kann sich damit ein Passwort setzen.
-                  Login-Redirect: Lernbar-Only → /lernbar, sonst → /hub
+                  {selectedTeilnehmer.vorname[0]}{selectedTeilnehmer.nachname[0]}
+                </div>
+                <div style={{fontSize: '20px', fontWeight: 700}}>{selectedTeilnehmer.vorname} {selectedTeilnehmer.nachname}</div>
+                {selectedTeilnehmer.ausbildung_typ && (
+                  <div style={{fontSize: '13px', color: 'rgba(255,255,255,0.55)', marginTop: '4px'}}>{selectedTeilnehmer.ausbildung_typ}</div>
+                )}
+                <button onClick={() => setShowTeilnehmerDetailModal(false)} style={{
+                  position: 'absolute', top: '16px', right: '16px', background: 'rgba(255,255,255,0.1)',
+                  border: 'none', borderRadius: '8px', width: '30px', height: '30px', cursor: 'pointer',
+                  color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center'
+                }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                  </svg>
+                </button>
+              </div>
+
+              <div style={{padding: '24px 28px', overflowY: 'auto', maxHeight: '65vh'}}>
+                {/* Contact info */}
+                <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '24px'}}>
+                  {selectedTeilnehmer.email && (
+                    <div style={{background: '#f8fafc', borderRadius: '8px', padding: '10px 14px'}}>
+                      <div style={{fontSize: '11px', color: '#94a3b8', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '3px'}}>Email</div>
+                      <div style={{fontSize: '13px'}}>{selectedTeilnehmer.email}</div>
+                    </div>
+                  )}
+                  {selectedTeilnehmer.telefon && (
+                    <div style={{background: '#f8fafc', borderRadius: '8px', padding: '10px 14px'}}>
+                      <div style={{fontSize: '11px', color: '#94a3b8', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '3px'}}>Telefon</div>
+                      <div style={{fontSize: '13px'}}>{selectedTeilnehmer.telefon}</div>
+                    </div>
+                  )}
+                  {selectedTeilnehmer.whatsapp && (
+                    <div style={{background: '#f8fafc', borderRadius: '8px', padding: '10px 14px'}}>
+                      <div style={{fontSize: '11px', color: '#94a3b8', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '3px'}}>WhatsApp</div>
+                      <div style={{fontSize: '13px'}}>{selectedTeilnehmer.whatsapp}</div>
+                    </div>
+                  )}
+                  <div style={{background: '#f8fafc', borderRadius: '8px', padding: '10px 14px'}}>
+                    <div style={{fontSize: '11px', color: '#94a3b8', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '3px'}}>Lernbar</div>
+                    <div style={{fontSize: '13px', color: selectedTeilnehmer.lernbar_zugang_aktiv ? '#059669' : '#94a3b8', fontWeight: 600}}>
+                      {selectedTeilnehmer.lernbar_zugang_aktiv ? 'Aktiv' : 'Inaktiv'}
+                    </div>
+                  </div>
+                </div>
+
+                {selectedTeilnehmer.notizen && (
+                  <div style={{background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '8px', padding: '12px 14px', marginBottom: '24px', fontSize: '13px', color: '#92400e'}}>
+                    {selectedTeilnehmer.notizen}
+                  </div>
+                )}
+
+                {/* Module progress */}
+                <div>
+                  <div style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    marginBottom: '14px'
+                  }}>
+                    <div style={{fontSize: '13px', fontWeight: 700, color: '#1d1d1f'}}>Lernmodule</div>
+                    <div style={{fontSize: '12px', color: '#64748b'}}>
+                      {myDone.length}/{myProgress.length} abgeschlossen
+                    </div>
+                  </div>
+
+                  {myProgress.length === 0 ? (
+                    <div style={{color: '#94a3b8', fontSize: '13px', textAlign: 'center', padding: '16px 0'}}>
+                      Noch keinem Modul zugewiesen.
+                    </div>
+                  ) : (
+                    <div style={{display: 'flex', flexDirection: 'column', gap: '6px'}}>
+                      {myProgress.map(p => {
+                        const mod = module.find(m => m.id === p.modul_id)
+                        const isDone = !!p.abgeschlossen_am
+                        return (
+                          <div key={p.id} style={{
+                            display: 'flex', alignItems: 'center', gap: '12px',
+                            padding: '10px 12px', borderRadius: '8px',
+                            background: isDone ? '#f0fdf4' : '#f8fafc',
+                            border: `1px solid ${isDone ? '#bbf7d0' : '#e2e8f0'}`
+                          }}>
+                            <div style={{
+                              width: '8px', height: '8px', borderRadius: '50%', flexShrink: 0,
+                              background: isDone ? '#10b981' : '#cbd5e1'
+                            }} />
+                            <div style={{flex: 1}}>
+                              <div style={{fontSize: '13px', fontWeight: 600}}>{mod?.name || 'Unbekanntes Modul'}</div>
+                              {isDone && p.abgeschlossen_am && (
+                                <div style={{fontSize: '11px', color: '#059669', marginTop: '1px'}}>
+                                  Abgeschlossen am {parseDate(p.abgeschlossen_am).toLocaleDateString('de-DE')}
+                                </div>
+                              )}
+                            </div>
+                            <span style={{
+                              fontSize: '11px', fontWeight: 700, padding: '3px 8px', borderRadius: '4px',
+                              background: isDone ? '#dcfce7' : '#f1f5f9',
+                              color: isDone ? '#065f46' : '#94a3b8'
+                            }}>
+                              {isDone ? 'Fertig' : 'Offen'}
+                            </span>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div style={{padding: '14px 28px', borderTop: '1px solid #f1f5f9', display: 'flex', justifyContent: 'flex-end'}}>
+                <button className="btn" onClick={() => setShowTeilnehmerDetailModal(false)}>Schließen</button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
+
+      {/* ADD/EDIT MODUL MODAL */}
+      {showAddModulModal && (
+        <div className="modal show" onClick={() => setShowAddModulModal(false)}>
+          <div className="modal-content large" onClick={(e) => e.stopPropagation()} style={{maxHeight: '90vh', overflowY: 'auto'}}>
+            <h3>{modulForm.id ? 'Modul bearbeiten' : 'Modul erstellen'}</h3>
+
+            <div className="field">
+              <label>Name *</label>
+              <input type="text" value={modulForm.name} autoFocus
+                onChange={(e) => setModulForm(prev => ({ ...prev, name: e.target.value }))}
+                placeholder="z.B. Grundlagen Erste Hilfe" />
+            </div>
+
+            <div className="field">
+              <label>Beschreibung</label>
+              <textarea rows={2} value={modulForm.beschreibung}
+                onChange={(e) => setModulForm(prev => ({ ...prev, beschreibung: e.target.value }))}
+                placeholder="Kurze Beschreibung des Moduls" />
+            </div>
+
+            <div className="field">
+              <label>Dauer (Minuten)</label>
+              <input type="number" min={1} value={modulForm.dauer_minuten}
+                onChange={(e) => setModulForm(prev => ({ ...prev, dauer_minuten: parseInt(e.target.value) || 60 }))} />
+            </div>
+
+            {/* Content blocks */}
+            <div style={{marginTop: '24px', marginBottom: '12px'}}>
+              <div style={{fontWeight: 700, fontSize: '14px', marginBottom: '12px'}}>Inhalte</div>
+
+              {modulForm.inhalte.length === 0 && (
+                <div style={{color: '#94a3b8', fontSize: '13px', marginBottom: '12px'}}>Noch keine Inhaltsblöcke hinzugefügt.</div>
+              )}
+
+              {modulForm.inhalte.map((block, idx) => (
+                <div key={idx} style={{
+                  border: '1px solid #e2e8f0', borderRadius: '10px',
+                  padding: '16px', marginBottom: '12px', background: '#fafafa'
+                }}>
+                  <div style={{display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px'}}>
+                    <span style={{
+                      fontSize: '11px', fontWeight: 700, letterSpacing: '0.06em',
+                      textTransform: 'uppercase', color: block.typ === 'quiz' ? '#7c3aed' : '#2563eb',
+                      background: block.typ === 'quiz' ? '#f5f3ff' : '#eff6ff',
+                      padding: '3px 8px', borderRadius: '4px'
+                    }}>
+                      {block.typ === 'quiz' ? 'Quiz' : 'Text'}
+                    </span>
+                    <input
+                      type="text"
+                      value={block.titel}
+                      onChange={(e) => updateInhaltBlock(idx, 'titel', e.target.value)}
+                      placeholder="Titel des Blocks"
+                      style={{flex: 1, padding: '6px 10px', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '13px', fontFamily: 'inherit'}}
+                    />
+                    <button onClick={() => removeInhaltBlock(idx)} style={{
+                      background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', padding: '4px'
+                    }}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                      </svg>
+                    </button>
+                  </div>
+
+                  {block.typ === 'text' && (
+                    <textarea
+                      rows={5}
+                      value={block.inhalt}
+                      onChange={(e) => updateInhaltBlock(idx, 'inhalt', e.target.value)}
+                      placeholder="Inhalt hier eingeben..."
+                      style={{width: '100%', padding: '10px', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '13px', fontFamily: 'inherit', resize: 'vertical', boxSizing: 'border-box'}}
+                    />
+                  )}
+
+                  {block.typ === 'quiz' && (() => {
+                    let quizData: { fragen: QuizFrage[] } = { fragen: [] }
+                    try { quizData = JSON.parse(block.inhalt) } catch {}
+                    return (
+                      <div>
+                        {quizData.fragen.map((f, fi) => (
+                          <div key={fi} style={{
+                            background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px',
+                            padding: '12px', marginBottom: '8px', fontSize: '13px'
+                          }}>
+                            <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start'}}>
+                              <div style={{fontWeight: 600, flex: 1}}>{f.frage}</div>
+                              <button onClick={() => removeQuizFrage(idx, fi)} style={{background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', padding: '2px'}}>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                  <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                                </svg>
+                              </button>
+                            </div>
+                            <div style={{marginTop: '6px', display: 'flex', flexDirection: 'column', gap: '3px'}}>
+                              {f.antworten.map((a, ai) => (
+                                <div key={ai} style={{
+                                  display: 'flex', alignItems: 'center', gap: '6px',
+                                  color: ai === f.richtige ? '#059669' : '#64748b'
+                                }}>
+                                  <span style={{fontSize: '11px', fontWeight: ai === f.richtige ? 700 : 400}}>
+                                    {ai === f.richtige ? '✓' : '○'}
+                                  </span>
+                                  {a}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+
+                        {editingQuizBlock === idx ? (
+                          <div style={{background: '#fff', border: '1px solid #c7d2fe', borderRadius: '8px', padding: '12px', marginTop: '8px'}}>
+                            <div className="field" style={{marginBottom: '8px'}}>
+                              <label style={{fontSize: '12px'}}>Frage</label>
+                              <input type="text" value={newQuizFrage}
+                                onChange={(e) => setNewQuizFrage(e.target.value)}
+                                placeholder="Frage eingeben..."
+                                style={{padding: '8px', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '13px', fontFamily: 'inherit', width: '100%', boxSizing: 'border-box'}} />
+                            </div>
+                            <div style={{display: 'grid', gap: '6px', marginBottom: '10px'}}>
+                              {[0,1,2,3].map(i => (
+                                <div key={i} style={{display: 'flex', gap: '8px', alignItems: 'center'}}>
+                                  <input type="radio" name={`richtig-${idx}`} checked={newQuizRichtige === i}
+                                    onChange={() => setNewQuizRichtige(i)} title="Richtige Antwort" />
+                                  <input type="text" value={newQuizAntworten[i]}
+                                    onChange={(e) => {
+                                      const a = [...newQuizAntworten]; a[i] = e.target.value; setNewQuizAntworten(a)
+                                    }}
+                                    placeholder={`Antwort ${i + 1}${i < 2 ? ' *' : ''}`}
+                                    style={{flex: 1, padding: '7px', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '13px', fontFamily: 'inherit'}} />
+                                </div>
+                              ))}
+                            </div>
+                            <div style={{fontSize: '11px', color: '#94a3b8', marginBottom: '8px'}}>Radio = richtige Antwort</div>
+                            <div style={{display: 'flex', gap: '8px'}}>
+                              <button className="btn primary" style={{fontSize: '12px', padding: '6px 14px'}} onClick={() => addQuizFrage(idx)}>Hinzufügen</button>
+                              <button className="btn secondary" style={{fontSize: '12px', padding: '6px 14px'}} onClick={() => setEditingQuizBlock(null)}>Abbrechen</button>
+                            </div>
+                          </div>
+                        ) : (
+                          <button className="btn secondary" style={{fontSize: '12px', padding: '6px 14px', marginTop: '8px'}}
+                            onClick={() => { setEditingQuizBlock(idx); setNewQuizFrage(''); setNewQuizAntworten(['','','','']); setNewQuizRichtige(0) }}>
+                            + Frage hinzufügen
+                          </button>
+                        )}
+                      </div>
+                    )
+                  })()}
+                </div>
+              ))}
+
+              <div style={{display: 'flex', gap: '8px', marginTop: '8px'}}>
+                <button className="btn secondary" style={{fontSize: '13px'}} onClick={() => addInhaltBlock('text')}>
+                  + Textblock
+                </button>
+                <button className="btn secondary" style={{fontSize: '13px'}} onClick={() => addInhaltBlock('quiz')}>
+                  + Quizblock
+                </button>
+              </div>
+            </div>
+
+            <div className="modal-actions">
+              <button className="btn" onClick={() => setShowAddModulModal(false)}>Abbrechen</button>
+              <button className="btn primary" onClick={saveModul}>
+                {modulForm.id ? 'Speichern' : 'Erstellen'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODUL DETAIL MODAL */}
+      {showModulDetailModal && selectedModul && (
+        <div className="modal show" onClick={() => setShowModulDetailModal(false)}>
+          <div className="modal-content large" onClick={(e) => e.stopPropagation()} style={{padding: 0, overflow: 'hidden'}}>
+            {/* Header */}
+            <div style={{background: 'linear-gradient(135deg, #1e1b4b 0%, #3730a3 100%)', padding: '24px 28px', color: '#fff', position: 'relative'}}>
+              <div style={{fontSize: '11px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.5)', marginBottom: '6px'}}>
+                Lernmodul · {selectedModul.dauer_minuten} Min.
+              </div>
+              <div style={{fontSize: '20px', fontWeight: 700}}>{selectedModul.name}</div>
+              {selectedModul.beschreibung && (
+                <div style={{fontSize: '13px', color: 'rgba(255,255,255,0.65)', marginTop: '6px'}}>{selectedModul.beschreibung}</div>
+              )}
+              <button onClick={() => setShowModulDetailModal(false)} style={{
+                position: 'absolute', top: '16px', right: '16px', background: 'rgba(255,255,255,0.12)',
+                border: 'none', borderRadius: '8px', width: '30px', height: '30px', cursor: 'pointer',
+                color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center'
+              }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              </button>
+            </div>
+
+            {/* Tabs */}
+            <div style={{display: 'flex', borderBottom: '1px solid #f1f5f9', padding: '0 28px'}}>
+              {(['inhalt', 'teilnehmer'] as const).map(tab => (
+                <button key={tab} onClick={() => setSelectedModulTab(tab)} style={{
+                  padding: '12px 16px', border: 'none', background: 'none', cursor: 'pointer',
+                  fontSize: '13px', fontWeight: 600, fontFamily: 'inherit',
+                  color: selectedModulTab === tab ? '#3730a3' : '#94a3b8',
+                  borderBottom: selectedModulTab === tab ? '2px solid #3730a3' : '2px solid transparent',
+                  marginBottom: '-1px'
+                }}>
+                  {tab === 'inhalt' ? 'Inhalt' : `Teilnehmer (${modulProgress.filter(p => p.modul_id === selectedModul.id).length})`}
+                </button>
+              ))}
+            </div>
+
+            {/* Body */}
+            <div style={{padding: '24px 28px', overflowY: 'auto', maxHeight: '55vh'}}>
+
+              {/* INHALT TAB */}
+              {selectedModulTab === 'inhalt' && (
+                <div>
+                  {(!selectedModul.inhalte || selectedModul.inhalte.length === 0) ? (
+                    <div style={{color: '#94a3b8', fontSize: '14px', textAlign: 'center', padding: '24px 0'}}>
+                      Noch keine Inhalte. Modul bearbeiten, um Blöcke hinzuzufügen.
+                    </div>
+                  ) : (
+                    selectedModul.inhalte.map((block, idx) => (
+                      <div key={idx} style={{marginBottom: '20px'}}>
+                        <div style={{display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px'}}>
+                          <span style={{
+                            fontSize: '11px', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase',
+                            color: block.typ === 'quiz' ? '#7c3aed' : '#2563eb',
+                            background: block.typ === 'quiz' ? '#f5f3ff' : '#eff6ff',
+                            padding: '2px 8px', borderRadius: '4px'
+                          }}>{block.typ === 'quiz' ? 'Quiz' : 'Text'}</span>
+                          {block.titel && <span style={{fontWeight: 600, fontSize: '14px'}}>{block.titel}</span>}
+                        </div>
+
+                        {block.typ === 'text' && (
+                          <div style={{
+                            background: '#f8fafc', borderRadius: '10px', padding: '16px',
+                            fontSize: '14px', lineHeight: 1.7, color: '#334155', whiteSpace: 'pre-wrap'
+                          }}>
+                            {block.inhalt || <span style={{color: '#94a3b8'}}>Kein Inhalt.</span>}
+                          </div>
+                        )}
+
+                        {block.typ === 'quiz' && (() => {
+                          let quizData: { fragen: QuizFrage[] } = { fragen: [] }
+                          try { quizData = JSON.parse(block.inhalt) } catch {}
+                          return (
+                            <div style={{display: 'flex', flexDirection: 'column', gap: '10px'}}>
+                              {quizData.fragen.length === 0 && (
+                                <div style={{color: '#94a3b8', fontSize: '13px'}}>Noch keine Fragen.</div>
+                              )}
+                              {quizData.fragen.map((f, fi) => (
+                                <div key={fi} style={{background: '#f5f3ff', borderRadius: '10px', padding: '14px', border: '1px solid #e9d5ff'}}>
+                                  <div style={{fontWeight: 600, fontSize: '14px', marginBottom: '8px'}}>{fi + 1}. {f.frage}</div>
+                                  <div style={{display: 'flex', flexDirection: 'column', gap: '5px'}}>
+                                    {f.antworten.map((a, ai) => (
+                                      <div key={ai} style={{
+                                        display: 'flex', alignItems: 'center', gap: '8px',
+                                        padding: '6px 10px', borderRadius: '6px',
+                                        background: ai === f.richtige ? '#d1fae5' : '#fff',
+                                        border: `1px solid ${ai === f.richtige ? '#6ee7b7' : '#e2e8f0'}`,
+                                        fontSize: '13px', color: ai === f.richtige ? '#065f46' : '#334155'
+                                      }}>
+                                        <span style={{fontWeight: ai === f.richtige ? 700 : 400, minWidth: '14px'}}>
+                                          {ai === f.richtige ? '✓' : String.fromCharCode(65 + ai)}
+                                        </span>
+                                        {a}
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )
+                        })()}
+                      </div>
+                    ))
+                  )}
                 </div>
               )}
+
+              {/* TEILNEHMER TAB */}
+              {selectedModulTab === 'teilnehmer' && (() => {
+                const assigned = modulProgress.filter(p => p.modul_id === selectedModul.id)
+                const done = assigned.filter(p => p.abgeschlossen_am)
+                const unassignedTeilnehmer = teilnehmer.filter(t => !assigned.some(p => p.teilnehmer_id === t.id))
+                return (
+                  <div>
+                    {/* Summary bar */}
+                    <div style={{
+                      display: 'flex', alignItems: 'center', gap: '16px',
+                      background: '#f8fafc', borderRadius: '10px', padding: '14px 16px', marginBottom: '20px'
+                    }}>
+                      <div style={{flex: 1}}>
+                        <div style={{fontSize: '13px', color: '#64748b', marginBottom: '4px'}}>
+                          {done.length} von {assigned.length} abgeschlossen
+                        </div>
+                        <div style={{height: '6px', background: '#e2e8f0', borderRadius: '3px', overflow: 'hidden'}}>
+                          <div style={{
+                            height: '100%', background: '#10b981', borderRadius: '3px',
+                            width: assigned.length > 0 ? `${Math.round((done.length / assigned.length) * 100)}%` : '0%',
+                            transition: 'width 0.3s'
+                          }} />
+                        </div>
+                      </div>
+                      <button className="btn primary" style={{fontSize: '12px', padding: '7px 14px', whiteSpace: 'nowrap'}}
+                        onClick={() => assignAllTeilnehmerToModul(selectedModul.id)}>
+                        Alle hinzufügen
+                      </button>
+                    </div>
+
+                    {/* Add individual */}
+                    {unassignedTeilnehmer.length > 0 && (
+                      <div style={{display: 'flex', gap: '8px', marginBottom: '16px'}}>
+                        <select value={addModulTeilnehmerId} onChange={(e) => setAddModulTeilnehmerId(e.target.value)}
+                          style={{flex: 1, padding: '9px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '13px', fontFamily: 'inherit'}}>
+                          <option value="">Teilnehmer einzeln hinzufügen...</option>
+                          {unassignedTeilnehmer.map(t => (
+                            <option key={t.id} value={t.id}>{t.vorname} {t.nachname}</option>
+                          ))}
+                        </select>
+                        <button className="btn primary" style={{fontSize: '13px', padding: '8px 16px'}}
+                          onClick={async () => { await assignTeilnehmerToModul(selectedModul.id, addModulTeilnehmerId); setAddModulTeilnehmerId('') }}>
+                          Hinzufügen
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Participant list */}
+                    {assigned.length === 0 ? (
+                      <div style={{color: '#94a3b8', fontSize: '14px', textAlign: 'center', padding: '20px 0'}}>
+                        Noch keine Teilnehmer zugewiesen.
+                      </div>
+                    ) : (
+                      <div style={{display: 'flex', flexDirection: 'column', gap: '6px'}}>
+                        {assigned.map(p => {
+                          const t = teilnehmer.find(x => x.id === p.teilnehmer_id)
+                          const isDone = !!p.abgeschlossen_am
+                          return (
+                            <div key={p.id} style={{
+                              display: 'flex', alignItems: 'center', gap: '12px',
+                              padding: '12px 14px', borderRadius: '10px',
+                              background: isDone ? '#f0fdf4' : '#fafafa',
+                              border: `1px solid ${isDone ? '#bbf7d0' : '#e2e8f0'}`
+                            }}>
+                              <div style={{
+                                width: '32px', height: '32px', borderRadius: '50%',
+                                background: isDone ? '#10b981' : '#e2e8f0',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                flexShrink: 0, color: isDone ? '#fff' : '#94a3b8', fontSize: '13px', fontWeight: 700
+                              }}>
+                                {t ? `${t.vorname[0]}${t.nachname[0]}` : '?'}
+                              </div>
+                              <div style={{flex: 1}}>
+                                <div style={{fontWeight: 600, fontSize: '14px'}}>
+                                  {t ? `${t.vorname} ${t.nachname}` : 'Unbekannt'}
+                                </div>
+                                {isDone && p.abgeschlossen_am && (
+                                  <div style={{fontSize: '11px', color: '#059669', marginTop: '2px'}}>
+                                    Abgeschlossen am {parseDate(p.abgeschlossen_am).toLocaleDateString('de-DE')}
+                                  </div>
+                                )}
+                              </div>
+                              <button
+                                onClick={() => toggleModulAbgeschlossen(p.id, isDone)}
+                                style={{
+                                  padding: '5px 12px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontSize: '12px', fontWeight: 600, fontFamily: 'inherit',
+                                  background: isDone ? '#dcfce7' : '#f1f5f9',
+                                  color: isDone ? '#065f46' : '#475569'
+                                }}
+                              >
+                                {isDone ? 'Abgeschlossen' : 'Offen'}
+                              </button>
+                              <button onClick={() => removeModulTeilnehmer(p.id)} style={{background: 'none', border: 'none', cursor: 'pointer', color: '#cbd5e1', padding: '4px'}}
+                                title="Entfernen">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                  <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                                </svg>
+                              </button>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )
+              })()}
             </div>
-            
-            <div className="modal-actions">
-              <button className="btn" onClick={() => setShowTeilnehmerDetailModal(false)}>
-                Schließen
+
+            {/* Footer */}
+            <div style={{padding: '14px 28px', borderTop: '1px solid #f1f5f9', display: 'flex', justifyContent: 'flex-end', gap: '10px'}}>
+              <button className="btn secondary" onClick={() => { setShowModulDetailModal(false); openEditModul(selectedModul) }}>
+                Bearbeiten
               </button>
+              <button className="btn" onClick={() => setShowModulDetailModal(false)}>Schließen</button>
             </div>
           </div>
         </div>
