@@ -107,11 +107,10 @@ function CalendarButtons({ record }: { record: TokenRecord }) {
 function RespondaLogo() {
   return (
     <div style={{textAlign: 'center', marginBottom: '24px'}}>
-      <svg width="140" height="32" viewBox="0 0 140 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <rect width="32" height="32" rx="8" fill="#0f172a"/>
-        <path d="M8 10h10a6 6 0 0 1 0 12H8V10z" fill="none" stroke="white" strokeWidth="2"/>
-        <circle cx="18" cy="16" r="3" fill="white"/>
-        <text x="40" y="22" fontFamily="system-ui, -apple-system, sans-serif" fontWeight="700" fontSize="18" fill="#0f172a" letterSpacing="-0.5">responda</text>
+      <svg width="150" height="40" viewBox="0 0 560 140">
+        <rect x="20" y="20" width="100" height="100" rx="26" fill="#1e3a8a" opacity="0.15"/>
+        <path d="M45 42 L45 98 L60 98 L60 78 L72 78 L83 98 L100 98 L87 77 Q92 74 92 63 Q92 42 75 42 Z M60 52 L72 52 Q77 52 77 62 Q77 72 72 72 L60 72 Z" fill="#1e3a8a"/>
+        <text x="140" y="80" fontFamily="Inter, sans-serif" fontSize="46" fontWeight="600" fill="#1d1d1f" letterSpacing="0">Responda</text>
       </svg>
     </div>
   )
