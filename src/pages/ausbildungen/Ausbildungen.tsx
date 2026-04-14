@@ -3326,6 +3326,12 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                 const unassignedTeilnehmer = teilnehmer.filter(t => !assigned.some(p => p.teilnehmer_id === t.id))
                 return (
                   <div>
+                    <div style={{background: '#fef9c3', border: '1px solid #fde68a', borderRadius: '8px', padding: '10px 12px', marginBottom: '12px', fontSize: '12px', color: '#92400e', fontFamily: 'monospace'}}>
+                      <div>modulProgress gesamt: {modulProgress.length}</div>
+                      <div>selectedModul.id: {selectedModul.id}</div>
+                      <div>modul_id der ersten 3 Einträge: {modulProgress.slice(0,3).map(p => p.modul_id).join(', ') || '–'}</div>
+                      <div>gefiltert (assigned): {assigned.length}</div>
+                    </div>
                     {/* Summary bar */}
                     <div style={{
                       display: 'flex', alignItems: 'center', gap: '16px',
