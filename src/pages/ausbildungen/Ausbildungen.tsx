@@ -2559,36 +2559,109 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                     </div>
 
                     {/* Ausbildungskonzept */}
-                    <div style={{background: '#f8fafc', borderRadius: '10px', padding: '14px'}}>
-                      <div style={{fontWeight: 700, fontSize: '13px', marginBottom: '10px', color: '#374151'}}>Ausbildungskonzept</div>
+                    <div style={{borderRadius: '10px', border: '1px solid #e2e8f0', overflow: 'hidden'}}>
+                      <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: '#f8fafc', borderBottom: linkedKonzept ? '1px solid #e2e8f0' : 'none'}}>
+                        <div style={{fontWeight: 700, fontSize: '13px', color: '#374151'}}>Ausbildungskonzept</div>
+                        {linkedKonzept && (
+                          <button
+                            onClick={() => saveTerminField(selectedTermin.id, { konzept_id: '' })}
+                            style={{background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: '16px', lineHeight: 1, padding: '0 2px'}}
+                            title="Konzept entfernen"
+                          >✕</button>
+                        )}
+                      </div>
+
                       {linkedKonzept ? (
-                        <div style={{background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '12px'}}>
-                          <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start'}}>
-                            <div>
-                              <div style={{fontWeight: 700, marginBottom: '4px'}}>{linkedKonzept.name}</div>
-                              {linkedKonzept.beschreibung && <div style={{fontSize: '13px', color: '#64748b'}}>{linkedKonzept.beschreibung}</div>}
-                              {linkedKonzept.lernziele?.length > 0 && (
-                                <div style={{marginTop: '8px', fontSize: '12px', color: '#475569'}}>
-                                  <strong>Lernziele:</strong> {linkedKonzept.lernziele.slice(0, 3).join(' • ')}{linkedKonzept.lernziele.length > 3 ? ` +${linkedKonzept.lernziele.length - 3} weitere` : ''}
-                                </div>
-                              )}
+                        <div style={{padding: '16px'}}>
+                          <div style={{fontWeight: 700, fontSize: '15px', marginBottom: '4px'}}>{linkedKonzept.name}</div>
+                          {linkedKonzept.beschreibung && (
+                            <div style={{fontSize: '13px', color: '#64748b', marginBottom: '16px'}}>{linkedKonzept.beschreibung}</div>
+                          )}
+
+                          {linkedKonzept.lernziele?.length > 0 && (
+                            <div style={{marginBottom: '16px'}}>
+                              <div style={{fontSize: '11px', fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', color: '#94a3b8', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px'}}>
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                                Lernziele
+                              </div>
+                              <div style={{display: 'flex', flexDirection: 'column', gap: '6px'}}>
+                                {linkedKonzept.lernziele.map((lz, i) => (
+                                  <div key={i} style={{display: 'flex', gap: '10px', padding: '8px 12px', background: '#eff6ff', borderRadius: '8px', borderLeft: '3px solid #3b82f6', fontSize: '13px', color: '#1d1d1f'}}>
+                                    <span style={{color: '#3b82f6', fontWeight: 700, fontSize: '11px', minWidth: '16px'}}>{i + 1}</span>
+                                    {lz}
+                                  </div>
+                                ))}
+                              </div>
                             </div>
-                            <button
-                              onClick={() => saveTerminField(selectedTermin.id, { konzept_id: '' })}
-                              style={{background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: '18px', lineHeight: 1, padding: '0 4px'}}
-                              title="Konzept entfernen"
-                            >✕</button>
-                          </div>
+                          )}
+
+                          {linkedKonzept.handlungen?.length > 0 && (
+                            <div style={{marginBottom: '16px'}}>
+                              <div style={{fontSize: '11px', fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', color: '#94a3b8', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px'}}>
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                                Handlungen
+                              </div>
+                              <div style={{display: 'flex', flexDirection: 'column', gap: '6px'}}>
+                                {linkedKonzept.handlungen.map((h, i) => (
+                                  <div key={i} style={{display: 'flex', gap: '10px', padding: '8px 12px', background: '#f0fdf4', borderRadius: '8px', borderLeft: '3px solid #10b981', fontSize: '13px', color: '#1d1d1f'}}>
+                                    <span style={{color: '#10b981', fontWeight: 700, fontSize: '11px', minWidth: '16px'}}>{i + 1}</span>
+                                    {h}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {linkedKonzept.koennen?.length > 0 && (
+                            <div style={{marginBottom: '16px'}}>
+                              <div style={{fontSize: '11px', fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', color: '#94a3b8', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px'}}>
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="8" r="4"/><path d="M6 20v-2a6 6 0 0 1 12 0v2"/></svg>
+                                Das Können
+                              </div>
+                              <div style={{display: 'flex', flexWrap: 'wrap', gap: '6px'}}>
+                                {linkedKonzept.koennen.map((k, i) => (
+                                  <span key={i} style={{padding: '4px 12px', background: '#f0f4ff', border: '1px solid #c7d2fe', borderRadius: '20px', fontSize: '12px', color: '#3730a3', fontWeight: 500}}>
+                                    {k}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {linkedKonzept.wissensanhang_links?.length > 0 && (
+                            <div>
+                              <div style={{fontSize: '11px', fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', color: '#94a3b8', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px'}}>
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                                Wissensanhang
+                              </div>
+                              <div style={{display: 'flex', flexDirection: 'column', gap: '6px'}}>
+                                {linkedKonzept.wissensanhang_links.map((link, i) => (
+                                  <a key={i} href={link.url} target="_blank" rel="noopener noreferrer" style={{display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0', textDecoration: 'none'}}>
+                                    <div style={{width: '28px', height: '28px', borderRadius: '6px', background: '#e0e7ff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0}}>
+                                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" strokeWidth="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                                    </div>
+                                    <div style={{flex: 1, minWidth: 0}}>
+                                      <div style={{fontWeight: 600, fontSize: '13px', color: '#1d1d1f'}}>{link.titel}</div>
+                                      <div style={{fontSize: '11px', color: '#94a3b8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>{link.url}</div>
+                                    </div>
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                                  </a>
+                                ))}
+                              </div>
+                            </div>
+                          )}
                         </div>
                       ) : (
-                        <select
-                          value=""
-                          onChange={(e) => { if (e.target.value) saveTerminField(selectedTermin.id, { konzept_id: e.target.value }) }}
-                          style={{width: '100%', padding: '9px 12px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '14px', fontFamily: 'inherit', background: '#fff'}}
-                        >
-                          <option value="">Konzept auswählen...</option>
-                          {konzepte.map(k => <option key={k.id} value={k.id}>{k.name}</option>)}
-                        </select>
+                        <div style={{padding: '12px 16px'}}>
+                          <select
+                            value=""
+                            onChange={(e) => { if (e.target.value) saveTerminField(selectedTermin.id, { konzept_id: e.target.value }) }}
+                            style={{width: '100%', padding: '9px 12px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '14px', fontFamily: 'inherit', background: '#fff'}}
+                          >
+                            <option value="">Konzept auswählen...</option>
+                            {konzepte.map(k => <option key={k.id} value={k.id}>{k.name}</option>)}
+                          </select>
+                        </div>
                       )}
                     </div>
 
