@@ -29,6 +29,8 @@ interface Termin {
   dozent: string
   max_teilnehmer: number
   status: 'geplant' | 'laufend' | 'abgeschlossen' | 'abgesagt'
+  konzept_id?: string
+  notizen?: string
   organization_id: string
   created: string
   updated: string
@@ -141,6 +143,8 @@ interface TerminForm {
   dozent: string
   max_teilnehmer: number
   status: 'geplant' | 'laufend' | 'abgeschlossen' | 'abgesagt'
+  konzept_id?: string
+  notizen?: string
 }
 
 interface TeilnehmerForm {
@@ -208,8 +212,11 @@ export default function Ausbildungen() {
     location: '',
     dozent: '',
     max_teilnehmer: 20,
-    status: 'geplant'
+    status: 'geplant',
+    konzept_id: '',
+    notizen: ''
   })
+  const [konzeptSuggestions, setKonzeptSuggestions] = useState<Ausbildungskonzept[]>([])
   
   const [teilnehmerForm, setTeilnehmerForm] = useState<TeilnehmerForm>({
     vorname: '',
@@ -472,15 +479,11 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
   // TERMIN FUNCTIONS
   function openAddTermin() {
     setTerminForm({
-      name: '',
-      description: '',
-      start_datetime: '',
-      end_datetime: '',
-      location: '',
-      dozent: '',
-      max_teilnehmer: 20,
-      status: 'geplant'
+      name: '', description: '', start_datetime: '', end_datetime: '',
+      location: '', dozent: '', max_teilnehmer: 20, status: 'geplant',
+      konzept_id: '', notizen: ''
     })
+    setKonzeptSuggestions([])
     setShowAddTerminModal(true)
   }
 
@@ -494,9 +497,25 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
       location: termin.location,
       dozent: termin.dozent,
       max_teilnehmer: termin.max_teilnehmer,
-      status: termin.status
+      status: termin.status,
+      konzept_id: termin.konzept_id || '',
+      notizen: termin.notizen || ''
     })
+    setKonzeptSuggestions([])
     setShowAddTerminModal(true)
+  }
+
+  function handleTerminNameChange(name: string) {
+    setTerminForm(prev => ({ ...prev, name }))
+    // Auto-Matching: suche passende Konzepte anhand des Namens
+    if (name.length < 2) { setKonzeptSuggestions([]); return }
+    const lower = name.toLowerCase()
+    const matches = konzepte.filter(k =>
+      k.name.toLowerCase().includes(lower) ||
+      lower.includes(k.name.toLowerCase()) ||
+      k.beschreibung?.toLowerCase().includes(lower)
+    )
+    setKonzeptSuggestions(matches.slice(0, 4))
   }
 
   async function saveTermin() {
@@ -524,6 +543,32 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
     } catch(e: any) {
       alert('Fehler beim Speichern: ' + e.message)
     }
+  }
+
+  async function saveTerminField(terminId: string, fields: Partial<Termin>) {
+    try {
+      await pb.collection('ausbildungen_termine').update(terminId, fields)
+      await loadTermine()
+      // selectedTermin aktualisieren
+      setSelectedTermin(prev => prev ? { ...prev, ...fields } : prev)
+    } catch(e: any) {
+      alert('Fehler: ' + e.message)
+    }
+  }
+
+  function generateEinladungsText(termin: Termin): string {
+    const datum = parseDate(termin.start_datetime).toLocaleDateString('de-DE', {
+      weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric',
+      hour: '2-digit', minute: '2-digit'
+    })
+    const lines = [
+      `📚 Einladung: ${termin.name}`,
+      `📅 ${datum}`,
+      termin.location ? `📍 ${termin.location}` : '',
+      termin.dozent ? `👤 Dozent: ${termin.dozent}` : '',
+      termin.description ? `\n${termin.description}` : '',
+    ].filter(Boolean)
+    return lines.join('\n')
   }
 
   async function deleteTermin(id: string, name: string) {
@@ -1680,10 +1725,34 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
               <input
                 type="text"
                 value={terminForm.name}
-                onChange={(e) => setTerminForm({ ...terminForm, name: e.target.value })}
+                onChange={(e) => handleTerminNameChange(e.target.value)}
                 placeholder="z.B. Sanitätsausbildung Gruppe A"
                 autoFocus
               />
+              {konzeptSuggestions.length > 0 && (
+                <div style={{marginTop: '6px', background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '8px', padding: '8px'}}>
+                  <div style={{fontSize: '12px', color: '#0369a1', fontWeight: 600, marginBottom: '6px'}}>
+                    💡 Passende Konzepte gefunden:
+                  </div>
+                  {konzeptSuggestions.map(k => (
+                    <button
+                      key={k.id}
+                      type="button"
+                      onClick={() => { setTerminForm(prev => ({ ...prev, konzept_id: k.id })); setKonzeptSuggestions([]) }}
+                      style={{display: 'block', width: '100%', textAlign: 'left', padding: '6px 10px', marginBottom: '4px', background: terminForm.konzept_id === k.id ? '#0ea5e9' : '#fff', color: terminForm.konzept_id === k.id ? '#fff' : '#0f172a', border: '1px solid #e2e8f0', borderRadius: '6px', cursor: 'pointer', fontSize: '13px', fontFamily: 'inherit'}}
+                    >
+                      {terminForm.konzept_id === k.id ? '✓ ' : ''}{k.name}
+                      {k.beschreibung && <span style={{color: terminForm.konzept_id === k.id ? 'rgba(255,255,255,0.8)' : '#94a3b8', marginLeft: '6px'}}>— {k.beschreibung.slice(0, 60)}{k.beschreibung.length > 60 ? '…' : ''}</span>}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {terminForm.konzept_id && (
+                <div style={{marginTop: '6px', fontSize: '12px', color: '#16a34a', display: 'flex', alignItems: 'center', gap: '4px'}}>
+                  ✓ Konzept verknüpft: <strong>{konzepte.find(k => k.id === terminForm.konzept_id)?.name}</strong>
+                  <button type="button" onClick={() => setTerminForm(prev => ({ ...prev, konzept_id: '' }))} style={{background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', marginLeft: '4px'}}>✕</button>
+                </div>
+              )}
             </div>
             
             <div className="field">
@@ -1964,39 +2033,118 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
             
             <div className="tab-content">
               {/* ÜBERSICHT TAB */}
-              {currentTerminTab === 'uebersicht' && (
-                <div>
-                  {selectedTermin.description && (
-                    <div style={{marginBottom: '16px'}}>
-                      <strong>Beschreibung:</strong>
-                      <div style={{marginTop: '8px', color: '#64748b'}}>{selectedTermin.description}</div>
+              {currentTerminTab === 'uebersicht' && (() => {
+                const einladungsText = generateEinladungsText(selectedTermin)
+                const linkedKonzept = selectedTermin.konzept_id ? konzepte.find(k => k.id === selectedTermin.konzept_id) : null
+                return (
+                  <div style={{display: 'flex', flexDirection: 'column', gap: '20px'}}>
+
+                    {/* Termin-Infos */}
+                    <div style={{display: 'grid', gap: '8px', fontSize: '14px'}}>
+                      <div style={{display: 'flex', gap: '8px', flexWrap: 'wrap'}}>
+                        <span className={`status-badge ${selectedTermin.status}`}>
+                          {selectedTermin.status === 'geplant' ? 'Geplant' : selectedTermin.status === 'laufend' ? 'Laufend' : selectedTermin.status === 'abgeschlossen' ? 'Abgeschlossen' : 'Abgesagt'}
+                        </span>
+                        <span style={{color: '#64748b'}}>{getTerminTeilnehmerCount(selectedTermin.id)} / {selectedTermin.max_teilnehmer} Teilnehmer</span>
+                        {selectedTermin.dozent && <span style={{color: '#64748b'}}>👤 {selectedTermin.dozent}</span>}
+                      </div>
+                      {selectedTermin.description && <div style={{color: '#374151'}}>{selectedTermin.description}</div>}
+                      {selectedTermin.end_datetime && (
+                        <div style={{color: '#64748b'}}>bis {parseDate(selectedTermin.end_datetime).toLocaleDateString('de-DE', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})}</div>
+                      )}
                     </div>
-                  )}
-                  <div style={{display: 'grid', gap: '12px'}}>
-                    <div>
-                      <strong>Status:</strong>{' '}
-                      <span className={`status-badge ${selectedTermin.status}`}>
-                        {selectedTermin.status === 'geplant' && 'Geplant'}
-                        {selectedTermin.status === 'laufend' && 'Laufend'}
-                        {selectedTermin.status === 'abgeschlossen' && 'Abgeschlossen'}
-                        {selectedTermin.status === 'abgesagt' && 'Abgesagt'}
-                      </span>
+
+                    {/* Einladungslinks */}
+                    <div style={{background: '#f8fafc', borderRadius: '10px', padding: '14px'}}>
+                      <div style={{fontWeight: 700, fontSize: '13px', marginBottom: '10px', color: '#374151'}}>Einladung versenden</div>
+                      <div style={{display: 'flex', gap: '8px', flexWrap: 'wrap'}}>
+                        <a
+                          href={`https://wa.me/?text=${encodeURIComponent(einladungsText)}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          style={{display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', borderRadius: '8px', background: '#25d366', color: '#fff', fontWeight: 600, fontSize: '13px', textDecoration: 'none'}}
+                        >
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.123.554 4.118 1.528 5.85L0 24l6.335-1.508A11.955 11.955 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 0 1-5.006-1.371l-.359-.213-3.721.886.9-3.62-.234-.372A9.818 9.818 0 1 1 12 21.818z"/></svg>
+                          WhatsApp
+                        </a>
+                        <a
+                          href={`sms:?body=${encodeURIComponent(einladungsText)}`}
+                          style={{display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', borderRadius: '8px', background: '#3b82f6', color: '#fff', fontWeight: 600, fontSize: '13px', textDecoration: 'none'}}
+                        >
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                          SMS
+                        </a>
+                        <a
+                          href={`mailto:?subject=${encodeURIComponent('Einladung: ' + selectedTermin.name)}&body=${encodeURIComponent(einladungsText)}`}
+                          style={{display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', borderRadius: '8px', background: '#6366f1', color: '#fff', fontWeight: 600, fontSize: '13px', textDecoration: 'none'}}
+                        >
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                          E-Mail
+                        </a>
+                        <button
+                          onClick={() => { navigator.clipboard.writeText(einladungsText); showMessage('Text kopiert', 'success') }}
+                          style={{display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', borderRadius: '8px', background: '#f1f5f9', border: '1px solid #e2e8f0', color: '#374151', fontWeight: 600, fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit'}}
+                        >
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                          Kopieren
+                        </button>
+                      </div>
                     </div>
-                    <div><strong>Dozent:</strong> {selectedTermin.dozent || '-'}</div>
-                    <div><strong>Max. Teilnehmer:</strong> {selectedTermin.max_teilnehmer}</div>
-                    <div><strong>Aktuell angemeldet:</strong> {getTerminTeilnehmerCount(selectedTermin.id)}</div>
-                    {selectedTermin.end_datetime && (
-                      <div><strong>Ende:</strong> {parseDate(selectedTermin.end_datetime).toLocaleDateString('de-DE', { 
-                        day: '2-digit', 
-                        month: '2-digit', 
-                        year: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })}</div>
-                    )}
+
+                    {/* Ausbildungskonzept */}
+                    <div style={{background: '#f8fafc', borderRadius: '10px', padding: '14px'}}>
+                      <div style={{fontWeight: 700, fontSize: '13px', marginBottom: '10px', color: '#374151'}}>Ausbildungskonzept</div>
+                      {linkedKonzept ? (
+                        <div style={{background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '12px'}}>
+                          <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start'}}>
+                            <div>
+                              <div style={{fontWeight: 700, marginBottom: '4px'}}>{linkedKonzept.name}</div>
+                              {linkedKonzept.beschreibung && <div style={{fontSize: '13px', color: '#64748b'}}>{linkedKonzept.beschreibung}</div>}
+                              {linkedKonzept.lernziele?.length > 0 && (
+                                <div style={{marginTop: '8px', fontSize: '12px', color: '#475569'}}>
+                                  <strong>Lernziele:</strong> {linkedKonzept.lernziele.slice(0, 3).join(' • ')}{linkedKonzept.lernziele.length > 3 ? ` +${linkedKonzept.lernziele.length - 3} weitere` : ''}
+                                </div>
+                              )}
+                            </div>
+                            <button
+                              onClick={() => saveTerminField(selectedTermin.id, { konzept_id: '' })}
+                              style={{background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: '18px', lineHeight: 1, padding: '0 4px'}}
+                              title="Konzept entfernen"
+                            >✕</button>
+                          </div>
+                        </div>
+                      ) : (
+                        <select
+                          value=""
+                          onChange={(e) => { if (e.target.value) saveTerminField(selectedTermin.id, { konzept_id: e.target.value }) }}
+                          style={{width: '100%', padding: '9px 12px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '14px', fontFamily: 'inherit', background: '#fff'}}
+                        >
+                          <option value="">Konzept auswählen...</option>
+                          {konzepte.map(k => <option key={k.id} value={k.id}>{k.name}</option>)}
+                        </select>
+                      )}
+                    </div>
+
+                    {/* Individuelle Notizen */}
+                    <div style={{background: '#f8fafc', borderRadius: '10px', padding: '14px'}}>
+                      <div style={{fontWeight: 700, fontSize: '13px', marginBottom: '10px', color: '#374151'}}>Notizen</div>
+                      <textarea
+                        defaultValue={selectedTermin.notizen || ''}
+                        onBlur={(e) => {
+                          if (e.target.value !== (selectedTermin.notizen || '')) {
+                            saveTerminField(selectedTermin.id, { notizen: e.target.value })
+                          }
+                        }}
+                        placeholder="Individuelle Notizen zum Termin..."
+                        rows={4}
+                        style={{width: '100%', padding: '10px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '14px', fontFamily: 'inherit', resize: 'vertical', boxSizing: 'border-box', background: '#fff'}}
+                      />
+                      <div style={{fontSize: '11px', color: '#94a3b8', marginTop: '4px'}}>Wird automatisch gespeichert wenn du das Feld verlässt</div>
+                    </div>
+
                   </div>
-                </div>
-              )}
+                )
+              })()}
               
               {/* TEILNEHMER TAB */}
               {currentTerminTab === 'teilnehmer' && (
