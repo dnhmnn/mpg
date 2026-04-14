@@ -106,13 +106,19 @@ function CalendarButtons({ record }: { record: TokenRecord }) {
 
 function RespondaLogo() {
   return (
-    <div style={{textAlign: 'center', marginBottom: '24px'}}>
-      <svg width="140" height="32" viewBox="0 0 140 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <rect width="32" height="32" rx="8" fill="#0f172a"/>
-        <path d="M8 10h10a6 6 0 0 1 0 12H8V10z" fill="none" stroke="white" strokeWidth="2"/>
-        <circle cx="18" cy="16" r="3" fill="white"/>
-        <text x="40" y="22" fontFamily="system-ui, -apple-system, sans-serif" fontWeight="700" fontSize="18" fill="#0f172a" letterSpacing="-0.5">responda</text>
+    <div style={{display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', marginBottom: '24px'}}>
+      <svg width="36" height="36" viewBox="0 0 1000 1000" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="rgrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style={{stopColor: '#667eea', stopOpacity: 1}} />
+            <stop offset="50%" style={{stopColor: '#f97316', stopOpacity: 1}} />
+            <stop offset="100%" style={{stopColor: '#764ba2', stopOpacity: 1}} />
+          </linearGradient>
+        </defs>
+        <rect x="100" y="100" width="800" height="800" rx="200" fill="url(#rgrad)"/>
+        <path d="M 250 250 L 250 750 L 400 750 L 400 600 L 500 600 L 625 750 L 800 750 L 650 587.5 Q 700 562.5 700 475 Q 700 250 575 250 Z M 400 350 L 550 350 Q 600 350 600 450 Q 600 550 550 550 L 400 550 Z" fill="white"/>
       </svg>
+      <span style={{fontFamily: 'Inter, system-ui, sans-serif', fontWeight: 600, fontSize: '22px', color: '#1d1d1f', letterSpacing: '-0.3px'}}>Responda</span>
     </div>
   )
 }
