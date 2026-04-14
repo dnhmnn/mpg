@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import PocketBase from 'pocketbase'
 import { useAuth } from '../hooks/useAuth'
 
@@ -104,7 +104,7 @@ function CalendarButtons({ termin }: { termin: Termin }) {
   )
 }
 
-
+export default function Lernbar() {
   const { user, loading: authLoading, logout } = useAuth()
   const [tab, setTab] = useState<'termine' | 'lernmodule' | 'konto'>('termine')
 
