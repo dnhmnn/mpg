@@ -1233,12 +1233,14 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
         )}
       </div>
 
+      {message && (
+        <div style={{position: 'fixed', top: '80px', left: '50%', transform: 'translateX(-50%)', zIndex: 1000}}>
+          <div className={`message ${message.type}`}>{message.text}</div>
+        </div>
+      )}
+
+      {(viewMode === 'termine' || viewMode === 'teilnehmer' || viewMode === 'module' || viewMode === 'konzepte') && (
       <div className="content">
-        {message && (
-          <div className={`message ${message.type}`}>
-            {message.text}
-          </div>
-        )}
 
 
         {/* TERMINE VIEW */}
@@ -1616,6 +1618,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
           )
         )}
       </div>
+      )}
 
       {/* JAHRESÜBERSICHT VIEW */}
       {viewMode === 'jahresuebersicht' && (
