@@ -20,9 +20,11 @@ export default function Login() {
     }, 10000)
 
     try {
-      await pb.collection('users').authWithPassword(email, password)
+      const authData = await pb.collection('users').authWithPassword(email, password)
       clearTimeout(timeoutId)
-      navigate('/hub', { replace: true })
+      const perms = authData.record?.permissions || {}
+      const isLernbarOnly = perms.lernbar && !Object.entries(perms).some(([k, v]) => k !== 'lernbar' && v)
+      navigate(isLernbarOnly ? '/lernbar' : '/hub', { replace: true })
     } catch (err) {
       clearTimeout(timeoutId)
       console.error('Login error:', err)
