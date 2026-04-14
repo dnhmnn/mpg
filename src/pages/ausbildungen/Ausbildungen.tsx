@@ -568,9 +568,20 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
       return
     }
 
+    // Convert datetime-local values ("2026-04-14T14:00") to full ISO strings
+    // PocketBase requires a complete datetime format
+    function toISOSafe(val: string): string {
+      if (!val) return ''
+      const d = new Date(val)
+      return isNaN(d.getTime()) ? val : d.toISOString()
+    }
+
     try {
+      const { id: _id, ...rest } = terminForm
       const data = {
-        ...terminForm,
+        ...rest,
+        start_datetime: toISOSafe(terminForm.start_datetime),
+        end_datetime: terminForm.end_datetime ? toISOSafe(terminForm.end_datetime) : '',
         organization_id: user?.organization_id
       }
 
@@ -585,7 +596,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
       setShowAddTerminModal(false)
       await loadTermine()
     } catch(e: any) {
-      alert('Fehler beim Speichern: ' + e.message)
+      alert('Fehler beim Speichern: ' + (e?.data ? JSON.stringify(e.data) : e.message))
     }
   }
 
