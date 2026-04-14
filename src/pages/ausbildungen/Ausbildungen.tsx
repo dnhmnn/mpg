@@ -9,7 +9,12 @@ const pb = new PocketBase('https://api.responda.systems')
 // new Date() needs ISO format with T, so we normalize first
 function parseDate(str: string | null | undefined): Date {
   if (!str) return new Date(NaN)
-  return new Date(str.replace(' ', 'T'))
+  // Replace space separator and ensure Z suffix for Safari compatibility
+  let s = str.trim().replace(' ', 'T')
+  if (!s.endsWith('Z') && !s.includes('+') && !/ [+-]\d{2}:\d{2}$/.test(s)) {
+    s += 'Z'
+  }
+  return new Date(s)
 }
 
 function formatDateForInput(str: string | null | undefined): string {
@@ -17,6 +22,30 @@ function formatDateForInput(str: string | null | undefined): string {
   const d = parseDate(str)
   if (isNaN(d.getTime())) return ''
   return d.toISOString().slice(0, 16)
+}
+
+function fmtDate(str: string | null | undefined): string {
+  const d = parseDate(str)
+  if (isNaN(d.getTime())) return '–'
+  return d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })
+}
+
+function fmtDateTime(str: string | null | undefined): string {
+  const d = parseDate(str)
+  if (isNaN(d.getTime())) return '–'
+  return d.toLocaleString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+}
+
+function fmtTime(str: string | null | undefined): string {
+  const d = parseDate(str)
+  if (isNaN(d.getTime())) return '–'
+  return d.toLocaleString('de-DE', { hour: '2-digit', minute: '2-digit' })
+}
+
+function fmtDayMonth(str: string | null | undefined): string {
+  const d = parseDate(str)
+  if (isNaN(d.getTime())) return '–'
+  return d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' })
 }
 
 interface Termin {
@@ -572,10 +601,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
   }
 
   function generateEinladungsText(termin: Termin): string {
-    const datum = parseDate(termin.start_datetime).toLocaleDateString('de-DE', {
-      weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric',
-      hour: '2-digit', minute: '2-digit'
-    })
+    const datum = fmtDateTime(termin.start_datetime)
     const lines = [
       `📚 Einladung: ${termin.name}`,
       `📅 ${datum}`,
@@ -1469,11 +1495,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                     </div>
                     
                     <div className="card-type">
-                      {parseDate(termin.start_datetime).toLocaleDateString('de-DE', { 
-                        day: '2-digit', 
-                        month: '2-digit', 
-                        year: 'numeric' 
-                      })}
+                      {fmtDate(termin.start_datetime)}
                     </div>
                     <div className="card-name">{termin.name}</div>
                     <div className="card-meta">
@@ -1835,7 +1857,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                         </th>
                         {jahresTermine.map(t => (
                           <th key={t.id} style={{padding: '10px 8px', background: '#f1f5f9', borderBottom: '2px solid #e2e8f0', textAlign: 'center', minWidth: '80px', fontWeight: 600}}>
-                            <div>{parseDate(t.start_datetime).toLocaleDateString('de-DE', {day:'2-digit', month:'2-digit'})}</div>
+                            <div>{fmtDayMonth(t.start_datetime)}</div>
                             <div style={{fontWeight: 400, color: '#64748b', fontSize: '11px', maxWidth: '80px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>{t.name}</div>
                           </th>
                         ))}
@@ -1964,10 +1986,10 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                             >
                               <div style={{minWidth: '48px', textAlign: 'center'}}>
                                 <div style={{fontSize: '18px', fontWeight: 700, lineHeight: 1}}>
-                                  {parseDate(termin.start_datetime).toLocaleDateString('de-DE', {day: '2-digit'})}
+                                  {parseDate(termin.start_datetime).getDate().toString().padStart(2,'0')}
                                 </div>
                                 <div style={{fontSize: '11px', color: '#94a3b8', textTransform: 'uppercase'}}>
-                                  {parseDate(termin.start_datetime).toLocaleDateString('de-DE', {month: 'short'})}
+                                  {parseDate(termin.start_datetime).toLocaleString('de-DE', {month: 'short'})}
                                 </div>
                               </div>
                               <div style={{flex: 1}}>
@@ -1985,7 +2007,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                                   </div>
                                 )}
                                 <div style={{fontSize: '11px', color: '#94a3b8', marginTop: '2px'}}>
-                                  {parseDate(termin.start_datetime).toLocaleTimeString('de-DE', {hour: '2-digit', minute: '2-digit'})} Uhr
+                                  {fmtTime(termin.start_datetime)} Uhr
                                 </div>
                               </div>
                             </div>
@@ -2190,7 +2212,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                     return (
                       <div key={termin.id} style={{display: 'flex', alignItems: 'center', gap: '10px', padding: '9px 12px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0'}}>
                         <div style={{fontSize: '12px', color: '#64748b', minWidth: '40px', fontWeight: 600}}>
-                          {parseDate(termin.start_datetime).toLocaleDateString('de-DE', {day:'2-digit', month:'2-digit'})}
+                          {fmtDayMonth(termin.start_datetime)}
                         </div>
                         <div style={{flex: 1, fontSize: '14px'}}>{termin.name}</div>
                         {cfg ? (
@@ -2414,8 +2436,8 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                   <div style={{fontSize: '13px', color: 'rgba(255,255,255,0.6)', display: 'flex', gap: '12px', flexWrap: 'wrap'}}>
                     {!isNaN(startD.getTime()) && (
                       <span>
-                        {startD.toLocaleString('de-DE', {day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit'})}
-                        {!isNaN(endD.getTime()) && ` – ${endD.toLocaleString('de-DE', {hour:'2-digit', minute:'2-digit'})}`}
+                        {fmtDateTime(selectedTermin.start_datetime)}
+                        {!isNaN(endD.getTime()) && ` – ${fmtTime(selectedTermin.end_datetime)}`}
                       </span>
                     )}
                     {selectedTermin.location && <span>{selectedTermin.location}</span>}
@@ -2484,7 +2506,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                       </div>
                       {selectedTermin.description && <div style={{color: '#374151'}}>{selectedTermin.description}</div>}
                       {selectedTermin.end_datetime && (
-                        <div style={{color: '#64748b'}}>bis {parseDate(selectedTermin.end_datetime).toLocaleDateString('de-DE', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})}</div>
+                        <div style={{color: '#64748b'}}>bis {fmtDateTime(selectedTermin.end_datetime)}</div>
                       )}
                     </div>
 
@@ -3014,7 +3036,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                               <div style={{fontSize: '13px', fontWeight: 600}}>{mod?.name || 'Unbekanntes Modul'}</div>
                               {isDone && p.abgeschlossen_am && (
                                 <div style={{fontSize: '11px', color: '#059669', marginTop: '1px'}}>
-                                  Abgeschlossen am {parseDate(p.abgeschlossen_am).toLocaleDateString('de-DE')}
+                                  Abgeschlossen am {fmtDate(p.abgeschlossen_am)}
                                 </div>
                               )}
                             </div>
@@ -3326,12 +3348,6 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                 const unassignedTeilnehmer = teilnehmer.filter(t => !assigned.some(p => p.teilnehmer_id === t.id))
                 return (
                   <div>
-                    <div style={{background: '#fef9c3', border: '1px solid #fde68a', borderRadius: '8px', padding: '10px 12px', marginBottom: '12px', fontSize: '12px', color: '#92400e', fontFamily: 'monospace'}}>
-                      <div>modulProgress gesamt: {modulProgress.length}</div>
-                      <div>selectedModul.id: {selectedModul.id}</div>
-                      <div>modul_id der ersten 3 Einträge: {modulProgress.slice(0,3).map(p => p.modul_id).join(', ') || '–'}</div>
-                      <div>gefiltert (assigned): {assigned.length}</div>
-                    </div>
                     {/* Summary bar */}
                     <div style={{
                       display: 'flex', alignItems: 'center', gap: '16px',
@@ -3403,7 +3419,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                                 </div>
                                 {isDone && p.abgeschlossen_am && (
                                   <div style={{fontSize: '11px', color: '#059669', marginTop: '2px'}}>
-                                    Abgeschlossen am {parseDate(p.abgeschlossen_am).toLocaleDateString('de-DE')}
+                                    Abgeschlossen am {fmtDate(p.abgeschlossen_am)}
                                   </div>
                                 )}
                               </div>
