@@ -399,7 +399,6 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
   async function loadModulTermine() {
     try {
       const records = await pb.collection('ausbildungen_module_termine').getFullList({
-        filter: `organization_id = "${user?.organization_id}"`,
         expand: 'modul_id',
         sort: '-created',
         requestKey: 'loadModulTermine'
@@ -413,8 +412,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
   async function loadModulProgress() {
     try {
       const records = await pb.collection('ausbildungen_module_progress').getFullList({
-        filter: `organization_id = "${user?.organization_id}"`,
-        sort: '-updated',
+        sort: 'created',
         requestKey: `loadModulProgress-${Date.now()}`
       })
       setModulProgress(records)
