@@ -3,7 +3,8 @@ import Hub from './pages/Hub'
 import Login from './pages/Login'
 import Index from './pages/Index'
 import SettingsPage from './pages/SettingsPage'
-import Ausbildungen from './pages/ausbildungen/Ausbildungen'  // ← GEÄNDERT
+import Ausbildungen from './pages/ausbildungen/Ausbildungen'
+import Einladung from './pages/ausbildungen/Einladung'
 import Files from './pages/Files'
 import Lager from './pages/Lager'
 import MPG from './pages/MPG'
@@ -21,6 +22,7 @@ function App() {
         <Route path="/lager" element={<Lager />} />
         <Route path="/files" element={<Files />} />
         <Route path="/mpg" element={<MPG />} />
+        <Route path="/einladung/:token" element={<Einladung />} />
       </Routes>
     </BrowserRouter>
   )
