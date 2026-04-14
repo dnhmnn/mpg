@@ -104,7 +104,7 @@ function CalendarButtons({ termin }: { termin: Termin }) {
   )
 }
 
-
+export default function Lernbar() {
   const { user, loading: authLoading, logout } = useAuth()
   const [tab, setTab] = useState<'termine' | 'lernmodule' | 'konto'>('termine')
 
