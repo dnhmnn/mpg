@@ -415,7 +415,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
       const records = await pb.collection('ausbildungen_module_progress').getFullList({
         filter: `organization_id = "${user?.organization_id}"`,
         sort: '-updated',
-        requestKey: 'loadModulProgress'
+        requestKey: `loadModulProgress-${Date.now()}`
       })
       setModulProgress(records)
     } catch(e: any) {
@@ -857,8 +857,8 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
       return
     }
     try {
-      await Promise.all(fehlende.map(t =>
-        pb.collection('ausbildungen_termine_user').create({
+      for (const t of fehlende) {
+        await pb.collection('ausbildungen_termine_user').create({
           termin_id: terminId,
           teilnehmer_id: t.id,
           status: 'eingeladen',
@@ -867,8 +867,8 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
           anwesend: false,
           notizen: '',
           organization_id: user?.organization_id
-        })
-      ))
+        }, { requestKey: `termin-teilnehmer-${terminId}-${t.id}` })
+      }
       showMessage(`${fehlende.length} Teilnehmer hinzugefügt`, 'success')
       await loadTerminTeilnehmer()
     } catch(e: any) {
@@ -1018,7 +1018,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
   async function assignTeilnehmerToModul(modulId: string, teilnehmerId: string) {
     if (!teilnehmerId) return
     const already = modulProgress.some(p => p.modul_id === modulId && p.teilnehmer_id === teilnehmerId)
-    if (already) return
+    if (already) { showMessage('Bereits zugewiesen', 'success'); return }
     try {
       await pb.collection('ausbildungen_module_progress').create({
         modul_id: modulId,
@@ -1026,8 +1026,9 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
         fortschritt_prozent: 0,
         notizen: '',
         organization_id: user?.organization_id
-      })
+      }, { requestKey: `modul-progress-${modulId}-${teilnehmerId}` })
       await loadModulProgress()
+      showMessage('Teilnehmer hinzugefügt', 'success')
     } catch(e: any) {
       alert('Fehler: ' + e.message)
     }
@@ -1391,9 +1392,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
       </div>
 
       {message && (
-        <div style={{position: 'fixed', top: '80px', left: '50%', transform: 'translateX(-50%)', zIndex: 1000}}>
-          <div className={`message ${message.type}`}>{message.text}</div>
-        </div>
+        <div className={`toast toast-${message.type}`}>{message.text}</div>
       )}
 
       {(viewMode === 'termine' || viewMode === 'teilnehmer' || viewMode === 'module' || viewMode === 'konzepte') && (
@@ -3852,20 +3851,32 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
           padding-bottom: 100px;
         }
 
-        .message {
-          padding: 12px 16px;
-          border-radius: 10px;
-          margin-bottom: 16px;
-          font-weight: 600;
+        @keyframes slideInRight {
+          from { transform: translateX(120%); opacity: 0; }
+          to   { transform: translateX(0);   opacity: 1; }
         }
 
-        .message.success {
+        .toast {
+          position: fixed;
+          bottom: 32px;
+          right: 24px;
+          z-index: 9999;
+          padding: 14px 20px;
+          border-radius: 12px;
+          font-weight: 600;
+          font-size: 14px;
+          box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+          animation: slideInRight 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+          max-width: 320px;
+        }
+
+        .toast-success {
           background: #f0fdf4;
           border: 1px solid #bbf7d0;
           color: #166534;
         }
 
-        .message.error {
+        .toast-error {
           background: #fef2f2;
           border: 1px solid #fecaca;
           color: #b91c1c;
