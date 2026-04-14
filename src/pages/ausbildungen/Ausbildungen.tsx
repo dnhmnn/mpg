@@ -226,7 +226,8 @@ export default function Ausbildungen() {
   const [modulTermine, setModulTermine] = useState<ModulTermin[]>([])
   const [modulProgress, setModulProgress] = useState<ModulProgress[]>([])
   const [konzepte, setKonzepte] = useState<Ausbildungskonzept[]>([])
-  
+  const [einladungen, setEinladungen] = useState<{id: string, termin_id: string, name: string, status: string}[]>([])
+
   const [loading, setLoading] = useState(true)
   const [message, setMessage] = useState<{text: string, type: 'success' | 'error'} | null>(null)
   
@@ -661,10 +662,23 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
     }
   }
 
+  async function loadEinladungenForTermin(terminId: string) {
+    try {
+      const res = await pb.collection('ausbildungen_einladungen').getFullList({
+        filter: `termin_id = "${terminId}"`,
+        requestKey: `einladungen-${terminId}-${Date.now()}`
+      })
+      setEinladungen(res as any)
+    } catch {
+      // collection may not exist yet
+    }
+  }
+
   function viewTerminDetail(termin: Termin) {
     setSelectedTermin(termin)
     setCurrentTerminTab('uebersicht')
     setShowTerminDetailModal(true)
+    loadEinladungenForTermin(termin.id)
   }
 
   function viewTeilnehmerDetail(t: Teilnehmer) {
@@ -2699,7 +2713,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                           style={{display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', borderRadius: '8px', background: '#0f172a', border: 'none', color: '#fff', fontWeight: 600, fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit', marginBottom: '12px'}}
                         >
                           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
-                          Einladungslink generieren
+                          Einladungslink erstellen (einmalig)
                         </button>
                       )}
 
@@ -2738,6 +2752,44 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                         </button>
                       </div>
                     </div>
+
+                    {/* Rückmeldungen */}
+                    {(() => {
+                      const terminEinladungen = einladungen.filter(e => e.termin_id === selectedTermin.id)
+                      if (terminEinladungen.length === 0) return null
+                      const zusagen = terminEinladungen.filter(e => e.status === 'zusagen')
+                      const absagen = terminEinladungen.filter(e => e.status === 'absagen')
+                      return (
+                        <div style={{borderRadius: '10px', border: '1px solid #e2e8f0', overflow: 'hidden'}}>
+                          <div style={{padding: '12px 16px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between'}}>
+                            <div style={{fontWeight: 700, fontSize: '13px', color: '#374151'}}>Rückmeldungen</div>
+                            <div style={{fontSize: '12px', color: '#64748b'}}>{terminEinladungen.length} gesamt</div>
+                          </div>
+                          <div style={{padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: '10px'}}>
+                            {zusagen.length > 0 && (
+                              <div>
+                                <div style={{fontSize: '11px', fontWeight: 700, color: '#16a34a', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '6px'}}>Zugesagt ({zusagen.length})</div>
+                                <div style={{display: 'flex', flexWrap: 'wrap', gap: '6px'}}>
+                                  {zusagen.map(e => (
+                                    <span key={e.id} style={{padding: '4px 10px', borderRadius: '20px', background: '#dcfce7', color: '#166534', fontSize: '13px', fontWeight: 500}}>{e.name}</span>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                            {absagen.length > 0 && (
+                              <div>
+                                <div style={{fontSize: '11px', fontWeight: 700, color: '#dc2626', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '6px'}}>Abgesagt ({absagen.length})</div>
+                                <div style={{display: 'flex', flexWrap: 'wrap', gap: '6px'}}>
+                                  {absagen.map(e => (
+                                    <span key={e.id} style={{padding: '4px 10px', borderRadius: '20px', background: '#fee2e2', color: '#991b1b', fontSize: '13px', fontWeight: 500}}>{e.name}</span>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )
+                    })()}
 
                     {/* Ausbildungskonzept */}
                     <div style={{borderRadius: '10px', border: '1px solid #e2e8f0', overflow: 'hidden'}}>
