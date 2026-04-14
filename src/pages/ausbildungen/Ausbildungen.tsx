@@ -2680,7 +2680,13 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                         const invText = `${einladungsText}\n\nHier anmelden / absagen: ${invUrl}`
                         return (
                           <div style={{marginBottom: '12px'}}>
-                            <div style={{fontSize: '11px', color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px'}}>Einladungslink</div>
+                            <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px'}}>
+                              <div style={{fontSize: '11px', color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em'}}>Einladungslink</div>
+                              <button
+                                onClick={() => { if (confirm('Neuen Link generieren? Der alte Link funktioniert dann nicht mehr.')) generateEinladungsToken(selectedTermin) }}
+                                style={{background: 'none', border: 'none', cursor: 'pointer', fontSize: '12px', color: '#94a3b8', fontFamily: 'inherit', padding: '0'}}
+                              >Neu generieren</button>
+                            </div>
                             <div style={{display: 'flex', gap: '8px', alignItems: 'center', background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '8px 12px'}}>
                               <span style={{flex: 1, fontSize: '12px', color: '#374151', wordBreak: 'break-all'}}>{invUrl}</span>
                               <button
