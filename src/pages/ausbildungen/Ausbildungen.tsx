@@ -2959,75 +2959,193 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
       {/* KONZEPT DETAIL MODAL */}
       {showKonzeptDetailModal && selectedKonzept && (
         <div className="modal show" onClick={() => setShowKonzeptDetailModal(false)}>
-          <div className="modal-content large" onClick={(e) => e.stopPropagation()}>
-            <h3>{selectedKonzept.name}</h3>
-            {selectedKonzept.beschreibung && (
-              <div style={{fontSize: '14px', color: '#64748b', marginBottom: '24px'}}>
-                {selectedKonzept.beschreibung}
+          <div className="modal-content large" onClick={(e) => e.stopPropagation()} style={{padding: 0, overflow: 'hidden'}}>
+            {/* Header */}
+            <div style={{
+              background: 'linear-gradient(135deg, #1d1d1f 0%, #3a3a3c 100%)',
+              padding: '28px 32px',
+              color: '#fff',
+              position: 'relative'
+            }}>
+              <div style={{fontSize: '11px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.5)', marginBottom: '8px'}}>
+                Ausbildungskonzept
               </div>
-            )}
-
-            {selectedKonzept.lernziele && selectedKonzept.lernziele.length > 0 && (
-              <div style={{marginBottom: '20px'}}>
-                <h4 style={{fontSize: '16px', marginBottom: '12px'}}>🎯 Lernziele</h4>
-                <ul style={{marginLeft: '20px', lineHeight: '1.8'}}>
-                  {selectedKonzept.lernziele.map((lz, idx) => (
-                    <li key={idx}>{lz}</li>
-                  ))}
-                </ul>
+              <div style={{fontSize: '22px', fontWeight: 700, lineHeight: 1.2}}>
+                {selectedKonzept.name}
               </div>
-            )}
-
-            {selectedKonzept.handlungen && selectedKonzept.handlungen.length > 0 && (
-              <div style={{marginBottom: '20px'}}>
-                <h4 style={{fontSize: '16px', marginBottom: '12px'}}>✋ Handlungen</h4>
-                <ul style={{marginLeft: '20px', lineHeight: '1.8'}}>
-                  {selectedKonzept.handlungen.map((h, idx) => (
-                    <li key={idx}>{h}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            {selectedKonzept.koennen && selectedKonzept.koennen.length > 0 && (
-              <div style={{marginBottom: '20px'}}>
-                <h4 style={{fontSize: '16px', marginBottom: '12px'}}>💪 Das Können</h4>
-                <ul style={{marginLeft: '20px', lineHeight: '1.8'}}>
-                  {selectedKonzept.koennen.map((k, idx) => (
-                    <li key={idx}>{k}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            {selectedKonzept.wissensanhang_links && selectedKonzept.wissensanhang_links.length > 0 && (
-              <div style={{marginBottom: '20px'}}>
-                <h4 style={{fontSize: '16px', marginBottom: '12px'}}>📚 Wissensanhang</h4>
-                <div style={{display: 'flex', flexDirection: 'column', gap: '8px'}}>
-                  {selectedKonzept.wissensanhang_links.map((link, idx) => (
-                    <a 
-                      key={idx} 
-                      href={link.url} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      style={{
-                        background: '#f9fafb',
-                        padding: '12px',
-                        borderRadius: '8px',
-                        textDecoration: 'none',
-                        color: '#1d1d1f',
-                        display: 'block'
-                      }}
-                    >
-                      <div style={{fontWeight: 600}}>{link.titel}</div>
-                      <div style={{fontSize: '12px', color: '#64748b', marginTop: '4px'}}>{link.url}</div>
-                    </a>
-                  ))}
+              {selectedKonzept.beschreibung && (
+                <div style={{fontSize: '14px', color: 'rgba(255,255,255,0.65)', marginTop: '10px', lineHeight: 1.6}}>
+                  {selectedKonzept.beschreibung}
                 </div>
-              </div>
-            )}
+              )}
+              <button
+                onClick={() => setShowKonzeptDetailModal(false)}
+                style={{
+                  position: 'absolute', top: '20px', right: '20px',
+                  background: 'rgba(255,255,255,0.12)', border: 'none', borderRadius: '8px',
+                  width: '32px', height: '32px', cursor: 'pointer', color: '#fff',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center'
+                }}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              </button>
+            </div>
 
-            <div className="modal-actions">
+            {/* Body */}
+            <div style={{padding: '28px 32px', overflowY: 'auto', maxHeight: '60vh'}}>
+
+              {selectedKonzept.lernziele && selectedKonzept.lernziele.length > 0 && (
+                <div style={{marginBottom: '28px'}}>
+                  <div style={{
+                    display: 'flex', alignItems: 'center', gap: '8px',
+                    fontSize: '11px', fontWeight: 700, letterSpacing: '0.08em',
+                    textTransform: 'uppercase', color: '#64748b', marginBottom: '14px'
+                  }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                      <polyline points="22 4 12 14.01 9 11.01"/>
+                    </svg>
+                    Lernziele
+                  </div>
+                  <div style={{display: 'flex', flexDirection: 'column', gap: '8px'}}>
+                    {selectedKonzept.lernziele.map((lz, idx) => (
+                      <div key={idx} style={{
+                        display: 'flex', alignItems: 'flex-start', gap: '12px',
+                        padding: '12px 14px', background: '#f8fafc',
+                        borderRadius: '10px', borderLeft: '3px solid #3b82f6',
+                        fontSize: '14px', lineHeight: 1.5, color: '#1d1d1f'
+                      }}>
+                        <span style={{color: '#3b82f6', fontWeight: 700, fontSize: '12px', minWidth: '20px', paddingTop: '1px'}}>{idx + 1}</span>
+                        {lz}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {selectedKonzept.handlungen && selectedKonzept.handlungen.length > 0 && (
+                <div style={{marginBottom: '28px'}}>
+                  <div style={{
+                    display: 'flex', alignItems: 'center', gap: '8px',
+                    fontSize: '11px', fontWeight: 700, letterSpacing: '0.08em',
+                    textTransform: 'uppercase', color: '#64748b', marginBottom: '14px'
+                  }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+                    </svg>
+                    Handlungen
+                  </div>
+                  <div style={{display: 'flex', flexDirection: 'column', gap: '8px'}}>
+                    {selectedKonzept.handlungen.map((h, idx) => (
+                      <div key={idx} style={{
+                        display: 'flex', alignItems: 'flex-start', gap: '12px',
+                        padding: '12px 14px', background: '#f8fafc',
+                        borderRadius: '10px', borderLeft: '3px solid #10b981',
+                        fontSize: '14px', lineHeight: 1.5, color: '#1d1d1f'
+                      }}>
+                        <span style={{color: '#10b981', fontWeight: 700, fontSize: '12px', minWidth: '20px', paddingTop: '1px'}}>{idx + 1}</span>
+                        {h}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {selectedKonzept.koennen && selectedKonzept.koennen.length > 0 && (
+                <div style={{marginBottom: '28px'}}>
+                  <div style={{
+                    display: 'flex', alignItems: 'center', gap: '8px',
+                    fontSize: '11px', fontWeight: 700, letterSpacing: '0.08em',
+                    textTransform: 'uppercase', color: '#64748b', marginBottom: '14px'
+                  }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <circle cx="12" cy="8" r="4"/><path d="M6 20v-2a6 6 0 0 1 12 0v2"/>
+                    </svg>
+                    Das Können
+                  </div>
+                  <div style={{display: 'flex', flexWrap: 'wrap', gap: '8px'}}>
+                    {selectedKonzept.koennen.map((k, idx) => (
+                      <span key={idx} style={{
+                        padding: '6px 14px', background: '#f0f4ff',
+                        border: '1px solid #c7d2fe', borderRadius: '20px',
+                        fontSize: '13px', color: '#3730a3', fontWeight: 500
+                      }}>
+                        {k}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {selectedKonzept.wissensanhang_links && selectedKonzept.wissensanhang_links.length > 0 && (
+                <div style={{marginBottom: '8px'}}>
+                  <div style={{
+                    display: 'flex', alignItems: 'center', gap: '8px',
+                    fontSize: '11px', fontWeight: 700, letterSpacing: '0.08em',
+                    textTransform: 'uppercase', color: '#64748b', marginBottom: '14px'
+                  }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+                      <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+                    </svg>
+                    Wissensanhang
+                  </div>
+                  <div style={{display: 'flex', flexDirection: 'column', gap: '8px'}}>
+                    {selectedKonzept.wissensanhang_links.map((link, idx) => (
+                      <a
+                        key={idx}
+                        href={link.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: '14px',
+                          padding: '14px 16px', background: '#f8fafc',
+                          borderRadius: '10px', textDecoration: 'none',
+                          border: '1px solid #e2e8f0', transition: 'border-color 0.15s'
+                        }}
+                      >
+                        <div style={{
+                          width: '36px', height: '36px', borderRadius: '8px',
+                          background: '#e0e7ff', display: 'flex', alignItems: 'center',
+                          justifyContent: 'center', flexShrink: 0
+                        }}>
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" strokeWidth="2">
+                            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+                            <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+                          </svg>
+                        </div>
+                        <div style={{flex: 1, minWidth: 0}}>
+                          <div style={{fontWeight: 600, fontSize: '14px', color: '#1d1d1f'}}>{link.titel}</div>
+                          <div style={{fontSize: '12px', color: '#94a3b8', marginTop: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>{link.url}</div>
+                        </div>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2">
+                          <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+                          <polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
+                        </svg>
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Empty state */}
+              {(!selectedKonzept.lernziele || selectedKonzept.lernziele.length === 0) &&
+               (!selectedKonzept.handlungen || selectedKonzept.handlungen.length === 0) &&
+               (!selectedKonzept.koennen || selectedKonzept.koennen.length === 0) &&
+               (!selectedKonzept.wissensanhang_links || selectedKonzept.wissensanhang_links.length === 0) && (
+                <div style={{textAlign: 'center', padding: '32px 0', color: '#94a3b8', fontSize: '14px'}}>
+                  Keine weiteren Inhalte vorhanden.
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div style={{padding: '16px 32px', borderTop: '1px solid #f1f5f9', display: 'flex', justifyContent: 'flex-end', gap: '10px'}}>
+              <button className="btn secondary" onClick={() => { setShowKonzeptDetailModal(false); openEditKonzept(selectedKonzept) }}>
+                Bearbeiten
+              </button>
               <button className="btn" onClick={() => setShowKonzeptDetailModal(false)}>
                 Schließen
               </button>
