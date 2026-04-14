@@ -1619,7 +1619,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
 
       {/* JAHRESÜBERSICHT VIEW */}
       {viewMode === 'jahresuebersicht' && (
-        <div className="content" style={{padding: '24px'}}>
+        <div className="content">
           <h2 style={{marginBottom: '8px'}}>Jahresübersicht {aktuellesJahr}</h2>
           <p style={{color: '#64748b', fontSize: '14px', marginBottom: '24px'}}>
             Anwesenheit aller Teilnehmer bei allen Terminen im Jahr {aktuellesJahr}
@@ -1732,7 +1732,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
 
       {/* ARCHIV VIEW */}
       {viewMode === 'archiv' && (
-        <div className="content" style={{padding: '24px'}}>
+        <div className="content">
           <h2 style={{marginBottom: '4px'}}>Archiv</h2>
           <p style={{color: '#64748b', fontSize: '14px', marginBottom: '24px'}}>
             Abgeschlossene Termine — nach Jahr sortiert
