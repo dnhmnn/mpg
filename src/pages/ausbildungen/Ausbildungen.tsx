@@ -60,6 +60,7 @@ interface Termin {
   status: 'geplant' | 'laufend' | 'abgeschlossen' | 'abgesagt'
   konzept_id?: string
   notizen?: string
+  einladung_token?: string
   organization_id: string
   created: string
   updated: string
@@ -291,6 +292,7 @@ export default function Ausbildungen() {
   const [selectedModulTab, setSelectedModulTab] = useState<'inhalt' | 'teilnehmer'>('inhalt')
   const [currentTerminTab, setCurrentTerminTab] = useState<'uebersicht' | 'teilnehmer' | 'dokumente' | 'module'>('uebersicht')
   const [selectedTeilnehmerDetail, setSelectedTeilnehmerDetail] = useState<Teilnehmer | null>(null)
+  const [selectedTeilnehmerTab, setSelectedTeilnehmerTab] = useState<'uebersicht' | 'lernmodule' | 'termine'>('uebersicht')
   const [addModulTeilnehmerId, setAddModulTeilnehmerId] = useState('')
   const [editingQuizBlock, setEditingQuizBlock] = useState<number | null>(null)
   const [newQuizFrage, setNewQuizFrage] = useState('')
@@ -623,6 +625,29 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
     return lines.join('\n')
   }
 
+  async function generateEinladungsToken(termin: Termin): Promise<string | null> {
+    try {
+      const token = Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2)
+      await pb.collection('ausbildungen_einladungs_tokens').create({
+        token,
+        termin_id: termin.id,
+        termin_name: termin.name,
+        termin_datum: termin.start_datetime,
+        termin_ort: termin.location || '',
+        termin_beschreibung: termin.description || '',
+        organization_id: termin.organization_id
+      }, { requestKey: `token-${Date.now()}` })
+      await pb.collection('ausbildungen_termine').update(termin.id, { einladung_token: token }, { requestKey: `termin-token-${Date.now()}` })
+      setSelectedTermin(prev => prev ? { ...prev, einladung_token: token } : prev)
+      setTermine(prev => prev.map(t => t.id === termin.id ? { ...t, einladung_token: token } : t))
+      showMessage('Einladungslink erstellt!', 'success')
+      return token
+    } catch (e: any) {
+      showMessage('Fehler: ' + e.message, 'error')
+      return null
+    }
+  }
+
   async function deleteTermin(id: string, name: string) {
     if (!confirm(`Termin "${name}" wirklich löschen?`)) return
 
@@ -643,6 +668,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
 
   function viewTeilnehmerDetail(t: Teilnehmer) {
     setSelectedTeilnehmerDetail(t)
+    setSelectedTeilnehmerTab('uebersicht')
     setShowTeilnehmerDetailModal(true)
   }
 
@@ -2241,38 +2267,146 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
         }
 
         const archivJahre = alleJahre.filter(j => j !== aktuellesJahrDetail)
+        const myProgress = modulProgress.filter(p => p.teilnehmer_id === t.id)
+        const myDone = myProgress.filter(p => p.abgeschlossen_am)
+        const myTerminCount = terminTeilnehmer.filter(tt => tt.teilnehmer_id === t.id).length
+
+        const tabs = [
+          { key: 'uebersicht' as const, label: 'Übersicht' },
+          { key: 'lernmodule' as const, label: `Lernmodule (${myProgress.length})` },
+          { key: 'termine' as const, label: `Termine (${myTerminCount})` },
+        ]
 
         return (
           <div className="modal show" onClick={() => setShowTeilnehmerDetailModal(false)}>
-            <div className="modal-content large" onClick={e => e.stopPropagation()}>
-              {/* Header */}
-              <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px'}}>
-                <div>
-                  <h3 style={{margin: 0}}>{t.vorname} {t.nachname}</h3>
-                  {t.ausbildung_typ && <div style={{fontSize: '13px', color: '#64748b', marginTop: '4px'}}>{t.ausbildung_typ}</div>}
-                  {t.email && <div style={{fontSize: '13px', color: '#64748b'}}>{t.email}</div>}
+            <div className="modal-content large" onClick={e => e.stopPropagation()} style={{padding: 0, overflow: 'hidden'}}>
+              {/* Dark header */}
+              <div style={{background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)', padding: '24px 28px', color: '#fff', position: 'relative'}}>
+                <div style={{width: '44px', height: '44px', borderRadius: '50%', background: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '18px', marginBottom: '10px'}}>
+                  {t.vorname[0]}{t.nachname[0]}
                 </div>
-                <div style={{display: 'flex', gap: '8px'}}>
-                  <button className="btn" onClick={() => { setShowTeilnehmerDetailModal(false); openEditTeilnehmer(t) }}>Bearbeiten</button>
-                  <button className="btn" onClick={() => setShowTeilnehmerDetailModal(false)}>✕</button>
+                <div style={{fontSize: '20px', fontWeight: 700}}>{t.vorname} {t.nachname}</div>
+                {t.ausbildung_typ && <div style={{fontSize: '13px', color: 'rgba(255,255,255,0.55)', marginTop: '4px'}}>{t.ausbildung_typ}</div>}
+                <div style={{position: 'absolute', top: '16px', right: '16px', display: 'flex', gap: '8px'}}>
+                  <button onClick={() => { setShowTeilnehmerDetailModal(false); openEditTeilnehmer(t) }} style={{background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: '8px', padding: '6px 12px', color: '#fff', cursor: 'pointer', fontWeight: 600, fontSize: '13px', fontFamily: 'inherit'}}>Bearbeiten</button>
+                  <button onClick={() => setShowTeilnehmerDetailModal(false)} style={{background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '8px', width: '30px', height: '30px', cursor: 'pointer', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                  </button>
                 </div>
               </div>
 
-              {/* Aktuelles Jahr */}
-              {renderJahrBlock(aktuellesJahrDetail, false)}
+              {/* Tabs */}
+              <div style={{display: 'flex', borderBottom: '1px solid #f1f5f9', padding: '0 28px', background: '#fff'}}>
+                {tabs.map(tab => (
+                  <button key={tab.key} onClick={() => setSelectedTeilnehmerTab(tab.key)} style={{
+                    padding: '12px 16px', border: 'none', background: 'none', cursor: 'pointer',
+                    fontSize: '13px', fontWeight: 600, fontFamily: 'inherit',
+                    color: selectedTeilnehmerTab === tab.key ? '#0f172a' : '#94a3b8',
+                    borderBottom: selectedTeilnehmerTab === tab.key ? '2px solid #0f172a' : '2px solid transparent',
+                    marginBottom: '-1px', whiteSpace: 'nowrap'
+                  }}>{tab.label}</button>
+                ))}
+              </div>
 
-              {/* Archiv */}
-              {archivJahre.length > 0 && (
-                <details style={{marginTop: '24px'}}>
-                  <summary style={{cursor: 'pointer', fontWeight: 700, fontSize: '14px', color: '#64748b', padding: '10px 0', borderTop: '1px solid #e2e8f0', listStyle: 'none', display: 'flex', alignItems: 'center', gap: '6px'}}>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 8v13H3V8"/><path d="M1 3h22v5H1z"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
-                    Archiv ({archivJahre.length} {archivJahre.length === 1 ? 'Jahr' : 'Jahre'})
-                  </summary>
-                  <div style={{marginTop: '16px'}}>
-                    {archivJahre.map(j => renderJahrBlock(j, true))}
+              {/* Tab body */}
+              <div style={{overflowY: 'auto', maxHeight: '60vh', padding: '20px 28px'}}>
+
+                {/* ÜBERSICHT */}
+                {selectedTeilnehmerTab === 'uebersicht' && (
+                  <div style={{display: 'flex', flexDirection: 'column', gap: '16px'}}>
+                    <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px'}}>
+                      {t.email && (
+                        <div style={{background: '#f8fafc', borderRadius: '8px', padding: '10px 14px'}}>
+                          <div style={{fontSize: '11px', color: '#94a3b8', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '3px'}}>Email</div>
+                          <div style={{fontSize: '13px'}}>{t.email}</div>
+                        </div>
+                      )}
+                      {t.telefon && (
+                        <div style={{background: '#f8fafc', borderRadius: '8px', padding: '10px 14px'}}>
+                          <div style={{fontSize: '11px', color: '#94a3b8', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '3px'}}>Telefon</div>
+                          <div style={{fontSize: '13px'}}>{t.telefon}</div>
+                        </div>
+                      )}
+                      {t.whatsapp && (
+                        <div style={{background: '#f8fafc', borderRadius: '8px', padding: '10px 14px'}}>
+                          <div style={{fontSize: '11px', color: '#94a3b8', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '3px'}}>WhatsApp</div>
+                          <div style={{fontSize: '13px'}}>{t.whatsapp}</div>
+                        </div>
+                      )}
+                      <div style={{background: '#f8fafc', borderRadius: '8px', padding: '10px 14px'}}>
+                        <div style={{fontSize: '11px', color: '#94a3b8', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '3px'}}>Lernbar</div>
+                        <div style={{fontSize: '13px', color: t.lernbar_zugang_aktiv ? '#059669' : '#94a3b8', fontWeight: 600}}>{t.lernbar_zugang_aktiv ? 'Aktiv' : 'Inaktiv'}</div>
+                      </div>
+                    </div>
+                    {t.notizen && (
+                      <div style={{background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '8px', padding: '12px 14px', fontSize: '13px', color: '#92400e'}}>
+                        {t.notizen}
+                      </div>
+                    )}
                   </div>
-                </details>
-              )}
+                )}
+
+                {/* LERNMODULE */}
+                {selectedTeilnehmerTab === 'lernmodule' && (
+                  <div>
+                    <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px'}}>
+                      <div style={{fontSize: '13px', fontWeight: 700, color: '#1d1d1f'}}>Fortschritt</div>
+                      <div style={{fontSize: '12px', color: '#64748b'}}>{myDone.length}/{myProgress.length} abgeschlossen</div>
+                    </div>
+                    {myProgress.length > 0 && (
+                      <div style={{background: '#e2e8f0', borderRadius: '6px', height: '8px', marginBottom: '16px'}}>
+                        <div style={{background: '#0f172a', borderRadius: '6px', height: '8px', width: `${myProgress.length > 0 ? Math.round((myDone.length/myProgress.length)*100) : 0}%`, transition: 'width 0.3s'}} />
+                      </div>
+                    )}
+                    {myProgress.length === 0 ? (
+                      <div style={{color: '#94a3b8', fontSize: '13px', textAlign: 'center', padding: '24px 0'}}>Noch keinem Modul zugewiesen.</div>
+                    ) : (
+                      <div style={{display: 'flex', flexDirection: 'column', gap: '6px'}}>
+                        {myProgress.map(p => {
+                          const mod = module.find(m => m.id === p.modul_id)
+                          const isDone = !!p.abgeschlossen_am
+                          return (
+                            <div key={p.id} style={{display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 12px', borderRadius: '8px', background: isDone ? '#f0fdf4' : '#f8fafc', border: `1px solid ${isDone ? '#bbf7d0' : '#e2e8f0'}`}}>
+                              <div style={{width: '8px', height: '8px', borderRadius: '50%', flexShrink: 0, background: isDone ? '#10b981' : '#cbd5e1'}} />
+                              <div style={{flex: 1}}>
+                                <div style={{fontSize: '13px', fontWeight: 600}}>{mod?.name || 'Unbekanntes Modul'}</div>
+                                {isDone && p.abgeschlossen_am && (
+                                  <div style={{fontSize: '11px', color: '#059669', marginTop: '1px'}}>Abgeschlossen am {fmtDate(p.abgeschlossen_am)}</div>
+                                )}
+                              </div>
+                              <span style={{fontSize: '11px', fontWeight: 700, padding: '3px 8px', borderRadius: '4px', background: isDone ? '#dcfce7' : '#f1f5f9', color: isDone ? '#065f46' : '#94a3b8'}}>
+                                {isDone ? 'Fertig' : 'Offen'}
+                              </span>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* TERMINE */}
+                {selectedTeilnehmerTab === 'termine' && (
+                  <div>
+                    {renderJahrBlock(aktuellesJahrDetail, false)}
+                    {archivJahre.length > 0 && (
+                      <details style={{marginTop: '24px'}}>
+                        <summary style={{cursor: 'pointer', fontWeight: 700, fontSize: '14px', color: '#64748b', padding: '10px 0', borderTop: '1px solid #e2e8f0', listStyle: 'none', display: 'flex', alignItems: 'center', gap: '6px'}}>
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 8v13H3V8"/><path d="M1 3h22v5H1z"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+                          Archiv ({archivJahre.length} {archivJahre.length === 1 ? 'Jahr' : 'Jahre'})
+                        </summary>
+                        <div style={{marginTop: '16px'}}>
+                          {archivJahre.map(j => renderJahrBlock(j, true))}
+                        </div>
+                      </details>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div style={{padding: '14px 28px', borderTop: '1px solid #f1f5f9', display: 'flex', justifyContent: 'flex-end'}}>
+                <button className="btn" onClick={() => setShowTeilnehmerDetailModal(false)}>Schließen</button>
+              </div>
             </div>
           </div>
         )
@@ -2524,6 +2658,52 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                     {/* Einladungslinks */}
                     <div style={{background: '#f8fafc', borderRadius: '10px', padding: '14px'}}>
                       <div style={{fontWeight: 700, fontSize: '13px', marginBottom: '10px', color: '#374151'}}>Einladung versenden</div>
+
+                      {/* Einladungslink */}
+                      {selectedTermin.einladung_token ? (() => {
+                        const invUrl = `${window.location.origin}/einladung/${selectedTermin.einladung_token}`
+                        const invText = `${einladungsText}\n\nHier anmelden / absagen: ${invUrl}`
+                        return (
+                          <div style={{marginBottom: '12px'}}>
+                            <div style={{fontSize: '11px', color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px'}}>Einladungslink</div>
+                            <div style={{display: 'flex', gap: '8px', alignItems: 'center', background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '8px 12px'}}>
+                              <span style={{flex: 1, fontSize: '12px', color: '#374151', wordBreak: 'break-all'}}>{invUrl}</span>
+                              <button
+                                onClick={() => { navigator.clipboard.writeText(invUrl); showMessage('Link kopiert!', 'success') }}
+                                style={{flexShrink: 0, padding: '4px 10px', borderRadius: '6px', background: '#0f172a', border: 'none', color: '#fff', fontWeight: 600, fontSize: '12px', cursor: 'pointer', fontFamily: 'inherit'}}
+                              >Kopieren</button>
+                            </div>
+                            <div style={{display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '8px'}}>
+                              <a
+                                href={`https://wa.me/?text=${encodeURIComponent(invText)}`}
+                                target="_blank" rel="noreferrer"
+                                style={{display: 'flex', alignItems: 'center', gap: '6px', padding: '7px 12px', borderRadius: '8px', background: '#25d366', color: '#fff', fontWeight: 600, fontSize: '12px', textDecoration: 'none'}}
+                              >
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.123.554 4.118 1.528 5.85L0 24l6.335-1.508A11.955 11.955 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 0 1-5.006-1.371l-.359-.213-3.721.886.9-3.62-.234-.372A9.818 9.818 0 1 1 12 21.818z"/></svg>
+                                WhatsApp
+                              </a>
+                              <a
+                                href={`mailto:?subject=${encodeURIComponent('Einladung: '+selectedTermin.name)}&body=${encodeURIComponent(invText)}`}
+                                style={{display: 'flex', alignItems: 'center', gap: '6px', padding: '7px 12px', borderRadius: '8px', background: '#6366f1', color: '#fff', fontWeight: 600, fontSize: '12px', textDecoration: 'none'}}
+                              >
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                                E-Mail
+                              </a>
+                            </div>
+                          </div>
+                        )
+                      })() : (
+                        <button
+                          onClick={() => generateEinladungsToken(selectedTermin)}
+                          style={{display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', borderRadius: '8px', background: '#0f172a', border: 'none', color: '#fff', fontWeight: 600, fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit', marginBottom: '12px'}}
+                        >
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                          Einladungslink generieren
+                        </button>
+                      )}
+
+                      {/* Text-Einladung */}
+                      <div style={{fontSize: '11px', color: '#94a3b8', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px'}}>Text versenden</div>
                       <div style={{display: 'flex', gap: '8px', flexWrap: 'wrap'}}>
                         <a
                           href={`https://wa.me/?text=${encodeURIComponent(einladungsText)}`}
@@ -3018,134 +3198,6 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
         </div>
       )}
 
-      {/* TEILNEHMER DETAIL MODAL */}
-      {showTeilnehmerDetailModal && selectedTeilnehmer && (() => {
-        const myProgress = modulProgress.filter(p => p.teilnehmer_id === selectedTeilnehmer.id)
-        const myDone = myProgress.filter(p => p.abgeschlossen_am)
-        return (
-          <div className="modal show" onClick={() => setShowTeilnehmerDetailModal(false)}>
-            <div className="modal-content large" onClick={(e) => e.stopPropagation()} style={{padding: 0, overflow: 'hidden'}}>
-              {/* Header */}
-              <div style={{background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)', padding: '24px 28px', color: '#fff', position: 'relative'}}>
-                <div style={{
-                  width: '44px', height: '44px', borderRadius: '50%', background: 'rgba(255,255,255,0.15)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontWeight: 700, fontSize: '18px', marginBottom: '10px'
-                }}>
-                  {selectedTeilnehmer.vorname[0]}{selectedTeilnehmer.nachname[0]}
-                </div>
-                <div style={{fontSize: '20px', fontWeight: 700}}>{selectedTeilnehmer.vorname} {selectedTeilnehmer.nachname}</div>
-                {selectedTeilnehmer.ausbildung_typ && (
-                  <div style={{fontSize: '13px', color: 'rgba(255,255,255,0.55)', marginTop: '4px'}}>{selectedTeilnehmer.ausbildung_typ}</div>
-                )}
-                <button onClick={() => setShowTeilnehmerDetailModal(false)} style={{
-                  position: 'absolute', top: '16px', right: '16px', background: 'rgba(255,255,255,0.1)',
-                  border: 'none', borderRadius: '8px', width: '30px', height: '30px', cursor: 'pointer',
-                  color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center'
-                }}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-                  </svg>
-                </button>
-              </div>
-
-              <div style={{padding: '24px 28px', overflowY: 'auto', maxHeight: '65vh'}}>
-                {/* Contact info */}
-                <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '24px'}}>
-                  {selectedTeilnehmer.email && (
-                    <div style={{background: '#f8fafc', borderRadius: '8px', padding: '10px 14px'}}>
-                      <div style={{fontSize: '11px', color: '#94a3b8', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '3px'}}>Email</div>
-                      <div style={{fontSize: '13px'}}>{selectedTeilnehmer.email}</div>
-                    </div>
-                  )}
-                  {selectedTeilnehmer.telefon && (
-                    <div style={{background: '#f8fafc', borderRadius: '8px', padding: '10px 14px'}}>
-                      <div style={{fontSize: '11px', color: '#94a3b8', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '3px'}}>Telefon</div>
-                      <div style={{fontSize: '13px'}}>{selectedTeilnehmer.telefon}</div>
-                    </div>
-                  )}
-                  {selectedTeilnehmer.whatsapp && (
-                    <div style={{background: '#f8fafc', borderRadius: '8px', padding: '10px 14px'}}>
-                      <div style={{fontSize: '11px', color: '#94a3b8', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '3px'}}>WhatsApp</div>
-                      <div style={{fontSize: '13px'}}>{selectedTeilnehmer.whatsapp}</div>
-                    </div>
-                  )}
-                  <div style={{background: '#f8fafc', borderRadius: '8px', padding: '10px 14px'}}>
-                    <div style={{fontSize: '11px', color: '#94a3b8', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '3px'}}>Lernbar</div>
-                    <div style={{fontSize: '13px', color: selectedTeilnehmer.lernbar_zugang_aktiv ? '#059669' : '#94a3b8', fontWeight: 600}}>
-                      {selectedTeilnehmer.lernbar_zugang_aktiv ? 'Aktiv' : 'Inaktiv'}
-                    </div>
-                  </div>
-                </div>
-
-                {selectedTeilnehmer.notizen && (
-                  <div style={{background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '8px', padding: '12px 14px', marginBottom: '24px', fontSize: '13px', color: '#92400e'}}>
-                    {selectedTeilnehmer.notizen}
-                  </div>
-                )}
-
-                {/* Module progress */}
-                <div>
-                  <div style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    marginBottom: '14px'
-                  }}>
-                    <div style={{fontSize: '13px', fontWeight: 700, color: '#1d1d1f'}}>Lernmodule</div>
-                    <div style={{fontSize: '12px', color: '#64748b'}}>
-                      {myDone.length}/{myProgress.length} abgeschlossen
-                    </div>
-                  </div>
-
-                  {myProgress.length === 0 ? (
-                    <div style={{color: '#94a3b8', fontSize: '13px', textAlign: 'center', padding: '16px 0'}}>
-                      Noch keinem Modul zugewiesen.
-                    </div>
-                  ) : (
-                    <div style={{display: 'flex', flexDirection: 'column', gap: '6px'}}>
-                      {myProgress.map(p => {
-                        const mod = module.find(m => m.id === p.modul_id)
-                        const isDone = !!p.abgeschlossen_am
-                        return (
-                          <div key={p.id} style={{
-                            display: 'flex', alignItems: 'center', gap: '12px',
-                            padding: '10px 12px', borderRadius: '8px',
-                            background: isDone ? '#f0fdf4' : '#f8fafc',
-                            border: `1px solid ${isDone ? '#bbf7d0' : '#e2e8f0'}`
-                          }}>
-                            <div style={{
-                              width: '8px', height: '8px', borderRadius: '50%', flexShrink: 0,
-                              background: isDone ? '#10b981' : '#cbd5e1'
-                            }} />
-                            <div style={{flex: 1}}>
-                              <div style={{fontSize: '13px', fontWeight: 600}}>{mod?.name || 'Unbekanntes Modul'}</div>
-                              {isDone && p.abgeschlossen_am && (
-                                <div style={{fontSize: '11px', color: '#059669', marginTop: '1px'}}>
-                                  Abgeschlossen am {fmtDate(p.abgeschlossen_am)}
-                                </div>
-                              )}
-                            </div>
-                            <span style={{
-                              fontSize: '11px', fontWeight: 700, padding: '3px 8px', borderRadius: '4px',
-                              background: isDone ? '#dcfce7' : '#f1f5f9',
-                              color: isDone ? '#065f46' : '#94a3b8'
-                            }}>
-                              {isDone ? 'Fertig' : 'Offen'}
-                            </span>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div style={{padding: '14px 28px', borderTop: '1px solid #f1f5f9', display: 'flex', justifyContent: 'flex-end'}}>
-                <button className="btn" onClick={() => setShowTeilnehmerDetailModal(false)}>Schließen</button>
-              </div>
-            </div>
-          </div>
-        )
-      })()}
 
       {/* ADD/EDIT MODUL MODAL */}
       {showAddModulModal && (
