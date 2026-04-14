@@ -884,19 +884,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
       }
 
       await pb.collection('users').update(teilnehmer.id, { permissions })
-      
-      if (newStatus && teilnehmer.email) {
-        try {
-          await pb.collection('users').requestPasswordReset(teilnehmer.email)
-          showMessage('Lernbar aktiviert - Password-Reset Email gesendet', 'success')
-        } catch(e: any) {
-          console.error('Password Reset Fehler:', e)
-          showMessage('Lernbar aktiviert', 'success')
-        }
-      } else {
-        showMessage(newStatus ? 'Lernbar aktiviert' : 'Lernbar deaktiviert', 'success')
-      }
-      
+      showMessage(newStatus ? 'Lernbar aktiviert' : 'Lernbar deaktiviert', 'success')
       await loadTeilnehmer()
     } catch(e: any) {
       alert('Fehler: ' + e.message)
