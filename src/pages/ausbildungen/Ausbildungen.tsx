@@ -833,7 +833,16 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
       } else {
         // NEUEN USER MIT PLATZHALTER-EMAIL ERSTELLEN
         await pb.collection('users').create(userData)
-        showMessage('Neuer Teilnehmer erstellt', 'success')
+        if (teilnehmerForm.lernbar_zugang_aktiv && teilnehmerForm.email) {
+          try {
+            await pb.collection('users').requestPasswordReset(teilnehmerForm.email)
+            showMessage('Neuer Teilnehmer erstellt – Passwort-Email gesendet', 'success')
+          } catch {
+            showMessage('Neuer Teilnehmer erstellt', 'success')
+          }
+        } else {
+          showMessage('Neuer Teilnehmer erstellt', 'success')
+        }
       }
     }
 
