@@ -1037,15 +1037,15 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
     const unassigned = teilnehmer.filter(t => !modulProgress.some(p => p.modul_id === modulId && p.teilnehmer_id === t.id))
     if (unassigned.length === 0) { showMessage('Alle bereits zugewiesen', 'success'); return }
     try {
-      await Promise.all(unassigned.map(t =>
-        pb.collection('ausbildungen_module_progress').create({
+      for (const t of unassigned) {
+        await pb.collection('ausbildungen_module_progress').create({
           modul_id: modulId,
           teilnehmer_id: t.id,
           fortschritt_prozent: 0,
           notizen: '',
           organization_id: user?.organization_id
-        })
-      ))
+        }, { requestKey: `assign-${modulId}-${t.id}` })
+      }
       await loadModulProgress()
       showMessage(`${unassigned.length} Teilnehmer hinzugefügt`, 'success')
     } catch(e: any) {
