@@ -2389,59 +2389,86 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
       {/* TERMIN DETAIL MODAL */}
       {showTerminDetailModal && selectedTermin && (
         <div className="modal show" onClick={() => setShowTerminDetailModal(false)}>
-          <div className="modal-content large" onClick={(e) => e.stopPropagation()}>
-            <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px'}}>
-              <div>
-                <h3 style={{margin: 0}}>{selectedTermin.name}</h3>
-                <div style={{fontSize: '14px', color: '#64748b', marginTop: '8px'}}>
-                  {parseDate(selectedTermin.start_datetime).toLocaleDateString('de-DE', { 
-                    day: '2-digit', 
-                    month: '2-digit', 
-                    year: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit'
-                  })} • {selectedTermin.location}
+          <div className="modal-content large" onClick={(e) => e.stopPropagation()} style={{padding: 0, overflow: 'hidden'}}>
+
+            {/* Header */}
+            {(() => {
+              const startD = parseDate(selectedTermin.start_datetime)
+              const endD = parseDate(selectedTermin.end_datetime)
+              const statusLabels: Record<string, string> = {geplant: 'Geplant', laufend: 'Laufend', abgeschlossen: 'Abgeschlossen', abgesagt: 'Abgesagt'}
+              const statusColors: Record<string, string> = {geplant: '#3b82f6', laufend: '#10b981', abgeschlossen: '#6366f1', abgesagt: '#ef4444'}
+              const sc = statusColors[selectedTermin.status] || '#64748b'
+              return (
+                <div style={{background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)', padding: '24px 28px', color: '#fff', position: 'relative'}}>
+                  <div style={{display: 'flex', alignItems: 'flex-start', gap: '10px', marginBottom: '8px'}}>
+                    <span style={{
+                      fontSize: '11px', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase',
+                      background: sc, color: '#fff', padding: '3px 10px', borderRadius: '20px'
+                    }}>
+                      {statusLabels[selectedTermin.status]}
+                    </span>
+                    {selectedTermin.dozent && (
+                      <span style={{fontSize: '12px', color: 'rgba(255,255,255,0.5)', paddingTop: '3px'}}>{selectedTermin.dozent}</span>
+                    )}
+                  </div>
+                  <div style={{fontSize: '21px', fontWeight: 700, lineHeight: 1.2, marginBottom: '8px'}}>
+                    {selectedTermin.name}
+                  </div>
+                  <div style={{fontSize: '13px', color: 'rgba(255,255,255,0.6)', display: 'flex', gap: '12px', flexWrap: 'wrap'}}>
+                    {!isNaN(startD.getTime()) && (
+                      <span>
+                        {startD.toLocaleString('de-DE', {day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit'})}
+                        {!isNaN(endD.getTime()) && ` – ${endD.toLocaleString('de-DE', {hour:'2-digit', minute:'2-digit'})}`}
+                      </span>
+                    )}
+                    {selectedTermin.location && <span>{selectedTermin.location}</span>}
+                    <span>{getTerminTeilnehmerCount(selectedTermin.id)} / {selectedTermin.max_teilnehmer} Teilnehmer</span>
+                  </div>
+                  {selectedTermin.description && (
+                    <div style={{fontSize: '13px', color: 'rgba(255,255,255,0.5)', marginTop: '8px'}}>{selectedTermin.description}</div>
+                  )}
+                  <div style={{position: 'absolute', top: '16px', right: '16px', display: 'flex', gap: '8px'}}>
+                    <button
+                      onClick={() => { setShowTerminDetailModal(false); openEditTermin(selectedTermin) }}
+                      style={{background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: '8px', padding: '7px 14px', color: '#fff', cursor: 'pointer', fontSize: '13px', fontWeight: 600, fontFamily: 'inherit'}}
+                    >
+                      Bearbeiten
+                    </button>
+                    <button onClick={() => setShowTerminDetailModal(false)} style={{
+                      background: 'rgba(255,255,255,0.12)', border: 'none', borderRadius: '8px',
+                      width: '32px', height: '32px', cursor: 'pointer', color: '#fff',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center'
+                    }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                      </svg>
+                    </button>
+                  </div>
                 </div>
-              </div>
-              <button 
-                className="btn"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  openEditTermin(selectedTermin)
-                }}
-              >
-                Bearbeiten
-              </button>
+              )
+            })()}
+
+            {/* Tabs */}
+            <div style={{display: 'flex', borderBottom: '1px solid #f1f5f9', padding: '0 28px', background: '#fff'}}>
+              {([
+                {key: 'uebersicht', label: 'Übersicht'},
+                {key: 'teilnehmer', label: `Teilnehmer (${getTerminTeilnehmerCount(selectedTermin.id)})`},
+                {key: 'dokumente', label: `Dokumente (${getTerminDokumenteCount(selectedTermin.id)})`},
+                {key: 'module', label: `Module (${getTerminModuleCount(selectedTermin.id)})`},
+              ] as const).map(tab => (
+                <button key={tab.key} onClick={() => setCurrentTerminTab(tab.key)} style={{
+                  padding: '12px 16px', border: 'none', background: 'none', cursor: 'pointer',
+                  fontSize: '13px', fontWeight: 600, fontFamily: 'inherit',
+                  color: currentTerminTab === tab.key ? '#0f172a' : '#94a3b8',
+                  borderBottom: currentTerminTab === tab.key ? '2px solid #0f172a' : '2px solid transparent',
+                  marginBottom: '-1px', whiteSpace: 'nowrap'
+                }}>
+                  {tab.label}
+                </button>
+              ))}
             </div>
-            
-            <div className="tabs">
-              <button 
-                className={`tab ${currentTerminTab === 'uebersicht' ? 'active' : ''}`}
-                onClick={() => setCurrentTerminTab('uebersicht')}
-              >
-                Übersicht
-              </button>
-              <button 
-                className={`tab ${currentTerminTab === 'teilnehmer' ? 'active' : ''}`}
-                onClick={() => setCurrentTerminTab('teilnehmer')}
-              >
-                Teilnehmer ({getTerminTeilnehmerCount(selectedTermin.id)})
-              </button>
-              <button 
-                className={`tab ${currentTerminTab === 'dokumente' ? 'active' : ''}`}
-                onClick={() => setCurrentTerminTab('dokumente')}
-              >
-                Dokumente ({getTerminDokumenteCount(selectedTermin.id)})
-              </button>
-              <button 
-                className={`tab ${currentTerminTab === 'module' ? 'active' : ''}`}
-                onClick={() => setCurrentTerminTab('module')}
-              >
-                Module ({getTerminModuleCount(selectedTermin.id)})
-              </button>
-            </div>
-            
-            <div className="tab-content">
+
+            <div style={{overflowY: 'auto', maxHeight: '60vh', padding: '20px 28px'}}>
               {/* ÜBERSICHT TAB */}
               {currentTerminTab === 'uebersicht' && (() => {
                 const einladungsText = generateEinladungsText(selectedTermin)
@@ -2883,12 +2910,6 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                   )}
                 </div>
               )}
-            </div>
-            
-            <div className="modal-actions">
-              <button className="btn" onClick={() => setShowTerminDetailModal(false)}>
-                Schließen
-              </button>
             </div>
           </div>
         </div>
