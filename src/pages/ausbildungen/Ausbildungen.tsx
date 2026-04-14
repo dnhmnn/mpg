@@ -252,6 +252,7 @@ export default function Ausbildungen() {
   const [selectedTeilnehmer, setSelectedTeilnehmer] = useState<Teilnehmer | null>(null)
   const [selectedKonzept, setSelectedKonzept] = useState<Ausbildungskonzept | null>(null)
   const [currentTerminTab, setCurrentTerminTab] = useState<'uebersicht' | 'teilnehmer' | 'dokumente' | 'module'>('uebersicht')
+  const [selectedTeilnehmerDetail, setSelectedTeilnehmerDetail] = useState<Teilnehmer | null>(null)
   
 const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | 'konzepte' | 'jahresuebersicht'>('termine')
   
@@ -589,6 +590,11 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
     setShowTerminDetailModal(true)
   }
 
+  function viewTeilnehmerDetail(t: Teilnehmer) {
+    setSelectedTeilnehmerDetail(t)
+    setShowTeilnehmerDetailModal(true)
+  }
+
   // TEILNEHMER FUNCTIONS
   function openAddTeilnehmer() {
     setTeilnehmerForm({
@@ -803,11 +809,6 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
     } catch(e: any) {
       alert('Fehler: ' + e.message)
     }
-  }
-
-  function viewTeilnehmerDetail(teilnehmer: Teilnehmer) {
-    setSelectedTeilnehmer(teilnehmer)
-    setShowTeilnehmerDetailModal(true)
   }
 
   // TERMIN-TEILNEHMER FUNCTIONS
@@ -1837,6 +1838,126 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
           </div>
         </div>
       )}
+
+      {/* TEILNEHMER DETAIL MODAL */}
+      {showTeilnehmerDetailModal && selectedTeilnehmerDetail && (() => {
+        const t = selectedTeilnehmerDetail
+        const aktuellesJahrDetail = new Date().getFullYear()
+        const alleJahre = [...new Set(
+          terminTeilnehmer
+            .filter(tt => tt.teilnehmer_id === t.id)
+            .map(tt => {
+              const termin = termine.find(tr => tr.id === tt.termin_id)
+              return termin ? parseDate(termin.start_datetime).getFullYear() : null
+            })
+            .filter(Boolean) as number[]
+        )].sort((a, b) => b - a)
+        if (!alleJahre.includes(aktuellesJahrDetail)) alleJahre.unshift(aktuellesJahrDetail)
+
+        const renderJahrBlock = (jahr: number, isArchiv: boolean) => {
+          const jahresTermineFiltered = termine
+            .filter(tr => parseDate(tr.start_datetime).getFullYear() === jahr)
+            .sort((a, b) => parseDate(a.start_datetime).getTime() - parseDate(b.start_datetime).getTime())
+          const ttFiltered = terminTeilnehmer.filter(tt =>
+            tt.teilnehmer_id === t.id && jahresTermineFiltered.some(tr => tr.id === tt.termin_id)
+          )
+          const da = ttFiltered.filter(tt => tt.status === 'da').length
+          const total = jahresTermineFiltered.length
+          const prozent = total > 0 ? Math.round((da / total) * 100) : 0
+          const ziel50 = da >= 2
+          const zielColor = prozent >= 80 ? '#16a34a' : prozent >= 50 ? '#d97706' : '#dc2626'
+          const barColor = prozent >= 80 ? '#22c55e' : prozent >= 50 ? '#eab308' : '#ef4444'
+
+          const statusConfig: {[k:string]: {label:string, bg:string, color:string}} = {
+            da:           {label: 'Da',           bg: '#dcfce7', color: '#166534'},
+            krank:        {label: 'Krank',         bg: '#fef9c3', color: '#92400e'},
+            entschuldigt: {label: 'Entschuldigt',  bg: '#dbeafe', color: '#1e40af'},
+            fehlend:      {label: 'Fehlend',       bg: '#fee2e2', color: '#991b1b'},
+            zugesagt:     {label: 'Zugesagt',      bg: '#d1fae5', color: '#065f46'},
+            abgesagt:     {label: 'Abgesagt',      bg: '#fce7f3', color: '#9d174d'},
+            eingeladen:   {label: 'Eingeladen',    bg: '#f1f5f9', color: '#64748b'},
+          }
+
+          return (
+            <div key={jahr} style={{marginBottom: isArchiv ? '24px' : '0'}}>
+              {/* Jahr-Header + Balken */}
+              <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '8px'}}>
+                <div style={{fontWeight: 700, fontSize: '15px'}}>{jahr}</div>
+                <div style={{fontSize: '13px', color: zielColor, fontWeight: 700}}>{da}/{total} · {prozent}%</div>
+              </div>
+              <div style={{background: '#e2e8f0', borderRadius: '6px', height: '8px', marginBottom: '6px'}}>
+                <div style={{background: barColor, borderRadius: '6px', height: '8px', width: `${Math.min(prozent,100)}%`, transition: 'width 0.3s'}} />
+              </div>
+              <div style={{fontSize: '12px', color: ziel50 ? '#16a34a' : '#94a3b8', marginBottom: '14px'}}>
+                {ziel50 ? '✓ Mindestziel erreicht (≥ 2 Schulungen, ≥ 50%)' : '✗ Mindestziel nicht erreicht'}
+              </div>
+
+              {/* Termin-Liste */}
+              {jahresTermineFiltered.length === 0 ? (
+                <div style={{color: '#94a3b8', fontSize: '13px'}}>Keine Termine in diesem Jahr</div>
+              ) : (
+                <div style={{display: 'flex', flexDirection: 'column', gap: '6px'}}>
+                  {jahresTermineFiltered.map(termin => {
+                    const tt = terminTeilnehmer.find(tt => tt.termin_id === termin.id && tt.teilnehmer_id === t.id)
+                    const st = tt?.status as string | undefined
+                    const cfg = st ? statusConfig[st] : null
+                    return (
+                      <div key={termin.id} style={{display: 'flex', alignItems: 'center', gap: '10px', padding: '9px 12px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0'}}>
+                        <div style={{fontSize: '12px', color: '#64748b', minWidth: '40px', fontWeight: 600}}>
+                          {parseDate(termin.start_datetime).toLocaleDateString('de-DE', {day:'2-digit', month:'2-digit'})}
+                        </div>
+                        <div style={{flex: 1, fontSize: '14px'}}>{termin.name}</div>
+                        {cfg ? (
+                          <span style={{padding: '3px 10px', borderRadius: '6px', background: cfg.bg, color: cfg.color, fontWeight: 700, fontSize: '12px'}}>{cfg.label}</span>
+                        ) : (
+                          <span style={{padding: '3px 10px', borderRadius: '6px', background: '#f1f5f9', color: '#94a3b8', fontSize: '12px'}}>–</span>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          )
+        }
+
+        const archivJahre = alleJahre.filter(j => j !== aktuellesJahrDetail)
+
+        return (
+          <div className="modal show" onClick={() => setShowTeilnehmerDetailModal(false)}>
+            <div className="modal-content large" onClick={e => e.stopPropagation()}>
+              {/* Header */}
+              <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px'}}>
+                <div>
+                  <h3 style={{margin: 0}}>{t.vorname} {t.nachname}</h3>
+                  {t.ausbildung_typ && <div style={{fontSize: '13px', color: '#64748b', marginTop: '4px'}}>{t.ausbildung_typ}</div>}
+                  {t.email && <div style={{fontSize: '13px', color: '#64748b'}}>{t.email}</div>}
+                </div>
+                <div style={{display: 'flex', gap: '8px'}}>
+                  <button className="btn" onClick={() => { setShowTeilnehmerDetailModal(false); openEditTeilnehmer(t) }}>Bearbeiten</button>
+                  <button className="btn" onClick={() => setShowTeilnehmerDetailModal(false)}>✕</button>
+                </div>
+              </div>
+
+              {/* Aktuelles Jahr */}
+              {renderJahrBlock(aktuellesJahrDetail, false)}
+
+              {/* Archiv */}
+              {archivJahre.length > 0 && (
+                <details style={{marginTop: '24px'}}>
+                  <summary style={{cursor: 'pointer', fontWeight: 700, fontSize: '14px', color: '#64748b', padding: '10px 0', borderTop: '1px solid #e2e8f0', listStyle: 'none', display: 'flex', alignItems: 'center', gap: '6px'}}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 8v13H3V8"/><path d="M1 3h22v5H1z"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+                    Archiv ({archivJahre.length} {archivJahre.length === 1 ? 'Jahr' : 'Jahre'})
+                  </summary>
+                  <div style={{marginTop: '16px'}}>
+                    {archivJahre.map(j => renderJahrBlock(j, true))}
+                  </div>
+                </details>
+              )}
+            </div>
+          </div>
+        )
+      })()}
 
       {/* ADD/EDIT TEILNEHMER MODAL */}
       {showAddTeilnehmerModal && (
