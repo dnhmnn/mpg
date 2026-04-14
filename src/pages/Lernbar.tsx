@@ -114,8 +114,14 @@ export default function Lernbar() {
   const [progress, setProgress] = useState<ModulProgress[]>([])
   const [loading, setLoading] = useState(true)
 
-  const [expandedModul, setExpandedModul] = useState<string | null>(null)
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null)
+
+  // Modul-Player
+  const [playerProgress, setPlayerProgress] = useState<ModulProgress | null>(null)
+  const [playerStep, setPlayerStep] = useState<'intro' | number>('intro')
+  const [quizSelected, setQuizSelected] = useState<number | null>(null)
+  const [quizSubmitted, setQuizSubmitted] = useState(false)
+  const [modulFailed, setModulFailed] = useState(false)
 
   // Konto-Form
   const [kontaktEmail, setKontaktEmail] = useState('')
@@ -397,13 +403,12 @@ export default function Lernbar() {
         )}
 
         {/* LERNMODULE */}
-        {tab === 'lernmodule' && (
+        {tab === 'lernmodule' && !playerProgress && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             {progress.length === 0 && (
               <div style={{ textAlign: 'center', color: '#94a3b8', padding: '48px 0', fontSize: '15px' }}>Noch keine Lernmodule zugewiesen</div>
             )}
 
-            {/* Fortschrittsbalken gesamt */}
             {progress.length > 0 && (
               <div style={{ background: '#fff', borderRadius: '12px', padding: '16px 20px', border: '1px solid #e2e8f0', marginBottom: '4px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
@@ -411,7 +416,7 @@ export default function Lernbar() {
                   <span style={{ fontSize: '13px', color: '#64748b' }}>{doneMods}/{progress.length} abgeschlossen</span>
                 </div>
                 <div style={{ background: '#e2e8f0', borderRadius: '6px', height: '8px' }}>
-                  <div style={{ background: '#0f172a', borderRadius: '6px', height: '8px', width: `${progress.length > 0 ? Math.round((doneMods / progress.length) * 100) : 0}%`, transition: 'width 0.3s' }} />
+                  <div style={{ background: '#0f172a', borderRadius: '6px', height: '8px', width: `${Math.round((doneMods / progress.length) * 100)}%`, transition: 'width 0.3s' }} />
                 </div>
               </div>
             )}
@@ -420,69 +425,27 @@ export default function Lernbar() {
               const mod = module.find(m => m.id === p.modul_id)
               if (!mod) return null
               const isDone = !!p.abgeschlossen_am
-              const isOpen = expandedModul === p.id
               return (
                 <div key={p.id} style={{ background: '#fff', borderRadius: '14px', border: `1px solid ${isDone ? '#bbf7d0' : '#e2e8f0'}`, overflow: 'hidden' }}>
-                  <button
-                    onClick={() => setExpandedModul(isOpen ? null : p.id)}
-                    style={{ width: '100%', padding: '16px 20px', display: 'flex', alignItems: 'center', gap: '14px', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit' }}
-                  >
+                  <div style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', gap: '14px' }}>
                     <div style={{ width: '10px', height: '10px', borderRadius: '50%', flexShrink: 0, background: isDone ? '#10b981' : '#cbd5e1' }} />
                     <div style={{ flex: 1 }}>
                       <div style={{ fontWeight: 700, fontSize: '15px', color: '#0f172a' }}>{mod.name}</div>
                       {mod.beschreibung && <div style={{ fontSize: '13px', color: '#64748b', marginTop: '2px' }}>{mod.beschreibung}</div>}
+                      <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '4px' }}>{mod.dauer_minuten} Min · {mod.inhalte?.length || 0} Blöcke</div>
                     </div>
-                    <span style={{ padding: '3px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: 700, background: isDone ? '#dcfce7' : '#f1f5f9', color: isDone ? '#065f46' : '#94a3b8', flexShrink: 0 }}>
-                      {isDone ? 'Fertig' : 'Offen'}
-                    </span>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2" style={{ flexShrink: 0, transform: isOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}><polyline points="6 9 12 15 18 9"/></svg>
-                  </button>
-
-                  {isOpen && (
-                    <div style={{ borderTop: '1px solid #f1f5f9', padding: '20px' }}>
-                      {mod.inhalte && mod.inhalte.length > 0 ? (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                          {[...mod.inhalte].sort((a, b) => a.reihenfolge - b.reihenfolge).map((block, i) => (
-                            <div key={i}>
-                              {block.titel && <div style={{ fontWeight: 700, fontSize: '14px', marginBottom: '6px', color: '#0f172a' }}>{block.titel}</div>}
-                              {block.typ === 'text' && (
-                                <div style={{ fontSize: '14px', color: '#374151', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>{block.inhalt}</div>
-                              )}
-                              {block.typ === 'quiz' && (() => {
-                                let quiz: any = null
-                                try { quiz = JSON.parse(block.inhalt) } catch { return null }
-                                return (
-                                  <div style={{ background: '#f5f3ff', borderRadius: '10px', padding: '14px', border: '1px solid #ddd6fe' }}>
-                                    <div style={{ fontSize: '11px', fontWeight: 700, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px' }}>Quiz</div>
-                                    <div style={{ fontWeight: 600, fontSize: '14px', marginBottom: '10px' }}>{quiz.frage}</div>
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                      {quiz.antworten?.map((a: string, idx: number) => (
-                                        <div key={idx} style={{ padding: '8px 12px', borderRadius: '8px', background: '#fff', border: '1px solid #ddd6fe', fontSize: '13px' }}>{a}</div>
-                                      ))}
-                                    </div>
-                                  </div>
-                                )
-                              })()}
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <div style={{ color: '#94a3b8', fontSize: '14px' }}>Kein Inhalt vorhanden.</div>
-                      )}
-
-                      {!isDone && (
-                        <button
-                          onClick={() => markModulDone(p.id)}
-                          style={{ marginTop: '20px', width: '100%', padding: '12px', borderRadius: '10px', border: 'none', background: '#0f172a', color: '#fff', fontWeight: 700, fontSize: '14px', cursor: 'pointer', fontFamily: 'inherit' }}
-                        >
-                          Als abgeschlossen markieren
-                        </button>
-                      )}
-                      {isDone && (
-                        <div style={{ marginTop: '16px', textAlign: 'center', fontSize: '13px', color: '#059669', fontWeight: 600 }}>
-                          Abgeschlossen am {new Date(p.abgeschlossen_am!).toLocaleDateString('de-DE')}
-                        </div>
-                      )}
+                    {isDone ? (
+                      <span style={{ padding: '4px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 700, background: '#dcfce7', color: '#065f46' }}>Fertig</span>
+                    ) : (
+                      <button
+                        onClick={() => { setPlayerProgress(p); setPlayerStep('intro'); setQuizSelected(null); setQuizSubmitted(false); setModulFailed(false) }}
+                        style={{ padding: '8px 16px', borderRadius: '8px', border: 'none', background: '#0f172a', color: '#fff', fontWeight: 700, fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit' }}
+                      >Starten</button>
+                    )}
+                  </div>
+                  {isDone && (
+                    <div style={{ padding: '0 20px 14px 20px', fontSize: '12px', color: '#059669' }}>
+                      Abgeschlossen am {new Date(p.abgeschlossen_am!).toLocaleDateString('de-DE')}
                     </div>
                   )}
                 </div>
@@ -490,6 +453,181 @@ export default function Lernbar() {
             })}
           </div>
         )}
+
+        {/* MODUL PLAYER */}
+        {tab === 'lernmodule' && playerProgress && (() => {
+          const mod = module.find(m => m.id === playerProgress.modul_id)
+          if (!mod) return null
+          const blocks = [...(mod.inhalte || [])].sort((a, b) => a.reihenfolge - b.reihenfolge)
+          const totalBlocks = blocks.length
+          const isLast = typeof playerStep === 'number' && playerStep === totalBlocks - 1
+
+          function resetPlayer() {
+            setPlayerProgress(null)
+            setPlayerStep('intro')
+            setQuizSelected(null)
+            setQuizSubmitted(false)
+            setModulFailed(false)
+          }
+
+          function nextBlock() {
+            setQuizSelected(null)
+            setQuizSubmitted(false)
+            setModulFailed(false)
+            if (playerStep === 'intro') { setPlayerStep(0); return }
+            if (typeof playerStep === 'number') {
+              if (isLast) { markModulDone(playerProgress.id); resetPlayer() }
+              else setPlayerStep(playerStep + 1)
+            }
+          }
+
+          const currentBlock = typeof playerStep === 'number' ? blocks[playerStep] : null
+          let quiz: any = null
+          if (currentBlock?.typ === 'quiz') {
+            try { quiz = JSON.parse(currentBlock.inhalt) } catch {}
+          }
+
+          return (
+            <div style={{ background: '#fff', borderRadius: '16px', border: '1px solid #e2e8f0', overflow: 'hidden' }}>
+              {/* Player header */}
+              <div style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)', padding: '16px 20px', color: '#fff', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <button onClick={resetPlayer} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '8px', width: '30px', height: '30px', cursor: 'pointer', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+                </button>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 700, fontSize: '15px' }}>{mod.name}</div>
+                  {playerStep !== 'intro' && (
+                    <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', marginTop: '2px' }}>
+                      Block {(playerStep as number) + 1} von {totalBlocks}
+                    </div>
+                  )}
+                </div>
+                {playerStep !== 'intro' && totalBlocks > 0 && (
+                  <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)' }}>
+                    {Math.round(((playerStep as number) / totalBlocks) * 100)}%
+                  </div>
+                )}
+              </div>
+
+              {/* Progress bar */}
+              {playerStep !== 'intro' && totalBlocks > 0 && (
+                <div style={{ background: '#e2e8f0', height: '3px' }}>
+                  <div style={{ background: '#0f172a', height: '3px', width: `${Math.round(((playerStep as number) / totalBlocks) * 100)}%`, transition: 'width 0.3s' }} />
+                </div>
+              )}
+
+              <div style={{ padding: '24px 20px' }}>
+
+                {/* INTRO */}
+                {playerStep === 'intro' && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: '20px', color: '#0f172a', marginBottom: '8px' }}>{mod.name}</div>
+                      {mod.beschreibung && <div style={{ fontSize: '15px', color: '#374151', lineHeight: 1.6 }}>{mod.beschreibung}</div>}
+                    </div>
+                    <div style={{ display: 'flex', gap: '12px' }}>
+                      <div style={{ background: '#f8fafc', borderRadius: '10px', padding: '12px 16px', flex: 1, textAlign: 'center' }}>
+                        <div style={{ fontSize: '20px', fontWeight: 700, color: '#0f172a' }}>{mod.dauer_minuten}</div>
+                        <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '2px' }}>Minuten</div>
+                      </div>
+                      <div style={{ background: '#f8fafc', borderRadius: '10px', padding: '12px 16px', flex: 1, textAlign: 'center' }}>
+                        <div style={{ fontSize: '20px', fontWeight: 700, color: '#0f172a' }}>{totalBlocks}</div>
+                        <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '2px' }}>Blöcke</div>
+                      </div>
+                      <div style={{ background: '#f8fafc', borderRadius: '10px', padding: '12px 16px', flex: 1, textAlign: 'center' }}>
+                        <div style={{ fontSize: '20px', fontWeight: 700, color: '#7c3aed' }}>{blocks.filter(b => b.typ === 'quiz').length}</div>
+                        <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '2px' }}>Quiz</div>
+                      </div>
+                    </div>
+                    {blocks.filter(b => b.typ === 'quiz').length > 0 && (
+                      <div style={{ background: '#fef3c7', border: '1px solid #fde68a', borderRadius: '10px', padding: '12px 14px', fontSize: '13px', color: '#92400e' }}>
+                        Dieses Modul enthält Quiz-Fragen. Alle müssen richtig beantwortet werden.
+                      </div>
+                    )}
+                    <button onClick={nextBlock} style={{ width: '100%', padding: '14px', borderRadius: '10px', border: 'none', background: '#0f172a', color: '#fff', fontWeight: 700, fontSize: '15px', cursor: 'pointer', fontFamily: 'inherit', marginTop: '4px' }}>
+                      Starten
+                    </button>
+                  </div>
+                )}
+
+                {/* TEXT BLOCK */}
+                {currentBlock?.typ === 'text' && (
+                  <div>
+                    {currentBlock.titel && <div style={{ fontWeight: 700, fontSize: '18px', color: '#0f172a', marginBottom: '14px' }}>{currentBlock.titel}</div>}
+                    <div style={{ fontSize: '15px', color: '#374151', lineHeight: 1.75, whiteSpace: 'pre-wrap', marginBottom: '24px' }}>{currentBlock.inhalt}</div>
+                    <button onClick={nextBlock} style={{ width: '100%', padding: '14px', borderRadius: '10px', border: 'none', background: '#0f172a', color: '#fff', fontWeight: 700, fontSize: '15px', cursor: 'pointer', fontFamily: 'inherit' }}>
+                      {isLast ? 'Abschließen' : 'Weiter'}
+                    </button>
+                  </div>
+                )}
+
+                {/* QUIZ BLOCK */}
+                {currentBlock?.typ === 'quiz' && quiz && (
+                  <div>
+                    {currentBlock.titel && <div style={{ fontWeight: 700, fontSize: '18px', color: '#0f172a', marginBottom: '14px' }}>{currentBlock.titel}</div>}
+                    <div style={{ fontSize: '11px', fontWeight: 700, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '10px' }}>Quiz</div>
+                    <div style={{ fontWeight: 600, fontSize: '16px', color: '#0f172a', marginBottom: '16px', lineHeight: 1.5 }}>{quiz.frage}</div>
+
+                    {modulFailed ? (
+                      <div>
+                        <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '12px', padding: '16px', marginBottom: '16px', textAlign: 'center' }}>
+                          <div style={{ fontWeight: 700, fontSize: '16px', color: '#b91c1c', marginBottom: '6px' }}>Falsch!</div>
+                          <div style={{ fontSize: '14px', color: '#991b1b' }}>Das Modul muss neu gestartet werden.</div>
+                        </div>
+                        <button
+                          onClick={() => { setPlayerStep('intro'); setQuizSelected(null); setQuizSubmitted(false); setModulFailed(false) }}
+                          style={{ width: '100%', padding: '14px', borderRadius: '10px', border: 'none', background: '#0f172a', color: '#fff', fontWeight: 700, fontSize: '15px', cursor: 'pointer', fontFamily: 'inherit' }}
+                        >Neu starten</button>
+                      </div>
+                    ) : (
+                      <div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '20px' }}>
+                          {quiz.antworten?.map((a: string, idx: number) => {
+                            let bg = '#fff', border = '1px solid #e2e8f0', color = '#374151'
+                            if (quizSubmitted) {
+                              if (idx === quiz.richtige) { bg = '#f0fdf4'; border = '2px solid #16a34a'; color = '#166534' }
+                              else if (idx === quizSelected) { bg = '#fef2f2'; border = '2px solid #ef4444'; color = '#b91c1c' }
+                            } else if (idx === quizSelected) {
+                              bg = '#eff6ff'; border = '2px solid #3b82f6'; color = '#1d4ed8'
+                            }
+                            return (
+                              <button
+                                key={idx}
+                                disabled={quizSubmitted}
+                                onClick={() => setQuizSelected(idx)}
+                                style={{ padding: '12px 16px', borderRadius: '10px', border, background: bg, color, fontWeight: idx === quizSelected || (quizSubmitted && idx === quiz.richtige) ? 700 : 400, fontSize: '14px', cursor: quizSubmitted ? 'default' : 'pointer', textAlign: 'left', fontFamily: 'inherit' }}
+                              >{a}</button>
+                            )
+                          })}
+                        </div>
+
+                        {!quizSubmitted ? (
+                          <button
+                            disabled={quizSelected === null}
+                            onClick={() => {
+                              setQuizSubmitted(true)
+                              if (quizSelected !== quiz.richtige) setModulFailed(true)
+                            }}
+                            style={{ width: '100%', padding: '14px', borderRadius: '10px', border: 'none', background: quizSelected === null ? '#e2e8f0' : '#0f172a', color: quizSelected === null ? '#94a3b8' : '#fff', fontWeight: 700, fontSize: '15px', cursor: quizSelected === null ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}
+                          >Antworten</button>
+                        ) : quizSelected === quiz.richtige ? (
+                          <div>
+                            <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '10px', padding: '12px', textAlign: 'center', marginBottom: '14px', fontWeight: 700, color: '#166534' }}>
+                              Richtig!
+                            </div>
+                            <button onClick={nextBlock} style={{ width: '100%', padding: '14px', borderRadius: '10px', border: 'none', background: '#16a34a', color: '#fff', fontWeight: 700, fontSize: '15px', cursor: 'pointer', fontFamily: 'inherit' }}>
+                              {isLast ? 'Abschließen' : 'Weiter'}
+                            </button>
+                          </div>
+                        ) : null}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          )
+        })()}
 
         {/* MEIN KONTO */}
         {tab === 'konto' && (
