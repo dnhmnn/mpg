@@ -254,7 +254,7 @@ export default function Ausbildungen() {
   const [currentTerminTab, setCurrentTerminTab] = useState<'uebersicht' | 'teilnehmer' | 'dokumente' | 'module'>('uebersicht')
   const [selectedTeilnehmerDetail, setSelectedTeilnehmerDetail] = useState<Teilnehmer | null>(null)
   
-const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | 'konzepte' | 'jahresuebersicht'>('termine')
+const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | 'konzepte' | 'jahresuebersicht' | 'archiv'>('termine')
   
   const [uploadFile, setUploadFile] = useState<File | null>(null)
   const [uploadTyp, setUploadTyp] = useState<'dozent' | 'teilnehmer'>('teilnehmer')
@@ -472,7 +472,9 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
     setTimeout(() => setMessage(null), 3000)
   }
 
-  const filteredTermine = termine
+  // Aktive Termine (nicht abgeschlossen) im Hauptbereich, abgeschlossene ins Archiv
+  const filteredTermine = termine.filter(t => t.status !== 'abgeschlossen')
+  const archivTermine = termine.filter(t => t.status === 'abgeschlossen')
   const filteredTeilnehmer = teilnehmer
   const filteredModule = module
   const filteredKonzepte = konzepte
@@ -1183,6 +1185,19 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
             <rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
           </svg>
         </button>
+        <button
+          className={`action-btn ${viewMode === 'archiv' ? 'active' : ''}`}
+          onClick={() => setViewMode('archiv')}
+          title={`Archiv (${archivTermine.length})`}
+          style={{position: 'relative'}}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/>
+          </svg>
+          {archivTermine.length > 0 && (
+            <span style={{position: 'absolute', top: '2px', right: '2px', background: '#64748b', color: '#fff', borderRadius: '50%', width: '14px', height: '14px', fontSize: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700}}>{archivTermine.length > 9 ? '9+' : archivTermine.length}</span>
+          )}
+        </button>
         <div style={{flex: 1}} />
         {viewMode === 'termine' && (
           <button className="action-btn primary" onClick={openAddTermin} title="Termin hinzufügen">
@@ -1712,6 +1727,82 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* ARCHIV VIEW */}
+      {viewMode === 'archiv' && (
+        <div className="content" style={{padding: '24px'}}>
+          <h2 style={{marginBottom: '4px'}}>Archiv</h2>
+          <p style={{color: '#64748b', fontSize: '14px', marginBottom: '24px'}}>
+            Abgeschlossene Termine — nach Jahr sortiert
+          </p>
+          {archivTermine.length === 0 ? (
+            <div className="empty-state">Noch keine abgeschlossenen Termine</div>
+          ) : (() => {
+            const Jahre = ([...new Set(
+              archivTermine.map(t => parseDate(t.start_datetime).getFullYear())
+            )] as number[]).sort((a, b) => b - a)
+            return (
+              <div style={{display: 'flex', flexDirection: 'column', gap: '32px'}}>
+                {Jahre.map(jahr => {
+                  const jahrTermine = archivTermine
+                    .filter(t => parseDate(t.start_datetime).getFullYear() === jahr)
+                    .sort((a, b) => parseDate(b.start_datetime).getTime() - parseDate(a.start_datetime).getTime())
+                  return (
+                    <div key={jahr}>
+                      <div style={{display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px'}}>
+                        <h3 style={{margin: 0, fontSize: '18px'}}>{jahr}</h3>
+                        <span style={{fontSize: '13px', color: '#94a3b8'}}>{jahrTermine.length} Termine</span>
+                      </div>
+                      <div style={{display: 'flex', flexDirection: 'column', gap: '8px'}}>
+                        {jahrTermine.map(termin => {
+                          const ttCount = terminTeilnehmer.filter(tt => tt.termin_id === termin.id).length
+                          const daCount = terminTeilnehmer.filter(tt => tt.termin_id === termin.id && tt.status === 'da').length
+                          return (
+                            <div
+                              key={termin.id}
+                              onClick={() => viewTerminDetail(termin)}
+                              style={{display: 'flex', alignItems: 'center', gap: '14px', padding: '14px 16px', background: '#fff', border: '1px solid #e2e8f0', borderRadius: '10px', cursor: 'pointer', transition: 'box-shadow 0.15s'}}
+                              onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)')}
+                              onMouseLeave={e => (e.currentTarget.style.boxShadow = 'none')}
+                            >
+                              <div style={{minWidth: '48px', textAlign: 'center'}}>
+                                <div style={{fontSize: '18px', fontWeight: 700, lineHeight: 1}}>
+                                  {parseDate(termin.start_datetime).toLocaleDateString('de-DE', {day: '2-digit'})}
+                                </div>
+                                <div style={{fontSize: '11px', color: '#94a3b8', textTransform: 'uppercase'}}>
+                                  {parseDate(termin.start_datetime).toLocaleDateString('de-DE', {month: 'short'})}
+                                </div>
+                              </div>
+                              <div style={{flex: 1}}>
+                                <div style={{fontWeight: 600, fontSize: '15px'}}>{termin.name}</div>
+                                <div style={{fontSize: '12px', color: '#64748b', marginTop: '2px', display: 'flex', gap: '10px', flexWrap: 'wrap'}}>
+                                  {termin.location && <span>📍 {termin.location}</span>}
+                                  {termin.dozent && <span>👤 {termin.dozent}</span>}
+                                </div>
+                              </div>
+                              <div style={{textAlign: 'right', fontSize: '13px'}}>
+                                {ttCount > 0 && (
+                                  <div>
+                                    <span style={{color: '#16a34a', fontWeight: 700}}>{daCount}</span>
+                                    <span style={{color: '#94a3b8'}}> / {ttCount} Da</span>
+                                  </div>
+                                )}
+                                <div style={{fontSize: '11px', color: '#94a3b8', marginTop: '2px'}}>
+                                  {parseDate(termin.start_datetime).toLocaleTimeString('de-DE', {hour: '2-digit', minute: '2-digit'})} Uhr
+                                </div>
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )
+          })()}
         </div>
       )}
 
