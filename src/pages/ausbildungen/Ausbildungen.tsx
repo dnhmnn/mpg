@@ -633,6 +633,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
         termin_id: termin.id,
         termin_name: termin.name,
         termin_datum: termin.start_datetime,
+        termin_end_datum: termin.end_datetime || '',
         termin_ort: termin.location || '',
         termin_beschreibung: termin.description || '',
         organization_id: termin.organization_id
