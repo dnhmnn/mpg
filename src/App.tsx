@@ -8,6 +8,7 @@ import Einladung from './pages/ausbildungen/Einladung'
 import Files from './pages/Files'
 import Lager from './pages/Lager'
 import MPG from './pages/MPG'
+import Lernbar from './pages/Lernbar'
 import './styles/globals.css'
 
 function App() {
@@ -23,6 +24,7 @@ function App() {
         <Route path="/files" element={<Files />} />
         <Route path="/mpg" element={<MPG />} />
         <Route path="/einladung/:token" element={<Einladung />} />
+        <Route path="/lernbar" element={<Lernbar />} />
       </Routes>
     </BrowserRouter>
   )
