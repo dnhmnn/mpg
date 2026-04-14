@@ -351,7 +351,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
       const records = await pb.collection('ausbildungen_termine').getFullList({
         filter: `organization_id = "${user?.organization_id}"`,
         sort: '-start_datetime',
-        requestKey: 'loadTermine'
+        requestKey: `loadTermine-${Date.now()}`
       })
       setTermine(records)
     } catch(e: any) {
@@ -364,7 +364,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
       const userRecords = await pb.collection('users').getFullList({
         filter: `organization_id = "${user?.organization_id}" && role = "teilnehmer"`,
         sort: 'name',
-        requestKey: 'loadTeilnehmer'
+        requestKey: `loadTeilnehmer-${Date.now()}`
       })
       const teilnehmerData = userRecords.map(u => ({
         id: u.id,
@@ -391,7 +391,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
     try {
       const records = await pb.collection('ausbildungen_termine_user').getFullList({
         sort: 'created',
-        requestKey: 'loadTerminTeilnehmer'
+        requestKey: `loadTerminTeilnehmer-${Date.now()}`
       })
       setTerminTeilnehmer(records)
     } catch(e: any) {
@@ -404,7 +404,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
       const records = await pb.collection('ausbildungen_dokumente').getFullList({
         filter: `organization_id = "${user?.organization_id}"`,
         sort: '-created',
-        requestKey: 'loadDokumente'
+        requestKey: `loadDokumente-${Date.now()}`
       })
       setDokumente(records)
     } catch(e: any) {
@@ -417,7 +417,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
       const records = await pb.collection('ausbildungen_module').getFullList({
         filter: `organization_id = "${user?.organization_id}"`,
         sort: 'name',
-        requestKey: 'loadModule'
+        requestKey: `loadModule-${Date.now()}`
       })
       setModule(records)
     } catch(e: any) {
@@ -430,7 +430,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
       const records = await pb.collection('ausbildungen_module_termine').getFullList({
         expand: 'modul_id',
         sort: '-created',
-        requestKey: 'loadModulTermine'
+        requestKey: `loadModulTermine-${Date.now()}`
       })
       setModulTermine(records)
     } catch(e: any) {
@@ -455,7 +455,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
       const records = await pb.collection('ausbildungen_konzepte').getFullList({
         filter: `organization_id = "${user?.organization_id}"`,
         sort: '-created',
-        requestKey: 'loadKonzepte'
+        requestKey: `loadKonzepte-${Date.now()}`
       })
       setKonzepte(records)
     } catch(e: any) {
