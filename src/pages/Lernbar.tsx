@@ -56,6 +56,18 @@ interface ModulProgress {
   abgeschlossen_am?: string
 }
 
+interface Neuigkeit {
+  id: string
+  titel: string
+  inhalt: string
+  anhang: string
+  organisation_id: string
+  erstellt_von: string
+  gepinnt: boolean
+  created: string
+  collectionId: string
+}
+
 function toICSDate(str: string): string {
   const d = parseDate(str)
   if (isNaN(d.getTime())) return ''
@@ -107,12 +119,13 @@ function CalendarButtons({ termin }: { termin: Termin }) {
 
 export default function Lernbar() {
   const { user, loading: authLoading, logout } = useAuth()
-  const [tab, setTab] = useState<'termine' | 'lernmodule' | 'konto'>('termine')
+  const [tab, setTab] = useState<'termine' | 'lernmodule' | 'neuigkeiten' | 'konto'>('termine')
 
   const [termine, setTermine] = useState<Termin[]>([])
   const [terminUser, setTerminUser] = useState<TerminUser[]>([])
   const [module, setModule] = useState<Modul[]>([])
   const [progress, setProgress] = useState<ModulProgress[]>([])
+  const [neuigkeiten, setNeuigkeiten] = useState<Neuigkeit[]>([])
   const [loading, setLoading] = useState(true)
 
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null)
@@ -176,6 +189,17 @@ export default function Lernbar() {
           requestKey: `lernbar-module-${Date.now()}`
         })
         setModule(modulRecords as any)
+      }
+
+      // Neuigkeiten
+      try {
+        const neuigkeitenRecords = await pb.collection('lernbar_neuigkeiten').getFullList({
+          sort: '-gepinnt,-created',
+          requestKey: `lernbar-neuigkeiten-${Date.now()}`
+        })
+        setNeuigkeiten(neuigkeitenRecords as any)
+      } catch {
+        // collection may not exist yet
       }
     } catch (e: any) {
       console.error(e)
@@ -286,6 +310,9 @@ export default function Lernbar() {
           </button>
           <button style={tabStyle(tab === 'lernmodule')} onClick={() => setTab('lernmodule')}>
             Lernmodule {progress.length > 0 && <span style={{ marginLeft: '4px', background: doneMods === progress.length ? '#16a34a' : 'var(--btn-dark)', color: 'var(--btn-dark-text)', borderRadius: '10px', padding: '1px 6px', fontSize: '11px' }}>{doneMods}/{progress.length}</span>}
+          </button>
+          <button style={tabStyle(tab === 'neuigkeiten')} onClick={() => setTab('neuigkeiten')}>
+            Neuigkeiten {neuigkeiten.length > 0 && <span style={{ marginLeft: '4px', background: 'var(--btn-dark)', color: 'var(--btn-dark-text)', borderRadius: '10px', padding: '1px 6px', fontSize: '11px' }}>{neuigkeiten.length}</span>}
           </button>
           <button style={tabStyle(tab === 'konto')} onClick={() => setTab('konto')}>Mein Konto</button>
         </div>
@@ -630,6 +657,51 @@ export default function Lernbar() {
             </div>
           )
         })()}
+
+        {/* NEUIGKEITEN */}
+        {tab === 'neuigkeiten' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {neuigkeiten.length === 0 && (
+              <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '48px 0', fontSize: '15px' }}>Noch keine Neuigkeiten</div>
+            )}
+            {neuigkeiten.map(n => {
+              const anhangUrl = n.anhang
+                ? `https://api.responda.systems/api/files/${n.collectionId}/${n.id}/${n.anhang}`
+                : null
+              return (
+                <div key={n.id} style={{ background: 'var(--bg-card)', borderRadius: '14px', border: `1px solid ${n.gepinnt ? 'var(--accent)' : 'var(--border)'}`, overflow: 'hidden' }}>
+                  {n.gepinnt && (
+                    <div style={{ background: 'var(--accent)', padding: '6px 16px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style={{ color: '#fff' }}><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5v6h2v-6h5v-2l-2-2z"/></svg>
+                      <span style={{ fontSize: '11px', fontWeight: 700, color: '#fff', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Angepinnt</span>
+                    </div>
+                  )}
+                  <div style={{ padding: '16px 20px' }}>
+                    <div style={{ fontWeight: 700, fontSize: '16px', color: 'var(--text)', marginBottom: '8px' }}>{n.titel}</div>
+                    {n.inhalt && (
+                      <div style={{ fontSize: '14px', color: 'var(--text)', lineHeight: 1.65, whiteSpace: 'pre-wrap', marginBottom: anhangUrl ? '12px' : '0' }}>{n.inhalt}</div>
+                    )}
+                    {anhangUrl && (
+                      <a
+                        href={anhangUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 14px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontWeight: 600, fontSize: '13px', textDecoration: 'none', marginTop: '4px' }}
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                        Anhang herunterladen
+                      </a>
+                    )}
+                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '12px' }}>
+                      {new Date(n.created).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                      {n.erstellt_von && ` · ${n.erstellt_von}`}
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
 
         {/* MEIN KONTO */}
         {tab === 'konto' && (
