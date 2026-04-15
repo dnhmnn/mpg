@@ -171,7 +171,7 @@ export default function SettingsModal({ isOpen, onClose, user }: SettingsModalPr
               type="email" 
               value={user?.email || ''} 
               readOnly 
-              style={{ background: '#f5f5f5' }}
+              style={{ background: 'var(--bg-input)' }}
             />
           </div>
           <div className="field">
@@ -251,21 +251,21 @@ export default function SettingsModal({ isOpen, onClose, user }: SettingsModalPr
             <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '600px' }}>
               <thead>
                 <tr style={{ background: '#f8f8f8' }}>
-                  <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600, color: '#1a1a1a', borderBottom: '2px solid #e0e0e0' }}>Name</th>
-                  <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600, color: '#1a1a1a', borderBottom: '2px solid #e0e0e0' }}>E-Mail</th>
-                  <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600, color: '#1a1a1a', borderBottom: '2px solid #e0e0e0' }}>Rolle</th>
+                  <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600, color: 'var(--text)', borderBottom: '2px solid var(--border)' }}>Name</th>
+                  <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600, color: 'var(--text)', borderBottom: '2px solid var(--border)' }}>E-Mail</th>
+                  <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600, color: 'var(--text)', borderBottom: '2px solid var(--border)' }}>Rolle</th>
                 </tr>
               </thead>
               <tbody>
                 {loadingUsers ? (
                   <tr>
-                    <td colSpan={3} style={{ textAlign: 'center', padding: '40px', color: '#999' }}>
+                    <td colSpan={3} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-secondary)' }}>
                       Lade Benutzer...
                     </td>
                   </tr>
                 ) : users.length === 0 ? (
                   <tr>
-                    <td colSpan={3} style={{ textAlign: 'center', padding: '40px', color: '#999' }}>
+                    <td colSpan={3} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-secondary)' }}>
                       Keine Benutzer gefunden
                     </td>
                   </tr>
@@ -336,7 +336,7 @@ export default function SettingsModal({ isOpen, onClose, user }: SettingsModalPr
           </div>
           
           <div style={{ background: '#f8f8f8', borderRadius: '12px', padding: '20px' }}>
-            <strong style={{ color: '#1a1a1a' }}>📞 Support kontaktieren</strong><br/>
+            <strong style={{ color: 'var(--text)' }}>📞 Support kontaktieren</strong><br/>
             <span style={{ color: '#666', fontSize: '14px' }}>
               Bei Fragen zur Lizenz kontaktieren Sie uns unter:<br/>
               <strong>support@responda.systems</strong>
