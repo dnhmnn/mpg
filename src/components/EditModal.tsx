@@ -13,8 +13,8 @@ export default function EditModal({ isOpen, onClose, onEditApps, onEditWidgets }
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
         <button 
           style={{
-            background: '#fff',
-            border: '1px solid #e0e0e0',
+            background: 'var(--bg-card)',
+            border: '1px solid var(--border)',
             borderRadius: '14px',
             padding: '16px',
             display: 'flex',
@@ -23,7 +23,7 @@ export default function EditModal({ isOpen, onClose, onEditApps, onEditWidgets }
             cursor: 'pointer',
             transition: 'all 0.2s',
             fontSize: '15px',
-            color: '#1a1a1a',
+            color: 'var(--text)',
             fontWeight: 500
           }}
           onClick={() => {
@@ -51,13 +51,13 @@ export default function EditModal({ isOpen, onClose, onEditApps, onEditWidgets }
             </div>
             <span>Apps verwalten</span>
           </div>
-          <span style={{ color: '#999', fontSize: '18px' }}>›</span>
+          <span style={{ color: 'var(--text-secondary)', fontSize: '18px' }}>›</span>
         </button>
 
         <button 
           style={{
-            background: '#fff',
-            border: '1px solid #e0e0e0',
+            background: 'var(--bg-card)',
+            border: '1px solid var(--border)',
             borderRadius: '14px',
             padding: '16px',
             display: 'flex',
@@ -66,7 +66,7 @@ export default function EditModal({ isOpen, onClose, onEditApps, onEditWidgets }
             cursor: 'pointer',
             transition: 'all 0.2s',
             fontSize: '15px',
-            color: '#1a1a1a',
+            color: 'var(--text)',
             fontWeight: 500
           }}
           onClick={() => {
@@ -94,7 +94,7 @@ export default function EditModal({ isOpen, onClose, onEditApps, onEditWidgets }
             </div>
             <span>Widgets anpassen</span>
           </div>
-          <span style={{ color: '#999', fontSize: '18px' }}>›</span>
+          <span style={{ color: 'var(--text-secondary)', fontSize: '18px' }}>›</span>
         </button>
       </div>
     </Modal>
