@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import PocketBase from 'pocketbase'
 import { useAuth } from '../hooks/useAuth'
+import { getTheme, setTheme, type ThemeMode } from '../lib/theme'
 
 const pb = new PocketBase('https://api.responda.systems')
 
@@ -115,6 +116,7 @@ export default function Lernbar() {
   const [loading, setLoading] = useState(true)
 
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null)
+  const [themeMode, setThemeMode] = useState<ThemeMode>(getTheme())
 
   // Modul-Player
   const [playerProgress, setPlayerProgress] = useState<ModulProgress | null>(null)
@@ -677,6 +679,43 @@ export default function Lernbar() {
                   </button>
                   <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '6px' }}>Du erhältst eine Email mit einem Link zum Passwort zurücksetzen.</div>
                 </div>
+              </div>
+            </div>
+            {/* Darstellung */}
+            <div style={{ background: 'var(--bg-card)', borderRadius: '14px', border: '1px solid var(--border)', overflow: 'hidden' }}>
+              <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)' }}>
+                <div style={{ fontWeight: 700, fontSize: '15px', color: 'var(--text)' }}>Darstellung</div>
+              </div>
+              <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {([
+                  { value: 'light', label: 'Hell', icon: '☀️', desc: 'Helles Design' },
+                  { value: 'dark',  label: 'Dunkel', icon: '🌙', desc: 'Dunkles Design' },
+                  { value: 'system', label: 'System', icon: '⚙️', desc: 'Geräteeinstellung' }
+                ] as { value: ThemeMode; label: string; icon: string; desc: string }[]).map(opt => (
+                  <button
+                    key={opt.value}
+                    onClick={() => { setTheme(opt.value); setThemeMode(opt.value) }}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: '14px',
+                      padding: '12px 14px', borderRadius: '10px',
+                      border: themeMode === opt.value ? '2px solid var(--accent)' : '1.5px solid var(--border)',
+                      background: themeMode === opt.value ? 'var(--bg-subtle)' : 'transparent',
+                      cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit',
+                      transition: 'all 0.15s', width: '100%'
+                    }}
+                  >
+                    <span style={{ fontSize: '20px', lineHeight: 1 }}>{opt.icon}</span>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: 600, fontSize: '14px', color: 'var(--text)' }}>{opt.label}</div>
+                      <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '1px' }}>{opt.desc}</div>
+                    </div>
+                    {themeMode === opt.value && (
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2.5">
+                        <polyline points="20 6 9 17 4 12"/>
+                      </svg>
+                    )}
+                  </button>
+                ))}
               </div>
             </div>
           </div>
