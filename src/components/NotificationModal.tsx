@@ -77,7 +77,7 @@ export default function NotificationModal({
         <div style={{
           fontSize: '24px',
           fontWeight: 700,
-          color: '#1a1a1a',
+          color: 'var(--text)',
           textAlign: 'center',
           marginBottom: '16px'
         }}>
