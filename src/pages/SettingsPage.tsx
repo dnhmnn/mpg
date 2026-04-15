@@ -3,16 +3,18 @@ import { useNavigate } from 'react-router-dom'
 import { pb } from '../lib/pocketbase'
 import type { User } from '../types'
 import StatusBar from '../components/StatusBar'
+import { getTheme, setTheme, type ThemeMode } from '../lib/theme'
 
 interface SettingsPageProps {
   user: User | null
 }
 
-type Tab = 'profile' | 'password' | 'users' | 'license'
+type Tab = 'profile' | 'password' | 'appearance' | 'users' | 'license'
 
 export default function SettingsPage({ user }: SettingsPageProps) {
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState<Tab>('profile')
+  const [themeMode, setThemeMode] = useState<ThemeMode>(getTheme())
 
   // Profile tab
   const [profileName, setProfileName] = useState('')
@@ -224,10 +226,16 @@ export default function SettingsPage({ user }: SettingsPageProps) {
 
   const canManageUsers = user?.supervisor || user?.role === 'mpg'
 
+  function handleThemeChange(mode: ThemeMode) {
+    setTheme(mode)
+    setThemeMode(mode)
+  }
+
   // iOS-style settings items
   const settingsItems = [
     { id: 'profile', label: 'Profil', icon: 'person', tab: 'profile' as Tab },
     { id: 'password', label: 'Passwort', icon: 'lock', tab: 'password' as Tab },
+    { id: 'appearance', label: 'Darstellung', icon: 'appearance', tab: 'appearance' as Tab },
     ...(canManageUsers ? [
       { id: 'users', label: 'Benutzer', icon: 'people', tab: 'users' as Tab },
       { id: 'license', label: 'Lizenz', icon: 'key', tab: 'license' as Tab }
@@ -298,6 +306,11 @@ export default function SettingsPage({ user }: SettingsPageProps) {
                     <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/>
                   </svg>
                 )}
+                {item.icon === 'appearance' && (
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+                  </svg>
+                )}
               </div>
               <span className="settings-item-label">{item.label}</span>
               <div className="settings-item-chevron">
@@ -322,7 +335,7 @@ export default function SettingsPage({ user }: SettingsPageProps) {
                     type="email"
                     value={user?.email || ''}
                     readOnly
-                    style={{ background: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.4)' }}
+                    style={{ background: 'var(--bg-subtle)', color: 'var(--text-secondary)' }}
                   />
                 </div>
                 <div className="ios-field">
@@ -399,6 +412,52 @@ export default function SettingsPage({ user }: SettingsPageProps) {
             </div>
           )}
 
+          {/* Appearance Tab */}
+          {activeTab === 'appearance' && (
+            <div className="settings-section">
+              <div className="settings-section-header">DARSTELLUNG</div>
+              <div className="settings-section-content">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {([
+                    { value: 'light', label: 'Hell', icon: '☀️', desc: 'Helles Design' },
+                    { value: 'dark', label: 'Dunkel', icon: '🌙', desc: 'Dunkles Design' },
+                    { value: 'system', label: 'System', icon: '⚙️', desc: 'Geräteeinstellung' }
+                  ] as { value: ThemeMode; label: string; icon: string; desc: string }[]).map(opt => (
+                    <button
+                      key={opt.value}
+                      onClick={() => handleThemeChange(opt.value)}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '14px',
+                        padding: '14px 16px',
+                        borderRadius: '12px',
+                        border: themeMode === opt.value ? '2px solid var(--accent)' : '1.5px solid var(--border)',
+                        background: themeMode === opt.value ? 'var(--bg-subtle)' : 'transparent',
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                        fontFamily: 'inherit',
+                        transition: 'all 0.15s',
+                        width: '100%'
+                      }}
+                    >
+                      <span style={{ fontSize: '22px', lineHeight: 1 }}>{opt.icon}</span>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 600, fontSize: '15px', color: 'var(--text)' }}>{opt.label}</div>
+                        <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '2px' }}>{opt.desc}</div>
+                      </div>
+                      {themeMode === opt.value && (
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2.5">
+                          <polyline points="20 6 9 17 4 12"/>
+                        </svg>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Users Tab */}
           {activeTab === 'users' && (
             <div className="settings-section">
@@ -407,16 +466,7 @@ export default function SettingsPage({ user }: SettingsPageProps) {
                 {canManageUsers && (
                   <button
                     onClick={openAddUser}
-                    style={{
-                      background: 'linear-gradient(135deg, #ff6b35, #c8102e)',
-                      border: 'none',
-                      borderRadius: '8px',
-                      padding: '6px 12px',
-                      color: '#fff',
-                      fontSize: '13px',
-                      fontWeight: '600',
-                      cursor: 'pointer'
-                    }}
+                    style={{ background: 'var(--accent)', border: 'none', borderRadius: '8px', padding: '6px 12px', color: '#fff', fontSize: '13px', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
                   >
                     + Hinzufügen
                   </button>
@@ -424,11 +474,11 @@ export default function SettingsPage({ user }: SettingsPageProps) {
               </div>
               <div className="settings-section-content">
                 {loadingUsers ? (
-                  <div style={{ textAlign: 'center', padding: '40px', color: 'rgba(255,255,255,0.5)' }}>
+                  <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-secondary)' }}>
                     Lade Benutzer...
                   </div>
                 ) : users.length === 0 ? (
-                  <div style={{ textAlign: 'center', padding: '40px', color: 'rgba(255,255,255,0.5)' }}>
+                  <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-secondary)' }}>
                     Keine Benutzer gefunden
                   </div>
                 ) : (
@@ -536,7 +586,7 @@ export default function SettingsPage({ user }: SettingsPageProps) {
                   onChange={(e) => setUserFormEmail(e.target.value)}
                   placeholder="email@beispiel.de"
                   disabled={!!editingUser}
-                  style={editingUser ? { background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.4)' } : {}}
+                  style={editingUser ? { background: 'var(--bg-subtle)', color: 'var(--text-secondary)' } : {}}
                 />
               </div>
               {editingUser && (
@@ -555,21 +605,10 @@ export default function SettingsPage({ user }: SettingsPageProps) {
                 <select
                   value={userFormRole}
                   onChange={(e) => setUserFormRole(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '12px 14px',
-                    background: 'rgba(255, 255, 255, 0.1)',
-                    border: '0.5px solid rgba(255, 255, 255, 0.2)',
-                    borderRadius: '10px',
-                    color: '#fff',
-                    fontSize: '16px',
-                    outline: 'none',
-                    appearance: 'none',
-                    cursor: 'pointer'
-                  }}
+                  style={{ width: '100%', padding: '12px 14px', background: 'var(--bg-input)', border: '0.5px solid var(--border-medium)', borderRadius: '10px', color: 'var(--text)', fontSize: '16px', outline: 'none', appearance: 'none', cursor: 'pointer', fontFamily: 'inherit' }}
                 >
                   {roleOptions.map(opt => (
-                    <option key={opt.value} value={opt.value} style={{ background: '#1a1a1a' }}>
+                    <option key={opt.value} value={opt.value} style={{ background: 'var(--bg-card-solid)' }}>
                       {opt.label}
                     </option>
                   ))}
