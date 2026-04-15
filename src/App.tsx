@@ -10,6 +10,10 @@ import Lager from './pages/Lager'
 import MPG from './pages/MPG'
 import Lernbar from './pages/Lernbar'
 import './styles/globals.css'
+import { applyTheme, getTheme } from './lib/theme'
+
+// Apply saved theme immediately to avoid flash of wrong theme on load
+applyTheme(getTheme())
 
 function App() {
   return (
