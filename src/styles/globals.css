@@ -1,6 +1,104 @@
 /* Google Fonts - Atkinson Hyperlegible */
 @import url('https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap');
 
+/* ============================================
+   DESIGN TOKENS
+   ============================================ */
+:root {
+  /* Backgrounds */
+  --bg: #f5f5f7;
+  --bg-card: rgba(255, 255, 255, 0.9);
+  --bg-card-solid: #ffffff;
+  --bg-elevated: rgba(255, 255, 255, 0.98);
+  --bg-input: #ffffff;
+  --bg-subtle: rgba(0, 0, 0, 0.03);
+  --bg-hover: rgba(0, 0, 0, 0.05);
+  --bg-status-bar: rgba(255, 255, 255, 0.9);
+
+  /* Text */
+  --text: #1d1d1f;
+  --text-secondary: rgba(0, 0, 0, 0.5);
+  --text-placeholder: rgba(0, 0, 0, 0.3);
+
+  /* Borders */
+  --border: rgba(0, 0, 0, 0.08);
+  --border-medium: rgba(0, 0, 0, 0.1);
+  --border-strong: rgba(0, 0, 0, 0.15);
+
+  /* Accent */
+  --accent: #b91c1c;
+  --accent-hover: #dc2626;
+
+  /* Dark action buttons (inverted) */
+  --btn-dark: #0f172a;
+  --btn-dark-text: #ffffff;
+
+  /* Shadows */
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.12);
+}
+
+[data-theme="dark"] {
+  --bg: #000000;
+  --bg-card: rgba(28, 28, 30, 0.9);
+  --bg-card-solid: #1c1c1e;
+  --bg-elevated: rgba(44, 44, 46, 0.98);
+  --bg-input: #3a3a3c;
+  --bg-subtle: rgba(255, 255, 255, 0.05);
+  --bg-hover: rgba(255, 255, 255, 0.08);
+  --bg-status-bar: rgba(28, 28, 30, 0.9);
+
+  --text: #f5f5f7;
+  --text-secondary: rgba(255, 255, 255, 0.5);
+  --text-placeholder: rgba(255, 255, 255, 0.3);
+
+  --border: rgba(255, 255, 255, 0.08);
+  --border-medium: rgba(255, 255, 255, 0.1);
+  --border-strong: rgba(255, 255, 255, 0.15);
+
+  --accent: #ef4444;
+  --accent-hover: #f87171;
+
+  --btn-dark: #f5f5f7;
+  --btn-dark-text: #0f172a;
+
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.2);
+  --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #000000;
+    --bg-card: rgba(28, 28, 30, 0.9);
+    --bg-card-solid: #1c1c1e;
+    --bg-elevated: rgba(44, 44, 46, 0.98);
+    --bg-input: #3a3a3c;
+    --bg-subtle: rgba(255, 255, 255, 0.05);
+    --bg-hover: rgba(255, 255, 255, 0.08);
+    --bg-status-bar: rgba(28, 28, 30, 0.9);
+
+    --text: #f5f5f7;
+    --text-secondary: rgba(255, 255, 255, 0.5);
+    --text-placeholder: rgba(255, 255, 255, 0.3);
+
+    --border: rgba(255, 255, 255, 0.08);
+    --border-medium: rgba(255, 255, 255, 0.1);
+    --border-strong: rgba(255, 255, 255, 0.15);
+
+    --accent: #ef4444;
+    --accent-hover: #f87171;
+
+    --btn-dark: #f5f5f7;
+    --btn-dark-text: #0f172a;
+
+    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.2);
+    --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.3);
+    --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.4);
+  }
+}
+
 /* Global */
 * {
   box-sizing: border-box;
@@ -15,8 +113,9 @@ html {
 
 body {
   font-family: 'Atkinson Hyperlegible', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  background: #f5f5f7;
+  background: var(--bg);
   background-attachment: fixed;
+  color: var(--text);
   min-height: 100%;
   height: 100%;
   overflow-x: hidden;
@@ -36,7 +135,7 @@ body {
   align-items: center;
   padding-left: max(24px, env(safe-area-inset-left));
   padding-right: max(24px, env(safe-area-inset-right));
-  color: #1d1d1f;
+  color: var(--text);
   font-size: 15px;
   font-weight: 600;
   position: fixed;
@@ -44,10 +143,10 @@ body {
   left: 0;
   right: 0;
   z-index: 1000;
-  background: rgba(255, 255, 255, 0.9);
+  background: var(--bg-status-bar);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  border-bottom: 1px solid var(--border);
 }
 
 .logo {
@@ -65,7 +164,7 @@ body {
 .user-name {
   text-align: center;
   justify-self: center;
-  color: #1d1d1f;
+  color: var(--text);
 }
 
 .org-logo {
@@ -77,9 +176,9 @@ body {
 }
 
 .logout-btn {
-  background: rgba(0, 0, 0, 0.05);
-  border: 0.5px solid rgba(0, 0, 0, 0.1);
-  color: #1d1d1f;
+  background: var(--bg-hover);
+  border: 0.5px solid var(--border-medium);
+  color: var(--text);
   padding: 6px 12px;
   border-radius: 12px;
   font-size: 13px;
@@ -89,11 +188,13 @@ body {
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   justify-self: end;
+  text-decoration: none;
+  display: inline-block;
 }
 
 .logout-btn:active {
   transform: scale(0.95);
-  background: rgba(0, 0, 0, 0.1);
+  background: var(--bg-hover);
 }
 
 /* Main Content */
@@ -116,15 +217,15 @@ body {
 }
 
 .widget {
-  background: rgba(255, 255, 255, 0.9);
+  background: var(--bg-card);
   backdrop-filter: blur(40px);
   -webkit-backdrop-filter: blur(40px);
   border-radius: 20px;
   padding: 16px;
-  color: #1d1d1f;
+  color: var(--text);
   min-height: 120px;
-  border: 0.5px solid rgba(0, 0, 0, 0.08);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  border: 0.5px solid var(--border);
+  box-shadow: var(--shadow-sm);
 }
 
 .widget.large {
@@ -141,7 +242,7 @@ body {
 .widget-value {
   font-size: 28px;
   font-weight: 700;
-  color: #1d1d1f;
+  color: var(--text);
 }
 
 .widget-label {
@@ -184,15 +285,15 @@ body {
 .app-icon {
   width: 60px;
   height: 60px;
-  background: rgba(255, 255, 255, 0.9);
+  background: var(--bg-card);
   backdrop-filter: blur(30px);
   -webkit-backdrop-filter: blur(30px);
   border-radius: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #b91c1c;
-  border: 0.5px solid rgba(0, 0, 0, 0.08);
+  color: var(--accent);
+  border: 0.5px solid var(--border);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
@@ -207,7 +308,7 @@ body {
 .app-name {
   font-size: 11px;
   font-weight: 500;
-  color: #1d1d1f;
+  color: var(--text);
   text-align: center;
   max-width: 65px;
   line-height: 1.2;
@@ -252,7 +353,7 @@ body {
 
 .modal-content {
   width: 100%;
-  background: #fff;
+  background: var(--bg-card-solid);
   border-radius: 28px 28px 0 0;
   padding: 24px 24px 40px;
   max-height: 75vh;
@@ -271,26 +372,26 @@ body {
   align-items: center;
   margin-bottom: 24px;
   padding-bottom: 16px;
-  border-bottom: 1px solid #e0e0e0;
+  border-bottom: 1px solid var(--border);
 }
 
 .modal-title {
   font-size: 20px;
   font-weight: 700;
-  color: #1a1a1a;
+  color: var(--text);
 }
 
 .modal-close {
   width: 32px;
   height: 32px;
-  background: #f0f0f0;
+  background: var(--bg-subtle);
   border: none;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 20px;
-  color: #666;
+  color: var(--text-secondary);
   cursor: pointer;
 }
 
@@ -324,7 +425,7 @@ body {
 .field label {
   display: block;
   font-weight: 600;
-  color: #1a1a1a;
+  color: var(--text);
   margin-bottom: 8px;
   font-size: 14px;
 }
@@ -332,24 +433,25 @@ body {
 .field input, .field select, .field textarea {
   width: 100%;
   padding: 12px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid var(--border);
   border-radius: 10px;
   font-size: 15px;
   font-family: inherit;
-  background: #fff;
+  background: var(--bg-input);
+  color: var(--text);
 }
 
 .field input:focus, .field select:focus, .field textarea:focus {
   outline: none;
-  border-color: #b91c1c;
+  border-color: var(--accent);
 }
 
 /* Settings Tabs */
 .settings-tab {
   padding: 10px 16px;
   border: none;
-  background: #f0f0f0;
-  color: #666;
+  background: var(--bg-subtle);
+  color: var(--text-secondary);
   border-radius: 10px;
   font-weight: 600;
   font-size: 14px;
@@ -359,23 +461,23 @@ body {
 }
 
 .settings-tab.active {
-  background: #b91c1c;
+  background: var(--accent);
   color: #fff;
 }
 
 .edit-button {
-  background: rgba(0, 0, 0, 0.05);
+  background: var(--bg-hover);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 0.5px solid rgba(0, 0, 0, 0.1);
-  color: #1d1d1f;
+  border: 0.5px solid var(--border-medium);
+  color: var(--text);
   padding: 8px 16px;
   border-radius: 16px;
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-sm);
 }
 
 /* Index Page Styles */
@@ -403,7 +505,7 @@ body {
 .index-org-name {
   font-size: 1.5rem;
   font-weight: 700;
-  color: #1d1d1f;
+  color: var(--text);
   text-align: center;
 }
 
@@ -414,10 +516,10 @@ body {
 }
 
 .index-form-card {
-  background: rgba(255, 255, 255, 0.9);
+  background: var(--bg-card);
   backdrop-filter: blur(40px);
   -webkit-backdrop-filter: blur(40px);
-  border: 0.5px solid rgba(0, 0, 0, 0.08);
+  border: 0.5px solid var(--border);
   border-radius: 20px;
   padding: 20px;
   display: flex;
@@ -426,7 +528,7 @@ body {
   text-decoration: none;
   color: inherit;
   transition: all 0.2s;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  box-shadow: var(--shadow-sm);
 }
 
 .index-form-card:active {
@@ -455,13 +557,13 @@ body {
 .index-form-text h2 {
   font-size: 1.1rem;
   font-weight: 600;
-  color: #1d1d1f;
+  color: var(--text);
   margin-bottom: 4px;
 }
 
 .index-form-text p {
   font-size: 0.85rem;
-  color: rgba(0, 0, 0, 0.6);
+  color: var(--text-secondary);
   line-height: 1.4;
 }
 
@@ -488,13 +590,19 @@ body {
 .login-card {
   width: 100%;
   max-width: 400px;
-  background: rgba(255, 255, 255, 0.95);
+  background: var(--bg-card);
   backdrop-filter: blur(40px);
   -webkit-backdrop-filter: blur(40px);
-  border: 0.5px solid rgba(0, 0, 0, 0.08);
+  border: 0.5px solid var(--border);
   border-radius: 24px;
   padding: 32px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-lg);
+  animation: fadeInUp 0.5s ease-out;
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .login-header {
@@ -505,13 +613,13 @@ body {
 .login-header h1 {
   font-size: 1.5rem;
   font-weight: 700;
-  color: #1d1d1f;
+  color: var(--text);
   margin-bottom: 8px;
 }
 
 .login-header p {
   font-size: 0.9rem;
-  color: rgba(0, 0, 0, 0.6);
+  color: var(--text-secondary);
   margin: 0;
 }
 
@@ -523,30 +631,30 @@ body {
   display: block;
   font-size: 14px;
   font-weight: 600;
-  color: #1d1d1f;
+  color: var(--text);
   margin-bottom: 8px;
 }
 
 .login-form .field input {
   width: 100%;
   padding: 14px 16px;
-  border: 0.5px solid rgba(0, 0, 0, 0.15);
+  border: 0.5px solid var(--border-strong);
   border-radius: 12px;
   font-size: 15px;
   font-family: 'Atkinson Hyperlegible', sans-serif;
-  background: rgba(255, 255, 255, 0.95);
-  color: #1d1d1f;
+  background: var(--bg-input);
+  color: var(--text);
   transition: all 0.2s;
 }
 
 .login-form .field input::placeholder {
-  color: rgba(0, 0, 0, 0.4);
+  color: var(--text-placeholder);
 }
 
 .login-form .field input:focus {
   outline: none;
-  border-color: #b91c1c;
-  background: white;
+  border-color: var(--accent);
+  background: var(--bg-input);
 }
 
 .login-error {
@@ -591,7 +699,7 @@ body {
   margin-top: 24px;
   text-align: center;
   font-size: 13px;
-  color: rgba(0, 0, 0, 0.6);
+  color: var(--text-secondary);
 }
 
 .login-footer a {
@@ -620,14 +728,14 @@ body {
 }
 
 .settings-group {
-  background: rgba(255, 255, 255, 0.95);
+  background: var(--bg-card);
   backdrop-filter: blur(40px);
   -webkit-backdrop-filter: blur(40px);
-  border: 0.5px solid rgba(0, 0, 0, 0.08);
+  border: 0.5px solid var(--border);
   border-radius: 16px;
   overflow: hidden;
   margin-bottom: 24px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  box-shadow: var(--shadow-sm);
 }
 
 .settings-item {
@@ -637,12 +745,13 @@ body {
   padding: 14px 16px;
   background: transparent;
   border: none;
-  border-bottom: 0.5px solid rgba(0, 0, 0, 0.08);
-  color: #1d1d1f;
+  border-bottom: 0.5px solid var(--border);
+  color: var(--text);
   font-size: 16px;
   text-align: left;
   cursor: pointer;
   transition: background 0.2s;
+  font-family: inherit;
 }
 
 .settings-item:last-child {
@@ -650,11 +759,11 @@ body {
 }
 
 .settings-item:active {
-  background: rgba(0, 0, 0, 0.03);
+  background: var(--bg-subtle);
 }
 
 .settings-item.active {
-  background: rgba(0, 0, 0, 0.02);
+  background: var(--bg-subtle);
 }
 
 .settings-item-icon {
@@ -669,7 +778,7 @@ body {
 .settings-item-icon svg {
   width: 22px;
   height: 22px;
-  stroke: rgba(0, 0, 0, 0.6);
+  stroke: var(--text-secondary);
 }
 
 .settings-item-label {
@@ -685,14 +794,14 @@ body {
 .settings-item-chevron svg {
   width: 16px;
   height: 16px;
-  stroke: rgba(0, 0, 0, 0.3);
+  stroke: var(--text-placeholder);
 }
 
 .settings-panel {
-  background: rgba(255, 255, 255, 0.95);
+  background: var(--bg-card);
   backdrop-filter: blur(40px);
   -webkit-backdrop-filter: blur(40px);
-  border: 0.5px solid rgba(0, 0, 0, 0.08);
+  border: 0.5px solid var(--border);
   border-radius: 16px;
   overflow: hidden;
 }
@@ -701,7 +810,7 @@ body {
   padding: 12px 16px 8px;
   font-size: 13px;
   font-weight: 600;
-  color: rgba(0, 0, 0, 0.5);
+  color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -717,29 +826,30 @@ body {
 .ios-field label {
   display: block;
   font-size: 13px;
-  color: rgba(0, 0, 0, 0.6);
+  color: var(--text-secondary);
   margin-bottom: 6px;
 }
 
 .ios-field input {
   width: 100%;
   padding: 12px 14px;
-  background: rgba(0, 0, 0, 0.03);
-  border: 0.5px solid rgba(0, 0, 0, 0.1);
+  background: var(--bg-subtle);
+  border: 0.5px solid var(--border-medium);
   border-radius: 10px;
-  color: #1d1d1f;
+  color: var(--text);
   font-size: 16px;
   outline: none;
   transition: all 0.2s;
+  font-family: inherit;
 }
 
 .ios-field input:focus {
-  background: white;
-  border-color: #b91c1c;
+  background: var(--bg-input);
+  border-color: var(--accent);
 }
 
 .ios-field input::placeholder {
-  color: rgba(0, 0, 0, 0.3);
+  color: var(--text-placeholder);
 }
 
 .ios-button {
@@ -770,7 +880,7 @@ body {
   display: flex;
   align-items: center;
   padding: 12px 0;
-  border-bottom: 0.5px solid rgba(0, 0, 0, 0.08);
+  border-bottom: 0.5px solid var(--border);
 }
 
 .user-row:last-child {
@@ -798,18 +908,18 @@ body {
 .user-name {
   font-size: 16px;
   font-weight: 500;
-  color: #1d1d1f;
+  color: var(--text);
 }
 
 .user-email {
   font-size: 13px;
-  color: rgba(0, 0, 0, 0.5);
+  color: var(--text-secondary);
 }
 
 .user-role {
   font-size: 13px;
-  color: rgba(0, 0, 0, 0.6);
-  background: rgba(0, 0, 0, 0.05);
+  color: var(--text-secondary);
+  background: var(--bg-hover);
   padding: 4px 10px;
   border-radius: 8px;
 }
@@ -855,7 +965,7 @@ body {
 
 /* Support card */
 .support-card {
-  background: rgba(0, 0, 0, 0.03);
+  background: var(--bg-subtle);
   border-radius: 12px;
   padding: 16px;
 }
@@ -863,13 +973,13 @@ body {
 .support-title {
   font-size: 15px;
   font-weight: 600;
-  color: #1d1d1f;
+  color: var(--text);
   margin-bottom: 8px;
 }
 
 .support-text {
   font-size: 14px;
-  color: rgba(0, 0, 0, 0.6);
+  color: var(--text-secondary);
   margin-bottom: 8px;
 }
 
@@ -1079,13 +1189,13 @@ body.loaded {
 }
 
 .action-btn.secondary {
-  background: rgba(0, 0, 0, 0.05);
-  border: 0.5px solid rgba(0, 0, 0, 0.1);
-  color: #1d1d1f;
+  background: var(--bg-hover);
+  border: 0.5px solid var(--border-medium);
+  color: var(--text);
 }
 
 .action-btn.secondary:hover {
-  background: rgba(0, 0, 0, 0.08);
+  background: var(--bg-hover);
 }
 
 .action-btn:active {

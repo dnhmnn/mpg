@@ -875,7 +875,7 @@ export default function MPG() {
         <div className="modal show" onClick={() => setShowInspectionModal(false)}>
           <div className="modal-content large" onClick={(e) => e.stopPropagation()}>
             <h3>Prüfung: {inspectionForm.device_name}</h3>
-            <div style={{fontSize: '14px', color: '#64748b', marginBottom: '24px'}}>
+            <div style={{fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '24px'}}>
               {inspectionForm.device_type}
             </div>
             
@@ -953,7 +953,7 @@ export default function MPG() {
                           <div style={{flex: 1}}>
                             <div>{result.item}</div>
                             {result.note && (
-                              <div style={{fontSize: '13px', color: '#64748b', marginTop: '4px', fontStyle: 'italic'}}>
+                              <div style={{fontSize: '13px', color: 'var(--text-secondary)', marginTop: '4px', fontStyle: 'italic'}}>
                                 → {result.note}
                               </div>
                             )}
@@ -1079,7 +1079,7 @@ export default function MPG() {
                                 <div style={{flex: 1}}>
                                   <div>{result.item}</div>
                                   {result.note && (
-                                    <div style={{fontSize: '12px', color: '#64748b', marginTop: '2px', fontStyle: 'italic'}}>
+                                    <div style={{fontSize: '12px', color: 'var(--text-secondary)', marginTop: '2px', fontStyle: 'italic'}}>
                                       → {result.note}
                                     </div>
                                   )}
@@ -1109,7 +1109,7 @@ export default function MPG() {
         <div className="modal show" onClick={() => setShowDeviceDetailModal(false)}>
           <div className="modal-content large" onClick={(e) => e.stopPropagation()}>
             <h3>{selectedDevice.name}</h3>
-            <div style={{fontSize: '14px', color: '#64748b', marginBottom: '24px'}}>
+            <div style={{fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '24px'}}>
               {selectedDevice.type} • {selectedDevice.location}
             </div>
             
@@ -1297,8 +1297,8 @@ export default function MPG() {
         }
 
         .action-toolbar {
-          background: #fff;
-          border-bottom: 1px solid #e5e7eb;
+          background: var(--bg-card);
+          border-bottom: 1px solid var(--border);
           padding: 0.5rem 1rem;
           display: flex;
           gap: 0.5rem;
@@ -1309,9 +1309,9 @@ export default function MPG() {
         }
 
         .action-btn {
-          border: 1px solid rgba(0,0,0,0.1);
+          border: 1px solid var(--border);
           background: rgba(0,0,0,0.03);
-          color: #1d1d1f;
+          color: var(--text);
           padding: 0.6rem;
           border-radius: 0.5rem;
           cursor: pointer;
@@ -1325,7 +1325,7 @@ export default function MPG() {
         }
 
         .action-btn:hover {
-          background: #f3f4f6;
+          background: var(--bg-subtle);
           transform: translateY(-2px);
         }
 
@@ -1337,12 +1337,12 @@ export default function MPG() {
         }
 
         .stat-card {
-          background: rgba(255, 255, 255, 0.9);
+          background: var(--bg-card);
           backdrop-filter: blur(20px);
           -webkit-backdrop-filter: blur(20px);
           padding: 20px;
           border-radius: 12px;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+          box-shadow: var(--shadow-sm);
           border: 2px solid transparent;
           transition: all 0.2s;
         }
@@ -1361,7 +1361,7 @@ export default function MPG() {
 
         .stat-card:hover {
           transform: translateY(-2px);
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+          box-shadow: var(--shadow-md);
         }
 
         .stat-icon {
@@ -1388,14 +1388,14 @@ export default function MPG() {
         .stat-number {
           font-size: 32px;
           font-weight: 800;
-          color: #1d1d1f;
+          color: var(--text);
           margin-bottom: 8px;
         }
 
         .stat-label {
           font-size: 14px;
           font-weight: 600;
-          color: #64748b;
+          color: var(--text-secondary);
         }
 
         .filter-bar {
@@ -1409,9 +1409,9 @@ export default function MPG() {
           flex: 1;
           min-width: 200px;
           padding: 10px 16px;
-          border: 1px solid rgba(0, 0, 0, 0.08);
+          border: 1px solid var(--border);
           border-radius: 8px;
-          background: rgba(255, 255, 255, 0.9);
+          background: var(--bg-card);
           font-size: 14px;
           font-family: inherit;
         }
@@ -1430,8 +1430,8 @@ export default function MPG() {
 
         .filter-btn {
           padding: 8px 16px;
-          border: 1px solid rgba(0, 0, 0, 0.1);
-          background: rgba(255, 255, 255, 0.9);
+          border: 1px solid var(--border);
+          background: var(--bg-card);
           border-radius: 8px;
           cursor: pointer;
           font-weight: 600;
@@ -1441,7 +1441,7 @@ export default function MPG() {
         }
 
         .filter-btn:hover {
-          background: #f3f4f6;
+          background: var(--bg-subtle);
         }
 
         .filter-btn.active {
@@ -1457,13 +1457,13 @@ export default function MPG() {
         }
 
         .device-card {
-          background: rgba(255, 255, 255, 0.9);
+          background: var(--bg-card);
           backdrop-filter: blur(20px);
           -webkit-backdrop-filter: blur(20px);
           border-radius: 12px;
           padding: 20px;
           border: 2px solid transparent;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+          box-shadow: var(--shadow-sm);
           position: relative;
           transition: all 0.2s;
         }
@@ -1482,7 +1482,7 @@ export default function MPG() {
 
         .device-card:hover {
           transform: translateY(-4px);
-          box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+          box-shadow: var(--shadow-md);
         }
 
         .device-menu-container {
@@ -1492,9 +1492,9 @@ export default function MPG() {
         }
 
         .menu-dots {
-          background: rgba(255, 255, 255, 0.95);
+          background: var(--bg-card);
           backdrop-filter: blur(10px);
-          border: 1px solid rgba(0, 0, 0, 0.08);
+          border: 1px solid var(--border);
           border-radius: 6px;
           width: 28px;
           height: 28px;
@@ -1503,12 +1503,12 @@ export default function MPG() {
           justify-content: center;
           cursor: pointer;
           font-size: 18px;
-          color: #64748b;
+          color: var(--text-secondary);
           transition: all 0.2s;
         }
 
         .menu-dots:hover {
-          background: #fff;
+          background: var(--bg-card);
           color: #b91c1c;
           transform: scale(1.1);
         }
@@ -1517,11 +1517,11 @@ export default function MPG() {
           position: absolute;
           top: 32px;
           right: 0;
-          background: rgba(255, 255, 255, 0.98);
+          background: var(--bg-elevated);
           backdrop-filter: blur(20px);
-          border: 1px solid rgba(0, 0, 0, 0.08);
+          border: 1px solid var(--border);
           border-radius: 8px;
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+          box-shadow: var(--shadow-md);
           min-width: 160px;
           display: none;
           flex-direction: column;
@@ -1542,7 +1542,7 @@ export default function MPG() {
           font-weight: 600;
           text-align: left;
           white-space: nowrap;
-          color: #1d1d1f;
+          color: var(--text);
         }
 
         .menu-item:first-child {
@@ -1554,7 +1554,7 @@ export default function MPG() {
         }
 
         .menu-item:hover {
-          background: #f3f4f6;
+          background: var(--bg-subtle);
         }
 
         .menu-item.danger {
@@ -1578,12 +1578,12 @@ export default function MPG() {
           font-weight: 700;
           font-size: 16px;
           margin-bottom: 8px;
-          color: #1d1d1f;
+          color: var(--text);
         }
 
         .device-meta {
           font-size: 13px;
-          color: #64748b;
+          color: var(--text-secondary);
           margin-bottom: 12px;
         }
 
@@ -1632,7 +1632,7 @@ export default function MPG() {
 
         .device-dates {
           font-size: 13px;
-          color: #64748b;
+          color: var(--text-secondary);
           margin-bottom: 12px;
         }
 
@@ -1657,7 +1657,7 @@ export default function MPG() {
         .empty-state {
           text-align: center;
           padding: 48px 16px;
-          color: #64748b;
+          color: var(--text-secondary);
         }
 
         .modal {
@@ -1676,7 +1676,7 @@ export default function MPG() {
         }
 
         .modal-content {
-          background: rgba(255, 255, 255, 0.98);
+          background: var(--bg-elevated);
           backdrop-filter: blur(40px);
           -webkit-backdrop-filter: blur(40px);
           border-radius: 14px;
@@ -1685,7 +1685,7 @@ export default function MPG() {
           max-height: 90vh;
           overflow-y: auto;
           padding: 24px;
-          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+          box-shadow: var(--shadow-md);
         }
 
         .modal-content.large {
@@ -1700,7 +1700,7 @@ export default function MPG() {
 
         .modal-content h4 {
           margin: 0 0 12px 0;
-          color: #1d1d1f;
+          color: var(--text);
           font-weight: 700;
         }
 
@@ -1711,7 +1711,7 @@ export default function MPG() {
         .field label {
           font-weight: 700;
           font-size: 14px;
-          color: #374151;
+          color: var(--text);
           display: block;
           margin-bottom: 8px;
         }
@@ -1720,9 +1720,9 @@ export default function MPG() {
         .field select,
         .field textarea {
           padding: 10px;
-          border: 1px solid rgba(0, 0, 0, 0.15);
+          border: 1px solid var(--border-strong);
           border-radius: 8px;
-          background: #fff;
+          background: var(--bg-card);
           font-size: 16px;
           font-family: inherit;
           width: 100%;
@@ -1744,21 +1744,21 @@ export default function MPG() {
         }
 
         .btn {
-          background: rgba(255, 255, 255, 0.9);
-          color: #1d1d1f;
+          background: var(--bg-card);
+          color: var(--text);
           padding: 10px 20px;
           border-radius: 8px;
           cursor: pointer;
           font-weight: 700;
           transition: all 0.2s;
           font-family: inherit;
-          border: 1px solid rgba(0, 0, 0, 0.08);
+          border: 1px solid var(--border);
           font-size: 14px;
         }
 
         .btn:hover {
           transform: translateY(-2px);
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+          box-shadow: var(--shadow-sm);
         }
 
         .btn:disabled {

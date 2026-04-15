@@ -1074,12 +1074,12 @@ export default function Lager() {
                     <div>
                       <div style={{background: '#fafafa', padding: '16px', borderRadius: '8px', marginBottom: '16px'}}>
                         <h4 style={{margin: '0 0 8px 0'}}>{auditIndex + 1}. {auditItems[auditIndex]?.expand?.item_id?.name}</h4>
-                        <div style={{color: '#64748b', fontSize: '0.9rem', marginBottom: '8px'}}>
+                        <div style={{color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '8px'}}>
                           {auditItems[auditIndex]?.expand?.item_id?.category || 'Keine Kategorie'} • {auditItems[auditIndex]?.expand?.item_id?.unit || 'Stück'}
                         </div>
                         
-                        <div style={{background: '#fff', padding: '12px', borderRadius: '8px', marginBottom: '12px'}}>
-                          <div style={{color: '#64748b', fontSize: '0.85rem'}}>Erwarteter Bestand (laut System):</div>
+                        <div style={{background: 'var(--bg-card)', padding: '12px', borderRadius: '8px', marginBottom: '12px'}}>
+                          <div style={{color: 'var(--text-secondary)', fontSize: '0.85rem'}}>Erwarteter Bestand (laut System):</div>
                           <div style={{fontSize: '1.5rem', fontWeight: 700}}>{auditItems[auditIndex]?.expected_quantity} {auditItems[auditIndex]?.expand?.item_id?.unit || 'Stück'}</div>
                         </div>
                         
@@ -1289,8 +1289,8 @@ export default function Lager() {
       <style>{`
       
         .action-toolbar {
-  background: #fff;
-  border-bottom: 1px solid #e5e7eb;
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border);
   padding: 0.5rem 1rem;
   display: flex;
   gap: 0.5rem;
@@ -1302,9 +1302,9 @@ export default function Lager() {
 
 
         .action-btn {
-          border: 1px solid rgba(0,0,0,0.1);
+          border: 1px solid var(--border);
           background: rgba(0,0,0,0.03);
-          color: #1d1d1f;
+          color: var(--text);
           padding: 0.5rem;
           border-radius: 0.5rem;
           cursor: pointer;
@@ -1410,9 +1410,9 @@ export default function Lager() {
         .search-box input {
           width: 100%;
           padding: 10px 16px;
-          border: 1px solid rgba(0,0,0,0.08);
+          border: 1px solid var(--border);
           border-radius: 8px;
-          background: #fff;
+          background: var(--bg-card);
           font-size: 14px;
           font-family: inherit;
         }
@@ -1430,8 +1430,8 @@ export default function Lager() {
         }
 
         .chip {
-          border: 1px solid rgba(0,0,0,0.08);
-          background: #fff;
+          border: 1px solid var(--border);
+          background: var(--bg-card);
           padding: 8px 12px;
           border-radius: 999px;
           font-size: 0.85rem;
@@ -1443,7 +1443,7 @@ export default function Lager() {
         }
 
         .chip:hover {
-          background: #f9f9f9;
+          background: var(--bg-subtle);
         }
 
         .chip.active {
@@ -1453,21 +1453,21 @@ export default function Lager() {
         }
 
         .btn {
-          background: #fff;
-          color: #1d1d1f;
+          background: var(--bg-card);
+          color: var(--text);
           padding: 10px 20px;
           border-radius: 8px;
           cursor: pointer;
           font-weight: 700;
           transition: all 0.2s;
           font-family: inherit;
-          border: 1px solid rgba(0,0,0,0.08);
+          border: 1px solid var(--border);
           font-size: 14px;
         }
 
         .btn:hover {
           transform: translateY(-2px);
-          box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+          box-shadow: var(--shadow-md);
         }
 
         .btn.primary {

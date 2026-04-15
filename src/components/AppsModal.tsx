@@ -13,7 +13,7 @@ export default function AppsModal({ isOpen, onClose, availableApps, onAddApp }: 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Apps verwalten">
       {availableApps.length === 0 ? (
-        <div style={{ gridColumn: '1 / -1', textAlign: 'center', color: '#999', padding: '40px 20px' }}>
+        <div style={{ gridColumn: '1 / -1', textAlign: 'center', color: 'var(--text-secondary)', padding: '40px 20px' }}>
           Alle Apps sind bereits hinzugefügt
         </div>
       ) : (
@@ -67,7 +67,7 @@ export default function AppsModal({ isOpen, onClose, availableApps, onAddApp }: 
               <div style={{
                 fontSize: '11px',
                 fontWeight: 500,
-                color: '#1a1a1a',
+                color: 'var(--text)',
                 textAlign: 'center',
                 maxWidth: '65px'
               }}>
