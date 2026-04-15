@@ -16,7 +16,7 @@ export default function WidgetsModal({ isOpen, onClose }: WidgetsModalProps) {
           padding: '16px',
           cursor: 'pointer'
         }}>
-          <div style={{ fontWeight: 600, color: '#1a1a1a', marginBottom: '4px' }}>
+          <div style={{ fontWeight: 600, color: 'var(--text)', marginBottom: '4px' }}>
             Datum & Uhrzeit
           </div>
           <div style={{ fontSize: '13px', color: '#666' }}>
@@ -31,7 +31,7 @@ export default function WidgetsModal({ isOpen, onClose }: WidgetsModalProps) {
           padding: '16px',
           cursor: 'pointer'
         }}>
-          <div style={{ fontWeight: 600, color: '#1a1a1a', marginBottom: '4px' }}>
+          <div style={{ fontWeight: 600, color: 'var(--text)', marginBottom: '4px' }}>
             Organisation
           </div>
           <div style={{ fontSize: '13px', color: '#666' }}>
@@ -46,7 +46,7 @@ export default function WidgetsModal({ isOpen, onClose }: WidgetsModalProps) {
           padding: '16px',
           cursor: 'pointer'
         }}>
-          <div style={{ fontWeight: 600, color: '#1a1a1a', marginBottom: '4px' }}>
+          <div style={{ fontWeight: 600, color: 'var(--text)', marginBottom: '4px' }}>
             Neuigkeiten
           </div>
           <div style={{ fontSize: '13px', color: '#666' }}>
