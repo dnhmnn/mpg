@@ -511,18 +511,30 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
     if (!neuigkeitForm.titel.trim()) return
     setSavingNeuigkeit(true)
     try {
-      const formData = new FormData()
-      formData.append('titel', neuigkeitForm.titel)
-      formData.append('inhalt', neuigkeitForm.inhalt)
-      formData.append('gepinnt', String(neuigkeitForm.gepinnt))
-      formData.append('organisation_id', user?.organization_id || '')
-      formData.append('erstellt_von', user?.name || user?.email || '')
-      if (neuigkeitAnhang) formData.append('anhang', neuigkeitAnhang)
+      let data: any
+      if (neuigkeitAnhang) {
+        const formData = new FormData()
+        formData.append('titel', neuigkeitForm.titel)
+        formData.append('inhalt', neuigkeitForm.inhalt)
+        formData.append('gepinnt', neuigkeitForm.gepinnt ? 'true' : 'false')
+        formData.append('organisation_id', user?.organization_id || '')
+        formData.append('erstellt_von', user?.name || user?.email || '')
+        formData.append('anhang', neuigkeitAnhang)
+        data = formData
+      } else {
+        data = {
+          titel: neuigkeitForm.titel,
+          inhalt: neuigkeitForm.inhalt,
+          gepinnt: neuigkeitForm.gepinnt,
+          organisation_id: user?.organization_id || '',
+          erstellt_von: user?.name || user?.email || '',
+        }
+      }
 
       if (editingNeuigkeit) {
-        await pb.collection('lernbar_neuigkeiten').update(editingNeuigkeit.id, formData)
+        await pb.collection('lernbar_neuigkeiten').update(editingNeuigkeit.id, data)
       } else {
-        await pb.collection('lernbar_neuigkeiten').create(formData)
+        await pb.collection('lernbar_neuigkeiten').create(data)
       }
       setShowNeuigkeitModal(false)
       await loadNeuigkeiten()
