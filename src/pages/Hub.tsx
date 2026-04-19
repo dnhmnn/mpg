@@ -132,8 +132,58 @@ export default function Hub() {
 
   return (
     <>
+      <style>{`
+        @media (min-width: 768px) {
+          .hub-layout {
+            display: flex;
+            flex-direction: row;
+            gap: 28px;
+            align-items: flex-start;
+          }
+          .hub-apps {
+            flex: 1;
+            min-width: 0;
+            order: 1;
+          }
+          .hub-widgets {
+            width: 260px;
+            flex-shrink: 0;
+            order: 2;
+          }
+          .hub-widgets .widgets {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 0;
+          }
+          .hub-apps .apps {
+            grid-template-columns: repeat(5, 1fr);
+            gap: 24px 16px;
+            padding: 0;
+          }
+          .hub-apps .app-icon {
+            width: 64px;
+            height: 64px;
+            border-radius: 15px;
+          }
+          .hub-apps .app-icon svg {
+            width: 30px;
+            height: 30px;
+          }
+          .hub-apps .app-name {
+            font-size: 12px;
+            max-width: 70px;
+          }
+        }
+        @media (min-width: 1100px) {
+          .hub-layout { gap: 40px; }
+          .hub-widgets { width: 300px; }
+          .hub-apps .apps { grid-template-columns: repeat(6, 1fr); }
+        }
+      `}</style>
+
       <StatusBar user={user} onLogout={logout} />
-      
+
       <div className="content">
         <div className="hub-layout">
           <div className="hub-widgets">
