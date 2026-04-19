@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { pb } from '../lib/pocketbase'
 import { useAuth } from '../hooks/useAuth'
 import StatusBar from '../components/StatusBar'
+import NotificationModal from '../components/NotificationModal'
 
 
 interface InventoryItem {
@@ -140,6 +141,9 @@ export default function Lager() {
   const [detailSoll, setDetailSoll] = useState(0)
   const [detailLoadingData, setDetailLoadingData] = useState(false)
 
+  // Stock warning notification
+  const [stockNotification, setStockNotification] = useState<{title: string, message: string} | null>(null)
+
   // Multi-buchung state
   const [showMultiBuchungModal, setShowMultiBuchungModal] = useState(false)
   const [multiBuchungItems, setMultiBuchungItems] = useState<Array<{itemId: string, qty: number, expiry: string}>>([])
@@ -233,8 +237,9 @@ export default function Lager() {
         ...item,
         status: computeStatus(item.expiry, item.qty, item.min_stock)
       }))
-      
+
       setDisplayItems(items_list)
+      checkStockWarnings(items_list)
       
     } catch(e: any) {
       console.error('Error loading stock:', e)
@@ -254,6 +259,21 @@ export default function Lager() {
     }
     if (min_stock && min_stock > 0 && qty !== undefined && qty < min_stock) return 'warn'
     return 'ok'
+  }
+
+  function checkStockWarnings(items: DisplayItem[]) {
+    const sessionKey = `lager_notif_dismissed_${currentLocationId}`
+    if (sessionStorage.getItem(sessionKey)) return
+    const active = items.filter(i => i.qty > 0)
+    const expired = active.filter(i => i.status === 'exp').length
+    const nearExp = active.filter(i => i.status === 'warn' && i.expiry).length
+    const lowStock = active.filter(i => i.min_stock > 0 && i.qty < i.min_stock).length
+    if (!expired && !nearExp && !lowStock) return
+    const lines: string[] = []
+    if (expired) lines.push(`${expired} Artikel abgelaufen`)
+    if (nearExp) lines.push(`${nearExp} Artikel laufen bald ab`)
+    if (lowStock) lines.push(`${lowStock} Artikel unter Mindestbestand`)
+    setStockNotification({ title: 'Lagerhinweise', message: lines.join('\n') })
   }
 
   function showMsg(text: string, type: 'success' | 'error' = 'success') {
@@ -677,6 +697,19 @@ export default function Lager() {
     }
   }
 
+  async function reloadDetailStocks() {
+    if (!detailItem) return
+    const stocks = await pb.collection('inventory_stock').getFullList<StockItem>({
+      filter: `item_id = "${detailItem.id}" && location_id = "${currentLocationId}"`,
+      sort: 'expiry_date'
+    })
+    setDetailStockEntries(stocks)
+    // Sync qty back to detailItem
+    const newQty = stocks.reduce((s, st) => s + (st.quantity || 0), 0)
+    setDetailItem(prev => prev ? { ...prev, qty: newQty } : null)
+    setDisplayItems(prev => prev.map(i => i.id === detailItem.id ? { ...i, qty: newQty } : i))
+  }
+
   async function saveItemDetail() {
     if (!detailItem) return
     try {
@@ -932,7 +965,7 @@ export default function Lager() {
                     <div className="item-right">
                       <div className="item-qty">
                         <div className={`qty-display ${isLow ? 'low' : ''}`}>
-                          {item.qty} / {item.min_stock} {item.unit}
+                          {item.qty}{item.min_stock > 0 ? ` / ${item.min_stock}` : ''} {item.unit}
                         </div>
                         {item.expiry && (
                           <div className="expiry-date">
@@ -1347,8 +1380,30 @@ export default function Lager() {
                 {detailItem.status === 'exp' ? 'Abgelaufen' : detailItem.status === 'warn' ? 'Achtung' : 'In Ordnung'}
               </span>
             </div>
-            <div style={{color: '#64748b', fontSize: '0.9rem', marginBottom: '20px'}}>
-              IST: {detailItem.qty} {detailItem.unit}
+            <div style={{display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px'}}>
+              <div style={{color: '#64748b', fontSize: '0.9rem'}}>
+                IST: <strong style={{color: 'var(--text)', fontSize: '1.1rem'}}>{detailItem.qty}</strong> {detailItem.unit}
+                {detailItem.min_stock > 0 && (
+                  <span style={{marginLeft: '8px', color: '#64748b'}}>/ SOLL: {detailItem.min_stock}</span>
+                )}
+              </div>
+              <div style={{display: 'flex', gap: '8px', marginLeft: 'auto'}}>
+                <button
+                  className="quick-btn minus"
+                  onClick={async () => { await adjustQty(detailItem.id, -1); await reloadDetailStocks(); await loadStock() }}
+                  title="Ausbuchen (-1)"
+                >−</button>
+                <button
+                  className="quick-btn plus"
+                  onClick={() => {
+                    setShowItemDetailModal(false)
+                    setSelectedBuchungItem(detailItem.id)
+                    setBuchungType('ein')
+                    setShowBuchungModal(true)
+                  }}
+                  title="Einbuchen"
+                >+</button>
+              </div>
             </div>
 
             {/* SOLL & Bemerkungen */}
@@ -1555,6 +1610,20 @@ export default function Lager() {
           </div>
         </div>
       )}
+      {stockNotification && (
+        <NotificationModal
+          isOpen={true}
+          type="warning"
+          title={stockNotification.title}
+          message={stockNotification.message}
+          onDismiss={() => {
+            sessionStorage.setItem(`lager_notif_dismissed_${currentLocationId}`, '1')
+            setStockNotification(null)
+          }}
+          onRemindLater={() => setStockNotification(null)}
+        />
+      )}
+
       <style>{`
       
         .action-toolbar {
