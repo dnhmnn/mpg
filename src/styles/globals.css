@@ -1029,50 +1029,55 @@ body {
   }
 
   .content {
-    padding-left: max(16px, env(safe-area-inset-left));
-    padding-right: max(16px, env(safe-area-inset-right));
+    padding-top: calc(54px + env(safe-area-inset-top) + 16px);
+    padding-left: max(14px, env(safe-area-inset-left));
+    padding-right: max(14px, env(safe-area-inset-right));
   }
 
   .widgets {
-    gap: 10px;
+    gap: 8px;
+    margin-bottom: 20px;
   }
 
   .widget {
-    padding: 14px;
-    min-height: 100px;
+    padding: 11px 13px;
+    min-height: 86px;
+    border-radius: 16px;
   }
 
   .widget-title {
-    font-size: 12px;
+    font-size: 11px;
+    margin-bottom: 6px;
   }
 
   .widget-value {
-    font-size: 24px;
+    font-size: 22px;
   }
 
   .widget-label {
-    font-size: 13px;
+    font-size: 12px;
   }
 
   .apps {
-    gap: 20px 12px;
-    padding: 0 4px;
+    gap: 14px 10px;
+    padding: 0 2px;
+    grid-template-columns: repeat(4, 1fr);
   }
 
   .app-icon {
-    width: 56px;
-    height: 56px;
-    border-radius: 13px;
+    width: 52px;
+    height: 52px;
+    border-radius: 12px;
   }
 
   .app-icon svg {
-    width: 26px;
-    height: 26px;
+    width: 24px;
+    height: 24px;
   }
 
   .app-name {
     font-size: 10px;
-    max-width: 60px;
+    max-width: 56px;
   }
 
   .index-content {
@@ -1113,15 +1118,82 @@ body {
   }
 }
 
+/* Tablet / Desktop: two-column hub layout */
 @media (min-width: 768px) {
   .content {
-    max-width: 600px;
+    max-width: 1200px;
     margin: 0 auto;
   }
 
   .index-content {
     max-width: 600px;
     margin: 0 auto;
+  }
+
+  /* Hub: apps left, widgets right */
+  .hub-layout {
+    display: grid;
+    grid-template-columns: 1fr 260px;
+    grid-template-areas: "apps widgets";
+    gap: 28px;
+    align-items: start;
+  }
+
+  .hub-apps {
+    grid-area: apps;
+  }
+
+  .hub-widgets {
+    grid-area: widgets;
+    position: sticky;
+    top: calc(54px + env(safe-area-inset-top) + 24px);
+  }
+
+  /* Widgets stack vertically in sidebar */
+  .hub-widgets .widgets {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 0;
+  }
+
+  .hub-widgets .widget.large {
+    /* flex item – no grid-column span needed */
+  }
+
+  /* Apps: more columns on tablet */
+  .hub-apps .apps {
+    grid-template-columns: repeat(5, 1fr);
+    gap: 24px 16px;
+    padding: 0;
+  }
+
+  .hub-apps .app-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: 15px;
+  }
+
+  .hub-apps .app-icon svg {
+    width: 30px;
+    height: 30px;
+  }
+
+  .hub-apps .app-name {
+    font-size: 12px;
+    max-width: 70px;
+  }
+}
+
+/* Large desktop: wider sidebar, more app columns */
+@media (min-width: 1100px) {
+  .hub-layout {
+    grid-template-columns: 1fr 300px;
+    gap: 40px;
+  }
+
+  .hub-apps .apps {
+    grid-template-columns: repeat(6, 1fr);
   }
 }
 
