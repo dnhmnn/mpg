@@ -215,18 +215,6 @@ interface KonzeptForm {
   verknuepfte_termine: string[]
 }
 
-interface Neuigkeit {
-  id: string
-  titel: string
-  inhalt: string
-  anhang: string
-  organisation_id: string
-  erstellt_von: string
-  gepinnt: boolean
-  created: string
-  updated: string
-}
-
 export default function Ausbildungen() {
   const { user, loading: authLoading, logout } = useAuth()
   
@@ -239,17 +227,10 @@ export default function Ausbildungen() {
   const [modulProgress, setModulProgress] = useState<ModulProgress[]>([])
   const [konzepte, setKonzepte] = useState<Ausbildungskonzept[]>([])
   const [einladungen, setEinladungen] = useState<{id: string, termin_id: string, name: string, status: string}[]>([])
-  const [neuigkeiten, setNeuigkeiten] = useState<Neuigkeit[]>([])
 
   const [loading, setLoading] = useState(true)
   const [message, setMessage] = useState<{text: string, type: 'success' | 'error'} | null>(null)
 
-  // Neuigkeiten state
-  const [showNeuigkeitModal, setShowNeuigkeitModal] = useState(false)
-  const [editingNeuigkeit, setEditingNeuigkeit] = useState<Neuigkeit | null>(null)
-  const [neuigkeitForm, setNeuigkeitForm] = useState({ titel: '', inhalt: '', gepinnt: false })
-  const [neuigkeitAnhang, setNeuigkeitAnhang] = useState<File | null>(null)
-  const [savingNeuigkeit, setSavingNeuigkeit] = useState(false)
   
   const [showAddTerminModal, setShowAddTerminModal] = useState(false)
   const [showTerminDetailModal, setShowTerminDetailModal] = useState(false)
@@ -320,7 +301,7 @@ export default function Ausbildungen() {
   const [newQuizAntworten, setNewQuizAntworten] = useState(['', '', '', ''])
   const [newQuizRichtige, setNewQuizRichtige] = useState(0)
   
-const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | 'konzepte' | 'jahresuebersicht' | 'archiv' | 'neuigkeiten'>('termine')
+const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | 'konzepte' | 'jahresuebersicht' | 'archiv'>('termine')
   
   const [uploadFile, setUploadFile] = useState<File | null>(null)
   const [uploadTyp, setUploadTyp] = useState<'dozent' | 'teilnehmer'>('teilnehmer')
@@ -360,7 +341,6 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
         loadModulTermine(),
         loadModulProgress(),
         loadKonzepte(),
-        loadNeuigkeiten()
       ])
     } catch(e: any) {
       console.error('Fehler beim Laden:', e)
@@ -487,75 +467,9 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
     }
   }
 
-  async function loadNeuigkeiten() {
-    try {
-      const records = await pb.collection('lernbar_neuigkeiten').getFullList({
-        filter: `organisation_id = "${user?.organization_id}"`,
-        sort: '-gepinnt,-created',
-        requestKey: `loadNeuigkeiten-${Date.now()}`
-      })
-      setNeuigkeiten(records as any)
-    } catch(e: any) {
-      if (e?.status !== 404) console.error('loadNeuigkeiten:', e)
-    }
-  }
 
-  function openNeuigkeitModal(n?: Neuigkeit) {
-    setEditingNeuigkeit(n || null)
-    setNeuigkeitForm(n ? { titel: n.titel, inhalt: n.inhalt, gepinnt: n.gepinnt } : { titel: '', inhalt: '', gepinnt: false })
-    setNeuigkeitAnhang(null)
-    setShowNeuigkeitModal(true)
-  }
 
-  async function saveNeuigkeit() {
-    if (!neuigkeitForm.titel.trim()) return
-    setSavingNeuigkeit(true)
-    try {
-      let data: any
-      if (neuigkeitAnhang) {
-        const formData = new FormData()
-        formData.append('titel', neuigkeitForm.titel)
-        formData.append('inhalt', neuigkeitForm.inhalt)
-        formData.append('gepinnt', neuigkeitForm.gepinnt ? 'true' : 'false')
-        formData.append('organisation_id', user?.organization_id || '')
-        formData.append('erstellt_von', user?.name || user?.email || '')
-        formData.append('anhang', neuigkeitAnhang)
-        data = formData
-      } else {
-        data = {
-          titel: neuigkeitForm.titel,
-          inhalt: neuigkeitForm.inhalt,
-          gepinnt: neuigkeitForm.gepinnt,
-          organisation_id: user?.organization_id || '',
-          erstellt_von: user?.name || user?.email || '',
-        }
-      }
 
-      if (editingNeuigkeit) {
-        await pb.collection('lernbar_neuigkeiten').update(editingNeuigkeit.id, data)
-      } else {
-        await pb.collection('lernbar_neuigkeiten').create(data)
-      }
-      setShowNeuigkeitModal(false)
-      await loadNeuigkeiten()
-      showMessage(editingNeuigkeit ? 'Neuigkeit aktualisiert' : 'Neuigkeit veröffentlicht', 'success')
-    } catch(e: any) {
-      showMessage('Fehler: ' + e.message, 'error')
-    } finally {
-      setSavingNeuigkeit(false)
-    }
-  }
-
-  async function deleteNeuigkeit(id: string) {
-    if (!confirm('Neuigkeit wirklich löschen?')) return
-    try {
-      await pb.collection('lernbar_neuigkeiten').delete(id)
-      await loadNeuigkeiten()
-      showMessage('Gelöscht', 'success')
-    } catch(e: any) {
-      showMessage('Fehler: ' + e.message, 'error')
-    }
-  }
 
   async function loadAllUsers() {
     try {
@@ -1520,21 +1434,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
             <span style={{position: 'absolute', top: '2px', right: '2px', background: 'var(--text-secondary)', color: 'var(--btn-dark-text)', borderRadius: '50%', width: '14px', height: '14px', fontSize: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700}}>{archivTermine.length > 9 ? '9+' : archivTermine.length}</span>
           )}
         </button>
-        <button
-          className={`action-btn ${viewMode === 'neuigkeiten' ? 'active' : ''}`}
-          onClick={() => setViewMode('neuigkeiten')}
-          title="Neuigkeiten"
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>
-          </svg>
-        </button>
         <div style={{flex: 1}} />
-        {viewMode === 'neuigkeiten' && (
-          <button className="action-btn primary" onClick={() => openNeuigkeitModal()} title="Neue Neuigkeit">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          </button>
-        )}
         {viewMode === 'termine' && (
           <button className="action-btn primary" onClick={openAddTermin} title="Termin hinzufügen">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -2174,111 +2074,6 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
               </div>
             )
           })()}
-        </div>
-      )}
-
-      {/* NEUIGKEITEN VIEW */}
-      {viewMode === 'neuigkeiten' && (
-        <div className="content">
-          <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px'}}>
-            <div>
-              <h2 style={{margin: 0}}>Neuigkeiten</h2>
-              <p style={{color: 'var(--text-secondary)', fontSize: '14px', marginTop: '4px', marginBottom: 0}}>
-                Werden in der Lernbar für alle Teilnehmer angezeigt
-              </p>
-            </div>
-            <button
-              onClick={() => openNeuigkeitModal()}
-              style={{display: 'flex', alignItems: 'center', gap: '6px', padding: '9px 16px', borderRadius: '10px', border: 'none', background: 'var(--btn-dark)', color: 'var(--btn-dark-text)', fontWeight: 700, fontSize: '14px', cursor: 'pointer', fontFamily: 'inherit'}}
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-              Neue Neuigkeit
-            </button>
-          </div>
-
-          {neuigkeiten.length === 0 ? (
-            <div className="empty-state">Noch keine Neuigkeiten veröffentlicht</div>
-          ) : (
-            <div style={{display: 'flex', flexDirection: 'column', gap: '12px'}}>
-              {neuigkeiten.map(n => (
-                <div key={n.id} style={{background: 'var(--bg-card)', borderRadius: '14px', border: `1px solid ${n.gepinnt ? '#fde68a' : 'var(--border)'}`, overflow: 'hidden'}}>
-                  {n.gepinnt && (
-                    <div style={{background: '#fef3c7', padding: '5px 16px', fontSize: '12px', fontWeight: 700, color: '#92400e', display: 'flex', alignItems: 'center', gap: '5px'}}>
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-                      Angeheftet
-                    </div>
-                  )}
-                  <div style={{padding: '16px 20px'}}>
-                    <div style={{display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px', marginBottom: '8px'}}>
-                      <div style={{fontWeight: 700, fontSize: '16px', color: 'var(--text)'}}>{n.titel}</div>
-                      <div style={{display: 'flex', gap: '6px', flexShrink: 0}}>
-                        <button onClick={() => openNeuigkeitModal(n)} style={{padding: '5px 10px', borderRadius: '7px', border: '1px solid var(--border)', background: 'var(--bg-card)', color: 'var(--text)', fontWeight: 600, fontSize: '12px', cursor: 'pointer', fontFamily: 'inherit'}}>Bearbeiten</button>
-                        <button onClick={() => deleteNeuigkeit(n.id)} style={{padding: '5px 10px', borderRadius: '7px', border: '1px solid #fecaca', background: '#fef2f2', color: '#b91c1c', fontWeight: 600, fontSize: '12px', cursor: 'pointer', fontFamily: 'inherit'}}>Löschen</button>
-                      </div>
-                    </div>
-                    {n.inhalt && <div style={{fontSize: '14px', color: 'var(--text)', lineHeight: 1.6, whiteSpace: 'pre-wrap', marginBottom: '10px'}}>{n.inhalt}</div>}
-                    <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px'}}>
-                      <div style={{fontSize: '12px', color: 'var(--text-secondary)'}}>
-                        {n.erstellt_von && <span>{n.erstellt_von} · </span>}
-                        {new Date(n.created).toLocaleDateString('de-DE', {day: '2-digit', month: '2-digit', year: 'numeric'})}
-                      </div>
-                      {n.anhang && (
-                        <a
-                          href={`${pb.baseUrl}/api/files/lernbar_neuigkeiten/${n.id}/${n.anhang}?token=${pb.authStore.token}`}
-                          target="_blank" rel="noreferrer"
-                          style={{display: 'flex', alignItems: 'center', gap: '5px', fontSize: '12px', fontWeight: 600, color: 'var(--accent)', textDecoration: 'none'}}
-                        >
-                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
-                          {n.anhang}
-                        </a>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* NEUIGKEIT MODAL */}
-      {showNeuigkeitModal && (
-        <div className="modal show" onClick={() => setShowNeuigkeitModal(false)}>
-          <div className="modal-content" onClick={e => e.stopPropagation()}>
-            <h3>{editingNeuigkeit ? 'Neuigkeit bearbeiten' : 'Neue Neuigkeit'}</h3>
-
-            <div className="field">
-              <label>Titel *</label>
-              <input type="text" value={neuigkeitForm.titel} onChange={e => setNeuigkeitForm(p => ({...p, titel: e.target.value}))} placeholder="Betreff / Titel" />
-            </div>
-            <div className="field">
-              <label>Text</label>
-              <textarea value={neuigkeitForm.inhalt} onChange={e => setNeuigkeitForm(p => ({...p, inhalt: e.target.value}))} rows={5} placeholder="Nachricht an die Teilnehmer..." style={{resize: 'vertical'}} />
-            </div>
-            <div className="field">
-              <label>Anhang {editingNeuigkeit?.anhang && <span style={{color: 'var(--text-secondary)', fontWeight: 400}}>— aktuell: {editingNeuigkeit.anhang}</span>}</label>
-              <input type="file" onChange={e => setNeuigkeitAnhang(e.target.files?.[0] || null)} style={{padding: '8px 0'}} />
-            </div>
-            <div style={{display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px'}}>
-              <input
-                type="checkbox"
-                id="gepinnt"
-                checked={neuigkeitForm.gepinnt}
-                onChange={e => setNeuigkeitForm(p => ({...p, gepinnt: e.target.checked}))}
-                style={{width: '16px', height: '16px', cursor: 'pointer'}}
-              />
-              <label htmlFor="gepinnt" style={{cursor: 'pointer', fontSize: '14px', fontWeight: 500, color: 'var(--text)'}}>
-                Angeheftet (wird oben in der Liste angezeigt)
-              </label>
-            </div>
-
-            <div style={{display: 'flex', gap: '8px', justifyContent: 'flex-end'}}>
-              <button onClick={() => setShowNeuigkeitModal(false)} style={{padding: '10px 18px', borderRadius: '9px', border: '1px solid var(--border)', background: 'var(--bg-card)', color: 'var(--text)', fontWeight: 600, fontSize: '14px', cursor: 'pointer', fontFamily: 'inherit'}}>Abbrechen</button>
-              <button onClick={saveNeuigkeit} disabled={savingNeuigkeit || !neuigkeitForm.titel.trim()} style={{padding: '10px 18px', borderRadius: '9px', border: 'none', background: savingNeuigkeit || !neuigkeitForm.titel.trim() ? 'var(--border)' : 'var(--btn-dark)', color: savingNeuigkeit || !neuigkeitForm.titel.trim() ? 'var(--text-secondary)' : 'var(--btn-dark-text)', fontWeight: 700, fontSize: '14px', cursor: savingNeuigkeit || !neuigkeitForm.titel.trim() ? 'not-allowed' : 'pointer', fontFamily: 'inherit'}}>
-                {savingNeuigkeit ? 'Speichern...' : (editingNeuigkeit ? 'Speichern' : 'Veröffentlichen')}
-              </button>
-            </div>
-          </div>
         </div>
       )}
 
