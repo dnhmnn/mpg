@@ -703,23 +703,29 @@ export default function Lager() {
         alert(`PocketBase hat min_stock nicht gespeichert!\nGesendet: ${detailSoll}\nZurückbekommen: ${updated.min_stock}\n\nBitte im PocketBase Admin das Feld "min_stock" (Typ: Number) in der inventory_items Collection anlegen.`)
         return
       }
-      // Update expiry date on all stock entries for this item/location
-      if (detailExpiry !== (detailItem.expiry ? detailItem.expiry.slice(0, 10) : '')) {
-        const stocks = await pb.collection('inventory_stock').getFullList({
-          filter: `item_id = "${detailItem.id}" && location_id = "${currentLocationId}"`
-        })
-        for (const s of stocks) {
-          await pb.collection('inventory_stock').update(s.id, {
-            expiry_date: detailExpiry || null
-          })
-        }
-      }
       await loadStock()
-      setDetailItem(prev => prev ? { ...prev, notes: detailNote, min_stock: detailSoll, expiry: detailExpiry || undefined } : null)
+      setDetailItem(prev => prev ? { ...prev, notes: detailNote, min_stock: detailSoll } : null)
       showMsg('✅ Gespeichert!', 'success')
     } catch(e: any) {
       const detail = e?.data ? JSON.stringify(e.data) : e.message
       alert(`Fehler: ${detail}`)
+    }
+  }
+
+  async function saveExpiry() {
+    if (!detailItem) return
+    try {
+      const stocks = await pb.collection('inventory_stock').getFullList({
+        filter: `item_id = "${detailItem.id}" && location_id = "${currentLocationId}"`
+      })
+      for (const s of stocks) {
+        await pb.collection('inventory_stock').update(s.id, { expiry_date: detailExpiry || null })
+      }
+      await loadStock()
+      setDetailItem(prev => prev ? { ...prev, expiry: detailExpiry || undefined } : null)
+      showMsg('✅ Ablaufdatum gespeichert!', 'success')
+    } catch(e: any) {
+      alert('Fehler: ' + e.message)
     }
   }
 
@@ -1405,13 +1411,17 @@ export default function Lager() {
             </button>
 
             {/* Ablaufdatum */}
-            <div className="form-group" style={{marginBottom: '20px'}}>
-              <label>Ablaufdatum</label>
-              <input
-                type="date"
-                value={detailExpiry}
-                onChange={(e) => setDetailExpiry(e.target.value)}
-              />
+            <div style={{marginBottom: '20px'}}>
+              <div style={{fontWeight: 700, fontSize: '0.9rem', marginBottom: '8px', color: '#374151'}}>Ablaufdatum</div>
+              <div style={{display: 'flex', gap: '8px', alignItems: 'center'}}>
+                <input
+                  type="date"
+                  value={detailExpiry}
+                  onChange={(e) => setDetailExpiry(e.target.value)}
+                  style={{flex: 1, padding: '10px 12px', border: '1px solid rgba(0,0,0,0.08)', borderRadius: '8px', fontSize: '14px', fontFamily: 'inherit'}}
+                />
+                <button className="btn primary" onClick={saveExpiry}>Speichern</button>
+              </div>
             </div>
 
             {/* Transaction history */}
