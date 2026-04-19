@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react'
 import { pb } from '../lib/pocketbase'
 import { useAuth } from '../hooks/useAuth'
 import StatusBar from '../components/StatusBar'
-import NotificationModal from '../components/NotificationModal'
 
 
 interface InventoryItem {
@@ -141,9 +140,6 @@ export default function Lager() {
   const [detailSoll, setDetailSoll] = useState(0)
   const [detailLoadingData, setDetailLoadingData] = useState(false)
 
-  // Stock warning notification
-  const [stockNotification, setStockNotification] = useState<{title: string, message: string} | null>(null)
-
   // Multi-buchung state
   const [showMultiBuchungModal, setShowMultiBuchungModal] = useState(false)
   const [multiBuchungItems, setMultiBuchungItems] = useState<Array<{itemId: string, qty: number, expiry: string}>>([])
@@ -239,7 +235,6 @@ export default function Lager() {
       }))
 
       setDisplayItems(items_list)
-      checkStockWarnings(items_list)
       
     } catch(e: any) {
       console.error('Error loading stock:', e)
@@ -259,21 +254,6 @@ export default function Lager() {
     }
     if (min_stock && min_stock > 0 && qty !== undefined && qty < min_stock) return 'warn'
     return 'ok'
-  }
-
-  function checkStockWarnings(items: DisplayItem[]) {
-    const sessionKey = `lager_notif_dismissed_${currentLocationId}`
-    if (sessionStorage.getItem(sessionKey)) return
-    const active = items.filter(i => i.qty > 0)
-    const expired = active.filter(i => i.status === 'exp').length
-    const nearExp = active.filter(i => i.status === 'warn' && i.expiry).length
-    const lowStock = active.filter(i => i.min_stock > 0 && i.qty < i.min_stock).length
-    if (!expired && !nearExp && !lowStock) return
-    const lines: string[] = []
-    if (expired) lines.push(`${expired} Artikel abgelaufen`)
-    if (nearExp) lines.push(`${nearExp} Artikel laufen bald ab`)
-    if (lowStock) lines.push(`${lowStock} Artikel unter Mindestbestand`)
-    setStockNotification({ title: 'Lagerhinweise', message: lines.join('\n') })
   }
 
   function showMsg(text: string, type: 'success' | 'error' = 'success') {
@@ -858,13 +838,11 @@ export default function Lager() {
         </button>
       </div>
       
-      <div className="content">
-        {message && (
-          <div className={`message ${message.type}`}>
-            {message.text}
-          </div>
-        )}
+      {message && (
+        <div className={`toast toast-${message.type}`}>{message.text}</div>
+      )}
 
+      <div className="content">
         <div className="stats-grid">
           <div className="stat-card ok">
             <div className="stat-num">{stats.ok}</div>
@@ -1610,20 +1588,6 @@ export default function Lager() {
           </div>
         </div>
       )}
-      {stockNotification && (
-        <NotificationModal
-          isOpen={true}
-          type="warning"
-          title={stockNotification.title}
-          message={stockNotification.message}
-          onDismiss={() => {
-            sessionStorage.setItem(`lager_notif_dismissed_${currentLocationId}`, '1')
-            setStockNotification(null)
-          }}
-          onRemindLater={() => setStockNotification(null)}
-        />
-      )}
-
       <style>{`
       
         .action-toolbar {
@@ -1672,20 +1636,32 @@ export default function Lager() {
         }
 
 
-        .message {
-          padding: 12px 16px;
-          border-radius: 10px;
-          margin-bottom: 16px;
-          font-weight: 600;
+        @keyframes slideInRight {
+          from { transform: translateX(120%); opacity: 0; }
+          to   { transform: translateX(0);   opacity: 1; }
         }
 
-        .message.success {
+        .toast {
+          position: fixed;
+          bottom: 32px;
+          right: 24px;
+          z-index: 9999;
+          padding: 12px 18px;
+          border-radius: 12px;
+          font-weight: 600;
+          font-size: 14px;
+          box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+          animation: slideInRight 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+          max-width: 320px;
+        }
+
+        .toast-success {
           background: #f0fdf4;
           border: 1px solid #bbf7d0;
           color: #166534;
         }
 
-        .message.error {
+        .toast-error {
           background: #fef2f2;
           border: 1px solid #fecaca;
           color: #b91c1c;
