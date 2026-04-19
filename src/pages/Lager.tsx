@@ -293,7 +293,7 @@ export default function Lager() {
       })
 
       if (delta > 0) {
-        const expiry = expiryParam !== undefined ? expiryParam : prompt('Ablaufdatum (JJJJ-MM-TT) oder leer lassen:')
+        const expiry = expiryParam || null
         await pb.collection('inventory_stock').create({
           item_id: itemId,
           location_id: currentLocationId,
@@ -1371,13 +1371,8 @@ export default function Lager() {
                 >−</button>
                 <button
                   className="quick-btn plus"
-                  onClick={() => {
-                    setShowItemDetailModal(false)
-                    setSelectedBuchungItem(detailItem.id)
-                    setBuchungType('ein')
-                    setShowBuchungModal(true)
-                  }}
-                  title="Einbuchen"
+                  onClick={async () => { await adjustQty(detailItem.id, 1, ''); await reloadDetailStocks(); await loadStock() }}
+                  title="Einbuchen (+1)"
                 >+</button>
               </div>
             </div>
