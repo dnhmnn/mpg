@@ -692,23 +692,22 @@ export default function Lager() {
 
   async function saveItemDetail() {
     if (!detailItem) return
-    let firstError: any = null
     try {
-      await pb.collection('inventory_items').update(detailItem.id, { notes: detailNote, min_stock: detailSoll })
-    } catch(e1: any) {
-      firstError = e1
-      try {
-        await pb.collection('inventory_items').update(detailItem.id, { min_stock: detailSoll })
-      } catch(e2: any) {
-        const detail = e2?.data ? JSON.stringify(e2.data) : e2.message
-        alert(`Speichern fehlgeschlagen.\nID: ${detailItem.id}\nSOLL: ${detailSoll}\nFehler: ${detail}`)
+      const updated = await pb.collection('inventory_items').update(detailItem.id, {
+        min_stock: detailSoll,
+        notes: detailNote
+      })
+      if (Number(updated.min_stock) !== detailSoll) {
+        alert(`PocketBase hat min_stock nicht gespeichert!\nGesendet: ${detailSoll}\nZurückbekommen: ${updated.min_stock}\n\nBitte im PocketBase Admin prüfen ob das Feld "min_stock" in inventory_items editierbar ist (kein "No Update" Haken).`)
         return
       }
+      await loadStock()
+      setDetailItem(prev => prev ? { ...prev, notes: detailNote, min_stock: detailSoll } : null)
+      showMsg('✅ Gespeichert!', 'success')
+    } catch(e: any) {
+      const detail = e?.data ? JSON.stringify(e.data) : e.message
+      alert(`Fehler: ${detail}`)
     }
-    // Reload from server to confirm the save
-    await loadStock()
-    setDetailItem(prev => prev ? { ...prev, notes: detailNote, min_stock: detailSoll } : null)
-    showMsg('✅ Gespeichert!', 'success')
   }
 
   function exportPDF() {
