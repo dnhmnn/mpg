@@ -137,28 +137,20 @@ export default function Hub() {
           .hub-layout {
             display: flex;
             flex-direction: row;
-            gap: 28px;
+            gap: 32px;
             align-items: flex-start;
           }
+          /* Apps – linke Hälfte, Inhalt zentriert */
           .hub-apps {
             flex: 1;
             min-width: 0;
             order: 1;
           }
-          .hub-widgets {
-            flex: 1;
-            min-width: 0;
-            order: 2;
-          }
-          .hub-widgets .widgets {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            margin-bottom: 0;
-          }
           .hub-apps .apps {
-            grid-template-columns: repeat(5, 1fr);
-            gap: 24px 16px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 24px 20px;
+            justify-content: center;
             padding: 0;
           }
           .hub-apps .app-icon {
@@ -174,10 +166,23 @@ export default function Hub() {
             font-size: 12px;
             max-width: 70px;
           }
+          /* Widgets – rechte Hälfte, Inhalt zentriert */
+          .hub-widgets {
+            flex: 1;
+            min-width: 0;
+            order: 2;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+          }
+          .hub-widgets .widgets {
+            width: 100%;
+            max-width: 380px;
+            margin-bottom: 0;
+          }
         }
         @media (min-width: 1100px) {
-          .hub-layout { gap: 40px; }
-          .hub-apps .apps { grid-template-columns: repeat(5, 1fr); }
+          .hub-layout { gap: 48px; }
         }
       `}</style>
 
@@ -242,4 +247,3 @@ export default function Hub() {
     </>
   )
 }
-
