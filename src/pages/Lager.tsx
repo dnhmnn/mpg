@@ -2551,16 +2551,22 @@ export default function Lager() {
         }
 
         @media (max-width: 768px) {
-  
+
+          /* Toolbar: eine Zeile, kleinere Buttons */
           .action-toolbar {
-            flex-wrap: wrap;
-            gap: 0.4rem;
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            justify-content: flex-start;
+            gap: 0.3rem;
+            padding: 0.35rem 0.75rem;
           }
+          .action-toolbar::-webkit-scrollbar { display: none; }
 
           .action-btn {
-            flex: 1;
-            min-width: 40px;
-            height: 40px;
+            flex-shrink: 0;
+            min-width: 38px;
+            height: 38px;
           }
 
           .action-btn svg {
@@ -2568,51 +2574,120 @@ export default function Lager() {
             height: 16px;
           }
 
-          .toolbar {
-            flex-direction: column;
+          /* Content: kompaktes Padding, Platz für Tabs unten */
+          .content {
+            padding-top: 106px;
+            padding-left: 12px;
+            padding-right: 12px;
+            padding-bottom: 76px;
           }
 
-          .search-box {
-            width: 100%;
-            min-width: auto;
+          /* Toast über den Standort-Tabs */
+          .toast {
+            bottom: 72px;
+            right: 12px;
+            max-width: calc(100vw - 24px);
           }
 
-          .filter-chips {
-            justify-content: space-between;
-          }
-
-          .chip {
-            flex: 1;
-            text-align: center;
-            justify-content: center;
-          }
-
+          /* Stats */
           .stats-grid {
             grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+            margin-bottom: 12px;
           }
+
+          .stat-card { padding: 12px 14px; border-radius: 10px; }
+          .stat-num { font-size: 1.2rem; }
+
+          /* Suche + Filter */
+          .toolbar {
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 12px;
+          }
+
+          .search-box { width: 100%; min-width: auto; }
+
+          .filter-chips {
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            gap: 6px;
+          }
+          .filter-chips::-webkit-scrollbar { display: none; }
+
+          .chip {
+            flex-shrink: 0;
+            font-size: 0.8rem;
+            padding: 6px 10px;
+          }
+
+          /* Artikel-Karten: horizontal kompakt */
+          .item-row { padding: 0.7rem 0.85rem; }
 
           .item-header {
-            flex-direction: column;
-            align-items: flex-start;
+            flex-direction: row;
+            align-items: center;
+            flex-wrap: nowrap;
+            gap: 8px;
           }
+
+          .item-info {
+            flex: 1;
+            min-width: 0;
+          }
+
+          .item-name {
+            font-size: 0.9rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+          }
+
+          .item-category { font-size: 0.8rem; }
 
           .item-right {
-            width: 100%;
-            justify-content: space-between;
+            flex-shrink: 0;
+            gap: 8px;
           }
 
-          .item-qty {
-            text-align: left;
+          .item-qty { text-align: right; }
+          .qty-display { font-size: 0.88rem; }
+          .expiry-date { font-size: 0.75rem; }
+
+          .quick-btn { width: 30px; height: 30px; font-size: 17px; }
+
+          /* Modals: Bottom-Sheet */
+          .modal {
+            align-items: flex-end;
+            padding: 0;
           }
 
+          .modal-box {
+            border-radius: 20px 20px 0 0;
+            max-height: 92vh;
+            padding: 20px 16px;
+            padding-bottom: calc(16px + env(safe-area-inset-bottom));
+            max-width: 100%;
+          }
+
+          .modal-box.small { max-width: 100%; }
+
+          /* Standort-Tabs */
           .location-tabs-fixed {
-            flex-wrap: wrap;
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            justify-content: flex-start;
+            padding: 8px 12px;
+            gap: 6px;
           }
+          .location-tabs-fixed::-webkit-scrollbar { display: none; }
 
           .location-tab {
-            flex: 1;
-            min-width: 100px;
-            text-align: center;
+            flex-shrink: 0;
+            padding: 8px 14px;
+            font-size: 13px;
+            min-width: auto;
           }
         }
       `}</style>
