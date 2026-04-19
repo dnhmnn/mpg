@@ -134,6 +134,14 @@ export default function Lager() {
   const [buchungExpiry, setBuchungExpiry] = useState('')
   const [buchungBatch, setBuchungBatch] = useState('')
 
+  // Multi-buchung state
+  const [showMultiBuchungModal, setShowMultiBuchungModal] = useState(false)
+  const [multiBuchungItems, setMultiBuchungItems] = useState<Array<{itemId: string, qty: number, expiry: string}>>([])
+  const [multiBuchungType, setMultiBuchungType] = useState<'ein' | 'aus'>('ein')
+  const [multiBuchungNewItemId, setMultiBuchungNewItemId] = useState('')
+  const [multiBuchungNewQty, setMultiBuchungNewQty] = useState(1)
+  const [multiBuchungNewExpiry, setMultiBuchungNewExpiry] = useState('')
+
   useEffect(() => {
     if (user?.organization_id) {
       loadLocations()
@@ -274,23 +282,23 @@ export default function Lager() {
     }
   }
 
-  async function adjustQty(itemId: string, delta: number) {
+  async function adjustQty(itemId: string, delta: number, expiryParam?: string) {
     const item = displayItems.find(it => it.id === itemId)
     if (!item) return
-    
-    if (delta < 0 && item.qty <= 0) {
+
+    if (delta < 0 && item.qty + delta < 0) {
       alert('Nicht genügend Bestand')
       return
     }
-    
+
     try {
       const stockList = await pb.collection('inventory_stock').getFullList({
         filter: `item_id = "${itemId}" && location_id = "${currentLocationId}"`,
         sort: 'expiry_date'
       })
-      
+
       if (delta > 0) {
-        const expiry = prompt('Ablaufdatum (JJJJ-MM-TT) oder leer lassen:')
+        const expiry = expiryParam !== undefined ? expiryParam : prompt('Ablaufdatum (JJJJ-MM-TT) oder leer lassen:')
         await pb.collection('inventory_stock').create({
           item_id: itemId,
           location_id: currentLocationId,
@@ -618,7 +626,7 @@ export default function Lager() {
     const delta = buchungType === 'ein' ? buchungQty : -buchungQty
     
     try {
-      await adjustQty(selectedBuchungItem, delta)
+      await adjustQty(selectedBuchungItem, delta, buchungExpiry || undefined)
       setShowBuchungModal(false)
       setSelectedBuchungItem('')
       setBuchungQty(1)
@@ -629,20 +637,76 @@ export default function Lager() {
     }
   }
 
+  async function saveMultiBuchung() {
+    if (multiBuchungItems.length === 0) {
+      alert('Keine Artikel hinzugefügt')
+      return
+    }
+    for (const entry of multiBuchungItems) {
+      const delta = multiBuchungType === 'ein' ? entry.qty : -entry.qty
+      await adjustQty(entry.itemId, delta, entry.expiry || undefined)
+    }
+    setShowMultiBuchungModal(false)
+    setMultiBuchungItems([])
+    setMultiBuchungNewItemId('')
+    setMultiBuchungNewQty(1)
+    setMultiBuchungNewExpiry('')
+  }
+
+  function exportPDF() {
+    const location = locations.find(l => l.id === currentLocationId)
+    const locName = location?.name || 'Lager'
+    const date = new Date().toLocaleDateString('de-DE')
+    const rows = displayItems
+      .filter(i => i.qty > 0)
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .map(item => `
+        <tr>
+          <td>${item.name}</td>
+          <td>${item.category || '—'}</td>
+          <td style="text-align:center">${item.qty} ${item.unit}</td>
+          <td style="text-align:center">${item.min_stock || '—'}</td>
+          <td style="text-align:center">${item.expiry ? new Date(item.expiry).toLocaleDateString('de-DE') : '—'}</td>
+        </tr>
+      `).join('')
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
+      <title>Bestand ${locName} – ${date}</title>
+      <style>
+        body { font-family: Arial, sans-serif; font-size: 12px; margin: 20px; }
+        h1 { font-size: 18px; margin-bottom: 4px; }
+        .sub { color: #555; margin-bottom: 16px; }
+        table { width: 100%; border-collapse: collapse; }
+        th { background: #b91c1c; color: #fff; padding: 8px 10px; text-align: left; }
+        td { padding: 6px 10px; border-bottom: 1px solid #e5e7eb; }
+        tr:nth-child(even) td { background: #f9fafb; }
+      </style></head><body>
+      <h1>Bestandsliste – ${locName}</h1>
+      <div class="sub">Erstellt am ${date}</div>
+      <table>
+        <thead><tr><th>Artikel</th><th>Kategorie</th><th>Bestand</th><th>Mindestbestand</th><th>Ablaufdatum</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+      </body></html>`
+    const w = window.open('', '_blank')
+    if (w) { w.document.write(html); w.document.close(); w.print() }
+  }
+
   const filteredItems = displayItems.filter(item => {
+    if (item.qty === 0 && !showZeroOnly) return false
+
     if (searchQuery) {
       const needle = searchQuery.toLowerCase()
-      if (!item.name.toLowerCase().includes(needle) && 
+      if (!item.name.toLowerCase().includes(needle) &&
           !item.category.toLowerCase().includes(needle)) {
         return false
       }
     }
-    
+
     if (statusFilter === 'expired' && item.status !== 'exp') return false
     if (statusFilter === 'warning' && item.status !== 'warn') return false
     if (showLowOnly && item.qty >= item.min_stock) return false
     if (showZeroOnly && item.qty !== 0) return false
-    
+
     return true
   })
 
@@ -686,6 +750,23 @@ export default function Lager() {
         <button className="action-btn" onClick={() => { setBuchungType('aus'); setShowBuchungModal(true) }} title="Ausbuchen">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
             <line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+        </button>
+        <button className="action-btn" onClick={() => { setMultiBuchungType('ein'); setShowMultiBuchungModal(true) }} title="Mehrfachbuchung">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <rect x="3" y="3" width="7" height="5" rx="1"/>
+            <rect x="14" y="3" width="7" height="5" rx="1"/>
+            <rect x="3" y="13" width="7" height="5" rx="1"/>
+            <rect x="14" y="13" width="7" height="5" rx="1"/>
+            <line x1="17.5" y1="19" x2="17.5" y2="23"/><line x1="15.5" y1="21" x2="19.5" y2="21"/>
+          </svg>
+        </button>
+        <button className="action-btn" onClick={exportPDF} title="PDF Export">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <line x1="12" y1="18" x2="12" y2="12"/>
+            <polyline points="9 15 12 18 15 15"/>
           </svg>
         </button>
         <button className="action-btn" onClick={() => { loadAuditHistory(); setShowInventoryModal(true) }} title="Inventur">
@@ -791,66 +872,46 @@ export default function Lager() {
             filteredItems.map(item => {
               const isLow = item.min_stock > 0 && item.qty < item.min_stock
               const isZero = item.qty === 0
-              
+
               return (
-                <div 
+                <div
                   key={item.id}
                   className={`item-row ${isZero ? 'zero' : item.status}`}
                 >
-                  <div className="item-menu-container">
-                    <button 
-                      className="menu-dots"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        const menuId = `menu-${item.id}`
-                        const menu = document.getElementById(menuId)
-                        const allMenus = document.querySelectorAll('.item-menu-dropdown')
-                        allMenus.forEach(m => {
-                          if (m.id !== menuId) m.classList.remove('show')
-                        })
-                        menu?.classList.toggle('show')
-                      }}
-                    >
-                      ⋮
-                    </button>
-                    <div id={`menu-${item.id}`} className="item-menu-dropdown">
-                      <button 
-                        className="menu-item"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          adjustQty(item.id, 1)
-                        }}
-                      >
-                        Einbuchen (+1)
-                      </button>
-                      <button 
-                        className="menu-item"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          adjustQty(item.id, -1)
-                        }}
-                      >
-                        Ausbuchen (-1)
-                      </button>
-                    </div>
-                  </div>
-
                   <div className="item-header">
-                    <div>
+                    <div className="item-info">
                       <div className="item-name">{item.name}</div>
                       {item.category && (
                         <div className="item-category">{item.category}</div>
                       )}
                     </div>
-                    <div className="item-qty">
-                      <div className={`qty-display ${isLow ? 'low' : ''}`}>
-                        IST: {item.qty} {item.unit} / SOLL: {item.min_stock}
-                      </div>
-                      {item.expiry && (
-                        <div className="expiry-date">
-                          {new Date(item.expiry).toLocaleDateString('de-DE')}
+                    <div className="item-right">
+                      <div className="item-qty">
+                        <div className={`qty-display ${isLow ? 'low' : ''}`}>
+                          IST: {item.qty} {item.unit} / SOLL: {item.min_stock}
                         </div>
-                      )}
+                        {item.expiry && (
+                          <div className="expiry-date">
+                            Ablaufdatum: {new Date(item.expiry).toLocaleDateString('de-DE')}
+                          </div>
+                        )}
+                      </div>
+                      <div className="item-quick-btns">
+                        <button
+                          className="quick-btn minus"
+                          onClick={() => adjustQty(item.id, -1)}
+                          title="Ausbuchen (-1)"
+                        >−</button>
+                        <button
+                          className="quick-btn plus"
+                          onClick={() => {
+                            setSelectedBuchungItem(item.id)
+                            setBuchungType('ein')
+                            setShowBuchungModal(true)
+                          }}
+                          title="Einbuchen"
+                        >+</button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1222,6 +1283,78 @@ export default function Lager() {
               </button>
               <button className="btn primary" onClick={saveBuchung}>
                 {buchungType === 'ein' ? 'Einbuchen' : 'Ausbuchen'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MEHRFACHBUCHUNG MODAL */}
+      {showMultiBuchungModal && (
+        <div className="modal" onClick={() => setShowMultiBuchungModal(false)}>
+          <div className="modal-box" onClick={(e) => e.stopPropagation()}>
+            <h3>Mehrfachbuchung</h3>
+
+            <div className="tabs" style={{marginBottom: '16px'}}>
+              <button className={`tab ${multiBuchungType === 'ein' ? 'active' : ''}`} onClick={() => setMultiBuchungType('ein')}>Einbuchen</button>
+              <button className={`tab ${multiBuchungType === 'aus' ? 'active' : ''}`} onClick={() => setMultiBuchungType('aus')}>Ausbuchen</button>
+            </div>
+
+            <div style={{display: 'grid', gridTemplateColumns: '1fr auto auto', gap: '8px', alignItems: 'end', marginBottom: '12px'}}>
+              <div className="form-group" style={{marginBottom: 0}}>
+                <label>Artikel</label>
+                <select value={multiBuchungNewItemId} onChange={(e) => setMultiBuchungNewItemId(e.target.value)}>
+                  <option value="">-- Artikel wählen --</option>
+                  {allItems.map(item => (
+                    <option key={item.id} value={item.id}>{item.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-group" style={{marginBottom: 0}}>
+                <label>Menge</label>
+                <input type="number" value={multiBuchungNewQty} onChange={(e) => setMultiBuchungNewQty(parseInt(e.target.value) || 1)} min="1" style={{width: '80px'}} />
+              </div>
+              {multiBuchungType === 'ein' && (
+                <div className="form-group" style={{marginBottom: 0}}>
+                  <label>Ablaufdatum</label>
+                  <input type="date" value={multiBuchungNewExpiry} onChange={(e) => setMultiBuchungNewExpiry(e.target.value)} style={{width: '140px'}} />
+                </div>
+              )}
+              <button
+                className="btn primary"
+                style={{alignSelf: 'flex-end'}}
+                onClick={() => {
+                  if (!multiBuchungNewItemId) return
+                  setMultiBuchungItems(prev => [...prev, { itemId: multiBuchungNewItemId, qty: multiBuchungNewQty, expiry: multiBuchungNewExpiry }])
+                  setMultiBuchungNewItemId('')
+                  setMultiBuchungNewQty(1)
+                  setMultiBuchungNewExpiry('')
+                }}
+              >
+                Hinzufügen
+              </button>
+            </div>
+
+            {multiBuchungItems.length > 0 && (
+              <div style={{marginBottom: '16px'}}>
+                <div style={{fontWeight: 700, marginBottom: '8px', fontSize: '0.9rem'}}>Buchungsliste:</div>
+                {multiBuchungItems.map((entry, idx) => {
+                  const item = allItems.find(i => i.id === entry.itemId)
+                  return (
+                    <div key={idx} style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: '#f9fafb', borderRadius: '8px', marginBottom: '4px'}}>
+                      <span style={{fontWeight: 600}}>{item?.name || entry.itemId}</span>
+                      <span style={{color: '#64748b'}}>{entry.qty} {item?.unit || 'Stück'}{entry.expiry ? ` · ${new Date(entry.expiry).toLocaleDateString('de-DE')}` : ''}</span>
+                      <button className="btn-small danger" onClick={() => setMultiBuchungItems(prev => prev.filter((_, i) => i !== idx))}>✕</button>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+
+            <div style={{display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '8px'}}>
+              <button className="btn" onClick={() => { setShowMultiBuchungModal(false); setMultiBuchungItems([]) }}>Abbrechen</button>
+              <button className="btn primary" onClick={saveMultiBuchung} disabled={multiBuchungItems.length === 0}>
+                Alle {multiBuchungType === 'ein' ? 'einbuchen' : 'ausbuchen'}
               </button>
             </div>
           </div>
@@ -1631,9 +1764,61 @@ export default function Lager() {
         .item-header {
           display: flex;
           justify-content: space-between;
-          align-items: flex-start;
+          align-items: center;
           flex-wrap: wrap;
           gap: 0.5rem;
+        }
+
+        .item-info {
+          flex: 1;
+          min-width: 0;
+        }
+
+        .item-right {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          flex-shrink: 0;
+        }
+
+        .item-quick-btns {
+          display: flex;
+          gap: 6px;
+        }
+
+        .quick-btn {
+          width: 34px;
+          height: 34px;
+          border-radius: 50%;
+          border: none;
+          font-size: 20px;
+          font-weight: 700;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: all 0.15s;
+          line-height: 1;
+        }
+
+        .quick-btn.minus {
+          background: #fee2e2;
+          color: #b91c1c;
+        }
+
+        .quick-btn.minus:hover {
+          background: #fecaca;
+          transform: scale(1.1);
+        }
+
+        .quick-btn.plus {
+          background: #dcfce7;
+          color: #15803d;
+        }
+
+        .quick-btn.plus:hover {
+          background: #bbf7d0;
+          transform: scale(1.1);
         }
 
         .item-name {
@@ -2013,6 +2198,11 @@ export default function Lager() {
           .item-header {
             flex-direction: column;
             align-items: flex-start;
+          }
+
+          .item-right {
+            width: 100%;
+            justify-content: space-between;
           }
 
           .item-qty {
