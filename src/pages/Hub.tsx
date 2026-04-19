@@ -26,9 +26,11 @@ const ALL_APPS: Record<string, App> = {
 }
 
 const ROLES: Record<string, { permissions: Record<string, boolean> }> = {
-  ausbildung: { permissions: { dashboard: true, einsaetze: true, lernbar: true, ausbildungen_manage: true, patienten: true, dateien: true, qr: true, chat: true } },
-  qm: { permissions: { dashboard: true, dokumente: true, dateien: true, qr: true, chat: true } },
-  benutzer: { permissions: { dashboard: true, lernbar: true, chat: true } }
+  mpg:       { permissions: { dashboard: true, einsaetze: true, lager: true, lernbar: true, ausbildungen_manage: true, dokumente: true, patienten: true, dateien: true, chat: true, unitarii: true } },
+  lager:     { permissions: { dashboard: true, lager: true, dateien: true, chat: true } },
+  ausbildung:{ permissions: { dashboard: true, einsaetze: true, lernbar: true, ausbildungen_manage: true, patienten: true, dateien: true, chat: true } },
+  qm:        { permissions: { dashboard: true, dokumente: true, dateien: true, chat: true } },
+  benutzer:  { permissions: { dashboard: true, lernbar: true, chat: true } }
 }
 
 export default function Hub() {
