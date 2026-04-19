@@ -693,19 +693,20 @@ export default function Lager() {
   async function saveItemDetail() {
     if (!detailItem) return
     try {
-      await pb.collection('inventory_items').update(detailItem.id, {
-        notes: detailNote,
-        min_stock: detailSoll
+      const updated = await pb.collection('inventory_items').update(detailItem.id, {
+        min_stock: detailSoll,
+        notes: detailNote
       })
-      setDisplayItems(prev => prev.map(i =>
-        i.id === detailItem.id
-          ? { ...i, notes: detailNote, min_stock: detailSoll, status: computeStatus(i.expiry, i.qty, detailSoll) }
-          : i
-      ))
+      if (Number(updated.min_stock) !== detailSoll) {
+        alert(`PocketBase hat min_stock nicht gespeichert!\nGesendet: ${detailSoll}\nZurückbekommen: ${updated.min_stock}\n\nBitte im PocketBase Admin prüfen ob das Feld "min_stock" in inventory_items editierbar ist (kein "No Update" Haken).`)
+        return
+      }
+      await loadStock()
       setDetailItem(prev => prev ? { ...prev, notes: detailNote, min_stock: detailSoll } : null)
       showMsg('✅ Gespeichert!', 'success')
     } catch(e: any) {
-      alert('Fehler: ' + e.message)
+      const detail = e?.data ? JSON.stringify(e.data) : e.message
+      alert(`Fehler: ${detail}`)
     }
   }
 
@@ -1306,28 +1307,16 @@ export default function Lager() {
                 min="1"
               />
             </div>
-            
+
             {buchungType === 'ein' && (
-              <>
-                <div className="form-group">
-                  <label>Ablaufdatum (optional)</label>
-                  <input
-                    type="date"
-                    value={buchungExpiry}
-                    onChange={(e) => setBuchungExpiry(e.target.value)}
-                  />
-                </div>
-                
-                <div className="form-group">
-                  <label>Charge/Bemerkung (optional)</label>
-                  <input
-                    type="text"
-                    value={buchungBatch}
-                    onChange={(e) => setBuchungBatch(e.target.value)}
-                    placeholder="z.B. Charge 12345"
-                  />
-                </div>
-              </>
+              <div className="form-group">
+                <label>Ablaufdatum (optional)</label>
+                <input
+                  type="date"
+                  value={buchungExpiry}
+                  onChange={(e) => setBuchungExpiry(e.target.value)}
+                />
+              </div>
             )}
             
             <div style={{display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '24px'}}>
