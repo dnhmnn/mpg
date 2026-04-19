@@ -77,6 +77,7 @@ interface Audit {
   audit_date: string
   status: string
   user: string
+  location_id?: string
   organization_id: string
 }
 
@@ -119,11 +120,18 @@ export default function Lager() {
   const [transactions, setTransactions] = useState<Transaction[]>([])
   
   // Inventur state
-  const [inventoryTab, setInventoryTab] = useState<'new' | 'history'>('new')
+  const [inventoryTab, setInventoryTab] = useState<'new' | 'history' | 'schedule'>('new')
   const [currentAudit, setCurrentAudit] = useState<Audit | null>(null)
   const [auditItems, setAuditItems] = useState<AuditItem[]>([])
   const [auditIndex, setAuditIndex] = useState(0)
   const [auditHistory, setAuditHistory] = useState<Audit[]>([])
+  const [openAudits, setOpenAudits] = useState<Audit[]>([])
+  const [selectedHistoryAudit, setSelectedHistoryAudit] = useState<Audit | null>(null)
+  const [historyAuditItems, setHistoryAuditItems] = useState<AuditItem[]>([])
+  const [inventurSchedule, setInventurSchedule] = useState<{interval: string}>(() => {
+    const saved = localStorage.getItem('lager_inventur_schedule')
+    return saved ? JSON.parse(saved) : { interval: 'monthly' }
+  })
   
   // Buchung state
   const [selectedBuchungItem, setSelectedBuchungItem] = useState<string>('')
@@ -455,15 +463,63 @@ export default function Lager() {
   async function loadAuditHistory() {
     try {
       const audits = await pb.collection('inventory_audits').getFullList<Audit>({
-        filter: `organization_id = "${user?.organization_id}"`,
+        filter: `organization_id = "${user?.organization_id}" && status = "abgeschlossen" && location_id = "${currentLocationId}"`,
         sort: '-audit_date',
         limit: 50
       })
-      
       setAuditHistory(audits)
     } catch(e: any) {
       console.error('Error loading audit history:', e)
     }
+  }
+
+  async function loadOpenAudits() {
+    try {
+      const audits = await pb.collection('inventory_audits').getFullList<Audit>({
+        filter: `organization_id = "${user?.organization_id}" && status = "offen" && location_id = "${currentLocationId}"`,
+        sort: '-audit_date'
+      })
+      setOpenAudits(audits)
+    } catch(e: any) {
+      console.error('Error loading open audits:', e)
+    }
+  }
+
+  async function resumeAudit(audit: Audit) {
+    setCurrentAudit(audit)
+    await loadAuditItems(audit.id)
+    setInventoryTab('new')
+  }
+
+  async function loadHistoryAuditItems(auditId: string) {
+    try {
+      const items = await pb.collection('inventory_audit_items').getFullList<AuditItem>({
+        filter: `audit_id = "${auditId}"`,
+        expand: 'item_id',
+        sort: 'created'
+      })
+      setHistoryAuditItems(items)
+    } catch(e: any) {
+      console.error('Error loading history audit items:', e)
+    }
+  }
+
+  function saveSchedule() {
+    localStorage.setItem('lager_inventur_schedule', JSON.stringify(inventurSchedule))
+    showMsg('✅ Zeitplan gespeichert!', 'success')
+  }
+
+  function getNextInventurDate(): Date | null {
+    if (inventurSchedule.interval === 'disabled') return null
+    const last = auditHistory[0]
+    const base = last ? new Date(last.audit_date) : new Date()
+    const next = new Date(base)
+    if (inventurSchedule.interval === 'weekly')    next.setDate(next.getDate() + 7)
+    if (inventurSchedule.interval === 'monthly')   next.setMonth(next.getMonth() + 1)
+    if (inventurSchedule.interval === 'quarterly') next.setMonth(next.getMonth() + 3)
+    if (inventurSchedule.interval === 'biannual')  next.setMonth(next.getMonth() + 6)
+    if (inventurSchedule.interval === 'annual')    next.setFullYear(next.getFullYear() + 1)
+    return next
   }
 
   async function startInventur() {
@@ -474,6 +530,7 @@ export default function Lager() {
         audit_date: new Date().toISOString(),
         status: 'offen',
         user: user?.email || user?.name || user?.id,
+        location_id: currentLocationId,
         organization_id: user?.organization_id
       })
       
@@ -834,7 +891,7 @@ export default function Lager() {
             <polyline points="9 15 12 18 15 15"/>
           </svg>
         </button>
-        <button className="action-btn" onClick={() => { loadAuditHistory(); setShowInventoryModal(true) }} title="Inventur">
+        <button className="action-btn" onClick={() => { loadAuditHistory(); loadOpenAudits(); setShowInventoryModal(true) }} title="Inventur">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
             <path d="M9 12h6m-6 4h6"/>
@@ -1153,39 +1210,48 @@ export default function Lager() {
       {showInventoryModal && (
         <div className="modal" onClick={() => setShowInventoryModal(false)}>
           <div className="modal-box" onClick={(e) => e.stopPropagation()}>
-            <h3>Inventur</h3>
-            
+            <h3>Inventur – {locations.find(l => l.id === currentLocationId)?.name || 'Lager'}</h3>
+
             {/* TABS */}
             <div className="tabs">
-              <button 
-                className={`tab ${inventoryTab === 'new' ? 'active' : ''}`}
-                onClick={() => setInventoryTab('new')}
-              >
-                Neue Inventur
+              <button className={`tab ${inventoryTab === 'new' ? 'active' : ''}`} onClick={() => setInventoryTab('new')}>
+                Inventur
               </button>
-              <button 
-                className={`tab ${inventoryTab === 'history' ? 'active' : ''}`}
-                onClick={() => setInventoryTab('history')}
-              >
+              <button className={`tab ${inventoryTab === 'history' ? 'active' : ''}`} onClick={() => { setInventoryTab('history'); loadAuditHistory() }}>
                 Historie
               </button>
+              <button className={`tab ${inventoryTab === 'schedule' ? 'active' : ''}`} onClick={() => setInventoryTab('schedule')}>
+                Zeitplan
+              </button>
             </div>
-            
-            {inventoryTab === 'new' ? (
+
+            {/* TAB: INVENTUR */}
+            {inventoryTab === 'new' && (
               !currentAudit ? (
                 <div>
+                  {openAudits.length > 0 && (
+                    <div style={{marginBottom: '16px'}}>
+                      <div style={{fontWeight: 700, fontSize: '0.9rem', color: '#374151', marginBottom: '8px'}}>Offene Inventuren:</div>
+                      {openAudits.map(audit => (
+                        <div key={audit.id} style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', background: '#fef3c7', borderRadius: '8px', marginBottom: '8px', border: '1px solid #fcd34d'}}>
+                          <div>
+                            <div style={{fontWeight: 700, fontSize: '0.9rem'}}>{new Date(audit.audit_date).toLocaleString('de-DE')}</div>
+                            <div style={{fontSize: '0.8rem', color: '#92400e'}}>von {audit.user}</div>
+                          </div>
+                          <button className="btn primary" onClick={() => resumeAudit(audit)}>Weiterführen</button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
                   <div className="empty-state" style={{marginBottom: '24px'}}>
                     <div style={{fontSize: '48px', marginBottom: '16px'}}>📋</div>
                     <div style={{fontWeight: 700, marginBottom: '8px'}}>Inventur durchführen</div>
                     <div>Zählen Sie alle Artikel und korrigieren Sie Bestände</div>
                   </div>
-                  
-                  <button 
-                    className="btn primary" 
-                    style={{width: '100%'}}
-                    onClick={startInventur}
-                  >
-                    Inventur starten
+
+                  <button className="btn primary" style={{width: '100%'}} onClick={startInventur}>
+                    Neue Inventur starten
                   </button>
                 </div>
               ) : (
@@ -1193,7 +1259,7 @@ export default function Lager() {
                   <div style={{background: '#f0f9ff', padding: '12px', borderRadius: '8px', marginBottom: '16px'}}>
                     <strong>Fortschritt:</strong> {auditItems.filter(ai => ai.checked).length} / {auditItems.length} geprüft
                   </div>
-                  
+
                   {auditIndex < auditItems.length && (
                     <div>
                       <div style={{background: '#fafafa', padding: '16px', borderRadius: '8px', marginBottom: '16px'}}>
@@ -1201,12 +1267,12 @@ export default function Lager() {
                         <div style={{color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '8px'}}>
                           {auditItems[auditIndex]?.expand?.item_id?.unit || 'Stück'}
                         </div>
-                        
+
                         <div style={{background: 'var(--bg-card)', padding: '12px', borderRadius: '8px', marginBottom: '12px'}}>
                           <div style={{color: 'var(--text-secondary)', fontSize: '0.85rem'}}>Erwarteter Bestand (laut System):</div>
                           <div style={{fontSize: '1.5rem', fontWeight: 700}}>{auditItems[auditIndex]?.expected_quantity} {auditItems[auditIndex]?.expand?.item_id?.unit || 'Stück'}</div>
                         </div>
-                        
+
                         <div className="form-group">
                           <label>Tatsächlicher Bestand (gezählt):</label>
                           <input
@@ -1217,7 +1283,7 @@ export default function Lager() {
                             style={{fontSize: '1.2rem', fontWeight: 700}}
                           />
                         </div>
-                        
+
                         <div style={{marginTop: '12px'}}>
                           <label style={{display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer'}}>
                             <input type="checkbox" id="audit-checked" defaultChecked={auditItems[auditIndex]?.checked || false} />
@@ -1225,16 +1291,12 @@ export default function Lager() {
                           </label>
                         </div>
                       </div>
-                      
+
                       <div style={{display: 'flex', gap: '8px', justifyContent: 'space-between'}}>
-                        <button 
-                          className="btn" 
-                          onClick={() => setAuditIndex(Math.max(0, auditIndex - 1))}
-                          disabled={auditIndex === 0}
-                        >
+                        <button className="btn" onClick={() => setAuditIndex(Math.max(0, auditIndex - 1))} disabled={auditIndex === 0}>
                           Zurück
                         </button>
-                        <button 
+                        <button
                           className="btn primary"
                           onClick={() => {
                             const actual = parseInt((document.getElementById('audit-actual') as HTMLInputElement)?.value || '0')
@@ -1249,27 +1311,115 @@ export default function Lager() {
                   )}
                 </div>
               )
-            ) : (
-              <div className="audit-history-list">
-                {auditHistory.length === 0 ? (
-                  <div className="empty-state">Keine Inventuren vorhanden</div>
+            )}
+
+            {/* TAB: HISTORIE */}
+            {inventoryTab === 'history' && (
+              <div>
+                {selectedHistoryAudit ? (
+                  <div>
+                    <button className="btn" style={{marginBottom: '16px'}} onClick={() => { setSelectedHistoryAudit(null); setHistoryAuditItems([]) }}>
+                      ← Zurück zur Liste
+                    </button>
+                    <div style={{fontWeight: 700, marginBottom: '4px'}}>{new Date(selectedHistoryAudit.audit_date).toLocaleString('de-DE')}</div>
+                    <div style={{fontSize: '0.85rem', color: '#64748b', marginBottom: '16px'}}>Durchgeführt von: {selectedHistoryAudit.user}</div>
+
+                    {historyAuditItems.length === 0 ? (
+                      <div style={{color: '#64748b', fontSize: '0.9rem', textAlign: 'center', padding: '24px'}}>Keine Einträge gefunden</div>
+                    ) : (
+                      <div style={{display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '360px', overflowY: 'auto'}}>
+                        {historyAuditItems.map(ai => {
+                          const diff = ai.actual_quantity - ai.expected_quantity
+                          const hasDiff = diff !== 0
+                          return (
+                            <div key={ai.id} style={{
+                              padding: '10px 12px', borderRadius: '8px',
+                              background: hasDiff ? (diff > 0 ? '#f0fdf4' : '#fef2f2') : '#f9fafb',
+                              borderLeft: `3px solid ${hasDiff ? (diff > 0 ? '#16a34a' : '#b91c1c') : '#e5e7eb'}`,
+                              display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+                            }}>
+                              <div>
+                                <div style={{fontWeight: 700, fontSize: '0.9rem'}}>{ai.expand?.item_id?.name || ai.item_id}</div>
+                                <div style={{fontSize: '0.8rem', color: '#64748b'}}>
+                                  Erwartet: {ai.expected_quantity} → Gezählt: {ai.actual_quantity}
+                                </div>
+                              </div>
+                              {hasDiff ? (
+                                <span style={{fontWeight: 700, fontSize: '0.9rem', color: diff > 0 ? '#16a34a' : '#b91c1c'}}>
+                                  {diff > 0 ? '+' : ''}{diff}
+                                </span>
+                              ) : (
+                                <span style={{fontSize: '0.8rem', color: '#64748b'}}>✓</span>
+                              )}
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </div>
                 ) : (
-                  auditHistory.map(audit => (
-                    <div key={audit.id} className="audit-card">
-                      <div className="audit-card-header">
-                        <div className="audit-date">
-                          {new Date(audit.audit_date).toLocaleString('de-DE')}
+                  <div className="audit-history-list">
+                    {auditHistory.length === 0 ? (
+                      <div className="empty-state">Keine Inventuren vorhanden</div>
+                    ) : (
+                      auditHistory.map(audit => (
+                        <div
+                          key={audit.id}
+                          className="audit-card"
+                          style={{cursor: 'pointer'}}
+                          onClick={() => { setSelectedHistoryAudit(audit); loadHistoryAuditItems(audit.id) }}
+                        >
+                          <div className="audit-card-header">
+                            <div className="audit-date">{new Date(audit.audit_date).toLocaleString('de-DE')}</div>
+                            <div className="audit-status abgeschlossen">✓ Abgeschlossen</div>
+                          </div>
+                          <div className="audit-user"><strong>Durchgeführt von:</strong> {audit.user}</div>
                         </div>
-                        <div className={`audit-status ${audit.status}`}>
-                          {audit.status === 'abgeschlossen' ? '✓ Abgeschlossen' : '⏳ Offen'}
-                        </div>
-                      </div>
-                      <div className="audit-user">
-                        <strong>Durchgeführt von:</strong> {audit.user}
-                      </div>
-                    </div>
-                  ))
+                      ))
+                    )}
+                  </div>
                 )}
+              </div>
+            )}
+
+            {/* TAB: ZEITPLAN */}
+            {inventoryTab === 'schedule' && (
+              <div>
+                <div className="form-group">
+                  <label>Inventur-Intervall</label>
+                  <select value={inventurSchedule.interval} onChange={(e) => setInventurSchedule({ interval: e.target.value })}>
+                    <option value="disabled">Deaktiviert</option>
+                    <option value="weekly">Wöchentlich</option>
+                    <option value="monthly">Monatlich</option>
+                    <option value="quarterly">Vierteljährlich</option>
+                    <option value="biannual">Halbjährlich</option>
+                    <option value="annual">Jährlich</option>
+                  </select>
+                </div>
+
+                {inventurSchedule.interval !== 'disabled' && (() => {
+                  const next = getNextInventurDate()
+                  if (!next) return null
+                  const isOverdue = next < new Date()
+                  return (
+                    <div style={{background: '#f0f9ff', borderRadius: '8px', padding: '12px', marginBottom: '16px', border: '1px solid #bae6fd'}}>
+                      <div style={{fontSize: '0.85rem', color: '#0369a1', fontWeight: 700, marginBottom: '4px'}}>Nächste Inventur:</div>
+                      <div style={{fontSize: '1rem', fontWeight: 700, color: isOverdue ? '#b91c1c' : '#0369a1'}}>
+                        {next.toLocaleDateString('de-DE')}
+                        {isOverdue && <span style={{marginLeft: '8px', fontSize: '0.85rem', background: '#fee2e2', color: '#b91c1c', padding: '2px 8px', borderRadius: '999px'}}>Überfällig</span>}
+                      </div>
+                      {auditHistory[0] && (
+                        <div style={{fontSize: '0.8rem', color: '#64748b', marginTop: '4px'}}>
+                          Letzte Inventur: {new Date(auditHistory[0].audit_date).toLocaleDateString('de-DE')}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })()}
+
+                <button className="btn primary" style={{width: '100%'}} onClick={saveSchedule}>
+                  Speichern
+                </button>
               </div>
             )}
 
@@ -1278,6 +1428,8 @@ export default function Lager() {
                 setShowInventoryModal(false)
                 setCurrentAudit(null)
                 setAuditItems([])
+                setSelectedHistoryAudit(null)
+                setHistoryAuditItems([])
               }}>
                 Schließen
               </button>
