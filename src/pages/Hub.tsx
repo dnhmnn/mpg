@@ -134,37 +134,18 @@ export default function Hub() {
     <>
       <StatusBar user={user} onLogout={logout} />
       
-      <div className={`content ${editMode ? 'edit-mode' : ''}`}>
-        <Widgets user={user} />
-        <AppGrid 
-          userApps={userApps}
-          onRemoveApp={handleRemoveApp}
-        />
-        
-        {/* Edit Button */}
-        <button 
-          className="edit-button"
-          onClick={() => setShowEditModal(true)}
-          style={{
-            background: 'rgba(255, 255, 255, 0.2)',
-            backdropFilter: 'blur(20px)',
-            WebkitBackdropFilter: 'blur(20px)',
-            border: '0.5px solid rgba(255, 255, 255, 0.3)',
-            color: '#fff',
-            padding: '8px 16px',
-            borderRadius: '16px',
-            fontSize: '13px',
-            fontWeight: 600,
-            cursor: 'pointer',
-            transition: 'all 0.2s',
-            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
-            margin: '32px auto 0',
-            display: 'block',
-            width: 'fit-content'
-          }}
-        >
-          Hub bearbeiten
-        </button>
+      <div className="content">
+        <div className="hub-layout">
+          <div className="hub-widgets">
+            <Widgets user={user} />
+          </div>
+          <div className="hub-apps">
+            <AppGrid
+              userApps={userApps}
+              onRemoveApp={handleRemoveApp}
+            />
+          </div>
+        </div>
       </div>
 
       {/* Modals */}
