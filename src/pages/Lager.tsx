@@ -961,11 +961,9 @@ export default function Lager() {
                           className="quick-btn plus"
                           onClick={(e) => {
                             e.stopPropagation()
-                            setSelectedBuchungItem(item.id)
-                            setBuchungType('ein')
-                            setShowBuchungModal(true)
+                            adjustQty(item.id, 1, '')
                           }}
-                          title="Einbuchen"
+                          title="Einbuchen (+1)"
                         >+</button>
                       </div>
                     </div>
