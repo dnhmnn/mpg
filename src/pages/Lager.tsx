@@ -1307,7 +1307,17 @@ export default function Lager() {
                 min="1"
               />
             </div>
-            
+
+            {buchungType === 'ein' && (
+              <div className="form-group">
+                <label>Ablaufdatum (optional)</label>
+                <input
+                  type="date"
+                  value={buchungExpiry}
+                  onChange={(e) => setBuchungExpiry(e.target.value)}
+                />
+              </div>
+            )}
             
             <div style={{display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '24px'}}>
               <button className="btn" onClick={() => setShowBuchungModal(false)}>
