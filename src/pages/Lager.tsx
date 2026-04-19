@@ -124,6 +124,7 @@ export default function Lager() {
   const [currentAudit, setCurrentAudit] = useState<Audit | null>(null)
   const [auditItems, setAuditItems] = useState<AuditItem[]>([])
   const [auditIndex, setAuditIndex] = useState(0)
+  const [auditLocationId, setAuditLocationId] = useState<string | null>(null)
   const [auditHistory, setAuditHistory] = useState<Audit[]>([])
   const [openAudits, setOpenAudits] = useState<Audit[]>([])
   const [selectedHistoryAudit, setSelectedHistoryAudit] = useState<Audit | null>(null)
@@ -463,9 +464,9 @@ export default function Lager() {
   async function loadAuditHistory() {
     try {
       const audits = await pb.collection('inventory_audits').getFullList<Audit>({
-        filter: `organization_id = "${user?.organization_id}" && status = "abgeschlossen" && location_id = "${currentLocationId}"`,
+        filter: `organization_id = "${user?.organization_id}" && status = "abgeschlossen"`,
         sort: '-audit_date',
-        limit: 50
+        limit: 200
       })
       setAuditHistory(audits)
     } catch(e: any) {
@@ -476,7 +477,7 @@ export default function Lager() {
   async function loadOpenAudits() {
     try {
       const audits = await pb.collection('inventory_audits').getFullList<Audit>({
-        filter: `organization_id = "${user?.organization_id}" && status = "offen" && location_id = "${currentLocationId}"`,
+        filter: `organization_id = "${user?.organization_id}" && status = "offen"`,
         sort: '-audit_date'
       })
       setOpenAudits(audits)
@@ -486,8 +487,10 @@ export default function Lager() {
   }
 
   async function resumeAudit(audit: Audit) {
+    const locId = audit.location_id || currentLocationId || ''
+    setAuditLocationId(locId)
     setCurrentAudit(audit)
-    await loadAuditItems(audit.id)
+    await loadAuditItems(audit.id, locId)
     setInventoryTab('new')
   }
 
@@ -509,11 +512,13 @@ export default function Lager() {
     showMsg('✅ Zeitplan gespeichert!', 'success')
   }
 
-  function getNextInventurDate(): Date | null {
+  function getNextDueDateForLocation(locationId: string): Date | null {
     if (inventurSchedule.interval === 'disabled') return null
-    const last = auditHistory[0]
-    const base = last ? new Date(last.audit_date) : new Date()
-    const next = new Date(base)
+    const lastAudit = auditHistory
+      .filter(a => a.location_id === locationId)
+      .sort((a, b) => new Date(b.audit_date).getTime() - new Date(a.audit_date).getTime())[0]
+    if (!lastAudit) return null
+    const next = new Date(lastAudit.audit_date)
     if (inventurSchedule.interval === 'weekly')    next.setDate(next.getDate() + 7)
     if (inventurSchedule.interval === 'monthly')   next.setMonth(next.getMonth() + 1)
     if (inventurSchedule.interval === 'quarterly') next.setMonth(next.getMonth() + 3)
@@ -522,45 +527,62 @@ export default function Lager() {
     return next
   }
 
-  async function startInventur() {
-    if (!currentLocationId) return
-    
+  async function startInventur(locationId: string) {
+    if (!locationId) return
+
     try {
+      const [itemsList, stockData] = await Promise.all([
+        pb.collection('inventory_items').getFullList<InventoryItem>({
+          filter: `organization_id = "${user?.organization_id}"`,
+          sort: 'name'
+        }),
+        pb.collection('inventory_stock').getFullList<StockItem>({
+          filter: `location_id = "${locationId}" && organization_id = "${user?.organization_id}"`
+        })
+      ])
+
+      const qtyMap = new Map<string, number>()
+      for (const s of stockData) {
+        qtyMap.set(s.item_id, (qtyMap.get(s.item_id) || 0) + (s.quantity || 0))
+      }
+
       const audit = await pb.collection('inventory_audits').create({
         audit_date: new Date().toISOString(),
         status: 'offen',
         user: user?.email || user?.name || user?.id,
-        location_id: currentLocationId,
+        location_id: locationId,
         organization_id: user?.organization_id
       })
-      
-      for (const item of displayItems) {
+
+      const itemsToAudit = itemsList.filter(item => (qtyMap.get(item.id) || 0) > 0)
+      for (const item of itemsToAudit) {
         await pb.collection('inventory_audit_items').create({
           audit_id: audit.id,
           item_id: item.id,
-          location_id: currentLocationId,
-          expected_quantity: item.qty,
+          location_id: locationId,
+          expected_quantity: qtyMap.get(item.id) || 0,
           actual_quantity: 0,
           checked: false,
           organization_id: user?.organization_id
         })
       }
-      
+
+      setAuditLocationId(locationId)
       setCurrentAudit(audit)
-      await loadAuditItems(audit.id)
+      await loadAuditItems(audit.id, locationId)
       setAuditIndex(0)
-      setInventoryTab('new')
       showMsg('✅ Inventur gestartet!', 'success')
-      
+
     } catch(e: any) {
       alert('Fehler: ' + e.message)
     }
   }
 
-  async function loadAuditItems(auditId: string) {
+  async function loadAuditItems(auditId: string, locationId?: string) {
+    const locId = locationId || currentLocationId
     try {
       const items = await pb.collection('inventory_audit_items').getFullList<AuditItem>({
-        filter: `audit_id = "${auditId}" && location_id = "${currentLocationId}"`,
+        filter: `audit_id = "${auditId}" && location_id = "${locId}"`,
         expand: 'item_id',
         sort: 'checked,created'
       })
@@ -577,26 +599,27 @@ export default function Lager() {
 
   async function saveAuditItem(actual: number, checked: boolean) {
     if (!currentAudit || auditIndex >= auditItems.length) return
-    
+
     const auditItem = auditItems[auditIndex]
-    
+    const locId = auditLocationId || currentLocationId
+
     try {
       await pb.collection('inventory_audit_items').update(auditItem.id, {
         actual_quantity: actual,
         checked: checked
       })
-      
+
       if (checked && actual !== auditItem.expected_quantity) {
         const diff = actual - auditItem.expected_quantity
-        
+
         const stockList = await pb.collection('inventory_stock').getFullList({
-          filter: `item_id = "${auditItem.item_id}" && location_id = "${currentLocationId}"`
+          filter: `item_id = "${auditItem.item_id}" && location_id = "${locId}"`
         })
-        
+
         if (diff > 0) {
           await pb.collection('inventory_stock').create({
             item_id: auditItem.item_id,
-            location_id: currentLocationId,
+            location_id: locId,
             quantity: diff,
             organization_id: user?.organization_id
           })
@@ -604,10 +627,10 @@ export default function Lager() {
           let remaining = Math.abs(diff)
           for (const stock of stockList) {
             if (remaining <= 0) break
-            
+
             const take = Math.min(stock.quantity, remaining)
             const newQty = stock.quantity - take
-            
+
             if (newQty <= 0) {
               await pb.collection('inventory_stock').delete(stock.id)
             } else {
@@ -615,14 +638,14 @@ export default function Lager() {
                 quantity: newQty
               })
             }
-            
+
             remaining -= take
           }
         }
-        
+
         await pb.collection('inventory_transactions').create({
           item_id: auditItem.item_id,
-          location_id: currentLocationId,
+          location_id: locId,
           type: 'korrektur',
           quantity: diff,
           note: `Inventur-Korrektur: ${auditItem.expected_quantity} → ${actual}`,
@@ -630,10 +653,10 @@ export default function Lager() {
           organization_id: user?.organization_id
         })
       }
-      
+
       if (auditIndex < auditItems.length - 1) {
         setAuditIndex(auditIndex + 1)
-        await loadAuditItems(currentAudit.id)
+        await loadAuditItems(currentAudit.id, locId)
       } else {
         await finishInventur()
       }
@@ -654,8 +677,10 @@ export default function Lager() {
       setCurrentAudit(null)
       setAuditItems([])
       setAuditIndex(0)
-      setInventoryTab('history')
+      setAuditLocationId(null)
+      setInventoryTab('new')
       await loadAuditHistory()
+      await loadOpenAudits()
       await loadStock()
       showMsg('✅ Inventur abgeschlossen!', 'success')
       
@@ -1210,7 +1235,7 @@ export default function Lager() {
       {showInventoryModal && (
         <div className="modal" onClick={() => setShowInventoryModal(false)}>
           <div className="modal-box" onClick={(e) => e.stopPropagation()}>
-            <h3>Inventur – {locations.find(l => l.id === currentLocationId)?.name || 'Lager'}</h3>
+            <h3>Inventur</h3>
 
             {/* TABS */}
             <div className="tabs">
@@ -1225,39 +1250,16 @@ export default function Lager() {
               </button>
             </div>
 
-            {/* TAB: INVENTUR */}
+            {/* TAB: INVENTUR – alle Lager */}
             {inventoryTab === 'new' && (
-              !currentAudit ? (
-                <div>
-                  {openAudits.length > 0 && (
-                    <div style={{marginBottom: '16px'}}>
-                      <div style={{fontWeight: 700, fontSize: '0.9rem', color: '#374151', marginBottom: '8px'}}>Offene Inventuren:</div>
-                      {openAudits.map(audit => (
-                        <div key={audit.id} style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', background: '#fef3c7', borderRadius: '8px', marginBottom: '8px', border: '1px solid #fcd34d'}}>
-                          <div>
-                            <div style={{fontWeight: 700, fontSize: '0.9rem'}}>{new Date(audit.audit_date).toLocaleString('de-DE')}</div>
-                            <div style={{fontSize: '0.8rem', color: '#92400e'}}>von {audit.user}</div>
-                          </div>
-                          <button className="btn primary" onClick={() => resumeAudit(audit)}>Weiterführen</button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  <div className="empty-state" style={{marginBottom: '24px'}}>
-                    <div style={{fontSize: '48px', marginBottom: '16px'}}>📋</div>
-                    <div style={{fontWeight: 700, marginBottom: '8px'}}>Inventur durchführen</div>
-                    <div>Zählen Sie alle Artikel und korrigieren Sie Bestände</div>
-                  </div>
-
-                  <button className="btn primary" style={{width: '100%'}} onClick={startInventur}>
-                    Neue Inventur starten
-                  </button>
-                </div>
-              ) : (
+              currentAudit ? (
+                /* Aktive Zählung */
                 <div>
                   <div style={{background: '#f0f9ff', padding: '12px', borderRadius: '8px', marginBottom: '16px'}}>
-                    <strong>Fortschritt:</strong> {auditItems.filter(ai => ai.checked).length} / {auditItems.length} geprüft
+                    <div style={{fontWeight: 700, fontSize: '0.9rem', color: '#0369a1', marginBottom: '2px'}}>
+                      {locations.find(l => l.id === auditLocationId)?.name || 'Lager'}
+                    </div>
+                    <span><strong>Fortschritt:</strong> {auditItems.filter(ai => ai.checked).length} / {auditItems.length} geprüft</span>
                   </div>
 
                   {auditIndex < auditItems.length && (
@@ -1310,6 +1312,69 @@ export default function Lager() {
                     </div>
                   )}
                 </div>
+              ) : (
+                /* Übersicht aller Lager */
+                <div style={{display: 'flex', flexDirection: 'column', gap: '12px'}}>
+                  {locations.map(loc => {
+                    const openAudit = openAudits.find(a => a.location_id === loc.id)
+                    const lastAudit = auditHistory
+                      .filter(a => a.location_id === loc.id)
+                      .sort((a, b) => new Date(b.audit_date).getTime() - new Date(a.audit_date).getTime())[0]
+                    const nextDue = getNextDueDateForLocation(loc.id)
+                    const neverAudited = !lastAudit && inventurSchedule.interval !== 'disabled'
+                    const isOverdue = neverAudited || (nextDue !== null && nextDue < new Date())
+
+                    return (
+                      <div key={loc.id} style={{
+                        background: '#fafafa', borderRadius: '12px', padding: '16px',
+                        border: `1px solid ${isOverdue ? '#fecaca' : '#e5e7eb'}`,
+                        borderLeft: `4px solid ${isOverdue ? '#b91c1c' : openAudit ? '#f59e0b' : '#e5e7eb'}`
+                      }}>
+                        <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px'}}>
+                          <div style={{fontWeight: 700, fontSize: '1rem'}}>{loc.name}</div>
+                          <div style={{display: 'flex', gap: '6px', alignItems: 'center'}}>
+                            {openAudit && (
+                              <span style={{fontSize: '0.75rem', background: '#fef3c7', color: '#92400e', padding: '2px 8px', borderRadius: '999px', fontWeight: 700}}>
+                                Offen
+                              </span>
+                            )}
+                            {isOverdue && (
+                              <span style={{fontSize: '0.75rem', background: '#fee2e2', color: '#b91c1c', padding: '2px 8px', borderRadius: '999px', fontWeight: 700}}>
+                                Überfällig
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        <div style={{fontSize: '0.85rem', color: '#64748b', marginBottom: '12px', display: 'flex', flexDirection: 'column', gap: '2px'}}>
+                          <div>
+                            Letzte Inventur:{' '}
+                            {lastAudit
+                              ? `${new Date(lastAudit.audit_date).toLocaleDateString('de-DE')} · ${lastAudit.user}`
+                              : 'Noch nie durchgeführt'}
+                          </div>
+                          {inventurSchedule.interval !== 'disabled' && (
+                            <div style={{color: isOverdue ? '#b91c1c' : '#64748b'}}>
+                              Nächste fällig:{' '}
+                              {neverAudited ? 'Sofort' : nextDue?.toLocaleDateString('de-DE')}
+                            </div>
+                          )}
+                        </div>
+
+                        <div style={{display: 'flex', gap: '8px'}}>
+                          {openAudit && (
+                            <button className="btn primary" onClick={() => resumeAudit(openAudit)}>
+                              Weiterführen
+                            </button>
+                          )}
+                          <button className="btn" onClick={() => startInventur(loc.id)}>
+                            {openAudit ? 'Neu starten' : 'Inventur starten'}
+                          </button>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
               )
             )}
 
@@ -1321,8 +1386,11 @@ export default function Lager() {
                     <button className="btn" style={{marginBottom: '16px'}} onClick={() => { setSelectedHistoryAudit(null); setHistoryAuditItems([]) }}>
                       ← Zurück zur Liste
                     </button>
-                    <div style={{fontWeight: 700, marginBottom: '4px'}}>{new Date(selectedHistoryAudit.audit_date).toLocaleString('de-DE')}</div>
-                    <div style={{fontSize: '0.85rem', color: '#64748b', marginBottom: '16px'}}>Durchgeführt von: {selectedHistoryAudit.user}</div>
+                    <div style={{fontWeight: 700, marginBottom: '2px'}}>{new Date(selectedHistoryAudit.audit_date).toLocaleString('de-DE')}</div>
+                    <div style={{fontSize: '0.85rem', color: '#64748b', marginBottom: '4px'}}>
+                      {locations.find(l => l.id === selectedHistoryAudit.location_id)?.name || 'Unbekannter Standort'}
+                    </div>
+                    <div style={{fontSize: '0.85rem', color: '#64748b', marginBottom: '16px'}}>von {selectedHistoryAudit.user}</div>
 
                     {historyAuditItems.length === 0 ? (
                       <div style={{color: '#64748b', fontSize: '0.9rem', textAlign: 'center', padding: '24px'}}>Keine Einträge gefunden</div>
@@ -1373,7 +1441,10 @@ export default function Lager() {
                             <div className="audit-date">{new Date(audit.audit_date).toLocaleString('de-DE')}</div>
                             <div className="audit-status abgeschlossen">✓ Abgeschlossen</div>
                           </div>
-                          <div className="audit-user"><strong>Durchgeführt von:</strong> {audit.user}</div>
+                          <div className="audit-user">
+                            <strong>{locations.find(l => l.id === audit.location_id)?.name || 'Standort'}</strong>
+                            {' · '}{audit.user}
+                          </div>
                         </div>
                       ))
                     )}
@@ -1386,7 +1457,7 @@ export default function Lager() {
             {inventoryTab === 'schedule' && (
               <div>
                 <div className="form-group">
-                  <label>Inventur-Intervall</label>
+                  <label>Inventur-Intervall (gilt für alle Standorte)</label>
                   <select value={inventurSchedule.interval} onChange={(e) => setInventurSchedule({ interval: e.target.value })}>
                     <option value="disabled">Deaktiviert</option>
                     <option value="weekly">Wöchentlich</option>
@@ -1397,25 +1468,39 @@ export default function Lager() {
                   </select>
                 </div>
 
-                {inventurSchedule.interval !== 'disabled' && (() => {
-                  const next = getNextInventurDate()
-                  if (!next) return null
-                  const isOverdue = next < new Date()
-                  return (
-                    <div style={{background: '#f0f9ff', borderRadius: '8px', padding: '12px', marginBottom: '16px', border: '1px solid #bae6fd'}}>
-                      <div style={{fontSize: '0.85rem', color: '#0369a1', fontWeight: 700, marginBottom: '4px'}}>Nächste Inventur:</div>
-                      <div style={{fontSize: '1rem', fontWeight: 700, color: isOverdue ? '#b91c1c' : '#0369a1'}}>
-                        {next.toLocaleDateString('de-DE')}
-                        {isOverdue && <span style={{marginLeft: '8px', fontSize: '0.85rem', background: '#fee2e2', color: '#b91c1c', padding: '2px 8px', borderRadius: '999px'}}>Überfällig</span>}
-                      </div>
-                      {auditHistory[0] && (
-                        <div style={{fontSize: '0.8rem', color: '#64748b', marginTop: '4px'}}>
-                          Letzte Inventur: {new Date(auditHistory[0].audit_date).toLocaleDateString('de-DE')}
+                {inventurSchedule.interval !== 'disabled' && (
+                  <div style={{display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px'}}>
+                    <div style={{fontWeight: 700, fontSize: '0.85rem', color: '#374151'}}>Fälligkeiten je Standort:</div>
+                    {locations.map(loc => {
+                      const nextDue = getNextDueDateForLocation(loc.id)
+                      const lastAudit = auditHistory
+                        .filter(a => a.location_id === loc.id)
+                        .sort((a, b) => new Date(b.audit_date).getTime() - new Date(a.audit_date).getTime())[0]
+                      const neverAudited = !lastAudit
+                      const isOverdue = neverAudited || (nextDue !== null && nextDue < new Date())
+                      return (
+                        <div key={loc.id} style={{
+                          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                          padding: '10px 12px', borderRadius: '8px',
+                          background: isOverdue ? '#fef2f2' : '#f0fdf4',
+                          border: `1px solid ${isOverdue ? '#fecaca' : '#bbf7d0'}`
+                        }}>
+                          <div style={{fontWeight: 700, fontSize: '0.9rem'}}>{loc.name}</div>
+                          <div style={{textAlign: 'right', fontSize: '0.85rem'}}>
+                            {neverAudited ? (
+                              <span style={{color: '#b91c1c', fontWeight: 700}}>Noch nie – sofort fällig</span>
+                            ) : (
+                              <span style={{color: isOverdue ? '#b91c1c' : '#166534', fontWeight: 600}}>
+                                {nextDue?.toLocaleDateString('de-DE')}
+                                {isOverdue && ' ⚠ Überfällig'}
+                              </span>
+                            )}
+                          </div>
                         </div>
-                      )}
-                    </div>
-                  )
-                })()}
+                      )
+                    })}
+                  </div>
+                )}
 
                 <button className="btn primary" style={{width: '100%'}} onClick={saveSchedule}>
                   Speichern
@@ -1428,6 +1513,7 @@ export default function Lager() {
                 setShowInventoryModal(false)
                 setCurrentAudit(null)
                 setAuditItems([])
+                setAuditLocationId(null)
                 setSelectedHistoryAudit(null)
                 setHistoryAuditItems([])
               }}>
