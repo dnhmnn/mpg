@@ -693,10 +693,11 @@ export default function Lager() {
   async function saveItemDetail() {
     if (!detailItem) return
     try {
-      await pb.collection('inventory_items').update(detailItem.id, {
-        notes: detailNote,
-        min_stock: detailSoll
-      })
+      try {
+        await pb.collection('inventory_items').update(detailItem.id, { notes: detailNote, min_stock: detailSoll })
+      } catch {
+        await pb.collection('inventory_items').update(detailItem.id, { min_stock: detailSoll })
+      }
       setDisplayItems(prev => prev.map(i =>
         i.id === detailItem.id
           ? { ...i, notes: detailNote, min_stock: detailSoll, status: computeStatus(i.expiry, i.qty, detailSoll) }
@@ -1307,28 +1308,6 @@ export default function Lager() {
               />
             </div>
             
-            {buchungType === 'ein' && (
-              <>
-                <div className="form-group">
-                  <label>Ablaufdatum (optional)</label>
-                  <input
-                    type="date"
-                    value={buchungExpiry}
-                    onChange={(e) => setBuchungExpiry(e.target.value)}
-                  />
-                </div>
-                
-                <div className="form-group">
-                  <label>Charge/Bemerkung (optional)</label>
-                  <input
-                    type="text"
-                    value={buchungBatch}
-                    onChange={(e) => setBuchungBatch(e.target.value)}
-                    placeholder="z.B. Charge 12345"
-                  />
-                </div>
-              </>
-            )}
             
             <div style={{display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '24px'}}>
               <button className="btn" onClick={() => setShowBuchungModal(false)}>
