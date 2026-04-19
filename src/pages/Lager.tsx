@@ -703,16 +703,12 @@ export default function Lager() {
         alert(`PocketBase hat min_stock nicht gespeichert!\nGesendet: ${detailSoll}\nZurückbekommen: ${updated.min_stock}\n\nBitte im PocketBase Admin das Feld "min_stock" (Typ: Number) in der inventory_items Collection anlegen.`)
         return
       }
-      // Update expiry date on all stock entries for this item/location
-      if (detailExpiry !== (detailItem.expiry ? detailItem.expiry.slice(0, 10) : '')) {
-        const stocks = await pb.collection('inventory_stock').getFullList({
-          filter: `item_id = "${detailItem.id}" && location_id = "${currentLocationId}"`
-        })
-        for (const s of stocks) {
-          await pb.collection('inventory_stock').update(s.id, {
-            expiry_date: detailExpiry || null
-          })
-        }
+      // Save expiry date on all stock entries for this item/location
+      const stocks = await pb.collection('inventory_stock').getFullList({
+        filter: `item_id = "${detailItem.id}" && location_id = "${currentLocationId}"`
+      })
+      for (const s of stocks) {
+        await pb.collection('inventory_stock').update(s.id, { expiry_date: detailExpiry || null })
       }
       await loadStock()
       setDetailItem(prev => prev ? { ...prev, notes: detailNote, min_stock: detailSoll, expiry: detailExpiry || undefined } : null)
@@ -1379,8 +1375,8 @@ export default function Lager() {
               </div>
             </div>
 
-            {/* SOLL & Bemerkungen */}
-            <div style={{display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '12px', marginBottom: '20px'}}>
+            {/* SOLL, Bemerkung & Ablaufdatum */}
+            <div style={{display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '12px', marginBottom: '12px'}}>
               <div className="form-group" style={{marginBottom: 0}}>
                 <label>SOLL (Mindestbestand)</label>
                 <input
@@ -1400,12 +1396,7 @@ export default function Lager() {
                 />
               </div>
             </div>
-            <button className="btn primary" style={{width: '100%', marginBottom: '20px'}} onClick={saveItemDetail}>
-              Speichern
-            </button>
-
-            {/* Ablaufdatum */}
-            <div className="form-group" style={{marginBottom: '20px'}}>
+            <div className="form-group" style={{marginBottom: '12px'}}>
               <label>Ablaufdatum</label>
               <input
                 type="date"
@@ -1413,6 +1404,9 @@ export default function Lager() {
                 onChange={(e) => setDetailExpiry(e.target.value)}
               />
             </div>
+            <button className="btn primary" style={{width: '100%', marginBottom: '20px'}} onClick={saveItemDetail}>
+              Speichern
+            </button>
 
             {/* Transaction history */}
             <div>
