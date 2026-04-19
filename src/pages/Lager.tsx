@@ -1,17 +1,15 @@
 import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
 import { pb } from '../lib/pocketbase'
 import { useAuth } from '../hooks/useAuth'
-import type { User } from '../types'
 import StatusBar from '../components/StatusBar'
 
 
 interface InventoryItem {
   id: string
   name: string
-  category: string
   unit: string
   min_stock: number
+  notes?: string
   organization_id: string
   created: string
 }
@@ -36,11 +34,11 @@ interface Location {
 interface DisplayItem {
   id: string
   name: string
-  category: string
   unit: string
   min_stock: number
   qty: number
   expiry?: string
+  notes?: string
   status: 'ok' | 'warn' | 'exp'
 }
 
@@ -110,7 +108,6 @@ export default function Lager() {
   
   const [itemFormData, setItemFormData] = useState({
     name: '',
-    category: '',
     unit: 'Stück',
     min_stock: 0
   })
@@ -134,6 +131,15 @@ export default function Lager() {
   const [buchungExpiry, setBuchungExpiry] = useState('')
   const [buchungBatch, setBuchungBatch] = useState('')
 
+  // Item detail state
+  const [showItemDetailModal, setShowItemDetailModal] = useState(false)
+  const [detailItem, setDetailItem] = useState<DisplayItem | null>(null)
+  const [detailTransactions, setDetailTransactions] = useState<Transaction[]>([])
+  const [detailStockEntries, setDetailStockEntries] = useState<StockItem[]>([])
+  const [detailNote, setDetailNote] = useState('')
+  const [detailSoll, setDetailSoll] = useState(0)
+  const [detailLoadingData, setDetailLoadingData] = useState(false)
+
   // Multi-buchung state
   const [showMultiBuchungModal, setShowMultiBuchungModal] = useState(false)
   const [multiBuchungItems, setMultiBuchungItems] = useState<Array<{itemId: string, qty: number, expiry: string}>>([])
@@ -153,18 +159,6 @@ export default function Lager() {
       loadStock()
     }
   }, [currentLocationId])
-
-  useEffect(() => {
-    function closeMenus(e: MouseEvent) {
-      if (!(e.target as HTMLElement).closest('.item-menu-container')) {
-        document.querySelectorAll('.item-menu-dropdown').forEach(menu => {
-          menu.classList.remove('show')
-        })
-      }
-    }
-    document.addEventListener('click', closeMenus)
-    return () => document.removeEventListener('click', closeMenus)
-  }, [])
 
   async function loadLocations() {
     try {
@@ -216,11 +210,11 @@ export default function Lager() {
         itemMap.set(item.id, {
           id: item.id,
           name: item.name,
-          category: item.category,
           unit: item.unit,
           min_stock: item.min_stock,
           qty: 0,
           expiry: undefined,
+          notes: item.notes,
           status: 'ok'
         })
       }
@@ -237,7 +231,7 @@ export default function Lager() {
       
       const items_list = Array.from(itemMap.values()).map(item => ({
         ...item,
-        status: computeStatus(item.expiry)
+        status: computeStatus(item.expiry, item.qty, item.min_stock)
       }))
       
       setDisplayItems(items_list)
@@ -250,14 +244,15 @@ export default function Lager() {
     }
   }
 
-  function computeStatus(expiry?: string): 'ok' | 'warn' | 'exp' {
-    if (!expiry) return 'ok'
-    const today = new Date()
-    const expiryDate = new Date(expiry)
-    const diffDays = Math.floor((expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
-    
-    if (diffDays < 0) return 'exp'
-    if (diffDays < 30) return 'warn'
+  function computeStatus(expiry?: string, qty?: number, min_stock?: number): 'ok' | 'warn' | 'exp' {
+    if (expiry) {
+      const today = new Date()
+      const expiryDate = new Date(expiry)
+      const diffDays = Math.floor((expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+      if (diffDays < 0) return 'exp'
+      if (diffDays < 30) return 'warn'
+    }
+    if (min_stock && min_stock > 0 && qty !== undefined && qty < min_stock) return 'warn'
     return 'ok'
   }
 
@@ -378,7 +373,7 @@ export default function Lager() {
       
       setShowAddItemModal(false)
       setEditingItemId(null)
-      setItemFormData({ name: '', category: '', unit: 'Stück', min_stock: 0 })
+      setItemFormData({ name: '', unit: 'Stück', min_stock: 0 })
       await loadStock()
       
     } catch(e: any) {
@@ -653,6 +648,54 @@ export default function Lager() {
     setMultiBuchungNewExpiry('')
   }
 
+  async function openItemDetail(item: DisplayItem) {
+    setDetailItem(item)
+    setDetailNote(item.notes || '')
+    setDetailSoll(item.min_stock)
+    setDetailTransactions([])
+    setDetailStockEntries([])
+    setShowItemDetailModal(true)
+    setDetailLoadingData(true)
+    try {
+      const [txns, stocks] = await Promise.all([
+        pb.collection('inventory_transactions').getFullList<Transaction>({
+          filter: `item_id = "${item.id}"`,
+          sort: '-created',
+          limit: 50
+        }),
+        pb.collection('inventory_stock').getFullList<StockItem>({
+          filter: `item_id = "${item.id}" && location_id = "${currentLocationId}"`,
+          sort: 'expiry_date'
+        })
+      ])
+      setDetailTransactions(txns)
+      setDetailStockEntries(stocks)
+    } catch(e: any) {
+      console.error('Error loading item detail:', e)
+    } finally {
+      setDetailLoadingData(false)
+    }
+  }
+
+  async function saveItemDetail() {
+    if (!detailItem) return
+    try {
+      await pb.collection('inventory_items').update(detailItem.id, {
+        notes: detailNote,
+        min_stock: detailSoll
+      })
+      setDisplayItems(prev => prev.map(i =>
+        i.id === detailItem.id
+          ? { ...i, notes: detailNote, min_stock: detailSoll, status: computeStatus(i.expiry, i.qty, detailSoll) }
+          : i
+      ))
+      setDetailItem(prev => prev ? { ...prev, notes: detailNote, min_stock: detailSoll } : null)
+      showMsg('✅ Gespeichert!', 'success')
+    } catch(e: any) {
+      alert('Fehler: ' + e.message)
+    }
+  }
+
   function exportPDF() {
     const location = locations.find(l => l.id === currentLocationId)
     const locName = location?.name || 'Lager'
@@ -663,7 +706,6 @@ export default function Lager() {
       .map(item => `
         <tr>
           <td>${item.name}</td>
-          <td>${item.category || '—'}</td>
           <td style="text-align:center">${item.qty} ${item.unit}</td>
           <td style="text-align:center">${item.min_stock || '—'}</td>
           <td style="text-align:center">${item.expiry ? new Date(item.expiry).toLocaleDateString('de-DE') : '—'}</td>
@@ -683,7 +725,7 @@ export default function Lager() {
       <h1>Bestandsliste – ${locName}</h1>
       <div class="sub">Erstellt am ${date}</div>
       <table>
-        <thead><tr><th>Artikel</th><th>Kategorie</th><th>Bestand</th><th>Mindestbestand</th><th>Ablaufdatum</th></tr></thead>
+        <thead><tr><th>Artikel</th><th>Bestand</th><th>SOLL</th><th>Ablaufdatum</th></tr></thead>
         <tbody>${rows}</tbody>
       </table>
       </body></html>`
@@ -696,8 +738,7 @@ export default function Lager() {
 
     if (searchQuery) {
       const needle = searchQuery.toLowerCase()
-      if (!item.name.toLowerCase().includes(needle) &&
-          !item.category.toLowerCase().includes(needle)) {
+      if (!item.name.toLowerCase().includes(needle)) {
         return false
       }
     }
@@ -710,11 +751,12 @@ export default function Lager() {
     return true
   })
 
+  const activeItems = displayItems.filter(i => i.qty > 0)
   const stats = {
-    ok: displayItems.filter(i => i.status === 'ok').length,
-    warn: displayItems.filter(i => i.status === 'warn').length,
-    exp: displayItems.filter(i => i.status === 'exp').length,
-    total: displayItems.length
+    ok: activeItems.filter(i => i.status === 'ok').length,
+    warn: activeItems.filter(i => i.status === 'warn').length,
+    exp: activeItems.filter(i => i.status === 'exp').length,
+    total: activeItems.length
   }
 
   if (authLoading) {
@@ -877,18 +919,20 @@ export default function Lager() {
                 <div
                   key={item.id}
                   className={`item-row ${isZero ? 'zero' : item.status}`}
+                  onClick={() => openItemDetail(item)}
+                  style={{cursor: 'pointer'}}
                 >
                   <div className="item-header">
                     <div className="item-info">
                       <div className="item-name">{item.name}</div>
-                      {item.category && (
-                        <div className="item-category">{item.category}</div>
+                      {item.notes && (
+                        <div className="item-category" style={{fontStyle: 'italic'}}>{item.notes}</div>
                       )}
                     </div>
                     <div className="item-right">
                       <div className="item-qty">
                         <div className={`qty-display ${isLow ? 'low' : ''}`}>
-                          IST: {item.qty} {item.unit} / SOLL: {item.min_stock}
+                          {item.qty} / {item.min_stock} {item.unit}
                         </div>
                         {item.expiry && (
                           <div className="expiry-date">
@@ -899,12 +943,13 @@ export default function Lager() {
                       <div className="item-quick-btns">
                         <button
                           className="quick-btn minus"
-                          onClick={() => adjustQty(item.id, -1)}
+                          onClick={(e) => { e.stopPropagation(); adjustQty(item.id, -1) }}
                           title="Ausbuchen (-1)"
                         >−</button>
                         <button
                           className="quick-btn plus"
-                          onClick={() => {
+                          onClick={(e) => {
+                            e.stopPropagation()
                             setSelectedBuchungItem(item.id)
                             setBuchungType('ein')
                             setShowBuchungModal(true)
@@ -987,7 +1032,7 @@ export default function Lager() {
               className="btn primary" 
               style={{width: '100%', marginBottom: '16px'}}
               onClick={() => {
-                setItemFormData({ name: '', category: '', unit: 'Stück', min_stock: 0 })
+                setItemFormData({ name: '', unit: 'Stück', min_stock: 0 })
                 setEditingItemId(null)
                 setShowAddItemModal(true)
               }}
@@ -1004,7 +1049,7 @@ export default function Lager() {
                     <div className="item-card-info">
                       <div className="item-card-name">{item.name}</div>
                       <div className="item-card-meta">
-                        {item.category || 'Keine Kategorie'} • {item.unit || 'Stück'} • Min: {item.min_stock || 0}
+                        {item.unit || 'Stück'} • SOLL: {item.min_stock || 0}
                       </div>
                     </div>
                     <div style={{display: 'flex', gap: '8px'}}>
@@ -1013,7 +1058,6 @@ export default function Lager() {
                         onClick={() => {
                           setItemFormData({
                             name: item.name,
-                            category: item.category,
                             unit: item.unit,
                             min_stock: item.min_stock
                           })
@@ -1136,7 +1180,7 @@ export default function Lager() {
                       <div style={{background: '#fafafa', padding: '16px', borderRadius: '8px', marginBottom: '16px'}}>
                         <h4 style={{margin: '0 0 8px 0'}}>{auditIndex + 1}. {auditItems[auditIndex]?.expand?.item_id?.name}</h4>
                         <div style={{color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '8px'}}>
-                          {auditItems[auditIndex]?.expand?.item_id?.category || 'Keine Kategorie'} • {auditItems[auditIndex]?.expand?.item_id?.unit || 'Stück'}
+                          {auditItems[auditIndex]?.expand?.item_id?.unit || 'Stück'}
                         </div>
                         
                         <div style={{background: 'var(--bg-card)', padding: '12px', borderRadius: '8px', marginBottom: '12px'}}>
@@ -1238,7 +1282,7 @@ export default function Lager() {
                 <option value="">-- Artikel wählen --</option>
                 {allItems.map(item => (
                   <option key={item.id} value={item.id}>
-                    {item.name} ({item.category || 'Keine Kategorie'})
+                    {item.name}
                   </option>
                 ))}
               </select>
@@ -1284,6 +1328,110 @@ export default function Lager() {
               <button className="btn primary" onClick={saveBuchung}>
                 {buchungType === 'ein' ? 'Einbuchen' : 'Ausbuchen'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ARTIKEL DETAIL MODAL */}
+      {showItemDetailModal && detailItem && (
+        <div className="modal" onClick={() => setShowItemDetailModal(false)}>
+          <div className="modal-box" onClick={(e) => e.stopPropagation()}>
+            <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '4px'}}>
+              <h3 style={{margin: 0}}>{detailItem.name}</h3>
+              <span style={{
+                background: detailItem.status === 'exp' ? '#fee2e2' : detailItem.status === 'warn' ? '#fef3c7' : '#dcfce7',
+                color: detailItem.status === 'exp' ? '#b91c1c' : detailItem.status === 'warn' ? '#92400e' : '#15803d',
+                padding: '4px 10px', borderRadius: '999px', fontSize: '0.8rem', fontWeight: 700
+              }}>
+                {detailItem.status === 'exp' ? 'Abgelaufen' : detailItem.status === 'warn' ? 'Achtung' : 'In Ordnung'}
+              </span>
+            </div>
+            <div style={{color: '#64748b', fontSize: '0.9rem', marginBottom: '20px'}}>
+              IST: {detailItem.qty} {detailItem.unit}
+            </div>
+
+            {/* SOLL & Bemerkungen */}
+            <div style={{display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '12px', marginBottom: '20px'}}>
+              <div className="form-group" style={{marginBottom: 0}}>
+                <label>SOLL (Mindestbestand)</label>
+                <input
+                  type="number"
+                  value={detailSoll}
+                  onChange={(e) => setDetailSoll(parseInt(e.target.value) || 0)}
+                  min="0"
+                />
+              </div>
+              <div className="form-group" style={{marginBottom: 0}}>
+                <label>Bemerkung</label>
+                <input
+                  type="text"
+                  value={detailNote}
+                  onChange={(e) => setDetailNote(e.target.value)}
+                  placeholder="Freitext..."
+                />
+              </div>
+            </div>
+            <button className="btn primary" style={{width: '100%', marginBottom: '20px'}} onClick={saveItemDetail}>
+              Speichern
+            </button>
+
+            {/* Stock entries / Ablaufdaten */}
+            <div style={{marginBottom: '20px'}}>
+              <div style={{fontWeight: 700, fontSize: '0.9rem', marginBottom: '8px', color: '#374151'}}>Bestand nach Ablaufdatum</div>
+              {detailLoadingData ? (
+                <div style={{color: '#64748b', fontSize: '0.9rem'}}>Lade...</div>
+              ) : detailStockEntries.length === 0 ? (
+                <div style={{color: '#64748b', fontSize: '0.9rem'}}>Kein Bestand vorhanden</div>
+              ) : (
+                detailStockEntries.map(stock => (
+                  <div key={stock.id} style={{
+                    display: 'flex', justifyContent: 'space-between', padding: '8px 12px',
+                    background: '#f9fafb', borderRadius: '8px', marginBottom: '4px', fontSize: '0.9rem'
+                  }}>
+                    <span style={{fontWeight: 600}}>{stock.quantity} {detailItem.unit}</span>
+                    <span style={{color: '#64748b'}}>
+                      {stock.expiry_date ? `Ablaufdatum: ${new Date(stock.expiry_date).toLocaleDateString('de-DE')}` : 'Kein Ablaufdatum'}
+                    </span>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* Transaction history */}
+            <div>
+              <div style={{fontWeight: 700, fontSize: '0.9rem', marginBottom: '8px', color: '#374151'}}>Verlauf</div>
+              <div style={{maxHeight: '220px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px'}}>
+                {detailLoadingData ? (
+                  <div style={{color: '#64748b', fontSize: '0.9rem'}}>Lade...</div>
+                ) : detailTransactions.length === 0 ? (
+                  <div style={{color: '#64748b', fontSize: '0.9rem'}}>Keine Transaktionen</div>
+                ) : (
+                  detailTransactions.map(txn => (
+                    <div key={txn.id} style={{
+                      display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                      padding: '8px 12px', background: '#f9fafb', borderRadius: '8px',
+                      borderLeft: `3px solid ${txn.type === 'einbuchung' ? '#16a34a' : txn.type === 'ausbuchung' ? '#b91c1c' : '#f59e0b'}`,
+                      fontSize: '0.85rem'
+                    }}>
+                      <div>
+                        <div style={{fontWeight: 600}}>
+                          {txn.type === 'einbuchung' ? `+${txn.quantity}` : txn.type === 'ausbuchung' ? `${txn.quantity}` : `Korrektur ${txn.quantity > 0 ? '+' : ''}${txn.quantity}`} {detailItem.unit}
+                        </div>
+                        {txn.note && <div style={{color: '#64748b', marginTop: '2px'}}>{txn.note}</div>}
+                      </div>
+                      <div style={{textAlign: 'right', color: '#64748b'}}>
+                        <div>{txn.user}</div>
+                        <div>{new Date(txn.created).toLocaleDateString('de-DE')}</div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            <div style={{display: 'flex', justifyContent: 'flex-end', marginTop: '20px'}}>
+              <button className="btn" onClick={() => setShowItemDetailModal(false)}>Schließen</button>
             </div>
           </div>
         </div>
@@ -1377,25 +1525,13 @@ export default function Lager() {
               />
             </div>
             
-            <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px'}}>
-              <div className="form-group">
-                <label>Kategorie</label>
-                <input
-                  type="text"
-                  value={itemFormData.category}
-                  onChange={(e) => setItemFormData({...itemFormData, category: e.target.value})}
-                  placeholder="z.B. Verbandmaterial"
-                />
-              </div>
-              
-              <div className="form-group">
-                <label>Einheit</label>
-                <input
-                  type="text"
-                  value={itemFormData.unit}
-                  onChange={(e) => setItemFormData({...itemFormData, unit: e.target.value})}
-                />
-              </div>
+            <div className="form-group">
+              <label>Einheit</label>
+              <input
+                type="text"
+                value={itemFormData.unit}
+                onChange={(e) => setItemFormData({...itemFormData, unit: e.target.value})}
+              />
             </div>
             
             <div className="form-group">
