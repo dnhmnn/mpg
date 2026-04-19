@@ -1132,21 +1132,24 @@ body {
 
   /* Hub: apps left, widgets right */
   .hub-layout {
-    display: grid;
-    grid-template-columns: 1fr 260px;
-    grid-template-areas: "apps widgets";
+    display: flex;
+    flex-direction: row;
     gap: 28px;
-    align-items: start;
+    align-items: flex-start;
   }
 
+  /* Apps on the left (order 1 = appears before order 2) */
   .hub-apps {
-    grid-area: apps;
+    flex: 1;
+    min-width: 0;
+    order: 1;
   }
 
+  /* Widgets on the right (order 2 = appears after order 1) */
   .hub-widgets {
-    grid-area: widgets;
-    position: sticky;
-    top: calc(54px + env(safe-area-inset-top) + 24px);
+    width: 260px;
+    flex-shrink: 0;
+    order: 2;
   }
 
   /* Widgets stack vertically in sidebar */
@@ -1155,10 +1158,6 @@ body {
     flex-direction: column;
     gap: 12px;
     margin-bottom: 0;
-  }
-
-  .hub-widgets .widget.large {
-    /* flex item – no grid-column span needed */
   }
 
   /* Apps: more columns on tablet */
@@ -1187,8 +1186,11 @@ body {
 
 /* Large desktop: wider sidebar, more app columns */
 @media (min-width: 1100px) {
+  .hub-widgets {
+    width: 300px;
+  }
+
   .hub-layout {
-    grid-template-columns: 1fr 300px;
     gap: 40px;
   }
 
