@@ -692,22 +692,23 @@ export default function Lager() {
 
   async function saveItemDetail() {
     if (!detailItem) return
+    let firstError: any = null
     try {
+      await pb.collection('inventory_items').update(detailItem.id, { notes: detailNote, min_stock: detailSoll })
+    } catch(e1: any) {
+      firstError = e1
       try {
-        await pb.collection('inventory_items').update(detailItem.id, { notes: detailNote, min_stock: detailSoll })
-      } catch {
         await pb.collection('inventory_items').update(detailItem.id, { min_stock: detailSoll })
+      } catch(e2: any) {
+        const detail = e2?.data ? JSON.stringify(e2.data) : e2.message
+        alert(`Speichern fehlgeschlagen.\nID: ${detailItem.id}\nSOLL: ${detailSoll}\nFehler: ${detail}`)
+        return
       }
-      setDisplayItems(prev => prev.map(i =>
-        i.id === detailItem.id
-          ? { ...i, notes: detailNote, min_stock: detailSoll, status: computeStatus(i.expiry, i.qty, detailSoll) }
-          : i
-      ))
-      setDetailItem(prev => prev ? { ...prev, notes: detailNote, min_stock: detailSoll } : null)
-      showMsg('✅ Gespeichert!', 'success')
-    } catch(e: any) {
-      alert('Fehler: ' + e.message)
     }
+    // Reload from server to confirm the save
+    await loadStock()
+    setDetailItem(prev => prev ? { ...prev, notes: detailNote, min_stock: detailSoll } : null)
+    showMsg('✅ Gespeichert!', 'success')
   }
 
   function exportPDF() {
