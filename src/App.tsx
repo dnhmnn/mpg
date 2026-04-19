@@ -9,6 +9,8 @@ import Files from './pages/Files'
 import Lager from './pages/Lager'
 import MPG from './pages/MPG'
 import Lernbar from './pages/Lernbar'
+import Unitas from './pages/Unitas'
+import Unitarii from './pages/Unitarii'
 import './styles/globals.css'
 import { applyTheme, getTheme } from './lib/theme'
 
@@ -29,6 +31,8 @@ function App() {
         <Route path="/mpg" element={<MPG />} />
         <Route path="/einladung/:token" element={<Einladung />} />
         <Route path="/lernbar" element={<Lernbar />} />
+        <Route path="/unitas" element={<Unitas />} />
+        <Route path="/unitarii" element={<Unitarii />} />
       </Routes>
     </BrowserRouter>
   )

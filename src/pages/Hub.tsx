@@ -19,15 +19,16 @@ const ALL_APPS: Record<string, App> = {
   produktausgabe: { id: 'produktausgabe', name: 'Ausgabe', icon: 'check', url: '/produktausgabe.html', permission: 'produktausgabe' },
   dateien: { id: 'dateien', name: 'Dateien', icon: 'folder', url: '/files', permission: 'dateien', isInternal: true },
   qr: { id: 'qr', name: 'QR-Codes', icon: 'qrcode', url: '/qr-code-generator.html', permission: 'qr' },
-  lernbar: { id: 'lernbar', name: 'Lernbar', icon: 'graduation', url: '/lernbar.html', permission: 'lernbar' },
+  lernbar: { id: 'lernbar', name: 'Unitas', icon: 'graduation', url: '/unitas', permission: 'lernbar', isInternal: true },
   ausbildungen: { id: 'ausbildungen', name: 'Ausbildungen', icon: 'book', url: '/ausbildungen', permission: 'ausbildungen_manage', isInternal: true },
+  unitarii: { id: 'unitarii', name: 'Unitarii', icon: 'users', url: '/unitarii', permission: 'unitarii', isInternal: true },
   chat: { id: 'chat', name: 'Chat', icon: 'chat', url: '/chat.html', permission: 'chat' },
   dashboard: { id: 'dashboard', name: 'Dashboard', icon: 'dashboard', url: '/mpg-dashboard.html', permission: 'dashboard' },
   settings: { id: 'settings', name: 'Einstellungen', icon: 'settings', url: '#settings', permission: 'dashboard', isInternal: true }
 }
 
 const ROLES: Record<string, { permissions: Record<string, boolean> }> = {
-  mpg: { permissions: { dashboard: true, einsaetze: true, lager: true, produktausgabe: true, lernbar: true, ausbildungen_manage: true, dokumente: true, patienten: true, dateien: true, qr: true, chat: true } },
+  mpg: { permissions: { dashboard: true, einsaetze: true, lager: true, produktausgabe: true, lernbar: true, ausbildungen_manage: true, dokumente: true, patienten: true, dateien: true, qr: true, chat: true, unitarii: true } },
   lager: { permissions: { dashboard: true, lager: true, produktausgabe: true, dateien: true, qr: true, chat: true } },
   ausbildung: { permissions: { dashboard: true, einsaetze: true, lernbar: true, ausbildungen_manage: true, patienten: true, dateien: true, qr: true, chat: true } },
   qm: { permissions: { dashboard: true, dokumente: true, dateien: true, qr: true, chat: true } },
