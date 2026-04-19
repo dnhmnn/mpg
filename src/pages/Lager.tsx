@@ -138,6 +138,7 @@ export default function Lager() {
   const [detailStockEntries, setDetailStockEntries] = useState<StockItem[]>([])
   const [detailNote, setDetailNote] = useState('')
   const [detailSoll, setDetailSoll] = useState(0)
+  const [detailExpiry, setDetailExpiry] = useState('')
   const [detailLoadingData, setDetailLoadingData] = useState(false)
 
   // Multi-buchung state
@@ -652,6 +653,7 @@ export default function Lager() {
     setDetailItem(item)
     setDetailNote(item.notes || '')
     setDetailSoll(item.min_stock)
+    setDetailExpiry(item.expiry ? item.expiry.slice(0, 10) : '')
     setDetailTransactions([])
     setDetailStockEntries([])
     setShowItemDetailModal(true)
@@ -698,11 +700,22 @@ export default function Lager() {
         notes: detailNote
       })
       if (Number(updated.min_stock) !== detailSoll) {
-        alert(`PocketBase hat min_stock nicht gespeichert!\nGesendet: ${detailSoll}\nZurückbekommen: ${updated.min_stock}\n\nBitte im PocketBase Admin prüfen ob das Feld "min_stock" in inventory_items editierbar ist (kein "No Update" Haken).`)
+        alert(`PocketBase hat min_stock nicht gespeichert!\nGesendet: ${detailSoll}\nZurückbekommen: ${updated.min_stock}\n\nBitte im PocketBase Admin das Feld "min_stock" (Typ: Number) in der inventory_items Collection anlegen.`)
         return
       }
+      // Update expiry date on all stock entries for this item/location
+      if (detailExpiry !== (detailItem.expiry ? detailItem.expiry.slice(0, 10) : '')) {
+        const stocks = await pb.collection('inventory_stock').getFullList({
+          filter: `item_id = "${detailItem.id}" && location_id = "${currentLocationId}"`
+        })
+        for (const s of stocks) {
+          await pb.collection('inventory_stock').update(s.id, {
+            expiry_date: detailExpiry || null
+          })
+        }
+      }
       await loadStock()
-      setDetailItem(prev => prev ? { ...prev, notes: detailNote, min_stock: detailSoll } : null)
+      setDetailItem(prev => prev ? { ...prev, notes: detailNote, min_stock: detailSoll, expiry: detailExpiry || undefined } : null)
       showMsg('✅ Gespeichert!', 'success')
     } catch(e: any) {
       const detail = e?.data ? JSON.stringify(e.data) : e.message
@@ -1391,26 +1404,14 @@ export default function Lager() {
               Speichern
             </button>
 
-            {/* Stock entries / Ablaufdaten */}
-            <div style={{marginBottom: '20px'}}>
-              <div style={{fontWeight: 700, fontSize: '0.9rem', marginBottom: '8px', color: '#374151'}}>Bestand nach Ablaufdatum</div>
-              {detailLoadingData ? (
-                <div style={{color: '#64748b', fontSize: '0.9rem'}}>Lade...</div>
-              ) : detailStockEntries.length === 0 ? (
-                <div style={{color: '#64748b', fontSize: '0.9rem'}}>Kein Bestand vorhanden</div>
-              ) : (
-                detailStockEntries.map(stock => (
-                  <div key={stock.id} style={{
-                    display: 'flex', justifyContent: 'space-between', padding: '8px 12px',
-                    background: '#f9fafb', borderRadius: '8px', marginBottom: '4px', fontSize: '0.9rem'
-                  }}>
-                    <span style={{fontWeight: 600}}>{stock.quantity} {detailItem.unit}</span>
-                    <span style={{color: '#64748b'}}>
-                      {stock.expiry_date ? `Ablaufdatum: ${new Date(stock.expiry_date).toLocaleDateString('de-DE')}` : 'Kein Ablaufdatum'}
-                    </span>
-                  </div>
-                ))
-              )}
+            {/* Ablaufdatum */}
+            <div className="form-group" style={{marginBottom: '20px'}}>
+              <label>Ablaufdatum</label>
+              <input
+                type="date"
+                value={detailExpiry}
+                onChange={(e) => setDetailExpiry(e.target.value)}
+              />
             </div>
 
             {/* Transaction history */}
