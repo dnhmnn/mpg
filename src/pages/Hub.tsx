@@ -146,8 +146,8 @@ export default function Hub() {
             order: 1;
           }
           .hub-widgets {
-            width: 260px;
-            flex-shrink: 0;
+            flex: 1;
+            min-width: 0;
             order: 2;
           }
           .hub-widgets .widgets {
@@ -177,8 +177,7 @@ export default function Hub() {
         }
         @media (min-width: 1100px) {
           .hub-layout { gap: 40px; }
-          .hub-widgets { width: 300px; }
-          .hub-apps .apps { grid-template-columns: repeat(6, 1fr); }
+          .hub-apps .apps { grid-template-columns: repeat(5, 1fr); }
         }
       `}</style>
 
