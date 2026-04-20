@@ -31,21 +31,26 @@ export default function Widgets({ user }: WidgetsProps) {
     logoDisplay = <div style={{ fontSize: '100px', lineHeight: 1 }}>🏢</div>
   }
 
-  const pad = (n: number) => String(n).padStart(2, '0')
-  const timeStr = `${pad(now.getHours())}:${pad(now.getMinutes())}`
-  const secStr = pad(now.getSeconds())
+  const secDeg = now.getSeconds() * 6
 
   return (
     <div className="widgets">
       <div className="widget">
         <div className="widget-title">Heute</div>
-        <div className="widget-value">{now.getDate()}</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div className="widget-value" style={{ marginBottom: 0 }}>{now.getDate()}</div>
+          <svg width="36" height="36" viewBox="-18 -18 36 36" style={{ flexShrink: 0 }}>
+            <circle cx="0" cy="0" r="16" fill="none" stroke="currentColor" strokeWidth="1" opacity="0.2" />
+            <line
+              x1="0" y1="2" x2="0" y2="-12"
+              stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"
+              transform={`rotate(${secDeg})`}
+            />
+            <circle cx="0" cy="0" r="2" fill="currentColor" />
+          </svg>
+        </div>
         <div className="widget-label">
           {now.toLocaleDateString('de-DE', { weekday: 'long' })}
-        </div>
-        <div style={{ marginTop: '8px', display: 'flex', alignItems: 'baseline', gap: '4px' }}>
-          <span style={{ fontSize: '20px', fontWeight: 600, letterSpacing: '0.5px' }}>{timeStr}</span>
-          <span style={{ fontSize: '14px', fontWeight: 500, opacity: 0.6 }}>{secStr}</span>
         </div>
       </div>
 
