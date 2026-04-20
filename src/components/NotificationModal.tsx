@@ -17,117 +17,93 @@ export default function NotificationModal({
 }: NotificationModalProps) {
   if (!isOpen) return null
 
+  const accentMap = {
+    info:    '#3b82f6',
+    warning: '#f59e0b',
+    success: '#10b981',
+    update:  '#8b5cf6'
+  }
+
   const iconMap = {
-    info: 'ℹ️',
+    info:    'ℹ️',
     warning: '⚠️',
     success: '✅',
-    update: '🔔'
+    update:  '🔔'
   }
 
-  const iconStyles: Record<typeof type, string> = {
-    info: 'linear-gradient(135deg, #3b82f6, #1e40af)',
-    warning: 'linear-gradient(135deg, #f59e0b, #d97706)',
-    success: 'linear-gradient(135deg, #10b981, #059669)',
-    update: 'linear-gradient(135deg, #8b5cf6, #6d28d9)'
-  }
+  const accent = accentMap[type]
 
   return (
-    <div 
+    <div
       style={{
         position: 'fixed',
-        inset: 0,
-        background: 'rgba(0, 0, 0, 0.6)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
+        bottom: 'calc(24px + env(safe-area-inset-bottom))',
+        right: '16px',
         zIndex: 10000,
-        padding: '20px',
-        animation: 'fadeIn 0.3s ease-out'
+        maxWidth: '340px',
+        width: 'calc(100vw - 32px)',
+        animation: 'slideInRight 0.35s cubic-bezier(0.34, 1.56, 0.64, 1)'
       }}
-      onClick={onDismiss}
     >
-      <div 
+      <style>{`
+        @keyframes slideInRight {
+          from { opacity: 0; transform: translateX(60px) scale(0.95); }
+          to   { opacity: 1; transform: translateX(0) scale(1); }
+        }
+      `}</style>
+      <div
         style={{
-          background: 'rgba(255, 255, 255, 0.98)',
-          backdropFilter: 'blur(40px)',
-          borderRadius: '24px',
-          boxShadow: '0 20px 60px rgba(0, 0, 0, 0.4)',
-          padding: '32px',
-          maxWidth: '500px',
-          width: '100%',
-          border: '0.5px solid rgba(255, 255, 255, 0.3)',
-          animation: 'slideUpNotif 0.4s ease-out'
+          background: 'var(--bg-card)',
+          borderRadius: '16px',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
+          padding: '16px',
+          borderLeft: `4px solid ${accent}`,
         }}
-        onClick={(e) => e.stopPropagation()}
       >
-        <div style={{
-          width: '60px',
-          height: '60px',
-          borderRadius: '50%',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          margin: '0 auto 20px',
-          fontSize: '32px',
-          background: iconStyles[type]
-        }}>
-          {iconMap[type]}
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', marginBottom: '12px' }}>
+          <span style={{ fontSize: '22px', lineHeight: 1 }}>{iconMap[type]}</span>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontWeight: 700, fontSize: '15px', color: 'var(--text)', marginBottom: '4px' }}>
+              {title}
+            </div>
+            <div style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>
+              {message}
+            </div>
+          </div>
         </div>
-        
-        <div style={{
-          fontSize: '24px',
-          fontWeight: 700,
-          color: 'var(--text)',
-          textAlign: 'center',
-          marginBottom: '16px'
-        }}>
-          {title}
-        </div>
-        
-        <div style={{
-          fontSize: '16px',
-          lineHeight: 1.6,
-          color: '#4b5563',
-          textAlign: 'center',
-          marginBottom: '28px',
-          whiteSpace: 'pre-wrap'
-        }}>
-          {message}
-        </div>
-        
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          <button 
+
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button
+            onClick={onDismiss}
             style={{
-              padding: '14px 24px',
+              flex: 1,
+              padding: '8px 12px',
               border: 'none',
-              borderRadius: '12px',
-              fontSize: '16px',
+              borderRadius: '10px',
+              fontSize: '14px',
               fontWeight: 600,
               cursor: 'pointer',
-              transition: 'all 0.2s',
-              background: 'linear-gradient(135deg, #667eea, #764ba2)',
+              background: accent,
               color: '#fff'
             }}
-            onClick={onDismiss}
           >
             Verstanden
           </button>
-          
-          <button 
+          <button
+            onClick={onRemindLater}
             style={{
-              padding: '14px 24px',
-              border: '1px solid rgba(102, 126, 234, 0.3)',
-              borderRadius: '12px',
-              fontSize: '16px',
+              flex: 1,
+              padding: '8px 12px',
+              border: `1px solid ${accent}`,
+              borderRadius: '10px',
+              fontSize: '14px',
               fontWeight: 600,
               cursor: 'pointer',
-              transition: 'all 0.2s',
-              background: 'rgba(255, 255, 255, 0.5)',
-              color: '#667eea'
+              background: 'transparent',
+              color: accent
             }}
-            onClick={onRemindLater}
           >
-            Später erinnern
+            Später
           </button>
         </div>
       </div>

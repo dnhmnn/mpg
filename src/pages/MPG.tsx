@@ -262,16 +262,32 @@ export default function MPG() {
     return d.toLocaleDateString('de-DE', opts)
   }
 
+  function calcNextDue(device: Device): Date | null {
+    const stored = parseDate(device.next_inspection_due)
+    if (stored) return stored
+    // Fallback: calculate from last_inspection or created date + interval
+    const base = parseDate(device.last_inspection) || parseDate(device.created)
+    if (!base) return null
+    const next = new Date(base)
+    switch (device.interval) {
+      case 'daily':   next.setDate(next.getDate() + 1); break
+      case 'weekly':  next.setDate(next.getDate() + 7); break
+      case 'monthly': next.setMonth(next.getMonth() + 1); break
+      case 'yearly':  next.setFullYear(next.getFullYear() + 1); break
+    }
+    return next
+  }
+
   function getDeviceStatus(device: Device): 'ok' | 'warning' | 'overdue' {
     if (device.last_inspection_passed === false) {
       return 'overdue'
     }
-    
+
     const now = new Date()
-    const dueDate = parseDate(device.next_inspection_due)
+    const dueDate = calcNextDue(device)
     if (!dueDate) return 'overdue'
     const diffDays = Math.floor((dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
-    
+
     if (diffDays < 0) return 'overdue'
     if (diffDays <= 7) return 'warning'
     return 'ok'
@@ -447,9 +463,19 @@ export default function MPG() {
       
       await pb.collection('mpg_inspections').create(inspectionData)
       
+      const device = devices.find(d => d.id === inspectionForm.device_id)
+      const nextDue = new Date()
+      switch (device?.interval) {
+        case 'daily':   nextDue.setDate(nextDue.getDate() + 1); break
+        case 'weekly':  nextDue.setDate(nextDue.getDate() + 7); break
+        case 'monthly': nextDue.setMonth(nextDue.getMonth() + 1); break
+        case 'yearly':  nextDue.setFullYear(nextDue.getFullYear() + 1); break
+        default:        nextDue.setMonth(nextDue.getMonth() + 1)
+      }
       await pb.collection('mpg_devices').update(inspectionForm.device_id, {
         last_inspection: new Date().toISOString(),
-        last_inspection_passed: passed
+        last_inspection_passed: passed,
+        next_inspection_due: nextDue.toISOString()
       })
       
       setShowInspectionModal(false)
@@ -788,7 +814,7 @@ export default function MPG() {
                   </div>
                   
                   <div className="device-dates">
-                    <div>Fällig: {fmtDate(device.next_inspection_due)}</div>
+                    <div>Fällig: {(() => { const d = calcNextDue(device); return d ? d.toLocaleDateString('de-DE') : '—' })()}</div>
                     {lastInspection && (
                       <div style={{fontSize: '12px', opacity: 0.7}}>
                         Zuletzt: {fmtDate(lastInspection.inspection_date)}
