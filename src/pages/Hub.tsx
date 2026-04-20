@@ -169,9 +169,29 @@ export default function Hub() {
             max-width: 380px;
             margin-bottom: 0;
           }
+          .hub-widgets .widget {
+            min-height: 140px;
+            padding: 20px;
+            border-radius: 24px;
+          }
+          .hub-widgets .widget-title { font-size: 14px; }
+          .hub-widgets .widget-value { font-size: 36px; }
+          .hub-widgets .widget-label { font-size: 15px; }
         }
         @media (min-width: 1100px) {
           .hub-layout { gap: 48px; }
+          .hub-widgets .widgets {
+            max-width: 480px;
+            gap: 16px;
+          }
+          .hub-widgets .widget {
+            min-height: 170px;
+            padding: 26px;
+            border-radius: 28px;
+          }
+          .hub-widgets .widget-title { font-size: 15px; }
+          .hub-widgets .widget-value { font-size: 48px; }
+          .hub-widgets .widget-label { font-size: 17px; }
           .hub-apps .apps { gap: 28px 24px; }
           .hub-apps .app-icon {
             width: 96px;

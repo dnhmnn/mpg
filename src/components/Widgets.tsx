@@ -24,7 +24,7 @@ export default function Widgets({ user }: WidgetsProps) {
       <img
         src={logoUrl}
         alt={orgName}
-        style={{ width: '100px', height: '100px', objectFit: 'contain', borderRadius: '12px' }}
+        style={{ width: '70%', height: '70%', objectFit: 'contain', borderRadius: '12px' }}
       />
     )
   } else {
