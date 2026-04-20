@@ -44,7 +44,7 @@ export default function AppGrid({ userApps, onRemoveApp }: AppGridProps) {
         return (
           <a key={id} href={app.url} className="app" onClick={(e) => handleAppClick(e, app)}>
             <div className="remove-btn" onClick={(e) => handleRemoveApp(e, id)}>−</div>
-            <div className="app-icon" style={{ background: app.color || 'var(--bg-card)', color: app.color ? '#fff' : 'var(--accent)', border: app.color ? 'none' : undefined }}>
+            <div className="app-icon" style={{ background: 'var(--bg-card-solid)', color: app.color?.match(/#[0-9a-fA-F]{6}/)?.[0] || 'var(--accent)' }}>
               <AppIcon icon={app.icon} />
             </div>
             <div className="app-name">{app.name}</div>
