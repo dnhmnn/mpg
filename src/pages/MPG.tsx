@@ -775,10 +775,10 @@ export default function MPG() {
                   </div>
                   
                   <div className="device-dates">
-                    <div>Fällig: {new Date(device.next_inspection_due).toLocaleDateString('de-DE')}</div>
+                    <div>Fällig: {device.next_inspection_due ? new Date(device.next_inspection_due).toLocaleDateString('de-DE') : '—'}</div>
                     {lastInspection && (
                       <div style={{fontSize: '12px', opacity: 0.7}}>
-                        Zuletzt: {new Date(lastInspection.inspection_date).toLocaleDateString('de-DE')}
+                        Zuletzt: {lastInspection.inspection_date ? new Date(lastInspection.inspection_date).toLocaleDateString('de-DE') : '—'}
                       </div>
                     )}
                   </div>
@@ -2043,40 +2043,87 @@ export default function MPG() {
 
         @media (max-width: 768px) {
           .action-toolbar {
-            flex-wrap: wrap;
-            padding: 0.5rem;
-            gap: 0.4rem;
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            overflow-y: hidden;
+            justify-content: flex-start;
+            gap: 0.25rem;
+            padding: 0.3rem 0.6rem;
+            max-width: 100vw;
+            box-sizing: border-box;
           }
+          .action-toolbar::-webkit-scrollbar { display: none; }
 
           .action-btn {
-            flex: 1;
-            min-width: 40px;
-            height: 40px;
+            flex-shrink: 0;
+            min-width: 36px;
+            height: 36px;
+            padding: 0.3rem;
+          }
+          .action-btn svg { width: 15px; height: 15px; }
+
+          .content {
+            padding-top: 108px;
+            padding-left: 10px;
+            padding-right: 10px;
+            padding-bottom: 72px;
+            overflow-x: hidden;
           }
 
           .stats-grid {
             grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
           }
 
           .filter-bar {
             flex-direction: column;
+            gap: 8px;
           }
 
           .filter-buttons {
             width: 100%;
+            flex-wrap: wrap;
           }
 
-          .filter-btn {
-            flex: 1;
-          }
+          .filter-btn { flex: 1; }
 
           .devices-grid {
             grid-template-columns: 1fr;
+            gap: 10px;
           }
 
-          .content {
-            padding-top: 160px;
+          .modal {
+            align-items: flex-end;
+            padding: 0;
           }
+
+          .modal-content {
+            border-radius: 18px 18px 0 0;
+            max-width: 100%;
+            width: 100%;
+            max-height: 60vh;
+            padding: 14px 14px 0;
+            box-sizing: border-box;
+            overflow-x: hidden;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            display: flex;
+            flex-direction: column;
+          }
+
+          .modal-content.large { max-width: 100%; }
+
+          .modal-actions {
+            position: sticky;
+            bottom: 0;
+            background: var(--bg-card);
+            padding: 10px 0 calc(14px + env(safe-area-inset-bottom));
+            margin-top: 8px;
+            flex-shrink: 0;
+          }
+
+          .logbook-list { max-height: 200px; }
+          .checklist-editor { max-height: 200px; }
         }
       `}</style>
     </>
