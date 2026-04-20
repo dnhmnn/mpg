@@ -4634,32 +4634,94 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
         }
 
         @media (max-width: 768px) {
+          /* Toolbar: horizontal scroll statt Wrapping */
           .action-toolbar {
-            flex-wrap: wrap;
-            padding: 0.5rem;
-            gap: 0.4rem;
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            overflow-y: hidden;
+            -webkit-overflow-scrolling: touch;
+            justify-content: flex-start;
+            gap: 0.25rem;
+            padding: 0.3rem 0.6rem;
+            max-width: 100vw;
+            box-sizing: border-box;
           }
+          .action-toolbar::-webkit-scrollbar { display: none; }
 
           .action-btn {
-            flex: 1;
-            min-width: 40px;
-            height: 40px;
+            flex-shrink: 0;
+            min-width: 36px;
+            height: 36px;
+            padding: 0.3rem;
+          }
+          .action-btn svg { width: 15px; height: 15px; }
+
+          /* Content */
+          .content {
+            padding-top: 108px;
+            padding-left: 10px;
+            padding-right: 10px;
+            padding-bottom: 72px;
+            overflow-x: hidden;
           }
 
+          /* Toast */
+          .toast {
+            bottom: 68px;
+            right: 10px;
+            left: 10px;
+            max-width: none;
+          }
+
+          /* Karten */
           .cards-grid {
             grid-template-columns: 1fr;
+            gap: 10px;
           }
+          .card { padding: 12px 14px; }
 
-          .content {
-            padding-top: 185px;
-          }
-
+          /* Tabs */
           .tabs {
             overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
           }
+          .tab { white-space: nowrap; flex-shrink: 0; }
 
-          .tab {
-            white-space: nowrap;
+          /* Modals: Bottom-Sheet */
+          .modal {
+            align-items: flex-end;
+            padding: 0;
+          }
+          .modal-content {
+            border-radius: 18px 18px 0 0;
+            max-width: 100%;
+            width: 100%;
+            max-height: 60vh;
+            padding: 14px 14px 0;
+            box-sizing: border-box;
+            overflow-x: hidden;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            display: flex;
+            flex-direction: column;
+          }
+          .modal-content.large { max-width: 100%; }
+          .modal-content h3 { font-size: 1rem; margin-bottom: 0.6rem; flex-shrink: 0; }
+          .modal-content h4 { font-size: 0.9rem; }
+
+          /* Formfelder kompakter */
+          .field { margin-bottom: 10px; }
+          .field label { font-size: 12px; margin-bottom: 4px; }
+          .field input, .field select, .field textarea { padding: 8px; font-size: 14px; }
+
+          /* Modal-Actions: sticky am unteren Rand */
+          .modal-actions {
+            position: sticky;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.98);
+            padding: 10px 0 calc(14px + env(safe-area-inset-bottom));
+            margin-top: 8px;
+            flex-shrink: 0;
           }
         }
       `}</style>
