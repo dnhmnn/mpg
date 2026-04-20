@@ -79,8 +79,15 @@ export default function Hub() {
     let apps: string[]
     if (saved) {
       apps = JSON.parse(saved)
-      if (!apps.includes('settings')) {
-        apps.push('settings')
+      if (!apps.includes('settings')) apps.push('settings')
+      // Auto-add newly available apps not yet in saved layout
+      const newApps = Object.keys(ALL_APPS).filter(id => {
+        const app = ALL_APPS[id]
+        return hasPermission(app.permission) && !apps.includes(id)
+      })
+      if (newApps.length > 0) {
+        apps = [...apps, ...newApps]
+        localStorage.setItem(`hub_apps_${user.id}`, JSON.stringify(apps))
       }
     } else {
       apps = Object.keys(ALL_APPS).filter(id => {
