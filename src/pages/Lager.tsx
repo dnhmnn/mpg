@@ -992,7 +992,7 @@ export default function Lager() {
               className={`chip ${showZeroOnly ? 'active' : ''}`}
               onClick={() => setShowZeroOnly(!showZeroOnly)}
             >
-              Nur 0
+              Leer
             </button>
           </div>
         </div>
@@ -2668,13 +2668,14 @@ export default function Lager() {
 
           .modal-box {
             border-radius: 18px 18px 0 0;
-            max-height: 80vh;
-            padding: 16px 14px;
-            padding-bottom: calc(14px + env(safe-area-inset-bottom));
+            max-height: 65vh;
+            padding: 12px 12px;
+            padding-bottom: calc(12px + env(safe-area-inset-bottom));
             max-width: 100%;
             width: 100%;
             box-sizing: border-box;
             overflow-x: hidden;
+            overflow-y: auto;
           }
 
           .modal-box.small { max-width: 100%; }
