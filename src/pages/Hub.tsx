@@ -144,17 +144,17 @@ export default function Hub() {
             padding: 0;
           }
           .hub-apps .app-icon {
-            width: 64px;
-            height: 64px;
-            border-radius: 15px;
+            width: 76px;
+            height: 76px;
+            border-radius: 18px;
           }
           .hub-apps .app-icon svg {
-            width: 30px;
-            height: 30px;
+            width: 34px;
+            height: 34px;
           }
           .hub-apps .app-name {
             font-size: 12px;
-            max-width: 70px;
+            max-width: 80px;
           }
           .hub-widgets {
             flex: 1;
@@ -172,6 +172,20 @@ export default function Hub() {
         }
         @media (min-width: 1100px) {
           .hub-layout { gap: 48px; }
+          .hub-apps .apps { gap: 28px 24px; }
+          .hub-apps .app-icon {
+            width: 96px;
+            height: 96px;
+            border-radius: 22px;
+          }
+          .hub-apps .app-icon svg {
+            width: 44px;
+            height: 44px;
+          }
+          .hub-apps .app-name {
+            font-size: 13px;
+            max-width: 96px;
+          }
         }
       `}</style>
 
