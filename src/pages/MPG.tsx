@@ -250,13 +250,26 @@ export default function MPG() {
     setTimeout(() => setMessage(null), 3000)
   }
 
+  function parseDate(str: string | undefined | null): Date | null {
+    if (!str) return null
+    const d = new Date(str.replace(' ', 'T'))
+    return isNaN(d.getTime()) ? null : d
+  }
+
+  function fmtDate(str: string | undefined | null, opts?: Intl.DateTimeFormatOptions): string {
+    const d = parseDate(str)
+    if (!d) return '—'
+    return d.toLocaleDateString('de-DE', opts)
+  }
+
   function getDeviceStatus(device: Device): 'ok' | 'warning' | 'overdue' {
     if (device.last_inspection_passed === false) {
       return 'overdue'
     }
     
     const now = new Date()
-    const dueDate = new Date(device.next_inspection_due)
+    const dueDate = parseDate(device.next_inspection_due)
+    if (!dueDate) return 'overdue'
     const diffDays = Math.floor((dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
     
     if (diffDays < 0) return 'overdue'
@@ -775,10 +788,10 @@ export default function MPG() {
                   </div>
                   
                   <div className="device-dates">
-                    <div>Fällig: {device.next_inspection_due ? new Date(device.next_inspection_due).toLocaleDateString('de-DE') : '—'}</div>
+                    <div>Fällig: {fmtDate(device.next_inspection_due)}</div>
                     {lastInspection && (
                       <div style={{fontSize: '12px', opacity: 0.7}}>
-                        Zuletzt: {lastInspection.inspection_date ? new Date(lastInspection.inspection_date).toLocaleDateString('de-DE') : '—'}
+                        Zuletzt: {fmtDate(lastInspection.inspection_date)}
                       </div>
                     )}
                   </div>
@@ -1022,13 +1035,7 @@ export default function MPG() {
                       <div>
                         <div className="logbook-device">{inspection.device_name}</div>
                         <div className="logbook-meta">
-                          {new Date(inspection.inspection_date).toLocaleDateString('de-DE', {
-                            day: '2-digit',
-                            month: '2-digit',
-                            year: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          })} • {inspection.user_name}
+                          {fmtDate(inspection.inspection_date, { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })} • {inspection.user_name}
                         </div>
                       </div>
                       <div className={`status-badge ${inspection.passed ? 'passed' : 'failed'}`}>
@@ -1124,13 +1131,7 @@ export default function MPG() {
                     <div className="logbook-header">
                       <div>
                         <div className="logbook-meta">
-                          {new Date(inspection.inspection_date).toLocaleDateString('de-DE', {
-                            day: '2-digit',
-                            month: '2-digit',
-                            year: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          })} • {inspection.user_name}
+                          {fmtDate(inspection.inspection_date, { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })} • {inspection.user_name}
                         </div>
                       </div>
                       <div className={`status-badge ${inspection.passed ? 'passed' : 'failed'}`}>
