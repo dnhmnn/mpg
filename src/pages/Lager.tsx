@@ -2552,58 +2552,64 @@ export default function Lager() {
 
         @media (max-width: 768px) {
 
-          /* Toolbar: eine Zeile, kleinere Buttons */
+          /* Kein horizontales Scrollen */
           .action-toolbar {
             flex-wrap: nowrap;
             overflow-x: auto;
+            overflow-y: hidden;
             -webkit-overflow-scrolling: touch;
             justify-content: flex-start;
-            gap: 0.3rem;
-            padding: 0.35rem 0.75rem;
+            gap: 0.25rem;
+            padding: 0.3rem 0.6rem;
+            max-width: 100vw;
+            box-sizing: border-box;
           }
           .action-toolbar::-webkit-scrollbar { display: none; }
 
           .action-btn {
             flex-shrink: 0;
-            min-width: 38px;
-            height: 38px;
+            min-width: 36px;
+            height: 36px;
+            padding: 0.3rem;
           }
 
           .action-btn svg {
-            width: 16px;
-            height: 16px;
+            width: 15px;
+            height: 15px;
           }
 
-          /* Content: kompaktes Padding, Platz für Tabs unten */
+          /* Content */
           .content {
-            padding-top: 106px;
-            padding-left: 12px;
-            padding-right: 12px;
-            padding-bottom: 76px;
+            padding-top: 102px;
+            padding-left: 10px;
+            padding-right: 10px;
+            padding-bottom: 72px;
+            overflow-x: hidden;
           }
 
           /* Toast über den Standort-Tabs */
           .toast {
-            bottom: 72px;
-            right: 12px;
-            max-width: calc(100vw - 24px);
+            bottom: 68px;
+            right: 10px;
+            left: 10px;
+            max-width: none;
           }
 
           /* Stats */
           .stats-grid {
             grid-template-columns: repeat(2, 1fr);
             gap: 8px;
-            margin-bottom: 12px;
+            margin-bottom: 10px;
           }
 
-          .stat-card { padding: 12px 14px; border-radius: 10px; }
-          .stat-num { font-size: 1.2rem; }
+          .stat-card { padding: 10px 12px; border-radius: 10px; }
+          .stat-num { font-size: 1.1rem; }
 
           /* Suche + Filter */
           .toolbar {
             flex-direction: column;
-            gap: 8px;
-            margin-bottom: 12px;
+            gap: 6px;
+            margin-bottom: 10px;
           }
 
           .search-box { width: 100%; min-width: auto; }
@@ -2612,80 +2618,82 @@ export default function Lager() {
             flex-wrap: nowrap;
             overflow-x: auto;
             -webkit-overflow-scrolling: touch;
-            gap: 6px;
+            gap: 5px;
           }
           .filter-chips::-webkit-scrollbar { display: none; }
 
           .chip {
             flex-shrink: 0;
-            font-size: 0.8rem;
-            padding: 6px 10px;
+            font-size: 0.78rem;
+            padding: 5px 9px;
           }
 
-          /* Artikel-Karten: horizontal kompakt */
-          .item-row { padding: 0.7rem 0.85rem; }
+          /* Artikel-Karten: kompakt horizontal */
+          .item-row { padding: 0.6rem 0.75rem; }
 
           .item-header {
             flex-direction: row;
             align-items: center;
             flex-wrap: nowrap;
-            gap: 8px;
+            gap: 6px;
           }
 
-          .item-info {
-            flex: 1;
-            min-width: 0;
-          }
+          .item-info { flex: 1; min-width: 0; }
 
           .item-name {
-            font-size: 0.9rem;
+            font-size: 0.88rem;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
           }
 
-          .item-category { font-size: 0.8rem; }
+          .item-category { font-size: 0.75rem; }
 
           .item-right {
             flex-shrink: 0;
-            gap: 8px;
+            gap: 6px;
           }
 
           .item-qty { text-align: right; }
-          .qty-display { font-size: 0.88rem; }
-          .expiry-date { font-size: 0.75rem; }
+          .qty-display { font-size: 0.85rem; }
+          .expiry-date { font-size: 0.72rem; }
 
-          .quick-btn { width: 30px; height: 30px; font-size: 17px; }
+          .quick-btn { width: 28px; height: 28px; font-size: 16px; }
 
-          /* Modals: Bottom-Sheet */
+          /* Modals: Bottom-Sheet, kompakter Inhalt */
           .modal {
             align-items: flex-end;
             padding: 0;
           }
 
           .modal-box {
-            border-radius: 20px 20px 0 0;
-            max-height: 92vh;
-            padding: 20px 16px;
-            padding-bottom: calc(16px + env(safe-area-inset-bottom));
+            border-radius: 18px 18px 0 0;
+            max-height: 80vh;
+            padding: 16px 14px;
+            padding-bottom: calc(14px + env(safe-area-inset-bottom));
             max-width: 100%;
+            width: 100%;
+            box-sizing: border-box;
+            overflow-x: hidden;
           }
 
           .modal-box.small { max-width: 100%; }
+
+          .modal-box h3 { font-size: 1rem; margin-bottom: 0.75rem; }
 
           /* Standort-Tabs */
           .location-tabs-fixed {
             flex-wrap: nowrap;
             overflow-x: auto;
             justify-content: flex-start;
-            padding: 8px 12px;
+            padding: 7px 10px;
             gap: 6px;
           }
           .location-tabs-fixed::-webkit-scrollbar { display: none; }
 
           .location-tab {
             flex-shrink: 0;
-            padding: 8px 14px;
+            padding: 7px 12px;
             font-size: 13px;
             min-width: auto;
           }
