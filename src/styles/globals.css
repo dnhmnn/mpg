@@ -285,16 +285,12 @@ body {
 .app-icon {
   width: 60px;
   height: 60px;
-  background: var(--bg-card);
-  backdrop-filter: blur(30px);
-  -webkit-backdrop-filter: blur(30px);
+  background: var(--bg-card-solid);
   border-radius: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--accent);
-  border: 0.5px solid var(--border);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .app-icon svg {
@@ -302,7 +298,7 @@ body {
   height: 28px;
   stroke: currentColor;
   fill: none;
-  stroke-width: 2;
+  stroke-width: 1.5;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
