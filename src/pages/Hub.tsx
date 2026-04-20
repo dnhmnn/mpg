@@ -129,7 +129,7 @@ export default function Hub() {
             display: flex;
             flex-direction: row;
             gap: 32px;
-            align-items: flex-start;
+            align-items: center;
           }
           .hub-apps {
             flex: 1;
