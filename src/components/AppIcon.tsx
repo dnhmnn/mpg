@@ -76,6 +76,24 @@ const icons: Record<string, JSX.Element> = {
       <path d="M12 1v6m0 6v6m5.66-13.66l-4.24 4.24m0 6l4.24 4.24M23 12h-6m-6 0H1m18.66-5.66l-4.24 4.24m0 6l4.24 4.24"/>
     </svg>
   ),
+  users: (
+    <svg viewBox="0 0 24 24">
+      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+      <circle cx="9" cy="7" r="4"/>
+      <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+      <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+    </svg>
+  ),
+  mpg: (
+    <svg viewBox="0 0 24 24">
+      <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+    </svg>
+  ),
+  cross: (
+    <svg viewBox="0 0 24 24">
+      <path d="M9 3h6v6h6v6h-6v6H9v-6H3v-6h6V3z"/>
+    </svg>
+  ),
 }
 
 export default function AppIcon({ icon }: AppIconProps) {
