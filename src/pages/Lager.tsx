@@ -992,7 +992,7 @@ export default function Lager() {
               className={`chip ${showZeroOnly ? 'active' : ''}`}
               onClick={() => setShowZeroOnly(!showZeroOnly)}
             >
-              Nur 0
+              Leer
             </button>
           </div>
         </div>
@@ -1114,7 +1114,7 @@ export default function Lager() {
               )}
             </div>
 
-            <div style={{display: 'flex', justifyContent: 'flex-end', marginTop: '24px'}}>
+            <div className="modal-footer" style={{display: 'flex', justifyContent: 'flex-end'}}>
               <button className="btn" onClick={() => setShowLogModal(false)}>
                 Schließen
               </button>
@@ -1180,7 +1180,7 @@ export default function Lager() {
               )}
             </div>
 
-            <div style={{display: 'flex', justifyContent: 'flex-end', marginTop: '24px'}}>
+            <div className="modal-footer" style={{display: 'flex', justifyContent: 'flex-end'}}>
               <button className="btn" onClick={() => setShowItemsModal(false)}>
                 Schließen
               </button>
@@ -1222,7 +1222,7 @@ export default function Lager() {
               </button>
             </div>
 
-            <div style={{display: 'flex', justifyContent: 'flex-end', marginTop: '24px'}}>
+            <div className="modal-footer" style={{display: 'flex', justifyContent: 'flex-end'}}>
               <button className="btn" onClick={() => setShowSettingsModal(false)}>
                 Schließen
               </button>
@@ -1508,7 +1508,7 @@ export default function Lager() {
               </div>
             )}
 
-            <div style={{display: 'flex', justifyContent: 'flex-end', marginTop: '24px'}}>
+            <div className="modal-footer" style={{display: 'flex', justifyContent: 'flex-end'}}>
               <button className="btn" onClick={() => {
                 setShowInventoryModal(false)
                 setCurrentAudit(null)
@@ -1566,7 +1566,7 @@ export default function Lager() {
               </div>
             )}
             
-            <div style={{display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '24px'}}>
+            <div className="modal-footer" style={{display: 'flex', gap: '8px', justifyContent: 'flex-end'}}>
               <button className="btn" onClick={() => setShowBuchungModal(false)}>
                 Abbrechen
               </button>
@@ -1678,7 +1678,7 @@ export default function Lager() {
               </div>
             </div>
 
-            <div style={{display: 'flex', justifyContent: 'flex-end', marginTop: '20px'}}>
+            <div className="modal-footer" style={{display: 'flex', justifyContent: 'flex-end'}}>
               <button className="btn" onClick={() => setShowItemDetailModal(false)}>Schließen</button>
             </div>
           </div>
@@ -1792,7 +1792,7 @@ export default function Lager() {
               />
             </div>
             
-            <div style={{display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '24px'}}>
+            <div className="modal-footer" style={{display: 'flex', gap: '8px', justifyContent: 'flex-end'}}>
               <button className="btn" onClick={() => setShowAddItemModal(false)}>
                 Abbrechen
               </button>
@@ -2668,18 +2668,29 @@ export default function Lager() {
 
           .modal-box {
             border-radius: 18px 18px 0 0;
-            max-height: 80vh;
-            padding: 16px 14px;
-            padding-bottom: calc(14px + env(safe-area-inset-bottom));
+            max-height: 60vh;
+            padding: 14px 14px 0;
             max-width: 100%;
             width: 100%;
             box-sizing: border-box;
             overflow-x: hidden;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            display: flex;
+            flex-direction: column;
           }
 
           .modal-box.small { max-width: 100%; }
 
-          .modal-box h3 { font-size: 1rem; margin-bottom: 0.75rem; }
+          .modal-box h3 { font-size: 1rem; margin-bottom: 0.6rem; flex-shrink: 0; }
+
+          .modal-footer {
+            position: sticky;
+            bottom: 0;
+            background: var(--bg-card);
+            padding: 10px 0 calc(14px + env(safe-area-inset-bottom));
+            flex-shrink: 0;
+          }
 
           /* Standort-Tabs */
           .location-tabs-fixed {
