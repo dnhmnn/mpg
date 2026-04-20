@@ -129,12 +129,14 @@ export default function Hub() {
             display: flex;
             flex-direction: row;
             gap: 32px;
-            align-items: center;
+            align-items: stretch;
           }
           .hub-apps {
             flex: 1;
             min-width: 0;
             order: 1;
+            display: flex;
+            align-items: center;
           }
           .hub-apps .apps {
             display: flex;
