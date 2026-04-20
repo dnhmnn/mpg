@@ -36,7 +36,7 @@ export default function AppsModal({ isOpen, onClose, availableApps, onAddApp }: 
               <div style={{
                 width: '60px',
                 height: '60px',
-                background: 'linear-gradient(135deg, #667eea, #764ba2)',
+                background: app.color || 'linear-gradient(145deg, #667eea, #764ba2)',
                 borderRadius: '14px',
                 display: 'flex',
                 alignItems: 'center',

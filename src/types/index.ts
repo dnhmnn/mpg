@@ -29,6 +29,7 @@ export interface App {
   url: string
   permission: string
   isInternal?: boolean
+  color?: string
 }
 
 export interface AppIconProps {
