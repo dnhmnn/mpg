@@ -208,7 +208,7 @@ export default function Hub() {
         }
         .hub-content { padding-bottom: 8vh; }
         @media (max-width: 767px) {
-          .hub-content { padding-top: 8px; }
+          .hub-content { padding-top: 48px; }
           .hub-widgets .widget { min-height: 70px; padding: 8px 12px; }
           .hub-widgets .widget-title { font-size: 11px; margin-bottom: 2px; }
           .hub-widgets .widget-value { font-size: 22px; }
