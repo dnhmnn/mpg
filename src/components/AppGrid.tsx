@@ -4,7 +4,7 @@ import type { App } from '../types'
 
 const ALL_APPS: Record<string, App> = {
   einsaetze:    { id: 'einsaetze',    name: 'Einsätze',     icon: 'siren',      url: '/einsaetze.html',                     permission: 'einsaetze',           color: 'linear-gradient(135deg, #ff3b30, #c03026)' },
-  patienten:    { id: 'patienten',    name: 'Patienten',    icon: 'clipboard',  url: '/patientendokumentation-dateien.html', permission: 'patienten',           color: 'linear-gradient(135deg, #007aff, #0062cc)' },
+  patienten:    { id: 'patienten',    name: 'Patienten',    icon: 'clipboard',  url: '/patienten',                           permission: 'patienten',           color: 'linear-gradient(135deg, #007aff, #0062cc)', isInternal: true },
   dokumente:    { id: 'dokumente',    name: 'Vorgänge',     icon: 'file',       url: '/dokumente-bearbeiten.html',           permission: 'dokumente',           color: 'linear-gradient(135deg, #af52de, #8e40b8)' },
   lager:        { id: 'lager',        name: 'Lager',        icon: 'package',    url: '/lager',                               permission: 'lager',               color: 'linear-gradient(135deg, #ff9500, #cc7800)', isInternal: true },
   dateien:      { id: 'dateien',      name: 'Dateien',      icon: 'folder',     url: '/files',                               permission: 'dateien',             color: 'linear-gradient(135deg, #ff9f0a, #cc8000)', isInternal: true },

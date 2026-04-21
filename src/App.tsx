@@ -11,10 +11,10 @@ import MPG from './pages/MPG'
 import Lernbar from './pages/Lernbar'
 import Unitas from './pages/Unitas'
 import Unitarii from './pages/Unitarii'
+import Patienten from './pages/patienten/Patienten'
 import './styles/globals.css'
 import { applyTheme, getTheme } from './lib/theme'
 
-// Apply saved theme immediately to avoid flash of wrong theme on load
 applyTheme(getTheme())
 
 function App() {
@@ -33,6 +33,7 @@ function App() {
         <Route path="/lernbar" element={<Lernbar />} />
         <Route path="/unitas" element={<Unitas />} />
         <Route path="/unitarii" element={<Unitarii />} />
+        <Route path="/patienten" element={<Patienten />} />
       </Routes>
     </BrowserRouter>
   )
