@@ -199,7 +199,7 @@ body {
 
 /* Main Content */
 .content {
-  height: 100vh;
+  height: 100dvh;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   padding-top: calc(54px + env(safe-area-inset-top) + 30px);
