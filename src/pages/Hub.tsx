@@ -206,7 +206,14 @@ export default function Hub() {
           .hub-widgets .widget-value { font-size: 36px; }
           .hub-widgets .widget-label { font-size: 15px; }
         }
-        .hub-content { padding-bottom: 20vh; }
+        .hub-content { padding-bottom: 8vh; }
+        @media (max-width: 767px) {
+          .hub-content { padding-top: 0; }
+          .hub-widgets .widget { min-height: 70px; padding: 8px 12px; }
+          .hub-widgets .widget-title { font-size: 11px; margin-bottom: 2px; }
+          .hub-widgets .widget-value { font-size: 22px; }
+          .hub-widgets .widget-label { font-size: 12px; margin-top: 2px; }
+        }
         @media (min-width: 768px) {
           .hub-content { padding-bottom: 32vh; }
         }
