@@ -1126,6 +1126,11 @@ body {
     margin: 0 auto;
   }
 
+  .hub-content {
+    padding-top: calc(54px + env(safe-area-inset-top) + 16px);
+    padding-bottom: 8vh;
+  }
+
 }
 
 body.loading { opacity: 0; }
