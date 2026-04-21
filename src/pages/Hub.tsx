@@ -215,7 +215,7 @@ export default function Hub() {
           .hub-widgets .widget-label { font-size: 12px; margin-top: 2px; }
         }
         @media (min-width: 768px) {
-          .hub-content { justify-content: center; padding-bottom: 70vh; }
+          .hub-content { justify-content: center; padding-bottom: 82vh; }
         }
         @media (min-width: 1100px) {
           .hub-layout { gap: 48px; }
