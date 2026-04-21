@@ -12,6 +12,7 @@ import Lernbar from './pages/Lernbar'
 import Unitas from './pages/Unitas'
 import Unitarii from './pages/Unitarii'
 import Patienten from './pages/patienten/Patienten'
+import Chat from './pages/Chat'
 import './styles/globals.css'
 import { applyTheme, getTheme } from './lib/theme'
 
@@ -34,6 +35,7 @@ function App() {
         <Route path="/unitas" element={<Unitas />} />
         <Route path="/unitarii" element={<Unitarii />} />
         <Route path="/patienten" element={<Patienten />} />
+        <Route path="/chat" element={<Chat />} />
       </Routes>
     </BrowserRouter>
   )

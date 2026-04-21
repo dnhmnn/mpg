@@ -13,7 +13,7 @@ const ALL_APPS: Record<string, App> = {
   ausbildungen: { id: 'ausbildungen', name: 'Ausbildungen', icon: 'book',       url: '/ausbildungen',                        permission: 'ausbildungen_manage', color: 'linear-gradient(135deg, #1c7cd6, #1560a8)', isInternal: true },
   unitarii:     { id: 'unitarii',     name: 'Unitarii',     icon: 'users',      url: '/unitarii',                            permission: 'unitarii',            color: 'linear-gradient(135deg, #636e8a, #4a5370)', isInternal: true },
   mpg:          { id: 'mpg',          name: 'MPG',          icon: 'mpg',        url: '/mpg',                                 permission: 'dashboard',           color: 'linear-gradient(135deg, #c0392b, #962d22)', isInternal: true },
-  chat:         { id: 'chat',         name: 'Chat',         icon: 'chat',       url: '/chat.html',                           permission: 'chat',                color: 'linear-gradient(135deg, #34c759, #27a447)' },
+  chat:         { id: 'chat',         name: 'Chat',         icon: 'chat',       url: '/chat',                                permission: 'chat',                color: 'linear-gradient(135deg, #34c759, #27a447)', isInternal: true },
   settings:     { id: 'settings',     name: 'Einstellungen',icon: 'settings',   url: '/settings',                            permission: 'dashboard',           color: 'linear-gradient(135deg, #8e8e93, #6c6c72)', isInternal: true },
 }
 
