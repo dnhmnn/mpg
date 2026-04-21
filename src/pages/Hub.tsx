@@ -208,7 +208,7 @@ export default function Hub() {
         }
         .hub-content { padding-bottom: 20vh; }
         @media (min-width: 768px) {
-          .hub-content { padding-bottom: 50vh; }
+          .hub-content { padding-bottom: 32vh; }
         }
         @media (min-width: 1100px) {
           .hub-layout { gap: 48px; }
