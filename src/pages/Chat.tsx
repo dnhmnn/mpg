@@ -55,7 +55,12 @@ export default function Chat() {
   const unsubRef = useRef<(() => void) | null>(null)
 
   useEffect(() => {
-    if (hasSessionKeys()) setUnlocked(true)
+    async function restoreKeys() {
+      const { tryRestoreSession } = await import('../lib/keyManager')
+      const ok = hasSessionKeys() || await tryRestoreSession()
+      if (ok) setUnlocked(true)
+    }
+    restoreKeys()
   }, [])
 
   useEffect(() => {

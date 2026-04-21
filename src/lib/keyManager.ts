@@ -5,7 +5,7 @@ import {
   deriveKeyFromPassword, encryptData, decryptData
 } from './crypto'
 
-// Module-level session keys — set at login, cleared at logout
+// Module-level session keys — set at login, restored from sessionStorage on reload
 let _privateKey: CryptoKey | null = null
 let _publicKey: CryptoKey | null = null
 
@@ -16,6 +16,49 @@ export function hasSessionKeys(): boolean { return _privateKey !== null }
 export function clearSessionKeys(): void {
   _privateKey = null
   _publicKey = null
+  sessionStorage.removeItem('responda_sk')
+}
+
+// Derive a wrap key from the PocketBase auth token (stable within one session)
+async function sessionWrapKey(): Promise<CryptoKey> {
+  const token = pb.authStore.token || 'no-token'
+  const enc = new TextEncoder()
+  const base = await crypto.subtle.importKey('raw', enc.encode(token), 'PBKDF2', false, ['deriveKey'])
+  return crypto.subtle.deriveKey(
+    { name: 'PBKDF2', salt: enc.encode('responda-session-v1'), iterations: 1000, hash: 'SHA-256' },
+    base,
+    { name: 'AES-GCM', length: 256 },
+    false,
+    ['encrypt', 'decrypt']
+  )
+}
+
+async function persistSession(priv: CryptoKey, pub: CryptoKey): Promise<void> {
+  try {
+    const wk = await sessionWrapKey()
+    const payload = JSON.stringify({
+      priv: await exportPrivateKey(priv),
+      pub: await exportPublicKey(pub),
+    })
+    const enc = await encryptData(wk, payload)
+    sessionStorage.setItem('responda_sk', enc)
+  } catch { /* non-critical */ }
+}
+
+export async function tryRestoreSession(): Promise<boolean> {
+  if (_privateKey) return true
+  const stored = sessionStorage.getItem('responda_sk')
+  if (!stored || !pb.authStore.isValid) return false
+  try {
+    const wk = await sessionWrapKey()
+    const payload = JSON.parse(await decryptData(wk, stored))
+    _privateKey = await importPrivateKey(payload.priv)
+    _publicKey = await importPublicKey(payload.pub)
+    return true
+  } catch {
+    sessionStorage.removeItem('responda_sk')
+    return false
+  }
 }
 
 function getSalt(userId: string): Uint8Array {
@@ -42,6 +85,7 @@ export async function initializeAndUnlock(userId: string, password: string): Pro
     _privateKey = keyPair.privateKey
     _publicKey = keyPair.publicKey
     cachePublicKey(userId, pubB64)
+    await persistSession(_privateKey, _publicKey)
     return
   }
 
@@ -52,6 +96,7 @@ export async function initializeAndUnlock(userId: string, password: string): Pro
   _privateKey = await importPrivateKey(privB64)
   _publicKey = await importPublicKey(existing.public_key)
   cachePublicKey(userId, existing.public_key)
+  await persistSession(_privateKey, _publicKey)
 }
 
 export async function getPublicKey(userId: string): Promise<CryptoKey | null> {
