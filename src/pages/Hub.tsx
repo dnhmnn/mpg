@@ -287,7 +287,7 @@ export default function Hub() {
         }
         .dock-label {
           font-size: 10px;
-          font-weight: 600;
+          font-weight: 400;
           color: var(--text);
           text-align: center;
           max-width: 58px;
