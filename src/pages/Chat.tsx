@@ -82,8 +82,17 @@ export default function Chat() {
     try {
       await initializeAndUnlock(user.id, password)
       setUnlocked(true)
-    } catch {
-      setUnlockError('Falsches Passwort.')
+    } catch (err: any) {
+      console.error('Chat unlock error:', err)
+      if (err?.message?.includes('Failed to fetch') || err?.status >= 500) {
+        setUnlockError('Server nicht erreichbar. Bitte erneut versuchen.')
+      } else if (err?.status === 400 || err?.status === 403) {
+        setUnlockError('Zugriff verweigert. Bitte neu einloggen.')
+      } else if (err?.message?.includes('decryptData') || err?.message?.includes('decrypt') || err?.name === 'OperationError') {
+        setUnlockError('Falsches Passwort.')
+      } else {
+        setUnlockError(`Fehler: ${err?.message || 'Unbekannter Fehler'}`)
+      }
     } finally {
       setUnlocking(false)
     }

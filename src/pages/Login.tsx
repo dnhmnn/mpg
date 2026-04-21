@@ -22,9 +22,13 @@ export default function Login() {
     try {
       const authData = await pb.collection('users').authWithPassword(email, password)
       clearTimeout(timeoutId)
-      // Initialize/unlock E2E keys in background — no extra prompt needed
-      const { initializeAndUnlock } = await import('../lib/keyManager')
-      initializeAndUnlock(authData.record.id, password).catch(() => {})
+      // Initialize/unlock E2E keys — awaited so Chat opens without extra prompt
+      try {
+        const { initializeAndUnlock } = await import('../lib/keyManager')
+        await initializeAndUnlock(authData.record.id, password)
+      } catch (keyErr) {
+        console.warn('Key init failed, chat will prompt for password:', keyErr)
+      }
       const perms = authData.record?.permissions || {}
       const isLernbarOnly = perms.lernbar && !Object.entries(perms).some(([k, v]) => k !== 'lernbar' && v)
       navigate(isLernbarOnly ? '/lernbar' : '/hub', { replace: true })
