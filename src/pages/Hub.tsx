@@ -332,7 +332,7 @@ export default function Hub() {
 
       <StatusBar user={user} onLogout={logout} />
 
-      <div className="content hub-content" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', paddingTop: 'calc(54px + env(safe-area-inset-top) + 6px)' }}>
+      <div className="content hub-content" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-start' }}>
         <div className="hub-layout">
           <div className="hub-widgets">
             <Widgets user={user} />
