@@ -12,6 +12,8 @@
 
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css"/>
 
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
@@ -75,6 +77,14 @@
     .msg.success { background: #efe; color: #060; border: 1px solid #cfc; }
     body.loading { opacity: 0; }
     body.loaded { opacity: 1; transition: opacity 0.3s; }
+    .modal-map { padding: 0; }
+    .modal-map .modal-box { max-width: 100%; width: 100%; max-height: 95vh; height: 90vh; padding: 0; display: flex; flex-direction: column; }
+    #mapContainer { flex: 1; min-height: 0; width: 100%; }
+    .map-header { padding: 16px 20px; flex-shrink: 0; border-bottom: 1px solid #e0e0e0; display: flex; align-items: center; justify-content: space-between; }
+    @media (max-width: 768px) {
+      .modal-map { padding: 0; align-items: stretch; }
+      .modal-map .modal-box { max-height: 100%; height: 100%; border-radius: 0; max-width: 100%; }
+    }
     @media (max-width: 768px) {
       .status-bar {
         padding-left: max(16px, env(safe-area-inset-left));
@@ -322,6 +332,21 @@
   </div>
 </div>
 
+<!-- Modal: Einsatzkarte -->
+
+<div class="modal modal-map" id="mapModal">
+  <div class="modal-box">
+    <div class="map-header">
+      <div class="modal-title"><i class="fa-solid fa-map-location-dot"></i> <span id="mapModalTitle">Einsatzkarte</span></div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="btn btn-small" id="saveMapBtn"><i class="fa-solid fa-floppy-disk"></i> Speichern</button>
+        <button class="modal-close" onclick="closeMapModal()">×</button>
+      </div>
+    </div>
+    <div id="mapContainer"></div>
+  </div>
+</div>
+
 <!-- Modal: Person hinzufügen -->
 
 <div class="modal" id="personModal">
@@ -348,6 +373,9 @@
     </form>
   </div>
 </div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
 
 <script type="module">
   import PocketBase from 'https://cdn.jsdelivr.net/npm/pocketbase@0.21.3/dist/pocketbase.es.mjs';
@@ -642,6 +670,18 @@
           ${personenHTML}
         </div>
         
+        <div class="details-section">
+          <h4>
+            <span class="section-header"><i class="fa-solid fa-map-location-dot"></i> Einsatzkarte</span>
+            <button class="btn btn-small" onclick="openMapModal('${einsatzId}')">
+              <i class="fa-solid fa-pencil"></i> ${einsatz.karte_geojson ? 'Karte bearbeiten' : 'Karte öffnen'}
+            </button>
+          </h4>
+          ${einsatz.karte_geojson
+            ? '<div style="color:#667eea;font-size:13px"><i class="fa-solid fa-circle-check"></i> Skizzen vorhanden</div>'
+            : '<div class="empty-list">Noch keine Karteneinträge</div>'}
+        </div>
+
         <div style="display:flex;gap:10px;margin-top:24px">
           <button class="btn" onclick="openEinsatzModal('${einsatzId}')">
             <i class="fa-solid fa-edit"></i> Bearbeiten
@@ -872,6 +912,128 @@
     });
   });
   
+  // ── Map / BayernAtlas ──────────────────────────────────────────────────────
+  let mapInstance = null;
+  let drawnItems = null;
+  let mapEinsatzId = null;
+
+  window.openMapModal = async function(einsatzId) {
+    mapEinsatzId = einsatzId;
+    const einsatz = allEinsaetze.find(e => e.id === einsatzId);
+    if (!einsatz) return;
+    document.getElementById('mapModalTitle').textContent =
+      (einsatz.stichwort || einsatz.einsatz_nr) + ' – Karte';
+    document.getElementById('mapModal').classList.add('show');
+    setTimeout(() => initMap(einsatz), 150);
+  };
+
+  window.closeMapModal = function() {
+    document.getElementById('mapModal').classList.remove('show');
+    if (mapInstance) { mapInstance.remove(); mapInstance = null; drawnItems = null; }
+  };
+
+  async function initMap(einsatz) {
+    const container = document.getElementById('mapContainer');
+    if (mapInstance) { mapInstance.remove(); mapInstance = null; drawnItems = null; }
+
+    // Default: center of Bavaria
+    let center = [48.5, 11.5];
+    let zoom = 12;
+
+    if (einsatz.adresse) {
+      try {
+        const res = await fetch(
+          `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(einsatz.adresse + ', Bayern, Deutschland')}&format=json&limit=1`,
+          { headers: { 'Accept-Language': 'de' } }
+        );
+        const data = await res.json();
+        if (data.length > 0) {
+          center = [parseFloat(data[0].lat), parseFloat(data[0].lon)];
+          zoom = 17;
+        }
+      } catch(e) { /* ignore geocoding failure */ }
+    }
+
+    mapInstance = L.map(container).setView(center, zoom);
+
+    // Base layers
+    const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors', maxZoom: 19
+    });
+
+    // BayernAtlas WMS (Bayerische Vermessungsverwaltung – free public service)
+    // Requires field "karte_geojson" (text) in PocketBase "einsaetze" collection to save
+    const bayernTopoLayer = L.tileLayer.wms('https://geoservices.bayern.de/wms/v2/ogc_bayernatlas_basic.cgi', {
+      layers: 'by_dtk25', format: 'image/png', transparent: false,
+      attribution: '© Bayerische Vermessungsverwaltung', maxZoom: 19
+    });
+
+    const bayernLuftbildLayer = L.tileLayer.wms('https://geoservices.bayern.de/wms/v2/ogc_bayernatlas_basic.cgi', {
+      layers: 'by_dop80', format: 'image/png', transparent: false,
+      attribution: '© Bayerische Vermessungsverwaltung', maxZoom: 20
+    });
+
+    bayernTopoLayer.addTo(mapInstance);
+
+    L.control.layers({
+      'BayernAtlas Topographie': bayernTopoLayer,
+      'BayernAtlas Luftbild': bayernLuftbildLayer,
+      'OpenStreetMap': osmLayer
+    }).addTo(mapInstance);
+
+    // Drawing layer
+    drawnItems = new L.FeatureGroup();
+    mapInstance.addLayer(drawnItems);
+
+    // Load saved GeoJSON
+    if (einsatz.karte_geojson) {
+      try {
+        L.geoJSON(JSON.parse(einsatz.karte_geojson), {
+          onEachFeature: (_, layer) => drawnItems.addLayer(layer)
+        });
+      } catch(e) { /* corrupt data, ignore */ }
+    }
+
+    // Address marker
+    if (zoom === 17) {
+      L.marker(center)
+        .addTo(mapInstance)
+        .bindPopup(`<b>${einsatz.stichwort || einsatz.einsatz_nr}</b><br>${einsatz.adresse}`)
+        .openPopup();
+    }
+
+    // Drawing controls
+    const drawControl = new L.Control.Draw({
+      draw: {
+        polyline:     { shapeOptions: { color: '#e74c3c', weight: 3 } },
+        polygon:      { shapeOptions: { color: '#e74c3c', fillColor: '#e74c3c', fillOpacity: 0.25 } },
+        rectangle:    { shapeOptions: { color: '#3498db', fillColor: '#3498db', fillOpacity: 0.2 } },
+        circle:       { shapeOptions: { color: '#f39c12', fillColor: '#f39c12', fillOpacity: 0.2 } },
+        marker:       true,
+        circlemarker: false
+      },
+      edit: { featureGroup: drawnItems }
+    });
+    mapInstance.addControl(drawControl);
+    mapInstance.on(L.Draw.Event.CREATED, e => drawnItems.addLayer(e.layer));
+
+    document.getElementById('saveMapBtn').onclick = async () => {
+      try {
+        const geojsonStr = JSON.stringify(drawnItems.toGeoJSON());
+        await pb.collection('einsaetze').update(mapEinsatzId, { karte_geojson: geojsonStr });
+        const local = allEinsaetze.find(e => e.id === mapEinsatzId);
+        if (local) local.karte_geojson = geojsonStr;
+        showMsg('✅ Karte gespeichert!', 'success');
+      } catch(err) {
+        const hint = err?.response?.data?.karte_geojson
+          ? ' → Bitte Feld "karte_geojson" (Typ: Text) in der PocketBase-Collection "einsaetze" anlegen.'
+          : '';
+        showMsg('Fehler beim Speichern: ' + err.message + hint, 'error');
+      }
+    };
+  }
+  // ──────────────────────────────────────────────────────────────────────────
+
   console.log('🚒 Einsatzverwaltung geladen');
   init();
 </script>
