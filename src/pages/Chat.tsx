@@ -42,9 +42,6 @@ export default function Chat() {
   const [sending, setSending] = useState(false)
 
   const [unlocked, setUnlocked] = useState(false)
-  const [password, setPassword] = useState('')
-  const [unlockError, setUnlockError] = useState('')
-  const [unlocking, setUnlocking] = useState(false)
 
   const [showContacts, setShowContacts] = useState(false)
   const [orgUsers, setOrgUsers] = useState<OrgUser[]>([])
@@ -74,29 +71,6 @@ export default function Chat() {
 
   useEffect(() => () => { unsubRef.current?.() }, [])
 
-  async function handleUnlock(e: React.FormEvent) {
-    e.preventDefault()
-    if (!user) return
-    setUnlocking(true)
-    setUnlockError('')
-    try {
-      await initializeAndUnlock(user.id, password)
-      setUnlocked(true)
-    } catch (err: any) {
-      console.error('Chat unlock error:', err)
-      if (err?.message?.includes('Failed to fetch') || err?.status >= 500) {
-        setUnlockError('Server nicht erreichbar. Bitte erneut versuchen.')
-      } else if (err?.status === 400 || err?.status === 403) {
-        setUnlockError('Zugriff verweigert. Bitte neu einloggen.')
-      } else if (err?.message?.includes('decryptData') || err?.message?.includes('decrypt') || err?.name === 'OperationError') {
-        setUnlockError('Falsches Passwort.')
-      } else {
-        setUnlockError(`Fehler: ${err?.message || 'Unbekannter Fehler'}`)
-      }
-    } finally {
-      setUnlocking(false)
-    }
-  }
 
   async function loadChannels() {
     if (!user) return
@@ -458,13 +432,9 @@ export default function Chat() {
             <div className="chat-lock-wrap">
               <div className="chat-lock-card">
                 <div className="chat-lock-icon">🔐</div>
-                <div className="chat-lock-title">Chat entsperren</div>
-                <div className="chat-lock-desc">Gib dein Login-Passwort ein. Der Schlüssel verlässt nie das Gerät.</div>
-                <form onSubmit={handleUnlock}>
-                  <input className="chat-lock-inp" type="password" placeholder="Passwort" value={password} onChange={e => setPassword(e.target.value)} autoFocus />
-                  <button className="chat-lock-btn" type="submit" disabled={unlocking}>{unlocking ? 'Entsperre...' : 'Entsperren'}</button>
-                  {unlockError && <div className="chat-lock-err">{unlockError}</div>}
-                </form>
+                <div className="chat-lock-title">Sitzung abgelaufen</div>
+                <div className="chat-lock-desc">Der verschlüsselte Chat ist nur direkt nach dem Login verfügbar. Bitte melde dich neu an.</div>
+                <button className="chat-lock-btn" onClick={() => navigate('/login')}>Neu einloggen</button>
               </div>
             </div>
           </div>
