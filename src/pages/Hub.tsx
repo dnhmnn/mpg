@@ -208,14 +208,14 @@ export default function Hub() {
         }
         .hub-content { padding-bottom: 8vh; }
         @media (max-width: 767px) {
-          .hub-content { padding-top: 110px; }
+          .hub-content { padding-top: 110px; justify-content: flex-start; }
           .hub-widgets .widget { min-height: 70px; padding: 8px 12px; }
           .hub-widgets .widget-title { font-size: 11px; margin-bottom: 2px; }
           .hub-widgets .widget-value { font-size: 22px; }
           .hub-widgets .widget-label { font-size: 12px; margin-top: 2px; }
         }
         @media (min-width: 768px) {
-          .hub-content { justify-content: center; padding-bottom: 82vh; }
+          .hub-content { justify-content: center; padding-bottom: 32vh; }
         }
         @media (min-width: 1100px) {
           .hub-layout { gap: 48px; }
@@ -332,7 +332,7 @@ export default function Hub() {
 
       <StatusBar user={user} onLogout={logout} />
 
-      <div className="content hub-content" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-start' }}>
+      <div className="content hub-content" style={{ display: 'flex', flexDirection: 'column' }}>
         <div className="hub-layout">
           <div className="hub-widgets">
             <Widgets user={user} />
