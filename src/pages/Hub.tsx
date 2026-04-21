@@ -4,12 +4,15 @@ import { useNotifications } from '../hooks/useNotifications'
 import StatusBar from '../components/StatusBar'
 import Widgets from '../components/Widgets'
 import AppGrid from '../components/AppGrid'
+import Dock from '../components/Dock'
 import SettingsModal from '../components/SettingsModal'
 import AppsModal from '../components/AppsModal'
 import EditModal from '../components/EditModal'
 import WidgetsModal from '../components/WidgetsModal'
 import NotificationModal from '../components/NotificationModal'
 import type { App } from '../types'
+
+const DOCK_APP_IDS = ['einsaetze', 'patienten', 'ausbildungen', 'mpg']
 
 const ALL_APPS: Record<string, App> = {
   einsaetze:    { id: 'einsaetze',    name: 'Einsätze',     icon: 'siren',      url: '/einsaetze.html',                     permission: 'einsaetze',           color: 'linear-gradient(135deg, #ff3b30, #c03026)' },
@@ -46,10 +49,24 @@ export default function Hub() {
   const [showAppsModal, setShowAppsModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
   const [showWidgetsModal, setShowWidgetsModal] = useState(false)
+  const [recentApps, setRecentApps] = useState<string[]>([])
 
   useEffect(() => {
-    if (user) loadUserApps()
+    if (user) {
+      loadUserApps()
+      const saved = localStorage.getItem(`hub_recent_${user.id}`)
+      setRecentApps(saved ? JSON.parse(saved) : [])
+    }
   }, [user])
+
+  function trackAppClick(id: string) {
+    if (!user) return
+    setRecentApps(prev => {
+      const updated = [id, ...prev.filter(r => r !== id)].slice(0, 20)
+      localStorage.setItem(`hub_recent_${user.id}`, JSON.stringify(updated))
+      return updated
+    })
+  }
 
   useEffect(() => {
     const handleOpenSettings = () => setShowSettings(true)
@@ -120,6 +137,15 @@ export default function Hub() {
   }
 
   if (loading) return null
+
+  const dockApps = DOCK_APP_IDS
+    .filter(id => ALL_APPS[id] && hasPermission(ALL_APPS[id].permission))
+    .map(id => ALL_APPS[id])
+
+  const recentDockApps = recentApps
+    .filter(id => !DOCK_APP_IDS.includes(id) && userApps.includes(id) && ALL_APPS[id])
+    .slice(0, 3)
+    .map(id => ALL_APPS[id])
 
   return (
     <>
@@ -209,6 +235,88 @@ export default function Hub() {
             max-width: 96px;
           }
         }
+
+        /* ── Dock ── */
+        .dock {
+          position: fixed;
+          bottom: calc(14px + env(safe-area-inset-bottom));
+          left: 50%;
+          transform: translateX(-50%);
+          background: var(--bg-card);
+          backdrop-filter: blur(40px);
+          -webkit-backdrop-filter: blur(40px);
+          border: 0.5px solid var(--border);
+          border-radius: 26px;
+          padding: 10px 14px;
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          box-shadow: 0 6px 28px rgba(0,0,0,0.14);
+          z-index: 400;
+          white-space: nowrap;
+        }
+        .dock-btn {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 4px;
+          text-decoration: none;
+          color: inherit;
+          padding: 4px 7px;
+          border-radius: 14px;
+          transition: background 0.15s;
+        }
+        .dock-btn:active { background: var(--bg-hover); }
+        .dock-icon {
+          width: 52px;
+          height: 52px;
+          border-radius: 13px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+        }
+        .dock-icon svg {
+          width: 24px;
+          height: 24px;
+          stroke: currentColor;
+          fill: none;
+          stroke-width: 1.5;
+          stroke-linecap: round;
+          stroke-linejoin: round;
+        }
+        .dock-label {
+          font-size: 10px;
+          font-weight: 600;
+          color: var(--text);
+          text-align: center;
+          max-width: 58px;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        .dock-sep {
+          width: 1px;
+          height: 44px;
+          background: var(--border-medium);
+          margin: 0 6px;
+          flex-shrink: 0;
+        }
+        /* On mobile: hide recent section in dock */
+        @media (max-width: 767px) {
+          .dock-sep, .dock-recent { display: none; }
+          /* Hide dock apps from main grid on mobile */
+          .app[data-app-id="einsaetze"],
+          .app[data-app-id="patienten"],
+          .app[data-app-id="ausbildungen"],
+          .app[data-app-id="mpg"] { display: none; }
+        }
+        /* Desktop dock: slightly larger icons */
+        @media (min-width: 768px) {
+          .dock-icon { width: 58px; height: 58px; border-radius: 14px; }
+          .dock-icon svg { width: 26px; height: 26px; }
+          .dock-label { font-size: 11px; max-width: 66px; }
+          .dock-btn { padding: 4px 9px; }
+        }
       `}</style>
 
       <StatusBar user={user} onLogout={logout} />
@@ -222,10 +330,17 @@ export default function Hub() {
             <AppGrid
               userApps={userApps}
               onRemoveApp={handleRemoveApp}
+              onAppClick={trackAppClick}
             />
           </div>
         </div>
       </div>
+
+      <Dock
+        dockApps={dockApps}
+        recentApps={recentDockApps}
+        onAppClick={trackAppClick}
+      />
 
       <SettingsModal isOpen={showSettings} onClose={() => setShowSettings(false)} user={user} />
 
