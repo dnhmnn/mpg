@@ -301,14 +301,14 @@ export default function Hub() {
           margin: 0 6px;
           flex-shrink: 0;
         }
+        /* Hide dock apps from main grid on all screen sizes */
+        .app[data-app-id="einsaetze"],
+        .app[data-app-id="patienten"],
+        .app[data-app-id="ausbildungen"],
+        .app[data-app-id="mpg"] { display: none; }
         /* On mobile: hide recent section in dock */
         @media (max-width: 767px) {
           .dock-sep, .dock-recent { display: none; }
-          /* Hide dock apps from main grid on mobile */
-          .app[data-app-id="einsaetze"],
-          .app[data-app-id="patienten"],
-          .app[data-app-id="ausbildungen"],
-          .app[data-app-id="mpg"] { display: none; }
         }
         /* Desktop dock: slightly larger icons */
         @media (min-width: 768px) {
