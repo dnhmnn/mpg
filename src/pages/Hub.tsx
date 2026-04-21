@@ -206,6 +206,9 @@ export default function Hub() {
           .hub-widgets .widget-value { font-size: 36px; }
           .hub-widgets .widget-label { font-size: 15px; }
         }
+        @media (min-width: 768px) {
+          .hub-content { padding-bottom: 34vh; }
+        }
         @media (min-width: 1100px) {
           .hub-layout { gap: 48px; }
           .hub-widgets .widgets {
@@ -321,7 +324,7 @@ export default function Hub() {
 
       <StatusBar user={user} onLogout={logout} />
 
-      <div className="content" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', paddingBottom: '20vh' }}>
+      <div className="content hub-content" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', paddingBottom: '20vh' }}>
         <div className="hub-layout">
           <div className="hub-widgets">
             <Widgets user={user} />
