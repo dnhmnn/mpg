@@ -40,22 +40,37 @@ export default function DetailsModal({ doc, type, onClose }: Props) {
       const p = parsePayload(pd.payload)
       const gcsTotal = (p.gcs_e || 0) + (p.gcs_v || 0) + (p.gcs_m || 0)
       const meds = p.medications || []
-      const chk = (on: boolean | undefined, label: string) =>
-        `<span style="display:inline-flex;align-items:center;gap:2pt;font-size:7pt;margin:1pt 3pt 1pt 0">` +
-        `<span style="width:8pt;height:8pt;border:0.7pt solid #444;display:inline-block;background:${on?'#1c3a5e':'#fff'};flex-shrink:0;position:relative">${on?`<svg style="position:absolute;top:-1pt;left:0" width="8" height="8" viewBox="0 0 8 8"><path d="M1.5 4.5l2 2 3-4" stroke="white" stroke-width="1.3" fill="none"/></svg>`:''}</span>${label}</span>`
+
+      // tag-badge helpers: .tag renders as a grey pill; .tag.active = dark filled
+      const tag = (on: boolean | undefined, label: string) =>
+        `<span class="tag${on?' active':''}">${label}</span>`
 
       const B = (t:string) => `<div style="font-size:6.5pt;font-weight:bold;background:#d0d0d0;padding:2pt 5pt;text-transform:uppercase;letter-spacing:.4pt;border-bottom:0.5pt solid #888">${t}</div>`
-      const hdr = (sub:string) => `<div style="background:#1c3a5e;color:#fff;display:flex;align-items:stretch;margin-bottom:4pt"><div style="flex:1;padding:5pt 10pt"><div style="font-size:13pt;font-weight:bold;letter-spacing:.5pt;text-transform:uppercase">Notfalleinsatzprotokoll</div><div style="font-size:6pt;opacity:.75;margin-top:2pt">${sub}</div></div><div style="background:#c0392b;padding:5pt 14pt;display:flex;align-items:center"><span style="font-size:17pt;font-weight:bold;color:#fff;letter-spacing:2pt">MIND</span></div></div>`
+      const hdr = (sub:string) => `<div style="border:1pt solid #000;display:flex;align-items:center;justify-content:space-between;padding:5pt 10pt;margin-bottom:4pt"><div style="font-size:13pt;font-weight:bold;letter-spacing:.5pt;text-transform:uppercase">NOTFALLEINSATZPROTOKOLL</div><div style="font-size:6pt;color:#444">${sub}</div><div style="font-size:17pt;font-weight:bold;letter-spacing:2pt">MIND</div></div>`
       const blk = (title:string, content:string) => `<div style="border:0.5pt solid #888;margin-bottom:4pt;overflow:hidden">${B(title)}${content}</div>`
       const row = (cols:string, cells:string) => `<div style="display:grid;grid-template-columns:${cols};border-top:0.5pt solid #ccc">${cells}</div>`
       const cell = (lbl:string, val:string) => `<div style="padding:2.5pt 5pt;border-right:0.5pt solid #ccc"><div style="font-size:5.5pt;color:#666;text-transform:uppercase;letter-spacing:.3pt;margin-bottom:1pt">${lbl}</div><div style="font-weight:bold;font-size:8.5pt;min-height:9pt">${val||''}</div></div>`
       const cellL = (lbl:string, val:string) => `<div style="padding:2.5pt 5pt;border-right:0.5pt solid #ccc"><div style="font-size:5.5pt;color:#666;text-transform:uppercase;letter-spacing:.3pt;margin-bottom:1pt">${lbl}</div><div style="font-size:8.5pt;min-height:12pt;white-space:pre-wrap">${val||''}</div></div>`
-      const naca = ['0','I','II','III','IV','V','VI','VII'].map(v=>`<div style="width:16pt;height:16pt;border:0.7pt solid ${p.naca===v?'#1c3a5e':'#555'};display:inline-flex;align-items:center;justify-content:center;font-size:7.5pt;font-weight:bold;background:${p.naca===v?'#1c3a5e':'#fff'};color:${p.naca===v?'#fff':'#000'};margin-right:1.5pt">${v}</div>`).join('')
-      const cr = (items:[boolean|undefined,string][]) => `<div style="display:flex;flex-wrap:wrap;gap:2pt;padding:3pt 5pt">${items.map(([on,l])=>chk(on,l)).join('')}</div>`
+      // NACA boxes: dark-filled when active, same visual as .tag.active
+      const naca = ['0','I','II','III','IV','V','VI','VII'].map(v=>`<span class="tag naca${p.naca===v?' active':''}">${v}</span>`).join('')
+      const cr = (items:[boolean|undefined,string][]) => `<div style="display:flex;flex-wrap:wrap;gap:2pt;padding:3pt 5pt">${items.map(([on,l])=>tag(on,l)).join('')}</div>`
       const vitG = [['RR syst.',p.rr_sys],['RR diast.',p.rr_dia],['HF /min',p.hf],['SpO₂ %',p.spo2],['AF /min',p.af],['Temp °C',p.temp],['BZ mg/dl',p.bz_mg],['etCO₂',p.etco2],['Schmerz NRS',p.schmerz]].map(([l,v])=>`<div style="text-align:center;border-right:0.5pt solid #ccc;padding:2pt 1pt"><div style="font-size:5pt;color:#666">${l}</div><div style="font-size:10pt;font-weight:bold">${v||'—'}</div></div>`).join('')
 
       const html = `<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"><title>MIND Notfalleinsatzprotokoll</title>
-      <style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,Helvetica,sans-serif;font-size:8.5pt;color:#000;background:#fff}.pg{padding:8mm 10mm;max-width:210mm;margin:0 auto}.pb{page-break-before:always}table{width:100%;border-collapse:collapse}th{background:#d0d0d0;font-size:6pt;text-transform:uppercase;padding:2pt 4pt;border:0.5pt solid #888;letter-spacing:.3pt}td{padding:2pt 4pt;border:0.5pt solid #ccc;font-size:8pt}.pbtn{position:fixed;bottom:20px;right:20px;background:#c0392b;color:#fff;border:none;padding:10px 20px;border-radius:8px;font-size:14px;font-weight:bold;cursor:pointer}@media print{.pbtn{display:none}}</style>
+      <style>
+        *{box-sizing:border-box;margin:0;padding:0}
+        body{font-family:Arial,Helvetica,sans-serif;font-size:8.5pt;color:#000;background:#fff}
+        .pg{padding:8mm 10mm;max-width:210mm;margin:0 auto}
+        .pb{page-break-before:always}
+        table{width:100%;border-collapse:collapse}
+        th{background:#d0d0d0;font-size:6pt;text-transform:uppercase;padding:2pt 4pt;border:0.5pt solid #888;letter-spacing:.3pt}
+        td{padding:2pt 4pt;border:0.5pt solid #ccc;font-size:8pt}
+        .tag{display:inline-block;font-size:6.5pt;padding:1pt 4pt;border:0.6pt solid #888;border-radius:2pt;margin:1pt 2pt 1pt 0;background:#f0f0f0;color:#333}
+        .tag.active{background:#222;color:#fff;border-color:#222}
+        .tag.naca{min-width:14pt;text-align:center;font-weight:bold}
+        .pbtn{position:fixed;bottom:20px;right:20px;background:#222;color:#fff;border:none;padding:10px 20px;border-radius:8px;font-size:14px;font-weight:bold;cursor:pointer}
+        @media print{.pbtn{display:none}}
+      </style>
       </head><body>
 
       <div class="pg">
@@ -82,7 +97,8 @@ export default function DetailsModal({ doc, type, onClose }: Props) {
       )}
 
       ${blk('Notfallgeschehen / Anamnese',
-        `<div style="padding:4pt 5pt;min-height:28pt;font-size:8.5pt;white-space:pre-wrap">${p.notfallgeschehen||''}</div>`+
+        row('1fr',cellL('Notfallgeschehen',p.notfallgeschehen||''))+
+        row('1fr',cellL('Verlaufsbeschreibung',p.verlaufsbeschreibung||''))+
         row('1fr 1fr',cellL('Vorerkrankungen',p.vorerkrankungen||'')+cellL('Dauermedikation Patient',p.vormedikation_patient||''))+
         row('1fr',cell('Allergien / Unverträglichkeiten',p.allergien||'Keine bekannt'))
       )}
@@ -90,7 +106,7 @@ export default function DetailsModal({ doc, type, onClose }: Props) {
       <div style="display:grid;grid-template-columns:auto 1fr 1fr;gap:4pt;margin-bottom:4pt">
         ${blk('NACA-Score',`<div style="padding:3pt 5pt;display:flex;gap:1.5pt">${naca}</div>`)}
         ${blk('Bewusstsein',cr([[p.bewusstsein==='wach','Wach'],[p.bewusstsein==='somnolent','Somnolent'],[p.bewusstsein==='soporös','Soporös'],[p.bewusstsein==='komatös','Komatös']]))}
-        ${blk('Neurologie',`<div style="padding:3pt 5pt;display:flex;gap:10pt;align-items:center">${chk(p.neu_unauff,'Unauffällig')}<span style="font-size:7pt">Zeit: <b>${p.neu_zeit||'—'}</b></span></div>`)}
+        ${blk('Neurologie',`<div style="padding:3pt 5pt;display:flex;gap:10pt;align-items:center">${tag(p.neu_unauff,'Unauffällig')}<span style="font-size:7pt">Zeit: <b>${p.neu_zeit||'—'}</b></span></div>`)}
       </div>
 
       <div style="display:grid;grid-template-columns:1fr 88pt;gap:4pt;margin-bottom:4pt">
@@ -100,7 +116,7 @@ export default function DetailsModal({ doc, type, onClose }: Props) {
               `<div style="padding:2.5pt 5pt;border-right:0.5pt solid #ccc"><div style="font-size:5.5pt;color:#666;text-transform:uppercase;letter-spacing:.3pt;margin-bottom:1pt">Pupillen rechts</div><div style="font-size:7.5pt"><b>${p.pw_r||'—'}</b>${p.pw_r_entrundet?' entr.':''} · LR: ${p.lr_r||'—'}</div></div>`+
               `<div style="padding:2.5pt 5pt"><div style="font-size:5.5pt;color:#666;text-transform:uppercase;letter-spacing:.3pt;margin-bottom:1pt">Pupillen links</div><div style="font-size:7.5pt"><b>${p.pw_l||'—'}</b>${p.pw_l_entrundet?' entr.':''} · LR: ${p.lr_l||'—'}</div></div>`
             )+
-            `<div style="border-top:0.5pt solid #ccc;padding:2.5pt 5pt"><div style="font-size:5.5pt;color:#666;text-transform:uppercase;letter-spacing:.3pt;margin-bottom:1pt">O₂-Gabe</div><div style="display:flex;flex-wrap:wrap;gap:2pt">${chk(p.o2,'O₂')}${chk(p.o2_nasal,'Nasal')}${chk(p.o2_maske,'Maske')}${chk(p.o2_reservoir,'Reservoir')}${p.o2_flow?`<span style="font-size:7pt;align-self:center">${p.o2_flow} l/min</span>`:''}</div></div>`
+            `<div style="border-top:0.5pt solid #ccc;padding:2.5pt 5pt"><div style="font-size:5.5pt;color:#666;text-transform:uppercase;letter-spacing:.3pt;margin-bottom:1pt">O₂-Gabe</div><div style="display:flex;flex-wrap:wrap;gap:2pt">${tag(p.o2,'O₂')}${tag(p.o2_nasal,'Nasal')}${tag(p.o2_maske,'Maske')}${tag(p.o2_reservoir,'Reservoir')}${p.o2_flow?`<span style="font-size:7pt;align-self:center">${p.o2_flow} l/min</span>`:''}</div></div>`
           )}
         </div>
         <div>
