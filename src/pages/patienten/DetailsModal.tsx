@@ -40,209 +40,126 @@ export default function DetailsModal({ doc, type, onClose }: Props) {
       const p = parsePayload(pd.payload)
       const gcsTotal = (p.gcs_e || 0) + (p.gcs_v || 0) + (p.gcs_m || 0)
       const meds = p.medications || []
-      const tags = (items: { val?: boolean; label: string }[]) =>
-        items.map(t => `<span class="tag${t.val ? ' active' : ''}">${t.label}</span>`).join('')
+      const chk = (on: boolean | undefined, label: string) =>
+        `<span style="display:inline-flex;align-items:center;gap:2pt;font-size:7pt;margin:1pt 3pt 1pt 0">` +
+        `<span style="width:8pt;height:8pt;border:0.7pt solid #444;display:inline-block;background:${on?'#1c3a5e':'#fff'};flex-shrink:0;position:relative">${on?`<svg style="position:absolute;top:-1pt;left:0" width="8" height="8" viewBox="0 0 8 8"><path d="M1.5 4.5l2 2 3-4" stroke="white" stroke-width="1.3" fill="none"/></svg>`:''}</span>${label}</span>`
 
-      const html = `<!DOCTYPE html><html lang="de"><head>
-        <meta charset="UTF-8"><title>Notfalleinsatzprotokoll</title>
-        <style>
-          *{box-sizing:border-box;margin:0;padding:0}
-          body{font-family:Arial,Helvetica,sans-serif;font-size:9pt;color:#000;background:#fff}
-          .page{padding:8mm 10mm;max-width:210mm;margin:0 auto}
-          .hdr{display:flex;justify-content:space-between;border-bottom:2pt solid #000;padding-bottom:4pt;margin-bottom:6pt}
-          .hdr-title{font-size:14pt;font-weight:bold}
-          .block{border:0.5pt solid #999;border-radius:2pt;margin-bottom:5pt;overflow:hidden}
-          .block-title{font-size:7.5pt;font-weight:bold;background:#eee;padding:2pt 5pt;text-transform:uppercase;letter-spacing:.3pt;border-bottom:0.5pt solid #ccc}
-          .row{display:grid;border-top:0.5pt solid #eee}
-          .row:first-of-type{border-top:none}
-          .cell{padding:3pt 5pt;border-right:0.5pt solid #eee}
-          .cell:last-child{border-right:none}
-          .lbl{font-size:6.5pt;color:#777;text-transform:uppercase}
-          .val{font-weight:bold;min-height:10pt;font-size:9pt}
-          .vitals{display:grid;grid-template-columns:repeat(8,1fr)}
-          .vital{text-align:center;border-right:0.5pt solid #eee;padding:3pt 2pt}
-          .vital:last-child{border-right:none}
-          .vlbl{font-size:6.5pt;color:#777}
-          .vval{font-size:11pt;font-weight:bold}
-          .gcs-wrap{display:grid;grid-template-columns:1fr 1fr 1fr 48pt}
-          .gcs-cell{text-align:center;border-right:0.5pt solid #eee;padding:3pt 2pt}
-          .gcs-cell:last-child{border-right:none;background:#f5f5f5}
-          .gcs-total{font-size:16pt;font-weight:bold}
-          .tag{display:inline-block;border:0.5pt solid #999;border-radius:2pt;padding:1pt 4pt;margin:1pt;font-size:7.5pt}
-          .tag.active{background:#222;color:#fff;border-color:#222}
-          table{width:100%;border-collapse:collapse}
-          th,td{border:0.5pt solid #ccc;padding:2pt 4pt;font-size:8pt}
-          th{background:#eee;text-transform:uppercase;font-size:7.5pt}
-          .two{display:grid;grid-template-columns:1fr 1fr;gap:5pt;margin-bottom:5pt}
-          .print-btn{position:fixed;bottom:20px;right:20px;background:#c0392b;color:#fff;border:none;padding:10px 20px;border-radius:8px;font-size:14px;font-weight:bold;cursor:pointer}
-          @media print{.print-btn{display:none}}
-        </style>
-      </head><body><div class="page">
+      const B = (t:string) => `<div style="font-size:6.5pt;font-weight:bold;background:#d0d0d0;padding:2pt 5pt;text-transform:uppercase;letter-spacing:.4pt;border-bottom:0.5pt solid #888">${t}</div>`
+      const hdr = (sub:string) => `<div style="background:#1c3a5e;color:#fff;display:flex;align-items:stretch;margin-bottom:4pt"><div style="flex:1;padding:5pt 10pt"><div style="font-size:13pt;font-weight:bold;letter-spacing:.5pt;text-transform:uppercase">Notfalleinsatzprotokoll</div><div style="font-size:6pt;opacity:.75;margin-top:2pt">${sub}</div></div><div style="background:#c0392b;padding:5pt 14pt;display:flex;align-items:center"><span style="font-size:17pt;font-weight:bold;color:#fff;letter-spacing:2pt">MIND</span></div></div>`
+      const blk = (title:string, content:string) => `<div style="border:0.5pt solid #888;margin-bottom:4pt;overflow:hidden">${B(title)}${content}</div>`
+      const row = (cols:string, cells:string) => `<div style="display:grid;grid-template-columns:${cols};border-top:0.5pt solid #ccc">${cells}</div>`
+      const cell = (lbl:string, val:string) => `<div style="padding:2.5pt 5pt;border-right:0.5pt solid #ccc"><div style="font-size:5.5pt;color:#666;text-transform:uppercase;letter-spacing:.3pt;margin-bottom:1pt">${lbl}</div><div style="font-weight:bold;font-size:8.5pt;min-height:9pt">${val||''}</div></div>`
+      const cellL = (lbl:string, val:string) => `<div style="padding:2.5pt 5pt;border-right:0.5pt solid #ccc"><div style="font-size:5.5pt;color:#666;text-transform:uppercase;letter-spacing:.3pt;margin-bottom:1pt">${lbl}</div><div style="font-size:8.5pt;min-height:12pt;white-space:pre-wrap">${val||''}</div></div>`
+      const naca = ['0','I','II','III','IV','V','VI','VII'].map(v=>`<div style="width:16pt;height:16pt;border:0.7pt solid ${p.naca===v?'#1c3a5e':'#555'};display:inline-flex;align-items:center;justify-content:center;font-size:7.5pt;font-weight:bold;background:${p.naca===v?'#1c3a5e':'#fff'};color:${p.naca===v?'#fff':'#000'};margin-right:1.5pt">${v}</div>`).join('')
+      const cr = (items:[boolean|undefined,string][]) => `<div style="display:flex;flex-wrap:wrap;gap:2pt;padding:3pt 5pt">${items.map(([on,l])=>chk(on,l)).join('')}</div>`
+      const vitG = [['RR syst.',p.rr_sys],['RR diast.',p.rr_dia],['HF /min',p.hf],['SpO₂ %',p.spo2],['AF /min',p.af],['Temp °C',p.temp],['BZ mg/dl',p.bz_mg],['etCO₂',p.etco2],['Schmerz NRS',p.schmerz]].map(([l,v])=>`<div style="text-align:center;border-right:0.5pt solid #ccc;padding:2pt 1pt"><div style="font-size:5pt;color:#666">${l}</div><div style="font-size:10pt;font-weight:bold">${v||'—'}</div></div>`).join('')
 
-        <div class="hdr">
-          <div>
-            <div class="hdr-title">NOTFALLEINSATZPROTOKOLL</div>
-            <div style="font-size:7.5pt;color:#555">Responda · Erstellt: ${new Date().toLocaleString('de-DE')}</div>
-          </div>
-          <div style="font-size:7pt;color:#aaa;align-self:flex-end">MIND</div>
-        </div>
+      const html = `<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"><title>MIND Notfalleinsatzprotokoll</title>
+      <style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,Helvetica,sans-serif;font-size:8.5pt;color:#000;background:#fff}.pg{padding:8mm 10mm;max-width:210mm;margin:0 auto}.pb{page-break-before:always}table{width:100%;border-collapse:collapse}th{background:#d0d0d0;font-size:6pt;text-transform:uppercase;padding:2pt 4pt;border:0.5pt solid #888;letter-spacing:.3pt}td{padding:2pt 4pt;border:0.5pt solid #ccc;font-size:8pt}.pbtn{position:fixed;bottom:20px;right:20px;background:#c0392b;color:#fff;border:none;padding:10px 20px;border-radius:8px;font-size:14px;font-weight:bold;cursor:pointer}@media print{.pbtn{display:none}}</style>
+      </head><body>
 
-        <div class="block">
-          <div class="block-title">Einsatzdaten</div>
-          <div class="row" style="grid-template-columns:1fr 1fr 1fr 1fr 1fr">
-            <div class="cell"><div class="lbl">Alarmzeit</div><div class="val">${p.zeit_einsatz||'—'}</div></div>
-            <div class="cell"><div class="lbl">Eintreffen</div><div class="val">${p.zeit_eintreffen||'—'}</div></div>
-            <div class="cell"><div class="lbl">Transportbeginn</div><div class="val">${p.zeit_transport||'—'}</div></div>
-            <div class="cell"><div class="lbl">Übergabe</div><div class="val">${p.zeit_uebergabe||'—'}</div></div>
-            <div class="cell"><div class="lbl">Einsatz-Nr.</div><div class="val">${p.einsatz_nr||'—'}</div></div>
-          </div>
-          <div class="row" style="grid-template-columns:2fr 1fr 1fr 1fr">
-            <div class="cell"><div class="lbl">Einsatzort / Adresse</div><div class="val">${p.einsatz_adresse||'—'}</div></div>
-            <div class="cell"><div class="lbl">Rufname</div><div class="val">${p.rufname||'—'}</div></div>
-            <div class="cell"><div class="lbl">Fahrzeug / Einheit</div><div class="val">${p.fahrzeug||'—'}</div></div>
-            <div class="cell"><div class="lbl">Einsatzart / Stichwort</div><div class="val">${p.einsatz_art||'—'}</div></div>
-          </div>
-          <div class="row" style="grid-template-columns:1fr 1fr">
-            <div class="cell"><div class="lbl">Auftrags-Nr.</div><div class="val">${p.auftrags_nr||'—'}</div></div>
-            <div class="cell"><div class="lbl">Transportziel</div><div class="val">${p.transport_ziel||'—'}</div></div>
-          </div>
-        </div>
+      <div class="pg">
+      ${hdr('MIND · Minimaler Notfalldatensatz · Erstellt: '+new Date().toLocaleString('de-DE'))}
 
-        <div class="block">
-          <div class="block-title">Patientendaten</div>
-          <div class="row" style="grid-template-columns:2fr 1fr .6fr 1.2fr 1.4fr">
-            <div class="cell"><div class="lbl">Name, Vorname</div><div class="val">${[p.name,p.vorname].filter(Boolean).join(', ')||'—'}</div></div>
-            <div class="cell"><div class="lbl">Geburtsdatum</div><div class="val">${p.gebdatum||'—'}</div></div>
-            <div class="cell"><div class="lbl">Alter</div><div class="val">${p.alter||'—'}</div></div>
-            <div class="cell"><div class="lbl">Krankenkasse</div><div class="val">${p.kasse||'—'}</div></div>
-            <div class="cell"><div class="lbl">Vers.-Nr.</div><div class="val">${p.versnr||'—'}</div></div>
-          </div>
-          <div class="row" style="grid-template-columns:1fr 1fr">
-            <div class="cell"><div class="lbl">Hausarzt</div><div class="val">${p.hausarzt||'—'}</div></div>
-            <div class="cell"><div class="lbl">Angehöriger</div><div class="val">${p.angehoeriger||'—'}</div></div>
-          </div>
-        </div>
+      ${blk('Einsatzdaten',
+        row('1fr 1.2fr 1fr 1fr 1fr 1fr',
+          cell('Einsatz-Nr.',p.einsatz_nr||'')+cell('Auftrags-Nr. (ILS)',p.auftrags_nr||'')+cell('Datum',new Date().toLocaleDateString('de-DE'))+cell('Alarmzeit',p.zeit_einsatz||'')+cell('Eintreffen',p.zeit_eintreffen||'')+cell('Transportbeginn',p.zeit_transport||'')
+        )+row('1fr 1fr 1fr 2fr',
+          cell('Übergabe',p.zeit_uebergabe||'')+cell('Rufname',p.rufname||'')+cell('Fahrzeug / Einheit',p.fahrzeug||'')+cell('Einsatzart / Stichwort',p.einsatz_art||'')
+        )+row('2fr 1fr',
+          cell('Einsatzort / Adresse',p.einsatz_adresse||'')+cell('Transportziel',p.transport_ziel||'')
+        )
+      )}
 
-        <div class="block">
-          <div class="block-title">Notfallgeschehen / Anamnese</div>
-          <div style="padding:5pt 6pt;min-height:30pt;font-size:9pt;white-space:pre-wrap">${p.notfallgeschehen||'—'}</div>
-          <div class="row" style="grid-template-columns:1fr 1fr">
-            <div class="cell"><div class="lbl">Vorerkrankungen</div><div style="font-size:9pt;min-height:18pt;white-space:pre-wrap">${p.vorerkrankungen||'—'}</div></div>
-            <div class="cell"><div class="lbl">Dauermedikation Patient</div><div style="font-size:9pt;min-height:18pt;white-space:pre-wrap">${p.vormedikation_patient||'—'}</div></div>
-          </div>
-          <div class="row" style="grid-template-columns:1fr">
-            <div class="cell"><div class="lbl">Allergien</div><div class="val">${p.allergien||'—'}</div></div>
-          </div>
-        </div>
+      ${blk('Patientenstammdaten',
+        row('2fr 1fr .6fr',
+          cell('Name, Vorname',[p.name,p.vorname].filter(Boolean).join(', '))+cell('Geburtsdatum',p.gebdatum||'')+cell('Alter',p.alter||'')
+        )+row('2fr 1fr 1fr',
+          cell('Straße',p.strasse||'')+cell('PLZ / Ort',p.plz_ort||'')+cell('Telefon',p.telefon||p.mobil||'')
+        )+row('1.5fr 1fr 1.5fr 1.5fr',
+          cell('Krankenkasse',p.kasse||'')+cell('Vers.-Nr.',p.versnr||'')+cell('Hausarzt',p.hausarzt||'')+cell('Angehöriger / Kontakt',p.angehoeriger||'')
+        )
+      )}
 
-        <div class="block">
-          <div class="row" style="grid-template-columns:1fr 1fr">
-            <div class="cell"><div class="lbl">NACA-Score</div><div class="val">${p.naca||'—'}</div></div>
-            <div class="cell"><div class="lbl">Bewusstsein</div><div class="val">${p.bewusstsein||'—'}</div></div>
-          </div>
-        </div>
+      ${blk('Notfallgeschehen / Anamnese',
+        `<div style="padding:4pt 5pt;min-height:28pt;font-size:8.5pt;white-space:pre-wrap">${p.notfallgeschehen||''}</div>`+
+        row('1fr 1fr',cellL('Vorerkrankungen',p.vorerkrankungen||'')+cellL('Dauermedikation Patient',p.vormedikation_patient||''))+
+        row('1fr',cell('Allergien / Unverträglichkeiten',p.allergien||'Keine bekannt'))
+      )}
 
-        <div style="display:grid;grid-template-columns:1fr 150pt;gap:5pt;margin-bottom:5pt">
-          <div class="block" style="margin:0">
-            <div class="block-title">Vitalzeichen</div>
-            <div class="vitals">
-              <div class="vital"><div class="vlbl">RR syst.</div><div class="vval">${p.rr_sys||'—'}</div></div>
-              <div class="vital"><div class="vlbl">RR diast.</div><div class="vval">${p.rr_dia||'—'}</div></div>
-              <div class="vital"><div class="vlbl">HF /min</div><div class="vval">${p.hf||'—'}</div></div>
-              <div class="vital"><div class="vlbl">SpO₂ %</div><div class="vval">${p.spo2||'—'}</div></div>
-              <div class="vital"><div class="vlbl">AF /min</div><div class="vval">${p.af||'—'}</div></div>
-              <div class="vital"><div class="vlbl">Temp °C</div><div class="vval">${p.temp||'—'}</div></div>
-              <div class="vital"><div class="vlbl">BZ mg/dl</div><div class="vval">${p.bz_mg||'—'}</div></div>
-              <div class="vital"><div class="vlbl">etCO₂</div><div class="vval">${p.etco2||'—'}</div></div>
-            </div>
-            <div class="row" style="grid-template-columns:1fr 1fr">
-              <div class="cell"><div class="lbl">Schmerz (NRS)</div><div class="val">${p.schmerz||'—'}/10</div></div>
-              <div class="cell"><div class="lbl">O₂-Gabe</div><div class="val">${p.o2?[p.o2_nasal&&'Nasal',p.o2_maske&&'Maske',p.o2_reservoir&&'Reservoir',p.o2_flow&&(p.o2_flow+' L/min')].filter(Boolean).join(', '):'—'}</div></div>
-            </div>
-          </div>
-          <div class="block" style="margin:0">
-            <div class="block-title">GCS</div>
-            <div class="gcs-wrap">
-              <div class="gcs-cell"><div class="vlbl">Augen (E)</div><div class="vval">${p.gcs_e||'—'}</div></div>
-              <div class="gcs-cell"><div class="vlbl">Verbal (V)</div><div class="vval">${p.gcs_v||'—'}</div></div>
-              <div class="gcs-cell"><div class="vlbl">Motorik (M)</div><div class="vval">${p.gcs_m||'—'}</div></div>
-              <div class="gcs-cell"><div class="vlbl">Gesamt</div><div class="gcs-total">${gcsTotal||'—'}</div></div>
-            </div>
-            <div class="block-title">Pupillen</div>
-            <div class="row" style="grid-template-columns:1fr 1fr">
-              <div class="cell"><div class="lbl">Links</div><div class="val">${p.pw_l||'—'}${p.pw_l_entrundet?' entr.':''}</div><div style="font-size:7.5pt">LR: ${p.lr_l||'—'}</div></div>
-              <div class="cell"><div class="lbl">Rechts</div><div class="val">${p.pw_r||'—'}${p.pw_r_entrundet?' entr.':''}</div><div style="font-size:7.5pt">LR: ${p.lr_r||'—'}</div></div>
-            </div>
-          </div>
-        </div>
-
-        <div class="two">
-          <div class="block" style="margin:0">
-            <div class="block-title">EKG-Befund</div>
-            <div style="padding:4pt 5pt">${tags([{val:p.sr,label:'Sinusrhythmus'},{val:p.stemi,label:'STEMI'},{val:p.vf,label:'Kammerflimmern'},{val:p.asystole,label:'Asystolie'}])}</div>
-            <div class="block-title">Atmung</div>
-            <div style="padding:4pt 5pt">${tags([{val:p.atm_apnoe,label:'Apnoe'},{val:p.atm_stridor,label:'Stridor'},{val:p.atm_dyspnoe,label:'Dyspnoe'},{val:p.atm_zyanose,label:'Zyanose'}])}</div>
-            <div class="block-title">Atemwegsmanagement</div>
-            <div style="padding:4pt 5pt">${tags([{val:p.awm_freihalten,label:'Freihalten'},{val:p.awm_absaugung,label:'Absaugung'},{val:p.awm_opa,label:'OPA'},{val:p.awm_npa,label:'NPA'},{val:p.awm_lma,label:'LMA/SGA'},{val:p.awm_intubation,label:'Intubation'}])}</div>
-          </div>
-          <div class="block" style="margin:0">
-            <div class="block-title">Verdachtsdiagnosen</div>
-            <div style="padding:4pt 5pt">${tags([{val:p.diag_krampf,label:'Krampfanfall'},{val:p.diag_synkope,label:'Synkope'},{val:p.diag_apoplex,label:'Apoplex'},{val:p.diag_sht,label:'SHT'},{val:p.diag_acs,label:'ACS'},{val:p.diag_insuff,label:'Herzinsuffizienz'},{val:p.diag_hypo,label:'Hypoglykämie'},{val:p.diag_resp_insuff,label:'Resp. Insuff.'}])}</div>
-            <div class="block-title">Haut / Psyche</div>
-            <div style="padding:4pt 5pt">${tags([{val:p.haut_unauff,label:'Haut unauff.'},{val:p.haut_kaltschweissig,label:'kaltschweißig'},{val:p.haut_oedeme,label:'Ödeme'},{val:p.haut_dekubitus,label:'Dekubitus'},{val:p.psy_erregt,label:'erregt'},{val:p.psy_verwirrt,label:'verwirrt'},{val:p.psy_suizidal,label:'suizidal'},{val:p.psy_aggr,label:'aggressiv'}])}</div>
-            <div class="block-title">Lagerung</div>
-            <div style="padding:4pt 5pt">${tags([{val:p.lag_flach,label:'Flach'},{val:p.lag_schock,label:'Schock'},{val:p.lag_ok_hoch,label:'OK hoch'},{val:p.lag_ssl,label:'Stabile SL'},{val:p.lag_sitzend,label:'Sitzend'},{val:p.lag_haengend,label:'Hängeposition'}])}</div>
-            <div class="block-title">Immobilisation</div>
-            <div style="padding:4pt 5pt">${tags([{val:p.immo_hws,label:'HWS-Orthese'},{val:p.immo_spineboard,label:'Spineboard'},{val:p.immo_vakuum,label:'Vakuummatratze'}])}</div>
-          </div>
-        </div>
-
-        ${p.rean ? `<div class="block">
-          <div class="block-title">Reanimation</div>
-          <div class="row" style="grid-template-columns:1fr 1fr 1fr">
-            <div class="cell"><div class="lbl">Beginn</div><div class="val">${p.rean_beginn||'—'}</div></div>
-            <div class="cell"><div class="lbl">Ende</div><div class="val">${p.rean_ende||'—'}</div></div>
-            <div class="cell"><div class="lbl">Defibrillationen</div><div class="val">${p.rean_defib||'—'}</div></div>
-          </div>
-        </div>` : ''}
-
-        ${meds.length > 0 ? `<div class="block">
-          <div class="block-title">Medikamente</div>
-          <div style="padding:4pt 5pt">
-            <table><thead><tr><th>Zeit</th><th>Medikament</th><th>Dosis</th><th>Einheit</th><th>Applikation</th><th>Bemerkung</th></tr></thead>
-            <tbody>${meds.map(m=>`<tr><td>${m.time||'—'}</td><td>${m.name||'—'}</td><td>${m.dose||'—'}</td><td>${m.unit||'—'}</td><td>${m.route||'—'}</td><td>${m.note||''}</td></tr>`).join('')}</tbody>
-            </table>
-          </div>
-        </div>` : ''}
-
-        <div class="two">
-          <div class="block" style="margin:0">
-            <div class="block-title">Venöser Zugang / Infusion</div>
-            <div style="padding:4pt 5pt;font-size:9pt">${p.zugang_art||p.zugang_gauge||p.zugang_region?[p.zugang_art,p.zugang_gauge?p.zugang_gauge+'G':'',p.zugang_region].filter(Boolean).join(' · '):'—'}${p.inf_art?`<br>${p.inf_art} ${p.inf_menge||''}`:''}
-            </div>
-          </div>
-          <div class="block" style="margin:0">
-            <div class="block-title">Verletzungen / Sonstiges</div>
-            <div style="padding:4pt 5pt;font-size:9pt;white-space:pre-wrap;min-height:24pt">${p.verletz_text||'—'}</div>
-          </div>
-        </div>
-
-        ${p.signature ? `<div class="block">
-          <div class="block-title">Unterschrift Patient / Einwilligung</div>
-          <div style="padding:5pt"><img src="${p.signature}" style="max-height:50pt;border:0.5pt solid #ccc"></div>
-        </div>` : ''}
-
-        ${pd.admin_name ? `<div class="block">
-          <div class="block-title">Gegenzeichnung MPG-Beauftragter</div>
-          <div class="row" style="grid-template-columns:1fr 1fr">
-            <div class="cell"><div class="lbl">Name</div><div class="val">${pd.admin_name}</div></div>
-            <div class="cell"><div class="lbl">Datum</div><div class="val">${fmtDateTime(pd.admin_datum)}</div></div>
-          </div>
-          ${pd.admin_unterschrift?`<div style="padding:5pt;border-top:0.5pt solid #eee"><img src="${pd.admin_unterschrift}" style="max-height:50pt;border:0.5pt solid #ccc"></div>`:''}
-        </div>` : ''}
-
+      <div style="display:grid;grid-template-columns:auto 1fr 1fr;gap:4pt;margin-bottom:4pt">
+        ${blk('NACA-Score',`<div style="padding:3pt 5pt;display:flex;gap:1.5pt">${naca}</div>`)}
+        ${blk('Bewusstsein',cr([[p.bewusstsein==='wach','Wach'],[p.bewusstsein==='somnolent','Somnolent'],[p.bewusstsein==='soporös','Soporös'],[p.bewusstsein==='komatös','Komatös']]))}
+        ${blk('Neurologie',`<div style="padding:3pt 5pt;display:flex;gap:10pt;align-items:center">${chk(p.neu_unauff,'Unauffällig')}<span style="font-size:7pt">Zeit: <b>${p.neu_zeit||'—'}</b></span></div>`)}
       </div>
-      <button class="print-btn" onclick="window.print()">Drucken / PDF</button>
+
+      <div style="display:grid;grid-template-columns:1fr 88pt;gap:4pt;margin-bottom:4pt">
+        <div>
+          ${blk('Vitalzeichen',`<div style="display:grid;grid-template-columns:repeat(9,1fr)">${vitG}</div>`+
+            row('1fr 1fr',
+              `<div style="padding:2.5pt 5pt;border-right:0.5pt solid #ccc"><div style="font-size:5.5pt;color:#666;text-transform:uppercase;letter-spacing:.3pt;margin-bottom:1pt">Pupillen rechts</div><div style="font-size:7.5pt"><b>${p.pw_r||'—'}</b>${p.pw_r_entrundet?' entr.':''} · LR: ${p.lr_r||'—'}</div></div>`+
+              `<div style="padding:2.5pt 5pt"><div style="font-size:5.5pt;color:#666;text-transform:uppercase;letter-spacing:.3pt;margin-bottom:1pt">Pupillen links</div><div style="font-size:7.5pt"><b>${p.pw_l||'—'}</b>${p.pw_l_entrundet?' entr.':''} · LR: ${p.lr_l||'—'}</div></div>`
+            )+
+            `<div style="border-top:0.5pt solid #ccc;padding:2.5pt 5pt"><div style="font-size:5.5pt;color:#666;text-transform:uppercase;letter-spacing:.3pt;margin-bottom:1pt">O₂-Gabe</div><div style="display:flex;flex-wrap:wrap;gap:2pt">${chk(p.o2,'O₂')}${chk(p.o2_nasal,'Nasal')}${chk(p.o2_maske,'Maske')}${chk(p.o2_reservoir,'Reservoir')}${p.o2_flow?`<span style="font-size:7pt;align-self:center">${p.o2_flow} l/min</span>`:''}</div></div>`
+          )}
+        </div>
+        <div>
+          ${blk('GCS',`<div style="display:grid;grid-template-columns:1fr 1fr 1fr 34pt">`+
+            [['Augen (E)',p.gcs_e],['Verbal (V)',p.gcs_v],['Motorik (M)',p.gcs_m]].map(([l,v])=>`<div style="text-align:center;border-right:0.5pt solid #ccc;padding:2pt 1pt"><div style="font-size:5pt;color:#666">${l}</div><div style="font-size:10pt;font-weight:bold">${v||'—'}</div></div>`).join('')+
+            `<div style="text-align:center;padding:2pt 1pt;background:#efefef"><div style="font-size:5pt;color:#666">Σ</div><div style="font-size:13pt;font-weight:bold">${gcsTotal||'—'}</div></div></div>`
+          )}
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:4pt;margin-bottom:4pt">
+        <div>
+          ${blk('EKG-Befund / Rhythmus',cr([[p.sr,'Sinusrhythmus'],[p.stemi,'STEMI'],[p.vf,'Kammerflimmern'],[p.asystole,'Asystolie']])+
+            (p.ekg_standort||p.ekg_persnr?`<div style="padding:1pt 5pt 3pt;font-size:7pt">EKG: ${p.ekg_standort||''} ${p.ekg_persnr?'· Pers.-Nr. '+p.ekg_persnr:''}</div>`:'')
+          )}
+          ${blk('Atmung',cr([[p.atm_apnoe,'Apnoe'],[p.atm_stridor,'Stridor'],[p.atm_dyspnoe,'Dyspnoe'],[p.atm_zyanose,'Zyanose']]))}
+        </div>
+        <div>
+          ${blk('Haut',cr([[p.haut_unauff,'Unauffällig'],[p.haut_falten,'Fältchentest pos.'],[p.haut_oedeme,'Ödeme'],[p.haut_dekubitus,'Dekubitus'],[p.haut_kaltschweissig,'Kaltschweißig'],[p.haut_exanthem,'Exanthem']]))}
+          ${blk('Psyche',cr([[p.psy_erregt,'Erregt'],[p.psy_aggr,'Aggressiv'],[p.psy_verlangsamt,'Verlangsamt'],[p.psy_depressiv,'Depressiv'],[p.psy_aengstlich,'Ängstlich'],[p.psy_euphorisch,'Euphorisch'],[p.psy_wahnhaft,'Wahnhaft'],[p.psy_verwirrt,'Verwirrt'],[p.psy_suizidal,'Suizidal'],[p.psy_motor_unruhig,'Motor. unruhig']]))}
+        </div>
+      </div>
+      </div>
+
+      <div class="pg pb">
+      ${hdr('Seite 2 · '+([p.name,p.vorname].filter(Boolean).join(', ')||'—')+' · geb. '+(p.gebdatum||'—'))}
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:4pt;margin-bottom:4pt">
+        ${blk('Erstdiagnose / Verdachtsdiagnose',cr([[p.diag_krampf,'Krampfanfall'],[p.diag_synkope,'Synkope'],[p.diag_apoplex,'Apoplex'],[p.diag_sht,'SHT'],[p.diag_acs,'ACS'],[p.diag_insuff,'Herzinsuffizienz'],[p.diag_hypo,'Hypoglykämie'],[p.diag_resp_insuff,'Resp. Insufzienz']]))}
+        ${blk('Verletzungen / Befunde',`<div style="padding:4pt 5pt;min-height:28pt;font-size:8.5pt;white-space:pre-wrap">${p.verletz_text||''}</div>`)}
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:4pt;margin-bottom:4pt">
+        <div>
+          ${blk('Atemwegsmanagement',cr([[p.awm_freihalten,'Freihalten'],[p.awm_absaugung,'Absaugung'],[p.awm_opa,'OPA/Guedel'],[p.awm_npa,'NPA/Wendl'],[p.awm_lma,'LMA/SGA'],[p.awm_intubation,'Intubation (OTI)']]))}
+          ${blk('Lagerung',cr([[p.lag_flach,'Flachlagerung'],[p.lag_schock,'Schocklagerung'],[p.lag_ok_hoch,'OK hoch'],[p.lag_ssl,'Stabile Seitenlage'],[p.lag_sitzend,'Sitzend'],[p.lag_haengend,'Hängeposition']]))}
+          ${blk('Immobilisation',cr([[p.immo_hws,'HWS-Orthese'],[p.immo_spineboard,'Spineboard'],[p.immo_vakuum,'Vakuummatratze']]))}
+        </div>
+        <div>
+          ${blk('Reanimation',cr([[p.rean,'CPR durchgeführt']])+
+            (p.rean?row('1fr 1fr 1fr',cell('Beginn',p.rean_beginn||'')+cell('Ende',p.rean_ende||'')+cell('Defibrillationen',p.rean_defib||'')):'')
+          )}
+          ${blk('Venöser Zugang',row('1fr 1fr 1fr',cell('Art',p.zugang_art||'')+cell('Gauge',p.zugang_gauge||'')+cell('Region',p.zugang_region||'')))}
+          ${blk('Infusion',row('1fr 1fr',cell('Art',p.inf_art||'')+cell('Menge (ml)',p.inf_menge||'')))}
+        </div>
+      </div>
+
+      ${blk('Medikamente / Therapie',`<div style="padding:3pt 5pt"><table><thead><tr><th>Zeit</th><th>Medikament</th><th>Dosis</th><th>Einheit</th><th>Applikationsweg</th><th>Hinweis</th></tr></thead><tbody>${meds.length>0?meds.map(m=>`<tr><td>${m.time||''}</td><td>${m.name||''}</td><td>${m.dose||''}</td><td>${m.unit||''}</td><td>${m.route||''}</td><td>${m.note||''}</td></tr>`).join(''):'<tr><td colspan="6" style="text-align:center;color:#aaa;font-style:italic">—</td></tr>'}</tbody></table></div>`)}
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:4pt;margin-top:4pt">
+        ${blk('Unterschrift Patient / Einwilligung',p.signature?`<div style="padding:4pt"><img src="${p.signature}" style="max-height:48pt"></div>`:'<div style="min-height:40pt;border-top:0.5pt solid #ccc"></div>')}
+        ${blk('Gegenzeichnung / Stempel',pd.admin_name?
+          row('1fr 1fr',cell('Name',pd.admin_name)+cell('Datum',fmtDateTime(pd.admin_datum)))+(pd.admin_unterschrift?`<div style="padding:4pt"><img src="${pd.admin_unterschrift}" style="max-height:48pt"></div>`:'<div style="min-height:24pt"></div>'):
+          '<div style="min-height:40pt;border-top:0.5pt solid #ccc"></div>'
+        )}
+      </div>
+      </div>
+
+      <button class="pbtn" onclick="window.print()">Drucken / PDF</button>
       </body></html>`
 
       w.document.write(html)
