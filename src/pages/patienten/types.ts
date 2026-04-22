@@ -17,7 +17,7 @@ export interface PatientPayload {
   telefon?: string; mobil?: string; strasse?: string; plz_ort?: string
   kasse?: string; versnr?: string; hausarzt?: string; angehoeriger?: string; infos?: string
   allergien?: string; vorerkrankungen?: string; vormedikation_patient?: string
-  notfallgeschehen?: string
+  notfallgeschehen?: string; verlaufsbeschreibung?: string
   naca?: string
   bewusstsein?: string
   neu_zeit?: string; neu_unauff?: boolean
@@ -91,7 +91,7 @@ export const EMPTY_PAYLOAD: PatientPayload = {
   name: '', vorname: '', gebdatum: '', alter: '', telefon: '', mobil: '',
   strasse: '', plz_ort: '', kasse: '', versnr: '', hausarzt: '', angehoeriger: '', infos: '',
   allergien: '', vorerkrankungen: '', vormedikation_patient: '',
-  notfallgeschehen: '', naca: '', bewusstsein: '',
+  notfallgeschehen: '', verlaufsbeschreibung: '', naca: '', bewusstsein: '',
   neu_zeit: '', neu_unauff: false,
   pw_r: 'mittel', pw_l: 'mittel', pw_r_entrundet: false, pw_l_entrundet: false,
   lr_r: 'prompt', lr_l: 'prompt',

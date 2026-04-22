@@ -143,6 +143,10 @@ export default function PatientEditModal({ payload, setP, onClose, onSaveAndSign
                 style={{ width: '100%', padding: '8px 10px', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '14px', resize: 'vertical', background: 'var(--bg)', color: 'var(--text)', boxSizing: 'border-box' }} />
             </Field>
             <Field label="Allergien"><Inp value={p.allergien||''} onChange={v => setP('allergien', v)} placeholder="Keine bekannt / ..." /></Field>
+            <Field label="Verlaufsbeschreibung">
+              <textarea value={p.verlaufsbeschreibung||''} onChange={e => setP('verlaufsbeschreibung', e.target.value)} rows={2}
+                style={{ width: '100%', padding: '8px 10px', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '14px', resize: 'vertical', background: 'var(--bg)', color: 'var(--text)', boxSizing: 'border-box' }} />
+            </Field>
             <Field label="Dauermedikation Patient">
               <textarea value={p.vormedikation_patient||''} onChange={e => setP('vormedikation_patient', e.target.value)} rows={2}
                 style={{ width: '100%', padding: '8px 10px', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '14px', resize: 'vertical', background: 'var(--bg)', color: 'var(--text)', boxSizing: 'border-box' }} />
