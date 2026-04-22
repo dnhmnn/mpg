@@ -59,7 +59,7 @@ export default function DetailsModal({ doc, type, onClose }: Props) {
       </head><body>
 
       <div class="pg">
-      ${hdr('MIND · Minimaler Notfalldatensatz · Erstellt: '+new Date().toLocaleString('de-DE'))}
+      ${hdr('Erstellt: '+new Date().toLocaleString('de-DE'))}
 
       ${blk('Einsatzdaten',
         row('1fr 1.2fr 1fr 1fr 1fr 1fr',
