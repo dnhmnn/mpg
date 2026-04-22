@@ -54,8 +54,23 @@ export interface PatientPayload {
   verlauf?: VitalRow[]
   medications?: Medication[]
   zugang_art?: string; zugang_gauge?: string; zugang_region?: string
+  zugang_peripher?: boolean; zugang_intraossar?: boolean; zugang_transnasal?: boolean; zugang_erschwert?: boolean
   inf_art?: string; inf_menge?: string
   verletz_text?: string
+  // Beatmung
+  beat_manuell?: boolean; beat_maschinell?: boolean; beat_niv?: boolean; beat_notfallnarkose?: boolean
+  beat_fio2?: string; beat_af?: string; beat_peep?: string; beat_pmax?: string; beat_amv?: string
+  // Defibrillation
+  defi_aed?: boolean; defi_defi?: boolean; defi_mono?: boolean; defi_bi?: boolean
+  defi_erstanw_laie?: boolean; defi_erstanw_fr?: boolean; defi_erstanw_rd?: boolean; defi_erstanw_arzt?: boolean
+  defi_zeitpunkt?: string; defi_rosc?: string; defi_anzahl?: string; defi_energie?: string
+  // Übergabe
+  uebergabe_ziel?: string
+  uebergabe_name?: string
+  bemerkungen?: string
+  // Einsatzverlauf Besonderheiten
+  ev_transport_sondersignal?: boolean; ev_zwangseinweisung?: boolean; ev_transportverweigerung?: boolean
+  ev_nur_untersuchung?: boolean; ev_manv?: boolean; ev_lna?: boolean; ev_schwerlast?: boolean
   signature?: string; photos?: string[]
 }
 
@@ -125,8 +140,18 @@ export const EMPTY_PAYLOAD: PatientPayload = {
   verlauf: [],
   medications: [],
   zugang_art: '', zugang_gauge: '', zugang_region: '',
+  zugang_peripher: false, zugang_intraossar: false, zugang_transnasal: false, zugang_erschwert: false,
   inf_art: '', inf_menge: '',
-  verletz_text: '', signature: '', photos: []
+  verletz_text: '',
+  beat_manuell: false, beat_maschinell: false, beat_niv: false, beat_notfallnarkose: false,
+  beat_fio2: '', beat_af: '', beat_peep: '', beat_pmax: '', beat_amv: '',
+  defi_aed: false, defi_defi: false, defi_mono: false, defi_bi: false,
+  defi_erstanw_laie: false, defi_erstanw_fr: false, defi_erstanw_rd: false, defi_erstanw_arzt: false,
+  defi_zeitpunkt: '', defi_rosc: '', defi_anzahl: '', defi_energie: '',
+  uebergabe_ziel: '', uebergabe_name: '', bemerkungen: '',
+  ev_transport_sondersignal: false, ev_zwangseinweisung: false, ev_transportverweigerung: false,
+  ev_nur_untersuchung: false, ev_manv: false, ev_lna: false, ev_schwerlast: false,
+  signature: '', photos: []
 }
 
 export const EMPTY_NACH: NachForm = {

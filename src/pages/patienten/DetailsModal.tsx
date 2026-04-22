@@ -225,6 +225,22 @@ export default function DetailsModal({ doc, type, onClose }: Props) {
         </div>
       </div>
 
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:4pt;margin-bottom:4pt">
+        ${blk('Beatmung',cr([[p.beat_manuell,'Manuell'],[p.beat_maschinell,'Maschinell'],[p.beat_niv,'NIV'],[p.beat_notfallnarkose,'Notfallnarkose']])+
+          row('1fr 1fr 1fr 1fr 1fr',cell('FiO₂',p.beat_fio2||'')+cell('AF /min',p.beat_af||'')+cell('PEEP mbar',p.beat_peep||'')+cell('Pmax mbar',p.beat_pmax||'')+cell('AMV l/min',p.beat_amv||''))
+        )}
+        ${blk('Defibrillation',cr([[p.defi_aed,'AED'],[p.defi_defi,'Defi'],[p.defi_mono,'Monophasisch'],[p.defi_bi,'Biphasisch']])+
+          `<div style="padding:1pt 5pt 2pt;font-size:6.5pt;color:#555">Erstanwendung: `+[p.defi_erstanw_laie&&'Laie',p.defi_erstanw_fr&&'First Resp.',p.defi_erstanw_rd&&'Rettungsdienst',p.defi_erstanw_arzt&&'Arzt'].filter(Boolean).join(', ')+`</div>`+
+          row('1fr 1fr 1fr 1fr',cell('Zeitpunkt 1. Defi',p.defi_zeitpunkt||'')+cell('ROSC',p.defi_rosc||'')+cell('Anzahl',p.defi_anzahl||'')+cell('Energie (kJ)',p.defi_energie||''))
+        )}
+      </div>
+
+      ${blk('Übergabe / Besonderheiten',
+        row('1fr 1fr',cell('Übergabe Ziel',p.uebergabe_ziel||'')+cell('Übergabe an (Name)',p.uebergabe_name||''))+
+        cr([[p.ev_transportverweigerung,'Transportverweigerung'],[p.ev_nur_untersuchung,'Nur Untersuchung/Behandlung'],[p.ev_zwangseinweisung,'Zwangseinweisung'],[p.ev_transport_sondersignal,'Transport mit Sondersignal'],[p.ev_manv,'MANV'],[p.ev_lna,'LNA am Einsatz'],[p.ev_schwerlast,'Schwerlasttransport']])+
+        `<div style="padding:2.5pt 5pt;border-top:0.5pt solid #ccc"><div style="font-size:5.5pt;color:#666;text-transform:uppercase;letter-spacing:.3pt;margin-bottom:1pt">Bemerkungen</div><div style="font-size:8.5pt;min-height:16pt;white-space:pre-wrap">${p.bemerkungen||''}</div></div>`
+      )}
+
       ${blk('Medikamente / Therapie',`<div style="padding:3pt 5pt"><table><thead><tr><th>Zeit</th><th>Medikament</th><th>Dosis</th><th>Einheit</th><th>Applikationsweg</th><th>Hinweis</th></tr></thead><tbody>${meds.length>0?meds.map(m=>`<tr><td>${m.time||''}</td><td>${m.name||''}</td><td>${m.dose||''}</td><td>${m.unit||''}</td><td>${m.route||''}</td><td>${m.note||''}</td></tr>`).join(''):'<tr><td colspan="6" style="text-align:center;color:#aaa;font-style:italic">—</td></tr>'}</tbody></table></div>`)}
 
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:4pt;margin-top:4pt">

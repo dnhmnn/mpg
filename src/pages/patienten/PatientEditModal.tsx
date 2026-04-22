@@ -434,6 +434,78 @@ export default function PatientEditModal({ payload, setP, onClose, onSaveAndSign
             </Row2>
           </Section>
 
+          <Section title="Beatmung / Defibrillation">
+            <CbRow>
+              <Cb label="Manuell" checked={!!p.beat_manuell} onChange={v => setP('beat_manuell', v)} />
+              <Cb label="Maschinell" checked={!!p.beat_maschinell} onChange={v => setP('beat_maschinell', v)} />
+              <Cb label="NIV" checked={!!p.beat_niv} onChange={v => setP('beat_niv', v)} />
+              <Cb label="Notfallnarkose" checked={!!p.beat_notfallnarkose} onChange={v => setP('beat_notfallnarkose', v)} />
+            </CbRow>
+            <Row2>
+              <Field label="FiO2"><Inp value={p.beat_fio2||''} onChange={v => setP('beat_fio2', v)} /></Field>
+              <Field label="AF (/min)"><Inp value={p.beat_af||''} onChange={v => setP('beat_af', v)} /></Field>
+              <Field label="AMV (l/min)"><Inp value={p.beat_amv||''} onChange={v => setP('beat_amv', v)} /></Field>
+              <Field label="PEEP (mbar)"><Inp value={p.beat_peep||''} onChange={v => setP('beat_peep', v)} /></Field>
+              <Field label="Pmax (mbar)"><Inp value={p.beat_pmax||''} onChange={v => setP('beat_pmax', v)} /></Field>
+            </Row2>
+            <div style={{ fontWeight: 600, fontSize: '13px', margin: '8px 0 6px', paddingTop: '4px', borderTop: '1px solid var(--border)' }}>Defibrillation</div>
+            <CbRow>
+              <Cb label="AED" checked={!!p.defi_aed} onChange={v => setP('defi_aed', v)} />
+              <Cb label="Defi" checked={!!p.defi_defi} onChange={v => setP('defi_defi', v)} />
+              <Cb label="Monophasisch" checked={!!p.defi_mono} onChange={v => setP('defi_mono', v)} />
+              <Cb label="Biphasisch" checked={!!p.defi_bi} onChange={v => setP('defi_bi', v)} />
+            </CbRow>
+            <CbRow>
+              <span style={{ fontSize: '12px', fontWeight: 600, opacity: 0.6, marginRight: '6px', alignSelf: 'center' }}>Erstanw.:</span>
+              <Cb label="Laie" checked={!!p.defi_erstanw_laie} onChange={v => setP('defi_erstanw_laie', v)} />
+              <Cb label="First Resp." checked={!!p.defi_erstanw_fr} onChange={v => setP('defi_erstanw_fr', v)} />
+              <Cb label="Rettungsdienst" checked={!!p.defi_erstanw_rd} onChange={v => setP('defi_erstanw_rd', v)} />
+              <Cb label="Arzt" checked={!!p.defi_erstanw_arzt} onChange={v => setP('defi_erstanw_arzt', v)} />
+            </CbRow>
+            <Row2>
+              <Field label="Zeitpunkt 1. Defi"><Inp value={p.defi_zeitpunkt||''} onChange={v => setP('defi_zeitpunkt', v)} type="time" /></Field>
+              <Field label="ROSC"><Inp value={p.defi_rosc||''} onChange={v => setP('defi_rosc', v)} type="time" /></Field>
+              <Field label="Anzahl Defi"><Inp value={p.defi_anzahl||''} onChange={v => setP('defi_anzahl', v)} /></Field>
+              <Field label="Energie (kJ)"><Inp value={p.defi_energie||''} onChange={v => setP('defi_energie', v)} /></Field>
+            </Row2>
+          </Section>
+
+          <Section title="Übergabe / Besonderheiten">
+            <Field label="Übergabe Ziel">
+              <select value={p.uebergabe_ziel||''} onChange={e => setP('uebergabe_ziel', e.target.value)}
+                style={{ width: '100%', padding: '8px', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '14px', background: 'var(--bg)', color: 'var(--text)' }}>
+                <option value="">–</option>
+                <option>ZNA/INA</option>
+                <option>Schockraum</option>
+                <option>Stroke Unit</option>
+                <option>Herzkatheterlabor</option>
+                <option>CPU</option>
+                <option>Intensivstation</option>
+                <option>Allgemeinstation</option>
+                <option>OP direkt</option>
+                <option>Praxis</option>
+                <option>Hausarzt/KV-Arzt</option>
+                <option>Fachambulanz</option>
+                <option>Einsatzstelle</option>
+                <option>Sonstige</option>
+              </select>
+            </Field>
+            <Field label="Übergabe an (Name)"><Inp value={p.uebergabe_name||''} onChange={v => setP('uebergabe_name', v)} /></Field>
+            <CbRow>
+              <Cb label="Transportverweigerung" checked={!!p.ev_transportverweigerung} onChange={v => setP('ev_transportverweigerung', v)} />
+              <Cb label="Nur Untersuchung/Behandlung" checked={!!p.ev_nur_untersuchung} onChange={v => setP('ev_nur_untersuchung', v)} />
+              <Cb label="Zwangseinweisung" checked={!!p.ev_zwangseinweisung} onChange={v => setP('ev_zwangseinweisung', v)} />
+              <Cb label="Transport mit Sondersignal" checked={!!p.ev_transport_sondersignal} onChange={v => setP('ev_transport_sondersignal', v)} />
+              <Cb label="MANV" checked={!!p.ev_manv} onChange={v => setP('ev_manv', v)} />
+              <Cb label="LNA am Einsatz" checked={!!p.ev_lna} onChange={v => setP('ev_lna', v)} />
+              <Cb label="Schwerlasttransport" checked={!!p.ev_schwerlast} onChange={v => setP('ev_schwerlast', v)} />
+            </CbRow>
+            <Field label="Bemerkungen">
+              <textarea value={p.bemerkungen||''} onChange={e => setP('bemerkungen', e.target.value)} rows={3}
+                style={{ width: '100%', padding: '8px 10px', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '14px', resize: 'vertical', background: 'var(--bg)', color: 'var(--text)', boxSizing: 'border-box' }} />
+            </Field>
+          </Section>
+
           <Section title="Verletzungen">
             <textarea value={p.verletz_text||''} onChange={e => setP('verletz_text', e.target.value)} rows={3}
               style={{ width: '100%', padding: '8px 10px', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '14px', resize: 'vertical', background: 'var(--bg)', color: 'var(--text)', boxSizing: 'border-box' }} />
