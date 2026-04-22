@@ -146,39 +146,62 @@ export default function DetailsModal({ doc, type, onClose }: Props) {
       ${hdr('Seite 2 · '+([p.name,p.vorname].filter(Boolean).join(', ')||'—')+' · geb. '+(p.gebdatum||'—'))}
 
       ${(()=>{
-        const emptyRow = `<tr>${Array(11).fill('<td style="border:0.5pt solid #ccc;padding:4pt 4pt;height:12pt">&nbsp;</td>').join('')}</tr>`
-        const dataRows = verlauf.map(vr=>`<tr>
-          <td style="border:0.5pt solid #ccc;padding:2pt 4pt;text-align:center;font-weight:bold">${vr.zeit||''}</td>
-          <td style="border:0.5pt solid #ccc;padding:2pt 4pt;text-align:center">${vr.rr_sys||''}</td>
-          <td style="border:0.5pt solid #ccc;padding:2pt 4pt;text-align:center">${vr.rr_dia||''}</td>
-          <td style="border:0.5pt solid #ccc;padding:2pt 4pt;text-align:center">${vr.hf||''}</td>
-          <td style="border:0.5pt solid #ccc;padding:2pt 4pt;text-align:center">${vr.spo2||''}</td>
-          <td style="border:0.5pt solid #ccc;padding:2pt 4pt;text-align:center">${vr.af||''}</td>
-          <td style="border:0.5pt solid #ccc;padding:2pt 4pt;text-align:center">${vr.temp||''}</td>
-          <td style="border:0.5pt solid #ccc;padding:2pt 4pt;text-align:center">${vr.bz||''}</td>
-          <td style="border:0.5pt solid #ccc;padding:2pt 4pt;text-align:center">${vr.etco2||''}</td>
-          <td style="border:0.5pt solid #ccc;padding:2pt 4pt;text-align:center">${vr.schmerz||''}</td>
-          <td style="border:0.5pt solid #ccc;padding:2pt 4pt">${vr.bemerkung||''}</td>
-        </tr>`).join('')
-        const extraRows = Math.max(0, 5 - verlauf.length)
+        const cols = Math.max(14, verlauf.length)
+        const W = 560, H = 180
+        const cw = W / cols
+        const sy = (v: number) => Math.max(0, Math.min(H, 220 - Math.max(40, Math.min(220, v))))
+        const scaleVals = [220,200,180,160,140,120,100,80,60,40]
+        const hLines = scaleVals.map(v=>{
+          const y = sy(v)
+          const bold = v===200||v===100
+          return `<line x1="0" y1="${y}" x2="${W}" y2="${y}" stroke="${bold?'#555':'#ccc'}" stroke-width="${bold?1:0.5}"/>`
+        }).join('')
+        const vLines = Array.from({length:cols+1},(_,i)=>
+          `<line x1="${i*cw}" y1="0" x2="${i*cw}" y2="${H}" stroke="#ccc" stroke-width="0.5"/>`
+        ).join('')
+        const shading = Array.from({length:cols},(_,i)=>
+          i%2===0?`<rect x="${i*cw}" y="0" width="${cw}" height="${H}" fill="#f5f5f5"/>`:'').join('')
+        const dots = (key:'rr_sys'|'rr_dia'|'hf', fill:string, stroke:string, r:number) =>
+          verlauf.map((vr,i)=>{
+            const n = Number(vr[key]); if(!vr[key]||isNaN(n)) return ''
+            return `<circle cx="${(i+0.5)*cw}" cy="${sy(n)}" r="${r}" fill="${fill}" stroke="${stroke}" stroke-width="1.2"/>`
+          }).join('')
+        const lines = (key:'rr_sys'|'rr_dia'|'hf', stroke:string) => {
+          const pts = verlauf.map((vr,i)=>{const n=Number(vr[key]);return vr[key]&&!isNaN(n)?`${(i+0.5)*cw},${sy(n)}`:null}).filter(Boolean)
+          if(pts.length<2) return ''
+          return `<polyline points="${pts.join(' ')}" fill="none" stroke="${stroke}" stroke-width="1.2" stroke-linejoin="round"/>`
+        }
+        const scaleLabels = scaleVals.map(v=>`<text x="30" y="${sy(v)+3}" text-anchor="end" font-size="6" fill="#555" font-weight="${v===200||v===100?'bold':'normal'}">${v===220?'≥220':v===40?'≤40':v}</text>`).join('')
+        const zeitRow = Array.from({length:cols},(_,i)=>`<div style="border-right:0.5pt solid #ccc;padding:1pt;font-size:5.5pt;text-align:center;overflow:hidden;min-width:0">${verlauf[i]?.zeit||''}</div>`).join('')
+        const bottomCells = (key:'spo2'|'etco2'|'schmerz') => Array.from({length:cols},(_,i)=>`<div style="border-right:0.5pt solid #ccc;padding:1pt;font-size:5.5pt;text-align:center">${verlauf[i]?.[key]||''}</div>`).join('')
+        const legend = `<text x="2" y="9" font-size="6" fill="#555">● RR sys</text><text x="40" y="9" font-size="6" fill="#555">○ RR dia</text><text x="80" y="9" font-size="6" fill="#1c3a5e">○ Puls</text>`
         return `<div style="border:0.5pt solid #888;margin-bottom:4pt;overflow:hidden">
-          <div style="font-size:6.5pt;font-weight:bold;background:#d0d0d0;padding:2pt 5pt;text-transform:uppercase;letter-spacing:.4pt;border-bottom:0.5pt solid #888">Verlauf / Vitalzeichen-Kurve</div>
-          <table style="width:100%;border-collapse:collapse;font-size:7pt">
-            <thead><tr style="background:#eee">
-              <th style="border:0.5pt solid #ccc;padding:2pt 4pt;text-align:center;white-space:nowrap">Zeit</th>
-              <th style="border:0.5pt solid #ccc;padding:2pt 4pt;text-align:center">RR sys</th>
-              <th style="border:0.5pt solid #ccc;padding:2pt 4pt;text-align:center">RR dia</th>
-              <th style="border:0.5pt solid #ccc;padding:2pt 4pt;text-align:center">HF</th>
-              <th style="border:0.5pt solid #ccc;padding:2pt 4pt;text-align:center">SpO₂</th>
-              <th style="border:0.5pt solid #ccc;padding:2pt 4pt;text-align:center">AF</th>
-              <th style="border:0.5pt solid #ccc;padding:2pt 4pt;text-align:center">Temp</th>
-              <th style="border:0.5pt solid #ccc;padding:2pt 4pt;text-align:center">BZ</th>
-              <th style="border:0.5pt solid #ccc;padding:2pt 4pt;text-align:center">etCO₂</th>
-              <th style="border:0.5pt solid #ccc;padding:2pt 4pt;text-align:center">Schmerz</th>
-              <th style="border:0.5pt solid #ccc;padding:2pt 4pt;text-align:center">Bemerkung</th>
-            </tr></thead>
-            <tbody>${dataRows}${emptyRow.repeat(extraRows)}</tbody>
-          </table>
+          <div style="font-size:6.5pt;font-weight:bold;background:#d0d0d0;padding:2pt 5pt;text-transform:uppercase;letter-spacing:.5pt;border-bottom:0.5pt solid #888">Verlaufsbeschreibung</div>
+          <div style="display:flex">
+            <div style="width:36pt;flex-shrink:0;border-right:0.5pt solid #888;font-size:5.5pt">
+              <div style="height:12pt;border-bottom:0.5pt solid #ccc;padding:1pt 3pt;display:flex;align-items:center">Zeit</div>
+              <div style="position:relative;height:${H}pt;border-bottom:0.5pt solid #ccc">
+                <svg viewBox="0 0 34 ${H}" width="35pt" height="${H}pt" style="display:block;overflow:visible">${scaleLabels}</svg>
+              </div>
+              <div style="height:11pt;border-bottom:0.5pt solid #ccc;padding:1pt 3pt;display:flex;align-items:center">SpO₂ %</div>
+              <div style="height:11pt;border-bottom:0.5pt solid #ccc;padding:1pt 3pt;display:flex;align-items:center">etCO₂</div>
+              <div style="height:11pt;padding:1pt 3pt;display:flex;align-items:center">Schmerz</div>
+            </div>
+            <div style="flex:1;min-width:0;overflow:hidden">
+              <div style="height:12pt;border-bottom:0.5pt solid #ccc;display:grid;grid-template-columns:repeat(${cols},1fr)">${zeitRow}</div>
+              <svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}pt" style="display:block;border-bottom:0.5pt solid #ccc">
+                ${shading}${hLines}${vLines}
+                ${lines('rr_sys','#c0392b')}${lines('rr_dia','#e74c3c')}${lines('hf','#1c3a5e')}
+                ${dots('rr_sys','#c0392b','#c0392b',3)}
+                ${dots('rr_dia','none','#c0392b',3)}
+                ${dots('hf','none','#1c3a5e',2.5)}
+                <svg x="0" y="0" width="${W}" height="12"><rect width="${W}" height="12" fill="rgba(255,255,255,0.7)"/>${legend}</svg>
+              </svg>
+              <div style="height:11pt;border-bottom:0.5pt solid #ccc;display:grid;grid-template-columns:repeat(${cols},1fr)">${bottomCells('spo2')}</div>
+              <div style="height:11pt;border-bottom:0.5pt solid #ccc;display:grid;grid-template-columns:repeat(${cols},1fr)">${bottomCells('etco2')}</div>
+              <div style="height:11pt;display:grid;grid-template-columns:repeat(${cols},1fr)">${bottomCells('schmerz')}</div>
+            </div>
+          </div>
         </div>`
       })()}
 
