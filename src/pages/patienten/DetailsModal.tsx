@@ -89,15 +89,22 @@ export default function DetailsModal({ doc, type, onClose }: Props) {
 
         <div class="block">
           <div class="block-title">Einsatzdaten</div>
-          <div class="row" style="grid-template-columns:1fr 1fr 1fr 1fr">
+          <div class="row" style="grid-template-columns:1fr 1fr 1fr 1fr 1fr">
+            <div class="cell"><div class="lbl">Alarmzeit</div><div class="val">${p.zeit_einsatz||'—'}</div></div>
+            <div class="cell"><div class="lbl">Eintreffen</div><div class="val">${p.zeit_eintreffen||'—'}</div></div>
+            <div class="cell"><div class="lbl">Transportbeginn</div><div class="val">${p.zeit_transport||'—'}</div></div>
+            <div class="cell"><div class="lbl">Übergabe</div><div class="val">${p.zeit_uebergabe||'—'}</div></div>
             <div class="cell"><div class="lbl">Einsatz-Nr.</div><div class="val">${p.einsatz_nr||'—'}</div></div>
-            <div class="cell"><div class="lbl">Auftrags-Nr.</div><div class="val">${p.auftrags_nr||'—'}</div></div>
-            <div class="cell"><div class="lbl">Zeit Einsatz</div><div class="val">${p.zeit_einsatz||'—'}</div></div>
+          </div>
+          <div class="row" style="grid-template-columns:2fr 1fr 1fr 1fr">
+            <div class="cell"><div class="lbl">Einsatzort / Adresse</div><div class="val">${p.einsatz_adresse||'—'}</div></div>
             <div class="cell"><div class="lbl">Rufname</div><div class="val">${p.rufname||'—'}</div></div>
+            <div class="cell"><div class="lbl">Fahrzeug / Einheit</div><div class="val">${p.fahrzeug||'—'}</div></div>
+            <div class="cell"><div class="lbl">Einsatzart / Stichwort</div><div class="val">${p.einsatz_art||'—'}</div></div>
           </div>
           <div class="row" style="grid-template-columns:1fr 1fr">
-            <div class="cell"><div class="lbl">Fahrzeug / Einheit</div><div class="val">${p.fahrzeug||'—'}</div></div>
-            <div class="cell"><div class="lbl">Einsatzart</div><div class="val">${p.einsatz_art||'—'}</div></div>
+            <div class="cell"><div class="lbl">Auftrags-Nr.</div><div class="val">${p.auftrags_nr||'—'}</div></div>
+            <div class="cell"><div class="lbl">Transportziel</div><div class="val">${p.transport_ziel||'—'}</div></div>
           </div>
         </div>
 
@@ -118,7 +125,25 @@ export default function DetailsModal({ doc, type, onClose }: Props) {
 
         <div class="block">
           <div class="block-title">Notfallgeschehen / Anamnese</div>
-          <div style="padding:5pt 6pt;min-height:36pt;font-size:9pt;white-space:pre-wrap">${p.notfallgeschehen||'—'}</div>
+          <div style="padding:5pt 6pt;min-height:30pt;font-size:9pt;white-space:pre-wrap">${p.notfallgeschehen||'—'}</div>
+          <div class="row" style="grid-template-columns:1fr 1fr">
+            <div class="cell"><div class="lbl">Vorerkrankungen</div><div style="font-size:9pt;min-height:18pt;white-space:pre-wrap">${p.vorerkrankungen||'—'}</div></div>
+            <div class="cell"><div class="lbl">Dauermedikation Patient</div><div style="font-size:9pt;min-height:18pt;white-space:pre-wrap">${p.vormedikation_patient||'—'}</div></div>
+          </div>
+          <div class="row" style="grid-template-columns:1fr">
+            <div class="cell"><div class="lbl">Allergien</div><div class="val">${p.allergien||'—'}</div></div>
+          </div>
+        </div>
+
+        <div class="two">
+          <div class="block" style="margin:0">
+            <div class="block-title">NACA-Score</div>
+            <div style="padding:6pt;text-align:center;font-size:18pt;font-weight:bold;border:2pt solid #000;border-radius:3pt;margin:4pt">${p.naca||'—'}</div>
+          </div>
+          <div class="block" style="margin:0">
+            <div class="block-title">Bewusstsein</div>
+            <div style="padding:6pt;font-size:12pt;font-weight:bold">${p.bewusstsein||'—'}</div>
+          </div>
         </div>
 
         <div style="display:grid;grid-template-columns:1fr 150pt;gap:5pt;margin-bottom:5pt">
@@ -161,14 +186,29 @@ export default function DetailsModal({ doc, type, onClose }: Props) {
             <div style="padding:4pt 5pt">${tags([{val:p.sr,label:'Sinusrhythmus'},{val:p.stemi,label:'STEMI'},{val:p.vf,label:'Kammerflimmern'},{val:p.asystole,label:'Asystolie'}])}</div>
             <div class="block-title">Atmung</div>
             <div style="padding:4pt 5pt">${tags([{val:p.atm_apnoe,label:'Apnoe'},{val:p.atm_stridor,label:'Stridor'},{val:p.atm_dyspnoe,label:'Dyspnoe'},{val:p.atm_zyanose,label:'Zyanose'}])}</div>
+            <div class="block-title">Atemwegsmanagement</div>
+            <div style="padding:4pt 5pt">${tags([{val:p.awm_freihalten,label:'Freihalten'},{val:p.awm_absaugung,label:'Absaugung'},{val:p.awm_opa,label:'OPA'},{val:p.awm_npa,label:'NPA'},{val:p.awm_lma,label:'LMA/SGA'},{val:p.awm_intubation,label:'Intubation'}])}</div>
           </div>
           <div class="block" style="margin:0">
             <div class="block-title">Verdachtsdiagnosen</div>
             <div style="padding:4pt 5pt">${tags([{val:p.diag_krampf,label:'Krampfanfall'},{val:p.diag_synkope,label:'Synkope'},{val:p.diag_apoplex,label:'Apoplex'},{val:p.diag_sht,label:'SHT'},{val:p.diag_acs,label:'ACS'},{val:p.diag_insuff,label:'Herzinsuffizienz'},{val:p.diag_hypo,label:'Hypoglykämie'},{val:p.diag_resp_insuff,label:'Resp. Insuff.'}])}</div>
             <div class="block-title">Haut / Psyche</div>
             <div style="padding:4pt 5pt">${tags([{val:p.haut_unauff,label:'Haut unauff.'},{val:p.haut_kaltschweissig,label:'kaltschweißig'},{val:p.haut_oedeme,label:'Ödeme'},{val:p.haut_dekubitus,label:'Dekubitus'},{val:p.psy_erregt,label:'erregt'},{val:p.psy_verwirrt,label:'verwirrt'},{val:p.psy_suizidal,label:'suizidal'},{val:p.psy_aggr,label:'aggressiv'}])}</div>
+            <div class="block-title">Lagerung</div>
+            <div style="padding:4pt 5pt">${tags([{val:p.lag_flach,label:'Flach'},{val:p.lag_schock,label:'Schock'},{val:p.lag_ok_hoch,label:'OK hoch'},{val:p.lag_ssl,label:'Stabile SL'},{val:p.lag_sitzend,label:'Sitzend'},{val:p.lag_haengend,label:'Hängeposition'}])}</div>
+            <div class="block-title">Immobilisation</div>
+            <div style="padding:4pt 5pt">${tags([{val:p.immo_hws,label:'HWS-Orthese'},{val:p.immo_spineboard,label:'Spineboard'},{val:p.immo_vakuum,label:'Vakuummatratze'}])}</div>
           </div>
         </div>
+
+        ${p.rean ? `<div class="block">
+          <div class="block-title">Reanimation</div>
+          <div class="row" style="grid-template-columns:1fr 1fr 1fr">
+            <div class="cell"><div class="lbl">Beginn</div><div class="val">${p.rean_beginn||'—'}</div></div>
+            <div class="cell"><div class="lbl">Ende</div><div class="val">${p.rean_ende||'—'}</div></div>
+            <div class="cell"><div class="lbl">Defibrillationen</div><div class="val">${p.rean_defib||'—'}</div></div>
+          </div>
+        </div>` : ''}
 
         ${meds.length > 0 ? `<div class="block">
           <div class="block-title">Medikamente</div>

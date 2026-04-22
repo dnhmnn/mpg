@@ -10,10 +10,16 @@ export interface Medication {
 export interface PatientPayload {
   einsatz_nr?: string; auftrags_nr?: string; rufname?: string; fahrzeug?: string
   zeit_einsatz?: string; einsatz_art?: string
+  einsatz_adresse?: string
+  zeit_eintreffen?: string; zeit_transport?: string; zeit_uebergabe?: string
+  transport_ziel?: string
   name?: string; vorname?: string; gebdatum?: string; alter?: string
   telefon?: string; mobil?: string; strasse?: string; plz_ort?: string
   kasse?: string; versnr?: string; hausarzt?: string; angehoeriger?: string; infos?: string
+  allergien?: string; vorerkrankungen?: string; vormedikation_patient?: string
   notfallgeschehen?: string
+  naca?: string
+  bewusstsein?: string
   neu_zeit?: string; neu_unauff?: boolean
   pw_r?: string; pw_l?: string; pw_r_entrundet?: boolean; pw_l_entrundet?: boolean
   lr_r?: string; lr_l?: string
@@ -27,10 +33,16 @@ export interface PatientPayload {
   hf?: string; spo2?: string; bz_mg?: string; schmerz?: string; etco2?: string
   atm_apnoe?: boolean; atm_stridor?: boolean; atm_dyspnoe?: boolean; atm_zyanose?: boolean
   o2?: boolean; o2_nasal?: boolean; o2_maske?: boolean; o2_reservoir?: boolean; o2_flow?: string
+  awm_freihalten?: boolean; awm_absaugung?: boolean; awm_opa?: boolean
+  awm_npa?: boolean; awm_lma?: boolean; awm_intubation?: boolean
   sr?: boolean; stemi?: boolean; vf?: boolean; asystole?: boolean
   ekg_standort?: string; ekg_persnr?: string
   diag_krampf?: boolean; diag_synkope?: boolean; diag_apoplex?: boolean; diag_sht?: boolean
   diag_acs?: boolean; diag_insuff?: boolean; diag_hypo?: boolean; diag_resp_insuff?: boolean
+  lag_flach?: boolean; lag_schock?: boolean; lag_ok_hoch?: boolean
+  lag_ssl?: boolean; lag_sitzend?: boolean; lag_haengend?: boolean
+  rean?: boolean; rean_beginn?: string; rean_ende?: string; rean_defib?: string
+  immo_hws?: boolean; immo_spineboard?: boolean; immo_vakuum?: boolean
   medications?: Medication[]
   zugang_art?: string; zugang_gauge?: string; zugang_region?: string
   inf_art?: string; inf_menge?: string
@@ -75,9 +87,11 @@ export interface NachForm {
 
 export const EMPTY_PAYLOAD: PatientPayload = {
   einsatz_nr: '', auftrags_nr: '', rufname: '', fahrzeug: '', zeit_einsatz: '', einsatz_art: '',
+  einsatz_adresse: '', zeit_eintreffen: '', zeit_transport: '', zeit_uebergabe: '', transport_ziel: '',
   name: '', vorname: '', gebdatum: '', alter: '', telefon: '', mobil: '',
   strasse: '', plz_ort: '', kasse: '', versnr: '', hausarzt: '', angehoeriger: '', infos: '',
-  notfallgeschehen: '',
+  allergien: '', vorerkrankungen: '', vormedikation_patient: '',
+  notfallgeschehen: '', naca: '', bewusstsein: '',
   neu_zeit: '', neu_unauff: false,
   pw_r: 'mittel', pw_l: 'mittel', pw_r_entrundet: false, pw_l_entrundet: false,
   lr_r: 'prompt', lr_l: 'prompt',
@@ -90,9 +104,15 @@ export const EMPTY_PAYLOAD: PatientPayload = {
   rr_sys: '', rr_dia: '', af: '', temp: '', hf: '', spo2: '', bz_mg: '', schmerz: '', etco2: '',
   atm_apnoe: false, atm_stridor: false, atm_dyspnoe: false, atm_zyanose: false,
   o2: false, o2_nasal: false, o2_maske: false, o2_reservoir: false, o2_flow: '',
+  awm_freihalten: false, awm_absaugung: false, awm_opa: false,
+  awm_npa: false, awm_lma: false, awm_intubation: false,
   sr: false, stemi: false, vf: false, asystole: false, ekg_standort: '', ekg_persnr: '',
   diag_krampf: false, diag_synkope: false, diag_apoplex: false, diag_sht: false,
   diag_acs: false, diag_insuff: false, diag_hypo: false, diag_resp_insuff: false,
+  lag_flach: false, lag_schock: false, lag_ok_hoch: false,
+  lag_ssl: false, lag_sitzend: false, lag_haengend: false,
+  rean: false, rean_beginn: '', rean_ende: '', rean_defib: '',
+  immo_hws: false, immo_spineboard: false, immo_vakuum: false,
   medications: [],
   zugang_art: '', zugang_gauge: '', zugang_region: '',
   inf_art: '', inf_menge: '',

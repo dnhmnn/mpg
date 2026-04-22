@@ -99,10 +99,17 @@ export default function PatientEditModal({ payload, setP, onClose, onSaveAndSign
               <Field label="Einsatz-Nr."><Inp value={p.einsatz_nr||''} onChange={v => setP('einsatz_nr', v)} /></Field>
               <Field label="Auftrags-Nr."><Inp value={p.auftrags_nr||''} onChange={v => setP('auftrags_nr', v)} /></Field>
               <Field label="Rufname"><Inp value={p.rufname||''} onChange={v => setP('rufname', v)} /></Field>
-              <Field label="Fahrzeug"><Inp value={p.fahrzeug||''} onChange={v => setP('fahrzeug', v)} /></Field>
-              <Field label="Zeit Einsatz"><Inp value={p.zeit_einsatz||''} onChange={v => setP('zeit_einsatz', v)} type="datetime-local" /></Field>
-              <Field label="Einsatzart"><Inp value={p.einsatz_art||''} onChange={v => setP('einsatz_art', v)} /></Field>
+              <Field label="Fahrzeug / Einheit"><Inp value={p.fahrzeug||''} onChange={v => setP('fahrzeug', v)} /></Field>
+              <Field label="Einsatzart / Stichwort"><Inp value={p.einsatz_art||''} onChange={v => setP('einsatz_art', v)} /></Field>
             </Row2>
+            <Field label="Einsatzort / Adresse"><Inp value={p.einsatz_adresse||''} onChange={v => setP('einsatz_adresse', v)} placeholder="Straße, PLZ Ort" /></Field>
+            <Row2>
+              <Field label="Alarmzeit"><Inp value={p.zeit_einsatz||''} onChange={v => setP('zeit_einsatz', v)} type="time" /></Field>
+              <Field label="Eintreffzeit"><Inp value={p.zeit_eintreffen||''} onChange={v => setP('zeit_eintreffen', v)} type="time" /></Field>
+              <Field label="Transportbeginn"><Inp value={p.zeit_transport||''} onChange={v => setP('zeit_transport', v)} type="time" /></Field>
+              <Field label="Übergabe"><Inp value={p.zeit_uebergabe||''} onChange={v => setP('zeit_uebergabe', v)} type="time" /></Field>
+            </Row2>
+            <Field label="Transportziel (Krankenhaus)"><Inp value={p.transport_ziel||''} onChange={v => setP('transport_ziel', v)} placeholder="Klinikum..." /></Field>
           </Section>
 
           <Section title="Patientenstammdaten">
@@ -126,9 +133,20 @@ export default function PatientEditModal({ payload, setP, onClose, onSaveAndSign
             </Field>
           </Section>
 
-          <Section title="Notfallgeschehen">
-            <textarea value={p.notfallgeschehen||''} onChange={e => setP('notfallgeschehen', e.target.value)} rows={4}
-              style={{ width: '100%', padding: '8px 10px', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '14px', resize: 'vertical', background: 'var(--bg)', color: 'var(--text)', boxSizing: 'border-box' }} />
+          <Section title="Notfallgeschehen / Anamnese">
+            <Field label="Notfallgeschehen / Beschwerden">
+              <textarea value={p.notfallgeschehen||''} onChange={e => setP('notfallgeschehen', e.target.value)} rows={3}
+                style={{ width: '100%', padding: '8px 10px', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '14px', resize: 'vertical', background: 'var(--bg)', color: 'var(--text)', boxSizing: 'border-box' }} />
+            </Field>
+            <Field label="Vorerkrankungen">
+              <textarea value={p.vorerkrankungen||''} onChange={e => setP('vorerkrankungen', e.target.value)} rows={2}
+                style={{ width: '100%', padding: '8px 10px', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '14px', resize: 'vertical', background: 'var(--bg)', color: 'var(--text)', boxSizing: 'border-box' }} />
+            </Field>
+            <Field label="Allergien"><Inp value={p.allergien||''} onChange={v => setP('allergien', v)} placeholder="Keine bekannt / ..." /></Field>
+            <Field label="Dauermedikation Patient">
+              <textarea value={p.vormedikation_patient||''} onChange={e => setP('vormedikation_patient', e.target.value)} rows={2}
+                style={{ width: '100%', padding: '8px 10px', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '14px', resize: 'vertical', background: 'var(--bg)', color: 'var(--text)', boxSizing: 'border-box' }} />
+            </Field>
           </Section>
 
           <Section title="Vitalparameter">
@@ -142,6 +160,35 @@ export default function PatientEditModal({ payload, setP, onClose, onSaveAndSign
               <Field label="BZ (mg/dl)"><Inp value={p.bz_mg||''} onChange={v => setP('bz_mg', v)} /></Field>
               <Field label="Schmerz (NRS 0–10)"><Inp value={p.schmerz||''} onChange={v => setP('schmerz', v)} /></Field>
               <Field label="etCO2"><Inp value={p.etco2||''} onChange={v => setP('etco2', v)} /></Field>
+            </Row2>
+          </Section>
+
+          <Section title="NACA / Bewusstsein">
+            <Row2>
+              <Field label="NACA-Score">
+                <select value={p.naca||''} onChange={e => setP('naca', e.target.value)}
+                  style={{ width: '100%', padding: '8px', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '14px', background: 'var(--bg)', color: 'var(--text)' }}>
+                  <option value="">–</option>
+                  <option value="0">0 – Keine Erkrankung/Verletzung</option>
+                  <option value="I">I – Geringfügig</option>
+                  <option value="II">II – Leicht</option>
+                  <option value="III">III – Mäßig schwer</option>
+                  <option value="IV">IV – Schwer, keine Lebensgefahr</option>
+                  <option value="V">V – Akute Lebensgefahr</option>
+                  <option value="VI">VI – Reanimation</option>
+                  <option value="VII">VII – Tod</option>
+                </select>
+              </Field>
+              <Field label="Bewusstsein">
+                <select value={p.bewusstsein||''} onChange={e => setP('bewusstsein', e.target.value)}
+                  style={{ width: '100%', padding: '8px', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '14px', background: 'var(--bg)', color: 'var(--text)' }}>
+                  <option value="">–</option>
+                  <option>wach</option>
+                  <option>somnolent</option>
+                  <option>soporös</option>
+                  <option>komatös</option>
+                </select>
+              </Field>
             </Row2>
           </Section>
 
@@ -246,6 +293,49 @@ export default function PatientEditModal({ payload, setP, onClose, onSaveAndSign
               <Cb label="Reservoir" checked={!!p.o2_reservoir} onChange={v => setP('o2_reservoir', v)} />
             </CbRow>
             <Field label="O₂-Flow (l/min)"><Inp value={p.o2_flow||''} onChange={v => setP('o2_flow', v)} /></Field>
+          </Section>
+
+          <Section title="Atemwegsmanagement">
+            <CbRow>
+              <Cb label="Freihalten" checked={!!p.awm_freihalten} onChange={v => setP('awm_freihalten', v)} />
+              <Cb label="Absaugung" checked={!!p.awm_absaugung} onChange={v => setP('awm_absaugung', v)} />
+              <Cb label="OPA (Guedel)" checked={!!p.awm_opa} onChange={v => setP('awm_opa', v)} />
+              <Cb label="NPA (Wendl)" checked={!!p.awm_npa} onChange={v => setP('awm_npa', v)} />
+              <Cb label="LMA / SGA" checked={!!p.awm_lma} onChange={v => setP('awm_lma', v)} />
+              <Cb label="Intubation (OTI)" checked={!!p.awm_intubation} onChange={v => setP('awm_intubation', v)} />
+            </CbRow>
+          </Section>
+
+          <Section title="Lagerung">
+            <CbRow>
+              <Cb label="Flachlagerung" checked={!!p.lag_flach} onChange={v => setP('lag_flach', v)} />
+              <Cb label="Schocklagerung" checked={!!p.lag_schock} onChange={v => setP('lag_schock', v)} />
+              <Cb label="Oberkörper hoch" checked={!!p.lag_ok_hoch} onChange={v => setP('lag_ok_hoch', v)} />
+              <Cb label="Stabile Seitenlage" checked={!!p.lag_ssl} onChange={v => setP('lag_ssl', v)} />
+              <Cb label="Sitzend" checked={!!p.lag_sitzend} onChange={v => setP('lag_sitzend', v)} />
+              <Cb label="Hängeposition" checked={!!p.lag_haengend} onChange={v => setP('lag_haengend', v)} />
+            </CbRow>
+          </Section>
+
+          <Section title="Reanimation">
+            <CbRow>
+              <Cb label="Reanimation durchgeführt" checked={!!p.rean} onChange={v => setP('rean', v)} />
+            </CbRow>
+            {p.rean && (
+              <Row2>
+                <Field label="Beginn"><Inp value={p.rean_beginn||''} onChange={v => setP('rean_beginn', v)} type="time" /></Field>
+                <Field label="Ende"><Inp value={p.rean_ende||''} onChange={v => setP('rean_ende', v)} type="time" /></Field>
+                <Field label="Defibrillationen (Anzahl)"><Inp value={p.rean_defib||''} onChange={v => setP('rean_defib', v)} /></Field>
+              </Row2>
+            )}
+          </Section>
+
+          <Section title="Immobilisation">
+            <CbRow>
+              <Cb label="HWS-Orthese" checked={!!p.immo_hws} onChange={v => setP('immo_hws', v)} />
+              <Cb label="Spineboard" checked={!!p.immo_spineboard} onChange={v => setP('immo_spineboard', v)} />
+              <Cb label="Vakuummatratze" checked={!!p.immo_vakuum} onChange={v => setP('immo_vakuum', v)} />
+            </CbRow>
           </Section>
 
           <Section title="Rhythmus / EKG">
