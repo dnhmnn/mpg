@@ -32,47 +32,204 @@ function bools(obj: Record<string, boolean | undefined>, labels: Record<string, 
 
 export default function DetailsModal({ doc, type, onClose }: Props) {
   function printDoc() {
-    const w = window.open('', '_blank', 'width=900,height=700')
+    const w = window.open('', '_blank', 'width=1000,height=750')
     if (!w) return
-    let body = ''
+
     if (type === 'patient') {
       const pd = doc as Patient
       const p = parsePayload(pd.payload)
-      body = `
-        <h1 style="font-size:18px;margin-bottom:16px">Notfallprotokoll</h1>
-        <h2>Einsatzdaten</h2>
-        <table><tr><td>Einsatz-Nr.</td><td>${p.einsatz_nr||'—'}</td><td>Auftrags-Nr.</td><td>${p.auftrags_nr||'—'}</td></tr>
-        <tr><td>Rufname</td><td>${p.rufname||'—'}</td><td>Fahrzeug</td><td>${p.fahrzeug||'—'}</td></tr>
-        <tr><td>Zeit Einsatz</td><td>${p.zeit_einsatz||'—'}</td><td>Einsatzart</td><td>${p.einsatz_art||'—'}</td></tr></table>
-        <h2>Patient</h2>
-        <table><tr><td>Name</td><td>${p.name||'—'} ${p.vorname||''}</td><td>Geburtsdatum</td><td>${p.gebdatum||'—'}</td></tr>
-        <tr><td>Alter</td><td>${p.alter||'—'}</td><td>Krankenkasse</td><td>${p.kasse||'—'}</td></tr>
-        <tr><td>Vers.-Nr.</td><td>${p.versnr||'—'}</td><td>Hausarzt</td><td>${p.hausarzt||'—'}</td></tr></table>
-        <h2>Vitalparameter</h2>
-        <table><tr><td>RR</td><td>${p.rr_sys||'—'}/${p.rr_dia||'—'} mmHg</td><td>HF</td><td>${p.hf||'—'} /min</td></tr>
-        <tr><td>SpO2</td><td>${p.spo2||'—'} %</td><td>AF</td><td>${p.af||'—'} /min</td></tr>
-        <tr><td>Temp</td><td>${p.temp||'—'} °C</td><td>BZ</td><td>${p.bz_mg||'—'} mg/dl</td></tr>
-        <tr><td>GCS</td><td>${calcGCS(p)}</td><td>Schmerz</td><td>${p.schmerz||'—'}/10</td></tr></table>
-        <h2>Notfallgeschehen</h2><p>${p.notfallgeschehen||'—'}</p>
-        ${pd.admin_name ? `<h2>Gegenzeichnung</h2><p>${pd.admin_name} — ${fmtDateTime(pd.admin_datum)}</p>${pd.admin_unterschrift ? `<img src="${pd.admin_unterschrift}" style="max-width:300px;border:1px solid #ccc">` : ''}` : ''}
-      `
-    } else {
-      const nd = doc as Nacherfassung
-      body = `
-        <h1 style="font-size:18px;margin-bottom:16px">Nacherfassung</h1>
-        <table>
-          <tr><td>Stichwort</td><td>${nd.stichwort||'—'}</td><td>Kategorie</td><td>${nd.kategorie||'—'}</td></tr>
-          <tr><td>Alarmzeit</td><td>${nd.datum_alarmzeit||'—'}</td><td>Einsatzende</td><td>${nd.datum_einsatzende||'—'}</td></tr>
-          <tr><td>Adresse</td><td colspan="3">${nd.adresse||'—'}</td></tr>
-          <tr><td>Meldebild</td><td colspan="3">${nd.meldebild||'—'}</td></tr>
-        </table>
-        <h2>Sachverhalt</h2><p>${nd.sachverhalt||'—'}</p>
-        <h2>Nacherfasst von</h2>
-        <p>${nd.nacherfasst_von_name||'—'} (${nd.nacherfasst_von_qualifikation||'—'}) — ${fmtDateTime(nd.nacherfasst_datum)}</p>
-        ${nd.nacherfasst_unterschrift ? `<img src="${nd.nacherfasst_unterschrift}" style="max-width:300px;border:1px solid #ccc">` : ''}
-      `
+      const gcsTotal = (p.gcs_e || 0) + (p.gcs_v || 0) + (p.gcs_m || 0)
+      const meds = p.medications || []
+      const tags = (items: { val?: boolean; label: string }[]) =>
+        items.map(t => `<span class="tag${t.val ? ' active' : ''}">${t.label}</span>`).join('')
+
+      const html = `<!DOCTYPE html><html lang="de"><head>
+        <meta charset="UTF-8"><title>Notfalleinsatzprotokoll</title>
+        <style>
+          *{box-sizing:border-box;margin:0;padding:0}
+          body{font-family:Arial,Helvetica,sans-serif;font-size:9pt;color:#000;background:#fff}
+          .page{padding:8mm 10mm;max-width:210mm;margin:0 auto}
+          .hdr{display:flex;justify-content:space-between;border-bottom:2pt solid #000;padding-bottom:4pt;margin-bottom:6pt}
+          .hdr-title{font-size:14pt;font-weight:bold}
+          .block{border:0.5pt solid #999;border-radius:2pt;margin-bottom:5pt;overflow:hidden}
+          .block-title{font-size:7.5pt;font-weight:bold;background:#eee;padding:2pt 5pt;text-transform:uppercase;letter-spacing:.3pt;border-bottom:0.5pt solid #ccc}
+          .row{display:grid;border-top:0.5pt solid #eee}
+          .row:first-of-type{border-top:none}
+          .cell{padding:3pt 5pt;border-right:0.5pt solid #eee}
+          .cell:last-child{border-right:none}
+          .lbl{font-size:6.5pt;color:#777;text-transform:uppercase}
+          .val{font-weight:bold;min-height:10pt;font-size:9pt}
+          .vitals{display:grid;grid-template-columns:repeat(8,1fr)}
+          .vital{text-align:center;border-right:0.5pt solid #eee;padding:3pt 2pt}
+          .vital:last-child{border-right:none}
+          .vlbl{font-size:6.5pt;color:#777}
+          .vval{font-size:11pt;font-weight:bold}
+          .gcs-wrap{display:grid;grid-template-columns:1fr 1fr 1fr 48pt}
+          .gcs-cell{text-align:center;border-right:0.5pt solid #eee;padding:3pt 2pt}
+          .gcs-cell:last-child{border-right:none;background:#f5f5f5}
+          .gcs-total{font-size:16pt;font-weight:bold}
+          .tag{display:inline-block;border:0.5pt solid #999;border-radius:2pt;padding:1pt 4pt;margin:1pt;font-size:7.5pt}
+          .tag.active{background:#222;color:#fff;border-color:#222}
+          table{width:100%;border-collapse:collapse}
+          th,td{border:0.5pt solid #ccc;padding:2pt 4pt;font-size:8pt}
+          th{background:#eee;text-transform:uppercase;font-size:7.5pt}
+          .two{display:grid;grid-template-columns:1fr 1fr;gap:5pt;margin-bottom:5pt}
+          .print-btn{position:fixed;bottom:20px;right:20px;background:#c0392b;color:#fff;border:none;padding:10px 20px;border-radius:8px;font-size:14px;font-weight:bold;cursor:pointer}
+          @media print{.print-btn{display:none}}
+        </style>
+      </head><body><div class="page">
+
+        <div class="hdr">
+          <div>
+            <div class="hdr-title">NOTFALLEINSATZPROTOKOLL</div>
+            <div style="font-size:7.5pt;color:#555">Responda · Erstellt: ${new Date().toLocaleString('de-DE')}</div>
+          </div>
+          <div style="font-size:7pt;color:#aaa;align-self:flex-end">MIND</div>
+        </div>
+
+        <div class="block">
+          <div class="block-title">Einsatzdaten</div>
+          <div class="row" style="grid-template-columns:1fr 1fr 1fr 1fr">
+            <div class="cell"><div class="lbl">Einsatz-Nr.</div><div class="val">${p.einsatz_nr||'—'}</div></div>
+            <div class="cell"><div class="lbl">Auftrags-Nr.</div><div class="val">${p.auftrags_nr||'—'}</div></div>
+            <div class="cell"><div class="lbl">Zeit Einsatz</div><div class="val">${p.zeit_einsatz||'—'}</div></div>
+            <div class="cell"><div class="lbl">Rufname</div><div class="val">${p.rufname||'—'}</div></div>
+          </div>
+          <div class="row" style="grid-template-columns:1fr 1fr">
+            <div class="cell"><div class="lbl">Fahrzeug / Einheit</div><div class="val">${p.fahrzeug||'—'}</div></div>
+            <div class="cell"><div class="lbl">Einsatzart</div><div class="val">${p.einsatz_art||'—'}</div></div>
+          </div>
+        </div>
+
+        <div class="block">
+          <div class="block-title">Patientendaten</div>
+          <div class="row" style="grid-template-columns:2fr 1fr .6fr 1.2fr 1.4fr">
+            <div class="cell"><div class="lbl">Name, Vorname</div><div class="val">${[p.name,p.vorname].filter(Boolean).join(', ')||'—'}</div></div>
+            <div class="cell"><div class="lbl">Geburtsdatum</div><div class="val">${p.gebdatum||'—'}</div></div>
+            <div class="cell"><div class="lbl">Alter</div><div class="val">${p.alter||'—'}</div></div>
+            <div class="cell"><div class="lbl">Krankenkasse</div><div class="val">${p.kasse||'—'}</div></div>
+            <div class="cell"><div class="lbl">Vers.-Nr.</div><div class="val">${p.versnr||'—'}</div></div>
+          </div>
+          <div class="row" style="grid-template-columns:1fr 1fr">
+            <div class="cell"><div class="lbl">Hausarzt</div><div class="val">${p.hausarzt||'—'}</div></div>
+            <div class="cell"><div class="lbl">Angehöriger</div><div class="val">${p.angehoeriger||'—'}</div></div>
+          </div>
+        </div>
+
+        <div class="block">
+          <div class="block-title">Notfallgeschehen / Anamnese</div>
+          <div style="padding:5pt 6pt;min-height:36pt;font-size:9pt;white-space:pre-wrap">${p.notfallgeschehen||'—'}</div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 150pt;gap:5pt;margin-bottom:5pt">
+          <div class="block" style="margin:0">
+            <div class="block-title">Vitalzeichen</div>
+            <div class="vitals">
+              <div class="vital"><div class="vlbl">RR syst.</div><div class="vval">${p.rr_sys||'—'}</div></div>
+              <div class="vital"><div class="vlbl">RR diast.</div><div class="vval">${p.rr_dia||'—'}</div></div>
+              <div class="vital"><div class="vlbl">HF /min</div><div class="vval">${p.hf||'—'}</div></div>
+              <div class="vital"><div class="vlbl">SpO₂ %</div><div class="vval">${p.spo2||'—'}</div></div>
+              <div class="vital"><div class="vlbl">AF /min</div><div class="vval">${p.af||'—'}</div></div>
+              <div class="vital"><div class="vlbl">Temp °C</div><div class="vval">${p.temp||'—'}</div></div>
+              <div class="vital"><div class="vlbl">BZ mg/dl</div><div class="vval">${p.bz_mg||'—'}</div></div>
+              <div class="vital"><div class="vlbl">etCO₂</div><div class="vval">${p.etco2||'—'}</div></div>
+            </div>
+            <div class="row" style="grid-template-columns:1fr 1fr">
+              <div class="cell"><div class="lbl">Schmerz (NRS)</div><div class="val">${p.schmerz||'—'}/10</div></div>
+              <div class="cell"><div class="lbl">O₂-Gabe</div><div class="val">${p.o2?[p.o2_nasal&&'Nasal',p.o2_maske&&'Maske',p.o2_reservoir&&'Reservoir',p.o2_flow&&(p.o2_flow+' L/min')].filter(Boolean).join(', '):'—'}</div></div>
+            </div>
+          </div>
+          <div class="block" style="margin:0">
+            <div class="block-title">GCS</div>
+            <div class="gcs-wrap">
+              <div class="gcs-cell"><div class="vlbl">Augen (E)</div><div class="vval">${p.gcs_e||'—'}</div></div>
+              <div class="gcs-cell"><div class="vlbl">Verbal (V)</div><div class="vval">${p.gcs_v||'—'}</div></div>
+              <div class="gcs-cell"><div class="vlbl">Motorik (M)</div><div class="vval">${p.gcs_m||'—'}</div></div>
+              <div class="gcs-cell"><div class="vlbl">Gesamt</div><div class="gcs-total">${gcsTotal||'—'}</div></div>
+            </div>
+            <div class="block-title">Pupillen</div>
+            <div class="row" style="grid-template-columns:1fr 1fr">
+              <div class="cell"><div class="lbl">Links</div><div class="val">${p.pw_l||'—'}${p.pw_l_entrundet?' entr.':''}</div><div style="font-size:7.5pt">LR: ${p.lr_l||'—'}</div></div>
+              <div class="cell"><div class="lbl">Rechts</div><div class="val">${p.pw_r||'—'}${p.pw_r_entrundet?' entr.':''}</div><div style="font-size:7.5pt">LR: ${p.lr_r||'—'}</div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="two">
+          <div class="block" style="margin:0">
+            <div class="block-title">EKG-Befund</div>
+            <div style="padding:4pt 5pt">${tags([{val:p.sr,label:'Sinusrhythmus'},{val:p.stemi,label:'STEMI'},{val:p.vf,label:'Kammerflimmern'},{val:p.asystole,label:'Asystolie'}])}</div>
+            <div class="block-title">Atmung</div>
+            <div style="padding:4pt 5pt">${tags([{val:p.atm_apnoe,label:'Apnoe'},{val:p.atm_stridor,label:'Stridor'},{val:p.atm_dyspnoe,label:'Dyspnoe'},{val:p.atm_zyanose,label:'Zyanose'}])}</div>
+          </div>
+          <div class="block" style="margin:0">
+            <div class="block-title">Verdachtsdiagnosen</div>
+            <div style="padding:4pt 5pt">${tags([{val:p.diag_krampf,label:'Krampfanfall'},{val:p.diag_synkope,label:'Synkope'},{val:p.diag_apoplex,label:'Apoplex'},{val:p.diag_sht,label:'SHT'},{val:p.diag_acs,label:'ACS'},{val:p.diag_insuff,label:'Herzinsuffizienz'},{val:p.diag_hypo,label:'Hypoglykämie'},{val:p.diag_resp_insuff,label:'Resp. Insuff.'}])}</div>
+            <div class="block-title">Haut / Psyche</div>
+            <div style="padding:4pt 5pt">${tags([{val:p.haut_unauff,label:'Haut unauff.'},{val:p.haut_kaltschweissig,label:'kaltschweißig'},{val:p.haut_oedeme,label:'Ödeme'},{val:p.haut_dekubitus,label:'Dekubitus'},{val:p.psy_erregt,label:'erregt'},{val:p.psy_verwirrt,label:'verwirrt'},{val:p.psy_suizidal,label:'suizidal'},{val:p.psy_aggr,label:'aggressiv'}])}</div>
+          </div>
+        </div>
+
+        ${meds.length > 0 ? `<div class="block">
+          <div class="block-title">Medikamente</div>
+          <div style="padding:4pt 5pt">
+            <table><thead><tr><th>Zeit</th><th>Medikament</th><th>Dosis</th><th>Einheit</th><th>Applikation</th><th>Bemerkung</th></tr></thead>
+            <tbody>${meds.map(m=>`<tr><td>${m.time||'—'}</td><td>${m.name||'—'}</td><td>${m.dose||'—'}</td><td>${m.unit||'—'}</td><td>${m.route||'—'}</td><td>${m.note||''}</td></tr>`).join('')}</tbody>
+            </table>
+          </div>
+        </div>` : ''}
+
+        <div class="two">
+          <div class="block" style="margin:0">
+            <div class="block-title">Venöser Zugang / Infusion</div>
+            <div style="padding:4pt 5pt;font-size:9pt">${p.zugang_art||p.zugang_gauge||p.zugang_region?[p.zugang_art,p.zugang_gauge?p.zugang_gauge+'G':'',p.zugang_region].filter(Boolean).join(' · '):'—'}${p.inf_art?`<br>${p.inf_art} ${p.inf_menge||''}`:''}
+            </div>
+          </div>
+          <div class="block" style="margin:0">
+            <div class="block-title">Verletzungen / Sonstiges</div>
+            <div style="padding:4pt 5pt;font-size:9pt;white-space:pre-wrap;min-height:24pt">${p.verletz_text||'—'}</div>
+          </div>
+        </div>
+
+        ${p.signature ? `<div class="block">
+          <div class="block-title">Unterschrift Patient / Einwilligung</div>
+          <div style="padding:5pt"><img src="${p.signature}" style="max-height:50pt;border:0.5pt solid #ccc"></div>
+        </div>` : ''}
+
+        ${pd.admin_name ? `<div class="block">
+          <div class="block-title">Gegenzeichnung MPG-Beauftragter</div>
+          <div class="row" style="grid-template-columns:1fr 1fr">
+            <div class="cell"><div class="lbl">Name</div><div class="val">${pd.admin_name}</div></div>
+            <div class="cell"><div class="lbl">Datum</div><div class="val">${fmtDateTime(pd.admin_datum)}</div></div>
+          </div>
+          ${pd.admin_unterschrift?`<div style="padding:5pt;border-top:0.5pt solid #eee"><img src="${pd.admin_unterschrift}" style="max-height:50pt;border:0.5pt solid #ccc"></div>`:''}
+        </div>` : ''}
+
+      </div>
+      <button class="print-btn" onclick="window.print()">Drucken / PDF</button>
+      </body></html>`
+
+      w.document.write(html)
+      w.document.close()
+      return
     }
-    w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Protokoll</title>
+
+    // Nacherfassung
+    const nd = doc as Nacherfassung
+    const body = `
+      <h1 style="font-size:18px;margin-bottom:16px">Nacherfassung</h1>
+      <table>
+        <tr><td>Stichwort</td><td>${nd.stichwort||'—'}</td><td>Kategorie</td><td>${nd.kategorie||'—'}</td></tr>
+        <tr><td>Alarmzeit</td><td>${nd.datum_alarmzeit||'—'}</td><td>Einsatzende</td><td>${nd.datum_einsatzende||'—'}</td></tr>
+        <tr><td>Adresse</td><td colspan="3">${nd.adresse||'—'}</td></tr>
+        <tr><td>Meldebild</td><td colspan="3">${nd.meldebild||'—'}</td></tr>
+      </table>
+      <h2>Sachverhalt</h2><p>${nd.sachverhalt||'—'}</p>
+      <h2>Nacherfasst von</h2>
+      <p>${nd.nacherfasst_von_name||'—'} (${nd.nacherfasst_von_qualifikation||'—'}) — ${fmtDateTime(nd.nacherfasst_datum)}</p>
+      ${nd.nacherfasst_unterschrift?`<img src="${nd.nacherfasst_unterschrift}" style="max-width:300px;border:1px solid #ccc">`:''}
+    `
+    w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Nacherfassung</title>
       <style>body{font-family:Arial,sans-serif;font-size:12px;padding:20px;color:#000}
       h1,h2{margin:12px 0 6px}h2{font-size:13px;border-bottom:1px solid #ccc;padding-bottom:2px}
       table{border-collapse:collapse;width:100%;margin-bottom:8px}
