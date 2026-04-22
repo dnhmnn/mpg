@@ -1,3 +1,10 @@
+export interface VitalRow {
+  zeit: string
+  rr_sys: string; rr_dia: string; hf: string; spo2: string
+  af: string; temp: string; bz: string; etco2: string; schmerz: string
+  bemerkung: string
+}
+
 export interface Medication {
   name: string
   dose: string
@@ -43,6 +50,7 @@ export interface PatientPayload {
   lag_ssl?: boolean; lag_sitzend?: boolean; lag_haengend?: boolean
   rean?: boolean; rean_beginn?: string; rean_ende?: string; rean_defib?: string
   immo_hws?: boolean; immo_spineboard?: boolean; immo_vakuum?: boolean
+  verlauf?: VitalRow[]
   medications?: Medication[]
   zugang_art?: string; zugang_gauge?: string; zugang_region?: string
   inf_art?: string; inf_menge?: string
@@ -113,6 +121,7 @@ export const EMPTY_PAYLOAD: PatientPayload = {
   lag_ssl: false, lag_sitzend: false, lag_haengend: false,
   rean: false, rean_beginn: '', rean_ende: '', rean_defib: '',
   immo_hws: false, immo_spineboard: false, immo_vakuum: false,
+  verlauf: [],
   medications: [],
   zugang_art: '', zugang_gauge: '', zugang_region: '',
   inf_art: '', inf_menge: '',

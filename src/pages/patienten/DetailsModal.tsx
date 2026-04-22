@@ -40,6 +40,7 @@ export default function DetailsModal({ doc, type, onClose }: Props) {
       const p = parsePayload(pd.payload)
       const gcsTotal = (p.gcs_e || 0) + (p.gcs_v || 0) + (p.gcs_m || 0)
       const meds = p.medications || []
+      const verlauf = p.verlauf || []
 
       // tag-badge helpers: .tag renders as a grey pill; .tag.active = dark filled
       const tag = (on: boolean | undefined, label: string) =>
@@ -143,6 +144,39 @@ export default function DetailsModal({ doc, type, onClose }: Props) {
 
       <div class="pg pb">
       ${hdr('Seite 2 · '+([p.name,p.vorname].filter(Boolean).join(', ')||'—')+' · geb. '+(p.gebdatum||'—'))}
+
+      ${verlauf.length>0?`<div style="border:0.5pt solid #888;margin-bottom:4pt;overflow:hidden">
+        <div style="font-size:6.5pt;font-weight:bold;background:#d0d0d0;padding:2pt 5pt;text-transform:uppercase;letter-spacing:.4pt;border-bottom:0.5pt solid #888">Verlauf / Vitalzeichen-Kurve</div>
+        <table style="width:100%;border-collapse:collapse;font-size:7pt">
+          <thead><tr style="background:#eee">
+            <th style="border:0.5pt solid #ccc;padding:2pt 4pt;text-align:center">Zeit</th>
+            <th style="border:0.5pt solid #ccc;padding:2pt 4pt;text-align:center">RR sys</th>
+            <th style="border:0.5pt solid #ccc;padding:2pt 4pt;text-align:center">RR dia</th>
+            <th style="border:0.5pt solid #ccc;padding:2pt 4pt;text-align:center">HF</th>
+            <th style="border:0.5pt solid #ccc;padding:2pt 4pt;text-align:center">SpO₂</th>
+            <th style="border:0.5pt solid #ccc;padding:2pt 4pt;text-align:center">AF</th>
+            <th style="border:0.5pt solid #ccc;padding:2pt 4pt;text-align:center">Temp</th>
+            <th style="border:0.5pt solid #ccc;padding:2pt 4pt;text-align:center">BZ</th>
+            <th style="border:0.5pt solid #ccc;padding:2pt 4pt;text-align:center">etCO₂</th>
+            <th style="border:0.5pt solid #ccc;padding:2pt 4pt;text-align:center">Schmerz</th>
+            <th style="border:0.5pt solid #ccc;padding:2pt 4pt;text-align:center">Bemerkung</th>
+          </tr></thead>
+          <tbody>${verlauf.map(vr=>`<tr>
+            <td style="border:0.5pt solid #ccc;padding:2pt 4pt;text-align:center;font-weight:bold">${vr.zeit||''}</td>
+            <td style="border:0.5pt solid #ccc;padding:2pt 4pt;text-align:center">${vr.rr_sys||''}</td>
+            <td style="border:0.5pt solid #ccc;padding:2pt 4pt;text-align:center">${vr.rr_dia||''}</td>
+            <td style="border:0.5pt solid #ccc;padding:2pt 4pt;text-align:center">${vr.hf||''}</td>
+            <td style="border:0.5pt solid #ccc;padding:2pt 4pt;text-align:center">${vr.spo2||''}</td>
+            <td style="border:0.5pt solid #ccc;padding:2pt 4pt;text-align:center">${vr.af||''}</td>
+            <td style="border:0.5pt solid #ccc;padding:2pt 4pt;text-align:center">${vr.temp||''}</td>
+            <td style="border:0.5pt solid #ccc;padding:2pt 4pt;text-align:center">${vr.bz||''}</td>
+            <td style="border:0.5pt solid #ccc;padding:2pt 4pt;text-align:center">${vr.etco2||''}</td>
+            <td style="border:0.5pt solid #ccc;padding:2pt 4pt;text-align:center">${vr.schmerz||''}</td>
+            <td style="border:0.5pt solid #ccc;padding:2pt 4pt">${vr.bemerkung||''}</td>
+          </tr>`).join('')}</tbody>
+        </table>
+      </div>`:''}
+
 
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:4pt;margin-bottom:4pt">
         ${blk('Erstdiagnose / Verdachtsdiagnose',cr([[p.diag_krampf,'Krampfanfall'],[p.diag_synkope,'Synkope'],[p.diag_apoplex,'Apoplex'],[p.diag_sht,'SHT'],[p.diag_acs,'ACS'],[p.diag_insuff,'Herzinsuffizienz'],[p.diag_hypo,'Hypoglykämie'],[p.diag_resp_insuff,'Resp. Insufzienz']]))}

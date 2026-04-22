@@ -1,4 +1,4 @@
-import type { PatientPayload, Medication } from './types'
+import type { PatientPayload, Medication, VitalRow } from './types'
 import { calcGCS } from './types'
 
 interface Props {
@@ -73,6 +73,15 @@ function CbRow({ children }: { children: React.ReactNode }) {
 
 export default function PatientEditModal({ payload, setP, onClose, onSaveAndSign }: Props) {
   const p = payload
+
+  const EMPTY_VROW: VitalRow = { zeit:'', rr_sys:'', rr_dia:'', hf:'', spo2:'', af:'', temp:'', bz:'', etco2:'', schmerz:'', bemerkung:'' }
+  function addVRow() { setP('verlauf', [...(p.verlauf||[]), {...EMPTY_VROW}]) }
+  function updateVRow(i: number, key: keyof VitalRow, value: string) {
+    const rows = [...(p.verlauf||[])]
+    rows[i] = { ...rows[i], [key]: value }
+    setP('verlauf', rows)
+  }
+  function removeVRow(i: number) { setP('verlauf', (p.verlauf||[]).filter((_,j)=>j!==i)) }
 
   function addMed() {
     setP('medications', [...(p.medications || []), { name: '', dose: '', unit: '', route: '', time: '', note: '' }])
@@ -151,6 +160,36 @@ export default function PatientEditModal({ payload, setP, onClose, onSaveAndSign
               <textarea value={p.vormedikation_patient||''} onChange={e => setP('vormedikation_patient', e.target.value)} rows={2}
                 style={{ width: '100%', padding: '8px 10px', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '14px', resize: 'vertical', background: 'var(--bg)', color: 'var(--text)', boxSizing: 'border-box' }} />
             </Field>
+          </Section>
+
+          <Section title="Verlauf / Vitalzeichen-Kurve">
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', minWidth: '700px' }}>
+                <thead>
+                  <tr style={{ background: 'var(--bg-secondary)' }}>
+                    {['Zeit','RR sys','RR dia','HF','SpO₂','AF','Temp','BZ','etCO₂','Schmerz','Bemerkung',''].map(h => (
+                      <th key={h} style={{ padding: '4px 6px', border: '1px solid var(--border)', fontWeight: 600, fontSize: '11px', textAlign: 'center', whiteSpace: 'nowrap' }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {(p.verlauf||[]).map((vr, i) => (
+                    <tr key={i}>
+                      {(['zeit','rr_sys','rr_dia','hf','spo2','af','temp','bz','etco2','schmerz','bemerkung'] as (keyof VitalRow)[]).map(k => (
+                        <td key={k} style={{ padding: '2px', border: '1px solid var(--border)' }}>
+                          <input value={vr[k]} onChange={e => updateVRow(i, k, e.target.value)}
+                            style={{ width: '100%', padding: '4px', border: 'none', background: 'transparent', color: 'var(--text)', fontSize: '12px', minWidth: k === 'bemerkung' ? '100px' : '44px' }} />
+                        </td>
+                      ))}
+                      <td style={{ padding: '2px', border: '1px solid var(--border)', textAlign: 'center' }}>
+                        <button onClick={() => removeVRow(i)} style={{ color: '#c0392b', background: 'none', border: 'none', cursor: 'pointer', fontSize: '14px' }}>✕</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <button onClick={addVRow} style={{ marginTop: '8px', fontSize: '14px', color: '#c0392b', background: 'none', border: '1px dashed #c0392b', borderRadius: '8px', padding: '6px 14px', cursor: 'pointer', width: '100%' }}>+ Zeile hinzufügen</button>
           </Section>
 
           <Section title="Vitalparameter">
