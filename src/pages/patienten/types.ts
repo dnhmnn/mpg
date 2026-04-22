@@ -2,6 +2,7 @@ export interface VitalRow {
   zeit: string
   rr_sys: string; rr_dia: string; hf: string; spo2: string
   af: string; temp: string; bz: string; etco2: string; schmerz: string
+  o2: string
   bemerkung: string
 }
 

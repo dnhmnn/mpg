@@ -183,9 +183,9 @@ export default function DetailsModal({ doc, type, onClose }: Props) {
               <div style="position:relative;height:${H}pt;border-bottom:0.5pt solid #ccc">
                 <svg viewBox="0 0 34 ${H}" width="35pt" height="${H}pt" style="display:block;overflow:visible">${scaleLabels}</svg>
               </div>
-              <div style="height:11pt;border-bottom:0.5pt solid #ccc;padding:1pt 3pt;display:flex;align-items:center">SpO₂ %</div>
-              <div style="height:11pt;border-bottom:0.5pt solid #ccc;padding:1pt 3pt;display:flex;align-items:center">etCO₂</div>
-              <div style="height:11pt;padding:1pt 3pt;display:flex;align-items:center">Schmerz</div>
+              <div style="height:11pt;border-bottom:0.5pt solid #ccc;padding:1pt 3pt;display:flex;align-items:center">O₂ [l/min]</div>
+              <div style="height:11pt;border-bottom:0.5pt solid #ccc;padding:1pt 3pt;display:flex;align-items:center">SpO₂ [%]</div>
+              <div style="height:11pt;padding:1pt 3pt;display:flex;align-items:center">etCO₂ [mmHg]</div>
             </div>
             <div style="flex:1;min-width:0;overflow:hidden">
               <div style="height:12pt;border-bottom:0.5pt solid #ccc;display:grid;grid-template-columns:repeat(${cols},1fr)">${zeitRow}</div>
@@ -197,9 +197,9 @@ export default function DetailsModal({ doc, type, onClose }: Props) {
                 ${dots('hf','none','#1c3a5e',2.5)}
                 <svg x="0" y="0" width="${W}" height="12"><rect width="${W}" height="12" fill="rgba(255,255,255,0.7)"/>${legend}</svg>
               </svg>
+              <div style="height:11pt;border-bottom:0.5pt solid #ccc;display:grid;grid-template-columns:repeat(${cols},1fr)">${bottomCells('o2')}</div>
               <div style="height:11pt;border-bottom:0.5pt solid #ccc;display:grid;grid-template-columns:repeat(${cols},1fr)">${bottomCells('spo2')}</div>
-              <div style="height:11pt;border-bottom:0.5pt solid #ccc;display:grid;grid-template-columns:repeat(${cols},1fr)">${bottomCells('etco2')}</div>
-              <div style="height:11pt;display:grid;grid-template-columns:repeat(${cols},1fr)">${bottomCells('schmerz')}</div>
+              <div style="height:11pt;display:grid;grid-template-columns:repeat(${cols},1fr)">${bottomCells('etco2')}</div>
             </div>
           </div>
         </div>`

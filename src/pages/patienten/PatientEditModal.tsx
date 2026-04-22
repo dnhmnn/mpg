@@ -74,7 +74,7 @@ function CbRow({ children }: { children: React.ReactNode }) {
 export default function PatientEditModal({ payload, setP, onClose, onSaveAndSign }: Props) {
   const p = payload
 
-  const EMPTY_VROW: VitalRow = { zeit:'', rr_sys:'', rr_dia:'', hf:'', spo2:'', af:'', temp:'', bz:'', etco2:'', schmerz:'', bemerkung:'' }
+  const EMPTY_VROW: VitalRow = { zeit:'', rr_sys:'', rr_dia:'', hf:'', spo2:'', af:'', temp:'', bz:'', etco2:'', schmerz:'', o2:'', bemerkung:'' }
   function addVRow() { setP('verlauf', [...(p.verlauf||[]), {...EMPTY_VROW}]) }
   function updateVRow(i: number, key: keyof VitalRow, value: string) {
     const rows = [...(p.verlauf||[])]
@@ -167,7 +167,7 @@ export default function PatientEditModal({ payload, setP, onClose, onSaveAndSign
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', minWidth: '700px' }}>
                 <thead>
                   <tr style={{ background: 'var(--bg-secondary)' }}>
-                    {['Zeit','RR sys','RR dia','HF','SpO₂','AF','Temp','BZ','etCO₂','Schmerz','Bemerkung',''].map(h => (
+                    {['Zeit','RR sys','RR dia','HF','SpO₂','AF','Temp','BZ','etCO₂','Schmerz','O₂ l/min','Bemerkung',''].map(h => (
                       <th key={h} style={{ padding: '4px 6px', border: '1px solid var(--border)', fontWeight: 600, fontSize: '11px', textAlign: 'center', whiteSpace: 'nowrap' }}>{h}</th>
                     ))}
                   </tr>
@@ -175,7 +175,7 @@ export default function PatientEditModal({ payload, setP, onClose, onSaveAndSign
                 <tbody>
                   {(p.verlauf||[]).map((vr, i) => (
                     <tr key={i}>
-                      {(['zeit','rr_sys','rr_dia','hf','spo2','af','temp','bz','etco2','schmerz','bemerkung'] as (keyof VitalRow)[]).map(k => (
+                      {(['zeit','rr_sys','rr_dia','hf','spo2','af','temp','bz','etco2','schmerz','o2','bemerkung'] as (keyof VitalRow)[]).map(k => (
                         <td key={k} style={{ padding: '2px', border: '1px solid var(--border)' }}>
                           <input value={vr[k]} onChange={e => updateVRow(i, k, e.target.value)}
                             style={{ width: '100%', padding: '4px', border: 'none', background: 'transparent', color: 'var(--text)', fontSize: '12px', minWidth: k === 'bemerkung' ? '100px' : '44px' }} />
