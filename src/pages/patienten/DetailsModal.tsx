@@ -135,14 +135,10 @@ export default function DetailsModal({ doc, type, onClose }: Props) {
           </div>
         </div>
 
-        <div class="two">
-          <div class="block" style="margin:0">
-            <div class="block-title">NACA-Score</div>
-            <div style="padding:6pt;text-align:center;font-size:18pt;font-weight:bold;border:2pt solid #000;border-radius:3pt;margin:4pt">${p.naca||'—'}</div>
-          </div>
-          <div class="block" style="margin:0">
-            <div class="block-title">Bewusstsein</div>
-            <div style="padding:6pt;font-size:12pt;font-weight:bold">${p.bewusstsein||'—'}</div>
+        <div class="block">
+          <div class="row" style="grid-template-columns:1fr 1fr">
+            <div class="cell"><div class="lbl">NACA-Score</div><div class="val">${p.naca||'—'}</div></div>
+            <div class="cell"><div class="lbl">Bewusstsein</div><div class="val">${p.bewusstsein||'—'}</div></div>
           </div>
         </div>
 
