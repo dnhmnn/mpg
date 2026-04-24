@@ -49,7 +49,7 @@ export default function DetailsModal({ doc, type, onClose }: Props) {
       const B = (t:string) => `<div style="font-size:5pt;font-weight:bold;background:#d0d0d0;padding:1pt 3pt;text-transform:uppercase;letter-spacing:.4pt;border-bottom:0.5pt solid #888">${t}</div>`
       const hdr = (sub:string) => `<div style="border:1pt solid #000;display:flex;align-items:center;justify-content:space-between;padding:2pt 6pt;margin-bottom:2pt"><div style="font-size:8pt;font-weight:bold;letter-spacing:.5pt;text-transform:uppercase">NOTFALLEINSATZPROTOKOLL</div><div style="font-size:5pt;color:#444">${sub}</div><div style="font-size:10pt;font-weight:bold;letter-spacing:2pt">MIND</div></div>`
       const blk = (title:string, content:string) => `<div style="border:0.5pt solid #888;margin-bottom:1.5pt;overflow:hidden">${B(title)}${content}</div>`
-      const blkF = (title:string, content:string) => `<div style="border:0.5pt solid #888;overflow:hidden;flex:1;display:flex;flex-direction:column">${B(title)}<div>${content}</div></div>`
+      const blkF = (title:string, content:string) => `<div style="border:0.5pt solid #888;overflow:hidden;flex:1;min-height:0;display:flex;flex-direction:column">${B(title)}<div style="overflow:hidden">${content}</div></div>`
       const row = (cols:string, cells:string) => `<div style="display:grid;grid-template-columns:${cols};border-top:0.5pt solid #ccc">${cells}</div>`
       const cell = (lbl:string, val:string) => `<div style="padding:1pt 3pt;border-right:0.5pt solid #ccc"><div style="font-size:4pt;color:#666;text-transform:uppercase;letter-spacing:.3pt;margin-bottom:0.5pt">${lbl}</div><div style="font-weight:bold;font-size:6pt;min-height:7pt">${val||''}</div></div>`
       const cellL = (lbl:string, val:string) => `<div style="padding:1pt 3pt;border-right:0.5pt solid #ccc"><div style="font-size:4pt;color:#666;text-transform:uppercase;letter-spacing:.3pt;margin-bottom:0.5pt">${lbl}</div><div style="font-size:6pt;min-height:7pt;white-space:pre-wrap">${val||''}</div></div>`
@@ -62,7 +62,8 @@ export default function DetailsModal({ doc, type, onClose }: Props) {
       <style>
         *{box-sizing:border-box;margin:0;padding:0}
         body{font-family:Arial,Helvetica,sans-serif;font-size:6pt;color:#000;background:#fff;margin:0;padding:0}
-        .pg{padding:3.5mm 5mm;width:210mm;height:297mm;display:flex;flex-direction:column;box-sizing:border-box}
+        .pg{padding:3.5mm 5mm;width:210mm;height:297mm;display:flex;flex-direction:column;box-sizing:border-box;overflow:hidden}
+        .pg>*{flex-shrink:0}
         .pb{page-break-before:always}
         @page{margin:0;size:A4 portrait}
         table{width:100%;border-collapse:collapse}
