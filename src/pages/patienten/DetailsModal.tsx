@@ -49,6 +49,7 @@ export default function DetailsModal({ doc, type, onClose }: Props) {
       const B = (t:string) => `<div style="font-size:5pt;font-weight:bold;background:#d0d0d0;padding:1pt 3pt;text-transform:uppercase;letter-spacing:.4pt;border-bottom:0.5pt solid #888">${t}</div>`
       const hdr = (sub:string) => `<div style="border:1pt solid #000;display:flex;align-items:center;justify-content:space-between;padding:2pt 6pt;margin-bottom:2pt"><div style="font-size:8pt;font-weight:bold;letter-spacing:.5pt;text-transform:uppercase">NOTFALLEINSATZPROTOKOLL</div><div style="font-size:5pt;color:#444">${sub}</div><div style="font-size:10pt;font-weight:bold;letter-spacing:2pt">MIND</div></div>`
       const blk = (title:string, content:string) => `<div style="border:0.5pt solid #888;margin-bottom:1.5pt;overflow:hidden">${B(title)}${content}</div>`
+      const blkF = (title:string, content:string) => `<div style="border:0.5pt solid #888;overflow:hidden;flex:1;display:flex;flex-direction:column">${B(title)}<div>${content}</div></div>`
       const row = (cols:string, cells:string) => `<div style="display:grid;grid-template-columns:${cols};border-top:0.5pt solid #ccc">${cells}</div>`
       const cell = (lbl:string, val:string) => `<div style="padding:1pt 3pt;border-right:0.5pt solid #ccc"><div style="font-size:4pt;color:#666;text-transform:uppercase;letter-spacing:.3pt;margin-bottom:0.5pt">${lbl}</div><div style="font-weight:bold;font-size:6pt;min-height:7pt">${val||''}</div></div>`
       const cellL = (lbl:string, val:string) => `<div style="padding:1pt 3pt;border-right:0.5pt solid #ccc"><div style="font-size:4pt;color:#666;text-transform:uppercase;letter-spacing:.3pt;margin-bottom:0.5pt">${lbl}</div><div style="font-size:6pt;min-height:7pt;white-space:pre-wrap">${val||''}</div></div>`
@@ -60,9 +61,10 @@ export default function DetailsModal({ doc, type, onClose }: Props) {
       const html = `<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"><title>MIND Notfalleinsatzprotokoll</title>
       <style>
         *{box-sizing:border-box;margin:0;padding:0}
-        body{font-family:Arial,Helvetica,sans-serif;font-size:6pt;color:#000;background:#fff}
-        .pg{padding:3.5mm 5mm;max-width:210mm;margin:0 auto}
+        body{font-family:Arial,Helvetica,sans-serif;font-size:6pt;color:#000;background:#fff;margin:0;padding:0}
+        .pg{padding:3.5mm 5mm;width:210mm;height:297mm;display:flex;flex-direction:column;box-sizing:border-box}
         .pb{page-break-before:always}
+        @page{margin:0;size:A4 portrait}
         table{width:100%;border-collapse:collapse}
         th{background:#d0d0d0;font-size:4pt;text-transform:uppercase;padding:1pt 2pt;border:0.5pt solid #888;letter-spacing:.3pt}
         td{padding:1pt 2pt;border:0.5pt solid #ccc;font-size:6pt}
@@ -153,7 +155,7 @@ export default function DetailsModal({ doc, type, onClose }: Props) {
         </div>
       </div>
 
-      ${blk('Erstdiagnose / Verdachtsdiagnose',
+      ${blkF('Erstdiagnose / Verdachtsdiagnose',
         (p.erstdiagnose_text?`<div style="padding:1pt 3pt;font-size:6pt;font-weight:bold">${p.erstdiagnose_text}</div>`:'')+
         cr([[p.e_keine,'Keine Erkrankung/Verletzung']])+
         catRow('ZNS',[[p.e_zns_schlaganfall,'Schlaganfall'],[p.e_zns_tia,'TIA'],[p.e_zns_blutung,'Intrakr. Blutung'],[p.e_zns_lyse,'Lyse'],[p.e_zns_krampf,'Krampfanfall'],[p.e_zns_status_epilept,'Status epilept.'],[p.e_zns_meningitis,'Meningitis'],[p.e_zns_synkope,'Synkope'],[p.e_zns_sonstige,'Sonstige']])+
@@ -270,7 +272,7 @@ export default function DetailsModal({ doc, type, onClose }: Props) {
 
       ${blk('Medikamente / Therapie',`<div style="padding:1.5pt 3pt"><table><thead><tr><th>Zeit</th><th>Medikament</th><th>Dosis</th><th>Einheit</th><th>Applikationsweg</th><th>Hinweis</th></tr></thead><tbody>${meds.length>0?meds.map(m=>`<tr><td>${m.time||''}</td><td>${m.name||''}</td><td>${m.dose||''}</td><td>${m.unit||''}</td><td>${m.route||''}</td><td>${m.note||''}</td></tr>`).join(''):'<tr><td colspan="6" style="text-align:center;color:#aaa;font-style:italic">—</td></tr>'}</tbody></table></div>`)}
 
-      ${blk('Übergabe / Besonderheiten',
+      ${blkF('Übergabe / Besonderheiten',
         row('1fr 1fr',cell('Übergabe Ziel',p.uebergabe_ziel||'')+cell('Übergabe an (Name)',p.uebergabe_name||''))+
         cr([[p.ev_transportverweigerung,'Transportverweigerung'],[p.ev_nur_untersuchung,'Nur Untersuchung/Behandlung'],[p.ev_zwangseinweisung,'Zwangseinweisung'],[p.ev_transport_sondersignal,'Transport mit Sondersignal'],[p.ev_manv,'MANV'],[p.ev_lna,'LNA am Einsatz'],[p.ev_schwerlast,'Schwerlasttransport']])+
         `<div style="padding:1.5pt 3pt;border-top:0.5pt solid #ccc"><div style="font-size:5pt;color:#666;text-transform:uppercase;letter-spacing:.3pt;margin-bottom:1pt">Bemerkungen</div><div style="font-size:5pt;min-height:10pt;white-space:pre-wrap">${p.bemerkungen||''}</div></div>`
