@@ -46,16 +46,16 @@ export default function DetailsModal({ doc, type, onClose }: Props) {
       const tag = (on: boolean | undefined, label: string) =>
         `<span class="tag${on?' active':''}">${label}</span>`
 
-      const B = (t:string) => `<div style="font-size:5.5pt;font-weight:bold;background:#d0d0d0;padding:2pt 4pt;text-transform:uppercase;letter-spacing:.4pt;border-bottom:0.5pt solid #888">${t}</div>`
-      const hdr = (sub:string) => `<div style="border:1pt solid #000;display:flex;align-items:center;justify-content:space-between;padding:2pt 6pt;margin-bottom:3pt"><div style="font-size:8pt;font-weight:bold;letter-spacing:.5pt;text-transform:uppercase">NOTFALLEINSATZPROTOKOLL</div><div style="font-size:5pt;color:#444">${sub}</div><div style="font-size:10pt;font-weight:bold;letter-spacing:2pt">MIND</div></div>`
-      const blk = (title:string, content:string) => `<div style="border:0.5pt solid #888;margin-bottom:2.5pt;overflow:hidden">${B(title)}${content}</div>`
+      const B = (t:string) => `<div style="font-size:5pt;font-weight:bold;background:#d0d0d0;padding:1.5pt 3pt;text-transform:uppercase;letter-spacing:.4pt;border-bottom:0.5pt solid #888">${t}</div>`
+      const hdr = (sub:string) => `<div style="border:1pt solid #000;display:flex;align-items:center;justify-content:space-between;padding:2pt 6pt;margin-bottom:2.5pt"><div style="font-size:8pt;font-weight:bold;letter-spacing:.5pt;text-transform:uppercase">NOTFALLEINSATZPROTOKOLL</div><div style="font-size:5pt;color:#444">${sub}</div><div style="font-size:10pt;font-weight:bold;letter-spacing:2pt">MIND</div></div>`
+      const blk = (title:string, content:string) => `<div style="border:0.5pt solid #888;margin-bottom:2pt;overflow:hidden">${B(title)}${content}</div>`
       const row = (cols:string, cells:string) => `<div style="display:grid;grid-template-columns:${cols};border-top:0.5pt solid #ccc">${cells}</div>`
-      const cell = (lbl:string, val:string) => `<div style="padding:2pt 4pt;border-right:0.5pt solid #ccc"><div style="font-size:4.5pt;color:#666;text-transform:uppercase;letter-spacing:.3pt;margin-bottom:1pt">${lbl}</div><div style="font-weight:bold;font-size:6.5pt;min-height:9pt">${val||''}</div></div>`
-      const cellL = (lbl:string, val:string) => `<div style="padding:2pt 4pt;border-right:0.5pt solid #ccc"><div style="font-size:4.5pt;color:#666;text-transform:uppercase;letter-spacing:.3pt;margin-bottom:1pt">${lbl}</div><div style="font-size:6.5pt;min-height:11pt;white-space:pre-wrap">${val||''}</div></div>`
+      const cell = (lbl:string, val:string) => `<div style="padding:1.5pt 3pt;border-right:0.5pt solid #ccc"><div style="font-size:4pt;color:#666;text-transform:uppercase;letter-spacing:.3pt;margin-bottom:0.5pt">${lbl}</div><div style="font-weight:bold;font-size:6.5pt;min-height:8pt">${val||''}</div></div>`
+      const cellL = (lbl:string, val:string) => `<div style="padding:1.5pt 3pt;border-right:0.5pt solid #ccc"><div style="font-size:4pt;color:#666;text-transform:uppercase;letter-spacing:.3pt;margin-bottom:0.5pt">${lbl}</div><div style="font-size:6.5pt;min-height:10pt;white-space:pre-wrap">${val||''}</div></div>`
       const naca = ['0','I','II','III','IV','V','VI','VII'].map(v=>`<span class="tag naca${p.naca===v?' active':''}">${v}</span>`).join('')
-      const cr = (items:[boolean|undefined,string][]) => `<div style="display:flex;flex-wrap:wrap;gap:1.5pt;padding:2pt 4pt">${items.map(([on,l])=>tag(on,l)).join('')}</div>`
-      const catRow = (cat:string, items:[boolean|undefined,string][]) => `<div style="display:flex;flex-wrap:wrap;gap:1pt;padding:1pt 4pt;border-top:0.5pt solid #e0e0e0;align-items:center"><span style="font-size:4pt;font-weight:bold;color:#444;text-transform:uppercase;min-width:32pt;flex-shrink:0">${cat}</span>${items.map(([on,l])=>tag(on,l)).join('')}</div>`
-      const vitG = [['RR syst.',p.rr_sys],['RR diast.',p.rr_dia],['HF /min',p.hf],['SpO₂ %',p.spo2],['AF /min',p.af],['Temp °C',p.temp],['BZ mg/dl',p.bz_mg],['etCO₂',p.etco2],['Schmerz NRS',p.schmerz]].map(([l,v])=>`<div style="text-align:center;border-right:0.5pt solid #ccc;padding:2pt 0.5pt"><div style="font-size:4.5pt;color:#666">${l}</div><div style="font-size:9pt;font-weight:bold">${v||'—'}</div></div>`).join('')
+      const cr = (items:[boolean|undefined,string][]) => `<div style="display:flex;flex-wrap:wrap;gap:1pt;padding:1.5pt 3pt">${items.map(([on,l])=>tag(on,l)).join('')}</div>`
+      const catRow = (cat:string, items:[boolean|undefined,string][]) => `<div style="display:flex;flex-wrap:wrap;gap:0.5pt;padding:1pt 3pt;border-top:0.5pt solid #e0e0e0;align-items:center"><span style="font-size:4pt;font-weight:bold;color:#444;text-transform:uppercase;min-width:30pt;flex-shrink:0">${cat}</span>${items.map(([on,l])=>tag(on,l)).join('')}</div>`
+      const vitG = [['RR syst.',p.rr_sys],['RR diast.',p.rr_dia],['HF /min',p.hf],['SpO₂ %',p.spo2],['AF /min',p.af],['Temp °C',p.temp],['BZ mg/dl',p.bz_mg],['etCO₂',p.etco2],['Schmerz NRS',p.schmerz]].map(([l,v])=>`<div style="text-align:center;border-right:0.5pt solid #ccc;padding:1.5pt 0.5pt"><div style="font-size:4pt;color:#666">${l}</div><div style="font-size:8.5pt;font-weight:bold">${v||'—'}</div></div>`).join('')
 
       const html = `<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"><title>MIND Notfalleinsatzprotokoll</title>
       <style>
@@ -66,7 +66,7 @@ export default function DetailsModal({ doc, type, onClose }: Props) {
         table{width:100%;border-collapse:collapse}
         th{background:#d0d0d0;font-size:4pt;text-transform:uppercase;padding:1pt 2pt;border:0.5pt solid #888;letter-spacing:.3pt}
         td{padding:1pt 2pt;border:0.5pt solid #ccc;font-size:6pt}
-        .tag{display:inline-block;font-size:4.5pt;padding:1pt 2.5pt;border:0.6pt solid #888;border-radius:2pt;margin:0.5pt 1pt 0.5pt 0;background:#f0f0f0;color:#333}
+        .tag{display:inline-block;font-size:4pt;padding:0.8pt 2pt;border:0.6pt solid #888;border-radius:2pt;margin:0.5pt 1pt 0.5pt 0;background:#f0f0f0;color:#333}
         .tag.active{background:#222;color:#fff;border-color:#222}
         .tag.naca{min-width:12pt;text-align:center;font-weight:bold}
         .pbtn{position:fixed;bottom:20px;right:20px;background:#222;color:#fff;border:none;padding:10px 20px;border-radius:8px;font-size:14px;font-weight:bold;cursor:pointer}
@@ -112,7 +112,7 @@ export default function DetailsModal({ doc, type, onClose }: Props) {
         row('1fr',cell('Allergien / Unverträglichkeiten',p.allergien||'Keine bekannt'))
       )}
 
-      <div style="display:grid;grid-template-columns:auto 1fr 1fr;gap:1pt;margin-bottom:3pt">
+      <div style="display:grid;grid-template-columns:auto 1fr 1fr;gap:1pt;margin-bottom:2.5pt">
         ${blk('NACA-Score',`<div style="padding:1.5pt 3pt;display:flex;gap:1pt">${naca}</div>`)}
         ${blk('Bewusstsein',cr([[p.bewusstsein==='nicht beurteilbar','Nicht beurteilbar'],[p.bewusstsein==='wach','Wach'],[p.bewusstsein==='getrübt','Getrübt'],[p.bewusstsein==='bewusstlos','Bewusstlos'],[p.bewusstsein==='reaktionslos','Reaktionslos'],[p.bewusstsein==='auf Ansprache','Auf Ansprache'],[p.bewusstsein==='Reaktion auf Schmerz','Reaktion auf Schmerz'],[p.bewusstsein==='analgosediert / Narkose','Analgosediert / Narkose']]))}
         ${blk('Neurologie',
@@ -121,7 +121,7 @@ export default function DetailsModal({ doc, type, onClose }: Props) {
         )}
       </div>
 
-      <div style="display:grid;grid-template-columns:1fr 88pt;gap:1pt;margin-bottom:3pt">
+      <div style="display:grid;grid-template-columns:1fr 88pt;gap:1pt;margin-bottom:2.5pt">
         <div>
           ${blk('Vitalzeichen',`<div style="display:grid;grid-template-columns:repeat(9,1fr)">${vitG}</div>`+
             row('1fr 1fr',
@@ -140,7 +140,7 @@ export default function DetailsModal({ doc, type, onClose }: Props) {
         </div>
       </div>
 
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1pt;margin-bottom:3pt">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1pt;margin-bottom:2.5pt">
         <div>
           ${blk('EKG-Befund / Rhythmus',cr([[p.sr,'Sinusrhythmus'],[p.stemi,'STEMI'],[p.vf,'Kammerflimmern'],[p.asystole,'Asystolie']])+
             (p.ekg_standort||p.ekg_persnr?`<div style="padding:1pt 5pt 3pt;font-size:5pt">EKG: ${p.ekg_standort||''} ${p.ekg_persnr?'· Pers.-Nr. '+p.ekg_persnr:''}</div>`:'')
@@ -173,7 +173,7 @@ export default function DetailsModal({ doc, type, onClose }: Props) {
 
       ${(()=>{
         const cols = Math.max(14, verlauf.length)
-        const W = 560, H = 155
+        const W = 560, H = 140
         const cw = W / cols
         const sy = (v: number) => Math.max(0, Math.min(H, 220 - Math.max(40, Math.min(220, v))))
         const scaleVals = [220,200,180,160,140,120,100,80,60,40]
@@ -201,7 +201,7 @@ export default function DetailsModal({ doc, type, onClose }: Props) {
         const zeitRow = Array.from({length:cols},(_,i)=>`<div style="border-right:0.5pt solid #ccc;padding:1pt;font-size:5pt;text-align:center;overflow:hidden;min-width:0">${verlauf[i]?.zeit||''}</div>`).join('')
         const bottomCells = (key:'spo2'|'etco2'|'schmerz') => Array.from({length:cols},(_,i)=>`<div style="border-right:0.5pt solid #ccc;padding:1pt;font-size:5pt;text-align:center">${verlauf[i]?.[key]||''}</div>`).join('')
         const legend = `<text x="2" y="9" font-size="6" fill="#555">● RR sys</text><text x="40" y="9" font-size="6" fill="#555">○ RR dia</text><text x="80" y="9" font-size="6" fill="#1c3a5e">○ Puls</text>`
-        return `<div style="border:0.5pt solid #888;margin-bottom:3pt;overflow:hidden">
+        return `<div style="border:0.5pt solid #888;margin-bottom:2.5pt;overflow:hidden">
           <div style="font-size:5pt;font-weight:bold;background:#d0d0d0;padding:1pt 3pt;text-transform:uppercase;letter-spacing:.5pt;border-bottom:0.5pt solid #888">Verlaufsbeschreibung</div>
           <div style="display:flex">
             <div style="width:36pt;flex-shrink:0;border-right:0.5pt solid #888;font-size:5pt">
@@ -242,7 +242,7 @@ export default function DetailsModal({ doc, type, onClose }: Props) {
         (p.verletz_text?`<div style="padding:1pt 3pt;font-size:5pt;border-top:0.5pt solid #ccc;white-space:pre-wrap">${p.verletz_text}</div>`:'')
       )}
 
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1pt;margin-bottom:3pt">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1pt;margin-bottom:2.5pt">
         <div>
           ${blk('Atemwegsmanagement',cr([[p.awm_freihalten,'Freihalten'],[p.awm_absaugung,'Absaugung'],[p.awm_opa,'OPA/Guedel'],[p.awm_npa,'NPA/Wendl'],[p.awm_lma,'LMA/SGA'],[p.awm_intubation,'Intubation (OTI)']]))}
           ${blk('Lagerung',cr([[p.lag_flach,'Flachlagerung'],[p.lag_schock,'Schocklagerung'],[p.lag_ok_hoch,'OK hoch'],[p.lag_ssl,'Stabile Seitenlage'],[p.lag_sitzend,'Sitzend'],[p.lag_haengend,'Hängeposition']]))}
@@ -258,7 +258,7 @@ export default function DetailsModal({ doc, type, onClose }: Props) {
         </div>
       </div>
 
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1pt;margin-bottom:3pt">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1pt;margin-bottom:2.5pt">
         ${blk('Beatmung',cr([[p.beat_manuell,'Manuell'],[p.beat_maschinell,'Maschinell'],[p.beat_niv,'NIV'],[p.beat_notfallnarkose,'Notfallnarkose']])+
           row('1fr 1fr 1fr 1fr 1fr',cell('FiO₂',p.beat_fio2||'')+cell('AF /min',p.beat_af||'')+cell('PEEP mbar',p.beat_peep||'')+cell('Pmax mbar',p.beat_pmax||'')+cell('AMV l/min',p.beat_amv||''))
         )}
