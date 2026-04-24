@@ -139,6 +139,8 @@ export default function DetailsModal({ doc, type, onClose }: Props) {
           ${blk('Psyche',cr([[p.psy_erregt,'Erregt'],[p.psy_aggr,'Aggressiv'],[p.psy_verlangsamt,'Verlangsamt'],[p.psy_depressiv,'Depressiv'],[p.psy_aengstlich,'Ängstlich'],[p.psy_euphorisch,'Euphorisch'],[p.psy_wahnhaft,'Wahnhaft'],[p.psy_verwirrt,'Verwirrt'],[p.psy_suizidal,'Suizidal'],[p.psy_motor_unruhig,'Motor. unruhig']]))}
         </div>
       </div>
+
+      ${blk('Erstdiagnose / Verdachtsdiagnose',cr([[p.diag_krampf,'Krampfanfall'],[p.diag_synkope,'Synkope'],[p.diag_apoplex,'Apoplex'],[p.diag_sht,'SHT'],[p.diag_acs,'ACS'],[p.diag_insuff,'Herzinsuffizienz'],[p.diag_hypo,'Hypoglykämie'],[p.diag_resp_insuff,'Resp. Insufzienz']]))}
       </div>
 
       <div class="pg pb">
@@ -204,10 +206,7 @@ export default function DetailsModal({ doc, type, onClose }: Props) {
         </div>`
       })()}
 
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:2pt;margin-bottom:2pt">
-        ${blk('Erstdiagnose / Verdachtsdiagnose',cr([[p.diag_krampf,'Krampfanfall'],[p.diag_synkope,'Synkope'],[p.diag_apoplex,'Apoplex'],[p.diag_sht,'SHT'],[p.diag_acs,'ACS'],[p.diag_insuff,'Herzinsuffizienz'],[p.diag_hypo,'Hypoglykämie'],[p.diag_resp_insuff,'Resp. Insufzienz']]))}
-        ${blk('Verletzungen / Befunde',`<div style="padding:2pt 4pt;min-height:18pt;font-size:7.5pt;white-space:pre-wrap">${p.verletz_text||''}</div>`)}
-      </div>
+      ${blk('Verletzungen / Befunde',`<div style="padding:2pt 4pt;min-height:18pt;font-size:7.5pt;white-space:pre-wrap">${p.verletz_text||''}</div>`)}
 
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:2pt;margin-bottom:2pt">
         <div>
