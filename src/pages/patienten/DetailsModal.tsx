@@ -77,17 +77,23 @@ export default function DetailsModal({ doc, type, onClose }: Props) {
       <div class="pg">
       ${hdr('Erstellt: '+new Date().toLocaleString('de-DE'))}
 
-      ${blk('Einsatzdaten',
-        row('1fr 1.2fr 1fr 1fr 1fr 1fr',
-          cell('Einsatz-Nr.',p.einsatz_nr||'')+cell('Auftrags-Nr. (ILS)',p.auftrags_nr||'')+cell('Datum',new Date().toLocaleDateString('de-DE'))+cell('Alarmzeit',p.zeit_einsatz||'')+cell('Eintreffen',p.zeit_eintreffen||'')+cell('Transportbeginn',p.zeit_transport||'')
-        )+row('1fr 1fr 1fr 2fr',
-          cell('Übergabe',p.zeit_uebergabe||'')+cell('Rufname',p.rufname||'')+cell('Fahrzeug / Einheit',p.fahrzeug||'')+cell('Einsatzart / Stichwort',p.einsatz_art||'')
-        )+row('2fr 1fr',
-          cell('Einsatzort / Adresse',p.einsatz_adresse||'')+cell('Transportziel',p.transport_ziel||'')
-        )+row('1fr 1fr 1fr 1fr',
-          cell('Teamführer',p.mannschaft_tf||'')+cell('Mannschaft 1',p.mannschaft_1||'')+cell('Mannschaft 2',p.mannschaft_2||'')+cell('Mannschaft 3',p.mannschaft_3||'')
-        )
-      )}
+      <div style="display:grid;grid-template-columns:1fr 80pt;gap:1.5pt;margin-bottom:1.5pt">
+        ${blk('Einsatzdaten',
+          row('1fr 1.2fr 1fr 1fr 1fr 1fr',
+            cell('Einsatz-Nr.',p.einsatz_nr||'')+cell('Auftrags-Nr. (ILS)',p.auftrags_nr||'')+cell('Datum',new Date().toLocaleDateString('de-DE'))+cell('Alarmzeit',p.zeit_einsatz||'')+cell('Eintreffen',p.zeit_eintreffen||'')+cell('Transportbeginn',p.zeit_transport||'')
+          )+row('1fr 1fr 1fr 2fr',
+            cell('Übergabe',p.zeit_uebergabe||'')+cell('Rufname',p.rufname||'')+cell('Fahrzeug / Einheit',p.fahrzeug||'')+cell('Einsatzart / Stichwort',p.einsatz_art||'')
+          )+row('2fr 1fr',
+            cell('Einsatzort / Adresse',p.einsatz_adresse||'')+cell('Transportziel',p.transport_ziel||'')
+          )
+        )}
+        ${blk('Mannschaft',
+          row('1fr',cell('Teamführer',p.mannschaft_tf||''))+
+          row('1fr',cell('Mannschaft 1',p.mannschaft_1||''))+
+          row('1fr',cell('Mannschaft 2',p.mannschaft_2||''))+
+          row('1fr',cell('Mannschaft 3',p.mannschaft_3||''))
+        )}
+      </div>
 
       ${blk('Patientenstammdaten',
         row('2fr 1fr .6fr',
