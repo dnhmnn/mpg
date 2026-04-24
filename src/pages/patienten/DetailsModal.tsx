@@ -84,6 +84,8 @@ export default function DetailsModal({ doc, type, onClose }: Props) {
           cell('Übergabe',p.zeit_uebergabe||'')+cell('Rufname',p.rufname||'')+cell('Fahrzeug / Einheit',p.fahrzeug||'')+cell('Einsatzart / Stichwort',p.einsatz_art||'')
         )+row('2fr 1fr',
           cell('Einsatzort / Adresse',p.einsatz_adresse||'')+cell('Transportziel',p.transport_ziel||'')
+        )+row('1fr 1fr 1fr 1fr',
+          cell('Teamführer',p.mannschaft_tf||'')+cell('Mannschaft 1',p.mannschaft_1||'')+cell('Mannschaft 2',p.mannschaft_2||'')+cell('Mannschaft 3',p.mannschaft_3||'')
         )
       )}
 

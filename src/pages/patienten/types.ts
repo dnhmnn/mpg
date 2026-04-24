@@ -21,6 +21,7 @@ export interface PatientPayload {
   einsatz_adresse?: string
   zeit_eintreffen?: string; zeit_transport?: string; zeit_uebergabe?: string
   transport_ziel?: string
+  mannschaft_tf?: string; mannschaft_1?: string; mannschaft_2?: string; mannschaft_3?: string
   name?: string; vorname?: string; gebdatum?: string; alter?: string
   telefon?: string; mobil?: string; strasse?: string; plz_ort?: string
   kasse?: string; versnr?: string; hausarzt?: string; angehoeriger?: string; infos?: string
@@ -156,6 +157,7 @@ export interface NachForm {
 export const EMPTY_PAYLOAD: PatientPayload = {
   einsatz_nr: '', auftrags_nr: '', rufname: '', fahrzeug: '', zeit_einsatz: '', einsatz_art: '',
   einsatz_adresse: '', zeit_eintreffen: '', zeit_transport: '', zeit_uebergabe: '', transport_ziel: '',
+  mannschaft_tf: '', mannschaft_1: '', mannschaft_2: '', mannschaft_3: '',
   name: '', vorname: '', gebdatum: '', alter: '', telefon: '', mobil: '',
   strasse: '', plz_ort: '', kasse: '', versnr: '', hausarzt: '', angehoeriger: '', infos: '',
   allergien: '', vorerkrankungen: '', vormedikation_patient: '',

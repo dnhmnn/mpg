@@ -119,6 +119,13 @@ export default function PatientEditModal({ payload, setP, onClose, onSaveAndSign
               <Field label="Übergabe"><Inp value={p.zeit_uebergabe||''} onChange={v => setP('zeit_uebergabe', v)} type="time" /></Field>
             </Row2>
             <Field label="Transportziel (Krankenhaus)"><Inp value={p.transport_ziel||''} onChange={v => setP('transport_ziel', v)} placeholder="Klinikum..." /></Field>
+            <div style={{ fontWeight: 600, fontSize: '13px', marginBottom: '6px', marginTop: '4px' }}>Mannschaft</div>
+            <Row2>
+              <Field label="Teamführer"><Inp value={p.mannschaft_tf||''} onChange={v => setP('mannschaft_tf', v)} /></Field>
+              <Field label="Mannschaft 1"><Inp value={p.mannschaft_1||''} onChange={v => setP('mannschaft_1', v)} /></Field>
+              <Field label="Mannschaft 2"><Inp value={p.mannschaft_2||''} onChange={v => setP('mannschaft_2', v)} /></Field>
+              <Field label="Mannschaft 3"><Inp value={p.mannschaft_3||''} onChange={v => setP('mannschaft_3', v)} /></Field>
+            </Row2>
           </Section>
 
           <Section title="Patientenstammdaten">
