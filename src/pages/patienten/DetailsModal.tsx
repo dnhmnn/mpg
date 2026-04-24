@@ -136,6 +136,7 @@ export default function DetailsModal({ doc, type, onClose }: Props) {
             [['Augen (E)',p.gcs_e],['Verbal (V)',p.gcs_v],['Motorik (M)',p.gcs_m]].map(([l,v])=>`<div style="text-align:center;border-right:0.5pt solid #ccc;padding:2pt 1pt"><div style="font-size:5pt;color:#666">${l}</div><div style="font-size:8pt;font-weight:bold">${v||'—'}</div></div>`).join('')+
             `<div style="text-align:center;padding:2pt 1pt;background:#efefef"><div style="font-size:5pt;color:#666">Σ</div><div style="font-size:10pt;font-weight:bold">${gcsTotal||'—'}</div></div></div>`
           )}
+          ${blk('Verdachtsdiagnose',`<div style="padding:1pt 3pt;min-height:20pt;font-size:6pt;white-space:pre-wrap">${p.erstdiagnose_text||''}</div>`)}
         </div>
       </div>
 
@@ -275,7 +276,7 @@ export default function DetailsModal({ doc, type, onClose }: Props) {
       ${blk('Medikamente / Therapie',`<div style="padding:1.5pt 3pt"><table><thead><tr><th>Zeit</th><th>Medikament</th><th>Dosis</th><th>Einheit</th><th>Applikationsweg</th><th>Hinweis</th></tr></thead><tbody>${meds.length>0?meds.map(m=>`<tr><td>${m.time||''}</td><td>${m.name||''}</td><td>${m.dose||''}</td><td>${m.unit||''}</td><td>${m.route||''}</td><td>${m.note||''}</td></tr>`).join(''):'<tr><td colspan="6" style="text-align:center;color:#aaa;font-style:italic">—</td></tr>'}</tbody></table></div>`)}
 
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:1pt;margin-top:2pt">
-        ${blk('Unterschrift Patient / Einwilligung',p.signature?`<div style="padding:2pt"><img src="${p.signature}" style="max-height:32pt"></div>`:'<div style="min-height:28pt;border-top:0.5pt solid #ccc"></div>')}
+        ${blk('Unterschrift Teamführer',p.signature?`<div style="padding:2pt"><img src="${p.signature}" style="max-height:32pt"></div>`:'<div style="min-height:28pt;border-top:0.5pt solid #ccc"></div>')}
         ${blk('Gegenzeichnung / Stempel',pd.admin_name?
           row('1fr 1fr',cell('Name',pd.admin_name)+cell('Datum',fmtDateTime(pd.admin_datum)))+(pd.admin_unterschrift?`<div style="padding:2pt"><img src="${pd.admin_unterschrift}" style="max-height:32pt"></div>`:'<div style="min-height:14pt"></div>'):
           '<div style="min-height:28pt;border-top:0.5pt solid #ccc"></div>'

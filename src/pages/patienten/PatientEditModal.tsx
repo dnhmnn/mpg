@@ -244,6 +244,9 @@ export default function PatientEditModal({ payload, setP, onClose, onSaveAndSign
                 </select>
               </Field>
             </Row2>
+            <Field label="Verdachtsdiagnose / Erstdiagnose">
+              <Inp value={p.erstdiagnose_text||''} onChange={v => setP('erstdiagnose_text', v)} placeholder="Freitexteingabe…" />
+            </Field>
           </Section>
 
           <Section title="Neurologie">
