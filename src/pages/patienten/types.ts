@@ -56,6 +56,7 @@ export interface PatientPayload {
   lag_flach?: boolean; lag_schock?: boolean; lag_ok_hoch?: boolean
   lag_ssl?: boolean; lag_sitzend?: boolean; lag_haengend?: boolean
   rean?: boolean; rean_beginn?: string; rean_ende?: string; rean_defib?: string
+  rean_tod?: boolean; rean_tod_zeit?: string
   immo_hws?: boolean; immo_spineboard?: boolean; immo_vakuum?: boolean
   verlauf?: VitalRow[]
   medications?: Medication[]
@@ -187,6 +188,7 @@ export const EMPTY_PAYLOAD: PatientPayload = {
   lag_flach: false, lag_schock: false, lag_ok_hoch: false,
   lag_ssl: false, lag_sitzend: false, lag_haengend: false,
   rean: false, rean_beginn: '', rean_ende: '', rean_defib: '',
+  rean_tod: false, rean_tod_zeit: '',
   immo_hws: false, immo_spineboard: false, immo_vakuum: false,
   verlauf: [],
   medications: [],

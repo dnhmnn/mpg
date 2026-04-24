@@ -249,7 +249,8 @@ export default function DetailsModal({ doc, type, onClose }: Props) {
           ${blk('Immobilisation',cr([[p.immo_hws,'HWS-Orthese'],[p.immo_spineboard,'Spineboard'],[p.immo_vakuum,'Vakuummatratze']]))}
         </div>
         <div>
-          ${blk('Reanimation',cr([[p.rean,'CPR durchgeführt']])+
+          ${blk('Reanimation',cr([[p.rean,'CPR durchgeführt'],[p.rean_tod,'Todesfeststellung']])+
+            (p.rean_tod&&p.rean_tod_zeit?row('1fr',cell('Uhrzeit Todesfeststellung',p.rean_tod_zeit)):'')+
             (p.rean?row('1fr 1fr 1fr',cell('Beginn',p.rean_beginn||'')+cell('Ende',p.rean_ende||'')+cell('Defibrillationen',p.rean_defib||'')):'')
           )}
           ${blk('Venöser Zugang',row('1fr 1fr 1fr',cell('Art',p.zugang_art||'')+cell('Gauge',p.zugang_gauge||'')+cell('Region',p.zugang_region||'')))}
@@ -267,13 +268,13 @@ export default function DetailsModal({ doc, type, onClose }: Props) {
         )}
       </div>
 
+      ${blk('Medikamente / Therapie',`<div style="padding:1.5pt 3pt"><table><thead><tr><th>Zeit</th><th>Medikament</th><th>Dosis</th><th>Einheit</th><th>Applikationsweg</th><th>Hinweis</th></tr></thead><tbody>${meds.length>0?meds.map(m=>`<tr><td>${m.time||''}</td><td>${m.name||''}</td><td>${m.dose||''}</td><td>${m.unit||''}</td><td>${m.route||''}</td><td>${m.note||''}</td></tr>`).join(''):'<tr><td colspan="6" style="text-align:center;color:#aaa;font-style:italic">—</td></tr>'}</tbody></table></div>`)}
+
       ${blk('Übergabe / Besonderheiten',
         row('1fr 1fr',cell('Übergabe Ziel',p.uebergabe_ziel||'')+cell('Übergabe an (Name)',p.uebergabe_name||''))+
         cr([[p.ev_transportverweigerung,'Transportverweigerung'],[p.ev_nur_untersuchung,'Nur Untersuchung/Behandlung'],[p.ev_zwangseinweisung,'Zwangseinweisung'],[p.ev_transport_sondersignal,'Transport mit Sondersignal'],[p.ev_manv,'MANV'],[p.ev_lna,'LNA am Einsatz'],[p.ev_schwerlast,'Schwerlasttransport']])+
         `<div style="padding:1.5pt 3pt;border-top:0.5pt solid #ccc"><div style="font-size:5pt;color:#666;text-transform:uppercase;letter-spacing:.3pt;margin-bottom:1pt">Bemerkungen</div><div style="font-size:5pt;min-height:10pt;white-space:pre-wrap">${p.bemerkungen||''}</div></div>`
       )}
-
-      ${blk('Medikamente / Therapie',`<div style="padding:1.5pt 3pt"><table><thead><tr><th>Zeit</th><th>Medikament</th><th>Dosis</th><th>Einheit</th><th>Applikationsweg</th><th>Hinweis</th></tr></thead><tbody>${meds.length>0?meds.map(m=>`<tr><td>${m.time||''}</td><td>${m.name||''}</td><td>${m.dose||''}</td><td>${m.unit||''}</td><td>${m.route||''}</td><td>${m.note||''}</td></tr>`).join(''):'<tr><td colspan="6" style="text-align:center;color:#aaa;font-style:italic">—</td></tr>'}</tbody></table></div>`)}
 
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:1pt;margin-top:2pt">
         ${blk('Unterschrift Teamführer',p.signature?`<div style="padding:2pt"><img src="${p.signature}" style="max-height:32pt"></div>`:'<div style="min-height:28pt;border-top:0.5pt solid #ccc"></div>')}

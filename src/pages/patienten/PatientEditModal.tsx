@@ -417,7 +417,11 @@ export default function PatientEditModal({ payload, setP, onClose, onSaveAndSign
           <Section title="Reanimation">
             <CbRow>
               <Cb label="Reanimation durchgeführt" checked={!!p.rean} onChange={v => setP('rean', v)} />
+              <Cb label="Todesfeststellung" checked={!!p.rean_tod} onChange={v => setP('rean_tod', v)} />
             </CbRow>
+            {p.rean_tod && (
+              <Field label="Uhrzeit Todesfeststellung"><Inp value={p.rean_tod_zeit||''} onChange={v => setP('rean_tod_zeit', v)} type="time" /></Field>
+            )}
             {p.rean && (
               <Row2>
                 <Field label="Beginn"><Inp value={p.rean_beginn||''} onChange={v => setP('rean_beginn', v)} type="time" /></Field>
