@@ -226,10 +226,14 @@ export default function PatientEditModal({ payload, setP, onClose, onSaveAndSign
                 <select value={p.bewusstsein||''} onChange={e => setP('bewusstsein', e.target.value)}
                   style={{ width: '100%', padding: '8px', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '14px', background: 'var(--bg)', color: 'var(--text)' }}>
                   <option value="">–</option>
+                  <option>nicht beurteilbar</option>
                   <option>wach</option>
-                  <option>somnolent</option>
-                  <option>soporös</option>
-                  <option>komatös</option>
+                  <option>getrübt</option>
+                  <option>bewusstlos</option>
+                  <option>reaktionslos</option>
+                  <option>auf Ansprache</option>
+                  <option>Reaktion auf Schmerz</option>
+                  <option>analgosediert / Narkose</option>
                 </select>
               </Field>
             </Row2>
@@ -268,6 +272,46 @@ export default function PatientEditModal({ payload, setP, onClose, onSaveAndSign
                 </div>
               </Field>
             </Row2>
+            <CbRow>
+              <Cb label="Sprachstörung" checked={!!p.neu_sprachstoerung} onChange={v => setP('neu_sprachstoerung', v)} />
+              <Cb label="Demenz" checked={!!p.neu_demenz} onChange={v => setP('neu_demenz', v)} />
+              <Cb label="Meningismus" checked={!!p.neu_meningismus} onChange={v => setP('neu_meningismus', v)} />
+              <Cb label="Seitenzeichen" checked={!!p.neu_seitenzeichen} onChange={v => setP('neu_seitenzeichen', v)} />
+              <Cb label="Kein Lächeln" checked={!!p.neu_kein_laecheln} onChange={v => setP('neu_kein_laecheln', v)} />
+              <Cb label="Sehstörung" checked={!!p.neu_sehstoerung} onChange={v => setP('neu_sehstoerung', v)} />
+              <Cb label="Querschnittssymptomatik" checked={!!p.neu_querschnitt} onChange={v => setP('neu_querschnitt', v)} />
+              <Cb label="Babinski" checked={!!p.neu_babinski} onChange={v => setP('neu_babinski', v)} />
+              <Cb label="Vorbestehende Defizite" checked={!!p.neu_vorbestehend} onChange={v => setP('neu_vorbestehend', v)} />
+            </CbRow>
+            <Field label="Neurologische Sonstige"><Inp value={p.neu_sonstige||''} onChange={v => setP('neu_sonstige', v)} /></Field>
+            <div style={{ fontWeight: 600, fontSize: '13px', marginBottom: '6px' }}>Extremitätenbewegung</div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr 1fr', gap: '4px 8px', alignItems: 'center', marginBottom: '10px', fontSize: '13px' }}>
+              <div></div>
+              <div style={{ textAlign: 'center', fontWeight: 600, fontSize: '12px' }}>Rechts</div>
+              <div style={{ textAlign: 'center', fontWeight: 600, fontSize: '12px' }}>Links</div>
+              <div style={{ fontWeight: 600, fontSize: '12px' }}>Arm</div>
+              {(['ext_r_arm','ext_l_arm'] as const).map(k => (
+                <select key={k} value={p[k]||''} onChange={e => setP(k, e.target.value)}
+                  style={{ padding: '6px', border: '1px solid var(--border)', borderRadius: '6px', fontSize: '13px', background: 'var(--bg)', color: 'var(--text)' }}>
+                  <option value="">–</option>
+                  <option value="1">1 – Normal</option>
+                  <option value="2">2 – Leicht vermindert</option>
+                  <option value="3">3 – Stark vermindert</option>
+                  <option value="4">4 – Fehlend</option>
+                </select>
+              ))}
+              <div style={{ fontWeight: 600, fontSize: '12px' }}>Bein</div>
+              {(['ext_r_bein','ext_l_bein'] as const).map(k => (
+                <select key={k} value={p[k]||''} onChange={e => setP(k, e.target.value)}
+                  style={{ padding: '6px', border: '1px solid var(--border)', borderRadius: '6px', fontSize: '13px', background: 'var(--bg)', color: 'var(--text)' }}>
+                  <option value="">–</option>
+                  <option value="1">1 – Normal</option>
+                  <option value="2">2 – Leicht vermindert</option>
+                  <option value="3">3 – Stark vermindert</option>
+                  <option value="4">4 – Fehlend</option>
+                </select>
+              ))}
+            </div>
             <div style={{ fontWeight: 600, fontSize: '13px', marginBottom: '6px' }}>Glasgow Coma Scale (GCS: {calcGCS(p)})</div>
             <Row2>
               <Field label="Augen (E 1–4)">
@@ -394,16 +438,107 @@ export default function PatientEditModal({ payload, setP, onClose, onSaveAndSign
             </Row2>
           </Section>
 
-          <Section title="Diagnosen">
+          <Section title="Diagnosen / Erkrankungen">
+            <Field label="Erstdiagnose / Verdachtsdiagnose (Freitext)">
+              <Inp value={p.erstdiagnose_text||''} onChange={v => setP('erstdiagnose_text', v)} placeholder="Freitexteingabe…" />
+            </Field>
+            <CbRow><Cb label="Keine Erkrankung / Verletzung" checked={!!p.e_keine} onChange={v => setP('e_keine', v)} /></CbRow>
+            <div style={{ fontWeight: 600, fontSize: '12px', opacity: 0.7, marginTop: '6px', marginBottom: '3px' }}>ZNS</div>
             <CbRow>
-              <Cb label="Krampfanfall" checked={!!p.diag_krampf} onChange={v => setP('diag_krampf', v)} />
-              <Cb label="Synkope" checked={!!p.diag_synkope} onChange={v => setP('diag_synkope', v)} />
-              <Cb label="Apoplex" checked={!!p.diag_apoplex} onChange={v => setP('diag_apoplex', v)} />
-              <Cb label="SHT" checked={!!p.diag_sht} onChange={v => setP('diag_sht', v)} />
-              <Cb label="ACS" checked={!!p.diag_acs} onChange={v => setP('diag_acs', v)} />
-              <Cb label="Herzinsuffizienz" checked={!!p.diag_insuff} onChange={v => setP('diag_insuff', v)} />
-              <Cb label="Hypoglykämie" checked={!!p.diag_hypo} onChange={v => setP('diag_hypo', v)} />
-              <Cb label="Resp. Insufzienz" checked={!!p.diag_resp_insuff} onChange={v => setP('diag_resp_insuff', v)} />
+              <Cb label="Schlaganfall" checked={!!p.e_zns_schlaganfall} onChange={v => setP('e_zns_schlaganfall', v)} />
+              <Cb label="TIA" checked={!!p.e_zns_tia} onChange={v => setP('e_zns_tia', v)} />
+              <Cb label="Intrakranielle Blutung" checked={!!p.e_zns_blutung} onChange={v => setP('e_zns_blutung', v)} />
+              <Cb label="Im Lysefenster" checked={!!p.e_zns_lyse} onChange={v => setP('e_zns_lyse', v)} />
+              <Cb label="Krampfanfall" checked={!!p.e_zns_krampf} onChange={v => setP('e_zns_krampf', v)} />
+              <Cb label="Status epilepticus" checked={!!p.e_zns_status_epilept} onChange={v => setP('e_zns_status_epilept', v)} />
+              <Cb label="Meningitis" checked={!!p.e_zns_meningitis} onChange={v => setP('e_zns_meningitis', v)} />
+              <Cb label="Synkope" checked={!!p.e_zns_synkope} onChange={v => setP('e_zns_synkope', v)} />
+              <Cb label="ZNS Sonstige" checked={!!p.e_zns_sonstige} onChange={v => setP('e_zns_sonstige', v)} />
+            </CbRow>
+            <div style={{ fontWeight: 600, fontSize: '12px', opacity: 0.7, marginTop: '6px', marginBottom: '3px' }}>Herz-Kreislauf</div>
+            <CbRow>
+              <Cb label="Akutes Koronarsyndrom" checked={!!p.e_hk_acs} onChange={v => setP('e_hk_acs', v)} />
+              <Cb label="STEMI Vorderwand" checked={!!p.e_hk_stemi_vw} onChange={v => setP('e_hk_stemi_vw', v)} />
+              <Cb label="STEMI Hinterwand" checked={!!p.e_hk_stemi_hw} onChange={v => setP('e_hk_stemi_hw', v)} />
+              <Cb label="Rhythmusstörung Tachy" checked={!!p.e_hk_tachy} onChange={v => setP('e_hk_tachy', v)} />
+              <Cb label="Rhythmusstörung Brady" checked={!!p.e_hk_brady} onChange={v => setP('e_hk_brady', v)} />
+              <Cb label="Lungenembolie" checked={!!p.e_hk_embolie} onChange={v => setP('e_hk_embolie', v)} />
+              <Cb label="Orthostatische Fehlregulation" checked={!!p.e_hk_ortho} onChange={v => setP('e_hk_ortho', v)} />
+              <Cb label="Herzinsuffizienz / Lungenödem" checked={!!p.e_hk_insuff} onChange={v => setP('e_hk_insuff', v)} />
+              <Cb label="Hypertensiver Notfall" checked={!!p.e_hk_hypert} onChange={v => setP('e_hk_hypert', v)} />
+              <Cb label="Kardiogener Schock" checked={!!p.e_hk_kard_schock} onChange={v => setP('e_hk_kard_schock', v)} />
+              <Cb label="Schrittmacher-/ICD-Fehlfunktion" checked={!!p.e_hk_schrittmacher} onChange={v => setP('e_hk_schrittmacher', v)} />
+              <Cb label="HK Sonstige" checked={!!p.e_hk_sonstige} onChange={v => setP('e_hk_sonstige', v)} />
+            </CbRow>
+            <div style={{ fontWeight: 600, fontSize: '12px', opacity: 0.7, marginTop: '6px', marginBottom: '3px' }}>Atmung</div>
+            <CbRow>
+              <Cb label="Asthma (Anfall)" checked={!!p.e_atm_asthma} onChange={v => setP('e_atm_asthma', v)} />
+              <Cb label="Status asthmaticus" checked={!!p.e_atm_status_asthm} onChange={v => setP('e_atm_status_asthm', v)} />
+              <Cb label="COPD" checked={!!p.e_atm_copd} onChange={v => setP('e_atm_copd', v)} />
+              <Cb label="Pneumonie / Bronchitis" checked={!!p.e_atm_pneumonie} onChange={v => setP('e_atm_pneumonie', v)} />
+              <Cb label="Hyperventilationssyndrom" checked={!!p.e_atm_hypervent} onChange={v => setP('e_atm_hypervent', v)} />
+              <Cb label="Aspiration" checked={!!p.e_atm_aspiration} onChange={v => setP('e_atm_aspiration', v)} />
+              <Cb label="Hämoptysen" checked={!!p.e_atm_haemoptysen} onChange={v => setP('e_atm_haemoptysen', v)} />
+              <Cb label="Atmung Sonstige" checked={!!p.e_atm_sonstige} onChange={v => setP('e_atm_sonstige', v)} />
+            </CbRow>
+            <div style={{ fontWeight: 600, fontSize: '12px', opacity: 0.7, marginTop: '6px', marginBottom: '3px' }}>Abdomen</div>
+            <CbRow>
+              <Cb label="Akutes Abdomen" checked={!!p.e_abd_akut} onChange={v => setP('e_abd_akut', v)} />
+              <Cb label="GI-Blutung obere" checked={!!p.e_abd_gi_ob} onChange={v => setP('e_abd_gi_ob', v)} />
+              <Cb label="GI-Blutung untere" checked={!!p.e_abd_gi_un} onChange={v => setP('e_abd_gi_un', v)} />
+              <Cb label="Kolik (Niere/Galle)" checked={!!p.e_abd_kolik} onChange={v => setP('e_abd_kolik', v)} />
+              <Cb label="Enteritis" checked={!!p.e_abd_enteritis} onChange={v => setP('e_abd_enteritis', v)} />
+              <Cb label="Abdomen Sonstige" checked={!!p.e_abd_sonstige} onChange={v => setP('e_abd_sonstige', v)} />
+            </CbRow>
+            <div style={{ fontWeight: 600, fontSize: '12px', opacity: 0.7, marginTop: '6px', marginBottom: '3px' }}>Psychiatrie</div>
+            <CbRow>
+              <Cb label="Psychose / Manie / Erregungszustand" checked={!!p.e_psy_psychose} onChange={v => setP('e_psy_psychose', v)} />
+              <Cb label="Angst / Depression" checked={!!p.e_psy_angst} onChange={v => setP('e_psy_angst', v)} />
+              <Cb label="Intoxikation akzidentell" checked={!!p.e_psy_intox_akzid} onChange={v => setP('e_psy_intox_akzid', v)} />
+              <Cb label="Intoxikation Alkohol" checked={!!p.e_psy_intox_alkohol} onChange={v => setP('e_psy_intox_alkohol', v)} />
+              <Cb label="Intoxikation Drogen" checked={!!p.e_psy_intox_drogen} onChange={v => setP('e_psy_intox_drogen', v)} />
+              <Cb label="Intoxikation Medikamente" checked={!!p.e_psy_intox_medis} onChange={v => setP('e_psy_intox_medis', v)} />
+              <Cb label="Intoxikation Sonstige" checked={!!p.e_psy_intox_sonstige} onChange={v => setP('e_psy_intox_sonstige', v)} />
+              <Cb label="Entzug / Delir" checked={!!p.e_psy_entzug} onChange={v => setP('e_psy_entzug', v)} />
+              <Cb label="Suizid(versuch)" checked={!!p.e_psy_suizid} onChange={v => setP('e_psy_suizid', v)} />
+              <Cb label="Psychosoziale Krise" checked={!!p.e_psy_krise} onChange={v => setP('e_psy_krise', v)} />
+              <Cb label="Psychiatrie Sonstige" checked={!!p.e_psy_sonstige} onChange={v => setP('e_psy_sonstige', v)} />
+            </CbRow>
+            <div style={{ fontWeight: 600, fontSize: '12px', opacity: 0.7, marginTop: '6px', marginBottom: '3px' }}>Stoffwechsel</div>
+            <CbRow>
+              <Cb label="Hypoglykämie" checked={!!p.e_stw_hypo} onChange={v => setP('e_stw_hypo', v)} />
+              <Cb label="Hyperglykämie" checked={!!p.e_stw_hyper} onChange={v => setP('e_stw_hyper', v)} />
+              <Cb label="Exsiccose" checked={!!p.e_stw_exsiccose} onChange={v => setP('e_stw_exsiccose', v)} />
+              <Cb label="Urämie / ANV" checked={!!p.e_stw_uraemie} onChange={v => setP('e_stw_uraemie', v)} />
+              <Cb label="Stoffwechsel Sonstige" checked={!!p.e_stw_sonstige} onChange={v => setP('e_stw_sonstige', v)} />
+            </CbRow>
+            <div style={{ fontWeight: 600, fontSize: '12px', opacity: 0.7, marginTop: '6px', marginBottom: '3px' }}>Pädiatrie</div>
+            <CbRow>
+              <Cb label="Fieberkrampf" checked={!!p.e_paed_fieberkrampf} onChange={v => setP('e_paed_fieberkrampf', v)} />
+              <Cb label="Pseudokrupp" checked={!!p.e_paed_pseudokrupp} onChange={v => setP('e_paed_pseudokrupp', v)} />
+              <Cb label="SIDS / Near-SIDS" checked={!!p.e_paed_sids} onChange={v => setP('e_paed_sids', v)} />
+            </CbRow>
+            <div style={{ fontWeight: 600, fontSize: '12px', opacity: 0.7, marginTop: '6px', marginBottom: '3px' }}>Gynäkologie</div>
+            <CbRow>
+              <Cb label="Schwangerschaft" checked={!!p.e_gyn_schwanger} onChange={v => setP('e_gyn_schwanger', v)} />
+              <Cb label="Drohende / präklinische Geburt" checked={!!p.e_gyn_geburt} onChange={v => setP('e_gyn_geburt', v)} />
+              <Cb label="(Prä-)Eklampsie" checked={!!p.e_gyn_eklampsie} onChange={v => setP('e_gyn_eklampsie', v)} />
+              <Cb label="Vaginale Blutung" checked={!!p.e_gyn_blutung} onChange={v => setP('e_gyn_blutung', v)} />
+              <Cb label="Gynäkologie Sonstige" checked={!!p.e_gyn_sonstige} onChange={v => setP('e_gyn_sonstige', v)} />
+            </CbRow>
+            <div style={{ fontWeight: 600, fontSize: '12px', opacity: 0.7, marginTop: '6px', marginBottom: '3px' }}>Weitere</div>
+            <CbRow>
+              <Cb label="Anaphylaktische Reaktion" checked={!!p.e_anaphylaxie} onChange={v => setP('e_anaphylaxie', v)} />
+              <Cb label="Hitzeerschöpfung / Hitzeschlag" checked={!!p.e_hitze} onChange={v => setP('e_hitze', v)} />
+              <Cb label="Unterkühlung / Erfrierung" checked={!!p.e_unterkuehlung} onChange={v => setP('e_unterkuehlung', v)} />
+              <Cb label="Sepsis / sept. Schock" checked={!!p.e_sepsis} onChange={v => setP('e_sepsis', v)} />
+              <Cb label="Influenza" checked={!!p.e_influenza} onChange={v => setP('e_influenza', v)} />
+              <Cb label="Hepatitis / HIV" checked={!!p.e_hepatitis_hiv} onChange={v => setP('e_hepatitis_hiv', v)} />
+              <Cb label="Akutes Lumbago" checked={!!p.e_lumbago} onChange={v => setP('e_lumbago', v)} />
+              <Cb label="Epistaxis" checked={!!p.e_epistaxis} onChange={v => setP('e_epistaxis', v)} />
+              <Cb label="Soziales Problem" checked={!!p.e_soziales} onChange={v => setP('e_soziales', v)} />
+              <Cb label="Behandlungskomplikation" checked={!!p.e_behandlungskompl} onChange={v => setP('e_behandlungskompl', v)} />
+              <Cb label="Weitere Sonstige" checked={!!p.e_weitere_sonstige} onChange={v => setP('e_weitere_sonstige', v)} />
             </CbRow>
           </Section>
 
@@ -506,9 +641,72 @@ export default function PatientEditModal({ payload, setP, onClose, onSaveAndSign
             </Field>
           </Section>
 
-          <Section title="Verletzungen">
-            <textarea value={p.verletz_text||''} onChange={e => setP('verletz_text', e.target.value)} rows={3}
-              style={{ width: '100%', padding: '8px 10px', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '14px', resize: 'vertical', background: 'var(--bg)', color: 'var(--text)', boxSizing: 'border-box' }} />
+          <Section title="Verletzungen / Trauma">
+            <CbRow><Cb label="Keine Verletzung" checked={!!p.v_keine} onChange={v => setP('v_keine', v)} /></CbRow>
+            <div style={{ fontWeight: 600, fontSize: '12px', opacity: 0.7, marginTop: '4px', marginBottom: '4px' }}>Körperregion – Schwere (leicht / mittel / schwer / geschlossen)</div>
+            {([
+              ['v_sht','Schädel-Hirn'],['v_gesicht','Gesicht'],['v_hals','Hals'],
+              ['v_thorax','Thorax'],['v_abdomen','Abdomen'],['v_ws','Wirbelsäule'],
+              ['v_becken','Becken'],['v_obext','Obere Extremitäten'],['v_untext','Untere Extremitäten'],['v_weich','Weichteile']
+            ] as [keyof typeof p, string][]).map(([k,lbl]) => (
+              <div key={String(k)} style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: '4px', alignItems: 'center', marginBottom: '4px' }}>
+                <span style={{ fontSize: '13px' }}>{lbl}</span>
+                <select value={p[k] as string||''} onChange={e => setP(k, e.target.value)}
+                  style={{ padding: '5px', border: '1px solid var(--border)', borderRadius: '6px', fontSize: '13px', background: 'var(--bg)', color: 'var(--text)' }}>
+                  <option value="">–</option>
+                  <option value="leicht">leicht</option>
+                  <option value="mittel">mittel</option>
+                  <option value="schwer">schwer</option>
+                  <option value="geschlossen">geschlossen</option>
+                </select>
+              </div>
+            ))}
+            <div style={{ fontWeight: 600, fontSize: '12px', opacity: 0.7, marginTop: '8px', marginBottom: '4px' }}>Besondere Verletzungsarten</div>
+            <CbRow>
+              <Cb label="Verbrennung / Verbrühung" checked={!!p.v_verbrennung} onChange={v => setP('v_verbrennung', v)} />
+              <Cb label="Verätzung" checked={!!p.v_veraetzung} onChange={v => setP('v_veraetzung', v)} />
+              <Cb label="Verschüttung" checked={!!p.v_verschuettung} onChange={v => setP('v_verschuettung', v)} />
+              <Cb label="Einklemmung" checked={!!p.v_einklemmung} onChange={v => setP('v_einklemmung', v)} />
+              <Cb label="Inhalationstrauma" checked={!!p.v_inhalation} onChange={v => setP('v_inhalation', v)} />
+              <Cb label="Elektrounfall" checked={!!p.v_elektrounfall} onChange={v => setP('v_elektrounfall', v)} />
+              <Cb label="Beinahe-Ertrinken" checked={!!p.v_ertrinken} onChange={v => setP('v_ertrinken', v)} />
+              <Cb label="Tauchunfall" checked={!!p.v_tauchunfall} onChange={v => setP('v_tauchunfall', v)} />
+              <Cb label="Hämorrhagischer Schock" checked={!!p.v_haemo_schock} onChange={v => setP('v_haemo_schock', v)} />
+            </CbRow>
+            {p.v_verbrennung && (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 12px' }}>
+                <Field label="Verbrennungsgrad"><Inp value={p.v_verbrennung_grad||''} onChange={v => setP('v_verbrennung_grad', v)} placeholder="Grad…" /></Field>
+                <Field label="Verbrannte Fläche (%)"><Inp value={p.v_verbrennung_pct||''} onChange={v => setP('v_verbrennung_pct', v)} /></Field>
+              </div>
+            )}
+            <Field label="Verletzungen Sonstige"><Inp value={p.v_sonstige||''} onChange={v => setP('v_sonstige', v)} /></Field>
+            <div style={{ fontWeight: 600, fontSize: '12px', opacity: 0.7, marginTop: '8px', marginBottom: '4px' }}>Unfallmechanismus</div>
+            <CbRow>
+              <Cb label="Trauma stumpf" checked={!!p.v_trauma_stumpf} onChange={v => setP('v_trauma_stumpf', v)} />
+              <Cb label="Trauma penetrierend" checked={!!p.v_trauma_penetr} onChange={v => setP('v_trauma_penetr', v)} />
+              <Cb label="Sturz ebenerdig" checked={!!p.v_sturz_eben} onChange={v => setP('v_sturz_eben', v)} />
+              <Cb label="Sturz &lt;3 m" checked={!!p.v_sturz_unter3m} onChange={v => setP('v_sturz_unter3m', v)} />
+              <Cb label="Sturz &gt;3 m" checked={!!p.v_sturz_ueber3m} onChange={v => setP('v_sturz_ueber3m', v)} />
+            </CbRow>
+            <div style={{ fontWeight: 600, fontSize: '12px', opacity: 0.7, marginTop: '6px', marginBottom: '4px' }}>Verkehrsteilnehmer</div>
+            <CbRow>
+              <Cb label="Fußgänger" checked={!!p.v_vt_fussgaenger} onChange={v => setP('v_vt_fussgaenger', v)} />
+              <Cb label="E-Scooter" checked={!!p.v_vt_escooter} onChange={v => setP('v_vt_escooter', v)} />
+              <Cb label="Fahrrad" checked={!!p.v_vt_fahrrad} onChange={v => setP('v_vt_fahrrad', v)} />
+              <Cb label="E-Bike" checked={!!p.v_vt_ebike} onChange={v => setP('v_vt_ebike', v)} />
+              <Cb label="Motorrad / Sozius" checked={!!p.v_vt_motorrad} onChange={v => setP('v_vt_motorrad', v)} />
+              <Cb label="PKW Insasse" checked={!!p.v_vt_pkw} onChange={v => setP('v_vt_pkw', v)} />
+              <Cb label="LKW Insasse" checked={!!p.v_vt_lkw} onChange={v => setP('v_vt_lkw', v)} />
+              <Cb label="Bus Insasse" checked={!!p.v_vt_bus} onChange={v => setP('v_vt_bus', v)} />
+            </CbRow>
+            <div style={{ fontWeight: 600, fontSize: '12px', opacity: 0.7, marginTop: '6px', marginBottom: '4px' }}>Gewaltanwendung</div>
+            <CbRow>
+              <Cb label="Schlag" checked={!!p.v_gew_schlag} onChange={v => setP('v_gew_schlag', v)} />
+              <Cb label="Schuss" checked={!!p.v_gew_schuss} onChange={v => setP('v_gew_schuss', v)} />
+              <Cb label="Stich" checked={!!p.v_gew_stich} onChange={v => setP('v_gew_stich', v)} />
+              <Cb label="Gewalt Sonstige" checked={!!p.v_gew_sonstige} onChange={v => setP('v_gew_sonstige', v)} />
+              <Cb label="Gewaltverbrechen" checked={!!p.v_gew_verbrechen} onChange={v => setP('v_gew_verbrechen', v)} />
+            </CbRow>
           </Section>
 
         </div>

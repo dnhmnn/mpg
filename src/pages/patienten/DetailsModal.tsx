@@ -105,8 +105,11 @@ export default function DetailsModal({ doc, type, onClose }: Props) {
 
       <div style="display:grid;grid-template-columns:auto 1fr 1fr;gap:2pt;margin-bottom:2pt">
         ${blk('NACA-Score',`<div style="padding:3pt 5pt;display:flex;gap:1.5pt">${naca}</div>`)}
-        ${blk('Bewusstsein',cr([[p.bewusstsein==='wach','Wach'],[p.bewusstsein==='somnolent','Somnolent'],[p.bewusstsein==='soporös','Soporös'],[p.bewusstsein==='komatös','Komatös']]))}
-        ${blk('Neurologie',`<div style="padding:3pt 5pt;display:flex;gap:10pt;align-items:center">${tag(p.neu_unauff,'Unauffällig')}<span style="font-size:7pt">Zeit: <b>${p.neu_zeit||'—'}</b></span></div>`)}
+        ${blk('Bewusstsein',cr([[p.bewusstsein==='nicht beurteilbar','Nicht beurteilbar'],[p.bewusstsein==='wach','Wach'],[p.bewusstsein==='getrübt','Getrübt'],[p.bewusstsein==='bewusstlos','Bewusstlos'],[p.bewusstsein==='reaktionslos','Reaktionslos'],[p.bewusstsein==='auf Ansprache','Auf Ansprache'],[p.bewusstsein==='Reaktion auf Schmerz','Reaktion auf Schmerz'],[p.bewusstsein==='analgosediert / Narkose','Analgosediert / Narkose']]))}
+        ${blk('Neurologie',
+          `<div style="padding:2pt 4pt;display:flex;flex-wrap:wrap;gap:1.5pt;align-items:center">${tag(p.neu_unauff,'Unauffällig')}${tag(p.neu_sprachstoerung,'Sprachstörung')}${tag(p.neu_demenz,'Demenz')}${tag(p.neu_meningismus,'Meningismus')}${tag(p.neu_seitenzeichen,'Seitenzeichen')}${tag(p.neu_kein_laecheln,'Kein Lächeln')}${tag(p.neu_sehstoerung,'Sehstörung')}${tag(p.neu_querschnitt,'Querschnitt')}${tag(p.neu_babinski,'Babinski')}${tag(p.neu_vorbestehend,'Vorbestehende Defizite')}${p.neu_sonstige?`<span style="font-size:7pt;margin-left:4pt">${p.neu_sonstige}</span>`:''}<span style="font-size:6.5pt;margin-left:6pt;color:#666">Zeit: <b>${p.neu_zeit||'—'}</b></span></div>`+
+          `<div style="padding:2pt 4pt;border-top:0.5pt solid #ccc"><div style="font-size:4.5pt;color:#666;text-transform:uppercase;letter-spacing:.3pt;margin-bottom:1pt">Extremitätenbewegung</div><div style="display:grid;grid-template-columns:auto 1fr 1fr;gap:1pt;font-size:6.5pt"><div></div><div style="text-align:center;font-weight:bold">Re</div><div style="text-align:center;font-weight:bold">Li</div><div>Arm</div><div style="text-align:center">${p.ext_r_arm||'—'}</div><div style="text-align:center">${p.ext_l_arm||'—'}</div><div>Bein</div><div style="text-align:center">${p.ext_r_bein||'—'}</div><div style="text-align:center">${p.ext_l_bein||'—'}</div></div></div>`
+        )}
       </div>
 
       <div style="display:grid;grid-template-columns:1fr 88pt;gap:2pt;margin-bottom:2pt">
@@ -140,7 +143,23 @@ export default function DetailsModal({ doc, type, onClose }: Props) {
         </div>
       </div>
 
-      ${blk('Erstdiagnose / Verdachtsdiagnose',cr([[p.diag_krampf,'Krampfanfall'],[p.diag_synkope,'Synkope'],[p.diag_apoplex,'Apoplex'],[p.diag_sht,'SHT'],[p.diag_acs,'ACS'],[p.diag_insuff,'Herzinsuffizienz'],[p.diag_hypo,'Hypoglykämie'],[p.diag_resp_insuff,'Resp. Insufzienz']]))}
+      ${blk('Erstdiagnose / Verdachtsdiagnose',
+        (p.erstdiagnose_text?`<div style="padding:2pt 4pt;font-size:7.5pt;font-weight:bold">${p.erstdiagnose_text}</div>`:'')+
+        cr([[p.e_keine,'Keine Erkrankung/Verletzung']])+
+        (([
+          ['ZNS',[[p.e_zns_schlaganfall,'Schlaganfall'],[p.e_zns_tia,'TIA'],[p.e_zns_blutung,'Intrakr. Blutung'],[p.e_zns_lyse,'Lyse'],[p.e_zns_krampf,'Krampfanfall'],[p.e_zns_status_epilept,'Status epilept.'],[p.e_zns_meningitis,'Meningitis'],[p.e_zns_synkope,'Synkope'],[p.e_zns_sonstige,'ZNS Sonstige']]],
+          ['Herz-Kreislauf',[[p.e_hk_acs,'ACS'],[p.e_hk_stemi_vw,'STEMI VW'],[p.e_hk_stemi_hw,'STEMI HW'],[p.e_hk_tachy,'Tachy'],[p.e_hk_brady,'Brady'],[p.e_hk_embolie,'Lungenembolie'],[p.e_hk_ortho,'Orthostatisch'],[p.e_hk_insuff,'Herzinsuff./Lungenödem'],[p.e_hk_hypert,'Hypertensiver Notfall'],[p.e_hk_kard_schock,'Kard. Schock'],[p.e_hk_schrittmacher,'SM/ICD-Fehlfunktion'],[p.e_hk_sonstige,'HK Sonstige']]],
+          ['Atmung',[[p.e_atm_asthma,'Asthma'],[p.e_atm_status_asthm,'Status asthm.'],[p.e_atm_copd,'COPD'],[p.e_atm_pneumonie,'Pneumonie'],[p.e_atm_hypervent,'Hyperventilation'],[p.e_atm_aspiration,'Aspiration'],[p.e_atm_haemoptysen,'Hämoptysen'],[p.e_atm_sonstige,'Atmung Sonstige']]],
+          ['Abdomen',[[p.e_abd_akut,'Akutes Abdomen'],[p.e_abd_gi_ob,'GI-Blutung ob.'],[p.e_abd_gi_un,'GI-Blutung un.'],[p.e_abd_kolik,'Kolik'],[p.e_abd_enteritis,'Enteritis'],[p.e_abd_sonstige,'Abdomen Sonstige']]],
+          ['Psychiatrie',[[p.e_psy_psychose,'Psychose/Manie'],[p.e_psy_angst,'Angst/Depression'],[p.e_psy_intox_akzid,'Intox. akzid.'],[p.e_psy_intox_alkohol,'Intox. Alkohol'],[p.e_psy_intox_drogen,'Intox. Drogen'],[p.e_psy_intox_medis,'Intox. Medis'],[p.e_psy_intox_sonstige,'Intox. Sonstige'],[p.e_psy_entzug,'Entzug/Delir'],[p.e_psy_suizid,'Suizid(versuch)'],[p.e_psy_krise,'Psych. Krise'],[p.e_psy_sonstige,'Psychiatrie Sonstige']]],
+          ['Stoffwechsel',[[p.e_stw_hypo,'Hypoglykämie'],[p.e_stw_hyper,'Hyperglykämie'],[p.e_stw_exsiccose,'Exsiccose'],[p.e_stw_uraemie,'Urämie/ANV'],[p.e_stw_sonstige,'SW Sonstige']]],
+          ['Pädiatrie',[[p.e_paed_fieberkrampf,'Fieberkrampf'],[p.e_paed_pseudokrupp,'Pseudokrupp'],[p.e_paed_sids,'SIDS/Near-SIDS']]],
+          ['Gynäkologie',[[p.e_gyn_schwanger,'Schwangerschaft'],[p.e_gyn_geburt,'Droh./präklin. Geburt'],[p.e_gyn_eklampsie,'(Prä-)Eklampsie'],[p.e_gyn_blutung,'Vag. Blutung'],[p.e_gyn_sonstige,'Gyn. Sonstige']]],
+          ['Weitere',[[p.e_anaphylaxie,'Anaphylaxie'],[p.e_hitze,'Hitzeerschöpfung'],[p.e_unterkuehlung,'Unterkühlung'],[p.e_sepsis,'Sepsis/sept. Schock'],[p.e_influenza,'Influenza'],[p.e_hepatitis_hiv,'Hepatitis/HIV'],[p.e_lumbago,'Akutes Lumbago'],[p.e_epistaxis,'Epistaxis'],[p.e_soziales,'Soziales Problem'],[p.e_behandlungskompl,'Behandlungskompl.'],[p.e_weitere_sonstige,'Weitere Sonstige']]],
+        ] as [string,[boolean|undefined,string][]][]).map(([cat,items])=>
+          items.some(([v])=>v)?`<div style="display:flex;flex-wrap:wrap;gap:1pt;padding:0.5pt 4pt;border-top:0.5pt solid #e0e0e0"><span style="font-size:4.5pt;font-weight:bold;color:#555;margin-right:3pt;align-self:center;text-transform:uppercase">${cat}</span>${items.filter(([v])=>v).map(([,l])=>`<span style="background:#222;color:#fff;font-size:5pt;padding:1pt 3pt;border-radius:2pt">${l}</span>`).join('')}</div>`:''
+        ).join(''))
+      )}
       </div>
 
       <div class="pg pb">
@@ -206,7 +225,16 @@ export default function DetailsModal({ doc, type, onClose }: Props) {
         </div>`
       })()}
 
-      ${blk('Verletzungen / Befunde',`<div style="padding:2pt 4pt;min-height:18pt;font-size:7.5pt;white-space:pre-wrap">${p.verletz_text||''}</div>`)}
+      ${blk('Verletzungen / Trauma',
+        cr([[p.v_keine,'Keine Verletzung']])+
+        `<div style="padding:2pt 4pt;display:flex;flex-wrap:wrap;gap:1pt">`+
+        ([['v_sht','Schädel-Hirn'],['v_gesicht','Gesicht'],['v_hals','Hals'],['v_thorax','Thorax'],['v_abdomen','Abdomen'],['v_ws','Wirbelsäule'],['v_becken','Becken'],['v_obext','Obere Ext.'],['v_untext','Untere Ext.'],['v_weich','Weichteile']] as [keyof typeof p,string][]).filter(([k])=>!!(p[k])).map(([k,l])=>`<span style="background:#222;color:#fff;font-size:5pt;padding:1pt 3pt;border-radius:2pt">${l}: ${p[k]}</span>`).join('')+
+        `</div>`+
+        cr([[p.v_verbrennung,`Verbrennung${p.v_verbrennung_grad?' Grad '+p.v_verbrennung_grad:''}${p.v_verbrennung_pct?' '+p.v_verbrennung_pct+'%':''}`],[p.v_veraetzung,'Verätzung'],[p.v_verschuettung,'Verschüttung'],[p.v_einklemmung,'Einklemmung'],[p.v_inhalation,'Inhalationstrauma'],[p.v_elektrounfall,'Elektrounfall'],[p.v_ertrinken,'Beinahe-Ertrinken'],[p.v_tauchunfall,'Tauchunfall'],[p.v_haemo_schock,'Hämorr. Schock']])+
+        cr([[p.v_trauma_stumpf,'Stumpfes Trauma'],[p.v_trauma_penetr,'Penetr. Trauma'],[p.v_sturz_eben,'Sturz ebenerdig'],[p.v_sturz_unter3m,'Sturz <3m'],[p.v_sturz_ueber3m,'Sturz >3m'],[p.v_vt_fussgaenger,'Fußgänger'],[p.v_vt_escooter,'E-Scooter'],[p.v_vt_fahrrad,'Fahrrad'],[p.v_vt_ebike,'E-Bike'],[p.v_vt_motorrad,'Motorrad'],[p.v_vt_pkw,'PKW'],[p.v_vt_lkw,'LKW'],[p.v_vt_bus,'Bus'],[p.v_gew_schlag,'Schlag'],[p.v_gew_schuss,'Schuss'],[p.v_gew_stich,'Stich'],[p.v_gew_sonstige,'Gewalt Sonstige'],[p.v_gew_verbrechen,'Gewaltverbrechen']])+
+        (p.v_sonstige?`<div style="padding:2pt 4pt;font-size:6.5pt">${p.v_sonstige}</div>`:'')+
+        (p.verletz_text?`<div style="padding:2pt 4pt;font-size:6.5pt;border-top:0.5pt solid #ccc;white-space:pre-wrap">${p.verletz_text}</div>`:'')
+      )}
 
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:2pt;margin-bottom:2pt">
         <div>
