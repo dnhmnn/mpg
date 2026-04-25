@@ -1,13 +1,12 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { pb } from '../../lib/pocketbase'
 import { inp, lbl } from './pubStyles'
 
-type Person = { vorname: string; nachname: string }
-type Mann = { tf: Person; m1: Person; m2: Person; m3: Person }
+type UserHit = { id: string; name: string; email: string }
+type Selection = UserHit | null
+type Pos = 'tf' | 'm1' | 'm2' | 'm3'
 
-const empty = (): Person => ({ vorname: '', nachname: '' })
-
-const FIELDS: { key: keyof Mann; label: string }[] = [
+const FIELDS: { key: Pos; label: string }[] = [
   { key: 'tf', label: 'Teamführer' },
   { key: 'm1', label: 'Mannschaft 1' },
   { key: 'm2', label: 'Mannschaft 2' },
@@ -21,26 +20,118 @@ const icon = (
   </svg>
 )
 
+function UserSearch({ label, orgId, value, onChange }: {
+  label: string; orgId: string; value: Selection; onChange: (u: Selection) => void
+}) {
+  const [query, setQuery] = useState('')
+  const [results, setResults] = useState<UserHit[]>([])
+  const [open, setOpen] = useState(false)
+  const timer = useRef<ReturnType<typeof setTimeout>>()
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function onClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', onClick)
+    return () => document.removeEventListener('mousedown', onClick)
+  }, [])
+
+  function onInput(q: string) {
+    setQuery(q)
+    clearTimeout(timer.current)
+    if (!q.trim()) { setResults([]); setOpen(false); return }
+    timer.current = setTimeout(async () => {
+      try {
+        const res = await pb.collection('users').getList(1, 8, {
+          filter: `organization_id = "${orgId}" && name ~ "${q.trim()}"`,
+          sort: 'name',
+        })
+        setResults(res.items.map(u => ({ id: u.id, name: u.name, email: u.email })))
+        setOpen(true)
+      } catch {
+        setResults([])
+      }
+    }, 350)
+  }
+
+  function select(u: UserHit) {
+    onChange(u)
+    setQuery('')
+    setResults([])
+    setOpen(false)
+  }
+
+  return (
+    <div ref={ref} style={{ position: 'relative' }}>
+      <label style={lbl}>{label}</label>
+      {value ? (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6, background: 'var(--bg-subtle)', border: '0.5px solid var(--border-medium)', borderRadius: 10, padding: '8px 12px' }}>
+          <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--accent)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 13, flexShrink: 0 }}>
+            {value.name.charAt(0).toUpperCase()}
+          </div>
+          <span style={{ flex: 1, fontWeight: 600, color: 'var(--text)', fontSize: 14 }}>{value.name}</span>
+          <button type="button" onClick={() => onChange(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', fontSize: 18, lineHeight: 1, padding: '0 2px' }}>×</button>
+        </div>
+      ) : (
+        <input
+          style={inp}
+          type="text"
+          value={query}
+          onChange={e => onInput(e.target.value)}
+          placeholder="Name suchen…"
+          onFocus={() => results.length > 0 && setOpen(true)}
+        />
+      )}
+      {open && results.length > 0 && (
+        <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--bg-card)', border: '0.5px solid var(--border)', borderRadius: 10, boxShadow: 'var(--shadow-md)', zIndex: 50, overflow: 'hidden', marginTop: 2 }}>
+          {results.map(u => (
+            <button key={u.id} type="button" onMouseDown={() => select(u)} style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', background: 'none', border: 'none', padding: '10px 12px', cursor: 'pointer', textAlign: 'left', borderBottom: '0.5px solid var(--border)', fontFamily: 'inherit' }}
+              onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'none')}>
+              <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--accent)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 13, flexShrink: 0 }}>
+                {u.name.charAt(0).toUpperCase()}
+              </div>
+              <div>
+                <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--text)' }}>{u.name}</div>
+                <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{u.email}</div>
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
+      {open && results.length === 0 && query.trim() && (
+        <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--bg-card)', border: '0.5px solid var(--border)', borderRadius: 10, padding: '10px 12px', fontSize: 14, color: 'var(--text-secondary)', zIndex: 50, marginTop: 2 }}>
+          Kein Benutzer gefunden
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function OrgPatientenMannschaft({
   orgId, orgCode, onDraftCreated,
 }: {
   orgId: string; orgCode: string; onDraftCreated: (id: string) => void
 }) {
-  const [mann, setMann] = useState<Mann>({ tf: empty(), m1: empty(), m2: empty(), m3: empty() })
+  const [sel, setSel] = useState<Record<Pos, Selection>>({ tf: null, m1: null, m2: null, m3: null })
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [offlineMsg, setOfflineMsg] = useState('')
 
-  function set(key: keyof Mann, field: keyof Person, value: string) {
-    setMann(m => ({ ...m, [key]: { ...m[key], [field]: value } }))
+  function set(pos: Pos, u: Selection) {
+    setSel(s => ({ ...s, [pos]: u }))
   }
 
   async function save() {
     setSaving(true)
     setOfflineMsg('')
+    const mannschaft = Object.fromEntries(
+      FIELDS.map(f => [f.key, sel[f.key] ? { id: sel[f.key]!.id, name: sel[f.key]!.name } : null])
+    )
     if (!navigator.onLine) {
       const queue = JSON.parse(localStorage.getItem(`offline_queue_${orgCode}`) || '[]')
-      queue.push({ type: 'draft', payload: { mannschaft: mann }, status: 'offen', organization_id: orgId })
+      queue.push({ type: 'draft', payload: { mannschaft }, status: 'offen', organization_id: orgId })
       localStorage.setItem(`offline_queue_${orgCode}`, JSON.stringify(queue))
       setSaved(true)
       setOfflineMsg('Offline gespeichert – wird beim nächsten Öffnen dieser Seite automatisch übermittelt.')
@@ -50,7 +141,7 @@ export default function OrgPatientenMannschaft({
     try {
       const rec = await pb.collection('patients').create({
         title: `Entwurf – ${new Date().toLocaleDateString('de-DE')}`,
-        payload: { mannschaft: mann },
+        payload: { mannschaft },
         status: 'offen',
         organization_id: orgId,
       })
@@ -69,21 +160,9 @@ export default function OrgPatientenMannschaft({
         {icon} Mannschaft
       </div>
       <div style={{ padding: '1rem' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(260px,1fr))', gap: '1rem', marginBottom: '1rem' }}>
-          {FIELDS.map(({ key, label }) => (
-            <div key={key}>
-              <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--text-secondary)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '.4px' }}>{label}</div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '.5rem' }}>
-                <div>
-                  <label style={lbl}>Vorname</label>
-                  <input style={inp} type="text" value={mann[key].vorname} onChange={e => set(key, 'vorname', e.target.value)} placeholder="Vorname" />
-                </div>
-                <div>
-                  <label style={lbl}>Nachname</label>
-                  <input style={inp} type="text" value={mann[key].nachname} onChange={e => set(key, 'nachname', e.target.value)} placeholder="Nachname" />
-                </div>
-              </div>
-            </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: '1rem', marginBottom: '1rem' }}>
+          {FIELDS.map(f => (
+            <UserSearch key={f.key} label={f.label} orgId={orgId} value={sel[f.key]} onChange={u => set(f.key, u)} />
           ))}
         </div>
         {offlineMsg && (
@@ -92,7 +171,7 @@ export default function OrgPatientenMannschaft({
           </div>
         )}
         {saved ? (
-          <div style={{ color: '#16a34a', fontWeight: 600, fontSize: '.9rem' }}>✓ Entwurf angelegt</div>
+          <div style={{ color: '#16a34a', fontWeight: 600, fontSize: '.9rem' }}>✓ Entwurf angelegt – sichtbar in Patienten & Unitas</div>
         ) : (
           <button type="button" disabled={saving} onClick={save} style={{ background: saving ? 'var(--bg-hover)' : 'var(--accent)', color: saving ? 'var(--text-secondary)' : '#fff', border: 'none', borderRadius: 10, padding: '10px 20px', fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer', fontSize: '.95rem', fontFamily: 'inherit' }}>
             {saving ? 'Speichert…' : 'Speichern'}
