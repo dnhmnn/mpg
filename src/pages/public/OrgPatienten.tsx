@@ -5,6 +5,8 @@ import { useOrg } from './OrgPublicLayout'
 import { PubHeader, PubWrap, PubSendBar, PubSection, inp, sel, ta, field, lbl } from './pubStyles'
 
 type Med = { name: string; dose: string; unit: string; route: string; time: string; note: string }
+type VRow = { zeit: string; rr_sys: string; rr_dia: string; hf: string; o2: string; spo2: string; etco2: string; schmerz: string }
+const emptyV = (): VRow => ({ zeit: '', rr_sys: '', rr_dia: '', hf: '', o2: '', spo2: '', etco2: '', schmerz: '' })
 const pill: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: '.35rem', border: '0.5px solid var(--border-medium)', borderRadius: 999, padding: '.2rem .5rem', background: 'var(--bg-subtle)', fontSize: '.9rem', cursor: 'pointer', margin: '2px', color: 'var(--text)' }
 const grid: React.CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))', gap: '.75rem' }
 const now = () => { const d = new Date(); return d.toISOString().slice(0,16) }
@@ -15,6 +17,7 @@ export default function OrgPatienten() {
   const formRef = useRef<HTMLFormElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [meds, setMeds] = useState<Med[]>([])
+  const [verlauf, setVerlauf] = useState<VRow[]>([emptyV()])
   const [photos, setPhotos] = useState<string[]>([])
   const [gcs, setGcs] = useState({ e: 0, v: 0, m: 0 })
   const [sigUrl, setSigUrl] = useState('')
@@ -49,7 +52,10 @@ export default function OrgPatienten() {
       else if ((el as HTMLInputElement).type === 'radio') { if ((el as HTMLInputElement).checked) data[el.name] = el.value }
       else data[el.name] = el.value
     })
-    data.medications = meds; data.photos = photos; data.signature = sigUrl
+    data.medications = meds
+    data.verlauf = verlauf.filter(r => r.zeit || r.rr_sys || r.hf)
+    data.photos = photos
+    data.signature = sigUrl
     return data
   }
 
@@ -77,7 +83,7 @@ export default function OrgPatienten() {
         <div style={{ width: 56, height: 56, background: '#dcfce7', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem', fontSize: '1.75rem' }}>✅</div>
         <h2 style={{ color: 'var(--text)', margin: '0 0 .5rem', fontSize: '1.2rem' }}>Erfolgreich übermittelt!</h2>
         <p style={{ fontFamily: 'monospace', color: 'var(--text-secondary)', margin: '0 0 1.5rem' }}>{success}</p>
-        <button style={{ background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: 12, padding: '12px 24px', fontWeight: 700, fontSize: '1rem', cursor: 'pointer', fontFamily: 'inherit' }} onClick={() => { setSuccess(null); setMeds([]); setPhotos([]); setGcs({ e: 0, v: 0, m: 0 }); clearSig() }}>+ Neues Formular</button>
+        <button style={{ background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: 12, padding: '12px 24px', fontWeight: 700, fontSize: '1rem', cursor: 'pointer', fontFamily: 'inherit' }} onClick={() => { setSuccess(null); setMeds([]); setVerlauf([emptyV()]); setPhotos([]); setGcs({ e: 0, v: 0, m: 0 }); clearSig() }}>+ Neues Formular</button>
       </div>
     </PubWrap>
   )
@@ -86,7 +92,7 @@ export default function OrgPatienten() {
     <PubHeader title={`Patientendoku – ${org.org_name}`} onBack={() => navigate(`/${orgCode}`)}
       extra={<>
         <button onClick={saveLocal} style={{ background: 'var(--bg-hover)', border: '0.5px solid var(--border-medium)', color: 'var(--text)', padding: '6px 10px', borderRadius: 8, fontWeight: 600, cursor: 'pointer', fontSize: '.85rem', fontFamily: 'inherit' }}>💾 Speichern</button>
-        <button onClick={() => { if (confirm('Formular zurücksetzen?')) { formRef.current?.reset(); setMeds([]); setPhotos([]); setGcs({ e: 0, v: 0, m: 0 }); clearSig() } }} style={{ background: 'var(--bg-hover)', border: '0.5px solid var(--border-medium)', color: 'var(--text)', padding: '6px 10px', borderRadius: 8, fontWeight: 600, cursor: 'pointer', fontSize: '.85rem', fontFamily: 'inherit' }}>🗑 Reset</button>
+        <button onClick={() => { if (confirm('Formular zurücksetzen?')) { formRef.current?.reset(); setMeds([]); setVerlauf([emptyV()]); setPhotos([]); setGcs({ e: 0, v: 0, m: 0 }); clearSig() } }} style={{ background: 'var(--bg-hover)', border: '0.5px solid var(--border-medium)', color: 'var(--text)', padding: '6px 10px', borderRadius: 8, fontWeight: 600, cursor: 'pointer', fontSize: '.85rem', fontFamily: 'inherit' }}>🗑 Reset</button>
       </>}
     />
     <PubWrap>
@@ -95,11 +101,25 @@ export default function OrgPatienten() {
         <PubSection title="🚑 Einsatzdaten" open>
           <div style={grid}>
             <label style={lbl}>Einsatz-Nr.<input style={inp} name="einsatz_nr" type="text" /></label>
-            <label style={lbl}>Auftrags-Nr.<input style={inp} name="auftrags_nr" type="text" /></label>
+            <label style={lbl}>Auftrags-Nr. (ILS)<input style={inp} name="auftrags_nr" type="text" /></label>
             <label style={lbl}>Rufname<input style={inp} name="rufname" type="text" /></label>
-            <label style={lbl}>Fahrzeug<input style={inp} name="fahrzeug" type="text" placeholder="z.B. 46/1" /></label>
-            <label style={lbl}>Datum/Uhrzeit<input style={inp} name="zeit_einsatz" type="datetime-local" defaultValue={now()} /></label>
-            <label style={lbl}>Einsatz-Art<input style={inp} name="einsatz_art" type="text" /></label>
+            <label style={lbl}>Fahrzeug / Einheit<input style={inp} name="fahrzeug" type="text" /></label>
+            <label style={lbl}>Einsatzart / Stichwort<input style={inp} name="einsatz_art" type="text" /></label>
+            <label style={lbl}>Alarmzeit<input style={inp} name="zeit_einsatz" type="datetime-local" defaultValue={now()} /></label>
+            <label style={lbl}>Eintreffen<input style={inp} name="zeit_eintreffen" type="datetime-local" /></label>
+            <label style={lbl}>Transportbeginn<input style={inp} name="zeit_transport" type="datetime-local" /></label>
+            <label style={lbl}>Übergabe<input style={inp} name="zeit_uebergabe" type="datetime-local" /></label>
+            <label style={lbl}>Einsatzort / Adresse<input style={inp} name="einsatz_adresse" type="text" /></label>
+            <label style={lbl}>Transportziel<input style={inp} name="transport_ziel" type="text" /></label>
+          </div>
+        </PubSection>
+
+        <PubSection title="👥 Mannschaft">
+          <div style={grid}>
+            <label style={lbl}>Teamführer<input style={inp} name="mannschaft_tf" type="text" /></label>
+            <label style={lbl}>Mannschaft 1<input style={inp} name="mannschaft_1" type="text" /></label>
+            <label style={lbl}>Mannschaft 2<input style={inp} name="mannschaft_2" type="text" /></label>
+            <label style={lbl}>Mannschaft 3<input style={inp} name="mannschaft_3" type="text" /></label>
           </div>
         </PubSection>
 
@@ -119,12 +139,17 @@ export default function OrgPatienten() {
             <label style={lbl}>Hausarzt<input style={inp} name="hausarzt" type="text" /></label>
             <label style={lbl}>Angehöriger<input style={inp} name="angehoeriger" type="text" /></label>
           </div>
-          <div style={field}><label style={lbl}>Infos / Ethik / Patientenverfügung<textarea style={ta} name="infos" /></label></div>
         </PubSection>
 
         {/* Notfallgeschehen */}
         <PubSection title="📋 Notfallgeschehen / Anamnese">
-          <textarea style={ta} name="notfallgeschehen" placeholder="Freitext…" />
+          <div style={field}><label style={lbl}>Notfallgeschehen<textarea style={ta} name="notfallgeschehen" placeholder="Freitext…" /></label></div>
+          <div style={field}><label style={lbl}>Verlaufsbeschreibung<textarea style={ta} name="verlaufsbeschreibung" /></label></div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '.75rem' }}>
+            <div style={field}><label style={lbl}>Vorerkrankungen<textarea style={ta} name="vorerkrankungen" /></label></div>
+            <div style={field}><label style={lbl}>Dauermedikation Patient<textarea style={ta} name="vormedikation_patient" /></label></div>
+          </div>
+          <div style={field}><label style={lbl}>Allergien / Unverträglichkeiten<input style={inp} name="allergien" type="text" placeholder="Keine bekannt" /></label></div>
           <div style={{ marginTop: '.75rem' }}>
             <label style={{ ...lbl, marginBottom: 6 }}>Fotos</label>
             <input type="file" accept="image/*" capture="environment" multiple onChange={async e => {
@@ -141,6 +166,22 @@ export default function OrgPatienten() {
               ))}
             </div>}
           </div>
+        </PubSection>
+
+        <PubSection title="🔢 NACA / Bewusstsein / Verdachtsdiagnose" open>
+          <div style={{ marginBottom: '.75rem' }}>
+            <div style={{ fontWeight: 700, marginBottom: 4, color: 'var(--text)' }}>NACA-Score</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap' }}>
+              {['0','I','II','III','IV','V','VI','VII'].map(v => <label key={v} style={pill}><input type="radio" name="naca" value={v} /> {v}</label>)}
+            </div>
+          </div>
+          <div style={{ marginBottom: '.75rem' }}>
+            <div style={{ fontWeight: 700, marginBottom: 4, color: 'var(--text)' }}>Bewusstsein</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap' }}>
+              {['nicht beurteilbar','wach','getrübt','bewusstlos','reaktionslos','auf Ansprache','Reaktion auf Schmerz','analgosediert / Narkose'].map(v => <label key={v} style={pill}><input type="radio" name="bewusstsein" value={v} /> {v}</label>)}
+            </div>
+          </div>
+          <div style={field}><label style={lbl}>Verdachtsdiagnose / Erstdiagnose<input style={inp} name="erstdiagnose_text" type="text" /></label></div>
         </PubSection>
 
         {/* GCS */}
@@ -175,31 +216,48 @@ export default function OrgPatienten() {
             ))}
           </div>
           <div style={{ marginTop: '.5rem', fontWeight: 700 }}>O₂-Gabe</div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', marginBottom: '.5rem' }}>
-            {[['o2_nasal','Nasensonde'],['o2_maske','Maske'],['o2_reservoir','Reservoir']].map(([n,l]) => (
+          <div style={{ display: 'flex', flexWrap: 'wrap', marginBottom: '.5rem', alignItems: 'center' }}>
+            {[['o2','O₂'],['o2_nasal','Nasensonde'],['o2_maske','Maske'],['o2_reservoir','Reservoir']].map(([n,l]) => (
               <label key={n} style={pill}><input type="checkbox" name={n} /> {l}</label>
             ))}
-            <label style={lbl}>Flow (l/min)<input style={{ ...inp, width: 100 }} name="o2_flow" type="number" step="0.5" /></label>
+            <label style={{ ...lbl, marginLeft: '.5rem' }}>Flow (l/min)<input style={{ ...inp, width: 100 }} name="o2_flow" type="number" step="0.5" /></label>
           </div>
         </PubSection>
 
         {/* Neurologie */}
         <PubSection title="🧠 Neurologie">
-          <div style={{ display: 'flex', flexWrap: 'wrap', marginBottom: '.5rem' }}>
-            {[['neu_unauff','Unauffällig'],['neu_sprachstoerung','Sprachstörung'],['neu_seitenzeichen','Seitenzeichen'],['neu_bewusstlos','Bewusstlos']].map(([n,l]) => (
+          <div style={{ display: 'flex', flexWrap: 'wrap', marginBottom: '.75rem' }}>
+            {[['neu_unauff','Unauffällig'],['neu_sprachstoerung','Sprachstörung'],['neu_demenz','Demenz'],['neu_meningismus','Meningismus'],['neu_seitenzeichen','Seitenzeichen'],['neu_kein_laecheln','Kein Lächeln'],['neu_sehstoerung','Sehstörung'],['neu_querschnitt','Querschnitt'],['neu_babinski','Babinski'],['neu_vorbestehend','Vorbestehende Defizite']].map(([n,l]) => (
               <label key={n} style={pill}><input type="checkbox" name={n} /> {l}</label>
             ))}
           </div>
-          <div style={grid}>
-            {[['pw_r','Pupille re.'],['pw_l','Pupille li.']].map(([n,l]) => (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '.75rem', marginBottom: '.75rem' }}>
+            <label style={lbl}>Sonstige Neurologie<input style={inp} name="neu_sonstige" type="text" /></label>
+            <label style={lbl}>Zeitpunkt Symptombeginn<input style={inp} name="neu_zeit" type="time" /></label>
+          </div>
+          <div style={{ fontWeight: 700, marginBottom: 4, color: 'var(--text)' }}>Extremitätenbewegung</div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '.75rem', marginBottom: '.75rem' }}>
+            {[['ext_r_arm','Arm rechts'],['ext_l_arm','Arm links'],['ext_r_bein','Bein rechts'],['ext_l_bein','Bein links']].map(([n,l]) => (
               <div key={n}>
-                <div style={{ fontWeight: 700, marginBottom: 4 }}>{l}</div>
+                <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 4, color: 'var(--text)' }}>{l}</div>
                 <div style={{ display: 'flex', flexWrap: 'wrap' }}>
-                  {[['eng','eng'],['mittel','mittel'],['weit','weit']].map(([v,lx]) => <label key={v} style={pill}><input type="radio" name={n} value={v} /> {lx}</label>)}
+                  {['unauff.','vermindert','Parese','keine'].map(v => <label key={v} style={pill}><input type="radio" name={n} value={v} /> {v}</label>)}
+                </div>
+              </div>
+            ))}
+          </div>
+          <div style={{ fontWeight: 700, marginBottom: 4, color: 'var(--text)' }}>Pupillen</div>
+          <div style={grid}>
+            {[['pw_r','Pupille re.','lr_r'],['pw_l','Pupille li.','lr_l']].map(([n,l,lr]) => (
+              <div key={n}>
+                <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 4, color: 'var(--text)' }}>{l}</div>
+                <div style={{ display: 'flex', flexWrap: 'wrap' }}>
+                  {['eng','mittel','weit'].map(v => <label key={v} style={pill}><input type="radio" name={n} value={v} /> {v}</label>)}
+                  <label style={pill}><input type="checkbox" name={n === 'pw_r' ? 'pw_r_entrundet' : 'pw_l_entrundet'} /> entrundet</label>
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', marginTop: 4 }}>
                   <span style={{ fontSize: '.8rem', color: 'var(--text-secondary)', marginRight: 6, alignSelf: 'center' }}>LR:</span>
-                  {[['prompt','prompt'],['träge','träge'],['keine','keine']].map(([v,lx]) => <label key={v} style={pill}><input type="radio" name={n === 'pw_r' ? 'lr_r' : 'lr_l'} value={v} /> {lx}</label>)}
+                  {['prompt','träge','keine'].map(v => <label key={v} style={pill}><input type="radio" name={lr} value={v} /> {v}</label>)}
                 </div>
               </div>
             ))}
@@ -223,21 +281,126 @@ export default function OrgPatienten() {
         <PubSection title="🖐 Haut / Psyche">
           <div style={{ fontWeight: 700, marginBottom: 4 }}>Haut</div>
           <div style={{ display: 'flex', flexWrap: 'wrap', marginBottom: '.75rem' }}>
-            {[['haut_unauff','Unauffällig'],['haut_falten','Stehende Falten'],['haut_oedeme','Ödeme'],['haut_kaltschweissig','Kaltschweißig'],['haut_exanthem','Exanthem']].map(([n,l]) => (
+            {[['haut_unauff','Unauffällig'],['haut_falten','Fältchentest pos.'],['haut_oedeme','Ödeme'],['haut_dekubitus','Dekubitus'],['haut_kaltschweissig','Kaltschweißig'],['haut_exanthem','Exanthem']].map(([n,l]) => (
               <label key={n} style={pill}><input type="checkbox" name={n} /> {l}</label>
             ))}
           </div>
           <div style={{ fontWeight: 700, marginBottom: 4 }}>Psyche</div>
           <div style={{ display: 'flex', flexWrap: 'wrap' }}>
-            {[['psy_erregt','Erregt'],['psy_aggr','Aggressiv'],['psy_depressiv','Depressiv'],['psy_aengstlich','Ängstlich'],['psy_verwirrt','Verwirrt'],['psy_suizidal','Suizidal']].map(([n,l]) => (
+            {[['psy_erregt','Erregt'],['psy_aggr','Aggressiv'],['psy_verlangsamt','Verlangsamt'],['psy_depressiv','Depressiv'],['psy_aengstlich','Ängstlich'],['psy_euphorisch','Euphorisch'],['psy_wahnhaft','Wahnhaft'],['psy_verwirrt','Verwirrt'],['psy_suizidal','Suizidal'],['psy_motor_unruhig','Motor. unruhig']].map(([n,l]) => (
               <label key={n} style={pill}><input type="checkbox" name={n} /> {l}</label>
             ))}
           </div>
         </PubSection>
 
+        {/* Erstdiagnose Kategorien */}
+        <PubSection title="🏥 Erstdiagnose / Diagnose-Kategorien">
+          <div style={field}><label style={pill}><input type="checkbox" name="e_keine" /> Keine Erkrankung / Verletzung</label></div>
+          {([
+            ['ZNS', [['e_zns_schlaganfall','Schlaganfall'],['e_zns_tia','TIA'],['e_zns_blutung','Intrakr. Blutung'],['e_zns_lyse','Lyse'],['e_zns_krampf','Krampfanfall'],['e_zns_status_epilept','Status epilept.'],['e_zns_meningitis','Meningitis'],['e_zns_synkope','Synkope'],['e_zns_sonstige','Sonstige']]],
+            ['Herz-Kreislauf', [['e_hk_acs','ACS'],['e_hk_stemi_vw','STEMI VW'],['e_hk_stemi_hw','STEMI HW'],['e_hk_tachy','Tachy'],['e_hk_brady','Brady'],['e_hk_embolie','Lungenembolie'],['e_hk_ortho','Orthostatisch'],['e_hk_insuff','Herzinsuff./Lungenödem'],['e_hk_hypert','Hypert. Notfall'],['e_hk_kard_schock','Kard. Schock'],['e_hk_schrittmacher','SM/ICD-Fehlfunktion'],['e_hk_sonstige','Sonstige']]],
+            ['Atmung', [['e_atm_asthma','Asthma'],['e_atm_status_asthm','Status asthm.'],['e_atm_copd','COPD'],['e_atm_pneumonie','Pneumonie'],['e_atm_hypervent','Hyperventilation'],['e_atm_aspiration','Aspiration'],['e_atm_haemoptysen','Hämoptysen'],['e_atm_sonstige','Sonstige']]],
+            ['Abdomen', [['e_abd_akut','Akutes Abdomen'],['e_abd_gi_ob','GI-Blutung ob.'],['e_abd_gi_un','GI-Blutung un.'],['e_abd_kolik','Kolik'],['e_abd_enteritis','Enteritis'],['e_abd_sonstige','Sonstige']]],
+            ['Psychiatrie', [['e_psy_psychose','Psychose/Manie'],['e_psy_angst','Angst/Depression'],['e_psy_intox_akzid','Intox. akzid.'],['e_psy_intox_alkohol','Intox. Alkohol'],['e_psy_intox_drogen','Intox. Drogen'],['e_psy_intox_medis','Intox. Medis'],['e_psy_entzug','Entzug/Delir'],['e_psy_suizid','Suizid(versuch)'],['e_psy_krise','Psych. Krise'],['e_psy_sonstige','Sonstige']]],
+            ['Stoffwechsel', [['e_stw_hypo','Hypoglykämie'],['e_stw_hyper','Hyperglykämie'],['e_stw_exsiccose','Exsiccose'],['e_stw_uraemie','Urämie/ANV'],['e_stw_sonstige','Sonstige']]],
+            ['Pädiatrie', [['e_paed_fieberkrampf','Fieberkrampf'],['e_paed_pseudokrupp','Pseudokrupp'],['e_paed_sids','SIDS/Near-SIDS']]],
+            ['Gynäkologie', [['e_gyn_schwanger','Schwangerschaft'],['e_gyn_geburt','Droh./präklin. Geburt'],['e_gyn_eklampsie','(Prä-)Eklampsie'],['e_gyn_blutung','Vag. Blutung'],['e_gyn_sonstige','Sonstige']]],
+            ['Weitere', [['e_anaphylaxie','Anaphylaxie'],['e_hitze','Hitzeerschöpfung'],['e_unterkuehlung','Unterkühlung'],['e_sepsis','Sepsis/sept. Schock'],['e_influenza','Influenza'],['e_lumbago','Akutes Lumbago'],['e_epistaxis','Epistaxis'],['e_soziales','Soziales Problem'],['e_weitere_sonstige','Sonstige']]],
+          ] as [string, [string,string][]][]).map(([cat, items]) => (
+            <div key={cat} style={{ borderTop: '0.5px solid var(--border)', paddingTop: '.5rem', marginTop: '.5rem' }}>
+              <div style={{ fontWeight: 700, fontSize: '.85rem', marginBottom: 4, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '.5px' }}>{cat}</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap' }}>
+                {items.map(([n,l]) => <label key={n} style={pill}><input type="checkbox" name={n} /> {l}</label>)}
+              </div>
+            </div>
+          ))}
+        </PubSection>
+
+        {/* Verlauf */}
+        <PubSection title="📈 Verlauf">
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '.85rem' }}>
+              <thead><tr>{['Zeit','RR sys','RR dia','HF','O₂ l/min','SpO₂ %','etCO₂',''].map(h => <th key={h} style={{ background: 'var(--bg-subtle)', border: '0.5px solid var(--border)', padding: '6px 8px', fontWeight: 700, color: 'var(--text)', textAlign: 'left' }}>{h}</th>)}</tr></thead>
+              <tbody>
+                {verlauf.map((r, i) => (
+                  <tr key={i}>
+                    {(['zeit','rr_sys','rr_dia','hf','o2','spo2','etco2'] as (keyof VRow)[]).map(k => (
+                      <td key={k} style={{ border: '0.5px solid var(--border)', padding: 4 }}>
+                        <input style={{ ...inp, marginTop: 0, minWidth: 60 }} type={k === 'zeit' ? 'time' : 'number'} value={r[k]} onChange={e => setVerlauf(vv => vv.map((row, j) => j === i ? { ...row, [k]: e.target.value } : row))} />
+                      </td>
+                    ))}
+                    <td style={{ border: '0.5px solid var(--border)', padding: 4 }}><button type="button" onClick={() => setVerlauf(vv => vv.filter((_,j) => j !== i))} style={{ background: 'var(--bg-hover)', border: '0.5px solid var(--border-medium)', borderRadius: 6, cursor: 'pointer', fontWeight: 700, color: 'var(--accent)', padding: '4px 8px' }}>×</button></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <button type="button" onClick={() => setVerlauf(vv => [...vv, emptyV()])} style={{ marginTop: '.5rem', border: '0.5px solid var(--border-medium)', background: 'var(--bg-subtle)', padding: '.45rem .75rem', borderRadius: 10, cursor: 'pointer', fontWeight: 600, color: 'var(--accent)', fontSize: '.9rem', fontFamily: 'inherit' }}>+ Zeile hinzufügen</button>
+        </PubSection>
+
         {/* Verletzungen */}
-        <PubSection title="🩹 Verletzungen">
-          <textarea style={ta} name="verletz_text" placeholder="Beschreibung…" />
+        <PubSection title="🩹 Verletzungen / Trauma">
+          <div style={{ marginBottom: '.5rem' }}><label style={pill}><input type="checkbox" name="v_keine" /> Keine Verletzung</label></div>
+          {([
+            ['Körper', [['v_sht','SHT'],['v_gesicht','Gesicht'],['v_hals','Hals'],['v_thorax','Thorax'],['v_abdomen','Abdomen'],['v_ws','Wirbelsäule'],['v_becken','Becken'],['v_obext','Obere Ext.'],['v_untext','Untere Ext.'],['v_weich','Weichteile']]],
+            ['Besonderheiten', [['v_verbrennung','Verbrennung'],['v_veraetzung','Verätzung'],['v_verschuettung','Verschüttung'],['v_einklemmung','Einklemmung'],['v_inhalation','Inhalationstrauma'],['v_elektrounfall','Elektrounfall'],['v_ertrinken','Beinahe-Ertrinken'],['v_tauchunfall','Tauchunfall'],['v_haemo_schock','Hämorr. Schock']]],
+            ['Mechanismus', [['v_trauma_stumpf','Stumpf'],['v_trauma_penetr','Penetrierend'],['v_sturz_eben','Sturz ebenerdig'],['v_sturz_unter3m','Sturz <3m'],['v_sturz_ueber3m','Sturz >3m']]],
+            ['Verkehr', [['v_vt_fussgaenger','Fußgänger'],['v_vt_escooter','E-Scooter'],['v_vt_fahrrad','Fahrrad'],['v_vt_ebike','E-Bike'],['v_vt_motorrad','Motorrad'],['v_vt_pkw','PKW'],['v_vt_lkw','LKW'],['v_vt_bus','Bus']]],
+            ['Gewalt', [['v_gew_schlag','Schlag'],['v_gew_schuss','Schuss'],['v_gew_stich','Stich'],['v_gew_verbrechen','Gewaltverbrechen'],['v_gew_sonstige','Sonstige']]],
+          ] as [string,[string,string][]][]).map(([cat, items]) => (
+            <div key={cat} style={{ borderTop: '0.5px solid var(--border)', paddingTop: '.5rem', marginTop: '.5rem' }}>
+              <div style={{ fontWeight: 700, fontSize: '.85rem', marginBottom: 4, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '.5px' }}>{cat}</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap' }}>
+                {items.map(([n,l]) => <label key={n} style={pill}><input type="checkbox" name={n} /> {l}</label>)}
+              </div>
+            </div>
+          ))}
+          <div style={{ borderTop: '0.5px solid var(--border)', paddingTop: '.75rem', marginTop: '.75rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))', gap: '.5rem', marginBottom: '.5rem' }}>
+              <label style={lbl}>Verbrennung Grad<input style={inp} name="v_verbrennung_grad" type="text" placeholder="I / II / III" /></label>
+              <label style={lbl}>Verbrennung %<input style={inp} name="v_verbrennung_pct" type="number" /></label>
+            </div>
+            <label style={lbl}>Sonstige Verletzungen<input style={inp} name="v_sonstige" type="text" /></label>
+            <div style={{ marginTop: '.5rem' }}><label style={lbl}>Freitext Verletzungen<textarea style={ta} name="verletz_text" /></label></div>
+          </div>
+        </PubSection>
+
+        {/* Atemwegsmanagement, Lagerung, Immobilisation */}
+        <PubSection title="🫁 Atemwege / Lagerung / Immobilisation">
+          <div style={{ fontWeight: 700, marginBottom: 4, color: 'var(--text)' }}>Atemwegsmanagement</div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', marginBottom: '.75rem' }}>
+            {[['awm_freihalten','Freihalten'],['awm_absaugung','Absaugung'],['awm_opa','OPA/Guedel'],['awm_npa','NPA/Wendl'],['awm_lma','LMA/SGA'],['awm_intubation','Intubation (OTI)']].map(([n,l]) => <label key={n} style={pill}><input type="checkbox" name={n} /> {l}</label>)}
+          </div>
+          <div style={{ fontWeight: 700, marginBottom: 4, color: 'var(--text)' }}>Lagerung</div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', marginBottom: '.75rem' }}>
+            {[['lag_flach','Flachlagerung'],['lag_schock','Schocklagerung'],['lag_ok_hoch','OK hoch'],['lag_ssl','Stabile Seitenlage'],['lag_sitzend','Sitzend'],['lag_haengend','Hängeposition']].map(([n,l]) => <label key={n} style={pill}><input type="checkbox" name={n} /> {l}</label>)}
+          </div>
+          <div style={{ fontWeight: 700, marginBottom: 4, color: 'var(--text)' }}>Immobilisation</div>
+          <div style={{ display: 'flex', flexWrap: 'wrap' }}>
+            {[['immo_hws','HWS-Orthese'],['immo_spineboard','Spineboard'],['immo_vakuum','Vakuummatratze']].map(([n,l]) => <label key={n} style={pill}><input type="checkbox" name={n} /> {l}</label>)}
+          </div>
+        </PubSection>
+
+        {/* Beatmung / Defibrillation */}
+        <PubSection title="⚡ Beatmung / Defibrillation">
+          <div style={{ fontWeight: 700, marginBottom: 4, color: 'var(--text)' }}>Beatmung</div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', marginBottom: '.5rem' }}>
+            {[['beat_manuell','Manuell'],['beat_maschinell','Maschinell'],['beat_niv','NIV'],['beat_notfallnarkose','Notfallnarkose']].map(([n,l]) => <label key={n} style={pill}><input type="checkbox" name={n} /> {l}</label>)}
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(120px,1fr))', gap: '.5rem', marginBottom: '.75rem' }}>
+            {[['beat_fio2','FiO₂'],['beat_af','AF /min'],['beat_peep','PEEP mbar'],['beat_pmax','Pmax mbar'],['beat_amv','AMV l/min']].map(([n,l]) => <label key={n} style={lbl}>{l}<input style={inp} name={n} type="number" /></label>)}
+          </div>
+          <div style={{ fontWeight: 700, marginBottom: 4, color: 'var(--text)' }}>Defibrillation</div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', marginBottom: '.5rem' }}>
+            {[['defi_aed','AED'],['defi_defi','Defi'],['defi_mono','Monophasisch'],['defi_bi','Biphasisch']].map(([n,l]) => <label key={n} style={pill}><input type="checkbox" name={n} /> {l}</label>)}
+          </div>
+          <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 4, color: 'var(--text)' }}>Erstanwendung durch</div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', marginBottom: '.5rem' }}>
+            {[['defi_erstanw_laie','Laie'],['defi_erstanw_fr','First Resp.'],['defi_erstanw_rd','Rettungsdienst'],['defi_erstanw_arzt','Arzt']].map(([n,l]) => <label key={n} style={pill}><input type="checkbox" name={n} /> {l}</label>)}
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(140px,1fr))', gap: '.5rem' }}>
+            {[['defi_zeitpunkt','Zeitpunkt 1. Defi'],['defi_rosc','ROSC'],['defi_anzahl','Anzahl'],['defi_energie','Energie (kJ)']].map(([n,l]) => <label key={n} style={lbl}>{l}<input style={inp} name={n} type="text" /></label>)}
+          </div>
         </PubSection>
 
         {/* Zugang & Medikamente */}
@@ -270,23 +433,29 @@ export default function OrgPatienten() {
         </PubSection>
 
         {/* Reanimation */}
-        <PubSection title="⚡ Reanimation">
+        <PubSection title="❤️ Reanimation">
+          <div style={{ display: 'flex', flexWrap: 'wrap', marginBottom: '.75rem' }}>
+            <label style={pill}><input type="checkbox" name="rean" /> CPR durchgeführt</label>
+            <label style={pill}><input type="checkbox" name="rean_tod" /> Todesfeststellung</label>
+          </div>
           <div style={grid}>
-            <label style={lbl}>Rea-Beginn<input style={inp} name="rea_beginn" type="datetime-local" /></label>
-            <label style={lbl}>Erst-Rhythmus<select style={sel} name="rea_initial"><option value="">—</option>{['Asystolie','PEA','VF','pVT'].map(v=><option key={v}>{v}</option>)}</select></label>
-            <label style={lbl}>Schocks<input style={inp} name="rea_shocks" type="number" min={0} /></label>
-            <label style={lbl}>ROSC<select style={sel} name="rea_rosc"><option value="">—</option><option>ja</option><option>nein</option></select></label>
+            <label style={lbl}>Uhrzeit Todesfeststellung<input style={inp} name="rean_tod_zeit" type="time" /></label>
+            <label style={lbl}>Beginn Reanimation<input style={inp} name="rean_beginn" type="datetime-local" /></label>
+            <label style={lbl}>Ende Reanimation<input style={inp} name="rean_ende" type="datetime-local" /></label>
+            <label style={lbl}>Defibrillationen<input style={inp} name="rean_defib" type="number" min={0} /></label>
           </div>
         </PubSection>
 
         {/* Übergabe */}
-        <PubSection title="🤝 Übergabe / Transport">
+        <PubSection title="🤝 Übergabe / Besonderheiten">
           <div style={grid}>
-            <label style={lbl}>Übergabe an<input style={inp} name="ue_name" type="text" /></label>
-            <label style={lbl}>Zeitpunkt<input style={inp} name="ue_zeit" type="datetime-local" /></label>
-            <label style={lbl}>Ziel<input style={inp} name="ziel_bez" type="text" /></label>
-            <label style={lbl}>Einsatzende<input style={inp} name="einsatzende" type="datetime-local" /></label>
+            <label style={lbl}>Übergabe Ziel<input style={inp} name="uebergabe_ziel" type="text" /></label>
+            <label style={lbl}>Übergabe an (Name)<input style={inp} name="uebergabe_name" type="text" /></label>
           </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', margin: '.75rem 0 .5rem' }}>
+            {[['ev_transportverweigerung','Transportverweigerung'],['ev_nur_untersuchung','Nur Untersuchung'],['ev_zwangseinweisung','Zwangseinweisung'],['ev_transport_sondersignal','Transport mit Sondersignal'],['ev_manv','MANV'],['ev_lna','LNA am Einsatz'],['ev_schwerlast','Schwerlasttransport']].map(([n,l]) => <label key={n} style={pill}><input type="checkbox" name={n} /> {l}</label>)}
+          </div>
+          <label style={lbl}>Bemerkungen<textarea style={ta} name="bemerkungen" /></label>
         </PubSection>
 
         {/* Unterschrift */}
