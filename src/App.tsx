@@ -12,6 +12,7 @@ import Lernbar from './pages/Lernbar'
 import Unitas from './pages/Unitas'
 import Unitarii from './pages/Unitarii'
 import Patienten from './pages/patienten/Patienten'
+import ProtokollBearbeiten from './pages/ProtokollBearbeiten'
 import Chat from './pages/Chat'
 import OrgPublicLayout from './pages/public/OrgPublicLayout'
 import OrgLanding from './pages/public/OrgLanding'
@@ -40,6 +41,7 @@ function App() {
         <Route path="/unitas" element={<Unitas />} />
         <Route path="/unitarii" element={<Unitarii />} />
         <Route path="/patienten" element={<Patienten />} />
+        <Route path="/protokoll/:patientId" element={<ProtokollBearbeiten />} />
         <Route path="/chat" element={<Chat />} />
         <Route path="/:orgCode" element={<OrgPublicLayout />}>
           <Route index element={<OrgLanding />} />
