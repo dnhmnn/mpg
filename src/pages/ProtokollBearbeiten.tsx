@@ -57,7 +57,7 @@ export default function ProtokollBearbeiten() {
     const up = () => { drawing = false; setSigUrl(canvas.toDataURL()); scheduleAutoSave() }
     canvas.addEventListener('pointerdown', down); canvas.addEventListener('pointermove', move); canvas.addEventListener('pointerup', up)
     return () => { canvas.removeEventListener('pointerdown', down); canvas.removeEventListener('pointermove', move); canvas.removeEventListener('pointerup', up) }
-  }, [locked])
+  }, [locked, loading])
 
   async function loadRecord() {
     try {
