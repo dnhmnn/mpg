@@ -128,7 +128,7 @@ function CalendarButtons({ termin }: { termin: Termin }) {
 
 export default function Unitas() {
   const { user, loading: authLoading, logout } = useAuth()
-  const [tab, setTab] = useState<'uebersicht' | 'lernbar' | 'konto'>('uebersicht')
+  const [tab, setTab] = useState<'uebersicht' | 'protokolle' | 'lernbar' | 'konto'>('uebersicht')
   const [lernbarTab, setLernbarTab] = useState<'termine' | 'lernmodule'>('termine')
 
   const [termine, setTermine] = useState<Termin[]>([])
@@ -335,6 +335,9 @@ export default function Unitas() {
         {/* Tabs */}
         <div style={{ maxWidth: '640px', margin: '0 auto', display: 'flex', borderBottom: '1px solid var(--bg-subtle)' }}>
           <button style={tabStyle(tab === 'uebersicht')} onClick={() => setTab('uebersicht')}>Übersicht</button>
+          <button style={tabStyle(tab === 'protokolle')} onClick={() => setTab('protokolle')}>
+            Protokolle{myPatients.length > 0 ? ` (${myPatients.length})` : ''}
+          </button>
           {(user?.supervisor || user?.permissions?.['lernbar'] || (user as any)?.lernbar_access) && (
             <button style={tabStyle(tab === 'lernbar')} onClick={() => setTab('lernbar')}>
               Lernbar
@@ -362,33 +365,6 @@ export default function Unitas() {
                 {new Date().toLocaleDateString('de-DE', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}
               </div>
             </div>
-            {myPatients.length > 0 && (
-              <div>
-                <div style={{ fontWeight: 700, fontSize: '15px', color: 'var(--text)', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6M9 16h4"/></svg>
-                  Meine Protokolle
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  {myPatients.map(p => {
-                    const m = p.payload?.mannschaft || {}
-                    const crew = ['tf','m1','m2','m3'].map(k => m[k]?.name).filter(Boolean).join(', ')
-                    return (
-                      <div key={p.id} style={{ background: 'var(--bg-card)', borderRadius: '14px', border: '1px solid var(--accent)', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontWeight: 700, fontSize: '14px', color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.title}</div>
-                          {crew && <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '3px' }}>{crew}</div>}
-                          <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px' }}>{new Date(p.created).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })} Uhr</div>
-                        </div>
-                        <button onClick={() => navigate(`/protokoll/${p.id}`)} style={{ background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: '8px', padding: '8px 14px', fontWeight: 700, fontSize: '13px', cursor: 'pointer', flexShrink: 0, fontFamily: 'inherit' }}>
-                          Bearbeiten
-                        </button>
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-            )}
-
             {neuigkeiten.length === 0 ? (
               <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '32px 0', fontSize: '15px' }}>Keine Neuigkeiten</div>
             ) : (
@@ -415,6 +391,45 @@ export default function Unitas() {
                         {new Date(n.created).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                         {n.erstellt_von && ` · ${n.erstellt_von}`}
                       </div>
+                    </div>
+                  </div>
+                )
+              })
+            )}
+          </div>
+        )}
+
+        {/* PROTOKOLLE */}
+        {tab === 'protokolle' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ fontSize: '17px', fontWeight: 700, color: 'var(--text)' }}>Meine Protokolle</div>
+            {myPatients.length === 0 ? (
+              <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '48px 0', fontSize: '15px' }}>Keine offenen Protokolle</div>
+            ) : (
+              myPatients.map(p => {
+                const m = p.payload?.mannschaft || {}
+                const crew = ['tf','m1','m2','m3'].map(k => m[k]?.name).filter(Boolean).join(', ')
+                const age = Date.now() - new Date(p.created).getTime()
+                const hoursLeft = Math.max(0, Math.ceil(24 - age / 3600000))
+                const isExpiringSoon = hoursLeft <= 4
+                return (
+                  <div key={p.id} style={{ background: 'var(--bg-card)', borderRadius: '14px', border: `1px solid ${isExpiringSoon ? '#f97316' : 'var(--border)'}`, overflow: 'hidden' }}>
+                    <div style={{ background: 'linear-gradient(135deg, var(--btn-dark) 0%, var(--btn-dark) 100%)', padding: '14px 18px', color: 'var(--btn-dark-text)' }}>
+                      <div style={{ fontWeight: 700, fontSize: '16px', marginBottom: '4px' }}>{p.title}</div>
+                      {crew && <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.7)' }}>{crew}</div>}
+                    </div>
+                    <div style={{ padding: '12px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+                      <div>
+                        <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                          Erstellt: {new Date(p.created).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })} Uhr
+                        </div>
+                        <div style={{ fontSize: '12px', marginTop: '3px', fontWeight: 600, color: isExpiringSoon ? '#f97316' : 'var(--text-secondary)' }}>
+                          {hoursLeft > 0 ? `⏱ Noch ${hoursLeft} Std. bearbeitbar` : '🔒 Gesperrt'}
+                        </div>
+                      </div>
+                      <button onClick={() => navigate(`/protokoll/${p.id}`)} style={{ background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: '8px', padding: '9px 16px', fontWeight: 700, fontSize: '13px', cursor: 'pointer', flexShrink: 0, fontFamily: 'inherit' }}>
+                        Bearbeiten
+                      </button>
                     </div>
                   </div>
                 )
