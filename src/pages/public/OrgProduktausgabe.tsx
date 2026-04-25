@@ -2,12 +2,10 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { pb } from '../../lib/pocketbase'
 import { useOrg } from './OrgPublicLayout'
-import { PubHeader, PubWrap, PubSendBar, PubSection, field, inp } from './pubStyles'
+import { PubHeader, PubWrap, PubSendBar, PubSection, field, inp, lbl } from './pubStyles'
 
 const today = () => new Date().toISOString().slice(0, 10)
 type Pos = { qty: number; name: string }
-
-const lbl: React.CSSProperties = { display: 'block', fontWeight: 700, color: '#111827', fontSize: '.92rem' }
 
 export default function OrgProduktausgabe() {
   const { org, orgCode } = useOrg()
@@ -38,11 +36,10 @@ export default function OrgProduktausgabe() {
 
   if (success) return (
     <PubWrap>
-      <div style={{ background: '#dcfce7', border: '2px solid #16a34a', borderRadius: 12, padding: 24, textAlign: 'center', maxWidth: 480, margin: '2rem auto' }}>
-        <div style={{ fontSize: '3rem' }}>✅</div>
-        <h2 style={{ color: '#15803d', margin: '.5rem 0' }}>Erfolgreich gespeichert!</h2>
-        <button style={{ background: '#c8102e', color: '#fff', border: 'none', borderRadius: 8, padding: '12px 24px', fontWeight: 700, fontSize: '1rem', cursor: 'pointer', marginTop: '1rem' }}
-          onClick={() => { setEinsatz(''); setDatum(today()); setVorname(''); setNachname(''); setPositions([{ qty: 1, name: '' }]); setSuccess(false) }}>
+      <div style={{ background: 'var(--bg-card)', border: '0.5px solid var(--border)', borderRadius: 20, padding: 32, textAlign: 'center', maxWidth: 480, margin: '2rem auto', boxShadow: 'var(--shadow-md)' }}>
+        <div style={{ width: 56, height: 56, background: '#dcfce7', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem', fontSize: '1.75rem' }}>✅</div>
+        <h2 style={{ color: 'var(--text)', margin: '0 0 1.5rem', fontSize: '1.2rem' }}>Erfolgreich gespeichert!</h2>
+        <button style={btn} onClick={() => { setEinsatz(''); setDatum(today()); setVorname(''); setNachname(''); setPositions([{ qty: 1, name: '' }]); setSuccess(false) }}>
           + Neue Ausgabe
         </button>
       </div>
@@ -61,13 +58,13 @@ export default function OrgProduktausgabe() {
 
       <PubSection title="📦 Positionen" open>
         {positions.map((pos, i) => (
-          <div key={i} style={{ display: 'flex', gap: '.5rem', alignItems: 'center', marginBottom: '.5rem', padding: '.5rem', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '.5rem' }}>
-            <input style={{ ...inp, width: 90 }} type="number" min={1} value={pos.qty} onChange={e => updPos(i, 'qty', Number(e.target.value))} placeholder="Anz." />
-            <input style={{ ...inp, flex: 1 }} type="text" value={pos.name} onChange={e => updPos(i, 'name', e.target.value)} placeholder="Artikel / Beschreibung" />
-            <button onClick={() => delPos(i)} style={{ width: 36, height: 36, borderRadius: '.5rem', border: '1px solid #fca5a5', background: '#fee2e2', color: '#c8102e', fontWeight: 700, cursor: 'pointer', fontSize: '1.1rem', flexShrink: 0 }}>×</button>
+          <div key={i} style={{ display: 'flex', gap: '.5rem', alignItems: 'center', marginBottom: '.5rem', padding: '.75rem', background: 'var(--bg-subtle)', border: '0.5px solid var(--border)', borderRadius: 10 }}>
+            <input style={{ ...inp, width: 90, marginTop: 0 }} type="number" min={1} value={pos.qty} onChange={e => updPos(i, 'qty', Number(e.target.value))} placeholder="Anz." />
+            <input style={{ ...inp, flex: 1, marginTop: 0 }} type="text" value={pos.name} onChange={e => updPos(i, 'name', e.target.value)} placeholder="Artikel / Beschreibung" />
+            <button onClick={() => delPos(i)} style={{ width: 36, height: 36, borderRadius: 8, border: '0.5px solid var(--border-medium)', background: 'var(--bg-hover)', color: 'var(--accent)', fontWeight: 700, cursor: 'pointer', fontSize: '1.1rem', flexShrink: 0 }}>×</button>
           </div>
         ))}
-        <button onClick={addPos} style={{ border: '1px solid #e2e8f0', background: '#fff', padding: '.5rem .75rem', borderRadius: '.5rem', cursor: 'pointer', fontWeight: 700, color: '#c8102e', fontSize: '.9rem' }}>+ Position hinzufügen</button>
+        <button onClick={addPos} style={{ border: '0.5px solid var(--border-medium)', background: 'var(--bg-subtle)', padding: '.6rem .9rem', borderRadius: 10, cursor: 'pointer', fontWeight: 600, color: 'var(--accent)', fontSize: '.9rem', fontFamily: 'inherit' }}>+ Position hinzufügen</button>
       </PubSection>
 
       <PubSection title="👤 Ausgetragen von" open>
@@ -80,3 +77,5 @@ export default function OrgProduktausgabe() {
     <PubSendBar onSubmit={submit} sending={sending} />
   </>
 }
+
+const btn: React.CSSProperties = { background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: 12, padding: '12px 24px', fontWeight: 700, fontSize: '1rem', cursor: 'pointer', fontFamily: 'inherit' }

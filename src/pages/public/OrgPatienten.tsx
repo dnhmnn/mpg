@@ -2,11 +2,10 @@ import { useRef, useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { pb } from '../../lib/pocketbase'
 import { useOrg } from './OrgPublicLayout'
-import { PubHeader, PubWrap, PubSendBar, PubSection, inp, sel, ta, field } from './pubStyles'
+import { PubHeader, PubWrap, PubSendBar, PubSection, inp, sel, ta, field, lbl } from './pubStyles'
 
 type Med = { name: string; dose: string; unit: string; route: string; time: string; note: string }
-const lbl: React.CSSProperties = { display: 'block', fontWeight: 700, color: '#111827', fontSize: '.92rem' }
-const pill: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: '.35rem', border: '1px solid #e2e8f0', borderRadius: 999, padding: '.2rem .5rem', background: '#fff', fontSize: '.9rem', cursor: 'pointer', margin: '2px' }
+const pill: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: '.35rem', border: '0.5px solid var(--border-medium)', borderRadius: 999, padding: '.2rem .5rem', background: 'var(--bg-subtle)', fontSize: '.9rem', cursor: 'pointer', margin: '2px', color: 'var(--text)' }
 const grid: React.CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))', gap: '.75rem' }
 const now = () => { const d = new Date(); return d.toISOString().slice(0,16) }
 
@@ -74,11 +73,11 @@ export default function OrgPatienten() {
 
   if (success) return (
     <PubWrap>
-      <div style={{ background: '#dcfce7', border: '2px solid #16a34a', borderRadius: 12, padding: 24, textAlign: 'center', maxWidth: 480, margin: '2rem auto' }}>
-        <div style={{ fontSize: '3rem' }}>✅</div>
-        <h2 style={{ color: '#15803d', margin: '.5rem 0' }}>Erfolgreich übermittelt!</h2>
-        <p style={{ fontFamily: 'monospace', color: '#166534' }}>{success}</p>
-        <button style={{ background: '#c8102e', color: '#fff', border: 'none', borderRadius: 8, padding: '12px 24px', fontWeight: 700, fontSize: '1rem', cursor: 'pointer', marginTop: '1rem' }} onClick={() => { setSuccess(null); setMeds([]); setPhotos([]); setGcs({ e: 0, v: 0, m: 0 }); clearSig() }}>+ Neues Formular</button>
+      <div style={{ background: 'var(--bg-card)', border: '0.5px solid var(--border)', borderRadius: 20, padding: 32, textAlign: 'center', maxWidth: 480, margin: '2rem auto', boxShadow: 'var(--shadow-md)' }}>
+        <div style={{ width: 56, height: 56, background: '#dcfce7', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem', fontSize: '1.75rem' }}>✅</div>
+        <h2 style={{ color: 'var(--text)', margin: '0 0 .5rem', fontSize: '1.2rem' }}>Erfolgreich übermittelt!</h2>
+        <p style={{ fontFamily: 'monospace', color: 'var(--text-secondary)', margin: '0 0 1.5rem' }}>{success}</p>
+        <button style={{ background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: 12, padding: '12px 24px', fontWeight: 700, fontSize: '1rem', cursor: 'pointer', fontFamily: 'inherit' }} onClick={() => { setSuccess(null); setMeds([]); setPhotos([]); setGcs({ e: 0, v: 0, m: 0 }); clearSig() }}>+ Neues Formular</button>
       </div>
     </PubWrap>
   )
@@ -86,8 +85,8 @@ export default function OrgPatienten() {
   return <>
     <PubHeader title={`Patientendoku – ${org.org_name}`} onBack={() => navigate(`/${orgCode}`)}
       extra={<>
-        <button onClick={saveLocal} style={{ background: 'rgba(255,255,255,.15)', border: '1px solid rgba(255,255,255,.3)', color: '#fff', padding: '6px 10px', borderRadius: 8, fontWeight: 700, cursor: 'pointer', fontSize: '.85rem' }}>💾 Speichern</button>
-        <button onClick={() => { if (confirm('Formular zurücksetzen?')) { formRef.current?.reset(); setMeds([]); setPhotos([]); setGcs({ e: 0, v: 0, m: 0 }); clearSig() } }} style={{ background: 'rgba(255,255,255,.15)', border: '1px solid rgba(255,255,255,.3)', color: '#fff', padding: '6px 10px', borderRadius: 8, fontWeight: 700, cursor: 'pointer', fontSize: '.85rem' }}>🗑 Reset</button>
+        <button onClick={saveLocal} style={{ background: 'var(--bg-hover)', border: '0.5px solid var(--border-medium)', color: 'var(--text)', padding: '6px 10px', borderRadius: 8, fontWeight: 600, cursor: 'pointer', fontSize: '.85rem', fontFamily: 'inherit' }}>💾 Speichern</button>
+        <button onClick={() => { if (confirm('Formular zurücksetzen?')) { formRef.current?.reset(); setMeds([]); setPhotos([]); setGcs({ e: 0, v: 0, m: 0 }); clearSig() } }} style={{ background: 'var(--bg-hover)', border: '0.5px solid var(--border-medium)', color: 'var(--text)', padding: '6px 10px', borderRadius: 8, fontWeight: 600, cursor: 'pointer', fontSize: '.85rem', fontFamily: 'inherit' }}>🗑 Reset</button>
       </>}
     />
     <PubWrap>
@@ -136,7 +135,7 @@ export default function OrgPatienten() {
             {photos.length > 0 && <div style={{ display: 'flex', gap: '.5rem', flexWrap: 'wrap', marginTop: '.5rem' }}>
               {photos.map((src, i) => (
                 <div key={i} style={{ position: 'relative' }}>
-                  <img src={src} style={{ width: 100, height: 100, objectFit: 'cover', borderRadius: 8, border: '1px solid #e2e8f0' }} />
+                  <img src={src} style={{ width: 100, height: 100, objectFit: 'cover', borderRadius: 8, border: '0.5px solid var(--border)' }} />
                   <button type="button" onClick={() => setPhotos(p => p.filter((_, j) => j !== i))} style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(0,0,0,.5)', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer', padding: '1px 5px', fontWeight: 700 }}>×</button>
                 </div>
               ))}
@@ -159,7 +158,7 @@ export default function OrgPatienten() {
               </div>
             </div>
           ))}
-          <div style={{ background: '#f1f5f9', borderRadius: 8, padding: '8px 12px', fontWeight: 700 }}>GCS Summe: <span style={{ fontSize: '1.2rem' }}>{gcsSum || '—'}</span></div>
+          <div style={{ background: 'var(--bg-subtle)', border: '0.5px solid var(--border)', borderRadius: 8, padding: '8px 12px', fontWeight: 700, color: 'var(--text)' }}>GCS Summe: <span style={{ fontSize: '1.2rem' }}>{gcsSum || '—'}</span></div>
         </PubSection>
 
         {/* Messwerte */}
@@ -199,7 +198,7 @@ export default function OrgPatienten() {
                   {[['eng','eng'],['mittel','mittel'],['weit','weit']].map(([v,lx]) => <label key={v} style={pill}><input type="radio" name={n} value={v} /> {lx}</label>)}
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', marginTop: 4 }}>
-                  <span style={{ fontSize: '.8rem', color: '#666', marginRight: 6, alignSelf: 'center' }}>LR:</span>
+                  <span style={{ fontSize: '.8rem', color: 'var(--text-secondary)', marginRight: 6, alignSelf: 'center' }}>LR:</span>
                   {[['prompt','prompt'],['träge','träge'],['keine','keine']].map(([v,lx]) => <label key={v} style={pill}><input type="radio" name={n === 'pw_r' ? 'lr_r' : 'lr_l'} value={v} /> {lx}</label>)}
                 </div>
               </div>
@@ -253,21 +252,21 @@ export default function OrgPatienten() {
           <div style={{ fontWeight: 700, margin: '1rem 0 .5rem' }}>Medikamente</div>
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '.9rem' }}>
-              <thead><tr>{['Medikament','Dosis','Einheit','Route','Zeit','Hinweis',''].map(h => <th key={h} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', padding: '6px 8px', textAlign: 'left', fontWeight: 700 }}>{h}</th>)}</tr></thead>
+              <thead><tr>{['Medikament','Dosis','Einheit','Route','Zeit','Hinweis',''].map(h => <th key={h} style={{ background: 'var(--bg-subtle)', border: '0.5px solid var(--border)', padding: '6px 8px', textAlign: 'left', fontWeight: 700, color: 'var(--text)' }}>{h}</th>)}</tr></thead>
               <tbody>
                 {meds.map((m, i) => (
                   <tr key={i}>
-                    {(['name','dose','unit'] as (keyof Med)[]).map(k => <td key={k} style={{ border: '1px solid #e2e8f0', padding: 4 }}><input style={{ ...inp, marginTop: 0 }} value={m[k]} onChange={e => setMeds(ms => ms.map((r,j) => j===i ? {...r,[k]:e.target.value} : r))} /></td>)}
-                    <td style={{ border: '1px solid #e2e8f0', padding: 4 }}><select style={{ ...sel, marginTop: 0 }} value={m.route} onChange={e => setMeds(ms => ms.map((r,j) => j===i ? {...r,route:e.target.value} : r))}><option value="">—</option>{['i.v.','i.o.','p.o.','s.c.','i.m.','inhal.'].map(v=><option key={v}>{v}</option>)}</select></td>
-                    <td style={{ border: '1px solid #e2e8f0', padding: 4 }}><input style={{ ...inp, marginTop: 0 }} type="time" value={m.time} onChange={e => setMeds(ms => ms.map((r,j) => j===i ? {...r,time:e.target.value} : r))} /></td>
-                    <td style={{ border: '1px solid #e2e8f0', padding: 4 }}><input style={{ ...inp, marginTop: 0 }} value={m.note} onChange={e => setMeds(ms => ms.map((r,j) => j===i ? {...r,note:e.target.value} : r))} /></td>
-                    <td style={{ border: '1px solid #e2e8f0', padding: 4 }}><button type="button" onClick={() => setMeds(ms => ms.filter((_,j) => j!==i))} style={{ background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: 6, cursor: 'pointer', fontWeight: 700, color: '#c8102e', padding: '4px 8px' }}>×</button></td>
+                    {(['name','dose','unit'] as (keyof Med)[]).map(k => <td key={k} style={{ border: '0.5px solid var(--border)', padding: 4 }}><input style={{ ...inp, marginTop: 0 }} value={m[k]} onChange={e => setMeds(ms => ms.map((r,j) => j===i ? {...r,[k]:e.target.value} : r))} /></td>)}
+                    <td style={{ border: '0.5px solid var(--border)', padding: 4 }}><select style={{ ...sel, marginTop: 0 }} value={m.route} onChange={e => setMeds(ms => ms.map((r,j) => j===i ? {...r,route:e.target.value} : r))}><option value="">—</option>{['i.v.','i.o.','p.o.','s.c.','i.m.','inhal.'].map(v=><option key={v}>{v}</option>)}</select></td>
+                    <td style={{ border: '0.5px solid var(--border)', padding: 4 }}><input style={{ ...inp, marginTop: 0 }} type="time" value={m.time} onChange={e => setMeds(ms => ms.map((r,j) => j===i ? {...r,time:e.target.value} : r))} /></td>
+                    <td style={{ border: '0.5px solid var(--border)', padding: 4 }}><input style={{ ...inp, marginTop: 0 }} value={m.note} onChange={e => setMeds(ms => ms.map((r,j) => j===i ? {...r,note:e.target.value} : r))} /></td>
+                    <td style={{ border: '0.5px solid var(--border)', padding: 4 }}><button type="button" onClick={() => setMeds(ms => ms.filter((_,j) => j!==i))} style={{ background: 'var(--bg-hover)', border: '0.5px solid var(--border-medium)', borderRadius: 6, cursor: 'pointer', fontWeight: 700, color: 'var(--accent)', padding: '4px 8px' }}>×</button></td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-          <button type="button" onClick={() => setMeds(ms => [...ms, { name:'',dose:'',unit:'',route:'',time:'',note:'' }])} style={{ marginTop: '.5rem', border: '1px solid #e2e8f0', background: '#fff', padding: '.45rem .75rem', borderRadius: '.5rem', cursor: 'pointer', fontWeight: 700, color: '#c8102e', fontSize: '.9rem' }}>+ Zeile hinzufügen</button>
+          <button type="button" onClick={() => setMeds(ms => [...ms, { name:'',dose:'',unit:'',route:'',time:'',note:'' }])} style={{ marginTop: '.5rem', border: '0.5px solid var(--border-medium)', background: 'var(--bg-subtle)', padding: '.45rem .75rem', borderRadius: 10, cursor: 'pointer', fontWeight: 600, color: 'var(--accent)', fontSize: '.9rem', fontFamily: 'inherit' }}>+ Zeile hinzufügen</button>
         </PubSection>
 
         {/* Reanimation */}
@@ -296,10 +295,10 @@ export default function OrgPatienten() {
             <label style={lbl}>Name Ausfüller<input style={inp} name="ausfueller_name" type="text" /></label>
             <label style={lbl}>Datum/Uhrzeit<input style={inp} name="ausfueller_zeit" type="datetime-local" defaultValue={now()} /></label>
           </div>
-          <div style={{ marginTop: '.75rem', border: '1px dashed #e2e8f0', borderRadius: '.6rem', padding: '.75rem', background: '#fff' }}>
-            <div style={{ fontWeight: 700, marginBottom: 6 }}>Unterschrift (Finger/Maus)</div>
-            <canvas ref={canvasRef} width={800} height={200} style={{ width: '100%', height: 160, border: '1px solid #e2e8f0', borderRadius: '.5rem', touchAction: 'none', cursor: 'crosshair', background: '#fff' }} />
-            <button type="button" onClick={clearSig} style={{ marginTop: 8, border: '1px solid #e2e8f0', background: '#fff', padding: '.35rem .6rem', borderRadius: '.45rem', cursor: 'pointer', fontSize: '.9rem', fontWeight: 600 }}>🗑 Signatur löschen</button>
+          <div style={{ marginTop: '.75rem', border: '0.5px dashed var(--border-medium)', borderRadius: 12, padding: '.75rem', background: 'var(--bg-subtle)' }}>
+            <div style={{ fontWeight: 700, marginBottom: 6, color: 'var(--text)' }}>Unterschrift (Finger/Maus)</div>
+            <canvas ref={canvasRef} width={800} height={200} style={{ width: '100%', height: 160, border: '0.5px solid var(--border)', borderRadius: 10, touchAction: 'none', cursor: 'crosshair', background: '#fff' }} />
+            <button type="button" onClick={clearSig} style={{ marginTop: 8, border: '0.5px solid var(--border-medium)', background: 'var(--bg-hover)', padding: '.35rem .6rem', borderRadius: 8, cursor: 'pointer', fontSize: '.9rem', fontWeight: 600, color: 'var(--text)', fontFamily: 'inherit' }}>🗑 Signatur löschen</button>
           </div>
         </PubSection>
       </form>

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { pb } from '../../lib/pocketbase'
 import { useOrg } from './OrgPublicLayout'
-import { PubHeader, PubWrap, PubSendBar, PubSection, field, inp, sel, ta } from './pubStyles'
+import { PubHeader, PubWrap, PubSendBar, PubSection, field, inp, sel, ta, lbl } from './pubStyles'
 
 const today = () => new Date().toISOString().slice(0, 10)
 
@@ -28,10 +28,10 @@ export default function OrgCirs() {
 
   if (success) return (
     <PubWrap>
-      <div style={{ background: '#dcfce7', border: '2px solid #16a34a', borderRadius: 12, padding: 24, textAlign: 'center', maxWidth: 480, margin: '2rem auto' }}>
-        <div style={{ fontSize: '3rem' }}>✅</div>
-        <h2 style={{ color: '#15803d', margin: '.5rem 0' }}>Erfolgreich gemeldet!</h2>
-        <p style={{ color: '#166534', margin: '0 0 1.5rem' }}>Danke für deinen Beitrag zur Sicherheit.</p>
+      <div style={{ background: 'var(--bg-card)', border: '0.5px solid var(--border)', borderRadius: 20, padding: 32, textAlign: 'center', maxWidth: 480, margin: '2rem auto', boxShadow: 'var(--shadow-md)' }}>
+        <div style={{ width: 56, height: 56, background: '#dcfce7', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem', fontSize: '1.75rem' }}>✅</div>
+        <h2 style={{ color: 'var(--text)', margin: '0 0 .5rem', fontSize: '1.2rem' }}>Erfolgreich gemeldet!</h2>
+        <p style={{ color: 'var(--text-secondary)', margin: '0 0 1.5rem', fontSize: 15 }}>Danke für deinen Beitrag zur Sicherheit.</p>
         <button style={btn} onClick={() => { setF({ datum: today(), ort: '', kategorie: '', schwere: '', was: '', warum: '', folgen: '', vorschlag: '', melder_name: '', melder_kontakt: '' }); setSuccess(false) }}>+ Neue Meldung</button>
       </div>
     </PubWrap>
@@ -40,7 +40,7 @@ export default function OrgCirs() {
   return <>
     <PubHeader title={`CIRS-Meldung – ${org.org_name}`} onBack={() => navigate(`/${orgCode}`)} />
     <PubWrap>
-      <div style={{ background: '#dbeafe', border: '2px solid #93c5fd', borderRadius: 12, padding: '1rem', marginBottom: '1rem', color: '#1e40af', fontSize: '.95rem' }}>
+      <div style={{ background: 'rgba(59,130,246,.08)', border: '0.5px solid rgba(59,130,246,.25)', borderRadius: 12, padding: '1rem', marginBottom: '1rem', color: 'var(--text)', fontSize: '.95rem' }}>
         <strong>ℹ️ Was ist CIRS?</strong><br />Anonyme Meldung kritischer Ereignisse zur Verbesserung der Sicherheit.
       </div>
       <PubSection title="📅 Ereignis" open>
@@ -76,5 +76,4 @@ export default function OrgCirs() {
   </>
 }
 
-const lbl: React.CSSProperties = { display: 'block', fontWeight: 700, color: '#111827', fontSize: '.92rem' }
-const btn: React.CSSProperties = { background: '#c8102e', color: '#fff', border: 'none', borderRadius: 8, padding: '12px 24px', fontWeight: 700, fontSize: '1rem', cursor: 'pointer' }
+const btn: React.CSSProperties = { background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: 12, padding: '12px 24px', fontWeight: 700, fontSize: '1rem', cursor: 'pointer', fontFamily: 'inherit' }

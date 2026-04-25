@@ -18,10 +18,6 @@ export function useOrg() {
   return c
 }
 
-const bg: React.CSSProperties = { minHeight: '100vh', background: 'linear-gradient(135deg,#667eea,#764ba2)', fontFamily: 'system-ui,sans-serif' }
-const center: React.CSSProperties = { display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', padding: '2rem' }
-const card: React.CSSProperties = { background: '#fff', borderRadius: '0.75rem', padding: '2rem', maxWidth: 480, width: '100%', textAlign: 'center', boxShadow: '0 4px 24px rgba(0,0,0,.15)' }
-
 export default function OrgPublicLayout() {
   const { orgCode } = useParams<{ orgCode: string }>()
   const [org, setOrg] = useState<Organization | null>(null)
@@ -37,23 +33,27 @@ export default function OrgPublicLayout() {
   }, [orgCode])
 
   if (loading) return (
-    <div style={bg}><div style={center}><div style={card}>
+    <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
-      <div style={{ width: 48, height: 48, border: '4px solid #e2e8f0', borderTopColor: '#667eea', borderRadius: '50%', animation: 'spin .8s linear infinite', margin: '0 auto 1rem' }} />
-      <p style={{ color: '#666', margin: 0 }}>Lade Organisation…</p>
-    </div></div></div>
+      <div style={{ textAlign: 'center' }}>
+        <div style={{ width: 44, height: 44, border: '3px solid var(--border)', borderTopColor: 'var(--accent)', borderRadius: '50%', animation: 'spin .8s linear infinite', margin: '0 auto 1rem' }} />
+        <p style={{ color: 'var(--text-secondary)', margin: 0, fontSize: 15 }}>Lade Organisation…</p>
+      </div>
+    </div>
   )
 
   if (error || !org) return (
-    <div style={bg}><div style={center}><div style={{ ...card, border: '2px solid #c8102e' }}>
-      <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>⚠️</div>
-      <h2 style={{ color: '#c8102e', margin: '0 0 .5rem' }}>Fehler</h2>
-      <p style={{ color: '#555', margin: 0 }}>{error}</p>
-    </div></div></div>
+    <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
+      <div style={{ background: 'var(--bg-card)', border: '0.5px solid var(--border)', borderRadius: 20, padding: '2rem', maxWidth: 400, width: '100%', textAlign: 'center', boxShadow: 'var(--shadow-md)' }}>
+        <div style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>⚠️</div>
+        <h2 style={{ color: 'var(--accent)', margin: '0 0 .5rem', fontSize: '1.2rem' }}>Fehler</h2>
+        <p style={{ color: 'var(--text-secondary)', margin: 0, fontSize: 15 }}>{error}</p>
+      </div>
+    </div>
   )
 
   return (
-    <div style={bg}>
+    <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
       <OrgContext.Provider value={{ org, orgCode: orgCode! }}>
         <Outlet />
       </OrgContext.Provider>
