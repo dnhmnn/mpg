@@ -25,6 +25,8 @@ export default function OrgPatienten() {
   const [draftId, setDraftId] = useState<string | null>(null)
   const [sending, setSending] = useState(false)
   const [success, setSuccess] = useState<string | null>(null)
+  const autoSaveTimer = useRef<ReturnType<typeof setTimeout>>()
+  const draftIdRef = useRef<string | null>(null)
   const gcsSum = gcs.e + gcs.v + gcs.m
 
   // Canvas signature
@@ -50,6 +52,16 @@ export default function OrgPatienten() {
       return pb.collection('patients').create(data)
     })).then(() => localStorage.removeItem(key)).catch(() => {})
   }, [orgCode])
+
+  useEffect(() => { draftIdRef.current = draftId }, [draftId])
+
+  function scheduleAutoSave() {
+    clearTimeout(autoSaveTimer.current)
+    autoSaveTimer.current = setTimeout(async () => {
+      const id = draftIdRef.current; if (!id || !navigator.onLine) return
+      try { await pb.collection('patients').update(id, { payload: collectData() }) } catch {}
+    }, 1500)
+  }
 
   function clearSig() {
     const canvas = canvasRef.current; if (!canvas) return
@@ -123,7 +135,7 @@ export default function OrgPatienten() {
     />
     <PubWrap>
       <OrgPatientenMannschaft orgId={org.id} orgCode={orgCode} onDraftCreated={id => setDraftId(id)} />
-      <form ref={formRef}>
+      <form ref={formRef} onChange={() => scheduleAutoSave()}>
         {/* Einsatzdaten */}
         <PubSection title="🚑 Einsatzdaten" open>
           <div style={grid}>

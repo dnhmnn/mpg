@@ -39,8 +39,25 @@ export default function ProtokollBearbeiten() {
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [locked, setLocked] = useState(false)
+  const [lockedReason, setLockedReason] = useState('')
+  const [sigUrl, setSigUrl] = useState('')
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const autoSaveTimer = useRef<ReturnType<typeof setTimeout>>()
 
   useEffect(() => { if (user && patientId) loadRecord() }, [user, patientId])
+
+  useEffect(() => {
+    const canvas = canvasRef.current; if (!canvas || locked) return
+    const ctx = canvas.getContext('2d')!
+    let drawing = false
+    const pos = (e: PointerEvent) => { const r = canvas.getBoundingClientRect(); return { x: (e.clientX - r.left) * (canvas.width / r.width), y: (e.clientY - r.top) * (canvas.height / r.height) } }
+    const down = (e: PointerEvent) => { drawing = true; const p = pos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); e.preventDefault() }
+    const move = (e: PointerEvent) => { if (!drawing) return; const p = pos(e); ctx.lineTo(p.x, p.y); ctx.strokeStyle = '#000'; ctx.lineWidth = 2; ctx.lineCap = 'round'; ctx.stroke(); e.preventDefault() }
+    const up = () => { drawing = false; setSigUrl(canvas.toDataURL()); scheduleAutoSave() }
+    canvas.addEventListener('pointerdown', down); canvas.addEventListener('pointermove', move); canvas.addEventListener('pointerup', up)
+    return () => { canvas.removeEventListener('pointerdown', down); canvas.removeEventListener('pointermove', move); canvas.removeEventListener('pointerup', up) }
+  }, [locked])
 
   async function loadRecord() {
     try {
@@ -50,6 +67,14 @@ export default function ProtokollBearbeiten() {
       if (p.medications?.length) setMeds(p.medications)
       if (p.verlauf?.length) setVerlauf(p.verlauf)
       if (p.gcs_e) setGcs({ e: Number(p.gcs_e) || 0, v: Number(p.gcs_v) || 0, m: Number(p.gcs_m) || 0 })
+      if (p.signature) setSigUrl(p.signature)
+      const age = Date.now() - new Date(rec.created).getTime()
+      const over24h = age > 24 * 60 * 60 * 1000
+      if (rec.status !== 'offen') { setLocked(true); setLockedReason('Dieses Protokoll wurde abgeschlossen.') }
+      else if (over24h) {
+        setLocked(true); setLockedReason('Dieses Protokoll wurde nach 24 Stunden automatisch gesperrt.')
+        pb.collection('patients').update(patientId!, { status: 'archiviert' }).catch(() => {})
+      }
       setTimeout(() => {
         const form = formRef.current; if (!form) return
         form.querySelectorAll<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>('[name]').forEach(el => {
@@ -66,6 +91,30 @@ export default function ProtokollBearbeiten() {
     } finally {
       setLoading(false)
     }
+  }
+
+  function clearSig() {
+    const canvas = canvasRef.current; if (!canvas) return
+    canvas.getContext('2d')!.clearRect(0, 0, canvas.width, canvas.height)
+    setSigUrl('')
+  }
+
+  function scheduleAutoSave() {
+    clearTimeout(autoSaveTimer.current)
+    autoSaveTimer.current = setTimeout(async () => {
+      if (!patientId || locked) return
+      try { await pb.collection('patients').update(patientId, { payload: { ...collectData(), signature: sigUrl } }) } catch {}
+    }, 1500)
+  }
+
+  async function finish() {
+    if (!sigUrl) { alert('Bitte zuerst unterschreiben.'); return }
+    setSending(true)
+    try {
+      await pb.collection('patients').update(patientId!, { payload: { ...collectData(), signature: sigUrl }, status: 'archiviert' })
+      setLocked(true); setLockedReason('Dieses Protokoll wurde abgeschlossen.')
+    } catch (e: any) { alert('Fehler: ' + e.message) }
+    finally { setSending(false) }
   }
 
   function collectData() {
@@ -86,10 +135,8 @@ export default function ProtokollBearbeiten() {
   async function submit() {
     setSending(true)
     try {
-      const data = collectData()
-      await pb.collection('patients').update(patientId!, { payload: data })
-      setSaved(true)
-      setTimeout(() => setSaved(false), 3000)
+      await pb.collection('patients').update(patientId!, { payload: { ...collectData(), signature: sigUrl } })
+      setSaved(true); setTimeout(() => setSaved(false), 3000)
     } catch (e: any) { alert('Fehler: ' + e.message) }
     finally { setSending(false) }
   }
@@ -126,7 +173,13 @@ export default function ProtokollBearbeiten() {
           </div>
         )}
 
-        <form ref={formRef}>
+        {lockedReason && (
+          <div style={{ background: '#fef2f2', border: '0.5px solid #fca5a5', borderRadius: 12, padding: '12px 16px', marginBottom: '.75rem', color: '#991b1b', fontWeight: 600, fontSize: '.9rem' }}>
+            🔒 {lockedReason}
+          </div>
+        )}
+
+        <form ref={formRef} onChange={() => !locked && scheduleAutoSave()}>
           <Section title="🚑 Einsatzdaten">
             <div style={grid}>
               <label style={lbl}>Einsatz-Nr.<input style={inp} name="einsatz_nr" type="text" /></label>
@@ -236,23 +289,44 @@ export default function ProtokollBearbeiten() {
 
           <Section title="🤝 Übergabe / Bemerkungen">
             <div style={grid}>
-              <label style={lbl}>Übergabe Ziel<input style={inp} name="uebergabe_ziel" type="text" /></label>
-              <label style={lbl}>Übergabe an<input style={inp} name="uebergabe_name" type="text" /></label>
+              <label style={lbl}>Übergabe Ziel<input style={inp} name="uebergabe_ziel" type="text" disabled={locked} /></label>
+              <label style={lbl}>Übergabe an<input style={inp} name="uebergabe_name" type="text" disabled={locked} /></label>
             </div>
-            <label style={{ ...lbl, marginTop: '.75rem' }}>Bemerkungen<textarea style={ta} name="bemerkungen" /></label>
+            <label style={{ ...lbl, marginTop: '.75rem' }}>Bemerkungen<textarea style={ta} name="bemerkungen" disabled={locked} /></label>
+          </Section>
+
+          <Section title="✍️ Unterschrift & Abschließen">
+            {locked && sigUrl ? (
+              <img src={sigUrl} alt="Unterschrift" style={{ maxWidth: '100%', border: '0.5px solid var(--border)', borderRadius: 8 }} />
+            ) : locked ? (
+              <div style={{ color: 'var(--text-secondary)', fontSize: '.9rem' }}>Keine Unterschrift hinterlegt.</div>
+            ) : (
+              <>
+                <div style={{ border: '0.5px dashed var(--border-medium)', borderRadius: 12, padding: '.75rem', background: 'var(--bg-subtle)' }}>
+                  <div style={{ fontWeight: 600, marginBottom: 6, color: 'var(--text)' }}>Unterschrift (Finger / Maus)</div>
+                  <canvas ref={canvasRef} width={800} height={200} style={{ width: '100%', height: 160, border: '0.5px solid var(--border)', borderRadius: 10, touchAction: 'none', cursor: 'crosshair', background: '#fff' }} />
+                  <button type="button" onClick={clearSig} style={{ marginTop: 8, border: '0.5px solid var(--border-medium)', background: 'var(--bg-hover)', padding: '.35rem .6rem', borderRadius: 8, cursor: 'pointer', fontSize: '.9rem', fontWeight: 600, color: 'var(--text)', fontFamily: 'inherit' }}>Löschen</button>
+                </div>
+                <button type="button" disabled={sending} onClick={finish} style={{ marginTop: '1rem', width: '100%', background: sending ? 'var(--bg-hover)' : '#16a34a', color: sending ? 'var(--text-secondary)' : '#fff', border: 'none', borderRadius: 12, padding: '14px', fontWeight: 700, cursor: sending ? 'not-allowed' : 'pointer', fontSize: '1.05rem', fontFamily: 'inherit' }}>
+                  {sending ? 'Wird abgeschlossen…' : '✓ Protokoll abschließen'}
+                </button>
+                <p style={{ fontSize: '.8rem', color: 'var(--text-secondary)', marginTop: '.5rem', textAlign: 'center' }}>Nach dem Abschließen kann das Protokoll nicht mehr bearbeitet werden.</p>
+              </>
+            )}
           </Section>
         </form>
       </div>
 
-      {/* Speichern-Leiste */}
-      <div style={{ position: 'fixed', left: 0, right: 0, bottom: 0, background: 'var(--bg-status-bar)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', borderTop: '0.5px solid var(--border)', padding: '.75rem 1rem', zIndex: 20 }}>
-        <div style={{ maxWidth: 800, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 12 }}>
-          {saved && <span style={{ color: '#16a34a', fontWeight: 600, fontSize: '.9rem' }}>✓ Gespeichert</span>}
-          <button disabled={sending} onClick={submit} style={{ background: sending ? 'var(--bg-hover)' : 'var(--accent)', border: 'none', color: sending ? 'var(--text-secondary)' : '#fff', padding: '12px 28px', borderRadius: 12, fontWeight: 700, cursor: sending ? 'not-allowed' : 'pointer', fontSize: '1rem', fontFamily: 'inherit' }}>
-            {sending ? 'Speichert…' : 'Speichern'}
-          </button>
+      {!locked && (
+        <div style={{ position: 'fixed', left: 0, right: 0, bottom: 0, background: 'var(--bg-status-bar)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', borderTop: '0.5px solid var(--border)', padding: '.75rem 1rem', zIndex: 20 }}>
+          <div style={{ maxWidth: 800, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 12 }}>
+            {saved && <span style={{ color: '#16a34a', fontWeight: 600, fontSize: '.9rem' }}>✓ Automatisch gespeichert</span>}
+            <button disabled={sending} onClick={submit} style={{ background: sending ? 'var(--bg-hover)' : 'var(--accent)', border: 'none', color: sending ? 'var(--text-secondary)' : '#fff', padding: '12px 28px', borderRadius: 12, fontWeight: 700, cursor: sending ? 'not-allowed' : 'pointer', fontSize: '1rem', fontFamily: 'inherit' }}>
+              {sending ? 'Speichert…' : 'Manuell speichern'}
+            </button>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   )
 }
