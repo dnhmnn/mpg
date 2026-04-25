@@ -1,12 +1,13 @@
-import { useState, useRef } from 'react'
+import { useState } from 'react'
 import { pb } from '../../lib/pocketbase'
 import { inp, lbl } from './pubStyles'
 
-type Field = 'tf' | 'm1' | 'm2' | 'm3'
-type Mann = Record<Field, string>
-type Status = Record<Field, 'found' | 'not_found' | null>
+type Person = { vorname: string; nachname: string }
+type Mann = { tf: Person; m1: Person; m2: Person; m3: Person }
 
-const FIELDS: { key: Field; label: string }[] = [
+const empty = (): Person => ({ vorname: '', nachname: '' })
+
+const FIELDS: { key: keyof Mann; label: string }[] = [
   { key: 'tf', label: 'Teamführer' },
   { key: 'm1', label: 'Mannschaft 1' },
   { key: 'm2', label: 'Mannschaft 2' },
@@ -25,38 +26,22 @@ export default function OrgPatientenMannschaft({
 }: {
   orgId: string; orgCode: string; onDraftCreated: (id: string) => void
 }) {
-  const [mann, setMann] = useState<Mann>({ tf: '', m1: '', m2: '', m3: '' })
-  const [status, setStatus] = useState<Status>({ tf: null, m1: null, m2: null, m3: null })
+  const [mann, setMann] = useState<Mann>({ tf: empty(), m1: empty(), m2: empty(), m3: empty() })
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [offlineMsg, setOfflineMsg] = useState('')
-  const timers = useRef<Partial<Record<Field, ReturnType<typeof setTimeout>>>>({})
 
-  function onInput(field: Field, value: string) {
-    setMann(m => ({ ...m, [field]: value }))
-    setStatus(s => ({ ...s, [field]: null }))
-    clearTimeout(timers.current[field])
-    if (!value.trim()) return
-    timers.current[field] = setTimeout(async () => {
-      try {
-        const res = await pb.collection('users').getList(1, 1, {
-          filter: `name ~ "${value.trim()}" || username ~ "${value.trim()}"`,
-        })
-        setStatus(s => ({ ...s, [field]: res.totalItems > 0 ? 'found' : 'not_found' }))
-      } catch {
-        setStatus(s => ({ ...s, [field]: 'not_found' }))
-      }
-    }, 500)
+  function set(key: keyof Mann, field: keyof Person, value: string) {
+    setMann(m => ({ ...m, [key]: { ...m[key], [field]: value } }))
   }
 
   async function save() {
     setSaving(true)
     setOfflineMsg('')
     if (!navigator.onLine) {
-      const key = `offline_queue_${orgCode}`
-      const queue = JSON.parse(localStorage.getItem(key) || '[]')
+      const queue = JSON.parse(localStorage.getItem(`offline_queue_${orgCode}`) || '[]')
       queue.push({ type: 'draft', payload: { mannschaft: mann }, status: 'offen', organization_id: orgId })
-      localStorage.setItem(key, JSON.stringify(queue))
+      localStorage.setItem(`offline_queue_${orgCode}`, JSON.stringify(queue))
       setSaved(true)
       setOfflineMsg('Offline gespeichert – wird beim nächsten Öffnen dieser Seite automatisch übermittelt.')
       setSaving(false)
@@ -84,17 +69,19 @@ export default function OrgPatientenMannschaft({
         {icon} Mannschaft
       </div>
       <div style={{ padding: '1rem' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))', gap: '.75rem', marginBottom: '1rem' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(260px,1fr))', gap: '1rem', marginBottom: '1rem' }}>
           {FIELDS.map(({ key, label }) => (
             <div key={key}>
-              <label style={lbl}>{label}</label>
-              <div style={{ position: 'relative' }}>
-                <input style={{ ...inp, paddingRight: status[key] === 'not_found' ? 110 : 36 }} type="text" value={mann[key]} onChange={e => onInput(key, e.target.value)} placeholder="Name eingeben…" />
-                {status[key] && (
-                  <span style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', fontSize: '.8rem', color: status[key] === 'found' ? '#16a34a' : 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
-                    {status[key] === 'found' ? '✓ Gefunden' : 'Nicht gefunden'}
-                  </span>
-                )}
+              <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--text-secondary)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '.4px' }}>{label}</div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '.5rem' }}>
+                <div>
+                  <label style={lbl}>Vorname</label>
+                  <input style={inp} type="text" value={mann[key].vorname} onChange={e => set(key, 'vorname', e.target.value)} placeholder="Vorname" />
+                </div>
+                <div>
+                  <label style={lbl}>Nachname</label>
+                  <input style={inp} type="text" value={mann[key].nachname} onChange={e => set(key, 'nachname', e.target.value)} placeholder="Nachname" />
+                </div>
               </div>
             </div>
           ))}
@@ -108,7 +95,7 @@ export default function OrgPatientenMannschaft({
           <div style={{ color: '#16a34a', fontWeight: 600, fontSize: '.9rem' }}>✓ Entwurf angelegt</div>
         ) : (
           <button type="button" disabled={saving} onClick={save} style={{ background: saving ? 'var(--bg-hover)' : 'var(--accent)', color: saving ? 'var(--text-secondary)' : '#fff', border: 'none', borderRadius: 10, padding: '10px 20px', fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer', fontSize: '.95rem', fontFamily: 'inherit' }}>
-            {saving ? 'Speichert…' : 'Entwurf anlegen'}
+            {saving ? 'Speichert…' : 'Speichern'}
           </button>
         )}
       </div>
