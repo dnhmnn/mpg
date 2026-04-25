@@ -22,6 +22,7 @@ export interface PatientPayload {
   zeit_eintreffen?: string; zeit_transport?: string; zeit_uebergabe?: string
   transport_ziel?: string
   mannschaft_tf?: string; mannschaft_1?: string; mannschaft_2?: string; mannschaft_3?: string
+  mannschaft?: Record<string, { id: string; name: string } | null>
   name?: string; vorname?: string; gebdatum?: string; alter?: string
   telefon?: string; mobil?: string; strasse?: string; plz_ort?: string
   kasse?: string; versnr?: string; hausarzt?: string; angehoeriger?: string; infos?: string

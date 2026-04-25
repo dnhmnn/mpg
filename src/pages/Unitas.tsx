@@ -137,6 +137,7 @@ export default function Unitas() {
   const [progress, setProgress] = useState<ModulProgress[]>([])
   const [neuigkeiten, setNeuigkeiten] = useState<Neuigkeit[]>([])
   const [myPatients, setMyPatients] = useState<PatientRecord[]>([])
+  const [myArchivedPatients, setMyArchivedPatients] = useState<PatientRecord[]>([])
   const [loading, setLoading] = useState(true)
   const navigate = useNavigate()
 
@@ -217,17 +218,13 @@ export default function Unitas() {
       // Meine Patientenprotokolle (wo ich in der Mannschaft bin)
       try {
         if (user?.organization_id) {
-          const allPats = await pb.collection('patients').getFullList({
-            filter: `status = "offen" && organization_id = "${user.organization_id}"`,
-            sort: '-created',
-            requestKey: `unitas-patients-${Date.now()}`
-          })
-          const mine = (allPats as any[]).filter(p => {
-            const m = p.payload?.mannschaft
-            if (!m) return false
-            return ['tf','m1','m2','m3'].some(k => m[k]?.id === user!.id)
-          })
-          setMyPatients(mine)
+          const isMine = (p: any) => ['tf','m1','m2','m3'].some(k => p.payload?.mannschaft?.[k]?.id === user!.id)
+          const [open, archived] = await Promise.all([
+            pb.collection('patients').getFullList({ filter: `status = "offen" && organization_id = "${user.organization_id}"`, sort: '-created', requestKey: `unitas-pats-open-${Date.now()}` }),
+            pb.collection('patients').getFullList({ filter: `status = "archiviert" && organization_id = "${user.organization_id}"`, sort: '-created', requestKey: `unitas-pats-arch-${Date.now()}` }),
+          ])
+          setMyPatients((open as any[]).filter(isMine))
+          setMyArchivedPatients((archived as any[]).filter(isMine))
         }
       } catch { /* ignore */ }
     } catch (e: any) {
@@ -336,7 +333,7 @@ export default function Unitas() {
         <div style={{ maxWidth: '640px', margin: '0 auto', display: 'flex', borderBottom: '1px solid var(--bg-subtle)' }}>
           <button style={tabStyle(tab === 'uebersicht')} onClick={() => setTab('uebersicht')}>Übersicht</button>
           <button style={tabStyle(tab === 'protokolle')} onClick={() => setTab('protokolle')}>
-            Protokolle{myPatients.length > 0 ? ` (${myPatients.length})` : ''}
+            Protokolle{myPatients.length + myArchivedPatients.length > 0 ? ` (${myPatients.length + myArchivedPatients.length})` : ''}
           </button>
           {(user?.supervisor || user?.permissions?.['lernbar'] || (user as any)?.lernbar_access) && (
             <button style={tabStyle(tab === 'lernbar')} onClick={() => setTab('lernbar')}>
@@ -403,37 +400,64 @@ export default function Unitas() {
         {tab === 'protokolle' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div style={{ fontSize: '17px', fontWeight: 700, color: 'var(--text)' }}>Meine Protokolle</div>
-            {myPatients.length === 0 ? (
-              <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '48px 0', fontSize: '15px' }}>Keine offenen Protokolle</div>
-            ) : (
-              myPatients.map(p => {
-                const m = p.payload?.mannschaft || {}
-                const crew = ['tf','m1','m2','m3'].map(k => m[k]?.name).filter(Boolean).join(', ')
-                const age = Date.now() - new Date(p.created).getTime()
-                const hoursLeft = Math.max(0, Math.ceil(24 - age / 3600000))
-                const isExpiringSoon = hoursLeft <= 4
-                return (
-                  <div key={p.id} style={{ background: 'var(--bg-card)', borderRadius: '14px', border: `1px solid ${isExpiringSoon ? '#f97316' : 'var(--border)'}`, overflow: 'hidden' }}>
-                    <div style={{ background: 'linear-gradient(135deg, var(--btn-dark) 0%, var(--btn-dark) 100%)', padding: '14px 18px', color: 'var(--btn-dark-text)' }}>
-                      <div style={{ fontWeight: 700, fontSize: '16px', marginBottom: '4px' }}>{p.title}</div>
-                      {crew && <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.7)' }}>{crew}</div>}
-                    </div>
-                    <div style={{ padding: '12px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
-                      <div>
-                        <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-                          Erstellt: {new Date(p.created).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })} Uhr
-                        </div>
-                        <div style={{ fontSize: '12px', marginTop: '3px', fontWeight: 600, color: isExpiringSoon ? '#f97316' : 'var(--text-secondary)' }}>
-                          {hoursLeft > 0 ? `⏱ Noch ${hoursLeft} Std. bearbeitbar` : '🔒 Gesperrt'}
-                        </div>
+
+            {myPatients.length === 0 && myArchivedPatients.length === 0 && (
+              <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '48px 0', fontSize: '15px' }}>Keine Protokolle vorhanden</div>
+            )}
+
+            {myPatients.length > 0 && (
+              <>
+                <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '.5px' }}>Offen</div>
+                {myPatients.map(p => {
+                  const m = p.payload?.mannschaft || {}
+                  const crew = ['tf','m1','m2','m3'].map(k => m[k]?.name).filter(Boolean).join(', ')
+                  const age = Date.now() - new Date(p.created).getTime()
+                  const hoursLeft = Math.max(0, Math.ceil(24 - age / 3600000))
+                  const isExpiringSoon = hoursLeft <= 4
+                  return (
+                    <div key={p.id} style={{ background: 'var(--bg-card)', borderRadius: '14px', border: `1px solid ${isExpiringSoon ? '#f97316' : 'var(--border)'}`, overflow: 'hidden' }}>
+                      <div style={{ background: 'linear-gradient(135deg, var(--btn-dark) 0%, var(--btn-dark) 100%)', padding: '14px 18px', color: 'var(--btn-dark-text)' }}>
+                        <div style={{ fontWeight: 700, fontSize: '16px', marginBottom: '4px' }}>{p.title}</div>
+                        {crew && <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.7)' }}>{crew}</div>}
                       </div>
-                      <button onClick={() => navigate(`/protokoll/${p.id}`)} style={{ background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: '8px', padding: '9px 16px', fontWeight: 700, fontSize: '13px', cursor: 'pointer', flexShrink: 0, fontFamily: 'inherit' }}>
-                        Bearbeiten
-                      </button>
+                      <div style={{ padding: '12px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+                        <div>
+                          <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Erstellt: {new Date(p.created).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })} Uhr</div>
+                          <div style={{ fontSize: '12px', marginTop: '3px', fontWeight: 600, color: isExpiringSoon ? '#f97316' : 'var(--text-secondary)' }}>
+                            {hoursLeft > 0 ? `⏱ Noch ${hoursLeft} Std. bearbeitbar` : '🔒 Gesperrt'}
+                          </div>
+                        </div>
+                        <button onClick={() => navigate(`/protokoll/${p.id}`)} style={{ background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: '8px', padding: '9px 16px', fontWeight: 700, fontSize: '13px', cursor: 'pointer', flexShrink: 0, fontFamily: 'inherit' }}>Bearbeiten</button>
+                      </div>
                     </div>
-                  </div>
-                )
-              })
+                  )
+                })}
+              </>
+            )}
+
+            {myArchivedPatients.length > 0 && (
+              <>
+                <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '.5px', marginTop: '8px' }}>Abgeschlossen</div>
+                {myArchivedPatients.map(p => {
+                  const m = p.payload?.mannschaft || {}
+                  const crew = ['tf','m1','m2','m3'].map(k => m[k]?.name).filter(Boolean).join(', ')
+                  const patName = [p.payload?.vorname, p.payload?.name].filter(Boolean).join(' ')
+                  return (
+                    <div key={p.id} style={{ background: 'var(--bg-card)', borderRadius: '14px', border: '1px solid var(--border)', overflow: 'hidden', opacity: 0.85 }}>
+                      <div style={{ background: 'linear-gradient(135deg, #4b5563, #374151)', padding: '14px 18px', color: '#fff' }}>
+                        <div style={{ fontWeight: 700, fontSize: '16px', marginBottom: '4px' }}>{patName || p.title}</div>
+                        {crew && <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.7)' }}>{crew}</div>}
+                      </div>
+                      <div style={{ padding: '12px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+                        <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                          {new Date(p.created).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })} Uhr · 🔒 Abgeschlossen
+                        </div>
+                        <button onClick={() => navigate(`/protokoll/${p.id}`)} style={{ background: 'var(--bg-subtle)', color: 'var(--text)', border: '0.5px solid var(--border-medium)', borderRadius: '8px', padding: '9px 16px', fontWeight: 700, fontSize: '13px', cursor: 'pointer', flexShrink: 0, fontFamily: 'inherit' }}>Ansehen</button>
+                      </div>
+                    </div>
+                  )
+                })}
+              </>
             )}
           </div>
         )}

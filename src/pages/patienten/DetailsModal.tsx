@@ -88,10 +88,10 @@ export default function DetailsModal({ doc, type, onClose }: Props) {
           )
         )}
         ${blk('Mannschaft',
-          row('1fr',cell('Teamführer',p.mannschaft_tf||''))+
-          row('1fr',cell('Mannschaft 1',p.mannschaft_1||''))+
-          row('1fr',cell('Mannschaft 2',p.mannschaft_2||''))+
-          row('1fr',cell('Mannschaft 3',p.mannschaft_3||''))
+          row('1fr',cell('Teamführer',(p.mannschaft?.tf?.name||p.mannschaft_tf||'')))+
+          row('1fr',cell('Mannschaft 1',(p.mannschaft?.m1?.name||p.mannschaft_1||'')))+
+          row('1fr',cell('Mannschaft 2',(p.mannschaft?.m2?.name||p.mannschaft_2||'')))+
+          row('1fr',cell('Mannschaft 3',(p.mannschaft?.m3?.name||p.mannschaft_3||'')))
         )}
       </div>
 

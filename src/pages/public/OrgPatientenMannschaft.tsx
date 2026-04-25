@@ -112,7 +112,7 @@ function UserSearch({ label, orgId, value, onChange }: {
 export default function OrgPatientenMannschaft({
   orgId, orgCode, onDraftCreated,
 }: {
-  orgId: string; orgCode: string; onDraftCreated: (id: string) => void
+  orgId: string; orgCode: string; onDraftCreated: (id: string, mannschaft: Record<string, { id: string; name: string } | null>) => void
 }) {
   const [sel, setSel] = useState<Record<Pos, Selection>>({ tf: null, m1: null, m2: null, m3: null })
   const [saving, setSaving] = useState(false)
@@ -145,7 +145,7 @@ export default function OrgPatientenMannschaft({
         status: 'offen',
         organization_id: orgId,
       })
-      onDraftCreated(rec.id)
+      onDraftCreated(rec.id, mannschaft)
       setSaved(true)
     } catch (e: any) {
       alert('Fehler: ' + e.message)

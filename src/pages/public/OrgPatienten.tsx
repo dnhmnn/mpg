@@ -23,6 +23,7 @@ export default function OrgPatienten() {
   const [gcs, setGcs] = useState({ e: 0, v: 0, m: 0 })
   const [sigUrl, setSigUrl] = useState('')
   const [draftId, setDraftId] = useState<string | null>(null)
+  const [draftMannschaft, setDraftMannschaft] = useState<Record<string, { id: string; name: string } | null>>({})
   const [sending, setSending] = useState(false)
   const [success, setSuccess] = useState<string | null>(null)
   const autoSaveTimer = useRef<ReturnType<typeof setTimeout>>()
@@ -81,6 +82,7 @@ export default function OrgPatienten() {
     data.verlauf = verlauf.filter(r => r.zeit || r.rr_sys || r.hf)
     data.photos = photos
     data.signature = sigUrl
+    data.mannschaft = draftMannschaft
     return data
   }
 
@@ -134,7 +136,7 @@ export default function OrgPatienten() {
       </>}
     />
     <PubWrap>
-      <OrgPatientenMannschaft orgId={org.id} orgCode={orgCode} onDraftCreated={id => setDraftId(id)} />
+      <OrgPatientenMannschaft orgId={org.id} orgCode={orgCode} onDraftCreated={(id, mann) => { setDraftId(id); setDraftMannschaft(mann) }} />
       <form ref={formRef} onChange={() => scheduleAutoSave()}>
         {/* Einsatzdaten */}
         <PubSection title="🚑 Einsatzdaten" open>
