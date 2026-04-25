@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { pb } from '../../lib/pocketbase'
 import { useOrg } from './OrgPublicLayout'
 import { PubHeader, PubWrap, PubSendBar, PubSection, inp, sel, ta, field, lbl } from './pubStyles'
+import OrgPatientenMannschaft from './OrgPatientenMannschaft'
 
 type Med = { name: string; dose: string; unit: string; route: string; time: string; note: string }
 type VRow = { zeit: string; rr_sys: string; rr_dia: string; hf: string; o2: string; spo2: string; etco2: string; schmerz: string }
@@ -21,6 +22,7 @@ export default function OrgPatienten() {
   const [photos, setPhotos] = useState<string[]>([])
   const [gcs, setGcs] = useState({ e: 0, v: 0, m: 0 })
   const [sigUrl, setSigUrl] = useState('')
+  const [draftId, setDraftId] = useState<string | null>(null)
   const [sending, setSending] = useState(false)
   const [success, setSuccess] = useState<string | null>(null)
   const gcsSum = gcs.e + gcs.v + gcs.m
@@ -37,6 +39,17 @@ export default function OrgPatienten() {
     canvas.addEventListener('pointerdown', down); canvas.addEventListener('pointermove', move); canvas.addEventListener('pointerup', up)
     return () => { canvas.removeEventListener('pointerdown', down); canvas.removeEventListener('pointermove', move); canvas.removeEventListener('pointerup', up) }
   }, [])
+
+  useEffect(() => {
+    if (!navigator.onLine) return
+    const key = `offline_queue_${orgCode}`
+    const queue: any[] = JSON.parse(localStorage.getItem(key) || '[]')
+    if (!queue.length) return
+    Promise.all(queue.map((item: any) => {
+      const { type, ...data } = item
+      return pb.collection('patients').create(data)
+    })).then(() => localStorage.removeItem(key)).catch(() => {})
+  }, [orgCode])
 
   function clearSig() {
     const canvas = canvasRef.current; if (!canvas) return
@@ -69,9 +82,22 @@ export default function OrgPatienten() {
     const name = data.name as string; const vorname = data.vorname as string; const geb = data.gebdatum as string
     if (!name || !vorname || !geb) { alert('Bitte Name, Vorname und Geburtsdatum ausfüllen.'); return }
     setSending(true)
+    if (!navigator.onLine) {
+      const key = `offline_queue_${orgCode}`
+      const queue = JSON.parse(localStorage.getItem(key) || '[]')
+      queue.push({ type: 'full', title: `Patientendoku: ${vorname} ${name}`, payload: data, status: 'offen', organization_id: org.id, draftId })
+      localStorage.setItem(key, JSON.stringify(queue))
+      setSending(false)
+      setSuccess('OFFLINE')
+      return
+    }
     try {
-      const rec = await pb.collection('patients').create({ title: `Patientendoku: ${vorname} ${name}`, payload: data, status: 'offen', organization_id: org.id })
-      localStorage.removeItem('patientendoku_' + orgCode)
+      let rec: any
+      if (draftId) {
+        rec = await pb.collection('patients').update(draftId, { title: `Patientendoku: ${vorname} ${name}`, payload: data, status: 'offen' })
+      } else {
+        rec = await pb.collection('patients').create({ title: `Patientendoku: ${vorname} ${name}`, payload: data, status: 'offen', organization_id: org.id })
+      }
       setSuccess(`PAT-${new Date().getFullYear()}-${rec.id.slice(0, 8)}`)
     } catch (e: any) { alert('Fehler: ' + e.message) }
     finally { setSending(false) }
@@ -80,9 +106,9 @@ export default function OrgPatienten() {
   if (success) return (
     <PubWrap>
       <div style={{ background: 'var(--bg-card)', border: '0.5px solid var(--border)', borderRadius: 20, padding: 32, textAlign: 'center', maxWidth: 480, margin: '2rem auto', boxShadow: 'var(--shadow-md)' }}>
-        <div style={{ width: 56, height: 56, background: '#dcfce7', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem', fontSize: '1.75rem' }}>✅</div>
-        <h2 style={{ color: 'var(--text)', margin: '0 0 .5rem', fontSize: '1.2rem' }}>Erfolgreich übermittelt!</h2>
-        <p style={{ fontFamily: 'monospace', color: 'var(--text-secondary)', margin: '0 0 1.5rem' }}>{success}</p>
+        <div style={{ width: 56, height: 56, background: success === 'OFFLINE' ? '#fef9c3' : '#dcfce7', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem', fontSize: '1.75rem' }}>{success === 'OFFLINE' ? '💾' : '✅'}</div>
+        <h2 style={{ color: 'var(--text)', margin: '0 0 .5rem', fontSize: '1.2rem' }}>{success === 'OFFLINE' ? 'Offline gespeichert' : 'Erfolgreich übermittelt!'}</h2>
+        <p style={{ color: 'var(--text-secondary)', margin: '0 0 1.5rem', fontSize: '.9rem' }}>{success === 'OFFLINE' ? 'Wird beim nächsten Öffnen dieser Seite automatisch übermittelt.' : success}</p>
         <button style={{ background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: 12, padding: '12px 24px', fontWeight: 700, fontSize: '1rem', cursor: 'pointer', fontFamily: 'inherit' }} onClick={() => { setSuccess(null); setMeds([]); setVerlauf([emptyV()]); setPhotos([]); setGcs({ e: 0, v: 0, m: 0 }); clearSig() }}>+ Neues Formular</button>
       </div>
     </PubWrap>
@@ -96,6 +122,7 @@ export default function OrgPatienten() {
       </>}
     />
     <PubWrap>
+      <OrgPatientenMannschaft orgId={org.id} orgCode={orgCode} onDraftCreated={id => setDraftId(id)} />
       <form ref={formRef}>
         {/* Einsatzdaten */}
         <PubSection title="🚑 Einsatzdaten" open>
@@ -111,15 +138,6 @@ export default function OrgPatienten() {
             <label style={lbl}>Übergabe<input style={inp} name="zeit_uebergabe" type="datetime-local" /></label>
             <label style={lbl}>Einsatzort / Adresse<input style={inp} name="einsatz_adresse" type="text" /></label>
             <label style={lbl}>Transportziel<input style={inp} name="transport_ziel" type="text" /></label>
-          </div>
-        </PubSection>
-
-        <PubSection title="👥 Mannschaft">
-          <div style={grid}>
-            <label style={lbl}>Teamführer<input style={inp} name="mannschaft_tf" type="text" /></label>
-            <label style={lbl}>Mannschaft 1<input style={inp} name="mannschaft_1" type="text" /></label>
-            <label style={lbl}>Mannschaft 2<input style={inp} name="mannschaft_2" type="text" /></label>
-            <label style={lbl}>Mannschaft 3<input style={inp} name="mannschaft_3" type="text" /></label>
           </div>
         </PubSection>
 
