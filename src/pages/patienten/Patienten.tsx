@@ -193,13 +193,17 @@ export default function Patienten() {
             {patients.length === 0 && <div style={{ opacity: 0.5, fontSize: '14px' }}>Keine offenen Patientendokus</div>}
             {patients.map(pat => {
               const p = parsePayload(pat.payload)
-              const name = [p.name, p.vorname].filter(Boolean).join(' ') || pat.title || 'Unbekannt'
+              const patName = [p.name, p.vorname].filter(Boolean).join(' ')
+              const isDraft = !patName
+              const m = (pat as any).payload?.mannschaft || {}
+              const crew = ['tf','m1','m2','m3'].map((k: string) => m[k]?.name).filter(Boolean).join(', ')
+              const displayName = patName || crew || pat.title || 'Unbekannt'
               return (
                 <div key={pat.id} style={rowStyle}>
-                  {pill('offen', '#2563eb')}
+                  {isDraft ? pill('Entwurf', '#d97706') : pill('offen', '#2563eb')}
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 600, fontSize: '14px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</div>
-                    <div style={{ fontSize: '12px', opacity: 0.6 }}>{fmtDate(pat.created)}</div>
+                    <div style={{ fontWeight: 600, fontSize: '14px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{displayName}</div>
+                    <div style={{ fontSize: '12px', opacity: 0.6 }}>{isDraft && crew ? `Mannschaft: ${crew} · ` : ''}{fmtDate(pat.created)}</div>
                   </div>
                   {btnSm(() => openEdit(pat), 'Bearbeiten')}
                 </div>
