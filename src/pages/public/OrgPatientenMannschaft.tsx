@@ -44,7 +44,7 @@ function UserSearch({ label, orgId, value, onChange }: {
     timer.current = setTimeout(async () => {
       try {
         const res = await pb.collection('users').getList(1, 8, {
-          filter: `organization_id = "${orgId}" && name ~ "${q.trim()}"`,
+          filter: `organization_id = "${orgId}" && name = "${q.trim()}"`,
           sort: 'name',
         })
         setResults(res.items.map(u => ({ id: u.id, name: u.name, email: u.email })))

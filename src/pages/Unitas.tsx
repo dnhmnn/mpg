@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import PocketBase from 'pocketbase'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { getTheme, setTheme, type ThemeMode } from '../lib/theme'
 
@@ -54,6 +55,14 @@ interface ModulProgress {
   teilnehmer_id: string
   fortschritt_prozent: number
   abgeschlossen_am?: string
+}
+
+interface PatientRecord {
+  id: string
+  title: string
+  status: string
+  created: string
+  payload: any
 }
 
 interface Neuigkeit {
@@ -127,7 +136,9 @@ export default function Unitas() {
   const [module, setModule] = useState<Modul[]>([])
   const [progress, setProgress] = useState<ModulProgress[]>([])
   const [neuigkeiten, setNeuigkeiten] = useState<Neuigkeit[]>([])
+  const [myPatients, setMyPatients] = useState<PatientRecord[]>([])
   const [loading, setLoading] = useState(true)
+  const navigate = useNavigate()
 
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null)
   const [themeMode, setThemeMode] = useState<ThemeMode>(getTheme())
@@ -202,6 +213,23 @@ export default function Unitas() {
       } catch {
         // collection may not exist yet
       }
+
+      // Meine Patientenprotokolle (wo ich in der Mannschaft bin)
+      try {
+        if (user?.organization_id) {
+          const allPats = await pb.collection('patients').getFullList({
+            filter: `status = "offen" && organization_id = "${user.organization_id}"`,
+            sort: '-created',
+            requestKey: `unitas-patients-${Date.now()}`
+          })
+          const mine = (allPats as any[]).filter(p => {
+            const m = p.payload?.mannschaft
+            if (!m) return false
+            return ['tf','m1','m2','m3'].some(k => m[k]?.id === user!.id)
+          })
+          setMyPatients(mine)
+        }
+      } catch { /* ignore */ }
     } catch (e: any) {
       console.error(e)
     } finally {
@@ -334,6 +362,33 @@ export default function Unitas() {
                 {new Date().toLocaleDateString('de-DE', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}
               </div>
             </div>
+            {myPatients.length > 0 && (
+              <div>
+                <div style={{ fontWeight: 700, fontSize: '15px', color: 'var(--text)', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6M9 16h4"/></svg>
+                  Meine Protokolle
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {myPatients.map(p => {
+                    const m = p.payload?.mannschaft || {}
+                    const crew = ['tf','m1','m2','m3'].map(k => m[k]?.name).filter(Boolean).join(', ')
+                    return (
+                      <div key={p.id} style={{ background: 'var(--bg-card)', borderRadius: '14px', border: '1px solid var(--accent)', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontWeight: 700, fontSize: '14px', color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.title}</div>
+                          {crew && <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '3px' }}>{crew}</div>}
+                          <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px' }}>{new Date(p.created).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })} Uhr</div>
+                        </div>
+                        <button onClick={() => navigate('/patienten')} style={{ background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: '8px', padding: '8px 14px', fontWeight: 700, fontSize: '13px', cursor: 'pointer', flexShrink: 0, fontFamily: 'inherit' }}>
+                          Bearbeiten
+                        </button>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
             {neuigkeiten.length === 0 ? (
               <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '32px 0', fontSize: '15px' }}>Keine Neuigkeiten</div>
             ) : (
