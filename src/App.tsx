@@ -13,6 +13,11 @@ import Unitas from './pages/Unitas'
 import Unitarii from './pages/Unitarii'
 import Patienten from './pages/patienten/Patienten'
 import Chat from './pages/Chat'
+import OrgPublicLayout from './pages/public/OrgPublicLayout'
+import OrgLanding from './pages/public/OrgLanding'
+import OrgPatienten from './pages/public/OrgPatienten'
+import OrgProduktausgabe from './pages/public/OrgProduktausgabe'
+import OrgCirs from './pages/public/OrgCirs'
 import './styles/globals.css'
 import { applyTheme, getTheme } from './lib/theme'
 
@@ -36,6 +41,12 @@ function App() {
         <Route path="/unitarii" element={<Unitarii />} />
         <Route path="/patienten" element={<Patienten />} />
         <Route path="/chat" element={<Chat />} />
+        <Route path="/:orgCode" element={<OrgPublicLayout />}>
+          <Route index element={<OrgLanding />} />
+          <Route path="patienten" element={<OrgPatienten />} />
+          <Route path="produktausgabe" element={<OrgProduktausgabe />} />
+          <Route path="cirs" element={<OrgCirs />} />
+        </Route>
       </Routes>
     </BrowserRouter>
   )
