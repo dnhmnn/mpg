@@ -26,9 +26,24 @@ export default function OrgPublicLayout() {
 
   useEffect(() => {
     if (!orgCode) { setError('Kein Organisationscode.'); setLoading(false); return }
+    const cacheKey = `org_cache_${orgCode}`
     pb.collection('organizations').getFirstListItem<Organization>(`org_code = "${orgCode}"`)
-      .then(r => r.is_active ? setOrg(r) : setError('Organisation nicht aktiv.'))
-      .catch(() => setError('Organisation nicht gefunden.'))
+      .then(r => {
+        if (r.is_active) {
+          localStorage.setItem(cacheKey, JSON.stringify(r))
+          setOrg(r)
+        } else {
+          setError('Organisation nicht aktiv.')
+        }
+      })
+      .catch(() => {
+        const cached = localStorage.getItem(cacheKey)
+        if (cached) {
+          setOrg(JSON.parse(cached))
+        } else {
+          setError('Organisation nicht gefunden.')
+        }
+      })
       .finally(() => setLoading(false))
   }, [orgCode])
 
