@@ -4,416 +4,240 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Responda — Digitale Einsatzdokumentation</title>
-<meta name="description" content="Digitale Patientendokumentation für den Rettungsdienst. Mobil. Sicher. DSGVO-konform.">
+<meta name="description" content="Digitale Patientendokumentation für den Rettungsdienst.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-html{scroll-behavior:smooth}
-
+html,body{height:100%;overflow:hidden}
 :root{
-  --bg:#0A0305;
-  --text:#F7EEF0;
-  --muted:rgba(247,238,240,.45);
-  --accent:#C94D6A;
-  --wine:#6B1A2A;
+  --bg:#060208;--text:#F7EEF0;--muted:rgba(247,238,240,.4);
+  --accent:#C94D6A;--wine:#6B1A2A;
   --font:'Atkinson Hyperlegible',system-ui,sans-serif;
 }
+body{font-family:var(--font);background:var(--bg);color:var(--text);cursor:none;overflow:hidden}
 
-body{
-  font-family:var(--font);
-  background:var(--bg);
-  color:var(--text);
-  overflow-x:hidden;
-  cursor:default;
+/* Three.js canvas */
+#bg{position:fixed;inset:0;z-index:0;pointer-events:none}
+
+/* Grain overlay */
+#grain{
+  position:fixed;inset:0;z-index:1;pointer-events:none;opacity:.035;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size:200px 200px;animation:grain 0.5s steps(2) infinite;
+}
+@keyframes grain{0%,100%{transform:translate(0,0)}25%{transform:translate(-2%,-2%)}50%{transform:translate(2%,2%)}75%{transform:translate(-2%,2%)} }
+
+/* Custom cursor */
+#cur{position:fixed;width:8px;height:8px;background:var(--accent);border-radius:50%;pointer-events:none;z-index:9999;transform:translate(-50%,-50%);transition:width .2s,height .2s,opacity .2s}
+#cur2{position:fixed;width:36px;height:36px;border:1px solid rgba(201,77,106,.5);border-radius:50%;pointer-events:none;z-index:9998;transform:translate(-50%,-50%);transition:width .3s,height .3s,border-color .3s}
+body:hover #cur{opacity:1}
+.hoverable:hover ~ #cur,a:hover ~ #cur{width:16px;height:16px}
+
+/* Smooth scroll container */
+#scroll-container{
+  position:fixed;top:0;left:0;width:100%;will-change:transform;
+  z-index:2;
 }
 
-/* ── NAV ── */
+/* NAV */
 nav{
-  position:fixed;top:0;left:0;right:0;z-index:100;
+  position:absolute;top:0;left:0;right:0;z-index:100;
   display:flex;align-items:center;justify-content:space-between;
-  padding:0 clamp(1.5rem,5vw,4rem);height:60px;
-  mix-blend-mode:normal;
+  padding:0 clamp(1.5rem,5vw,4rem);height:64px;
 }
-.nav-logo{display:flex;align-items:center;gap:10px;text-decoration:none}
-.nav-logo-mark{
-  width:32px;height:32px;background:var(--accent);border-radius:8px;
-  display:flex;align-items:center;justify-content:center;
-}
-.nav-wordmark{font-size:1.1rem;font-weight:700;color:var(--text);letter-spacing:-.02em}
-.nav-wordmark em{font-style:normal;color:var(--accent)}
-.nav-cta{
-  background:transparent;border:.5px solid rgba(247,238,240,.25);
-  color:var(--muted);padding:8px 18px;border-radius:100px;
-  font-family:var(--font);font-size:.85rem;font-weight:700;
-  cursor:pointer;text-decoration:none;
-  transition:border-color .3s,color .3s;
-}
-.nav-cta:hover{border-color:var(--accent);color:var(--text)}
+.logo{display:flex;align-items:center;gap:10px;text-decoration:none}
+.logo-mark{width:30px;height:30px;background:var(--accent);border-radius:8px;display:flex;align-items:center;justify-content:center}
+.logo-word{font-size:1.1rem;font-weight:700;color:var(--text);letter-spacing:-.02em}
+.logo-word em{font-style:normal;color:var(--accent)}
+.nav-link{background:transparent;border:.5px solid rgba(247,238,240,.15);color:var(--muted);padding:8px 20px;border-radius:100px;font-family:var(--font);font-size:.85rem;font-weight:700;cursor:none;text-decoration:none;transition:border-color .3s,color .3s}
+.nav-link:hover{border-color:var(--accent);color:var(--text)}
 
-/* ── HERO ── */
-#hero{
-  height:100svh;display:flex;flex-direction:column;
-  align-items:center;justify-content:center;
-  text-align:center;padding:0 clamp(1.5rem,6vw,6rem);
-  position:relative;overflow:hidden;
-}
-.hero-glow{
-  position:absolute;top:50%;left:50%;
-  transform:translate(-50%,-50%);
-  width:min(700px,90vw);height:400px;
-  background:radial-gradient(ellipse,rgba(107,26,42,.35) 0%,transparent 70%);
-  pointer-events:none;
-}
-.hero-eyebrow{
-  font-size:clamp(.7rem,.9vw,.85rem);font-weight:700;
-  color:var(--accent);letter-spacing:.15em;text-transform:uppercase;
-  margin-bottom:clamp(1rem,3vh,2rem);
-  display:flex;align-items:center;gap:.5rem;
-}
-.eyebrow-line{width:32px;height:1px;background:var(--accent)}
-h1{
-  font-size:clamp(3rem,9vw,8rem);font-weight:700;
-  line-height:.95;letter-spacing:-.04em;
-  margin-bottom:clamp(1.5rem,4vh,3rem);
-}
-h1 .dim{color:var(--muted)}
-.hero-sub{
-  font-size:clamp(.95rem,1.5vw,1.15rem);color:var(--muted);
-  max-width:40ch;margin:0 auto clamp(2rem,5vh,4rem);line-height:1.7;
-}
-.hero-scroll{
-  display:flex;flex-direction:column;align-items:center;gap:.5rem;
-  color:var(--muted);font-size:.75rem;letter-spacing:.1em;text-transform:uppercase;
-}
-.scroll-line{
-  width:1px;height:40px;
-  background:linear-gradient(to bottom,var(--accent),transparent);
-  animation:scrollPulse 2s ease-in-out infinite;
-}
-@keyframes scrollPulse{0%,100%{opacity:.4;transform:scaleY(.8)}50%{opacity:1;transform:scaleY(1)}}
+/* HERO */
+#hero{height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:0 clamp(1.5rem,6vw,6rem);position:relative}
+.eyebrow{font-size:.75rem;font-weight:700;color:var(--accent);letter-spacing:.18em;text-transform:uppercase;margin-bottom:2rem;display:flex;align-items:center;gap:.75rem;opacity:0;animation:fadeUp .8s .3s forwards}
+.eline{width:28px;height:1px;background:var(--accent)}
+h1{font-size:clamp(3.5rem,10vw,9rem);font-weight:700;line-height:.92;letter-spacing:-.04em;margin-bottom:2rem}
+.word{display:inline-block;overflow:hidden;vertical-align:top}
+.word span{display:inline-block;transform:translateY(110%);animation:wordUp .9s cubic-bezier(.16,1,.3,1) forwards}
+.dim{color:var(--muted)}
+.hero-sub{font-size:clamp(.95rem,1.5vw,1.1rem);color:var(--muted);max-width:38ch;margin:0 auto 3rem;line-height:1.75;opacity:0;animation:fadeUp .8s .9s forwards}
+.scroll-hint{display:flex;flex-direction:column;align-items:center;gap:.5rem;color:var(--muted);font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;opacity:0;animation:fadeUp .8s 1.1s forwards}
+.scroll-bar{width:1px;height:44px;background:linear-gradient(to bottom,var(--accent),transparent);animation:pulse 2s ease-in-out infinite}
+@keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:none}}
+@keyframes wordUp{from{transform:translateY(110%)}to{transform:translateY(0)}}
+@keyframes pulse{0%,100%{opacity:.4}50%{opacity:1}}
 
-/* ── STORY ── */
+/* STORY */
 #story{position:relative}
-.story-sticky{
-  position:sticky;top:0;height:100svh;overflow:hidden;
-  display:grid;grid-template-columns:1fr 1fr;align-items:center;
-  padding:0 clamp(2rem,6vw,8rem);gap:4rem;
-}
-.story-chapters{position:relative}
-.chapter{
-  position:absolute;top:50%;left:0;right:0;
-  transform:translateY(-50%);
-  opacity:0;transition:opacity .5s,transform .5s;
-  pointer-events:none;
-  transform:translateY(calc(-50% + 30px));
-}
-.chapter.vis{
-  opacity:1;pointer-events:auto;
-  transform:translateY(-50%);
-}
-.ch-num{
-  font-size:.75rem;font-weight:700;color:var(--accent);
-  letter-spacing:.15em;text-transform:uppercase;margin-bottom:1.25rem;
-  display:flex;align-items:center;gap:.75rem;
-}
-.ch-num::before{content:'';width:24px;height:1px;background:var(--accent)}
-h2{
-  font-size:clamp(2rem,5vw,3.75rem);font-weight:700;
-  line-height:1.0;letter-spacing:-.03em;margin-bottom:1.25rem;
-}
-.ch-desc{
-  font-size:clamp(.95rem,1.3vw,1.1rem);color:var(--muted);
-  line-height:1.75;max-width:38ch;
-}
-.story-spacer{height:500vh}
+.story-pin{position:sticky;top:0;height:100vh;display:grid;grid-template-columns:1fr 1fr;align-items:center;padding:0 clamp(2rem,6vw,8rem);gap:4rem;overflow:hidden}
+.chapters{position:relative;height:300px}
+.ch{position:absolute;top:0;left:0;right:0;opacity:0;transform:translateY(30px);transition:opacity .6s,transform .6s;pointer-events:none}
+.ch.on{opacity:1;transform:none;pointer-events:auto}
+.ch-n{font-size:.72rem;font-weight:700;color:var(--accent);letter-spacing:.15em;text-transform:uppercase;margin-bottom:1.25rem;display:flex;align-items:center;gap:.75rem}
+.ch-n::before{content:'';width:20px;height:1px;background:var(--accent)}
+h2{font-size:clamp(2rem,4.5vw,3.5rem);font-weight:700;line-height:1.0;letter-spacing:-.03em;margin-bottom:1.25rem}
+.ch-d{font-size:clamp(.9rem,1.2vw,1.05rem);color:var(--muted);line-height:1.8;max-width:36ch}
+.spacer{height:500vh}
+
+/* Progress bar */
+.prog-bar{position:fixed;top:0;left:0;height:2px;background:var(--accent);z-index:999;transition:width .1s linear;width:0%}
 
 /* Phone */
-.phone-wrap{display:flex;justify-content:center;align-items:center}
-.phone{
-  width:260px;height:520px;
-  background:#0E060A;
-  border-radius:40px;
-  border:1.5px solid rgba(255,255,255,.07);
-  box-shadow:0 0 0 1px rgba(0,0,0,.5),
-    0 40px 80px rgba(0,0,0,.6),
-    0 0 80px rgba(107,26,42,.2),
-    inset 0 1px 0 rgba(255,255,255,.04);
-  overflow:hidden;position:relative;
-}
-.phone-notch{
-  position:absolute;top:10px;left:50%;transform:translateX(-50%);
-  width:80px;height:22px;background:#080306;border-radius:100px;z-index:10;
-  display:flex;align-items:center;justify-content:center;gap:5px;
-}
-.nc{width:8px;height:8px;border-radius:50%;background:#1A0A10;border:1px solid #2A1018}
+.phone-side{display:flex;align-items:center;justify-content:center}
+.phone{width:255px;height:510px;background:#0A0408;border-radius:44px;border:1.5px solid rgba(255,255,255,.06);box-shadow:0 0 0 1px rgba(0,0,0,.5),0 50px 100px rgba(0,0,0,.7),0 0 60px rgba(107,26,42,.25),inset 0 1px 0 rgba(255,255,255,.04);overflow:hidden;position:relative}
+.notch{position:absolute;top:10px;left:50%;transform:translateX(-50%);width:78px;height:22px;background:#060208;border-radius:100px;z-index:10;display:flex;align-items:center;justify-content:center;gap:5px}
+.nc{width:8px;height:8px;border-radius:50%;background:#160810;border:1px solid #260C18}
+.pscr{position:absolute;inset:0;opacity:0;transition:opacity .5s}
+.pscr.on{opacity:1}
+.pbg{position:absolute;inset:0;background:#0C0508}
+.psb{height:42px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 13px 5px;font-size:9px;color:rgba(247,238,240,.35);position:relative;z-index:1}
+.phd{background:rgba(12,5,8,.95);border-bottom:.5px solid rgba(107,26,42,.25);padding:8px 11px;display:flex;align-items:center;justify-content:space-between;position:relative;z-index:1}
+.pht{font-size:11px;font-weight:700;color:#F7EEF0}
+.phb{font-size:10px;color:#C94D6A;font-weight:600}
 
-.scr{position:absolute;inset:0;opacity:0;transition:opacity .5s;pointer-events:none}
-.scr.on{opacity:1}
-.sbg{position:absolute;inset:0;background:#0D0608}
-.sb{height:44px;display:flex;align-items:flex-end;justify-content:space-between;
-  padding:0 14px 5px;font-size:9px;color:rgba(247,238,240,.4);
-  position:relative;z-index:1}
-.sh{background:rgba(15,6,10,.95);border-bottom:.5px solid rgba(107,26,42,.3);
-  padding:8px 12px;display:flex;align-items:center;justify-content:space-between;
-  position:relative;z-index:1}
-.st{font-size:11px;font-weight:700;color:#F7EEF0}
-.sback{font-size:10px;color:#C94D6A;font-weight:600}
-
-/* Screen styles */
-.alert-box{margin:8px 10px;background:rgba(107,26,42,.25);
-  border:.5px solid rgba(201,77,106,.45);border-radius:12px;padding:10px;
-  position:relative;z-index:1}
-.alert-row{display:flex;align-items:center;gap:7px;margin-bottom:7px}
-.alert-ico{width:26px;height:26px;background:#6B1A2A;border-radius:7px;
-  display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.apulse{width:6px;height:6px;border-radius:50%;background:#C94D6A;
-  animation:ap 1.5s infinite;margin-left:auto;flex-shrink:0}
+/* Phone screens */
+.abox{margin:7px 9px;background:rgba(107,26,42,.2);border:.5px solid rgba(201,77,106,.4);border-radius:11px;padding:9px;position:relative;z-index:1}
+.arow{display:flex;align-items:center;gap:6px;margin-bottom:6px}
+.aico{width:24px;height:24px;background:#6B1A2A;border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.apul{width:6px;height:6px;border-radius:50%;background:#C94D6A;animation:ap 1.5s infinite;margin-left:auto;flex-shrink:0}
 @keyframes ap{0%,100%{opacity:1}50%{opacity:.3}}
-.at{font-size:13px;font-weight:700;color:#F7EEF0;margin-bottom:3px}
-.aa{font-size:9px;color:#9A7880;line-height:1.4}
-.abtn{margin-top:9px;background:#6B1A2A;border-radius:7px;padding:8px;
-  font-size:10px;font-weight:700;color:#fff;text-align:center}
-
-.fsec{background:rgba(26,10,15,.8);border:.5px solid rgba(107,26,42,.3);
-  border-radius:8px;margin-bottom:6px;overflow:hidden}
-.fst{padding:6px 9px;font-size:8px;font-weight:700;color:#C94D6A;
-  border-bottom:.5px solid rgba(107,26,42,.2);text-transform:uppercase;letter-spacing:.04em}
-.fr{display:flex;justify-content:space-between;padding:5px 9px;
-  border-bottom:.5px solid rgba(107,26,42,.12)}
+.atit{font-size:12px;font-weight:700;color:#F7EEF0;margin-bottom:2px}
+.asub{font-size:9px;color:#9A7880;line-height:1.4}
+.abtn{margin-top:8px;background:#6B1A2A;border-radius:7px;padding:7px;font-size:10px;font-weight:700;color:#fff;text-align:center}
+.fsec{background:rgba(22,8,12,.8);border:.5px solid rgba(107,26,42,.25);border-radius:7px;margin-bottom:5px;overflow:hidden}
+.fst{padding:5px 8px;font-size:7px;font-weight:700;color:#C94D6A;border-bottom:.5px solid rgba(107,26,42,.2);text-transform:uppercase;letter-spacing:.04em}
+.fr{display:flex;justify-content:space-between;padding:5px 8px;border-bottom:.5px solid rgba(107,26,42,.1)}
 .fr:last-child{border-bottom:none}
 .fk{font-size:8px;color:#9A7880}.fv{font-size:8px;font-weight:700;color:#F7EEF0}
-.fi{padding:5px 9px;border-bottom:.5px solid rgba(107,26,42,.12)}
+.fi{padding:5px 8px;border-bottom:.5px solid rgba(107,26,42,.1)}
 .fi:last-child{border-bottom:none}
-.fl{font-size:7px;color:#9A7880;margin-bottom:2px}
-.ff{background:rgba(107,26,42,.12);border:.5px solid rgba(107,26,42,.3);
-  border-radius:4px;padding:4px 6px;font-size:9px;color:#F7EEF0;width:100%}
-.cur{display:inline-block;width:1px;height:9px;background:#C94D6A;
-  animation:bl .8s step-end infinite;vertical-align:middle;margin-left:1px}
+.fl{font-size:7px;color:#9A7880;margin-bottom:1px}
+.ff{background:rgba(107,26,42,.1);border:.5px solid rgba(107,26,42,.25);border-radius:3px;padding:3px 6px;font-size:9px;color:#F7EEF0;width:100%}
+.cur2{display:inline-block;width:1px;height:9px;background:#C94D6A;animation:bl .8s step-end infinite;vertical-align:middle;margin-left:1px}
 @keyframes bl{0%,100%{opacity:1}50%{opacity:0}}
-
-.vg{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:6px 9px}
-.vc{background:rgba(107,26,42,.12);border:.5px solid rgba(107,26,42,.25);
-  border-radius:6px;padding:6px 7px}
-.vl{font-size:7px;color:#9A7880;margin-bottom:2px}
-.vv{font-size:12px;font-weight:700;color:#F7EEF0}
-.vu{font-size:7px;color:#9A7880}
-.vok{display:inline-block;width:5px;height:5px;border-radius:50%;
-  background:#4ade80;margin-left:2px;vertical-align:middle}
-
-.sigpad{margin:6px 9px;background:rgba(255,255,255,.02);
-  border:.5px dashed rgba(201,77,106,.4);border-radius:8px;height:64px;
-  position:relative}
-.archbtn{margin:6px 9px 0;background:#6B1A2A;border:none;border-radius:7px;
-  padding:8px;font-size:10px;font-weight:700;color:#fff;
-  width:calc(100% - 18px);text-align:center;display:block}
-
-.pr{display:flex;align-items:center;gap:7px;padding:7px 9px;
-  border-bottom:.5px solid rgba(107,26,42,.12)}
+.vg{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:6px 8px}
+.vc{background:rgba(107,26,42,.1);border:.5px solid rgba(107,26,42,.2);border-radius:6px;padding:5px 6px}
+.vl{font-size:7px;color:#9A7880;margin-bottom:1px}
+.vv{font-size:11px;font-weight:700;color:#F7EEF0}
+.vu{font-size:7px;color:#9A7880}.vok{display:inline-block;width:4px;height:4px;border-radius:50%;background:#4ade80;margin-left:2px;vertical-align:middle}
+.sigp{margin:5px 8px;background:rgba(255,255,255,.02);border:.5px dashed rgba(201,77,106,.35);border-radius:7px;height:58px;position:relative}
+.archb{margin:5px 8px 0;background:#6B1A2A;border:none;border-radius:6px;padding:7px;font-size:10px;font-weight:700;color:#fff;width:calc(100% - 16px);text-align:center;display:block}
+.pr{display:flex;align-items:center;gap:6px;padding:6px 8px;border-bottom:.5px solid rgba(107,26,42,.1)}
 .ps{width:6px;height:6px;border-radius:50%;flex-shrink:0}
 .sg{background:#4ade80}.sy{background:#facc15}
-.pn{font-size:10px;font-weight:700;color:#F7EEF0}
-.pm{font-size:8px;color:#9A7880}
+.pnm{font-size:10px;font-weight:700;color:#F7EEF0}.pm{font-size:8px;color:#9A7880}
 .pb{font-size:7px;font-weight:700;padding:2px 5px;border-radius:3px}
-.bg{background:rgba(74,222,128,.1);color:#4ade80;border:.5px solid rgba(74,222,128,.3)}
-.by{background:rgba(250,204,21,.1);color:#facc15;border:.5px solid rgba(250,204,21,.3)}
+.pbg2{background:rgba(74,222,128,.1);color:#4ade80;border:.5px solid rgba(74,222,128,.3)}
+.pby{background:rgba(250,204,21,.1);color:#facc15;border:.5px solid rgba(250,204,21,.3)}
 
-/* ── FEATURES ── */
-#features{
-  padding:clamp(5rem,12vh,10rem) clamp(1.5rem,6vw,8rem);
-  max-width:1200px;margin:0 auto;
-}
-.feat-label{
-  font-size:.75rem;font-weight:700;color:var(--accent);
-  letter-spacing:.15em;text-transform:uppercase;
-  margin-bottom:1rem;display:flex;align-items:center;gap:.75rem;
-}
-.feat-label::before{content:'';width:24px;height:1px;background:var(--accent)}
-.feat-title{
-  font-size:clamp(2rem,4vw,3.5rem);font-weight:700;
-  letter-spacing:-.03em;line-height:1.05;margin-bottom:4rem;
-  max-width:18ch;
-}
-.feat-grid{
-  display:grid;
-  grid-template-columns:repeat(3,1fr);
-  gap:1px;
-  border:.5px solid rgba(247,238,240,.07);
-  border-radius:16px;overflow:hidden;
-}
-.feat-item{
-  padding:2rem 1.75rem;
-  background:rgba(18,6,8,.6);
-  transition:background .3s;
-}
-.feat-item:hover{background:rgba(107,26,42,.12)}
-.feat-icon{
-  width:36px;height:36px;
-  color:var(--accent);margin-bottom:1.25rem;
-}
-.feat-name{font-size:1rem;font-weight:700;margin-bottom:.5rem}
-.feat-desc{font-size:.875rem;color:var(--muted);line-height:1.65}
+/* FEATURES */
+#features{padding:clamp(6rem,14vh,12rem) clamp(1.5rem,6vw,8rem);max-width:1300px;margin:0 auto}
+.sec-label{font-size:.72rem;font-weight:700;color:var(--accent);letter-spacing:.18em;text-transform:uppercase;margin-bottom:1rem;display:flex;align-items:center;gap:.75rem}
+.sec-label::before{content:'';width:20px;height:1px;background:var(--accent)}
+.sec-title{font-size:clamp(2.5rem,5vw,4.5rem);font-weight:700;letter-spacing:-.04em;line-height:.95;margin-bottom:5rem;max-width:14ch}
+.feat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:rgba(247,238,240,.04);border:1px solid rgba(247,238,240,.04);border-radius:20px;overflow:hidden}
+.feat-item{padding:2.5rem 2rem;background:var(--bg);transition:background .4s}
+.feat-item:hover{background:rgba(107,26,42,.1)}
+.feat-ico{color:var(--accent);width:32px;height:32px;margin-bottom:1.5rem}
+.feat-name{font-size:1.05rem;font-weight:700;margin-bottom:.6rem}
+.feat-desc{font-size:.875rem;color:var(--muted);line-height:1.7}
 
-/* ── CTA ── */
-#cta{
-  min-height:60vh;display:flex;align-items:center;justify-content:center;
-  text-align:center;padding:clamp(4rem,10vh,8rem) clamp(1.5rem,6vw,6rem);
-  position:relative;overflow:hidden;
-}
-.cta-glow{
-  position:absolute;top:50%;left:50%;
-  transform:translate(-50%,-50%);
-  width:500px;height:300px;
-  background:radial-gradient(ellipse,rgba(107,26,42,.3) 0%,transparent 70%);
-  pointer-events:none;
-}
-.cta-inner{position:relative;z-index:1}
-.cta-inner h2{
-  font-size:clamp(2.5rem,7vw,6rem);font-weight:700;
-  letter-spacing:-.04em;line-height:.95;margin-bottom:2rem;
-}
-.cta-inner p{
-  font-size:1rem;color:var(--muted);margin-bottom:2.5rem;line-height:1.7;
-}
-.cta-btn{
-  display:inline-block;
-  background:var(--accent);color:#fff;
-  padding:16px 36px;border-radius:100px;
-  font-family:var(--font);font-size:1rem;font-weight:700;
-  text-decoration:none;border:none;cursor:pointer;
-  transition:background .3s,transform .2s;
-  letter-spacing:-.01em;
-}
-.cta-btn:hover{background:#B03050;transform:translateY(-2px)}
-.cta-btn:active{transform:translateY(0)}
+/* CTA */
+#cta{min-height:100vh;display:flex;align-items:center;justify-content:center;text-align:center;padding:0 clamp(1.5rem,6vw,6rem);position:relative}
+.cta-glow{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:600px;height:400px;background:radial-gradient(ellipse,rgba(107,26,42,.25) 0%,transparent 65%);pointer-events:none}
+.cta-wrap{position:relative;z-index:1}
+.cta-wrap h2{font-size:clamp(3rem,9vw,8rem);font-weight:700;letter-spacing:-.04em;line-height:.92;margin-bottom:2rem}
+.cta-wrap p{font-size:1.05rem;color:var(--muted);margin-bottom:3rem;line-height:1.7}
+.cta-btn{display:inline-block;background:var(--accent);color:#fff;padding:18px 44px;border-radius:100px;font-family:var(--font);font-size:1rem;font-weight:700;text-decoration:none;border:none;cursor:none;transition:background .3s,transform .2s;letter-spacing:-.01em}
+.cta-btn:hover{background:#B03050;transform:scale(1.04)}
 
-/* ── FOOTER ── */
-footer{
-  border-top:.5px solid rgba(247,238,240,.07);
-  padding:2rem clamp(1.5rem,6vw,8rem);
-  display:flex;align-items:center;justify-content:space-between;
-  flex-wrap:wrap;gap:1rem;
-}
+/* FOOTER */
+footer{padding:2rem clamp(1.5rem,6vw,8rem);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;border-top:.5px solid rgba(247,238,240,.06)}
 footer p{font-size:.8rem;color:var(--muted)}
-.foot-links{display:flex;gap:1.5rem}
-.foot-links a{font-size:.8rem;color:var(--muted);text-decoration:none;transition:color .2s}
-.foot-links a:hover{color:var(--text)}
+.flinks{display:flex;gap:1.5rem}
+.flinks a{font-size:.8rem;color:var(--muted);text-decoration:none;transition:color .2s}
+.flinks a:hover{color:var(--text)}
 
 /* Reveal */
-.reveal{opacity:0;transform:translateY(24px);transition:opacity .7s,transform .7s}
-.reveal.vis{opacity:1;transform:none}
+.rev{opacity:0;transform:translateY(28px);transition:opacity .8s,transform .8s}
+.rev.on{opacity:1;transform:none}
 
 @media(max-width:768px){
-  .story-sticky{grid-template-columns:1fr;padding:0 1.5rem;gap:2rem}
-  .phone-wrap{display:none}
-  h2{font-size:clamp(1.75rem,8vw,3rem)}
+  body,html{overflow:auto}
+  #scroll-container{position:static;transform:none!important}
+  .story-pin{grid-template-columns:1fr;padding:0 1.5rem}
+  .phone-side{display:none}
   .feat-grid{grid-template-columns:1fr}
+  h2{font-size:clamp(2rem,8vw,3rem)}
 }
 </style>
 </head>
 <body>
+<canvas id="bg"></canvas>
+<div id="grain"></div>
+<div id="cur"></div>
+<div id="cur2"></div>
+<div class="prog-bar" id="prog"></div>
+<div id="scroll-container">
 <nav>
-  <a href="#" class="nav-logo">
-    <div class="nav-logo-mark">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
-    </div>
-    <span class="nav-wordmark">res<em>ponda</em></span>
+  <a href="#" class="logo">
+    <div class="logo-mark"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></div>
+    <span class="logo-word">res<em>ponda</em></span>
   </a>
-  <a href="https://app.responda.systems" class="nav-cta">Zur App &#8594;</a>
+  <a href="https://app.responda.systems" class="nav-link">Zur App &#8594;</a>
 </nav>
 
 <section id="hero">
-  <div class="hero-glow"></div>
-  <div class="hero-eyebrow"><span class="eyebrow-line"></span>F&#252;r den Rettungsdienst<span class="eyebrow-line"></span></div>
-  <h1>Jeder Einsatz<br><span class="dim">z&#228;hlt.</span></h1>
+  <div class="eyebrow"><span class="eline"></span>F&#252;r den Rettungsdienst<span class="eline"></span></div>
+  <h1>
+    <div class="word"><span style="animation-delay:.1s">Jeder</span></div>&nbsp;
+    <div class="word"><span style="animation-delay:.2s">Einsatz</span></div><br>
+    <div class="word dim"><span style="animation-delay:.35s">z&#228;hlt.</span></div>
+  </h1>
   <p class="hero-sub">Responda digitalisiert Patientendokumentation, Produktausgabe und Qualit&#228;tsmanagement &#8212; mobil, sicher und DSGVO-konform.</p>
-  <div class="hero-scroll"><div class="scroll-line"></div>Scrollen</div>
+  <div class="scroll-hint"><div class="scroll-bar"></div>Scrollen</div>
 </section>
 
 <section id="story">
-  <div class="story-spacer"></div>
-  <div class="story-sticky">
-    <div class="story-chapters">
-      <div class="chapter vis" id="ch1">
-        <div class="ch-num">01 &#8212; Alarm</div>
-        <h2>09:13 Uhr.<br>Alarmierung.</h2>
-        <p class="ch-desc">RTW wird alarmiert. Die Crew &#246;ffnet Responda direkt auf dem Smartphone &#8212; kein Login, kein Papier, keine Verz&#246;gerung.</p>
-      </div>
-      <div class="chapter" id="ch2">
-        <div class="ch-num">02 &#8212; Formular</div>
-        <h2>QR scannen.<br>Sofort bereit.</h2>
-        <p class="ch-desc">Ein Scan am Fahrzeug &#246;ffnet das Patientenformular mit vorausgef&#252;llten Einsatzdaten. Kein App-Download, kein Account.</p>
-      </div>
-      <div class="chapter" id="ch3">
-        <div class="ch-num">03 &#8212; Dokumentation</div>
-        <h2>Vitalzeichen.<br>Anamnese.<br>Diagnose.</h2>
-        <p class="ch-desc">Alle relevanten Daten strukturiert erfassen &#8212; Blutdruck, Puls, SpO&#8322;, GCS, Maßnahmen und Diagnose in einem Formular.</p>
-      </div>
-      <div class="chapter" id="ch4">
-        <div class="ch-num">04 &#8212; Archiv</div>
-        <h2>Unterschrift.<br>Archiviert.</h2>
-        <p class="ch-desc">Digitale Unterschrift am Touchscreen. Ein Tipper &#8212; DSGVO-konform archiviert, 10-j&#228;hrige Aufbewahrung, Audit-Log automatisch.</p>
-      </div>
-      <div class="chapter" id="ch5">
-        <div class="ch-num">05 &#8212; &#220;bersicht</div>
-        <h2>Alles im Blick.<br>In Echtzeit.</h2>
-        <p class="ch-desc">Organisationsleitung sieht alle Einst&#228;tze live &#8212; wer in Bearbeitung ist, wer archiviert hat, mit vollst&#228;ndigem Verlauf.</p>
-      </div>
+  <div class="spacer"></div>
+  <div class="story-pin">
+    <div class="chapters">
+      <div class="ch on" id="c1"><div class="ch-n">01 &#8212; Alarm</div><h2>09:13 Uhr.<br>Alarmierung.</h2><p class="ch-d">RTW wird alarmiert. Die Crew &#246;ffnet Responda direkt auf dem Smartphone &#8212; kein Login, kein Papier.</p></div>
+      <div class="ch" id="c2"><div class="ch-n">02 &#8212; Formular</div><h2>QR scannen.<br>Sofort bereit.</h2><p class="ch-d">Ein Scan am Fahrzeug &#246;ffnet das Patientenformular mit vorausgef&#252;llten Einsatzdaten. Kein Download.</p></div>
+      <div class="ch" id="c3"><div class="ch-n">03 &#8212; Dokumentation</div><h2>Vitalzeichen.<br>Anamnese.<br>Diagnose.</h2><p class="ch-d">Alle relevanten Daten strukturiert erfassen &#8212; Blutdruck, Puls, SpO&#8322;, GCS, Maßnahmen in einem Formular.</p></div>
+      <div class="ch" id="c4"><div class="ch-n">04 &#8212; Archiv</div><h2>Unterschrift.<br>Archiviert.</h2><p class="ch-d">Digitale Unterschrift am Touchscreen. Ein Tipper &#8212; DSGVO-konform archiviert, Audit-Log automatisch.</p></div>
+      <div class="ch" id="c5"><div class="ch-n">05 &#8212; &#220;bersicht</div><h2>Alles im Blick.<br>In Echtzeit.</h2><p class="ch-d">Organisationsleitung sieht alle Einst&#228;tze live &#8212; wer arbeitet, wer fertig ist, vollst&#228;ndiger Verlauf.</p></div>
     </div>
-    <div class="phone-wrap">
+    <div class="phone-side">
       <div class="phone">
-        <div class="phone-notch"><div class="nc"></div><div class="nc" style="width:6px;height:6px"></div></div>
-        <div class="scr on" id="ps1">
-          <div class="sbg"></div><div class="sb"><span>09:13</span><span>&#9679;&#9679;&#9679;</span></div>
-          <div class="alert-box">
-            <div class="alert-row">
-              <div class="alert-ico"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
-              <div><div style="font-size:8px;font-weight:700;color:#C94D6A;text-transform:uppercase;letter-spacing:.05em">Responda</div><div style="font-size:7px;color:#9A7880">Neuer Einsatz</div></div>
-              <div class="apulse"></div>
-            </div>
-            <div class="at">&#9889; Notfalleinsatz &#8212; RTW 1</div>
-            <div class="aa">Hauptstra&#223;e 14 &#183; 80939 M&#252;nchen<br>Einsatz #2026-042 &#183; 09:13 Uhr</div>
-            <div class="abtn">Formular &#246;ffnen &#8594;</div>
-          </div>
-          <div style="position:relative;z-index:1;padding:0 10px;margin-top:6px"><div style="background:rgba(26,10,15,.6);border:.5px solid rgba(107,26,42,.2);border-radius:8px;padding:8px 10px"><div style="font-size:7px;color:#5A3840;margin-bottom:3px">Aktive Dokumentationen</div><div style="font-size:10px;color:#9A7880">2 offen &#183; 14 heute archiviert</div></div></div>
+        <div class="notch"><div class="nc"></div><div class="nc" style="width:6px;height:6px"></div></div>
+        <div class="pscr on" id="s1">
+          <div class="pbg"></div><div class="psb"><span>09:13</span><span>&#9679;&#9679;&#9679;</span></div>
+          <div class="abox"><div class="arow"><div class="aico"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div><div><div style="font-size:7px;font-weight:700;color:#C94D6A;text-transform:uppercase;letter-spacing:.05em">Responda</div><div style="font-size:7px;color:#9A7880">Neuer Einsatz</div></div><div class="apul"></div></div><div class="atit">&#9889; Notfalleinsatz &#8212; RTW 1</div><div class="asub">Hauptstra&#223;e 14 &#183; 80939 M&#252;nchen<br>#2026-042 &#183; 09:13 Uhr</div><div class="abtn">Formular &#246;ffnen &#8594;</div></div>
+          <div style="position:relative;z-index:1;padding:0 9px;margin-top:5px"><div style="background:rgba(22,8,12,.6);border:.5px solid rgba(107,26,42,.2);border-radius:7px;padding:7px 9px"><div style="font-size:7px;color:#5A3840;margin-bottom:2px">Aktive Dokumentationen</div><div style="font-size:10px;color:#9A7880">2 offen &#183; 14 archiviert</div></div></div>
         </div>
-        <div class="scr" id="ps2">
-          <div class="sbg"></div><div class="sb"><span>09:15</span><span>&#9679;&#9679;&#9679;</span></div>
-          <div class="sh"><span class="sback">&#8249; Zur&#252;ck</span><span class="st">Patientendoku</span><span style="width:30px"></span></div>
-          <div style="position:relative;z-index:1;padding:8px">
-            <div class="fsec"><div class="fst">Einsatzdaten</div><div class="fr"><span class="fk">Einsatz</span><span class="fv">#2026-042</span></div><div class="fr"><span class="fk">Datum</span><span class="fv">26.04.2026</span></div><div class="fr"><span class="fk">Fahrzeug</span><span class="fv">RTW 1</span></div></div>
-            <div class="fsec"><div class="fst">Patient</div><div class="fi"><div class="fl">Vorname *</div><div class="ff">Max<span class="cur"></span></div></div><div class="fi"><div class="fl">Nachname *</div><div class="ff" style="color:#5A3840">Eingabe&#8230;</div></div><div class="fi"><div class="fl">Geburtsdatum</div><div class="ff" style="color:#5A3840">TT.MM.JJJJ</div></div></div>
-          </div>
+        <div class="pscr" id="s2">
+          <div class="pbg"></div><div class="psb"><span>09:15</span><span>&#9679;&#9679;&#9679;</span></div>
+          <div class="phd"><span class="phb">&#8249; Zur&#252;ck</span><span class="pht">Patientendoku</span><span style="width:28px"></span></div>
+          <div style="position:relative;z-index:1;padding:7px"><div class="fsec"><div class="fst">Einsatzdaten</div><div class="fr"><span class="fk">Einsatz</span><span class="fv">#2026-042</span></div><div class="fr"><span class="fk">Datum</span><span class="fv">26.04.2026</span></div><div class="fr"><span class="fk">Fahrzeug</span><span class="fv">RTW 1</span></div></div><div class="fsec"><div class="fst">Patient</div><div class="fi"><div class="fl">Vorname *</div><div class="ff">Max<span class="cur2"></span></div></div><div class="fi"><div class="fl">Nachname *</div><div class="ff" style="color:#5A3840">Eingabe&#8230;</div></div><div class="fi"><div class="fl">Geburtsdatum</div><div class="ff" style="color:#5A3840">TT.MM.JJJJ</div></div></div></div>
         </div>
-        <div class="scr" id="ps3">
-          <div class="sbg"></div><div class="sb"><span>09:18</span><span>&#9679;&#9679;&#9679;</span></div>
-          <div class="sh"><span class="sback">&#8249; Zur&#252;ck</span><span class="st">Vitalzeichen</span><span style="width:30px"></span></div>
-          <div style="position:relative;z-index:1">
-            <div class="vg"><div class="vc"><div class="vl">Blutdruck</div><div class="vv">120<span class="vu">/80</span><span class="vok"></span></div></div><div class="vc"><div class="vl">Puls</div><div class="vv">72<span class="vu"> bpm</span><span class="vok"></span></div></div><div class="vc"><div class="vl">SpO&#8322;</div><div class="vv">98<span class="vu"> %</span><span class="vok"></span></div></div><div class="vc"><div class="vl">GCS</div><div class="vv">15<span class="vu">/15</span><span class="vok"></span></div></div></div>
-            <div style="padding:0 8px"><div class="fsec"><div class="fst">Anamnese</div><div class="fi"><div class="fl">Beschwerden</div><div class="ff">Thoraxschmerz li.<span class="cur"></span></div></div><div class="fi"><div class="fl">Diagnose</div><div class="ff" style="color:#5A3840">Verdacht ACS</div></div></div></div>
-          </div>
+        <div class="pscr" id="s3">
+          <div class="pbg"></div><div class="psb"><span>09:18</span><span>&#9679;&#9679;&#9679;</span></div>
+          <div class="phd"><span class="phb">&#8249; Zur&#252;ck</span><span class="pht">Vitalzeichen</span><span style="width:28px"></span></div>
+          <div style="position:relative;z-index:1"><div class="vg"><div class="vc"><div class="vl">Blutdruck</div><div class="vv">120<span class="vu">/80</span><span class="vok"></span></div></div><div class="vc"><div class="vl">Puls</div><div class="vv">72<span class="vu">bpm</span><span class="vok"></span></div></div><div class="vc"><div class="vl">SpO&#8322;</div><div class="vv">98<span class="vu">%</span><span class="vok"></span></div></div><div class="vc"><div class="vl">GCS</div><div class="vv">15<span class="vu">/15</span><span class="vok"></span></div></div></div><div style="padding:0 7px"><div class="fsec"><div class="fst">Anamnese</div><div class="fi"><div class="fl">Beschwerden</div><div class="ff">Thoraxschmerz li.<span class="cur2"></span></div></div><div class="fi"><div class="fl">Diagnose</div><div class="ff" style="color:#5A3840">Verdacht ACS</div></div></div></div></div>
         </div>
-        <div class="scr" id="ps4">
-          <div class="sbg"></div><div class="sb"><span>09:23</span><span>&#9679;&#9679;&#9679;</span></div>
-          <div class="sh"><span class="sback">&#8249; Zur&#252;ck</span><span class="st">Archivieren</span><span style="width:30px"></span></div>
-          <div style="position:relative;z-index:1;padding:8px">
-            <div style="background:rgba(74,222,128,.06);border:.5px solid rgba(74,222,128,.2);border-radius:8px;padding:7px 9px;margin-bottom:7px"><div style="font-size:8px;font-weight:700;color:#4ade80;margin-bottom:1px">&#10003; Alle Felder vollst&#228;ndig</div><div style="font-size:7px;color:#9A7880">Max M. &#183; #2026-042 &#183; RTW 1</div></div>
-            <div style="font-size:7px;font-weight:700;color:#9A7880;margin-bottom:3px;text-transform:uppercase;letter-spacing:.04em">Unterschrift Einsatzkraft</div>
-            <div class="sigpad"><svg style="position:absolute;inset:8px" viewBox="0 0 220 48" fill="none"><path d="M8 38 C22 18 36 42 54 26 C72 10 84 36 104 30 C124 24 136 40 156 34 C170 30 182 32 212 28" stroke="#C94D6A" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" opacity=".85"/></svg></div>
-            <div class="archbtn">Archivieren</div>
-          </div>
+        <div class="pscr" id="s4">
+          <div class="pbg"></div><div class="psb"><span>09:23</span><span>&#9679;&#9679;&#9679;</span></div>
+          <div class="phd"><span class="phb">&#8249; Zur&#252;ck</span><span class="pht">Archivieren</span><span style="width:28px"></span></div>
+          <div style="position:relative;z-index:1;padding:7px"><div style="background:rgba(74,222,128,.06);border:.5px solid rgba(74,222,128,.2);border-radius:7px;padding:6px 8px;margin-bottom:6px"><div style="font-size:8px;font-weight:700;color:#4ade80;margin-bottom:1px">&#10003; Vollst&#228;ndig</div><div style="font-size:7px;color:#9A7880">Max M. &#183; #2026-042</div></div><div style="font-size:7px;font-weight:700;color:#9A7880;margin-bottom:3px;text-transform:uppercase;letter-spacing:.04em">Unterschrift</div><div class="sigp"><svg style="position:absolute;inset:7px" viewBox="0 0 220 44" fill="none"><path d="M8 36 C22 16 36 40 54 24 C72 8 84 34 104 28 C124 22 136 38 156 32 C170 28 182 30 212 26" stroke="#C94D6A" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" opacity=".85"/></svg></div><div class="archb">Archivieren</div></div>
         </div>
-        <div class="scr" id="ps5">
-          <div class="sbg"></div><div class="sb"><span>09:25</span><span>&#9679;&#9679;&#9679;</span></div>
-          <div class="sh"><span></span><span class="st">Patienten</span><span style="font-size:8px;color:#C94D6A;font-weight:700">Heute</span></div>
-          <div style="position:relative;z-index:1">
-            <div class="pr"><div class="ps sg"></div><div style="flex:1"><div class="pn">Max M&#252;ller</div><div class="pm">09:23 &#183; RTW 1</div></div><div class="pb bg">Archiviert</div></div>
-            <div class="pr"><div class="ps sy"></div><div style="flex:1"><div class="pn">Anna Schmidt</div><div class="pm">08:51 &#183; RTW 2</div></div><div class="pb by">In Bearb.</div></div>
-            <div class="pr"><div class="ps sg"></div><div style="flex:1"><div class="pn">Klaus Weber</div><div class="pm">07:30 &#183; NEF</div></div><div class="pb bg">Archiviert</div></div>
-            <div class="pr"><div class="ps sg"></div><div style="flex:1"><div class="pn">Maria Fischer</div><div class="pm">06:15 &#183; RTW 1</div></div><div class="pb bg">Archiviert</div></div>
-            <div style="padding:8px;font-size:7px;color:#5A3840;text-align:center">+ 10 weitere heute</div>
-          </div>
+        <div class="pscr" id="s5">
+          <div class="pbg"></div><div class="psb"><span>09:25</span><span>&#9679;&#9679;&#9679;</span></div>
+          <div class="phd"><span></span><span class="pht">Patienten</span><span style="font-size:8px;color:#C94D6A;font-weight:700">Heute</span></div>
+          <div style="position:relative;z-index:1"><div class="pr"><div class="ps sg"></div><div style="flex:1"><div class="pnm">Max M&#252;ller</div><div class="pm">09:23 &#183; RTW 1</div></div><div class="pb pbg2">Archiviert</div></div><div class="pr"><div class="ps sy"></div><div style="flex:1"><div class="pnm">Anna Schmidt</div><div class="pm">08:51 &#183; RTW 2</div></div><div class="pb pby">In Bearb.</div></div><div class="pr"><div class="ps sg"></div><div style="flex:1"><div class="pnm">Klaus Weber</div><div class="pm">07:30 &#183; NEF</div></div><div class="pb pbg2">Archiviert</div></div><div class="pr"><div class="ps sg"></div><div style="flex:1"><div class="pnm">Maria Fischer</div><div class="pm">06:15 &#183; RTW 1</div></div><div class="pb pbg2">Archiviert</div></div></div>
         </div>
       </div>
     </div>
@@ -421,45 +245,21 @@ footer p{font-size:.8rem;color:var(--muted)}
 </section>
 
 <section id="features">
-  <div class="reveal"><div class="feat-label">Was Responda kann</div></div>
-  <h2 class="feat-title reveal">Alles was der<br>Rettungsdienst<br>braucht.</h2>
+  <div class="sec-label rev">Was Responda kann</div>
+  <div class="sec-title rev">Alles was der<br>Rettungsdienst<br>braucht.</div>
   <div class="feat-grid">
-    <div class="feat-item reveal">
-      <div class="feat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/><path d="M9 12l2 2 4-4"/></svg></div>
-      <div class="feat-name">Patientendokumentation</div>
-      <div class="feat-desc">Strukturierte Erfassung von Anamnese, Vitalzeichen und Diagnose &#8212; mit digitaler Unterschrift und DSGVO-konformem Archiv.</div>
-    </div>
-    <div class="feat-item reveal">
-      <div class="feat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7H4a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2z"/><path d="M16 3H8L6 7h12l-2-4z"/></svg></div>
-      <div class="feat-name">Produktausgabe</div>
-      <div class="feat-desc">Digitale Erfassung von Materialausgaben je Einsatz mit Positionsliste &#8212; sofort verf&#252;gbar f&#252;r das Qualit&#228;tsmanagement.</div>
-    </div>
-    <div class="feat-item reveal">
-      <div class="feat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
-      <div class="feat-name">CIRS-Meldungen</div>
-      <div class="feat-desc">Anonyme Meldung kritischer Ereignisse mit Schweregrad und Verbesserungsvorschl&#228;gen &#8212; direkt aus dem Einsatz.</div>
-    </div>
-    <div class="feat-item reveal">
-      <div class="feat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM17 14h3M17 17v3M14 20h3"/></svg></div>
-      <div class="feat-name">QR-Code Zugang</div>
-      <div class="feat-desc">Crew scannt QR-Code am Fahrzeug &#8212; Formular startet sofort im Browser. Kein App-Download, kein Account erforderlich.</div>
-    </div>
-    <div class="feat-item reveal">
-      <div class="feat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg></div>
-      <div class="feat-name">Mehrere Organisationen</div>
-      <div class="feat-desc">Mandantenf&#228;hig: Jede Organisation hat eigene Daten, Zugriffsrechte und QR-Codes &#8212; komplett voneinander getrennt.</div>
-    </div>
-    <div class="feat-item reveal">
-      <div class="feat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M9 7h6M9 11h6M9 15h4"/></svg></div>
-      <div class="feat-name">Audit-Log &amp; 10-Jahres-Archiv</div>
-      <div class="feat-desc">L&#252;ckenloses Protokoll aller Zugriffe. Automatische L&#246;schwarnung nach 10 Jahren gem&#228;&#223; &#167;630f BGB.</div>
-    </div>
+    <div class="feat-item rev"><div class="feat-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/><path d="M9 12l2 2 4-4"/></svg></div><div class="feat-name">Patientendokumentation</div><div class="feat-desc">Anamnese, Vitalzeichen, Diagnose &#8212; mit digitaler Unterschrift und DSGVO-konformem Archiv.</div></div>
+    <div class="feat-item rev"><div class="feat-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7H4a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2z"/><path d="M16 3H8L6 7h12l-2-4z"/></svg></div><div class="feat-name">Produktausgabe</div><div class="feat-desc">Materialausgaben je Einsatz mit Positionsliste &#8212; sofort verf&#252;gbar f&#252;r das QM.</div></div>
+    <div class="feat-item rev"><div class="feat-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div><div class="feat-name">CIRS-Meldungen</div><div class="feat-desc">Anonyme Meldung kritischer Ereignisse mit Schweregrad und Verbesserungsvorschl&#228;gen.</div></div>
+    <div class="feat-item rev"><div class="feat-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM17 14h3M17 17v3M14 20h3"/></svg></div><div class="feat-name">QR-Code Zugang</div><div class="feat-desc">Scan am Fahrzeug &#8212; Formular startet sofort. Kein App-Download, kein Account.</div></div>
+    <div class="feat-item rev"><div class="feat-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg></div><div class="feat-name">Mehrere Organisationen</div><div class="feat-desc">Mandantenf&#228;hig: Eigene Daten, Zugriffsrechte und QR-Codes pro Organisation.</div></div>
+    <div class="feat-item rev"><div class="feat-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M9 7h6M9 11h6M9 15h4"/></svg></div><div class="feat-name">Audit-Log &amp; Archiv</div><div class="feat-desc">L&#252;ckenloses Protokoll aller Zugriffe. Automatische L&#246;schwarnung nach 10 Jahren (&#167;630f BGB).</div></div>
   </div>
 </section>
 
 <section id="cta">
   <div class="cta-glow"></div>
-  <div class="cta-inner reveal">
+  <div class="cta-wrap rev">
     <h2>Bereit f&#252;r<br>Responda?</h2>
     <p>Starte jetzt mit deiner Organisation.<br>Kein Download, kein Vertrag.</p>
     <a href="https://app.responda.systems" class="cta-btn">Jetzt starten</a>
@@ -467,46 +267,138 @@ footer p{font-size:.8rem;color:var(--muted)}
 </section>
 
 <footer>
-  <a href="#" class="nav-logo">
-    <div class="nav-logo-mark" style="width:26px;height:26px;border-radius:6px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></div>
-    <span class="nav-wordmark" style="font-size:1rem">res<em>ponda</em></span>
-  </a>
-  <p>&#169; 2026 Responda. Alle Rechte vorbehalten.</p>
-  <div class="foot-links">
-    <a href="#">Datenschutz</a>
-    <a href="#">Impressum</a>
-  </div>
+  <a href="#" class="logo"><div class="logo-mark" style="width:26px;height:26px;border-radius:6px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></div><span class="logo-word" style="font-size:1rem">res<em>ponda</em></span></a>
+  <p>&#169; 2026 Responda</p>
+  <div class="flinks"><a href="#">Datenschutz</a><a href="#">Impressum</a></div>
 </footer>
-
+</div>
 <script>
-// Scroll-driven story
-const chapters = ['ch1','ch2','ch3','ch4','ch5'];
-const screens  = ['ps1','ps2','ps3','ps4','ps5'];
-const story = document.getElementById('story');
+// ── THREE.JS PARTICLE BACKGROUND ──
+(function(){
+  const canvas = document.getElementById('bg');
+  const renderer = new THREE.WebGLRenderer({canvas, alpha:true, antialias:true});
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setClearColor(0x000000, 0);
 
-function updateStory() {
-  const rect = story.getBoundingClientRect();
-  const total = story.offsetHeight - window.innerHeight;
-  const scrolled = Math.max(0, -rect.top);
-  const progress = Math.min(1, scrolled / total);
-  const idx = Math.min(4, Math.floor(progress * 5));
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 100);
+  camera.position.z = 30;
 
-  chapters.forEach((id, i) => {
-    document.getElementById(id).classList.toggle('vis', i === idx);
+  // Particles
+  const count = 1800;
+  const geo = new THREE.BufferGeometry();
+  const pos = new Float32Array(count * 3);
+  const col = new Float32Array(count * 3);
+  for(let i = 0; i < count; i++){
+    const r = 20 + Math.random() * 20;
+    const theta = Math.random() * Math.PI * 2;
+    const phi = Math.acos(2 * Math.random() - 1);
+    pos[i*3]   = r * Math.sin(phi) * Math.cos(theta);
+    pos[i*3+1] = r * Math.sin(phi) * Math.sin(theta);
+    pos[i*3+2] = r * Math.cos(phi);
+    const t = Math.random();
+    col[i*3]   = 0.4 + t * 0.3;
+    col[i*3+1] = 0.1 + t * 0.1;
+    col[i*3+2] = 0.15 + t * 0.2;
+  }
+  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  const mat = new THREE.PointsMaterial({size:0.18, vertexColors:true, transparent:true, opacity:0.7, sizeAttenuation:true});
+  const pts = new THREE.Points(geo, mat);
+  scene.add(pts);
+
+  // Mouse parallax
+  let mx = 0, my = 0;
+  window.addEventListener('mousemove', e => {
+    mx = (e.clientX / window.innerWidth  - 0.5) * 2;
+    my = (e.clientY / window.innerHeight - 0.5) * 2;
   });
-  screens.forEach((id, i) => {
-    document.getElementById(id).classList.toggle('on', i === idx);
+
+  window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
   });
+
+  let t = 0;
+  function animate(){
+    requestAnimationFrame(animate);
+    t += 0.003;
+    pts.rotation.y = t * 0.08;
+    pts.rotation.x = t * 0.03;
+    camera.position.x += (mx * 2 - camera.position.x) * 0.02;
+    camera.position.y += (-my * 2 - camera.position.y) * 0.02;
+    camera.lookAt(scene.position);
+    renderer.render(scene, camera);
+  }
+  animate();
+})();
+
+// ── SMOOTH SCROLL (lerp) ──
+const container = document.getElementById('scroll-container');
+let scrollY = 0, currentY = 0, raf;
+const lerp = (a,b,t) => a + (b-a)*t;
+
+function tick(){
+  currentY = lerp(currentY, scrollY, 0.08);
+  if(Math.abs(currentY - scrollY) < 0.05) currentY = scrollY;
+  container.style.transform = `translateY(${-currentY}px)`;
+  updateStory();
+  updateProg();
+  raf = requestAnimationFrame(tick);
 }
 
-window.addEventListener('scroll', updateStory, {passive: true});
-updateStory();
+document.documentElement.style.height = container.scrollHeight + 'px';
+window.addEventListener('scroll', () => { scrollY = window.scrollY; }, {passive:true});
+window.addEventListener('resize', () => { document.documentElement.style.height = container.scrollHeight + 'px'; });
+tick();
 
-// Reveal on scroll
+// ── SCROLL-DRIVEN STORY ──
+const story = document.getElementById('story');
+const chs = ['c1','c2','c3','c4','c5'];
+const scrs = ['s1','s2','s3','s4','s5'];
+function updateStory(){
+  const top = story.offsetTop - currentY;
+  const total = story.offsetHeight - window.innerHeight;
+  const scrolled = Math.max(0, -(top));
+  const prog = Math.min(1, scrolled / total);
+  const idx = Math.min(4, Math.floor(prog * 5));
+  chs.forEach((id,i)  => document.getElementById(id).classList.toggle('on', i===idx));
+  scrs.forEach((id,i) => document.getElementById(id).classList.toggle('on', i===idx));
+}
+
+// ── PROGRESS BAR ──
+const progEl = document.getElementById('prog');
+function updateProg(){
+  const total = container.scrollHeight - window.innerHeight;
+  const p = total > 0 ? (currentY / total * 100) : 0;
+  progEl.style.width = p + '%';
+}
+
+// ── CUSTOM CURSOR ──
+const cur = document.getElementById('cur');
+const cur2 = document.getElementById('cur2');
+let cx=0,cy=0,cx2=0,cy2=0;
+window.addEventListener('mousemove', e => { cx=e.clientX; cy=e.clientY; });
+function curTick(){
+  cur.style.left = cx+'px'; cur.style.top = cy+'px';
+  cx2 += (cx-cx2)*0.12; cy2 += (cy-cy2)*0.12;
+  cur2.style.left = cx2+'px'; cur2.style.top = cy2+'px';
+  requestAnimationFrame(curTick);
+}
+curTick();
+
+document.querySelectorAll('a,button,.feat-item').forEach(el => {
+  el.addEventListener('mouseenter', ()=>{ cur.style.transform='translate(-50%,-50%) scale(2)'; cur2.style.borderColor='rgba(201,77,106,.9)'; cur2.style.transform='translate(-50%,-50%) scale(1.3)'; });
+  el.addEventListener('mouseleave', ()=>{ cur.style.transform='translate(-50%,-50%) scale(1)'; cur2.style.borderColor='rgba(201,77,106,.5)'; cur2.style.transform='translate(-50%,-50%) scale(1)'; });
+});
+
+// ── REVEAL ON SCROLL ──
 const obs = new IntersectionObserver(e => e.forEach(x => {
-  if (x.isIntersecting) { x.target.classList.add('vis'); obs.unobserve(x.target); }
-}), {threshold: 0.1, rootMargin: '0px 0px -40px 0px'});
-document.querySelectorAll('.reveal').forEach(el => obs.observe(el));
+  if(x.isIntersecting){ x.target.classList.add('on'); obs.unobserve(x.target); }
+}), {threshold:0.1, rootMargin:'0px 0px -40px 0px'});
+document.querySelectorAll('.rev').forEach(el => obs.observe(el));
 </script>
 </body>
 </html>
