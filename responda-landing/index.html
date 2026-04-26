@@ -11,13 +11,14 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-html,body{height:100%;overflow:hidden}
+html{scroll-behavior:smooth}
+body{overflow-x:hidden}
 :root{
   --bg:#060208;--text:#F7EEF0;--muted:rgba(247,238,240,.4);
   --accent:#C94D6A;--wine:#6B1A2A;
   --font:'Atkinson Hyperlegible',system-ui,sans-serif;
 }
-body{font-family:var(--font);background:var(--bg);color:var(--text);cursor:none;overflow:hidden}
+body{font-family:var(--font);background:var(--bg);color:var(--text);cursor:none}
 
 /* Three.js canvas */
 #bg{position:fixed;inset:0;z-index:0;pointer-events:none}
@@ -36,15 +37,12 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);cursor:none;
 body:hover #cur{opacity:1}
 .hoverable:hover ~ #cur,a:hover ~ #cur{width:16px;height:16px}
 
-/* Smooth scroll container */
-#scroll-container{
-  position:fixed;top:0;left:0;width:100%;will-change:transform;
-  z-index:2;
-}
+/* Scroll container */
+#scroll-container{position:relative;z-index:2}
 
 /* NAV */
 nav{
-  position:absolute;top:0;left:0;right:0;z-index:100;
+  position:fixed;top:0;left:0;right:0;z-index:100;
   display:flex;align-items:center;justify-content:space-between;
   padding:0 clamp(1.5rem,5vw,4rem);height:64px;
 }
@@ -335,33 +333,14 @@ footer p{font-size:.8rem;color:var(--muted)}
   animate();
 })();
 
-// ── SMOOTH SCROLL (lerp) ──
-const container = document.getElementById('scroll-container');
-let scrollY = 0, currentY = 0, raf;
-const lerp = (a,b,t) => a + (b-a)*t;
-
-function tick(){
-  currentY = lerp(currentY, scrollY, 0.08);
-  if(Math.abs(currentY - scrollY) < 0.05) currentY = scrollY;
-  container.style.transform = `translateY(${-currentY}px)`;
-  updateStory();
-  updateProg();
-  raf = requestAnimationFrame(tick);
-}
-
-document.documentElement.style.height = container.scrollHeight + 'px';
-window.addEventListener('scroll', () => { scrollY = window.scrollY; }, {passive:true});
-window.addEventListener('resize', () => { document.documentElement.style.height = container.scrollHeight + 'px'; });
-tick();
-
 // ── SCROLL-DRIVEN STORY ──
 const story = document.getElementById('story');
 const chs = ['c1','c2','c3','c4','c5'];
 const scrs = ['s1','s2','s3','s4','s5'];
 function updateStory(){
-  const top = story.offsetTop - currentY;
+  const rect = story.getBoundingClientRect();
   const total = story.offsetHeight - window.innerHeight;
-  const scrolled = Math.max(0, -(top));
+  const scrolled = Math.max(0, -rect.top);
   const prog = Math.min(1, scrolled / total);
   const idx = Math.min(4, Math.floor(prog * 5));
   chs.forEach((id,i)  => document.getElementById(id).classList.toggle('on', i===idx));
@@ -371,10 +350,14 @@ function updateStory(){
 // ── PROGRESS BAR ──
 const progEl = document.getElementById('prog');
 function updateProg(){
-  const total = container.scrollHeight - window.innerHeight;
-  const p = total > 0 ? (currentY / total * 100) : 0;
+  const total = document.body.scrollHeight - window.innerHeight;
+  const p = total > 0 ? (window.scrollY / total * 100) : 0;
   progEl.style.width = p + '%';
 }
+
+window.addEventListener('scroll', () => { updateStory(); updateProg(); }, {passive:true});
+updateStory();
+updateProg();
 
 // ── CUSTOM CURSOR ──
 const cur = document.getElementById('cur');
