@@ -209,7 +209,10 @@ export default function Patienten() {
                     <div style={{ fontSize: '12px', opacity: 0.6 }}>{isDraft && crew ? `Mannschaft: ${crew} · ` : ''}{fmtDate(pat.created)}</div>
                   </div>
                   {crewStillEditing
-                    ? <span style={{ fontSize: '12px', fontWeight: 600, color: '#d97706', background: '#fef3c7', border: '1px solid #fcd34d', borderRadius: '8px', padding: '5px 10px', flexShrink: 0 }}>⏳ In Bearbeitung</span>
+                    ? <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+                        <span style={{ fontSize: '12px', fontWeight: 600, color: '#d97706', background: '#fef3c7', border: '1px solid #fcd34d', borderRadius: '8px', padding: '5px 10px' }}>In Bearbeitung</span>
+                        {btnSm(() => openDetails(pat.id, 'patient'), 'Ansehen')}
+                      </div>
                     : btnSm(() => openEdit(pat), 'Bearbeiten')
                   }
                 </div>
