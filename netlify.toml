@@ -1,5 +1,5 @@
 [build]
-  command = "npm run build"
+  command = "if [ -n \"$LANDING\" ]; then mkdir -p dist && cp responda-landing/index.html dist/; else npm run build; fi"
   publish = "dist"
 
 [[redirects]]
