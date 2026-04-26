@@ -198,6 +198,9 @@ export default function Patienten() {
               const m = (pat as any).payload?.mannschaft || {}
               const crew = ['tf','m1','m2','m3'].map((k: string) => m[k]?.name).filter(Boolean).join(', ')
               const displayName = patName || crew || pat.title || 'Unbekannt'
+              const hasCrewUsers = ['tf','m1','m2','m3'].some(k => m[k]?.id)
+              const ageMs = Date.now() - new Date(pat.created).getTime()
+              const crewStillEditing = hasCrewUsers && ageMs < 24 * 60 * 60 * 1000
               return (
                 <div key={pat.id} style={rowStyle}>
                   {isDraft ? pill('Entwurf', '#d97706') : pill('offen', '#2563eb')}
@@ -205,7 +208,10 @@ export default function Patienten() {
                     <div style={{ fontWeight: 600, fontSize: '14px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{displayName}</div>
                     <div style={{ fontSize: '12px', opacity: 0.6 }}>{isDraft && crew ? `Mannschaft: ${crew} · ` : ''}{fmtDate(pat.created)}</div>
                   </div>
-                  {btnSm(() => openEdit(pat), 'Bearbeiten')}
+                  {crewStillEditing
+                    ? <span style={{ fontSize: '12px', fontWeight: 600, color: '#d97706', background: '#fef3c7', border: '1px solid #fcd34d', borderRadius: '8px', padding: '5px 10px', flexShrink: 0 }}>⏳ In Bearbeitung</span>
+                    : btnSm(() => openEdit(pat), 'Bearbeiten')
+                  }
                 </div>
               )
             })}
