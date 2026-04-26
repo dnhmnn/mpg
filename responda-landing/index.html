@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Responda – Digitale Einsatzdokumentation</title>
+<meta name="description" content="Responda digitalisiert Patientendokumentation für Rettungsdienstorganisationen – mobil, sicher, DSGVO-konform.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --wine:#6B1A2A;--wine-mid:#8B2035;--rose:#C94D6A;
+  --bg:#080306;--bg-card:#120608;--bg-surface:#1C0A0F;--bg-raised:#261019;
+  --text:#F7EEF0;--text-muted:#9A7880;--text-faint:#5A3840;
+  --border:rgba(107,26,42,.35);--border-bright:rgba(201,77,106,.4);
+  --font:'Atkinson Hyperlegible',system-ui,sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:var(--font);background:var(--bg);color:var(--text);line-height:1.6;overflow-x:hidden}
+
+nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:0 clamp(1.5rem,5vw,4rem);height:64px;background:rgba(8,3,6,.85);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:.5px solid var(--border)}
+.logo{display:flex;align-items:center;gap:10px;text-decoration:none}
+.logo-icon{width:36px;height:36px;background:var(--wine);border-radius:10px;display:flex;align-items:center;justify-content:center}
+.logo-text{font-size:1.2rem;font-weight:700;color:var(--text);letter-spacing:-.02em}
+.logo-text span{color:var(--rose)}
+.nav-right{display:flex;align-items:center;gap:.75rem}
+.btn-ghost{background:transparent;border:.5px solid var(--border-bright);color:var(--text-muted);padding:8px 18px;border-radius:8px;font-family:var(--font);font-size:.9rem;font-weight:700;cursor:pointer;text-decoration:none;transition:all .2s}
+.btn-ghost:hover{border-color:var(--rose);color:var(--text)}
+.btn-primary{background:var(--wine);border:none;color:#fff;padding:9px 20px;border-radius:8px;font-family:var(--font);font-size:.9rem;font-weight:700;cursor:pointer;text-decoration:none;transition:background .2s}
+.btn-primary:hover{background:var(--wine-mid)}
+
+#hero{min-height:100svh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:100px clamp(1.5rem,5vw,4rem) 80px;text-align:center;position:relative}
+.hero-glow{position:absolute;top:20%;left:50%;transform:translateX(-50%);width:600px;height:300px;background:radial-gradient(ellipse,rgba(107,26,42,.4) 0%,transparent 70%);pointer-events:none}
+.badge{display:inline-flex;align-items:center;gap:.5rem;background:rgba(107,26,42,.2);border:.5px solid var(--border-bright);border-radius:100px;padding:6px 14px;font-size:.78rem;font-weight:700;color:var(--rose);letter-spacing:.05em;text-transform:uppercase;margin-bottom:1.5rem}
+.badge-dot{width:6px;height:6px;border-radius:50%;background:var(--rose);animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.8)}}
+h1{font-size:clamp(2.5rem,7vw,5rem);font-weight:700;line-height:1.05;letter-spacing:-.03em;max-width:16ch;margin:0 auto 1.25rem}
+h1 .accent{color:var(--rose)}
+.hero-sub{font-size:clamp(1rem,2.5vw,1.15rem);color:var(--text-muted);max-width:44ch;margin:0 auto 2.5rem;line-height:1.65}
+.hero-ctas{display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;margin-bottom:4rem}
+.btn-lg{padding:14px 28px;border-radius:14px;font-family:var(--font);font-size:1rem;font-weight:700;cursor:pointer;text-decoration:none;transition:all .2s;border:none;display:inline-block}
+.btn-lg.p{background:var(--wine);color:#fff}.btn-lg.p:hover{background:var(--wine-mid)}
+.btn-lg.g{background:transparent;color:var(--text-muted);border:.5px solid var(--border-bright)}.btn-lg.g:hover{color:var(--text);border-color:var(--rose)}
+
+/* Phone */
+.phone{width:270px;height:540px;background:#0E060A;border-radius:40px;border:1.5px solid rgba(255,255,255,.07);box-shadow:0 0 0 1px rgba(0,0,0,.6),0 40px 80px rgba(0,0,0,.7),0 0 100px rgba(107,26,42,.25),inset 0 1px 0 rgba(255,255,255,.05);overflow:hidden;position:relative;transform:rotateY(-6deg) rotateX(3deg);transition:transform .6s}
+.phone:hover{transform:rotateY(-2deg) rotateX(1deg)}
+.notch{position:absolute;top:12px;left:50%;transform:translateX(-50%);width:88px;height:24px;background:#080306;border-radius:100px;z-index:10;display:flex;align-items:center;justify-content:center;gap:5px}
+.nc{width:9px;height:9px;border-radius:50%;background:#1A0A10;border:1px solid #2A1018}
+
+.scr{position:absolute;inset:0;overflow:hidden;display:none}
+.scr.on{display:block}
+.sb{height:46px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 16px 6px;font-size:10px;color:rgba(247,238,240,.45);position:relative;z-index:1}
+.sh{background:rgba(20,10,14,.95);border-bottom:.5px solid rgba(107,26,42,.3);padding:9px 14px;display:flex;align-items:center;justify-content:space-between;position:relative;z-index:1}
+.st{font-size:12px;font-weight:700;color:var(--text)}
+.sback{font-size:11px;color:var(--rose);font-weight:600}
+.sbg{position:absolute;inset:0;background:#0D0608}
+
+/* Screen 1 - Alert */
+.alert-box{margin:10px 12px;background:rgba(107,26,42,.25);border:.5px solid rgba(201,77,106,.45);border-radius:14px;padding:12px;position:relative;z-index:1}
+.alert-row{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.alert-ico{width:28px;height:28px;background:var(--wine);border-radius:7px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.apulse{width:7px;height:7px;border-radius:50%;background:var(--rose);animation:pulse 1.5s infinite;margin-left:auto;flex-shrink:0}
+.at{font-size:14px;font-weight:700;color:var(--text);margin-bottom:3px}
+.aa{font-size:10px;color:var(--text-muted);line-height:1.4}
+.abtn{margin-top:10px;background:var(--wine);border-radius:8px;padding:9px;font-size:11px;font-weight:700;color:#fff;text-align:center}
+
+/* Form fields */
+.fsec{background:rgba(26,10,15,.8);border:.5px solid rgba(107,26,42,.3);border-radius:9px;margin-bottom:7px;overflow:hidden}
+.fst{padding:7px 10px;font-size:9px;font-weight:700;color:var(--rose);border-bottom:.5px solid rgba(107,26,42,.2);text-transform:uppercase;letter-spacing:.04em}
+.fr{display:flex;justify-content:space-between;padding:6px 10px;border-bottom:.5px solid rgba(107,26,42,.12)}
+.fr:last-child{border-bottom:none}
+.fk{font-size:9px;color:var(--text-muted)}.fv{font-size:9px;font-weight:700;color:var(--text)}
+.fi{padding:6px 10px;border-bottom:.5px solid rgba(107,26,42,.12)}
+.fi:last-child{border-bottom:none}
+.fl{font-size:8px;color:var(--text-muted);margin-bottom:2px}
+.ff{background:rgba(107,26,42,.12);border:.5px solid rgba(107,26,42,.3);border-radius:4px;padding:4px 7px;font-size:10px;color:var(--text);width:100%}
+.cur{display:inline-block;width:1px;height:10px;background:var(--rose);animation:blink .8s step-end infinite;vertical-align:middle;margin-left:1px}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+
+/* Vitals */
+.vg{display:grid;grid-template-columns:1fr 1fr;gap:5px;padding:8px 10px}
+.vc{background:rgba(107,26,42,.12);border:.5px solid rgba(107,26,42,.25);border-radius:7px;padding:7px 8px}
+.vl{font-size:8px;color:var(--text-muted);margin-bottom:2px}.vv{font-size:13px;font-weight:700;color:var(--text)}
+.vu{font-size:8px;color:var(--text-muted)}.vok{display:inline-block;width:5px;height:5px;border-radius:50%;background:#4ade80;margin-left:3px;vertical-align:middle}
+
+/* Signature */
+.sigpad{margin:8px 10px;background:rgba(255,255,255,.02);border:.5px dashed rgba(201,77,106,.4);border-radius:9px;height:76px;position:relative;display:flex;align-items:center;justify-content:center}
+.archbtn{margin:6px 10px 0;background:var(--wine);border:none;border-radius:7px;padding:9px;font-size:11px;font-weight:700;color:#fff;width:calc(100% - 20px);text-align:center}
+
+/* Admin list */
+.pr{display:flex;align-items:center;gap:8px;padding:8px 10px;border-bottom:.5px solid rgba(107,26,42,.12)}
+.ps{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.sg{background:#4ade80}.sy{background:#facc15}
+.pn{font-size:11px;font-weight:700;color:var(--text)}.pm{font-size:9px;color:var(--text-muted)}
+.pb{font-size:8px;font-weight:700;padding:2px 6px;border-radius:4px}
+.bg{background:rgba(74,222,128,.1);color:#4ade80;border:.5px solid rgba(74,222,128,.3)}
+.by{background:rgba(250,204,21,.1);color:#facc15;border:.5px solid rgba(250,204,21,.3)}
+
+/* Sections */
+.sec{max-width:1100px;margin:0 auto;padding:90px clamp(1.5rem,5vw,4rem)}
+.slabel{font-size:.78rem;font-weight:700;color:var(--rose);text-transform:uppercase;letter-spacing:.1em;margin-bottom:.6rem}
+.stitle{font-size:clamp(1.75rem,4vw,2.75rem);font-weight:700;letter-spacing:-.025em;line-height:1.15;margin-bottom:.6rem}
+.ssub{font-size:1rem;color:var(--text-muted);max-width:46ch;margin-bottom:3rem;line-height:1.65}
+hr.div{border:none;border-top:.5px solid var(--border);max-width:1100px;margin:0 auto}
+
+/* Walkthrough */
+.wl{display:grid;grid-template-columns:1fr auto;gap:4rem;align-items:center}
+.steps{display:flex;flex-direction:column;gap:.4rem}
+.step{padding:1rem 1.25rem;border-radius:14px;border:.5px solid transparent;cursor:pointer;transition:all .25s;position:relative}
+.step:hover{background:var(--bg-surface);border-color:var(--border)}
+.step.on{background:var(--bg-raised);border-color:var(--border-bright)}
+.stepn{font-size:.72rem;font-weight:700;color:var(--text-faint);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.25rem;transition:color .25s}
+.step.on .stepn{color:var(--rose)}
+.stept{font-size:1rem;font-weight:700;color:var(--text-muted);margin-bottom:.25rem;transition:color .25s}
+.step.on .stept{color:var(--text)}
+.stepd{font-size:.875rem;color:var(--text-faint);line-height:1.55;display:none}
+.step.on .stepd{display:block;color:var(--text-muted)}
+.prog{position:absolute;left:0;top:0;bottom:0;width:3px;border-radius:0 2px 2px 0;background:var(--wine);transform-origin:top;transform:scaleY(0)}
+.step.on .prog{animation:fillY 4.5s linear forwards}
+@keyframes fillY{from{transform:scaleY(0)}to{transform:scaleY(1)}}
+
+/* Features */
+.fgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1rem}
+.fcard{background:var(--bg-card);border:.5px solid var(--border);border-radius:20px;padding:1.5rem;transition:border-color .2s}
+.fcard:hover{border-color:var(--border-bright)}
+.fico{width:42px;height:42px;background:rgba(107,26,42,.2);border:.5px solid rgba(107,26,42,.4);border-radius:11px;display:flex;align-items:center;justify-content:center;margin-bottom:.9rem;color:var(--rose)}
+.ftitle{font-size:1rem;font-weight:700;margin-bottom:.35rem}
+.fdesc{font-size:.875rem;color:var(--text-muted);line-height:1.6}
+
+/* CTA */
+.ctabox{max-width:620px;margin:0 auto;background:var(--bg-card);border:.5px solid var(--border-bright);border-radius:26px;padding:clamp(2rem,5vw,3.5rem);box-shadow:0 0 80px rgba(107,26,42,.18);text-align:center}
+.ctabox h2{font-size:clamp(1.5rem,4vw,2.2rem);font-weight:700;letter-spacing:-.025em;margin-bottom:.7rem}
+.ctabox p{color:var(--text-muted);font-size:1rem;margin-bottom:1.75rem;line-height:1.65}
+.emailrow{display:flex;gap:.75rem;max-width:400px;margin:0 auto}
+.emailin{flex:1;background:var(--bg-surface);border:.5px solid var(--border-bright);border-radius:8px;padding:12px 14px;font-family:var(--font);font-size:.95rem;color:var(--text);outline:none}
+.emailin::placeholder{color:var(--text-faint)}
+.emailin:focus{border-color:var(--rose)}
+
+footer{border-top:.5px solid var(--border);padding:2rem clamp(1.5rem,5vw,4rem);display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap}
+footer p{font-size:.85rem;color:var(--text-faint)}
+.flinks{display:flex;gap:1.5rem}
+.flinks a{color:var(--text-muted);text-decoration:none;font-size:.85rem}
+.flinks a:hover{color:var(--text)}
+
+/* Orgs bar */
+.orgs{padding:2.5rem clamp(1.5rem,5vw,4rem);text-align:center;border-top:.5px solid var(--border);border-bottom:.5px solid var(--border)}
+.orgs p{font-size:.75rem;color:var(--text-faint);text-transform:uppercase;letter-spacing:.1em;margin-bottom:1.25rem}
+.orgrow{display:flex;gap:2rem;align-items:center;justify-content:center;flex-wrap:wrap}
+.opill{background:var(--bg-surface);border:.5px solid var(--border);border-radius:100px;padding:7px 16px;font-size:.82rem;font-weight:700;color:var(--text-muted)}
+
+.fade{opacity:0;transform:translateY(18px);transition:opacity .6s,transform .6s}
+.fade.vis{opacity:1;transform:none}
+
+@media(max-width:768px){
+  .wl{grid-template-columns:1fr}
+  .pwrap{display:flex;justify-content:center;order:-1}
+  .phone{width:220px;height:440px;transform:none}
+  .phone:hover{transform:none}
+}
+</style>
+</head>
+<body>
+<nav>
+  <a href="#" class="logo">
+    <div class="logo-icon">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+    </div>
+    <span class="logo-text">res<span>ponda</span></span>
+  </a>
+  <div class="nav-right">
+    <a href="#walkthrough" class="btn-ghost">Demo</a>
+    <a href="https://app.responda.systems" class="btn-primary">Zur App</a>
+  </div>
+</nav>
+
+<section id="hero">
+  <div class="hero-glow"></div>
+  <div class="badge"><div class="badge-dot"></div>Für den Rettungsdienst</div>
+  <h1>Digitale Doku.<br>Jeder Einsatz.<br><span class="accent">Immer korrekt.</span></h1>
+  <p class="hero-sub">Responda digitalisiert Patientendokumentation, Produktausgabe und Qualitätsmanagement – mobil, sicher und DSGVO-konform.</p>
+  <div class="hero-ctas">
+    <a href="#walkthrough" class="btn-lg p">Einsatz durchspielen</a>
+    <a href="https://app.responda.systems" class="btn-lg g">Zur App &#8594;</a>
+  </div>
+  <div class="phone" style="margin:0 auto">
+    <div class="notch"><div class="nc"></div><div class="nc" style="width:6px;height:6px"></div></div>
+    <div class="scr on" id="hs1">
+      <div class="sbg"></div>
+      <div class="sb"><span>09:14</span><span>●●●</span></div>
+      <div class="alert-box">
+        <div class="alert-row">
+          <div class="alert-ico"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
+          <div><div style="font-size:9px;font-weight:700;color:var(--rose);text-transform:uppercase;letter-spacing:.05em">Responda</div><div style="font-size:8px;color:var(--text-muted)">Neuer Einsatz</div></div>
+          <div class="apulse"></div>
+        </div>
+        <div class="at">&#9889; Notfalleinsatz – RTW 1</div>
+        <div class="aa">Hauptstra&#223;e 14 · 80939 M&#252;nchen<br>Einsatz #2026-042 · 09:13 Uhr</div>
+        <div class="abtn">Formular &#246;ffnen &#8594;</div>
+      </div>
+      <div style="position:relative;z-index:1;padding:0 12px;margin-top:6px"><div style="background:rgba(26,10,15,.6);border:.5px solid rgba(107,26,42,.2);border-radius:9px;padding:9px 11px"><div style="font-size:8px;color:var(--text-faint);margin-bottom:3px">Aktive Dokumentationen</div><div style="font-size:11px;color:var(--text-muted)">2 offen · 14 heute archiviert</div></div></div>
+    </div>
+    <div class="scr" id="hs2">
+      <div class="sbg"></div>
+      <div class="sb"><span>09:15</span><span>●●●</span></div>
+      <div class="sh"><span class="sback">&#8249; Zur&#252;ck</span><span class="st">Patientendoku</span><span style="width:36px"></span></div>
+      <div style="position:relative;z-index:1;padding:10px">
+        <div class="fsec"><div class="fst">Einsatzdaten</div><div class="fr"><span class="fk">Einsatz</span><span class="fv">#2026-042</span></div><div class="fr"><span class="fk">Datum</span><span class="fv">26.04.2026</span></div><div class="fr"><span class="fk">Fahrzeug</span><span class="fv">RTW 1</span></div></div>
+        <div class="fsec"><div class="fst">Patient</div>
+          <div class="fi"><div class="fl">Vorname *</div><div class="ff">Max<span class="cur"></span></div></div>
+          <div class="fi"><div class="fl">Nachname *</div><div class="ff" style="color:var(--text-faint)">Eingabe&#8230;</div></div>
+          <div class="fi"><div class="fl">Geburtsdatum</div><div class="ff" style="color:var(--text-faint)">TT.MM.JJJJ</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="scr" id="hs3">
+      <div class="sbg"></div>
+      <div class="sb"><span>09:18</span><span>●●●</span></div>
+      <div class="sh"><span class="sback">&#8249; Zur&#252;ck</span><span class="st">Vitalzeichen</span><span style="width:36px"></span></div>
+      <div style="position:relative;z-index:1">
+        <div class="vg">
+          <div class="vc"><div class="vl">Blutdruck</div><div class="vv">120<span class="vu">/80</span><span class="vok"></span></div></div>
+          <div class="vc"><div class="vl">Puls</div><div class="vv">72<span class="vu"> bpm</span><span class="vok"></span></div></div>
+          <div class="vc"><div class="vl">SpO&#8322;</div><div class="vv">98<span class="vu"> %</span><span class="vok"></span></div></div>
+          <div class="vc"><div class="vl">GCS</div><div class="vv">15<span class="vu">/15</span><span class="vok"></span></div></div>
+        </div>
+        <div style="padding:0 10px"><div class="fsec"><div class="fst">Anamnese</div><div class="fi"><div class="fl">Beschwerden</div><div class="ff">Thoraxschmerz li.<span class="cur"></span></div></div><div class="fi"><div class="fl">Diagnose</div><div class="ff" style="color:var(--text-faint)">Verdacht ACS</div></div></div></div>
+      </div>
+    </div>
+    <div class="scr" id="hs4">
+      <div class="sbg"></div>
+      <div class="sb"><span>09:23</span><span>●●●</span></div>
+      <div class="sh"><span class="sback">&#8249; Zur&#252;ck</span><span class="st">Archivieren</span><span style="width:36px"></span></div>
+      <div style="position:relative;z-index:1;padding:8px 10px 0">
+        <div style="background:rgba(74,222,128,.06);border:.5px solid rgba(74,222,128,.2);border-radius:9px;padding:8px 10px;margin-bottom:8px"><div style="font-size:9px;font-weight:700;color:#4ade80;margin-bottom:2px">&#10003; Alle Felder vollst&#228;ndig</div><div style="font-size:8px;color:var(--text-muted)">Max M. · #2026-042 · RTW 1</div></div>
+        <div style="font-size:8px;font-weight:700;color:var(--text-muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.04em">Unterschrift Einsatzkraft</div>
+        <div class="sigpad"><svg style="position:absolute;inset:10px" viewBox="0 0 220 56" fill="none"><path d="M8 44 C25 20 38 48 58 30 C78 12 88 40 108 34 C128 28 138 44 158 38 C174 34 184 36 215 32" stroke="#C94D6A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" opacity=".85"/></svg></div>
+        <div class="archbtn">Archivieren</div>
+      </div>
+    </div>
+    <div class="scr" id="hs5">
+      <div class="sbg"></div>
+      <div class="sb"><span>09:25</span><span>●●●</span></div>
+      <div class="sh"><span></span><span class="st">Patienten</span><span style="font-size:9px;color:var(--rose);font-weight:700">Heute</span></div>
+      <div style="position:relative;z-index:1">
+        <div class="pr"><div class="ps sg"></div><div style="flex:1"><div class="pn">Max M&#252;ller</div><div class="pm">09:23 · RTW 1 · #2026-042</div></div><div class="pb bg">Archiviert</div></div>
+        <div class="pr"><div class="ps sy"></div><div style="flex:1"><div class="pn">Anna Schmidt</div><div class="pm">08:51 · RTW 2 · #2026-041</div></div><div class="pb by">In Bearb.</div></div>
+        <div class="pr"><div class="ps sg"></div><div style="flex:1"><div class="pn">Klaus Weber</div><div class="pm">07:30 · NEF · #2026-040</div></div><div class="pb bg">Archiviert</div></div>
+        <div class="pr"><div class="ps sg"></div><div style="flex:1"><div class="pn">Maria Fischer</div><div class="pm">06:15 · RTW 1 · #2026-039</div></div><div class="pb bg">Archiviert</div></div>
+        <div style="padding:10px;font-size:9px;color:var(--text-faint);text-align:center">+ 10 weitere heute</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="div">
+<div class="orgs">
+  <p>Vertrauen von Rettungsdienstorganisationen</p>
+  <div class="orgrow">
+    <div class="opill">BRK M&#252;nchen</div>
+    <div class="opill">ASB N&#252;rnberg</div>
+    <div class="opill">DRK Stuttgart</div>
+    <div class="opill">MHD Augsburg</div>
+    <div class="opill">DLRG Bayern</div>
+  </div>
+</div>
+<section id="walkthrough" class="sec">
+  <div class="fade">
+    <div class="slabel">Interaktive Demo</div>
+    <h2 class="stitle">Ein Einsatz.<br>Von A bis Z.</h2>
+    <p class="ssub">Sieh wie Responda den gesamten Ablauf begleitet – von der Alarmierung bis zur DSGVO-konformen Archivierung.</p>
+  </div>
+  <div class="wl">
+    <div class="steps fade">
+      <div class="step on" data-s="1" onclick="go(1)"><div class="prog"></div><div class="stepn">Schritt 1</div><div class="stept">Alarm kommt rein</div><div class="stepd">RTW wird alarmiert. Die Crew &#246;ffnet Responda direkt auf dem Dienstsmartphone – kein Login, kein Papier.</div></div>
+      <div class="step" data-s="2" onclick="go(2)"><div class="prog"></div><div class="stepn">Schritt 2</div><div class="stept">Formular &#246;ffnen</div><div class="stepd">Via QR-Code oder direkt in der App: Das Formular startet mit vorausgef&#252;llten Einsatzdaten.</div></div>
+      <div class="step" data-s="3" onclick="go(3)"><div class="prog"></div><div class="stepn">Schritt 3</div><div class="stept">Vitalzeichen &amp; Anamnese</div><div class="stepd">Blutdruck, Puls, SpO&#8322;, GCS, Diagnose und Ma&#223;nahmen strukturiert erfassen.</div></div>
+      <div class="step" data-s="4" onclick="go(4)"><div class="prog"></div><div class="stepn">Schritt 4</div><div class="stept">Unterschrift &amp; Archiv</div><div class="stepd">Digitale Unterschrift am Touchscreen. Ein Tipper – DSGVO-konform archiviert.</div></div>
+      <div class="step" data-s="5" onclick="go(5)"><div class="prog"></div><div class="stepn">Schritt 5</div><div class="stept">Admin sieht alles</div><div class="stepd">Organisationsleitung sieht alle Einst&#228;tze in Echtzeit – mit Audit-Log und automatischer L&#246;schung nach 10 Jahren.</div></div>
+    </div>
+    <div class="pwrap fade">
+      <div class="phone" id="wphone">
+        <div class="notch"><div class="nc"></div><div class="nc" style="width:6px;height:6px"></div></div>
+        <div class="scr on" id="ws1">
+          <div class="sbg"></div><div class="sb"><span>09:14</span><span>●●●</span></div>
+          <div class="alert-box"><div class="alert-row"><div class="alert-ico"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div><div><div style="font-size:9px;font-weight:700;color:var(--rose);text-transform:uppercase;letter-spacing:.05em">Responda</div><div style="font-size:8px;color:var(--text-muted)">Neuer Einsatz</div></div><div class="apulse"></div></div><div class="at">&#9889; Notfalleinsatz – RTW 1</div><div class="aa">Hauptstra&#223;e 14 · 80939 M&#252;nchen<br>Einsatz #2026-042 · 09:13 Uhr</div><div class="abtn">Formular &#246;ffnen &#8594;</div></div>
+        </div>
+        <div class="scr" id="ws2">
+          <div class="sbg"></div><div class="sb"><span>09:15</span><span>●●●</span></div>
+          <div class="sh"><span class="sback">&#8249; Zur&#252;ck</span><span class="st">Patientendoku</span><span style="width:36px"></span></div>
+          <div style="position:relative;z-index:1;padding:10px"><div class="fsec"><div class="fst">Einsatzdaten</div><div class="fr"><span class="fk">Einsatz</span><span class="fv">#2026-042</span></div><div class="fr"><span class="fk">Datum</span><span class="fv">26.04.2026</span></div><div class="fr"><span class="fk">Fahrzeug</span><span class="fv">RTW 1</span></div></div><div class="fsec"><div class="fst">Patient</div><div class="fi"><div class="fl">Vorname *</div><div class="ff">Max<span class="cur"></span></div></div><div class="fi"><div class="fl">Nachname *</div><div class="ff" style="color:var(--text-faint)">Eingabe&#8230;</div></div><div class="fi"><div class="fl">Geburtsdatum</div><div class="ff" style="color:var(--text-faint)">TT.MM.JJJJ</div></div></div></div>
+        </div>
+        <div class="scr" id="ws3">
+          <div class="sbg"></div><div class="sb"><span>09:18</span><span>●●●</span></div>
+          <div class="sh"><span class="sback">&#8249; Zur&#252;ck</span><span class="st">Vitalzeichen</span><span style="width:36px"></span></div>
+          <div style="position:relative;z-index:1"><div class="vg"><div class="vc"><div class="vl">Blutdruck</div><div class="vv">120<span class="vu">/80</span><span class="vok"></span></div></div><div class="vc"><div class="vl">Puls</div><div class="vv">72<span class="vu"> bpm</span><span class="vok"></span></div></div><div class="vc"><div class="vl">SpO&#8322;</div><div class="vv">98<span class="vu"> %</span><span class="vok"></span></div></div><div class="vc"><div class="vl">GCS</div><div class="vv">15<span class="vu">/15</span><span class="vok"></span></div></div></div><div style="padding:0 10px"><div class="fsec"><div class="fst">Anamnese</div><div class="fi"><div class="fl">Beschwerden</div><div class="ff">Thoraxschmerz li.<span class="cur"></span></div></div><div class="fi"><div class="fl">Diagnose</div><div class="ff" style="color:var(--text-faint)">Verdacht ACS</div></div></div></div></div>
+        </div>
+        <div class="scr" id="ws4">
+          <div class="sbg"></div><div class="sb"><span>09:23</span><span>●●●</span></div>
+          <div class="sh"><span class="sback">&#8249; Zur&#252;ck</span><span class="st">Archivieren</span><span style="width:36px"></span></div>
+          <div style="position:relative;z-index:1;padding:8px 10px 0"><div style="background:rgba(74,222,128,.06);border:.5px solid rgba(74,222,128,.2);border-radius:9px;padding:8px 10px;margin-bottom:8px"><div style="font-size:9px;font-weight:700;color:#4ade80;margin-bottom:2px">&#10003; Alle Felder vollst&#228;ndig</div><div style="font-size:8px;color:var(--text-muted)">Max M. · #2026-042 · RTW 1</div></div><div style="font-size:8px;font-weight:700;color:var(--text-muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.04em">Unterschrift Einsatzkraft</div><div class="sigpad"><svg style="position:absolute;inset:10px" viewBox="0 0 220 56" fill="none"><path d="M8 44 C25 20 38 48 58 30 C78 12 88 40 108 34 C128 28 138 44 158 38 C174 34 184 36 215 32" stroke="#C94D6A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" opacity=".85"/></svg></div><div class="archbtn">Archivieren</div></div>
+        </div>
+        <div class="scr" id="ws5">
+          <div class="sbg"></div><div class="sb"><span>09:25</span><span>●●●</span></div>
+          <div class="sh"><span></span><span class="st">Patienten</span><span style="font-size:9px;color:var(--rose);font-weight:700">Heute</span></div>
+          <div style="position:relative;z-index:1"><div class="pr"><div class="ps sg"></div><div style="flex:1"><div class="pn">Max M&#252;ller</div><div class="pm">09:23 · RTW 1</div></div><div class="pb bg">Archiviert</div></div><div class="pr"><div class="ps sy"></div><div style="flex:1"><div class="pn">Anna Schmidt</div><div class="pm">08:51 · RTW 2</div></div><div class="pb by">In Bearb.</div></div><div class="pr"><div class="ps sg"></div><div style="flex:1"><div class="pn">Klaus Weber</div><div class="pm">07:30 · NEF</div></div><div class="pb bg">Archiviert</div></div><div class="pr"><div class="ps sg"></div><div style="flex:1"><div class="pn">Maria Fischer</div><div class="pm">06:15 · RTW 1</div></div><div class="pb bg">Archiviert</div></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+<hr class="div">
+<section id="features" class="sec">
+  <div class="fade" style="margin-bottom:2.5rem">
+    <div class="slabel">Was Responda kann</div>
+    <h2 class="stitle">Alles was der<br>Rettungsdienst braucht.</h2>
+  </div>
+  <div class="fgrid">
+    <div class="fcard fade"><div class="fico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/><path d="M9 12l2 2 4-4"/></svg></div><div class="ftitle">Patientendokumentation</div><div class="fdesc">Anamnese, Vitalzeichen, Diagnose und Ma&#223;nahmen – mit digitaler Unterschrift und DSGVO-konformer Archivierung.</div></div>
+    <div class="fcard fade"><div class="fico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7H4a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2z"/><path d="M16 3H8L6 7h12l-2-4z"/></svg></div><div class="ftitle">Produktausgabe</div><div class="fdesc">Digitale Erfassung von Materialausgaben je Einsatz – mit Positionsliste und sofortiger Verf&#252;gbarkeit f&#252;r das QM.</div></div>
+    <div class="fcard fade"><div class="fico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div><div class="ftitle">CIRS-Meldungen</div><div class="fdesc">Anonyme Meldung kritischer Ereignisse direkt aus dem Einsatz – mit Schweregrad und Verbesserungsvorschl&#228;gen.</div></div>
+    <div class="fcard fade"><div class="fico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg></div><div class="ftitle">Mehrere Organisationen</div><div class="fdesc">Mandantenf&#228;hig: Jede Organisation hat eigene Daten, eigene Zugriffsrechte und eigene QR-Codes – komplett getrennt.</div></div>
+    <div class="fcard fade"><div class="fico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M9 7h6M9 11h6M9 15h4"/></svg></div><div class="ftitle">Audit-Log &amp; Archiv</div><div class="fdesc">L&#252;ckenloses Protokoll aller Zugriffe. Automatische L&#246;schwarnung nach 10 Jahren Aufbewahrungsfrist (&#167;630f BGB).</div></div>
+    <div class="fcard fade"><div class="fico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM17 14h3M17 17v3M14 20h3"/></svg></div><div class="ftitle">QR-Code Zugang</div><div class="fdesc">Crew scannt QR-Code am Fahrzeug – Formular &#246;ffnet sich sofort im Browser. Kein App-Download, kein Login.</div></div>
+  </div>
+</section>
+
+<section id="cta" style="padding:80px clamp(1.5rem,5vw,4rem)">
+  <div class="ctabox fade">
+    <h2>Bereit f&#252;r die n&#228;chste Generation?</h2>
+    <p>Starte kostenlos mit deiner Organisation. Keine Kreditkarte, kein Vertrag – einfach anfangen.</p>
+    <div class="emailrow">
+      <input class="emailin" type="email" id="em" placeholder="deine@organisation.de">
+      <button class="btn-lg p" style="padding:12px 20px;white-space:nowrap" onclick="sub()">Demo anfragen</button>
+    </div>
+    <p style="margin-top:1rem;font-size:.78rem;color:var(--text-faint)">DSGVO-konform · Hosted in der EU · Keine Werbung</p>
+  </div>
+</section>
+
+<footer>
+  <a href="#" class="logo">
+    <div class="logo-icon" style="width:28px;height:28px;border-radius:8px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></div>
+    <span class="logo-text" style="font-size:1rem">res<span>ponda</span></span>
+  </a>
+  <p>&#169; 2026 Responda. Alle Rechte vorbehalten.</p>
+  <div class="flinks">
+    <a href="#">Datenschutz</a>
+    <a href="#">Impressum</a>
+    <a href="#">Kontakt</a>
+  </div>
+</footer>
+
+<script>
+let cur=1,t=null;
+function go(n){
+  clearInterval(t);
+  document.querySelectorAll('.steps .step').forEach(s=>s.classList.remove('on'));
+  document.querySelector('.steps .step[data-s="'+n+'"]').classList.add('on');
+  document.querySelectorAll('#wphone .scr').forEach(s=>s.classList.remove('on'));
+  document.getElementById('ws'+n).classList.add('on');
+  cur=n;
+  t=setInterval(()=>go(cur<5?cur+1:1),4500);
+}
+t=setInterval(()=>go(cur<5?cur+1:1),4500);
+
+const obs=new IntersectionObserver(e=>e.forEach(x=>{if(x.isIntersecting){x.target.classList.add('vis');obs.unobserve(x.target)}}),{threshold:.1,rootMargin:'0px 0px -40px 0px'});
+document.querySelectorAll('.fade').forEach(el=>obs.observe(el));
+
+function sub(){
+  const m=document.getElementById('em').value.trim();
+  if(!m||!m.includes('@')){alert('Bitte g&#252;ltige E-Mail eingeben.');return;}
+  alert('Danke! Wir melden uns bei '+m+'.');
+  document.getElementById('em').value='';
+}
+</script>
+</body>
+</html>
