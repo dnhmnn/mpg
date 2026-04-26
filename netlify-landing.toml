@@ -1,0 +1,10 @@
+[build]
+  command = ""
+  publish = "responda-landing"
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Cache-Control = "public, max-age=0, must-revalidate"
