@@ -1,8 +1,10 @@
 [build]
-  command = "if [ -n \"$LANDING\" ]; then mkdir -p dist && cp responda-landing/index.html dist/; else npm run build; fi"
-  publish = "dist"
+  command = ""
+  publish = "responda-landing"
 
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Cache-Control = "public, max-age=0, must-revalidate"
