@@ -29,10 +29,10 @@ export function PubWrap({ children }: { children: React.ReactNode }) {
   return <div style={{ maxWidth: 800, margin: '0 auto', padding: '1rem 1rem 100px' }}>{children}</div>
 }
 
-export function PubSection({ title, open, children }: { title: string; open?: boolean; children: React.ReactNode }) {
+export function PubSection({ title, open, children, icon }: { title: string; open?: boolean; children: React.ReactNode; icon?: React.ReactNode }) {
   return (
     <details open={open} style={{ background: 'var(--bg-card)', backdropFilter: 'blur(40px)', WebkitBackdropFilter: 'blur(40px)', border: '0.5px solid var(--border)', borderRadius: 16, marginBottom: '.75rem', overflow: 'hidden', boxShadow: 'var(--shadow-sm)' }}>
-      <summary style={{ listStyle: 'none', padding: '.9rem 1rem', cursor: 'pointer', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '.6rem', fontSize: '1rem', color: 'var(--text)', borderBottom: '0.5px solid var(--border)' }}>{title}</summary>
+      <summary style={{ listStyle: 'none', padding: '.9rem 1rem', cursor: 'pointer', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '.6rem', fontSize: '1rem', color: 'var(--text)', borderBottom: '0.5px solid var(--border)' }}>{icon}{title}</summary>
       <div style={{ padding: '1rem' }}>{children}</div>
     </details>
   )
