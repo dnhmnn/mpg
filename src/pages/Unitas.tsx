@@ -745,7 +745,7 @@ export default function Unitas() {
                     {modulFailed ? (
                       <div>
                         <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '12px', padding: '16px', marginBottom: '16px', textAlign: 'center' }}>
-                          <div style={{ fontWeight: 700, fontSize: '16px', color: '#C94D6A', marginBottom: '6px' }}>Falsch!</div>
+                          <div style={{ fontWeight: 700, fontSize: '16px', color: '#b91c1c', marginBottom: '6px' }}>Falsch!</div>
                           <div style={{ fontSize: '14px', color: '#991b1b' }}>Das Modul muss neu gestartet werden.</div>
                         </div>
                         <button
@@ -760,7 +760,7 @@ export default function Unitas() {
                             let bg = 'var(--bg-card)', border = '1px solid var(--border)', color = 'var(--text)'
                             if (quizSubmitted) {
                               if (idx === quiz.richtige) { bg = '#f0fdf4'; border = '2px solid #16a34a'; color = '#166534' }
-                              else if (idx === quizSelected) { bg = '#fef2f2'; border = '2px solid #C94D6A'; color = '#C94D6A' }
+                              else if (idx === quizSelected) { bg = '#fef2f2'; border = '2px solid #ef4444'; color = '#b91c1c' }
                             } else if (idx === quizSelected) {
                               bg = '#eff6ff'; border = '2px solid #3b82f6'; color = '#1d4ed8'
                             }
@@ -903,7 +903,7 @@ export default function Unitas() {
           padding: '12px 18px', borderRadius: '10px', fontSize: '14px', fontWeight: 600,
           background: message.type === 'success' ? '#f0fdf4' : '#fef2f2',
           border: `1px solid ${message.type === 'success' ? '#bbf7d0' : '#fecaca'}`,
-          color: message.type === 'success' ? '#166534' : '#C94D6A',
+          color: message.type === 'success' ? '#166534' : '#b91c1c',
           animation: 'slideInRight 0.25s cubic-bezier(0.34,1.56,0.64,1) both',
           boxShadow: '0 4px 16px rgba(0,0,0,0.08)'
         }}>
