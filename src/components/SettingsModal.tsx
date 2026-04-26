@@ -193,7 +193,7 @@ export default function SettingsModal({ isOpen, onClose, user }: SettingsModalPr
             />
           </div>
           {profileMsg && (
-            <div style={{ marginTop: '12px', fontSize: '14px', color: profileMsg.includes('✅') ? '#16a34a' : '#ef4444' }}>
+            <div style={{ marginTop: '12px', fontSize: '14px', color: profileMsg.includes('✅') ? '#16a34a' : '#C94D6A' }}>
               {profileMsg}
             </div>
           )}
@@ -234,7 +234,7 @@ export default function SettingsModal({ isOpen, onClose, user }: SettingsModalPr
             />
           </div>
           {pwMsg && (
-            <div style={{ marginTop: '12px', fontSize: '14px', color: pwMsg.includes('✅') ? '#16a34a' : '#ef4444' }}>
+            <div style={{ marginTop: '12px', fontSize: '14px', color: pwMsg.includes('✅') ? '#16a34a' : '#C94D6A' }}>
               {pwMsg}
             </div>
           )}

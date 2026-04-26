@@ -272,7 +272,7 @@ export default function Unitarii() {
                       {u.role && <span style={{ padding: '3px 10px', borderRadius: '20px', background: 'var(--bg-subtle)', border: '1px solid var(--border)', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', flexShrink: 0 }}>{u.role}</span>}
                       <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
                         <button onClick={() => openUserModal(u)} style={{ padding: '6px 12px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg-card)', color: 'var(--text)', fontWeight: 600, fontSize: '12px', cursor: 'pointer', fontFamily: 'inherit' }}>Bearbeiten</button>
-                        {u.id !== user?.id && <button onClick={() => deleteUser(u.id)} style={{ padding: '6px 12px', borderRadius: '8px', border: '1px solid #fecaca', background: '#fef2f2', color: '#b91c1c', fontWeight: 600, fontSize: '12px', cursor: 'pointer', fontFamily: 'inherit' }}>Löschen</button>}
+                        {u.id !== user?.id && <button onClick={() => deleteUser(u.id)} style={{ padding: '6px 12px', borderRadius: '8px', border: '1px solid #fecaca', background: '#fef2f2', color: '#C94D6A', fontWeight: 600, fontSize: '12px', cursor: 'pointer', fontFamily: 'inherit' }}>Löschen</button>}
                       </div>
                     </div>
                   )
@@ -307,7 +307,7 @@ export default function Unitarii() {
                         <div style={{ fontWeight: 700, fontSize: '16px', color: 'var(--text)' }}>{n.titel}</div>
                         <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
                           <button onClick={() => openNModal(n)} style={{ padding: '5px 10px', borderRadius: '7px', border: '1px solid var(--border)', background: 'var(--bg-card)', color: 'var(--text)', fontWeight: 600, fontSize: '12px', cursor: 'pointer', fontFamily: 'inherit' }}>Bearbeiten</button>
-                          <button onClick={() => deleteN(n.id)} style={{ padding: '5px 10px', borderRadius: '7px', border: '1px solid #fecaca', background: '#fef2f2', color: '#b91c1c', fontWeight: 600, fontSize: '12px', cursor: 'pointer', fontFamily: 'inherit' }}>Löschen</button>
+                          <button onClick={() => deleteN(n.id)} style={{ padding: '5px 10px', borderRadius: '7px', border: '1px solid #fecaca', background: '#fef2f2', color: '#C94D6A', fontWeight: 600, fontSize: '12px', cursor: 'pointer', fontFamily: 'inherit' }}>Löschen</button>
                         </div>
                       </div>
                       {n.inhalt && <div style={{ fontSize: '14px', color: 'var(--text)', lineHeight: 1.6, whiteSpace: 'pre-wrap', marginBottom: '10px' }}>{n.inhalt}</div>}
@@ -381,7 +381,7 @@ export default function Unitarii() {
       )}
 
       {message && (
-        <div style={{ position: 'fixed', bottom: '32px', right: '24px', zIndex: 9999, padding: '12px 18px', borderRadius: '10px', fontSize: '14px', fontWeight: 600, background: message.type === 'success' ? '#f0fdf4' : '#fef2f2', border: `1px solid ${message.type === 'success' ? '#bbf7d0' : '#fecaca'}`, color: message.type === 'success' ? '#166534' : '#b91c1c', boxShadow: '0 4px 16px rgba(0,0,0,0.08)' }}>
+        <div style={{ position: 'fixed', bottom: '32px', right: '24px', zIndex: 9999, padding: '12px 18px', borderRadius: '10px', fontSize: '14px', fontWeight: 600, background: message.type === 'success' ? '#f0fdf4' : '#fef2f2', border: `1px solid ${message.type === 'success' ? '#bbf7d0' : '#fecaca'}`, color: message.type === 'success' ? '#166534' : '#C94D6A', boxShadow: '0 4px 16px rgba(0,0,0,0.08)' }}>
           {message.text}
         </div>
       )}

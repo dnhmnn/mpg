@@ -1320,7 +1320,7 @@ export default function MPG() {
         .message.error {
           background: #fef2f2;
           border: 1px solid #fecaca;
-          color: #b91c1c;
+          color: #C94D6A;
         }
 
         .action-toolbar {
@@ -1383,7 +1383,7 @@ export default function MPG() {
         }
 
         .stat-card.overdue {
-          border-color: rgba(239, 68, 68, 0.2);
+          border-color: rgba(201, 77, 106, 0.2);
         }
 
         .stat-card:hover {
@@ -1409,7 +1409,7 @@ export default function MPG() {
         }
 
         .stat-card.overdue .stat-icon {
-          color: #dc2626;
+          color: #B03050;
         }
 
         .stat-number {
@@ -1445,8 +1445,8 @@ export default function MPG() {
 
         .search-input:focus {
           outline: none;
-          border-color: #b91c1c;
-          box-shadow: 0 0 0 3px rgba(185, 28, 28, 0.1);
+          border-color: #C94D6A;
+          box-shadow: 0 0 0 3px rgba(201, 77, 106, 0.1);
         }
 
         .filter-buttons {
@@ -1472,9 +1472,9 @@ export default function MPG() {
         }
 
         .filter-btn.active {
-          background: #b91c1c;
+          background: #C94D6A;
           color: #fff;
-          border-color: #b91c1c;
+          border-color: #C94D6A;
         }
 
         .devices-grid {
@@ -1504,7 +1504,7 @@ export default function MPG() {
         }
 
         .device-card.status-overdue {
-          border-color: rgba(239, 68, 68, 0.3);
+          border-color: rgba(201, 77, 106, 0.3);
         }
 
         .device-card:hover {
@@ -1536,7 +1536,7 @@ export default function MPG() {
 
         .menu-dots:hover {
           background: var(--bg-card);
-          color: #b91c1c;
+          color: #C94D6A;
           transform: scale(1.1);
         }
 
@@ -1585,7 +1585,7 @@ export default function MPG() {
         }
 
         .menu-item.danger {
-          color: #dc2626;
+          color: #B03050;
         }
 
         .menu-item.danger:hover {
@@ -1595,7 +1595,7 @@ export default function MPG() {
         .device-type {
           font-size: 12px;
           font-weight: 700;
-          color: #b91c1c;
+          color: #C94D6A;
           text-transform: uppercase;
           margin-bottom: 8px;
           letter-spacing: 0.5px;
@@ -1644,7 +1644,7 @@ export default function MPG() {
 
         .status-badge.overdue {
           background: #fef2f2;
-          color: #dc2626;
+          color: #B03050;
         }
 
         .status-badge.passed {
@@ -1654,7 +1654,7 @@ export default function MPG() {
 
         .status-badge.failed {
           background: #fef2f2;
-          color: #dc2626;
+          color: #B03050;
         }
 
         .device-dates {
@@ -1666,7 +1666,7 @@ export default function MPG() {
         .device-inspect-btn {
           width: 100%;
           padding: 10px;
-          background: #b91c1c;
+          background: #C94D6A;
           color: #fff;
           border: none;
           border-radius: 8px;
@@ -1677,7 +1677,7 @@ export default function MPG() {
         }
 
         .device-inspect-btn:hover {
-          background: #dc2626;
+          background: #B03050;
           transform: translateY(-2px);
         }
 
@@ -1721,7 +1721,7 @@ export default function MPG() {
 
         .modal-content h3 {
           margin: 0 0 16px 0;
-          color: #b91c1c;
+          color: #C94D6A;
           font-weight: 800;
         }
 
@@ -1759,8 +1759,8 @@ export default function MPG() {
         .field select:focus,
         .field textarea:focus {
           outline: none;
-          border-color: #b91c1c;
-          box-shadow: 0 0 0 3px rgba(185, 28, 28, 0.1);
+          border-color: #C94D6A;
+          box-shadow: 0 0 0 3px rgba(201, 77, 106, 0.1);
         }
 
         .modal-actions {
@@ -1795,26 +1795,26 @@ export default function MPG() {
         }
 
         .btn.primary {
-          background: #b91c1c;
+          background: #C94D6A;
           color: #fff;
-          border-color: #b91c1c;
+          border-color: #C94D6A;
           display: inline-flex;
           align-items: center;
           gap: 6px;
         }
 
         .btn.primary:hover {
-          background: #dc2626;
+          background: #B03050;
         }
 
         .btn.danger {
-          background: #dc2626;
+          background: #B03050;
           color: #fff;
-          border-color: #dc2626;
+          border-color: #B03050;
         }
 
         .btn.danger:hover {
-          background: #ef4444;
+          background: #C94D6A;
         }
 
         .btn-small {
@@ -1859,7 +1859,7 @@ export default function MPG() {
 
         .btn-icon.danger:hover {
           background: #fee2e2;
-          color: #dc2626;
+          color: #B03050;
         }
 
         .inspection-progress {
@@ -1933,7 +1933,7 @@ export default function MPG() {
         }
 
         .check-fail {
-          color: #dc2626;
+          color: #B03050;
           display: flex;
           align-items: center;
         }
@@ -1956,7 +1956,7 @@ export default function MPG() {
         }
 
         .logbook-entry.failed {
-          border-left-color: #ef4444;
+          border-left-color: #C94D6A;
         }
 
         .logbook-header {
@@ -1995,7 +1995,7 @@ export default function MPG() {
         .logbook-details summary {
           cursor: pointer;
           font-weight: 600;
-          color: #b91c1c;
+          color: #C94D6A;
           font-size: 14px;
           padding: 8px 0;
         }
@@ -2064,8 +2064,8 @@ export default function MPG() {
 
         .add-item-box input:focus {
           outline: none;
-          border-color: #b91c1c;
-          box-shadow: 0 0 0 3px rgba(185, 28, 28, 0.1);
+          border-color: #C94D6A;
+          box-shadow: 0 0 0 3px rgba(201, 77, 106, 0.1);
         }
 
         @media (max-width: 768px) {

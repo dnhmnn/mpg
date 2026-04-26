@@ -30,9 +30,9 @@ class ErrorBoundary extends React.Component<
           margin: '100px auto',
           background: '#fee2e2',
           borderRadius: '12px',
-          border: '2px solid #ef4444'
+          border: '2px solid #C94D6A'
         }}>
-          <h1 style={{ color: '#ef4444', fontSize: '24px', marginBottom: '16px' }}>
+          <h1 style={{ color: '#C94D6A', fontSize: '24px', marginBottom: '16px' }}>
             ⚠️ Fehler beim Laden der App
           </h1>
           <p style={{ marginBottom: '16px', color: '#991b1b' }}>
@@ -53,7 +53,7 @@ class ErrorBoundary extends React.Component<
             style={{
               marginTop: '16px',
               padding: '12px 24px',
-              background: '#ef4444',
+              background: '#C94D6A',
               color: '#fff',
               border: 'none',
               borderRadius: '8px',
@@ -76,7 +76,7 @@ const root = document.getElementById('root')
 if (!root) {
   document.body.innerHTML = `
     <div style="padding: 40px; font-family: Inter, sans-serif; text-align: center;">
-      <h1 style="color: #ef4444;">❌ Root Element nicht gefunden!</h1>
+      <h1 style="color: #C94D6A;">❌ Root Element nicht gefunden!</h1>
       <p>Das div mit id="root" fehlt in index.html</p>
     </div>
   `

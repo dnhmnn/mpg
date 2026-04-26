@@ -823,7 +823,7 @@ export default function Lager() {
         h1 { font-size: 18px; margin-bottom: 4px; }
         .sub { color: #555; margin-bottom: 16px; }
         table { width: 100%; border-collapse: collapse; }
-        th { background: #b91c1c; color: #fff; padding: 8px 10px; text-align: left; }
+        th { background: #C94D6A; color: #fff; padding: 8px 10px; text-align: left; }
         td { padding: 6px 10px; border-bottom: 1px solid #e5e7eb; }
         tr:nth-child(even) td { background: #f9fafb; }
       </style></head><body>
@@ -1328,7 +1328,7 @@ export default function Lager() {
                       <div key={loc.id} style={{
                         background: '#fafafa', borderRadius: '12px', padding: '16px',
                         border: `1px solid ${isOverdue ? '#fecaca' : '#e5e7eb'}`,
-                        borderLeft: `4px solid ${isOverdue ? '#b91c1c' : openAudit ? '#f59e0b' : '#e5e7eb'}`
+                        borderLeft: `4px solid ${isOverdue ? '#C94D6A' : openAudit ? '#f59e0b' : '#e5e7eb'}`
                       }}>
                         <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px'}}>
                           <div style={{fontWeight: 700, fontSize: '1rem'}}>{loc.name}</div>
@@ -1339,7 +1339,7 @@ export default function Lager() {
                               </span>
                             )}
                             {isOverdue && (
-                              <span style={{fontSize: '0.75rem', background: '#fee2e2', color: '#b91c1c', padding: '2px 8px', borderRadius: '999px', fontWeight: 700}}>
+                              <span style={{fontSize: '0.75rem', background: '#fee2e2', color: '#C94D6A', padding: '2px 8px', borderRadius: '999px', fontWeight: 700}}>
                                 Überfällig
                               </span>
                             )}
@@ -1354,7 +1354,7 @@ export default function Lager() {
                               : 'Noch nie durchgeführt'}
                           </div>
                           {inventurSchedule.interval !== 'disabled' && (
-                            <div style={{color: isOverdue ? '#b91c1c' : '#64748b'}}>
+                            <div style={{color: isOverdue ? '#C94D6A' : '#64748b'}}>
                               Nächste fällig:{' '}
                               {neverAudited ? 'Sofort' : nextDue?.toLocaleDateString('de-DE')}
                             </div>
@@ -1403,7 +1403,7 @@ export default function Lager() {
                             <div key={ai.id} style={{
                               padding: '10px 12px', borderRadius: '8px',
                               background: hasDiff ? (diff > 0 ? '#f0fdf4' : '#fef2f2') : '#f9fafb',
-                              borderLeft: `3px solid ${hasDiff ? (diff > 0 ? '#16a34a' : '#b91c1c') : '#e5e7eb'}`,
+                              borderLeft: `3px solid ${hasDiff ? (diff > 0 ? '#16a34a' : '#C94D6A') : '#e5e7eb'}`,
                               display: 'flex', justifyContent: 'space-between', alignItems: 'center'
                             }}>
                               <div>
@@ -1413,7 +1413,7 @@ export default function Lager() {
                                 </div>
                               </div>
                               {hasDiff ? (
-                                <span style={{fontWeight: 700, fontSize: '0.9rem', color: diff > 0 ? '#16a34a' : '#b91c1c'}}>
+                                <span style={{fontWeight: 700, fontSize: '0.9rem', color: diff > 0 ? '#16a34a' : '#C94D6A'}}>
                                   {diff > 0 ? '+' : ''}{diff}
                                 </span>
                               ) : (
@@ -1488,9 +1488,9 @@ export default function Lager() {
                           <div style={{fontWeight: 700, fontSize: '0.9rem'}}>{loc.name}</div>
                           <div style={{textAlign: 'right', fontSize: '0.85rem'}}>
                             {neverAudited ? (
-                              <span style={{color: '#b91c1c', fontWeight: 700}}>Noch nie – sofort fällig</span>
+                              <span style={{color: '#C94D6A', fontWeight: 700}}>Noch nie – sofort fällig</span>
                             ) : (
-                              <span style={{color: isOverdue ? '#b91c1c' : '#166534', fontWeight: 600}}>
+                              <span style={{color: isOverdue ? '#C94D6A' : '#166534', fontWeight: 600}}>
                                 {nextDue?.toLocaleDateString('de-DE')}
                                 {isOverdue && ' ⚠ Überfällig'}
                               </span>
@@ -1586,7 +1586,7 @@ export default function Lager() {
               <h3 style={{margin: 0}}>{detailItem.name}</h3>
               <span style={{
                 background: detailItem.status === 'exp' ? '#fee2e2' : detailItem.status === 'warn' ? '#fef3c7' : '#dcfce7',
-                color: detailItem.status === 'exp' ? '#b91c1c' : detailItem.status === 'warn' ? '#92400e' : '#15803d',
+                color: detailItem.status === 'exp' ? '#C94D6A' : detailItem.status === 'warn' ? '#92400e' : '#15803d',
                 padding: '4px 10px', borderRadius: '999px', fontSize: '0.8rem', fontWeight: 700
               }}>
                 {detailItem.status === 'exp' ? 'Abgelaufen' : detailItem.status === 'warn' ? 'Achtung' : 'In Ordnung'}
@@ -1659,7 +1659,7 @@ export default function Lager() {
                     <div key={txn.id} style={{
                       display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                       padding: '8px 12px', background: '#f9fafb', borderRadius: '8px',
-                      borderLeft: `3px solid ${txn.type === 'einbuchung' ? '#16a34a' : txn.type === 'ausbuchung' ? '#b91c1c' : '#f59e0b'}`,
+                      borderLeft: `3px solid ${txn.type === 'einbuchung' ? '#16a34a' : txn.type === 'ausbuchung' ? '#C94D6A' : '#f59e0b'}`,
                       fontSize: '0.85rem'
                     }}>
                       <div>
@@ -1879,13 +1879,13 @@ export default function Lager() {
         .toast-error {
           background: #fef2f2;
           border: 1px solid #fecaca;
-          color: #b91c1c;
+          color: #C94D6A;
         }
 
         .error-message {
           background: #fef2f2;
           border: 1px solid #fecaca;
-          color: #b91c1c;
+          color: #C94D6A;
           padding: 16px;
           border-radius: 12px;
           margin-bottom: 24px;
@@ -1921,7 +1921,7 @@ export default function Lager() {
         }
 
         .stat-card.exp .stat-num {
-          color: #b91c1c;
+          color: #C94D6A;
         }
 
         .toolbar {
@@ -1948,7 +1948,7 @@ export default function Lager() {
 
         .search-box input:focus {
           outline: none;
-          border-color: #b91c1c;
+          border-color: #C94D6A;
           box-shadow: 0 0 0 3px rgba(185,28,28,0.1);
         }
 
@@ -1977,8 +1977,8 @@ export default function Lager() {
 
         .chip.active {
           background: #fee2e2;
-          color: #b91c1c;
-          border-color: #b91c1c;
+          color: #C94D6A;
+          border-color: #C94D6A;
         }
 
         .btn {
@@ -2000,13 +2000,13 @@ export default function Lager() {
         }
 
         .btn.primary {
-          background: #b91c1c;
+          background: #C94D6A;
           color: #fff;
-          border-color: #b91c1c;
+          border-color: #C94D6A;
         }
 
         .btn.primary:hover {
-          background: #dc2626;
+          background: #B03050;
         }
 
         .btn:disabled {
@@ -2031,7 +2031,7 @@ export default function Lager() {
         }
 
         .btn-small.danger {
-          color: #b91c1c;
+          color: #C94D6A;
         }
 
         .btn-small:disabled {
@@ -2070,7 +2070,7 @@ export default function Lager() {
         }
 
         .item-row.exp {
-          border-color: #b91c1c;
+          border-color: #C94D6A;
         }
 
         .item-row.zero {
@@ -2107,7 +2107,7 @@ export default function Lager() {
 
         .menu-dots:hover {
           background: #fff;
-          color: #b91c1c;
+          color: #C94D6A;
           transform: scale(1.1);
         }
 
@@ -2154,7 +2154,7 @@ export default function Lager() {
 
         .menu-item:hover {
           background: #f3f4f6;
-          color: #b91c1c;
+          color: #C94D6A;
         }
 
         .item-header {
@@ -2199,7 +2199,7 @@ export default function Lager() {
 
         .quick-btn.minus {
           background: #fee2e2;
-          color: #b91c1c;
+          color: #C94D6A;
         }
 
         .quick-btn.minus:hover {
@@ -2278,9 +2278,9 @@ export default function Lager() {
         }
 
         .location-tab.active {
-          background: #b91c1c;
+          background: #C94D6A;
           color: #fff;
-          border-color: #b91c1c;
+          border-color: #C94D6A;
         }
 
         .empty-state {
@@ -2319,7 +2319,7 @@ export default function Lager() {
 
         .modal-box h3 {
           margin: 0 0 1rem 0;
-          color: #b91c1c;
+          color: #C94D6A;
           font-weight: 800;
         }
 
@@ -2354,8 +2354,8 @@ export default function Lager() {
         }
 
         .tab.active {
-          color: #b91c1c;
-          border-bottom-color: #b91c1c;
+          color: #C94D6A;
+          border-bottom-color: #C94D6A;
         }
 
         .log-list {
@@ -2400,7 +2400,7 @@ export default function Lager() {
 
         .log-type.ausbuchung {
           background: #fee2e2;
-          color: #b91c1c;
+          color: #C94D6A;
         }
 
         .log-type.korrektur {
@@ -2493,7 +2493,7 @@ export default function Lager() {
         .form-group textarea:focus,
         .form-group select:focus {
           outline: none;
-          border-color: #b91c1c;
+          border-color: #C94D6A;
           box-shadow: 0 0 0 3px rgba(185,28,28,0.1);
         }
 

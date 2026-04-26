@@ -1693,10 +1693,10 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                       <div style={{marginTop: '10px'}}>
                         <div style={{display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '4px'}}>
                           <span>{da} / {jahresTermine.length} Termine besucht</span>
-                          <span style={{fontWeight: 700, color: prozent >= 80 ? '#16a34a' : prozent >= 50 ? '#d97706' : '#dc2626'}}>{prozent}%</span>
+                          <span style={{fontWeight: 700, color: prozent >= 80 ? '#16a34a' : prozent >= 50 ? '#d97706' : '#B03050'}}>{prozent}%</span>
                         </div>
                         <div style={{background: '#e2e8f0', borderRadius: '4px', height: '5px'}}>
-                          <div style={{background: prozent >= 80 ? '#22c55e' : prozent >= 50 ? '#eab308' : '#ef4444', borderRadius: '4px', height: '5px', width: `${Math.min(prozent, 100)}%`}} />
+                          <div style={{background: prozent >= 80 ? '#22c55e' : prozent >= 50 ? '#eab308' : '#C94D6A', borderRadius: '4px', height: '5px', width: `${Math.min(prozent, 100)}%`}} />
                         </div>
                       </div>
                     )
@@ -1982,13 +1982,13 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                           </span>
                         </div>
                         <div style={{background: 'var(--bg-subtle)', borderRadius: '6px', height: '8px', marginBottom: '8px'}}>
-                          <div style={{background: prozent >= 80 ? '#22c55e' : prozent >= 50 ? '#eab308' : '#ef4444', borderRadius: '6px', height: '8px', width: `${Math.min(prozent, 100)}%`, transition: 'width 0.3s'}} />
+                          <div style={{background: prozent >= 80 ? '#22c55e' : prozent >= 50 ? '#eab308' : '#C94D6A', borderRadius: '6px', height: '8px', width: `${Math.min(prozent, 100)}%`, transition: 'width 0.3s'}} />
                         </div>
                         <div style={{fontSize: '13px', color: 'var(--text-secondary)', display: 'flex', gap: '12px', flexWrap: 'wrap'}}>
                           <span style={{color: '#16a34a'}}><b>{da}</b> Da</span>
                           <span style={{color: '#d97706'}}><b>{krank}</b> Krank</span>
                           <span style={{color: '#2563eb'}}><b>{entschuldigt}</b> Entsch.</span>
-                          <span style={{color: '#dc2626'}}><b>{fehlend}</b> Fehlend</span>
+                          <span style={{color: '#B03050'}}><b>{fehlend}</b> Fehlend</span>
                           <span style={{marginLeft: 'auto', fontWeight: 700}}>{prozent}%</span>
                         </div>
                       </div>
@@ -2227,8 +2227,8 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
           const total = jahresTermineFiltered.length
           const prozent = total > 0 ? Math.round((da / total) * 100) : 0
           const ziel50 = da >= 2
-          const zielColor = prozent >= 80 ? '#16a34a' : prozent >= 50 ? '#d97706' : '#dc2626'
-          const barColor = prozent >= 80 ? '#22c55e' : prozent >= 50 ? '#eab308' : '#ef4444'
+          const zielColor = prozent >= 80 ? '#16a34a' : prozent >= 50 ? '#d97706' : '#B03050'
+          const barColor = prozent >= 80 ? '#22c55e' : prozent >= 50 ? '#eab308' : '#C94D6A'
 
           const statusConfig: {[k:string]: {label:string, bg:string, color:string}} = {
             da:           {label: 'Da',           bg: '#dcfce7', color: '#166534'},
@@ -2577,7 +2577,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
               const startD = parseDate(selectedTermin.start_datetime)
               const endD = parseDate(selectedTermin.end_datetime)
               const statusLabels: Record<string, string> = {geplant: 'Geplant', laufend: 'Laufend', abgeschlossen: 'Abgeschlossen', abgesagt: 'Abgesagt'}
-              const statusColors: Record<string, string> = {geplant: '#3b82f6', laufend: '#10b981', abgeschlossen: '#6366f1', abgesagt: '#ef4444'}
+              const statusColors: Record<string, string> = {geplant: '#3b82f6', laufend: '#10b981', abgeschlossen: '#6366f1', abgesagt: '#C94D6A'}
               const sc = statusColors[selectedTermin.status] || '#64748b'
               return (
                 <div style={{background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)', padding: '24px 28px', color: '#fff', position: 'relative'}}>
@@ -2786,7 +2786,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                             )}
                             {absagen.length > 0 && (
                               <div>
-                                <div style={{fontSize: '11px', fontWeight: 700, color: '#dc2626', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '6px'}}>Abgesagt ({absagen.length})</div>
+                                <div style={{fontSize: '11px', fontWeight: 700, color: '#B03050', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '6px'}}>Abgesagt ({absagen.length})</div>
                                 <div style={{display: 'flex', flexWrap: 'wrap', gap: '6px'}}>
                                   {absagen.map(e => (
                                     <span key={e.id} style={{padding: '4px 10px', borderRadius: '20px', background: '#fee2e2', color: '#991b1b', fontSize: '13px', fontWeight: 500}}>{e.name}</span>
@@ -2953,7 +2953,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                                     >✓ Zugesagt</button>
                                     <button
                                       onClick={() => pb.collection('ausbildungen_termine_user').update(tt.id, { status: s === 'abgesagt' ? 'eingeladen' : 'abgesagt' }).then(() => loadTerminTeilnehmer())}
-                                      style={{padding: '4px 10px', borderRadius: '6px', border: '1px solid', fontSize: '12px', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', background: s === 'abgesagt' ? '#fee2e2' : '#fff', color: s === 'abgesagt' ? '#991b1b' : '#64748b', borderColor: s === 'abgesagt' ? '#ef4444' : '#e2e8f0'}}
+                                      style={{padding: '4px 10px', borderRadius: '6px', border: '1px solid', fontSize: '12px', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', background: s === 'abgesagt' ? '#fee2e2' : '#fff', color: s === 'abgesagt' ? '#991b1b' : '#64748b', borderColor: s === 'abgesagt' ? '#C94D6A' : '#e2e8f0'}}
                                     >✕ Abgesagt</button>
                                   </div>
                                 </div>
@@ -3012,7 +3012,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                         <span style={{color: '#16a34a'}}><strong>{da}</strong> Da</span>
                         <span style={{color: '#d97706'}}><strong>{krank}</strong> Krank</span>
                         <span style={{color: '#2563eb'}}><strong>{entschuldigt}</strong> Entschuldigt</span>
-                        <span style={{color: '#dc2626'}}><strong>{fehlend}</strong> Fehlend</span>
+                        <span style={{color: '#B03050'}}><strong>{fehlend}</strong> Fehlend</span>
                       </div>
                     )
                   })()}
@@ -3040,7 +3040,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                                     da:           {bg: anw === 'da'           ? '#dcfce7' : '#fff', color: anw === 'da'           ? '#166534' : '#64748b', border: anw === 'da'           ? '#22c55e' : 'rgba(0,0,0,0.12)'},
                                     krank:        {bg: anw === 'krank'        ? '#fef9c3' : '#fff', color: anw === 'krank'        ? '#92400e' : '#64748b', border: anw === 'krank'        ? '#eab308' : 'rgba(0,0,0,0.12)'},
                                     entschuldigt: {bg: anw === 'entschuldigt' ? '#dbeafe' : '#fff', color: anw === 'entschuldigt' ? '#1e40af' : '#64748b', border: anw === 'entschuldigt' ? '#3b82f6' : 'var(--border)'},
-                                    fehlend:      {bg: anw === 'fehlend'      ? '#fee2e2' : '#fff', color: anw === 'fehlend'      ? '#991b1b' : '#64748b', border: anw === 'fehlend'      ? '#ef4444' : 'rgba(0,0,0,0.12)'},
+                                    fehlend:      {bg: anw === 'fehlend'      ? '#fee2e2' : '#fff', color: anw === 'fehlend'      ? '#991b1b' : '#64748b', border: anw === 'fehlend'      ? '#C94D6A' : 'rgba(0,0,0,0.12)'},
                                   }
                                   const c = colors[opt]
                                   const labels: Record<string, string> = {da: 'Da', krank: 'Krank', entschuldigt: 'Entschuldigt', fehlend: 'Fehlend'}
@@ -3085,7 +3085,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                       {/* Dozenten-Dokumente */}
                       {dokumente.filter(d => d.termin_id === selectedTermin.id && d.typ === 'dozent').length > 0 && (
                         <div style={{marginBottom: '24px'}}>
-                          <h4 style={{fontSize: '14px', fontWeight: 700, marginBottom: '12px', color: '#b91c1c'}}>
+                          <h4 style={{fontSize: '14px', fontWeight: 700, marginBottom: '12px', color: '#C94D6A'}}>
                             📚 Dozenten-Unterlagen
                           </h4>
                           <div style={{display: 'flex', flexDirection: 'column', gap: '8px'}}>
@@ -3316,7 +3316,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                       style={{flex: 1, padding: '6px 10px', border: '1px solid var(--border)', borderRadius: '6px', fontSize: '13px', fontFamily: 'inherit'}}
                     />
                     <button onClick={() => removeInhaltBlock(idx)} style={{
-                      background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', padding: '4px'
+                      background: 'none', border: 'none', cursor: 'pointer', color: '#C94D6A', padding: '4px'
                     }}>
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                         <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
@@ -3346,7 +3346,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                           }}>
                             <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start'}}>
                               <div style={{fontWeight: 600, flex: 1}}>{f.frage}</div>
-                              <button onClick={() => removeQuizFrage(idx, fi)} style={{background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', padding: '2px'}}>
+                              <button onClick={() => removeQuizFrage(idx, fi)} style={{background: 'none', border: 'none', cursor: 'pointer', color: '#C94D6A', padding: '2px'}}>
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                   <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
                                 </svg>
@@ -4096,7 +4096,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
         .toast-error {
           background: #fef2f2;
           border: 1px solid #fecaca;
-          color: #b91c1c;
+          color: #C94D6A;
         }
 
         .action-toolbar {
@@ -4133,19 +4133,19 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
         }
 
         .action-btn.active {
-          background: #b91c1c;
+          background: #C94D6A;
           color: #fff;
-          border-color: #b91c1c;
+          border-color: #C94D6A;
         }
 
         .action-btn.primary {
-          background: #b91c1c;
+          background: #C94D6A;
           color: #fff;
-          border-color: #b91c1c;
+          border-color: #C94D6A;
         }
 
         .action-btn.primary:hover {
-          background: #dc2626;
+          background: #B03050;
         }
 
         .cards-grid {
@@ -4180,7 +4180,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
         }
 
         .card.status-abgesagt {
-          border-color: rgba(239, 68, 68, 0.2);
+          border-color: rgba(201, 77, 106, 0.2);
         }
 
         .card:hover {
@@ -4211,7 +4211,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
 
         .menu-dots:hover {
           background: #fff;
-          color: #b91c1c;
+          color: #C94D6A;
           transform: scale(1.1);
         }
 
@@ -4260,7 +4260,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
         }
 
         .menu-item.danger {
-          color: #dc2626;
+          color: #B03050;
         }
 
         .menu-item.danger:hover {
@@ -4270,7 +4270,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
         .card-type {
           font-size: 12px;
           font-weight: 700;
-          color: #b91c1c;
+          color: #C94D6A;
           text-transform: uppercase;
           margin-bottom: 8px;
           letter-spacing: 0.5px;
@@ -4324,7 +4324,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
 
         .status-badge.abgesagt {
           background: #fef2f2;
-          color: #dc2626;
+          color: #B03050;
         }
 
         .status-badge.lernbar {
@@ -4385,7 +4385,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
 
         .modal-content h3 {
           margin: 0 0 16px 0;
-          color: #b91c1c;
+          color: #C94D6A;
           font-weight: 800;
         }
 
@@ -4423,8 +4423,8 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
         .field select:focus,
         .field textarea:focus {
           outline: none;
-          border-color: #b91c1c;
-          box-shadow: 0 0 0 3px rgba(185, 28, 28, 0.1);
+          border-color: #C94D6A;
+          box-shadow: 0 0 0 3px rgba(201, 77, 106, 0.1);
         }
 
         .modal-actions {
@@ -4456,13 +4456,13 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
         }
 
         .btn.primary {
-          background: #b91c1c;
+          background: #C94D6A;
           color: #fff;
-          border-color: #b91c1c;
+          border-color: #C94D6A;
         }
 
         .btn.primary:hover {
-          background: #dc2626;
+          background: #B03050;
         }
 
         .btn-small {
@@ -4485,7 +4485,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
         }
 
         .btn-small.danger {
-          color: #dc2626;
+          color: #B03050;
         }
 
         .btn-small.danger:hover {
@@ -4493,9 +4493,9 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
         }
 
         .btn-small.primary {
-          background: #b91c1c;
+          background: #C94D6A;
           color: #fff;
-          border-color: #b91c1c;
+          border-color: #C94D6A;
         }
 
         .btn-icon {
@@ -4518,7 +4518,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
 
         .btn-icon.danger:hover {
           background: #fee2e2;
-          color: #dc2626;
+          color: #B03050;
         }
 
         .tabs {
@@ -4546,8 +4546,8 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
         }
 
         .tab.active {
-          color: #b91c1c;
-          border-bottom-color: #b91c1c;
+          color: #C94D6A;
+          border-bottom-color: #C94D6A;
         }
 
         .tab-content {
