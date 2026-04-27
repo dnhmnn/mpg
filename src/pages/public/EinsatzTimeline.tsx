@@ -1,14 +1,29 @@
 import { useRef, useState, useEffect } from 'react'
 
+interface Times {
+  status3: string   // datetime-local format
+  eintreffen: string
+  uebergabe: string
+  status1: string
+  status2: string
+}
+
 interface Props {
   alarmzeit: string
   defaultStandort?: string
   defaultEinsatzort?: string
+  onTimesChange?: (times: Times) => void
 }
 
 const STEP_COLORS = ['#6B1A2A', '#9E2A3A', '#C94D6A', '#2563eb', '#16a34a', '#166534']
 
-export default function EinsatzTimeline({ alarmzeit, defaultStandort, defaultEinsatzort }: Props) {
+const toLocalDT = (d: Date | null): string => {
+  if (!d) return ''
+  const p = (n: number) => n.toString().padStart(2, '0')
+  return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`
+}
+
+export default function EinsatzTimeline({ alarmzeit, defaultStandort, defaultEinsatzort, onTimesChange }: Props) {
   const mapDiv = useRef<HTMLDivElement>(null)
   const lMap = useRef<any>(null)
   const rLayer = useRef<any>(null)
@@ -137,6 +152,18 @@ export default function EinsatzTimeline({ alarmzeit, defaultStandort, defaultEin
   const t3 = t2 ? addMin(t2, szene) : null               // Übergabe
   const t4 = t3                                          // Status 1 (direkt nach Übergabe)
   const t5 = routeMin && t4 ? addMin(t4, routeMin) : null // Status 2
+
+  // Notify parent whenever calculated times change
+  useEffect(() => {
+    if (!onTimesChange) return
+    onTimesChange({
+      status3:    toLocalDT(t1),
+      eintreffen: toLocalDT(t2),
+      uebergabe:  toLocalDT(t3),
+      status1:    toLocalDT(t4),
+      status2:    toLocalDT(t5),
+    })
+  }, [toLocalDT(t1), toLocalDT(t2), toLocalDT(t3), toLocalDT(t4), toLocalDT(t5)])
 
   interface Step { label: string; sub: string; badge: string; time: Date | null; toNext: string | null }
   const steps: Step[] = [

@@ -36,6 +36,11 @@ export default function OrgPatienten() {
   const [einsatzAdresse, setEinsatzAdresse] = useState('')
   const autoSaveTimer = useRef<ReturnType<typeof setTimeout>>()
   const draftIdRef = useRef<string | null>(null)
+  const refS3   = useRef<HTMLInputElement>(null)
+  const refS4   = useRef<HTMLInputElement>(null)
+  const refUeg  = useRef<HTMLInputElement>(null)
+  const refS1   = useRef<HTMLInputElement>(null)
+  const refS2   = useRef<HTMLInputElement>(null)
   const gcsSum = gcs.e + gcs.v + gcs.m
 
   // Canvas signature
@@ -155,9 +160,11 @@ export default function OrgPatienten() {
             <label style={lbl}>Fahrzeug / Einheit<input style={inp} name="fahrzeug" type="text" /></label>
             <label style={lbl}>Einsatzart / Stichwort<input style={inp} name="einsatz_art" type="text" /></label>
             <label style={lbl}>Alarmzeit<input style={inp} name="zeit_einsatz" type="datetime-local" defaultValue={now()} onChange={e => setAlarmzeit(e.target.value)} /></label>
-            <label style={lbl}>Eintreffen<input style={inp} name="zeit_eintreffen" type="datetime-local" /></label>
-            <label style={lbl}>Transportbeginn<input style={inp} name="zeit_transport" type="datetime-local" /></label>
-            <label style={lbl}>Übergabe<input style={inp} name="zeit_uebergabe" type="datetime-local" /></label>
+            <input type="hidden" name="zeit_status3"    ref={refS3} />
+            <input type="hidden" name="zeit_eintreffen" ref={refS4} />
+            <input type="hidden" name="zeit_uebergabe"  ref={refUeg} />
+            <input type="hidden" name="zeit_status1"    ref={refS1} />
+            <input type="hidden" name="zeit_status2"    ref={refS2} />
             <label style={lbl}>Einsatzort / Adresse<input style={inp} name="einsatz_adresse" type="text" onChange={e => setEinsatzAdresse(e.target.value)} /></label>
             <label style={lbl}>Transportziel<input style={inp} name="transport_ziel" type="text" /></label>
           </div>
@@ -169,6 +176,13 @@ export default function OrgPatienten() {
             alarmzeit={alarmzeit}
             defaultStandort={org.org_name}
             defaultEinsatzort={einsatzAdresse}
+            onTimesChange={times => {
+              if (refS3.current)  refS3.current.value  = times.status3
+              if (refS4.current)  refS4.current.value  = times.eintreffen
+              if (refUeg.current) refUeg.current.value = times.uebergabe
+              if (refS1.current)  refS1.current.value  = times.status1
+              if (refS2.current)  refS2.current.value  = times.status2
+            }}
           />
         </PubSection>
 
