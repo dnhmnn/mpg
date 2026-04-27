@@ -4,6 +4,7 @@ import { pb } from '../../lib/pocketbase'
 import { useOrg } from './OrgPublicLayout'
 import { PubHeader, PubWrap, PubSendBar, PubSection, inp, sel, ta, field, lbl } from './pubStyles'
 import OrgPatientenMannschaft from './OrgPatientenMannschaft'
+import EinsatzTimeline from './EinsatzTimeline'
 
 type Med = { name: string; dose: string; unit: string; route: string; time: string; note: string }
 type VRow = { zeit: string; rr_sys: string; rr_dia: string; hf: string; o2: string; spo2: string; etco2: string; schmerz: string }
@@ -31,6 +32,8 @@ export default function OrgPatienten() {
   const [draftMannschaft, setDraftMannschaft] = useState<Record<string, { id: string; name: string } | null>>({})
   const [sending, setSending] = useState(false)
   const [success, setSuccess] = useState<string | null>(null)
+  const [alarmzeit, setAlarmzeit] = useState(now())
+  const [einsatzAdresse, setEinsatzAdresse] = useState('')
   const autoSaveTimer = useRef<ReturnType<typeof setTimeout>>()
   const draftIdRef = useRef<string | null>(null)
   const gcsSum = gcs.e + gcs.v + gcs.m
@@ -151,13 +154,22 @@ export default function OrgPatienten() {
             <label style={lbl}>Rufname<input style={inp} name="rufname" type="text" /></label>
             <label style={lbl}>Fahrzeug / Einheit<input style={inp} name="fahrzeug" type="text" /></label>
             <label style={lbl}>Einsatzart / Stichwort<input style={inp} name="einsatz_art" type="text" /></label>
-            <label style={lbl}>Alarmzeit<input style={inp} name="zeit_einsatz" type="datetime-local" defaultValue={now()} /></label>
+            <label style={lbl}>Alarmzeit<input style={inp} name="zeit_einsatz" type="datetime-local" defaultValue={now()} onChange={e => setAlarmzeit(e.target.value)} /></label>
             <label style={lbl}>Eintreffen<input style={inp} name="zeit_eintreffen" type="datetime-local" /></label>
             <label style={lbl}>Transportbeginn<input style={inp} name="zeit_transport" type="datetime-local" /></label>
             <label style={lbl}>Übergabe<input style={inp} name="zeit_uebergabe" type="datetime-local" /></label>
-            <label style={lbl}>Einsatzort / Adresse<input style={inp} name="einsatz_adresse" type="text" /></label>
+            <label style={lbl}>Einsatzort / Adresse<input style={inp} name="einsatz_adresse" type="text" onChange={e => setEinsatzAdresse(e.target.value)} /></label>
             <label style={lbl}>Transportziel<input style={inp} name="transport_ziel" type="text" /></label>
           </div>
+        </PubSection>
+
+        {/* Einsatz-Zeitstrahl */}
+        <PubSection title="Einsatz-Zeitstrahl" icon={pik(<><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></>)}>
+          <EinsatzTimeline
+            alarmzeit={alarmzeit}
+            defaultStandort={org.org_name}
+            defaultEinsatzort={einsatzAdresse}
+          />
         </PubSection>
 
         {/* Stammdaten */}
