@@ -164,35 +164,12 @@ footer p{font-size:.8rem;color:var(--muted)}
 .rev.on{opacity:1;transform:none}
 
 /* ALARM SCENE */
-#alarmscene{height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;overflow:hidden;padding:0 clamp(1.5rem,6vw,4rem)}
-.asc-label{font-size:.72rem;font-weight:700;color:var(--accent);letter-spacing:.18em;text-transform:uppercase;margin-bottom:2rem;display:flex;align-items:center;gap:1rem;opacity:0;transform:translateY(12px);transition:opacity .7s,transform .7s}
+#alarmscene{height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;overflow:hidden}
+#asc-canvas{position:absolute;inset:0;width:100%;height:100%}
+.asc-label{position:relative;z-index:5;font-size:.72rem;font-weight:700;color:var(--accent);letter-spacing:.18em;text-transform:uppercase;display:flex;align-items:center;gap:1rem;opacity:0;transform:translateY(12px);transition:opacity .7s,transform .7s;margin-top:2.5rem}
 .asc-label::before,.asc-label::after{content:'';height:1px;width:44px;background:rgba(201,77,106,.3)}
-.asc-svg{width:100%;max-width:900px;overflow:visible}
-.asc-cap{margin-top:1.75rem;font-size:.9rem;color:var(--muted);letter-spacing:.03em;text-align:center;opacity:0;transform:translateY(10px);transition:opacity .7s .4s,transform .7s .4s}
+.asc-cap{position:relative;z-index:5;font-size:.88rem;color:var(--muted);letter-spacing:.03em;text-align:center;opacity:0;transform:translateY(10px);transition:opacity .7s .5s,transform .7s .5s;margin-top:auto;padding-bottom:3rem}
 .asc-on .asc-label,.asc-on .asc-cap{opacity:1;transform:none}
-/* Emergency lights */
-.aLB{fill:rgba(59,130,246,.85);animation:aLB .55s ease-in-out infinite alternate}
-.aLR{fill:rgba(201,77,106,.85);animation:aLR .55s ease-in-out infinite alternate}
-@keyframes aLB{to{fill:rgba(59,130,246,.08);opacity:.15}}
-@keyframes aLR{to{fill:rgba(201,77,106,.08);opacity:.15}}
-/* Door swings open (scaleX from left edge) */
-.aDoor{transform-box:fill-box;transform-origin:left center}
-.asc-on .aDoor{animation:aDoor .75s .4s cubic-bezier(.4,0,.2,1) forwards}
-@keyframes aDoor{to{transform:scaleX(0)}}
-/* Figure steps out */
-.aFig{opacity:0}
-.asc-on .aFig{animation:aFig .65s 1.0s ease-out forwards}
-@keyframes aFig{from{opacity:0;transform:translateX(16px)}to{opacity:1;transform:none}}
-/* Phone screen appears */
-.aPhScr{opacity:0}
-.asc-on .aPhScr{animation:aPhScr .5s 1.65s ease forwards}
-@keyframes aPhScr{to{opacity:1}}
-/* Alarm pulse rings */
-.aRing{transform-box:fill-box;transform-origin:center;opacity:0}
-.asc-on .aRing:nth-child(1){animation:aRing 2s 2.0s ease-out infinite}
-.asc-on .aRing:nth-child(2){animation:aRing 2s 2.4s ease-out infinite}
-.asc-on .aRing:nth-child(3){animation:aRing 2s 2.8s ease-out infinite}
-@keyframes aRing{0%{opacity:.8;transform:scale(1)}100%{opacity:0;transform:scale(5)}}
 
 @media(max-width:768px){
   body,html{overflow:auto}
@@ -231,109 +208,8 @@ footer p{font-size:.8rem;color:var(--muted)}
 </section>
 
 <section id="alarmscene">
+  <canvas id="asc-canvas"></canvas>
   <div class="asc-label">09:13 Uhr &mdash; Alarmierung</div>
-  <svg class="asc-svg" viewBox="0 0 900 420" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <!-- Ground glow + line -->
-    <ellipse cx="450" cy="395" rx="400" ry="22" fill="rgba(107,26,42,0.12)"/>
-    <line x1="0" y1="388" x2="900" y2="388" stroke="rgba(247,238,240,0.04)" stroke-width="1"/>
-
-    <!-- === VEHICLE (RTW side view) === -->
-    <!-- Wheels -->
-    <circle cx="175" cy="388" r="30" fill="#0A0408" stroke="rgba(255,255,255,0.07)" stroke-width="1.5"/>
-    <circle cx="175" cy="388" r="17" fill="#060208" stroke="rgba(107,26,42,0.2)" stroke-width="1"/>
-    <circle cx="448" cy="388" r="30" fill="#0A0408" stroke="rgba(255,255,255,0.07)" stroke-width="1.5"/>
-    <circle cx="448" cy="388" r="17" fill="#060208" stroke="rgba(107,26,42,0.2)" stroke-width="1"/>
-    <!-- Undercarriage -->
-    <rect x="128" y="358" width="368" height="18" rx="3" fill="#0C0508"/>
-    <!-- Cab -->
-    <rect x="88" y="208" width="124" height="152" rx="7" fill="#0D0608" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
-    <!-- Windshield -->
-    <rect x="100" y="220" width="100" height="68" rx="4" fill="rgba(107,26,42,0.09)" stroke="rgba(107,26,42,0.14)" stroke-width=".5"/>
-    <!-- Cab/box divider -->
-    <line x1="212" y1="218" x2="212" y2="360" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
-    <!-- Box body -->
-    <rect x="206" y="162" width="302" height="198" rx="5" fill="#0E0608" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
-    <!-- Box windows -->
-    <rect x="224" y="182" width="64" height="52" rx="3" fill="rgba(107,26,42,0.1)" stroke="rgba(107,26,42,0.14)" stroke-width=".5"/>
-    <rect x="305" y="182" width="64" height="52" rx="3" fill="rgba(107,26,42,0.1)" stroke="rgba(107,26,42,0.14)" stroke-width=".5"/>
-    <!-- Red cross -->
-    <rect x="388" y="228" width="32" height="9" rx="2" fill="rgba(201,77,106,0.22)"/>
-    <rect x="399" y="217" width="9" height="32" rx="2" fill="rgba(201,77,106,0.22)"/>
-    <!-- "RTW 1" text hint -->
-    <rect x="224" y="246" width="40" height="8" rx="2" fill="rgba(247,238,240,0.03)"/>
-    <!-- Roof lightbar -->
-    <rect x="206" y="150" width="138" height="16" rx="4" fill="#13080C"/>
-    <!-- Emergency lights (alternate blue/red) -->
-    <rect class="aLB" x="213" y="153" width="23" height="9" rx="2"/>
-    <rect class="aLR" x="242" y="153" width="23" height="9" rx="2"/>
-    <rect class="aLB" x="271" y="153" width="23" height="9" rx="2" style="animation-delay:.28s"/>
-    <rect class="aLR" x="300" y="153" width="23" height="9" rx="2" style="animation-delay:.28s"/>
-    <!-- Rear door (hinged left, will scaleX to 0) -->
-    <g transform="translate(477,163)">
-      <g class="aDoor">
-        <rect x="0" y="0" width="30" height="196" fill="#120608" stroke="rgba(255,255,255,0.07)" stroke-width="1"/>
-        <rect x="3" y="16" width="22" height="46" rx="2" fill="rgba(107,26,42,0.09)" stroke="rgba(107,26,42,0.12)" stroke-width=".5"/>
-        <rect x="2" y="98" width="5" height="22" rx="2" fill="rgba(255,255,255,0.07)"/>
-      </g>
-    </g>
-
-    <!-- === FIRST RESPONDER === -->
-    <g class="aFig">
-      <!-- Ground shadow -->
-      <ellipse cx="604" cy="389" rx="32" ry="7" fill="rgba(0,0,0,0.32)"/>
-      <!-- Boots -->
-      <rect x="582" y="366" width="20" height="22" rx="4" fill="#0E0608"/>
-      <rect x="610" y="366" width="20" height="22" rx="4" fill="#0E0608"/>
-      <!-- Legs -->
-      <rect x="584" y="316" width="16" height="54" rx="4" fill="#180B10"/>
-      <rect x="610" y="316" width="16" height="54" rx="4" fill="#180B10"/>
-      <!-- Leg reflective strips -->
-      <rect x="584" y="346" width="16" height="3" rx="1" fill="rgba(201,77,106,0.28)"/>
-      <rect x="610" y="346" width="16" height="3" rx="1" fill="rgba(201,77,106,0.28)"/>
-      <!-- Jacket body -->
-      <rect x="567" y="252" width="66" height="68" rx="6" fill="#15090D"/>
-      <!-- Jacket reflective stripes -->
-      <rect x="567" y="280" width="66" height="4" rx="1" fill="rgba(201,77,106,0.24)"/>
-      <rect x="567" y="293" width="66" height="4" rx="1" fill="rgba(201,77,106,0.24)"/>
-      <!-- Left arm (hanging) -->
-      <line x1="567" y1="258" x2="554" y2="316" stroke="#15090D" stroke-width="15" stroke-linecap="round"/>
-      <!-- Right arm (raised, holding phone up) -->
-      <line x1="633" y1="258" x2="644" y2="198" stroke="#15090D" stroke-width="15" stroke-linecap="round"/>
-      <!-- Phone in raised hand -->
-      <g class="aPhScr">
-        <!-- Glow halo -->
-        <rect x="630" y="170" width="36" height="62" rx="8" fill="rgba(201,77,106,0.14)"/>
-        <!-- Phone frame -->
-        <rect x="632" y="172" width="32" height="58" rx="7" fill="#0A0508" stroke="rgba(201,77,106,0.7)" stroke-width="1.5"/>
-        <!-- Screen -->
-        <rect x="635" y="176" width="26" height="50" rx="5" fill="rgba(107,26,42,0.85)"/>
-        <!-- App icon / notification -->
-        <rect x="638" y="179" width="13" height="13" rx="4" fill="#C94D6A"/>
-        <circle cx="644" cy="185" r="3.5" fill="white" opacity=".92"/>
-        <!-- Text lines -->
-        <rect x="638" y="197" width="20" height="2" rx="1" fill="rgba(247,238,240,0.42)"/>
-        <rect x="638" y="203" width="14" height="2" rx="1" fill="rgba(247,238,240,0.18)"/>
-        <!-- Open button -->
-        <rect x="637" y="212" width="22" height="9" rx="3" fill="rgba(107,26,42,0.95)"/>
-        <rect x="641" y="215" width="14" height="3" rx="1" fill="rgba(201,77,106,0.6)"/>
-      </g>
-      <!-- Alarm pulse rings (from notification icon center) -->
-      <g transform="translate(644,185)">
-        <circle class="aRing" r="9" stroke="#C94D6A" stroke-width="1.5" fill="none"/>
-        <circle class="aRing" r="9" stroke="#C94D6A" stroke-width="1" fill="none"/>
-        <circle class="aRing" r="9" stroke="#C94D6A" stroke-width=".5" fill="none"/>
-      </g>
-      <!-- Neck -->
-      <rect x="587" y="238" width="20" height="18" rx="4" fill="#1C0C12"/>
-      <!-- Head -->
-      <ellipse cx="597" cy="224" rx="22" ry="24" fill="#1C0C12"/>
-      <!-- Helmet -->
-      <ellipse cx="597" cy="207" rx="27" ry="17" fill="#130810"/>
-      <rect x="570" y="217" width="54" height="9" rx="3" fill="#170C14"/>
-      <!-- Visor -->
-      <rect x="572" y="217" width="50" height="5" rx="1" fill="rgba(107,26,42,0.24)"/>
-    </g>
-  </svg>
   <p class="asc-cap">RTW 1 alarmiert &mdash; Besatzung &ouml;ffnet Responda direkt am Einsatzort.</p>
 </section>
 
@@ -515,11 +391,177 @@ document.querySelectorAll('a,button,.feat-item').forEach(el => {
   el.addEventListener('mouseleave', ()=>{ cur.style.transform='translate(-50%,-50%) scale(1)'; cur2.style.borderColor='rgba(201,77,106,.5)'; cur2.style.transform='translate(-50%,-50%) scale(1)'; });
 });
 
-// ── ALARM SCENE TRIGGER ──
-const ascEl = document.getElementById('alarmscene');
-new IntersectionObserver(([e])=>{
-  if(e.isIntersecting) ascEl.classList.add('asc-on');
-},{threshold:.25}).observe(ascEl);
+// ── 3D ALARM SCENE ──
+(function(){
+  const section = document.getElementById('alarmscene');
+  const cv = document.getElementById('asc-canvas');
+  const renderer2 = new THREE.WebGLRenderer({canvas:cv, alpha:true, antialias:true});
+  renderer2.setPixelRatio(Math.min(devicePixelRatio,2));
+  renderer2.shadowMap.enabled = true;
+  renderer2.shadowMap.type = THREE.PCFSoftShadowMap;
+
+  const sc2 = new THREE.Scene();
+  sc2.fog = new THREE.FogExp2(0x060208, 0.025);
+  const cam2 = new THREE.PerspectiveCamera(42, 1, 0.1, 100);
+  cam2.position.set(10, 6, 13);
+  cam2.lookAt(0, 1.5, 0);
+
+  function rsz(){
+    const W=section.clientWidth, H=section.clientHeight;
+    renderer2.setSize(W,H); cam2.aspect=W/H; cam2.updateProjectionMatrix();
+  }
+  rsz(); window.addEventListener('resize', rsz);
+
+  // ── helpers ──
+  const mat = (c,r=0.85,m=0.05,e=0,ei=0) =>
+    new THREE.MeshStandardMaterial({color:c,roughness:r,metalness:m,emissive:e,emissiveIntensity:ei});
+  function bx(w,h,d,M){ const o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),M); o.castShadow=o.receiveShadow=true; return o; }
+
+  // ── ground ──
+  const gnd = new THREE.Mesh(new THREE.PlaneGeometry(60,60), mat(0x070405,1));
+  gnd.rotation.x=-Math.PI/2; gnd.receiveShadow=true; sc2.add(gnd);
+
+  // ── vehicle ──
+  const veh = new THREE.Group(); sc2.add(veh);
+
+  // Box body: center (0,1.4,0.5), depth 5 → z: -2 to +3
+  const body = bx(2.4,2.8,5, mat(0x0E0608,0.88,0.08)); body.position.set(0,1.4,0.5); veh.add(body);
+  // Cab: center (0,1.25,-4.05)
+  const cab = bx(2.4,2.5,2.6, mat(0x0C0608,0.85,0.05)); cab.position.set(0,1.25,-4.05); veh.add(cab);
+  // Cab front face (glass tint)
+  const cFront = bx(2.1,1.7,0.07, mat(0x0A0508,0.5,0.1,0x2A0810,0.06)); cFront.position.set(0,1.3,-5.38); veh.add(cFront);
+  // Side windows (box body, right side)
+  [[1.23,1.9,1.2],[1.23,1.9,-0.35]].forEach(([x,y,z])=>{
+    const w=bx(0.05,0.85,1.1, mat(0x160C12,0.35,0.15,0x3A0C14,0.07)); w.position.set(x,y,z); veh.add(w);
+  });
+  // Cab side window
+  const cw=bx(0.05,1.0,1.45, mat(0x160C12,0.35,0.15,0x3A0C14,0.07)); cw.position.set(1.23,1.72,-3.8); veh.add(cw);
+  // Red cross (side)
+  const c1=bx(0.04,0.13,0.72, mat(0,1,0,0xC94D6A,0.65)); c1.position.set(1.23,1.4,-1.4); veh.add(c1);
+  const c2=bx(0.04,0.72,0.13, mat(0,1,0,0xC94D6A,0.65)); c2.position.set(1.23,1.4,-1.4); veh.add(c2);
+  // Lightbar
+  const lb=bx(2.1,0.28,1.0, mat(0x130808,0.9)); lb.position.set(-0.15,2.96,0.5); veh.add(lb);
+  // Lens meshes (emissive, will animate blink)
+  const lensM=[0x3B82F6,0xC94D6A,0x3B82F6,0xC94D6A].map((c,i)=>{
+    const l=bx(0.38,0.18,0.65, mat(0,0.3,0.1,c,0.8)); l.position.set(-0.65+i*0.48,2.97,0.5); veh.add(l); return l;
+  });
+  // Wheels
+  const wGeo=new THREE.CylinderGeometry(0.6,0.6,0.28,20);
+  const wMat=mat(0x0A0408,0.95); const rMat=mat(0x1C0C14,0.5,0.3);
+  [[-1.35,0.6,-3.0],[1.35,0.6,-3.0],[-1.35,0.6,1.5],[1.35,0.6,1.5]].forEach(([x,y,z])=>{
+    const wh=new THREE.Mesh(wGeo,wMat); wh.rotation.z=Math.PI/2; wh.position.set(x,y,z); wh.castShadow=true; veh.add(wh);
+    const rm=new THREE.Mesh(new THREE.CylinderGeometry(0.28,0.28,0.3,12),rMat); rm.rotation.z=Math.PI/2; rm.position.set(x,y,z); veh.add(rm);
+  });
+
+  // ── rear door (hinge at right edge x=+1.2, rear face z≈3.02) ──
+  const doorPiv = new THREE.Group(); doorPiv.position.set(1.2,1.4,3.02); veh.add(doorPiv);
+  const dMesh = bx(2.36,2.76,0.1, mat(0x110608,0.88)); dMesh.position.set(-1.18,0,0.05); doorPiv.add(dMesh);
+  const dGlass = bx(0.88,0.82,0.06, mat(0x160C12,0.4,0.1,0x3A0C14,0.05)); dGlass.position.set(-0.55,0.3,0.09); doorPiv.add(dGlass);
+
+  // ── character ──
+  const ch = new THREE.Group(); ch.visible=false; ch.position.set(2.2,0,3.6); sc2.add(ch);
+  const cMat=mat(0x150910,0.9); const hvMat=mat(0x1A0A10,0.85,0,0x6B1A2A,0.48); const hMat=mat(0x120810,0.9);
+  // Boots
+  [-0.2,0.2].forEach(x=>{ const b=bx(0.33,0.28,0.52,mat(0x0C0608,0.95)); b.position.set(x,0.14,0.06); ch.add(b); });
+  // Legs + stripes
+  [-0.2,0.2].forEach(x=>{
+    const l=bx(0.3,1.0,0.36,cMat); l.position.set(x,0.78,0); ch.add(l);
+    const s=bx(0.31,0.08,0.37,hvMat); s.position.set(x,0.64,0); ch.add(s);
+  });
+  // Torso + jacket stripes
+  const torso=bx(0.76,1.1,0.48,cMat); torso.position.set(0,1.73,0); ch.add(torso);
+  [1.71,1.57].forEach(y=>{ const s=bx(0.77,0.09,0.49,hvMat); s.position.set(0,y,0); ch.add(s); });
+  // Left arm
+  const lA=bx(0.25,0.88,0.28,cMat); lA.position.set(-0.54,1.3,0); ch.add(lA);
+  // Right arm pivot (shoulder)
+  const rPiv=new THREE.Group(); rPiv.position.set(0.52,2.28,0); ch.add(rPiv);
+  const rA=bx(0.25,0.88,0.28,cMat); rA.position.set(0,-0.44,0); rPiv.add(rA);
+  // Phone at hand end
+  const phPiv=new THREE.Group(); phPiv.position.set(0,-0.98,0.12); phPiv.rotation.x=-0.3; rPiv.add(phPiv);
+  const phBody=bx(0.22,0.44,0.04,mat(0x0A0508,0.8,0.2)); phPiv.add(phBody);
+  const scrMat2=mat(0x0A0508,0.4,0,0xC94D6A,0);
+  const phScr=bx(0.18,0.38,0.01,scrMat2); phScr.position.set(0,0,0.026); phPiv.add(phScr);
+  // Neck + head + helmet
+  const neck=bx(0.22,0.28,0.28,mat(0x1A0C10)); neck.position.set(0,2.4,0); ch.add(neck);
+  const head=new THREE.Mesh(new THREE.BoxGeometry(0.52,0.56,0.5),mat(0x1A0C10)); head.position.set(0,2.84,0); head.castShadow=true; ch.add(head);
+  const helm=bx(0.64,0.3,0.62,hMat); helm.position.set(0,3.08,0); ch.add(helm);
+  const hBrim=bx(0.72,0.1,0.14,hMat); hBrim.position.set(0,2.93,0.3); ch.add(hBrim);
+
+  // ── alarm rings ──
+  const rings2=Array.from({length:3},(_,i)=>{
+    const m=new THREE.MeshBasicMaterial({color:0xC94D6A,transparent:true,opacity:0,side:THREE.DoubleSide});
+    const r=new THREE.Mesh(new THREE.RingGeometry(0.05,0.09,32),m); r.visible=false; sc2.add(r);
+    return {mesh:r,mat:m,off:i*0.52};
+  });
+
+  // ── lights ──
+  sc2.add(new THREE.AmbientLight(0x1A0808,0.6));
+  const sun2=new THREE.DirectionalLight(0xF5E0E5,0.85); sun2.position.set(8,12,8); sun2.castShadow=true; sun2.shadow.mapSize.set(1024,1024); sc2.add(sun2);
+  const bLt=new THREE.PointLight(0x3B82F6,0,8); bLt.position.set(-0.6,3.5,0.5); sc2.add(bLt);
+  const rLt=new THREE.PointLight(0xC94D6A,0,8); rLt.position.set(0.5,3.5,0.5); sc2.add(rLt);
+  const fill2=new THREE.PointLight(0x6B1A2A,1.1,20); fill2.position.set(2,0.3,10); sc2.add(fill2);
+  const phLt=new THREE.PointLight(0xC94D6A,0,6); sc2.add(phLt);
+
+  // ── animation ──
+  let running2=false, t0=null;
+  const aEl=document.getElementById('alarmscene');
+  new IntersectionObserver(([e])=>{
+    if(e.isIntersecting&&!running2){ running2=true; aEl.classList.add('asc-on'); }
+  },{threshold:.18}).observe(aEl);
+
+  function eio(t){return t<.5?2*t*t:-1+(4-2*t)*t;}
+  function pr2(t,s,e){return Math.max(0,Math.min(1,(t-s)/(e-s)));}
+  const tmpV2=new THREE.Vector3();
+
+  function animSc(){
+    requestAnimationFrame(animSc);
+    if(!running2){renderer2.render(sc2,cam2);return;}
+    if(!t0)t0=performance.now();
+    const t=(performance.now()-t0)/1000;
+
+    // Emergency lights blink
+    const bk=Math.sin(t*9)*0.5+0.5;
+    bLt.intensity=bk*4.5; rLt.intensity=(1-bk)*4.5;
+    lensM[0].material.emissiveIntensity=0.25+bk*0.75; lensM[2].material.emissiveIntensity=0.25+bk*0.75;
+    lensM[1].material.emissiveIntensity=0.25+(1-bk)*0.75; lensM[3].material.emissiveIntensity=0.25+(1-bk)*0.75;
+
+    // Door opens: 0.3 → 1.3s (rotates ~84° on Y around hinge)
+    doorPiv.rotation.y=eio(pr2(t,0.3,1.3))*1.47;
+
+    // Character steps out: 1.1 → 2.0s
+    if(t>1.1){
+      ch.visible=true;
+      const p=eio(pr2(t,1.1,2.0));
+      ch.position.x=1.8+p*1.4; ch.position.z=3.8-p*0.6;
+    }
+
+    // Right arm raises: 2.0 → 2.8s
+    rPiv.rotation.z=eio(pr2(t,2.0,2.8))*Math.PI*0.62;
+
+    // Phone screen activates: 2.8 → 3.3s
+    const pp=pr2(t,2.8,3.3);
+    scrMat2.emissiveIntensity=pp*2.2;
+    phLt.intensity=pp*7;
+
+    // Phone light tracks phone world position
+    if(t>2.5){ phScr.getWorldPosition(tmpV2); phLt.position.copy(tmpV2); }
+
+    // Alarm rings: 3.2s+
+    if(t>3.2){
+      rings2.forEach(({mesh,mat:rm,off})=>{
+        const lt=((t-3.2+off)%2.4);
+        if(lt<2.0){const rp=lt/2.0; mesh.scale.setScalar(1+rp*9); rm.opacity=(1-rp)*0.55; mesh.visible=true; mesh.position.copy(tmpV2); mesh.lookAt(cam2.position);}
+        else{mesh.visible=false;}
+      });
+    }
+
+    // Gentle camera drift
+    cam2.position.x=10+Math.sin(t*0.07)*0.4; cam2.position.y=6+Math.sin(t*0.045)*0.18;
+    cam2.lookAt(0,1.5,0);
+    renderer2.render(sc2,cam2);
+  }
+  animSc();
+})();
 
 // ── REVEAL ON SCROLL ──
 const obs = new IntersectionObserver(e => e.forEach(x => {
