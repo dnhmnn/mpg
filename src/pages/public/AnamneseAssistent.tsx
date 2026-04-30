@@ -28,6 +28,7 @@ function Chips({ options, value, onChange, multi = false }: {
 }
 
 interface WasbState {
+  vorgefunden: string[]; vorgefundenFreitext: string
   wo: string[]; ausstrahlung: string[]; seit: string[]; nrs: number; begleitsymptome: string[]
 }
 interface XabcdeState {
@@ -43,8 +44,13 @@ interface SamplerState {
 const a = (arr: string[]) => arr.length ? arr.join(', ') : '–'
 
 function buildText(wasb: WasbState, xabcde: XabcdeState, sampler: SamplerState): string {
+  const vorgefundenStr = [
+    ...wasb.vorgefunden,
+    ...(wasb.vorgefundenFreitext.trim() ? [wasb.vorgefundenFreitext.trim()] : []),
+  ]
   const wasbParts = [
     `WASB:`,
+    `Vorgefunden: ${vorgefundenStr.length ? vorgefundenStr.join(', ') : '–'}.`,
     `W – Lokalisation: ${a(wasb.wo)}.`,
     `A – Ausstrahlung: ${a(wasb.ausstrahlung)}.`,
     `S – Seit: ${a(wasb.seit)}, NRS ${wasb.nrs}/10.`,
@@ -78,7 +84,7 @@ interface Props {
 
 export default function AnamneseAssistent({ onComplete, onCancel }: Props) {
   const [step, setStep] = useState(0)
-  const [wasb, setWasb] = useState<WasbState>({ wo: [], ausstrahlung: [], seit: [], nrs: 0, begleitsymptome: [] })
+  const [wasb, setWasb] = useState<WasbState>({ vorgefunden: [], vorgefundenFreitext: '', wo: [], ausstrahlung: [], seit: [], nrs: 0, begleitsymptome: [] })
   const [xabcde, setXabcde] = useState<XabcdeState>({ x: [], a: [], b_atmung: [], b_spo2: [], c_rr: [], c_puls: [], c_rhythmus: [], d_avpu: [], d_pupillen: [], e: [] })
   const [sampler, setSampler] = useState<SamplerState>({ allergien: [], medikamente: [], vorerkrankungen: [], letzteMahlzeit: [], ereignis: [], risikofaktoren: [] })
 
@@ -125,6 +131,17 @@ export default function AnamneseAssistent({ onComplete, onCancel }: Props) {
         {/* ── WASB ── */}
         {step === 0 && (
           <>
+            <div style={sec}>
+              <span style={secLbl}>Vorgefunden</span>
+              <Chips options={['Liegend vorgefunden','Sitzend vorgefunden','Stehend entgegengekommen']} value={wasb.vorgefunden} onChange={v => setWasb(p => ({ ...p, vorgefunden: v }))} />
+              <input
+                type="text"
+                placeholder="Freitext…"
+                value={wasb.vorgefundenFreitext}
+                onChange={e => setWasb(p => ({ ...p, vorgefundenFreitext: e.target.value }))}
+                style={{ marginTop: 8, width: '100%', padding: '6px 10px', borderRadius: 7, border: '0.5px solid var(--border-medium)', background: 'var(--bg)', color: 'var(--text)', fontSize: '.85rem', fontFamily: 'inherit', boxSizing: 'border-box' }}
+              />
+            </div>
             <div style={sec}>
               <span style={secLbl}>W – Wo? Lokalisation (Mehrfachauswahl)</span>
               <Chips multi options={['Kopf','Gesicht/Hals','Brust links','Brustmitte','Brust rechts','Bauch oben','Bauch unten','Rücken oben','Rücken unten','Linker Arm','Rechter Arm','Linkes Bein','Rechtes Bein','Ganzkörper','Unbekannt']} value={wasb.wo} onChange={sw('wo')} />
