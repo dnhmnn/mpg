@@ -42,8 +42,8 @@ export default function OrgPatienten() {
   const refUeg  = useRef<HTMLInputElement>(null)
   const refS1   = useRef<HTMLInputElement>(null)
   const refS2   = useRef<HTMLInputElement>(null)
-  const refNotfall = useRef<HTMLTextAreaElement>(null)
   const [anamneseModus, setAnamneseModus] = useState<'freitext' | 'klick'>('freitext')
+  const [notfallText, setNotfallText] = useState('')
   const gcsSum = gcs.e + gcs.v + gcs.m
 
   // Canvas signature
@@ -224,19 +224,21 @@ export default function OrgPatienten() {
                 ))}
               </div>
             </div>
-            {anamneseModus === 'freitext' ? (
-              <textarea style={ta} name="notfallgeschehen" ref={refNotfall} placeholder="Freitext…" />
-            ) : (
-              <>
-                <textarea style={{ ...ta, display: 'none' }} name="notfallgeschehen" ref={refNotfall} />
-                <AnamneseAssistent
-                  onComplete={text => {
-                    if (refNotfall.current) refNotfall.current.value = text
-                    setAnamneseModus('freitext')
-                  }}
-                  onCancel={() => setAnamneseModus('freitext')}
-                />
-              </>
+            <textarea
+              style={{ ...ta, display: anamneseModus === 'klick' ? 'none' : undefined }}
+              name="notfallgeschehen"
+              value={notfallText}
+              onChange={e => setNotfallText(e.target.value)}
+              placeholder="Freitext…"
+            />
+            {anamneseModus === 'klick' && (
+              <AnamneseAssistent
+                onComplete={text => {
+                  setNotfallText(text)
+                  setAnamneseModus('freitext')
+                }}
+                onCancel={() => setAnamneseModus('freitext')}
+              />
             )}
           </div>
           <div style={field}><label style={lbl}>Verlaufsbeschreibung<textarea style={ta} name="verlaufsbeschreibung" /></label></div>
