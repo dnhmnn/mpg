@@ -5,6 +5,7 @@ import { useOrg } from './OrgPublicLayout'
 import { PubHeader, PubWrap, PubSendBar, PubSection, inp, sel, ta, field, lbl } from './pubStyles'
 import OrgPatientenMannschaft from './OrgPatientenMannschaft'
 import EinsatzTimeline from './EinsatzTimeline'
+import AnamneseAssistent from './AnamneseAssistent'
 
 type Med = { name: string; dose: string; unit: string; route: string; time: string; note: string }
 type VRow = { zeit: string; rr_sys: string; rr_dia: string; hf: string; o2: string; spo2: string; etco2: string; schmerz: string }
@@ -41,6 +42,8 @@ export default function OrgPatienten() {
   const refUeg  = useRef<HTMLInputElement>(null)
   const refS1   = useRef<HTMLInputElement>(null)
   const refS2   = useRef<HTMLInputElement>(null)
+  const refNotfall = useRef<HTMLTextAreaElement>(null)
+  const [anamneseModus, setAnamneseModus] = useState<'freitext' | 'klick'>('freitext')
   const gcsSum = gcs.e + gcs.v + gcs.m
 
   // Canvas signature
@@ -206,7 +209,36 @@ export default function OrgPatienten() {
 
         {/* Notfallgeschehen */}
         <PubSection title="Notfallgeschehen / Anamnese" icon={pik(<><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></>)}>
-          <div style={field}><label style={lbl}>Notfallgeschehen<textarea style={ta} name="notfallgeschehen" placeholder="Freitext…" /></label></div>
+          <div style={field}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+              <span style={lbl}>Notfallgeschehen</span>
+              <div style={{ display: 'flex', gap: 0, borderRadius: 8, overflow: 'hidden', border: '0.5px solid var(--border-medium)', flexShrink: 0 }}>
+                {(['freitext', 'klick'] as const).map(m => (
+                  <button key={m} type="button" onClick={() => setAnamneseModus(m)} style={{
+                    padding: '4px 12px', border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+                    fontSize: '.78rem', fontWeight: anamneseModus === m ? 700 : 400,
+                    background: anamneseModus === m ? 'var(--accent)' : 'transparent',
+                    color: anamneseModus === m ? '#fff' : 'var(--text-secondary)',
+                    transition: 'all .15s',
+                  }}>{m === 'freitext' ? 'Freitext' : 'Klickstruktur'}</button>
+                ))}
+              </div>
+            </div>
+            {anamneseModus === 'freitext' ? (
+              <textarea style={ta} name="notfallgeschehen" ref={refNotfall} placeholder="Freitext…" />
+            ) : (
+              <>
+                <textarea style={{ ...ta, display: 'none' }} name="notfallgeschehen" ref={refNotfall} />
+                <AnamneseAssistent
+                  onComplete={text => {
+                    if (refNotfall.current) refNotfall.current.value = text
+                    setAnamneseModus('freitext')
+                  }}
+                  onCancel={() => setAnamneseModus('freitext')}
+                />
+              </>
+            )}
+          </div>
           <div style={field}><label style={lbl}>Verlaufsbeschreibung<textarea style={ta} name="verlaufsbeschreibung" /></label></div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '.75rem' }}>
             <div style={field}><label style={lbl}>Vorerkrankungen<textarea style={ta} name="vorerkrankungen" /></label></div>
