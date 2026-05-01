@@ -45,6 +45,7 @@ export default function OrgPatienten() {
   const refS2   = useRef<HTMLInputElement>(null)
   const [anamneseModus, setAnamneseModus] = useState<'freitext' | 'klick'>('freitext')
   const [notfallText, setNotfallText] = useState('')
+  const [verlaufModal, setVerlaufModal] = useState(false)
   const gcsSum = gcs.e + gcs.v + gcs.m
 
   // Canvas signature
@@ -255,7 +256,71 @@ export default function OrgPatienten() {
               />
             )}
           </div>
-          <div style={field}><label style={lbl}>Verlaufsbeschreibung<textarea style={ta} name="verlaufsbeschreibung" value={verlaufText} onChange={e => setVerlaufText(e.target.value)} /></label></div>
+          <div style={field}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+              <span style={lbl}>Verlaufsbeschreibung</span>
+              <button type="button" onClick={() => setVerlaufModal(true)} style={{
+                display: 'inline-flex', alignItems: 'center', gap: 5,
+                padding: '4px 10px', borderRadius: 8, border: '0.5px solid var(--border-medium)',
+                background: 'var(--bg-subtle)', color: 'var(--text)', fontSize: '.78rem',
+                fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0,
+              }}>
+                {pik(<><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></>, 14)} Vitalwerte
+              </button>
+            </div>
+            <textarea style={ta} name="verlaufsbeschreibung" value={verlaufText} onChange={e => setVerlaufText(e.target.value)} />
+            {verlaufModal && (
+              <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.45)', zIndex: 999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}
+                onClick={() => setVerlaufModal(false)}>
+                <div style={{ background: 'var(--bg-card)', borderRadius: 14, width: '100%', maxWidth: 640, boxShadow: '0 8px 40px rgba(0,0,0,.3)', overflow: 'hidden' }}
+                  onClick={e => e.stopPropagation()}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem 1.1rem', borderBottom: '0.5px solid var(--border)', background: 'var(--bg-subtle)' }}>
+                    <span style={{ fontWeight: 700, fontSize: '.95rem' }}>Vitalwerte — Zeile auswählen</span>
+                    <button type="button" onClick={() => setVerlaufModal(false)} style={{ background: 'none', border: 'none', fontSize: '1.3rem', cursor: 'pointer', color: 'var(--text-secondary)', lineHeight: 1 }}>×</button>
+                  </div>
+                  <div style={{ padding: '1rem', overflowX: 'auto' }}>
+                    {verlauf.filter(r => r.zeit || r.rr_sys || r.hf || r.spo2).length === 0 ? (
+                      <p style={{ color: 'var(--text-secondary)', fontSize: '.88rem', textAlign: 'center', margin: 0 }}>Noch keine Vitalwerte eingetragen.</p>
+                    ) : (
+                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '.84rem' }}>
+                        <thead>
+                          <tr>{['Zeit','RR sys','RR dia','HF','O₂','SpO₂','etCO₂','Schmerz',''].map(h =>
+                            <th key={h} style={{ background: 'var(--bg-subtle)', border: '0.5px solid var(--border)', padding: '5px 8px', fontWeight: 700, color: 'var(--text-secondary)', textAlign: 'left', whiteSpace: 'nowrap' }}>{h}</th>
+                          )}</tr>
+                        </thead>
+                        <tbody>
+                          {verlauf.map((r, i) => {
+                            if (!r.zeit && !r.rr_sys && !r.hf && !r.spo2) return null
+                            const parts: string[] = []
+                            if (r.zeit)   parts.push(`Zeit: ${r.zeit}`)
+                            if (r.rr_sys || r.rr_dia) parts.push(`RR: ${r.rr_sys || '–'}/${r.rr_dia || '–'} mmHg`)
+                            if (r.hf)     parts.push(`HF: ${r.hf}/min`)
+                            if (r.spo2)   parts.push(`SpO₂: ${r.spo2} %`)
+                            if (r.etco2)  parts.push(`etCO₂: ${r.etco2} mmHg`)
+                            if (r.o2)     parts.push(`O₂: ${r.o2} l/min`)
+                            if (r.schmerz) parts.push(`Schmerz: ${r.schmerz}/10`)
+                            return (
+                              <tr key={i} style={{ cursor: 'pointer' }}
+                                onClick={() => { setVerlaufText(parts.join(', ')); setVerlaufModal(false) }}>
+                                {(['zeit','rr_sys','rr_dia','hf','o2','spo2','etco2','schmerz'] as (keyof VRow)[]).map(k => (
+                                  <td key={k} style={{ border: '0.5px solid var(--border)', padding: '5px 8px', color: r[k] ? 'var(--text)' : 'var(--text-secondary)' }}>
+                                    {r[k] || '–'}
+                                  </td>
+                                ))}
+                                <td style={{ border: '0.5px solid var(--border)', padding: '5px 8px' }}>
+                                  <span style={{ color: 'var(--accent)', fontWeight: 700, fontSize: '.78rem', whiteSpace: 'nowrap' }}>Übernehmen</span>
+                                </td>
+                              </tr>
+                            )
+                          })}
+                        </tbody>
+                      </table>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '.75rem' }}>
             <div style={field}><label style={lbl}>Vorerkrankungen<textarea style={ta} name="vorerkrankungen" /></label></div>
             <div style={field}><label style={lbl}>Dauermedikation Patient<textarea style={ta} name="vormedikation_patient" /></label></div>
