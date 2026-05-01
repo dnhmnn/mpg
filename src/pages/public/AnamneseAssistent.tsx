@@ -77,12 +77,41 @@ function buildText(wasb: WasbState, xabcde: XabcdeState, sampler: SamplerState):
   return [wasbParts.join(' '), xParts.join(' '), sParts.join(' ')].join('\n\n')
 }
 
+type VRow = { zeit: string; rr_sys: string; rr_dia: string; hf: string; o2: string; spo2: string; etco2: string; schmerz: string }
+
 interface Props {
+  messwerte?: Record<string, string>
+  verlauf?: VRow[]
   onComplete: (text: string) => void
   onCancel: () => void
 }
 
-export default function AnamneseAssistent({ onComplete, onCancel }: Props) {
+function fmtMesswerte(m: Record<string, string>): string {
+  const parts: string[] = []
+  if (m.rr_sys || m.rr_dia) parts.push(`RR ${m.rr_sys || '–'}/${m.rr_dia || '–'} mmHg`)
+  if (m.hf)     parts.push(`HF ${m.hf}/min`)
+  if (m.af)     parts.push(`AF ${m.af}/min`)
+  if (m.spo2)   parts.push(`SpO₂ ${m.spo2} %`)
+  if (m.etco2)  parts.push(`etCO₂ ${m.etco2} mmHg`)
+  if (m.temp)   parts.push(`Temp ${m.temp} °C`)
+  if (m.bz_mg)  parts.push(`BZ ${m.bz_mg} mg/dl`)
+  if (m.schmerz) parts.push(`Schmerz ${m.schmerz}/10`)
+  return parts.length ? parts.join(', ') : '–'
+}
+
+function fmtVerlaufRow(r: VRow): string {
+  const parts: string[] = []
+  if (r.zeit) parts.push(r.zeit)
+  if (r.rr_sys || r.rr_dia) parts.push(`RR ${r.rr_sys || '–'}/${r.rr_dia || '–'} mmHg`)
+  if (r.hf)    parts.push(`HF ${r.hf}/min`)
+  if (r.spo2)  parts.push(`SpO₂ ${r.spo2} %`)
+  if (r.etco2) parts.push(`etCO₂ ${r.etco2} mmHg`)
+  if (r.o2)    parts.push(`O₂ ${r.o2} l/min`)
+  if (r.schmerz) parts.push(`Schmerz ${r.schmerz}/10`)
+  return parts.join(', ')
+}
+
+export default function AnamneseAssistent({ messwerte = {}, verlauf = [], onComplete, onCancel }: Props) {
   const [step, setStep] = useState(0)
   const [wasb, setWasb] = useState<WasbState>({ vorgefunden: [], vorgefundenFreitext: '', wo: [], ausstrahlung: [], seit: [], nrs: 0, begleitsymptome: [] })
   const [xabcde, setXabcde] = useState<XabcdeState>({ x: [], a: [], b_atmung: [], b_spo2: [], c_rr: [], c_puls: [], c_rhythmus: [], d_avpu: [], d_pupillen: [], e: [] })
@@ -92,7 +121,7 @@ export default function AnamneseAssistent({ onComplete, onCancel }: Props) {
   const sx = (key: keyof XabcdeState) => (v: string[]) => setXabcde(p => ({ ...p, [key]: v }))
   const ss = (key: keyof SamplerState) => (v: string[]) => setSampler(p => ({ ...p, [key]: v }))
 
-  const STEPS = ['WASB', 'xABCDE', 'SAMPLER']
+  const STEPS = ['WASB', 'xABCDE', 'Messwerte', 'SAMPLER']
   const sec: React.CSSProperties = { marginBottom: '1rem' }
   const secLbl: React.CSSProperties = { display: 'block', fontWeight: 700, fontSize: '.78rem', color: 'var(--text-secondary)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '.03em' }
   const grid2: React.CSSProperties = { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '.75rem', marginBottom: '1rem' }
@@ -227,8 +256,62 @@ export default function AnamneseAssistent({ onComplete, onCancel }: Props) {
           </>
         )}
 
+        {/* ── Messwerte ── */}
+        {step === 2 && (() => {
+          const verlaufFilled = verlauf.filter(r => r.zeit || r.rr_sys || r.hf || r.spo2)
+          const hasErstwerte = Object.values(messwerte).some(v => v)
+          const MESS_LABELS: [string, string][] = [
+            ['rr_sys','RR syst.'],['rr_dia','RR diast.'],['hf','HF'],['af','AF'],
+            ['spo2','SpO₂ %'],['etco2','etCO₂'],['temp','Temp'],['bz_mg','BZ'],['schmerz','Schmerz'],
+          ]
+          return (
+            <>
+              <div style={sec}>
+                <span style={secLbl}>Erstwerte (aus Messwerte / Atmung)</span>
+                {hasErstwerte ? (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 12px' }}>
+                    {MESS_LABELS.map(([k, l]) => messwerte[k] ? (
+                      <div key={k} style={{ background: 'var(--bg-subtle)', border: '0.5px solid var(--border)', borderRadius: 8, padding: '5px 10px', fontSize: '.83rem' }}>
+                        <span style={{ color: 'var(--text-secondary)', fontSize: '.73rem', display: 'block' }}>{l}</span>
+                        <span style={{ fontWeight: 700, color: 'var(--text)' }}>{messwerte[k]}</span>
+                      </div>
+                    ) : null)}
+                  </div>
+                ) : (
+                  <p style={{ color: 'var(--text-secondary)', fontSize: '.83rem', margin: 0 }}>Keine Werte in Messwerte / Atmung eingetragen.</p>
+                )}
+              </div>
+              <div style={sec}>
+                <span style={secLbl}>Verlauf (alle Zeilen)</span>
+                {verlaufFilled.length === 0 ? (
+                  <p style={{ color: 'var(--text-secondary)', fontSize: '.83rem', margin: 0 }}>Noch keine Verlaufswerte eingetragen.</p>
+                ) : (
+                  <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '.81rem' }}>
+                      <thead>
+                        <tr>{['Zeit','RR sys','RR dia','HF','O₂','SpO₂','etCO₂','Schmerz'].map(h =>
+                          <th key={h} style={{ background: 'var(--bg-subtle)', border: '0.5px solid var(--border)', padding: '4px 8px', fontWeight: 700, color: 'var(--text-secondary)', textAlign: 'left', whiteSpace: 'nowrap' }}>{h}</th>
+                        )}</tr>
+                      </thead>
+                      <tbody>
+                        {verlaufFilled.map((r, i) => (
+                          <tr key={i}>
+                            {(['zeit','rr_sys','rr_dia','hf','o2','spo2','etco2','schmerz'] as (keyof VRow)[]).map(k => (
+                              <td key={k} style={{ border: '0.5px solid var(--border)', padding: '4px 8px', color: r[k] ? 'var(--text)' : 'var(--text-secondary)' }}>{r[k] || '–'}</td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </>
+          )
+        })()}
+
         {/* ── SAMPLER ── */}
-        {step === 2 && (
+        {step === 3 && (
           <>
             <div style={sec}>
               <span style={secLbl}>A – Allergien (Mehrfachauswahl)</span>
@@ -274,14 +357,18 @@ export default function AnamneseAssistent({ onComplete, onCancel }: Props) {
               background: 'transparent', color: 'var(--text)', fontSize: '.85rem', cursor: 'pointer', fontFamily: 'inherit',
             }}>← Zurück</button>
           )}
-          {step < 2 ? (
+          {step < 3 ? (
             <button type="button" onClick={() => setStep(s => s + 1)} style={{
               padding: '7px 16px', borderRadius: 7, border: 'none',
               background: 'var(--accent)', color: '#fff', fontWeight: 700,
               fontSize: '.85rem', cursor: 'pointer', fontFamily: 'inherit',
             }}>Weiter →</button>
           ) : (
-            <button type="button" onClick={() => onComplete(buildText(wasb, xabcde, sampler))} style={{
+            <button type="button" onClick={() => {
+              const verlaufFilled = verlauf.filter(r => r.zeit || r.rr_sys || r.hf || r.spo2)
+              const messwerteLine = `Messwerte:\nErstwerte: ${fmtMesswerte(messwerte)}.${verlaufFilled.length ? '\nVerlauf: ' + verlaufFilled.map((r, i) => `(${i+1}) ${fmtVerlaufRow(r)}`).join(' | ') + '.' : ''}`
+              onComplete(buildText(wasb, xabcde, sampler) + '\n\n' + messwerteLine)
+            }} style={{
               padding: '7px 16px', borderRadius: 7, border: 'none',
               background: '#16a34a', color: '#fff', fontWeight: 700,
               fontSize: '.85rem', cursor: 'pointer', fontFamily: 'inherit',

@@ -46,6 +46,18 @@ export default function OrgPatienten() {
   const [anamneseModus, setAnamneseModus] = useState<'freitext' | 'klick'>('freitext')
   const [notfallText, setNotfallText] = useState('')
   const [verlaufModal, setVerlaufModal] = useState(false)
+  const [snapMesswerte, setSnapMesswerte] = useState<Record<string, string>>({})
+
+  const MESS_FIELDS = ['rr_sys','rr_dia','hf','af','spo2','etco2','temp','bz_mg','schmerz']
+  const openKlick = () => {
+    const snap: Record<string, string> = {}
+    MESS_FIELDS.forEach(n => {
+      const el = formRef.current?.querySelector<HTMLInputElement>(`[name="${n}"]`)
+      if (el) snap[n] = el.value
+    })
+    setSnapMesswerte(snap)
+    setAnamneseModus('klick')
+  }
   const gcsSum = gcs.e + gcs.v + gcs.m
 
   // Canvas signature
@@ -229,7 +241,7 @@ export default function OrgPatienten() {
               <span style={lbl}>Notfallgeschehen</span>
               <div style={{ display: 'flex', gap: 0, borderRadius: 8, overflow: 'hidden', border: '0.5px solid var(--border-medium)', flexShrink: 0 }}>
                 {(['freitext', 'klick'] as const).map(m => (
-                  <button key={m} type="button" onClick={() => setAnamneseModus(m)} style={{
+                  <button key={m} type="button" onClick={() => m === 'klick' ? openKlick() : setAnamneseModus(m)} style={{
                     padding: '4px 12px', border: 'none', cursor: 'pointer', fontFamily: 'inherit',
                     fontSize: '.78rem', fontWeight: anamneseModus === m ? 700 : 400,
                     background: anamneseModus === m ? 'var(--accent)' : 'transparent',
@@ -248,6 +260,8 @@ export default function OrgPatienten() {
             />
             {anamneseModus === 'klick' && (
               <AnamneseAssistent
+                messwerte={snapMesswerte}
+                verlauf={verlauf}
                 onComplete={text => {
                   setNotfallText(text)
                   setAnamneseModus('freitext')
