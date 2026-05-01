@@ -512,6 +512,108 @@ export default function OrgPatienten() {
             </table>
           </div>
           <button type="button" onClick={() => setVerlauf(vv => [...vv, emptyV()])} style={{ marginTop: '.5rem', border: '0.5px solid var(--border-medium)', background: 'var(--bg-subtle)', padding: '.45rem .75rem', borderRadius: 10, cursor: 'pointer', fontWeight: 600, color: 'var(--accent)', fontSize: '.9rem', fontFamily: 'inherit' }}>+ Zeile hinzufügen</button>
+
+          {/* Verlaufsgrafik */}
+          {(() => {
+            const rows = verlauf.filter(r => r.zeit)
+            if (rows.length < 1) return null
+            const W = 560, H = 200
+            const PAD = { l: 38, r: 12, t: 14, b: 28 }
+            const iW = W - PAD.l - PAD.r, iH = H - PAD.t - PAD.b
+
+            const toMin = (s: string) => { const [h, m] = s.split(':').map(Number); return h * 60 + m }
+            const times = rows.map(r => toMin(r.zeit))
+            const tMin = Math.min(...times), tMax = Math.max(...times)
+            const tSpan = tMax - tMin || 1
+            const cx = (t: number) => PAD.l + ((t - tMin) / tSpan) * iW
+
+            const SERIES = [
+              { key: 'rr_sys', label: 'RR sys', color: '#ef4444', min: 0, max: 220 },
+              { key: 'rr_dia', label: 'RR dia', color: '#f87171', min: 0, max: 220 },
+              { key: 'hf',     label: 'HF',     color: '#3b82f6', min: 0, max: 220 },
+              { key: 'spo2',   label: 'SpO₂',   color: '#22c55e', min: 70, max: 100 },
+              { key: 'etco2',  label: 'etCO₂',  color: '#f97316', min: 0,  max: 80  },
+            ] as { key: keyof VRow; label: string; color: string; min: number; max: number }[]
+
+            const cy = (v: number, min: number, max: number) =>
+              PAD.t + (1 - (v - min) / (max - min)) * iH
+
+            // Fine grid (every 10 units on 0-220 scale = 10/220 of iH)
+            const gridH = 220
+            const smallStep = 10, bigStep = 55
+            const gridYSmall = Array.from({ length: Math.floor(gridH / smallStep) + 1 }, (_, i) => i * smallStep)
+            const gridYBig   = Array.from({ length: Math.floor(gridH / bigStep)   + 1 }, (_, i) => i * bigStep)
+
+            return (
+              <div style={{ marginTop: '1rem', border: '0.5px solid var(--border)', borderRadius: 10, overflow: 'hidden', background: 'var(--bg-card)' }}>
+                <div style={{ padding: '8px 12px 0', fontSize: '.78rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '.04em' }}>Verlaufsgrafik</div>
+                <div style={{ overflowX: 'auto', padding: '0 4px 8px' }}>
+                  <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', minWidth: 320, height: 'auto', display: 'block' }}>
+
+                    {/* Fine grid */}
+                    {gridYSmall.map(v => {
+                      const y = cy(v, 0, gridH)
+                      return <line key={`gs${v}`} x1={PAD.l} y1={y} x2={W - PAD.r} y2={y} stroke="var(--border)" strokeWidth={0.4} />
+                    })}
+                    {/* Thick grid */}
+                    {gridYBig.map(v => {
+                      const y = cy(v, 0, gridH)
+                      return <line key={`gb${v}`} x1={PAD.l} y1={y} x2={W - PAD.r} y2={y} stroke="var(--border-medium)" strokeWidth={0.8} />
+                    })}
+                    {/* Vertical grid per measurement */}
+                    {rows.map((r, i) => {
+                      const x = cx(times[i])
+                      return <line key={`gx${i}`} x1={x} y1={PAD.t} x2={x} y2={H - PAD.b} stroke="var(--border-medium)" strokeWidth={0.8} />
+                    })}
+
+                    {/* Axes */}
+                    <line x1={PAD.l} y1={PAD.t} x2={PAD.l} y2={H - PAD.b} stroke="var(--text-secondary)" strokeWidth={1} />
+                    <line x1={PAD.l} y1={H - PAD.b} x2={W - PAD.r} y2={H - PAD.b} stroke="var(--text-secondary)" strokeWidth={1} />
+
+                    {/* Y-axis labels */}
+                    {gridYBig.map(v => (
+                      <text key={v} x={PAD.l - 4} y={cy(v, 0, gridH) + 3.5} textAnchor="end" fontSize={9} fill="var(--text-secondary)">{v}</text>
+                    ))}
+
+                    {/* X-axis time labels */}
+                    {rows.map((r, i) => (
+                      <text key={i} x={cx(times[i])} y={H - 5} textAnchor="middle" fontSize={9} fill="var(--text-secondary)">{r.zeit}</text>
+                    ))}
+
+                    {/* Series lines + dots */}
+                    {SERIES.map(s => {
+                      const pts = rows
+                        .map((r, i) => ({ x: cx(times[i]), y: cy(parseFloat(r[s.key] as string), s.min, s.max), v: r[s.key] }))
+                        .filter(p => p.v !== '' && !isNaN(p.y))
+                      if (pts.length < 1) return null
+                      const d = pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x},${p.y}`).join(' ')
+                      return (
+                        <g key={s.key}>
+                          {pts.length > 1 && <path d={d} fill="none" stroke={s.color} strokeWidth={2} strokeLinejoin="round" />}
+                          {pts.map((p, i) => (
+                            <g key={i}>
+                              <circle cx={p.x} cy={p.y} r={4} fill={s.color} />
+                              <text x={p.x} y={p.y - 6} textAnchor="middle" fontSize={8} fill={s.color} fontWeight="bold">{p.v}</text>
+                            </g>
+                          ))}
+                        </g>
+                      )
+                    })}
+                  </svg>
+                </div>
+
+                {/* Legend */}
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 14px', padding: '0 12px 10px', fontSize: '.78rem' }}>
+                  {SERIES.map(s => (
+                    <span key={s.key} style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                      <span style={{ width: 18, height: 3, background: s.color, borderRadius: 2, display: 'inline-block' }} />
+                      <span style={{ color: 'var(--text-secondary)' }}>{s.label}</span>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )
+          })()}
         </PubSection>
 
         {/* Verletzungen */}
