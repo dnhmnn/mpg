@@ -1367,59 +1367,64 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
       
       {/* ICON TOOLBAR */}
       <div className="action-toolbar">
-        <button 
+        <button
           className={`action-btn ${viewMode === 'termine' ? 'active' : ''}`}
-          onClick={() => setViewMode('termine')} 
+          onClick={() => setViewMode('termine')}
           title="Termine"
         >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
             <line x1="16" y1="2" x2="16" y2="6"/>
             <line x1="8" y1="2" x2="8" y2="6"/>
             <line x1="3" y1="10" x2="21" y2="10"/>
           </svg>
+          <span className="btn-label">Termine</span>
         </button>
-        <button 
+        <button
           className={`action-btn ${viewMode === 'teilnehmer' ? 'active' : ''}`}
-          onClick={() => setViewMode('teilnehmer')} 
+          onClick={() => setViewMode('teilnehmer')}
           title="Teilnehmer"
         >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
             <circle cx="9" cy="7" r="4"/>
             <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
             <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
           </svg>
+          <span className="btn-label">Teilnehmer</span>
         </button>
-        <button 
+        <button
           className={`action-btn ${viewMode === 'module' ? 'active' : ''}`}
-          onClick={() => setViewMode('module')} 
+          onClick={() => setViewMode('module')}
           title="Lernmodule"
         >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
             <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
           </svg>
+          <span className="btn-label">Module</span>
         </button>
         <button
           className={`action-btn ${viewMode === 'konzepte' ? 'active' : ''}`}
           onClick={() => setViewMode('konzepte')}
           title="Ausbildungskonzepte"
         >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M12 2L2 7l10 5 10-5-10-5z"/>
             <path d="M2 17l10 5 10-5M2 12l10 5 10-5"/>
           </svg>
+          <span className="btn-label">Konzepte</span>
         </button>
         <button
           className={`action-btn ${viewMode === 'jahresuebersicht' ? 'active' : ''}`}
           onClick={() => setViewMode('jahresuebersicht')}
           title="Jahresübersicht"
         >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
             <rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
           </svg>
+          <span className="btn-label">Jahresplan</span>
         </button>
         <button
           className={`action-btn ${viewMode === 'archiv' ? 'active' : ''}`}
@@ -1427,11 +1432,12 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
           title={`Archiv (${archivTermine.length})`}
           style={{position: 'relative'}}
         >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/>
           </svg>
+          <span className="btn-label">Archiv</span>
           {archivTermine.length > 0 && (
-            <span style={{position: 'absolute', top: '2px', right: '2px', background: 'var(--text-secondary)', color: 'var(--btn-dark-text)', borderRadius: '50%', width: '14px', height: '14px', fontSize: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700}}>{archivTermine.length > 9 ? '9+' : archivTermine.length}</span>
+            <span style={{position: 'absolute', top: '4px', right: '4px', background: 'var(--text-secondary)', color: '#fff', borderRadius: '50%', width: '14px', height: '14px', fontSize: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700}}>{archivTermine.length > 9 ? '9+' : archivTermine.length}</span>
           )}
         </button>
         <div style={{flex: 1}} />
@@ -4061,10 +4067,10 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
 
       <style>{`
         .content {
-          max-width: 1200px;
+          max-width: 1100px;
           margin: 0 auto;
-          padding: 1rem;
-          padding-top: 165px;
+          padding: 1rem 1.25rem;
+          padding-top: 130px;
           padding-bottom: 100px;
         }
 
@@ -4079,152 +4085,139 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
           right: 24px;
           z-index: 9999;
           padding: 14px 20px;
-          border-radius: 12px;
+          border-radius: 14px;
           font-weight: 600;
           font-size: 14px;
-          box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+          box-shadow: 0 8px 24px rgba(0,0,0,0.14);
           animation: slideInRight 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) both;
           max-width: 320px;
         }
 
-        .toast-success {
-          background: #f0fdf4;
-          border: 1px solid #bbf7d0;
-          color: #166534;
-        }
-
-        .toast-error {
-          background: #fef2f2;
-          border: 1px solid #fecaca;
-          color: #b91c1c;
-        }
+        .toast-success { background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; }
+        .toast-error   { background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; }
 
         .action-toolbar {
-          background: #fff;
-          border-bottom: 1px solid #e5e7eb;
+          background: var(--bg-card);
+          backdrop-filter: blur(20px);
+          -webkit-backdrop-filter: blur(20px);
+          border-bottom: 0.5px solid var(--border);
           padding: 0.5rem 1rem;
           display: flex;
-          gap: 0.5rem;
-          justify-content: center;
+          gap: 0.3rem;
+          align-items: center;
           position: sticky;
           top: 60px;
           z-index: 99;
         }
 
         .action-btn {
-          border: 1px solid rgba(0,0,0,0.1);
-          background: rgba(0,0,0,0.03);
-          color: #1d1d1f;
-          padding: 0.6rem;
-          border-radius: 0.5rem;
+          border: none;
+          background: transparent;
+          color: var(--text-secondary);
+          padding: 0.45rem 0.75rem;
+          border-radius: 10px;
           cursor: pointer;
-          transition: all 0.2s;
+          transition: all 0.15s;
           display: inline-flex;
           align-items: center;
-          justify-content: center;
+          gap: 6px;
           font-family: inherit;
-          min-width: 44px;
-          height: 44px;
+          font-size: 13px;
+          font-weight: 600;
+          white-space: nowrap;
         }
 
         .action-btn:hover {
-          background: #f3f4f6;
-          transform: translateY(-2px);
+          background: var(--bg-hover);
+          color: var(--text);
         }
 
         .action-btn.active {
-          background: #b91c1c;
+          background: var(--accent);
           color: #fff;
-          border-color: #b91c1c;
         }
 
         .action-btn.primary {
-          background: #b91c1c;
+          background: var(--accent);
           color: #fff;
-          border-color: #b91c1c;
+          margin-left: auto;
         }
 
-        .action-btn.primary:hover {
-          background: #dc2626;
-        }
+        .action-btn.primary:hover { opacity: 0.85; }
+
+        .btn-label { font-size: 13px; }
 
         .cards-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-          gap: 16px;
+          grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+          gap: 14px;
         }
 
         .card {
-          background: rgba(255, 255, 255, 0.9);
+          background: var(--bg-card);
           backdrop-filter: blur(20px);
           -webkit-backdrop-filter: blur(20px);
-          border-radius: 12px;
-          padding: 20px;
-          border: 2px solid transparent;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+          border-radius: 16px;
+          padding: 18px 18px 14px 18px;
+          border: 0.5px solid var(--border);
+          border-left: 4px solid transparent;
+          box-shadow: 0 2px 12px rgba(0,0,0,0.06);
           position: relative;
           transition: all 0.2s;
           cursor: pointer;
         }
 
-        .card.status-geplant {
-          border-color: rgba(59, 130, 246, 0.2);
-        }
-
-        .card.status-laufend {
-          border-color: rgba(234, 179, 8, 0.2);
-        }
-
-        .card.status-abgeschlossen {
-          border-color: rgba(34, 197, 94, 0.2);
-        }
-
-        .card.status-abgesagt {
-          border-color: rgba(239, 68, 68, 0.2);
-        }
+        .card.status-geplant     { border-left-color: #3b82f6; }
+        .card.status-laufend     { border-left-color: #f59e0b; }
+        .card.status-abgeschlossen { border-left-color: #22c55e; }
+        .card.status-abgesagt    { border-left-color: #ef4444; }
 
         .card:hover {
-          transform: translateY(-4px);
-          box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+          transform: translateY(-3px);
+          box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+          border-color: var(--border-medium);
         }
+        .card.status-geplant:hover     { border-left-color: #3b82f6; }
+        .card.status-laufend:hover     { border-left-color: #f59e0b; }
+        .card.status-abgeschlossen:hover { border-left-color: #22c55e; }
+        .card.status-abgesagt:hover    { border-left-color: #ef4444; }
 
         .card-menu-container {
           position: absolute;
-          top: 12px;
-          right: 12px;
+          top: 14px;
+          right: 14px;
         }
 
         .menu-dots {
-          background: rgba(255, 255, 255, 0.95);
-          backdrop-filter: blur(10px);
-          border: 1px solid rgba(0, 0, 0, 0.08);
-          border-radius: 6px;
-          width: 28px;
-          height: 28px;
+          background: var(--bg-subtle);
+          border: 0.5px solid var(--border-medium);
+          border-radius: 8px;
+          width: 30px;
+          height: 30px;
           display: flex;
           align-items: center;
           justify-content: center;
           cursor: pointer;
-          color: #64748b;
-          transition: all 0.2s;
+          color: var(--text-secondary);
+          transition: all 0.15s;
         }
 
         .menu-dots:hover {
-          background: #fff;
-          color: #b91c1c;
-          transform: scale(1.1);
+          background: var(--bg-hover);
+          color: var(--accent);
         }
 
         .card-menu-dropdown {
           position: absolute;
-          top: 32px;
+          top: 36px;
           right: 0;
-          background: rgba(255, 255, 255, 0.98);
+          background: var(--bg-card);
           backdrop-filter: blur(20px);
-          border: 1px solid rgba(0, 0, 0, 0.08);
-          border-radius: 8px;
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+          border: 0.5px solid var(--border-medium);
+          border-radius: 12px;
+          box-shadow: 0 8px 24px rgba(0,0,0,0.15);
           min-width: 160px;
+          overflow: hidden;
           display: none;
           flex-direction: column;
           z-index: 100;
@@ -4238,123 +4231,92 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
           background: none;
           border: none;
           cursor: pointer;
-          padding: 10px 16px;
+          padding: 11px 16px;
           font-size: 14px;
-          transition: all 0.2s;
+          transition: background 0.15s;
           font-weight: 600;
           text-align: left;
           white-space: nowrap;
-          color: #1d1d1f;
+          color: var(--text);
+          font-family: inherit;
         }
 
-        .menu-item:first-child {
-          border-radius: 8px 8px 0 0;
-        }
-
-        .menu-item:last-child {
-          border-radius: 0 0 8px 8px;
-        }
-
-        .menu-item:hover {
-          background: #f3f4f6;
-        }
-
-        .menu-item.danger {
-          color: #dc2626;
-        }
-
-        .menu-item.danger:hover {
-          background: #fee2e2;
-        }
+        .menu-item:hover { background: var(--bg-hover); }
+        .menu-item.danger { color: #dc2626; }
+        .menu-item.danger:hover { background: #fef2f2; }
 
         .card-type {
-          font-size: 12px;
+          font-size: 11px;
           font-weight: 700;
-          color: #b91c1c;
+          color: var(--text-secondary);
           text-transform: uppercase;
-          margin-bottom: 8px;
-          letter-spacing: 0.5px;
+          letter-spacing: 0.07em;
+          margin-bottom: 5px;
         }
 
         .card-name {
           font-weight: 700;
-          font-size: 16px;
-          margin-bottom: 8px;
-          color: #1d1d1f;
+          font-size: 17px;
+          margin-bottom: 6px;
+          color: var(--text);
+          line-height: 1.3;
+          padding-right: 32px;
         }
 
         .card-meta {
           font-size: 13px;
-          color: #64748b;
-          margin-bottom: 12px;
+          color: var(--text-secondary);
+          margin-bottom: 10px;
+          line-height: 1.5;
         }
 
-        .card-status-info {
-          margin: 12px 0;
-        }
+        .card-status-info { margin: 8px 0 10px; }
 
         .status-badge {
           display: inline-flex;
           align-items: center;
-          gap: 6px;
-          padding: 6px 12px;
-          border-radius: 6px;
-          font-size: 12px;
+          gap: 5px;
+          padding: 4px 10px;
+          border-radius: 20px;
+          font-size: 11px;
           font-weight: 700;
+          letter-spacing: 0.02em;
         }
 
-        .status-badge svg {
-          flex-shrink: 0;
-        }
-
-        .status-badge.geplant {
-          background: #eff6ff;
-          color: #1e40af;
-        }
-
-        .status-badge.laufend {
-          background: #fefce8;
-          color: #854d0e;
-        }
-
-        .status-badge.abgeschlossen {
-          background: #f0fdf4;
-          color: #166534;
-        }
-
-        .status-badge.abgesagt {
-          background: #fef2f2;
-          color: #dc2626;
-        }
-
-        .status-badge.lernbar {
-          background: #eff6ff;
-          color: #1e40af;
-        }
+        .status-badge.geplant      { background: #eff6ff; color: #1d4ed8; }
+        .status-badge.laufend      { background: #fffbeb; color: #b45309; }
+        .status-badge.abgeschlossen { background: #f0fdf4; color: #15803d; }
+        .status-badge.abgesagt     { background: #fef2f2; color: #b91c1c; }
+        .status-badge.lernbar      { background: #eff6ff; color: #1d4ed8; }
 
         .card-stats {
           display: flex;
-          gap: 16px;
-          font-size: 13px;
-          color: #64748b;
+          gap: 14px;
+          font-size: 12px;
+          font-weight: 600;
+          color: var(--text-secondary);
+          border-top: 0.5px solid var(--border);
+          padding-top: 10px;
+          margin-top: 4px;
         }
 
         .stat-item {
           display: flex;
           align-items: center;
-          gap: 6px;
+          gap: 5px;
         }
 
         .empty-state {
           text-align: center;
-          padding: 48px 16px;
-          color: #64748b;
+          padding: 64px 20px;
+          color: var(--text-secondary);
+          font-size: 15px;
         }
 
         .modal {
           position: fixed;
           inset: 0;
-          background: rgba(0, 0, 0, 0.6);
+          background: rgba(0,0,0,0.5);
           display: none;
           align-items: center;
           justify-content: center;
@@ -4362,69 +4324,68 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
           padding: 20px;
         }
 
-        .modal.show {
-          display: flex;
-        }
+        .modal.show { display: flex; }
 
         .modal-content {
-          background: rgba(255, 255, 255, 0.98);
+          background: var(--bg-card);
           backdrop-filter: blur(40px);
           -webkit-backdrop-filter: blur(40px);
-          border-radius: 14px;
-          max-width: 500px;
+          border-radius: 18px;
+          max-width: 520px;
           width: 100%;
           max-height: 90vh;
           overflow-y: auto;
           padding: 24px;
-          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+          box-shadow: 0 12px 40px rgba(0,0,0,0.2);
+          border: 0.5px solid var(--border);
         }
 
-        .modal-content.large {
-          max-width: 700px;
-        }
+        .modal-content.large { max-width: 700px; }
 
         .modal-content h3 {
           margin: 0 0 16px 0;
-          color: #b91c1c;
+          color: var(--accent);
           font-weight: 800;
         }
 
         .modal-content h4 {
           margin: 0 0 12px 0;
-          color: #1d1d1f;
+          color: var(--text);
           font-weight: 700;
         }
 
-        .field {
-          margin-bottom: 16px;
-        }
+        .field { margin-bottom: 16px; }
 
         .field label {
           font-weight: 700;
-          font-size: 14px;
-          color: #374151;
+          font-size: 12px;
+          color: var(--text-secondary);
           display: block;
-          margin-bottom: 8px;
+          margin-bottom: 6px;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
         }
 
         .field input,
         .field select,
         .field textarea {
-          padding: 10px;
-          border: 1px solid rgba(0, 0, 0, 0.15);
-          border-radius: 8px;
-          background: #fff;
-          font-size: 16px;
+          padding: 10px 12px;
+          border: 0.5px solid var(--border-medium);
+          border-radius: 10px;
+          background: var(--bg);
+          font-size: 15px;
           font-family: inherit;
           width: 100%;
+          color: var(--text);
+          transition: border-color 0.15s;
         }
 
         .field input:focus,
         .field select:focus,
         .field textarea:focus {
           outline: none;
-          border-color: #b91c1c;
-          box-shadow: 0 0 0 3px rgba(185, 28, 28, 0.1);
+          border-color: var(--accent);
+          box-shadow: 0 0 0 3px rgba(185,28,28,0.1);
         }
 
         .modal-actions {
@@ -4435,129 +4396,96 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
         }
 
         .btn {
-          background: rgba(255, 255, 255, 0.9);
-          color: #1d1d1f;
+          background: var(--bg-subtle);
+          color: var(--text);
           padding: 10px 20px;
-          border-radius: 8px;
+          border-radius: 10px;
           cursor: pointer;
           font-weight: 700;
-          transition: all 0.2s;
+          transition: all 0.15s;
           font-family: inherit;
-          border: 1px solid rgba(0, 0, 0, 0.08);
+          border: 0.5px solid var(--border-medium);
           font-size: 14px;
           display: inline-flex;
           align-items: center;
           gap: 6px;
         }
 
-        .btn:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-        }
-
-        .btn.primary {
-          background: #b91c1c;
-          color: #fff;
-          border-color: #b91c1c;
-        }
-
-        .btn.primary:hover {
-          background: #dc2626;
-        }
+        .btn:hover { background: var(--bg-hover); }
+        .btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+        .btn.primary:hover { opacity: 0.85; }
 
         .btn-small {
-          background: rgba(255, 255, 255, 0.9);
-          color: #1d1d1f;
+          background: var(--bg-subtle);
+          color: var(--text);
           padding: 6px 12px;
-          border-radius: 6px;
+          border-radius: 8px;
           cursor: pointer;
           font-weight: 600;
-          transition: all 0.2s;
+          transition: all 0.15s;
           font-family: inherit;
-          border: 1px solid rgba(0, 0, 0, 0.08);
+          border: 0.5px solid var(--border-medium);
           font-size: 12px;
           text-decoration: none;
-          display: inline-block;
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
         }
 
-        .btn-small:hover {
-          background: #f3f4f6;
-        }
-
-        .btn-small.danger {
-          color: #dc2626;
-        }
-
-        .btn-small.danger:hover {
-          background: #fee2e2;
-        }
-
-        .btn-small.primary {
-          background: #b91c1c;
-          color: #fff;
-          border-color: #b91c1c;
-        }
+        .btn-small:hover { background: var(--bg-hover); }
+        .btn-small.danger { color: #dc2626; }
+        .btn-small.danger:hover { background: #fef2f2; }
+        .btn-small.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
 
         .btn-icon {
           background: none;
           border: none;
           cursor: pointer;
           padding: 4px;
-          color: #64748b;
-          transition: all 0.2s;
+          color: var(--text-secondary);
+          transition: all 0.15s;
           display: inline-flex;
           align-items: center;
           justify-content: center;
-          border-radius: 4px;
+          border-radius: 6px;
         }
 
-        .btn-icon:hover {
-          background: #f3f4f6;
-          color: #1d1d1f;
-        }
-
-        .btn-icon.danger:hover {
-          background: #fee2e2;
-          color: #dc2626;
-        }
+        .btn-icon:hover { background: var(--bg-hover); color: var(--text); }
+        .btn-icon.danger:hover { background: #fef2f2; color: #dc2626; }
 
         .tabs {
           display: flex;
-          gap: 4px;
-          border-bottom: 2px solid #e5e7eb;
+          gap: 2px;
+          border-bottom: 1px solid var(--border);
           margin-bottom: 20px;
+          overflow-x: auto;
+          -webkit-overflow-scrolling: touch;
         }
 
         .tab {
           background: none;
           border: none;
-          padding: 12px 16px;
+          padding: 10px 16px;
           cursor: pointer;
           font-weight: 600;
-          font-size: 14px;
-          color: #64748b;
-          transition: all 0.2s;
+          font-size: 13px;
+          color: var(--text-secondary);
+          transition: all 0.15s;
           border-bottom: 2px solid transparent;
-          margin-bottom: -2px;
+          margin-bottom: -1px;
+          white-space: nowrap;
+          flex-shrink: 0;
+          font-family: inherit;
         }
 
-        .tab:hover {
-          color: #1d1d1f;
-        }
-
-        .tab.active {
-          color: #b91c1c;
-          border-bottom-color: #b91c1c;
-        }
-
-        .tab-content {
-          min-height: 200px;
-        }
+        .tab:hover { color: var(--text); }
+        .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+        .tab-content { min-height: 200px; }
 
         .list-editor {
-          background: #f9fafb;
-          border: 1px solid rgba(0, 0, 0, 0.08);
-          border-radius: 8px;
+          background: var(--bg-subtle);
+          border: 0.5px solid var(--border);
+          border-radius: 10px;
           padding: 12px;
         }
 
@@ -4565,76 +4493,59 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
           display: flex;
           justify-content: space-between;
           align-items: center;
-          background: #fff;
+          background: var(--bg-card);
           padding: 10px 12px;
-          border-radius: 6px;
+          border-radius: 8px;
           margin-bottom: 8px;
           gap: 12px;
+          border: 0.5px solid var(--border);
         }
 
-        .list-item:last-of-type {
-          margin-bottom: 12px;
-        }
+        .list-item:last-of-type { margin-bottom: 12px; }
+        .add-item, .add-link { display: flex; gap: 8px; }
 
-        .add-item {
-          display: flex;
-          gap: 8px;
-        }
-
-        .add-item input {
+        .add-item input, .add-link input {
           flex: 1;
           padding: 8px 12px;
-          border: 1px solid rgba(0, 0, 0, 0.15);
-          border-radius: 6px;
+          border: 0.5px solid var(--border-medium);
+          border-radius: 8px;
           font-size: 14px;
           font-family: inherit;
-        }
-
-        .add-link {
-          display: flex;
-          gap: 8px;
-        }
-
-        .add-link input {
-          padding: 8px 12px;
-          border: 1px solid rgba(0, 0, 0, 0.15);
-          border-radius: 6px;
-          font-size: 14px;
-          font-family: inherit;
+          background: var(--bg);
+          color: var(--text);
         }
 
         .teilnehmer-list {
-          border: 1px solid #e5e7eb;
-          border-radius: 8px;
+          border: 0.5px solid var(--border);
+          border-radius: 10px;
           padding: 12px;
-          background: #fff;
+          background: var(--bg-subtle);
         }
 
         .dokument-item {
-          background: #f9fafb;
+          background: var(--bg-subtle);
           padding: 12px;
-          border-radius: 8px;
+          border-radius: 10px;
           display: flex;
           justify-content: space-between;
           align-items: center;
           gap: 12px;
-          border: 1px solid #e5e7eb;
+          border: 0.5px solid var(--border);
         }
 
         .modul-item {
-          background: #f9fafb;
+          background: var(--bg-subtle);
           padding: 12px;
-          border-radius: 8px;
-          border: 1px solid #e5e7eb;
+          border-radius: 10px;
+          border: 0.5px solid var(--border);
         }
 
         .anwesend-btn:hover {
           transform: translateY(-1px);
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+          box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
 
         @media (max-width: 768px) {
-          /* Toolbar: horizontal scroll statt Wrapping */
           .action-toolbar {
             flex-wrap: nowrap;
             overflow-x: auto;
@@ -4642,62 +4553,37 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
             -webkit-overflow-scrolling: touch;
             justify-content: flex-start;
             gap: 0.25rem;
-            padding: 0.3rem 0.6rem;
+            padding: 0.35rem 0.75rem;
             max-width: 100vw;
             box-sizing: border-box;
           }
           .action-toolbar::-webkit-scrollbar { display: none; }
 
-          .action-btn {
-            flex-shrink: 0;
-            min-width: 36px;
-            height: 36px;
-            padding: 0.3rem;
-          }
+          .action-btn { flex-shrink: 0; padding: 0.4rem 0.6rem; gap: 4px; }
           .action-btn svg { width: 15px; height: 15px; }
+          .btn-label { display: none; }
 
           /* Content */
           .content {
-            padding-top: 108px;
-            padding-left: 10px;
-            padding-right: 10px;
+            padding-top: 110px;
+            padding-left: 12px;
+            padding-right: 12px;
             padding-bottom: 72px;
             overflow-x: hidden;
           }
 
-          /* Toast */
-          .toast {
-            bottom: 68px;
-            right: 10px;
-            left: 10px;
-            max-width: none;
-          }
+          .toast { bottom: 68px; right: 10px; left: 10px; max-width: none; }
 
-          /* Karten */
-          .cards-grid {
-            grid-template-columns: 1fr;
-            gap: 10px;
-          }
-          .card { padding: 12px 14px; }
+          .cards-grid { grid-template-columns: 1fr; gap: 10px; }
+          .card { padding: 14px 14px 12px 14px; }
 
-          /* Tabs */
-          .tabs {
-            overflow-x: auto;
-            -webkit-overflow-scrolling: touch;
-          }
-          .tab { white-space: nowrap; flex-shrink: 0; }
-
-          /* Modals: Bottom-Sheet */
-          .modal {
-            align-items: flex-end;
-            padding: 0;
-          }
+          .modal { align-items: flex-end; padding: 0; }
           .modal-content {
-            border-radius: 18px 18px 0 0;
+            border-radius: 20px 20px 0 0;
             max-width: 100%;
             width: 100%;
-            max-height: 60vh;
-            padding: 14px 14px 0;
+            max-height: 85vh;
+            padding: 16px 14px 0;
             box-sizing: border-box;
             overflow-x: hidden;
             overflow-y: auto;
@@ -4709,16 +4595,14 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
           .modal-content h3 { font-size: 1rem; margin-bottom: 0.6rem; flex-shrink: 0; }
           .modal-content h4 { font-size: 0.9rem; }
 
-          /* Formfelder kompakter */
           .field { margin-bottom: 10px; }
-          .field label { font-size: 12px; margin-bottom: 4px; }
-          .field input, .field select, .field textarea { padding: 8px; font-size: 14px; }
+          .field label { font-size: 11px; margin-bottom: 4px; }
+          .field input, .field select, .field textarea { padding: 8px 10px; font-size: 14px; }
 
-          /* Modal-Actions: sticky am unteren Rand */
           .modal-actions {
             position: sticky;
             bottom: 0;
-            background: rgba(255, 255, 255, 0.98);
+            background: var(--bg-card);
             padding: 10px 0 calc(14px + env(safe-area-inset-bottom));
             margin-top: 8px;
             flex-shrink: 0;
