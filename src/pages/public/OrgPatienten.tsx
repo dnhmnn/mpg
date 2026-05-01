@@ -26,6 +26,7 @@ export default function OrgPatienten() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [meds, setMeds] = useState<Med[]>([])
   const [verlauf, setVerlauf] = useState<VRow[]>([emptyV()])
+  const [verlaufText, setVerlaufText] = useState('')
   const [photos, setPhotos] = useState<string[]>([])
   const [gcs, setGcs] = useState({ e: 0, v: 0, m: 0 })
   const [sigUrl, setSigUrl] = useState('')
@@ -71,6 +72,19 @@ export default function OrgPatienten() {
   }, [orgCode])
 
   useEffect(() => { draftIdRef.current = draftId }, [draftId])
+
+  useEffect(() => {
+    const r = verlauf[0]
+    const parts: string[] = []
+    if (r.zeit) parts.push(`Zeit: ${r.zeit}`)
+    if (r.rr_sys || r.rr_dia) parts.push(`RR: ${r.rr_sys || '–'}/${r.rr_dia || '–'} mmHg`)
+    if (r.hf)     parts.push(`HF: ${r.hf}/min`)
+    if (r.spo2)   parts.push(`SpO₂: ${r.spo2} %`)
+    if (r.etco2)  parts.push(`etCO₂: ${r.etco2} mmHg`)
+    if (r.o2)     parts.push(`O₂: ${r.o2} l/min`)
+    if (r.schmerz) parts.push(`Schmerz: ${r.schmerz}/10`)
+    setVerlaufText(parts.length ? `Erstwerte: ${parts.join(', ')}` : '')
+  }, [verlauf[0].zeit, verlauf[0].rr_sys, verlauf[0].rr_dia, verlauf[0].hf, verlauf[0].spo2, verlauf[0].etco2, verlauf[0].o2, verlauf[0].schmerz])
 
   function scheduleAutoSave() {
     clearTimeout(autoSaveTimer.current)
@@ -241,7 +255,7 @@ export default function OrgPatienten() {
               />
             )}
           </div>
-          <div style={field}><label style={lbl}>Verlaufsbeschreibung<textarea style={ta} name="verlaufsbeschreibung" /></label></div>
+          <div style={field}><label style={lbl}>Verlaufsbeschreibung<textarea style={ta} name="verlaufsbeschreibung" value={verlaufText} onChange={e => setVerlaufText(e.target.value)} /></label></div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '.75rem' }}>
             <div style={field}><label style={lbl}>Vorerkrankungen<textarea style={ta} name="vorerkrankungen" /></label></div>
             <div style={field}><label style={lbl}>Dauermedikation Patient<textarea style={ta} name="vormedikation_patient" /></label></div>
