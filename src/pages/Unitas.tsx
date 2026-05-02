@@ -65,6 +65,19 @@ interface PatientRecord {
   payload: any
 }
 
+interface ProductOutput {
+  id: string
+  title: string
+  status: 'offen' | 'erledigt' | 'ignoriert' | string
+  created: string
+  payload: {
+    einsatz: string
+    datum: string
+    user_name?: string
+    positionen: Array<{ qty: number; name: string; unit?: string; item_id?: string }>
+  }
+}
+
 interface Neuigkeit {
   id: string
   titel: string
@@ -128,7 +141,8 @@ function CalendarButtons({ termin }: { termin: Termin }) {
 
 export default function Unitas() {
   const { user, loading: authLoading, logout } = useAuth()
-  const [tab, setTab] = useState<'uebersicht' | 'protokolle' | 'lernbar' | 'konto'>('uebersicht')
+  const [tab, setTab] = useState<'uebersicht' | 'protokolle' | 'lernbar' | 'vorgaenge' | 'konto'>('uebersicht')
+  const [myOutputs, setMyOutputs] = useState<ProductOutput[]>([])
   const [lernbarTab, setLernbarTab] = useState<'termine' | 'lernmodule'>('termine')
 
   const [termine, setTermine] = useState<Termin[]>([])
@@ -225,6 +239,18 @@ export default function Unitas() {
           ])
           setMyPatients((open as any[]).filter(isMine))
           setMyArchivedPatients((archived as any[]).filter(isMine))
+        }
+      } catch { /* ignore */ }
+
+      // Produktausgaben des Benutzers
+      try {
+        if (user?.organization_id) {
+          const outputs = await pb.collection('product_outputs').getFullList({
+            filter: `submitted_by = "${user.id}" && organization_id = "${user.organization_id}"`,
+            sort: '-created',
+            requestKey: `unitas-outputs-${Date.now()}`,
+          })
+          setMyOutputs(outputs as any)
         }
       } catch { /* ignore */ }
     } catch (e: any) {
@@ -345,6 +371,14 @@ export default function Unitas() {
               )}
             </button>
           )}
+          <button style={tabStyle(tab === 'vorgaenge')} onClick={() => setTab('vorgaenge')}>
+            Vorgänge
+            {myOutputs.filter(o => o.status === 'offen').length > 0 && (
+              <span style={{ marginLeft: '4px', background: '#f59e0b', color: '#fff', borderRadius: '10px', padding: '1px 6px', fontSize: '11px' }}>
+                {myOutputs.filter(o => o.status === 'offen').length}
+              </span>
+            )}
+          </button>
           <button style={tabStyle(tab === 'konto')} onClick={() => setTab('konto')}>Mein Konto</button>
         </div>
       </div>
@@ -804,6 +838,73 @@ export default function Unitas() {
         })()}
 
 
+
+        {/* VORGÄNGE */}
+        {tab === 'vorgaenge' && (
+          <div>
+            <h2 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text)', margin: '0 0 16px' }}>Meine Produktausgaben</h2>
+            {myOutputs.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '48px 0', color: 'var(--text-secondary)', fontSize: 15 }}>
+                Keine Vorgänge vorhanden
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {myOutputs.map(output => {
+                  const p = output.payload
+                  const deDate = p.datum ? p.datum.split('-').reverse().join('.') : '–'
+                  const statusCfg: Record<string, { label: string; bg: string; color: string }> = {
+                    offen:     { label: 'Offen',     bg: '#fef9c3', color: '#854d0e' },
+                    erledigt:  { label: 'Erledigt',  bg: '#dcfce7', color: '#166534' },
+                    ignoriert: { label: 'Ignoriert', bg: 'var(--bg-subtle)', color: 'var(--text-secondary)' },
+                  }
+                  const cfg = statusCfg[output.status] ?? { label: output.status, bg: 'var(--bg-subtle)', color: 'var(--text-secondary)' }
+                  return (
+                    <div key={output.id} style={{ background: 'var(--bg-card)', border: '0.5px solid var(--border)', borderRadius: 14, padding: '14px 16px', boxShadow: 'var(--shadow-sm)' }}>
+                      {/* Header */}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
+                        <div>
+                          <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--text)' }}>Einsatz {p.einsatz}</div>
+                          <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 2 }}>{deDate}</div>
+                        </div>
+                        <span style={{ fontSize: 11, fontWeight: 700, background: cfg.bg, color: cfg.color, borderRadius: 6, padding: '3px 9px', flexShrink: 0 }}>
+                          {cfg.label.toUpperCase()}
+                        </span>
+                      </div>
+                      {/* Status indicator */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, padding: '8px 12px', background: 'var(--bg-subtle)', borderRadius: 8 }}>
+                        {output.status === 'erledigt' ? (
+                          <>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                            <span style={{ fontSize: 13, color: '#166534', fontWeight: 600 }}>Aus dem Lager ausgebucht</span>
+                          </>
+                        ) : output.status === 'offen' ? (
+                          <>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#b45309" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                            <span style={{ fontSize: 13, color: '#92400e', fontWeight: 600 }}>Wartet auf Bearbeitung durch Lager</span>
+                          </>
+                        ) : (
+                          <>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+                            <span style={{ fontSize: 13, color: 'var(--text-secondary)', fontWeight: 600 }}>Ignoriert</span>
+                          </>
+                        )}
+                      </div>
+                      {/* Positions */}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                        {p.positionen.map((pos, idx) => (
+                          <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 13, padding: '4px 0', borderBottom: idx < p.positionen.length - 1 ? '0.5px solid var(--border)' : 'none' }}>
+                            <span style={{ color: 'var(--text)', fontWeight: 500 }}>{pos.name}</span>
+                            <span style={{ color: 'var(--text-secondary)', flexShrink: 0, marginLeft: 8 }}>{pos.qty}× {pos.unit ?? ''}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* MEIN KONTO */}
         {tab === 'konto' && (

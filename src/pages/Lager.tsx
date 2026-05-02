@@ -90,8 +90,9 @@ interface ProductOutput {
   payload: {
     einsatz: string
     datum: string
-    vorname: string
-    nachname: string
+    vorname?: string
+    nachname?: string
+    user_name?: string
     positionen: Array<{ qty: number; name: string; item_id?: string; unit?: string }>
   }
 }
@@ -268,7 +269,7 @@ export default function Lager() {
           location_id: currentLocationId,
           type: 'ausbuchung',
           quantity: -pos.qty,
-          note: `Produktausgabe ${output.payload.einsatz} – ${output.payload.vorname} ${output.payload.nachname}`,
+          note: `Produktausgabe ${output.payload.einsatz} – ${output.payload.user_name ?? `${output.payload.vorname ?? ''} ${output.payload.nachname ?? ''}`.trim()}`,
           user: user?.email || user?.id,
           organization_id: user?.organization_id,
         })
