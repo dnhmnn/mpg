@@ -28,7 +28,7 @@ export default function StatusBar({ user, onLogout, showBackButton, onBackClick,
         <div className="logo" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           {!logoError && (
             <img
-              src="/logo.png"
+              src="/logo.svg"
               alt="Logo"
               onError={() => setLogoError(true)}
               style={{ height: 34, width: 34, objectFit: 'contain', flexShrink: 0 }}

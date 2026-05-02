@@ -146,7 +146,7 @@ body {
   background: var(--bg-status-bar);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border-bottom: 1px solid var(--border);
+  border-bottom: 2px solid var(--text);
 }
 
 .logo {
@@ -176,25 +176,30 @@ body {
 }
 
 .logout-btn {
-  background: var(--bg-hover);
-  border: 0.5px solid var(--border-medium);
+  background: transparent;
+  border: 1.5px solid var(--text);
   color: var(--text);
-  padding: 6px 12px;
-  border-radius: 12px;
+  padding: 5px 13px;
+  border-radius: 0;
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s;
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  transition: background 0.15s, color 0.15s;
   justify-self: end;
   text-decoration: none;
   display: inline-block;
+  letter-spacing: 0.02em;
+}
+
+.logout-btn:hover {
+  background: var(--text);
+  color: var(--bg);
 }
 
 .logout-btn:active {
-  transform: scale(0.95);
-  background: var(--bg-hover);
+  background: var(--text);
+  color: var(--bg);
+  opacity: 0.8;
 }
 
 /* Main Content */
@@ -1020,7 +1025,7 @@ body {
   }
 
   .logout-btn {
-    padding: 5px 10px;
+    padding: 4px 10px;
     font-size: 12px;
   }
 
