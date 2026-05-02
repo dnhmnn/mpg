@@ -47,6 +47,7 @@ interface Modul {
   beschreibung: string
   inhalte: { typ: string; titel: string; inhalt: string; reihenfolge: number }[]
   dauer_minuten: number
+  min_pass_percent?: number
 }
 
 interface ModulProgress {
@@ -164,6 +165,8 @@ export default function Unitas() {
   const [quizSelected, setQuizSelected] = useState<number | null>(null)
   const [quizSubmitted, setQuizSubmitted] = useState(false)
   const [modulFailed, setModulFailed] = useState(false)
+  const [quizFrageIdx, setQuizFrageIdx] = useState(0)
+  const [quizResults, setQuizResults] = useState({ correct: 0, total: 0 })
 
   // Konto-Form
   const [kontaktEmail, setKontaktEmail] = useState('')
@@ -669,6 +672,7 @@ export default function Unitas() {
           const blocks = [...(mod.inhalte || [])].sort((a, b) => a.reihenfolge - b.reihenfolge)
           const totalBlocks = blocks.length
           const isLast = typeof playerStep === 'number' && playerStep === totalBlocks - 1
+          const passPercent = mod.min_pass_percent ?? 100
 
           function resetPlayer() {
             setPlayerProgress(null)
@@ -676,24 +680,31 @@ export default function Unitas() {
             setQuizSelected(null)
             setQuizSubmitted(false)
             setModulFailed(false)
+            setQuizFrageIdx(0)
+            setQuizResults({ correct: 0, total: 0 })
           }
 
-          function nextBlock() {
+          function advanceBlock() {
             setQuizSelected(null)
             setQuizSubmitted(false)
-            setModulFailed(false)
+            setQuizFrageIdx(0)
             if (playerStep === 'intro') { setPlayerStep(0); return }
             if (typeof playerStep === 'number') {
-              if (isLast) { markModulDone(playerProgress.id); resetPlayer() }
-              else setPlayerStep(playerStep + 1)
+              if (isLast) {
+                const passed = quizResults.total === 0 || (quizResults.correct / quizResults.total * 100) >= passPercent
+                if (passed) {
+                  markModulDone(playerProgress.id)
+                  resetPlayer()
+                } else {
+                  setModulFailed(true)
+                }
+              } else {
+                setPlayerStep(playerStep + 1)
+              }
             }
           }
 
           const currentBlock = typeof playerStep === 'number' ? blocks[playerStep] : null
-          let quiz: any = null
-          if (currentBlock?.typ === 'quiz') {
-            try { quiz = JSON.parse(currentBlock.inhalt) } catch {}
-          }
 
           return (
             <div style={{ background: 'var(--bg-card)', borderRadius: '16px', border: '1px solid var(--border)', overflow: 'hidden' }}>
@@ -704,13 +715,13 @@ export default function Unitas() {
                 </button>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontWeight: 700, fontSize: '15px' }}>{mod.name}</div>
-                  {playerStep !== 'intro' && (
+                  {playerStep !== 'intro' && !modulFailed && (
                     <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', marginTop: '2px' }}>
                       Block {(playerStep as number) + 1} von {totalBlocks}
                     </div>
                   )}
                 </div>
-                {playerStep !== 'intro' && totalBlocks > 0 && (
+                {playerStep !== 'intro' && totalBlocks > 0 && !modulFailed && (
                   <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)' }}>
                     {Math.round(((playerStep as number) / totalBlocks) * 100)}%
                   </div>
@@ -718,7 +729,7 @@ export default function Unitas() {
               </div>
 
               {/* Progress bar */}
-              {playerStep !== 'intro' && totalBlocks > 0 && (
+              {playerStep !== 'intro' && totalBlocks > 0 && !modulFailed && (
                 <div style={{ background: 'var(--border)', height: '3px' }}>
                   <div style={{ background: 'var(--btn-dark)', height: '3px', width: `${Math.round(((playerStep as number) / totalBlocks) * 100)}%`, transition: 'width 0.3s' }} />
                 </div>
@@ -749,89 +760,125 @@ export default function Unitas() {
                     </div>
                     {blocks.filter(b => b.typ === 'quiz').length > 0 && (
                       <div style={{ background: '#fef3c7', border: '1px solid #fde68a', borderRadius: '10px', padding: '12px 14px', fontSize: '13px', color: '#92400e' }}>
-                        Dieses Modul enthält Quiz-Fragen. Alle müssen richtig beantwortet werden.
+                        Dieses Modul enthält Quiz-Fragen. Mindestens {passPercent}% müssen richtig beantwortet werden.
                       </div>
                     )}
-                    <button onClick={nextBlock} style={{ width: '100%', padding: '14px', borderRadius: '10px', border: 'none', background: 'var(--btn-dark)', color: 'var(--btn-dark-text)', fontWeight: 700, fontSize: '15px', cursor: 'pointer', fontFamily: 'inherit', marginTop: '4px' }}>
+                    <button onClick={advanceBlock} style={{ width: '100%', padding: '14px', borderRadius: '10px', border: 'none', background: 'var(--btn-dark)', color: 'var(--btn-dark-text)', fontWeight: 700, fontSize: '15px', cursor: 'pointer', fontFamily: 'inherit', marginTop: '4px' }}>
                       Starten
                     </button>
                   </div>
                 )}
 
+                {/* MODULE FAILED (end-of-module pass check) */}
+                {modulFailed && (
+                  <div>
+                    <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '12px', padding: '20px 16px', marginBottom: '16px', textAlign: 'center' }}>
+                      <div style={{ fontWeight: 700, fontSize: '18px', color: '#b91c1c', marginBottom: '8px' }}>Nicht bestanden</div>
+                      <div style={{ fontSize: '14px', color: '#991b1b', lineHeight: 1.5 }}>
+                        {quizResults.correct} von {quizResults.total} Fragen richtig ({quizResults.total > 0 ? Math.round(quizResults.correct / quizResults.total * 100) : 0}%).
+                        Mindestens {passPercent}% erforderlich.
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => { setPlayerStep('intro'); setQuizSelected(null); setQuizSubmitted(false); setModulFailed(false); setQuizFrageIdx(0); setQuizResults({ correct: 0, total: 0 }) }}
+                      style={{ width: '100%', padding: '14px', borderRadius: '10px', border: 'none', background: 'var(--btn-dark)', color: 'var(--btn-dark-text)', fontWeight: 700, fontSize: '15px', cursor: 'pointer', fontFamily: 'inherit' }}
+                    >Neu starten</button>
+                  </div>
+                )}
+
                 {/* TEXT BLOCK */}
-                {currentBlock?.typ === 'text' && (
+                {!modulFailed && currentBlock?.typ === 'text' && (
                   <div>
                     {currentBlock.titel && <div style={{ fontWeight: 700, fontSize: '18px', color: 'var(--text)', marginBottom: '14px' }}>{currentBlock.titel}</div>}
                     <div style={{ fontSize: '15px', color: 'var(--text)', lineHeight: 1.75, whiteSpace: 'pre-wrap', marginBottom: '24px' }}>{currentBlock.inhalt}</div>
-                    <button onClick={nextBlock} style={{ width: '100%', padding: '14px', borderRadius: '10px', border: 'none', background: 'var(--btn-dark)', color: 'var(--btn-dark-text)', fontWeight: 700, fontSize: '15px', cursor: 'pointer', fontFamily: 'inherit' }}>
+                    <button onClick={advanceBlock} style={{ width: '100%', padding: '14px', borderRadius: '10px', border: 'none', background: 'var(--btn-dark)', color: 'var(--btn-dark-text)', fontWeight: 700, fontSize: '15px', cursor: 'pointer', fontFamily: 'inherit' }}>
                       {isLast ? 'Abschließen' : 'Weiter'}
                     </button>
                   </div>
                 )}
 
                 {/* QUIZ BLOCK */}
-                {currentBlock?.typ === 'quiz' && quiz && (
-                  <div>
-                    {currentBlock.titel && <div style={{ fontWeight: 700, fontSize: '18px', color: 'var(--text)', marginBottom: '14px' }}>{currentBlock.titel}</div>}
-                    <div style={{ fontSize: '11px', fontWeight: 700, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '10px' }}>Quiz</div>
-                    <div style={{ fontWeight: 600, fontSize: '16px', color: 'var(--text)', marginBottom: '16px', lineHeight: 1.5 }}>{quiz.frage}</div>
+                {!modulFailed && currentBlock?.typ === 'quiz' && (() => {
+                  let quizData: { fragen: { frage: string; antworten: string[]; richtige: number }[] } = { fragen: [] }
+                  try { quizData = JSON.parse(currentBlock.inhalt) } catch {}
+                  const fragen = quizData.fragen || []
+                  const currentFrage = fragen[quizFrageIdx]
+                  const isLastFrage = quizFrageIdx >= fragen.length - 1
 
-                    {modulFailed ? (
+                  if (!currentFrage) {
+                    return (
                       <div>
-                        <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '12px', padding: '16px', marginBottom: '16px', textAlign: 'center' }}>
-                          <div style={{ fontWeight: 700, fontSize: '16px', color: '#b91c1c', marginBottom: '6px' }}>Falsch!</div>
-                          <div style={{ fontSize: '14px', color: '#991b1b' }}>Das Modul muss neu gestartet werden.</div>
-                        </div>
+                        <div style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '20px' }}>Keine Fragen in diesem Quiz-Block.</div>
+                        <button onClick={advanceBlock} style={{ width: '100%', padding: '14px', borderRadius: '10px', border: 'none', background: 'var(--btn-dark)', color: 'var(--btn-dark-text)', fontWeight: 700, fontSize: '15px', cursor: 'pointer', fontFamily: 'inherit' }}>
+                          {isLast ? 'Abschließen' : 'Weiter'}
+                        </button>
+                      </div>
+                    )
+                  }
+
+                  return (
+                    <div>
+                      <div style={{ fontSize: '11px', fontWeight: 700, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '10px' }}>
+                        Quiz{fragen.length > 1 ? ` · Frage ${quizFrageIdx + 1} von ${fragen.length}` : ''}
+                      </div>
+                      <div style={{ fontWeight: 600, fontSize: '16px', color: 'var(--text)', marginBottom: '16px', lineHeight: 1.5 }}>
+                        {currentFrage.frage}
+                      </div>
+
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '20px' }}>
+                        {currentFrage.antworten.map((a: string, idx: number) => {
+                          let bg = 'var(--bg-card)', border = '1px solid var(--border)', color = 'var(--text)'
+                          if (quizSubmitted) {
+                            if (idx === currentFrage.richtige) { bg = '#f0fdf4'; border = '2px solid #16a34a'; color = '#166534' }
+                            else if (idx === quizSelected) { bg = '#fef2f2'; border = '2px solid #ef4444'; color = '#b91c1c' }
+                          } else if (idx === quizSelected) {
+                            bg = '#eff6ff'; border = '2px solid #3b82f6'; color = '#1d4ed8'
+                          }
+                          return (
+                            <button
+                              key={idx}
+                              disabled={quizSubmitted}
+                              onClick={() => setQuizSelected(idx)}
+                              style={{ padding: '12px 16px', borderRadius: '10px', border, background: bg, color, fontWeight: idx === quizSelected || (quizSubmitted && idx === currentFrage.richtige) ? 700 : 400, fontSize: '14px', cursor: quizSubmitted ? 'default' : 'pointer', textAlign: 'left', fontFamily: 'inherit' }}
+                            >{a}</button>
+                          )
+                        })}
+                      </div>
+
+                      {!quizSubmitted ? (
                         <button
-                          onClick={() => { setPlayerStep('intro'); setQuizSelected(null); setQuizSubmitted(false); setModulFailed(false) }}
-                          style={{ width: '100%', padding: '14px', borderRadius: '10px', border: 'none', background: 'var(--btn-dark)', color: 'var(--btn-dark-text)', fontWeight: 700, fontSize: '15px', cursor: 'pointer', fontFamily: 'inherit' }}
-                        >Neu starten</button>
-                      </div>
-                    ) : (
-                      <div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '20px' }}>
-                          {quiz.antworten?.map((a: string, idx: number) => {
-                            let bg = 'var(--bg-card)', border = '1px solid var(--border)', color = 'var(--text)'
-                            if (quizSubmitted) {
-                              if (idx === quiz.richtige) { bg = '#f0fdf4'; border = '2px solid #16a34a'; color = '#166534' }
-                              else if (idx === quizSelected) { bg = '#fef2f2'; border = '2px solid #ef4444'; color = '#b91c1c' }
-                            } else if (idx === quizSelected) {
-                              bg = '#eff6ff'; border = '2px solid #3b82f6'; color = '#1d4ed8'
-                            }
-                            return (
-                              <button
-                                key={idx}
-                                disabled={quizSubmitted}
-                                onClick={() => setQuizSelected(idx)}
-                                style={{ padding: '12px 16px', borderRadius: '10px', border, background: bg, color, fontWeight: idx === quizSelected || (quizSubmitted && idx === quiz.richtige) ? 700 : 400, fontSize: '14px', cursor: quizSubmitted ? 'default' : 'pointer', textAlign: 'left', fontFamily: 'inherit' }}
-                              >{a}</button>
-                            )
-                          })}
-                        </div>
-
-                        {!quizSubmitted ? (
-                          <button
-                            disabled={quizSelected === null}
-                            onClick={() => {
-                              setQuizSubmitted(true)
-                              if (quizSelected !== quiz.richtige) setModulFailed(true)
-                            }}
-                            style={{ width: '100%', padding: '14px', borderRadius: '10px', border: 'none', background: quizSelected === null ? 'var(--border)' : 'var(--btn-dark)', color: quizSelected === null ? 'var(--text-secondary)' : 'var(--btn-dark-text)', fontWeight: 700, fontSize: '15px', cursor: quizSelected === null ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}
-                          >Antworten</button>
-                        ) : quizSelected === quiz.richtige ? (
-                          <div>
-                            <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '10px', padding: '12px', textAlign: 'center', marginBottom: '14px', fontWeight: 700, color: '#166534' }}>
-                              Richtig!
-                            </div>
-                            <button onClick={nextBlock} style={{ width: '100%', padding: '14px', borderRadius: '10px', border: 'none', background: '#16a34a', color: '#fff', fontWeight: 700, fontSize: '15px', cursor: 'pointer', fontFamily: 'inherit' }}>
-                              {isLast ? 'Abschließen' : 'Weiter'}
-                            </button>
+                          disabled={quizSelected === null}
+                          onClick={() => {
+                            const correct = quizSelected === currentFrage.richtige
+                            setQuizResults(prev => ({ correct: prev.correct + (correct ? 1 : 0), total: prev.total + 1 }))
+                            setQuizSubmitted(true)
+                          }}
+                          style={{ width: '100%', padding: '14px', borderRadius: '10px', border: 'none', background: quizSelected === null ? 'var(--border)' : 'var(--btn-dark)', color: quizSelected === null ? 'var(--text-secondary)' : 'var(--btn-dark-text)', fontWeight: 700, fontSize: '15px', cursor: quizSelected === null ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}
+                        >Antworten</button>
+                      ) : (
+                        <div>
+                          <div style={{ borderRadius: '10px', padding: '12px', textAlign: 'center', marginBottom: '14px', fontWeight: 700, background: quizSelected === currentFrage.richtige ? '#f0fdf4' : '#fef2f2', border: quizSelected === currentFrage.richtige ? '1px solid #bbf7d0' : '1px solid #fecaca', color: quizSelected === currentFrage.richtige ? '#166534' : '#b91c1c' }}>
+                            {quizSelected === currentFrage.richtige ? 'Richtig!' : 'Falsch!'}
                           </div>
-                        ) : null}
-                      </div>
-                    )}
-                  </div>
-                )}
+                          <button
+                            onClick={() => {
+                              if (isLastFrage) {
+                                advanceBlock()
+                              } else {
+                                setQuizFrageIdx(quizFrageIdx + 1)
+                                setQuizSelected(null)
+                                setQuizSubmitted(false)
+                              }
+                            }}
+                            style={{ width: '100%', padding: '14px', borderRadius: '10px', border: 'none', background: quizSelected === currentFrage.richtige ? '#16a34a' : 'var(--btn-dark)', color: '#fff', fontWeight: 700, fontSize: '15px', cursor: 'pointer', fontFamily: 'inherit' }}
+                          >
+                            {isLastFrage ? (isLast ? 'Abschließen' : 'Weiter') : 'Nächste Frage'}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })()}
               </div>
             </div>
           )

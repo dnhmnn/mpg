@@ -114,6 +114,7 @@ interface Modul {
   beschreibung: string
   inhalte: ModulInhalt[]
   dauer_minuten: number
+  min_pass_percent: number
   organization_id: string
   created: string
 }
@@ -201,6 +202,7 @@ interface ModulForm {
   beschreibung: string
   inhalte: ModulInhalt[]
   dauer_minuten: number
+  min_pass_percent: number
 }
 
 interface KonzeptForm {
@@ -272,7 +274,8 @@ export default function Ausbildungen() {
     name: '',
     beschreibung: '',
     inhalte: [],
-    dauer_minuten: 60
+    dauer_minuten: 60,
+    min_pass_percent: 80
   })
 
   const [konzeptForm, setKonzeptForm] = useState<KonzeptForm>({
@@ -1032,7 +1035,8 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
       name: '',
       beschreibung: '',
       inhalte: [],
-      dauer_minuten: 60
+      dauer_minuten: 60,
+      min_pass_percent: 80
     })
     setShowAddModulModal(true)
   }
@@ -1070,7 +1074,8 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
       name: m.name,
       beschreibung: m.beschreibung,
       inhalte: m.inhalte ? [...m.inhalte] : [],
-      dauer_minuten: m.dauer_minuten
+      dauer_minuten: m.dauer_minuten,
+      min_pass_percent: m.min_pass_percent ?? 80
     })
     setShowAddModulModal(true)
   }
@@ -3290,6 +3295,16 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
               <label>Dauer (Minuten)</label>
               <input type="number" min={1} value={modulForm.dauer_minuten}
                 onChange={(e) => setModulForm(prev => ({ ...prev, dauer_minuten: parseInt(e.target.value) || 60 }))} />
+            </div>
+
+            <div className="field">
+              <label>Mindest-Quizprozent (%)</label>
+              <input type="number" min={0} max={100} value={modulForm.min_pass_percent}
+                onChange={(e) => setModulForm(prev => ({ ...prev, min_pass_percent: Math.min(100, Math.max(0, parseInt(e.target.value) || 0)) }))}
+                placeholder="z.B. 80" />
+              <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                Wie viel Prozent der Quiz-Fragen müssen richtig beantwortet werden (0–100).
+              </div>
             </div>
 
             {/* Content blocks */}
