@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { pb } from '../../lib/pocketbase'
 import { useOrg } from './OrgPublicLayout'
@@ -29,6 +29,42 @@ const IconUser = () => (
   </svg>
 )
 
+// Dropdown anchored via position:fixed to escape overflow:hidden parents
+function FixedDropdown({ anchorRef, open, children }: {
+  anchorRef: React.RefObject<HTMLElement>
+  open: boolean
+  children: React.ReactNode
+}) {
+  const [rect, setRect] = useState<DOMRect | null>(null)
+
+  useEffect(() => {
+    if (open && anchorRef.current) {
+      setRect(anchorRef.current.getBoundingClientRect())
+    }
+  }, [open, anchorRef])
+
+  if (!open || !rect) return null
+
+  return (
+    <div style={{
+      position: 'fixed',
+      top: rect.bottom + 2,
+      left: rect.left,
+      width: rect.width,
+      zIndex: 9999,
+      background: 'var(--bg-elevated)',
+      border: '0.5px solid var(--border-medium)',
+      borderRadius: 12,
+      boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
+      overflow: 'hidden',
+      maxHeight: 280,
+      overflowY: 'auto',
+    }}>
+      {children}
+    </div>
+  )
+}
+
 // ── User search ─────────────────────────────────────────────────────────────
 function UserSearch({ orgId, value, onChange }: {
   orgId: string; value: UserHit | null; onChange: (u: UserHit | null) => void
@@ -37,11 +73,12 @@ function UserSearch({ orgId, value, onChange }: {
   const [results, setResults] = useState<UserHit[]>([])
   const [open, setOpen] = useState(false)
   const timer = useRef<ReturnType<typeof setTimeout>>()
-  const ref = useRef<HTMLDivElement>(null)
+  const wrapRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false)
     }
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
@@ -53,12 +90,13 @@ function UserSearch({ orgId, value, onChange }: {
     if (!q.trim()) { setResults([]); setOpen(false); return }
     timer.current = setTimeout(async () => {
       try {
-        const res = await pb.collection('users').getList(1, 8, {
+        const res = await pb.collection('users').getList(1, 10, {
           filter: `organization_id = "${orgId}" && name ~ "${q.trim()}"`,
           sort: 'name',
         })
-        setResults(res.items.map(u => ({ id: u.id, name: u.name, email: u.email })))
-        setOpen(true)
+        const hits = res.items.map(u => ({ id: u.id, name: u.name, email: u.email }))
+        setResults(hits)
+        setOpen(hits.length > 0)
       } catch { setResults([]) }
     }, 300)
   }
@@ -68,51 +106,108 @@ function UserSearch({ orgId, value, onChange }: {
   }
 
   if (value) return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6, background: 'var(--bg-subtle)', border: '0.5px solid var(--border-medium)', borderRadius: 10, padding: '9px 12px' }}>
-      <div style={{ width: 30, height: 30, borderRadius: '50%', background: 'var(--accent)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 13, flexShrink: 0 }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 8, background: 'var(--bg-subtle)', border: '1px solid var(--border-medium)', borderRadius: 12, padding: '10px 14px' }}>
+      <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'var(--accent)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 14, flexShrink: 0 }}>
         {value.name.charAt(0).toUpperCase()}
       </div>
-      <div style={{ flex: 1 }}>
-        <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--text)' }}>{value.name}</div>
-        <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{value.email}</div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--text)' }}>{value.name}</div>
+        <div style={{ fontSize: 12, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{value.email}</div>
       </div>
-      <button type="button" onClick={() => onChange(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', fontSize: 20, lineHeight: 1, padding: '0 2px' }}>×</button>
+      <button type="button" onClick={() => onChange(null)}
+        style={{ background: 'var(--bg-hover)', border: '0.5px solid var(--border-medium)', borderRadius: 8, cursor: 'pointer', color: 'var(--text-secondary)', fontSize: 18, lineHeight: 1, padding: '4px 8px', flexShrink: 0 }}>
+        ×
+      </button>
     </div>
   )
 
   return (
-    <div ref={ref} style={{ position: 'relative' }}>
+    <div ref={wrapRef} style={{ position: 'relative', marginTop: 8 }}>
       <input
-        style={{ ...inp, marginTop: 6 }}
+        ref={inputRef}
+        style={{ ...inp, marginTop: 0 }}
         type="text"
         value={query}
         onChange={e => onInput(e.target.value)}
-        placeholder="Name eingeben…"
+        placeholder="Name eingeben und suchen…"
         onFocus={() => results.length > 0 && setOpen(true)}
       />
-      {open && results.length > 0 && (
-        <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--bg-elevated)', border: '0.5px solid var(--border)', borderRadius: 10, boxShadow: 'var(--shadow-md)', zIndex: 50, overflow: 'hidden', marginTop: 2 }}>
-          {results.map(u => (
-            <button key={u.id} type="button" onMouseDown={() => select(u)}
-              style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', background: 'none', border: 'none', padding: '10px 12px', cursor: 'pointer', borderBottom: '0.5px solid var(--border)', fontFamily: 'inherit' }}
-              onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
-              onMouseLeave={e => (e.currentTarget.style.background = 'none')}>
-              <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--accent)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 12, flexShrink: 0 }}>
-                {u.name.charAt(0).toUpperCase()}
-              </div>
-              <div style={{ textAlign: 'left' }}>
-                <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--text)' }}>{u.name}</div>
-                <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{u.email}</div>
-              </div>
-            </button>
-          ))}
-        </div>
-      )}
+      <FixedDropdown anchorRef={inputRef as React.RefObject<HTMLElement>} open={open}>
+        {results.map((u, idx) => (
+          <button key={u.id} type="button" onMouseDown={() => select(u)}
+            style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', background: 'none', border: 'none', padding: '11px 14px', cursor: 'pointer', borderBottom: idx < results.length - 1 ? '0.5px solid var(--border)' : 'none', fontFamily: 'inherit' }}
+            onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
+            onMouseLeave={e => (e.currentTarget.style.background = 'none')}>
+            <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--accent)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 13, flexShrink: 0 }}>
+              {u.name.charAt(0).toUpperCase()}
+            </div>
+            <div style={{ textAlign: 'left', minWidth: 0 }}>
+              <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--text)' }}>{u.name}</div>
+              <div style={{ fontSize: 12, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.email}</div>
+            </div>
+          </button>
+        ))}
+      </FixedDropdown>
       {open && results.length === 0 && query.trim() && (
-        <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--bg-card)', border: '0.5px solid var(--border)', borderRadius: 10, padding: '10px 12px', fontSize: 14, color: 'var(--text-secondary)', zIndex: 50, marginTop: 2 }}>
-          Kein Benutzer gefunden
-        </div>
+        <FixedDropdown anchorRef={inputRef as React.RefObject<HTMLElement>} open={open}>
+          <div style={{ padding: '12px 14px', fontSize: 14, color: 'var(--text-secondary)' }}>Kein Benutzer gefunden</div>
+        </FixedDropdown>
       )}
+    </div>
+  )
+}
+
+// ── Artikel-Suchfeld ────────────────────────────────────────────────────────
+function ArticleSearch({ inventoryItems, onSelect }: {
+  inventoryItems: InventoryItem[]
+  onSelect: (item: InventoryItem) => void
+}) {
+  const [query, setQuery] = useState('')
+  const [open, setOpen] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
+  const wrapRef = useRef<HTMLDivElement>(null)
+
+  const suggestions = query.trim()
+    ? inventoryItems.filter(it => it.name.toLowerCase().includes(query.toLowerCase())).slice(0, 8)
+    : inventoryItems.slice(0, 8)
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  function select(item: InventoryItem) {
+    onSelect(item); setQuery(''); setOpen(false)
+  }
+
+  return (
+    <div ref={wrapRef} style={{ flex: 1, position: 'relative' }}>
+      <input
+        ref={inputRef}
+        style={{ ...inp, marginTop: 0 }}
+        type="text"
+        placeholder="Artikel suchen…"
+        value={query}
+        onChange={e => { setQuery(e.target.value); setOpen(true) }}
+        onFocus={() => setOpen(true)}
+      />
+      <FixedDropdown anchorRef={inputRef as React.RefObject<HTMLElement>} open={open && suggestions.length > 0}>
+        {suggestions.map((item, idx) => (
+          <button key={item.id} type="button" onMouseDown={() => select(item)}
+            style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', padding: '11px 14px', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', borderBottom: idx < suggestions.length - 1 ? '0.5px solid var(--border)' : 'none', color: 'var(--text)' }}
+            onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
+            onMouseLeave={e => (e.currentTarget.style.background = 'none')}>
+            <span style={{ fontWeight: 600, fontSize: 14 }}>{item.name}</span>
+            <span style={{ fontSize: 12, color: 'var(--text-secondary)', flexShrink: 0, marginLeft: 8 }}>{item.unit}</span>
+          </button>
+        ))}
+        {inventoryItems.length === 0 && (
+          <div style={{ padding: '12px 14px', fontSize: 13, color: 'var(--text-secondary)' }}>Keine Artikel in der Lager-Datenbank</div>
+        )}
+      </FixedDropdown>
     </div>
   )
 }
@@ -127,11 +222,7 @@ export default function OrgProduktausgabe() {
   const [positions, setPositions] = useState<Partial<Pos>[]>([{ qty: 1 }])
   const [sending, setSending] = useState(false)
   const [success, setSuccess] = useState(false)
-
   const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([])
-  const [activeSearch, setActiveSearch] = useState<number | null>(null)
-  const [queries, setQueries] = useState<string[]>([''])
-  const dropdownRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     pb.collection('inventory_items').getFullList<InventoryItem>({
@@ -140,46 +231,20 @@ export default function OrgProduktausgabe() {
     }).then(setInventoryItems).catch(() => {})
   }, [org.id])
 
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node))
-        setActiveSearch(null)
-    }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
-  }, [])
-
-  const getSuggestions = (idx: number) => {
-    const q = (queries[idx] ?? '').toLowerCase().trim()
-    if (!q) return inventoryItems.slice(0, 6)
-    return inventoryItems.filter(it => it.name.toLowerCase().includes(q)).slice(0, 8)
-  }
-
-  const addPos = () => {
-    setPositions(p => [...p, { qty: 1 }])
-    setQueries(q => [...q, ''])
-  }
-  const delPos = (i: number) => {
-    setPositions(p => p.filter((_, j) => j !== i))
-    setQueries(q => q.filter((_, j) => j !== i))
-  }
+  const addPos = () => setPositions(p => [...p, { qty: 1 }])
+  const delPos = (i: number) => setPositions(p => p.filter((_, j) => j !== i))
   const updQty = (i: number, v: number) =>
     setPositions(p => p.map((r, j) => j === i ? { ...r, qty: v } : r))
-  const setQueryAt = (i: number, val: string) => {
-    setQueries(q => { const n = [...q]; n[i] = val; return n })
-    setPositions(p => p.map((r, j) => j === i ? { qty: r.qty ?? 1 } : r))
-    setActiveSearch(i)
-  }
-  const selectItem = (i: number, item: InventoryItem) => {
-    setPositions(p => p.map((r, j) => j === i ? { ...r, name: item.name, item_id: item.id, unit: item.unit } : r))
-    setQueries(q => { const n = [...q]; n[i] = item.name; return n })
-    setActiveSearch(null)
-  }
+  const clearPos = (i: number) =>
+    setPositions(p => p.map((r, j) => j === i ? { qty: r.qty } : r))
+  const selectItem = useCallback((i: number, item: InventoryItem) =>
+    setPositions(p => p.map((r, j) => j === i ? { ...r, name: item.name, item_id: item.id, unit: item.unit } : r)),
+    [])
 
   async function submit() {
     const filled = positions.filter((p): p is Pos => !!(p.item_id && p.name && (p.qty ?? 0) > 0))
     if (!einsatz || !datum || !filled.length || !selectedUser) {
-      alert('Bitte alle Pflichtfelder ausfüllen und mindestens einen Artikel aus dem Lager auswählen.')
+      alert('Bitte Einsatznummer, Datum, mindestens einen Artikel und einen Benutzer auswählen.')
       return
     }
     setSending(true)
@@ -193,7 +258,6 @@ export default function OrgProduktausgabe() {
           user_name: selectedUser.name,
           positionen: filled,
         },
-        submitted_by: selectedUser.id,
         status: 'offen',
         organization_id: org.id,
       })
@@ -207,7 +271,7 @@ export default function OrgProduktausgabe() {
 
   function reset() {
     setEinsatz(''); setDatum(today()); setSelectedUser(null)
-    setPositions([{ qty: 1 }]); setQueries(['']); setSuccess(false)
+    setPositions([{ qty: 1 }]); setSuccess(false)
   }
 
   if (success) return (
@@ -229,7 +293,6 @@ export default function OrgProduktausgabe() {
     <PubHeader title={`Produktausgabe – ${org.org_name}`} onBack={() => navigate(`/${orgCode}`)} />
     <PubWrap>
 
-      {/* Kopfdaten */}
       <PubSection title="Kopfdaten" open icon={<IconClipboard />}>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))', gap: '.75rem' }}>
           <div style={field}>
@@ -245,86 +308,47 @@ export default function OrgProduktausgabe() {
         </div>
       </PubSection>
 
-      {/* Positionen */}
       <PubSection title="Positionen" open icon={<IconBox />}>
-        <div ref={dropdownRef}>
-          {positions.map((pos, i) => {
-            const suggestions = getSuggestions(i)
-            const showDrop = activeSearch === i && suggestions.length > 0
-            const isSelected = !!pos.item_id
-            return (
-              <div key={i} style={{ marginBottom: '.6rem' }}>
-                <div style={{ display: 'flex', gap: '.5rem', alignItems: 'flex-start', padding: '.75rem', background: 'var(--bg-subtle)', border: `0.5px solid ${isSelected ? 'var(--accent)' : 'var(--border)'}`, borderRadius: 12 }}>
+        {positions.map((pos, i) => (
+          <div key={i} style={{ display: 'flex', gap: '.5rem', alignItems: 'flex-start', padding: '.75rem', background: 'var(--bg-subtle)', border: `0.5px solid ${pos.item_id ? 'var(--accent)' : 'var(--border)'}`, borderRadius: 12, marginBottom: '.6rem' }}>
+            {/* Qty */}
+            <div style={{ flexShrink: 0, width: 72 }}>
+              <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4 }}>Anz.</div>
+              <input style={{ ...inp, marginTop: 0, textAlign: 'center', padding: '10px 4px' }}
+                type="number" min={1} value={pos.qty ?? 1}
+                onChange={e => updQty(i, Number(e.target.value))} />
+            </div>
 
-                  {/* Qty */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 2, flexShrink: 0, width: 72 }}>
-                    <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)' }}>Anz.</span>
-                    <input
-                      style={{ ...inp, marginTop: 0, textAlign: 'center', padding: '10px 6px' }}
-                      type="number" min={1} value={pos.qty ?? 1}
-                      onChange={e => updQty(i, Number(e.target.value))}
-                    />
-                  </div>
-
-                  {/* Article search */}
-                  <div style={{ flex: 1, position: 'relative' }}>
-                    <span style={{ fontSize: 11, fontWeight: 600, color: isSelected ? 'var(--accent)' : 'var(--text-secondary)' }}>
-                      {isSelected ? '✓ Artikel ausgewählt' : 'Artikel auswählen *'}
-                    </span>
-                    {isSelected ? (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 2, background: 'var(--bg-card)', border: '0.5px solid var(--border-medium)', borderRadius: 10, padding: '10px 12px' }}>
-                        <span style={{ flex: 1, fontWeight: 600, fontSize: 14, color: 'var(--text)' }}>{pos.name}</span>
-                        <span style={{ fontSize: 13, color: 'var(--text-secondary)', marginRight: 4 }}>{pos.unit}</span>
-                        <button type="button" onClick={() => { setPositions(p => p.map((r, j) => j === i ? { qty: r.qty } : r)); setQueries(q => { const n = [...q]; n[i] = ''; return n }) }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', fontSize: 18, lineHeight: 1 }}>×</button>
-                      </div>
-                    ) : (
-                      <>
-                        <input
-                          style={{ ...inp, marginTop: 2 }}
-                          type="text"
-                          placeholder="Artikelname suchen…"
-                          value={queries[i] ?? ''}
-                          onChange={e => setQueryAt(i, e.target.value)}
-                          onFocus={() => setActiveSearch(i)}
-                        />
-                        {showDrop && (
-                          <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--bg-elevated)', border: '0.5px solid var(--border-medium)', borderRadius: 10, boxShadow: 'var(--shadow-md)', zIndex: 50, overflow: 'hidden', marginTop: 2 }}>
-                            {suggestions.map(item => (
-                              <button key={item.id} type="button"
-                                onMouseDown={e => { e.preventDefault(); selectItem(i, item) }}
-                                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', padding: '10px 14px', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', borderBottom: '0.5px solid var(--border)', color: 'var(--text)' }}
-                                onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
-                                onMouseLeave={e => (e.currentTarget.style.background = 'none')}>
-                                <span style={{ fontWeight: 600, fontSize: 14 }}>{item.name}</span>
-                                <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{item.unit}</span>
-                              </button>
-                            ))}
-                            {inventoryItems.length === 0 && (
-                              <div style={{ padding: '10px 14px', fontSize: 13, color: 'var(--text-secondary)' }}>Keine Artikel in der Datenbank</div>
-                            )}
-                          </div>
-                        )}
-                      </>
-                    )}
-                  </div>
-
-                  {/* Delete */}
-                  <button type="button" onClick={() => delPos(i)}
-                    style={{ width: 36, height: 36, borderRadius: 8, border: '0.5px solid var(--border-medium)', background: 'var(--bg-hover)', color: 'var(--accent)', fontWeight: 700, cursor: 'pointer', fontSize: '1.1rem', flexShrink: 0, marginTop: 18 }}>
-                    ×
-                  </button>
-                </div>
+            {/* Article */}
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 11, fontWeight: 600, color: pos.item_id ? 'var(--accent)' : 'var(--text-secondary)', marginBottom: 4 }}>
+                {pos.item_id ? '✓ Artikel ausgewählt' : 'Artikel auswählen *'}
               </div>
-            )
-          })}
-        </div>
+              {pos.item_id ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bg-card)', border: '0.5px solid var(--border-medium)', borderRadius: 10, padding: '10px 12px' }}>
+                  <span style={{ flex: 1, fontWeight: 600, fontSize: 14, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{pos.name}</span>
+                  <span style={{ fontSize: 13, color: 'var(--text-secondary)', flexShrink: 0 }}>{pos.unit}</span>
+                  <button type="button" onClick={() => clearPos(i)}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', fontSize: 20, lineHeight: 1, padding: '0 2px', flexShrink: 0 }}>×</button>
+                </div>
+              ) : (
+                <ArticleSearch inventoryItems={inventoryItems} onSelect={item => selectItem(i, item)} />
+              )}
+            </div>
+
+            {/* Delete row */}
+            <button type="button" onClick={() => delPos(i)}
+              style={{ width: 36, height: 36, borderRadius: 8, border: '0.5px solid var(--border-medium)', background: 'var(--bg-hover)', color: 'var(--accent)', fontWeight: 700, cursor: 'pointer', fontSize: '1.2rem', flexShrink: 0, alignSelf: 'flex-end', marginBottom: 1 }}>
+              ×
+            </button>
+          </div>
+        ))}
         <button type="button" onClick={addPos}
-          style={{ border: '0.5px solid var(--border-medium)', background: 'var(--bg-subtle)', padding: '.6rem .9rem', borderRadius: 10, cursor: 'pointer', fontWeight: 600, color: 'var(--accent)', fontSize: '.9rem', fontFamily: 'inherit', marginTop: '.25rem' }}>
+          style={{ border: '0.5px solid var(--border-medium)', background: 'var(--bg-subtle)', padding: '.6rem .9rem', borderRadius: 10, cursor: 'pointer', fontWeight: 600, color: 'var(--accent)', fontSize: '.9rem', fontFamily: 'inherit' }}>
           + Position hinzufügen
         </button>
       </PubSection>
 
-      {/* Ausgetragen von */}
       <PubSection title="Ausgetragen von" open icon={<IconUser />}>
         <label style={lbl}>Benutzer *</label>
         <UserSearch orgId={org.id} value={selectedUser} onChange={setSelectedUser} />
@@ -335,4 +359,7 @@ export default function OrgProduktausgabe() {
   </>
 }
 
-const btnStyle: React.CSSProperties = { background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: 12, padding: '12px 24px', fontWeight: 700, fontSize: '1rem', cursor: 'pointer', fontFamily: 'inherit' }
+const btnStyle: React.CSSProperties = {
+  background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: 12,
+  padding: '12px 24px', fontWeight: 700, fontSize: '1rem', cursor: 'pointer', fontFamily: 'inherit'
+}

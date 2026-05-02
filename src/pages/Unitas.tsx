@@ -242,15 +242,15 @@ export default function Unitas() {
         }
       } catch { /* ignore */ }
 
-      // Produktausgaben des Benutzers
+      // Produktausgaben des Benutzers (client-seitig gefiltert da JSON-Feld)
       try {
         if (user?.organization_id) {
           const outputs = await pb.collection('product_outputs').getFullList({
-            filter: `submitted_by = "${user.id}" && organization_id = "${user.organization_id}"`,
+            filter: `organization_id = "${user.organization_id}"`,
             sort: '-created',
             requestKey: `unitas-outputs-${Date.now()}`,
           })
-          setMyOutputs(outputs as any)
+          setMyOutputs((outputs as any[]).filter(o => o.payload?.user_id === user!.id))
         }
       } catch { /* ignore */ }
     } catch (e: any) {
