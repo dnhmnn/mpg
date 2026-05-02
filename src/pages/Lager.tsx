@@ -81,14 +81,34 @@ interface Audit {
   organization_id: string
 }
 
+interface ProductOutput {
+  id: string
+  title: string
+  status: string
+  organization_id: string
+  created: string
+  payload: {
+    einsatz: string
+    datum: string
+    vorname: string
+    nachname: string
+    positionen: Array<{ qty: number; name: string; item_id?: string; unit?: string }>
+  }
+}
+
 export default function Lager() {
   const { user, loading: authLoading, logout } = useAuth()
-  
+
   const [locations, setLocations] = useState<Location[]>([])
   const [currentLocationId, setCurrentLocationId] = useState<string | null>(null)
   const [allItems, setAllItems] = useState<InventoryItem[]>([])
   const [displayItems, setDisplayItems] = useState<DisplayItem[]>([])
-  
+
+  const [showAusgabenModal, setShowAusgabenModal] = useState(false)
+  const [productOutputs, setProductOutputs] = useState<ProductOutput[]>([])
+  const [ausgabenLoading, setAusgabenLoading] = useState(false)
+  const [ausgabenCount, setAusgabenCount] = useState(0)
+  const [buchendId, setBuchendId] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<'all' | 'warning' | 'expired'>('all')
   const [showLowOnly, setShowLowOnly] = useState(false)
@@ -161,6 +181,7 @@ export default function Lager() {
   useEffect(() => {
     if (user?.organization_id) {
       loadLocations()
+      loadAusgabenCount()
     }
   }, [user])
 
@@ -192,6 +213,85 @@ export default function Lager() {
     } catch(e: any) {
       console.error('Error loading locations:', e)
       setError('Fehler beim Laden der Standorte: ' + e.message)
+    }
+  }
+
+  async function loadAusgabenCount() {
+    try {
+      const list = await pb.collection('product_outputs').getList(1, 1, {
+        filter: `organization_id = "${user?.organization_id}" && status = "offen"`,
+      })
+      setAusgabenCount(list.totalItems)
+    } catch {}
+  }
+
+  async function loadProductOutputs() {
+    setAusgabenLoading(true)
+    try {
+      const list = await pb.collection('product_outputs').getFullList<ProductOutput>({
+        filter: `organization_id = "${user?.organization_id}" && status = "offen"`,
+        sort: '-created',
+      })
+      setProductOutputs(list)
+      setAusgabenCount(list.length)
+    } catch (e: any) {
+      showMsg('Fehler beim Laden: ' + e.message, 'error')
+    } finally {
+      setAusgabenLoading(false)
+    }
+  }
+
+  async function ausbuchenAlle(output: ProductOutput) {
+    if (!currentLocationId) { showMsg('Kein Lagerort ausgewählt', 'error'); return }
+    setBuchendId(output.id)
+    try {
+      const positionen = output.payload.positionen.filter(p => p.item_id && p.qty > 0)
+      for (const pos of positionen) {
+        const stockList = await pb.collection('inventory_stock').getFullList<StockItem>({
+          filter: `item_id = "${pos.item_id}" && location_id = "${currentLocationId}"`,
+          sort: 'expiry_date',
+        })
+        let remaining = pos.qty
+        for (const stock of stockList) {
+          if (remaining <= 0) break
+          const take = Math.min(stock.quantity, remaining)
+          const newQty = stock.quantity - take
+          if (newQty <= 0) {
+            await pb.collection('inventory_stock').delete(stock.id)
+          } else {
+            await pb.collection('inventory_stock').update(stock.id, { quantity: newQty })
+          }
+          remaining -= take
+        }
+        await pb.collection('inventory_transactions').create({
+          item_id: pos.item_id,
+          location_id: currentLocationId,
+          type: 'ausbuchung',
+          quantity: -pos.qty,
+          note: `Produktausgabe ${output.payload.einsatz} – ${output.payload.vorname} ${output.payload.nachname}`,
+          user: user?.email || user?.id,
+          organization_id: user?.organization_id,
+        })
+      }
+      await pb.collection('product_outputs').update(output.id, { status: 'erledigt' })
+      setProductOutputs(prev => prev.filter(o => o.id !== output.id))
+      setAusgabenCount(prev => Math.max(0, prev - 1))
+      showMsg(`✅ Ausgebucht: ${positionen.length} Position(en)`, 'success')
+      await loadStock()
+    } catch (e: any) {
+      showMsg('Fehler: ' + e.message, 'error')
+    } finally {
+      setBuchendId(null)
+    }
+  }
+
+  async function ignoreOutput(output: ProductOutput) {
+    try {
+      await pb.collection('product_outputs').update(output.id, { status: 'ignoriert' })
+      setProductOutputs(prev => prev.filter(o => o.id !== output.id))
+      setAusgabenCount(prev => Math.max(0, prev - 1))
+    } catch (e: any) {
+      showMsg('Fehler: ' + e.message, 'error')
     }
   }
 
@@ -874,6 +974,22 @@ export default function Lager() {
       
       {/* ICON-TOOLBAR UNTER STATUSBAR */}
       <div className="action-toolbar">
+        <button
+          className={`action-btn${ausgabenCount > 0 ? ' active' : ''}`}
+          onClick={() => { loadProductOutputs(); setShowAusgabenModal(true) }}
+          title="Produktausgaben"
+          style={{ position: 'relative' }}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8"/>
+            <path d="M10 12l2 2 4-4"/>
+          </svg>
+          {ausgabenCount > 0 && (
+            <span style={{ position: 'absolute', top: 4, right: 4, minWidth: 16, height: 16, borderRadius: 8, background: '#ef4444', color: '#fff', fontSize: 10, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 3px' }}>
+              {ausgabenCount}
+            </span>
+          )}
+        </button>
         <button className="action-btn" onClick={() => { loadTransactions(); setShowLogModal(true) }} title="Logbuch">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <circle cx="12" cy="12" r="10"/>
@@ -2710,6 +2826,92 @@ export default function Lager() {
           }
         }
       `}</style>
+
+      {/* ── Produktausgaben Modal ── */}
+      {showAusgabenModal && (
+        <div className="modal show" onClick={e => { if (e.target === e.currentTarget) setShowAusgabenModal(false) }}>
+          <div className="modal-content large">
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+              <h3 style={{ margin: 0 }}>📦 Offene Produktausgaben</h3>
+              <button className="btn" onClick={() => setShowAusgabenModal(false)}>×</button>
+            </div>
+
+            {ausgabenLoading ? (
+              <div style={{ textAlign: 'center', padding: '32px 0', color: 'var(--text-secondary)' }}>Laden…</div>
+            ) : productOutputs.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '48px 0', color: 'var(--text-secondary)' }}>
+                <div style={{ fontSize: 40, marginBottom: 12 }}>✅</div>
+                <div style={{ fontWeight: 600 }}>Keine offenen Ausgaben</div>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {productOutputs.map(output => {
+                  const p = output.payload
+                  const deDate = p.datum ? p.datum.split('-').reverse().join('.') : '–'
+                  const withItemId = p.positionen.filter(pos => pos.item_id)
+                  const withoutItemId = p.positionen.filter(pos => !pos.item_id)
+                  const isBusy = buchendId === output.id
+                  return (
+                    <div key={output.id} style={{ background: 'var(--bg-subtle)', border: '0.5px solid var(--border-medium)', borderRadius: 14, padding: 16 }}>
+                      {/* Header */}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
+                        <div>
+                          <div style={{ fontWeight: 700, fontSize: 15 }}>Einsatz {p.einsatz}</div>
+                          <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 2 }}>
+                            {deDate} · {p.vorname} {p.nachname}
+                          </div>
+                        </div>
+                        <span style={{ fontSize: 11, fontWeight: 700, background: '#fef9c3', color: '#854d0e', borderRadius: 6, padding: '3px 8px' }}>OFFEN</span>
+                      </div>
+
+                      {/* Positions */}
+                      <div style={{ marginBottom: 12 }}>
+                        {p.positionen.map((pos, idx) => (
+                          <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 10px', background: 'var(--bg-card)', borderRadius: 8, marginBottom: 4, border: `0.5px solid ${pos.item_id ? 'rgba(34,197,94,0.3)' : 'var(--border)'}` }}>
+                            <span style={{ fontWeight: 600, fontSize: 14 }}>{pos.name}</span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                              <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{pos.qty}× {pos.unit || ''}</span>
+                              {pos.item_id
+                                ? <span style={{ fontSize: 11, color: '#16a34a', fontWeight: 700 }}>✓ Lager</span>
+                                : <span style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 600 }}>Freitext</span>}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {withoutItemId.length > 0 && (
+                        <div style={{ fontSize: 12, color: '#b45309', background: '#fef9c3', borderRadius: 8, padding: '6px 10px', marginBottom: 10 }}>
+                          ⚠ {withoutItemId.length} Position(en) ohne Lager-Verknüpfung — werden nicht ausgebucht
+                        </div>
+                      )}
+
+                      {/* Actions */}
+                      <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                        <button className="btn" onClick={() => ignoreOutput(output)} disabled={isBusy}>
+                          Ignorieren
+                        </button>
+                        <button
+                          className="btn primary"
+                          onClick={() => ausbuchenAlle(output)}
+                          disabled={isBusy || withItemId.length === 0}
+                          title={withItemId.length === 0 ? 'Keine Artikel mit Lager-Verknüpfung' : ''}
+                        >
+                          {isBusy ? '⏳ Buche aus…' : `Alles ausbuchen (${withItemId.length})`}
+                        </button>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+
+            <div className="modal-footer" style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: 12 }}>
+              <button className="btn" onClick={() => setShowAusgabenModal(false)}>Schließen</button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </>
   )
 }
