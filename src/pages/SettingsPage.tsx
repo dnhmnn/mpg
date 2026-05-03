@@ -4,6 +4,8 @@ import { pb } from '../lib/pocketbase'
 import type { User } from '../types'
 import StatusBar from '../components/StatusBar'
 import { getTheme, setTheme, type ThemeMode } from '../lib/theme'
+import { ALL_APPS, getDockPins, setDockPins, MAX_DOCK_PINS } from '../lib/apps'
+import AppIcon from '../components/AppIcon'
 
 interface SettingsPageProps {
   user: User | null
@@ -15,6 +17,20 @@ export default function SettingsPage({ user }: SettingsPageProps) {
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState<Tab>('profile')
   const [themeMode, setThemeMode] = useState<ThemeMode>(getTheme())
+  const [dockPins, setDockPinsState] = useState<string[]>(() =>
+    user ? getDockPins(user.id) : []
+  )
+
+  function toggleDockPin(id: string) {
+    if (!user) return
+    setDockPinsState(prev => {
+      const next = prev.includes(id)
+        ? prev.filter(x => x !== id)
+        : prev.length < MAX_DOCK_PINS ? [...prev, id] : prev
+      setDockPins(user.id, next)
+      return next
+    })
+  }
 
   // Profile tab
   const [profileName, setProfileName] = useState('')
@@ -454,6 +470,67 @@ export default function SettingsPage({ user }: SettingsPageProps) {
                       )}
                     </button>
                   ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Dock Tab */}
+          {activeTab === 'appearance' && (
+            <div className="settings-section" style={{ marginTop: '16px' }}>
+              <div className="settings-section-header">DOCK</div>
+              <div className="settings-section-content">
+                <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '14px' }}>
+                  Wähle bis zu {MAX_DOCK_PINS} Apps für das Dock. Zuletzt geöffnete Apps erscheinen auf iPad/Mac automatisch rechts daneben.
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(72px, 1fr))', gap: '10px' }}>
+                  {Object.values(ALL_APPS).filter(a => a.id !== 'settings').map(app => {
+                    const pinned = dockPins.includes(app.id)
+                    const blocked = !pinned && dockPins.length >= MAX_DOCK_PINS
+                    const colorMatch = app.color?.match(/#[0-9a-fA-F]{6}/)?.[0] || 'var(--accent)'
+                    return (
+                      <button
+                        key={app.id}
+                        onClick={() => toggleDockPin(app.id)}
+                        disabled={blocked}
+                        style={{
+                          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px',
+                          padding: '10px 6px', borderRadius: '14px', border: 'none', cursor: blocked ? 'not-allowed' : 'pointer',
+                          background: pinned ? 'var(--bg-subtle)' : 'transparent',
+                          outline: pinned ? '2px solid var(--accent)' : '1.5px solid var(--border)',
+                          outlineOffset: '-1.5px',
+                          opacity: blocked ? 0.35 : 1,
+                          transition: 'all 0.15s', fontFamily: 'inherit',
+                          position: 'relative'
+                        }}
+                      >
+                        <div style={{
+                          width: '46px', height: '46px', borderRadius: '12px',
+                          background: pinned ? app.color || 'var(--accent)' : 'var(--bg-card-solid)',
+                          color: pinned ? '#fff' : colorMatch,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          boxShadow: '0 2px 6px rgba(0,0,0,0.1)', transition: 'all 0.15s'
+                        }}>
+                          <AppIcon icon={app.icon} />
+                        </div>
+                        <span style={{ fontSize: '10px', color: 'var(--text)', fontWeight: pinned ? 600 : 400, textAlign: 'center', lineHeight: 1.2 }}>
+                          {app.name}
+                        </span>
+                        {pinned && (
+                          <div style={{
+                            position: 'absolute', top: '4px', right: '4px',
+                            width: '14px', height: '14px', borderRadius: '50%',
+                            background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center'
+                          }}>
+                            <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
+                          </div>
+                        )}
+                      </button>
+                    )
+                  })}
+                </div>
+                <div style={{ marginTop: '12px', fontSize: '12px', color: 'var(--text-secondary)', textAlign: 'center' }}>
+                  {dockPins.length} / {MAX_DOCK_PINS} gepinnt
                 </div>
               </div>
             </div>
