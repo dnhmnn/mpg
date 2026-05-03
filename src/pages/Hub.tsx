@@ -289,6 +289,12 @@ export default function Hub() {
           margin: 0 6px;
           flex-shrink: 0;
         }
+        .dock-recent {
+          display: flex;
+          flex-direction: row;
+          align-items: center;
+          gap: 4px;
+        }
         /* On mobile: hide recent section in dock */
         @media (max-width: 767px) {
           .dock-sep, .dock-recent { display: none; }
