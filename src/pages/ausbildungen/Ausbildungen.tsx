@@ -396,7 +396,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
 
   async function loadTerminTeilnehmer() {
     try {
-      const records = await pb.collection('ausbildungen_termine_user').getFullList({
+      const records = await pb.collection('ausbildungen_termine_teilnehmer').getFullList({
         sort: 'created',
         requestKey: `loadTerminTeilnehmer-${Date.now()}`
       })
@@ -911,7 +911,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
   // TERMIN-TEILNEHMER FUNCTIONS
   async function addTeilnehmerToTermin(terminId: string, teilnehmerId: string) {
     try {
-      await pb.collection('ausbildungen_termine_user').create({
+      await pb.collection('ausbildungen_termine_teilnehmer').create({
         termin_id: terminId,
         teilnehmer_id: teilnehmerId,
         status: 'eingeladen',
@@ -939,7 +939,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
     }
     try {
       for (const t of fehlende) {
-        await pb.collection('ausbildungen_termine_user').create({
+        await pb.collection('ausbildungen_termine_teilnehmer').create({
           termin_id: terminId,
           teilnehmer_id: t.id,
           status: 'eingeladen',
@@ -961,7 +961,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
     if (!confirm('Teilnehmer wirklich entfernen?')) return
     
     try {
-      await pb.collection('ausbildungen_termine_user').delete(terminTeilnehmerId)
+      await pb.collection('ausbildungen_termine_teilnehmer').delete(terminTeilnehmerId)
       showMessage('Teilnehmer entfernt', 'success')
       await loadTerminTeilnehmer()
     } catch(e: any) {
@@ -971,7 +971,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
 
   async function updateTeilnehmerStatus(terminTeilnehmerId: string, status: string) {
     try {
-      await pb.collection('ausbildungen_termine_user').update(terminTeilnehmerId, { status })
+      await pb.collection('ausbildungen_termine_teilnehmer').update(terminTeilnehmerId, { status })
       await loadTerminTeilnehmer()
     } catch(e: any) {
       alert('Fehler: ' + e.message)
@@ -980,7 +980,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
 
   async function updateAnwesenheit(terminTeilnehmerId: string, anwesenheit: 'da' | 'krank' | 'entschuldigt' | 'fehlend' | '') {
     try {
-      await pb.collection('ausbildungen_termine_user').update(terminTeilnehmerId, {
+      await pb.collection('ausbildungen_termine_teilnehmer').update(terminTeilnehmerId, {
         status: anwesenheit || 'eingeladen',
         anwesend: anwesenheit === 'da'
       })
@@ -2965,11 +2965,11 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                                   <div style={{flex: 1, fontSize: '14px', fontWeight: 500}}>{t.vorname} {t.nachname}</div>
                                   <div style={{display: 'flex', gap: '4px'}}>
                                     <button
-                                      onClick={() => pb.collection('ausbildungen_termine_user').update(tt.id, { status: s === 'zugesagt' ? 'eingeladen' : 'zugesagt' }).then(() => loadTerminTeilnehmer())}
+                                      onClick={() => pb.collection('ausbildungen_termine_teilnehmer').update(tt.id, { status: s === 'zugesagt' ? 'eingeladen' : 'zugesagt' }).then(() => loadTerminTeilnehmer())}
                                       style={{padding: '4px 10px', borderRadius: '6px', border: '1px solid', fontSize: '12px', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', background: s === 'zugesagt' ? '#dcfce7' : '#fff', color: s === 'zugesagt' ? '#166534' : '#64748b', borderColor: s === 'zugesagt' ? '#22c55e' : '#e2e8f0'}}
                                     >✓ Zugesagt</button>
                                     <button
-                                      onClick={() => pb.collection('ausbildungen_termine_user').update(tt.id, { status: s === 'abgesagt' ? 'eingeladen' : 'abgesagt' }).then(() => loadTerminTeilnehmer())}
+                                      onClick={() => pb.collection('ausbildungen_termine_teilnehmer').update(tt.id, { status: s === 'abgesagt' ? 'eingeladen' : 'abgesagt' }).then(() => loadTerminTeilnehmer())}
                                       style={{padding: '4px 10px', borderRadius: '6px', border: '1px solid', fontSize: '12px', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', background: s === 'abgesagt' ? '#fee2e2' : '#fff', color: s === 'abgesagt' ? '#991b1b' : '#64748b', borderColor: s === 'abgesagt' ? '#ef4444' : '#e2e8f0'}}
                                     >✕ Abgesagt</button>
                                   </div>
