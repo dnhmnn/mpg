@@ -1024,7 +1024,8 @@ export default function Unitas() {
                 {([
                   { value: 'light', label: 'Hell', icon: '☀️', desc: 'Helles Design' },
                   { value: 'dark',  label: 'Dunkel', icon: '🌙', desc: 'Dunkles Design' },
-                  { value: 'system', label: 'System', icon: '⚙️', desc: 'Geräteeinstellung' }
+                  { value: 'system', label: 'System', icon: '⚙️', desc: 'Geräteeinstellung' },
+                  { value: 'retro', label: 'Retro', icon: '📟', desc: 'CRT Terminal — grüner Phosphor' }
                 ] as { value: ThemeMode; label: string; icon: string; desc: string }[]).map(opt => (
                   <button
                     key={opt.value}

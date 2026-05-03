@@ -68,6 +68,61 @@
   --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.4);
 }
 
+[data-theme="retro"] {
+  --bg: #080c08;
+  --bg-card: rgba(0, 22, 4, 0.92);
+  --bg-card-solid: #001400;
+  --bg-elevated: rgba(0, 30, 6, 0.98);
+  --bg-input: #001a02;
+  --bg-subtle: rgba(0, 255, 65, 0.04);
+  --bg-hover: rgba(0, 255, 65, 0.09);
+  --bg-status-bar: rgba(0, 16, 2, 0.96);
+
+  --text: #00ff41;
+  --text-secondary: rgba(0, 255, 65, 0.55);
+  --text-placeholder: rgba(0, 255, 65, 0.28);
+
+  --border: rgba(0, 255, 65, 0.18);
+  --border-medium: rgba(0, 255, 65, 0.28);
+  --border-strong: rgba(0, 255, 65, 0.4);
+
+  --accent: #00ff41;
+  --accent-hover: #33ff66;
+
+  --btn-dark: #00ff41;
+  --btn-dark-text: #000a01;
+
+  --shadow-sm: 0 0 12px rgba(0, 255, 65, 0.08);
+  --shadow-md: 0 0 24px rgba(0, 255, 65, 0.12);
+  --shadow-lg: 0 0 40px rgba(0, 255, 65, 0.18);
+}
+
+[data-theme="retro"] body {
+  font-family: 'Courier New', Courier, 'Lucida Console', monospace;
+}
+
+[data-theme="retro"] body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 3px,
+    rgba(0, 0, 0, 0.06) 3px,
+    rgba(0, 0, 0, 0.06) 4px
+  );
+  pointer-events: none;
+  z-index: 99999;
+}
+
+[data-theme="retro"] h1,
+[data-theme="retro"] h2,
+[data-theme="retro"] h3,
+[data-theme="retro"] .status-bar-title {
+  text-shadow: 0 0 12px rgba(0, 255, 65, 0.6);
+}
+
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --bg: #000000;
