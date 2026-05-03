@@ -1182,6 +1182,14 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
     })
   }
 
+  function parseQuizInhalt(raw: any): { fragen: QuizFrage[] } {
+    try {
+      const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw
+      if (parsed && Array.isArray(parsed.fragen)) return parsed
+    } catch {}
+    return { fragen: [] }
+  }
+
   function addQuizFrage(inhaltIdx: number) {
     if (!newQuizFrage.trim()) return
     const answers = newQuizAntworten.filter(a => a.trim())
@@ -1189,8 +1197,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
     setModulForm(prev => {
       const inhalte = [...prev.inhalte]
       const block = inhalte[inhaltIdx]
-      let quizData: { fragen: QuizFrage[] } = { fragen: [] }
-      try { quizData = JSON.parse(block.inhalt) } catch {}
+      const quizData = parseQuizInhalt(block.inhalt)
       quizData.fragen = [...quizData.fragen, { frage: newQuizFrage, antworten: answers, richtige: newQuizRichtige }]
       inhalte[inhaltIdx] = { ...block, inhalt: JSON.stringify(quizData) }
       return { ...prev, inhalte }
@@ -1205,8 +1212,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
     setModulForm(prev => {
       const inhalte = [...prev.inhalte]
       const block = inhalte[inhaltIdx]
-      let quizData: { fragen: QuizFrage[] } = { fragen: [] }
-      try { quizData = JSON.parse(block.inhalt) } catch {}
+      const quizData = parseQuizInhalt(block.inhalt)
       quizData.fragen = quizData.fragen.filter((_, i) => i !== frageIdx)
       inhalte[inhaltIdx] = { ...block, inhalt: JSON.stringify(quizData) }
       return { ...prev, inhalte }
@@ -3356,8 +3362,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                   )}
 
                   {block.typ === 'quiz' && (() => {
-                    let quizData: { fragen: QuizFrage[] } = { fragen: [] }
-                    try { quizData = JSON.parse(block.inhalt) } catch {}
+                    const quizData = parseQuizInhalt(block.inhalt)
                     return (
                       <div>
                         {quizData.fragen.map((f, fi) => (
@@ -3522,8 +3527,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                         )}
 
                         {block.typ === 'quiz' && (() => {
-                          let quizData: { fragen: QuizFrage[] } = { fragen: [] }
-                          try { quizData = JSON.parse(block.inhalt) } catch {}
+                          const quizData = parseQuizInhalt(block.inhalt)
                           return (
                             <div style={{display: 'flex', flexDirection: 'column', gap: '10px'}}>
                               {quizData.fragen.length === 0 && (

@@ -669,7 +669,11 @@ export default function Unitas() {
         {tab === 'lernbar' && playerProgress && (() => {
           const mod = module.find(m => m.id === playerProgress.modul_id)
           if (!mod) return null
-          const blocks = [...(mod.inhalte || [])].sort((a, b) => a.reihenfolge - b.reihenfolge)
+          const rawInhalte = mod.inhalte
+          const parsedInhalte: typeof rawInhalte = Array.isArray(rawInhalte)
+            ? rawInhalte
+            : (() => { try { return JSON.parse(rawInhalte as any) } catch { return [] } })()
+          const blocks = [...(parsedInhalte || [])].sort((a, b) => a.reihenfolge - b.reihenfolge)
           const totalBlocks = blocks.length
           const isLast = typeof playerStep === 'number' && playerStep === totalBlocks - 1
           const passPercent = mod.min_pass_percent ?? 100
@@ -800,7 +804,15 @@ export default function Unitas() {
                 {/* QUIZ BLOCK */}
                 {!modulFailed && currentBlock?.typ === 'quiz' && (() => {
                   let quizData: { fragen: { frage: string; antworten: string[]; richtige: number }[] } = { fragen: [] }
-                  try { quizData = JSON.parse(currentBlock.inhalt) } catch {}
+                  try {
+                    const raw = currentBlock.inhalt
+                    const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw
+                    if (parsed && Array.isArray(parsed.fragen)) {
+                      quizData = parsed
+                    } else if (parsed && typeof parsed.frage === 'string') {
+                      quizData = { fragen: [parsed] }
+                    }
+                  } catch {}
                   const fragen = quizData.fragen || []
                   const currentFrage = fragen[quizFrageIdx]
                   const isLastFrage = quizFrageIdx >= fragen.length - 1
