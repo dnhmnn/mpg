@@ -313,6 +313,7 @@ export default function Patienten() {
           max-width: 1100px;
           margin: 0 auto;
           padding: 1.25rem 1.25rem;
+          padding-top: 130px;
           padding-bottom: 100px;
         }
 
