@@ -81,6 +81,8 @@ export default function PatientView() {
   const [status, setStatus] = useState<Status>('loading')
   const [p, setP] = useState<PatientPayload | null>(null)
   const [expiry, setExpiry] = useState<Date | null>(null)
+  const [recId, setRecId] = useState('')
+  const [orgId, setOrgId] = useState('')
   const [dobInput, setDobInput] = useState('')
   const [dobError, setDobError] = useState('')
   const [attemptsLeft, setAttemptsLeft] = useState(MAX_ATTEMPTS)
@@ -90,6 +92,20 @@ export default function PatientView() {
     if (getAttempts(code) >= MAX_ATTEMPTS) { setStatus('locked'); return }
     loadByCode(code)
   }, [code])
+
+  async function logAccess(event: 'granted' | 'dob_failed' | 'locked' | 'expired' | 'notfound', payload?: PatientPayload, rid?: string, oid?: string) {
+    try {
+      const name = payload ? [payload.vorname, payload.name].filter(Boolean).join(' ') : ''
+      await pb.collection('access_logs').create({
+        access_code: code,
+        patient_id: rid || recId,
+        patient_name: name,
+        organization_id: oid || orgId,
+        event,
+        user_agent: navigator.userAgent,
+      })
+    } catch {}
+  }
 
   async function loadByCode(c: string) {
     try {
@@ -103,11 +119,17 @@ export default function PatientView() {
       if (!payload.access_code_created) { setStatus('expired'); return }
       const created = new Date(payload.access_code_created)
       const expires = new Date(created.getTime() + 24 * 60 * 60 * 1000)
-      if (new Date() > expires) { setStatus('expired'); return }
+      if (new Date() > expires) {
+        await logAccess('expired', payload, rec.id, rec.organization_id)
+        setStatus('expired')
+        return
+      }
       setP(payload)
       setExpiry(expires)
-      // If no DOB stored in record, skip auth gate
+      setRecId(rec.id)
+      setOrgId(rec.organization_id || '')
       if (!payload.gebdatum) {
+        await logAccess('granted', payload, rec.id, rec.organization_id)
         setStatus('valid')
       } else {
         setAttemptsLeft(MAX_ATTEMPTS - getAttempts(c))
@@ -122,19 +144,22 @@ export default function PatientView() {
     }
   }
 
-  function verifyDob() {
+  async function verifyDob() {
     if (!p || !code || !dobInput) return
     const stored = normDob(p.gebdatum || '')
     const entered = normDob(dobInput)
     if (stored === entered) {
       clearAttempts(code)
+      await logAccess('granted')
       setStatus('valid')
     } else {
       const n = bumpAttempts(code)
       const left = MAX_ATTEMPTS - n
       if (left <= 0) {
+        await logAccess('locked')
         setStatus('locked')
       } else {
+        await logAccess('dob_failed')
         setDobError(`Falsches Geburtsdatum. Noch ${left} Versuch${left === 1 ? '' : 'e'}.`)
         setAttemptsLeft(left)
       }
@@ -166,9 +191,27 @@ export default function PatientView() {
   if (status === 'auth') return centerCard(
     <>
       <div style={{ fontSize: 40, marginBottom: 12 }}>🔐</div>
-      <h2 style={{ color: '#111827', margin: '0 0 6px', fontSize: '1.2rem' }}>Zugang bestätigen</h2>
-      <p style={{ color: '#6b7280', margin: '0 0 24px', fontSize: 14, lineHeight: 1.5 }}>
-        Bitte Geburtsdatum des Patienten eingeben um das Protokoll einzusehen.
+      <h2 style={{ color: '#111827', margin: '0 0 16px', fontSize: '1.2rem' }}>Zugang bestätigen</h2>
+      {/* Patient identity card */}
+      {p && (
+        <div style={{ background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 12, padding: '14px 16px', marginBottom: 20, textAlign: 'left' }}>
+          {(p.vorname || p.name) && (
+            <div style={{ fontWeight: 700, fontSize: 17, color: '#111827', marginBottom: 4 }}>
+              {[p.vorname, p.name].filter(Boolean).join(' ')}
+            </div>
+          )}
+          {p.rufname && (
+            <div style={{ fontSize: 13, color: '#6b7280', display: 'flex', alignItems: 'center', gap: 5 }}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6A19.79 19.79 0 012.12 4.18 2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/>
+              </svg>
+              Funkrufname: <strong style={{ color: '#374151' }}>{p.rufname}</strong>
+            </div>
+          )}
+        </div>
+      )}
+      <p style={{ color: '#6b7280', margin: '0 0 16px', fontSize: 14, lineHeight: 1.5 }}>
+        Geburtsdatum des Patienten eingeben um das Protokoll einzusehen.
       </p>
       <input
         type="date"

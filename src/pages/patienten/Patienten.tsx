@@ -21,6 +21,15 @@ interface AuditEntry {
   created: string
 }
 
+interface AccessLogEntry {
+  id: string
+  access_code: string
+  patient_name: string
+  event: string
+  user_agent: string
+  created: string
+}
+
 const TEN_YEARS_MS = 10 * 365.25 * 24 * 60 * 60 * 1000
 
 export default function Patienten() {
@@ -31,6 +40,7 @@ export default function Patienten() {
   const [archivedPatients, setArchivedPatients] = useState<Patient[]>([])
   const [archivedNach, setArchivedNach] = useState<Nacherfassung[]>([])
   const [auditLogs, setAuditLogs] = useState<AuditEntry[]>([])
+  const [accessLogs, setAccessLogs] = useState<AccessLogEntry[]>([])
   const [activeTab, setActiveTab] = useState<Tab>('patienten')
 
   const [showEdit, setShowEdit] = useState(false)
@@ -98,11 +108,18 @@ export default function Patienten() {
     if (!user?.organization_id) return
     const org = user.organization_id
     try {
-      const logs = await pb.collection('audit_logs').getFullList({
-        filter: `organization_id="${org}"`, sort: '-created',
-        fields: 'id,action,record_type,record_title,user_name,created'
-      }).catch(() => [])
+      const [logs, accLogs] = await Promise.all([
+        pb.collection('audit_logs').getFullList({
+          filter: `organization_id="${org}"`, sort: '-created',
+          fields: 'id,action,record_type,record_title,user_name,created'
+        }).catch(() => []),
+        pb.collection('access_logs').getFullList({
+          filter: `organization_id="${org}"`, sort: '-created',
+          fields: 'id,access_code,patient_name,event,user_agent,created'
+        }).catch(() => []),
+      ])
       setAuditLogs(logs as unknown as AuditEntry[])
+      setAccessLogs(accLogs as unknown as AccessLogEntry[])
       setAuditLoaded(true)
     } catch (e: any) {
       flash('Fehler beim Laden: ' + e.message, 'error')
@@ -820,6 +837,45 @@ export default function Patienten() {
                 <span className="pat-audit-type">{entry.record_type}</span>
               </div>
             ))}
+
+            {/* QR Zugriffslog */}
+            {accessLogs.length > 0 && (
+              <>
+                <div style={{ fontWeight: 700, fontSize: '.85rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '.05em', margin: '1.25rem 0 .5rem', paddingTop: '1rem', borderTop: '0.5px solid var(--border)' }}>
+                  QR-Code Zugriffe
+                </div>
+                {accessLogs.map(entry => {
+                  const eventColor: Record<string, string> = {
+                    granted: '#16a34a',
+                    dob_failed: '#d97706',
+                    locked: '#c0392b',
+                    expired: '#6b7280',
+                  }
+                  const eventLabel: Record<string, string> = {
+                    granted: 'Zugriff gewährt',
+                    dob_failed: 'Falsches Geburtsdatum',
+                    locked: 'Gesperrt',
+                    expired: 'Abgelaufen',
+                  }
+                  return (
+                    <div key={entry.id} className="pat-audit-row">
+                      <span className="pat-audit-action" style={{ background: eventColor[entry.event] || '#6b7280' }}>
+                        {eventLabel[entry.event] || entry.event}
+                      </span>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div className="pat-audit-title">
+                          {entry.patient_name || '–'} · Code {entry.access_code}
+                        </div>
+                        <div className="pat-audit-sub" title={entry.user_agent}>
+                          {fmtDate(entry.created)} · {entry.user_agent?.split(' ').slice(-1)[0] || 'Unbekanntes Gerät'}
+                        </div>
+                      </div>
+                      <span className="pat-audit-type">QR-Zugriff</span>
+                    </div>
+                  )
+                })}
+              </>
+            )}
           </>
           )
         )}
