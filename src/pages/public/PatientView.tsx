@@ -208,6 +208,55 @@ export default function PatientView() {
           </div>
         </PubSection>
 
+        {/* Einsatz-Zeitstrahl */}
+        <PubSection title="Einsatz-Zeitstrahl" icon={pik(<><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></>)}>
+          {(() => {
+            const STEP_COLORS = ['#6B1A2A', '#9E2A3A', '#C94D6A', '#2563eb', '#16a34a', '#166534']
+            const fmtDT = (v?: string) => {
+              if (!v) return null
+              try {
+                const d = new Date(v)
+                if (isNaN(d.getTime())) return null
+                return d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })
+              } catch { return null }
+            }
+            const steps = [
+              { label: 'Alarm',    sub: 'Meldungseingang',   badge: '!', time: fmtDT((p as any).zeit_einsatz) },
+              { label: 'Status 3', sub: 'Ausgerückt',         badge: '3', time: fmtDT((p as any).zeit_status3) },
+              { label: 'Status 4', sub: 'Eintreffen',         badge: '4', time: fmtDT((p as any).zeit_eintreffen) },
+              { label: 'Übergabe', sub: 'Patient übergeben',  badge: '✓', time: fmtDT((p as any).zeit_uebergabe) },
+              { label: 'Status 1', sub: 'Wieder frei',        badge: '1', time: fmtDT((p as any).zeit_status1) },
+              { label: 'Status 2', sub: 'Am Standort',        badge: '2', time: fmtDT((p as any).zeit_status2) },
+            ]
+            return (
+              <div style={{ overflowX: 'auto' }}>
+                <div style={{ display: 'flex', position: 'relative', minWidth: 480, paddingBottom: 8 }}>
+                  <div style={{ position: 'absolute', left: `calc(100% / ${steps.length * 2})`, right: `calc(100% / ${steps.length * 2})`, top: 13, height: 2, background: 'var(--border)' }} />
+                  {steps.map((step, i) => {
+                    const color = STEP_COLORS[i]
+                    const known = !!step.time
+                    return (
+                      <div key={step.label} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative' }}>
+                        {i > 0 && known && <div style={{ position: 'absolute', right: '50%', top: 13, height: 2, left: 0, background: color, zIndex: 0 }} />}
+                        <div style={{ width: 28, height: 28, borderRadius: '50%', position: 'relative', zIndex: 1, flexShrink: 0, background: known ? color : 'var(--bg)', border: `2px solid ${known ? color : 'var(--border-medium)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: known ? `0 0 0 4px ${color}22` : 'none' }}>
+                          <span style={{ fontSize: '.62rem', fontWeight: 800, color: known ? '#fff' : 'var(--text-secondary)', lineHeight: 1 }}>{step.badge}</span>
+                        </div>
+                        <div style={{ textAlign: 'center', marginTop: 8, padding: '0 3px' }}>
+                          <div style={{ fontSize: '.76rem', fontWeight: 700, color: 'var(--text)', lineHeight: 1.2, whiteSpace: 'nowrap' }}>{step.label}</div>
+                          <div style={{ fontSize: '.67rem', color: 'var(--text-secondary)', lineHeight: 1.3, whiteSpace: 'nowrap' }}>{step.sub}</div>
+                          <div style={{ fontSize: '.9rem', fontWeight: 800, marginTop: 6, color: known ? color : 'var(--text-secondary)', fontVariantNumeric: 'tabular-nums' }}>
+                            {step.time ?? '–'}
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )
+          })()}
+        </PubSection>
+
         {/* Pat-Stammdaten */}
         <PubSection title="Pat-Stammdaten" open icon={pik(<><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></>)}>
           <div style={grid}>
