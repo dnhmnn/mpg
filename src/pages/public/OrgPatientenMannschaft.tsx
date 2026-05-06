@@ -66,7 +66,6 @@ function UserSearch({ label, orgId, value, onChange }: {
         setResults(res.items.map(u => ({ id: u.id, name: u.name, email: u.email })))
         setOpen(true)
       } catch {
-        // Auth not available (e.g. private tab) — fall back to manual text entry
         setResults([])
         setOpen(false)
         setManualMode(true)
@@ -151,103 +150,176 @@ function UserSearch({ label, orgId, value, onChange }: {
   )
 }
 
+const btnPrimary = (disabled: boolean): React.CSSProperties => ({
+  background: disabled ? 'var(--bg-hover)' : 'var(--accent)',
+  color: disabled ? 'var(--text-secondary)' : '#fff',
+  border: 'none', borderRadius: 10, padding: '10px 20px',
+  fontWeight: 700, cursor: disabled ? 'not-allowed' : 'pointer',
+  fontSize: '.95rem', fontFamily: 'inherit',
+})
+
 export default function OrgPatientenMannschaft({
-  orgId, orgCode, onDraftCreated,
+  orgId, orgCode, onDraftCreated, onQrSaved,
 }: {
-  orgId: string; orgCode: string; onDraftCreated: (id: string, mannschaft: Record<string, { id: string; name: string } | null>) => void
+  orgId: string
+  orgCode: string
+  onDraftCreated: (id: string, mannschaft: Record<string, { id: string; name: string } | null>) => void
+  onQrSaved?: (code: string, created: string) => void
 }) {
   const [sel, setSel] = useState<Record<Pos, Selection>>({ tf: null, m1: null, m2: null, m3: null })
+  const [savingMannschaft, setSavingMannschaft] = useState(false)
+  const [mannschaftSaved, setMannschaftSaved] = useState(false)
+  const [mannschaftOffline, setMannschaftOffline] = useState('')
+
   const [qrCode, setQrCode] = useState('')
-  const [saving, setSaving] = useState(false)
-  const [saved, setSaved] = useState(false)
-  const [offlineMsg, setOfflineMsg] = useState('')
+  const [savingQr, setSavingQr] = useState(false)
+  const [qrSaved, setQrSaved] = useState(false)
+  const [qrOffline, setQrOffline] = useState('')
+
+  const draftIdRef = useRef<string | null>(null)
 
   function set(pos: Pos, u: Selection) {
     setSel(s => ({ ...s, [pos]: u }))
+    setMannschaftSaved(false)
   }
 
-  async function save() {
-    setSaving(true)
-    setOfflineMsg('')
+  async function saveMannschaft() {
+    setSavingMannschaft(true)
+    setMannschaftOffline('')
     const mannschaft = Object.fromEntries(
       FIELDS.map(f => [f.key, sel[f.key] ? { id: sel[f.key]!.id, name: sel[f.key]!.name } : null])
     )
-    const payload: Record<string, unknown> = { mannschaft }
-    if (qrCode.trim().length === 4) {
-      payload.access_code = qrCode.trim()
-      payload.access_code_created = new Date().toISOString()
-    }
-
     if (!navigator.onLine) {
       const queue = JSON.parse(localStorage.getItem(`offline_queue_${orgCode}`) || '[]')
-      queue.push({ type: 'draft', payload, status: 'offen', organization_id: orgId })
+      queue.push({ type: 'draft', payload: { mannschaft }, status: 'offen', organization_id: orgId })
       localStorage.setItem(`offline_queue_${orgCode}`, JSON.stringify(queue))
-      setSaved(true)
-      setOfflineMsg('Offline gespeichert – wird beim nächsten Öffnen dieser Seite automatisch übermittelt.')
-      setSaving(false)
+      setMannschaftSaved(true)
+      setMannschaftOffline('Offline gespeichert – wird beim nächsten Öffnen übermittelt.')
+      setSavingMannschaft(false)
       return
     }
     try {
-      const rec = await pb.collection('patients').create({
-        title: `Entwurf – ${new Date().toLocaleDateString('de-DE')}`,
-        payload,
-        status: 'offen',
-        organization_id: orgId,
-      })
-      onDraftCreated(rec.id, mannschaft)
-      setSaved(true)
+      if (draftIdRef.current) {
+        await pb.collection('patients').update(draftIdRef.current, { payload: { mannschaft } })
+      } else {
+        const rec = await pb.collection('patients').create({
+          title: `Entwurf – ${new Date().toLocaleDateString('de-DE')}`,
+          payload: { mannschaft },
+          status: 'offen',
+          organization_id: orgId,
+        })
+        draftIdRef.current = rec.id
+        onDraftCreated(rec.id, mannschaft)
+      }
+      setMannschaftSaved(true)
     } catch (e: any) {
       alert('Fehler: ' + e.message)
     } finally {
-      setSaving(false)
+      setSavingMannschaft(false)
+    }
+  }
+
+  async function saveQr() {
+    const code = qrCode.trim()
+    if (code.length !== 4) { alert('Bitte eine 4-stellige Nummer eingeben.'); return }
+    setSavingQr(true)
+    setQrOffline('')
+    const created = new Date().toISOString()
+    if (!navigator.onLine) {
+      onQrSaved?.(code, created)
+      setQrSaved(true)
+      setQrOffline('Offline gespeichert – wird beim Absenden übermittelt.')
+      setSavingQr(false)
+      return
+    }
+    try {
+      if (draftIdRef.current) {
+        // Merge access_code into existing draft payload
+        const existing = await pb.collection('patients').getOne(draftIdRef.current)
+        const existingPayload = typeof existing.payload === 'string'
+          ? JSON.parse(existing.payload)
+          : existing.payload ?? {}
+        await pb.collection('patients').update(draftIdRef.current, {
+          payload: { ...existingPayload, access_code: code, access_code_created: created },
+        })
+      }
+      // Always propagate up so final form submit includes it
+      onQrSaved?.(code, created)
+      setQrSaved(true)
+    } catch (e: any) {
+      alert('Fehler: ' + e.message)
+    } finally {
+      setSavingQr(false)
     }
   }
 
   return (
-    <div style={{ background: 'var(--bg-card)', backdropFilter: 'blur(40px)', WebkitBackdropFilter: 'blur(40px)', border: '0.5px solid var(--border)', borderRadius: 16, marginBottom: '.75rem', overflow: 'hidden', boxShadow: 'var(--shadow-sm)' }}>
-      <div style={{ padding: '.9rem 1rem', fontWeight: 700, fontSize: '1rem', color: 'var(--text)', borderBottom: '0.5px solid var(--border)', display: 'flex', alignItems: 'center', gap: '.6rem' }}>
-        {iconMannschaft} Mannschaft
-      </div>
-      <div style={{ padding: '1rem' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: '1rem', marginBottom: '1rem' }}>
-          {FIELDS.map(f => (
-            <UserSearch key={f.key} label={f.label} orgId={orgId} value={sel[f.key]} onChange={u => set(f.key, u)} />
-          ))}
+    <>
+      {/* Mannschaft card */}
+      <div style={{ background: 'var(--bg-card)', backdropFilter: 'blur(40px)', WebkitBackdropFilter: 'blur(40px)', border: '0.5px solid var(--border)', borderRadius: 16, marginBottom: '.75rem', overflow: 'hidden', boxShadow: 'var(--shadow-sm)' }}>
+        <div style={{ padding: '.9rem 1rem', fontWeight: 700, fontSize: '1rem', color: 'var(--text)', borderBottom: '0.5px solid var(--border)', display: 'flex', alignItems: 'center', gap: '.6rem' }}>
+          {iconMannschaft} Mannschaft
         </div>
-
-        {/* QR-Code */}
-        <div style={{ borderTop: '0.5px solid var(--border)', paddingTop: '1rem', marginBottom: '1rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem', marginBottom: '.5rem', fontWeight: 600, fontSize: '.9rem', color: 'var(--text)' }}>
-            {iconQR} QR-Code für Rettungsdienst
+        <div style={{ padding: '1rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: '1rem', marginBottom: '1rem' }}>
+            {FIELDS.map(f => (
+              <UserSearch key={f.key} label={f.label} orgId={orgId} value={sel[f.key]} onChange={u => set(f.key, u)} />
+            ))}
           </div>
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            <input
-              style={{ ...inp, width: 100, letterSpacing: '0.2em', fontWeight: 700, fontSize: '1.1rem', textAlign: 'center', margin: 0 }}
-              type="text"
-              inputMode="numeric"
-              maxLength={4}
-              placeholder="0000"
-              pattern="[0-9]{4}"
-              value={qrCode}
-              onChange={e => setQrCode(e.target.value.replace(/\D/g, '').slice(0, 4))}
-            />
-            <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>4-stellige Nummer vom QR-Label</span>
-          </div>
+          {mannschaftOffline && (
+            <div style={{ background: '#fef9c3', border: '0.5px solid #eab308', borderRadius: 8, padding: '8px 12px', fontSize: '.85rem', color: '#854d0e', marginBottom: '.75rem' }}>
+              {mannschaftOffline}
+            </div>
+          )}
+          {mannschaftSaved ? (
+            <div style={{ color: '#16a34a', fontWeight: 600, fontSize: '.9rem' }}>✓ Mannschaft gespeichert</div>
+          ) : (
+            <button type="button" disabled={savingMannschaft} onClick={saveMannschaft} style={btnPrimary(savingMannschaft)}>
+              {savingMannschaft ? 'Speichert…' : 'Mannschaft speichern'}
+            </button>
+          )}
         </div>
-
-        {offlineMsg && (
-          <div style={{ background: '#fef9c3', border: '0.5px solid #eab308', borderRadius: 8, padding: '8px 12px', fontSize: '.85rem', color: '#854d0e', marginBottom: '.75rem' }}>
-            {offlineMsg}
-          </div>
-        )}
-        {saved ? (
-          <div style={{ color: '#16a34a', fontWeight: 600, fontSize: '.9rem' }}>✓ Entwurf angelegt – sichtbar in Patienten & Unitas</div>
-        ) : (
-          <button type="button" disabled={saving} onClick={save} style={{ background: saving ? 'var(--bg-hover)' : 'var(--accent)', color: saving ? 'var(--text-secondary)' : '#fff', border: 'none', borderRadius: 10, padding: '10px 20px', fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer', fontSize: '.95rem', fontFamily: 'inherit' }}>
-            {saving ? 'Speichert…' : 'Speichern'}
-          </button>
-        )}
       </div>
-    </div>
+
+      {/* QR-Code card */}
+      <div style={{ background: 'var(--bg-card)', backdropFilter: 'blur(40px)', WebkitBackdropFilter: 'blur(40px)', border: '0.5px solid var(--border)', borderRadius: 16, marginBottom: '.75rem', overflow: 'hidden', boxShadow: 'var(--shadow-sm)' }}>
+        <div style={{ padding: '.9rem 1rem', fontWeight: 700, fontSize: '1rem', color: 'var(--text)', borderBottom: '0.5px solid var(--border)', display: 'flex', alignItems: 'center', gap: '.6rem' }}>
+          {iconQR} QR-Code für Rettungsdienst
+        </div>
+        <div style={{ padding: '1rem' }}>
+          <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end', marginBottom: '1rem' }}>
+            <div style={{ flex: '0 0 auto' }}>
+              <label style={lbl}>4-stelliger Code</label>
+              <input
+                style={{ ...inp, width: 100, letterSpacing: '0.2em', fontWeight: 800, fontSize: '1.3rem', textAlign: 'center', color: '#c0392b', margin: 0 }}
+                type="text"
+                inputMode="numeric"
+                maxLength={4}
+                placeholder="0000"
+                value={qrCode}
+                onChange={e => { setQrCode(e.target.value.replace(/\D/g, '').slice(0, 4)); setQrSaved(false) }}
+              />
+            </div>
+            <span style={{ fontSize: 13, color: 'var(--text-secondary)', paddingBottom: 10, lineHeight: 1.4 }}>
+              Nummer vom gedruckten QR-Label eingeben.<br/>
+              Rettungsdienst kann das Protokoll 24 h einsehen.
+            </span>
+          </div>
+          {qrOffline && (
+            <div style={{ background: '#fef9c3', border: '0.5px solid #eab308', borderRadius: 8, padding: '8px 12px', fontSize: '.85rem', color: '#854d0e', marginBottom: '.75rem' }}>
+              {qrOffline}
+            </div>
+          )}
+          {qrSaved ? (
+            <div style={{ color: '#16a34a', fontWeight: 600, fontSize: '.9rem' }}>✓ QR-Code {qrCode} verknüpft</div>
+          ) : (
+            <button type="button" disabled={savingQr || qrCode.length !== 4} onClick={saveQr}
+              style={btnPrimary(savingQr || qrCode.length !== 4)}>
+              {savingQr ? 'Speichert…' : 'QR-Code speichern'}
+            </button>
+          )}
+        </div>
+      </div>
+    </>
   )
 }

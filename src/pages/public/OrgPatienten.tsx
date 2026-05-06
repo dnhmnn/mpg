@@ -32,6 +32,8 @@ export default function OrgPatienten() {
   const [sigUrl, setSigUrl] = useState('')
   const [draftId, setDraftId] = useState<string | null>(null)
   const [draftMannschaft, setDraftMannschaft] = useState<Record<string, { id: string; name: string } | null>>({})
+  const [savedQrCode, setSavedQrCode] = useState('')
+  const [savedQrCreated, setSavedQrCreated] = useState('')
   const [sending, setSending] = useState(false)
   const [success, setSuccess] = useState<string | null>(null)
   const [alarmzeit, setAlarmzeit] = useState(now())
@@ -126,6 +128,10 @@ export default function OrgPatienten() {
     data.photos = photos
     data.signature = sigUrl
     data.mannschaft = draftMannschaft
+    if (savedQrCode) {
+      data.access_code = savedQrCode
+      data.access_code_created = savedQrCreated
+    }
     return data
   }
 
@@ -179,7 +185,12 @@ export default function OrgPatienten() {
       </>}
     />
     <PubWrap>
-      <OrgPatientenMannschaft orgId={org.id} orgCode={orgCode} onDraftCreated={(id, mann) => { setDraftId(id); setDraftMannschaft(mann) }} />
+      <OrgPatientenMannschaft
+        orgId={org.id}
+        orgCode={orgCode}
+        onDraftCreated={(id, mann) => { setDraftId(id); setDraftMannschaft(mann) }}
+        onQrSaved={(code, created) => { setSavedQrCode(code); setSavedQrCreated(created) }}
+      />
       <form ref={formRef} onChange={() => scheduleAutoSave()}>
         {/* Einsatzdaten */}
         <PubSection title="Einsatzdaten" open icon={pik(<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>)}>
