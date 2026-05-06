@@ -47,28 +47,73 @@ export default function Patienten() {
   const [detailsType, setDetailsType] = useState<'patient' | 'nach'>('patient')
 
   const [msg, setMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(null)
+  const [dataLoading, setDataLoading] = useState(true)
+  const [archivLoaded, setArchivLoaded] = useState(false)
+  const [auditLoaded, setAuditLoaded] = useState(false)
 
-  useEffect(() => { if (user) loadData() }, [user])
+  useEffect(() => { if (user) loadOpenData() }, [user])
 
-  async function loadData() {
+  useEffect(() => {
+    if (!user) return
+    if (activeTab === 'archiv' && !archivLoaded) loadArchivData()
+    if (activeTab === 'audit' && !auditLoaded) loadAuditData()
+  }, [activeTab, user])
+
+  async function loadOpenData() {
     if (!user?.organization_id) return
     const org = user.organization_id
+    setDataLoading(true)
     try {
-      const [pats, nachs, aPats, aNachs, logs] = await Promise.all([
+      const [pats, nachs] = await Promise.all([
         pb.collection('patients').getFullList({ filter: `status="offen"&&organization_id="${org}"`, sort: '-created' }),
         pb.collection('patient_docs_nacherfassung').getFullList({ filter: `status="offen"&&organization_id="${org}"`, sort: '-created' }),
-        pb.collection('patients').getFullList({ filter: `status="archiviert"&&organization_id="${org}"`, sort: '-updated' }),
-        pb.collection('patient_docs_nacherfassung').getFullList({ filter: `status="archiviert"&&organization_id="${org}"`, sort: '-created' }),
-        pb.collection('audit_logs').getFullList({ filter: `organization_id="${org}"`, sort: '-created', fields: 'id,action,record_type,record_title,user_name,created' }).catch(() => []),
       ])
       setPatients(pats as unknown as Patient[])
       setNacherfassungen(nachs as unknown as Nacherfassung[])
+    } catch (e: any) {
+      flash('Fehler beim Laden: ' + e.message, 'error')
+    } finally {
+      setDataLoading(false)
+    }
+  }
+
+  async function loadArchivData() {
+    if (!user?.organization_id) return
+    const org = user.organization_id
+    try {
+      const [aPats, aNachs] = await Promise.all([
+        pb.collection('patients').getFullList({ filter: `status="archiviert"&&organization_id="${org}"`, sort: '-updated' }),
+        pb.collection('patient_docs_nacherfassung').getFullList({ filter: `status="archiviert"&&organization_id="${org}"`, sort: '-created' }),
+      ])
       setArchivedPatients(aPats as unknown as Patient[])
       setArchivedNach(aNachs as unknown as Nacherfassung[])
-      setAuditLogs(logs as unknown as AuditEntry[])
+      setArchivLoaded(true)
     } catch (e: any) {
       flash('Fehler beim Laden: ' + e.message, 'error')
     }
+  }
+
+  async function loadAuditData() {
+    if (!user?.organization_id) return
+    const org = user.organization_id
+    try {
+      const logs = await pb.collection('audit_logs').getFullList({
+        filter: `organization_id="${org}"`, sort: '-created',
+        fields: 'id,action,record_type,record_title,user_name,created'
+      }).catch(() => [])
+      setAuditLogs(logs as unknown as AuditEntry[])
+      setAuditLoaded(true)
+    } catch (e: any) {
+      flash('Fehler beim Laden: ' + e.message, 'error')
+    }
+  }
+
+  async function loadData() {
+    setArchivLoaded(false)
+    setAuditLoaded(false)
+    await loadOpenData()
+    if (activeTab === 'archiv') await loadArchivData()
+    if (activeTab === 'audit') await loadAuditData()
   }
 
   async function auditLog(action: string, recordId: string, recordType: string, title: string) {
@@ -253,6 +298,8 @@ export default function Patienten() {
   return (
     <>
       <style>{`
+        @keyframes spin { to { transform: rotate(360deg); } }
+
         @keyframes slideInRight {
           from { transform: translateX(120%); opacity: 0; }
           to   { transform: translateX(0);   opacity: 1; }
@@ -571,7 +618,12 @@ export default function Patienten() {
 
         {/* PATIENTENDOKUS */}
         {activeTab === 'patienten' && (
-          patients.length === 0 ? (
+          dataLoading ? (
+            <div className="pat-empty">
+              <div style={{ width: '32px', height: '32px', border: '3px solid var(--border)', borderTopColor: 'var(--accent)', borderRadius: '50%', animation: 'spin 0.7s linear infinite', margin: '0 auto 14px' }} />
+              <div style={{ fontSize: '14px' }}>Lade Dokus...</div>
+            </div>
+          ) : patients.length === 0 ? (
             <div className="pat-empty">
               <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ opacity: 0.3, marginBottom: '14px' }}>
                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
@@ -624,7 +676,12 @@ export default function Patienten() {
 
         {/* NACHERFASSUNGEN */}
         {activeTab === 'nach' && (
-          nacherfassungen.length === 0 ? (
+          dataLoading ? (
+            <div className="pat-empty">
+              <div style={{ width: '32px', height: '32px', border: '3px solid var(--border)', borderTopColor: 'var(--accent)', borderRadius: '50%', animation: 'spin 0.7s linear infinite', margin: '0 auto 14px' }} />
+              <div style={{ fontSize: '14px' }}>Lade Nacherfassungen...</div>
+            </div>
+          ) : nacherfassungen.length === 0 ? (
             <div className="pat-empty">
               <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ opacity: 0.3, marginBottom: '14px' }}>
                 <circle cx="12" cy="12" r="10"/>
@@ -654,7 +711,14 @@ export default function Patienten() {
         )}
 
         {/* ARCHIV */}
+
         {activeTab === 'archiv' && (
+          !archivLoaded ? (
+            <div className="pat-empty">
+              <div style={{ width: '32px', height: '32px', border: '3px solid var(--border)', borderTopColor: 'var(--accent)', borderRadius: '50%', animation: 'spin 0.7s linear infinite', margin: '0 auto 14px' }} />
+              <div style={{ fontSize: '14px' }}>Lade Archiv...</div>
+            </div>
+          ) : (
           <>
             {oldCount > 0 && (
               <div className="pat-warn-banner">
@@ -706,10 +770,17 @@ export default function Patienten() {
                 ))
             )}
           </>
+          )
         )}
 
         {/* AUDIT LOG */}
         {activeTab === 'audit' && (
+          !auditLoaded ? (
+            <div className="pat-empty">
+              <div style={{ width: '32px', height: '32px', border: '3px solid var(--border)', borderTopColor: 'var(--accent)', borderRadius: '50%', animation: 'spin 0.7s linear infinite', margin: '0 auto 14px' }} />
+              <div style={{ fontSize: '14px' }}>Lade Audit-Log...</div>
+            </div>
+          ) : (
           <>
             {auditLogs.length === 0 && (
               <div className="pat-empty">
@@ -733,6 +804,7 @@ export default function Patienten() {
               </div>
             ))}
           </>
+          )
         )}
 
       </div>
