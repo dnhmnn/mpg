@@ -63,6 +63,7 @@ export default function OrgPatienten() {
     const data = collectData()
     const name = data.name as string; const vorname = data.vorname as string; const geb = data.gebdatum as string
     if (!name || !vorname || !geb) { alert('Bitte Name, Vorname und Geburtsdatum ausfüllen.'); return }
+    if (data.access_code) data.access_code_created = new Date().toISOString()
     setSending(true)
     try {
       const rec = await pb.collection('patients').create({ title: `Patientendoku: ${vorname} ${name}`, payload: data, status: 'offen', organization_id: org.id })
@@ -101,6 +102,33 @@ export default function OrgPatienten() {
             <label style={lbl}>Fahrzeug<input style={inp} name="fahrzeug" type="text" placeholder="z.B. 46/1" /></label>
             <label style={lbl}>Datum/Uhrzeit<input style={inp} name="zeit_einsatz" type="datetime-local" defaultValue={now()} /></label>
             <label style={lbl}>Einsatz-Art<input style={inp} name="einsatz_art" type="text" /></label>
+          </div>
+        </PubSection>
+
+        {/* Mannschaft */}
+        <PubSection title="👥 Mannschaft" open>
+          <div style={grid}>
+            <label style={lbl}>Teamführer<input style={inp} name="mannschaft_tf" type="text" /></label>
+            <label style={lbl}>Mannschaft 1<input style={inp} name="mannschaft_1" type="text" /></label>
+            <label style={lbl}>Mannschaft 2<input style={inp} name="mannschaft_2" type="text" /></label>
+            <label style={lbl}>Mannschaft 3<input style={inp} name="mannschaft_3" type="text" /></label>
+          </div>
+          <div style={{ marginTop: '.75rem', background: '#fef3c7', border: '1px solid #fbbf24', borderRadius: 10, padding: '12px 14px' }}>
+            <label style={{ ...lbl, color: '#92400e', marginBottom: 6 }}>
+              QR-Code (4-stellige Nummer vom Ausdruck)
+            </label>
+            <input
+              style={{ ...inp, fontFamily: 'monospace', fontSize: 22, fontWeight: 700, letterSpacing: '0.2em', color: '#c0392b', maxWidth: 140 }}
+              name="access_code"
+              type="text"
+              inputMode="numeric"
+              maxLength={4}
+              placeholder="0000"
+              pattern="[0-9]{4}"
+            />
+            <div style={{ fontSize: 12, color: '#92400e', marginTop: 6 }}>
+              Der Rettungsdienst kann das Protokoll nach dem Absenden 24 Stunden lang über diesen Code einsehen.
+            </div>
           </div>
         </PubSection>
 
