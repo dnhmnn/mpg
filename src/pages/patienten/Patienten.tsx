@@ -3,13 +3,14 @@ import { pb } from '../../lib/pocketbase'
 import { useAuth } from '../../hooks/useAuth'
 import StatusBar from '../../components/StatusBar'
 import PatientEditModal from './PatientEditModal'
+import PatientQRManager from './PatientQRManager'
 import SignModal from './SignModal'
 import NachModal from './NachModal'
 import DetailsModal from './DetailsModal'
 import type { Patient, Nacherfassung, PatientPayload, NachForm } from './types'
 import { EMPTY_PAYLOAD, EMPTY_NACH, parsePayload, fmtDate } from './types'
 
-type Tab = 'patienten' | 'nach' | 'archiv' | 'audit'
+type Tab = 'patienten' | 'nach' | 'archiv' | 'audit' | 'qrcodes'
 
 interface AuditEntry {
   id: string
@@ -606,6 +607,18 @@ export default function Patienten() {
           </svg>
           <span>Audit-Log</span>
         </button>
+        {user?.supervisor && (
+          <button
+            className={`pat-tab-btn${activeTab === 'qrcodes' ? ' active' : ''}`}
+            onClick={() => setActiveTab('qrcodes')}
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+              <path d="M14 14h3v3h-3zM17 17h3M17 20h3M20 17v3"/>
+            </svg>
+            <span>QR-Codes</span>
+          </button>
+        )}
         <button
           className="pat-tab-btn primary"
           onClick={() => { setNachForm({ ...EMPTY_NACH }); setShowNach(true) }}
@@ -809,6 +822,11 @@ export default function Patienten() {
             ))}
           </>
           )
+        )}
+
+        {/* QR-CODES */}
+        {activeTab === 'qrcodes' && (
+          <PatientQRManager />
         )}
 
       </div>
