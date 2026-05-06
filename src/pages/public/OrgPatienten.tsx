@@ -181,6 +181,29 @@ export default function OrgPatienten() {
     <PubWrap>
       <OrgPatientenMannschaft orgId={org.id} orgCode={orgCode} onDraftCreated={(id, mann) => { setDraftId(id); setDraftMannschaft(mann) }} />
       <form ref={formRef} onChange={() => scheduleAutoSave()}>
+        {/* QR-Code für Rettungsdienst */}
+        <PubSection title="QR-Code für Rettungsdienst" icon={pik(<><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3h-3zM17 17h3M17 20h3M20 17v3"/></>)} open>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap' }}>
+            <div style={{ flex: 1, minWidth: 200 }}>
+              <label style={lbl}>
+                4-stelliger Code (vom Ausdruck)
+                <input
+                  style={{ ...inp, fontFamily: 'monospace', fontSize: 28, fontWeight: 800, letterSpacing: '0.25em', color: '#c0392b', maxWidth: 160, display: 'block', marginTop: 6 }}
+                  name="access_code"
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={4}
+                  placeholder="0000"
+                  pattern="[0-9]{4}"
+                />
+              </label>
+              <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 8, lineHeight: 1.5 }}>
+                Den QR-Code-Ausdruck vom Supervisor scannen lassen oder die Nummer manuell eingeben. Der Rettungsdienst kann das Protokoll 24 Stunden nach dem Absenden über diesen Code einsehen.
+              </div>
+            </div>
+          </div>
+        </PubSection>
+
         {/* Einsatzdaten */}
         <PubSection title="Einsatzdaten" open icon={pik(<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>)}>
           <div style={grid}>
