@@ -50,14 +50,44 @@ function CatSection({ label, items }: { label: string; items: [boolean | undefin
   )
 }
 
+type Status = 'loading' | 'auth' | 'valid' | 'expired' | 'notfound' | 'error' | 'locked'
+
+const MAX_ATTEMPTS = 5
+const attemptsKey = (c: string) => `dob_attempts_${c}`
+
+function getAttempts(c: string) {
+  try { return parseInt(localStorage.getItem(attemptsKey(c)) || '0', 10) } catch { return 0 }
+}
+function bumpAttempts(c: string) {
+  const n = getAttempts(c) + 1
+  try { localStorage.setItem(attemptsKey(c), String(n)) } catch {}
+  return n
+}
+function clearAttempts(c: string) {
+  try { localStorage.removeItem(attemptsKey(c)) } catch {}
+}
+function normDob(d: string) {
+  const s = d.trim()
+  // yyyy-mm-dd → dd.mm.yyyy
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+    const [y, m, day] = s.split('-')
+    return `${day}.${m}.${y}`
+  }
+  return s
+}
+
 export default function PatientView() {
   const { code } = useParams<{ code: string }>()
-  const [status, setStatus] = useState<'loading' | 'valid' | 'expired' | 'notfound' | 'error'>('loading')
+  const [status, setStatus] = useState<Status>('loading')
   const [p, setP] = useState<PatientPayload | null>(null)
   const [expiry, setExpiry] = useState<Date | null>(null)
+  const [dobInput, setDobInput] = useState('')
+  const [dobError, setDobError] = useState('')
+  const [attemptsLeft, setAttemptsLeft] = useState(MAX_ATTEMPTS)
 
   useEffect(() => {
     if (!code) { setStatus('notfound'); return }
+    if (getAttempts(code) >= MAX_ATTEMPTS) { setStatus('locked'); return }
     loadByCode(code)
   }, [code])
 
@@ -76,12 +106,37 @@ export default function PatientView() {
       if (new Date() > expires) { setStatus('expired'); return }
       setP(payload)
       setExpiry(expires)
-      setStatus('valid')
+      // If no DOB stored in record, skip auth gate
+      if (!payload.gebdatum) {
+        setStatus('valid')
+      } else {
+        setAttemptsLeft(MAX_ATTEMPTS - getAttempts(c))
+        setStatus('auth')
+      }
     } catch (e: any) {
       if (e?.status === 403 || e?.status === 401) {
         setStatus('error')
       } else {
         setStatus('notfound')
+      }
+    }
+  }
+
+  function verifyDob() {
+    if (!p || !code || !dobInput) return
+    const stored = normDob(p.gebdatum || '')
+    const entered = normDob(dobInput)
+    if (stored === entered) {
+      clearAttempts(code)
+      setStatus('valid')
+    } else {
+      const n = bumpAttempts(code)
+      const left = MAX_ATTEMPTS - n
+      if (left <= 0) {
+        setStatus('locked')
+      } else {
+        setDobError(`Falsches Geburtsdatum. Noch ${left} Versuch${left === 1 ? '' : 'e'}.`)
+        setAttemptsLeft(left)
       }
     }
   }
@@ -92,34 +147,79 @@ export default function PatientView() {
     </svg>
   )
 
-  if (status === 'loading') return (
-    <div style={{ minHeight: '100vh', background: '#f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div style={{ textAlign: 'center' }}>
-        <div style={{ width: 40, height: 40, border: '3px solid #e5e7eb', borderTopColor: '#667eea', borderRadius: '50%', animation: 'spin 0.7s linear infinite', margin: '0 auto 16px' }} />
-        <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
-        <div style={{ color: '#6b7280' }}>Lade Patientendaten…</div>
+  const centerCard = (children: React.ReactNode) => (
+    <div style={{ minHeight: '100vh', background: '#f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
+      <div style={{ background: '#fff', borderRadius: 16, padding: 40, maxWidth: 420, width: '100%', textAlign: 'center', boxShadow: '0 4px 24px rgba(0,0,0,0.08)' }}>
+        {children}
       </div>
     </div>
   )
 
-  if (status === 'expired') return (
-    <div style={{ minHeight: '100vh', background: '#f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
-      <div style={{ background: '#fff', borderRadius: 16, padding: 40, maxWidth: 400, textAlign: 'center', boxShadow: '0 4px 24px rgba(0,0,0,0.08)' }}>
-        <div style={{ fontSize: 48, marginBottom: 16 }}>🔒</div>
-        <h2 style={{ color: '#c0392b', margin: '0 0 8px' }}>Zugang gesperrt</h2>
-        <p style={{ color: '#6b7280', margin: 0 }}>Der 24-Stunden-Zugang für dieses Protokoll ist abgelaufen.</p>
-      </div>
-    </div>
+  if (status === 'loading') return centerCard(
+    <>
+      <div style={{ width: 40, height: 40, border: '3px solid #e5e7eb', borderTopColor: '#c0392b', borderRadius: '50%', animation: 'spin 0.7s linear infinite', margin: '0 auto 16px' }} />
+      <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
+      <div style={{ color: '#6b7280' }}>Lade Patientendaten…</div>
+    </>
   )
 
-  if (status === 'notfound' || status === 'error') return (
-    <div style={{ minHeight: '100vh', background: '#f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
-      <div style={{ background: '#fff', borderRadius: 16, padding: 40, maxWidth: 400, textAlign: 'center', boxShadow: '0 4px 24px rgba(0,0,0,0.08)' }}>
-        <div style={{ fontSize: 48, marginBottom: 16 }}>❌</div>
-        <h2 style={{ color: '#111827', margin: '0 0 8px' }}>Nicht gefunden</h2>
-        <p style={{ color: '#6b7280', margin: 0 }}>Dieser Code ist ungültig oder das Protokoll existiert nicht.</p>
-      </div>
-    </div>
+  if (status === 'auth') return centerCard(
+    <>
+      <div style={{ fontSize: 40, marginBottom: 12 }}>🔐</div>
+      <h2 style={{ color: '#111827', margin: '0 0 6px', fontSize: '1.2rem' }}>Zugang bestätigen</h2>
+      <p style={{ color: '#6b7280', margin: '0 0 24px', fontSize: 14, lineHeight: 1.5 }}>
+        Bitte Geburtsdatum des Patienten eingeben um das Protokoll einzusehen.
+      </p>
+      <input
+        type="date"
+        value={dobInput}
+        onChange={e => { setDobInput(e.target.value); setDobError('') }}
+        onKeyDown={e => e.key === 'Enter' && verifyDob()}
+        style={{ width: '100%', padding: '12px 14px', border: `1.5px solid ${dobError ? '#c0392b' : '#e5e7eb'}`, borderRadius: 10, fontSize: 16, fontFamily: 'inherit', boxSizing: 'border-box', marginBottom: 8, outline: 'none' }}
+        autoFocus
+      />
+      {dobError && (
+        <div style={{ color: '#c0392b', fontSize: 13, marginBottom: 12, fontWeight: 600 }}>{dobError}</div>
+      )}
+      {!dobError && (
+        <div style={{ color: '#9ca3af', fontSize: 12, marginBottom: 12 }}>
+          {attemptsLeft} von {MAX_ATTEMPTS} Versuchen verbleibend
+        </div>
+      )}
+      <button
+        onClick={verifyDob}
+        disabled={!dobInput}
+        style={{ width: '100%', padding: '12px', background: dobInput ? '#c0392b' : '#e5e7eb', color: dobInput ? '#fff' : '#9ca3af', border: 'none', borderRadius: 10, fontWeight: 700, fontSize: 15, cursor: dobInput ? 'pointer' : 'not-allowed', fontFamily: 'inherit' }}
+      >
+        Zugang öffnen
+      </button>
+    </>
+  )
+
+  if (status === 'locked') return centerCard(
+    <>
+      <div style={{ fontSize: 48, marginBottom: 16 }}>🔒</div>
+      <h2 style={{ color: '#c0392b', margin: '0 0 8px' }}>Zugang gesperrt</h2>
+      <p style={{ color: '#6b7280', margin: 0, fontSize: 14 }}>
+        Zu viele Fehleingaben. Bitte einsatzkräfte der Organisation kontaktieren.
+      </p>
+    </>
+  )
+
+  if (status === 'expired') return centerCard(
+    <>
+      <div style={{ fontSize: 48, marginBottom: 16 }}>⏱</div>
+      <h2 style={{ color: '#c0392b', margin: '0 0 8px' }}>Zugang abgelaufen</h2>
+      <p style={{ color: '#6b7280', margin: 0, fontSize: 14 }}>Der 24-Stunden-Zugang für dieses Protokoll ist abgelaufen.</p>
+    </>
+  )
+
+  if (status === 'notfound' || status === 'error') return centerCard(
+    <>
+      <div style={{ fontSize: 48, marginBottom: 16 }}>❌</div>
+      <h2 style={{ color: '#111827', margin: '0 0 8px' }}>Nicht gefunden</h2>
+      <p style={{ color: '#6b7280', margin: 0, fontSize: 14 }}>Dieser Code ist ungültig oder das Protokoll existiert nicht.</p>
+    </>
   )
 
   if (!p) return null
