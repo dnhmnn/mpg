@@ -1,3 +1,5 @@
+import { useState, useEffect } from 'react'
+import QRCode from 'qrcode'
 import type { PatientPayload, Medication, VitalRow } from './types'
 import { calcGCS } from './types'
 
@@ -73,6 +75,22 @@ function CbRow({ children }: { children: React.ReactNode }) {
 
 export default function PatientEditModal({ payload, setP, onClose, onSaveAndSign }: Props) {
   const p = payload
+  const [showQR, setShowQR] = useState(false)
+  const [qrDataUrl, setQrDataUrl] = useState('')
+
+  useEffect(() => {
+    if (p.access_code) {
+      const url = `${window.location.origin}/p/${p.access_code}`
+      QRCode.toDataURL(url, { width: 300, margin: 2, color: { dark: '#000', light: '#fff' } })
+        .then(setQrDataUrl)
+    }
+  }, [p.access_code])
+
+  function generateCode() {
+    const code = String(Math.floor(1000 + Math.random() * 9000))
+    setP('access_code', code)
+    setP('access_code_created', new Date().toISOString())
+  }
 
   const EMPTY_VROW: VitalRow = { zeit:'', rr_sys:'', rr_dia:'', hf:'', spo2:'', af:'', temp:'', bz:'', etco2:'', schmerz:'', o2:'', bemerkung:'' }
   function addVRow() { setP('verlauf', [...(p.verlauf||[]), {...EMPTY_VROW}]) }
@@ -126,7 +144,48 @@ export default function PatientEditModal({ payload, setP, onClose, onSaveAndSign
               <Field label="Mannschaft 2"><Inp value={p.mannschaft_2||''} onChange={v => setP('mannschaft_2', v)} /></Field>
               <Field label="Mannschaft 3"><Inp value={p.mannschaft_3||''} onChange={v => setP('mannschaft_3', v)} /></Field>
             </Row2>
+
+            {/* QR-Code für Rettungsdienst */}
+            <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '10px', padding: '12px', marginTop: '8px' }}>
+              <div style={{ fontWeight: 600, fontSize: '13px', marginBottom: '8px' }}>QR-Code für Rettungsdienst</div>
+              {p.access_code ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                  <div style={{ fontFamily: 'monospace', fontSize: '28px', fontWeight: 700, letterSpacing: '0.2em', color: '#c0392b' }}>{p.access_code}</div>
+                  <div style={{ flex: 1, minWidth: 120 }}>
+                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Gültig für 24 Stunden ab Erstellung</div>
+                    {p.access_code_created && (
+                      <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: 2 }}>
+                        Erstellt: {new Date(p.access_code_created).toLocaleString('de-DE')}
+                      </div>
+                    )}
+                  </div>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <button type="button" onClick={() => setShowQR(true)} style={{ padding: '8px 12px', background: '#007aff', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 600, fontSize: '13px', cursor: 'pointer' }}>QR anzeigen</button>
+                    <button type="button" onClick={generateCode} style={{ padding: '8px 12px', background: 'var(--bg-secondary)', color: 'var(--text)', border: 'none', borderRadius: '8px', fontWeight: 600, fontSize: '13px', cursor: 'pointer' }}>Neu generieren</button>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{ fontSize: '13px', color: 'var(--text-secondary)', flex: 1 }}>Noch kein Code. Generiere einen 4-stelligen Code für den Rettungsdienst.</div>
+                  <button type="button" onClick={generateCode} style={{ padding: '10px 16px', background: '#c0392b', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 600, fontSize: '13px', cursor: 'pointer', whiteSpace: 'nowrap' }}>Code generieren</button>
+                </div>
+              )}
+            </div>
           </Section>
+
+          {/* QR Modal */}
+          {showQR && p.access_code && (
+            <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }} onClick={() => setShowQR(false)}>
+              <div style={{ background: '#fff', borderRadius: '20px', padding: '32px', maxWidth: '360px', width: '100%', textAlign: 'center' }} onClick={e => e.stopPropagation()}>
+                <div style={{ fontSize: '13px', fontWeight: 700, color: '#333', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Rettungsdienst-Zugang</div>
+                <div style={{ fontFamily: 'monospace', fontSize: '36px', fontWeight: 800, letterSpacing: '0.3em', color: '#c0392b', margin: '8px 0' }}>{p.access_code}</div>
+                {qrDataUrl && <img src={qrDataUrl} alt="QR Code" style={{ width: '220px', height: '220px', display: 'block', margin: '0 auto 12px' }} />}
+                <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>Scan → Formular einsehen (24h)</div>
+                <div style={{ fontFamily: 'monospace', fontSize: '11px', color: '#999', wordBreak: 'break-all', marginBottom: '16px' }}>{window.location.origin}/p/{p.access_code}</div>
+                <button onClick={() => setShowQR(false)} style={{ padding: '10px 24px', background: '#222', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 600, cursor: 'pointer' }}>Schließen</button>
+              </div>
+            </div>
+          )}
 
           <Section title="Patientenstammdaten">
             <Row2>

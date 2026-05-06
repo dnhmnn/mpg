@@ -219,6 +219,10 @@ export default function Patienten() {
     const doc = await pb.collection(col).getOne(id)
     setDetailsDoc(doc as unknown as Patient | Nacherfassung)
     setDetailsType(type)
+    if (type === 'patient') {
+      setCurrentPatient(doc as unknown as Patient)
+      setPayload(parsePayload((doc as any).payload))
+    }
     setShowDetails(true)
     const title = type === 'patient'
       ? (() => { const p = parsePayload((doc as any).payload); return [p.name, p.vorname].filter(Boolean).join(' ') || (doc as any).title || 'Unbekannt' })()
@@ -664,7 +668,7 @@ export default function Patienten() {
                           <button className="pat-btn" onClick={() => openDetails(pat.id, 'patient')}>Ansehen</button>
                         </>
                       ) : (
-                        <button className="pat-btn" onClick={() => openEdit(pat)}>Bearbeiten</button>
+                        <button className="pat-btn" onClick={() => openDetails(pat.id, 'patient')}>Bearbeiten</button>
                       )}
                     </div>
                   </div>
@@ -819,7 +823,14 @@ export default function Patienten() {
         <NachModal form={nachForm} setN={setN} onClose={() => setShowNach(false)} onSave={saveNach} />
       )}
       {showDetails && detailsDoc && (
-        <DetailsModal doc={detailsDoc} type={detailsType} onClose={() => setShowDetails(false)} />
+        <DetailsModal
+          doc={detailsDoc}
+          type={detailsType}
+          onClose={() => setShowDetails(false)}
+          onEdit={detailsType === 'patient' && currentPatient && (currentPatient as any).status !== 'archiviert'
+            ? () => { setShowDetails(false); setShowEdit(true) }
+            : undefined}
+        />
       )}
     </>
   )
