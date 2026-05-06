@@ -118,6 +118,7 @@ export interface PatientPayload {
   ev_transport_sondersignal?: boolean; ev_zwangseinweisung?: boolean; ev_transportverweigerung?: boolean
   ev_nur_untersuchung?: boolean; ev_manv?: boolean; ev_lna?: boolean; ev_schwerlast?: boolean
   signature?: string; photos?: string[]
+  access_code?: string; access_code_created?: string
 }
 
 export interface Patient {

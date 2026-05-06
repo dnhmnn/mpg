@@ -23,10 +23,10 @@ export function PubWrap({ children }: { children: React.ReactNode }) {
   return <div style={{ maxWidth: 1100, margin: '0 auto', padding: '1rem 1rem 100px' }}>{children}</div>
 }
 
-export function PubSection({ title, open, children }: { title: string; open?: boolean; children: React.ReactNode }) {
+export function PubSection({ title, open, children, icon }: { title: string; open?: boolean; children: React.ReactNode; icon?: React.ReactNode }) {
   return (
     <details open={open} style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '.75rem', marginBottom: '.8rem', overflow: 'hidden' }}>
-      <summary style={{ listStyle: 'none', padding: '.9rem 1rem', cursor: 'pointer', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '.6rem', fontSize: '1rem' }}>{title}</summary>
+      <summary style={{ listStyle: 'none', padding: '.9rem 1rem', cursor: 'pointer', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '.6rem', fontSize: '1rem' }}>{icon}{title}</summary>
       <div style={{ padding: '1rem' }}>{children}</div>
     </details>
   )

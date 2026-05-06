@@ -6,6 +6,7 @@ interface Props {
   doc: Patient | Nacherfassung
   type: 'patient' | 'nach'
   onClose: () => void
+  onEdit?: () => void
 }
 
 const pik = (ch: React.ReactNode, sz = 18) => (
@@ -59,7 +60,7 @@ function CatSection({ label, items }: { label: string; items: [boolean | undefin
   )
 }
 
-export default function DetailsModal({ doc, type, onClose }: Props) {
+export default function DetailsModal({ doc, type, onClose, onEdit }: Props) {
   function printDoc() {
     const w = window.open('', '_blank', 'width=1000,height=750')
     if (!w) return
@@ -367,10 +368,18 @@ export default function DetailsModal({ doc, type, onClose }: Props) {
           <h1 style={{ flex: 1, textAlign: 'center', fontSize: '1rem', fontWeight: 700, color: 'var(--text)', margin: 0 }}>
             {isPatient ? 'Patientendokumentation' : 'Nacherfassung'}
           </h1>
-          <button onClick={printDoc} style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'transparent', border: 'none', color: 'var(--accent)', fontWeight: 600, fontSize: 14, cursor: 'pointer', padding: '8px 0', fontFamily: 'inherit', flexShrink: 0 }}>
-            {pik(<><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></>)}
-            PDF
-          </button>
+          <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+            {onEdit && (
+              <button onClick={onEdit} style={{ display: 'flex', alignItems: 'center', gap: 4, background: '#c0392b', border: 'none', color: '#fff', fontWeight: 600, fontSize: 14, cursor: 'pointer', padding: '6px 12px', borderRadius: 8, fontFamily: 'inherit' }}>
+                {pik(<><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></>, 16)}
+                Bearbeiten
+              </button>
+            )}
+            <button onClick={printDoc} style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'transparent', border: 'none', color: 'var(--accent)', fontWeight: 600, fontSize: 14, cursor: 'pointer', padding: '8px 0', fontFamily: 'inherit' }}>
+              {pik(<><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></>)}
+              PDF
+            </button>
+          </div>
         </div>
       </header>
 
@@ -400,11 +409,30 @@ export default function DetailsModal({ doc, type, onClose }: Props) {
 
             <PubSection title="Mannschaft" icon={pik(<><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></>)}>
               <Grid>
-                <F label="Teamführer" value={p.mannschaft?.tf?.name || p.mannschaft_tf} />
-                <F label="Mannschaft 1" value={p.mannschaft?.m1?.name || p.mannschaft_1} />
-                <F label="Mannschaft 2" value={p.mannschaft?.m2?.name || p.mannschaft_2} />
-                <F label="Mannschaft 3" value={p.mannschaft?.m3?.name || p.mannschaft_3} />
+                <F label="Teamführer" value={p.mannschaft_tf} />
+                <F label="Mannschaft 1" value={p.mannschaft_1} />
+                <F label="Mannschaft 2" value={p.mannschaft_2} />
+                <F label="Mannschaft 3" value={p.mannschaft_3} />
               </Grid>
+              {p.access_code && (() => {
+                const created = p.access_code_created ? new Date(p.access_code_created) : null
+                const expires = created ? new Date(created.getTime() + 24 * 60 * 60 * 1000) : null
+                const valid = expires ? new Date() < expires : false
+                return (
+                  <div style={{ marginTop: 10, padding: '10px 14px', background: valid ? '#f0fdf4' : '#fef3c7', border: `1px solid ${valid ? '#bbf7d0' : '#fbbf24'}`, borderRadius: 10, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                    <div>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: valid ? '#166534' : '#92400e', textTransform: 'uppercase', letterSpacing: '0.05em' }}>QR-Zugang Rettungsdienst</div>
+                      <div style={{ fontFamily: 'monospace', fontSize: 24, fontWeight: 800, letterSpacing: '0.2em', color: '#c0392b' }}>{p.access_code}</div>
+                      <div style={{ fontSize: 11, color: valid ? '#166534' : '#92400e' }}>
+                        {valid ? `Gültig bis ${expires?.toLocaleString('de-DE')}` : 'Abgelaufen'}
+                      </div>
+                    </div>
+                    <a href={`/p/${p.access_code}`} target="_blank" rel="noreferrer" style={{ marginLeft: 'auto', padding: '6px 12px', background: valid ? '#166534' : '#92400e', color: '#fff', borderRadius: 8, fontSize: 12, fontWeight: 700, textDecoration: 'none' }}>
+                      Link öffnen ↗
+                    </a>
+                  </div>
+                )
+              })()}
             </PubSection>
 
             <PubSection title="Pat-Stammdaten" open icon={pik(<><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></>)}>
@@ -486,7 +514,7 @@ export default function DetailsModal({ doc, type, onClose }: Props) {
               </Grid>
               <div style={{ marginTop: 8 }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>Atmung</div>
-                <Tags items={[[p.atm_apnoe,'Apnoe'],[p.atm_stridor,'Stridor'],[p.atm_dyspnoe,'Dyspnoe'],[p.atm_zyanose,'Zyanose'],[p.atm_beatmung,'Beatmung'],[p.atm_verlegung,'Atemwegsverlegung']]} />
+                <Tags items={[[p.atm_apnoe,'Apnoe'],[p.atm_stridor,'Stridor'],[p.atm_dyspnoe,'Dyspnoe'],[p.atm_zyanose,'Zyanose']]} />
               </div>
               <div style={{ marginTop: 8 }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>O₂-Gabe</div>
@@ -530,7 +558,7 @@ export default function DetailsModal({ doc, type, onClose }: Props) {
             </PubSection>
 
             <PubSection title="Rhythmus / EKG" icon={pik(<path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>)}>
-              <Tags items={[[p.sr,'Sinusrhythmus'],[p.stemi,'STEMI'],[p.vf,'Kammerflimmern'],[p.asystole,'Asystolie'],[p.arrh_abs,'Abs. Arrhythmie']]} />
+              <Tags items={[[p.sr,'Sinusrhythmus'],[p.stemi,'STEMI'],[p.vf,'Kammerflimmern'],[p.asystole,'Asystolie']]} />
               <Grid>
                 <F label="EKG Standort" value={p.ekg_standort} />
                 <F label="Pers-Nr." value={p.ekg_persnr} />

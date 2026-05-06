@@ -18,6 +18,7 @@ import OrgLanding from './pages/public/OrgLanding'
 import OrgPatienten from './pages/public/OrgPatienten'
 import OrgProduktausgabe from './pages/public/OrgProduktausgabe'
 import OrgCirs from './pages/public/OrgCirs'
+import PatientView from './pages/public/PatientView'
 import './styles/globals.css'
 import { applyTheme, getTheme } from './lib/theme'
 
@@ -40,6 +41,7 @@ function App() {
         <Route path="/unitas" element={<Unitas />} />
         <Route path="/unitarii" element={<Unitarii />} />
         <Route path="/patienten" element={<Patienten />} />
+        <Route path="/p/:code" element={<PatientView />} />
         <Route path="/chat" element={<Chat />} />
         <Route path="/:orgCode" element={<OrgPublicLayout />}>
           <Route index element={<OrgLanding />} />
