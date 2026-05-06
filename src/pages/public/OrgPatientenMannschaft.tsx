@@ -13,10 +13,17 @@ const FIELDS: { key: Pos; label: string }[] = [
   { key: 'm3', label: 'Mannschaft 3' },
 ]
 
-const icon = (
+const iconMannschaft = (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/>
     <path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/>
+  </svg>
+)
+
+const iconQR = (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+    <path d="M14 14h3v3h-3zM17 17h3v3h-3zM14 20h3"/>
   </svg>
 )
 
@@ -26,6 +33,8 @@ function UserSearch({ label, orgId, value, onChange }: {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<UserHit[]>([])
   const [open, setOpen] = useState(false)
+  const [manualMode, setManualMode] = useState(false)
+  const [manualName, setManualName] = useState('')
   const timer = useRef<ReturnType<typeof setTimeout>>()
   const ref = useRef<HTMLDivElement>(null)
 
@@ -37,6 +46,13 @@ function UserSearch({ label, orgId, value, onChange }: {
     return () => document.removeEventListener('mousedown', onClick)
   }, [])
 
+  function confirmManual() {
+    if (!manualName.trim()) return
+    onChange({ id: '', name: manualName.trim(), email: '' })
+    setManualName('')
+    setManualMode(false)
+  }
+
   function onInput(q: string) {
     setQuery(q)
     clearTimeout(timer.current)
@@ -44,13 +60,16 @@ function UserSearch({ label, orgId, value, onChange }: {
     timer.current = setTimeout(async () => {
       try {
         const res = await pb.collection('users').getList(1, 8, {
-          filter: `organization_id = "${orgId}" && name = "${q.trim()}"`,
+          filter: `organization_id = "${orgId}" && name ~ "${q.trim()}"`,
           sort: 'name',
         })
         setResults(res.items.map(u => ({ id: u.id, name: u.name, email: u.email })))
         setOpen(true)
       } catch {
+        // Auth not available (e.g. private tab) — fall back to manual text entry
         setResults([])
+        setOpen(false)
+        setManualMode(true)
       }
     }, 350)
   }
@@ -60,6 +79,29 @@ function UserSearch({ label, orgId, value, onChange }: {
     setQuery('')
     setResults([])
     setOpen(false)
+  }
+
+  if (manualMode && !value) {
+    return (
+      <div>
+        <label style={lbl}>{label}</label>
+        <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
+          <input
+            style={{ ...inp, flex: 1, margin: 0 }}
+            type="text"
+            value={manualName}
+            onChange={e => setManualName(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), confirmManual())}
+            placeholder="Name eingeben…"
+            autoFocus
+          />
+          <button type="button" onClick={confirmManual}
+            style={{ background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: 10, padding: '0 14px', fontWeight: 700, cursor: 'pointer', fontSize: 14, fontFamily: 'inherit' }}>
+            OK
+          </button>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -115,6 +157,7 @@ export default function OrgPatientenMannschaft({
   orgId: string; orgCode: string; onDraftCreated: (id: string, mannschaft: Record<string, { id: string; name: string } | null>) => void
 }) {
   const [sel, setSel] = useState<Record<Pos, Selection>>({ tf: null, m1: null, m2: null, m3: null })
+  const [qrCode, setQrCode] = useState('')
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [offlineMsg, setOfflineMsg] = useState('')
@@ -129,9 +172,15 @@ export default function OrgPatientenMannschaft({
     const mannschaft = Object.fromEntries(
       FIELDS.map(f => [f.key, sel[f.key] ? { id: sel[f.key]!.id, name: sel[f.key]!.name } : null])
     )
+    const payload: Record<string, unknown> = { mannschaft }
+    if (qrCode.trim().length === 4) {
+      payload.access_code = qrCode.trim()
+      payload.access_code_created = new Date().toISOString()
+    }
+
     if (!navigator.onLine) {
       const queue = JSON.parse(localStorage.getItem(`offline_queue_${orgCode}`) || '[]')
-      queue.push({ type: 'draft', payload: { mannschaft }, status: 'offen', organization_id: orgId })
+      queue.push({ type: 'draft', payload, status: 'offen', organization_id: orgId })
       localStorage.setItem(`offline_queue_${orgCode}`, JSON.stringify(queue))
       setSaved(true)
       setOfflineMsg('Offline gespeichert – wird beim nächsten Öffnen dieser Seite automatisch übermittelt.')
@@ -141,7 +190,7 @@ export default function OrgPatientenMannschaft({
     try {
       const rec = await pb.collection('patients').create({
         title: `Entwurf – ${new Date().toLocaleDateString('de-DE')}`,
-        payload: { mannschaft },
+        payload,
         status: 'offen',
         organization_id: orgId,
       })
@@ -157,7 +206,7 @@ export default function OrgPatientenMannschaft({
   return (
     <div style={{ background: 'var(--bg-card)', backdropFilter: 'blur(40px)', WebkitBackdropFilter: 'blur(40px)', border: '0.5px solid var(--border)', borderRadius: 16, marginBottom: '.75rem', overflow: 'hidden', boxShadow: 'var(--shadow-sm)' }}>
       <div style={{ padding: '.9rem 1rem', fontWeight: 700, fontSize: '1rem', color: 'var(--text)', borderBottom: '0.5px solid var(--border)', display: 'flex', alignItems: 'center', gap: '.6rem' }}>
-        {icon} Mannschaft
+        {iconMannschaft} Mannschaft
       </div>
       <div style={{ padding: '1rem' }}>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: '1rem', marginBottom: '1rem' }}>
@@ -165,6 +214,27 @@ export default function OrgPatientenMannschaft({
             <UserSearch key={f.key} label={f.label} orgId={orgId} value={sel[f.key]} onChange={u => set(f.key, u)} />
           ))}
         </div>
+
+        {/* QR-Code */}
+        <div style={{ borderTop: '0.5px solid var(--border)', paddingTop: '1rem', marginBottom: '1rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem', marginBottom: '.5rem', fontWeight: 600, fontSize: '.9rem', color: 'var(--text)' }}>
+            {iconQR} QR-Code für Rettungsdienst
+          </div>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <input
+              style={{ ...inp, width: 100, letterSpacing: '0.2em', fontWeight: 700, fontSize: '1.1rem', textAlign: 'center', margin: 0 }}
+              type="text"
+              inputMode="numeric"
+              maxLength={4}
+              placeholder="0000"
+              pattern="[0-9]{4}"
+              value={qrCode}
+              onChange={e => setQrCode(e.target.value.replace(/\D/g, '').slice(0, 4))}
+            />
+            <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>4-stellige Nummer vom QR-Label</span>
+          </div>
+        </div>
+
         {offlineMsg && (
           <div style={{ background: '#fef9c3', border: '0.5px solid #eab308', borderRadius: 8, padding: '8px 12px', fontSize: '.85rem', color: '#854d0e', marginBottom: '.75rem' }}>
             {offlineMsg}
