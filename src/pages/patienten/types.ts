@@ -22,6 +22,7 @@ export interface PatientPayload {
   zeit_eintreffen?: string; zeit_transport?: string; zeit_uebergabe?: string
   transport_ziel?: string
   mannschaft_tf?: string; mannschaft_1?: string; mannschaft_2?: string; mannschaft_3?: string
+  mannschaft?: Record<string, { id?: string; name?: string; persnr?: string } | null>
   name?: string; vorname?: string; gebdatum?: string; alter?: string
   telefon?: string; mobil?: string; strasse?: string; plz_ort?: string
   kasse?: string; versnr?: string; hausarzt?: string; angehoeriger?: string; infos?: string
@@ -119,6 +120,8 @@ export interface PatientPayload {
   ev_nur_untersuchung?: boolean; ev_manv?: boolean; ev_lna?: boolean; ev_schwerlast?: boolean
   signature?: string; photos?: string[]
   access_code?: string; access_code_created?: string
+  dauermedikation?: { name?: string; pzn?: string; handelsname?: string }[]
+  rueckfragen?: { id: string; frage: string; antwort?: string; status: 'offen' | 'beantwortet'; created: string }[]
 }
 
 export interface Patient {
@@ -244,7 +247,9 @@ export const EMPTY_PAYLOAD: PatientPayload = {
   uebergabe_ziel: '', uebergabe_name: '', bemerkungen: '',
   ev_transport_sondersignal: false, ev_zwangseinweisung: false, ev_transportverweigerung: false,
   ev_nur_untersuchung: false, ev_manv: false, ev_lna: false, ev_schwerlast: false,
-  signature: '', photos: []
+  signature: '', photos: [],
+  dauermedikation: [],
+  rueckfragen: [],
 }
 
 export const EMPTY_NACH: NachForm = {

@@ -1,90 +1,66 @@
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import QRCode from 'qrcode'
-import type { PatientPayload, Medication, VitalRow } from './types'
-import { calcGCS } from './types'
+import type { Patient, PatientPayload, Medication, VitalRow } from './types'
+import { PubSection, inp, sel, ta, field, lbl } from '../public/pubStyles'
+import { pb } from '../../lib/pocketbase'
+
+interface RQ { id: string; frage: string; antwort?: string; status: 'offen' | 'beantwortet'; created: string }
 
 interface Props {
+  patient: Patient
   payload: PatientPayload
+  original: PatientPayload
   setP: <K extends keyof PatientPayload>(key: K, value: PatientPayload[K]) => void
   onClose: () => void
   onSaveAndSign: () => void
+  onRefresh: () => void
 }
 
-const s = {
-  modal: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'flex-end', zIndex: 1000 } as React.CSSProperties,
-  box: { background: 'var(--bg-card)', borderRadius: '18px 18px 0 0', width: '100%', maxHeight: '88vh', display: 'flex', flexDirection: 'column' as const },
-  header: { padding: '16px 20px 0', flexShrink: 0 },
-  body: { overflowY: 'auto' as const, flex: 1, padding: '0 20px 8px' },
-  footer: { padding: '12px 20px calc(16px + env(safe-area-inset-bottom))', display: 'flex', gap: '10px', flexShrink: 0, background: 'var(--bg-card)', borderTop: '1px solid var(--border)' },
-  btnP: { flex: 1, padding: '12px', background: '#c0392b', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 600, fontSize: '15px', cursor: 'pointer' } as React.CSSProperties,
-  btnS: { flex: 1, padding: '12px', background: 'var(--bg-secondary)', color: 'var(--text)', border: 'none', borderRadius: '10px', fontWeight: 600, fontSize: '15px', cursor: 'pointer' } as React.CSSProperties,
+const CH: React.CSSProperties = { background: '#fffbeb', borderColor: '#f59e0b' }
+const pil: React.CSSProperties = {
+  display: 'inline-flex', alignItems: 'center', border: '0.5px solid var(--border-medium)',
+  borderRadius: 999, padding: '.15rem .6rem', background: 'var(--bg-subtle)',
+  fontSize: 13, color: 'var(--text)', margin: '2px 2px 2px 0',
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div style={{ marginBottom: '10px' }}>
-      <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, opacity: 0.6, marginBottom: '4px' }}>{label}</label>
-      {children}
-    </div>
-  )
-}
-
-function Inp({ value, onChange, type = 'text', placeholder = '' }: { value: string; onChange: (v: string) => void; type?: string; placeholder?: string }) {
-  return (
-    <input type={type} value={value || ''} onChange={e => onChange(e.target.value)} placeholder={placeholder}
-      style={{ width: '100%', padding: '8px 10px', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '14px', background: 'var(--bg)', color: 'var(--text)', boxSizing: 'border-box' }} />
-  )
-}
-
-function Cb({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
-  return (
-    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px', cursor: 'pointer', marginRight: '12px' }}>
-      <input type="checkbox" checked={!!checked} onChange={e => onChange(e.target.checked)} />
-      {label}
-    </label>
-  )
-}
-
-function Radio({ name, value, current, onChange, label }: { name: string; value: string; current: string; onChange: (v: string) => void; label: string; key?: string }) {
-  return (
-    <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '14px', cursor: 'pointer', marginRight: '10px' }}>
-      <input type="radio" name={name} value={value} checked={current === value} onChange={() => onChange(value)} />
-      {label}
-    </label>
-  )
-}
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <details style={{ marginBottom: '12px' }} open>
-      <summary style={{ fontWeight: 700, fontSize: '14px', cursor: 'pointer', padding: '8px 0', borderBottom: '1px solid var(--border)', marginBottom: '10px', listStyle: 'none', display: 'flex', justifyContent: 'space-between' }}>
-        {title} <span style={{ opacity: 0.4, fontSize: '12px' }}>▼</span>
-      </summary>
-      {children}
-    </details>
-  )
-}
-
-function Row2({ children }: { children: React.ReactNode }) {
-  return <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 12px' }}>{children}</div>
-}
-
-function CbRow({ children }: { children: React.ReactNode }) {
-  return <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 0', marginBottom: '8px' }}>{children}</div>
-}
-
-export default function PatientEditModal({ payload, setP, onClose, onSaveAndSign }: Props) {
-  const p = payload
+export default function PatientEditModal({ patient, payload: p, original, setP, onClose, onSaveAndSign, onRefresh }: Props) {
+  const [newFrage, setNewFrage] = useState('')
+  const [sendingFrage, setSendingFrage] = useState(false)
   const [showQR, setShowQR] = useState(false)
   const [qrDataUrl, setQrDataUrl] = useState('')
 
   useEffect(() => {
     if (p.access_code) {
-      const url = `${window.location.origin}/p/${p.access_code}`
-      QRCode.toDataURL(url, { width: 300, margin: 2, color: { dark: '#000', light: '#fff' } })
-        .then(setQrDataUrl)
+      QRCode.toDataURL(`${window.location.origin}/p/${p.access_code}`, { width: 300, margin: 2 }).then(setQrDataUrl)
     }
   }, [p.access_code])
+
+  const hl  = (k: keyof PatientPayload): React.CSSProperties =>
+    JSON.stringify((original as any)[k]) !== JSON.stringify((p as any)[k]) ? CH : {}
+  const H   = (k: keyof PatientPayload) => ({ ...inp, ...hl(k) })
+  const HS  = (k: keyof PatientPayload) => ({ ...sel, ...hl(k) })
+  const HT  = (k: keyof PatientPayload) => ({ ...ta,  ...hl(k) })
+  const hlCb = (k: keyof PatientPayload): React.CSSProperties =>
+    (original as any)[k] !== (p as any)[k]
+      ? { accentColor: '#f59e0b', outline: '2px solid #fcd34d', borderRadius: 3 } : {}
+
+  const rueckfragen: RQ[] = Array.isArray(p.rueckfragen) ? (p.rueckfragen as RQ[]) : []
+  const openRQ     = rueckfragen.filter(r => r.status === 'offen').length
+  const answeredRQ = rueckfragen.filter(r => r.status === 'beantwortet').length
+
+  async function sendRueckfrage() {
+    if (!newFrage.trim() || sendingFrage) return
+    setSendingFrage(true)
+    try {
+      const rq: RQ = { id: Date.now().toString(), frage: newFrage.trim(), status: 'offen', created: new Date().toISOString() }
+      const updated = [...rueckfragen, rq]
+      setP('rueckfragen', updated as any)
+      await pb.collection('patients').update(patient.id, { payload: { ...p, rueckfragen: updated } })
+      setNewFrage('')
+      onRefresh()
+    } catch (e: any) { alert('Fehler: ' + e.message) }
+    finally { setSendingFrage(false) }
+  }
 
   function generateCode() {
     const code = String(Math.floor(1000 + Math.random() * 9000))
@@ -92,700 +68,718 @@ export default function PatientEditModal({ payload, setP, onClose, onSaveAndSign
     setP('access_code_created', new Date().toISOString())
   }
 
-  const EMPTY_VROW: VitalRow = { zeit:'', rr_sys:'', rr_dia:'', hf:'', spo2:'', af:'', temp:'', bz:'', etco2:'', schmerz:'', o2:'', bemerkung:'' }
-  function addVRow() { setP('verlauf', [...(p.verlauf||[]), {...EMPTY_VROW}]) }
-  function updateVRow(i: number, key: keyof VitalRow, value: string) {
-    const rows = [...(p.verlauf||[])]
-    rows[i] = { ...rows[i], [key]: value }
-    setP('verlauf', rows)
+  const EMPTYV: VitalRow = { zeit: '', rr_sys: '', rr_dia: '', hf: '', spo2: '', af: '', temp: '', bz: '', etco2: '', schmerz: '', o2: '', bemerkung: '' }
+  function addV() { setP('verlauf', [...(p.verlauf || []), { ...EMPTYV }]) }
+  function upV(i: number, k: keyof VitalRow, v: string) {
+    const rows = [...(p.verlauf || [])]; rows[i] = { ...rows[i], [k]: v }; setP('verlauf', rows)
   }
-  function removeVRow(i: number) { setP('verlauf', (p.verlauf||[]).filter((_,j)=>j!==i)) }
+  function rmV(i: number) { setP('verlauf', (p.verlauf || []).filter((_, j) => j !== i)) }
 
-  function addMed() {
-    setP('medications', [...(p.medications || []), { name: '', dose: '', unit: '', route: '', time: '', note: '' }])
+  function addMed() { setP('medications', [...(p.medications || []), { name: '', dose: '', unit: '', route: '', time: '', note: '' }]) }
+  function upMed(i: number, k: keyof Medication, v: string) {
+    const meds = [...(p.medications || [])]; meds[i] = { ...meds[i], [k]: v }; setP('medications', meds)
   }
-  function updateMed(i: number, key: keyof Medication, value: string) {
-    const meds = [...(p.medications || [])]
-    meds[i] = { ...meds[i], [key]: value }
-    setP('medications', meds)
+  function rmMed(i: number) { setP('medications', (p.medications || []).filter((_, j) => j !== i)) }
+
+  function F({ l, children }: { l: string; children: React.ReactNode }) {
+    return <div style={field}><label style={lbl}>{l}</label>{children}</div>
   }
-  function removeMed(i: number) {
-    setP('medications', (p.medications || []).filter((_, j) => j !== i))
+  function G2({ children }: { children: React.ReactNode }) {
+    return <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 12px' }}>{children}</div>
   }
+  function Cb({ k, label }: { k: keyof PatientPayload; label: string }) {
+    return (
+      <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, cursor: 'pointer', marginRight: 12, marginBottom: 4 }}>
+        <input type="checkbox" checked={!!((p as any)[k])} onChange={e => setP(k, e.target.checked as any)} style={hlCb(k)} />
+        {label}
+      </label>
+    )
+  }
+  function CbRow({ children }: { children: React.ReactNode }) {
+    return <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2px 0', marginBottom: 10 }}>{children}</div>
+  }
+  function Cat({ t }: { t: string }) {
+    return <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: 8, marginBottom: 4, paddingTop: 6, borderTop: '0.5px solid var(--border)' }}>{t}</div>
+  }
+  function Rad({ name, v, cur, set, label }: { name: string; v: string; cur: string; set: (x: string) => void; label: string }) {
+    return (
+      <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 14, cursor: 'pointer', marginRight: 10 }}>
+        <input type="radio" name={name} value={v} checked={cur === v} onChange={() => set(v)} />
+        {label}
+      </label>
+    )
+  }
+
+  const m = ((p.mannschaft || {}) as Record<string, { id?: string; name?: string; persnr?: string } | null>)
+  function MRow({ role, label: rl, nk }: { role: string; label: string; nk: keyof PatientPayload }) {
+    const linked = m[role]
+    return (
+      <div style={field}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: 4 }}>
+          <label style={{ ...lbl, margin: 0 }}>{rl}</label>
+          {linked && (
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: '#eff6ff', border: '0.5px solid #93c5fd', borderRadius: 999, padding: '2px 8px', fontSize: 12, color: '#1d4ed8', fontWeight: 600 }}>
+              {linked.name || '—'}{linked.persnr && <span style={{ opacity: .7 }}>&nbsp;· #{linked.persnr}</span>}
+            </span>
+          )}
+        </div>
+        <input type="text" value={String((p as any)[nk] || '')} onChange={e => setP(nk, e.target.value as any)} style={H(nk)} />
+      </div>
+    )
+  }
+
+  const dauerMeds: any[] = Array.isArray(p.dauermedikation) ? p.dauermedikation : []
+  const gcsT = (p.gcs_e || 0) + (p.gcs_v || 0) + (p.gcs_m || 0)
 
   return (
-    <div style={s.modal} onClick={onClose}>
-      <div style={s.box} onClick={e => e.stopPropagation()}>
-        <div style={s.header}>
-          <h3 style={{ margin: '0 0 12px', fontSize: '17px' }}>Patientendokumentation</h3>
+    <div style={{ position: 'fixed', inset: 0, zIndex: 2000, background: 'var(--bg)', overflowY: 'auto' }}>
+
+      {/* Sticky header */}
+      <header style={{ position: 'sticky', top: 0, background: 'var(--bg-status-bar)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', borderBottom: '0.5px solid var(--border)', zIndex: 10 }}>
+        <div style={{ maxWidth: 800, margin: '0 auto', padding: '0 1rem', height: 54, display: 'flex', alignItems: 'center', gap: 12 }}>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--accent)', fontWeight: 600, fontSize: 16, cursor: 'pointer', padding: '8px 0', fontFamily: 'inherit', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 4 }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
+            Zurück
+          </button>
+          <h1 style={{ flex: 1, textAlign: 'center', fontSize: '1rem', fontWeight: 700, color: 'var(--text)', margin: 0 }}>Patientendoku</h1>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
+            {openRQ > 0 && <span style={{ background: '#fef9c3', border: '1px solid #fcd34d', borderRadius: 999, padding: '2px 8px', fontSize: 12, fontWeight: 700, color: '#92400e' }}>{openRQ} Rückfrage{openRQ !== 1 ? 'n' : ''}</span>}
+            <button onClick={() => window.print()} style={{ background: 'none', border: '0.5px solid var(--border)', borderRadius: 8, padding: '6px 12px', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: 'var(--text)', fontFamily: 'inherit' }}>PDF</button>
+          </div>
         </div>
-        <div style={s.body}>
+      </header>
 
-          <Section title="Einsatzdaten">
-            <Row2>
-              <Field label="Einsatz-Nr."><Inp value={p.einsatz_nr||''} onChange={v => setP('einsatz_nr', v)} /></Field>
-              <Field label="Auftrags-Nr."><Inp value={p.auftrags_nr||''} onChange={v => setP('auftrags_nr', v)} /></Field>
-              <Field label="Rufname"><Inp value={p.rufname||''} onChange={v => setP('rufname', v)} /></Field>
-              <Field label="Fahrzeug / Einheit"><Inp value={p.fahrzeug||''} onChange={v => setP('fahrzeug', v)} /></Field>
-              <Field label="Einsatzart / Stichwort"><Inp value={p.einsatz_art||''} onChange={v => setP('einsatz_art', v)} /></Field>
-            </Row2>
-            <Field label="Einsatzort / Adresse"><Inp value={p.einsatz_adresse||''} onChange={v => setP('einsatz_adresse', v)} placeholder="Straße, PLZ Ort" /></Field>
-            <Row2>
-              <Field label="Alarmzeit"><Inp value={p.zeit_einsatz||''} onChange={v => setP('zeit_einsatz', v)} type="time" /></Field>
-              <Field label="Eintreffzeit"><Inp value={p.zeit_eintreffen||''} onChange={v => setP('zeit_eintreffen', v)} type="time" /></Field>
-              <Field label="Transportbeginn"><Inp value={p.zeit_transport||''} onChange={v => setP('zeit_transport', v)} type="time" /></Field>
-              <Field label="Übergabe"><Inp value={p.zeit_uebergabe||''} onChange={v => setP('zeit_uebergabe', v)} type="time" /></Field>
-            </Row2>
-            <Field label="Transportziel (Krankenhaus)"><Inp value={p.transport_ziel||''} onChange={v => setP('transport_ziel', v)} placeholder="Klinikum..." /></Field>
-            <div style={{ fontWeight: 600, fontSize: '13px', marginBottom: '6px', marginTop: '4px' }}>Mannschaft</div>
-            <Row2>
-              <Field label="Teamführer"><Inp value={p.mannschaft_tf||''} onChange={v => setP('mannschaft_tf', v)} /></Field>
-              <Field label="Mannschaft 1"><Inp value={p.mannschaft_1||''} onChange={v => setP('mannschaft_1', v)} /></Field>
-              <Field label="Mannschaft 2"><Inp value={p.mannschaft_2||''} onChange={v => setP('mannschaft_2', v)} /></Field>
-              <Field label="Mannschaft 3"><Inp value={p.mannschaft_3||''} onChange={v => setP('mannschaft_3', v)} /></Field>
-            </Row2>
+      {/* Answered RQ banner */}
+      {answeredRQ > 0 && (
+        <div style={{ background: '#f0fdf4', borderBottom: '1px solid #bbf7d0', padding: '10px 16px', textAlign: 'center', fontSize: 14, color: '#166534', fontWeight: 600 }}>
+          {answeredRQ} Stellungnahme{answeredRQ !== 1 ? 'n' : ''} vom Teamleader eingegangen ↓
+        </div>
+      )}
 
-            {/* QR-Code für Rettungsdienst */}
-            <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '10px', padding: '12px', marginTop: '8px' }}>
-              <div style={{ fontWeight: 600, fontSize: '13px', marginBottom: '8px' }}>QR-Code für Rettungsdienst</div>
-              {p.access_code ? (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-                  <div style={{ fontFamily: 'monospace', fontSize: '28px', fontWeight: 700, letterSpacing: '0.2em', color: '#c0392b' }}>{p.access_code}</div>
-                  <div style={{ flex: 1, minWidth: 120 }}>
-                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Gültig für 24 Stunden ab Erstellung</div>
-                    {p.access_code_created && (
-                      <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: 2 }}>
-                        Erstellt: {new Date(p.access_code_created).toLocaleString('de-DE')}
-                      </div>
-                    )}
-                  </div>
-                  <div style={{ display: 'flex', gap: 6 }}>
-                    <button type="button" onClick={() => setShowQR(true)} style={{ padding: '8px 12px', background: '#007aff', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 600, fontSize: '13px', cursor: 'pointer' }}>QR anzeigen</button>
-                    <button type="button" onClick={generateCode} style={{ padding: '8px 12px', background: 'var(--bg-secondary)', color: 'var(--text)', border: 'none', borderRadius: '8px', fontWeight: 600, fontSize: '13px', cursor: 'pointer' }}>Neu generieren</button>
-                  </div>
+      <div style={{ maxWidth: 800, margin: '0 auto', padding: '1rem 1rem 120px' }}>
+
+        {/* Change legend */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: '0.75rem', fontSize: 13, color: 'var(--text-secondary)' }}>
+          <span style={{ display: 'inline-block', width: 16, height: 16, background: '#fffbeb', border: '1px solid #f59e0b', borderRadius: 4 }} />
+          Geänderte Felder sind amber markiert
+        </div>
+
+        {/* 1. Einsatzdaten */}
+        <PubSection title="Einsatzdaten" open>
+          <G2>
+            <F l="Einsatz-Nr."><input type="text" value={p.einsatz_nr || ''} onChange={e => setP('einsatz_nr', e.target.value)} style={H('einsatz_nr')} /></F>
+            <F l="Auftrags-Nr."><input type="text" value={p.auftrags_nr || ''} onChange={e => setP('auftrags_nr', e.target.value)} style={H('auftrags_nr')} /></F>
+            <F l="Rufname"><input type="text" value={p.rufname || ''} onChange={e => setP('rufname', e.target.value)} style={H('rufname')} /></F>
+            <F l="Fahrzeug / Einheit"><input type="text" value={p.fahrzeug || ''} onChange={e => setP('fahrzeug', e.target.value)} style={H('fahrzeug')} /></F>
+            <F l="Einsatzart / Stichwort"><input type="text" value={p.einsatz_art || ''} onChange={e => setP('einsatz_art', e.target.value)} style={H('einsatz_art')} /></F>
+          </G2>
+          <F l="Einsatzort / Adresse"><input type="text" value={p.einsatz_adresse || ''} onChange={e => setP('einsatz_adresse', e.target.value)} placeholder="Straße, PLZ Ort" style={H('einsatz_adresse')} /></F>
+          <G2>
+            <F l="Alarmzeit"><input type="time" value={p.zeit_einsatz || ''} onChange={e => setP('zeit_einsatz', e.target.value)} style={H('zeit_einsatz')} /></F>
+            <F l="Eintreffzeit"><input type="time" value={p.zeit_eintreffen || ''} onChange={e => setP('zeit_eintreffen', e.target.value)} style={H('zeit_eintreffen')} /></F>
+            <F l="Transportbeginn"><input type="time" value={p.zeit_transport || ''} onChange={e => setP('zeit_transport', e.target.value)} style={H('zeit_transport')} /></F>
+            <F l="Übergabe"><input type="time" value={p.zeit_uebergabe || ''} onChange={e => setP('zeit_uebergabe', e.target.value)} style={H('zeit_uebergabe')} /></F>
+          </G2>
+          <F l="Transportziel (Krankenhaus)"><input type="text" value={p.transport_ziel || ''} onChange={e => setP('transport_ziel', e.target.value)} placeholder="Klinikum…" style={H('transport_ziel')} /></F>
+
+          <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 8, marginTop: 4 }}>Mannschaft</div>
+          <G2>
+            <MRow role="tf" label="Teamführer" nk="mannschaft_tf" />
+            <MRow role="m1" label="Mannschaft 1" nk="mannschaft_1" />
+            <MRow role="m2" label="Mannschaft 2" nk="mannschaft_2" />
+            <MRow role="m3" label="Mannschaft 3" nk="mannschaft_3" />
+          </G2>
+
+          <div style={{ background: 'var(--bg)', border: '0.5px solid var(--border)', borderRadius: 10, padding: 12, marginTop: 8 }}>
+            <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 8 }}>QR-Code für Rettungsdienst</div>
+            {p.access_code ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                <div style={{ fontFamily: 'monospace', fontSize: 28, fontWeight: 700, letterSpacing: '0.2em', color: '#c0392b' }}>{p.access_code}</div>
+                <div style={{ flex: 1, minWidth: 120 }}>
+                  <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Gültig für 24 Stunden</div>
+                  {p.access_code_created && <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>Erstellt: {new Date(p.access_code_created).toLocaleString('de-DE')}</div>}
                 </div>
-              ) : (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <div style={{ fontSize: '13px', color: 'var(--text-secondary)', flex: 1 }}>Noch kein Code. Generiere einen 4-stelligen Code für den Rettungsdienst.</div>
-                  <button type="button" onClick={generateCode} style={{ padding: '10px 16px', background: '#c0392b', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 600, fontSize: '13px', cursor: 'pointer', whiteSpace: 'nowrap' }}>Code generieren</button>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <button type="button" onClick={() => setShowQR(true)} style={{ padding: '8px 12px', background: '#007aff', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>QR anzeigen</button>
+                  <button type="button" onClick={generateCode} style={{ padding: '8px 12px', background: 'var(--bg-secondary)', color: 'var(--text)', border: 'none', borderRadius: 8, fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>Neu generieren</button>
                 </div>
-              )}
+              </div>
+            ) : (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{ fontSize: 13, color: 'var(--text-secondary)', flex: 1 }}>Noch kein Code. Generiere einen 4-stelligen Code für den Rettungsdienst.</div>
+                <button type="button" onClick={generateCode} style={{ padding: '10px 16px', background: '#c0392b', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 600, fontSize: 13, cursor: 'pointer', whiteSpace: 'nowrap' }}>Code generieren</button>
+              </div>
+            )}
+          </div>
+        </PubSection>
+
+        {/* QR Modal */}
+        {showQR && p.access_code && (
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }} onClick={() => setShowQR(false)}>
+            <div style={{ background: '#fff', borderRadius: 20, padding: 32, maxWidth: 360, width: '100%', textAlign: 'center' }} onClick={e => e.stopPropagation()}>
+              <div style={{ fontFamily: 'monospace', fontSize: 36, fontWeight: 800, letterSpacing: '0.3em', color: '#c0392b', margin: '8px 0' }}>{p.access_code}</div>
+              {qrDataUrl && <img src={qrDataUrl} alt="QR Code" style={{ width: 220, height: 220, display: 'block', margin: '0 auto 12px' }} />}
+              <button onClick={() => setShowQR(false)} style={{ padding: '10px 24px', background: '#222', color: '#fff', border: 'none', borderRadius: 10, fontWeight: 600, cursor: 'pointer' }}>Schließen</button>
             </div>
-          </Section>
+          </div>
+        )}
 
-          {/* QR Modal */}
-          {showQR && p.access_code && (
-            <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }} onClick={() => setShowQR(false)}>
-              <div style={{ background: '#fff', borderRadius: '20px', padding: '32px', maxWidth: '360px', width: '100%', textAlign: 'center' }} onClick={e => e.stopPropagation()}>
-                <div style={{ fontSize: '13px', fontWeight: 700, color: '#333', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Rettungsdienst-Zugang</div>
-                <div style={{ fontFamily: 'monospace', fontSize: '36px', fontWeight: 800, letterSpacing: '0.3em', color: '#c0392b', margin: '8px 0' }}>{p.access_code}</div>
-                {qrDataUrl && <img src={qrDataUrl} alt="QR Code" style={{ width: '220px', height: '220px', display: 'block', margin: '0 auto 12px' }} />}
-                <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>Scan → Formular einsehen (24h)</div>
-                <div style={{ fontFamily: 'monospace', fontSize: '11px', color: '#999', wordBreak: 'break-all', marginBottom: '16px' }}>{window.location.origin}/p/{p.access_code}</div>
-                <button onClick={() => setShowQR(false)} style={{ padding: '10px 24px', background: '#222', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 600, cursor: 'pointer' }}>Schließen</button>
+        {/* 2. Patientenstammdaten */}
+        <PubSection title="Patientenstammdaten" open>
+          <G2>
+            <F l="Nachname"><input type="text" value={p.name || ''} onChange={e => setP('name', e.target.value)} style={H('name')} /></F>
+            <F l="Vorname"><input type="text" value={p.vorname || ''} onChange={e => setP('vorname', e.target.value)} style={H('vorname')} /></F>
+            <F l="Geburtsdatum"><input type="date" value={p.gebdatum || ''} onChange={e => setP('gebdatum', e.target.value)} style={H('gebdatum')} /></F>
+            <F l="Alter"><input type="text" value={p.alter || ''} onChange={e => setP('alter', e.target.value)} style={H('alter')} /></F>
+            <F l="Telefon"><input type="text" value={p.telefon || ''} onChange={e => setP('telefon', e.target.value)} style={H('telefon')} /></F>
+            <F l="Mobil"><input type="text" value={p.mobil || ''} onChange={e => setP('mobil', e.target.value)} style={H('mobil')} /></F>
+            <F l="Straße"><input type="text" value={p.strasse || ''} onChange={e => setP('strasse', e.target.value)} style={H('strasse')} /></F>
+            <F l="PLZ / Ort"><input type="text" value={p.plz_ort || ''} onChange={e => setP('plz_ort', e.target.value)} style={H('plz_ort')} /></F>
+            <F l="Krankenkasse"><input type="text" value={p.kasse || ''} onChange={e => setP('kasse', e.target.value)} style={H('kasse')} /></F>
+            <F l="Vers.-Nr."><input type="text" value={p.versnr || ''} onChange={e => setP('versnr', e.target.value)} style={H('versnr')} /></F>
+          </G2>
+          <F l="Hausarzt"><input type="text" value={p.hausarzt || ''} onChange={e => setP('hausarzt', e.target.value)} style={H('hausarzt')} /></F>
+          <F l="Angehöriger"><input type="text" value={p.angehoeriger || ''} onChange={e => setP('angehoeriger', e.target.value)} style={H('angehoeriger')} /></F>
+          <F l="Infos"><textarea value={p.infos || ''} onChange={e => setP('infos', e.target.value)} rows={2} style={HT('infos')} /></F>
+        </PubSection>
+
+        {/* 3. Notfallgeschehen / Anamnese */}
+        <PubSection title="Notfallgeschehen / Anamnese" open>
+          <F l="Notfallgeschehen / Beschwerden"><textarea value={p.notfallgeschehen || ''} onChange={e => setP('notfallgeschehen', e.target.value)} rows={3} style={HT('notfallgeschehen')} /></F>
+          <F l="Vorerkrankungen"><textarea value={p.vorerkrankungen || ''} onChange={e => setP('vorerkrankungen', e.target.value)} rows={2} style={HT('vorerkrankungen')} /></F>
+          <F l="Allergien"><input type="text" value={p.allergien || ''} onChange={e => setP('allergien', e.target.value)} placeholder="Keine bekannt / …" style={H('allergien')} /></F>
+          <F l="Verlaufsbeschreibung"><textarea value={p.verlaufsbeschreibung || ''} onChange={e => setP('verlaufsbeschreibung', e.target.value)} rows={2} style={HT('verlaufsbeschreibung')} /></F>
+          <F l="Dauermedikation Patient (Freitext)"><textarea value={p.vormedikation_patient || ''} onChange={e => setP('vormedikation_patient', e.target.value)} rows={2} style={HT('vormedikation_patient')} /></F>
+          {dauerMeds.length > 0 && (
+            <div style={field}>
+              <label style={lbl}>Dauermedikation (gescannt)</label>
+              <div style={{ display: 'flex', flexWrap: 'wrap', marginTop: 6 }}>
+                {dauerMeds.map((med: any, i: number) => (
+                  <span key={i} style={pil}>{med.name || med.handelsname || med.pzn || String(med)}</span>
+                ))}
               </div>
             </div>
           )}
+        </PubSection>
 
-          <Section title="Patientenstammdaten">
-            <Row2>
-              <Field label="Nachname"><Inp value={p.name||''} onChange={v => setP('name', v)} /></Field>
-              <Field label="Vorname"><Inp value={p.vorname||''} onChange={v => setP('vorname', v)} /></Field>
-              <Field label="Geburtsdatum"><Inp value={p.gebdatum||''} onChange={v => setP('gebdatum', v)} type="date" /></Field>
-              <Field label="Alter"><Inp value={p.alter||''} onChange={v => setP('alter', v)} /></Field>
-              <Field label="Telefon"><Inp value={p.telefon||''} onChange={v => setP('telefon', v)} /></Field>
-              <Field label="Mobil"><Inp value={p.mobil||''} onChange={v => setP('mobil', v)} /></Field>
-              <Field label="Straße"><Inp value={p.strasse||''} onChange={v => setP('strasse', v)} /></Field>
-              <Field label="PLZ / Ort"><Inp value={p.plz_ort||''} onChange={v => setP('plz_ort', v)} /></Field>
-              <Field label="Krankenkasse"><Inp value={p.kasse||''} onChange={v => setP('kasse', v)} /></Field>
-              <Field label="Vers.-Nr."><Inp value={p.versnr||''} onChange={v => setP('versnr', v)} /></Field>
-            </Row2>
-            <Field label="Hausarzt"><Inp value={p.hausarzt||''} onChange={v => setP('hausarzt', v)} /></Field>
-            <Field label="Angehöriger"><Inp value={p.angehoeriger||''} onChange={v => setP('angehoeriger', v)} /></Field>
-            <Field label="Infos">
-              <textarea value={p.infos||''} onChange={e => setP('infos', e.target.value)} rows={2}
-                style={{ width: '100%', padding: '8px 10px', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '14px', resize: 'vertical', background: 'var(--bg)', color: 'var(--text)', boxSizing: 'border-box' }} />
-            </Field>
-          </Section>
-
-          <Section title="Notfallgeschehen / Anamnese">
-            <Field label="Notfallgeschehen / Beschwerden">
-              <textarea value={p.notfallgeschehen||''} onChange={e => setP('notfallgeschehen', e.target.value)} rows={3}
-                style={{ width: '100%', padding: '8px 10px', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '14px', resize: 'vertical', background: 'var(--bg)', color: 'var(--text)', boxSizing: 'border-box' }} />
-            </Field>
-            <Field label="Vorerkrankungen">
-              <textarea value={p.vorerkrankungen||''} onChange={e => setP('vorerkrankungen', e.target.value)} rows={2}
-                style={{ width: '100%', padding: '8px 10px', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '14px', resize: 'vertical', background: 'var(--bg)', color: 'var(--text)', boxSizing: 'border-box' }} />
-            </Field>
-            <Field label="Allergien"><Inp value={p.allergien||''} onChange={v => setP('allergien', v)} placeholder="Keine bekannt / ..." /></Field>
-            <Field label="Verlaufsbeschreibung">
-              <textarea value={p.verlaufsbeschreibung||''} onChange={e => setP('verlaufsbeschreibung', e.target.value)} rows={2}
-                style={{ width: '100%', padding: '8px 10px', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '14px', resize: 'vertical', background: 'var(--bg)', color: 'var(--text)', boxSizing: 'border-box' }} />
-            </Field>
-            <Field label="Dauermedikation Patient">
-              <textarea value={p.vormedikation_patient||''} onChange={e => setP('vormedikation_patient', e.target.value)} rows={2}
-                style={{ width: '100%', padding: '8px 10px', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '14px', resize: 'vertical', background: 'var(--bg)', color: 'var(--text)', boxSizing: 'border-box' }} />
-            </Field>
-          </Section>
-
-          <Section title="Verlauf / Vitalzeichen-Kurve">
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', minWidth: '700px' }}>
-                <thead>
-                  <tr style={{ background: 'var(--bg-secondary)' }}>
-                    {['Zeit','RR sys','RR dia','HF','SpO₂','AF','Temp','BZ','etCO₂','Schmerz','O₂ l/min','Bemerkung',''].map(h => (
-                      <th key={h} style={{ padding: '4px 6px', border: '1px solid var(--border)', fontWeight: 600, fontSize: '11px', textAlign: 'center', whiteSpace: 'nowrap' }}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {(p.verlauf||[]).map((vr, i) => (
-                    <tr key={i}>
-                      {(['zeit','rr_sys','rr_dia','hf','spo2','af','temp','bz','etco2','schmerz','o2','bemerkung'] as (keyof VitalRow)[]).map(k => (
-                        <td key={k} style={{ padding: '2px', border: '1px solid var(--border)' }}>
-                          <input value={vr[k]} onChange={e => updateVRow(i, k, e.target.value)}
-                            style={{ width: '100%', padding: '4px', border: 'none', background: 'transparent', color: 'var(--text)', fontSize: '12px', minWidth: k === 'bemerkung' ? '100px' : '44px' }} />
-                        </td>
-                      ))}
-                      <td style={{ padding: '2px', border: '1px solid var(--border)', textAlign: 'center' }}>
-                        <button onClick={() => removeVRow(i)} style={{ color: '#c0392b', background: 'none', border: 'none', cursor: 'pointer', fontSize: '14px' }}>✕</button>
-                      </td>
-                    </tr>
+        {/* 4. Verlauf / Vitalzeichen-Kurve */}
+        <PubSection title="Verlauf / Vitalzeichen-Kurve">
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, minWidth: 700 }}>
+              <thead>
+                <tr style={{ background: 'var(--bg-secondary)' }}>
+                  {['Zeit', 'RR sys', 'RR dia', 'HF', 'SpO₂', 'AF', 'Temp', 'BZ', 'etCO₂', 'Schmerz', 'O₂ l/min', 'Bemerkung', ''].map(h => (
+                    <th key={h} style={{ padding: '4px 6px', border: '1px solid var(--border)', fontWeight: 600, fontSize: 11, textAlign: 'center', whiteSpace: 'nowrap' }}>{h}</th>
                   ))}
-                </tbody>
-              </table>
-            </div>
-            <button onClick={addVRow} style={{ marginTop: '8px', fontSize: '14px', color: '#c0392b', background: 'none', border: '1px dashed #c0392b', borderRadius: '8px', padding: '6px 14px', cursor: 'pointer', width: '100%' }}>+ Zeile hinzufügen</button>
-          </Section>
+                </tr>
+              </thead>
+              <tbody>
+                {(p.verlauf || []).map((vr, i) => (
+                  <tr key={i}>
+                    {(['zeit', 'rr_sys', 'rr_dia', 'hf', 'spo2', 'af', 'temp', 'bz', 'etco2', 'schmerz', 'o2', 'bemerkung'] as (keyof VitalRow)[]).map(k => (
+                      <td key={k} style={{ padding: 2, border: '1px solid var(--border)' }}>
+                        <input value={vr[k]} onChange={e => upV(i, k, e.target.value)}
+                          style={{ width: '100%', padding: 4, border: 'none', background: 'transparent', color: 'var(--text)', fontSize: 12, minWidth: k === 'bemerkung' ? 100 : 44 }} />
+                      </td>
+                    ))}
+                    <td style={{ padding: 2, border: '1px solid var(--border)', textAlign: 'center' }}>
+                      <button onClick={() => rmV(i)} style={{ color: '#c0392b', background: 'none', border: 'none', cursor: 'pointer', fontSize: 14 }}>✕</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <button onClick={addV} style={{ marginTop: 8, fontSize: 14, color: '#c0392b', background: 'none', border: '1px dashed #c0392b', borderRadius: 8, padding: '6px 14px', cursor: 'pointer', width: '100%' }}>+ Zeile hinzufügen</button>
+        </PubSection>
 
-          <Section title="Vitalparameter">
-            <Row2>
-              <Field label="RR syst. (mmHg)"><Inp value={p.rr_sys||''} onChange={v => setP('rr_sys', v)} /></Field>
-              <Field label="RR diast. (mmHg)"><Inp value={p.rr_dia||''} onChange={v => setP('rr_dia', v)} /></Field>
-              <Field label="HF (/min)"><Inp value={p.hf||''} onChange={v => setP('hf', v)} /></Field>
-              <Field label="SpO2 (%)"><Inp value={p.spo2||''} onChange={v => setP('spo2', v)} /></Field>
-              <Field label="AF (/min)"><Inp value={p.af||''} onChange={v => setP('af', v)} /></Field>
-              <Field label="Temp (°C)"><Inp value={p.temp||''} onChange={v => setP('temp', v)} /></Field>
-              <Field label="BZ (mg/dl)"><Inp value={p.bz_mg||''} onChange={v => setP('bz_mg', v)} /></Field>
-              <Field label="Schmerz (NRS 0–10)"><Inp value={p.schmerz||''} onChange={v => setP('schmerz', v)} /></Field>
-              <Field label="etCO2"><Inp value={p.etco2||''} onChange={v => setP('etco2', v)} /></Field>
-            </Row2>
-          </Section>
+        {/* 5. Vitalparameter */}
+        <PubSection title="Vitalparameter">
+          <G2>
+            <F l="RR syst. (mmHg)"><input type="text" value={p.rr_sys || ''} onChange={e => setP('rr_sys', e.target.value)} style={H('rr_sys')} /></F>
+            <F l="RR diast. (mmHg)"><input type="text" value={p.rr_dia || ''} onChange={e => setP('rr_dia', e.target.value)} style={H('rr_dia')} /></F>
+            <F l="HF (/min)"><input type="text" value={p.hf || ''} onChange={e => setP('hf', e.target.value)} style={H('hf')} /></F>
+            <F l="SpO2 (%)"><input type="text" value={p.spo2 || ''} onChange={e => setP('spo2', e.target.value)} style={H('spo2')} /></F>
+            <F l="AF (/min)"><input type="text" value={p.af || ''} onChange={e => setP('af', e.target.value)} style={H('af')} /></F>
+            <F l="Temp (°C)"><input type="text" value={p.temp || ''} onChange={e => setP('temp', e.target.value)} style={H('temp')} /></F>
+            <F l="BZ (mg/dl)"><input type="text" value={p.bz_mg || ''} onChange={e => setP('bz_mg', e.target.value)} style={H('bz_mg')} /></F>
+            <F l="Schmerz (NRS 0–10)"><input type="text" value={p.schmerz || ''} onChange={e => setP('schmerz', e.target.value)} style={H('schmerz')} /></F>
+            <F l="etCO2"><input type="text" value={p.etco2 || ''} onChange={e => setP('etco2', e.target.value)} style={H('etco2')} /></F>
+          </G2>
+        </PubSection>
 
-          <Section title="NACA / Bewusstsein">
-            <Row2>
-              <Field label="NACA-Score">
-                <select value={p.naca||''} onChange={e => setP('naca', e.target.value)}
-                  style={{ width: '100%', padding: '8px', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '14px', background: 'var(--bg)', color: 'var(--text)' }}>
-                  <option value="">–</option>
-                  <option value="0">0 – Keine Erkrankung/Verletzung</option>
-                  <option value="I">I – Geringfügig</option>
-                  <option value="II">II – Leicht</option>
-                  <option value="III">III – Mäßig schwer</option>
-                  <option value="IV">IV – Schwer, keine Lebensgefahr</option>
-                  <option value="V">V – Akute Lebensgefahr</option>
-                  <option value="VI">VI – Reanimation</option>
-                  <option value="VII">VII – Tod</option>
-                </select>
-              </Field>
-              <Field label="Bewusstsein">
-                <select value={p.bewusstsein||''} onChange={e => setP('bewusstsein', e.target.value)}
-                  style={{ width: '100%', padding: '8px', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '14px', background: 'var(--bg)', color: 'var(--text)' }}>
-                  <option value="">–</option>
-                  <option>nicht beurteilbar</option>
-                  <option>wach</option>
-                  <option>getrübt</option>
-                  <option>bewusstlos</option>
-                  <option>reaktionslos</option>
-                  <option>auf Ansprache</option>
-                  <option>Reaktion auf Schmerz</option>
-                  <option>analgosediert / Narkose</option>
-                </select>
-              </Field>
-            </Row2>
-            <Field label="Verdachtsdiagnose / Erstdiagnose">
-              <Inp value={p.erstdiagnose_text||''} onChange={v => setP('erstdiagnose_text', v)} placeholder="Freitexteingabe…" />
-            </Field>
-          </Section>
-
-          <Section title="Neurologie">
-            <Row2>
-              <Field label="Zeit"><Inp value={p.neu_zeit||''} onChange={v => setP('neu_zeit', v)} type="time" /></Field>
-              <Field label=""><div style={{ paddingTop: '20px' }}><Cb label="Unauffällig" checked={!!p.neu_unauff} onChange={v => setP('neu_unauff', v)} /></div></Field>
-            </Row2>
-            <Row2>
-              <Field label="Pupillenweite re.">
-                <div style={{ display: 'flex' }}>
-                  {['eng','mittel','weit'].map(v => <Radio key={v} name="pw_r" value={v} current={p.pw_r||'mittel'} onChange={v2 => setP('pw_r', v2)} label={v} />)}
-                </div>
-              </Field>
-              <Field label="Pupillenweite li.">
-                <div style={{ display: 'flex' }}>
-                  {['eng','mittel','weit'].map(v => <Radio key={v} name="pw_l" value={v} current={p.pw_l||'mittel'} onChange={v2 => setP('pw_l', v2)} label={v} />)}
-                </div>
-              </Field>
-            </Row2>
-            <CbRow>
-              <Cb label="Entrundet re." checked={!!p.pw_r_entrundet} onChange={v => setP('pw_r_entrundet', v)} />
-              <Cb label="Entrundet li." checked={!!p.pw_l_entrundet} onChange={v => setP('pw_l_entrundet', v)} />
-            </CbRow>
-            <Row2>
-              <Field label="Lichtreaktion re.">
-                <div style={{ display: 'flex' }}>
-                  {['prompt','träge','keine'].map(v => <Radio key={v} name="lr_r" value={v} current={p.lr_r||'prompt'} onChange={v2 => setP('lr_r', v2)} label={v} />)}
-                </div>
-              </Field>
-              <Field label="Lichtreaktion li.">
-                <div style={{ display: 'flex' }}>
-                  {['prompt','träge','keine'].map(v => <Radio key={v} name="lr_l" value={v} current={p.lr_l||'prompt'} onChange={v2 => setP('lr_l', v2)} label={v} />)}
-                </div>
-              </Field>
-            </Row2>
-            <CbRow>
-              <Cb label="Sprachstörung" checked={!!p.neu_sprachstoerung} onChange={v => setP('neu_sprachstoerung', v)} />
-              <Cb label="Demenz" checked={!!p.neu_demenz} onChange={v => setP('neu_demenz', v)} />
-              <Cb label="Meningismus" checked={!!p.neu_meningismus} onChange={v => setP('neu_meningismus', v)} />
-              <Cb label="Seitenzeichen" checked={!!p.neu_seitenzeichen} onChange={v => setP('neu_seitenzeichen', v)} />
-              <Cb label="Kein Lächeln" checked={!!p.neu_kein_laecheln} onChange={v => setP('neu_kein_laecheln', v)} />
-              <Cb label="Sehstörung" checked={!!p.neu_sehstoerung} onChange={v => setP('neu_sehstoerung', v)} />
-              <Cb label="Querschnittssymptomatik" checked={!!p.neu_querschnitt} onChange={v => setP('neu_querschnitt', v)} />
-              <Cb label="Babinski" checked={!!p.neu_babinski} onChange={v => setP('neu_babinski', v)} />
-              <Cb label="Vorbestehende Defizite" checked={!!p.neu_vorbestehend} onChange={v => setP('neu_vorbestehend', v)} />
-            </CbRow>
-            <Field label="Neurologische Sonstige"><Inp value={p.neu_sonstige||''} onChange={v => setP('neu_sonstige', v)} /></Field>
-            <div style={{ fontWeight: 600, fontSize: '13px', marginBottom: '6px' }}>Extremitätenbewegung</div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr 1fr', gap: '4px 8px', alignItems: 'center', marginBottom: '10px', fontSize: '13px' }}>
-              <div></div>
-              <div style={{ textAlign: 'center', fontWeight: 600, fontSize: '12px' }}>Rechts</div>
-              <div style={{ textAlign: 'center', fontWeight: 600, fontSize: '12px' }}>Links</div>
-              <div style={{ fontWeight: 600, fontSize: '12px' }}>Arm</div>
-              {(['ext_r_arm','ext_l_arm'] as const).map(k => (
-                <select key={k} value={p[k]||''} onChange={e => setP(k, e.target.value)}
-                  style={{ padding: '6px', border: '1px solid var(--border)', borderRadius: '6px', fontSize: '13px', background: 'var(--bg)', color: 'var(--text)' }}>
-                  <option value="">–</option>
-                  <option value="1">1 – Normal</option>
-                  <option value="2">2 – Leicht vermindert</option>
-                  <option value="3">3 – Stark vermindert</option>
-                  <option value="4">4 – Fehlend</option>
-                </select>
-              ))}
-              <div style={{ fontWeight: 600, fontSize: '12px' }}>Bein</div>
-              {(['ext_r_bein','ext_l_bein'] as const).map(k => (
-                <select key={k} value={p[k]||''} onChange={e => setP(k, e.target.value)}
-                  style={{ padding: '6px', border: '1px solid var(--border)', borderRadius: '6px', fontSize: '13px', background: 'var(--bg)', color: 'var(--text)' }}>
-                  <option value="">–</option>
-                  <option value="1">1 – Normal</option>
-                  <option value="2">2 – Leicht vermindert</option>
-                  <option value="3">3 – Stark vermindert</option>
-                  <option value="4">4 – Fehlend</option>
-                </select>
-              ))}
-            </div>
-            <div style={{ fontWeight: 600, fontSize: '13px', marginBottom: '6px' }}>Glasgow Coma Scale (GCS: {calcGCS(p)})</div>
-            <Row2>
-              <Field label="Augen (E 1–4)">
-                <select value={p.gcs_e||4} onChange={e => setP('gcs_e', +e.target.value)}
-                  style={{ width: '100%', padding: '8px', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '14px', background: 'var(--bg)', color: 'var(--text)' }}>
-                  <option value={1}>1 – Keine</option><option value={2}>2 – Auf Schmerz</option>
-                  <option value={3}>3 – Auf Aufforderung</option><option value={4}>4 – Spontan</option>
-                </select>
-              </Field>
-              <Field label="Verbal (V 1–5)">
-                <select value={p.gcs_v||5} onChange={e => setP('gcs_v', +e.target.value)}
-                  style={{ width: '100%', padding: '8px', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '14px', background: 'var(--bg)', color: 'var(--text)' }}>
-                  <option value={1}>1 – Keine</option><option value={2}>2 – Unverständlich</option>
-                  <option value={3}>3 – Einzelne Wörter</option><option value={4}>4 – Verwirrt</option>
-                  <option value={5}>5 – Orientiert</option>
-                </select>
-              </Field>
-              <Field label="Motorik (M 1–6)">
-                <select value={p.gcs_m||6} onChange={e => setP('gcs_m', +e.target.value)}
-                  style={{ width: '100%', padding: '8px', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '14px', background: 'var(--bg)', color: 'var(--text)' }}>
-                  <option value={1}>1 – Keine</option><option value={2}>2 – Strecksynergismen</option>
-                  <option value={3}>3 – Beugesynergismen</option><option value={4}>4 – Auf Schmerz</option>
-                  <option value={5}>5 – Gezielte Abwehr</option><option value={6}>6 – Auf Aufforderung</option>
-                </select>
-              </Field>
-            </Row2>
-          </Section>
-
-          <Section title="Haut">
-            <CbRow>
-              <Cb label="Unauffällig" checked={!!p.haut_unauff} onChange={v => setP('haut_unauff', v)} />
-              <Cb label="Hautfalten" checked={!!p.haut_falten} onChange={v => setP('haut_falten', v)} />
-              <Cb label="Ödeme" checked={!!p.haut_oedeme} onChange={v => setP('haut_oedeme', v)} />
-              <Cb label="Dekubitus" checked={!!p.haut_dekubitus} onChange={v => setP('haut_dekubitus', v)} />
-              <Cb label="Kaltschweißig" checked={!!p.haut_kaltschweissig} onChange={v => setP('haut_kaltschweissig', v)} />
-              <Cb label="Exanthem" checked={!!p.haut_exanthem} onChange={v => setP('haut_exanthem', v)} />
-            </CbRow>
-          </Section>
-
-          <Section title="Psyche">
-            <CbRow>
-              <Cb label="Erregt" checked={!!p.psy_erregt} onChange={v => setP('psy_erregt', v)} />
-              <Cb label="Aggressiv" checked={!!p.psy_aggr} onChange={v => setP('psy_aggr', v)} />
-              <Cb label="Verlangsamt" checked={!!p.psy_verlangsamt} onChange={v => setP('psy_verlangsamt', v)} />
-              <Cb label="Depressiv" checked={!!p.psy_depressiv} onChange={v => setP('psy_depressiv', v)} />
-              <Cb label="Ängstlich" checked={!!p.psy_aengstlich} onChange={v => setP('psy_aengstlich', v)} />
-              <Cb label="Euphorisch" checked={!!p.psy_euphorisch} onChange={v => setP('psy_euphorisch', v)} />
-              <Cb label="Wahnhaft" checked={!!p.psy_wahnhaft} onChange={v => setP('psy_wahnhaft', v)} />
-              <Cb label="Verwirrt" checked={!!p.psy_verwirrt} onChange={v => setP('psy_verwirrt', v)} />
-              <Cb label="Suizidal" checked={!!p.psy_suizidal} onChange={v => setP('psy_suizidal', v)} />
-              <Cb label="Motor. unruhig" checked={!!p.psy_motor_unruhig} onChange={v => setP('psy_motor_unruhig', v)} />
-            </CbRow>
-          </Section>
-
-          <Section title="Atmung">
-            <CbRow>
-              <Cb label="Apnoe" checked={!!p.atm_apnoe} onChange={v => setP('atm_apnoe', v)} />
-              <Cb label="Stridor" checked={!!p.atm_stridor} onChange={v => setP('atm_stridor', v)} />
-              <Cb label="Dyspnoe" checked={!!p.atm_dyspnoe} onChange={v => setP('atm_dyspnoe', v)} />
-              <Cb label="Zyanose" checked={!!p.atm_zyanose} onChange={v => setP('atm_zyanose', v)} />
-            </CbRow>
-            <CbRow>
-              <Cb label="O₂" checked={!!p.o2} onChange={v => setP('o2', v)} />
-              <Cb label="Nasal" checked={!!p.o2_nasal} onChange={v => setP('o2_nasal', v)} />
-              <Cb label="Maske" checked={!!p.o2_maske} onChange={v => setP('o2_maske', v)} />
-              <Cb label="Reservoir" checked={!!p.o2_reservoir} onChange={v => setP('o2_reservoir', v)} />
-            </CbRow>
-            <Field label="O₂-Flow (l/min)"><Inp value={p.o2_flow||''} onChange={v => setP('o2_flow', v)} /></Field>
-          </Section>
-
-          <Section title="Atemwegsmanagement">
-            <CbRow>
-              <Cb label="Freihalten" checked={!!p.awm_freihalten} onChange={v => setP('awm_freihalten', v)} />
-              <Cb label="Absaugung" checked={!!p.awm_absaugung} onChange={v => setP('awm_absaugung', v)} />
-              <Cb label="OPA (Guedel)" checked={!!p.awm_opa} onChange={v => setP('awm_opa', v)} />
-              <Cb label="NPA (Wendl)" checked={!!p.awm_npa} onChange={v => setP('awm_npa', v)} />
-              <Cb label="LMA / SGA" checked={!!p.awm_lma} onChange={v => setP('awm_lma', v)} />
-              <Cb label="Intubation (OTI)" checked={!!p.awm_intubation} onChange={v => setP('awm_intubation', v)} />
-            </CbRow>
-          </Section>
-
-          <Section title="Lagerung">
-            <CbRow>
-              <Cb label="Flachlagerung" checked={!!p.lag_flach} onChange={v => setP('lag_flach', v)} />
-              <Cb label="Schocklagerung" checked={!!p.lag_schock} onChange={v => setP('lag_schock', v)} />
-              <Cb label="Oberkörper hoch" checked={!!p.lag_ok_hoch} onChange={v => setP('lag_ok_hoch', v)} />
-              <Cb label="Stabile Seitenlage" checked={!!p.lag_ssl} onChange={v => setP('lag_ssl', v)} />
-              <Cb label="Sitzend" checked={!!p.lag_sitzend} onChange={v => setP('lag_sitzend', v)} />
-              <Cb label="Hängeposition" checked={!!p.lag_haengend} onChange={v => setP('lag_haengend', v)} />
-            </CbRow>
-          </Section>
-
-          <Section title="Reanimation">
-            <CbRow>
-              <Cb label="Reanimation durchgeführt" checked={!!p.rean} onChange={v => setP('rean', v)} />
-              <Cb label="Todesfeststellung" checked={!!p.rean_tod} onChange={v => setP('rean_tod', v)} />
-            </CbRow>
-            {p.rean_tod && (
-              <Field label="Uhrzeit Todesfeststellung"><Inp value={p.rean_tod_zeit||''} onChange={v => setP('rean_tod_zeit', v)} type="time" /></Field>
-            )}
-            {p.rean && (
-              <Row2>
-                <Field label="Beginn"><Inp value={p.rean_beginn||''} onChange={v => setP('rean_beginn', v)} type="time" /></Field>
-                <Field label="Ende"><Inp value={p.rean_ende||''} onChange={v => setP('rean_ende', v)} type="time" /></Field>
-                <Field label="Defibrillationen (Anzahl)"><Inp value={p.rean_defib||''} onChange={v => setP('rean_defib', v)} /></Field>
-              </Row2>
-            )}
-          </Section>
-
-          <Section title="Immobilisation">
-            <CbRow>
-              <Cb label="HWS-Orthese" checked={!!p.immo_hws} onChange={v => setP('immo_hws', v)} />
-              <Cb label="Spineboard" checked={!!p.immo_spineboard} onChange={v => setP('immo_spineboard', v)} />
-              <Cb label="Vakuummatratze" checked={!!p.immo_vakuum} onChange={v => setP('immo_vakuum', v)} />
-            </CbRow>
-          </Section>
-
-          <Section title="Rhythmus / EKG">
-            <CbRow>
-              <Cb label="Sinusrhythmus" checked={!!p.sr} onChange={v => setP('sr', v)} />
-              <Cb label="STEMI" checked={!!p.stemi} onChange={v => setP('stemi', v)} />
-              <Cb label="Kammerflimmern" checked={!!p.vf} onChange={v => setP('vf', v)} />
-              <Cb label="Asystolie" checked={!!p.asystole} onChange={v => setP('asystole', v)} />
-            </CbRow>
-            <Row2>
-              <Field label="EKG-Standort"><Inp value={p.ekg_standort||''} onChange={v => setP('ekg_standort', v)} /></Field>
-              <Field label="EKG Pers.-Nr."><Inp value={p.ekg_persnr||''} onChange={v => setP('ekg_persnr', v)} /></Field>
-            </Row2>
-          </Section>
-
-          <Section title="Diagnosen / Erkrankungen">
-            <Field label="Erstdiagnose / Verdachtsdiagnose (Freitext)">
-              <Inp value={p.erstdiagnose_text||''} onChange={v => setP('erstdiagnose_text', v)} placeholder="Freitexteingabe…" />
-            </Field>
-            <CbRow><Cb label="Keine Erkrankung / Verletzung" checked={!!p.e_keine} onChange={v => setP('e_keine', v)} /></CbRow>
-            <div style={{ fontWeight: 600, fontSize: '12px', opacity: 0.7, marginTop: '6px', marginBottom: '3px' }}>ZNS</div>
-            <CbRow>
-              <Cb label="Schlaganfall" checked={!!p.e_zns_schlaganfall} onChange={v => setP('e_zns_schlaganfall', v)} />
-              <Cb label="TIA" checked={!!p.e_zns_tia} onChange={v => setP('e_zns_tia', v)} />
-              <Cb label="Intrakranielle Blutung" checked={!!p.e_zns_blutung} onChange={v => setP('e_zns_blutung', v)} />
-              <Cb label="Im Lysefenster" checked={!!p.e_zns_lyse} onChange={v => setP('e_zns_lyse', v)} />
-              <Cb label="Krampfanfall" checked={!!p.e_zns_krampf} onChange={v => setP('e_zns_krampf', v)} />
-              <Cb label="Status epilepticus" checked={!!p.e_zns_status_epilept} onChange={v => setP('e_zns_status_epilept', v)} />
-              <Cb label="Meningitis" checked={!!p.e_zns_meningitis} onChange={v => setP('e_zns_meningitis', v)} />
-              <Cb label="Synkope" checked={!!p.e_zns_synkope} onChange={v => setP('e_zns_synkope', v)} />
-              <Cb label="ZNS Sonstige" checked={!!p.e_zns_sonstige} onChange={v => setP('e_zns_sonstige', v)} />
-            </CbRow>
-            <div style={{ fontWeight: 600, fontSize: '12px', opacity: 0.7, marginTop: '6px', marginBottom: '3px' }}>Herz-Kreislauf</div>
-            <CbRow>
-              <Cb label="Akutes Koronarsyndrom" checked={!!p.e_hk_acs} onChange={v => setP('e_hk_acs', v)} />
-              <Cb label="STEMI Vorderwand" checked={!!p.e_hk_stemi_vw} onChange={v => setP('e_hk_stemi_vw', v)} />
-              <Cb label="STEMI Hinterwand" checked={!!p.e_hk_stemi_hw} onChange={v => setP('e_hk_stemi_hw', v)} />
-              <Cb label="Rhythmusstörung Tachy" checked={!!p.e_hk_tachy} onChange={v => setP('e_hk_tachy', v)} />
-              <Cb label="Rhythmusstörung Brady" checked={!!p.e_hk_brady} onChange={v => setP('e_hk_brady', v)} />
-              <Cb label="Lungenembolie" checked={!!p.e_hk_embolie} onChange={v => setP('e_hk_embolie', v)} />
-              <Cb label="Orthostatische Fehlregulation" checked={!!p.e_hk_ortho} onChange={v => setP('e_hk_ortho', v)} />
-              <Cb label="Herzinsuffizienz / Lungenödem" checked={!!p.e_hk_insuff} onChange={v => setP('e_hk_insuff', v)} />
-              <Cb label="Hypertensiver Notfall" checked={!!p.e_hk_hypert} onChange={v => setP('e_hk_hypert', v)} />
-              <Cb label="Kardiogener Schock" checked={!!p.e_hk_kard_schock} onChange={v => setP('e_hk_kard_schock', v)} />
-              <Cb label="Schrittmacher-/ICD-Fehlfunktion" checked={!!p.e_hk_schrittmacher} onChange={v => setP('e_hk_schrittmacher', v)} />
-              <Cb label="HK Sonstige" checked={!!p.e_hk_sonstige} onChange={v => setP('e_hk_sonstige', v)} />
-            </CbRow>
-            <div style={{ fontWeight: 600, fontSize: '12px', opacity: 0.7, marginTop: '6px', marginBottom: '3px' }}>Atmung</div>
-            <CbRow>
-              <Cb label="Asthma (Anfall)" checked={!!p.e_atm_asthma} onChange={v => setP('e_atm_asthma', v)} />
-              <Cb label="Status asthmaticus" checked={!!p.e_atm_status_asthm} onChange={v => setP('e_atm_status_asthm', v)} />
-              <Cb label="COPD" checked={!!p.e_atm_copd} onChange={v => setP('e_atm_copd', v)} />
-              <Cb label="Pneumonie / Bronchitis" checked={!!p.e_atm_pneumonie} onChange={v => setP('e_atm_pneumonie', v)} />
-              <Cb label="Hyperventilationssyndrom" checked={!!p.e_atm_hypervent} onChange={v => setP('e_atm_hypervent', v)} />
-              <Cb label="Aspiration" checked={!!p.e_atm_aspiration} onChange={v => setP('e_atm_aspiration', v)} />
-              <Cb label="Hämoptysen" checked={!!p.e_atm_haemoptysen} onChange={v => setP('e_atm_haemoptysen', v)} />
-              <Cb label="Atmung Sonstige" checked={!!p.e_atm_sonstige} onChange={v => setP('e_atm_sonstige', v)} />
-            </CbRow>
-            <div style={{ fontWeight: 600, fontSize: '12px', opacity: 0.7, marginTop: '6px', marginBottom: '3px' }}>Abdomen</div>
-            <CbRow>
-              <Cb label="Akutes Abdomen" checked={!!p.e_abd_akut} onChange={v => setP('e_abd_akut', v)} />
-              <Cb label="GI-Blutung obere" checked={!!p.e_abd_gi_ob} onChange={v => setP('e_abd_gi_ob', v)} />
-              <Cb label="GI-Blutung untere" checked={!!p.e_abd_gi_un} onChange={v => setP('e_abd_gi_un', v)} />
-              <Cb label="Kolik (Niere/Galle)" checked={!!p.e_abd_kolik} onChange={v => setP('e_abd_kolik', v)} />
-              <Cb label="Enteritis" checked={!!p.e_abd_enteritis} onChange={v => setP('e_abd_enteritis', v)} />
-              <Cb label="Abdomen Sonstige" checked={!!p.e_abd_sonstige} onChange={v => setP('e_abd_sonstige', v)} />
-            </CbRow>
-            <div style={{ fontWeight: 600, fontSize: '12px', opacity: 0.7, marginTop: '6px', marginBottom: '3px' }}>Psychiatrie</div>
-            <CbRow>
-              <Cb label="Psychose / Manie / Erregungszustand" checked={!!p.e_psy_psychose} onChange={v => setP('e_psy_psychose', v)} />
-              <Cb label="Angst / Depression" checked={!!p.e_psy_angst} onChange={v => setP('e_psy_angst', v)} />
-              <Cb label="Intoxikation akzidentell" checked={!!p.e_psy_intox_akzid} onChange={v => setP('e_psy_intox_akzid', v)} />
-              <Cb label="Intoxikation Alkohol" checked={!!p.e_psy_intox_alkohol} onChange={v => setP('e_psy_intox_alkohol', v)} />
-              <Cb label="Intoxikation Drogen" checked={!!p.e_psy_intox_drogen} onChange={v => setP('e_psy_intox_drogen', v)} />
-              <Cb label="Intoxikation Medikamente" checked={!!p.e_psy_intox_medis} onChange={v => setP('e_psy_intox_medis', v)} />
-              <Cb label="Intoxikation Sonstige" checked={!!p.e_psy_intox_sonstige} onChange={v => setP('e_psy_intox_sonstige', v)} />
-              <Cb label="Entzug / Delir" checked={!!p.e_psy_entzug} onChange={v => setP('e_psy_entzug', v)} />
-              <Cb label="Suizid(versuch)" checked={!!p.e_psy_suizid} onChange={v => setP('e_psy_suizid', v)} />
-              <Cb label="Psychosoziale Krise" checked={!!p.e_psy_krise} onChange={v => setP('e_psy_krise', v)} />
-              <Cb label="Psychiatrie Sonstige" checked={!!p.e_psy_sonstige} onChange={v => setP('e_psy_sonstige', v)} />
-            </CbRow>
-            <div style={{ fontWeight: 600, fontSize: '12px', opacity: 0.7, marginTop: '6px', marginBottom: '3px' }}>Stoffwechsel</div>
-            <CbRow>
-              <Cb label="Hypoglykämie" checked={!!p.e_stw_hypo} onChange={v => setP('e_stw_hypo', v)} />
-              <Cb label="Hyperglykämie" checked={!!p.e_stw_hyper} onChange={v => setP('e_stw_hyper', v)} />
-              <Cb label="Exsiccose" checked={!!p.e_stw_exsiccose} onChange={v => setP('e_stw_exsiccose', v)} />
-              <Cb label="Urämie / ANV" checked={!!p.e_stw_uraemie} onChange={v => setP('e_stw_uraemie', v)} />
-              <Cb label="Stoffwechsel Sonstige" checked={!!p.e_stw_sonstige} onChange={v => setP('e_stw_sonstige', v)} />
-            </CbRow>
-            <div style={{ fontWeight: 600, fontSize: '12px', opacity: 0.7, marginTop: '6px', marginBottom: '3px' }}>Pädiatrie</div>
-            <CbRow>
-              <Cb label="Fieberkrampf" checked={!!p.e_paed_fieberkrampf} onChange={v => setP('e_paed_fieberkrampf', v)} />
-              <Cb label="Pseudokrupp" checked={!!p.e_paed_pseudokrupp} onChange={v => setP('e_paed_pseudokrupp', v)} />
-              <Cb label="SIDS / Near-SIDS" checked={!!p.e_paed_sids} onChange={v => setP('e_paed_sids', v)} />
-            </CbRow>
-            <div style={{ fontWeight: 600, fontSize: '12px', opacity: 0.7, marginTop: '6px', marginBottom: '3px' }}>Gynäkologie</div>
-            <CbRow>
-              <Cb label="Schwangerschaft" checked={!!p.e_gyn_schwanger} onChange={v => setP('e_gyn_schwanger', v)} />
-              <Cb label="Drohende / präklinische Geburt" checked={!!p.e_gyn_geburt} onChange={v => setP('e_gyn_geburt', v)} />
-              <Cb label="(Prä-)Eklampsie" checked={!!p.e_gyn_eklampsie} onChange={v => setP('e_gyn_eklampsie', v)} />
-              <Cb label="Vaginale Blutung" checked={!!p.e_gyn_blutung} onChange={v => setP('e_gyn_blutung', v)} />
-              <Cb label="Gynäkologie Sonstige" checked={!!p.e_gyn_sonstige} onChange={v => setP('e_gyn_sonstige', v)} />
-            </CbRow>
-            <div style={{ fontWeight: 600, fontSize: '12px', opacity: 0.7, marginTop: '6px', marginBottom: '3px' }}>Weitere</div>
-            <CbRow>
-              <Cb label="Anaphylaktische Reaktion" checked={!!p.e_anaphylaxie} onChange={v => setP('e_anaphylaxie', v)} />
-              <Cb label="Hitzeerschöpfung / Hitzeschlag" checked={!!p.e_hitze} onChange={v => setP('e_hitze', v)} />
-              <Cb label="Unterkühlung / Erfrierung" checked={!!p.e_unterkuehlung} onChange={v => setP('e_unterkuehlung', v)} />
-              <Cb label="Sepsis / sept. Schock" checked={!!p.e_sepsis} onChange={v => setP('e_sepsis', v)} />
-              <Cb label="Influenza" checked={!!p.e_influenza} onChange={v => setP('e_influenza', v)} />
-              <Cb label="Hepatitis / HIV" checked={!!p.e_hepatitis_hiv} onChange={v => setP('e_hepatitis_hiv', v)} />
-              <Cb label="Akutes Lumbago" checked={!!p.e_lumbago} onChange={v => setP('e_lumbago', v)} />
-              <Cb label="Epistaxis" checked={!!p.e_epistaxis} onChange={v => setP('e_epistaxis', v)} />
-              <Cb label="Soziales Problem" checked={!!p.e_soziales} onChange={v => setP('e_soziales', v)} />
-              <Cb label="Behandlungskomplikation" checked={!!p.e_behandlungskompl} onChange={v => setP('e_behandlungskompl', v)} />
-              <Cb label="Weitere Sonstige" checked={!!p.e_weitere_sonstige} onChange={v => setP('e_weitere_sonstige', v)} />
-            </CbRow>
-          </Section>
-
-          <Section title="Medikamente">
-            {(p.medications || []).map((med, i) => (
-              <div key={i} style={{ background: 'var(--bg-secondary)', borderRadius: '8px', padding: '10px', marginBottom: '8px' }}>
-                <Row2>
-                  <Field label="Medikament"><Inp value={med.name} onChange={v => updateMed(i, 'name', v)} /></Field>
-                  <Field label="Dosis"><Inp value={med.dose} onChange={v => updateMed(i, 'dose', v)} /></Field>
-                  <Field label="Einheit"><Inp value={med.unit} onChange={v => updateMed(i, 'unit', v)} placeholder="mg, ml…" /></Field>
-                  <Field label="Applikation"><Inp value={med.route} onChange={v => updateMed(i, 'route', v)} placeholder="i.v., s.c.…" /></Field>
-                  <Field label="Zeit"><Inp value={med.time} onChange={v => updateMed(i, 'time', v)} type="time" /></Field>
-                  <Field label="Hinweis"><Inp value={med.note} onChange={v => updateMed(i, 'note', v)} /></Field>
-                </Row2>
-                <button onClick={() => removeMed(i)} style={{ fontSize: '12px', color: '#c0392b', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>Entfernen</button>
-              </div>
-            ))}
-            <button onClick={addMed} style={{ fontSize: '14px', color: '#c0392b', background: 'none', border: '1px dashed #c0392b', borderRadius: '8px', padding: '8px 16px', cursor: 'pointer', width: '100%' }}>+ Medikament hinzufügen</button>
-          </Section>
-
-          <Section title="Zugang / Infusion">
-            <Row2>
-              <Field label="Zugang Art"><Inp value={p.zugang_art||''} onChange={v => setP('zugang_art', v)} placeholder="peripher, zentral…" /></Field>
-              <Field label="Gauge"><Inp value={p.zugang_gauge||''} onChange={v => setP('zugang_gauge', v)} /></Field>
-              <Field label="Region"><Inp value={p.zugang_region||''} onChange={v => setP('zugang_region', v)} /></Field>
-              <Field label="Infusion Art"><Inp value={p.inf_art||''} onChange={v => setP('inf_art', v)} /></Field>
-              <Field label="Infusion Menge (ml)"><Inp value={p.inf_menge||''} onChange={v => setP('inf_menge', v)} /></Field>
-            </Row2>
-          </Section>
-
-          <Section title="Beatmung / Defibrillation">
-            <CbRow>
-              <Cb label="Manuell" checked={!!p.beat_manuell} onChange={v => setP('beat_manuell', v)} />
-              <Cb label="Maschinell" checked={!!p.beat_maschinell} onChange={v => setP('beat_maschinell', v)} />
-              <Cb label="NIV" checked={!!p.beat_niv} onChange={v => setP('beat_niv', v)} />
-              <Cb label="Notfallnarkose" checked={!!p.beat_notfallnarkose} onChange={v => setP('beat_notfallnarkose', v)} />
-            </CbRow>
-            <Row2>
-              <Field label="FiO2"><Inp value={p.beat_fio2||''} onChange={v => setP('beat_fio2', v)} /></Field>
-              <Field label="AF (/min)"><Inp value={p.beat_af||''} onChange={v => setP('beat_af', v)} /></Field>
-              <Field label="AMV (l/min)"><Inp value={p.beat_amv||''} onChange={v => setP('beat_amv', v)} /></Field>
-              <Field label="PEEP (mbar)"><Inp value={p.beat_peep||''} onChange={v => setP('beat_peep', v)} /></Field>
-              <Field label="Pmax (mbar)"><Inp value={p.beat_pmax||''} onChange={v => setP('beat_pmax', v)} /></Field>
-            </Row2>
-            <div style={{ fontWeight: 600, fontSize: '13px', margin: '8px 0 6px', paddingTop: '4px', borderTop: '1px solid var(--border)' }}>Defibrillation</div>
-            <CbRow>
-              <Cb label="AED" checked={!!p.defi_aed} onChange={v => setP('defi_aed', v)} />
-              <Cb label="Defi" checked={!!p.defi_defi} onChange={v => setP('defi_defi', v)} />
-              <Cb label="Monophasisch" checked={!!p.defi_mono} onChange={v => setP('defi_mono', v)} />
-              <Cb label="Biphasisch" checked={!!p.defi_bi} onChange={v => setP('defi_bi', v)} />
-            </CbRow>
-            <CbRow>
-              <span style={{ fontSize: '12px', fontWeight: 600, opacity: 0.6, marginRight: '6px', alignSelf: 'center' }}>Erstanw.:</span>
-              <Cb label="Laie" checked={!!p.defi_erstanw_laie} onChange={v => setP('defi_erstanw_laie', v)} />
-              <Cb label="First Resp." checked={!!p.defi_erstanw_fr} onChange={v => setP('defi_erstanw_fr', v)} />
-              <Cb label="Rettungsdienst" checked={!!p.defi_erstanw_rd} onChange={v => setP('defi_erstanw_rd', v)} />
-              <Cb label="Arzt" checked={!!p.defi_erstanw_arzt} onChange={v => setP('defi_erstanw_arzt', v)} />
-            </CbRow>
-            <Row2>
-              <Field label="Zeitpunkt 1. Defi"><Inp value={p.defi_zeitpunkt||''} onChange={v => setP('defi_zeitpunkt', v)} type="time" /></Field>
-              <Field label="ROSC"><Inp value={p.defi_rosc||''} onChange={v => setP('defi_rosc', v)} type="time" /></Field>
-              <Field label="Anzahl Defi"><Inp value={p.defi_anzahl||''} onChange={v => setP('defi_anzahl', v)} /></Field>
-              <Field label="Energie (kJ)"><Inp value={p.defi_energie||''} onChange={v => setP('defi_energie', v)} /></Field>
-            </Row2>
-          </Section>
-
-          <Section title="Übergabe / Besonderheiten">
-            <Field label="Übergabe Ziel">
-              <select value={p.uebergabe_ziel||''} onChange={e => setP('uebergabe_ziel', e.target.value)}
-                style={{ width: '100%', padding: '8px', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '14px', background: 'var(--bg)', color: 'var(--text)' }}>
+        {/* 6. NACA / Bewusstsein */}
+        <PubSection title="NACA / Bewusstsein">
+          <G2>
+            <F l="NACA-Score">
+              <select value={p.naca || ''} onChange={e => setP('naca', e.target.value)} style={HS('naca')}>
                 <option value="">–</option>
-                <option>ZNA/INA</option>
-                <option>Schockraum</option>
-                <option>Stroke Unit</option>
-                <option>Herzkatheterlabor</option>
-                <option>CPU</option>
-                <option>Intensivstation</option>
-                <option>Allgemeinstation</option>
-                <option>OP direkt</option>
-                <option>Praxis</option>
-                <option>Hausarzt/KV-Arzt</option>
-                <option>Fachambulanz</option>
-                <option>Einsatzstelle</option>
-                <option>Sonstige</option>
+                {['0 – Keine Erkrankung/Verletzung', 'I – Geringfügig', 'II – Leicht', 'III – Mäßig schwer', 'IV – Schwer, keine Lebensgefahr', 'V – Akute Lebensgefahr', 'VI – Reanimation', 'VII – Tod'].map((o, i) => (
+                  <option key={i} value={['0', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII'][i]}>{o}</option>
+                ))}
               </select>
-            </Field>
-            <Field label="Übergabe an (Name)"><Inp value={p.uebergabe_name||''} onChange={v => setP('uebergabe_name', v)} /></Field>
-            <CbRow>
-              <Cb label="Transportverweigerung" checked={!!p.ev_transportverweigerung} onChange={v => setP('ev_transportverweigerung', v)} />
-              <Cb label="Nur Untersuchung/Behandlung" checked={!!p.ev_nur_untersuchung} onChange={v => setP('ev_nur_untersuchung', v)} />
-              <Cb label="Zwangseinweisung" checked={!!p.ev_zwangseinweisung} onChange={v => setP('ev_zwangseinweisung', v)} />
-              <Cb label="Transport mit Sondersignal" checked={!!p.ev_transport_sondersignal} onChange={v => setP('ev_transport_sondersignal', v)} />
-              <Cb label="MANV" checked={!!p.ev_manv} onChange={v => setP('ev_manv', v)} />
-              <Cb label="LNA am Einsatz" checked={!!p.ev_lna} onChange={v => setP('ev_lna', v)} />
-              <Cb label="Schwerlasttransport" checked={!!p.ev_schwerlast} onChange={v => setP('ev_schwerlast', v)} />
-            </CbRow>
-            <Field label="Bemerkungen">
-              <textarea value={p.bemerkungen||''} onChange={e => setP('bemerkungen', e.target.value)} rows={3}
-                style={{ width: '100%', padding: '8px 10px', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '14px', resize: 'vertical', background: 'var(--bg)', color: 'var(--text)', boxSizing: 'border-box' }} />
-            </Field>
-          </Section>
+            </F>
+            <F l="Bewusstsein">
+              <select value={p.bewusstsein || ''} onChange={e => setP('bewusstsein', e.target.value)} style={HS('bewusstsein')}>
+                <option value="">–</option>
+                {['nicht beurteilbar', 'wach', 'getrübt', 'bewusstlos', 'reaktionslos', 'auf Ansprache', 'Reaktion auf Schmerz', 'analgosediert / Narkose'].map(o => <option key={o}>{o}</option>)}
+              </select>
+            </F>
+          </G2>
+          <F l="Verdachtsdiagnose / Erstdiagnose"><input type="text" value={p.erstdiagnose_text || ''} onChange={e => setP('erstdiagnose_text', e.target.value)} placeholder="Freitexteingabe…" style={H('erstdiagnose_text')} /></F>
+        </PubSection>
 
-          <Section title="Verletzungen / Trauma">
-            <CbRow><Cb label="Keine Verletzung" checked={!!p.v_keine} onChange={v => setP('v_keine', v)} /></CbRow>
-            <div style={{ fontWeight: 600, fontSize: '12px', opacity: 0.7, marginTop: '4px', marginBottom: '4px' }}>Körperregion – Schwere (leicht / mittel / schwer / geschlossen)</div>
-            {([
-              ['v_sht','Schädel-Hirn'],['v_gesicht','Gesicht'],['v_hals','Hals'],
-              ['v_thorax','Thorax'],['v_abdomen','Abdomen'],['v_ws','Wirbelsäule'],
-              ['v_becken','Becken'],['v_obext','Obere Extremitäten'],['v_untext','Untere Extremitäten'],['v_weich','Weichteile']
-            ] as [keyof typeof p, string][]).map(([k,lbl]) => (
-              <div key={String(k)} style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: '4px', alignItems: 'center', marginBottom: '4px' }}>
-                <span style={{ fontSize: '13px' }}>{lbl}</span>
-                <select value={p[k] as string||''} onChange={e => setP(k, e.target.value)}
-                  style={{ padding: '5px', border: '1px solid var(--border)', borderRadius: '6px', fontSize: '13px', background: 'var(--bg)', color: 'var(--text)' }}>
-                  <option value="">–</option>
-                  <option value="leicht">leicht</option>
-                  <option value="mittel">mittel</option>
-                  <option value="schwer">schwer</option>
-                  <option value="geschlossen">geschlossen</option>
-                </select>
+        {/* 7. Neurologie */}
+        <PubSection title="Neurologie">
+          <G2>
+            <F l="Zeit"><input type="time" value={p.neu_zeit || ''} onChange={e => setP('neu_zeit', e.target.value)} style={H('neu_zeit')} /></F>
+            <div style={{ paddingTop: 28 }}><Cb k="neu_unauff" label="Unauffällig" /></div>
+          </G2>
+          <G2>
+            <F l="Pupillenweite re.">
+              <div style={{ display: 'flex' }}>
+                {['eng', 'mittel', 'weit'].map(v => <Rad key={v} name="pw_r" v={v} cur={p.pw_r || 'mittel'} set={v2 => setP('pw_r', v2)} label={v} />)}
               </div>
+            </F>
+            <F l="Pupillenweite li.">
+              <div style={{ display: 'flex' }}>
+                {['eng', 'mittel', 'weit'].map(v => <Rad key={v} name="pw_l" v={v} cur={p.pw_l || 'mittel'} set={v2 => setP('pw_l', v2)} label={v} />)}
+              </div>
+            </F>
+          </G2>
+          <CbRow>
+            <Cb k="pw_r_entrundet" label="Entrundet re." />
+            <Cb k="pw_l_entrundet" label="Entrundet li." />
+          </CbRow>
+          <G2>
+            <F l="Lichtreaktion re.">
+              <div style={{ display: 'flex' }}>
+                {['prompt', 'träge', 'keine'].map(v => <Rad key={v} name="lr_r" v={v} cur={p.lr_r || 'prompt'} set={v2 => setP('lr_r', v2)} label={v} />)}
+              </div>
+            </F>
+            <F l="Lichtreaktion li.">
+              <div style={{ display: 'flex' }}>
+                {['prompt', 'träge', 'keine'].map(v => <Rad key={v} name="lr_l" v={v} cur={p.lr_l || 'prompt'} set={v2 => setP('lr_l', v2)} label={v} />)}
+              </div>
+            </F>
+          </G2>
+          <CbRow>
+            <Cb k="neu_sprachstoerung" label="Sprachstörung" />
+            <Cb k="neu_demenz" label="Demenz" />
+            <Cb k="neu_meningismus" label="Meningismus" />
+            <Cb k="neu_seitenzeichen" label="Seitenzeichen" />
+            <Cb k="neu_kein_laecheln" label="Kein Lächeln" />
+            <Cb k="neu_sehstoerung" label="Sehstörung" />
+            <Cb k="neu_querschnitt" label="Querschnittssymptomatik" />
+            <Cb k="neu_babinski" label="Babinski" />
+            <Cb k="neu_vorbestehend" label="Vorbestehende Defizite" />
+          </CbRow>
+          <F l="Neurologische Sonstige"><input type="text" value={p.neu_sonstige || ''} onChange={e => setP('neu_sonstige', e.target.value)} style={H('neu_sonstige')} /></F>
+          <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 6 }}>Extremitätenbewegung</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr 1fr', gap: '4px 8px', alignItems: 'center', marginBottom: 10, fontSize: 13 }}>
+            <div /><div style={{ textAlign: 'center', fontWeight: 600, fontSize: 12 }}>Rechts</div><div style={{ textAlign: 'center', fontWeight: 600, fontSize: 12 }}>Links</div>
+            <div style={{ fontWeight: 600, fontSize: 12 }}>Arm</div>
+            {(['ext_r_arm', 'ext_l_arm'] as const).map(k => (
+              <select key={k} value={p[k] || ''} onChange={e => setP(k, e.target.value)}
+                style={{ padding: 6, border: '1px solid var(--border)', borderRadius: 6, fontSize: 13, background: 'var(--bg)', color: 'var(--text)', ...hl(k) }}>
+                <option value="">–</option><option value="1">1 – Normal</option><option value="2">2 – Leicht vermindert</option>
+                <option value="3">3 – Stark vermindert</option><option value="4">4 – Fehlend</option>
+              </select>
             ))}
-            <div style={{ fontWeight: 600, fontSize: '12px', opacity: 0.7, marginTop: '8px', marginBottom: '4px' }}>Besondere Verletzungsarten</div>
-            <CbRow>
-              <Cb label="Verbrennung / Verbrühung" checked={!!p.v_verbrennung} onChange={v => setP('v_verbrennung', v)} />
-              <Cb label="Verätzung" checked={!!p.v_veraetzung} onChange={v => setP('v_veraetzung', v)} />
-              <Cb label="Verschüttung" checked={!!p.v_verschuettung} onChange={v => setP('v_verschuettung', v)} />
-              <Cb label="Einklemmung" checked={!!p.v_einklemmung} onChange={v => setP('v_einklemmung', v)} />
-              <Cb label="Inhalationstrauma" checked={!!p.v_inhalation} onChange={v => setP('v_inhalation', v)} />
-              <Cb label="Elektrounfall" checked={!!p.v_elektrounfall} onChange={v => setP('v_elektrounfall', v)} />
-              <Cb label="Beinahe-Ertrinken" checked={!!p.v_ertrinken} onChange={v => setP('v_ertrinken', v)} />
-              <Cb label="Tauchunfall" checked={!!p.v_tauchunfall} onChange={v => setP('v_tauchunfall', v)} />
-              <Cb label="Hämorrhagischer Schock" checked={!!p.v_haemo_schock} onChange={v => setP('v_haemo_schock', v)} />
-            </CbRow>
-            {p.v_verbrennung && (
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 12px' }}>
-                <Field label="Verbrennungsgrad"><Inp value={p.v_verbrennung_grad||''} onChange={v => setP('v_verbrennung_grad', v)} placeholder="Grad…" /></Field>
-                <Field label="Verbrannte Fläche (%)"><Inp value={p.v_verbrennung_pct||''} onChange={v => setP('v_verbrennung_pct', v)} /></Field>
-              </div>
-            )}
-            <Field label="Verletzungen Sonstige"><Inp value={p.v_sonstige||''} onChange={v => setP('v_sonstige', v)} /></Field>
-            <div style={{ fontWeight: 600, fontSize: '12px', opacity: 0.7, marginTop: '8px', marginBottom: '4px' }}>Unfallmechanismus</div>
-            <CbRow>
-              <Cb label="Trauma stumpf" checked={!!p.v_trauma_stumpf} onChange={v => setP('v_trauma_stumpf', v)} />
-              <Cb label="Trauma penetrierend" checked={!!p.v_trauma_penetr} onChange={v => setP('v_trauma_penetr', v)} />
-              <Cb label="Sturz ebenerdig" checked={!!p.v_sturz_eben} onChange={v => setP('v_sturz_eben', v)} />
-              <Cb label="Sturz &lt;3 m" checked={!!p.v_sturz_unter3m} onChange={v => setP('v_sturz_unter3m', v)} />
-              <Cb label="Sturz &gt;3 m" checked={!!p.v_sturz_ueber3m} onChange={v => setP('v_sturz_ueber3m', v)} />
-            </CbRow>
-            <div style={{ fontWeight: 600, fontSize: '12px', opacity: 0.7, marginTop: '6px', marginBottom: '4px' }}>Verkehrsteilnehmer</div>
-            <CbRow>
-              <Cb label="Fußgänger" checked={!!p.v_vt_fussgaenger} onChange={v => setP('v_vt_fussgaenger', v)} />
-              <Cb label="E-Scooter" checked={!!p.v_vt_escooter} onChange={v => setP('v_vt_escooter', v)} />
-              <Cb label="Fahrrad" checked={!!p.v_vt_fahrrad} onChange={v => setP('v_vt_fahrrad', v)} />
-              <Cb label="E-Bike" checked={!!p.v_vt_ebike} onChange={v => setP('v_vt_ebike', v)} />
-              <Cb label="Motorrad / Sozius" checked={!!p.v_vt_motorrad} onChange={v => setP('v_vt_motorrad', v)} />
-              <Cb label="PKW Insasse" checked={!!p.v_vt_pkw} onChange={v => setP('v_vt_pkw', v)} />
-              <Cb label="LKW Insasse" checked={!!p.v_vt_lkw} onChange={v => setP('v_vt_lkw', v)} />
-              <Cb label="Bus Insasse" checked={!!p.v_vt_bus} onChange={v => setP('v_vt_bus', v)} />
-            </CbRow>
-            <div style={{ fontWeight: 600, fontSize: '12px', opacity: 0.7, marginTop: '6px', marginBottom: '4px' }}>Gewaltanwendung</div>
-            <CbRow>
-              <Cb label="Schlag" checked={!!p.v_gew_schlag} onChange={v => setP('v_gew_schlag', v)} />
-              <Cb label="Schuss" checked={!!p.v_gew_schuss} onChange={v => setP('v_gew_schuss', v)} />
-              <Cb label="Stich" checked={!!p.v_gew_stich} onChange={v => setP('v_gew_stich', v)} />
-              <Cb label="Gewalt Sonstige" checked={!!p.v_gew_sonstige} onChange={v => setP('v_gew_sonstige', v)} />
-              <Cb label="Gewaltverbrechen" checked={!!p.v_gew_verbrechen} onChange={v => setP('v_gew_verbrechen', v)} />
-            </CbRow>
-          </Section>
+            <div style={{ fontWeight: 600, fontSize: 12 }}>Bein</div>
+            {(['ext_r_bein', 'ext_l_bein'] as const).map(k => (
+              <select key={k} value={p[k] || ''} onChange={e => setP(k, e.target.value)}
+                style={{ padding: 6, border: '1px solid var(--border)', borderRadius: 6, fontSize: 13, background: 'var(--bg)', color: 'var(--text)', ...hl(k) }}>
+                <option value="">–</option><option value="1">1 – Normal</option><option value="2">2 – Leicht vermindert</option>
+                <option value="3">3 – Stark vermindert</option><option value="4">4 – Fehlend</option>
+              </select>
+            ))}
+          </div>
+          <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 6 }}>Glasgow Coma Scale (GCS: {gcsT > 0 ? gcsT : '—'})</div>
+          <G2>
+            <F l="Augen (E 1–4)">
+              <select value={p.gcs_e || 4} onChange={e => setP('gcs_e', +e.target.value)} style={HS('gcs_e')}>
+                <option value={1}>1 – Keine</option><option value={2}>2 – Auf Schmerz</option>
+                <option value={3}>3 – Auf Aufforderung</option><option value={4}>4 – Spontan</option>
+              </select>
+            </F>
+            <F l="Verbal (V 1–5)">
+              <select value={p.gcs_v || 5} onChange={e => setP('gcs_v', +e.target.value)} style={HS('gcs_v')}>
+                <option value={1}>1 – Keine</option><option value={2}>2 – Unverständlich</option>
+                <option value={3}>3 – Einzelne Wörter</option><option value={4}>4 – Verwirrt</option><option value={5}>5 – Orientiert</option>
+              </select>
+            </F>
+            <F l="Motorik (M 1–6)">
+              <select value={p.gcs_m || 6} onChange={e => setP('gcs_m', +e.target.value)} style={HS('gcs_m')}>
+                <option value={1}>1 – Keine</option><option value={2}>2 – Strecksynergismen</option>
+                <option value={3}>3 – Beugesynergismen</option><option value={4}>4 – Auf Schmerz</option>
+                <option value={5}>5 – Gezielte Abwehr</option><option value={6}>6 – Auf Aufforderung</option>
+              </select>
+            </F>
+          </G2>
+        </PubSection>
 
-        </div>
-        <div style={s.footer}>
-          <button style={s.btnS} onClick={onClose}>Abbrechen</button>
-          <button style={s.btnP} onClick={onSaveAndSign}>Speichern & Gegenzeichnen</button>
+        {/* 8. Haut */}
+        <PubSection title="Haut">
+          <CbRow>
+            <Cb k="haut_unauff" label="Unauffällig" /><Cb k="haut_falten" label="Hautfalten" />
+            <Cb k="haut_oedeme" label="Ödeme" /><Cb k="haut_dekubitus" label="Dekubitus" />
+            <Cb k="haut_kaltschweissig" label="Kaltschweißig" /><Cb k="haut_exanthem" label="Exanthem" />
+          </CbRow>
+        </PubSection>
+
+        {/* 9. Psyche */}
+        <PubSection title="Psyche">
+          <CbRow>
+            <Cb k="psy_erregt" label="Erregt" /><Cb k="psy_aggr" label="Aggressiv" />
+            <Cb k="psy_verlangsamt" label="Verlangsamt" /><Cb k="psy_depressiv" label="Depressiv" />
+            <Cb k="psy_aengstlich" label="Ängstlich" /><Cb k="psy_euphorisch" label="Euphorisch" />
+            <Cb k="psy_wahnhaft" label="Wahnhaft" /><Cb k="psy_verwirrt" label="Verwirrt" />
+            <Cb k="psy_suizidal" label="Suizidal" /><Cb k="psy_motor_unruhig" label="Motor. unruhig" />
+          </CbRow>
+        </PubSection>
+
+        {/* 10. Atmung */}
+        <PubSection title="Atmung">
+          <CbRow>
+            <Cb k="atm_apnoe" label="Apnoe" /><Cb k="atm_stridor" label="Stridor" />
+            <Cb k="atm_dyspnoe" label="Dyspnoe" /><Cb k="atm_zyanose" label="Zyanose" />
+          </CbRow>
+          <CbRow>
+            <Cb k="o2" label="O₂" /><Cb k="o2_nasal" label="Nasal" />
+            <Cb k="o2_maske" label="Maske" /><Cb k="o2_reservoir" label="Reservoir" />
+          </CbRow>
+          <F l="O₂-Flow (l/min)"><input type="text" value={p.o2_flow || ''} onChange={e => setP('o2_flow', e.target.value)} style={H('o2_flow')} /></F>
+        </PubSection>
+
+        {/* 11. Atemwegsmanagement */}
+        <PubSection title="Atemwegsmanagement">
+          <CbRow>
+            <Cb k="awm_freihalten" label="Freihalten" /><Cb k="awm_absaugung" label="Absaugung" />
+            <Cb k="awm_opa" label="OPA (Guedel)" /><Cb k="awm_npa" label="NPA (Wendl)" />
+            <Cb k="awm_lma" label="LMA / SGA" /><Cb k="awm_intubation" label="Intubation (OTI)" />
+          </CbRow>
+        </PubSection>
+
+        {/* 12. Lagerung */}
+        <PubSection title="Lagerung">
+          <CbRow>
+            <Cb k="lag_flach" label="Flachlagerung" /><Cb k="lag_schock" label="Schocklagerung" />
+            <Cb k="lag_ok_hoch" label="Oberkörper hoch" /><Cb k="lag_ssl" label="Stabile Seitenlage" />
+            <Cb k="lag_sitzend" label="Sitzend" /><Cb k="lag_haengend" label="Hängeposition" />
+          </CbRow>
+        </PubSection>
+
+        {/* 13. Reanimation */}
+        <PubSection title="Reanimation">
+          <CbRow>
+            <Cb k="rean" label="Reanimation durchgeführt" />
+            <Cb k="rean_tod" label="Todesfeststellung" />
+          </CbRow>
+          {p.rean_tod && <F l="Uhrzeit Todesfeststellung"><input type="time" value={p.rean_tod_zeit || ''} onChange={e => setP('rean_tod_zeit', e.target.value)} style={H('rean_tod_zeit')} /></F>}
+          {p.rean && (
+            <G2>
+              <F l="Beginn"><input type="time" value={p.rean_beginn || ''} onChange={e => setP('rean_beginn', e.target.value)} style={H('rean_beginn')} /></F>
+              <F l="Ende"><input type="time" value={p.rean_ende || ''} onChange={e => setP('rean_ende', e.target.value)} style={H('rean_ende')} /></F>
+              <F l="Defibrillationen (Anzahl)"><input type="text" value={p.rean_defib || ''} onChange={e => setP('rean_defib', e.target.value)} style={H('rean_defib')} /></F>
+            </G2>
+          )}
+        </PubSection>
+
+        {/* 14. Immobilisation */}
+        <PubSection title="Immobilisation">
+          <CbRow>
+            <Cb k="immo_hws" label="HWS-Orthese" />
+            <Cb k="immo_spineboard" label="Spineboard" />
+            <Cb k="immo_vakuum" label="Vakuummatratze" />
+          </CbRow>
+        </PubSection>
+
+        {/* 15. Rhythmus / EKG */}
+        <PubSection title="Rhythmus / EKG">
+          <CbRow>
+            <Cb k="sr" label="Sinusrhythmus" /><Cb k="stemi" label="STEMI" />
+            <Cb k="vf" label="Kammerflimmern" /><Cb k="asystole" label="Asystolie" />
+          </CbRow>
+          <G2>
+            <F l="EKG-Standort"><input type="text" value={p.ekg_standort || ''} onChange={e => setP('ekg_standort', e.target.value)} style={H('ekg_standort')} /></F>
+            <F l="EKG Pers.-Nr."><input type="text" value={p.ekg_persnr || ''} onChange={e => setP('ekg_persnr', e.target.value)} style={H('ekg_persnr')} /></F>
+          </G2>
+        </PubSection>
+
+        {/* 16. Diagnosen / Erkrankungen */}
+        <PubSection title="Diagnosen / Erkrankungen">
+          <CbRow><Cb k="e_keine" label="Keine Erkrankung / Verletzung" /></CbRow>
+          <Cat t="ZNS" />
+          <CbRow>
+            <Cb k="e_zns_schlaganfall" label="Schlaganfall" /><Cb k="e_zns_tia" label="TIA" />
+            <Cb k="e_zns_blutung" label="Intrakranielle Blutung" /><Cb k="e_zns_lyse" label="Im Lysefenster" />
+            <Cb k="e_zns_krampf" label="Krampfanfall" /><Cb k="e_zns_status_epilept" label="Status epilepticus" />
+            <Cb k="e_zns_meningitis" label="Meningitis" /><Cb k="e_zns_synkope" label="Synkope" />
+            <Cb k="e_zns_sonstige" label="ZNS Sonstige" />
+          </CbRow>
+          <Cat t="Herz-Kreislauf" />
+          <CbRow>
+            <Cb k="e_hk_acs" label="Akutes Koronarsyndrom" /><Cb k="e_hk_stemi_vw" label="STEMI Vorderwand" />
+            <Cb k="e_hk_stemi_hw" label="STEMI Hinterwand" /><Cb k="e_hk_tachy" label="Rhythmusstörung Tachy" />
+            <Cb k="e_hk_brady" label="Rhythmusstörung Brady" /><Cb k="e_hk_embolie" label="Lungenembolie" />
+            <Cb k="e_hk_ortho" label="Orthostatische Fehlregulation" /><Cb k="e_hk_insuff" label="Herzinsuffizienz / Lungenödem" />
+            <Cb k="e_hk_hypert" label="Hypertensiver Notfall" /><Cb k="e_hk_kard_schock" label="Kardiogener Schock" />
+            <Cb k="e_hk_schrittmacher" label="Schrittmacher-/ICD-Fehlfunktion" /><Cb k="e_hk_sonstige" label="HK Sonstige" />
+          </CbRow>
+          <Cat t="Atmung" />
+          <CbRow>
+            <Cb k="e_atm_asthma" label="Asthma (Anfall)" /><Cb k="e_atm_status_asthm" label="Status asthmaticus" />
+            <Cb k="e_atm_copd" label="COPD" /><Cb k="e_atm_pneumonie" label="Pneumonie / Bronchitis" />
+            <Cb k="e_atm_hypervent" label="Hyperventilationssyndrom" /><Cb k="e_atm_aspiration" label="Aspiration" />
+            <Cb k="e_atm_haemoptysen" label="Hämoptysen" /><Cb k="e_atm_sonstige" label="Atmung Sonstige" />
+          </CbRow>
+          <Cat t="Abdomen" />
+          <CbRow>
+            <Cb k="e_abd_akut" label="Akutes Abdomen" /><Cb k="e_abd_gi_ob" label="GI-Blutung obere" />
+            <Cb k="e_abd_gi_un" label="GI-Blutung untere" /><Cb k="e_abd_kolik" label="Kolik (Niere/Galle)" />
+            <Cb k="e_abd_enteritis" label="Enteritis" /><Cb k="e_abd_sonstige" label="Abdomen Sonstige" />
+          </CbRow>
+          <Cat t="Psychiatrie" />
+          <CbRow>
+            <Cb k="e_psy_psychose" label="Psychose / Manie / Erregungszustand" /><Cb k="e_psy_angst" label="Angst / Depression" />
+            <Cb k="e_psy_intox_akzid" label="Intoxikation akzidentell" /><Cb k="e_psy_intox_alkohol" label="Intoxikation Alkohol" />
+            <Cb k="e_psy_intox_drogen" label="Intoxikation Drogen" /><Cb k="e_psy_intox_medis" label="Intoxikation Medikamente" />
+            <Cb k="e_psy_intox_sonstige" label="Intoxikation Sonstige" /><Cb k="e_psy_entzug" label="Entzug / Delir" />
+            <Cb k="e_psy_suizid" label="Suizid(versuch)" /><Cb k="e_psy_krise" label="Psychosoziale Krise" />
+            <Cb k="e_psy_sonstige" label="Psychiatrie Sonstige" />
+          </CbRow>
+          <Cat t="Stoffwechsel" />
+          <CbRow>
+            <Cb k="e_stw_hypo" label="Hypoglykämie" /><Cb k="e_stw_hyper" label="Hyperglykämie" />
+            <Cb k="e_stw_exsiccose" label="Exsiccose" /><Cb k="e_stw_uraemie" label="Urämie / ANV" />
+            <Cb k="e_stw_sonstige" label="Stoffwechsel Sonstige" />
+          </CbRow>
+          <Cat t="Pädiatrie" />
+          <CbRow>
+            <Cb k="e_paed_fieberkrampf" label="Fieberkrampf" /><Cb k="e_paed_pseudokrupp" label="Pseudokrupp" />
+            <Cb k="e_paed_sids" label="SIDS / Near-SIDS" />
+          </CbRow>
+          <Cat t="Gynäkologie" />
+          <CbRow>
+            <Cb k="e_gyn_schwanger" label="Schwangerschaft" /><Cb k="e_gyn_geburt" label="Drohende / präklinische Geburt" />
+            <Cb k="e_gyn_eklampsie" label="(Prä-)Eklampsie" /><Cb k="e_gyn_blutung" label="Vaginale Blutung" />
+            <Cb k="e_gyn_sonstige" label="Gynäkologie Sonstige" />
+          </CbRow>
+          <Cat t="Weitere" />
+          <CbRow>
+            <Cb k="e_anaphylaxie" label="Anaphylaktische Reaktion" /><Cb k="e_hitze" label="Hitzeerschöpfung / Hitzeschlag" />
+            <Cb k="e_unterkuehlung" label="Unterkühlung / Erfrierung" /><Cb k="e_sepsis" label="Sepsis / sept. Schock" />
+            <Cb k="e_influenza" label="Influenza" /><Cb k="e_hepatitis_hiv" label="Hepatitis / HIV" />
+            <Cb k="e_lumbago" label="Akutes Lumbago" /><Cb k="e_epistaxis" label="Epistaxis" />
+            <Cb k="e_soziales" label="Soziales Problem" /><Cb k="e_behandlungskompl" label="Behandlungskomplikation" />
+            <Cb k="e_weitere_sonstige" label="Weitere Sonstige" />
+          </CbRow>
+        </PubSection>
+
+        {/* 17. Medikamente */}
+        <PubSection title="Medikamente">
+          {(p.medications || []).map((med, i) => (
+            <div key={i} style={{ background: 'var(--bg-secondary)', borderRadius: 8, padding: 10, marginBottom: 8 }}>
+              <G2>
+                <F l="Medikament"><input type="text" value={med.name} onChange={e => upMed(i, 'name', e.target.value)} style={inp} /></F>
+                <F l="Dosis"><input type="text" value={med.dose} onChange={e => upMed(i, 'dose', e.target.value)} style={inp} /></F>
+                <F l="Einheit"><input type="text" value={med.unit} onChange={e => upMed(i, 'unit', e.target.value)} placeholder="mg, ml…" style={inp} /></F>
+                <F l="Applikation"><input type="text" value={med.route} onChange={e => upMed(i, 'route', e.target.value)} placeholder="i.v., s.c.…" style={inp} /></F>
+                <F l="Zeit"><input type="time" value={med.time} onChange={e => upMed(i, 'time', e.target.value)} style={inp} /></F>
+                <F l="Hinweis"><input type="text" value={med.note} onChange={e => upMed(i, 'note', e.target.value)} style={inp} /></F>
+              </G2>
+              <button onClick={() => rmMed(i)} style={{ fontSize: 12, color: '#c0392b', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>Entfernen</button>
+            </div>
+          ))}
+          <button onClick={addMed} style={{ fontSize: 14, color: '#c0392b', background: 'none', border: '1px dashed #c0392b', borderRadius: 8, padding: '8px 16px', cursor: 'pointer', width: '100%' }}>+ Medikament hinzufügen</button>
+        </PubSection>
+
+        {/* 18. Zugang / Infusion */}
+        <PubSection title="Zugang / Infusion">
+          <G2>
+            <F l="Zugang Art"><input type="text" value={p.zugang_art || ''} onChange={e => setP('zugang_art', e.target.value)} placeholder="peripher, zentral…" style={H('zugang_art')} /></F>
+            <F l="Gauge"><input type="text" value={p.zugang_gauge || ''} onChange={e => setP('zugang_gauge', e.target.value)} style={H('zugang_gauge')} /></F>
+            <F l="Region"><input type="text" value={p.zugang_region || ''} onChange={e => setP('zugang_region', e.target.value)} style={H('zugang_region')} /></F>
+            <F l="Infusion Art"><input type="text" value={p.inf_art || ''} onChange={e => setP('inf_art', e.target.value)} style={H('inf_art')} /></F>
+            <F l="Infusion Menge (ml)"><input type="text" value={p.inf_menge || ''} onChange={e => setP('inf_menge', e.target.value)} style={H('inf_menge')} /></F>
+          </G2>
+        </PubSection>
+
+        {/* 19. Beatmung / Defibrillation */}
+        <PubSection title="Beatmung / Defibrillation">
+          <CbRow>
+            <Cb k="beat_manuell" label="Manuell" /><Cb k="beat_maschinell" label="Maschinell" />
+            <Cb k="beat_niv" label="NIV" /><Cb k="beat_notfallnarkose" label="Notfallnarkose" />
+          </CbRow>
+          <G2>
+            <F l="FiO2"><input type="text" value={p.beat_fio2 || ''} onChange={e => setP('beat_fio2', e.target.value)} style={H('beat_fio2')} /></F>
+            <F l="AF (/min)"><input type="text" value={p.beat_af || ''} onChange={e => setP('beat_af', e.target.value)} style={H('beat_af')} /></F>
+            <F l="AMV (l/min)"><input type="text" value={p.beat_amv || ''} onChange={e => setP('beat_amv', e.target.value)} style={H('beat_amv')} /></F>
+            <F l="PEEP (mbar)"><input type="text" value={p.beat_peep || ''} onChange={e => setP('beat_peep', e.target.value)} style={H('beat_peep')} /></F>
+            <F l="Pmax (mbar)"><input type="text" value={p.beat_pmax || ''} onChange={e => setP('beat_pmax', e.target.value)} style={H('beat_pmax')} /></F>
+          </G2>
+          <div style={{ fontWeight: 600, fontSize: 13, margin: '8px 0 6px', paddingTop: 4, borderTop: '1px solid var(--border)' }}>Defibrillation</div>
+          <CbRow>
+            <Cb k="defi_aed" label="AED" /><Cb k="defi_defi" label="Defi" />
+            <Cb k="defi_mono" label="Monophasisch" /><Cb k="defi_bi" label="Biphasisch" />
+          </CbRow>
+          <CbRow>
+            <span style={{ fontSize: 12, fontWeight: 600, opacity: .6, marginRight: 6, alignSelf: 'center' }}>Erstanw.:</span>
+            <Cb k="defi_erstanw_laie" label="Laie" /><Cb k="defi_erstanw_fr" label="First Resp." />
+            <Cb k="defi_erstanw_rd" label="Rettungsdienst" /><Cb k="defi_erstanw_arzt" label="Arzt" />
+          </CbRow>
+          <G2>
+            <F l="Zeitpunkt 1. Defi"><input type="time" value={p.defi_zeitpunkt || ''} onChange={e => setP('defi_zeitpunkt', e.target.value)} style={H('defi_zeitpunkt')} /></F>
+            <F l="ROSC"><input type="time" value={p.defi_rosc || ''} onChange={e => setP('defi_rosc', e.target.value)} style={H('defi_rosc')} /></F>
+            <F l="Anzahl Defi"><input type="text" value={p.defi_anzahl || ''} onChange={e => setP('defi_anzahl', e.target.value)} style={H('defi_anzahl')} /></F>
+            <F l="Energie (kJ)"><input type="text" value={p.defi_energie || ''} onChange={e => setP('defi_energie', e.target.value)} style={H('defi_energie')} /></F>
+          </G2>
+        </PubSection>
+
+        {/* 20. Übergabe / Besonderheiten */}
+        <PubSection title="Übergabe / Besonderheiten">
+          <F l="Übergabe Ziel">
+            <select value={p.uebergabe_ziel || ''} onChange={e => setP('uebergabe_ziel', e.target.value)} style={HS('uebergabe_ziel')}>
+              <option value="">–</option>
+              {['ZNA/INA', 'Schockraum', 'Stroke Unit', 'Herzkatheterlabor', 'CPU', 'Intensivstation', 'Allgemeinstation', 'OP direkt', 'Praxis', 'Hausarzt/KV-Arzt', 'Fachambulanz', 'Einsatzstelle', 'Sonstige'].map(o => <option key={o}>{o}</option>)}
+            </select>
+          </F>
+          <F l="Übergabe an (Name)"><input type="text" value={p.uebergabe_name || ''} onChange={e => setP('uebergabe_name', e.target.value)} style={H('uebergabe_name')} /></F>
+          <CbRow>
+            <Cb k="ev_transportverweigerung" label="Transportverweigerung" />
+            <Cb k="ev_nur_untersuchung" label="Nur Untersuchung/Behandlung" />
+            <Cb k="ev_zwangseinweisung" label="Zwangseinweisung" />
+            <Cb k="ev_transport_sondersignal" label="Transport mit Sondersignal" />
+            <Cb k="ev_manv" label="MANV" /><Cb k="ev_lna" label="LNA am Einsatz" />
+            <Cb k="ev_schwerlast" label="Schwerlasttransport" />
+          </CbRow>
+          <F l="Bemerkungen"><textarea value={p.bemerkungen || ''} onChange={e => setP('bemerkungen', e.target.value)} rows={3} style={HT('bemerkungen')} /></F>
+        </PubSection>
+
+        {/* 21. Verletzungen / Trauma */}
+        <PubSection title="Verletzungen / Trauma">
+          <CbRow><Cb k="v_keine" label="Keine Verletzung" /></CbRow>
+          <div style={{ fontWeight: 600, fontSize: 12, opacity: .7, marginTop: 4, marginBottom: 4 }}>Körperregion – Schwere</div>
+          {([['v_sht', 'Schädel-Hirn'], ['v_gesicht', 'Gesicht'], ['v_hals', 'Hals'], ['v_thorax', 'Thorax'], ['v_abdomen', 'Abdomen'], ['v_ws', 'Wirbelsäule'], ['v_becken', 'Becken'], ['v_obext', 'Obere Extremitäten'], ['v_untext', 'Untere Extremitäten'], ['v_weich', 'Weichteile']] as [keyof PatientPayload, string][]).map(([k, lbl2]) => (
+            <div key={String(k)} style={{ display: 'grid', gridTemplateColumns: '130px 1fr', gap: '4px', alignItems: 'center', marginBottom: 4 }}>
+              <span style={{ fontSize: 13 }}>{lbl2}</span>
+              <select value={(p[k] as string) || ''} onChange={e => setP(k, e.target.value as any)}
+                style={{ padding: 5, border: '1px solid var(--border)', borderRadius: 6, fontSize: 13, background: 'var(--bg)', color: 'var(--text)', ...hl(k) }}>
+                <option value="">–</option><option value="leicht">leicht</option>
+                <option value="mittel">mittel</option><option value="schwer">schwer</option>
+                <option value="geschlossen">geschlossen</option>
+              </select>
+            </div>
+          ))}
+          <div style={{ fontWeight: 600, fontSize: 12, opacity: .7, marginTop: 8, marginBottom: 4 }}>Besondere Verletzungsarten</div>
+          <CbRow>
+            <Cb k="v_verbrennung" label="Verbrennung / Verbrühung" /><Cb k="v_veraetzung" label="Verätzung" />
+            <Cb k="v_verschuettung" label="Verschüttung" /><Cb k="v_einklemmung" label="Einklemmung" />
+            <Cb k="v_inhalation" label="Inhalationstrauma" /><Cb k="v_elektrounfall" label="Elektrounfall" />
+            <Cb k="v_ertrinken" label="Beinahe-Ertrinken" /><Cb k="v_tauchunfall" label="Tauchunfall" />
+            <Cb k="v_haemo_schock" label="Hämorrhagischer Schock" />
+          </CbRow>
+          {p.v_verbrennung && (
+            <G2>
+              <F l="Verbrennungsgrad"><input type="text" value={p.v_verbrennung_grad || ''} onChange={e => setP('v_verbrennung_grad', e.target.value)} placeholder="Grad…" style={H('v_verbrennung_grad')} /></F>
+              <F l="Verbrannte Fläche (%)"><input type="text" value={p.v_verbrennung_pct || ''} onChange={e => setP('v_verbrennung_pct', e.target.value)} style={H('v_verbrennung_pct')} /></F>
+            </G2>
+          )}
+          <F l="Verletzungen Sonstige"><input type="text" value={p.v_sonstige || ''} onChange={e => setP('v_sonstige', e.target.value)} style={H('v_sonstige')} /></F>
+          <div style={{ fontWeight: 600, fontSize: 12, opacity: .7, marginTop: 8, marginBottom: 4 }}>Unfallmechanismus</div>
+          <CbRow>
+            <Cb k="v_trauma_stumpf" label="Trauma stumpf" /><Cb k="v_trauma_penetr" label="Trauma penetrierend" />
+            <Cb k="v_sturz_eben" label="Sturz ebenerdig" /><Cb k="v_sturz_unter3m" label="Sturz &lt;3 m" />
+            <Cb k="v_sturz_ueber3m" label="Sturz &gt;3 m" />
+          </CbRow>
+          <div style={{ fontWeight: 600, fontSize: 12, opacity: .7, marginTop: 6, marginBottom: 4 }}>Verkehrsteilnehmer</div>
+          <CbRow>
+            <Cb k="v_vt_fussgaenger" label="Fußgänger" /><Cb k="v_vt_escooter" label="E-Scooter" />
+            <Cb k="v_vt_fahrrad" label="Fahrrad" /><Cb k="v_vt_ebike" label="E-Bike" />
+            <Cb k="v_vt_motorrad" label="Motorrad / Sozius" /><Cb k="v_vt_pkw" label="PKW Insasse" />
+            <Cb k="v_vt_lkw" label="LKW Insasse" /><Cb k="v_vt_bus" label="Bus Insasse" />
+          </CbRow>
+          <div style={{ fontWeight: 600, fontSize: 12, opacity: .7, marginTop: 6, marginBottom: 4 }}>Gewaltanwendung</div>
+          <CbRow>
+            <Cb k="v_gew_schlag" label="Schlag" /><Cb k="v_gew_schuss" label="Schuss" />
+            <Cb k="v_gew_stich" label="Stich" /><Cb k="v_gew_sonstige" label="Gewalt Sonstige" />
+            <Cb k="v_gew_verbrechen" label="Gewaltverbrechen" />
+          </CbRow>
+        </PubSection>
+
+        {/* 22. Rückfragen / Stellungnahmen */}
+        <PubSection title={`Rückfragen / Stellungnahmen${rueckfragen.length ? ` (${rueckfragen.length})` : ''}`} open>
+          {rueckfragen.length === 0 && (
+            <p style={{ fontSize: 14, color: 'var(--text-secondary)', margin: '0 0 12px' }}>Keine Rückfragen vorhanden.</p>
+          )}
+          {rueckfragen.map((rq, i) => (
+            <div key={rq.id} style={{
+              background: rq.status === 'beantwortet' ? '#f0fdf4' : '#fffbeb',
+              border: `1px solid ${rq.status === 'beantwortet' ? '#bbf7d0' : '#fcd34d'}`,
+              borderRadius: 10, padding: 12, marginBottom: 12,
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, flexWrap: 'wrap', gap: 6 }}>
+                <span style={{ fontWeight: 700, fontSize: 13 }}>Rückfrage #{i + 1}</span>
+                <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{new Date(rq.created).toLocaleString('de-DE')}</span>
+                <span style={{
+                  fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 999,
+                  background: rq.status === 'beantwortet' ? '#dcfce7' : '#fef9c3',
+                  color: rq.status === 'beantwortet' ? '#166534' : '#92400e',
+                }}>
+                  {rq.status === 'beantwortet' ? 'Beantwortet' : 'Offen'}
+                </span>
+              </div>
+              <div style={{ fontSize: 14, marginBottom: 8, background: 'rgba(0,0,0,0.04)', borderRadius: 6, padding: 8 }}>
+                <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 2 }}>Frage an Teamleader:</div>
+                {rq.frage}
+              </div>
+              {rq.antwort ? (
+                <div style={{ fontSize: 14, background: '#dcfce7', borderRadius: 6, padding: 8, border: '1px solid #bbf7d0' }}>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: '#166534', marginBottom: 2 }}>Stellungnahme:</div>
+                  {rq.antwort}
+                </div>
+              ) : (
+                <div style={{ fontSize: 13, color: 'var(--text-secondary)', fontStyle: 'italic' }}>Noch keine Stellungnahme eingegangen.</div>
+              )}
+            </div>
+          ))}
+
+          <div style={{ marginTop: rueckfragen.length ? 4 : 0 }}>
+            <label style={{ ...lbl, marginBottom: 6 }}>Neue Rückfrage an Teamleader senden:</label>
+            <textarea
+              value={newFrage} onChange={e => setNewFrage(e.target.value)} rows={3}
+              placeholder="Rückfrage eingeben – der Teamleader wird aufgefordert, Stellung zu nehmen…"
+              style={{ ...ta, marginBottom: 8 }}
+            />
+            <button
+              onClick={sendRueckfrage}
+              disabled={sendingFrage || !newFrage.trim()}
+              style={{
+                padding: '10px 20px',
+                background: sendingFrage || !newFrage.trim() ? 'var(--bg-secondary)' : '#2563eb',
+                color: sendingFrage || !newFrage.trim() ? 'var(--text-secondary)' : '#fff',
+                border: 'none', borderRadius: 10, fontWeight: 700,
+                cursor: sendingFrage || !newFrage.trim() ? 'not-allowed' : 'pointer',
+                fontFamily: 'inherit', fontSize: 14,
+              }}
+            >
+              {sendingFrage ? 'Sende…' : 'Rückfrage senden'}
+            </button>
+          </div>
+        </PubSection>
+
+      </div>
+
+      {/* Bottom bar */}
+      <div style={{ position: 'fixed', left: 0, right: 0, bottom: 0, background: 'var(--bg-status-bar)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', borderTop: '0.5px solid var(--border)', padding: 'calc(0.75rem) 1rem calc(0.75rem + env(safe-area-inset-bottom))', zIndex: 20 }}>
+        <div style={{ maxWidth: 800, margin: '0 auto', display: 'flex', gap: 12 }}>
+          <button onClick={onClose} style={{ flex: 1, padding: 12, background: 'var(--bg-secondary)', color: 'var(--text)', border: 'none', borderRadius: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', fontSize: 15 }}>
+            Abbrechen
+          </button>
+          <button onClick={onSaveAndSign} style={{ flex: 2, padding: 12, background: '#c0392b', color: '#fff', border: 'none', borderRadius: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', fontSize: 15 }}>
+            Speichern & Gegenzeichnen
+          </button>
         </div>
       </div>
     </div>

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import PocketBase from 'pocketbase'
 import { useAuth } from '../hooks/useAuth'
 import { getTheme, setTheme, type ThemeMode } from '../lib/theme'
@@ -119,7 +120,10 @@ function CalendarButtons({ termin }: { termin: Termin }) {
 
 export default function Unitas() {
   const { user, loading: authLoading, logout } = useAuth()
-  const [tab, setTab] = useState<'uebersicht' | 'lernbar' | 'konto'>('uebersicht')
+  const navigate = useNavigate()
+  const [tab, setTab] = useState<'uebersicht' | 'lernbar' | 'konto' | 'protokolle'>('uebersicht')
+  const [myPatients, setMyPatients] = useState<any[]>([])
+  const [myArchivedPatients, setMyArchivedPatients] = useState<any[]>([])
   const [lernbarTab, setLernbarTab] = useState<'termine' | 'lernmodule'>('termine')
 
   const [termine, setTermine] = useState<Termin[]>([])
@@ -201,6 +205,33 @@ export default function Unitas() {
         setNeuigkeiten(neuigkeitenRecords as any)
       } catch {
         // collection may not exist yet
+      }
+
+      // Patienten-Protokolle
+      if (user?.id) {
+        try {
+          const cutoff24h = new Date(Date.now() - 24 * 3600 * 1000).toISOString().replace('T', ' ')
+          const activeRecs = await pb.collection('patients').getFullList({
+            filter: `crew_tf = "${user.id}" || crew_m1 = "${user.id}" || crew_m2 = "${user.id}" || crew_m3 = "${user.id}"`,
+            sort: '-created',
+            requestKey: `patients-active-${Date.now()}`
+          })
+          const active: any[] = []
+          const archived: any[] = []
+          for (const r of activeRecs as any[]) {
+            const p = typeof r.payload === 'string' ? JSON.parse(r.payload) : (r.payload || {})
+            const rec = { ...r, payload: p }
+            if (new Date(r.created) >= new Date(cutoff24h)) {
+              active.push(rec)
+            } else {
+              archived.push(rec)
+            }
+          }
+          setMyPatients(active)
+          setMyArchivedPatients(archived)
+        } catch {
+          // patients collection may not exist yet
+        }
       }
     } catch (e: any) {
       console.error(e)
@@ -307,6 +338,13 @@ export default function Unitas() {
         {/* Tabs */}
         <div style={{ maxWidth: '640px', margin: '0 auto', display: 'flex', borderBottom: '1px solid var(--bg-subtle)' }}>
           <button style={tabStyle(tab === 'uebersicht')} onClick={() => setTab('uebersicht')}>Übersicht</button>
+          <button style={tabStyle(tab === 'protokolle')} onClick={() => setTab('protokolle')}>
+            {(() => {
+              const allPats = [...myPatients, ...myArchivedPatients]
+              const totalRQ = allPats.reduce((sum, p) => sum + (Array.isArray(p.payload?.rueckfragen) ? (p.payload.rueckfragen as any[]).filter((r: any) => r.status === 'offen').length : 0), 0)
+              return <>Protokolle{myPatients.length + myArchivedPatients.length > 0 ? ` (${myPatients.length + myArchivedPatients.length})` : ''}{totalRQ > 0 && <span style={{ marginLeft: 5, background: '#f59e0b', color: '#fff', borderRadius: 999, padding: '1px 6px', fontSize: 10, fontWeight: 700, verticalAlign: 'middle' }}>{totalRQ}</span>}</>
+            })()}
+          </button>
           {(user?.supervisor || user?.permissions?.['lernbar'] || (user as any)?.lernbar_access) && (
             <button style={tabStyle(tab === 'lernbar')} onClick={() => setTab('lernbar')}>
               Lernbar
@@ -364,6 +402,106 @@ export default function Unitas() {
                   </div>
                 )
               })
+            )}
+          </div>
+        )}
+
+        {/* PROTOKOLLE */}
+        {tab === 'protokolle' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ fontSize: '17px', fontWeight: 700, color: 'var(--text)' }}>Meine Protokolle</div>
+
+            {myPatients.length === 0 && myArchivedPatients.length === 0 && (
+              <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '48px 0', fontSize: '15px' }}>Keine Protokolle vorhanden</div>
+            )}
+
+            {myPatients.length > 0 && (
+              <>
+                <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '.5px' }}>Offen</div>
+                {myPatients.map(p => {
+                  const m = p.payload?.mannschaft || {}
+                  const crew = ['tf','m1','m2','m3'].map(k => m[k]?.name).filter(Boolean).join(', ')
+                  const age = Date.now() - new Date(p.created).getTime()
+                  const hoursLeft = Math.max(0, Math.ceil(24 - age / 3600000))
+                  const isExpiringSoon = hoursLeft <= 4
+                  const dMeds: any[] = Array.isArray(p.payload?.dauermedikation) ? p.payload.dauermedikation : []
+                  const openRQ = Array.isArray(p.payload?.rueckfragen) ? (p.payload.rueckfragen as any[]).filter((r: any) => r.status === 'offen').length : 0
+                  return (
+                    <div key={p.id} style={{ background: 'var(--bg-card)', borderRadius: '14px', border: `1px solid ${openRQ > 0 ? '#f59e0b' : isExpiringSoon ? '#f97316' : 'var(--border)'}`, overflow: 'hidden' }}>
+                      <div style={{ background: 'linear-gradient(135deg, var(--btn-dark) 0%, var(--btn-dark) 100%)', padding: '14px 18px', color: 'var(--btn-dark-text)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: '4px' }}>
+                          <span style={{ fontWeight: 700, fontSize: '16px' }}>{p.title}</span>
+                          {openRQ > 0 && <span style={{ background: '#f59e0b', color: '#fff', borderRadius: 999, padding: '2px 8px', fontSize: 11, fontWeight: 700, flexShrink: 0 }}>{openRQ} Rückfrage{openRQ !== 1 ? 'n' : ''}</span>}
+                        </div>
+                        {crew && <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.7)' }}>{crew}</div>}
+                      </div>
+                      {dMeds.length > 0 && (
+                        <div style={{ padding: '10px 18px 0', display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                          {dMeds.map((m: any, i: number) => (
+                            <div key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'var(--bg-subtle)', border: '0.5px solid var(--border-medium)', borderRadius: 8, padding: '4px 8px', fontSize: 12 }}>
+                              <span style={{ fontWeight: 700 }}>{m.name}</span>
+                              {m.wirkstoff && <span style={{ color: 'var(--text-secondary)' }}>({m.wirkstoff})</span>}
+                              {m.dosis && <span>{m.dosis}</span>}
+                              {m.pzn && <span style={{ fontSize: 10, color: 'var(--text-secondary)' }}>PZN {m.pzn}</span>}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      <div style={{ padding: '12px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+                        <div>
+                          <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Erstellt: {new Date(p.created).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })} Uhr</div>
+                          <div style={{ fontSize: '12px', marginTop: '3px', fontWeight: 600, color: isExpiringSoon ? '#f97316' : 'var(--text-secondary)' }}>
+                            {hoursLeft > 0 ? `⏱ Noch ${hoursLeft} Std. bearbeitbar` : '🔒 Gesperrt'}
+                          </div>
+                        </div>
+                        <button onClick={() => navigate(`/protokoll/${p.id}`)} style={{ background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: '8px', padding: '9px 16px', fontWeight: 700, fontSize: '13px', cursor: 'pointer', flexShrink: 0, fontFamily: 'inherit' }}>Bearbeiten</button>
+                      </div>
+                    </div>
+                  )
+                })}
+              </>
+            )}
+
+            {myArchivedPatients.length > 0 && (
+              <>
+                <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '.5px', marginTop: '8px' }}>Abgeschlossen</div>
+                {myArchivedPatients.map(p => {
+                  const m = p.payload?.mannschaft || {}
+                  const crew = ['tf','m1','m2','m3'].map(k => m[k]?.name).filter(Boolean).join(', ')
+                  const patName = [p.payload?.vorname, p.payload?.name].filter(Boolean).join(' ')
+                  const dMedsA: any[] = Array.isArray(p.payload?.dauermedikation) ? p.payload.dauermedikation : []
+                  const openRQA = Array.isArray(p.payload?.rueckfragen) ? (p.payload.rueckfragen as any[]).filter((r: any) => r.status === 'offen').length : 0
+                  return (
+                    <div key={p.id} style={{ background: 'var(--bg-card)', borderRadius: '14px', border: `1px solid ${openRQA > 0 ? '#f59e0b' : 'var(--border)'}`, overflow: 'hidden', opacity: openRQA > 0 ? 1 : 0.85 }}>
+                      <div style={{ background: 'linear-gradient(135deg, #4b5563, #374151)', padding: '14px 18px', color: '#fff' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: '4px' }}>
+                          <span style={{ fontWeight: 700, fontSize: '16px' }}>{patName || p.title}</span>
+                          {openRQA > 0 && <span style={{ background: '#f59e0b', color: '#fff', borderRadius: 999, padding: '2px 8px', fontSize: 11, fontWeight: 700, flexShrink: 0 }}>{openRQA} Rückfrage{openRQA !== 1 ? 'n' : ''}</span>}
+                        </div>
+                        {crew && <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.7)' }}>{crew}</div>}
+                      </div>
+                      {dMedsA.length > 0 && (
+                        <div style={{ padding: '10px 18px 0', display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                          {dMedsA.map((m: any, i: number) => (
+                            <div key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'var(--bg-subtle)', border: '0.5px solid var(--border-medium)', borderRadius: 8, padding: '4px 8px', fontSize: 12 }}>
+                              <span style={{ fontWeight: 700 }}>{m.name}</span>
+                              {m.wirkstoff && <span style={{ color: 'var(--text-secondary)' }}>({m.wirkstoff})</span>}
+                              {m.dosis && <span>{m.dosis}</span>}
+                              {m.pzn && <span style={{ fontSize: 10, color: 'var(--text-secondary)' }}>PZN {m.pzn}</span>}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      <div style={{ padding: '12px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+                        <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                          {new Date(p.created).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })} Uhr · Abgeschlossen
+                        </div>
+                        <button onClick={() => navigate(`/protokoll/${p.id}`)} style={{ background: 'var(--bg-subtle)', color: 'var(--text)', border: '0.5px solid var(--border-medium)', borderRadius: '8px', padding: '9px 16px', fontWeight: 700, fontSize: '13px', cursor: 'pointer', flexShrink: 0, fontFamily: 'inherit' }}>Ansehen</button>
+                      </div>
+                    </div>
+                  )
+                })}
+              </>
             )}
           </div>
         )}
