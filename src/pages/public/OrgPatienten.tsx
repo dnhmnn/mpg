@@ -355,7 +355,7 @@ export default function OrgPatienten() {
           </div>
           <div style={field}>
             <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--text)', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 8 }}>
-              💊 Dauermedikation
+              Dauermedikation
               <span style={{ fontSize: 12, fontWeight: 400, color: 'var(--text-secondary)' }}>Wirkstoff aus Datenbank übernehmen oder Barcode scannen</span>
             </div>
             <DauermedikationPicker value={dauerMeds} onChange={setDauerMeds} />

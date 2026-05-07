@@ -285,7 +285,7 @@ export default function PatientView() {
           </div>
           {((p as any).dauermedikation as any[])?.length > 0 && (
             <div style={{ marginTop: '.75rem' }}>
-              <div style={{ fontWeight: 700, fontSize: '.88rem', color: 'var(--text)', marginBottom: 6 }}>💊 Dauermedikation</div>
+              <div style={{ fontWeight: 700, fontSize: '.88rem', color: 'var(--text)', marginBottom: 6 }}>Dauermedikation</div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
                 {((p as any).dauermedikation as any[]).map((m: any, i: number) => (
                   <div key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: 'var(--bg-subtle)', border: '0.5px solid var(--border-medium)', borderRadius: 10, padding: '6px 10px', fontSize: 13 }}>
