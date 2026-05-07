@@ -58,6 +58,9 @@ export default function Patienten() {
   const [detailsDoc, setDetailsDoc] = useState<Patient | Nacherfassung | null>(null)
   const [detailsType, setDetailsType] = useState<'patient' | 'nach'>('patient')
 
+  const [showStellungnahme, setShowStellungnahme] = useState(false)
+  const [stellungnahmePat, setStellungnahmePat] = useState<Patient | null>(null)
+
   const [msg, setMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(null)
   const [dataLoading, setDataLoading] = useState(true)
   const [archivLoaded, setArchivLoaded] = useState(false)
@@ -682,8 +685,12 @@ export default function Patienten() {
                 const hasCrewUsers = ['tf','m1','m2','m3'].some(k => m[k]?.id)
                 const ageMs = Date.now() - new Date(pat.created).getTime()
                 const crewStillEditing = hasCrewUsers && ageMs < 24 * 60 * 60 * 1000
+                const rqs: any[] = Array.isArray((pat as any).payload?.rueckfragen) ? (pat as any).payload.rueckfragen : []
+                const sns: any[] = Array.isArray((pat as any).payload?.stellungnahmen) ? (pat as any).payload.stellungnahmen : []
+                const openRQ = rqs.filter((r: any) => r.status === 'offen').length
+                const hasRQ = rqs.length > 0
                 return (
-                  <div key={pat.id} className={`pat-card ${isDraft ? 'entwurf' : 'offen'}`}>
+                  <div key={pat.id} className={`pat-card ${isDraft ? 'entwurf' : 'offen'}`} style={openRQ > 0 ? { borderColor: '#f59e0b' } : undefined}>
                     <div className="pat-card-type">{isDraft ? 'Entwurf' : 'Patientendoku'}</div>
                     <div className="pat-card-name">{displayName}</div>
                     <div className="pat-card-meta">
@@ -691,11 +698,30 @@ export default function Patienten() {
                       {isDraft && crew ? <br /> : null}
                       {fmtDate(pat.created)}
                     </div>
+                    {hasRQ && (
+                      <div style={{ padding: '6px 14px 2px', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                        {openRQ > 0 && (
+                          <span style={{ fontSize: 11, fontWeight: 700, background: '#fef9c3', color: '#92400e', border: '1px solid #fcd34d', borderRadius: 999, padding: '2px 8px' }}>
+                            {openRQ} Rückfrage{openRQ !== 1 ? 'n' : ''} offen
+                          </span>
+                        )}
+                        {sns.length > 0 && (
+                          <span style={{ fontSize: 11, fontWeight: 700, background: '#dcfce7', color: '#166534', border: '1px solid #bbf7d0', borderRadius: 999, padding: '2px 8px' }}>
+                            {sns.length} Stellungnahme{sns.length !== 1 ? 'n' : ''} eingegangen
+                          </span>
+                        )}
+                      </div>
+                    )}
                     <div className="pat-card-footer">
                       <span className={`pat-badge ${isDraft ? 'entwurf' : 'offen'}`}>
                         {isDraft ? 'Entwurf' : 'offen'}
                       </span>
                       <div style={{ flex: 1 }} />
+                      {hasRQ && (
+                        <button className="pat-btn" onClick={() => { setStellungnahmePat(pat); setShowStellungnahme(true) }}>
+                          Stellungnahme{openRQ > 0 ? ` (${openRQ})` : ''}
+                        </button>
+                      )}
                       {crewStillEditing ? (
                         <>
                           <span className="pat-badge editing">In Bearbeitung</span>
@@ -918,6 +944,74 @@ export default function Patienten() {
             : undefined}
         />
       )}
+
+      {/* Stellungnahmen-Modal */}
+      {showStellungnahme && stellungnahmePat && (() => {
+        const pl = (stellungnahmePat as any).payload || {}
+        const rqs: any[] = Array.isArray(pl.rueckfragen) ? pl.rueckfragen : []
+        const sns: any[] = Array.isArray(pl.stellungnahmen) ? pl.stellungnahmen : []
+        const patName = [pl.vorname, pl.name].filter(Boolean).join(' ') || stellungnahmePat.title || 'Unbekannt'
+        return (
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+            <div style={{ background: 'var(--bg-card)', borderRadius: 18, width: '100%', maxWidth: 560, maxHeight: '85vh', overflowY: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
+              <div style={{ padding: '18px 20px 14px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', position: 'sticky', top: 0, background: 'var(--bg-card)', zIndex: 1 }}>
+                <div>
+                  <div style={{ fontWeight: 800, fontSize: 16, color: 'var(--text)' }}>Rückfragen &amp; Stellungnahmen</div>
+                  <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 2 }}>{patName}</div>
+                </div>
+                <button onClick={() => setShowStellungnahme(false)} style={{ background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', color: 'var(--text-secondary)', padding: '0 4px', lineHeight: 1 }}>×</button>
+              </div>
+              <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+                {rqs.length === 0 && (
+                  <div style={{ fontSize: 14, color: 'var(--text-secondary)', textAlign: 'center', padding: '24px 0' }}>Keine Rückfragen vorhanden.</div>
+                )}
+                {rqs.map((rq: any, i: number) => {
+                  const sn = sns.find((s: any) => s.rueckfrage_id === rq.id)
+                  return (
+                    <div key={rq.id} style={{ border: `1px solid ${sn ? '#bbf7d0' : '#fcd34d'}`, borderRadius: 12, overflow: 'hidden' }}>
+                      <div style={{ background: sn ? '#f0fdf4' : '#fffbeb', padding: '10px 14px', borderBottom: `1px solid ${sn ? '#bbf7d0' : '#fcd34d'}`, display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontWeight: 700, fontSize: 13, color: 'var(--text)' }}>Rückfrage #{i + 1}</span>
+                        <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 999, background: sn ? '#dcfce7' : '#fef9c3', color: sn ? '#166534' : '#92400e', marginLeft: 'auto' }}>
+                          {sn ? 'Beantwortet' : 'Offen'}
+                        </span>
+                        <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{new Date(rq.created).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</span>
+                      </div>
+                      <div style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                        <div style={{ fontSize: 14, background: 'var(--bg-subtle)', borderRadius: 8, padding: '8px 10px', lineHeight: 1.5 }}>
+                          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 3 }}>Frage an Teamleiter:</div>
+                          {rq.frage}
+                        </div>
+                        {sn ? (
+                          <div style={{ fontSize: 14, background: '#dcfce7', borderRadius: 8, padding: '8px 10px', border: '1px solid #bbf7d0', lineHeight: 1.5 }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 3 }}>
+                              <span style={{ fontSize: 11, fontWeight: 700, color: '#166534' }}>Stellungnahme des Teamleiters:</span>
+                              <span style={{ fontSize: 11, color: '#166534' }}>{new Date(sn.created).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</span>
+                            </div>
+                            {sn.text}
+                          </div>
+                        ) : (
+                          <div style={{ fontSize: 13, color: 'var(--text-secondary)', fontStyle: 'italic', padding: '4px 0' }}>Noch keine Stellungnahme eingegangen.</div>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+              <div style={{ padding: '12px 20px 18px', borderTop: '1px solid var(--border)', display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+                <button
+                  onClick={() => { setShowStellungnahme(false); openDetails(stellungnahmePat.id, 'patient') }}
+                  style={{ padding: '9px 18px', background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit' }}
+                >
+                  Protokoll bearbeiten
+                </button>
+                <button onClick={() => setShowStellungnahme(false)} style={{ padding: '9px 18px', background: 'var(--bg-subtle)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: 8, fontWeight: 600, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit' }}>
+                  Schließen
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
     </>
   )
 }
