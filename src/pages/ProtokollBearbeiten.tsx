@@ -49,6 +49,8 @@ export default function ProtokollBearbeiten() {
   const [snapMesswerte, setSnapMesswerte] = useState<Record<string, string>>({})
   const [verlaufModal, setVerlaufModal] = useState(false)
   const [mannschaft, setMannschaft] = useState<Record<string, { name: string } | null>>({})
+  const [rueckfragen, setRueckfragen] = useState<{ id: string; frage: string; antwort?: string; status: string; created: string }[]>([])
+  const [rqAntworten, setRqAntworten] = useState<Record<string, string>>({})
 
   const MESS_FIELDS = ['rr_sys', 'rr_dia', 'hf', 'af', 'spo2', 'etco2', 'temp', 'bz_mg', 'schmerz']
   const gcsSum = gcs.e + gcs.v + gcs.m
@@ -91,6 +93,7 @@ export default function ProtokollBearbeiten() {
       if (p.verlaufsbeschreibung) setVerlaufText(p.verlaufsbeschreibung)
       if (p.zeit_einsatz) setAlarmzeit(p.zeit_einsatz)
       if (p.einsatz_adresse) setEinsatzAdresse(p.einsatz_adresse)
+      if (Array.isArray(p.rueckfragen)) setRueckfragen(p.rueckfragen as any)
       if (p.signature) {
         setSigUrl(p.signature)
         const img = new Image()
@@ -147,6 +150,7 @@ export default function ProtokollBearbeiten() {
     data.photos = photos
     data.signature = sigUrl
     data.gcs_e = gcs.e; data.gcs_v = gcs.v; data.gcs_m = gcs.m
+    data.rueckfragen = rueckfragen
     return data
   }
 
@@ -167,6 +171,19 @@ export default function ProtokollBearbeiten() {
       setLocked(true); setLockedReason('Dieses Protokoll wurde abgeschlossen.')
     } catch (e: any) { alert('Fehler: ' + e.message) }
     finally { setSending(false) }
+  }
+
+  async function respondToRueckfrage(id: string) {
+    const antwort = rqAntworten[id]?.trim()
+    if (!antwort) return
+    const updated = rueckfragen.map(rq =>
+      rq.id === id ? { ...rq, antwort, status: 'beantwortet' } : rq
+    )
+    try {
+      await pb.collection('patients').update(patientId!, { payload: { ...collectData(), rueckfragen: updated } })
+      setRueckfragen(updated)
+      setRqAntworten(prev => ({ ...prev, [id]: '' }))
+    } catch (e: any) { alert('Fehler: ' + e.message) }
   }
 
   const mannNames = ['tf', 'm1', 'm2', 'm3'].map(k => mannschaft[k]?.name).filter(Boolean).join(', ')
@@ -705,6 +722,63 @@ export default function ProtokollBearbeiten() {
 
           </fieldset>
         </form>
+
+        {/* Rückfragen vom Supervisor – immer sichtbar, auch wenn gesperrt */}
+        {rueckfragen.length > 0 && (
+          <PubSection title={`Rückfragen vom Supervisor (${rueckfragen.filter(r => r.status === 'offen').length} offen)`} open icon={pik(<><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></>)}>
+            {rueckfragen.map(rq => (
+              <div key={rq.id} style={{
+                background: rq.status === 'beantwortet' ? '#f0fdf4' : '#fffbeb',
+                border: `1px solid ${rq.status === 'beantwortet' ? '#bbf7d0' : '#fcd34d'}`,
+                borderRadius: 10, padding: 12, marginBottom: 12,
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, flexWrap: 'wrap', gap: 6 }}>
+                  <span style={{ fontWeight: 700, fontSize: 13 }}>Rückfrage</span>
+                  <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{new Date(rq.created).toLocaleString('de-DE')}</span>
+                  <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 999, background: rq.status === 'beantwortet' ? '#dcfce7' : '#fef9c3', color: rq.status === 'beantwortet' ? '#166534' : '#92400e' }}>
+                    {rq.status === 'beantwortet' ? 'Beantwortet' : 'Offen'}
+                  </span>
+                </div>
+                <div style={{ fontSize: 14, padding: 8, background: 'rgba(0,0,0,0.04)', borderRadius: 6, marginBottom: 8 }}>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 2 }}>Frage:</div>
+                  {rq.frage}
+                </div>
+                {rq.status === 'beantwortet' && rq.antwort ? (
+                  <div style={{ fontSize: 14, background: '#dcfce7', borderRadius: 6, padding: 8, border: '1px solid #bbf7d0' }}>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: '#166534', marginBottom: 2 }}>Deine Stellungnahme:</div>
+                    {rq.antwort}
+                  </div>
+                ) : (
+                  <>
+                    <label style={{ ...lbl, marginBottom: 4 }}>Stellungnahme:</label>
+                    <textarea
+                      value={rqAntworten[rq.id] || ''}
+                      onChange={e => setRqAntworten(prev => ({ ...prev, [rq.id]: e.target.value }))}
+                      rows={3}
+                      placeholder="Antwort eingeben…"
+                      style={{ ...ta, marginBottom: 8 }}
+                    />
+                    <button
+                      onClick={() => respondToRueckfrage(rq.id)}
+                      disabled={!rqAntworten[rq.id]?.trim()}
+                      style={{
+                        padding: '10px 20px',
+                        background: !rqAntworten[rq.id]?.trim() ? 'var(--bg-secondary)' : '#16a34a',
+                        color: !rqAntworten[rq.id]?.trim() ? 'var(--text-secondary)' : '#fff',
+                        border: 'none', borderRadius: 10, fontWeight: 700,
+                        cursor: !rqAntworten[rq.id]?.trim() ? 'not-allowed' : 'pointer',
+                        fontFamily: 'inherit', fontSize: 14,
+                      }}
+                    >
+                      Stellungnahme absenden
+                    </button>
+                  </>
+                )}
+              </div>
+            ))}
+          </PubSection>
+        )}
+
       </PubWrap>
 
       {!locked && (

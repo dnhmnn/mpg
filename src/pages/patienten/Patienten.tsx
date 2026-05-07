@@ -46,6 +46,7 @@ export default function Patienten() {
   const [showEdit, setShowEdit] = useState(false)
   const [currentPatient, setCurrentPatient] = useState<Patient | null>(null)
   const [payload, setPayload] = useState<PatientPayload>({ ...EMPTY_PAYLOAD })
+  const [originalPayload, setOriginalPayload] = useState<PatientPayload>({ ...EMPTY_PAYLOAD })
 
   const [showSign, setShowSign] = useState(false)
   const [adminName, setAdminName] = useState('')
@@ -161,10 +162,11 @@ export default function Patienten() {
   async function openEdit(pat: Patient) {
     const doc = await pb.collection('patients').getOne(pat.id)
     setCurrentPatient(doc as unknown as Patient)
-    setPayload(parsePayload((doc as any).payload))
+    const parsed = parsePayload((doc as any).payload)
+    setPayload(parsed)
+    setOriginalPayload(parsed)
     setShowEdit(true)
-    const p = parsePayload((doc as any).payload)
-    auditLog('bearbeitet', pat.id, 'patient', [p.name, p.vorname].filter(Boolean).join(' ') || pat.title || 'Unbekannt')
+    auditLog('bearbeitet', pat.id, 'patient', [parsed.name, parsed.vorname].filter(Boolean).join(' ') || pat.title || 'Unbekannt')
   }
 
   async function saveAndSign() {
@@ -239,7 +241,9 @@ export default function Patienten() {
     setDetailsType(type)
     if (type === 'patient') {
       setCurrentPatient(doc as unknown as Patient)
-      setPayload(parsePayload((doc as any).payload))
+      const parsed = parsePayload((doc as any).payload)
+      setPayload(parsed)
+      setOriginalPayload(parsed)
     }
     setShowDetails(true)
     const title = type === 'patient'
@@ -887,8 +891,16 @@ export default function Patienten() {
 
       </div>
 
-      {showEdit && (
-        <PatientEditModal payload={payload} setP={setP} onClose={() => setShowEdit(false)} onSaveAndSign={saveAndSign} />
+      {showEdit && currentPatient && (
+        <PatientEditModal
+          patient={currentPatient}
+          payload={payload}
+          original={originalPayload}
+          setP={setP}
+          onClose={() => setShowEdit(false)}
+          onSaveAndSign={saveAndSign}
+          onRefresh={loadData}
+        />
       )}
       {showSign && (
         <SignModal adminName={adminName} setAdminName={setAdminName} onClose={() => setShowSign(false)} onArchive={archiveWithSig} />
