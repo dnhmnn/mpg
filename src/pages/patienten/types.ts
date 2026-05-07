@@ -121,7 +121,8 @@ export interface PatientPayload {
   signature?: string; photos?: string[]
   access_code?: string; access_code_created?: string
   dauermedikation?: { name?: string; pzn?: string; handelsname?: string }[]
-  rueckfragen?: { id: string; frage: string; antwort?: string; status: 'offen' | 'beantwortet'; created: string }[]
+  rueckfragen?: { id: string; frage: string; status: 'offen' | 'beantwortet'; created: string }[]
+  stellungnahmen?: { id: string; rueckfrage_id: string; text: string; created: string }[]
 }
 
 export interface Patient {
@@ -250,6 +251,7 @@ export const EMPTY_PAYLOAD: PatientPayload = {
   signature: '', photos: [],
   dauermedikation: [],
   rueckfragen: [],
+  stellungnahmen: [],
 }
 
 export const EMPTY_NACH: NachForm = {

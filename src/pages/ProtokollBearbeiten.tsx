@@ -49,7 +49,8 @@ export default function ProtokollBearbeiten() {
   const [snapMesswerte, setSnapMesswerte] = useState<Record<string, string>>({})
   const [verlaufModal, setVerlaufModal] = useState(false)
   const [mannschaft, setMannschaft] = useState<Record<string, { name: string } | null>>({})
-  const [rueckfragen, setRueckfragen] = useState<{ id: string; frage: string; antwort?: string; status: string; created: string }[]>([])
+  const [rueckfragen, setRueckfragen] = useState<{ id: string; frage: string; status: string; created: string }[]>([])
+  const [stellungnahmen, setStellungnahmen] = useState<{ id: string; rueckfrage_id: string; text: string; created: string }[]>([])
   const [rqAntworten, setRqAntworten] = useState<Record<string, string>>({})
 
   const MESS_FIELDS = ['rr_sys', 'rr_dia', 'hf', 'af', 'spo2', 'etco2', 'temp', 'bz_mg', 'schmerz']
@@ -94,6 +95,7 @@ export default function ProtokollBearbeiten() {
       if (p.zeit_einsatz) setAlarmzeit(p.zeit_einsatz)
       if (p.einsatz_adresse) setEinsatzAdresse(p.einsatz_adresse)
       if (Array.isArray(p.rueckfragen)) setRueckfragen(p.rueckfragen as any)
+      if (Array.isArray(p.stellungnahmen)) setStellungnahmen(p.stellungnahmen as any)
       if (p.signature) {
         setSigUrl(p.signature)
         const img = new Image()
@@ -151,6 +153,7 @@ export default function ProtokollBearbeiten() {
     data.signature = sigUrl
     data.gcs_e = gcs.e; data.gcs_v = gcs.v; data.gcs_m = gcs.m
     data.rueckfragen = rueckfragen
+    data.stellungnahmen = stellungnahmen
     return data
   }
 
@@ -174,14 +177,17 @@ export default function ProtokollBearbeiten() {
   }
 
   async function respondToRueckfrage(id: string) {
-    const antwort = rqAntworten[id]?.trim()
-    if (!antwort) return
-    const updated = rueckfragen.map(rq =>
-      rq.id === id ? { ...rq, antwort, status: 'beantwortet' } : rq
-    )
+    const text = rqAntworten[id]?.trim()
+    if (!text) return
+    const newSN = { id: Date.now().toString(), rueckfrage_id: id, text, created: new Date().toISOString() }
+    const updatedRQ = rueckfragen.map(rq => rq.id === id ? { ...rq, status: 'beantwortet' } : rq)
+    const updatedSN = [...stellungnahmen, newSN]
     try {
-      await pb.collection('patients').update(patientId!, { payload: { ...collectData(), rueckfragen: updated } })
-      setRueckfragen(updated)
+      await pb.collection('patients').update(patientId!, {
+        payload: { ...collectData(), rueckfragen: updatedRQ, stellungnahmen: updatedSN }
+      })
+      setRueckfragen(updatedRQ)
+      setStellungnahmen(updatedSN)
       setRqAntworten(prev => ({ ...prev, [id]: '' }))
     } catch (e: any) { alert('Fehler: ' + e.message) }
   }
@@ -743,10 +749,10 @@ export default function ProtokollBearbeiten() {
                   <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 2 }}>Frage:</div>
                   {rq.frage}
                 </div>
-                {rq.status === 'beantwortet' && rq.antwort ? (
+                {rq.status === 'beantwortet' && stellungnahmen.find(s => s.rueckfrage_id === rq.id) ? (
                   <div style={{ fontSize: 14, background: '#dcfce7', borderRadius: 6, padding: 8, border: '1px solid #bbf7d0' }}>
                     <div style={{ fontSize: 11, fontWeight: 600, color: '#166534', marginBottom: 2 }}>Deine Stellungnahme:</div>
-                    {rq.antwort}
+                    {stellungnahmen.find(s => s.rueckfrage_id === rq.id)!.text}
                   </div>
                 ) : (
                   <>

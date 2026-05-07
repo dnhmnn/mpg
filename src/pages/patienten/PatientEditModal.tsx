@@ -4,7 +4,8 @@ import type { Patient, PatientPayload, Medication, VitalRow } from './types'
 import { PubSection, inp, sel, ta, field, lbl } from '../public/pubStyles'
 import { pb } from '../../lib/pocketbase'
 
-interface RQ { id: string; frage: string; antwort?: string; status: 'offen' | 'beantwortet'; created: string }
+interface RQ { id: string; frage: string; status: 'offen' | 'beantwortet'; created: string }
+interface SN { id: string; rueckfrage_id: string; text: string; created: string }
 
 interface Props {
   patient: Patient
@@ -45,6 +46,7 @@ export default function PatientEditModal({ patient, payload: p, original, setP, 
       ? { accentColor: '#f59e0b', outline: '2px solid #fcd34d', borderRadius: 3 } : {}
 
   const rueckfragen: RQ[] = Array.isArray(p.rueckfragen) ? (p.rueckfragen as RQ[]) : []
+  const stellungnahmen: SN[] = Array.isArray(p.stellungnahmen) ? (p.stellungnahmen as SN[]) : []
   const openRQ     = rueckfragen.filter(r => r.status === 'offen').length
   const answeredRQ = rueckfragen.filter(r => r.status === 'beantwortet').length
 
@@ -150,9 +152,9 @@ export default function PatientEditModal({ patient, payload: p, original, setP, 
       </header>
 
       {/* Answered RQ banner */}
-      {answeredRQ > 0 && (
+      {stellungnahmen.length > 0 && (
         <div style={{ background: '#f0fdf4', borderBottom: '1px solid #bbf7d0', padding: '10px 16px', textAlign: 'center', fontSize: 14, color: '#166534', fontWeight: 600 }}>
-          {answeredRQ} Stellungnahme{answeredRQ !== 1 ? 'n' : ''} vom Teamleader eingegangen ↓
+          {stellungnahmen.length} Stellungnahme{stellungnahmen.length !== 1 ? 'n' : ''} vom Teamleader eingegangen ↓
         </div>
       )}
 
@@ -734,14 +736,20 @@ export default function PatientEditModal({ patient, payload: p, original, setP, 
                 <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 2 }}>Frage an Teamleader:</div>
                 {rq.frage}
               </div>
-              {rq.antwort ? (
-                <div style={{ fontSize: 14, background: '#dcfce7', borderRadius: 6, padding: 8, border: '1px solid #bbf7d0' }}>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: '#166534', marginBottom: 2 }}>Stellungnahme:</div>
-                  {rq.antwort}
-                </div>
-              ) : (
-                <div style={{ fontSize: 13, color: 'var(--text-secondary)', fontStyle: 'italic' }}>Noch keine Stellungnahme eingegangen.</div>
-              )}
+              {(() => {
+                const sn = stellungnahmen.find(s => s.rueckfrage_id === rq.id)
+                return sn ? (
+                  <div style={{ fontSize: 14, background: '#dcfce7', borderRadius: 6, padding: 8, border: '1px solid #bbf7d0' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: '#166534' }}>Stellungnahme des Teamleiters:</span>
+                      <span style={{ fontSize: 11, color: '#166534' }}>{new Date(sn.created).toLocaleString('de-DE')}</span>
+                    </div>
+                    {sn.text}
+                  </div>
+                ) : (
+                  <div style={{ fontSize: 13, color: 'var(--text-secondary)', fontStyle: 'italic' }}>Noch keine Stellungnahme eingegangen.</div>
+                )
+              })()}
             </div>
           ))}
 
