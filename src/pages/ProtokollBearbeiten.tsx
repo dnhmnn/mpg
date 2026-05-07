@@ -729,59 +729,40 @@ export default function ProtokollBearbeiten() {
           </fieldset>
         </form>
 
-        {/* Rückfragen vom Supervisor – immer sichtbar, auch wenn gesperrt */}
+        {/* Rückfragen vom Supervisor – nur lesend anzeigen */}
         {rueckfragen.length > 0 && (
           <PubSection title={`Rückfragen vom Supervisor (${rueckfragen.filter(r => r.status === 'offen').length} offen)`} open icon={pik(<><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></>)}>
-            {rueckfragen.map(rq => (
-              <div key={rq.id} style={{
-                background: rq.status === 'beantwortet' ? '#f0fdf4' : '#fffbeb',
-                border: `1px solid ${rq.status === 'beantwortet' ? '#bbf7d0' : '#fcd34d'}`,
-                borderRadius: 10, padding: 12, marginBottom: 12,
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, flexWrap: 'wrap', gap: 6 }}>
-                  <span style={{ fontWeight: 700, fontSize: 13 }}>Rückfrage</span>
-                  <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{new Date(rq.created).toLocaleString('de-DE')}</span>
-                  <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 999, background: rq.status === 'beantwortet' ? '#dcfce7' : '#fef9c3', color: rq.status === 'beantwortet' ? '#166534' : '#92400e' }}>
-                    {rq.status === 'beantwortet' ? 'Beantwortet' : 'Offen'}
-                  </span>
-                </div>
-                <div style={{ fontSize: 14, padding: 8, background: 'rgba(0,0,0,0.04)', borderRadius: 6, marginBottom: 8 }}>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 2 }}>Frage:</div>
-                  {rq.frage}
-                </div>
-                {rq.status === 'beantwortet' && stellungnahmen.find(s => s.rueckfrage_id === rq.id) ? (
-                  <div style={{ fontSize: 14, background: '#dcfce7', borderRadius: 6, padding: 8, border: '1px solid #bbf7d0' }}>
-                    <div style={{ fontSize: 11, fontWeight: 600, color: '#166534', marginBottom: 2 }}>Deine Stellungnahme:</div>
-                    {stellungnahmen.find(s => s.rueckfrage_id === rq.id)!.text}
+            <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 12 }}>
+              Stellungnahmen werden separat über dein Profil unter „Protokolle" abgegeben.
+            </p>
+            {rueckfragen.map(rq => {
+              const sn = stellungnahmen.find(s => s.rueckfrage_id === rq.id)
+              return (
+                <div key={rq.id} style={{
+                  background: sn ? '#f0fdf4' : '#fffbeb',
+                  border: `1px solid ${sn ? '#bbf7d0' : '#fcd34d'}`,
+                  borderRadius: 10, padding: 12, marginBottom: 12,
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, flexWrap: 'wrap', gap: 6 }}>
+                    <span style={{ fontWeight: 700, fontSize: 13 }}>Rückfrage</span>
+                    <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{new Date(rq.created).toLocaleString('de-DE')}</span>
+                    <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 999, background: sn ? '#dcfce7' : '#fef9c3', color: sn ? '#166534' : '#92400e' }}>
+                      {sn ? 'Beantwortet' : 'Offen'}
+                    </span>
                   </div>
-                ) : (
-                  <>
-                    <label style={{ ...lbl, marginBottom: 4 }}>Stellungnahme:</label>
-                    <textarea
-                      value={rqAntworten[rq.id] || ''}
-                      onChange={e => setRqAntworten(prev => ({ ...prev, [rq.id]: e.target.value }))}
-                      rows={3}
-                      placeholder="Antwort eingeben…"
-                      style={{ ...ta, marginBottom: 8 }}
-                    />
-                    <button
-                      onClick={() => respondToRueckfrage(rq.id)}
-                      disabled={!rqAntworten[rq.id]?.trim()}
-                      style={{
-                        padding: '10px 20px',
-                        background: !rqAntworten[rq.id]?.trim() ? 'var(--bg-secondary)' : '#16a34a',
-                        color: !rqAntworten[rq.id]?.trim() ? 'var(--text-secondary)' : '#fff',
-                        border: 'none', borderRadius: 10, fontWeight: 700,
-                        cursor: !rqAntworten[rq.id]?.trim() ? 'not-allowed' : 'pointer',
-                        fontFamily: 'inherit', fontSize: 14,
-                      }}
-                    >
-                      Stellungnahme absenden
-                    </button>
-                  </>
-                )}
-              </div>
-            ))}
+                  <div style={{ fontSize: 14, padding: 8, background: 'rgba(0,0,0,0.04)', borderRadius: 6, marginBottom: sn ? 8 : 0 }}>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 2 }}>Frage:</div>
+                    {rq.frage}
+                  </div>
+                  {sn && (
+                    <div style={{ fontSize: 14, background: '#dcfce7', borderRadius: 6, padding: 8, border: '1px solid #bbf7d0' }}>
+                      <div style={{ fontSize: 11, fontWeight: 600, color: '#166534', marginBottom: 2 }}>Deine Stellungnahme:</div>
+                      {sn.text}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
           </PubSection>
         )}
 
