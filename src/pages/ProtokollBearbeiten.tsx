@@ -49,7 +49,7 @@ export default function ProtokollBearbeiten() {
   const [snapMesswerte, setSnapMesswerte] = useState<Record<string, string>>({})
   const [verlaufModal, setVerlaufModal] = useState(false)
   const [mannschaft, setMannschaft] = useState<Record<string, { name: string } | null>>({})
-  const [rueckfragen, setRueckfragen] = useState<{ id: string; frage: string; status: string; created: string }[]>([])
+  const [rueckfragen, setRueckfragen] = useState<{ id: string; frage: string; created_by?: string; status: string; created: string }[]>([])
   const [stellungnahmen, setStellungnahmen] = useState<{ id: string; rueckfrage_id: string; text: string; created: string }[]>([])
   const [rqAntworten, setRqAntworten] = useState<Record<string, string>>({})
 
@@ -729,9 +729,9 @@ export default function ProtokollBearbeiten() {
           </fieldset>
         </form>
 
-        {/* Rückfragen vom Supervisor – nur lesend anzeigen */}
+        {/* Rückfragen – nur lesend anzeigen */}
         {rueckfragen.length > 0 && (
-          <PubSection title={`Rückfragen vom Supervisor (${rueckfragen.filter(r => r.status === 'offen').length} offen)`} open icon={pik(<><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></>)}>
+          <PubSection title={`Rückfragen (${rueckfragen.filter(r => r.status === 'offen').length} offen)`} open icon={pik(<><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></>)}>
             <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 12 }}>
               Stellungnahmen werden separat über dein Profil unter „Protokolle" abgegeben.
             </p>
@@ -744,7 +744,7 @@ export default function ProtokollBearbeiten() {
                   borderRadius: 10, padding: 12, marginBottom: 12,
                 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, flexWrap: 'wrap', gap: 6 }}>
-                    <span style={{ fontWeight: 700, fontSize: 13 }}>Rückfrage</span>
+                    <span style={{ fontWeight: 700, fontSize: 13 }}>Rückfrage{rq.created_by ? ` von ${rq.created_by}` : ''}</span>
                     <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{new Date(rq.created).toLocaleString('de-DE')}</span>
                     <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 999, background: sn ? '#dcfce7' : '#fef9c3', color: sn ? '#166534' : '#92400e' }}>
                       {sn ? 'Beantwortet' : 'Offen'}

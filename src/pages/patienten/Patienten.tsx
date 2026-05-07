@@ -978,7 +978,7 @@ export default function Patienten() {
                       </div>
                       <div style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 10 }}>
                         <div style={{ fontSize: 14, background: 'var(--bg-subtle)', borderRadius: 8, padding: '8px 10px', lineHeight: 1.5 }}>
-                          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 3 }}>Frage an Teamleiter:</div>
+                          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 3 }}>{rq.created_by ? `${rq.created_by} fragt:` : 'Frage:'}</div>
                           {rq.frage}
                         </div>
                         {sn ? (

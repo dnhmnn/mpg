@@ -3,8 +3,9 @@ import QRCode from 'qrcode'
 import type { Patient, PatientPayload, Medication, VitalRow } from './types'
 import { PubSection, inp, sel, ta, field, lbl } from '../public/pubStyles'
 import { pb } from '../../lib/pocketbase'
+import { useAuth } from '../../hooks/useAuth'
 
-interface RQ { id: string; frage: string; status: 'offen' | 'beantwortet'; created: string }
+interface RQ { id: string; frage: string; created_by?: string; status: 'offen' | 'beantwortet'; created: string }
 interface SN { id: string; rueckfrage_id: string; text: string; created: string }
 
 interface Props {
@@ -25,6 +26,7 @@ const pil: React.CSSProperties = {
 }
 
 export default function PatientEditModal({ patient, payload: p, original, setP, onClose, onSaveAndSign, onRefresh }: Props) {
+  const { user } = useAuth()
   const [newFrage, setNewFrage] = useState('')
   const [sendingFrage, setSendingFrage] = useState(false)
   const [showQR, setShowQR] = useState(false)
@@ -54,7 +56,7 @@ export default function PatientEditModal({ patient, payload: p, original, setP, 
     if (!newFrage.trim() || sendingFrage) return
     setSendingFrage(true)
     try {
-      const rq: RQ = { id: Date.now().toString(), frage: newFrage.trim(), status: 'offen', created: new Date().toISOString() }
+      const rq: RQ = { id: Date.now().toString(), frage: newFrage.trim(), created_by: user?.name || 'Admin', status: 'offen', created: new Date().toISOString() }
       const updated = [...rueckfragen, rq]
       setP('rueckfragen', updated as any)
       await pb.collection('patients').update(patient.id, { payload: { ...p, rueckfragen: updated } })
@@ -722,7 +724,7 @@ export default function PatientEditModal({ patient, payload: p, original, setP, 
               borderRadius: 10, padding: 12, marginBottom: 12,
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, flexWrap: 'wrap', gap: 6 }}>
-                <span style={{ fontWeight: 700, fontSize: 13 }}>Rückfrage #{i + 1}</span>
+                <span style={{ fontWeight: 700, fontSize: 13 }}>Rückfrage #{i + 1}{rq.created_by ? ` · ${rq.created_by}` : ''}</span>
                 <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{new Date(rq.created).toLocaleString('de-DE')}</span>
                 <span style={{
                   fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 999,
@@ -733,7 +735,7 @@ export default function PatientEditModal({ patient, payload: p, original, setP, 
                 </span>
               </div>
               <div style={{ fontSize: 14, marginBottom: 8, background: 'rgba(0,0,0,0.04)', borderRadius: 6, padding: 8 }}>
-                <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 2 }}>Frage an Teamleader:</div>
+                <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 2 }}>{rq.created_by ? `${rq.created_by} fragt:` : 'Frage:'}</div>
                 {rq.frage}
               </div>
               {(() => {
