@@ -6,6 +6,7 @@ import { PubHeader, PubWrap, PubSendBar, PubSection, inp, sel, ta, field, lbl } 
 import OrgPatientenMannschaft from './OrgPatientenMannschaft'
 import EinsatzTimeline from './EinsatzTimeline'
 import AnamneseAssistent from './AnamneseAssistent'
+import DauermedikationPicker, { type DauerMed } from './DauermedikationPicker'
 
 type Med = { name: string; dose: string; unit: string; route: string; time: string; note: string }
 type VRow = { zeit: string; rr_sys: string; rr_dia: string; hf: string; o2: string; spo2: string; etco2: string; schmerz: string }
@@ -25,6 +26,7 @@ export default function OrgPatienten() {
   const formRef = useRef<HTMLFormElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [meds, setMeds] = useState<Med[]>([])
+  const [dauerMeds, setDauerMeds] = useState<DauerMed[]>([])
   const [verlauf, setVerlauf] = useState<VRow[]>([emptyV()])
   const [verlaufText, setVerlaufText] = useState('')
   const [photos, setPhotos] = useState<string[]>([])
@@ -124,6 +126,7 @@ export default function OrgPatienten() {
       else data[el.name] = el.value
     })
     data.medications = meds
+    data.dauermedikation = dauerMeds
     data.verlauf = verlauf.filter(r => r.zeit || r.rr_sys || r.hf)
     data.photos = photos
     data.signature = sigUrl
@@ -172,7 +175,7 @@ export default function OrgPatienten() {
         <div style={{ width: 56, height: 56, background: success === 'OFFLINE' ? '#fef9c3' : '#dcfce7', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem', color: success === 'OFFLINE' ? '#854d0e' : '#15803d' }}>{success === 'OFFLINE' ? pik(<><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></>, 28) : pik(<><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></>, 28)}</div>
         <h2 style={{ color: 'var(--text)', margin: '0 0 .5rem', fontSize: '1.2rem' }}>{success === 'OFFLINE' ? 'Offline gespeichert' : 'Erfolgreich übermittelt!'}</h2>
         <p style={{ color: 'var(--text-secondary)', margin: '0 0 1.5rem', fontSize: '.9rem' }}>{success === 'OFFLINE' ? 'Wird beim nächsten Öffnen dieser Seite automatisch übermittelt.' : success}</p>
-        <button style={{ background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: 12, padding: '12px 24px', fontWeight: 700, fontSize: '1rem', cursor: 'pointer', fontFamily: 'inherit' }} onClick={() => { setSuccess(null); setMeds([]); setVerlauf([emptyV()]); setPhotos([]); setGcs({ e: 0, v: 0, m: 0 }); clearSig() }}>+ Neues Formular</button>
+        <button style={{ background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: 12, padding: '12px 24px', fontWeight: 700, fontSize: '1rem', cursor: 'pointer', fontFamily: 'inherit' }} onClick={() => { setSuccess(null); setMeds([]); setDauerMeds([]); setVerlauf([emptyV()]); setPhotos([]); setGcs({ e: 0, v: 0, m: 0 }); clearSig() }}>+ Neues Formular</button>
       </div>
     </PubWrap>
   )
@@ -181,7 +184,7 @@ export default function OrgPatienten() {
     <PubHeader title={`Patientendoku – ${org.org_name}`} onBack={() => navigate(`/${orgCode}`)}
       extra={<>
         <button onClick={saveLocal} style={{ background: 'var(--bg-hover)', border: '0.5px solid var(--border-medium)', color: 'var(--text)', padding: '6px 10px', borderRadius: 8, fontWeight: 600, cursor: 'pointer', fontSize: '.85rem', fontFamily: 'inherit', display: 'inline-flex', alignItems: 'center', gap: 4 }}>{pik(<><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></>, 15)} Speichern</button>
-        <button onClick={() => { if (confirm('Formular zurücksetzen?')) { formRef.current?.reset(); setMeds([]); setVerlauf([emptyV()]); setPhotos([]); setGcs({ e: 0, v: 0, m: 0 }); clearSig() } }} style={{ background: 'var(--bg-hover)', border: '0.5px solid var(--border-medium)', color: 'var(--text)', padding: '6px 10px', borderRadius: 8, fontWeight: 600, cursor: 'pointer', fontSize: '.85rem', fontFamily: 'inherit', display: 'inline-flex', alignItems: 'center', gap: 4 }}>{pik(<><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></>, 15)} Reset</button>
+        <button onClick={() => { if (confirm('Formular zurücksetzen?')) { formRef.current?.reset(); setMeds([]); setDauerMeds([]); setVerlauf([emptyV()]); setPhotos([]); setGcs({ e: 0, v: 0, m: 0 }); clearSig() } }} style={{ background: 'var(--bg-hover)', border: '0.5px solid var(--border-medium)', color: 'var(--text)', padding: '6px 10px', borderRadius: 8, fontWeight: 600, cursor: 'pointer', fontSize: '.85rem', fontFamily: 'inherit', display: 'inline-flex', alignItems: 'center', gap: 4 }}>{pik(<><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></>, 15)} Reset</button>
       </>}
     />
     <PubWrap>
@@ -348,7 +351,14 @@ export default function OrgPatienten() {
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '.75rem' }}>
             <div style={field}><label style={lbl}>Vorerkrankungen<textarea style={ta} name="vorerkrankungen" /></label></div>
-            <div style={field}><label style={lbl}>Dauermedikation Patient<textarea style={ta} name="vormedikation_patient" /></label></div>
+            <div style={field}><label style={lbl}>Dauermedikation Patient (Freitext)<textarea style={ta} name="vormedikation_patient" /></label></div>
+          </div>
+          <div style={field}>
+            <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--text)', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 8 }}>
+              💊 Dauermedikation
+              <span style={{ fontSize: 12, fontWeight: 400, color: 'var(--text-secondary)' }}>Wirkstoff aus Datenbank übernehmen oder Barcode scannen</span>
+            </div>
+            <DauermedikationPicker value={dauerMeds} onChange={setDauerMeds} />
           </div>
           <div style={field}><label style={lbl}>Allergien / Unverträglichkeiten<input style={inp} name="allergien" type="text" placeholder="Keine bekannt" /></label></div>
           <div style={{ marginTop: '.75rem' }}>
