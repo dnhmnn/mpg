@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { pb } from '../lib/pocketbase'
 import { useAuth } from '../hooks/useAuth'
+import DauermedikationPicker, { type DauerMed } from './public/DauermedikationPicker'
 
 type Med = { name: string; dose: string; unit: string; route: string; time: string; note: string }
 type VRow = { zeit: string; rr_sys: string; rr_dia: string; hf: string; o2: string; spo2: string; etco2: string; schmerz: string }
@@ -33,6 +34,7 @@ export default function ProtokollBearbeiten() {
   const formRef = useRef<HTMLFormElement>(null)
 
   const [meds, setMeds] = useState<Med[]>([])
+  const [dauerMeds, setDauerMeds] = useState<DauerMed[]>([])
   const [verlauf, setVerlauf] = useState<VRow[]>([emptyV()])
   const [gcs, setGcs] = useState({ e: 0, v: 0, m: 0 })
   const [mannschaft, setMannschaft] = useState<Record<string, { name: string } | null>>({})
@@ -65,6 +67,7 @@ export default function ProtokollBearbeiten() {
       const p = rec.payload || {}
       if (p.mannschaft) setMannschaft(p.mannschaft)
       if (p.medications?.length) setMeds(p.medications)
+      if (Array.isArray(p.dauermedikation) && p.dauermedikation.length) setDauerMeds(p.dauermedikation)
       if (p.verlauf?.length) setVerlauf(p.verlauf)
       if (p.gcs_e) setGcs({ e: Number(p.gcs_e) || 0, v: Number(p.gcs_v) || 0, m: Number(p.gcs_m) || 0 })
       if (p.signature) setSigUrl(p.signature)
@@ -127,6 +130,7 @@ export default function ProtokollBearbeiten() {
     })
     data.mannschaft = mannschaft
     data.medications = meds
+    data.dauermedikation = dauerMeds
     data.verlauf = verlauf.filter(r => r.zeit || r.rr_sys || r.hf)
     data.gcs_e = gcs.e; data.gcs_v = gcs.v; data.gcs_m = gcs.m
     return data
@@ -208,6 +212,27 @@ export default function ProtokollBearbeiten() {
             <label style={lbl}>Notfallgeschehen<textarea style={ta} name="notfallgeschehen" /></label>
             <label style={{ ...lbl, marginTop: '.75rem' }}>Vorerkrankungen<textarea style={ta} name="vorerkrankungen" /></label>
             <label style={{ ...lbl, marginTop: '.75rem' }}>Allergien<input style={inp} name="allergien" type="text" /></label>
+            <div style={{ marginTop: '.75rem' }}>
+              <div style={lbl}>Dauermedikation</div>
+              {locked ? (
+                dauerMeds.length > 0 ? (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 6 }}>
+                    {dauerMeds.map((m, i) => (
+                      <div key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: 'var(--bg-subtle)', border: '0.5px solid var(--border-medium)', borderRadius: 10, padding: '6px 10px', fontSize: 13 }}>
+                        <span style={{ fontWeight: 700 }}>{m.name}</span>
+                        {m.wirkstoff && <span style={{ color: 'var(--text-secondary)' }}>({m.wirkstoff})</span>}
+                        {m.dosis && <span>{m.dosis}</span>}
+                        {m.pzn && <span style={{ fontSize: 11 }}>PZN {m.pzn}</span>}
+                      </div>
+                    ))}
+                  </div>
+                ) : <div style={{ color: 'var(--text-secondary)', fontSize: 14, marginTop: 6 }}>Keine eingetragen</div>
+              ) : (
+                <div style={{ marginTop: 6 }}>
+                  <DauermedikationPicker value={dauerMeds} onChange={v => { setDauerMeds(v); scheduleAutoSave() }} />
+                </div>
+              )}
+            </div>
           </Section>
 
           <Section title="🔢 NACA / Bewusstsein">
