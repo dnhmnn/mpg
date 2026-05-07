@@ -1,5 +1,6 @@
 import React from 'react'
 
+export const lbl: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: 3, fontSize: '.88rem', fontWeight: 700, color: 'var(--text-secondary)' }
 export const inp: React.CSSProperties = { width: '100%', padding: '.55rem .6rem', border: '1px solid #e2e8f0', borderRadius: '.5rem', background: '#fff', fontSize: 16, marginTop: 4 }
 export const sel: React.CSSProperties = { ...inp }
 export const ta: React.CSSProperties = { ...inp, minHeight: 88, resize: 'vertical' }

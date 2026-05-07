@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { pb } from '../../lib/pocketbase'
 import { useOrg } from './OrgPublicLayout'
 import { PubHeader, PubWrap, PubSendBar, PubSection, inp, sel, ta, field } from './pubStyles'
+import DauermedikationPicker, { type DauerMed } from './DauermedikationPicker'
 
 type Med = { name: string; dose: string; unit: string; route: string; time: string; note: string }
 const lbl: React.CSSProperties = { display: 'block', fontWeight: 700, color: '#111827', fontSize: '.92rem' }
@@ -16,6 +17,7 @@ export default function OrgPatienten() {
   const formRef = useRef<HTMLFormElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [meds, setMeds] = useState<Med[]>([])
+  const [dauerMeds, setDauerMeds] = useState<DauerMed[]>([])
   const [photos, setPhotos] = useState<string[]>([])
   const [gcs, setGcs] = useState({ e: 0, v: 0, m: 0 })
   const [sigUrl, setSigUrl] = useState('')
@@ -50,7 +52,7 @@ export default function OrgPatienten() {
       else if ((el as HTMLInputElement).type === 'radio') { if ((el as HTMLInputElement).checked) data[el.name] = el.value }
       else data[el.name] = el.value
     })
-    data.medications = meds; data.photos = photos; data.signature = sigUrl
+    data.medications = meds; data.dauermedikation = dauerMeds; data.photos = photos; data.signature = sigUrl
     return data
   }
 
@@ -79,7 +81,7 @@ export default function OrgPatienten() {
         <div style={{ fontSize: '3rem' }}>✅</div>
         <h2 style={{ color: '#15803d', margin: '.5rem 0' }}>Erfolgreich übermittelt!</h2>
         <p style={{ fontFamily: 'monospace', color: '#166534' }}>{success}</p>
-        <button style={{ background: '#c8102e', color: '#fff', border: 'none', borderRadius: 8, padding: '12px 24px', fontWeight: 700, fontSize: '1rem', cursor: 'pointer', marginTop: '1rem' }} onClick={() => { setSuccess(null); setMeds([]); setPhotos([]); setGcs({ e: 0, v: 0, m: 0 }); clearSig() }}>+ Neues Formular</button>
+        <button style={{ background: '#c8102e', color: '#fff', border: 'none', borderRadius: 8, padding: '12px 24px', fontWeight: 700, fontSize: '1rem', cursor: 'pointer', marginTop: '1rem' }} onClick={() => { setSuccess(null); setMeds([]); setDauerMeds([]); setPhotos([]); setGcs({ e: 0, v: 0, m: 0 }); clearSig() }}>+ Neues Formular</button>
       </div>
     </PubWrap>
   )
@@ -88,7 +90,7 @@ export default function OrgPatienten() {
     <PubHeader title={`Patientendoku – ${org.org_name}`} onBack={() => navigate(`/${orgCode}`)}
       extra={<>
         <button onClick={saveLocal} style={{ background: 'rgba(255,255,255,.15)', border: '1px solid rgba(255,255,255,.3)', color: '#fff', padding: '6px 10px', borderRadius: 8, fontWeight: 700, cursor: 'pointer', fontSize: '.85rem' }}>💾 Speichern</button>
-        <button onClick={() => { if (confirm('Formular zurücksetzen?')) { formRef.current?.reset(); setMeds([]); setPhotos([]); setGcs({ e: 0, v: 0, m: 0 }); clearSig() } }} style={{ background: 'rgba(255,255,255,.15)', border: '1px solid rgba(255,255,255,.3)', color: '#fff', padding: '6px 10px', borderRadius: 8, fontWeight: 700, cursor: 'pointer', fontSize: '.85rem' }}>🗑 Reset</button>
+        <button onClick={() => { if (confirm('Formular zurücksetzen?')) { formRef.current?.reset(); setMeds([]); setDauerMeds([]); setPhotos([]); setGcs({ e: 0, v: 0, m: 0 }); clearSig() } }} style={{ background: 'rgba(255,255,255,.15)', border: '1px solid rgba(255,255,255,.3)', color: '#fff', padding: '6px 10px', borderRadius: 8, fontWeight: 700, cursor: 'pointer', fontSize: '.85rem' }}>🗑 Reset</button>
       </>}
     />
     <PubWrap>
@@ -154,6 +156,17 @@ export default function OrgPatienten() {
         {/* Notfallgeschehen */}
         <PubSection title="📋 Notfallgeschehen / Anamnese">
           <textarea style={ta} name="notfallgeschehen" placeholder="Freitext…" />
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: '.75rem', marginTop: '.75rem' }}>
+            <label style={lbl}>Vorerkrankungen<textarea style={{ ...ta, marginTop: 4 }} name="vorerkrankungen" rows={2} placeholder="z.B. Diabetes, KHK…" /></label>
+            <label style={lbl}>Allergien / Unverträglichkeiten<textarea style={{ ...ta, marginTop: 4 }} name="allergien" rows={2} placeholder="z.B. Penicillin, Latex…" /></label>
+          </div>
+          <div style={{ marginTop: '.75rem' }}>
+            <div style={{ fontWeight: 700, marginBottom: 6, color: '#111827', display: 'flex', alignItems: 'center', gap: 6 }}>
+              💊 Dauermedikation
+              <span style={{ fontSize: 12, fontWeight: 400, color: '#6b7280' }}>– Wirkstoff aus Medikamentendatenbank übernehmen oder Barcode scannen</span>
+            </div>
+            <DauermedikationPicker value={dauerMeds} onChange={setDauerMeds} />
+          </div>
           <div style={{ marginTop: '.75rem' }}>
             <label style={{ ...lbl, marginBottom: 6 }}>Fotos</label>
             <input type="file" accept="image/*" capture="environment" multiple onChange={async e => {

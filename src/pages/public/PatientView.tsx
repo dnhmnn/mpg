@@ -245,9 +245,28 @@ export default function PatientView() {
           <Val label="Verlaufsbeschreibung" value={(p as any).verlaufsbeschreibung} />
           <div style={{ ...grid, marginTop: '.5rem' }}>
             <Val label="Vorerkrankungen" value={(p as any).vorerkrankungen} />
-            <Val label="Dauermedikation Patient" value={(p as any).vormedikation_patient} />
           </div>
           <Val label="Allergien / Unverträglichkeiten" value={(p as any).allergien} />
+          {/* Structured Dauermedikation */}
+          {((p as any).dauermedikation as any[])?.length > 0 && (
+            <div style={{ marginTop: '.75rem' }}>
+              <div style={{ fontWeight: 700, fontSize: '.88rem', color: 'var(--text)', marginBottom: 6 }}>💊 Dauermedikation</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                {((p as any).dauermedikation as any[]).map((m: any, i: number) => (
+                  <div key={i} style={{
+                    display: 'inline-flex', alignItems: 'flex-start', gap: 5,
+                    background: 'var(--bg-subtle)', border: '0.5px solid var(--border-medium)',
+                    borderRadius: 10, padding: '6px 10px', fontSize: 13,
+                  }}>
+                    <span style={{ fontWeight: 700, color: 'var(--text)' }}>{m.name}</span>
+                    {m.wirkstoff && <span style={{ color: 'var(--text-secondary)' }}>({m.wirkstoff})</span>}
+                    {m.dosis && <span style={{ color: 'var(--text-secondary)', marginLeft: 2 }}>{m.dosis}</span>}
+                    {m.pzn && <span style={{ fontSize: 11, color: 'var(--text-secondary)', marginLeft: 2 }}>PZN {m.pzn}</span>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
           {(p as any).photos?.length > 0 && (
             <div style={{ marginTop: '.75rem' }}>
               <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--text)', marginBottom: 6 }}>Fotos</div>
