@@ -90,6 +90,58 @@ export default function OrgPatienten() {
 
   useEffect(() => { draftIdRef.current = draftId }, [draftId])
 
+  // Restore draft from localStorage on mount
+  useEffect(() => {
+    const raw = localStorage.getItem('patientendoku_' + orgCode)
+    if (!raw) return
+    try {
+      const d = JSON.parse(raw)
+      // Controlled state
+      if (Array.isArray(d.medications))    setMeds(d.medications)
+      if (Array.isArray(d.dauermedikation)) setDauerMeds(d.dauermedikation)
+      if (Array.isArray(d.verlauf) && d.verlauf.length) setVerlauf(d.verlauf)
+      if (Array.isArray(d.photos))         setPhotos(d.photos)
+      if (d.notfallgeschehen)              setNotfallText(d.notfallgeschehen)
+      if (d.verlaufsbeschreibung)          setVerlaufText(d.verlaufsbeschreibung)
+      if (d.zeit_einsatz)                  setAlarmzeit(d.zeit_einsatz)
+      if (d.einsatz_adresse)               setEinsatzAdresse(d.einsatz_adresse)
+      if (d.access_code)                   setSavedQrCode(d.access_code)
+      if (d.access_code_created)           setSavedQrCreated(d.access_code_created)
+      if (d.gcs_e || d.gcs_v || d.gcs_m)
+        setGcs({ e: Number(d.gcs_e) || 0, v: Number(d.gcs_v) || 0, m: Number(d.gcs_m) || 0 })
+      // Restore signature to canvas
+      if (d.signature) {
+        setSigUrl(d.signature)
+        const img = new Image()
+        img.onload = () => {
+          const ctx = canvasRef.current?.getContext('2d')
+          if (ctx) ctx.drawImage(img, 0, 0)
+        }
+        img.src = d.signature
+      }
+      // Restore uncontrolled form inputs after React has painted
+      requestAnimationFrame(() => {
+        if (!formRef.current) return
+        const skip = new Set(['notfallgeschehen', 'verlaufsbeschreibung', 'zeit_einsatz', 'einsatz_adresse'])
+        Object.entries(d).forEach(([key, val]) => {
+          if (skip.has(key)) return
+          if (val === null || val === undefined) return
+          if (typeof val === 'object') return
+          formRef.current!.querySelectorAll<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>(
+            `[name="${CSS.escape(key)}"]`
+          ).forEach(el => {
+            if ((el as HTMLInputElement).type === 'checkbox')
+              (el as HTMLInputElement).checked = Boolean(val)
+            else if ((el as HTMLInputElement).type === 'radio')
+              (el as HTMLInputElement).checked = (el as HTMLInputElement).value === String(val)
+            else
+              el.value = String(val)
+          })
+        })
+      })
+    } catch {}
+  }, [orgCode])
+
   useEffect(() => {
     const r = verlauf[0]
     const parts: string[] = []
