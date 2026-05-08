@@ -123,6 +123,7 @@ export interface PatientPayload {
   dauermedikation?: { name?: string; pzn?: string; handelsname?: string }[]
   rueckfragen?: { id: string; frage: string; created_by?: string; status: 'offen' | 'beantwortet'; created: string }[]
   stellungnahmen?: { id: string; rueckfrage_id: string; text: string; created: string }[]
+  _changed_fields?: string[]
 }
 
 export interface Patient {
