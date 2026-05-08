@@ -15,11 +15,11 @@ const pik = (ch: React.ReactNode, sz = 18) => (
   </svg>
 )
 
-function F({ label, value }: { label: string; value?: string | number | boolean | null }) {
+function F({ label, value, ch }: { label: string; value?: string | number | boolean | null; ch?: boolean }) {
   if (!value && value !== 0) return null
   return (
-    <div style={{ marginBottom: 10 }}>
-      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2 }}>{label}</div>
+    <div style={{ marginBottom: 10, ...(ch ? { borderLeft: '3px solid #d97706', paddingLeft: 8, marginLeft: -8 } : {}) }}>
+      <div style={{ fontSize: 11, fontWeight: 700, color: ch ? '#d97706' : 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2 }}>{label}</div>
       <div style={{ fontSize: 15, color: 'var(--text)', whiteSpace: 'pre-wrap' }}>{String(value)}</div>
     </div>
   )
@@ -68,6 +68,7 @@ export default function DetailsModal({ doc, type, onClose, onEdit }: Props) {
     if (type === 'patient') {
       const pd = doc as Patient
       const p = parsePayload(pd.payload)
+      const pChf = new Set<string>(p._changed_fields || [])
       const gcsTotal = (p.gcs_e || 0) + (p.gcs_v || 0) + (p.gcs_m || 0)
       const meds = p.medications || []
       const verlauf = p.verlauf || []
@@ -79,8 +80,8 @@ export default function DetailsModal({ doc, type, onClose, onEdit }: Props) {
       const hdr = (sub:string) => `<div style="border:1pt solid #000;display:flex;align-items:center;justify-content:space-between;padding:2pt 6pt;margin-bottom:2pt"><div style="font-size:8pt;font-weight:bold;letter-spacing:.5pt;text-transform:uppercase">NOTFALLEINSATZPROTOKOLL</div><div style="font-size:5pt;color:#444">${sub}</div><div style="font-size:10pt;font-weight:bold;letter-spacing:2pt">MIND</div></div>`
       const blk = (title:string, content:string) => `<div style="border:0.5pt solid #888;margin-bottom:1.5pt;overflow:hidden">${B(title)}${content}</div>`
       const row = (cols:string, cells:string) => `<div style="display:grid;grid-template-columns:${cols};border-top:0.5pt solid #ccc">${cells}</div>`
-      const cell = (lbl:string, val:string) => `<div style="padding:1pt 3pt;border-right:0.5pt solid #ccc"><div style="font-size:4pt;color:#666;text-transform:uppercase;letter-spacing:.3pt;margin-bottom:0.5pt">${lbl}</div><div style="font-weight:bold;font-size:6pt;min-height:7pt">${val||''}</div></div>`
-      const cellL = (lbl:string, val:string) => `<div style="padding:1pt 3pt;border-right:0.5pt solid #ccc"><div style="font-size:4pt;color:#666;text-transform:uppercase;letter-spacing:.3pt;margin-bottom:0.5pt">${lbl}</div><div style="font-size:6pt;min-height:7pt;white-space:pre-wrap">${val||''}</div></div>`
+      const cell = (lbl:string, val:string, k?:string) => { const ch = k && pChf.has(k); return `<div style="padding:1pt 3pt;border-right:0.5pt solid #ccc${ch?';background:#fef3c7;border-left:2pt solid #d97706':''}"><div style="font-size:4pt;${ch?'color:#d97706;font-weight:bold;':'color:#666;'}text-transform:uppercase;letter-spacing:.3pt;margin-bottom:0.5pt">${lbl}</div><div style="font-weight:bold;font-size:6pt;min-height:7pt">${val||''}</div></div>` }
+      const cellL = (lbl:string, val:string, k?:string) => { const ch = k && pChf.has(k); return `<div style="padding:1pt 3pt;border-right:0.5pt solid #ccc${ch?';background:#fef3c7;border-left:2pt solid #d97706':''}"><div style="font-size:4pt;${ch?'color:#d97706;font-weight:bold;':'color:#666;'}text-transform:uppercase;letter-spacing:.3pt;margin-bottom:0.5pt">${lbl}</div><div style="font-size:6pt;min-height:7pt;white-space:pre-wrap">${val||''}</div></div>` }
       const naca = ['0','I','II','III','IV','V','VI','VII'].map(v=>`<span class="tag naca${p.naca===v?' active':''}">${v}</span>`).join('')
       const cr = (items:[boolean|undefined,string][]) => `<div style="display:flex;flex-wrap:wrap;gap:1pt;padding:1.5pt 3pt">${items.map(([on,l])=>tag(on,l)).join('')}</div>`
       const catRow = (cat:string, items:[boolean|undefined,string][]) => `<div style="display:flex;flex-wrap:wrap;gap:0.5pt;padding:0.5pt 3pt;border-top:0.5pt solid #e0e0e0;align-items:center"><span style="font-size:3.5pt;font-weight:bold;color:#444;text-transform:uppercase;min-width:30pt;flex-shrink:0">${cat}</span>${items.map(([on,l])=>tag(on,l)).join('')}</div>`
@@ -109,36 +110,36 @@ export default function DetailsModal({ doc, type, onClose, onEdit }: Props) {
       <div style="display:grid;grid-template-columns:1fr 80pt;gap:1.5pt;margin-bottom:1.5pt">
         ${blk('Einsatzdaten',
           row('1fr 1.2fr 1fr 1fr 1fr 1fr',
-            cell('Einsatz-Nr.',p.einsatz_nr||'')+cell('Auftrags-Nr. (ILS)',p.auftrags_nr||'')+cell('Datum',new Date().toLocaleDateString('de-DE'))+cell('Alarmzeit',p.zeit_einsatz||'')+cell('Eintreffen',p.zeit_eintreffen||'')+cell('Transportbeginn',p.zeit_transport||'')
+            cell('Einsatz-Nr.',p.einsatz_nr||'','einsatz_nr')+cell('Auftrags-Nr. (ILS)',p.auftrags_nr||'','auftrags_nr')+cell('Datum',new Date().toLocaleDateString('de-DE'))+cell('Alarmzeit',p.zeit_einsatz||'','zeit_einsatz')+cell('Eintreffen',p.zeit_eintreffen||'','zeit_eintreffen')+cell('Transportbeginn',p.zeit_transport||'','zeit_transport')
           )+row('1fr 1fr 1fr 2fr',
-            cell('Übergabe',p.zeit_uebergabe||'')+cell('Rufname',p.rufname||'')+cell('Fahrzeug / Einheit',p.fahrzeug||'')+cell('Einsatzart / Stichwort',p.einsatz_art||'')
+            cell('Übergabe',p.zeit_uebergabe||'','zeit_uebergabe')+cell('Rufname',p.rufname||'','rufname')+cell('Fahrzeug / Einheit',p.fahrzeug||'','fahrzeug')+cell('Einsatzart / Stichwort',p.einsatz_art||'','einsatz_art')
           )+row('2fr 1fr',
-            cell('Einsatzort / Adresse',p.einsatz_adresse||'')+cell('Transportziel',p.transport_ziel||'')
+            cell('Einsatzort / Adresse',p.einsatz_adresse||'','einsatz_adresse')+cell('Transportziel',p.transport_ziel||'','transport_ziel')
           )
         )}
         ${blk('Mannschaft',
-          row('1fr',cell('Teamführer',p.mannschaft_tf||''))+
-          row('1fr',cell('Mannschaft 1',p.mannschaft_1||''))+
-          row('1fr',cell('Mannschaft 2',p.mannschaft_2||''))+
-          row('1fr',cell('Mannschaft 3',p.mannschaft_3||''))
+          row('1fr',cell('Teamführer',  (p as any).mannschaft?.tf?.name || p.mannschaft_tf||''))+
+          row('1fr',cell('Mannschaft 1',(p as any).mannschaft?.m1?.name || p.mannschaft_1||''))+
+          row('1fr',cell('Mannschaft 2',(p as any).mannschaft?.m2?.name || p.mannschaft_2||''))+
+          row('1fr',cell('Mannschaft 3',(p as any).mannschaft?.m3?.name || p.mannschaft_3||''))
         )}
       </div>
 
       ${blk('Patientenstammdaten',
         row('2fr 1fr .6fr',
-          cell('Name, Vorname',[p.name,p.vorname].filter(Boolean).join(', '))+cell('Geburtsdatum',p.gebdatum||'')+cell('Alter',p.alter||'')
+          cell('Name, Vorname',[p.name,p.vorname].filter(Boolean).join(', '))+cell('Geburtsdatum',p.gebdatum||'','gebdatum')+cell('Alter',p.alter||'','alter')
         )+row('2fr 1fr 1fr',
-          cell('Straße',p.strasse||'')+cell('PLZ / Ort',p.plz_ort||'')+cell('Telefon',p.telefon||p.mobil||'')
+          cell('Straße',p.strasse||'','strasse')+cell('PLZ / Ort',p.plz_ort||'','plz_ort')+cell('Telefon',p.telefon||p.mobil||'')
         )+row('1.5fr 1fr 1.5fr 1.5fr',
-          cell('Krankenkasse',p.kasse||'')+cell('Vers.-Nr.',p.versnr||'')+cell('Hausarzt',p.hausarzt||'')+cell('Angehöriger / Kontakt',p.angehoeriger||'')
+          cell('Krankenkasse',p.kasse||'','kasse')+cell('Vers.-Nr.',p.versnr||'','versnr')+cell('Hausarzt',p.hausarzt||'','hausarzt')+cell('Angehöriger / Kontakt',p.angehoeriger||'','angehoeriger')
         )
       )}
 
       ${blk('Notfallgeschehen / Anamnese',
-        row('1fr',cellL('Notfallgeschehen',p.notfallgeschehen||''))+
-        row('1fr',cellL('Verlaufsbeschreibung',p.verlaufsbeschreibung||''))+
-        row('1fr 1fr',cellL('Vorerkrankungen',p.vorerkrankungen||'')+cellL('Dauermedikation Patient',p.vormedikation_patient||''))+
-        row('1fr',cell('Allergien / Unverträglichkeiten',p.allergien||'Keine bekannt'))
+        row('1fr',cellL('Notfallgeschehen',p.notfallgeschehen||'','notfallgeschehen'))+
+        row('1fr',cellL('Verlaufsbeschreibung',p.verlaufsbeschreibung||'','verlaufsbeschreibung'))+
+        row('1fr 1fr',cellL('Vorerkrankungen',p.vorerkrankungen||'','vorerkrankungen')+cellL('Dauermedikation Patient',p.vormedikation_patient||'','vormedikation_patient'))+
+        row('1fr',cell('Allergien / Unverträglichkeiten',p.allergien||'Keine bekannt','allergien'))
       )}
 
       <div style="display:grid;grid-template-columns:auto 1fr 1fr;gap:1pt;margin-bottom:2pt">
@@ -279,28 +280,28 @@ export default function DetailsModal({ doc, type, onClose, onEdit }: Props) {
         </div>
         <div>
           ${blk('Reanimation',cr([[p.rean,'CPR durchgeführt'],[p.rean_tod,'Todesfeststellung']])+
-            (p.rean_tod&&p.rean_tod_zeit?row('1fr',cell('Uhrzeit Todesfeststellung',p.rean_tod_zeit)):'')+
-            (p.rean?row('1fr 1fr 1fr',cell('Beginn',p.rean_beginn||'')+cell('Ende',p.rean_ende||'')+cell('Defibrillationen',p.rean_defib||'')):'')
+            (p.rean_tod&&p.rean_tod_zeit?row('1fr',cell('Uhrzeit Todesfeststellung',p.rean_tod_zeit,'rean_tod_zeit')):'')+
+            (p.rean?row('1fr 1fr 1fr',cell('Beginn',p.rean_beginn||'','rean_beginn')+cell('Ende',p.rean_ende||'','rean_ende')+cell('Defibrillationen',p.rean_defib||'','rean_defib')):'')
           )}
-          ${blk('Venöser Zugang',row('1fr 1fr 1fr',cell('Art',p.zugang_art||'')+cell('Gauge',p.zugang_gauge||'')+cell('Region',p.zugang_region||'')))}
-          ${blk('Infusion',row('1fr 1fr',cell('Art',p.inf_art||'')+cell('Menge (ml)',p.inf_menge||'')))}
+          ${blk('Venöser Zugang',row('1fr 1fr 1fr',cell('Art',p.zugang_art||'','zugang_art')+cell('Gauge',p.zugang_gauge||'','zugang_gauge')+cell('Region',p.zugang_region||'','zugang_region')))}
+          ${blk('Infusion',row('1fr 1fr',cell('Art',p.inf_art||'','inf_art')+cell('Menge (ml)',p.inf_menge||'','inf_menge')))}
         </div>
       </div>
 
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:1pt;margin-bottom:2pt">
         ${blk('Beatmung',cr([[p.beat_manuell,'Manuell'],[p.beat_maschinell,'Maschinell'],[p.beat_niv,'NIV'],[p.beat_notfallnarkose,'Notfallnarkose']])+
-          row('1fr 1fr 1fr 1fr 1fr',cell('FiO₂',p.beat_fio2||'')+cell('AF /min',p.beat_af||'')+cell('PEEP mbar',p.beat_peep||'')+cell('Pmax mbar',p.beat_pmax||'')+cell('AMV l/min',p.beat_amv||''))
+          row('1fr 1fr 1fr 1fr 1fr',cell('FiO₂',p.beat_fio2||'','beat_fio2')+cell('AF /min',p.beat_af||'','beat_af')+cell('PEEP mbar',p.beat_peep||'','beat_peep')+cell('Pmax mbar',p.beat_pmax||'','beat_pmax')+cell('AMV l/min',p.beat_amv||'','beat_amv'))
         )}
         ${blk('Defibrillation',cr([[p.defi_aed,'AED'],[p.defi_defi,'Defi'],[p.defi_mono,'Monophasisch'],[p.defi_bi,'Biphasisch']])+
           `<div style="padding:1pt 5pt 2pt;font-size:5pt;color:#555">Erstanwendung: `+[p.defi_erstanw_laie&&'Laie',p.defi_erstanw_fr&&'First Resp.',p.defi_erstanw_rd&&'Rettungsdienst',p.defi_erstanw_arzt&&'Arzt'].filter(Boolean).join(', ')+`</div>`+
-          row('1fr 1fr 1fr 1fr',cell('Zeitpunkt 1. Defi',p.defi_zeitpunkt||'')+cell('ROSC',p.defi_rosc||'')+cell('Anzahl',p.defi_anzahl||'')+cell('Energie (kJ)',p.defi_energie||''))
+          row('1fr 1fr 1fr 1fr',cell('Zeitpunkt 1. Defi',p.defi_zeitpunkt||'','defi_zeitpunkt')+cell('ROSC',p.defi_rosc||'','defi_rosc')+cell('Anzahl',p.defi_anzahl||'','defi_anzahl')+cell('Energie (kJ)',p.defi_energie||'','defi_energie'))
         )}
       </div>
 
       ${blk('Medikamente / Therapie',`<div style="padding:1.5pt 3pt"><table><thead><tr><th>Zeit</th><th>Medikament</th><th>Dosis</th><th>Einheit</th><th>Applikationsweg</th><th>Hinweis</th></tr></thead><tbody>${meds.length>0?meds.map(m=>`<tr><td>${m.time||''}</td><td>${m.name||''}</td><td>${m.dose||''}</td><td>${m.unit||''}</td><td>${m.route||''}</td><td>${m.note||''}</td></tr>`).join(''):'<tr><td colspan="6" style="text-align:center;color:#aaa;font-style:italic">—</td></tr>'}</tbody></table></div>`)}
 
       ${blk('Übergabe / Besonderheiten',
-        row('1fr 1fr',cell('Übergabe Ziel',p.uebergabe_ziel||'')+cell('Übergabe an (Name)',p.uebergabe_name||''))+
+        row('1fr 1fr',cell('Übergabe Ziel',p.uebergabe_ziel||'','uebergabe_ziel')+cell('Übergabe an (Name)',p.uebergabe_name||'','uebergabe_name'))+
         cr([[p.ev_transportverweigerung,'Transportverweigerung'],[p.ev_nur_untersuchung,'Nur Untersuchung/Behandlung'],[p.ev_zwangseinweisung,'Zwangseinweisung'],[p.ev_transport_sondersignal,'Transport mit Sondersignal'],[p.ev_manv,'MANV'],[p.ev_lna,'LNA am Einsatz'],[p.ev_schwerlast,'Schwerlasttransport']])+
         `<div style="padding:1.5pt 3pt;border-top:0.5pt solid #ccc"><div style="font-size:5pt;color:#666;text-transform:uppercase;letter-spacing:.3pt;margin-bottom:1pt">Bemerkungen</div><div style="font-size:5pt;min-height:10pt;white-space:pre-wrap">${p.bemerkungen||''}</div></div>`
       )}
@@ -354,6 +355,7 @@ export default function DetailsModal({ doc, type, onClose, onEdit }: Props) {
   const gcsTotal = p ? (p.gcs_e || 0) + (p.gcs_v || 0) + (p.gcs_m || 0) : 0
   const verlauf = p?.verlauf || []
   const meds = p?.medications || []
+  const chf = new Set<string>(p?._changed_fields || [])
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'var(--bg)', zIndex: 2000, display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
@@ -391,28 +393,28 @@ export default function DetailsModal({ doc, type, onClose, onEdit }: Props) {
           <>
             <PubSection title="Einsatzdaten" open icon={pik(<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>)}>
               <Grid>
-                <F label="Einsatz-Nr." value={p.einsatz_nr} />
-                <F label="Auftrags-Nr. (ILS)" value={p.auftrags_nr} />
-                <F label="Rufname" value={p.rufname} />
-                <F label="Fahrzeug / Einheit" value={p.fahrzeug} />
-                <F label="Einsatzart / Stichwort" value={p.einsatz_art} />
-                <F label="Alarmzeit" value={p.zeit_einsatz} />
-                <F label="Einsatzort / Adresse" value={p.einsatz_adresse} />
-                <F label="Transportziel" value={p.transport_ziel} />
+                <F label="Einsatz-Nr." value={p.einsatz_nr} ch={chf.has('einsatz_nr')} />
+                <F label="Auftrags-Nr. (ILS)" value={p.auftrags_nr} ch={chf.has('auftrags_nr')} />
+                <F label="Rufname" value={p.rufname} ch={chf.has('rufname')} />
+                <F label="Fahrzeug / Einheit" value={p.fahrzeug} ch={chf.has('fahrzeug')} />
+                <F label="Einsatzart / Stichwort" value={p.einsatz_art} ch={chf.has('einsatz_art')} />
+                <F label="Alarmzeit" value={p.zeit_einsatz} ch={chf.has('zeit_einsatz')} />
+                <F label="Einsatzort / Adresse" value={p.einsatz_adresse} ch={chf.has('einsatz_adresse')} />
+                <F label="Transportziel" value={p.transport_ziel} ch={chf.has('transport_ziel')} />
               </Grid>
               <Grid cols="repeat(auto-fit, minmax(120px, 1fr))">
-                <F label="Status 3" value={p.zeit_eintreffen} />
-                <F label="Transportbeginn" value={p.zeit_transport} />
-                <F label="Übergabe" value={p.zeit_uebergabe} />
+                <F label="Status 3" value={p.zeit_eintreffen} ch={chf.has('zeit_eintreffen')} />
+                <F label="Transportbeginn" value={p.zeit_transport} ch={chf.has('zeit_transport')} />
+                <F label="Übergabe" value={p.zeit_uebergabe} ch={chf.has('zeit_uebergabe')} />
               </Grid>
             </PubSection>
 
             <PubSection title="Mannschaft" icon={pik(<><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></>)}>
               <Grid>
-                <F label="Teamführer" value={p.mannschaft_tf} />
-                <F label="Mannschaft 1" value={p.mannschaft_1} />
-                <F label="Mannschaft 2" value={p.mannschaft_2} />
-                <F label="Mannschaft 3" value={p.mannschaft_3} />
+                <F label="Teamführer"   value={(p as any).mannschaft?.tf?.name  || p.mannschaft_tf} />
+                <F label="Mannschaft 1" value={(p as any).mannschaft?.m1?.name  || p.mannschaft_1} />
+                <F label="Mannschaft 2" value={(p as any).mannschaft?.m2?.name  || p.mannschaft_2} />
+                <F label="Mannschaft 3" value={(p as any).mannschaft?.m3?.name  || p.mannschaft_3} />
               </Grid>
               {p.access_code && (() => {
                 const created = p.access_code_created ? new Date(p.access_code_created) : null
@@ -437,29 +439,29 @@ export default function DetailsModal({ doc, type, onClose, onEdit }: Props) {
 
             <PubSection title="Pat-Stammdaten" open icon={pik(<><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></>)}>
               <Grid>
-                <F label="Name" value={p.name} />
-                <F label="Vorname" value={p.vorname} />
-                <F label="Geb.-Datum" value={p.gebdatum} />
-                <F label="Alter" value={p.alter} />
-                <F label="Telefon" value={p.telefon} />
-                <F label="Mobil" value={p.mobil} />
-                <F label="Straße" value={p.strasse} />
-                <F label="PLZ, Ort" value={p.plz_ort} />
-                <F label="Kasse" value={p.kasse} />
-                <F label="Vers.-Nr." value={p.versnr} />
-                <F label="Hausarzt" value={p.hausarzt} />
-                <F label="Angehöriger" value={p.angehoeriger} />
+                <F label="Name" value={p.name} ch={chf.has('name')} />
+                <F label="Vorname" value={p.vorname} ch={chf.has('vorname')} />
+                <F label="Geb.-Datum" value={p.gebdatum} ch={chf.has('gebdatum')} />
+                <F label="Alter" value={p.alter} ch={chf.has('alter')} />
+                <F label="Telefon" value={p.telefon} ch={chf.has('telefon')} />
+                <F label="Mobil" value={p.mobil} ch={chf.has('mobil')} />
+                <F label="Straße" value={p.strasse} ch={chf.has('strasse')} />
+                <F label="PLZ, Ort" value={p.plz_ort} ch={chf.has('plz_ort')} />
+                <F label="Kasse" value={p.kasse} ch={chf.has('kasse')} />
+                <F label="Vers.-Nr." value={p.versnr} ch={chf.has('versnr')} />
+                <F label="Hausarzt" value={p.hausarzt} ch={chf.has('hausarzt')} />
+                <F label="Angehöriger" value={p.angehoeriger} ch={chf.has('angehoeriger')} />
               </Grid>
             </PubSection>
 
             <PubSection title="Notfallgeschehen / Anamnese" open icon={pik(<><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></>)}>
-              <F label="Notfallgeschehen" value={p.notfallgeschehen} />
-              <F label="Verlaufsbeschreibung" value={p.verlaufsbeschreibung} />
+              <F label="Notfallgeschehen" value={p.notfallgeschehen} ch={chf.has('notfallgeschehen')} />
+              <F label="Verlaufsbeschreibung" value={p.verlaufsbeschreibung} ch={chf.has('verlaufsbeschreibung')} />
               <Grid>
-                <F label="Vorerkrankungen" value={p.vorerkrankungen} />
-                <F label="Dauermedikation Patient" value={p.vormedikation_patient} />
+                <F label="Vorerkrankungen" value={p.vorerkrankungen} ch={chf.has('vorerkrankungen')} />
+                <F label="Dauermedikation Patient" value={p.vormedikation_patient} ch={chf.has('vormedikation_patient')} />
               </Grid>
-              <F label="Allergien / Unverträglichkeiten" value={p.allergien} />
+              <F label="Allergien / Unverträglichkeiten" value={p.allergien} ch={chf.has('allergien')} />
               {(p.photos || []).length > 0 && (
                 <div style={{ marginTop: 12 }}>
                   <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>Fotos</div>
@@ -481,7 +483,7 @@ export default function DetailsModal({ doc, type, onClose, onEdit }: Props) {
                 <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>Bewusstsein</div>
                 <Tags items={['nicht beurteilbar','wach','getrübt','bewusstlos','reaktionslos','auf Ansprache','Reaktion auf Schmerz','analgosediert / Narkose'].map(v => [p.bewusstsein === v, v] as [boolean, string])} />
               </div>
-              <F label="Verdachtsdiagnose / Erstdiagnose" value={p.erstdiagnose_text} />
+              <F label="Verdachtsdiagnose / Erstdiagnose" value={p.erstdiagnose_text} ch={chf.has('erstdiagnose_text')} />
             </PubSection>
 
             <PubSection title="Glasgow Coma Scale" icon={pik(<><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></>)}>
@@ -502,15 +504,15 @@ export default function DetailsModal({ doc, type, onClose, onEdit }: Props) {
 
             <PubSection title="Messwerte / Atmung" icon={pik(<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>)}>
               <Grid cols="repeat(auto-fit, minmax(130px, 1fr))">
-                <F label="RR syst. (mmHg)" value={p.rr_sys} />
-                <F label="RR diast. (mmHg)" value={p.rr_dia} />
-                <F label="HF (/min)" value={p.hf} />
-                <F label="AF (/min)" value={p.af} />
-                <F label="SpO₂ (%)" value={p.spo2} />
-                <F label="etCO₂ (mmHg)" value={p.etco2} />
-                <F label="Temp (°C)" value={p.temp} />
-                <F label="BZ (mg/dl)" value={p.bz_mg} />
-                <F label="Schmerz (0–10)" value={p.schmerz} />
+                <F label="RR syst. (mmHg)" value={p.rr_sys} ch={chf.has('rr_sys')} />
+                <F label="RR diast. (mmHg)" value={p.rr_dia} ch={chf.has('rr_dia')} />
+                <F label="HF (/min)" value={p.hf} ch={chf.has('hf')} />
+                <F label="AF (/min)" value={p.af} ch={chf.has('af')} />
+                <F label="SpO₂ (%)" value={p.spo2} ch={chf.has('spo2')} />
+                <F label="etCO₂ (mmHg)" value={p.etco2} ch={chf.has('etco2')} />
+                <F label="Temp (°C)" value={p.temp} ch={chf.has('temp')} />
+                <F label="BZ (mg/dl)" value={p.bz_mg} ch={chf.has('bz_mg')} />
+                <F label="Schmerz (0–10)" value={p.schmerz} ch={chf.has('schmerz')} />
               </Grid>
               <div style={{ marginTop: 8 }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>Atmung</div>
@@ -525,15 +527,15 @@ export default function DetailsModal({ doc, type, onClose, onEdit }: Props) {
 
             <PubSection title="Neurologie" icon={pik(<><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96-.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2z"/><path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96-.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 14.5 2z"/></>)}>
               <Tags items={[[p.neu_unauff,'Unauffällig'],[p.neu_sprachstoerung,'Sprachstörung'],[p.neu_demenz,'Demenz'],[p.neu_meningismus,'Meningismus'],[p.neu_seitenzeichen,'Seitenzeichen'],[p.neu_kein_laecheln,'Kein Lächeln'],[p.neu_sehstoerung,'Sehstörung'],[p.neu_querschnitt,'Querschnitt'],[p.neu_babinski,'Babinski'],[p.neu_vorbestehend,'Vorbestehende Defizite']]} />
-              {p.neu_sonstige && <F label="Sonstige Neurologie" value={p.neu_sonstige} />}
-              {p.neu_zeit && <F label="Zeitpunkt Symptombeginn" value={p.neu_zeit} />}
+              {p.neu_sonstige && <F label="Sonstige Neurologie" value={p.neu_sonstige} ch={chf.has('neu_sonstige')} />}
+              {p.neu_zeit && <F label="Zeitpunkt Symptombeginn" value={p.neu_zeit} ch={chf.has('neu_zeit')} />}
               <div style={{ marginTop: 10 }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>Extremitätenbewegung</div>
                 <Grid cols="1fr 1fr">
-                  <F label="Arm rechts" value={p.ext_r_arm} />
-                  <F label="Arm links" value={p.ext_l_arm} />
-                  <F label="Bein rechts" value={p.ext_r_bein} />
-                  <F label="Bein links" value={p.ext_l_bein} />
+                  <F label="Arm rechts" value={p.ext_r_arm} ch={chf.has('ext_r_arm')} />
+                  <F label="Arm links" value={p.ext_l_arm} ch={chf.has('ext_l_arm')} />
+                  <F label="Bein rechts" value={p.ext_r_bein} ch={chf.has('ext_r_bein')} />
+                  <F label="Bein links" value={p.ext_l_bein} ch={chf.has('ext_l_bein')} />
                 </Grid>
               </div>
               <div style={{ marginTop: 10 }}>
@@ -560,8 +562,8 @@ export default function DetailsModal({ doc, type, onClose, onEdit }: Props) {
             <PubSection title="Rhythmus / EKG" icon={pik(<path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>)}>
               <Tags items={[[p.sr,'Sinusrhythmus'],[p.stemi,'STEMI'],[p.vf,'Kammerflimmern'],[p.asystole,'Asystolie']]} />
               <Grid>
-                <F label="EKG Standort" value={p.ekg_standort} />
-                <F label="Pers-Nr." value={p.ekg_persnr} />
+                <F label="EKG Standort" value={p.ekg_standort} ch={chf.has('ekg_standort')} />
+                <F label="Pers-Nr." value={p.ekg_persnr} ch={chf.has('ekg_persnr')} />
               </Grid>
             </PubSection>
 
@@ -625,9 +627,9 @@ export default function DetailsModal({ doc, type, onClose, onEdit }: Props) {
               <CatSection label="Mechanismus" items={[[p.v_trauma_stumpf,'Stumpf'],[p.v_trauma_penetr,'Penetrierend'],[p.v_sturz_eben,'Sturz ebenerdig'],[p.v_sturz_unter3m,'Sturz <3m'],[p.v_sturz_ueber3m,'Sturz >3m']]} />
               <CatSection label="Verkehr" items={[[p.v_vt_fussgaenger,'Fußgänger'],[p.v_vt_escooter,'E-Scooter'],[p.v_vt_fahrrad,'Fahrrad'],[p.v_vt_ebike,'E-Bike'],[p.v_vt_motorrad,'Motorrad'],[p.v_vt_pkw,'PKW'],[p.v_vt_lkw,'LKW'],[p.v_vt_bus,'Bus']]} />
               <CatSection label="Gewalt" items={[[p.v_gew_schlag,'Schlag'],[p.v_gew_schuss,'Schuss'],[p.v_gew_stich,'Stich'],[p.v_gew_verbrechen,'Gewaltverbrechen'],[p.v_gew_sonstige,'Sonstige']]} />
-              {p.v_verbrennung && <Grid cols="1fr 1fr"><F label="Verbrennung Grad" value={p.v_verbrennung_grad} /><F label="Verbrennung %" value={p.v_verbrennung_pct} /></Grid>}
-              <F label="Sonstige Verletzungen" value={p.v_sonstige} />
-              <F label="Freitext Verletzungen" value={p.verletz_text} />
+              {p.v_verbrennung && <Grid cols="1fr 1fr"><F label="Verbrennung Grad" value={p.v_verbrennung_grad} ch={chf.has('v_verbrennung_grad')} /><F label="Verbrennung %" value={p.v_verbrennung_pct} ch={chf.has('v_verbrennung_pct')} /></Grid>}
+              <F label="Sonstige Verletzungen" value={p.v_sonstige} ch={chf.has('v_sonstige')} />
+              <F label="Freitext Verletzungen" value={p.verletz_text} ch={chf.has('verletz_text')} />
             </PubSection>
 
             <PubSection title="Atemwege / Lagerung / Immobilisation" icon={pik(<><path d="M9.59 4.59A2 2 0 1 1 11 8H2m10.59 11.41A2 2 0 1 0 14 16H2m15.73-8.27A2.5 2.5 0 1 1 19.5 12H2"/></>)}>
@@ -650,11 +652,11 @@ export default function DetailsModal({ doc, type, onClose, onEdit }: Props) {
                 <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>Beatmung</div>
                 <Tags items={[[p.beat_manuell,'Manuell'],[p.beat_maschinell,'Maschinell'],[p.beat_niv,'NIV'],[p.beat_notfallnarkose,'Notfallnarkose']]} />
                 <Grid cols="repeat(auto-fit, minmax(100px, 1fr))">
-                  <F label="FiO₂" value={p.beat_fio2} />
-                  <F label="AF /min" value={p.beat_af} />
-                  <F label="PEEP mbar" value={p.beat_peep} />
-                  <F label="Pmax mbar" value={p.beat_pmax} />
-                  <F label="AMV l/min" value={p.beat_amv} />
+                  <F label="FiO₂" value={p.beat_fio2} ch={chf.has('beat_fio2')} />
+                  <F label="AF /min" value={p.beat_af} ch={chf.has('beat_af')} />
+                  <F label="PEEP mbar" value={p.beat_peep} ch={chf.has('beat_peep')} />
+                  <F label="Pmax mbar" value={p.beat_pmax} ch={chf.has('beat_pmax')} />
+                  <F label="AMV l/min" value={p.beat_amv} ch={chf.has('beat_amv')} />
                 </Grid>
               </div>
               <div>
@@ -663,21 +665,21 @@ export default function DetailsModal({ doc, type, onClose, onEdit }: Props) {
                 <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '8px 0 4px' }}>Erstanwendung durch</div>
                 <Tags items={[[p.defi_erstanw_laie,'Laie'],[p.defi_erstanw_fr,'First Resp.'],[p.defi_erstanw_rd,'Rettungsdienst'],[p.defi_erstanw_arzt,'Arzt']]} />
                 <Grid cols="repeat(auto-fit, minmax(120px, 1fr))">
-                  <F label="Zeitpunkt 1. Defi" value={p.defi_zeitpunkt} />
-                  <F label="ROSC" value={p.defi_rosc} />
-                  <F label="Anzahl" value={p.defi_anzahl} />
-                  <F label="Energie (kJ)" value={p.defi_energie} />
+                  <F label="Zeitpunkt 1. Defi" value={p.defi_zeitpunkt} ch={chf.has('defi_zeitpunkt')} />
+                  <F label="ROSC" value={p.defi_rosc} ch={chf.has('defi_rosc')} />
+                  <F label="Anzahl" value={p.defi_anzahl} ch={chf.has('defi_anzahl')} />
+                  <F label="Energie (kJ)" value={p.defi_energie} ch={chf.has('defi_energie')} />
                 </Grid>
               </div>
             </PubSection>
 
             <PubSection title="Zugang / Infusion / Medikamente" icon={pik(<path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/>)}>
               <Grid>
-                <F label="Zugang Art" value={p.zugang_art} />
-                <F label="Region" value={p.zugang_region} />
-                <F label="Gauge" value={p.zugang_gauge} />
-                <F label="Infusion" value={p.inf_art} />
-                <F label="Menge (ml)" value={p.inf_menge} />
+                <F label="Zugang Art" value={p.zugang_art} ch={chf.has('zugang_art')} />
+                <F label="Region" value={p.zugang_region} ch={chf.has('zugang_region')} />
+                <F label="Gauge" value={p.zugang_gauge} ch={chf.has('zugang_gauge')} />
+                <F label="Infusion" value={p.inf_art} ch={chf.has('inf_art')} />
+                <F label="Menge (ml)" value={p.inf_menge} ch={chf.has('inf_menge')} />
               </Grid>
               {meds.length > 0 && (
                 <>
@@ -709,20 +711,20 @@ export default function DetailsModal({ doc, type, onClose, onEdit }: Props) {
             <PubSection title="Reanimation" icon={pik(<><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></>)}>
               <Tags items={[[p.rean,'CPR durchgeführt'],[p.rean_tod,'Todesfeststellung']]} />
               <Grid>
-                {p.rean_tod && <F label="Uhrzeit Todesfeststellung" value={p.rean_tod_zeit} />}
-                <F label="Beginn Reanimation" value={p.rean_beginn} />
-                <F label="Ende Reanimation" value={p.rean_ende} />
-                <F label="Defibrillationen" value={p.rean_defib} />
+                {p.rean_tod && <F label="Uhrzeit Todesfeststellung" value={p.rean_tod_zeit} ch={chf.has('rean_tod_zeit')} />}
+                <F label="Beginn Reanimation" value={p.rean_beginn} ch={chf.has('rean_beginn')} />
+                <F label="Ende Reanimation" value={p.rean_ende} ch={chf.has('rean_ende')} />
+                <F label="Defibrillationen" value={p.rean_defib} ch={chf.has('rean_defib')} />
               </Grid>
             </PubSection>
 
             <PubSection title="Übergabe / Besonderheiten" icon={pik(<><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></>)}>
               <Grid>
-                <F label="Übergabe Ziel" value={p.uebergabe_ziel} />
-                <F label="Übergabe an (Name)" value={p.uebergabe_name} />
+                <F label="Übergabe Ziel" value={p.uebergabe_ziel} ch={chf.has('uebergabe_ziel')} />
+                <F label="Übergabe an (Name)" value={p.uebergabe_name} ch={chf.has('uebergabe_name')} />
               </Grid>
               <Tags items={[[p.ev_transportverweigerung,'Transportverweigerung'],[p.ev_nur_untersuchung,'Nur Untersuchung'],[p.ev_zwangseinweisung,'Zwangseinweisung'],[p.ev_transport_sondersignal,'Transport mit Sondersignal'],[p.ev_manv,'MANV'],[p.ev_lna,'LNA am Einsatz'],[p.ev_schwerlast,'Schwerlasttransport']]} />
-              <F label="Bemerkungen" value={p.bemerkungen} />
+              <F label="Bemerkungen" value={p.bemerkungen} ch={chf.has('bemerkungen')} />
             </PubSection>
 
             <PubSection title="Unterschrift / Gegenzeichnung" open icon={pik(<><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></>)}>
