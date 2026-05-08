@@ -196,10 +196,9 @@ export default function PatientEditModal({ patient, payload: initialPayload, ori
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
             Zurück
           </button>
-          <h1 style={{ flex: 1, textAlign: 'center', fontSize: '1rem', fontWeight: 700, color: 'var(--text)', margin: 0 }}>Patientendoku</h1>
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
-            {openRQ > 0 && <span style={{ background: '#fef9c3', border: '1px solid #fcd34d', borderRadius: 999, padding: '2px 8px', fontSize: 12, fontWeight: 700, color: '#92400e' }}>{openRQ} offene Rückfrage{openRQ !== 1 ? 'n' : ''}</span>}
-            <button onClick={() => window.print()} style={{ background: 'none', border: '0.5px solid var(--border)', borderRadius: 8, padding: '6px 12px', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: 'var(--text)', fontFamily: 'inherit' }}>PDF</button>
+          <h1 style={{ flex: 1, textAlign: 'center', fontSize: '1rem', fontWeight: 700, color: 'var(--text)', margin: 0 }}>Protokoll</h1>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0, minWidth: 32 }}>
+            {openRQ > 0 && <span style={{ background: '#fcd34d', borderRadius: 999, width: 26, height: 26, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, fontWeight: 800, color: '#92400e' }}>!</span>}
           </div>
         </div>
       </header>
