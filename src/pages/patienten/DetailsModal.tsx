@@ -357,6 +357,7 @@ export default function DetailsModal({ doc, type, onClose, onEdit }: Props) {
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'var(--bg)', zIndex: 2000, display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
+      <style>{`.dm-edit-label { display: none; } @media (min-width: 500px) { .dm-edit-label { display: inline; } }`}</style>
 
       {/* Header – mirrors PubHeader style */}
       <header style={{ position: 'sticky', top: 0, background: 'var(--bg-status-bar)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', borderBottom: '0.5px solid var(--border)', zIndex: 10, flexShrink: 0 }}>
@@ -370,9 +371,9 @@ export default function DetailsModal({ doc, type, onClose, onEdit }: Props) {
           </h1>
           <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
             {onEdit && (
-              <button onClick={onEdit} style={{ display: 'flex', alignItems: 'center', gap: 4, background: '#c0392b', border: 'none', color: '#fff', fontWeight: 600, fontSize: 14, cursor: 'pointer', padding: '6px 12px', borderRadius: 8, fontFamily: 'inherit' }}>
-                {pik(<><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></>, 16)}
-                Bearbeiten
+              <button onClick={onEdit} title="Bearbeiten" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, background: '#c0392b', border: 'none', color: '#fff', fontWeight: 600, fontSize: 14, cursor: 'pointer', padding: '8px 10px', borderRadius: 8, fontFamily: 'inherit' }}>
+                {pik(<><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></>, 18)}
+                <span className="dm-edit-label">Bearbeiten</span>
               </button>
             )}
             <button onClick={printDoc} style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'transparent', border: 'none', color: 'var(--accent)', fontWeight: 600, fontSize: 14, cursor: 'pointer', padding: '8px 0', fontFamily: 'inherit' }}>
