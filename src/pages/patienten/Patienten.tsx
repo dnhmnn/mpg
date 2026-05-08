@@ -36,6 +36,7 @@ export default function Patienten() {
   const { user, loading, logout } = useAuth()
 
   const [patients, setPatients] = useState<Patient[]>([])
+  const [abgeschlossenPatients, setAbgeschlossenPatients] = useState<Patient[]>([])
   const [nacherfassungen, setNacherfassungen] = useState<Nacherfassung[]>([])
   const [archivedPatients, setArchivedPatients] = useState<Patient[]>([])
   const [archivedNach, setArchivedNach] = useState<Nacherfassung[]>([])
@@ -79,11 +80,13 @@ export default function Patienten() {
     const org = user.organization_id
     setDataLoading(true)
     try {
-      const [pats, nachs] = await Promise.all([
+      const [pats, abgPats, nachs] = await Promise.all([
         pb.collection('patients').getFullList({ filter: `status="offen"&&organization_id="${org}"`, sort: '-created' }),
+        pb.collection('patients').getFullList({ filter: `status="abgeschlossen"&&organization_id="${org}"`, sort: '-created' }),
         pb.collection('patient_docs_nacherfassung').getFullList({ filter: `status="offen"&&organization_id="${org}"`, sort: '-created' }),
       ])
       setPatients(pats as unknown as Patient[])
+      setAbgeschlossenPatients(abgPats as unknown as Patient[])
       setNacherfassungen(nachs as unknown as Nacherfassung[])
     } catch (e: any) {
       flash('Fehler beim Laden: ' + e.message, 'error')
@@ -172,10 +175,11 @@ export default function Patienten() {
     auditLog('bearbeitet', pat.id, 'patient', [parsed.name, parsed.vorname].filter(Boolean).join(' ') || pat.title || 'Unbekannt')
   }
 
-  async function saveAndSign() {
+  async function saveAndSign(localPayload: PatientPayload) {
     if (!currentPatient) return
     try {
-      await pb.collection('patients').update(currentPatient.id, { payload })
+      await pb.collection('patients').update(currentPatient.id, { payload: localPayload })
+      setPayload(localPayload)
       setShowEdit(false)
       setShowSign(true)
     } catch (e: any) {
@@ -417,11 +421,12 @@ export default function Patienten() {
           box-shadow: 0 8px 24px rgba(0,0,0,0.1);
           border-color: var(--border-medium);
         }
-        .pat-card.offen      { border-left-color: #3b82f6; }
-        .pat-card.entwurf    { border-left-color: #f59e0b; }
-        .pat-card.nach       { border-left-color: #8b5cf6; }
-        .pat-card.archiviert { border-left-color: #6b7280; }
-        .pat-card.old        { border-left-color: #f59e0b; outline: 1px solid #fcd34d; }
+        .pat-card.offen         { border-left-color: #3b82f6; }
+        .pat-card.abgeschlossen { border-left-color: #f97316; }
+        .pat-card.entwurf       { border-left-color: #f59e0b; }
+        .pat-card.nach          { border-left-color: #8b5cf6; }
+        .pat-card.archiviert    { border-left-color: #6b7280; }
+        .pat-card.old           { border-left-color: #f59e0b; outline: 1px solid #fcd34d; }
 
         .pat-card-type {
           font-size: 11px;
@@ -467,12 +472,13 @@ export default function Patienten() {
           letter-spacing: 0.02em;
           flex-shrink: 0;
         }
-        .pat-badge.offen      { background: #eff6ff; color: #1d4ed8; }
-        .pat-badge.entwurf    { background: #fffbeb; color: #b45309; }
-        .pat-badge.nach       { background: #f5f3ff; color: #6d28d9; }
-        .pat-badge.archiviert { background: #f3f4f6; color: #374151; }
-        .pat-badge.editing    { background: #fef9c3; color: #92400e; border: 1px solid #fcd34d; }
-        .pat-badge.old-warn   { background: #fef3c7; color: #b45309; border: 1px solid #fcd34d; }
+        .pat-badge.offen         { background: #eff6ff; color: #1d4ed8; }
+        .pat-badge.abgeschlossen { background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa; }
+        .pat-badge.entwurf       { background: #fffbeb; color: #b45309; }
+        .pat-badge.nach          { background: #f5f3ff; color: #6d28d9; }
+        .pat-badge.archiviert    { background: #f3f4f6; color: #374151; }
+        .pat-badge.editing       { background: #fef9c3; color: #92400e; border: 1px solid #fcd34d; }
+        .pat-badge.old-warn      { background: #fef3c7; color: #b45309; border: 1px solid #fcd34d; }
 
         .pat-btn {
           font-size: 13px;
@@ -593,7 +599,7 @@ export default function Patienten() {
             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
             <polyline points="14 2 14 8 20 8"/>
           </svg>
-          <span>Dokus{patients.length > 0 ? ` (${patients.length})` : ''}</span>
+          <span>Dokus{(patients.length + abgeschlossenPatients.length) > 0 ? ` (${patients.length + abgeschlossenPatients.length})` : ''}</span>
         </button>
         <button
           className={`pat-tab-btn${activeTab === 'nach' ? ' active' : ''}`}
@@ -664,7 +670,7 @@ export default function Patienten() {
               <div style={{ width: '32px', height: '32px', border: '3px solid var(--border)', borderTopColor: 'var(--accent)', borderRadius: '50%', animation: 'spin 0.7s linear infinite', margin: '0 auto 14px' }} />
               <div style={{ fontSize: '14px' }}>Lade Dokus...</div>
             </div>
-          ) : patients.length === 0 ? (
+          ) : patients.length === 0 && abgeschlossenPatients.length === 0 ? (
             <div className="pat-empty">
               <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ opacity: 0.3, marginBottom: '14px' }}>
                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
@@ -674,67 +680,112 @@ export default function Patienten() {
               <div style={{ fontSize: '13px' }}>Neue Dokus werden hier angezeigt, sobald sie eingereicht werden.</div>
             </div>
           ) : (
-            <div className="pat-grid">
-              {patients.map(pat => {
-                const p = parsePayload(pat.payload)
-                const patName = [p.name, p.vorname].filter(Boolean).join(' ')
-                const isDraft = !patName
-                const m = (pat as any).payload?.mannschaft || {}
-                const crew = ['tf','m1','m2','m3'].map((k: string) => m[k]?.name).filter(Boolean).join(', ')
-                const displayName = patName || crew || pat.title || 'Unbekannt'
-                const hasCrewUsers = ['tf','m1','m2','m3'].some(k => m[k]?.id)
-                const ageMs = Date.now() - new Date(pat.created).getTime()
-                const crewStillEditing = hasCrewUsers && ageMs < 24 * 60 * 60 * 1000
-                const rqs: any[] = Array.isArray((pat as any).payload?.rueckfragen) ? (pat as any).payload.rueckfragen : []
-                const sns: any[] = Array.isArray((pat as any).payload?.stellungnahmen) ? (pat as any).payload.stellungnahmen : []
-                const openRQ = rqs.filter((r: any) => r.status === 'offen').length
-                const hasRQ = rqs.length > 0
-                return (
-                  <div key={pat.id} className={`pat-card ${isDraft ? 'entwurf' : 'offen'}`} style={openRQ > 0 ? { borderColor: '#f59e0b' } : undefined}>
-                    <div className="pat-card-type">{isDraft ? 'Entwurf' : 'Patientendoku'}</div>
-                    <div className="pat-card-name">{displayName}</div>
-                    <div className="pat-card-meta">
-                      {isDraft && crew ? `Mannschaft: ${crew}` : null}
-                      {isDraft && crew ? <br /> : null}
-                      {fmtDate(pat.created)}
-                    </div>
-                    {hasRQ && (
-                      <div style={{ padding: '6px 14px 2px', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                        {openRQ > 0 && (
-                          <span style={{ fontSize: 11, fontWeight: 700, background: '#fef9c3', color: '#92400e', border: '1px solid #fcd34d', borderRadius: 999, padding: '2px 8px' }}>
-                            {openRQ} Rückfrage{openRQ !== 1 ? 'n' : ''} offen
-                          </span>
-                        )}
-                        {sns.length > 0 && (
-                          <span style={{ fontSize: 11, fontWeight: 700, background: '#dcfce7', color: '#166534', border: '1px solid #bbf7d0', borderRadius: 999, padding: '2px 8px' }}>
-                            {sns.length} Stellungnahme{sns.length !== 1 ? 'n' : ''} eingegangen
-                          </span>
-                        )}
-                      </div>
-                    )}
-                    <div className="pat-card-footer">
-                      <span className={`pat-badge ${isDraft ? 'entwurf' : 'offen'}`}>
-                        {isDraft ? 'Entwurf' : 'offen'}
-                      </span>
-                      <div style={{ flex: 1 }} />
-                      {hasRQ && (
-                        <button className="pat-btn" onClick={() => { setStellungnahmePat(pat); setShowStellungnahme(true) }}>
-                          Stellungnahme{openRQ > 0 ? ` (${openRQ})` : ''}
-                        </button>
-                      )}
-                      {crewStillEditing ? (
-                        <>
-                          <span className="pat-badge editing">In Bearbeitung</span>
-                          <button className="pat-btn" onClick={() => openDetails(pat.id, 'patient')}>Ansehen</button>
-                        </>
-                      ) : (
-                        <button className="pat-btn" onClick={() => openDetails(pat.id, 'patient')}>Bearbeiten</button>
-                      )}
-                    </div>
+            <>
+              {abgeschlossenPatients.length > 0 && (
+                <>
+                  <div style={{ fontWeight: 700, fontSize: 12, color: '#c2410c', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                    Gegenzeichnung ausstehend ({abgeschlossenPatients.length})
                   </div>
-                )
-              })}
-            </div>
+                  <div className="pat-grid" style={{ marginBottom: 24 }}>
+                    {abgeschlossenPatients.map(pat => {
+                      const p = parsePayload(pat.payload)
+                      const patName = [p.name, p.vorname].filter(Boolean).join(' ')
+                      const m = (pat as any).payload?.mannschaft || {}
+                      const crew = ['tf','m1','m2','m3'].map((k: string) => m[k]?.name).filter(Boolean).join(', ')
+                      const displayName = patName || crew || pat.title || 'Unbekannt'
+                      const rqs: any[] = Array.isArray((pat as any).payload?.rueckfragen) ? (pat as any).payload.rueckfragen : []
+                      const sns: any[] = Array.isArray((pat as any).payload?.stellungnahmen) ? (pat as any).payload.stellungnahmen : []
+                      const openRQ = rqs.filter((r: any) => r.status === 'offen').length
+                      return (
+                        <div key={pat.id} className="pat-card abgeschlossen" style={{ borderColor: '#f97316' }}>
+                          <div className="pat-card-type">Patientendoku</div>
+                          <div className="pat-card-name">{displayName}</div>
+                          <div className="pat-card-meta">
+                            {crew ? `Mannschaft: ${crew}` : null}
+                            {crew ? <br /> : null}
+                            {fmtDate(pat.created)}
+                          </div>
+                          {(rqs.length > 0) && (
+                            <div style={{ padding: '6px 0 2px', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                              {openRQ > 0 && <span style={{ fontSize: 11, fontWeight: 700, background: '#fef9c3', color: '#92400e', border: '1px solid #fcd34d', borderRadius: 999, padding: '2px 8px' }}>{openRQ} Rückfrage{openRQ !== 1 ? 'n' : ''} offen</span>}
+                              {sns.length > 0 && <span style={{ fontSize: 11, fontWeight: 700, background: '#dcfce7', color: '#166534', border: '1px solid #bbf7d0', borderRadius: 999, padding: '2px 8px' }}>{sns.length} Stellungnahme{sns.length !== 1 ? 'n' : ''}</span>}
+                            </div>
+                          )}
+                          <div className="pat-card-footer">
+                            <span className="pat-badge abgeschlossen">Abgeschlossen</span>
+                            <div style={{ flex: 1 }} />
+                            {rqs.length > 0 && (
+                              <button className="pat-btn" onClick={() => { setStellungnahmePat(pat); setShowStellungnahme(true) }}>
+                                Stellungnahme{openRQ > 0 ? ` (${openRQ})` : ''}
+                              </button>
+                            )}
+                            <button className="pat-btn" style={{ background: '#f97316', color: '#fff' }} onClick={() => openEdit(pat)}>
+                              Gegenzeichnen
+                            </button>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </>
+              )}
+              {patients.length > 0 && (
+                <div className="pat-grid">
+                  {patients.map(pat => {
+                    const p = parsePayload(pat.payload)
+                    const patName = [p.name, p.vorname].filter(Boolean).join(' ')
+                    const isDraft = !patName
+                    const m = (pat as any).payload?.mannschaft || {}
+                    const crew = ['tf','m1','m2','m3'].map((k: string) => m[k]?.name).filter(Boolean).join(', ')
+                    const displayName = patName || crew || pat.title || 'Unbekannt'
+                    const hasCrewUsers = ['tf','m1','m2','m3'].some(k => m[k]?.id)
+                    const ageMs = Date.now() - new Date(pat.created).getTime()
+                    const crewStillEditing = hasCrewUsers && ageMs < 24 * 60 * 60 * 1000
+                    const rqs: any[] = Array.isArray((pat as any).payload?.rueckfragen) ? (pat as any).payload.rueckfragen : []
+                    const sns: any[] = Array.isArray((pat as any).payload?.stellungnahmen) ? (pat as any).payload.stellungnahmen : []
+                    const openRQ = rqs.filter((r: any) => r.status === 'offen').length
+                    const hasRQ = rqs.length > 0
+                    return (
+                      <div key={pat.id} className={`pat-card ${isDraft ? 'entwurf' : 'offen'}`} style={openRQ > 0 ? { borderColor: '#f59e0b' } : undefined}>
+                        <div className="pat-card-type">{isDraft ? 'Entwurf' : 'Patientendoku'}</div>
+                        <div className="pat-card-name">{displayName}</div>
+                        <div className="pat-card-meta">
+                          {isDraft && crew ? `Mannschaft: ${crew}` : null}
+                          {isDraft && crew ? <br /> : null}
+                          {fmtDate(pat.created)}
+                        </div>
+                        {hasRQ && (
+                          <div style={{ padding: '6px 0 2px', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                            {openRQ > 0 && <span style={{ fontSize: 11, fontWeight: 700, background: '#fef9c3', color: '#92400e', border: '1px solid #fcd34d', borderRadius: 999, padding: '2px 8px' }}>{openRQ} Rückfrage{openRQ !== 1 ? 'n' : ''} offen</span>}
+                            {sns.length > 0 && <span style={{ fontSize: 11, fontWeight: 700, background: '#dcfce7', color: '#166534', border: '1px solid #bbf7d0', borderRadius: 999, padding: '2px 8px' }}>{sns.length} Stellungnahme{sns.length !== 1 ? 'n' : ''} eingegangen</span>}
+                          </div>
+                        )}
+                        <div className="pat-card-footer">
+                          <span className={`pat-badge ${isDraft ? 'entwurf' : 'offen'}`}>
+                            {isDraft ? 'Entwurf' : 'offen'}
+                          </span>
+                          <div style={{ flex: 1 }} />
+                          {hasRQ && (
+                            <button className="pat-btn" onClick={() => { setStellungnahmePat(pat); setShowStellungnahme(true) }}>
+                              Stellungnahme{openRQ > 0 ? ` (${openRQ})` : ''}
+                            </button>
+                          )}
+                          {crewStillEditing ? (
+                            <>
+                              <span className="pat-badge editing">In Bearbeitung</span>
+                              <button className="pat-btn" onClick={() => openDetails(pat.id, 'patient')}>Ansehen</button>
+                            </>
+                          ) : (
+                            <button className="pat-btn" onClick={() => openDetails(pat.id, 'patient')}>Bearbeiten</button>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </>
           )
         )}
 
@@ -809,26 +860,41 @@ export default function Patienten() {
                   <div key={year} style={{ marginBottom: '24px' }}>
                     <div className="pat-year-header">{year} · {items.length} Einträge</div>
                     <div className="pat-grid">
-                      {items.map(item => (
-                        <div key={item.id} className={`pat-card ${item.isOld ? 'old' : 'archiviert'}`}>
-                          <div className="pat-card-type">
-                            {item.type === 'patient' ? 'Patientendoku' : 'Nacherfassung'}
+                      {items.map(item => {
+                        const archSns: any[] = item.type === 'patient' ? (Array.isArray((item.orig as any).payload?.stellungnahmen) ? (item.orig as any).payload.stellungnahmen : []) : []
+                        return (
+                          <div key={item.id} className={`pat-card ${item.isOld ? 'old' : 'archiviert'}`}>
+                            <div className="pat-card-type">
+                              {item.type === 'patient' ? 'Patientendoku' : 'Nacherfassung'}
+                            </div>
+                            <div className="pat-card-name">{item.title}</div>
+                            <div className="pat-card-meta">
+                              {item.type === 'patient' && (item.orig as Patient).admin_name
+                                ? `${(item.orig as Patient).admin_name} · ` : ''}
+                              {fmtDate(item.type === 'patient' ? (item.orig as Patient).updated : (item.orig as Nacherfassung).created)}
+                            </div>
+                            {archSns.length > 0 && (
+                              <div style={{ padding: '4px 0 2px' }}>
+                                <span style={{ fontSize: 11, fontWeight: 700, background: '#dcfce7', color: '#166534', border: '1px solid #bbf7d0', borderRadius: 999, padding: '2px 8px' }}>
+                                  {archSns.length} Stellungnahme{archSns.length !== 1 ? 'n' : ''}
+                                </span>
+                              </div>
+                            )}
+                            <div className="pat-card-footer">
+                              <span className="pat-badge archiviert">archiviert</span>
+                              {item.isOld && <span className="pat-badge old-warn">Frist überschritten</span>}
+                              <div style={{ flex: 1 }} />
+                              {archSns.length > 0 && (
+                                <button className="pat-btn" onClick={() => { setStellungnahmePat(item.orig as Patient); setShowStellungnahme(true) }}>
+                                  Stellungnahmen
+                                </button>
+                              )}
+                              <button className="pat-btn" onClick={() => openDetails(item.id, item.type)}>Ansehen</button>
+                              <button className="pat-btn danger" onClick={() => deleteRecord(item.id, item.type, item.title)}>Löschen</button>
+                            </div>
                           </div>
-                          <div className="pat-card-name">{item.title}</div>
-                          <div className="pat-card-meta">
-                            {item.type === 'patient' && (item.orig as Patient).admin_name
-                              ? `${(item.orig as Patient).admin_name} · ` : ''}
-                            {fmtDate(item.type === 'patient' ? (item.orig as Patient).updated : (item.orig as Nacherfassung).created)}
-                          </div>
-                          <div className="pat-card-footer">
-                            <span className="pat-badge archiviert">archiviert</span>
-                            {item.isOld && <span className="pat-badge old-warn">Frist überschritten</span>}
-                            <div style={{ flex: 1 }} />
-                            <button className="pat-btn" onClick={() => openDetails(item.id, item.type)}>Ansehen</button>
-                            <button className="pat-btn danger" onClick={() => deleteRecord(item.id, item.type, item.title)}>Löschen</button>
-                          </div>
-                        </div>
-                      ))}
+                        )
+                      })}
                     </div>
                   </div>
                 ))
@@ -922,7 +988,6 @@ export default function Patienten() {
           patient={currentPatient}
           payload={payload}
           original={originalPayload}
-          setP={setP}
           onClose={() => setShowEdit(false)}
           onSaveAndSign={saveAndSign}
           onRefresh={loadData}
@@ -951,65 +1016,109 @@ export default function Patienten() {
         const rqs: any[] = Array.isArray(pl.rueckfragen) ? pl.rueckfragen : []
         const sns: any[] = Array.isArray(pl.stellungnahmen) ? pl.stellungnahmen : []
         const patName = [pl.vorname, pl.name].filter(Boolean).join(' ') || stellungnahmePat.title || 'Unbekannt'
+        const einsatzInfo = [pl.einsatz_nr && `Einsatz-Nr. ${pl.einsatz_nr}`, pl.einsatz_art, pl.einsatz_adresse].filter(Boolean).join(' · ')
+        const m = (pl.mannschaft || {}) as Record<string, { name?: string } | null>
+        const crew = ['tf','m1','m2','m3'].map(k => m[k]?.name).filter(Boolean).join(', ')
+        const isArchived = (stellungnahmePat as any).status === 'archiviert'
         return (
-          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 3000, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '16px 20px' }}>
-            <div style={{ background: 'var(--bg-card)', borderRadius: 18, width: '100%', maxWidth: 560, maxHeight: '85vh', overflowY: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
-              <div style={{ padding: '18px 20px 14px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', position: 'sticky', top: 0, background: 'var(--bg-card)', zIndex: 1 }}>
-                <div>
-                  <div style={{ fontWeight: 800, fontSize: 16, color: 'var(--text)' }}>Rückfragen &amp; Stellungnahmen</div>
-                  <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 2 }}>{patName}</div>
+          <>
+            {/* Print-only area */}
+            <style>{`@media print { body > *:not(#sn-print-area) { display: none !important; } #sn-print-area { display: block !important; } }`}</style>
+            <div id="sn-print-area" style={{ display: 'none', padding: 32, fontFamily: 'serif', maxWidth: 700 }}>
+              <h2 style={{ fontSize: 18, marginBottom: 4 }}>Stellungnahmen zum Einsatz</h2>
+              <div style={{ fontSize: 13, marginBottom: 4 }}><strong>Patient:</strong> {patName}</div>
+              {einsatzInfo && <div style={{ fontSize: 13, marginBottom: 4 }}><strong>Einsatz:</strong> {einsatzInfo}</div>}
+              {pl.zeit_einsatz && <div style={{ fontSize: 13, marginBottom: 4 }}><strong>Alarmzeit:</strong> {pl.zeit_einsatz}</div>}
+              {crew && <div style={{ fontSize: 13, marginBottom: 16 }}><strong>Mannschaft:</strong> {crew}</div>}
+              <hr style={{ margin: '12px 0' }} />
+              {rqs.map((rq: any, i: number) => {
+                const sn = sns.find((s: any) => s.rueckfrage_id === rq.id)
+                return (
+                  <div key={rq.id} style={{ marginBottom: 20, breakInside: 'avoid' }}>
+                    <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 4 }}>Rückfrage #{i + 1} {rq.created_by ? `(${rq.created_by})` : ''}</div>
+                    <div style={{ fontSize: 13, marginBottom: 8, paddingLeft: 12 }}>{rq.frage}</div>
+                    {sn ? (
+                      <>
+                        <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 2 }}>Stellungnahme ({new Date(sn.created).toLocaleString('de-DE')}):</div>
+                        <div style={{ fontSize: 13, paddingLeft: 12 }}>{sn.text}</div>
+                      </>
+                    ) : (
+                      <div style={{ fontSize: 13, fontStyle: 'italic' }}>Keine Stellungnahme eingegangen.</div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+
+            <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 3000, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '16px 20px' }}>
+              <div style={{ background: 'var(--bg-card)', borderRadius: 18, width: '100%', maxWidth: 560, maxHeight: '85vh', overflowY: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
+                <div style={{ padding: '18px 20px 14px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', position: 'sticky', top: 0, background: 'var(--bg-card)', zIndex: 1 }}>
+                  <div>
+                    <div style={{ fontWeight: 800, fontSize: 16, color: 'var(--text)' }}>Rückfragen &amp; Stellungnahmen</div>
+                    <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 2 }}>{patName}</div>
+                    {einsatzInfo && <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 1 }}>{einsatzInfo}</div>}
+                    {crew && <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 1 }}>Mannschaft: {crew}</div>}
+                  </div>
+                  <button onClick={() => setShowStellungnahme(false)} style={{ background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', color: 'var(--text-secondary)', padding: '0 4px', lineHeight: 1 }}>×</button>
                 </div>
-                <button onClick={() => setShowStellungnahme(false)} style={{ background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', color: 'var(--text-secondary)', padding: '0 4px', lineHeight: 1 }}>×</button>
-              </div>
-              <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 14 }}>
-                {rqs.length === 0 && (
-                  <div style={{ fontSize: 14, color: 'var(--text-secondary)', textAlign: 'center', padding: '24px 0' }}>Keine Rückfragen vorhanden.</div>
-                )}
-                {rqs.map((rq: any, i: number) => {
-                  const sn = sns.find((s: any) => s.rueckfrage_id === rq.id)
-                  return (
-                    <div key={rq.id} style={{ border: `1px solid ${sn ? '#bbf7d0' : '#fcd34d'}`, borderRadius: 12, overflow: 'hidden' }}>
-                      <div style={{ background: sn ? '#f0fdf4' : '#fffbeb', padding: '10px 14px', borderBottom: `1px solid ${sn ? '#bbf7d0' : '#fcd34d'}`, display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span style={{ fontWeight: 700, fontSize: 13, color: 'var(--text)' }}>Rückfrage #{i + 1}</span>
-                        <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 999, background: sn ? '#dcfce7' : '#fef9c3', color: sn ? '#166534' : '#92400e', marginLeft: 'auto' }}>
-                          {sn ? 'Beantwortet' : 'Offen'}
-                        </span>
-                        <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{new Date(rq.created).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</span>
-                      </div>
-                      <div style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-                        <div style={{ fontSize: 14, background: 'var(--bg-subtle)', borderRadius: 8, padding: '8px 10px', lineHeight: 1.5 }}>
-                          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 3 }}>{rq.created_by ? `${rq.created_by} fragt:` : 'Frage:'}</div>
-                          {rq.frage}
+                <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+                  {rqs.length === 0 && (
+                    <div style={{ fontSize: 14, color: 'var(--text-secondary)', textAlign: 'center', padding: '24px 0' }}>Keine Rückfragen vorhanden.</div>
+                  )}
+                  {rqs.map((rq: any, i: number) => {
+                    const sn = sns.find((s: any) => s.rueckfrage_id === rq.id)
+                    return (
+                      <div key={rq.id} style={{ border: `1px solid ${sn ? '#bbf7d0' : '#fcd34d'}`, borderRadius: 12, overflow: 'hidden' }}>
+                        <div style={{ background: sn ? '#f0fdf4' : '#fffbeb', padding: '10px 14px', borderBottom: `1px solid ${sn ? '#bbf7d0' : '#fcd34d'}`, display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <span style={{ fontWeight: 700, fontSize: 13, color: 'var(--text)' }}>Rückfrage #{i + 1}</span>
+                          <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 999, background: sn ? '#dcfce7' : '#fef9c3', color: sn ? '#166534' : '#92400e', marginLeft: 'auto' }}>
+                            {sn ? 'Beantwortet' : 'Offen'}
+                          </span>
+                          <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{new Date(rq.created).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</span>
                         </div>
-                        {sn ? (
-                          <div style={{ fontSize: 14, background: '#dcfce7', borderRadius: 8, padding: '8px 10px', border: '1px solid #bbf7d0', lineHeight: 1.5 }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 3 }}>
-                              <span style={{ fontSize: 11, fontWeight: 700, color: '#166534' }}>Stellungnahme des Teamleiters:</span>
-                              <span style={{ fontSize: 11, color: '#166534' }}>{new Date(sn.created).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</span>
-                            </div>
-                            {sn.text}
+                        <div style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                          <div style={{ fontSize: 14, background: 'var(--bg-subtle)', borderRadius: 8, padding: '8px 10px', lineHeight: 1.5 }}>
+                            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 3 }}>{rq.created_by ? `${rq.created_by} fragt:` : 'Frage:'}</div>
+                            {rq.frage}
                           </div>
-                        ) : (
-                          <div style={{ fontSize: 13, color: 'var(--text-secondary)', fontStyle: 'italic', padding: '4px 0' }}>Noch keine Stellungnahme eingegangen.</div>
-                        )}
+                          {sn ? (
+                            <div style={{ fontSize: 14, background: '#dcfce7', borderRadius: 8, padding: '8px 10px', border: '1px solid #bbf7d0', lineHeight: 1.5 }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 3 }}>
+                                <span style={{ fontSize: 11, fontWeight: 700, color: '#166534' }}>Stellungnahme des Teamleiters:</span>
+                                <span style={{ fontSize: 11, color: '#166534' }}>{new Date(sn.created).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</span>
+                              </div>
+                              {sn.text}
+                            </div>
+                          ) : (
+                            <div style={{ fontSize: 13, color: 'var(--text-secondary)', fontStyle: 'italic', padding: '4px 0' }}>Noch keine Stellungnahme eingegangen.</div>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  )
-                })}
-              </div>
-              <div style={{ padding: '12px 20px 18px', borderTop: '1px solid var(--border)', display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-                <button
-                  onClick={() => { setShowStellungnahme(false); openDetails(stellungnahmePat.id, 'patient') }}
-                  style={{ padding: '9px 18px', background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit' }}
-                >
-                  Protokoll bearbeiten
-                </button>
-                <button onClick={() => setShowStellungnahme(false)} style={{ padding: '9px 18px', background: 'var(--bg-subtle)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: 8, fontWeight: 600, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit' }}>
-                  Schließen
-                </button>
+                    )
+                  })}
+                </div>
+                <div style={{ padding: '12px 20px 18px', borderTop: '1px solid var(--border)', display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+                  <button
+                    onClick={() => window.print()}
+                    style={{ padding: '9px 18px', background: 'var(--bg-secondary)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: 8, fontWeight: 600, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit' }}
+                  >
+                    Drucken / PDF
+                  </button>
+                  {!isArchived && (
+                    <button
+                      onClick={() => { setShowStellungnahme(false); openDetails(stellungnahmePat.id, 'patient') }}
+                      style={{ padding: '9px 18px', background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit' }}
+                    >
+                      Protokoll bearbeiten
+                    </button>
+                  )}
+                  <button onClick={() => setShowStellungnahme(false)} style={{ padding: '9px 18px', background: 'var(--bg-subtle)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: 8, fontWeight: 600, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit' }}>
+                    Schließen
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
+          </>
         )
       })()}
     </>

@@ -12,9 +12,8 @@ interface Props {
   patient: Patient
   payload: PatientPayload
   original: PatientPayload
-  setP: <K extends keyof PatientPayload>(key: K, value: PatientPayload[K]) => void
   onClose: () => void
-  onSaveAndSign: () => void
+  onSaveAndSign: (payload: PatientPayload) => void
   onRefresh: () => void
 }
 
@@ -25,32 +24,38 @@ const pil: React.CSSProperties = {
   fontSize: 13, color: 'var(--text)', margin: '2px 2px 2px 0',
 }
 
-export default function PatientEditModal({ patient, payload: p, original, setP, onClose, onSaveAndSign, onRefresh }: Props) {
+export default function PatientEditModal({ patient, payload: initialPayload, original, onClose, onSaveAndSign, onRefresh }: Props) {
   const { user } = useAuth()
+  const [lp, setLp] = useState<PatientPayload>(() => ({ ...initialPayload }))
   const [newFrage, setNewFrage] = useState('')
   const [sendingFrage, setSendingFrage] = useState(false)
   const [showQR, setShowQR] = useState(false)
   const [qrDataUrl, setQrDataUrl] = useState('')
+  const [mannSearch, setMannSearch] = useState<Record<string, string>>({})
+  const [mannResults, setMannResults] = useState<Record<string, any[]>>({})
+
+  function upLp<K extends keyof PatientPayload>(key: K, value: PatientPayload[K]) {
+    setLp(prev => ({ ...prev, [key]: value }))
+  }
 
   useEffect(() => {
-    if (p.access_code) {
-      QRCode.toDataURL(`${window.location.origin}/p/${p.access_code}`, { width: 300, margin: 2 }).then(setQrDataUrl)
+    if (lp.access_code) {
+      QRCode.toDataURL(`${window.location.origin}/p/${lp.access_code}`, { width: 300, margin: 2 }).then(setQrDataUrl)
     }
-  }, [p.access_code])
+  }, [lp.access_code])
 
   const hl  = (k: keyof PatientPayload): React.CSSProperties =>
-    JSON.stringify((original as any)[k]) !== JSON.stringify((p as any)[k]) ? CH : {}
+    JSON.stringify((original as any)[k]) !== JSON.stringify((lp as any)[k]) ? CH : {}
   const H   = (k: keyof PatientPayload) => ({ ...inp, ...hl(k) })
   const HS  = (k: keyof PatientPayload) => ({ ...sel, ...hl(k) })
   const HT  = (k: keyof PatientPayload) => ({ ...ta,  ...hl(k) })
   const hlCb = (k: keyof PatientPayload): React.CSSProperties =>
-    (original as any)[k] !== (p as any)[k]
+    (original as any)[k] !== (lp as any)[k]
       ? { accentColor: '#f59e0b', outline: '2px solid #fcd34d', borderRadius: 3 } : {}
 
-  const rueckfragen: RQ[] = Array.isArray(p.rueckfragen) ? (p.rueckfragen as RQ[]) : []
-  const stellungnahmen: SN[] = Array.isArray(p.stellungnahmen) ? (p.stellungnahmen as SN[]) : []
-  const openRQ     = rueckfragen.filter(r => r.status === 'offen').length
-  const answeredRQ = rueckfragen.filter(r => r.status === 'beantwortet').length
+  const rueckfragen: RQ[] = Array.isArray(lp.rueckfragen) ? (lp.rueckfragen as RQ[]) : []
+  const stellungnahmen: SN[] = Array.isArray(lp.stellungnahmen) ? (lp.stellungnahmen as SN[]) : []
+  const openRQ = rueckfragen.filter(r => r.status === 'offen').length
 
   async function sendRueckfrage() {
     if (!newFrage.trim() || sendingFrage) return
@@ -58,8 +63,8 @@ export default function PatientEditModal({ patient, payload: p, original, setP, 
     try {
       const rq: RQ = { id: Date.now().toString(), frage: newFrage.trim(), created_by: user?.name || 'Admin', status: 'offen', created: new Date().toISOString() }
       const updated = [...rueckfragen, rq]
-      setP('rueckfragen', updated as any)
-      await pb.collection('patients').update(patient.id, { payload: { ...p, rueckfragen: updated } })
+      setLp(prev => ({ ...prev, rueckfragen: updated as any }))
+      await pb.collection('patients').update(patient.id, { payload: { ...lp, rueckfragen: updated } })
       setNewFrage('')
       onRefresh()
     } catch (e: any) { alert('Fehler: ' + e.message) }
@@ -68,22 +73,46 @@ export default function PatientEditModal({ patient, payload: p, original, setP, 
 
   function generateCode() {
     const code = String(Math.floor(1000 + Math.random() * 9000))
-    setP('access_code', code)
-    setP('access_code_created', new Date().toISOString())
+    setLp(prev => ({ ...prev, access_code: code, access_code_created: new Date().toISOString() }))
   }
 
   const EMPTYV: VitalRow = { zeit: '', rr_sys: '', rr_dia: '', hf: '', spo2: '', af: '', temp: '', bz: '', etco2: '', schmerz: '', o2: '', bemerkung: '' }
-  function addV() { setP('verlauf', [...(p.verlauf || []), { ...EMPTYV }]) }
+  function addV() { upLp('verlauf', [...(lp.verlauf || []), { ...EMPTYV }]) }
   function upV(i: number, k: keyof VitalRow, v: string) {
-    const rows = [...(p.verlauf || [])]; rows[i] = { ...rows[i], [k]: v }; setP('verlauf', rows)
+    const rows = [...(lp.verlauf || [])]; rows[i] = { ...rows[i], [k]: v }; upLp('verlauf', rows)
   }
-  function rmV(i: number) { setP('verlauf', (p.verlauf || []).filter((_, j) => j !== i)) }
+  function rmV(i: number) { upLp('verlauf', (lp.verlauf || []).filter((_, j) => j !== i)) }
 
-  function addMed() { setP('medications', [...(p.medications || []), { name: '', dose: '', unit: '', route: '', time: '', note: '' }]) }
+  function addMed() { upLp('medications', [...(lp.medications || []), { name: '', dose: '', unit: '', route: '', time: '', note: '' }]) }
   function upMed(i: number, k: keyof Medication, v: string) {
-    const meds = [...(p.medications || [])]; meds[i] = { ...meds[i], [k]: v }; setP('medications', meds)
+    const meds = [...(lp.medications || [])]; meds[i] = { ...meds[i], [k]: v }; upLp('medications', meds)
   }
-  function rmMed(i: number) { setP('medications', (p.medications || []).filter((_, j) => j !== i)) }
+  function rmMed(i: number) { upLp('medications', (lp.medications || []).filter((_, j) => j !== i)) }
+
+  async function searchMannschaft(role: string, text: string) {
+    setMannSearch(prev => ({ ...prev, [role]: text }))
+    if (text.length < 2) { setMannResults(prev => ({ ...prev, [role]: [] })); return }
+    try {
+      const results = await pb.collection('users').getFullList({
+        filter: `organization_id="${(patient as any).organization_id}"&&(name~"${text}"||email~"${text}")`,
+        fields: 'id,name,email',
+        sort: 'name',
+      })
+      setMannResults(prev => ({ ...prev, [role]: results }))
+    } catch { setMannResults(prev => ({ ...prev, [role]: [] })) }
+  }
+
+  function pickMannUser(role: string, u: any) {
+    const updated = { ...(lp.mannschaft || {}), [role]: { id: u.id, name: u.name, persnr: u.persnr || '' } }
+    setLp(prev => ({ ...prev, mannschaft: updated }))
+    setMannSearch(prev => ({ ...prev, [role]: '' }))
+    setMannResults(prev => ({ ...prev, [role]: [] }))
+  }
+
+  function clearMannUser(role: string) {
+    const updated = { ...(lp.mannschaft || {}), [role]: null }
+    setLp(prev => ({ ...prev, mannschaft: updated }))
+  }
 
   function F({ l, children }: { l: string; children: React.ReactNode }) {
     return <div style={field}><label style={lbl}>{l}</label>{children}</div>
@@ -94,7 +123,7 @@ export default function PatientEditModal({ patient, payload: p, original, setP, 
   function Cb({ k, label }: { k: keyof PatientPayload; label: string }) {
     return (
       <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, cursor: 'pointer', marginRight: 12, marginBottom: 4 }}>
-        <input type="checkbox" checked={!!((p as any)[k])} onChange={e => setP(k, e.target.checked as any)} style={hlCb(k)} />
+        <input type="checkbox" checked={!!((lp as any)[k])} onChange={e => upLp(k, e.target.checked as any)} style={hlCb(k)} />
         {label}
       </label>
     )
@@ -114,26 +143,47 @@ export default function PatientEditModal({ patient, payload: p, original, setP, 
     )
   }
 
-  const m = ((p.mannschaft || {}) as Record<string, { id?: string; name?: string; persnr?: string } | null>)
-  function MRow({ role, label: rl, nk }: { role: string; label: string; nk: keyof PatientPayload }) {
+  const m = ((lp.mannschaft || {}) as Record<string, { id?: string; name?: string; persnr?: string } | null>)
+  function MRow({ role, label: rl }: { role: string; label: string }) {
     const linked = m[role]
+    const srchText = mannSearch[role] || ''
+    const results = mannResults[role] || []
     return (
-      <div style={field}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: 4 }}>
-          <label style={{ ...lbl, margin: 0 }}>{rl}</label>
-          {linked && (
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: '#eff6ff', border: '0.5px solid #93c5fd', borderRadius: 999, padding: '2px 8px', fontSize: 12, color: '#1d4ed8', fontWeight: 600 }}>
-              {linked.name || '—'}{linked.persnr && <span style={{ opacity: .7 }}>&nbsp;· #{linked.persnr}</span>}
+      <div style={{ ...field, position: 'relative' }}>
+        <label style={lbl}>{rl}</label>
+        {linked ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ flex: 1, display: 'inline-flex', alignItems: 'center', gap: 4, background: '#eff6ff', border: '0.5px solid #93c5fd', borderRadius: 8, padding: '8px 10px', fontSize: 13, color: '#1d4ed8', fontWeight: 600 }}>
+              {linked.name || '—'}{linked.persnr && <span style={{ opacity: .7, fontSize: 12 }}>&nbsp;· #{linked.persnr}</span>}
             </span>
-          )}
-        </div>
-        <input type="text" value={String((p as any)[nk] || '')} onChange={e => setP(nk, e.target.value as any)} style={H(nk)} />
+            <button type="button" onClick={() => clearMannUser(role)} style={{ background: 'none', border: '0.5px solid var(--border)', borderRadius: 6, padding: '7px 10px', cursor: 'pointer', color: 'var(--text-secondary)', fontSize: 13 }}>×</button>
+          </div>
+        ) : (
+          <div style={{ position: 'relative' }}>
+            <input
+              type="text"
+              value={srchText}
+              onChange={e => searchMannschaft(role, e.target.value)}
+              placeholder="Name suchen…"
+              style={inp}
+            />
+            {results.length > 0 && (
+              <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10, zIndex: 200, maxHeight: 200, overflowY: 'auto', boxShadow: '0 8px 24px rgba(0,0,0,0.12)', marginTop: 2 }}>
+                {results.map((u: any) => (
+                  <div key={u.id} onMouseDown={() => pickMannUser(role, u)} style={{ padding: '9px 14px', cursor: 'pointer', fontSize: 14, borderBottom: '0.5px solid var(--border)' }}>
+                    {u.name}<span style={{ fontSize: 12, color: 'var(--text-secondary)', marginLeft: 6 }}>{u.email}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     )
   }
 
-  const dauerMeds: any[] = Array.isArray(p.dauermedikation) ? p.dauermedikation : []
-  const gcsT = (p.gcs_e || 0) + (p.gcs_v || 0) + (p.gcs_m || 0)
+  const dauerMeds: any[] = Array.isArray(lp.dauermedikation) ? lp.dauermedikation : []
+  const gcsT = (lp.gcs_e || 0) + (lp.gcs_v || 0) + (lp.gcs_m || 0)
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 2000, background: 'var(--bg)', overflowY: 'auto' }}>
@@ -147,7 +197,7 @@ export default function PatientEditModal({ patient, payload: p, original, setP, 
           </button>
           <h1 style={{ flex: 1, textAlign: 'center', fontSize: '1rem', fontWeight: 700, color: 'var(--text)', margin: 0 }}>Patientendoku</h1>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
-            {openRQ > 0 && <span style={{ background: '#fef9c3', border: '1px solid #fcd34d', borderRadius: 999, padding: '2px 8px', fontSize: 12, fontWeight: 700, color: '#92400e' }}>{openRQ} Rückfrage{openRQ !== 1 ? 'n' : ''}</span>}
+            {openRQ > 0 && <span style={{ background: '#fef9c3', border: '1px solid #fcd34d', borderRadius: 999, padding: '2px 8px', fontSize: 12, fontWeight: 700, color: '#92400e' }}>{openRQ} offene Rückfrage{openRQ !== 1 ? 'n' : ''}</span>}
             <button onClick={() => window.print()} style={{ background: 'none', border: '0.5px solid var(--border)', borderRadius: 8, padding: '6px 12px', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: 'var(--text)', fontFamily: 'inherit' }}>PDF</button>
           </div>
         </div>
@@ -171,37 +221,37 @@ export default function PatientEditModal({ patient, payload: p, original, setP, 
         {/* 1. Einsatzdaten */}
         <PubSection title="Einsatzdaten" open>
           <G2>
-            <F l="Einsatz-Nr."><input type="text" value={p.einsatz_nr || ''} onChange={e => setP('einsatz_nr', e.target.value)} style={H('einsatz_nr')} /></F>
-            <F l="Auftrags-Nr."><input type="text" value={p.auftrags_nr || ''} onChange={e => setP('auftrags_nr', e.target.value)} style={H('auftrags_nr')} /></F>
-            <F l="Rufname"><input type="text" value={p.rufname || ''} onChange={e => setP('rufname', e.target.value)} style={H('rufname')} /></F>
-            <F l="Fahrzeug / Einheit"><input type="text" value={p.fahrzeug || ''} onChange={e => setP('fahrzeug', e.target.value)} style={H('fahrzeug')} /></F>
-            <F l="Einsatzart / Stichwort"><input type="text" value={p.einsatz_art || ''} onChange={e => setP('einsatz_art', e.target.value)} style={H('einsatz_art')} /></F>
+            <F l="Einsatz-Nr."><input type="text" value={lp.einsatz_nr || ''} onChange={e => upLp('einsatz_nr', e.target.value)} style={H('einsatz_nr')} /></F>
+            <F l="Auftrags-Nr."><input type="text" value={lp.auftrags_nr || ''} onChange={e => upLp('auftrags_nr', e.target.value)} style={H('auftrags_nr')} /></F>
+            <F l="Rufname"><input type="text" value={lp.rufname || ''} onChange={e => upLp('rufname', e.target.value)} style={H('rufname')} /></F>
+            <F l="Fahrzeug / Einheit"><input type="text" value={lp.fahrzeug || ''} onChange={e => upLp('fahrzeug', e.target.value)} style={H('fahrzeug')} /></F>
+            <F l="Einsatzart / Stichwort"><input type="text" value={lp.einsatz_art || ''} onChange={e => upLp('einsatz_art', e.target.value)} style={H('einsatz_art')} /></F>
           </G2>
-          <F l="Einsatzort / Adresse"><input type="text" value={p.einsatz_adresse || ''} onChange={e => setP('einsatz_adresse', e.target.value)} placeholder="Straße, PLZ Ort" style={H('einsatz_adresse')} /></F>
+          <F l="Einsatzort / Adresse"><input type="text" value={lp.einsatz_adresse || ''} onChange={e => upLp('einsatz_adresse', e.target.value)} placeholder="Straße, PLZ Ort" style={H('einsatz_adresse')} /></F>
           <G2>
-            <F l="Alarmzeit"><input type="time" value={p.zeit_einsatz || ''} onChange={e => setP('zeit_einsatz', e.target.value)} style={H('zeit_einsatz')} /></F>
-            <F l="Eintreffzeit"><input type="time" value={p.zeit_eintreffen || ''} onChange={e => setP('zeit_eintreffen', e.target.value)} style={H('zeit_eintreffen')} /></F>
-            <F l="Transportbeginn"><input type="time" value={p.zeit_transport || ''} onChange={e => setP('zeit_transport', e.target.value)} style={H('zeit_transport')} /></F>
-            <F l="Übergabe"><input type="time" value={p.zeit_uebergabe || ''} onChange={e => setP('zeit_uebergabe', e.target.value)} style={H('zeit_uebergabe')} /></F>
+            <F l="Alarmzeit"><input type="time" value={lp.zeit_einsatz || ''} onChange={e => upLp('zeit_einsatz', e.target.value)} style={H('zeit_einsatz')} /></F>
+            <F l="Eintreffzeit"><input type="time" value={lp.zeit_eintreffen || ''} onChange={e => upLp('zeit_eintreffen', e.target.value)} style={H('zeit_eintreffen')} /></F>
+            <F l="Transportbeginn"><input type="time" value={lp.zeit_transport || ''} onChange={e => upLp('zeit_transport', e.target.value)} style={H('zeit_transport')} /></F>
+            <F l="Übergabe"><input type="time" value={lp.zeit_uebergabe || ''} onChange={e => upLp('zeit_uebergabe', e.target.value)} style={H('zeit_uebergabe')} /></F>
           </G2>
-          <F l="Transportziel (Krankenhaus)"><input type="text" value={p.transport_ziel || ''} onChange={e => setP('transport_ziel', e.target.value)} placeholder="Klinikum…" style={H('transport_ziel')} /></F>
+          <F l="Transportziel (Krankenhaus)"><input type="text" value={lp.transport_ziel || ''} onChange={e => upLp('transport_ziel', e.target.value)} placeholder="Klinikum…" style={H('transport_ziel')} /></F>
 
           <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 8, marginTop: 4 }}>Mannschaft</div>
           <G2>
-            <MRow role="tf" label="Teamführer" nk="mannschaft_tf" />
-            <MRow role="m1" label="Mannschaft 1" nk="mannschaft_1" />
-            <MRow role="m2" label="Mannschaft 2" nk="mannschaft_2" />
-            <MRow role="m3" label="Mannschaft 3" nk="mannschaft_3" />
+            <MRow role="tf" label="Teamführer" />
+            <MRow role="m1" label="Mannschaft 1" />
+            <MRow role="m2" label="Mannschaft 2" />
+            <MRow role="m3" label="Mannschaft 3" />
           </G2>
 
           <div style={{ background: 'var(--bg)', border: '0.5px solid var(--border)', borderRadius: 10, padding: 12, marginTop: 8 }}>
             <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 8 }}>QR-Code für Rettungsdienst</div>
-            {p.access_code ? (
+            {lp.access_code ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-                <div style={{ fontFamily: 'monospace', fontSize: 28, fontWeight: 700, letterSpacing: '0.2em', color: '#c0392b' }}>{p.access_code}</div>
+                <div style={{ fontFamily: 'monospace', fontSize: 28, fontWeight: 700, letterSpacing: '0.2em', color: '#c0392b' }}>{lp.access_code}</div>
                 <div style={{ flex: 1, minWidth: 120 }}>
                   <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Gültig für 24 Stunden</div>
-                  {p.access_code_created && <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>Erstellt: {new Date(p.access_code_created).toLocaleString('de-DE')}</div>}
+                  {lp.access_code_created && <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>Erstellt: {new Date(lp.access_code_created).toLocaleString('de-DE')}</div>}
                 </div>
                 <div style={{ display: 'flex', gap: 6 }}>
                   <button type="button" onClick={() => setShowQR(true)} style={{ padding: '8px 12px', background: '#007aff', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>QR anzeigen</button>
@@ -218,10 +268,10 @@ export default function PatientEditModal({ patient, payload: p, original, setP, 
         </PubSection>
 
         {/* QR Modal */}
-        {showQR && p.access_code && (
+        {showQR && lp.access_code && (
           <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }} onClick={() => setShowQR(false)}>
             <div style={{ background: '#fff', borderRadius: 20, padding: 32, maxWidth: 360, width: '100%', textAlign: 'center' }} onClick={e => e.stopPropagation()}>
-              <div style={{ fontFamily: 'monospace', fontSize: 36, fontWeight: 800, letterSpacing: '0.3em', color: '#c0392b', margin: '8px 0' }}>{p.access_code}</div>
+              <div style={{ fontFamily: 'monospace', fontSize: 36, fontWeight: 800, letterSpacing: '0.3em', color: '#c0392b', margin: '8px 0' }}>{lp.access_code}</div>
               {qrDataUrl && <img src={qrDataUrl} alt="QR Code" style={{ width: 220, height: 220, display: 'block', margin: '0 auto 12px' }} />}
               <button onClick={() => setShowQR(false)} style={{ padding: '10px 24px', background: '#222', color: '#fff', border: 'none', borderRadius: 10, fontWeight: 600, cursor: 'pointer' }}>Schließen</button>
             </div>
@@ -231,29 +281,29 @@ export default function PatientEditModal({ patient, payload: p, original, setP, 
         {/* 2. Patientenstammdaten */}
         <PubSection title="Patientenstammdaten" open>
           <G2>
-            <F l="Nachname"><input type="text" value={p.name || ''} onChange={e => setP('name', e.target.value)} style={H('name')} /></F>
-            <F l="Vorname"><input type="text" value={p.vorname || ''} onChange={e => setP('vorname', e.target.value)} style={H('vorname')} /></F>
-            <F l="Geburtsdatum"><input type="date" value={p.gebdatum || ''} onChange={e => setP('gebdatum', e.target.value)} style={H('gebdatum')} /></F>
-            <F l="Alter"><input type="text" value={p.alter || ''} onChange={e => setP('alter', e.target.value)} style={H('alter')} /></F>
-            <F l="Telefon"><input type="text" value={p.telefon || ''} onChange={e => setP('telefon', e.target.value)} style={H('telefon')} /></F>
-            <F l="Mobil"><input type="text" value={p.mobil || ''} onChange={e => setP('mobil', e.target.value)} style={H('mobil')} /></F>
-            <F l="Straße"><input type="text" value={p.strasse || ''} onChange={e => setP('strasse', e.target.value)} style={H('strasse')} /></F>
-            <F l="PLZ / Ort"><input type="text" value={p.plz_ort || ''} onChange={e => setP('plz_ort', e.target.value)} style={H('plz_ort')} /></F>
-            <F l="Krankenkasse"><input type="text" value={p.kasse || ''} onChange={e => setP('kasse', e.target.value)} style={H('kasse')} /></F>
-            <F l="Vers.-Nr."><input type="text" value={p.versnr || ''} onChange={e => setP('versnr', e.target.value)} style={H('versnr')} /></F>
+            <F l="Nachname"><input type="text" value={lp.name || ''} onChange={e => upLp('name', e.target.value)} style={H('name')} /></F>
+            <F l="Vorname"><input type="text" value={lp.vorname || ''} onChange={e => upLp('vorname', e.target.value)} style={H('vorname')} /></F>
+            <F l="Geburtsdatum"><input type="date" value={lp.gebdatum || ''} onChange={e => upLp('gebdatum', e.target.value)} style={H('gebdatum')} /></F>
+            <F l="Alter"><input type="text" value={lp.alter || ''} onChange={e => upLp('alter', e.target.value)} style={H('alter')} /></F>
+            <F l="Telefon"><input type="text" value={lp.telefon || ''} onChange={e => upLp('telefon', e.target.value)} style={H('telefon')} /></F>
+            <F l="Mobil"><input type="text" value={lp.mobil || ''} onChange={e => upLp('mobil', e.target.value)} style={H('mobil')} /></F>
+            <F l="Straße"><input type="text" value={lp.strasse || ''} onChange={e => upLp('strasse', e.target.value)} style={H('strasse')} /></F>
+            <F l="PLZ / Ort"><input type="text" value={lp.plz_ort || ''} onChange={e => upLp('plz_ort', e.target.value)} style={H('plz_ort')} /></F>
+            <F l="Krankenkasse"><input type="text" value={lp.kasse || ''} onChange={e => upLp('kasse', e.target.value)} style={H('kasse')} /></F>
+            <F l="Vers.-Nr."><input type="text" value={lp.versnr || ''} onChange={e => upLp('versnr', e.target.value)} style={H('versnr')} /></F>
           </G2>
-          <F l="Hausarzt"><input type="text" value={p.hausarzt || ''} onChange={e => setP('hausarzt', e.target.value)} style={H('hausarzt')} /></F>
-          <F l="Angehöriger"><input type="text" value={p.angehoeriger || ''} onChange={e => setP('angehoeriger', e.target.value)} style={H('angehoeriger')} /></F>
-          <F l="Infos"><textarea value={p.infos || ''} onChange={e => setP('infos', e.target.value)} rows={2} style={HT('infos')} /></F>
+          <F l="Hausarzt"><input type="text" value={lp.hausarzt || ''} onChange={e => upLp('hausarzt', e.target.value)} style={H('hausarzt')} /></F>
+          <F l="Angehöriger"><input type="text" value={lp.angehoeriger || ''} onChange={e => upLp('angehoeriger', e.target.value)} style={H('angehoeriger')} /></F>
+          <F l="Infos"><textarea value={lp.infos || ''} onChange={e => upLp('infos', e.target.value)} rows={2} style={HT('infos')} /></F>
         </PubSection>
 
         {/* 3. Notfallgeschehen / Anamnese */}
         <PubSection title="Notfallgeschehen / Anamnese" open>
-          <F l="Notfallgeschehen / Beschwerden"><textarea value={p.notfallgeschehen || ''} onChange={e => setP('notfallgeschehen', e.target.value)} rows={3} style={HT('notfallgeschehen')} /></F>
-          <F l="Vorerkrankungen"><textarea value={p.vorerkrankungen || ''} onChange={e => setP('vorerkrankungen', e.target.value)} rows={2} style={HT('vorerkrankungen')} /></F>
-          <F l="Allergien"><input type="text" value={p.allergien || ''} onChange={e => setP('allergien', e.target.value)} placeholder="Keine bekannt / …" style={H('allergien')} /></F>
-          <F l="Verlaufsbeschreibung"><textarea value={p.verlaufsbeschreibung || ''} onChange={e => setP('verlaufsbeschreibung', e.target.value)} rows={2} style={HT('verlaufsbeschreibung')} /></F>
-          <F l="Dauermedikation Patient (Freitext)"><textarea value={p.vormedikation_patient || ''} onChange={e => setP('vormedikation_patient', e.target.value)} rows={2} style={HT('vormedikation_patient')} /></F>
+          <F l="Notfallgeschehen / Beschwerden"><textarea value={lp.notfallgeschehen || ''} onChange={e => upLp('notfallgeschehen', e.target.value)} rows={3} style={HT('notfallgeschehen')} /></F>
+          <F l="Vorerkrankungen"><textarea value={lp.vorerkrankungen || ''} onChange={e => upLp('vorerkrankungen', e.target.value)} rows={2} style={HT('vorerkrankungen')} /></F>
+          <F l="Allergien"><input type="text" value={lp.allergien || ''} onChange={e => upLp('allergien', e.target.value)} placeholder="Keine bekannt / …" style={H('allergien')} /></F>
+          <F l="Verlaufsbeschreibung"><textarea value={lp.verlaufsbeschreibung || ''} onChange={e => upLp('verlaufsbeschreibung', e.target.value)} rows={2} style={HT('verlaufsbeschreibung')} /></F>
+          <F l="Dauermedikation Patient (Freitext)"><textarea value={lp.vormedikation_patient || ''} onChange={e => upLp('vormedikation_patient', e.target.value)} rows={2} style={HT('vormedikation_patient')} /></F>
           {dauerMeds.length > 0 && (
             <div style={field}>
               <label style={lbl}>Dauermedikation (gescannt)</label>
@@ -278,7 +328,7 @@ export default function PatientEditModal({ patient, payload: p, original, setP, 
                 </tr>
               </thead>
               <tbody>
-                {(p.verlauf || []).map((vr, i) => (
+                {(lp.verlauf || []).map((vr, i) => (
                   <tr key={i}>
                     {(['zeit', 'rr_sys', 'rr_dia', 'hf', 'spo2', 'af', 'temp', 'bz', 'etco2', 'schmerz', 'o2', 'bemerkung'] as (keyof VitalRow)[]).map(k => (
                       <td key={k} style={{ padding: 2, border: '1px solid var(--border)' }}>
@@ -300,15 +350,15 @@ export default function PatientEditModal({ patient, payload: p, original, setP, 
         {/* 5. Vitalparameter */}
         <PubSection title="Vitalparameter">
           <G2>
-            <F l="RR syst. (mmHg)"><input type="text" value={p.rr_sys || ''} onChange={e => setP('rr_sys', e.target.value)} style={H('rr_sys')} /></F>
-            <F l="RR diast. (mmHg)"><input type="text" value={p.rr_dia || ''} onChange={e => setP('rr_dia', e.target.value)} style={H('rr_dia')} /></F>
-            <F l="HF (/min)"><input type="text" value={p.hf || ''} onChange={e => setP('hf', e.target.value)} style={H('hf')} /></F>
-            <F l="SpO2 (%)"><input type="text" value={p.spo2 || ''} onChange={e => setP('spo2', e.target.value)} style={H('spo2')} /></F>
-            <F l="AF (/min)"><input type="text" value={p.af || ''} onChange={e => setP('af', e.target.value)} style={H('af')} /></F>
-            <F l="Temp (°C)"><input type="text" value={p.temp || ''} onChange={e => setP('temp', e.target.value)} style={H('temp')} /></F>
-            <F l="BZ (mg/dl)"><input type="text" value={p.bz_mg || ''} onChange={e => setP('bz_mg', e.target.value)} style={H('bz_mg')} /></F>
-            <F l="Schmerz (NRS 0–10)"><input type="text" value={p.schmerz || ''} onChange={e => setP('schmerz', e.target.value)} style={H('schmerz')} /></F>
-            <F l="etCO2"><input type="text" value={p.etco2 || ''} onChange={e => setP('etco2', e.target.value)} style={H('etco2')} /></F>
+            <F l="RR syst. (mmHg)"><input type="text" value={lp.rr_sys || ''} onChange={e => upLp('rr_sys', e.target.value)} style={H('rr_sys')} /></F>
+            <F l="RR diast. (mmHg)"><input type="text" value={lp.rr_dia || ''} onChange={e => upLp('rr_dia', e.target.value)} style={H('rr_dia')} /></F>
+            <F l="HF (/min)"><input type="text" value={lp.hf || ''} onChange={e => upLp('hf', e.target.value)} style={H('hf')} /></F>
+            <F l="SpO2 (%)"><input type="text" value={lp.spo2 || ''} onChange={e => upLp('spo2', e.target.value)} style={H('spo2')} /></F>
+            <F l="AF (/min)"><input type="text" value={lp.af || ''} onChange={e => upLp('af', e.target.value)} style={H('af')} /></F>
+            <F l="Temp (°C)"><input type="text" value={lp.temp || ''} onChange={e => upLp('temp', e.target.value)} style={H('temp')} /></F>
+            <F l="BZ (mg/dl)"><input type="text" value={lp.bz_mg || ''} onChange={e => upLp('bz_mg', e.target.value)} style={H('bz_mg')} /></F>
+            <F l="Schmerz (NRS 0–10)"><input type="text" value={lp.schmerz || ''} onChange={e => upLp('schmerz', e.target.value)} style={H('schmerz')} /></F>
+            <F l="etCO2"><input type="text" value={lp.etco2 || ''} onChange={e => upLp('etco2', e.target.value)} style={H('etco2')} /></F>
           </G2>
         </PubSection>
 
@@ -316,7 +366,7 @@ export default function PatientEditModal({ patient, payload: p, original, setP, 
         <PubSection title="NACA / Bewusstsein">
           <G2>
             <F l="NACA-Score">
-              <select value={p.naca || ''} onChange={e => setP('naca', e.target.value)} style={HS('naca')}>
+              <select value={lp.naca || ''} onChange={e => upLp('naca', e.target.value)} style={HS('naca')}>
                 <option value="">–</option>
                 {['0 – Keine Erkrankung/Verletzung', 'I – Geringfügig', 'II – Leicht', 'III – Mäßig schwer', 'IV – Schwer, keine Lebensgefahr', 'V – Akute Lebensgefahr', 'VI – Reanimation', 'VII – Tod'].map((o, i) => (
                   <option key={i} value={['0', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII'][i]}>{o}</option>
@@ -324,30 +374,30 @@ export default function PatientEditModal({ patient, payload: p, original, setP, 
               </select>
             </F>
             <F l="Bewusstsein">
-              <select value={p.bewusstsein || ''} onChange={e => setP('bewusstsein', e.target.value)} style={HS('bewusstsein')}>
+              <select value={lp.bewusstsein || ''} onChange={e => upLp('bewusstsein', e.target.value)} style={HS('bewusstsein')}>
                 <option value="">–</option>
                 {['nicht beurteilbar', 'wach', 'getrübt', 'bewusstlos', 'reaktionslos', 'auf Ansprache', 'Reaktion auf Schmerz', 'analgosediert / Narkose'].map(o => <option key={o}>{o}</option>)}
               </select>
             </F>
           </G2>
-          <F l="Verdachtsdiagnose / Erstdiagnose"><input type="text" value={p.erstdiagnose_text || ''} onChange={e => setP('erstdiagnose_text', e.target.value)} placeholder="Freitexteingabe…" style={H('erstdiagnose_text')} /></F>
+          <F l="Verdachtsdiagnose / Erstdiagnose"><input type="text" value={lp.erstdiagnose_text || ''} onChange={e => upLp('erstdiagnose_text', e.target.value)} placeholder="Freitexteingabe…" style={H('erstdiagnose_text')} /></F>
         </PubSection>
 
         {/* 7. Neurologie */}
         <PubSection title="Neurologie">
           <G2>
-            <F l="Zeit"><input type="time" value={p.neu_zeit || ''} onChange={e => setP('neu_zeit', e.target.value)} style={H('neu_zeit')} /></F>
+            <F l="Zeit"><input type="time" value={lp.neu_zeit || ''} onChange={e => upLp('neu_zeit', e.target.value)} style={H('neu_zeit')} /></F>
             <div style={{ paddingTop: 28 }}><Cb k="neu_unauff" label="Unauffällig" /></div>
           </G2>
           <G2>
             <F l="Pupillenweite re.">
               <div style={{ display: 'flex' }}>
-                {['eng', 'mittel', 'weit'].map(v => <Rad key={v} name="pw_r" v={v} cur={p.pw_r || 'mittel'} set={v2 => setP('pw_r', v2)} label={v} />)}
+                {['eng', 'mittel', 'weit'].map(v => <Rad key={v} name="pw_r" v={v} cur={lp.pw_r || 'mittel'} set={v2 => upLp('pw_r', v2)} label={v} />)}
               </div>
             </F>
             <F l="Pupillenweite li.">
               <div style={{ display: 'flex' }}>
-                {['eng', 'mittel', 'weit'].map(v => <Rad key={v} name="pw_l" v={v} cur={p.pw_l || 'mittel'} set={v2 => setP('pw_l', v2)} label={v} />)}
+                {['eng', 'mittel', 'weit'].map(v => <Rad key={v} name="pw_l" v={v} cur={lp.pw_l || 'mittel'} set={v2 => upLp('pw_l', v2)} label={v} />)}
               </div>
             </F>
           </G2>
@@ -358,12 +408,12 @@ export default function PatientEditModal({ patient, payload: p, original, setP, 
           <G2>
             <F l="Lichtreaktion re.">
               <div style={{ display: 'flex' }}>
-                {['prompt', 'träge', 'keine'].map(v => <Rad key={v} name="lr_r" v={v} cur={p.lr_r || 'prompt'} set={v2 => setP('lr_r', v2)} label={v} />)}
+                {['prompt', 'träge', 'keine'].map(v => <Rad key={v} name="lr_r" v={v} cur={lp.lr_r || 'prompt'} set={v2 => upLp('lr_r', v2)} label={v} />)}
               </div>
             </F>
             <F l="Lichtreaktion li.">
               <div style={{ display: 'flex' }}>
-                {['prompt', 'träge', 'keine'].map(v => <Rad key={v} name="lr_l" v={v} cur={p.lr_l || 'prompt'} set={v2 => setP('lr_l', v2)} label={v} />)}
+                {['prompt', 'träge', 'keine'].map(v => <Rad key={v} name="lr_l" v={v} cur={lp.lr_l || 'prompt'} set={v2 => upLp('lr_l', v2)} label={v} />)}
               </div>
             </F>
           </G2>
@@ -378,13 +428,13 @@ export default function PatientEditModal({ patient, payload: p, original, setP, 
             <Cb k="neu_babinski" label="Babinski" />
             <Cb k="neu_vorbestehend" label="Vorbestehende Defizite" />
           </CbRow>
-          <F l="Neurologische Sonstige"><input type="text" value={p.neu_sonstige || ''} onChange={e => setP('neu_sonstige', e.target.value)} style={H('neu_sonstige')} /></F>
+          <F l="Neurologische Sonstige"><input type="text" value={lp.neu_sonstige || ''} onChange={e => upLp('neu_sonstige', e.target.value)} style={H('neu_sonstige')} /></F>
           <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 6 }}>Extremitätenbewegung</div>
           <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr 1fr', gap: '4px 8px', alignItems: 'center', marginBottom: 10, fontSize: 13 }}>
             <div /><div style={{ textAlign: 'center', fontWeight: 600, fontSize: 12 }}>Rechts</div><div style={{ textAlign: 'center', fontWeight: 600, fontSize: 12 }}>Links</div>
             <div style={{ fontWeight: 600, fontSize: 12 }}>Arm</div>
             {(['ext_r_arm', 'ext_l_arm'] as const).map(k => (
-              <select key={k} value={p[k] || ''} onChange={e => setP(k, e.target.value)}
+              <select key={k} value={lp[k] || ''} onChange={e => upLp(k, e.target.value)}
                 style={{ padding: 6, border: '1px solid var(--border)', borderRadius: 6, fontSize: 13, background: 'var(--bg)', color: 'var(--text)', ...hl(k) }}>
                 <option value="">–</option><option value="1">1 – Normal</option><option value="2">2 – Leicht vermindert</option>
                 <option value="3">3 – Stark vermindert</option><option value="4">4 – Fehlend</option>
@@ -392,7 +442,7 @@ export default function PatientEditModal({ patient, payload: p, original, setP, 
             ))}
             <div style={{ fontWeight: 600, fontSize: 12 }}>Bein</div>
             {(['ext_r_bein', 'ext_l_bein'] as const).map(k => (
-              <select key={k} value={p[k] || ''} onChange={e => setP(k, e.target.value)}
+              <select key={k} value={lp[k] || ''} onChange={e => upLp(k, e.target.value)}
                 style={{ padding: 6, border: '1px solid var(--border)', borderRadius: 6, fontSize: 13, background: 'var(--bg)', color: 'var(--text)', ...hl(k) }}>
                 <option value="">–</option><option value="1">1 – Normal</option><option value="2">2 – Leicht vermindert</option>
                 <option value="3">3 – Stark vermindert</option><option value="4">4 – Fehlend</option>
@@ -402,19 +452,19 @@ export default function PatientEditModal({ patient, payload: p, original, setP, 
           <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 6 }}>Glasgow Coma Scale (GCS: {gcsT > 0 ? gcsT : '—'})</div>
           <G2>
             <F l="Augen (E 1–4)">
-              <select value={p.gcs_e || 4} onChange={e => setP('gcs_e', +e.target.value)} style={HS('gcs_e')}>
+              <select value={lp.gcs_e || 4} onChange={e => upLp('gcs_e', +e.target.value)} style={HS('gcs_e')}>
                 <option value={1}>1 – Keine</option><option value={2}>2 – Auf Schmerz</option>
                 <option value={3}>3 – Auf Aufforderung</option><option value={4}>4 – Spontan</option>
               </select>
             </F>
             <F l="Verbal (V 1–5)">
-              <select value={p.gcs_v || 5} onChange={e => setP('gcs_v', +e.target.value)} style={HS('gcs_v')}>
+              <select value={lp.gcs_v || 5} onChange={e => upLp('gcs_v', +e.target.value)} style={HS('gcs_v')}>
                 <option value={1}>1 – Keine</option><option value={2}>2 – Unverständlich</option>
                 <option value={3}>3 – Einzelne Wörter</option><option value={4}>4 – Verwirrt</option><option value={5}>5 – Orientiert</option>
               </select>
             </F>
             <F l="Motorik (M 1–6)">
-              <select value={p.gcs_m || 6} onChange={e => setP('gcs_m', +e.target.value)} style={HS('gcs_m')}>
+              <select value={lp.gcs_m || 6} onChange={e => upLp('gcs_m', +e.target.value)} style={HS('gcs_m')}>
                 <option value={1}>1 – Keine</option><option value={2}>2 – Strecksynergismen</option>
                 <option value={3}>3 – Beugesynergismen</option><option value={4}>4 – Auf Schmerz</option>
                 <option value={5}>5 – Gezielte Abwehr</option><option value={6}>6 – Auf Aufforderung</option>
@@ -453,7 +503,7 @@ export default function PatientEditModal({ patient, payload: p, original, setP, 
             <Cb k="o2" label="O₂" /><Cb k="o2_nasal" label="Nasal" />
             <Cb k="o2_maske" label="Maske" /><Cb k="o2_reservoir" label="Reservoir" />
           </CbRow>
-          <F l="O₂-Flow (l/min)"><input type="text" value={p.o2_flow || ''} onChange={e => setP('o2_flow', e.target.value)} style={H('o2_flow')} /></F>
+          <F l="O₂-Flow (l/min)"><input type="text" value={lp.o2_flow || ''} onChange={e => upLp('o2_flow', e.target.value)} style={H('o2_flow')} /></F>
         </PubSection>
 
         {/* 11. Atemwegsmanagement */}
@@ -480,12 +530,12 @@ export default function PatientEditModal({ patient, payload: p, original, setP, 
             <Cb k="rean" label="Reanimation durchgeführt" />
             <Cb k="rean_tod" label="Todesfeststellung" />
           </CbRow>
-          {p.rean_tod && <F l="Uhrzeit Todesfeststellung"><input type="time" value={p.rean_tod_zeit || ''} onChange={e => setP('rean_tod_zeit', e.target.value)} style={H('rean_tod_zeit')} /></F>}
-          {p.rean && (
+          {lp.rean_tod && <F l="Uhrzeit Todesfeststellung"><input type="time" value={lp.rean_tod_zeit || ''} onChange={e => upLp('rean_tod_zeit', e.target.value)} style={H('rean_tod_zeit')} /></F>}
+          {lp.rean && (
             <G2>
-              <F l="Beginn"><input type="time" value={p.rean_beginn || ''} onChange={e => setP('rean_beginn', e.target.value)} style={H('rean_beginn')} /></F>
-              <F l="Ende"><input type="time" value={p.rean_ende || ''} onChange={e => setP('rean_ende', e.target.value)} style={H('rean_ende')} /></F>
-              <F l="Defibrillationen (Anzahl)"><input type="text" value={p.rean_defib || ''} onChange={e => setP('rean_defib', e.target.value)} style={H('rean_defib')} /></F>
+              <F l="Beginn"><input type="time" value={lp.rean_beginn || ''} onChange={e => upLp('rean_beginn', e.target.value)} style={H('rean_beginn')} /></F>
+              <F l="Ende"><input type="time" value={lp.rean_ende || ''} onChange={e => upLp('rean_ende', e.target.value)} style={H('rean_ende')} /></F>
+              <F l="Defibrillationen (Anzahl)"><input type="text" value={lp.rean_defib || ''} onChange={e => upLp('rean_defib', e.target.value)} style={H('rean_defib')} /></F>
             </G2>
           )}
         </PubSection>
@@ -506,8 +556,8 @@ export default function PatientEditModal({ patient, payload: p, original, setP, 
             <Cb k="vf" label="Kammerflimmern" /><Cb k="asystole" label="Asystolie" />
           </CbRow>
           <G2>
-            <F l="EKG-Standort"><input type="text" value={p.ekg_standort || ''} onChange={e => setP('ekg_standort', e.target.value)} style={H('ekg_standort')} /></F>
-            <F l="EKG Pers.-Nr."><input type="text" value={p.ekg_persnr || ''} onChange={e => setP('ekg_persnr', e.target.value)} style={H('ekg_persnr')} /></F>
+            <F l="EKG-Standort"><input type="text" value={lp.ekg_standort || ''} onChange={e => upLp('ekg_standort', e.target.value)} style={H('ekg_standort')} /></F>
+            <F l="EKG Pers.-Nr."><input type="text" value={lp.ekg_persnr || ''} onChange={e => upLp('ekg_persnr', e.target.value)} style={H('ekg_persnr')} /></F>
           </G2>
         </PubSection>
 
@@ -583,7 +633,7 @@ export default function PatientEditModal({ patient, payload: p, original, setP, 
 
         {/* 17. Medikamente */}
         <PubSection title="Medikamente">
-          {(p.medications || []).map((med, i) => (
+          {(lp.medications || []).map((med, i) => (
             <div key={i} style={{ background: 'var(--bg-secondary)', borderRadius: 8, padding: 10, marginBottom: 8 }}>
               <G2>
                 <F l="Medikament"><input type="text" value={med.name} onChange={e => upMed(i, 'name', e.target.value)} style={inp} /></F>
@@ -602,11 +652,11 @@ export default function PatientEditModal({ patient, payload: p, original, setP, 
         {/* 18. Zugang / Infusion */}
         <PubSection title="Zugang / Infusion">
           <G2>
-            <F l="Zugang Art"><input type="text" value={p.zugang_art || ''} onChange={e => setP('zugang_art', e.target.value)} placeholder="peripher, zentral…" style={H('zugang_art')} /></F>
-            <F l="Gauge"><input type="text" value={p.zugang_gauge || ''} onChange={e => setP('zugang_gauge', e.target.value)} style={H('zugang_gauge')} /></F>
-            <F l="Region"><input type="text" value={p.zugang_region || ''} onChange={e => setP('zugang_region', e.target.value)} style={H('zugang_region')} /></F>
-            <F l="Infusion Art"><input type="text" value={p.inf_art || ''} onChange={e => setP('inf_art', e.target.value)} style={H('inf_art')} /></F>
-            <F l="Infusion Menge (ml)"><input type="text" value={p.inf_menge || ''} onChange={e => setP('inf_menge', e.target.value)} style={H('inf_menge')} /></F>
+            <F l="Zugang Art"><input type="text" value={lp.zugang_art || ''} onChange={e => upLp('zugang_art', e.target.value)} placeholder="peripher, zentral…" style={H('zugang_art')} /></F>
+            <F l="Gauge"><input type="text" value={lp.zugang_gauge || ''} onChange={e => upLp('zugang_gauge', e.target.value)} style={H('zugang_gauge')} /></F>
+            <F l="Region"><input type="text" value={lp.zugang_region || ''} onChange={e => upLp('zugang_region', e.target.value)} style={H('zugang_region')} /></F>
+            <F l="Infusion Art"><input type="text" value={lp.inf_art || ''} onChange={e => upLp('inf_art', e.target.value)} style={H('inf_art')} /></F>
+            <F l="Infusion Menge (ml)"><input type="text" value={lp.inf_menge || ''} onChange={e => upLp('inf_menge', e.target.value)} style={H('inf_menge')} /></F>
           </G2>
         </PubSection>
 
@@ -617,11 +667,11 @@ export default function PatientEditModal({ patient, payload: p, original, setP, 
             <Cb k="beat_niv" label="NIV" /><Cb k="beat_notfallnarkose" label="Notfallnarkose" />
           </CbRow>
           <G2>
-            <F l="FiO2"><input type="text" value={p.beat_fio2 || ''} onChange={e => setP('beat_fio2', e.target.value)} style={H('beat_fio2')} /></F>
-            <F l="AF (/min)"><input type="text" value={p.beat_af || ''} onChange={e => setP('beat_af', e.target.value)} style={H('beat_af')} /></F>
-            <F l="AMV (l/min)"><input type="text" value={p.beat_amv || ''} onChange={e => setP('beat_amv', e.target.value)} style={H('beat_amv')} /></F>
-            <F l="PEEP (mbar)"><input type="text" value={p.beat_peep || ''} onChange={e => setP('beat_peep', e.target.value)} style={H('beat_peep')} /></F>
-            <F l="Pmax (mbar)"><input type="text" value={p.beat_pmax || ''} onChange={e => setP('beat_pmax', e.target.value)} style={H('beat_pmax')} /></F>
+            <F l="FiO2"><input type="text" value={lp.beat_fio2 || ''} onChange={e => upLp('beat_fio2', e.target.value)} style={H('beat_fio2')} /></F>
+            <F l="AF (/min)"><input type="text" value={lp.beat_af || ''} onChange={e => upLp('beat_af', e.target.value)} style={H('beat_af')} /></F>
+            <F l="AMV (l/min)"><input type="text" value={lp.beat_amv || ''} onChange={e => upLp('beat_amv', e.target.value)} style={H('beat_amv')} /></F>
+            <F l="PEEP (mbar)"><input type="text" value={lp.beat_peep || ''} onChange={e => upLp('beat_peep', e.target.value)} style={H('beat_peep')} /></F>
+            <F l="Pmax (mbar)"><input type="text" value={lp.beat_pmax || ''} onChange={e => upLp('beat_pmax', e.target.value)} style={H('beat_pmax')} /></F>
           </G2>
           <div style={{ fontWeight: 600, fontSize: 13, margin: '8px 0 6px', paddingTop: 4, borderTop: '1px solid var(--border)' }}>Defibrillation</div>
           <CbRow>
@@ -634,22 +684,22 @@ export default function PatientEditModal({ patient, payload: p, original, setP, 
             <Cb k="defi_erstanw_rd" label="Rettungsdienst" /><Cb k="defi_erstanw_arzt" label="Arzt" />
           </CbRow>
           <G2>
-            <F l="Zeitpunkt 1. Defi"><input type="time" value={p.defi_zeitpunkt || ''} onChange={e => setP('defi_zeitpunkt', e.target.value)} style={H('defi_zeitpunkt')} /></F>
-            <F l="ROSC"><input type="time" value={p.defi_rosc || ''} onChange={e => setP('defi_rosc', e.target.value)} style={H('defi_rosc')} /></F>
-            <F l="Anzahl Defi"><input type="text" value={p.defi_anzahl || ''} onChange={e => setP('defi_anzahl', e.target.value)} style={H('defi_anzahl')} /></F>
-            <F l="Energie (kJ)"><input type="text" value={p.defi_energie || ''} onChange={e => setP('defi_energie', e.target.value)} style={H('defi_energie')} /></F>
+            <F l="Zeitpunkt 1. Defi"><input type="time" value={lp.defi_zeitpunkt || ''} onChange={e => upLp('defi_zeitpunkt', e.target.value)} style={H('defi_zeitpunkt')} /></F>
+            <F l="ROSC"><input type="time" value={lp.defi_rosc || ''} onChange={e => upLp('defi_rosc', e.target.value)} style={H('defi_rosc')} /></F>
+            <F l="Anzahl Defi"><input type="text" value={lp.defi_anzahl || ''} onChange={e => upLp('defi_anzahl', e.target.value)} style={H('defi_anzahl')} /></F>
+            <F l="Energie (kJ)"><input type="text" value={lp.defi_energie || ''} onChange={e => upLp('defi_energie', e.target.value)} style={H('defi_energie')} /></F>
           </G2>
         </PubSection>
 
         {/* 20. Übergabe / Besonderheiten */}
         <PubSection title="Übergabe / Besonderheiten">
           <F l="Übergabe Ziel">
-            <select value={p.uebergabe_ziel || ''} onChange={e => setP('uebergabe_ziel', e.target.value)} style={HS('uebergabe_ziel')}>
+            <select value={lp.uebergabe_ziel || ''} onChange={e => upLp('uebergabe_ziel', e.target.value)} style={HS('uebergabe_ziel')}>
               <option value="">–</option>
               {['ZNA/INA', 'Schockraum', 'Stroke Unit', 'Herzkatheterlabor', 'CPU', 'Intensivstation', 'Allgemeinstation', 'OP direkt', 'Praxis', 'Hausarzt/KV-Arzt', 'Fachambulanz', 'Einsatzstelle', 'Sonstige'].map(o => <option key={o}>{o}</option>)}
             </select>
           </F>
-          <F l="Übergabe an (Name)"><input type="text" value={p.uebergabe_name || ''} onChange={e => setP('uebergabe_name', e.target.value)} style={H('uebergabe_name')} /></F>
+          <F l="Übergabe an (Name)"><input type="text" value={lp.uebergabe_name || ''} onChange={e => upLp('uebergabe_name', e.target.value)} style={H('uebergabe_name')} /></F>
           <CbRow>
             <Cb k="ev_transportverweigerung" label="Transportverweigerung" />
             <Cb k="ev_nur_untersuchung" label="Nur Untersuchung/Behandlung" />
@@ -658,7 +708,7 @@ export default function PatientEditModal({ patient, payload: p, original, setP, 
             <Cb k="ev_manv" label="MANV" /><Cb k="ev_lna" label="LNA am Einsatz" />
             <Cb k="ev_schwerlast" label="Schwerlasttransport" />
           </CbRow>
-          <F l="Bemerkungen"><textarea value={p.bemerkungen || ''} onChange={e => setP('bemerkungen', e.target.value)} rows={3} style={HT('bemerkungen')} /></F>
+          <F l="Bemerkungen"><textarea value={lp.bemerkungen || ''} onChange={e => upLp('bemerkungen', e.target.value)} rows={3} style={HT('bemerkungen')} /></F>
         </PubSection>
 
         {/* 21. Verletzungen / Trauma */}
@@ -668,7 +718,7 @@ export default function PatientEditModal({ patient, payload: p, original, setP, 
           {([['v_sht', 'Schädel-Hirn'], ['v_gesicht', 'Gesicht'], ['v_hals', 'Hals'], ['v_thorax', 'Thorax'], ['v_abdomen', 'Abdomen'], ['v_ws', 'Wirbelsäule'], ['v_becken', 'Becken'], ['v_obext', 'Obere Extremitäten'], ['v_untext', 'Untere Extremitäten'], ['v_weich', 'Weichteile']] as [keyof PatientPayload, string][]).map(([k, lbl2]) => (
             <div key={String(k)} style={{ display: 'grid', gridTemplateColumns: '130px 1fr', gap: '4px', alignItems: 'center', marginBottom: 4 }}>
               <span style={{ fontSize: 13 }}>{lbl2}</span>
-              <select value={(p[k] as string) || ''} onChange={e => setP(k, e.target.value as any)}
+              <select value={(lp[k] as string) || ''} onChange={e => upLp(k, e.target.value as any)}
                 style={{ padding: 5, border: '1px solid var(--border)', borderRadius: 6, fontSize: 13, background: 'var(--bg)', color: 'var(--text)', ...hl(k) }}>
                 <option value="">–</option><option value="leicht">leicht</option>
                 <option value="mittel">mittel</option><option value="schwer">schwer</option>
@@ -684,13 +734,13 @@ export default function PatientEditModal({ patient, payload: p, original, setP, 
             <Cb k="v_ertrinken" label="Beinahe-Ertrinken" /><Cb k="v_tauchunfall" label="Tauchunfall" />
             <Cb k="v_haemo_schock" label="Hämorrhagischer Schock" />
           </CbRow>
-          {p.v_verbrennung && (
+          {lp.v_verbrennung && (
             <G2>
-              <F l="Verbrennungsgrad"><input type="text" value={p.v_verbrennung_grad || ''} onChange={e => setP('v_verbrennung_grad', e.target.value)} placeholder="Grad…" style={H('v_verbrennung_grad')} /></F>
-              <F l="Verbrannte Fläche (%)"><input type="text" value={p.v_verbrennung_pct || ''} onChange={e => setP('v_verbrennung_pct', e.target.value)} style={H('v_verbrennung_pct')} /></F>
+              <F l="Verbrennungsgrad"><input type="text" value={lp.v_verbrennung_grad || ''} onChange={e => upLp('v_verbrennung_grad', e.target.value)} placeholder="Grad…" style={H('v_verbrennung_grad')} /></F>
+              <F l="Verbrannte Fläche (%)"><input type="text" value={lp.v_verbrennung_pct || ''} onChange={e => upLp('v_verbrennung_pct', e.target.value)} style={H('v_verbrennung_pct')} /></F>
             </G2>
           )}
-          <F l="Verletzungen Sonstige"><input type="text" value={p.v_sonstige || ''} onChange={e => setP('v_sonstige', e.target.value)} style={H('v_sonstige')} /></F>
+          <F l="Verletzungen Sonstige"><input type="text" value={lp.v_sonstige || ''} onChange={e => upLp('v_sonstige', e.target.value)} style={H('v_sonstige')} /></F>
           <div style={{ fontWeight: 600, fontSize: 12, opacity: .7, marginTop: 8, marginBottom: 4 }}>Unfallmechanismus</div>
           <CbRow>
             <Cb k="v_trauma_stumpf" label="Trauma stumpf" /><Cb k="v_trauma_penetr" label="Trauma penetrierend" />
@@ -787,7 +837,7 @@ export default function PatientEditModal({ patient, payload: p, original, setP, 
           <button onClick={onClose} style={{ flex: 1, padding: 12, background: 'var(--bg-secondary)', color: 'var(--text)', border: 'none', borderRadius: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', fontSize: 15 }}>
             Abbrechen
           </button>
-          <button onClick={onSaveAndSign} style={{ flex: 2, padding: 12, background: '#c0392b', color: '#fff', border: 'none', borderRadius: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', fontSize: 15 }}>
+          <button onClick={() => onSaveAndSign(lp)} style={{ flex: 2, padding: 12, background: '#c0392b', color: '#fff', border: 'none', borderRadius: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', fontSize: 15 }}>
             Speichern & Gegenzeichnen
           </button>
         </div>

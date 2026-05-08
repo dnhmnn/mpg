@@ -106,7 +106,7 @@ export default function ProtokollBearbeiten() {
       if (rec.status !== 'offen') { setLocked(true); setLockedReason('Dieses Protokoll wurde abgeschlossen.') }
       else if (age > 24 * 60 * 60 * 1000) {
         setLocked(true); setLockedReason('Dieses Protokoll wurde nach 24 Stunden automatisch gesperrt.')
-        pb.collection('patients').update(patientId!, { status: 'archiviert' }).catch(() => {})
+        pb.collection('patients').update(patientId!, { status: 'abgeschlossen' }).catch(() => {})
       }
       setTimeout(() => {
         const form = formRef.current; if (!form) return
@@ -170,7 +170,7 @@ export default function ProtokollBearbeiten() {
     if (!sigUrl) { alert('Bitte zuerst unterschreiben.'); return }
     setSending(true)
     try {
-      await pb.collection('patients').update(patientId!, { payload: collectData(), status: 'archiviert' })
+      await pb.collection('patients').update(patientId!, { payload: collectData(), status: 'abgeschlossen' })
       setLocked(true); setLockedReason('Dieses Protokoll wurde abgeschlossen.')
     } catch (e: any) { alert('Fehler: ' + e.message) }
     finally { setSending(false) }
