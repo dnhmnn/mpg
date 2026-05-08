@@ -402,6 +402,13 @@ export default function Patienten() {
         .pat-tab-btn.primary { background: var(--accent); color: #fff; margin-left: auto; }
         .pat-tab-btn.primary:hover { opacity: 0.85; }
 
+        @media (max-width: 560px) {
+          .pat-toolbar { overflow-x: auto; -webkit-overflow-scrolling: touch; gap: 0.2rem; padding: 0.35rem 0.75rem; }
+          .pat-toolbar::-webkit-scrollbar { display: none; }
+          .pat-tab-btn { padding: 0.4rem 0.6rem; flex-shrink: 0; }
+          .pat-tab-label { display: none; }
+        }
+
         .pat-content {
           max-width: 1100px;
           margin: 0 auto;
@@ -612,7 +619,7 @@ export default function Patienten() {
             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
             <polyline points="14 2 14 8 20 8"/>
           </svg>
-          <span>Dokus{(patients.length + abgeschlossenPatients.length) > 0 ? ` (${patients.length + abgeschlossenPatients.length})` : ''}</span>
+          <span className="pat-tab-label">Dokus{(patients.length + abgeschlossenPatients.length) > 0 ? ` (${patients.length + abgeschlossenPatients.length})` : ''}</span>
         </button>
         <button
           className={`pat-tab-btn${activeTab === 'nach' ? ' active' : ''}`}
@@ -623,7 +630,7 @@ export default function Patienten() {
             <line x1="12" y1="8" x2="12" y2="12"/>
             <line x1="12" y1="16" x2="12.01" y2="16"/>
           </svg>
-          <span>Nacherfassungen{nacherfassungen.length > 0 ? ` (${nacherfassungen.length})` : ''}</span>
+          <span className="pat-tab-label">Nacherfassungen{nacherfassungen.length > 0 ? ` (${nacherfassungen.length})` : ''}</span>
         </button>
         <button
           className={`pat-tab-btn${activeTab === 'archiv' ? ' active' : ''}`}
@@ -634,7 +641,7 @@ export default function Patienten() {
             <polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/>
             <line x1="10" y1="12" x2="14" y2="12"/>
           </svg>
-          <span>Archiv{totalArchiv > 0 ? ` (${totalArchiv})` : ''}</span>
+          <span className="pat-tab-label">Archiv{totalArchiv > 0 ? ` (${totalArchiv})` : ''}</span>
           {oldCount > 0 && (
             <span style={{ position: 'absolute', top: '4px', right: '4px', background: '#f59e0b', color: '#fff', borderRadius: '50%', width: '14px', height: '14px', fontSize: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>
               {oldCount > 9 ? '9+' : oldCount}
@@ -648,7 +655,7 @@ export default function Patienten() {
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
           </svg>
-          <span>Audit-Log</span>
+          <span className="pat-tab-label">Audit-Log</span>
         </button>
         {user?.supervisor && (
           <button
@@ -659,7 +666,7 @@ export default function Patienten() {
               <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
               <path d="M14 14h3v3h-3zM17 17h3M17 20h3M20 17v3"/>
             </svg>
-            <span>QR-Codes</span>
+            <span className="pat-tab-label">QR-Codes</span>
           </button>
         )}
         <button
