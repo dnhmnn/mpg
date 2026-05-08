@@ -175,6 +175,19 @@ export default function Patienten() {
     auditLog('bearbeitet', pat.id, 'patient', [parsed.name, parsed.vorname].filter(Boolean).join(' ') || pat.title || 'Unbekannt')
   }
 
+  async function saveOnly(localPayload: PatientPayload) {
+    if (!currentPatient) return
+    try {
+      await pb.collection('patients').update(currentPatient.id, { payload: localPayload })
+      setPayload(localPayload)
+      flash('Gespeichert', 'success')
+      setShowEdit(false)
+      await loadData()
+    } catch (e: any) {
+      flash('Fehler: ' + e.message, 'error')
+    }
+  }
+
   async function saveAndSign(localPayload: PatientPayload) {
     if (!currentPatient) return
     try {
@@ -989,6 +1002,7 @@ export default function Patienten() {
           payload={payload}
           original={originalPayload}
           onClose={() => setShowEdit(false)}
+          onSave={saveOnly}
           onSaveAndSign={saveAndSign}
           onRefresh={loadData}
         />
@@ -1023,8 +1037,8 @@ export default function Patienten() {
         return (
           <>
             {/* Print-only area */}
-            <style>{`@media print { body > *:not(#sn-print-area) { display: none !important; } #sn-print-area { display: block !important; } }`}</style>
-            <div id="sn-print-area" style={{ display: 'none', padding: 32, fontFamily: 'serif', maxWidth: 700 }}>
+            <style>{`@media print { body * { visibility: hidden !important; } #sn-print-area, #sn-print-area * { visibility: visible !important; } #sn-print-area { position: fixed; top: 0; left: 0; width: 100vw; background: white; padding: 32px; z-index: 99999; } }`}</style>
+            <div id="sn-print-area" style={{ visibility: 'hidden', position: 'fixed', top: 0, left: '-200vw', width: '700px', padding: 32, fontFamily: 'serif', background: 'white' }}>
               <h2 style={{ fontSize: 18, marginBottom: 4 }}>Stellungnahmen zum Einsatz</h2>
               <div style={{ fontSize: 13, marginBottom: 4 }}><strong>Patient:</strong> {patName}</div>
               {einsatzInfo && <div style={{ fontSize: 13, marginBottom: 4 }}><strong>Einsatz:</strong> {einsatzInfo}</div>}

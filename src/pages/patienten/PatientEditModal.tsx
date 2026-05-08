@@ -13,6 +13,7 @@ interface Props {
   payload: PatientPayload
   original: PatientPayload
   onClose: () => void
+  onSave: (payload: PatientPayload) => void
   onSaveAndSign: (payload: PatientPayload) => void
   onRefresh: () => void
 }
@@ -24,7 +25,7 @@ const pil: React.CSSProperties = {
   fontSize: 13, color: 'var(--text)', margin: '2px 2px 2px 0',
 }
 
-export default function PatientEditModal({ patient, payload: initialPayload, original, onClose, onSaveAndSign, onRefresh }: Props) {
+export default function PatientEditModal({ patient, payload: initialPayload, original, onClose, onSave, onSaveAndSign, onRefresh }: Props) {
   const { user } = useAuth()
   const [lp, setLp] = useState<PatientPayload>(() => ({ ...initialPayload }))
   const [newFrage, setNewFrage] = useState('')
@@ -833,12 +834,15 @@ export default function PatientEditModal({ patient, payload: initialPayload, ori
 
       {/* Bottom bar */}
       <div style={{ position: 'fixed', left: 0, right: 0, bottom: 0, background: 'var(--bg-status-bar)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', borderTop: '0.5px solid var(--border)', padding: 'calc(0.75rem) 1rem calc(0.75rem + env(safe-area-inset-bottom))', zIndex: 20 }}>
-        <div style={{ maxWidth: 800, margin: '0 auto', display: 'flex', gap: 12 }}>
-          <button onClick={onClose} style={{ flex: 1, padding: 12, background: 'var(--bg-secondary)', color: 'var(--text)', border: 'none', borderRadius: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', fontSize: 15 }}>
+        <div style={{ maxWidth: 800, margin: '0 auto', display: 'flex', gap: 10 }}>
+          <button onClick={onClose} style={{ flex: 1, padding: 12, background: 'var(--bg-secondary)', color: 'var(--text)', border: 'none', borderRadius: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', fontSize: 14 }}>
             Abbrechen
           </button>
-          <button onClick={() => onSaveAndSign(lp)} style={{ flex: 2, padding: 12, background: '#c0392b', color: '#fff', border: 'none', borderRadius: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', fontSize: 15 }}>
-            Speichern & Gegenzeichnen
+          <button onClick={() => onSave(lp)} style={{ flex: 2, padding: 12, background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', fontSize: 14 }}>
+            Speichern
+          </button>
+          <button onClick={() => onSaveAndSign(lp)} style={{ flex: 2, padding: 12, background: '#c0392b', color: '#fff', border: 'none', borderRadius: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', fontSize: 14 }}>
+            Gegenzeichnen
           </button>
         </div>
       </div>
