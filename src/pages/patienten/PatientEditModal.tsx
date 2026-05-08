@@ -25,6 +25,19 @@ const pil: React.CSSProperties = {
   fontSize: 13, color: 'var(--text)', margin: '2px 2px 2px 0',
 }
 
+function F({ l, children }: { l: string; children: React.ReactNode }) {
+  return <div style={field}><label style={lbl}>{l}</label>{children}</div>
+}
+function G2({ children }: { children: React.ReactNode }) {
+  return <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 12px' }}>{children}</div>
+}
+function CbRow({ children }: { children: React.ReactNode }) {
+  return <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2px 0', marginBottom: 10 }}>{children}</div>
+}
+function Cat({ t }: { t: string }) {
+  return <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: 8, marginBottom: 4, paddingTop: 6, borderTop: '0.5px solid var(--border)' }}>{t}</div>
+}
+
 export default function PatientEditModal({ patient, payload: initialPayload, original, onClose, onSave, onSaveAndSign, onRefresh }: Props) {
   const { user } = useAuth()
   const [lp, setLp] = useState<PatientPayload>(() => ({ ...initialPayload }))
@@ -115,12 +128,6 @@ export default function PatientEditModal({ patient, payload: initialPayload, ori
     setLp(prev => ({ ...prev, mannschaft: updated }))
   }
 
-  function F({ l, children }: { l: string; children: React.ReactNode }) {
-    return <div style={field}><label style={lbl}>{l}</label>{children}</div>
-  }
-  function G2({ children }: { children: React.ReactNode }) {
-    return <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 12px' }}>{children}</div>
-  }
   function Cb({ k, label }: { k: keyof PatientPayload; label: string }) {
     return (
       <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, cursor: 'pointer', marginRight: 12, marginBottom: 4 }}>
@@ -128,12 +135,6 @@ export default function PatientEditModal({ patient, payload: initialPayload, ori
         {label}
       </label>
     )
-  }
-  function CbRow({ children }: { children: React.ReactNode }) {
-    return <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2px 0', marginBottom: 10 }}>{children}</div>
-  }
-  function Cat({ t }: { t: string }) {
-    return <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: 8, marginBottom: 4, paddingTop: 6, borderTop: '0.5px solid var(--border)' }}>{t}</div>
   }
   function Rad({ name, v, cur, set, label }: { name: string; v: string; cur: string; set: (x: string) => void; label: string }) {
     return (
