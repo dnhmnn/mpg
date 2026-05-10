@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import PocketBase from 'pocketbase'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { getTheme, setTheme, type ThemeMode } from '../lib/theme'
 
@@ -155,6 +155,7 @@ export default function Unitas() {
   const [myArchivedPatients, setMyArchivedPatients] = useState<PatientRecord[]>([])
   const [loading, setLoading] = useState(true)
   const navigate = useNavigate()
+  const location = useLocation()
 
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null)
   const [themeMode, setThemeMode] = useState<ThemeMode>(getTheme())
@@ -178,12 +179,38 @@ export default function Unitas() {
   const [savingEmail, setSavingEmail] = useState(false)
   const [sendingReset, setSendingReset] = useState(false)
 
+  const loadPatients = useCallback(async () => {
+    if (!user?.organization_id) return
+    try {
+      const isMine = (p: any) => {
+        const pl = typeof p.payload === 'string' ? JSON.parse(p.payload) : (p.payload || {})
+        return ['tf','m1','m2','m3'].some((k: string) => pl.mannschaft?.[k]?.id === user!.id)
+      }
+      const [open, archived] = await Promise.all([
+        pb.collection('patients').getFullList({ filter: `status = "offen" && organization_id = "${user.organization_id}"`, sort: '-created', requestKey: `unitas-pats-open-${Date.now()}` }),
+        pb.collection('patients').getFullList({ filter: `status = "archiviert" && organization_id = "${user.organization_id}"`, sort: '-created', requestKey: `unitas-pats-arch-${Date.now()}` }),
+      ])
+      setMyPatients((open as any[]).filter(isMine))
+      setMyArchivedPatients((archived as any[]).filter(isMine))
+    } catch { /* ignore */ }
+  }, [user])
+
   useEffect(() => {
     if (user) {
       loadData()
       setKontaktEmail((user as any).contact_email || '')
     }
   }, [user])
+
+  useEffect(() => {
+    if (user) loadPatients()
+  }, [location.pathname, user])
+
+  useEffect(() => {
+    if (!user?.organization_id) return
+    pb.collection('patients').subscribe('*', () => { loadPatients() }, { requestKey: null } as any)
+    return () => { pb.collection('patients').unsubscribe('*') }
+  }, [user, loadPatients])
 
   function showMsg(text: string, type: 'success' | 'error') {
     setMessage({ text, type })
@@ -265,17 +292,7 @@ export default function Unitas() {
       }
 
       // Meine Patientenprotokolle (wo ich in der Mannschaft bin)
-      try {
-        if (user?.organization_id) {
-          const isMine = (p: any) => ['tf','m1','m2','m3'].some(k => p.payload?.mannschaft?.[k]?.id === user!.id)
-          const [open, archived] = await Promise.all([
-            pb.collection('patients').getFullList({ filter: `status = "offen" && organization_id = "${user.organization_id}"`, sort: '-created', requestKey: `unitas-pats-open-${Date.now()}` }),
-            pb.collection('patients').getFullList({ filter: `status = "archiviert" && organization_id = "${user.organization_id}"`, sort: '-created', requestKey: `unitas-pats-arch-${Date.now()}` }),
-          ])
-          setMyPatients((open as any[]).filter(isMine))
-          setMyArchivedPatients((archived as any[]).filter(isMine))
-        }
-      } catch { /* ignore */ }
+      await loadPatients()
 
       // Produktausgaben des Benutzers (client-seitig gefiltert da JSON-Feld)
       try {
