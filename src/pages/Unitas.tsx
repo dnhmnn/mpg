@@ -477,23 +477,47 @@ export default function Unitas() {
             {myPatients.length > 0 && (
               <>
                 <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '.5px' }}>Offen</div>
-                {myPatients.map(p => {
+                {[...myPatients].sort((a, b) => {
+                  const aRQ = (a.payload?.rueckfragen || []).filter((r: any) => r.status === 'offen').length
+                  const bRQ = (b.payload?.rueckfragen || []).filter((r: any) => r.status === 'offen').length
+                  if (bRQ !== aRQ) return bRQ - aRQ
+                  return new Date(b.created).getTime() - new Date(a.created).getTime()
+                }).map(p => {
                   const m = p.payload?.mannschaft || {}
                   const crew = ['tf','m1','m2','m3'].map(k => m[k]?.name).filter(Boolean).join(', ')
                   const age = Date.now() - new Date(p.created).getTime()
                   const hoursLeft = Math.max(0, Math.ceil(24 - age / 3600000))
                   const isExpiringSoon = hoursLeft <= 4
                   const dMeds: any[] = Array.isArray(p.payload?.dauermedikation) ? p.payload.dauermedikation : []
-                  const openRQs: any[] = (Array.isArray(p.payload?.rueckfragen) ? p.payload.rueckfragen as any[] : []).filter((r: any) => r.status === 'offen')
+                  const allRQs: any[] = Array.isArray(p.payload?.rueckfragen) ? p.payload.rueckfragen : []
+                  const openRQs = allRQs.filter((r: any) => r.status === 'offen')
+                  const sns: any[] = Array.isArray(p.payload?.stellungnahmen) ? p.payload.stellungnahmen : []
+                  const answeredRQs = allRQs.filter((r: any) => r.status !== 'offen' || sns.some((s: any) => s.rueckfrage_id === r.id))
+                  const changedCount = (p.payload?._changed_fields || []).length
                   return (
                     <div key={p.id} style={{ background: 'var(--bg-card)', borderRadius: '14px', border: `1px solid ${openRQs.length > 0 ? '#f59e0b' : isExpiringSoon ? '#f97316' : 'var(--border)'}`, overflow: 'hidden' }}>
                       <div style={{ background: 'linear-gradient(135deg, var(--btn-dark) 0%, var(--btn-dark) 100%)', padding: '14px 18px', color: 'var(--btn-dark-text)' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: '4px' }}>
                           <span style={{ fontWeight: 700, fontSize: '16px' }}>{p.title}</span>
                           {openRQs.length > 0 && <span style={{ background: '#f59e0b', color: '#fff', borderRadius: 999, padding: '2px 8px', fontSize: 11, fontWeight: 700, flexShrink: 0 }}>{openRQs.length} Rückfrage{openRQs.length !== 1 ? 'n' : ''}</span>}
+                          {changedCount > 0 && <span style={{ background: '#d97706', color: '#fff', borderRadius: 999, padding: '2px 8px', fontSize: 11, fontWeight: 700, flexShrink: 0 }}>{changedCount} Änderung{changedCount !== 1 ? 'en' : ''}</span>}
                         </div>
                         {crew && <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.7)' }}>{crew}</div>}
                       </div>
+                      {answeredRQs.length > 0 && (
+                        <div style={{ background: '#f0fdf4', borderBottom: '1px solid #bbf7d0', padding: '10px 18px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                          {answeredRQs.map((rq: any) => {
+                            const sn = sns.find((s: any) => s.rueckfrage_id === rq.id)
+                            if (!sn) return null
+                            return (
+                              <div key={rq.id} style={{ fontSize: 13, color: '#166534', lineHeight: 1.4 }}>
+                                <span style={{ fontWeight: 700 }}>Stellungnahme: </span>
+                                <span style={{ color: '#374151' }}>{sn.text.length > 100 ? sn.text.slice(0, 100) + '…' : sn.text}</span>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      )}
                       {openRQs.length > 0 && (
                         <div style={{ background: '#fffbeb', borderBottom: '1px solid #fcd34d', padding: '10px 18px', display: 'flex', flexDirection: 'column', gap: 8 }}>
                           {openRQs.map((rq: any) => (
@@ -539,21 +563,45 @@ export default function Unitas() {
             {myArchivedPatients.length > 0 && (
               <>
                 <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '.5px', marginTop: '8px' }}>Abgeschlossen</div>
-                {myArchivedPatients.map(p => {
+                {[...myArchivedPatients].sort((a, b) => {
+                  const aRQ = (a.payload?.rueckfragen || []).filter((r: any) => r.status === 'offen').length
+                  const bRQ = (b.payload?.rueckfragen || []).filter((r: any) => r.status === 'offen').length
+                  if (bRQ !== aRQ) return bRQ - aRQ
+                  return new Date(b.created).getTime() - new Date(a.created).getTime()
+                }).map(p => {
                   const m = p.payload?.mannschaft || {}
                   const crew = ['tf','m1','m2','m3'].map(k => m[k]?.name).filter(Boolean).join(', ')
                   const patName = [p.payload?.vorname, p.payload?.name].filter(Boolean).join(' ')
                   const dMedsA: any[] = Array.isArray(p.payload?.dauermedikation) ? p.payload.dauermedikation : []
-                  const openRQsA: any[] = (Array.isArray(p.payload?.rueckfragen) ? p.payload.rueckfragen as any[] : []).filter((r: any) => r.status === 'offen')
+                  const allRQsA: any[] = Array.isArray(p.payload?.rueckfragen) ? p.payload.rueckfragen : []
+                  const openRQsA = allRQsA.filter((r: any) => r.status === 'offen')
+                  const snsA: any[] = Array.isArray(p.payload?.stellungnahmen) ? p.payload.stellungnahmen : []
+                  const answeredRQsA = allRQsA.filter((r: any) => snsA.some((s: any) => s.rueckfrage_id === r.id))
+                  const changedCountA = (p.payload?._changed_fields || []).length
                   return (
-                    <div key={p.id} style={{ background: 'var(--bg-card)', borderRadius: '14px', border: `1px solid ${openRQsA.length > 0 ? '#f59e0b' : 'var(--border)'}`, overflow: 'hidden', opacity: openRQsA.length > 0 ? 1 : 0.85 }}>
+                    <div key={p.id} style={{ background: 'var(--bg-card)', borderRadius: '14px', border: `1px solid ${openRQsA.length > 0 ? '#f59e0b' : 'var(--border)'}`, overflow: 'hidden', opacity: openRQsA.length > 0 || changedCountA > 0 ? 1 : 0.85 }}>
                       <div style={{ background: 'linear-gradient(135deg, #4b5563, #374151)', padding: '14px 18px', color: '#fff' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: '4px' }}>
                           <span style={{ fontWeight: 700, fontSize: '16px' }}>{patName || p.title}</span>
                           {openRQsA.length > 0 && <span style={{ background: '#f59e0b', color: '#fff', borderRadius: 999, padding: '2px 8px', fontSize: 11, fontWeight: 700, flexShrink: 0 }}>{openRQsA.length} Rückfrage{openRQsA.length !== 1 ? 'n' : ''}</span>}
+                          {changedCountA > 0 && <span style={{ background: '#d97706', color: '#fff', borderRadius: 999, padding: '2px 8px', fontSize: 11, fontWeight: 700, flexShrink: 0 }}>{changedCountA} Änderung{changedCountA !== 1 ? 'en' : ''}</span>}
                         </div>
                         {crew && <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.7)' }}>{crew}</div>}
                       </div>
+                      {answeredRQsA.length > 0 && (
+                        <div style={{ background: '#f0fdf4', borderBottom: '1px solid #bbf7d0', padding: '10px 18px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                          {answeredRQsA.map((rq: any) => {
+                            const sn = snsA.find((s: any) => s.rueckfrage_id === rq.id)
+                            if (!sn) return null
+                            return (
+                              <div key={rq.id} style={{ fontSize: 13, color: '#166534', lineHeight: 1.4 }}>
+                                <span style={{ fontWeight: 700 }}>Stellungnahme: </span>
+                                <span style={{ color: '#374151' }}>{sn.text.length > 100 ? sn.text.slice(0, 100) + '…' : sn.text}</span>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      )}
                       {openRQsA.length > 0 && (
                         <div style={{ background: '#fffbeb', borderBottom: '1px solid #fcd34d', padding: '10px 18px', display: 'flex', flexDirection: 'column', gap: 8 }}>
                           {openRQsA.map((rq: any) => (
