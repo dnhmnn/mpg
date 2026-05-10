@@ -108,6 +108,7 @@ export default function ProtokollBearbeiten() {
         setLocked(true); setLockedReason('Dieses Protokoll wurde nach 24 Stunden automatisch gesperrt.')
         pb.collection('patients').update(patientId!, { status: 'abgeschlossen' }).catch(() => {})
       }
+      const chf = new Set<string>(Array.isArray(p._changed_fields) ? p._changed_fields : [])
       setTimeout(() => {
         const form = formRef.current; if (!form) return
         const skip = new Set(['notfallgeschehen', 'verlaufsbeschreibung', 'zeit_einsatz', 'einsatz_adresse'])
@@ -117,7 +118,19 @@ export default function ProtokollBearbeiten() {
           if ((el as HTMLInputElement).type === 'checkbox') (el as HTMLInputElement).checked = !!v
           else if ((el as HTMLInputElement).type === 'radio') (el as HTMLInputElement).checked = el.value === String(v)
           else el.value = String(v)
+          if (chf.has(el.name)) {
+            el.style.background = '#fef3c7'
+            el.style.borderColor = '#d97706'
+            el.style.borderWidth = '2px'
+          }
         })
+        if (chf.has('notfallgeschehen') || chf.has('verlaufsbeschreibung')) {
+          ['notfallgeschehen', 'verlaufsbeschreibung'].forEach(n => {
+            if (!chf.has(n)) return
+            const el = form.querySelector<HTMLTextAreaElement>(`[name="${n}"]`)
+            if (el) { el.style.background = '#fef3c7'; el.style.borderColor = '#d97706'; el.style.borderWidth = '2px' }
+          })
+        }
       }, 50)
     } catch { alert('Protokoll nicht gefunden.'); navigate('/unitas') }
     finally { setLoading(false) }
