@@ -89,7 +89,7 @@ export default function DetailsModal({ doc, type, onClose, onEdit }: Props) {
 
       const html = `<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"><title>MIND Notfalleinsatzprotokoll</title>
       <style>
-        *{box-sizing:border-box;margin:0;padding:0}
+        *{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
         body{font-family:Arial,Helvetica,sans-serif;font-size:6pt;color:#000;background:#fff}
         .pg{padding:3.5mm 5mm;max-width:210mm;margin:0 auto}
         .pb{page-break-before:always}
