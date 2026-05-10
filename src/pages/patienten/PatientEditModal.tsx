@@ -63,16 +63,17 @@ export default function PatientEditModal({ patient, payload: initialPayload, ori
     }
   }, [lp.access_code])
 
-  const hl  = (k: keyof PatientPayload): React.CSSProperties =>
-    JSON.stringify((original as any)[k]) !== JSON.stringify((lp as any)[k]) ? CH : {}
+  const persistentChanged = new Set<string>((initialPayload as any)._changed_fields || [])
+  const sessionChanged = (k: keyof PatientPayload) =>
+    JSON.stringify((original as any)[k]) !== JSON.stringify((lp as any)[k])
+  const isChanged = (k: keyof PatientPayload) =>
+    persistentChanged.has(k as string) || sessionChanged(k)
+  const hl  = (k: keyof PatientPayload): React.CSSProperties => isChanged(k) ? CH : {}
   const H   = (k: keyof PatientPayload) => ({ ...inp, ...hl(k) })
   const HS  = (k: keyof PatientPayload) => ({ ...sel, ...hl(k) })
   const HT  = (k: keyof PatientPayload) => ({ ...ta,  ...hl(k) })
   const hlCb = (k: keyof PatientPayload): React.CSSProperties =>
-    (original as any)[k] !== (lp as any)[k]
-      ? { accentColor: '#f59e0b', outline: '2px solid #fcd34d', borderRadius: 3 } : {}
-  const isChanged = (k: keyof PatientPayload) =>
-    JSON.stringify((original as any)[k]) !== JSON.stringify((lp as any)[k])
+    isChanged(k) ? { accentColor: '#f59e0b', outline: '2px solid #fcd34d', borderRadius: 3 } : {}
 
   const rueckfragen: RQ[] = Array.isArray(lp.rueckfragen) ? (lp.rueckfragen as RQ[]) : []
   const stellungnahmen: SN[] = Array.isArray(lp.stellungnahmen) ? (lp.stellungnahmen as SN[]) : []
@@ -846,14 +847,16 @@ export default function PatientEditModal({ patient, payload: initialPayload, ori
             Abbrechen
           </button>
           <button onClick={() => {
-            const changedKeys = (Object.keys(lp) as (keyof typeof lp)[]).filter(k => k !== '_changed_fields' && isChanged(k))
-            onSave({ ...lp, _changed_fields: changedKeys })
+            const newlyChanged = (Object.keys(lp) as string[]).filter(k => k !== '_changed_fields' && sessionChanged(k as keyof PatientPayload))
+            const allChanged = [...new Set([...persistentChanged, ...newlyChanged])]
+            onSave({ ...lp, _changed_fields: allChanged })
           }} style={{ flex: 2, padding: 12, background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', fontSize: 14 }}>
             Speichern
           </button>
           <button onClick={() => {
-            const changedKeys = (Object.keys(lp) as (keyof typeof lp)[]).filter(k => k !== '_changed_fields' && isChanged(k))
-            onSaveAndSign({ ...lp, _changed_fields: changedKeys })
+            const newlyChanged = (Object.keys(lp) as string[]).filter(k => k !== '_changed_fields' && sessionChanged(k as keyof PatientPayload))
+            const allChanged = [...new Set([...persistentChanged, ...newlyChanged])]
+            onSaveAndSign({ ...lp, _changed_fields: allChanged })
           }} style={{ flex: 2, padding: 12, background: '#c0392b', color: '#fff', border: 'none', borderRadius: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', fontSize: 14 }}>
             Gegenzeichnen
           </button>
