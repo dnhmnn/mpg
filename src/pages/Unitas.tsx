@@ -1095,7 +1095,7 @@ export default function Unitas() {
                         {output.status === 'erledigt' ? (
                           <>
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                            <span style={{ fontSize: 13, color: '#166534', fontWeight: 600 }}>Aus dem Lager ausgebucht</span>
+                            <span style={{ fontSize: 13, color: '#166634', fontWeight: 600 }}>Aus dem Lager ausgebucht</span>
                           </>
                         ) : output.status === 'offen' ? (
                           <>
