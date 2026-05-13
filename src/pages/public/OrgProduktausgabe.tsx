@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { pb } from '../../lib/pocketbase'
 import { useOrg } from './OrgPublicLayout'
@@ -29,8 +30,8 @@ const IconUser = () => (
   </svg>
 )
 
-// Dropdown anchored via position:fixed to escape overflow:hidden parents
-function FixedDropdown({ anchorRef, open, children }: {
+// Portal-based dropdown — escapes overflow:hidden AND backdrop-filter containing blocks
+function PortalDropdown({ anchorRef, open, children }: {
   anchorRef: React.RefObject<HTMLElement>
   open: boolean
   children: React.ReactNode
@@ -38,14 +39,22 @@ function FixedDropdown({ anchorRef, open, children }: {
   const [rect, setRect] = useState<DOMRect | null>(null)
 
   useEffect(() => {
-    if (open && anchorRef.current) {
-      setRect(anchorRef.current.getBoundingClientRect())
+    if (!open) { setRect(null); return }
+    const update = () => {
+      if (anchorRef.current) setRect(anchorRef.current.getBoundingClientRect())
+    }
+    update()
+    window.addEventListener('scroll', update, true)
+    window.addEventListener('resize', update)
+    return () => {
+      window.removeEventListener('scroll', update, true)
+      window.removeEventListener('resize', update)
     }
   }, [open, anchorRef])
 
   if (!open || !rect) return null
 
-  return (
+  return createPortal(
     <div style={{
       position: 'fixed',
       top: rect.bottom + 2,
@@ -61,7 +70,8 @@ function FixedDropdown({ anchorRef, open, children }: {
       overflowY: 'auto',
     }}>
       {children}
-    </div>
+    </div>,
+    document.body
   )
 }
 
@@ -72,6 +82,7 @@ function UserSearch({ orgId, value, onChange }: {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<UserHit[]>([])
   const [open, setOpen] = useState(false)
+  const [searched, setSearched] = useState(false)
   const timer = useRef<ReturnType<typeof setTimeout>>()
   const wrapRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -86,6 +97,7 @@ function UserSearch({ orgId, value, onChange }: {
 
   function onInput(q: string) {
     setQuery(q)
+    setSearched(false)
     clearTimeout(timer.current)
     if (!q.trim()) { setResults([]); setOpen(false); return }
     timer.current = setTimeout(async () => {
@@ -96,13 +108,14 @@ function UserSearch({ orgId, value, onChange }: {
         })
         const hits = res.items.map(u => ({ id: u.id, name: u.name, email: u.email }))
         setResults(hits)
-        setOpen(hits.length > 0)
       } catch { setResults([]) }
+      setSearched(true)
+      setOpen(true)
     }, 300)
   }
 
   function select(u: UserHit) {
-    onChange(u); setQuery(''); setResults([]); setOpen(false)
+    onChange(u); setQuery(''); setResults([]); setOpen(false); setSearched(false)
   }
 
   if (value) return (
@@ -130,9 +143,9 @@ function UserSearch({ orgId, value, onChange }: {
         value={query}
         onChange={e => onInput(e.target.value)}
         placeholder="Name eingeben und suchen…"
-        onFocus={() => results.length > 0 && setOpen(true)}
+        onFocus={() => (results.length > 0 || searched) && setOpen(true)}
       />
-      <FixedDropdown anchorRef={inputRef as React.RefObject<HTMLElement>} open={open}>
+      <PortalDropdown anchorRef={inputRef as React.RefObject<HTMLElement>} open={open && (results.length > 0 || (searched && !!query.trim()))}>
         {results.map((u, idx) => (
           <button key={u.id} type="button" onMouseDown={() => select(u)}
             style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', background: 'none', border: 'none', padding: '11px 14px', cursor: 'pointer', borderBottom: idx < results.length - 1 ? '0.5px solid var(--border)' : 'none', fontFamily: 'inherit' }}
@@ -147,12 +160,10 @@ function UserSearch({ orgId, value, onChange }: {
             </div>
           </button>
         ))}
-      </FixedDropdown>
-      {open && results.length === 0 && query.trim() && (
-        <FixedDropdown anchorRef={inputRef as React.RefObject<HTMLElement>} open={open}>
+        {searched && results.length === 0 && query.trim() && (
           <div style={{ padding: '12px 14px', fontSize: 14, color: 'var(--text-secondary)' }}>Kein Benutzer gefunden</div>
-        </FixedDropdown>
-      )}
+        )}
+      </PortalDropdown>
     </div>
   )
 }
@@ -194,7 +205,7 @@ function ArticleSearch({ inventoryItems, onSelect }: {
         onChange={e => { setQuery(e.target.value); setOpen(true) }}
         onFocus={() => setOpen(true)}
       />
-      <FixedDropdown anchorRef={inputRef as React.RefObject<HTMLElement>} open={open && suggestions.length > 0}>
+      <PortalDropdown anchorRef={inputRef as React.RefObject<HTMLElement>} open={open}>
         {suggestions.map((item, idx) => (
           <button key={item.id} type="button" onMouseDown={() => select(item)}
             style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', padding: '11px 14px', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', borderBottom: idx < suggestions.length - 1 ? '0.5px solid var(--border)' : 'none', color: 'var(--text)' }}
@@ -204,10 +215,13 @@ function ArticleSearch({ inventoryItems, onSelect }: {
             <span style={{ fontSize: 12, color: 'var(--text-secondary)', flexShrink: 0, marginLeft: 8 }}>{item.unit}</span>
           </button>
         ))}
-        {inventoryItems.length === 0 && (
+        {suggestions.length === 0 && inventoryItems.length === 0 && (
           <div style={{ padding: '12px 14px', fontSize: 13, color: 'var(--text-secondary)' }}>Keine Artikel in der Lager-Datenbank</div>
         )}
-      </FixedDropdown>
+        {suggestions.length === 0 && inventoryItems.length > 0 && query.trim() && (
+          <div style={{ padding: '12px 14px', fontSize: 13, color: 'var(--text-secondary)' }}>Kein Artikel gefunden</div>
+        )}
+      </PortalDropdown>
     </div>
   )
 }
