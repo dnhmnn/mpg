@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { pb } from '../../lib/pocketbase'
 import { useOrg } from './OrgPublicLayout'
@@ -30,48 +29,15 @@ const IconUser = () => (
   </svg>
 )
 
-// Portal-based dropdown — escapes overflow:hidden AND backdrop-filter containing blocks
-function PortalDropdown({ anchorRef, open, children }: {
-  anchorRef: React.RefObject<HTMLElement>
-  open: boolean
-  children: React.ReactNode
-}) {
-  const [rect, setRect] = useState<DOMRect | null>(null)
-
-  useEffect(() => {
-    if (!open) { setRect(null); return }
-    const update = () => {
-      if (anchorRef.current) setRect(anchorRef.current.getBoundingClientRect())
-    }
-    update()
-    window.addEventListener('scroll', update, true)
-    window.addEventListener('resize', update)
-    return () => {
-      window.removeEventListener('scroll', update, true)
-      window.removeEventListener('resize', update)
-    }
-  }, [open, anchorRef])
-
-  if (!open || !rect) return null
-
-  return createPortal(
-    <div style={{
-      position: 'fixed',
-      top: rect.bottom + 2,
-      left: rect.left,
-      width: rect.width,
-      zIndex: 9999,
-      background: 'var(--bg-elevated)',
-      border: '0.5px solid var(--border-medium)',
-      borderRadius: 12,
-      boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
-      overflow: 'hidden',
-      maxHeight: 280,
-      overflowY: 'auto',
-    }}>
-      {children}
-    </div>,
-    document.body
+// Card layout (no overflow:hidden — allows dropdowns to escape)
+function Card({ title, icon, children }: { title: string; icon: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <div style={{ background: 'var(--bg-card)', border: '0.5px solid var(--border)', borderRadius: 16, marginBottom: '.75rem', boxShadow: 'var(--shadow-sm)', overflow: 'visible' }}>
+      <div style={{ padding: '.9rem 1rem', fontWeight: 700, fontSize: '1rem', color: 'var(--text)', borderBottom: '0.5px solid var(--border)', display: 'flex', alignItems: 'center', gap: '.6rem' }}>
+        {icon}{title}
+      </div>
+      <div style={{ padding: '1rem', overflow: 'visible' }}>{children}</div>
+    </div>
   )
 }
 
@@ -84,12 +50,11 @@ function UserSearch({ orgId, value, onChange }: {
   const [open, setOpen] = useState(false)
   const [searched, setSearched] = useState(false)
   const timer = useRef<ReturnType<typeof setTimeout>>()
-  const wrapRef = useRef<HTMLDivElement>(null)
-  const inputRef = useRef<HTMLInputElement>(null)
+  const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false)
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
     }
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
@@ -106,8 +71,7 @@ function UserSearch({ orgId, value, onChange }: {
           filter: `organization_id = "${orgId}" && name ~ "${q.trim()}"`,
           sort: 'name',
         })
-        const hits = res.items.map(u => ({ id: u.id, name: u.name, email: u.email }))
-        setResults(hits)
+        setResults(res.items.map(u => ({ id: u.id, name: u.name, email: u.email })))
       } catch { setResults([]) }
       setSearched(true)
       setOpen(true)
@@ -135,9 +99,8 @@ function UserSearch({ orgId, value, onChange }: {
   )
 
   return (
-    <div ref={wrapRef} style={{ position: 'relative', marginTop: 8 }}>
+    <div ref={ref} style={{ position: 'relative', marginTop: 8 }}>
       <input
-        ref={inputRef}
         style={{ ...inp, marginTop: 0 }}
         type="text"
         value={query}
@@ -145,25 +108,29 @@ function UserSearch({ orgId, value, onChange }: {
         placeholder="Name eingeben und suchen…"
         onFocus={() => (results.length > 0 || searched) && setOpen(true)}
       />
-      <PortalDropdown anchorRef={inputRef as React.RefObject<HTMLElement>} open={open && (results.length > 0 || (searched && !!query.trim()))}>
-        {results.map((u, idx) => (
-          <button key={u.id} type="button" onMouseDown={() => select(u)}
-            style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', background: 'none', border: 'none', padding: '11px 14px', cursor: 'pointer', borderBottom: idx < results.length - 1 ? '0.5px solid var(--border)' : 'none', fontFamily: 'inherit' }}
-            onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
-            onMouseLeave={e => (e.currentTarget.style.background = 'none')}>
-            <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--accent)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 13, flexShrink: 0 }}>
-              {u.name.charAt(0).toUpperCase()}
-            </div>
-            <div style={{ textAlign: 'left', minWidth: 0 }}>
-              <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--text)' }}>{u.name}</div>
-              <div style={{ fontSize: 12, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.email}</div>
-            </div>
-          </button>
-        ))}
-        {searched && results.length === 0 && query.trim() && (
-          <div style={{ padding: '12px 14px', fontSize: 14, color: 'var(--text-secondary)' }}>Kein Benutzer gefunden</div>
-        )}
-      </PortalDropdown>
+      {open && results.length > 0 && (
+        <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--bg-elevated)', border: '0.5px solid var(--border-medium)', borderRadius: 12, boxShadow: '0 8px 24px rgba(0,0,0,0.15)', zIndex: 100, marginTop: 4, overflow: 'hidden', maxHeight: 280, overflowY: 'auto' }}>
+          {results.map((u, idx) => (
+            <button key={u.id} type="button" onMouseDown={() => select(u)}
+              style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', background: 'none', border: 'none', padding: '11px 14px', cursor: 'pointer', borderBottom: idx < results.length - 1 ? '0.5px solid var(--border)' : 'none', fontFamily: 'inherit' }}
+              onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'none')}>
+              <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--accent)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 13, flexShrink: 0 }}>
+                {u.name.charAt(0).toUpperCase()}
+              </div>
+              <div style={{ textAlign: 'left', minWidth: 0 }}>
+                <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--text)' }}>{u.name}</div>
+                <div style={{ fontSize: 12, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.email}</div>
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
+      {open && searched && results.length === 0 && query.trim() && (
+        <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--bg-elevated)', border: '0.5px solid var(--border-medium)', borderRadius: 12, boxShadow: '0 8px 24px rgba(0,0,0,0.15)', zIndex: 100, marginTop: 4, padding: '12px 14px', fontSize: 14, color: 'var(--text-secondary)' }}>
+          Kein Benutzer gefunden
+        </div>
+      )}
     </div>
   )
 }
@@ -175,7 +142,6 @@ function ArticleSearch({ inventoryItems, onSelect }: {
 }) {
   const [query, setQuery] = useState('')
   const [open, setOpen] = useState(false)
-  const inputRef = useRef<HTMLInputElement>(null)
   const wrapRef = useRef<HTMLDivElement>(null)
 
   const suggestions = query.trim()
@@ -197,7 +163,6 @@ function ArticleSearch({ inventoryItems, onSelect }: {
   return (
     <div ref={wrapRef} style={{ flex: 1, position: 'relative' }}>
       <input
-        ref={inputRef}
         style={{ ...inp, marginTop: 0 }}
         type="text"
         placeholder="Artikel suchen…"
@@ -205,23 +170,29 @@ function ArticleSearch({ inventoryItems, onSelect }: {
         onChange={e => { setQuery(e.target.value); setOpen(true) }}
         onFocus={() => setOpen(true)}
       />
-      <PortalDropdown anchorRef={inputRef as React.RefObject<HTMLElement>} open={open}>
-        {suggestions.map((item, idx) => (
-          <button key={item.id} type="button" onMouseDown={() => select(item)}
-            style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', padding: '11px 14px', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', borderBottom: idx < suggestions.length - 1 ? '0.5px solid var(--border)' : 'none', color: 'var(--text)' }}
-            onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
-            onMouseLeave={e => (e.currentTarget.style.background = 'none')}>
-            <span style={{ fontWeight: 600, fontSize: 14 }}>{item.name}</span>
-            <span style={{ fontSize: 12, color: 'var(--text-secondary)', flexShrink: 0, marginLeft: 8 }}>{item.unit}</span>
-          </button>
-        ))}
-        {suggestions.length === 0 && inventoryItems.length === 0 && (
-          <div style={{ padding: '12px 14px', fontSize: 13, color: 'var(--text-secondary)' }}>Keine Artikel in der Lager-Datenbank</div>
-        )}
-        {suggestions.length === 0 && inventoryItems.length > 0 && query.trim() && (
-          <div style={{ padding: '12px 14px', fontSize: 13, color: 'var(--text-secondary)' }}>Kein Artikel gefunden</div>
-        )}
-      </PortalDropdown>
+      {open && suggestions.length > 0 && (
+        <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--bg-elevated)', border: '0.5px solid var(--border-medium)', borderRadius: 12, boxShadow: '0 8px 24px rgba(0,0,0,0.15)', zIndex: 100, marginTop: 4, overflow: 'hidden', maxHeight: 280, overflowY: 'auto' }}>
+          {suggestions.map((item, idx) => (
+            <button key={item.id} type="button" onMouseDown={() => select(item)}
+              style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', padding: '11px 14px', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', borderBottom: idx < suggestions.length - 1 ? '0.5px solid var(--border)' : 'none', color: 'var(--text)' }}
+              onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'none')}>
+              <span style={{ fontWeight: 600, fontSize: 14 }}>{item.name}</span>
+              <span style={{ fontSize: 12, color: 'var(--text-secondary)', flexShrink: 0, marginLeft: 8 }}>{item.unit}</span>
+            </button>
+          ))}
+        </div>
+      )}
+      {open && suggestions.length === 0 && inventoryItems.length === 0 && (
+        <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--bg-elevated)', border: '0.5px solid var(--border-medium)', borderRadius: 12, boxShadow: '0 8px 24px rgba(0,0,0,0.15)', zIndex: 100, marginTop: 4, padding: '12px 14px', fontSize: 13, color: 'var(--text-secondary)' }}>
+          Keine Artikel in der Lager-Datenbank
+        </div>
+      )}
+      {open && suggestions.length === 0 && inventoryItems.length > 0 && query.trim() && (
+        <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--bg-elevated)', border: '0.5px solid var(--border-medium)', borderRadius: 12, boxShadow: '0 8px 24px rgba(0,0,0,0.15)', zIndex: 100, marginTop: 4, padding: '12px 14px', fontSize: 13, color: 'var(--text-secondary)' }}>
+          Kein Artikel gefunden
+        </div>
+      )}
     </div>
   )
 }
@@ -322,9 +293,9 @@ export default function OrgProduktausgabe() {
         </div>
       </PubSection>
 
-      <PubSection title="Positionen" open icon={<IconBox />}>
+      <Card title="Positionen" icon={<IconBox />}>
         {positions.map((pos, i) => (
-          <div key={i} style={{ display: 'flex', gap: '.5rem', alignItems: 'flex-start', padding: '.75rem', background: 'var(--bg-subtle)', border: `0.5px solid ${pos.item_id ? 'var(--accent)' : 'var(--border)'}`, borderRadius: 12, marginBottom: '.6rem' }}>
+          <div key={i} style={{ display: 'flex', gap: '.5rem', alignItems: 'flex-start', padding: '.75rem', background: 'var(--bg-subtle)', border: `0.5px solid ${pos.item_id ? 'var(--accent)' : 'var(--border)'}`, borderRadius: 12, marginBottom: '.6rem', overflow: 'visible' }}>
             {/* Qty */}
             <div style={{ flexShrink: 0, width: 72 }}>
               <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4 }}>Anz.</div>
@@ -361,12 +332,12 @@ export default function OrgProduktausgabe() {
           style={{ border: '0.5px solid var(--border-medium)', background: 'var(--bg-subtle)', padding: '.6rem .9rem', borderRadius: 10, cursor: 'pointer', fontWeight: 600, color: 'var(--accent)', fontSize: '.9rem', fontFamily: 'inherit' }}>
           + Position hinzufügen
         </button>
-      </PubSection>
+      </Card>
 
-      <PubSection title="Ausgetragen von" open icon={<IconUser />}>
+      <Card title="Ausgetragen von" icon={<IconUser />}>
         <label style={lbl}>Benutzer *</label>
         <UserSearch orgId={org.id} value={selectedUser} onChange={setSelectedUser} />
-      </PubSection>
+      </Card>
 
     </PubWrap>
     <PubSendBar onSubmit={submit} sending={sending} label="An Lager senden" />
