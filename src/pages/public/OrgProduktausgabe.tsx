@@ -37,6 +37,7 @@ function UserSearch({ orgId, value, onChange }: {
   const [open, setOpen] = useState(false)
   const [searched, setSearched] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [searchError, setSearchError] = useState('')
   const timer = useRef<ReturnType<typeof setTimeout>>()
   const ref = useRef<HTMLDivElement>(null)
 
@@ -54,6 +55,7 @@ function UserSearch({ orgId, value, onChange }: {
     clearTimeout(timer.current)
     if (!q.trim()) { setResults([]); setOpen(false); return }
     setLoading(true)
+    setSearchError('')
     timer.current = setTimeout(async () => {
       try {
         const res = await pb.collection('users').getList(1, 10, {
@@ -61,8 +63,9 @@ function UserSearch({ orgId, value, onChange }: {
           sort: 'name',
         })
         setResults(res.items.map(u => ({ id: u.id, name: u.name, email: u.email })))
-      } catch {
+      } catch (e: any) {
         setResults([])
+        setSearchError(`FEHLER: ${e?.status ?? ''} ${e?.message ?? e}`)
       }
       setSearched(true)
       setLoading(false)
@@ -122,7 +125,12 @@ function UserSearch({ orgId, value, onChange }: {
           ))}
         </div>
       )}
-      {open && !loading && searched && results.length === 0 && query.trim() && (
+      {searchError && (
+        <div style={{ background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: 12, marginTop: 4, padding: '12px 14px', fontSize: 13, color: '#991b1b', fontFamily: 'monospace', wordBreak: 'break-all' }}>
+          {searchError}
+        </div>
+      )}
+      {open && !loading && !searchError && searched && results.length === 0 && query.trim() && (
         <div style={{ background: 'var(--bg-elevated)', border: '0.5px solid var(--border-medium)', borderRadius: 12, marginTop: 4, padding: '12px 14px', fontSize: 14, color: 'var(--text-secondary)' }}>
           Kein Benutzer gefunden
         </div>
@@ -204,12 +212,18 @@ export default function OrgProduktausgabe() {
   const [sending, setSending] = useState(false)
   const [success, setSuccess] = useState(false)
   const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([])
+  const [itemsError, setItemsError] = useState<string>('')
 
   useEffect(() => {
     pb.collection('inventory_items').getFullList<InventoryItem>({
       filter: `organization_id = "${org.id}"`,
       sort: 'name',
-    }).then(setInventoryItems).catch(() => {})
+    }).then(items => {
+      setInventoryItems(items)
+      setItemsError('')
+    }).catch((e: any) => {
+      setItemsError(`Artikel-Fehler: ${e?.status ?? ''} ${e?.message ?? e}`)
+    })
   }, [org.id])
 
   const addPos = () => setPositions(p => [...p, { qty: 1 }])
@@ -288,6 +302,12 @@ export default function OrgProduktausgabe() {
           </div>
         </div>
       </PubSection>
+
+      {itemsError && (
+        <div style={{ background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: 10, padding: '10px 14px', marginBottom: '.75rem', fontSize: 13, color: '#991b1b', fontFamily: 'monospace', wordBreak: 'break-all' }}>
+          {itemsError}
+        </div>
+      )}
 
       <PubSection title="Positionen" open icon={<IconBox />}>
         {positions.map((pos, i) => (
