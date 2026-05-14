@@ -10,7 +10,6 @@ interface InventoryItem { id: string; name: string; unit: string }
 interface UserHit { id: string; name: string; email: string }
 type Pos = { qty: number; name: string; item_id: string; unit: string }
 
-// ── Icons ──────────────────────────────────────────────────────────────────
 const IconClipboard = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
@@ -29,26 +28,15 @@ const IconUser = () => (
   </svg>
 )
 
-// Card layout (no overflow:hidden — allows dropdowns to escape)
-function Card({ title, icon, children }: { title: string; icon: React.ReactNode; children: React.ReactNode }) {
-  return (
-    <div style={{ background: 'var(--bg-card)', border: '0.5px solid var(--border)', borderRadius: 16, marginBottom: '.75rem', boxShadow: 'var(--shadow-sm)', overflow: 'visible' }}>
-      <div style={{ padding: '.9rem 1rem', fontWeight: 700, fontSize: '1rem', color: 'var(--text)', borderBottom: '0.5px solid var(--border)', display: 'flex', alignItems: 'center', gap: '.6rem' }}>
-        {icon}{title}
-      </div>
-      <div style={{ padding: '1rem', overflow: 'visible' }}>{children}</div>
-    </div>
-  )
-}
-
-// ── User search ─────────────────────────────────────────────────────────────
-function UserSearch({ orgId, value, onChange, onDebug }: {
-  orgId: string; value: UserHit | null; onChange: (u: UserHit | null) => void; onDebug: (s: string) => void
+// ── User search ──────────────────────────────────────────────────────────────
+function UserSearch({ orgId, value, onChange }: {
+  orgId: string; value: UserHit | null; onChange: (u: UserHit | null) => void
 }) {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<UserHit[]>([])
   const [open, setOpen] = useState(false)
   const [searched, setSearched] = useState(false)
+  const [loading, setLoading] = useState(false)
   const timer = useRef<ReturnType<typeof setTimeout>>()
   const ref = useRef<HTMLDivElement>(null)
 
@@ -65,20 +53,19 @@ function UserSearch({ orgId, value, onChange, onDebug }: {
     setSearched(false)
     clearTimeout(timer.current)
     if (!q.trim()) { setResults([]); setOpen(false); return }
+    setLoading(true)
     timer.current = setTimeout(async () => {
-      onDebug(`Suche users mit name ~ "${q.trim()}" für org "${orgId}"…`)
       try {
         const res = await pb.collection('users').getList(1, 10, {
           filter: `organization_id = "${orgId}" && name ~ "${q.trim()}"`,
           sort: 'name',
         })
         setResults(res.items.map(u => ({ id: u.id, name: u.name, email: u.email })))
-        onDebug(`users geladen: ${res.items.length} Treffer (total ${res.totalItems})`)
-      } catch (e: any) {
+      } catch {
         setResults([])
-        onDebug(`users FEHLER: ${e?.status || ''} ${e?.message || e}`)
       }
       setSearched(true)
+      setLoading(false)
       setOpen(true)
     }, 300)
   }
@@ -104,17 +91,21 @@ function UserSearch({ orgId, value, onChange, onDebug }: {
   )
 
   return (
-    <div ref={ref} style={{ position: 'relative', marginTop: 8 }}>
+    <div ref={ref} style={{ marginTop: 8 }}>
       <input
         style={{ ...inp, marginTop: 0 }}
         type="text"
         value={query}
         onChange={e => onInput(e.target.value)}
         placeholder="Name eingeben und suchen…"
-        onFocus={() => (results.length > 0 || searched) && setOpen(true)}
       />
-      {open && results.length > 0 && (
-        <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--bg-elevated)', border: '0.5px solid var(--border-medium)', borderRadius: 12, boxShadow: '0 8px 24px rgba(0,0,0,0.15)', zIndex: 100, marginTop: 4, overflow: 'hidden', maxHeight: 280, overflowY: 'auto' }}>
+      {loading && (
+        <div style={{ background: 'var(--bg-elevated)', border: '0.5px solid var(--border-medium)', borderRadius: 12, marginTop: 4, padding: '12px 14px', fontSize: 14, color: 'var(--text-secondary)' }}>
+          Suche…
+        </div>
+      )}
+      {open && !loading && results.length > 0 && (
+        <div style={{ background: 'var(--bg-elevated)', border: '0.5px solid var(--border-medium)', borderRadius: 12, marginTop: 4, overflow: 'hidden', maxHeight: 280, overflowY: 'auto' }}>
           {results.map((u, idx) => (
             <button key={u.id} type="button" onMouseDown={() => select(u)}
               style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', background: 'none', border: 'none', padding: '11px 14px', cursor: 'pointer', borderBottom: idx < results.length - 1 ? '0.5px solid var(--border)' : 'none', fontFamily: 'inherit' }}
@@ -131,8 +122,8 @@ function UserSearch({ orgId, value, onChange, onDebug }: {
           ))}
         </div>
       )}
-      {open && searched && results.length === 0 && query.trim() && (
-        <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--bg-elevated)', border: '0.5px solid var(--border-medium)', borderRadius: 12, boxShadow: '0 8px 24px rgba(0,0,0,0.15)', zIndex: 100, marginTop: 4, padding: '12px 14px', fontSize: 14, color: 'var(--text-secondary)' }}>
+      {open && !loading && searched && results.length === 0 && query.trim() && (
+        <div style={{ background: 'var(--bg-elevated)', border: '0.5px solid var(--border-medium)', borderRadius: 12, marginTop: 4, padding: '12px 14px', fontSize: 14, color: 'var(--text-secondary)' }}>
           Kein Benutzer gefunden
         </div>
       )}
@@ -140,7 +131,7 @@ function UserSearch({ orgId, value, onChange, onDebug }: {
   )
 }
 
-// ── Artikel-Suchfeld ────────────────────────────────────────────────────────
+// ── Artikel-Suchfeld ────────────────────────────────────────────────────────────
 function ArticleSearch({ inventoryItems, onSelect }: {
   inventoryItems: InventoryItem[]
   onSelect: (item: InventoryItem) => void
@@ -166,7 +157,7 @@ function ArticleSearch({ inventoryItems, onSelect }: {
   }
 
   return (
-    <div ref={wrapRef} style={{ flex: 1, position: 'relative' }}>
+    <div ref={wrapRef} style={{ flex: 1 }}>
       <input
         style={{ ...inp, marginTop: 0 }}
         type="text"
@@ -176,7 +167,7 @@ function ArticleSearch({ inventoryItems, onSelect }: {
         onFocus={() => setOpen(true)}
       />
       {open && suggestions.length > 0 && (
-        <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--bg-elevated)', border: '0.5px solid var(--border-medium)', borderRadius: 12, boxShadow: '0 8px 24px rgba(0,0,0,0.15)', zIndex: 100, marginTop: 4, overflow: 'hidden', maxHeight: 280, overflowY: 'auto' }}>
+        <div style={{ background: 'var(--bg-elevated)', border: '0.5px solid var(--border-medium)', borderRadius: 12, marginTop: 4, overflow: 'hidden', maxHeight: 280, overflowY: 'auto' }}>
           {suggestions.map((item, idx) => (
             <button key={item.id} type="button" onMouseDown={() => select(item)}
               style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', padding: '11px 14px', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', borderBottom: idx < suggestions.length - 1 ? '0.5px solid var(--border)' : 'none', color: 'var(--text)' }}
@@ -188,13 +179,13 @@ function ArticleSearch({ inventoryItems, onSelect }: {
           ))}
         </div>
       )}
-      {open && suggestions.length === 0 && inventoryItems.length === 0 && (
-        <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--bg-elevated)', border: '0.5px solid var(--border-medium)', borderRadius: 12, boxShadow: '0 8px 24px rgba(0,0,0,0.15)', zIndex: 100, marginTop: 4, padding: '12px 14px', fontSize: 13, color: 'var(--text-secondary)' }}>
-          Keine Artikel in der Lager-Datenbank
+      {open && inventoryItems.length === 0 && (
+        <div style={{ background: 'var(--bg-elevated)', border: '0.5px solid var(--border-medium)', borderRadius: 12, marginTop: 4, padding: '12px 14px', fontSize: 13, color: 'var(--text-secondary)' }}>
+          Keine Artikel in der Datenbank
         </div>
       )}
       {open && suggestions.length === 0 && inventoryItems.length > 0 && query.trim() && (
-        <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--bg-elevated)', border: '0.5px solid var(--border-medium)', borderRadius: 12, boxShadow: '0 8px 24px rgba(0,0,0,0.15)', zIndex: 100, marginTop: 4, padding: '12px 14px', fontSize: 13, color: 'var(--text-secondary)' }}>
+        <div style={{ background: 'var(--bg-elevated)', border: '0.5px solid var(--border-medium)', borderRadius: 12, marginTop: 4, padding: '12px 14px', fontSize: 13, color: 'var(--text-secondary)' }}>
           Kein Artikel gefunden
         </div>
       )}
@@ -202,7 +193,7 @@ function ArticleSearch({ inventoryItems, onSelect }: {
   )
 }
 
-// ── Main component ──────────────────────────────────────────────────────────
+// ── Main component ─────────────────────────────────────────────────────────────
 export default function OrgProduktausgabe() {
   const { org, orgCode } = useOrg()
   const navigate = useNavigate()
@@ -213,19 +204,12 @@ export default function OrgProduktausgabe() {
   const [sending, setSending] = useState(false)
   const [success, setSuccess] = useState(false)
   const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([])
-  const [debug, setDebug] = useState<string>('')
 
   useEffect(() => {
-    setDebug(`Suche inventory_items für org "${org.id}"…`)
     pb.collection('inventory_items').getFullList<InventoryItem>({
       filter: `organization_id = "${org.id}"`,
       sort: 'name',
-    }).then(items => {
-      setInventoryItems(items)
-      setDebug(`inventory_items geladen: ${items.length} Artikel`)
-    }).catch(e => {
-      setDebug(`inventory_items FEHLER: ${e?.status || ''} ${e?.message || e}`)
-    })
+    }).then(setInventoryItems).catch(() => {})
   }, [org.id])
 
   const addPos = () => setPositions(p => [...p, { qty: 1 }])
@@ -305,57 +289,58 @@ export default function OrgProduktausgabe() {
         </div>
       </PubSection>
 
-      <Card title="Positionen" icon={<IconBox />}>
+      <PubSection title="Positionen" open icon={<IconBox />}>
         {positions.map((pos, i) => (
-          <div key={i} style={{ display: 'flex', gap: '.5rem', alignItems: 'flex-start', padding: '.75rem', background: 'var(--bg-subtle)', border: `0.5px solid ${pos.item_id ? 'var(--accent)' : 'var(--border)'}`, borderRadius: 12, marginBottom: '.6rem', overflow: 'visible' }}>
-            {/* Qty */}
-            <div style={{ flexShrink: 0, width: 72 }}>
-              <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4 }}>Anz.</div>
-              <input style={{ ...inp, marginTop: 0, textAlign: 'center', padding: '10px 4px' }}
-                type="number" min={1} value={pos.qty ?? 1}
-                onChange={e => updQty(i, Number(e.target.value))} />
-            </div>
-
-            {/* Article */}
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 11, fontWeight: 600, color: pos.item_id ? 'var(--accent)' : 'var(--text-secondary)', marginBottom: 4 }}>
-                {pos.item_id ? '✓ Artikel ausgewählt' : 'Artikel auswählen *'}
+          <div key={i} style={{ padding: '.75rem', background: 'var(--bg-subtle)', border: `0.5px solid ${pos.item_id ? 'var(--accent)' : 'var(--border)'}`, borderRadius: 12, marginBottom: '.6rem' }}>
+            <div style={{ display: 'flex', gap: '.5rem', alignItems: 'flex-start' }}>
+              {/* Qty */}
+              <div style={{ flexShrink: 0, width: 72 }}>
+                <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4 }}>Anz.</div>
+                <input style={{ ...inp, marginTop: 0, textAlign: 'center', padding: '10px 4px' }}
+                  type="number" min={1} value={pos.qty ?? 1}
+                  onChange={e => updQty(i, Number(e.target.value))} />
               </div>
-              {pos.item_id ? (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bg-card)', border: '0.5px solid var(--border-medium)', borderRadius: 10, padding: '10px 12px' }}>
-                  <span style={{ flex: 1, fontWeight: 600, fontSize: 14, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{pos.name}</span>
-                  <span style={{ fontSize: 13, color: 'var(--text-secondary)', flexShrink: 0 }}>{pos.unit}</span>
-                  <button type="button" onClick={() => clearPos(i)}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', fontSize: 20, lineHeight: 1, padding: '0 2px', flexShrink: 0 }}>×</button>
+
+              {/* Article header + clear */}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 11, fontWeight: 600, color: pos.item_id ? 'var(--accent)' : 'var(--text-secondary)', marginBottom: 4 }}>
+                  {pos.item_id ? '✓ Artikel ausgewählt' : 'Artikel auswählen *'}
                 </div>
-              ) : (
-                <ArticleSearch inventoryItems={inventoryItems} onSelect={item => selectItem(i, item)} />
-              )}
+                {pos.item_id ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bg-card)', border: '0.5px solid var(--border-medium)', borderRadius: 10, padding: '10px 12px' }}>
+                    <span style={{ flex: 1, fontWeight: 600, fontSize: 14, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{pos.name}</span>
+                    <span style={{ fontSize: 13, color: 'var(--text-secondary)', flexShrink: 0 }}>{pos.unit}</span>
+                    <button type="button" onClick={() => clearPos(i)}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', fontSize: 20, lineHeight: 1, padding: '0 2px', flexShrink: 0 }}>×</button>
+                  </div>
+                ) : null}
+              </div>
+
+              {/* Delete row */}
+              <button type="button" onClick={() => delPos(i)}
+                style={{ width: 36, height: 36, borderRadius: 8, border: '0.5px solid var(--border-medium)', background: 'var(--bg-hover)', color: 'var(--accent)', fontWeight: 700, cursor: 'pointer', fontSize: '1.2rem', flexShrink: 0, alignSelf: 'flex-end', marginBottom: 1 }}>
+                ×
+              </button>
             </div>
 
-            {/* Delete row */}
-            <button type="button" onClick={() => delPos(i)}
-              style={{ width: 36, height: 36, borderRadius: 8, border: '0.5px solid var(--border-medium)', background: 'var(--bg-hover)', color: 'var(--accent)', fontWeight: 700, cursor: 'pointer', fontSize: '1.2rem', flexShrink: 0, alignSelf: 'flex-end', marginBottom: 1 }}>
-              ×
-            </button>
+            {/* Article search below header row — inline, never clipped */}
+            {!pos.item_id && (
+              <div style={{ marginTop: '.5rem' }}>
+                <ArticleSearch inventoryItems={inventoryItems} onSelect={item => selectItem(i, item)} />
+              </div>
+            )}
           </div>
         ))}
         <button type="button" onClick={addPos}
           style={{ border: '0.5px solid var(--border-medium)', background: 'var(--bg-subtle)', padding: '.6rem .9rem', borderRadius: 10, cursor: 'pointer', fontWeight: 600, color: 'var(--accent)', fontSize: '.9rem', fontFamily: 'inherit' }}>
           + Position hinzufügen
         </button>
-      </Card>
+      </PubSection>
 
-      <Card title="Ausgetragen von" icon={<IconUser />}>
+      <PubSection title="Ausgetragen von" open icon={<IconUser />}>
         <label style={lbl}>Benutzer *</label>
-        <UserSearch orgId={org.id} value={selectedUser} onChange={setSelectedUser} onDebug={setDebug} />
-      </Card>
-
-      {debug && (
-        <div style={{ background: '#fef3c7', border: '1px solid #fde047', borderRadius: 10, padding: '10px 14px', marginBottom: '.75rem', fontSize: 12, color: '#78350f', fontFamily: 'monospace', wordBreak: 'break-all' }}>
-          {debug}
-        </div>
-      )}
+        <UserSearch orgId={org.id} value={selectedUser} onChange={setSelectedUser} />
+      </PubSection>
 
     </PubWrap>
     <PubSendBar onSubmit={submit} sending={sending} label="An Lager senden" />
