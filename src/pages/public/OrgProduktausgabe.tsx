@@ -42,8 +42,8 @@ function Card({ title, icon, children }: { title: string; icon: React.ReactNode;
 }
 
 // ── User search ─────────────────────────────────────────────────────────────
-function UserSearch({ orgId, value, onChange }: {
-  orgId: string; value: UserHit | null; onChange: (u: UserHit | null) => void
+function UserSearch({ orgId, value, onChange, onDebug }: {
+  orgId: string; value: UserHit | null; onChange: (u: UserHit | null) => void; onDebug: (s: string) => void
 }) {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<UserHit[]>([])
@@ -66,13 +66,18 @@ function UserSearch({ orgId, value, onChange }: {
     clearTimeout(timer.current)
     if (!q.trim()) { setResults([]); setOpen(false); return }
     timer.current = setTimeout(async () => {
+      onDebug(`Suche users mit name ~ "${q.trim()}" für org "${orgId}"…`)
       try {
         const res = await pb.collection('users').getList(1, 10, {
           filter: `organization_id = "${orgId}" && name ~ "${q.trim()}"`,
           sort: 'name',
         })
         setResults(res.items.map(u => ({ id: u.id, name: u.name, email: u.email })))
-      } catch { setResults([]) }
+        onDebug(`users geladen: ${res.items.length} Treffer (total ${res.totalItems})`)
+      } catch (e: any) {
+        setResults([])
+        onDebug(`users FEHLER: ${e?.status || ''} ${e?.message || e}`)
+      }
       setSearched(true)
       setOpen(true)
     }, 300)
@@ -208,12 +213,19 @@ export default function OrgProduktausgabe() {
   const [sending, setSending] = useState(false)
   const [success, setSuccess] = useState(false)
   const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([])
+  const [debug, setDebug] = useState<string>('')
 
   useEffect(() => {
+    setDebug(`Suche inventory_items für org "${org.id}"…`)
     pb.collection('inventory_items').getFullList<InventoryItem>({
       filter: `organization_id = "${org.id}"`,
       sort: 'name',
-    }).then(setInventoryItems).catch(() => {})
+    }).then(items => {
+      setInventoryItems(items)
+      setDebug(`inventory_items geladen: ${items.length} Artikel`)
+    }).catch(e => {
+      setDebug(`inventory_items FEHLER: ${e?.status || ''} ${e?.message || e}`)
+    })
   }, [org.id])
 
   const addPos = () => setPositions(p => [...p, { qty: 1 }])
@@ -336,8 +348,14 @@ export default function OrgProduktausgabe() {
 
       <Card title="Ausgetragen von" icon={<IconUser />}>
         <label style={lbl}>Benutzer *</label>
-        <UserSearch orgId={org.id} value={selectedUser} onChange={setSelectedUser} />
+        <UserSearch orgId={org.id} value={selectedUser} onChange={setSelectedUser} onDebug={setDebug} />
       </Card>
+
+      {debug && (
+        <div style={{ background: '#fef3c7', border: '1px solid #fde047', borderRadius: 10, padding: '10px 14px', marginBottom: '.75rem', fontSize: 12, color: '#78350f', fontFamily: 'monospace', wordBreak: 'break-all' }}>
+          {debug}
+        </div>
+      )}
 
     </PubWrap>
     <PubSendBar onSubmit={submit} sending={sending} label="An Lager senden" />
