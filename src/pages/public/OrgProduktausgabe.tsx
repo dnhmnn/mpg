@@ -211,9 +211,10 @@ export default function OrgProduktausgabe() {
 
   useEffect(() => {
     pb.collection('inventory_items').getFullList<InventoryItem>({
+      filter: `organization_id = "${org.id}"`,
       sort: 'name',
     }).then(setInventoryItems).catch(() => {})
-  }, [])
+  }, [org.id])
 
   const addPos = () => setPositions(p => [...p, { qty: 1 }])
   const delPos = (i: number) => setPositions(p => p.filter((_, j) => j !== i))
