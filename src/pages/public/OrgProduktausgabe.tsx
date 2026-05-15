@@ -28,6 +28,18 @@ const IconUser = () => (
   </svg>
 )
 
+// Karten-Container ohne overflow:hidden – Dropdowns werden nicht abgeschnitten
+function Card({ title, icon, children }: { title: string; icon: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <div style={{ background: 'var(--bg-card)', border: '0.5px solid var(--border)', borderRadius: 16, marginBottom: '.75rem', boxShadow: 'var(--shadow-sm)' }}>
+      <div style={{ padding: '.9rem 1rem', fontWeight: 700, fontSize: '1rem', color: 'var(--text)', borderBottom: '0.5px solid var(--border)', display: 'flex', alignItems: 'center', gap: '.6rem' }}>
+        {icon}{title}
+      </div>
+      <div style={{ padding: '1rem' }}>{children}</div>
+    </div>
+  )
+}
+
 function UserSearch({ orgId, value, onChange }: {
   orgId: string; value: UserHit | null; onChange: (u: UserHit | null) => void
 }) {
@@ -301,7 +313,7 @@ export default function OrgProduktausgabe() {
         </div>
       )}
 
-      <PubSection title="Positionen" open icon={<IconBox />}>
+      <Card title="Positionen" icon={<IconBox />}>
         {positions.map((pos, i) => (
           <div key={i} style={{ padding: '.75rem', background: 'var(--bg-subtle)', border: `0.5px solid ${pos.item_id ? 'var(--accent)' : 'var(--border)'}`, borderRadius: 12, marginBottom: '.6rem' }}>
             <div style={{ display: 'flex', gap: '.5rem', alignItems: 'flex-start' }}>
@@ -340,12 +352,12 @@ export default function OrgProduktausgabe() {
           style={{ border: '0.5px solid var(--border-medium)', background: 'var(--bg-subtle)', padding: '.6rem .9rem', borderRadius: 10, cursor: 'pointer', fontWeight: 600, color: 'var(--accent)', fontSize: '.9rem', fontFamily: 'inherit' }}>
           + Position hinzufügen
         </button>
-      </PubSection>
+      </Card>
 
-      <PubSection title="Ausgetragen von" open icon={<IconUser />}>
+      <Card title="Ausgetragen von" icon={<IconUser />}>
         <label style={lbl}>Benutzer *</label>
         <UserSearch orgId={org.id} value={selectedUser} onChange={setSelectedUser} />
-      </PubSection>
+      </Card>
 
     </PubWrap>
     <PubSendBar onSubmit={submit} sending={sending} label="An Lager senden" />
