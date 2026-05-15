@@ -246,7 +246,7 @@ export default function OrgPatienten() {
     fontSize: '.9rem', fontFamily: 'inherit', cursor: 'pointer', border: 'none',
   }
 
-  return <>
+  return <div style={{ minHeight: '100vh', background: '#ffffff', '--bg-card': 'rgba(0,0,0,0.04)', '--bg-subtle': 'rgba(0,0,0,0.025)', '--border': 'rgba(0,0,0,0.07)', '--shadow-sm': '0 2px 16px rgba(0,0,0,0.08)' } as React.CSSProperties}>
     <PubHeader
       title={`Patientendoku – ${org.org_name}`}
       onBack={() => navigate(`/${orgCode}`)}
@@ -972,5 +972,5 @@ export default function OrgPatienten() {
         )}
       </div>
     </div>
-  </>
+  </div>
 }
