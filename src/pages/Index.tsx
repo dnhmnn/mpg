@@ -67,7 +67,7 @@ export default function Index() {
       {/* Logo */}
       <div style={{ marginBottom: '32px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
         <img src="/logo.svg" alt="Responda" width="120" height="120" />
-        <span style={{ fontSize: '28px', fontWeight: 700, color: '#1d1d1f', letterSpacing: '-0.02em' }}>Responda</span>
+        <span style={{ fontWeight: 700, fontSize: '1.5rem', letterSpacing: '-0.01em', color: '#1d1d1f' }}>Responda</span>
       </div>
 
       {/* Animated tagline */}
