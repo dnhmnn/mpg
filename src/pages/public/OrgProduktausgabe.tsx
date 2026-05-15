@@ -342,7 +342,7 @@ export default function OrgProduktausgabe() {
       </Card>
 
     </PubWrap>
-    <PubSendBar onSubmit={submit} sending={sending} label="An Lager senden" />
+    <PubSendBar onSubmit={submit} sending={sending} label="An Lager senden" small />
   </div>
 }
 

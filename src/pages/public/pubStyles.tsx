@@ -38,11 +38,11 @@ export function PubSection({ title, open, children, icon }: { title: string; ope
   )
 }
 
-export function PubSendBar({ onSubmit, sending, label = 'Absenden' }: { onSubmit: () => void; sending: boolean; label?: string }) {
+export function PubSendBar({ onSubmit, sending, label = 'Absenden', small }: { onSubmit: () => void; sending: boolean; label?: string; small?: boolean }) {
   return (
     <div style={{ position: 'fixed', left: 0, right: 0, bottom: 0, background: 'var(--bg-status-bar)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', borderTop: '0.5px solid var(--border)', padding: '.75rem 1rem', zIndex: 20 }}>
       <div style={{ maxWidth: 800, margin: '0 auto', display: 'flex', justifyContent: 'flex-end' }}>
-        <button disabled={sending} onClick={onSubmit} style={{ background: sending ? 'var(--bg-hover)' : 'var(--accent)', border: 'none', color: sending ? 'var(--text-secondary)' : '#fff', padding: '12px 24px', borderRadius: 12, fontWeight: 700, cursor: sending ? 'not-allowed' : 'pointer', fontSize: '1rem', fontFamily: 'inherit', transition: 'all .2s' }}>
+        <button disabled={sending} onClick={onSubmit} style={{ background: sending ? 'var(--bg-hover)' : 'var(--accent)', border: 'none', color: sending ? 'var(--text-secondary)' : '#fff', padding: small ? '8px 16px' : '12px 24px', borderRadius: small ? 9 : 12, fontWeight: 600, cursor: sending ? 'not-allowed' : 'pointer', fontSize: small ? '.85rem' : '1rem', fontFamily: 'inherit', transition: 'all .2s' }}>
           {sending ? '⏳ Sende…' : `✈ ${label}`}
         </button>
       </div>
