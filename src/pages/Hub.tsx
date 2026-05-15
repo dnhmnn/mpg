@@ -257,7 +257,7 @@ export default function Hub() {
           display: flex;
           align-items: center;
           gap: 4px;
-          box-shadow: 0 -2px 12px rgba(107,15,26,0.08);
+          box-shadow: none;
           z-index: 400;
           white-space: nowrap;
         }
@@ -360,6 +360,9 @@ export default function Hub() {
           </div>
         </div>
       </div>
+
+      {/* White fill behind dock safe area */}
+      <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, height: 'calc(10px + env(safe-area-inset-bottom))', background: '#ffffff', zIndex: 399 }} />
 
       <Dock
         dockApps={dockApps}
