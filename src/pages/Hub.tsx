@@ -247,14 +247,13 @@ export default function Hub() {
         /* ── Dock ── */
         .dock {
           position: fixed;
-          bottom: 0;
+          bottom: calc(10px + env(safe-area-inset-bottom));
           left: 50%;
           transform: translateX(-50%);
           background: var(--bg-card);
           border: 0.5px solid var(--border);
-          border-bottom: none;
-          border-radius: 26px 26px 0 0;
-          padding: 10px 14px calc(10px + env(safe-area-inset-bottom));
+          border-radius: 26px;
+          padding: 10px 14px;
           display: flex;
           align-items: center;
           gap: 4px;
