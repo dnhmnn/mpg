@@ -171,7 +171,7 @@ export default function Hub() {
           .hub-apps .app-icon {
             width: 76px;
             height: 76px;
-            border-radius: 18px;
+            border-radius: 50%;
           }
           .hub-apps .app-icon svg {
             width: 34px;
@@ -232,7 +232,7 @@ export default function Hub() {
           .hub-apps .app-icon {
             width: 96px;
             height: 96px;
-            border-radius: 22px;
+            border-radius: 50%;
           }
           .hub-apps .app-icon svg {
             width: 44px;
@@ -357,6 +357,7 @@ export default function Hub() {
               userApps={userApps}
               onRemoveApp={handleRemoveApp}
               onAppClick={trackAppClick}
+              dockPinIds={dockPinIds}
             />
           </div>
         </div>
