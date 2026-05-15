@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import { useNotifications } from '../hooks/useNotifications'
 import StatusBar from '../components/StatusBar'
@@ -125,7 +125,7 @@ export default function Hub() {
     .map(id => ALL_APPS[id])
 
   return (
-    <>
+    <div style={{ '--bg-card': 'rgba(107,15,26,0.06)', '--bg-subtle': 'rgba(107,15,26,0.03)', '--border': 'rgba(107,15,26,0.12)', '--border-medium': 'rgba(107,15,26,0.15)', '--shadow-sm': '0 2px 16px rgba(107,15,26,0.08)' } as React.CSSProperties}>
       <style>{`
         @media (min-width: 768px) {
           .hub-layout {
@@ -359,6 +359,6 @@ export default function Hub() {
           onRemindLater={remindLater}
         />
       )}
-    </>
+    </div>
   )
 }
