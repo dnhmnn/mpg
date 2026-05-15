@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { pb } from '../../lib/pocketbase'
 import { useOrg } from './OrgPublicLayout'
-import { PubHeader, PubWrap, PubSendBar, PubSection, field, inp, lbl } from './pubStyles'
+import { PubWrap, PubSendBar, PubSection, field, inp, lbl } from './pubStyles'
 
 const today = () => new Date().toISOString().slice(0, 10)
 
@@ -264,8 +264,20 @@ export default function OrgProduktausgabe() {
     </PubWrap>
   )
 
-  return <>
-    <PubHeader title={`Produktausgabe – ${org.org_name}`} onBack={() => navigate(`/${orgCode}`)} />
+  return <div style={{ minHeight: '100vh', background: '#ffffff', '--bg-card': 'rgba(107,15,26,0.06)', '--bg-subtle': 'rgba(107,15,26,0.03)', '--border': 'rgba(107,15,26,0.12)', '--border-medium': 'rgba(107,15,26,0.15)', '--shadow-sm': '0 2px 16px rgba(107,15,26,0.08)' } as React.CSSProperties}>
+    <header style={{ position: 'sticky', top: 0, background: 'var(--bg-status-bar)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', borderBottom: '0.5px solid var(--border)', zIndex: 10 }}>
+      <div style={{ maxWidth: 800, margin: '0 auto', padding: '0 1rem', height: 54, display: 'flex', alignItems: 'center', gap: 8 }}>
+        <button onClick={() => navigate(`/${orgCode}`)} style={{ display: 'flex', alignItems: 'center', background: 'transparent', border: 'none', color: 'var(--accent)', cursor: 'pointer', padding: '8px 4px 8px 0', flexShrink: 0 }}>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+          <span style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--text)', whiteSpace: 'nowrap' }}>Produktausgabe</span>
+          {org.logo && (
+            <img src={pb.files.getUrl(org, org.logo)} alt={org.org_name} style={{ height: 28, width: 28, objectFit: 'contain', borderRadius: 6, flexShrink: 0 }} />
+          )}
+        </div>
+      </div>
+    </header>
     <PubWrap>
 
       <PubSection title="Kopfdaten" open icon={<IconClipboard />}>
@@ -331,7 +343,7 @@ export default function OrgProduktausgabe() {
 
     </PubWrap>
     <PubSendBar onSubmit={submit} sending={sending} label="An Lager senden" />
-  </>
+  </div>
 }
 
 const btnStyle: React.CSSProperties = {
