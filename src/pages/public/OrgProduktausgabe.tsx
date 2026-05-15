@@ -28,7 +28,6 @@ const IconUser = () => (
   </svg>
 )
 
-// Karten-Container ohne overflow:hidden – Dropdowns werden nicht abgeschnitten
 function Card({ title, icon, children }: { title: string; icon: React.ReactNode; children: React.ReactNode }) {
   return (
     <div style={{ background: 'var(--bg-card)', border: '0.5px solid var(--border)', borderRadius: 16, marginBottom: '.75rem', boxShadow: 'var(--shadow-sm)' }}>
@@ -46,7 +45,6 @@ function UserSearch({ orgId, value, onChange }: {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<UserHit[]>([])
   const [open, setOpen] = useState(false)
-  const [searchDiag, setSearchDiag] = useState('')
   const timer = useRef<ReturnType<typeof setTimeout>>()
   const ref = useRef<HTMLDivElement>(null)
 
@@ -60,7 +58,6 @@ function UserSearch({ orgId, value, onChange }: {
 
   function onInput(q: string) {
     setQuery(q)
-    setSearchDiag('')
     clearTimeout(timer.current)
     if (!q.trim()) { setResults([]); setOpen(false); return }
     timer.current = setTimeout(async () => {
@@ -71,23 +68,9 @@ function UserSearch({ orgId, value, onChange }: {
         })
         setResults(res.items.map(u => ({ id: u.id, name: u.name, email: u.email })))
         setOpen(true)
-        if (res.items.length === 0) {
-          // Diagnose: suche ohne org-Filter um zu sehen ob User existiert und welche organization_id er hat
-          pb.collection('users').getList(1, 3, { filter: `name ~ "${q.trim()}"`, sort: 'name' }).then(r2 => {
-            if (r2.items.length === 0) {
-              setSearchDiag(`0 Treffer mit UND ohne org-Filter – Benutzer existiert nicht in users-Collection`)
-            } else {
-              const ids = r2.items.map((u: any) => `"${u.name}": org_id="${u.organization_id}"`).join(' | ')
-              setSearchDiag(`Filter-org.id="${orgId}" → 0 Treffer. Ohne Filter: ${ids}`)
-            }
-          }).catch(() => {
-            setSearchDiag(`0 Treffer für org.id="${orgId}". Ohne Filter: kein Zugriff (403?)`)
-          })
-        }
-      } catch (e: any) {
+      } catch {
         setResults([])
         setOpen(true)
-        setSearchDiag(`Fehler ${e?.status ?? ''}: ${e?.message ?? e} – org.id="${orgId}"`)
       }
     }, 350)
   }
@@ -97,7 +80,6 @@ function UserSearch({ orgId, value, onChange }: {
     setQuery('')
     setResults([])
     setOpen(false)
-    setSearchDiag('')
   }
 
   return (
@@ -139,11 +121,6 @@ function UserSearch({ orgId, value, onChange }: {
       {open && results.length === 0 && query.trim() && (
         <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--bg-card)', border: '0.5px solid var(--border)', borderRadius: 10, padding: '10px 12px', fontSize: 14, color: 'var(--text-secondary)', zIndex: 50, marginTop: 2 }}>
           Kein Benutzer gefunden
-        </div>
-      )}
-      {searchDiag && (
-        <div style={{ marginTop: 6, background: '#fef3c7', border: '1px solid #fde047', borderRadius: 8, padding: '6px 10px', fontSize: 11, color: '#78350f', fontFamily: 'monospace', wordBreak: 'break-all' }}>
-          {searchDiag}
         </div>
       )}
     </div>
@@ -221,30 +198,12 @@ export default function OrgProduktausgabe() {
   const [sending, setSending] = useState(false)
   const [success, setSuccess] = useState(false)
   const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([])
-  const [itemsError, setItemsError] = useState<string>('')
-  const [itemsDiag, setItemsDiag] = useState<string>('')
 
   useEffect(() => {
     pb.collection('inventory_items').getFullList<InventoryItem>({
       filter: `organization_id = "${org.id}"`,
       sort: 'name',
-    }).then(items => {
-      setInventoryItems(items)
-      setItemsError('')
-      if (items.length === 0) {
-        pb.collection('inventory_items').getList(1, 1, {}).then(r => {
-          if (r.totalItems === 0) {
-            setItemsDiag(`Kein Zugriff auf inventory_items (PocketBase List-Regel prüfen) – org.id="${org.id}"`)
-          } else {
-            setItemsDiag(`${r.totalItems} Artikel gesamt in DB, aber 0 für org.id="${org.id}" – organization_id-Feld prüfen`)
-          }
-        }).catch(() => {
-          setItemsDiag(`Kein Zugriff auf inventory_items ohne Filter (Auth erforderlich?) – org.id="${org.id}"`)
-        })
-      }
-    }).catch((e: any) => {
-      setItemsError(`Artikel-Fehler: ${e?.status ?? ''} ${e?.message ?? e}`)
-    })
+    }).then(items => setInventoryItems(items)).catch(() => {})
   }, [org.id])
 
   const addPos = () => setPositions(p => [...p, { qty: 1 }])
@@ -323,17 +282,6 @@ export default function OrgProduktausgabe() {
           </div>
         </div>
       </PubSection>
-
-      {itemsError && (
-        <div style={{ background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: 10, padding: '10px 14px', marginBottom: '.75rem', fontSize: 13, color: '#991b1b', fontFamily: 'monospace', wordBreak: 'break-all' }}>
-          {itemsError}
-        </div>
-      )}
-      {itemsDiag && (
-        <div style={{ background: '#fef3c7', border: '1px solid #fde047', borderRadius: 10, padding: '10px 14px', marginBottom: '.75rem', fontSize: 12, color: '#78350f', fontFamily: 'monospace', wordBreak: 'break-all' }}>
-          {itemsDiag}
-        </div>
-      )}
 
       <Card title="Positionen" icon={<IconBox />}>
         {positions.map((pos, i) => (
