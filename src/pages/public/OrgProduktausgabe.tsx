@@ -46,6 +46,7 @@ function UserSearch({ orgId, value, onChange }: {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<UserHit[]>([])
   const [open, setOpen] = useState(false)
+  const [searchDiag, setSearchDiag] = useState('')
   const timer = useRef<ReturnType<typeof setTimeout>>()
   const ref = useRef<HTMLDivElement>(null)
 
@@ -59,6 +60,7 @@ function UserSearch({ orgId, value, onChange }: {
 
   function onInput(q: string) {
     setQuery(q)
+    setSearchDiag('')
     clearTimeout(timer.current)
     if (!q.trim()) { setResults([]); setOpen(false); return }
     timer.current = setTimeout(async () => {
@@ -69,9 +71,13 @@ function UserSearch({ orgId, value, onChange }: {
         })
         setResults(res.items.map(u => ({ id: u.id, name: u.name, email: u.email })))
         setOpen(true)
-      } catch {
+        if (res.items.length === 0) {
+          setSearchDiag(`0 Treffer für "${q.trim()}" – org.id="${orgId}"`)
+        }
+      } catch (e: any) {
         setResults([])
         setOpen(true)
+        setSearchDiag(`Fehler ${e?.status ?? ''}: ${e?.message ?? e} – org.id="${orgId}"`)
       }
     }, 350)
   }
@@ -81,6 +87,7 @@ function UserSearch({ orgId, value, onChange }: {
     setQuery('')
     setResults([])
     setOpen(false)
+    setSearchDiag('')
   }
 
   return (
@@ -122,6 +129,11 @@ function UserSearch({ orgId, value, onChange }: {
       {open && results.length === 0 && query.trim() && (
         <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--bg-card)', border: '0.5px solid var(--border)', borderRadius: 10, padding: '10px 12px', fontSize: 14, color: 'var(--text-secondary)', zIndex: 50, marginTop: 2 }}>
           Kein Benutzer gefunden
+        </div>
+      )}
+      {searchDiag && (
+        <div style={{ marginTop: 6, background: '#fef3c7', border: '1px solid #fde047', borderRadius: 8, padding: '6px 10px', fontSize: 11, color: '#78350f', fontFamily: 'monospace', wordBreak: 'break-all' }}>
+          {searchDiag}
         </div>
       )}
     </div>
