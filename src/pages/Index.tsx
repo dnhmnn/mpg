@@ -39,7 +39,7 @@ export default function Index() {
   return (
     <div style={{
       minHeight: '100dvh',
-      background: '#ffffff',
+      background: 'var(--bg)',
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
@@ -60,14 +60,14 @@ export default function Index() {
         .tagline-text.hiding { animation: tagFadeOut 0.5s ease forwards; }
         .landing-btn { transition: background 0.15s, transform 0.12s; }
         .landing-btn:active { transform: scale(0.97); }
-        .org-input:focus { outline: none; border-color: rgba(107,15,26,0.4) !important; }
-        .org-input::placeholder { color: rgba(107,15,26,0.3); }
+        .org-input:focus { outline: none; border-color: var(--accent) !important; }
+        .org-input::placeholder { color: var(--text-placeholder); }
       `}</style>
 
       {/* Logo */}
       <div style={{ marginBottom: '32px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
         <img src="/logo.svg" alt="Responda" width="120" height="120" />
-        <span style={{ fontWeight: 700, fontSize: '1.5rem', letterSpacing: '-0.01em', color: '#1d1d1f' }}>Responda</span>
+        <span style={{ fontWeight: 700, fontSize: '1.5rem', letterSpacing: '-0.01em', color: 'var(--text)' }}>Responda</span>
       </div>
 
       {/* Animated tagline */}
@@ -75,7 +75,7 @@ export default function Index() {
         <p
           className={`tagline-text${visible ? '' : ' hiding'}`}
           key={taglineIndex}
-          style={{ fontSize: 'clamp(15px, 4vw, 18px)', fontWeight: 500, color: 'rgba(107,15,26,0.7)', textAlign: 'center', margin: 0, letterSpacing: '-0.01em', lineHeight: 1.4, maxWidth: '320px' }}
+          style={{ fontSize: 'clamp(15px, 4vw, 18px)', fontWeight: 500, color: 'var(--text-secondary)', textAlign: 'center', margin: 0, letterSpacing: '-0.01em', lineHeight: 1.4, maxWidth: '320px' }}
         >
           {TAGLINES[taglineIndex]}
         </p>
@@ -85,21 +85,21 @@ export default function Index() {
       <button
         className="landing-btn"
         onClick={() => navigate('/login')}
-        style={{ width: '100%', maxWidth: '320px', padding: '15px', borderRadius: '14px', background: '#6B0F1A', border: 'none', cursor: 'pointer', fontSize: '16px', fontWeight: 700, color: '#fff', fontFamily: 'inherit', letterSpacing: '-0.01em', marginBottom: '12px' }}
+        style={{ width: '100%', maxWidth: '320px', padding: '15px', borderRadius: '14px', background: 'var(--accent)', border: 'none', cursor: 'pointer', fontSize: '16px', fontWeight: 700, color: '#fff', fontFamily: 'inherit', letterSpacing: '-0.01em', marginBottom: '12px' }}
       >
         Anmelden
       </button>
 
       {/* Divider */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', maxWidth: '320px', margin: '16px 0' }}>
-        <div style={{ flex: 1, height: '1px', background: 'rgba(107,15,26,0.12)' }} />
-        <span style={{ fontSize: '11px', color: 'rgba(107,15,26,0.35)', fontWeight: 600, letterSpacing: '.06em' }}>ODER</span>
-        <div style={{ flex: 1, height: '1px', background: 'rgba(107,15,26,0.12)' }} />
+        <div style={{ flex: 1, height: '1px', background: 'var(--border)' }} />
+        <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 600, letterSpacing: '.06em' }}>ODER</span>
+        <div style={{ flex: 1, height: '1px', background: 'var(--border)' }} />
       </div>
 
       {/* Org code section */}
       <form onSubmit={handleOrgSubmit} style={{ width: '100%', maxWidth: '320px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-        <p style={{ margin: '0 0 4px', fontSize: '12px', color: 'rgba(107,15,26,0.45)', textAlign: 'center', letterSpacing: '.04em', fontWeight: 600, textTransform: 'uppercase' }}>
+        <p style={{ margin: '0 0 4px', fontSize: '12px', color: 'var(--text-secondary)', textAlign: 'center', letterSpacing: '.04em', fontWeight: 600, textTransform: 'uppercase' }}>
           Organisations-Code
         </p>
         <input
@@ -110,20 +110,20 @@ export default function Index() {
           autoCapitalize="none"
           autoCorrect="off"
           spellCheck={false}
-          style={{ width: '100%', padding: '13px 16px', borderRadius: '12px', border: '1.5px solid rgba(107,15,26,0.15)', background: 'rgba(107,15,26,0.04)', fontSize: '15px', color: '#1d1d1f', fontFamily: 'inherit', boxSizing: 'border-box' }}
+          style={{ width: '100%', padding: '13px 16px', borderRadius: '12px', border: '1.5px solid var(--border)', background: 'var(--bg-input)', fontSize: '15px', color: 'var(--text)', fontFamily: 'inherit', boxSizing: 'border-box' }}
         />
-        {orgError && <p style={{ margin: 0, fontSize: '13px', color: '#c0392b', textAlign: 'center' }}>{orgError}</p>}
+        {orgError && <p style={{ margin: 0, fontSize: '13px', color: 'var(--accent)', textAlign: 'center' }}>{orgError}</p>}
         <button
           type="submit"
           className="landing-btn"
-          style={{ padding: '13px', borderRadius: '12px', background: 'rgba(107,15,26,0.06)', border: '1.5px solid rgba(107,15,26,0.15)', cursor: 'pointer', fontSize: '15px', fontWeight: 600, color: '#6B0F1A', fontFamily: 'inherit' }}
+          style={{ padding: '13px', borderRadius: '12px', background: 'var(--bg-subtle)', border: '1.5px solid var(--border)', cursor: 'pointer', fontSize: '15px', fontWeight: 600, color: 'var(--accent)', fontFamily: 'inherit' }}
         >
           Weiter →
         </button>
       </form>
 
       {/* Footer */}
-      <p style={{ position: 'fixed', bottom: 'calc(12px + env(safe-area-inset-bottom))', fontSize: '11px', color: 'rgba(107,15,26,0.2)', margin: 0, letterSpacing: '.03em' }}>
+      <p style={{ position: 'fixed', bottom: 'calc(12px + env(safe-area-inset-bottom))', fontSize: '11px', color: 'var(--text-secondary)', margin: 0, letterSpacing: '.03em', opacity: 0.5 }}>
         © 2025 Responda Systems
       </p>
     </div>
