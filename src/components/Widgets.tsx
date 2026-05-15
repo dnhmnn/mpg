@@ -43,7 +43,14 @@ export default function Widgets({ user, onNewsOpenChange }: WidgetsProps) {
     week.setDate(week.getDate() - 7)
     const weekStr = week.toISOString().replace('T', ' ').substring(0, 19)
 
-    await Promise.allSettled([
+    const prefs = (() => {
+      try { return JSON.parse(localStorage.getItem('notif_prefs') || '{}') } catch { return {} }
+    })()
+    const enabled = (key: string) => prefs[key] !== false
+
+    const queries: Promise<any>[] = []
+
+    if (enabled('patienten')) queries.push(
       pb.collection('patients').getList(1, 1, {
         filter: `status="offen"&&organization_id="${org}"`,
         fields: 'id',
@@ -56,8 +63,10 @@ export default function Widgets({ user, onNewsOpenChange }: WidgetsProps) {
           url: '/patienten',
           color: '#007aff',
         })
-      }),
+      })
+    )
 
+    if (enabled('lager')) queries.push(
       pb.collection('inventory_stock').getList(1, 1, {
         filter: `organization_id="${org}"&&expiry_date!=""&&expiry_date<="${soonStr}"`,
         fields: 'id',
@@ -70,8 +79,10 @@ export default function Widgets({ user, onNewsOpenChange }: WidgetsProps) {
           url: '/lager',
           color: '#ff9500',
         })
-      }),
+      })
+    )
 
+    if (enabled('ausbildungen')) queries.push(
       pb.collection('ausbildungen_termine_user').getList(1, 50, {
         filter: `updated>="${weekStr}"&&(status="abgesagt"||status="zugesagt")`,
         fields: 'id,status',
@@ -91,8 +102,10 @@ export default function Widgets({ user, onNewsOpenChange }: WidgetsProps) {
             color: '#1c7cd6',
           })
         }
-      }),
+      })
+    )
 
+    if (enabled('mpg')) queries.push(
       pb.collection('mpg_devices').getList(1, 1, {
         filter: `organization_id="${org}"&&next_inspection_due<="${soonStr}"`,
         fields: 'id,next_inspection_due',
@@ -118,8 +131,10 @@ export default function Widgets({ user, onNewsOpenChange }: WidgetsProps) {
             })
           })
         }
-      }),
+      })
+    )
 
+    if (enabled('produktausgabe')) queries.push(
       pb.collection('product_outputs').getList(1, 1, {
         filter: `organization_id="${org}"&&status="offen"`,
         fields: 'id',
@@ -132,8 +147,10 @@ export default function Widgets({ user, onNewsOpenChange }: WidgetsProps) {
           url: '/lager',
           color: '#ff3b30',
         })
-      }),
-    ])
+      })
+    )
+
+    await Promise.allSettled(queries)
 
     setNews(items)
     setNewsLoaded(true)
