@@ -315,7 +315,7 @@ export default function Hub() {
           <div className="hub-widgets">
             <Widgets user={user} />
           </div>
-          <div className="hub-apps" style={{ '--bg-card': 'rgba(255,255,255,0.9)', '--bg-subtle': 'rgba(0,0,0,0.03)', '--border': 'rgba(0,0,0,0.08)', '--border-medium': 'rgba(0,0,0,0.1)', '--shadow-sm': '0 2px 8px rgba(0,0,0,0.04)' } as React.CSSProperties}>
+          <div className="hub-apps">
             <AppGrid
               userApps={userApps}
               onRemoveApp={handleRemoveApp}
