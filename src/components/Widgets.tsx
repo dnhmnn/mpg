@@ -164,15 +164,8 @@ export default function Widgets({ user }: WidgetsProps) {
               onClick={() => setDetailOpen(true)}
               style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'none', border: 'none', cursor: 'pointer', padding: 0, width: '100%', marginTop: '8px', fontFamily: 'inherit' }}
             >
-              <div style={{ textAlign: 'left' }}>
-                <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text)', lineHeight: 1.4 }}>
-                  {news.length === 1 ? news[0].label : `${news.length} neue Hinweise`}
-                </div>
-                {news.length > 1 && (
-                  <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: 2 }}>
-                    {news.map(n => n.id).join(' · ')}
-                  </div>
-                )}
+              <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text)', lineHeight: 1.4, textAlign: 'left' }}>
+                {news.length === 1 ? news[0].label : `${news.length} neue Hinweise`}
               </div>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginLeft: 8 }}>
                 <path d="M9 18l6-6-6-6"/>
@@ -188,7 +181,7 @@ export default function Widgets({ user }: WidgetsProps) {
         onClick={() => setDetailOpen(false)}
       >
         <div
-          style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: '#fff', borderRadius: '22px 22px 0 0', padding: '10px 20px calc(32px + env(safe-area-inset-bottom))', transform: detailOpen ? 'translateY(0)' : 'translateY(100%)', transition: 'transform .35s cubic-bezier(0.32,0.72,0,1)', maxHeight: '75vh', overflowY: 'auto', boxShadow: '0 -4px 32px rgba(0,0,0,0.12)' }}
+          style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: '#fff', borderRadius: '22px 22px 0 0', padding: '10px 20px calc(110px + env(safe-area-inset-bottom))', transform: detailOpen ? 'translateY(0)' : 'translateY(100%)', transition: 'transform .35s cubic-bezier(0.32,0.72,0,1)', maxHeight: '75vh', overflowY: 'auto', boxShadow: '0 -4px 32px rgba(0,0,0,0.12)' }}
           onClick={e => e.stopPropagation()}
           onTouchStart={e => { touchStartY.current = e.touches[0].clientY }}
           onTouchEnd={e => { if (e.changedTouches[0].clientY - touchStartY.current > 50) setDetailOpen(false) }}
