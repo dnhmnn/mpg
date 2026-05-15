@@ -250,14 +250,15 @@ export default function Hub() {
           bottom: 0;
           left: 50%;
           transform: translateX(-50%);
-          background: #6B0F1A;
-          border: none;
+          background: var(--bg-card);
+          border: 0.5px solid var(--border);
+          border-bottom: none;
           border-radius: 26px 26px 0 0;
           padding: 10px 14px calc(10px + env(safe-area-inset-bottom));
           display: flex;
           align-items: center;
           gap: 4px;
-          box-shadow: 0 -2px 16px rgba(107,15,26,0.18);
+          box-shadow: 0 -2px 12px rgba(107,15,26,0.08);
           z-index: 400;
           white-space: nowrap;
         }
@@ -267,12 +268,12 @@ export default function Hub() {
           align-items: center;
           gap: 4px;
           text-decoration: none;
-          color: #fff;
+          color: inherit;
           padding: 4px 7px;
           border-radius: 14px;
           transition: background 0.15s;
         }
-        .dock-btn:active { background: rgba(255,255,255,0.12); }
+        .dock-btn:active { background: rgba(107,15,26,0.08); }
         .dock-icon {
           width: 52px;
           height: 52px;
@@ -294,7 +295,7 @@ export default function Hub() {
         .dock-label {
           font-size: 10px;
           font-weight: 400;
-          color: rgba(255,255,255,0.85);
+          color: var(--text);
           text-align: center;
           max-width: 58px;
           overflow: hidden;
@@ -303,7 +304,7 @@ export default function Hub() {
         .dock-sep {
           width: 1px;
           height: 44px;
-          background: rgba(255,255,255,0.2);
+          background: var(--border-medium);
           margin: 0 6px;
           flex-shrink: 0;
         }
