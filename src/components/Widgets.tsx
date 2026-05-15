@@ -93,6 +93,33 @@ export default function Widgets({ user, onNewsOpenChange }: WidgetsProps) {
         }
       }),
 
+      pb.collection('mpg_devices').getList(1, 1, {
+        filter: `organization_id="${org}"&&next_inspection_due<="${soonStr}"`,
+        fields: 'id,next_inspection_due',
+        requestKey: 'widget-mpg'
+      }).then(r => {
+        if (r.totalItems > 0) {
+          const today = new Date().toISOString().split('T')[0]
+          const overdueFilter = `organization_id="${org}"&&next_inspection_due<="${today}"`
+          return pb.collection('mpg_devices').getList(1, 1, {
+            filter: overdueFilter, fields: 'id', requestKey: 'widget-mpg-overdue'
+          }).then(o => {
+            const overdue = o.totalItems
+            const warning = r.totalItems - overdue
+            const parts: string[] = []
+            if (overdue > 0) parts.push(`${overdue} überfällig`)
+            if (warning > 0) parts.push(`${warning} bald fällig`)
+            items.push({
+              id: 'mpg',
+              label: `MPG: ${parts.join(', ')}`,
+              sub: 'Geräteprüfung',
+              url: '/mpg',
+              color: '#c0392b',
+            })
+          })
+        }
+      }),
+
       pb.collection('product_outputs').getList(1, 1, {
         filter: `organization_id="${org}"&&status="offen"`,
         fields: 'id',
