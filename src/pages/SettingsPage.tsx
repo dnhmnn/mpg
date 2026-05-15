@@ -65,10 +65,10 @@ const S = {
     background: '#ffffff'
   },
   mainList: {
-    padding: '20px 16px 40px'
+    padding: '20px 16px calc(40px + env(safe-area-inset-bottom))'
   },
   detailPanel: {
-    padding: '20px 16px 40px'
+    padding: '20px 16px calc(40px + env(safe-area-inset-bottom))'
   },
   // iOS-style group
   group: {
