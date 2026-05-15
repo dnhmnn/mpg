@@ -267,11 +267,11 @@ export default function OrgPatienten() {
     {/* Section navigation drawer */}
     {menuOpen && (
       <div
-        style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.45)', zIndex: 200, display: 'flex', justifyContent: 'flex-end' }}
+        style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.25)', backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)', zIndex: 200, display: 'flex', justifyContent: 'flex-end' }}
         onClick={() => setMenuOpen(false)}
       >
         <div
-          style={{ background: 'var(--bg-card)', width: 280, height: '100%', overflowY: 'auto', padding: '1rem', display: 'flex', flexDirection: 'column', gap: 2 }}
+          style={{ background: 'rgba(255,255,255,0.18)', backdropFilter: 'blur(40px) saturate(180%)', WebkitBackdropFilter: 'blur(40px) saturate(180%)', width: 280, height: '100%', overflowY: 'auto', padding: '1rem', display: 'flex', flexDirection: 'column', gap: 2, borderLeft: '0.5px solid rgba(255,255,255,0.3)' }}
           onClick={e => e.stopPropagation()}
         >
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '.75rem' }}>
@@ -287,8 +287,9 @@ export default function OrgPatienten() {
                 padding: '.55rem .8rem', borderRadius: 10, border: 'none', cursor: 'pointer',
                 fontFamily: 'inherit', fontSize: '.88rem',
                 fontWeight: activeStep === i ? 700 : 400,
-                background: activeStep === i ? 'var(--accent)' : 'transparent',
+                background: activeStep === i ? 'var(--accent)' : 'rgba(255,255,255,0.15)',
                 color: activeStep === i ? '#fff' : 'var(--text)',
+                backdropFilter: activeStep === i ? undefined : 'blur(4px)',
               }}
             >
               <span style={{ opacity: .55, fontSize: '.75rem', minWidth: 20, textAlign: 'right' }}>{i + 1}</span>
