@@ -247,22 +247,36 @@ export default function OrgPatienten() {
   }
 
   return <div style={{ minHeight: '100vh', background: '#ffffff', '--bg-card': 'rgba(107,15,26,0.06)', '--bg-subtle': 'rgba(107,15,26,0.03)', '--border': 'rgba(107,15,26,0.12)', '--border-medium': 'rgba(107,15,26,0.15)', '--shadow-sm': '0 2px 16px rgba(107,15,26,0.08)' } as React.CSSProperties}>
-    <PubHeader
-      title={`Patientendoku – ${org.org_name}`}
-      onBack={() => navigate(`/${orgCode}`)}
-      extra={
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <button onClick={saveLocal} style={{ background: 'var(--bg-hover)', border: '0.5px solid var(--border-medium)', color: 'var(--text)', padding: '6px 10px', borderRadius: 8, fontWeight: 600, cursor: 'pointer', fontSize: '.85rem', fontFamily: 'inherit', display: 'inline-flex', alignItems: 'center', gap: 4 }}>{pik(<><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></>, 15)} Speichern</button>
-          <button
-            onClick={() => setMenuOpen(true)}
-            title="Abschnitte"
-            style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--bg-hover)', border: '0.5px solid var(--border-medium)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text)', padding: 0, flexShrink: 0 }}
-          >
+    <header style={{ position: 'sticky', top: 0, background: 'var(--bg-status-bar)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', borderBottom: '0.5px solid var(--border)', zIndex: 10 }}>
+      <div style={{ maxWidth: 800, margin: '0 auto', padding: '0 1rem', height: 54, display: 'flex', alignItems: 'center', gap: 8 }}>
+        {/* Zurück — nur Pfeil */}
+        <button onClick={() => navigate(`/${orgCode}`)} style={{ display: 'flex', alignItems: 'center', background: 'transparent', border: 'none', color: 'var(--accent)', cursor: 'pointer', padding: '8px 4px 8px 0', flexShrink: 0 }}>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+
+        {/* Titel + Logo */}
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+          <span style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--text)', whiteSpace: 'nowrap' }}>Protokoll</span>
+          {org.logo && (
+            <img
+              src={pb.files.getUrl(org, org.logo)}
+              alt={org.org_name}
+              style={{ height: 28, width: 28, objectFit: 'contain', borderRadius: 6, flexShrink: 0 }}
+            />
+          )}
+        </div>
+
+        {/* Rechts: Speichern (nur Icon) + Hamburger */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+          <button onClick={saveLocal} title="Speichern" style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--bg-hover)', border: '0.5px solid var(--border-medium)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text)', padding: 0 }}>
+            {pik(<><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></>)}
+          </button>
+          <button onClick={() => setMenuOpen(true)} title="Abschnitte" style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--bg-hover)', border: '0.5px solid var(--border-medium)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text)', padding: 0 }}>
             {pik(<><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></>)}
           </button>
         </div>
-      }
-    />
+      </div>
+    </header>
 
     {/* Section navigation drawer */}
     {menuOpen && (
