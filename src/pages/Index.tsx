@@ -65,12 +65,9 @@ export default function Index() {
       `}</style>
 
       {/* Logo */}
-      <div style={{ marginBottom: '40px', textAlign: 'center' }}>
-        <svg width="200" height="52" viewBox="0 0 560 140">
-          <rect x="20" y="20" width="100" height="100" rx="26" fill="#6B0F1A" opacity="0.15"/>
-          <path d="M45 42 L45 98 L60 98 L60 78 L72 78 L83 98 L100 98 L87 77 Q92 74 92 63 Q92 42 75 42 Z M60 52 L72 52 Q77 52 77 62 Q77 72 72 72 L60 72 Z" fill="#6B0F1A"/>
-          <text x="140" y="80" fontFamily="Inter, sans-serif" fontSize="46" fontWeight="600" fill="#1d1d1f" letterSpacing="0">Responda</text>
-        </svg>
+      <div style={{ marginBottom: '32px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
+        <img src="/logo.svg" alt="Responda" style={{ width: '110px', height: '110px' }} />
+        <span style={{ fontSize: '28px', fontWeight: 700, color: '#1d1d1f', letterSpacing: '-0.02em' }}>Responda</span>
       </div>
 
       {/* Animated tagline */}
