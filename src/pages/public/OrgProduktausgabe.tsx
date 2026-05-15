@@ -28,7 +28,6 @@ const IconUser = () => (
   </svg>
 )
 
-// ── User search ──────────────────────────────────────────────────────────────
 function UserSearch({ orgId, value, onChange }: {
   orgId: string; value: UserHit | null; onChange: (u: UserHit | null) => void
 }) {
@@ -139,7 +138,6 @@ function UserSearch({ orgId, value, onChange }: {
   )
 }
 
-// ── Artikel-Suchfeld ────────────────────────────────────────────────────────────
 function ArticleSearch({ inventoryItems, onSelect }: {
   inventoryItems: InventoryItem[]
   onSelect: (item: InventoryItem) => void
@@ -201,7 +199,6 @@ function ArticleSearch({ inventoryItems, onSelect }: {
   )
 }
 
-// ── Main component ─────────────────────────────────────────────────────────────
 export default function OrgProduktausgabe() {
   const { org, orgCode } = useOrg()
   const navigate = useNavigate()
@@ -213,6 +210,7 @@ export default function OrgProduktausgabe() {
   const [success, setSuccess] = useState(false)
   const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([])
   const [itemsError, setItemsError] = useState<string>('')
+  const [itemsDiag, setItemsDiag] = useState<string>('')
 
   useEffect(() => {
     pb.collection('inventory_items').getFullList<InventoryItem>({
@@ -221,6 +219,17 @@ export default function OrgProduktausgabe() {
     }).then(items => {
       setInventoryItems(items)
       setItemsError('')
+      if (items.length === 0) {
+        pb.collection('inventory_items').getList(1, 1, {}).then(r => {
+          if (r.totalItems === 0) {
+            setItemsDiag(`Kein Zugriff auf inventory_items (PocketBase List-Regel prüfen) – org.id="${org.id}"`)
+          } else {
+            setItemsDiag(`${r.totalItems} Artikel gesamt in DB, aber 0 für org.id="${org.id}" – organization_id-Feld prüfen`)
+          }
+        }).catch(() => {
+          setItemsDiag(`Kein Zugriff auf inventory_items ohne Filter (Auth erforderlich?) – org.id="${org.id}"`)
+        })
+      }
     }).catch((e: any) => {
       setItemsError(`Artikel-Fehler: ${e?.status ?? ''} ${e?.message ?? e}`)
     })
@@ -308,20 +317,22 @@ export default function OrgProduktausgabe() {
           {itemsError}
         </div>
       )}
+      {itemsDiag && (
+        <div style={{ background: '#fef3c7', border: '1px solid #fde047', borderRadius: 10, padding: '10px 14px', marginBottom: '.75rem', fontSize: 12, color: '#78350f', fontFamily: 'monospace', wordBreak: 'break-all' }}>
+          {itemsDiag}
+        </div>
+      )}
 
       <PubSection title="Positionen" open icon={<IconBox />}>
         {positions.map((pos, i) => (
           <div key={i} style={{ padding: '.75rem', background: 'var(--bg-subtle)', border: `0.5px solid ${pos.item_id ? 'var(--accent)' : 'var(--border)'}`, borderRadius: 12, marginBottom: '.6rem' }}>
             <div style={{ display: 'flex', gap: '.5rem', alignItems: 'flex-start' }}>
-              {/* Qty */}
               <div style={{ flexShrink: 0, width: 72 }}>
                 <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4 }}>Anz.</div>
                 <input style={{ ...inp, marginTop: 0, textAlign: 'center', padding: '10px 4px' }}
                   type="number" min={1} value={pos.qty ?? 1}
                   onChange={e => updQty(i, Number(e.target.value))} />
               </div>
-
-              {/* Article header + clear */}
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 11, fontWeight: 600, color: pos.item_id ? 'var(--accent)' : 'var(--text-secondary)', marginBottom: 4 }}>
                   {pos.item_id ? '✓ Artikel ausgewählt' : 'Artikel auswählen *'}
@@ -335,15 +346,11 @@ export default function OrgProduktausgabe() {
                   </div>
                 ) : null}
               </div>
-
-              {/* Delete row */}
               <button type="button" onClick={() => delPos(i)}
                 style={{ width: 36, height: 36, borderRadius: 8, border: '0.5px solid var(--border-medium)', background: 'var(--bg-hover)', color: 'var(--accent)', fontWeight: 700, cursor: 'pointer', fontSize: '1.2rem', flexShrink: 0, alignSelf: 'flex-end', marginBottom: 1 }}>
                 ×
               </button>
             </div>
-
-            {/* Article search below header row — inline, never clipped */}
             {!pos.item_id && (
               <div style={{ marginTop: '.5rem' }}>
                 <ArticleSearch inventoryItems={inventoryItems} onSelect={item => selectItem(i, item)} />
