@@ -66,7 +66,39 @@ export default function Index() {
 
       {/* Logo */}
       <div style={{ marginBottom: '32px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
-        <img src="/logo.svg" alt="Responda" style={{ width: '110px', height: '110px' }} />
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="110" height="110">
+          <circle cx="100" cy="100" r="100" fill="#720016"/>
+          <circle cx="100" cy="100" r="97" fill="none" stroke="white" strokeWidth="2"/>
+          <circle cx="100" cy="100" r="89" fill="none" stroke="white" strokeWidth="6"/>
+          <circle cx="100" cy="100" r="84" fill="none" stroke="#720016" strokeWidth="4"/>
+          <path d="M76 46 Q72 28 84 20 Q94 13 100 16 Q106 13 116 20 Q128 28 124 46" fill="none" stroke="white" strokeWidth="9" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M74 44 Q65 34 68 24 Q70 19 74 22" fill="none" stroke="white" strokeWidth="6" strokeLinecap="round"/>
+          <path d="M126 44 Q135 34 132 24 Q130 19 126 22" fill="none" stroke="white" strokeWidth="6" strokeLinecap="round"/>
+          <path d="M 100 68 C 108 66 120 71 126 80 C 132 89 132 103 127 114 C 123 123 116 130 108 133 C 100 136 92 134 86 128 C 80 122 78 112 79 102 C 80 92 83 82 88 76 C 92 71 96 68 100 68 Z" fill="white"/>
+          <path d="M 88 74 C 90 66 95 61 100 60 C 106 59 112 62 117 68 L 120 72 C 115 65 107 62 100 63 C 93 64 89 68 88 74 Z" fill="white"/>
+          <path d="M 88 72 C 83 65 76 56 68 47 C 62 40 56 33 54 26 C 60 22 68 25 74 32 C 80 39 85 50 87 62 Z" fill="white"/>
+          <line x1="57" y1="30" x2="66" y2="46" stroke="#720016" strokeWidth="2.5" strokeLinecap="round"/>
+          <line x1="61" y1="28" x2="70" y2="44" stroke="#720016" strokeWidth="2.5" strokeLinecap="round"/>
+          <line x1="65" y1="28" x2="74" y2="44" stroke="#720016" strokeWidth="2.5" strokeLinecap="round"/>
+          <line x1="69" y1="29" x2="77" y2="45" stroke="#720016" strokeWidth="2.5" strokeLinecap="round"/>
+          <line x1="73" y1="32" x2="80" y2="48" stroke="#720016" strokeWidth="2.5" strokeLinecap="round"/>
+          <line x1="77" y1="37" x2="83" y2="52" stroke="#720016" strokeWidth="2.5" strokeLinecap="round"/>
+          <path d="M 88 76 Q 104 72 118 75" fill="none" stroke="#720016" strokeWidth="4" strokeLinecap="round"/>
+          <ellipse cx="120" cy="92" rx="5" ry="4" fill="#720016"/>
+          <path d="M 114 85 Q 120 83 126 86" fill="none" stroke="#720016" strokeWidth="2.5" strokeLinecap="round"/>
+          <path d="M 128 103 Q 132 109 128 116" fill="none" stroke="#720016" strokeWidth="2" strokeLinecap="round"/>
+          <path d="M 82 82 C 76 90 70 100 69 110 C 68 118 70 125 74 130 C 76 125 74 118 75 110 C 76 102 80 92 82 82 Z" fill="white"/>
+          <path d="M 80 92 C 74 102 70 113 71 122 C 74 115 77 104 80 94 Z" fill="white"/>
+          <path d="M 78 102 C 73 110 72 120 74 128 C 76 120 75 112 78 104 Z" fill="white"/>
+          <path d="M 96 134 C 94 140 94 148 96 154 L 104 154 C 106 148 106 140 104 134 Z" fill="white"/>
+          <path d="M 86 152 Q 100 160 114 152 L 114 156 Q 100 164 86 156 Z" fill="white"/>
+          <path d="M 90 154 Q 85 163 89 171 Q 93 176 100 176" fill="none" stroke="white" strokeWidth="8" strokeLinecap="round"/>
+          <path d="M 110 154 Q 115 163 111 171 Q 107 176 100 176" fill="none" stroke="white" strokeWidth="8" strokeLinecap="round"/>
+          <ellipse cx="100" cy="176" rx="13" ry="9" fill="white"/>
+          <ellipse cx="93" cy="173" rx="2.5" ry="2" fill="#720016"/>
+          <ellipse cx="107" cy="173" rx="2.5" ry="2" fill="#720016"/>
+          <path d="M 96 184 Q 93 190 90 193 M 104 184 Q 107 190 110 193" stroke="#720016" strokeWidth="2.5" fill="none" strokeLinecap="round"/>
+        </svg>
         <span style={{ fontSize: '28px', fontWeight: 700, color: '#1d1d1f', letterSpacing: '-0.02em' }}>Responda</span>
       </div>
 
