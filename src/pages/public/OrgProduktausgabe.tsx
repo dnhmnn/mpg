@@ -72,7 +72,17 @@ function UserSearch({ orgId, value, onChange }: {
         setResults(res.items.map(u => ({ id: u.id, name: u.name, email: u.email })))
         setOpen(true)
         if (res.items.length === 0) {
-          setSearchDiag(`0 Treffer für "${q.trim()}" – org.id="${orgId}"`)
+          // Diagnose: suche ohne org-Filter um zu sehen ob User existiert und welche organization_id er hat
+          pb.collection('users').getList(1, 3, { filter: `name ~ "${q.trim()}"`, sort: 'name' }).then(r2 => {
+            if (r2.items.length === 0) {
+              setSearchDiag(`0 Treffer mit UND ohne org-Filter – Benutzer existiert nicht in users-Collection`)
+            } else {
+              const ids = r2.items.map((u: any) => `"${u.name}": org_id="${u.organization_id}"`).join(' | ')
+              setSearchDiag(`Filter-org.id="${orgId}" → 0 Treffer. Ohne Filter: ${ids}`)
+            }
+          }).catch(() => {
+            setSearchDiag(`0 Treffer für org.id="${orgId}". Ohne Filter: kein Zugriff (403?)`)
+          })
         }
       } catch (e: any) {
         setResults([])
