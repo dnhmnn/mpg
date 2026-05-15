@@ -247,19 +247,20 @@ export default function Hub() {
         /* ── Dock ── */
         .dock {
           position: fixed;
-          bottom: calc(4px + env(safe-area-inset-bottom));
+          bottom: 0;
           left: 50%;
           transform: translateX(-50%);
           background: #fff;
           backdrop-filter: none;
           -webkit-backdrop-filter: none;
           border: 0.5px solid rgba(0,0,0,0.08);
-          border-radius: 26px;
-          padding: 10px 14px;
+          border-bottom: none;
+          border-radius: 26px 26px 0 0;
+          padding: 10px 14px calc(10px + env(safe-area-inset-bottom));
           display: flex;
           align-items: center;
           gap: 4px;
-          box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+          box-shadow: 0 -2px 12px rgba(0,0,0,0.05);
           z-index: 400;
           white-space: nowrap;
         }
