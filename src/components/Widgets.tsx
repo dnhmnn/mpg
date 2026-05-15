@@ -13,9 +13,10 @@ interface NewsItem {
 
 interface WidgetsProps {
   user: User | null
+  onNewsOpenChange?: (open: boolean) => void
 }
 
-export default function Widgets({ user }: WidgetsProps) {
+export default function Widgets({ user, onNewsOpenChange }: WidgetsProps) {
   const navigate = useNavigate()
   const [now, setNow] = useState(new Date())
   const [news, setNews] = useState<NewsItem[]>([])
@@ -151,7 +152,7 @@ export default function Widgets({ user }: WidgetsProps) {
         </div>
 
         {/* Neuigkeiten widget */}
-        <div className="widget">
+        <div className="widget large" style={{ minHeight: 0, padding: '12px 16px' }}>
           <div className="widget-title">Neuigkeiten</div>
           {!newsLoaded ? (
             <div style={{ fontSize: '13px', opacity: 0.4, marginTop: '8px' }}>Lädt…</div>
@@ -161,7 +162,7 @@ export default function Widgets({ user }: WidgetsProps) {
             </div>
           ) : (
             <button
-              onClick={() => setDetailOpen(true)}
+              onClick={() => { setDetailOpen(true); onNewsOpenChange?.(true) }}
               style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'none', border: 'none', cursor: 'pointer', padding: 0, width: '100%', marginTop: '8px', fontFamily: 'inherit' }}
             >
               <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text)', lineHeight: 1.4, textAlign: 'left' }}>
@@ -178,13 +179,13 @@ export default function Widgets({ user }: WidgetsProps) {
       {/* Detail bottom sheet */}
       <div
         style={{ position: 'fixed', inset: 0, zIndex: 600, background: detailOpen ? 'rgba(0,0,0,0.25)' : 'transparent', pointerEvents: detailOpen ? 'all' : 'none', transition: 'background .3s', backdropFilter: detailOpen ? 'blur(4px)' : 'none' }}
-        onClick={() => setDetailOpen(false)}
+        onClick={() => { setDetailOpen(false); onNewsOpenChange?.(false) }}
       >
         <div
-          style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: '#fff', borderRadius: '22px 22px 0 0', padding: '10px 20px calc(110px + env(safe-area-inset-bottom))', transform: detailOpen ? 'translateY(0)' : 'translateY(100%)', transition: 'transform .35s cubic-bezier(0.32,0.72,0,1)', maxHeight: '75vh', overflowY: 'auto', boxShadow: '0 -4px 32px rgba(0,0,0,0.12)' }}
+          style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: '#fff', borderRadius: '22px 22px 0 0', padding: '10px 20px calc(32px + env(safe-area-inset-bottom))', transform: detailOpen ? 'translateY(0)' : 'translateY(100%)', transition: 'transform .35s cubic-bezier(0.32,0.72,0,1)', maxHeight: '80vh', overflowY: 'auto', boxShadow: '0 -4px 32px rgba(0,0,0,0.12)' }}
           onClick={e => e.stopPropagation()}
           onTouchStart={e => { touchStartY.current = e.touches[0].clientY }}
-          onTouchEnd={e => { if (e.changedTouches[0].clientY - touchStartY.current > 50) setDetailOpen(false) }}
+          onTouchEnd={e => { if (e.changedTouches[0].clientY - touchStartY.current > 50) { setDetailOpen(false); onNewsOpenChange?.(false) } }}
         >
           <div style={{ width: 36, height: 4, borderRadius: 99, background: 'rgba(0,0,0,0.15)', margin: '0 auto 18px' }} />
           <div style={{ fontWeight: 700, fontSize: '1.05rem', color: '#1d1d1f', marginBottom: 16 }}>Neuigkeiten</div>

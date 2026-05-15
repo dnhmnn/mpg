@@ -39,6 +39,7 @@ export default function Hub() {
   const [showEditModal, setShowEditModal] = useState(false)
   const [showWidgetsModal, setShowWidgetsModal] = useState(false)
   const [recentApps, setRecentApps] = useState<string[]>([])
+  const [newsOpen, setNewsOpen] = useState(false)
 
   const [sheetOpen, setSheetOpen] = useState(false)
   const [shortcuts, setShortcuts] = useState<{ name: string; url: string }[]>(() => {
@@ -391,7 +392,7 @@ export default function Hub() {
       <div className="content hub-content" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-start' }}>
         <div className="hub-layout">
           <div className="hub-widgets">
-            <Widgets user={user} />
+            <Widgets user={user} onNewsOpenChange={setNewsOpen} />
           </div>
           <div className="hub-apps">
             <AppGrid
@@ -404,14 +405,16 @@ export default function Hub() {
         </div>
       </div>
 
-      {/* White fill behind dock safe area */}
-      <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, height: 'calc(10px + env(safe-area-inset-bottom))', background: '#ffffff', zIndex: 399 }} />
-
-      <Dock
-        dockApps={dockApps}
-        recentApps={recentDockApps}
-        onAppClick={trackAppClick}
-      />
+      {!newsOpen && (
+        <>
+          <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, height: 'calc(10px + env(safe-area-inset-bottom))', background: '#ffffff', zIndex: 399 }} />
+          <Dock
+            dockApps={dockApps}
+            recentApps={recentDockApps}
+            onAppClick={trackAppClick}
+          />
+        </>
+      )}
 
       <SettingsModal isOpen={showSettings} onClose={() => setShowSettings(false)} user={user} />
 
