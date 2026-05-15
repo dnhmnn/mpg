@@ -91,9 +91,9 @@ export default function Login() {
       `}</style>
 
       {/* Logo */}
-      <Link to="/" style={{ textDecoration: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, marginBottom: 32 }}>
-        <img src="/logo.svg" alt="Responda" width="100" height="100" />
-        <span style={{ fontWeight: 700, fontSize: '1.4rem', letterSpacing: '-0.01em', color: 'var(--text)' }}>Responda</span>
+      <Link to="/" style={{ textDecoration: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, marginBottom: 32 }}>
+        <img src="/logo.svg" alt="Responda" width="120" height="120" />
+        <span style={{ fontWeight: 700, fontSize: '1.5rem', letterSpacing: '-0.01em', color: 'var(--text)' }}>Responda</span>
       </Link>
 
       <div style={{ width: '100%', maxWidth: '360px' }}>
