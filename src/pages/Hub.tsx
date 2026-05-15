@@ -343,9 +343,7 @@ export default function Hub() {
         onTouchStart={e => { touchStartY.current = e.touches[0].clientY }}
         onTouchEnd={e => { if (touchStartY.current - e.changedTouches[0].clientY > 30) setSheetOpen(true) }}
       >
-        <svg width="18" height="11" viewBox="0 0 18 11" fill="none">
-          <path d="M1.5 1.5L9 9L16.5 1.5" stroke="rgba(0,0,0,0.3)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
-        </svg>
+        <div style={{ width: 32, height: 4, borderRadius: 99, background: 'rgba(0,0,0,0.22)' }} />
         <span style={{ fontSize: 9, fontWeight: 600, color: 'rgba(0,0,0,0.28)', letterSpacing: '.06em' }}>control</span>
       </div>
 
