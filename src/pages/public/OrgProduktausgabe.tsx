@@ -61,7 +61,19 @@ function UserSearch({ orgId, value, onChange }: {
           filter: `organization_id = "${orgId}" && name ~ "${q.trim()}"`,
           sort: 'name',
         })
-        setResults(res.items.map(u => ({ id: u.id, name: u.name, email: u.email })))
+        const hits = res.items.map(u => ({ id: u.id, name: u.name, email: u.email }))
+        setResults(hits)
+        if (hits.length === 0) {
+          pb.collection('users').getList(1, 1, {}).then(r => {
+            if (r.totalItems === 0) {
+              setSearchError(`users: Kein Zugriff (PocketBase List-Regel prüfen) – org.id="${orgId}"`)
+            } else {
+              setSearchError(`users: ${r.totalItems} Benutzer gesamt, aber 0 für org.id="${orgId}" mit name~"${q.trim()}"`)
+            }
+          }).catch(() => {
+            setSearchError(`users: Kein Zugriff ohne Filter (Auth erforderlich?) – org.id="${orgId}"`)
+          })
+        }
       } catch (e: any) {
         setResults([])
         setSearchError(`FEHLER: ${e?.status ?? ''} ${e?.message ?? e}`)
@@ -125,7 +137,7 @@ function UserSearch({ orgId, value, onChange }: {
         </div>
       )}
       {searchError && (
-        <div style={{ background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: 12, marginTop: 4, padding: '12px 14px', fontSize: 13, color: '#991b1b', fontFamily: 'monospace', wordBreak: 'break-all' }}>
+        <div style={{ background: '#fef3c7', border: '1px solid #fde047', borderRadius: 12, marginTop: 4, padding: '12px 14px', fontSize: 12, color: '#78350f', fontFamily: 'monospace', wordBreak: 'break-all' }}>
           {searchError}
         </div>
       )}
