@@ -9,7 +9,7 @@ import {
   ResponsiveContainer, BarChart, Bar, CartesianGrid,
 } from "recharts";
 
-// ─── Global Styles ───────────────────────────────────────────────
+// ─── Global Styles ─────────────────────────────────────────────────────────
 if (!document.getElementById("responda-styles")) {
   const link = document.createElement("link");
   link.rel  = "stylesheet";
@@ -22,7 +22,7 @@ if (!document.getElementById("responda-styles")) {
   document.head.appendChild(style);
 }
 
-// ─── Tokens ──────────────────────────────────────────────────────────────────
+// ─── Tokens ────────────────────────────────────────────────────────────────
 const C = {
   cr:"#7B0D1E", crDk:"#520910", crMd:"#9E1426",
   crPale:"#FEF1F4", crBdr:"#F0D0D6",
@@ -36,7 +36,7 @@ const C = {
 };
 const F = { d:'"Cormorant Garamond",Georgia,serif', b:'"Sora",system-ui,sans-serif' };
 
-// ─── Mock Data ─────────────────────────────────────────────────────────────────
+// ─── Mock Data ─────────────────────────────────────────────────────────────
 const areaData = [
   {m:"Jan",erledigt:28,neu:34},{m:"Feb",erledigt:40,neu:29},
   {m:"Mär",erledigt:32,neu:45},{m:"Apr",erledigt:55,neu:38},
@@ -72,7 +72,7 @@ const TEAM = [
   {name:"Tina Braun",role:"Marketing",status:"offline",ini:"TB",color:C.txM},
 ];
 
-// ─── Helpers ────────────────────────────────────────────────────────────────────
+// ─── Helpers ───────────────────────────────────────────────────────────────
 const statusStyle = (s: string) => {
   const map: Record<string, {bg:string;color:string;dot:string}> = {
     Aktiv:   {bg:C.okBg,    color:C.ok,   dot:C.ok},
@@ -91,7 +91,7 @@ const prioStyle = (p: string) => {
   return map[p] || map.Niedrig;
 };
 
-// ─── Primitives ────────────────────────────────────────────────────────────────
+// ─── Primitives ────────────────────────────────────────────────────────────
 const Divider = () => <div style={{height:1,background:C.bdrL,margin:"0 24px"}}/>;
 
 const Badge = ({label, bg, color}: {label:string;bg:string;color:string}) => (
@@ -108,7 +108,7 @@ const ProgressBar = ({value, color=C.cr, height=5}: {value:number;color?:string;
   </div>
 );
 
-// ─── Logo ────────────────────────────────────────────────────────────────────────────
+// ─── Logo ──────────────────────────────────────────────────────────────────
 const RespondaLogo = ({size=38}: {size?:number}) => (
   <svg width={size} height={size} viewBox="0 0 200 200" fill="none">
     <circle cx="100" cy="100" r="98" fill={C.cr}/>
@@ -127,7 +127,7 @@ const RespondaLogo = ({size=38}: {size?:number}) => (
   </svg>
 );
 
-// ─── Sidebar ─────────────────────────────────────────────────────────────────────
+// ─── Sidebar ───────────────────────────────────────────────────────────────
 const NAV = [
   {id:"dashboard",label:"Dashboard",   icon:"⊞"},
   {id:"projekte", label:"Projekte",    icon:"◫"},
@@ -173,7 +173,7 @@ const Sidebar = ({view, setView}: {view:string;setView:(v:string)=>void}) => (
   </div>
 );
 
-// ─── TopBar ─────────────────────────────────────────────────────────────────────────
+// ─── TopBar ────────────────────────────────────────────────────────────────
 const TITLES: Record<string,string> = {dashboard:"Dashboard",projekte:"Projekte",aufgaben:"Aufgaben",analytics:"Analytics",team:"Team",settings:"Einstellungen"};
 
 const TopBar = ({view, search, setSearch}: {view:string;search:string;setSearch:(s:string)=>void}) => (
@@ -182,7 +182,7 @@ const TopBar = ({view, search, setSearch}: {view:string;search:string;setSearch:
       <h1 style={{fontFamily:F.d,fontStyle:"italic",fontSize:26,fontWeight:500,color:C.tx,letterSpacing:.2}}>{TITLES[view]}</h1>
     </div>
     <div style={{position:"relative"}}>
-      <span style={{position:"absolute",left:12,top:"50%",transform:"translateY(-50%)",color:C.txL,fontSize:13}}>⎕</span>
+      <span style={{position:"absolute",left:12,top:"50%",transform:"translateY(-50%)",color:C.txL,fontSize:13}}>⌕</span>
       <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Suchen …" style={{paddingLeft:32,paddingRight:14,paddingTop:8,paddingBottom:8,border:`1.5px solid ${C.bdr}`,borderRadius:10,fontSize:13,fontFamily:F.b,color:C.tx,background:C.surfAlt,width:210}}/>
     </div>
     <div style={{width:38,height:38,borderRadius:10,border:`1.5px solid ${C.bdr}`,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",background:C.surfAlt,position:"relative"}} className="btn">
@@ -194,7 +194,7 @@ const TopBar = ({view, search, setSearch}: {view:string;search:string;setSearch:
   </div>
 );
 
-// ─── Dashboard ─────────────────────────────────────────────────────────────────────
+// ─── Dashboard ─────────────────────────────────────────────────────────────
 const DashboardView = () => {
   const stats = [
     {label:"Aktive Projekte",value:"6",delta:"+2 diesen Monat",up:true,icon:"◫",color:C.cr},
@@ -206,7 +206,7 @@ const DashboardView = () => {
     <div style={{padding:"28px 28px 40px",display:"flex",flexDirection:"column",gap:24}}>
       <div className="fu">
         <p style={{fontFamily:F.b,fontSize:13,color:C.txM}}>Freitag, 15. Mai 2026</p>
-        <h2 style={{fontFamily:F.d,fontStyle:"italic",fontSize:32,fontWeight:500,color:C.tx,marginTop:2}}>Guten Morgen, Alex. ✶</h2>
+        <h2 style={{fontFamily:F.d,fontStyle:"italic",fontSize:32,fontWeight:500,color:C.tx,marginTop:2}}>Guten Morgen, Alex. ✦</h2>
       </div>
       <div className="fu d1" style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:14}}>
         {stats.map((s,i)=>(
@@ -287,7 +287,7 @@ const DashboardView = () => {
   );
 };
 
-// ─── Projekte ──────────────────────────────────────────────────────────────────────
+// ─── Projekte ──────────────────────────────────────────────────────────────
 const ProjekteView = () => {
   const [filter, setFilter] = useState("Alle");
   const filters = ["Alle","Aktiv","Review","Planung","Pausiert"];
@@ -328,7 +328,7 @@ const ProjekteView = () => {
   );
 };
 
-// ─── Aufgaben ──────────────────────────────────────────────────────────────────────
+// ─── Aufgaben ──────────────────────────────────────────────────────────────
 const AufgabenView = () => {
   const [tasks, setTasks] = useState(TASKS);
   const [filter, setFilter] = useState("Alle");
@@ -373,7 +373,7 @@ const AufgabenView = () => {
   );
 };
 
-// ─── Analytics ─────────────────────────────────────────────────────────────────────
+// ─── Analytics ─────────────────────────────────────────────────────────────
 const AnalyticsView = () => (
   <div style={{padding:"28px 28px 40px",display:"flex",flexDirection:"column",gap:20}}>
     <div className="fu">
@@ -421,7 +421,7 @@ const AnalyticsView = () => (
   </div>
 );
 
-// ─── Team ────────────────────────────────────────────────────────────────────────────
+// ─── Team ──────────────────────────────────────────────────────────────────
 const TeamView = () => (
   <div style={{padding:"28px 28px 40px",display:"flex",flexDirection:"column",gap:20}}>
     <div className="fu" style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
@@ -454,7 +454,7 @@ const TeamView = () => (
   </div>
 );
 
-// ─── Settings ─────────────────────────────────────────────────────────────────────
+// ─── Settings ──────────────────────────────────────────────────────────────
 const SettingsView = () => {
   const [notif, setNotif] = useState(true);
   const [emails, setEmails] = useState(false);
@@ -504,7 +504,7 @@ const SettingsView = () => {
   );
 };
 
-// ─── Root ────────────────────────────────────────────────────────────────────────────
+// ─── Root ──────────────────────────────────────────────────────────────────
 export default function RespondaApp() {
   const [view, setView] = useState("dashboard");
   const [search, setSearch] = useState("");
