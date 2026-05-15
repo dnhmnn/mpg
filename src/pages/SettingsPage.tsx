@@ -42,10 +42,11 @@ function loadNotifPrefs(): NotifPrefs {
 // ─── Inline styles / design tokens ────────────────────────────────────────────
 const S = {
   page: {
-    minHeight: '100vh',
+    height: '100dvh',
     background: '#ffffff',
     display: 'flex',
-    flexDirection: 'column' as const
+    flexDirection: 'column' as const,
+    overflow: 'hidden' as const
   },
   contentWrapper: {
     flex: 1,
