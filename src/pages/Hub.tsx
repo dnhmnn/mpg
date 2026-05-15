@@ -250,10 +250,10 @@ export default function Hub() {
           bottom: calc(4px + env(safe-area-inset-bottom));
           left: 50%;
           transform: translateX(-50%);
-          background: var(--bg-card);
-          backdrop-filter: blur(40px);
-          -webkit-backdrop-filter: blur(40px);
-          border: 0.5px solid var(--border);
+          background: #fff;
+          backdrop-filter: none;
+          -webkit-backdrop-filter: none;
+          border: 0.5px solid rgba(0,0,0,0.08);
           border-radius: 26px;
           padding: 10px 14px;
           display: flex;
@@ -278,7 +278,7 @@ export default function Hub() {
         .dock-icon {
           width: 52px;
           height: 52px;
-          border-radius: 13px;
+          border-radius: 50%;
           display: flex;
           align-items: center;
           justify-content: center;
@@ -321,7 +321,7 @@ export default function Hub() {
         }
         /* Desktop dock: slightly larger icons */
         @media (min-width: 768px) {
-          .dock-icon { width: 58px; height: 58px; border-radius: 14px; }
+          .dock-icon { width: 58px; height: 58px; border-radius: 50%; }
           .dock-icon svg { width: 26px; height: 26px; }
           .dock-label { font-size: 11px; max-width: 66px; }
           .dock-btn { padding: 4px 9px; }
