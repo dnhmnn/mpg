@@ -259,7 +259,7 @@ export default function Hub() {
           display: flex;
           align-items: center;
           gap: 4px;
-          box-shadow: 0 6px 28px rgba(0,0,0,0.14);
+          box-shadow: 0 2px 12px rgba(0,0,0,0.06);
           z-index: 400;
           white-space: nowrap;
         }
