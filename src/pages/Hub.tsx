@@ -17,12 +17,18 @@ export default function Hub() {
   const { user, loading, logout } = useAuth()
   const { currentNotification, dismissNotification, remindLater } = useNotifications(user)
 
-  const [showGreeting, setShowGreeting] = useState(true)
+  const [showGreeting] = useState(() => {
+    const flag = sessionStorage.getItem('justLoggedIn')
+    if (flag) { sessionStorage.removeItem('justLoggedIn'); return true }
+    return false
+  })
+  const [greetingGone, setGreetingGone] = useState(false)
 
   useEffect(() => {
-    const t = setTimeout(() => setShowGreeting(false), 2400)
+    if (!showGreeting) return
+    const t = setTimeout(() => setGreetingGone(true), 2400)
     return () => clearTimeout(t)
-  }, [])
+  }, [showGreeting])
 
   const [editMode, setEditMode] = useState(false)
   const [userApps, setUserApps] = useState<string[]>([])
@@ -359,7 +365,7 @@ export default function Hub() {
         .control-handle-hub { animation: controlDrift 2.2s ease-in-out infinite; }
       `}</style>
 
-      {showGreeting && (
+      {showGreeting && !greetingGone && (
         <div className="greeting-overlay">
           <span style={{ fontSize: '1.1rem', fontWeight: 400, color: 'rgba(0,0,0,0.4)', letterSpacing: '.01em' }}>Servus,</span>
           <span style={{ fontSize: '2.4rem', fontWeight: 700, color: '#6B0F1A', letterSpacing: '-0.02em', lineHeight: 1 }}>

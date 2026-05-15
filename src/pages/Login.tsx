@@ -28,6 +28,7 @@ export default function Login() {
       }
       const perms = authData.record?.permissions || {}
       const isLernbarOnly = perms.lernbar && !Object.entries(perms).some(([k, v]) => k !== 'lernbar' && v)
+      sessionStorage.setItem('justLoggedIn', '1')
       navigate(isLernbarOnly ? '/lernbar' : '/hub', { replace: true })
     } catch (err: any) {
       clearTimeout(timeoutId)
