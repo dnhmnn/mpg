@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { useNotifications } from '../hooks/useNotifications'
+import { getTheme, setTheme, applyTheme } from '../lib/theme'
 import StatusBar from '../components/StatusBar'
 import Widgets from '../components/Widgets'
 import AppGrid from '../components/AppGrid'
@@ -13,7 +15,40 @@ import NotificationModal from '../components/NotificationModal'
 import { ALL_APPS, ROLES, getDockPins, MAX_DOCK_RECENT } from '../lib/apps'
 import type { App } from '../types'
 
+const PREDEFINED_SHORTCUTS = [
+  { id: 'protokoll',   name: 'Protokoll anlegen',          url: '/patienten' },
+  { id: 'mpg',         name: 'MPG Prüfung starten',        url: '/mpg' },
+  { id: 'ausbildung',  name: 'Ausbildungstermin anlegen',  url: '/ausbildungen' },
+  { id: 'lernmodul',   name: 'Lernmodul erstellen',        url: '/lernbar' },
+  { id: 'lernkonzept', name: 'Lernkonzept erstellen',      url: '/lernbar' },
+  { id: 'einbuchen',   name: 'Artikel einbuchen',          url: '/lager' },
+  { id: 'ausbuchen',   name: 'Artikel ausbuchen',          url: '/lager' },
+  { id: 'inventur',    name: 'Inventur starten',           url: '/lager' },
+  { id: 'darkmode',    name: 'Dark Mode umschalten',       url: null },
+  { id: 'dateien',     name: 'Dateien suchen',             url: '/files' },
+  { id: 'qr',          name: 'QR Code generieren',        url: '/qr' },
+] as const
+
+type ShortcutId = typeof PREDEFINED_SHORTCUTS[number]['id']
+
+function ShortcutIcon({ id, color = 'currentColor' }: { id: ShortcutId; color?: string }) {
+  const s = { stroke: color, strokeWidth: 1.8, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const, fill: 'none' }
+  if (id === 'protokoll') return <svg width="18" height="18" viewBox="0 0 24 24" {...s}><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/></svg>
+  if (id === 'mpg') return <svg width="18" height="18" viewBox="0 0 24 24" {...s}><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+  if (id === 'ausbildung') return <svg width="18" height="18" viewBox="0 0 24 24" {...s}><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+  if (id === 'lernmodul') return <svg width="18" height="18" viewBox="0 0 24 24" {...s}><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+  if (id === 'lernkonzept') return <svg width="18" height="18" viewBox="0 0 24 24" {...s}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+  if (id === 'einbuchen') return <svg width="18" height="18" viewBox="0 0 24 24" {...s}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+  if (id === 'ausbuchen') return <svg width="18" height="18" viewBox="0 0 24 24" {...s}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+  if (id === 'inventur') return <svg width="18" height="18" viewBox="0 0 24 24" {...s}><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><polyline points="3 6 4 7 6 5"/><polyline points="3 12 4 13 6 11"/><polyline points="3 18 4 19 6 17"/></svg>
+  if (id === 'darkmode') return <svg width="18" height="18" viewBox="0 0 24 24" {...s}><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+  if (id === 'dateien') return <svg width="18" height="18" viewBox="0 0 24 24" {...s}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+  if (id === 'qr') return <svg width="18" height="18" viewBox="0 0 24 24" {...s}><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="3" height="3"/><rect x="18" y="14" width="3" height="3"/><rect x="14" y="18" width="3" height="3"/><rect x="18" y="18" width="3" height="3"/></svg>
+  return null
+}
+
 export default function Hub() {
+  const navigate = useNavigate()
   const { user, loading, logout } = useAuth()
   const { currentNotification, dismissNotification, remindLater } = useNotifications(user)
 
@@ -42,23 +77,36 @@ export default function Hub() {
   const [newsOpen, setNewsOpen] = useState(false)
 
   const [sheetOpen, setSheetOpen] = useState(false)
-  const [shortcuts, setShortcuts] = useState<{ name: string; url: string }[]>(() => {
-    try { return JSON.parse(localStorage.getItem('hub_shortcuts') || '[]') } catch { return [] }
+  const [editingShortcuts, setEditingShortcuts] = useState(false)
+  const [enabledShortcuts, setEnabledShortcuts] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('hub_shortcuts')
+      return saved ? JSON.parse(saved) : PREDEFINED_SHORTCUTS.map(s => s.id)
+    } catch { return PREDEFINED_SHORTCUTS.map(s => s.id) }
   })
-  const [adding, setAdding] = useState(false)
-  const [newName, setNewName] = useState('')
-  const [newUrl, setNewUrl] = useState('')
   const touchStartY = useRef(0)
 
-  function saveShortcuts(list: { name: string; url: string }[]) {
-    setShortcuts(list)
-    localStorage.setItem('hub_shortcuts', JSON.stringify(list))
+  function saveEnabledShortcuts(ids: string[]) {
+    setEnabledShortcuts(ids)
+    localStorage.setItem('hub_shortcuts', JSON.stringify(ids))
   }
 
-  function addShortcut() {
-    if (!newName.trim() || !newUrl.trim()) return
-    saveShortcuts([...shortcuts, { name: newName.trim(), url: newUrl.trim() }])
-    setNewName(''); setNewUrl(''); setAdding(false)
+  function toggleShortcut(id: string) {
+    const next = enabledShortcuts.includes(id)
+      ? enabledShortcuts.filter(x => x !== id)
+      : [...enabledShortcuts, id]
+    saveEnabledShortcuts(next)
+  }
+
+  function runShortcut(id: ShortcutId, url: string | null) {
+    setSheetOpen(false)
+    setEditingShortcuts(false)
+    if (id === 'darkmode') {
+      const next = getTheme() === 'dark' ? 'light' : 'dark'
+      setTheme(next); applyTheme(next)
+    } else if (url) {
+      navigate(url)
+    }
   }
 
   useEffect(() => {
@@ -447,61 +495,62 @@ export default function Hub() {
 
       {/* Bottom Sheet Overlay */}
       <div
-        style={{ position: 'fixed', inset: 0, zIndex: 500, background: sheetOpen ? 'rgba(0,0,0,0.25)' : 'transparent', pointerEvents: sheetOpen ? 'all' : 'none', transition: 'background .3s', backdropFilter: sheetOpen ? 'blur(4px)' : 'none' }}
-        onClick={() => { setSheetOpen(false); setAdding(false) }}
+        style={{ position: 'fixed', inset: 0, zIndex: 500, background: sheetOpen ? 'rgba(0,0,0,0.45)' : 'transparent', pointerEvents: sheetOpen ? 'all' : 'none', transition: 'background .3s', backdropFilter: sheetOpen ? 'blur(12px)' : 'none', WebkitBackdropFilter: sheetOpen ? 'blur(12px)' : 'none' }}
+        onClick={() => { setSheetOpen(false); setEditingShortcuts(false) }}
       >
         <div
-          style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: '#fff', borderRadius: '22px 22px 0 0', padding: '10px 20px calc(32px + env(safe-area-inset-bottom))', transform: sheetOpen ? 'translateY(0)' : 'translateY(100%)', transition: 'transform .35s cubic-bezier(0.32,0.72,0,1)', maxHeight: '70vh', overflowY: 'auto', boxShadow: '0 -4px 32px rgba(0,0,0,0.12)' }}
+          style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'rgba(30,8,12,0.82)', borderRadius: '28px 28px 0 0', padding: '12px 20px calc(36px + env(safe-area-inset-bottom))', transform: sheetOpen ? 'translateY(0)' : 'translateY(100%)', transition: 'transform .38s cubic-bezier(0.32,0.72,0,1)', maxHeight: '75vh', overflowY: 'auto', boxShadow: '0 -8px 40px rgba(0,0,0,0.4)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)' }}
           onClick={e => e.stopPropagation()}
           onTouchStart={e => { touchStartY.current = e.touches[0].clientY }}
-          onTouchEnd={e => { if (e.changedTouches[0].clientY - touchStartY.current > 50) { setSheetOpen(false); setAdding(false) } }}
+          onTouchEnd={e => { if (e.changedTouches[0].clientY - touchStartY.current > 50) { setSheetOpen(false); setEditingShortcuts(false) } }}
         >
-          <div style={{ width: 36, height: 4, borderRadius: 99, background: 'rgba(0,0,0,0.15)', margin: '0 auto 18px' }} />
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-            <span style={{ fontWeight: 700, fontSize: '1.05rem', color: '#1d1d1f' }}>Kurzbefehle</span>
-            {!adding && (
-              <button onClick={() => setAdding(true)} style={{ background: 'rgba(107,15,26,0.08)', border: 'none', borderRadius: 8, padding: '5px 12px', fontWeight: 700, fontSize: '.82rem', color: '#6B0F1A', cursor: 'pointer', fontFamily: 'inherit' }}>+ Neu</button>
+          <div style={{ width: 36, height: 4, borderRadius: 99, background: 'rgba(255,255,255,0.2)', margin: '0 auto 18px' }} />
+
+          {/* Header */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, paddingBottom: 14, borderBottom: '0.5px solid rgba(255,255,255,0.1)' }}>
+            <span style={{ fontWeight: 700, fontSize: '1.05rem', color: '#fff', letterSpacing: '-0.01em' }}>Kurzbefehle</span>
+            <button
+              onClick={() => setEditingShortcuts(e => !e)}
+              style={{ background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: 99, padding: '6px 14px', fontWeight: 600, fontSize: '.8rem', color: '#fff', cursor: 'pointer', fontFamily: 'inherit', letterSpacing: '.01em' }}
+            >
+              {editingShortcuts ? 'Fertig' : 'Bearbeiten'}
+            </button>
+          </div>
+
+          {/* Grid */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px 10px' }}>
+            {(editingShortcuts ? PREDEFINED_SHORTCUTS : PREDEFINED_SHORTCUTS.filter(s => enabledShortcuts.includes(s.id))).map(s => {
+              const on = enabledShortcuts.includes(s.id)
+              return (
+                <div key={s.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, position: 'relative' }}>
+                  <div style={{ position: 'relative', flexShrink: 0 }}>
+                    <button
+                      onClick={() => editingShortcuts ? toggleShortcut(s.id) : runShortcut(s.id, s.url)}
+                      style={{ width: 64, height: 64, borderRadius: '50%', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', background: on ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.15)', transition: 'background .2s, transform .1s' }}
+                      onTouchStart={e => { (e.currentTarget as HTMLButtonElement).style.transform = 'scale(0.92)' }}
+                      onTouchEnd={e => { (e.currentTarget as HTMLButtonElement).style.transform = '' }}
+                    >
+                      <ShortcutIcon id={s.id} color={on ? '#6B0F1A' : 'rgba(255,255,255,0.85)'} />
+                    </button>
+                    {editingShortcuts && (
+                      <div style={{ position: 'absolute', top: -2, right: -2, width: 20, height: 20, borderRadius: '50%', background: on ? '#6B0F1A' : 'rgba(255,255,255,0.3)', border: '2px solid rgba(30,8,12,0.82)', display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
+                        {on
+                          ? <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                          : <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                        }
+                      </div>
+                    )}
+                  </div>
+                  <span style={{ fontSize: '10px', fontWeight: 500, color: 'rgba(255,255,255,0.7)', textAlign: 'center', lineHeight: 1.3, maxWidth: 68 }}>{s.name}</span>
+                </div>
+              )
+            })}
+            {!editingShortcuts && enabledShortcuts.length === 0 && (
+              <div style={{ gridColumn: '1/-1', textAlign: 'center', color: 'rgba(255,255,255,0.4)', fontSize: '.88rem', padding: '16px 0' }}>
+                Tippe auf „Bearbeiten" um Kurzbefehle hinzuzufügen.
+              </div>
             )}
           </div>
-          {shortcuts.length === 0 && !adding && (
-            <p style={{ color: 'rgba(0,0,0,0.35)', fontSize: '.9rem', textAlign: 'center', margin: '24px 0' }}>Noch keine Kurzbefehle. Tippe auf „+ Neu".</p>
-          )}
-          {shortcuts.map((s, i) => (
-            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 0', borderBottom: '0.5px solid rgba(0,0,0,0.07)' }}>
-              <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(107,15,26,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6B0F1A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
-                </svg>
-              </div>
-              <button
-                onClick={() => { setSheetOpen(false); window.location.href = s.url }}
-                style={{ flex: 1, background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit', fontSize: '.95rem', color: '#1d1d1f', fontWeight: 600, padding: 0 }}
-              >
-                {s.name}
-                <div style={{ fontSize: '.75rem', color: 'rgba(0,0,0,0.35)', fontWeight: 400, marginTop: 1 }}>{s.url}</div>
-              </button>
-              <button onClick={() => saveShortcuts(shortcuts.filter((_, j) => j !== i))} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(0,0,0,0.25)', fontSize: 20, lineHeight: 1, padding: '4px 6px', flexShrink: 0 }}>×</button>
-            </div>
-          ))}
-          {adding && (
-            <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <input
-                style={{ width: '100%', padding: '10px 14px', border: '0.5px solid rgba(0,0,0,0.15)', borderRadius: 10, fontSize: 15, fontFamily: 'inherit', background: '#fff', color: '#1d1d1f', boxSizing: 'border-box' }}
-                placeholder="Name (z.B. Ausbildungstermin anlegen)"
-                value={newName} onChange={e => setNewName(e.target.value)} autoFocus
-              />
-              <input
-                style={{ width: '100%', padding: '10px 14px', border: '0.5px solid rgba(0,0,0,0.15)', borderRadius: 10, fontSize: 15, fontFamily: 'inherit', background: '#fff', color: '#1d1d1f', boxSizing: 'border-box' }}
-                placeholder="URL (z.B. /ausbildungen/neu)"
-                value={newUrl} onChange={e => setNewUrl(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && addShortcut()}
-              />
-              <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
-                <button onClick={addShortcut} style={{ flex: 1, background: '#6B0F1A', color: '#fff', border: 'none', borderRadius: 10, padding: '11px', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', fontSize: '.9rem' }}>Hinzufügen</button>
-                <button onClick={() => { setAdding(false); setNewName(''); setNewUrl('') }} style={{ background: 'rgba(0,0,0,0.06)', border: 'none', borderRadius: 10, padding: '11px 16px', cursor: 'pointer', fontFamily: 'inherit', fontSize: '.9rem', color: '#1d1d1f' }}>Abbrechen</button>
-              </div>
-            </div>
-          )}
         </div>
       </div>
     </div>
