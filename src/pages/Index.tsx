@@ -1,160 +1,148 @@
-import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { pb } from '../lib/pocketbase'
+import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 
-interface Organization {
-  org_name: string
-  is_active: boolean
-  org_code: string
-  logo?: string
-}
+const TAGLINES = [
+  'Digitalisierung, die zuverlässig funktioniert.',
+  'Einsatzbereit. Immer und überall.',
+  'Dokumentation, die keine Zeit kostet.',
+  'Zuverlässige Lösungen für den Rettungsdienst.',
+  'Von der Idee zur digitalen Wirklichkeit.',
+  'Sicher. Schnell. Vernetzt.',
+]
 
 export default function Index() {
-  const [org, setOrg] = useState<Organization | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
+  const navigate = useNavigate()
+  const [taglineIndex, setTaglineIndex] = useState(0)
+  const [visible, setVisible] = useState(true)
+  const [orgCode, setOrgCode] = useState('')
+  const [orgError, setOrgError] = useState('')
 
   useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search)
-    const orgCode = urlParams.get('org')
-
-    async function loadOrganization() {
-      if (!orgCode) {
-        setError('Keine Organisation in URL angegeben!')
-        setLoading(false)
-        return
-      }
-
-      try {
-        const orgData = await pb.collection('organizations').getFirstListItem<Organization>(
-          `org_code = "${orgCode}"`
-        )
-
-        if (!orgData.is_active) {
-          setError('Diese Organisation ist nicht aktiv!')
-          setLoading(false)
-          return
-        }
-
-        setOrg(orgData)
-      } catch (err: unknown) {
-        if (err && typeof err === 'object' && 'status' in err && (err as { status: number }).status === 404) {
-          setError('Organisation nicht gefunden!')
-        } else {
-          setError('Fehler beim Laden der Organisation')
-        }
-      }
-
-      setLoading(false)
-    }
-
-    loadOrganization()
+    const interval = setInterval(() => {
+      setVisible(false)
+      setTimeout(() => {
+        setTaglineIndex(i => (i + 1) % TAGLINES.length)
+        setVisible(true)
+      }, 500)
+    }, 3500)
+    return () => clearInterval(interval)
   }, [])
 
-  // Build large organization logo
-  let logoDisplay: JSX.Element | null = null
-  if (org?.logo) {
-    const logoUrl = pb.files.getUrl(org, org.logo, { thumb: '500x500' })
-    logoDisplay = (
-      <img
-        src={logoUrl}
-        alt={org.org_name}
-        style={{ width: '120px', height: '120px', objectFit: 'contain', borderRadius: '24px' }}
-      />
-    )
-  } else {
-    logoDisplay = <div style={{ fontSize: '80px', lineHeight: 1 }}>🏢</div>
-  }
-
-  if (loading) {
-    return null
-  }
-
-  if (error) {
-    return (
-      <div className="status-bar">
-        <div className="logo">
-          <svg width="120" height="32" viewBox="0 0 560 140">
-            <rect x="20" y="20" width="100" height="100" rx="26" fill="rgba(255,255,255,0.25)"/>
-            <path d="M45 42 L45 98 L60 98 L60 78 L72 78 L83 98 L100 98 L87 77 Q92 74 92 63 Q92 42 75 42 Z M60 52 L72 52 Q77 52 77 62 Q77 72 72 72 L60 72 Z" fill="white"/>
-            <text x="140" y="80" fontFamily="Inter, sans-serif" fontSize="46" fontWeight="600" fill="white" letterSpacing="0">Responda</text>
-          </svg>
-        </div>
-        <div></div>
-        <Link to="/login" className="logout-btn">Login</Link>
-      </div>
-    )
+  function handleOrgSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    const code = orgCode.trim().toLowerCase()
+    if (!code) { setOrgError('Bitte einen Code eingeben.'); return }
+    setOrgError('')
+    navigate(`/${code}`)
   }
 
   return (
-    <>
-      {/* Status Bar - Logo left, Login right */}
-      <div className="status-bar">
-        <div className="logo">
-          <svg width="120" height="32" viewBox="0 0 560 140">
-            <rect x="20" y="20" width="100" height="100" rx="26" fill="rgba(255,255,255,0.25)"/>
-            <path d="M45 42 L45 98 L60 98 L60 78 L72 78 L83 98 L100 98 L87 77 Q92 74 92 63 Q92 42 75 42 Z M60 52 L72 52 Q77 52 77 62 Q77 72 72 72 L60 72 Z" fill="white"/>
-            <text x="140" y="80" fontFamily="Inter, sans-serif" fontSize="46" fontWeight="600" fill="white" letterSpacing="0">Responda</text>
-          </svg>
-        </div>
-        <div></div>
-        <Link to="/login" className="logout-btn">Login</Link>
+    <div style={{
+      minHeight: '100dvh',
+      background: 'linear-gradient(160deg, #6B0F1A 0%, #3d0808 55%, #1a0303 100%)',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '32px 24px calc(48px + env(safe-area-inset-bottom))',
+      fontFamily: 'Inter, -apple-system, sans-serif',
+      position: 'relative',
+      overflow: 'hidden',
+    }}>
+      {/* Background glow */}
+      <div style={{ position: 'absolute', top: '-10%', left: '50%', transform: 'translateX(-50%)', width: '600px', height: '600px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(255,80,80,0.08) 0%, transparent 70%)', pointerEvents: 'none' }} />
+
+      <style>{`
+        @keyframes fadeUp {
+          from { opacity: 0; transform: translateY(10px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes tagFadeIn {
+          from { opacity: 0; transform: translateY(6px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes tagFadeOut {
+          from { opacity: 1; transform: translateY(0); }
+          to   { opacity: 0; transform: translateY(-6px); }
+        }
+        .tagline-text {
+          animation: tagFadeIn 0.5s ease forwards;
+        }
+        .tagline-text.hiding {
+          animation: tagFadeOut 0.5s ease forwards;
+        }
+        .landing-btn {
+          transition: background 0.2s, transform 0.15s;
+        }
+        .landing-btn:active { transform: scale(0.97); }
+        .org-input:focus { outline: none; border-color: rgba(255,255,255,0.5) !important; }
+      `}</style>
+
+      {/* Logo */}
+      <div style={{ animation: 'fadeUp 0.7s ease forwards', marginBottom: '48px', textAlign: 'center' }}>
+        <svg width="200" height="52" viewBox="0 0 560 140">
+          <rect x="20" y="20" width="100" height="100" rx="26" fill="rgba(255,255,255,0.15)"/>
+          <path d="M45 42 L45 98 L60 98 L60 78 L72 78 L83 98 L100 98 L87 77 Q92 74 92 63 Q92 42 75 42 Z M60 52 L72 52 Q77 52 77 62 Q77 72 72 72 L60 72 Z" fill="white"/>
+          <text x="140" y="80" fontFamily="Inter, sans-serif" fontSize="46" fontWeight="600" fill="white" letterSpacing="0">Responda</text>
+        </svg>
       </div>
 
-      {/* Main Content */}
-      <div className="index-content">
-        {/* Large Org Logo */}
-        <div className="index-logo-section">
-          {logoDisplay}
-          <h1 className="index-org-name">{org?.org_name}</h1>
-        </div>
-
-        {/* Form Cards - Glassmorphism */}
-        <div className="index-forms">
-          <Link to={`/hub?org=${org?.org_code}`} className="index-form-card">
-            <div className="index-form-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                <polyline points="14,2 14,8 20,8" />
-                <line x1="16" y1="13" x2="8" y2="13" />
-                <line x1="16" y1="17" x2="8" y2="17" />
-              </svg>
-            </div>
-            <div className="index-form-text">
-              <h2>Patientendokumentation</h2>
-              <p>Dokumentiere Einsätze und Patienteninformationen</p>
-            </div>
-          </Link>
-
-          <Link to={`/hub?org=${org?.org_code}`} className="index-form-card">
-            <div className="index-form-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
-                <polyline points="3.27,6.96 12,12.01 20.73,6.96" />
-                <line x1="12" y1="22.08" x2="12" y2="12" />
-              </svg>
-            </div>
-            <div className="index-form-text">
-              <h2>Produktausgabe</h2>
-              <p>Dokumentiere ausgegebene Materialien und Produkte</p>
-            </div>
-          </Link>
-
-          <Link to={`/hub?org=${org?.org_code}`} className="index-form-card">
-            <div className="index-form-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
-                <line x1="12" y1="9" x2="12" y2="13" />
-                <line x1="12" y1="17" x2="12.01" y2="17" />
-              </svg>
-            </div>
-            <div className="index-form-text">
-              <h2>CIRS-Meldung</h2>
-              <p>Melde kritische Ereignisse und Beinahe-Unfälle</p>
-            </div>
-          </Link>
-        </div>
+      {/* Animated tagline */}
+      <div style={{ height: '52px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '56px', overflow: 'hidden' }}>
+        <p
+          className={`tagline-text${visible ? '' : ' hiding'}`}
+          key={taglineIndex}
+          style={{ fontSize: 'clamp(15px, 4vw, 19px)', fontWeight: 500, color: 'rgba(255,255,255,0.82)', textAlign: 'center', margin: 0, letterSpacing: '-0.01em', lineHeight: 1.4, maxWidth: '320px' }}
+        >
+          {TAGLINES[taglineIndex]}
+        </p>
       </div>
-    </>
+
+      {/* Login button */}
+      <button
+        className="landing-btn"
+        onClick={() => navigate('/login')}
+        style={{ width: '100%', maxWidth: '320px', padding: '15px', borderRadius: '14px', background: 'rgba(255,255,255,0.95)', border: 'none', cursor: 'pointer', fontSize: '16px', fontWeight: 700, color: '#6B0F1A', fontFamily: 'inherit', letterSpacing: '-0.01em', marginBottom: '12px', boxShadow: '0 4px 24px rgba(0,0,0,0.25)' }}
+      >
+        Anmelden
+      </button>
+
+      {/* Divider */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', maxWidth: '320px', margin: '20px 0' }}>
+        <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.15)' }} />
+        <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.35)', fontWeight: 500, letterSpacing: '.05em' }}>ODER</span>
+        <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.15)' }} />
+      </div>
+
+      {/* Org code section */}
+      <form onSubmit={handleOrgSubmit} style={{ width: '100%', maxWidth: '320px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        <p style={{ margin: '0 0 4px', fontSize: '13px', color: 'rgba(255,255,255,0.45)', textAlign: 'center', letterSpacing: '.02em' }}>
+          Organisations-Code eingeben
+        </p>
+        <input
+          className="org-input"
+          value={orgCode}
+          onChange={e => { setOrgCode(e.target.value); setOrgError('') }}
+          placeholder="z.B. feuerwehr-musterstadt"
+          autoCapitalize="none"
+          autoCorrect="off"
+          spellCheck={false}
+          style={{ width: '100%', padding: '13px 16px', borderRadius: '12px', border: '1.5px solid rgba(255,255,255,0.2)', background: 'rgba(255,255,255,0.08)', fontSize: '15px', color: '#fff', fontFamily: 'inherit', boxSizing: 'border-box', letterSpacing: '0.01em' }}
+        />
+        {orgError && <p style={{ margin: 0, fontSize: '13px', color: 'rgba(255,150,150,0.9)', textAlign: 'center' }}>{orgError}</p>}
+        <button
+          type="submit"
+          className="landing-btn"
+          style={{ padding: '13px', borderRadius: '12px', background: 'rgba(255,255,255,0.12)', border: '1.5px solid rgba(255,255,255,0.2)', cursor: 'pointer', fontSize: '15px', fontWeight: 600, color: '#fff', fontFamily: 'inherit' }}
+        >
+          Weiter →
+        </button>
+      </form>
+
+      {/* Footer */}
+      <p style={{ position: 'absolute', bottom: 'calc(16px + env(safe-area-inset-bottom))', fontSize: '11px', color: 'rgba(255,255,255,0.2)', margin: 0, letterSpacing: '.03em' }}>
+        © 2025 Responda Systems
+      </p>
+    </div>
   )
 }
