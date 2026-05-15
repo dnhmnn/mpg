@@ -34,115 +34,81 @@ function UserSearch({ orgId, value, onChange }: {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<UserHit[]>([])
   const [open, setOpen] = useState(false)
-  const [searched, setSearched] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [searchError, setSearchError] = useState('')
   const timer = useRef<ReturnType<typeof setTimeout>>()
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    const handler = (e: MouseEvent) => {
+    function onClick(e: MouseEvent) {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
     }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
+    document.addEventListener('mousedown', onClick)
+    return () => document.removeEventListener('mousedown', onClick)
   }, [])
 
   function onInput(q: string) {
     setQuery(q)
-    setSearched(false)
     clearTimeout(timer.current)
     if (!q.trim()) { setResults([]); setOpen(false); return }
-    setLoading(true)
-    setSearchError('')
     timer.current = setTimeout(async () => {
       try {
-        const res = await pb.collection('users').getList(1, 10, {
+        const res = await pb.collection('users').getList(1, 8, {
           filter: `organization_id = "${orgId}" && name ~ "${q.trim()}"`,
           sort: 'name',
         })
-        const hits = res.items.map(u => ({ id: u.id, name: u.name, email: u.email }))
-        setResults(hits)
-        if (hits.length === 0) {
-          pb.collection('users').getList(1, 1, {}).then(r => {
-            if (r.totalItems === 0) {
-              setSearchError(`users: Kein Zugriff (PocketBase List-Regel prüfen) – org.id="${orgId}"`)
-            } else {
-              setSearchError(`users: ${r.totalItems} Benutzer gesamt, aber 0 für org.id="${orgId}" mit name~"${q.trim()}"`)
-            }
-          }).catch(() => {
-            setSearchError(`users: Kein Zugriff ohne Filter (Auth erforderlich?) – org.id="${orgId}"`)
-          })
-        }
-      } catch (e: any) {
+        setResults(res.items.map(u => ({ id: u.id, name: u.name, email: u.email })))
+        setOpen(true)
+      } catch {
         setResults([])
-        setSearchError(`FEHLER: ${e?.status ?? ''} ${e?.message ?? e}`)
+        setOpen(true)
       }
-      setSearched(true)
-      setLoading(false)
-      setOpen(true)
-    }, 300)
+    }, 350)
   }
 
   function select(u: UserHit) {
-    onChange(u); setQuery(''); setResults([]); setOpen(false); setSearched(false)
+    onChange(u)
+    setQuery('')
+    setResults([])
+    setOpen(false)
   }
 
-  if (value) return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 8, background: 'var(--bg-subtle)', border: '1px solid var(--border-medium)', borderRadius: 12, padding: '10px 14px' }}>
-      <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'var(--accent)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 14, flexShrink: 0 }}>
-        {value.name.charAt(0).toUpperCase()}
-      </div>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--text)' }}>{value.name}</div>
-        <div style={{ fontSize: 12, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{value.email}</div>
-      </div>
-      <button type="button" onClick={() => onChange(null)}
-        style={{ background: 'var(--bg-hover)', border: '0.5px solid var(--border-medium)', borderRadius: 8, cursor: 'pointer', color: 'var(--text-secondary)', fontSize: 18, lineHeight: 1, padding: '4px 8px', flexShrink: 0 }}>
-        ×
-      </button>
-    </div>
-  )
-
   return (
-    <div ref={ref} style={{ marginTop: 8 }}>
-      <input
-        style={{ ...inp, marginTop: 0 }}
-        type="text"
-        value={query}
-        onChange={e => onInput(e.target.value)}
-        placeholder="Name eingeben und suchen…"
-      />
-      {loading && (
-        <div style={{ background: 'var(--bg-elevated)', border: '0.5px solid var(--border-medium)', borderRadius: 12, marginTop: 4, padding: '12px 14px', fontSize: 14, color: 'var(--text-secondary)' }}>
-          Suche…
+    <div ref={ref} style={{ position: 'relative', marginTop: 8 }}>
+      {value ? (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bg-subtle)', border: '0.5px solid var(--border-medium)', borderRadius: 10, padding: '8px 12px' }}>
+          <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--accent)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 13, flexShrink: 0 }}>
+            {value.name.charAt(0).toUpperCase()}
+          </div>
+          <span style={{ flex: 1, fontWeight: 600, color: 'var(--text)', fontSize: 14 }}>{value.name}</span>
+          <button type="button" onClick={() => onChange(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', fontSize: 18, lineHeight: 1, padding: '0 2px' }}>×</button>
         </div>
+      ) : (
+        <input
+          style={inp}
+          type="text"
+          value={query}
+          onChange={e => onInput(e.target.value)}
+          placeholder="Name suchen…"
+        />
       )}
-      {open && !loading && results.length > 0 && (
-        <div style={{ background: 'var(--bg-elevated)', border: '0.5px solid var(--border-medium)', borderRadius: 12, marginTop: 4, overflow: 'hidden', maxHeight: 280, overflowY: 'auto' }}>
-          {results.map((u, idx) => (
-            <button key={u.id} type="button" onMouseDown={() => select(u)}
-              style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', background: 'none', border: 'none', padding: '11px 14px', cursor: 'pointer', borderBottom: idx < results.length - 1 ? '0.5px solid var(--border)' : 'none', fontFamily: 'inherit' }}
+      {open && results.length > 0 && (
+        <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--bg-card)', border: '0.5px solid var(--border)', borderRadius: 10, boxShadow: 'var(--shadow-md)', zIndex: 50, overflow: 'hidden', marginTop: 2 }}>
+          {results.map(u => (
+            <button key={u.id} type="button" onMouseDown={() => select(u)} style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', background: 'none', border: 'none', padding: '10px 12px', cursor: 'pointer', textAlign: 'left', borderBottom: '0.5px solid var(--border)', fontFamily: 'inherit' }}
               onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
               onMouseLeave={e => (e.currentTarget.style.background = 'none')}>
-              <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--accent)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 13, flexShrink: 0 }}>
+              <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--accent)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 13, flexShrink: 0 }}>
                 {u.name.charAt(0).toUpperCase()}
               </div>
-              <div style={{ textAlign: 'left', minWidth: 0 }}>
+              <div>
                 <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--text)' }}>{u.name}</div>
-                <div style={{ fontSize: 12, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.email}</div>
+                <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{u.email}</div>
               </div>
             </button>
           ))}
         </div>
       )}
-      {searchError && (
-        <div style={{ background: '#fef3c7', border: '1px solid #fde047', borderRadius: 12, marginTop: 4, padding: '12px 14px', fontSize: 12, color: '#78350f', fontFamily: 'monospace', wordBreak: 'break-all' }}>
-          {searchError}
-        </div>
-      )}
-      {open && !loading && !searchError && searched && results.length === 0 && query.trim() && (
-        <div style={{ background: 'var(--bg-elevated)', border: '0.5px solid var(--border-medium)', borderRadius: 12, marginTop: 4, padding: '12px 14px', fontSize: 14, color: 'var(--text-secondary)' }}>
+      {open && results.length === 0 && query.trim() && (
+        <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--bg-card)', border: '0.5px solid var(--border)', borderRadius: 10, padding: '10px 12px', fontSize: 14, color: 'var(--text-secondary)', zIndex: 50, marginTop: 2 }}>
           Kein Benutzer gefunden
         </div>
       )}
