@@ -21,9 +21,10 @@ interface AppGridProps {
   userApps: string[]
   onRemoveApp: (id: string) => void
   onAppClick?: (id: string) => void
+  dockPinIds?: string[]
 }
 
-export default function AppGrid({ userApps, onRemoveApp, onAppClick }: AppGridProps) {
+export default function AppGrid({ userApps, onRemoveApp, onAppClick, dockPinIds = [] }: AppGridProps) {
   const navigate = useNavigate()
 
   function handleRemoveApp(e: React.MouseEvent, id: string) {
@@ -44,9 +45,9 @@ export default function AppGrid({ userApps, onRemoveApp, onAppClick }: AppGridPr
         const app = ALL_APPS[id]
         if (!app) return null
         return (
-          <a key={id} href={app.url} className="app" data-app-id={id} onClick={(e) => handleAppClick(e, app)}>
+          <a key={id} href={app.url} className={`app${dockPinIds.includes(id) ? ' app-dock-pinned' : ''}`} data-app-id={id} onClick={(e) => handleAppClick(e, app)}>
             <div className="remove-btn" onClick={(e) => handleRemoveApp(e, id)}>−</div>
-            <div className="app-icon" style={{ background: 'var(--bg-card-solid)', color: app.color?.match(/#[0-9a-fA-F]{6}/)?.[0] || 'var(--accent)' }}>
+            <div className="app-icon" style={{ background: 'var(--bg-card)', color: app.color?.match(/#[0-9a-fA-F]{6}/)?.[0] || 'var(--accent)' }}>
               <AppIcon icon={app.icon} />
             </div>
             <div className="app-name">{app.name}</div>

@@ -989,20 +989,27 @@ export default function Unitas() {
                     )
                   }
 
+                  const antworten: string[] = Array.isArray(currentFrage.antworten) ? currentFrage.antworten : []
+                  const richtige = Number(currentFrage.richtige)
+
                   return (
                     <div>
                       <div style={{ fontSize: '11px', fontWeight: 700, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '10px' }}>
                         Quiz{fragen.length > 1 ? ` · Frage ${quizFrageIdx + 1} von ${fragen.length}` : ''}
                       </div>
                       <div style={{ fontWeight: 600, fontSize: '16px', color: 'var(--text)', marginBottom: '16px', lineHeight: 1.5 }}>
-                        {currentFrage.frage}
+                        {currentFrage.frage || ''}
                       </div>
 
+                      {antworten.length === 0 && (
+                        <div style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '20px' }}>Keine Antwortoptionen hinterlegt.</div>
+                      )}
+
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '20px' }}>
-                        {currentFrage.antworten.map((a: string, idx: number) => {
+                        {antworten.map((a: string, idx: number) => {
                           let bg = 'var(--bg-card)', border = '1px solid var(--border)', color = 'var(--text)'
                           if (quizSubmitted) {
-                            if (idx === currentFrage.richtige) { bg = '#f0fdf4'; border = '2px solid #16a34a'; color = '#166534' }
+                            if (idx === richtige) { bg = '#f0fdf4'; border = '2px solid #16a34a'; color = '#166534' }
                             else if (idx === quizSelected) { bg = '#fef2f2'; border = '2px solid #ef4444'; color = '#b91c1c' }
                           } else if (idx === quizSelected) {
                             bg = '#eff6ff'; border = '2px solid #3b82f6'; color = '#1d4ed8'
@@ -1012,7 +1019,7 @@ export default function Unitas() {
                               key={idx}
                               disabled={quizSubmitted}
                               onClick={() => setQuizSelected(idx)}
-                              style={{ padding: '12px 16px', borderRadius: '10px', border, background: bg, color, fontWeight: idx === quizSelected || (quizSubmitted && idx === currentFrage.richtige) ? 700 : 400, fontSize: '14px', cursor: quizSubmitted ? 'default' : 'pointer', textAlign: 'left', fontFamily: 'inherit' }}
+                              style={{ padding: '12px 16px', borderRadius: '10px', border, background: bg, color, fontWeight: idx === quizSelected || (quizSubmitted && idx === richtige) ? 700 : 400, fontSize: '14px', cursor: quizSubmitted ? 'default' : 'pointer', textAlign: 'left', fontFamily: 'inherit' }}
                             >{a}</button>
                           )
                         })}
@@ -1022,7 +1029,7 @@ export default function Unitas() {
                         <button
                           disabled={quizSelected === null}
                           onClick={() => {
-                            const correct = quizSelected === currentFrage.richtige
+                            const correct = quizSelected === richtige
                             setQuizResults(prev => ({ correct: prev.correct + (correct ? 1 : 0), total: prev.total + 1 }))
                             setQuizSubmitted(true)
                           }}
@@ -1030,8 +1037,8 @@ export default function Unitas() {
                         >Antworten</button>
                       ) : (
                         <div>
-                          <div style={{ borderRadius: '10px', padding: '12px', textAlign: 'center', marginBottom: '14px', fontWeight: 700, background: quizSelected === currentFrage.richtige ? '#f0fdf4' : '#fef2f2', border: quizSelected === currentFrage.richtige ? '1px solid #bbf7d0' : '1px solid #fecaca', color: quizSelected === currentFrage.richtige ? '#166534' : '#b91c1c' }}>
-                            {quizSelected === currentFrage.richtige ? 'Richtig!' : 'Falsch!'}
+                          <div style={{ borderRadius: '10px', padding: '12px', textAlign: 'center', marginBottom: '14px', fontWeight: 700, background: quizSelected === richtige ? '#f0fdf4' : '#fef2f2', border: quizSelected === richtige ? '1px solid #bbf7d0' : '1px solid #fecaca', color: quizSelected === richtige ? '#166534' : '#b91c1c' }}>
+                            {quizSelected === richtige ? 'Richtig!' : 'Falsch!'}
                           </div>
                           <button
                             onClick={() => {
@@ -1043,7 +1050,7 @@ export default function Unitas() {
                                 setQuizSubmitted(false)
                               }
                             }}
-                            style={{ width: '100%', padding: '14px', borderRadius: '10px', border: 'none', background: quizSelected === currentFrage.richtige ? '#16a34a' : 'var(--btn-dark)', color: '#fff', fontWeight: 700, fontSize: '15px', cursor: 'pointer', fontFamily: 'inherit' }}
+                            style={{ width: '100%', padding: '14px', borderRadius: '10px', border: 'none', background: quizSelected === richtige ? '#16a34a' : 'var(--btn-dark)', color: '#fff', fontWeight: 700, fontSize: '15px', cursor: 'pointer', fontFamily: 'inherit' }}
                           >
                             {isLastFrage ? (isLast ? 'Abschließen' : 'Weiter') : 'Nächste Frage'}
                           </button>

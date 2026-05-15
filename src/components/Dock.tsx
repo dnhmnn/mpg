@@ -19,7 +19,7 @@ function DockBtn({ app, onAppClick }: { app: App; onAppClick: (id: string) => vo
 
   return (
     <a href={app.url} className="dock-btn" onClick={handleClick}>
-      <div className="dock-icon" style={{ background: 'var(--bg-card-solid)', color }}>
+      <div className="dock-icon" style={{ background: 'var(--bg-card)', color }}>
         <AppIcon icon={app.icon} />
       </div>
       <div className="dock-label">{app.name}</div>
