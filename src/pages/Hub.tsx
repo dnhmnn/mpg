@@ -65,6 +65,11 @@ export default function Hub() {
   }
 
   useEffect(() => {
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = '' }
+  }, [])
+
+  useEffect(() => {
     const handleOpenSettings = () => setShowSettings(true)
     window.addEventListener('openSettings', handleOpenSettings)
     return () => window.removeEventListener('openSettings', handleOpenSettings)
@@ -145,7 +150,7 @@ export default function Hub() {
     .map(id => ALL_APPS[id])
 
   return (
-    <div style={{ background: '#fff', minHeight: '100vh', '--bg-card': 'rgba(107,15,26,0.06)', '--bg-subtle': 'rgba(107,15,26,0.03)', '--border': 'rgba(107,15,26,0.12)', '--border-medium': 'rgba(107,15,26,0.15)', '--shadow-sm': '0 2px 16px rgba(107,15,26,0.08)' } as React.CSSProperties}>
+    <div style={{ background: '#fff', height: '100dvh', overflow: 'hidden', '--bg-card': 'rgba(107,15,26,0.06)', '--bg-subtle': 'rgba(107,15,26,0.03)', '--border': 'rgba(107,15,26,0.12)', '--border-medium': 'rgba(107,15,26,0.15)', '--shadow-sm': '0 2px 16px rgba(107,15,26,0.08)' } as React.CSSProperties}>
       <style>{`
         @media (min-width: 768px) {
           .hub-layout {
