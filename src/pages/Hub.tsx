@@ -17,6 +17,13 @@ export default function Hub() {
   const { user, loading, logout } = useAuth()
   const { currentNotification, dismissNotification, remindLater } = useNotifications(user)
 
+  const [showGreeting, setShowGreeting] = useState(true)
+
+  useEffect(() => {
+    const t = setTimeout(() => setShowGreeting(false), 2400)
+    return () => clearTimeout(t)
+  }, [])
+
   const [editMode, setEditMode] = useState(false)
   const [userApps, setUserApps] = useState<string[]>([])
   const [availableApps, setAvailableApps] = useState<App[]>([])
@@ -329,12 +336,37 @@ export default function Hub() {
           .dock-label { font-size: 11px; max-width: 66px; }
           .dock-btn { padding: 4px 9px; }
         }
+        @keyframes greetIn {
+          0%   { opacity: 0; transform: translateY(18px); }
+          30%  { opacity: 1; transform: translateY(0); }
+          70%  { opacity: 1; transform: translateY(0); }
+          100% { opacity: 0; transform: translateY(-14px); }
+        }
+        .greeting-overlay {
+          position: fixed; inset: 0; z-index: 999;
+          background: #fff;
+          display: flex; flex-direction: column;
+          align-items: center; justify-content: center;
+          gap: 4px;
+          animation: greetIn 2.4s cubic-bezier(0.4,0,0.2,1) forwards;
+          pointer-events: none;
+        }
+        .greeting-overlay.gone { display: none; }
         @keyframes controlDrift {
           0%, 100% { transform: translateY(0); opacity: 0.4; }
           55% { transform: translateY(5px); opacity: 0.8; }
         }
         .control-handle-hub { animation: controlDrift 2.2s ease-in-out infinite; }
       `}</style>
+
+      {showGreeting && (
+        <div className="greeting-overlay">
+          <span style={{ fontSize: '1.1rem', fontWeight: 400, color: 'rgba(0,0,0,0.4)', letterSpacing: '.01em' }}>Servus,</span>
+          <span style={{ fontSize: '2.4rem', fontWeight: 700, color: '#6B0F1A', letterSpacing: '-0.02em', lineHeight: 1 }}>
+            {(user?.name || user?.email?.split('@')[0] || '').split(' ')[0]}
+          </span>
+        </div>
+      )}
 
       <StatusBar user={user} onLogout={logout} />
 
