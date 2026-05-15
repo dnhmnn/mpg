@@ -1,3 +1,4 @@
+import React from 'react'
 import { Link } from 'react-router-dom'
 import { useOrg } from './OrgPublicLayout'
 import { pb } from '../../lib/pocketbase'
@@ -16,6 +17,7 @@ export default function OrgLanding() {
   const logoUrl = org.logo ? pb.files.getUrl(org, org.logo) : null
 
   return (
+    <div style={{ minHeight: '100vh', background: '#ffffff', '--bg-card': 'rgba(107,15,26,0.06)', '--bg-subtle': 'rgba(107,15,26,0.03)', '--border': 'rgba(107,15,26,0.12)', '--border-medium': 'rgba(107,15,26,0.15)', '--shadow-sm': '0 2px 16px rgba(107,15,26,0.08)' } as React.CSSProperties}>
     <div style={{ maxWidth: 600, margin: '0 auto', padding: '2rem 1rem' }}>
       <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
         {logoUrl && <img src={logoUrl} alt="Logo" style={{ maxHeight: 120, maxWidth: '80%', marginBottom: '1rem', borderRadius: 12 }} />}
@@ -40,6 +42,7 @@ export default function OrgLanding() {
           </Link>
         ))}
       </div>
+    </div>
     </div>
   )
 }
