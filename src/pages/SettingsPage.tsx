@@ -51,7 +51,8 @@ const S = {
   contentWrapper: {
     flex: 1,
     position: 'relative' as const,
-    overflow: 'hidden' as const
+    overflow: 'hidden' as const,
+    marginTop: 'calc(54px + env(safe-area-inset-top))'
   },
   panel: {
     position: 'absolute' as const,
