@@ -151,7 +151,7 @@ export default function Widgets({ user }: WidgetsProps) {
         </div>
 
         {/* Neuigkeiten widget */}
-        <div className="widget large">
+        <div className="widget">
           <div className="widget-title">Neuigkeiten</div>
           {!newsLoaded ? (
             <div style={{ fontSize: '13px', opacity: 0.4, marginTop: '8px' }}>Lädt…</div>
