@@ -212,7 +212,7 @@ export default function Hub() {
     .map(id => ALL_APPS[id])
 
   return (
-    <div style={{ background: '#fff', height: '100dvh', overflow: 'hidden', '--bg-card': 'rgba(107,15,26,0.06)', '--bg-subtle': 'rgba(107,15,26,0.03)', '--border': 'rgba(107,15,26,0.12)', '--border-medium': 'rgba(107,15,26,0.15)', '--shadow-sm': '0 2px 16px rgba(107,15,26,0.08)' } as React.CSSProperties}>
+    <div style={{ background: 'var(--bg)', height: '100dvh', overflow: 'hidden' } as React.CSSProperties}>
       <style>{`
         @media (min-width: 768px) {
           .hub-layout {
@@ -339,7 +339,7 @@ export default function Hub() {
           border-radius: 14px;
           transition: background 0.15s;
         }
-        .dock-btn:active { background: rgba(107,15,26,0.08); }
+        .dock-btn:active { background: var(--bg-hover); }
         .dock-icon {
           width: 52px;
           height: 52px;
@@ -399,7 +399,7 @@ export default function Hub() {
         }
         .greeting-overlay {
           position: fixed; inset: 0; z-index: 999;
-          background: #fff;
+          background: var(--bg);
           display: flex; flex-direction: column;
           align-items: center; justify-content: center;
           gap: 4px;
@@ -416,8 +416,8 @@ export default function Hub() {
 
       {showGreeting && !greetingGone && (
         <div className="greeting-overlay">
-          <span style={{ fontSize: '1.1rem', fontWeight: 400, color: 'rgba(0,0,0,0.4)', letterSpacing: '.01em' }}>Servus,</span>
-          <span style={{ fontSize: '2.4rem', fontWeight: 700, color: '#6B0F1A', letterSpacing: '-0.02em', lineHeight: 1 }}>
+          <span style={{ fontSize: '1.1rem', fontWeight: 400, color: 'var(--text-secondary)', letterSpacing: '.01em' }}>Servus,</span>
+          <span style={{ fontSize: '2.4rem', fontWeight: 700, color: 'var(--accent)', letterSpacing: '-0.02em', lineHeight: 1 }}>
             {(user?.name || user?.email?.split('@')[0] || '').split(' ')[0]}
           </span>
         </div>
@@ -433,8 +433,8 @@ export default function Hub() {
         onTouchStart={e => { touchStartY.current = e.touches[0].clientY }}
         onTouchEnd={e => { if (touchStartY.current - e.changedTouches[0].clientY > 30) setSheetOpen(true) }}
       >
-        <div style={{ width: 32, height: 4, borderRadius: 99, background: 'rgba(0,0,0,0.22)' }} />
-        <span style={{ fontSize: 9, fontWeight: 600, color: 'rgba(0,0,0,0.28)', letterSpacing: '.06em' }}>control</span>
+        <div style={{ width: 32, height: 4, borderRadius: 99, background: 'var(--border-strong)' }} />
+        <span style={{ fontSize: 9, fontWeight: 600, color: 'var(--text-secondary)', letterSpacing: '.06em' }}>control</span>
       </div>
 
       <div className="content hub-content" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-start' }}>
@@ -455,7 +455,7 @@ export default function Hub() {
 
       {!newsOpen && (
         <>
-          <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, height: 'calc(10px + env(safe-area-inset-bottom))', background: '#ffffff', zIndex: 399 }} />
+          <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, height: 'calc(10px + env(safe-area-inset-bottom))', background: 'var(--bg)', zIndex: 399 }} />
           <Dock
             dockApps={dockApps}
             recentApps={recentDockApps}
