@@ -427,80 +427,110 @@ export default function Lernbar() {
       </div>
 
       {/* Content */}
-      <div style={{ maxWidth: 600, margin: '0 auto', padding: '20px 16px calc(80px + env(safe-area-inset-bottom))' }}>
+      <div style={{ maxWidth: 600, margin: '0 auto', padding: tab === 'feed' ? '0 0 calc(80px + env(safe-area-inset-bottom))' : '20px 16px calc(80px + env(safe-area-inset-bottom))' }}>
 
         {/* ── FEED ── */}
         {tab === 'feed' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
             {beitraege.length === 0 && (
-              <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '64px 0 24px', fontSize: 15 }}>
+              <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '64px 16px 24px', fontSize: 15 }}>
                 <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--border-strong)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: 12, display: 'block', margin: '0 auto 12px' }}><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
                 Noch keine Lernbeiträge
               </div>
             )}
-            {beitraege.map(b => {
+            {beitraege.map((b, idx) => {
               const tags = parseTags(b.tags)
               const bildUrl = b.bild ? `https://api.responda.systems/api/files/${b.collectionId}/${b.id}/${b.bild}` : null
               const qs = feedQuizState[b.id] || { selected: null, submitted: false }
               const quiz = parseQuiz(b.quiz_daten)
+              const initials = (b.erstellt_von_name || 'R').split(' ').map((w: string) => w[0]).slice(0, 2).join('').toUpperCase()
+
+              const TypeIcon = () => {
+                if (b.typ === 'bild') return <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                if (b.typ === 'text') return <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/></svg>
+                if (b.typ === 'video') return <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                return <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              }
+
               return (
-                <div key={b.id} style={{ background: 'var(--bg-card)', borderRadius: 18, border: `1px solid ${b.gepinnt ? 'var(--accent)' : 'var(--border)'}`, overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,0.04)' }}>
+                <div key={b.id}>
+                  {idx > 0 && <div style={{ height: 1, background: 'var(--border)', margin: '0' }} />}
+
+                  {/* Pinned banner */}
                   {b.gepinnt && (
                     <div style={{ background: 'var(--accent)', padding: '5px 16px', display: 'flex', alignItems: 'center', gap: 6 }}>
                       <svg width="10" height="10" viewBox="0 0 24 24" fill="white"><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5v6h2v-6h5v-2l-2-2z"/></svg>
                       <span style={{ fontSize: 10, fontWeight: 700, color: '#fff', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Angepinnt</span>
                     </div>
                   )}
+
+                  {/* Author row */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px 10px' }}>
+                    <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--accent)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, flexShrink: 0, letterSpacing: '0.02em' }}>
+                      {initials}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)', lineHeight: 1.2 }}>{b.erstellt_von_name || 'Responda'}</div>
+                      <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 1 }}>
+                        {new Date(b.created).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                      </div>
+                    </div>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 700, color: 'var(--accent)', background: 'rgba(107,15,26,0.08)', borderRadius: 20, padding: '4px 10px', flexShrink: 0 }}>
+                      <TypeIcon />
+                      {b.typ === 'bild' ? 'Bild' : b.typ === 'text' ? 'Info' : b.typ === 'video' ? 'Reel' : 'Quiz'}
+                    </span>
+                  </div>
+
+                  {/* Media */}
                   {b.typ === 'bild' && bildUrl && (
-                    <img src={bildUrl} alt={b.titel} style={{ width: '100%', display: 'block', maxHeight: 300, objectFit: 'cover' }} />
+                    <img src={bildUrl} alt={b.titel} style={{ width: '100%', display: 'block', maxHeight: 400, objectFit: 'cover' }} />
                   )}
                   {b.typ === 'video' && b.video_url && (
                     <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0, background: '#000' }}>
                       <iframe src={getVideoEmbed(b.video_url)} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }} allowFullScreen allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" />
                     </div>
                   )}
+
+                  {/* Text/Quiz accent bar */}
                   {(b.typ === 'text' || b.typ === 'quiz') && (
-                    <div style={{ height: 4, background: 'var(--accent)' }} />
+                    <div style={{ height: 3, background: 'var(--accent)', margin: '0 16px', borderRadius: 2 }} />
                   )}
-                  <div style={{ padding: '16px 18px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
-                      <div style={{ fontWeight: 700, fontSize: 17, color: 'var(--text)', flex: 1 }}>{b.titel}</div>
-                      <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 700, color: 'var(--accent)', background: 'rgba(107,15,26,0.08)', borderRadius: 7, padding: '4px 9px', marginLeft: 10, flexShrink: 0, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                        {b.typ === 'bild' && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>}
-                        {b.typ === 'text' && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>}
-                        {b.typ === 'video' && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>}
-                        {b.typ === 'quiz' && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>}
-                        {b.typ === 'bild' ? 'Bild' : b.typ === 'text' ? 'Info' : b.typ === 'video' ? 'Video' : 'Quiz'}
-                      </span>
-                    </div>
+
+                  {/* Content */}
+                  <div style={{ padding: '12px 16px 16px' }}>
+                    <div style={{ fontWeight: 700, fontSize: 17, color: 'var(--text)', marginBottom: b.inhalt || quiz ? 8 : 0, lineHeight: 1.3 }}>{b.titel}</div>
+
                     {b.inhalt && b.typ !== 'quiz' && (
-                      <div style={{ fontSize: 15, color: 'var(--text)', lineHeight: 1.65, whiteSpace: 'pre-wrap', marginBottom: 12 }}>{b.inhalt}</div>
+                      <div style={{ fontSize: 15, color: 'var(--text)', lineHeight: 1.65, whiteSpace: 'pre-wrap', marginBottom: tags.length > 0 ? 12 : 0 }}>{b.inhalt}</div>
                     )}
+
                     {b.typ === 'quiz' && quiz && (
-                      <div style={{ marginBottom: 12 }}>
-                        <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text)', lineHeight: 1.5, marginBottom: 14 }}>{quiz.frage}</div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
-                          {quiz.antworten.map((a: string, idx: number) => {
+                      <div style={{ marginTop: 4 }}>
+                        <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text)', lineHeight: 1.5, marginBottom: 12 }}>{quiz.frage}</div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                          {quiz.antworten.map((a: string, idx2: number) => {
                             let bg = 'var(--bg-subtle)', border = '1.5px solid var(--border)', color = 'var(--text)'
                             if (qs.submitted) {
-                              if (idx === quiz.richtige) { bg = '#f0fdf4'; border = '2px solid #16a34a'; color = '#166534' }
-                              else if (idx === qs.selected) { bg = '#fef2f2'; border = '2px solid var(--accent)'; color = 'var(--accent)' }
-                            } else if (idx === qs.selected) { bg = 'rgba(107,15,26,0.06)'; border = '2px solid var(--accent)'; color = 'var(--accent)' }
+                              if (idx2 === quiz.richtige) { bg = '#f0fdf4'; border = '2px solid #16a34a'; color = '#166534' }
+                              else if (idx2 === qs.selected) { bg = '#fef2f2'; border = '2px solid var(--accent)'; color = 'var(--accent)' }
+                            } else if (idx2 === qs.selected) { bg = 'rgba(107,15,26,0.06)'; border = '2px solid var(--accent)'; color = 'var(--accent)' }
                             return (
-                              <button key={idx} disabled={qs.submitted} onClick={() => setFeedQuizState(prev => ({ ...prev, [b.id]: { selected: idx, submitted: false } }))}
-                                style={{ padding: '12px 14px', borderRadius: 12, border, background: bg, color, fontWeight: idx === qs.selected || (qs.submitted && idx === quiz.richtige) ? 700 : 400, fontSize: 14, cursor: qs.submitted ? 'default' : 'pointer', textAlign: 'left', fontFamily: 'inherit' }}>
+                              <button key={idx2} disabled={qs.submitted}
+                                onClick={() => setFeedQuizState(prev => ({ ...prev, [b.id]: { selected: idx2, submitted: false } }))}
+                                style={{ padding: '12px 14px', borderRadius: 12, border, background: bg, color, fontWeight: idx2 === qs.selected || (qs.submitted && idx2 === quiz.richtige) ? 700 : 400, fontSize: 14, cursor: qs.submitted ? 'default' : 'pointer', textAlign: 'left', fontFamily: 'inherit' }}>
                                 {a}
                               </button>
                             )
                           })}
                         </div>
                         {!qs.submitted ? (
-                          <button disabled={qs.selected === null} onClick={() => setFeedQuizState(prev => ({ ...prev, [b.id]: { ...prev[b.id], submitted: true } }))}
-                            style={{ marginTop: 12, width: '100%', padding: '13px', borderRadius: 12, border: 'none', background: qs.selected === null ? 'var(--bg-subtle)' : 'var(--accent)', color: qs.selected === null ? 'var(--text-secondary)' : '#fff', fontWeight: 700, fontSize: 15, cursor: qs.selected === null ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
+                          <button disabled={qs.selected === null}
+                            onClick={() => setFeedQuizState(prev => ({ ...prev, [b.id]: { ...prev[b.id], submitted: true } }))}
+                            style={{ marginTop: 10, width: '100%', padding: '13px', borderRadius: 12, border: 'none', background: qs.selected === null ? 'var(--bg-subtle)' : 'var(--accent)', color: qs.selected === null ? 'var(--text-secondary)' : '#fff', fontWeight: 700, fontSize: 15, cursor: qs.selected === null ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
                             Antworten
                           </button>
                         ) : (
-                          <div style={{ marginTop: 12, padding: '12px 16px', borderRadius: 12, textAlign: 'center', fontWeight: 700, background: qs.selected === quiz.richtige ? '#f0fdf4' : '#fef2f2', border: qs.selected === quiz.richtige ? '1px solid #bbf7d0' : '1px solid #fecaca', color: qs.selected === quiz.richtige ? '#166534' : 'var(--accent)' }}>
+                          <div style={{ marginTop: 10, padding: '12px 16px', borderRadius: 12, textAlign: 'center', fontWeight: 700, background: qs.selected === quiz.richtige ? '#f0fdf4' : '#fef2f2', border: qs.selected === quiz.richtige ? '1px solid #bbf7d0' : '1px solid #fecaca', color: qs.selected === quiz.richtige ? '#166534' : 'var(--accent)' }}>
                             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                               {qs.selected === quiz.richtige
                                 ? <><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Richtig!</>
@@ -510,16 +540,14 @@ export default function Lernbar() {
                         )}
                       </div>
                     )}
+
                     {tags.length > 0 && (
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 10 }}>
                         {tags.map(t => (
-                          <span key={t} style={{ fontSize: 11, fontWeight: 600, background: 'rgba(107,15,26,0.07)', color: 'var(--accent)', borderRadius: 6, padding: '3px 9px' }}>{t}</span>
+                          <span key={t} style={{ fontSize: 13, fontWeight: 600, color: 'var(--accent)' }}>#{t}</span>
                         ))}
                       </div>
                     )}
-                    <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 10 }}>
-                      {b.erstellt_von_name && `${b.erstellt_von_name} · `}{new Date(b.created).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}
-                    </div>
                   </div>
                 </div>
               )
