@@ -364,7 +364,7 @@ export default function Unitas() {
 
   if (authLoading || loading) {
     return (
-      <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ minHeight: '100dvh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Inter, -apple-system, sans-serif' }}>
         <div style={{ color: 'var(--text-secondary)' }}>Lade...</div>
       </div>
     )
@@ -390,52 +390,28 @@ export default function Unitas() {
     marginBottom: '-1px', whiteSpace: 'nowrap'
   })
 
+  const hasLernbar = user?.supervisor || user?.permissions?.['lernbar'] || (user as any)?.lernbar_access
+  const openOutputs = myOutputs.filter(o => o.status === 'offen').length
+  const lernbarBadge = upcomingTermine.length + (progress.length - doneMods)
+  const protokolleBadge = myPatients.length + myArchivedPatients.length
+
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
+    <div style={{ minHeight: '100dvh', background: 'var(--bg)', fontFamily: 'Inter, -apple-system, sans-serif' }}>
       {/* Header */}
-      <div style={{ background: 'var(--bg-card)', borderBottom: '1px solid var(--bg-subtle)', padding: '0 20px' }}>
-        <div style={{ maxWidth: '640px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '56px' }}>
-          <svg width="120" height="28" viewBox="0 0 140 32" fill="none">
-            <rect width="32" height="32" rx="8" fill="#0f172a"/>
-            <path d="M8 10h10a6 6 0 0 1 0 12H8V10z" fill="none" stroke="white" strokeWidth="2"/>
-            <circle cx="18" cy="16" r="3" fill="white"/>
-            <text x="40" y="22" fontFamily="system-ui,-apple-system,sans-serif" fontWeight="700" fontSize="18" fill="#0f172a" letterSpacing="-0.5">responda</text>
-          </svg>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <span style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>{user?.name}</span>
+      <div style={{ background: 'var(--bg-card)', borderBottom: '1px solid var(--border)', position: 'sticky', top: 0, zIndex: 100, padding: '0 16px' }}>
+        <div style={{ maxWidth: '640px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '52px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <img src="/logo.svg" alt="Responda" width={32} height={32} />
+            <span style={{ fontWeight: 700, fontSize: '1.05rem', letterSpacing: '-0.01em', color: 'var(--text)' }}>Responda</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>{user?.name?.split(' ')[0]}</span>
             <button onClick={logout} style={{ background: 'none', border: '1px solid var(--border)', borderRadius: '8px', padding: '6px 12px', fontSize: '13px', cursor: 'pointer', color: 'var(--text)', fontFamily: 'inherit' }}>Abmelden</button>
           </div>
         </div>
-
-        {/* Tabs */}
-        <div style={{ maxWidth: '640px', margin: '0 auto', display: 'flex', borderBottom: '1px solid var(--bg-subtle)' }}>
-          <button style={tabStyle(tab === 'uebersicht')} onClick={() => setTab('uebersicht')}>Übersicht</button>
-          <button style={tabStyle(tab === 'protokolle')} onClick={() => setTab('protokolle')}>
-            Protokolle{myPatients.length + myArchivedPatients.length > 0 ? ` (${myPatients.length + myArchivedPatients.length})` : ''}
-          </button>
-          {(user?.supervisor || user?.permissions?.['lernbar'] || (user as any)?.lernbar_access) && (
-            <button style={tabStyle(tab === 'lernbar')} onClick={() => setTab('lernbar')}>
-              Lernbar
-              {(upcomingTermine.length > 0 || progress.length > 0) && (
-                <span style={{ marginLeft: '4px', background: 'var(--btn-dark)', color: 'var(--btn-dark-text)', borderRadius: '10px', padding: '1px 6px', fontSize: '11px' }}>
-                  {upcomingTermine.length + (progress.length - doneMods)}
-                </span>
-              )}
-            </button>
-          )}
-          <button style={tabStyle(tab === 'vorgaenge')} onClick={() => setTab('vorgaenge')}>
-            Vorgänge
-            {myOutputs.filter(o => o.status === 'offen').length > 0 && (
-              <span style={{ marginLeft: '4px', background: '#f59e0b', color: '#fff', borderRadius: '10px', padding: '1px 6px', fontSize: '11px' }}>
-                {myOutputs.filter(o => o.status === 'offen').length}
-              </span>
-            )}
-          </button>
-          <button style={tabStyle(tab === 'konto')} onClick={() => setTab('konto')}>Mein Konto</button>
-        </div>
       </div>
 
-      <div style={{ maxWidth: '640px', margin: '0 auto', padding: '24px 20px' }}>
+      <div style={{ maxWidth: '640px', margin: '0 auto', padding: '20px 16px calc(80px + env(safe-area-inset-bottom))' }}>
 
         {/* ÜBERSICHT */}
         {tab === 'uebersicht' && (
@@ -597,13 +573,13 @@ export default function Unitas() {
                   const changedCountA = (p.payload?._changed_fields || []).length
                   return (
                     <div key={p.id} style={{ background: 'var(--bg-card)', borderRadius: '14px', border: `1px solid ${openRQsA.length > 0 ? '#f59e0b' : 'var(--border)'}`, overflow: 'hidden', opacity: openRQsA.length > 0 || changedCountA > 0 ? 1 : 0.85 }}>
-                      <div style={{ background: 'linear-gradient(135deg, #4b5563, #374151)', padding: '14px 18px', color: '#fff' }}>
+                      <div style={{ background: 'var(--bg-subtle)', padding: '14px 18px', borderBottom: '1px solid var(--border)' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: '4px' }}>
-                          <span style={{ fontWeight: 700, fontSize: '16px' }}>{patName || p.title}</span>
+                          <span style={{ fontWeight: 700, fontSize: '16px', color: 'var(--text)' }}>{patName || p.title}</span>
                           {openRQsA.length > 0 && <span style={{ background: '#f59e0b', color: '#fff', borderRadius: 999, padding: '2px 8px', fontSize: 11, fontWeight: 700, flexShrink: 0 }}>{openRQsA.length} Rückfrage{openRQsA.length !== 1 ? 'n' : ''}</span>}
                           {changedCountA > 0 && <span style={{ background: '#d97706', color: '#fff', borderRadius: 999, padding: '2px 8px', fontSize: 11, fontWeight: 700, flexShrink: 0 }}>{changedCountA} Änderung{changedCountA !== 1 ? 'en' : ''}</span>}
                         </div>
-                        {crew && <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.7)' }}>{crew}</div>}
+                        {crew && <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>{crew}</div>}
                       </div>
                       {answeredRQsA.length > 0 && (
                         <div style={{ background: '#f0fdf4', borderBottom: '1px solid #bbf7d0', padding: '10px 18px', display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -919,7 +895,7 @@ export default function Unitas() {
                         <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '2px' }}>Blöcke</div>
                       </div>
                       <div style={{ background: 'var(--bg)', borderRadius: '10px', padding: '12px 16px', flex: 1, textAlign: 'center' }}>
-                        <div style={{ fontSize: '20px', fontWeight: 700, color: '#7c3aed' }}>{blocks.filter(b => b.typ === 'quiz').length}</div>
+                        <div style={{ fontSize: '20px', fontWeight: 700, color: 'var(--accent)' }}>{blocks.filter(b => b.typ === 'quiz').length}</div>
                         <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '2px' }}>Quiz</div>
                       </div>
                     </div>
@@ -994,7 +970,7 @@ export default function Unitas() {
 
                   return (
                     <div>
-                      <div style={{ fontSize: '11px', fontWeight: 700, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '10px' }}>
+                      <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '10px' }}>
                         Quiz{fragen.length > 1 ? ` · Frage ${quizFrageIdx + 1} von ${fragen.length}` : ''}
                       </div>
                       <div style={{ fontWeight: 600, fontSize: '16px', color: 'var(--text)', marginBottom: '16px', lineHeight: 1.5 }}>
@@ -1012,7 +988,7 @@ export default function Unitas() {
                             if (idx === richtige) { bg = '#f0fdf4'; border = '2px solid #16a34a'; color = '#166534' }
                             else if (idx === quizSelected) { bg = '#fef2f2'; border = '2px solid #ef4444'; color = '#b91c1c' }
                           } else if (idx === quizSelected) {
-                            bg = '#eff6ff'; border = '2px solid #3b82f6'; color = '#1d4ed8'
+                            bg = 'var(--bg-subtle)'; border = '2px solid var(--accent)'; color = 'var(--accent)'
                           }
                           return (
                             <button
@@ -1158,7 +1134,7 @@ export default function Unitas() {
                       value={kontaktEmail}
                       onChange={e => setKontaktEmail(e.target.value)}
                       placeholder="deine@email.de"
-                      style={{ flex: 1, padding: '10px 14px', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '14px', fontFamily: 'inherit', outline: 'none' }}
+                      style={{ flex: 1, padding: '10px 14px', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '14px', fontFamily: 'inherit', outline: 'none', background: 'var(--bg-input)', color: 'var(--text)' }}
                     />
                     <button
                       onClick={saveKontaktEmail}
@@ -1225,25 +1201,65 @@ export default function Unitas() {
         )}
       </div>
 
+      {/* Bottom Tab Bar */}
+      <div style={{
+        position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 100,
+        background: 'var(--bg-card)', borderTop: '1px solid var(--border)',
+        display: 'flex', alignItems: 'stretch',
+        paddingBottom: 'env(safe-area-inset-bottom)'
+      }}>
+        {([
+          { id: 'uebersicht', label: 'Übersicht', badge: 0, icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg> },
+          { id: 'protokolle', label: 'Protokolle', badge: protokolleBadge, icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg> },
+          ...(hasLernbar ? [{ id: 'lernbar', label: 'Lernbar', badge: lernbarBadge, icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg> }] : []),
+          { id: 'vorgaenge', label: 'Vorgänge', badge: openOutputs, icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg> },
+          { id: 'konto', label: 'Konto', badge: 0, icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> },
+        ] as { id: string; label: string; badge: number; icon: React.ReactNode }[]).map(t => {
+          const active = tab === t.id
+          return (
+            <button
+              key={t.id}
+              onClick={() => setTab(t.id as any)}
+              style={{
+                flex: 1, padding: '8px 4px 6px', border: 'none', background: 'none',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
+                cursor: 'pointer', fontFamily: 'inherit', position: 'relative',
+                color: active ? 'var(--accent)' : 'var(--text-secondary)'
+              }}
+            >
+              {t.icon}
+              {t.badge > 0 && (
+                <span style={{
+                  position: 'absolute', top: 6, right: 'calc(50% - 14px)',
+                  background: 'var(--accent)', color: '#fff',
+                  borderRadius: 999, padding: '0px 5px', fontSize: 9, fontWeight: 700, minWidth: 14, textAlign: 'center'
+                }}>{t.badge}</span>
+              )}
+              <span style={{ fontSize: 10, fontWeight: active ? 700 : 500, lineHeight: 1 }}>{t.label}</span>
+            </button>
+          )
+        })}
+      </div>
+
       {/* Toast */}
       {message && (
         <div style={{
-          position: 'fixed', bottom: '32px', right: '24px', zIndex: 9999,
-          padding: '12px 18px', borderRadius: '10px', fontSize: '14px', fontWeight: 600,
+          position: 'fixed', bottom: 'calc(76px + env(safe-area-inset-bottom))', left: '50%', transform: 'translateX(-50%)', zIndex: 9999,
+          padding: '12px 18px', borderRadius: '10px', fontSize: '14px', fontWeight: 600, whiteSpace: 'nowrap',
           background: message.type === 'success' ? '#f0fdf4' : '#fef2f2',
           border: `1px solid ${message.type === 'success' ? '#bbf7d0' : '#fecaca'}`,
           color: message.type === 'success' ? '#166534' : '#b91c1c',
-          animation: 'slideInRight 0.25s cubic-bezier(0.34,1.56,0.64,1) both',
-          boxShadow: '0 4px 16px rgba(0,0,0,0.08)'
+          animation: 'slideInUp 0.25s cubic-bezier(0.34,1.56,0.64,1) both',
+          boxShadow: '0 4px 16px rgba(0,0,0,0.12)'
         }}>
           {message.text}
         </div>
       )}
 
       <style>{`
-        @keyframes slideInRight {
-          from { transform: translateX(120%); opacity: 0; }
-          to   { transform: translateX(0);   opacity: 1; }
+        @keyframes slideInUp {
+          from { transform: translateX(-50%) translateY(20px); opacity: 0; }
+          to   { transform: translateX(-50%) translateY(0);    opacity: 1; }
         }
         details > summary::-webkit-details-marker { display: none; }
         @media print {
