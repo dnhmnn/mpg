@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import Hub from './pages/Hub'
 import Login from './pages/Login'
 import Index from './pages/Index'
+import ResetPassword from './pages/ResetPassword'
 import SettingsPage from './pages/SettingsPage'
 import Ausbildungen from './pages/ausbildungen/Ausbildungen'
 import Einladung from './pages/ausbildungen/Einladung'
@@ -31,6 +32,7 @@ function App() {
       <Routes>
         <Route path="/" element={<Index />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/hub" element={<Hub />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/ausbildungen" element={<Ausbildungen />} />
