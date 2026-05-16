@@ -35,8 +35,12 @@ function getVideoEmbed(url: string): string {
 }
 
 interface Termin {
-  id: string; name: string; description: string; start_datetime: string
-  end_datetime: string; location: string; dozent: string; status: string
+  id: string; collectionId: string; name: string; description: string
+  start_datetime: string; end_datetime: string; location: string
+  dozent: string; status: string
+  lernkonzept?: string
+  dateien?: string[]
+  anhang?: string[]
 }
 interface TerminUser {
   id: string; termin_id: string; teilnehmer_id: string; status: string
@@ -103,6 +107,7 @@ export default function Lernbar() {
   const [loading, setLoading] = useState(true)
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null)
   const [feedQuizState, setFeedQuizState] = useState<Record<string, { selected: number | null; submitted: boolean }>>({})
+  const [detailTermin, setDetailTermin] = useState<Termin | null>(null)
 
   // Module player
   const [playerProgress, setPlayerProgress] = useState<ModulProgress | null>(null)
@@ -555,81 +560,124 @@ export default function Lernbar() {
           </div>
         )}
 
-        {/* ── TERMINE ── */}
+        {/* ── TERMINE (Timeline) ── */}
         {tab === 'termine' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            {upcomingTermine.length === 0 && pastTermine.length === 0 && (
+          <div>
+            {termine.length === 0 && (
               <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '64px 0 24px', fontSize: 15 }}>
                 <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--border-strong)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block', margin: '0 auto 12px' }}><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
                 Keine Termine zugewiesen
               </div>
             )}
-            {upcomingTermine.map(termin => {
-              const tu = terminUser.find(t => t.termin_id === termin.id)
-              const cfg = tu ? statusConfig[tu.status] : null
-              const startTime = fmtTime(termin.start_datetime)
-              const endTime = termin.end_datetime ? fmtTime(termin.end_datetime) : ''
-              return (
-                <div key={termin.id} style={{ background: 'var(--bg-card)', borderRadius: 18, border: '1px solid var(--border)', overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,0.04)' }}>
-                  <div style={{ background: 'var(--accent)', padding: '16px 20px' }}>
-                    <div style={{ fontWeight: 700, fontSize: 18, color: '#fff', marginBottom: 6 }}>{termin.name}</div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                      {[
-                        { icon: <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>, text: fmtDate(termin.start_datetime) },
-                        startTime ? { icon: <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>, text: `${startTime}${endTime ? ` – ${endTime}` : ''} Uhr` } : null,
-                        termin.location ? { icon: <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>, text: termin.location } : null,
-                      ].filter(Boolean).map((item: any, i) => (
-                        <div key={i} style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)', display: 'flex', alignItems: 'center', gap: 6 }}>{item.icon}{item.text}</div>
-                      ))}
-                    </div>
-                  </div>
-                  <div style={{ padding: '16px 20px' }}>
-                    {termin.description && <div style={{ fontSize: 14, color: 'var(--text)', marginBottom: 12, lineHeight: 1.6 }}>{termin.description}</div>}
-                    {termin.dozent && <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 12 }}>Dozent: {termin.dozent}</div>}
-                    {tu && (
-                      <div>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-                          {cfg && <span style={{ padding: '5px 14px', borderRadius: 99, background: cfg.bg, color: cfg.color, fontWeight: 700, fontSize: 13 }}>{cfg.label}</span>}
-                          {(tu.status === 'eingeladen' || tu.status === 'abgesagt' || tu.status === 'zugesagt') && (
-                            <div style={{ display: 'flex', gap: 8, marginLeft: 'auto' }}>
+            {termine.length > 0 && (
+              <div style={{ position: 'relative', paddingLeft: 52 }}>
+                {/* Vertical line */}
+                <div style={{ position: 'absolute', left: 19, top: 12, bottom: 12, width: 2, background: 'var(--border)', borderRadius: 2 }} />
+
+                {termine.map((termin, idx) => {
+                  const tu = terminUser.find(t => t.termin_id === termin.id)
+                  const cfg = tu ? statusConfig[tu.status] : null
+                  const isPast = termin.status === 'abgeschlossen'
+                  const startTime = fmtTime(termin.start_datetime)
+                  const endTime = termin.end_datetime ? fmtTime(termin.end_datetime) : ''
+                  const d = parseDate(termin.start_datetime)
+                  const dayNum = isNaN(d.getTime()) ? '?' : d.getDate().toString()
+                  const monthName = isNaN(d.getTime()) ? '' : d.toLocaleDateString('de-DE', { month: 'short' })
+                  const weekday = isNaN(d.getTime()) ? '' : d.toLocaleDateString('de-DE', { weekday: 'short' })
+
+                  return (
+                    <div key={termin.id} style={{ position: 'relative', marginBottom: idx < termine.length - 1 ? 0 : 0 }}>
+                      {/* Dot */}
+                      <div style={{
+                        position: 'absolute', left: -38, top: 16,
+                        width: 16, height: 16, borderRadius: '50%',
+                        background: isPast ? 'var(--bg-subtle)' : 'var(--accent)',
+                        border: isPast ? '2px solid var(--border-strong)' : '2px solid var(--accent)',
+                        zIndex: 1,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center'
+                      }}>
+                        {isPast && <div style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--border-strong)' }} />}
+                      </div>
+
+                      {/* Card */}
+                      <div
+                        onClick={() => setDetailTermin(termin)}
+                        style={{
+                          background: 'var(--bg-card)', borderRadius: 14,
+                          border: `1px solid ${cfg?.label === 'Zugesagt' ? '#bbf7d0' : tu?.status === 'abgesagt' ? '#fecaca' : 'var(--border)'}`,
+                          marginBottom: 12, cursor: 'pointer',
+                          opacity: isPast ? 0.65 : 1,
+                          transition: 'opacity 0.15s'
+                        }}
+                      >
+                        {/* Date bar */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px 0' }}>
+                          <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
+                            <span style={{ fontSize: 22, fontWeight: 700, color: isPast ? 'var(--text-secondary)' : 'var(--accent)', lineHeight: 1 }}>{dayNum}</span>
+                            <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)' }}>{monthName}</span>
+                          </div>
+                          <span style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600 }}>{weekday}</span>
+                          {cfg && (
+                            <span style={{ marginLeft: 'auto', padding: '3px 10px', borderRadius: 99, background: cfg.bg, color: cfg.color, fontWeight: 700, fontSize: 11 }}>
+                              {cfg.label}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Name + meta */}
+                        <div style={{ padding: '6px 14px 12px' }}>
+                          <div style={{ fontWeight: 700, fontSize: 16, color: 'var(--text)', marginBottom: 6 }}>{termin.name}</div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                            {startTime && (
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--text-secondary)' }}>
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                                {startTime}{endTime ? ` – ${endTime}` : ''} Uhr
+                              </div>
+                            )}
+                            {termin.location && (
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--text-secondary)' }}>
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                                {termin.location}
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Actions */}
+                          {tu && (tu.status === 'eingeladen' || tu.status === 'abgesagt' || tu.status === 'zugesagt') && !isPast && (
+                            <div style={{ display: 'flex', gap: 8, marginTop: 10 }} onClick={e => e.stopPropagation()}>
                               {tu.status !== 'zugesagt' && (
-                                <button onClick={() => updateTerminStatus(tu.id, 'zugesagt')} style={{ padding: '9px 18px', borderRadius: 10, border: 'none', background: '#16a34a', color: '#fff', fontWeight: 700, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit' }}>Zusagen</button>
+                                <button onClick={() => updateTerminStatus(tu.id, 'zugesagt')}
+                                  style={{ flex: 1, padding: '9px 0', borderRadius: 10, border: 'none', background: '#16a34a', color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>
+                                  Zusagen
+                                </button>
                               )}
                               {tu.status !== 'abgesagt' && (
-                                <button onClick={() => updateTerminStatus(tu.id, 'abgesagt')} style={{ padding: '9px 18px', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--bg-card)', color: 'var(--text)', fontWeight: 600, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit' }}>Absagen</button>
+                                <button onClick={() => updateTerminStatus(tu.id, 'abgesagt')}
+                                  style={{ flex: 1, padding: '9px 0', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>
+                                  Absagen
+                                </button>
                               )}
                             </div>
                           )}
+                          {/* Calendar export if zugesagt */}
+                          {tu?.status === 'zugesagt' && !isPast && (
+                            <div onClick={e => e.stopPropagation()}>
+                              <CalendarButtons termin={termin} />
+                            </div>
+                          )}
                         </div>
-                        {tu.status === 'zugesagt' && <CalendarButtons termin={termin} />}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )
-            })}
-            {pastTermine.length > 0 && (
-              <details style={{ marginTop: 8 }}>
-                <summary style={{ cursor: 'pointer', fontWeight: 700, fontSize: 14, color: 'var(--text-secondary)', padding: '12px 0', borderTop: '1px solid var(--border)', listStyle: 'none', display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 8v13H3V8"/><path d="M1 3h22v5H1z"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
-                  Vergangene Termine ({pastTermine.length})
-                </summary>
-                <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {pastTermine.map(termin => {
-                    const tu = terminUser.find(t => t.termin_id === termin.id)
-                    const cfg = tu ? statusConfig[tu.status] : null
-                    return (
-                      <div key={termin.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', background: 'var(--bg-card)', borderRadius: 12, border: '1px solid var(--border)' }}>
-                        <div style={{ flex: 1 }}>
-                          <div style={{ fontWeight: 600, fontSize: 14 }}>{termin.name}</div>
-                          <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>{fmtDate(termin.start_datetime)}</div>
+
+                        {/* Details hint */}
+                        <div style={{ borderTop: '1px solid var(--border)', padding: '8px 14px', display: 'flex', alignItems: 'center', gap: 4, color: 'var(--text-secondary)', fontSize: 12 }}>
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                          Details, Lernkonzept & Dateien
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginLeft: 'auto' }}><polyline points="9 18 15 12 9 6"/></svg>
                         </div>
-                        {cfg && <span style={{ padding: '3px 10px', borderRadius: 99, background: cfg.bg, color: cfg.color, fontWeight: 700, fontSize: 12 }}>{cfg.label}</span>}
                       </div>
-                    )
-                  })}
-                </div>
-              </details>
+                    </div>
+                  )
+                })}
+              </div>
             )}
           </div>
         )}
@@ -714,7 +762,136 @@ export default function Lernbar() {
         </div>
       )}
 
-      <style>{`details > summary::-webkit-details-marker { display: none; }`}</style>
+      <style>{`details > summary::-webkit-details-marker { display: none; }
+@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }`}</style>
+
+      {/* Termin Detail Sheet */}
+      {detailTermin && (() => {
+        const termin = detailTermin
+        const tu = terminUser.find(t => t.termin_id === termin.id)
+        const cfg = tu ? statusConfig[tu.status] : null
+        const startTime = fmtTime(termin.start_datetime)
+        const endTime = termin.end_datetime ? fmtTime(termin.end_datetime) : ''
+        const dateien: string[] = Array.isArray(termin.dateien) ? termin.dateien : Array.isArray(termin.anhang) ? termin.anhang : []
+        return (
+          <>
+            {/* Backdrop */}
+            <div onClick={() => setDetailTermin(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 200 }} />
+            {/* Sheet */}
+            <div style={{ position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 201, background: 'var(--bg-card)', borderRadius: '20px 20px 0 0', maxHeight: '88dvh', display: 'flex', flexDirection: 'column', animation: 'slideUp 0.3s cubic-bezier(0.32,0.72,0,1)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
+              {/* Drag handle */}
+              <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0 4px' }}>
+                <div style={{ width: 36, height: 4, borderRadius: 2, background: 'var(--border-strong)' }} />
+              </div>
+              {/* Header */}
+              <div style={{ padding: '8px 20px 14px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 700, fontSize: 19, color: 'var(--text)', lineHeight: 1.25, marginBottom: 6 }}>{termin.name}</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, color: 'var(--text-secondary)' }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                      {fmtDate(termin.start_datetime)}
+                    </div>
+                    {startTime && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, color: 'var(--text-secondary)' }}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                        {startTime}{endTime ? ` – ${endTime}` : ''} Uhr
+                      </div>
+                    )}
+                    {termin.location && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, color: 'var(--text-secondary)' }}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                        {termin.location}
+                      </div>
+                    )}
+                    {termin.dozent && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, color: 'var(--text-secondary)' }}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                        {termin.dozent}
+                      </div>
+                    )}
+                  </div>
+                  {cfg && <span style={{ display: 'inline-block', marginTop: 8, padding: '4px 12px', borderRadius: 99, background: cfg.bg, color: cfg.color, fontWeight: 700, fontSize: 12 }}>{cfg.label}</span>}
+                </div>
+                <button onClick={() => setDetailTermin(null)} style={{ background: 'var(--bg-subtle)', border: 'none', borderRadius: '50%', width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0, color: 'var(--text-secondary)' }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+              </div>
+
+              {/* Scrollable content */}
+              <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 20 }}>
+
+                {/* Actions */}
+                {tu && (tu.status === 'eingeladen' || tu.status === 'abgesagt' || tu.status === 'zugesagt') && termin.status !== 'abgeschlossen' && (
+                  <div style={{ display: 'flex', gap: 10 }}>
+                    {tu.status !== 'zugesagt' && (
+                      <button onClick={() => { updateTerminStatus(tu.id, 'zugesagt'); setDetailTermin(null) }}
+                        style={{ flex: 1, padding: '12px 0', borderRadius: 12, border: 'none', background: '#16a34a', color: '#fff', fontWeight: 700, fontSize: 15, cursor: 'pointer', fontFamily: 'inherit' }}>
+                        Zusagen
+                      </button>
+                    )}
+                    {tu.status !== 'abgesagt' && (
+                      <button onClick={() => { updateTerminStatus(tu.id, 'abgesagt'); setDetailTermin(null) }}
+                        style={{ flex: 1, padding: '12px 0', borderRadius: 12, border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontWeight: 600, fontSize: 15, cursor: 'pointer', fontFamily: 'inherit' }}>
+                        Absagen
+                      </button>
+                    )}
+                  </div>
+                )}
+                {tu?.status === 'zugesagt' && <CalendarButtons termin={termin} />}
+
+                {/* Description */}
+                {termin.description && (
+                  <div>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Beschreibung</div>
+                    <div style={{ fontSize: 15, color: 'var(--text)', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>{termin.description}</div>
+                  </div>
+                )}
+
+                {/* Lernkonzept */}
+                {termin.lernkonzept && (
+                  <div>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Lernkonzept</div>
+                    <div style={{ background: 'var(--bg-subtle)', borderRadius: 12, padding: '14px 16px', fontSize: 15, color: 'var(--text)', lineHeight: 1.7, whiteSpace: 'pre-wrap', borderLeft: '3px solid var(--accent)' }}>{termin.lernkonzept}</div>
+                  </div>
+                )}
+
+                {/* Files */}
+                {dateien.length > 0 && (
+                  <div>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Dateien</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      {dateien.map((file: string, i: number) => {
+                        const fileUrl = `https://api.responda.systems/api/files/${termin.collectionId}/${termin.id}/${file}`
+                        const ext = file.split('.').pop()?.toLowerCase() ?? ''
+                        return (
+                          <a key={i} href={fileUrl} target="_blank" rel="noreferrer"
+                            style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 12, textDecoration: 'none', color: 'var(--text)' }}>
+                            <div style={{ width: 36, height: 36, borderRadius: 8, background: 'rgba(107,15,26,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                            </div>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ fontWeight: 600, fontSize: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{file}</div>
+                              {ext && <div style={{ fontSize: 11, color: 'var(--text-secondary)', textTransform: 'uppercase', marginTop: 1 }}>{ext}</div>}
+                            </div>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                          </a>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {!termin.description && !termin.lernkonzept && dateien.length === 0 && (
+                  <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '20px 0', fontSize: 14 }}>
+                    Keine weiteren Informationen hinterlegt
+                  </div>
+                )}
+              </div>
+            </div>
+          </>
+        )
+      })()}
     </div>
   )
 }
