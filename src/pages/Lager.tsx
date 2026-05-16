@@ -986,7 +986,7 @@ export default function Lager() {
             <path d="M10 12l2 2 4-4"/>
           </svg>
           {ausgabenCount > 0 && (
-            <span style={{ position: 'absolute', top: 4, right: 4, minWidth: 16, height: 16, borderRadius: 8, background: '#ef4444', color: '#fff', fontSize: 10, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 3px' }}>
+            <span style={{ position: 'absolute', top: 4, right: 4, minWidth: 16, height: 16, borderRadius: 8, background: 'var(--accent)', color: '#fff', fontSize: 10, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 3px' }}>
               {ausgabenCount}
             </span>
           )}
@@ -1372,8 +1372,8 @@ export default function Lager() {
               currentAudit ? (
                 /* Aktive Zählung */
                 <div>
-                  <div style={{background: '#f0f9ff', padding: '12px', borderRadius: '8px', marginBottom: '16px'}}>
-                    <div style={{fontWeight: 700, fontSize: '0.9rem', color: '#0369a1', marginBottom: '2px'}}>
+                  <div style={{background: 'var(--bg-subtle)', padding: '12px', borderRadius: '8px', marginBottom: '16px', border: '1px solid var(--border)'}}>
+                    <div style={{fontWeight: 700, fontSize: '0.9rem', color: 'var(--accent)', marginBottom: '2px'}}>
                       {locations.find(l => l.id === auditLocationId)?.name || 'Lager'}
                     </div>
                     <span><strong>Fortschritt:</strong> {auditItems.filter(ai => ai.checked).length} / {auditItems.length} geprüft</span>
@@ -1381,7 +1381,7 @@ export default function Lager() {
 
                   {auditIndex < auditItems.length && (
                     <div>
-                      <div style={{background: '#fafafa', padding: '16px', borderRadius: '8px', marginBottom: '16px'}}>
+                      <div style={{background: 'var(--bg-subtle)', padding: '16px', borderRadius: '8px', marginBottom: '16px'}}>
                         <h4 style={{margin: '0 0 8px 0'}}>{auditIndex + 1}. {auditItems[auditIndex]?.expand?.item_id?.name}</h4>
                         <div style={{color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '8px'}}>
                           {auditItems[auditIndex]?.expand?.item_id?.unit || 'Stück'}
@@ -1443,9 +1443,9 @@ export default function Lager() {
 
                     return (
                       <div key={loc.id} style={{
-                        background: '#fafafa', borderRadius: '12px', padding: '16px',
-                        border: `1px solid ${isOverdue ? '#fecaca' : '#e5e7eb'}`,
-                        borderLeft: `4px solid ${isOverdue ? '#b91c1c' : openAudit ? '#f59e0b' : '#e5e7eb'}`
+                        background: 'var(--bg-subtle)', borderRadius: '12px', padding: '16px',
+                        border: `1px solid ${isOverdue ? '#fecaca' : 'var(--border)'}`,
+                        borderLeft: `4px solid ${isOverdue ? 'var(--accent)' : openAudit ? '#f59e0b' : 'var(--border)'}`
                       }}>
                         <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px'}}>
                           <div style={{fontWeight: 700, fontSize: '1rem'}}>{loc.name}</div>
@@ -1456,14 +1456,14 @@ export default function Lager() {
                               </span>
                             )}
                             {isOverdue && (
-                              <span style={{fontSize: '0.75rem', background: '#fee2e2', color: '#b91c1c', padding: '2px 8px', borderRadius: '999px', fontWeight: 700}}>
+                              <span style={{fontSize: '0.75rem', background: '#fee2e2', color: 'var(--accent)', padding: '2px 8px', borderRadius: '999px', fontWeight: 700}}>
                                 Überfällig
                               </span>
                             )}
                           </div>
                         </div>
 
-                        <div style={{fontSize: '0.85rem', color: '#64748b', marginBottom: '12px', display: 'flex', flexDirection: 'column', gap: '2px'}}>
+                        <div style={{fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '12px', display: 'flex', flexDirection: 'column', gap: '2px'}}>
                           <div>
                             Letzte Inventur:{' '}
                             {lastAudit
@@ -1471,7 +1471,7 @@ export default function Lager() {
                               : 'Noch nie durchgeführt'}
                           </div>
                           {inventurSchedule.interval !== 'disabled' && (
-                            <div style={{color: isOverdue ? '#b91c1c' : '#64748b'}}>
+                            <div style={{color: isOverdue ? 'var(--accent)' : 'var(--text-secondary)'}}>
                               Nächste fällig:{' '}
                               {neverAudited ? 'Sofort' : nextDue?.toLocaleDateString('de-DE')}
                             </div>
@@ -1504,13 +1504,13 @@ export default function Lager() {
                       ← Zurück zur Liste
                     </button>
                     <div style={{fontWeight: 700, marginBottom: '2px'}}>{new Date(selectedHistoryAudit.audit_date).toLocaleString('de-DE')}</div>
-                    <div style={{fontSize: '0.85rem', color: '#64748b', marginBottom: '4px'}}>
+                    <div style={{fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '4px'}}>
                       {locations.find(l => l.id === selectedHistoryAudit.location_id)?.name || 'Unbekannter Standort'}
                     </div>
-                    <div style={{fontSize: '0.85rem', color: '#64748b', marginBottom: '16px'}}>von {selectedHistoryAudit.user}</div>
+                    <div style={{fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '16px'}}>von {selectedHistoryAudit.user}</div>
 
                     {historyAuditItems.length === 0 ? (
-                      <div style={{color: '#64748b', fontSize: '0.9rem', textAlign: 'center', padding: '24px'}}>Keine Einträge gefunden</div>
+                      <div style={{color: 'var(--text-secondary)', fontSize: '0.9rem', textAlign: 'center', padding: '24px'}}>Keine Einträge gefunden</div>
                     ) : (
                       <div style={{display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '360px', overflowY: 'auto'}}>
                         {historyAuditItems.map(ai => {
@@ -1520,21 +1520,21 @@ export default function Lager() {
                             <div key={ai.id} style={{
                               padding: '10px 12px', borderRadius: '8px',
                               background: hasDiff ? (diff > 0 ? '#f0fdf4' : '#fef2f2') : '#f9fafb',
-                              borderLeft: `3px solid ${hasDiff ? (diff > 0 ? '#16a34a' : '#b91c1c') : '#e5e7eb'}`,
+                              borderLeft: `3px solid ${hasDiff ? (diff > 0 ? '#16a34a' : 'var(--accent)') : 'var(--border)'}`,
                               display: 'flex', justifyContent: 'space-between', alignItems: 'center'
                             }}>
                               <div>
                                 <div style={{fontWeight: 700, fontSize: '0.9rem'}}>{ai.expand?.item_id?.name || ai.item_id}</div>
-                                <div style={{fontSize: '0.8rem', color: '#64748b'}}>
+                                <div style={{fontSize: '0.8rem', color: 'var(--text-secondary)'}}>
                                   Erwartet: {ai.expected_quantity} → Gezählt: {ai.actual_quantity}
                                 </div>
                               </div>
                               {hasDiff ? (
-                                <span style={{fontWeight: 700, fontSize: '0.9rem', color: diff > 0 ? '#16a34a' : '#b91c1c'}}>
+                                <span style={{fontWeight: 700, fontSize: '0.9rem', color: diff > 0 ? '#16a34a' : 'var(--accent)'}}>
                                   {diff > 0 ? '+' : ''}{diff}
                                 </span>
                               ) : (
-                                <span style={{fontSize: '0.8rem', color: '#64748b'}}>✓</span>
+                                <span style={{fontSize: '0.8rem', color: 'var(--text-secondary)'}}>✓</span>
                               )}
                             </div>
                           )
@@ -1587,7 +1587,7 @@ export default function Lager() {
 
                 {inventurSchedule.interval !== 'disabled' && (
                   <div style={{display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px'}}>
-                    <div style={{fontWeight: 700, fontSize: '0.85rem', color: '#374151'}}>Fälligkeiten je Standort:</div>
+                    <div style={{fontWeight: 700, fontSize: '0.85rem', color: 'var(--text)'}}>Fälligkeiten je Standort:</div>
                     {locations.map(loc => {
                       const nextDue = getNextDueDateForLocation(loc.id)
                       const lastAudit = auditHistory
@@ -1605,9 +1605,9 @@ export default function Lager() {
                           <div style={{fontWeight: 700, fontSize: '0.9rem'}}>{loc.name}</div>
                           <div style={{textAlign: 'right', fontSize: '0.85rem'}}>
                             {neverAudited ? (
-                              <span style={{color: '#b91c1c', fontWeight: 700}}>Noch nie – sofort fällig</span>
+                              <span style={{color: 'var(--accent)', fontWeight: 700}}>Noch nie – sofort fällig</span>
                             ) : (
-                              <span style={{color: isOverdue ? '#b91c1c' : '#166534', fontWeight: 600}}>
+                              <span style={{color: isOverdue ? 'var(--accent)' : '#166534', fontWeight: 600}}>
                                 {nextDue?.toLocaleDateString('de-DE')}
                                 {isOverdue && ' ⚠ Überfällig'}
                               </span>
@@ -1703,17 +1703,17 @@ export default function Lager() {
               <h3 style={{margin: 0}}>{detailItem.name}</h3>
               <span style={{
                 background: detailItem.status === 'exp' ? '#fee2e2' : detailItem.status === 'warn' ? '#fef3c7' : '#dcfce7',
-                color: detailItem.status === 'exp' ? '#b91c1c' : detailItem.status === 'warn' ? '#92400e' : '#15803d',
+                color: detailItem.status === 'exp' ? 'var(--accent)' : detailItem.status === 'warn' ? '#92400e' : '#15803d',
                 padding: '4px 10px', borderRadius: '999px', fontSize: '0.8rem', fontWeight: 700
               }}>
                 {detailItem.status === 'exp' ? 'Abgelaufen' : detailItem.status === 'warn' ? 'Achtung' : 'In Ordnung'}
               </span>
             </div>
             <div style={{display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px'}}>
-              <div style={{color: '#64748b', fontSize: '0.9rem'}}>
+              <div style={{color: 'var(--text-secondary)', fontSize: '0.9rem'}}>
                 IST: <strong style={{color: 'var(--text)', fontSize: '1.1rem'}}>{detailItem.qty}</strong> {detailItem.unit}
                 {detailItem.min_stock > 0 && (
-                  <span style={{marginLeft: '8px', color: '#64748b'}}>/ SOLL: {detailItem.min_stock}</span>
+                  <span style={{marginLeft: '8px', color: 'var(--text-secondary)'}}>/ SOLL: {detailItem.min_stock}</span>
                 )}
               </div>
               <div style={{display: 'flex', gap: '8px', marginLeft: 'auto'}}>
@@ -1765,27 +1765,27 @@ export default function Lager() {
 
             {/* Transaction history */}
             <div>
-              <div style={{fontWeight: 700, fontSize: '0.9rem', marginBottom: '8px', color: '#374151'}}>Verlauf</div>
+              <div style={{fontWeight: 700, fontSize: '0.9rem', marginBottom: '8px', color: 'var(--text)'}}>Verlauf</div>
               <div style={{maxHeight: '220px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px'}}>
                 {detailLoadingData ? (
-                  <div style={{color: '#64748b', fontSize: '0.9rem'}}>Lade...</div>
+                  <div style={{color: 'var(--text-secondary)', fontSize: '0.9rem'}}>Lade...</div>
                 ) : detailTransactions.length === 0 ? (
-                  <div style={{color: '#64748b', fontSize: '0.9rem'}}>Keine Transaktionen</div>
+                  <div style={{color: 'var(--text-secondary)', fontSize: '0.9rem'}}>Keine Transaktionen</div>
                 ) : (
                   detailTransactions.map(txn => (
                     <div key={txn.id} style={{
                       display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                      padding: '8px 12px', background: '#f9fafb', borderRadius: '8px',
-                      borderLeft: `3px solid ${txn.type === 'einbuchung' ? '#16a34a' : txn.type === 'ausbuchung' ? '#b91c1c' : '#f59e0b'}`,
+                      padding: '8px 12px', background: 'var(--bg-subtle)', borderRadius: '8px',
+                      borderLeft: `3px solid ${txn.type === 'einbuchung' ? '#16a34a' : txn.type === 'ausbuchung' ? 'var(--accent)' : '#f59e0b'}`,
                       fontSize: '0.85rem'
                     }}>
                       <div>
                         <div style={{fontWeight: 600}}>
                           {txn.type === 'einbuchung' ? `+${txn.quantity}` : txn.type === 'ausbuchung' ? `${txn.quantity}` : `Korrektur ${txn.quantity > 0 ? '+' : ''}${txn.quantity}`} {detailItem.unit}
                         </div>
-                        {txn.note && <div style={{color: '#64748b', marginTop: '2px'}}>{txn.note}</div>}
+                        {txn.note && <div style={{color: 'var(--text-secondary)', marginTop: '2px'}}>{txn.note}</div>}
                       </div>
-                      <div style={{textAlign: 'right', color: '#64748b'}}>
+                      <div style={{textAlign: 'right', color: 'var(--text-secondary)'}}>
                         <div>{txn.user}</div>
                         <div>{new Date(txn.created).toLocaleDateString('de-DE')}</div>
                       </div>
@@ -1854,9 +1854,9 @@ export default function Lager() {
                 {multiBuchungItems.map((entry, idx) => {
                   const item = allItems.find(i => i.id === entry.itemId)
                   return (
-                    <div key={idx} style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: '#f9fafb', borderRadius: '8px', marginBottom: '4px'}}>
+                    <div key={idx} style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: 'var(--bg-subtle)', borderRadius: '8px', marginBottom: '4px'}}>
                       <span style={{fontWeight: 600}}>{item?.name || entry.itemId}</span>
-                      <span style={{color: '#64748b'}}>{entry.qty} {item?.unit || 'Stück'}{entry.expiry ? ` · ${new Date(entry.expiry).toLocaleDateString('de-DE')}` : ''}</span>
+                      <span style={{color: 'var(--text-secondary)'}}>{entry.qty} {item?.unit || 'Stück'}{entry.expiry ? ` · ${new Date(entry.expiry).toLocaleDateString('de-DE')}` : ''}</span>
                       <button className="btn-small danger" onClick={() => setMultiBuchungItems(prev => prev.filter((_, i) => i !== idx))}>✕</button>
                     </div>
                   )
@@ -2017,9 +2017,9 @@ export default function Lager() {
         }
 
         .stat-card {
-          background: #fff;
+          background: var(--bg-card);
           border-radius: 14px;
-          box-shadow: 0 3px 12px rgba(0,0,0,0.06);
+          box-shadow: var(--shadow-sm);
           padding: 20px;
         }
 
@@ -2065,8 +2065,8 @@ export default function Lager() {
 
         .search-box input:focus {
           outline: none;
-          border-color: #b91c1c;
-          box-shadow: 0 0 0 3px rgba(185,28,28,0.1);
+          border-color: var(--accent);
+          box-shadow: 0 0 0 3px rgba(107,15,26,0.1);
         }
 
         .filter-chips {
@@ -2093,9 +2093,9 @@ export default function Lager() {
         }
 
         .chip.active {
-          background: #fee2e2;
-          color: #b91c1c;
-          border-color: #b91c1c;
+          background: rgba(107,15,26,0.08);
+          color: var(--accent);
+          border-color: var(--accent);
         }
 
         .btn {
@@ -2117,13 +2117,13 @@ export default function Lager() {
         }
 
         .btn.primary {
-          background: #b91c1c;
+          background: var(--accent);
           color: #fff;
-          border-color: #b91c1c;
+          border-color: var(--accent);
         }
 
         .btn.primary:hover {
-          background: #dc2626;
+          opacity: 0.88;
         }
 
         .btn:disabled {
@@ -2133,22 +2133,23 @@ export default function Lager() {
         }
 
         .btn-small {
-          background: #fff;
-          border: 1px solid rgba(0,0,0,0.08);
+          background: var(--bg-card);
+          border: 1px solid var(--border);
           padding: 6px 12px;
           border-radius: 6px;
           font-size: 13px;
           font-weight: 600;
           cursor: pointer;
           font-family: inherit;
+          color: var(--text);
         }
 
         .btn-small:hover {
-          background: #f9f9f9;
+          background: var(--bg-hover);
         }
 
         .btn-small.danger {
-          color: #b91c1c;
+          color: var(--accent);
         }
 
         .btn-small:disabled {
@@ -2164,11 +2165,11 @@ export default function Lager() {
         }
 
         .item-row {
-          background: #fff;
+          background: var(--bg-card);
           border-left: 4px solid;
           border-radius: 12px;
           padding: 1rem;
-          box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+          box-shadow: var(--shadow-sm);
           position: relative;
           transition: all 0.2s;
         }
@@ -2202,9 +2203,9 @@ export default function Lager() {
         }
 
         .menu-dots {
-          background: rgba(255,255,255,0.95);
+          background: var(--bg-card);
           backdrop-filter: blur(10px);
-          border: 1px solid rgba(0,0,0,0.08);
+          border: 1px solid var(--border);
           border-radius: 6px;
           width: 28px;
           height: 28px;
@@ -2213,7 +2214,7 @@ export default function Lager() {
           justify-content: center;
           cursor: pointer;
           font-size: 18px;
-          color: #64748b;
+          color: var(--text-secondary);
           transition: all 0.2s;
           opacity: 0;
         }
@@ -2223,8 +2224,8 @@ export default function Lager() {
         }
 
         .menu-dots:hover {
-          background: #fff;
-          color: #b91c1c;
+          background: var(--bg-hover);
+          color: var(--accent);
           transform: scale(1.1);
         }
 
@@ -2232,9 +2233,9 @@ export default function Lager() {
           position: absolute;
           top: 32px;
           right: 0;
-          background: rgba(255,255,255,0.98);
+          background: var(--bg-card);
           backdrop-filter: blur(20px);
-          border: 1px solid rgba(0,0,0,0.08);
+          border: 1px solid var(--border);
           border-radius: 8px;
           box-shadow: 0 4px 12px rgba(0,0,0,0.15);
           min-width: 140px;
@@ -2257,7 +2258,7 @@ export default function Lager() {
           font-weight: 600;
           text-align: left;
           white-space: nowrap;
-          color: #1d1d1f;
+          color: var(--text);
           font-family: inherit;
         }
 
@@ -2270,8 +2271,8 @@ export default function Lager() {
         }
 
         .menu-item:hover {
-          background: #f3f4f6;
-          color: #b91c1c;
+          background: var(--bg-hover);
+          color: var(--accent);
         }
 
         .item-header {
@@ -2342,7 +2343,7 @@ export default function Lager() {
 
         .item-category {
           font-size: 0.9rem;
-          color: #64748b;
+          color: var(--text-secondary);
         }
 
         .item-qty {
@@ -2360,7 +2361,7 @@ export default function Lager() {
 
         .expiry-date {
           font-size: 0.85rem;
-          color: #64748b;
+          color: var(--text-secondary);
           margin-top: 0.25rem;
         }
 
@@ -2369,9 +2370,9 @@ export default function Lager() {
           bottom: 0;
           left: 0;
           right: 0;
-          background: #fff;
-          border-top: 1px solid rgba(0,0,0,0.08);
-          padding: 12px;
+          background: var(--bg-card);
+          border-top: 1px solid var(--border);
+          padding: 12px 12px calc(12px + env(safe-area-inset-bottom));
           display: flex;
           gap: 8px;
           justify-content: center;
@@ -2380,31 +2381,32 @@ export default function Lager() {
         }
 
         .location-tab {
-          background: #fff;
-          border: 1px solid rgba(0,0,0,0.08);
+          background: var(--bg-card);
+          border: 1px solid var(--border);
           padding: 10px 20px;
           border-radius: 8px;
           cursor: pointer;
           font-weight: 700;
           transition: all 0.2s;
           font-family: inherit;
+          color: var(--text);
         }
 
         .location-tab:hover {
-          background: #f9f9f9;
+          background: var(--bg-hover);
         }
 
         .location-tab.active {
-          background: #b91c1c;
+          background: var(--accent);
           color: #fff;
-          border-color: #b91c1c;
+          border-color: var(--accent);
         }
 
         .empty-state {
           text-align: center;
           padding: 48px 16px;
-          color: #64748b;
-          background: #fff;
+          color: var(--text-secondary);
+          background: var(--bg-card);
           border-radius: 12px;
         }
 
@@ -2420,7 +2422,7 @@ export default function Lager() {
         }
 
         .modal-box {
-          background: #fff;
+          background: var(--bg-card);
           border-radius: 14px;
           max-width: 800px;
           width: 100%;
@@ -2436,20 +2438,20 @@ export default function Lager() {
 
         .modal-box h3 {
           margin: 0 0 1rem 0;
-          color: #b91c1c;
+          color: var(--accent);
           font-weight: 800;
         }
 
         .modal-box h4 {
           margin: 0 0 0.5rem 0;
-          color: #1d1d1f;
+          color: var(--text);
         }
 
         .tabs {
           display: flex;
           gap: 8px;
           margin-bottom: 16px;
-          border-bottom: 2px solid #e5e7eb;
+          border-bottom: 2px solid var(--border);
         }
 
         .tab {
@@ -2459,7 +2461,7 @@ export default function Lager() {
           cursor: pointer;
           font-weight: 600;
           font-size: 0.95rem;
-          color: #64748b;
+          color: var(--text-secondary);
           transition: all 0.2s;
           border-bottom: 2px solid transparent;
           margin-bottom: -2px;
@@ -2467,12 +2469,12 @@ export default function Lager() {
         }
 
         .tab:hover {
-          color: #1d1d1f;
+          color: var(--text);
         }
 
         .tab.active {
-          color: #b91c1c;
-          border-bottom-color: #b91c1c;
+          color: var(--accent);
+          border-bottom-color: var(--accent);
         }
 
         .log-list {
@@ -2484,10 +2486,10 @@ export default function Lager() {
         }
 
         .log-entry {
-          background: #fafafa;
+          background: var(--bg-subtle);
           border-radius: 8px;
           padding: 12px;
-          border-left: 3px solid #64748b;
+          border-left: 3px solid var(--border-strong);
         }
 
         .log-header {
@@ -2499,7 +2501,7 @@ export default function Lager() {
 
         .log-date {
           font-size: 0.9rem;
-          color: #64748b;
+          color: var(--text-secondary);
           font-weight: 600;
         }
 
@@ -2541,10 +2543,10 @@ export default function Lager() {
         }
 
         .audit-card {
-          background: #fafafa;
+          background: var(--bg-subtle);
           border-radius: 8px;
           padding: 12px;
-          border-left: 3px solid #2563eb;
+          border-left: 3px solid var(--accent);
         }
 
         .audit-card-header {
@@ -2578,7 +2580,7 @@ export default function Lager() {
 
         .audit-user {
           font-size: 0.9rem;
-          color: #64748b;
+          color: var(--text-secondary);
         }
 
         .form-group {
@@ -2591,16 +2593,17 @@ export default function Lager() {
         .form-group label {
           font-weight: 700;
           font-size: 0.9rem;
-          color: #374151;
+          color: var(--text);
         }
 
         .form-group input,
         .form-group textarea,
         .form-group select {
           padding: 10px 12px;
-          border: 1px solid rgba(0,0,0,0.08);
+          border: 1px solid var(--border);
           border-radius: 8px;
-          background: #fff;
+          background: var(--bg-input);
+          color: var(--text);
           font-size: 14px;
           font-family: inherit;
           width: 100%;
@@ -2610,8 +2613,8 @@ export default function Lager() {
         .form-group textarea:focus,
         .form-group select:focus {
           outline: none;
-          border-color: #b91c1c;
-          box-shadow: 0 0 0 3px rgba(185,28,28,0.1);
+          border-color: var(--accent);
+          box-shadow: 0 0 0 3px rgba(107,15,26,0.1);
         }
 
         .item-list {
@@ -2633,7 +2636,7 @@ export default function Lager() {
         }
 
         .item-card:hover {
-          background: #f9f9f9;
+          background: var(--bg-hover);
         }
 
         .item-card-info {
@@ -2647,7 +2650,7 @@ export default function Lager() {
 
         .item-card-meta {
           font-size: 0.85rem;
-          color: #64748b;
+          color: var(--text-secondary);
         }
 
         .location-list {
