@@ -91,6 +91,30 @@ interface Neuigkeit {
   collectionId: string
 }
 
+interface Lernbeitrag {
+  id: string
+  collectionId: string
+  typ: 'bild' | 'text' | 'video' | 'quiz'
+  titel: string
+  inhalt: string
+  bild?: string
+  video_url?: string
+  tags: string[] | string
+  organisation_id: string
+  erstellt_von_name: string
+  gepinnt: boolean
+  quiz_daten?: string | { frage: string; antworten: string[]; richtige: number }
+  created: string
+}
+
+function getVideoEmbed(url: string): string {
+  const yt = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)/)
+  if (yt) return `https://www.youtube.com/embed/${yt[1]}?rel=0`
+  const vimeo = url.match(/vimeo\.com\/(\d+)/)
+  if (vimeo) return `https://player.vimeo.com/video/${vimeo[1]}`
+  return url
+}
+
 function toICSDate(str: string): string {
   const d = parseDate(str)
   if (isNaN(d.getTime())) return ''
@@ -144,7 +168,9 @@ export default function Unitas() {
   const { user, loading: authLoading, logout } = useAuth()
   const [tab, setTab] = useState<'uebersicht' | 'protokolle' | 'lernbar' | 'vorgaenge' | 'konto'>('uebersicht')
   const [myOutputs, setMyOutputs] = useState<ProductOutput[]>([])
-  const [lernbarTab, setLernbarTab] = useState<'termine' | 'lernmodule'>('termine')
+  const [lernbarTab, setLernbarTab] = useState<'termine' | 'lernmodule' | 'feed'>('termine')
+  const [beitraege, setBeitraege] = useState<Lernbeitrag[]>([])
+  const [feedQuizState, setFeedQuizState] = useState<Record<string, { selected: number | null; submitted: boolean }>>({})
 
   const [termine, setTermine] = useState<Termin[]>([])
   const [terminUser, setTerminUser] = useState<TerminUser[]>([])
@@ -290,6 +316,18 @@ export default function Unitas() {
       } catch {
         // collection may not exist yet
       }
+
+      // Lernfeed-Beiträge
+      try {
+        if (user?.organization_id) {
+          const beitraegeRecords = await pb.collection('lernbar_beitraege').getFullList({
+            filter: `organisation_id = "${user!.organization_id}"`,
+            sort: '-gepinnt,-created',
+            requestKey: `beitraege-${Date.now()}`
+          })
+          setBeitraege(beitraegeRecords as any)
+        }
+      } catch { /* collection may not exist yet */ }
 
       // Meine Patientenprotokolle (wo ich in der Mannschaft bin)
       await loadPatients()
@@ -640,9 +678,13 @@ export default function Unitas() {
         {tab === 'lernbar' && !playerProgress && (
           <div>
             <div style={{ display: 'flex', gap: '4px', marginBottom: '20px', background: 'var(--bg-subtle)', borderRadius: '10px', padding: '4px' }}>
-              {(['termine', 'lernmodule'] as const).map(st => (
-                <button key={st} onClick={() => setLernbarTab(st)} style={{ flex: 1, padding: '8px', borderRadius: '7px', border: 'none', background: lernbarTab === st ? 'var(--bg-card)' : 'transparent', color: lernbarTab === st ? 'var(--text)' : 'var(--text-secondary)', fontWeight: 600, fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit', boxShadow: lernbarTab === st ? '0 1px 3px rgba(0,0,0,0.1)' : 'none', transition: 'all 0.15s' }}>
-                  {st === 'termine' ? `Termine${upcomingTermine.length > 0 ? ` (${upcomingTermine.length})` : ''}` : `Lernmodule${progress.length > 0 ? ` ${doneMods}/${progress.length}` : ''}`}
+              {([
+                { key: 'termine', label: `Termine${upcomingTermine.length > 0 ? ` (${upcomingTermine.length})` : ''}` },
+                { key: 'lernmodule', label: `Module${progress.length > 0 ? ` ${doneMods}/${progress.length}` : ''}` },
+                { key: 'feed', label: `Feed${beitraege.length > 0 ? ` (${beitraege.length})` : ''}` },
+              ] as const).map(st => (
+                <button key={st.key} onClick={() => setLernbarTab(st.key)} style={{ flex: 1, padding: '8px', borderRadius: '7px', border: 'none', background: lernbarTab === st.key ? 'var(--bg-card)' : 'transparent', color: lernbarTab === st.key ? 'var(--text)' : 'var(--text-secondary)', fontWeight: 600, fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit', boxShadow: lernbarTab === st.key ? '0 1px 3px rgba(0,0,0,0.1)' : 'none', transition: 'all 0.15s' }}>
+                  {st.label}
                 </button>
               ))}
             </div>
@@ -1041,6 +1083,126 @@ export default function Unitas() {
         })()}
 
 
+
+        {/* LERNFEED */}
+        {tab === 'lernbar' && !playerProgress && lernbarTab === 'feed' && (() => {
+          const parseTags = (raw: string[] | string): string[] => {
+            if (Array.isArray(raw)) return raw
+            try { const p = JSON.parse(raw as string); return Array.isArray(p) ? p : [] } catch { return [] }
+          }
+          const parseQuiz = (raw: any): { frage: string; antworten: string[]; richtige: number } | null => {
+            if (!raw) return null
+            if (typeof raw === 'object' && raw.frage) return raw
+            try { const p = JSON.parse(raw); return p?.frage ? p : null } catch { return null }
+          }
+          return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {beitraege.length === 0 && (
+                <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '48px 0', fontSize: 15 }}>
+                  Noch keine Lernbeiträge vorhanden
+                </div>
+              )}
+              {beitraege.map(b => {
+                const tags = parseTags(b.tags)
+                const bildUrl = b.bild ? `https://api.responda.systems/api/files/${b.collectionId}/${b.id}/${b.bild}` : null
+                const qs = feedQuizState[b.id] || { selected: null, submitted: false }
+                const quiz = parseQuiz(b.quiz_daten)
+                return (
+                  <div key={b.id} style={{ background: 'var(--bg-card)', borderRadius: 16, border: `1px solid ${b.gepinnt ? 'var(--accent)' : 'var(--border)'}`, overflow: 'hidden' }}>
+                    {/* Pinned banner */}
+                    {b.gepinnt && (
+                      <div style={{ background: 'var(--accent)', padding: '5px 14px', display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="white"><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5v6h2v-6h5v-2l-2-2z"/></svg>
+                        <span style={{ fontSize: 10, fontWeight: 700, color: '#fff', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Angepinnt</span>
+                      </div>
+                    )}
+
+                    {/* Bild */}
+                    {b.typ === 'bild' && bildUrl && (
+                      <img src={bildUrl} alt={b.titel} style={{ width: '100%', display: 'block', maxHeight: 280, objectFit: 'cover' }} />
+                    )}
+
+                    {/* Video */}
+                    {b.typ === 'video' && b.video_url && (
+                      <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0, overflow: 'hidden', background: '#000' }}>
+                        <iframe
+                          src={getVideoEmbed(b.video_url)}
+                          style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }}
+                          allowFullScreen
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        />
+                      </div>
+                    )}
+
+                    {/* Typ-Badge für Text/Quiz */}
+                    {(b.typ === 'text' || b.typ === 'quiz') && (
+                      <div style={{ height: 4, background: b.typ === 'quiz' ? 'var(--accent)' : 'var(--border-strong)' }} />
+                    )}
+
+                    <div style={{ padding: '14px 16px' }}>
+                      {/* Header */}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+                        <div style={{ fontWeight: 700, fontSize: 16, color: 'var(--text)', flex: 1 }}>{b.titel}</div>
+                        <span style={{ fontSize: 11, fontWeight: 700, color: b.typ === 'video' ? 'var(--accent)' : b.typ === 'quiz' ? 'var(--accent)' : 'var(--text-secondary)', background: b.typ === 'video' ? 'rgba(107,15,26,0.08)' : b.typ === 'quiz' ? 'rgba(107,15,26,0.08)' : 'var(--bg-subtle)', borderRadius: 6, padding: '3px 8px', marginLeft: 8, flexShrink: 0, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                          {b.typ === 'bild' ? '📷 Post' : b.typ === 'text' ? '📝 Info' : b.typ === 'video' ? '▶ Video' : '❓ Quiz'}
+                        </span>
+                      </div>
+
+                      {/* Inhalt */}
+                      {b.inhalt && b.typ !== 'quiz' && (
+                        <div style={{ fontSize: 14, color: 'var(--text)', lineHeight: 1.65, whiteSpace: 'pre-wrap', marginBottom: 12 }}>{b.inhalt}</div>
+                      )}
+
+                      {/* Quiz */}
+                      {b.typ === 'quiz' && quiz && (
+                        <div style={{ marginBottom: 12 }}>
+                          <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text)', lineHeight: 1.5, marginBottom: 12 }}>{quiz.frage}</div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                            {quiz.antworten.map((a, idx) => {
+                              let bg = 'var(--bg-subtle)', border = '1px solid var(--border)', color = 'var(--text)'
+                              if (qs.submitted) {
+                                if (idx === quiz.richtige) { bg = '#f0fdf4'; border = '2px solid #16a34a'; color = '#166534' }
+                                else if (idx === qs.selected) { bg = '#fef2f2'; border = '2px solid var(--accent)'; color = 'var(--accent)' }
+                              } else if (idx === qs.selected) {
+                                bg = 'var(--bg-subtle)'; border = '2px solid var(--accent)'; color = 'var(--accent)'
+                              }
+                              return (
+                                <button key={idx} disabled={qs.submitted} onClick={() => setFeedQuizState(prev => ({ ...prev, [b.id]: { selected: idx, submitted: false } }))}
+                                  style={{ padding: '10px 14px', borderRadius: 10, border, background: bg, color, fontWeight: idx === qs.selected || (qs.submitted && idx === quiz.richtige) ? 700 : 400, fontSize: 14, cursor: qs.submitted ? 'default' : 'pointer', textAlign: 'left', fontFamily: 'inherit' }}>
+                                  {a}
+                                </button>
+                              )
+                            })}
+                          </div>
+                          {!qs.submitted ? (
+                            <button disabled={qs.selected === null} onClick={() => setFeedQuizState(prev => ({ ...prev, [b.id]: { ...prev[b.id], submitted: true } }))}
+                              style={{ marginTop: 12, width: '100%', padding: '12px', borderRadius: 10, border: 'none', background: qs.selected === null ? 'var(--bg-subtle)' : 'var(--accent)', color: qs.selected === null ? 'var(--text-secondary)' : '#fff', fontWeight: 700, fontSize: 14, cursor: qs.selected === null ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
+                              Antworten
+                            </button>
+                          ) : (
+                            <div style={{ marginTop: 12, padding: '10px 14px', borderRadius: 10, textAlign: 'center', fontWeight: 700, background: qs.selected === quiz.richtige ? '#f0fdf4' : '#fef2f2', border: qs.selected === quiz.richtige ? '1px solid #bbf7d0' : '1px solid #fecaca', color: qs.selected === quiz.richtige ? '#166534' : 'var(--accent)' }}>
+                              {qs.selected === quiz.richtige ? '✓ Richtig!' : '✗ Falsch — die richtige Antwort ist markiert'}
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Tags + Meta */}
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
+                        {tags.map(t => (
+                          <span key={t} style={{ fontSize: 11, fontWeight: 600, background: 'rgba(107,15,26,0.07)', color: 'var(--accent)', borderRadius: 6, padding: '3px 8px' }}>{t}</span>
+                        ))}
+                      </div>
+                      <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 8 }}>
+                        {b.erstellt_von_name && `${b.erstellt_von_name} · `}{new Date(b.created).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )
+        })()}
 
         {/* VORGÄNGE */}
         {tab === 'vorgaenge' && (

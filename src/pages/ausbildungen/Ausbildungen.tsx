@@ -96,6 +96,22 @@ interface TerminTeilnehmer {
   }
 }
 
+interface Lernbeitrag {
+  id: string
+  collectionId: string
+  typ: 'bild' | 'text' | 'video' | 'quiz'
+  titel: string
+  inhalt: string
+  bild?: string
+  video_url?: string
+  tags: string[]
+  organisation_id: string
+  erstellt_von_name: string
+  gepinnt: boolean
+  quiz_daten?: { frage: string; antworten: string[]; richtige: number }
+  created: string
+}
+
 interface Dokument {
   id: string
   termin_id: string
@@ -303,8 +319,26 @@ export default function Ausbildungen() {
   const [newQuizFrage, setNewQuizFrage] = useState('')
   const [newQuizAntworten, setNewQuizAntworten] = useState(['', '', '', ''])
   const [newQuizRichtige, setNewQuizRichtige] = useState(0)
+
+  // Lernfeed
+  const [beitraege, setBeitraege] = useState<Lernbeitrag[]>([])
+  const [beitraegeLoading, setBeitraegeLoading] = useState(false)
+  const [showBeitragModal, setShowBeitragModal] = useState(false)
+  const [beitragForm, setBeitragForm] = useState<{
+    typ: 'bild' | 'text' | 'video' | 'quiz'
+    titel: string
+    inhalt: string
+    video_url: string
+    tags: string
+    gepinnt: boolean
+    quiz_frage: string
+    quiz_antworten: string[]
+    quiz_richtige: number
+    bild_file: File | null
+  }>({ typ: 'text', titel: '', inhalt: '', video_url: '', tags: '', gepinnt: false, quiz_frage: '', quiz_antworten: ['', '', '', ''], quiz_richtige: 0, bild_file: null })
+  const [savingBeitrag, setSavingBeitrag] = useState(false)
   
-const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | 'konzepte' | 'jahresuebersicht' | 'archiv'>('termine')
+const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | 'konzepte' | 'jahresuebersicht' | 'archiv' | 'lernfeed'>('termine')
   
   const [uploadFile, setUploadFile] = useState<File | null>(null)
   const [uploadTyp, setUploadTyp] = useState<'dozent' | 'teilnehmer'>('teilnehmer')
@@ -473,6 +507,70 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
 
 
 
+
+  async function loadBeitraege() {
+    setBeitraegeLoading(true)
+    try {
+      const records = await pb.collection('lernbar_beitraege').getFullList({
+        filter: `organisation_id = "${user?.organization_id}"`,
+        sort: '-gepinnt,-created',
+        requestKey: `loadBeitraege-${Date.now()}`
+      })
+      setBeitraege(records as any)
+    } catch { /* collection may not exist */ }
+    finally { setBeitraegeLoading(false) }
+  }
+
+  async function saveBeitrag() {
+    if (!beitragForm.titel.trim()) return
+    setSavingBeitrag(true)
+    try {
+      const tags = beitragForm.tags.split(',').map(t => t.trim()).filter(Boolean)
+      const data: Record<string, any> = {
+        typ: beitragForm.typ,
+        titel: beitragForm.titel.trim(),
+        inhalt: beitragForm.inhalt.trim(),
+        tags: JSON.stringify(tags),
+        gepinnt: beitragForm.gepinnt,
+        organisation_id: user?.organization_id,
+        erstellt_von_id: user?.id,
+        erstellt_von_name: user?.name,
+      }
+      if (beitragForm.typ === 'video') data.video_url = beitragForm.video_url.trim()
+      if (beitragForm.typ === 'quiz') {
+        data.quiz_daten = JSON.stringify({
+          frage: beitragForm.quiz_frage,
+          antworten: beitragForm.quiz_antworten.filter(a => a.trim()),
+          richtige: beitragForm.quiz_richtige
+        })
+      }
+      if (beitragForm.typ === 'bild' && beitragForm.bild_file) {
+        const fd = new FormData()
+        Object.entries(data).forEach(([k, v]) => fd.append(k, String(v)))
+        fd.append('bild', beitragForm.bild_file)
+        await pb.collection('lernbar_beitraege').create(fd)
+      } else {
+        await pb.collection('lernbar_beitraege').create(data)
+      }
+      setShowBeitragModal(false)
+      setBeitragForm({ typ: 'text', titel: '', inhalt: '', video_url: '', tags: '', gepinnt: false, quiz_frage: '', quiz_antworten: ['', '', '', ''], quiz_richtige: 0, bild_file: null })
+      await loadBeitraege()
+      showMessage('Beitrag erstellt', 'success')
+    } catch(e: any) {
+      showMessage('Fehler: ' + e.message, 'error')
+    } finally { setSavingBeitrag(false) }
+  }
+
+  async function deleteBeitrag(id: string) {
+    if (!confirm('Beitrag wirklich löschen?')) return
+    try {
+      await pb.collection('lernbar_beitraege').delete(id)
+      setBeitraege(prev => prev.filter(b => b.id !== id))
+      showMessage('Beitrag gelöscht', 'success')
+    } catch(e: any) {
+      showMessage('Fehler: ' + e.message, 'error')
+    }
+  }
 
   async function loadAllUsers() {
     try {
@@ -1451,6 +1549,16 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
             <span style={{position: 'absolute', top: '4px', right: '4px', background: 'var(--text-secondary)', color: '#fff', borderRadius: '50%', width: '14px', height: '14px', fontSize: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700}}>{archivTermine.length > 9 ? '9+' : archivTermine.length}</span>
           )}
         </button>
+        <button
+          className={`action-btn ${viewMode === 'lernfeed' ? 'active' : ''}`}
+          onClick={() => { setViewMode('lernfeed'); loadBeitraege() }}
+          title="Lernfeed"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M4 11a9 9 0 0 1 9 9"/><path d="M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1"/>
+          </svg>
+          <span className="btn-label">Lernfeed</span>
+        </button>
         <div style={{flex: 1}} />
         {viewMode === 'termine' && (
           <button className="action-btn primary" onClick={openAddTermin} title="Termin hinzufügen">
@@ -1478,6 +1586,14 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
         )}
         {viewMode === 'konzepte' && (
           <button className="action-btn primary" onClick={openAddKonzept} title="Konzept hinzufügen">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <line x1="12" y1="5" x2="12" y2="19"/>
+              <line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+          </button>
+        )}
+        {viewMode === 'lernfeed' && (
+          <button className="action-btn primary" onClick={() => setShowBeitragModal(true)} title="Beitrag erstellen">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
               <line x1="12" y1="5" x2="12" y2="19"/>
               <line x1="5" y1="12" x2="19" y2="12"/>
@@ -2091,6 +2207,141 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
               </div>
             )
           })()}
+        </div>
+      )}
+
+      {/* LERNFEED VIEW */}
+      {viewMode === 'lernfeed' && (
+        <div className="content">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 }}>
+            <div>
+              <h2 style={{ margin: '0 0 4px' }}>Lernfeed</h2>
+              <p style={{ color: 'var(--text-secondary)', fontSize: 14, margin: 0 }}>
+                Lernbeiträge für den Unitas-Feed — erscheinen in der Lernbar deiner Teilnehmer
+              </p>
+            </div>
+          </div>
+
+          {beitraegeLoading ? (
+            <div style={{ textAlign: 'center', padding: '48px 0', color: 'var(--text-secondary)' }}>Lade...</div>
+          ) : beitraege.length === 0 ? (
+            <div className="empty-state">
+              <div style={{ fontSize: 32, marginBottom: 12 }}>📚</div>
+              <div style={{ fontWeight: 600, marginBottom: 6 }}>Noch keine Lernbeiträge</div>
+              <div style={{ fontSize: 14 }}>Erstelle deinen ersten Beitrag mit dem + Button oben</div>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {beitraege.map(b => (
+                <div key={b.id} style={{ background: 'var(--bg-card)', border: `1px solid ${b.gepinnt ? 'var(--accent)' : 'var(--border)'}`, borderRadius: 14, overflow: 'hidden' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px' }}>
+                    <div style={{ width: 36, height: 36, borderRadius: 10, background: b.typ === 'video' ? 'rgba(107,15,26,0.1)' : b.typ === 'quiz' ? 'rgba(107,15,26,0.1)' : 'var(--bg-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>
+                      {b.typ === 'bild' ? '📷' : b.typ === 'text' ? '📝' : b.typ === 'video' ? '▶️' : '❓'}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                        {b.titel}
+                        {b.gepinnt && <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--accent)', background: 'rgba(107,15,26,0.08)', borderRadius: 5, padding: '2px 6px', textTransform: 'uppercase' }}>Angepinnt</span>}
+                      </div>
+                      <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 2 }}>
+                        {b.typ.charAt(0).toUpperCase() + b.typ.slice(1)} · {new Date(b.created).toLocaleDateString('de-DE')}
+                        {(() => { try { const tags = JSON.parse(b.tags as any); return tags.length > 0 ? ` · ${tags.join(', ')}` : '' } catch { return '' } })()}
+                      </div>
+                    </div>
+                    <button onClick={() => deleteBeitrag(b.id)} style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 8, padding: '6px 10px', cursor: 'pointer', color: 'var(--accent)', fontWeight: 600, fontSize: 13, fontFamily: 'inherit', flexShrink: 0 }}>
+                      Löschen
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* BEITRAG ERSTELLEN MODAL */}
+      {showBeitragModal && (
+        <div className="modal show" onClick={() => setShowBeitragModal(false)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: 520 }}>
+            <h3>Neuer Lernbeitrag</h3>
+
+            {/* Typ-Auswahl */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginBottom: 20 }}>
+              {([
+                { key: 'text', label: '📝 Info', desc: 'Text' },
+                { key: 'bild', label: '📷 Post', desc: 'Bild+Text' },
+                { key: 'video', label: '▶ Video', desc: 'YouTube' },
+                { key: 'quiz', label: '❓ Quiz', desc: 'Frage' },
+              ] as const).map(t => (
+                <button key={t.key} onClick={() => setBeitragForm(prev => ({ ...prev, typ: t.key }))}
+                  style={{ padding: '10px 6px', borderRadius: 10, border: beitragForm.typ === t.key ? '2px solid var(--accent)' : '1.5px solid var(--border)', background: beitragForm.typ === t.key ? 'rgba(107,15,26,0.06)' : 'var(--bg-card)', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'center' }}>
+                  <div style={{ fontSize: 18, marginBottom: 2 }}>{t.label.split(' ')[0]}</div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: beitragForm.typ === t.key ? 'var(--accent)' : 'var(--text-secondary)' }}>{t.desc}</div>
+                </button>
+              ))}
+            </div>
+
+            <div className="field">
+              <label>Titel *</label>
+              <input value={beitragForm.titel} onChange={e => setBeitragForm(prev => ({ ...prev, titel: e.target.value }))} placeholder="z.B. XABCDE Schema" />
+            </div>
+
+            {beitragForm.typ !== 'quiz' && (
+              <div className="field">
+                <label>{beitragForm.typ === 'bild' ? 'Beschreibung' : 'Inhalt'}</label>
+                <textarea value={beitragForm.inhalt} onChange={e => setBeitragForm(prev => ({ ...prev, inhalt: e.target.value }))} placeholder="Erklärender Text..." rows={4} style={{ width: '100%', resize: 'vertical', padding: '10px 12px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--bg-input)', color: 'var(--text)', fontFamily: 'inherit', fontSize: 14 }} />
+              </div>
+            )}
+
+            {beitragForm.typ === 'bild' && (
+              <div className="field">
+                <label>Bild hochladen</label>
+                <input type="file" accept="image/*" onChange={e => setBeitragForm(prev => ({ ...prev, bild_file: e.target.files?.[0] || null }))} />
+              </div>
+            )}
+
+            {beitragForm.typ === 'video' && (
+              <div className="field">
+                <label>YouTube / Vimeo URL *</label>
+                <input value={beitragForm.video_url} onChange={e => setBeitragForm(prev => ({ ...prev, video_url: e.target.value }))} placeholder="https://youtube.com/watch?v=..." />
+              </div>
+            )}
+
+            {beitragForm.typ === 'quiz' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 16 }}>
+                <div className="field" style={{ margin: 0 }}>
+                  <label>Frage *</label>
+                  <input value={beitragForm.quiz_frage} onChange={e => setBeitragForm(prev => ({ ...prev, quiz_frage: e.target.value }))} placeholder="Was ist der erste Schritt bei XABCDE?" />
+                </div>
+                {beitragForm.quiz_antworten.map((a, idx) => (
+                  <div key={idx} className="field" style={{ margin: 0 }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <input type="radio" name="richtige" checked={beitragForm.quiz_richtige === idx} onChange={() => setBeitragForm(prev => ({ ...prev, quiz_richtige: idx }))} />
+                      Antwort {idx + 1} {beitragForm.quiz_richtige === idx && <span style={{ color: 'var(--accent)', fontSize: 11, fontWeight: 700 }}>✓ Richtig</span>}
+                    </label>
+                    <input value={a} onChange={e => { const arr = [...beitragForm.quiz_antworten]; arr[idx] = e.target.value; setBeitragForm(prev => ({ ...prev, quiz_antworten: arr })) }} placeholder={`Antwort ${idx + 1}...`} />
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="field">
+              <label>Tags (kommagetrennt)</label>
+              <input value={beitragForm.tags} onChange={e => setBeitragForm(prev => ({ ...prev, tags: e.target.value }))} placeholder="XABCDE, AMLS, Beatmung, Reanimation" />
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
+              <input type="checkbox" id="gepinnt" checked={beitragForm.gepinnt} onChange={e => setBeitragForm(prev => ({ ...prev, gepinnt: e.target.checked }))} />
+              <label htmlFor="gepinnt" style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)', cursor: 'pointer' }}>Beitrag anpinnen (erscheint ganz oben)</label>
+            </div>
+
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button className="btn" onClick={() => setShowBeitragModal(false)} style={{ flex: 1 }}>Abbrechen</button>
+              <button className="btn primary" onClick={saveBeitrag} disabled={savingBeitrag || !beitragForm.titel.trim()} style={{ flex: 1 }}>
+                {savingBeitrag ? 'Wird gespeichert…' : 'Erstellen'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
