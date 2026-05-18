@@ -19,16 +19,18 @@ interface Props {
 }
 
 const CH: React.CSSProperties = { background: '#fef3c7', borderColor: '#d97706', borderWidth: 2 }
+const CH_TF: React.CSSProperties = { background: '#f0fdf4', borderColor: '#16a34a', borderWidth: 2 }
 const pil: React.CSSProperties = {
   display: 'inline-flex', alignItems: 'center', border: '0.5px solid var(--border-medium)',
   borderRadius: 999, padding: '.15rem .6rem', background: 'var(--bg-subtle)',
   fontSize: 13, color: 'var(--text)', margin: '2px 2px 2px 0',
 }
 
-function F({ l, children, ch }: { l: string; children: React.ReactNode; ch?: boolean }) {
+function F({ l, children, ch, tf }: { l: string; children: React.ReactNode; ch?: boolean; tf?: boolean }) {
+  const borderColor = ch ? '#d97706' : tf ? '#16a34a' : undefined
   return (
-    <div style={{ ...field, ...(ch ? { borderLeft: '3px solid #d97706', paddingLeft: 8, marginLeft: -8 } : {}) }}>
-      <label style={{ ...lbl, ...(ch ? { color: '#d97706' } : {}) }}>{l}</label>
+    <div style={{ ...field, ...(borderColor ? { borderLeft: `3px solid ${borderColor}`, paddingLeft: 8, marginLeft: -8 } : {}) }}>
+      <label style={{ ...lbl, ...(borderColor ? { color: borderColor } : {}) }}>{l}</label>
       {children}
     </div>
   )
@@ -64,16 +66,20 @@ export default function PatientEditModal({ patient, payload: initialPayload, ori
   }, [lp.access_code])
 
   const persistentChanged = new Set<string>((initialPayload as any)._changed_fields || [])
+  const persistentTFChanged = new Set<string>((initialPayload as any)._tf_changed_fields || [])
   const sessionChanged = (k: keyof PatientPayload) =>
     JSON.stringify((original as any)[k]) !== JSON.stringify((lp as any)[k])
   const isChanged = (k: keyof PatientPayload) =>
     persistentChanged.has(k as string) || sessionChanged(k)
-  const hl  = (k: keyof PatientPayload): React.CSSProperties => isChanged(k) ? CH : {}
+  const isTFChanged = (k: keyof PatientPayload) =>
+    persistentTFChanged.has(k as string) && !isChanged(k)
+  const hl  = (k: keyof PatientPayload): React.CSSProperties => isChanged(k) ? CH : isTFChanged(k) ? CH_TF : {}
   const H   = (k: keyof PatientPayload) => ({ ...inp, ...hl(k) })
   const HS  = (k: keyof PatientPayload) => ({ ...sel, ...hl(k) })
   const HT  = (k: keyof PatientPayload) => ({ ...ta,  ...hl(k) })
   const hlCb = (k: keyof PatientPayload): React.CSSProperties =>
-    isChanged(k) ? { accentColor: '#f59e0b', outline: '2px solid #fcd34d', borderRadius: 3 } : {}
+    isChanged(k) ? { accentColor: '#f59e0b', outline: '2px solid #fcd34d', borderRadius: 3 }
+    : isTFChanged(k) ? { accentColor: '#16a34a', outline: '2px solid #86efac', borderRadius: 3 } : {}
 
   const rueckfragen: RQ[] = Array.isArray(lp.rueckfragen) ? (lp.rueckfragen as RQ[]) : []
   const stellungnahmen: SN[] = Array.isArray(lp.stellungnahmen) ? (lp.stellungnahmen as SN[]) : []
@@ -222,28 +228,36 @@ export default function PatientEditModal({ patient, payload: initialPayload, ori
       <div style={{ maxWidth: 800, margin: '0 auto', padding: '1rem 1rem 120px' }}>
 
         {/* Change legend */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: '0.75rem', fontSize: 13, color: 'var(--text-secondary)' }}>
-          <span style={{ display: 'inline-block', width: 16, height: 16, background: '#fffbeb', border: '1px solid #f59e0b', borderRadius: 4 }} />
-          Geänderte Felder sind amber markiert
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 16px', marginBottom: '0.75rem', fontSize: 13, color: 'var(--text-secondary)' }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ display: 'inline-block', width: 16, height: 16, background: '#fffbeb', border: '1px solid #f59e0b', borderRadius: 4, flexShrink: 0 }} />
+            Geändert durch Admin
+          </span>
+          {persistentTFChanged.size > 0 && (
+            <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ display: 'inline-block', width: 16, height: 16, background: '#f0fdf4', border: '1px solid #16a34a', borderRadius: 4, flexShrink: 0 }} />
+              Nachbearbeitung durch Teamführer
+            </span>
+          )}
         </div>
 
         {/* 1. Einsatzdaten */}
         <PubSection title="Einsatzdaten" open>
           <G2>
-            <F l="Einsatz-Nr." ch={isChanged('einsatz_nr')}><input type="text" value={lp.einsatz_nr || ''} onChange={e => upLp('einsatz_nr', e.target.value)} style={H('einsatz_nr')} /></F>
-            <F l="Auftrags-Nr." ch={isChanged('auftrags_nr')}><input type="text" value={lp.auftrags_nr || ''} onChange={e => upLp('auftrags_nr', e.target.value)} style={H('auftrags_nr')} /></F>
-            <F l="Rufname" ch={isChanged('rufname')}><input type="text" value={lp.rufname || ''} onChange={e => upLp('rufname', e.target.value)} style={H('rufname')} /></F>
-            <F l="Fahrzeug / Einheit" ch={isChanged('fahrzeug')}><input type="text" value={lp.fahrzeug || ''} onChange={e => upLp('fahrzeug', e.target.value)} style={H('fahrzeug')} /></F>
-            <F l="Einsatzart / Stichwort" ch={isChanged('einsatz_art')}><input type="text" value={lp.einsatz_art || ''} onChange={e => upLp('einsatz_art', e.target.value)} style={H('einsatz_art')} /></F>
+            <F l="Einsatz-Nr." ch={isChanged('einsatz_nr')} tf={isTFChanged('einsatz_nr')}><input type="text" value={lp.einsatz_nr || ''} onChange={e => upLp('einsatz_nr', e.target.value)} style={H('einsatz_nr')} /></F>
+            <F l="Auftrags-Nr." ch={isChanged('auftrags_nr')} tf={isTFChanged('auftrags_nr')}><input type="text" value={lp.auftrags_nr || ''} onChange={e => upLp('auftrags_nr', e.target.value)} style={H('auftrags_nr')} /></F>
+            <F l="Rufname" ch={isChanged('rufname')} tf={isTFChanged('rufname')}><input type="text" value={lp.rufname || ''} onChange={e => upLp('rufname', e.target.value)} style={H('rufname')} /></F>
+            <F l="Fahrzeug / Einheit" ch={isChanged('fahrzeug')} tf={isTFChanged('fahrzeug')}><input type="text" value={lp.fahrzeug || ''} onChange={e => upLp('fahrzeug', e.target.value)} style={H('fahrzeug')} /></F>
+            <F l="Einsatzart / Stichwort" ch={isChanged('einsatz_art')} tf={isTFChanged('einsatz_art')}><input type="text" value={lp.einsatz_art || ''} onChange={e => upLp('einsatz_art', e.target.value)} style={H('einsatz_art')} /></F>
           </G2>
-          <F l="Einsatzort / Adresse" ch={isChanged('einsatz_adresse')}><input type="text" value={lp.einsatz_adresse || ''} onChange={e => upLp('einsatz_adresse', e.target.value)} placeholder="Straße, PLZ Ort" style={H('einsatz_adresse')} /></F>
+          <F l="Einsatzort / Adresse" ch={isChanged('einsatz_adresse')} tf={isTFChanged('einsatz_adresse')}><input type="text" value={lp.einsatz_adresse || ''} onChange={e => upLp('einsatz_adresse', e.target.value)} placeholder="Straße, PLZ Ort" style={H('einsatz_adresse')} /></F>
           <G2>
-            <F l="Alarmzeit" ch={isChanged('zeit_einsatz')}><input type="time" value={lp.zeit_einsatz || ''} onChange={e => upLp('zeit_einsatz', e.target.value)} style={H('zeit_einsatz')} /></F>
-            <F l="Eintreffzeit" ch={isChanged('zeit_eintreffen')}><input type="time" value={lp.zeit_eintreffen || ''} onChange={e => upLp('zeit_eintreffen', e.target.value)} style={H('zeit_eintreffen')} /></F>
-            <F l="Transportbeginn" ch={isChanged('zeit_transport')}><input type="time" value={lp.zeit_transport || ''} onChange={e => upLp('zeit_transport', e.target.value)} style={H('zeit_transport')} /></F>
-            <F l="Übergabe" ch={isChanged('zeit_uebergabe')}><input type="time" value={lp.zeit_uebergabe || ''} onChange={e => upLp('zeit_uebergabe', e.target.value)} style={H('zeit_uebergabe')} /></F>
+            <F l="Alarmzeit" ch={isChanged('zeit_einsatz')} tf={isTFChanged('zeit_einsatz')}><input type="time" value={lp.zeit_einsatz || ''} onChange={e => upLp('zeit_einsatz', e.target.value)} style={H('zeit_einsatz')} /></F>
+            <F l="Eintreffzeit" ch={isChanged('zeit_eintreffen')} tf={isTFChanged('zeit_eintreffen')}><input type="time" value={lp.zeit_eintreffen || ''} onChange={e => upLp('zeit_eintreffen', e.target.value)} style={H('zeit_eintreffen')} /></F>
+            <F l="Transportbeginn" ch={isChanged('zeit_transport')} tf={isTFChanged('zeit_transport')}><input type="time" value={lp.zeit_transport || ''} onChange={e => upLp('zeit_transport', e.target.value)} style={H('zeit_transport')} /></F>
+            <F l="Übergabe" ch={isChanged('zeit_uebergabe')} tf={isTFChanged('zeit_uebergabe')}><input type="time" value={lp.zeit_uebergabe || ''} onChange={e => upLp('zeit_uebergabe', e.target.value)} style={H('zeit_uebergabe')} /></F>
           </G2>
-          <F l="Transportziel (Krankenhaus)" ch={isChanged('transport_ziel')}><input type="text" value={lp.transport_ziel || ''} onChange={e => upLp('transport_ziel', e.target.value)} placeholder="Klinikum…" style={H('transport_ziel')} /></F>
+          <F l="Transportziel (Krankenhaus)" ch={isChanged('transport_ziel')} tf={isTFChanged('transport_ziel')}><input type="text" value={lp.transport_ziel || ''} onChange={e => upLp('transport_ziel', e.target.value)} placeholder="Klinikum…" style={H('transport_ziel')} /></F>
 
           <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 8, marginTop: 4 }}>Mannschaft</div>
           <G2>
@@ -290,29 +304,29 @@ export default function PatientEditModal({ patient, payload: initialPayload, ori
         {/* 2. Patientenstammdaten */}
         <PubSection title="Patientenstammdaten" open>
           <G2>
-            <F l="Nachname" ch={isChanged('name')}><input type="text" value={lp.name || ''} onChange={e => upLp('name', e.target.value)} style={H('name')} /></F>
-            <F l="Vorname" ch={isChanged('vorname')}><input type="text" value={lp.vorname || ''} onChange={e => upLp('vorname', e.target.value)} style={H('vorname')} /></F>
-            <F l="Geburtsdatum" ch={isChanged('gebdatum')}><input type="date" value={lp.gebdatum || ''} onChange={e => upLp('gebdatum', e.target.value)} style={H('gebdatum')} /></F>
-            <F l="Alter" ch={isChanged('alter')}><input type="text" value={lp.alter || ''} onChange={e => upLp('alter', e.target.value)} style={H('alter')} /></F>
-            <F l="Telefon" ch={isChanged('telefon')}><input type="text" value={lp.telefon || ''} onChange={e => upLp('telefon', e.target.value)} style={H('telefon')} /></F>
-            <F l="Mobil" ch={isChanged('mobil')}><input type="text" value={lp.mobil || ''} onChange={e => upLp('mobil', e.target.value)} style={H('mobil')} /></F>
-            <F l="Straße" ch={isChanged('strasse')}><input type="text" value={lp.strasse || ''} onChange={e => upLp('strasse', e.target.value)} style={H('strasse')} /></F>
-            <F l="PLZ / Ort" ch={isChanged('plz_ort')}><input type="text" value={lp.plz_ort || ''} onChange={e => upLp('plz_ort', e.target.value)} style={H('plz_ort')} /></F>
-            <F l="Krankenkasse" ch={isChanged('kasse')}><input type="text" value={lp.kasse || ''} onChange={e => upLp('kasse', e.target.value)} style={H('kasse')} /></F>
-            <F l="Vers.-Nr." ch={isChanged('versnr')}><input type="text" value={lp.versnr || ''} onChange={e => upLp('versnr', e.target.value)} style={H('versnr')} /></F>
+            <F l="Nachname" ch={isChanged('name')} tf={isTFChanged('name')}><input type="text" value={lp.name || ''} onChange={e => upLp('name', e.target.value)} style={H('name')} /></F>
+            <F l="Vorname" ch={isChanged('vorname')} tf={isTFChanged('vorname')}><input type="text" value={lp.vorname || ''} onChange={e => upLp('vorname', e.target.value)} style={H('vorname')} /></F>
+            <F l="Geburtsdatum" ch={isChanged('gebdatum')} tf={isTFChanged('gebdatum')}><input type="date" value={lp.gebdatum || ''} onChange={e => upLp('gebdatum', e.target.value)} style={H('gebdatum')} /></F>
+            <F l="Alter" ch={isChanged('alter')} tf={isTFChanged('alter')}><input type="text" value={lp.alter || ''} onChange={e => upLp('alter', e.target.value)} style={H('alter')} /></F>
+            <F l="Telefon" ch={isChanged('telefon')} tf={isTFChanged('telefon')}><input type="text" value={lp.telefon || ''} onChange={e => upLp('telefon', e.target.value)} style={H('telefon')} /></F>
+            <F l="Mobil" ch={isChanged('mobil')} tf={isTFChanged('mobil')}><input type="text" value={lp.mobil || ''} onChange={e => upLp('mobil', e.target.value)} style={H('mobil')} /></F>
+            <F l="Straße" ch={isChanged('strasse')} tf={isTFChanged('strasse')}><input type="text" value={lp.strasse || ''} onChange={e => upLp('strasse', e.target.value)} style={H('strasse')} /></F>
+            <F l="PLZ / Ort" ch={isChanged('plz_ort')} tf={isTFChanged('plz_ort')}><input type="text" value={lp.plz_ort || ''} onChange={e => upLp('plz_ort', e.target.value)} style={H('plz_ort')} /></F>
+            <F l="Krankenkasse" ch={isChanged('kasse')} tf={isTFChanged('kasse')}><input type="text" value={lp.kasse || ''} onChange={e => upLp('kasse', e.target.value)} style={H('kasse')} /></F>
+            <F l="Vers.-Nr." ch={isChanged('versnr')} tf={isTFChanged('versnr')}><input type="text" value={lp.versnr || ''} onChange={e => upLp('versnr', e.target.value)} style={H('versnr')} /></F>
           </G2>
-          <F l="Hausarzt" ch={isChanged('hausarzt')}><input type="text" value={lp.hausarzt || ''} onChange={e => upLp('hausarzt', e.target.value)} style={H('hausarzt')} /></F>
-          <F l="Angehöriger" ch={isChanged('angehoeriger')}><input type="text" value={lp.angehoeriger || ''} onChange={e => upLp('angehoeriger', e.target.value)} style={H('angehoeriger')} /></F>
-          <F l="Infos" ch={isChanged('infos')}><textarea value={lp.infos || ''} onChange={e => upLp('infos', e.target.value)} rows={2} style={HT('infos')} /></F>
+          <F l="Hausarzt" ch={isChanged('hausarzt')} tf={isTFChanged('hausarzt')}><input type="text" value={lp.hausarzt || ''} onChange={e => upLp('hausarzt', e.target.value)} style={H('hausarzt')} /></F>
+          <F l="Angehöriger" ch={isChanged('angehoeriger')} tf={isTFChanged('angehoeriger')}><input type="text" value={lp.angehoeriger || ''} onChange={e => upLp('angehoeriger', e.target.value)} style={H('angehoeriger')} /></F>
+          <F l="Infos" ch={isChanged('infos')} tf={isTFChanged('infos')}><textarea value={lp.infos || ''} onChange={e => upLp('infos', e.target.value)} rows={2} style={HT('infos')} /></F>
         </PubSection>
 
         {/* 3. Notfallgeschehen / Anamnese */}
         <PubSection title="Notfallgeschehen / Anamnese" open>
-          <F l="Notfallgeschehen / Beschwerden" ch={isChanged('notfallgeschehen')}><textarea value={lp.notfallgeschehen || ''} onChange={e => upLp('notfallgeschehen', e.target.value)} rows={3} style={HT('notfallgeschehen')} /></F>
-          <F l="Vorerkrankungen" ch={isChanged('vorerkrankungen')}><textarea value={lp.vorerkrankungen || ''} onChange={e => upLp('vorerkrankungen', e.target.value)} rows={2} style={HT('vorerkrankungen')} /></F>
-          <F l="Allergien" ch={isChanged('allergien')}><input type="text" value={lp.allergien || ''} onChange={e => upLp('allergien', e.target.value)} placeholder="Keine bekannt / …" style={H('allergien')} /></F>
-          <F l="Verlaufsbeschreibung" ch={isChanged('verlaufsbeschreibung')}><textarea value={lp.verlaufsbeschreibung || ''} onChange={e => upLp('verlaufsbeschreibung', e.target.value)} rows={2} style={HT('verlaufsbeschreibung')} /></F>
-          <F l="Dauermedikation Patient (Freitext)" ch={isChanged('vormedikation_patient')}><textarea value={lp.vormedikation_patient || ''} onChange={e => upLp('vormedikation_patient', e.target.value)} rows={2} style={HT('vormedikation_patient')} /></F>
+          <F l="Notfallgeschehen / Beschwerden" ch={isChanged('notfallgeschehen')} tf={isTFChanged('notfallgeschehen')}><textarea value={lp.notfallgeschehen || ''} onChange={e => upLp('notfallgeschehen', e.target.value)} rows={3} style={HT('notfallgeschehen')} /></F>
+          <F l="Vorerkrankungen" ch={isChanged('vorerkrankungen')} tf={isTFChanged('vorerkrankungen')}><textarea value={lp.vorerkrankungen || ''} onChange={e => upLp('vorerkrankungen', e.target.value)} rows={2} style={HT('vorerkrankungen')} /></F>
+          <F l="Allergien" ch={isChanged('allergien')} tf={isTFChanged('allergien')}><input type="text" value={lp.allergien || ''} onChange={e => upLp('allergien', e.target.value)} placeholder="Keine bekannt / …" style={H('allergien')} /></F>
+          <F l="Verlaufsbeschreibung" ch={isChanged('verlaufsbeschreibung')} tf={isTFChanged('verlaufsbeschreibung')}><textarea value={lp.verlaufsbeschreibung || ''} onChange={e => upLp('verlaufsbeschreibung', e.target.value)} rows={2} style={HT('verlaufsbeschreibung')} /></F>
+          <F l="Dauermedikation Patient (Freitext)" ch={isChanged('vormedikation_patient')} tf={isTFChanged('vormedikation_patient')}><textarea value={lp.vormedikation_patient || ''} onChange={e => upLp('vormedikation_patient', e.target.value)} rows={2} style={HT('vormedikation_patient')} /></F>
           {dauerMeds.length > 0 && (
             <div style={field}>
               <label style={lbl}>Dauermedikation (gescannt)</label>
@@ -359,15 +373,15 @@ export default function PatientEditModal({ patient, payload: initialPayload, ori
         {/* 5. Vitalparameter */}
         <PubSection title="Vitalparameter">
           <G2>
-            <F l="RR syst. (mmHg)" ch={isChanged('rr_sys')}><input type="text" value={lp.rr_sys || ''} onChange={e => upLp('rr_sys', e.target.value)} style={H('rr_sys')} /></F>
-            <F l="RR diast. (mmHg)" ch={isChanged('rr_dia')}><input type="text" value={lp.rr_dia || ''} onChange={e => upLp('rr_dia', e.target.value)} style={H('rr_dia')} /></F>
-            <F l="HF (/min)" ch={isChanged('hf')}><input type="text" value={lp.hf || ''} onChange={e => upLp('hf', e.target.value)} style={H('hf')} /></F>
-            <F l="SpO2 (%)" ch={isChanged('spo2')}><input type="text" value={lp.spo2 || ''} onChange={e => upLp('spo2', e.target.value)} style={H('spo2')} /></F>
-            <F l="AF (/min)" ch={isChanged('af')}><input type="text" value={lp.af || ''} onChange={e => upLp('af', e.target.value)} style={H('af')} /></F>
-            <F l="Temp (°C)" ch={isChanged('temp')}><input type="text" value={lp.temp || ''} onChange={e => upLp('temp', e.target.value)} style={H('temp')} /></F>
-            <F l="BZ (mg/dl)" ch={isChanged('bz_mg')}><input type="text" value={lp.bz_mg || ''} onChange={e => upLp('bz_mg', e.target.value)} style={H('bz_mg')} /></F>
-            <F l="Schmerz (NRS 0–10)" ch={isChanged('schmerz')}><input type="text" value={lp.schmerz || ''} onChange={e => upLp('schmerz', e.target.value)} style={H('schmerz')} /></F>
-            <F l="etCO2" ch={isChanged('etco2')}><input type="text" value={lp.etco2 || ''} onChange={e => upLp('etco2', e.target.value)} style={H('etco2')} /></F>
+            <F l="RR syst. (mmHg)" ch={isChanged('rr_sys')} tf={isTFChanged('rr_sys')}><input type="text" value={lp.rr_sys || ''} onChange={e => upLp('rr_sys', e.target.value)} style={H('rr_sys')} /></F>
+            <F l="RR diast. (mmHg)" ch={isChanged('rr_dia')} tf={isTFChanged('rr_dia')}><input type="text" value={lp.rr_dia || ''} onChange={e => upLp('rr_dia', e.target.value)} style={H('rr_dia')} /></F>
+            <F l="HF (/min)" ch={isChanged('hf')} tf={isTFChanged('hf')}><input type="text" value={lp.hf || ''} onChange={e => upLp('hf', e.target.value)} style={H('hf')} /></F>
+            <F l="SpO2 (%)" ch={isChanged('spo2')} tf={isTFChanged('spo2')}><input type="text" value={lp.spo2 || ''} onChange={e => upLp('spo2', e.target.value)} style={H('spo2')} /></F>
+            <F l="AF (/min)" ch={isChanged('af')} tf={isTFChanged('af')}><input type="text" value={lp.af || ''} onChange={e => upLp('af', e.target.value)} style={H('af')} /></F>
+            <F l="Temp (°C)" ch={isChanged('temp')} tf={isTFChanged('temp')}><input type="text" value={lp.temp || ''} onChange={e => upLp('temp', e.target.value)} style={H('temp')} /></F>
+            <F l="BZ (mg/dl)" ch={isChanged('bz_mg')} tf={isTFChanged('bz_mg')}><input type="text" value={lp.bz_mg || ''} onChange={e => upLp('bz_mg', e.target.value)} style={H('bz_mg')} /></F>
+            <F l="Schmerz (NRS 0–10)" ch={isChanged('schmerz')} tf={isTFChanged('schmerz')}><input type="text" value={lp.schmerz || ''} onChange={e => upLp('schmerz', e.target.value)} style={H('schmerz')} /></F>
+            <F l="etCO2" ch={isChanged('etco2')} tf={isTFChanged('etco2')}><input type="text" value={lp.etco2 || ''} onChange={e => upLp('etco2', e.target.value)} style={H('etco2')} /></F>
           </G2>
         </PubSection>
 
@@ -389,13 +403,13 @@ export default function PatientEditModal({ patient, payload: initialPayload, ori
               </select>
             </F>
           </G2>
-          <F l="Verdachtsdiagnose / Erstdiagnose" ch={isChanged('erstdiagnose_text')}><input type="text" value={lp.erstdiagnose_text || ''} onChange={e => upLp('erstdiagnose_text', e.target.value)} placeholder="Freitexteingabe…" style={H('erstdiagnose_text')} /></F>
+          <F l="Verdachtsdiagnose / Erstdiagnose" ch={isChanged('erstdiagnose_text')} tf={isTFChanged('erstdiagnose_text')}><input type="text" value={lp.erstdiagnose_text || ''} onChange={e => upLp('erstdiagnose_text', e.target.value)} placeholder="Freitexteingabe…" style={H('erstdiagnose_text')} /></F>
         </PubSection>
 
         {/* 7. Neurologie */}
         <PubSection title="Neurologie">
           <G2>
-            <F l="Zeit" ch={isChanged('neu_zeit')}><input type="time" value={lp.neu_zeit || ''} onChange={e => upLp('neu_zeit', e.target.value)} style={H('neu_zeit')} /></F>
+            <F l="Zeit" ch={isChanged('neu_zeit')} tf={isTFChanged('neu_zeit')}><input type="time" value={lp.neu_zeit || ''} onChange={e => upLp('neu_zeit', e.target.value)} style={H('neu_zeit')} /></F>
             <div style={{ paddingTop: 28 }}><Cb k="neu_unauff" label="Unauffällig" /></div>
           </G2>
           <G2>
@@ -437,7 +451,7 @@ export default function PatientEditModal({ patient, payload: initialPayload, ori
             <Cb k="neu_babinski" label="Babinski" />
             <Cb k="neu_vorbestehend" label="Vorbestehende Defizite" />
           </CbRow>
-          <F l="Neurologische Sonstige" ch={isChanged('neu_sonstige')}><input type="text" value={lp.neu_sonstige || ''} onChange={e => upLp('neu_sonstige', e.target.value)} style={H('neu_sonstige')} /></F>
+          <F l="Neurologische Sonstige" ch={isChanged('neu_sonstige')} tf={isTFChanged('neu_sonstige')}><input type="text" value={lp.neu_sonstige || ''} onChange={e => upLp('neu_sonstige', e.target.value)} style={H('neu_sonstige')} /></F>
           <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 6 }}>Extremitätenbewegung</div>
           <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr 1fr', gap: '4px 8px', alignItems: 'center', marginBottom: 10, fontSize: 13 }}>
             <div /><div style={{ textAlign: 'center', fontWeight: 600, fontSize: 12 }}>Rechts</div><div style={{ textAlign: 'center', fontWeight: 600, fontSize: 12 }}>Links</div>
@@ -512,7 +526,7 @@ export default function PatientEditModal({ patient, payload: initialPayload, ori
             <Cb k="o2" label="O₂" /><Cb k="o2_nasal" label="Nasal" />
             <Cb k="o2_maske" label="Maske" /><Cb k="o2_reservoir" label="Reservoir" />
           </CbRow>
-          <F l="O₂-Flow (l/min)" ch={isChanged('o2_flow')}><input type="text" value={lp.o2_flow || ''} onChange={e => upLp('o2_flow', e.target.value)} style={H('o2_flow')} /></F>
+          <F l="O₂-Flow (l/min)" ch={isChanged('o2_flow')} tf={isTFChanged('o2_flow')}><input type="text" value={lp.o2_flow || ''} onChange={e => upLp('o2_flow', e.target.value)} style={H('o2_flow')} /></F>
         </PubSection>
 
         {/* 11. Atemwegsmanagement */}
@@ -539,12 +553,12 @@ export default function PatientEditModal({ patient, payload: initialPayload, ori
             <Cb k="rean" label="Reanimation durchgeführt" />
             <Cb k="rean_tod" label="Todesfeststellung" />
           </CbRow>
-          {lp.rean_tod && <F l="Uhrzeit Todesfeststellung" ch={isChanged('rean_tod_zeit')}><input type="time" value={lp.rean_tod_zeit || ''} onChange={e => upLp('rean_tod_zeit', e.target.value)} style={H('rean_tod_zeit')} /></F>}
+          {lp.rean_tod && <F l="Uhrzeit Todesfeststellung" ch={isChanged('rean_tod_zeit')} tf={isTFChanged('rean_tod_zeit')}><input type="time" value={lp.rean_tod_zeit || ''} onChange={e => upLp('rean_tod_zeit', e.target.value)} style={H('rean_tod_zeit')} /></F>}
           {lp.rean && (
             <G2>
-              <F l="Beginn" ch={isChanged('rean_beginn')}><input type="time" value={lp.rean_beginn || ''} onChange={e => upLp('rean_beginn', e.target.value)} style={H('rean_beginn')} /></F>
-              <F l="Ende" ch={isChanged('rean_ende')}><input type="time" value={lp.rean_ende || ''} onChange={e => upLp('rean_ende', e.target.value)} style={H('rean_ende')} /></F>
-              <F l="Defibrillationen (Anzahl)" ch={isChanged('rean_defib')}><input type="text" value={lp.rean_defib || ''} onChange={e => upLp('rean_defib', e.target.value)} style={H('rean_defib')} /></F>
+              <F l="Beginn" ch={isChanged('rean_beginn')} tf={isTFChanged('rean_beginn')}><input type="time" value={lp.rean_beginn || ''} onChange={e => upLp('rean_beginn', e.target.value)} style={H('rean_beginn')} /></F>
+              <F l="Ende" ch={isChanged('rean_ende')} tf={isTFChanged('rean_ende')}><input type="time" value={lp.rean_ende || ''} onChange={e => upLp('rean_ende', e.target.value)} style={H('rean_ende')} /></F>
+              <F l="Defibrillationen (Anzahl)" ch={isChanged('rean_defib')} tf={isTFChanged('rean_defib')}><input type="text" value={lp.rean_defib || ''} onChange={e => upLp('rean_defib', e.target.value)} style={H('rean_defib')} /></F>
             </G2>
           )}
         </PubSection>
@@ -565,8 +579,8 @@ export default function PatientEditModal({ patient, payload: initialPayload, ori
             <Cb k="vf" label="Kammerflimmern" /><Cb k="asystole" label="Asystolie" />
           </CbRow>
           <G2>
-            <F l="EKG-Standort" ch={isChanged('ekg_standort')}><input type="text" value={lp.ekg_standort || ''} onChange={e => upLp('ekg_standort', e.target.value)} style={H('ekg_standort')} /></F>
-            <F l="EKG Pers.-Nr." ch={isChanged('ekg_persnr')}><input type="text" value={lp.ekg_persnr || ''} onChange={e => upLp('ekg_persnr', e.target.value)} style={H('ekg_persnr')} /></F>
+            <F l="EKG-Standort" ch={isChanged('ekg_standort')} tf={isTFChanged('ekg_standort')}><input type="text" value={lp.ekg_standort || ''} onChange={e => upLp('ekg_standort', e.target.value)} style={H('ekg_standort')} /></F>
+            <F l="EKG Pers.-Nr." ch={isChanged('ekg_persnr')} tf={isTFChanged('ekg_persnr')}><input type="text" value={lp.ekg_persnr || ''} onChange={e => upLp('ekg_persnr', e.target.value)} style={H('ekg_persnr')} /></F>
           </G2>
         </PubSection>
 
@@ -661,11 +675,11 @@ export default function PatientEditModal({ patient, payload: initialPayload, ori
         {/* 18. Zugang / Infusion */}
         <PubSection title="Zugang / Infusion">
           <G2>
-            <F l="Zugang Art" ch={isChanged('zugang_art')}><input type="text" value={lp.zugang_art || ''} onChange={e => upLp('zugang_art', e.target.value)} placeholder="peripher, zentral…" style={H('zugang_art')} /></F>
-            <F l="Gauge" ch={isChanged('zugang_gauge')}><input type="text" value={lp.zugang_gauge || ''} onChange={e => upLp('zugang_gauge', e.target.value)} style={H('zugang_gauge')} /></F>
-            <F l="Region" ch={isChanged('zugang_region')}><input type="text" value={lp.zugang_region || ''} onChange={e => upLp('zugang_region', e.target.value)} style={H('zugang_region')} /></F>
-            <F l="Infusion Art" ch={isChanged('inf_art')}><input type="text" value={lp.inf_art || ''} onChange={e => upLp('inf_art', e.target.value)} style={H('inf_art')} /></F>
-            <F l="Infusion Menge (ml)" ch={isChanged('inf_menge')}><input type="text" value={lp.inf_menge || ''} onChange={e => upLp('inf_menge', e.target.value)} style={H('inf_menge')} /></F>
+            <F l="Zugang Art" ch={isChanged('zugang_art')} tf={isTFChanged('zugang_art')}><input type="text" value={lp.zugang_art || ''} onChange={e => upLp('zugang_art', e.target.value)} placeholder="peripher, zentral…" style={H('zugang_art')} /></F>
+            <F l="Gauge" ch={isChanged('zugang_gauge')} tf={isTFChanged('zugang_gauge')}><input type="text" value={lp.zugang_gauge || ''} onChange={e => upLp('zugang_gauge', e.target.value)} style={H('zugang_gauge')} /></F>
+            <F l="Region" ch={isChanged('zugang_region')} tf={isTFChanged('zugang_region')}><input type="text" value={lp.zugang_region || ''} onChange={e => upLp('zugang_region', e.target.value)} style={H('zugang_region')} /></F>
+            <F l="Infusion Art" ch={isChanged('inf_art')} tf={isTFChanged('inf_art')}><input type="text" value={lp.inf_art || ''} onChange={e => upLp('inf_art', e.target.value)} style={H('inf_art')} /></F>
+            <F l="Infusion Menge (ml)" ch={isChanged('inf_menge')} tf={isTFChanged('inf_menge')}><input type="text" value={lp.inf_menge || ''} onChange={e => upLp('inf_menge', e.target.value)} style={H('inf_menge')} /></F>
           </G2>
         </PubSection>
 
@@ -676,11 +690,11 @@ export default function PatientEditModal({ patient, payload: initialPayload, ori
             <Cb k="beat_niv" label="NIV" /><Cb k="beat_notfallnarkose" label="Notfallnarkose" />
           </CbRow>
           <G2>
-            <F l="FiO2" ch={isChanged('beat_fio2')}><input type="text" value={lp.beat_fio2 || ''} onChange={e => upLp('beat_fio2', e.target.value)} style={H('beat_fio2')} /></F>
-            <F l="AF (/min)" ch={isChanged('beat_af')}><input type="text" value={lp.beat_af || ''} onChange={e => upLp('beat_af', e.target.value)} style={H('beat_af')} /></F>
-            <F l="AMV (l/min)" ch={isChanged('beat_amv')}><input type="text" value={lp.beat_amv || ''} onChange={e => upLp('beat_amv', e.target.value)} style={H('beat_amv')} /></F>
-            <F l="PEEP (mbar)" ch={isChanged('beat_peep')}><input type="text" value={lp.beat_peep || ''} onChange={e => upLp('beat_peep', e.target.value)} style={H('beat_peep')} /></F>
-            <F l="Pmax (mbar)" ch={isChanged('beat_pmax')}><input type="text" value={lp.beat_pmax || ''} onChange={e => upLp('beat_pmax', e.target.value)} style={H('beat_pmax')} /></F>
+            <F l="FiO2" ch={isChanged('beat_fio2')} tf={isTFChanged('beat_fio2')}><input type="text" value={lp.beat_fio2 || ''} onChange={e => upLp('beat_fio2', e.target.value)} style={H('beat_fio2')} /></F>
+            <F l="AF (/min)" ch={isChanged('beat_af')} tf={isTFChanged('beat_af')}><input type="text" value={lp.beat_af || ''} onChange={e => upLp('beat_af', e.target.value)} style={H('beat_af')} /></F>
+            <F l="AMV (l/min)" ch={isChanged('beat_amv')} tf={isTFChanged('beat_amv')}><input type="text" value={lp.beat_amv || ''} onChange={e => upLp('beat_amv', e.target.value)} style={H('beat_amv')} /></F>
+            <F l="PEEP (mbar)" ch={isChanged('beat_peep')} tf={isTFChanged('beat_peep')}><input type="text" value={lp.beat_peep || ''} onChange={e => upLp('beat_peep', e.target.value)} style={H('beat_peep')} /></F>
+            <F l="Pmax (mbar)" ch={isChanged('beat_pmax')} tf={isTFChanged('beat_pmax')}><input type="text" value={lp.beat_pmax || ''} onChange={e => upLp('beat_pmax', e.target.value)} style={H('beat_pmax')} /></F>
           </G2>
           <div style={{ fontWeight: 600, fontSize: 13, margin: '8px 0 6px', paddingTop: 4, borderTop: '1px solid var(--border)' }}>Defibrillation</div>
           <CbRow>
@@ -693,10 +707,10 @@ export default function PatientEditModal({ patient, payload: initialPayload, ori
             <Cb k="defi_erstanw_rd" label="Rettungsdienst" /><Cb k="defi_erstanw_arzt" label="Arzt" />
           </CbRow>
           <G2>
-            <F l="Zeitpunkt 1. Defi" ch={isChanged('defi_zeitpunkt')}><input type="time" value={lp.defi_zeitpunkt || ''} onChange={e => upLp('defi_zeitpunkt', e.target.value)} style={H('defi_zeitpunkt')} /></F>
-            <F l="ROSC" ch={isChanged('defi_rosc')}><input type="time" value={lp.defi_rosc || ''} onChange={e => upLp('defi_rosc', e.target.value)} style={H('defi_rosc')} /></F>
-            <F l="Anzahl Defi" ch={isChanged('defi_anzahl')}><input type="text" value={lp.defi_anzahl || ''} onChange={e => upLp('defi_anzahl', e.target.value)} style={H('defi_anzahl')} /></F>
-            <F l="Energie (kJ)" ch={isChanged('defi_energie')}><input type="text" value={lp.defi_energie || ''} onChange={e => upLp('defi_energie', e.target.value)} style={H('defi_energie')} /></F>
+            <F l="Zeitpunkt 1. Defi" ch={isChanged('defi_zeitpunkt')} tf={isTFChanged('defi_zeitpunkt')}><input type="time" value={lp.defi_zeitpunkt || ''} onChange={e => upLp('defi_zeitpunkt', e.target.value)} style={H('defi_zeitpunkt')} /></F>
+            <F l="ROSC" ch={isChanged('defi_rosc')} tf={isTFChanged('defi_rosc')}><input type="time" value={lp.defi_rosc || ''} onChange={e => upLp('defi_rosc', e.target.value)} style={H('defi_rosc')} /></F>
+            <F l="Anzahl Defi" ch={isChanged('defi_anzahl')} tf={isTFChanged('defi_anzahl')}><input type="text" value={lp.defi_anzahl || ''} onChange={e => upLp('defi_anzahl', e.target.value)} style={H('defi_anzahl')} /></F>
+            <F l="Energie (kJ)" ch={isChanged('defi_energie')} tf={isTFChanged('defi_energie')}><input type="text" value={lp.defi_energie || ''} onChange={e => upLp('defi_energie', e.target.value)} style={H('defi_energie')} /></F>
           </G2>
         </PubSection>
 
@@ -708,7 +722,7 @@ export default function PatientEditModal({ patient, payload: initialPayload, ori
               {['ZNA/INA', 'Schockraum', 'Stroke Unit', 'Herzkatheterlabor', 'CPU', 'Intensivstation', 'Allgemeinstation', 'OP direkt', 'Praxis', 'Hausarzt/KV-Arzt', 'Fachambulanz', 'Einsatzstelle', 'Sonstige'].map(o => <option key={o}>{o}</option>)}
             </select>
           </F>
-          <F l="Übergabe an (Name)" ch={isChanged('uebergabe_name')}><input type="text" value={lp.uebergabe_name || ''} onChange={e => upLp('uebergabe_name', e.target.value)} style={H('uebergabe_name')} /></F>
+          <F l="Übergabe an (Name)" ch={isChanged('uebergabe_name')} tf={isTFChanged('uebergabe_name')}><input type="text" value={lp.uebergabe_name || ''} onChange={e => upLp('uebergabe_name', e.target.value)} style={H('uebergabe_name')} /></F>
           <CbRow>
             <Cb k="ev_transportverweigerung" label="Transportverweigerung" />
             <Cb k="ev_nur_untersuchung" label="Nur Untersuchung/Behandlung" />
@@ -717,7 +731,7 @@ export default function PatientEditModal({ patient, payload: initialPayload, ori
             <Cb k="ev_manv" label="MANV" /><Cb k="ev_lna" label="LNA am Einsatz" />
             <Cb k="ev_schwerlast" label="Schwerlasttransport" />
           </CbRow>
-          <F l="Bemerkungen" ch={isChanged('bemerkungen')}><textarea value={lp.bemerkungen || ''} onChange={e => upLp('bemerkungen', e.target.value)} rows={3} style={HT('bemerkungen')} /></F>
+          <F l="Bemerkungen" ch={isChanged('bemerkungen')} tf={isTFChanged('bemerkungen')}><textarea value={lp.bemerkungen || ''} onChange={e => upLp('bemerkungen', e.target.value)} rows={3} style={HT('bemerkungen')} /></F>
         </PubSection>
 
         {/* 21. Verletzungen / Trauma */}
@@ -745,11 +759,11 @@ export default function PatientEditModal({ patient, payload: initialPayload, ori
           </CbRow>
           {lp.v_verbrennung && (
             <G2>
-              <F l="Verbrennungsgrad" ch={isChanged('v_verbrennung_grad')}><input type="text" value={lp.v_verbrennung_grad || ''} onChange={e => upLp('v_verbrennung_grad', e.target.value)} placeholder="Grad…" style={H('v_verbrennung_grad')} /></F>
-              <F l="Verbrannte Fläche (%)" ch={isChanged('v_verbrennung_pct')}><input type="text" value={lp.v_verbrennung_pct || ''} onChange={e => upLp('v_verbrennung_pct', e.target.value)} style={H('v_verbrennung_pct')} /></F>
+              <F l="Verbrennungsgrad" ch={isChanged('v_verbrennung_grad')} tf={isTFChanged('v_verbrennung_grad')}><input type="text" value={lp.v_verbrennung_grad || ''} onChange={e => upLp('v_verbrennung_grad', e.target.value)} placeholder="Grad…" style={H('v_verbrennung_grad')} /></F>
+              <F l="Verbrannte Fläche (%)" ch={isChanged('v_verbrennung_pct')} tf={isTFChanged('v_verbrennung_pct')}><input type="text" value={lp.v_verbrennung_pct || ''} onChange={e => upLp('v_verbrennung_pct', e.target.value)} style={H('v_verbrennung_pct')} /></F>
             </G2>
           )}
-          <F l="Verletzungen Sonstige" ch={isChanged('v_sonstige')}><input type="text" value={lp.v_sonstige || ''} onChange={e => upLp('v_sonstige', e.target.value)} style={H('v_sonstige')} /></F>
+          <F l="Verletzungen Sonstige" ch={isChanged('v_sonstige')} tf={isTFChanged('v_sonstige')}><input type="text" value={lp.v_sonstige || ''} onChange={e => upLp('v_sonstige', e.target.value)} style={H('v_sonstige')} /></F>
           <div style={{ fontWeight: 600, fontSize: 12, opacity: .7, marginTop: 8, marginBottom: 4 }}>Unfallmechanismus</div>
           <CbRow>
             <Cb k="v_trauma_stumpf" label="Trauma stumpf" /><Cb k="v_trauma_penetr" label="Trauma penetrierend" />
@@ -772,11 +786,29 @@ export default function PatientEditModal({ patient, payload: initialPayload, ori
         </PubSection>
 
         {/* 22. Rückfragen / Stellungnahmen */}
-        <PubSection title={`Rückfragen / Stellungnahmen${rueckfragen.length ? ` (${rueckfragen.length})` : ''}`} open>
-          {rueckfragen.length === 0 && (
+        {(() => {
+          const systemRQs = rueckfragen.filter(rq => rq.created_by === 'System')
+          const realRQs = rueckfragen.filter(rq => rq.created_by !== 'System')
+          return (
+          <PubSection title={`Rückfragen / Stellungnahmen${realRQs.length ? ` (${realRQs.length})` : ''}`} open>
+
+          {systemRQs.map(rq => (
+            <div key={rq.id} style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 10, padding: '10px 12px', marginBottom: 10, display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 2 }}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              <div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: '#1d4ed8', marginBottom: 2 }}>System · {new Date(rq.created).toLocaleString('de-DE')}</div>
+                <div style={{ fontSize: 13, color: '#1e3a8a', lineHeight: 1.5 }}>{rq.frage}</div>
+              </div>
+            </div>
+          ))}
+
+          {realRQs.length === 0 && systemRQs.length === 0 && (
             <p style={{ fontSize: 14, color: 'var(--text-secondary)', margin: '0 0 12px' }}>Keine Rückfragen vorhanden.</p>
           )}
-          {rueckfragen.map((rq, i) => (
+          {realRQs.length === 0 && systemRQs.length > 0 && (
+            <p style={{ fontSize: 14, color: 'var(--text-secondary)', margin: '0 0 12px' }}>Keine offenen Rückfragen.</p>
+          )}
+          {realRQs.map((rq, i) => (
             <div key={rq.id} style={{
               background: rq.status === 'beantwortet' ? '#f0fdf4' : '#fffbeb',
               border: `1px solid ${rq.status === 'beantwortet' ? '#bbf7d0' : '#fcd34d'}`,
@@ -814,7 +846,7 @@ export default function PatientEditModal({ patient, payload: initialPayload, ori
             </div>
           ))}
 
-          <div style={{ marginTop: rueckfragen.length ? 4 : 0 }}>
+          <div style={{ marginTop: realRQs.length ? 4 : 0 }}>
             <label style={{ ...lbl, marginBottom: 6 }}>Neue Rückfrage an Teamleader senden:</label>
             <textarea
               value={newFrage} onChange={e => setNewFrage(e.target.value)} rows={3}
@@ -836,7 +868,9 @@ export default function PatientEditModal({ patient, payload: initialPayload, ori
               {sendingFrage ? 'Sende…' : 'Rückfrage senden'}
             </button>
           </div>
-        </PubSection>
+          </PubSection>
+          )
+        })()}
 
       </div>
 
