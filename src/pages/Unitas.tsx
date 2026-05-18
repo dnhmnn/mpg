@@ -85,6 +85,33 @@ export default function Unitas() {
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null)
   const [themeMode, setThemeMode] = useState<ThemeMode>(getTheme())
 
+  // Greeting animation — only on first visit per browser session
+  const [greetingPhase, setGreetingPhase] = useState<'servus' | 'name' | 'exit' | 'done'>(() =>
+    sessionStorage.getItem('unitas_greeted') ? 'done' : 'servus'
+  )
+
+  useEffect(() => {
+    if (greetingPhase === 'done') return
+    if (greetingPhase === 'servus') {
+      const t = setTimeout(() => setGreetingPhase('name'), 1300)
+      return () => clearTimeout(t)
+    }
+    if (greetingPhase === 'name') {
+      const t = setTimeout(() => setGreetingPhase('exit'), 1400)
+      return () => clearTimeout(t)
+    }
+    if (greetingPhase === 'exit') {
+      const t = setTimeout(() => { setGreetingPhase('done'); sessionStorage.setItem('unitas_greeted', '1') }, 550)
+      return () => clearTimeout(t)
+    }
+  }, [greetingPhase])
+
+  const initials = (name?: string) => {
+    if (!name) return '?'
+    const parts = name.trim().split(/\s+/)
+    return parts.length === 1 ? parts[0][0].toUpperCase() : (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+  }
+
   // Stellungnahme-Modal
   const [snModal, setSnModal] = useState<PatientRecord | null>(null)
   const [snAntworten, setSnAntworten] = useState<Record<string, string>>({})
@@ -259,8 +286,9 @@ export default function Unitas() {
 
   if (authLoading || loading) {
     return (
-      <div style={{ minHeight: '100dvh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Atkinson Hyperlegible', -apple-system, sans-serif" }}>
-        <div style={{ color: 'var(--text-secondary)' }}>Lade...</div>
+      <div style={{ minHeight: '100dvh', background: '#0a0f1e', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Atkinson Hyperlegible', -apple-system, sans-serif" }}>
+        <div style={{ width: 36, height: 36, border: '3px solid rgba(255,255,255,0.12)', borderTopColor: 'rgba(255,255,255,0.6)', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
+        <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
       </div>
     )
   }
@@ -283,21 +311,84 @@ export default function Unitas() {
 
   return (
     <div style={{ minHeight: '100dvh', background: 'var(--bg)', fontFamily: "'Atkinson Hyperlegible', -apple-system, sans-serif" }}>
-      {/* Header */}
-      <div style={{ background: 'var(--bg-card)', borderBottom: '1px solid var(--border)', position: 'sticky', top: 0, zIndex: 100, padding: '0 16px' }}>
-        <div style={{ maxWidth: '640px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '52px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <img src="/logo.svg" alt="Responda" width={32} height={32} />
-            <span style={{ fontWeight: 700, fontSize: '1.05rem', letterSpacing: '-0.01em', color: 'var(--text)' }}>Responda</span>
+
+      {/* ── Greeting overlay ─────────────────────────────── */}
+      {greetingPhase !== 'done' && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 9999,
+          background: 'radial-gradient(ellipse at 50% 40%, #111827 0%, #030712 100%)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          animation: greetingPhase === 'exit' ? 'greetFadeOut 0.55s cubic-bezier(0.4,0,1,1) forwards' : 'none',
+          userSelect: 'none',
+        }}>
+          {/* Blurred logo watermark */}
+          <img src="/logo.svg" alt="" aria-hidden style={{
+            position: 'absolute', width: '55vw', maxWidth: 360,
+            opacity: 0.04, filter: 'blur(2px) saturate(0)',
+            pointerEvents: 'none', userSelect: 'none'
+          }} />
+          {/* Glow ring */}
+          <div style={{ position: 'absolute', width: '50vw', maxWidth: 320, height: '50vw', maxHeight: 320, borderRadius: '50%', background: 'radial-gradient(circle, rgba(99,102,241,0.18) 0%, transparent 70%)', pointerEvents: 'none' }} />
+
+          <div style={{ textAlign: 'center', position: 'relative' }}>
+            {/* "Servus" */}
+            <div key="servus" style={{
+              position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
+              fontSize: 'clamp(52px, 14vw, 100px)', fontWeight: 800, color: '#fff',
+              letterSpacing: '-0.03em', lineHeight: 1, whiteSpace: 'nowrap',
+              fontFamily: "'Atkinson Hyperlegible', -apple-system, sans-serif",
+              animation: greetingPhase === 'servus' ? 'greetIn 0.7s cubic-bezier(0.34,1.56,0.64,1) both' : 'greetOut 0.35s ease-in forwards',
+            }}>Servus</div>
+            {/* First name */}
+            <div key="name" style={{
+              position: 'relative',
+              fontSize: 'clamp(52px, 14vw, 100px)', fontWeight: 800,
+              letterSpacing: '-0.03em', lineHeight: 1, whiteSpace: 'nowrap',
+              fontFamily: "'Atkinson Hyperlegible', -apple-system, sans-serif",
+              background: 'linear-gradient(135deg, #c7d2fe 0%, #a5b4fc 40%, #818cf8 100%)',
+              WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
+              animation: greetingPhase === 'name' || greetingPhase === 'exit'
+                ? 'greetIn 0.55s cubic-bezier(0.34,1.56,0.64,1) both'
+                : 'none',
+              opacity: greetingPhase === 'servus' ? 0 : 1,
+              visibility: greetingPhase === 'servus' ? 'hidden' : 'visible',
+            }}>{user?.name?.split(' ')[0]}</div>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>{user?.name?.split(' ')[0]}</span>
-            <button onClick={logout} style={{ background: 'none', border: '1px solid var(--border)', borderRadius: '8px', padding: '6px 12px', fontSize: '13px', cursor: 'pointer', color: 'var(--text)', fontFamily: 'inherit' }}>Abmelden</button>
+        </div>
+      )}
+
+      {/* ── Header ───────────────────────────────────────── */}
+      <div style={{
+        background: 'var(--bg-card)', backdropFilter: 'blur(20px) saturate(160%)', WebkitBackdropFilter: 'blur(20px) saturate(160%)',
+        borderBottom: '1px solid var(--border)', position: 'sticky', top: 0, zIndex: 100, padding: '0 16px',
+      }}>
+        <div style={{ maxWidth: '640px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '54px' }}>
+          {/* Left: logo + org name */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+            <img src="/logo.svg" alt="" width={30} height={30} style={{ borderRadius: 6 }} />
+            <span style={{ fontWeight: 800, fontSize: '1rem', letterSpacing: '-0.02em', color: 'var(--text)' }}>
+              {(user as any)?.organization_name || 'Responda'}
+            </span>
           </div>
+          {/* Right: user avatar */}
+          <button
+            onClick={() => setTab('konto')}
+            title={user?.name || ''}
+            style={{
+              width: 36, height: 36, borderRadius: '50%', border: 'none', cursor: 'pointer',
+              background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontFamily: "'Atkinson Hyperlegible', -apple-system, sans-serif",
+              fontWeight: 800, fontSize: 13, color: '#fff', letterSpacing: '0.02em',
+              boxShadow: '0 2px 8px rgba(99,102,241,0.4)',
+              flexShrink: 0,
+            }}
+          >{initials(user?.name)}</button>
         </div>
 
         {/* Tabs */}
-        <div style={{ maxWidth: '640px', margin: '0 auto', display: 'flex', borderBottom: '1px solid var(--bg-subtle)' }}>
+        <div style={{ maxWidth: '640px', margin: '0 auto', display: 'flex', borderBottom: '1px solid var(--border)' }}>
           <button style={tabStyle(tab === 'uebersicht')} onClick={() => setTab('uebersicht')}>Übersicht</button>
           <button style={tabStyle(tab === 'protokolle')} onClick={() => setTab('protokolle')}>
             Protokolle{myPatients.length + myFreigegebenPatients.length + myArchivedPatients.length > 0 ? ` (${myPatients.length + myFreigegebenPatients.length + myArchivedPatients.length})` : ''}
@@ -310,7 +401,7 @@ export default function Unitas() {
               </span>
             )}
           </button>
-          <button style={tabStyle(tab === 'konto')} onClick={() => setTab('konto')}>Mein Konto</button>
+          <button style={tabStyle(tab === 'konto')} onClick={() => setTab('konto')}>Konto</button>
         </div>
       </div>
 
@@ -320,8 +411,8 @@ export default function Unitas() {
         {tab === 'uebersicht' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             <div>
-              <div style={{ fontSize: '22px', fontWeight: 700, color: 'var(--text)' }}>
-                Servus, {user?.name?.split(' ')[0]}!
+              <div style={{ fontSize: '22px', fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.01em' }}>
+                Servus, {user?.name?.split(' ')[0]}
               </div>
               <div style={{ fontSize: '14px', color: 'var(--text-secondary)', marginTop: '4px' }}>
                 {new Date().toLocaleDateString('de-DE', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}
@@ -788,9 +879,22 @@ export default function Unitas() {
       )}
 
       <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400;1,700&display=swap');
         @keyframes slideInUp {
           from { transform: translateX(-50%) translateY(20px); opacity: 0; }
           to   { transform: translateX(-50%) translateY(0);    opacity: 1; }
+        }
+        @keyframes greetIn {
+          from { opacity: 0; transform: scale(0.92) translateY(16px); }
+          to   { opacity: 1; transform: scale(1)    translateY(0); }
+        }
+        @keyframes greetOut {
+          from { opacity: 1; transform: scale(1)    translateY(0); }
+          to   { opacity: 0; transform: scale(1.06) translateY(-12px); }
+        }
+        @keyframes greetFadeOut {
+          from { opacity: 1; backdrop-filter: blur(0); }
+          to   { opacity: 0; }
         }
         details > summary::-webkit-details-marker { display: none; }
         @media print {
