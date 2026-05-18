@@ -313,43 +313,24 @@ export default function Unitas() {
           animation: greetingPhase === 'exit' ? 'greetFadeOut 0.55s cubic-bezier(0.4,0,1,1) forwards' : 'none',
           userSelect: 'none',
         }}>
-          {/* Blurred logo watermark */}
-          <img src="/logo.svg" alt="" aria-hidden style={{
-            position: 'absolute', width: '55vw', maxWidth: 360,
-            opacity: 0.12, filter: 'blur(3px) saturate(0) brightness(2)',
-            pointerEvents: 'none', userSelect: 'none'
-          }} />
-          {/* Glow ring */}
-          <div style={{ position: 'absolute', width: '50vw', maxWidth: 320, height: '50vw', maxHeight: 320, borderRadius: '50%', background: 'radial-gradient(circle, rgba(220,40,60,0.22) 0%, transparent 70%)', pointerEvents: 'none' }} />
-
           {greetingPhase === 'loading' ? (
             <div style={{ width: 36, height: 36, border: '3px solid rgba(255,255,255,0.15)', borderTopColor: 'rgba(255,255,255,0.7)', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
+          ) : greetingPhase === 'servus' ? (
+            <div key="servus" style={{
+              fontSize: 'clamp(52px, 14vw, 100px)', fontWeight: 800, color: '#fff',
+              letterSpacing: '-0.03em', lineHeight: 1, whiteSpace: 'nowrap',
+              fontFamily: "'Atkinson Hyperlegible', -apple-system, sans-serif",
+              animation: 'greetIn 0.65s cubic-bezier(0.34,1.56,0.64,1) both',
+            }}>Servus</div>
           ) : (
-            <div style={{ textAlign: 'center', position: 'relative' }}>
-              {/* "Servus" */}
-              <div key="servus" style={{
-                position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
-                fontSize: 'clamp(52px, 14vw, 100px)', fontWeight: 800, color: '#fff',
-                letterSpacing: '-0.03em', lineHeight: 1, whiteSpace: 'nowrap',
-                fontFamily: "'Atkinson Hyperlegible', -apple-system, sans-serif",
-                animation: greetingPhase === 'servus' ? 'greetIn 0.7s cubic-bezier(0.34,1.56,0.64,1) both' : 'greetOut 0.35s ease-in forwards',
-              }}>Servus</div>
-              {/* First name */}
-              <div key="name" style={{
-                position: 'relative',
-                fontSize: 'clamp(52px, 14vw, 100px)', fontWeight: 800,
-                letterSpacing: '-0.03em', lineHeight: 1, whiteSpace: 'nowrap',
-                fontFamily: "'Atkinson Hyperlegible', -apple-system, sans-serif",
-                background: 'linear-gradient(135deg, #fca5a5 0%, #f87171 40%, #fbbf24 100%)',
-                WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
-                backgroundClip: 'text',
-                animation: greetingPhase === 'name' || greetingPhase === 'exit'
-                  ? 'greetIn 0.55s cubic-bezier(0.34,1.56,0.64,1) both'
-                  : 'none',
-                opacity: greetingPhase === 'servus' ? 0 : 1,
-                visibility: greetingPhase === 'servus' ? 'hidden' : 'visible',
-              }}>{user?.name?.split(' ')[0]}</div>
-            </div>
+            <div key="name" style={{
+              fontSize: 'clamp(52px, 14vw, 100px)', fontWeight: 800,
+              letterSpacing: '-0.03em', lineHeight: 1, whiteSpace: 'nowrap',
+              fontFamily: "'Atkinson Hyperlegible', -apple-system, sans-serif",
+              background: 'linear-gradient(135deg, #fca5a5 0%, #f87171 40%, #fbbf24 100%)',
+              WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
+              animation: 'greetIn 0.55s cubic-bezier(0.34,1.56,0.64,1) both',
+            }}>{user?.name?.split(' ')[0]}</div>
           )}
         </div>
       )}
