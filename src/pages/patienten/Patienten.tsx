@@ -7,6 +7,7 @@ import PatientQRManager from './PatientQRManager'
 import SignModal from './SignModal'
 import NachModal from './NachModal'
 import DetailsModal from './DetailsModal'
+import ProtokollView from '../../components/ProtokollView'
 import type { Patient, Nacherfassung, PatientPayload, NachForm } from './types'
 import { EMPTY_PAYLOAD, EMPTY_NACH, parsePayload, fmtDate } from './types'
 
@@ -46,6 +47,13 @@ export default function Patienten() {
 
   const [reopenModal, setReopenModal] = useState<Patient | null>(null)
   const [reopenHours, setReopenHours] = useState(24)
+
+  const [protokollSheet, setProtokollSheet] = useState<Patient | null>(null)
+  const [mannschaftModal, setMannschaftModal] = useState<Patient | null>(null)
+  const [mannSearch, setMannSearch] = useState<Record<string, string>>({})
+  const [mannResults, setMannResults] = useState<Record<string, any[]>>({})
+  const [mannPicked, setMannPicked] = useState<Record<string, any>>({})
+  const [savingMannschaft, setSavingMannschaft] = useState(false)
 
   const [showEdit, setShowEdit] = useState(false)
   const [currentPatient, setCurrentPatient] = useState<Patient | null>(null)
@@ -283,6 +291,54 @@ export default function Patienten() {
       await loadOpenData()
     } catch (e: any) {
       flash('Fehler: ' + e.message, 'error')
+    }
+  }
+
+  async function searchMannschaft(role: string, text: string) {
+    setMannSearch(prev => ({ ...prev, [role]: text }))
+    if (!mannschaftModal || text.length < 2) { setMannResults(prev => ({ ...prev, [role]: [] })); return }
+    try {
+      const results = await pb.collection('users').getFullList({
+        filter: `organization_id="${(mannschaftModal as any).organization_id}"&&(name~"${text}"||email~"${text}")`,
+        fields: 'id,name,email',
+        sort: 'name',
+      })
+      setMannResults(prev => ({ ...prev, [role]: results }))
+    } catch { setMannResults(prev => ({ ...prev, [role]: [] })) }
+  }
+
+  async function saveMannschaftNachtraeglich() {
+    if (!mannschaftModal) return
+    setSavingMannschaft(true)
+    try {
+      const pl = parsePayload((mannschaftModal as any).payload)
+      const existingMann = (pl as any).mannschaft || {}
+      const newMann = { ...existingMann }
+      for (const role of ['tf','m1','m2','m3']) {
+        if (mannPicked[role]) newMann[role] = { id: mannPicked[role].id, name: mannPicked[role].name }
+      }
+      const adminName = (user as any)?.name || user?.email || 'Admin'
+      const rq = {
+        id: Date.now().toString(),
+        frage: `Mannschaft wurde am ${new Date().toLocaleString('de-DE')} durch ${adminName} nachgetragen. Bitte prüfen und bestätigen.`,
+        created_by: 'System',
+        status: 'offen' as const,
+        created: new Date().toISOString(),
+      }
+      const existingRQs = pl.rueckfragen || []
+      await pb.collection('patients').update(mannschaftModal.id, {
+        payload: { ...pl, mannschaft: newMann, rueckfragen: [...existingRQs, rq] }
+      })
+      flash('Mannschaft gespeichert', 'success')
+      setMannschaftModal(null)
+      setMannPicked({})
+      setMannSearch({})
+      setMannResults({})
+      await loadOpenData()
+    } catch (e: any) {
+      flash('Fehler: ' + e.message, 'error')
+    } finally {
+      setSavingMannschaft(false)
     }
   }
 
@@ -840,7 +896,10 @@ export default function Patienten() {
                               {hoursLeft > 0 ? `noch ${hoursLeft}h` : 'Freigabe ausstehend'}
                             </span>
                             <div style={{ flex: 1 }} />
-                            <button className="pat-btn" onClick={() => openDetails(pat.id, 'patient')}>Ansehen</button>
+                            {!m.tf?.id && (
+                              <button className="pat-btn" onClick={() => { setMannschaftModal(pat); setMannPicked((pat as any).payload?.mannschaft || {}) }}>Mannschaft nachtragen</button>
+                            )}
+                            <button className="pat-btn" onClick={() => setProtokollSheet(pat)}>Ansehen</button>
                           </div>
                         </div>
                       )
@@ -1073,6 +1132,103 @@ export default function Patienten() {
             : undefined}
         />
       )}
+
+      {/* Protokoll Bottom Sheet */}
+      {protokollSheet && (() => {
+        const pl = parsePayload((protokollSheet as any).payload)
+        const cf = new Set<string>((protokollSheet as any).payload?._changed_fields || [])
+        const tf = new Set<string>((protokollSheet as any).payload?._tf_changed_fields || [])
+        const sheetName = [pl.name, pl.vorname].filter(Boolean).join(' ') || protokollSheet.title || 'Protokoll'
+        return (
+          <>
+            <div onClick={() => setProtokollSheet(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 3000 }} />
+            <div style={{ position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 3001, background: 'var(--bg-card)', borderRadius: '20px 20px 0 0', maxHeight: '92dvh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+              <div style={{ padding: '12px 20px', borderBottom: '0.5px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: 16, color: 'var(--text)' }}>{sheetName}</div>
+                  <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Protokoll ansehen · {(protokollSheet as any).status === 'offen' ? 'In Bearbeitung durch Teamleiter' : 'Freigegeben'}</div>
+                </div>
+                <button onClick={() => setProtokollSheet(null)} style={{ background: 'none', border: 'none', fontSize: 24, cursor: 'pointer', color: 'var(--text-secondary)', lineHeight: 1, padding: '4px 8px' }}>×</button>
+              </div>
+              <div style={{ overflowY: 'auto', flex: 1 }}>
+                <ProtokollView payload={pl} changedFields={cf} tfChangedFields={tf} />
+              </div>
+            </div>
+          </>
+        )
+      })()}
+
+      {/* Mannschaft nachtragen Modal */}
+      {mannschaftModal && (() => {
+        const pl = parsePayload((mannschaftModal as any).payload)
+        const patName = [pl.name, pl.vorname].filter(Boolean).join(' ') || mannschaftModal.title || 'Unbekannt'
+        const roles: { key: string; label: string }[] = [
+          { key: 'tf', label: 'Teamführer (TF)' },
+          { key: 'm1', label: 'Ersthelfer 1 (M1)' },
+          { key: 'm2', label: 'Ersthelfer 2 (M2)' },
+          { key: 'm3', label: 'Fahrer (M3)' },
+        ]
+        return (
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 3100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+            <div style={{ background: 'var(--bg-card)', borderRadius: 18, width: '100%', maxWidth: 460, padding: '24px', boxShadow: '0 20px 60px rgba(0,0,0,0.3)', maxHeight: '90dvh', overflowY: 'auto' }}>
+              <div style={{ fontWeight: 800, fontSize: 17, color: 'var(--text)', marginBottom: 4 }}>Mannschaft nachtragen</div>
+              <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 20 }}>{patName}</div>
+              {roles.map(({ key, label }) => {
+                const existing = (mannschaftModal as any).payload?.mannschaft?.[key]
+                const picked = mannPicked[key]
+                return (
+                  <div key={key} style={{ marginBottom: 16 }}>
+                    <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: 'var(--text)', marginBottom: 6 }}>{label}</label>
+                    {picked ? (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'var(--bg-subtle)', border: '1px solid var(--border)', borderRadius: 10 }}>
+                        <span style={{ flex: 1, fontSize: 14, color: 'var(--text)' }}>{picked.name}</span>
+                        <button onClick={() => setMannPicked(prev => { const n = { ...prev }; delete n[key]; return n })} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', fontSize: 18, lineHeight: 1 }}>×</button>
+                      </div>
+                    ) : existing?.id ? (
+                      <div style={{ padding: '8px 12px', background: 'var(--bg-subtle)', border: '1px solid var(--border)', borderRadius: 10, fontSize: 14, color: 'var(--text-secondary)' }}>
+                        {existing.name} <span style={{ fontSize: 11, opacity: 0.7 }}>(bereits eingetragen)</span>
+                      </div>
+                    ) : (
+                      <div style={{ position: 'relative' }}>
+                        <input
+                          type="text"
+                          placeholder="Name suchen…"
+                          value={mannSearch[key] || ''}
+                          onChange={e => searchMannschaft(key, e.target.value)}
+                          style={{ width: '100%', padding: '10px 12px', border: '1px solid var(--border)', borderRadius: 10, fontSize: 14, fontFamily: 'inherit', boxSizing: 'border-box' as const, background: 'var(--bg)', color: 'var(--text)' }}
+                        />
+                        {(mannResults[key] || []).length > 0 && (
+                          <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10, boxShadow: '0 8px 24px rgba(0,0,0,0.15)', zIndex: 10, overflow: 'hidden', marginTop: 4 }}>
+                            {mannResults[key].map((u: any) => (
+                              <div key={u.id} onClick={() => { setMannPicked(prev => ({ ...prev, [key]: u })); setMannSearch(prev => ({ ...prev, [key]: '' })); setMannResults(prev => ({ ...prev, [key]: [] })) }} style={{ padding: '10px 14px', cursor: 'pointer', fontSize: 14, color: 'var(--text)', borderBottom: '0.5px solid var(--border)' }}
+                                onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-subtle)')}
+                                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                              >
+                                {u.name} <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{u.email}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+              <div style={{ fontSize: 12, color: '#d97706', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 8, padding: '8px 12px', marginBottom: 20 }}>
+                Der Teamleiter erhält eine offene Rückfrage zur Bestätigung der Mannschaft.
+              </div>
+              <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+                <button onClick={() => { setMannschaftModal(null); setMannPicked({}); setMannSearch({}); setMannResults({}) }} style={{ padding: '10px 18px', background: 'var(--bg-subtle)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: 10, fontWeight: 600, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit' }}>
+                  Abbrechen
+                </button>
+                <button onClick={saveMannschaftNachtraeglich} disabled={savingMannschaft || Object.keys(mannPicked).length === 0} style={{ padding: '10px 18px', background: Object.keys(mannPicked).length > 0 ? 'var(--accent)' : '#e5e7eb', color: Object.keys(mannPicked).length > 0 ? '#fff' : '#9ca3af', border: 'none', borderRadius: 10, fontWeight: 700, fontSize: 14, cursor: Object.keys(mannPicked).length > 0 ? 'pointer' : 'not-allowed', fontFamily: 'inherit' }}>
+                  {savingMannschaft ? 'Speichern…' : 'Speichern'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
 
       {/* Wiedereröffnen Modal */}
       {reopenModal && (() => {
