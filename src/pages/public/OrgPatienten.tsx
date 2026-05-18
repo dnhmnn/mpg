@@ -11,6 +11,36 @@ import DauermedikationPicker, { type DauerMed } from './DauermedikationPicker'
 type Med = { name: string; dose: string; unit: string; route: string; time: string; note: string }
 type VRow = { zeit: string; rr_sys: string; rr_dia: string; hf: string; o2: string; spo2: string; etco2: string; schmerz: string }
 const emptyV = (): VRow => ({ zeit: '', rr_sys: '', rr_dia: '', hf: '', o2: '', spo2: '', etco2: '', schmerz: '' })
+
+const VITAL_RANGES: Record<string, { ok: [number,number]; warn: [number,number] }> = {
+  rr_sys:  { ok: [90,140],    warn: [70,180]   },
+  rr_dia:  { ok: [60,90],     warn: [50,110]   },
+  hf:      { ok: [60,100],    warn: [50,120]   },
+  af:      { ok: [12,20],     warn: [10,29]    },
+  spo2:    { ok: [95,Infinity],warn: [90,Infinity] },
+  etco2:   { ok: [35,45],     warn: [30,55]    },
+  temp:    { ok: [36.0,37.5], warn: [35.0,38.5]},
+  bz_mg:   { ok: [70,140],    warn: [50,199]   },
+  schmerz: { ok: [0,3],       warn: [0,6]      },
+}
+function vitalStatus(key: string, raw: string): 'ok' | 'warn' | 'critical' | null {
+  if (raw === '' || raw === undefined) return null
+  const v = parseFloat(raw)
+  if (isNaN(v)) return null
+  const r = VITAL_RANGES[key]
+  if (!r) return null
+  if (v >= r.ok[0] && v <= r.ok[1]) return 'ok'
+  if (v >= r.warn[0] && v <= r.warn[1]) return 'warn'
+  return 'critical'
+}
+const statusColor = { ok: '#16a34a', warn: '#d97706', critical: '#dc2626' }
+const statusBg    = { ok: '#f0fdf4', warn: '#fffbeb', critical: '#fef2f2' }
+const statusBorder = { ok: '#86efac', warn: '#fde047', critical: '#fca5a5' }
+const VITAL_LABEL: Record<string, string> = {
+  rr_sys:'RR syst.', rr_dia:'RR diast.', hf:'HF', af:'AF',
+  spo2:'SpO₂', etco2:'etCO₂', temp:'Temp', bz_mg:'BZ', schmerz:'Schmerz',
+}
+
 const pill: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: '.35rem', border: '0.5px solid var(--border-medium)', borderRadius: 999, padding: '.2rem .5rem', background: 'var(--bg-subtle)', fontSize: '.9rem', cursor: 'pointer', margin: '2px', color: 'var(--text)' }
 const grid: React.CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))', gap: '.75rem' }
 const now = () => { const d = new Date(); return d.toISOString().slice(0,16) }
@@ -60,6 +90,7 @@ export default function OrgPatienten() {
   const [notfallText, setNotfallText] = useState('')
   const [verlaufModal, setVerlaufModal] = useState(false)
   const [snapMesswerte, setSnapMesswerte] = useState<Record<string, string>>({})
+  const [messwerte, setMesswerte] = useState<Record<string, string>>({})
   const [activeStep, setActiveStep] = useState(0)
   const [menuOpen, setMenuOpen] = useState(false)
 
@@ -146,6 +177,12 @@ export default function OrgPatienten() {
               el.value = String(val)
           })
         })
+        const mwSnap: Record<string, string> = {}
+        MESS_FIELDS.forEach(n => {
+          const el = formRef.current?.querySelector<HTMLInputElement>(`[name="${n}"]`)
+          if (el?.value) mwSnap[n] = el.value
+        })
+        if (Object.keys(mwSnap).length) setMesswerte(mwSnap)
       })
     } catch {}
   }, [orgCode])
@@ -567,10 +604,75 @@ export default function OrgPatienten() {
         <div style={{ display: activeStep === 7 ? undefined : 'none' }}>
           <PubSection title="Messwerte / Atmung" open icon={pik(<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>)}>
             <div style={grid}>
-              {[['rr_sys','RR syst. (mmHg)'],['rr_dia','RR diast. (mmHg)'],['hf','HF (/min)'],['af','AF (/min)'],['spo2','SpO₂ (%)'],['etco2','etCO₂ (mmHg)'],['temp','Temp (°C)'],['bz_mg','BZ (mg/dl)'],['schmerz','Schmerz (0–10)']].map(([n,l]) => (
-                <label key={n} style={lbl}>{l}<input style={inp} name={n} type="number" step={n === 'temp' ? '0.1' : '1'} /></label>
-              ))}
+              {([['rr_sys','RR syst. (mmHg)'],['rr_dia','RR diast. (mmHg)'],['hf','HF (/min)'],['af','AF (/min)'],['spo2','SpO₂ (%)'],['etco2','etCO₂ (mmHg)'],['temp','Temp (°C)'],['bz_mg','BZ (mg/dl)'],['schmerz','Schmerz (0–10)']] as [string,string][]).map(([n,l]) => {
+                const st = vitalStatus(n, messwerte[n] ?? '')
+                return (
+                  <div key={n} style={{ position: 'relative' }}>
+                    <label style={lbl}>
+                      {l}
+                      <input
+                        style={inp} name={n} type="number"
+                        step={n === 'temp' ? '0.1' : '1'}
+                        value={messwerte[n] ?? ''}
+                        onChange={e => setMesswerte(prev => ({ ...prev, [n]: e.target.value }))}
+                      />
+                    </label>
+                    {st && <span style={{ position: 'absolute', top: 4, right: 6, width: 10, height: 10, borderRadius: '50%', background: statusColor[st], pointerEvents: 'none' }} />}
+                  </div>
+                )
+              })}
             </div>
+
+            {/* Status banner */}
+            {(() => {
+              const filled = MESS_FIELDS.map(k => ({ k, st: vitalStatus(k, messwerte[k] ?? '') })).filter(x => x.st !== null)
+              if (!filled.length) return null
+              const crits = filled.filter(x => x.st === 'critical')
+              const warns = filled.filter(x => x.st === 'warn')
+              const allOk = !crits.length && !warns.length
+              const col  = crits.length ? 'critical' : warns.length ? 'warn' : 'ok'
+              const msg  = allOk
+                ? 'Alle Werte im Normbereich'
+                : crits.length
+                  ? `${crits.length} kritischer Wert${crits.length > 1 ? 'e' : ''}: ${crits.map(x => VITAL_LABEL[x.k]).join(', ')}`
+                  : `${warns.length} auffälliger Wert${warns.length > 1 ? 'e' : ''}: ${warns.map(x => VITAL_LABEL[x.k]).join(', ')}`
+              return (
+                <div style={{ marginTop: '.6rem', padding: '.5rem .85rem', borderRadius: 10, background: statusBg[col], border: `0.5px solid ${statusBorder[col]}`, color: statusColor[col], fontSize: '.85rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ width: 9, height: 9, borderRadius: '50%', background: statusColor[col], flexShrink: 0 }} />
+                  {msg}
+                </div>
+              )
+            })()}
+
+            {/* Snap to Verlauf */}
+            {MESS_FIELDS.some(k => messwerte[k]) && (
+              <button
+                type="button"
+                onClick={() => {
+                  const d = new Date()
+                  const hhmm = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`
+                  const row: VRow = {
+                    zeit: hhmm,
+                    rr_sys:  messwerte.rr_sys  ?? '',
+                    rr_dia:  messwerte.rr_dia  ?? '',
+                    hf:      messwerte.hf      ?? '',
+                    spo2:    messwerte.spo2    ?? '',
+                    etco2:   messwerte.etco2   ?? '',
+                    o2:      '',
+                    schmerz: messwerte.schmerz ?? '',
+                  }
+                  setVerlauf(vv => {
+                    const last = vv[vv.length - 1]
+                    const isEmpty = !last.zeit && !last.rr_sys && !last.hf
+                    return isEmpty ? [...vv.slice(0, -1), row] : [...vv, row]
+                  })
+                }}
+                style={{ marginTop: '.5rem', width: '100%', padding: '.5rem .85rem', borderRadius: 10, border: '1px dashed var(--accent)', background: 'rgba(107,15,26,0.04)', color: 'var(--accent)', fontWeight: 700, fontSize: '.88rem', cursor: 'pointer', fontFamily: 'inherit' }}
+              >
+                + Jetzt zum Verlauf hinzufügen
+              </button>
+            )}
+
             <div style={{ marginTop: '.75rem', fontWeight: 700 }}>Atmung</div>
             <div style={{ display: 'flex', flexWrap: 'wrap', marginBottom: '.5rem' }}>
               {[['atm_apnoe','Apnoe'],['atm_stridor','Stridor'],['atm_dyspnoe','Dyspnoe'],['atm_zyanose','Zyanose'],['atm_beatmung','Beatmung'],['atm_verlegung','Atemwegsverlegung']].map(([n,l]) => (
@@ -696,18 +798,21 @@ export default function OrgPatienten() {
                 <tbody>
                   {verlauf.map((r, i) => (
                     <tr key={i}>
-                      {(['zeit','rr_sys','rr_dia','hf','o2','spo2','etco2'] as (keyof VRow)[]).map(k => (
-                        <td key={k} style={{ border: '0.5px solid var(--border)', padding: 4 }}>
-                          <input style={{ ...inp, marginTop: 0, minWidth: 60 }} type={k === 'zeit' ? 'time' : 'number'} value={r[k]} onChange={e => setVerlauf(vv => vv.map((row, j) => j === i ? { ...row, [k]: e.target.value } : row))} />
-                        </td>
-                      ))}
+                      {(['zeit','rr_sys','rr_dia','hf','o2','spo2','etco2'] as (keyof VRow)[]).map(k => {
+                        const st = k !== 'zeit' && k !== 'o2' ? vitalStatus(k, r[k]) : null
+                        return (
+                          <td key={k} style={{ border: '0.5px solid var(--border)', padding: 4, background: st === 'critical' ? '#fef2f2' : st === 'warn' ? '#fffbeb' : undefined }}>
+                            <input style={{ ...inp, marginTop: 0, minWidth: 60, background: 'transparent' }} type={k === 'zeit' ? 'time' : 'number'} value={r[k]} onChange={e => setVerlauf(vv => vv.map((row, j) => j === i ? { ...row, [k]: e.target.value } : row))} />
+                          </td>
+                        )
+                      })}
                       <td style={{ border: '0.5px solid var(--border)', padding: 4 }}><button type="button" onClick={() => setVerlauf(vv => vv.filter((_,j) => j !== i))} style={{ background: 'var(--bg-hover)', border: '0.5px solid var(--border-medium)', borderRadius: 6, cursor: 'pointer', fontWeight: 700, color: 'var(--accent)', padding: '4px 8px' }}>×</button></td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-            <button type="button" onClick={() => setVerlauf(vv => [...vv, emptyV()])} style={{ marginTop: '.5rem', border: '0.5px solid var(--border-medium)', background: 'var(--bg-subtle)', padding: '.45rem .75rem', borderRadius: 10, cursor: 'pointer', fontWeight: 600, color: 'var(--accent)', fontSize: '.9rem', fontFamily: 'inherit' }}>+ Zeile hinzufügen</button>
+            <button type="button" onClick={() => { const d = new Date(); const hhmm = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; setVerlauf(vv => [...vv, { ...emptyV(), zeit: hhmm }]) }} style={{ marginTop: '.5rem', border: '0.5px solid var(--border-medium)', background: 'var(--bg-subtle)', padding: '.45rem .75rem', borderRadius: 10, cursor: 'pointer', fontWeight: 600, color: 'var(--accent)', fontSize: '.9rem', fontFamily: 'inherit' }}>+ Zeile hinzufügen</button>
 
             {/* Verlaufsgrafik */}
             {(() => {
