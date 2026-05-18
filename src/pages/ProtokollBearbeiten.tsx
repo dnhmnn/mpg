@@ -116,6 +116,7 @@ export default function ProtokollBearbeiten() {
         pb.collection('patients').update(patientId!, { status: 'freigegeben' }).catch(() => {})
       }
       const chf = new Set<string>(Array.isArray(p._changed_fields) ? p._changed_fields : [])
+      const tfchf = new Set<string>(Array.isArray(p._tf_changed_fields) ? p._tf_changed_fields : [])
       setTimeout(() => {
         const form = formRef.current; if (!form) return
         const skip = new Set(['notfallgeschehen', 'verlaufsbeschreibung', 'zeit_einsatz', 'einsatz_adresse'])
@@ -129,15 +130,18 @@ export default function ProtokollBearbeiten() {
             el.style.background = '#fef3c7'
             el.style.borderColor = '#d97706'
             el.style.borderWidth = '2px'
+          } else if (tfchf.has(el.name)) {
+            el.style.background = '#f0fdf4'
+            el.style.borderColor = '#16a34a'
+            el.style.borderWidth = '2px'
           }
         })
-        if (chf.has('notfallgeschehen') || chf.has('verlaufsbeschreibung')) {
-          ['notfallgeschehen', 'verlaufsbeschreibung'].forEach(n => {
-            if (!chf.has(n)) return
-            const el = form.querySelector<HTMLTextAreaElement>(`[name="${n}"]`)
-            if (el) { el.style.background = '#fef3c7'; el.style.borderColor = '#d97706'; el.style.borderWidth = '2px' }
-          })
-        }
+        ;['notfallgeschehen', 'verlaufsbeschreibung'].forEach(n => {
+          const el = form.querySelector<HTMLTextAreaElement>(`[name="${n}"]`)
+          if (!el) return
+          if (chf.has(n)) { el.style.background = '#fef3c7'; el.style.borderColor = '#d97706'; el.style.borderWidth = '2px' }
+          else if (tfchf.has(n)) { el.style.background = '#f0fdf4'; el.style.borderColor = '#16a34a'; el.style.borderWidth = '2px' }
+        })
       }, 50)
     } catch { alert('Protokoll nicht gefunden.'); navigate('/unitas') }
     finally { setLoading(false) }
@@ -177,7 +181,8 @@ export default function ProtokollBearbeiten() {
     // Preserve fields not managed by this form
     const orig = originalPayloadRef.current
     if (orig._changed_fields) data._changed_fields = orig._changed_fields
-    if (orig.tf_reopen) data.tf_reopen = orig.tf_reopen
+    if (orig._tf_changed_fields) data._tf_changed_fields = orig._tf_changed_fields
+    if (orig.tf_reopen) data.tf_reopen = orig.tf_reopen  // cleared in finish() for reopen
     if (orig.access_code) data.access_code = orig.access_code
     if (orig.access_code_created) data.access_code_created = orig.access_code_created
     return data
@@ -212,6 +217,7 @@ export default function ProtokollBearbeiten() {
       const newData = collectData()
       if (isReopenEdit) {
         newData._tf_changed_fields = computeTFChangedFields(newData)
+        delete newData.tf_reopen  // clear reopen window
         await pb.collection('patients').update(patientId!, { payload: newData })
         setLocked(true); setLockedReason('Nachbearbeitung abgeschlossen. Das Protokoll liegt wieder beim Admin.')
       } else {
