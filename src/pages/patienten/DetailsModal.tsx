@@ -1,6 +1,7 @@
 import type { Patient, Nacherfassung } from './types'
 import { parsePayload, fmtDateTime } from './types'
 import { PubSection } from '../public/pubStyles'
+import ProtokollView from '../../components/ProtokollView'
 
 interface Props {
   doc: Patient | Nacherfassung
@@ -69,6 +70,7 @@ export default function DetailsModal({ doc, type, onClose, onEdit }: Props) {
       const pd = doc as Patient
       const p = parsePayload(pd.payload)
       const pChf = new Set<string>(p._changed_fields || [])
+      const pTfChf = new Set<string>(p._tf_changed_fields || [])
       const gcsTotal = (p.gcs_e || 0) + (p.gcs_v || 0) + (p.gcs_m || 0)
       const meds = p.medications || []
       const verlauf = p.verlauf || []
@@ -80,8 +82,10 @@ export default function DetailsModal({ doc, type, onClose, onEdit }: Props) {
       const hdr = (sub:string) => `<div style="border:1pt solid #000;display:flex;align-items:center;justify-content:space-between;padding:2pt 6pt;margin-bottom:2pt"><div style="font-size:8pt;font-weight:bold;letter-spacing:.5pt;text-transform:uppercase">NOTFALLEINSATZPROTOKOLL</div><div style="font-size:5pt;color:#444">${sub}</div><div style="font-size:10pt;font-weight:bold;letter-spacing:2pt">MIND</div></div>`
       const blk = (title:string, content:string) => `<div style="border:0.5pt solid #888;margin-bottom:1.5pt;overflow:hidden">${B(title)}${content}</div>`
       const row = (cols:string, cells:string) => `<div style="display:grid;grid-template-columns:${cols};border-top:0.5pt solid #ccc">${cells}</div>`
-      const cell = (lbl:string, val:string, k?:string) => { const ch = k && pChf.has(k); return `<div style="padding:1pt 3pt;border-right:0.5pt solid #ccc${ch?';background:#fef3c7;border-left:2pt solid #d97706':''}"><div style="font-size:4pt;${ch?'color:#d97706;font-weight:bold;':'color:#666;'}text-transform:uppercase;letter-spacing:.3pt;margin-bottom:0.5pt">${lbl}</div><div style="font-weight:bold;font-size:6pt;min-height:7pt">${val||''}</div></div>` }
-      const cellL = (lbl:string, val:string, k?:string) => { const ch = k && pChf.has(k); return `<div style="padding:1pt 3pt;border-right:0.5pt solid #ccc${ch?';background:#fef3c7;border-left:2pt solid #d97706':''}"><div style="font-size:4pt;${ch?'color:#d97706;font-weight:bold;':'color:#666;'}text-transform:uppercase;letter-spacing:.3pt;margin-bottom:0.5pt">${lbl}</div><div style="font-size:6pt;min-height:7pt;white-space:pre-wrap">${val||''}</div></div>` }
+      const cellStyle = (k?:string) => { const ch = k && pChf.has(k); const tf = k && !ch && pTfChf.has(k); return ch ? ';background:#fef3c7;border-left:2pt solid #d97706' : tf ? ';background:#f0fdf4;border-left:2pt solid #16a34a' : '' }
+      const cellLblStyle = (k?:string) => { const ch = k && pChf.has(k); const tf = k && !ch && pTfChf.has(k); return ch ? 'color:#d97706;font-weight:bold;' : tf ? 'color:#16a34a;font-weight:bold;' : 'color:#666;' }
+      const cell = (lbl:string, val:string, k?:string) => `<div style="padding:1pt 3pt;border-right:0.5pt solid #ccc${cellStyle(k)}"><div style="font-size:4pt;${cellLblStyle(k)}text-transform:uppercase;letter-spacing:.3pt;margin-bottom:0.5pt">${lbl}</div><div style="font-weight:bold;font-size:6pt;min-height:7pt">${val||''}</div></div>`
+      const cellL = (lbl:string, val:string, k?:string) => `<div style="padding:1pt 3pt;border-right:0.5pt solid #ccc${cellStyle(k)}"><div style="font-size:4pt;${cellLblStyle(k)}text-transform:uppercase;letter-spacing:.3pt;margin-bottom:0.5pt">${lbl}</div><div style="font-size:6pt;min-height:7pt;white-space:pre-wrap">${val||''}</div></div>`
       const naca = ['0','I','II','III','IV','V','VI','VII'].map(v=>`<span class="tag naca${p.naca===v?' active':''}">${v}</span>`).join('')
       const cr = (items:[boolean|undefined,string][]) => `<div style="display:flex;flex-wrap:wrap;gap:1pt;padding:1.5pt 3pt">${items.map(([on,l])=>tag(on,l)).join('')}</div>`
       const catRow = (cat:string, items:[boolean|undefined,string][]) => `<div style="display:flex;flex-wrap:wrap;gap:0.5pt;padding:0.5pt 3pt;border-top:0.5pt solid #e0e0e0;align-items:center"><span style="font-size:3.5pt;font-weight:bold;color:#444;text-transform:uppercase;min-width:30pt;flex-shrink:0">${cat}</span>${items.map(([on,l])=>tag(on,l)).join('')}</div>`
@@ -352,10 +356,8 @@ export default function DetailsModal({ doc, type, onClose, onEdit }: Props) {
   const pd = isPatient ? (doc as Patient) : null
   const p = pd ? parsePayload(pd.payload) : null
   const nd = !isPatient ? (doc as Nacherfassung) : null
-  const gcsTotal = p ? (p.gcs_e || 0) + (p.gcs_v || 0) + (p.gcs_m || 0) : 0
-  const verlauf = p?.verlauf || []
-  const meds = p?.medications || []
   const chf = new Set<string>(p?._changed_fields || [])
+  const tfchf = new Set<string>(p?._tf_changed_fields || [])
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'var(--bg)', zIndex: 2000, display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
@@ -390,364 +392,7 @@ export default function DetailsModal({ doc, type, onClose, onEdit }: Props) {
 
         {/* ── PATIENTENDOKU ── */}
         {isPatient && p && (
-          <>
-            <PubSection title="Einsatzdaten" open icon={pik(<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>)}>
-              <Grid>
-                <F label="Einsatz-Nr." value={p.einsatz_nr} ch={chf.has('einsatz_nr')} />
-                <F label="Auftrags-Nr. (ILS)" value={p.auftrags_nr} ch={chf.has('auftrags_nr')} />
-                <F label="Rufname" value={p.rufname} ch={chf.has('rufname')} />
-                <F label="Fahrzeug / Einheit" value={p.fahrzeug} ch={chf.has('fahrzeug')} />
-                <F label="Einsatzart / Stichwort" value={p.einsatz_art} ch={chf.has('einsatz_art')} />
-                <F label="Alarmzeit" value={p.zeit_einsatz} ch={chf.has('zeit_einsatz')} />
-                <F label="Einsatzort / Adresse" value={p.einsatz_adresse} ch={chf.has('einsatz_adresse')} />
-                <F label="Transportziel" value={p.transport_ziel} ch={chf.has('transport_ziel')} />
-              </Grid>
-              <Grid cols="repeat(auto-fit, minmax(120px, 1fr))">
-                <F label="Status 3" value={p.zeit_eintreffen} ch={chf.has('zeit_eintreffen')} />
-                <F label="Transportbeginn" value={p.zeit_transport} ch={chf.has('zeit_transport')} />
-                <F label="Übergabe" value={p.zeit_uebergabe} ch={chf.has('zeit_uebergabe')} />
-              </Grid>
-            </PubSection>
-
-            <PubSection title="Mannschaft" icon={pik(<><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></>)}>
-              <Grid>
-                <F label="Teamführer"   value={(p as any).mannschaft?.tf?.name  || p.mannschaft_tf} />
-                <F label="Mannschaft 1" value={(p as any).mannschaft?.m1?.name  || p.mannschaft_1} />
-                <F label="Mannschaft 2" value={(p as any).mannschaft?.m2?.name  || p.mannschaft_2} />
-                <F label="Mannschaft 3" value={(p as any).mannschaft?.m3?.name  || p.mannschaft_3} />
-              </Grid>
-              {p.access_code && (() => {
-                const created = p.access_code_created ? new Date(p.access_code_created) : null
-                const expires = created ? new Date(created.getTime() + 24 * 60 * 60 * 1000) : null
-                const valid = expires ? new Date() < expires : false
-                return (
-                  <div style={{ marginTop: 10, padding: '10px 14px', background: valid ? '#f0fdf4' : '#fef3c7', border: `1px solid ${valid ? '#bbf7d0' : '#fbbf24'}`, borderRadius: 10, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-                    <div>
-                      <div style={{ fontSize: 11, fontWeight: 700, color: valid ? '#166534' : '#92400e', textTransform: 'uppercase', letterSpacing: '0.05em' }}>QR-Zugang Rettungsdienst</div>
-                      <div style={{ fontFamily: 'monospace', fontSize: 24, fontWeight: 800, letterSpacing: '0.2em', color: '#c0392b' }}>{p.access_code}</div>
-                      <div style={{ fontSize: 11, color: valid ? '#166534' : '#92400e' }}>
-                        {valid ? `Gültig bis ${expires?.toLocaleString('de-DE')}` : 'Abgelaufen'}
-                      </div>
-                    </div>
-                    <a href={`/p/${p.access_code}`} target="_blank" rel="noreferrer" style={{ marginLeft: 'auto', padding: '6px 12px', background: valid ? '#166534' : '#92400e', color: '#fff', borderRadius: 8, fontSize: 12, fontWeight: 700, textDecoration: 'none' }}>
-                      Link öffnen ↗
-                    </a>
-                  </div>
-                )
-              })()}
-            </PubSection>
-
-            <PubSection title="Pat-Stammdaten" open icon={pik(<><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></>)}>
-              <Grid>
-                <F label="Name" value={p.name} ch={chf.has('name')} />
-                <F label="Vorname" value={p.vorname} ch={chf.has('vorname')} />
-                <F label="Geb.-Datum" value={p.gebdatum} ch={chf.has('gebdatum')} />
-                <F label="Alter" value={p.alter} ch={chf.has('alter')} />
-                <F label="Telefon" value={p.telefon} ch={chf.has('telefon')} />
-                <F label="Mobil" value={p.mobil} ch={chf.has('mobil')} />
-                <F label="Straße" value={p.strasse} ch={chf.has('strasse')} />
-                <F label="PLZ, Ort" value={p.plz_ort} ch={chf.has('plz_ort')} />
-                <F label="Kasse" value={p.kasse} ch={chf.has('kasse')} />
-                <F label="Vers.-Nr." value={p.versnr} ch={chf.has('versnr')} />
-                <F label="Hausarzt" value={p.hausarzt} ch={chf.has('hausarzt')} />
-                <F label="Angehöriger" value={p.angehoeriger} ch={chf.has('angehoeriger')} />
-              </Grid>
-            </PubSection>
-
-            <PubSection title="Notfallgeschehen / Anamnese" open icon={pik(<><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></>)}>
-              <F label="Notfallgeschehen" value={p.notfallgeschehen} ch={chf.has('notfallgeschehen')} />
-              <F label="Verlaufsbeschreibung" value={p.verlaufsbeschreibung} ch={chf.has('verlaufsbeschreibung')} />
-              <Grid>
-                <F label="Vorerkrankungen" value={p.vorerkrankungen} ch={chf.has('vorerkrankungen')} />
-                <F label="Dauermedikation Patient" value={p.vormedikation_patient} ch={chf.has('vormedikation_patient')} />
-              </Grid>
-              <F label="Allergien / Unverträglichkeiten" value={p.allergien} ch={chf.has('allergien')} />
-              {(p.photos || []).length > 0 && (
-                <div style={{ marginTop: 12 }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>Fotos</div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                    {(p.photos || []).map((src, i) => (
-                      <img key={i} src={src} style={{ width: 100, height: 100, objectFit: 'cover', borderRadius: 8, border: '0.5px solid var(--border)' }} />
-                    ))}
-                  </div>
-                </div>
-              )}
-            </PubSection>
-
-            <PubSection title="NACA / Bewusstsein / Verdachtsdiagnose" open icon={pik(<><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></>)}>
-              <div style={{ marginBottom: 10 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>NACA-Score</div>
-                <Tags items={['0','I','II','III','IV','V','VI','VII'].map(v => [p.naca === v, v] as [boolean, string])} />
-              </div>
-              <div style={{ marginBottom: 10 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>Bewusstsein</div>
-                <Tags items={['nicht beurteilbar','wach','getrübt','bewusstlos','reaktionslos','auf Ansprache','Reaktion auf Schmerz','analgosediert / Narkose'].map(v => [p.bewusstsein === v, v] as [boolean, string])} />
-              </div>
-              <F label="Verdachtsdiagnose / Erstdiagnose" value={p.erstdiagnose_text} ch={chf.has('erstdiagnose_text')} />
-            </PubSection>
-
-            <PubSection title="Glasgow Coma Scale" icon={pik(<><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></>)}>
-              {([
-                ['Augenöffnung (E)', 'gcs_e', [['4','spontan'],['3','auf Geräusch'],['2','auf Druck'],['1','keine']]],
-                ['Verbale Antwort (V)', 'gcs_v', [['5','orientiert'],['4','verwirrt'],['3','Wörter'],['2','Laute'],['1','keine']]],
-                ['Motorik (M)', 'gcs_m', [['6','folgt'],['5','lokalisiert'],['4','beugt norm.'],['3','beugt abnorm.'],['2','streckt'],['1','keine']]],
-              ] as [string, 'gcs_e'|'gcs_v'|'gcs_m', [string,string][]][]).map(([title, key, opts]) => (
-                <div key={key} style={{ marginBottom: 10 }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>{title}</div>
-                  <Tags items={opts.map(([v, l]) => [String(p[key]) === v, `${l} (${v})`] as [boolean, string])} />
-                </div>
-              ))}
-              <div style={{ background: 'var(--bg-subtle)', border: '0.5px solid var(--border)', borderRadius: 8, padding: '8px 12px', fontWeight: 700 }}>
-                GCS Summe: <span style={{ fontSize: '1.2rem' }}>{gcsTotal || '—'}</span>
-              </div>
-            </PubSection>
-
-            <PubSection title="Messwerte / Atmung" icon={pik(<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>)}>
-              <Grid cols="repeat(auto-fit, minmax(130px, 1fr))">
-                <F label="RR syst. (mmHg)" value={p.rr_sys} ch={chf.has('rr_sys')} />
-                <F label="RR diast. (mmHg)" value={p.rr_dia} ch={chf.has('rr_dia')} />
-                <F label="HF (/min)" value={p.hf} ch={chf.has('hf')} />
-                <F label="AF (/min)" value={p.af} ch={chf.has('af')} />
-                <F label="SpO₂ (%)" value={p.spo2} ch={chf.has('spo2')} />
-                <F label="etCO₂ (mmHg)" value={p.etco2} ch={chf.has('etco2')} />
-                <F label="Temp (°C)" value={p.temp} ch={chf.has('temp')} />
-                <F label="BZ (mg/dl)" value={p.bz_mg} ch={chf.has('bz_mg')} />
-                <F label="Schmerz (0–10)" value={p.schmerz} ch={chf.has('schmerz')} />
-              </Grid>
-              <div style={{ marginTop: 8 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>Atmung</div>
-                <Tags items={[[p.atm_apnoe,'Apnoe'],[p.atm_stridor,'Stridor'],[p.atm_dyspnoe,'Dyspnoe'],[p.atm_zyanose,'Zyanose']]} />
-              </div>
-              <div style={{ marginTop: 8 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>O₂-Gabe</div>
-                <Tags items={[[p.o2,'O₂'],[p.o2_nasal,'Nasensonde'],[p.o2_maske,'Maske'],[p.o2_reservoir,'Reservoir']]} />
-                {p.o2_flow && <div style={{ fontSize: 14, marginTop: 4 }}>Flow: <strong>{p.o2_flow} l/min</strong></div>}
-              </div>
-            </PubSection>
-
-            <PubSection title="Neurologie" icon={pik(<><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96-.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2z"/><path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96-.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 14.5 2z"/></>)}>
-              <Tags items={[[p.neu_unauff,'Unauffällig'],[p.neu_sprachstoerung,'Sprachstörung'],[p.neu_demenz,'Demenz'],[p.neu_meningismus,'Meningismus'],[p.neu_seitenzeichen,'Seitenzeichen'],[p.neu_kein_laecheln,'Kein Lächeln'],[p.neu_sehstoerung,'Sehstörung'],[p.neu_querschnitt,'Querschnitt'],[p.neu_babinski,'Babinski'],[p.neu_vorbestehend,'Vorbestehende Defizite']]} />
-              {p.neu_sonstige && <F label="Sonstige Neurologie" value={p.neu_sonstige} ch={chf.has('neu_sonstige')} />}
-              {p.neu_zeit && <F label="Zeitpunkt Symptombeginn" value={p.neu_zeit} ch={chf.has('neu_zeit')} />}
-              <div style={{ marginTop: 10 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>Extremitätenbewegung</div>
-                <Grid cols="1fr 1fr">
-                  <F label="Arm rechts" value={p.ext_r_arm} ch={chf.has('ext_r_arm')} />
-                  <F label="Arm links" value={p.ext_l_arm} ch={chf.has('ext_l_arm')} />
-                  <F label="Bein rechts" value={p.ext_r_bein} ch={chf.has('ext_r_bein')} />
-                  <F label="Bein links" value={p.ext_l_bein} ch={chf.has('ext_l_bein')} />
-                </Grid>
-              </div>
-              <div style={{ marginTop: 10 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>Pupillen</div>
-                <Grid cols="1fr 1fr">
-                  <div>
-                    <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 4 }}>Pupille rechts</div>
-                    <Tags items={[['eng','mittel','weit'].map(v => [p.pw_r === v, v] as [boolean, string])].flat()} />
-                    {p.pw_r_entrundet && <Tag active label="entrundet" />}
-                    <div style={{ fontSize: 12, fontWeight: 600, marginTop: 4, marginBottom: 2 }}>Lichtreaktion re.</div>
-                    <Tags items={['prompt','träge','keine'].map(v => [p.lr_r === v, v] as [boolean, string])} />
-                  </div>
-                  <div>
-                    <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 4 }}>Pupille links</div>
-                    <Tags items={['eng','mittel','weit'].map(v => [p.pw_l === v, v] as [boolean, string])} />
-                    {p.pw_l_entrundet && <Tag active label="entrundet" />}
-                    <div style={{ fontSize: 12, fontWeight: 600, marginTop: 4, marginBottom: 2 }}>Lichtreaktion li.</div>
-                    <Tags items={['prompt','träge','keine'].map(v => [p.lr_l === v, v] as [boolean, string])} />
-                  </div>
-                </Grid>
-              </div>
-            </PubSection>
-
-            <PubSection title="Rhythmus / EKG" icon={pik(<path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>)}>
-              <Tags items={[[p.sr,'Sinusrhythmus'],[p.stemi,'STEMI'],[p.vf,'Kammerflimmern'],[p.asystole,'Asystolie']]} />
-              <Grid>
-                <F label="EKG Standort" value={p.ekg_standort} ch={chf.has('ekg_standort')} />
-                <F label="Pers-Nr." value={p.ekg_persnr} ch={chf.has('ekg_persnr')} />
-              </Grid>
-            </PubSection>
-
-            <PubSection title="Haut / Psyche" icon={pik(<><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></>)}>
-              <div style={{ marginBottom: 10 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>Haut</div>
-                <Tags items={[[p.haut_unauff,'Unauffällig'],[p.haut_falten,'Fältchentest pos.'],[p.haut_oedeme,'Ödeme'],[p.haut_dekubitus,'Dekubitus'],[p.haut_kaltschweissig,'Kaltschweißig'],[p.haut_exanthem,'Exanthem']]} />
-              </div>
-              <div>
-                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>Psyche</div>
-                <Tags items={[[p.psy_erregt,'Erregt'],[p.psy_aggr,'Aggressiv'],[p.psy_verlangsamt,'Verlangsamt'],[p.psy_depressiv,'Depressiv'],[p.psy_aengstlich,'Ängstlich'],[p.psy_euphorisch,'Euphorisch'],[p.psy_wahnhaft,'Wahnhaft'],[p.psy_verwirrt,'Verwirrt'],[p.psy_suizidal,'Suizidal'],[p.psy_motor_unruhig,'Motor. unruhig']]} />
-              </div>
-            </PubSection>
-
-            <PubSection title="Erstdiagnose / Diagnose-Kategorien" icon={pik(<><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></>)}>
-              <Tags items={[[p.e_keine,'Keine Erkrankung / Verletzung']]} />
-              <CatSection label="ZNS" items={[[p.e_zns_schlaganfall,'Schlaganfall'],[p.e_zns_tia,'TIA'],[p.e_zns_blutung,'Intrakr. Blutung'],[p.e_zns_lyse,'Lyse'],[p.e_zns_krampf,'Krampfanfall'],[p.e_zns_status_epilept,'Status epilept.'],[p.e_zns_meningitis,'Meningitis'],[p.e_zns_synkope,'Synkope'],[p.e_zns_sonstige,'Sonstige']]} />
-              <CatSection label="Herz-Kreislauf" items={[[p.e_hk_acs,'ACS'],[p.e_hk_stemi_vw,'STEMI VW'],[p.e_hk_stemi_hw,'STEMI HW'],[p.e_hk_tachy,'Tachy'],[p.e_hk_brady,'Brady'],[p.e_hk_embolie,'Lungenembolie'],[p.e_hk_ortho,'Orthostatisch'],[p.e_hk_insuff,'Herzinsuff./Lungenödem'],[p.e_hk_hypert,'Hypert. Notfall'],[p.e_hk_kard_schock,'Kard. Schock'],[p.e_hk_schrittmacher,'SM/ICD-Fehlfunktion'],[p.e_hk_sonstige,'Sonstige']]} />
-              <CatSection label="Atmung" items={[[p.e_atm_asthma,'Asthma'],[p.e_atm_status_asthm,'Status asthm.'],[p.e_atm_copd,'COPD'],[p.e_atm_pneumonie,'Pneumonie'],[p.e_atm_hypervent,'Hyperventilation'],[p.e_atm_aspiration,'Aspiration'],[p.e_atm_haemoptysen,'Hämoptysen'],[p.e_atm_sonstige,'Sonstige']]} />
-              <CatSection label="Abdomen" items={[[p.e_abd_akut,'Akutes Abdomen'],[p.e_abd_gi_ob,'GI-Blutung ob.'],[p.e_abd_gi_un,'GI-Blutung un.'],[p.e_abd_kolik,'Kolik'],[p.e_abd_enteritis,'Enteritis'],[p.e_abd_sonstige,'Sonstige']]} />
-              <CatSection label="Psychiatrie" items={[[p.e_psy_psychose,'Psychose/Manie'],[p.e_psy_angst,'Angst/Depression'],[p.e_psy_intox_akzid,'Intox. akzid.'],[p.e_psy_intox_alkohol,'Intox. Alkohol'],[p.e_psy_intox_drogen,'Intox. Drogen'],[p.e_psy_intox_medis,'Intox. Medis'],[p.e_psy_intox_sonstige,'Intox. Sonstige'],[p.e_psy_entzug,'Entzug/Delir'],[p.e_psy_suizid,'Suizid(versuch)'],[p.e_psy_krise,'Psych. Krise'],[p.e_psy_sonstige,'Sonstige']]} />
-              <CatSection label="Stoffwechsel" items={[[p.e_stw_hypo,'Hypoglykämie'],[p.e_stw_hyper,'Hyperglykämie'],[p.e_stw_exsiccose,'Exsiccose'],[p.e_stw_uraemie,'Urämie/ANV'],[p.e_stw_sonstige,'Sonstige']]} />
-              <CatSection label="Pädiatrie" items={[[p.e_paed_fieberkrampf,'Fieberkrampf'],[p.e_paed_pseudokrupp,'Pseudokrupp'],[p.e_paed_sids,'SIDS/Near-SIDS']]} />
-              <CatSection label="Gynäkologie" items={[[p.e_gyn_schwanger,'Schwangerschaft'],[p.e_gyn_geburt,'Droh./präklin. Geburt'],[p.e_gyn_eklampsie,'(Prä-)Eklampsie'],[p.e_gyn_blutung,'Vag. Blutung'],[p.e_gyn_sonstige,'Sonstige']]} />
-              <CatSection label="Weitere" items={[[p.e_anaphylaxie,'Anaphylaxie'],[p.e_hitze,'Hitzeerschöpfung'],[p.e_unterkuehlung,'Unterkühlung'],[p.e_sepsis,'Sepsis/sept. Schock'],[p.e_influenza,'Influenza'],[p.e_hepatitis_hiv,'Hepatitis/HIV'],[p.e_lumbago,'Akutes Lumbago'],[p.e_epistaxis,'Epistaxis'],[p.e_soziales,'Soziales Problem'],[p.e_behandlungskompl,'Behandlungskompl.'],[p.e_weitere_sonstige,'Sonstige']]} />
-            </PubSection>
-
-            <PubSection title="Verlauf" icon={pik(<><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></>)}>
-              {verlauf.length === 0 ? (
-                <div style={{ fontSize: 14, color: 'var(--text-secondary)' }}>Keine Vitalwerte erfasst</div>
-              ) : (
-                <div style={{ overflowX: 'auto' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-                    <thead>
-                      <tr>
-                        {['Zeit','RR sys','RR dia','HF','O₂ l/min','SpO₂ %','etCO₂','Schmerz'].map(h => (
-                          <th key={h} style={{ background: 'var(--bg-subtle)', border: '0.5px solid var(--border)', padding: '6px 8px', fontWeight: 700, color: 'var(--text)', textAlign: 'left', whiteSpace: 'nowrap' }}>{h}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {verlauf.map((r, i) => (
-                        <tr key={i}>
-                          {(['zeit','rr_sys','rr_dia','hf','o2','spo2','etco2','schmerz'] as const).map(k => (
-                            <td key={k} style={{ border: '0.5px solid var(--border)', padding: '5px 8px', color: r[k as keyof typeof r] ? 'var(--text)' : 'var(--text-secondary)' }}>
-                              {(r[k as keyof typeof r] as string) || '—'}
-                            </td>
-                          ))}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </PubSection>
-
-            <PubSection title="Verletzungen / Trauma" icon={pik(<><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></>)}>
-              <Tags items={[[p.v_keine,'Keine Verletzung']]} />
-              <CatSection label="Körper" items={[[!!p.v_sht, p.v_sht ? `SHT (${p.v_sht})` : 'SHT'],[!!p.v_gesicht, p.v_gesicht ? `Gesicht (${p.v_gesicht})` : 'Gesicht'],[!!p.v_hals, p.v_hals ? `Hals (${p.v_hals})` : 'Hals'],[!!p.v_thorax, p.v_thorax ? `Thorax (${p.v_thorax})` : 'Thorax'],[!!p.v_abdomen, p.v_abdomen ? `Abdomen (${p.v_abdomen})` : 'Abdomen'],[!!p.v_ws, p.v_ws ? `Wirbelsäule (${p.v_ws})` : 'Wirbelsäule'],[!!p.v_becken, p.v_becken ? `Becken (${p.v_becken})` : 'Becken'],[!!p.v_obext, p.v_obext ? `Obere Ext. (${p.v_obext})` : 'Obere Ext.'],[!!p.v_untext, p.v_untext ? `Untere Ext. (${p.v_untext})` : 'Untere Ext.'],[!!p.v_weich, p.v_weich ? `Weichteile (${p.v_weich})` : 'Weichteile']]} />
-              <CatSection label="Besonderheiten" items={[[p.v_verbrennung,'Verbrennung'],[p.v_veraetzung,'Verätzung'],[p.v_verschuettung,'Verschüttung'],[p.v_einklemmung,'Einklemmung'],[p.v_inhalation,'Inhalationstrauma'],[p.v_elektrounfall,'Elektrounfall'],[p.v_ertrinken,'Beinahe-Ertrinken'],[p.v_tauchunfall,'Tauchunfall'],[p.v_haemo_schock,'Hämorr. Schock']]} />
-              <CatSection label="Mechanismus" items={[[p.v_trauma_stumpf,'Stumpf'],[p.v_trauma_penetr,'Penetrierend'],[p.v_sturz_eben,'Sturz ebenerdig'],[p.v_sturz_unter3m,'Sturz <3m'],[p.v_sturz_ueber3m,'Sturz >3m']]} />
-              <CatSection label="Verkehr" items={[[p.v_vt_fussgaenger,'Fußgänger'],[p.v_vt_escooter,'E-Scooter'],[p.v_vt_fahrrad,'Fahrrad'],[p.v_vt_ebike,'E-Bike'],[p.v_vt_motorrad,'Motorrad'],[p.v_vt_pkw,'PKW'],[p.v_vt_lkw,'LKW'],[p.v_vt_bus,'Bus']]} />
-              <CatSection label="Gewalt" items={[[p.v_gew_schlag,'Schlag'],[p.v_gew_schuss,'Schuss'],[p.v_gew_stich,'Stich'],[p.v_gew_verbrechen,'Gewaltverbrechen'],[p.v_gew_sonstige,'Sonstige']]} />
-              {p.v_verbrennung && <Grid cols="1fr 1fr"><F label="Verbrennung Grad" value={p.v_verbrennung_grad} ch={chf.has('v_verbrennung_grad')} /><F label="Verbrennung %" value={p.v_verbrennung_pct} ch={chf.has('v_verbrennung_pct')} /></Grid>}
-              <F label="Sonstige Verletzungen" value={p.v_sonstige} ch={chf.has('v_sonstige')} />
-              <F label="Freitext Verletzungen" value={p.verletz_text} ch={chf.has('verletz_text')} />
-            </PubSection>
-
-            <PubSection title="Atemwege / Lagerung / Immobilisation" icon={pik(<><path d="M9.59 4.59A2 2 0 1 1 11 8H2m10.59 11.41A2 2 0 1 0 14 16H2m15.73-8.27A2.5 2.5 0 1 1 19.5 12H2"/></>)}>
-              <div style={{ marginBottom: 10 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>Atemwegsmanagement</div>
-                <Tags items={[[p.awm_freihalten,'Freihalten'],[p.awm_absaugung,'Absaugung'],[p.awm_opa,'OPA/Guedel'],[p.awm_npa,'NPA/Wendl'],[p.awm_lma,'LMA/SGA'],[p.awm_intubation,'Intubation (OTI)']]} />
-              </div>
-              <div style={{ marginBottom: 10 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>Lagerung</div>
-                <Tags items={[[p.lag_flach,'Flachlagerung'],[p.lag_schock,'Schocklagerung'],[p.lag_ok_hoch,'OK hoch'],[p.lag_ssl,'Stabile Seitenlage'],[p.lag_sitzend,'Sitzend'],[p.lag_haengend,'Hängeposition']]} />
-              </div>
-              <div>
-                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>Immobilisation</div>
-                <Tags items={[[p.immo_hws,'HWS-Orthese'],[p.immo_spineboard,'Spineboard'],[p.immo_vakuum,'Vakuummatratze']]} />
-              </div>
-            </PubSection>
-
-            <PubSection title="Beatmung / Defibrillation" icon={pik(<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>)}>
-              <div style={{ marginBottom: 10 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>Beatmung</div>
-                <Tags items={[[p.beat_manuell,'Manuell'],[p.beat_maschinell,'Maschinell'],[p.beat_niv,'NIV'],[p.beat_notfallnarkose,'Notfallnarkose']]} />
-                <Grid cols="repeat(auto-fit, minmax(100px, 1fr))">
-                  <F label="FiO₂" value={p.beat_fio2} ch={chf.has('beat_fio2')} />
-                  <F label="AF /min" value={p.beat_af} ch={chf.has('beat_af')} />
-                  <F label="PEEP mbar" value={p.beat_peep} ch={chf.has('beat_peep')} />
-                  <F label="Pmax mbar" value={p.beat_pmax} ch={chf.has('beat_pmax')} />
-                  <F label="AMV l/min" value={p.beat_amv} ch={chf.has('beat_amv')} />
-                </Grid>
-              </div>
-              <div>
-                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>Defibrillation</div>
-                <Tags items={[[p.defi_aed,'AED'],[p.defi_defi,'Defi'],[p.defi_mono,'Monophasisch'],[p.defi_bi,'Biphasisch']]} />
-                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '8px 0 4px' }}>Erstanwendung durch</div>
-                <Tags items={[[p.defi_erstanw_laie,'Laie'],[p.defi_erstanw_fr,'First Resp.'],[p.defi_erstanw_rd,'Rettungsdienst'],[p.defi_erstanw_arzt,'Arzt']]} />
-                <Grid cols="repeat(auto-fit, minmax(120px, 1fr))">
-                  <F label="Zeitpunkt 1. Defi" value={p.defi_zeitpunkt} ch={chf.has('defi_zeitpunkt')} />
-                  <F label="ROSC" value={p.defi_rosc} ch={chf.has('defi_rosc')} />
-                  <F label="Anzahl" value={p.defi_anzahl} ch={chf.has('defi_anzahl')} />
-                  <F label="Energie (kJ)" value={p.defi_energie} ch={chf.has('defi_energie')} />
-                </Grid>
-              </div>
-            </PubSection>
-
-            <PubSection title="Zugang / Infusion / Medikamente" icon={pik(<path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/>)}>
-              <Grid>
-                <F label="Zugang Art" value={p.zugang_art} ch={chf.has('zugang_art')} />
-                <F label="Region" value={p.zugang_region} ch={chf.has('zugang_region')} />
-                <F label="Gauge" value={p.zugang_gauge} ch={chf.has('zugang_gauge')} />
-                <F label="Infusion" value={p.inf_art} ch={chf.has('inf_art')} />
-                <F label="Menge (ml)" value={p.inf_menge} ch={chf.has('inf_menge')} />
-              </Grid>
-              {meds.length > 0 && (
-                <>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '12px 0 6px' }}>Medikamente</div>
-                  <div style={{ overflowX: 'auto' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-                      <thead>
-                        <tr>
-                          {['Medikament','Dosis','Einheit','Route','Zeit','Hinweis'].map(h => (
-                            <th key={h} style={{ background: 'var(--bg-subtle)', border: '0.5px solid var(--border)', padding: '6px 8px', textAlign: 'left', fontWeight: 700 }}>{h}</th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {meds.map((m, i) => (
-                          <tr key={i}>
-                            {[m.name, m.dose, m.unit, m.route, m.time, m.note].map((v, j) => (
-                              <td key={j} style={{ border: '0.5px solid var(--border)', padding: '5px 8px' }}>{v || '—'}</td>
-                            ))}
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </>
-              )}
-            </PubSection>
-
-            <PubSection title="Reanimation" icon={pik(<><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></>)}>
-              <Tags items={[[p.rean,'CPR durchgeführt'],[p.rean_tod,'Todesfeststellung']]} />
-              <Grid>
-                {p.rean_tod && <F label="Uhrzeit Todesfeststellung" value={p.rean_tod_zeit} ch={chf.has('rean_tod_zeit')} />}
-                <F label="Beginn Reanimation" value={p.rean_beginn} ch={chf.has('rean_beginn')} />
-                <F label="Ende Reanimation" value={p.rean_ende} ch={chf.has('rean_ende')} />
-                <F label="Defibrillationen" value={p.rean_defib} ch={chf.has('rean_defib')} />
-              </Grid>
-            </PubSection>
-
-            <PubSection title="Übergabe / Besonderheiten" icon={pik(<><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></>)}>
-              <Grid>
-                <F label="Übergabe Ziel" value={p.uebergabe_ziel} ch={chf.has('uebergabe_ziel')} />
-                <F label="Übergabe an (Name)" value={p.uebergabe_name} ch={chf.has('uebergabe_name')} />
-              </Grid>
-              <Tags items={[[p.ev_transportverweigerung,'Transportverweigerung'],[p.ev_nur_untersuchung,'Nur Untersuchung'],[p.ev_zwangseinweisung,'Zwangseinweisung'],[p.ev_transport_sondersignal,'Transport mit Sondersignal'],[p.ev_manv,'MANV'],[p.ev_lna,'LNA am Einsatz'],[p.ev_schwerlast,'Schwerlasttransport']]} />
-              <F label="Bemerkungen" value={p.bemerkungen} ch={chf.has('bemerkungen')} />
-            </PubSection>
-
-            <PubSection title="Unterschrift / Gegenzeichnung" open icon={pik(<><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></>)}>
-              {p.signature && (
-                <div style={{ marginBottom: 16 }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>Unterschrift Einsatzkraft</div>
-                  <img src={p.signature} alt="Unterschrift" style={{ maxWidth: '100%', maxHeight: 120, border: '0.5px solid var(--border)', borderRadius: 8, background: '#fff' }} />
-                </div>
-              )}
-              {pd?.admin_name && (
-                <div>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>Gegenzeichnung</div>
-                  <Grid>
-                    <F label="MPG-Beauftragter" value={pd.admin_name} />
-                    <F label="Datum" value={fmtDateTime(pd.admin_datum)} />
-                  </Grid>
-                  {pd.admin_unterschrift && (
-                    <img src={pd.admin_unterschrift} alt="Unterschrift Admin" style={{ maxWidth: '100%', maxHeight: 120, border: '0.5px solid var(--border)', borderRadius: 8, background: '#fff', marginTop: 8 }} />
-                  )}
-                </div>
-              )}
-            </PubSection>
-          </>
+          <ProtokollView payload={p} changedFields={chf} tfChangedFields={tfchf} />
         )}
 
         {/* ── NACHERFASSUNG ── */}

@@ -823,40 +823,42 @@ export default function Patienten() {
                       const changedCount = ((pat as any).payload?._changed_fields || []).length
                       const hasTFReopen = !!(pat as any).payload?.tf_reopen
                       const reopenActive = hasTFReopen && new Date((pat as any).payload.tf_reopen.expires_at) > new Date()
+                      const tfChangedCount = ((pat as any).payload?._tf_changed_fields || []).length
                       return (
-                        <div key={pat.id} className="pat-card" style={{ borderLeftColor: '#16a34a', borderColor: openRQ > 0 ? '#f59e0b' : undefined }}>
-                          <div className="pat-card-type">Patientendoku</div>
-                          <div className="pat-card-name">{displayName}</div>
-                          <div className="pat-card-meta">
-                            {crew ? `Mannschaft: ${crew}` : null}
-                            {crew ? <br /> : null}
-                            {fmtDate(pat.created)}
-                          </div>
-                          <div style={{ padding: '4px 0 2px', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                            <span style={{ fontSize: 11, fontWeight: 700, background: '#dcfce7', color: '#166534', border: '1px solid #bbf7d0', borderRadius: 999, padding: '2px 8px' }}>Freigegeben</span>
-                            {openRQ > 0 && <span style={{ fontSize: 11, fontWeight: 700, background: '#fef9c3', color: '#92400e', border: '1px solid #fcd34d', borderRadius: 999, padding: '2px 8px' }}>{openRQ} Rückfrage{openRQ !== 1 ? 'n' : ''} offen</span>}
-                            {sns.length > 0 && <span style={{ fontSize: 11, fontWeight: 700, background: '#dcfce7', color: '#166534', border: '1px solid #bbf7d0', borderRadius: 999, padding: '2px 8px' }}>{sns.length} Stellungnahme{sns.length !== 1 ? 'n' : ''}</span>}
-                            {changedCount > 0 && <span style={{ fontSize: 11, fontWeight: 700, background: '#fffbeb', color: '#d97706', border: '1px solid #fde68a', borderRadius: 999, padding: '2px 8px' }}>{changedCount} Änderung{changedCount !== 1 ? 'en' : ''}</span>}
-                            {reopenActive && <span style={{ fontSize: 11, fontWeight: 700, background: '#dcfce7', color: '#166534', border: '1px solid #bbf7d0', borderRadius: 999, padding: '2px 8px' }}>TF bearbeitet</span>}
-                          </div>
-                          <div className="pat-card-footer">
-                            <div style={{ flex: 1 }} />
-                            {rqs.length > 0 && (
-                              <button className="pat-btn" onClick={() => { setStellungnahmePat(pat); setShowStellungnahme(true) }}>
-                                Stellungnahme{openRQ > 0 ? ` (${openRQ})` : ''}
+                        <div key={pat.id} className="pat-card" style={{ borderLeft: `3px solid ${openRQ > 0 ? '#f59e0b' : '#16a34a'}`, padding: 0, overflow: 'hidden' }}>
+                          {/* Top: name + date */}
+                          <div style={{ padding: '14px 16px 10px', borderBottom: '0.5px solid var(--border)' }}>
+                            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, marginBottom: 6 }}>
+                              <div>
+                                <div style={{ fontSize: 11, fontWeight: 700, color: '#16a34a', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2 }}>Patientendoku · {fmtDate(pat.created)}</div>
+                                <div style={{ fontWeight: 800, fontSize: 17, color: 'var(--text)', lineHeight: 1.2 }}>{displayName}</div>
+                                {crew && <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 3 }}>{crew}</div>}
+                              </div>
+                              <button
+                                style={{ flexShrink: 0, background: canSign ? '#f97316' : '#e5e7eb', color: canSign ? '#fff' : '#9ca3af', border: 'none', borderRadius: 10, padding: '9px 14px', fontWeight: 700, fontSize: 13, cursor: canSign ? 'pointer' : 'not-allowed', fontFamily: 'inherit', whiteSpace: 'nowrap' }}
+                                onClick={() => canSign && openEdit(pat)}
+                                title={!canSign ? `Erst alle ${openRQ} offene Rückfrage${openRQ !== 1 ? 'n' : ''} beantworten` : ''}
+                              >
+                                Gegenzeichnen
                               </button>
-                            )}
+                            </div>
+                            {/* Badges */}
+                            <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+                              {openRQ > 0
+                                ? <span style={{ fontSize: 11, fontWeight: 700, background: '#fef9c3', color: '#92400e', border: '1px solid #fcd34d', borderRadius: 999, padding: '2px 8px' }}>{openRQ} Rückfrage{openRQ !== 1 ? 'n' : ''} offen</span>
+                                : <span style={{ fontSize: 11, fontWeight: 700, background: '#dcfce7', color: '#166534', border: '1px solid #bbf7d0', borderRadius: 999, padding: '2px 8px' }}>Freigegeben</span>
+                              }
+                              {changedCount > 0 && <span style={{ fontSize: 11, fontWeight: 700, background: '#fffbeb', color: '#d97706', border: '1px solid #fde68a', borderRadius: 999, padding: '2px 8px' }}>● {changedCount} Admin-Änd.</span>}
+                              {tfChangedCount > 0 && <span style={{ fontSize: 11, fontWeight: 700, background: '#f0fdf4', color: '#16a34a', border: '1px solid #86efac', borderRadius: 999, padding: '2px 8px' }}>● {tfChangedCount} TF-Nachbearb.</span>}
+                              {sns.length > 0 && <span style={{ fontSize: 11, fontWeight: 700, background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe', borderRadius: 999, padding: '2px 8px' }}>{sns.length} Stellungnahme{sns.length !== 1 ? 'n' : ''}</span>}
+                            </div>
+                          </div>
+                          {/* Bottom: action buttons */}
+                          <div style={{ padding: '8px 12px', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                             <button className="pat-btn" onClick={() => setProtokollSheet(pat)}>Ansehen</button>
-                            <button className="pat-btn" onClick={() => setReopenModal(pat)}>Nachbearbeitung</button>
                             <button className="pat-btn" onClick={() => openEdit(pat)}>Bearbeiten</button>
-                            <button
-                              className="pat-btn"
-                              style={{ background: canSign ? '#f97316' : '#e5e7eb', color: canSign ? '#fff' : '#9ca3af', cursor: canSign ? 'pointer' : 'not-allowed' }}
-                              onClick={() => canSign && openEdit(pat)}
-                              title={!canSign ? `Erst alle ${openRQ} offene Rückfrage${openRQ !== 1 ? 'n' : ''} beantworten` : ''}
-                            >
-                              Gegenzeichnen
-                            </button>
+                            {openRQ > 0 && <button className="pat-btn" style={{ color: '#92400e', borderColor: '#fcd34d' }} onClick={() => { setStellungnahmePat(pat); setShowStellungnahme(true) }}>Stellungnahme ({openRQ})</button>}
+                            <button className="pat-btn" onClick={() => setReopenModal(pat)}>Nachbearbeitung</button>
                           </div>
                         </div>
                       )
