@@ -459,17 +459,17 @@ export default function Unitas() {
 
         {/* PROTOKOLLE */}
         {tab === 'protokolle' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <div style={{ fontSize: '17px', fontWeight: 700, color: 'var(--text)' }}>Meine Protokolle</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.01em' }}>Meine Protokolle</div>
 
             {myPatients.length === 0 && myFreigegebenPatients.length === 0 && myArchivedPatients.length === 0 && (
-              <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '48px 0', fontSize: '15px' }}>Keine Protokolle vorhanden</div>
+              <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '48px 0', fontSize: 15 }}>Keine Protokolle vorhanden</div>
             )}
 
-            {/* Offen — TF can edit+release within 24h */}
+            {/* Offen */}
             {myPatients.length > 0 && (
               <>
-                <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '.5px' }}>In Bearbeitung</div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>In Bearbeitung</div>
                 {[...myPatients].sort((a, b) => new Date(b.created).getTime() - new Date(a.created).getTime()).map(p => {
                   const m = p.payload?.mannschaft || {}
                   const crew = ['tf','m1','m2','m3'].map((k: string) => m[k]?.name).filter(Boolean).join(', ')
@@ -481,52 +481,50 @@ export default function Unitas() {
                   const canEdit = isTF && hoursLeft > 0
                   const allRQs: any[] = Array.isArray(p.payload?.rueckfragen) ? p.payload.rueckfragen : []
                   const openRQs = allRQs.filter((r: any) => r.status === 'offen')
-                  const sns: any[] = Array.isArray(p.payload?.stellungnahmen) ? p.payload.stellungnahmen : []
                   return (
-                    <div key={p.id} style={{ background: 'var(--bg-card)', borderRadius: '14px', border: `1px solid ${openRQs.length > 0 ? '#f59e0b' : isExpiringSoon ? '#f97316' : 'var(--border)'}`, overflow: 'hidden' }}>
-                      <div style={{ background: 'linear-gradient(135deg, var(--btn-dark) 0%, var(--btn-dark) 100%)', padding: '14px 18px', color: 'var(--btn-dark-text)' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: '4px' }}>
-                          <span style={{ fontWeight: 700, fontSize: '16px' }}>{patName || p.title}</span>
-                          {openRQs.length > 0 && <span style={{ background: '#f59e0b', color: '#fff', borderRadius: 999, padding: '2px 8px', fontSize: 11, fontWeight: 700, flexShrink: 0 }}>{openRQs.length} Rückfrage{openRQs.length !== 1 ? 'n' : ''}</span>}
+                    <div key={p.id} style={{ background: 'var(--bg-card)', borderRadius: 16, border: `1px solid ${openRQs.length > 0 ? '#fde68a' : 'var(--border)'}`, overflow: 'hidden' }}>
+                      <div style={{ padding: '14px 16px 0' }}>
+                        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, marginBottom: 6 }}>
+                          <div>
+                            <div style={{ fontWeight: 700, fontSize: 16, color: 'var(--text)' }}>{patName || p.title}</div>
+                            {crew && <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 2 }}>{crew}</div>}
+                          </div>
+                          {openRQs.length > 0 && (
+                            <span style={{ background: '#fef3c7', color: '#92400e', borderRadius: 999, padding: '3px 9px', fontSize: 11, fontWeight: 700, flexShrink: 0, border: '1px solid #fde68a' }}>
+                              {openRQs.length} Rückfrage{openRQs.length !== 1 ? 'n' : ''}
+                            </span>
+                          )}
                         </div>
-                        {crew && <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.7)' }}>{crew}</div>}
+                        <div style={{ fontSize: 12, color: isExpiringSoon ? '#d97706' : 'var(--text-secondary)', fontWeight: isExpiringSoon ? 600 : 400, marginBottom: 12 }}>
+                          {new Date(p.created).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })} Uhr
+                          {isTF && ` · ${hoursLeft > 0 ? `noch ${hoursLeft}h bearbeitbar` : 'Bearbeitungsfenster abgelaufen'}`}
+                        </div>
                       </div>
                       {openRQs.length > 0 && (
-                        <div style={{ background: '#fffbeb', borderBottom: '1px solid #fcd34d', padding: '10px 18px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        <div style={{ background: '#fffbeb', borderTop: '1px solid #fde68a', padding: '10px 16px' }}>
                           {openRQs.map((rq: any) => (
                             <div key={rq.id} style={{ fontSize: 13, color: '#78350f', lineHeight: 1.4 }}>
-                              <span style={{ fontWeight: 700, color: '#92400e' }}>Rückfrage: </span>{rq.frage}
+                              <span style={{ fontWeight: 700 }}>Rückfrage: </span>{rq.frage}
                             </div>
                           ))}
-                          <div style={{ fontSize: 12, color: '#a16207', fontWeight: 600 }}>→ Bitte im Protokoll Stellung nehmen</div>
                         </div>
                       )}
-                      <div style={{ padding: '12px 18px', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-                        <div style={{ flex: 1 }}>
-                          <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Erstellt: {new Date(p.created).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })} Uhr</div>
-                          {isTF && <div style={{ fontSize: '12px', marginTop: '3px', fontWeight: 600, color: isExpiringSoon ? '#f97316' : 'var(--text-secondary)' }}>
-                            {hoursLeft > 0 ? `Noch ${hoursLeft} Std. bearbeitbar` : 'Bearbeitungsfenster abgelaufen'}
-                          </div>}
-                        </div>
+                      <div style={{ padding: '10px 12px', display: 'flex', gap: 8, borderTop: '1px solid var(--border)', background: 'var(--bg)' }}>
                         {openRQs.length > 0 && (
-                          <button onClick={() => setSnModal(p)} style={{ background: '#f59e0b', color: '#fff', border: 'none', borderRadius: '8px', padding: '9px 16px', fontWeight: 700, fontSize: '13px', cursor: 'pointer', flexShrink: 0, fontFamily: 'inherit' }}>
-                            Stellungnahme ({openRQs.length})
+                          <button onClick={() => setSnModal(p)} style={{ background: '#f59e0b', color: '#fff', border: 'none', borderRadius: 10, padding: '8px 14px', fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>
+                            Stellungnahme
                           </button>
                         )}
                         {canEdit && (
-                          <button onClick={async () => {
-                            await pb.collection('patients').update(p.id, { status: 'freigegeben' })
-                            showMsg('Protokoll freigegeben', 'success')
-                            loadPatients()
-                          }} style={{ background: '#16a34a', color: '#fff', border: 'none', borderRadius: '8px', padding: '9px 16px', fontWeight: 700, fontSize: '13px', cursor: 'pointer', flexShrink: 0, fontFamily: 'inherit' }}>
-                            Freigeben
-                          </button>
-                        )}
-                        {canEdit && (
-                          <button onClick={() => navigate(`/protokoll/${p.id}`)} style={{ background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: '8px', padding: '9px 16px', fontWeight: 700, fontSize: '13px', cursor: 'pointer', flexShrink: 0, fontFamily: 'inherit' }}>Bearbeiten</button>
+                          <>
+                            <button onClick={async () => { await pb.collection('patients').update(p.id, { status: 'freigegeben' }); showMsg('Protokoll freigegeben', 'success'); loadPatients() }} style={{ background: '#16a34a', color: '#fff', border: 'none', borderRadius: 10, padding: '8px 14px', fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>
+                              Freigeben
+                            </button>
+                            <button onClick={() => navigate(`/protokoll/${p.id}`)} style={{ background: 'var(--btn-dark)', color: 'var(--btn-dark-text)', border: 'none', borderRadius: 10, padding: '8px 14px', fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>Bearbeiten</button>
+                          </>
                         )}
                         {!canEdit && (
-                          <button onClick={() => navigate(`/protokoll/${p.id}`)} style={{ background: 'var(--bg-subtle)', color: 'var(--text)', border: '0.5px solid var(--border-medium)', borderRadius: '8px', padding: '9px 16px', fontWeight: 700, fontSize: '13px', cursor: 'pointer', flexShrink: 0, fontFamily: 'inherit' }}>Ansehen</button>
+                          <button onClick={() => navigate(`/protokoll/${p.id}`)} style={{ background: 'var(--bg-subtle)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: 10, padding: '8px 14px', fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>Ansehen</button>
                         )}
                       </div>
                     </div>
@@ -535,10 +533,10 @@ export default function Unitas() {
               </>
             )}
 
-            {/* Freigegeben — TF can re-edit if reopen active */}
+            {/* Freigegeben */}
             {myFreigegebenPatients.length > 0 && (
               <>
-                <div style={{ fontSize: '13px', fontWeight: 700, color: '#166534', textTransform: 'uppercase', letterSpacing: '.5px', marginTop: myPatients.length > 0 ? '8px' : 0 }}>Freigegeben</div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: '#166534', textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: myPatients.length > 0 ? 4 : 0 }}>Freigegeben</div>
                 {[...myFreigegebenPatients].sort((a, b) => new Date(b.created).getTime() - new Date(a.created).getTime()).map(p => {
                   const m = p.payload?.mannschaft || {}
                   const crew = ['tf','m1','m2','m3'].map((k: string) => m[k]?.name).filter(Boolean).join(', ')
@@ -552,54 +550,53 @@ export default function Unitas() {
                   const reopenActive = reopen && new Date(reopen.expires_at) > new Date()
                   const reopenMinsLeft = reopenActive ? Math.ceil((new Date(reopen.expires_at).getTime() - Date.now()) / 60000) : 0
                   return (
-                    <div key={p.id} style={{ background: 'var(--bg-card)', borderRadius: '14px', border: `1px solid ${openRQs.length > 0 ? '#f59e0b' : reopenActive ? '#16a34a' : 'var(--border)'}`, overflow: 'hidden' }}>
-                      <div style={{ background: 'linear-gradient(135deg, #166534, #15803d)', padding: '14px 18px', color: '#fff' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: '4px' }}>
-                          <span style={{ fontWeight: 700, fontSize: '16px' }}>{patName || p.title}</span>
-                          {openRQs.length > 0 && <span style={{ background: '#f59e0b', color: '#fff', borderRadius: 999, padding: '2px 8px', fontSize: 11, fontWeight: 700, flexShrink: 0 }}>{openRQs.length} Rückfrage{openRQs.length !== 1 ? 'n' : ''}</span>}
-                          {changedCount > 0 && <span style={{ background: '#d97706', color: '#fff', borderRadius: 999, padding: '2px 8px', fontSize: 11, fontWeight: 700, flexShrink: 0 }}>{changedCount} Änderung{changedCount !== 1 ? 'en' : ''}</span>}
-                          {reopenActive && <span style={{ background: 'rgba(255,255,255,0.2)', color: '#fff', borderRadius: 999, padding: '2px 8px', fontSize: 11, fontWeight: 700, flexShrink: 0 }}>Nachbearbeitung offen</span>}
+                    <div key={p.id} style={{ background: 'var(--bg-card)', borderRadius: 16, border: `1px solid ${openRQs.length > 0 ? '#fde68a' : 'var(--border)'}`, overflow: 'hidden' }}>
+                      <div style={{ padding: '14px 16px 0' }}>
+                        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, marginBottom: 6 }}>
+                          <div>
+                            <div style={{ fontWeight: 700, fontSize: 16, color: 'var(--text)' }}>{patName || p.title}</div>
+                            {crew && <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 2 }}>{crew}</div>}
+                          </div>
+                          <div style={{ display: 'flex', gap: 5, flexShrink: 0, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                            {openRQs.length > 0 && <span style={{ background: '#fef3c7', color: '#92400e', borderRadius: 999, padding: '3px 9px', fontSize: 11, fontWeight: 700, border: '1px solid #fde68a' }}>{openRQs.length} Rückfrage{openRQs.length !== 1 ? 'n' : ''}</span>}
+                            {changedCount > 0 && <span style={{ background: '#fffbeb', color: '#d97706', borderRadius: 999, padding: '3px 9px', fontSize: 11, fontWeight: 700, border: '1px solid #fde68a' }}>{changedCount} Änd.</span>}
+                            {reopenActive && <span style={{ background: '#f0fdf4', color: '#166534', borderRadius: 999, padding: '3px 9px', fontSize: 11, fontWeight: 700, border: '1px solid #bbf7d0' }}>Nachbearb. offen</span>}
+                          </div>
                         </div>
-                        {crew && <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.75)' }}>{crew}</div>}
+                        <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 12 }}>
+                          {new Date(p.created).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })} Uhr · Freigegeben
+                          {reopenActive && isTF && ` · noch ${reopenMinsLeft >= 60 ? `${Math.ceil(reopenMinsLeft/60)}h` : `${reopenMinsLeft}min`}`}
+                        </div>
                       </div>
                       {openRQs.length > 0 && (
-                        <div style={{ background: '#fffbeb', borderBottom: '1px solid #fcd34d', padding: '10px 18px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        <div style={{ background: '#fffbeb', borderTop: '1px solid #fde68a', padding: '10px 16px' }}>
                           {openRQs.map((rq: any) => (
                             <div key={rq.id} style={{ fontSize: 13, color: '#78350f', lineHeight: 1.4 }}>
-                              <span style={{ fontWeight: 700, color: '#92400e' }}>Rückfrage: </span>{rq.frage}
+                              <span style={{ fontWeight: 700 }}>Rückfrage: </span>{rq.frage}
                             </div>
                           ))}
-                          <div style={{ fontSize: 12, color: '#a16207', fontWeight: 600 }}>→ Bitte im Protokoll Stellung nehmen</div>
                         </div>
                       )}
                       {sns.filter((s: any) => allRQs.some((rq: any) => rq.id === s.rueckfrage_id)).length > 0 && (
-                        <div style={{ background: '#f0fdf4', borderBottom: '1px solid #bbf7d0', padding: '10px 18px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        <div style={{ background: '#f0fdf4', borderTop: '1px solid #bbf7d0', padding: '10px 16px' }}>
                           {sns.map((s: any) => (
                             <div key={s.id} style={{ fontSize: 13, color: '#166534', lineHeight: 1.4 }}>
                               <span style={{ fontWeight: 700 }}>Stellungnahme: </span>
-                              <span style={{ color: '#374151' }}>{s.text.length > 100 ? s.text.slice(0, 100) + '…' : s.text}</span>
+                              <span style={{ color: 'var(--text)' }}>{s.text.length > 100 ? s.text.slice(0, 100) + '…' : s.text}</span>
                             </div>
                           ))}
                         </div>
                       )}
-                      <div style={{ padding: '12px 18px', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-                        <div style={{ flex: 1 }}>
-                          <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{new Date(p.created).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })} Uhr · Freigegeben</div>
-                          {reopenActive && isTF && (
-                            <div style={{ fontSize: '12px', marginTop: '3px', fontWeight: 600, color: '#16a34a' }}>
-                              Nachbearbeitung: noch {reopenMinsLeft >= 60 ? `${Math.ceil(reopenMinsLeft / 60)}h` : `${reopenMinsLeft}min`}
-                            </div>
-                          )}
-                        </div>
+                      <div style={{ padding: '10px 12px', display: 'flex', gap: 8, borderTop: '1px solid var(--border)', background: 'var(--bg)' }}>
                         {openRQs.length > 0 && (
-                          <button onClick={() => setSnModal(p)} style={{ background: '#f59e0b', color: '#fff', border: 'none', borderRadius: '8px', padding: '9px 16px', fontWeight: 700, fontSize: '13px', cursor: 'pointer', flexShrink: 0, fontFamily: 'inherit' }}>
-                            Stellungnahme ({openRQs.length})
+                          <button onClick={() => setSnModal(p)} style={{ background: '#f59e0b', color: '#fff', border: 'none', borderRadius: 10, padding: '8px 14px', fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>
+                            Stellungnahme
                           </button>
                         )}
                         {reopenActive && isTF ? (
-                          <button onClick={() => navigate(`/protokoll/${p.id}`)} style={{ background: '#16a34a', color: '#fff', border: 'none', borderRadius: '8px', padding: '9px 16px', fontWeight: 700, fontSize: '13px', cursor: 'pointer', flexShrink: 0, fontFamily: 'inherit' }}>Nachbearbeiten</button>
+                          <button onClick={() => navigate(`/protokoll/${p.id}`)} style={{ background: '#16a34a', color: '#fff', border: 'none', borderRadius: 10, padding: '8px 14px', fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>Nachbearbeiten</button>
                         ) : (
-                          <button onClick={() => navigate(`/protokoll/${p.id}`)} style={{ background: 'var(--bg-subtle)', color: 'var(--text)', border: '0.5px solid var(--border-medium)', borderRadius: '8px', padding: '9px 16px', fontWeight: 700, fontSize: '13px', cursor: 'pointer', flexShrink: 0, fontFamily: 'inherit' }}>Ansehen</button>
+                          <button onClick={() => navigate(`/protokoll/${p.id}`)} style={{ background: 'var(--bg-subtle)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: 10, padding: '8px 14px', fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>Ansehen</button>
                         )}
                       </div>
                     </div>
@@ -611,7 +608,7 @@ export default function Unitas() {
             {/* Archiviert */}
             {myArchivedPatients.length > 0 && (
               <>
-                <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '.5px', marginTop: '8px' }}>Archiviert</div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: 4 }}>Archiviert</div>
                 {[...myArchivedPatients].sort((a, b) => new Date(b.created).getTime() - new Date(a.created).getTime()).map(p => {
                   const m = p.payload?.mannschaft || {}
                   const crew = ['tf','m1','m2','m3'].map((k: string) => m[k]?.name).filter(Boolean).join(', ')
@@ -621,45 +618,48 @@ export default function Unitas() {
                   const snsA: any[] = Array.isArray(p.payload?.stellungnahmen) ? p.payload.stellungnahmen : []
                   const changedCountA = (p.payload?._changed_fields || []).length
                   return (
-                    <div key={p.id} style={{ background: 'var(--bg-card)', borderRadius: '14px', border: `1px solid ${openRQsA.length > 0 ? '#f59e0b' : 'var(--border)'}`, overflow: 'hidden', opacity: openRQsA.length > 0 || changedCountA > 0 ? 1 : 0.85 }}>
-                      <div style={{ background: 'var(--bg-subtle)', padding: '14px 18px', borderBottom: '1px solid var(--border)' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: '4px' }}>
-                          <span style={{ fontWeight: 700, fontSize: '16px', color: 'var(--text)' }}>{patName || p.title}</span>
-                          {openRQsA.length > 0 && <span style={{ background: '#f59e0b', color: '#fff', borderRadius: 999, padding: '2px 8px', fontSize: 11, fontWeight: 700, flexShrink: 0 }}>{openRQsA.length} Rückfrage{openRQsA.length !== 1 ? 'n' : ''}</span>}
-                          {changedCountA > 0 && <span style={{ background: '#d97706', color: '#fff', borderRadius: 999, padding: '2px 8px', fontSize: 11, fontWeight: 700, flexShrink: 0 }}>{changedCountA} Änderung{changedCountA !== 1 ? 'en' : ''}</span>}
+                    <div key={p.id} style={{ background: 'var(--bg-card)', borderRadius: 16, border: '1px solid var(--border)', overflow: 'hidden', opacity: openRQsA.length > 0 || changedCountA > 0 ? 1 : 0.75 }}>
+                      <div style={{ padding: '14px 16px 0' }}>
+                        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, marginBottom: 6 }}>
+                          <div>
+                            <div style={{ fontWeight: 700, fontSize: 16, color: 'var(--text)' }}>{patName || p.title}</div>
+                            {crew && <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 2 }}>{crew}</div>}
+                          </div>
+                          <div style={{ display: 'flex', gap: 5, flexShrink: 0 }}>
+                            {openRQsA.length > 0 && <span style={{ background: '#fef3c7', color: '#92400e', borderRadius: 999, padding: '3px 9px', fontSize: 11, fontWeight: 700, border: '1px solid #fde68a' }}>{openRQsA.length} Rückfrage{openRQsA.length !== 1 ? 'n' : ''}</span>}
+                            {changedCountA > 0 && <span style={{ background: '#fffbeb', color: '#d97706', borderRadius: 999, padding: '3px 9px', fontSize: 11, fontWeight: 700, border: '1px solid #fde68a' }}>{changedCountA} Änd.</span>}
+                          </div>
                         </div>
-                        {crew && <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>{crew}</div>}
+                        <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 12 }}>
+                          {new Date(p.created).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })} Uhr · Archiviert
+                        </div>
                       </div>
                       {openRQsA.length > 0 && (
-                        <div style={{ background: '#fffbeb', borderBottom: '1px solid #fcd34d', padding: '10px 18px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        <div style={{ background: '#fffbeb', borderTop: '1px solid #fde68a', padding: '10px 16px' }}>
                           {openRQsA.map((rq: any) => (
                             <div key={rq.id} style={{ fontSize: 13, color: '#78350f', lineHeight: 1.4 }}>
-                              <span style={{ fontWeight: 700, color: '#92400e' }}>Rückfrage: </span>{rq.frage}
+                              <span style={{ fontWeight: 700 }}>Rückfrage: </span>{rq.frage}
                             </div>
                           ))}
-                          <div style={{ fontSize: 12, color: '#a16207', fontWeight: 600 }}>→ Bitte im Protokoll Stellung nehmen</div>
                         </div>
                       )}
                       {snsA.length > 0 && (
-                        <div style={{ background: '#f0fdf4', borderBottom: '1px solid #bbf7d0', padding: '10px 18px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        <div style={{ background: '#f0fdf4', borderTop: '1px solid #bbf7d0', padding: '10px 16px' }}>
                           {snsA.map((s: any) => (
                             <div key={s.id} style={{ fontSize: 13, color: '#166534', lineHeight: 1.4 }}>
                               <span style={{ fontWeight: 700 }}>Stellungnahme: </span>
-                              <span style={{ color: '#374151' }}>{s.text.length > 100 ? s.text.slice(0, 100) + '…' : s.text}</span>
+                              <span style={{ color: 'var(--text)' }}>{s.text.length > 100 ? s.text.slice(0, 100) + '…' : s.text}</span>
                             </div>
                           ))}
                         </div>
                       )}
-                      <div style={{ padding: '12px 18px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <div style={{ flex: 1, fontSize: '12px', color: 'var(--text-secondary)' }}>
-                          {new Date(p.created).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })} Uhr · Archiviert
-                        </div>
+                      <div style={{ padding: '10px 12px', display: 'flex', gap: 8, borderTop: '1px solid var(--border)', background: 'var(--bg)' }}>
                         {openRQsA.length > 0 && (
-                          <button onClick={() => setSnModal(p)} style={{ background: '#f59e0b', color: '#fff', border: 'none', borderRadius: '8px', padding: '9px 16px', fontWeight: 700, fontSize: '13px', cursor: 'pointer', flexShrink: 0, fontFamily: 'inherit' }}>
-                            Stellungnahme ({openRQsA.length})
+                          <button onClick={() => setSnModal(p)} style={{ background: '#f59e0b', color: '#fff', border: 'none', borderRadius: 10, padding: '8px 14px', fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>
+                            Stellungnahme
                           </button>
                         )}
-                        <button onClick={() => navigate(`/protokoll/${p.id}`)} style={{ background: 'var(--bg-subtle)', color: 'var(--text)', border: '0.5px solid var(--border-medium)', borderRadius: '8px', padding: '9px 16px', fontWeight: 700, fontSize: '13px', cursor: 'pointer', flexShrink: 0, fontFamily: 'inherit' }}>Ansehen</button>
+                        <button onClick={() => navigate(`/protokoll/${p.id}`)} style={{ background: 'var(--bg-subtle)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: 10, padding: '8px 14px', fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>Ansehen</button>
                       </div>
                     </div>
                   )
@@ -670,61 +670,39 @@ export default function Unitas() {
         )}
 
 
+        {/* VORGÄNGE */}
         {tab === 'vorgaenge' && (
           <div>
-            <h2 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text)', margin: '0 0 16px' }}>Meine Produktausgaben</h2>
+            <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.01em', marginBottom: 16 }}>Meine Vorgänge</div>
             {myOutputs.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '48px 0', color: 'var(--text-secondary)', fontSize: 15 }}>
-                Keine Vorgänge vorhanden
-              </div>
+              <div style={{ textAlign: 'center', padding: '48px 0', color: 'var(--text-secondary)', fontSize: 15 }}>Keine Vorgänge vorhanden</div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {myOutputs.map(output => {
                   const p = output.payload
                   const deDate = p.datum ? p.datum.split('-').reverse().join('.') : '–'
-                  const statusCfg: Record<string, { label: string; bg: string; color: string }> = {
-                    offen:     { label: 'Offen',     bg: '#fef9c3', color: '#854d0e' },
-                    erledigt:  { label: 'Erledigt',  bg: '#dcfce7', color: '#166534' },
-                    ignoriert: { label: 'Ignoriert', bg: 'var(--bg-subtle)', color: 'var(--text-secondary)' },
+                  const statusCfg: Record<string, { label: string; bg: string; color: string; border: string }> = {
+                    offen:     { label: 'Offen',     bg: '#fffbeb', color: '#92400e', border: '#fde68a' },
+                    erledigt:  { label: 'Erledigt',  bg: '#f0fdf4', color: '#166534', border: '#bbf7d0' },
+                    ignoriert: { label: 'Ignoriert', bg: 'var(--bg-subtle)', color: 'var(--text-secondary)', border: 'var(--border)' },
                   }
-                  const cfg = statusCfg[output.status] ?? { label: output.status, bg: 'var(--bg-subtle)', color: 'var(--text-secondary)' }
+                  const cfg = statusCfg[output.status] ?? statusCfg['ignoriert']
                   return (
-                    <div key={output.id} style={{ background: 'var(--bg-card)', border: '0.5px solid var(--border)', borderRadius: 14, padding: '14px 16px', boxShadow: 'var(--shadow-sm)' }}>
-                      {/* Header */}
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
+                    <div key={output.id} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16, overflow: 'hidden' }}>
+                      <div style={{ padding: '14px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid var(--border)' }}>
                         <div>
                           <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--text)' }}>Einsatz {p.einsatz}</div>
                           <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 2 }}>{deDate}</div>
                         </div>
-                        <span style={{ fontSize: 11, fontWeight: 700, background: cfg.bg, color: cfg.color, borderRadius: 6, padding: '3px 9px', flexShrink: 0 }}>
-                          {cfg.label.toUpperCase()}
+                        <span style={{ fontSize: 11, fontWeight: 700, background: cfg.bg, color: cfg.color, border: `1px solid ${cfg.border}`, borderRadius: 999, padding: '3px 9px' }}>
+                          {cfg.label}
                         </span>
                       </div>
-                      {/* Status indicator */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, padding: '8px 12px', background: 'var(--bg-subtle)', borderRadius: 8 }}>
-                        {output.status === 'erledigt' ? (
-                          <>
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                            <span style={{ fontSize: 13, color: '#166634', fontWeight: 600 }}>Aus dem Lager ausgebucht</span>
-                          </>
-                        ) : output.status === 'offen' ? (
-                          <>
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#b45309" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                            <span style={{ fontSize: 13, color: '#92400e', fontWeight: 600 }}>Wartet auf Bearbeitung durch Lager</span>
-                          </>
-                        ) : (
-                          <>
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
-                            <span style={{ fontSize: 13, color: 'var(--text-secondary)', fontWeight: 600 }}>Ignoriert</span>
-                          </>
-                        )}
-                      </div>
-                      {/* Positions */}
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                      <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 4 }}>
                         {p.positionen.map((pos, idx) => (
-                          <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 13, padding: '4px 0', borderBottom: idx < p.positionen.length - 1 ? '0.5px solid var(--border)' : 'none' }}>
-                            <span style={{ color: 'var(--text)', fontWeight: 500 }}>{pos.name}</span>
-                            <span style={{ color: 'var(--text-secondary)', flexShrink: 0, marginLeft: 8 }}>{pos.qty}× {pos.unit ?? ''}</span>
+                          <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, padding: '3px 0', borderBottom: idx < p.positionen.length - 1 ? '0.5px solid var(--border)' : 'none' }}>
+                            <span style={{ color: 'var(--text)' }}>{pos.name}</span>
+                            <span style={{ color: 'var(--text-secondary)' }}>{pos.qty}× {pos.unit ?? ''}</span>
                           </div>
                         ))}
                       </div>
@@ -736,107 +714,74 @@ export default function Unitas() {
           </div>
         )}
 
-        {/* MEIN KONTO */}
+        {/* KONTO */}
         {tab === 'konto' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            {/* Profil */}
-            <div style={{ background: 'var(--bg-card)', borderRadius: 16, border: '0.5px solid var(--border)', overflow: 'hidden', boxShadow: 'var(--shadow-sm)' }}>
-              <div style={{ background: 'linear-gradient(140deg, #600812 0%, #8b1120 100%)', padding: '24px 20px 20px', display: 'flex', alignItems: 'center', gap: 14 }}>
-                <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(255,255,255,0.15)', border: '1.5px solid rgba(255,255,255,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 20, color: '#fff', flexShrink: 0, letterSpacing: '0.03em' }}>
+            {/* Profile card */}
+            <div style={{ background: 'var(--bg-card)', borderRadius: 16, border: '1px solid var(--border)', overflow: 'hidden' }}>
+              <div style={{ background: 'linear-gradient(135deg, #600812 0%, #9b1b2a 100%)', padding: '24px 20px', display: 'flex', alignItems: 'center', gap: 16 }}>
+                <div style={{ width: 52, height: 52, borderRadius: '50%', background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 20, color: '#fff', flexShrink: 0 }}>
                   {initials(user?.name)}
                 </div>
                 <div>
-                  <div style={{ fontWeight: 800, fontSize: 17, color: '#fff', letterSpacing: '-0.01em' }}>{user?.name}</div>
-                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', marginTop: 3, fontWeight: 500 }}>{(user as any)?.organization_name || 'Responda'}</div>
+                  <div style={{ fontWeight: 800, fontSize: 18, color: '#fff' }}>{user?.name}</div>
+                  <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.65)', marginTop: 2 }}>{user?.email}</div>
                 </div>
               </div>
-
-              <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                {/* Email */}
+              <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: 16 }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: 'var(--text)', marginBottom: '6px' }}>Kontakt-Email</label>
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    <input
-                      type="email"
-                      value={kontaktEmail}
-                      onChange={e => setKontaktEmail(e.target.value)}
-                      placeholder="deine@email.de"
-                      style={{ flex: 1, padding: '10px 14px', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '14px', fontFamily: 'inherit', outline: 'none', background: 'var(--bg-input)', color: 'var(--text)' }}
-                    />
-                    <button
-                      onClick={saveKontaktEmail}
-                      disabled={savingEmail}
-                      style={{ padding: '10px 16px', borderRadius: '8px', border: 'none', background: 'var(--btn-dark)', color: 'var(--btn-dark-text)', fontWeight: 600, fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit', opacity: savingEmail ? 0.6 : 1 }}
-                    >Speichern</button>
+                  <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: 'var(--text)', marginBottom: 6 }}>Kontakt-Email</label>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <input type="email" value={kontaktEmail} onChange={e => setKontaktEmail(e.target.value)} placeholder="deine@email.de"
+                      style={{ flex: 1, padding: '10px 14px', border: '1px solid var(--border)', borderRadius: 10, fontSize: 14, fontFamily: 'inherit', outline: 'none', background: 'var(--bg-input)', color: 'var(--text)' }} />
+                    <button onClick={saveKontaktEmail} disabled={savingEmail}
+                      style={{ padding: '10px 16px', borderRadius: 10, border: 'none', background: '#600812', color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', opacity: savingEmail ? 0.6 : 1 }}>
+                      Speichern
+                    </button>
                   </div>
                 </div>
-
-                {/* Passwort */}
                 <div>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: 'var(--text)', marginBottom: '6px' }}>Passwort</label>
-                  <button
-                    onClick={sendPasswordReset}
-                    disabled={sendingReset}
-                    style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg-card)', color: 'var(--text)', fontWeight: 600, fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit', opacity: sendingReset ? 0.6 : 1 }}
-                  >
+                  <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: 'var(--text)', marginBottom: 6 }}>Passwort</label>
+                  <button onClick={sendPasswordReset} disabled={sendingReset}
+                    style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--bg-card)', color: 'var(--text)', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', opacity: sendingReset ? 0.6 : 1 }}>
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
                     Passwort-Reset Email senden
                   </button>
-                  <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '6px' }}>Du erhältst eine Email mit einem Link zum Passwort zurücksetzen.</div>
                 </div>
+                <button onClick={logout} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 10, border: '1px solid #fecaca', background: '#fef2f2', color: '#b91c1c', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', marginTop: 4 }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                  Abmelden
+                </button>
               </div>
             </div>
-            {/* Darstellung */}
-            <div style={{ background: 'var(--bg-card)', borderRadius: 16, border: '0.5px solid var(--border)', overflow: 'hidden', boxShadow: 'var(--shadow-sm)' }}>
-              <div style={{ padding: '14px 18px', borderBottom: '0.5px solid var(--border)' }}>
-                <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)', letterSpacing: '-0.01em' }}>Darstellung</div>
-              </div>
-              <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+
+            {/* Theme */}
+            <div style={{ background: 'var(--bg-card)', borderRadius: 16, border: '1px solid var(--border)', overflow: 'hidden' }}>
+              <div style={{ padding: '14px 18px', borderBottom: '1px solid var(--border)', fontWeight: 700, fontSize: 15, color: 'var(--text)' }}>Darstellung</div>
+              <div style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {([
-                  { value: 'light', label: 'Hell', icon: '☀️', desc: 'Helles Design' },
-                  { value: 'dark',  label: 'Dunkel', icon: '🌙', desc: 'Dunkles Design' },
+                  { value: 'light',  label: 'Hell',   icon: '☀️', desc: 'Helles Design' },
+                  { value: 'dark',   label: 'Dunkel', icon: '🌙', desc: 'Dunkles Design' },
                   { value: 'system', label: 'System', icon: '⚙️', desc: 'Geräteeinstellung' },
-                  { value: 'retro', label: 'Retro', icon: '📟', desc: 'CRT Terminal — grüner Phosphor' }
+                  { value: 'retro',  label: 'Retro',  icon: '📟', desc: 'CRT Terminal' },
                 ] as { value: ThemeMode; label: string; icon: string; desc: string }[]).map(opt => (
-                  <button
-                    key={opt.value}
-                    onClick={() => { setTheme(opt.value); setThemeMode(opt.value) }}
-                    style={{
-                      display: 'flex', alignItems: 'center', gap: 12,
-                      padding: '10px 12px', borderRadius: 10,
-                      border: themeMode === opt.value ? '1.5px solid #600812' : '1px solid var(--border)',
-                      background: themeMode === opt.value ? 'rgba(96,8,18,0.05)' : 'transparent',
-                      cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit',
-                      transition: 'all 0.15s', width: '100%'
-                    }}
-                  >
+                  <button key={opt.value} onClick={() => { setTheme(opt.value); setThemeMode(opt.value) }}
+                    style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 12px', borderRadius: 12,
+                      border: themeMode === opt.value ? '2px solid #600812' : '1.5px solid var(--border)',
+                      background: themeMode === opt.value ? 'rgba(96,8,18,0.04)' : 'transparent',
+                      cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit', width: '100%' }}>
                     <span style={{ fontSize: 18, lineHeight: 1 }}>{opt.icon}</span>
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--text)' }}>{opt.label}</div>
-                      <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 1 }}>{opt.desc}</div>
+                      <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--text)' }}>{opt.label}</div>
+                      <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 1 }}>{opt.desc}</div>
                     </div>
                     {themeMode === opt.value && (
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#600812" strokeWidth="2.5">
-                        <polyline points="20 6 9 17 4 12"/>
-                      </svg>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#600812" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
                     )}
                   </button>
                 ))}
               </div>
             </div>
-
-            {/* Abmelden */}
-            <button
-              onClick={logout}
-              style={{
-                width: '100%', padding: '14px', borderRadius: 14, border: '0.5px solid #fecaca',
-                background: '#fff5f5', color: '#b91c1c', fontWeight: 700, fontSize: 14,
-                cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-              }}
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-              Abmelden
-            </button>
           </div>
         )}
       </div>
