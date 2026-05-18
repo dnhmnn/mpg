@@ -85,10 +85,12 @@ export default function Unitas() {
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null)
   const [themeMode, setThemeMode] = useState<ThemeMode>(getTheme())
 
-  // Greeting animation — only on first visit per browser session
-  const [greetingPhase, setGreetingPhase] = useState<'servus' | 'name' | 'exit' | 'done'>('servus')
+  const [greetingPhase, setGreetingPhase] = useState<'loading' | 'servus' | 'name' | 'exit' | 'done'>('loading')
 
   useEffect(() => {
+    // Only start text animation once data has loaded
+    if (authLoading || loading) return
+    if (greetingPhase === 'loading') { setGreetingPhase('servus'); return }
     if (greetingPhase === 'done') return
     if (greetingPhase === 'servus') {
       const t = setTimeout(() => setGreetingPhase('name'), 1300)
@@ -102,7 +104,7 @@ export default function Unitas() {
       const t = setTimeout(() => setGreetingPhase('done'), 550)
       return () => clearTimeout(t)
     }
-  }, [greetingPhase])
+  }, [greetingPhase, authLoading, loading])
 
   const initials = (name?: string) => {
     if (!name) return '?'
@@ -282,14 +284,6 @@ export default function Unitas() {
     }
   }
 
-  if (authLoading || loading) {
-    return (
-      <div style={{ minHeight: '100dvh', background: '#1a0104', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Atkinson Hyperlegible', -apple-system, sans-serif" }}>
-        <div style={{ width: 36, height: 36, border: '3px solid rgba(255,255,255,0.12)', borderTopColor: 'rgba(255,255,255,0.6)', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
-        <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
-      </div>
-    )
-  }
 
   const upcomingTermine = termine.filter(t => t.status !== 'abgeschlossen' && t.status !== 'abgesagt')
   const doneMods = progress.filter(p => p.abgeschlossen_am).length
@@ -328,31 +322,35 @@ export default function Unitas() {
           {/* Glow ring */}
           <div style={{ position: 'absolute', width: '50vw', maxWidth: 320, height: '50vw', maxHeight: 320, borderRadius: '50%', background: 'radial-gradient(circle, rgba(220,40,60,0.22) 0%, transparent 70%)', pointerEvents: 'none' }} />
 
-          <div style={{ textAlign: 'center', position: 'relative' }}>
-            {/* "Servus" */}
-            <div key="servus" style={{
-              position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
-              fontSize: 'clamp(52px, 14vw, 100px)', fontWeight: 800, color: '#fff',
-              letterSpacing: '-0.03em', lineHeight: 1, whiteSpace: 'nowrap',
-              fontFamily: "'Atkinson Hyperlegible', -apple-system, sans-serif",
-              animation: greetingPhase === 'servus' ? 'greetIn 0.7s cubic-bezier(0.34,1.56,0.64,1) both' : 'greetOut 0.35s ease-in forwards',
-            }}>Servus</div>
-            {/* First name */}
-            <div key="name" style={{
-              position: 'relative',
-              fontSize: 'clamp(52px, 14vw, 100px)', fontWeight: 800,
-              letterSpacing: '-0.03em', lineHeight: 1, whiteSpace: 'nowrap',
-              fontFamily: "'Atkinson Hyperlegible', -apple-system, sans-serif",
-              background: 'linear-gradient(135deg, #fca5a5 0%, #f87171 40%, #fbbf24 100%)',
-              WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text',
-              animation: greetingPhase === 'name' || greetingPhase === 'exit'
-                ? 'greetIn 0.55s cubic-bezier(0.34,1.56,0.64,1) both'
-                : 'none',
-              opacity: greetingPhase === 'servus' ? 0 : 1,
-              visibility: greetingPhase === 'servus' ? 'hidden' : 'visible',
-            }}>{user?.name?.split(' ')[0]}</div>
-          </div>
+          {greetingPhase === 'loading' ? (
+            <div style={{ width: 36, height: 36, border: '3px solid rgba(255,255,255,0.15)', borderTopColor: 'rgba(255,255,255,0.7)', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
+          ) : (
+            <div style={{ textAlign: 'center', position: 'relative' }}>
+              {/* "Servus" */}
+              <div key="servus" style={{
+                position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
+                fontSize: 'clamp(52px, 14vw, 100px)', fontWeight: 800, color: '#fff',
+                letterSpacing: '-0.03em', lineHeight: 1, whiteSpace: 'nowrap',
+                fontFamily: "'Atkinson Hyperlegible', -apple-system, sans-serif",
+                animation: greetingPhase === 'servus' ? 'greetIn 0.7s cubic-bezier(0.34,1.56,0.64,1) both' : 'greetOut 0.35s ease-in forwards',
+              }}>Servus</div>
+              {/* First name */}
+              <div key="name" style={{
+                position: 'relative',
+                fontSize: 'clamp(52px, 14vw, 100px)', fontWeight: 800,
+                letterSpacing: '-0.03em', lineHeight: 1, whiteSpace: 'nowrap',
+                fontFamily: "'Atkinson Hyperlegible', -apple-system, sans-serif",
+                background: 'linear-gradient(135deg, #fca5a5 0%, #f87171 40%, #fbbf24 100%)',
+                WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+                animation: greetingPhase === 'name' || greetingPhase === 'exit'
+                  ? 'greetIn 0.55s cubic-bezier(0.34,1.56,0.64,1) both'
+                  : 'none',
+                opacity: greetingPhase === 'servus' ? 0 : 1,
+                visibility: greetingPhase === 'servus' ? 'hidden' : 'visible',
+              }}>{user?.name?.split(' ')[0]}</div>
+            </div>
+          )}
         </div>
       )}
 
@@ -882,6 +880,7 @@ export default function Unitas() {
           from { transform: translateX(-50%) translateY(20px); opacity: 0; }
           to   { transform: translateX(-50%) translateY(0);    opacity: 1; }
         }
+        @keyframes spin { to { transform: rotate(360deg); } }
         @keyframes greetIn {
           from { opacity: 0; transform: scale(0.92) translateY(16px); }
           to   { opacity: 1; transform: scale(1)    translateY(0); }
