@@ -11,6 +11,15 @@ import ProtokollView from '../../components/ProtokollView'
 import type { Patient, Nacherfassung, PatientPayload, NachForm } from './types'
 import { EMPTY_PAYLOAD, EMPTY_NACH, parsePayload, fmtDate } from './types'
 
+function fmtReopenRemaining(expiresAt: string): string {
+  const ms = new Date(expiresAt).getTime() - Date.now()
+  if (ms <= 0) return 'abgelaufen'
+  const totalMin = Math.floor(ms / 60000)
+  const h = Math.floor(totalMin / 60)
+  const min = totalMin % 60
+  return h > 0 ? `noch ${h}h ${min}min` : `noch ${min}min`
+}
+
 type Tab = 'patienten' | 'nach' | 'archiv' | 'audit' | 'qrcodes'
 
 interface AuditEntry {
@@ -859,6 +868,21 @@ export default function Patienten() {
                                 {canSign ? '✓ Gegenzeichnen' : 'Gegenzeichnen'}
                               </button>
                             </div>
+
+                            {/* Nachbearbeitung status */}
+                            {reopenActive && (
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 10, background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 8, padding: '6px 10px' }}>
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#1d4ed8" strokeWidth="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                                <span style={{ fontSize: 12, fontWeight: 700, color: '#1d4ed8' }}>TF Nachbearbeitung läuft</span>
+                                <span style={{ fontSize: 12, color: '#3b82f6', marginLeft: 2 }}>· {fmtReopenRemaining((pat as any).payload.tf_reopen.expires_at)}</span>
+                              </div>
+                            )}
+                            {hasTFReopen && !reopenActive && (
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 10, background: 'var(--bg-subtle)', border: '1px solid var(--border)', borderRadius: 8, padding: '6px 10px' }}>
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" strokeWidth="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                                <span style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600 }}>Nachbearbeitung abgelaufen</span>
+                              </div>
+                            )}
 
                             {/* Change indicators */}
                             {(changedCount > 0 || tfChangedCount > 0 || sns.length > 0) && (
