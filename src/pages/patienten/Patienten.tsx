@@ -797,8 +797,8 @@ export default function Patienten() {
                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
                 <polyline points="14 2 14 8 20 8"/>
               </svg>
-              <div style={{ fontWeight: 700, marginBottom: '6px' }}>Keine offenen Patientendokus</div>
-              <div style={{ fontSize: '13px' }}>Neue Dokus werden hier angezeigt, sobald sie eingereicht werden.</div>
+              <div style={{ fontWeight: 700, marginBottom: '6px' }}>Keine offenen Protokolle</div>
+              <div style={{ fontSize: '13px' }}>Neue Protokolle werden hier angezeigt, sobald sie eingereicht werden.</div>
             </div>
           ) : (
             <>
@@ -824,41 +824,52 @@ export default function Patienten() {
                       const hasTFReopen = !!(pat as any).payload?.tf_reopen
                       const reopenActive = hasTFReopen && new Date((pat as any).payload.tf_reopen.expires_at) > new Date()
                       const tfChangedCount = ((pat as any).payload?._tf_changed_fields || []).length
+                      const accentColor = openRQ > 0 ? '#f59e0b' : '#16a34a'
+                      const accentDark = openRQ > 0 ? '#92400e' : '#166534'
                       return (
-                        <div key={pat.id} className="pat-card" style={{ borderLeft: `3px solid ${openRQ > 0 ? '#f59e0b' : '#16a34a'}`, padding: 0, overflow: 'hidden' }}>
-                          {/* Top: name + date */}
-                          <div style={{ padding: '14px 16px 10px', borderBottom: '0.5px solid var(--border)' }}>
-                            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, marginBottom: 6 }}>
-                              <div>
-                                <div style={{ fontSize: 11, fontWeight: 700, color: '#16a34a', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2 }}>Patientendoku · {fmtDate(pat.created)}</div>
-                                <div style={{ fontWeight: 800, fontSize: 17, color: 'var(--text)', lineHeight: 1.2 }}>{displayName}</div>
-                                {crew && <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 3 }}>{crew}</div>}
+                        <div key={pat.id} style={{ background: 'var(--bg-card)', borderRadius: 16, overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.07)', border: '1px solid var(--border)' }}>
+                          {/* Header band */}
+                          <div style={{ background: accentColor, padding: '10px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.9)" strokeWidth="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                              <span style={{ color: '#fff', fontWeight: 800, fontSize: 11, letterSpacing: '0.1em' }}>PROTOKOLL</span>
+                              {openRQ > 0 && <span style={{ background: 'rgba(0,0,0,0.18)', color: '#fff', fontSize: 10, fontWeight: 700, borderRadius: 999, padding: '1px 7px', letterSpacing: '0.03em' }}>⚠ {openRQ} Rückfrage{openRQ !== 1 ? 'n' : ''}</span>}
+                            </div>
+                            <span style={{ color: 'rgba(255,255,255,0.85)', fontSize: 12, fontWeight: 500 }}>{fmtDate(pat.created)}</span>
+                          </div>
+
+                          {/* Body */}
+                          <div style={{ padding: '14px 16px 12px' }}>
+                            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, justifyContent: 'space-between' }}>
+                              <div style={{ minWidth: 0 }}>
+                                <div style={{ fontWeight: 800, fontSize: 18, color: 'var(--text)', lineHeight: 1.2, marginBottom: 4 }}>{displayName}</div>
+                                {crew && <div style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 500 }}>{crew}</div>}
                               </div>
                               <button
-                                style={{ flexShrink: 0, background: canSign ? '#f97316' : '#e5e7eb', color: canSign ? '#fff' : '#9ca3af', border: 'none', borderRadius: 10, padding: '9px 14px', fontWeight: 700, fontSize: 13, cursor: canSign ? 'pointer' : 'not-allowed', fontFamily: 'inherit', whiteSpace: 'nowrap' }}
+                                style={{ flexShrink: 0, background: canSign ? accentColor : 'var(--border)', color: canSign ? '#fff' : 'var(--text-secondary)', border: 'none', borderRadius: 12, padding: '10px 16px', fontWeight: 700, fontSize: 13, cursor: canSign ? 'pointer' : 'not-allowed', fontFamily: 'inherit', lineHeight: 1 }}
                                 onClick={() => canSign && openEdit(pat)}
-                                title={!canSign ? `Erst alle ${openRQ} offene Rückfrage${openRQ !== 1 ? 'n' : ''} beantworten` : ''}
+                                title={!canSign ? `Erst alle ${openRQ} offenen Rückfragen beantworten` : ''}
                               >
-                                Gegenzeichnen
+                                {canSign ? '✓ Gegenzeichnen' : 'Gegenzeichnen'}
                               </button>
                             </div>
-                            {/* Badges */}
-                            <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
-                              {openRQ > 0
-                                ? <span style={{ fontSize: 11, fontWeight: 700, background: '#fef9c3', color: '#92400e', border: '1px solid #fcd34d', borderRadius: 999, padding: '2px 8px' }}>{openRQ} Rückfrage{openRQ !== 1 ? 'n' : ''} offen</span>
-                                : <span style={{ fontSize: 11, fontWeight: 700, background: '#dcfce7', color: '#166534', border: '1px solid #bbf7d0', borderRadius: 999, padding: '2px 8px' }}>Freigegeben</span>
-                              }
-                              {changedCount > 0 && <span style={{ fontSize: 11, fontWeight: 700, background: '#fffbeb', color: '#d97706', border: '1px solid #fde68a', borderRadius: 999, padding: '2px 8px' }}>● {changedCount} Admin-Änd.</span>}
-                              {tfChangedCount > 0 && <span style={{ fontSize: 11, fontWeight: 700, background: '#f0fdf4', color: '#16a34a', border: '1px solid #86efac', borderRadius: 999, padding: '2px 8px' }}>● {tfChangedCount} TF-Nachbearb.</span>}
-                              {sns.length > 0 && <span style={{ fontSize: 11, fontWeight: 700, background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe', borderRadius: 999, padding: '2px 8px' }}>{sns.length} Stellungnahme{sns.length !== 1 ? 'n' : ''}</span>}
-                            </div>
+
+                            {/* Change indicators */}
+                            {(changedCount > 0 || tfChangedCount > 0 || sns.length > 0) && (
+                              <div style={{ display: 'flex', gap: 14, marginTop: 10, flexWrap: 'wrap' }}>
+                                {changedCount > 0 && <span style={{ fontSize: 12, fontWeight: 600, color: '#d97706', display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ width: 8, height: 8, borderRadius: '50%', background: '#d97706', display: 'inline-block' }} />{changedCount} Admin-Änd.</span>}
+                                {tfChangedCount > 0 && <span style={{ fontSize: 12, fontWeight: 600, color: '#16a34a', display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ width: 8, height: 8, borderRadius: '50%', background: '#16a34a', display: 'inline-block' }} />{tfChangedCount} TF-Nachbearb.</span>}
+                                {sns.length > 0 && <span style={{ fontSize: 12, fontWeight: 600, color: '#3b82f6', display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ width: 8, height: 8, borderRadius: '50%', background: '#3b82f6', display: 'inline-block' }} />{sns.length} Stellungnahme{sns.length !== 1 ? 'n' : ''}</span>}
+                              </div>
+                            )}
                           </div>
-                          {/* Bottom: action buttons */}
-                          <div style={{ padding: '8px 12px', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+
+                          {/* Action footer */}
+                          <div style={{ borderTop: '1px solid var(--border)', padding: '8px 12px', display: 'flex', gap: 6, background: 'var(--bg)', flexWrap: 'wrap' }}>
                             <button className="pat-btn" onClick={() => setProtokollSheet(pat)}>Ansehen</button>
                             <button className="pat-btn" onClick={() => openEdit(pat)}>Bearbeiten</button>
-                            {openRQ > 0 && <button className="pat-btn" style={{ color: '#92400e', borderColor: '#fcd34d' }} onClick={() => { setStellungnahmePat(pat); setShowStellungnahme(true) }}>Stellungnahme ({openRQ})</button>}
-                            <button className="pat-btn" onClick={() => setReopenModal(pat)}>Nachbearbeitung</button>
+                            {openRQ > 0 && <button className="pat-btn" style={{ color: accentDark, borderColor: accentColor }} onClick={() => { setStellungnahmePat(pat); setShowStellungnahme(true) }}>Anfragen ({openRQ})</button>}
+                            <button className="pat-btn" onClick={() => setReopenModal(pat)}>Nachbearbeit.</button>
                           </div>
                         </div>
                       )
@@ -884,7 +895,7 @@ export default function Patienten() {
                       const hoursLeft = Math.max(0, Math.ceil(24 - ageMs / 3600000))
                       return (
                         <div key={pat.id} className="pat-card offen" style={{ opacity: 0.8 }}>
-                          <div className="pat-card-type">Patientendoku</div>
+                          <div className="pat-card-type">Protokoll</div>
                           <div className="pat-card-name">{displayName}</div>
                           <div className="pat-card-meta">
                             {crew ? `Mannschaft: ${crew}` : null}
@@ -990,7 +1001,7 @@ export default function Patienten() {
                         return (
                           <div key={item.id} className={`pat-card ${item.isOld ? 'old' : 'archiviert'}`}>
                             <div className="pat-card-type">
-                              {item.type === 'patient' ? 'Patientendoku' : 'Nacherfassung'}
+                              {item.type === 'patient' ? 'Protokoll' : 'Nacherfassung'}
                             </div>
                             <div className="pat-card-name">{item.title}</div>
                             <div className="pat-card-meta">
