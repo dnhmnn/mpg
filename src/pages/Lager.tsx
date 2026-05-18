@@ -116,6 +116,9 @@ export default function Lager() {
   const [editingOutputId, setEditingOutputId] = useState<string | null>(null)
   const [editedPositionen, setEditedPositionen] = useState<Record<string, Array<{ qty: number; name: string; item_id?: string; unit?: string }>>>({})
   const [savingEdit, setSavingEdit] = useState(false)
+  const [addItemId, setAddItemId] = useState<Record<string, string>>({})
+  const [addItemQty, setAddItemQty] = useState<Record<string, number>>({})
+  const [addFreetext, setAddFreetext] = useState<Record<string, string>>({})
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<'all' | 'warning' | 'expired'>('all')
   const [showLowOnly, setShowLowOnly] = useState(false)
@@ -2971,9 +2974,94 @@ export default function Lager() {
                               {pos.item_id
                                 ? <span style={{ fontSize: 11, color: '#16a34a', fontWeight: 700 }}>Lager</span>
                                 : <span style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 600 }}>Freitext</span>}
+                              {isEditing && (
+                                <button
+                                  type="button"
+                                  onClick={() => setEditedPositionen(prev => {
+                                    const copy = (prev[output.id] ?? p.positionen.map(p2 => ({ ...p2 }))).filter((_, i2) => i2 !== idx)
+                                    return { ...prev, [output.id]: copy }
+                                  })}
+                                  style={{ width: 22, height: 22, borderRadius: '50%', border: '1px solid #fca5a5', background: '#fef2f2', color: '#dc2626', fontSize: 14, lineHeight: 1, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}
+                                  title="Entfernen"
+                                >×</button>
+                              )}
                             </div>
                           </div>
                         ))}
+
+                        {/* Add position row */}
+                        {isEditing && (
+                          <div style={{ marginTop: 8, padding: '10px 10px', background: 'var(--bg-card)', borderRadius: 8, border: '1px dashed var(--border-medium)' }}>
+                            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>Artikel hinzufügen</div>
+                            <div style={{ display: 'flex', gap: 6, marginBottom: 6 }}>
+                              <select
+                                value={addItemId[output.id] ?? ''}
+                                onChange={e => setAddItemId(prev => ({ ...prev, [output.id]: e.target.value }))}
+                                style={{ flex: 1, padding: '6px 8px', borderRadius: 7, border: '0.5px solid var(--border-medium)', background: 'var(--bg-input)', color: 'var(--text)', fontSize: 13, fontFamily: 'inherit' }}
+                              >
+                                <option value="">— Lagerartikel wählen —</option>
+                                {allItems.map(item => (
+                                  <option key={item.id} value={item.id}>{item.name} ({item.unit})</option>
+                                ))}
+                              </select>
+                              <input
+                                type="number" min={1}
+                                placeholder="Menge"
+                                value={addItemQty[output.id] ?? ''}
+                                onChange={e => setAddItemQty(prev => ({ ...prev, [output.id]: Number(e.target.value) }))}
+                                style={{ width: 70, padding: '6px 8px', borderRadius: 7, border: '0.5px solid var(--border-medium)', background: 'var(--bg-input)', color: 'var(--text)', fontSize: 13, textAlign: 'center' }}
+                              />
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const item = allItems.find(i => i.id === (addItemId[output.id] ?? ''))
+                                  if (!item) return
+                                  const qty = addItemQty[output.id] || 1
+                                  setEditedPositionen(prev => {
+                                    const cur = prev[output.id] ?? p.positionen.map(p2 => ({ ...p2 }))
+                                    return { ...prev, [output.id]: [...cur, { name: item.name, qty, item_id: item.id, unit: item.unit }] }
+                                  })
+                                  setAddItemId(prev => ({ ...prev, [output.id]: '' }))
+                                  setAddItemQty(prev => ({ ...prev, [output.id]: 1 }))
+                                }}
+                                disabled={!addItemId[output.id]}
+                                style={{ padding: '6px 12px', borderRadius: 7, border: 'none', background: 'var(--accent)', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', opacity: addItemId[output.id] ? 1 : 0.4 }}
+                              >+</button>
+                            </div>
+                            <div style={{ display: 'flex', gap: 6 }}>
+                              <input
+                                type="text"
+                                placeholder="Freitext-Artikel (Name)"
+                                value={addFreetext[output.id] ?? ''}
+                                onChange={e => setAddFreetext(prev => ({ ...prev, [output.id]: e.target.value }))}
+                                style={{ flex: 1, padding: '6px 8px', borderRadius: 7, border: '0.5px solid var(--border-medium)', background: 'var(--bg-input)', color: 'var(--text)', fontSize: 13 }}
+                              />
+                              <input
+                                type="number" min={1}
+                                placeholder="Menge"
+                                value={addItemQty[`${output.id}_ft`] ?? ''}
+                                onChange={e => setAddItemQty(prev => ({ ...prev, [`${output.id}_ft`]: Number(e.target.value) }))}
+                                style={{ width: 70, padding: '6px 8px', borderRadius: 7, border: '0.5px solid var(--border-medium)', background: 'var(--bg-input)', color: 'var(--text)', fontSize: 13, textAlign: 'center' }}
+                              />
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const name = (addFreetext[output.id] ?? '').trim()
+                                  if (!name) return
+                                  const qty = addItemQty[`${output.id}_ft`] || 1
+                                  setEditedPositionen(prev => {
+                                    const cur = prev[output.id] ?? p.positionen.map(p2 => ({ ...p2 }))
+                                    return { ...prev, [output.id]: [...cur, { name, qty }] }
+                                  })
+                                  setAddFreetext(prev => ({ ...prev, [output.id]: '' }))
+                                  setAddItemQty(prev => ({ ...prev, [`${output.id}_ft`]: 1 }))
+                                }}
+                                disabled={!(addFreetext[output.id] ?? '').trim()}
+                                style={{ padding: '6px 12px', borderRadius: 7, border: '0.5px solid var(--border-medium)', background: 'var(--bg-subtle)', color: 'var(--text)', fontSize: 13, fontWeight: 700, cursor: 'pointer', opacity: (addFreetext[output.id] ?? '').trim() ? 1 : 0.4 }}
+                              >+</button>
+                            </div>
+                          </div>
+                        )}
                       </div>
 
                       {withoutItemId.length > 0 && (
