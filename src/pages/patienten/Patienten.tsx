@@ -36,13 +36,16 @@ export default function Patienten() {
   const { user, loading, logout } = useAuth()
 
   const [patients, setPatients] = useState<Patient[]>([])
-  const [abgeschlossenPatients, setAbgeschlossenPatients] = useState<Patient[]>([])
+  const [freigegebenPatients, setFreigegebenPatients] = useState<Patient[]>([])
   const [nacherfassungen, setNacherfassungen] = useState<Nacherfassung[]>([])
   const [archivedPatients, setArchivedPatients] = useState<Patient[]>([])
   const [archivedNach, setArchivedNach] = useState<Nacherfassung[]>([])
   const [auditLogs, setAuditLogs] = useState<AuditEntry[]>([])
   const [accessLogs, setAccessLogs] = useState<AccessLogEntry[]>([])
   const [activeTab, setActiveTab] = useState<Tab>('patienten')
+
+  const [reopenModal, setReopenModal] = useState<Patient | null>(null)
+  const [reopenHours, setReopenHours] = useState(24)
 
   const [showEdit, setShowEdit] = useState(false)
   const [currentPatient, setCurrentPatient] = useState<Patient | null>(null)
@@ -80,13 +83,26 @@ export default function Patienten() {
     const org = user.organization_id
     setDataLoading(true)
     try {
-      const [pats, abgPats, nachs] = await Promise.all([
+      const [openList, freiList, nachs] = await Promise.all([
         pb.collection('patients').getFullList({ filter: `status="offen"&&organization_id="${org}"`, sort: '-created' }),
-        pb.collection('patients').getFullList({ filter: `status="abgeschlossen"&&organization_id="${org}"`, sort: '-created' }),
+        pb.collection('patients').getFullList({ filter: `status="freigegeben"&&organization_id="${org}"`, sort: '-created' }),
         pb.collection('patient_docs_nacherfassung').getFullList({ filter: `status="offen"&&organization_id="${org}"`, sort: '-created' }),
       ])
-      setPatients(pats as unknown as Patient[])
-      setAbgeschlossenPatients(abgPats as unknown as Patient[])
+      // Auto-freigabe: offen records older than 24h
+      const now = Date.now()
+      const stillOpen: Patient[] = []
+      for (const p of openList as unknown as Patient[]) {
+        if (now - new Date(p.created).getTime() > 24 * 3600 * 1000) {
+          try {
+            await pb.collection('patients').update(p.id, { status: 'freigegeben' })
+            freiList.push({ ...p, status: 'freigegeben' } as any)
+          } catch {}
+        } else {
+          stillOpen.push(p)
+        }
+      }
+      setPatients(stillOpen)
+      setFreigegebenPatients(freiList as unknown as Patient[])
       setNacherfassungen(nachs as unknown as Nacherfassung[])
     } catch (e: any) {
       flash('Fehler beim Laden: ' + e.message, 'error')
@@ -236,6 +252,35 @@ export default function Patienten() {
       setShowNach(false)
       setNachForm({ ...EMPTY_NACH })
       await loadData()
+    } catch (e: any) {
+      flash('Fehler: ' + e.message, 'error')
+    }
+  }
+
+  async function reopenForTF(patient: Patient, hours: number) {
+    const now = new Date()
+    const expires = new Date(now.getTime() + hours * 3600 * 1000)
+    const adminName = (user as any)?.name || user?.email || 'Admin'
+    const sysRQ = {
+      id: Date.now().toString(),
+      frage: `Protokoll wurde am ${now.toLocaleString('de-DE')} für ${hours} Stunden zur Weiterbearbeitung an den Teamleiter gesendet (durch ${adminName}).`,
+      created_by: 'System',
+      status: 'beantwortet' as const,
+      created: now.toISOString(),
+    }
+    const pl = parsePayload((patient as any).payload)
+    const existingRQs = pl.rueckfragen || []
+    try {
+      await pb.collection('patients').update(patient.id, {
+        payload: {
+          ...pl,
+          tf_reopen: { opened_at: now.toISOString(), expires_at: expires.toISOString(), opened_by: adminName },
+          rueckfragen: [...existingRQs, sysRQ],
+        }
+      })
+      flash(`Protokoll für ${hours}h zur Nachbearbeitung geöffnet`, 'success')
+      setReopenModal(null)
+      await loadOpenData()
     } catch (e: any) {
       flash('Fehler: ' + e.message, 'error')
     }
@@ -619,7 +664,7 @@ export default function Patienten() {
             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
             <polyline points="14 2 14 8 20 8"/>
           </svg>
-          <span className="pat-tab-label">Dokus{(patients.length + abgeschlossenPatients.length) > 0 ? ` (${patients.length + abgeschlossenPatients.length})` : ''}</span>
+          <span className="pat-tab-label">Dokus{(patients.length + freigegebenPatients.length) > 0 ? ` (${patients.length + freigegebenPatients.length})` : ''}</span>
         </button>
         <button
           className={`pat-tab-btn${activeTab === 'nach' ? ' active' : ''}`}
@@ -690,7 +735,7 @@ export default function Patienten() {
               <div style={{ width: '32px', height: '32px', border: '3px solid var(--border)', borderTopColor: 'var(--accent)', borderRadius: '50%', animation: 'spin 0.7s linear infinite', margin: '0 auto 14px' }} />
               <div style={{ fontSize: '14px' }}>Lade Dokus...</div>
             </div>
-          ) : patients.length === 0 && abgeschlossenPatients.length === 0 ? (
+          ) : patients.length === 0 && freigegebenPatients.length === 0 ? (
             <div className="pat-empty">
               <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ opacity: 0.3, marginBottom: '14px' }}>
                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
@@ -701,14 +746,15 @@ export default function Patienten() {
             </div>
           ) : (
             <>
-              {abgeschlossenPatients.length > 0 && (
+              {/* Freigegeben — ready for admin action */}
+              {freigegebenPatients.length > 0 && (
                 <>
-                  <div style={{ fontWeight: 700, fontSize: 12, color: '#c2410c', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{ fontWeight: 700, fontSize: 12, color: '#166534', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-                    Gegenzeichnung ausstehend ({abgeschlossenPatients.length})
+                    Freigegeben – Gegenzeichnung möglich ({freigegebenPatients.length})
                   </div>
                   <div className="pat-grid" style={{ marginBottom: 24 }}>
-                    {abgeschlossenPatients.map(pat => {
+                    {freigegebenPatients.map(pat => {
                       const p = parsePayload(pat.payload)
                       const patName = [p.name, p.vorname].filter(Boolean).join(' ')
                       const m = (pat as any).payload?.mannschaft || {}
@@ -717,8 +763,12 @@ export default function Patienten() {
                       const rqs: any[] = Array.isArray((pat as any).payload?.rueckfragen) ? (pat as any).payload.rueckfragen : []
                       const sns: any[] = Array.isArray((pat as any).payload?.stellungnahmen) ? (pat as any).payload.stellungnahmen : []
                       const openRQ = rqs.filter((r: any) => r.status === 'offen').length
+                      const canSign = openRQ === 0
+                      const changedCount = ((pat as any).payload?._changed_fields || []).length
+                      const hasTFReopen = !!(pat as any).payload?.tf_reopen
+                      const reopenActive = hasTFReopen && new Date((pat as any).payload.tf_reopen.expires_at) > new Date()
                       return (
-                        <div key={pat.id} className="pat-card abgeschlossen" style={{ borderColor: '#f97316' }}>
+                        <div key={pat.id} className="pat-card" style={{ borderLeftColor: '#16a34a', borderColor: openRQ > 0 ? '#f59e0b' : undefined }}>
                           <div className="pat-card-type">Patientendoku</div>
                           <div className="pat-card-name">{displayName}</div>
                           <div className="pat-card-meta">
@@ -726,21 +776,28 @@ export default function Patienten() {
                             {crew ? <br /> : null}
                             {fmtDate(pat.created)}
                           </div>
-                          {(rqs.length > 0) && (
-                            <div style={{ padding: '6px 0 2px', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                              {openRQ > 0 && <span style={{ fontSize: 11, fontWeight: 700, background: '#fef9c3', color: '#92400e', border: '1px solid #fcd34d', borderRadius: 999, padding: '2px 8px' }}>{openRQ} Rückfrage{openRQ !== 1 ? 'n' : ''} offen</span>}
-                              {sns.length > 0 && <span style={{ fontSize: 11, fontWeight: 700, background: '#dcfce7', color: '#166534', border: '1px solid #bbf7d0', borderRadius: 999, padding: '2px 8px' }}>{sns.length} Stellungnahme{sns.length !== 1 ? 'n' : ''}</span>}
-                            </div>
-                          )}
+                          <div style={{ padding: '4px 0 2px', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                            <span style={{ fontSize: 11, fontWeight: 700, background: '#dcfce7', color: '#166534', border: '1px solid #bbf7d0', borderRadius: 999, padding: '2px 8px' }}>Freigegeben</span>
+                            {openRQ > 0 && <span style={{ fontSize: 11, fontWeight: 700, background: '#fef9c3', color: '#92400e', border: '1px solid #fcd34d', borderRadius: 999, padding: '2px 8px' }}>{openRQ} Rückfrage{openRQ !== 1 ? 'n' : ''} offen</span>}
+                            {sns.length > 0 && <span style={{ fontSize: 11, fontWeight: 700, background: '#dcfce7', color: '#166534', border: '1px solid #bbf7d0', borderRadius: 999, padding: '2px 8px' }}>{sns.length} Stellungnahme{sns.length !== 1 ? 'n' : ''}</span>}
+                            {changedCount > 0 && <span style={{ fontSize: 11, fontWeight: 700, background: '#fffbeb', color: '#d97706', border: '1px solid #fde68a', borderRadius: 999, padding: '2px 8px' }}>{changedCount} Änderung{changedCount !== 1 ? 'en' : ''}</span>}
+                            {reopenActive && <span style={{ fontSize: 11, fontWeight: 700, background: '#dcfce7', color: '#166534', border: '1px solid #bbf7d0', borderRadius: 999, padding: '2px 8px' }}>TF bearbeitet</span>}
+                          </div>
                           <div className="pat-card-footer">
-                            <span className="pat-badge abgeschlossen">Abgeschlossen</span>
                             <div style={{ flex: 1 }} />
                             {rqs.length > 0 && (
                               <button className="pat-btn" onClick={() => { setStellungnahmePat(pat); setShowStellungnahme(true) }}>
                                 Stellungnahme{openRQ > 0 ? ` (${openRQ})` : ''}
                               </button>
                             )}
-                            <button className="pat-btn" style={{ background: '#f97316', color: '#fff' }} onClick={() => openEdit(pat)}>
+                            <button className="pat-btn" onClick={() => setReopenModal(pat)}>Nachbearbeitung</button>
+                            <button className="pat-btn" onClick={() => openEdit(pat)}>Bearbeiten</button>
+                            <button
+                              className="pat-btn"
+                              style={{ background: canSign ? '#f97316' : '#e5e7eb', color: canSign ? '#fff' : '#9ca3af', cursor: canSign ? 'pointer' : 'not-allowed' }}
+                              onClick={() => canSign && openEdit(pat)}
+                              title={!canSign ? `Erst alle ${openRQ} offene Rückfrage${openRQ !== 1 ? 'n' : ''} beantworten` : ''}
+                            >
                               Gegenzeichnen
                             </button>
                           </div>
@@ -750,60 +807,46 @@ export default function Patienten() {
                   </div>
                 </>
               )}
+              {/* Offen — not yet released by TF */}
               {patients.length > 0 && (
-                <div className="pat-grid">
-                  {patients.map(pat => {
-                    const p = parsePayload(pat.payload)
-                    const patName = [p.name, p.vorname].filter(Boolean).join(' ')
-                    const isDraft = !patName
-                    const m = (pat as any).payload?.mannschaft || {}
-                    const crew = ['tf','m1','m2','m3'].map((k: string) => m[k]?.name).filter(Boolean).join(', ')
-                    const displayName = patName || crew || pat.title || 'Unbekannt'
-                    const hasCrewUsers = ['tf','m1','m2','m3'].some(k => m[k]?.id)
-                    const ageMs = Date.now() - new Date(pat.created).getTime()
-                    const crewStillEditing = hasCrewUsers && ageMs < 24 * 60 * 60 * 1000
-                    const rqs: any[] = Array.isArray((pat as any).payload?.rueckfragen) ? (pat as any).payload.rueckfragen : []
-                    const sns: any[] = Array.isArray((pat as any).payload?.stellungnahmen) ? (pat as any).payload.stellungnahmen : []
-                    const openRQ = rqs.filter((r: any) => r.status === 'offen').length
-                    const hasRQ = rqs.length > 0
-                    return (
-                      <div key={pat.id} className={`pat-card ${isDraft ? 'entwurf' : 'offen'}`} style={openRQ > 0 ? { borderColor: '#f59e0b' } : undefined}>
-                        <div className="pat-card-type">{isDraft ? 'Entwurf' : 'Patientendoku'}</div>
-                        <div className="pat-card-name">{displayName}</div>
-                        <div className="pat-card-meta">
-                          {isDraft && crew ? `Mannschaft: ${crew}` : null}
-                          {isDraft && crew ? <br /> : null}
-                          {fmtDate(pat.created)}
-                        </div>
-                        {hasRQ && (
-                          <div style={{ padding: '6px 0 2px', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                            {openRQ > 0 && <span style={{ fontSize: 11, fontWeight: 700, background: '#fef9c3', color: '#92400e', border: '1px solid #fcd34d', borderRadius: 999, padding: '2px 8px' }}>{openRQ} Rückfrage{openRQ !== 1 ? 'n' : ''} offen</span>}
-                            {sns.length > 0 && <span style={{ fontSize: 11, fontWeight: 700, background: '#dcfce7', color: '#166534', border: '1px solid #bbf7d0', borderRadius: 999, padding: '2px 8px' }}>{sns.length} Stellungnahme{sns.length !== 1 ? 'n' : ''} eingegangen</span>}
+                <>
+                  <div style={{ fontWeight: 700, fontSize: 12, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    Noch nicht freigegeben ({patients.length})
+                  </div>
+                  <div className="pat-grid">
+                    {patients.map(pat => {
+                      const p = parsePayload(pat.payload)
+                      const patName = [p.name, p.vorname].filter(Boolean).join(' ')
+                      const m = (pat as any).payload?.mannschaft || {}
+                      const crew = ['tf','m1','m2','m3'].map((k: string) => m[k]?.name).filter(Boolean).join(', ')
+                      const displayName = patName || crew || pat.title || 'Unbekannt'
+                      const ageMs = Date.now() - new Date(pat.created).getTime()
+                      const hoursLeft = Math.max(0, Math.ceil(24 - ageMs / 3600000))
+                      return (
+                        <div key={pat.id} className="pat-card offen" style={{ opacity: 0.8 }}>
+                          <div className="pat-card-type">Patientendoku</div>
+                          <div className="pat-card-name">{displayName}</div>
+                          <div className="pat-card-meta">
+                            {crew ? `Mannschaft: ${crew}` : null}
+                            {crew ? <br /> : null}
+                            {fmtDate(pat.created)}
                           </div>
-                        )}
-                        <div className="pat-card-footer">
-                          <span className={`pat-badge ${isDraft ? 'entwurf' : 'offen'}`}>
-                            {isDraft ? 'Entwurf' : 'offen'}
-                          </span>
-                          <div style={{ flex: 1 }} />
-                          {hasRQ && (
-                            <button className="pat-btn" onClick={() => { setStellungnahmePat(pat); setShowStellungnahme(true) }}>
-                              Stellungnahme{openRQ > 0 ? ` (${openRQ})` : ''}
-                            </button>
-                          )}
-                          {crewStillEditing ? (
-                            <>
-                              <span className="pat-badge editing">In Bearbeitung</span>
-                              <button className="pat-btn" onClick={() => openDetails(pat.id, 'patient')}>Ansehen</button>
-                            </>
-                          ) : (
-                            <button className="pat-btn" onClick={() => openDetails(pat.id, 'patient')}>Bearbeiten</button>
-                          )}
+                          <div className="pat-card-footer">
+                            <span style={{ fontSize: 11, fontWeight: 700, background: '#f3f4f6', color: '#6b7280', border: '1px solid #e5e7eb', borderRadius: 999, padding: '2px 8px' }}>
+                              Noch nicht freigegeben
+                            </span>
+                            <span style={{ fontSize: 11, color: '#6b7280', marginLeft: 4 }}>
+                              {hoursLeft > 0 ? `noch ${hoursLeft}h` : 'Freigabe ausstehend'}
+                            </span>
+                            <div style={{ flex: 1 }} />
+                            <button className="pat-btn" onClick={() => openDetails(pat.id, 'patient')}>Ansehen</button>
+                          </div>
                         </div>
-                      </div>
-                    )
-                  })}
-                </div>
+                      )
+                    })}
+                  </div>
+                </>
               )}
             </>
           )
@@ -1030,6 +1073,42 @@ export default function Patienten() {
             : undefined}
         />
       )}
+
+      {/* Wiedereröffnen Modal */}
+      {reopenModal && (() => {
+        const pl = parsePayload((reopenModal as any).payload)
+        const patName = [pl.name, pl.vorname].filter(Boolean).join(' ') || reopenModal.title || 'Unbekannt'
+        return (
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 3100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+            <div style={{ background: 'var(--bg-card)', borderRadius: 18, width: '100%', maxWidth: 420, padding: '24px', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
+              <div style={{ fontWeight: 800, fontSize: 17, color: 'var(--text)', marginBottom: 6 }}>Zur Nachbearbeitung öffnen</div>
+              <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 20 }}>{patName}</div>
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: 'var(--text)', marginBottom: 6 }}>Dauer (Stunden)</label>
+                <input
+                  type="number"
+                  min={1}
+                  max={72}
+                  value={reopenHours}
+                  onChange={e => setReopenHours(Math.max(1, Math.min(72, Number(e.target.value))))}
+                  style={{ width: '100%', padding: '10px 12px', border: '1px solid var(--border)', borderRadius: 10, fontSize: 16, fontFamily: 'inherit', boxSizing: 'border-box' as const, background: 'var(--bg)', color: 'var(--text)' }}
+                />
+                <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 4 }}>
+                  Der Teamleiter hat {reopenHours} Stunden Zeit zur Nachbearbeitung. Ein System-Eintrag wird automatisch erstellt.
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+                <button onClick={() => setReopenModal(null)} style={{ padding: '10px 18px', background: 'var(--bg-subtle)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: 10, fontWeight: 600, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit' }}>
+                  Abbrechen
+                </button>
+                <button onClick={() => reopenForTF(reopenModal, reopenHours)} style={{ padding: '10px 18px', background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: 10, fontWeight: 700, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit' }}>
+                  Öffnen
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
 
       {/* Stellungnahmen-Modal */}
       {showStellungnahme && stellungnahmePat && (() => {

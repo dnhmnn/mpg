@@ -152,6 +152,7 @@ export default function Unitas() {
   const [progress, setProgress] = useState<ModulProgress[]>([])
   const [neuigkeiten, setNeuigkeiten] = useState<Neuigkeit[]>([])
   const [myPatients, setMyPatients] = useState<PatientRecord[]>([])
+  const [myFreigegebenPatients, setMyFreigegebenPatients] = useState<PatientRecord[]>([])
   const [myArchivedPatients, setMyArchivedPatients] = useState<PatientRecord[]>([])
   const [loading, setLoading] = useState(true)
   const navigate = useNavigate()
@@ -186,11 +187,13 @@ export default function Unitas() {
         const pl = typeof p.payload === 'string' ? JSON.parse(p.payload) : (p.payload || {})
         return ['tf','m1','m2','m3'].some((k: string) => pl.mannschaft?.[k]?.id === user!.id)
       }
-      const [open, archived] = await Promise.all([
+      const [open, freed, archived] = await Promise.all([
         pb.collection('patients').getFullList({ filter: `status = "offen" && organization_id = "${user.organization_id}"`, sort: '-created', requestKey: `unitas-pats-open-${Date.now()}` }),
+        pb.collection('patients').getFullList({ filter: `status = "freigegeben" && organization_id = "${user.organization_id}"`, sort: '-created', requestKey: `unitas-pats-freed-${Date.now()}` }),
         pb.collection('patients').getFullList({ filter: `status = "archiviert" && organization_id = "${user.organization_id}"`, sort: '-created', requestKey: `unitas-pats-arch-${Date.now()}` }),
       ])
       setMyPatients((open as any[]).filter(isMine))
+      setMyFreigegebenPatients((freed as any[]).filter(isMine))
       setMyArchivedPatients((archived as any[]).filter(isMine))
     } catch { /* ignore */ }
   }, [user])
@@ -411,7 +414,7 @@ export default function Unitas() {
         <div style={{ maxWidth: '640px', margin: '0 auto', display: 'flex', borderBottom: '1px solid var(--bg-subtle)' }}>
           <button style={tabStyle(tab === 'uebersicht')} onClick={() => setTab('uebersicht')}>Übersicht</button>
           <button style={tabStyle(tab === 'protokolle')} onClick={() => setTab('protokolle')}>
-            Protokolle{myPatients.length + myArchivedPatients.length > 0 ? ` (${myPatients.length + myArchivedPatients.length})` : ''}
+            Protokolle{myPatients.length + myFreigegebenPatients.length + myArchivedPatients.length > 0 ? ` (${myPatients.length + myFreigegebenPatients.length + myArchivedPatients.length})` : ''}
           </button>
           {(user?.supervisor || user?.permissions?.['lernbar'] || (user as any)?.lernbar_access) && (
             <button style={tabStyle(tab === 'lernbar')} onClick={() => setTab('lernbar')}>
@@ -487,54 +490,35 @@ export default function Unitas() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div style={{ fontSize: '17px', fontWeight: 700, color: 'var(--text)' }}>Meine Protokolle</div>
 
-            {myPatients.length === 0 && myArchivedPatients.length === 0 && (
+            {myPatients.length === 0 && myFreigegebenPatients.length === 0 && myArchivedPatients.length === 0 && (
               <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '48px 0', fontSize: '15px' }}>Keine Protokolle vorhanden</div>
             )}
 
+            {/* Offen — TF can edit+release within 24h */}
             {myPatients.length > 0 && (
               <>
-                <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '.5px' }}>Offen</div>
-                {[...myPatients].sort((a, b) => {
-                  const aRQ = (a.payload?.rueckfragen || []).filter((r: any) => r.status === 'offen').length
-                  const bRQ = (b.payload?.rueckfragen || []).filter((r: any) => r.status === 'offen').length
-                  if (bRQ !== aRQ) return bRQ - aRQ
-                  return new Date(b.created).getTime() - new Date(a.created).getTime()
-                }).map(p => {
+                <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '.5px' }}>In Bearbeitung</div>
+                {[...myPatients].sort((a, b) => new Date(b.created).getTime() - new Date(a.created).getTime()).map(p => {
                   const m = p.payload?.mannschaft || {}
-                  const crew = ['tf','m1','m2','m3'].map(k => m[k]?.name).filter(Boolean).join(', ')
+                  const crew = ['tf','m1','m2','m3'].map((k: string) => m[k]?.name).filter(Boolean).join(', ')
+                  const patName = [p.payload?.vorname, p.payload?.name].filter(Boolean).join(' ')
                   const age = Date.now() - new Date(p.created).getTime()
                   const hoursLeft = Math.max(0, Math.ceil(24 - age / 3600000))
                   const isExpiringSoon = hoursLeft <= 4
-                  const dMeds: any[] = Array.isArray(p.payload?.dauermedikation) ? p.payload.dauermedikation : []
+                  const isTF = m.tf?.id === user?.id
+                  const canEdit = isTF && hoursLeft > 0
                   const allRQs: any[] = Array.isArray(p.payload?.rueckfragen) ? p.payload.rueckfragen : []
                   const openRQs = allRQs.filter((r: any) => r.status === 'offen')
                   const sns: any[] = Array.isArray(p.payload?.stellungnahmen) ? p.payload.stellungnahmen : []
-                  const answeredRQs = allRQs.filter((r: any) => r.status !== 'offen' || sns.some((s: any) => s.rueckfrage_id === r.id))
-                  const changedCount = (p.payload?._changed_fields || []).length
                   return (
                     <div key={p.id} style={{ background: 'var(--bg-card)', borderRadius: '14px', border: `1px solid ${openRQs.length > 0 ? '#f59e0b' : isExpiringSoon ? '#f97316' : 'var(--border)'}`, overflow: 'hidden' }}>
                       <div style={{ background: 'linear-gradient(135deg, var(--btn-dark) 0%, var(--btn-dark) 100%)', padding: '14px 18px', color: 'var(--btn-dark-text)' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: '4px' }}>
-                          <span style={{ fontWeight: 700, fontSize: '16px' }}>{p.title}</span>
+                          <span style={{ fontWeight: 700, fontSize: '16px' }}>{patName || p.title}</span>
                           {openRQs.length > 0 && <span style={{ background: '#f59e0b', color: '#fff', borderRadius: 999, padding: '2px 8px', fontSize: 11, fontWeight: 700, flexShrink: 0 }}>{openRQs.length} Rückfrage{openRQs.length !== 1 ? 'n' : ''}</span>}
-                          {changedCount > 0 && <span style={{ background: '#d97706', color: '#fff', borderRadius: 999, padding: '2px 8px', fontSize: 11, fontWeight: 700, flexShrink: 0 }}>{changedCount} Änderung{changedCount !== 1 ? 'en' : ''}</span>}
                         </div>
                         {crew && <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.7)' }}>{crew}</div>}
                       </div>
-                      {answeredRQs.length > 0 && (
-                        <div style={{ background: '#f0fdf4', borderBottom: '1px solid #bbf7d0', padding: '10px 18px', display: 'flex', flexDirection: 'column', gap: 6 }}>
-                          {answeredRQs.map((rq: any) => {
-                            const sn = sns.find((s: any) => s.rueckfrage_id === rq.id)
-                            if (!sn) return null
-                            return (
-                              <div key={rq.id} style={{ fontSize: 13, color: '#166534', lineHeight: 1.4 }}>
-                                <span style={{ fontWeight: 700 }}>Stellungnahme: </span>
-                                <span style={{ color: '#374151' }}>{sn.text.length > 100 ? sn.text.slice(0, 100) + '…' : sn.text}</span>
-                              </div>
-                            )
-                          })}
-                        </div>
-                      )}
                       {openRQs.length > 0 && (
                         <div style={{ background: '#fffbeb', borderBottom: '1px solid #fcd34d', padding: '10px 18px', display: 'flex', flexDirection: 'column', gap: 8 }}>
                           {openRQs.map((rq: any) => (
@@ -545,31 +529,33 @@ export default function Unitas() {
                           <div style={{ fontSize: 12, color: '#a16207', fontWeight: 600 }}>→ Bitte im Protokoll Stellung nehmen</div>
                         </div>
                       )}
-                      {dMeds.length > 0 && (
-                        <div style={{ padding: '10px 18px 0', display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                          {dMeds.map((m: any, i: number) => (
-                            <div key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'var(--bg-subtle)', border: '0.5px solid var(--border-medium)', borderRadius: 8, padding: '4px 8px', fontSize: 12 }}>
-                              <span style={{ fontWeight: 700 }}>{m.name}</span>
-                              {m.wirkstoff && <span style={{ color: 'var(--text-secondary)' }}>({m.wirkstoff})</span>}
-                              {m.dosis && <span>{m.dosis}</span>}
-                              {m.pzn && <span style={{ fontSize: 10, color: 'var(--text-secondary)' }}>PZN {m.pzn}</span>}
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                      <div style={{ padding: '12px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
-                        <div>
+                      <div style={{ padding: '12px 18px', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                        <div style={{ flex: 1 }}>
                           <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Erstellt: {new Date(p.created).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })} Uhr</div>
-                          <div style={{ fontSize: '12px', marginTop: '3px', fontWeight: 600, color: isExpiringSoon ? '#f97316' : 'var(--text-secondary)' }}>
-                            {hoursLeft > 0 ? `⏱ Noch ${hoursLeft} Std. bearbeitbar` : '🔒 Gesperrt'}
-                          </div>
+                          {isTF && <div style={{ fontSize: '12px', marginTop: '3px', fontWeight: 600, color: isExpiringSoon ? '#f97316' : 'var(--text-secondary)' }}>
+                            {hoursLeft > 0 ? `Noch ${hoursLeft} Std. bearbeitbar` : 'Bearbeitungsfenster abgelaufen'}
+                          </div>}
                         </div>
                         {openRQs.length > 0 && (
                           <button onClick={() => setSnModal(p)} style={{ background: '#f59e0b', color: '#fff', border: 'none', borderRadius: '8px', padding: '9px 16px', fontWeight: 700, fontSize: '13px', cursor: 'pointer', flexShrink: 0, fontFamily: 'inherit' }}>
                             Stellungnahme ({openRQs.length})
                           </button>
                         )}
-                        <button onClick={() => navigate(`/protokoll/${p.id}`)} style={{ background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: '8px', padding: '9px 16px', fontWeight: 700, fontSize: '13px', cursor: 'pointer', flexShrink: 0, fontFamily: 'inherit' }}>Bearbeiten</button>
+                        {canEdit && (
+                          <button onClick={async () => {
+                            await pb.collection('patients').update(p.id, { status: 'freigegeben' })
+                            showMsg('Protokoll freigegeben', 'success')
+                            loadPatients()
+                          }} style={{ background: '#16a34a', color: '#fff', border: 'none', borderRadius: '8px', padding: '9px 16px', fontWeight: 700, fontSize: '13px', cursor: 'pointer', flexShrink: 0, fontFamily: 'inherit' }}>
+                            Freigeben
+                          </button>
+                        )}
+                        {canEdit && (
+                          <button onClick={() => navigate(`/protokoll/${p.id}`)} style={{ background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: '8px', padding: '9px 16px', fontWeight: 700, fontSize: '13px', cursor: 'pointer', flexShrink: 0, fontFamily: 'inherit' }}>Bearbeiten</button>
+                        )}
+                        {!canEdit && (
+                          <button onClick={() => navigate(`/protokoll/${p.id}`)} style={{ background: 'var(--bg-subtle)', color: 'var(--text)', border: '0.5px solid var(--border-medium)', borderRadius: '8px', padding: '9px 16px', fontWeight: 700, fontSize: '13px', cursor: 'pointer', flexShrink: 0, fontFamily: 'inherit' }}>Ansehen</button>
+                        )}
                       </div>
                     </div>
                   )
@@ -577,48 +563,101 @@ export default function Unitas() {
               </>
             )}
 
+            {/* Freigegeben — TF can re-edit if reopen active */}
+            {myFreigegebenPatients.length > 0 && (
+              <>
+                <div style={{ fontSize: '13px', fontWeight: 700, color: '#166534', textTransform: 'uppercase', letterSpacing: '.5px', marginTop: myPatients.length > 0 ? '8px' : 0 }}>Freigegeben</div>
+                {[...myFreigegebenPatients].sort((a, b) => new Date(b.created).getTime() - new Date(a.created).getTime()).map(p => {
+                  const m = p.payload?.mannschaft || {}
+                  const crew = ['tf','m1','m2','m3'].map((k: string) => m[k]?.name).filter(Boolean).join(', ')
+                  const patName = [p.payload?.vorname, p.payload?.name].filter(Boolean).join(' ')
+                  const allRQs: any[] = Array.isArray(p.payload?.rueckfragen) ? p.payload.rueckfragen : []
+                  const openRQs = allRQs.filter((r: any) => r.status === 'offen')
+                  const sns: any[] = Array.isArray(p.payload?.stellungnahmen) ? p.payload.stellungnahmen : []
+                  const changedCount = (p.payload?._changed_fields || []).length
+                  const isTF = m.tf?.id === user?.id
+                  const reopen = p.payload?.tf_reopen
+                  const reopenActive = reopen && new Date(reopen.expires_at) > new Date()
+                  const reopenMinsLeft = reopenActive ? Math.ceil((new Date(reopen.expires_at).getTime() - Date.now()) / 60000) : 0
+                  return (
+                    <div key={p.id} style={{ background: 'var(--bg-card)', borderRadius: '14px', border: `1px solid ${openRQs.length > 0 ? '#f59e0b' : reopenActive ? '#16a34a' : 'var(--border)'}`, overflow: 'hidden' }}>
+                      <div style={{ background: 'linear-gradient(135deg, #166534, #15803d)', padding: '14px 18px', color: '#fff' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: '4px' }}>
+                          <span style={{ fontWeight: 700, fontSize: '16px' }}>{patName || p.title}</span>
+                          {openRQs.length > 0 && <span style={{ background: '#f59e0b', color: '#fff', borderRadius: 999, padding: '2px 8px', fontSize: 11, fontWeight: 700, flexShrink: 0 }}>{openRQs.length} Rückfrage{openRQs.length !== 1 ? 'n' : ''}</span>}
+                          {changedCount > 0 && <span style={{ background: '#d97706', color: '#fff', borderRadius: 999, padding: '2px 8px', fontSize: 11, fontWeight: 700, flexShrink: 0 }}>{changedCount} Änderung{changedCount !== 1 ? 'en' : ''}</span>}
+                          {reopenActive && <span style={{ background: 'rgba(255,255,255,0.2)', color: '#fff', borderRadius: 999, padding: '2px 8px', fontSize: 11, fontWeight: 700, flexShrink: 0 }}>Nachbearbeitung offen</span>}
+                        </div>
+                        {crew && <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.75)' }}>{crew}</div>}
+                      </div>
+                      {openRQs.length > 0 && (
+                        <div style={{ background: '#fffbeb', borderBottom: '1px solid #fcd34d', padding: '10px 18px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                          {openRQs.map((rq: any) => (
+                            <div key={rq.id} style={{ fontSize: 13, color: '#78350f', lineHeight: 1.4 }}>
+                              <span style={{ fontWeight: 700, color: '#92400e' }}>Rückfrage: </span>{rq.frage}
+                            </div>
+                          ))}
+                          <div style={{ fontSize: 12, color: '#a16207', fontWeight: 600 }}>→ Bitte im Protokoll Stellung nehmen</div>
+                        </div>
+                      )}
+                      {sns.filter((s: any) => allRQs.some((rq: any) => rq.id === s.rueckfrage_id)).length > 0 && (
+                        <div style={{ background: '#f0fdf4', borderBottom: '1px solid #bbf7d0', padding: '10px 18px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                          {sns.map((s: any) => (
+                            <div key={s.id} style={{ fontSize: 13, color: '#166534', lineHeight: 1.4 }}>
+                              <span style={{ fontWeight: 700 }}>Stellungnahme: </span>
+                              <span style={{ color: '#374151' }}>{s.text.length > 100 ? s.text.slice(0, 100) + '…' : s.text}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      <div style={{ padding: '12px 18px', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{new Date(p.created).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })} Uhr · Freigegeben</div>
+                          {reopenActive && isTF && (
+                            <div style={{ fontSize: '12px', marginTop: '3px', fontWeight: 600, color: '#16a34a' }}>
+                              Nachbearbeitung: noch {reopenMinsLeft >= 60 ? `${Math.ceil(reopenMinsLeft / 60)}h` : `${reopenMinsLeft}min`}
+                            </div>
+                          )}
+                        </div>
+                        {openRQs.length > 0 && (
+                          <button onClick={() => setSnModal(p)} style={{ background: '#f59e0b', color: '#fff', border: 'none', borderRadius: '8px', padding: '9px 16px', fontWeight: 700, fontSize: '13px', cursor: 'pointer', flexShrink: 0, fontFamily: 'inherit' }}>
+                            Stellungnahme ({openRQs.length})
+                          </button>
+                        )}
+                        {reopenActive && isTF ? (
+                          <button onClick={() => navigate(`/protokoll/${p.id}`)} style={{ background: '#16a34a', color: '#fff', border: 'none', borderRadius: '8px', padding: '9px 16px', fontWeight: 700, fontSize: '13px', cursor: 'pointer', flexShrink: 0, fontFamily: 'inherit' }}>Nachbearbeiten</button>
+                        ) : (
+                          <button onClick={() => navigate(`/protokoll/${p.id}`)} style={{ background: 'var(--bg-subtle)', color: 'var(--text)', border: '0.5px solid var(--border-medium)', borderRadius: '8px', padding: '9px 16px', fontWeight: 700, fontSize: '13px', cursor: 'pointer', flexShrink: 0, fontFamily: 'inherit' }}>Ansehen</button>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </>
+            )}
+
+            {/* Archiviert */}
             {myArchivedPatients.length > 0 && (
               <>
-                <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '.5px', marginTop: '8px' }}>Abgeschlossen</div>
-                {[...myArchivedPatients].sort((a, b) => {
-                  const aRQ = (a.payload?.rueckfragen || []).filter((r: any) => r.status === 'offen').length
-                  const bRQ = (b.payload?.rueckfragen || []).filter((r: any) => r.status === 'offen').length
-                  if (bRQ !== aRQ) return bRQ - aRQ
-                  return new Date(b.created).getTime() - new Date(a.created).getTime()
-                }).map(p => {
+                <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '.5px', marginTop: '8px' }}>Archiviert</div>
+                {[...myArchivedPatients].sort((a, b) => new Date(b.created).getTime() - new Date(a.created).getTime()).map(p => {
                   const m = p.payload?.mannschaft || {}
-                  const crew = ['tf','m1','m2','m3'].map(k => m[k]?.name).filter(Boolean).join(', ')
+                  const crew = ['tf','m1','m2','m3'].map((k: string) => m[k]?.name).filter(Boolean).join(', ')
                   const patName = [p.payload?.vorname, p.payload?.name].filter(Boolean).join(' ')
-                  const dMedsA: any[] = Array.isArray(p.payload?.dauermedikation) ? p.payload.dauermedikation : []
                   const allRQsA: any[] = Array.isArray(p.payload?.rueckfragen) ? p.payload.rueckfragen : []
                   const openRQsA = allRQsA.filter((r: any) => r.status === 'offen')
                   const snsA: any[] = Array.isArray(p.payload?.stellungnahmen) ? p.payload.stellungnahmen : []
-                  const answeredRQsA = allRQsA.filter((r: any) => snsA.some((s: any) => s.rueckfrage_id === r.id))
                   const changedCountA = (p.payload?._changed_fields || []).length
                   return (
-                    <div key={p.id} style={{ background: 'var(--bg-card)', borderRadius: '14px', border: `1px solid ${openRQsA.length > 0 ? '#f59e0b' : 'var(--border)'}`, overflow: 'hidden', opacity: openRQsA.length > 0 || changedCountA > 0 ? 1 : 0.85 }}>
-                      <div style={{ background: 'linear-gradient(135deg, #4b5563, #374151)', padding: '14px 18px', color: '#fff' }}>
+                    <div key={p.id} style={{ background: 'var(--bg-card)', borderRadius: '14px', border: `1px solid ${openRQsA.length > 0 ? '#f59e0b' : 'var(--border)'}`, overflow: 'hidden', opacity: 0.85 }}>
+                      <div style={{ background: 'var(--bg-subtle)', padding: '14px 18px', borderBottom: '1px solid var(--border)' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: '4px' }}>
-                          <span style={{ fontWeight: 700, fontSize: '16px' }}>{patName || p.title}</span>
+                          <span style={{ fontWeight: 700, fontSize: '16px', color: 'var(--text)' }}>{patName || p.title}</span>
                           {openRQsA.length > 0 && <span style={{ background: '#f59e0b', color: '#fff', borderRadius: 999, padding: '2px 8px', fontSize: 11, fontWeight: 700, flexShrink: 0 }}>{openRQsA.length} Rückfrage{openRQsA.length !== 1 ? 'n' : ''}</span>}
                           {changedCountA > 0 && <span style={{ background: '#d97706', color: '#fff', borderRadius: 999, padding: '2px 8px', fontSize: 11, fontWeight: 700, flexShrink: 0 }}>{changedCountA} Änderung{changedCountA !== 1 ? 'en' : ''}</span>}
                         </div>
-                        {crew && <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.7)' }}>{crew}</div>}
+                        {crew && <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>{crew}</div>}
                       </div>
-                      {answeredRQsA.length > 0 && (
-                        <div style={{ background: '#f0fdf4', borderBottom: '1px solid #bbf7d0', padding: '10px 18px', display: 'flex', flexDirection: 'column', gap: 6 }}>
-                          {answeredRQsA.map((rq: any) => {
-                            const sn = snsA.find((s: any) => s.rueckfrage_id === rq.id)
-                            if (!sn) return null
-                            return (
-                              <div key={rq.id} style={{ fontSize: 13, color: '#166534', lineHeight: 1.4 }}>
-                                <span style={{ fontWeight: 700 }}>Stellungnahme: </span>
-                                <span style={{ color: '#374151' }}>{sn.text.length > 100 ? sn.text.slice(0, 100) + '…' : sn.text}</span>
-                              </div>
-                            )
-                          })}
-                        </div>
-                      )}
                       {openRQsA.length > 0 && (
                         <div style={{ background: '#fffbeb', borderBottom: '1px solid #fcd34d', padding: '10px 18px', display: 'flex', flexDirection: 'column', gap: 8 }}>
                           {openRQsA.map((rq: any) => (
@@ -629,21 +668,19 @@ export default function Unitas() {
                           <div style={{ fontSize: 12, color: '#a16207', fontWeight: 600 }}>→ Bitte im Protokoll Stellung nehmen</div>
                         </div>
                       )}
-                      {dMedsA.length > 0 && (
-                        <div style={{ padding: '10px 18px 0', display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                          {dMedsA.map((m: any, i: number) => (
-                            <div key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'var(--bg-subtle)', border: '0.5px solid var(--border-medium)', borderRadius: 8, padding: '4px 8px', fontSize: 12 }}>
-                              <span style={{ fontWeight: 700 }}>{m.name}</span>
-                              {m.wirkstoff && <span style={{ color: 'var(--text-secondary)' }}>({m.wirkstoff})</span>}
-                              {m.dosis && <span>{m.dosis}</span>}
-                              {m.pzn && <span style={{ fontSize: 10, color: 'var(--text-secondary)' }}>PZN {m.pzn}</span>}
+                      {snsA.length > 0 && (
+                        <div style={{ background: '#f0fdf4', borderBottom: '1px solid #bbf7d0', padding: '10px 18px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                          {snsA.map((s: any) => (
+                            <div key={s.id} style={{ fontSize: 13, color: '#166534', lineHeight: 1.4 }}>
+                              <span style={{ fontWeight: 700 }}>Stellungnahme: </span>
+                              <span style={{ color: '#374151' }}>{s.text.length > 100 ? s.text.slice(0, 100) + '…' : s.text}</span>
                             </div>
                           ))}
                         </div>
                       )}
-                      <div style={{ padding: '12px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
-                        <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-                          {new Date(p.created).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })} Uhr · Abgeschlossen
+                      <div style={{ padding: '12px 18px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div style={{ flex: 1, fontSize: '12px', color: 'var(--text-secondary)' }}>
+                          {new Date(p.created).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })} Uhr · Archiviert
                         </div>
                         {openRQsA.length > 0 && (
                           <button onClick={() => setSnModal(p)} style={{ background: '#f59e0b', color: '#fff', border: 'none', borderRadius: '8px', padding: '9px 16px', fontWeight: 700, fontSize: '13px', cursor: 'pointer', flexShrink: 0, fontFamily: 'inherit' }}>

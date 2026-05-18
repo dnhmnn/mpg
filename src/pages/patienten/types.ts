@@ -124,6 +124,9 @@ export interface PatientPayload {
   rueckfragen?: { id: string; frage: string; created_by?: string; status: 'offen' | 'beantwortet'; created: string }[]
   stellungnahmen?: { id: string; rueckfrage_id: string; text: string; created: string }[]
   _changed_fields?: string[]
+  _tf_changed_fields?: string[]
+  _changed_meta?: Record<string, { changed_by: string; changed_at: string }>
+  tf_reopen?: { opened_at: string; expires_at: string; opened_by: string }
 }
 
 export interface Patient {
