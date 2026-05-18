@@ -86,6 +86,12 @@ export default function Patienten() {
     if (activeTab === 'audit' && !auditLoaded) loadAuditData()
   }, [activeTab, user])
 
+  useEffect(() => {
+    if (!user?.organization_id) return
+    pb.collection('patients').subscribe('*', () => { loadOpenData() }, { requestKey: null } as any)
+    return () => { pb.collection('patients').unsubscribe('*') }
+  }, [user])
+
   async function loadOpenData() {
     if (!user?.organization_id) return
     const org = user.organization_id
@@ -1282,14 +1288,18 @@ export default function Patienten() {
 
       {/* Stellungnahmen-Modal */}
       {showStellungnahme && stellungnahmePat && (() => {
-        const pl = (stellungnahmePat as any).payload || {}
+        // Use fresh data from subscribed state so Unitas answers appear immediately
+        const freshPat = freigegebenPatients.find(p => p.id === stellungnahmePat.id)
+          || archivedPatients.find(p => p.id === stellungnahmePat.id)
+          || stellungnahmePat
+        const pl = (freshPat as any).payload || {}
         const rqs: any[] = Array.isArray(pl.rueckfragen) ? pl.rueckfragen : []
         const sns: any[] = Array.isArray(pl.stellungnahmen) ? pl.stellungnahmen : []
-        const patName = [pl.vorname, pl.name].filter(Boolean).join(' ') || stellungnahmePat.title || 'Unbekannt'
+        const patName = [pl.vorname, pl.name].filter(Boolean).join(' ') || freshPat.title || 'Unbekannt'
         const einsatzInfo = [pl.einsatz_nr && `Einsatz-Nr. ${pl.einsatz_nr}`, pl.einsatz_art, pl.einsatz_adresse].filter(Boolean).join(' · ')
         const m = (pl.mannschaft || {}) as Record<string, { name?: string } | null>
         const crew = ['tf','m1','m2','m3'].map(k => m[k]?.name).filter(Boolean).join(', ')
-        const isArchived = (stellungnahmePat as any).status === 'archiviert'
+        const isArchived = (freshPat as any).status === 'archiviert'
         return (
           <>
             {/* Print-only area */}
