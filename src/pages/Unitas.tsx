@@ -293,92 +293,67 @@ export default function Unitas() {
   const lernbarBadge = upcomingTermine.length + (progress.length - doneMods)
   const protokolleBadge = myPatients.length + myArchivedPatients.length
 
-  const tabStyle = (active: boolean): React.CSSProperties => ({
-    padding: '12px 20px', border: 'none', background: 'none', cursor: 'pointer',
-    fontSize: '14px', fontWeight: 600, fontFamily: 'inherit',
-    color: active ? 'var(--text)' : 'var(--text-secondary)',
-    borderBottom: active ? '2px solid var(--btn-dark)' : '2px solid transparent',
-    marginBottom: '-1px', whiteSpace: 'nowrap' as const
-  })
+  const firstName = user?.name?.split(' ')[0] || ''
 
   return (
     <div style={{ minHeight: '100dvh', background: 'var(--bg)', fontFamily: "'Atkinson Hyperlegible', -apple-system, sans-serif" }}>
 
-      {/* ── Greeting overlay ─────────────────────────────── */}
+      {/* ── Greeting overlay ── */}
       {greetingPhase !== 'done' && (
         <div style={{
           position: 'fixed', inset: 0, zIndex: 9999,
-          background: 'radial-gradient(ellipse at 40% 35%, #7a0c16 0%, #3d0309 55%, #1a0104 100%)',
+          background: '#ffffff',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          animation: greetingPhase === 'exit' ? 'greetFadeOut 0.55s cubic-bezier(0.4,0,1,1) forwards' : 'none',
+          animation: greetingPhase === 'exit' ? 'greetFadeOut 0.5s ease-in forwards' : 'none',
           userSelect: 'none',
         }}>
           {greetingPhase === 'loading' ? (
-            <div style={{ width: 36, height: 36, border: '3px solid rgba(255,255,255,0.15)', borderTopColor: 'rgba(255,255,255,0.7)', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
+            <div style={{ width: 32, height: 32, border: '3px solid #e5e7eb', borderTopColor: '#600812', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
           ) : greetingPhase === 'servus' ? (
             <div key="servus" style={{
-              fontSize: 'clamp(52px, 14vw, 100px)', fontWeight: 800, color: '#fff',
+              fontSize: 'clamp(52px, 14vw, 96px)', fontWeight: 800, color: '#111827',
               letterSpacing: '-0.03em', lineHeight: 1, whiteSpace: 'nowrap',
               fontFamily: "'Atkinson Hyperlegible', -apple-system, sans-serif",
-              animation: 'greetIn 0.65s cubic-bezier(0.34,1.56,0.64,1) both',
+              animation: 'greetIn 0.6s cubic-bezier(0.34,1.56,0.64,1) both',
             }}>Servus</div>
           ) : (
             <div key="name" style={{
-              fontSize: 'clamp(52px, 14vw, 100px)', fontWeight: 800,
+              fontSize: 'clamp(52px, 14vw, 96px)', fontWeight: 800, color: '#600812',
               letterSpacing: '-0.03em', lineHeight: 1, whiteSpace: 'nowrap',
               fontFamily: "'Atkinson Hyperlegible', -apple-system, sans-serif",
-              background: 'linear-gradient(135deg, #fca5a5 0%, #f87171 40%, #fbbf24 100%)',
-              WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
               animation: 'greetIn 0.55s cubic-bezier(0.34,1.56,0.64,1) both',
-            }}>{user?.name?.split(' ')[0]}</div>
+            }}>{firstName}</div>
           )}
         </div>
       )}
 
-      {/* ── Header ───────────────────────────────────────── */}
+      {/* ── Header ── */}
       <div style={{
-        background: 'var(--bg-card)', backdropFilter: 'blur(20px) saturate(160%)', WebkitBackdropFilter: 'blur(20px) saturate(160%)',
-        borderBottom: '1px solid var(--border)', position: 'sticky', top: 0, zIndex: 100, padding: '0 16px',
+        background: 'var(--bg-card)',
+        borderBottom: '0.5px solid var(--border)',
+        position: 'sticky', top: 0, zIndex: 100,
+        padding: '0 20px',
       }}>
-        <div style={{ maxWidth: '640px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '54px' }}>
-          {/* Left: logo + org name */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-            <img src="/logo.svg" alt="" width={30} height={30} style={{ borderRadius: 6 }} />
-            <span style={{ fontWeight: 800, fontSize: '1rem', letterSpacing: '-0.02em', color: 'var(--text)' }}>
+        <div style={{ maxWidth: 640, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 56 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <img src="/logo.svg" alt="" width={28} height={28} style={{ borderRadius: 6, flexShrink: 0 }} />
+            <span style={{ fontWeight: 800, fontSize: '0.9375rem', letterSpacing: '-0.02em', color: 'var(--text)' }}>
               {(user as any)?.organization_name || 'Responda'}
             </span>
           </div>
-          {/* Right: user avatar */}
           <button
             onClick={() => setTab('konto')}
             title={user?.name || ''}
             style={{
-              width: 36, height: 36, borderRadius: '50%', border: 'none', cursor: 'pointer',
-              background: 'linear-gradient(135deg, #600812 0%, #9b1b2a 100%)',
+              width: 34, height: 34, borderRadius: '50%', border: 'none', cursor: 'pointer',
+              background: 'linear-gradient(140deg, #600812 0%, #8b1120 100%)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontFamily: "'Atkinson Hyperlegible', -apple-system, sans-serif",
-              fontWeight: 800, fontSize: 13, color: '#fff', letterSpacing: '0.02em',
-              boxShadow: '0 2px 8px rgba(96,8,18,0.45)',
+              fontWeight: 700, fontSize: 12, color: '#fff', letterSpacing: '0.03em',
+              boxShadow: '0 2px 10px rgba(96,8,18,0.4)',
               flexShrink: 0,
             }}
           >{initials(user?.name)}</button>
-        </div>
-
-        {/* Tabs */}
-        <div style={{ maxWidth: '640px', margin: '0 auto', display: 'flex', borderBottom: '1px solid var(--border)' }}>
-          <button style={tabStyle(tab === 'uebersicht')} onClick={() => setTab('uebersicht')}>Übersicht</button>
-          <button style={tabStyle(tab === 'protokolle')} onClick={() => setTab('protokolle')}>
-            Protokolle{myPatients.length + myFreigegebenPatients.length + myArchivedPatients.length > 0 ? ` (${myPatients.length + myFreigegebenPatients.length + myArchivedPatients.length})` : ''}
-          </button>
-          <button style={tabStyle(tab === 'vorgaenge')} onClick={() => setTab('vorgaenge')}>
-            Vorgänge
-            {myOutputs.filter(o => o.status === 'offen').length > 0 && (
-              <span style={{ marginLeft: '4px', background: '#f59e0b', color: '#fff', borderRadius: '10px', padding: '1px 6px', fontSize: '11px' }}>
-                {myOutputs.filter(o => o.status === 'offen').length}
-              </span>
-            )}
-          </button>
-          <button style={tabStyle(tab === 'konto')} onClick={() => setTab('konto')}>Konto</button>
         </div>
       </div>
 
@@ -386,45 +361,98 @@ export default function Unitas() {
 
         {/* ÜBERSICHT */}
         {tab === 'uebersicht' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            <div>
-              <div style={{ fontSize: '22px', fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.01em' }}>
-                Servus, {user?.name?.split(' ')[0]}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+
+            {/* Greeting + date */}
+            <div style={{ paddingTop: 4 }}>
+              <div style={{ fontSize: 24, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.02em', lineHeight: 1.1 }}>
+                Servus, {firstName}
               </div>
-              <div style={{ fontSize: '14px', color: 'var(--text-secondary)', marginTop: '4px' }}>
+              <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 5, fontWeight: 500 }}>
                 {new Date().toLocaleDateString('de-DE', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}
               </div>
             </div>
-            {neuigkeiten.length === 0 ? (
-              <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '32px 0', fontSize: '15px' }}>Keine Neuigkeiten</div>
-            ) : (
-              neuigkeiten.map(n => {
-                const anhangUrl = n.anhang ? `https://api.responda.systems/api/files/${n.collectionId}/${n.id}/${n.anhang}` : null
-                return (
-                  <div key={n.id} style={{ background: 'var(--bg-card)', borderRadius: '14px', border: `1px solid ${n.gepinnt ? 'var(--accent)' : 'var(--border)'}`, overflow: 'hidden' }}>
-                    {n.gepinnt && (
-                      <div style={{ background: 'var(--accent)', padding: '6px 16px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <svg width="11" height="11" viewBox="0 0 24 24" fill="white"><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5v6h2v-6h5v-2l-2-2z"/></svg>
-                        <span style={{ fontSize: '11px', fontWeight: 700, color: '#fff', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Angepinnt</span>
+
+            {/* Quick-stat cards */}
+            {(myPatients.length + myFreigegebenPatients.length + openOutputs > 0) && (
+              <div style={{ display: 'grid', gridTemplateColumns: openOutputs > 0 ? '1fr 1fr' : '1fr', gap: 10 }}>
+                {(myPatients.length + myFreigegebenPatients.length) > 0 && (
+                  <button onClick={() => setTab('protokolle')} style={{
+                    background: 'linear-gradient(140deg, #600812 0%, #8b1120 100%)',
+                    borderRadius: 16, padding: '18px 20px', border: 'none', cursor: 'pointer',
+                    textAlign: 'left', fontFamily: 'inherit',
+                    boxShadow: '0 4px 20px rgba(96,8,18,0.28)',
+                  }}>
+                    <div style={{ fontSize: 28, fontWeight: 800, color: '#fff', lineHeight: 1, marginBottom: 4 }}>
+                      {myPatients.length + myFreigegebenPatients.length}
+                    </div>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.75)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                      Protokoll{(myPatients.length + myFreigegebenPatients.length) !== 1 ? 'e' : ''}
+                    </div>
+                    {myFreigegebenPatients.length > 0 && (
+                      <div style={{ marginTop: 8, fontSize: 11, color: 'rgba(255,255,255,0.6)', fontWeight: 600 }}>
+                        {myFreigegebenPatients.length} freigegeben
                       </div>
                     )}
-                    <div style={{ padding: '16px 20px' }}>
-                      <div style={{ fontWeight: 700, fontSize: '16px', color: 'var(--text)', marginBottom: '8px' }}>{n.titel}</div>
-                      {n.inhalt && <div style={{ fontSize: '14px', color: 'var(--text)', lineHeight: 1.65, whiteSpace: 'pre-wrap', marginBottom: anhangUrl ? '12px' : '0' }}>{n.inhalt}</div>}
-                      {anhangUrl && (
-                        <a href={anhangUrl} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 14px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontWeight: 600, fontSize: '13px', textDecoration: 'none', marginTop: '4px' }}>
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                          Anhang herunterladen
-                        </a>
+                  </button>
+                )}
+                {openOutputs > 0 && (
+                  <button onClick={() => setTab('vorgaenge')} style={{
+                    background: 'linear-gradient(140deg, #92400e 0%, #b45309 100%)',
+                    borderRadius: 16, padding: '18px 20px', border: 'none', cursor: 'pointer',
+                    textAlign: 'left', fontFamily: 'inherit',
+                    boxShadow: '0 4px 20px rgba(180,83,9,0.25)',
+                  }}>
+                    <div style={{ fontSize: 28, fontWeight: 800, color: '#fff', lineHeight: 1, marginBottom: 4 }}>
+                      {openOutputs}
+                    </div>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.75)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                      Vorgang{openOutputs !== 1 ? 'svorgänge' : ''}
+                    </div>
+                    <div style={{ marginTop: 8, fontSize: 11, color: 'rgba(255,255,255,0.6)', fontWeight: 600 }}>
+                      offen
+                    </div>
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Neuigkeiten */}
+            {neuigkeiten.length === 0 ? (
+              <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '40px 0', fontSize: 14 }}>
+                Keine Neuigkeiten vorhanden
+              </div>
+            ) : (
+              <>
+                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Neuigkeiten</div>
+                {neuigkeiten.map(n => {
+                  const anhangUrl = n.anhang ? `https://api.responda.systems/api/files/${n.collectionId}/${n.id}/${n.anhang}` : null
+                  return (
+                    <div key={n.id} style={{ background: 'var(--bg-card)', borderRadius: 16, border: `0.5px solid ${n.gepinnt ? '#600812' : 'var(--border)'}`, overflow: 'hidden', boxShadow: n.gepinnt ? '0 2px 12px rgba(96,8,18,0.1)' : 'var(--shadow-sm)' }}>
+                      {n.gepinnt && (
+                        <div style={{ background: '#600812', padding: '6px 16px', display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <svg width="10" height="10" viewBox="0 0 24 24" fill="white"><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5v6h2v-6h5v-2l-2-2z"/></svg>
+                          <span style={{ fontSize: 10, fontWeight: 700, color: '#fff', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Angepinnt</span>
+                        </div>
                       )}
-                      <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '12px' }}>
-                        {new Date(n.created).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}
-                        {n.erstellt_von && ` · ${n.erstellt_von}`}
+                      <div style={{ padding: '16px 18px' }}>
+                        <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--text)', marginBottom: 8, lineHeight: 1.3 }}>{n.titel}</div>
+                        {n.inhalt && <div style={{ fontSize: 14, color: 'var(--text)', lineHeight: 1.7, whiteSpace: 'pre-wrap', marginBottom: anhangUrl ? 12 : 0 }}>{n.inhalt}</div>}
+                        {anhangUrl && (
+                          <a href={anhangUrl} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 13px', borderRadius: 8, border: '0.5px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontWeight: 600, fontSize: 13, textDecoration: 'none', marginTop: 4 }}>
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                            Anhang herunterladen
+                          </a>
+                        )}
+                        <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 10, fontWeight: 500 }}>
+                          {new Date(n.created).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                          {n.erstellt_von && ` · ${n.erstellt_von}`}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                )
-              })
+                  )
+                })}
+              </>
             )}
           </div>
         )}
@@ -710,16 +738,16 @@ export default function Unitas() {
 
         {/* MEIN KONTO */}
         {tab === 'konto' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {/* Profil */}
-            <div style={{ background: 'var(--bg-card)', borderRadius: '14px', border: '1px solid var(--border)', overflow: 'hidden' }}>
-              <div style={{ background: 'linear-gradient(135deg, var(--btn-dark) 0%, var(--btn-dark) 100%)', padding: '20px 24px', color: 'var(--btn-dark-text)', display: 'flex', alignItems: 'center', gap: '14px' }}>
-                <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '18px', flexShrink: 0 }}>
-                  {user?.name?.charAt(0) || '?'}
+            <div style={{ background: 'var(--bg-card)', borderRadius: 16, border: '0.5px solid var(--border)', overflow: 'hidden', boxShadow: 'var(--shadow-sm)' }}>
+              <div style={{ background: 'linear-gradient(140deg, #600812 0%, #8b1120 100%)', padding: '24px 20px 20px', display: 'flex', alignItems: 'center', gap: 14 }}>
+                <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(255,255,255,0.15)', border: '1.5px solid rgba(255,255,255,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 20, color: '#fff', flexShrink: 0, letterSpacing: '0.03em' }}>
+                  {initials(user?.name)}
                 </div>
                 <div>
-                  <div style={{ fontWeight: 700, fontSize: '17px' }}>{user?.name}</div>
-                  <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.55)', marginTop: '2px' }}>Lernbar-Zugang</div>
+                  <div style={{ fontWeight: 800, fontSize: 17, color: '#fff', letterSpacing: '-0.01em' }}>{user?.name}</div>
+                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', marginTop: 3, fontWeight: 500 }}>{(user as any)?.organization_name || 'Responda'}</div>
                 </div>
               </div>
 
@@ -759,11 +787,11 @@ export default function Unitas() {
               </div>
             </div>
             {/* Darstellung */}
-            <div style={{ background: 'var(--bg-card)', borderRadius: '14px', border: '1px solid var(--border)', overflow: 'hidden' }}>
-              <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)' }}>
-                <div style={{ fontWeight: 700, fontSize: '15px', color: 'var(--text)' }}>Darstellung</div>
+            <div style={{ background: 'var(--bg-card)', borderRadius: 16, border: '0.5px solid var(--border)', overflow: 'hidden', boxShadow: 'var(--shadow-sm)' }}>
+              <div style={{ padding: '14px 18px', borderBottom: '0.5px solid var(--border)' }}>
+                <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)', letterSpacing: '-0.01em' }}>Darstellung</div>
               </div>
-              <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {([
                   { value: 'light', label: 'Hell', icon: '☀️', desc: 'Helles Design' },
                   { value: 'dark',  label: 'Dunkel', icon: '🌙', desc: 'Dunkles Design' },
@@ -774,21 +802,21 @@ export default function Unitas() {
                     key={opt.value}
                     onClick={() => { setTheme(opt.value); setThemeMode(opt.value) }}
                     style={{
-                      display: 'flex', alignItems: 'center', gap: '14px',
-                      padding: '12px 14px', borderRadius: '10px',
-                      border: themeMode === opt.value ? '2px solid var(--accent)' : '1.5px solid var(--border)',
-                      background: themeMode === opt.value ? 'var(--bg-subtle)' : 'transparent',
+                      display: 'flex', alignItems: 'center', gap: 12,
+                      padding: '10px 12px', borderRadius: 10,
+                      border: themeMode === opt.value ? '1.5px solid #600812' : '1px solid var(--border)',
+                      background: themeMode === opt.value ? 'rgba(96,8,18,0.05)' : 'transparent',
                       cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit',
                       transition: 'all 0.15s', width: '100%'
                     }}
                   >
-                    <span style={{ fontSize: '20px', lineHeight: 1 }}>{opt.icon}</span>
+                    <span style={{ fontSize: 18, lineHeight: 1 }}>{opt.icon}</span>
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontWeight: 600, fontSize: '14px', color: 'var(--text)' }}>{opt.label}</div>
-                      <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '1px' }}>{opt.desc}</div>
+                      <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--text)' }}>{opt.label}</div>
+                      <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 1 }}>{opt.desc}</div>
                     </div>
                     {themeMode === opt.value && (
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2.5">
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#600812" strokeWidth="2.5">
                         <polyline points="20 6 9 17 4 12"/>
                       </svg>
                     )}
@@ -796,45 +824,73 @@ export default function Unitas() {
                 ))}
               </div>
             </div>
+
+            {/* Abmelden */}
+            <button
+              onClick={logout}
+              style={{
+                width: '100%', padding: '14px', borderRadius: 14, border: '0.5px solid #fecaca',
+                background: '#fff5f5', color: '#b91c1c', fontWeight: 700, fontSize: 14,
+                cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+              }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+              Abmelden
+            </button>
           </div>
         )}
       </div>
 
-      {/* Bottom Tab Bar */}
+      {/* ── Bottom Tab Bar ── */}
       <div style={{
         position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 100,
-        background: 'var(--bg-card)', borderTop: '1px solid var(--border)',
+        background: 'var(--bg-card)',
+        borderTop: '0.5px solid var(--border)',
         display: 'flex', alignItems: 'stretch',
-        paddingBottom: 'env(safe-area-inset-bottom)'
+        paddingBottom: 'env(safe-area-inset-bottom)',
+        boxShadow: '0 -4px 24px rgba(0,0,0,0.06)',
       }}>
         {([
-          { id: 'uebersicht', label: 'Übersicht', badge: 0, icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg> },
-          { id: 'protokolle', label: 'Protokolle', badge: protokolleBadge, icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg> },
-          ...(hasLernbar ? [{ id: 'lernbar', label: 'Lernbar', badge: lernbarBadge, icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg> }] : []),
-          { id: 'vorgaenge', label: 'Vorgänge', badge: openOutputs, icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg> },
-          { id: 'konto', label: 'Konto', badge: 0, icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> },
-        ] as { id: string; label: string; badge: number; icon: React.ReactNode }[]).map(t => {
+          { id: 'uebersicht', label: 'Übersicht', badge: 0,
+            icon: (a: boolean) => <svg width="21" height="21" viewBox="0 0 24 24" fill={a ? '#600812' : 'none'} stroke={a ? '#600812' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg> },
+          { id: 'protokolle', label: 'Protokolle', badge: protokolleBadge,
+            icon: (a: boolean) => <svg width="21" height="21" viewBox="0 0 24 24" fill={a ? '#600812' : 'none'} stroke={a ? '#600812' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg> },
+          ...(hasLernbar ? [{ id: 'lernbar', label: 'Lernbar', badge: lernbarBadge,
+            icon: (a: boolean) => <svg width="21" height="21" viewBox="0 0 24 24" fill={a ? '#600812' : 'none'} stroke={a ? '#600812' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg> }] : []),
+          { id: 'vorgaenge', label: 'Vorgänge', badge: openOutputs,
+            icon: (a: boolean) => <svg width="21" height="21" viewBox="0 0 24 24" fill={a ? '#600812' : 'none'} stroke={a ? '#600812' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg> },
+          { id: 'konto', label: 'Konto', badge: 0,
+            icon: (a: boolean) => <svg width="21" height="21" viewBox="0 0 24 24" fill={a ? '#600812' : 'none'} stroke={a ? '#600812' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> },
+        ] as { id: string; label: string; badge: number; icon: (active: boolean) => React.ReactNode }[]).map(t => {
           const active = tab === t.id
           return (
             <button
               key={t.id}
               onClick={() => t.id === 'lernbar' ? navigate('/lernbar') : setTab(t.id as any)}
               style={{
-                flex: 1, padding: '8px 4px 6px', border: 'none', background: 'none',
+                flex: 1, padding: '9px 4px 7px', border: 'none', background: 'none',
                 display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
                 cursor: 'pointer', fontFamily: 'inherit', position: 'relative',
-                color: active ? 'var(--accent)' : 'var(--text-secondary)'
+                color: active ? '#600812' : 'var(--text-secondary)',
               }}
             >
-              {t.icon}
+              {active && (
+                <div style={{
+                  position: 'absolute', top: 6, left: '50%', transform: 'translateX(-50%)',
+                  width: 32, height: 32, borderRadius: 10,
+                  background: 'rgba(96,8,18,0.1)',
+                  pointerEvents: 'none',
+                }} />
+              )}
+              {t.icon(active)}
               {t.badge > 0 && (
                 <span style={{
-                  position: 'absolute', top: 6, right: 'calc(50% - 14px)',
-                  background: 'var(--accent)', color: '#fff',
-                  borderRadius: 999, padding: '0px 5px', fontSize: 9, fontWeight: 700, minWidth: 14, textAlign: 'center'
+                  position: 'absolute', top: 5, right: 'calc(50% - 16px)',
+                  background: '#600812', color: '#fff',
+                  borderRadius: 999, padding: '0 5px', fontSize: 9, fontWeight: 700, minWidth: 14, textAlign: 'center', lineHeight: '15px',
                 }}>{t.badge}</span>
               )}
-              <span style={{ fontSize: 10, fontWeight: active ? 700 : 500, lineHeight: 1 }}>{t.label}</span>
+              <span style={{ fontSize: 10, fontWeight: active ? 700 : 500, lineHeight: 1, color: active ? '#600812' : 'var(--text-secondary)' }}>{t.label}</span>
             </button>
           )
         })}
