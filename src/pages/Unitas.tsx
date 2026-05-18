@@ -273,6 +273,14 @@ export default function Unitas() {
   const lernbarBadge = upcomingTermine.length + (progress.length - doneMods)
   const protokolleBadge = myPatients.length + myArchivedPatients.length
 
+  const tabStyle = (active: boolean): React.CSSProperties => ({
+    padding: '12px 20px', border: 'none', background: 'none', cursor: 'pointer',
+    fontSize: '14px', fontWeight: 600, fontFamily: 'inherit',
+    color: active ? 'var(--text)' : 'var(--text-secondary)',
+    borderBottom: active ? '2px solid var(--btn-dark)' : '2px solid transparent',
+    marginBottom: '-1px', whiteSpace: 'nowrap' as const
+  })
+
   return (
     <div style={{ minHeight: '100dvh', background: 'var(--bg)', fontFamily: "'Atkinson Hyperlegible', -apple-system, sans-serif" }}>
       {/* Header */}
@@ -294,16 +302,6 @@ export default function Unitas() {
           <button style={tabStyle(tab === 'protokolle')} onClick={() => setTab('protokolle')}>
             Protokolle{myPatients.length + myFreigegebenPatients.length + myArchivedPatients.length > 0 ? ` (${myPatients.length + myFreigegebenPatients.length + myArchivedPatients.length})` : ''}
           </button>
-          {(user?.supervisor || user?.permissions?.['lernbar'] || (user as any)?.lernbar_access) && (
-            <button style={tabStyle(tab === 'lernbar')} onClick={() => setTab('lernbar')}>
-              Lernbar
-              {(upcomingTermine.length > 0 || progress.length > 0) && (
-                <span style={{ marginLeft: '4px', background: 'var(--btn-dark)', color: 'var(--btn-dark-text)', borderRadius: '10px', padding: '1px 6px', fontSize: '11px' }}>
-                  {upcomingTermine.length + (progress.length - doneMods)}
-                </span>
-              )}
-            </button>
-          )}
           <button style={tabStyle(tab === 'vorgaenge')} onClick={() => setTab('vorgaenge')}>
             Vorgänge
             {myOutputs.filter(o => o.status === 'offen').length > 0 && (
