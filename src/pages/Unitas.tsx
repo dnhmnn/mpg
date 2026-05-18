@@ -86,9 +86,7 @@ export default function Unitas() {
   const [themeMode, setThemeMode] = useState<ThemeMode>(getTheme())
 
   // Greeting animation — only on first visit per browser session
-  const [greetingPhase, setGreetingPhase] = useState<'servus' | 'name' | 'exit' | 'done'>(() =>
-    sessionStorage.getItem('unitas_greeted') ? 'done' : 'servus'
-  )
+  const [greetingPhase, setGreetingPhase] = useState<'servus' | 'name' | 'exit' | 'done'>('servus')
 
   useEffect(() => {
     if (greetingPhase === 'done') return
@@ -101,7 +99,7 @@ export default function Unitas() {
       return () => clearTimeout(t)
     }
     if (greetingPhase === 'exit') {
-      const t = setTimeout(() => { setGreetingPhase('done'); sessionStorage.setItem('unitas_greeted', '1') }, 550)
+      const t = setTimeout(() => setGreetingPhase('done'), 550)
       return () => clearTimeout(t)
     }
   }, [greetingPhase])
