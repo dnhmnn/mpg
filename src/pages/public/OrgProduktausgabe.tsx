@@ -8,6 +8,7 @@ const today = () => new Date().toISOString().slice(0, 10)
 
 interface InventoryItem { id: string; name: string; unit: string }
 interface UserHit { id: string; name: string; email: string }
+interface Location { id: string; name: string }
 type Pos = { qty: number; name: string; item_id: string; unit: string }
 
 const IconClipboard = () => (
@@ -25,6 +26,11 @@ const IconBox = () => (
 const IconUser = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+  </svg>
+)
+const IconWarehouse = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
   </svg>
 )
 
@@ -198,12 +204,21 @@ export default function OrgProduktausgabe() {
   const [sending, setSending] = useState(false)
   const [success, setSuccess] = useState(false)
   const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([])
+  const [locations, setLocations] = useState<Location[]>([])
+  const [selectedLagerId, setSelectedLagerId] = useState('')
 
   useEffect(() => {
     pb.collection('inventory_items').getFullList<InventoryItem>({
       filter: `organization_id = "${org.id}"`,
       sort: 'name',
     }).then(items => setInventoryItems(items)).catch(() => {})
+    pb.collection('inventory_locations').getFullList<Location>({
+      filter: `organization_id = "${org.id}"`,
+      sort: 'name',
+    }).then(locs => {
+      setLocations(locs)
+      if (locs.length === 1) setSelectedLagerId(locs[0].id)
+    }).catch(() => {})
   }, [org.id])
 
   const addPos = () => setPositions(p => [...p, { qty: 1 }])
@@ -222,15 +237,22 @@ export default function OrgProduktausgabe() {
       alert('Bitte Einsatznummer, Datum, mindestens einen Artikel und einen Benutzer auswählen.')
       return
     }
+    if (!selectedLagerId) {
+      alert('Bitte ein Lager auswählen.')
+      return
+    }
     setSending(true)
     try {
       const deDate = datum.split('-').reverse().join('.')
+      const lagerName = locations.find(l => l.id === selectedLagerId)?.name ?? ''
       await pb.collection('product_outputs').create({
         title: `Produktausgabe ${einsatz} (${deDate})`,
         payload: {
           einsatz, datum,
           user_id: selectedUser.id,
           user_name: selectedUser.name,
+          lager_id: selectedLagerId,
+          lager_name: lagerName,
           positionen: filled,
         },
         status: 'offen',
@@ -246,7 +268,7 @@ export default function OrgProduktausgabe() {
 
   function reset() {
     setEinsatz(''); setDatum(today()); setSelectedUser(null)
-    setPositions([{ qty: 1 }]); setSuccess(false)
+    setPositions([{ qty: 1 }]); setSuccess(false); setSelectedLagerId('')
   }
 
   if (success) return (
@@ -334,6 +356,39 @@ export default function OrgProduktausgabe() {
           style={{ border: '0.5px solid var(--border-medium)', background: 'var(--bg-subtle)', padding: '.6rem .9rem', borderRadius: 10, cursor: 'pointer', fontWeight: 600, color: 'var(--accent)', fontSize: '.9rem', fontFamily: 'inherit' }}>
           + Position hinzufügen
         </button>
+      </Card>
+
+      <Card title="Lager *" icon={<IconWarehouse />}>
+        {locations.length === 0 ? (
+          <div style={{ fontSize: 14, color: 'var(--text-secondary)' }}>Keine Lager gefunden</div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 4 }}>
+            {locations.map(loc => (
+              <button
+                key={loc.id}
+                type="button"
+                onClick={() => setSelectedLagerId(loc.id)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 12,
+                  padding: '12px 14px', borderRadius: 12,
+                  border: selectedLagerId === loc.id ? '2px solid var(--accent)' : '0.5px solid var(--border-medium)',
+                  background: selectedLagerId === loc.id ? 'rgba(107,15,26,0.06)' : 'var(--bg-subtle)',
+                  cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit',
+                }}
+              >
+                <div style={{
+                  width: 20, height: 20, borderRadius: '50%', flexShrink: 0,
+                  border: selectedLagerId === loc.id ? '2px solid var(--accent)' : '2px solid var(--border-medium)',
+                  background: selectedLagerId === loc.id ? 'var(--accent)' : 'transparent',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center'
+                }}>
+                  {selectedLagerId === loc.id && <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#fff' }} />}
+                </div>
+                <span style={{ fontWeight: selectedLagerId === loc.id ? 700 : 500, fontSize: 15, color: 'var(--text)' }}>{loc.name}</span>
+              </button>
+            ))}
+          </div>
+        )}
       </Card>
 
       <Card title="Ausgetragen von" icon={<IconUser />}>

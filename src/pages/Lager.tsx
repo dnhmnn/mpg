@@ -93,6 +93,8 @@ interface ProductOutput {
     vorname?: string
     nachname?: string
     user_name?: string
+    lager_id?: string
+    lager_name?: string
     positionen: Array<{ qty: number; name: string; item_id?: string; unit?: string }>
   }
 }
@@ -110,6 +112,10 @@ export default function Lager() {
   const [ausgabenLoading, setAusgabenLoading] = useState(false)
   const [ausgabenCount, setAusgabenCount] = useState(0)
   const [buchendId, setBuchendId] = useState<string | null>(null)
+  const [outputLagerIds, setOutputLagerIds] = useState<Record<string, string>>({})
+  const [editingOutputId, setEditingOutputId] = useState<string | null>(null)
+  const [editedPositionen, setEditedPositionen] = useState<Record<string, Array<{ qty: number; name: string; item_id?: string; unit?: string }>>>({})
+  const [savingEdit, setSavingEdit] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<'all' | 'warning' | 'expired'>('all')
   const [showLowOnly, setShowLowOnly] = useState(false)
@@ -235,6 +241,9 @@ export default function Lager() {
       })
       setProductOutputs(list)
       setAusgabenCount(list.length)
+      const lagerMap: Record<string, string> = {}
+      list.forEach(o => { lagerMap[o.id] = o.payload.lager_id || currentLocationId || '' })
+      setOutputLagerIds(lagerMap)
     } catch (e: any) {
       showMsg('Fehler beim Laden: ' + e.message, 'error')
     } finally {
@@ -242,14 +251,33 @@ export default function Lager() {
     }
   }
 
+  async function saveOutputEdit(output: ProductOutput) {
+    const pos = editedPositionen[output.id]
+    if (!pos) return
+    setSavingEdit(true)
+    try {
+      await pb.collection('product_outputs').update(output.id, {
+        payload: { ...output.payload, positionen: pos }
+      })
+      setProductOutputs(prev => prev.map(o => o.id === output.id ? { ...o, payload: { ...o.payload, positionen: pos } } : o))
+      setEditingOutputId(null)
+      showMsg('Gespeichert', 'success')
+    } catch (e: any) {
+      showMsg('Fehler: ' + e.message, 'error')
+    } finally {
+      setSavingEdit(false)
+    }
+  }
+
   async function ausbuchenAlle(output: ProductOutput) {
-    if (!currentLocationId) { showMsg('Kein Lagerort ausgewählt', 'error'); return }
+    const locId = outputLagerIds[output.id] || currentLocationId
+    if (!locId) { showMsg('Kein Lagerort ausgewählt', 'error'); return }
     setBuchendId(output.id)
     try {
       const positionen = output.payload.positionen.filter(p => p.item_id && p.qty > 0)
       for (const pos of positionen) {
         const stockList = await pb.collection('inventory_stock').getFullList<StockItem>({
-          filter: `item_id = "${pos.item_id}" && location_id = "${currentLocationId}"`,
+          filter: `item_id = "${pos.item_id}" && location_id = "${locId}"`,
           sort: 'expiry_date',
         })
         let remaining = pos.qty
@@ -266,7 +294,7 @@ export default function Lager() {
         }
         await pb.collection('inventory_transactions').create({
           item_id: pos.item_id,
-          location_id: currentLocationId,
+          location_id: locId,
           type: 'ausbuchung',
           quantity: -pos.qty,
           note: `Produktausgabe ${output.payload.einsatz} – ${output.payload.user_name ?? `${output.payload.vorname ?? ''} ${output.payload.nachname ?? ''}`.trim()}`,
@@ -2844,17 +2872,22 @@ export default function Lager() {
               <div style={{ textAlign: 'center', padding: '32px 0', color: 'var(--text-secondary)' }}>Laden…</div>
             ) : productOutputs.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '48px 0', color: 'var(--text-secondary)' }}>
-                <div style={{ fontSize: 40, marginBottom: 12 }}>✅</div>
+                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2" style={{ display: 'block', margin: '0 auto 12px' }}><polyline points="20 6 9 17 4 12"/></svg>
                 <div style={{ fontWeight: 600 }}>Keine offenen Ausgaben</div>
               </div>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                 {productOutputs.map(output => {
                   const p = output.payload
                   const deDate = p.datum ? p.datum.split('-').reverse().join('.') : '–'
-                  const withItemId = p.positionen.filter(pos => pos.item_id)
-                  const withoutItemId = p.positionen.filter(pos => !pos.item_id)
+                  const activePosionen = editingOutputId === output.id ? (editedPositionen[output.id] ?? p.positionen) : p.positionen
+                  const withItemId = activePosionen.filter(pos => pos.item_id)
+                  const withoutItemId = activePosionen.filter(pos => !pos.item_id)
                   const isBusy = buchendId === output.id
+                  const isEditing = editingOutputId === output.id
+                  const selectedLocId = outputLagerIds[output.id] || currentLocationId || ''
+                  const selectedLocName = locations.find(l => l.id === selectedLocId)?.name ?? selectedLocId
+
                   return (
                     <div key={output.id} style={{ background: 'var(--bg-subtle)', border: '0.5px solid var(--border-medium)', borderRadius: 14, padding: 16 }}>
                       {/* Header */}
@@ -2862,21 +2895,81 @@ export default function Lager() {
                         <div>
                           <div style={{ fontWeight: 700, fontSize: 15 }}>Einsatz {p.einsatz}</div>
                           <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 2 }}>
-                            {deDate} · {p.vorname} {p.nachname}
+                            {deDate} · {p.user_name ?? `${p.vorname ?? ''} ${p.nachname ?? ''}`.trim()}
                           </div>
                         </div>
                         <span style={{ fontSize: 11, fontWeight: 700, background: '#fef9c3', color: '#854d0e', borderRadius: 6, padding: '3px 8px' }}>OFFEN</span>
                       </div>
 
-                      {/* Positions */}
+                      {/* Lager selector */}
                       <div style={{ marginBottom: 12 }}>
-                        {p.positionen.map((pos, idx) => (
-                          <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 10px', background: 'var(--bg-card)', borderRadius: 8, marginBottom: 4, border: `0.5px solid ${pos.item_id ? 'rgba(34,197,94,0.3)' : 'var(--border)'}` }}>
-                            <span style={{ fontWeight: 600, fontSize: 14 }}>{pos.name}</span>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>Lager</div>
+                        {p.lager_name && selectedLocId === p.lager_id && (
+                          <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 4 }}>
+                            Angefordert: <strong>{p.lager_name}</strong>
+                          </div>
+                        )}
+                        <select
+                          value={selectedLocId}
+                          onChange={e => setOutputLagerIds(prev => ({ ...prev, [output.id]: e.target.value }))}
+                          style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: selectedLocId !== p.lager_id && p.lager_id ? '1.5px solid #f59e0b' : '0.5px solid var(--border-medium)', background: 'var(--bg-card)', color: 'var(--text)', fontSize: 14, fontFamily: 'inherit' }}
+                        >
+                          <option value="">— Lager wählen —</option>
+                          {locations.map(loc => (
+                            <option key={loc.id} value={loc.id}>{loc.name}{loc.id === p.lager_id ? ' (angefordert)' : ''}</option>
+                          ))}
+                        </select>
+                        {selectedLocId !== p.lager_id && p.lager_id && (
+                          <div style={{ fontSize: 11, color: '#b45309', marginTop: 4 }}>
+                            Abweichend vom angeforderten Lager ({p.lager_name})
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Positions */}
+                      <div style={{ marginBottom: 10 }}>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          Positionen
+                          {!isEditing && (
+                            <button
+                              className="btn-small"
+                              onClick={() => {
+                                setEditingOutputId(output.id)
+                                setEditedPositionen(prev => ({ ...prev, [output.id]: p.positionen.map(pos => ({ ...pos })) }))
+                              }}
+                              style={{ fontSize: 11, padding: '3px 10px' }}
+                            >
+                              Korrigieren
+                            </button>
+                          )}
+                          {isEditing && (
+                            <div style={{ display: 'flex', gap: 6 }}>
+                              <button className="btn-small" onClick={() => setEditingOutputId(null)} style={{ fontSize: 11, padding: '3px 10px' }}>Abbrechen</button>
+                              <button className="btn primary" onClick={() => saveOutputEdit(output)} disabled={savingEdit} style={{ fontSize: 11, padding: '3px 10px' }}>
+                                {savingEdit ? '…' : 'Speichern'}
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                        {activePosionen.map((pos, idx) => (
+                          <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 10px', background: 'var(--bg-card)', borderRadius: 8, marginBottom: 4, border: `0.5px solid ${pos.item_id ? 'rgba(34,197,94,0.3)' : 'var(--border)'}` }}>
+                            <span style={{ fontWeight: 600, fontSize: 14, flex: 1, marginRight: 8 }}>{pos.name}</span>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                              <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{pos.qty}× {pos.unit || ''}</span>
+                              {isEditing ? (
+                                <input
+                                  type="number" min={0}
+                                  value={pos.qty}
+                                  onChange={e => setEditedPositionen(prev => {
+                                    const copy = (prev[output.id] ?? p.positionen.map(p2 => ({ ...p2 }))).map((p2, i2) => i2 === idx ? { ...p2, qty: Number(e.target.value) } : p2)
+                                    return { ...prev, [output.id]: copy }
+                                  })}
+                                  style={{ width: 60, padding: '4px 6px', borderRadius: 6, border: '1px solid var(--border-medium)', background: 'var(--bg-input)', color: 'var(--text)', fontSize: 13, textAlign: 'center' }}
+                                />
+                              ) : (
+                                <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{pos.qty}× {pos.unit || ''}</span>
+                              )}
                               {pos.item_id
-                                ? <span style={{ fontSize: 11, color: '#16a34a', fontWeight: 700 }}>✓ Lager</span>
+                                ? <span style={{ fontSize: 11, color: '#16a34a', fontWeight: 700 }}>Lager</span>
                                 : <span style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 600 }}>Freitext</span>}
                             </div>
                           </div>
@@ -2885,7 +2978,7 @@ export default function Lager() {
 
                       {withoutItemId.length > 0 && (
                         <div style={{ fontSize: 12, color: '#b45309', background: '#fef9c3', borderRadius: 8, padding: '6px 10px', marginBottom: 10 }}>
-                          ⚠ {withoutItemId.length} Position(en) ohne Lager-Verknüpfung — werden nicht ausgebucht
+                          {withoutItemId.length} Position(en) ohne Lager-Verknüpfung — werden nicht ausgebucht
                         </div>
                       )}
 
@@ -2897,10 +2990,10 @@ export default function Lager() {
                         <button
                           className="btn primary"
                           onClick={() => ausbuchenAlle(output)}
-                          disabled={isBusy || withItemId.length === 0}
-                          title={withItemId.length === 0 ? 'Keine Artikel mit Lager-Verknüpfung' : ''}
+                          disabled={isBusy || withItemId.length === 0 || !selectedLocId}
+                          title={!selectedLocId ? 'Kein Lager ausgewählt' : withItemId.length === 0 ? 'Keine Artikel mit Lager-Verknüpfung' : ''}
                         >
-                          {isBusy ? '⏳ Buche aus…' : `Alles ausbuchen (${withItemId.length})`}
+                          {isBusy ? 'Buche aus…' : `Alles ausbuchen (${withItemId.length})`}
                         </button>
                       </div>
                     </div>
