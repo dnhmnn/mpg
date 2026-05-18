@@ -39,6 +39,8 @@ export default function ProtokollBearbeiten() {
   const [sigUrl, setSigUrl] = useState('')
   const [locked, setLocked] = useState(false)
   const [lockedReason, setLockedReason] = useState('')
+  const [isReopenEdit, setIsReopenEdit] = useState(false)
+  const originalPayloadRef = useRef<Record<string, unknown>>({})
   const [sending, setSending] = useState(false)
   const [saved, setSaved] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -103,10 +105,15 @@ export default function ProtokollBearbeiten() {
         img.src = p.signature
       }
       const age = Date.now() - new Date(rec.created).getTime()
-      if (rec.status !== 'offen') { setLocked(true); setLockedReason('Dieses Protokoll wurde abgeschlossen.') }
-      else if (age > 24 * 60 * 60 * 1000) {
+      const reopenActive = p.tf_reopen && new Date(p.tf_reopen.expires_at) > new Date()
+      originalPayloadRef.current = p
+      if (rec.status === 'freigegeben' && reopenActive) {
+        setIsReopenEdit(true)
+      } else if (rec.status !== 'offen') {
+        setLocked(true); setLockedReason('Dieses Protokoll wurde abgeschlossen.')
+      } else if (age > 24 * 60 * 60 * 1000) {
         setLocked(true); setLockedReason('Dieses Protokoll wurde nach 24 Stunden automatisch gesperrt.')
-        pb.collection('patients').update(patientId!, { status: 'abgeschlossen' }).catch(() => {})
+        pb.collection('patients').update(patientId!, { status: 'freigegeben' }).catch(() => {})
       }
       const chf = new Set<string>(Array.isArray(p._changed_fields) ? p._changed_fields : [])
       setTimeout(() => {
@@ -167,24 +174,50 @@ export default function ProtokollBearbeiten() {
     data.gcs_e = gcs.e; data.gcs_v = gcs.v; data.gcs_m = gcs.m
     data.rueckfragen = rueckfragen
     data.stellungnahmen = stellungnahmen
+    // Preserve fields not managed by this form
+    const orig = originalPayloadRef.current
+    if (orig._changed_fields) data._changed_fields = orig._changed_fields
+    if (orig.tf_reopen) data.tf_reopen = orig.tf_reopen
+    if (orig.access_code) data.access_code = orig.access_code
+    if (orig.access_code_created) data.access_code_created = orig.access_code_created
     return data
+  }
+
+  function computeTFChangedFields(newData: Record<string, unknown>): string[] {
+    const orig = originalPayloadRef.current
+    const existing = new Set<string>(Array.isArray(orig._tf_changed_fields) ? orig._tf_changed_fields as string[] : [])
+    const skip = new Set(['_changed_fields', '_tf_changed_fields', 'tf_reopen', 'access_code', 'access_code_created', 'rueckfragen', 'stellungnahmen', 'photos', 'signature'])
+    for (const key of Object.keys(newData)) {
+      if (skip.has(key)) continue
+      if (JSON.stringify(newData[key]) !== JSON.stringify(orig[key])) existing.add(key)
+    }
+    return Array.from(existing)
   }
 
   async function submit() {
     setSending(true)
     try {
-      await pb.collection('patients').update(patientId!, { payload: collectData() })
+      const newData = collectData()
+      if (isReopenEdit) newData._tf_changed_fields = computeTFChangedFields(newData)
+      await pb.collection('patients').update(patientId!, { payload: newData })
       setSaved(true); setTimeout(() => setSaved(false), 3000)
     } catch (e: any) { alert('Fehler: ' + e.message) }
     finally { setSending(false) }
   }
 
   async function finish() {
-    if (!sigUrl) { alert('Bitte zuerst unterschreiben.'); return }
+    if (!sigUrl && !isReopenEdit) { alert('Bitte zuerst unterschreiben.'); return }
     setSending(true)
     try {
-      await pb.collection('patients').update(patientId!, { payload: collectData(), status: 'abgeschlossen' })
-      setLocked(true); setLockedReason('Dieses Protokoll wurde abgeschlossen.')
+      const newData = collectData()
+      if (isReopenEdit) {
+        newData._tf_changed_fields = computeTFChangedFields(newData)
+        await pb.collection('patients').update(patientId!, { payload: newData })
+        setLocked(true); setLockedReason('Nachbearbeitung abgeschlossen. Das Protokoll liegt wieder beim Admin.')
+      } else {
+        await pb.collection('patients').update(patientId!, { payload: newData, status: 'abgeschlossen' })
+        setLocked(true); setLockedReason('Dieses Protokoll wurde abgeschlossen.')
+      }
     } catch (e: any) { alert('Fehler: ' + e.message) }
     finally { setSending(false) }
   }
@@ -224,9 +257,19 @@ export default function ProtokollBearbeiten() {
           </div>
         )}
 
+        {isReopenEdit && !locked && (() => {
+          const reopen = originalPayloadRef.current.tf_reopen as any
+          const minsLeft = reopen ? Math.ceil((new Date(reopen.expires_at).getTime() - Date.now()) / 60000) : 0
+          return (
+            <div style={{ background: '#f0fdf4', border: '0.5px solid #86efac', borderRadius: 12, padding: '12px 16px', marginBottom: '.75rem', color: '#166534', fontWeight: 600, fontSize: '.9rem' }}>
+              Nachbearbeitung aktiv · noch {minsLeft >= 60 ? `${Math.ceil(minsLeft / 60)}h` : `${minsLeft}min`} · Deine Änderungen werden grün markiert
+            </div>
+          )
+        })()}
+
         {lockedReason && (
-          <div style={{ background: '#fef2f2', border: '0.5px solid #fca5a5', borderRadius: 12, padding: '12px 16px', marginBottom: '.75rem', color: '#991b1b', fontWeight: 600, fontSize: '.9rem' }}>
-            🔒 {lockedReason}
+          <div style={{ background: lockedReason.startsWith('Nachbearbeitung') ? '#f0fdf4' : '#fef2f2', border: `0.5px solid ${lockedReason.startsWith('Nachbearbeitung') ? '#86efac' : '#fca5a5'}`, borderRadius: 12, padding: '12px 16px', marginBottom: '.75rem', color: lockedReason.startsWith('Nachbearbeitung') ? '#166534' : '#991b1b', fontWeight: 600, fontSize: '.9rem' }}>
+            {lockedReason.startsWith('Nachbearbeitung') ? '✓' : '🔒'} {lockedReason}
           </div>
         )}
 
@@ -733,10 +776,10 @@ export default function ProtokollBearbeiten() {
               </div>
               {!locked && (
                 <button type="button" disabled={sending} onClick={finish} style={{ marginTop: '1rem', width: '100%', background: sending ? 'var(--bg-hover)' : '#16a34a', color: sending ? 'var(--text-secondary)' : '#fff', border: 'none', borderRadius: 12, padding: '14px', fontWeight: 700, cursor: sending ? 'not-allowed' : 'pointer', fontSize: '1.05rem', fontFamily: 'inherit' }}>
-                  {sending ? 'Wird abgeschlossen…' : 'Protokoll abschließen'}
+                  {sending ? 'Wird abgeschlossen…' : isReopenEdit ? 'Nachbearbeitung abschließen' : 'Protokoll abschließen'}
                 </button>
               )}
-              {!locked && <p style={{ fontSize: '.8rem', color: 'var(--text-secondary)', marginTop: '.5rem', textAlign: 'center' }}>Nach dem Abschließen kann das Protokoll nicht mehr bearbeitet werden.</p>}
+              {!locked && <p style={{ fontSize: '.8rem', color: 'var(--text-secondary)', marginTop: '.5rem', textAlign: 'center' }}>{isReopenEdit ? 'Änderungen werden für den Admin grün markiert.' : 'Nach dem Abschließen kann das Protokoll nicht mehr bearbeitet werden.'}</p>}
             </PubSection>
 
           </fieldset>
