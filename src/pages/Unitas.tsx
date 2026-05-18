@@ -286,7 +286,7 @@ export default function Unitas() {
 
   if (authLoading || loading) {
     return (
-      <div style={{ minHeight: '100dvh', background: '#0a0f1e', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Atkinson Hyperlegible', -apple-system, sans-serif" }}>
+      <div style={{ minHeight: '100dvh', background: '#1a0104', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Atkinson Hyperlegible', -apple-system, sans-serif" }}>
         <div style={{ width: 36, height: 36, border: '3px solid rgba(255,255,255,0.12)', borderTopColor: 'rgba(255,255,255,0.6)', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
         <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
       </div>
@@ -316,7 +316,7 @@ export default function Unitas() {
       {greetingPhase !== 'done' && (
         <div style={{
           position: 'fixed', inset: 0, zIndex: 9999,
-          background: 'radial-gradient(ellipse at 50% 40%, #111827 0%, #030712 100%)',
+          background: 'radial-gradient(ellipse at 40% 35%, #7a0c16 0%, #3d0309 55%, #1a0104 100%)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           animation: greetingPhase === 'exit' ? 'greetFadeOut 0.55s cubic-bezier(0.4,0,1,1) forwards' : 'none',
           userSelect: 'none',
@@ -324,11 +324,11 @@ export default function Unitas() {
           {/* Blurred logo watermark */}
           <img src="/logo.svg" alt="" aria-hidden style={{
             position: 'absolute', width: '55vw', maxWidth: 360,
-            opacity: 0.04, filter: 'blur(2px) saturate(0)',
+            opacity: 0.12, filter: 'blur(3px) saturate(0) brightness(2)',
             pointerEvents: 'none', userSelect: 'none'
           }} />
           {/* Glow ring */}
-          <div style={{ position: 'absolute', width: '50vw', maxWidth: 320, height: '50vw', maxHeight: 320, borderRadius: '50%', background: 'radial-gradient(circle, rgba(99,102,241,0.18) 0%, transparent 70%)', pointerEvents: 'none' }} />
+          <div style={{ position: 'absolute', width: '50vw', maxWidth: 320, height: '50vw', maxHeight: 320, borderRadius: '50%', background: 'radial-gradient(circle, rgba(220,40,60,0.22) 0%, transparent 70%)', pointerEvents: 'none' }} />
 
           <div style={{ textAlign: 'center', position: 'relative' }}>
             {/* "Servus" */}
@@ -345,7 +345,7 @@ export default function Unitas() {
               fontSize: 'clamp(52px, 14vw, 100px)', fontWeight: 800,
               letterSpacing: '-0.03em', lineHeight: 1, whiteSpace: 'nowrap',
               fontFamily: "'Atkinson Hyperlegible', -apple-system, sans-serif",
-              background: 'linear-gradient(135deg, #c7d2fe 0%, #a5b4fc 40%, #818cf8 100%)',
+              background: 'linear-gradient(135deg, #fca5a5 0%, #f87171 40%, #fbbf24 100%)',
               WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
               backgroundClip: 'text',
               animation: greetingPhase === 'name' || greetingPhase === 'exit'
@@ -377,11 +377,11 @@ export default function Unitas() {
             title={user?.name || ''}
             style={{
               width: 36, height: 36, borderRadius: '50%', border: 'none', cursor: 'pointer',
-              background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+              background: 'linear-gradient(135deg, #600812 0%, #9b1b2a 100%)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontFamily: "'Atkinson Hyperlegible', -apple-system, sans-serif",
               fontWeight: 800, fontSize: 13, color: '#fff', letterSpacing: '0.02em',
-              boxShadow: '0 2px 8px rgba(99,102,241,0.4)',
+              boxShadow: '0 2px 8px rgba(96,8,18,0.45)',
               flexShrink: 0,
             }}
           >{initials(user?.name)}</button>
