@@ -846,6 +846,7 @@ export default function Patienten() {
                                 Stellungnahme{openRQ > 0 ? ` (${openRQ})` : ''}
                               </button>
                             )}
+                            <button className="pat-btn" onClick={() => setProtokollSheet(pat)}>Ansehen</button>
                             <button className="pat-btn" onClick={() => setReopenModal(pat)}>Nachbearbeitung</button>
                             <button className="pat-btn" onClick={() => openEdit(pat)}>Bearbeiten</button>
                             <button
