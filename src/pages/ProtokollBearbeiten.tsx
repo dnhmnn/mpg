@@ -110,7 +110,7 @@ export default function ProtokollBearbeiten() {
       if (rec.status === 'freigegeben' && reopenActive) {
         setIsReopenEdit(true)
       } else if (rec.status !== 'offen') {
-        setLocked(true); setLockedReason('Dieses Protokoll wurde abgeschlossen.')
+        setLocked(true); setLockedReason('Dieses Protokoll ist freigegeben und liegt beim Admin zur Gegenzeichnung.')
       } else if (age > 24 * 60 * 60 * 1000) {
         setLocked(true); setLockedReason('Dieses Protokoll wurde nach 24 Stunden automatisch gesperrt.')
         pb.collection('patients').update(patientId!, { status: 'freigegeben' }).catch(() => {})
@@ -221,8 +221,8 @@ export default function ProtokollBearbeiten() {
         await pb.collection('patients').update(patientId!, { payload: newData })
         setLocked(true); setLockedReason('Nachbearbeitung abgeschlossen. Das Protokoll liegt wieder beim Admin.')
       } else {
-        await pb.collection('patients').update(patientId!, { payload: newData, status: 'abgeschlossen' })
-        setLocked(true); setLockedReason('Dieses Protokoll wurde abgeschlossen.')
+        await pb.collection('patients').update(patientId!, { payload: newData, status: 'freigegeben' })
+        setLocked(true); setLockedReason('Protokoll freigegeben. Der Admin kann es jetzt gegenzeichnen.')
       }
     } catch (e: any) { alert('Fehler: ' + e.message) }
     finally { setSending(false) }
