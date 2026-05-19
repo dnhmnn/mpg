@@ -159,30 +159,38 @@ export default function Widgets({ user }: WidgetsProps) {
       }}>
         Neuigkeiten
       </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         {news.map(item => (
           <div
             key={item.id}
             onClick={() => navigate(item.url)}
             style={{
-              display: 'flex', alignItems: 'center', gap: 12,
-              width: '100%', padding: '14px 12px',
-              background: '#fff', borderRadius: 10,
-              boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
-              borderTop: 'none', borderRight: 'none', borderBottom: 'none',
+              display: 'flex', alignItems: 'center', gap: 14,
+              padding: '14px 16px',
+              background: '#fff', borderRadius: 12,
+              boxShadow: '0 1px 6px rgba(0,0,0,0.06)',
               borderLeft: `3px solid ${item.color}`,
-              cursor: 'pointer', textAlign: 'left' as const,
+              cursor: 'pointer',
             }}
           >
+            {/* Editorial icon square */}
             <div style={{
-              width: 8, height: 8, borderRadius: '50%',
-              background: item.color, flexShrink: 0,
-            }} />
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 14, fontWeight: 700, color: '#1a0e08' }}>{item.label}</div>
-              <div style={{ fontSize: 12, fontStyle: 'italic', color: 'var(--warm-gray)', marginTop: 2 }}>{item.sub}</div>
+              width: 34, height: 34, borderRadius: 9, flexShrink: 0,
+              background: item.color + '16',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <div style={{ width: 9, height: 9, borderRadius: 2, background: item.color }} />
             </div>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(96,8,18,0.3)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            {/* Text */}
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: '#1a0e08', lineHeight: 1.3 }}>
+                {item.label}
+              </div>
+              <div style={{ fontSize: 12, fontStyle: 'italic', color: 'var(--warm-gray)', marginTop: 3 }}>
+                {item.sub}
+              </div>
+            </div>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(96,8,18,0.25)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
               <path d="M9 18l6-6-6-6"/>
             </svg>
           </div>
