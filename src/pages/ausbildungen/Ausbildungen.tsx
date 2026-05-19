@@ -530,7 +530,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
         typ: beitragForm.typ,
         titel: beitragForm.titel.trim(),
         inhalt: beitragForm.inhalt.trim(),
-        tags: JSON.stringify(tags),
+        tags: tags,
         gepinnt: beitragForm.gepinnt,
         organisation_id: user?.organization_id,
         erstellt_von_id: user?.id,
@@ -538,15 +538,15 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
       }
       if (beitragForm.typ === 'video') data.video_url = beitragForm.video_url.trim()
       if (beitragForm.typ === 'quiz') {
-        data.quiz_daten = JSON.stringify({
+        data.quiz_daten = {
           frage: beitragForm.quiz_frage,
           antworten: beitragForm.quiz_antworten.filter(a => a.trim()),
           richtige: beitragForm.quiz_richtige
-        })
+        }
       }
       if (beitragForm.typ === 'bild' && beitragForm.bild_file) {
         const fd = new FormData()
-        Object.entries(data).forEach(([k, v]) => fd.append(k, String(v)))
+        Object.entries(data).forEach(([k, v]) => fd.append(k, typeof v === 'object' ? JSON.stringify(v) : String(v)))
         fd.append('bild', beitragForm.bild_file)
         await pb.collection('lernbar_beitraege').create(fd)
       } else {
