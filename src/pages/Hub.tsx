@@ -128,13 +128,7 @@ export default function Hub() {
 
   useEffect(() => {
     document.body.style.overflow = 'hidden'
-    document.body.style.backgroundColor = '#faf9f7'
-    document.documentElement.style.backgroundColor = '#faf9f7'
-    return () => {
-      document.body.style.overflow = ''
-      document.body.style.backgroundColor = ''
-      document.documentElement.style.backgroundColor = ''
-    }
+    return () => { document.body.style.overflow = '' }
   }, [])
 
   useEffect(() => {
@@ -375,10 +369,9 @@ export default function Hub() {
       <div style={{
         position: 'fixed',
         inset: 0,
-        zIndex: 1,
         overflowY: 'auto',
         overscrollBehavior: 'none',
-        background: '#faf9f7',
+        background: '#ffffff',
         paddingTop: 'calc(54px + env(safe-area-inset-top) + 30px)',
         paddingBottom: 'calc(8vh + env(safe-area-inset-bottom))',
         paddingLeft: 'max(20px, env(safe-area-inset-left))',
