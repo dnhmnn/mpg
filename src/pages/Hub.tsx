@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { useNotifications } from '../hooks/useNotifications'
 import { getTheme, setTheme, applyTheme } from '../lib/theme'
-import { pb } from '../lib/pocketbase'
 import Widgets from '../components/Widgets'
 import AppGrid from '../components/AppGrid'
 import SettingsModal from '../components/SettingsModal'
@@ -149,7 +148,6 @@ export default function Hub() {
     if (saved) {
       apps = JSON.parse(saved)
       if (!apps.includes('settings')) apps.push('settings')
-      // Auto-add newly permitted apps missing from saved layout
       const newApps = Object.keys(ALL_APPS).filter(id => {
         const app = ALL_APPS[id]
         return hasPermission(app.permission) && !apps.includes(id)
@@ -195,22 +193,26 @@ export default function Hub() {
 
   if (loading) return null
 
+  const firstName = (user?.name || user?.email?.split('@')[0] || '').split(' ')[0]
+
   return (
     <div style={{ minHeight: '100dvh', background: 'var(--warm-bg)', fontFamily: "'Atkinson Hyperlegible', -apple-system, sans-serif" }}>
       <style>{`
         @keyframes greetCurtainOut { 0%,60%{opacity:1} 100%{opacity:0} }
         @keyframes greetNameSlide { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:none} }
-        .greeting-overlay { position:fixed;inset:0;z-index:9999;background:#3d0408;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;animation:greetCurtainOut 2.4s ease forwards;pointer-events:none; }
-        .greeting-overlay.gone { display:none; }
-        @keyframes sheetIn { from{transform:translateY(100%)} to{transform:translateY(0)} }
+        .hub-greeting-overlay {
+          position:fixed;inset:0;z-index:9999;background:#3d0408;
+          display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;
+          animation:greetCurtainOut 2.4s ease forwards;pointer-events:none;
+        }
       `}</style>
 
       {/* Greeting overlay */}
       {showGreeting && !greetingGone && (
-        <div className="greeting-overlay">
+        <div className="hub-greeting-overlay">
           <span style={{ fontSize: 15, fontStyle: 'italic', color: 'rgba(253,232,216,0.5)', letterSpacing: '0.04em', animation: 'greetNameSlide 0.5s ease-out both' }}>Servus,</span>
           <span style={{ fontStyle: 'italic', fontWeight: 700, color: '#fde8d8', fontSize: 'clamp(48px,13vw,80px)', lineHeight: 1, animation: 'greetNameSlide 0.5s 0.12s ease-out both' }}>
-            {(user?.name || user?.email?.split('@')[0] || '').split(' ')[0]}
+            {firstName}
           </span>
         </div>
       )}
@@ -219,20 +221,20 @@ export default function Hub() {
       <div style={{
         background: '#fff',
         borderBottom: '0.5px solid rgba(96,8,18,0.12)',
-        position: 'sticky', top: 0, zIndex: 100,
+        position: 'sticky',
+        top: 0,
+        zIndex: 100,
         paddingTop: 'env(safe-area-inset-top)',
         paddingLeft: 'max(20px, env(safe-area-inset-left))',
         paddingRight: 'max(20px, env(safe-area-inset-right))',
       } as React.CSSProperties}>
         <div style={{ height: 60, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          {/* Left: Responda logo circle */}
           <div style={{ width: 34, height: 34, borderRadius: '50%', background: '#600812', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, overflow: 'hidden' }}>
             {!logoError
               ? <img src="/logo.png" alt="" style={{ width: 20, height: 20, objectFit: 'contain', filter: 'brightness(0) invert(1)' }} onError={() => setLogoError(true)} />
               : <span style={{ color: '#fff', fontWeight: 700, fontSize: 13 }}>R</span>
             }
           </div>
-          {/* Center: org + date */}
           <div style={{ flex: 1, textAlign: 'center', padding: '0 12px' }}>
             <div style={{ fontWeight: 700, fontSize: 15, letterSpacing: '-0.01em', color: '#1a0e08', lineHeight: 1.2 }}>
               {user?.organization_name || 'Responda'}
@@ -241,12 +243,10 @@ export default function Hub() {
               {new Date().toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' })}
             </div>
           </div>
-          {/* Right: user avatar → opens settings */}
-          <button onClick={() => setShowSettings(true)} style={{
-            width: 34, height: 34, borderRadius: '50%', border: '1.5px solid #600812',
-            background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontWeight: 700, fontSize: 12, color: '#600812', cursor: 'pointer', flexShrink: 0, fontFamily: 'inherit',
-          } as React.CSSProperties}>
+          <button
+            onClick={() => setShowSettings(true)}
+            style={{ width: 34, height: 34, borderRadius: '50%', border: '1.5px solid #600812', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 12, color: '#600812', cursor: 'pointer', flexShrink: 0, fontFamily: 'inherit' } as React.CSSProperties}
+          >
             {initials(user?.name || user?.email)}
           </button>
         </div>
@@ -256,28 +256,25 @@ export default function Hub() {
       <div style={{
         maxWidth: 640,
         margin: '0 auto',
-        padding: '24px max(20px, env(safe-area-inset-left)) calc(env(safe-area-inset-bottom) + 40px)',
+        padding: '24px max(20px, env(safe-area-inset-left)) calc(env(safe-area-inset-bottom) + 48px)',
         display: 'flex',
         flexDirection: 'column',
         gap: 28,
       } as React.CSSProperties}>
 
-        {/* Greeting */}
         <div>
           <div style={{ fontSize: 26, fontWeight: 800, color: '#1a0e08', letterSpacing: '-0.02em', lineHeight: 1.1 }}>
-            Ciao, <span style={{ color: '#600812', fontStyle: 'italic' }}>{(user?.name || user?.email?.split('@')[0] || '').split(' ')[0]}</span>
+            Ciao, <span style={{ color: '#600812', fontStyle: 'italic' }}>{firstName}</span>
           </div>
         </div>
 
-        {/* Neuigkeiten */}
         <Widgets user={user} />
 
-        {/* Module section */}
         <div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
             <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em' }}>Module</div>
             <button
-              onClick={() => { setEditMode(prev => !prev) }}
+              onClick={() => setEditMode(prev => !prev)}
               style={{ fontSize: 11, fontWeight: 600, color: editMode ? '#600812' : 'var(--warm-gray)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', padding: '2px 0' }}
             >
               {editMode ? 'Fertig' : 'Bearbeiten'}
@@ -299,7 +296,6 @@ export default function Hub() {
           )}
         </div>
 
-        {/* Kurzbefehle trigger */}
         <div>
           <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 14 }}>Kurzbefehle</div>
           <button
@@ -313,13 +309,29 @@ export default function Hub() {
 
       </div>
 
-      {/* Modals */}
       <SettingsModal isOpen={showSettings} onClose={() => setShowSettings(false)} user={user} />
-      <AppsModal isOpen={showAppsModal} onClose={() => { setShowAppsModal(false); setEditMode(false) }} availableApps={availableApps} onAddApp={handleAddApp} />
-      <EditModal isOpen={showEditModal} onClose={() => setShowEditModal(false)} onEditApps={() => { setEditMode(true); setShowAppsModal(true) }} onEditWidgets={() => setShowWidgetsModal(true)} />
+      <AppsModal
+        isOpen={showAppsModal}
+        onClose={() => { setShowAppsModal(false); setEditMode(false) }}
+        availableApps={availableApps}
+        onAddApp={handleAddApp}
+      />
+      <EditModal
+        isOpen={showEditModal}
+        onClose={() => setShowEditModal(false)}
+        onEditApps={() => { setEditMode(true); setShowAppsModal(true) }}
+        onEditWidgets={() => setShowWidgetsModal(true)}
+      />
       <WidgetsModal isOpen={showWidgetsModal} onClose={() => setShowWidgetsModal(false)} />
       {currentNotification && (
-        <NotificationModal isOpen={true} type={currentNotification.type} title={currentNotification.title} message={currentNotification.message} onDismiss={dismissNotification} onRemindLater={remindLater} />
+        <NotificationModal
+          isOpen={true}
+          type={currentNotification.type}
+          title={currentNotification.title}
+          message={currentNotification.message}
+          onDismiss={dismissNotification}
+          onRemindLater={remindLater}
+        />
       )}
 
       {/* Kurzbefehle bottom sheet */}
@@ -328,7 +340,7 @@ export default function Hub() {
         onClick={() => { setSheetOpen(false); setEditingShortcuts(false) }}
       >
         <div
-          style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: '#fff', borderRadius: '22px 22px 0 0', padding: `12px 20px calc(${24}px + env(safe-area-inset-bottom))`, transform: sheetOpen ? 'translateY(0)' : 'translateY(100%)', transition: 'transform .38s cubic-bezier(0.32,0.72,0,1)', maxHeight: '75vh', overflowY: 'auto', boxShadow: '0 -4px 32px rgba(0,0,0,0.1)' } as React.CSSProperties}
+          style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: '#fff', borderRadius: '22px 22px 0 0', padding: '12px 20px calc(24px + env(safe-area-inset-bottom))', transform: sheetOpen ? 'translateY(0)' : 'translateY(100%)', transition: 'transform .38s cubic-bezier(0.32,0.72,0,1)', maxHeight: '75vh', overflowY: 'auto', boxShadow: '0 -4px 32px rgba(0,0,0,0.1)' } as React.CSSProperties}
           onClick={e => e.stopPropagation()}
           onTouchStart={e => { touchStartY.current = e.touches[0].clientY }}
           onTouchEnd={e => { if (e.changedTouches[0].clientY - touchStartY.current > 50) { setSheetOpen(false); setEditingShortcuts(false) } }}
@@ -336,7 +348,10 @@ export default function Hub() {
           <div style={{ width: 36, height: 3, borderRadius: 99, background: 'rgba(96,8,18,0.15)', margin: '0 auto 20px' }} />
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, paddingBottom: 14, borderBottom: '0.5px solid rgba(96,8,18,0.08)' }}>
             <span style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em' }}>Kurzbefehle</span>
-            <button onClick={() => setEditingShortcuts(prev => !prev)} style={{ background: 'rgba(96,8,18,0.06)', border: 'none', borderRadius: 99, padding: '6px 14px', fontWeight: 600, fontSize: 11, color: '#600812', cursor: 'pointer', fontFamily: 'inherit' }}>
+            <button
+              onClick={() => setEditingShortcuts(prev => !prev)}
+              style={{ background: 'rgba(96,8,18,0.06)', border: 'none', borderRadius: 99, padding: '6px 14px', fontWeight: 600, fontSize: 11, color: '#600812', cursor: 'pointer', fontFamily: 'inherit' }}
+            >
               {editingShortcuts ? 'Fertig' : 'Bearbeiten'}
             </button>
           </div>
@@ -355,7 +370,7 @@ export default function Hub() {
                       <ShortcutIcon id={s.id} color={on ? '#fff' : '#600812'} />
                     </button>
                     {editingShortcuts && (
-                      <div style={{ position: 'absolute', top: -4, right: -4, width: 18, height: 18, borderRadius: '50%', background: on ? '#600812' : 'rgba(96,8,18,0.2)', border: '2px solid #faf9f7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <div style={{ position: 'absolute', top: -4, right: -4, width: 18, height: 18, borderRadius: '50%', background: on ? '#600812' : 'rgba(96,8,18,0.2)', border: '2px solid var(--warm-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         {on
                           ? <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
                           : <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
