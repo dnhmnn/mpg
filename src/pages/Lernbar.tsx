@@ -188,8 +188,8 @@ export default function Lernbar() {
 
   if (authLoading || loading) {
     return (
-      <div style={{ minHeight: '100dvh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Atkinson Hyperlegible', Inter, -apple-system, sans-serif" }}>
-        <div style={{ color: 'var(--text-secondary)', fontSize: 15 }}>Lade…</div>
+      <div style={{ minHeight: '100dvh', background: 'var(--warm-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Atkinson Hyperlegible', Inter, -apple-system, sans-serif" }}>
+        <div style={{ color: 'var(--warm-gray)', fontSize: 15, fontStyle: 'italic' }}>Lade…</div>
       </div>
     )
   }
@@ -417,31 +417,32 @@ export default function Lernbar() {
   ]
 
   return (
-    <div style={{ minHeight: '100dvh', background: 'var(--bg)', fontFamily: "'Atkinson Hyperlegible', Inter, -apple-system, sans-serif" }}>
-      {/* Header */}
-      <div style={{ position: 'sticky', top: 0, zIndex: 100, background: 'var(--bg-card)', borderBottom: '1px solid var(--border)', padding: 'calc(env(safe-area-inset-top) + 0px) 0 0' }}>
-        <div style={{ maxWidth: 600, margin: '0 auto', display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px' }}>
-          <button onClick={() => navigate(-1)} style={{ background: 'none', border: 'none', padding: '4px 8px 4px 0', cursor: 'pointer', color: 'var(--accent)', display: 'flex', alignItems: 'center', gap: 4, fontWeight: 600, fontSize: 14, fontFamily: 'inherit', flexShrink: 0 }}>
+    <div style={{ minHeight: '100dvh', background: 'var(--warm-bg)', fontFamily: "'Atkinson Hyperlegible', Inter, -apple-system, sans-serif" }}>
+      {/* Header — masthead */}
+      <div style={{ position: 'sticky', top: 0, zIndex: 100, background: '#fff', borderBottom: '0.5px solid rgba(96,8,18,0.12)', padding: 'calc(env(safe-area-inset-top) + 0px) 0 0' }}>
+        <div style={{ maxWidth: 600, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 60, padding: '0 20px' }}>
+          <button onClick={() => navigate(-1)} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: '#600812', display: 'flex', alignItems: 'center', gap: 4, fontWeight: 600, fontSize: 14, fontFamily: 'inherit', flexShrink: 0 }}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
-            Zurück
           </button>
-          <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'center' }}>
-            <img src="/logo.svg" alt="Responda" width={30} height={30} />
-            <span style={{ fontWeight: 700, fontSize: '1.15rem', letterSpacing: '-0.01em', color: 'var(--text)' }}>Lernbar</span>
+          <div style={{ flex: 1, textAlign: 'center', padding: '0 12px' }}>
+            <div style={{ fontWeight: 700, fontSize: 15, letterSpacing: '-0.01em', color: 'var(--text)', lineHeight: 1.2 }}>Lernbar</div>
+            <div style={{ fontStyle: 'italic', fontSize: 11, color: 'var(--warm-gray)', marginTop: 1 }}>
+              {new Date().toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' })}
+            </div>
           </div>
-          <div style={{ width: 70 }} />
+          <div style={{ width: 34 }} />
         </div>
       </div>
 
       {/* Content */}
-      <div style={{ maxWidth: 600, margin: '0 auto', padding: tab === 'feed' ? '12px 12px calc(80px + env(safe-area-inset-bottom))' : '20px 16px calc(80px + env(safe-area-inset-bottom))' }}>
+      <div style={{ maxWidth: 600, margin: '0 auto', padding: tab === 'feed' ? '14px 14px calc(84px + env(safe-area-inset-bottom))' : '20px 16px calc(84px + env(safe-area-inset-bottom))' }}>
 
         {/* ── FEED ── */}
         {tab === 'feed' && (
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             {beitraege.length === 0 && (
-              <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '64px 16px 24px', fontSize: 15 }}>
-                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--border-strong)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: 12, display: 'block', margin: '0 auto 12px' }}><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+              <div style={{ textAlign: 'center', color: 'var(--warm-gray)', padding: '64px 16px 24px', fontSize: 15, fontStyle: 'italic' }}>
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="rgba(96,8,18,0.2)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: 12, display: 'block', margin: '0 auto 12px' }}><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
                 Noch keine Lernbeiträge
               </div>
             )}
@@ -457,20 +458,20 @@ export default function Lernbar() {
 
                   {/* Pinned banner */}
                   {b.gepinnt && (
-                    <div style={{ background: 'var(--accent)', padding: '5px 16px', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <div style={{ background: '#600812', padding: '5px 16px', display: 'flex', alignItems: 'center', gap: 6 }}>
                       <svg width="10" height="10" viewBox="0 0 24 24" fill="white"><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5v6h2v-6h5v-2l-2-2z"/></svg>
-                      <span style={{ fontSize: 10, fontWeight: 700, color: '#fff', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Angepinnt</span>
+                      <span style={{ fontSize: 9, fontWeight: 700, color: '#fff', textTransform: 'uppercase', letterSpacing: '0.14em' }}>Angepinnt</span>
                     </div>
                   )}
 
                   {/* Author row */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px 10px' }}>
-                    <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--accent)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, flexShrink: 0 }}>
+                    <div style={{ width: 34, height: 34, borderRadius: '50%', background: '#600812', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, flexShrink: 0 }}>
                       {initials}
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)', lineHeight: 1.2 }}>{b.erstellt_von_name || 'Responda'}</div>
-                      <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 1 }}>
+                      <div style={{ fontSize: 12, color: 'var(--warm-gray)', marginTop: 1, fontStyle: 'italic' }}>
                         {new Date(b.created).toLocaleDateString('de-DE', { day: '2-digit', month: 'long', year: 'numeric' })}
                       </div>
                     </div>
@@ -541,7 +542,7 @@ export default function Lernbar() {
                     {tags.length > 0 && (
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 10 }}>
                         {tags.map(t => (
-                          <span key={t} style={{ fontSize: 13, fontWeight: 600, color: 'var(--accent)' }}>#{t}</span>
+                          <span key={t} style={{ fontSize: 12, fontWeight: 700, color: '#600812', fontStyle: 'italic' }}>#{t}</span>
                         ))}
                       </div>
                     )}
@@ -556,15 +557,15 @@ export default function Lernbar() {
         {tab === 'termine' && (
           <div>
             {termine.length === 0 && (
-              <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '64px 0 24px', fontSize: 15 }}>
-                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--border-strong)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block', margin: '0 auto 12px' }}><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              <div style={{ textAlign: 'center', color: 'var(--warm-gray)', padding: '64px 0 24px', fontSize: 15, fontStyle: 'italic' }}>
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="rgba(96,8,18,0.2)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block', margin: '0 auto 12px' }}><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
                 Keine Termine zugewiesen
               </div>
             )}
             {termine.length > 0 && (
               <div style={{ position: 'relative', paddingLeft: 52 }}>
                 {/* Vertical line */}
-                <div style={{ position: 'absolute', left: 19, top: 12, bottom: 12, width: 2, background: 'var(--border)', borderRadius: 2 }} />
+                <div style={{ position: 'absolute', left: 19, top: 12, bottom: 12, width: 1, background: 'rgba(96,8,18,0.12)', borderRadius: 2 }} />
 
                 {termine.map((termin, idx) => {
                   const tu = terminUser.find(t => t.termin_id === termin.id)
@@ -583,20 +584,21 @@ export default function Lernbar() {
                       <div style={{
                         position: 'absolute', left: -38, top: 16,
                         width: 16, height: 16, borderRadius: '50%',
-                        background: isPast ? 'var(--bg-subtle)' : 'var(--accent)',
-                        border: isPast ? '2px solid var(--border-strong)' : '2px solid var(--accent)',
+                        background: isPast ? 'var(--warm-bg)' : '#600812',
+                        border: isPast ? '1.5px solid rgba(96,8,18,0.25)' : '2px solid #600812',
                         zIndex: 1,
                         display: 'flex', alignItems: 'center', justifyContent: 'center'
                       }}>
-                        {isPast && <div style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--border-strong)' }} />}
+                        {isPast && <div style={{ width: 5, height: 5, borderRadius: '50%', background: 'rgba(96,8,18,0.3)' }} />}
                       </div>
 
                       {/* Card */}
                       <div
                         onClick={() => setDetailTermin(termin)}
                         style={{
-                          background: 'var(--bg-card)', borderRadius: 14,
-                          border: `1px solid ${cfg?.label === 'Zugesagt' ? '#bbf7d0' : tu?.status === 'abgesagt' ? '#fecaca' : 'var(--border)'}`,
+                          background: '#fff', borderRadius: 12,
+                          boxShadow: '0 1px 4px rgba(0,0,0,0.07)',
+                          borderLeft: `3px solid ${isPast ? 'rgba(139,113,90,0.3)' : '#600812'}`,
                           marginBottom: 12, cursor: 'pointer',
                           opacity: isPast ? 0.65 : 1,
                           transition: 'opacity 0.15s'
@@ -605,10 +607,10 @@ export default function Lernbar() {
                         {/* Date bar */}
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px 0' }}>
                           <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
-                            <span style={{ fontSize: 22, fontWeight: 700, color: isPast ? 'var(--text-secondary)' : 'var(--accent)', lineHeight: 1 }}>{dayNum}</span>
-                            <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)' }}>{monthName}</span>
+                            <span style={{ fontSize: 24, fontWeight: 800, color: isPast ? 'var(--warm-gray)' : '#600812', lineHeight: 1, fontStyle: 'italic' }}>{dayNum}</span>
+                            <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--warm-gray)', fontStyle: 'italic' }}>{monthName}</span>
                           </div>
-                          <span style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600 }}>{weekday}</span>
+                          <span style={{ fontSize: 11, color: 'var(--warm-gray)', fontStyle: 'italic' }}>{weekday}</span>
                           {cfg && (
                             <span style={{ marginLeft: 'auto', padding: '3px 10px', borderRadius: 99, background: cfg.bg, color: cfg.color, fontWeight: 700, fontSize: 11 }}>
                               {cfg.label}
@@ -618,17 +620,17 @@ export default function Lernbar() {
 
                         {/* Name + meta */}
                         <div style={{ padding: '6px 14px 12px' }}>
-                          <div style={{ fontWeight: 700, fontSize: 16, color: 'var(--text)', marginBottom: 6 }}>{termin.name}</div>
+                          <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--text)', marginBottom: 5 }}>{termin.name}</div>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
                             {startTime && (
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--text-secondary)' }}>
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--warm-gray)', fontStyle: 'italic' }}>
+                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                                 {startTime}{endTime ? ` – ${endTime}` : ''} Uhr
                               </div>
                             )}
                             {termin.location && (
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--text-secondary)' }}>
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--warm-gray)', fontStyle: 'italic' }}>
+                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
                                 {termin.location}
                               </div>
                             )}
@@ -660,7 +662,7 @@ export default function Lernbar() {
                         </div>
 
                         {/* Details hint */}
-                        <div style={{ borderTop: '1px solid var(--border)', padding: '8px 14px', display: 'flex', alignItems: 'center', gap: 4, color: 'var(--text-secondary)', fontSize: 12 }}>
+                        <div style={{ borderTop: '0.5px solid rgba(96,8,18,0.08)', padding: '8px 14px', display: 'flex', alignItems: 'center', gap: 4, color: 'var(--warm-gray)', fontSize: 12, fontStyle: 'italic' }}>
                           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
                           Details, Lernkonzept & Dateien
                           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginLeft: 'auto' }}><polyline points="9 18 15 12 9 6"/></svg>
@@ -678,19 +680,20 @@ export default function Lernbar() {
         {tab === 'module' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {progress.length === 0 && (
-              <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '64px 0 24px', fontSize: 15 }}>
-                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--border-strong)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block', margin: '0 auto 12px' }}><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+              <div style={{ textAlign: 'center', color: 'var(--warm-gray)', padding: '64px 0 24px', fontSize: 15, fontStyle: 'italic' }}>
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="rgba(96,8,18,0.2)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block', margin: '0 auto 12px' }}><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
                 Noch keine Lernmodule zugewiesen
               </div>
             )}
             {progress.length > 0 && (
-              <div style={{ background: 'var(--bg-card)', borderRadius: 14, padding: '16px 18px', border: '1px solid var(--border)', marginBottom: 4 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
-                  <span style={{ fontWeight: 700, fontSize: 14 }}>Gesamtfortschritt</span>
-                  <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{doneMods}/{progress.length} abgeschlossen</span>
+              <div style={{ background: '#fff', borderRadius: 12, padding: '16px 18px', boxShadow: '0 1px 4px rgba(0,0,0,0.07)', marginBottom: 8 }}>
+                <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 10 }}>Gesamtfortschritt</div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                  <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)' }}>{doneMods} von {progress.length} abgeschlossen</span>
+                  <span style={{ fontSize: 13, fontWeight: 800, color: '#600812', fontStyle: 'italic' }}>{Math.round((doneMods / progress.length) * 100)}%</span>
                 </div>
-                <div style={{ background: 'var(--border)', borderRadius: 99, height: 8 }}>
-                  <div style={{ background: 'var(--accent)', borderRadius: 99, height: 8, width: `${Math.round((doneMods / progress.length) * 100)}%`, transition: 'width 0.4s' }} />
+                <div style={{ background: 'rgba(96,8,18,0.08)', borderRadius: 99, height: 4 }}>
+                  <div style={{ background: '#600812', borderRadius: 99, height: 4, width: `${Math.round((doneMods / progress.length) * 100)}%`, transition: 'width 0.4s' }} />
                 </div>
               </div>
             )}
@@ -699,28 +702,27 @@ export default function Lernbar() {
               if (!mod) return null
               const isDone = !!p.abgeschlossen_am
               return (
-                <div key={p.id} style={{ background: 'var(--bg-card)', borderRadius: 16, border: `1.5px solid ${isDone ? '#bbf7d0' : 'var(--border)'}`, overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
-                  <div style={{ padding: '16px 18px', display: 'flex', alignItems: 'center', gap: 14 }}>
-                    <div style={{ width: 12, height: 12, borderRadius: '50%', flexShrink: 0, background: isDone ? '#10b981' : 'var(--border-strong)' }} />
+                <div key={p.id} style={{ background: '#fff', borderRadius: 12, borderLeft: `3px solid ${isDone ? '#16a34a' : '#600812'}`, boxShadow: '0 1px 4px rgba(0,0,0,0.07)', overflow: 'hidden' }}>
+                  <div style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 14 }}>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--text)' }}>{mod.name}</div>
-                      {mod.beschreibung && <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 2 }}>{mod.beschreibung}</div>}
-                      <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 4 }}>{mod.dauer_minuten} Min · {mod.inhalte?.length || 0} Blöcke</div>
+                      {mod.beschreibung && <div style={{ fontSize: 12, color: 'var(--warm-gray)', marginTop: 2, fontStyle: 'italic' }}>{mod.beschreibung}</div>}
+                      <div style={{ fontSize: 11, color: 'var(--warm-gray)', marginTop: 4, fontStyle: 'italic' }}>{mod.dauer_minuten} Min · {mod.inhalte?.length || 0} Blöcke</div>
                     </div>
                     {isDone ? (
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 14px', borderRadius: 99, fontSize: 12, fontWeight: 700, background: '#dcfce7', color: '#065f46', flexShrink: 0 }}>
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 12px', borderRadius: 99, fontSize: 11, fontWeight: 700, background: '#dcfce7', color: '#065f46', flexShrink: 0 }}>
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
                         Fertig
                       </span>
                     ) : (
                       <button onClick={() => { setPlayerProgress(p); setPlayerStep('intro'); setQuizSelected(null); setQuizSubmitted(false); setModulFailed(false); setQuizFrageIdx(0); setQuizResults({ correct: 0, total: 0 }) }}
-                        style={{ padding: '10px 18px', borderRadius: 10, border: 'none', background: 'var(--accent)', color: '#fff', fontWeight: 700, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
+                        style={{ padding: '9px 16px', borderRadius: 8, border: 'none', background: '#600812', color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
                         Starten
                       </button>
                     )}
                   </div>
                   {isDone && (
-                    <div style={{ padding: '0 18px 14px', fontSize: 12, color: '#059669' }}>
+                    <div style={{ padding: '0 16px 12px', fontSize: 11, color: '#059669', fontStyle: 'italic' }}>
                       Abgeschlossen am {new Date(p.abgeschlossen_am!).toLocaleDateString('de-DE')}
                     </div>
                   )}
@@ -732,16 +734,21 @@ export default function Lernbar() {
       </div>
 
       {/* Bottom Tab Bar */}
-      <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 100, background: 'var(--bg-card)', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'stretch', paddingBottom: 'env(safe-area-inset-bottom)' }}>
+      <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 100, background: '#fff', borderTop: '0.5px solid rgba(96,8,18,0.12)', display: 'flex', alignItems: 'stretch', paddingBottom: 'env(safe-area-inset-bottom)' }}>
         {BOTTOM_TABS.map(t => {
           const active = tab === t.id
           return (
-            <button key={t.id} onClick={() => setTab(t.id)} style={{ flex: 1, padding: '8px 4px 6px', border: 'none', background: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, cursor: 'pointer', fontFamily: 'inherit', position: 'relative', color: active ? 'var(--accent)' : 'var(--text-secondary)' }}>
-              {t.icon}
+            <button key={t.id} onClick={() => setTab(t.id)} style={{
+              flex: 1, border: 'none', background: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, cursor: 'pointer', fontFamily: 'inherit', position: 'relative',
+              color: active ? '#600812' : 'var(--warm-gray)',
+              borderTop: active ? '2px solid #600812' : '2px solid transparent',
+              paddingTop: 10, paddingBottom: 6
+            }}>
+              {React.cloneElement(t.icon, { width: 20, height: 20, stroke: active ? '#600812' : 'var(--warm-gray)' })}
               {t.badge > 0 && (
-                <span style={{ position: 'absolute', top: 6, right: 'calc(50% - 16px)', background: 'var(--accent)', color: '#fff', borderRadius: 999, padding: '0 5px', fontSize: 9, fontWeight: 700, minWidth: 14, textAlign: 'center' }}>{t.badge}</span>
+                <span style={{ position: 'absolute', top: 8, right: 'calc(50% - 16px)', background: '#600812', color: '#fff', borderRadius: 999, padding: '0 5px', fontSize: 9, fontWeight: 700, minWidth: 14, textAlign: 'center' }}>{t.badge}</span>
               )}
-              <span style={{ fontSize: 10, fontWeight: active ? 700 : 500, lineHeight: 1 }}>{t.label}</span>
+              <span style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', lineHeight: 1 }}>{t.label}</span>
             </button>
           )
         })}

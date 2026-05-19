@@ -339,12 +339,9 @@ export default function Unitas() {
         padding: '0 20px',
       }}>
         <div style={{ maxWidth: 640, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 60 }}>
-          {/* Left: org logo circle */}
-          <div style={{ width: 34, height: 34, borderRadius: '50%', background: '#600812', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, overflow: 'hidden' }}>
-            {(user as any)?.organization_logo && (user as any)?.organization_logo !== '🏢' && (user as any)?.organization
-              ? <img src={pb.files.getUrl((user as any).organization, (user as any).organization_logo, { thumb: '68x68' })} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-              : <img src="/logo.svg" alt="" width={18} height={18} style={{ filter: 'brightness(0) invert(1)', display: 'block' }} />
-            }
+          {/* Left: Responda logo circle */}
+          <div style={{ width: 34, height: 34, borderRadius: '50%', background: '#600812', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <img src="/logo.svg" alt="" width={18} height={18} style={{ filter: 'brightness(0) invert(1)', display: 'block' }} />
           </div>
           {/* Center: org + date */}
           <div style={{ flex: 1, textAlign: 'center', padding: '0 12px' }}>
