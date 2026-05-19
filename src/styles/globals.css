@@ -289,15 +289,12 @@ body {
 }
 
 .widget {
-  background: var(--bg-card);
-  backdrop-filter: blur(40px);
-  -webkit-backdrop-filter: blur(40px);
-  border-radius: 20px;
+  background: #fff;
+  border-radius: 16px;
   padding: 16px;
   color: var(--text);
   min-height: 120px;
-  border: 0.5px solid var(--border);
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 1px 5px rgba(0,0,0,0.08);
 }
 
 .widget.large {
@@ -305,21 +302,26 @@ body {
 }
 
 .widget-title {
-  font-size: 13px;
-  font-weight: 600;
-  opacity: 0.6;
+  font-size: 10px;
+  font-weight: 700;
+  color: #600812;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
   margin-bottom: 8px;
+  opacity: 1;
 }
 
 .widget-value {
   font-size: 28px;
-  font-weight: 700;
-  color: var(--text);
+  font-weight: 800;
+  color: #600812;
+  font-style: italic;
 }
 
 .widget-label {
-  font-size: 14px;
-  opacity: 0.6;
+  font-size: 13px;
+  color: var(--warm-gray);
+  font-style: italic;
   margin-top: 4px;
 }
 
@@ -377,7 +379,7 @@ body {
 
 .app-name {
   font-size: 11px;
-  font-weight: 500;
+  font-weight: 600;
   color: var(--text);
   text-align: center;
   max-width: 65px;
@@ -1111,12 +1113,12 @@ body {
   .widget {
     padding: 11px 13px;
     min-height: 86px;
-    border-radius: 16px;
+    border-radius: 14px;
   }
 
   .widget-title {
-    font-size: 11px;
-    margin-bottom: 6px;
+    font-size: 9px;
+    margin-bottom: 5px;
   }
 
   .widget-value {
@@ -1124,7 +1126,7 @@ body {
   }
 
   .widget-label {
-    font-size: 12px;
+    font-size: 11px;
   }
 
   .apps {

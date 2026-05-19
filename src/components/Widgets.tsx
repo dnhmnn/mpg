@@ -231,30 +231,30 @@ export default function Widgets({ user, onNewsOpenChange }: WidgetsProps) {
           onTouchStart={e => { touchStartY.current = e.touches[0].clientY }}
           onTouchEnd={e => { if (e.changedTouches[0].clientY - touchStartY.current > 50) { setDetailOpen(false); onNewsOpenChange?.(false) } }}
         >
-          <div style={{ width: 36, height: 4, borderRadius: 99, background: 'rgba(0,0,0,0.15)', margin: '0 auto 18px' }} />
-          <div style={{ fontWeight: 700, fontSize: '1.05rem', color: '#1d1d1f', marginBottom: 16 }}>Neuigkeiten</div>
+          <div style={{ width: 36, height: 3, borderRadius: 99, background: 'rgba(96,8,18,0.15)', margin: '0 auto 18px' }} />
+          <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 16 }}>Neuigkeiten</div>
 
           {news.map(item => (
             <button
               key={item.id}
               onClick={() => { setDetailOpen(false); navigate(item.url) }}
-              style={{ display: 'flex', alignItems: 'center', gap: 14, width: '100%', padding: '14px 0', borderTop: '0.5px solid rgba(0,0,0,0.07)', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit' }}
+              style={{ display: 'flex', alignItems: 'center', gap: 14, width: '100%', padding: '14px 0', borderTop: '0.5px solid rgba(96,8,18,0.08)', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit' }}
             >
-              <div style={{ width: 40, height: 40, borderRadius: '50%', background: item.color + '18', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <div style={{ width: 10, height: 10, borderRadius: '50%', background: item.color }} />
+              <div style={{ width: 36, height: 36, borderRadius: '50%', background: item.color + '18', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <div style={{ width: 9, height: 9, borderRadius: '50%', background: item.color }} />
               </div>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#1d1d1f' }}>{item.label}</div>
-                <div style={{ fontSize: '0.78rem', color: 'rgba(0,0,0,0.4)', marginTop: 2 }}>{item.sub}</div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: '#1a0e08' }}>{item.label}</div>
+                <div style={{ fontSize: 12, color: 'var(--warm-gray)', marginTop: 2, fontStyle: 'italic' }}>{item.sub}</div>
               </div>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,0.25)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(96,8,18,0.3)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M9 18l6-6-6-6"/>
               </svg>
             </button>
           ))}
 
           {news.length === 0 && (
-            <p style={{ color: 'rgba(0,0,0,0.35)', fontSize: '.9rem', textAlign: 'center', margin: '24px 0' }}>Keine Nachrichten.</p>
+            <p style={{ color: 'var(--warm-gray)', fontSize: 14, fontStyle: 'italic', textAlign: 'center', margin: '24px 0' }}>Keine Nachrichten.</p>
           )}
         </div>
       </div>

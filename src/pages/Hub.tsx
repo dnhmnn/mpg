@@ -212,7 +212,7 @@ export default function Hub() {
     .map(id => ALL_APPS[id])
 
   return (
-    <div style={{ background: 'var(--bg)', height: '100dvh', overflow: 'hidden' } as React.CSSProperties}>
+    <div style={{ background: 'var(--warm-bg)', height: '100dvh', overflow: 'hidden' } as React.CSSProperties}>
       <style>{`
         @media (min-width: 768px) {
           .hub-layout {
@@ -317,14 +317,14 @@ export default function Hub() {
           bottom: calc(10px + env(safe-area-inset-bottom));
           left: 50%;
           transform: translateX(-50%);
-          background: var(--bg-card);
-          border: 0.5px solid var(--border);
+          background: #fff;
+          border: 0.5px solid rgba(96,8,18,0.12);
           border-radius: 26px;
           padding: 10px 14px;
           display: flex;
           align-items: center;
           gap: 4px;
-          box-shadow: none;
+          box-shadow: 0 2px 16px rgba(96,8,18,0.08);
           z-index: 400;
           white-space: nowrap;
         }
@@ -339,7 +339,7 @@ export default function Hub() {
           border-radius: 14px;
           transition: background 0.15s;
         }
-        .dock-btn:active { background: var(--bg-hover); }
+        .dock-btn:active { background: rgba(96,8,18,0.06); }
         .dock-icon {
           width: 52px;
           height: 52px;
@@ -347,7 +347,8 @@ export default function Hub() {
           display: flex;
           align-items: center;
           justify-content: center;
-          box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+          box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+          background: var(--warm-bg);
         }
         .dock-icon svg {
           width: 24px;
@@ -359,18 +360,20 @@ export default function Hub() {
           stroke-linejoin: round;
         }
         .dock-label {
-          font-size: 10px;
-          font-weight: 400;
-          color: var(--text);
+          font-size: 9px;
+          font-weight: 700;
+          color: var(--warm-gray);
           text-align: center;
           max-width: 58px;
           overflow: hidden;
           text-overflow: ellipsis;
+          text-transform: uppercase;
+          letter-spacing: 0.04em;
         }
         .dock-sep {
-          width: 1px;
+          width: 0.5px;
           height: 44px;
-          background: var(--border-medium);
+          background: rgba(96,8,18,0.12);
           margin: 0 6px;
           flex-shrink: 0;
         }
@@ -391,22 +394,36 @@ export default function Hub() {
           .dock-label { font-size: 11px; max-width: 66px; }
           .dock-btn { padding: 4px 9px; }
         }
-        @keyframes greetIn {
-          0%   { opacity: 0; transform: translateY(18px); }
-          30%  { opacity: 1; transform: translateY(0); }
-          70%  { opacity: 1; transform: translateY(0); }
-          100% { opacity: 0; transform: translateY(-14px); }
+        @keyframes greetCurtainOut {
+          0%   { opacity: 1; }
+          60%  { opacity: 1; }
+          100% { opacity: 0; }
+        }
+        @keyframes greetNameSlide {
+          from { opacity: 0; transform: translateY(20px); }
+          to   { opacity: 1; transform: none; }
         }
         .greeting-overlay {
           position: fixed; inset: 0; z-index: 999;
-          background: var(--bg);
+          background: #3d0408;
           display: flex; flex-direction: column;
           align-items: center; justify-content: center;
-          gap: 4px;
-          animation: greetIn 2.4s cubic-bezier(0.4,0,0.2,1) forwards;
+          gap: 10px;
+          animation: greetCurtainOut 2.4s ease forwards;
           pointer-events: none;
         }
         .greeting-overlay.gone { display: none; }
+        .greeting-sub {
+          font-size: 15px; font-style: italic; font-weight: 400;
+          color: rgba(253,232,216,0.5); letter-spacing: 0.04em;
+          animation: greetNameSlide 0.5s ease-out both;
+        }
+        .greeting-name {
+          font-style: italic; font-weight: 700;
+          color: #fde8d8; line-height: 1;
+          font-size: clamp(48px, 13vw, 80px);
+          animation: greetNameSlide 0.5s 0.12s ease-out both;
+        }
         @keyframes controlDrift {
           0%, 100% { transform: translateY(0); opacity: 0.4; }
           55% { transform: translateY(5px); opacity: 0.8; }
@@ -416,8 +433,8 @@ export default function Hub() {
 
       {showGreeting && !greetingGone && (
         <div className="greeting-overlay">
-          <span style={{ fontSize: '1.1rem', fontWeight: 400, color: 'var(--text-secondary)', letterSpacing: '.01em' }}>Servus,</span>
-          <span style={{ fontSize: '2.4rem', fontWeight: 700, color: 'var(--accent)', letterSpacing: '-0.02em', lineHeight: 1 }}>
+          <span className="greeting-sub">Servus,</span>
+          <span className="greeting-name">
             {(user?.name || user?.email?.split('@')[0] || '').split(' ')[0]}
           </span>
         </div>
@@ -433,8 +450,8 @@ export default function Hub() {
         onTouchStart={e => { touchStartY.current = e.touches[0].clientY }}
         onTouchEnd={e => { if (touchStartY.current - e.changedTouches[0].clientY > 30) setSheetOpen(true) }}
       >
-        <div style={{ width: 32, height: 4, borderRadius: 99, background: 'var(--border-strong)' }} />
-        <span style={{ fontSize: 9, fontWeight: 600, color: 'var(--text-secondary)', letterSpacing: '.06em' }}>control</span>
+        <div style={{ width: 32, height: 3, borderRadius: 99, background: 'rgba(96,8,18,0.3)' }} />
+        <span style={{ fontSize: 9, fontWeight: 700, color: '#600812', letterSpacing: '0.14em', textTransform: 'uppercase' }}>Control</span>
       </div>
 
       <div className="content hub-content" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-start' }}>
@@ -455,7 +472,7 @@ export default function Hub() {
 
       {!newsOpen && (
         <>
-          <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, height: 'calc(10px + env(safe-area-inset-bottom))', background: 'var(--bg)', zIndex: 399 }} />
+          <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, height: 'calc(10px + env(safe-area-inset-bottom))', background: 'var(--warm-bg)', zIndex: 399 }} />
           <Dock
             dockApps={dockApps}
             recentApps={recentDockApps}
