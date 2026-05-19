@@ -383,9 +383,14 @@ export default function Hub() {
           align-items: center;
           gap: 4px;
         }
-        /* On mobile: hide recent section in dock */
+        /* On mobile: compact dock — no labels, smaller icons */
         @media (max-width: 767px) {
           .dock-sep, .dock-recent { display: none; }
+          .dock { padding: 8px 10px; border-radius: 22px; }
+          .dock-btn { padding: 2px 5px; gap: 0; }
+          .dock-label { display: none; }
+          .dock-icon { width: 42px; height: 42px; }
+          .dock-icon svg { width: 19px; height: 19px; }
         }
         /* Desktop dock: slightly larger icons */
         @media (min-width: 768px) {
@@ -472,7 +477,7 @@ export default function Hub() {
 
       {!newsOpen && (
         <>
-          <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, height: 'calc(10px + env(safe-area-inset-bottom))', background: 'var(--warm-bg)', zIndex: 399 }} />
+          <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, height: 'calc(80px + env(safe-area-inset-bottom))', background: 'var(--warm-bg)', zIndex: 398 }} />
           <Dock
             dockApps={dockApps}
             recentApps={recentDockApps}
