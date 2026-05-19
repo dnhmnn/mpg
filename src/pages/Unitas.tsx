@@ -339,9 +339,12 @@ export default function Unitas() {
         padding: '0 20px',
       }}>
         <div style={{ maxWidth: 640, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 60 }}>
-          {/* Left: logo circle */}
-          <div style={{ width: 34, height: 34, borderRadius: '50%', background: '#600812', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-            <img src="/logo.svg" alt="" width={18} height={18} style={{ filter: 'brightness(0) invert(1)', display: 'block' }} />
+          {/* Left: org logo circle */}
+          <div style={{ width: 34, height: 34, borderRadius: '50%', background: '#600812', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, overflow: 'hidden' }}>
+            {(user as any)?.organization_logo && (user as any)?.organization_logo !== '🏢' && (user as any)?.organization
+              ? <img src={pb.files.getUrl((user as any).organization, (user as any).organization_logo, { thumb: '68x68' })} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+              : <img src="/logo.svg" alt="" width={18} height={18} style={{ filter: 'brightness(0) invert(1)', display: 'block' }} />
+            }
           </div>
           {/* Center: org + date */}
           <div style={{ flex: 1, textAlign: 'center', padding: '0 12px' }}>
@@ -375,7 +378,7 @@ export default function Unitas() {
                 {new Date().toLocaleDateString('de-DE', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}
               </div>
               <div style={{ fontSize: 26, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.02em', lineHeight: 1.1 }}>
-                Ciao, <span style={{ color: '#600812', fontStyle: 'italic' }}>{firstName}</span>
+                Servus, <span style={{ color: '#600812', fontStyle: 'italic' }}>{firstName}</span>
               </div>
             </div>
 
