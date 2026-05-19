@@ -118,10 +118,6 @@ export default function Hub() {
     localStorage.setItem(key, JSON.stringify([id, ...prev.filter((r: string) => r !== id)].slice(0, 20)))
   }
 
-  useEffect(() => {
-    document.body.style.overflow = 'hidden'
-    return () => { document.body.style.overflow = '' }
-  }, [])
 
   useEffect(() => {
     const handleOpenSettings = () => setShowSettings(true)
@@ -347,18 +343,10 @@ export default function Hub() {
         <span style={{ fontSize: 9, fontWeight: 700, color: '#600812', letterSpacing: '0.14em', textTransform: 'uppercase' }}>Control</span>
       </div>
 
-      {/* White fill — separate from scroll container to prevent iOS background-clipping bug */}
-      <div aria-hidden style={{ position: 'fixed', inset: 0, background: '#ffffff', zIndex: 0, pointerEvents: 'none' } as React.CSSProperties} />
-
-      {/* Main scroll container — position:fixed fills entire viewport including safe areas */}
+      {/* Main content — normal document flow like Unitas, no fixed scroll container */}
       <div style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 1,
-        overflowY: 'auto',
-        WebkitOverflowScrolling: 'touch',
-        overscrollBehavior: 'none',
-        background: 'transparent',
+        minHeight: '100dvh',
+        background: '#ffffff',
         paddingTop: 'calc(54px + env(safe-area-inset-top) + 30px)',
         paddingBottom: 'calc(8vh + env(safe-area-inset-bottom))',
         paddingLeft: 'max(20px, env(safe-area-inset-left))',
