@@ -185,7 +185,7 @@ html {
 
 body {
   font-family: 'Atkinson Hyperlegible', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  background: var(--bg);
+  background: var(--warm-bg);
   background-attachment: fixed;
   color: var(--text);
   min-height: 100%;
