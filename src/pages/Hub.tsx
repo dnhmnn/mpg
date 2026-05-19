@@ -212,9 +212,7 @@ export default function Hub() {
     .map(id => ALL_APPS[id])
 
   return (
-    <div style={{ background: '#faf9f7', minHeight: '100dvh' } as React.CSSProperties}>
-      {/* Full-viewport ivory backdrop — fills safe areas on iOS */}
-      <div style={{ position: 'fixed', inset: 0, background: '#faf9f7', zIndex: 0, pointerEvents: 'none' }} />
+    <>
       <style>{`
         @media (min-width: 768px) {
           .hub-layout {
@@ -272,16 +270,11 @@ export default function Hub() {
           .hub-widgets .widget-value { font-size: 36px; }
           .hub-widgets .widget-label { font-size: 15px; }
         }
-        .hub-content { padding-bottom: 8vh; }
         @media (max-width: 767px) {
-          .hub-content { padding-top: 110px; }
           .hub-widgets .widget { min-height: 70px; padding: 8px 12px; }
           .hub-widgets .widget-title { font-size: 11px; margin-bottom: 2px; }
           .hub-widgets .widget-value { font-size: 22px; }
           .hub-widgets .widget-label { font-size: 12px; margin-top: 2px; }
-        }
-        @media (min-width: 768px) {
-          .hub-content { justify-content: center; padding-bottom: 32vh; }
         }
         @media (min-width: 1100px) {
           .hub-layout { gap: 48px; }
@@ -311,95 +304,6 @@ export default function Hub() {
             font-size: 13px;
             max-width: 96px;
           }
-        }
-
-        /* ── Dock ── */
-        .dock {
-          position: fixed;
-          bottom: calc(10px + env(safe-area-inset-bottom));
-          left: 50%;
-          transform: translateX(-50%);
-          background: #fff;
-          border: 0.5px solid rgba(96,8,18,0.12);
-          border-radius: 26px;
-          padding: 10px 14px;
-          display: flex;
-          align-items: center;
-          gap: 4px;
-          box-shadow: none;
-          z-index: 400;
-          white-space: nowrap;
-        }
-        .dock-btn {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap: 4px;
-          text-decoration: none;
-          color: inherit;
-          padding: 4px 7px;
-          border-radius: 14px;
-          transition: background 0.15s;
-        }
-        .dock-btn:active { background: rgba(96,8,18,0.06); }
-        .dock-icon {
-          width: 52px;
-          height: 52px;
-          border-radius: 50%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          box-shadow: 0 1px 4px rgba(0,0,0,0.1);
-          background: var(--warm-bg);
-        }
-        .dock-icon svg {
-          width: 24px;
-          height: 24px;
-          stroke: currentColor;
-          fill: none;
-          stroke-width: 1.5;
-          stroke-linecap: round;
-          stroke-linejoin: round;
-        }
-        .dock-label {
-          font-size: 9px;
-          font-weight: 700;
-          color: var(--warm-gray);
-          text-align: center;
-          max-width: 58px;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          text-transform: uppercase;
-          letter-spacing: 0.04em;
-        }
-        .dock-sep {
-          width: 0.5px;
-          height: 44px;
-          background: rgba(96,8,18,0.12);
-          margin: 0 6px;
-          flex-shrink: 0;
-        }
-        .dock-recent {
-          display: flex;
-          flex-direction: row;
-          align-items: center;
-          gap: 4px;
-        }
-        /* On mobile: compact dock — no labels, smaller icons */
-        @media (max-width: 767px) {
-          .dock-sep, .dock-recent { display: none; }
-          .dock { padding: 8px 10px; border-radius: 22px; }
-          .dock-btn { padding: 2px 5px; gap: 0; }
-          .dock-label { display: none; }
-          .dock-icon { width: 42px; height: 42px; }
-          .dock-icon svg { width: 19px; height: 19px; }
-        }
-        /* Desktop dock: slightly larger icons */
-        @media (min-width: 768px) {
-          .dock-icon { width: 58px; height: 58px; border-radius: 50%; }
-          .dock-icon svg { width: 26px; height: 26px; }
-          .dock-label { font-size: 11px; max-width: 66px; }
-          .dock-btn { padding: 4px 9px; }
         }
         @keyframes greetCurtainOut {
           0%   { opacity: 1; }
@@ -449,10 +353,10 @@ export default function Hub() {
 
       <StatusBar user={user} onLogout={logout} />
 
-      {/* Control handle — below the Abmelden button */}
+      {/* Control handle */}
       <div
         className="control-handle-hub"
-        style={{ position: 'fixed', top: 62, right: 16, zIndex: 399, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, cursor: 'pointer', userSelect: 'none', WebkitUserSelect: 'none' }}
+        style={{ position: 'fixed', top: 62, right: 16, zIndex: 399, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, cursor: 'pointer', userSelect: 'none', WebkitUserSelect: 'none' } as React.CSSProperties}
         onClick={() => setSheetOpen(true)}
         onTouchStart={e => { touchStartY.current = e.touches[0].clientY }}
         onTouchEnd={e => { if (touchStartY.current - e.changedTouches[0].clientY > 30) setSheetOpen(true) }}
@@ -461,7 +365,21 @@ export default function Hub() {
         <span style={{ fontSize: 9, fontWeight: 700, color: '#600812', letterSpacing: '0.14em', textTransform: 'uppercase' }}>Control</span>
       </div>
 
-      <div className="content hub-content" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-start' }}>
+      {/* Main scroll container — position:fixed fills entire viewport including safe areas */}
+      <div style={{
+        position: 'fixed',
+        inset: 0,
+        overflowY: 'auto',
+        overscrollBehavior: 'none',
+        background: '#faf9f7',
+        paddingTop: 'calc(54px + env(safe-area-inset-top) + 30px)',
+        paddingBottom: 'calc(8vh + env(safe-area-inset-bottom))',
+        paddingLeft: 'max(20px, env(safe-area-inset-left))',
+        paddingRight: 'max(20px, env(safe-area-inset-right))',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'flex-start',
+      } as React.CSSProperties}>
         <div className="hub-layout">
           <div className="hub-widgets">
             <Widgets user={user} onNewsOpenChange={setNewsOpen} />
@@ -476,7 +394,6 @@ export default function Hub() {
           </div>
         </div>
       </div>
-
 
       <SettingsModal isOpen={showSettings} onClose={() => setShowSettings(false)} user={user} />
 
@@ -509,11 +426,11 @@ export default function Hub() {
 
       {/* Bottom Sheet Overlay */}
       <div
-        style={{ position: 'fixed', inset: 0, zIndex: 500, background: sheetOpen ? 'rgba(0,0,0,0.45)' : 'transparent', pointerEvents: sheetOpen ? 'all' : 'none', transition: 'background .3s', backdropFilter: sheetOpen ? 'blur(12px)' : 'none', WebkitBackdropFilter: sheetOpen ? 'blur(12px)' : 'none' }}
+        style={{ position: 'fixed', inset: 0, zIndex: 500, background: sheetOpen ? 'rgba(0,0,0,0.45)' : 'transparent', pointerEvents: sheetOpen ? 'all' : 'none', transition: 'background .3s', backdropFilter: sheetOpen ? 'blur(12px)' : 'none', WebkitBackdropFilter: sheetOpen ? 'blur(12px)' : 'none' } as React.CSSProperties}
         onClick={() => { setSheetOpen(false); setEditingShortcuts(false) }}
       >
         <div
-          style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'rgba(30,8,12,0.82)', borderRadius: '28px 28px 0 0', padding: '12px 20px calc(36px + env(safe-area-inset-bottom))', transform: sheetOpen ? 'translateY(0)' : 'translateY(100%)', transition: 'transform .38s cubic-bezier(0.32,0.72,0,1)', maxHeight: '75vh', overflowY: 'auto', boxShadow: '0 -8px 40px rgba(0,0,0,0.4)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)' }}
+          style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'rgba(30,8,12,0.82)', borderRadius: '28px 28px 0 0', padding: '12px 20px calc(36px + env(safe-area-inset-bottom))', transform: sheetOpen ? 'translateY(0)' : 'translateY(100%)', transition: 'transform .38s cubic-bezier(0.32,0.72,0,1)', maxHeight: '75vh', overflowY: 'auto', boxShadow: '0 -8px 40px rgba(0,0,0,0.4)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)' } as React.CSSProperties}
           onClick={e => e.stopPropagation()}
           onTouchStart={e => { touchStartY.current = e.touches[0].clientY }}
           onTouchEnd={e => { if (e.changedTouches[0].clientY - touchStartY.current > 50) { setSheetOpen(false); setEditingShortcuts(false) } }}
@@ -567,6 +484,6 @@ export default function Hub() {
           </div>
         </div>
       </div>
-    </div>
+    </>
   )
 }
