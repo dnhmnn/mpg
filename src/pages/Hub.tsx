@@ -210,6 +210,26 @@ export default function Hub() {
           55%{transform:translateY(5px);opacity:0.9}
         }
         .hub-control-handle { animation: controlDrift 2.2s ease-in-out infinite; }
+
+        /* App grid columns */
+        .hub-app-grid { grid-template-columns: repeat(3, 1fr); }
+        @media (min-width: 768px)  { .hub-app-grid { grid-template-columns: repeat(4, 1fr); } }
+        @media (min-width: 1100px) { .hub-app-grid { grid-template-columns: repeat(5, 1fr); } }
+
+        /* Two-column layout on larger screens */
+        @media (min-width: 768px) {
+          .hub-body { max-width: 1100px !important; }
+          .hub-cols {
+            display: grid;
+            grid-template-columns: 1fr 320px;
+            gap: 48px;
+            align-items: start;
+          }
+        }
+        @media (min-width: 1100px) {
+          .hub-body { max-width: 1400px !important; }
+          .hub-cols { grid-template-columns: 1fr 360px; gap: 64px; }
+        }
       `}</style>
 
       {/* Greeting overlay */}
@@ -258,47 +278,50 @@ export default function Hub() {
       </div>
 
       {/* Page content */}
-      <div style={{
+      <div className="hub-body" style={{
         maxWidth: 640,
         margin: '0 auto',
         padding: '24px max(20px, env(safe-area-inset-left)) calc(env(safe-area-inset-bottom) + 48px)',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 28,
       } as React.CSSProperties}>
+        <div className="hub-cols" style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
 
-        <div>
-          <div style={{ fontSize: 26, fontWeight: 800, color: '#1a0e08', letterSpacing: '-0.02em', lineHeight: 1.1 }}>
-            Servus, <span style={{ color: '#600812', fontStyle: 'italic' }}>{firstName}</span>
+          {/* Left / main column: Module grid */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em' }}>Module</div>
+              <button
+                onClick={() => setEditMode(prev => !prev)}
+                style={{ fontSize: 11, fontWeight: 600, color: editMode ? '#600812' : 'var(--warm-gray)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', padding: '2px 0' }}
+              >
+                {editMode ? 'Fertig' : 'Bearbeiten'}
+              </button>
+            </div>
+            <AppGrid
+              userApps={userApps}
+              editMode={editMode}
+              onRemoveApp={handleRemoveApp}
+              onAppClick={trackAppClick}
+            />
+            {editMode && (
+              <button
+                onClick={() => { setEditMode(false); setShowAppsModal(true) }}
+                style={{ width: '100%', padding: '12px', background: '#fff', border: '1px dashed rgba(96,8,18,0.2)', borderRadius: 12, fontSize: 13, fontWeight: 600, color: 'var(--warm-gray)', cursor: 'pointer', fontFamily: 'inherit' }}
+              >
+                + App hinzufügen
+              </button>
+            )}
           </div>
-        </div>
 
-        <Widgets user={user} />
-
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em' }}>Module</div>
-            <button
-              onClick={() => setEditMode(prev => !prev)}
-              style={{ fontSize: 11, fontWeight: 600, color: editMode ? '#600812' : 'var(--warm-gray)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', padding: '2px 0' }}
-            >
-              {editMode ? 'Fertig' : 'Bearbeiten'}
-            </button>
+          {/* Right / side column: Greeting + News */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+            <div>
+              <div style={{ fontSize: 26, fontWeight: 800, color: '#1a0e08', letterSpacing: '-0.02em', lineHeight: 1.1 }}>
+                Servus, <span style={{ color: '#600812', fontStyle: 'italic' }}>{firstName}</span>
+              </div>
+            </div>
+            <Widgets user={user} />
           </div>
-          <AppGrid
-            userApps={userApps}
-            editMode={editMode}
-            onRemoveApp={handleRemoveApp}
-            onAppClick={trackAppClick}
-          />
-          {editMode && (
-            <button
-              onClick={() => { setEditMode(false); setShowAppsModal(true) }}
-              style={{ marginTop: 12, width: '100%', padding: '12px', background: '#fff', border: '1px dashed rgba(96,8,18,0.2)', borderRadius: 12, fontSize: 13, fontWeight: 600, color: 'var(--warm-gray)', cursor: 'pointer', fontFamily: 'inherit' }}
-            >
-              + App hinzufügen
-            </button>
-          )}
+
         </div>
 
 

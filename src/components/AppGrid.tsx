@@ -43,7 +43,7 @@ export default function AppGrid({ userApps, editMode = false, onRemoveApp, onApp
   }
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+    <div className="hub-app-grid" style={{ display: 'grid', gap: 12 }}>
       {userApps.map(id => {
         const app = ALL_APPS[id]
         if (!app) return null
