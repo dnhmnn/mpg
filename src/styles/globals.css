@@ -218,7 +218,7 @@ body {
   background: var(--bg-status-bar);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border-bottom: 1px solid var(--border);
+  border-bottom: 0.5px solid rgba(96,8,18,0.12);
 }
 
 .logo {
@@ -236,7 +236,10 @@ body {
 .user-name {
   text-align: center;
   justify-self: center;
-  color: var(--text);
+  color: var(--warm-gray);
+  font-style: italic;
+  font-weight: 400;
+  font-size: 13px;
 }
 
 .org-logo {
@@ -248,25 +251,24 @@ body {
 }
 
 .logout-btn {
-  background: var(--bg-hover);
-  border: 0.5px solid var(--border-medium);
-  color: var(--text);
-  padding: 6px 12px;
-  border-radius: 12px;
-  font-size: 13px;
-  font-weight: 600;
+  background: transparent;
+  border: 1px solid rgba(96,8,18,0.2);
+  color: #600812;
+  padding: 5px 12px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 700;
   cursor: pointer;
-  transition: all 0.2s;
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  transition: all 0.15s;
   justify-self: end;
   text-decoration: none;
   display: inline-block;
+  letter-spacing: 0.01em;
 }
 
 .logout-btn:active {
   transform: scale(0.95);
-  background: var(--bg-hover);
+  background: rgba(96,8,18,0.06);
 }
 
 /* Main Content */

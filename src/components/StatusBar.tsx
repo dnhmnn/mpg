@@ -34,7 +34,7 @@ export default function StatusBar({ user, onLogout, showBackButton, onBackClick,
               style={{ height: 34, width: 34, objectFit: 'contain', flexShrink: 0 }}
             />
           )}
-          <span style={{ fontWeight: 700, fontSize: '1.1rem', letterSpacing: '-0.01em', color: 'var(--text)' }}>
+          <span style={{ fontWeight: 700, fontSize: '1.05rem', letterSpacing: '-0.01em', color: '#1a0e08' }}>
             Responda
           </span>
         </div>
