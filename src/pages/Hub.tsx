@@ -212,7 +212,7 @@ export default function Hub() {
     .map(id => ALL_APPS[id])
 
   return (
-    <div style={{ background: 'var(--warm-bg)', height: '100dvh' } as React.CSSProperties}>
+    <div style={{ background: '#faf9f7', minHeight: '100dvh' } as React.CSSProperties}>
       {/* Full-viewport ivory backdrop — fills safe areas on iOS */}
       <div style={{ position: 'fixed', inset: 0, background: '#faf9f7', zIndex: 0, pointerEvents: 'none' }} />
       <style>{`
