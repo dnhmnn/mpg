@@ -289,6 +289,7 @@ export default function Unitas() {
   const doneMods = progress.filter(p => p.abgeschlossen_am).length
 
   const hasLernbar = user?.supervisor || user?.permissions?.['lernbar'] || (user as any)?.lernbar_access
+  const hasMPG = user?.supervisor || user?.permissions?.['dashboard']
   const openOutputs = myOutputs.filter(o => o.status === 'offen').length
   const lernbarBadge = upcomingTermine.length + (progress.length - doneMods)
   const protokolleBadge = myPatients.length + myArchivedPatients.length
@@ -804,14 +805,22 @@ export default function Unitas() {
             icon: (a: boolean) => <svg width="21" height="21" viewBox="0 0 24 24" fill={a ? '#600812' : 'none'} stroke={a ? '#600812' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg> }] : []),
           { id: 'vorgaenge', label: 'Vorgänge', badge: openOutputs,
             icon: (a: boolean) => <svg width="21" height="21" viewBox="0 0 24 24" fill={a ? '#600812' : 'none'} stroke={a ? '#600812' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg> },
-          { id: 'konto', label: 'Konto', badge: 0,
-            icon: (a: boolean) => <svg width="21" height="21" viewBox="0 0 24 24" fill={a ? '#600812' : 'none'} stroke={a ? '#600812' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> },
+          ...(hasMPG ? [{ id: 'hub', label: 'Hub', badge: 0,
+            icon: (a: boolean) => (
+              <div style={{
+                width: 24, height: 24, borderRadius: '50%',
+                background: a ? '#600812' : '#8e8e93',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 9, fontWeight: 700, color: '#fff', letterSpacing: '0.03em',
+                flexShrink: 0,
+              }}>{initials(user?.name)}</div>
+            ) }] : []),
         ] as { id: string; label: string; badge: number; icon: (active: boolean) => React.ReactNode }[]).map(t => {
           const active = tab === t.id
           return (
             <button
               key={t.id}
-              onClick={() => t.id === 'lernbar' ? navigate('/lernbar') : setTab(t.id as any)}
+              onClick={() => t.id === 'lernbar' || t.id === 'hub' ? navigate(`/${t.id}`) : setTab(t.id as any)}
               style={{
                 flex: 1, padding: '10px 4px 8px', border: 'none', background: 'none',
                 display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
