@@ -477,16 +477,6 @@ export default function Hub() {
         </div>
       </div>
 
-      {!newsOpen && (
-        <>
-          <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, height: 'calc(80px + env(safe-area-inset-bottom))', background: 'var(--warm-bg)', zIndex: 398 }} />
-          <Dock
-            dockApps={dockApps}
-            recentApps={recentDockApps}
-            onAppClick={trackAppClick}
-          />
-        </>
-      )}
 
       <SettingsModal isOpen={showSettings} onClose={() => setShowSettings(false)} user={user} />
 
