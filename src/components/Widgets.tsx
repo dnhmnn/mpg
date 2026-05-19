@@ -52,7 +52,7 @@ export default function Widgets({ user }: WidgetsProps) {
           label: `${r.totalItems} offene${r.totalItems === 1 ? 's' : ''} Protokoll${r.totalItems === 1 ? '' : 'e'}`,
           sub: 'Zum Gegenzeichnen oder Bearbeiten',
           url: '/patienten',
-          color: '#007aff',
+          color: '#600812',
         })
       })
     )
@@ -68,7 +68,7 @@ export default function Widgets({ user }: WidgetsProps) {
           label: `${r.totalItems} Artikel laufen ab`,
           sub: 'Im Lager in den nächsten 30 Tagen',
           url: '/lager',
-          color: '#ff9500',
+          color: '#8c5e00',
         })
       })
     )
@@ -90,7 +90,7 @@ export default function Widgets({ user }: WidgetsProps) {
             label: parts.join(', '),
             sub: 'Rückmeldungen in den letzten 7 Tagen',
             url: '/ausbildungen',
-            color: '#1c7cd6',
+            color: '#3d5a6e',
           })
         }
       })
@@ -118,7 +118,7 @@ export default function Widgets({ user }: WidgetsProps) {
               label: `MPG: ${parts.join(', ')}`,
               sub: 'Geräteprüfung',
               url: '/mpg',
-              color: '#c0392b',
+              color: '#600812',
             })
           })
         }
@@ -136,7 +136,7 @@ export default function Widgets({ user }: WidgetsProps) {
           label: `${r.totalItems} offene Produktausgabe${r.totalItems === 1 ? '' : 'n'}`,
           sub: 'Noch nicht ins Lager gebucht',
           url: '/lager',
-          color: '#ff3b30',
+          color: '#600812',
         })
       })
     )
