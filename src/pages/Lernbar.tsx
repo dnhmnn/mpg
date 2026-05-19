@@ -562,117 +562,107 @@ export default function Lernbar() {
                 Keine Termine zugewiesen
               </div>
             )}
-            {termine.length > 0 && (
-              <div style={{ position: 'relative', paddingLeft: 52 }}>
-                {/* Vertical line */}
-                <div style={{ position: 'absolute', left: 19, top: 12, bottom: 12, width: 1, background: 'rgba(96,8,18,0.12)', borderRadius: 2 }} />
+            {termine.length > 0 && (() => {
+              const upcoming = termine.filter(t => t.status !== 'abgeschlossen')
+              const past = termine.filter(t => t.status === 'abgeschlossen')
 
-                {termine.map((termin, idx) => {
-                  const tu = terminUser.find(t => t.termin_id === termin.id)
-                  const cfg = tu ? statusConfig[tu.status] : null
-                  const isPast = termin.status === 'abgeschlossen'
-                  const startTime = fmtTime(termin.start_datetime)
-                  const endTime = termin.end_datetime ? fmtTime(termin.end_datetime) : ''
-                  const d = parseDate(termin.start_datetime)
-                  const dayNum = isNaN(d.getTime()) ? '?' : d.getDate().toString()
-                  const monthName = isNaN(d.getTime()) ? '' : d.toLocaleDateString('de-DE', { month: 'short' })
-                  const weekday = isNaN(d.getTime()) ? '' : d.toLocaleDateString('de-DE', { weekday: 'short' })
+              const renderCard = (termin: Termin) => {
+                const tu = terminUser.find(t => t.termin_id === termin.id)
+                const cfg = tu ? statusConfig[tu.status] : null
+                const isPast = termin.status === 'abgeschlossen'
+                const startTime = fmtTime(termin.start_datetime)
+                const endTime = termin.end_datetime ? fmtTime(termin.end_datetime) : ''
+                const d = parseDate(termin.start_datetime)
+                const dayNum = isNaN(d.getTime()) ? '?' : d.getDate().toString()
+                const monthName = isNaN(d.getTime()) ? '' : d.toLocaleDateString('de-DE', { month: 'short' }).replace('.', '').toUpperCase()
+                const weekday = isNaN(d.getTime()) ? '' : d.toLocaleDateString('de-DE', { weekday: 'short' }).replace('.', '').toUpperCase()
+                const stripColor = tu?.status === 'zugesagt' ? '#16a34a' : tu?.status === 'abgesagt' ? '#dc2626' : '#600812'
+                const hasActions = tu && (tu.status === 'eingeladen' || tu.status === 'abgesagt' || tu.status === 'zugesagt') && !isPast
 
-                  return (
-                    <div key={termin.id} style={{ position: 'relative', marginBottom: idx < termine.length - 1 ? 0 : 0 }}>
-                      {/* Dot */}
-                      <div style={{
-                        position: 'absolute', left: -38, top: 16,
-                        width: 16, height: 16, borderRadius: '50%',
-                        background: isPast ? 'var(--warm-bg)' : '#600812',
-                        border: isPast ? '1.5px solid rgba(96,8,18,0.25)' : '2px solid #600812',
-                        zIndex: 1,
-                        display: 'flex', alignItems: 'center', justifyContent: 'center'
-                      }}>
-                        {isPast && <div style={{ width: 5, height: 5, borderRadius: '50%', background: 'rgba(96,8,18,0.3)' }} />}
+                return (
+                  <div key={termin.id} onClick={() => setDetailTermin(termin)} style={{ background: '#fff', borderRadius: 12, boxShadow: '0 1px 5px rgba(0,0,0,0.08)', overflow: 'hidden', cursor: 'pointer', opacity: isPast ? 0.6 : 1 }}>
+                    {/* Status strip */}
+                    {!isPast && <div style={{ height: 3, background: stripColor }} />}
+
+                    <div style={{ display: 'flex' }}>
+                      {/* Date column */}
+                      <div style={{ width: 64, flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '14px 0', borderRight: '0.5px solid rgba(96,8,18,0.1)', gap: 1 }}>
+                        <span style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--warm-gray)' }}>{weekday}</span>
+                        <span style={{ fontSize: 30, fontWeight: 800, color: isPast ? 'var(--warm-gray)' : '#600812', fontStyle: 'italic', lineHeight: 1 }}>{dayNum}</span>
+                        <span style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--warm-gray)' }}>{monthName}</span>
                       </div>
 
-                      {/* Card */}
-                      <div
-                        onClick={() => setDetailTermin(termin)}
-                        style={{
-                          background: '#fff', borderRadius: 12,
-                          boxShadow: '0 1px 4px rgba(0,0,0,0.07)',
-                          borderLeft: `3px solid ${isPast ? 'rgba(139,113,90,0.3)' : '#600812'}`,
-                          marginBottom: 12, cursor: 'pointer',
-                          opacity: isPast ? 0.65 : 1,
-                          transition: 'opacity 0.15s'
-                        }}
-                      >
-                        {/* Date bar */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px 0' }}>
-                          <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
-                            <span style={{ fontSize: 24, fontWeight: 800, color: isPast ? 'var(--warm-gray)' : '#600812', lineHeight: 1, fontStyle: 'italic' }}>{dayNum}</span>
-                            <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--warm-gray)', fontStyle: 'italic' }}>{monthName}</span>
-                          </div>
-                          <span style={{ fontSize: 11, color: 'var(--warm-gray)', fontStyle: 'italic' }}>{weekday}</span>
+                      {/* Content */}
+                      <div style={{ flex: 1, padding: '12px 14px', minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, marginBottom: 4 }}>
+                          <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--text)', lineHeight: 1.3 }}>{termin.name}</div>
                           {cfg && (
-                            <span style={{ marginLeft: 'auto', padding: '3px 10px', borderRadius: 99, background: cfg.bg, color: cfg.color, fontWeight: 700, fontSize: 11 }}>
+                            <span style={{ flexShrink: 0, padding: '2px 8px', borderRadius: 99, background: cfg.bg, color: cfg.color, fontWeight: 700, fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                               {cfg.label}
                             </span>
                           )}
                         </div>
-
-                        {/* Name + meta */}
-                        <div style={{ padding: '6px 14px 12px' }}>
-                          <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--text)', marginBottom: 5 }}>{termin.name}</div>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                            {startTime && (
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--warm-gray)', fontStyle: 'italic' }}>
-                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                                {startTime}{endTime ? ` – ${endTime}` : ''} Uhr
-                              </div>
-                            )}
-                            {termin.location && (
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--warm-gray)', fontStyle: 'italic' }}>
-                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-                                {termin.location}
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Actions */}
-                          {tu && (tu.status === 'eingeladen' || tu.status === 'abgesagt' || tu.status === 'zugesagt') && !isPast && (
-                            <div style={{ display: 'flex', gap: 8, marginTop: 10 }} onClick={e => e.stopPropagation()}>
-                              {tu.status !== 'zugesagt' && (
-                                <button onClick={() => updateTerminStatus(tu.id, 'zugesagt')}
-                                  style={{ flex: 1, padding: '9px 0', borderRadius: 10, border: 'none', background: '#16a34a', color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>
-                                  Zusagen
-                                </button>
-                              )}
-                              {tu.status !== 'abgesagt' && (
-                                <button onClick={() => updateTerminStatus(tu.id, 'abgesagt')}
-                                  style={{ flex: 1, padding: '9px 0', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>
-                                  Absagen
-                                </button>
-                              )}
-                            </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                          {startTime && (
+                            <span style={{ fontSize: 12, color: 'var(--warm-gray)', fontStyle: 'italic' }}>
+                              {startTime}{endTime ? ` – ${endTime}` : ''} Uhr
+                            </span>
                           )}
-                          {/* Calendar export if zugesagt */}
-                          {tu?.status === 'zugesagt' && !isPast && (
-                            <div onClick={e => e.stopPropagation()}>
-                              <CalendarButtons termin={termin} />
-                            </div>
+                          {termin.location && (
+                            <span style={{ fontSize: 12, color: 'var(--warm-gray)', fontStyle: 'italic' }}>{termin.location}</span>
                           )}
-                        </div>
-
-                        {/* Details hint */}
-                        <div style={{ borderTop: '0.5px solid rgba(96,8,18,0.08)', padding: '8px 14px', display: 'flex', alignItems: 'center', gap: 4, color: 'var(--warm-gray)', fontSize: 12, fontStyle: 'italic' }}>
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                          Details, Lernkonzept & Dateien
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginLeft: 'auto' }}><polyline points="9 18 15 12 9 6"/></svg>
+                          {termin.dozent && (
+                            <span style={{ fontSize: 12, color: 'var(--warm-gray)', fontStyle: 'italic' }}>{termin.dozent}</span>
+                          )}
                         </div>
                       </div>
                     </div>
-                  )
-                })}
-              </div>
-            )}
+
+                    {/* Action area */}
+                    <div style={{ borderTop: '0.5px solid rgba(96,8,18,0.08)', padding: '8px 12px', background: 'rgba(250,249,247,0.8)', display: 'flex', alignItems: 'center', gap: 8 }} onClick={e => e.stopPropagation()}>
+                      {hasActions && tu.status !== 'zugesagt' && (
+                        <button onClick={() => updateTerminStatus(tu.id, 'zugesagt')}
+                          style={{ padding: '6px 14px', borderRadius: 8, border: 'none', background: '#16a34a', color: '#fff', fontWeight: 700, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>
+                          Zusagen
+                        </button>
+                      )}
+                      {hasActions && tu.status !== 'abgesagt' && (
+                        <button onClick={() => updateTerminStatus(tu.id, 'abgesagt')}
+                          style={{ padding: '6px 14px', borderRadius: 8, border: '1px solid rgba(96,8,18,0.2)', background: 'transparent', color: 'var(--warm-gray)', fontWeight: 600, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>
+                          Absagen
+                        </button>
+                      )}
+                      {tu?.status === 'zugesagt' && !isPast && (
+                        <div style={{ display: 'flex', gap: 6 }}>
+                          <CalendarButtons termin={termin} />
+                        </div>
+                      )}
+                      <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--warm-gray)', fontStyle: 'italic', display: 'flex', alignItems: 'center', gap: 3 }} onClick={() => setDetailTermin(termin)}>
+                        Details
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+                      </span>
+                    </div>
+                  </div>
+                )
+              }
+
+              return (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {upcoming.length > 0 && (
+                    <>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', paddingLeft: 2, marginBottom: 2 }}>Bevorstehend</div>
+                      {upcoming.map(renderCard)}
+                    </>
+                  )}
+                  {past.length > 0 && (
+                    <>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--warm-gray)', textTransform: 'uppercase', letterSpacing: '0.14em', paddingLeft: 2, marginTop: upcoming.length > 0 ? 8 : 0, marginBottom: 2 }}>Vergangen</div>
+                      {past.map(renderCard)}
+                    </>
+                  )}
+                </div>
+              )
+            })()}
           </div>
         )}
 
