@@ -509,15 +509,18 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
 
 
   async function loadBeitraege() {
+    if (!user?.organization_id) return
     setBeitraegeLoading(true)
     try {
       const records = await pb.collection('lernbar_beitraege').getFullList({
-        filter: `organisation_id = "${user?.organization_id}"`,
+        filter: `organisation_id = "${user.organization_id}"`,
         sort: '-gepinnt,-created',
         requestKey: `loadBeitraege-${Date.now()}`
       })
       setBeitraege(records as any)
-    } catch { /* collection may not exist */ }
+    } catch (e: any) {
+      console.error('loadBeitraege Fehler:', e?.message, e?.data)
+    }
     finally { setBeitraegeLoading(false) }
   }
 

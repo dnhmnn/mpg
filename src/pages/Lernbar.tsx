@@ -157,7 +157,9 @@ export default function Lernbar() {
           })
           setBeitraege(br as any)
         }
-      } catch { /* collection may not exist */ }
+      } catch (e: any) {
+        console.error('lernbar_beitraege Fehler:', e?.message, e?.data)
+      }
     } catch (e: any) { console.error(e) }
     finally { setLoading(false) }
   }
