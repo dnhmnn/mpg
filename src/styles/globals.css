@@ -7,6 +7,7 @@
 :root {
   /* Backgrounds */
   --bg: #ffffff;
+  --bg-app: #f2f2f7;
   --bg-card: rgba(255, 255, 255, 0.9);
   --bg-card-solid: #ffffff;
   --bg-elevated: rgba(255, 255, 255, 0.98);
@@ -41,6 +42,7 @@
 
 [data-theme="dark"] {
   --bg: #000000;
+  --bg-app: #1c1c1e;
   --bg-card: rgba(28, 28, 30, 0.9);
   --bg-card-solid: #1c1c1e;
   --bg-elevated: rgba(44, 44, 46, 0.98);
@@ -70,6 +72,7 @@
 
 [data-theme="retro"] {
   --bg: #080c08;
+  --bg-app: #080c08;
   --bg-card: rgba(0, 22, 4, 0.92);
   --bg-card-solid: #001400;
   --bg-elevated: rgba(0, 30, 6, 0.98);
@@ -126,6 +129,7 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --bg: #000000;
+    --bg-app: #1c1c1e;
     --bg-card: rgba(28, 28, 30, 0.9);
     --bg-card-solid: #1c1c1e;
     --bg-elevated: rgba(44, 44, 46, 0.98);
