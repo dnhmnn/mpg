@@ -6,13 +6,12 @@ import { getTheme, setTheme, applyTheme } from '../lib/theme'
 import StatusBar from '../components/StatusBar'
 import Widgets from '../components/Widgets'
 import AppGrid from '../components/AppGrid'
-import Dock from '../components/Dock'
 import SettingsModal from '../components/SettingsModal'
 import AppsModal from '../components/AppsModal'
 import EditModal from '../components/EditModal'
 import WidgetsModal from '../components/WidgetsModal'
 import NotificationModal from '../components/NotificationModal'
-import { ALL_APPS, ROLES, getDockPins, MAX_DOCK_RECENT } from '../lib/apps'
+import { ALL_APPS, ROLES } from '../lib/apps'
 import type { App } from '../types'
 
 const PREDEFINED_SHORTCUTS = [
@@ -73,7 +72,6 @@ export default function Hub() {
   const [showAppsModal, setShowAppsModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
   const [showWidgetsModal, setShowWidgetsModal] = useState(false)
-  const [recentApps, setRecentApps] = useState<string[]>([])
   const [newsOpen, setNewsOpen] = useState(false)
 
   const [sheetOpen, setSheetOpen] = useState(false)
@@ -110,20 +108,14 @@ export default function Hub() {
   }
 
   useEffect(() => {
-    if (user) {
-      loadUserApps()
-      const saved = localStorage.getItem(`hub_recent_${user.id}`)
-      setRecentApps(saved ? JSON.parse(saved) : [])
-    }
+    if (user) loadUserApps()
   }, [user])
 
   function trackAppClick(id: string) {
     if (!user) return
-    setRecentApps(prev => {
-      const updated = [id, ...prev.filter(r => r !== id)].slice(0, 20)
-      localStorage.setItem(`hub_recent_${user.id}`, JSON.stringify(updated))
-      return updated
-    })
+    const key = `hub_recent_${user.id}`
+    const prev = (() => { try { return JSON.parse(localStorage.getItem(key) || '[]') } catch { return [] } })()
+    localStorage.setItem(key, JSON.stringify([id, ...prev.filter((r: string) => r !== id)].slice(0, 20)))
   }
 
   useEffect(() => {
@@ -200,16 +192,6 @@ export default function Hub() {
   }
 
   if (loading) return null
-
-  const dockPinIds = user ? getDockPins(user.id) : []
-  const dockApps = dockPinIds
-    .filter(id => ALL_APPS[id] && hasPermission(ALL_APPS[id].permission))
-    .map(id => ALL_APPS[id])
-
-  const recentDockApps = recentApps
-    .filter(id => !dockPinIds.includes(id) && userApps.includes(id) && ALL_APPS[id])
-    .slice(0, MAX_DOCK_RECENT)
-    .map(id => ALL_APPS[id])
 
   return (
     <>
@@ -389,7 +371,6 @@ export default function Hub() {
               userApps={userApps}
               onRemoveApp={handleRemoveApp}
               onAppClick={trackAppClick}
-              dockPinIds={dockPinIds}
             />
           </div>
         </div>
