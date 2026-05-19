@@ -5,6 +5,10 @@
    DESIGN TOKENS
    ============================================ */
 :root {
+  /* Warm editorial palette (Unitas) */
+  --warm-bg: #faf9f7;
+  --warm-gray: #8a7a68;
+
   /* Backgrounds */
   --bg: #ffffff;
   --bg-app: #f2f2f7;
@@ -41,6 +45,9 @@
 }
 
 [data-theme="dark"] {
+  --warm-bg: #0f0a07;
+  --warm-gray: #9a8a78;
+
   --bg: #000000;
   --bg-app: #1c1c1e;
   --bg-card: rgba(28, 28, 30, 0.9);
@@ -71,6 +78,9 @@
 }
 
 [data-theme="retro"] {
+  --warm-bg: #080c08;
+  --warm-gray: #00cc33;
+
   --bg: #080c08;
   --bg-app: #080c08;
   --bg-card: rgba(0, 22, 4, 0.92);
@@ -128,6 +138,9 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
+    --warm-bg: #0f0a07;
+    --warm-gray: #9a8a78;
+
     --bg: #000000;
     --bg-app: #1c1c1e;
     --bg-card: rgba(28, 28, 30, 0.9);
