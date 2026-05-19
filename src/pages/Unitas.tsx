@@ -297,7 +297,7 @@ export default function Unitas() {
   const firstName = user?.name?.split(' ')[0] || ''
 
   return (
-    <div style={{ minHeight: '100dvh', background: 'var(--bg-app)', fontFamily: "'Atkinson Hyperlegible', -apple-system, sans-serif" }}>
+    <div style={{ minHeight: '100dvh', background: 'var(--bg)', fontFamily: "'Atkinson Hyperlegible', -apple-system, sans-serif" }}>
 
       {/* ── Greeting overlay ── */}
       {greetingPhase !== 'done' && (
@@ -388,7 +388,7 @@ export default function Unitas() {
                       {myPatients.length + myFreigegebenPatients.length}
                     </div>
                     <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                      Protokoll{(myPatients.length + myFreigegebenPatients.length) !== 1 ? 'e' : ''}
+                      {(myPatients.length + myFreigegebenPatients.length) === 1 ? 'Protokoll' : 'Protokolle'}
                     </div>
                     {myFreigegebenPatients.length > 0 && (
                       <div style={{ marginTop: 6, fontSize: 11, color: '#600812', fontWeight: 600 }}>
@@ -508,7 +508,7 @@ export default function Unitas() {
                             ))}
                           </div>
                         )}
-                        <div style={{ padding: '9px 12px', display: 'flex', gap: 7, background: 'var(--bg-app)', borderTop: openRQs.length > 0 ? 'none' : '0.5px solid var(--border)' }}>
+                        <div style={{ padding: '9px 12px', display: 'flex', gap: 7, background: 'var(--bg-subtle)', borderTop: openRQs.length > 0 ? 'none' : '0.5px solid var(--border)' }}>
                           {openRQs.length > 0 && (
                             <button onClick={() => setSnModal(p)} style={{ background: '#f59e0b', color: '#fff', border: 'none', borderRadius: 8, padding: '7px 13px', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>
                               Stellungnahme
@@ -587,7 +587,7 @@ export default function Unitas() {
                             ))}
                           </div>
                         )}
-                        <div style={{ padding: '9px 12px', display: 'flex', gap: 7, background: 'var(--bg-app)', borderTop: (openRQs.length > 0 || sns.length > 0) ? 'none' : '0.5px solid var(--border)' }}>
+                        <div style={{ padding: '9px 12px', display: 'flex', gap: 7, background: 'var(--bg-subtle)', borderTop: (openRQs.length > 0 || sns.length > 0) ? 'none' : '0.5px solid var(--border)' }}>
                           {openRQs.length > 0 && (
                             <button onClick={() => setSnModal(p)} style={{ background: '#f59e0b', color: '#fff', border: 'none', borderRadius: 8, padding: '7px 13px', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>
                               Stellungnahme
@@ -654,7 +654,7 @@ export default function Unitas() {
                             ))}
                           </div>
                         )}
-                        <div style={{ padding: '9px 12px', display: 'flex', gap: 7, background: 'var(--bg-app)', borderTop: (openRQsA.length > 0 || snsA.length > 0) ? 'none' : '0.5px solid var(--border)' }}>
+                        <div style={{ padding: '9px 12px', display: 'flex', gap: 7, background: 'var(--bg-subtle)', borderTop: (openRQsA.length > 0 || snsA.length > 0) ? 'none' : '0.5px solid var(--border)' }}>
                           {openRQsA.length > 0 && (
                             <button onClick={() => setSnModal(p)} style={{ background: '#f59e0b', color: '#fff', border: 'none', borderRadius: 8, padding: '7px 13px', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>
                               Stellungnahme
