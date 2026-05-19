@@ -213,6 +213,8 @@ export default function Hub() {
 
   return (
     <div style={{ background: 'var(--warm-bg)', height: '100dvh', overflow: 'hidden' } as React.CSSProperties}>
+      {/* Full-viewport ivory backdrop — fills safe areas on iOS */}
+      <div style={{ position: 'fixed', inset: 0, background: '#faf9f7', zIndex: 0, pointerEvents: 'none' }} />
       <style>{`
         @media (min-width: 768px) {
           .hub-layout {

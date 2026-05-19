@@ -181,7 +181,18 @@
 
 html {
   height: 100%;
-  background: var(--warm-bg);
+  background: #faf9f7;
+}
+html[data-theme="dark"] {
+  background: #0f0a07;
+}
+html[data-theme="retro"] {
+  background: #080c08;
+}
+@media (prefers-color-scheme: dark) {
+  html:not([data-theme="light"]) {
+    background: #0f0a07;
+  }
 }
 
 body {
