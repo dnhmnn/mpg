@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { pb } from '../lib/pocketbase'
 import type { User } from '../types'
@@ -13,21 +13,12 @@ interface NewsItem {
 
 interface WidgetsProps {
   user: User | null
-  onNewsOpenChange?: (open: boolean) => void
 }
 
-export default function Widgets({ user, onNewsOpenChange }: WidgetsProps) {
+export default function Widgets({ user }: WidgetsProps) {
   const navigate = useNavigate()
-  const [now, setNow] = useState(new Date())
   const [news, setNews] = useState<NewsItem[]>([])
-  const [detailOpen, setDetailOpen] = useState(false)
   const [newsLoaded, setNewsLoaded] = useState(false)
-  const touchStartY = useRef(0)
-
-  useEffect(() => {
-    const id = setInterval(() => setNow(new Date()), 1000)
-    return () => clearInterval(id)
-  }, [])
 
   useEffect(() => {
     if (!user?.organization_id) return
@@ -156,108 +147,47 @@ export default function Widgets({ user, onNewsOpenChange }: WidgetsProps) {
     setNewsLoaded(true)
   }
 
-  const orgName = user?.organization_name || 'Responda'
-  const orgLogoFile = user?.organization_logo || ''
+  if (!newsLoaded) return null
 
-  let logoDisplay: JSX.Element
-  if (orgLogoFile && user?.organization && orgLogoFile !== '🏢') {
-    const logoUrl = pb.files.getUrl(user.organization, orgLogoFile, { thumb: '500x500' })
-    logoDisplay = (
-      <img src={logoUrl} alt={orgName}
-        style={{ width: '70%', height: '70%', objectFit: 'contain', borderRadius: '12px' }} />
-    )
-  } else {
-    logoDisplay = <div style={{ fontSize: '100px', lineHeight: 1 }}>🏢</div>
-  }
-
-  const secDeg = now.getSeconds() * 6
+  if (news.length === 0) return null
 
   return (
-    <>
-      <div className="widgets">
-        {/* Clock widget */}
-        <div className="widget">
-          <div className="widget-title">Heute</div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div className="widget-value" style={{ marginBottom: 0 }}>{now.getDate()}</div>
-            <svg width="36" height="36" viewBox="-18 -18 36 36" style={{ flexShrink: 0 }}>
-              <circle cx="0" cy="0" r="16" fill="none" stroke="currentColor" strokeWidth="1" opacity="0.2" />
-              <line x1="0" y1="2" x2="0" y2="-12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"
-                transform={`rotate(${secDeg})`} />
-              <circle cx="0" cy="0" r="2" fill="currentColor" />
+    <div>
+      <div style={{
+        fontSize: 10, fontWeight: 700, color: '#600812',
+        textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 12,
+      }}>
+        Neuigkeiten
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {news.map(item => (
+          <div
+            key={item.id}
+            onClick={() => navigate(item.url)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 12,
+              width: '100%', padding: '14px 12px',
+              background: '#fff', borderRadius: 10,
+              boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+              borderTop: 'none', borderRight: 'none', borderBottom: 'none',
+              borderLeft: `3px solid ${item.color}`,
+              cursor: 'pointer', textAlign: 'left' as const,
+            }}
+          >
+            <div style={{
+              width: 8, height: 8, borderRadius: '50%',
+              background: item.color, flexShrink: 0,
+            }} />
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: '#1a0e08' }}>{item.label}</div>
+              <div style={{ fontSize: 12, fontStyle: 'italic', color: 'var(--warm-gray)', marginTop: 2 }}>{item.sub}</div>
+            </div>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(96,8,18,0.3)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M9 18l6-6-6-6"/>
             </svg>
           </div>
-          <div className="widget-label">{now.toLocaleDateString('de-DE', { weekday: 'long' })}</div>
-        </div>
-
-        {/* Logo widget */}
-        <div className="widget" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          {logoDisplay}
-        </div>
-
-        {/* Neuigkeiten widget */}
-        <div className="widget large" style={{ minHeight: 0, padding: '12px 16px' }}>
-          <div className="widget-title">Neuigkeiten</div>
-          {!newsLoaded ? (
-            <div style={{ fontSize: '13px', opacity: 0.4, marginTop: '8px' }}>Lädt…</div>
-          ) : news.length === 0 ? (
-            <div style={{ fontSize: '14px', lineHeight: 1.6, opacity: 0.9, marginTop: '8px' }}>
-              Willkommen zurück! Keine neuen Nachrichten.
-            </div>
-          ) : (
-            <button
-              onClick={() => { setDetailOpen(true); onNewsOpenChange?.(true) }}
-              style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'none', border: 'none', cursor: 'pointer', padding: 0, width: '100%', marginTop: '8px', fontFamily: 'inherit' }}
-            >
-              <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text)', lineHeight: 1.4, textAlign: 'left' }}>
-                {news.length === 1 ? news[0].label : `${news.length} neue Hinweise`}
-              </div>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginLeft: 8 }}>
-                <path d="M9 18l6-6-6-6"/>
-              </svg>
-            </button>
-          )}
-        </div>
+        ))}
       </div>
-
-      {/* Detail bottom sheet */}
-      <div
-        style={{ position: 'fixed', inset: 0, zIndex: 600, background: detailOpen ? 'rgba(0,0,0,0.25)' : 'transparent', pointerEvents: detailOpen ? 'all' : 'none', transition: 'background .3s', backdropFilter: detailOpen ? 'blur(4px)' : 'none' }}
-        onClick={() => { setDetailOpen(false); onNewsOpenChange?.(false) }}
-      >
-        <div
-          style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: '#fff', borderRadius: '22px 22px 0 0', padding: '10px 20px calc(32px + env(safe-area-inset-bottom))', transform: detailOpen ? 'translateY(0)' : 'translateY(100%)', transition: 'transform .35s cubic-bezier(0.32,0.72,0,1)', maxHeight: '80vh', overflowY: 'auto', boxShadow: '0 -4px 32px rgba(0,0,0,0.12)' }}
-          onClick={e => e.stopPropagation()}
-          onTouchStart={e => { touchStartY.current = e.touches[0].clientY }}
-          onTouchEnd={e => { if (e.changedTouches[0].clientY - touchStartY.current > 50) { setDetailOpen(false); onNewsOpenChange?.(false) } }}
-        >
-          <div style={{ width: 36, height: 3, borderRadius: 99, background: 'rgba(96,8,18,0.15)', margin: '0 auto 18px' }} />
-          <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 16 }}>Neuigkeiten</div>
-
-          {news.map(item => (
-            <button
-              key={item.id}
-              onClick={() => { setDetailOpen(false); navigate(item.url) }}
-              style={{ display: 'flex', alignItems: 'center', gap: 14, width: '100%', padding: '14px 0', borderTop: '0.5px solid rgba(96,8,18,0.08)', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit' }}
-            >
-              <div style={{ width: 36, height: 36, borderRadius: '50%', background: item.color + '18', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <div style={{ width: 9, height: 9, borderRadius: '50%', background: item.color }} />
-              </div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 14, fontWeight: 700, color: '#1a0e08' }}>{item.label}</div>
-                <div style={{ fontSize: 12, color: 'var(--warm-gray)', marginTop: 2, fontStyle: 'italic' }}>{item.sub}</div>
-              </div>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(96,8,18,0.3)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M9 18l6-6-6-6"/>
-              </svg>
-            </button>
-          ))}
-
-          {news.length === 0 && (
-            <p style={{ color: 'var(--warm-gray)', fontSize: 14, fontStyle: 'italic', textAlign: 'center', margin: '24px 0' }}>Keine Nachrichten.</p>
-          )}
-        </div>
-      </div>
-    </>
+    </div>
   )
 }
