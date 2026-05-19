@@ -347,13 +347,18 @@ export default function Hub() {
         <span style={{ fontSize: 9, fontWeight: 700, color: '#600812', letterSpacing: '0.14em', textTransform: 'uppercase' }}>Control</span>
       </div>
 
+      {/* White fill — separate from scroll container to prevent iOS background-clipping bug */}
+      <div aria-hidden style={{ position: 'fixed', inset: 0, background: '#ffffff', zIndex: 0, pointerEvents: 'none' } as React.CSSProperties} />
+
       {/* Main scroll container — position:fixed fills entire viewport including safe areas */}
       <div style={{
         position: 'fixed',
         inset: 0,
+        zIndex: 1,
         overflowY: 'auto',
+        WebkitOverflowScrolling: 'touch',
         overscrollBehavior: 'none',
-        background: '#ffffff',
+        background: 'transparent',
         paddingTop: 'calc(54px + env(safe-area-inset-top) + 30px)',
         paddingBottom: 'calc(8vh + env(safe-area-inset-bottom))',
         paddingLeft: 'max(20px, env(safe-area-inset-left))',
