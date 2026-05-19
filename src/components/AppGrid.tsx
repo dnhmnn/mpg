@@ -3,18 +3,18 @@ import AppIcon from './AppIcon'
 import type { App } from '../types'
 
 const ALL_APPS: Record<string, App> = {
-  einsaetze:    { id: 'einsaetze',    name: 'Einsätze',      icon: 'siren',      url: '/einsaetze.html',           permission: 'einsaetze',           color: 'linear-gradient(135deg, #ff3b30, #c03026)' },
-  patienten:    { id: 'patienten',    name: 'Patienten',     icon: 'clipboard',  url: '/patienten',                 permission: 'patienten',           color: 'linear-gradient(135deg, #007aff, #0062cc)', isInternal: true },
-  dokumente:    { id: 'dokumente',    name: 'Vorgänge',      icon: 'file',       url: '/dokumente-bearbeiten.html', permission: 'dokumente',           color: 'linear-gradient(135deg, #af52de, #8e40b8)' },
-  lager:        { id: 'lager',        name: 'Lager',         icon: 'package',    url: '/lager',                     permission: 'lager',               color: 'linear-gradient(135deg, #ff9500, #cc7800)', isInternal: true },
-  dateien:      { id: 'dateien',      name: 'Dateien',       icon: 'folder',     url: '/files',                     permission: 'dateien',             color: 'linear-gradient(135deg, #ff9f0a, #cc8000)', isInternal: true },
-  qr:           { id: 'qr',           name: 'QR-Codes',      icon: 'qrcode',     url: '/qr-code-generator.html',    permission: 'qr',                  color: 'linear-gradient(135deg, #32ade6, #2591c4)' },
-  lernbar:      { id: 'lernbar',      name: 'Unitas',        icon: 'graduation', url: '/unitas',                    permission: 'lernbar',             color: 'linear-gradient(135deg, #5856d6, #4240b0)', isInternal: true },
-  ausbildungen: { id: 'ausbildungen', name: 'Ausbildungen',  icon: 'book',       url: '/ausbildungen',              permission: 'ausbildungen_manage', color: 'linear-gradient(135deg, #1c7cd6, #1560a8)', isInternal: true },
-  unitarii:     { id: 'unitarii',     name: 'Unitarii',      icon: 'users',      url: '/unitarii',                  permission: 'unitarii',            color: 'linear-gradient(135deg, #636e8a, #4a5370)', isInternal: true },
-  mpg:          { id: 'mpg',          name: 'MPG',           icon: 'mpg',        url: '/mpg',                       permission: 'dashboard',           color: 'linear-gradient(135deg, #c0392b, #962d22)', isInternal: true },
-  chat:         { id: 'chat',         name: 'Chat',          icon: 'chat',       url: '/chat',                      permission: 'chat',                color: 'linear-gradient(135deg, #34c759, #27a447)', isInternal: true },
-  settings:     { id: 'settings',     name: 'Einstellungen', icon: 'settings',   url: '#settings',                  permission: 'dashboard',           color: 'linear-gradient(135deg, #8e8e93, #6c6c72)', isInternal: true },
+  einsaetze:    { id: 'einsaetze',    name: 'Einsätze',      icon: 'siren',      url: '/einsaetze.html',           permission: 'einsaetze',           color: '#600812' },
+  patienten:    { id: 'patienten',    name: 'Patienten',     icon: 'clipboard',  url: '/patienten',                 permission: 'patienten',           color: '#600812', isInternal: true },
+  dokumente:    { id: 'dokumente',    name: 'Vorgänge',      icon: 'file',       url: '/dokumente-bearbeiten.html', permission: 'dokumente',           color: '#7a1020' },
+  lager:        { id: 'lager',        name: 'Lager',         icon: 'package',    url: '/lager',                     permission: 'lager',               color: '#5c3800', isInternal: true },
+  dateien:      { id: 'dateien',      name: 'Dateien',       icon: 'folder',     url: '/files',                     permission: 'dateien',             color: '#8a7a68', isInternal: true },
+  qr:           { id: 'qr',           name: 'QR-Codes',      icon: 'qrcode',     url: '/qr-code-generator.html',    permission: 'qr',                  color: '#3d5c6e' },
+  lernbar:      { id: 'lernbar',      name: 'Unitas',        icon: 'graduation', url: '/unitas',                    permission: 'lernbar',             color: '#600812', isInternal: true },
+  ausbildungen: { id: 'ausbildungen', name: 'Ausbildungen',  icon: 'book',       url: '/ausbildungen',              permission: 'ausbildungen_manage', color: '#7a1020', isInternal: true },
+  unitarii:     { id: 'unitarii',     name: 'Unitarii',      icon: 'users',      url: '/unitarii',                  permission: 'unitarii',            color: '#3d0408', isInternal: true },
+  mpg:          { id: 'mpg',          name: 'MPG',           icon: 'mpg',        url: '/mpg',                       permission: 'dashboard',           color: '#600812', isInternal: true },
+  chat:         { id: 'chat',         name: 'Chat',          icon: 'chat',       url: '/chat',                      permission: 'chat',                color: '#3d5c6e', isInternal: true },
+  settings:     { id: 'settings',     name: 'Einstellungen', icon: 'settings',   url: '#settings',                  permission: 'dashboard',           color: '#8a7a68', isInternal: true },
 }
 
 function extractColor(colorStr = ''): string {
