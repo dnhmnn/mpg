@@ -512,11 +512,13 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
     if (!user?.organization_id) return
     setBeitraegeLoading(true)
     try {
-      const records = await pb.collection('lernbar_beitraege').getFullList({
-        filter: `organisation_id = "${user.organization_id}"`,
-        sort: '-gepinnt,-created',
+      const all = await pb.collection('lernbar_beitraege').getFullList({
         requestKey: `loadBeitraege-${Date.now()}`
       })
+      console.log('Alle Beitraege (ohne Filter):', all.length, all.map(r => ({ id: r.id, organisation_id: (r as any).organisation_id, organization_id: (r as any).organization_id })))
+      const records = all.filter((r: any) =>
+        r.organisation_id === user.organization_id || r.organization_id === user.organization_id
+      )
       setBeitraege(records as any)
     } catch (e: any) {
       console.error('loadBeitraege Fehler:', e?.message, e?.data)
