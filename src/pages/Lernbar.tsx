@@ -434,7 +434,7 @@ export default function Lernbar() {
       </div>
 
       {/* Content */}
-      <div style={{ maxWidth: 600, margin: '0 auto', padding: tab === 'feed' ? '0 0 calc(80px + env(safe-area-inset-bottom))' : '20px 16px calc(80px + env(safe-area-inset-bottom))' }}>
+      <div style={{ maxWidth: 600, margin: '0 auto', padding: tab === 'feed' ? '12px 12px calc(80px + env(safe-area-inset-bottom))' : '20px 16px calc(80px + env(safe-area-inset-bottom))' }}>
 
         {/* ── FEED ── */}
         {tab === 'feed' && (
@@ -445,23 +445,15 @@ export default function Lernbar() {
                 Noch keine Lernbeiträge
               </div>
             )}
-            {beitraege.map((b, idx) => {
+            {beitraege.map((b) => {
               const tags = parseTags(b.tags)
               const bildUrl = b.bild ? `https://api.responda.systems/api/files/${b.collectionId}/${b.id}/${b.bild}` : null
               const qs = feedQuizState[b.id] || { selected: null, submitted: false }
               const quiz = parseQuiz(b.quiz_daten)
               const initials = (b.erstellt_von_name || 'R').split(' ').map((w: string) => w[0]).slice(0, 2).join('').toUpperCase()
 
-              const TypeIcon = () => {
-                if (b.typ === 'bild') return <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-                if (b.typ === 'text') return <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/></svg>
-                if (b.typ === 'video') return <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-                return <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-              }
-
               return (
-                <div key={b.id}>
-                  {idx > 0 && <div style={{ height: 1, background: 'var(--border)', margin: '0' }} />}
+                <div key={b.id} style={{ background: 'var(--bg-card)', borderRadius: 16, boxShadow: '0 2px 8px rgba(0,0,0,0.09)', overflow: 'hidden', marginBottom: 14 }}>
 
                   {/* Pinned banner */}
                   {b.gepinnt && (
@@ -472,43 +464,41 @@ export default function Lernbar() {
                   )}
 
                   {/* Author row */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px 10px' }}>
-                    <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--accent)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, flexShrink: 0, letterSpacing: '0.02em' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px 10px' }}>
+                    <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--accent)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, flexShrink: 0 }}>
                       {initials}
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)', lineHeight: 1.2 }}>{b.erstellt_von_name || 'Responda'}</div>
                       <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 1 }}>
-                        {new Date(b.created).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                        {new Date(b.created).toLocaleDateString('de-DE', { day: '2-digit', month: 'long', year: 'numeric' })}
                       </div>
                     </div>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 700, color: 'var(--accent)', background: 'rgba(107,15,26,0.08)', borderRadius: 20, padding: '4px 10px', flexShrink: 0 }}>
-                      <TypeIcon />
-                      {b.typ === 'bild' ? 'Bild' : b.typ === 'text' ? 'Info' : b.typ === 'video' ? 'Reel' : 'Quiz'}
-                    </span>
                   </div>
 
                   {/* Media */}
-                  {b.typ === 'bild' && bildUrl && (
-                    <img src={bildUrl} alt={b.titel} style={{ width: '100%', display: 'block', maxHeight: 400, objectFit: 'cover' }} />
-                  )}
-                  {b.typ === 'video' && b.video_url && (
+                  {b.typ === 'video' && b.video_url ? (
                     <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0, background: '#000' }}>
                       <iframe src={getVideoEmbed(b.video_url)} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }} allowFullScreen allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" />
                     </div>
-                  )}
-
-                  {/* Text/Quiz accent bar */}
-                  {(b.typ === 'text' || b.typ === 'quiz') && (
-                    <div style={{ height: 3, background: 'var(--accent)', margin: '0 16px', borderRadius: 2 }} />
+                  ) : bildUrl ? (
+                    <img src={bildUrl} alt={b.titel} style={{ width: '100%', display: 'block', maxHeight: 420, objectFit: 'cover' }} />
+                  ) : (
+                    <div style={{ height: 160, background: b.typ === 'quiz' ? 'linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%)' : 'linear-gradient(135deg, #600812 0%, #9b1a2a 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      {b.typ === 'quiz' ? (
+                        <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.65)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                      ) : (
+                        <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.65)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+                      )}
+                    </div>
                   )}
 
                   {/* Content */}
-                  <div style={{ padding: '12px 16px 16px' }}>
-                    <div style={{ fontWeight: 700, fontSize: 17, color: 'var(--text)', marginBottom: b.inhalt || quiz ? 8 : 0, lineHeight: 1.3 }}>{b.titel}</div>
+                  <div style={{ padding: '12px 14px 14px' }}>
+                    <div style={{ fontWeight: 700, fontSize: 16, color: 'var(--text)', marginBottom: b.inhalt || quiz ? 6 : 0, lineHeight: 1.35 }}>{b.titel}</div>
 
                     {b.inhalt && b.typ !== 'quiz' && (
-                      <div style={{ fontSize: 15, color: 'var(--text)', lineHeight: 1.65, whiteSpace: 'pre-wrap', marginBottom: tags.length > 0 ? 12 : 0 }}>{b.inhalt}</div>
+                      <div style={{ fontSize: 14, color: 'var(--text)', lineHeight: 1.6, whiteSpace: 'pre-wrap', marginBottom: tags.length > 0 ? 10 : 0 }}>{b.inhalt}</div>
                     )}
 
                     {b.typ === 'quiz' && quiz && (

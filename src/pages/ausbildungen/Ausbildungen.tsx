@@ -337,6 +337,8 @@ export default function Ausbildungen() {
     bild_file: File | null
   }>({ typ: 'text', titel: '', inhalt: '', video_url: '', tags: '', gepinnt: false, quiz_frage: '', quiz_antworten: ['', '', '', ''], quiz_richtige: 0, bild_file: null })
   const [savingBeitrag, setSavingBeitrag] = useState(false)
+  const [generatingAIImage, setGeneratingAIImage] = useState(false)
+  const [aiImagePreview, setAiImagePreview] = useState<string | null>(null)
   
 const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | 'konzepte' | 'jahresuebersicht' | 'archiv' | 'lernfeed'>('termine')
   
@@ -559,6 +561,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
       }
       setShowBeitragModal(false)
       setBeitragForm({ typ: 'text', titel: '', inhalt: '', video_url: '', tags: '', gepinnt: false, quiz_frage: '', quiz_antworten: ['', '', '', ''], quiz_richtige: 0, bild_file: null })
+      setAiImagePreview(null)
       await loadBeitraege()
       showMessage('Beitrag erstellt', 'success')
     } catch(e: any) {
@@ -574,6 +577,25 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
       showMessage('Beitrag gelöscht', 'success')
     } catch(e: any) {
       showMessage('Fehler: ' + e.message, 'error')
+    }
+  }
+
+  async function generateAIImage() {
+    if (!beitragForm.titel.trim()) { showMessage('Bitte zuerst einen Titel eingeben', 'error'); return }
+    setGeneratingAIImage(true)
+    try {
+      const prompt = encodeURIComponent(`${beitragForm.titel} ${beitragForm.inhalt} Rettungsdienst Notfallmedizin training illustration`.trim())
+      const url = `https://image.pollinations.ai/prompt/${prompt}?width=1024&height=768&nologo=true&seed=${Date.now()}`
+      const response = await fetch(url)
+      if (!response.ok) throw new Error('Bildgenerierung fehlgeschlagen')
+      const blob = await response.blob()
+      const file = new File([blob], 'ki-bild.jpg', { type: 'image/jpeg' })
+      setBeitragForm(prev => ({ ...prev, bild_file: file }))
+      setAiImagePreview(URL.createObjectURL(blob))
+    } catch(e: any) {
+      showMessage('KI-Bild Fehler: ' + e.message, 'error')
+    } finally {
+      setGeneratingAIImage(false)
     }
   }
 
@@ -2300,8 +2322,24 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
 
             {beitragForm.typ === 'bild' && (
               <div className="field">
-                <label>Bild hochladen</label>
-                <input type="file" accept="image/*" onChange={e => setBeitragForm(prev => ({ ...prev, bild_file: e.target.files?.[0] || null }))} />
+                <label>Bild</label>
+                <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+                  <label style={{ flex: 1, padding: '9px 12px', borderRadius: 8, border: '1.5px solid var(--border)', background: 'var(--bg-input)', color: 'var(--text-secondary)', fontSize: 13, cursor: 'pointer', textAlign: 'center', fontFamily: 'inherit' }}>
+                    Hochladen
+                    <input type="file" accept="image/*" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0] || null; setBeitragForm(prev => ({ ...prev, bild_file: f })); setAiImagePreview(f ? URL.createObjectURL(f) : null) }} />
+                  </label>
+                  <button type="button" onClick={generateAIImage} disabled={generatingAIImage || !beitragForm.titel.trim()}
+                    style={{ flex: 1, padding: '9px 12px', borderRadius: 8, border: '1.5px solid var(--accent)', background: generatingAIImage ? 'var(--bg-subtle)' : 'rgba(96,8,18,0.06)', color: 'var(--accent)', fontSize: 13, fontWeight: 600, cursor: generatingAIImage || !beitragForm.titel.trim() ? 'not-allowed' : 'pointer', fontFamily: 'inherit', opacity: !beitragForm.titel.trim() ? 0.5 : 1 }}>
+                    {generatingAIImage ? '✦ Generiere…' : '✦ KI-Bild'}
+                  </button>
+                </div>
+                {aiImagePreview && (
+                  <div style={{ position: 'relative' }}>
+                    <img src={aiImagePreview} alt="Vorschau" style={{ width: '100%', borderRadius: 10, display: 'block', maxHeight: 220, objectFit: 'cover' }} />
+                    <button type="button" onClick={() => { setBeitragForm(prev => ({ ...prev, bild_file: null })); setAiImagePreview(null) }}
+                      style={{ position: 'absolute', top: 8, right: 8, width: 26, height: 26, borderRadius: '50%', border: 'none', background: 'rgba(0,0,0,0.55)', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, lineHeight: 1 }}>×</button>
+                  </div>
+                )}
               </div>
             )}
 
@@ -2341,7 +2379,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
             </div>
 
             <div style={{ display: 'flex', gap: 8 }}>
-              <button className="btn" onClick={() => setShowBeitragModal(false)} style={{ flex: 1 }}>Abbrechen</button>
+              <button className="btn" onClick={() => { setShowBeitragModal(false); setAiImagePreview(null) }} style={{ flex: 1 }}>Abbrechen</button>
               <button className="btn primary" onClick={saveBeitrag} disabled={savingBeitrag || !beitragForm.titel.trim()} style={{ flex: 1 }}>
                 {savingBeitrag ? 'Wird gespeichert…' : 'Erstellen'}
               </button>
