@@ -205,6 +205,11 @@ export default function Hub() {
           display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;
           animation:greetCurtainOut 2.4s ease forwards;pointer-events:none;
         }
+        @keyframes controlDrift {
+          0%,100%{transform:translateY(0);opacity:0.45}
+          55%{transform:translateY(5px);opacity:0.9}
+        }
+        .hub-control-handle { animation: controlDrift 2.2s ease-in-out infinite; }
       `}</style>
 
       {/* Greeting overlay */}
@@ -229,10 +234,10 @@ export default function Hub() {
         paddingRight: 'max(20px, env(safe-area-inset-right))',
       } as React.CSSProperties}>
         <div style={{ height: 60, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ width: 34, height: 34, borderRadius: '50%', background: '#600812', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, overflow: 'hidden' }}>
+          <div style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
             {!logoError
-              ? <img src="/logo.png" alt="" style={{ width: 20, height: 20, objectFit: 'contain', filter: 'brightness(0) invert(1)' }} onError={() => setLogoError(true)} />
-              : <span style={{ color: '#fff', fontWeight: 700, fontSize: 13 }}>R</span>
+              ? <img src="/logo.png" alt="Responda" onError={() => setLogoError(true)} style={{ height: 34, width: 34, objectFit: 'contain' }} />
+              : <div style={{ width: 34, height: 34, borderRadius: '50%', background: '#600812', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><span style={{ color: '#fff', fontWeight: 700, fontSize: 13 }}>R</span></div>
             }
           </div>
           <div style={{ flex: 1, textAlign: 'center', padding: '0 12px' }}>
@@ -296,17 +301,20 @@ export default function Hub() {
           )}
         </div>
 
-        <div>
-          <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 14 }}>Kurzbefehle</div>
-          <button
-            onClick={() => setSheetOpen(true)}
-            style={{ width: '100%', background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.07)', border: 'none', cursor: 'pointer', padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontFamily: 'inherit' }}
-          >
-            <span style={{ fontSize: 14, fontWeight: 600, color: '#1a0e08' }}>Kurzbefehle öffnen</span>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(96,8,18,0.35)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6"/></svg>
-          </button>
-        </div>
 
+      </div>
+
+      {/* Animated Control handle — fixed below header, above user avatar */}
+      <div
+        className="hub-control-handle"
+        style={{ position: 'fixed', top: 'calc(env(safe-area-inset-top) + 68px)', right: 16, zIndex: 399, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, cursor: 'pointer', userSelect: 'none', WebkitUserSelect: 'none' } as React.CSSProperties}
+        onClick={() => setSheetOpen(true)}
+        onTouchStart={e => { touchStartY.current = e.touches[0].clientY }}
+        onTouchEnd={e => { if (touchStartY.current - e.changedTouches[0].clientY > 30) setSheetOpen(true) }}
+      >
+        <div style={{ width: 32, height: 3, borderRadius: 99, background: 'rgba(96,8,18,0.3)' }} />
+        <div style={{ width: 24, height: 2, borderRadius: 99, background: 'rgba(96,8,18,0.18)' }} />
+        <span style={{ fontSize: 9, fontWeight: 700, color: '#600812', letterSpacing: '0.14em', textTransform: 'uppercase', marginTop: 1 }}>Control</span>
       </div>
 
       <SettingsModal isOpen={showSettings} onClose={() => setShowSettings(false)} user={user} />
