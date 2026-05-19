@@ -269,7 +269,7 @@ export default function Hub() {
 
         <div>
           <div style={{ fontSize: 26, fontWeight: 800, color: '#1a0e08', letterSpacing: '-0.02em', lineHeight: 1.1 }}>
-            Ciao, <span style={{ color: '#600812', fontStyle: 'italic' }}>{firstName}</span>
+            Servus, <span style={{ color: '#600812', fontStyle: 'italic' }}>{firstName}</span>
           </div>
         </div>
 
