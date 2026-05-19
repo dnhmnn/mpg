@@ -76,12 +76,12 @@ export default function AppGrid({ userApps, editMode = false, onRemoveApp, onApp
               onTouchEnd={e => { (e.currentTarget as HTMLButtonElement).style.transform = '' }}
             >
               <div style={{
-                width: 48, height: 48, borderRadius: 12,
-                background: iconColor + '18',
+                width: 52, height: 52, borderRadius: 14,
+                background: iconColor,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                color: iconColor, flexShrink: 0,
+                color: '#fff', flexShrink: 0,
               }}>
-                <div style={{ width: 24, height: 24 }}>
+                <div style={{ width: 26, height: 26 }}>
                   <AppIcon icon={app.icon} />
                 </div>
               </div>
