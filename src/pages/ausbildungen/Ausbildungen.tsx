@@ -1643,7 +1643,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                     style={{ background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.07)', cursor: 'pointer', position: 'relative' }}
                   >
                     {/* Status strip top */}
-                    <div style={{ height: 3, background: statusColor }} />
+                    <div style={{ height: 3, background: statusColor, borderRadius: '12px 12px 0 0' }} />
                     <div style={{ display: 'flex', alignItems: 'stretch', padding: '12px 14px 10px' }}>
                       {/* Left date column */}
                       <div style={{ minWidth: 48, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', paddingRight: 12, borderRight: '0.5px solid rgba(96,8,18,0.1)', marginRight: 12, gap: 2, paddingTop: 2 }}>
@@ -1662,7 +1662,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                       </div>
                     </div>
                     {/* Bottom stats strip */}
-                    <div style={{ borderTop: '0.5px solid rgba(96,8,18,0.08)', background: 'rgba(250,249,247,0.8)', padding: '8px 14px', display: 'flex', gap: 14, fontSize: 12, color: 'var(--warm-gray)', fontWeight: 600 }}>
+                    <div style={{ borderTop: '0.5px solid rgba(96,8,18,0.08)', background: 'rgba(250,249,247,0.8)', padding: '8px 14px', display: 'flex', gap: 14, fontSize: 12, color: 'var(--warm-gray)', fontWeight: 600, borderRadius: '0 0 12px 12px' }}>
                       <span>{teilnehmerCount}/{termin.max_teilnehmer} TN</span>
                       {anwesendCount > 0 && <span style={{ color: '#16a34a' }}>{anwesendCount} Da</span>}
                       {dokumenteCount > 0 && <span>{dokumenteCount} Dok.</span>}
@@ -1681,7 +1681,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                           menu?.classList.toggle('show')
                         }}
                       >
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="12" cy="5" r="2.2"/><circle cx="12" cy="12" r="2.2"/><circle cx="12" cy="19" r="2.2"/></svg>
                       </button>
                       <div id={`menu-${termin.id}`} className="ausb-card-menu-dropdown">
                         <button className="ausb-menu-item" onClick={(e) => { e.stopPropagation(); openEditTermin(termin) }}>Bearbeiten</button>
@@ -1725,7 +1725,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                         menu?.classList.toggle('show')
                       }}
                     >
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="12" cy="5" r="2.2"/><circle cx="12" cy="12" r="2.2"/><circle cx="12" cy="19" r="2.2"/></svg>
                     </button>
                     <div id={`menu-${t.id}`} className="ausb-card-menu-dropdown">
                       <button className="ausb-menu-item" onClick={(e) => { e.stopPropagation(); openEditTeilnehmer(t) }}>Bearbeiten</button>
@@ -1801,7 +1801,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                           menu?.classList.toggle('show')
                         }}
                       >
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="12" cy="5" r="2.2"/><circle cx="12" cy="12" r="2.2"/><circle cx="12" cy="19" r="2.2"/></svg>
                       </button>
                       <div id={`menu-m-${m.id}`} className="ausb-card-menu-dropdown">
                         <button className="ausb-menu-item" onClick={(e) => { e.stopPropagation(); openEditModul(m) }}>Bearbeiten</button>
@@ -1857,7 +1857,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                         menu?.classList.toggle('show')
                       }}
                     >
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="12" cy="5" r="2.2"/><circle cx="12" cy="12" r="2.2"/><circle cx="12" cy="19" r="2.2"/></svg>
                     </button>
                     <div id={`menu-${k.id}`} className="ausb-card-menu-dropdown">
                       <button className="ausb-menu-item" onClick={(e) => { e.stopPropagation(); openEditKonzept(k) }}>Bearbeiten</button>
