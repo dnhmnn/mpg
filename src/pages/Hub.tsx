@@ -213,10 +213,10 @@ export default function Hub() {
 
         /* App grid + card sizing — mobile first (4 cols, compact) */
         .hub-app-grid { grid-template-columns: repeat(4, 1fr); gap: 8px; }
-        .hub-app-card { padding: 10px 4px 8px !important; }
-        .hub-app-icon-wrap { width: 38px !important; height: 38px !important; border-radius: 10px !important; }
-        .hub-app-icon-wrap > div { width: 18px !important; height: 18px !important; }
-        .hub-app-label { font-size: 10px !important; max-width: 64px !important; }
+        .hub-app-card { padding: 12px 4px 10px !important; }
+        .hub-app-icon-wrap { width: 46px !important; height: 46px !important; border-radius: 12px !important; }
+        .hub-app-icon-wrap > div { width: 22px !important; height: 22px !important; }
+        .hub-app-label { font-size: 11px !important; max-width: 72px !important; }
 
         /* Mobile column order: greeting+news first, apps second */
         .hub-cols { display: flex; flex-direction: column; gap: 16px; }
