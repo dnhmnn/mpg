@@ -215,9 +215,19 @@ export default function OrgProduktausgabe() {
     pb.collection('inventory_locations').getFullList<Location>({
       filter: `organization_id = "${org.id}"`,
       sort: 'name',
-    }).then(locs => {
-      setLocations(locs)
-      if (locs.length === 1) setSelectedLagerId(locs[0].id)
+    }).then(async locs => {
+      if (locs.length === 0) {
+        const defaultLoc = await pb.collection('inventory_locations').create({
+          name: 'Lager',
+          icon: 'box',
+          organization_id: org.id,
+        })
+        setLocations([defaultLoc as Location])
+        setSelectedLagerId(defaultLoc.id)
+      } else {
+        setLocations(locs)
+        if (locs.length === 1) setSelectedLagerId(locs[0].id)
+      }
     }).catch(() => {})
   }, [org.id])
 
