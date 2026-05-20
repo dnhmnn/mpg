@@ -1497,144 +1497,120 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
     fehlend:      {bg: '#fee2e2', label: 'Fe', color: '#991b1b'},
   }
 
+  // LBF helpers
+  const addBtnStyle: React.CSSProperties = {
+    width: 32, height: 32, borderRadius: 8, border: 'none',
+    background: 'rgba(96,8,18,0.07)', color: '#600812', fontSize: 20,
+    cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+    flexShrink: 0
+  }
+
+  function terminStatusColor(status: string): string {
+    if (status === 'geplant') return '#600812'
+    if (status === 'laufend') return '#d97706'
+    if (status === 'abgeschlossen') return '#16a34a'
+    if (status === 'abgesagt') return 'rgba(139,113,90,0.4)'
+    return '#600812'
+  }
+
   return (
-    <>
-      <StatusBar user={user} onLogout={logout} pageName="Ausbildungen" showHubLink={true} />
-      
-      {/* ICON TOOLBAR */}
-      <div className="action-toolbar">
-        <button
-          className={`action-btn ${viewMode === 'termine' ? 'active' : ''}`}
-          onClick={() => setViewMode('termine')}
-          title="Termine"
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-            <line x1="16" y1="2" x2="16" y2="6"/>
-            <line x1="8" y1="2" x2="8" y2="6"/>
-            <line x1="3" y1="10" x2="21" y2="10"/>
-          </svg>
-          <span className="btn-label">Termine</span>
-        </button>
-        <button
-          className={`action-btn ${viewMode === 'teilnehmer' ? 'active' : ''}`}
-          onClick={() => setViewMode('teilnehmer')}
-          title="Teilnehmer"
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-            <circle cx="9" cy="7" r="4"/>
-            <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-          </svg>
-          <span className="btn-label">Teilnehmer</span>
-        </button>
-        <button
-          className={`action-btn ${viewMode === 'module' ? 'active' : ''}`}
-          onClick={() => setViewMode('module')}
-          title="Lernmodule"
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
-            <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
-          </svg>
-          <span className="btn-label">Module</span>
-        </button>
-        <button
-          className={`action-btn ${viewMode === 'konzepte' ? 'active' : ''}`}
-          onClick={() => setViewMode('konzepte')}
-          title="Ausbildungskonzepte"
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M12 2L2 7l10 5 10-5-10-5z"/>
-            <path d="M2 17l10 5 10-5M2 12l10 5 10-5"/>
-          </svg>
-          <span className="btn-label">Konzepte</span>
-        </button>
-        <button
-          className={`action-btn ${viewMode === 'jahresuebersicht' ? 'active' : ''}`}
-          onClick={() => setViewMode('jahresuebersicht')}
-          title="Jahresübersicht"
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
-            <rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
-          </svg>
-          <span className="btn-label">Jahresplan</span>
-        </button>
-        <button
-          className={`action-btn ${viewMode === 'archiv' ? 'active' : ''}`}
-          onClick={() => setViewMode('archiv')}
-          title={`Archiv (${archivTermine.length})`}
-          style={{position: 'relative'}}
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/>
-          </svg>
-          <span className="btn-label">Archiv</span>
-          {archivTermine.length > 0 && (
-            <span style={{position: 'absolute', top: '4px', right: '4px', background: 'var(--text-secondary)', color: '#fff', borderRadius: '50%', width: '14px', height: '14px', fontSize: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700}}>{archivTermine.length > 9 ? '9+' : archivTermine.length}</span>
+    <div style={{ minHeight: '100dvh', background: 'var(--warm-bg)', fontFamily: "'Atkinson Hyperlegible', -apple-system, sans-serif" }}>
+
+      {/* ── MASTHEAD HEADER ── */}
+      <div style={{ background: '#fff', borderBottom: '0.5px solid rgba(96,8,18,0.12)', position: 'sticky', top: 0, zIndex: 100, paddingTop: 'env(safe-area-inset-top)', paddingLeft: 'max(20px, env(safe-area-inset-left))', paddingRight: 'max(20px, env(safe-area-inset-right))' }}>
+        <div style={{ height: 60, display: 'flex', alignItems: 'center', gap: 12 }}>
+          <a href="/hub" style={{ display: 'flex', color: '#600812', textDecoration: 'none', flexShrink: 0 }}>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#600812" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+          </a>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontWeight: 700, fontSize: 15, letterSpacing: '-0.01em', color: '#1a0e08' }}>Ausbildungen</div>
+            <div style={{ fontStyle: 'italic', fontSize: 11, color: 'var(--warm-gray)', marginTop: 1 }}>{user?.organization_name || 'Responda'}</div>
+          </div>
+          {viewMode === 'termine' && (
+            <button onClick={openAddTermin} style={addBtnStyle} title="Termin hinzufügen">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            </button>
           )}
-        </button>
-        <button
-          className={`action-btn ${viewMode === 'lernfeed' ? 'active' : ''}`}
-          onClick={() => { setViewMode('lernfeed'); loadBeitraege() }}
-          title="Lernfeed"
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M4 11a9 9 0 0 1 9 9"/><path d="M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1"/>
-          </svg>
-          <span className="btn-label">Lernfeed</span>
-        </button>
-        <div style={{flex: 1}} />
-        {viewMode === 'termine' && (
-          <button className="action-btn primary" onClick={openAddTermin} title="Termin hinzufügen">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <line x1="12" y1="5" x2="12" y2="19"/>
-              <line x1="5" y1="12" x2="19" y2="12"/>
-            </svg>
-          </button>
-        )}
-        {viewMode === 'teilnehmer' && (
-          <button className="action-btn primary" onClick={openAddTeilnehmer} title="Teilnehmer hinzufügen">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <line x1="12" y1="5" x2="12" y2="19"/>
-              <line x1="5" y1="12" x2="19" y2="12"/>
-            </svg>
-          </button>
-        )}
-        {viewMode === 'module' && (
-          <button className="action-btn primary" onClick={openAddModul} title="Modul hinzufügen">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <line x1="12" y1="5" x2="12" y2="19"/>
-              <line x1="5" y1="12" x2="19" y2="12"/>
-            </svg>
-          </button>
-        )}
-        {viewMode === 'konzepte' && (
-          <button className="action-btn primary" onClick={openAddKonzept} title="Konzept hinzufügen">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <line x1="12" y1="5" x2="12" y2="19"/>
-              <line x1="5" y1="12" x2="19" y2="12"/>
-            </svg>
-          </button>
-        )}
-        {viewMode === 'lernfeed' && (
-          <button className="action-btn primary" onClick={() => setShowBeitragModal(true)} title="Beitrag erstellen">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <line x1="12" y1="5" x2="12" y2="19"/>
-              <line x1="5" y1="12" x2="19" y2="12"/>
-            </svg>
-          </button>
-        )}
+          {viewMode === 'teilnehmer' && (
+            <button onClick={openAddTeilnehmer} style={addBtnStyle} title="Teilnehmer hinzufügen">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            </button>
+          )}
+          {viewMode === 'module' && (
+            <button onClick={openAddModul} style={addBtnStyle} title="Modul hinzufügen">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            </button>
+          )}
+          {viewMode === 'konzepte' && (
+            <button onClick={openAddKonzept} style={addBtnStyle} title="Konzept hinzufügen">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            </button>
+          )}
+          {viewMode === 'lernfeed' && (
+            <button onClick={() => setShowBeitragModal(true)} style={addBtnStyle} title="Beitrag erstellen">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            </button>
+          )}
+        </div>
       </div>
 
+      {/* ── VIEW NAVIGATION BAR ── */}
+      <div style={{ background: '#fff', borderBottom: '0.5px solid rgba(96,8,18,0.1)', position: 'sticky', top: 'calc(env(safe-area-inset-top) + 60px)', zIndex: 99, overflowX: 'auto', WebkitOverflowScrolling: 'touch' as any }}>
+        <div style={{ display: 'flex', paddingLeft: 'max(8px, env(safe-area-inset-left))', paddingRight: 'max(8px, env(safe-area-inset-right))', minWidth: 'max-content' }}>
+          {([
+            { key: 'termine', label: 'Termine' },
+            { key: 'teilnehmer', label: 'Teilnehmer' },
+            { key: 'module', label: 'Module' },
+            { key: 'konzepte', label: 'Konzepte' },
+            { key: 'jahresuebersicht', label: 'Jahresplan' },
+            { key: 'archiv', label: 'Archiv', count: archivTermine.length },
+            { key: 'lernfeed', label: 'Lernfeed' },
+          ] as const).map(tab => (
+            <button
+              key={tab.key}
+              onClick={() => {
+                setViewMode(tab.key as typeof viewMode)
+                if (tab.key === 'lernfeed') loadBeitraege()
+              }}
+              className="ausb-nav-btn"
+              style={{
+                color: viewMode === tab.key ? '#600812' : 'var(--warm-gray)',
+                borderBottom: viewMode === tab.key ? '2px solid #600812' : '2px solid transparent',
+                fontWeight: 700, fontSize: 13, background: 'none', border: 'none',
+                borderBottomWidth: 2,
+                borderBottomStyle: 'solid' as const,
+                borderBottomColor: viewMode === tab.key ? '#600812' : 'transparent',
+                padding: '0 14px', height: 44, cursor: 'pointer', whiteSpace: 'nowrap' as const,
+                fontFamily: 'inherit', position: 'relative' as const
+              }}
+            >
+              {tab.label}
+              {'count' in tab && tab.count > 0 && (
+                <span style={{ marginLeft: 5, background: '#600812', color: '#fff', borderRadius: 8, padding: '1px 5px', fontSize: 10, fontWeight: 700, verticalAlign: 'middle' }}>
+                  {tab.count > 9 ? '9+' : tab.count}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* ── TOAST ── */}
       {message && (
-        <div className={`toast toast-${message.type}`}>{message.text}</div>
+        <div style={{
+          position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)',
+          padding: '12px 20px', borderRadius: 12, fontWeight: 600, fontSize: 14,
+          boxShadow: '0 4px 20px rgba(0,0,0,0.12)', whiteSpace: 'nowrap', zIndex: 9999,
+          ...(message.type === 'success'
+            ? { background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#166534' }
+            : { background: '#fff0f0', border: '1px solid rgba(96,8,18,0.2)', color: '#600812' })
+        }}>
+          {message.text}
+        </div>
       )}
 
       {(viewMode === 'termine' || viewMode === 'teilnehmer' || viewMode === 'module' || viewMode === 'konzepte') && (
-      <div className="content">
+      <div style={{ maxWidth: 900, margin: '0 auto', padding: '20px max(16px, env(safe-area-inset-left)) calc(env(safe-area-inset-bottom) + 40px)' }}>
 
 
         {/* TERMINE VIEW */}
@@ -2050,14 +2026,15 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
 
       {/* JAHRESÜBERSICHT VIEW */}
       {viewMode === 'jahresuebersicht' && (
-        <div className="content">
-          <h2 style={{marginBottom: '8px'}}>Jahresübersicht {aktuellesJahr}</h2>
-          <p style={{color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '24px'}}>
+        <div style={{ maxWidth: 900, margin: '0 auto', padding: '20px max(16px, env(safe-area-inset-left)) calc(env(safe-area-inset-bottom) + 40px)' }}>
+          <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 8 }}>Jahresplan</div>
+          <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 17, color: '#1a0e08', marginBottom: 4 }}>Jahresübersicht {aktuellesJahr}</div>
+          <p style={{color: 'var(--warm-gray)', fontStyle: 'italic', fontSize: '12px', marginBottom: '24px'}}>
             Anwesenheit aller Teilnehmer bei allen Terminen im Jahr {aktuellesJahr}
           </p>
 
           {teilnehmer.length === 0 || jahresTermine.length === 0 ? (
-            <div className="empty-state">Keine Daten vorhanden</div>
+            <div style={{ textAlign: 'center', padding: '64px 20px', color: 'var(--warm-gray)', fontStyle: 'italic', fontSize: 15 }}>Keine Daten vorhanden</div>
           ) : (
             <div>
               <div>
@@ -2066,16 +2043,16 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                   <table style={{borderCollapse: 'collapse', width: '100%', fontSize: '13px'}}>
                     <thead>
                       <tr>
-                        <th style={{textAlign: 'left', padding: '10px 12px', background: 'var(--bg-subtle)', borderBottom: '2px solid var(--border)', position: 'sticky', left: 0, zIndex: 1, minWidth: '160px'}}>
+                        <th style={{textAlign: 'left', padding: '10px 12px', background: '#faf9f7', borderBottom: '2px solid rgba(96,8,18,0.1)', position: 'sticky', left: 0, zIndex: 1, minWidth: '160px', color: '#1a0e08'}}>
                           Teilnehmer
                         </th>
                         {jahresTermine.map(t => (
-                          <th key={t.id} style={{padding: '10px 8px', background: 'var(--bg-subtle)', borderBottom: '2px solid var(--border)', textAlign: 'center', minWidth: '80px', fontWeight: 600}}>
+                          <th key={t.id} style={{padding: '10px 8px', background: '#faf9f7', borderBottom: '2px solid rgba(96,8,18,0.1)', textAlign: 'center', minWidth: '80px', fontWeight: 600, color: '#1a0e08'}}>
                             <div>{fmtDayMonth(t.start_datetime)}</div>
-                            <div style={{fontWeight: 400, color: 'var(--text-secondary)', fontSize: '11px', maxWidth: '80px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>{t.name}</div>
+                            <div style={{fontWeight: 400, color: 'var(--warm-gray)', fontSize: '11px', maxWidth: '80px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>{t.name}</div>
                           </th>
                         ))}
-                        <th style={{padding: '10px 12px', background: 'var(--bg-subtle)', borderBottom: '2px solid var(--border)', textAlign: 'center', minWidth: '80px'}}>
+                        <th style={{padding: '10px 12px', background: '#faf9f7', borderBottom: '2px solid rgba(96,8,18,0.1)', textAlign: 'center', minWidth: '80px', color: '#1a0e08'}}>
                           Gesamt
                         </th>
                       </tr>
@@ -2084,10 +2061,10 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                       {teilnehmer.map((t, idx) => {
                         let daCount = 0
                         return (
-                          <tr key={t.id} style={{background: idx % 2 === 0 ? 'var(--bg-card)' : 'var(--bg-subtle)'}}>
-                            <td style={{padding: '10px 12px', fontWeight: 600, borderBottom: '1px solid var(--border)', position: 'sticky', left: 0, background: idx % 2 === 0 ? 'var(--bg-card)' : 'var(--bg-subtle)', zIndex: 1}}>
+                          <tr key={t.id} style={{background: idx % 2 === 0 ? '#ffffff' : '#faf9f7'}}>
+                            <td style={{padding: '10px 12px', fontWeight: 600, borderBottom: '1px solid rgba(96,8,18,0.06)', position: 'sticky', left: 0, background: idx % 2 === 0 ? '#ffffff' : '#faf9f7', zIndex: 1, color: '#1a0e08'}}>
                               {t.vorname} {t.nachname}
-                              {t.ausbildung_typ && <div style={{fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 400}}>{t.ausbildung_typ}</div>}
+                              {t.ausbildung_typ && <div style={{fontSize: '11px', color: 'var(--warm-gray)', fontWeight: 400}}>{t.ausbildung_typ}</div>}
                             </td>
                             {jahresTermine.map(termin => {
                               const tt = terminTeilnehmer.find(tt => tt.termin_id === termin.id && tt.teilnehmer_id === t.id)
@@ -2095,20 +2072,20 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                               if (status === 'da') daCount++
                               const cfg = status ? anwesenheitsfarben[status] : null
                               return (
-                                <td key={termin.id} style={{padding: '10px 8px', textAlign: 'center', borderBottom: '1px solid var(--border)'}}>
+                                <td key={termin.id} style={{padding: '10px 8px', textAlign: 'center', borderBottom: '1px solid rgba(96,8,18,0.06)'}}>
                                   {cfg ? (
                                     <span style={{display: 'inline-block', padding: '2px 8px', borderRadius: '4px', background: cfg.bg, color: cfg.color, fontWeight: 700, fontSize: '11px'}}>
                                       {cfg.label}
                                     </span>
                                   ) : (
-                                    tt ? <span style={{color: 'var(--text-secondary)', fontSize: '11px'}}>–</span>
-                                       : <span style={{color: 'var(--border)', fontSize: '11px'}}>·</span>
+                                    tt ? <span style={{color: 'var(--warm-gray)', fontSize: '11px'}}>–</span>
+                                       : <span style={{color: 'rgba(96,8,18,0.15)', fontSize: '11px'}}>·</span>
                                   )}
                                 </td>
                               )
                             })}
-                            <td style={{padding: '10px 12px', textAlign: 'center', borderBottom: '1px solid var(--border)', fontWeight: 700}}>
-                              <span style={{color: daCount > 0 ? '#16a34a' : 'var(--text-secondary)'}}>
+                            <td style={{padding: '10px 12px', textAlign: 'center', borderBottom: '1px solid rgba(96,8,18,0.06)', fontWeight: 700}}>
+                              <span style={{color: daCount > 0 ? '#16a34a' : 'var(--warm-gray)'}}>
                                 {daCount}/{jahresTermine.length}
                               </span>
                             </td>
@@ -2120,7 +2097,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                 </div>
 
                 {/* Gesamtauswertung */}
-                <h3 style={{marginBottom: '16px'}}>Gesamtauswertung</h3>
+                <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 12 }}>Gesamtauswertung</div>
                 <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '12px'}}>
                   {teilnehmer.map(t => {
                     const ttList = terminTeilnehmer.filter(tt => tt.teilnehmer_id === t.id && jahresTermine.some(jt => jt.id === tt.termin_id))
@@ -2131,25 +2108,25 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                     const prozent = jahresTermine.length > 0 ? Math.round((da / jahresTermine.length) * 100) : 0
                     const erreicht = prozent >= 80
                     return (
-                      <div key={t.id} style={{background: 'var(--bg-card)', border: `2px solid ${erreicht ? '#22c55e' : 'var(--border)'}`, borderRadius: '10px', padding: '16px'}}>
+                      <div key={t.id} style={{background: '#fff', border: `1.5px solid ${erreicht ? '#16a34a' : 'rgba(96,8,18,0.1)'}`, borderRadius: '12px', padding: '16px', boxShadow: '0 1px 4px rgba(0,0,0,0.07)'}}>
                         <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px'}}>
                           <div>
-                            <div style={{fontWeight: 700}}>{t.vorname} {t.nachname}</div>
-                            {t.ausbildung_typ && <div style={{fontSize: '12px', color: 'var(--text-secondary)'}}>{t.ausbildung_typ}</div>}
+                            <div style={{fontStyle: 'italic', fontWeight: 700, fontSize: 15, color: '#1a0e08'}}>{t.vorname} {t.nachname}</div>
+                            {t.ausbildung_typ && <div style={{fontStyle: 'italic', fontSize: '12px', color: 'var(--warm-gray)'}}>{t.ausbildung_typ}</div>}
                           </div>
-                          <span style={{padding: '4px 10px', borderRadius: '6px', background: erreicht ? '#dcfce7' : '#fee2e2', color: erreicht ? '#166534' : '#991b1b', fontWeight: 700, fontSize: '12px'}}>
-                            {erreicht ? '✓ Erreicht' : '✗ Nicht erreicht'}
+                          <span style={{padding: '4px 10px', borderRadius: '6px', background: erreicht ? '#dcfce7' : '#fef2f2', color: erreicht ? '#166534' : '#991b1b', fontWeight: 700, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.04em'}}>
+                            {erreicht ? 'Erreicht' : 'Nicht erreicht'}
                           </span>
                         </div>
-                        <div style={{background: 'var(--bg-subtle)', borderRadius: '6px', height: '8px', marginBottom: '8px'}}>
-                          <div style={{background: prozent >= 80 ? '#22c55e' : prozent >= 50 ? '#eab308' : '#ef4444', borderRadius: '6px', height: '8px', width: `${Math.min(prozent, 100)}%`, transition: 'width 0.3s'}} />
+                        <div style={{background: 'rgba(96,8,18,0.06)', borderRadius: '6px', height: '6px', marginBottom: '8px'}}>
+                          <div style={{background: prozent >= 80 ? '#16a34a' : prozent >= 50 ? '#d97706' : '#600812', borderRadius: '6px', height: '6px', width: `${Math.min(prozent, 100)}%`, transition: 'width 0.3s'}} />
                         </div>
-                        <div style={{fontSize: '13px', color: 'var(--text-secondary)', display: 'flex', gap: '12px', flexWrap: 'wrap'}}>
+                        <div style={{fontStyle: 'italic', fontSize: '12px', color: 'var(--warm-gray)', display: 'flex', gap: '12px', flexWrap: 'wrap'}}>
                           <span style={{color: '#16a34a'}}><b>{da}</b> Da</span>
                           <span style={{color: '#d97706'}}><b>{krank}</b> Krank</span>
                           <span style={{color: '#2563eb'}}><b>{entschuldigt}</b> Entsch.</span>
                           <span style={{color: '#dc2626'}}><b>{fehlend}</b> Fehlend</span>
-                          <span style={{marginLeft: 'auto', fontWeight: 700}}>{prozent}%</span>
+                          <span style={{marginLeft: 'auto', fontWeight: 700, color: '#600812'}}>{prozent}%</span>
                         </div>
                       </div>
                     )
@@ -2163,13 +2140,13 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
 
       {/* ARCHIV VIEW */}
       {viewMode === 'archiv' && (
-        <div className="content">
-          <h2 style={{marginBottom: '4px'}}>Archiv</h2>
-          <p style={{color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '24px'}}>
+        <div style={{ maxWidth: 900, margin: '0 auto', padding: '20px max(16px, env(safe-area-inset-left)) calc(env(safe-area-inset-bottom) + 40px)' }}>
+          <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 4 }}>Archiv</div>
+          <p style={{fontStyle: 'italic', color: 'var(--warm-gray)', fontSize: '12px', marginBottom: '24px'}}>
             Abgeschlossene Termine — nach Jahr sortiert
           </p>
           {archivTermine.length === 0 ? (
-            <div className="empty-state">Noch keine abgeschlossenen Termine</div>
+            <div style={{ textAlign: 'center', padding: '64px 20px', color: 'var(--warm-gray)', fontStyle: 'italic', fontSize: 15 }}>Noch keine abgeschlossenen Termine</div>
           ) : (() => {
             const Jahre = ([...new Set(
               archivTermine.map(t => parseDate(t.start_datetime).getFullYear())
@@ -2183,45 +2160,49 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                   return (
                     <div key={jahr}>
                       <div style={{display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px'}}>
-                        <h3 style={{margin: 0, fontSize: '18px'}}>{jahr}</h3>
-                        <span style={{fontSize: '13px', color: 'var(--text-secondary)'}}>{jahrTermine.length} Termine</span>
+                        <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em' }}>{jahr}</div>
+                        <span style={{fontStyle: 'italic', fontSize: '12px', color: 'var(--warm-gray)'}}>{jahrTermine.length} Termine</span>
                       </div>
                       <div style={{display: 'flex', flexDirection: 'column', gap: '8px'}}>
                         {jahrTermine.map(termin => {
                           const ttCount = terminTeilnehmer.filter(tt => tt.termin_id === termin.id).length
                           const daCount = terminTeilnehmer.filter(tt => tt.termin_id === termin.id && tt.status === 'da').length
+                          const d = parseDate(termin.start_datetime)
+                          const weekday = d.toLocaleDateString('de-DE', { weekday: 'short' }).toUpperCase()
+                          const dayNum = d.getDate()
+                          const month = d.toLocaleDateString('de-DE', { month: 'short' }).toUpperCase()
                           return (
                             <div
                               key={termin.id}
                               onClick={() => viewTerminDetail(termin)}
-                              style={{display: 'flex', alignItems: 'center', gap: '14px', padding: '14px 16px', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '10px', cursor: 'pointer', transition: 'box-shadow 0.15s'}}
-                              onMouseEnter={e => (e.currentTarget.style.boxShadow = 'var(--shadow-sm)')}
-                              onMouseLeave={e => (e.currentTarget.style.boxShadow = 'none')}
+                              style={{
+                                background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.07)',
+                                borderLeft: '3px solid rgba(139,113,90,0.4)', overflow: 'hidden',
+                                cursor: 'pointer', display: 'flex', alignItems: 'stretch'
+                              }}
                             >
-                              <div style={{minWidth: '48px', textAlign: 'center'}}>
-                                <div style={{fontSize: '18px', fontWeight: 700, lineHeight: 1}}>
-                                  {parseDate(termin.start_datetime).getDate().toString().padStart(2,'0')}
-                                </div>
-                                <div style={{fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase'}}>
-                                  {parseDate(termin.start_datetime).toLocaleString('de-DE', {month: 'short'})}
-                                </div>
+                              <div style={{ minWidth: 56, padding: '12px 8px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', borderRight: '0.5px solid rgba(96,8,18,0.1)', gap: 2 }}>
+                                <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--warm-gray)' }}>{weekday}</div>
+                                <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 24, lineHeight: 1, color: 'rgba(139,113,90,0.6)' }}>{dayNum}</div>
+                                <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--warm-gray)' }}>{month}</div>
                               </div>
-                              <div style={{flex: 1}}>
-                                <div style={{fontWeight: 600, fontSize: '15px'}}>{termin.name}</div>
-                                <div style={{fontSize: '12px', color: 'var(--text-secondary)', marginTop: '2px', display: 'flex', gap: '10px', flexWrap: 'wrap'}}>
-                                  {termin.location && <span>📍 {termin.location}</span>}
-                                  {termin.dozent && <span>👤 {termin.dozent}</span>}
-                                </div>
-                              </div>
-                              <div style={{textAlign: 'right', fontSize: '13px'}}>
-                                {ttCount > 0 && (
-                                  <div>
-                                    <span style={{color: '#16a34a', fontWeight: 700}}>{daCount}</span>
-                                    <span style={{color: 'var(--text-secondary)'}}> / {ttCount} Da</span>
+                              <div style={{ flex: 1, padding: '12px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                                <div>
+                                  <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 15, color: '#1a0e08' }}>{termin.name}</div>
+                                  <div style={{ fontStyle: 'italic', fontSize: '12px', color: 'var(--warm-gray)', marginTop: 2, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                                    {termin.location && <span>{termin.location}</span>}
+                                    {termin.dozent && <span>{termin.dozent}</span>}
                                   </div>
-                                )}
-                                <div style={{fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px'}}>
-                                  {fmtTime(termin.start_datetime)} Uhr
+                                </div>
+                                <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                                  {ttCount > 0 && (
+                                    <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)' }}>
+                                      <span style={{ color: '#16a34a', fontWeight: 700 }}>{daCount}</span> / {ttCount}
+                                    </div>
+                                  )}
+                                  <div style={{ fontStyle: 'italic', fontSize: '11px', color: 'var(--warm-gray)' }}>
+                                    {fmtTime(termin.start_datetime)} Uhr
+                                  </div>
                                 </div>
                               </div>
                             </div>
@@ -2239,43 +2220,45 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
 
       {/* LERNFEED VIEW */}
       {viewMode === 'lernfeed' && (
-        <div className="content">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 }}>
-            <div>
-              <h2 style={{ margin: '0 0 4px' }}>Lernfeed</h2>
-              <p style={{ color: 'var(--text-secondary)', fontSize: 14, margin: 0 }}>
-                Lernbeiträge für den Unitas-Feed — erscheinen in der Lernbar deiner Teilnehmer
-              </p>
-            </div>
+        <div style={{ maxWidth: 900, margin: '0 auto', padding: '20px max(16px, env(safe-area-inset-left)) calc(env(safe-area-inset-bottom) + 40px)' }}>
+          <div style={{ marginBottom: 24 }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 4 }}>Lernfeed</div>
+            <p style={{ fontStyle: 'italic', color: 'var(--warm-gray)', fontSize: 12, margin: 0 }}>
+              Lernbeiträge für den Unitas-Feed — erscheinen in der Lernbar deiner Teilnehmer
+            </p>
           </div>
 
           {beitraegeLoading ? (
-            <div style={{ textAlign: 'center', padding: '48px 0', color: 'var(--text-secondary)' }}>Lade...</div>
+            <div style={{ textAlign: 'center', padding: '48px 0', color: 'var(--warm-gray)', fontStyle: 'italic' }}>Lade...</div>
           ) : beitraege.length === 0 ? (
-            <div className="empty-state">
-              <div style={{ fontSize: 32, marginBottom: 12 }}>📚</div>
-              <div style={{ fontWeight: 600, marginBottom: 6 }}>Noch keine Lernbeiträge</div>
-              <div style={{ fontSize: 14 }}>Erstelle deinen ersten Beitrag mit dem + Button oben</div>
+            <div style={{ textAlign: 'center', padding: '64px 20px', color: 'var(--warm-gray)', fontStyle: 'italic', fontSize: 15 }}>
+              <div style={{ fontWeight: 700, marginBottom: 6, color: '#1a0e08' }}>Noch keine Lernbeiträge</div>
+              <div>Erstelle deinen ersten Beitrag mit dem + Button oben</div>
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {beitraege.map(b => (
-                <div key={b.id} style={{ background: 'var(--bg-card)', border: `1px solid ${b.gepinnt ? 'var(--accent)' : 'var(--border)'}`, borderRadius: 14, overflow: 'hidden' }}>
+                <div key={b.id} style={{ background: '#fff', border: `1px solid ${b.gepinnt ? '#600812' : 'rgba(96,8,18,0.1)'}`, borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.07)', overflow: 'hidden' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px' }}>
-                    <div style={{ width: 36, height: 36, borderRadius: 10, background: b.typ === 'video' ? 'rgba(107,15,26,0.1)' : b.typ === 'quiz' ? 'rgba(107,15,26,0.1)' : 'var(--bg-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>
-                      {b.typ === 'bild' ? '📷' : b.typ === 'text' ? '📝' : b.typ === 'video' ? '▶️' : '❓'}
+                    <div style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(96,8,18,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#600812" strokeWidth="2">
+                        {b.typ === 'video' ? <><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></> :
+                         b.typ === 'quiz' ? <><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></> :
+                         b.typ === 'bild' ? <><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></> :
+                         <><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></>}
+                      </svg>
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 15, color: '#1a0e08', display: 'flex', alignItems: 'center', gap: 8 }}>
                         {b.titel}
-                        {b.gepinnt && <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--accent)', background: 'rgba(107,15,26,0.08)', borderRadius: 5, padding: '2px 6px', textTransform: 'uppercase' }}>Angepinnt</span>}
+                        {b.gepinnt && <span style={{ fontSize: 10, fontWeight: 700, color: '#600812', background: 'rgba(96,8,18,0.08)', borderRadius: 5, padding: '2px 6px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Angepinnt</span>}
                       </div>
-                      <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 2 }}>
+                      <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginTop: 2 }}>
                         {b.typ.charAt(0).toUpperCase() + b.typ.slice(1)} · {new Date(b.created).toLocaleDateString('de-DE')}
                         {(() => { try { const tags = JSON.parse(b.tags as any); return tags.length > 0 ? ` · ${tags.join(', ')}` : '' } catch { return '' } })()}
                       </div>
                     </div>
-                    <button onClick={() => deleteBeitrag(b.id)} style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 8, padding: '6px 10px', cursor: 'pointer', color: 'var(--accent)', fontWeight: 600, fontSize: 13, fontFamily: 'inherit', flexShrink: 0 }}>
+                    <button onClick={() => deleteBeitrag(b.id)} style={{ background: 'none', border: '1px solid rgba(96,8,18,0.15)', borderRadius: 8, padding: '6px 10px', cursor: 'pointer', color: '#600812', fontWeight: 600, fontSize: 12, fontFamily: 'inherit', flexShrink: 0 }}>
                       Löschen
                     </button>
                   </div>
@@ -4922,6 +4905,6 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
           }
         }
       `}</style>
-    </>
+    </div>
   )
 }
