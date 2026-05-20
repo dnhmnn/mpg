@@ -211,7 +211,7 @@ export default function OrgProduktausgabe() {
     pb.collection('inventory_items').getFullList<InventoryItem>({
       filter: `organization_id = "${org.id}"`,
       sort: 'name',
-    }).then(items => setInventoryItems(items)).catch(() => {})
+    }).then(items => setInventoryItems(items)).catch(e => console.error('inventory_items:', e))
     pb.collection('inventory_locations').getFullList<Location>({
       filter: `organization_id = "${org.id}"`,
       sort: 'name',
@@ -228,7 +228,7 @@ export default function OrgProduktausgabe() {
         setLocations(locs)
         if (locs.length === 1) setSelectedLagerId(locs[0].id)
       }
-    }).catch(() => {})
+    }).catch(e => console.error('inventory_locations:', e))
   }, [org.id])
 
   const addPos = () => setPositions(p => [...p, { qty: 1 }])
