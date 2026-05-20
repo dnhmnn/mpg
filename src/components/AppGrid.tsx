@@ -64,6 +64,7 @@ export default function AppGrid({ userApps, editMode = false, onRemoveApp, onApp
               >−</button>
             )}
             <button
+              className="hub-app-card"
               onClick={() => handleAppClick(app)}
               style={{
                 width: '100%', background: '#fff', borderRadius: 14,
@@ -75,7 +76,7 @@ export default function AppGrid({ userApps, editMode = false, onRemoveApp, onApp
               onTouchStart={e => { (e.currentTarget as HTMLButtonElement).style.transform = 'scale(0.95)' }}
               onTouchEnd={e => { (e.currentTarget as HTMLButtonElement).style.transform = '' }}
             >
-              <div style={{
+              <div className="hub-app-icon-wrap" style={{
                 width: 52, height: 52, borderRadius: 14,
                 background: iconColor,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -85,7 +86,7 @@ export default function AppGrid({ userApps, editMode = false, onRemoveApp, onApp
                   <AppIcon icon={app.icon} />
                 </div>
               </div>
-              <span style={{
+              <span className="hub-app-label" style={{
                 fontSize: 12, fontWeight: 700, color: '#1a0e08',
                 textAlign: 'center', lineHeight: 1.3, maxWidth: 80,
               }}>{app.name}</span>

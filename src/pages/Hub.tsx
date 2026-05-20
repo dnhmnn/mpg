@@ -211,12 +211,19 @@ export default function Hub() {
         }
         .hub-control-handle { animation: controlDrift 2.2s ease-in-out infinite; }
 
-        /* App grid columns */
-        .hub-app-grid { grid-template-columns: repeat(3, 1fr); }
-        @media (min-width: 768px)  { .hub-app-grid { grid-template-columns: repeat(4, 1fr); } }
-        @media (min-width: 1100px) { .hub-app-grid { grid-template-columns: repeat(5, 1fr); } }
+        /* App grid + card sizing — mobile first (4 cols, compact) */
+        .hub-app-grid { grid-template-columns: repeat(4, 1fr); gap: 8px; }
+        .hub-app-card { padding: 10px 4px 8px !important; }
+        .hub-app-icon-wrap { width: 38px !important; height: 38px !important; border-radius: 10px !important; }
+        .hub-app-icon-wrap > div { width: 18px !important; height: 18px !important; }
+        .hub-app-label { font-size: 10px !important; max-width: 64px !important; }
 
-        /* Two-column layout on larger screens */
+        /* Mobile column order: greeting+news first, apps second */
+        .hub-cols { display: flex; flex-direction: column; gap: 16px; }
+        .hub-side-col { order: 1; }
+        .hub-module-col { order: 2; }
+
+        /* Tablet+ two-column layout */
         @media (min-width: 768px) {
           .hub-body { max-width: 1100px !important; }
           .hub-cols {
@@ -225,10 +232,18 @@ export default function Hub() {
             gap: 48px;
             align-items: start;
           }
+          .hub-side-col { order: 2; }
+          .hub-module-col { order: 1; }
+          .hub-app-grid { grid-template-columns: repeat(4, 1fr); gap: 12px; }
+          .hub-app-card { padding: 16px 8px 12px !important; }
+          .hub-app-icon-wrap { width: 52px !important; height: 52px !important; border-radius: 14px !important; }
+          .hub-app-icon-wrap > div { width: 26px !important; height: 26px !important; }
+          .hub-app-label { font-size: 12px !important; max-width: 80px !important; }
         }
         @media (min-width: 1100px) {
           .hub-body { max-width: 1400px !important; }
           .hub-cols { grid-template-columns: 1fr 360px; gap: 64px; }
+          .hub-app-grid { grid-template-columns: repeat(5, 1fr); }
         }
       `}</style>
 
@@ -283,10 +298,10 @@ export default function Hub() {
         margin: '0 auto',
         padding: '24px max(20px, env(safe-area-inset-left)) calc(env(safe-area-inset-bottom) + 48px)',
       } as React.CSSProperties}>
-        <div className="hub-cols" style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
+        <div className="hub-cols">
 
           {/* Left / main column: Module grid */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div className="hub-module-col" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em' }}>Module</div>
               <button
@@ -313,7 +328,7 @@ export default function Hub() {
           </div>
 
           {/* Right / side column: Greeting + News */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+          <div className="hub-side-col" style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
             <div>
               <div style={{ fontSize: 26, fontWeight: 800, color: '#1a0e08', letterSpacing: '-0.02em', lineHeight: 1.1 }}>
                 Servus, <span style={{ color: '#600812', fontStyle: 'italic' }}>{firstName}</span>
