@@ -248,7 +248,7 @@ export default function OrgProduktausgabe() {
       return
     }
     if (!selectedLagerId) {
-      alert('Bitte ein Lager auswählen.')
+      alert('Bitte einen Verbrauchsort auswählen.')
       return
     }
     setSending(true)
@@ -368,9 +368,9 @@ export default function OrgProduktausgabe() {
         </button>
       </Card>
 
-      <Card title="Lager *" icon={<IconWarehouse />}>
+      <Card title="Verbrauchsort *" icon={<IconWarehouse />}>
         {locations.length === 0 ? (
-          <div style={{ fontSize: 14, color: 'var(--text-secondary)' }}>Keine Lager gefunden</div>
+          <div style={{ fontSize: 14, color: 'var(--text-secondary)' }}>Keine Verbrauchsorte gefunden</div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 4 }}>
             {locations.map(loc => (
