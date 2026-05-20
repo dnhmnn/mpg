@@ -1669,24 +1669,21 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                       {moduleCount > 0 && <span>{moduleCount} Mod.</span>}
                     </div>
                     {/* 3-dot menu */}
-                    <div style={{ position: 'absolute', top: 14, right: 10 }}>
-                      <button
-                        style={{ background: 'rgba(250,249,247,0.9)', border: '0.5px solid rgba(96,8,18,0.12)', borderRadius: 8, width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--warm-gray)' }}
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          const menuId = `menu-${termin.id}`
-                          const menu = document.getElementById(menuId)
-                          const allMenus = document.querySelectorAll('.ausb-card-menu-dropdown')
-                          allMenus.forEach(m => { if (m.id !== menuId) m.classList.remove('show') })
-                          menu?.classList.toggle('show')
-                        }}
-                      >
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="12" cy="5" r="2.2"/><circle cx="12" cy="12" r="2.2"/><circle cx="12" cy="19" r="2.2"/></svg>
-                      </button>
-                      <div id={`menu-${termin.id}`} className="ausb-card-menu-dropdown">
-                        <button className="ausb-menu-item" onClick={(e) => { e.stopPropagation(); openEditTermin(termin) }}>Bearbeiten</button>
-                        <button className="ausb-menu-item danger" onClick={(e) => { e.stopPropagation(); deleteTermin(termin.id, termin.name) }}>Löschen</button>
-                      </div>
+                    <button
+                      style={{ position: 'absolute', top: 14, right: 10, background: 'rgba(250,249,247,0.9)', border: '0.5px solid rgba(96,8,18,0.12)', borderRadius: 8, width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--warm-gray)' }}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        const menuId = `menu-${termin.id}`
+                        const menu = document.getElementById(menuId)
+                        document.querySelectorAll('.card-menu-dropdown').forEach(m => { if (m.id !== menuId) m.classList.remove('show') })
+                        menu?.classList.toggle('show')
+                      }}
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="12" cy="5" r="2.2"/><circle cx="12" cy="12" r="2.2"/><circle cx="12" cy="19" r="2.2"/></svg>
+                    </button>
+                    <div id={`menu-${termin.id}`} className="card-menu-dropdown" style={{ top: 46, right: 10 }}>
+                      <button className="menu-item" onClick={(e) => { e.stopPropagation(); openEditTermin(termin) }}>Bearbeiten</button>
+                      <button className="menu-item danger" onClick={(e) => { e.stopPropagation(); deleteTermin(termin.id, termin.name) }}>Löschen</button>
                     </div>
                   </div>
                 )
@@ -1713,25 +1710,22 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                   style={{ background: '#fff', borderRadius: 12, borderLeft: '3px solid #600812', boxShadow: '0 1px 4px rgba(0,0,0,0.07)', padding: '14px 14px 10px', cursor: 'pointer', position: 'relative' }}
                 >
                   {/* 3-dot menu */}
-                  <div style={{ position: 'absolute', top: 10, right: 10 }}>
-                    <button
-                      style={{ background: 'rgba(250,249,247,0.9)', border: '0.5px solid rgba(96,8,18,0.12)', borderRadius: 8, width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--warm-gray)' }}
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        const menuId = `menu-${t.id}`
-                        const menu = document.getElementById(menuId)
-                        const allMenus = document.querySelectorAll('.ausb-card-menu-dropdown')
-                        allMenus.forEach(m => { if (m.id !== menuId) m.classList.remove('show') })
-                        menu?.classList.toggle('show')
-                      }}
-                    >
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="12" cy="5" r="2.2"/><circle cx="12" cy="12" r="2.2"/><circle cx="12" cy="19" r="2.2"/></svg>
-                    </button>
-                    <div id={`menu-${t.id}`} className="ausb-card-menu-dropdown">
-                      <button className="ausb-menu-item" onClick={(e) => { e.stopPropagation(); openEditTeilnehmer(t) }}>Bearbeiten</button>
-                      <button className="ausb-menu-item" onClick={(e) => { e.stopPropagation(); toggleLernbarZugang(t) }}>{t.lernbar_zugang_aktiv ? 'Lernbar deaktivieren' : 'Lernbar aktivieren'}</button>
-                      <button className="ausb-menu-item danger" onClick={(e) => { e.stopPropagation(); deleteTeilnehmer(t.id, `${t.vorname} ${t.nachname}`) }}>Löschen</button>
-                    </div>
+                  <button
+                    style={{ position: 'absolute', top: 10, right: 10, background: 'rgba(250,249,247,0.9)', border: '0.5px solid rgba(96,8,18,0.12)', borderRadius: 8, width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--warm-gray)' }}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      const menuId = `menu-${t.id}`
+                      const menu = document.getElementById(menuId)
+                      document.querySelectorAll('.card-menu-dropdown').forEach(m => { if (m.id !== menuId) m.classList.remove('show') })
+                      menu?.classList.toggle('show')
+                    }}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="12" cy="5" r="2.2"/><circle cx="12" cy="12" r="2.2"/><circle cx="12" cy="19" r="2.2"/></svg>
+                  </button>
+                  <div id={`menu-${t.id}`} className="card-menu-dropdown" style={{ top: 42, right: 10 }}>
+                    <button className="menu-item" onClick={(e) => { e.stopPropagation(); openEditTeilnehmer(t) }}>Bearbeiten</button>
+                    <button className="menu-item" onClick={(e) => { e.stopPropagation(); toggleLernbarZugang(t) }}>{t.lernbar_zugang_aktiv ? 'Lernbar deaktivieren' : 'Lernbar aktivieren'}</button>
+                    <button className="menu-item danger" onClick={(e) => { e.stopPropagation(); deleteTeilnehmer(t.id, `${t.vorname} ${t.nachname}`) }}>Löschen</button>
                   </div>
 
                   <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 4 }}>{t.ausbildung_typ || 'Teilnehmer'}</div>
@@ -1790,23 +1784,21 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                 return (
                   <div key={m.id} onClick={() => openModulDetail(m)} style={{ background: '#fff', borderRadius: 12, borderLeft: '3px solid #600812', boxShadow: '0 1px 4px rgba(0,0,0,0.07)', padding: '14px 14px 10px', cursor: 'pointer', position: 'relative' }}>
                     {/* 3-dot menu */}
-                    <div style={{ position: 'absolute', top: 10, right: 10 }}>
-                      <button
-                        style={{ background: 'rgba(250,249,247,0.9)', border: '0.5px solid rgba(96,8,18,0.12)', borderRadius: 8, width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--warm-gray)' }}
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          const menuId = `menu-m-${m.id}`
-                          const menu = document.getElementById(menuId)
-                          document.querySelectorAll('.ausb-card-menu-dropdown').forEach(el => { if (el.id !== menuId) el.classList.remove('show') })
-                          menu?.classList.toggle('show')
-                        }}
-                      >
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="12" cy="5" r="2.2"/><circle cx="12" cy="12" r="2.2"/><circle cx="12" cy="19" r="2.2"/></svg>
-                      </button>
-                      <div id={`menu-m-${m.id}`} className="ausb-card-menu-dropdown">
-                        <button className="ausb-menu-item" onClick={(e) => { e.stopPropagation(); openEditModul(m) }}>Bearbeiten</button>
-                        <button className="ausb-menu-item danger" onClick={(e) => { e.stopPropagation(); deleteModul(m.id, m.name) }}>Löschen</button>
-                      </div>
+                    <button
+                      style={{ position: 'absolute', top: 10, right: 10, background: 'rgba(250,249,247,0.9)', border: '0.5px solid rgba(96,8,18,0.12)', borderRadius: 8, width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--warm-gray)' }}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        const menuId = `menu-m-${m.id}`
+                        const menu = document.getElementById(menuId)
+                        document.querySelectorAll('.card-menu-dropdown').forEach(el => { if (el.id !== menuId) el.classList.remove('show') })
+                        menu?.classList.toggle('show')
+                      }}
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="12" cy="5" r="2.2"/><circle cx="12" cy="12" r="2.2"/><circle cx="12" cy="19" r="2.2"/></svg>
+                    </button>
+                    <div id={`menu-m-${m.id}`} className="card-menu-dropdown" style={{ top: 42, right: 10 }}>
+                      <button className="menu-item" onClick={(e) => { e.stopPropagation(); openEditModul(m) }}>Bearbeiten</button>
+                      <button className="menu-item danger" onClick={(e) => { e.stopPropagation(); deleteModul(m.id, m.name) }}>Löschen</button>
                     </div>
                     <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 4 }}>{m.dauer_minuten} Min.</div>
                     <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 17, color: '#1a0e08', marginBottom: 4, paddingRight: 32 }}>{m.name}</div>
@@ -1845,24 +1837,21 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                   style={{ background: '#fff', borderRadius: 12, borderLeft: '3px solid #600812', boxShadow: '0 1px 4px rgba(0,0,0,0.07)', padding: '14px 14px 10px', cursor: 'pointer', position: 'relative' }}
                 >
                   {/* 3-dot menu */}
-                  <div style={{ position: 'absolute', top: 10, right: 10 }}>
-                    <button
-                      style={{ background: 'rgba(250,249,247,0.9)', border: '0.5px solid rgba(96,8,18,0.12)', borderRadius: 8, width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--warm-gray)' }}
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        const menuId = `menu-${k.id}`
-                        const menu = document.getElementById(menuId)
-                        const allMenus = document.querySelectorAll('.ausb-card-menu-dropdown')
-                        allMenus.forEach(m => { if (m.id !== menuId) m.classList.remove('show') })
-                        menu?.classList.toggle('show')
-                      }}
-                    >
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="12" cy="5" r="2.2"/><circle cx="12" cy="12" r="2.2"/><circle cx="12" cy="19" r="2.2"/></svg>
-                    </button>
-                    <div id={`menu-${k.id}`} className="ausb-card-menu-dropdown">
-                      <button className="ausb-menu-item" onClick={(e) => { e.stopPropagation(); openEditKonzept(k) }}>Bearbeiten</button>
-                      <button className="ausb-menu-item danger" onClick={(e) => { e.stopPropagation(); deleteKonzept(k.id, k.name) }}>Löschen</button>
-                    </div>
+                  <button
+                    style={{ position: 'absolute', top: 10, right: 10, background: 'rgba(250,249,247,0.9)', border: '0.5px solid rgba(96,8,18,0.12)', borderRadius: 8, width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--warm-gray)' }}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      const menuId = `menu-${k.id}`
+                      const menu = document.getElementById(menuId)
+                      document.querySelectorAll('.card-menu-dropdown').forEach(m => { if (m.id !== menuId) m.classList.remove('show') })
+                      menu?.classList.toggle('show')
+                    }}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="12" cy="5" r="2.2"/><circle cx="12" cy="12" r="2.2"/><circle cx="12" cy="19" r="2.2"/></svg>
+                  </button>
+                  <div id={`menu-${k.id}`} className="card-menu-dropdown" style={{ top: 42, right: 10 }}>
+                    <button className="menu-item" onClick={(e) => { e.stopPropagation(); openEditKonzept(k) }}>Bearbeiten</button>
+                    <button className="menu-item danger" onClick={(e) => { e.stopPropagation(); deleteKonzept(k.id, k.name) }}>Löschen</button>
                   </div>
                   <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 4 }}>Konzept</div>
                   <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 17, color: '#1a0e08', marginBottom: 4, paddingRight: 32 }}>{k.name}</div>
