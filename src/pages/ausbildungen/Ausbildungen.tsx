@@ -1558,35 +1558,36 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
       <div style={{ background: '#fff', borderBottom: '0.5px solid rgba(96,8,18,0.1)', position: 'sticky', top: 'calc(env(safe-area-inset-top) + 60px)', zIndex: 99, overflowX: 'auto', WebkitOverflowScrolling: 'touch' as any }}>
         <div style={{ display: 'flex', paddingLeft: 'max(8px, env(safe-area-inset-left))', paddingRight: 'max(8px, env(safe-area-inset-right))', minWidth: 'max-content' }}>
           {([
-            { key: 'termine', label: 'Termine' },
-            { key: 'teilnehmer', label: 'Teilnehmer' },
-            { key: 'module', label: 'Module' },
-            { key: 'konzepte', label: 'Konzepte' },
-            { key: 'jahresuebersicht', label: 'Jahresplan' },
-            { key: 'archiv', label: 'Archiv', count: archivTermine.length },
-            { key: 'lernfeed', label: 'Lernfeed' },
-          ] as const).map(tab => (
+            { key: 'termine' as const, label: 'Termine', icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>, count: undefined },
+            { key: 'teilnehmer' as const, label: 'Teilnehmer', icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/><path d="M21 21v-2a4 4 0 0 0-3-3.85"/></svg>, count: undefined },
+            { key: 'module' as const, label: 'Module', icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>, count: undefined },
+            { key: 'konzepte' as const, label: 'Konzepte', icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>, count: undefined },
+            { key: 'jahresuebersicht' as const, label: 'Jahresplan', icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/></svg>, count: undefined },
+            { key: 'archiv' as const, label: 'Archiv', icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="21,8 21,21 3,21 3,8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>, count: archivTermine.length },
+            { key: 'lernfeed' as const, label: 'Lernfeed', icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 11a9 9 0 0 1 9 9"/><path d="M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1" fill="currentColor" stroke="none"/></svg>, count: undefined },
+          ]).map(tab => (
             <button
               key={tab.key}
               onClick={() => {
-                setViewMode(tab.key as typeof viewMode)
+                setViewMode(tab.key)
                 if (tab.key === 'lernfeed') loadBeitraege()
               }}
               className="ausb-nav-btn"
               style={{
                 color: viewMode === tab.key ? '#600812' : 'var(--warm-gray)',
-                borderBottom: viewMode === tab.key ? '2px solid #600812' : '2px solid transparent',
-                fontWeight: 700, fontSize: 13, background: 'none', border: 'none',
                 borderBottomWidth: 2,
-                borderBottomStyle: 'solid' as const,
+                borderBottomStyle: 'solid',
                 borderBottomColor: viewMode === tab.key ? '#600812' : 'transparent',
-                padding: '0 14px', height: 44, cursor: 'pointer', whiteSpace: 'nowrap' as const,
-                fontFamily: 'inherit', position: 'relative' as const
+                background: 'none', border: 'none', borderBottom: viewMode === tab.key ? '2px solid #600812' : '2px solid transparent',
+                padding: '6px 12px 0', height: 50, cursor: 'pointer', whiteSpace: 'nowrap',
+                fontFamily: 'inherit', position: 'relative',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
               }}
             >
-              {tab.label}
-              {'count' in tab && tab.count > 0 && (
-                <span style={{ marginLeft: 5, background: '#600812', color: '#fff', borderRadius: 8, padding: '1px 5px', fontSize: 10, fontWeight: 700, verticalAlign: 'middle' }}>
+              {tab.icon}
+              <span style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{tab.label}</span>
+              {tab.count != null && tab.count > 0 && (
+                <span style={{ position: 'absolute', top: 4, right: 6, background: '#600812', color: '#fff', borderRadius: 8, padding: '1px 4px', fontSize: 9, fontWeight: 700 }}>
                   {tab.count > 9 ? '9+' : tab.count}
                 </span>
               )}
@@ -1639,7 +1640,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                   <div
                     key={termin.id}
                     onClick={() => viewTerminDetail(termin)}
-                    style={{ background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.07)', overflow: 'hidden', cursor: 'pointer', position: 'relative' }}
+                    style={{ background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.07)', cursor: 'pointer', position: 'relative' }}
                   >
                     {/* Status strip top */}
                     <div style={{ height: 3, background: statusColor }} />
@@ -2447,30 +2448,33 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
         return (
           <div className="modal show" onClick={() => setShowTeilnehmerDetailModal(false)}>
             <div className="modal-content large" onClick={e => e.stopPropagation()} style={{padding: 0, overflow: 'hidden'}}>
-              {/* Dark header */}
-              <div style={{background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)', padding: '24px 28px', color: '#fff', position: 'relative'}}>
-                <div style={{width: '44px', height: '44px', borderRadius: '50%', background: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '18px', marginBottom: '10px'}}>
+              {/* LBF header */}
+              <div style={{background: '#fff', borderBottom: '0.5px solid rgba(96,8,18,0.12)', padding: '20px 24px 16px', position: 'relative', display: 'flex', alignItems: 'center', gap: 14}}>
+                <div style={{width: 44, height: 44, borderRadius: '50%', background: 'rgba(96,8,18,0.08)', border: '1.5px solid #600812', display: 'flex', alignItems: 'center', justifyContent: 'center', fontStyle: 'italic', fontWeight: 700, fontSize: 16, color: '#600812', flexShrink: 0}}>
                   {t.vorname[0]}{t.nachname[0]}
                 </div>
-                <div style={{fontSize: '20px', fontWeight: 700}}>{t.vorname} {t.nachname}</div>
-                {t.ausbildung_typ && <div style={{fontSize: '13px', color: 'rgba(255,255,255,0.55)', marginTop: '4px'}}>{t.ausbildung_typ}</div>}
-                <div style={{position: 'absolute', top: '16px', right: '16px', display: 'flex', gap: '8px'}}>
-                  <button onClick={() => { setShowTeilnehmerDetailModal(false); openEditTeilnehmer(t) }} style={{background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: '8px', padding: '6px 12px', color: '#fff', cursor: 'pointer', fontWeight: 600, fontSize: '13px', fontFamily: 'inherit'}}>Bearbeiten</button>
-                  <button onClick={() => setShowTeilnehmerDetailModal(false)} style={{background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '8px', width: '30px', height: '30px', cursor: 'pointer', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                <div style={{flex: 1, minWidth: 0, paddingRight: 80}}>
+                  {t.ausbildung_typ && <div style={{fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.14em', color: '#600812', marginBottom: 4}}>{t.ausbildung_typ}</div>}
+                  <div style={{fontStyle: 'italic', fontWeight: 700, fontSize: 17, color: '#1a0e08'}}>{t.vorname} {t.nachname}</div>
+                  {t.email && <div style={{fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginTop: 2}}>{t.email}</div>}
+                </div>
+                <div style={{position: 'absolute', top: 14, right: 14, display: 'flex', gap: 8}}>
+                  <button onClick={() => { setShowTeilnehmerDetailModal(false); openEditTeilnehmer(t) }} style={{background: 'rgba(96,8,18,0.06)', border: '0.5px solid rgba(96,8,18,0.15)', borderRadius: 8, padding: '6px 12px', color: '#600812', cursor: 'pointer', fontWeight: 700, fontSize: 12, fontFamily: 'inherit'}}>Bearbeiten</button>
+                  <button onClick={() => setShowTeilnehmerDetailModal(false)} style={{background: 'rgba(96,8,18,0.06)', border: '0.5px solid rgba(96,8,18,0.12)', borderRadius: 8, width: 30, height: 30, cursor: 'pointer', color: 'var(--warm-gray)', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                   </button>
                 </div>
               </div>
 
               {/* Tabs */}
-              <div style={{display: 'flex', borderBottom: '1px solid var(--border)', padding: '0 28px', background: 'var(--bg-card)'}}>
+              <div style={{display: 'flex', borderBottom: '0.5px solid rgba(96,8,18,0.1)', padding: '0 24px', background: '#fff', overflowX: 'auto'}}>
                 {tabs.map(tab => (
                   <button key={tab.key} onClick={() => setSelectedTeilnehmerTab(tab.key)} style={{
-                    padding: '12px 16px', border: 'none', background: 'none', cursor: 'pointer',
-                    fontSize: '13px', fontWeight: 600, fontFamily: 'inherit',
-                    color: selectedTeilnehmerTab === tab.key ? 'var(--text)' : 'var(--text-secondary)',
-                    borderBottom: selectedTeilnehmerTab === tab.key ? '2px solid var(--text)' : '2px solid transparent',
-                    marginBottom: '-1px', whiteSpace: 'nowrap'
+                    padding: '10px 14px', border: 'none', background: 'none', cursor: 'pointer',
+                    fontSize: 12, fontWeight: 700, fontFamily: 'inherit', textTransform: 'uppercase' as const, letterSpacing: '0.06em',
+                    color: selectedTeilnehmerTab === tab.key ? '#600812' : 'var(--warm-gray)',
+                    borderBottom: selectedTeilnehmerTab === tab.key ? '2px solid #600812' : '2px solid transparent',
+                    marginBottom: '-0.5px', whiteSpace: 'nowrap' as const
                   }}>{tab.label}</button>
                 ))}
               </div>
@@ -2730,22 +2734,16 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
               const statusColors: Record<string, string> = {geplant: '#3b82f6', laufend: '#10b981', abgeschlossen: '#6366f1', abgesagt: '#ef4444'}
               const sc = statusColors[selectedTermin.status] || '#64748b'
               return (
-                <div style={{background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)', padding: '24px 28px', color: '#fff', position: 'relative'}}>
-                  <div style={{display: 'flex', alignItems: 'flex-start', gap: '10px', marginBottom: '8px'}}>
-                    <span style={{
-                      fontSize: '11px', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase',
-                      background: sc, color: '#fff', padding: '3px 10px', borderRadius: '20px'
-                    }}>
-                      {statusLabels[selectedTermin.status]}
-                    </span>
-                    {selectedTermin.dozent && (
-                      <span style={{fontSize: '12px', color: 'rgba(255,255,255,0.5)', paddingTop: '3px'}}>{selectedTermin.dozent}</span>
-                    )}
+                <div style={{background: '#fff', borderBottom: '0.5px solid rgba(96,8,18,0.12)', padding: '20px 24px 16px', position: 'relative'}}>
+                  <div style={{height: 3, background: sc, position: 'absolute', top: 0, left: 0, right: 0}} />
+                  <div style={{fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.14em', color: sc, marginBottom: 6, marginTop: 4}}>
+                    {statusLabels[selectedTermin.status]}
+                    {selectedTermin.dozent && <span style={{color: 'var(--warm-gray)', fontWeight: 400, marginLeft: 10, textTransform: 'none', letterSpacing: 0}}>{selectedTermin.dozent}</span>}
                   </div>
-                  <div style={{fontSize: '21px', fontWeight: 700, lineHeight: 1.2, marginBottom: '8px'}}>
+                  <div style={{fontStyle: 'italic', fontWeight: 700, fontSize: 20, color: '#1a0e08', lineHeight: 1.25, marginBottom: 6, paddingRight: 80}}>
                     {selectedTermin.name}
                   </div>
-                  <div style={{fontSize: '13px', color: 'rgba(255,255,255,0.6)', display: 'flex', gap: '12px', flexWrap: 'wrap'}}>
+                  <div style={{fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', display: 'flex', gap: 12, flexWrap: 'wrap' as const}}>
                     {!isNaN(startD.getTime()) && (
                       <span>
                         {fmtDateTime(selectedTermin.start_datetime)}
@@ -2756,21 +2754,21 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                     <span>{getTerminTeilnehmerCount(selectedTermin.id)} / {selectedTermin.max_teilnehmer} Teilnehmer</span>
                   </div>
                   {selectedTermin.description && (
-                    <div style={{fontSize: '13px', color: 'rgba(255,255,255,0.5)', marginTop: '8px'}}>{selectedTermin.description}</div>
+                    <div style={{fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginTop: 4}}>{selectedTermin.description}</div>
                   )}
-                  <div style={{position: 'absolute', top: '16px', right: '16px', display: 'flex', gap: '8px'}}>
+                  <div style={{position: 'absolute', top: 14, right: 14, display: 'flex', gap: 8}}>
                     <button
                       onClick={() => { setShowTerminDetailModal(false); openEditTermin(selectedTermin) }}
-                      style={{background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: '8px', padding: '7px 14px', color: '#fff', cursor: 'pointer', fontSize: '13px', fontWeight: 600, fontFamily: 'inherit'}}
+                      style={{background: 'rgba(96,8,18,0.06)', border: '0.5px solid rgba(96,8,18,0.15)', borderRadius: 8, padding: '6px 12px', color: '#600812', cursor: 'pointer', fontSize: 12, fontWeight: 700, fontFamily: 'inherit'}}
                     >
                       Bearbeiten
                     </button>
                     <button onClick={() => setShowTerminDetailModal(false)} style={{
-                      background: 'rgba(255,255,255,0.12)', border: 'none', borderRadius: '8px',
-                      width: '32px', height: '32px', cursor: 'pointer', color: '#fff',
+                      background: 'rgba(96,8,18,0.06)', border: '0.5px solid rgba(96,8,18,0.12)', borderRadius: 8,
+                      width: 30, height: 30, cursor: 'pointer', color: 'var(--warm-gray)',
                       display: 'flex', alignItems: 'center', justifyContent: 'center'
                     }}>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                         <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
                       </svg>
                     </button>
@@ -2780,7 +2778,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
             })()}
 
             {/* Tabs */}
-            <div style={{display: 'flex', borderBottom: '1px solid #f1f5f9', padding: '0 28px', background: 'var(--bg-card)'}}>
+            <div style={{display: 'flex', borderBottom: '0.5px solid rgba(96,8,18,0.1)', padding: '0 24px', background: '#fff', overflowX: 'auto'}}>
               {([
                 {key: 'uebersicht', label: 'Übersicht'},
                 {key: 'teilnehmer', label: `Teilnehmer (${getTerminTeilnehmerCount(selectedTermin.id)})`},
@@ -2788,11 +2786,11 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                 {key: 'module', label: `Module (${getTerminModuleCount(selectedTermin.id)})`},
               ] as const).map(tab => (
                 <button key={tab.key} onClick={() => setCurrentTerminTab(tab.key)} style={{
-                  padding: '12px 16px', border: 'none', background: 'none', cursor: 'pointer',
-                  fontSize: '13px', fontWeight: 600, fontFamily: 'inherit',
-                  color: currentTerminTab === tab.key ? 'var(--text)' : 'var(--text-secondary)',
-                  borderBottom: currentTerminTab === tab.key ? '2px solid #0f172a' : '2px solid transparent',
-                  marginBottom: '-1px', whiteSpace: 'nowrap'
+                  padding: '10px 14px', border: 'none', background: 'none', cursor: 'pointer',
+                  fontSize: 12, fontWeight: 700, fontFamily: 'inherit', textTransform: 'uppercase' as const, letterSpacing: '0.06em',
+                  color: currentTerminTab === tab.key ? '#600812' : 'var(--warm-gray)',
+                  borderBottom: currentTerminTab === tab.key ? '2px solid #600812' : '2px solid transparent',
+                  marginBottom: '-0.5px', whiteSpace: 'nowrap' as const
                 }}>
                   {tab.label}
                 </button>
@@ -3593,34 +3591,34 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
         <div className="modal show" onClick={() => setShowModulDetailModal(false)}>
           <div className="modal-content large" onClick={(e) => e.stopPropagation()} style={{padding: 0, overflow: 'hidden'}}>
             {/* Header */}
-            <div style={{background: 'linear-gradient(135deg, #1e1b4b 0%, #3730a3 100%)', padding: '24px 28px', color: '#fff', position: 'relative'}}>
-              <div style={{fontSize: '11px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.5)', marginBottom: '6px'}}>
+            <div style={{background: '#fff', borderBottom: '0.5px solid rgba(96,8,18,0.12)', padding: '20px 24px 16px', position: 'relative'}}>
+              <div style={{fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.14em', color: '#600812', marginBottom: 6}}>
                 Lernmodul · {selectedModul.dauer_minuten} Min.
               </div>
-              <div style={{fontSize: '20px', fontWeight: 700}}>{selectedModul.name}</div>
+              <div style={{fontStyle: 'italic', fontWeight: 700, fontSize: 17, color: '#1a0e08', lineHeight: 1.25, paddingRight: 50}}>{selectedModul.name}</div>
               {selectedModul.beschreibung && (
-                <div style={{fontSize: '13px', color: 'rgba(255,255,255,0.65)', marginTop: '6px'}}>{selectedModul.beschreibung}</div>
+                <div style={{fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginTop: 4}}>{selectedModul.beschreibung}</div>
               )}
               <button onClick={() => setShowModulDetailModal(false)} style={{
-                position: 'absolute', top: '16px', right: '16px', background: 'rgba(255,255,255,0.12)',
-                border: 'none', borderRadius: '8px', width: '30px', height: '30px', cursor: 'pointer',
-                color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center'
+                position: 'absolute', top: 14, right: 14, background: 'rgba(96,8,18,0.06)',
+                border: '0.5px solid rgba(96,8,18,0.12)', borderRadius: 8, width: 30, height: 30, cursor: 'pointer',
+                color: 'var(--warm-gray)', display: 'flex', alignItems: 'center', justifyContent: 'center'
               }}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                   <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
                 </svg>
               </button>
             </div>
 
             {/* Tabs */}
-            <div style={{display: 'flex', borderBottom: '1px solid #f1f5f9', padding: '0 28px'}}>
+            <div style={{display: 'flex', borderBottom: '0.5px solid rgba(96,8,18,0.1)', padding: '0 24px', background: '#fff'}}>
               {(['inhalt', 'teilnehmer'] as const).map(tab => (
                 <button key={tab} onClick={() => setSelectedModulTab(tab)} style={{
-                  padding: '12px 16px', border: 'none', background: 'none', cursor: 'pointer',
-                  fontSize: '13px', fontWeight: 600, fontFamily: 'inherit',
-                  color: selectedModulTab === tab ? '#3730a3' : '#94a3b8',
-                  borderBottom: selectedModulTab === tab ? '2px solid #3730a3' : '2px solid transparent',
-                  marginBottom: '-1px'
+                  padding: '10px 14px', border: 'none', background: 'none', cursor: 'pointer',
+                  fontSize: 12, fontWeight: 700, fontFamily: 'inherit', textTransform: 'uppercase' as const, letterSpacing: '0.06em',
+                  color: selectedModulTab === tab ? '#600812' : 'var(--warm-gray)',
+                  borderBottom: selectedModulTab === tab ? '2px solid #600812' : '2px solid transparent',
+                  marginBottom: '-0.5px', whiteSpace: 'nowrap' as const
                 }}>
                   {tab === 'inhalt' ? 'Inhalt' : `Teilnehmer (${modulProgress.filter(p => p.modul_id === selectedModul.id).length})`}
                 </button>
@@ -4025,32 +4023,30 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
           <div className="modal-content large" onClick={(e) => e.stopPropagation()} style={{padding: 0, overflow: 'hidden'}}>
             {/* Header */}
             <div style={{
-              background: 'linear-gradient(135deg, #1d1d1f 0%, #3a3a3c 100%)',
-              padding: '28px 32px',
-              color: '#fff',
-              position: 'relative'
+              background: '#fff', borderBottom: '0.5px solid rgba(96,8,18,0.12)',
+              padding: '20px 24px 16px', position: 'relative'
             }}>
-              <div style={{fontSize: '11px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.5)', marginBottom: '8px'}}>
+              <div style={{fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.14em', color: '#600812', marginBottom: 6}}>
                 Ausbildungskonzept
               </div>
-              <div style={{fontSize: '22px', fontWeight: 700, lineHeight: 1.2}}>
+              <div style={{fontStyle: 'italic', fontWeight: 700, fontSize: 17, color: '#1a0e08', lineHeight: 1.25, paddingRight: 50}}>
                 {selectedKonzept.name}
               </div>
               {selectedKonzept.beschreibung && (
-                <div style={{fontSize: '14px', color: 'rgba(255,255,255,0.65)', marginTop: '10px', lineHeight: 1.6}}>
+                <div style={{fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginTop: 4, lineHeight: 1.6}}>
                   {selectedKonzept.beschreibung}
                 </div>
               )}
               <button
                 onClick={() => setShowKonzeptDetailModal(false)}
                 style={{
-                  position: 'absolute', top: '20px', right: '20px',
-                  background: 'rgba(255,255,255,0.12)', border: 'none', borderRadius: '8px',
-                  width: '32px', height: '32px', cursor: 'pointer', color: '#fff',
+                  position: 'absolute', top: 14, right: 14,
+                  background: 'rgba(96,8,18,0.06)', border: '0.5px solid rgba(96,8,18,0.12)', borderRadius: 8,
+                  width: 30, height: 30, cursor: 'pointer', color: 'var(--warm-gray)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center'
                 }}
               >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                   <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
                 </svg>
               </button>
