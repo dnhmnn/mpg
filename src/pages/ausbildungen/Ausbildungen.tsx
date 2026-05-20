@@ -1616,121 +1616,75 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
         {/* TERMINE VIEW */}
         {viewMode === 'termine' && (
           loading ? (
-            <div className="empty-state">Lade Termine...</div>
+            <div style={{ textAlign: 'center', padding: '64px 20px', color: 'var(--warm-gray)', fontStyle: 'italic', fontSize: 15 }}>Lade Termine...</div>
           ) : filteredTermine.length === 0 ? (
-            <div className="empty-state">
-              <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{opacity: 0.3, marginBottom: '16px'}}>
-                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-                <line x1="16" y1="2" x2="16" y2="6"/>
-                <line x1="8" y1="2" x2="8" y2="6"/>
-                <line x1="3" y1="10" x2="21" y2="10"/>
-              </svg>
-              <div style={{fontWeight: 700, marginBottom: '8px'}}>Keine Termine</div>
+            <div style={{ textAlign: 'center', padding: '64px 20px', color: 'var(--warm-gray)', fontStyle: 'italic', fontSize: 15 }}>
+              <div style={{ fontWeight: 700, marginBottom: 8, color: '#1a0e08', fontStyle: 'normal' }}>Keine Termine</div>
               <div>Erstelle deinen ersten Ausbildungstermin</div>
             </div>
           ) : (
-            <div className="cards-grid">
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 12 }}>
               {filteredTermine.map(termin => {
                 const teilnehmerCount = getTerminTeilnehmerCount(termin.id)
                 const dokumenteCount = getTerminDokumenteCount(termin.id)
                 const moduleCount = getTerminModuleCount(termin.id)
-                
                 const anwesendCount = terminTeilnehmer.filter(tt => tt.termin_id === termin.id && tt.status === 'da').length
+                const d = parseDate(termin.start_datetime)
+                const weekday = isNaN(d.getTime()) ? '' : d.toLocaleDateString('de-DE', { weekday: 'short' }).toUpperCase()
+                const dayNum = isNaN(d.getTime()) ? '–' : d.getDate()
+                const month = isNaN(d.getTime()) ? '' : d.toLocaleDateString('de-DE', { month: 'short' }).toUpperCase()
+                const statusColor = terminStatusColor(termin.status)
+                const statusLabel = termin.status === 'geplant' ? 'Geplant' : termin.status === 'laufend' ? 'Laufend' : termin.status === 'abgeschlossen' ? 'Abgeschlossen' : 'Abgesagt'
                 return (
                   <div
                     key={termin.id}
-                    className={`card status-${termin.status}`}
                     onClick={() => viewTerminDetail(termin)}
+                    style={{ background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.07)', overflow: 'hidden', cursor: 'pointer', position: 'relative' }}
                   >
-                    <div className="card-menu-container">
-                      <button 
-                        className="menu-dots"
+                    {/* Status strip top */}
+                    <div style={{ height: 3, background: statusColor }} />
+                    <div style={{ display: 'flex', alignItems: 'stretch', padding: '12px 14px 10px' }}>
+                      {/* Left date column */}
+                      <div style={{ minWidth: 48, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', paddingRight: 12, borderRight: '0.5px solid rgba(96,8,18,0.1)', marginRight: 12, gap: 2, paddingTop: 2 }}>
+                        <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--warm-gray)' }}>{weekday}</div>
+                        <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 30, lineHeight: 1, color: statusColor }}>{dayNum}</div>
+                        <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--warm-gray)' }}>{month}</div>
+                      </div>
+                      {/* Right content */}
+                      <div style={{ flex: 1, minWidth: 0, paddingRight: 28 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
+                          <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 15, color: '#1a0e08', lineHeight: 1.3 }}>{termin.name}</div>
+                          <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: statusColor, flexShrink: 0, marginLeft: 6 }}>{statusLabel}</span>
+                        </div>
+                        {termin.location && <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)' }}>{termin.location}</div>}
+                        {termin.dozent && <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)' }}>{termin.dozent}</div>}
+                      </div>
+                    </div>
+                    {/* Bottom stats strip */}
+                    <div style={{ borderTop: '0.5px solid rgba(96,8,18,0.08)', background: 'rgba(250,249,247,0.8)', padding: '8px 14px', display: 'flex', gap: 14, fontSize: 12, color: 'var(--warm-gray)', fontWeight: 600 }}>
+                      <span>{teilnehmerCount}/{termin.max_teilnehmer} TN</span>
+                      {anwesendCount > 0 && <span style={{ color: '#16a34a' }}>{anwesendCount} Da</span>}
+                      {dokumenteCount > 0 && <span>{dokumenteCount} Dok.</span>}
+                      {moduleCount > 0 && <span>{moduleCount} Mod.</span>}
+                    </div>
+                    {/* 3-dot menu */}
+                    <div style={{ position: 'absolute', top: 14, right: 10 }}>
+                      <button
+                        style={{ background: 'rgba(250,249,247,0.9)', border: '0.5px solid rgba(96,8,18,0.12)', borderRadius: 8, width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--warm-gray)' }}
                         onClick={(e) => {
                           e.stopPropagation()
                           const menuId = `menu-${termin.id}`
                           const menu = document.getElementById(menuId)
-                          const allMenus = document.querySelectorAll('.card-menu-dropdown')
-                          allMenus.forEach(m => {
-                            if (m.id !== menuId) m.classList.remove('show')
-                          })
+                          const allMenus = document.querySelectorAll('.ausb-card-menu-dropdown')
+                          allMenus.forEach(m => { if (m.id !== menuId) m.classList.remove('show') })
                           menu?.classList.toggle('show')
                         }}
                       >
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                          <circle cx="12" cy="12" r="1"/>
-                          <circle cx="12" cy="5" r="1"/>
-                          <circle cx="12" cy="19" r="1"/>
-                        </svg>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg>
                       </button>
-                      <div id={`menu-${termin.id}`} className="card-menu-dropdown">
-                        <button 
-                          className="menu-item"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            openEditTermin(termin)
-                          }}
-                        >
-                          Bearbeiten
-                        </button>
-                        <button 
-                          className="menu-item danger"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            deleteTermin(termin.id, termin.name)
-                          }}
-                        >
-                          Löschen
-                        </button>
-                      </div>
-                    </div>
-                    
-                    <div className="card-type">
-                      {fmtDate(termin.start_datetime)}
-                    </div>
-                    <div className="card-name">{termin.name}</div>
-                    <div className="card-meta">
-                      {termin.location && <div>{termin.location}</div>}
-                      {termin.dozent && <div>Dozent: {termin.dozent}</div>}
-                    </div>
-                    
-                    <div className="card-status-info">
-                      <div className={`status-badge ${termin.status}`}>
-                        {termin.status === 'geplant' && 'Geplant'}
-                        {termin.status === 'laufend' && 'Laufend'}
-                        {termin.status === 'abgeschlossen' && 'Abgeschlossen'}
-                        {termin.status === 'abgesagt' && 'Abgesagt'}
-                      </div>
-                    </div>
-                    
-                    <div className="card-stats">
-                      <div className="stat-item">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-                          <circle cx="9" cy="7" r="4"/>
-                        </svg>
-                        <span>{teilnehmerCount}/{termin.max_teilnehmer}</span>
-                      </div>
-                      {anwesendCount > 0 && (
-                        <div className="stat-item" style={{color: '#16a34a'}}>
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <polyline points="20 6 9 17 4 12"/>
-                          </svg>
-                          <span>{anwesendCount} Da</span>
-                        </div>
-                      )}
-                      <div className="stat-item">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                          <polyline points="14 2 14 8 20 8"/>
-                        </svg>
-                        <span>{dokumenteCount}</span>
-                      </div>
-                      <div className="stat-item">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
-                          <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
-                        </svg>
-                        <span>{moduleCount}</span>
+                      <div id={`menu-${termin.id}`} className="ausb-card-menu-dropdown">
+                        <button className="ausb-menu-item" onClick={(e) => { e.stopPropagation(); openEditTermin(termin) }}>Bearbeiten</button>
+                        <button className="ausb-menu-item danger" onClick={(e) => { e.stopPropagation(); deleteTermin(termin.id, termin.name) }}>Löschen</button>
                       </div>
                     </div>
                   </div>
@@ -1743,78 +1697,45 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
         {/* TEILNEHMER VIEW */}
         {viewMode === 'teilnehmer' && (
           loading ? (
-            <div className="empty-state">Lade Teilnehmer...</div>
+            <div style={{ textAlign: 'center', padding: '64px 20px', color: 'var(--warm-gray)', fontStyle: 'italic', fontSize: 15 }}>Lade Teilnehmer...</div>
           ) : filteredTeilnehmer.length === 0 ? (
-            <div className="empty-state">
-              <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{opacity: 0.3, marginBottom: '16px'}}>
-                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-                <circle cx="9" cy="7" r="4"/>
-              </svg>
-              <div style={{fontWeight: 700, marginBottom: '8px'}}>Keine Teilnehmer</div>
+            <div style={{ textAlign: 'center', padding: '64px 20px', color: 'var(--warm-gray)', fontStyle: 'italic', fontSize: 15 }}>
+              <div style={{ fontWeight: 700, marginBottom: 8, color: '#1a0e08', fontStyle: 'normal' }}>Keine Teilnehmer</div>
               <div>Füge Teilnehmer hinzu oder weise sie einem Termin zu</div>
             </div>
           ) : (
-            <div className="cards-grid">
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 12 }}>
               {filteredTeilnehmer.map(t => (
-                <div 
-                  key={t.id} 
-                  className="card"
+                <div
+                  key={t.id}
                   onClick={() => viewTeilnehmerDetail(t)}
+                  style={{ background: '#fff', borderRadius: 12, borderLeft: '3px solid #600812', boxShadow: '0 1px 4px rgba(0,0,0,0.07)', padding: '14px 14px 10px', cursor: 'pointer', position: 'relative' }}
                 >
-                  <div className="card-menu-container">
-                    <button 
-                      className="menu-dots"
+                  {/* 3-dot menu */}
+                  <div style={{ position: 'absolute', top: 10, right: 10 }}>
+                    <button
+                      style={{ background: 'rgba(250,249,247,0.9)', border: '0.5px solid rgba(96,8,18,0.12)', borderRadius: 8, width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--warm-gray)' }}
                       onClick={(e) => {
                         e.stopPropagation()
                         const menuId = `menu-${t.id}`
                         const menu = document.getElementById(menuId)
-                        const allMenus = document.querySelectorAll('.card-menu-dropdown')
-                        allMenus.forEach(m => {
-                          if (m.id !== menuId) m.classList.remove('show')
-                        })
+                        const allMenus = document.querySelectorAll('.ausb-card-menu-dropdown')
+                        allMenus.forEach(m => { if (m.id !== menuId) m.classList.remove('show') })
                         menu?.classList.toggle('show')
                       }}
                     >
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                        <circle cx="12" cy="12" r="1"/>
-                        <circle cx="12" cy="5" r="1"/>
-                        <circle cx="12" cy="19" r="1"/>
-                      </svg>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg>
                     </button>
-                    <div id={`menu-${t.id}`} className="card-menu-dropdown">
-                      <button 
-                        className="menu-item"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          openEditTeilnehmer(t)
-                        }}
-                      >
-                        Bearbeiten
-                      </button>
-                      <button 
-                        className="menu-item"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          toggleLernbarZugang(t)
-                        }}
-                      >
-                        {t.lernbar_zugang_aktiv ? 'Lernbar deaktivieren' : 'Lernbar aktivieren'}
-                      </button>
-                      <button 
-                        className="menu-item danger"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          deleteTeilnehmer(t.id, `${t.vorname} ${t.nachname}`)
-                        }}
-                      >
-                        Löschen
-                      </button>
+                    <div id={`menu-${t.id}`} className="ausb-card-menu-dropdown">
+                      <button className="ausb-menu-item" onClick={(e) => { e.stopPropagation(); openEditTeilnehmer(t) }}>Bearbeiten</button>
+                      <button className="ausb-menu-item" onClick={(e) => { e.stopPropagation(); toggleLernbarZugang(t) }}>{t.lernbar_zugang_aktiv ? 'Lernbar deaktivieren' : 'Lernbar aktivieren'}</button>
+                      <button className="ausb-menu-item danger" onClick={(e) => { e.stopPropagation(); deleteTeilnehmer(t.id, `${t.vorname} ${t.nachname}`) }}>Löschen</button>
                     </div>
                   </div>
-                  
-                  <div className="card-type">{t.ausbildung_typ || 'Teilnehmer'}</div>
-                  <div className="card-name">{t.vorname} {t.nachname}</div>
-                  <div className="card-meta">
+
+                  <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 4 }}>{t.ausbildung_typ || 'Teilnehmer'}</div>
+                  <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 17, color: '#1a0e08', marginBottom: 4, paddingRight: 32 }}>{t.vorname} {t.nachname}</div>
+                  <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginBottom: 8 }}>
                     {t.email && <div>{t.email}</div>}
                     {t.telefon && <div>{t.telefon}</div>}
                   </div>
@@ -1826,27 +1747,23 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                     const prozent = jahresTermine.length > 0 ? Math.round((da / jahresTermine.length) * 100) : 0
                     if (ttList.length === 0) return null
                     return (
-                      <div style={{marginTop: '10px'}}>
-                        <div style={{display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '4px'}}>
+                      <div style={{marginTop: '8px'}}>
+                        <div style={{display: 'flex', justifyContent: 'space-between', fontStyle: 'italic', fontSize: '12px', color: 'var(--warm-gray)', marginBottom: '4px'}}>
                           <span>{da} / {jahresTermine.length} Termine besucht</span>
-                          <span style={{fontWeight: 700, color: prozent >= 80 ? '#16a34a' : prozent >= 50 ? '#d97706' : '#dc2626'}}>{prozent}%</span>
+                          <span style={{fontWeight: 700, color: prozent >= 80 ? '#16a34a' : prozent >= 50 ? '#d97706' : '#600812'}}>{prozent}%</span>
                         </div>
-                        <div style={{background: '#e2e8f0', borderRadius: '4px', height: '5px'}}>
-                          <div style={{background: prozent >= 80 ? '#22c55e' : prozent >= 50 ? '#eab308' : '#ef4444', borderRadius: '4px', height: '5px', width: `${Math.min(prozent, 100)}%`}} />
+                        <div style={{background: 'rgba(96,8,18,0.06)', borderRadius: '4px', height: '4px'}}>
+                          <div style={{background: prozent >= 80 ? '#16a34a' : prozent >= 50 ? '#d97706' : '#600812', borderRadius: '4px', height: '4px', width: `${Math.min(prozent, 100)}%`}} />
                         </div>
                       </div>
                     )
                   })()}
 
                   {t.lernbar_zugang_aktiv && (
-                    <div className="card-status-info">
-                      <div className="status-badge lernbar">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
-                          <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
-                        </svg>
-                        <span>Lernbar aktiv</span>
-                      </div>
+                    <div style={{ marginTop: 8 }}>
+                      <span style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.08em', background: 'rgba(96,8,18,0.07)', borderRadius: 5, padding: '3px 8px' }}>
+                        Lernbar aktiv
+                      </span>
                     </div>
                   )}
                 </div>
@@ -1858,71 +1775,48 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
         {/* MODULE VIEW */}
         {viewMode === 'module' && (
           loading ? (
-            <div className="empty-state">Lade Module...</div>
+            <div style={{ textAlign: 'center', padding: '64px 20px', color: 'var(--warm-gray)', fontStyle: 'italic', fontSize: 15 }}>Lade Module...</div>
           ) : filteredModule.length === 0 ? (
-            <div className="empty-state">
-              <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{opacity: 0.3, marginBottom: '16px'}}>
-                <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
-                <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
-              </svg>
-              <div style={{fontWeight: 700, marginBottom: '8px'}}>Keine Module</div>
+            <div style={{ textAlign: 'center', padding: '64px 20px', color: 'var(--warm-gray)', fontStyle: 'italic', fontSize: 15 }}>
+              <div style={{ fontWeight: 700, marginBottom: 8, color: '#1a0e08', fontStyle: 'normal' }}>Keine Module</div>
               <div>Erstelle dein erstes Lernmodul</div>
             </div>
           ) : (
-            <div className="cards-grid">
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 12 }}>
               {filteredModule.map(m => {
                 const assigned = modulProgress.filter(p => p.modul_id === m.id)
                 const done = assigned.filter(p => p.abgeschlossen_am)
                 return (
-                  <div key={m.id} className="card" onClick={() => openModulDetail(m)}>
-                    <div className="card-menu-container">
+                  <div key={m.id} onClick={() => openModulDetail(m)} style={{ background: '#fff', borderRadius: 12, borderLeft: '3px solid #600812', boxShadow: '0 1px 4px rgba(0,0,0,0.07)', padding: '14px 14px 10px', cursor: 'pointer', position: 'relative' }}>
+                    {/* 3-dot menu */}
+                    <div style={{ position: 'absolute', top: 10, right: 10 }}>
                       <button
-                        className="menu-dots"
+                        style={{ background: 'rgba(250,249,247,0.9)', border: '0.5px solid rgba(96,8,18,0.12)', borderRadius: 8, width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--warm-gray)' }}
                         onClick={(e) => {
                           e.stopPropagation()
                           const menuId = `menu-m-${m.id}`
                           const menu = document.getElementById(menuId)
-                          document.querySelectorAll('.card-menu-dropdown').forEach(el => {
-                            if (el.id !== menuId) el.classList.remove('show')
-                          })
+                          document.querySelectorAll('.ausb-card-menu-dropdown').forEach(el => { if (el.id !== menuId) el.classList.remove('show') })
                           menu?.classList.toggle('show')
                         }}
                       >
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                          <circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/>
-                        </svg>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg>
                       </button>
-                      <div id={`menu-m-${m.id}`} className="card-menu-dropdown">
-                        <button className="menu-item" onClick={(e) => { e.stopPropagation(); openEditModul(m) }}>Bearbeiten</button>
-                        <button className="menu-item danger" onClick={(e) => { e.stopPropagation(); deleteModul(m.id, m.name) }}>Löschen</button>
+                      <div id={`menu-m-${m.id}`} className="ausb-card-menu-dropdown">
+                        <button className="ausb-menu-item" onClick={(e) => { e.stopPropagation(); openEditModul(m) }}>Bearbeiten</button>
+                        <button className="ausb-menu-item danger" onClick={(e) => { e.stopPropagation(); deleteModul(m.id, m.name) }}>Löschen</button>
                       </div>
                     </div>
-                    <div className="card-type">{m.dauer_minuten} Min.</div>
-                    <div className="card-name">{m.name}</div>
-                    <div className="card-meta">{m.beschreibung && <div>{m.beschreibung}</div>}</div>
-                    <div className="card-stats">
-                      <div className="stat-item">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
-                          <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
-                        </svg>
-                        <span>{m.inhalte?.length || 0} Blöcke</span>
-                      </div>
-                      <div className="stat-item">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-                          <circle cx="9" cy="7" r="4"/>
-                          <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-                          <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-                        </svg>
-                        <span>{done.length}/{assigned.length} abgeschlossen</span>
-                      </div>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 4 }}>{m.dauer_minuten} Min.</div>
+                    <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 17, color: '#1a0e08', marginBottom: 4, paddingRight: 32 }}>{m.name}</div>
+                    <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginBottom: 10 }}>{m.beschreibung && <div>{m.beschreibung}</div>}</div>
+                    <div style={{ borderTop: '0.5px solid rgba(96,8,18,0.08)', background: 'rgba(250,249,247,0.8)', margin: '0 -14px', padding: '8px 14px', display: 'flex', gap: 14, fontSize: 12, color: 'var(--warm-gray)', fontWeight: 600 }}>
+                      <span>{m.inhalte?.length || 0} Blöcke</span>
+                      <span>{done.length}/{assigned.length} abgeschl.</span>
                     </div>
                     {assigned.length > 0 && (
-                      <div style={{marginTop: '10px'}}>
-                        <div style={{height: '4px', background: 'var(--border)', borderRadius: '2px', overflow: 'hidden'}}>
-                          <div style={{height: '100%', background: '#10b981', borderRadius: '2px', width: `${Math.round((done.length / assigned.length) * 100)}%`, transition: 'width 0.3s'}} />
-                        </div>
+                      <div style={{height: '3px', background: 'rgba(96,8,18,0.06)', borderRadius: '0 0 12px 12px', overflow: 'hidden', margin: '0 -14px'}}>
+                        <div style={{height: '100%', background: '#16a34a', width: `${Math.round((done.length / assigned.length) * 100)}%`, transition: 'width 0.3s'}} />
                       </div>
                     )}
                   </div>
@@ -1935,86 +1829,48 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
         {/* KONZEPTE VIEW */}
         {viewMode === 'konzepte' && (
           loading ? (
-            <div className="empty-state">Lade Konzepte...</div>
+            <div style={{ textAlign: 'center', padding: '64px 20px', color: 'var(--warm-gray)', fontStyle: 'italic', fontSize: 15 }}>Lade Konzepte...</div>
           ) : filteredKonzepte.length === 0 ? (
-            <div className="empty-state">
-              <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{opacity: 0.3, marginBottom: '16px'}}>
-                <path d="M12 2L2 7l10 5 10-5-10-5z"/>
-                <path d="M2 17l10 5 10-5M2 12l10 5 10-5"/>
-              </svg>
-              <div style={{fontWeight: 700, marginBottom: '8px'}}>Keine Konzepte</div>
+            <div style={{ textAlign: 'center', padding: '64px 20px', color: 'var(--warm-gray)', fontStyle: 'italic', fontSize: 15 }}>
+              <div style={{ fontWeight: 700, marginBottom: 8, color: '#1a0e08', fontStyle: 'normal' }}>Keine Konzepte</div>
               <div>Erstelle dein erstes Ausbildungskonzept</div>
             </div>
           ) : (
-            <div className="cards-grid">
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 12 }}>
               {filteredKonzepte.map(k => (
-                <div 
-                  key={k.id} 
-                  className="card"
+                <div
+                  key={k.id}
                   onClick={() => viewKonzeptDetail(k)}
+                  style={{ background: '#fff', borderRadius: 12, borderLeft: '3px solid #600812', boxShadow: '0 1px 4px rgba(0,0,0,0.07)', padding: '14px 14px 10px', cursor: 'pointer', position: 'relative' }}
                 >
-                  <div className="card-menu-container">
-                    <button 
-                      className="menu-dots"
+                  {/* 3-dot menu */}
+                  <div style={{ position: 'absolute', top: 10, right: 10 }}>
+                    <button
+                      style={{ background: 'rgba(250,249,247,0.9)', border: '0.5px solid rgba(96,8,18,0.12)', borderRadius: 8, width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--warm-gray)' }}
                       onClick={(e) => {
                         e.stopPropagation()
                         const menuId = `menu-${k.id}`
                         const menu = document.getElementById(menuId)
-                        const allMenus = document.querySelectorAll('.card-menu-dropdown')
-                        allMenus.forEach(m => {
-                          if (m.id !== menuId) m.classList.remove('show')
-                        })
+                        const allMenus = document.querySelectorAll('.ausb-card-menu-dropdown')
+                        allMenus.forEach(m => { if (m.id !== menuId) m.classList.remove('show') })
                         menu?.classList.toggle('show')
                       }}
                     >
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                        <circle cx="12" cy="12" r="1"/>
-                        <circle cx="12" cy="5" r="1"/>
-                        <circle cx="12" cy="19" r="1"/>
-                      </svg>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg>
                     </button>
-                    <div id={`menu-${k.id}`} className="card-menu-dropdown">
-                      <button 
-                        className="menu-item"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          openEditKonzept(k)
-                        }}
-                      >
-                        Bearbeiten
-                      </button>
-                      <button 
-                        className="menu-item danger"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          deleteKonzept(k.id, k.name)
-                        }}
-                      >
-                        Löschen
-                      </button>
+                    <div id={`menu-${k.id}`} className="ausb-card-menu-dropdown">
+                      <button className="ausb-menu-item" onClick={(e) => { e.stopPropagation(); openEditKonzept(k) }}>Bearbeiten</button>
+                      <button className="ausb-menu-item danger" onClick={(e) => { e.stopPropagation(); deleteKonzept(k.id, k.name) }}>Löschen</button>
                     </div>
                   </div>
-                  
-                  <div className="card-type">Konzept</div>
-                  <div className="card-name">{k.name}</div>
-                  <div className="card-meta">
+                  <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 4 }}>Konzept</div>
+                  <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 17, color: '#1a0e08', marginBottom: 4, paddingRight: 32 }}>{k.name}</div>
+                  <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginBottom: 10 }}>
                     {k.beschreibung && <div>{k.beschreibung}</div>}
                   </div>
-                  <div className="card-stats">
-                    <div className="stat-item">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-                        <polyline points="22 4 12 14.01 9 11.01"/>
-                      </svg>
-                      <span>{k.lernziele?.length || 0} Lernziele</span>
-                    </div>
-                    <div className="stat-item">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <polyline points="9 11 12 14 22 4"/>
-                        <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
-                      </svg>
-                      <span>{k.handlungen?.length || 0} Handlungen</span>
-                    </div>
+                  <div style={{ borderTop: '0.5px solid rgba(96,8,18,0.08)', background: 'rgba(250,249,247,0.8)', margin: '0 -14px', padding: '8px 14px', display: 'flex', gap: 14, fontSize: 12, color: 'var(--warm-gray)', fontWeight: 600 }}>
+                    <span>{k.lernziele?.length || 0} Lernziele</span>
+                    <span>{k.handlungen?.length || 0} Handlungen</span>
                   </div>
                 </div>
               ))}
