@@ -492,12 +492,14 @@ export default function Patienten() {
           z-index: 99;
           overflow-x: auto;
           -webkit-overflow-scrolling: touch;
-          display: flex;
-          padding-left: max(8px, env(safe-area-inset-left));
-          padding-right: max(8px, env(safe-area-inset-right));
-          min-width: max-content;
         }
         .pat-toolbar::-webkit-scrollbar { display: none; }
+        .pat-toolbar-inner {
+          display: flex;
+          min-width: max-content;
+          padding-left: max(8px, env(safe-area-inset-left));
+          padding-right: max(8px, env(safe-area-inset-right));
+        }
 
         .pat-tab-btn {
           display: flex;
@@ -763,6 +765,15 @@ export default function Patienten() {
             <div style={{ fontWeight: 700, fontSize: 15, letterSpacing: '-0.01em', color: '#1a0e08' }}>Patienten</div>
             <div style={{ fontStyle: 'italic', fontSize: 11, color: 'var(--warm-gray)', marginTop: 1 }}>{user?.organization_name || 'Responda'}</div>
           </div>
+          {(activeTab === 'patienten' || activeTab === 'nach') && (
+            <button
+              onClick={() => { setNachForm({ ...EMPTY_NACH }); setShowNach(true) }}
+              style={{ width: 32, height: 32, borderRadius: 8, border: 'none', background: 'rgba(96,8,18,0.07)', color: '#600812', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+              title="Neue Nacherfassung"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            </button>
+          )}
         </div>
       </div>
 
@@ -772,6 +783,7 @@ export default function Patienten() {
 
       {/* TOOLBAR */}
       <div className="pat-toolbar">
+        <div className="pat-toolbar-inner">
         <button
           className={`pat-tab-btn${activeTab === 'patienten' ? ' active' : ''}`}
           onClick={() => setActiveTab('patienten')}
@@ -829,17 +841,7 @@ export default function Patienten() {
             <span className="pat-tab-label">QR-Codes</span>
           </button>
         )}
-        <button
-          className="pat-tab-btn primary"
-          onClick={() => { setNachForm({ ...EMPTY_NACH }); setShowNach(true) }}
-          title="Neue Nacherfassung"
-        >
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-            <line x1="12" y1="5" x2="12" y2="19"/>
-            <line x1="5" y1="12" x2="19" y2="12"/>
-          </svg>
-          <span className="pat-tab-label">Neu</span>
-        </button>
+        </div>
       </div>
 
       <div className="pat-content">
