@@ -132,14 +132,10 @@ export default function Einsaetze() {
   // New modal
   const [newModal, setNewModal]             = useState(false)
   const [newForm, setNewForm]               = useState({ einsatz_nr: '', stichwort: '', adresse: '', datum: nowLocalISO() })
-  // Alamos Setup Wizard
-  const [setupOpen, setSetupOpen]           = useState(false)
-  const [setupStep, setSetupStep]           = useState<'login' | 'running' | 'done'>('login')
-  const [setupEmail, setSetupEmail]         = useState('')
-  const [setupPassword, setSetupPassword]   = useState('')
-  const [setupAdminToken, setSetupAdminToken] = useState(() => localStorage.getItem('alamos_token') || '')
-  const [setupLog, setSetupLog]             = useState<{ text: string; ok: boolean }[]>([])
-  const [setupError, setSetupError]         = useState('')
+  // Alamos Setup
+  const [setupOpen, setSetupOpen]     = useState(false)
+  const [setupApiKey, setSetupApiKey] = useState(() => localStorage.getItem('alamos_token') || '')
+  const [setupInput, setSetupInput]   = useState('')
 
   // Map refs
   const mapDivRef   = useRef<HTMLDivElement>(null)
@@ -161,84 +157,15 @@ export default function Einsaetze() {
   }
 
   function openSetup() {
-    setSetupError('')
-    setSetupLog([])
-    setSetupStep(setupAdminToken ? 'done' : 'login')
+    setSetupInput(setupApiKey)
     setSetupOpen(true)
   }
 
-  async function runSetup() {
-    setSetupStep('running')
-    setSetupLog([])
-    setSetupError('')
-
-    const log = (text: string, ok: boolean) =>
-      setSetupLog(prev => [...prev, { text, ok }])
-
-    try {
-      // 1. Admin-Login (PocketBase v0.23+ uses _superusers, older uses /admins)
-      log('Anmeldung läuft…', true)
-      let token = ''
-      for (const endpoint of [
-        'https://api.responda.systems/api/collections/_superusers/auth-with-password',
-        'https://api.responda.systems/api/admins/auth-with-password',
-      ]) {
-        const authRes = await fetch(endpoint, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ identity: setupEmail.trim(), password: setupPassword }),
-        })
-        if (authRes.ok) {
-          const data = await authRes.json()
-          token = data.token
-          break
-        }
-        if (authRes.status !== 404) {
-          const err = await authRes.json().catch(() => ({}))
-          throw new Error(err?.message || 'E-Mail oder Passwort falsch')
-        }
-      }
-      if (!token) throw new Error('E-Mail oder Passwort falsch')
-      localStorage.setItem('alamos_token', token)
-      setSetupAdminToken(token)
-      localStorage.setItem('alamos_token', token)
-      setSetupAdminToken(token)
-      log('Anmeldung erfolgreich', true)
-
-      // 2. Collection laden
-      log('Collection "einsaetze" prüfen…', true)
-      const colRes = await fetch('https://api.responda.systems/api/collections/einsaetze', {
-        headers: { 'Authorization': `Bearer ${token}` },
-      })
-      if (!colRes.ok) throw new Error('Collection "einsaetze" nicht gefunden — bitte zuerst anlegen')
-      const col = await colRes.json()
-      const existing: any[] = col.schema || []
-      const hasStatus   = existing.some((f: any) => f.name === 'status')
-      const hasAlamosId = existing.some((f: any) => f.name === 'alamos_id')
-
-      if (hasStatus && hasAlamosId) {
-        log('Felder bereits vorhanden — kein Update nötig', true)
-      } else {
-        // 3. Felder ergänzen
-        log('Neue Felder anlegen…', true)
-        const newSchema = [...existing]
-        if (!hasStatus)   newSchema.push({ name: 'status',    type: 'text', required: false, options: {} })
-        if (!hasAlamosId) newSchema.push({ name: 'alamos_id', type: 'text', required: false, options: {} })
-        const patchRes = await fetch(`https://api.responda.systems/api/collections/${col.id}`, {
-          method: 'PATCH',
-          headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ schema: newSchema }),
-        })
-        if (!patchRes.ok) throw new Error('Felder konnten nicht angelegt werden')
-        log(`Felder angelegt: ${!hasStatus ? 'status ' : ''}${!hasAlamosId ? 'alamos_id' : ''}`.trim(), true)
-      }
-
-      log('Einrichtung abgeschlossen', true)
-      setSetupStep('done')
-    } catch (e: any) {
-      setSetupError(e.message || 'Unbekannter Fehler')
-      setSetupStep('login')
-    }
+  function saveApiKey() {
+    const key = setupInput.trim()
+    localStorage.setItem('alamos_token', key)
+    setSetupApiKey(key)
+    showMsg('API-Key gespeichert', 'success')
   }
 
   // ── Load functions ────────────────────────────────────────────────────────
@@ -512,7 +439,7 @@ export default function Einsaetze() {
             </div>
           </div>
           <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-            <button onClick={openSetup} title="Alamos Webhook einrichten" style={{ background: setupAdminToken ? 'rgba(22,163,74,0.12)' : 'rgba(96,8,18,0.08)', border: 'none', borderRadius: 8, width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: setupAdminToken ? '#16a34a' : '#600812' }}>
+            <button onClick={openSetup} title="Alamos Webhook einrichten" style={{ background: setupApiKey ? 'rgba(22,163,74,0.12)' : 'rgba(96,8,18,0.08)', border: 'none', borderRadius: 8, width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: setupApiKey ? '#16a34a' : '#600812' }}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
             </button>
             <button onClick={() => setNewModal(true)} style={{ background: '#600812', border: 'none', borderRadius: 8, width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#fff' }}>
@@ -886,156 +813,93 @@ export default function Einsaetze() {
         </>
       )}
 
-      {/* ── Alamos Setup Wizard ── */}
+      {/* ── Alamos Setup ── */}
       {setupOpen && (() => {
-        const orgId = user?.organization_id || ''
+        const orgId      = user?.organization_id || ''
         const WEBHOOK_URL = 'https://api.responda.systems/api/collections/einsaetze/records'
-        const authHeader  = `Bearer ${setupAdminToken}`
+        const authHeader  = setupApiKey ? `Bearer ${setupApiKey}` : 'Bearer <API-KEY>'
         const jsonBody    = `{\n  "einsatz_nr":      "{{EinsatzNummer}}",\n  "stichwort":       "{{Stichwort}}",\n  "adresse":         "{{Adresse}}",\n  "datum":           "{{Alarmzeit}}",\n  "status":          "aktiv",\n  "organization_id": "${orgId}",\n  "alamos_id":       "{{ExterneId}}"\n}`
         const curlTest    = `curl -X POST ${WEBHOOK_URL} \\\n  -H "Authorization: ${authHeader}" \\\n  -H "Content-Type: application/json" \\\n  -d '{"einsatz_nr":"TEST-001","stichwort":"RD B3 Test","adresse":"Musterstr. 1, 80331 München","datum":"${new Date().toISOString()}","status":"aktiv","organization_id":"${orgId}"}'`
-
         return (
           <>
             <div onClick={() => setSetupOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(26,14,8,0.5)', zIndex: 300 }} />
             <div style={{ position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 301, background: '#fff', borderRadius: '22px 22px 0 0', maxHeight: '94dvh', display: 'flex', flexDirection: 'column', paddingBottom: 'env(safe-area-inset-bottom)' }}>
 
-              {/* Handle */}
               <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0 6px', flexShrink: 0 }}>
                 <div style={{ width: 36, height: 4, borderRadius: 2, background: 'rgba(96,8,18,0.2)' }} />
               </div>
 
-              {/* Header */}
               <div style={{ padding: '4px 20px 14px', borderBottom: '0.5px solid rgba(96,8,18,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
                 <div>
                   <div style={{ fontWeight: 700, fontSize: 17, color: '#1a0e08' }}>Alamos Einrichten</div>
-                  <div style={{ fontSize: 12, color: 'var(--warm-gray)', fontStyle: 'italic', marginTop: 2 }}>
-                    {setupStep === 'login'   && 'Einmalige Einrichtung — dauert unter 30 Sekunden'}
-                    {setupStep === 'running' && 'Einrichtung läuft…'}
-                    {setupStep === 'done'    && 'Eingerichtet — Konfiguration in Alamos eintragen'}
-                  </div>
+                  <div style={{ fontSize: 12, color: 'var(--warm-gray)', fontStyle: 'italic', marginTop: 2 }}>Einmalig — API-Key aus PocketBase einfügen</div>
                 </div>
                 <button onClick={() => setSetupOpen(false)} style={{ background: 'rgba(96,8,18,0.06)', border: 'none', borderRadius: '50%', width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--warm-gray)' }}>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                 </button>
               </div>
 
-              {/* Content */}
               <div style={{ flex: 1, overflowY: 'auto', padding: '20px 20px 8px', display: 'flex', flexDirection: 'column', gap: 18 }}>
 
-                {/* ── LOGIN ── */}
-                {setupStep === 'login' && (
-                  <>
-                    <div style={{ background: 'rgba(96,8,18,0.04)', borderRadius: 12, padding: '14px 16px', fontSize: 13, color: '#1a0e08', lineHeight: 1.6 }}>
-                      <strong>Was passiert automatisch:</strong>
-                      <div style={{ marginTop: 6, display: 'flex', flexDirection: 'column', gap: 4, color: 'var(--warm-gray)', fontStyle: 'italic' }}>
-                        <span>✓ Felder in PocketBase anlegen</span>
-                        <span>✓ Token sichern</span>
-                        <span>✓ Webhook-Konfiguration fertig aufbereiten</span>
-                      </div>
-                    </div>
-
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                      <div>
-                        <div style={LABEL}>PocketBase Admin E-Mail</div>
-                        <input
-                          type="email"
-                          value={setupEmail}
-                          onChange={e => setSetupEmail(e.target.value)}
-                          placeholder="admin@responda.systems"
-                          style={INPUT}
-                          autoComplete="email"
-                        />
-                      </div>
-                      <div>
-                        <div style={LABEL}>Passwort</div>
-                        <input
-                          type="password"
-                          value={setupPassword}
-                          onChange={e => setSetupPassword(e.target.value)}
-                          placeholder="••••••••••"
-                          style={INPUT}
-                          onKeyDown={e => e.key === 'Enter' && setupEmail && setupPassword && runSetup()}
-                          autoComplete="current-password"
-                        />
-                      </div>
-                    </div>
-
-                    {setupError && (
-                      <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 10, padding: '12px 14px', fontSize: 13, color: '#b91c1c', fontWeight: 600 }}>
-                        {setupError}
-                      </div>
-                    )}
-
-                    <button
-                      onClick={runSetup}
-                      disabled={!setupEmail || !setupPassword}
-                      style={{ ...BTN_PRIMARY, padding: '14px', fontSize: 15, borderRadius: 12, opacity: !setupEmail || !setupPassword ? 0.4 : 1 }}
-                    >
-                      Automatisch einrichten
-                    </button>
-
-                    {setupAdminToken && (
-                      <button onClick={() => setSetupStep('done')} style={{ ...BTN_SECONDARY, textAlign: 'center' }}>
-                        Bereits eingerichtet — Konfiguration anzeigen
-                      </button>
-                    )}
-                  </>
-                )}
-
-                {/* ── RUNNING ── */}
-                {setupStep === 'running' && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12, paddingTop: 8 }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                      {setupLog.map((entry, i) => (
-                        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 15, color: '#1a0e08' }}>
-                          <div style={{ width: 22, height: 22, borderRadius: '50%', background: '#dcfce7', border: '1.5px solid #16a34a', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                          </div>
-                          {entry.text}
-                        </div>
-                      ))}
-                      {/* Spinner for current step */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 15, color: 'var(--warm-gray)' }}>
-                        <div style={{ width: 22, height: 22, borderRadius: '50%', border: '2px solid rgba(96,8,18,0.15)', borderTopColor: '#600812', animation: 'spin 0.8s linear infinite', flexShrink: 0 }} />
-                        <span style={{ fontStyle: 'italic' }}>Läuft…</span>
-                      </div>
-                    </div>
+                {/* Step 1: API Key */}
+                <div style={{ background: 'rgba(96,8,18,0.04)', borderRadius: 12, padding: '14px 16px', fontSize: 13, color: '#1a0e08', lineHeight: 1.7 }}>
+                  <div style={{ fontWeight: 700, marginBottom: 6 }}>So erhältst du den API-Key:</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 3, color: 'var(--warm-gray)', fontStyle: 'italic' }}>
+                    <span>1. PocketBase Admin-Panel öffnen</span>
+                    <span>2. Settings → API Keys → <strong style={{ fontStyle: 'normal', color: '#1a0e08' }}>New key</strong></span>
+                    <span>3. Namen eingeben (z.B. "Alamos"), speichern</span>
+                    <span>4. Den angezeigten Key hier einfügen</span>
                   </div>
-                )}
+                </div>
 
-                {/* ── DONE ── */}
-                {setupStep === 'done' && (
+                <div>
+                  <div style={LABEL}>PocketBase API-Key</div>
+                  <input
+                    type="text"
+                    value={setupInput}
+                    onChange={e => setSetupInput(e.target.value)}
+                    placeholder="pb_…"
+                    style={{ ...INPUT, fontFamily: 'monospace', fontSize: 13 }}
+                    autoComplete="off"
+                    autoCorrect="off"
+                    spellCheck={false}
+                  />
+                </div>
+
+                <button
+                  onClick={saveApiKey}
+                  disabled={!setupInput.trim() || setupInput.trim() === setupApiKey}
+                  style={{ ...BTN_PRIMARY, padding: '14px', fontSize: 15, borderRadius: 12, opacity: (!setupInput.trim() || setupInput.trim() === setupApiKey) ? 0.4 : 1 }}
+                >
+                  {setupApiKey ? 'API-Key aktualisieren' : 'API-Key speichern'}
+                </button>
+
+                {/* Config (shown when key is set) */}
+                {setupApiKey && (
                   <>
-                    <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 12, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
-                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="20 6 9 17 4 12"/></svg>
-                      <div>
-                        <div style={{ fontWeight: 700, fontSize: 14, color: '#166534' }}>Einrichtung abgeschlossen</div>
-                        <div style={{ fontSize: 12, color: '#16a34a', fontStyle: 'italic', marginTop: 2 }}>Diese Werte jetzt in Alamos eintragen</div>
-                      </div>
+                    <div style={{ height: 1, background: 'rgba(96,8,18,0.08)' }} />
+                    <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 12, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="20 6 9 17 4 12"/></svg>
+                      <div style={{ fontWeight: 700, fontSize: 13, color: '#166534' }}>Alamos-Konfiguration bereit</div>
                     </div>
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-
                       <div>
                         <div style={LABEL}>1. Webhook-URL</div>
                         <WebhookBox text={WEBHOOK_URL} label="Webhook-URL" onCopy={copyText} />
                       </div>
-
                       <div>
                         <div style={LABEL}>2. Authorization-Header</div>
                         <WebhookBox text={authHeader} label="Authorization-Header" onCopy={copyText} mono />
                       </div>
-
                       <div>
                         <div style={LABEL}>3. JSON-Body</div>
                         <div style={{ fontSize: 11, color: 'var(--warm-gray)', fontStyle: 'italic', marginBottom: 6 }}>
-                          Die <code style={{ background: 'rgba(96,8,18,0.06)', padding: '1px 4px', borderRadius: 3, fontStyle: 'normal' }}>{'{{Platzhalter}}'}</code> sind Alamos-Variablen — in deiner Alamos-Version können die Namen leicht abweichen.
+                          Die <code style={{ background: 'rgba(96,8,18,0.06)', padding: '1px 4px', borderRadius: 3, fontStyle: 'normal' }}>{'{{Platzhalter}}'}</code> sind Alamos-Variablen — Namen können in deiner Version leicht abweichen.
                         </div>
                         <WebhookBox text={jsonBody} label="JSON-Body" onCopy={copyText} mono />
                       </div>
-
                       <div style={{ height: 1, background: 'rgba(96,8,18,0.08)' }} />
-
                       <div>
                         <div style={LABEL}>Test-Befehl (optional)</div>
                         <div style={{ fontSize: 11, color: 'var(--warm-gray)', fontStyle: 'italic', marginBottom: 6 }}>Im Terminal ausführen — Einsatz erscheint sofort in der App.</div>
@@ -1044,16 +908,15 @@ export default function Einsaetze() {
                     </div>
 
                     <button
-                      onClick={() => { setSetupStep('login'); setSetupAdminToken(''); localStorage.removeItem('alamos_token') }}
+                      onClick={() => { localStorage.removeItem('alamos_token'); setSetupApiKey(''); setSetupInput(''); showMsg('API-Key gelöscht', 'success') }}
                       style={{ ...BTN_SECONDARY, fontSize: 12, padding: '8px', marginTop: 4 }}
                     >
-                      Token zurücksetzen / neu einrichten
+                      API-Key entfernen
                     </button>
                   </>
                 )}
               </div>
             </div>
-            <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
           </>
         )
       })()}
