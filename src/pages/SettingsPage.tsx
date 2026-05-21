@@ -640,7 +640,6 @@ export default function SettingsPage({ user }: SettingsPageProps) {
   // Profile
   const profilePanel = (
     <div style={S.detailPanel}>
-      <DetailHeader title="Profil" />
       <div style={S.sectionHeader}>PROFIL</div>
       <div style={S.card}>
         <div style={S.field}>
@@ -683,7 +682,6 @@ export default function SettingsPage({ user }: SettingsPageProps) {
   // Password
   const passwordPanel = (
     <div style={S.detailPanel}>
-      <DetailHeader title="Passwort" />
       <div style={S.sectionHeader}>PASSWORT ÄNDERN</div>
       <div style={S.card}>
         <div style={S.field}>
@@ -735,7 +733,6 @@ export default function SettingsPage({ user }: SettingsPageProps) {
 
   const notificationsPanel = (
     <div style={S.detailPanel}>
-      <DetailHeader title="Benachrichtigungen" />
       <div style={S.sectionHeader}>HINWEISE</div>
       <div style={S.card}>
         {notifItems.map((item, idx) => {
@@ -774,7 +771,6 @@ export default function SettingsPage({ user }: SettingsPageProps) {
   // Appearance
   const appearancePanel = (
     <div style={S.detailPanel}>
-      <DetailHeader title="Darstellung" />
       <div style={S.sectionHeader}>DARSTELLUNG</div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '24px' }}>
         {([
@@ -877,7 +873,6 @@ export default function SettingsPage({ user }: SettingsPageProps) {
   // Users
   const usersPanel = (
     <div style={S.detailPanel}>
-      <DetailHeader title="Benutzer" />
       <div style={{ ...S.sectionHeader, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <span>BENUTZER</span>
         {canManageUsers && (
@@ -941,7 +936,6 @@ export default function SettingsPage({ user }: SettingsPageProps) {
   // License
   const licensePanel = (
     <div style={S.detailPanel}>
-      <DetailHeader title="Lizenz" />
       <div style={S.sectionHeader}>LIZENZ</div>
       {license && (
         <>
