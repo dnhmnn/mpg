@@ -600,9 +600,7 @@ export default function MPG() {
             <div style={{ fontWeight: 700, fontSize: 15, letterSpacing: '-0.01em', color: '#1a0e08' }}>MPG</div>
             <div style={{ fontStyle: 'italic', fontSize: 11, color: 'var(--warm-gray)', marginTop: 1 }}>{user?.organization_name || 'Responda'}</div>
           </div>
-          <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#fff', border: '1.5px solid #600812', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#600812', fontWeight: 700, fontSize: 13, flexShrink: 0 }}>
-            {user?.name?.charAt(0).toUpperCase() || 'U'}
-          </div>
+          <div style={{ width: 22 }} />
         </div>
       </div>
       
