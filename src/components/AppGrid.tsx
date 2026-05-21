@@ -35,7 +35,7 @@ export default function AppGrid({ userApps, editMode = false, onRemoveApp, onApp
   function handleAppClick(app: App) {
     onAppClick?.(app.id)
     if (app.id === 'settings') {
-      window.dispatchEvent(new Event('openSettings'))
+      navigate('/settings')
       return
     }
     if (app.isInternal) navigate(app.url)
