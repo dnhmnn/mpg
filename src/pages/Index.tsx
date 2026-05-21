@@ -16,6 +16,7 @@ export default function Index() {
   const [visible, setVisible] = useState(true)
   const [orgCode, setOrgCode] = useState('')
   const [orgError, setOrgError] = useState('')
+  const [showOrgInput, setShowOrgInput] = useState(false)
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -65,8 +66,9 @@ export default function Index() {
       `}</style>
 
       {/* Logo */}
-      <div style={{ marginBottom: 32, textAlign: 'center' }}>
+      <div style={{ marginBottom: 32, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
         <img src="/logo.svg" alt="Responda" width="120" height="120" />
+        <span style={{ fontWeight: 700, fontSize: '1.4rem', letterSpacing: '-0.01em', color: '#1a0e08' }}>Responda</span>
       </div>
 
       {/* Animated tagline */}
@@ -101,31 +103,42 @@ export default function Index() {
         </div>
 
         {/* Org code */}
-        <form onSubmit={handleOrgSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <label style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: '#600812' }}>
-            Organisations-Code
-          </label>
-          <input
-            className="org-input"
-            value={orgCode}
-            onChange={e => { setOrgCode(e.target.value); setOrgError('') }}
-            placeholder="z.B. feuerwehr-musterstadt"
-            autoCapitalize="none"
-            autoCorrect="off"
-            spellCheck={false}
-            style={{ width: '100%', padding: '13px 14px', borderRadius: 10, border: '1.5px solid rgba(96,8,18,0.15)', background: 'var(--warm-bg)', fontSize: 15, color: '#1a0e08', fontFamily: 'inherit', boxSizing: 'border-box' }}
-          />
-          {orgError && (
-            <p style={{ margin: 0, fontSize: 13, fontStyle: 'italic', color: '#b91c1c', textAlign: 'center' }}>{orgError}</p>
-          )}
+        {!showOrgInput ? (
           <button
-            type="submit"
             className="landing-btn"
-            style={{ padding: '13px', borderRadius: 10, background: 'rgba(96,8,18,0.06)', border: '1px solid rgba(96,8,18,0.15)', cursor: 'pointer', fontSize: 14, fontWeight: 700, color: '#600812', fontFamily: 'inherit', letterSpacing: '0.02em' }}
+            onClick={() => setShowOrgInput(true)}
+            style={{ width: '100%', padding: '13px', borderRadius: 10, background: 'rgba(96,8,18,0.06)', border: '1px solid rgba(96,8,18,0.15)', cursor: 'pointer', fontSize: 14, fontWeight: 700, color: '#600812', fontFamily: 'inherit', letterSpacing: '0.02em' }}
           >
-            Weiter →
+            Mit Organisations-Code
           </button>
-        </form>
+        ) : (
+          <form onSubmit={handleOrgSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <label style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: '#600812' }}>
+              Organisations-Code
+            </label>
+            <input
+              className="org-input"
+              value={orgCode}
+              onChange={e => { setOrgCode(e.target.value); setOrgError('') }}
+              placeholder="z.B. feuerwehr-musterstadt"
+              autoCapitalize="none"
+              autoCorrect="off"
+              autoFocus
+              spellCheck={false}
+              style={{ width: '100%', padding: '13px 14px', borderRadius: 10, border: '1.5px solid rgba(96,8,18,0.15)', background: 'var(--warm-bg)', fontSize: 15, color: '#1a0e08', fontFamily: 'inherit', boxSizing: 'border-box' }}
+            />
+            {orgError && (
+              <p style={{ margin: 0, fontSize: 13, fontStyle: 'italic', color: '#b91c1c', textAlign: 'center' }}>{orgError}</p>
+            )}
+            <button
+              type="submit"
+              className="landing-btn"
+              style={{ padding: '13px', borderRadius: 10, background: 'rgba(96,8,18,0.06)', border: '1px solid rgba(96,8,18,0.15)', cursor: 'pointer', fontSize: 14, fontWeight: 700, color: '#600812', fontFamily: 'inherit', letterSpacing: '0.02em' }}
+            >
+              Weiter →
+            </button>
+          </form>
+        )}
       </div>
 
       {/* Footer */}
