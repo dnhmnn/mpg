@@ -132,6 +132,8 @@ export default function Einsaetze() {
   // New modal
   const [newModal, setNewModal]             = useState(false)
   const [newForm, setNewForm]               = useState({ einsatz_nr: '', stichwort: '', adresse: '', datum: nowLocalISO() })
+  const [webhookSheet, setWebhookSheet]     = useState(false)
+  const [webhookToken, setWebhookToken]     = useState('')
 
   // Map refs
   const mapDivRef   = useRef<HTMLDivElement>(null)
@@ -141,6 +143,15 @@ export default function Einsaetze() {
   function showMsg(text: string, type: 'success' | 'error' | 'info' = 'success') {
     setMessage({ text, type })
     setTimeout(() => setMessage(null), 4000)
+  }
+
+  async function copyText(text: string, label: string) {
+    try {
+      await navigator.clipboard.writeText(text)
+      showMsg(`${label} kopiert`, 'success')
+    } catch {
+      showMsg('Kopieren fehlgeschlagen — bitte manuell kopieren', 'error')
+    }
   }
 
   // ── Load functions ────────────────────────────────────────────────────────
@@ -413,9 +424,14 @@ export default function Einsaetze() {
               {new Date().toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' })}
             </div>
           </div>
-          <button onClick={() => setNewModal(true)} style={{ background: '#600812', border: 'none', borderRadius: 8, width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#fff', flexShrink: 0 }}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          </button>
+          <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+            <button onClick={() => setWebhookSheet(true)} title="Alamos Webhook einrichten" style={{ background: 'rgba(96,8,18,0.08)', border: 'none', borderRadius: 8, width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#600812' }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+            </button>
+            <button onClick={() => setNewModal(true)} style={{ background: '#600812', border: 'none', borderRadius: 8, width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#fff' }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -783,6 +799,111 @@ export default function Einsaetze() {
         </>
       )}
 
+      {/* ── Webhook Sheet ── */}
+      {webhookSheet && (() => {
+        const orgId = user?.organization_id || 'DEINE_ORG_ID'
+        const token = webhookToken.trim() || 'DEIN_TOKEN'
+        const webhookUrl = 'https://api.responda.systems/api/collections/einsaetze/records'
+        const authHeader = `Bearer ${token}`
+        const jsonBody = JSON.stringify({
+          einsatz_nr: '{{EinsatzNummer}}',
+          stichwort: '{{Stichwort}}',
+          adresse: '{{Adresse}}',
+          datum: '{{Alarmzeit}}',
+          status: 'aktiv',
+          organization_id: orgId,
+          alamos_id: '{{ExterneId}}',
+        }, null, 2)
+        const curlCmd = `curl -X POST ${webhookUrl} \\\n  -H "Authorization: ${authHeader}" \\\n  -H "Content-Type: application/json" \\\n  -d '{"einsatz_nr":"TEST-001","stichwort":"RD B3 Test","adresse":"Musterstr. 1, 80331 München","datum":"${new Date().toISOString()}","status":"aktiv","organization_id":"${orgId}"}'`
+        const tokenCmd = `curl -X POST https://api.responda.systems/api/admins/auth-with-password \\\n  -H "Content-Type: application/json" \\\n  -d '{"identity":"DEINE_ADMIN_EMAIL","password":"DEIN_PASSWORT"}'`
+
+        return (
+          <>
+            <div onClick={() => setWebhookSheet(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(26,14,8,0.5)', zIndex: 300 }} />
+            <div style={{ position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 301, background: '#fff', borderRadius: '22px 22px 0 0', maxHeight: '94dvh', display: 'flex', flexDirection: 'column', paddingBottom: 'env(safe-area-inset-bottom)' }}>
+
+              {/* Handle */}
+              <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0 6px', flexShrink: 0 }}>
+                <div style={{ width: 36, height: 4, borderRadius: 2, background: 'rgba(96,8,18,0.2)' }} />
+              </div>
+
+              {/* Header */}
+              <div style={{ padding: '4px 20px 14px', borderBottom: '0.5px solid rgba(96,8,18,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: 17, color: '#1a0e08' }}>Alamos Webhook</div>
+                  <div style={{ fontSize: 12, color: 'var(--warm-gray)', fontStyle: 'italic', marginTop: 2 }}>Alles fertig zum Kopieren</div>
+                </div>
+                <button onClick={() => setWebhookSheet(false)} style={{ background: 'rgba(96,8,18,0.06)', border: 'none', borderRadius: '50%', width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--warm-gray)' }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+              </div>
+
+              {/* Scrollable content */}
+              <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 20 }}>
+
+                {/* Step 1: Token */}
+                <div>
+                  <div style={LABEL}>Schritt 1 — Token holen</div>
+                  <div style={{ fontSize: 13, color: 'var(--warm-gray)', fontStyle: 'italic', marginBottom: 10, lineHeight: 1.5 }}>
+                    Diesen Befehl im Terminal ausführen. Im Ergebnis steht <code style={{ background: 'rgba(96,8,18,0.07)', padding: '1px 5px', borderRadius: 4, fontStyle: 'normal' }}>"token":"eyJ…"</code> — diesen Wert unten eintragen.
+                  </div>
+                  <WebhookBox text={tokenCmd} label="Token-Befehl" onCopy={copyText} mono />
+                </div>
+
+                {/* Token input */}
+                <div>
+                  <div style={LABEL}>Token eintragen</div>
+                  <input
+                    value={webhookToken}
+                    onChange={e => setWebhookToken(e.target.value)}
+                    placeholder="eyJhbGciOiJIUzI1NiJ9…"
+                    style={{ ...INPUT, fontFamily: 'monospace', fontSize: 12 }}
+                  />
+                  {webhookToken && <div style={{ fontSize: 11, color: '#16a34a', marginTop: 4, fontStyle: 'italic' }}>Token eingetragen — alle Felder unten sind jetzt fertig.</div>}
+                </div>
+
+                <div style={{ height: 1, background: 'rgba(96,8,18,0.08)' }} />
+
+                {/* Schritt 2: Alamos config */}
+                <div>
+                  <div style={LABEL}>Schritt 2 — In Alamos eintragen</div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    <div>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 6 }}>Webhook-URL</div>
+                      <WebhookBox text={webhookUrl} label="URL" onCopy={copyText} />
+                    </div>
+
+                    <div>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 6 }}>Authorization-Header</div>
+                      <WebhookBox text={authHeader} label="Authorization" onCopy={copyText} mono highlight={!webhookToken} />
+                    </div>
+
+                    <div>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 6 }}>JSON-Body (Felder mappen)</div>
+                      <div style={{ fontSize: 11, color: 'var(--warm-gray)', fontStyle: 'italic', marginBottom: 6 }}>Die {'{{Platzhalter}}'} sind die Alamos-Variablen — in deiner Alamos-Version können die Namen leicht abweichen.</div>
+                      <WebhookBox text={jsonBody} label="JSON-Body" onCopy={copyText} mono />
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ height: 1, background: 'rgba(96,8,18,0.08)' }} />
+
+                {/* Schritt 3: Test */}
+                <div>
+                  <div style={LABEL}>Schritt 3 — Testen (optional)</div>
+                  <div style={{ fontSize: 13, color: 'var(--warm-gray)', fontStyle: 'italic', marginBottom: 10, lineHeight: 1.5 }}>
+                    Diesen Befehl ausführen — danach sollte sofort ein Test-Einsatz in der Liste erscheinen.
+                  </div>
+                  <WebhookBox text={curlCmd} label="Test-Befehl" onCopy={copyText} mono highlight={!webhookToken} />
+                </div>
+
+              </div>
+            </div>
+          </>
+        )
+      })()}
+
     </div>
   )
 }
@@ -819,6 +940,20 @@ function EinsatzCard({ einsatz, onClick }: { einsatz: Einsatz; onClick: () => vo
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg>
         </span>
       </div>
+    </div>
+  )
+}
+
+function WebhookBox({ text, label, onCopy, mono, highlight }: { text: string; label: string; onCopy: (t: string, l: string) => void; mono?: boolean; highlight?: boolean }) {
+  return (
+    <div style={{ position: 'relative', background: highlight ? 'rgba(96,8,18,0.04)' : 'rgba(250,249,247,0.9)', border: `1px solid ${highlight ? 'rgba(96,8,18,0.25)' : 'rgba(96,8,18,0.1)'}`, borderRadius: 10, padding: '10px 44px 10px 12px', minHeight: 40 }}>
+      <pre style={{ margin: 0, fontSize: 12, color: highlight ? '#600812' : '#1a0e08', fontFamily: mono ? 'monospace' : 'inherit', whiteSpace: 'pre-wrap', wordBreak: 'break-all', lineHeight: 1.6 }}>
+        {text}
+      </pre>
+      <button onClick={() => onCopy(text, label)} style={{ position: 'absolute', top: 8, right: 8, background: '#600812', border: 'none', borderRadius: 6, padding: '4px 8px', cursor: 'pointer', color: '#fff', display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 700, fontFamily: 'inherit', flexShrink: 0 }}>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        Kopieren
+      </button>
     </div>
   )
 }
