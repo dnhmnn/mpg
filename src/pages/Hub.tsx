@@ -281,7 +281,7 @@ export default function Hub() {
             </div>
           </div>
           <button
-            onClick={() => setShowSettings(true)}
+            onClick={() => navigate('/settings')}
             style={{ width: 34, height: 34, borderRadius: '50%', border: '1.5px solid #600812', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 12, color: '#600812', cursor: 'pointer', flexShrink: 0, fontFamily: 'inherit' } as React.CSSProperties}
           >
             {initials(user?.name || user?.email)}
