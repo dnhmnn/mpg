@@ -142,7 +142,10 @@
   }
   .page-number {
     font-size: 11px; font-style: italic; color: rgba(96,8,18,0.3);
-    align-self: flex-end;
+    align-self: flex-end; display: flex; align-items: center; gap: 8px;
+  }
+  .page-number img {
+    height: 18px; width: 18px; object-fit: contain; opacity: 0.25;
   }
 
   /* ── SECTION LABEL ── */
@@ -372,13 +375,14 @@
 <div class="page cover">
   <div class="cover-deco"></div>
   <div class="cover-deco2"></div>
+  <div style="position: absolute; right: 48px; top: 50%; transform: translateY(-50%); opacity: 0.13; pointer-events: none;">
+    <img src="/logo.svg" alt="" style="height: 320px; width: 320px; object-fit: contain;">
+  </div>
 
   <div class="cover-top">
     <div class="cover-logo">
       <div class="cover-logo-circle">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(253,232,216,0.7)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
-        </svg>
+        <img src="/logoklein.svg" alt="Responda" style="height: 28px; width: 28px; object-fit: contain;">
       </div>
       <span class="cover-logo-name">Responda</span>
     </div>
@@ -408,7 +412,7 @@
       <div class="page-label">Kapitel 01</div>
       <div class="page-title">Philosophie</div>
     </div>
-    <div class="page-number">02</div>
+    <div class="page-number"><img src="/logoklein.svg" alt="">02</div>
   </div>
 
   <div class="philosophy-quote">
@@ -458,7 +462,7 @@
       <div class="page-label">Kapitel 02</div>
       <div class="page-title">Farbpalette</div>
     </div>
-    <div class="page-number">03</div>
+    <div class="page-number"><img src="/logoklein.svg" alt="">03</div>
   </div>
 
   <div class="color-grid">
@@ -543,7 +547,7 @@
       <div class="page-label">Kapitel 03</div>
       <div class="page-title">Typografie</div>
     </div>
-    <div class="page-number">04</div>
+    <div class="page-number"><img src="/logoklein.svg" alt="">04</div>
   </div>
 
   <div class="section-label">Schriftfamilie</div>
@@ -604,7 +608,7 @@
       <div class="page-label">Kapitel 04</div>
       <div class="page-title">Komponenten</div>
     </div>
-    <div class="page-number">05</div>
+    <div class="page-number"><img src="/logoklein.svg" alt="">05</div>
   </div>
 
   <!-- Masthead -->
@@ -710,7 +714,7 @@
       <div class="page-label">Kapitel 05</div>
       <div class="page-title">App-Module</div>
     </div>
-    <div class="page-number">06</div>
+    <div class="page-number"><img src="/logoklein.svg" alt="">06</div>
   </div>
 
   <div class="body-text" style="margin-bottom: 28px;">
@@ -786,7 +790,7 @@
       <div class="page-label">Kapitel 06</div>
       <div class="page-title">Technologie &amp; Sicherheit</div>
     </div>
-    <div class="page-number">07</div>
+    <div class="page-number"><img src="/logoklein.svg" alt="">07</div>
   </div>
 
   <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 32px; margin-bottom: 36px;">
@@ -895,9 +899,7 @@
 <!-- ── 8. BACK COVER ────────────────────────────── -->
 <div class="page backcover">
   <div class="backcover-logo">
-    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="rgba(253,232,216,0.85)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
-    </svg>
+    <img src="/logo.svg" alt="Responda" style="height: 40px; width: 40px; object-fit: contain;">
   </div>
   <div class="backcover-name">Responda</div>
   <div class="backcover-tagline">Digitale Infrastruktur für den Rettungsdienst.</div>
