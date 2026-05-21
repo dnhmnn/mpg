@@ -806,10 +806,9 @@ export default function Einsaetze() {
         const orgId      = user?.organization_id || ''
         const token      = import.meta.env.VITE_ALAMOS_TOKEN || ''
         const WEBHOOK_URL = 'https://api.responda.systems/api/collections/einsaetze/records'
-        const authHeader  = `Bearer ${token}`
         const jsonBody    = `{\n  "einsatz_nr":      "{{EinsatzNummer}}",\n  "stichwort":       "{{Stichwort}}",\n  "adresse":         "{{Adresse}}",\n  "datum":           "{{Alarmzeit}}",\n  "status":          "aktiv",\n  "organization_id": "${orgId}",\n  "alamos_id":       "{{ExterneId}}"\n}`
-        const curlTest    = `curl -X POST ${WEBHOOK_URL} \\\n  -H "Authorization: ${authHeader}" \\\n  -H "Content-Type: application/json" \\\n  -d '{"einsatz_nr":"TEST-001","stichwort":"RD B3 Test","adresse":"Musterstr. 1, 80331 München","datum":"${new Date().toISOString()}","status":"aktiv","organization_id":"${orgId}"}'`
-        const configured  = !!token
+        const curlTest    = `curl -X POST ${WEBHOOK_URL} \\\n${token ? `  -H "Authorization: Bearer ${token}" \\\n` : ''}  -H "Content-Type: application/json" \\\n  -d '{"einsatz_nr":"TEST-001","stichwort":"RD B3 Test","adresse":"Musterstr. 1, 80331 München","datum":"${new Date().toISOString()}","status":"aktiv","organization_id":"${orgId}"}'`
+        const configured  = true
 
         return (
           <>
@@ -824,7 +823,7 @@ export default function Einsaetze() {
                 <div>
                   <div style={{ fontWeight: 700, fontSize: 17, color: '#1a0e08' }}>Alamos-Konfiguration</div>
                   <div style={{ fontSize: 12, color: 'var(--warm-gray)', fontStyle: 'italic', marginTop: 2 }}>
-                    {configured ? 'Diese Werte in Alamos eintragen' : 'Noch nicht konfiguriert'}
+                    Diese Werte in Alamos eintragen
                   </div>
                 </div>
                 <button onClick={() => setSetupOpen(false)} style={{ background: 'rgba(96,8,18,0.06)', border: 'none', borderRadius: '50%', width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--warm-gray)' }}>
@@ -833,12 +832,6 @@ export default function Einsaetze() {
               </div>
 
               <div style={{ flex: 1, overflowY: 'auto', padding: '20px 20px 8px', display: 'flex', flexDirection: 'column', gap: 16 }}>
-                {!configured ? (
-                  <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 12, padding: '14px 16px', fontSize: 13, color: '#b91c1c', lineHeight: 1.6 }}>
-                    <strong>Noch nicht eingerichtet.</strong><br />
-                    <span style={{ fontStyle: 'italic', color: 'var(--warm-gray)' }}>Bitte den Systemadministrator kontaktieren.</span>
-                  </div>
-                ) : (
                   <>
                     <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 12, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="20 6 9 17 4 12"/></svg>
@@ -850,12 +843,14 @@ export default function Einsaetze() {
                         <div style={LABEL}>1. Webhook-URL</div>
                         <WebhookBox text={WEBHOOK_URL} label="Webhook-URL" onCopy={copyText} />
                       </div>
+                      {token && (
+                        <div>
+                          <div style={LABEL}>2. Authorization-Header</div>
+                          <WebhookBox text={`Bearer ${token}`} label="Authorization-Header" onCopy={copyText} mono />
+                        </div>
+                      )}
                       <div>
-                        <div style={LABEL}>2. Authorization-Header</div>
-                        <WebhookBox text={authHeader} label="Authorization-Header" onCopy={copyText} mono />
-                      </div>
-                      <div>
-                        <div style={LABEL}>3. JSON-Body</div>
+                        <div style={LABEL}>{token ? '3.' : '2.'} JSON-Body</div>
                         <div style={{ fontSize: 11, color: 'var(--warm-gray)', fontStyle: 'italic', marginBottom: 6 }}>
                           Die <code style={{ background: 'rgba(96,8,18,0.06)', padding: '1px 4px', borderRadius: 3, fontStyle: 'normal' }}>{'{{Platzhalter}}'}</code> sind Alamos-Variablen — Namen können in deiner Version leicht abweichen.
                         </div>
@@ -869,7 +864,6 @@ export default function Einsaetze() {
                       </div>
                     </div>
                   </>
-                )}
               </div>
             </div>
           </>
