@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { pb } from '../lib/pocketbase'
 import type { User } from '../types'
-import StatusBar from '../components/StatusBar'
 import { getTheme, setTheme, type ThemeMode } from '../lib/theme'
 import { ALL_APPS, getDockPins, setDockPins, MAX_DOCK_PINS } from '../lib/apps'
 import AppIcon from '../components/AppIcon'
@@ -43,7 +42,7 @@ function loadNotifPrefs(): NotifPrefs {
 const S = {
   page: {
     height: '100dvh',
-    background: '#ffffff',
+    background: 'var(--warm-bg)',
     display: 'flex',
     flexDirection: 'column' as const,
     overflow: 'hidden' as const
@@ -52,7 +51,7 @@ const S = {
     flex: 1,
     position: 'relative' as const,
     overflow: 'hidden' as const,
-    marginTop: 'calc(54px + env(safe-area-inset-top))'
+    marginTop: 'calc(60px + env(safe-area-inset-top))'
   },
   panel: {
     position: 'absolute' as const,
@@ -63,30 +62,31 @@ const S = {
     overflowY: 'auto' as const,
     transition: 'transform 0.32s cubic-bezier(0.4,0,0.2,1)',
     willChange: 'transform' as const,
-    background: '#ffffff'
+    background: 'var(--warm-bg)'
   },
   mainList: {
-    padding: '20px 16px calc(40px + env(safe-area-inset-bottom))'
+    padding: '16px 16px calc(40px + env(safe-area-inset-bottom))'
   },
   detailPanel: {
     padding: '20px 16px calc(40px + env(safe-area-inset-bottom))'
   },
-  // iOS-style group
   group: {
     background: '#ffffff',
     borderRadius: '12px',
     overflow: 'hidden' as const,
-    border: '1px solid rgba(107,15,26,0.12)',
-    marginBottom: '24px'
+    border: '0.5px solid rgba(96,8,18,0.1)',
+    borderLeft: '3px solid #600812',
+    marginBottom: '16px',
+    boxShadow: '0 1px 4px rgba(0,0,0,0.06)'
   },
   groupHeader: {
-    fontSize: '11px',
-    fontVariant: 'small-caps' as const,
-    color: 'rgba(107,15,26,0.5)',
-    letterSpacing: '0.06em',
-    fontWeight: 600,
+    fontSize: '10px',
+    fontWeight: 700,
+    color: '#600812',
+    letterSpacing: '0.14em',
+    textTransform: 'uppercase' as const,
     marginBottom: '6px',
-    paddingLeft: '4px'
+    paddingLeft: '2px'
   },
   item: {
     display: 'flex' as const,
@@ -95,7 +95,7 @@ const S = {
     padding: '13px 16px',
     background: '#ffffff',
     border: 'none',
-    borderBottom: '1px solid rgba(107,15,26,0.08)',
+    borderBottom: '0.5px solid rgba(96,8,18,0.07)',
     cursor: 'pointer',
     width: '100%',
     textAlign: 'left' as const,
@@ -108,7 +108,7 @@ const S = {
     width: '30px',
     height: '30px',
     borderRadius: '8px',
-    background: '#6B0F1A',
+    background: '#600812',
     display: 'flex' as const,
     alignItems: 'center' as const,
     justifyContent: 'center' as const,
@@ -116,21 +116,20 @@ const S = {
   },
   itemLabel: {
     flex: 1,
-    fontSize: '16px',
-    color: '#1c1c1e',
-    fontWeight: 400
+    fontSize: '15px',
+    color: '#1a0e08',
+    fontWeight: 500
   },
   chevron: {
     width: '16px',
     height: '16px',
-    color: 'rgba(107,15,26,0.35)'
+    color: 'rgba(96,8,18,0.3)'
   },
-  // Detail header
   detailHeader: {
     display: 'flex' as const,
     alignItems: 'center' as const,
     gap: '10px',
-    marginBottom: '24px'
+    marginBottom: '20px'
   },
   backBtn: {
     display: 'flex' as const,
@@ -139,58 +138,59 @@ const S = {
     background: 'none',
     border: 'none',
     cursor: 'pointer',
-    color: '#6B0F1A',
-    fontSize: '16px',
+    color: '#600812',
+    fontSize: '15px',
     fontFamily: 'inherit',
     padding: '4px 0',
-    fontWeight: 500
+    fontWeight: 600
   },
   detailTitle: {
-    fontSize: '20px',
+    fontSize: '18px',
     fontWeight: 700,
-    color: '#1c1c1e',
-    flex: 1
+    color: '#1a0e08',
+    flex: 1,
+    fontStyle: 'italic' as const
   },
   sectionHeader: {
-    fontSize: '11px',
-    fontVariant: 'small-caps' as const,
-    color: 'rgba(107,15,26,0.5)',
-    letterSpacing: '0.06em',
-    fontWeight: 600,
+    fontSize: '10px',
+    fontWeight: 700,
+    color: '#600812',
+    letterSpacing: '0.14em',
+    textTransform: 'uppercase' as const,
     marginBottom: '6px',
-    paddingLeft: '4px'
+    paddingLeft: '2px'
   },
   card: {
-    background: 'rgba(107,15,26,0.06)',
+    background: '#ffffff',
     borderRadius: '12px',
-    border: '1px solid rgba(107,15,26,0.12)',
+    border: '0.5px solid rgba(96,8,18,0.1)',
     overflow: 'hidden' as const,
-    marginBottom: '20px'
+    marginBottom: '20px',
+    boxShadow: '0 1px 4px rgba(0,0,0,0.06)'
   },
-  // Form field
   field: {
     display: 'flex' as const,
     flexDirection: 'column' as const,
-    gap: '6px',
+    gap: '4px',
     padding: '12px 16px',
-    borderBottom: '1px solid rgba(107,15,26,0.08)'
+    borderBottom: '0.5px solid rgba(96,8,18,0.07)'
   },
   fieldLast: {
     borderBottom: 'none'
   },
   fieldLabel: {
-    fontSize: '12px',
-    color: 'rgba(107,15,26,0.5)',
-    fontWeight: 600,
+    fontSize: '10px',
+    color: '#600812',
+    fontWeight: 700,
     textTransform: 'uppercase' as const,
-    letterSpacing: '0.05em'
+    letterSpacing: '0.12em'
   },
   fieldInput: {
     background: 'transparent',
     border: 'none',
     outline: 'none',
-    fontSize: '16px',
-    color: '#1c1c1e',
+    fontSize: '15px',
+    color: '#1a0e08',
     fontFamily: 'inherit',
     padding: '2px 0'
   },
@@ -198,8 +198,8 @@ const S = {
     background: 'transparent',
     border: 'none',
     outline: 'none',
-    fontSize: '16px',
-    color: 'rgba(107,15,26,0.4)',
+    fontSize: '15px',
+    color: 'var(--warm-gray)',
     fontFamily: 'inherit',
     padding: '2px 0'
   },
@@ -207,19 +207,20 @@ const S = {
     display: 'block' as const,
     width: '100%',
     padding: '14px',
-    background: '#6B0F1A',
+    background: '#600812',
     color: '#fff',
     border: 'none',
     borderRadius: '12px',
-    fontSize: '16px',
-    fontWeight: 600,
+    fontSize: '15px',
+    fontWeight: 700,
     cursor: 'pointer',
     fontFamily: 'inherit',
     marginTop: '16px'
   },
   msg: (ok: boolean) => ({
-    fontSize: '14px',
-    color: ok ? '#34c759' : '#ff3b30',
+    fontSize: '13px',
+    fontStyle: 'italic' as const,
+    color: ok ? '#16a34a' : '#dc2626',
     marginTop: '10px',
     padding: '0 4px'
   })
@@ -746,11 +747,11 @@ export default function SettingsPage({ user }: SettingsPageProps) {
                 display: 'flex',
                 alignItems: 'center',
                 padding: '13px 16px',
-                borderBottom: isLast ? 'none' : '1px solid rgba(107,15,26,0.08)',
+                borderBottom: isLast ? 'none' : '1px solid rgba(96,8,18,0.08)',
                 gap: '12px'
               }}
             >
-              <span style={{ flex: 1, fontSize: '16px', color: '#1c1c1e' }}>{item.label}</span>
+              <span style={{ flex: 1, fontSize: '16px', color: '#1a0e08' }}>{item.label}</span>
               <ToggleSwitch on={notifPrefs[item.key]} onChange={() => toggleNotif(item.key)} />
             </div>
           )
@@ -758,12 +759,12 @@ export default function SettingsPage({ user }: SettingsPageProps) {
       </div>
 
       <div style={{ ...S.sectionHeader, marginTop: '8px' }}>E-MAIL</div>
-      <div style={{ fontSize: '12px', color: 'rgba(107,15,26,0.5)', marginBottom: '8px', paddingLeft: '4px' }}>
+      <div style={{ fontSize: '12px', color: 'rgba(96,8,18,0.5)', marginBottom: '8px', paddingLeft: '4px' }}>
         Erhalte eine E-Mail wenn neue Hinweise vorliegen
       </div>
       <div style={S.card}>
         <div style={{ display: 'flex', alignItems: 'center', padding: '13px 16px', gap: '12px' }}>
-          <span style={{ flex: 1, fontSize: '16px', color: '#1c1c1e' }}>Per E-Mail benachrichtigen</span>
+          <span style={{ flex: 1, fontSize: '16px', color: '#1a0e08' }}>Per E-Mail benachrichtigen</span>
           <ToggleSwitch on={notifPrefs.email} onChange={() => toggleNotif('email')} />
         </div>
       </div>
@@ -777,11 +778,11 @@ export default function SettingsPage({ user }: SettingsPageProps) {
       <div style={S.sectionHeader}>DARSTELLUNG</div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '24px' }}>
         {([
-          { value: 'light', label: 'Hell', icon: '☀️', desc: 'Helles Design' },
-          { value: 'dark', label: 'Dunkel', icon: '🌙', desc: 'Dunkles Design' },
-          { value: 'system', label: 'System', icon: '⚙️', desc: 'Geräteeinstellung' },
-          { value: 'retro', label: 'Retro', icon: '📟', desc: 'CRT Terminal — grüner Phosphor' }
-        ] as { value: ThemeMode; label: string; icon: string; desc: string }[]).map(opt => (
+          { value: 'light', label: 'Hell', desc: 'Helles Design' },
+          { value: 'dark', label: 'Dunkel', desc: 'Dunkles Design' },
+          { value: 'system', label: 'System', desc: 'Geräteeinstellung' },
+          { value: 'retro', label: 'Retro', desc: 'CRT Terminal — grüner Phosphor' }
+        ] as { value: ThemeMode; label: string; desc: string }[]).map(opt => (
           <button
             key={opt.value}
             onClick={() => handleThemeChange(opt.value)}
@@ -791,24 +792,23 @@ export default function SettingsPage({ user }: SettingsPageProps) {
               gap: '14px',
               padding: '14px 16px',
               borderRadius: '12px',
-              border: themeMode === opt.value
-                ? '2px solid #6B0F1A'
-                : '1.5px solid rgba(107,15,26,0.12)',
-              background: themeMode === opt.value ? 'rgba(107,15,26,0.06)' : '#ffffff',
+              borderLeft: themeMode === opt.value ? '3px solid #600812' : '3px solid transparent',
+              border: themeMode === opt.value ? '0.5px solid rgba(96,8,18,0.15)' : '0.5px solid rgba(96,8,18,0.08)',
+              borderLeft: themeMode === opt.value ? '3px solid #600812' : '3px solid rgba(96,8,18,0.15)',
+              background: themeMode === opt.value ? 'rgba(96,8,18,0.04)' : '#ffffff',
               cursor: 'pointer',
-              textAlign: 'left',
+              textAlign: 'left' as const,
               fontFamily: 'inherit',
-              transition: 'all 0.15s',
-              width: '100%'
+              width: '100%',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
             }}
           >
-            <span style={{ fontSize: '22px', lineHeight: 1 }}>{opt.icon}</span>
             <div style={{ flex: 1 }}>
-              <div style={{ fontWeight: 600, fontSize: '15px', color: '#1c1c1e' }}>{opt.label}</div>
-              <div style={{ fontSize: '12px', color: 'rgba(107,15,26,0.5)', marginTop: '2px' }}>{opt.desc}</div>
+              <div style={{ fontWeight: 700, fontSize: '15px', color: themeMode === opt.value ? '#600812' : '#1a0e08' }}>{opt.label}</div>
+              <div style={{ fontSize: '12px', fontStyle: 'italic', color: 'var(--warm-gray)', marginTop: '2px' }}>{opt.desc}</div>
             </div>
             {themeMode === opt.value && (
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6B0F1A" strokeWidth="2.5">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#600812" strokeWidth="2.5">
                 <polyline points="20 6 9 17 4 12"/>
               </svg>
             )}
@@ -817,14 +817,14 @@ export default function SettingsPage({ user }: SettingsPageProps) {
       </div>
 
       <div style={{ ...S.sectionHeader, marginTop: '4px' }}>DOCK</div>
-      <div style={{ fontSize: '12px', color: 'rgba(107,15,26,0.5)', marginBottom: '12px', paddingLeft: '4px' }}>
+      <div style={{ fontSize: '12px', color: 'rgba(96,8,18,0.5)', marginBottom: '12px', paddingLeft: '4px' }}>
         Wähle bis zu {MAX_DOCK_PINS} Apps für das Dock.
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(72px, 1fr))', gap: '10px' }}>
         {Object.values(ALL_APPS).filter(a => a.id !== 'settings').map(app => {
           const pinned = dockPins.includes(app.id)
           const blocked = !pinned && dockPins.length >= MAX_DOCK_PINS
-          const colorMatch = app.color?.match(/#[0-9a-fA-F]{6}/)?.[0] || '#6B0F1A'
+          const colorMatch = app.color?.match(/#[0-9a-fA-F]{6}/)?.[0] || '#600812'
           return (
             <button
               key={app.id}
@@ -833,8 +833,8 @@ export default function SettingsPage({ user }: SettingsPageProps) {
               style={{
                 display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px',
                 padding: '10px 6px', borderRadius: '14px', border: 'none', cursor: blocked ? 'not-allowed' : 'pointer',
-                background: pinned ? 'rgba(107,15,26,0.06)' : 'transparent',
-                outline: pinned ? '2px solid #6B0F1A' : '1.5px solid rgba(107,15,26,0.12)',
+                background: pinned ? 'rgba(96,8,18,0.06)' : 'transparent',
+                outline: pinned ? '2px solid #600812' : '1.5px solid rgba(96,8,18,0.12)',
                 outlineOffset: '-1.5px',
                 opacity: blocked ? 0.35 : 1,
                 transition: 'all 0.15s', fontFamily: 'inherit',
@@ -843,21 +843,21 @@ export default function SettingsPage({ user }: SettingsPageProps) {
             >
               <div style={{
                 width: '46px', height: '46px', borderRadius: '12px',
-                background: pinned ? app.color || '#6B0F1A' : 'rgba(107,15,26,0.06)',
+                background: pinned ? app.color || '#600812' : 'rgba(96,8,18,0.06)',
                 color: pinned ? '#fff' : colorMatch,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 boxShadow: '0 2px 6px rgba(0,0,0,0.1)', transition: 'all 0.15s'
               }}>
                 <AppIcon icon={app.icon} />
               </div>
-              <span style={{ fontSize: '10px', color: '#1c1c1e', fontWeight: pinned ? 600 : 400, textAlign: 'center', lineHeight: 1.2 }}>
+              <span style={{ fontSize: '10px', color: '#1a0e08', fontWeight: pinned ? 600 : 400, textAlign: 'center', lineHeight: 1.2 }}>
                 {app.name}
               </span>
               {pinned && (
                 <div style={{
                   position: 'absolute', top: '4px', right: '4px',
                   width: '14px', height: '14px', borderRadius: '50%',
-                  background: '#6B0F1A', display: 'flex', alignItems: 'center', justifyContent: 'center'
+                  background: '#600812', display: 'flex', alignItems: 'center', justifyContent: 'center'
                 }}>
                   <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3">
                     <polyline points="20 6 9 17 4 12"/>
@@ -868,7 +868,7 @@ export default function SettingsPage({ user }: SettingsPageProps) {
           )
         })}
       </div>
-      <div style={{ marginTop: '12px', fontSize: '12px', color: 'rgba(107,15,26,0.5)', textAlign: 'center' }}>
+      <div style={{ marginTop: '12px', fontSize: '12px', color: 'rgba(96,8,18,0.5)', textAlign: 'center' }}>
         {dockPins.length} / {MAX_DOCK_PINS} gepinnt
       </div>
     </div>
@@ -884,7 +884,7 @@ export default function SettingsPage({ user }: SettingsPageProps) {
           <button
             onClick={openAddUser}
             style={{
-              background: '#6B0F1A', border: 'none', borderRadius: '8px',
+              background: '#600812', border: 'none', borderRadius: '8px',
               padding: '6px 12px', color: '#fff', fontSize: '13px',
               fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit'
             }}
@@ -895,11 +895,11 @@ export default function SettingsPage({ user }: SettingsPageProps) {
       </div>
       <div style={S.card}>
         {loadingUsers ? (
-          <div style={{ textAlign: 'center', padding: '40px', color: 'rgba(107,15,26,0.4)' }}>
+          <div style={{ textAlign: 'center', padding: '40px', color: 'rgba(96,8,18,0.4)' }}>
             Lade Benutzer...
           </div>
         ) : users.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '40px', color: 'rgba(107,15,26,0.4)' }}>
+          <div style={{ textAlign: 'center', padding: '40px', color: 'rgba(96,8,18,0.4)' }}>
             Keine Benutzer gefunden
           </div>
         ) : (
@@ -907,7 +907,7 @@ export default function SettingsPage({ user }: SettingsPageProps) {
             <div
               key={u.id}
               className="user-row"
-              style={{ borderBottom: idx === users.length - 1 ? 'none' : '1px solid rgba(107,15,26,0.08)' }}
+              style={{ borderBottom: idx === users.length - 1 ? 'none' : '1px solid rgba(96,8,18,0.08)' }}
             >
               <div className="user-avatar">{(u.name || u.email)[0].toUpperCase()}</div>
               <div className="user-info">
@@ -988,23 +988,24 @@ export default function SettingsPage({ user }: SettingsPageProps) {
 
   return (
     <div style={S.page}>
-      <StatusBar
-        user={user}
-        onLogout={() => {
-          pb.authStore.clear()
-          localStorage.clear()
-          navigate('/login')
-        }}
-        showBackButton={true}
-        onBackClick={() => {
-          if (view !== 'main') {
-            goBack()
-          } else {
-            navigate('/hub')
-          }
-        }}
-        pageName={view !== 'main' ? viewTitles[view] : 'Einstellungen'}
-      />
+      {/* MASTHEAD */}
+      <div style={{ background: '#fff', borderBottom: '0.5px solid rgba(96,8,18,0.12)', position: 'sticky', top: 0, zIndex: 100, paddingTop: 'env(safe-area-inset-top)', paddingLeft: 'max(20px, env(safe-area-inset-left))', paddingRight: 'max(20px, env(safe-area-inset-right))', flexShrink: 0 }}>
+        <div style={{ height: 60, display: 'flex', alignItems: 'center', gap: 12 }}>
+          <button
+            onClick={() => view !== 'main' ? goBack() : navigate('/hub')}
+            style={{ display: 'flex', alignItems: 'center', background: 'none', border: 'none', color: '#600812', cursor: 'pointer', padding: 0, flexShrink: 0 }}
+          >
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#600812" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+          </button>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontWeight: 700, fontSize: 15, letterSpacing: '-0.01em', color: '#1a0e08' }}>
+              {view !== 'main' ? viewTitles[view] : 'Einstellungen'}
+            </div>
+            <div style={{ fontStyle: 'italic', fontSize: 11, color: 'var(--warm-gray)', marginTop: 1 }}>{user?.organization_name || 'Responda'}</div>
+          </div>
+          <div style={{ width: 22 }} />
+        </div>
+      </div>
 
       <div style={S.contentWrapper}>
         {/* Main list panel */}
@@ -1054,7 +1055,7 @@ export default function SettingsPage({ user }: SettingsPageProps) {
                   onChange={(e) => setUserFormEmail(e.target.value)}
                   placeholder="email@beispiel.de"
                   disabled={!!editingUser}
-                  style={editingUser ? { background: 'var(--bg-subtle)', color: 'var(--text-secondary)' } : {}}
+                  style={editingUser ? { background: 'var(--warm-bg)', color: 'var(--warm-gray)' } : {}}
                 />
               </div>
               {editingUser && (
@@ -1073,14 +1074,7 @@ export default function SettingsPage({ user }: SettingsPageProps) {
                 <select
                   value={userFormRole}
                   onChange={(e) => setUserFormRole(e.target.value)}
-                  style={{
-                    width: '100%', padding: '12px 14px',
-                    background: 'var(--bg-input)',
-                    border: '0.5px solid var(--border-medium)',
-                    borderRadius: '10px', color: 'var(--text)',
-                    fontSize: '16px', outline: 'none',
-                    appearance: 'none', cursor: 'pointer', fontFamily: 'inherit'
-                  }}
+                  className="ios-field-select"
                 >
                   {roleOptions.map(opt => (
                     <option key={opt.value} value={opt.value} style={{ background: 'var(--bg-card-solid)' }}>
