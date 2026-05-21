@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { pb } from '../../lib/pocketbase'
 import { useAuth } from '../../hooks/useAuth'
-import StatusBar from '../../components/StatusBar'
 import PatientEditModal from './PatientEditModal'
 import PatientQRManager from './PatientQRManager'
 import SignModal from './SignModal'
@@ -489,7 +488,7 @@ export default function Patienten() {
           background: #fff;
           border-bottom: 0.5px solid rgba(96,8,18,0.1);
           position: sticky;
-          top: 60px;
+          top: calc(env(safe-area-inset-top) + 60px);
           z-index: 99;
           overflow-x: auto;
           -webkit-overflow-scrolling: touch;
@@ -754,7 +753,18 @@ export default function Patienten() {
         .fab:active { transform: scale(0.94); }
       `}</style>
 
-      <StatusBar user={user} onLogout={logout} pageName="Patienten" showHubLink />
+      {/* ── MASTHEAD ── */}
+      <div style={{ background: '#fff', borderBottom: '0.5px solid rgba(96,8,18,0.12)', position: 'sticky', top: 0, zIndex: 100, paddingTop: 'env(safe-area-inset-top)', paddingLeft: 'max(20px, env(safe-area-inset-left))', paddingRight: 'max(20px, env(safe-area-inset-right))' }}>
+        <div style={{ height: 60, display: 'flex', alignItems: 'center', gap: 12 }}>
+          <a href="/hub" style={{ display: 'flex', color: '#600812', textDecoration: 'none', flexShrink: 0 }}>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#600812" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+          </a>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontWeight: 700, fontSize: 15, letterSpacing: '-0.01em', color: '#1a0e08' }}>Patienten</div>
+            <div style={{ fontStyle: 'italic', fontSize: 11, color: 'var(--warm-gray)', marginTop: 1 }}>{user?.organization_name || 'Responda'}</div>
+          </div>
+        </div>
+      </div>
 
       {msg && (
         <div className={`pat-toast ${msg.type}`}>{msg.text}</div>
