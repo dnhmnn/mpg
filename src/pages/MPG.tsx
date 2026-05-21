@@ -589,7 +589,7 @@ export default function MPG() {
   }
 
   return (
-    <>
+    <div style={{ minHeight: '100dvh', background: 'var(--warm-bg)', fontFamily: "'Atkinson Hyperlegible', -apple-system, sans-serif" }}>
       {/* MASTHEAD */}
       <div style={{ background: '#fff', borderBottom: '0.5px solid rgba(96,8,18,0.12)', position: 'sticky', top: 0, zIndex: 100, paddingTop: 'env(safe-area-inset-top)', paddingLeft: 'max(20px, env(safe-area-inset-left))', paddingRight: 'max(20px, env(safe-area-inset-right))' }}>
         <div style={{ height: 60, display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -606,117 +606,70 @@ export default function MPG() {
         </div>
       </div>
       
-      {/* ICON TOOLBAR */}
-      <div className="action-toolbar">
-        <button className="action-btn" onClick={openAddDevice} title="Gerät hinzufügen">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-            <line x1="12" y1="5" x2="12" y2="19"/>
-            <line x1="5" y1="12" x2="19" y2="12"/>
-          </svg>
+      {/* ACTION TOOLBAR */}
+      <div className="mpg-actionbar">
+        <button className="mpg-action-btn" onClick={openAddDevice}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          <span className="mpg-action-label">Gerät</span>
         </button>
-        <button className="action-btn" onClick={() => setShowLogbookModal(true)} title="Prüfungslogbuch">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-            <polyline points="14 2 14 8 20 8"/>
-            <line x1="16" y1="13" x2="8" y2="13"/>
-            <line x1="16" y1="17" x2="8" y2="17"/>
-            <polyline points="10 9 9 9 8 9"/>
-          </svg>
+        <button className="mpg-action-btn" onClick={() => setShowLogbookModal(true)}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+          <span className="mpg-action-label">Logbuch</span>
         </button>
-        <button className="action-btn" onClick={openSettings} title="Prüfvorlagen">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <circle cx="12" cy="12" r="3"/>
-            <path d="M12 1v6m0 6v6M5.6 5.6l4.2 4.2m4.2 4.2l4.2 4.2M1 12h6m6 0h6M5.6 18.4l4.2-4.2m4.2-4.2l4.2-4.2"/>
-          </svg>
+        <button className="mpg-action-btn" onClick={openSettings}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          <span className="mpg-action-label">Vorlagen</span>
         </button>
       </div>
 
-      <div className="content">
-        {message && (
-          <div className={`message ${message.type}`}>
-            {message.text}
-          </div>
-        )}
+      {/* TOAST */}
+      {message && (
+        <div className={`mpg-toast mpg-toast-${message.type}`}>{message.text}</div>
+      )}
 
-        {/* STATISTICS - MIT KEY FÜR KORREKTES RE-RENDERING */}
-        <div className="stats-grid" key={devices.length}>
-          <div className="stat-card ok">
-            <div className="stat-icon">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <polyline points="20 6 9 17 4 12"/>
-              </svg>
-            </div>
-            <div className="stat-number">{stats.ok}</div>
-            <div className="stat-label">Geprüft</div>
+      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '16px 16px 120px', boxSizing: 'border-box' as const }}>
+
+        {/* STATISTICS */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 16 }} key={devices.length}>
+          <div style={{ background: '#fff', borderRadius: 12, padding: '14px 12px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: '#16a34a', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 4 }}>OK</div>
+            <div style={{ fontSize: 32, fontWeight: 800, color: '#16a34a', lineHeight: 1 }}>{stats.ok}</div>
+            <div style={{ fontStyle: 'italic', fontSize: 11, color: 'var(--warm-gray)', marginTop: 3 }}>Geprüft</div>
           </div>
-          <div className="stat-card warning">
-            <div className="stat-icon">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
-                <line x1="12" y1="9" x2="12" y2="13"/>
-                <line x1="12" y1="17" x2="12.01" y2="17"/>
-              </svg>
-            </div>
-            <div className="stat-number">{stats.warning}</div>
-            <div className="stat-label">Bald fällig</div>
+          <div style={{ background: '#fff', borderRadius: 12, padding: '14px 12px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: '#d97706', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 4 }}>Bald</div>
+            <div style={{ fontSize: 32, fontWeight: 800, color: '#d97706', lineHeight: 1 }}>{stats.warning}</div>
+            <div style={{ fontStyle: 'italic', fontSize: 11, color: 'var(--warm-gray)', marginTop: 3 }}>Bald fällig</div>
           </div>
-          <div className="stat-card overdue">
-            <div className="stat-icon">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <circle cx="12" cy="12" r="10"/>
-                <line x1="15" y1="9" x2="9" y2="15"/>
-                <line x1="9" y1="9" x2="15" y2="15"/>
-              </svg>
-            </div>
-            <div className="stat-number">{stats.overdue}</div>
-            <div className="stat-label">Überfällig</div>
+          <div style={{ background: '#fff', borderRadius: 12, padding: '14px 12px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: '#dc2626', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 4 }}>Überfällig</div>
+            <div style={{ fontSize: 32, fontWeight: 800, color: '#dc2626', lineHeight: 1 }}>{stats.overdue}</div>
+            <div style={{ fontStyle: 'italic', fontSize: 11, color: 'var(--warm-gray)', marginTop: 3 }}>Überfällig</div>
           </div>
-          <div className="stat-card total">
-            <div className="stat-icon">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
-              </svg>
-            </div>
-            <div className="stat-number">{stats.total}</div>
-            <div className="stat-label">Gesamt</div>
+          <div style={{ background: '#fff', borderRadius: 12, padding: '14px 12px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: '#1a0e08', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 4 }}>Gesamt</div>
+            <div style={{ fontSize: 32, fontWeight: 800, color: '#1a0e08', lineHeight: 1 }}>{stats.total}</div>
+            <div style={{ fontStyle: 'italic', fontSize: 11, color: 'var(--warm-gray)', marginTop: 3 }}>Geräte</div>
           </div>
         </div>
 
-        {/* SEARCH AND FILTERS */}
-        <div className="filter-bar">
+        {/* SEARCH */}
+        <div style={{ marginBottom: 10 }}>
           <input
+            className="mpg-search"
             type="text"
-            className="search-input"
             placeholder="Geräte durchsuchen..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
-          <div className="filter-buttons">
-            <button 
-              className={`filter-btn ${statusFilter === 'all' ? 'active' : ''}`}
-              onClick={() => setStatusFilter('all')}
-            >
-              Alle
-            </button>
-            <button 
-              className={`filter-btn ${statusFilter === 'ok' ? 'active' : ''}`}
-              onClick={() => setStatusFilter('ok')}
-            >
-              Geprüft
-            </button>
-            <button 
-              className={`filter-btn ${statusFilter === 'warning' ? 'active' : ''}`}
-              onClick={() => setStatusFilter('warning')}
-            >
-              Bald fällig
-            </button>
-            <button 
-              className={`filter-btn ${statusFilter === 'overdue' ? 'active' : ''}`}
-              onClick={() => setStatusFilter('overdue')}
-            >
-              Überfällig
-            </button>
-          </div>
+        </div>
+
+        {/* FILTER CHIPS */}
+        <div className="mpg-chips" style={{ marginBottom: 14 }}>
+          <button className={`mpg-chip${statusFilter === 'all' ? ' active' : ''}`} onClick={() => setStatusFilter('all')}>Alle</button>
+          <button className={`mpg-chip${statusFilter === 'ok' ? ' active' : ''}`} onClick={() => setStatusFilter('ok')}>Geprüft</button>
+          <button className={`mpg-chip${statusFilter === 'warning' ? ' active' : ''}`} onClick={() => setStatusFilter('warning')}>Bald fällig</button>
+          <button className={`mpg-chip${statusFilter === 'overdue' ? ' active' : ''}`} onClick={() => setStatusFilter('overdue')}>Überfällig</button>
         </div>
 
         {/* DEVICE CARDS */}
@@ -727,11 +680,11 @@ export default function MPG() {
             <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{opacity: 0.3, marginBottom: '16px'}}>
               <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
             </svg>
-            <div style={{fontWeight: 700, marginBottom: '8px'}}>Keine Geräte</div>
-            <div>Füge dein erstes Prüfgerät hinzu</div>
+            <div style={{fontWeight: 700, marginBottom: '8px', color: '#1a0e08'}}>Keine Geräte</div>
+            <div style={{ fontStyle: 'italic' }}>Füge dein erstes Prüfgerät hinzu</div>
           </div>
         ) : (
-          <div className="devices-grid">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {filteredDevices.map(device => {
               const status = getDeviceStatus(device)
               const lastInspection = inspections.find(i => i.device_id === device.id)
@@ -1310,187 +1263,97 @@ export default function MPG() {
       )}
 
       <style>{`
-        .content {
-          max-width: 1200px;
-          margin: 0 auto;
-          padding: 1rem;
-          padding-top: calc(env(safe-area-inset-top) + 140px);
-          padding-bottom: 100px;
-          background: var(--warm-bg);
-          min-height: 100dvh;
-        }
-
-        .message {
-          padding: 12px 16px;
-          border-radius: 10px;
-          margin-bottom: 16px;
-          font-weight: 600;
-        }
-
-        .message.success {
-          background: #f0fdf4;
-          border: 1px solid #bbf7d0;
-          color: #166534;
-        }
-
-        .message.error {
-          background: #fef2f2;
-          border: 1px solid #fecaca;
-          color: #dc2626;
-        }
-
-        .action-toolbar {
+        .mpg-actionbar {
           background: #fff;
           border-bottom: 0.5px solid rgba(96,8,18,0.12);
-          padding: 0.5rem 1rem;
-          display: flex;
-          gap: 0.5rem;
-          justify-content: center;
           position: sticky;
           top: calc(env(safe-area-inset-top) + 60px);
           z-index: 99;
+          display: flex;
+          gap: 0;
+          overflow-x: auto;
+          -webkit-overflow-scrolling: touch;
+          padding: 0 4px;
         }
+        .mpg-actionbar::-webkit-scrollbar { display: none; }
 
-        .action-btn {
-          border: 1px solid rgba(96,8,18,0.12);
-          background: rgba(96,8,18,0.04);
-          color: #600812;
-          padding: 0.6rem;
-          border-radius: 0.5rem;
-          cursor: pointer;
-          transition: background 0.15s;
-          display: inline-flex;
+        .mpg-action-btn {
+          display: flex;
+          flex-direction: column;
           align-items: center;
           justify-content: center;
+          gap: 3px;
+          flex-shrink: 0;
+          min-width: 60px;
+          padding: 8px 6px;
+          background: none;
+          border: none;
+          cursor: pointer;
+          color: #600812;
           font-family: inherit;
-          min-width: 44px;
-          height: 44px;
+        }
+        .mpg-action-btn:hover { background: rgba(96,8,18,0.05); }
+
+        .mpg-action-label {
+          font-size: 9px;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+          color: #600812;
+          white-space: nowrap;
         }
 
-        .action-btn:hover {
-          background: rgba(96,8,18,0.08);
-        }
-
-        .stats-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-          gap: 16px;
-          margin-bottom: 24px;
-        }
-
-        .stat-card {
-          background: #fff;
-          padding: 20px;
-          border-radius: 12px;
-          box-shadow: 0 1px 4px rgba(0,0,0,0.07);
-          border: 2px solid transparent;
-        }
-
-        .stat-card.ok {
-          border-color: rgba(34, 197, 94, 0.25);
-        }
-
-        .stat-card.warning {
-          border-color: rgba(217, 119, 6, 0.25);
-        }
-
-        .stat-card.overdue {
-          border-color: rgba(220, 38, 38, 0.25);
-        }
-
-        .stat-icon {
-          margin-bottom: 12px;
-          opacity: 0.6;
-        }
-
-        .stat-icon svg {
-          display: block;
-        }
-
-        .stat-card.ok .stat-icon {
-          color: #16a34a;
-        }
-
-        .stat-card.warning .stat-icon {
-          color: #ca8a04;
-        }
-
-        .stat-card.overdue .stat-icon {
-          color: #dc2626;
-        }
-
-        .stat-number {
-          font-size: 32px;
-          font-weight: 800;
-          color: #1a0e08;
-          margin-bottom: 8px;
-        }
-
-        .stat-label {
-          font-size: 14px;
+        .mpg-toast {
+          position: fixed;
+          bottom: calc(70px + env(safe-area-inset-bottom));
+          left: 50%;
+          transform: translateX(-50%);
+          z-index: 9999;
+          padding: 10px 20px;
+          border-radius: 20px;
           font-weight: 600;
-          color: var(--warm-gray);
+          font-size: 13px;
+          box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+          white-space: nowrap;
         }
+        .mpg-toast-success { background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; }
+        .mpg-toast-error   { background: #fef2f2; border: 1px solid #fecaca; color: #dc2626; }
 
-        .filter-bar {
-          display: flex;
-          gap: 12px;
-          margin-bottom: 24px;
-          flex-wrap: wrap;
-        }
-
-        .search-input {
-          flex: 1;
-          min-width: 200px;
-          padding: 10px 16px;
-          border: 1.5px solid rgba(96,8,18,0.15);
+        .mpg-search {
+          width: 100%;
+          box-sizing: border-box;
+          padding: 10px 14px;
+          border: 1px solid rgba(96,8,18,0.15);
           border-radius: 10px;
           background: #fff;
           font-size: 14px;
           font-family: inherit;
           color: #1a0e08;
-          -webkit-appearance: none;
         }
+        .mpg-search:focus { outline: none; border-color: #600812; box-shadow: 0 0 0 3px rgba(96,8,18,0.08); }
 
-        .search-input:focus {
-          outline: none;
-          border-color: #600812;
-          box-shadow: 0 0 0 3px rgba(96,8,18,0.1);
-        }
-
-        .filter-buttons {
+        .mpg-chips {
           display: flex;
-          gap: 8px;
-          flex-wrap: wrap;
+          gap: 6px;
+          overflow-x: auto;
+          -webkit-overflow-scrolling: touch;
         }
+        .mpg-chips::-webkit-scrollbar { display: none; }
 
-        .filter-btn {
-          padding: 8px 16px;
+        .mpg-chip {
+          flex-shrink: 0;
           border: 1px solid rgba(96,8,18,0.15);
           background: #fff;
-          border-radius: 8px;
-          cursor: pointer;
-          font-weight: 600;
-          font-size: 14px;
-          font-family: inherit;
           color: #1a0e08;
+          padding: 6px 12px;
+          border-radius: 999px;
+          font-size: 12px;
+          font-weight: 600;
+          cursor: pointer;
+          font-family: inherit;
+          white-space: nowrap;
         }
-
-        .filter-btn:hover {
-          background: rgba(96,8,18,0.05);
-        }
-
-        .filter-btn.active {
-          background: #600812;
-          color: #fff;
-          border-color: #600812;
-        }
-
-        .devices-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-          gap: 16px;
-        }
+        .mpg-chip.active { background: rgba(96,8,18,0.08); border-color: #600812; color: #600812; }
 
         .device-card {
           background: #fff;
@@ -2065,56 +1928,6 @@ export default function MPG() {
         }
 
         @media (max-width: 768px) {
-          .action-toolbar {
-            flex-wrap: nowrap;
-            overflow-x: auto;
-            overflow-y: hidden;
-            justify-content: flex-start;
-            gap: 0.25rem;
-            padding: 0.3rem 0.6rem;
-            max-width: 100vw;
-            box-sizing: border-box;
-          }
-          .action-toolbar::-webkit-scrollbar { display: none; }
-
-          .action-btn {
-            flex-shrink: 0;
-            min-width: 36px;
-            height: 36px;
-            padding: 0.3rem;
-          }
-          .action-btn svg { width: 15px; height: 15px; }
-
-          .content {
-            padding-top: calc(env(safe-area-inset-top) + 108px);
-            padding-left: 10px;
-            padding-right: 10px;
-            padding-bottom: 72px;
-            overflow-x: hidden;
-          }
-
-          .stats-grid {
-            grid-template-columns: repeat(2, 1fr);
-            gap: 10px;
-          }
-
-          .filter-bar {
-            flex-direction: column;
-            gap: 8px;
-          }
-
-          .filter-buttons {
-            width: 100%;
-            flex-wrap: wrap;
-          }
-
-          .filter-btn { flex: 1; }
-
-          .devices-grid {
-            grid-template-columns: 1fr;
-            gap: 10px;
-          }
-
           .modal {
             align-items: flex-end;
             padding: 0;
@@ -2149,6 +1962,6 @@ export default function MPG() {
           .checklist-editor { max-height: 200px; }
         }
       `}</style>
-    </>
+    </div>
   )
 }
