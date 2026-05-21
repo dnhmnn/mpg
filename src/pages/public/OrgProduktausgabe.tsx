@@ -297,7 +297,7 @@ export default function OrgProduktausgabe() {
                   </div>
                   {pos.item_id ? (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#fff', border: '1.5px solid rgba(96,8,18,0.15)', borderRadius: 10, padding: '10px 12px' }}>
-                      <span style={{ flex: 1, fontWeight: 700, fontStyle: 'italic', fontSize: 14, color: '#1a0e08', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{pos.name}</span>
+                      <span style={{ flex: 1, fontWeight: 700, fontStyle: 'italic', fontSize: 14, color: '#1a0e08', wordBreak: 'break-word' }}>{pos.name}</span>
                       <span style={{ fontSize: 12, fontStyle: 'italic', color: 'var(--warm-gray)', flexShrink: 0 }}>{pos.unit}</span>
                       <button type="button" onClick={() => clearPos(i)}
                         style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--warm-gray)', fontSize: 20, lineHeight: 1, padding: '0 2px', flexShrink: 0 }}>×</button>
