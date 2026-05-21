@@ -270,10 +270,7 @@ export default function Hub() {
       } as React.CSSProperties}>
         <div style={{ height: 60, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
-            {!logoError
-              ? <img src="/logo.png" alt="Responda" onError={() => setLogoError(true)} style={{ height: 34, width: 34, objectFit: 'contain' }} />
-              : <div style={{ width: 34, height: 34, borderRadius: '50%', background: '#600812', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><span style={{ color: '#fff', fontWeight: 700, fontSize: 13 }}>R</span></div>
-            }
+            <img src="/logoklein.svg" alt="Responda" style={{ height: 34, width: 34, objectFit: 'contain' }} />
           </div>
           <div style={{ flex: 1, textAlign: 'center', padding: '0 12px' }}>
             <div style={{ fontWeight: 700, fontSize: 15, letterSpacing: '-0.01em', color: '#1a0e08', lineHeight: 1.2 }}>
