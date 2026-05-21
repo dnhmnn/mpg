@@ -79,6 +79,7 @@ export default function Hub() {
   const [showAppsModal, setShowAppsModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
   const [showWidgetsModal, setShowWidgetsModal] = useState(false)
+  const [profileSheetOpen, setProfileSheetOpen] = useState(false)
 
   const [sheetOpen, setSheetOpen] = useState(false)
   const [editingShortcuts, setEditingShortcuts] = useState(false)
@@ -89,6 +90,13 @@ export default function Hub() {
     } catch { return PREDEFINED_SHORTCUTS.map(s => s.id) }
   })
   const touchStartY = useRef(0)
+  const installPromptRef = useRef<any>(null)
+
+  useEffect(() => {
+    const handler = (e: Event) => { e.preventDefault(); installPromptRef.current = e }
+    window.addEventListener('beforeinstallprompt', handler)
+    return () => window.removeEventListener('beforeinstallprompt', handler)
+  }, [])
 
   function saveEnabledShortcuts(ids: string[]) {
     setEnabledShortcuts(ids)
@@ -281,7 +289,7 @@ export default function Hub() {
             </div>
           </div>
           <button
-            onClick={() => navigate('/settings')}
+            onClick={() => setProfileSheetOpen(true)}
             style={{ width: 34, height: 34, borderRadius: '50%', border: '1.5px solid #600812', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 12, color: '#600812', cursor: 'pointer', flexShrink: 0, fontFamily: 'inherit' } as React.CSSProperties}
           >
             {initials(user?.name || user?.email)}
@@ -433,6 +441,93 @@ export default function Hub() {
           </div>
         </div>
       </div>
+
+      {/* Profile bottom sheet */}
+      {(() => {
+        const roleLabels: Record<string, string> = {
+          mpg: 'MPG-Beauftragter', lager: 'Lagerwart', ausbildung: 'Ausbilder',
+          qm: 'Qualitätsmanagement', benutzer: 'Benutzer'
+        }
+        const roleLabel = user?.supervisor ? 'Supervisor' : (roleLabels[user?.role || ''] || user?.role || 'Benutzer')
+
+        async function handleInstall() {
+          if (installPromptRef.current) {
+            installPromptRef.current.prompt()
+            await installPromptRef.current.userChoice
+            installPromptRef.current = null
+          } else {
+            alert('Öffne das Teilen-Menü in Safari und tippe auf „Zum Home-Bildschirm".')
+          }
+        }
+
+        return (
+          <div
+            style={{ position: 'fixed', inset: 0, zIndex: 600, background: profileSheetOpen ? 'rgba(26,14,8,0.5)' : 'transparent', pointerEvents: profileSheetOpen ? 'all' : 'none', transition: 'background .3s' } as React.CSSProperties}
+            onClick={() => setProfileSheetOpen(false)}
+          >
+            <div
+              style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: '#fff', borderRadius: '22px 22px 0 0', transform: profileSheetOpen ? 'translateY(0)' : 'translateY(100%)', transition: 'transform .38s cubic-bezier(0.32,0.72,0,1)', overflow: 'hidden', display: 'flex', flexDirection: 'column' } as React.CSSProperties}
+              onClick={e => e.stopPropagation()}
+            >
+              <div style={{ width: 36, height: 3, borderRadius: 99, background: 'rgba(96,8,18,0.15)', margin: '12px auto 0', flexShrink: 0 }} />
+              <div style={{ overflowY: 'auto', padding: '16px 20px calc(24px + env(safe-area-inset-bottom))' }}>
+
+                {/* Abmelden */}
+                <button
+                  onClick={() => { logout(); setProfileSheetOpen(false) }}
+                  style={{ width: '100%', background: 'rgba(220,38,38,0.06)', border: '0.5px solid rgba(220,38,38,0.18)', borderRadius: 12, padding: '14px', color: '#dc2626', fontWeight: 700, fontSize: 15, cursor: 'pointer', fontFamily: 'inherit', marginBottom: 16 } as React.CSSProperties}
+                >
+                  Abmelden
+                </button>
+
+                {/* User info */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px', background: 'var(--warm-bg)', borderRadius: 12, marginBottom: 20 }}>
+                  <div style={{ width: 48, height: 48, borderRadius: '50%', border: '2px solid #600812', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 16, color: '#600812', flexShrink: 0 }}>
+                    {initials(user?.name || user?.email)}
+                  </div>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontWeight: 700, fontStyle: 'italic', fontSize: 15, color: '#1a0e08', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.name || user?.email?.split('@')[0]}</div>
+                    <div style={{ fontSize: 11, color: 'var(--warm-gray)', fontStyle: 'italic', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.email}</div>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.1em', marginTop: 5, background: 'rgba(96,8,18,0.07)', borderRadius: 99, padding: '2px 8px', display: 'inline-block' }}>{roleLabel}</div>
+                  </div>
+                </div>
+
+                {/* Ausweis */}
+                <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 12 }}>Ausweis</div>
+                <div style={{ background: '#600812', borderRadius: 16, padding: '22px 20px 20px', position: 'relative', overflow: 'hidden', marginBottom: 12 }}>
+                  <div style={{ position: 'absolute', top: -24, right: -24, width: 130, height: 130, borderRadius: '50%', background: 'rgba(255,255,255,0.06)', pointerEvents: 'none' }} />
+                  <div style={{ position: 'absolute', bottom: -30, left: -10, width: 90, height: 90, borderRadius: '50%', background: 'rgba(255,255,255,0.04)', pointerEvents: 'none' }} />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 18 }}>
+                    <div>
+                      <div style={{ fontSize: 9, fontWeight: 700, color: 'rgba(253,232,216,0.55)', textTransform: 'uppercase', letterSpacing: '0.2em' }}>Responda</div>
+                      <div style={{ fontSize: 11, color: 'rgba(253,232,216,0.75)', fontStyle: 'italic', marginTop: 3 }}>{user?.organization_name || ''}</div>
+                    </div>
+                    <img src="/logoklein.svg" alt="" style={{ height: 26, opacity: 0.4 }} />
+                  </div>
+                  <div style={{ fontSize: 24, fontWeight: 800, fontStyle: 'italic', color: '#fde8d8', letterSpacing: '-0.01em', marginBottom: 6, lineHeight: 1.1 }}>
+                    {user?.name || user?.email?.split('@')[0]}
+                  </div>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: 'rgba(253,232,216,0.65)', textTransform: 'uppercase', letterSpacing: '0.14em' }}>
+                    {roleLabel}
+                  </div>
+                </div>
+
+                {/* Add to home screen */}
+                <button
+                  onClick={handleInstall}
+                  style={{ width: '100%', background: 'var(--warm-bg)', border: '0.5px solid rgba(96,8,18,0.15)', borderRadius: 12, padding: '13px 16px', color: '#1a0e08', fontWeight: 600, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 } as React.CSSProperties}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#600812" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 5v14M5 12l7-7 7 7"/>
+                  </svg>
+                  Zum Homebildschirm hinzufügen
+                </button>
+
+              </div>
+            </div>
+          </div>
+        )
+      })()}
     </div>
   )
 }
