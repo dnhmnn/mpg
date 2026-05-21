@@ -93,8 +93,9 @@ export default function Login() {
       `}</style>
 
       {/* Logo */}
-      <Link to="/" style={{ textDecoration: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, marginBottom: 36 }}>
+      <Link to="/" style={{ textDecoration: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, marginBottom: 36 }}>
         <img src="/logo.svg" alt="Responda" width="120" height="120" />
+        <span style={{ fontWeight: 700, fontSize: '1.4rem', letterSpacing: '-0.01em', color: '#1a0e08' }}>Responda</span>
       </Link>
 
       {/* Card */}
