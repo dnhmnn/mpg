@@ -176,18 +176,31 @@ export default function Einsaetze() {
       setSetupLog(prev => [...prev, { text, ok }])
 
     try {
-      // 1. Admin-Login
+      // 1. Admin-Login (PocketBase v0.23+ uses _superusers, older uses /admins)
       log('Anmeldung läuft…', true)
-      const authRes = await fetch('https://api.responda.systems/api/admins/auth-with-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ identity: setupEmail.trim(), password: setupPassword }),
-      })
-      if (!authRes.ok) {
-        const err = await authRes.json().catch(() => ({}))
-        throw new Error(err?.message || 'E-Mail oder Passwort falsch')
+      let token = ''
+      for (const endpoint of [
+        'https://api.responda.systems/api/collections/_superusers/auth-with-password',
+        'https://api.responda.systems/api/admins/auth-with-password',
+      ]) {
+        const authRes = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ identity: setupEmail.trim(), password: setupPassword }),
+        })
+        if (authRes.ok) {
+          const data = await authRes.json()
+          token = data.token
+          break
+        }
+        if (authRes.status !== 404) {
+          const err = await authRes.json().catch(() => ({}))
+          throw new Error(err?.message || 'E-Mail oder Passwort falsch')
+        }
       }
-      const { token } = await authRes.json()
+      if (!token) throw new Error('E-Mail oder Passwort falsch')
+      localStorage.setItem('alamos_token', token)
+      setSetupAdminToken(token)
       localStorage.setItem('alamos_token', token)
       setSetupAdminToken(token)
       log('Anmeldung erfolgreich', true)
