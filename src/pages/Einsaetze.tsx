@@ -804,11 +804,8 @@ export default function Einsaetze() {
       {/* ── Alamos Konfiguration ── */}
       {setupOpen && (() => {
         const orgId      = user?.organization_id || ''
-        const token      = import.meta.env.VITE_ALAMOS_TOKEN || ''
-        const WEBHOOK_URL = 'https://api.responda.systems/api/collections/einsaetze/records'
-        const jsonBody    = `{\n  "einsatz_nr":      "{{EinsatzNummer}}",\n  "stichwort":       "{{Stichwort}}",\n  "adresse":         "{{Adresse}}",\n  "datum":           "{{Alarmzeit}}",\n  "status":          "aktiv",\n  "organization_id": "${orgId}",\n  "alamos_id":       "{{ExterneId}}"\n}`
-        const curlTest    = `curl -X POST ${WEBHOOK_URL} \\\n${token ? `  -H "Authorization: Bearer ${token}" \\\n` : ''}  -H "Content-Type: application/json" \\\n  -d '{"einsatz_nr":"TEST-001","stichwort":"RD B3 Test","adresse":"Musterstr. 1, 80331 München","datum":"${new Date().toISOString()}","status":"aktiv","organization_id":"${orgId}"}'`
-        const configured  = true
+        const WEBHOOK_URL = `https://api.responda.systems/alamos/${orgId}`
+        const curlTest    = `curl -X POST "${WEBHOOK_URL}" \\\n  -H "Content-Type: application/json" \\\n  -d '{"unit":"TEST-001","keyword":"RD B3 Test"}'`
 
         return (
           <>
@@ -822,9 +819,7 @@ export default function Einsaetze() {
               <div style={{ padding: '4px 20px 14px', borderBottom: '0.5px solid rgba(96,8,18,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
                 <div>
                   <div style={{ fontWeight: 700, fontSize: 17, color: '#1a0e08' }}>Alamos-Konfiguration</div>
-                  <div style={{ fontSize: 12, color: 'var(--warm-gray)', fontStyle: 'italic', marginTop: 2 }}>
-                    Diese Werte in Alamos eintragen
-                  </div>
+                  <div style={{ fontSize: 12, color: 'var(--warm-gray)', fontStyle: 'italic', marginTop: 2 }}>Diese URL in Alamos eintragen</div>
                 </div>
                 <button onClick={() => setSetupOpen(false)} style={{ background: 'rgba(96,8,18,0.06)', border: 'none', borderRadius: '50%', width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--warm-gray)' }}>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
@@ -832,38 +827,35 @@ export default function Einsaetze() {
               </div>
 
               <div style={{ flex: 1, overflowY: 'auto', padding: '20px 20px 8px', display: 'flex', flexDirection: 'column', gap: 16 }}>
-                  <>
-                    <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 12, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="20 6 9 17 4 12"/></svg>
-                      <div style={{ fontWeight: 700, fontSize: 13, color: '#166534' }}>Bereit — Werte in Alamos eintragen</div>
-                    </div>
 
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                      <div>
-                        <div style={LABEL}>1. Webhook-URL</div>
-                        <WebhookBox text={WEBHOOK_URL} label="Webhook-URL" onCopy={copyText} />
-                      </div>
-                      {token && (
-                        <div>
-                          <div style={LABEL}>2. Authorization-Header</div>
-                          <WebhookBox text={`Bearer ${token}`} label="Authorization-Header" onCopy={copyText} mono />
-                        </div>
-                      )}
-                      <div>
-                        <div style={LABEL}>{token ? '3.' : '2.'} JSON-Body</div>
-                        <div style={{ fontSize: 11, color: 'var(--warm-gray)', fontStyle: 'italic', marginBottom: 6 }}>
-                          Die <code style={{ background: 'rgba(96,8,18,0.06)', padding: '1px 4px', borderRadius: 3, fontStyle: 'normal' }}>{'{{Platzhalter}}'}</code> sind Alamos-Variablen — Namen können in deiner Version leicht abweichen.
-                        </div>
-                        <WebhookBox text={jsonBody} label="JSON-Body" onCopy={copyText} mono />
-                      </div>
-                      <div style={{ height: 1, background: 'rgba(96,8,18,0.08)' }} />
-                      <div>
-                        <div style={LABEL}>Test-Befehl (optional)</div>
-                        <div style={{ fontSize: 11, color: 'var(--warm-gray)', fontStyle: 'italic', marginBottom: 6 }}>Im Terminal ausführen — Einsatz erscheint sofort in der App.</div>
-                        <WebhookBox text={curlTest} label="Test-Befehl" onCopy={copyText} mono />
-                      </div>
+                {/* Alamos settings checklist */}
+                <div style={{ background: 'rgba(96,8,18,0.04)', borderRadius: 12, padding: '14px 16px', fontSize: 13, color: '#1a0e08', lineHeight: 1.8 }}>
+                  <div style={{ fontWeight: 700, marginBottom: 6 }}>In Alamos einstellen:</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 3, color: 'var(--warm-gray)', fontStyle: 'italic' }}>
+                    <span>✓ Einheitenkennung übertragen: <strong style={{ fontStyle: 'normal', color: '#1a0e08' }}>Ein</strong></span>
+                    <span>✓ Stichwort übertragen: <strong style={{ fontStyle: 'normal', color: '#1a0e08' }}>Ein</strong></span>
+                    <span>✓ HTTP POST statt GET: <strong style={{ fontStyle: 'normal', color: '#1a0e08' }}>Ein</strong></span>
+                    <span>✓ Kein Authorization-Header nötig</span>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                  <div>
+                    <div style={LABEL}>Webhook-URL</div>
+                    <div style={{ fontSize: 11, color: 'var(--warm-gray)', fontStyle: 'italic', marginBottom: 6 }}>
+                      Enthält bereits deine Organisations-ID — einfach kopieren und in Alamos einfügen.
                     </div>
-                  </>
+                    <WebhookBox text={WEBHOOK_URL} label="Webhook-URL" onCopy={copyText} />
+                  </div>
+
+                  <div style={{ height: 1, background: 'rgba(96,8,18,0.08)' }} />
+
+                  <div>
+                    <div style={LABEL}>Test-Befehl (optional)</div>
+                    <div style={{ fontSize: 11, color: 'var(--warm-gray)', fontStyle: 'italic', marginBottom: 6 }}>Im Terminal ausführen — Einsatz erscheint sofort in der App.</div>
+                    <WebhookBox text={curlTest} label="Test-Befehl" onCopy={copyText} mono />
+                  </div>
+                </div>
               </div>
             </div>
           </>
