@@ -133,9 +133,7 @@ export default function Einsaetze() {
   const [newModal, setNewModal]             = useState(false)
   const [newForm, setNewForm]               = useState({ einsatz_nr: '', stichwort: '', adresse: '', datum: nowLocalISO() })
   // Alamos Setup
-  const [setupOpen, setSetupOpen]     = useState(false)
-  const [setupApiKey, setSetupApiKey] = useState(() => localStorage.getItem('alamos_token') || '')
-  const [setupInput, setSetupInput]   = useState('')
+  const [setupOpen, setSetupOpen] = useState(false)
 
   // Map refs
   const mapDivRef   = useRef<HTMLDivElement>(null)
@@ -156,17 +154,7 @@ export default function Einsaetze() {
     }
   }
 
-  function openSetup() {
-    setSetupInput(setupApiKey)
-    setSetupOpen(true)
-  }
-
-  function saveApiKey() {
-    const key = setupInput.trim()
-    localStorage.setItem('alamos_token', key)
-    setSetupApiKey(key)
-    showMsg('API-Key gespeichert', 'success')
-  }
+  function openSetup() { setSetupOpen(true) }
 
   // ── Load functions ────────────────────────────────────────────────────────
   async function loadEinsaetze() {
@@ -439,7 +427,7 @@ export default function Einsaetze() {
             </div>
           </div>
           <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-            <button onClick={openSetup} title="Alamos Webhook einrichten" style={{ background: setupApiKey ? 'rgba(22,163,74,0.12)' : 'rgba(96,8,18,0.08)', border: 'none', borderRadius: 8, width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: setupApiKey ? '#16a34a' : '#600812' }}>
+            <button onClick={openSetup} title="Alamos Webhook-Konfiguration" style={{ background: 'rgba(96,8,18,0.08)', border: 'none', borderRadius: 8, width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#600812' }}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
             </button>
             <button onClick={() => setNewModal(true)} style={{ background: '#600812', border: 'none', borderRadius: 8, width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#fff' }}>
@@ -813,13 +801,16 @@ export default function Einsaetze() {
         </>
       )}
 
-      {/* ── Alamos Setup ── */}
+      {/* ── Alamos Konfiguration ── */}
       {setupOpen && (() => {
         const orgId      = user?.organization_id || ''
+        const token      = import.meta.env.VITE_ALAMOS_TOKEN || ''
         const WEBHOOK_URL = 'https://api.responda.systems/api/collections/einsaetze/records'
-        const authHeader  = setupApiKey ? `Bearer ${setupApiKey}` : 'Bearer <API-KEY>'
+        const authHeader  = `Bearer ${token}`
         const jsonBody    = `{\n  "einsatz_nr":      "{{EinsatzNummer}}",\n  "stichwort":       "{{Stichwort}}",\n  "adresse":         "{{Adresse}}",\n  "datum":           "{{Alarmzeit}}",\n  "status":          "aktiv",\n  "organization_id": "${orgId}",\n  "alamos_id":       "{{ExterneId}}"\n}`
         const curlTest    = `curl -X POST ${WEBHOOK_URL} \\\n  -H "Authorization: ${authHeader}" \\\n  -H "Content-Type: application/json" \\\n  -d '{"einsatz_nr":"TEST-001","stichwort":"RD B3 Test","adresse":"Musterstr. 1, 80331 München","datum":"${new Date().toISOString()}","status":"aktiv","organization_id":"${orgId}"}'`
+        const configured  = !!token
+
         return (
           <>
             <div onClick={() => setSetupOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(26,14,8,0.5)', zIndex: 300 }} />
@@ -831,56 +822,27 @@ export default function Einsaetze() {
 
               <div style={{ padding: '4px 20px 14px', borderBottom: '0.5px solid rgba(96,8,18,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
                 <div>
-                  <div style={{ fontWeight: 700, fontSize: 17, color: '#1a0e08' }}>Alamos Einrichten</div>
-                  <div style={{ fontSize: 12, color: 'var(--warm-gray)', fontStyle: 'italic', marginTop: 2 }}>Einmalig — API-Key aus PocketBase einfügen</div>
+                  <div style={{ fontWeight: 700, fontSize: 17, color: '#1a0e08' }}>Alamos-Konfiguration</div>
+                  <div style={{ fontSize: 12, color: 'var(--warm-gray)', fontStyle: 'italic', marginTop: 2 }}>
+                    {configured ? 'Diese Werte in Alamos eintragen' : 'Noch nicht konfiguriert'}
+                  </div>
                 </div>
                 <button onClick={() => setSetupOpen(false)} style={{ background: 'rgba(96,8,18,0.06)', border: 'none', borderRadius: '50%', width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--warm-gray)' }}>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                 </button>
               </div>
 
-              <div style={{ flex: 1, overflowY: 'auto', padding: '20px 20px 8px', display: 'flex', flexDirection: 'column', gap: 18 }}>
-
-                {/* Step 1: API Key */}
-                <div style={{ background: 'rgba(96,8,18,0.04)', borderRadius: 12, padding: '14px 16px', fontSize: 13, color: '#1a0e08', lineHeight: 1.7 }}>
-                  <div style={{ fontWeight: 700, marginBottom: 6 }}>So erhältst du den API-Key:</div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 3, color: 'var(--warm-gray)', fontStyle: 'italic' }}>
-                    <span>1. PocketBase Admin-Panel öffnen</span>
-                    <span>2. Settings → API Keys → <strong style={{ fontStyle: 'normal', color: '#1a0e08' }}>New key</strong></span>
-                    <span>3. Namen eingeben (z.B. "Alamos"), speichern</span>
-                    <span>4. Den angezeigten Key hier einfügen</span>
+              <div style={{ flex: 1, overflowY: 'auto', padding: '20px 20px 8px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+                {!configured ? (
+                  <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 12, padding: '14px 16px', fontSize: 13, color: '#b91c1c', lineHeight: 1.6 }}>
+                    <strong>Noch nicht eingerichtet.</strong><br />
+                    <span style={{ fontStyle: 'italic', color: 'var(--warm-gray)' }}>Bitte den Systemadministrator kontaktieren.</span>
                   </div>
-                </div>
-
-                <div>
-                  <div style={LABEL}>PocketBase API-Key</div>
-                  <input
-                    type="text"
-                    value={setupInput}
-                    onChange={e => setSetupInput(e.target.value)}
-                    placeholder="pb_…"
-                    style={{ ...INPUT, fontFamily: 'monospace', fontSize: 13 }}
-                    autoComplete="off"
-                    autoCorrect="off"
-                    spellCheck={false}
-                  />
-                </div>
-
-                <button
-                  onClick={saveApiKey}
-                  disabled={!setupInput.trim() || setupInput.trim() === setupApiKey}
-                  style={{ ...BTN_PRIMARY, padding: '14px', fontSize: 15, borderRadius: 12, opacity: (!setupInput.trim() || setupInput.trim() === setupApiKey) ? 0.4 : 1 }}
-                >
-                  {setupApiKey ? 'API-Key aktualisieren' : 'API-Key speichern'}
-                </button>
-
-                {/* Config (shown when key is set) */}
-                {setupApiKey && (
+                ) : (
                   <>
-                    <div style={{ height: 1, background: 'rgba(96,8,18,0.08)' }} />
                     <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 12, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="20 6 9 17 4 12"/></svg>
-                      <div style={{ fontWeight: 700, fontSize: 13, color: '#166534' }}>Alamos-Konfiguration bereit</div>
+                      <div style={{ fontWeight: 700, fontSize: 13, color: '#166534' }}>Bereit — Werte in Alamos eintragen</div>
                     </div>
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -906,13 +868,6 @@ export default function Einsaetze() {
                         <WebhookBox text={curlTest} label="Test-Befehl" onCopy={copyText} mono />
                       </div>
                     </div>
-
-                    <button
-                      onClick={() => { localStorage.removeItem('alamos_token'); setSetupApiKey(''); setSetupInput(''); showMsg('API-Key gelöscht', 'success') }}
-                      style={{ ...BTN_SECONDARY, fontSize: 12, padding: '8px', marginTop: 4 }}
-                    >
-                      API-Key entfernen
-                    </button>
                   </>
                 )}
               </div>
