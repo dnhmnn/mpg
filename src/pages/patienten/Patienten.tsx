@@ -488,58 +488,61 @@ export default function Patienten() {
         .pat-toolbar {
           background: #fff;
           border-bottom: 0.5px solid rgba(96,8,18,0.1);
-          padding: 0 1rem;
-          display: flex;
-          gap: 0;
-          align-items: stretch;
           position: sticky;
           top: 60px;
           z-index: 99;
-          min-height: 44px;
+          overflow-x: auto;
+          -webkit-overflow-scrolling: touch;
+          display: flex;
+          padding-left: max(8px, env(safe-area-inset-left));
+          padding-right: max(8px, env(safe-area-inset-right));
+          min-width: max-content;
         }
+        .pat-toolbar::-webkit-scrollbar { display: none; }
 
         .pat-tab-btn {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          gap: 3px;
+          flex-shrink: 0;
+          padding: 6px 12px 0;
+          height: 50px;
           border: none;
           border-bottom: 2px solid transparent;
-          background: transparent;
+          background: none;
           color: var(--warm-gray);
-          padding: 0 0.75rem;
           cursor: pointer;
-          transition: color 0.15s, border-color 0.15s;
-          display: inline-flex;
-          align-items: center;
-          gap: 5px;
           font-family: inherit;
-          font-size: 12px;
-          font-weight: 700;
-          text-transform: uppercase;
-          letter-spacing: 0.06em;
           white-space: nowrap;
-          flex-shrink: 0;
+          position: relative;
+          transition: color 0.15s, border-color 0.15s;
         }
         .pat-tab-btn:hover { color: #1a0e08; }
         .pat-tab-btn.active {
           color: #600812;
           border-bottom-color: #600812;
         }
+        .pat-tab-btn .pat-tab-label {
+          font-size: 9px;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.08em;
+        }
         .pat-tab-btn.primary {
           background: #600812;
           color: #fff;
           border-bottom-color: transparent;
           border-radius: 8px;
-          margin: auto 0 auto auto;
+          margin: auto 4px auto auto;
           padding: 0 14px;
           height: 32px;
-          font-size: 11px;
+          gap: 0;
+          flex-direction: row;
+          align-self: center;
         }
         .pat-tab-btn.primary:hover { opacity: 0.88; }
-
-        @media (max-width: 560px) {
-          .pat-toolbar { overflow-x: auto; -webkit-overflow-scrolling: touch; padding: 0 0.5rem; }
-          .pat-toolbar::-webkit-scrollbar { display: none; }
-          .pat-tab-btn { padding: 0 0.5rem; flex-shrink: 0; }
-          .pat-tab-label { display: none; }
-        }
 
         .pat-content {
           max-width: 1100px;
@@ -763,7 +766,7 @@ export default function Patienten() {
           className={`pat-tab-btn${activeTab === 'patienten' ? ' active' : ''}`}
           onClick={() => setActiveTab('patienten')}
         >
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
             <polyline points="14 2 14 8 20 8"/>
           </svg>
@@ -773,7 +776,7 @@ export default function Patienten() {
           className={`pat-tab-btn${activeTab === 'nach' ? ' active' : ''}`}
           onClick={() => setActiveTab('nach')}
         >
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <circle cx="12" cy="12" r="10"/>
             <line x1="12" y1="8" x2="12" y2="12"/>
             <line x1="12" y1="16" x2="12.01" y2="16"/>
@@ -783,15 +786,14 @@ export default function Patienten() {
         <button
           className={`pat-tab-btn${activeTab === 'archiv' ? ' active' : ''}`}
           onClick={() => setActiveTab('archiv')}
-          style={{ position: 'relative' }}
         >
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/>
             <line x1="10" y1="12" x2="14" y2="12"/>
           </svg>
           <span className="pat-tab-label">Archiv{totalArchiv > 0 ? ` (${totalArchiv})` : ''}</span>
           {oldCount > 0 && (
-            <span style={{ position: 'absolute', top: '6px', right: '2px', background: '#d97706', color: '#fff', borderRadius: '50%', width: '13px', height: '13px', fontSize: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>
+            <span style={{ position: 'absolute', top: 4, right: 6, background: '#d97706', color: '#fff', borderRadius: 8, padding: '1px 4px', fontSize: 9, fontWeight: 700 }}>
               {oldCount > 9 ? '9+' : oldCount}
             </span>
           )}
@@ -800,17 +802,17 @@ export default function Patienten() {
           className={`pat-tab-btn${activeTab === 'audit' ? ' active' : ''}`}
           onClick={() => setActiveTab('audit')}
         >
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
           </svg>
-          <span className="pat-tab-label">Audit-Log</span>
+          <span className="pat-tab-label">Audit</span>
         </button>
         {user?.supervisor && (
           <button
             className={`pat-tab-btn${activeTab === 'qrcodes' ? ' active' : ''}`}
             onClick={() => setActiveTab('qrcodes')}
           >
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
               <path d="M14 14h3v3h-3zM17 17h3M17 20h3M20 17v3"/>
             </svg>
@@ -822,7 +824,7 @@ export default function Patienten() {
           onClick={() => { setNachForm({ ...EMPTY_NACH }); setShowNach(true) }}
           title="Neue Nacherfassung"
         >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
             <line x1="12" y1="5" x2="12" y2="19"/>
             <line x1="5" y1="12" x2="19" y2="12"/>
           </svg>
