@@ -1,0 +1,917 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Responda — Designkonzept</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --red:      #600812;
+    --red-dark: #3d0408;
+    --text:     #1a0e08;
+    --gray:     #8a7a68;
+    --bg:       #faf9f7;
+    --cream:    #fde8d8;
+  }
+
+  body {
+    font-family: 'Atkinson Hyperlegible', sans-serif;
+    background: #fff;
+    color: var(--text);
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* ── PAGE BREAKS ── */
+  .page {
+    width: 210mm;
+    min-height: 297mm;
+    margin: 0 auto;
+    position: relative;
+    overflow: hidden;
+    background: #fff;
+    page-break-after: always;
+  }
+
+  @media print {
+    body { margin: 0; }
+    .page { margin: 0; page-break-after: always; }
+    .no-print { display: none; }
+  }
+
+  @media screen {
+    body { background: #e8e4df; padding: 40px 0; }
+    .page { box-shadow: 0 8px 40px rgba(0,0,0,0.15); margin-bottom: 32px; }
+  }
+
+  /* ── COVER ── */
+  .cover {
+    background: var(--red-dark);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 60px 64px;
+  }
+
+  .cover-deco {
+    position: absolute;
+    top: -120px; right: -120px;
+    width: 480px; height: 480px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.03);
+  }
+  .cover-deco2 {
+    position: absolute;
+    bottom: -80px; left: -80px;
+    width: 320px; height: 320px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.025);
+  }
+
+  .cover-top { position: relative; z-index: 1; }
+  .cover-logo {
+    display: flex; align-items: center; gap: 14px; margin-bottom: 80px;
+  }
+  .cover-logo-circle {
+    width: 44px; height: 44px; border-radius: 50%;
+    background: rgba(253,232,216,0.12);
+    border: 1.5px solid rgba(253,232,216,0.25);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .cover-logo-name {
+    font-size: 13px; font-weight: 700; letter-spacing: 0.18em;
+    text-transform: uppercase; color: rgba(253,232,216,0.6);
+  }
+
+  .cover-eyebrow {
+    font-size: 11px; font-weight: 700; letter-spacing: 0.22em;
+    text-transform: uppercase; color: rgba(253,232,216,0.45);
+    margin-bottom: 18px;
+  }
+  .cover-title {
+    font-size: 64px; font-weight: 800; font-style: italic;
+    line-height: 1; letter-spacing: -0.02em;
+    color: var(--cream);
+    margin-bottom: 10px;
+  }
+  .cover-subtitle {
+    font-size: 18px; font-style: italic; font-weight: 400;
+    color: rgba(253,232,216,0.55); margin-bottom: 48px;
+  }
+  .cover-rule {
+    width: 48px; height: 2px; background: rgba(253,232,216,0.3);
+    margin-bottom: 28px;
+  }
+  .cover-desc {
+    font-size: 14px; line-height: 1.7; color: rgba(253,232,216,0.65);
+    max-width: 440px;
+  }
+
+  .cover-bottom {
+    position: relative; z-index: 1;
+    display: flex; justify-content: space-between; align-items: flex-end;
+  }
+  .cover-date {
+    font-size: 11px; font-style: italic; color: rgba(253,232,216,0.35);
+  }
+  .cover-version {
+    font-size: 10px; font-weight: 700; letter-spacing: 0.14em;
+    text-transform: uppercase; color: rgba(253,232,216,0.3);
+  }
+
+  /* ── INNER PAGES ── */
+  .inner { padding: 60px 64px; display: flex; flex-direction: column; gap: 0; }
+
+  .page-header {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    margin-bottom: 52px; padding-bottom: 20px;
+    border-bottom: 0.5px solid rgba(96,8,18,0.1);
+  }
+  .page-label {
+    font-size: 9px; font-weight: 700; letter-spacing: 0.22em;
+    text-transform: uppercase; color: rgba(96,8,18,0.35);
+    margin-bottom: 6px;
+  }
+  .page-title {
+    font-size: 28px; font-weight: 800; font-style: italic;
+    color: var(--text); letter-spacing: -0.01em;
+  }
+  .page-number {
+    font-size: 11px; font-style: italic; color: rgba(96,8,18,0.3);
+    align-self: flex-end;
+  }
+
+  /* ── SECTION LABEL ── */
+  .section-label {
+    font-size: 9px; font-weight: 700; letter-spacing: 0.2em;
+    text-transform: uppercase; color: var(--red);
+    margin-bottom: 14px;
+  }
+
+  /* ── BODY TEXT ── */
+  .body-text {
+    font-size: 13px; line-height: 1.75; color: var(--text);
+  }
+  .body-text + .body-text { margin-top: 14px; }
+  em { font-style: italic; color: var(--red); }
+
+  /* ── PHILOSOPHY PAGE ── */
+  .philosophy-quote {
+    font-size: 26px; font-weight: 800; font-style: italic;
+    line-height: 1.25; letter-spacing: -0.01em;
+    color: var(--text); margin-bottom: 32px;
+    border-left: 3px solid var(--red);
+    padding-left: 24px;
+  }
+  .philosophy-grid {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 24px; margin-top: 36px;
+  }
+  .philosophy-card {
+    background: var(--bg);
+    border-radius: 12px;
+    padding: 22px 20px;
+    border-left: 3px solid var(--red);
+  }
+  .philosophy-card-title {
+    font-size: 10px; font-weight: 700; letter-spacing: 0.16em;
+    text-transform: uppercase; color: var(--red); margin-bottom: 10px;
+  }
+  .philosophy-card-text {
+    font-size: 12px; line-height: 1.65; color: var(--gray); font-style: italic;
+  }
+
+  /* ── COLOR PAGE ── */
+  .color-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;
+    margin-bottom: 32px;
+  }
+  .color-swatch {
+    border-radius: 12px; overflow: hidden;
+    box-shadow: 0 1px 8px rgba(0,0,0,0.08);
+  }
+  .color-block {
+    height: 88px;
+  }
+  .color-info {
+    background: #fff; padding: 12px 14px;
+    border-top: 0.5px solid rgba(96,8,18,0.08);
+  }
+  .color-name {
+    font-size: 11px; font-weight: 700; color: var(--text);
+    margin-bottom: 2px;
+  }
+  .color-hex {
+    font-size: 10px; font-style: italic; color: var(--gray);
+  }
+  .color-usage {
+    font-size: 10px; color: var(--gray); margin-top: 4px; line-height: 1.4;
+  }
+
+  /* ── TYPOGRAPHY PAGE ── */
+  .type-specimen {
+    margin-bottom: 32px;
+    padding: 28px 28px;
+    background: var(--bg);
+    border-radius: 12px;
+    border-left: 3px solid var(--red);
+  }
+  .type-label {
+    font-size: 9px; font-weight: 700; letter-spacing: 0.2em;
+    text-transform: uppercase; color: rgba(96,8,18,0.4); margin-bottom: 10px;
+  }
+  .type-display {
+    font-size: 48px; font-weight: 800; font-style: italic;
+    color: var(--red); line-height: 1; letter-spacing: -0.02em;
+  }
+  .type-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+  .type-table tr { border-bottom: 0.5px solid rgba(96,8,18,0.07); }
+  .type-table td {
+    padding: 10px 0; font-size: 12px; color: var(--text); vertical-align: middle;
+  }
+  .type-table td:first-child { color: var(--gray); font-style: italic; width: 44%; }
+  .type-table td:last-child { text-align: right; font-size: 10px; color: var(--gray); }
+
+  /* ── COMPONENTS PAGE ── */
+  .component-row { margin-bottom: 36px; }
+  .component-label {
+    font-size: 9px; font-weight: 700; letter-spacing: 0.2em;
+    text-transform: uppercase; color: var(--red); margin-bottom: 14px;
+  }
+
+  /* Masthead mockup */
+  .mockup-masthead {
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 1px 8px rgba(0,0,0,0.08);
+    overflow: hidden;
+    border: 0.5px solid rgba(96,8,18,0.08);
+  }
+  .mockup-masthead-inner {
+    height: 52px;
+    display: flex; align-items: center; padding: 0 18px; gap: 12px;
+    border-bottom: 0.5px solid rgba(96,8,18,0.1);
+  }
+  .mockup-chevron {
+    color: var(--red); font-size: 16px; font-weight: 300; line-height: 1;
+  }
+  .mockup-title-block { flex: 1; }
+  .mockup-title { font-size: 13px; font-weight: 700; color: var(--text); letter-spacing: -0.01em; }
+  .mockup-subtitle { font-size: 10px; font-style: italic; color: var(--gray); margin-top: 1px; }
+  .mockup-avatar {
+    width: 28px; height: 28px; border-radius: 50%;
+    border: 1.5px solid var(--red);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; font-weight: 700; color: var(--red);
+  }
+
+  /* Card mockup */
+  .mockup-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .mockup-card {
+    background: #fff; border-radius: 10px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+    padding: 14px 14px;
+    border-left: 3px solid var(--red);
+  }
+  .mockup-card-label { font-size: 8px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--red); margin-bottom: 4px; }
+  .mockup-card-name { font-size: 13px; font-weight: 700; font-style: italic; color: var(--text); margin-bottom: 3px; }
+  .mockup-card-meta { font-size: 10px; font-style: italic; color: var(--gray); }
+  .mockup-card-green { border-left-color: #16a34a; }
+  .mockup-card-green .mockup-card-label { color: #16a34a; }
+  .mockup-card-amber { border-left-color: #d97706; }
+  .mockup-card-amber .mockup-card-label { color: #d97706; }
+
+  /* Tab bar mockup */
+  .mockup-tabbar {
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 1px 8px rgba(0,0,0,0.08);
+    border: 0.5px solid rgba(96,8,18,0.08);
+    display: flex; align-items: stretch;
+    overflow: hidden; margin-top: 12px;
+  }
+  .mockup-tab {
+    flex: 1; display: flex; flex-direction: column; align-items: center;
+    justify-content: center; gap: 4px;
+    padding: 10px 0 8px;
+    font-size: 7px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+    color: var(--gray);
+    border-top: 2px solid transparent;
+  }
+  .mockup-tab.active { color: var(--red); border-top-color: var(--red); }
+  .mockup-tab-dot { width: 18px; height: 18px; border-radius: 4px; background: rgba(96,8,18,0.08); }
+  .mockup-tab.active .mockup-tab-dot { background: rgba(96,8,18,0.12); }
+
+  /* Stats mockup */
+  .mockup-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 12px; }
+  .mockup-stat {
+    background: #fff; border-radius: 10px; padding: 12px 10px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06); text-align: left;
+  }
+  .mockup-stat-label { font-size: 7px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--red); margin-bottom: 3px; }
+  .mockup-stat-num { font-size: 28px; font-weight: 800; color: var(--red); line-height: 1; }
+  .mockup-stat-desc { font-size: 8px; font-style: italic; color: var(--gray); margin-top: 3px; }
+  .mockup-stat.green .mockup-stat-label,
+  .mockup-stat.green .mockup-stat-num { color: #16a34a; }
+  .mockup-stat.amber .mockup-stat-label,
+  .mockup-stat.amber .mockup-stat-num { color: #d97706; }
+
+  /* ── MODULES PAGE ── */
+  .modules-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .module-card {
+    background: var(--bg); border-radius: 12px; padding: 20px 18px;
+    border-left: 3px solid var(--red);
+  }
+  .module-icon {
+    width: 36px; height: 36px; border-radius: 10px; background: var(--red);
+    display: flex; align-items: center; justify-content: center; margin-bottom: 12px;
+  }
+  .module-name { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+  .module-desc { font-size: 11px; font-style: italic; color: var(--gray); line-height: 1.5; }
+
+  /* ── BACK COVER ── */
+  .backcover {
+    background: var(--bg);
+    display: flex; flex-direction: column;
+    justify-content: center; align-items: center;
+    text-align: center; padding: 60px 64px;
+  }
+  .backcover-logo {
+    width: 64px; height: 64px; border-radius: 50%;
+    background: var(--red); display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 28px;
+  }
+  .backcover-name { font-size: 32px; font-weight: 800; font-style: italic; color: var(--text); margin-bottom: 10px; }
+  .backcover-tagline { font-size: 14px; font-style: italic; color: var(--gray); margin-bottom: 48px; }
+  .backcover-rule { width: 40px; height: 1px; background: rgba(96,8,18,0.2); margin: 0 auto 40px; }
+  .backcover-contact { font-size: 12px; color: var(--gray); line-height: 2; }
+  .backcover-contact strong { color: var(--text); font-style: italic; }
+
+  /* print button */
+  .print-btn {
+    position: fixed; bottom: 32px; right: 32px;
+    background: var(--red); color: #fff; border: none;
+    border-radius: 12px; padding: 14px 24px;
+    font-family: 'Atkinson Hyperlegible', sans-serif;
+    font-size: 13px; font-weight: 700; cursor: pointer;
+    box-shadow: 0 4px 20px rgba(96,8,18,0.35);
+    z-index: 999;
+  }
+</style>
+</head>
+<body>
+
+<!-- PRINT BUTTON (screen only) -->
+<button class="print-btn no-print" onclick="window.print()">Als PDF speichern</button>
+
+<!-- ── 1. COVER ────────────────────────────── -->
+<div class="page cover">
+  <div class="cover-deco"></div>
+  <div class="cover-deco2"></div>
+
+  <div class="cover-top">
+    <div class="cover-logo">
+      <div class="cover-logo-circle">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(253,232,216,0.7)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+        </svg>
+      </div>
+      <span class="cover-logo-name">Responda</span>
+    </div>
+
+    <div class="cover-eyebrow">Designkonzept · 2026</div>
+    <div class="cover-title">La Bella<br>Figura</div>
+    <div class="cover-subtitle">Designsprache für digitale Rettungsdienst-Software</div>
+    <div class="cover-rule"></div>
+    <div class="cover-desc">
+      Responda verfolgt ein konsequentes, editorial-getriebenes Designprinzip: Reduktion,
+      Eleganz und Lesbarkeit im Dienste der Einsatzkraft. Kein Spielzeug —
+      ein professionelles Werkzeug, das unter Druck funktioniert.
+    </div>
+  </div>
+
+  <div class="cover-bottom">
+    <div class="cover-date">Mai 2026 — Version 1.0</div>
+    <div class="cover-version">Vertraulich</div>
+  </div>
+</div>
+
+
+<!-- ── 2. PHILOSOPHIE ────────────────────────── -->
+<div class="page inner">
+  <div class="page-header">
+    <div>
+      <div class="page-label">Kapitel 01</div>
+      <div class="page-title">Philosophie</div>
+    </div>
+    <div class="page-number">02</div>
+  </div>
+
+  <div class="philosophy-quote">
+    „Gut gestaltete Software rettet Leben —<br>
+    weil sie nicht im Weg steht."
+  </div>
+
+  <div class="body-text">
+    Einsatzkräfte arbeiten unter extremem Druck, schlechten Lichtverhältnissen und auf engstem
+    Raum. Herkömmliche Software überwältigt mit Optionen, Farben und Komplexität.
+    <em>La Bella Figura</em> geht den entgegengesetzten Weg: maximale Klarheit bei minimalem
+    visuellen Rauschen.
+  </div>
+
+  <div class="body-text" style="margin-top: 16px;">
+    Die Designsprache orientiert sich an norditalienischen Editorialtraditionen — Corriere della Sera,
+    Ferrari-Dokumentationen, Milaneser Hochglanzpublikationen. Reduziert, würdevoll, nie verspielt.
+    Atkinson Hyperlegible als Schriftfamilie ist gezielt auf maximale Lesbarkeit auch für
+    Sehbeeinträchtigte ausgelegt.
+  </div>
+
+  <div class="philosophy-grid">
+    <div class="philosophy-card">
+      <div class="philosophy-card-title">Editorial</div>
+      <div class="philosophy-card-text">Typografie als primäres Gestaltungselement. Kursive Namen, große Zahlen, klare Hierarchie — wie eine Zeitung, die man sofort versteht.</div>
+    </div>
+    <div class="philosophy-card">
+      <div class="philosophy-card-title">Reduziert</div>
+      <div class="philosophy-card-text">Kein unnötiges Dekor. Keine Animationen um der Animation willen. Jedes Element hat eine Funktion — sonst ist es nicht da.</div>
+    </div>
+    <div class="philosophy-card">
+      <div class="philosophy-card-title">Warm</div>
+      <div class="philosophy-card-text">Elfenbein statt kaltem Weiß. Cappuccino-Grau statt iOS-Systemgrau. Die Farbpalette fühlt sich menschlich an, nicht maschinell.</div>
+    </div>
+    <div class="philosophy-card">
+      <div class="philosophy-card-title">Verlässlich</div>
+      <div class="philosophy-card-text">Konsistenz auf jeder Seite. Wer Responda einmal kennt, findet sich überall zurecht — auch nach 12-Stunden-Schicht um 3 Uhr nachts.</div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ── 3. FARBE ────────────────────────────── -->
+<div class="page inner">
+  <div class="page-header">
+    <div>
+      <div class="page-label">Kapitel 02</div>
+      <div class="page-title">Farbpalette</div>
+    </div>
+    <div class="page-number">03</div>
+  </div>
+
+  <div class="color-grid">
+    <div class="color-swatch">
+      <div class="color-block" style="background: #600812;"></div>
+      <div class="color-info">
+        <div class="color-name">Responda Rot</div>
+        <div class="color-hex">#600812</div>
+        <div class="color-usage">Primärakzent · Aktive Elemente · Zahlen · Section-Labels · Karten-Border</div>
+      </div>
+    </div>
+    <div class="color-swatch">
+      <div class="color-block" style="background: #3d0408;"></div>
+      <div class="color-info">
+        <div class="color-name">Nachtrot</div>
+        <div class="color-hex">#3d0408</div>
+        <div class="color-usage">Greeting-Overlay · Tiefe Akzentbereiche · Ausweis-Hintergrund</div>
+      </div>
+    </div>
+    <div class="color-swatch">
+      <div class="color-block" style="background: #1a0e08;"></div>
+      <div class="color-info">
+        <div class="color-name">Warmscharz</div>
+        <div class="color-hex">#1a0e08</div>
+        <div class="color-usage">Primärtext · Headlines · Kein kaltes Schwarz</div>
+      </div>
+    </div>
+    <div class="color-swatch">
+      <div class="color-block" style="background: #8a7a68;"></div>
+      <div class="color-info">
+        <div class="color-name">Cappuccino</div>
+        <div class="color-hex">#8a7a68</div>
+        <div class="color-usage">Sekundärtext · Metadaten · Datum · Crew-Info</div>
+      </div>
+    </div>
+    <div class="color-swatch">
+      <div class="color-block" style="background: #faf9f7; border: 0.5px solid rgba(96,8,18,0.08);"></div>
+      <div class="color-info">
+        <div class="color-name">Elfenbein</div>
+        <div class="color-hex">#faf9f7</div>
+        <div class="color-usage">Seitenhintergrund · Warmweiß statt neutralem Grau</div>
+      </div>
+    </div>
+    <div class="color-swatch">
+      <div class="color-block" style="background: #fde8d8;"></div>
+      <div class="color-info">
+        <div class="color-name">Creme</div>
+        <div class="color-hex">#fde8d8</div>
+        <div class="color-usage">Greeting-Name · Ausweis-Text · Helle Akzente auf Dunkelrot</div>
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-top: 8px;">
+    <div class="section-label">Statusfarben</div>
+    <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <div style="width: 12px; height: 12px; border-radius: 50%; background: #16a34a; flex-shrink: 0;"></div>
+        <span style="font-size: 11px; color: var(--gray); font-style: italic;">#16a34a — Freigegeben / OK</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <div style="width: 12px; height: 12px; border-radius: 50%; background: #d97706; flex-shrink: 0;"></div>
+        <span style="font-size: 11px; color: var(--gray); font-style: italic;">#d97706 — Ausstehend / Warnung</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <div style="width: 12px; height: 12px; border-radius: 50%; background: #dc2626; flex-shrink: 0;"></div>
+        <span style="font-size: 11px; color: var(--gray); font-style: italic;">#dc2626 — Fehler / Abgesagt</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <div style="width: 12px; height: 12px; border-radius: 50%; background: rgba(139,122,90,0.4); border: 1px solid rgba(139,122,90,0.6); flex-shrink: 0;"></div>
+        <span style="font-size: 11px; color: var(--gray); font-style: italic;">rgba warm — Archiviert / Inaktiv</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ── 4. TYPOGRAFIE ────────────────────────────── -->
+<div class="page inner">
+  <div class="page-header">
+    <div>
+      <div class="page-label">Kapitel 03</div>
+      <div class="page-title">Typografie</div>
+    </div>
+    <div class="page-number">04</div>
+  </div>
+
+  <div class="section-label">Schriftfamilie</div>
+  <div class="type-specimen">
+    <div class="type-label">Atkinson Hyperlegible — Italic Bold 800</div>
+    <div class="type-display">Max Mustermann</div>
+    <div style="font-size: 14px; font-style: italic; color: var(--gray); margin-top: 12px; line-height: 1.6;">
+      Entwickelt für maximale Lesbarkeit — auch für Menschen mit Sehbeeinträchtigungen.<br>
+      Einzelne Buchstabenformen klar unterscheidbar. Ideal für Hochdrucksituationen.
+    </div>
+  </div>
+
+  <div class="section-label" style="margin-top: 8px;">Typografische Hierarchie</div>
+  <table class="type-table">
+    <tr>
+      <td>Statistik-Zahl</td>
+      <td style="font-size: 36px; font-weight: 800; color: var(--red); line-height: 1;">247</td>
+      <td>48px · 800 · Rot</td>
+    </tr>
+    <tr>
+      <td>Greeting-Name</td>
+      <td style="font-size: 22px; font-weight: 800; font-style: italic; color: var(--red);">Daniel</td>
+      <td>clamp 48–80px · 800 · Italic · Rot</td>
+    </tr>
+    <tr>
+      <td>Patienten-/Hauptname</td>
+      <td style="font-size: 15px; font-weight: 700; font-style: italic;">Max Mustermann</td>
+      <td>17px · 700 · Italic</td>
+    </tr>
+    <tr>
+      <td>Section-Header</td>
+      <td style="font-size: 9px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--red);">PROTOKOLLE</td>
+      <td>10px · 700 · Uppercase · 0.14em · Rot</td>
+    </tr>
+    <tr>
+      <td>Seitenname / Menütitel</td>
+      <td style="font-size: 14px; font-weight: 700; letter-spacing: -0.01em;">Patienten</td>
+      <td>15px · 700 · −0.01em Tracking</td>
+    </tr>
+    <tr>
+      <td>Datum / Crew / Meta</td>
+      <td style="font-size: 11px; font-style: italic; color: var(--gray);">12. Mai 2026 · 4h verbleibend</td>
+      <td>12px · 400 · Italic · Cappuccino</td>
+    </tr>
+    <tr>
+      <td>Tab-Labels</td>
+      <td style="font-size: 8px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--gray);">ÜBERSICHT</td>
+      <td>9px · 700 · Uppercase · 0.05em</td>
+    </tr>
+  </table>
+</div>
+
+
+<!-- ── 5. KOMPONENTEN ────────────────────────────── -->
+<div class="page inner">
+  <div class="page-header">
+    <div>
+      <div class="page-label">Kapitel 04</div>
+      <div class="page-title">Komponenten</div>
+    </div>
+    <div class="page-number">05</div>
+  </div>
+
+  <!-- Masthead -->
+  <div class="component-row">
+    <div class="component-label">Masthead — Seitenkopf</div>
+    <div class="mockup-masthead">
+      <div class="mockup-masthead-inner">
+        <div class="mockup-chevron">‹</div>
+        <div class="mockup-title-block">
+          <div class="mockup-title">MPG-Verwaltung</div>
+          <div class="mockup-subtitle">BRK Ortsverband Muster</div>
+        </div>
+        <div style="width: 22px;"></div>
+      </div>
+    </div>
+    <div style="font-size: 10px; color: var(--gray); font-style: italic; margin-top: 8px;">Weiß · 60px Höhe · 0.5px Unterlinie in rgba(96,8,18,0.12) · Kein Avatar auf Unterseiten</div>
+  </div>
+
+  <!-- Cards -->
+  <div class="component-row">
+    <div class="component-label">Karten — Status-Varianten</div>
+    <div class="mockup-cards">
+      <div class="mockup-card">
+        <div class="mockup-card-label">In Bearbeitung</div>
+        <div class="mockup-card-name">Max Mustermann</div>
+        <div class="mockup-card-meta">12. Mai 2026 · TF: K. Müller</div>
+      </div>
+      <div class="mockup-card mockup-card-green">
+        <div class="mockup-card-label">Freigegeben</div>
+        <div class="mockup-card-name">Maria Schmidt</div>
+        <div class="mockup-card-meta">11. Mai 2026 · Archivierung ausstehend</div>
+      </div>
+      <div class="mockup-card mockup-card-amber">
+        <div class="mockup-card-label">Rückfrage offen</div>
+        <div class="mockup-card-name">Hans Meier</div>
+        <div class="mockup-card-meta">10. Mai 2026 · Antwort ausstehend</div>
+      </div>
+      <div class="mockup-card" style="border-left-color: rgba(139,122,90,0.4); opacity: 0.75;">
+        <div class="mockup-card-label" style="color: var(--gray);">Archiviert</div>
+        <div class="mockup-card-name">Lisa Wagner</div>
+        <div class="mockup-card-meta">09. Mai 2026 · Gegengezeichnet</div>
+      </div>
+    </div>
+    <div style="font-size: 10px; color: var(--gray); font-style: italic; margin-top: 8px;">Weiß · borderRadius 12 · boxShadow 0 1px 4px · borderLeft 3px farbig je Status</div>
+  </div>
+
+  <!-- Stats + Tabbar -->
+  <div class="component-row">
+    <div class="component-label">Statistik-Grid</div>
+    <div class="mockup-stats">
+      <div class="mockup-stat">
+        <div class="mockup-stat-label">Gesamt</div>
+        <div class="mockup-stat-num">47</div>
+        <div class="mockup-stat-desc">Protokolle</div>
+      </div>
+      <div class="mockup-stat green">
+        <div class="mockup-stat-label">OK</div>
+        <div class="mockup-stat-num">31</div>
+        <div class="mockup-stat-desc">Geprüft</div>
+      </div>
+      <div class="mockup-stat amber">
+        <div class="mockup-stat-label">Offen</div>
+        <div class="mockup-stat-num">9</div>
+        <div class="mockup-stat-desc">Ausstehend</div>
+      </div>
+      <div class="mockup-stat" style="opacity:.6;">
+        <div class="mockup-stat-label">Fällig</div>
+        <div class="mockup-stat-num">7</div>
+        <div class="mockup-stat-desc">Überprüfen</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="component-row" style="margin-bottom: 0;">
+    <div class="component-label">Tab Bar</div>
+    <div class="mockup-tabbar">
+      <div class="mockup-tab active">
+        <div class="mockup-tab-dot"></div>
+        Übersicht
+      </div>
+      <div class="mockup-tab">
+        <div class="mockup-tab-dot"></div>
+        Protokolle
+      </div>
+      <div class="mockup-tab">
+        <div class="mockup-tab-dot"></div>
+        Vorgänge
+      </div>
+      <div class="mockup-tab">
+        <div class="mockup-tab-dot"></div>
+        Konto
+      </div>
+    </div>
+    <div style="font-size: 10px; color: var(--gray); font-style: italic; margin-top: 8px;">Aktiver Tab: borderTop 2px #600812 · Inaktiv: transparent · Labels 9px uppercase</div>
+  </div>
+</div>
+
+
+<!-- ── 6. MODULE ────────────────────────────── -->
+<div class="page inner">
+  <div class="page-header">
+    <div>
+      <div class="page-label">Kapitel 05</div>
+      <div class="page-title">App-Module</div>
+    </div>
+    <div class="page-number">06</div>
+  </div>
+
+  <div class="body-text" style="margin-bottom: 28px;">
+    Responda ist modular aufgebaut. Jede Organisation aktiviert nur die Module, die sie benötigt.
+    Alle Module folgen derselben Designsprache und sind auf iOS Safari optimiert.
+  </div>
+
+  <div class="modules-grid">
+    <div class="module-card">
+      <div class="module-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(253,232,216,0.9)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      </div>
+      <div class="module-name">Hub</div>
+      <div class="module-desc">Persönlicher Startbereich. App-Grid, Kurzbefehle, Widgets. Greeting-Overlay bei Erstanmeldung.</div>
+    </div>
+    <div class="module-card" style="border-left-color: #16a34a;">
+      <div class="module-icon" style="background: #16a34a;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.9)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/></svg>
+      </div>
+      <div class="module-name">Unitas / Patienten</div>
+      <div class="module-desc">Einsatzprotokolle für Rettungsdienst. Mehrstufiger Freigabe-Workflow: offen → freigegeben → archiviert.</div>
+    </div>
+    <div class="module-card" style="border-left-color: #5c3800;">
+      <div class="module-icon" style="background: #5c3800;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.9)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+      </div>
+      <div class="module-name">Lager</div>
+      <div class="module-desc">Materialverwaltung mit Einbuchen, Ausbuchen, Inventur. QR-Code-Integration für schnelle Entnahme.</div>
+    </div>
+    <div class="module-card" style="border-left-color: #600812;">
+      <div class="module-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(253,232,216,0.9)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+      </div>
+      <div class="module-name">MPG-Verwaltung</div>
+      <div class="module-desc">Medizinprodukte-Gerätemanagement. Prüffristen, Logbuch, Statusübersicht nach MPG-Anforderungen.</div>
+    </div>
+    <div class="module-card" style="border-left-color: #7a1020;">
+      <div class="module-icon" style="background: #7a1020;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(253,232,216,0.9)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+      </div>
+      <div class="module-name">Lernbar / Ausbildungen</div>
+      <div class="module-desc">Lernfeed, Ausbildungstermine, Module. Für Ausbilder und Teilnehmer. Kursbuchung und Teilnehmertracking.</div>
+    </div>
+    <div class="module-card" style="border-left-color: #3d5c6e;">
+      <div class="module-icon" style="background: #3d5c6e;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.9)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      </div>
+      <div class="module-name">Chat</div>
+      <div class="module-desc">Verschlüsselte Teamkommunikation. Ende-zu-Ende verschlüsselt, DSGVO-konform, keine externen Server.</div>
+    </div>
+    <div class="module-card" style="border-left-color: #8a7a68;">
+      <div class="module-icon" style="background: #8a7a68;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.9)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>
+      </div>
+      <div class="module-name">Dateien</div>
+      <div class="module-desc">Organisationsdokumente zentral verwalten. Ordner, Vorlagen, PDF-Ablage. Zugriffsrechte per Rolle.</div>
+    </div>
+    <div class="module-card" style="border-left-color: #600812; opacity: 0.7;">
+      <div class="module-icon" style="opacity: 0.7;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(253,232,216,0.9)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+      </div>
+      <div class="module-name">Supervisor-Portal</div>
+      <div class="module-desc">Mandantenverwaltung über alle Organisationen. Lizenz- und Benutzermanagement zentral für Betreiber.</div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ── 7. TECHNIK ────────────────────────────── -->
+<div class="page inner">
+  <div class="page-header">
+    <div>
+      <div class="page-label">Kapitel 06</div>
+      <div class="page-title">Technologie &amp; Sicherheit</div>
+    </div>
+    <div class="page-number">07</div>
+  </div>
+
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 32px; margin-bottom: 36px;">
+    <div>
+      <div class="section-label">Frontend</div>
+      <table style="width: 100%; border-collapse: collapse;">
+        <tr style="border-bottom: 0.5px solid rgba(96,8,18,0.07);">
+          <td style="padding: 9px 0; font-size: 11px; color: var(--gray); font-style: italic; width: 50%;">Framework</td>
+          <td style="padding: 9px 0; font-size: 12px; font-weight: 700; color: var(--text);">React 18 + TypeScript</td>
+        </tr>
+        <tr style="border-bottom: 0.5px solid rgba(96,8,18,0.07);">
+          <td style="padding: 9px 0; font-size: 11px; color: var(--gray); font-style: italic;">Build</td>
+          <td style="padding: 9px 0; font-size: 12px; font-weight: 700; color: var(--text);">Vite + PWA Plugin</td>
+        </tr>
+        <tr style="border-bottom: 0.5px solid rgba(96,8,18,0.07);">
+          <td style="padding: 9px 0; font-size: 11px; color: var(--gray); font-style: italic;">Styling</td>
+          <td style="padding: 9px 0; font-size: 12px; font-weight: 700; color: var(--text);">Inline Styles + CSS</td>
+        </tr>
+        <tr style="border-bottom: 0.5px solid rgba(96,8,18,0.07);">
+          <td style="padding: 9px 0; font-size: 11px; color: var(--gray); font-style: italic;">Routing</td>
+          <td style="padding: 9px 0; font-size: 12px; font-weight: 700; color: var(--text);">React Router v6</td>
+        </tr>
+        <tr>
+          <td style="padding: 9px 0; font-size: 11px; color: var(--gray); font-style: italic;">Font</td>
+          <td style="padding: 9px 0; font-size: 12px; font-weight: 700; color: var(--text);">Atkinson Hyperlegible</td>
+        </tr>
+      </table>
+    </div>
+    <div>
+      <div class="section-label">Backend</div>
+      <table style="width: 100%; border-collapse: collapse;">
+        <tr style="border-bottom: 0.5px solid rgba(96,8,18,0.07);">
+          <td style="padding: 9px 0; font-size: 11px; color: var(--gray); font-style: italic; width: 50%;">Datenbank</td>
+          <td style="padding: 9px 0; font-size: 12px; font-weight: 700; color: var(--text);">PocketBase (SQLite)</td>
+        </tr>
+        <tr style="border-bottom: 0.5px solid rgba(96,8,18,0.07);">
+          <td style="padding: 9px 0; font-size: 11px; color: var(--gray); font-style: italic;">Auth</td>
+          <td style="padding: 9px 0; font-size: 12px; font-weight: 700; color: var(--text);">JWT · Rollenbasiert</td>
+        </tr>
+        <tr style="border-bottom: 0.5px solid rgba(96,8,18,0.07);">
+          <td style="padding: 9px 0; font-size: 11px; color: var(--gray); font-style: italic;">Hosting</td>
+          <td style="padding: 9px 0; font-size: 12px; font-weight: 700; color: var(--text);">api.responda.systems</td>
+        </tr>
+        <tr style="border-bottom: 0.5px solid rgba(96,8,18,0.07);">
+          <td style="padding: 9px 0; font-size: 11px; color: var(--gray); font-style: italic;">Chat-Verschlüsselung</td>
+          <td style="padding: 9px 0; font-size: 12px; font-weight: 700; color: var(--text);">E2E · AES-GCM</td>
+        </tr>
+        <tr>
+          <td style="padding: 9px 0; font-size: 11px; color: var(--gray); font-style: italic;">Datenschutz</td>
+          <td style="padding: 9px 0; font-size: 12px; font-weight: 700; color: var(--text);">DSGVO · Server DE</td>
+        </tr>
+      </table>
+    </div>
+  </div>
+
+  <div class="section-label">Platform-Support</div>
+  <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 36px;">
+    <div style="background: var(--bg); border-radius: 10px; padding: 16px 16px; border-left: 3px solid var(--red);">
+      <div style="font-size: 10px; font-weight: 700; color: var(--red); text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 8px;">iOS Safari</div>
+      <div style="font-size: 12px; font-style: italic; color: var(--gray); line-height: 1.5;">Primärplattform. PWA-installierbar. Safe-Area-optimiert. Geprüft auf iPhone 13–16.</div>
+    </div>
+    <div style="background: var(--bg); border-radius: 10px; padding: 16px 16px; border-left: 3px solid var(--red);">
+      <div style="font-size: 10px; font-weight: 700; color: var(--red); text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 8px;">Android Chrome</div>
+      <div style="font-size: 12px; font-style: italic; color: var(--gray); line-height: 1.5;">Vollständig unterstützt. PWA-Install-Prompt. Material-You-kompatibel.</div>
+    </div>
+    <div style="background: var(--bg); border-radius: 10px; padding: 16px 16px; border-left: 3px solid var(--red);">
+      <div style="font-size: 10px; font-weight: 700; color: var(--red); text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 8px;">Desktop</div>
+      <div style="font-size: 12px; font-style: italic; color: var(--gray); line-height: 1.5;">Admin-Module für Patienten, Lager, Ausbildungen. Optimiert für Tablet und PC.</div>
+    </div>
+  </div>
+
+  <div class="section-label">Rollen &amp; Berechtigungen</div>
+  <table style="width: 100%; border-collapse: collapse;">
+    <thead>
+      <tr style="border-bottom: 1px solid rgba(96,8,18,0.12);">
+        <th style="padding: 8px 0; font-size: 9px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--red); text-align: left;">Rolle</th>
+        <th style="padding: 8px 0; font-size: 9px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--red); text-align: left;">Zugang</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr style="border-bottom: 0.5px solid rgba(96,8,18,0.07);">
+        <td style="padding: 9px 0; font-size: 12px; font-weight: 700; font-style: italic; color: var(--text); width: 30%;">Supervisor</td>
+        <td style="padding: 9px 0; font-size: 11px; color: var(--gray); font-style: italic;">Alle Module aller Organisationen · Lizenz- und Benutzerverwaltung</td>
+      </tr>
+      <tr style="border-bottom: 0.5px solid rgba(96,8,18,0.07);">
+        <td style="padding: 9px 0; font-size: 12px; font-weight: 700; font-style: italic; color: var(--text);">MPG-Beauftragter</td>
+        <td style="padding: 9px 0; font-size: 11px; color: var(--gray); font-style: italic;">Alle Module der eigenen Organisation · Benutzerverwaltung</td>
+      </tr>
+      <tr style="border-bottom: 0.5px solid rgba(96,8,18,0.07);">
+        <td style="padding: 9px 0; font-size: 12px; font-weight: 700; font-style: italic; color: var(--text);">Ausbilder</td>
+        <td style="padding: 9px 0; font-size: 11px; color: var(--gray); font-style: italic;">Lernbar, Ausbildungen, Protokolle, Dateien</td>
+      </tr>
+      <tr style="border-bottom: 0.5px solid rgba(96,8,18,0.07);">
+        <td style="padding: 9px 0; font-size: 12px; font-weight: 700; font-style: italic; color: var(--text);">Lagerwart</td>
+        <td style="padding: 9px 0; font-size: 11px; color: var(--gray); font-style: italic;">Lager, Produktausgabe, Dateien, QR-Codes</td>
+      </tr>
+      <tr>
+        <td style="padding: 9px 0; font-size: 12px; font-weight: 700; font-style: italic; color: var(--text);">Benutzer</td>
+        <td style="padding: 9px 0; font-size: 11px; color: var(--gray); font-style: italic;">Hub, Lernbar, Chat · Grundzugang</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+
+<!-- ── 8. BACK COVER ────────────────────────────── -->
+<div class="page backcover">
+  <div class="backcover-logo">
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="rgba(253,232,216,0.85)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+    </svg>
+  </div>
+  <div class="backcover-name">Responda</div>
+  <div class="backcover-tagline">Digitale Infrastruktur für den Rettungsdienst.</div>
+  <div class="backcover-rule"></div>
+  <div class="backcover-contact">
+    <div><strong>Plattform</strong> — responda.systems</div>
+    <div><strong>Technologie</strong> — React · TypeScript · PocketBase</div>
+    <div><strong>Design</strong> — La Bella Figura · Atkinson Hyperlegible</div>
+    <div style="margin-top: 16px; font-size: 10px; color: var(--gray); font-style: italic;">
+      Dieses Dokument ist vertraulich und ausschließlich für autorisierte Empfänger bestimmt.<br>
+      © 2026 Responda · Alle Rechte vorbehalten.
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
