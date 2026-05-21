@@ -35,7 +35,7 @@ export function PubWrap({ children }: { children: React.ReactNode }) {
 
 export function PubSection({ title, open, children, icon }: { title: string; open?: boolean; children: React.ReactNode; icon?: React.ReactNode }) {
   return (
-    <details open={open} style={{ background: '#fff', border: '0.5px solid rgba(96,8,18,0.1)', borderLeft: '3px solid #600812', borderRadius: 12, marginBottom: '.75rem', overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.07)' }}>
+    <details open={open} style={{ background: '#fff', border: '0.5px solid rgba(96,8,18,0.1)', borderLeft: '3px solid #600812', borderRadius: 12, marginBottom: '.75rem', boxShadow: '0 1px 4px rgba(0,0,0,0.07)' }}>
       <summary style={{ listStyle: 'none', padding: '.85rem 1rem', cursor: 'pointer', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '.6rem', fontSize: 10, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.12em', borderBottom: '0.5px solid rgba(96,8,18,0.08)' }}>
         {icon}{title}
       </summary>
