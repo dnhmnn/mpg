@@ -33,7 +33,7 @@ export default function OrgLanding() {
       {/* Org header */}
       <div style={{ textAlign: 'center', marginBottom: 36 }}>
         {logoUrl && (
-          <img src={logoUrl} alt="Logo" style={{ maxHeight: 80, maxWidth: '60%', marginBottom: 16, borderRadius: 10, objectFit: 'contain' }} />
+          <img src={logoUrl} alt="Logo" style={{ maxHeight: 110, maxWidth: '70%', marginBottom: 16, borderRadius: 10, objectFit: 'contain' }} />
         )}
         <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 22, color: '#1a0e08', lineHeight: 1.2 }}>{org.org_name}</div>
         <div style={{ fontStyle: 'italic', fontSize: 13, color: 'var(--warm-gray)', marginTop: 6 }}>Wähle eine Anwendung</div>
