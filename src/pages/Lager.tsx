@@ -180,6 +180,9 @@ export default function Lager() {
   const [detailExpiry, setDetailExpiry] = useState('')
   const [detailLoadingData, setDetailLoadingData] = useState(false)
 
+  const [buchungSearch, setBuchungSearch] = useState('')
+  const [multiBuchungSearch, setMultiBuchungSearch] = useState('')
+
   // Multi-buchung state
   const [showMultiBuchungModal, setShowMultiBuchungModal] = useState(false)
   const [multiBuchungItems, setMultiBuchungItems] = useState<Array<{itemId: string, qty: number, expiry: string}>>([])
@@ -847,6 +850,7 @@ export default function Lager() {
       setBuchungQty(1)
       setBuchungExpiry('')
       setBuchungBatch('')
+      setBuchungSearch('')
     } catch(e: any) {
       alert('Fehler: ' + e.message)
     }
@@ -866,6 +870,7 @@ export default function Lager() {
     setMultiBuchungNewItemId('')
     setMultiBuchungNewQty(1)
     setMultiBuchungNewExpiry('')
+    setMultiBuchungSearch('')
   }
 
   async function openItemDetail(item: DisplayItem) {
@@ -1045,13 +1050,13 @@ export default function Lager() {
             <rect x="14" y="14" width="7" height="7"/>
           </svg>
         </button>
-        <button className="action-btn" onClick={() => { setBuchungType('ein'); setShowBuchungModal(true) }} title="Einbuchen">
+        <button className="action-btn" onClick={() => { setBuchungType('ein'); setBuchungSearch(''); setSelectedBuchungItem(''); setBuchungQty(1); setShowBuchungModal(true) }} title="Einbuchen">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
             <line x1="12" y1="5" x2="12" y2="19"/>
             <line x1="5" y1="12" x2="19" y2="12"/>
           </svg>
         </button>
-        <button className="action-btn" onClick={() => { setBuchungType('aus'); setShowBuchungModal(true) }} title="Ausbuchen">
+        <button className="action-btn" onClick={() => { setBuchungType('aus'); setBuchungSearch(''); setSelectedBuchungItem(''); setBuchungQty(1); setShowBuchungModal(true) }} title="Ausbuchen">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
             <line x1="5" y1="12" x2="19" y2="12"/>
           </svg>
@@ -1685,25 +1690,41 @@ export default function Lager() {
             
             <div className="form-group">
               <label>Artikel auswählen *</label>
-              <select 
-                value={selectedBuchungItem}
-                onChange={(e) => setSelectedBuchungItem(e.target.value)}
-              >
-                <option value="">-- Artikel wählen --</option>
-                {allItems.map(item => (
-                  <option key={item.id} value={item.id}>
-                    {item.name}
-                  </option>
-                ))}
-              </select>
+              <input
+                type="text"
+                placeholder="Artikel suchen..."
+                value={selectedBuchungItem ? allItems.find(i => i.id === selectedBuchungItem)?.name || buchungSearch : buchungSearch}
+                onChange={e => { setBuchungSearch(e.target.value); setSelectedBuchungItem('') }}
+                autoComplete="off"
+              />
+              {(!selectedBuchungItem || buchungSearch) && (
+                <div style={{ maxHeight: 180, overflowY: 'auto', border: '1px solid #e5e7eb', borderRadius: 8, marginTop: 4, background: '#fff' }}>
+                  {allItems
+                    .filter(i => !buchungSearch || i.name.toLowerCase().includes(buchungSearch.toLowerCase()))
+                    .map(item => (
+                      <div
+                        key={item.id}
+                        onClick={() => { setSelectedBuchungItem(item.id); setBuchungSearch('') }}
+                        style={{
+                          padding: '9px 14px', cursor: 'pointer', fontSize: '0.9rem',
+                          background: selectedBuchungItem === item.id ? '#f0fdf4' : undefined,
+                          fontWeight: selectedBuchungItem === item.id ? 700 : 400,
+                          borderBottom: '1px solid #f3f4f6'
+                        }}
+                      >
+                        {item.name}
+                      </div>
+                    ))}
+                </div>
+              )}
             </div>
-            
+
             <div className="form-group">
               <label>Menge *</label>
               <input
                 type="number"
-                value={buchungQty}
-                onChange={(e) => setBuchungQty(parseInt(e.target.value) || 1)}
+                value={buchungQty || ''}
+                onChange={(e) => setBuchungQty(parseInt(e.target.value) || 0)}
                 min="1"
               />
             </div>
@@ -1720,7 +1741,7 @@ export default function Lager() {
             )}
             
             <div className="modal-footer" style={{display: 'flex', gap: '8px', justifyContent: 'flex-end'}}>
-              <button className="btn" onClick={() => setShowBuchungModal(false)}>
+              <button className="btn" onClick={() => { setShowBuchungModal(false); setBuchungSearch(''); setSelectedBuchungItem('') }}>
                 Abbrechen
               </button>
               <button className="btn primary" onClick={saveBuchung}>
@@ -1852,16 +1873,37 @@ export default function Lager() {
             <div style={{display: 'grid', gridTemplateColumns: '1fr auto auto', gap: '8px', alignItems: 'end', marginBottom: '12px'}}>
               <div className="form-group" style={{marginBottom: 0}}>
                 <label>Artikel</label>
-                <select value={multiBuchungNewItemId} onChange={(e) => setMultiBuchungNewItemId(e.target.value)}>
-                  <option value="">-- Artikel wählen --</option>
-                  {allItems.map(item => (
-                    <option key={item.id} value={item.id}>{item.name}</option>
-                  ))}
-                </select>
+                <input
+                  type="text"
+                  placeholder="Artikel suchen..."
+                  value={multiBuchungNewItemId ? allItems.find(i => i.id === multiBuchungNewItemId)?.name || multiBuchungSearch : multiBuchungSearch}
+                  onChange={e => { setMultiBuchungSearch(e.target.value); setMultiBuchungNewItemId('') }}
+                  autoComplete="off"
+                />
+                {(!multiBuchungNewItemId || multiBuchungSearch) && (
+                  <div style={{ maxHeight: 160, overflowY: 'auto', border: '1px solid #e5e7eb', borderRadius: 8, marginTop: 4, background: '#fff', position: 'relative', zIndex: 10 }}>
+                    {allItems
+                      .filter(i => !multiBuchungSearch || i.name.toLowerCase().includes(multiBuchungSearch.toLowerCase()))
+                      .map(item => (
+                        <div
+                          key={item.id}
+                          onClick={() => { setMultiBuchungNewItemId(item.id); setMultiBuchungSearch('') }}
+                          style={{
+                            padding: '8px 12px', cursor: 'pointer', fontSize: '0.9rem',
+                            background: multiBuchungNewItemId === item.id ? '#f0fdf4' : undefined,
+                            fontWeight: multiBuchungNewItemId === item.id ? 700 : 400,
+                            borderBottom: '1px solid #f3f4f6'
+                          }}
+                        >
+                          {item.name}
+                        </div>
+                      ))}
+                  </div>
+                )}
               </div>
               <div className="form-group" style={{marginBottom: 0}}>
                 <label>Menge</label>
-                <input type="number" value={multiBuchungNewQty} onChange={(e) => setMultiBuchungNewQty(parseInt(e.target.value) || 1)} min="1" style={{width: '80px'}} />
+                <input type="number" value={multiBuchungNewQty || ''} onChange={(e) => setMultiBuchungNewQty(parseInt(e.target.value) || 0)} min="1" style={{width: '80px'}} />
               </div>
               {multiBuchungType === 'ein' && (
                 <div className="form-group" style={{marginBottom: 0}}>
@@ -1874,10 +1916,11 @@ export default function Lager() {
                 style={{alignSelf: 'flex-end'}}
                 onClick={() => {
                   if (!multiBuchungNewItemId) return
-                  setMultiBuchungItems(prev => [...prev, { itemId: multiBuchungNewItemId, qty: multiBuchungNewQty, expiry: multiBuchungNewExpiry }])
+                  setMultiBuchungItems(prev => [...prev, { itemId: multiBuchungNewItemId, qty: multiBuchungNewQty || 1, expiry: multiBuchungNewExpiry }])
                   setMultiBuchungNewItemId('')
                   setMultiBuchungNewQty(1)
                   setMultiBuchungNewExpiry('')
+                  setMultiBuchungSearch('')
                 }}
               >
                 Hinzufügen
