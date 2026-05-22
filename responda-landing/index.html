@@ -224,8 +224,8 @@
 <section id="hero">
   <div class="container">
     <div class="hero-eyebrow">Digitale Einsatzverwaltung</div>
-    <h1>Das <em>digitale Rückgrat</em><br>deiner Organisation.</h1>
-    <p>Einsätze, Protokolle, Lager, Ausbildungen und mehr — sicher, schnell und von überall erreichbar.</p>
+    <h1 id="hero-title">Das <em>digitale Rückgrat</em><br>deiner Organisation.</h1>
+    <p id="hero-subtitle">Einsätze, Protokolle, Lager, Ausbildungen und mehr — sicher, schnell und von überall erreichbar.</p>
     <div class="hero-actions">
       <a href="#kontakt" class="btn-primary">Demo anfragen</a>
       <a href="https://app.responda.systems" class="btn-secondary">Zur App →</a>
@@ -257,7 +257,7 @@
     <div class="label">Alles in einer Plattform</div>
     <h2>Was <em>Responda</em> kann</h2>
     <p>Von der Alarmierung bis zum archivierten Protokoll — kein Medienbruch mehr.</p>
-    <div class="features-grid">
+    <div class="features-grid" id="features-grid">
 
       <div class="feature-card">
         <div class="feature-icon">
@@ -359,7 +359,7 @@
     <div class="label">Zielgruppen</div>
     <h2>Gemacht für <em>Einsatzorganisationen</em></h2>
     <p>Responda wurde von Einsatzkräften für Einsatzkräfte entwickelt.</p>
-    <div class="audience-grid">
+    <div class="audience-grid" id="audience-grid">
       <div class="audience-card">
         <h3>Freiwillige Feuerwehren</h3>
         <p>Einsatzverwaltung, Alamos-Integration, Ausbildungsplanung und digitale Dokumentation für den Ehrenamt-Alltag.</p>
@@ -589,6 +589,62 @@
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape') { ['impressum','datenschutz'].forEach(closeLegal); document.body.style.overflow = '' }
   })
+  // Load dynamic content from PocketBase
+  ;(async function loadContent() {
+    try {
+      const res = await fetch('https://api.responda.systems/api/collections/landing_content/records?page=1&perPage=1', { cache: 'no-cache' })
+      if (!res.ok) return
+      const data = await res.json()
+      const r = data.items?.[0]
+      if (!r) return
+
+      function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') }
+
+      if (r.hero_title) document.getElementById('hero-title').innerHTML = r.hero_title
+      if (r.hero_subtitle) document.getElementById('hero-subtitle').textContent = r.hero_subtitle
+
+      if (r.audience?.length) {
+        document.getElementById('audience-grid').innerHTML = r.audience.map(a => `
+          <div class="audience-card">
+            <h3>${esc(a.title)}</h3>
+            <p>${esc(a.description)}</p>
+          </div>`).join('')
+      }
+
+      if (r.features?.length) {
+        const icons = [
+          '<path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/>',
+          '<path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/>',
+          '<path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>',
+          '<path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>',
+          '<rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>',
+          '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',
+          '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
+          '<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>',
+          '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+        ]
+        const s = 'stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"'
+        document.getElementById('features-grid').innerHTML = r.features.map((f, i) => `
+          <div class="feature-card">
+            <div class="feature-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" ${s}>${icons[i % icons.length]}</svg>
+            </div>
+            <div>
+              <h3>${esc(f.title)}</h3>
+              <p>${esc(f.description)}</p>
+            </div>
+          </div>`).join('')
+      }
+
+      if (r.contact_email) {
+        document.querySelectorAll('a[href^="mailto:"]').forEach(el => {
+          el.href = 'mailto:' + r.contact_email
+          if (el.textContent.includes('@')) el.textContent = r.contact_email
+        })
+      }
+    } catch(e) { /* fallback to static content */ }
+  })()
+
   function handleForm(e) {
     e.preventDefault()
     const btn = document.getElementById('formBtn')

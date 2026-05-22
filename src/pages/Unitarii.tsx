@@ -6,6 +6,38 @@ import StatusBar from '../components/StatusBar'
 
 const pb = new PocketBase('https://api.responda.systems')
 
+interface LandingContent {
+  id?: string
+  hero_title: string
+  hero_subtitle: string
+  audience: { title: string; description: string }[]
+  features: { title: string; description: string }[]
+  contact_email: string
+}
+
+const DEFAULT_LANDING: LandingContent = {
+  hero_title: 'Das <em>digitale Rückgrat</em><br>deiner Organisation.',
+  hero_subtitle: 'Einsätze, Protokolle, Lager, Ausbildungen und mehr — sicher, schnell und von überall erreichbar.',
+  audience: [
+    { title: 'Freiwillige Feuerwehren', description: 'Einsatzverwaltung, Alamos-Integration, Ausbildungsplanung und digitale Dokumentation für den Ehrenamt-Alltag.' },
+    { title: 'Bereitschaften & Hilfsorganisationen', description: 'BRK, DRK, ASB, MHD, JUH — Responda passt sich eurer Struktur an, nicht umgekehrt.' },
+    { title: 'Werkfeuerwehren & Betriebssanitäter', description: 'MPG-Prüfungen, Lagerverwaltung und digitale Protokolle für betriebliche Sicherheitsorganisationen.' },
+    { title: 'Ausbildungseinrichtungen', description: 'Lernplattform, Terminverwaltung und Nachweisführung für Schulungs- und Ausbildungszentren.' },
+  ],
+  features: [
+    { title: 'Einsatzverwaltung', description: 'Einsätze manuell anlegen oder per Alamos-Webhook automatisch empfangen. Realtime-Übersicht für alle.' },
+    { title: 'Patientenprotokolle', description: 'Lückenlose Dokumentation mit Freigabe-Workflow zwischen Teamleader und Administration.' },
+    { title: 'Lagerverwaltung', description: 'Bestände überwachen, Produktausgaben erfassen und Inventur digital abwickeln.' },
+    { title: 'Unitas — Lernplattform', description: 'Interne Wissensmodule, Quizze und Neuigkeiten für das gesamte Team an einem Ort.' },
+    { title: 'Ausbildungsmanagement', description: 'Termine anlegen, Teilnehmer einladen und Nachweise digital verwalten.' },
+    { title: 'MPG-Prüfungen', description: 'Medizinprodukte prüfen, Ergebnisse dokumentieren und Fristen im Blick behalten.' },
+    { title: 'Verschlüsselter Chat', description: 'Ende-zu-Ende-verschlüsselte Kommunikation für das gesamte Team — ohne externe Dienste.' },
+    { title: 'Dateiverwaltung', description: 'Zentrale Ablage für alle Organisationsdokumente, sicher und zugriffsgesteuert.' },
+    { title: 'Benutzerverwaltung', description: 'Rollen, individuelle Rechte, temporäre Zugänge und Supervisor-Funktionen für Admins.' },
+  ],
+  contact_email: 'info@responda.systems',
+}
+
 interface UUser {
   id: string
   name: string
@@ -41,7 +73,7 @@ const EMPTY_PERMS = Object.fromEntries(PERM_LABELS.map(p => [p.key, false])) as 
 export default function Unitarii() {
   const { user, loading: authLoading, logout } = useAuth()
   const navigate = useNavigate()
-  const [tab, setTab] = useState<'benutzer' | 'neuigkeiten'>('benutzer')
+  const [tab, setTab] = useState<'benutzer' | 'neuigkeiten' | 'website'>('benutzer')
   const [loading, setLoading] = useState(true)
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null)
 
@@ -58,6 +90,10 @@ export default function Unitarii() {
   const [nAnhang, setNAnhang] = useState<File | null>(null)
   const [savingN, setSavingN] = useState(false)
 
+  const [website, setWebsite] = useState<LandingContent>({ ...DEFAULT_LANDING })
+  const [websiteLoading, setWebsiteLoading] = useState(false)
+  const [websiteSaving, setWebsiteSaving] = useState(false)
+
   useEffect(() => { if (user) loadAll() }, [user])
 
   function showMsg(text: string, type: 'success' | 'error') {
@@ -72,6 +108,73 @@ export default function Unitarii() {
     } finally {
       setLoading(false)
     }
+  }
+
+  async function loadWebsite() {
+    setWebsiteLoading(true)
+    try {
+      const r = await pb.collection('landing_content').getFullList({ requestKey: `landing-${Date.now()}` })
+      if (r.length > 0) {
+        const rec = r[0] as any
+        setWebsite({
+          id: rec.id,
+          hero_title: rec.hero_title || DEFAULT_LANDING.hero_title,
+          hero_subtitle: rec.hero_subtitle || DEFAULT_LANDING.hero_subtitle,
+          audience: rec.audience?.length ? rec.audience : DEFAULT_LANDING.audience,
+          features: rec.features?.length ? rec.features : DEFAULT_LANDING.features,
+          contact_email: rec.contact_email || DEFAULT_LANDING.contact_email,
+        })
+      }
+    } catch { /* collection not created yet — use defaults */ }
+    finally { setWebsiteLoading(false) }
+  }
+
+  async function saveWebsite() {
+    setWebsiteSaving(true)
+    try {
+      const data = {
+        hero_title: website.hero_title,
+        hero_subtitle: website.hero_subtitle,
+        audience: website.audience,
+        features: website.features,
+        contact_email: website.contact_email,
+      }
+      if (website.id) {
+        await pb.collection('landing_content').update(website.id, data)
+      } else {
+        const rec = await pb.collection('landing_content').create(data) as any
+        setWebsite(prev => ({ ...prev, id: rec.id }))
+      }
+      showMsg('Website-Inhalt gespeichert', 'success')
+    } catch (e: any) {
+      showMsg('Fehler: ' + e.message, 'error')
+    } finally {
+      setWebsiteSaving(false)
+    }
+  }
+
+  function updateAudience(i: number, field: 'title' | 'description', val: string) {
+    setWebsite(prev => {
+      const a = [...prev.audience]
+      a[i] = { ...a[i], [field]: val }
+      return { ...prev, audience: a }
+    })
+  }
+
+  function addAudience() {
+    setWebsite(prev => ({ ...prev, audience: [...prev.audience, { title: '', description: '' }] }))
+  }
+
+  function removeAudience(i: number) {
+    setWebsite(prev => ({ ...prev, audience: prev.audience.filter((_, idx) => idx !== i) }))
+  }
+
+  function updateFeature(i: number, field: 'title' | 'description', val: string) {
+    setWebsite(prev => {
+      const f = [...prev.features]
+      f[i] = { ...f[i], [field]: val }
+      return { ...prev, features: f }
+    })
   }
 
   async function loadUsers() {
@@ -227,6 +330,11 @@ export default function Unitarii() {
           <button style={tabStyle(tab === 'neuigkeiten')} onClick={() => setTab('neuigkeiten')}>
             Neuigkeiten {neuigkeiten.length > 0 && <span style={{ marginLeft: '5px', background: 'var(--btn-dark)', color: 'var(--btn-dark-text)', borderRadius: '10px', padding: '1px 6px', fontSize: '11px' }}>{neuigkeiten.length}</span>}
           </button>
+          {user?.supervisor && (
+            <button style={tabStyle(tab === 'website')} onClick={() => { setTab('website'); if (!website.id && !websiteLoading) loadWebsite() }}>
+              Website
+            </button>
+          )}
         </div>
       </div>
 
@@ -322,6 +430,85 @@ export default function Unitarii() {
             )}
           </div>
         )}
+        {/* WEBSITE */}
+        {tab === 'website' && (
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
+              <div>
+                <h2 style={{ margin: 0, fontSize: '20px', color: 'var(--text)' }}>Website-Inhalt</h2>
+                <p style={{ margin: '4px 0 0', fontSize: '14px', color: 'var(--text-secondary)' }}>Inhalte von responda.systems verwalten</p>
+              </div>
+              <button onClick={saveWebsite} disabled={websiteSaving} style={{ padding: '9px 20px', borderRadius: '10px', border: 'none', background: 'var(--btn-dark)', color: 'var(--btn-dark-text)', fontWeight: 700, fontSize: '14px', cursor: websiteSaving ? 'not-allowed' : 'pointer', fontFamily: 'inherit', opacity: websiteSaving ? 0.6 : 1, flexShrink: 0 }}>
+                {websiteSaving ? 'Speichern...' : 'Speichern'}
+              </button>
+            </div>
+
+            {websiteLoading ? (
+              <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '48px 0' }}>Lade...</div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
+
+                {/* Hero */}
+                <div style={{ background: 'var(--bg-card)', borderRadius: '14px', border: '1px solid var(--border)', padding: '20px 24px' }}>
+                  <div style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: '#600812', marginBottom: '16px' }}>Hero</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                    <div>
+                      <label style={labelStyle}>Überschrift <span style={{ fontWeight: 400, color: 'var(--text-secondary)' }}>(HTML erlaubt: &lt;em&gt; für kursiv, &lt;br&gt; für Zeilenumbruch)</span></label>
+                      <input value={website.hero_title} onChange={e => setWebsite(p => ({ ...p, hero_title: e.target.value }))} style={inputStyle} placeholder="Das <em>digitale Rückgrat</em><br>deiner Organisation." />
+                    </div>
+                    <div>
+                      <label style={labelStyle}>Untertitel</label>
+                      <textarea value={website.hero_subtitle} onChange={e => setWebsite(p => ({ ...p, hero_subtitle: e.target.value }))} rows={2} style={{ ...inputStyle, resize: 'vertical' }} placeholder="Kurze Beschreibung unter der Überschrift..." />
+                    </div>
+                    <div>
+                      <label style={labelStyle}>Kontakt-E-Mail (im Footer + Impressum)</label>
+                      <input type="email" value={website.contact_email} onChange={e => setWebsite(p => ({ ...p, contact_email: e.target.value }))} style={inputStyle} placeholder="info@responda.systems" />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Zielgruppen */}
+                <div style={{ background: 'var(--bg-card)', borderRadius: '14px', border: '1px solid var(--border)', padding: '20px 24px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+                    <div style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: '#600812' }}>Zielgruppen</div>
+                    <button onClick={addAudience} style={{ fontSize: '12px', fontWeight: 700, color: '#600812', background: 'rgba(96,8,18,0.07)', border: 'none', borderRadius: '8px', padding: '5px 12px', cursor: 'pointer', fontFamily: 'inherit' }}>+ Hinzufügen</button>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {website.audience.map((a, i) => (
+                      <div key={i} style={{ background: 'var(--bg)', borderRadius: '10px', padding: '14px', border: '1px solid var(--border)', display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                          <input value={a.title} onChange={e => updateAudience(i, 'title', e.target.value)} style={{ ...inputStyle, fontWeight: 700 }} placeholder="Titel" />
+                          <textarea value={a.description} onChange={e => updateAudience(i, 'description', e.target.value)} rows={2} style={{ ...inputStyle, resize: 'vertical' }} placeholder="Beschreibung..." />
+                        </div>
+                        <button onClick={() => removeAudience(i)} style={{ padding: '6px 10px', borderRadius: '7px', border: '1px solid #fecaca', background: '#fef2f2', color: '#b91c1c', fontWeight: 600, fontSize: '12px', cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>×</button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Features */}
+                <div style={{ background: 'var(--bg-card)', borderRadius: '14px', border: '1px solid var(--border)', padding: '20px 24px' }}>
+                  <div style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: '#600812', marginBottom: '16px' }}>Features</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    {website.features.map((f, i) => (
+                      <div key={i} style={{ background: 'var(--bg)', borderRadius: '10px', padding: '12px 14px', border: '1px solid var(--border)', display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                          <input value={f.title} onChange={e => updateFeature(i, 'title', e.target.value)} style={{ ...inputStyle, fontWeight: 700 }} placeholder="Feature-Name" />
+                          <textarea value={f.description} onChange={e => updateFeature(i, 'description', e.target.value)} rows={2} style={{ ...inputStyle, resize: 'vertical', fontSize: '13px' }} placeholder="Kurze Beschreibung..." />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <button onClick={saveWebsite} disabled={websiteSaving} style={{ padding: '14px', borderRadius: '10px', border: 'none', background: 'var(--btn-dark)', color: 'var(--btn-dark-text)', fontWeight: 700, fontSize: '15px', cursor: websiteSaving ? 'not-allowed' : 'pointer', fontFamily: 'inherit', opacity: websiteSaving ? 0.6 : 1 }}>
+                  {websiteSaving ? 'Speichern...' : 'Änderungen speichern'}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
       </div>
 
       {/* USER MODAL */}
