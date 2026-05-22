@@ -6,8 +6,8 @@ import { useAuth } from '../hooks/useAuth'
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface Einsatz {
   id: string
-  einsatz_nr: string
-  stichwort?: string
+  unit: string
+  keyword?: string
   adresse?: string
   datum: string
   status: 'aktiv' | 'abgeschlossen' | 'abgebrochen'
@@ -120,7 +120,7 @@ export default function Einsaetze() {
 
   // Übersicht edit
   const [editing, setEditing]               = useState(false)
-  const [editForm, setEditForm]             = useState<{ stichwort: string; adresse: string; interne_vermerke: string }>({ stichwort: '', adresse: '', interne_vermerke: '' })
+  const [editForm, setEditForm]             = useState<{ keyword: string; adresse: string; interne_vermerke: string }>({ keyword: '', adresse: '', interne_vermerke: '' })
   const [saving, setSaving]                 = useState(false)
 
   // Personal
@@ -131,7 +131,7 @@ export default function Einsaetze() {
 
   // New modal
   const [newModal, setNewModal]             = useState(false)
-  const [newForm, setNewForm]               = useState({ einsatz_nr: '', stichwort: '', adresse: '', datum: nowLocalISO() })
+  const [newForm, setNewForm]               = useState({ unit: '', keyword: '', adresse: '', datum: nowLocalISO() })
   // Alamos Setup
   const [setupOpen, setSetupOpen] = useState(false)
 
@@ -200,8 +200,8 @@ export default function Einsaetze() {
         }),
       ])
       setPersonen(persList as any)
-      setLinkedPatients((allPat as any[]).filter((p: any) => safeJson(p.payload)?.einsatz_nr === e.einsatz_nr))
-      setLinkedOutputs((allOut as any[]).filter((o: any) => safeJson(o.payload)?.einsatz === e.einsatz_nr))
+      setLinkedPatients((allPat as any[]).filter((p: any) => safeJson(p.payload)?.unit === e.unit))
+      setLinkedOutputs((allOut as any[]).filter((o: any) => safeJson(o.payload)?.einsatz === e.unit))
     } catch (err) { console.error(err) }
     finally { setDetailLoading(false) }
   }
@@ -213,7 +213,7 @@ export default function Einsaetze() {
     loadUsers()
     pb.collection('einsaetze').subscribe('*', (ev) => {
       if (ev.action === 'create' && ev.record.organization_id === user.organization_id) {
-        showMsg(`Neuer Alarm: ${ev.record.stichwort || ev.record.einsatz_nr || 'Einsatz'}`, 'info')
+        showMsg(`Neuer Alarm: ${ev.record.keyword || ev.record.unit || 'Einsatz'}`, 'info')
       }
       loadEinsaetze()
     })
@@ -286,7 +286,7 @@ export default function Einsaetze() {
             const { lat, lon } = res[0]
             L.marker([parseFloat(lat), parseFloat(lon)])
               .addTo(map)
-              .bindPopup(`<b>${e.stichwort || e.einsatz_nr}</b><br>${e.adresse}`)
+              .bindPopup(`<b>${e.keyword || e.unit}</b><br>${e.adresse}`)
               .openPopup()
             map.setView([parseFloat(lat), parseFloat(lon)], 15)
           }
@@ -316,14 +316,14 @@ export default function Einsaetze() {
 
   // ── CRUD ──────────────────────────────────────────────────────────────────
   async function createEinsatz() {
-    if (!user || !newForm.stichwort.trim()) return
+    if (!user || !newForm.keyword.trim()) return
     setSaving(true)
     try {
-      const nr = newForm.einsatz_nr.trim() ||
+      const nr = newForm.unit.trim() ||
         `E-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 9000) + 1000)}`
       await pb.collection('einsaetze').create({
-        einsatz_nr: nr,
-        stichwort: newForm.stichwort.trim(),
+        unit: nr,
+        keyword: newForm.keyword.trim(),
         adresse: newForm.adresse.trim(),
         datum: new Date(newForm.datum).toISOString(),
         status: 'aktiv',
@@ -332,7 +332,7 @@ export default function Einsaetze() {
       })
       showMsg('Einsatz angelegt', 'success')
       setNewModal(false)
-      setNewForm({ einsatz_nr: '', stichwort: '', adresse: '', datum: nowLocalISO() })
+      setNewForm({ unit: '', keyword: '', adresse: '', datum: nowLocalISO() })
     } catch (e: any) { showMsg('Fehler: ' + e.message, 'error') }
     finally { setSaving(false) }
   }
@@ -389,7 +389,7 @@ export default function Einsaetze() {
     setSelected(e)
     setDetailTab('uebersicht')
     setEditing(false)
-    setEditForm({ stichwort: e.stichwort || '', adresse: e.adresse || '', interne_vermerke: e.interne_vermerke || '' })
+    setEditForm({ keyword: e.keyword || '', adresse: e.adresse || '', interne_vermerke: e.interne_vermerke || '' })
     loadDetail(e)
   }
 
@@ -501,11 +501,11 @@ export default function Einsaetze() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div>
                 <div style={LABEL}>Stichwort *</div>
-                <input value={newForm.stichwort} onChange={e => setNewForm(f => ({ ...f, stichwort: e.target.value }))} placeholder="z.B. RD B3, Brand Wohnung" style={INPUT} />
+                <input value={newForm.keyword} onChange={e => setNewForm(f => ({ ...f, keyword: e.target.value }))} placeholder="z.B. RD B3, Brand Wohnung" style={INPUT} />
               </div>
               <div>
                 <div style={LABEL}>Einsatznummer</div>
-                <input value={newForm.einsatz_nr} onChange={e => setNewForm(f => ({ ...f, einsatz_nr: e.target.value }))} placeholder="Wird automatisch generiert wenn leer" style={INPUT} />
+                <input value={newForm.unit} onChange={e => setNewForm(f => ({ ...f, unit: e.target.value }))} placeholder="Wird automatisch generiert wenn leer" style={INPUT} />
               </div>
               <div>
                 <div style={LABEL}>Adresse</div>
@@ -519,7 +519,7 @@ export default function Einsaetze() {
 
             <div style={{ display: 'flex', gap: 10, marginTop: 22 }}>
               <button onClick={() => setNewModal(false)} style={{ ...BTN_SECONDARY, flex: 1 }}>Abbrechen</button>
-              <button onClick={createEinsatz} disabled={saving || !newForm.stichwort.trim()} style={{ ...BTN_PRIMARY, flex: 2, opacity: saving || !newForm.stichwort.trim() ? 0.5 : 1 }}>
+              <button onClick={createEinsatz} disabled={saving || !newForm.keyword.trim()} style={{ ...BTN_PRIMARY, flex: 2, opacity: saving || !newForm.keyword.trim() ? 0.5 : 1 }}>
                 {saving ? 'Speichern…' : 'Anlegen'}
               </button>
             </div>
@@ -542,10 +542,10 @@ export default function Einsaetze() {
             <div style={{ padding: '4px 20px 12px', borderBottom: '0.5px solid rgba(96,8,18,0.1)', display: 'flex', alignItems: 'flex-start', gap: 12, flexShrink: 0 }}>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 17, color: '#1a0e08', lineHeight: 1.25 }}>
-                  {selected.stichwort || selected.einsatz_nr || 'Einsatz'}
+                  {selected.keyword || selected.unit || 'Einsatz'}
                 </div>
                 <div style={{ fontSize: 12, color: 'var(--warm-gray)', fontStyle: 'italic', marginTop: 3 }}>
-                  {fmtDate(selected.datum)}{fmtTime(selected.datum) ? ` · ${fmtTime(selected.datum)} Uhr` : ''} · Nr: {selected.einsatz_nr}
+                  {fmtDate(selected.datum)}{fmtTime(selected.datum) ? ` · ${fmtTime(selected.datum)} Uhr` : ''} · Nr: {selected.unit}
                 </div>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
@@ -588,7 +588,7 @@ export default function Einsaetze() {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                       <div>
                         <div style={LABEL}>Stichwort</div>
-                        <input value={editForm.stichwort} onChange={e => setEditForm(f => ({ ...f, stichwort: e.target.value }))} style={INPUT} />
+                        <input value={editForm.keyword} onChange={e => setEditForm(f => ({ ...f, keyword: e.target.value }))} style={INPUT} />
                       </div>
                       <div>
                         <div style={LABEL}>Adresse</div>
@@ -608,8 +608,9 @@ export default function Einsaetze() {
                   ) : (
                     <>
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-                        <InfoField label="Stichwort" value={selected.stichwort} italic />
-                        <InfoField label="Einsatz-Nr." value={selected.einsatz_nr} />
+                        <InfoField label="Stichwort" value={selected.keyword} italic />
+                        <InfoField label="Einsatz-Nr." value={selected.unit} />
+
                         <InfoField label="Datum" value={fmtDate(selected.datum)} italic />
                         <InfoField label="Alarmzeit" value={fmtTime(selected.datum) ? fmtTime(selected.datum) + ' Uhr' : undefined} italic />
                         <InfoField label="Adresse" value={selected.adresse} italic span />
@@ -876,7 +877,7 @@ function EinsatzCard({ einsatz, onClick }: { einsatz: Einsatz; onClick: () => vo
       <div style={{ padding: '12px 14px 10px' }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, marginBottom: 5 }}>
           <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 16, color: '#1a0e08', lineHeight: 1.3 }}>
-            {einsatz.stichwort || einsatz.einsatz_nr || 'Einsatz'}
+            {einsatz.keyword || einsatz.unit || 'Einsatz'}
           </div>
           <span style={{ flexShrink: 0, padding: '3px 9px', borderRadius: 99, fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', background: cfg.bg, color: cfg.color }}>
             {cfg.label}
@@ -888,7 +889,7 @@ function EinsatzCard({ einsatz, onClick }: { einsatz: Einsatz; onClick: () => vo
           )}
           <span style={{ fontSize: 12, color: 'var(--warm-gray)', fontStyle: 'italic' }}>
             {fmtDate(einsatz.datum)}{fmtTime(einsatz.datum) ? `, ${fmtTime(einsatz.datum)} Uhr` : ''}
-            {einsatz.einsatz_nr && einsatz.stichwort ? ` · Nr: ${einsatz.einsatz_nr}` : ''}
+            {einsatz.unit && einsatz.keyword ? ` · Nr: ${einsatz.unit}` : ''}
           </span>
         </div>
       </div>
