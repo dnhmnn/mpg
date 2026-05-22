@@ -1381,36 +1381,56 @@ export default function Patienten() {
         const m = (pl.mannschaft || {}) as Record<string, { name?: string } | null>
         const crew = ['tf','m1','m2','m3'].map(k => m[k]?.name).filter(Boolean).join(', ')
         const isArchived = (freshPat as any).status === 'archiviert'
+        const printStellungnahmen = () => {
+          const esc = (s: any) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] || c))
+          const rqHtml = rqs.map((rq: any, i: number) => {
+            const sn = sns.find((s: any) => s.rueckfrage_id === rq.id)
+            return `
+              <div class="rq">
+                <div class="rq-head">Rückfrage #${i + 1}${rq.created_by ? ` <span class="meta">— ${esc(rq.created_by)}</span>` : ''}</div>
+                <div class="rq-body">${esc(rq.frage)}</div>
+                ${sn
+                  ? `<div class="sn-label">Stellungnahme (${new Date(sn.created).toLocaleString('de-DE')}):</div><div class="sn-body">${esc(sn.text)}</div>`
+                  : `<div class="sn-empty">Keine Stellungnahme eingegangen.</div>`
+                }
+              </div>
+            `
+          }).join('')
+          const w = window.open('', '_blank', 'width=900,height=1100')
+          if (!w) { alert('Bitte Popups erlauben, um drucken zu können.'); return }
+          w.document.write(`<!DOCTYPE html>
+<html lang="de"><head><meta charset="utf-8"><title>Stellungnahmen — ${esc(patName)}</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  body{font-family:'Atkinson Hyperlegible','Helvetica Neue',Arial,sans-serif;color:#1a0e08;padding:32px;background:#fff;line-height:1.5}
+  h1{font-size:20px;margin-bottom:12px;color:#600812;letter-spacing:-0.01em}
+  .meta-row{font-size:13px;margin-bottom:4px}
+  .meta-row strong{display:inline-block;min-width:100px;color:#600812;font-weight:700}
+  hr{border:none;border-top:0.5px solid rgba(96,8,18,0.2);margin:16px 0 20px}
+  .rq{margin-bottom:20px;page-break-inside:avoid;border-left:3px solid #600812;padding-left:12px}
+  .rq-head{font-weight:700;font-size:14px;color:#1a0e08;margin-bottom:6px}
+  .rq-head .meta{font-style:italic;color:#8a7a68;font-weight:400;font-size:12px}
+  .rq-body{font-size:13px;margin-bottom:10px;color:#1a0e08}
+  .sn-label{font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:0.08em;color:#16a34a;margin-bottom:4px}
+  .sn-body{font-size:13px;background:rgba(22,163,74,0.06);border-left:2px solid #16a34a;padding:8px 12px;border-radius:4px;color:#1a0e08}
+  .sn-empty{font-size:13px;font-style:italic;color:#8a7a68}
+  .print-btn{position:fixed;bottom:24px;right:24px;background:#600812;color:#fff;border:none;padding:12px 22px;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,0.15);font-family:inherit}
+  @media print{.print-btn{display:none}}
+</style></head>
+<body>
+<h1>Stellungnahmen zum Einsatz</h1>
+<div class="meta-row"><strong>Patient:</strong> ${esc(patName)}</div>
+${einsatzInfo ? `<div class="meta-row"><strong>Einsatz:</strong> ${esc(einsatzInfo)}</div>` : ''}
+${pl.zeit_einsatz ? `<div class="meta-row"><strong>Alarmzeit:</strong> ${esc(pl.zeit_einsatz)}</div>` : ''}
+${crew ? `<div class="meta-row"><strong>Mannschaft:</strong> ${esc(crew)}</div>` : ''}
+<hr>
+${rqHtml || '<div style="font-style:italic;color:#8a7a68">Keine Rückfragen vorhanden.</div>'}
+<button class="print-btn" onclick="window.print()">Drucken / PDF</button>
+</body></html>`)
+          w.document.close()
+        }
         return (
           <>
-            {/* Print-only area */}
-            <style>{`@media print { body * { visibility: hidden !important; } #sn-print-area, #sn-print-area * { visibility: visible !important; } #sn-print-area { position: fixed; top: 0; left: 0; width: 100vw; background: white; padding: 32px; z-index: 99999; } }`}</style>
-            <div id="sn-print-area" style={{ visibility: 'hidden', position: 'fixed', top: 0, left: '-200vw', width: '700px', padding: 32, fontFamily: 'serif', background: 'white' }}>
-              <h2 style={{ fontSize: 18, marginBottom: 4 }}>Stellungnahmen zum Einsatz</h2>
-              <div style={{ fontSize: 13, marginBottom: 4 }}><strong>Patient:</strong> {patName}</div>
-              {einsatzInfo && <div style={{ fontSize: 13, marginBottom: 4 }}><strong>Einsatz:</strong> {einsatzInfo}</div>}
-              {pl.zeit_einsatz && <div style={{ fontSize: 13, marginBottom: 4 }}><strong>Alarmzeit:</strong> {pl.zeit_einsatz}</div>}
-              {crew && <div style={{ fontSize: 13, marginBottom: 16 }}><strong>Mannschaft:</strong> {crew}</div>}
-              <hr style={{ margin: '12px 0' }} />
-              {rqs.map((rq: any, i: number) => {
-                const sn = sns.find((s: any) => s.rueckfrage_id === rq.id)
-                return (
-                  <div key={rq.id} style={{ marginBottom: 20, breakInside: 'avoid' }}>
-                    <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 4 }}>Rückfrage #{i + 1} {rq.created_by ? `(${rq.created_by})` : ''}</div>
-                    <div style={{ fontSize: 13, marginBottom: 8, paddingLeft: 12 }}>{rq.frage}</div>
-                    {sn ? (
-                      <>
-                        <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 2 }}>Stellungnahme ({new Date(sn.created).toLocaleString('de-DE')}):</div>
-                        <div style={{ fontSize: 13, paddingLeft: 12 }}>{sn.text}</div>
-                      </>
-                    ) : (
-                      <div style={{ fontSize: 13, fontStyle: 'italic' }}>Keine Stellungnahme eingegangen.</div>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
-
             <div style={{ position: 'fixed', inset: 0, background: 'rgba(26,14,8,0.45)', zIndex: 3000, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '16px 20px' }}>
               <div style={{ background: '#fff', borderRadius: 14, width: '100%', maxWidth: 560, maxHeight: '85vh', overflowY: 'auto', boxShadow: '0 16px 48px rgba(0,0,0,0.2)', border: '0.5px solid rgba(96,8,18,0.1)' }}>
                 <div style={{ padding: '16px 20px 12px', borderBottom: '0.5px solid rgba(96,8,18,0.12)', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', position: 'sticky', top: 0, background: '#fff', zIndex: 1 }}>
@@ -1468,7 +1488,7 @@ export default function Patienten() {
                 </div>
                 <div style={{ padding: '10px 20px 16px', borderTop: '0.5px solid rgba(96,8,18,0.08)', background: 'rgba(250,249,247,0.8)', display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
                   <button
-                    onClick={() => window.print()}
+                    onClick={printStellungnahmen}
                     className="pat-btn"
                   >
                     Drucken / PDF
