@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { pb } from '../lib/pocketbase'
 import { useAuth } from '../hooks/useAuth'
 import StatusBar from '../components/StatusBar'
@@ -182,6 +182,12 @@ export default function Lager() {
 
   const [buchungSearch, setBuchungSearch] = useState('')
   const [multiBuchungSearch, setMultiBuchungSearch] = useState('')
+
+  // CSV Import state
+  const [showImportModal, setShowImportModal] = useState(false)
+  const [importItems, setImportItems] = useState<Array<{name: string, qty: number, expiry?: string, item?: InventoryItem}>>([])
+  const [importLoading, setImportLoading] = useState(false)
+  const importFileRef = useRef<HTMLInputElement>(null)
 
   // Multi-buchung state
   const [showMultiBuchungModal, setShowMultiBuchungModal] = useState(false)
@@ -873,6 +879,78 @@ export default function Lager() {
     setMultiBuchungSearch('')
   }
 
+  function handleImportFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = (ev) => {
+      const text = ev.target?.result as string
+      parseImportCSV(text)
+      if (importFileRef.current) importFileRef.current.value = ''
+    }
+    reader.readAsText(file, 'UTF-8')
+  }
+
+  function parseImportCSV(text: string) {
+    const lines = text.split(/\r?\n/).filter(l => l.trim())
+    if (lines.length < 2) { showMsg('Datei ist leer oder hat nur eine Zeile', 'error'); return }
+
+    const sep = lines[0].includes(';') ? ';' : ','
+    const headers = lines[0].split(sep).map(h => h.trim().replace(/^"|"$/g, '').toLowerCase())
+
+    const nameCol = headers.findIndex(h => ['artikel', 'name', 'bezeichnung', 'produkt', 'item'].some(k => h.includes(k)))
+    const qtyCol  = headers.findIndex(h => ['menge', 'anzahl', 'qty', 'quantity', 'stück'].some(k => h.includes(k)))
+    const expCol  = headers.findIndex(h => ['ablauf', 'haltbar', 'expiry', 'datum', 'mhd'].some(k => h.includes(k)))
+
+    const nCol = nameCol >= 0 ? nameCol : 0
+    const qCol = qtyCol  >= 0 ? qtyCol  : 1
+
+    const parsed = lines.slice(1).flatMap(line => {
+      const cols = line.split(sep).map(c => c.trim().replace(/^"|"$/g, ''))
+      const name = cols[nCol] || ''
+      const qty  = parseInt(cols[qCol]) || 0
+      if (!name || qty <= 0) return []
+      let expiry: string | undefined
+      if (expCol >= 0 && cols[expCol]) {
+        // Support DD.MM.YYYY and YYYY-MM-DD
+        const raw = cols[expCol]
+        const dmy = raw.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/)
+        expiry = dmy ? `${dmy[3]}-${dmy[2].padStart(2,'0')}-${dmy[1].padStart(2,'0')}` : raw
+      }
+      const item = allItems.find(i =>
+        i.name.toLowerCase() === name.toLowerCase() ||
+        i.name.toLowerCase().includes(name.toLowerCase()) ||
+        name.toLowerCase().includes(i.name.toLowerCase())
+      )
+      return [{ name, qty, expiry, item }]
+    })
+
+    if (parsed.length === 0) { showMsg('Keine gültigen Zeilen gefunden', 'error'); return }
+    setImportItems(parsed)
+    setShowImportModal(true)
+  }
+
+  async function confirmImport() {
+    if (!currentLocationId) return
+    setImportLoading(true)
+    try {
+      let count = 0
+      for (const row of importItems) {
+        if (!row.item) continue
+        await adjustQty(row.item.id, row.qty, row.expiry)
+        count++
+      }
+      setShowImportModal(false)
+      setImportItems([])
+      await loadStock()
+      showMsg(`✅ ${count} Artikel eingebucht`, 'success')
+    } catch (e: any) {
+      showMsg('Fehler: ' + e.message, 'error')
+    } finally {
+      setImportLoading(false)
+    }
+  }
+
   async function openItemDetail(item: DisplayItem) {
     setDetailItem(item)
     setDetailNote(item.notes || '')
@@ -1070,6 +1148,14 @@ export default function Lager() {
             <line x1="17.5" y1="19" x2="17.5" y2="23"/><line x1="15.5" y1="21" x2="19.5" y2="21"/>
           </svg>
         </button>
+        <button className="action-btn" onClick={() => importFileRef.current?.click()} title="Liste importieren (CSV)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+            <polyline points="17 8 12 3 7 8"/>
+            <line x1="12" y1="3" x2="12" y2="15"/>
+          </svg>
+        </button>
+        <input ref={importFileRef} type="file" accept=".csv,.txt" style={{display:'none'}} onChange={handleImportFile} />
         <button className="action-btn" onClick={exportPDF} title="PDF Export">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
@@ -1746,6 +1832,53 @@ export default function Lager() {
               </button>
               <button className="btn primary" onClick={saveBuchung}>
                 {buchungType === 'ein' ? 'Einbuchen' : 'Ausbuchen'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CSV IMPORT MODAL */}
+      {showImportModal && (
+        <div className="modal" onClick={() => { setShowImportModal(false); setImportItems([]) }}>
+          <div className="modal-box" onClick={(e) => e.stopPropagation()}>
+            <h3>Liste importieren</h3>
+            <div style={{marginBottom: 12, fontSize: '0.85rem', color: '#64748b'}}>
+              {importItems.filter(r => r.item).length} von {importItems.length} Artikel erkannt ·&nbsp;
+              Standort: <strong>{locations.find(l => l.id === currentLocationId)?.name}</strong>
+            </div>
+            <div style={{maxHeight: 320, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 16}}>
+              {importItems.map((row, i) => (
+                <div key={i} style={{
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                  padding: '9px 12px', borderRadius: 8,
+                  background: row.item ? '#f0fdf4' : '#fafafa',
+                  borderLeft: `3px solid ${row.item ? '#16a34a' : '#d1d5db'}`
+                }}>
+                  <div>
+                    <div style={{fontWeight: 600, fontSize: '0.9rem'}}>{row.item?.name || row.name}</div>
+                    {!row.item && <div style={{fontSize: '0.75rem', color: '#9ca3af'}}>„{row.name}" — kein Artikel gefunden</div>}
+                    {row.expiry && <div style={{fontSize: '0.75rem', color: '#64748b'}}>MHD: {new Date(row.expiry).toLocaleDateString('de-DE')}</div>}
+                  </div>
+                  <div style={{fontWeight: 700, color: row.item ? '#15803d' : '#9ca3af', fontSize: '0.95rem', whiteSpace: 'nowrap'}}>
+                    +{row.qty} {row.item?.unit || ''}
+                  </div>
+                </div>
+              ))}
+            </div>
+            {importItems.filter(r => !r.item).length > 0 && (
+              <div style={{fontSize: '0.8rem', color: '#92400e', background: '#fef3c7', padding: '8px 12px', borderRadius: 8, marginBottom: 12}}>
+                {importItems.filter(r => !r.item).length} Artikel nicht erkannt — bitte Artikelnamen in der CSV mit denen im Lager abgleichen.
+              </div>
+            )}
+            <div style={{display: 'flex', gap: 8, justifyContent: 'flex-end'}}>
+              <button className="btn" onClick={() => { setShowImportModal(false); setImportItems([]) }}>Abbrechen</button>
+              <button
+                className="btn primary"
+                disabled={importLoading || importItems.filter(r => r.item).length === 0}
+                onClick={confirmImport}
+              >
+                {importLoading ? 'Buche…' : `${importItems.filter(r => r.item).length} Artikel einbuchen`}
               </button>
             </div>
           </div>
