@@ -339,18 +339,32 @@ export default function Unitarii() {
   return (
     <div style={{ minHeight: '100vh', background: 'var(--warm-bg)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
 
-      {/* Masthead */}
-      <div style={{ position: 'sticky', top: 0, zIndex: 50, background: '#fff', borderBottom: '0.5px solid rgba(96,8,18,0.12)', padding: '0 16px', display: 'flex', alignItems: 'center', height: 60, gap: 12 }}>
-        <button onClick={() => navigate('/hub')} style={{ background: 'rgba(96,8,18,0.06)', border: 'none', borderRadius: 8, width: 34, height: 34, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#600812' }}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-        </button>
-        <div style={{ flex: 1, textAlign: 'center' }}>
-          <div style={{ fontWeight: 700, fontSize: 15, color: '#1a0e08', letterSpacing: '-0.01em' }}>Benutzerverwaltung</div>
-          <div style={{ fontStyle: 'italic', fontSize: 11, color: 'var(--warm-gray)' }}>
-            {new Date().toLocaleDateString('de-DE', { weekday: 'long', day: '2-digit', month: 'long' })}
+      {/* Masthead (Patienten/Lager-Stil) */}
+      <div style={{ background: '#fff', borderBottom: '0.5px solid rgba(96,8,18,0.12)', position: 'sticky', top: 0, zIndex: 100, paddingTop: 'env(safe-area-inset-top)', paddingLeft: 'max(20px, env(safe-area-inset-left))', paddingRight: 'max(20px, env(safe-area-inset-right))' }}>
+        <div style={{ height: 60, display: 'flex', alignItems: 'center', gap: 12 }}>
+          <a href="/hub" style={{ display: 'flex', color: '#600812', textDecoration: 'none', flexShrink: 0 }}>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#600812" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+          </a>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontWeight: 700, fontSize: 15, letterSpacing: '-0.01em', color: '#1a0e08' }}>Benutzerverwaltung</div>
+            <div style={{ fontStyle: 'italic', fontSize: 11, color: 'var(--warm-gray)', marginTop: 1 }}>{user?.organization_name || 'Responda'}</div>
           </div>
+          {tab === 'benutzer' && (
+            <button onClick={() => openEditUser()} title="Benutzer anlegen" style={{ width: 32, height: 32, borderRadius: 8, border: 'none', background: 'rgba(96,8,18,0.07)', color: '#600812', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            </button>
+          )}
+          {tab === 'neuigkeiten' && (
+            <button onClick={() => openEditN()} title="Neue Neuigkeit" style={{ width: 32, height: 32, borderRadius: 8, border: 'none', background: 'rgba(96,8,18,0.07)', color: '#600812', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            </button>
+          )}
+          {tab === 'temp' && (
+            <button onClick={openTempCreate} title="Temporären Zugang erstellen" style={{ width: 32, height: 32, borderRadius: 8, border: 'none', background: 'rgba(96,8,18,0.07)', color: '#600812', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            </button>
+          )}
         </div>
-        <div style={{ width: 34 }} />
       </div>
 
       {/* Tab Bar */}
@@ -381,10 +395,7 @@ export default function Unitarii() {
         {/* ── BENUTZER ── */}
         {tab === 'benutzer' && (
           <>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-              <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em' }}>Alle Benutzer</div>
-              <button onClick={() => openEditUser()} style={BTN_PRIMARY}>+ Hinzufügen</button>
-            </div>
+            <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 14 }}>Alle Benutzer</div>
 
             {regularUsers.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--warm-gray)', fontStyle: 'italic' }}>Noch keine Benutzer</div>
@@ -399,10 +410,7 @@ export default function Unitarii() {
         {/* ── NEUIGKEITEN ── */}
         {tab === 'neuigkeiten' && (
           <>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-              <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em' }}>Veröffentlicht in Unitas</div>
-              <button onClick={() => openEditN()} style={BTN_PRIMARY}>+ Neuigkeit</button>
-            </div>
+            <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 14 }}>Veröffentlicht in Unitas</div>
 
             {neuigkeiten.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--warm-gray)', fontStyle: 'italic' }}>Noch keine Neuigkeiten</div>
@@ -443,10 +451,7 @@ export default function Unitarii() {
         {/* ── TEMPORÄRE ── */}
         {tab === 'temp' && (
           <>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-              <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em' }}>Zugänge mit Ablaufdatum</div>
-              <button onClick={openTempCreate} style={BTN_PRIMARY}>+ Erstellen</button>
-            </div>
+            <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 4 }}>Zugänge mit Ablaufdatum</div>
             <div style={{ fontSize: 12, fontStyle: 'italic', color: 'var(--warm-gray)', marginBottom: 14 }}>
               Echte Benutzer-Accounts die nach Ablauf automatisch deaktiviert werden.
             </div>
