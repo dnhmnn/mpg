@@ -55,5 +55,9 @@ export function useAuth() {
     }
   }
 
-  return { user, loading, logout }
+  async function refresh() {
+    await checkAuth()
+  }
+
+  return { user, loading, logout, refresh }
 }

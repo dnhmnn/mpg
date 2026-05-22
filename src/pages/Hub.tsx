@@ -11,6 +11,7 @@ import EditModal from '../components/EditModal'
 import WidgetsModal from '../components/WidgetsModal'
 import NotificationModal from '../components/NotificationModal'
 import { ALL_APPS, ROLES } from '../lib/apps'
+import { pb } from '../lib/pocketbase'
 import type { App } from '../types'
 
 const PREDEFINED_SHORTCUTS = [
@@ -53,7 +54,7 @@ function initials(name?: string | null): string {
 
 export default function Hub() {
   const navigate = useNavigate()
-  const { user, loading, logout } = useAuth()
+  const { user, loading, logout, refresh } = useAuth()
   const { currentNotification, dismissNotification, remindLater } = useNotifications(user)
 
   const [logoError, setLogoError] = useState(false)
@@ -125,6 +126,15 @@ export default function Hub() {
     if (user) loadUserApps()
   }, [user])
 
+  // Subscribe to own user record so temp-permission grants appear immediately
+  useEffect(() => {
+    if (!user?.id) return
+    pb.collection('users').subscribe(user.id, async () => {
+      await refresh()
+    })
+    return () => { pb.collection('users').unsubscribe(user.id) }
+  }, [user?.id])
+
   function trackAppClick(id: string) {
     if (!user) return
     const key = `hub_recent_${user.id}`
@@ -151,6 +161,16 @@ export default function Hub() {
     return false
   }
 
+  function getActiveTempPermAppIds(): string[] {
+    const tempPerms = (user as any)?.temp_permissions as Record<string, { until: string }> | undefined
+    if (!tempPerms) return []
+    const now = Date.now()
+    const activePerms = Object.entries(tempPerms)
+      .filter(([, v]) => new Date(v.until).getTime() > now)
+      .map(([k]) => k)
+    return Object.keys(ALL_APPS).filter(id => activePerms.includes(ALL_APPS[id].permission))
+  }
+
   function loadUserApps() {
     if (!user) return
     const saved = localStorage.getItem(`hub_apps_${user.id}`)
@@ -169,6 +189,10 @@ export default function Hub() {
     } else {
       apps = Object.keys(ALL_APPS).filter(id => hasPermission(ALL_APPS[id].permission))
     }
+    // Always inject active temp-permission apps even if user removed them from grid
+    const tempAppIds = getActiveTempPermAppIds()
+    const missing = tempAppIds.filter(id => !apps.includes(id))
+    if (missing.length > 0) apps = [...apps, ...missing]
     setUserApps(apps)
     updateAvailableApps(apps)
   }
