@@ -1,9 +1,11 @@
 import { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate, Link, useSearchParams } from 'react-router-dom'
 import { pb } from '../lib/pocketbase'
 
 export default function Login() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const disabledHint = searchParams.get('reason') === 'disabled'
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -25,6 +27,14 @@ export default function Login() {
     try {
       const authData = await pb.collection('users').authWithPassword(email, password)
       clearTimeout(timeoutId)
+      const u = authData.record as any
+      const expired = u?.expires_at && new Date(u.expires_at).getTime() < Date.now()
+      if (u?.disabled || expired) {
+        pb.authStore.clear()
+        setError('Dein Zugang wurde deaktiviert oder ist abgelaufen. Bitte Admin kontaktieren.')
+        setLoading(false)
+        return
+      }
       try {
         const { initializeAndUnlock } = await import('../lib/keyManager')
         await initializeAndUnlock(authData.record.id, password)
@@ -120,6 +130,12 @@ export default function Login() {
                 <input className="l-input" type="password" value={password} onChange={e => setPassword(e.target.value)}
                   placeholder="••••••••" required disabled={loading} />
               </div>
+
+              {!error && disabledHint && (
+                <div style={{ padding: '10px 14px', background: 'rgba(192,57,43,0.06)', border: '1px solid rgba(192,57,43,0.2)', borderRadius: 8, fontSize: 13, color: '#b91c1c', fontStyle: 'italic' }}>
+                  Dein Zugang wurde deaktiviert oder ist abgelaufen. Bitte Admin kontaktieren.
+                </div>
+              )}
 
               {error && (
                 <div style={{ padding: '10px 14px', background: 'rgba(192,57,43,0.06)', border: '1px solid rgba(192,57,43,0.2)', borderRadius: 8, fontSize: 13, color: '#b91c1c', fontStyle: 'italic' }}>

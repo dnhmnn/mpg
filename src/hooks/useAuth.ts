@@ -20,6 +20,13 @@ export function useAuth() {
       await pb.collection('users').authRefresh()
       let userData = pb.authStore.model as User
 
+      const isExpired = userData?.expires_at && new Date(userData.expires_at).getTime() < Date.now()
+      if (userData?.disabled || isExpired) {
+        pb.authStore.clear()
+        window.location.href = '/login?reason=disabled'
+        return
+      }
+
       if (userData && userData.organization_id) {
         try {
           const org = await pb.collection('organizations').getOne(userData.organization_id)

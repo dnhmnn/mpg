@@ -11,6 +11,8 @@ export interface User {
   supervisor?: boolean
   permissions?: Record<string, boolean>
   lernbar_access?: boolean
+  disabled?: boolean
+  expires_at?: string
 }
 
 export interface Organization {
