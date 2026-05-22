@@ -1373,7 +1373,7 @@ export default function Patienten() {
         const freshPat = freigegebenPatients.find(p => p.id === stellungnahmePat.id)
           || archivedPatients.find(p => p.id === stellungnahmePat.id)
           || stellungnahmePat
-        const pl = (freshPat as any).payload || {}
+        const pl = parsePayload((freshPat as any).payload)
         const rqs: any[] = Array.isArray(pl.rueckfragen) ? pl.rueckfragen : []
         const sns: any[] = Array.isArray(pl.stellungnahmen) ? pl.stellungnahmen : []
         const patName = [pl.vorname, pl.name].filter(Boolean).join(' ') || freshPat.title || 'Unbekannt'
