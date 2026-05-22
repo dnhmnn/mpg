@@ -127,20 +127,18 @@ export default function ProtokollBearbeiten() {
           else if ((el as HTMLInputElement).type === 'radio') (el as HTMLInputElement).checked = el.value === String(v)
           else el.value = String(v)
           if (chf.has(el.name)) {
+            el.style.boxShadow = 'inset 0 0 0 2px #d97706'
             el.style.background = '#fef3c7'
-            el.style.borderColor = '#d97706'
-            el.style.borderWidth = '2px'
           } else if (tfchf.has(el.name)) {
+            el.style.boxShadow = 'inset 0 0 0 2px #16a34a'
             el.style.background = '#f0fdf4'
-            el.style.borderColor = '#16a34a'
-            el.style.borderWidth = '2px'
           }
         })
         ;['notfallgeschehen', 'verlaufsbeschreibung'].forEach(n => {
           const el = form.querySelector<HTMLTextAreaElement>(`[name="${n}"]`)
           if (!el) return
-          if (chf.has(n)) { el.style.background = '#fef3c7'; el.style.borderColor = '#d97706'; el.style.borderWidth = '2px' }
-          else if (tfchf.has(n)) { el.style.background = '#f0fdf4'; el.style.borderColor = '#16a34a'; el.style.borderWidth = '2px' }
+          if (chf.has(n)) { el.style.boxShadow = 'inset 0 0 0 2px #d97706'; el.style.background = '#fef3c7' }
+          else if (tfchf.has(n)) { el.style.boxShadow = 'inset 0 0 0 2px #16a34a'; el.style.background = '#f0fdf4' }
         })
       }, 50)
     } catch { alert('Protokoll nicht gefunden.'); navigate('/unitas') }
@@ -157,7 +155,11 @@ export default function ProtokollBearbeiten() {
     clearTimeout(autoSaveTimer.current)
     autoSaveTimer.current = setTimeout(async () => {
       if (!patientId || locked) return
-      try { await pb.collection('patients').update(patientId, { payload: collectData() }) } catch {}
+      try {
+        const data = collectData()
+        if (isReopenEdit) data._tf_changed_fields = computeTFChangedFields(data)
+        await pb.collection('patients').update(patientId, { payload: data })
+      } catch {}
     }, 1500)
   }
 

@@ -591,7 +591,18 @@ export default function Unitas() {
                             </button>
                           )}
                           {reopenActive && isTF ? (
-                            <button onClick={() => navigate(`/protokoll/${p.id}`)} style={{ background: '#16a34a', color: '#fff', border: 'none', borderRadius: 7, padding: '6px 13px', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>Nachbearbeiten</button>
+                            <>
+                              <button onClick={() => navigate(`/protokoll/${p.id}`)} style={{ background: '#16a34a', color: '#fff', border: 'none', borderRadius: 7, padding: '6px 13px', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>Nachbearbeiten</button>
+                              <button onClick={async () => {
+                                try {
+                                  const newPayload = { ...p.payload }
+                                  delete newPayload.tf_reopen
+                                  await pb.collection('patients').update(p.id, { payload: newPayload })
+                                  showMsg('Nachbearbeitung abgeschlossen', 'success')
+                                  loadPatients()
+                                } catch (e: any) { showMsg('Fehler: ' + e.message, 'error') }
+                              }} style={{ background: 'transparent', color: '#16a34a', border: '1px solid #16a34a', borderRadius: 7, padding: '6px 13px', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>Abschließen</button>
+                            </>
                           ) : (
                             <button onClick={() => navigate(`/protokoll/${p.id}`)} style={{ background: 'transparent', color: '#600812', border: '1px solid rgba(96,8,18,0.3)', borderRadius: 7, padding: '6px 13px', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>Ansehen</button>
                           )}
