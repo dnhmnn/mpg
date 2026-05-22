@@ -9,6 +9,7 @@ interface InventoryItem {
   name: string
   unit: string
   min_stock: number
+  location_min_stocks?: Record<string, number>
   notes?: string
   organization_id: string
   created: string
@@ -97,6 +98,12 @@ interface ProductOutput {
   }
 }
 
+function getMinStock(item: InventoryItem, locationId: string | null): number {
+  if (locationId && item.location_min_stocks?.[locationId] !== undefined)
+    return item.location_min_stocks[locationId]
+  return item.min_stock ?? 0
+}
+
 export default function Lager() {
   const { user, loading: authLoading, logout } = useAuth()
 
@@ -154,6 +161,8 @@ export default function Lager() {
     const saved = localStorage.getItem('lager_inventur_schedule')
     return saved ? JSON.parse(saved) : { interval: 'monthly' }
   })
+  const [auditActual, setAuditActual] = useState(0)
+  const [auditChecked, setAuditChecked] = useState(false)
   
   // Buchung state
   const [selectedBuchungItem, setSelectedBuchungItem] = useState<string>('')
@@ -183,8 +192,17 @@ export default function Lager() {
     if (user?.organization_id) {
       loadLocations()
       loadAusgabenCount()
+      loadLagerSettings()
     }
   }, [user])
+
+  useEffect(() => {
+    const item = auditItems[auditIndex]
+    if (item) {
+      setAuditActual(item.actual_quantity || 0)
+      setAuditChecked(item.checked || false)
+    }
+  }, [auditIndex, auditItems])
 
   useEffect(() => {
     if (currentLocationId) {
@@ -215,6 +233,15 @@ export default function Lager() {
       console.error('Error loading locations:', e)
       setError('Fehler beim Laden der Standorte: ' + e.message)
     }
+  }
+
+  async function loadLagerSettings() {
+    try {
+      const s = await pb.collection('lager_settings').getFirstListItem(
+        `organization_id = "${user?.organization_id}"`
+      )
+      if (s?.inventur_interval) setInventurSchedule({ interval: s.inventur_interval })
+    } catch { /* collection not set up yet → localStorage fallback stays */ }
   }
 
   async function loadAusgabenCount() {
@@ -322,7 +349,7 @@ export default function Lager() {
           id: item.id,
           name: item.name,
           unit: item.unit,
-          min_stock: item.min_stock,
+          min_stock: getMinStock(item, currentLocationId),
           qty: 0,
           expiry: undefined,
           notes: item.notes,
@@ -608,9 +635,21 @@ export default function Lager() {
     }
   }
 
-  function saveSchedule() {
+  async function saveSchedule() {
     localStorage.setItem('lager_inventur_schedule', JSON.stringify(inventurSchedule))
-    showMsg('✅ Zeitplan gespeichert!', 'success')
+    try {
+      const existing = await pb.collection('lager_settings').getFullList({
+        filter: `organization_id = "${user?.organization_id}"`
+      })
+      if (existing.length > 0) {
+        await pb.collection('lager_settings').update(existing[0].id, { inventur_interval: inventurSchedule.interval })
+      } else {
+        await pb.collection('lager_settings').create({ organization_id: user?.organization_id, inventur_interval: inventurSchedule.interval })
+      }
+      showMsg('✅ Zeitplan gespeichert!', 'success')
+    } catch (e: any) {
+      showMsg('Fehler beim Speichern: ' + e.message, 'error')
+    }
   }
 
   function getNextDueDateForLocation(locationId: string): Date | null {
@@ -679,7 +718,7 @@ export default function Lager() {
     }
   }
 
-  async function loadAuditItems(auditId: string, locationId?: string) {
+  async function loadAuditItems(auditId: string, locationId?: string): Promise<AuditItem[]> {
     const locId = locationId || currentLocationId
     try {
       const items = await pb.collection('inventory_audit_items').getFullList<AuditItem>({
@@ -687,14 +726,13 @@ export default function Lager() {
         expand: 'item_id',
         sort: 'checked,created'
       })
-      
       setAuditItems(items)
-      
       const firstUnchecked = items.findIndex(ai => !ai.checked)
       if (firstUnchecked >= 0) setAuditIndex(firstUnchecked)
-      
+      return items
     } catch(e: any) {
       console.error('Error loading audit items:', e)
+      return []
     }
   }
 
@@ -755,10 +793,8 @@ export default function Lager() {
         })
       }
 
-      if (auditIndex < auditItems.length - 1) {
-        setAuditIndex(auditIndex + 1)
-        await loadAuditItems(currentAudit.id, locId)
-      } else {
+      const updatedItems = await loadAuditItems(currentAudit.id, locId)
+      if (updatedItems.every(ai => ai.checked)) {
         await finishInventur()
       }
       
@@ -876,16 +912,20 @@ export default function Lager() {
   }
 
   async function saveItemDetail() {
-    if (!detailItem) return
+    if (!detailItem || !currentLocationId) return
     try {
-      const updated = await pb.collection('inventory_items').update(detailItem.id, {
-        min_stock: detailSoll,
+      const existingItem = allItems.find(i => i.id === detailItem.id)
+      const updatedLocationMinStocks = {
+        ...(existingItem?.location_min_stocks || {}),
+        [currentLocationId]: detailSoll
+      }
+      await pb.collection('inventory_items').update(detailItem.id, {
+        location_min_stocks: updatedLocationMinStocks,
         notes: detailNote
       })
-      if (Number(updated.min_stock) !== detailSoll) {
-        alert(`PocketBase hat min_stock nicht gespeichert!\nGesendet: ${detailSoll}\nZurückbekommen: ${updated.min_stock}\n\nBitte im PocketBase Admin das Feld "min_stock" (Typ: Number) in der inventory_items Collection anlegen.`)
-        return
-      }
+      setAllItems(prev => prev.map(i => i.id === detailItem.id
+        ? { ...i, location_min_stocks: updatedLocationMinStocks }
+        : i))
       // Save expiry date on all stock entries for this item/location
       const stocks = await pb.collection('inventory_stock').getFullList({
         filter: `item_id = "${detailItem.id}" && location_id = "${currentLocationId}"`
@@ -1396,8 +1436,8 @@ export default function Lager() {
                           <label>Tatsächlicher Bestand (gezählt):</label>
                           <input
                             type="number"
-                            id="audit-actual"
-                            defaultValue={auditItems[auditIndex]?.actual_quantity || 0}
+                            value={auditActual}
+                            onChange={e => setAuditActual(Number(e.target.value))}
                             min="0"
                             style={{fontSize: '1.2rem', fontWeight: 700}}
                           />
@@ -1405,7 +1445,7 @@ export default function Lager() {
 
                         <div style={{marginTop: '12px'}}>
                           <label style={{display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer'}}>
-                            <input type="checkbox" id="audit-checked" defaultChecked={auditItems[auditIndex]?.checked || false} />
+                            <input type="checkbox" checked={auditChecked} onChange={e => setAuditChecked(e.target.checked)} />
                             <span>Als geprüft markieren</span>
                           </label>
                         </div>
@@ -1417,13 +1457,9 @@ export default function Lager() {
                         </button>
                         <button
                           className="btn primary"
-                          onClick={() => {
-                            const actual = parseInt((document.getElementById('audit-actual') as HTMLInputElement)?.value || '0')
-                            const checked = (document.getElementById('audit-checked') as HTMLInputElement)?.checked || false
-                            saveAuditItem(actual, checked)
-                          }}
+                          onClick={() => saveAuditItem(auditActual, auditChecked)}
                         >
-                          {auditIndex === auditItems.length - 1 ? 'Fertig' : 'Weiter'}
+                          {auditItems.filter(ai => !ai.checked).length <= 1 ? 'Fertig' : 'Weiter'}
                         </button>
                       </div>
                     </div>
@@ -1733,7 +1769,7 @@ export default function Lager() {
             {/* SOLL, Bemerkung & Ablaufdatum */}
             <div style={{display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '12px', marginBottom: '12px'}}>
               <div className="form-group" style={{marginBottom: 0}}>
-                <label>SOLL (Mindestbestand)</label>
+                <label>SOLL für {locations.find(l => l.id === currentLocationId)?.name || 'diesen Standort'}</label>
                 <input
                   type="number"
                   value={detailSoll}
