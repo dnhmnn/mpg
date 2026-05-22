@@ -14,6 +14,7 @@ interface UUser {
   supervisor?: boolean
   disabled?: boolean
   expires_at?: string
+  temp_permissions?: Record<string, { until: string; granted_by?: string }>
   created?: string
 }
 
@@ -109,8 +110,10 @@ export default function Unitarii() {
     name: '', email: '', phone: '', password: '', role: 'benutzer',
     permissions: { ...EMPTY_PERMS },
     supervisor: false, disabled: false, expires_at: '',
+    temp_permissions: {} as Record<string, { until: string; granted_by?: string }>,
   })
   const [savingUser, setSavingUser] = useState(false)
+  const [tempPermKey, setTempPermKey] = useState('')
 
   const [neuigkeiten, setNeuigkeiten] = useState<Neuigkeit[]>([])
   const [nOpen, setNOpen] = useState(false)
@@ -162,18 +165,50 @@ export default function Unitarii() {
 
   function openEditUser(u?: UUser) {
     setEditingUser(u || null)
+    // Clean expired temp_permissions when loading
+    const cleanTemp: Record<string, { until: string; granted_by?: string }> = {}
+    if (u?.temp_permissions) {
+      const now = Date.now()
+      for (const [k, v] of Object.entries(u.temp_permissions)) {
+        if (v?.until && new Date(v.until).getTime() > now) cleanTemp[k] = v
+      }
+    }
     setUserForm(u ? {
       name: u.name || '', email: u.email || '', phone: u.phone || '',
       password: '', role: u.role || 'benutzer',
       permissions: { ...EMPTY_PERMS, ...(u.permissions || {}) },
       supervisor: !!u.supervisor, disabled: !!u.disabled,
       expires_at: fmtDateTimeLocal(u.expires_at),
+      temp_permissions: cleanTemp,
     } : {
       name: '', email: '', phone: '', password: genPassword(),
       role: 'benutzer', permissions: { ...EMPTY_PERMS },
       supervisor: false, disabled: false, expires_at: '',
+      temp_permissions: {},
     })
+    setTempPermKey('')
     setEditOpen(true)
+  }
+
+  function addTempPerm(key: string, hours: number) {
+    if (!key) return
+    const until = new Date(Date.now() + hours * 3600 * 1000).toISOString()
+    setUserForm(p => ({
+      ...p,
+      temp_permissions: {
+        ...p.temp_permissions,
+        [key]: { until, granted_by: user?.name || user?.email || '' },
+      },
+    }))
+    setTempPermKey('')
+  }
+
+  function removeTempPerm(key: string) {
+    setUserForm(p => {
+      const next = { ...p.temp_permissions }
+      delete next[key]
+      return { ...p, temp_permissions: next }
+    })
   }
 
   async function saveUser() {
@@ -191,6 +226,7 @@ export default function Unitarii() {
         phone: userForm.phone.trim(), role: userForm.role,
         permissions: userForm.permissions, disabled: userForm.disabled,
         expires_at: expIso,
+        temp_permissions: userForm.temp_permissions,
       }
       if (user?.supervisor) base.supervisor = userForm.supervisor
 
@@ -482,7 +518,7 @@ export default function Unitarii() {
             </Field>
 
             <div>
-              <div style={LABEL}>Zugriffsrechte</div>
+              <div style={LABEL}>Zugriffsrechte (dauerhaft)</div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, padding: '10px 12px', background: '#fff', borderRadius: 10, border: '0.5px solid rgba(96,8,18,0.1)' }}>
                 {PERM_LABELS.map(({ key, label }) => (
                   <label key={key} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, color: '#1a0e08' }}>
@@ -490,6 +526,50 @@ export default function Unitarii() {
                     {label}
                   </label>
                 ))}
+              </div>
+            </div>
+
+            <div>
+              <div style={LABEL}>Temporäre Zusatzrechte</div>
+              <div style={{ padding: '10px 12px', background: '#fff', borderRadius: 10, border: '0.5px solid rgba(96,8,18,0.1)', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {Object.entries(userForm.temp_permissions).length === 0 ? (
+                  <div style={{ fontSize: 12, fontStyle: 'italic', color: 'var(--warm-gray)' }}>Keine aktiv — Beispiel: Unitas-User für 4h Lager-Zugriff</div>
+                ) : (
+                  Object.entries(userForm.temp_permissions).map(([key, val]) => {
+                    const label = PERM_LABELS.find(p => p.key === key)?.label || key
+                    const left = fmtCountdown(val.until)
+                    return (
+                      <div key={key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 0', borderBottom: '0.5px solid rgba(96,8,18,0.06)' }}>
+                        <div>
+                          <div style={{ fontWeight: 700, fontSize: 13, color: '#1a0e08' }}>{label}</div>
+                          <div style={{ fontStyle: 'italic', fontSize: 11, color: 'var(--warm-gray)' }}>läuft in {left}</div>
+                        </div>
+                        <button onClick={() => removeTempPerm(key)} style={{ ...BTN_SECONDARY, padding: '5px 11px', fontSize: 11, color: '#b91c1c', borderColor: 'rgba(185,28,28,0.3)' }}>Entfernen</button>
+                      </div>
+                    )
+                  })
+                )}
+                {/* Add new */}
+                <div style={{ paddingTop: 6, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <select value={tempPermKey} onChange={e => setTempPermKey(e.target.value)} style={{ ...INPUT, padding: '9px 11px' }}>
+                    <option value="">Berechtigung wählen…</option>
+                    {PERM_LABELS.filter(p => !userForm.permissions[p.key] && !userForm.temp_permissions[p.key]).map(p => (
+                      <option key={p.key} value={p.key}>{p.label}</option>
+                    ))}
+                  </select>
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                    {[{ h: 1, l: '1h' }, { h: 4, l: '4h' }, { h: 12, l: '12h' }, { h: 24, l: '24h' }, { h: 24 * 7, l: '7 Tage' }].map(opt => (
+                      <button
+                        key={opt.h}
+                        onClick={() => addTempPerm(tempPermKey, opt.h)}
+                        disabled={!tempPermKey}
+                        style={{ ...BTN_SECONDARY, padding: '6px 12px', fontSize: 11, opacity: !tempPermKey ? 0.4 : 1, cursor: !tempPermKey ? 'not-allowed' : 'pointer' }}
+                      >
+                        {opt.l}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -644,6 +724,12 @@ function UserCard({ u, onClick, isSelf }: { u: UUser; onClick: () => void; isSel
         <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginTop: 4, flexWrap: 'wrap' }}>
           {u.role && <span style={{ fontSize: 9, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.08em', padding: '2px 7px', background: 'rgba(96,8,18,0.06)', borderRadius: 4 }}>{u.role}</span>}
           {u.supervisor && <span style={{ fontSize: 9, fontWeight: 700, color: '#d97706', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Supervisor</span>}
+          {(() => {
+            const tempActive = Object.values(u.temp_permissions || {}).filter(v => v?.until && new Date(v.until).getTime() > Date.now()).length
+            return tempActive > 0
+              ? <span style={{ fontSize: 9, fontWeight: 700, color: '#16a34a', textTransform: 'uppercase', letterSpacing: '0.08em', padding: '2px 7px', background: 'rgba(22,163,74,0.08)', borderRadius: 4 }}>+{tempActive} temp</span>
+              : null
+          })()}
         </div>
       </div>
       <div style={{ flexShrink: 0, fontSize: 9, fontWeight: 700, color: statusColor, textTransform: 'uppercase', letterSpacing: '0.06em', textAlign: 'right' }}>

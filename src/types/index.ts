@@ -13,6 +13,7 @@ export interface User {
   lernbar_access?: boolean
   disabled?: boolean
   expires_at?: string
+  temp_permissions?: Record<string, { until: string; granted_by?: string }>
 }
 
 export interface Organization {

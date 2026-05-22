@@ -146,6 +146,8 @@ export default function Hub() {
     if (perms[perm]) return true
     if (role?.permissions[perm]) return true
     if (perm === 'lernbar' && user.lernbar_access) return true
+    const tempPerms = (user as any).temp_permissions as Record<string, { until: string }> | undefined
+    if (tempPerms?.[perm]?.until && new Date(tempPerms[perm].until).getTime() > Date.now()) return true
     return false
   }
 
