@@ -230,7 +230,7 @@ export default function Hub() {
   const firstName = (user?.name || user?.email?.split('@')[0] || '').split(' ')[0]
 
   return (
-    <div style={{ minHeight: '100dvh', background: 'var(--warm-bg)', fontFamily: "'Atkinson Hyperlegible', -apple-system, sans-serif" }}>
+    <div style={{ position: 'fixed', inset: 0, overflowY: 'auto', overscrollBehavior: 'none', background: 'var(--warm-bg)', fontFamily: "'Atkinson Hyperlegible', -apple-system, sans-serif" } as React.CSSProperties}>
       <style>{`
         @keyframes greetCurtainOut { 0%,60%{opacity:1} 100%{opacity:0} }
         @keyframes greetNameSlide { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:none} }
