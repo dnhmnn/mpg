@@ -23,19 +23,16 @@
     overflow: hidden;
   }
 
-  /* Hintergrund-Textur: große helle Zahl */
-  .bg-number {
+  /* Hintergrund-Textur: großes Logo */
+  .bg-logo {
     position: absolute;
-    bottom: -60px;
-    right: -20px;
-    font-size: 520px;
-    font-weight: 800;
-    font-style: italic;
-    color: rgba(253, 232, 216, 0.04);
-    line-height: 1;
-    user-select: none;
+    bottom: -80px;
+    right: -80px;
+    width: 700px;
+    height: 700px;
+    opacity: 0.06;
     pointer-events: none;
-    letter-spacing: -0.05em;
+    user-select: none;
   }
 
   /* Diagonale Akzentlinie */
@@ -66,9 +63,10 @@
     align-items: center;
     justify-content: center;
   }
-  .logo-circle svg {
-    width: 30px;
-    height: 30px;
+  .logo-circle img {
+    width: 36px;
+    height: 36px;
+    object-fit: contain;
   }
   .brand {
     display: flex;
@@ -185,16 +183,13 @@
 <div class="post">
 
   <!-- Dekor -->
-  <div class="bg-number">R</div>
+  <img src="/logo.svg" class="bg-logo" alt="">
   <div class="accent-line"></div>
 
   <!-- Header -->
   <div class="header">
     <div class="logo-circle">
-      <!-- Responda R als SVG -->
-      <svg viewBox="0 0 30 30" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <text x="5" y="23" font-family="Georgia, serif" font-size="22" font-weight="700" font-style="italic" fill="#fde8d8">R</text>
-      </svg>
+      <img src="/logo.svg" alt="Responda">
     </div>
     <div class="brand">
       <div class="brand-name">Responda</div>
