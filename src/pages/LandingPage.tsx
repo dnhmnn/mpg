@@ -163,9 +163,14 @@ export default function LandingPage() {
   }, [])
 
   useEffect(() => {
-    const prev = document.documentElement.style.background
-    document.documentElement.style.background = '#faf9f7'
-    return () => { document.documentElement.style.background = prev }
+    const prevHtml = document.documentElement.style.background
+    const prevBody = document.body.style.background
+    document.documentElement.style.background = '#3d0408'
+    document.body.style.background = '#3d0408'
+    return () => {
+      document.documentElement.style.background = prevHtml
+      document.body.style.background = prevBody
+    }
   }, [])
 
   useEffect(() => {
