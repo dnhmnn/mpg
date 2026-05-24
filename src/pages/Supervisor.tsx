@@ -1,7 +1,45 @@
-import { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { pb } from '../lib/pocketbase'
 import { useAuth } from '../hooks/useAuth'
+
+interface LandingContent {
+  id?: string
+  hero_title: string
+  hero_subtitle: string
+  audience: { title: string; description: string }[]
+  features: { title: string; description: string }[]
+  contact_email: string
+}
+
+const DEFAULT_LANDING: LandingContent = {
+  hero_title: 'Das <em>digitale Rückgrat</em><br>deiner Organisation.',
+  hero_subtitle: 'Einsätze, Protokolle, Lager, Ausbildungen und mehr — sicher, schnell und von überall erreichbar.',
+  audience: [
+    { title: 'Freiwillige Feuerwehren', description: 'Einsatzverwaltung, Alamos-Integration, Ausbildungsplanung und digitale Dokumentation für den Ehrenamt-Alltag.' },
+    { title: 'Bereitschaften & Hilfsorganisationen', description: 'BRK, DRK, ASB, MHD, JUH — Responda passt sich eurer Struktur an, nicht umgekehrt.' },
+    { title: 'Werkfeuerwehren & Betriebssanitäter', description: 'MPG-Prüfungen, Lagerverwaltung und digitale Protokolle für betriebliche Sicherheitsorganisationen.' },
+    { title: 'Ausbildungseinrichtungen', description: 'Lernplattform, Terminverwaltung und Nachweisführung für Schulungs- und Ausbildungszentren.' },
+  ],
+  features: [
+    { title: 'Einsatzverwaltung', description: 'Einsätze manuell anlegen oder per Alamos-Webhook automatisch empfangen. Realtime-Übersicht für alle.' },
+    { title: 'Patientenprotokolle', description: 'Lückenlose Dokumentation mit Freigabe-Workflow zwischen Teamleader und Administration.' },
+    { title: 'Lagerverwaltung', description: 'Bestände überwachen, Produktausgaben erfassen und Inventur digital abwickeln.' },
+    { title: 'Unitas — Lernplattform', description: 'Interne Wissensmodule, Quizze und Neuigkeiten für das gesamte Team an einem Ort.' },
+    { title: 'Ausbildungsmanagement', description: 'Termine anlegen, Teilnehmer einladen und Nachweise digital verwalten.' },
+    { title: 'MPG-Prüfungen', description: 'Medizinprodukte prüfen, Ergebnisse dokumentieren und Fristen im Blick behalten.' },
+    { title: 'Verschlüsselter Chat', description: 'Ende-zu-Ende-verschlüsselte Kommunikation für das gesamte Team — ohne externe Dienste.' },
+    { title: 'Dateiverwaltung', description: 'Zentrale Ablage für alle Organisationsdokumente, sicher und zugriffsgesteuert.' },
+    { title: 'Benutzerverwaltung', description: 'Rollen, individuelle Rechte, temporäre Zugänge und Supervisor-Funktionen für Admins.' },
+  ],
+  contact_email: 'info@responda.systems',
+}
+
+interface LegalContent {
+  id?: string
+  impressum: string
+  datenschutz: string
+}
 
 interface Org {
   id: string
@@ -115,6 +153,8 @@ export default function Supervisor() {
   const navigate = useNavigate()
   const { user, loading } = useAuth()
 
+  const [tab, setTab] = useState<'orgs' | 'profil' | 'website' | 'legal'>('orgs')
+
   const [orgs, setOrgs] = useState<Org[]>([])
   const [dataLoading, setDataLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -154,6 +194,24 @@ export default function Supervisor() {
   const [userFormMsg, setUserFormMsg] = useState('')
   const [savingUser, setSavingUser] = useState(false)
 
+  // Profil tab state
+  const [profilName, setProfilName] = useState('')
+  const [profilEmail, setProfilEmail] = useState('')
+  const [profilPhone, setProfilPhone] = useState('')
+  const [profilPassword, setProfilPassword] = useState('')
+  const [profilSaving, setProfilSaving] = useState(false)
+  const [profilMsg, setProfilMsg] = useState('')
+
+  // Website tab state
+  const [website, setWebsite] = useState<LandingContent>({ ...DEFAULT_LANDING })
+  const [websiteLoading, setWebsiteLoading] = useState(false)
+  const [websiteSaving, setWebsiteSaving] = useState(false)
+
+  // Legal tab state
+  const [legal, setLegal] = useState<LegalContent>({ impressum: '', datenschutz: '' })
+  const [legalLoading, setLegalLoading] = useState(false)
+  const [legalSaving, setLegalSaving] = useState(false)
+
   useEffect(() => {
     if (!loading && user && !user.supervisor) {
       navigate('/hub')
@@ -163,6 +221,11 @@ export default function Supervisor() {
   useEffect(() => {
     if (!loading && user?.supervisor) {
       loadOrgs()
+      if (user) {
+        setProfilName(user.name || '')
+        setProfilEmail(user.email || '')
+        setProfilPhone((user as any).phone || '')
+      }
     }
   }, [loading, user])
 
@@ -365,6 +428,115 @@ export default function Supervisor() {
     }
   }
 
+  async function loadWebsite() {
+    setWebsiteLoading(true)
+    try {
+      const list = await pb.collection('landing_content').getFullList({ sort: '-created', limit: 1 })
+      if (list.length > 0) {
+        const r = list[0] as any
+        setWebsite({
+          id: r.id,
+          hero_title: r.hero_title || DEFAULT_LANDING.hero_title,
+          hero_subtitle: r.hero_subtitle || DEFAULT_LANDING.hero_subtitle,
+          audience: r.audience || DEFAULT_LANDING.audience,
+          features: r.features || DEFAULT_LANDING.features,
+          contact_email: r.contact_email || DEFAULT_LANDING.contact_email,
+        })
+      }
+    } catch (e) { console.error(e) }
+    finally { setWebsiteLoading(false) }
+  }
+
+  async function saveWebsite() {
+    setWebsiteSaving(true)
+    try {
+      const data = {
+        hero_title: website.hero_title,
+        hero_subtitle: website.hero_subtitle,
+        audience: website.audience,
+        features: website.features,
+        contact_email: website.contact_email,
+      }
+      if (website.id) {
+        await pb.collection('landing_content').update(website.id, data)
+      } else {
+        const rec = await pb.collection('landing_content').create(data)
+        setWebsite(prev => ({ ...prev, id: (rec as any).id }))
+      }
+      setSaveMsg('Website-Inhalt gespeichert')
+      setTimeout(() => setSaveMsg(''), 3000)
+    } catch (e: any) {
+      setSaveMsg('Fehler: ' + e.message)
+    } finally {
+      setWebsiteSaving(false)
+    }
+  }
+
+  function addAudience() { setWebsite(prev => ({ ...prev, audience: [...prev.audience, { title: '', description: '' }] })) }
+  function removeAudience(i: number) { setWebsite(prev => ({ ...prev, audience: prev.audience.filter((_, idx) => idx !== i) })) }
+  function updateAudience(i: number, field: 'title' | 'description', value: string) {
+    setWebsite(prev => {
+      const a = [...prev.audience]
+      a[i] = { ...a[i], [field]: value }
+      return { ...prev, audience: a }
+    })
+  }
+  function updateFeature(i: number, field: 'title' | 'description', value: string) {
+    setWebsite(prev => {
+      const f = [...prev.features]
+      f[i] = { ...f[i], [field]: value }
+      return { ...prev, features: f }
+    })
+  }
+
+  async function loadLegal() {
+    setLegalLoading(true)
+    try {
+      const list = await pb.collection('landing_content').getFullList({ sort: '-created', limit: 1 })
+      if (list.length > 0) {
+        const r = list[0] as any
+        setLegal({ id: r.id, impressum: r.impressum || '', datenschutz: r.datenschutz || '' })
+      }
+    } catch (e) { console.error(e) }
+    finally { setLegalLoading(false) }
+  }
+
+  async function saveLegal() {
+    setLegalSaving(true)
+    try {
+      const list = await pb.collection('landing_content').getFullList({ sort: '-created', limit: 1 })
+      const data = { impressum: legal.impressum, datenschutz: legal.datenschutz }
+      if (list.length > 0) {
+        await pb.collection('landing_content').update(list[0].id, data)
+      } else {
+        await pb.collection('landing_content').create(data)
+      }
+      setSaveMsg('Rechtliche Texte gespeichert')
+      setTimeout(() => setSaveMsg(''), 3000)
+    } catch (e: any) {
+      setSaveMsg('Fehler: ' + e.message)
+    } finally {
+      setLegalSaving(false)
+    }
+  }
+
+  async function saveProfil() {
+    setProfilSaving(true)
+    setProfilMsg('')
+    try {
+      const data: Record<string, any> = { name: profilName, email: profilEmail, phone: profilPhone }
+      if (profilPassword) { data.password = profilPassword; data.passwordConfirm = profilPassword }
+      await pb.collection('users').update(user!.id, data)
+      setProfilPassword('')
+      setProfilMsg('Profil gespeichert')
+      setTimeout(() => setProfilMsg(''), 3000)
+    } catch (e: any) {
+      setProfilMsg('Fehler: ' + e.message)
+    } finally {
+      setProfilSaving(false)
+    }
+  }
+
   const filtered = orgs.filter(o => {
     const q = search.toLowerCase()
     return !q || o.org_name?.toLowerCase().includes(q) || o.org_code?.toLowerCase().includes(q)
@@ -372,6 +544,9 @@ export default function Supervisor() {
 
   const totalUsers = orgs.reduce((s, o) => s + o.userCount, 0)
   const activeCount = orgs.filter(o => o.is_active).length
+
+  const inputStyle: React.CSSProperties = { width: '100%', padding: '11px 13px', borderRadius: 10, border: '0.5px solid rgba(96,8,18,0.15)', background: '#fff', fontSize: 14, fontFamily: 'inherit', color: '#1a0e08', boxSizing: 'border-box', outline: 'none' }
+  const labelStyle: React.CSSProperties = { fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 6, display: 'block' }
 
   if (loading || (!user?.supervisor && !loading)) {
     return (
@@ -404,13 +579,41 @@ export default function Supervisor() {
           </a>
           <div style={{ flex: 1 }}>
             <div style={{ fontWeight: 700, fontSize: 15, color: '#1a0e08', letterSpacing: '-0.01em' }}>Supervisor</div>
-            <div style={{ fontStyle: 'italic', fontSize: 11, color: 'var(--warm-gray)', marginTop: 1 }}>Organisationsverwaltung</div>
+            <div style={{ fontStyle: 'italic', fontSize: 11, color: 'var(--warm-gray)', marginTop: 1 }}>
+              {tab === 'orgs' ? 'Organisationsverwaltung' : tab === 'profil' ? 'Mein Profil' : tab === 'website' ? 'Website-Inhalt' : 'Rechtliche Texte'}
+            </div>
           </div>
           <div style={{ width: 22 }} />
         </div>
       </div>
 
-      <div style={{
+      <div style={{ background: '#fff', borderBottom: '0.5px solid rgba(96,8,18,0.12)', display: 'flex', overflowX: 'auto', paddingLeft: 'max(16px, env(safe-area-inset-left))', paddingRight: 'max(16px, env(safe-area-inset-right))' }}>
+        {([
+          { key: 'orgs', label: 'Organisationen' },
+          { key: 'profil', label: 'Mein Profil' },
+          { key: 'website', label: 'Website' },
+          { key: 'legal', label: 'Rechtliches' },
+        ] as const).map(t => (
+          <button
+            key={t.key}
+            onClick={() => {
+              setTab(t.key)
+              if (t.key === 'website' && !website.id && !websiteLoading) loadWebsite()
+              if (t.key === 'legal' && !legal.impressum && !legalLoading) loadLegal()
+            }}
+            style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              fontFamily: 'inherit', fontWeight: 700,
+              fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.1em',
+              color: tab === t.key ? '#600812' : 'var(--warm-gray)',
+              borderTop: `2px solid ${tab === t.key ? '#600812' : 'transparent'}`,
+              padding: '12px 14px', whiteSpace: 'nowrap', flexShrink: 0,
+            }}
+          >{t.label}</button>
+        ))}
+      </div>
+
+      {tab === 'orgs' && <div style={{
         padding: '20px max(20px, env(safe-area-inset-left)) calc(env(safe-area-inset-bottom) + 40px)',
         maxWidth: 640,
         margin: '0 auto'
