@@ -203,8 +203,17 @@ export default function Lager() {
   const [auditChecked, setAuditChecked] = useState(false)
 
   // CSV Import state
+  type ImportRow = {
+    name: string; qty: number; expiry: string
+    matchType: 'exact' | 'similar' | 'none'
+    item: InventoryItem | null
+    similar: InventoryItem[]
+    selectedItem: InventoryItem | null
+    createNew: boolean
+    included: boolean
+  }
   const [showImportModal, setShowImportModal] = useState(false)
-  const [importItems, setImportItems] = useState<Array<{name: string, qty: number, expiry: string, item: InventoryItem | null}>>([])
+  const [importItems, setImportItems] = useState<ImportRow[]>([])
   const [importLoading, setImportLoading] = useState(false)
   const importFileRef = useRef<HTMLInputElement>(null)
 
@@ -1013,15 +1022,34 @@ export default function Lager() {
     }).filter(r => r.name)
   }
 
+  function fuzzyScore(a: string, b: string): number {
+    a = a.toLowerCase().trim(); b = b.toLowerCase().trim()
+    if (a === b) return 1.0
+    if (a.includes(b) || b.includes(a)) return 0.8
+    const wa = new Set(a.split(/[\s\-_/]+/).filter(Boolean))
+    const wb = new Set(b.split(/[\s\-_/]+/).filter(Boolean))
+    const inter = [...wa].filter(w => wb.has(w)).length
+    const union = new Set([...wa, ...wb]).size
+    return union > 0 ? inter / union : 0
+  }
+
   async function handleImportFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
     const text = await file.text()
     const rows = parseImportCSV(text)
-    const matched = rows.map(row => ({
-      ...row,
-      item: allItems.find(i => i.name.toLowerCase() === row.name.toLowerCase()) || null
-    }))
+    const matched: ImportRow[] = rows.map(row => {
+      const exact = allItems.find(i => i.name.toLowerCase() === row.name.toLowerCase()) || null
+      if (exact) return { ...row, matchType: 'exact' as const, item: exact, similar: [], selectedItem: null, createNew: false, included: true }
+      const candidates = allItems
+        .map(i => ({ item: i, score: fuzzyScore(row.name, i.name) }))
+        .filter(c => c.score >= 0.35)
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 4)
+        .map(c => c.item)
+      if (candidates.length > 0) return { ...row, matchType: 'similar' as const, item: null, similar: candidates, selectedItem: candidates[0], createNew: false, included: true }
+      return { ...row, matchType: 'none' as const, item: null, similar: [], selectedItem: null, createNew: false, included: false }
+    })
     setImportItems(matched)
     setShowImportModal(true)
     if (importFileRef.current) importFileRef.current.value = ''
@@ -1030,30 +1058,42 @@ export default function Lager() {
   async function confirmImport() {
     if (!currentLocationId) return
     setImportLoading(true)
+    let booked = 0
+    let created = 0
     try {
       for (const row of importItems) {
-        if (!row.item) continue
+        if (!row.included) continue
+        let targetItem: InventoryItem | null = null
+        if (row.matchType === 'exact') {
+          targetItem = row.item
+        } else if (row.matchType === 'similar' && row.selectedItem) {
+          targetItem = row.selectedItem
+        } else if (row.matchType === 'none' && row.createNew) {
+          const newItem = await pb.collection('inventory_items').create({
+            name: row.name, unit: 'Stück', min_stock: 0,
+            organization_id: user?.organization_id, notes: ''
+          })
+          targetItem = newItem as unknown as InventoryItem
+          setAllItems(prev => [...prev, targetItem as InventoryItem])
+          created++
+        }
+        if (!targetItem) continue
         await pb.collection('inventory_stock').create({
-          item_id: row.item.id,
-          location_id: currentLocationId,
-          quantity: row.qty,
-          expiry_date: row.expiry || null,
+          item_id: targetItem.id, location_id: currentLocationId,
+          quantity: row.qty, expiry_date: row.expiry || null,
           organization_id: user?.organization_id
         })
         await pb.collection('inventory_transactions').create({
-          item_id: row.item.id,
-          location_id: currentLocationId,
-          type: 'einbuchung',
-          quantity: row.qty,
-          note: 'CSV-Import',
-          user: user?.email || user?.id,
-          organization_id: user?.organization_id
+          item_id: targetItem.id, location_id: currentLocationId,
+          type: 'einbuchung', quantity: row.qty, note: 'CSV-Import',
+          user: user?.email || user?.id, organization_id: user?.organization_id
         })
+        booked++
       }
       await loadStock()
       setShowImportModal(false)
       setImportItems([])
-      showMsg(`✅ ${importItems.filter(r => r.item).length} Artikel eingebucht`, 'success')
+      showMsg(`✅ ${booked} eingebucht${created > 0 ? `, ${created} neu angelegt` : ''}`, 'success')
     } catch (e: any) {
       showMsg('Fehler: ' + e.message, 'error')
     } finally {
@@ -2211,30 +2251,56 @@ export default function Lager() {
       {/* CSV IMPORT MODAL */}
       {showImportModal && (
         <div className="lager-modal-overlay" onClick={() => setShowImportModal(false)}>
-          <div className="lager-modal" style={{ maxWidth: 520 }} onClick={e => e.stopPropagation()}>
+          <div className="lager-modal" style={{ maxWidth: 560 }} onClick={e => e.stopPropagation()}>
             <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 4 }}>CSV-Import</div>
-            <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginBottom: 16 }}>{importItems.filter(r => r.item).length} von {importItems.length} Artikeln erkannt</div>
-            <div style={{ maxHeight: 320, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 16 }}>
-              {importItems.map((row, i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', background: row.item ? 'rgba(22,163,74,0.05)' : 'rgba(139,113,90,0.07)', borderRadius: 8, borderLeft: `3px solid ${row.item ? '#16a34a' : 'rgba(139,113,90,0.4)'}` }}>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 700, fontSize: 13, color: '#1a0e08', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{row.item?.name || row.name}</div>
-                    {!row.item && <div style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--warm-gray)' }}>„{row.name}" — kein Artikel gefunden</div>}
-                    {row.expiry && <div style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--warm-gray)' }}>MHD: {new Date(row.expiry).toLocaleDateString('de-DE')}</div>}
-                  </div>
-                  <div style={{ fontWeight: 700, color: row.item ? '#16a34a' : 'rgba(139,113,90,0.5)', fontSize: 14, whiteSpace: 'nowrap' }}>{row.qty} {row.item?.unit || 'Stück'}</div>
-                </div>
-              ))}
+            <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginBottom: 14 }}>
+              {importItems.filter(r => r.matchType === 'exact').length} exakt · {importItems.filter(r => r.matchType === 'similar').length} ähnlich · {importItems.filter(r => r.matchType === 'none').length} unbekannt
             </div>
-            {importItems.some(r => !r.item) && (
-              <div style={{ fontSize: 12, fontStyle: 'italic', color: '#d97706', background: 'rgba(217,119,6,0.07)', padding: '8px 12px', borderRadius: 8, marginBottom: 12 }}>
-                Nicht erkannte Artikel werden übersprungen.
-              </div>
-            )}
+            <div style={{ maxHeight: 400, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
+              {importItems.map((row, i) => {
+                const borderColor = row.matchType === 'exact' ? '#16a34a' : row.matchType === 'similar' ? '#d97706' : 'rgba(139,113,90,0.4)'
+                const bg = row.matchType === 'exact' ? 'rgba(22,163,74,0.04)' : row.matchType === 'similar' ? 'rgba(217,119,6,0.05)' : 'rgba(139,113,90,0.06)'
+                return (
+                  <div key={i} style={{ padding: '10px 12px', background: bg, borderRadius: 10, borderLeft: `3px solid ${borderColor}`, opacity: row.included || row.createNew ? 1 : 0.5 }}>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                      <input type="checkbox" checked={row.included || row.createNew} onChange={e => setImportItems(prev => prev.map((r, j) => j !== i ? r : { ...r, included: row.matchType !== 'none' ? e.target.checked : r.included, createNew: row.matchType === 'none' ? e.target.checked : r.createNew }))} style={{ marginTop: 3, accentColor: '#600812', flexShrink: 0 }} />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                          <div style={{ fontWeight: 700, fontSize: 13, color: '#1a0e08', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {row.name}
+                            {row.matchType === 'exact' && <span style={{ marginLeft: 6, fontSize: 10, color: '#16a34a', fontWeight: 700 }}>✓ ERKANNT</span>}
+                            {row.matchType === 'none' && <span style={{ marginLeft: 6, fontSize: 10, color: 'var(--warm-gray)', fontWeight: 700 }}>NEU</span>}
+                          </div>
+                          <div style={{ fontWeight: 700, color: borderColor, fontSize: 14, whiteSpace: 'nowrap', flexShrink: 0 }}>
+                            {row.qty} {(row.matchType === 'exact' ? row.item?.unit : row.matchType === 'similar' ? (row.selectedItem?.unit || 'Stück') : 'Stück')}
+                          </div>
+                        </div>
+                        {row.expiry && <div style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--warm-gray)', marginTop: 1 }}>MHD: {new Date(row.expiry).toLocaleDateString('de-DE')}</div>}
+                        {row.matchType === 'similar' && (
+                          <div style={{ marginTop: 6 }}>
+                            <div style={{ fontSize: 11, color: '#d97706', fontStyle: 'italic', marginBottom: 4 }}>Ähnlicher Artikel — bitte bestätigen:</div>
+                            <select
+                              value={row.selectedItem?.id || ''}
+                              onChange={e => setImportItems(prev => prev.map((r, j) => j !== i ? r : { ...r, selectedItem: allItems.find(a => a.id === e.target.value) || null }))}
+                              style={{ fontSize: 13, padding: '4px 8px', borderRadius: 6, border: '1px solid rgba(96,8,18,0.2)', background: '#fff', color: '#1a0e08', width: '100%', fontFamily: 'inherit' }}
+                            >
+                              {row.similar.map(s => <option key={s.id} value={s.id}>{s.name} ({s.unit})</option>)}
+                            </select>
+                          </div>
+                        )}
+                        {row.matchType === 'none' && row.createNew && (
+                          <div style={{ fontSize: 11, fontStyle: 'italic', color: '#600812', marginTop: 4 }}>Wird als neuer Artikel angelegt</div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
               <button className="lager-btn" onClick={() => setShowImportModal(false)}>Abbrechen</button>
-              <button className="lager-btn primary" onClick={confirmImport} disabled={importLoading || !importItems.some(r => r.item)}>
-                {importLoading ? 'Importiere…' : `${importItems.filter(r => r.item).length} Artikel einbuchen`}
+              <button className="lager-btn primary" onClick={confirmImport} disabled={importLoading || !importItems.some(r => r.included || r.createNew)}>
+                {importLoading ? 'Importiere…' : `${importItems.filter(r => r.included || r.createNew).length} Artikel importieren`}
               </button>
             </div>
           </div>
