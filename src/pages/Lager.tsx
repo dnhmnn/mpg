@@ -969,11 +969,12 @@ export default function Lager() {
         [currentLocationId]: detailSoll
       }
       await pb.collection('inventory_items').update(detailItem.id, {
+        min_stock: detailSoll,
         location_min_stocks: updatedLocationMinStocks,
         notes: detailNote
       })
       setAllItems(prev => prev.map(i => i.id === detailItem.id
-        ? { ...i, location_min_stocks: updatedLocationMinStocks }
+        ? { ...i, min_stock: detailSoll, location_min_stocks: updatedLocationMinStocks }
         : i))
       // Save expiry date on all stock entries for this item/location
       const stocks = await pb.collection('inventory_stock').getFullList({
