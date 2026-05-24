@@ -19,6 +19,8 @@ interface Content {
   nav_items?: {label:string;href:string}[]
   pricing?: {name:string;price:string;period:string;features:string[];featured?:boolean;badge?:string;cta?:string}[]
   show?: {features?:boolean;audience?:boolean;pricing?:boolean;contact?:boolean}
+  impressum?: string
+  datenschutz?: string
 }
 
 const DEF_FEATURES = [
@@ -415,37 +417,72 @@ export default function LandingPage() {
   const secP: React.CSSProperties = { fontSize: '0.9rem', color: '#1a0e08', lineHeight: 1.7, marginBottom: 8 }
   const closeBtn: React.CSSProperties = { position: 'absolute', top: 20, right: 20, width: 32, height: 32, borderRadius: '50%', background: 'rgba(96,8,18,0.08)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#600812', fontSize: 18, fontFamily: 'inherit' }
 
+  const lnk = (href: string, label: string) => <a href={href} style={{color:'#600812'}}>{label}</a>
+  const pb_impressum = content.impressum
+  const pb_datenschutz = content.datenschutz
+
   return (
     <>
       {main}
+
       {legal === 'impressum' && createPortal(
         <div style={modalStyle} onClick={e=>{if(e.target===e.currentTarget)setLegal(null)}}>
           <div style={boxStyle}>
             <button style={closeBtn} onClick={()=>setLegal(null)}>×</button>
             <div style={eyeStyle}>Rechtliches</div>
             <h1 style={h1Style}><span style={emStyle}>Impressum</span></h1>
-            <div style={secStyle}><h2 style={secH}>Angaben gemäß § 5 TMG</h2><p style={secP}>Responda Systems<br/>[Straße]<br/>[PLZ] [Stadt]<br/>Deutschland</p></div>
-            <div style={secStyle}><h2 style={secH}>Kontakt</h2><p style={secP}>E-Mail: <a href={`mailto:${email}`} style={{color:'#600812'}}>{email}</a></p></div>
-            <div style={secStyle}><h2 style={secH}>Verantwortlich für den Inhalt</h2><p style={secP}>[Name des Verantwortlichen]</p></div>
-            <div style={secStyle}><h2 style={secH}>Haftungsausschluss</h2><p style={secP}>Die Inhalte dieser Website wurden mit größter Sorgfalt erstellt. Für die Richtigkeit können wir jedoch keine Gewähr übernehmen.</p></div>
-            <div style={secStyle}><h2 style={secH}>Urheberrecht</h2><p style={secP}>Die erstellten Inhalte unterliegen dem deutschen Urheberrecht. Vervielfältigung bedarf der schriftlichen Zustimmung.</p></div>
+            {pb_impressum
+              ? <div style={{marginTop:24,fontSize:'0.9rem',color:'#1a0e08',lineHeight:1.8,whiteSpace:'pre-wrap'}}>{pb_impressum}</div>
+              : <>
+                <div style={secStyle}><h2 style={secH}>Angaben gemäß § 5 TMG</h2><p style={secP}>Responda Systems<br/>[Straße und Hausnummer]<br/>[PLZ] [Stadt]<br/>Deutschland</p></div>
+                <div style={secStyle}><h2 style={secH}>Kontakt</h2><p style={secP}>E-Mail: {lnk(`mailto:${email}`,email)}</p></div>
+                <div style={secStyle}><h2 style={secH}>Verantwortlich für den Inhalt nach § 18 Abs. 2 MStV</h2><p style={secP}>[Vollständiger Name]<br/>[Anschrift wie oben]</p></div>
+                <div style={secStyle}><h2 style={secH}>Haftungsausschluss</h2><p style={secP}>Die Inhalte dieser Website wurden mit größter Sorgfalt erstellt. Für die Richtigkeit, Vollständigkeit und Aktualität der Inhalte können wir jedoch keine Gewähr übernehmen. Als Diensteanbieter sind wir gemäß § 7 Abs. 1 TMG für eigene Inhalte auf diesen Seiten nach den allgemeinen Gesetzen verantwortlich.</p></div>
+                <div style={secStyle}><h2 style={secH}>Urheberrecht</h2><p style={secP}>Die durch die Seitenbetreiber erstellten Inhalte und Werke auf diesen Seiten unterliegen dem deutschen Urheberrecht. Die Vervielfältigung, Bearbeitung, Verbreitung und jede Art der Verwertung außerhalb der Grenzen des Urheberrechtes bedürfen der schriftlichen Zustimmung des jeweiligen Autors bzw. Erstellers.</p></div>
+              </>
+            }
           </div>
         </div>,
         document.body
       )}
+
       {legal === 'datenschutz' && createPortal(
         <div style={modalStyle} onClick={e=>{if(e.target===e.currentTarget)setLegal(null)}}>
           <div style={boxStyle}>
             <button style={closeBtn} onClick={()=>setLegal(null)}>×</button>
             <div style={eyeStyle}>Rechtliches</div>
             <h1 style={h1Style}><span style={emStyle}>Datenschutzerklärung</span></h1>
-            <div style={secStyle}><h2 style={secH}>1. Verantwortlicher</h2><p style={secP}>Responda Systems · <a href={`mailto:${email}`} style={{color:'#600812'}}>{email}</a></p></div>
-            <div style={secStyle}><h2 style={secH}>2. Erhobene Daten</h2><p style={secP}>Beim Besuch erfasst der Server: anonymisierte IP, Datum, aufgerufene Seite, Browser. Löschung nach 7 Tagen.</p></div>
-            <div style={secStyle}><h2 style={secH}>3. Kontaktformular</h2><p style={secP}>Angaben werden zur Bearbeitung gespeichert. Keine Weitergabe ohne Einwilligung.</p></div>
-            <div style={secStyle}><h2 style={secH}>4. Cookies</h2><p style={secP}>Keine Tracking-Cookies, keine Analyse-Tools.</p></div>
-            <div style={secStyle}><h2 style={secH}>5. Google Fonts</h2><p style={secP}>Für einheitliche Darstellung werden Google Fonts geladen (Google Ireland Limited). Dabei wird Ihre IP übertragen.</p></div>
-            <div style={secStyle}><h2 style={secH}>6. Ihre Rechte (DSGVO)</h2><p style={secP}>Auskunft, Berichtigung, Löschung: <a href={`mailto:${email}`} style={{color:'#600812'}}>{email}</a></p></div>
-            <div style={secStyle}><h2 style={secH}>Stand</h2><p style={secP}>Mai 2025</p></div>
+            {pb_datenschutz
+              ? <div style={{marginTop:24,fontSize:'0.9rem',color:'#1a0e08',lineHeight:1.8,whiteSpace:'pre-wrap'}}>{pb_datenschutz}</div>
+              : <>
+                <div style={secStyle}><h2 style={secH}>1. Verantwortlicher</h2>
+                  <p style={secP}>Verantwortlicher im Sinne der DSGVO ist:<br/><strong>Responda Systems</strong><br/>[Straße und Hausnummer]<br/>[PLZ] [Stadt]<br/>Deutschland<br/>E-Mail: {lnk(`mailto:${email}`,email)}</p>
+                </div>
+                <div style={secStyle}><h2 style={secH}>2. Erhebung und Speicherung personenbezogener Daten</h2>
+                  <p style={secP}>Beim Aufrufen unserer Website werden durch den Hosting-Anbieter automatisch Informationen in Server-Logfiles gespeichert. Dies umfasst: IP-Adresse (anonymisiert), Datum und Uhrzeit des Zugriffs, aufgerufene Seite, verwendeter Browser und Betriebssystem. Diese Daten sind nicht einer bestimmten Person zuordenbar und werden nicht mit anderen Datenquellen zusammengeführt. Die Löschung erfolgt automatisch nach 7 Tagen. Rechtsgrundlage ist Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse am sicheren Betrieb).</p>
+                </div>
+                <div style={secStyle}><h2 style={secH}>3. Hosting</h2>
+                  <p style={secP}>Diese Website wird über <strong>Netlify</strong> (Netlify, Inc., 512 2nd Street, Suite 200, San Francisco, CA 94107, USA) gehostet. Netlify hat sich dem EU-US Data Privacy Framework verpflichtet. Es besteht ein Data Processing Agreement (DPA) mit Netlify. Weitere Informationen: {lnk('https://www.netlify.com/privacy/','netlify.com/privacy')}.</p>
+                </div>
+                <div style={secStyle}><h2 style={secH}>4. Kontaktformular</h2>
+                  <p style={secP}>Wenn Sie uns über das Kontaktformular eine Anfrage zukommen lassen, werden Ihre Angaben (Name, E-Mail-Adresse, Nachricht) zur Bearbeitung der Anfrage und für den Fall von Anschlussfragen bei uns gespeichert. Diese Daten geben wir nicht ohne Ihre Einwilligung weiter. Rechtsgrundlage ist Art. 6 Abs. 1 lit. b DSGVO (Vertragsanbahnung) bzw. Art. 6 Abs. 1 lit. f DSGVO.</p>
+                </div>
+                <div style={secStyle}><h2 style={secH}>5. Schriftarten</h2>
+                  <p style={secP}>Diese Website verwendet Schriftarten (<em>Atkinson Hyperlegible</em>, <em>Inter</em>), die auf unseren eigenen Servern gehostet werden. Es findet keine Übertragung von Daten an externe Schriftanbieter statt.</p>
+                </div>
+                <div style={secStyle}><h2 style={secH}>6. Cookies und Tracking</h2>
+                  <p style={secP}>Diese Website verwendet keine Tracking-Cookies und keine Analyse-Tools (z. B. Google Analytics). Es werden ausschließlich technisch notwendige Daten verarbeitet.</p>
+                </div>
+                <div style={secStyle}><h2 style={secH}>7. Ihre Rechte (Art. 15–21 DSGVO)</h2>
+                  <p style={secP}>Sie haben das Recht auf <strong>Auskunft</strong> über die zu Ihrer Person gespeicherten Daten (Art. 15), <strong>Berichtigung</strong> unrichtiger Daten (Art. 16), <strong>Löschung</strong> Ihrer Daten (Art. 17), <strong>Einschränkung der Verarbeitung</strong> (Art. 18), <strong>Datenübertragbarkeit</strong> (Art. 20) sowie <strong>Widerspruch</strong> gegen die Verarbeitung (Art. 21). Zur Ausübung Ihrer Rechte wenden Sie sich an: {lnk(`mailto:${email}`,email)}.</p>
+                  <p style={secP}>Sie haben zudem das Recht, sich bei einer Datenschutz-Aufsichtsbehörde zu beschweren, z. B. beim <strong>Bayerischen Landesamt für Datenschutzaufsicht (BayLDA)</strong>, Promenade 27, 91522 Ansbach.</p>
+                </div>
+                <div style={secStyle}><h2 style={secH}>8. Änderungen dieser Datenschutzerklärung</h2>
+                  <p style={secP}>Wir behalten uns vor, diese Datenschutzerklärung bei Bedarf anzupassen, um sie stets den aktuellen rechtlichen Anforderungen zu entsprechen.</p>
+                </div>
+                <div style={secStyle}><h2 style={secH}>Stand</h2><p style={secP}>Mai 2025</p></div>
+              </>
+            }
           </div>
         </div>,
         document.body
