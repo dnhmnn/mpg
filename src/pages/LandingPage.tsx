@@ -18,6 +18,7 @@ interface Content {
   contact_email?: string
   nav_items?: {label:string;href:string}[]
   pricing?: {name:string;price:string;period:string;features:string[];featured?:boolean;badge?:string;cta?:string}[]
+  show?: {features?:boolean;audience?:boolean;pricing?:boolean;contact?:boolean}
 }
 
 const DEF_FEATURES = [
@@ -195,6 +196,7 @@ export default function LandingPage() {
   const features = content.features?.length ? content.features : DEF_FEATURES
   const audience = content.audience?.length ? content.audience : DEF_AUDIENCE
   const navItems = content.nav_items?.length ? content.nav_items : DEF_NAV
+  const show = { features: true, audience: true, pricing: true, contact: true, ...content.show }
   const pricing = content.pricing?.length ? content.pricing : DEF_PRICING
   const email = content.contact_email || 'info@responda.systems'
   const heroTitle = content.hero_title || 'Das <em>digitale Rückgrat</em><br>deiner Organisation.'
@@ -255,11 +257,12 @@ export default function LandingPage() {
       </section>
 
       {/* FEATURES */}
-      <section id="features" style={{background:'#faf9f7'}}>
+      {show.features && <section id="features" style={{background:'#faf9f7'}}>
         <div className="wrap">
           <div className="eyebrow">Alles in einer Plattform</div>
           <h2>Was <em>Responda</em> kann</h2>
           <p className="sub">Von der Alarmierung bis zum archivierten Protokoll — kein Medienbruch mehr.</p>
+
           <div className="features-grid">
             {features.map((f,i)=>(
               <div key={i} className="fc">
@@ -271,10 +274,10 @@ export default function LandingPage() {
             ))}
           </div>
         </div>
-      </section>
+      </section>}
 
       {/* FÜR WEN */}
-      <section id="fuer-wen" style={{background:'#fff'}}>
+      {show.audience && <section id="fuer-wen" style={{background:'#fff'}}>
         <div className="wrap">
           <div className="eyebrow">Zielgruppen</div>
           <h2>Gemacht für <em>Einsatzorganisationen</em></h2>
@@ -285,10 +288,10 @@ export default function LandingPage() {
             ))}
           </div>
         </div>
-      </section>
+      </section>}
 
       {/* PREISE */}
-      <section id="preise" style={{background:'#faf9f7'}}>
+      {show.pricing && <section id="preise" style={{background:'#faf9f7'}}>
         <div className="wrap">
           <div className="eyebrow">Lizenzmodelle</div>
           <h2>Klare <em>Preise,</em> keine Überraschungen</h2>
@@ -312,10 +315,10 @@ export default function LandingPage() {
             ))}
           </div>
         </div>
-      </section>
+      </section>}
 
       {/* KONTAKT */}
-      <section id="kontakt" style={{background:'#fff'}}>
+      {show.contact && <section id="kontakt" style={{background:'#fff'}}>
         <div className="wrap">
           <div className="eyebrow">Kontakt</div>
           <h2>Bereit für <em>Responda?</em></h2>
@@ -342,7 +345,7 @@ export default function LandingPage() {
             </div>
           </div>
         </div>
-      </section>
+      </section>}
 
       {/* FOOTER */}
       <footer>

@@ -12,6 +12,7 @@ interface LandingContent {
   features: { title: string; description: string }[]
   pricing: {name:string;price:string;period:string;features:string[];featured?:boolean;badge?:string;cta?:string}[]
   contact_email: string
+  show: { features: boolean; audience: boolean; pricing: boolean; contact: boolean }
 }
 
 const DEFAULT_LANDING: LandingContent = {
@@ -35,6 +36,7 @@ const DEFAULT_LANDING: LandingContent = {
     { title: 'Benutzerverwaltung', description: 'Rollen, individuelle Rechte, temporäre Zugänge und Supervisor-Funktionen für Admins.' },
   ],
   contact_email: 'info@responda.systems',
+  show: { features: true, audience: true, pricing: true, contact: true },
   nav_items: [
     {label:'Features', href:'#features'},
     {label:'Für wen', href:'#fuer-wen'},
@@ -456,6 +458,7 @@ export default function Supervisor() {
           features: r.features || DEFAULT_LANDING.features,
           pricing: r.pricing?.length ? r.pricing : DEFAULT_LANDING.pricing,
           contact_email: r.contact_email || DEFAULT_LANDING.contact_email,
+          show: r.show ?? DEFAULT_LANDING.show,
         })
       }
     } catch (e) { console.error(e) }
@@ -473,6 +476,7 @@ export default function Supervisor() {
         features: website.features,
         pricing: website.pricing,
         contact_email: website.contact_email,
+        show: website.show,
       }
       if (website.id) {
         await pb.collection('landing_content').update(website.id, data)
@@ -814,6 +818,25 @@ export default function Supervisor() {
             <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--warm-gray)', fontStyle: 'italic' }}>Laden…</div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
+
+              {/* Sichtbarkeit */}
+              <div style={{ background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.07)', padding: '20px 24px' }}>
+                <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 4 }}>ABSCHNITTE</div>
+                <div style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--warm-gray)', marginBottom: 16 }}>Abschnitte ein- oder ausblenden</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+                  {([
+                    { key: 'features', label: 'Features' },
+                    { key: 'audience', label: 'Für wen' },
+                    { key: 'pricing', label: 'Preise' },
+                    { key: 'contact', label: 'Kontakt' },
+                  ] as const).map((s, i, arr) => (
+                    <div key={s.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 0', borderBottom: i < arr.length - 1 ? '0.5px solid rgba(96,8,18,0.08)' : 'none' }}>
+                      <span style={{ fontSize: 14, fontWeight: 600, color: website.show[s.key] ? '#1a0e08' : 'var(--warm-gray)' }}>{s.label}</span>
+                      <ToggleSwitch on={website.show[s.key]} onChange={() => setWebsite(p => ({ ...p, show: { ...p.show, [s.key]: !p.show[s.key] } }))} />
+                    </div>
+                  ))}
+                </div>
+              </div>
 
               {/* Hero */}
               <div style={{ background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.07)', padding: '20px 24px' }}>
