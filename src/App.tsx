@@ -37,6 +37,12 @@ if (isMarketingDomain && window.location.pathname !== '/') {
   window.location.replace('https://app.responda.systems' + window.location.pathname + window.location.search)
 }
 
+// Fix html/body background before first paint so dark-mode globals.css doesn't flash black
+if (isMarketingDomain) {
+  document.documentElement.style.background = '#faf9f7'
+  document.body.style.background = '#faf9f7'
+}
+
 function App() {
   return (
     <BrowserRouter>

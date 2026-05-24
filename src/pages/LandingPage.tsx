@@ -164,17 +164,6 @@ export default function LandingPage() {
   }, [])
 
   useEffect(() => {
-    const prevHtml = document.documentElement.style.background
-    const prevBody = document.body.style.background
-    document.documentElement.style.background = '#faf9f7'
-    document.body.style.background = '#faf9f7'
-    return () => {
-      document.documentElement.style.background = prevHtml
-      document.body.style.background = prevBody
-    }
-  }, [])
-
-  useEffect(() => {
     const h = (e: KeyboardEvent) => { if(e.key==='Escape') setLegal(null) }
     window.addEventListener('keydown',h)
     return () => window.removeEventListener('keydown',h)
