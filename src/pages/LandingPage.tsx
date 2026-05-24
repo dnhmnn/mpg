@@ -173,6 +173,20 @@ const CSS = `
 
 const check = <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
 
+const JSON_LD = JSON.stringify({
+  '@context': 'https://schema.org',
+  '@type': 'SoftwareApplication',
+  name: 'Responda',
+  applicationCategory: 'BusinessApplication',
+  operatingSystem: 'Web, iOS, Android',
+  url: 'https://responda.systems',
+  description: 'Responda digitalisiert Einsätze, Patientenprotokolle, Lagerverwaltung und Ausbildungen für Feuerwehren, Rettungsdienste und Hilfsorganisationen.',
+  offers: { '@type': 'Offer', price: '49', priceCurrency: 'EUR', priceSpecification: { '@type': 'UnitPriceSpecification', price: '49', priceCurrency: 'EUR', unitText: 'Monat' } },
+  provider: { '@type': 'Organization', name: 'Responda Systems', url: 'https://responda.systems', email: 'info@responda.systems' },
+  inLanguage: 'de',
+  keywords: 'Einsatzverwaltung, Feuerwehr, Rettungsdienst, Patientenprotokoll, Lagerverwaltung, Ausbildung',
+})
+
 export default function LandingPage() {
   const [menuOpen, setMenuOpen] = useState(false)
   const [legal, setLegal] = useState<'impressum'|'datenschutz'|null>(null)
@@ -183,6 +197,16 @@ export default function LandingPage() {
   useEffect(() => {
     fetch(`${API_URL}/api/collections/landing_content/records?page=1&perPage=1`,{cache:'no-cache'})
       .then(r=>r.ok?r.json():null).then(d=>{if(d?.items?.[0])setContent(d.items[0])}).catch(()=>{})
+  }, [])
+
+  useEffect(() => {
+    document.title = 'Responda — Digitale Einsatzverwaltung für Feuerwehr & Rettungsdienst'
+    const script = document.createElement('script')
+    script.type = 'application/ld+json'
+    script.id = 'lp-jsonld'
+    script.text = JSON_LD
+    document.head.appendChild(script)
+    return () => { document.getElementById('lp-jsonld')?.remove() }
   }, [])
 
   useEffect(() => {
