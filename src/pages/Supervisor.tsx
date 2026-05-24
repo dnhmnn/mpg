@@ -7,8 +7,10 @@ interface LandingContent {
   id?: string
   hero_title: string
   hero_subtitle: string
+  nav_items: {label:string;href:string}[]
   audience: { title: string; description: string }[]
   features: { title: string; description: string }[]
+  pricing: {name:string;price:string;period:string;features:string[];featured?:boolean;badge?:string;cta?:string}[]
   contact_email: string
 }
 
@@ -33,6 +35,17 @@ const DEFAULT_LANDING: LandingContent = {
     { title: 'Benutzerverwaltung', description: 'Rollen, individuelle Rechte, temporäre Zugänge und Supervisor-Funktionen für Admins.' },
   ],
   contact_email: 'info@responda.systems',
+  nav_items: [
+    {label:'Features', href:'#features'},
+    {label:'Für wen', href:'#fuer-wen'},
+    {label:'Preise', href:'#preise'},
+    {label:'Kontakt', href:'#kontakt'},
+  ],
+  pricing: [
+    {name:'Starter', price:'49', period:'pro Monat · bis 25 Nutzer', features:['Einsatzverwaltung','Patientenprotokolle','Unitas Lernplattform','Team-Chat','Dateiverwaltung'], cta:'Jetzt anfragen'},
+    {name:'Team', price:'149', period:'pro Monat · bis 100 Nutzer', features:['Alles aus Starter','Lagerverwaltung','Ausbildungsmanagement','MPG-Prüfungen','Alamos-Webhook','Prioritäts-Support'], featured:true, badge:'Empfohlen', cta:'Jetzt anfragen'},
+    {name:'Enterprise', price:'Auf Anfrage', period:'unbegrenzte Nutzer · individuell', features:['Alles aus Team','Mehrere Standorte','Individuelle Integrationen','Dedizierter Ansprechpartner','SLA-Vereinbarung'], cta:'Kontakt aufnehmen'},
+  ],
 }
 
 interface LegalContent {
@@ -438,8 +451,10 @@ export default function Supervisor() {
           id: r.id,
           hero_title: r.hero_title || DEFAULT_LANDING.hero_title,
           hero_subtitle: r.hero_subtitle || DEFAULT_LANDING.hero_subtitle,
+          nav_items: r.nav_items?.length ? r.nav_items : DEFAULT_LANDING.nav_items,
           audience: r.audience || DEFAULT_LANDING.audience,
           features: r.features || DEFAULT_LANDING.features,
+          pricing: r.pricing?.length ? r.pricing : DEFAULT_LANDING.pricing,
           contact_email: r.contact_email || DEFAULT_LANDING.contact_email,
         })
       }
@@ -453,8 +468,10 @@ export default function Supervisor() {
       const data = {
         hero_title: website.hero_title,
         hero_subtitle: website.hero_subtitle,
+        nav_items: website.nav_items,
         audience: website.audience,
         features: website.features,
+        pricing: website.pricing,
         contact_email: website.contact_email,
       }
       if (website.id) {
@@ -487,6 +504,22 @@ export default function Supervisor() {
       f[i] = { ...f[i], [field]: value }
       return { ...prev, features: f }
     })
+  }
+  function addFeature() { setWebsite(prev => ({ ...prev, features: [...prev.features, { title: '', description: '' }] })) }
+  function removeFeature(i: number) { setWebsite(prev => ({ ...prev, features: prev.features.filter((_, idx) => idx !== i) })) }
+  function addNavItem() { setWebsite(prev => ({ ...prev, nav_items: [...prev.nav_items, { label: '', href: '' }] })) }
+  function removeNavItem(i: number) { setWebsite(prev => ({ ...prev, nav_items: prev.nav_items.filter((_, idx) => idx !== i) })) }
+  function updateNavItem(i: number, field: 'label'|'href', value: string) {
+    setWebsite(prev => { const a = [...prev.nav_items]; a[i] = { ...a[i], [field]: value }; return { ...prev, nav_items: a } })
+  }
+  function addPricingTier() { setWebsite(prev => ({ ...prev, pricing: [...prev.pricing, { name: '', price: '', period: '', features: [''], cta: 'Jetzt anfragen' }] })) }
+  function removePricingTier(i: number) { setWebsite(prev => ({ ...prev, pricing: prev.pricing.filter((_, idx) => idx !== i) })) }
+  function updatePricingTier(i: number, field: string, value: any) {
+    setWebsite(prev => { const p = [...prev.pricing]; p[i] = { ...p[i], [field]: value }; return { ...prev, pricing: p } })
+  }
+  function updatePricingFeatures(i: number, text: string) {
+    const lines = text.split('\n').map(l => l.trim()).filter(Boolean)
+    updatePricingTier(i, 'features', lines.length ? lines : [''])
   }
 
   async function loadLegal() {
@@ -820,9 +853,30 @@ export default function Supervisor() {
                 </div>
               </div>
 
+              {/* Navigation */}
+              <div style={{ background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.07)', padding: '20px 24px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em' }}>NAVIGATION</div>
+                  <button onClick={addNavItem} style={{ fontSize: 12, fontWeight: 700, color: '#600812', background: 'rgba(96,8,18,0.07)', border: 'none', borderRadius: 8, padding: '5px 12px', cursor: 'pointer', fontFamily: 'inherit' }}>+ Hinzufügen</button>
+                </div>
+                <div style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--warm-gray)', marginBottom: 12 }}>Links in der Navigationsleiste. Href: #section-id für Seitenabschnitte oder https://... für externe Links.</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {website.nav_items.map((item, i) => (
+                    <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                      <input value={item.label} onChange={e => updateNavItem(i, 'label', e.target.value)} style={{ ...inputStyle, width: '40%', fontWeight: 700 }} placeholder="Label z.B. Über uns" />
+                      <input value={item.href} onChange={e => updateNavItem(i, 'href', e.target.value)} style={{ ...inputStyle, flex: 1 }} placeholder="#ueber-uns oder https://..." />
+                      <button onClick={() => removeNavItem(i)} style={{ padding: '8px 10px', borderRadius: 7, border: '1px solid #fecaca', background: '#fef2f2', color: '#b91c1c', fontWeight: 600, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>×</button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
               {/* Features */}
               <div style={{ background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.07)', padding: '20px 24px' }}>
-                <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 16 }}>FEATURES</div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em' }}>FEATURES</div>
+                  <button onClick={addFeature} style={{ fontSize: 12, fontWeight: 700, color: '#600812', background: 'rgba(96,8,18,0.07)', border: 'none', borderRadius: 8, padding: '5px 12px', cursor: 'pointer', fontFamily: 'inherit' }}>+ Hinzufügen</button>
+                </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   {website.features.map((f, i) => (
                     <div key={i} style={{ background: 'var(--warm-bg)', borderRadius: 10, padding: '12px 14px', border: '0.5px solid rgba(96,8,18,0.1)', display: 'flex', gap: 12, alignItems: 'flex-start' }}>
@@ -830,6 +884,7 @@ export default function Supervisor() {
                         <input value={f.title} onChange={e => updateFeature(i, 'title', e.target.value)} style={{ ...inputStyle, fontWeight: 700 }} placeholder="Feature-Name" />
                         <textarea value={f.description} onChange={e => updateFeature(i, 'description', e.target.value)} rows={2} style={{ ...inputStyle, resize: 'vertical', fontSize: 13 }} placeholder="Kurze Beschreibung..." />
                       </div>
+                      <button onClick={() => removeFeature(i)} style={{ padding: '6px 10px', borderRadius: 7, border: '1px solid #fecaca', background: '#fef2f2', color: '#b91c1c', fontWeight: 600, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>×</button>
                     </div>
                   ))}
                 </div>

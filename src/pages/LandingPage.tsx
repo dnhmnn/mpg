@@ -10,7 +10,15 @@ const C = {
   border: 'rgba(96,8,18,0.10)',
 }
 
-interface Content { hero_title?: string; hero_subtitle?: string; audience?: {title:string;description:string}[]; features?: {title:string;description:string}[]; contact_email?: string }
+interface Content {
+  hero_title?: string
+  hero_subtitle?: string
+  audience?: {title:string;description:string}[]
+  features?: {title:string;description:string}[]
+  contact_email?: string
+  nav_items?: {label:string;href:string}[]
+  pricing?: {name:string;price:string;period:string;features:string[];featured?:boolean;badge?:string;cta?:string}[]
+}
 
 const DEF_FEATURES = [
   {title:'Einsatzverwaltung',description:'Einsätze manuell anlegen oder per Alamos-Webhook automatisch empfangen. Realtime-Übersicht für alle.'},
@@ -29,6 +37,19 @@ const DEF_AUDIENCE = [
   {title:'Bereitschaften & Hilfsorganisationen',description:'BRK, DRK, ASB, MHD, JUH — Responda passt sich eurer Struktur an, nicht umgekehrt.'},
   {title:'Werkfeuerwehren & Betriebssanitäter',description:'MPG-Prüfungen, Lagerverwaltung und digitale Protokolle für betriebliche Sicherheitsorganisationen.'},
   {title:'Ausbildungseinrichtungen',description:'Lernplattform, Terminverwaltung und Nachweisführung für Schulungs- und Ausbildungszentren.'},
+]
+
+const DEF_NAV = [
+  {label:'Features', href:'#features'},
+  {label:'Für wen', href:'#fuer-wen'},
+  {label:'Preise', href:'#preise'},
+  {label:'Kontakt', href:'#kontakt'},
+]
+
+const DEF_PRICING = [
+  {name:'Starter', price:'49', period:'pro Monat · bis 25 Nutzer', features:['Einsatzverwaltung','Patientenprotokolle','Unitas Lernplattform','Team-Chat','Dateiverwaltung'], cta:'Jetzt anfragen'},
+  {name:'Team', price:'149', period:'pro Monat · bis 100 Nutzer', features:['Alles aus Starter','Lagerverwaltung','Ausbildungsmanagement','MPG-Prüfungen','Alamos-Webhook','Prioritäts-Support'], featured:true, badge:'Empfohlen', cta:'Jetzt anfragen'},
+  {name:'Enterprise', price:'Auf Anfrage', period:'unbegrenzte Nutzer · individuell', features:['Alles aus Team','Mehrere Standorte','Individuelle Integrationen','Dedizierter Ansprechpartner','SLA-Vereinbarung'], cta:'Kontakt aufnehmen'},
 ]
 
 const ICONS = [
@@ -173,6 +194,8 @@ export default function LandingPage() {
 
   const features = content.features?.length ? content.features : DEF_FEATURES
   const audience = content.audience?.length ? content.audience : DEF_AUDIENCE
+  const navItems = content.nav_items?.length ? content.nav_items : DEF_NAV
+  const pricing = content.pricing?.length ? content.pricing : DEF_PRICING
   const email = content.contact_email || 'info@responda.systems'
   const heroTitle = content.hero_title || 'Das <em>digitale Rückgrat</em><br>deiner Organisation.'
   const heroSub = content.hero_subtitle || 'Einsätze, Protokolle, Lager, Ausbildungen und mehr — sicher, schnell und von überall erreichbar.'
@@ -188,10 +211,9 @@ export default function LandingPage() {
           <span>Responda</span>
         </a>
         <ul className="nav-links">
-          <li><a href="#features">Features</a></li>
-          <li><a href="#fuer-wen">Für wen</a></li>
-          <li><a href="#preise">Preise</a></li>
-          <li><a href="#kontakt">Kontakt</a></li>
+          {navItems.map(item=>(
+            <li key={item.href}><a href={item.href}>{item.label}</a></li>
+          ))}
           <li><a href={APP_URL} className="nav-cta">Zur App →</a></li>
         </ul>
         <button className="hamburger" onClick={()=>setMenuOpen(o=>!o)} aria-label="Menü">
@@ -200,10 +222,9 @@ export default function LandingPage() {
       </nav>
 
       <div className={`mob-menu${menuOpen?' open':''}`}>
-        <a href="#features" onClick={()=>setMenuOpen(false)}>Features</a>
-        <a href="#fuer-wen" onClick={()=>setMenuOpen(false)}>Für wen</a>
-        <a href="#preise" onClick={()=>setMenuOpen(false)}>Preise</a>
-        <a href="#kontakt" onClick={()=>setMenuOpen(false)}>Kontakt</a>
+        {navItems.map(item=>(
+          <a key={item.href} href={item.href} onClick={()=>setMenuOpen(false)}>{item.label}</a>
+        ))}
         <a href={APP_URL} className="cta">Zur App →</a>
       </div>
 
@@ -273,31 +294,22 @@ export default function LandingPage() {
           <h2>Klare <em>Preise,</em> keine Überraschungen</h2>
           <p className="sub">Monatlich kündbar. Keine Einrichtungsgebühr. Alle Pläne inkl. Updates und Support.</p>
           <div className="price-grid">
-            <div className="pc">
-              <div className="pc-name">Starter</div>
-              <div className="pc-price"><sup style={{fontSize:'1.1rem',verticalAlign:'super',marginRight:2}}>€</sup>49</div>
-              <div className="pc-period">pro Monat · bis 25 Nutzer</div>
-              <div className="pc-div"/>
-              <ul className="pc-feats">{['Einsatzverwaltung','Patientenprotokolle','Unitas Lernplattform','Team-Chat','Dateiverwaltung'].map(f=><li key={f}>{check}{f}</li>)}</ul>
-              <a href="#kontakt" className="btn-p btn-outline">Jetzt anfragen</a>
-            </div>
-            <div className="pc feat">
-              <div className="pc-badge">Empfohlen</div>
-              <div className="pc-name">Team</div>
-              <div className="pc-price"><sup style={{fontSize:'1.1rem',verticalAlign:'super',marginRight:2}}>€</sup>149</div>
-              <div className="pc-period">pro Monat · bis 100 Nutzer</div>
-              <div className="pc-div"/>
-              <ul className="pc-feats">{['Alles aus Starter','Lagerverwaltung','Ausbildungsmanagement','MPG-Prüfungen','Alamos-Webhook','Prioritäts-Support'].map(f=><li key={f}>{check}{f}</li>)}</ul>
-              <a href="#kontakt" className="btn-p btn-solid">Jetzt anfragen</a>
-            </div>
-            <div className="pc">
-              <div className="pc-name">Enterprise</div>
-              <div className="pc-price" style={{fontSize:'1.9rem',fontStyle:'italic'}}>Auf Anfrage</div>
-              <div className="pc-period">unbegrenzte Nutzer · individuell</div>
-              <div className="pc-div"/>
-              <ul className="pc-feats">{['Alles aus Team','Mehrere Standorte','Individuelle Integrationen','Dedizierter Ansprechpartner','SLA-Vereinbarung'].map(f=><li key={f}>{check}{f}</li>)}</ul>
-              <a href="#kontakt" className="btn-p btn-outline">Kontakt aufnehmen</a>
-            </div>
+            {pricing.map((tier,i)=>(
+              <div key={i} className={`pc${tier.featured?' feat':''}`}>
+                {tier.badge && <div className="pc-badge">{tier.badge}</div>}
+                <div className="pc-name">{tier.name}</div>
+                <div className="pc-price">
+                  {!isNaN(Number(tier.price))
+                    ? <><sup style={{fontSize:'1.1rem',verticalAlign:'super',marginRight:2}}>€</sup>{tier.price}</>
+                    : <span style={{fontSize:'1.9rem',fontStyle:'italic'}}>{tier.price}</span>
+                  }
+                </div>
+                <div className="pc-period">{tier.period}</div>
+                <div className="pc-div"/>
+                <ul className="pc-feats">{tier.features.map(f=><li key={f}>{check}{f}</li>)}</ul>
+                <a href="#kontakt" className={`btn-p ${tier.featured?'btn-solid':'btn-outline'}`}>{tier.cta||'Jetzt anfragen'}</a>
+              </div>
+            ))}
           </div>
         </div>
       </section>
