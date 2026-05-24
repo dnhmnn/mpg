@@ -1,0 +1,17 @@
+{
+  "name": "Responda",
+  "short_name": "Responda",
+  "description": "Digitale Einsatzverwaltung für Feuerwehr & Rettungsdienst",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#faf9f7",
+  "theme_color": "#600812",
+  "icons": [
+    {
+      "src": "/logoklein.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
