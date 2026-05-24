@@ -434,9 +434,9 @@ export default function LandingPage() {
             {pb_impressum
               ? <div style={{marginTop:24,fontSize:'0.9rem',color:'#1a0e08',lineHeight:1.8,whiteSpace:'pre-wrap'}}>{pb_impressum}</div>
               : <>
-                <div style={secStyle}><h2 style={secH}>Angaben gemäß § 5 TMG</h2><p style={secP}>Responda Systems<br/>[Straße und Hausnummer]<br/>[PLZ] [Stadt]<br/>Deutschland</p></div>
-                <div style={secStyle}><h2 style={secH}>Kontakt</h2><p style={secP}>E-Mail: {lnk(`mailto:${email}`,email)}</p></div>
-                <div style={secStyle}><h2 style={secH}>Verantwortlich für den Inhalt nach § 18 Abs. 2 MStV</h2><p style={secP}>[Vollständiger Name]<br/>[Anschrift wie oben]</p></div>
+                <div style={secStyle}><h2 style={secH}>Angaben gemäß § 5 TMG</h2><p style={secP}>Daniel Heilmann<br/>Alter Keller 5<br/>91541 Rothenburg ob der Tauber<br/>Deutschland</p></div>
+                <div style={secStyle}><h2 style={secH}>Kontakt</h2><p style={secP}>E-Mail: {lnk('mailto:daniel@responda.systems','daniel@responda.systems')}</p></div>
+                <div style={secStyle}><h2 style={secH}>Verantwortlich für den Inhalt nach § 18 Abs. 2 MStV</h2><p style={secP}>Daniel Heilmann<br/>Alter Keller 5<br/>91541 Rothenburg ob der Tauber</p></div>
                 <div style={secStyle}><h2 style={secH}>Haftungsausschluss</h2><p style={secP}>Die Inhalte dieser Website wurden mit größter Sorgfalt erstellt. Für die Richtigkeit, Vollständigkeit und Aktualität der Inhalte können wir jedoch keine Gewähr übernehmen. Als Diensteanbieter sind wir gemäß § 7 Abs. 1 TMG für eigene Inhalte auf diesen Seiten nach den allgemeinen Gesetzen verantwortlich.</p></div>
                 <div style={secStyle}><h2 style={secH}>Urheberrecht</h2><p style={secP}>Die durch die Seitenbetreiber erstellten Inhalte und Werke auf diesen Seiten unterliegen dem deutschen Urheberrecht. Die Vervielfältigung, Bearbeitung, Verbreitung und jede Art der Verwertung außerhalb der Grenzen des Urheberrechtes bedürfen der schriftlichen Zustimmung des jeweiligen Autors bzw. Erstellers.</p></div>
               </>
@@ -456,7 +456,7 @@ export default function LandingPage() {
               ? <div style={{marginTop:24,fontSize:'0.9rem',color:'#1a0e08',lineHeight:1.8,whiteSpace:'pre-wrap'}}>{pb_datenschutz}</div>
               : <>
                 <div style={secStyle}><h2 style={secH}>1. Verantwortlicher</h2>
-                  <p style={secP}>Verantwortlicher im Sinne der DSGVO ist:<br/><strong>Responda Systems</strong><br/>[Straße und Hausnummer]<br/>[PLZ] [Stadt]<br/>Deutschland<br/>E-Mail: {lnk(`mailto:${email}`,email)}</p>
+                  <p style={secP}>Verantwortlicher im Sinne der DSGVO ist:<br/><strong>Daniel Heilmann</strong><br/>Alter Keller 5<br/>91541 Rothenburg ob der Tauber<br/>Deutschland<br/>E-Mail: {lnk('mailto:daniel@responda.systems','daniel@responda.systems')}</p>
                 </div>
                 <div style={secStyle}><h2 style={secH}>2. Erhebung und Speicherung personenbezogener Daten</h2>
                   <p style={secP}>Beim Aufrufen unserer Website werden durch den Hosting-Anbieter automatisch Informationen in Server-Logfiles gespeichert. Dies umfasst: IP-Adresse (anonymisiert), Datum und Uhrzeit des Zugriffs, aufgerufene Seite, verwendeter Browser und Betriebssystem. Diese Daten sind nicht einer bestimmten Person zuordenbar und werden nicht mit anderen Datenquellen zusammengeführt. Die Löschung erfolgt automatisch nach 7 Tagen. Rechtsgrundlage ist Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse am sicheren Betrieb).</p>
