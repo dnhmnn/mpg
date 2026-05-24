@@ -890,6 +890,67 @@ export default function Supervisor() {
                 </div>
               </div>
 
+              {/* Preise */}
+              <div style={{ background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.07)', padding: '20px 24px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em' }}>PREISE</div>
+                  <button onClick={addPricingTier} style={{ fontSize: 12, fontWeight: 700, color: '#600812', background: 'rgba(96,8,18,0.07)', border: 'none', borderRadius: 8, padding: '5px 12px', cursor: 'pointer', fontFamily: 'inherit' }}>+ Tier hinzufügen</button>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                  {website.pricing.map((tier, i) => (
+                    <div key={i} style={{ background: 'var(--warm-bg)', borderRadius: 12, padding: '16px', border: `0.5px solid ${tier.featured ? '#600812' : 'rgba(96,8,18,0.1)'}` }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                        <div style={{ fontSize: 10, fontWeight: 700, color: tier.featured ? '#600812' : 'var(--warm-gray)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+                          {tier.name || 'Neuer Tier'}{tier.featured ? ' · EMPFOHLEN' : ''}
+                        </div>
+                        <button onClick={() => removePricingTier(i)} style={{ padding: '4px 10px', borderRadius: 7, border: '1px solid #fecaca', background: '#fef2f2', color: '#b91c1c', fontWeight: 600, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>× Entfernen</button>
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
+                        <div>
+                          <label style={labelStyle}>Name</label>
+                          <input value={tier.name} onChange={e => updatePricingTier(i, 'name', e.target.value)} style={inputStyle} placeholder="z.B. Starter" />
+                        </div>
+                        <div>
+                          <label style={labelStyle}>Preis (Zahl oder Text)</label>
+                          <input value={tier.price} onChange={e => updatePricingTier(i, 'price', e.target.value)} style={inputStyle} placeholder="49 oder Auf Anfrage" />
+                        </div>
+                        <div>
+                          <label style={labelStyle}>Zeitraum / Nutzer</label>
+                          <input value={tier.period} onChange={e => updatePricingTier(i, 'period', e.target.value)} style={inputStyle} placeholder="pro Monat · bis 25 Nutzer" />
+                        </div>
+                        <div>
+                          <label style={labelStyle}>Button-Text</label>
+                          <input value={tier.cta||''} onChange={e => updatePricingTier(i, 'cta', e.target.value)} style={inputStyle} placeholder="Jetzt anfragen" />
+                        </div>
+                        <div>
+                          <label style={labelStyle}>Badge-Text (optional)</label>
+                          <input value={tier.badge||''} onChange={e => updatePricingTier(i, 'badge', e.target.value || undefined)} style={inputStyle} placeholder="z.B. Empfohlen" />
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingTop: 18 }}>
+                          <label style={{ ...labelStyle, marginBottom: 0 }}>Hervorgehoben</label>
+                          <button
+                            onClick={() => updatePricingTier(i, 'featured', !tier.featured)}
+                            style={{ width: 44, height: 26, borderRadius: 13, background: tier.featured ? '#600812' : '#e5e5ea', border: 'none', cursor: 'pointer', position: 'relative', transition: 'background 0.2s', padding: 0, flexShrink: 0 }}
+                          >
+                            <span style={{ position: 'absolute', top: 2, left: tier.featured ? 20 : 2, width: 22, height: 22, borderRadius: '50%', background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.2)', transition: 'left 0.2s' }} />
+                          </button>
+                        </div>
+                      </div>
+                      <div>
+                        <label style={labelStyle}>Features (eine pro Zeile)</label>
+                        <textarea
+                          value={tier.features.join('\n')}
+                          onChange={e => updatePricingFeatures(i, e.target.value)}
+                          rows={Math.max(3, tier.features.length + 1)}
+                          style={{ ...inputStyle, resize: 'vertical', fontSize: 13 }}
+                          placeholder={'Feature 1\nFeature 2\nFeature 3'}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
               {saveMsg && <div style={{ fontSize: 13, fontStyle: 'italic', color: saveMsg.startsWith('Fehler') ? '#b91c1c' : '#16a34a' }}>{saveMsg}</div>}
               <button onClick={saveWebsite} disabled={websiteSaving}
                 style={{ background: '#600812', color: '#fff', border: 'none', borderRadius: 10, padding: '14px 0', fontWeight: 700, fontSize: 15, fontFamily: 'inherit', cursor: websiteSaving ? 'not-allowed' : 'pointer', opacity: websiteSaving ? 0.7 : 1 }}>
