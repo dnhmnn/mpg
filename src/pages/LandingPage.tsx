@@ -48,7 +48,7 @@ const CSS = `
   .lp a{text-decoration:none}
   .lp nav{position:sticky;top:0;z-index:100;background:rgba(250,249,247,0.93);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:0.5px solid rgba(96,8,18,0.10);padding:0 clamp(1.25rem,5vw,4rem);height:60px;display:flex;align-items:center;justify-content:space-between;gap:16px}
   .lp .nav-logo{display:flex;align-items:center;gap:10px;flex-shrink:0}
-  .lp .nav-logo img{height:30px;width:30px;object-fit:contain}
+  .lp .nav-logo img{height:32px;width:auto;max-width:100px;object-fit:contain}
   .lp .nav-logo span{font-weight:700;font-size:1.05rem;color:#1a0e08;letter-spacing:-0.01em}
   .lp .nav-links{display:flex;align-items:center;gap:28px;list-style:none}
   .lp .nav-links a{color:#8a7a68;font-size:0.875rem;font-weight:600;transition:color 0.15s}
@@ -163,6 +163,12 @@ export default function LandingPage() {
   }, [])
 
   useEffect(() => {
+    const prev = document.documentElement.style.background
+    document.documentElement.style.background = '#faf9f7'
+    return () => { document.documentElement.style.background = prev }
+  }, [])
+
+  useEffect(() => {
     const h = (e: KeyboardEvent) => { if(e.key==='Escape') setLegal(null) }
     window.addEventListener('keydown',h)
     return () => window.removeEventListener('keydown',h)
@@ -183,7 +189,7 @@ export default function LandingPage() {
       {/* NAV */}
       <nav>
         <a href="#" className="nav-logo">
-          <img src={`${APP_URL}/logoklein.svg`} alt="" onError={e=>(e.currentTarget.style.display='none')}/>
+          <img src="/logo.svg" alt="" onError={e=>(e.currentTarget.style.display='none')}/>
           <span>Responda</span>
         </a>
         <ul className="nav-links">
