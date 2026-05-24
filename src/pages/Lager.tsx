@@ -177,6 +177,7 @@ export default function Lager() {
   const [buchungExpiry, setBuchungExpiry] = useState('')
   const [buchungBatch, setBuchungBatch] = useState('')
   const [buchungSearch, setBuchungSearch] = useState('')
+  const [savingBuchung, setSavingBuchung] = useState(false)
 
   // Item detail state
   const [showItemDetailModal, setShowItemDetailModal] = useState(false)
@@ -877,14 +878,13 @@ export default function Lager() {
       alert('Bitte Artikel auswählen')
       return
     }
-    
     if (buchungQty <= 0) {
       alert('Menge muss größer 0 sein')
       return
     }
-    
+    if (savingBuchung) return
+    setSavingBuchung(true)
     const delta = buchungType === 'ein' ? buchungQty : -buchungQty
-    
     try {
       await adjustQty(selectedBuchungItem, delta, buchungExpiry || undefined)
       setShowBuchungModal(false)
@@ -895,6 +895,8 @@ export default function Lager() {
       setBuchungSearch('')
     } catch(e: any) {
       alert('Fehler: ' + e.message)
+    } finally {
+      setSavingBuchung(false)
     }
   }
 
@@ -1291,6 +1293,7 @@ export default function Lager() {
                     <div style={{ textAlign: 'right' }}>
                       <div style={{ fontWeight: 800, fontSize: 16, color: isLow ? '#d97706' : '#1a0e08' }}>{item.qty}</div>
                       <div style={{ fontSize: 10, color: 'var(--warm-gray)', textTransform: 'uppercase' as const }}>{item.unit}</div>
+                      {item.min_stock > 0 && <div style={{ fontSize: 10, color: isLow ? '#d97706' : 'var(--warm-gray)', fontWeight: 600 }}>Soll: {item.min_stock}</div>}
                     </div>
                     <button
                       onClick={(e) => { e.stopPropagation(); adjustQty(item.id, -1) }}
@@ -1683,7 +1686,7 @@ export default function Lager() {
             )}
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 8 }}>
               <button className="lager-btn" onClick={() => setShowBuchungModal(false)}>Abbrechen</button>
-              <button className="lager-btn primary" onClick={saveBuchung}>{buchungType === 'ein' ? 'Einbuchen' : 'Ausbuchen'}</button>
+              <button className="lager-btn primary" onClick={saveBuchung} disabled={savingBuchung}>{buchungType === 'ein' ? 'Einbuchen' : 'Ausbuchen'}</button>
             </div>
           </div>
         </div>
@@ -1716,7 +1719,7 @@ export default function Lager() {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 12, marginBottom: 12 }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 <label style={{ fontSize: 11, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.1em' }}>SOLL für {locations.find(l => l.id === currentLocationId)?.name || 'diesen Standort'}</label>
-                <input className="lager-input" type="number" value={detailSoll} onChange={(e) => setDetailSoll(parseInt(e.target.value) || 0)} min="0" />
+                <input className="lager-input" type="number" value={detailSoll || ''} onChange={(e) => setDetailSoll(e.target.value === '' ? 0 : (parseInt(e.target.value) || 0))} min="0" />
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 <label style={{ fontSize: 11, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.1em' }}>Bemerkung</label>
