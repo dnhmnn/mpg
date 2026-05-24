@@ -173,6 +173,16 @@ const CSS = `
 
 const check = <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
 
+function safeHtml(raw: string): string {
+  return raw
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/&lt;em&gt;/gi, '<em>')
+    .replace(/&lt;\/em&gt;/gi, '</em>')
+    .replace(/&lt;br\s*\/?&gt;/gi, '<br>')
+}
+
 const JSON_LD = JSON.stringify({
   '@context': 'https://schema.org',
   '@type': 'SoftwareApplication',
@@ -258,7 +268,7 @@ export default function LandingPage() {
       <section className="hero">
         <div className="wrap">
           <div className="hero-eye">Digitale Einsatzverwaltung</div>
-          <h1 dangerouslySetInnerHTML={{__html: heroTitle}}/>
+          <h1 dangerouslySetInnerHTML={{__html: safeHtml(heroTitle)}}/>
           <p className="hero-sub">{heroSub}</p>
           <div className="hero-btns">
             <a href="#kontakt" className="btn-cream">Demo anfragen</a>
