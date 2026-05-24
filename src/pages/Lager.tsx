@@ -1062,7 +1062,7 @@ export default function Lager() {
     let created = 0
     try {
       for (const row of importItems) {
-        if (!row.included) continue
+        if (!row.included && !row.createNew) continue
         let targetItem: InventoryItem | null = null
         if (row.matchType === 'exact') {
           targetItem = row.item
