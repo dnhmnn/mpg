@@ -744,7 +744,142 @@ export default function Supervisor() {
             ))}
           </div>
         )}
-      </div>
+      </div>}
+
+      {tab === 'profil' && (
+        <div style={{ padding: '20px max(20px, env(safe-area-inset-left)) calc(env(safe-area-inset-bottom) + 40px)', maxWidth: 600, margin: '0 auto' }}>
+          <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 16 }}>MEIN PROFIL</div>
+          <div style={{ background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.07)', padding: '20px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+            {[
+              { label: 'Name', value: profilName, setter: setProfilName, type: 'text' },
+              { label: 'E-Mail', value: profilEmail, setter: setProfilEmail, type: 'email' },
+              { label: 'Telefon', value: profilPhone, setter: setProfilPhone, type: 'tel' },
+            ].map(f => (
+              <div key={f.label}>
+                <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 6 }}>{f.label}</div>
+                <input type={f.type} value={f.value} onChange={e => f.setter(e.target.value)}
+                  style={{ width: '100%', padding: '11px 13px', borderRadius: 10, border: '0.5px solid rgba(96,8,18,0.15)', background: '#fff', fontSize: 14, fontFamily: 'inherit', color: '#1a0e08', boxSizing: 'border-box' as const, outline: 'none' }} />
+              </div>
+            ))}
+            <div>
+              <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 6 }}>Neues Passwort <span style={{ fontWeight: 400, fontSize: 10, color: 'var(--warm-gray)' }}>(leer = unverändert)</span></div>
+              <input type="text" value={profilPassword} onChange={e => setProfilPassword(e.target.value)} placeholder="••••••••"
+                style={{ width: '100%', padding: '11px 13px', borderRadius: 10, border: '0.5px solid rgba(96,8,18,0.15)', background: '#fff', fontSize: 14, fontFamily: 'monospace', color: '#1a0e08', boxSizing: 'border-box' as const, outline: 'none' }} />
+            </div>
+            {profilMsg && <div style={{ fontSize: 13, fontStyle: 'italic', color: profilMsg.startsWith('Fehler') ? '#b91c1c' : '#16a34a' }}>{profilMsg}</div>}
+            <button onClick={saveProfil} disabled={profilSaving}
+              style={{ background: '#600812', color: '#fff', border: 'none', borderRadius: 10, padding: '12px 0', fontWeight: 700, fontSize: 14, fontFamily: 'inherit', cursor: profilSaving ? 'not-allowed' : 'pointer', opacity: profilSaving ? 0.7 : 1 }}>
+              {profilSaving ? 'Speichern…' : 'Profil speichern'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {tab === 'website' && (
+        <div style={{ padding: '20px max(20px, env(safe-area-inset-left)) calc(env(safe-area-inset-bottom) + 40px)', maxWidth: 640, margin: '0 auto' }}>
+          {websiteLoading ? (
+            <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--warm-gray)', fontStyle: 'italic' }}>Laden…</div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
+
+              {/* Hero */}
+              <div style={{ background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.07)', padding: '20px 24px' }}>
+                <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 16 }}>HERO</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                  <div>
+                    <label style={labelStyle}>Überschrift <span style={{ fontWeight: 400, fontSize: 10, color: 'var(--warm-gray)' }}>(HTML erlaubt: &lt;em&gt; für kursiv, &lt;br&gt; für Zeilenumbruch)</span></label>
+                    <input value={website.hero_title} onChange={e => setWebsite(p => ({ ...p, hero_title: e.target.value }))} style={inputStyle} placeholder="Das <em>digitale Rückgrat</em><br>deiner Organisation." />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Untertitel</label>
+                    <textarea value={website.hero_subtitle} onChange={e => setWebsite(p => ({ ...p, hero_subtitle: e.target.value }))} rows={2} style={{ ...inputStyle, resize: 'vertical' }} placeholder="Kurze Beschreibung unter der Überschrift..." />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Kontakt-E-Mail (im Footer + Impressum)</label>
+                    <input type="email" value={website.contact_email} onChange={e => setWebsite(p => ({ ...p, contact_email: e.target.value }))} style={inputStyle} placeholder="info@responda.systems" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Zielgruppen */}
+              <div style={{ background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.07)', padding: '20px 24px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em' }}>ZIELGRUPPEN</div>
+                  <button onClick={addAudience} style={{ fontSize: 12, fontWeight: 700, color: '#600812', background: 'rgba(96,8,18,0.07)', border: 'none', borderRadius: 8, padding: '5px 12px', cursor: 'pointer', fontFamily: 'inherit' }}>+ Hinzufügen</button>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  {website.audience.map((a, i) => (
+                    <div key={i} style={{ background: 'var(--warm-bg)', borderRadius: 10, padding: '14px', border: '0.5px solid rgba(96,8,18,0.1)', display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        <input value={a.title} onChange={e => updateAudience(i, 'title', e.target.value)} style={{ ...inputStyle, fontWeight: 700 }} placeholder="Titel" />
+                        <textarea value={a.description} onChange={e => updateAudience(i, 'description', e.target.value)} rows={2} style={{ ...inputStyle, resize: 'vertical' }} placeholder="Beschreibung..." />
+                      </div>
+                      <button onClick={() => removeAudience(i)} style={{ padding: '6px 10px', borderRadius: 7, border: '1px solid #fecaca', background: '#fef2f2', color: '#b91c1c', fontWeight: 600, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>×</button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Features */}
+              <div style={{ background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.07)', padding: '20px 24px' }}>
+                <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 16 }}>FEATURES</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {website.features.map((f, i) => (
+                    <div key={i} style={{ background: 'var(--warm-bg)', borderRadius: 10, padding: '12px 14px', border: '0.5px solid rgba(96,8,18,0.1)', display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        <input value={f.title} onChange={e => updateFeature(i, 'title', e.target.value)} style={{ ...inputStyle, fontWeight: 700 }} placeholder="Feature-Name" />
+                        <textarea value={f.description} onChange={e => updateFeature(i, 'description', e.target.value)} rows={2} style={{ ...inputStyle, resize: 'vertical', fontSize: 13 }} placeholder="Kurze Beschreibung..." />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {saveMsg && <div style={{ fontSize: 13, fontStyle: 'italic', color: saveMsg.startsWith('Fehler') ? '#b91c1c' : '#16a34a' }}>{saveMsg}</div>}
+              <button onClick={saveWebsite} disabled={websiteSaving}
+                style={{ background: '#600812', color: '#fff', border: 'none', borderRadius: 10, padding: '14px 0', fontWeight: 700, fontSize: 15, fontFamily: 'inherit', cursor: websiteSaving ? 'not-allowed' : 'pointer', opacity: websiteSaving ? 0.7 : 1 }}>
+                {websiteSaving ? 'Speichern…' : 'Änderungen speichern'}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {tab === 'legal' && (
+        <div style={{ padding: '20px max(20px, env(safe-area-inset-left)) calc(env(safe-area-inset-bottom) + 40px)', maxWidth: 640, margin: '0 auto' }}>
+          {legalLoading ? (
+            <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--warm-gray)', fontStyle: 'italic' }}>Laden…</div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+              <div style={{ background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.07)', padding: '20px' }}>
+                <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 12 }}>IMPRESSUM</div>
+                <textarea
+                  value={legal.impressum}
+                  onChange={e => setLegal(p => ({ ...p, impressum: e.target.value }))}
+                  rows={12}
+                  placeholder="Angaben gemäß § 5 TMG..."
+                  style={{ width: '100%', padding: '11px 13px', borderRadius: 10, border: '0.5px solid rgba(96,8,18,0.15)', background: '#fff', fontSize: 13, fontFamily: 'inherit', color: '#1a0e08', boxSizing: 'border-box', outline: 'none', resize: 'vertical' }}
+                />
+              </div>
+              <div style={{ background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.07)', padding: '20px' }}>
+                <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 12 }}>DATENSCHUTZ</div>
+                <textarea
+                  value={legal.datenschutz}
+                  onChange={e => setLegal(p => ({ ...p, datenschutz: e.target.value }))}
+                  rows={12}
+                  placeholder="Datenschutzerklärung gemäß DSGVO..."
+                  style={{ width: '100%', padding: '11px 13px', borderRadius: 10, border: '0.5px solid rgba(96,8,18,0.15)', background: '#fff', fontSize: 13, fontFamily: 'inherit', color: '#1a0e08', boxSizing: 'border-box', outline: 'none', resize: 'vertical' }}
+                />
+              </div>
+              {saveMsg && <div style={{ fontSize: 13, fontStyle: 'italic', color: saveMsg.startsWith('Fehler') ? '#b91c1c' : '#16a34a' }}>{saveMsg}</div>}
+              <button onClick={saveLegal} disabled={legalSaving}
+                style={{ background: '#600812', color: '#fff', border: 'none', borderRadius: 10, padding: '14px 0', fontWeight: 700, fontSize: 15, fontFamily: 'inherit', cursor: legalSaving ? 'not-allowed' : 'pointer', opacity: legalSaving ? 0.7 : 1 }}>
+                {legalSaving ? 'Speichern…' : 'Rechtliche Texte speichern'}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
 
       {selectedOrg && (
         <div
