@@ -28,6 +28,15 @@ import { applyTheme, getTheme } from './lib/theme'
 
 applyTheme(getTheme())
 
+const isMarketingDomain =
+  window.location.hostname === 'responda.systems' ||
+  window.location.hostname === 'www.responda.systems'
+
+// On the marketing domain, only / shows the landing page — everything else redirects to the app
+if (isMarketingDomain && window.location.pathname !== '/') {
+  window.location.replace('https://app.responda.systems' + window.location.pathname + window.location.search)
+}
+
 function App() {
   return (
     <BrowserRouter>

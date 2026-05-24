@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { pb } from '../lib/pocketbase'
+
+const APP_URL = 'https://app.responda.systems'
 
 interface LandingContent {
   hero_title: string
@@ -31,9 +32,7 @@ const DEFAULT: LandingContent = {
 }
 
 export default function LandingPage() {
-  const navigate = useNavigate()
   const [content, setContent] = useState<LandingContent>(DEFAULT)
-  const [menuOpen, setMenuOpen] = useState(false)
 
   useEffect(() => {
     pb.collection('landing_content').getFullList({ sort: '-created', limit: 1 })
@@ -82,7 +81,7 @@ export default function LandingPage() {
             <a href="#zielgruppen" className="lp-nav-link" style={{ display: window.innerWidth < 480 ? 'none' : undefined }}>Für wen</a>
             <a href="#features" className="lp-nav-link" style={{ display: window.innerWidth < 480 ? 'none' : undefined }}>Features</a>
             <a href={`mailto:${content.contact_email}`} className="lp-nav-link" style={{ display: window.innerWidth < 480 ? 'none' : undefined }}>Kontakt</a>
-            <button className="lp-btn-primary" onClick={() => navigate('/login')} style={{ padding: '9px 18px', fontSize: 13 }}>Anmelden</button>
+            <button className="lp-btn-primary" onClick={() => window.location.href = APP_URL + '/login'} style={{ padding: '9px 18px', fontSize: 13 }}>Anmelden</button>
           </nav>
         </div>
       </header>
@@ -102,7 +101,7 @@ export default function LandingPage() {
             {content.hero_subtitle}
           </p>
           <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
-            <button className="lp-btn-primary" onClick={() => navigate('/login')}>Jetzt starten</button>
+            <button className="lp-btn-primary" onClick={() => window.location.href = APP_URL + '/login'}>Jetzt starten</button>
             <a href={`mailto:${content.contact_email}`} className="lp-btn-secondary">Kontakt aufnehmen</a>
           </div>
         </section>
@@ -158,7 +157,7 @@ export default function LandingPage() {
           </p>
           <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
             <button
-              onClick={() => navigate('/login')}
+              onClick={() => window.location.href = APP_URL + '/login'}
               style={{ background: '#fde8d8', color: '#3d0408', border: 'none', borderRadius: 10, padding: '14px 28px', fontSize: 15, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}
             >
               Anmelden
