@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 
 const APP_URL = 'https://app.responda.systems'
 const API_URL = 'https://api.responda.systems'
@@ -187,7 +188,7 @@ export default function LandingPage() {
   const heroTitle = content.hero_title || 'Das <em>digitale Rückgrat</em><br>deiner Organisation.'
   const heroSub = content.hero_subtitle || 'Einsätze, Protokolle, Lager, Ausbildungen und mehr — sicher, schnell und von überall erreichbar.'
 
-  return (
+  const main = (
     <div className="lp">
       <style>{CSS}</style>
 
@@ -355,35 +356,62 @@ export default function LandingPage() {
         </div>
       </footer>
 
-      {/* IMPRESSUM */}
-      <div className={`overlay${legal==='impressum'?' open':''}`} onClick={e=>{if(e.target===e.currentTarget)setLegal(null)}}>
-        <div className="modal">
-          <button className="modal-close" onClick={()=>setLegal(null)}>×</button>
-          <div className="eyebrow">Rechtliches</div>
-          <h1><em>Impressum</em></h1>
-          <div className="lsec"><h2>Angaben gemäß § 5 TMG</h2><p>Responda Systems<br/>[Straße]<br/>[PLZ] [Stadt]<br/>Deutschland</p></div>
-          <div className="lsec"><h2>Kontakt</h2><p>E-Mail: <a href={`mailto:${email}`}>{email}</a></p></div>
-          <div className="lsec"><h2>Verantwortlich für den Inhalt</h2><p>[Name des Verantwortlichen]</p></div>
-          <div className="lsec"><h2>Haftungsausschluss</h2><p>Die Inhalte dieser Website wurden mit größter Sorgfalt erstellt. Für die Richtigkeit können wir jedoch keine Gewähr übernehmen.</p></div>
-          <div className="lsec"><h2>Urheberrecht</h2><p>Die erstellten Inhalte unterliegen dem deutschen Urheberrecht. Vervielfältigung bedarf der schriftlichen Zustimmung.</p></div>
-        </div>
-      </div>
-
-      {/* DATENSCHUTZ */}
-      <div className={`overlay${legal==='datenschutz'?' open':''}`} onClick={e=>{if(e.target===e.currentTarget)setLegal(null)}}>
-        <div className="modal">
-          <button className="modal-close" onClick={()=>setLegal(null)}>×</button>
-          <div className="eyebrow">Rechtliches</div>
-          <h1><em>Datenschutzerklärung</em></h1>
-          <div className="lsec"><h2>1. Verantwortlicher</h2><p>Responda Systems · <a href={`mailto:${email}`}>{email}</a></p></div>
-          <div className="lsec"><h2>2. Erhobene Daten</h2><p>Beim Besuch erfasst der Server: anonymisierte IP, Datum, aufgerufene Seite, Browser. Löschung nach 7 Tagen.</p></div>
-          <div className="lsec"><h2>3. Kontaktformular</h2><p>Angaben werden zur Bearbeitung gespeichert. Keine Weitergabe ohne Einwilligung.</p></div>
-          <div className="lsec"><h2>4. Cookies</h2><p>Keine Tracking-Cookies, keine Analyse-Tools.</p></div>
-          <div className="lsec"><h2>5. Google Fonts</h2><p>Für einheitliche Darstellung werden Google Fonts geladen (Google Ireland Limited). Dabei wird Ihre IP übertragen.</p></div>
-          <div className="lsec"><h2>6. Ihre Rechte (DSGVO)</h2><p>Auskunft, Berichtigung, Löschung: <a href={`mailto:${email}`}>{email}</a></p></div>
-          <div className="lsec"><h2>Stand</h2><p>Mai 2025</p></div>
-        </div>
-      </div>
     </div>
+  )
+
+  const modalStyle: React.CSSProperties = {
+    position: 'fixed', inset: 0, zIndex: 9999,
+    background: 'rgba(26,14,8,0.65)', backdropFilter: 'blur(6px)',
+    WebkitBackdropFilter: 'blur(6px)', overflowY: 'auto',
+    padding: '40px 20px', fontFamily: "'Atkinson Hyperlegible',-apple-system,sans-serif",
+  }
+  const boxStyle: React.CSSProperties = {
+    background: '#fff', borderRadius: 20, maxWidth: 760, margin: '0 auto',
+    padding: 'clamp(28px,5vw,52px)', position: 'relative',
+  }
+  const eyeStyle: React.CSSProperties = { fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.16em', color: '#600812', marginBottom: 10 }
+  const h1Style: React.CSSProperties = { fontSize: '1.8rem', fontWeight: 800, letterSpacing: '-0.02em', color: '#1a0e08', marginBottom: 0 }
+  const emStyle: React.CSSProperties = { color: '#600812', fontStyle: 'italic' }
+  const secStyle: React.CSSProperties = { marginTop: 28 }
+  const secH: React.CSSProperties = { fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.14em', color: '#600812', marginBottom: 8 }
+  const secP: React.CSSProperties = { fontSize: '0.9rem', color: '#1a0e08', lineHeight: 1.7, marginBottom: 8 }
+  const closeBtn: React.CSSProperties = { position: 'absolute', top: 20, right: 20, width: 32, height: 32, borderRadius: '50%', background: 'rgba(96,8,18,0.08)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#600812', fontSize: 18, fontFamily: 'inherit' }
+
+  return (
+    <>
+      {main}
+      {legal === 'impressum' && createPortal(
+        <div style={modalStyle} onClick={e=>{if(e.target===e.currentTarget)setLegal(null)}}>
+          <div style={boxStyle}>
+            <button style={closeBtn} onClick={()=>setLegal(null)}>×</button>
+            <div style={eyeStyle}>Rechtliches</div>
+            <h1 style={h1Style}><span style={emStyle}>Impressum</span></h1>
+            <div style={secStyle}><h2 style={secH}>Angaben gemäß § 5 TMG</h2><p style={secP}>Responda Systems<br/>[Straße]<br/>[PLZ] [Stadt]<br/>Deutschland</p></div>
+            <div style={secStyle}><h2 style={secH}>Kontakt</h2><p style={secP}>E-Mail: <a href={`mailto:${email}`} style={{color:'#600812'}}>{email}</a></p></div>
+            <div style={secStyle}><h2 style={secH}>Verantwortlich für den Inhalt</h2><p style={secP}>[Name des Verantwortlichen]</p></div>
+            <div style={secStyle}><h2 style={secH}>Haftungsausschluss</h2><p style={secP}>Die Inhalte dieser Website wurden mit größter Sorgfalt erstellt. Für die Richtigkeit können wir jedoch keine Gewähr übernehmen.</p></div>
+            <div style={secStyle}><h2 style={secH}>Urheberrecht</h2><p style={secP}>Die erstellten Inhalte unterliegen dem deutschen Urheberrecht. Vervielfältigung bedarf der schriftlichen Zustimmung.</p></div>
+          </div>
+        </div>,
+        document.body
+      )}
+      {legal === 'datenschutz' && createPortal(
+        <div style={modalStyle} onClick={e=>{if(e.target===e.currentTarget)setLegal(null)}}>
+          <div style={boxStyle}>
+            <button style={closeBtn} onClick={()=>setLegal(null)}>×</button>
+            <div style={eyeStyle}>Rechtliches</div>
+            <h1 style={h1Style}><span style={emStyle}>Datenschutzerklärung</span></h1>
+            <div style={secStyle}><h2 style={secH}>1. Verantwortlicher</h2><p style={secP}>Responda Systems · <a href={`mailto:${email}`} style={{color:'#600812'}}>{email}</a></p></div>
+            <div style={secStyle}><h2 style={secH}>2. Erhobene Daten</h2><p style={secP}>Beim Besuch erfasst der Server: anonymisierte IP, Datum, aufgerufene Seite, Browser. Löschung nach 7 Tagen.</p></div>
+            <div style={secStyle}><h2 style={secH}>3. Kontaktformular</h2><p style={secP}>Angaben werden zur Bearbeitung gespeichert. Keine Weitergabe ohne Einwilligung.</p></div>
+            <div style={secStyle}><h2 style={secH}>4. Cookies</h2><p style={secP}>Keine Tracking-Cookies, keine Analyse-Tools.</p></div>
+            <div style={secStyle}><h2 style={secH}>5. Google Fonts</h2><p style={secP}>Für einheitliche Darstellung werden Google Fonts geladen (Google Ireland Limited). Dabei wird Ihre IP übertragen.</p></div>
+            <div style={secStyle}><h2 style={secH}>6. Ihre Rechte (DSGVO)</h2><p style={secP}>Auskunft, Berichtigung, Löschung: <a href={`mailto:${email}`} style={{color:'#600812'}}>{email}</a></p></div>
+            <div style={secStyle}><h2 style={secH}>Stand</h2><p style={secP}>Mai 2025</p></div>
+          </div>
+        </div>,
+        document.body
+      )}
+    </>
   )
 }
