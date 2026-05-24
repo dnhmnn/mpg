@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import LandingPage from './LandingPage'
 
 const TAGLINES = [
   'Digitalisierung, die zuverlässig funktioniert.',
@@ -12,6 +13,10 @@ const TAGLINES = [
 
 export default function Index() {
   const navigate = useNavigate()
+
+  if (window.location.hostname === 'responda.systems' || window.location.hostname === 'www.responda.systems') {
+    return <LandingPage />
+  }
   const [taglineIndex, setTaglineIndex] = useState(0)
   const [visible, setVisible] = useState(true)
   const [orgCode, setOrgCode] = useState('')
