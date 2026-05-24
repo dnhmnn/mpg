@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { pb } from '../lib/pocketbase'
 import { useAuth } from '../hooks/useAuth'
+import KachelGenerator from './KachelGenerator'
 
 interface LandingContent {
   id?: string
@@ -168,7 +169,7 @@ export default function Supervisor() {
   const navigate = useNavigate()
   const { user, loading } = useAuth()
 
-  const [tab, setTab] = useState<'orgs' | 'profil' | 'website' | 'legal'>('orgs')
+  const [tab, setTab] = useState<'orgs' | 'profil' | 'website' | 'legal' | 'kachel'>('orgs')
 
   const [orgs, setOrgs] = useState<Org[]>([])
   const [dataLoading, setDataLoading] = useState(true)
@@ -617,7 +618,7 @@ export default function Supervisor() {
           <div style={{ flex: 1 }}>
             <div style={{ fontWeight: 700, fontSize: 15, color: '#1a0e08', letterSpacing: '-0.01em' }}>Supervisor</div>
             <div style={{ fontStyle: 'italic', fontSize: 11, color: 'var(--warm-gray)', marginTop: 1 }}>
-              {tab === 'orgs' ? 'Organisationsverwaltung' : tab === 'profil' ? 'Mein Profil' : tab === 'website' ? 'Website-Inhalt' : 'Rechtliche Texte'}
+              {tab === 'orgs' ? 'Organisationsverwaltung' : tab === 'profil' ? 'Mein Profil' : tab === 'website' ? 'Website-Inhalt' : tab === 'kachel' ? 'Kachel-Generator' : 'Rechtliche Texte'}
             </div>
           </div>
           <div style={{ width: 22 }} />
@@ -630,6 +631,7 @@ export default function Supervisor() {
           { key: 'profil', label: 'Mein Profil' },
           { key: 'website', label: 'Website' },
           { key: 'legal', label: 'Rechtliches' },
+          { key: 'kachel', label: 'Kachel' },
         ] as const).map(t => (
           <button
             key={t.key}
@@ -1019,6 +1021,8 @@ export default function Supervisor() {
           )}
         </div>
       )}
+
+      {tab === 'kachel' && <KachelGenerator />}
 
       {selectedOrg && (
         <div
