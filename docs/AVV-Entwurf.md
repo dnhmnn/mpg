@@ -74,7 +74,7 @@ E-Mail: daniel@responda.systems
 Der Auftragnehmer trifft geeignete technische und organisatorische Maßnahmen gemäß Art. 32 DSGVO, insbesondere:
 
 **Zutrittskontrolle:**
-- Der Server befindet sich in den privaten Räumlichkeiten des Auftragnehmers in Rothenburg ob der Tauber; Zugang nur für den Auftragnehmer persönlich.
+- Der Server befindet sich in Nürnberg, Deutschland und steht im ausschließlichen Eigentum des Auftragnehmers; Zugang ausschließlich für den Auftragnehmer persönlich.
 
 **Zugangskontrolle:**
 - Starke Passwörter und SSH-Key-Authentifizierung für Server-Zugang

@@ -60,7 +60,7 @@ const SECTIONS = [
       'Der Auftragnehmer trifft geeignete technische und organisatorische Maßnahmen gemäß Art. 32 DSGVO:',
     ],
     toms: [
-      { label: 'Zutrittskontrolle', text: 'Der Server befindet sich in den privaten Räumlichkeiten des Auftragnehmers in Rothenburg ob der Tauber; Zugang ausschließlich für den Auftragnehmer persönlich.' },
+      { label: 'Zutrittskontrolle', text: 'Der Server befindet sich in Nürnberg, Deutschland und steht im ausschließlichen Eigentum des Auftragnehmers; Zugang ausschließlich für den Auftragnehmer persönlich.' },
       { label: 'Zugangskontrolle', text: 'Starke Passwörter und SSH-Key-Authentifizierung; keine unsicheren Remote-Zugangsprotokolle.' },
       { label: 'Zugriffskontrolle', text: 'Rollenbasiertes Zugriffskonzept (Benutzer, Supervisor, Admin); Mandantentrennung per organization_id.' },
       { label: 'Weitergabekontrolle', text: 'Alle Verbindungen verschlüsselt via TLS 1.2/1.3 (HTTPS); keine Weitergabe an Dritte ohne Weisung.' },
