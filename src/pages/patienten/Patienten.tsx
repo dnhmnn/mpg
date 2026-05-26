@@ -756,13 +756,13 @@ export default function Patienten() {
       `}</style>
 
       {/* ── MASTHEAD ── */}
-      <div style={{ background: '#fff', borderBottom: '0.5px solid rgba(96,8,18,0.12)', position: 'sticky', top: 0, zIndex: 100, paddingTop: 'env(safe-area-inset-top)', paddingLeft: 'max(20px, env(safe-area-inset-left))', paddingRight: 'max(20px, env(safe-area-inset-right))' }}>
+      <div style={{ background: 'var(--lbf-card)', borderBottom: '0.5px solid rgba(96,8,18,0.12)', position: 'sticky', top: 0, zIndex: 100, paddingTop: 'env(safe-area-inset-top)', paddingLeft: 'max(20px, env(safe-area-inset-left))', paddingRight: 'max(20px, env(safe-area-inset-right))' }}>
         <div style={{ height: 60, display: 'flex', alignItems: 'center', gap: 12 }}>
           <a href="/hub" style={{ display: 'flex', color: '#600812', textDecoration: 'none', flexShrink: 0 }}>
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#600812" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
           </a>
           <div style={{ flex: 1 }}>
-            <div style={{ fontWeight: 700, fontSize: 15, letterSpacing: '-0.01em', color: '#1a0e08' }}>Patienten</div>
+            <div style={{ fontWeight: 700, fontSize: 15, letterSpacing: '-0.01em', color: 'var(--lbf-text)' }}>Patienten</div>
             <div style={{ fontStyle: 'italic', fontSize: 11, color: 'var(--warm-gray)', marginTop: 1 }}>{user?.organization_name || 'Responda'}</div>
           </div>
           {(activeTab === 'patienten' || activeTab === 'nach') && (
@@ -859,7 +859,7 @@ export default function Patienten() {
                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
                 <polyline points="14 2 14 8 20 8"/>
               </svg>
-              <div style={{ fontStyle: 'italic', fontWeight: 700, color: '#1a0e08', marginBottom: '6px', fontSize: 15 }}>Keine offenen Protokolle</div>
+              <div style={{ fontStyle: 'italic', fontWeight: 700, color: 'var(--lbf-text)', marginBottom: '6px', fontSize: 15 }}>Keine offenen Protokolle</div>
               <div>Neue Protokolle werden hier angezeigt, sobald sie eingereicht werden.</div>
             </div>
           ) : (
@@ -887,13 +887,13 @@ export default function Patienten() {
                       const tfChangedCount = ((pat as any).payload?._tf_changed_fields || []).length
                       const accentColor = openRQ > 0 ? '#f59e0b' : '#16a34a'
                       return (
-                        <div key={pat.id} style={{ background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.07)', position: 'relative', overflow: 'hidden' }}>
+                        <div key={pat.id} style={{ background: 'var(--lbf-card)', borderRadius: 12, boxShadow: 'var(--lbf-shadow)', position: 'relative', overflow: 'hidden' }}>
                           <div style={{ height: 3, background: accentColor, borderRadius: '12px 12px 0 0' }} />
                           <div style={{ padding: '12px 16px 10px' }}>
                             <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.14em', color: accentColor, marginBottom: 6 }}>
                               PROTOKOLL FREIGEGEBEN{openRQ > 0 ? ` · ${openRQ} Rückfrage${openRQ !== 1 ? 'n' : ''}` : ''}
                             </div>
-                            <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 17, color: '#1a0e08', marginBottom: 4 }}>{displayName}</div>
+                            <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 17, color: 'var(--lbf-text)', marginBottom: 4 }}>{displayName}</div>
                             {crew && <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)' }}>{crew}</div>}
                             <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginTop: 2 }}>{fmtDate(pat.created)}</div>
 
@@ -928,7 +928,7 @@ export default function Patienten() {
                             <button className="pat-btn" onClick={() => setReopenModal(pat)}>Nachbearbeit.</button>
                             <div style={{ flex: 1 }} />
                             <button
-                              style={{ background: canSign ? '#600812' : 'rgba(96,8,18,0.08)', color: canSign ? '#fff' : 'var(--warm-gray)', border: 'none', borderRadius: 8, padding: '7px 14px', fontWeight: 700, fontSize: 12, cursor: canSign ? 'pointer' : 'not-allowed', fontFamily: 'inherit', letterSpacing: '0.04em' }}
+                              style={{ background: canSign ? '#600812' : 'var(--lbf-border-light)', color: canSign ? '#fff' : 'var(--warm-gray)', border: 'none', borderRadius: 8, padding: '7px 14px', fontWeight: 700, fontSize: 12, cursor: canSign ? 'pointer' : 'not-allowed', fontFamily: 'inherit', letterSpacing: '0.04em' }}
                               onClick={() => canSign && openEdit(pat)}
                               title={!canSign ? `Erst alle ${openRQ} offenen Rückfragen beantworten` : ''}
                             >
@@ -1006,7 +1006,7 @@ export default function Patienten() {
                 <line x1="12" y1="8" x2="12" y2="12"/>
                 <line x1="12" y1="16" x2="12.01" y2="16"/>
               </svg>
-              <div style={{ fontStyle: 'italic', fontWeight: 700, color: '#1a0e08', marginBottom: '6px', fontSize: 15 }}>Keine offenen Nacherfassungen</div>
+              <div style={{ fontStyle: 'italic', fontWeight: 700, color: 'var(--lbf-text)', marginBottom: '6px', fontSize: 15 }}>Keine offenen Nacherfassungen</div>
               <div>Über den + Button oben rechts eine neue anlegen.</div>
             </div>
           ) : (
@@ -1055,7 +1055,7 @@ export default function Patienten() {
                   <polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/>
                   <line x1="10" y1="12" x2="14" y2="12"/>
                 </svg>
-                <div style={{ fontStyle: 'italic', fontWeight: 700, color: '#1a0e08', fontSize: 15 }}>Archiv leer</div>
+                <div style={{ fontStyle: 'italic', fontWeight: 700, color: 'var(--lbf-text)', fontSize: 15 }}>Archiv leer</div>
               </div>
             ) : (
               Object.entries(archiveByYear)
@@ -1123,7 +1123,7 @@ export default function Patienten() {
                 <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ opacity: 0.25, marginBottom: '14px', color: '#600812' }}>
                   <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
                 </svg>
-                <div style={{ fontStyle: 'italic', fontWeight: 700, color: '#1a0e08', marginBottom: '6px', fontSize: 15 }}>Keine Einträge</div>
+                <div style={{ fontStyle: 'italic', fontWeight: 700, color: 'var(--lbf-text)', marginBottom: '6px', fontSize: 15 }}>Keine Einträge</div>
                 <div>Collection <code>audit_logs</code> muss in PocketBase angelegt sein.</div>
               </div>
             )}
@@ -1227,9 +1227,9 @@ export default function Patienten() {
           <>
             <div onClick={() => setProtokollSheet(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(26,14,8,0.45)', zIndex: 3000 }} />
             <div style={{ position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 3001, background: 'var(--warm-bg)', borderRadius: '16px 16px 0 0', maxHeight: '92dvh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-              <div style={{ padding: '14px 20px', borderBottom: '0.5px solid rgba(96,8,18,0.12)', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+              <div style={{ padding: '14px 20px', borderBottom: '0.5px solid rgba(96,8,18,0.12)', background: 'var(--lbf-card)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
                 <div>
-                  <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 17, color: '#1a0e08' }}>{sheetName}</div>
+                  <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 17, color: 'var(--lbf-text)' }}>{sheetName}</div>
                   <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginTop: 2 }}>
                     {(protokollSheet as any).status === 'offen' ? 'In Bearbeitung durch Teamleiter' : 'Freigegeben'}
                   </div>
@@ -1264,9 +1264,9 @@ export default function Patienten() {
         ]
         return (
           <div style={{ position: 'fixed', inset: 0, background: 'rgba(26,14,8,0.45)', zIndex: 3100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-            <div style={{ background: '#fff', borderRadius: 14, width: '100%', maxWidth: 460, padding: '24px', boxShadow: '0 16px 48px rgba(0,0,0,0.2)', border: '0.5px solid rgba(96,8,18,0.1)', maxHeight: '90dvh', overflowY: 'auto' }}>
+            <div style={{ background: 'var(--lbf-card)', borderRadius: 14, width: '100%', maxWidth: 460, padding: '24px', boxShadow: '0 16px 48px rgba(0,0,0,0.2)', border: '0.5px solid rgba(96,8,18,0.1)', maxHeight: '90dvh', overflowY: 'auto' }}>
               <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 8 }}>Mannschaft nachtragen</div>
-              <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 17, color: '#1a0e08', marginBottom: 20 }}>{patName}</div>
+              <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 17, color: 'var(--lbf-text)', marginBottom: 20 }}>{patName}</div>
               {roles.map(({ key, label }) => {
                 const existing = (mannschaftModal as any).payload?.mannschaft?.[key]
                 const picked = mannPicked[key]
@@ -1275,7 +1275,7 @@ export default function Patienten() {
                     <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 6 }}>{label}</label>
                     {picked ? (
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'rgba(96,8,18,0.04)', border: '0.5px solid rgba(96,8,18,0.15)', borderRadius: 8 }}>
-                        <span style={{ flex: 1, fontStyle: 'italic', fontWeight: 700, fontSize: 14, color: '#1a0e08' }}>{picked.name}</span>
+                        <span style={{ flex: 1, fontStyle: 'italic', fontWeight: 700, fontSize: 14, color: 'var(--lbf-text)' }}>{picked.name}</span>
                         <button onClick={() => setMannPicked(prev => { const n = { ...prev }; delete n[key]; return n })} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--warm-gray)', fontSize: 18, lineHeight: 1, padding: '0 2px' }}>×</button>
                       </div>
                     ) : existing?.id ? (
@@ -1289,12 +1289,12 @@ export default function Patienten() {
                           placeholder="Name suchen…"
                           value={mannSearch[key] || ''}
                           onChange={e => searchMannschaft(key, e.target.value)}
-                          style={{ width: '100%', padding: '9px 12px', border: '0.5px solid rgba(96,8,18,0.2)', borderRadius: 8, fontSize: 14, fontFamily: 'inherit', boxSizing: 'border-box' as const, background: '#faf9f7', color: '#1a0e08', outline: 'none' }}
+                          style={{ width: '100%', padding: '9px 12px', border: '0.5px solid rgba(96,8,18,0.2)', borderRadius: 8, fontSize: 14, fontFamily: 'inherit', boxSizing: 'border-box' as const, background: 'var(--warm-bg)', color: 'var(--lbf-text)', outline: 'none' }}
                         />
                         {(mannResults[key] || []).length > 0 && (
-                          <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: '#fff', border: '0.5px solid rgba(96,8,18,0.15)', borderRadius: 8, boxShadow: '0 8px 20px rgba(0,0,0,0.12)', zIndex: 10, overflow: 'hidden', marginTop: 4 }}>
+                          <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--lbf-card)', border: '0.5px solid rgba(96,8,18,0.15)', borderRadius: 8, boxShadow: '0 8px 20px rgba(0,0,0,0.12)', zIndex: 10, overflow: 'hidden', marginTop: 4 }}>
                             {mannResults[key].map((u: any) => (
-                              <div key={u.id} onClick={() => { setMannPicked(prev => ({ ...prev, [key]: u })); setMannSearch(prev => ({ ...prev, [key]: '' })); setMannResults(prev => ({ ...prev, [key]: [] })) }} style={{ padding: '10px 14px', cursor: 'pointer', fontSize: 14, color: '#1a0e08', borderBottom: '0.5px solid rgba(96,8,18,0.06)' }}
+                              <div key={u.id} onClick={() => { setMannPicked(prev => ({ ...prev, [key]: u })); setMannSearch(prev => ({ ...prev, [key]: '' })); setMannResults(prev => ({ ...prev, [key]: [] })) }} style={{ padding: '10px 14px', cursor: 'pointer', fontSize: 14, color: 'var(--lbf-text)', borderBottom: '0.5px solid rgba(96,8,18,0.06)' }}
                                 onMouseEnter={e => (e.currentTarget.style.background = 'rgba(96,8,18,0.04)')}
                                 onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                               >
@@ -1318,7 +1318,7 @@ export default function Patienten() {
                 <button
                   onClick={saveMannschaftNachtraeglich}
                   disabled={savingMannschaft || Object.keys(mannPicked).length === 0}
-                  style={{ padding: '9px 18px', background: Object.keys(mannPicked).length > 0 ? '#600812' : 'rgba(96,8,18,0.08)', color: Object.keys(mannPicked).length > 0 ? '#fff' : 'var(--warm-gray)', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: Object.keys(mannPicked).length > 0 ? 'pointer' : 'not-allowed', fontFamily: 'inherit', letterSpacing: '0.04em' }}
+                  style={{ padding: '9px 18px', background: Object.keys(mannPicked).length > 0 ? '#600812' : 'var(--lbf-border-light)', color: Object.keys(mannPicked).length > 0 ? '#fff' : 'var(--warm-gray)', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: Object.keys(mannPicked).length > 0 ? 'pointer' : 'not-allowed', fontFamily: 'inherit', letterSpacing: '0.04em' }}
                 >
                   {savingMannschaft ? 'Speichern…' : 'Speichern'}
                 </button>
@@ -1334,9 +1334,9 @@ export default function Patienten() {
         const patName = [pl.name, pl.vorname].filter(Boolean).join(' ') || reopenModal.title || 'Unbekannt'
         return (
           <div style={{ position: 'fixed', inset: 0, background: 'rgba(26,14,8,0.45)', zIndex: 3100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-            <div style={{ background: '#fff', borderRadius: 14, width: '100%', maxWidth: 420, padding: '24px', boxShadow: '0 16px 48px rgba(0,0,0,0.2)', border: '0.5px solid rgba(96,8,18,0.1)' }}>
+            <div style={{ background: 'var(--lbf-card)', borderRadius: 14, width: '100%', maxWidth: 420, padding: '24px', boxShadow: '0 16px 48px rgba(0,0,0,0.2)', border: '0.5px solid rgba(96,8,18,0.1)' }}>
               <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 8 }}>Zur Nachbearbeitung öffnen</div>
-              <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 17, color: '#1a0e08', marginBottom: 20 }}>{patName}</div>
+              <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 17, color: 'var(--lbf-text)', marginBottom: 20 }}>{patName}</div>
               <div style={{ marginBottom: 16 }}>
                 <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 6 }}>Dauer (Stunden)</label>
                 <input
@@ -1345,7 +1345,7 @@ export default function Patienten() {
                   max={72}
                   value={reopenHours}
                   onChange={e => setReopenHours(Math.max(1, Math.min(72, Number(e.target.value))))}
-                  style={{ width: '100%', padding: '9px 12px', border: '0.5px solid rgba(96,8,18,0.2)', borderRadius: 8, fontSize: 16, fontFamily: 'inherit', boxSizing: 'border-box' as const, background: '#faf9f7', color: '#1a0e08', outline: 'none' }}
+                  style={{ width: '100%', padding: '9px 12px', border: '0.5px solid rgba(96,8,18,0.2)', borderRadius: 8, fontSize: 16, fontFamily: 'inherit', boxSizing: 'border-box' as const, background: 'var(--warm-bg)', color: 'var(--lbf-text)', outline: 'none' }}
                 />
                 <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginTop: 6 }}>
                   Der Teamleiter hat {reopenHours} Stunden Zeit zur Nachbearbeitung. Ein System-Eintrag wird automatisch erstellt.
@@ -1432,11 +1432,11 @@ ${rqHtml || '<div style="font-style:italic;color:#8a7a68">Keine Rückfragen vorh
         return (
           <>
             <div style={{ position: 'fixed', inset: 0, background: 'rgba(26,14,8,0.45)', zIndex: 3000, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '16px 20px' }}>
-              <div style={{ background: '#fff', borderRadius: 14, width: '100%', maxWidth: 560, maxHeight: '85vh', overflowY: 'auto', boxShadow: '0 16px 48px rgba(0,0,0,0.2)', border: '0.5px solid rgba(96,8,18,0.1)' }}>
-                <div style={{ padding: '16px 20px 12px', borderBottom: '0.5px solid rgba(96,8,18,0.12)', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', position: 'sticky', top: 0, background: '#fff', zIndex: 1 }}>
+              <div style={{ background: 'var(--lbf-card)', borderRadius: 14, width: '100%', maxWidth: 560, maxHeight: '85vh', overflowY: 'auto', boxShadow: '0 16px 48px rgba(0,0,0,0.2)', border: '0.5px solid rgba(96,8,18,0.1)' }}>
+                <div style={{ padding: '16px 20px 12px', borderBottom: '0.5px solid rgba(96,8,18,0.12)', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', position: 'sticky', top: 0, background: 'var(--lbf-card)', zIndex: 1 }}>
                   <div>
                     <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 6 }}>Rückfragen &amp; Stellungnahmen</div>
-                    <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 17, color: '#1a0e08' }}>{patName}</div>
+                    <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 17, color: 'var(--lbf-text)' }}>{patName}</div>
                     {einsatzInfo && <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginTop: 2 }}>{einsatzInfo}</div>}
                     {crew && <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginTop: 1 }}>Mannschaft: {crew}</div>}
                   </div>
@@ -1457,21 +1457,21 @@ ${rqHtml || '<div style="font-style:italic;color:#8a7a68">Keine Rückfragen vorh
                   {rqs.map((rq: any, i: number) => {
                     const sn = sns.find((s: any) => s.rueckfrage_id === rq.id)
                     return (
-                      <div key={rq.id} style={{ background: '#fff', border: `0.5px solid ${sn ? 'rgba(22,163,74,0.3)' : 'rgba(96,8,18,0.15)'}`, borderLeft: `3px solid ${sn ? '#16a34a' : '#600812'}`, borderRadius: 10, overflow: 'hidden' }}>
+                      <div key={rq.id} style={{ background: 'var(--lbf-card)', border: `0.5px solid ${sn ? 'rgba(22,163,74,0.3)' : 'var(--lbf-input-border)'}`, borderLeft: `3px solid ${sn ? '#16a34a' : '#600812'}`, borderRadius: 10, overflow: 'hidden' }}>
                         <div style={{ background: sn ? 'rgba(22,163,74,0.05)' : 'rgba(96,8,18,0.04)', padding: '8px 14px', borderBottom: `0.5px solid ${sn ? 'rgba(22,163,74,0.2)' : 'rgba(96,8,18,0.1)'}`, display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <span style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 13, color: '#1a0e08' }}>Rückfrage #{i + 1}</span>
-                          <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 4, background: sn ? 'rgba(22,163,74,0.12)' : 'rgba(96,8,18,0.08)', color: sn ? '#16a34a' : '#600812', marginLeft: 'auto', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                          <span style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 13, color: 'var(--lbf-text)' }}>Rückfrage #{i + 1}</span>
+                          <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 4, background: sn ? 'rgba(22,163,74,0.12)' : 'var(--lbf-border-light)', color: sn ? '#16a34a' : '#600812', marginLeft: 'auto', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                             {sn ? 'Beantwortet' : 'Offen'}
                           </span>
                           <span style={{ fontStyle: 'italic', fontSize: 11, color: 'var(--warm-gray)' }}>{new Date(rq.created).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</span>
                         </div>
                         <div style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-                          <div style={{ fontSize: 13, background: 'rgba(250,249,247,0.8)', borderRadius: 8, padding: '8px 10px', lineHeight: 1.5, color: '#1a0e08' }}>
+                          <div style={{ fontSize: 13, background: 'rgba(250,249,247,0.8)', borderRadius: 8, padding: '8px 10px', lineHeight: 1.5, color: 'var(--lbf-text)' }}>
                             <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--warm-gray)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 4 }}>{rq.created_by ? `${rq.created_by} fragt:` : 'Frage:'}</div>
                             {rq.frage}
                           </div>
                           {sn ? (
-                            <div style={{ fontSize: 13, background: 'rgba(22,163,74,0.06)', borderRadius: 8, padding: '8px 10px', border: '0.5px solid rgba(22,163,74,0.2)', lineHeight: 1.5, color: '#1a0e08' }}>
+                            <div style={{ fontSize: 13, background: 'rgba(22,163,74,0.06)', borderRadius: 8, padding: '8px 10px', border: '0.5px solid rgba(22,163,74,0.2)', lineHeight: 1.5, color: 'var(--lbf-text)' }}>
                               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
                                 <span style={{ fontSize: 10, fontWeight: 700, color: '#16a34a', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Stellungnahme des Teamleiters:</span>
                                 <span style={{ fontStyle: 'italic', fontSize: 11, color: 'var(--warm-gray)' }}>{new Date(sn.created).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</span>

@@ -293,7 +293,7 @@ export default function PatientEditModal({ patient, payload: initialPayload, ori
         {/* QR Modal */}
         {showQR && lp.access_code && (
           <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }} onClick={() => setShowQR(false)}>
-            <div style={{ background: '#fff', borderRadius: 20, padding: 32, maxWidth: 360, width: '100%', textAlign: 'center' }} onClick={e => e.stopPropagation()}>
+            <div style={{ background: 'var(--lbf-card)', borderRadius: 20, padding: 32, maxWidth: 360, width: '100%', textAlign: 'center' }} onClick={e => e.stopPropagation()}>
               <div style={{ fontFamily: 'monospace', fontSize: 36, fontWeight: 800, letterSpacing: '0.3em', color: '#c0392b', margin: '8px 0' }}>{lp.access_code}</div>
               {qrDataUrl && <img src={qrDataUrl} alt="QR Code" style={{ width: 220, height: 220, display: 'block', margin: '0 auto 12px' }} />}
               <button onClick={() => setShowQR(false)} style={{ padding: '10px 24px', background: '#222', color: '#fff', border: 'none', borderRadius: 10, fontWeight: 600, cursor: 'pointer' }}>Schließen</button>

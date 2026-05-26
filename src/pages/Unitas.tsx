@@ -333,7 +333,7 @@ export default function Unitas() {
 
       {/* ── Header — masthead ── */}
       <div style={{
-        background: '#fff',
+        background: 'var(--lbf-card)',
         borderBottom: '0.5px solid rgba(96,8,18,0.15)',
         position: 'sticky', top: 0, zIndex: 100,
         padding: '0 20px',
@@ -355,7 +355,7 @@ export default function Unitas() {
           {/* Right: avatar */}
           <button onClick={() => setTab('konto')} title={user?.name || ''} style={{
             width: 34, height: 34, borderRadius: '50%', border: '1.5px solid #600812', cursor: 'pointer',
-            background: '#fff',
+            background: 'var(--lbf-card)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontFamily: "'Atkinson Hyperlegible', -apple-system, sans-serif",
             fontWeight: 700, fontSize: 12, color: '#600812', letterSpacing: '0.03em', flexShrink: 0,
@@ -384,9 +384,9 @@ export default function Unitas() {
               <div style={{ display: 'grid', gridTemplateColumns: openOutputs > 0 && (myPatients.length + myFreigegebenPatients.length) > 0 ? '1fr 1fr' : '1fr', gap: 12 }}>
                 {(myPatients.length + myFreigegebenPatients.length) > 0 && (
                   <button onClick={() => setTab('protokolle')} style={{
-                    background: '#fff', borderRadius: 12, padding: '18px 20px',
+                    background: 'var(--lbf-card)', borderRadius: 12, padding: '18px 20px',
                     border: 'none', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit',
-                    boxShadow: '0 1px 4px rgba(0,0,0,0.07)',
+                    boxShadow: 'var(--lbf-shadow)',
                   }}>
                     <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 8 }}>Protokolle</div>
                     <div style={{ fontSize: 48, fontWeight: 800, color: '#600812', lineHeight: 1 }}>
@@ -399,9 +399,9 @@ export default function Unitas() {
                 )}
                 {openOutputs > 0 && (
                   <button onClick={() => setTab('vorgaenge')} style={{
-                    background: '#fff', borderRadius: 12, padding: '18px 20px',
+                    background: 'var(--lbf-card)', borderRadius: 12, padding: '18px 20px',
                     border: 'none', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit',
-                    boxShadow: '0 1px 4px rgba(0,0,0,0.07)',
+                    boxShadow: 'var(--lbf-shadow)',
                   }}>
                     <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 8 }}>Vorgänge</div>
                     <div style={{ fontSize: 48, fontWeight: 800, color: '#d97706', lineHeight: 1 }}>
@@ -425,7 +425,7 @@ export default function Unitas() {
                   {neuigkeiten.map(n => {
                     const anhangUrl = n.anhang ? `https://api.responda.systems/api/files/${n.collectionId}/${n.id}/${n.anhang}` : null
                     return (
-                      <div key={n.id} style={{ background: '#fff', borderRadius: 10, overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', borderLeft: '3px solid #600812' }}>
+                      <div key={n.id} style={{ background: 'var(--lbf-card)', borderRadius: 10, overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', borderLeft: '3px solid #600812' }}>
                         {n.gepinnt && (
                           <div style={{ background: '#600812', padding: '4px 14px', display: 'flex', alignItems: 'center', gap: 6 }}>
                             <svg width="9" height="9" viewBox="0 0 24 24" fill="white"><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5v6h2v-6h5v-2l-2-2z"/></svg>
@@ -480,7 +480,7 @@ export default function Unitas() {
                     const allRQs: any[] = Array.isArray(p.payload?.rueckfragen) ? p.payload.rueckfragen : []
                     const openRQs = allRQs.filter((r: any) => r.status === 'offen')
                     return (
-                      <div key={p.id} style={{ background: '#fff', borderRadius: 10, overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.07)', borderLeft: '3px solid #600812' }}>
+                      <div key={p.id} style={{ background: 'var(--lbf-card)', borderRadius: 10, overflow: 'hidden', boxShadow: 'var(--lbf-shadow)', borderLeft: '3px solid #600812' }}>
                         <div style={{ padding: '13px 16px 12px' }}>
                           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, marginBottom: 5 }}>
                             <div style={{ fontWeight: 700, fontSize: 17, fontStyle: 'italic', color: 'var(--text)', lineHeight: 1.2 }}>{patName || p.title}</div>
@@ -548,7 +548,7 @@ export default function Unitas() {
                     const reopenActive = reopen && new Date(reopen.expires_at) > new Date()
                     const reopenMinsLeft = reopenActive ? Math.ceil((new Date(reopen.expires_at).getTime() - Date.now()) / 60000) : 0
                     return (
-                      <div key={p.id} style={{ background: '#fff', borderRadius: 10, overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.07)', borderLeft: '3px solid #16a34a' }}>
+                      <div key={p.id} style={{ background: 'var(--lbf-card)', borderRadius: 10, overflow: 'hidden', boxShadow: 'var(--lbf-shadow)', borderLeft: '3px solid #16a34a' }}>
                         <div style={{ padding: '13px 16px 12px' }}>
                           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, marginBottom: 5 }}>
                             <div style={{ fontWeight: 700, fontSize: 17, fontStyle: 'italic', color: 'var(--text)', lineHeight: 1.2 }}>{patName || p.title}</div>
@@ -628,7 +628,7 @@ export default function Unitas() {
                     const snsA: any[] = Array.isArray(p.payload?.stellungnahmen) ? p.payload.stellungnahmen : []
                     const changedCountA = (p.payload?._changed_fields || []).length
                     return (
-                      <div key={p.id} style={{ background: '#fff', borderRadius: 10, overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', borderLeft: '3px solid rgba(139,113,90,0.4)', opacity: openRQsA.length > 0 || changedCountA > 0 ? 1 : 0.75 }}>
+                      <div key={p.id} style={{ background: 'var(--lbf-card)', borderRadius: 10, overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', borderLeft: '3px solid rgba(139,113,90,0.4)', opacity: openRQsA.length > 0 || changedCountA > 0 ? 1 : 0.75 }}>
                         <div style={{ padding: '13px 16px 12px' }}>
                           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, marginBottom: 5 }}>
                             <div style={{ fontWeight: 700, fontSize: 17, fontStyle: 'italic', color: 'var(--text)', lineHeight: 1.2 }}>{patName || p.title}</div>
@@ -697,7 +697,7 @@ export default function Unitas() {
                   }
                   const cfg = statusCfg[output.status] ?? statusCfg['ignoriert']
                   return (
-                    <div key={output.id} style={{ background: '#fff', borderRadius: 10, overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', borderLeft: '3px solid #600812' }}>
+                    <div key={output.id} style={{ background: 'var(--lbf-card)', borderRadius: 10, overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', borderLeft: '3px solid #600812' }}>
                       <div style={{ padding: '14px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '0.5px solid rgba(0,0,0,0.06)' }}>
                         <div>
                           <div style={{ fontWeight: 700, fontSize: 15, fontStyle: 'italic', color: 'var(--text)' }}>Einsatz {p.einsatz}</div>
@@ -727,7 +727,7 @@ export default function Unitas() {
         {tab === 'konto' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {/* Profile */}
-            <div style={{ background: '#fff', borderRadius: 12, overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.07)' }}>
+            <div style={{ background: 'var(--lbf-card)', borderRadius: 12, overflow: 'hidden', boxShadow: 'var(--lbf-shadow)' }}>
               <div style={{ padding: '22px 20px 18px', borderBottom: '0.5px solid rgba(96,8,18,0.1)' }}>
                 <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 14 }}>Profil</div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
@@ -755,7 +755,7 @@ export default function Unitas() {
                 <div>
                   <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 8 }}>Passwort</label>
                   <button onClick={sendPasswordReset} disabled={sendingReset}
-                    style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 8, border: '1px solid rgba(0,0,0,0.1)', background: '#fff', color: 'var(--text)', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', opacity: sendingReset ? 0.6 : 1 }}>
+                    style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 8, border: '1px solid rgba(0,0,0,0.1)', background: 'var(--lbf-card)', color: 'var(--text)', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', opacity: sendingReset ? 0.6 : 1 }}>
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
                     Passwort-Reset Email senden
                   </button>
@@ -768,7 +768,7 @@ export default function Unitas() {
             </div>
 
             {/* Theme */}
-            <div style={{ background: '#fff', borderRadius: 12, overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.07)' }}>
+            <div style={{ background: 'var(--lbf-card)', borderRadius: 12, overflow: 'hidden', boxShadow: 'var(--lbf-shadow)' }}>
               <div style={{ padding: '16px 20px', borderBottom: '0.5px solid rgba(96,8,18,0.1)' }}>
                 <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em' }}>Darstellung</div>
               </div>
@@ -803,7 +803,7 @@ export default function Unitas() {
       {/* ── Bottom Tab Bar — editorial ── */}
       <div style={{
         position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 100,
-        background: '#fff',
+        background: 'var(--lbf-card)',
         borderTop: '0.5px solid rgba(96,8,18,0.12)',
         display: 'flex', alignItems: 'stretch',
         paddingBottom: 'env(safe-area-inset-bottom)',

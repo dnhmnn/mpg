@@ -591,13 +591,13 @@ export default function MPG() {
   return (
     <div style={{ minHeight: '100dvh', background: 'var(--warm-bg)', fontFamily: "'Atkinson Hyperlegible', -apple-system, sans-serif" }}>
       {/* MASTHEAD */}
-      <div style={{ background: '#fff', borderBottom: '0.5px solid rgba(96,8,18,0.12)', position: 'sticky', top: 0, zIndex: 100, paddingTop: 'env(safe-area-inset-top)', paddingLeft: 'max(20px, env(safe-area-inset-left))', paddingRight: 'max(20px, env(safe-area-inset-right))' }}>
+      <div style={{ background: 'var(--lbf-card)', borderBottom: '0.5px solid rgba(96,8,18,0.12)', position: 'sticky', top: 0, zIndex: 100, paddingTop: 'env(safe-area-inset-top)', paddingLeft: 'max(20px, env(safe-area-inset-left))', paddingRight: 'max(20px, env(safe-area-inset-right))' }}>
         <div style={{ height: 60, display: 'flex', alignItems: 'center', gap: 12 }}>
           <a href="/hub" style={{ display: 'flex', alignItems: 'center', color: '#600812', textDecoration: 'none', flexShrink: 0 }}>
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#600812" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
           </a>
           <div style={{ flex: 1 }}>
-            <div style={{ fontWeight: 700, fontSize: 15, letterSpacing: '-0.01em', color: '#1a0e08' }}>MPG</div>
+            <div style={{ fontWeight: 700, fontSize: 15, letterSpacing: '-0.01em', color: 'var(--lbf-text)' }}>MPG</div>
             <div style={{ fontStyle: 'italic', fontSize: 11, color: 'var(--warm-gray)', marginTop: 1 }}>{user?.organization_name || 'Responda'}</div>
           </div>
           <div style={{ width: 22 }} />
@@ -629,24 +629,24 @@ export default function MPG() {
 
         {/* STATISTICS */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 16 }} key={devices.length}>
-          <div style={{ background: '#fff', borderRadius: 12, padding: '14px 12px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
+          <div style={{ background: 'var(--lbf-card)', borderRadius: 12, padding: '14px 12px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
             <div style={{ fontSize: 10, fontWeight: 700, color: '#16a34a', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 4 }}>OK</div>
             <div style={{ fontSize: 32, fontWeight: 800, color: '#16a34a', lineHeight: 1 }}>{stats.ok}</div>
             <div style={{ fontStyle: 'italic', fontSize: 11, color: 'var(--warm-gray)', marginTop: 3 }}>Geprüft</div>
           </div>
-          <div style={{ background: '#fff', borderRadius: 12, padding: '14px 12px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
+          <div style={{ background: 'var(--lbf-card)', borderRadius: 12, padding: '14px 12px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
             <div style={{ fontSize: 10, fontWeight: 700, color: '#d97706', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 4 }}>Bald</div>
             <div style={{ fontSize: 32, fontWeight: 800, color: '#d97706', lineHeight: 1 }}>{stats.warning}</div>
             <div style={{ fontStyle: 'italic', fontSize: 11, color: 'var(--warm-gray)', marginTop: 3 }}>Bald fällig</div>
           </div>
-          <div style={{ background: '#fff', borderRadius: 12, padding: '14px 12px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
+          <div style={{ background: 'var(--lbf-card)', borderRadius: 12, padding: '14px 12px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
             <div style={{ fontSize: 10, fontWeight: 700, color: '#dc2626', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 4 }}>Überfällig</div>
             <div style={{ fontSize: 32, fontWeight: 800, color: '#dc2626', lineHeight: 1 }}>{stats.overdue}</div>
             <div style={{ fontStyle: 'italic', fontSize: 11, color: 'var(--warm-gray)', marginTop: 3 }}>Überfällig</div>
           </div>
-          <div style={{ background: '#fff', borderRadius: 12, padding: '14px 12px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: '#1a0e08', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 4 }}>Gesamt</div>
-            <div style={{ fontSize: 32, fontWeight: 800, color: '#1a0e08', lineHeight: 1 }}>{stats.total}</div>
+          <div style={{ background: 'var(--lbf-card)', borderRadius: 12, padding: '14px 12px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-text)', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 4 }}>Gesamt</div>
+            <div style={{ fontSize: 32, fontWeight: 800, color: 'var(--lbf-text)', lineHeight: 1 }}>{stats.total}</div>
             <div style={{ fontStyle: 'italic', fontSize: 11, color: 'var(--warm-gray)', marginTop: 3 }}>Geräte</div>
           </div>
         </div>
@@ -678,7 +678,7 @@ export default function MPG() {
             <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{opacity: 0.3, marginBottom: '16px'}}>
               <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
             </svg>
-            <div style={{fontWeight: 700, marginBottom: '8px', color: '#1a0e08'}}>Keine Geräte</div>
+            <div style={{fontWeight: 700, marginBottom: '8px', color: 'var(--lbf-text)'}}>Keine Geräte</div>
             <div style={{ fontStyle: 'italic' }}>Füge dein erstes Prüfgerät hinzu</div>
           </div>
         ) : (

@@ -1517,13 +1517,13 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
     <div style={{ minHeight: '100dvh', background: 'var(--warm-bg)', fontFamily: "'Atkinson Hyperlegible', -apple-system, sans-serif" }}>
 
       {/* ── MASTHEAD HEADER ── */}
-      <div style={{ background: '#fff', borderBottom: '0.5px solid rgba(96,8,18,0.12)', position: 'sticky', top: 0, zIndex: 100, paddingTop: 'env(safe-area-inset-top)', paddingLeft: 'max(20px, env(safe-area-inset-left))', paddingRight: 'max(20px, env(safe-area-inset-right))' }}>
+      <div style={{ background: 'var(--lbf-card)', borderBottom: '0.5px solid rgba(96,8,18,0.12)', position: 'sticky', top: 0, zIndex: 100, paddingTop: 'env(safe-area-inset-top)', paddingLeft: 'max(20px, env(safe-area-inset-left))', paddingRight: 'max(20px, env(safe-area-inset-right))' }}>
         <div style={{ height: 60, display: 'flex', alignItems: 'center', gap: 12 }}>
           <a href="/hub" style={{ display: 'flex', color: '#600812', textDecoration: 'none', flexShrink: 0 }}>
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#600812" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
           </a>
           <div style={{ flex: 1 }}>
-            <div style={{ fontWeight: 700, fontSize: 15, letterSpacing: '-0.01em', color: '#1a0e08' }}>Ausbildungen</div>
+            <div style={{ fontWeight: 700, fontSize: 15, letterSpacing: '-0.01em', color: 'var(--lbf-text)' }}>Ausbildungen</div>
             <div style={{ fontStyle: 'italic', fontSize: 11, color: 'var(--warm-gray)', marginTop: 1 }}>{user?.organization_name || 'Responda'}</div>
           </div>
           {viewMode === 'termine' && (
@@ -1555,7 +1555,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
       </div>
 
       {/* ── VIEW NAVIGATION BAR ── */}
-      <div style={{ background: '#fff', borderBottom: '0.5px solid rgba(96,8,18,0.1)', position: 'sticky', top: 'calc(env(safe-area-inset-top) + 60px)', zIndex: 99, overflowX: 'auto', WebkitOverflowScrolling: 'touch' as any }}>
+      <div style={{ background: 'var(--lbf-card)', borderBottom: '0.5px solid rgba(96,8,18,0.1)', position: 'sticky', top: 'calc(env(safe-area-inset-top) + 60px)', zIndex: 99, overflowX: 'auto', WebkitOverflowScrolling: 'touch' as any }}>
         <div style={{ display: 'flex', paddingLeft: 'max(8px, env(safe-area-inset-left))', paddingRight: 'max(8px, env(safe-area-inset-right))', minWidth: 'max-content' }}>
           {([
             { key: 'termine' as const, label: 'Termine', icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>, count: undefined },
@@ -1620,7 +1620,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
             <div style={{ textAlign: 'center', padding: '64px 20px', color: 'var(--warm-gray)', fontStyle: 'italic', fontSize: 15 }}>Lade Termine...</div>
           ) : filteredTermine.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '64px 20px', color: 'var(--warm-gray)', fontStyle: 'italic', fontSize: 15 }}>
-              <div style={{ fontWeight: 700, marginBottom: 8, color: '#1a0e08', fontStyle: 'normal' }}>Keine Termine</div>
+              <div style={{ fontWeight: 700, marginBottom: 8, color: 'var(--lbf-text)', fontStyle: 'normal' }}>Keine Termine</div>
               <div>Erstelle deinen ersten Ausbildungstermin</div>
             </div>
           ) : (
@@ -1640,7 +1640,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                   <div
                     key={termin.id}
                     onClick={() => viewTerminDetail(termin)}
-                    style={{ background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.07)', cursor: 'pointer', position: 'relative' }}
+                    style={{ background: 'var(--lbf-card)', borderRadius: 12, boxShadow: 'var(--lbf-shadow)', cursor: 'pointer', position: 'relative' }}
                   >
                     {/* Status strip top */}
                     <div style={{ height: 3, background: statusColor, borderRadius: '12px 12px 0 0' }} />
@@ -1654,7 +1654,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                       {/* Right content */}
                       <div style={{ flex: 1, minWidth: 0, paddingRight: 28 }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
-                          <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 15, color: '#1a0e08', lineHeight: 1.3 }}>{termin.name}</div>
+                          <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 15, color: 'var(--lbf-text)', lineHeight: 1.3 }}>{termin.name}</div>
                           <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: statusColor, flexShrink: 0, marginLeft: 6 }}>{statusLabel}</span>
                         </div>
                         {termin.location && <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)' }}>{termin.location}</div>}
@@ -1698,7 +1698,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
             <div style={{ textAlign: 'center', padding: '64px 20px', color: 'var(--warm-gray)', fontStyle: 'italic', fontSize: 15 }}>Lade Teilnehmer...</div>
           ) : filteredTeilnehmer.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '64px 20px', color: 'var(--warm-gray)', fontStyle: 'italic', fontSize: 15 }}>
-              <div style={{ fontWeight: 700, marginBottom: 8, color: '#1a0e08', fontStyle: 'normal' }}>Keine Teilnehmer</div>
+              <div style={{ fontWeight: 700, marginBottom: 8, color: 'var(--lbf-text)', fontStyle: 'normal' }}>Keine Teilnehmer</div>
               <div>Füge Teilnehmer hinzu oder weise sie einem Termin zu</div>
             </div>
           ) : (
@@ -1707,7 +1707,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                 <div
                   key={t.id}
                   onClick={() => viewTeilnehmerDetail(t)}
-                  style={{ background: '#fff', borderRadius: 12, borderLeft: '3px solid #600812', boxShadow: '0 1px 4px rgba(0,0,0,0.07)', padding: '14px 14px 10px', cursor: 'pointer', position: 'relative' }}
+                  style={{ background: 'var(--lbf-card)', borderRadius: 12, borderLeft: '3px solid #600812', boxShadow: 'var(--lbf-shadow)', padding: '14px 14px 10px', cursor: 'pointer', position: 'relative' }}
                 >
                   {/* 3-dot menu */}
                   <button
@@ -1729,7 +1729,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                   </div>
 
                   <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 4 }}>{t.ausbildung_typ || 'Teilnehmer'}</div>
-                  <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 17, color: '#1a0e08', marginBottom: 4, paddingRight: 32 }}>{t.vorname} {t.nachname}</div>
+                  <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 17, color: 'var(--lbf-text)', marginBottom: 4, paddingRight: 32 }}>{t.vorname} {t.nachname}</div>
                   <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginBottom: 8 }}>
                     {t.email && <div>{t.email}</div>}
                     {t.telefon && <div>{t.telefon}</div>}
@@ -1773,7 +1773,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
             <div style={{ textAlign: 'center', padding: '64px 20px', color: 'var(--warm-gray)', fontStyle: 'italic', fontSize: 15 }}>Lade Module...</div>
           ) : filteredModule.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '64px 20px', color: 'var(--warm-gray)', fontStyle: 'italic', fontSize: 15 }}>
-              <div style={{ fontWeight: 700, marginBottom: 8, color: '#1a0e08', fontStyle: 'normal' }}>Keine Module</div>
+              <div style={{ fontWeight: 700, marginBottom: 8, color: 'var(--lbf-text)', fontStyle: 'normal' }}>Keine Module</div>
               <div>Erstelle dein erstes Lernmodul</div>
             </div>
           ) : (
@@ -1782,7 +1782,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                 const assigned = modulProgress.filter(p => p.modul_id === m.id)
                 const done = assigned.filter(p => p.abgeschlossen_am)
                 return (
-                  <div key={m.id} onClick={() => openModulDetail(m)} style={{ background: '#fff', borderRadius: 12, borderLeft: '3px solid #600812', boxShadow: '0 1px 4px rgba(0,0,0,0.07)', padding: '14px 14px 10px', cursor: 'pointer', position: 'relative' }}>
+                  <div key={m.id} onClick={() => openModulDetail(m)} style={{ background: 'var(--lbf-card)', borderRadius: 12, borderLeft: '3px solid #600812', boxShadow: 'var(--lbf-shadow)', padding: '14px 14px 10px', cursor: 'pointer', position: 'relative' }}>
                     {/* 3-dot menu */}
                     <button
                       style={{ position: 'absolute', top: 10, right: 10, background: 'rgba(250,249,247,0.9)', border: '0.5px solid rgba(96,8,18,0.12)', borderRadius: 8, width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--warm-gray)' }}
@@ -1801,7 +1801,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                       <button className="menu-item danger" onClick={(e) => { e.stopPropagation(); deleteModul(m.id, m.name) }}>Löschen</button>
                     </div>
                     <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 4 }}>{m.dauer_minuten} Min.</div>
-                    <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 17, color: '#1a0e08', marginBottom: 4, paddingRight: 32 }}>{m.name}</div>
+                    <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 17, color: 'var(--lbf-text)', marginBottom: 4, paddingRight: 32 }}>{m.name}</div>
                     <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginBottom: 10 }}>{m.beschreibung && <div>{m.beschreibung}</div>}</div>
                     <div style={{ borderTop: '0.5px solid rgba(96,8,18,0.08)', background: 'rgba(250,249,247,0.8)', margin: '0 -14px', padding: '8px 14px', display: 'flex', gap: 14, fontSize: 12, color: 'var(--warm-gray)', fontWeight: 600 }}>
                       <span>{m.inhalte?.length || 0} Blöcke</span>
@@ -1825,7 +1825,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
             <div style={{ textAlign: 'center', padding: '64px 20px', color: 'var(--warm-gray)', fontStyle: 'italic', fontSize: 15 }}>Lade Konzepte...</div>
           ) : filteredKonzepte.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '64px 20px', color: 'var(--warm-gray)', fontStyle: 'italic', fontSize: 15 }}>
-              <div style={{ fontWeight: 700, marginBottom: 8, color: '#1a0e08', fontStyle: 'normal' }}>Keine Konzepte</div>
+              <div style={{ fontWeight: 700, marginBottom: 8, color: 'var(--lbf-text)', fontStyle: 'normal' }}>Keine Konzepte</div>
               <div>Erstelle dein erstes Ausbildungskonzept</div>
             </div>
           ) : (
@@ -1834,7 +1834,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                 <div
                   key={k.id}
                   onClick={() => viewKonzeptDetail(k)}
-                  style={{ background: '#fff', borderRadius: 12, borderLeft: '3px solid #600812', boxShadow: '0 1px 4px rgba(0,0,0,0.07)', padding: '14px 14px 10px', cursor: 'pointer', position: 'relative' }}
+                  style={{ background: 'var(--lbf-card)', borderRadius: 12, borderLeft: '3px solid #600812', boxShadow: 'var(--lbf-shadow)', padding: '14px 14px 10px', cursor: 'pointer', position: 'relative' }}
                 >
                   {/* 3-dot menu */}
                   <button
@@ -1854,7 +1854,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                     <button className="menu-item danger" onClick={(e) => { e.stopPropagation(); deleteKonzept(k.id, k.name) }}>Löschen</button>
                   </div>
                   <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 4 }}>Konzept</div>
-                  <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 17, color: '#1a0e08', marginBottom: 4, paddingRight: 32 }}>{k.name}</div>
+                  <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 17, color: 'var(--lbf-text)', marginBottom: 4, paddingRight: 32 }}>{k.name}</div>
                   <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginBottom: 10 }}>
                     {k.beschreibung && <div>{k.beschreibung}</div>}
                   </div>
@@ -1874,7 +1874,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
       {viewMode === 'jahresuebersicht' && (
         <div style={{ maxWidth: 900, margin: '0 auto', padding: '20px max(16px, env(safe-area-inset-left)) calc(env(safe-area-inset-bottom) + 40px)' }}>
           <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 8 }}>Jahresplan</div>
-          <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 17, color: '#1a0e08', marginBottom: 4 }}>Jahresübersicht {aktuellesJahr}</div>
+          <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 17, color: 'var(--lbf-text)', marginBottom: 4 }}>Jahresübersicht {aktuellesJahr}</div>
           <p style={{color: 'var(--warm-gray)', fontStyle: 'italic', fontSize: '12px', marginBottom: '24px'}}>
             Anwesenheit aller Teilnehmer bei allen Terminen im Jahr {aktuellesJahr}
           </p>
@@ -1889,16 +1889,16 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                   <table style={{borderCollapse: 'collapse', width: '100%', fontSize: '13px'}}>
                     <thead>
                       <tr>
-                        <th style={{textAlign: 'left', padding: '10px 12px', background: '#faf9f7', borderBottom: '2px solid rgba(96,8,18,0.1)', position: 'sticky', left: 0, zIndex: 1, minWidth: '160px', color: '#1a0e08'}}>
+                        <th style={{textAlign: 'left', padding: '10px 12px', background: 'var(--warm-bg)', borderBottom: '2px solid rgba(96,8,18,0.1)', position: 'sticky', left: 0, zIndex: 1, minWidth: '160px', color: 'var(--lbf-text)'}}>
                           Teilnehmer
                         </th>
                         {jahresTermine.map(t => (
-                          <th key={t.id} style={{padding: '10px 8px', background: '#faf9f7', borderBottom: '2px solid rgba(96,8,18,0.1)', textAlign: 'center', minWidth: '80px', fontWeight: 600, color: '#1a0e08'}}>
+                          <th key={t.id} style={{padding: '10px 8px', background: 'var(--warm-bg)', borderBottom: '2px solid rgba(96,8,18,0.1)', textAlign: 'center', minWidth: '80px', fontWeight: 600, color: 'var(--lbf-text)'}}>
                             <div>{fmtDayMonth(t.start_datetime)}</div>
                             <div style={{fontWeight: 400, color: 'var(--warm-gray)', fontSize: '11px', maxWidth: '80px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>{t.name}</div>
                           </th>
                         ))}
-                        <th style={{padding: '10px 12px', background: '#faf9f7', borderBottom: '2px solid rgba(96,8,18,0.1)', textAlign: 'center', minWidth: '80px', color: '#1a0e08'}}>
+                        <th style={{padding: '10px 12px', background: 'var(--warm-bg)', borderBottom: '2px solid rgba(96,8,18,0.1)', textAlign: 'center', minWidth: '80px', color: 'var(--lbf-text)'}}>
                           Gesamt
                         </th>
                       </tr>
@@ -1908,7 +1908,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                         let daCount = 0
                         return (
                           <tr key={t.id} style={{background: idx % 2 === 0 ? '#ffffff' : '#faf9f7'}}>
-                            <td style={{padding: '10px 12px', fontWeight: 600, borderBottom: '1px solid rgba(96,8,18,0.06)', position: 'sticky', left: 0, background: idx % 2 === 0 ? '#ffffff' : '#faf9f7', zIndex: 1, color: '#1a0e08'}}>
+                            <td style={{padding: '10px 12px', fontWeight: 600, borderBottom: '1px solid rgba(96,8,18,0.06)', position: 'sticky', left: 0, background: idx % 2 === 0 ? '#ffffff' : '#faf9f7', zIndex: 1, color: 'var(--lbf-text)'}}>
                               {t.vorname} {t.nachname}
                               {t.ausbildung_typ && <div style={{fontSize: '11px', color: 'var(--warm-gray)', fontWeight: 400}}>{t.ausbildung_typ}</div>}
                             </td>
@@ -1925,7 +1925,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                                     </span>
                                   ) : (
                                     tt ? <span style={{color: 'var(--warm-gray)', fontSize: '11px'}}>–</span>
-                                       : <span style={{color: 'rgba(96,8,18,0.15)', fontSize: '11px'}}>·</span>
+                                       : <span style={{color: 'var(--lbf-input-border)', fontSize: '11px'}}>·</span>
                                   )}
                                 </td>
                               )
@@ -1954,10 +1954,10 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                     const prozent = jahresTermine.length > 0 ? Math.round((da / jahresTermine.length) * 100) : 0
                     const erreicht = prozent >= 80
                     return (
-                      <div key={t.id} style={{background: '#fff', border: `1.5px solid ${erreicht ? '#16a34a' : 'rgba(96,8,18,0.1)'}`, borderRadius: '12px', padding: '16px', boxShadow: '0 1px 4px rgba(0,0,0,0.07)'}}>
+                      <div key={t.id} style={{background: 'var(--lbf-card)', border: `1.5px solid ${erreicht ? '#16a34a' : 'rgba(96,8,18,0.1)'}`, borderRadius: '12px', padding: '16px', boxShadow: 'var(--lbf-shadow)'}}>
                         <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px'}}>
                           <div>
-                            <div style={{fontStyle: 'italic', fontWeight: 700, fontSize: 15, color: '#1a0e08'}}>{t.vorname} {t.nachname}</div>
+                            <div style={{fontStyle: 'italic', fontWeight: 700, fontSize: 15, color: 'var(--lbf-text)'}}>{t.vorname} {t.nachname}</div>
                             {t.ausbildung_typ && <div style={{fontStyle: 'italic', fontSize: '12px', color: 'var(--warm-gray)'}}>{t.ausbildung_typ}</div>}
                           </div>
                           <span style={{padding: '4px 10px', borderRadius: '6px', background: erreicht ? '#dcfce7' : '#fef2f2', color: erreicht ? '#166534' : '#991b1b', fontWeight: 700, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.04em'}}>
@@ -2022,7 +2022,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                               key={termin.id}
                               onClick={() => viewTerminDetail(termin)}
                               style={{
-                                background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.07)',
+                                background: 'var(--lbf-card)', borderRadius: 12, boxShadow: 'var(--lbf-shadow)',
                                 borderLeft: '3px solid rgba(139,113,90,0.4)', overflow: 'hidden',
                                 cursor: 'pointer', display: 'flex', alignItems: 'stretch'
                               }}
@@ -2034,7 +2034,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                               </div>
                               <div style={{ flex: 1, padding: '12px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
                                 <div>
-                                  <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 15, color: '#1a0e08' }}>{termin.name}</div>
+                                  <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 15, color: 'var(--lbf-text)' }}>{termin.name}</div>
                                   <div style={{ fontStyle: 'italic', fontSize: '12px', color: 'var(--warm-gray)', marginTop: 2, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                                     {termin.location && <span>{termin.location}</span>}
                                     {termin.dozent && <span>{termin.dozent}</span>}
@@ -2078,13 +2078,13 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
             <div style={{ textAlign: 'center', padding: '48px 0', color: 'var(--warm-gray)', fontStyle: 'italic' }}>Lade...</div>
           ) : beitraege.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '64px 20px', color: 'var(--warm-gray)', fontStyle: 'italic', fontSize: 15 }}>
-              <div style={{ fontWeight: 700, marginBottom: 6, color: '#1a0e08' }}>Noch keine Lernbeiträge</div>
+              <div style={{ fontWeight: 700, marginBottom: 6, color: 'var(--lbf-text)' }}>Noch keine Lernbeiträge</div>
               <div>Erstelle deinen ersten Beitrag mit dem + Button oben</div>
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {beitraege.map(b => (
-                <div key={b.id} style={{ background: '#fff', border: `1px solid ${b.gepinnt ? '#600812' : 'rgba(96,8,18,0.1)'}`, borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.07)', overflow: 'hidden' }}>
+                <div key={b.id} style={{ background: 'var(--lbf-card)', border: `1px solid ${b.gepinnt ? '#600812' : 'rgba(96,8,18,0.1)'}`, borderRadius: 12, boxShadow: 'var(--lbf-shadow)', overflow: 'hidden' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px' }}>
                     <div style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(96,8,18,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#600812" strokeWidth="2">
@@ -2095,9 +2095,9 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                       </svg>
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 15, color: '#1a0e08', display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 15, color: 'var(--lbf-text)', display: 'flex', alignItems: 'center', gap: 8 }}>
                         {b.titel}
-                        {b.gepinnt && <span style={{ fontSize: 10, fontWeight: 700, color: '#600812', background: 'rgba(96,8,18,0.08)', borderRadius: 5, padding: '2px 6px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Angepinnt</span>}
+                        {b.gepinnt && <span style={{ fontSize: 10, fontWeight: 700, color: '#600812', background: 'var(--lbf-border-light)', borderRadius: 5, padding: '2px 6px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Angepinnt</span>}
                       </div>
                       <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginTop: 2 }}>
                         {b.typ.charAt(0).toUpperCase() + b.typ.slice(1)} · {new Date(b.created).toLocaleDateString('de-DE')}
@@ -2438,13 +2438,13 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
           <div className="modal show" onClick={() => setShowTeilnehmerDetailModal(false)}>
             <div className="modal-content large" onClick={e => e.stopPropagation()} style={{padding: 0, overflow: 'hidden'}}>
               {/* LBF header */}
-              <div style={{background: '#fff', borderBottom: '0.5px solid rgba(96,8,18,0.12)', padding: '20px 24px 16px', position: 'relative', display: 'flex', alignItems: 'center', gap: 14}}>
-                <div style={{width: 44, height: 44, borderRadius: '50%', background: 'rgba(96,8,18,0.08)', border: '1.5px solid #600812', display: 'flex', alignItems: 'center', justifyContent: 'center', fontStyle: 'italic', fontWeight: 700, fontSize: 16, color: '#600812', flexShrink: 0}}>
+              <div style={{background: 'var(--lbf-card)', borderBottom: '0.5px solid rgba(96,8,18,0.12)', padding: '20px 24px 16px', position: 'relative', display: 'flex', alignItems: 'center', gap: 14}}>
+                <div style={{width: 44, height: 44, borderRadius: '50%', background: 'var(--lbf-border-light)', border: '1.5px solid #600812', display: 'flex', alignItems: 'center', justifyContent: 'center', fontStyle: 'italic', fontWeight: 700, fontSize: 16, color: '#600812', flexShrink: 0}}>
                   {t.vorname[0]}{t.nachname[0]}
                 </div>
                 <div style={{flex: 1, minWidth: 0, paddingRight: 80}}>
                   {t.ausbildung_typ && <div style={{fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.14em', color: '#600812', marginBottom: 4}}>{t.ausbildung_typ}</div>}
-                  <div style={{fontStyle: 'italic', fontWeight: 700, fontSize: 17, color: '#1a0e08'}}>{t.vorname} {t.nachname}</div>
+                  <div style={{fontStyle: 'italic', fontWeight: 700, fontSize: 17, color: 'var(--lbf-text)'}}>{t.vorname} {t.nachname}</div>
                   {t.email && <div style={{fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginTop: 2}}>{t.email}</div>}
                 </div>
                 <div style={{position: 'absolute', top: 14, right: 14, display: 'flex', gap: 8}}>
@@ -2456,7 +2456,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
               </div>
 
               {/* Tabs */}
-              <div style={{display: 'flex', borderBottom: '0.5px solid rgba(96,8,18,0.1)', padding: '0 24px', background: '#fff', overflowX: 'auto'}}>
+              <div style={{display: 'flex', borderBottom: '0.5px solid rgba(96,8,18,0.1)', padding: '0 24px', background: 'var(--lbf-card)', overflowX: 'auto'}}>
                 {tabs.map(tab => (
                   <button key={tab.key} onClick={() => setSelectedTeilnehmerTab(tab.key)} style={{
                     padding: '10px 14px', border: 'none', background: 'none', cursor: 'pointer',
@@ -2723,13 +2723,13 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
               const statusColors: Record<string, string> = {geplant: '#3b82f6', laufend: '#10b981', abgeschlossen: '#6366f1', abgesagt: '#ef4444'}
               const sc = statusColors[selectedTermin.status] || '#64748b'
               return (
-                <div style={{background: '#fff', borderBottom: '0.5px solid rgba(96,8,18,0.12)', padding: '20px 24px 16px', position: 'relative'}}>
+                <div style={{background: 'var(--lbf-card)', borderBottom: '0.5px solid rgba(96,8,18,0.12)', padding: '20px 24px 16px', position: 'relative'}}>
                   <div style={{height: 3, background: sc, position: 'absolute', top: 0, left: 0, right: 0}} />
                   <div style={{fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.14em', color: sc, marginBottom: 6, marginTop: 4}}>
                     {statusLabels[selectedTermin.status]}
                     {selectedTermin.dozent && <span style={{color: 'var(--warm-gray)', fontWeight: 400, marginLeft: 10, textTransform: 'none', letterSpacing: 0}}>{selectedTermin.dozent}</span>}
                   </div>
-                  <div style={{fontStyle: 'italic', fontWeight: 700, fontSize: 20, color: '#1a0e08', lineHeight: 1.25, marginBottom: 6, paddingRight: 80}}>
+                  <div style={{fontStyle: 'italic', fontWeight: 700, fontSize: 20, color: 'var(--lbf-text)', lineHeight: 1.25, marginBottom: 6, paddingRight: 80}}>
                     {selectedTermin.name}
                   </div>
                   <div style={{fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', display: 'flex', gap: 12, flexWrap: 'wrap' as const}}>
@@ -2767,7 +2767,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
             })()}
 
             {/* Tabs */}
-            <div style={{display: 'flex', borderBottom: '0.5px solid rgba(96,8,18,0.1)', padding: '0 24px', background: '#fff', overflowX: 'auto'}}>
+            <div style={{display: 'flex', borderBottom: '0.5px solid rgba(96,8,18,0.1)', padding: '0 24px', background: 'var(--lbf-card)', overflowX: 'auto'}}>
               {([
                 {key: 'uebersicht', label: 'Übersicht'},
                 {key: 'teilnehmer', label: `Teilnehmer (${getTerminTeilnehmerCount(selectedTermin.id)})`},
@@ -3580,11 +3580,11 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
         <div className="modal show" onClick={() => setShowModulDetailModal(false)}>
           <div className="modal-content large" onClick={(e) => e.stopPropagation()} style={{padding: 0, overflow: 'hidden'}}>
             {/* Header */}
-            <div style={{background: '#fff', borderBottom: '0.5px solid rgba(96,8,18,0.12)', padding: '20px 24px 16px', position: 'relative'}}>
+            <div style={{background: 'var(--lbf-card)', borderBottom: '0.5px solid rgba(96,8,18,0.12)', padding: '20px 24px 16px', position: 'relative'}}>
               <div style={{fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.14em', color: '#600812', marginBottom: 6}}>
                 Lernmodul · {selectedModul.dauer_minuten} Min.
               </div>
-              <div style={{fontStyle: 'italic', fontWeight: 700, fontSize: 17, color: '#1a0e08', lineHeight: 1.25, paddingRight: 50}}>{selectedModul.name}</div>
+              <div style={{fontStyle: 'italic', fontWeight: 700, fontSize: 17, color: 'var(--lbf-text)', lineHeight: 1.25, paddingRight: 50}}>{selectedModul.name}</div>
               {selectedModul.beschreibung && (
                 <div style={{fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginTop: 4}}>{selectedModul.beschreibung}</div>
               )}
@@ -3600,7 +3600,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
             </div>
 
             {/* Tabs */}
-            <div style={{display: 'flex', borderBottom: '0.5px solid rgba(96,8,18,0.1)', padding: '0 24px', background: '#fff'}}>
+            <div style={{display: 'flex', borderBottom: '0.5px solid rgba(96,8,18,0.1)', padding: '0 24px', background: 'var(--lbf-card)'}}>
               {(['inhalt', 'teilnehmer'] as const).map(tab => (
                 <button key={tab} onClick={() => setSelectedModulTab(tab)} style={{
                   padding: '10px 14px', border: 'none', background: 'none', cursor: 'pointer',
@@ -4012,13 +4012,13 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
           <div className="modal-content large" onClick={(e) => e.stopPropagation()} style={{padding: 0, overflow: 'hidden'}}>
             {/* Header */}
             <div style={{
-              background: '#fff', borderBottom: '0.5px solid rgba(96,8,18,0.12)',
+              background: 'var(--lbf-card)', borderBottom: '0.5px solid rgba(96,8,18,0.12)',
               padding: '20px 24px 16px', position: 'relative'
             }}>
               <div style={{fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.14em', color: '#600812', marginBottom: 6}}>
                 Ausbildungskonzept
               </div>
-              <div style={{fontStyle: 'italic', fontWeight: 700, fontSize: 17, color: '#1a0e08', lineHeight: 1.25, paddingRight: 50}}>
+              <div style={{fontStyle: 'italic', fontWeight: 700, fontSize: 17, color: 'var(--lbf-text)', lineHeight: 1.25, paddingRight: 50}}>
                 {selectedKonzept.name}
               </div>
               {selectedKonzept.beschreibung && (

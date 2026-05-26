@@ -51,8 +51,8 @@ const EMPTY_PERMS = Object.fromEntries(PERM_LABELS.map(p => [p.key, false])) as 
 // ── LBF styles ──
 const INPUT: React.CSSProperties = {
   width: '100%', padding: '11px 13px', borderRadius: 10,
-  border: '0.5px solid rgba(96,8,18,0.15)', background: '#fff',
-  fontSize: 14, fontFamily: 'inherit', color: '#1a0e08', boxSizing: 'border-box',
+  border: '0.5px solid rgba(96,8,18,0.15)', background: 'var(--lbf-card)',
+  fontSize: 14, fontFamily: 'inherit', color: 'var(--lbf-text)', boxSizing: 'border-box',
   outline: 'none',
 }
 const LABEL: React.CSSProperties = {
@@ -66,7 +66,7 @@ const BTN_PRIMARY: React.CSSProperties = {
 }
 const BTN_SECONDARY: React.CSSProperties = {
   padding: '10px 16px', borderRadius: 10, border: '0.5px solid rgba(96,8,18,0.25)',
-  background: '#fff', color: '#600812', fontWeight: 600,
+  background: 'var(--lbf-card)', color: '#600812', fontWeight: 600,
   fontSize: 13, cursor: 'pointer', fontFamily: 'inherit',
 }
 
@@ -355,7 +355,7 @@ export default function Unitarii() {
   if (!user?.supervisor && (user as any)?.role !== 'mpg') {
     return (
       <div style={{ minHeight: '100vh', background: 'var(--warm-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 16 }}>
-        <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 22, color: '#1a0e08' }}>Kein Zugriff</div>
+        <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 22, color: 'var(--lbf-text)' }}>Kein Zugriff</div>
         <div style={{ fontSize: 13, color: 'var(--warm-gray)', fontStyle: 'italic' }}>Benutzerverwaltung ist nur für Administratoren zugänglich.</div>
         <button onClick={() => navigate('/hub')} style={BTN_PRIMARY}>Zurück zum Hub</button>
       </div>
@@ -376,13 +376,13 @@ export default function Unitarii() {
     <div style={{ minHeight: '100vh', background: 'var(--warm-bg)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
 
       {/* Masthead (Patienten/Lager-Stil) */}
-      <div style={{ background: '#fff', borderBottom: '0.5px solid rgba(96,8,18,0.12)', position: 'sticky', top: 0, zIndex: 100, paddingTop: 'env(safe-area-inset-top)', paddingLeft: 'max(20px, env(safe-area-inset-left))', paddingRight: 'max(20px, env(safe-area-inset-right))' }}>
+      <div style={{ background: 'var(--lbf-card)', borderBottom: '0.5px solid rgba(96,8,18,0.12)', position: 'sticky', top: 0, zIndex: 100, paddingTop: 'env(safe-area-inset-top)', paddingLeft: 'max(20px, env(safe-area-inset-left))', paddingRight: 'max(20px, env(safe-area-inset-right))' }}>
         <div style={{ height: 60, display: 'flex', alignItems: 'center', gap: 12 }}>
           <a href="/hub" style={{ display: 'flex', color: '#600812', textDecoration: 'none', flexShrink: 0 }}>
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#600812" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
           </a>
           <div style={{ flex: 1 }}>
-            <div style={{ fontWeight: 700, fontSize: 15, letterSpacing: '-0.01em', color: '#1a0e08' }}>Benutzerverwaltung</div>
+            <div style={{ fontWeight: 700, fontSize: 15, letterSpacing: '-0.01em', color: 'var(--lbf-text)' }}>Benutzerverwaltung</div>
             <div style={{ fontStyle: 'italic', fontSize: 11, color: 'var(--warm-gray)', marginTop: 1 }}>{user?.organization_name || 'Responda'}</div>
           </div>
           {tab === 'benutzer' && (
@@ -404,7 +404,7 @@ export default function Unitarii() {
       </div>
 
       {/* Tab Bar */}
-      <div style={{ background: '#fff', borderBottom: '0.5px solid rgba(96,8,18,0.08)', display: 'flex', justifyContent: 'center', gap: 0 }}>
+      <div style={{ background: 'var(--lbf-card)', borderBottom: '0.5px solid rgba(96,8,18,0.08)', display: 'flex', justifyContent: 'center', gap: 0 }}>
         {([
           { key: 'benutzer',    label: 'Benutzer',    count: regularUsers.length },
           { key: 'neuigkeiten', label: 'Neuigkeiten', count: neuigkeiten.length },
@@ -455,7 +455,7 @@ export default function Unitarii() {
                 {neuigkeiten.map(n => {
                   const url = n.anhang ? `https://api.responda.systems/api/files/${n.collectionId}/${n.id}/${n.anhang}` : null
                   return (
-                    <div key={n.id} style={{ background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.07)', borderLeft: `3px solid ${n.gepinnt ? '#d97706' : '#600812'}`, overflow: 'hidden' }}>
+                    <div key={n.id} style={{ background: 'var(--lbf-card)', borderRadius: 12, boxShadow: 'var(--lbf-shadow)', borderLeft: `3px solid ${n.gepinnt ? '#d97706' : '#600812'}`, overflow: 'hidden' }}>
                       {n.gepinnt && (
                         <div style={{ background: 'rgba(217,119,6,0.08)', padding: '5px 14px', fontSize: 10, fontWeight: 700, color: '#d97706', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Angeheftet</div>
                       )}
@@ -463,8 +463,8 @@ export default function Unitarii() {
                         <img src={url} alt="" style={{ width: '100%', maxHeight: 220, objectFit: 'cover', display: 'block' }} />
                       )}
                       <div style={{ padding: '14px 16px' }}>
-                        <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 17, color: '#1a0e08', marginBottom: 4 }}>{n.titel}</div>
-                        {n.inhalt && <div style={{ fontSize: 13.5, color: '#1a0e08', lineHeight: 1.55, whiteSpace: 'pre-wrap', marginBottom: 10 }}>{n.inhalt}</div>}
+                        <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 17, color: 'var(--lbf-text)', marginBottom: 4 }}>{n.titel}</div>
+                        {n.inhalt && <div style={{ fontSize: 13.5, color: 'var(--lbf-text)', lineHeight: 1.55, whiteSpace: 'pre-wrap', marginBottom: 10 }}>{n.inhalt}</div>}
                         <div style={{ fontStyle: 'italic', fontSize: 11, color: 'var(--warm-gray)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                           <span>
                             {n.erstellt_von && <>{n.erstellt_von} · </>}
@@ -519,9 +519,9 @@ export default function Unitarii() {
 
             <div>
               <div style={LABEL}>Zugriffsrechte (dauerhaft)</div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, padding: '10px 12px', background: '#fff', borderRadius: 10, border: '0.5px solid rgba(96,8,18,0.1)' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, padding: '10px 12px', background: 'var(--lbf-card)', borderRadius: 10, border: '0.5px solid rgba(96,8,18,0.1)' }}>
                 {PERM_LABELS.map(({ key, label }) => (
-                  <label key={key} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, color: '#1a0e08' }}>
+                  <label key={key} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, color: 'var(--lbf-text)' }}>
                     <input type="checkbox" checked={!!userForm.permissions[key]} onChange={e => setUserForm(p => ({ ...p, permissions: { ...p.permissions, [key]: e.target.checked } }))} style={{ width: 16, height: 16, accentColor: '#600812' }} />
                     {label}
                   </label>
@@ -531,7 +531,7 @@ export default function Unitarii() {
 
             <div>
               <div style={LABEL}>Temporäre Zusatzrechte</div>
-              <div style={{ padding: '10px 12px', background: '#fff', borderRadius: 10, border: '0.5px solid rgba(96,8,18,0.1)', display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div style={{ padding: '10px 12px', background: 'var(--lbf-card)', borderRadius: 10, border: '0.5px solid rgba(96,8,18,0.1)', display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {Object.entries(userForm.temp_permissions).length === 0 ? (
                   <div style={{ fontSize: 12, fontStyle: 'italic', color: 'var(--warm-gray)' }}>Keine aktiv — Beispiel: Unitas-User für 4h Lager-Zugriff</div>
                 ) : (
@@ -541,7 +541,7 @@ export default function Unitarii() {
                     return (
                       <div key={key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 0', borderBottom: '0.5px solid rgba(96,8,18,0.06)' }}>
                         <div>
-                          <div style={{ fontWeight: 700, fontSize: 13, color: '#1a0e08' }}>{label}</div>
+                          <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--lbf-text)' }}>{label}</div>
                           <div style={{ fontStyle: 'italic', fontSize: 11, color: 'var(--warm-gray)' }}>läuft in {left}</div>
                         </div>
                         <button onClick={() => removeTempPerm(key)} style={{ ...BTN_SECONDARY, padding: '5px 11px', fontSize: 11, color: '#b91c1c', borderColor: 'rgba(185,28,28,0.3)' }}>Entfernen</button>
@@ -643,9 +643,9 @@ export default function Unitarii() {
             </Field>
             <div>
               <div style={LABEL}>Berechtigungen</div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, padding: '10px 12px', background: '#fff', borderRadius: 10, border: '0.5px solid rgba(96,8,18,0.1)' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, padding: '10px 12px', background: 'var(--lbf-card)', borderRadius: 10, border: '0.5px solid rgba(96,8,18,0.1)' }}>
                 {PERM_LABELS.map(({ key, label }) => (
-                  <label key={key} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, color: '#1a0e08' }}>
+                  <label key={key} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, color: 'var(--lbf-text)' }}>
                     <input type="checkbox" checked={!!tempForm.permissions[key]} onChange={e => setTempForm(p => ({ ...p, permissions: { ...p.permissions, [key]: e.target.checked } }))} style={{ width: 16, height: 16, accentColor: '#600812' }} />
                     {label}
                   </label>
@@ -706,7 +706,7 @@ function UserCard({ u, onClick, isSelf }: { u: UUser; onClick: () => void; isSel
 
   return (
     <div onClick={onClick} style={{
-      background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.07)',
+      background: 'var(--lbf-card)', borderRadius: 12, boxShadow: 'var(--lbf-shadow)',
       borderLeft: `3px solid ${stripColor}`, padding: '12px 14px', display: 'flex',
       alignItems: 'center', gap: 12, cursor: 'pointer',
     }}>
@@ -717,7 +717,7 @@ function UserCard({ u, onClick, isSelf }: { u: UUser; onClick: () => void; isSel
       }}>{(u.name || u.email || '?').charAt(0).toUpperCase()}</div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 16, color: '#1a0e08', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.name || '—'}</div>
+          <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 16, color: 'var(--lbf-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.name || '—'}</div>
           {isSelf && <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--warm-gray)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>· du</span>}
         </div>
         <div style={{ fontSize: 12, fontStyle: 'italic', color: 'var(--warm-gray)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.email}</div>
@@ -750,15 +750,15 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 function ToggleRow({ label, value, onChange }: { label: string; value: boolean; onChange: (v: boolean) => void }) {
   return (
-    <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: '#fff', borderRadius: 10, border: '0.5px solid rgba(96,8,18,0.1)', cursor: 'pointer' }}>
-      <span style={{ fontSize: 13, color: '#1a0e08', fontWeight: 600 }}>{label}</span>
+    <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: 'var(--lbf-card)', borderRadius: 10, border: '0.5px solid rgba(96,8,18,0.1)', cursor: 'pointer' }}>
+      <span style={{ fontSize: 13, color: 'var(--lbf-text)', fontWeight: 600 }}>{label}</span>
       <div onClick={() => onChange(!value)} style={{
         width: 42, height: 24, borderRadius: 12, background: value ? '#600812' : 'rgba(139,113,90,0.3)',
         position: 'relative', transition: 'background 0.15s',
       }}>
         <div style={{
           position: 'absolute', top: 2, left: value ? 20 : 2, width: 20, height: 20, borderRadius: '50%',
-          background: '#fff', transition: 'left 0.15s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+          background: 'var(--lbf-card)', transition: 'left 0.15s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
         }} />
       </div>
     </label>
@@ -771,7 +771,7 @@ function Sheet({ title, onClose, children }: { title: string; onClose: () => voi
       <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(26,14,8,0.5)', zIndex: 300 }} />
       <div style={{
         position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 301,
-        background: '#fff', borderRadius: '22px 22px 0 0',
+        background: 'var(--lbf-card)', borderRadius: '22px 22px 0 0',
         maxHeight: '94dvh', display: 'flex', flexDirection: 'column',
         paddingBottom: 'env(safe-area-inset-bottom)',
       }}>
@@ -779,7 +779,7 @@ function Sheet({ title, onClose, children }: { title: string; onClose: () => voi
           <div style={{ width: 36, height: 4, borderRadius: 2, background: 'rgba(96,8,18,0.2)' }} />
         </div>
         <div style={{ padding: '4px 20px 14px', borderBottom: '0.5px solid rgba(96,8,18,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
-          <div style={{ fontWeight: 700, fontSize: 17, color: '#1a0e08' }}>{title}</div>
+          <div style={{ fontWeight: 700, fontSize: 17, color: 'var(--lbf-text)' }}>{title}</div>
           <button onClick={onClose} style={{ background: 'rgba(96,8,18,0.06)', border: 'none', borderRadius: '50%', width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--warm-gray)' }}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           </button>

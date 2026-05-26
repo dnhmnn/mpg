@@ -139,7 +139,7 @@ export default function AVV() {
   const inp: React.CSSProperties = {
     width: '100%', border: 'none', borderBottom: '1px solid rgba(96,8,18,0.2)',
     background: 'transparent', padding: '6px 0', fontSize: 14,
-    color: '#1a0e08', fontFamily: 'inherit', outline: 'none',
+    color: 'var(--lbf-text)', fontFamily: 'inherit', outline: 'none',
     boxSizing: 'border-box',
   }
 
@@ -147,10 +147,10 @@ export default function AVV() {
     <div style={{ background: 'var(--warm-bg)', minHeight: '100dvh', fontFamily: "'Atkinson Hyperlegible', Georgia, serif" }}>
 
       {/* Header */}
-      <div style={{ background: '#fff', borderBottom: '0.5px solid rgba(96,8,18,0.12)', padding: '24px 24px 20px', position: 'sticky', top: 0, zIndex: 10 }}>
+      <div style={{ background: 'var(--lbf-card)', borderBottom: '0.5px solid rgba(96,8,18,0.12)', padding: '24px 24px 20px', position: 'sticky', top: 0, zIndex: 10 }}>
         <div style={{ maxWidth: 680, margin: '0 auto' }}>
           <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 4 }}>Responda · Rechtliches</div>
-          <div style={{ fontSize: 22, fontWeight: 800, color: '#1a0e08', letterSpacing: '-0.02em' }}>
+          <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--lbf-text)', letterSpacing: '-0.02em' }}>
             Auftragsverarbeitungsvertrag
           </div>
           <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginTop: 2 }}>
@@ -162,13 +162,13 @@ export default function AVV() {
       <div style={{ maxWidth: 680, margin: '0 auto', padding: '32px 24px 80px' }}>
 
         {/* Vertragsparteien */}
-        <div style={{ background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.07)', borderLeft: '3px solid #600812', padding: '20px 24px', marginBottom: 16 }}>
+        <div style={{ background: 'var(--lbf-card)', borderRadius: 12, boxShadow: 'var(--lbf-shadow)', borderLeft: '3px solid #600812', padding: '20px 24px', marginBottom: 16 }}>
           <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 16 }}>Vertragsparteien</div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
             {/* Auftraggeber */}
             <div>
-              <div style={{ fontSize: 12, fontWeight: 700, color: '#1a0e08', marginBottom: 12 }}>Auftraggeber <span style={{ fontStyle: 'italic', fontWeight: 400, color: 'var(--warm-gray)' }}>(Verantwortlicher)</span></div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--lbf-text)', marginBottom: 12 }}>Auftraggeber <span style={{ fontStyle: 'italic', fontWeight: 400, color: 'var(--warm-gray)' }}>(Verantwortlicher)</span></div>
               <div style={{ marginBottom: 12 }}>
                 <label style={label}>Organisation</label>
                 <input style={inp} value={orgName} onChange={e => setOrgName(e.target.value)} placeholder="Name der Organisation" />
@@ -186,8 +186,8 @@ export default function AVV() {
 
             {/* Auftragnehmer */}
             <div>
-              <div style={{ fontSize: 12, fontWeight: 700, color: '#1a0e08', marginBottom: 12 }}>Auftragnehmer <span style={{ fontStyle: 'italic', fontWeight: 400, color: 'var(--warm-gray)' }}>(Auftragsverarbeiter)</span></div>
-              <div style={{ fontSize: 14, color: '#1a0e08', lineHeight: 1.7 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--lbf-text)', marginBottom: 12 }}>Auftragnehmer <span style={{ fontStyle: 'italic', fontWeight: 400, color: 'var(--warm-gray)' }}>(Auftragsverarbeiter)</span></div>
+              <div style={{ fontSize: 14, color: 'var(--lbf-text)', lineHeight: 1.7 }}>
                 <div style={{ fontWeight: 700 }}>Daniel Heilmann</div>
                 <div style={{ fontStyle: 'italic', color: 'var(--warm-gray)', fontSize: 12 }}>Responda</div>
                 <div style={{ marginTop: 8, fontSize: 13 }}>Alter Keller 5</div>
@@ -203,14 +203,14 @@ export default function AVV() {
 
         {/* Sections */}
         {SECTIONS.map(s => (
-          <div key={s.num} style={{ background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.07)', borderLeft: '3px solid rgba(96,8,18,0.25)', padding: '20px 24px', marginBottom: 12 }}>
+          <div key={s.num} style={{ background: 'var(--lbf-card)', borderRadius: 12, boxShadow: 'var(--lbf-shadow)', borderLeft: '3px solid rgba(96,8,18,0.25)', padding: '20px 24px', marginBottom: 12 }}>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 12 }}>
               <span style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', whiteSpace: 'nowrap' }}>{s.num}</span>
-              <span style={{ fontSize: 15, fontWeight: 700, color: '#1a0e08' }}>{s.title}</span>
+              <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--lbf-text)' }}>{s.title}</span>
             </div>
 
             {s.paragraphs.map((p, i) => (
-              <p key={i} style={{ fontSize: 13, color: '#1a0e08', lineHeight: 1.65, margin: '0 0 10px', opacity: 0.9 }}>{p}</p>
+              <p key={i} style={{ fontSize: 13, color: 'var(--lbf-text)', lineHeight: 1.65, margin: '0 0 10px', opacity: 0.9 }}>{p}</p>
             ))}
 
             {'list' in s && s.list && (
@@ -219,7 +219,7 @@ export default function AVV() {
                 {s.list.items.map((item, i) => (
                   <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 6 }}>
                     <span style={{ color: '#600812', fontWeight: 700, flexShrink: 0 }}>—</span>
-                    <span style={{ fontSize: 13, color: '#1a0e08', opacity: 0.9, lineHeight: 1.5 }}>{item}</span>
+                    <span style={{ fontSize: 13, color: 'var(--lbf-text)', opacity: 0.9, lineHeight: 1.5 }}>{item}</span>
                   </div>
                 ))}
               </div>
@@ -231,7 +231,7 @@ export default function AVV() {
                 {s.list2.items.map((item, i) => (
                   <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 6 }}>
                     <span style={{ color: '#600812', fontWeight: 700, flexShrink: 0 }}>—</span>
-                    <span style={{ fontSize: 13, color: '#1a0e08', opacity: 0.9, lineHeight: 1.5 }}>{item}</span>
+                    <span style={{ fontSize: 13, color: 'var(--lbf-text)', opacity: 0.9, lineHeight: 1.5 }}>{item}</span>
                   </div>
                 ))}
               </div>
@@ -242,7 +242,7 @@ export default function AVV() {
                 {s.toms.map((tom, i) => (
                   <div key={i} style={{ borderTop: i === 0 ? 'none' : '0.5px solid rgba(96,8,18,0.08)', padding: '10px 0', display: 'flex', gap: 12 }}>
                     <span style={{ fontSize: 11, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.08em', whiteSpace: 'nowrap', minWidth: 140, paddingTop: 1 }}>{tom.label}</span>
-                    <span style={{ fontSize: 13, color: '#1a0e08', opacity: 0.9, lineHeight: 1.55 }}>{tom.text}</span>
+                    <span style={{ fontSize: 13, color: 'var(--lbf-text)', opacity: 0.9, lineHeight: 1.55 }}>{tom.text}</span>
                   </div>
                 ))}
               </div>
@@ -251,12 +251,12 @@ export default function AVV() {
         ))}
 
         {/* Unterschriften */}
-        <div style={{ background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.07)', borderLeft: '3px solid #600812', padding: '20px 24px', marginTop: 8 }}>
+        <div style={{ background: 'var(--lbf-card)', borderRadius: 12, boxShadow: 'var(--lbf-shadow)', borderLeft: '3px solid #600812', padding: '20px 24px', marginTop: 8 }}>
           <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 20 }}>Unterschriften</div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 32 }}>
             <div>
-              <div style={{ fontSize: 12, fontWeight: 700, color: '#1a0e08', marginBottom: 16 }}>Auftraggeber</div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--lbf-text)', marginBottom: 16 }}>Auftraggeber</div>
               <div style={{ marginBottom: 16 }}>
                 <label style={label}>Datum</label>
                 <input style={inp} value={orgDate} onChange={e => setOrgDate(e.target.value)} placeholder="TT.MM.JJJJ" />
@@ -270,7 +270,7 @@ export default function AVV() {
             </div>
 
             <div>
-              <div style={{ fontSize: 12, fontWeight: 700, color: '#1a0e08', marginBottom: 16 }}>Auftragnehmer</div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--lbf-text)', marginBottom: 16 }}>Auftragnehmer</div>
               <div style={{ fontSize: 13, color: 'var(--warm-gray)', fontStyle: 'italic', marginBottom: 4 }}>Rothenburg ob der Tauber, {today}</div>
               <div style={{ borderTop: '1px solid rgba(96,8,18,0.2)', paddingTop: 8, marginTop: 32 }}>
                 <div style={{ fontSize: 11, color: 'var(--warm-gray)', fontStyle: 'italic' }}>Daniel Heilmann · Responda</div>

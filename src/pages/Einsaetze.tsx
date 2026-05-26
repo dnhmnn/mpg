@@ -60,7 +60,7 @@ function safeJson(v: any): any {
 
 // ── Status Config ─────────────────────────────────────────────────────────────
 const STATUS_CFG: Record<string, { label: string; color: string; bg: string; strip: string }> = {
-  aktiv:         { label: 'Aktiv',         color: '#600812',              bg: 'rgba(96,8,18,0.08)',   strip: '#600812' },
+  aktiv:         { label: 'Aktiv',         color: '#600812',              bg: 'var(--lbf-border-light)',   strip: '#600812' },
   abgeschlossen: { label: 'Abgeschlossen', color: '#16a34a',              bg: '#dcfce7',              strip: '#16a34a' },
   abgebrochen:   { label: 'Abgebrochen',   color: '#8a7a68',              bg: 'rgba(139,113,90,0.1)', strip: 'rgba(139,113,90,0.4)' },
 }
@@ -81,8 +81,8 @@ const DETAIL_TABS: { id: DetailTab; label: string }[] = [
 // ── Style constants ───────────────────────────────────────────────────────────
 const INPUT: React.CSSProperties = {
   width: '100%', padding: '10px 12px', borderRadius: 10,
-  border: '1px solid rgba(96,8,18,0.15)', background: '#faf9f7',
-  fontSize: 14, color: '#1a0e08', fontFamily: 'inherit',
+  border: '1px solid rgba(96,8,18,0.15)', background: 'var(--warm-bg)',
+  fontSize: 14, color: 'var(--lbf-text)', fontFamily: 'inherit',
   outline: 'none', boxSizing: 'border-box',
 }
 const LABEL: React.CSSProperties = {
@@ -415,19 +415,19 @@ export default function Einsaetze() {
     <div style={{ minHeight: '100dvh', background: 'var(--warm-bg)', fontFamily: "'Atkinson Hyperlegible', Inter, -apple-system, sans-serif" }}>
 
       {/* ── Masthead ── */}
-      <div style={{ position: 'sticky', top: 0, zIndex: 100, background: '#fff', borderBottom: '0.5px solid rgba(96,8,18,0.12)', paddingTop: 'env(safe-area-inset-top)' }}>
+      <div style={{ position: 'sticky', top: 0, zIndex: 100, background: 'var(--lbf-card)', borderBottom: '0.5px solid rgba(96,8,18,0.12)', paddingTop: 'env(safe-area-inset-top)' }}>
         <div style={{ maxWidth: 640, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 60, padding: '0 20px' }}>
           <button onClick={() => navigate(-1)} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: '#600812', display: 'flex', alignItems: 'center', fontFamily: 'inherit', flexShrink: 0 }}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
           </button>
           <div style={{ flex: 1, textAlign: 'center', padding: '0 12px' }}>
-            <div style={{ fontWeight: 700, fontSize: 15, letterSpacing: '-0.01em', color: '#1a0e08', lineHeight: 1.2 }}>Einsätze</div>
+            <div style={{ fontWeight: 700, fontSize: 15, letterSpacing: '-0.01em', color: 'var(--lbf-text)', lineHeight: 1.2 }}>Einsätze</div>
             <div style={{ fontStyle: 'italic', fontSize: 11, color: 'var(--warm-gray)', marginTop: 1 }}>
               {new Date().toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' })}
             </div>
           </div>
           <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-            <button onClick={openSetup} title="Alamos Webhook-Konfiguration" style={{ background: 'rgba(96,8,18,0.08)', border: 'none', borderRadius: 8, width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#600812' }}>
+            <button onClick={openSetup} title="Alamos Webhook-Konfiguration" style={{ background: 'var(--lbf-border-light)', border: 'none', borderRadius: 8, width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#600812' }}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
             </button>
             <button onClick={() => setNewModal(true)} style={{ background: '#600812', border: 'none', borderRadius: 8, width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#fff' }}>
@@ -485,8 +485,8 @@ export default function Einsaetze() {
       {newModal && (
         <>
           <div onClick={() => setNewModal(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(26,14,8,0.5)', zIndex: 500 }} />
-          <div style={{ position: 'fixed', left: '50%', top: '50%', transform: 'translate(-50%,-50%)', zIndex: 501, background: '#fff', borderRadius: 20, padding: '28px 24px', width: 'min(480px, calc(100vw - 40px))', boxShadow: '0 20px 60px rgba(0,0,0,0.2)', maxHeight: '90dvh', overflowY: 'auto' }}>
-            <div style={{ fontWeight: 700, fontSize: 17, color: '#1a0e08', marginBottom: 20 }}>Neuer Einsatz</div>
+          <div style={{ position: 'fixed', left: '50%', top: '50%', transform: 'translate(-50%,-50%)', zIndex: 501, background: 'var(--lbf-card)', borderRadius: 20, padding: '28px 24px', width: 'min(480px, calc(100vw - 40px))', boxShadow: '0 20px 60px rgba(0,0,0,0.2)', maxHeight: '90dvh', overflowY: 'auto' }}>
+            <div style={{ fontWeight: 700, fontSize: 17, color: 'var(--lbf-text)', marginBottom: 20 }}>Neuer Einsatz</div>
 
             {/* Alamos Webhook Info */}
             <div style={{ background: 'rgba(96,8,18,0.04)', border: '1px solid rgba(96,8,18,0.12)', borderRadius: 10, padding: '12px 14px', marginBottom: 20 }}>
@@ -531,7 +531,7 @@ export default function Einsaetze() {
       {selected && (
         <>
           <div onClick={() => { setSelected(null); if (mapRef.current) { mapRef.current.remove(); mapRef.current = null } }} style={{ position: 'fixed', inset: 0, background: 'rgba(26,14,8,0.5)', zIndex: 200 }} />
-          <div style={{ position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 201, background: '#fff', borderRadius: '22px 22px 0 0', maxHeight: '92dvh', display: 'flex', flexDirection: 'column', paddingBottom: 'env(safe-area-inset-bottom)' }}>
+          <div style={{ position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 201, background: 'var(--lbf-card)', borderRadius: '22px 22px 0 0', maxHeight: '92dvh', display: 'flex', flexDirection: 'column', paddingBottom: 'env(safe-area-inset-bottom)' }}>
 
             {/* Drag handle */}
             <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0 6px', flexShrink: 0 }}>
@@ -541,7 +541,7 @@ export default function Einsaetze() {
             {/* Sheet header */}
             <div style={{ padding: '4px 20px 12px', borderBottom: '0.5px solid rgba(96,8,18,0.1)', display: 'flex', alignItems: 'flex-start', gap: 12, flexShrink: 0 }}>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 17, color: '#1a0e08', lineHeight: 1.25 }}>
+                <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 17, color: 'var(--lbf-text)', lineHeight: 1.25 }}>
                   {selected.keyword || selected.unit || 'Einsatz'}
                 </div>
                 <div style={{ fontSize: 12, color: 'var(--warm-gray)', fontStyle: 'italic', marginTop: 3 }}>
@@ -619,7 +619,7 @@ export default function Einsaetze() {
                       {selected.interne_vermerke && (
                         <div>
                           <div style={LABEL}>Interne Vermerke</div>
-                          <div style={{ fontSize: 14, color: '#1a0e08', lineHeight: 1.7, whiteSpace: 'pre-wrap', background: 'rgba(250,249,247,0.8)', borderRadius: 10, padding: '12px 14px', border: '0.5px solid rgba(96,8,18,0.08)' }}>
+                          <div style={{ fontSize: 14, color: 'var(--lbf-text)', lineHeight: 1.7, whiteSpace: 'pre-wrap', background: 'rgba(250,249,247,0.8)', borderRadius: 10, padding: '12px 14px', border: '0.5px solid rgba(96,8,18,0.08)' }}>
                             {selected.interne_vermerke}
                           </div>
                         </div>
@@ -656,9 +656,9 @@ export default function Einsaetze() {
                         style={INPUT}
                       />
                       {filteredUsers.length > 0 && (
-                        <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: '#fff', border: '1px solid rgba(96,8,18,0.12)', borderRadius: 8, boxShadow: '0 4px 12px rgba(0,0,0,0.1)', zIndex: 10, maxHeight: 180, overflowY: 'auto' }}>
+                        <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--lbf-card)', border: '1px solid rgba(96,8,18,0.12)', borderRadius: 8, boxShadow: '0 4px 12px rgba(0,0,0,0.1)', zIndex: 10, maxHeight: 180, overflowY: 'auto' }}>
                           {filteredUsers.map(u => (
-                            <button key={u.id} onClick={() => { setSelectedUser(u); setUserSearch(u.name) }} style={{ width: '100%', padding: '10px 14px', background: 'none', border: 'none', borderBottom: '0.5px solid rgba(96,8,18,0.06)', textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit', fontSize: 14, color: '#1a0e08' }}>
+                            <button key={u.id} onClick={() => { setSelectedUser(u); setUserSearch(u.name) }} style={{ width: '100%', padding: '10px 14px', background: 'none', border: 'none', borderBottom: '0.5px solid rgba(96,8,18,0.06)', textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit', fontSize: 14, color: 'var(--lbf-text)' }}>
                               {u.name} <span style={{ color: 'var(--warm-gray)', fontSize: 12 }}>{u.email}</span>
                             </button>
                           ))}
@@ -687,12 +687,12 @@ export default function Einsaetze() {
                         const person = (p.expand?.user_id as any) || allUsers.find(u => u.id === p.user_id)
                         const initials = ((person as any)?.name || '?').split(' ').map((w: string) => w[0]).slice(0, 2).join('').toUpperCase()
                         return (
-                          <div key={p.id} style={{ background: '#fff', borderRadius: 10, borderLeft: '3px solid #600812', padding: '12px 14px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', display: 'flex', alignItems: 'center', gap: 12 }}>
+                          <div key={p.id} style={{ background: 'var(--lbf-card)', borderRadius: 10, borderLeft: '3px solid #600812', padding: '12px 14px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', display: 'flex', alignItems: 'center', gap: 12 }}>
                             <div style={{ width: 36, height: 36, borderRadius: '50%', background: '#600812', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, flexShrink: 0 }}>
                               {initials}
                             </div>
                             <div style={{ flex: 1, minWidth: 0 }}>
-                              <div style={{ fontWeight: 700, fontSize: 14, color: '#1a0e08' }}>{(person as any)?.name || '–'}</div>
+                              <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--lbf-text)' }}>{(person as any)?.name || '–'}</div>
                               {p.rolle && <div style={{ fontSize: 12, color: 'var(--warm-gray)', fontStyle: 'italic' }}>{p.rolle}</div>}
                             </div>
                             <button onClick={() => removePerson(p.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--warm-gray)', padding: 4, display: 'flex' }}>
@@ -724,9 +724,9 @@ export default function Einsaetze() {
                         const name = [payload.name, payload.vorname].filter(Boolean).join(', ') || 'Unbekannt'
                         const sc: Record<string, string> = { offen: '#600812', freigegeben: '#16a34a', archiviert: '#8a7a68' }
                         return (
-                          <div key={p.id} style={{ background: '#fff', borderRadius: 12, borderLeft: `3px solid ${sc[p.status] || '#600812'}`, boxShadow: '0 1px 4px rgba(0,0,0,0.07)', padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12 }}>
+                          <div key={p.id} style={{ background: 'var(--lbf-card)', borderRadius: 12, borderLeft: `3px solid ${sc[p.status] || '#600812'}`, boxShadow: 'var(--lbf-shadow)', padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12 }}>
                             <div style={{ flex: 1 }}>
-                              <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 15, color: '#1a0e08' }}>{name}</div>
+                              <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 15, color: 'var(--lbf-text)' }}>{name}</div>
                               <div style={{ fontSize: 12, color: 'var(--warm-gray)', fontStyle: 'italic', marginTop: 2 }}>
                                 {new Date(p.created).toLocaleDateString('de-DE')}
                               </div>
@@ -759,9 +759,9 @@ export default function Einsaetze() {
                         const payload = safeJson(o.payload)
                         const positionen: any[] = payload.positionen || []
                         return (
-                          <div key={o.id} style={{ background: '#fff', borderRadius: 12, borderLeft: '3px solid #600812', boxShadow: '0 1px 4px rgba(0,0,0,0.07)', overflow: 'hidden' }}>
+                          <div key={o.id} style={{ background: 'var(--lbf-card)', borderRadius: 12, borderLeft: '3px solid #600812', boxShadow: 'var(--lbf-shadow)', overflow: 'hidden' }}>
                             <div style={{ padding: '12px 14px 10px' }}>
-                              <div style={{ fontWeight: 700, fontSize: 14, color: '#1a0e08', marginBottom: 3 }}>
+                              <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--lbf-text)', marginBottom: 3 }}>
                                 {payload.user_name || o.title || 'Ausgabe'}
                               </div>
                               <div style={{ fontSize: 12, color: 'var(--warm-gray)', fontStyle: 'italic' }}>
@@ -771,7 +771,7 @@ export default function Einsaetze() {
                               {positionen.length > 0 && (
                                 <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 4 }}>
                                   {positionen.map((pos: any, idx: number) => (
-                                    <div key={idx} style={{ fontSize: 13, color: '#1a0e08', display: 'flex', gap: 8 }}>
+                                    <div key={idx} style={{ fontSize: 13, color: 'var(--lbf-text)', display: 'flex', gap: 8 }}>
                                       <span style={{ fontWeight: 700, color: '#600812', minWidth: 28 }}>{pos.qty}×</span>
                                       <span>{pos.name}</span>
                                     </div>
@@ -811,7 +811,7 @@ export default function Einsaetze() {
         return (
           <>
             <div onClick={() => setSetupOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(26,14,8,0.5)', zIndex: 300 }} />
-            <div style={{ position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 301, background: '#fff', borderRadius: '22px 22px 0 0', maxHeight: '94dvh', display: 'flex', flexDirection: 'column', paddingBottom: 'env(safe-area-inset-bottom)' }}>
+            <div style={{ position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 301, background: 'var(--lbf-card)', borderRadius: '22px 22px 0 0', maxHeight: '94dvh', display: 'flex', flexDirection: 'column', paddingBottom: 'env(safe-area-inset-bottom)' }}>
 
               <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0 6px', flexShrink: 0 }}>
                 <div style={{ width: 36, height: 4, borderRadius: 2, background: 'rgba(96,8,18,0.2)' }} />
@@ -819,7 +819,7 @@ export default function Einsaetze() {
 
               <div style={{ padding: '4px 20px 14px', borderBottom: '0.5px solid rgba(96,8,18,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
                 <div>
-                  <div style={{ fontWeight: 700, fontSize: 17, color: '#1a0e08' }}>Alamos-Konfiguration</div>
+                  <div style={{ fontWeight: 700, fontSize: 17, color: 'var(--lbf-text)' }}>Alamos-Konfiguration</div>
                   <div style={{ fontSize: 12, color: 'var(--warm-gray)', fontStyle: 'italic', marginTop: 2 }}>Diese URL in Alamos eintragen</div>
                 </div>
                 <button onClick={() => setSetupOpen(false)} style={{ background: 'rgba(96,8,18,0.06)', border: 'none', borderRadius: '50%', width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--warm-gray)' }}>
@@ -830,12 +830,12 @@ export default function Einsaetze() {
               <div style={{ flex: 1, overflowY: 'auto', padding: '20px 20px 8px', display: 'flex', flexDirection: 'column', gap: 16 }}>
 
                 {/* Alamos settings checklist */}
-                <div style={{ background: 'rgba(96,8,18,0.04)', borderRadius: 12, padding: '14px 16px', fontSize: 13, color: '#1a0e08', lineHeight: 1.8 }}>
+                <div style={{ background: 'rgba(96,8,18,0.04)', borderRadius: 12, padding: '14px 16px', fontSize: 13, color: 'var(--lbf-text)', lineHeight: 1.8 }}>
                   <div style={{ fontWeight: 700, marginBottom: 6 }}>In Alamos einstellen:</div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 3, color: 'var(--warm-gray)', fontStyle: 'italic' }}>
-                    <span>✓ Einheitenkennung übertragen: <strong style={{ fontStyle: 'normal', color: '#1a0e08' }}>Ein</strong></span>
-                    <span>✓ Stichwort übertragen: <strong style={{ fontStyle: 'normal', color: '#1a0e08' }}>Ein</strong></span>
-                    <span>✓ HTTP POST statt GET: <strong style={{ fontStyle: 'normal', color: '#1a0e08' }}>Ein</strong></span>
+                    <span>✓ Einheitenkennung übertragen: <strong style={{ fontStyle: 'normal', color: 'var(--lbf-text)' }}>Ein</strong></span>
+                    <span>✓ Stichwort übertragen: <strong style={{ fontStyle: 'normal', color: 'var(--lbf-text)' }}>Ein</strong></span>
+                    <span>✓ HTTP POST statt GET: <strong style={{ fontStyle: 'normal', color: 'var(--lbf-text)' }}>Ein</strong></span>
                     <span>✓ Kein Authorization-Header nötig</span>
                   </div>
                 </div>
@@ -849,7 +849,7 @@ export default function Einsaetze() {
                     <WebhookBox text={WEBHOOK_URL} label="Webhook-URL" onCopy={copyText} />
                   </div>
 
-                  <div style={{ height: 1, background: 'rgba(96,8,18,0.08)' }} />
+                  <div style={{ height: 1, background: 'var(--lbf-border-light)' }} />
 
                   <div>
                     <div style={LABEL}>Test-Befehl (optional)</div>
@@ -872,11 +872,11 @@ function EinsatzCard({ einsatz, onClick }: { einsatz: Einsatz; onClick: () => vo
   const cfg = STATUS_CFG[einsatz.status] || STATUS_CFG.aktiv
   const isPast = einsatz.status !== 'aktiv'
   return (
-    <div onClick={onClick} style={{ background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.07)', overflow: 'hidden', cursor: 'pointer', opacity: isPast ? 0.72 : 1 }}>
+    <div onClick={onClick} style={{ background: 'var(--lbf-card)', borderRadius: 12, boxShadow: 'var(--lbf-shadow)', overflow: 'hidden', cursor: 'pointer', opacity: isPast ? 0.72 : 1 }}>
       <div style={{ height: 3, background: cfg.strip }} />
       <div style={{ padding: '12px 14px 10px' }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, marginBottom: 5 }}>
-          <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 16, color: '#1a0e08', lineHeight: 1.3 }}>
+          <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 16, color: 'var(--lbf-text)', lineHeight: 1.3 }}>
             {einsatz.keyword || einsatz.unit || 'Einsatz'}
           </div>
           <span style={{ flexShrink: 0, padding: '3px 9px', borderRadius: 99, fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', background: cfg.bg, color: cfg.color }}>
@@ -906,7 +906,7 @@ function EinsatzCard({ einsatz, onClick }: { einsatz: Einsatz; onClick: () => vo
 function WebhookBox({ text, label, onCopy, mono, highlight }: { text: string; label: string; onCopy: (t: string, l: string) => void; mono?: boolean; highlight?: boolean }) {
   return (
     <div style={{ position: 'relative', background: highlight ? 'rgba(96,8,18,0.04)' : 'rgba(250,249,247,0.9)', border: `1px solid ${highlight ? 'rgba(96,8,18,0.25)' : 'rgba(96,8,18,0.1)'}`, borderRadius: 10, padding: '10px 44px 10px 12px', minHeight: 40 }}>
-      <pre style={{ margin: 0, fontSize: 12, color: highlight ? '#600812' : '#1a0e08', fontFamily: mono ? 'monospace' : 'inherit', whiteSpace: 'pre-wrap', wordBreak: 'break-all', lineHeight: 1.6 }}>
+      <pre style={{ margin: 0, fontSize: 12, color: highlight ? '#600812' : 'var(--lbf-text)', fontFamily: mono ? 'monospace' : 'inherit', whiteSpace: 'pre-wrap', wordBreak: 'break-all', lineHeight: 1.6 }}>
         {text}
       </pre>
       <button onClick={() => onCopy(text, label)} style={{ position: 'absolute', top: 8, right: 8, background: '#600812', border: 'none', borderRadius: 6, padding: '4px 8px', cursor: 'pointer', color: '#fff', display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 700, fontFamily: 'inherit', flexShrink: 0 }}>
@@ -921,7 +921,7 @@ function InfoField({ label, value, italic, span }: { label: string; value?: stri
   return (
     <div style={span ? { gridColumn: '1 / -1' } : {}}>
       <div style={{ fontSize: 9, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 3 }}>{label}</div>
-      <div style={{ fontSize: 14, color: value ? '#1a0e08' : 'var(--warm-gray)', fontStyle: italic && value ? 'italic' : 'normal' }}>
+      <div style={{ fontSize: 14, color: value ? 'var(--lbf-text)' : 'var(--warm-gray)', fontStyle: italic && value ? 'italic' : 'normal' }}>
         {value || '–'}
       </div>
     </div>

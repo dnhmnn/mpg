@@ -90,6 +90,15 @@
   --warm-bg: #faf9f7;
   --warm-gray: #8a7a68;
 
+  /* LBF design tokens — adapt to dark/retro */
+  --lbf-text: #1a0e08;
+  --lbf-card: #ffffff;
+  --lbf-border: rgba(96,8,18,0.12);
+  --lbf-border-light: rgba(96,8,18,0.08);
+  --lbf-input-bg: #ffffff;
+  --lbf-input-border: rgba(96,8,18,0.15);
+  --lbf-shadow: 0 1px 4px rgba(0,0,0,0.07);
+
   /* Backgrounds */
   --bg: #ffffff;
   --bg-app: #f2f2f7;
@@ -129,6 +138,14 @@
   --warm-bg: #0f0a07;
   --warm-gray: #9a8a78;
 
+  --lbf-text: #f0e8e0;
+  --lbf-card: #1c1008;
+  --lbf-border: rgba(253,200,160,0.1);
+  --lbf-border-light: rgba(253,200,160,0.07);
+  --lbf-input-bg: #1c1008;
+  --lbf-input-border: rgba(253,200,160,0.15);
+  --lbf-shadow: 0 1px 4px rgba(0,0,0,0.4);
+
   --bg: #000000;
   --bg-app: #1c1c1e;
   --bg-card: rgba(28, 28, 30, 0.9);
@@ -161,6 +178,14 @@
 [data-theme="retro"] {
   --warm-bg: #080c08;
   --warm-gray: #00cc33;
+
+  --lbf-text: #00ff41;
+  --lbf-card: #001400;
+  --lbf-border: rgba(0,255,65,0.18);
+  --lbf-border-light: rgba(0,255,65,0.1);
+  --lbf-input-bg: #001a02;
+  --lbf-input-border: rgba(0,255,65,0.25);
+  --lbf-shadow: 0 1px 4px rgba(0,0,0,0.5);
 
   --bg: #080c08;
   --bg-app: #080c08;
@@ -221,6 +246,14 @@
   :root:not([data-theme="light"]) {
     --warm-bg: #0f0a07;
     --warm-gray: #9a8a78;
+
+    --lbf-text: #f0e8e0;
+    --lbf-card: #1c1008;
+    --lbf-border: rgba(253,200,160,0.1);
+    --lbf-border-light: rgba(253,200,160,0.07);
+    --lbf-input-bg: #1c1008;
+    --lbf-input-border: rgba(253,200,160,0.15);
+    --lbf-shadow: 0 1px 4px rgba(0,0,0,0.4);
 
     --bg: #000000;
     --bg-app: #1c1c1e;

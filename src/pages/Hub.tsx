@@ -293,7 +293,7 @@ export default function Hub() {
 
       {/* Masthead header — sticky, handles safe area */}
       <div style={{
-        background: '#fff',
+        background: 'var(--lbf-card)',
         borderBottom: '0.5px solid rgba(96,8,18,0.12)',
         position: 'sticky',
         top: 0,
@@ -307,7 +307,7 @@ export default function Hub() {
             <img src="/logoklein.svg" alt="Responda" style={{ height: 34, width: 34, objectFit: 'contain' }} />
           </div>
           <div style={{ flex: 1, textAlign: 'center', padding: '0 12px' }}>
-            <div style={{ fontWeight: 700, fontSize: 15, letterSpacing: '-0.01em', color: '#1a0e08', lineHeight: 1.2 }}>
+            <div style={{ fontWeight: 700, fontSize: 15, letterSpacing: '-0.01em', color: 'var(--lbf-text)', lineHeight: 1.2 }}>
               {user?.organization_name || 'Responda'}
             </div>
             <div style={{ fontStyle: 'italic', fontSize: 11, color: 'var(--warm-gray)', marginTop: 1 }}>
@@ -316,7 +316,7 @@ export default function Hub() {
           </div>
           <button
             onClick={() => setProfileSheetOpen(true)}
-            style={{ width: 34, height: 34, borderRadius: '50%', border: '1.5px solid #600812', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 12, color: '#600812', cursor: 'pointer', flexShrink: 0, fontFamily: 'inherit' } as React.CSSProperties}
+            style={{ width: 34, height: 34, borderRadius: '50%', border: '1.5px solid #600812', background: 'var(--lbf-card)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 12, color: '#600812', cursor: 'pointer', flexShrink: 0, fontFamily: 'inherit' } as React.CSSProperties}
           >
             {initials(user?.name || user?.email)}
           </button>
@@ -351,7 +351,7 @@ export default function Hub() {
             {editMode && (
               <button
                 onClick={() => { setEditMode(false); setShowAppsModal(true) }}
-                style={{ width: '100%', padding: '12px', background: '#fff', border: '1px dashed rgba(96,8,18,0.2)', borderRadius: 12, fontSize: 13, fontWeight: 600, color: 'var(--warm-gray)', cursor: 'pointer', fontFamily: 'inherit' }}
+                style={{ width: '100%', padding: '12px', background: 'var(--lbf-card)', border: '1px dashed rgba(96,8,18,0.2)', borderRadius: 12, fontSize: 13, fontWeight: 600, color: 'var(--warm-gray)', cursor: 'pointer', fontFamily: 'inherit' }}
               >
                 + App hinzufügen
               </button>
@@ -361,7 +361,7 @@ export default function Hub() {
           {/* Right / side column: Greeting + News */}
           <div className="hub-side-col" style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
             <div>
-              <div style={{ fontSize: 26, fontWeight: 800, color: '#1a0e08', letterSpacing: '-0.02em', lineHeight: 1.1 }}>
+              <div style={{ fontSize: 26, fontWeight: 800, color: 'var(--lbf-text)', letterSpacing: '-0.02em', lineHeight: 1.1 }}>
                 Servus, <span style={{ color: '#600812', fontStyle: 'italic' }}>{firstName}</span>
               </div>
             </div>
@@ -417,12 +417,12 @@ export default function Hub() {
         onClick={() => { setSheetOpen(false); setEditingShortcuts(false) }}
       >
         <div
-          style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: '#fff', borderRadius: '22px 22px 0 0', padding: '12px 20px calc(24px + env(safe-area-inset-bottom))', transform: sheetOpen ? 'translateY(0)' : 'translateY(100%)', transition: 'transform .38s cubic-bezier(0.32,0.72,0,1)', maxHeight: '75vh', overflowY: 'auto', boxShadow: '0 -4px 32px rgba(0,0,0,0.1)' } as React.CSSProperties}
+          style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'var(--lbf-card)', borderRadius: '22px 22px 0 0', padding: '12px 20px calc(24px + env(safe-area-inset-bottom))', transform: sheetOpen ? 'translateY(0)' : 'translateY(100%)', transition: 'transform .38s cubic-bezier(0.32,0.72,0,1)', maxHeight: '75vh', overflowY: 'auto', boxShadow: '0 -4px 32px rgba(0,0,0,0.1)' } as React.CSSProperties}
           onClick={e => e.stopPropagation()}
           onTouchStart={e => { touchStartY.current = e.touches[0].clientY }}
           onTouchEnd={e => { if (e.changedTouches[0].clientY - touchStartY.current > 50) { setSheetOpen(false); setEditingShortcuts(false) } }}
         >
-          <div style={{ width: 36, height: 3, borderRadius: 99, background: 'rgba(96,8,18,0.15)', margin: '0 auto 20px' }} />
+          <div style={{ width: 36, height: 3, borderRadius: 99, background: 'var(--lbf-input-border)', margin: '0 auto 20px' }} />
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, paddingBottom: 14, borderBottom: '0.5px solid rgba(96,8,18,0.08)' }}>
             <span style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em' }}>Kurzbefehle</span>
             <button
@@ -455,7 +455,7 @@ export default function Hub() {
                       </div>
                     )}
                   </div>
-                  <span style={{ fontSize: 10, fontWeight: 600, color: on ? '#1a0e08' : 'var(--warm-gray)', textAlign: 'center', lineHeight: 1.3, maxWidth: 64 }}>{s.name}</span>
+                  <span style={{ fontSize: 10, fontWeight: 600, color: on ? 'var(--lbf-text)' : 'var(--warm-gray)', textAlign: 'center', lineHeight: 1.3, maxWidth: 64 }}>{s.name}</span>
                 </div>
               )
             })}
@@ -492,10 +492,10 @@ export default function Hub() {
             onClick={() => setProfileSheetOpen(false)}
           >
             <div
-              style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: '#fff', borderRadius: '22px 22px 0 0', transform: profileSheetOpen ? 'translateY(0)' : 'translateY(100%)', transition: 'transform .38s cubic-bezier(0.32,0.72,0,1)', overflow: 'hidden', display: 'flex', flexDirection: 'column' } as React.CSSProperties}
+              style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'var(--lbf-card)', borderRadius: '22px 22px 0 0', transform: profileSheetOpen ? 'translateY(0)' : 'translateY(100%)', transition: 'transform .38s cubic-bezier(0.32,0.72,0,1)', overflow: 'hidden', display: 'flex', flexDirection: 'column' } as React.CSSProperties}
               onClick={e => e.stopPropagation()}
             >
-              <div style={{ width: 36, height: 3, borderRadius: 99, background: 'rgba(96,8,18,0.15)', margin: '12px auto 0', flexShrink: 0 }} />
+              <div style={{ width: 36, height: 3, borderRadius: 99, background: 'var(--lbf-input-border)', margin: '12px auto 0', flexShrink: 0 }} />
               <div style={{ overflowY: 'auto', padding: '16px 20px calc(24px + env(safe-area-inset-bottom))' }}>
 
                 {/* Abmelden */}
@@ -508,11 +508,11 @@ export default function Hub() {
 
                 {/* User info */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px', background: 'var(--warm-bg)', borderRadius: 12, marginBottom: 20 }}>
-                  <div style={{ width: 48, height: 48, borderRadius: '50%', border: '2px solid #600812', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 16, color: '#600812', flexShrink: 0 }}>
+                  <div style={{ width: 48, height: 48, borderRadius: '50%', border: '2px solid #600812', background: 'var(--lbf-card)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 16, color: '#600812', flexShrink: 0 }}>
                     {initials(user?.name || user?.email)}
                   </div>
                   <div style={{ minWidth: 0 }}>
-                    <div style={{ fontWeight: 700, fontStyle: 'italic', fontSize: 15, color: '#1a0e08', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.name || user?.email?.split('@')[0]}</div>
+                    <div style={{ fontWeight: 700, fontStyle: 'italic', fontSize: 15, color: 'var(--lbf-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.name || user?.email?.split('@')[0]}</div>
                     <div style={{ fontSize: 11, color: 'var(--warm-gray)', fontStyle: 'italic', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.email}</div>
                     <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.1em', marginTop: 5, background: 'rgba(96,8,18,0.07)', borderRadius: 99, padding: '2px 8px', display: 'inline-block' }}>{roleLabel}</div>
                   </div>
@@ -541,7 +541,7 @@ export default function Hub() {
                 {/* Add to home screen */}
                 <button
                   onClick={handleInstall}
-                  style={{ width: '100%', background: 'var(--warm-bg)', border: '0.5px solid rgba(96,8,18,0.15)', borderRadius: 12, padding: '13px 16px', color: '#1a0e08', fontWeight: 600, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 } as React.CSSProperties}
+                  style={{ width: '100%', background: 'var(--warm-bg)', border: '0.5px solid rgba(96,8,18,0.15)', borderRadius: 12, padding: '13px 16px', color: 'var(--lbf-text)', fontWeight: 600, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 } as React.CSSProperties}
                 >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#600812" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M12 5v14M5 12l7-7 7 7"/>
