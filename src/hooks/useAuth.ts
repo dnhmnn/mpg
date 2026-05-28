@@ -27,7 +27,7 @@ export function useAuth() {
         return
       }
 
-      const isBeta = window.location.hostname === 'beta.responda.systems'
+      const isBeta = window.location.hostname === 'supervisor.responda.systems'
       if (isBeta && !userData?.supervisor) {
         pb.authStore.clear()
         window.location.href = '/login?reason=beta'
