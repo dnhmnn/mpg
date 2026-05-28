@@ -27,6 +27,13 @@ export function useAuth() {
         return
       }
 
+      const isBeta = window.location.hostname === 'beta.responda.systems'
+      if (isBeta && !userData?.supervisor) {
+        pb.authStore.clear()
+        window.location.href = '/login?reason=beta'
+        return
+      }
+
       if (userData && userData.organization_id) {
         try {
           const org = await pb.collection('organizations').getOne(userData.organization_id)

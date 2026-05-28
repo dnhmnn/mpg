@@ -6,6 +6,7 @@ export default function Login() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const disabledHint = searchParams.get('reason') === 'disabled'
+  const betaHint = searchParams.get('reason') === 'beta'
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -134,6 +135,11 @@ export default function Login() {
               {!error && disabledHint && (
                 <div style={{ padding: '10px 14px', background: 'rgba(192,57,43,0.06)', border: '1px solid rgba(192,57,43,0.2)', borderRadius: 8, fontSize: 13, color: '#b91c1c', fontStyle: 'italic' }}>
                   Dein Zugang wurde deaktiviert oder ist abgelaufen. Bitte Admin kontaktieren.
+                </div>
+              )}
+              {!error && betaHint && (
+                <div style={{ padding: '10px 14px', background: 'rgba(192,57,43,0.06)', border: '1px solid rgba(192,57,43,0.2)', borderRadius: 8, fontSize: 13, color: '#b91c1c', fontStyle: 'italic' }}>
+                  Diese Beta-Umgebung ist nur für Supervisoren zugänglich.
                 </div>
               )}
 
