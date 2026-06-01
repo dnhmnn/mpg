@@ -67,7 +67,7 @@ export default function AppGrid({ userApps, editMode = false, onRemoveApp, onApp
               className="hub-app-card"
               onClick={() => handleAppClick(app)}
               style={{
-                width: '100%', background: '#fff', borderRadius: 14,
+                width: '100%', background: 'var(--lbf-card)', borderRadius: 14,
                 boxShadow: '0 1px 4px rgba(0,0,0,0.07)', border: 'none',
                 cursor: 'pointer', padding: '16px 8px 12px',
                 display: 'flex', flexDirection: 'column', alignItems: 'center',
@@ -87,7 +87,7 @@ export default function AppGrid({ userApps, editMode = false, onRemoveApp, onApp
                 </div>
               </div>
               <span className="hub-app-label" style={{
-                fontSize: 12, fontWeight: 700, color: '#1a0e08',
+                fontSize: 12, fontWeight: 700, color: 'var(--lbf-text)',
                 textAlign: 'center', lineHeight: 1.3, maxWidth: 80,
               }}>{app.name}</span>
             </button>

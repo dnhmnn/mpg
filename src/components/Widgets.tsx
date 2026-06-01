@@ -167,7 +167,7 @@ export default function Widgets({ user }: WidgetsProps) {
             style={{
               display: 'flex', alignItems: 'center', gap: 14,
               padding: '14px 16px',
-              background: '#fff', borderRadius: 12,
+              background: 'var(--lbf-card)', borderRadius: 12,
               boxShadow: '0 1px 6px rgba(0,0,0,0.06)',
               borderLeft: `3px solid ${item.color}`,
               cursor: 'pointer',
@@ -183,7 +183,7 @@ export default function Widgets({ user }: WidgetsProps) {
             </div>
             {/* Text */}
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 14, fontWeight: 700, color: '#1a0e08', lineHeight: 1.3 }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--lbf-text)', lineHeight: 1.3 }}>
                 {item.label}
               </div>
               <div style={{ fontSize: 12, fontStyle: 'italic', color: 'var(--warm-gray)', marginTop: 3 }}>
