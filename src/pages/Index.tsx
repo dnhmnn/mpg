@@ -73,7 +73,7 @@ export default function Index() {
       {/* Logo */}
       <div style={{ marginBottom: 32, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
         <img src="/logo.svg" alt="Responda" width="120" height="120" />
-        <span style={{ fontWeight: 700, fontSize: '1.4rem', letterSpacing: '-0.01em', color: '#1a0e08' }}>Responda</span>
+        <span style={{ fontWeight: 700, fontSize: '1.4rem', letterSpacing: '-0.01em', color: 'var(--lbf-text)' }}>Responda</span>
       </div>
 
       {/* Animated tagline */}
@@ -88,7 +88,7 @@ export default function Index() {
       </div>
 
       {/* Card */}
-      <div style={{ width: '100%', maxWidth: 360, background: '#fff', borderRadius: 16, boxShadow: '0 2px 16px rgba(96,8,18,0.07)', padding: '28px 24px 24px', border: '0.5px solid rgba(96,8,18,0.08)' }}>
+      <div style={{ width: '100%', maxWidth: 360, background: 'var(--lbf-card)', borderRadius: 16, boxShadow: '0 2px 16px rgba(96,8,18,0.07)', padding: '28px 24px 24px', border: '0.5px solid rgba(96,8,18,0.08)' }}>
 
         {/* Anmelden */}
         <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.14em', color: '#600812', marginBottom: 12 }}>Zugang</div>
@@ -130,7 +130,7 @@ export default function Index() {
               autoCorrect="off"
               autoFocus
               spellCheck={false}
-              style={{ width: '100%', padding: '13px 14px', borderRadius: 10, border: '1.5px solid rgba(96,8,18,0.15)', background: 'var(--warm-bg)', fontSize: 15, color: '#1a0e08', fontFamily: 'inherit', boxSizing: 'border-box' }}
+              style={{ width: '100%', padding: '13px 14px', borderRadius: 10, border: '1.5px solid rgba(96,8,18,0.15)', background: 'var(--warm-bg)', fontSize: 15, color: 'var(--lbf-text)', fontFamily: 'inherit', boxSizing: 'border-box' }}
             />
             {orgError && (
               <p style={{ margin: 0, fontSize: 13, fontStyle: 'italic', color: '#b91c1c', textAlign: 'center' }}>{orgError}</p>

@@ -137,8 +137,8 @@ export default function Login() {
           padding: 13px 14px;
           border-radius: 10px;
           border: 1.5px solid rgba(96,8,18,0.15);
-          background: #fff;
-          color: #1a0e08;
+          background: var(--lbf-card);
+          color: var(--lbf-text);
           font-size: 15px;
           font-family: inherit;
           box-sizing: border-box;
@@ -155,17 +155,17 @@ export default function Login() {
       {/* Logo */}
       <Link to="/" style={{ textDecoration: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, marginBottom: 36 }}>
         <img src="/logo.svg" alt="Responda" width="120" height="120" />
-        <span style={{ fontWeight: 700, fontSize: '1.4rem', letterSpacing: '-0.01em', color: '#1a0e08' }}>Responda</span>
+        <span style={{ fontWeight: 700, fontSize: '1.4rem', letterSpacing: '-0.01em', color: 'var(--lbf-text)' }}>Responda</span>
       </Link>
 
       {/* Card */}
-      <div style={{ width: '100%', maxWidth: 360, background: '#fff', borderRadius: 16, boxShadow: '0 2px 16px rgba(96,8,18,0.07)', padding: '28px 24px 24px', border: '0.5px solid rgba(96,8,18,0.08)' }}>
+      <div style={{ width: '100%', maxWidth: 360, background: 'var(--lbf-card)', borderRadius: 16, boxShadow: '0 2px 16px rgba(96,8,18,0.07)', padding: '28px 24px 24px', border: '0.5px solid rgba(96,8,18,0.08)' }}>
 
         {step === 'login' && (
           <>
             <div style={{ marginBottom: 24 }}>
               <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.14em', color: '#600812', marginBottom: 6 }}>Anmeldung</div>
-              <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 22, color: '#1a0e08', lineHeight: 1.2 }}>Willkommen zurück</div>
+              <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 22, color: 'var(--lbf-text)', lineHeight: 1.2 }}>Willkommen zurück</div>
               <div style={{ fontStyle: 'italic', fontSize: 13, color: 'var(--warm-gray)', marginTop: 4 }}>Melde dich an um fortzufahren</div>
             </div>
 
@@ -220,9 +220,9 @@ export default function Login() {
 
             <div style={{ marginBottom: 24 }}>
               <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.14em', color: '#600812', marginBottom: 6 }}>Sicherheit</div>
-              <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 22, color: '#1a0e08', lineHeight: 1.2 }}>Code eingeben</div>
+              <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 22, color: 'var(--lbf-text)', lineHeight: 1.2 }}>Code eingeben</div>
               <div style={{ fontStyle: 'italic', fontSize: 13, color: 'var(--warm-gray)', marginTop: 4 }}>
-                Wir haben einen Code an <span style={{ color: '#1a0e08', fontWeight: 700 }}>{email}</span> gesendet
+                Wir haben einen Code an <span style={{ color: 'var(--lbf-text)', fontWeight: 700 }}>{email}</span> gesendet
               </div>
             </div>
 
@@ -269,7 +269,7 @@ export default function Login() {
 
             <div style={{ marginBottom: 24 }}>
               <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.14em', color: '#600812', marginBottom: 6 }}>Passwort</div>
-              <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 22, color: '#1a0e08', lineHeight: 1.2 }}>Zurücksetzen</div>
+              <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 22, color: 'var(--lbf-text)', lineHeight: 1.2 }}>Zurücksetzen</div>
               <div style={{ fontStyle: 'italic', fontSize: 13, color: 'var(--warm-gray)', marginTop: 4 }}>Wir senden dir einen Reset-Link per E-Mail</div>
             </div>
 
