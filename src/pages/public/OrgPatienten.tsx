@@ -450,6 +450,7 @@ export default function OrgPatienten() {
                 if (refS2.current)  refS2.current.value  = times.status2
               }}
             />
+            {renderCustomFields('zeitstrahl')}
           </PubSection>
         </div>
 
@@ -624,6 +625,7 @@ export default function OrgPatienten() {
               </div>
             </div>
             <div style={field}><label style={lbl}>Verdachtsdiagnose / Erstdiagnose<input style={inp} name="erstdiagnose_text" type="text" /></label></div>
+            {renderCustomFields('naca')}
           </PubSection>
         </div>
 
@@ -644,6 +646,7 @@ export default function OrgPatienten() {
               </div>
             ))}
             <div style={{ background: 'rgba(96,8,18,0.04)', border: '0.5px solid rgba(96,8,18,0.12)', borderRadius: 8, padding: '8px 12px', fontWeight: 700, color: '#1a0e08' }}>GCS Summe: <span style={{ fontSize: '1.2rem' }}>{gcsSum || '—'}</span></div>
+            {renderCustomFields('gcs')}
           </PubSection>
         </div>
 
