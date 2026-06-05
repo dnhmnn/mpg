@@ -26,6 +26,7 @@ export interface FormConfig {
   hidden_fields: string[]
   required_fields: string[]
   custom_fields: CustomFieldDef[]
+  hidden_forms: string[]
 }
 
 export const DEFAULT_FORM_CONFIG: FormConfig = {
@@ -33,6 +34,27 @@ export const DEFAULT_FORM_CONFIG: FormConfig = {
   hidden_fields: [],
   required_fields: [],
   custom_fields: [],
+  hidden_forms: [],
+}
+
+export interface TemplateFieldDef {
+  id: string
+  label: string
+  fieldType: 'text' | 'number' | 'date' | 'time' | 'textarea' | 'select' | 'checkbox'
+  options?: string[]
+  required: boolean
+  hint?: string
+}
+
+export interface FormTemplate {
+  id: string
+  organization_id: string
+  title: string
+  description: string
+  schema: TemplateFieldDef[]
+  is_active: boolean
+  created: string
+  updated: string
 }
 
 // Maps sectionId → original step number (1-based)
