@@ -736,6 +736,7 @@ export default function OrgPatienten() {
               ))}
               <label style={{ ...lbl, marginLeft: '.5rem' }}>Flow (l/min)<input style={{ ...inp, width: 100 }} name="o2_flow" type="number" step="0.5" /></label>
             </div>
+            {renderCustomFields('messwerte')}
           </PubSection>
         </div>
 
@@ -778,6 +779,7 @@ export default function OrgPatienten() {
                 </div>
               ))}
             </div>
+            {renderCustomFields('neurologie')}
           </PubSection>
         </div>
 
@@ -793,6 +795,7 @@ export default function OrgPatienten() {
               <label style={lbl}>Standort<input style={inp} name="ekg_standort" type="text" /></label>
               <label style={lbl}>Pers-Nr.<input style={inp} name="ekg_persnr" type="text" /></label>
             </div>
+            {renderCustomFields('ekg')}
           </PubSection>
         </div>
 
@@ -811,6 +814,7 @@ export default function OrgPatienten() {
                 <label key={n} style={pill}><input type="checkbox" name={n} /> {l}</label>
               ))}
             </div>
+            {renderCustomFields('haut_psyche')}
           </PubSection>
         </div>
 
@@ -836,6 +840,7 @@ export default function OrgPatienten() {
                 </div>
               </div>
             ))}
+            {renderCustomFields('erstdiagnose')}
           </PubSection>
         </div>
 
@@ -950,6 +955,7 @@ export default function OrgPatienten() {
                 </div>
               )
             })()}
+            {renderCustomFields('verlauf')}
           </PubSection>
         </div>
 
@@ -979,6 +985,7 @@ export default function OrgPatienten() {
               <label style={lbl}>Sonstige Verletzungen<input style={inp} name="v_sonstige" type="text" /></label>
               <div style={{ marginTop: '.5rem' }}><label style={lbl}>Freitext Verletzungen<textarea style={ta} name="verletz_text" /></label></div>
             </div>
+            {renderCustomFields('verletzungen')}
           </PubSection>
         </div>
 
@@ -997,6 +1004,7 @@ export default function OrgPatienten() {
             <div style={{ display: 'flex', flexWrap: 'wrap' }}>
               {[['immo_hws','HWS-Orthese'],['immo_spineboard','Spineboard'],['immo_vakuum','Vakuummatratze']].map(([n,l]) => <label key={n} style={pill}><input type="checkbox" name={n} /> {l}</label>)}
             </div>
+            {renderCustomFields('atemwege')}
           </PubSection>
         </div>
 
@@ -1021,6 +1029,7 @@ export default function OrgPatienten() {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(140px,1fr))', gap: '.5rem' }}>
               {[['defi_zeitpunkt','Zeitpunkt 1. Defi'],['defi_rosc','ROSC'],['defi_anzahl','Anzahl'],['defi_energie','Energie (kJ)']].map(([n,l]) => <label key={n} style={lbl}>{l}<input style={inp} name={n} type="text" /></label>)}
             </div>
+            {renderCustomFields('beatmung')}
           </PubSection>
         </div>
 
@@ -1052,6 +1061,7 @@ export default function OrgPatienten() {
               </table>
             </div>
             <button type="button" onClick={() => setMeds(ms => [...ms, { name:'',dose:'',unit:'',route:'',time:'',note:'' }])} style={{ marginTop: '.5rem', border: '0.5px solid rgba(96,8,18,0.15)', background: 'rgba(96,8,18,0.04)', padding: '.45rem .75rem', borderRadius: 10, cursor: 'pointer', fontWeight: 600, color: '#600812', fontSize: '.9rem', fontFamily: 'inherit' }}>+ Zeile hinzufügen</button>
+            {renderCustomFields('zugang')}
           </PubSection>
         </div>
 
@@ -1068,6 +1078,7 @@ export default function OrgPatienten() {
               <label style={lbl}>Ende Reanimation<input style={inp} name="rean_ende" type="datetime-local" /></label>
               <label style={lbl}>Defibrillationen<input style={inp} name="rean_defib" type="number" min={0} /></label>
             </div>
+            {renderCustomFields('reanimation')}
           </PubSection>
         </div>
 
@@ -1082,6 +1093,7 @@ export default function OrgPatienten() {
               {[['ev_transportverweigerung','Transportverweigerung'],['ev_nur_untersuchung','Nur Untersuchung'],['ev_zwangseinweisung','Zwangseinweisung'],['ev_transport_sondersignal','Transport mit Sondersignal'],['ev_manv','MANV'],['ev_lna','LNA am Einsatz'],['ev_schwerlast','Schwerlasttransport']].map(([n,l]) => <label key={n} style={pill}><input type="checkbox" name={n} /> {l}</label>)}
             </div>
             <label style={lbl}>Bemerkungen<textarea style={ta} name="bemerkungen" /></label>
+            {renderCustomFields('uebergabe')}
           </PubSection>
         </div>
 
@@ -1097,6 +1109,7 @@ export default function OrgPatienten() {
               <canvas ref={canvasRef} width={800} height={200} style={{ width: '100%', height: 160, border: '0.5px solid rgba(96,8,18,0.12)', borderRadius: 10, touchAction: 'none', cursor: 'crosshair', background: '#fff' }} />
               <button type="button" onClick={clearSig} style={{ marginTop: 8, border: '0.5px solid rgba(96,8,18,0.15)', background: 'rgba(96,8,18,0.06)', padding: '.35rem .6rem', borderRadius: 8, cursor: 'pointer', fontSize: '.9rem', fontWeight: 600, color: '#1a0e08', fontFamily: 'inherit', display: 'inline-flex', alignItems: 'center', gap: 4 }}>{pik(<><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></>, 15)} Signatur löschen</button>
             </div>
+            {renderCustomFields('unterschrift')}
           </PubSection>
         </div>
 
