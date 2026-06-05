@@ -8,6 +8,7 @@ export interface Organization {
   org_name: string
   logo: string
   is_active: boolean
+  form_config?: Record<string, unknown>
 }
 
 interface OrgCtx { org: Organization; orgCode: string }

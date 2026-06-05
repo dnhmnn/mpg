@@ -17,6 +17,7 @@ import ProtokollBearbeiten from './pages/ProtokollBearbeiten'
 import Chat from './pages/Chat'
 import Supervisor from './pages/Supervisor'
 import Einsaetze from './pages/Einsaetze'
+import Vorgaenge from './pages/Vorgaenge'
 import AVV from './pages/AVV'
 import OrgPublicLayout from './pages/public/OrgPublicLayout'
 import OrgLanding from './pages/public/OrgLanding'
@@ -67,6 +68,7 @@ function App() {
         <Route path="/chat" element={<Chat />} />
         <Route path="/supervisor" element={<Supervisor />} />
         <Route path="/einsaetze" element={<Einsaetze />} />
+        <Route path="/vorgaenge" element={<Vorgaenge />} />
         <Route path="/avv" element={<AVV />} />
         <Route path="/:orgCode" element={<OrgPublicLayout />}>
           <Route index element={<OrgLanding />} />

@@ -5,7 +5,7 @@ import type { App } from '../types'
 const ALL_APPS: Record<string, App> = {
   einsaetze:    { id: 'einsaetze',    name: 'Einsätze',      icon: 'siren',      url: '/einsaetze',                permission: 'einsaetze',           color: '#600812', isInternal: true },
   patienten:    { id: 'patienten',    name: 'Patienten',     icon: 'clipboard',  url: '/patienten',                 permission: 'patienten',           color: '#600812', isInternal: true },
-  dokumente:    { id: 'dokumente',    name: 'Vorgänge',      icon: 'file',       url: '/dokumente-bearbeiten.html', permission: 'dokumente',           color: '#7a1020' },
+  dokumente:    { id: 'dokumente',    name: 'Vorgänge',      icon: 'file',       url: '/vorgaenge',                 permission: 'dokumente',           color: '#7a1020', isInternal: true },
   lager:        { id: 'lager',        name: 'Lager',         icon: 'package',    url: '/lager',                     permission: 'lager',               color: '#5c3800', isInternal: true },
   dateien:      { id: 'dateien',      name: 'Dateien',       icon: 'folder',     url: '/files',                     permission: 'dateien',             color: '#8a7a68', isInternal: true },
   qr:           { id: 'qr',           name: 'QR-Codes',      icon: 'qrcode',     url: '/qr-code-generator.html',    permission: 'qr',                  color: '#3d5c6e' },

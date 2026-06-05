@@ -1,8 +1,9 @@
-import { useRef, useState, useEffect } from 'react'
+import { useRef, useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { pb } from '../../lib/pocketbase'
 import { useOrg } from './OrgPublicLayout'
 import { PubHeader, PubWrap, PubSection, inp, sel, ta, field, lbl } from './pubStyles'
+import { DEFAULT_FORM_CONFIG, SECTION_STEP_MAP, type FormConfig, type CustomFieldDef } from './formSchema'
 import OrgPatientenMannschaft from './OrgPatientenMannschaft'
 import EinsatzTimeline from './EinsatzTimeline'
 import AnamneseAssistent from './AnamneseAssistent'
@@ -62,6 +63,26 @@ const STEPS = [
 export default function OrgPatienten() {
   const { org, orgCode } = useOrg()
   const navigate = useNavigate()
+
+  const cfg: FormConfig = useMemo(() => {
+    if ((org as any).form_config) {
+      try { return { ...DEFAULT_FORM_CONFIG, ...((org as any).form_config as FormConfig) } }
+      catch { return DEFAULT_FORM_CONFIG }
+    }
+    return DEFAULT_FORM_CONFIG
+  }, [org])
+
+  // Helper to hide fields/sections
+  const hide = (id: string) => cfg.hidden_fields.includes(id)
+  const req  = (id: string) => cfg.required_fields.includes(id)
+
+  // Compute visible sections based on form config
+  const visibleSectionIds = useMemo(() =>
+    Object.entries(SECTION_STEP_MAP)
+      .sort((a, b) => a[1] - b[1])
+      .filter(([id]) => !cfg.hidden_sections.includes(id))
+      .map(([id]) => id)
+  , [cfg])
   const formRef = useRef<HTMLFormElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [meds, setMeds] = useState<Med[]>([])
@@ -93,6 +114,10 @@ export default function OrgPatienten() {
   const [messwerte, setMesswerte] = useState<Record<string, string>>({})
   const [activeStep, setActiveStep] = useState(0)
   const [menuOpen, setMenuOpen] = useState(false)
+
+  const totalSteps = visibleSectionIds.length
+  const currentSectionId = visibleSectionIds[activeStep] ?? 'unterschrift'
+  const currentOrigStep  = SECTION_STEP_MAP[currentSectionId] ?? 1
 
   const MESS_FIELDS = ['rr_sys','rr_dia','hf','af','spo2','etco2','temp','bz_mg','schmerz']
   const openKlick = () => {
@@ -266,6 +291,32 @@ export default function OrgPatienten() {
     finally { setSending(false) }
   }
 
+  function renderCustomFields(sectionId: string) {
+    return cfg.custom_fields
+      .filter((f: CustomFieldDef) => f.sectionId === sectionId)
+      .map((f: CustomFieldDef) => {
+        if (f.fieldType === 'checkbox') return (
+          <label key={f.id} style={pill}><input type="checkbox" name={f.id} />{f.required ? ' * ' : ' '}{f.label}</label>
+        )
+        if (f.fieldType === 'textarea') return (
+          <div key={f.id} style={field}><label style={lbl}>{f.label}{f.required ? ' *' : ''}<textarea style={ta} name={f.id} required={f.required} /></label></div>
+        )
+        if (f.fieldType === 'select') return (
+          <label key={f.id} style={lbl}>{f.label}{f.required ? ' *' : ''}
+            <select style={sel} name={f.id} required={f.required}>
+              <option value="">—</option>
+              {f.options?.map((o: string) => <option key={o} value={o}>{o}</option>)}
+            </select>
+          </label>
+        )
+        return (
+          <label key={f.id} style={lbl}>{f.label}{f.required ? ' *' : ''}
+            <input style={inp} type={f.fieldType} name={f.id} required={f.required} />
+          </label>
+        )
+      })
+  }
+
   if (success) return (
     <div style={{ minHeight: '100dvh', background: 'var(--warm-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
       <div style={{ background: '#fff', borderLeft: `3px solid ${success === 'OFFLINE' ? '#d97706' : '#16a34a'}`, borderRadius: 12, padding: 32, textAlign: 'center', maxWidth: 400, width: '100%', boxShadow: '0 2px 16px rgba(0,0,0,0.07)' }}>
@@ -351,7 +402,7 @@ export default function OrgPatienten() {
 
     <PubWrap>
       {/* Step 0: Mannschaft */}
-      <div style={{ display: activeStep === 0 ? undefined : 'none' }}>
+      <div style={{ display: currentOrigStep === 1 ? undefined : 'none' }}>
         <OrgPatientenMannschaft
           orgId={org.id}
           orgCode={orgCode}
@@ -363,28 +414,29 @@ export default function OrgPatienten() {
       <form ref={formRef} onChange={() => scheduleAutoSave()}>
 
         {/* Step 1: Einsatzdaten */}
-        <div style={{ display: activeStep === 1 ? undefined : 'none' }}>
+        <div style={{ display: currentOrigStep === 2 ? undefined : 'none' }}>
           <PubSection title="Einsatzdaten" open icon={pik(<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>)}>
             <div style={grid}>
               <label style={lbl}>Einsatz-Nr.<input style={inp} name="einsatz_nr" type="text" /></label>
-              <label style={lbl}>Auftrags-Nr. (ILS)<input style={inp} name="auftrags_nr" type="text" /></label>
-              <label style={lbl}>Rufname<input style={inp} name="rufname" type="text" /></label>
-              <label style={lbl}>Fahrzeug / Einheit<input style={inp} name="fahrzeug" type="text" /></label>
-              <label style={lbl}>Einsatzart / Stichwort<input style={inp} name="einsatz_art" type="text" /></label>
+              {!hide('auftrags_nr') && <label style={lbl}>Auftrags-Nr. (ILS)<input style={inp} name="auftrags_nr" type="text" /></label>}
+              {!hide('rufname') && <label style={lbl}>Rufname<input style={inp} name="rufname" type="text" /></label>}
+              {!hide('fahrzeug') && <label style={lbl}>Fahrzeug / Einheit<input style={inp} name="fahrzeug" type="text" /></label>}
+              {!hide('einsatz_art') && <label style={lbl}>Einsatzart / Stichwort<input style={inp} name="einsatz_art" type="text" required={req('einsatz_art')} /></label>}
               <label style={lbl}>Alarmzeit<input style={inp} name="zeit_einsatz" type="datetime-local" defaultValue={now()} onChange={e => setAlarmzeit(e.target.value)} /></label>
               <input type="hidden" name="zeit_status3"    ref={refS3} />
               <input type="hidden" name="zeit_eintreffen" ref={refS4} />
               <input type="hidden" name="zeit_uebergabe"  ref={refUeg} />
               <input type="hidden" name="zeit_status1"    ref={refS1} />
               <input type="hidden" name="zeit_status2"    ref={refS2} />
-              <label style={lbl}>Einsatzort / Adresse<input style={inp} name="einsatz_adresse" type="text" onChange={e => setEinsatzAdresse(e.target.value)} /></label>
-              <label style={lbl}>Transportziel<input style={inp} name="transport_ziel" type="text" /></label>
+              {!hide('einsatz_adresse') && <label style={lbl}>Einsatzort / Adresse<input style={inp} name="einsatz_adresse" type="text" onChange={e => setEinsatzAdresse(e.target.value)} required={req('einsatz_adresse')} /></label>}
+              {!hide('transport_ziel') && <label style={lbl}>Transportziel<input style={inp} name="transport_ziel" type="text" /></label>}
+              {renderCustomFields('einsatzdaten')}
             </div>
           </PubSection>
         </div>
 
         {/* Step 2: Einsatz-Zeitstrahl */}
-        <div style={{ display: activeStep === 2 ? undefined : 'none' }}>
+        <div style={{ display: currentOrigStep === 3 ? undefined : 'none' }}>
           <PubSection title="Einsatz-Zeitstrahl" open icon={pik(<><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></>)}>
             <EinsatzTimeline
               alarmzeit={alarmzeit}
@@ -402,27 +454,28 @@ export default function OrgPatienten() {
         </div>
 
         {/* Step 3: Pat-Stammdaten */}
-        <div style={{ display: activeStep === 3 ? undefined : 'none' }}>
+        <div style={{ display: currentOrigStep === 4 ? undefined : 'none' }}>
           <PubSection title="Pat-Stammdaten" open icon={pik(<><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></>)}>
             <div style={grid}>
               <label style={lbl}>Name *<input style={inp} name="name" type="text" /></label>
               <label style={lbl}>Vorname *<input style={inp} name="vorname" type="text" /></label>
               <label style={lbl}>Geb.-Datum *<input style={inp} name="gebdatum" type="date" /></label>
-              <label style={lbl}>Alter<input style={inp} name="alter" type="number" min={0} /></label>
-              <label style={lbl}>Telefon<input style={inp} name="telefon" type="text" /></label>
-              <label style={lbl}>Mobil<input style={inp} name="mobil" type="text" /></label>
-              <label style={lbl}>Straße<input style={inp} name="strasse" type="text" /></label>
-              <label style={lbl}>PLZ, Ort<input style={inp} name="plz_ort" type="text" /></label>
-              <label style={lbl}>Kasse<input style={inp} name="kasse" type="text" /></label>
-              <label style={lbl}>Vers.-Nr.<input style={inp} name="versnr" type="text" /></label>
-              <label style={lbl}>Hausarzt<input style={inp} name="hausarzt" type="text" /></label>
-              <label style={lbl}>Angehöriger<input style={inp} name="angehoeriger" type="text" /></label>
+              {!hide('alter') && <label style={lbl}>Alter<input style={inp} name="alter" type="number" min={0} /></label>}
+              {!hide('telefon') && <label style={lbl}>Telefon<input style={inp} name="telefon" type="text" /></label>}
+              {!hide('mobil') && <label style={lbl}>Mobil<input style={inp} name="mobil" type="text" /></label>}
+              {!hide('strasse') && <label style={lbl}>Straße<input style={inp} name="strasse" type="text" /></label>}
+              {!hide('plz_ort') && <label style={lbl}>PLZ, Ort<input style={inp} name="plz_ort" type="text" /></label>}
+              {!hide('kasse') && <label style={lbl}>Kasse<input style={inp} name="kasse" type="text" /></label>}
+              {!hide('versnr') && <label style={lbl}>Vers.-Nr.<input style={inp} name="versnr" type="text" /></label>}
+              {!hide('hausarzt') && <label style={lbl}>Hausarzt<input style={inp} name="hausarzt" type="text" /></label>}
+              {!hide('angehoeriger') && <label style={lbl}>Angehöriger<input style={inp} name="angehoeriger" type="text" /></label>}
+              {renderCustomFields('stammdaten')}
             </div>
           </PubSection>
         </div>
 
         {/* Step 4: Notfallgeschehen / Anamnese */}
-        <div style={{ display: activeStep === 4 ? undefined : 'none' }}>
+        <div style={{ display: currentOrigStep === 5 ? undefined : 'none' }}>
           <PubSection title="Notfallgeschehen / Anamnese" open icon={pik(<><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></>)}>
             <div style={field}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
@@ -524,8 +577,8 @@ export default function OrgPatienten() {
               )}
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '.75rem' }}>
-              <div style={field}><label style={lbl}>Vorerkrankungen<textarea style={ta} name="vorerkrankungen" /></label></div>
-              <div style={field}><label style={lbl}>Dauermedikation Patient (Freitext)<textarea style={ta} name="vormedikation_patient" /></label></div>
+              {!hide('vorerkrankungen') && <div style={field}><label style={lbl}>Vorerkrankungen<textarea style={ta} name="vorerkrankungen" /></label></div>}
+              {!hide('vormedikation_patient') && <div style={field}><label style={lbl}>Dauermedikation Patient (Freitext)<textarea style={ta} name="vormedikation_patient" /></label></div>}
             </div>
             <div style={field}>
               <div style={{ fontWeight: 600, fontSize: 14, color: '#1a0e08', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -534,7 +587,8 @@ export default function OrgPatienten() {
               </div>
               <DauermedikationPicker value={dauerMeds} onChange={setDauerMeds} />
             </div>
-            <div style={field}><label style={lbl}>Allergien / Unverträglichkeiten<input style={inp} name="allergien" type="text" placeholder="Keine bekannt" /></label></div>
+            {!hide('allergien') && <div style={field}><label style={lbl}>Allergien / Unverträglichkeiten<input style={inp} name="allergien" type="text" placeholder="Keine bekannt" /></label></div>}
+            {renderCustomFields('anamnese')}
             <div style={{ marginTop: '.75rem' }}>
               <label style={{ ...lbl, marginBottom: 6 }}>Fotos</label>
               <input type="file" accept="image/*" capture="environment" multiple onChange={async e => {
@@ -555,7 +609,7 @@ export default function OrgPatienten() {
         </div>
 
         {/* Step 5: NACA / Bewusstsein */}
-        <div style={{ display: activeStep === 5 ? undefined : 'none' }}>
+        <div style={{ display: currentOrigStep === 6 ? undefined : 'none' }}>
           <PubSection title="NACA / Bewusstsein / Verdachtsdiagnose" open icon={pik(<><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></>)}>
             <div style={{ marginBottom: '.75rem' }}>
               <div style={{ fontWeight: 700, marginBottom: 4, color: '#1a0e08' }}>NACA-Score</div>
@@ -574,7 +628,7 @@ export default function OrgPatienten() {
         </div>
 
         {/* Step 6: Glasgow Coma Scale */}
-        <div style={{ display: activeStep === 6 ? undefined : 'none' }}>
+        <div style={{ display: currentOrigStep === 7 ? undefined : 'none' }}>
           <PubSection title="Glasgow Coma Scale" open icon={pik(<><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></>)}>
             {([['gcs_e', 'Augenöffnung (E)', [['4','spontan'],['3','auf Geräusch'],['2','auf Druck'],['1','keine']]], ['gcs_v', 'Verbale Antwort (V)', [['5','orientiert'],['4','verwirrt'],['3','Wörter'],['2','Laute'],['1','keine']]], ['gcs_m', 'Motorik (M)', [['6','folgt'],['5','lokalisiert'],['4','beugt norm.'],['3','beugt abnorm.'],['2','streckt'],['1','keine']]]] as [string, string, [string,string][]][]).map(([name, title, opts]) => (
               <div key={name} style={{ marginBottom: '.75rem' }}>
@@ -594,7 +648,7 @@ export default function OrgPatienten() {
         </div>
 
         {/* Step 7: Messwerte / Atmung */}
-        <div style={{ display: activeStep === 7 ? undefined : 'none' }}>
+        <div style={{ display: currentOrigStep === 8 ? undefined : 'none' }}>
           <PubSection title="Messwerte / Atmung" open icon={pik(<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>)}>
             <div style={grid}>
               {([['rr_sys','RR syst. (mmHg)'],['rr_dia','RR diast. (mmHg)'],['hf','HF (/min)'],['af','AF (/min)'],['spo2','SpO₂ (%)'],['etco2','etCO₂ (mmHg)'],['temp','Temp (°C)'],['bz_mg','BZ (mg/dl)'],['schmerz','Schmerz (0–10)']] as [string,string][]).map(([n,l]) => {
@@ -683,7 +737,7 @@ export default function OrgPatienten() {
         </div>
 
         {/* Step 8: Neurologie */}
-        <div style={{ display: activeStep === 8 ? undefined : 'none' }}>
+        <div style={{ display: currentOrigStep === 9 ? undefined : 'none' }}>
           <PubSection title="Neurologie" open icon={pik(<><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96-.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2z"/><path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96-.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 14.5 2z"/></>)}>
             <div style={{ display: 'flex', flexWrap: 'wrap', marginBottom: '.75rem' }}>
               {[['neu_unauff','Unauffällig'],['neu_sprachstoerung','Sprachstörung'],['neu_demenz','Demenz'],['neu_meningismus','Meningismus'],['neu_seitenzeichen','Seitenzeichen'],['neu_kein_laecheln','Kein Lächeln'],['neu_sehstoerung','Sehstörung'],['neu_querschnitt','Querschnitt'],['neu_babinski','Babinski'],['neu_vorbestehend','Vorbestehende Defizite']].map(([n,l]) => (
@@ -725,7 +779,7 @@ export default function OrgPatienten() {
         </div>
 
         {/* Step 9: Rhythmus / EKG */}
-        <div style={{ display: activeStep === 9 ? undefined : 'none' }}>
+        <div style={{ display: currentOrigStep === 10 ? undefined : 'none' }}>
           <PubSection title="Rhythmus / EKG" open icon={pik(<path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>)}>
             <div style={{ display: 'flex', flexWrap: 'wrap', marginBottom: '.5rem' }}>
               {[['sr','Sinusrhythmus'],['stemi','STEMI'],['vf','Kammerflimmern'],['asystole','Asystolie'],['arrh_abs','Abs. Arrhythmie']].map(([n,l]) => (
@@ -740,7 +794,7 @@ export default function OrgPatienten() {
         </div>
 
         {/* Step 10: Haut / Psyche */}
-        <div style={{ display: activeStep === 10 ? undefined : 'none' }}>
+        <div style={{ display: currentOrigStep === 11 ? undefined : 'none' }}>
           <PubSection title="Haut / Psyche" open icon={pik(<><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></>)}>
             <div style={{ fontWeight: 700, marginBottom: 4 }}>Haut</div>
             <div style={{ display: 'flex', flexWrap: 'wrap', marginBottom: '.75rem' }}>
@@ -758,7 +812,7 @@ export default function OrgPatienten() {
         </div>
 
         {/* Step 11: Erstdiagnose / Diagnose-Kategorien */}
-        <div style={{ display: activeStep === 11 ? undefined : 'none' }}>
+        <div style={{ display: currentOrigStep === 12 ? undefined : 'none' }}>
           <PubSection title="Erstdiagnose / Diagnose-Kategorien" open icon={pik(<><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></>)}>
             <div style={field}><label style={pill}><input type="checkbox" name="e_keine" /> Keine Erkrankung / Verletzung</label></div>
             {([
@@ -783,7 +837,7 @@ export default function OrgPatienten() {
         </div>
 
         {/* Step 12: Verlauf */}
-        <div style={{ display: activeStep === 12 ? undefined : 'none' }}>
+        <div style={{ display: currentOrigStep === 13 ? undefined : 'none' }}>
           <PubSection title="Verlauf" open icon={pik(<><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></>)}>
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '.85rem' }}>
@@ -897,7 +951,7 @@ export default function OrgPatienten() {
         </div>
 
         {/* Step 13: Verletzungen / Trauma */}
-        <div style={{ display: activeStep === 13 ? undefined : 'none' }}>
+        <div style={{ display: currentOrigStep === 14 ? undefined : 'none' }}>
           <PubSection title="Verletzungen / Trauma" open icon={pik(<><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></>)}>
             <div style={{ marginBottom: '.5rem' }}><label style={pill}><input type="checkbox" name="v_keine" /> Keine Verletzung</label></div>
             {([
@@ -926,7 +980,7 @@ export default function OrgPatienten() {
         </div>
 
         {/* Step 14: Atemwege / Lagerung / Immobilisation */}
-        <div style={{ display: activeStep === 14 ? undefined : 'none' }}>
+        <div style={{ display: currentOrigStep === 15 ? undefined : 'none' }}>
           <PubSection title="Atemwege / Lagerung / Immobilisation" open icon={pik(<><path d="M9.59 4.59A2 2 0 1 1 11 8H2m10.59 11.41A2 2 0 1 0 14 16H2m15.73-8.27A2.5 2.5 0 1 1 19.5 12H2"/></>)}>
             <div style={{ fontWeight: 700, marginBottom: 4, color: '#1a0e08' }}>Atemwegsmanagement</div>
             <div style={{ display: 'flex', flexWrap: 'wrap', marginBottom: '.75rem' }}>
@@ -944,7 +998,7 @@ export default function OrgPatienten() {
         </div>
 
         {/* Step 15: Beatmung / Defibrillation */}
-        <div style={{ display: activeStep === 15 ? undefined : 'none' }}>
+        <div style={{ display: currentOrigStep === 16 ? undefined : 'none' }}>
           <PubSection title="Beatmung / Defibrillation" open icon={pik(<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>)}>
             <div style={{ fontWeight: 700, marginBottom: 4, color: '#1a0e08' }}>Beatmung</div>
             <div style={{ display: 'flex', flexWrap: 'wrap', marginBottom: '.5rem' }}>
@@ -968,7 +1022,7 @@ export default function OrgPatienten() {
         </div>
 
         {/* Step 16: Zugang / Infusion / Medikamente */}
-        <div style={{ display: activeStep === 16 ? undefined : 'none' }}>
+        <div style={{ display: currentOrigStep === 17 ? undefined : 'none' }}>
           <PubSection title="Zugang / Infusion / Medikamente" open icon={pik(<path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/>)}>
             <div style={grid}>
               <label style={lbl}>Zugang Art<select style={sel} name="zugang_art"><option value="">—</option><option value="iv">i.v.</option><option value="io">i.o.</option></select></label>
@@ -999,7 +1053,7 @@ export default function OrgPatienten() {
         </div>
 
         {/* Step 17: Reanimation */}
-        <div style={{ display: activeStep === 17 ? undefined : 'none' }}>
+        <div style={{ display: currentOrigStep === 18 ? undefined : 'none' }}>
           <PubSection title="Reanimation" open icon={pik(<><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></>)}>
             <div style={{ display: 'flex', flexWrap: 'wrap', marginBottom: '.75rem' }}>
               <label style={pill}><input type="checkbox" name="rean" /> CPR durchgeführt</label>
@@ -1015,7 +1069,7 @@ export default function OrgPatienten() {
         </div>
 
         {/* Step 18: Übergabe / Besonderheiten */}
-        <div style={{ display: activeStep === 18 ? undefined : 'none' }}>
+        <div style={{ display: currentOrigStep === 19 ? undefined : 'none' }}>
           <PubSection title="Übergabe / Besonderheiten" open icon={pik(<><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></>)}>
             <div style={grid}>
               <label style={lbl}>Übergabe Ziel<input style={inp} name="uebergabe_ziel" type="text" /></label>
@@ -1029,7 +1083,7 @@ export default function OrgPatienten() {
         </div>
 
         {/* Step 19: Unterschrift */}
-        <div style={{ display: activeStep === 19 ? undefined : 'none' }}>
+        <div style={{ display: currentOrigStep === 20 ? undefined : 'none' }}>
           <PubSection title="Unterschrift" open icon={pik(<><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></>)}>
             <div style={grid}>
               <label style={lbl}>Name Ausfüller<input style={inp} name="ausfueller_name" type="text" /></label>
@@ -1059,16 +1113,16 @@ export default function OrgPatienten() {
 
         <div style={{ flex: 1, textAlign: 'center' }}>
           <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
-            {activeStep + 1} / {STEPS.length}
+            {activeStep + 1} / {totalSteps}
           </div>
           <div style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--warm-gray)', marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {STEPS[activeStep]}
+            {STEPS[currentOrigStep - 1]}
           </div>
         </div>
 
-        {activeStep < STEPS.length - 1 ? (
+        {activeStep < totalSteps - 1 ? (
           <button
-            onClick={() => setActiveStep(s => Math.min(STEPS.length - 1, s + 1))}
+            onClick={() => setActiveStep(s => Math.min(totalSteps - 1, s + 1))}
             style={{ ...btnNav, background: '#600812', color: '#fff', cursor: 'pointer', border: 'none' }}
           >
             Weiter {pik(<polyline points="9 18 15 12 9 6"/>, 16)}
