@@ -1,9 +1,7 @@
 import React, { useState, useEffect } from 'react'
-import PocketBase from 'pocketbase'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
-
-const pb = new PocketBase('https://api.responda.systems')
+import { pb } from '../lib/pocketbase'
 
 function parseDate(str: string | null | undefined): Date {
   if (!str) return new Date(NaN)
@@ -97,7 +95,7 @@ const statusConfig: Record<string, { label: string; bg: string; color: string }>
 export default function Lernbar() {
   const { user, loading: authLoading } = useAuth()
   const navigate = useNavigate()
-  const [tab, setTab] = useState<'feed' | 'termine' | 'module'>('feed')
+  const [tab, setTab] = useState<'bibliothek' | 'termine' | 'module'>('bibliothek')
 
   const [termine, setTermine] = useState<Termin[]>([])
   const [terminUser, setTerminUser] = useState<TerminUser[]>([])
@@ -108,6 +106,8 @@ export default function Lernbar() {
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null)
   const [feedQuizState, setFeedQuizState] = useState<Record<string, { selected: number | null; submitted: boolean }>>({})
   const [detailTermin, setDetailTermin] = useState<Termin | null>(null)
+  const [bibSearch, setBibSearch] = useState('')
+  const [bibActiveTag, setBibActiveTag] = useState<string | null>(null)
 
   // Module player
   const [playerProgress, setPlayerProgress] = useState<ModulProgress | null>(null)
@@ -396,13 +396,24 @@ export default function Lernbar() {
     try { const p = JSON.parse(raw); return p?.frage ? p : null } catch { return null }
   }
 
-  const lernbarBadge = upcomingTermine.length + (progress.length - doneMods) + beitraege.length
+  const lernbarBadge = upcomingTermine.length + (progress.length - doneMods)
+
+  const allBibTags = [...new Set(beitraege.flatMap(b => parseTags(b.tags)))]
+  const filteredBeitraege = beitraege.filter(b => {
+    const tags = parseTags(b.tags)
+    if (bibActiveTag && !tags.includes(bibActiveTag)) return false
+    if (bibSearch.trim()) {
+      const q = bibSearch.toLowerCase()
+      return b.titel.toLowerCase().includes(q) || (b.inhalt || '').toLowerCase().includes(q) || tags.some(t => t.toLowerCase().includes(q))
+    }
+    return true
+  })
 
   const BOTTOM_TABS = [
     {
-      id: 'feed' as const, label: 'Feed',
-      badge: beitraege.length,
-      icon: <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13.5 19.79 19.79 0 0 1 1.61 4.87 2 2 0 0 1 3.6 2.69h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 10.06a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+      id: 'bibliothek' as const, label: 'Bibliothek',
+      badge: 0,
+      icon: <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
     },
     {
       id: 'termine' as const, label: 'Termine',
@@ -435,123 +446,159 @@ export default function Lernbar() {
       </div>
 
       {/* Content */}
-      <div style={{ maxWidth: 600, margin: '0 auto', padding: tab === 'feed' ? '14px 14px calc(84px + env(safe-area-inset-bottom))' : '20px 16px calc(84px + env(safe-area-inset-bottom))' }}>
+      <div style={{ maxWidth: 600, margin: '0 auto', padding: tab === 'bibliothek' ? '14px 14px calc(84px + env(safe-area-inset-bottom))' : '20px 16px calc(84px + env(safe-area-inset-bottom))' }}>
 
-        {/* ── FEED ── */}
-        {tab === 'feed' && (
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
-            {beitraege.length === 0 && (
-              <div style={{ textAlign: 'center', color: 'var(--warm-gray)', padding: '64px 16px 24px', fontSize: 15, fontStyle: 'italic' }}>
-                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="rgba(96,8,18,0.2)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: 12, display: 'block', margin: '0 auto 12px' }}><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
-                Noch keine Lernbeiträge
-              </div>
-            )}
-            {beitraege.map((b) => {
-              const tags = parseTags(b.tags)
-              const bildUrl = b.bild ? `https://api.responda.systems/api/files/${b.collectionId}/${b.id}/${b.bild}` : null
-              const qs = feedQuizState[b.id] || { selected: null, submitted: false }
-              const quiz = parseQuiz(b.quiz_daten)
-              const initials = (b.erstellt_von_name || 'R').split(' ').map((w: string) => w[0]).slice(0, 2).join('').toUpperCase()
+        {/* ── BIBLIOTHEK ── */}
+        {tab === 'bibliothek' && (() => {
+          const TYPE_CFG: Record<string, { label: string; bg: string; color: string }> = {
+            bild:  { label: 'Bild',  bg: 'rgba(96,8,18,0.08)',  color: '#600812' },
+            text:  { label: 'Text',  bg: 'rgba(96,8,18,0.08)',  color: '#600812' },
+            video: { label: 'Video', bg: '#dcfce7', color: '#065f46' },
+            quiz:  { label: 'Quiz',  bg: '#dbeafe', color: '#1e40af' },
+          }
 
-              return (
-                <div key={b.id} style={{ background: 'var(--lbf-card)', borderRadius: 12, boxShadow: 'var(--lbf-shadow)', overflow: 'hidden', marginBottom: 14, borderLeft: '3px solid #600812' }}>
+          const renderCard = (b: Lernbeitrag) => {
+            const tags = parseTags(b.tags)
+            const bildUrl = b.bild ? `https://api.responda.systems/api/files/${b.collectionId}/${b.id}/${b.bild}` : null
+            const qs = feedQuizState[b.id] || { selected: null, submitted: false }
+            const quiz = parseQuiz(b.quiz_daten)
+            const initials = (b.erstellt_von_name || 'R').split(' ').map((w: string) => w[0]).slice(0, 2).join('').toUpperCase()
+            const typeCfg = TYPE_CFG[b.typ] || TYPE_CFG.text
 
-                  {/* Pinned banner */}
-                  {b.gepinnt && (
-                    <div style={{ background: '#600812', padding: '5px 16px', display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <svg width="10" height="10" viewBox="0 0 24 24" fill="white"><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5v6h2v-6h5v-2l-2-2z"/></svg>
-                      <span style={{ fontSize: 9, fontWeight: 700, color: '#fff', textTransform: 'uppercase', letterSpacing: '0.14em' }}>Angepinnt</span>
-                    </div>
-                  )}
+            return (
+              <div key={b.id} style={{ background: 'var(--lbf-card)', borderRadius: 12, boxShadow: 'var(--lbf-shadow)', overflow: 'hidden', marginBottom: 12, borderLeft: '3px solid #600812' }}>
 
-                  {/* Author row */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px 10px' }}>
-                    <div style={{ width: 34, height: 34, borderRadius: '50%', background: '#600812', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, flexShrink: 0 }}>
-                      {initials}
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--lbf-text)', lineHeight: 1.2 }}>{b.erstellt_von_name || 'Responda'}</div>
-                      <div style={{ fontSize: 12, color: 'var(--warm-gray)', marginTop: 1, fontStyle: 'italic' }}>
-                        {new Date(b.created).toLocaleDateString('de-DE', { day: '2-digit', month: 'long', year: 'numeric' })}
-                      </div>
-                    </div>
+                {/* Media */}
+                {b.typ === 'video' && b.video_url ? (
+                  <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0, background: '#000' }}>
+                    <iframe src={getVideoEmbed(b.video_url)} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }} allowFullScreen allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" />
+                  </div>
+                ) : bildUrl ? (
+                  <img src={bildUrl} alt={b.titel} style={{ width: '100%', display: 'block', maxHeight: 360, objectFit: 'cover' }} />
+                ) : null}
+
+                {/* Body */}
+                <div style={{ padding: '12px 14px 14px' }}>
+                  {/* Title + type badge row */}
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 6 }}>
+                    <div style={{ flex: 1, fontWeight: 700, fontSize: 16, color: 'var(--lbf-text)', lineHeight: 1.35 }}>{b.titel}</div>
+                    <span style={{ flexShrink: 0, fontSize: 9, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.1em', color: typeCfg.color, background: typeCfg.bg, padding: '3px 7px', borderRadius: 6 }}>
+                      {typeCfg.label}
+                    </span>
                   </div>
 
-                  {/* Media */}
-                  {b.typ === 'video' && b.video_url ? (
-                    <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0, background: '#000' }}>
-                      <iframe src={getVideoEmbed(b.video_url)} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }} allowFullScreen allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" />
-                    </div>
-                  ) : bildUrl ? (
-                    <img src={bildUrl} alt={b.titel} style={{ width: '100%', display: 'block', maxHeight: 420, objectFit: 'cover' }} />
-                  ) : (
-                    <div style={{ height: 160, background: b.typ === 'quiz' ? 'linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%)' : 'linear-gradient(135deg, #600812 0%, #9b1a2a 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      {b.typ === 'quiz' ? (
-                        <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.65)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                  {b.inhalt && b.typ !== 'quiz' && (
+                    <div style={{ fontSize: 14, color: 'var(--lbf-text)', lineHeight: 1.65, whiteSpace: 'pre-wrap', marginBottom: tags.length > 0 ? 10 : 8 }}>{b.inhalt}</div>
+                  )}
+
+                  {b.typ === 'quiz' && quiz && (
+                    <div style={{ marginTop: 4 }}>
+                      <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--lbf-text)', lineHeight: 1.5, marginBottom: 12 }}>{quiz.frage}</div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        {quiz.antworten.map((a: string, idx2: number) => {
+                          let bg = 'var(--warm-bg)', border = '1.5px solid rgba(96,8,18,0.12)', color = 'var(--lbf-text)'
+                          if (qs.submitted) {
+                            if (idx2 === quiz.richtige) { bg = '#f0fdf4'; border = '2px solid #16a34a'; color = '#166534' }
+                            else if (idx2 === qs.selected) { bg = '#fef2f2'; border = '2px solid #600812'; color = '#600812' }
+                          } else if (idx2 === qs.selected) { bg = 'rgba(107,15,26,0.06)'; border = '2px solid #600812'; color = '#600812' }
+                          return (
+                            <button key={idx2} disabled={qs.submitted}
+                              onClick={() => setFeedQuizState(prev => ({ ...prev, [b.id]: { selected: idx2, submitted: false } }))}
+                              style={{ padding: '12px 14px', borderRadius: 12, border, background: bg, color, fontWeight: idx2 === qs.selected || (qs.submitted && idx2 === quiz.richtige) ? 700 : 400, fontSize: 14, cursor: qs.submitted ? 'default' : 'pointer', textAlign: 'left', fontFamily: 'inherit' }}>
+                              {a}
+                            </button>
+                          )
+                        })}
+                      </div>
+                      {!qs.submitted ? (
+                        <button disabled={qs.selected === null}
+                          onClick={() => setFeedQuizState(prev => ({ ...prev, [b.id]: { ...prev[b.id], submitted: true } }))}
+                          style={{ marginTop: 10, width: '100%', padding: '13px', borderRadius: 12, border: 'none', background: qs.selected === null ? 'var(--warm-bg)' : '#600812', color: qs.selected === null ? 'var(--warm-gray)' : '#fff', fontWeight: 700, fontSize: 15, cursor: qs.selected === null ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
+                          Antworten
+                        </button>
                       ) : (
-                        <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.65)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+                        <div style={{ marginTop: 10, padding: '12px 16px', borderRadius: 12, textAlign: 'center', fontWeight: 700, background: qs.selected === quiz.richtige ? '#f0fdf4' : '#fef2f2', border: qs.selected === quiz.richtige ? '1px solid #bbf7d0' : '1px solid #fecaca', color: qs.selected === quiz.richtige ? '#166534' : '#600812' }}>
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                            {qs.selected === quiz.richtige
+                              ? <><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Richtig!</>
+                              : <><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Falsch — die richtige Antwort ist markiert</>}
+                          </span>
+                        </div>
                       )}
                     </div>
                   )}
 
-                  {/* Content */}
-                  <div style={{ padding: '12px 14px 14px' }}>
-                    <div style={{ fontWeight: 700, fontSize: 16, color: 'var(--lbf-text)', marginBottom: b.inhalt || quiz ? 6 : 0, lineHeight: 1.35 }}>{b.titel}</div>
+                  {/* Tags (clickable to filter) */}
+                  {tags.length > 0 && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 10 }}>
+                      {tags.map(t => (
+                        <button key={t} onClick={() => setBibActiveTag(bibActiveTag === t ? null : t)}
+                          style={{ fontSize: 12, fontWeight: 700, fontStyle: 'italic', color: bibActiveTag === t ? '#fff' : '#600812', background: bibActiveTag === t ? '#600812' : 'transparent', border: 'none', padding: '0 2px', cursor: 'pointer', fontFamily: 'inherit' }}>
+                          #{t}
+                        </button>
+                      ))}
+                    </div>
+                  )}
 
-                    {b.inhalt && b.typ !== 'quiz' && (
-                      <div style={{ fontSize: 14, color: 'var(--lbf-text)', lineHeight: 1.6, whiteSpace: 'pre-wrap', marginBottom: tags.length > 0 ? 10 : 0 }}>{b.inhalt}</div>
-                    )}
-
-                    {b.typ === 'quiz' && quiz && (
-                      <div style={{ marginTop: 4 }}>
-                        <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--lbf-text)', lineHeight: 1.5, marginBottom: 12 }}>{quiz.frage}</div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                          {quiz.antworten.map((a: string, idx2: number) => {
-                            let bg = 'var(--warm-bg)', border = '1.5px solid rgba(96,8,18,0.12)', color = 'var(--lbf-text)'
-                            if (qs.submitted) {
-                              if (idx2 === quiz.richtige) { bg = '#f0fdf4'; border = '2px solid #16a34a'; color = '#166534' }
-                              else if (idx2 === qs.selected) { bg = '#fef2f2'; border = '2px solid #600812'; color = '#600812' }
-                            } else if (idx2 === qs.selected) { bg = 'rgba(107,15,26,0.06)'; border = '2px solid #600812'; color = '#600812' }
-                            return (
-                              <button key={idx2} disabled={qs.submitted}
-                                onClick={() => setFeedQuizState(prev => ({ ...prev, [b.id]: { selected: idx2, submitted: false } }))}
-                                style={{ padding: '12px 14px', borderRadius: 12, border, background: bg, color, fontWeight: idx2 === qs.selected || (qs.submitted && idx2 === quiz.richtige) ? 700 : 400, fontSize: 14, cursor: qs.submitted ? 'default' : 'pointer', textAlign: 'left', fontFamily: 'inherit' }}>
-                                {a}
-                              </button>
-                            )
-                          })}
-                        </div>
-                        {!qs.submitted ? (
-                          <button disabled={qs.selected === null}
-                            onClick={() => setFeedQuizState(prev => ({ ...prev, [b.id]: { ...prev[b.id], submitted: true } }))}
-                            style={{ marginTop: 10, width: '100%', padding: '13px', borderRadius: 12, border: 'none', background: qs.selected === null ? 'var(--warm-bg)' : '#600812', color: qs.selected === null ? 'var(--warm-gray)' : '#fff', fontWeight: 700, fontSize: 15, cursor: qs.selected === null ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
-                            Antworten
-                          </button>
-                        ) : (
-                          <div style={{ marginTop: 10, padding: '12px 16px', borderRadius: 12, textAlign: 'center', fontWeight: 700, background: qs.selected === quiz.richtige ? '#f0fdf4' : '#fef2f2', border: qs.selected === quiz.richtige ? '1px solid #bbf7d0' : '1px solid #fecaca', color: qs.selected === quiz.richtige ? '#166534' : '#600812' }}>
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                              {qs.selected === quiz.richtige
-                                ? <><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Richtig!</>
-                                : <><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Falsch — die richtige Antwort ist markiert</>}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {tags.length > 0 && (
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 10 }}>
-                        {tags.map(t => (
-                          <span key={t} style={{ fontSize: 12, fontWeight: 700, color: '#600812', fontStyle: 'italic' }}>#{t}</span>
-                        ))}
-                      </div>
+                  {/* Author + date footer */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10, paddingTop: 8, borderTop: '0.5px solid rgba(96,8,18,0.08)' }}>
+                    <div style={{ width: 22, height: 22, borderRadius: '50%', background: '#600812', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 8, fontWeight: 700, flexShrink: 0 }}>
+                      {initials}
+                    </div>
+                    <div style={{ flex: 1, fontSize: 11, color: 'var(--warm-gray)', fontStyle: 'italic' }}>
+                      {b.erstellt_von_name || 'Responda'} · {new Date(b.created).toLocaleDateString('de-DE', { day: '2-digit', month: 'long', year: 'numeric' })}
+                    </div>
+                    {b.gepinnt && (
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="#600812"><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5v6h2v-6h5v-2l-2-2z"/></svg>
                     )}
                   </div>
                 </div>
-              )
-            })}
-          </div>
-        )}
+              </div>
+            )
+          }
+
+          const pinned = filteredBeitraege.filter(b => b.gepinnt)
+          const regular = filteredBeitraege.filter(b => !b.gepinnt)
+
+          return (
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              {/* Search bar */}
+              <div style={{ position: 'relative', marginBottom: 12 }}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--warm-gray)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <input type="search" placeholder="Titel, Inhalt oder Tag suchen…" value={bibSearch} onChange={e => setBibSearch(e.target.value)}
+                  style={{ width: '100%', padding: '10px 14px 10px 36px', border: '1.5px solid rgba(96,8,18,0.15)', borderRadius: 10, background: '#fff', fontSize: 14, fontFamily: 'inherit', color: '#1a0e08', boxSizing: 'border-box', WebkitAppearance: 'none' }} />
+              </div>
+
+              {/* Tag filter chips */}
+              {allBibTags.length > 0 && (
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 14 }}>
+                  {allBibTags.map(tag => (
+                    <button key={tag} onClick={() => setBibActiveTag(bibActiveTag === tag ? null : tag)}
+                      style={{ fontSize: 11, fontWeight: 700, fontStyle: 'italic', color: bibActiveTag === tag ? '#fff' : '#600812', background: bibActiveTag === tag ? '#600812' : 'rgba(96,8,18,0.07)', border: 'none', borderRadius: 99, padding: '4px 10px', cursor: 'pointer', fontFamily: 'inherit' }}>
+                      #{tag}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {filteredBeitraege.length === 0 && (
+                <div style={{ textAlign: 'center', color: 'var(--warm-gray)', padding: '64px 16px 24px', fontSize: 15, fontStyle: 'italic' }}>
+                  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="rgba(96,8,18,0.2)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block', margin: '0 auto 12px' }}><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+                  {bibSearch || bibActiveTag ? 'Keine Treffer' : 'Noch keine Beiträge'}
+                </div>
+              )}
+
+              {pinned.length > 0 && (
+                <>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 8 }}>Angepinnt</div>
+                  {pinned.map(renderCard)}
+                  {regular.length > 0 && <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 8, marginTop: 16 }}>Alle Beiträge</div>}
+                </>
+              )}
+              {regular.map(renderCard)}
+            </div>
+          )
+        })()}
 
         {/* ── TERMINE (Timeline) ── */}
         {tab === 'termine' && (
