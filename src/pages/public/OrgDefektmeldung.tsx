@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { pb } from '../../lib/pocketbase'
 import { useOrg } from './OrgPublicLayout'
@@ -7,6 +7,7 @@ import { PubWrap, PubSendBar, inp, lbl, field, ta } from './pubStyles'
 type Severity = 'low' | 'medium' | 'high' | 'critical'
 
 interface DeviceSummary { id: string; name: string; type: string; location: string }
+interface UserHit { id: string; name: string; email: string }
 
 const SEVERITY_CFG: Record<Severity, { label: string; desc: string; color: string; bg: string }> = {
   low:      { label: 'Gering',   desc: 'Gerät noch nutzbar',          color: '#d97706', bg: 'rgba(217,119,6,0.08)'  },
@@ -26,6 +27,84 @@ function Card({ title, children }: { title: string; children: React.ReactNode })
   )
 }
 
+function UserSearch({ orgId, value, onChange }: {
+  orgId: string; value: UserHit | null; onChange: (u: UserHit | null) => void
+}) {
+  const [query, setQuery] = useState('')
+  const [results, setResults] = useState<UserHit[]>([])
+  const [open, setOpen] = useState(false)
+  const timer = useRef<ReturnType<typeof setTimeout>>()
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function onClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', onClick)
+    return () => document.removeEventListener('mousedown', onClick)
+  }, [])
+
+  function onInput(q: string) {
+    setQuery(q)
+    clearTimeout(timer.current)
+    if (!q.trim()) { setResults([]); setOpen(false); return }
+    timer.current = setTimeout(async () => {
+      try {
+        const res = await pb.collection('users').getList(1, 8, {
+          filter: `organization_id = "${orgId}" && name ~ "${q.trim()}"`,
+          sort: 'name',
+        })
+        setResults(res.items.map(u => ({ id: u.id, name: u.name, email: u.email })))
+        setOpen(true)
+      } catch {
+        setResults([])
+        setOpen(true)
+      }
+    }, 350)
+  }
+
+  function select(u: UserHit) {
+    onChange(u); setQuery(''); setResults([]); setOpen(false)
+  }
+
+  return (
+    <div ref={ref} style={{ position: 'relative', marginTop: 8 }}>
+      {value ? (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(96,8,18,0.04)', border: '1.5px solid rgba(96,8,18,0.15)', borderRadius: 10, padding: '8px 12px' }}>
+          <div style={{ width: 28, height: 28, borderRadius: '50%', background: '#600812', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontStyle: 'italic', fontSize: 13, flexShrink: 0 }}>
+            {value.name.charAt(0).toUpperCase()}
+          </div>
+          <span style={{ flex: 1, fontWeight: 700, fontStyle: 'italic', color: '#1a0e08', fontSize: 14 }}>{value.name}</span>
+          <button type="button" onClick={() => onChange(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--warm-gray)', fontSize: 18, lineHeight: 1, padding: '0 2px' }}>×</button>
+        </div>
+      ) : (
+        <input style={inp} type="text" value={query} onChange={e => onInput(e.target.value)} placeholder="Name suchen…" />
+      )}
+      {open && results.length > 0 && (
+        <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: '#fff', border: '1px solid rgba(96,8,18,0.15)', borderRadius: 10, boxShadow: '0 4px 16px rgba(0,0,0,0.1)', zIndex: 50, overflow: 'hidden', marginTop: 2 }}>
+          {results.map(u => (
+            <button key={u.id} type="button" onMouseDown={() => select(u)}
+              style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', background: 'none', border: 'none', padding: '10px 12px', cursor: 'pointer', textAlign: 'left', borderBottom: '0.5px solid rgba(96,8,18,0.08)', fontFamily: 'inherit' }}>
+              <div style={{ width: 28, height: 28, borderRadius: '50%', background: '#600812', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontStyle: 'italic', fontSize: 13, flexShrink: 0 }}>
+                {u.name.charAt(0).toUpperCase()}
+              </div>
+              <div>
+                <div style={{ fontWeight: 700, fontStyle: 'italic', fontSize: 14, color: '#1a0e08' }}>{u.name}</div>
+                <div style={{ fontSize: 12, color: 'var(--warm-gray)' }}>{u.email}</div>
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
+      {open && results.length === 0 && query.trim() && (
+        <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: '#fff', border: '1px solid rgba(96,8,18,0.15)', borderRadius: 10, padding: '10px 12px', fontSize: 13, fontStyle: 'italic', color: 'var(--warm-gray)', zIndex: 50, marginTop: 2 }}>
+          Kein Benutzer gefunden
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function OrgDefektmeldung() {
   const { org, orgCode } = useOrg()
   const navigate = useNavigate()
@@ -34,9 +113,9 @@ export default function OrgDefektmeldung() {
 
   const [devices, setDevices] = useState<DeviceSummary[]>([])
   const [selectedId, setSelectedId] = useState(preselectedId)
-  const [reporterName, setReporterName] = useState('')
   const [description, setDescription] = useState('')
   const [severity, setSeverity] = useState<Severity>('medium')
+  const [selectedUser, setSelectedUser] = useState<UserHit | null>(null)
   const [sending, setSending] = useState(false)
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState('')
@@ -54,6 +133,7 @@ export default function OrgDefektmeldung() {
   async function submit() {
     if (!selectedId) { setError('Bitte ein Gerät auswählen.'); return }
     if (!description.trim()) { setError('Bitte eine Beschreibung eingeben.'); return }
+    if (!selectedUser) { setError('Bitte einen Benutzer auswählen.'); return }
     setError('')
     setSending(true)
     try {
@@ -61,7 +141,8 @@ export default function OrgDefektmeldung() {
         device_id: selectedId,
         device_name: selectedDevice?.name || '',
         organization_id: org.id,
-        reporter_name: reporterName.trim() || 'Anonym',
+        reporter_name: selectedUser.name,
+        reporter_user_id: selectedUser.id,
         description: description.trim(),
         severity,
         status: 'pending',
@@ -77,8 +158,8 @@ export default function OrgDefektmeldung() {
   function reset() {
     setSuccess(false)
     setDescription('')
-    setReporterName('')
     setSeverity('medium')
+    setSelectedUser(null)
     setError('')
     if (!preselectedId) setSelectedId('')
   }
@@ -142,30 +223,16 @@ export default function OrgDefektmeldung() {
 
         {/* Beschreibung */}
         <Card title="Beschreibung">
-          <div style={field}>
-            <label style={lbl}>
-              Was ist defekt? *
-              <textarea
-                value={description}
-                onChange={e => setDescription(e.target.value)}
-                placeholder="Was genau ist defekt? Wie macht sich das Problem bemerkbar?"
-                rows={4}
-                style={ta}
-              />
-            </label>
-          </div>
-          <div style={field}>
-            <label style={lbl}>
-              Dein Name (optional)
-              <input
-                type="text"
-                value={reporterName}
-                onChange={e => setReporterName(e.target.value)}
-                placeholder="Anonym"
-                style={inp}
-              />
-            </label>
-          </div>
+          <label style={lbl}>
+            Was ist defekt? *
+            <textarea
+              value={description}
+              onChange={e => setDescription(e.target.value)}
+              placeholder="Was genau ist defekt? Wie macht sich das Problem bemerkbar?"
+              rows={4}
+              style={ta}
+            />
+          </label>
         </Card>
 
         {/* Schweregrad */}
@@ -191,6 +258,12 @@ export default function OrgDefektmeldung() {
               </button>
             ))}
           </div>
+        </Card>
+
+        {/* Gemeldet von — last */}
+        <Card title="Gemeldet von">
+          <label style={lbl}>Benutzer *</label>
+          <UserSearch orgId={org.id} value={selectedUser} onChange={setSelectedUser} />
         </Card>
 
         {error && (
