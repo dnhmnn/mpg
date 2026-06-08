@@ -337,6 +337,7 @@ export default function Ausbildungen() {
     bild_file: File | null
   }>({ typ: 'text', titel: '', inhalt: '', video_url: '', tags: '', gepinnt: false, quiz_frage: '', quiz_antworten: ['', '', '', ''], quiz_richtige: 0, bild_file: null })
   const [savingBeitrag, setSavingBeitrag] = useState(false)
+  const [editingBeitragId, setEditingBeitragId] = useState<string | null>(null)
   const [generatingAIImage, setGeneratingAIImage] = useState(false)
   const [aiImagePreview, setAiImagePreview] = useState<string | null>(null)
   
@@ -528,6 +529,13 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
     finally { setBeitraegeLoading(false) }
   }
 
+  function resetBeitragForm() {
+    setEditingBeitragId(null)
+    setShowBeitragModal(false)
+    setBeitragForm({ typ: 'text', titel: '', inhalt: '', video_url: '', tags: '', gepinnt: false, quiz_frage: '', quiz_antworten: ['', '', '', ''], quiz_richtige: 0, bild_file: null })
+    setAiImagePreview(null)
+  }
+
   async function saveBeitrag() {
     if (!beitragForm.titel.trim()) return
     setSavingBeitrag(true)
@@ -537,11 +545,13 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
         typ: beitragForm.typ,
         titel: beitragForm.titel.trim(),
         inhalt: beitragForm.inhalt.trim(),
-        tags: tags,
+        tags,
         gepinnt: beitragForm.gepinnt,
-        organisation_id: user?.organization_id,
-        erstellt_von_id: user?.id,
-        erstellt_von_name: user?.name,
+      }
+      if (!editingBeitragId) {
+        data.organisation_id = user?.organization_id
+        data.erstellt_von_id = user?.id
+        data.erstellt_von_name = user?.name
       }
       if (beitragForm.typ === 'video') data.video_url = beitragForm.video_url.trim()
       if (beitragForm.typ === 'quiz') {
@@ -551,22 +561,54 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
           richtige: beitragForm.quiz_richtige
         }
       }
-      if (beitragForm.typ === 'bild' && beitragForm.bild_file) {
-        const fd = new FormData()
-        Object.entries(data).forEach(([k, v]) => fd.append(k, typeof v === 'object' ? JSON.stringify(v) : String(v)))
-        fd.append('bild', beitragForm.bild_file)
-        await pb.collection('lernbar_beitraege').create(fd)
+
+      if (editingBeitragId) {
+        if (beitragForm.typ === 'bild' && beitragForm.bild_file) {
+          const fd = new FormData()
+          Object.entries(data).forEach(([k, v]) => fd.append(k, typeof v === 'object' ? JSON.stringify(v) : String(v)))
+          fd.append('bild', beitragForm.bild_file)
+          await pb.collection('lernbar_beitraege').update(editingBeitragId, fd)
+        } else {
+          await pb.collection('lernbar_beitraege').update(editingBeitragId, data)
+        }
+        showMessage('Beitrag aktualisiert', 'success')
       } else {
-        await pb.collection('lernbar_beitraege').create(data)
+        if (beitragForm.typ === 'bild' && beitragForm.bild_file) {
+          const fd = new FormData()
+          Object.entries(data).forEach(([k, v]) => fd.append(k, typeof v === 'object' ? JSON.stringify(v) : String(v)))
+          fd.append('bild', beitragForm.bild_file)
+          await pb.collection('lernbar_beitraege').create(fd)
+        } else {
+          await pb.collection('lernbar_beitraege').create(data)
+        }
+        showMessage('Beitrag erstellt', 'success')
       }
-      setShowBeitragModal(false)
-      setBeitragForm({ typ: 'text', titel: '', inhalt: '', video_url: '', tags: '', gepinnt: false, quiz_frage: '', quiz_antworten: ['', '', '', ''], quiz_richtige: 0, bild_file: null })
-      setAiImagePreview(null)
+      resetBeitragForm()
       await loadBeitraege()
-      showMessage('Beitrag erstellt', 'success')
     } catch(e: any) {
       showMessage('Fehler: ' + e.message, 'error')
     } finally { setSavingBeitrag(false) }
+  }
+
+  function openEditBeitrag(b: Lernbeitrag) {
+    const tags = Array.isArray(b.tags) ? b.tags.join(', ') : ''
+    const qd = b.quiz_daten
+    setBeitragForm({
+      typ: b.typ,
+      titel: b.titel,
+      inhalt: b.inhalt || '',
+      video_url: b.video_url || '',
+      tags,
+      gepinnt: b.gepinnt,
+      quiz_frage: qd?.frage || '',
+      quiz_antworten: [...(qd?.antworten || []), '', '', '', ''].slice(0, 4),
+      quiz_richtige: qd?.richtige ?? 0,
+      bild_file: null,
+    })
+    if (b.bild) setAiImagePreview(`https://api.responda.systems/api/files/${b.collectionId}/${b.id}/${b.bild}`)
+    else setAiImagePreview(null)
+    setEditingBeitragId(b.id)
+    setShowBeitragModal(true)
   }
 
   async function deleteBeitrag(id: string) {
@@ -2104,9 +2146,14 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                         {(() => { try { const tags = JSON.parse(b.tags as any); return tags.length > 0 ? ` · ${tags.join(', ')}` : '' } catch { return '' } })()}
                       </div>
                     </div>
-                    <button onClick={() => deleteBeitrag(b.id)} style={{ background: 'none', border: '1px solid rgba(96,8,18,0.15)', borderRadius: 8, padding: '6px 10px', cursor: 'pointer', color: '#600812', fontWeight: 600, fontSize: 12, fontFamily: 'inherit', flexShrink: 0 }}>
-                      Löschen
-                    </button>
+                    <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                      <button onClick={() => openEditBeitrag(b)} style={{ background: 'rgba(96,8,18,0.06)', border: '1px solid rgba(96,8,18,0.15)', borderRadius: 8, padding: '6px 10px', cursor: 'pointer', color: '#600812', fontWeight: 600, fontSize: 12, fontFamily: 'inherit' }}>
+                        Bearbeiten
+                      </button>
+                      <button onClick={() => deleteBeitrag(b.id)} style={{ background: 'none', border: '1px solid rgba(96,8,18,0.15)', borderRadius: 8, padding: '6px 10px', cursor: 'pointer', color: '#600812', fontWeight: 600, fontSize: 12, fontFamily: 'inherit' }}>
+                        Löschen
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -2117,9 +2164,9 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
 
       {/* BEITRAG ERSTELLEN MODAL */}
       {showBeitragModal && (
-        <div className="modal show" onClick={() => setShowBeitragModal(false)}>
+        <div className="modal show" onClick={resetBeitragForm}>
           <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: 520 }}>
-            <h3>Neuer Lernbeitrag</h3>
+            <h3>{editingBeitragId ? 'Beitrag bearbeiten' : 'Neuer Lernbeitrag'}</h3>
 
             {/* Typ-Auswahl */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginBottom: 20 }}>
@@ -2208,9 +2255,9 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
             </div>
 
             <div style={{ display: 'flex', gap: 8 }}>
-              <button className="btn" onClick={() => { setShowBeitragModal(false); setAiImagePreview(null) }} style={{ flex: 1 }}>Abbrechen</button>
+              <button className="btn" onClick={resetBeitragForm} style={{ flex: 1 }}>Abbrechen</button>
               <button className="btn primary" onClick={saveBeitrag} disabled={savingBeitrag || !beitragForm.titel.trim()} style={{ flex: 1 }}>
-                {savingBeitrag ? 'Wird gespeichert…' : 'Erstellen'}
+                {savingBeitrag ? 'Wird gespeichert…' : editingBeitragId ? 'Speichern' : 'Erstellen'}
               </button>
             </div>
           </div>
