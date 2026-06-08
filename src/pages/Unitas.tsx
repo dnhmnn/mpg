@@ -6,31 +6,9 @@ import { getTheme, setTheme, type ThemeMode } from '../lib/theme'
 
 const pb = new PocketBase('https://api.responda.systems')
 
-function parseDate(str: string | null | undefined): Date {
-  if (!str) return new Date(NaN)
-  let s = str.trim().replace(' ', 'T')
-  if (!s.endsWith('Z') && !s.includes('+') && !/ [+-]\d{2}:\d{2}$/.test(s)) s += 'Z'
-  return new Date(s)
-}
-function fmtDate(str: string | null | undefined): string {
-  const d = parseDate(str)
-  if (isNaN(d.getTime())) return '–'
-  return d.toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' })
-}
-function fmtTime(str: string | null | undefined): string {
-  const d = parseDate(str)
-  if (isNaN(d.getTime())) return ''
-  return d.toLocaleString('de-DE', { hour: '2-digit', minute: '2-digit' })
-}
-
 interface Termin {
   id: string
-  name: string
-  description: string
   start_datetime: string
-  end_datetime: string
-  location: string
-  dozent: string
   status: string
 }
 
@@ -43,11 +21,6 @@ interface TerminUser {
 
 interface Modul {
   id: string
-  name: string
-  beschreibung: string
-  inhalte: { typ: string; titel: string; inhalt: string; reihenfolge: number }[]
-  dauer_minuten: number
-  min_pass_percent?: number
 }
 
 interface ModulProgress {
@@ -79,6 +52,17 @@ interface ProductOutput {
   }
 }
 
+interface DefectReport {
+  id: string
+  device_name: string
+  description: string
+  severity: string
+  status: 'pending' | 'confirmed' | 'rejected' | string
+  reporter_user_id: string
+  rejected_reason?: string
+  created: string
+}
+
 interface Neuigkeit {
   id: string
   titel: string
@@ -91,60 +75,12 @@ interface Neuigkeit {
   collectionId: string
 }
 
-function toICSDate(str: string): string {
-  const d = parseDate(str)
-  if (isNaN(d.getTime())) return ''
-  return d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z'
-}
-
-function CalendarButtons({ termin }: { termin: Termin }) {
-  const start = toICSDate(termin.start_datetime)
-  const end = termin.end_datetime ? toICSDate(termin.end_datetime) : start
-
-  const googleUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE` +
-    `&text=${encodeURIComponent(termin.name)}` +
-    `&dates=${start}/${end}` +
-    `&details=${encodeURIComponent(termin.description || '')}` +
-    `&location=${encodeURIComponent(termin.location || '')}`
-
-  function downloadICS() {
-    const ics = [
-      'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Responda//Lernbar//DE',
-      'BEGIN:VEVENT',
-      `DTSTART:${start}`, `DTEND:${end}`,
-      `SUMMARY:${termin.name}`,
-      `DESCRIPTION:${(termin.description || '').replace(/\n/g, '\\n')}`,
-      `LOCATION:${termin.location || ''}`,
-      'END:VEVENT', 'END:VCALENDAR'
-    ].join('\r\n')
-    const blob = new Blob([ics], { type: 'text/calendar' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `${termin.name.replace(/\s+/g, '_')}.ics`
-    a.click()
-    URL.revokeObjectURL(url)
-  }
-
-  return (
-    <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
-      <a href={googleUrl} target="_blank" rel="noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '7px 12px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg-card)', color: 'var(--text)', fontWeight: 600, fontSize: '12px', textDecoration: 'none', fontFamily: 'inherit' }}>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
-        Google
-      </a>
-      <button onClick={downloadICS} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '7px 12px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg-card)', color: 'var(--text)', fontWeight: 600, fontSize: '12px', cursor: 'pointer', fontFamily: 'inherit' }}>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-        Apple / iCal
-      </button>
-    </div>
-  )
-}
 
 export default function Unitas() {
   const { user, loading: authLoading, logout } = useAuth()
-  const [tab, setTab] = useState<'uebersicht' | 'protokolle' | 'lernbar' | 'vorgaenge' | 'konto'>('uebersicht')
+  const [tab, setTab] = useState<'uebersicht' | 'protokolle' | 'vorgaenge' | 'konto'>('uebersicht')
   const [myOutputs, setMyOutputs] = useState<ProductOutput[]>([])
-  const [lernbarTab, setLernbarTab] = useState<'termine' | 'lernmodule'>('termine')
+  const [myReports, setMyReports] = useState<DefectReport[]>([])
 
   const [termine, setTermine] = useState<Termin[]>([])
   const [terminUser, setTerminUser] = useState<TerminUser[]>([])
@@ -161,19 +97,37 @@ export default function Unitas() {
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null)
   const [themeMode, setThemeMode] = useState<ThemeMode>(getTheme())
 
+  const [greetingPhase, setGreetingPhase] = useState<'loading' | 'servus' | 'name' | 'exit' | 'done'>('loading')
+
+  useEffect(() => {
+    // Only start text animation once data has loaded
+    if (authLoading || loading) return
+    if (greetingPhase === 'loading') { setGreetingPhase('servus'); return }
+    if (greetingPhase === 'done') return
+    if (greetingPhase === 'servus') {
+      const t = setTimeout(() => setGreetingPhase('name'), 800)
+      return () => clearTimeout(t)
+    }
+    if (greetingPhase === 'name') {
+      const t = setTimeout(() => setGreetingPhase('exit'), 900)
+      return () => clearTimeout(t)
+    }
+    if (greetingPhase === 'exit') {
+      const t = setTimeout(() => setGreetingPhase('done'), 350)
+      return () => clearTimeout(t)
+    }
+  }, [greetingPhase, authLoading, loading])
+
+  const initials = (name?: string) => {
+    if (!name) return '?'
+    const parts = name.trim().split(/\s+/)
+    return parts.length === 1 ? parts[0][0].toUpperCase() : (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+  }
+
   // Stellungnahme-Modal
   const [snModal, setSnModal] = useState<PatientRecord | null>(null)
   const [snAntworten, setSnAntworten] = useState<Record<string, string>>({})
   const [snSending, setSnSending] = useState<Record<string, boolean>>({})
-
-  // Modul-Player
-  const [playerProgress, setPlayerProgress] = useState<ModulProgress | null>(null)
-  const [playerStep, setPlayerStep] = useState<'intro' | number>('intro')
-  const [quizSelected, setQuizSelected] = useState<number | null>(null)
-  const [quizSubmitted, setQuizSubmitted] = useState(false)
-  const [modulFailed, setModulFailed] = useState(false)
-  const [quizFrageIdx, setQuizFrageIdx] = useState(0)
-  const [quizResults, setQuizResults] = useState({ correct: 0, total: 0 })
 
   // Konto-Form
   const [kontaktEmail, setKontaktEmail] = useState('')
@@ -308,33 +262,22 @@ export default function Unitas() {
           setMyOutputs((outputs as any[]).filter(o => o.payload?.user_id === user!.id))
         }
       } catch { /* ignore */ }
+
+      // Defektmeldungen des Benutzers
+      try {
+        if (user?.organization_id) {
+          const reports = await pb.collection('mpg_defect_reports').getFullList({
+            filter: `organization_id = "${user.organization_id}"`,
+            sort: '-created',
+            requestKey: `unitas-reports-${Date.now()}`,
+          })
+          setMyReports((reports as any[]).filter(r => r.reporter_user_id === user!.id))
+        }
+      } catch { /* ignore */ }
     } catch (e: any) {
       console.error(e)
     } finally {
       setLoading(false)
-    }
-  }
-
-  async function updateTerminStatus(terminUserId: string, status: 'zugesagt' | 'abgesagt') {
-    try {
-      await pb.collection('ausbildungen_termine_user').update(terminUserId, { status }, { requestKey: `tu-update-${Date.now()}` })
-      setTerminUser(prev => prev.map(t => t.id === terminUserId ? { ...t, status } : t))
-      showMsg(status === 'zugesagt' ? 'Zugesagt!' : 'Abgesagt', 'success')
-    } catch (e: any) {
-      showMsg('Fehler: ' + e.message, 'error')
-    }
-  }
-
-  async function markModulDone(progressId: string) {
-    try {
-      await pb.collection('ausbildungen_module_progress').update(progressId, {
-        abgeschlossen_am: new Date().toISOString(),
-        fortschritt_prozent: 100
-      }, { requestKey: `mod-done-${Date.now()}` })
-      setProgress(prev => prev.map(p => p.id === progressId ? { ...p, abgeschlossen_am: new Date().toISOString(), fortschritt_prozent: 100 } : p))
-      showMsg('Modul als abgeschlossen markiert!', 'success')
-    } catch (e: any) {
-      showMsg('Fehler: ' + e.message, 'error')
     }
   }
 
@@ -365,800 +308,436 @@ export default function Unitas() {
     }
   }
 
-  if (authLoading || loading) {
-    return (
-      <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ color: 'var(--text-secondary)' }}>Lade...</div>
-      </div>
-    )
-  }
-
-  const statusConfig: Record<string, { label: string; bg: string; color: string }> = {
-    zugesagt:   { label: 'Zugesagt',   bg: '#dcfce7', color: '#166534' },
-    abgesagt:   { label: 'Abgesagt',   bg: '#fee2e2', color: '#991b1b' },
-    eingeladen: { label: 'Eingeladen', bg: 'var(--bg-subtle)', color: 'var(--text-secondary)' },
-    da:         { label: 'Anwesend',   bg: '#dbeafe', color: '#1e40af' },
-    fehlend:    { label: 'Gefehlt',    bg: '#fef3c7', color: '#92400e' },
-  }
 
   const upcomingTermine = termine.filter(t => t.status !== 'abgeschlossen' && t.status !== 'abgesagt')
-  const pastTermine = termine.filter(t => t.status === 'abgeschlossen')
   const doneMods = progress.filter(p => p.abgeschlossen_am).length
 
-  const tabStyle = (active: boolean): React.CSSProperties => ({
-    padding: '12px 20px', border: 'none', background: 'none', cursor: 'pointer',
-    fontSize: '14px', fontWeight: 600, fontFamily: 'inherit',
-    color: active ? 'var(--text)' : 'var(--text-secondary)',
-    borderBottom: active ? '2px solid var(--btn-dark)' : '2px solid transparent',
-    marginBottom: '-1px', whiteSpace: 'nowrap'
-  })
+  const hasLernbar = user?.supervisor || user?.permissions?.['lernbar'] || (user as any)?.lernbar_access
+  const hasMPG = user?.supervisor || user?.permissions?.['dashboard']
+  const openOutputs = myOutputs.filter(o => o.status === 'offen').length
+  const pendingReportsCount = myReports.filter(r => r.status === 'pending').length
+  const lernbarBadge = upcomingTermine.length + (progress.length - doneMods)
+  const protokolleBadge = myPatients.length + myArchivedPatients.length
+
+  const firstName = user?.name?.split(' ')[0] || ''
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
-      {/* Header */}
-      <div style={{ background: 'var(--bg-card)', borderBottom: '1px solid var(--bg-subtle)', padding: '0 20px' }}>
-        <div style={{ maxWidth: '640px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '56px' }}>
-          <svg width="120" height="28" viewBox="0 0 140 32" fill="none">
-            <rect width="32" height="32" rx="8" fill="#0f172a"/>
-            <path d="M8 10h10a6 6 0 0 1 0 12H8V10z" fill="none" stroke="white" strokeWidth="2"/>
-            <circle cx="18" cy="16" r="3" fill="white"/>
-            <text x="40" y="22" fontFamily="system-ui,-apple-system,sans-serif" fontWeight="700" fontSize="18" fill="#0f172a" letterSpacing="-0.5">responda</text>
-          </svg>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <span style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>{user?.name}</span>
-            <button onClick={logout} style={{ background: 'none', border: '1px solid var(--border)', borderRadius: '8px', padding: '6px 12px', fontSize: '13px', cursor: 'pointer', color: 'var(--text)', fontFamily: 'inherit' }}>Abmelden</button>
-          </div>
-        </div>
+    <div style={{ minHeight: '100dvh', background: 'var(--warm-bg)', fontFamily: "'Atkinson Hyperlegible', -apple-system, sans-serif" }}>
 
-        {/* Tabs */}
-        <div style={{ maxWidth: '640px', margin: '0 auto', display: 'flex', borderBottom: '1px solid var(--bg-subtle)' }}>
-          <button style={tabStyle(tab === 'uebersicht')} onClick={() => setTab('uebersicht')}>Übersicht</button>
-          <button style={tabStyle(tab === 'protokolle')} onClick={() => setTab('protokolle')}>
-            Protokolle{myPatients.length + myFreigegebenPatients.length + myArchivedPatients.length > 0 ? ` (${myPatients.length + myFreigegebenPatients.length + myArchivedPatients.length})` : ''}
-          </button>
-          {(user?.supervisor || user?.permissions?.['lernbar'] || (user as any)?.lernbar_access) && (
-            <button style={tabStyle(tab === 'lernbar')} onClick={() => setTab('lernbar')}>
-              Lernbar
-              {(upcomingTermine.length > 0 || progress.length > 0) && (
-                <span style={{ marginLeft: '4px', background: 'var(--btn-dark)', color: 'var(--btn-dark-text)', borderRadius: '10px', padding: '1px 6px', fontSize: '11px' }}>
-                  {upcomingTermine.length + (progress.length - doneMods)}
-                </span>
-              )}
-            </button>
+      {/* ── Greeting overlay — dark red curtain ── */}
+      {greetingPhase !== 'done' && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 9999,
+          background: '#3d0408',
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6,
+          animation: greetingPhase === 'exit' ? 'greetOverlayOut 0.4s ease-in forwards' : 'none',
+          userSelect: 'none',
+        }}>
+          {greetingPhase === 'loading' ? (
+            <div style={{ width: 1, height: 36, background: 'rgba(253,232,216,0.25)', borderRadius: 1 }} />
+          ) : greetingPhase === 'servus' ? (
+            <div key="servus" style={{
+              fontSize: 15, fontStyle: 'italic', color: 'rgba(253,232,216,0.5)',
+              fontFamily: "'Atkinson Hyperlegible', -apple-system, sans-serif",
+              letterSpacing: '0.04em',
+              animation: 'greetNameIn 0.4s ease-out both',
+            }}>Servus,</div>
+          ) : (
+            <>
+              <div style={{ fontSize: 15, fontStyle: 'italic', color: 'rgba(253,232,216,0.5)', letterSpacing: '0.04em' }}>Servus,</div>
+              <div key="name" style={{
+                fontSize: 'clamp(48px, 13vw, 80px)', fontWeight: 700, fontStyle: 'italic', color: '#fde8d8',
+                letterSpacing: '-0.025em', lineHeight: 1, whiteSpace: 'nowrap',
+                fontFamily: "'Atkinson Hyperlegible', -apple-system, sans-serif",
+                animation: 'greetNameIn 0.45s ease-out both',
+              }}>{firstName}</div>
+            </>
           )}
-          <button style={tabStyle(tab === 'vorgaenge')} onClick={() => setTab('vorgaenge')}>
-            Vorgänge
-            {myOutputs.filter(o => o.status === 'offen').length > 0 && (
-              <span style={{ marginLeft: '4px', background: '#f59e0b', color: '#fff', borderRadius: '10px', padding: '1px 6px', fontSize: '11px' }}>
-                {myOutputs.filter(o => o.status === 'offen').length}
-              </span>
-            )}
-          </button>
-          <button style={tabStyle(tab === 'konto')} onClick={() => setTab('konto')}>Mein Konto</button>
+        </div>
+      )}
+
+      {/* ── Header — masthead ── */}
+      <div style={{
+        background: 'var(--lbf-card)',
+        borderBottom: '0.5px solid rgba(96,8,18,0.15)',
+        position: 'sticky', top: 0, zIndex: 100,
+        padding: '0 20px',
+      }}>
+        <div style={{ maxWidth: 640, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 60 }}>
+          {/* Left: Responda logo circle */}
+          <div style={{ width: 34, height: 34, borderRadius: '50%', background: '#600812', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <img src="/logo.svg" alt="" width={18} height={18} style={{ filter: 'brightness(0) invert(1)', display: 'block' }} />
+          </div>
+          {/* Center: org + date */}
+          <div style={{ flex: 1, textAlign: 'center', padding: '0 12px' }}>
+            <div style={{ fontWeight: 700, fontSize: 15, letterSpacing: '-0.01em', color: 'var(--text)', lineHeight: 1.2 }}>
+              {(user as any)?.organization_name || 'Responda'}
+            </div>
+            <div style={{ fontStyle: 'italic', fontSize: 11, color: 'var(--warm-gray)', marginTop: 1 }}>
+              {new Date().toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' })}
+            </div>
+          </div>
+          {/* Right: avatar */}
+          <button onClick={() => setTab('konto')} title={user?.name || ''} style={{
+            width: 34, height: 34, borderRadius: '50%', border: '1.5px solid #600812', cursor: 'pointer',
+            background: 'var(--lbf-card)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontFamily: "'Atkinson Hyperlegible', -apple-system, sans-serif",
+            fontWeight: 700, fontSize: 12, color: '#600812', letterSpacing: '0.03em', flexShrink: 0,
+          }}>{initials(user?.name)}</button>
         </div>
       </div>
 
-      <div style={{ maxWidth: '640px', margin: '0 auto', padding: '24px 20px' }}>
+      <div style={{ maxWidth: '640px', margin: '0 auto', padding: '20px 16px calc(88px + env(safe-area-inset-bottom))' }}>
 
         {/* ÜBERSICHT */}
         {tab === 'uebersicht' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            <div>
-              <div style={{ fontSize: '22px', fontWeight: 700, color: 'var(--text)' }}>
-                Servus, {user?.name?.split(' ')[0]}!
-              </div>
-              <div style={{ fontSize: '14px', color: 'var(--text-secondary)', marginTop: '4px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
+
+            {/* Editorial greeting */}
+            <div style={{ paddingTop: 4 }}>
+              <div style={{ fontStyle: 'italic', color: 'var(--warm-gray)', fontSize: 12, marginBottom: 5, letterSpacing: '0.01em' }}>
                 {new Date().toLocaleDateString('de-DE', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}
               </div>
+              <div style={{ fontSize: 26, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.02em', lineHeight: 1.1 }}>
+                Servus, <span style={{ color: '#600812', fontStyle: 'italic' }}>{firstName}</span>
+              </div>
             </div>
-            {neuigkeiten.length === 0 ? (
-              <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '32px 0', fontSize: '15px' }}>Keine Neuigkeiten</div>
-            ) : (
-              neuigkeiten.map(n => {
-                const anhangUrl = n.anhang ? `https://api.responda.systems/api/files/${n.collectionId}/${n.id}/${n.anhang}` : null
-                return (
-                  <div key={n.id} style={{ background: 'var(--bg-card)', borderRadius: '14px', border: `1px solid ${n.gepinnt ? 'var(--accent)' : 'var(--border)'}`, overflow: 'hidden' }}>
-                    {n.gepinnt && (
-                      <div style={{ background: 'var(--accent)', padding: '6px 16px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <svg width="11" height="11" viewBox="0 0 24 24" fill="white"><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5v6h2v-6h5v-2l-2-2z"/></svg>
-                        <span style={{ fontSize: '11px', fontWeight: 700, color: '#fff', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Angepinnt</span>
-                      </div>
-                    )}
-                    <div style={{ padding: '16px 20px' }}>
-                      <div style={{ fontWeight: 700, fontSize: '16px', color: 'var(--text)', marginBottom: '8px' }}>{n.titel}</div>
-                      {n.inhalt && <div style={{ fontSize: '14px', color: 'var(--text)', lineHeight: 1.65, whiteSpace: 'pre-wrap', marginBottom: anhangUrl ? '12px' : '0' }}>{n.inhalt}</div>}
-                      {anhangUrl && (
-                        <a href={anhangUrl} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 14px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontWeight: 600, fontSize: '13px', textDecoration: 'none', marginTop: '4px' }}>
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                          Anhang herunterladen
-                        </a>
-                      )}
-                      <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '12px' }}>
-                        {new Date(n.created).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}
-                        {n.erstellt_von && ` · ${n.erstellt_von}`}
-                      </div>
+
+            {/* Stat cards — editorial big numbers */}
+            {(myPatients.length + myFreigegebenPatients.length + openOutputs > 0) && (
+              <div style={{ display: 'grid', gridTemplateColumns: openOutputs > 0 && (myPatients.length + myFreigegebenPatients.length) > 0 ? '1fr 1fr' : '1fr', gap: 12 }}>
+                {(myPatients.length + myFreigegebenPatients.length) > 0 && (
+                  <button onClick={() => setTab('protokolle')} style={{
+                    background: 'var(--lbf-card)', borderRadius: 12, padding: '18px 20px',
+                    border: 'none', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit',
+                    boxShadow: 'var(--lbf-shadow)',
+                  }}>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 8 }}>Protokolle</div>
+                    <div style={{ fontSize: 48, fontWeight: 800, color: '#600812', lineHeight: 1 }}>
+                      {myPatients.length + myFreigegebenPatients.length}
                     </div>
-                  </div>
-                )
-              })
+                    <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginTop: 6 }}>
+                      {myFreigegebenPatients.length > 0 ? `${myFreigegebenPatients.length} freigegeben` : 'in Bearbeitung'}
+                    </div>
+                  </button>
+                )}
+                {openOutputs > 0 && (
+                  <button onClick={() => setTab('vorgaenge')} style={{
+                    background: 'var(--lbf-card)', borderRadius: 12, padding: '18px 20px',
+                    border: 'none', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit',
+                    boxShadow: 'var(--lbf-shadow)',
+                  }}>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 8 }}>Vorgänge</div>
+                    <div style={{ fontSize: 48, fontWeight: 800, color: '#600812', lineHeight: 1 }}>
+                      {openOutputs}
+                    </div>
+                    <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginTop: 6 }}>offen</div>
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Neuigkeiten */}
+            {neuigkeiten.length === 0 ? (
+              <div style={{ textAlign: 'center', color: 'var(--warm-gray)', padding: '40px 0', fontSize: 14, fontStyle: 'italic' }}>
+                Keine Neuigkeiten vorhanden
+              </div>
+            ) : (
+              <>
+                <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', paddingLeft: 2 }}>Neuigkeiten</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: -12 }}>
+                  {neuigkeiten.map(n => {
+                    const anhangUrl = n.anhang ? `https://api.responda.systems/api/files/${n.collectionId}/${n.id}/${n.anhang}` : null
+                    return (
+                      <div key={n.id} style={{ background: 'var(--lbf-card)', borderRadius: 10, overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', borderLeft: '3px solid #600812' }}>
+                        {n.gepinnt && (
+                          <div style={{ background: '#600812', padding: '4px 14px', display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <svg width="9" height="9" viewBox="0 0 24 24" fill="white"><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5v6h2v-6h5v-2l-2-2z"/></svg>
+                            <span style={{ fontSize: 10, fontWeight: 700, color: '#fff', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Angepinnt</span>
+                          </div>
+                        )}
+                        <div style={{ padding: '14px 16px' }}>
+                          <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--text)', marginBottom: 6, lineHeight: 1.3 }}>{n.titel}</div>
+                          {n.inhalt && <div style={{ fontSize: 14, color: 'var(--text)', lineHeight: 1.65, whiteSpace: 'pre-wrap', marginBottom: anhangUrl ? 10 : 0 }}>{n.inhalt}</div>}
+                          {anhangUrl && (
+                            <a href={anhangUrl} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 6, border: '0.5px solid rgba(0,0,0,0.1)', background: 'var(--warm-bg)', color: 'var(--text)', fontWeight: 600, fontSize: 13, textDecoration: 'none', marginTop: 4 }}>
+                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                              Anhang
+                            </a>
+                          )}
+                          <div style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--warm-gray)', marginTop: 8 }}>
+                            {new Date(n.created).toLocaleDateString('de-DE', { day: '2-digit', month: 'long', year: 'numeric' })}
+                            {n.erstellt_von && ` · ${n.erstellt_von}`}
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </>
             )}
           </div>
         )}
 
         {/* PROTOKOLLE */}
         {tab === 'protokolle' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <div style={{ fontSize: '17px', fontWeight: 700, color: 'var(--text)' }}>Meine Protokolle</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
 
             {myPatients.length === 0 && myFreigegebenPatients.length === 0 && myArchivedPatients.length === 0 && (
-              <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '48px 0', fontSize: '15px' }}>Keine Protokolle vorhanden</div>
+              <div style={{ textAlign: 'center', color: 'var(--warm-gray)', padding: '60px 0', fontSize: 15, fontStyle: 'italic' }}>Keine Protokolle vorhanden</div>
             )}
 
-            {/* Offen — TF can edit+release within 24h */}
+            {/* In Bearbeitung */}
             {myPatients.length > 0 && (
               <>
-                <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '.5px' }}>In Bearbeitung</div>
-                {[...myPatients].sort((a, b) => new Date(b.created).getTime() - new Date(a.created).getTime()).map(p => {
-                  const m = p.payload?.mannschaft || {}
-                  const crew = ['tf','m1','m2','m3'].map((k: string) => m[k]?.name).filter(Boolean).join(', ')
-                  const patName = [p.payload?.vorname, p.payload?.name].filter(Boolean).join(' ')
-                  const age = Date.now() - new Date(p.created).getTime()
-                  const hoursLeft = Math.max(0, Math.ceil(24 - age / 3600000))
-                  const isExpiringSoon = hoursLeft <= 4
-                  const isTF = m.tf?.id === user?.id
-                  const canEdit = isTF && hoursLeft > 0
-                  const allRQs: any[] = Array.isArray(p.payload?.rueckfragen) ? p.payload.rueckfragen : []
-                  const openRQs = allRQs.filter((r: any) => r.status === 'offen')
-                  const sns: any[] = Array.isArray(p.payload?.stellungnahmen) ? p.payload.stellungnahmen : []
-                  return (
-                    <div key={p.id} style={{ background: 'var(--bg-card)', borderRadius: '14px', border: `1px solid ${openRQs.length > 0 ? '#f59e0b' : isExpiringSoon ? '#f97316' : 'var(--border)'}`, overflow: 'hidden' }}>
-                      <div style={{ background: 'linear-gradient(135deg, var(--btn-dark) 0%, var(--btn-dark) 100%)', padding: '14px 18px', color: 'var(--btn-dark-text)' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: '4px' }}>
-                          <span style={{ fontWeight: 700, fontSize: '16px' }}>{patName || p.title}</span>
-                          {openRQs.length > 0 && <span style={{ background: '#f59e0b', color: '#fff', borderRadius: 999, padding: '2px 8px', fontSize: 11, fontWeight: 700, flexShrink: 0 }}>{openRQs.length} Rückfrage{openRQs.length !== 1 ? 'n' : ''}</span>}
-                        </div>
-                        {crew && <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.7)' }}>{crew}</div>}
-                      </div>
-                      {openRQs.length > 0 && (
-                        <div style={{ background: '#fffbeb', borderBottom: '1px solid #fcd34d', padding: '10px 18px', display: 'flex', flexDirection: 'column', gap: 8 }}>
-                          {openRQs.map((rq: any) => (
-                            <div key={rq.id} style={{ fontSize: 13, color: '#78350f', lineHeight: 1.4 }}>
-                              <span style={{ fontWeight: 700, color: '#92400e' }}>Rückfrage: </span>{rq.frage}
-                            </div>
-                          ))}
-                          <div style={{ fontSize: 12, color: '#a16207', fontWeight: 600 }}>→ Bitte im Protokoll Stellung nehmen</div>
-                        </div>
-                      )}
-                      <div style={{ padding: '12px 18px', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-                        <div style={{ flex: 1 }}>
-                          <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Erstellt: {new Date(p.created).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })} Uhr</div>
-                          {isTF && <div style={{ fontSize: '12px', marginTop: '3px', fontWeight: 600, color: isExpiringSoon ? '#f97316' : 'var(--text-secondary)' }}>
-                            {hoursLeft > 0 ? `Noch ${hoursLeft} Std. bearbeitbar` : 'Bearbeitungsfenster abgelaufen'}
-                          </div>}
+                <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', paddingLeft: 2, paddingBottom: 6, paddingTop: 4 }}>In Bearbeitung</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
+                  {[...myPatients].sort((a, b) => new Date(b.created).getTime() - new Date(a.created).getTime()).map(p => {
+                    const m = p.payload?.mannschaft || {}
+                    const crew = ['tf','m1','m2','m3'].map((k: string) => m[k]?.name).filter(Boolean).join(' · ')
+                    const patName = [p.payload?.vorname, p.payload?.name].filter(Boolean).join(' ')
+                    const age = Date.now() - new Date(p.created).getTime()
+                    const hoursLeft = Math.max(0, Math.ceil(24 - age / 3600000))
+                    const isExpiringSoon = hoursLeft <= 4
+                    const isTF = m.tf?.id === user?.id
+                    const canEdit = isTF && hoursLeft > 0
+                    const allRQs: any[] = Array.isArray(p.payload?.rueckfragen) ? p.payload.rueckfragen : []
+                    const openRQs = allRQs.filter((r: any) => r.status === 'offen')
+                    return (
+                      <div key={p.id} style={{ background: 'var(--lbf-card)', borderRadius: 10, overflow: 'hidden', boxShadow: 'var(--lbf-shadow)', borderLeft: '3px solid #600812' }}>
+                        <div style={{ padding: '13px 16px 12px' }}>
+                          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, marginBottom: 5 }}>
+                            <div style={{ fontWeight: 700, fontSize: 17, fontStyle: 'italic', color: 'var(--text)', lineHeight: 1.2 }}>{patName || p.title}</div>
+                            {openRQs.length > 0 && (
+                              <span style={{ background: '#fef3c7', color: '#92400e', borderRadius: 6, padding: '2px 8px', fontSize: 11, fontWeight: 600, flexShrink: 0 }}>
+                                {openRQs.length} Rückfrage{openRQs.length !== 1 ? 'n' : ''}
+                              </span>
+                            )}
+                          </div>
+                          <div style={{ fontSize: 12, fontStyle: 'italic', color: isExpiringSoon ? '#d97706' : 'var(--warm-gray)', fontWeight: isExpiringSoon ? 600 : 400, marginBottom: crew ? 2 : 0 }}>
+                            {new Date(p.created).toLocaleDateString('de-DE', { day: '2-digit', month: 'long' })}
+                            {isTF && ` · ${hoursLeft > 0 ? `noch ${hoursLeft}h bearbeitbar` : 'Fenster abgelaufen'}`}
+                          </div>
+                          {crew && <div style={{ fontSize: 12, fontStyle: 'italic', color: 'var(--warm-gray)' }}>{crew}</div>}
                         </div>
                         {openRQs.length > 0 && (
-                          <button onClick={() => setSnModal(p)} style={{ background: '#f59e0b', color: '#fff', border: 'none', borderRadius: '8px', padding: '9px 16px', fontWeight: 700, fontSize: '13px', cursor: 'pointer', flexShrink: 0, fontFamily: 'inherit' }}>
-                            Stellungnahme ({openRQs.length})
-                          </button>
+                          <div style={{ background: '#fffbeb', borderTop: '0.5px solid #fde68a', borderBottom: '0.5px solid #fde68a', padding: '9px 16px' }}>
+                            {openRQs.map((rq: any) => (
+                              <div key={rq.id} style={{ fontSize: 13, color: '#78350f', lineHeight: 1.45 }}>
+                                <span style={{ fontWeight: 600 }}>Rückfrage: </span>{rq.frage}
+                              </div>
+                            ))}
+                          </div>
                         )}
-                        {canEdit && (
-                          <button onClick={async () => {
-                            await pb.collection('patients').update(p.id, { status: 'freigegeben' })
-                            showMsg('Protokoll freigegeben', 'success')
-                            loadPatients()
-                          }} style={{ background: '#16a34a', color: '#fff', border: 'none', borderRadius: '8px', padding: '9px 16px', fontWeight: 700, fontSize: '13px', cursor: 'pointer', flexShrink: 0, fontFamily: 'inherit' }}>
-                            Freigeben
-                          </button>
-                        )}
-                        {canEdit && (
-                          <button onClick={() => navigate(`/protokoll/${p.id}`)} style={{ background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: '8px', padding: '9px 16px', fontWeight: 700, fontSize: '13px', cursor: 'pointer', flexShrink: 0, fontFamily: 'inherit' }}>Bearbeiten</button>
-                        )}
-                        {!canEdit && (
-                          <button onClick={() => navigate(`/protokoll/${p.id}`)} style={{ background: 'var(--bg-subtle)', color: 'var(--text)', border: '0.5px solid var(--border-medium)', borderRadius: '8px', padding: '9px 16px', fontWeight: 700, fontSize: '13px', cursor: 'pointer', flexShrink: 0, fontFamily: 'inherit' }}>Ansehen</button>
-                        )}
+                        <div style={{ padding: '9px 12px', display: 'flex', gap: 7, background: 'rgba(250,249,247,0.8)', borderTop: '0.5px solid rgba(96,8,18,0.08)' }}>
+                          {openRQs.length > 0 && (
+                            <button onClick={() => setSnModal(p)} style={{ background: '#f59e0b', color: '#fff', border: 'none', borderRadius: 7, padding: '6px 13px', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>
+                              Stellungnahme
+                            </button>
+                          )}
+                          {canEdit && (
+                            <>
+                              <button onClick={async () => { await pb.collection('patients').update(p.id, { status: 'freigegeben' }); showMsg('Protokoll freigegeben', 'success'); loadPatients() }} style={{ background: '#16a34a', color: '#fff', border: 'none', borderRadius: 7, padding: '6px 13px', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>
+                                Freigeben
+                              </button>
+                              <button onClick={() => navigate(`/protokoll/${p.id}`)} style={{ background: '#600812', color: '#fff', border: 'none', borderRadius: 7, padding: '6px 13px', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>Bearbeiten</button>
+                            </>
+                          )}
+                          {!canEdit && (
+                            <button onClick={() => navigate(`/protokoll/${p.id}`)} style={{ background: 'transparent', color: '#600812', border: '1px solid rgba(96,8,18,0.3)', borderRadius: 7, padding: '6px 13px', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>Ansehen</button>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  )
-                })}
+                    )
+                  })}
+                </div>
               </>
             )}
 
-            {/* Freigegeben — TF can re-edit if reopen active */}
+            {/* Freigegeben */}
             {myFreigegebenPatients.length > 0 && (
               <>
-                <div style={{ fontSize: '13px', fontWeight: 700, color: '#166534', textTransform: 'uppercase', letterSpacing: '.5px', marginTop: myPatients.length > 0 ? '8px' : 0 }}>Freigegeben</div>
-                {[...myFreigegebenPatients].sort((a, b) => new Date(b.created).getTime() - new Date(a.created).getTime()).map(p => {
-                  const m = p.payload?.mannschaft || {}
-                  const crew = ['tf','m1','m2','m3'].map((k: string) => m[k]?.name).filter(Boolean).join(', ')
-                  const patName = [p.payload?.vorname, p.payload?.name].filter(Boolean).join(' ')
-                  const allRQs: any[] = Array.isArray(p.payload?.rueckfragen) ? p.payload.rueckfragen : []
-                  const openRQs = allRQs.filter((r: any) => r.status === 'offen')
-                  const sns: any[] = Array.isArray(p.payload?.stellungnahmen) ? p.payload.stellungnahmen : []
-                  const changedCount = (p.payload?._changed_fields || []).length
-                  const isTF = m.tf?.id === user?.id
-                  const reopen = p.payload?.tf_reopen
-                  const reopenActive = reopen && new Date(reopen.expires_at) > new Date()
-                  const reopenMinsLeft = reopenActive ? Math.ceil((new Date(reopen.expires_at).getTime() - Date.now()) / 60000) : 0
-                  return (
-                    <div key={p.id} style={{ background: 'var(--bg-card)', borderRadius: '14px', border: `1px solid ${openRQs.length > 0 ? '#f59e0b' : reopenActive ? '#16a34a' : 'var(--border)'}`, overflow: 'hidden' }}>
-                      <div style={{ background: 'linear-gradient(135deg, #166534, #15803d)', padding: '14px 18px', color: '#fff' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: '4px' }}>
-                          <span style={{ fontWeight: 700, fontSize: '16px' }}>{patName || p.title}</span>
-                          {openRQs.length > 0 && <span style={{ background: '#f59e0b', color: '#fff', borderRadius: 999, padding: '2px 8px', fontSize: 11, fontWeight: 700, flexShrink: 0 }}>{openRQs.length} Rückfrage{openRQs.length !== 1 ? 'n' : ''}</span>}
-                          {changedCount > 0 && <span style={{ background: '#d97706', color: '#fff', borderRadius: 999, padding: '2px 8px', fontSize: 11, fontWeight: 700, flexShrink: 0 }}>{changedCount} Änderung{changedCount !== 1 ? 'en' : ''}</span>}
-                          {reopenActive && <span style={{ background: 'rgba(255,255,255,0.2)', color: '#fff', borderRadius: 999, padding: '2px 8px', fontSize: 11, fontWeight: 700, flexShrink: 0 }}>Nachbearbeitung offen</span>}
-                        </div>
-                        {crew && <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.75)' }}>{crew}</div>}
-                      </div>
-                      {openRQs.length > 0 && (
-                        <div style={{ background: '#fffbeb', borderBottom: '1px solid #fcd34d', padding: '10px 18px', display: 'flex', flexDirection: 'column', gap: 8 }}>
-                          {openRQs.map((rq: any) => (
-                            <div key={rq.id} style={{ fontSize: 13, color: '#78350f', lineHeight: 1.4 }}>
-                              <span style={{ fontWeight: 700, color: '#92400e' }}>Rückfrage: </span>{rq.frage}
+                <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', paddingLeft: 2, paddingBottom: 6, paddingTop: 4 }}>Freigegeben</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
+                  {[...myFreigegebenPatients].sort((a, b) => new Date(b.created).getTime() - new Date(a.created).getTime()).map(p => {
+                    const m = p.payload?.mannschaft || {}
+                    const crew = ['tf','m1','m2','m3'].map((k: string) => m[k]?.name).filter(Boolean).join(' · ')
+                    const patName = [p.payload?.vorname, p.payload?.name].filter(Boolean).join(' ')
+                    const allRQs: any[] = Array.isArray(p.payload?.rueckfragen) ? p.payload.rueckfragen : []
+                    const openRQs = allRQs.filter((r: any) => r.status === 'offen')
+                    const sns: any[] = Array.isArray(p.payload?.stellungnahmen) ? p.payload.stellungnahmen : []
+                    const changedCount = (p.payload?._changed_fields || []).length
+                    const isTF = m.tf?.id === user?.id
+                    const reopen = p.payload?.tf_reopen
+                    const reopenActive = reopen && new Date(reopen.expires_at) > new Date()
+                    const reopenMinsLeft = reopenActive ? Math.ceil((new Date(reopen.expires_at).getTime() - Date.now()) / 60000) : 0
+                    return (
+                      <div key={p.id} style={{ background: 'var(--lbf-card)', borderRadius: 10, overflow: 'hidden', boxShadow: 'var(--lbf-shadow)', borderLeft: '3px solid #16a34a' }}>
+                        <div style={{ padding: '13px 16px 12px' }}>
+                          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, marginBottom: 5 }}>
+                            <div style={{ fontWeight: 700, fontSize: 17, fontStyle: 'italic', color: 'var(--text)', lineHeight: 1.2 }}>{patName || p.title}</div>
+                            <div style={{ display: 'flex', gap: 4, flexShrink: 0, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                              {openRQs.length > 0 && <span style={{ background: '#fef3c7', color: '#92400e', borderRadius: 6, padding: '2px 8px', fontSize: 11, fontWeight: 600 }}>{openRQs.length} Rückfrage{openRQs.length !== 1 ? 'n' : ''}</span>}
+                              {changedCount > 0 && <span style={{ background: '#fef9eb', color: '#b45309', borderRadius: 6, padding: '2px 8px', fontSize: 11, fontWeight: 600 }}>{changedCount} Änd.</span>}
+                              {reopenActive && <span style={{ background: '#f0fdf4', color: '#166534', borderRadius: 6, padding: '2px 8px', fontSize: 11, fontWeight: 600 }}>Nachbearb.</span>}
+                              {!openRQs.length && !changedCount && !reopenActive && <span style={{ background: '#f0fdf4', color: '#166534', borderRadius: 6, padding: '2px 8px', fontSize: 11, fontWeight: 600 }}>Freigegeben</span>}
                             </div>
-                          ))}
-                          <div style={{ fontSize: 12, color: '#a16207', fontWeight: 600 }}>→ Bitte im Protokoll Stellung nehmen</div>
-                        </div>
-                      )}
-                      {sns.filter((s: any) => allRQs.some((rq: any) => rq.id === s.rueckfrage_id)).length > 0 && (
-                        <div style={{ background: '#f0fdf4', borderBottom: '1px solid #bbf7d0', padding: '10px 18px', display: 'flex', flexDirection: 'column', gap: 6 }}>
-                          {sns.map((s: any) => (
-                            <div key={s.id} style={{ fontSize: 13, color: '#166534', lineHeight: 1.4 }}>
-                              <span style={{ fontWeight: 700 }}>Stellungnahme: </span>
-                              <span style={{ color: '#374151' }}>{s.text.length > 100 ? s.text.slice(0, 100) + '…' : s.text}</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                      <div style={{ padding: '12px 18px', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-                        <div style={{ flex: 1 }}>
-                          <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{new Date(p.created).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })} Uhr · Freigegeben</div>
-                          {reopenActive && isTF && (
-                            <div style={{ fontSize: '12px', marginTop: '3px', fontWeight: 600, color: '#16a34a' }}>
-                              Nachbearbeitung: noch {reopenMinsLeft >= 60 ? `${Math.ceil(reopenMinsLeft / 60)}h` : `${reopenMinsLeft}min`}
-                            </div>
-                          )}
+                          </div>
+                          <div style={{ fontSize: 12, fontStyle: 'italic', color: 'var(--warm-gray)', marginBottom: crew ? 2 : 0 }}>
+                            {new Date(p.created).toLocaleDateString('de-DE', { day: '2-digit', month: 'long' })}
+                            {reopenActive && isTF && ` · Nachbearbeitung noch ${reopenMinsLeft >= 60 ? `${Math.ceil(reopenMinsLeft/60)}h` : `${reopenMinsLeft}min`}`}
+                          </div>
+                          {crew && <div style={{ fontSize: 12, fontStyle: 'italic', color: 'var(--warm-gray)' }}>{crew}</div>}
                         </div>
                         {openRQs.length > 0 && (
-                          <button onClick={() => setSnModal(p)} style={{ background: '#f59e0b', color: '#fff', border: 'none', borderRadius: '8px', padding: '9px 16px', fontWeight: 700, fontSize: '13px', cursor: 'pointer', flexShrink: 0, fontFamily: 'inherit' }}>
-                            Stellungnahme ({openRQs.length})
-                          </button>
+                          <div style={{ background: '#fffbeb', borderTop: '0.5px solid #fde68a', borderBottom: '0.5px solid #fde68a', padding: '9px 16px' }}>
+                            {openRQs.map((rq: any) => (
+                              <div key={rq.id} style={{ fontSize: 13, color: '#78350f', lineHeight: 1.45 }}>
+                                <span style={{ fontWeight: 600 }}>Rückfrage: </span>{rq.frage}
+                              </div>
+                            ))}
+                          </div>
                         )}
-                        {reopenActive && isTF ? (
-                          <button onClick={() => navigate(`/protokoll/${p.id}`)} style={{ background: '#16a34a', color: '#fff', border: 'none', borderRadius: '8px', padding: '9px 16px', fontWeight: 700, fontSize: '13px', cursor: 'pointer', flexShrink: 0, fontFamily: 'inherit' }}>Nachbearbeiten</button>
-                        ) : (
-                          <button onClick={() => navigate(`/protokoll/${p.id}`)} style={{ background: 'var(--bg-subtle)', color: 'var(--text)', border: '0.5px solid var(--border-medium)', borderRadius: '8px', padding: '9px 16px', fontWeight: 700, fontSize: '13px', cursor: 'pointer', flexShrink: 0, fontFamily: 'inherit' }}>Ansehen</button>
+                        {sns.filter((s: any) => allRQs.some((rq: any) => rq.id === s.rueckfrage_id)).length > 0 && (
+                          <div style={{ background: '#f0fdf4', borderTop: '0.5px solid #bbf7d0', borderBottom: '0.5px solid #bbf7d0', padding: '9px 16px' }}>
+                            {sns.map((s: any) => (
+                              <div key={s.id} style={{ fontSize: 13, color: '#15803d', lineHeight: 1.45 }}>
+                                <span style={{ fontWeight: 600 }}>Stellungnahme: </span>
+                                <span style={{ color: 'var(--text)' }}>{s.text.length > 80 ? s.text.slice(0, 80) + '…' : s.text}</span>
+                              </div>
+                            ))}
+                          </div>
                         )}
+                        <div style={{ padding: '9px 12px', display: 'flex', gap: 7, background: 'rgba(250,249,247,0.8)', borderTop: '0.5px solid rgba(22,163,74,0.15)' }}>
+                          {openRQs.length > 0 && (
+                            <button onClick={() => setSnModal(p)} style={{ background: '#f59e0b', color: '#fff', border: 'none', borderRadius: 7, padding: '6px 13px', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>
+                              Stellungnahme
+                            </button>
+                          )}
+                          {reopenActive && isTF ? (
+                            <>
+                              <button onClick={() => navigate(`/protokoll/${p.id}`)} style={{ background: '#16a34a', color: '#fff', border: 'none', borderRadius: 7, padding: '6px 13px', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>Nachbearbeiten</button>
+                              <button onClick={async () => {
+                                try {
+                                  const newPayload = { ...p.payload }
+                                  delete newPayload.tf_reopen
+                                  await pb.collection('patients').update(p.id, { payload: newPayload })
+                                  showMsg('Nachbearbeitung abgeschlossen', 'success')
+                                  loadPatients()
+                                } catch (e: any) { showMsg('Fehler: ' + e.message, 'error') }
+                              }} style={{ background: 'transparent', color: '#16a34a', border: '1px solid #16a34a', borderRadius: 7, padding: '6px 13px', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>Abschließen</button>
+                            </>
+                          ) : (
+                            <button onClick={() => navigate(`/protokoll/${p.id}`)} style={{ background: 'transparent', color: '#600812', border: '1px solid rgba(96,8,18,0.3)', borderRadius: 7, padding: '6px 13px', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>Ansehen</button>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  )
-                })}
+                    )
+                  })}
+                </div>
               </>
             )}
 
             {/* Archiviert */}
             {myArchivedPatients.length > 0 && (
               <>
-                <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '.5px', marginTop: '8px' }}>Archiviert</div>
-                {[...myArchivedPatients].sort((a, b) => new Date(b.created).getTime() - new Date(a.created).getTime()).map(p => {
-                  const m = p.payload?.mannschaft || {}
-                  const crew = ['tf','m1','m2','m3'].map((k: string) => m[k]?.name).filter(Boolean).join(', ')
-                  const patName = [p.payload?.vorname, p.payload?.name].filter(Boolean).join(' ')
-                  const allRQsA: any[] = Array.isArray(p.payload?.rueckfragen) ? p.payload.rueckfragen : []
-                  const openRQsA = allRQsA.filter((r: any) => r.status === 'offen')
-                  const snsA: any[] = Array.isArray(p.payload?.stellungnahmen) ? p.payload.stellungnahmen : []
-                  const changedCountA = (p.payload?._changed_fields || []).length
-                  return (
-                    <div key={p.id} style={{ background: 'var(--bg-card)', borderRadius: '14px', border: `1px solid ${openRQsA.length > 0 ? '#f59e0b' : 'var(--border)'}`, overflow: 'hidden', opacity: 0.85 }}>
-                      <div style={{ background: 'var(--bg-subtle)', padding: '14px 18px', borderBottom: '1px solid var(--border)' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: '4px' }}>
-                          <span style={{ fontWeight: 700, fontSize: '16px', color: 'var(--text)' }}>{patName || p.title}</span>
-                          {openRQsA.length > 0 && <span style={{ background: '#f59e0b', color: '#fff', borderRadius: 999, padding: '2px 8px', fontSize: 11, fontWeight: 700, flexShrink: 0 }}>{openRQsA.length} Rückfrage{openRQsA.length !== 1 ? 'n' : ''}</span>}
-                          {changedCountA > 0 && <span style={{ background: '#d97706', color: '#fff', borderRadius: 999, padding: '2px 8px', fontSize: 11, fontWeight: 700, flexShrink: 0 }}>{changedCountA} Änderung{changedCountA !== 1 ? 'en' : ''}</span>}
-                        </div>
-                        {crew && <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>{crew}</div>}
-                      </div>
-                      {openRQsA.length > 0 && (
-                        <div style={{ background: '#fffbeb', borderBottom: '1px solid #fcd34d', padding: '10px 18px', display: 'flex', flexDirection: 'column', gap: 8 }}>
-                          {openRQsA.map((rq: any) => (
-                            <div key={rq.id} style={{ fontSize: 13, color: '#78350f', lineHeight: 1.4 }}>
-                              <span style={{ fontWeight: 700, color: '#92400e' }}>Rückfrage: </span>{rq.frage}
+                <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', paddingLeft: 2, paddingBottom: 6, paddingTop: 4 }}>Archiviert</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {[...myArchivedPatients].sort((a, b) => new Date(b.created).getTime() - new Date(a.created).getTime()).map(p => {
+                    const m = p.payload?.mannschaft || {}
+                    const crew = ['tf','m1','m2','m3'].map((k: string) => m[k]?.name).filter(Boolean).join(' · ')
+                    const patName = [p.payload?.vorname, p.payload?.name].filter(Boolean).join(' ')
+                    const allRQsA: any[] = Array.isArray(p.payload?.rueckfragen) ? p.payload.rueckfragen : []
+                    const openRQsA = allRQsA.filter((r: any) => r.status === 'offen')
+                    const snsA: any[] = Array.isArray(p.payload?.stellungnahmen) ? p.payload.stellungnahmen : []
+                    const changedCountA = (p.payload?._changed_fields || []).length
+                    return (
+                      <div key={p.id} style={{ background: 'var(--lbf-card)', borderRadius: 10, overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', borderLeft: '3px solid rgba(139,113,90,0.4)', opacity: openRQsA.length > 0 || changedCountA > 0 ? 1 : 0.75 }}>
+                        <div style={{ padding: '13px 16px 12px' }}>
+                          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, marginBottom: 5 }}>
+                            <div style={{ fontWeight: 700, fontSize: 17, fontStyle: 'italic', color: 'var(--text)', lineHeight: 1.2 }}>{patName || p.title}</div>
+                            <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+                              {openRQsA.length > 0 && <span style={{ background: '#fef3c7', color: '#92400e', borderRadius: 6, padding: '2px 8px', fontSize: 11, fontWeight: 600 }}>{openRQsA.length} Rückfrage{openRQsA.length !== 1 ? 'n' : ''}</span>}
+                              {changedCountA > 0 && <span style={{ background: '#fef9eb', color: '#b45309', borderRadius: 6, padding: '2px 8px', fontSize: 11, fontWeight: 600 }}>{changedCountA} Änd.</span>}
+                              {!openRQsA.length && !changedCountA && <span style={{ background: 'rgba(0,0,0,0.04)', color: 'var(--warm-gray)', borderRadius: 6, padding: '2px 8px', fontSize: 11, fontWeight: 600 }}>Archiviert</span>}
                             </div>
-                          ))}
-                          <div style={{ fontSize: 12, color: '#a16207', fontWeight: 600 }}>→ Bitte im Protokoll Stellung nehmen</div>
-                        </div>
-                      )}
-                      {snsA.length > 0 && (
-                        <div style={{ background: '#f0fdf4', borderBottom: '1px solid #bbf7d0', padding: '10px 18px', display: 'flex', flexDirection: 'column', gap: 6 }}>
-                          {snsA.map((s: any) => (
-                            <div key={s.id} style={{ fontSize: 13, color: '#166534', lineHeight: 1.4 }}>
-                              <span style={{ fontWeight: 700 }}>Stellungnahme: </span>
-                              <span style={{ color: '#374151' }}>{s.text.length > 100 ? s.text.slice(0, 100) + '…' : s.text}</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                      <div style={{ padding: '12px 18px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <div style={{ flex: 1, fontSize: '12px', color: 'var(--text-secondary)' }}>
-                          {new Date(p.created).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })} Uhr · Archiviert
+                          </div>
+                          <div style={{ fontSize: 12, fontStyle: 'italic', color: 'var(--warm-gray)', marginBottom: crew ? 2 : 0 }}>
+                            {new Date(p.created).toLocaleDateString('de-DE', { day: '2-digit', month: 'long' })}
+                          </div>
+                          {crew && <div style={{ fontSize: 12, fontStyle: 'italic', color: 'var(--warm-gray)' }}>{crew}</div>}
                         </div>
                         {openRQsA.length > 0 && (
-                          <button onClick={() => setSnModal(p)} style={{ background: '#f59e0b', color: '#fff', border: 'none', borderRadius: '8px', padding: '9px 16px', fontWeight: 700, fontSize: '13px', cursor: 'pointer', flexShrink: 0, fontFamily: 'inherit' }}>
-                            Stellungnahme ({openRQsA.length})
-                          </button>
+                          <div style={{ background: '#fffbeb', borderTop: '0.5px solid #fde68a', borderBottom: '0.5px solid #fde68a', padding: '9px 16px' }}>
+                            {openRQsA.map((rq: any) => (
+                              <div key={rq.id} style={{ fontSize: 13, color: '#78350f', lineHeight: 1.45 }}>
+                                <span style={{ fontWeight: 600 }}>Rückfrage: </span>{rq.frage}
+                              </div>
+                            ))}
+                          </div>
                         )}
-                        <button onClick={() => navigate(`/protokoll/${p.id}`)} style={{ background: 'var(--bg-subtle)', color: 'var(--text)', border: '0.5px solid var(--border-medium)', borderRadius: '8px', padding: '9px 16px', fontWeight: 700, fontSize: '13px', cursor: 'pointer', flexShrink: 0, fontFamily: 'inherit' }}>Ansehen</button>
+                        {snsA.length > 0 && (
+                          <div style={{ background: '#f0fdf4', borderTop: '0.5px solid #bbf7d0', borderBottom: '0.5px solid #bbf7d0', padding: '9px 16px' }}>
+                            {snsA.map((s: any) => (
+                              <div key={s.id} style={{ fontSize: 13, color: '#15803d', lineHeight: 1.45 }}>
+                                <span style={{ fontWeight: 600 }}>Stellungnahme: </span>
+                                <span style={{ color: 'var(--text)' }}>{s.text.length > 80 ? s.text.slice(0, 80) + '…' : s.text}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        <div style={{ padding: '9px 12px', display: 'flex', gap: 7, background: 'rgba(250,249,247,0.8)', borderTop: '0.5px solid rgba(139,113,90,0.15)' }}>
+                          {openRQsA.length > 0 && (
+                            <button onClick={() => setSnModal(p)} style={{ background: '#f59e0b', color: '#fff', border: 'none', borderRadius: 7, padding: '6px 13px', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>
+                              Stellungnahme
+                            </button>
+                          )}
+                          <button onClick={() => navigate(`/protokoll/${p.id}`)} style={{ background: 'transparent', color: '#600812', border: '1px solid rgba(96,8,18,0.3)', borderRadius: 7, padding: '6px 13px', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>Ansehen</button>
+                        </div>
                       </div>
-                    </div>
-                  )
-                })}
+                    )
+                  })}
+                </div>
               </>
             )}
           </div>
         )}
 
-        {/* LERNBAR - Sub-Navigation */}
-        {tab === 'lernbar' && !playerProgress && (
-          <div>
-            <div style={{ display: 'flex', gap: '4px', marginBottom: '20px', background: 'var(--bg-subtle)', borderRadius: '10px', padding: '4px' }}>
-              {(['termine', 'lernmodule'] as const).map(st => (
-                <button key={st} onClick={() => setLernbarTab(st)} style={{ flex: 1, padding: '8px', borderRadius: '7px', border: 'none', background: lernbarTab === st ? 'var(--bg-card)' : 'transparent', color: lernbarTab === st ? 'var(--text)' : 'var(--text-secondary)', fontWeight: 600, fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit', boxShadow: lernbarTab === st ? '0 1px 3px rgba(0,0,0,0.1)' : 'none', transition: 'all 0.15s' }}>
-                  {st === 'termine' ? `Termine${upcomingTermine.length > 0 ? ` (${upcomingTermine.length})` : ''}` : `Lernmodule${progress.length > 0 ? ` ${doneMods}/${progress.length}` : ''}`}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* TERMINE (within Lernbar tab) */}
-        {tab === 'lernbar' && !playerProgress && lernbarTab === 'termine' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            {upcomingTermine.length === 0 && pastTermine.length === 0 && (
-              <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '48px 0', fontSize: '15px' }}>Keine Termine zugewiesen</div>
-            )}
-
-            {upcomingTermine.map(termin => {
-              const tu = terminUser.find(t => t.termin_id === termin.id)
-              const cfg = tu ? statusConfig[tu.status] : null
-              const startTime = fmtTime(termin.start_datetime)
-              const endTime = termin.end_datetime ? fmtTime(termin.end_datetime) : ''
-              return (
-                <div key={termin.id} style={{ background: 'var(--bg-card)', borderRadius: '14px', border: '1px solid var(--border)', overflow: 'hidden' }}>
-                  <div style={{ background: 'linear-gradient(135deg, var(--btn-dark) 0%, var(--btn-dark) 100%)', padding: '16px 20px', color: 'var(--btn-dark-text)' }}>
-                    <div style={{ fontWeight: 700, fontSize: '17px', marginBottom: '6px' }}>{termin.name}</div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                      <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.7)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                        {fmtDate(termin.start_datetime)}
-                      </div>
-                      {startTime && (
-                        <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.7)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                          {startTime}{endTime ? ` – ${endTime}` : ''} Uhr
-                        </div>
-                      )}
-                      {termin.location && (
-                        <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.7)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-                          {termin.location}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  <div style={{ padding: '14px 20px' }}>
-                    {termin.description && (
-                      <div style={{ fontSize: '14px', color: 'var(--text)', marginBottom: '14px', lineHeight: 1.5 }}>{termin.description}</div>
-                    )}
-                    {termin.dozent && (
-                      <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '14px' }}>Dozent: {termin.dozent}</div>
-                    )}
-
-                    {tu && (
-                      <div>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
-                          {cfg && (
-                            <span style={{ padding: '4px 12px', borderRadius: '20px', background: cfg.bg, color: cfg.color, fontWeight: 700, fontSize: '13px' }}>{cfg.label}</span>
-                          )}
-                          {(tu.status === 'eingeladen' || tu.status === 'abgesagt' || tu.status === 'zugesagt') && (
-                            <div style={{ display: 'flex', gap: '8px', marginLeft: 'auto' }}>
-                              {tu.status !== 'zugesagt' && (
-                                <button
-                                  onClick={() => updateTerminStatus(tu.id, 'zugesagt')}
-                                  style={{ padding: '8px 16px', borderRadius: '8px', border: 'none', background: '#16a34a', color: '#fff', fontWeight: 700, fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit' }}
-                                >Zusagen</button>
-                              )}
-                              {tu.status !== 'abgesagt' && (
-                                <button
-                                  onClick={() => updateTerminStatus(tu.id, 'abgesagt')}
-                                  style={{ padding: '8px 16px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg-card)', color: 'var(--text)', fontWeight: 600, fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit' }}
-                                >Absagen</button>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                        {tu.status === 'zugesagt' && <CalendarButtons termin={termin} />}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )
-            })}
-
-            {pastTermine.length > 0 && (
-              <details>
-                <summary style={{ cursor: 'pointer', fontWeight: 700, fontSize: '14px', color: 'var(--text-secondary)', padding: '10px 0', borderTop: '1px solid var(--border)', listStyle: 'none', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 8v13H3V8"/><path d="M1 3h22v5H1z"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
-                  Vergangene Termine ({pastTermine.length})
-                </summary>
-                <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  {pastTermine.map(termin => {
-                    const tu = terminUser.find(t => t.termin_id === termin.id)
-                    const cfg = tu ? statusConfig[tu.status] : null
-                    return (
-                      <div key={termin.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', background: 'var(--bg-card)', borderRadius: '10px', border: '1px solid var(--border)' }}>
-                        <div style={{ flex: 1 }}>
-                          <div style={{ fontWeight: 600, fontSize: '14px' }}>{termin.name}</div>
-                          <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '2px' }}>{fmtDate(termin.start_datetime)}</div>
-                        </div>
-                        {cfg && <span style={{ padding: '3px 10px', borderRadius: '20px', background: cfg.bg, color: cfg.color, fontWeight: 700, fontSize: '12px' }}>{cfg.label}</span>}
-                      </div>
-                    )
-                  })}
-                </div>
-              </details>
-            )}
-          </div>
-        )}
-
-        {/* LERNMODULE */}
-        {tab === 'lernbar' && !playerProgress && lernbarTab === 'lernmodule' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {progress.length === 0 && (
-              <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '48px 0', fontSize: '15px' }}>Noch keine Lernmodule zugewiesen</div>
-            )}
-
-            {progress.length > 0 && (
-              <div style={{ background: 'var(--bg-card)', borderRadius: '12px', padding: '16px 20px', border: '1px solid var(--border)', marginBottom: '4px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                  <span style={{ fontWeight: 700, fontSize: '14px' }}>Gesamtfortschritt</span>
-                  <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>{doneMods}/{progress.length} abgeschlossen</span>
-                </div>
-                <div style={{ background: 'var(--border)', borderRadius: '6px', height: '8px' }}>
-                  <div style={{ background: 'var(--btn-dark)', borderRadius: '6px', height: '8px', width: `${Math.round((doneMods / progress.length) * 100)}%`, transition: 'width 0.3s' }} />
-                </div>
-              </div>
-            )}
-
-            {progress.map(p => {
-              const mod = module.find(m => m.id === p.modul_id)
-              if (!mod) return null
-              const isDone = !!p.abgeschlossen_am
-              return (
-                <div key={p.id} style={{ background: 'var(--bg-card)', borderRadius: '14px', border: `1px solid ${isDone ? '#bbf7d0' : 'var(--border)'}`, overflow: 'hidden' }}>
-                  <div style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', gap: '14px' }}>
-                    <div style={{ width: '10px', height: '10px', borderRadius: '50%', flexShrink: 0, background: isDone ? '#10b981' : '#cbd5e1' }} />
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontWeight: 700, fontSize: '15px', color: 'var(--text)' }}>{mod.name}</div>
-                      {mod.beschreibung && <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '2px' }}>{mod.beschreibung}</div>}
-                      <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px' }}>{mod.dauer_minuten} Min · {mod.inhalte?.length || 0} Blöcke</div>
-                    </div>
-                    {isDone ? (
-                      <span style={{ padding: '4px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 700, background: '#dcfce7', color: '#065f46' }}>Fertig</span>
-                    ) : (
-                      <button
-                        onClick={() => { setPlayerProgress(p); setPlayerStep('intro'); setQuizSelected(null); setQuizSubmitted(false); setModulFailed(false) }}
-                        style={{ padding: '8px 16px', borderRadius: '8px', border: 'none', background: 'var(--btn-dark)', color: 'var(--btn-dark-text)', fontWeight: 700, fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit' }}
-                      >Starten</button>
-                    )}
-                  </div>
-                  {isDone && (
-                    <div style={{ padding: '0 20px 14px 20px', fontSize: '12px', color: '#059669' }}>
-                      Abgeschlossen am {new Date(p.abgeschlossen_am!).toLocaleDateString('de-DE')}
-                    </div>
-                  )}
-                </div>
-              )
-            })}
-          </div>
-        )}
-
-        {/* MODUL PLAYER */}
-        {tab === 'lernbar' && playerProgress && (() => {
-          const mod = module.find(m => m.id === playerProgress.modul_id)
-          if (!mod) return null
-          const rawInhalte = mod.inhalte
-          const parsedInhalte: typeof rawInhalte = Array.isArray(rawInhalte)
-            ? rawInhalte
-            : (() => { try { return JSON.parse(rawInhalte as any) } catch { return [] } })()
-          const blocks = [...(parsedInhalte || [])].sort((a, b) => a.reihenfolge - b.reihenfolge)
-          const totalBlocks = blocks.length
-          const isLast = typeof playerStep === 'number' && playerStep === totalBlocks - 1
-          const passPercent = mod.min_pass_percent ?? 100
-
-          function resetPlayer() {
-            setPlayerProgress(null)
-            setPlayerStep('intro')
-            setQuizSelected(null)
-            setQuizSubmitted(false)
-            setModulFailed(false)
-            setQuizFrageIdx(0)
-            setQuizResults({ correct: 0, total: 0 })
-          }
-
-          function advanceBlock() {
-            setQuizSelected(null)
-            setQuizSubmitted(false)
-            setQuizFrageIdx(0)
-            if (playerStep === 'intro') { setPlayerStep(0); return }
-            if (typeof playerStep === 'number') {
-              if (isLast) {
-                const passed = quizResults.total === 0 || (quizResults.correct / quizResults.total * 100) >= passPercent
-                if (passed) {
-                  markModulDone(playerProgress.id)
-                  resetPlayer()
-                } else {
-                  setModulFailed(true)
-                }
-              } else {
-                setPlayerStep(playerStep + 1)
-              }
-            }
-          }
-
-          const currentBlock = typeof playerStep === 'number' ? blocks[playerStep] : null
-
-          return (
-            <div style={{ background: 'var(--bg-card)', borderRadius: '16px', border: '1px solid var(--border)', overflow: 'hidden' }}>
-              {/* Player header */}
-              <div style={{ background: 'linear-gradient(135deg, var(--btn-dark) 0%, var(--btn-dark) 100%)', padding: '16px 20px', color: 'var(--btn-dark-text)', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <button onClick={resetPlayer} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '8px', width: '30px', height: '30px', cursor: 'pointer', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
-                </button>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 700, fontSize: '15px' }}>{mod.name}</div>
-                  {playerStep !== 'intro' && !modulFailed && (
-                    <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', marginTop: '2px' }}>
-                      Block {(playerStep as number) + 1} von {totalBlocks}
-                    </div>
-                  )}
-                </div>
-                {playerStep !== 'intro' && totalBlocks > 0 && !modulFailed && (
-                  <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)' }}>
-                    {Math.round(((playerStep as number) / totalBlocks) * 100)}%
-                  </div>
-                )}
-              </div>
-
-              {/* Progress bar */}
-              {playerStep !== 'intro' && totalBlocks > 0 && !modulFailed && (
-                <div style={{ background: 'var(--border)', height: '3px' }}>
-                  <div style={{ background: 'var(--btn-dark)', height: '3px', width: `${Math.round(((playerStep as number) / totalBlocks) * 100)}%`, transition: 'width 0.3s' }} />
-                </div>
-              )}
-
-              <div style={{ padding: '24px 20px' }}>
-
-                {/* INTRO */}
-                {playerStep === 'intro' && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                    <div>
-                      <div style={{ fontWeight: 700, fontSize: '20px', color: 'var(--text)', marginBottom: '8px' }}>{mod.name}</div>
-                      {mod.beschreibung && <div style={{ fontSize: '15px', color: 'var(--text)', lineHeight: 1.6 }}>{mod.beschreibung}</div>}
-                    </div>
-                    <div style={{ display: 'flex', gap: '12px' }}>
-                      <div style={{ background: 'var(--bg)', borderRadius: '10px', padding: '12px 16px', flex: 1, textAlign: 'center' }}>
-                        <div style={{ fontSize: '20px', fontWeight: 700, color: 'var(--text)' }}>{mod.dauer_minuten}</div>
-                        <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '2px' }}>Minuten</div>
-                      </div>
-                      <div style={{ background: 'var(--bg)', borderRadius: '10px', padding: '12px 16px', flex: 1, textAlign: 'center' }}>
-                        <div style={{ fontSize: '20px', fontWeight: 700, color: 'var(--text)' }}>{totalBlocks}</div>
-                        <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '2px' }}>Blöcke</div>
-                      </div>
-                      <div style={{ background: 'var(--bg)', borderRadius: '10px', padding: '12px 16px', flex: 1, textAlign: 'center' }}>
-                        <div style={{ fontSize: '20px', fontWeight: 700, color: '#7c3aed' }}>{blocks.filter(b => b.typ === 'quiz').length}</div>
-                        <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '2px' }}>Quiz</div>
-                      </div>
-                    </div>
-                    {blocks.filter(b => b.typ === 'quiz').length > 0 && (
-                      <div style={{ background: '#fef3c7', border: '1px solid #fde68a', borderRadius: '10px', padding: '12px 14px', fontSize: '13px', color: '#92400e' }}>
-                        Dieses Modul enthält Quiz-Fragen. Mindestens {passPercent}% müssen richtig beantwortet werden.
-                      </div>
-                    )}
-                    <button onClick={advanceBlock} style={{ width: '100%', padding: '14px', borderRadius: '10px', border: 'none', background: 'var(--btn-dark)', color: 'var(--btn-dark-text)', fontWeight: 700, fontSize: '15px', cursor: 'pointer', fontFamily: 'inherit', marginTop: '4px' }}>
-                      Starten
-                    </button>
-                  </div>
-                )}
-
-                {/* MODULE FAILED (end-of-module pass check) */}
-                {modulFailed && (
-                  <div>
-                    <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '12px', padding: '20px 16px', marginBottom: '16px', textAlign: 'center' }}>
-                      <div style={{ fontWeight: 700, fontSize: '18px', color: '#b91c1c', marginBottom: '8px' }}>Nicht bestanden</div>
-                      <div style={{ fontSize: '14px', color: '#991b1b', lineHeight: 1.5 }}>
-                        {quizResults.correct} von {quizResults.total} Fragen richtig ({quizResults.total > 0 ? Math.round(quizResults.correct / quizResults.total * 100) : 0}%).
-                        Mindestens {passPercent}% erforderlich.
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => { setPlayerStep('intro'); setQuizSelected(null); setQuizSubmitted(false); setModulFailed(false); setQuizFrageIdx(0); setQuizResults({ correct: 0, total: 0 }) }}
-                      style={{ width: '100%', padding: '14px', borderRadius: '10px', border: 'none', background: 'var(--btn-dark)', color: 'var(--btn-dark-text)', fontWeight: 700, fontSize: '15px', cursor: 'pointer', fontFamily: 'inherit' }}
-                    >Neu starten</button>
-                  </div>
-                )}
-
-                {/* TEXT BLOCK */}
-                {!modulFailed && currentBlock?.typ === 'text' && (
-                  <div>
-                    {currentBlock.titel && <div style={{ fontWeight: 700, fontSize: '18px', color: 'var(--text)', marginBottom: '14px' }}>{currentBlock.titel}</div>}
-                    <div style={{ fontSize: '15px', color: 'var(--text)', lineHeight: 1.75, whiteSpace: 'pre-wrap', marginBottom: '24px' }}>{currentBlock.inhalt}</div>
-                    <button onClick={advanceBlock} style={{ width: '100%', padding: '14px', borderRadius: '10px', border: 'none', background: 'var(--btn-dark)', color: 'var(--btn-dark-text)', fontWeight: 700, fontSize: '15px', cursor: 'pointer', fontFamily: 'inherit' }}>
-                      {isLast ? 'Abschließen' : 'Weiter'}
-                    </button>
-                  </div>
-                )}
-
-                {/* QUIZ BLOCK */}
-                {!modulFailed && currentBlock?.typ === 'quiz' && (() => {
-                  let quizData: { fragen: { frage: string; antworten: string[]; richtige: number }[] } = { fragen: [] }
-                  try {
-                    const raw = currentBlock.inhalt
-                    const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw
-                    if (parsed && Array.isArray(parsed.fragen)) {
-                      quizData = parsed
-                    } else if (parsed && typeof parsed.frage === 'string') {
-                      quizData = { fragen: [parsed] }
-                    }
-                  } catch {}
-                  const fragen = quizData.fragen || []
-                  const currentFrage = fragen[quizFrageIdx]
-                  const isLastFrage = quizFrageIdx >= fragen.length - 1
-
-                  if (!currentFrage) {
-                    return (
-                      <div>
-                        <div style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '20px' }}>Keine Fragen in diesem Quiz-Block.</div>
-                        <button onClick={advanceBlock} style={{ width: '100%', padding: '14px', borderRadius: '10px', border: 'none', background: 'var(--btn-dark)', color: 'var(--btn-dark-text)', fontWeight: 700, fontSize: '15px', cursor: 'pointer', fontFamily: 'inherit' }}>
-                          {isLast ? 'Abschließen' : 'Weiter'}
-                        </button>
-                      </div>
-                    )
-                  }
-
-                  const antworten: string[] = Array.isArray(currentFrage.antworten) ? currentFrage.antworten : []
-                  const richtige = Number(currentFrage.richtige)
-
-                  return (
-                    <div>
-                      <div style={{ fontSize: '11px', fontWeight: 700, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '10px' }}>
-                        Quiz{fragen.length > 1 ? ` · Frage ${quizFrageIdx + 1} von ${fragen.length}` : ''}
-                      </div>
-                      <div style={{ fontWeight: 600, fontSize: '16px', color: 'var(--text)', marginBottom: '16px', lineHeight: 1.5 }}>
-                        {currentFrage.frage || ''}
-                      </div>
-
-                      {antworten.length === 0 && (
-                        <div style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '20px' }}>Keine Antwortoptionen hinterlegt.</div>
-                      )}
-
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '20px' }}>
-                        {antworten.map((a: string, idx: number) => {
-                          let bg = 'var(--bg-card)', border = '1px solid var(--border)', color = 'var(--text)'
-                          if (quizSubmitted) {
-                            if (idx === richtige) { bg = '#f0fdf4'; border = '2px solid #16a34a'; color = '#166534' }
-                            else if (idx === quizSelected) { bg = '#fef2f2'; border = '2px solid #ef4444'; color = '#b91c1c' }
-                          } else if (idx === quizSelected) {
-                            bg = '#eff6ff'; border = '2px solid #3b82f6'; color = '#1d4ed8'
-                          }
-                          return (
-                            <button
-                              key={idx}
-                              disabled={quizSubmitted}
-                              onClick={() => setQuizSelected(idx)}
-                              style={{ padding: '12px 16px', borderRadius: '10px', border, background: bg, color, fontWeight: idx === quizSelected || (quizSubmitted && idx === richtige) ? 700 : 400, fontSize: '14px', cursor: quizSubmitted ? 'default' : 'pointer', textAlign: 'left', fontFamily: 'inherit' }}
-                            >{a}</button>
-                          )
-                        })}
-                      </div>
-
-                      {!quizSubmitted ? (
-                        <button
-                          disabled={quizSelected === null}
-                          onClick={() => {
-                            const correct = quizSelected === richtige
-                            setQuizResults(prev => ({ correct: prev.correct + (correct ? 1 : 0), total: prev.total + 1 }))
-                            setQuizSubmitted(true)
-                          }}
-                          style={{ width: '100%', padding: '14px', borderRadius: '10px', border: 'none', background: quizSelected === null ? 'var(--border)' : 'var(--btn-dark)', color: quizSelected === null ? 'var(--text-secondary)' : 'var(--btn-dark-text)', fontWeight: 700, fontSize: '15px', cursor: quizSelected === null ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}
-                        >Antworten</button>
-                      ) : (
-                        <div>
-                          <div style={{ borderRadius: '10px', padding: '12px', textAlign: 'center', marginBottom: '14px', fontWeight: 700, background: quizSelected === richtige ? '#f0fdf4' : '#fef2f2', border: quizSelected === richtige ? '1px solid #bbf7d0' : '1px solid #fecaca', color: quizSelected === richtige ? '#166534' : '#b91c1c' }}>
-                            {quizSelected === richtige ? 'Richtig!' : 'Falsch!'}
-                          </div>
-                          <button
-                            onClick={() => {
-                              if (isLastFrage) {
-                                advanceBlock()
-                              } else {
-                                setQuizFrageIdx(quizFrageIdx + 1)
-                                setQuizSelected(null)
-                                setQuizSubmitted(false)
-                              }
-                            }}
-                            style={{ width: '100%', padding: '14px', borderRadius: '10px', border: 'none', background: quizSelected === richtige ? '#16a34a' : 'var(--btn-dark)', color: '#fff', fontWeight: 700, fontSize: '15px', cursor: 'pointer', fontFamily: 'inherit' }}
-                          >
-                            {isLastFrage ? (isLast ? 'Abschließen' : 'Weiter') : 'Nächste Frage'}
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  )
-                })()}
-              </div>
-            </div>
-          )
-        })()}
-
-
-
         {/* VORGÄNGE */}
         {tab === 'vorgaenge' && (
           <div>
-            <h2 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text)', margin: '0 0 16px' }}>Meine Produktausgaben</h2>
+            {/* Produktausgaben */}
+            <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', paddingLeft: 2, marginBottom: 16 }}>Produktausgaben</div>
             {myOutputs.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '48px 0', color: 'var(--text-secondary)', fontSize: 15 }}>
-                Keine Vorgänge vorhanden
-              </div>
+              <div style={{ textAlign: 'center', padding: '32px 0', color: 'var(--warm-gray)', fontSize: 14, fontStyle: 'italic' }}>Keine Produktausgaben vorhanden</div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {myOutputs.map(output => {
                   const p = output.payload
                   const deDate = p.datum ? p.datum.split('-').reverse().join('.') : '–'
-                  const statusCfg: Record<string, { label: string; bg: string; color: string }> = {
-                    offen:     { label: 'Offen',     bg: '#fef9c3', color: '#854d0e' },
-                    erledigt:  { label: 'Erledigt',  bg: '#dcfce7', color: '#166534' },
-                    ignoriert: { label: 'Ignoriert', bg: 'var(--bg-subtle)', color: 'var(--text-secondary)' },
+                  const statusCfg: Record<string, { label: string; bg: string; color: string; border: string }> = {
+                    offen:     { label: 'Offen',     bg: '#fffbeb', color: '#92400e', border: '#fde68a' },
+                    erledigt:  { label: 'Erledigt',  bg: '#f0fdf4', color: '#166534', border: '#bbf7d0' },
+                    ignoriert: { label: 'Ignoriert', bg: 'rgba(0,0,0,0.04)', color: 'var(--warm-gray)', border: 'rgba(0,0,0,0.08)' },
                   }
-                  const cfg = statusCfg[output.status] ?? { label: output.status, bg: 'var(--bg-subtle)', color: 'var(--text-secondary)' }
+                  const cfg = statusCfg[output.status] ?? statusCfg['ignoriert']
                   return (
-                    <div key={output.id} style={{ background: 'var(--bg-card)', border: '0.5px solid var(--border)', borderRadius: 14, padding: '14px 16px', boxShadow: 'var(--shadow-sm)' }}>
-                      {/* Header */}
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
+                    <div key={output.id} style={{ background: 'var(--lbf-card)', borderRadius: 10, overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', borderLeft: '3px solid #600812' }}>
+                      <div style={{ padding: '14px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '0.5px solid rgba(0,0,0,0.06)' }}>
                         <div>
-                          <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--text)' }}>Einsatz {p.einsatz}</div>
-                          <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 2 }}>{deDate}</div>
+                          <div style={{ fontWeight: 700, fontSize: 15, fontStyle: 'italic', color: 'var(--text)' }}>Einsatz {p.einsatz}</div>
+                          <div style={{ fontSize: 12, fontStyle: 'italic', color: 'var(--warm-gray)', marginTop: 2 }}>{deDate}</div>
                         </div>
-                        <span style={{ fontSize: 11, fontWeight: 700, background: cfg.bg, color: cfg.color, borderRadius: 6, padding: '3px 9px', flexShrink: 0 }}>
-                          {cfg.label.toUpperCase()}
+                        <span style={{ fontSize: 11, fontWeight: 700, background: cfg.bg, color: cfg.color, border: `1px solid ${cfg.border}`, borderRadius: 999, padding: '3px 9px' }}>
+                          {cfg.label}
                         </span>
                       </div>
-                      {/* Status indicator */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, padding: '8px 12px', background: 'var(--bg-subtle)', borderRadius: 8 }}>
-                        {output.status === 'erledigt' ? (
-                          <>
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                            <span style={{ fontSize: 13, color: '#166634', fontWeight: 600 }}>Aus dem Lager ausgebucht</span>
-                          </>
-                        ) : output.status === 'offen' ? (
-                          <>
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#b45309" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                            <span style={{ fontSize: 13, color: '#92400e', fontWeight: 600 }}>Wartet auf Bearbeitung durch Lager</span>
-                          </>
-                        ) : (
-                          <>
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
-                            <span style={{ fontSize: 13, color: 'var(--text-secondary)', fontWeight: 600 }}>Ignoriert</span>
-                          </>
-                        )}
-                      </div>
-                      {/* Positions */}
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                      <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 4 }}>
                         {p.positionen.map((pos, idx) => (
-                          <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 13, padding: '4px 0', borderBottom: idx < p.positionen.length - 1 ? '0.5px solid var(--border)' : 'none' }}>
-                            <span style={{ color: 'var(--text)', fontWeight: 500 }}>{pos.name}</span>
-                            <span style={{ color: 'var(--text-secondary)', flexShrink: 0, marginLeft: 8 }}>{pos.qty}× {pos.unit ?? ''}</span>
+                          <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, padding: '3px 0', borderBottom: idx < p.positionen.length - 1 ? '0.5px solid rgba(0,0,0,0.06)' : 'none' }}>
+                            <span style={{ color: 'var(--text)' }}>{pos.name}</span>
+                            <span style={{ fontStyle: 'italic', color: 'var(--warm-gray)' }}>{pos.qty}× {pos.unit ?? ''}</span>
                           </div>
                         ))}
                       </div>
@@ -1167,92 +746,119 @@ export default function Unitas() {
                 })}
               </div>
             )}
+
+            {/* Defektmeldungen */}
+            <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', paddingLeft: 2, marginTop: 28, marginBottom: 16 }}>Defektmeldungen</div>
+            {myReports.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '32px 0', color: 'var(--warm-gray)', fontSize: 14, fontStyle: 'italic' }}>Keine Defektmeldungen vorhanden</div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {myReports.map(report => {
+                  const statusCfg: Record<string, { label: string; bg: string; color: string; border: string; borderLeft: string }> = {
+                    pending:   { label: 'Ausstehend', bg: '#fffbeb', color: '#92400e', border: '#fde68a', borderLeft: '#d97706' },
+                    confirmed: { label: 'Bestätigt',  bg: '#fef2f2', color: '#991b1b', border: '#fecaca', borderLeft: '#dc2626' },
+                    rejected:  { label: 'Abgelehnt',  bg: 'rgba(0,0,0,0.04)', color: 'var(--warm-gray)', border: 'rgba(0,0,0,0.08)', borderLeft: 'rgba(139,113,90,0.35)' },
+                  }
+                  const cfg = statusCfg[report.status] ?? statusCfg['rejected']
+                  return (
+                    <div key={report.id} style={{ background: 'var(--lbf-card)', borderRadius: 10, overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', borderLeft: `3px solid ${cfg.borderLeft}` }}>
+                      <div style={{ padding: '14px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '0.5px solid rgba(0,0,0,0.06)' }}>
+                        <div style={{ flex: 1, minWidth: 0, paddingRight: 10 }}>
+                          <div style={{ fontWeight: 700, fontSize: 15, fontStyle: 'italic', color: 'var(--text)' }}>{report.device_name}</div>
+                          <div style={{ fontSize: 12, fontStyle: 'italic', color: 'var(--warm-gray)', marginTop: 2 }}>
+                            {new Date(report.created).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                          </div>
+                        </div>
+                        <span style={{ fontSize: 11, fontWeight: 700, background: cfg.bg, color: cfg.color, border: `1px solid ${cfg.border}`, borderRadius: 999, padding: '3px 9px', flexShrink: 0 }}>
+                          {cfg.label}
+                        </span>
+                      </div>
+                      <div style={{ padding: '12px 16px' }}>
+                        <div style={{ fontSize: 13, color: 'var(--text)', lineHeight: 1.5 }}>{report.description}</div>
+                        {report.status === 'rejected' && report.rejected_reason && (
+                          <div style={{ fontSize: 12, fontStyle: 'italic', color: 'var(--warm-gray)', marginTop: 6 }}>Grund: {report.rejected_reason}</div>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
           </div>
         )}
 
-        {/* MEIN KONTO */}
+        {/* KONTO */}
         {tab === 'konto' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            {/* Profil */}
-            <div style={{ background: 'var(--bg-card)', borderRadius: '14px', border: '1px solid var(--border)', overflow: 'hidden' }}>
-              <div style={{ background: 'linear-gradient(135deg, var(--btn-dark) 0%, var(--btn-dark) 100%)', padding: '20px 24px', color: 'var(--btn-dark-text)', display: 'flex', alignItems: 'center', gap: '14px' }}>
-                <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '18px', flexShrink: 0 }}>
-                  {user?.name?.charAt(0) || '?'}
-                </div>
-                <div>
-                  <div style={{ fontWeight: 700, fontSize: '17px' }}>{user?.name}</div>
-                  <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.55)', marginTop: '2px' }}>Lernbar-Zugang</div>
-                </div>
-              </div>
-
-              <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                {/* Email */}
-                <div>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: 'var(--text)', marginBottom: '6px' }}>Kontakt-Email</label>
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    <input
-                      type="email"
-                      value={kontaktEmail}
-                      onChange={e => setKontaktEmail(e.target.value)}
-                      placeholder="deine@email.de"
-                      style={{ flex: 1, padding: '10px 14px', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '14px', fontFamily: 'inherit', outline: 'none' }}
-                    />
-                    <button
-                      onClick={saveKontaktEmail}
-                      disabled={savingEmail}
-                      style={{ padding: '10px 16px', borderRadius: '8px', border: 'none', background: 'var(--btn-dark)', color: 'var(--btn-dark-text)', fontWeight: 600, fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit', opacity: savingEmail ? 0.6 : 1 }}
-                    >Speichern</button>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {/* Profile */}
+            <div style={{ background: 'var(--lbf-card)', borderRadius: 12, overflow: 'hidden', boxShadow: 'var(--lbf-shadow)' }}>
+              <div style={{ padding: '22px 20px 18px', borderBottom: '0.5px solid rgba(96,8,18,0.1)' }}>
+                <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 14 }}>Profil</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                  <div style={{ width: 52, height: 52, borderRadius: '50%', border: '2px solid #600812', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 20, color: '#600812', flexShrink: 0, background: 'rgba(96,8,18,0.04)' }}>
+                    {initials(user?.name)}
+                  </div>
+                  <div>
+                    <div style={{ fontWeight: 800, fontSize: 18, fontStyle: 'italic', color: 'var(--text)', lineHeight: 1.2 }}>{user?.name}</div>
+                    <div style={{ fontSize: 13, color: 'var(--warm-gray)', marginTop: 2 }}>{user?.email}</div>
                   </div>
                 </div>
-
-                {/* Passwort */}
+              </div>
+              <div style={{ padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 16 }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: 'var(--text)', marginBottom: '6px' }}>Passwort</label>
-                  <button
-                    onClick={sendPasswordReset}
-                    disabled={sendingReset}
-                    style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg-card)', color: 'var(--text)', fontWeight: 600, fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit', opacity: sendingReset ? 0.6 : 1 }}
-                  >
+                  <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 8 }}>Kontakt-Email</label>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <input type="email" value={kontaktEmail} onChange={e => setKontaktEmail(e.target.value)} placeholder="deine@email.de"
+                      style={{ flex: 1, padding: '10px 14px', border: '1px solid rgba(0,0,0,0.1)', borderRadius: 8, fontSize: 14, fontFamily: 'inherit', outline: 'none', background: 'var(--bg-input)', color: 'var(--text)' }} />
+                    <button onClick={saveKontaktEmail} disabled={savingEmail}
+                      style={{ padding: '10px 16px', borderRadius: 8, border: 'none', background: '#600812', color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', opacity: savingEmail ? 0.6 : 1 }}>
+                      Speichern
+                    </button>
+                  </div>
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 8 }}>Passwort</label>
+                  <button onClick={sendPasswordReset} disabled={sendingReset}
+                    style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 8, border: '1px solid rgba(0,0,0,0.1)', background: 'var(--lbf-card)', color: 'var(--text)', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', opacity: sendingReset ? 0.6 : 1 }}>
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
                     Passwort-Reset Email senden
                   </button>
-                  <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '6px' }}>Du erhältst eine Email mit einem Link zum Passwort zurücksetzen.</div>
                 </div>
+                <button onClick={logout} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 8, border: '1px solid #fecaca', background: '#fef2f2', color: '#b91c1c', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', marginTop: 4 }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                  Abmelden
+                </button>
               </div>
             </div>
-            {/* Darstellung */}
-            <div style={{ background: 'var(--bg-card)', borderRadius: '14px', border: '1px solid var(--border)', overflow: 'hidden' }}>
-              <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)' }}>
-                <div style={{ fontWeight: 700, fontSize: '15px', color: 'var(--text)' }}>Darstellung</div>
+
+            {/* Theme */}
+            <div style={{ background: 'var(--lbf-card)', borderRadius: 12, overflow: 'hidden', boxShadow: 'var(--lbf-shadow)' }}>
+              <div style={{ padding: '16px 20px', borderBottom: '0.5px solid rgba(96,8,18,0.1)' }}>
+                <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em' }}>Darstellung</div>
               </div>
-              <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {([
-                  { value: 'light', label: 'Hell', icon: '☀️', desc: 'Helles Design' },
-                  { value: 'dark',  label: 'Dunkel', icon: '🌙', desc: 'Dunkles Design' },
-                  { value: 'system', label: 'System', icon: '⚙️', desc: 'Geräteeinstellung' },
-                  { value: 'retro', label: 'Retro', icon: '📟', desc: 'CRT Terminal — grüner Phosphor' }
-                ] as { value: ThemeMode; label: string; icon: string; desc: string }[]).map(opt => (
-                  <button
-                    key={opt.value}
-                    onClick={() => { setTheme(opt.value); setThemeMode(opt.value) }}
-                    style={{
-                      display: 'flex', alignItems: 'center', gap: '14px',
-                      padding: '12px 14px', borderRadius: '10px',
-                      border: themeMode === opt.value ? '2px solid var(--accent)' : '1.5px solid var(--border)',
-                      background: themeMode === opt.value ? 'var(--bg-subtle)' : 'transparent',
-                      cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit',
-                      transition: 'all 0.15s', width: '100%'
-                    }}
-                  >
-                    <span style={{ fontSize: '20px', lineHeight: 1 }}>{opt.icon}</span>
+                  { value: 'light',  label: 'Hell',   desc: 'Helles Design',
+                    icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg> },
+                  { value: 'dark',   label: 'Dunkel', desc: 'Dunkles Design',
+                    icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg> },
+                  { value: 'system', label: 'System', desc: 'Geräteeinstellung',
+                    icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg> },
+                  { value: 'retro',  label: 'Retro',  desc: 'CRT Terminal',
+                    icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg> },
+                ] as { value: ThemeMode; label: string; icon: React.ReactNode; desc: string }[]).map(opt => (
+                  <button key={opt.value} onClick={() => { setTheme(opt.value); setThemeMode(opt.value) }}
+                    style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 12px', borderRadius: 10,
+                      border: themeMode === opt.value ? '1.5px solid #600812' : '1px solid rgba(0,0,0,0.08)',
+                      background: themeMode === opt.value ? 'rgba(96,8,18,0.04)' : 'transparent',
+                      cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit', width: '100%' }}>
+                    <span style={{ lineHeight: 1, color: themeMode === opt.value ? '#600812' : 'var(--warm-gray)', flexShrink: 0 }}>{opt.icon}</span>
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontWeight: 600, fontSize: '14px', color: 'var(--text)' }}>{opt.label}</div>
-                      <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '1px' }}>{opt.desc}</div>
+                      <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--text)' }}>{opt.label}</div>
+                      <div style={{ fontSize: 12, fontStyle: 'italic', color: 'var(--warm-gray)', marginTop: 1 }}>{opt.desc}</div>
                     </div>
                     {themeMode === opt.value && (
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2.5">
-                        <polyline points="20 6 9 17 4 12"/>
-                      </svg>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#600812" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
                     )}
                   </button>
                 ))}
@@ -1262,25 +868,91 @@ export default function Unitas() {
         )}
       </div>
 
+      {/* ── Bottom Tab Bar — editorial ── */}
+      <div style={{
+        position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 100,
+        background: 'var(--lbf-card)',
+        borderTop: '0.5px solid rgba(96,8,18,0.12)',
+        display: 'flex', alignItems: 'stretch',
+        paddingBottom: 'env(safe-area-inset-bottom)',
+      }}>
+        {([
+          { id: 'uebersicht', label: 'Übersicht', badge: 0,
+            icon: (a: boolean) => <svg width="20" height="20" viewBox="0 0 24 24" fill={a ? '#600812' : 'none'} stroke={a ? '#600812' : 'var(--warm-gray)'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg> },
+          { id: 'protokolle', label: 'Protokolle', badge: protokolleBadge,
+            icon: (a: boolean) => <svg width="20" height="20" viewBox="0 0 24 24" fill={a ? '#600812' : 'none'} stroke={a ? '#600812' : 'var(--warm-gray)'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg> },
+          ...(hasLernbar ? [{ id: 'lernbar', label: 'Lernbar', badge: lernbarBadge,
+            icon: (a: boolean) => <svg width="20" height="20" viewBox="0 0 24 24" fill={a ? '#600812' : 'none'} stroke={a ? '#600812' : 'var(--warm-gray)'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg> }] : []),
+          { id: 'vorgaenge', label: 'Vorgänge', badge: openOutputs + pendingReportsCount,
+            icon: (a: boolean) => <svg width="20" height="20" viewBox="0 0 24 24" fill={a ? '#600812' : 'none'} stroke={a ? '#600812' : 'var(--warm-gray)'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg> },
+          ...(hasMPG ? [{ id: 'hub', label: 'Hub', badge: 0,
+            icon: (a: boolean) => (
+              <div style={{
+                width: 22, height: 22, borderRadius: '50%',
+                background: a ? '#600812' : 'transparent',
+                border: a ? 'none' : '1.5px solid var(--warm-gray)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 8, fontWeight: 700, color: a ? '#fff' : 'var(--warm-gray)', letterSpacing: '0.03em',
+                flexShrink: 0,
+              }}>{initials(user?.name)}</div>
+            ) }] : []),
+        ] as { id: string; label: string; badge: number; icon: (active: boolean) => React.ReactNode }[]).map(t => {
+          const active = tab === t.id
+          return (
+            <button
+              key={t.id}
+              onClick={() => t.id === 'lernbar' || t.id === 'hub' ? navigate(`/${t.id}`) : setTab(t.id as any)}
+              style={{
+                flex: 1, padding: '0 4px 8px', border: 'none', background: 'none',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
+                cursor: 'pointer', fontFamily: 'inherit', position: 'relative',
+                color: active ? '#600812' : 'var(--warm-gray)',
+                borderTop: active ? '2px solid #600812' : '2px solid transparent',
+                paddingTop: 10,
+              }}
+            >
+              {t.icon(active)}
+              {t.badge > 0 && (
+                <span style={{
+                  position: 'absolute', top: 6, right: 'calc(50% - 16px)',
+                  background: '#600812', color: '#fff',
+                  borderRadius: 999, padding: '0 5px', fontSize: 9, fontWeight: 700, minWidth: 14, textAlign: 'center', lineHeight: '15px',
+                }}>{t.badge}</span>
+              )}
+              <span style={{ fontSize: 9, fontWeight: 700, lineHeight: 1, color: active ? '#600812' : 'var(--warm-gray)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t.label}</span>
+            </button>
+          )
+        })}
+      </div>
+
       {/* Toast */}
       {message && (
         <div style={{
-          position: 'fixed', bottom: '32px', right: '24px', zIndex: 9999,
-          padding: '12px 18px', borderRadius: '10px', fontSize: '14px', fontWeight: 600,
+          position: 'fixed', bottom: 'calc(80px + env(safe-area-inset-bottom))', left: '50%', transform: 'translateX(-50%)', zIndex: 9999,
+          padding: '12px 18px', borderRadius: '10px', fontSize: '14px', fontWeight: 600, whiteSpace: 'nowrap',
           background: message.type === 'success' ? '#f0fdf4' : '#fef2f2',
           border: `1px solid ${message.type === 'success' ? '#bbf7d0' : '#fecaca'}`,
           color: message.type === 'success' ? '#166534' : '#b91c1c',
-          animation: 'slideInRight 0.25s cubic-bezier(0.34,1.56,0.64,1) both',
-          boxShadow: '0 4px 16px rgba(0,0,0,0.08)'
+          animation: 'slideInUp 0.25s cubic-bezier(0.34,1.56,0.64,1) both',
+          boxShadow: '0 4px 16px rgba(0,0,0,0.12)'
         }}>
           {message.text}
         </div>
       )}
 
       <style>{`
-        @keyframes slideInRight {
-          from { transform: translateX(120%); opacity: 0; }
-          to   { transform: translateX(0);   opacity: 1; }
+        @import url('https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400;1,700&display=swap');
+        @keyframes slideInUp {
+          from { transform: translateX(-50%) translateY(20px); opacity: 0; }
+          to   { transform: translateX(-50%) translateY(0);    opacity: 1; }
+        }
+        @keyframes greetNameIn {
+          from { opacity: 0; transform: translateY(16px); }
+          to   { opacity: 1; transform: none; }
+        }
+        @keyframes greetOverlayOut {
+          from { opacity: 1; }
+          to   { opacity: 0; }
         }
         details > summary::-webkit-details-marker { display: none; }
         @media print {
