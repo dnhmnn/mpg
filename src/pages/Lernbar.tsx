@@ -524,13 +524,13 @@ export default function Lernbar() {
               {pinned.length > 0 && (
                 <>
                   <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 10 }}>Angepinnt</div>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12, marginBottom: 20 }}>{pinned.map(renderBook)}</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 20 }}>{pinned.map(renderBook)}</div>
                 </>
               )}
               {regular.length > 0 && (
                 <>
                   {pinned.length > 0 && <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 10 }}>Alle Beiträge</div>}
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>{regular.map(renderBook)}</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>{regular.map(renderBook)}</div>
                 </>
               )}
             </div>
