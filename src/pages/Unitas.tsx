@@ -52,6 +52,17 @@ interface ProductOutput {
   }
 }
 
+interface DefectReport {
+  id: string
+  device_name: string
+  description: string
+  severity: string
+  status: 'pending' | 'confirmed' | 'rejected' | string
+  reporter_user_id: string
+  rejected_reason?: string
+  created: string
+}
+
 interface Neuigkeit {
   id: string
   titel: string
@@ -69,6 +80,7 @@ export default function Unitas() {
   const { user, loading: authLoading, logout } = useAuth()
   const [tab, setTab] = useState<'uebersicht' | 'protokolle' | 'vorgaenge' | 'konto'>('uebersicht')
   const [myOutputs, setMyOutputs] = useState<ProductOutput[]>([])
+  const [myReports, setMyReports] = useState<DefectReport[]>([])
 
   const [termine, setTermine] = useState<Termin[]>([])
   const [terminUser, setTerminUser] = useState<TerminUser[]>([])
@@ -250,6 +262,18 @@ export default function Unitas() {
           setMyOutputs((outputs as any[]).filter(o => o.payload?.user_id === user!.id))
         }
       } catch { /* ignore */ }
+
+      // Defektmeldungen des Benutzers
+      try {
+        if (user?.organization_id) {
+          const reports = await pb.collection('mpg_defect_reports').getFullList({
+            filter: `organization_id = "${user.organization_id}"`,
+            sort: '-created',
+            requestKey: `unitas-reports-${Date.now()}`,
+          })
+          setMyReports((reports as any[]).filter(r => r.reporter_user_id === user!.id))
+        }
+      } catch { /* ignore */ }
     } catch (e: any) {
       console.error(e)
     } finally {
@@ -291,6 +315,7 @@ export default function Unitas() {
   const hasLernbar = user?.supervisor || user?.permissions?.['lernbar'] || (user as any)?.lernbar_access
   const hasMPG = user?.supervisor || user?.permissions?.['dashboard']
   const openOutputs = myOutputs.filter(o => o.status === 'offen').length
+  const pendingReportsCount = myReports.filter(r => r.status === 'pending').length
   const lernbarBadge = upcomingTermine.length + (progress.length - doneMods)
   const protokolleBadge = myPatients.length + myArchivedPatients.length
 
@@ -682,9 +707,10 @@ export default function Unitas() {
         {/* VORGÄNGE */}
         {tab === 'vorgaenge' && (
           <div>
-            <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', paddingLeft: 2, marginBottom: 16 }}>Meine Vorgänge</div>
+            {/* Produktausgaben */}
+            <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', paddingLeft: 2, marginBottom: 16 }}>Produktausgaben</div>
             {myOutputs.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '48px 0', color: 'var(--warm-gray)', fontSize: 15, fontStyle: 'italic' }}>Keine Vorgänge vorhanden</div>
+              <div style={{ textAlign: 'center', padding: '32px 0', color: 'var(--warm-gray)', fontSize: 14, fontStyle: 'italic' }}>Keine Produktausgaben vorhanden</div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {myOutputs.map(output => {
@@ -714,6 +740,44 @@ export default function Unitas() {
                             <span style={{ fontStyle: 'italic', color: 'var(--warm-gray)' }}>{pos.qty}× {pos.unit ?? ''}</span>
                           </div>
                         ))}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+
+            {/* Defektmeldungen */}
+            <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', paddingLeft: 2, marginTop: 28, marginBottom: 16 }}>Defektmeldungen</div>
+            {myReports.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '32px 0', color: 'var(--warm-gray)', fontSize: 14, fontStyle: 'italic' }}>Keine Defektmeldungen vorhanden</div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {myReports.map(report => {
+                  const statusCfg: Record<string, { label: string; bg: string; color: string; border: string; borderLeft: string }> = {
+                    pending:   { label: 'Ausstehend', bg: '#fffbeb', color: '#92400e', border: '#fde68a', borderLeft: '#d97706' },
+                    confirmed: { label: 'Bestätigt',  bg: '#fef2f2', color: '#991b1b', border: '#fecaca', borderLeft: '#dc2626' },
+                    rejected:  { label: 'Abgelehnt',  bg: 'rgba(0,0,0,0.04)', color: 'var(--warm-gray)', border: 'rgba(0,0,0,0.08)', borderLeft: 'rgba(139,113,90,0.35)' },
+                  }
+                  const cfg = statusCfg[report.status] ?? statusCfg['rejected']
+                  return (
+                    <div key={report.id} style={{ background: 'var(--lbf-card)', borderRadius: 10, overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', borderLeft: `3px solid ${cfg.borderLeft}` }}>
+                      <div style={{ padding: '14px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '0.5px solid rgba(0,0,0,0.06)' }}>
+                        <div style={{ flex: 1, minWidth: 0, paddingRight: 10 }}>
+                          <div style={{ fontWeight: 700, fontSize: 15, fontStyle: 'italic', color: 'var(--text)' }}>{report.device_name}</div>
+                          <div style={{ fontSize: 12, fontStyle: 'italic', color: 'var(--warm-gray)', marginTop: 2 }}>
+                            {new Date(report.created).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                          </div>
+                        </div>
+                        <span style={{ fontSize: 11, fontWeight: 700, background: cfg.bg, color: cfg.color, border: `1px solid ${cfg.border}`, borderRadius: 999, padding: '3px 9px', flexShrink: 0 }}>
+                          {cfg.label}
+                        </span>
+                      </div>
+                      <div style={{ padding: '12px 16px' }}>
+                        <div style={{ fontSize: 13, color: 'var(--text)', lineHeight: 1.5 }}>{report.description}</div>
+                        {report.status === 'rejected' && report.rejected_reason && (
+                          <div style={{ fontSize: 12, fontStyle: 'italic', color: 'var(--warm-gray)', marginTop: 6 }}>Grund: {report.rejected_reason}</div>
+                        )}
                       </div>
                     </div>
                   )
@@ -815,7 +879,7 @@ export default function Unitas() {
             icon: (a: boolean) => <svg width="20" height="20" viewBox="0 0 24 24" fill={a ? '#600812' : 'none'} stroke={a ? '#600812' : 'var(--warm-gray)'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg> },
           ...(hasLernbar ? [{ id: 'lernbar', label: 'Lernbar', badge: lernbarBadge,
             icon: (a: boolean) => <svg width="20" height="20" viewBox="0 0 24 24" fill={a ? '#600812' : 'none'} stroke={a ? '#600812' : 'var(--warm-gray)'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg> }] : []),
-          { id: 'vorgaenge', label: 'Vorgänge', badge: openOutputs,
+          { id: 'vorgaenge', label: 'Vorgänge', badge: openOutputs + pendingReportsCount,
             icon: (a: boolean) => <svg width="20" height="20" viewBox="0 0 24 24" fill={a ? '#600812' : 'none'} stroke={a ? '#600812' : 'var(--warm-gray)'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg> },
           ...(hasMPG ? [{ id: 'hub', label: 'Hub', badge: 0,
             icon: (a: boolean) => (
