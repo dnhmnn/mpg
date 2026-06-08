@@ -108,6 +108,7 @@ export default function Lernbar() {
   const [detailTermin, setDetailTermin] = useState<Termin | null>(null)
   const [bibSearch, setBibSearch] = useState('')
   const [bibActiveTag, setBibActiveTag] = useState<string | null>(null)
+  const [openBook, setOpenBook] = useState<Lernbeitrag | null>(null)
 
   // Module player
   const [playerProgress, setPlayerProgress] = useState<ModulProgress | null>(null)
@@ -450,108 +451,40 @@ export default function Lernbar() {
 
         {/* ── BIBLIOTHEK ── */}
         {tab === 'bibliothek' && (() => {
-          const TYPE_CFG: Record<string, { label: string; bg: string; color: string }> = {
-            bild:  { label: 'Bild',  bg: 'rgba(96,8,18,0.08)',  color: '#600812' },
-            text:  { label: 'Text',  bg: 'rgba(96,8,18,0.08)',  color: '#600812' },
-            video: { label: 'Video', bg: '#dcfce7', color: '#065f46' },
-            quiz:  { label: 'Quiz',  bg: '#dbeafe', color: '#1e40af' },
+          const COVER: Record<string, { bg: string; spine: string; label: string }> = {
+            text:  { bg: 'linear-gradient(165deg, #600812 0%, #3d0408 100%)', spine: 'rgba(0,0,0,0.3)', label: 'Text' },
+            bild:  { bg: 'linear-gradient(165deg, #7c2d12 0%, #431407 100%)', spine: 'rgba(0,0,0,0.3)', label: 'Bild' },
+            video: { bg: 'linear-gradient(165deg, #065f46 0%, #022c22 100%)', spine: 'rgba(0,0,0,0.3)', label: 'Video' },
+            quiz:  { bg: 'linear-gradient(165deg, #1e3a8a 0%, #0f172a 100%)', spine: 'rgba(0,0,0,0.3)', label: 'Quiz' },
           }
 
-          const renderCard = (b: Lernbeitrag) => {
+          const renderBook = (b: Lernbeitrag) => {
             const tags = parseTags(b.tags)
             const bildUrl = b.bild ? `https://api.responda.systems/api/files/${b.collectionId}/${b.id}/${b.bild}` : null
-            const qs = feedQuizState[b.id] || { selected: null, submitted: false }
-            const quiz = parseQuiz(b.quiz_daten)
-            const initials = (b.erstellt_von_name || 'R').split(' ').map((w: string) => w[0]).slice(0, 2).join('').toUpperCase()
-            const typeCfg = TYPE_CFG[b.typ] || TYPE_CFG.text
-
+            const cfg = COVER[b.typ] || COVER.text
             return (
-              <div key={b.id} style={{ background: 'var(--lbf-card)', borderRadius: 12, boxShadow: 'var(--lbf-shadow)', overflow: 'hidden', marginBottom: 12, borderLeft: '3px solid #600812' }}>
-
-                {/* Media */}
-                {b.typ === 'video' && b.video_url ? (
-                  <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0, background: '#000' }}>
-                    <iframe src={getVideoEmbed(b.video_url)} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }} allowFullScreen allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" />
+              <div key={b.id} onClick={() => setOpenBook(b)} style={{
+                cursor: 'pointer', borderRadius: 10, overflow: 'hidden',
+                aspectRatio: '3/4', position: 'relative',
+                background: bildUrl ? '#1a0e08' : cfg.bg,
+                boxShadow: '3px 5px 18px rgba(0,0,0,0.28), inset -3px 0 8px rgba(0,0,0,0.18)',
+              }}>
+                <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 7, background: cfg.spine, zIndex: 3 }} />
+                {bildUrl && <img src={bildUrl} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />}
+                <div style={{ position: 'absolute', inset: 0, background: bildUrl ? 'linear-gradient(to top, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.05) 55%, transparent 100%)' : 'none', zIndex: 2 }} />
+                {b.gepinnt && (
+                  <div style={{ position: 'absolute', top: 10, right: 10, zIndex: 4 }}>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="rgba(253,232,216,0.9)"><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5v6h2v-6h5v-2l-2-2z"/></svg>
                   </div>
-                ) : bildUrl ? (
-                  <img src={bildUrl} alt={b.titel} style={{ width: '100%', display: 'block', maxHeight: 360, objectFit: 'cover' }} />
-                ) : null}
-
-                {/* Body */}
-                <div style={{ padding: '12px 14px 14px' }}>
-                  {/* Title + type badge row */}
-                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 6 }}>
-                    <div style={{ flex: 1, fontWeight: 700, fontSize: 16, color: 'var(--lbf-text)', lineHeight: 1.35 }}>{b.titel}</div>
-                    <span style={{ flexShrink: 0, fontSize: 9, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.1em', color: typeCfg.color, background: typeCfg.bg, padding: '3px 7px', borderRadius: 6 }}>
-                      {typeCfg.label}
-                    </span>
-                  </div>
-
-                  {b.inhalt && b.typ !== 'quiz' && (
-                    <div style={{ fontSize: 14, color: 'var(--lbf-text)', lineHeight: 1.65, whiteSpace: 'pre-wrap', marginBottom: tags.length > 0 ? 10 : 8 }}>{b.inhalt}</div>
-                  )}
-
-                  {b.typ === 'quiz' && quiz && (
-                    <div style={{ marginTop: 4 }}>
-                      <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--lbf-text)', lineHeight: 1.5, marginBottom: 12 }}>{quiz.frage}</div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                        {quiz.antworten.map((a: string, idx2: number) => {
-                          let bg = 'var(--warm-bg)', border = '1.5px solid rgba(96,8,18,0.12)', color = 'var(--lbf-text)'
-                          if (qs.submitted) {
-                            if (idx2 === quiz.richtige) { bg = '#f0fdf4'; border = '2px solid #16a34a'; color = '#166534' }
-                            else if (idx2 === qs.selected) { bg = '#fef2f2'; border = '2px solid #600812'; color = '#600812' }
-                          } else if (idx2 === qs.selected) { bg = 'rgba(107,15,26,0.06)'; border = '2px solid #600812'; color = '#600812' }
-                          return (
-                            <button key={idx2} disabled={qs.submitted}
-                              onClick={() => setFeedQuizState(prev => ({ ...prev, [b.id]: { selected: idx2, submitted: false } }))}
-                              style={{ padding: '12px 14px', borderRadius: 12, border, background: bg, color, fontWeight: idx2 === qs.selected || (qs.submitted && idx2 === quiz.richtige) ? 700 : 400, fontSize: 14, cursor: qs.submitted ? 'default' : 'pointer', textAlign: 'left', fontFamily: 'inherit' }}>
-                              {a}
-                            </button>
-                          )
-                        })}
-                      </div>
-                      {!qs.submitted ? (
-                        <button disabled={qs.selected === null}
-                          onClick={() => setFeedQuizState(prev => ({ ...prev, [b.id]: { ...prev[b.id], submitted: true } }))}
-                          style={{ marginTop: 10, width: '100%', padding: '13px', borderRadius: 12, border: 'none', background: qs.selected === null ? 'var(--warm-bg)' : '#600812', color: qs.selected === null ? 'var(--warm-gray)' : '#fff', fontWeight: 700, fontSize: 15, cursor: qs.selected === null ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
-                          Antworten
-                        </button>
-                      ) : (
-                        <div style={{ marginTop: 10, padding: '12px 16px', borderRadius: 12, textAlign: 'center', fontWeight: 700, background: qs.selected === quiz.richtige ? '#f0fdf4' : '#fef2f2', border: qs.selected === quiz.richtige ? '1px solid #bbf7d0' : '1px solid #fecaca', color: qs.selected === quiz.richtige ? '#166534' : '#600812' }}>
-                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                            {qs.selected === quiz.richtige
-                              ? <><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Richtig!</>
-                              : <><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Falsch — die richtige Antwort ist markiert</>}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Tags (clickable to filter) */}
+                )}
+                <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '14px 12px 14px 20px', zIndex: 4 }}>
+                  <div style={{ fontSize: 8, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.18em', color: 'rgba(255,255,255,0.5)', marginBottom: 5 }}>{cfg.label}</div>
+                  <div style={{ fontWeight: 700, fontStyle: 'italic', fontSize: 14, color: '#fff', lineHeight: 1.3, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' as const } as React.CSSProperties}>{b.titel}</div>
                   {tags.length > 0 && (
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 10 }}>
-                      {tags.map(t => (
-                        <button key={t} onClick={() => setBibActiveTag(bibActiveTag === t ? null : t)}
-                          style={{ fontSize: 12, fontWeight: 700, fontStyle: 'italic', color: bibActiveTag === t ? '#fff' : '#600812', background: bibActiveTag === t ? '#600812' : 'transparent', border: 'none', padding: '0 2px', cursor: 'pointer', fontFamily: 'inherit' }}>
-                          #{t}
-                        </button>
-                      ))}
+                    <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.4)', fontStyle: 'italic', marginTop: 5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {tags.slice(0, 3).map(t => `#${t}`).join(' ')}
                     </div>
                   )}
-
-                  {/* Author + date footer */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10, paddingTop: 8, borderTop: '0.5px solid rgba(96,8,18,0.08)' }}>
-                    <div style={{ width: 22, height: 22, borderRadius: '50%', background: '#600812', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 8, fontWeight: 700, flexShrink: 0 }}>
-                      {initials}
-                    </div>
-                    <div style={{ flex: 1, fontSize: 11, color: 'var(--warm-gray)', fontStyle: 'italic' }}>
-                      {b.erstellt_von_name || 'Responda'} · {new Date(b.created).toLocaleDateString('de-DE', { day: '2-digit', month: 'long', year: 'numeric' })}
-                    </div>
-                    {b.gepinnt && (
-                      <svg width="11" height="11" viewBox="0 0 24 24" fill="#600812"><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5v6h2v-6h5v-2l-2-2z"/></svg>
-                    )}
-                  </div>
                 </div>
               </div>
             )
@@ -562,16 +495,16 @@ export default function Lernbar() {
 
           return (
             <div style={{ display: 'flex', flexDirection: 'column' }}>
-              {/* Search bar */}
+              {/* Search */}
               <div style={{ position: 'relative', marginBottom: 12 }}>
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--warm-gray)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
                 <input type="search" placeholder="Titel, Inhalt oder Tag suchen…" value={bibSearch} onChange={e => setBibSearch(e.target.value)}
                   style={{ width: '100%', padding: '10px 14px 10px 36px', border: '1.5px solid rgba(96,8,18,0.15)', borderRadius: 10, background: '#fff', fontSize: 14, fontFamily: 'inherit', color: '#1a0e08', boxSizing: 'border-box', WebkitAppearance: 'none' }} />
               </div>
 
-              {/* Tag filter chips */}
+              {/* Tag chips */}
               {allBibTags.length > 0 && (
-                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 14 }}>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 16 }}>
                   {allBibTags.map(tag => (
                     <button key={tag} onClick={() => setBibActiveTag(bibActiveTag === tag ? null : tag)}
                       style={{ fontSize: 11, fontWeight: 700, fontStyle: 'italic', color: bibActiveTag === tag ? '#fff' : '#600812', background: bibActiveTag === tag ? '#600812' : 'rgba(96,8,18,0.07)', border: 'none', borderRadius: 99, padding: '4px 10px', cursor: 'pointer', fontFamily: 'inherit' }}>
@@ -590,12 +523,16 @@ export default function Lernbar() {
 
               {pinned.length > 0 && (
                 <>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 8 }}>Angepinnt</div>
-                  {pinned.map(renderCard)}
-                  {regular.length > 0 && <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 8, marginTop: 16 }}>Alle Beiträge</div>}
+                  <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 10 }}>Angepinnt</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12, marginBottom: 20 }}>{pinned.map(renderBook)}</div>
                 </>
               )}
-              {regular.map(renderCard)}
+              {regular.length > 0 && (
+                <>
+                  {pinned.length > 0 && <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 10 }}>Alle Beiträge</div>}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>{regular.map(renderBook)}</div>
+                </>
+              )}
             </div>
           )
         })()}
@@ -800,6 +737,124 @@ export default function Lernbar() {
 
       <style>{`details > summary::-webkit-details-marker { display: none; }
 @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }`}</style>
+
+      {/* Open Book Sheet */}
+      {openBook && (() => {
+        const b = openBook
+        const tags = parseTags(b.tags)
+        const bildUrl = b.bild ? `https://api.responda.systems/api/files/${b.collectionId}/${b.id}/${b.bild}` : null
+        const qs = feedQuizState[b.id] || { selected: null, submitted: false }
+        const quiz = parseQuiz(b.quiz_daten)
+        const initials = (b.erstellt_von_name || 'R').split(' ').map((w: string) => w[0]).slice(0, 2).join('').toUpperCase()
+        const COVER_COLORS: Record<string, string> = {
+          text: '#600812', bild: '#7c2d12', video: '#065f46', quiz: '#1e3a8a'
+        }
+        const accentColor = COVER_COLORS[b.typ] || '#600812'
+        return (
+          <>
+            <div onClick={() => setOpenBook(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 200 }} />
+            <div style={{ position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 201, background: 'var(--lbf-card)', borderRadius: '20px 20px 0 0', maxHeight: '92dvh', display: 'flex', flexDirection: 'column', animation: 'slideUp 0.3s cubic-bezier(0.32,0.72,0,1)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
+              {/* Handle */}
+              <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0 0' }}>
+                <div style={{ width: 36, height: 4, borderRadius: 2, background: 'rgba(96,8,18,0.2)' }} />
+              </div>
+              {/* Header */}
+              <div style={{ padding: '10px 20px 14px', borderBottom: `0.5px solid rgba(96,8,18,0.12)`, display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                <div style={{ width: 4, flexShrink: 0, alignSelf: 'stretch', borderRadius: 2, background: accentColor, marginTop: 2 }} />
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.18em', color: accentColor, marginBottom: 4 }}>
+                    {b.typ === 'quiz' ? 'Quiz' : b.typ === 'video' ? 'Video' : b.typ === 'bild' ? 'Bild' : 'Text'}
+                  </div>
+                  <div style={{ fontWeight: 700, fontStyle: 'italic', fontSize: 20, color: 'var(--lbf-text)', lineHeight: 1.25 }}>{b.titel}</div>
+                </div>
+                <button onClick={() => setOpenBook(null)} style={{ background: 'rgba(96,8,18,0.06)', border: 'none', borderRadius: '50%', width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0, color: 'var(--warm-gray)' }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+              </div>
+
+              {/* Scrollable content */}
+              <div style={{ flex: 1, overflowY: 'auto', padding: '20px 20px 32px' }}>
+
+                {/* Video */}
+                {b.typ === 'video' && b.video_url && (
+                  <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0, background: '#000', borderRadius: 12, overflow: 'hidden', marginBottom: 20 }}>
+                    <iframe src={getVideoEmbed(b.video_url)} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }} allowFullScreen allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" />
+                  </div>
+                )}
+
+                {/* Image */}
+                {bildUrl && (
+                  <img src={bildUrl} alt={b.titel} style={{ width: '100%', display: 'block', borderRadius: 12, maxHeight: 340, objectFit: 'cover', marginBottom: 20 }} />
+                )}
+
+                {/* Text content */}
+                {b.inhalt && b.typ !== 'quiz' && (
+                  <div style={{ fontSize: 16, color: 'var(--lbf-text)', lineHeight: 1.75, whiteSpace: 'pre-wrap', marginBottom: 20 }}>{b.inhalt}</div>
+                )}
+
+                {/* Quiz */}
+                {b.typ === 'quiz' && quiz && (
+                  <div style={{ marginBottom: 20 }}>
+                    <div style={{ fontSize: 17, fontWeight: 600, color: 'var(--lbf-text)', lineHeight: 1.5, marginBottom: 16 }}>{quiz.frage}</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                      {quiz.antworten.map((a: string, idx2: number) => {
+                        let bg = 'var(--warm-bg)', border = '1.5px solid rgba(96,8,18,0.12)', color = 'var(--lbf-text)'
+                        if (qs.submitted) {
+                          if (idx2 === quiz.richtige) { bg = '#f0fdf4'; border = '2px solid #16a34a'; color = '#166534' }
+                          else if (idx2 === qs.selected) { bg = '#fef2f2'; border = '2px solid #600812'; color = '#600812' }
+                        } else if (idx2 === qs.selected) { bg = 'rgba(107,15,26,0.06)'; border = '2px solid #600812'; color = '#600812' }
+                        return (
+                          <button key={idx2} disabled={qs.submitted}
+                            onClick={() => setFeedQuizState(prev => ({ ...prev, [b.id]: { selected: idx2, submitted: false } }))}
+                            style={{ padding: '13px 16px', borderRadius: 12, border, background: bg, color, fontWeight: idx2 === qs.selected || (qs.submitted && idx2 === quiz.richtige) ? 700 : 400, fontSize: 15, cursor: qs.submitted ? 'default' : 'pointer', textAlign: 'left', fontFamily: 'inherit' }}>
+                            {a}
+                          </button>
+                        )
+                      })}
+                    </div>
+                    {!qs.submitted ? (
+                      <button disabled={qs.selected === null}
+                        onClick={() => setFeedQuizState(prev => ({ ...prev, [b.id]: { ...prev[b.id], submitted: true } }))}
+                        style={{ marginTop: 12, width: '100%', padding: '14px', borderRadius: 12, border: 'none', background: qs.selected === null ? 'var(--warm-bg)' : '#600812', color: qs.selected === null ? 'var(--warm-gray)' : '#fff', fontWeight: 700, fontSize: 16, cursor: qs.selected === null ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
+                        Antworten
+                      </button>
+                    ) : (
+                      <div style={{ marginTop: 12, padding: '14px 16px', borderRadius: 12, textAlign: 'center', fontWeight: 700, background: qs.selected === quiz.richtige ? '#f0fdf4' : '#fef2f2', border: qs.selected === quiz.richtige ? '1px solid #bbf7d0' : '1px solid #fecaca', color: qs.selected === quiz.richtige ? '#166534' : '#600812' }}>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                          {qs.selected === quiz.richtige
+                            ? <><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Richtig!</>
+                            : <><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Falsch — die richtige Antwort ist markiert</>}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Tags */}
+                {tags.length > 0 && (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 20 }}>
+                    {tags.map(t => (
+                      <button key={t} onClick={() => { setBibActiveTag(bibActiveTag === t ? null : t); setOpenBook(null) }}
+                        style={{ fontSize: 12, fontWeight: 700, fontStyle: 'italic', color: '#600812', background: 'rgba(96,8,18,0.07)', border: 'none', borderRadius: 99, padding: '4px 10px', cursor: 'pointer', fontFamily: 'inherit' }}>
+                        #{t}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {/* Author / date */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingTop: 16, borderTop: '0.5px solid rgba(96,8,18,0.08)' }}>
+                  <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#600812', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, flexShrink: 0 }}>{initials}</div>
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--lbf-text)' }}>{b.erstellt_von_name || 'Responda'}</div>
+                    <div style={{ fontSize: 11, color: 'var(--warm-gray)', fontStyle: 'italic' }}>{new Date(b.created).toLocaleDateString('de-DE', { day: '2-digit', month: 'long', year: 'numeric' })}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </>
+        )
+      })()}
 
       {/* Termin Detail Sheet */}
       {detailTermin && (() => {
