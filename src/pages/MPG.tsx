@@ -10,6 +10,7 @@ type DeviceInterval = 'daily' | 'weekly' | 'monthly' | 'yearly'
 type Severity = 'low' | 'medium' | 'high' | 'critical'
 type DefectStatus = 'open' | 'in_progress' | 'resolved'
 type DeviceStatus = 'ok' | 'warning' | 'overdue' | 'defect'
+type ExternalReportStatus = 'pending' | 'confirmed' | 'rejected'
 
 interface Device {
   id: string
@@ -23,6 +24,13 @@ interface Device {
   next_inspection_due: string
   organization_id: string
   created: string
+  operational?: boolean
+  has_stk?: boolean
+  last_stk?: string
+  stk_interval_months?: number
+  has_mtk?: boolean
+  last_mtk?: string
+  mtk_interval_months?: number
 }
 
 interface ChecklistResult { item: string; checked: boolean; note: string }
@@ -57,6 +65,19 @@ interface Defect {
   resolved_by?: string
   resolved_notes?: string
   organization_id: string
+  created: string
+}
+
+interface ExternalReport {
+  id: string
+  device_id: string
+  device_name: string
+  organization_id: string
+  reporter_name?: string
+  description: string
+  severity: Severity
+  status: ExternalReportStatus
+  rejected_reason?: string
   created: string
 }
 
@@ -119,6 +140,17 @@ function relativeDate(s?: string | null): string {
   return fmtDate(s)
 }
 
+function calcPeriodicStatus(lastDate: string | null | undefined, intervalMonths: number): 'ok' | 'warning' | 'overdue' {
+  const d = parseDate(lastDate)
+  if (!d) return 'overdue'
+  const next = new Date(d)
+  next.setMonth(next.getMonth() + intervalMonths)
+  const daysLeft = Math.floor((next.getTime() - Date.now()) / 86400000)
+  if (daysLeft < 0) return 'overdue'
+  if (daysLeft <= 30) return 'warning'
+  return 'ok'
+}
+
 // ── Component ──────────────────────────────────────────────────────────────
 
 export default function MPG() {
@@ -142,7 +174,7 @@ export default function MPG() {
   const [openMenu, setOpenMenu] = useState<string | null>(null)
 
   // Add/Edit Device sheet
-  const [deviceSheet, setDeviceSheet] = useState<null | { id?: string; name: string; type: string; serial_number: string; location: string; interval: DeviceInterval }>(null)
+  const [deviceSheet, setDeviceSheet] = useState<null | { id?: string; name: string; type: string; serial_number: string; location: string; interval: DeviceInterval; operational: boolean; has_stk: boolean; last_stk: string; stk_interval_months: number; has_mtk: boolean; last_mtk: string; mtk_interval_months: number }>(null)
 
   // Inspection overlay
   const [inspState, setInspState] = useState<null | {
@@ -167,6 +199,13 @@ export default function MPG() {
   const [vtItems, setVtItems] = useState<string[]>([])
   const [vtNewItem, setVtNewItem] = useState('')
 
+  // External defect reports
+  const [externalReports, setExternalReports] = useState<ExternalReport[]>([])
+  const [confirmTarget, setConfirmTarget] = useState<ExternalReport | null>(null)
+  const [confirmNotes, setConfirmNotes] = useState('')
+  const [rejectTarget, setRejectTarget] = useState<ExternalReport | null>(null)
+  const [rejectReason, setRejectReason] = useState('')
+
   // ── Effects ────────────────────────────────────────────────────────────
 
   useEffect(() => {
@@ -187,7 +226,7 @@ export default function MPG() {
     if (!user?.organization_id) return
     setLoading(true)
     try {
-      await Promise.all([loadDevices(), loadInspections(), loadChecklists(), loadDefects()])
+      await Promise.all([loadDevices(), loadInspections(), loadChecklists(), loadDefects(), loadExternalReports()])
     } finally {
       setLoading(false)
     }
@@ -207,6 +246,13 @@ export default function MPG() {
     try {
       const r = await pb.collection('mpg_defects').getFullList<Defect>({ filter: `organization_id = "${user!.organization_id}"`, sort: '-created' })
       setDefects(r)
+    } catch { /* collection not yet created */ }
+  }
+
+  async function loadExternalReports() {
+    try {
+      const r = await pb.collection('mpg_defect_reports').getFullList<ExternalReport>({ filter: `organization_id = "${user!.organization_id}"`, sort: '-created' })
+      setExternalReports(r)
     } catch { /* collection not yet created */ }
   }
 
@@ -247,13 +293,18 @@ export default function MPG() {
   }
 
   function getDeviceStatus(device: Device): DeviceStatus {
+    if (device.operational === false) return 'defect'
     const hasOpenDefect = defects.some(d => d.device_id === device.id && d.status !== 'resolved')
     if (hasOpenDefect) return 'defect'
     if (device.last_inspection_passed === false) return 'overdue'
+    if (device.has_stk && calcPeriodicStatus(device.last_stk, device.stk_interval_months || 24) === 'overdue') return 'overdue'
+    if (device.has_mtk && calcPeriodicStatus(device.last_mtk, device.mtk_interval_months || 24) === 'overdue') return 'overdue'
     const due = calcNextDue(device)
     if (!due) return 'overdue'
     const diff = Math.floor((due.getTime() - Date.now()) / 86400000)
     if (diff < 0) return 'overdue'
+    if (device.has_stk && calcPeriodicStatus(device.last_stk, device.stk_interval_months || 24) === 'warning') return 'warning'
+    if (device.has_mtk && calcPeriodicStatus(device.last_mtk, device.mtk_interval_months || 24) === 'warning') return 'warning'
     if (diff <= 7) return 'warning'
     return 'ok'
   }
@@ -375,6 +426,43 @@ export default function MPG() {
     await pb.collection('mpg_defects').delete(id)
     showMsg('Eintrag gelöscht')
     await loadDefects()
+  }
+
+  async function toggleOperational(device: Device) {
+    const newVal = device.operational !== false ? false : true
+    await pb.collection('mpg_devices').update(device.id, { operational: newVal })
+    showMsg(newVal ? 'Gerät als einsatzbereit markiert' : 'Gerät als nicht einsatzbereit markiert', newVal ? 'success' : 'error')
+    await loadDevices()
+  }
+
+  async function confirmExternalReport() {
+    if (!confirmTarget) return
+    try {
+      await pb.collection('mpg_defects').create({
+        device_id: confirmTarget.device_id, device_name: confirmTarget.device_name,
+        reported_by: confirmTarget.reporter_name || 'Externe Meldung',
+        description: confirmTarget.description,
+        severity: confirmTarget.severity, status: 'open',
+        organization_id: user!.organization_id,
+      })
+      await pb.collection('mpg_devices').update(confirmTarget.device_id, { operational: false })
+      await pb.collection('mpg_defect_reports').update(confirmTarget.id, { status: 'confirmed' })
+      setConfirmTarget(null)
+      setConfirmNotes('')
+      showMsg('Meldung bestätigt — Defekt angelegt, Gerät deaktiviert')
+      await loadAll()
+    } catch (e: unknown) { showMsg('Fehler: ' + (e as Error).message, 'error') }
+  }
+
+  async function rejectExternalReport() {
+    if (!rejectTarget) return
+    try {
+      await pb.collection('mpg_defect_reports').update(rejectTarget.id, { status: 'rejected', rejected_reason: rejectReason.trim() })
+      setRejectTarget(null)
+      setRejectReason('')
+      showMsg('Meldung abgelehnt')
+      await loadExternalReports()
+    } catch (e: unknown) { showMsg('Fehler: ' + (e as Error).message, 'error') }
   }
 
   // Vorlagen (checklist templates)
@@ -545,6 +633,7 @@ export default function MPG() {
 
   const openDefects = defects.filter(d => d.status !== 'resolved')
   const resolvedDefects = defects.filter(d => d.status === 'resolved')
+  const pendingReports = externalReports.filter(r => r.status === 'pending')
 
   return (
     <div style={{ position: 'fixed', inset: 0, overflowY: 'auto', background: 'var(--warm-bg)', fontFamily: "'Atkinson Hyperlegible', -apple-system, sans-serif" }}>
@@ -559,7 +648,7 @@ export default function MPG() {
           <div style={{ fontStyle: 'italic', fontSize: 11, color: 'var(--warm-gray)' }}>{today}</div>
         </div>
         {activeTab === 'geraete' && (
-          <button onClick={() => setDeviceSheet({ name: '', type: 'AED', serial_number: '', location: '', interval: 'monthly' })}
+          <button onClick={() => setDeviceSheet({ name: '', type: 'AED', serial_number: '', location: '', interval: 'monthly', operational: true, has_stk: false, last_stk: '', stk_interval_months: 24, has_mtk: false, last_mtk: '', mtk_interval_months: 24 })}
             style={{ background: '#600812', border: 'none', borderRadius: 8, color: '#fff', cursor: 'pointer', padding: '7px 14px', fontSize: 13, fontWeight: 700, fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 6 }}>
             {pik(<><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></>, 14)}
             Gerät
@@ -577,7 +666,7 @@ export default function MPG() {
       <div style={{ display: 'flex', background: 'var(--lbf-card)', borderBottom: '0.5px solid rgba(96,8,18,0.08)', position: 'sticky', top: 'calc(env(safe-area-inset-top) + 60px)', zIndex: 99 }}>
         {([
           ['geraete', 'Geräte'],
-          ['defekte', `Defekte${openDefects.length > 0 ? ` (${openDefects.length})` : ''}`],
+          ['defekte', (() => { const n = openDefects.length + pendingReports.length; return n > 0 ? `Defekte (${n})` : 'Defekte' })()],
           ['logbuch', 'Logbuch'],
           ['vorlagen', 'Vorlagen'],
         ] as [Tab, string][]).map(([t, label]) => (
@@ -625,7 +714,7 @@ export default function MPG() {
               <div style={{ padding: '48px 16px', textAlign: 'center', color: 'var(--warm-gray)' }}>
                 <div style={{ fontStyle: 'italic', marginBottom: 8 }}>Keine Geräte gefunden</div>
                 {devices.length === 0 && (
-                  <button onClick={() => setDeviceSheet({ name: '', type: 'AED', serial_number: '', location: '', interval: 'monthly' })}
+                  <button onClick={() => setDeviceSheet({ name: '', type: 'AED', serial_number: '', location: '', interval: 'monthly', operational: true, has_stk: false, last_stk: '', stk_interval_months: 24, has_mtk: false, last_mtk: '', mtk_interval_months: 24 })}
                     style={{ padding: '12px 24px', borderRadius: 10, border: 'none', background: '#600812', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
                     Erstes Gerät anlegen
                   </button>
@@ -652,20 +741,38 @@ export default function MPG() {
 
                         {/* Status badges */}
                         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' as const, marginBottom: 10 }}>
-                          {status === 'ok' && <span style={{ fontSize: 11, fontWeight: 700, color: '#16a34a', background: 'rgba(22,163,74,0.1)', borderRadius: 99, padding: '3px 10px' }}>In Ordnung</span>}
-                          {status === 'warning' && <span style={{ fontSize: 11, fontWeight: 700, color: '#d97706', background: 'rgba(217,119,6,0.1)', borderRadius: 99, padding: '3px 10px' }}>Bald fällig</span>}
-                          {status === 'overdue' && <span style={{ fontSize: 11, fontWeight: 700, color: '#dc2626', background: 'rgba(220,38,38,0.1)', borderRadius: 99, padding: '3px 10px' }}>Überfällig</span>}
+                          {device.operational === false
+                            ? <span style={{ fontSize: 11, fontWeight: 700, color: '#dc2626', background: 'rgba(220,38,38,0.1)', borderRadius: 99, padding: '3px 10px' }}>Nicht einsatzbereit</span>
+                            : <span style={{ fontSize: 11, fontWeight: 700, color: '#16a34a', background: 'rgba(22,163,74,0.1)', borderRadius: 99, padding: '3px 10px' }}>Einsatzbereit</span>
+                          }
+                          {status === 'warning' && <span style={{ fontSize: 11, fontWeight: 700, color: '#d97706', background: 'rgba(217,119,6,0.1)', borderRadius: 99, padding: '3px 10px' }}>Prüfung bald fällig</span>}
+                          {status === 'overdue' && device.operational !== false && <span style={{ fontSize: 11, fontWeight: 700, color: '#dc2626', background: 'rgba(220,38,38,0.1)', borderRadius: 99, padding: '3px 10px' }}>Prüfung überfällig</span>}
                           {openDef.length > 0 && (
                             <span style={{ fontSize: 11, fontWeight: 700, color: '#7f1d1d', background: 'rgba(127,29,29,0.1)', borderRadius: 99, padding: '3px 10px' }}>
                               {openDef.length} Defekt{openDef.length > 1 ? 'e' : ''} offen
                             </span>
                           )}
+                          {device.has_stk && (() => {
+                            const s = calcPeriodicStatus(device.last_stk, device.stk_interval_months || 24)
+                            return s !== 'ok' ? <span style={{ fontSize: 11, fontWeight: 700, color: s === 'overdue' ? '#dc2626' : '#d97706', background: s === 'overdue' ? 'rgba(220,38,38,0.1)' : 'rgba(217,119,6,0.1)', borderRadius: 99, padding: '3px 10px' }}>STK {s === 'overdue' ? 'überfällig' : 'bald fällig'}</span> : <span style={{ fontSize: 11, fontWeight: 700, color: '#16a34a', background: 'rgba(22,163,74,0.1)', borderRadius: 99, padding: '3px 10px' }}>STK OK</span>
+                          })()}
+                          {device.has_mtk && (() => {
+                            const s = calcPeriodicStatus(device.last_mtk, device.mtk_interval_months || 24)
+                            return s !== 'ok' ? <span style={{ fontSize: 11, fontWeight: 700, color: s === 'overdue' ? '#dc2626' : '#d97706', background: s === 'overdue' ? 'rgba(220,38,38,0.1)' : 'rgba(217,119,6,0.1)', borderRadius: 99, padding: '3px 10px' }}>MTK {s === 'overdue' ? 'überfällig' : 'bald fällig'}</span> : <span style={{ fontSize: 11, fontWeight: 700, color: '#16a34a', background: 'rgba(22,163,74,0.1)', borderRadius: 99, padding: '3px 10px' }}>MTK OK</span>
+                          })()}
                         </div>
 
                         <div style={{ fontSize: 12, color: 'var(--warm-gray)', fontStyle: 'italic' }}>
                           {due ? `Nächste Prüfung: ${due.toLocaleDateString('de-DE')}` : ''}
                           {lastInsp ? ` · Zuletzt: ${relativeDate(lastInsp.inspection_date)}` : ''}
                         </div>
+                        {(device.has_stk || device.has_mtk) && (
+                          <div style={{ fontSize: 11, color: 'var(--warm-gray)', fontStyle: 'italic', marginTop: 3 }}>
+                            {device.has_stk && `STK: ${device.last_stk ? fmtDate(device.last_stk) : 'ausstehend'}`}
+                            {device.has_stk && device.has_mtk && ' · '}
+                            {device.has_mtk && `MTK: ${device.last_mtk ? fmtDate(device.last_mtk) : 'ausstehend'}`}
+                          </div>
+                        )}
                       </div>
 
                       {/* Action strip */}
@@ -693,7 +800,8 @@ export default function MPG() {
                         {openMenu === device.id && (
                           <div style={{ position: 'absolute', top: 30, right: 0, background: 'var(--lbf-card)', border: '0.5px solid rgba(96,8,18,0.12)', borderRadius: 10, boxShadow: '0 4px 16px rgba(0,0,0,0.1)', minWidth: 160, zIndex: 200 }}>
                             {[
-                              { label: 'Bearbeiten', action: () => { setDeviceSheet({ id: device.id, name: device.name, type: device.type, serial_number: device.serial_number, location: device.location, interval: device.interval }); setOpenMenu(null) } },
+                              { label: 'Bearbeiten', action: () => { setDeviceSheet({ id: device.id, name: device.name, type: device.type, serial_number: device.serial_number, location: device.location, interval: device.interval, operational: device.operational !== false, has_stk: !!device.has_stk, last_stk: device.last_stk || '', stk_interval_months: device.stk_interval_months || 24, has_mtk: !!device.has_mtk, last_mtk: device.last_mtk || '', mtk_interval_months: device.mtk_interval_months || 24 }); setOpenMenu(null) } },
+                              { label: device.operational === false ? 'Als einsatzbereit markieren' : 'Als nicht einsatzbereit markieren', action: () => { toggleOperational(device); setOpenMenu(null) }, danger: device.operational !== false },
                               { label: 'Löschen', action: () => { deleteDevice(device.id, device.name); setOpenMenu(null) }, danger: true },
                             ].map(item => (
                               <button key={item.label} onClick={item.action}
@@ -715,11 +823,49 @@ export default function MPG() {
         {/* ═══ DEFEKTE TAB ═══ */}
         {activeTab === 'defekte' && (
           <>
-            {openDefects.length === 0 && resolvedDefects.length === 0 ? (
+            {/* Pending external reports */}
+            {pendingReports.length > 0 && (
+              <>
+                <div style={{ fontSize: 10, fontWeight: 700, color: '#d97706', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 12 }}>
+                  Eingehende Meldungen ({pendingReports.length})
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 24 }}>
+                  {pendingReports.map(r => (
+                    <div key={r.id} style={{ background: 'var(--lbf-card)', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.07)', borderLeft: '3px solid #d97706', overflow: 'hidden' }}>
+                      <div style={{ padding: '14px 16px' }}>
+                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, justifyContent: 'space-between', marginBottom: 6 }}>
+                          <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 15, color: 'var(--lbf-text)' }}>{r.device_name}</div>
+                          <span style={{ fontSize: 10, fontWeight: 700, color: SEVERITY_CFG[r.severity].color, background: SEVERITY_CFG[r.severity].bg, borderRadius: 99, padding: '3px 9px', flexShrink: 0, textTransform: 'uppercase' as const, letterSpacing: '0.08em' }}>
+                            {SEVERITY_CFG[r.severity].label}
+                          </span>
+                        </div>
+                        <div style={{ fontSize: 14, color: 'var(--lbf-text)', marginBottom: 8, lineHeight: 1.5 }}>{r.description}</div>
+                        <div style={{ fontSize: 12, color: 'var(--warm-gray)', fontStyle: 'italic' }}>
+                          {relativeDate(r.created)} · {r.reporter_name || 'Anonym'}
+                        </div>
+                      </div>
+                      <div style={{ borderTop: '0.5px solid rgba(96,8,18,0.08)', background: 'rgba(250,249,247,0.8)', padding: '8px 14px', display: 'flex', gap: 8 }}>
+                        <button onClick={() => { setConfirmTarget(r); setConfirmNotes('') }}
+                          style={{ flex: 1, padding: '8px 12px', borderRadius: 8, border: 'none', background: '#600812', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                          Bestätigen
+                        </button>
+                        <button onClick={() => { setRejectTarget(r); setRejectReason('') }}
+                          style={{ flex: 1, padding: '8px 12px', borderRadius: 8, border: '0.5px solid rgba(96,8,18,0.2)', background: 'none', color: 'var(--warm-gray)', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                          Ablehnen
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+
+            {openDefects.length === 0 && resolvedDefects.length === 0 && pendingReports.length === 0 && (
               <div style={{ padding: '48px 16px', textAlign: 'center', color: 'var(--warm-gray)' }}>
                 <div style={{ fontSize: 13, fontStyle: 'italic' }}>Keine Defekte gemeldet</div>
               </div>
-            ) : (
+            )}
+            {(openDefects.length > 0 || resolvedDefects.length > 0) && (
               <>
                 {openDefects.length > 0 && (
                   <>
@@ -902,6 +1048,63 @@ export default function MPG() {
                   {el}
                 </label>
               ))}
+
+              {/* Einsatzbereit */}
+              <label style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0', cursor: 'pointer' }}>
+                <input type="checkbox" checked={deviceSheet.operational} onChange={e => setDeviceSheet({ ...deviceSheet, operational: e.target.checked })}
+                  style={{ width: 20, height: 20, accentColor: '#600812', cursor: 'pointer', flexShrink: 0 }} />
+                <div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--lbf-text)' }}>Einsatzbereit</div>
+                  <div style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--warm-gray)' }}>Deaktivieren = Gerät vorübergehend außer Betrieb</div>
+                </div>
+              </label>
+
+              {/* STK */}
+              <div style={{ background: 'var(--warm-bg)', borderRadius: 10, padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
+                  <input type="checkbox" checked={deviceSheet.has_stk} onChange={e => setDeviceSheet({ ...deviceSheet, has_stk: e.target.checked })}
+                    style={{ width: 18, height: 18, accentColor: '#600812', cursor: 'pointer', flexShrink: 0 }} />
+                  <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--lbf-text)' }}>STK (Sicherheitstechn. Kontrolle) erforderlich</span>
+                </label>
+                {deviceSheet.has_stk && (
+                  <div style={{ display: 'flex', gap: 10, paddingLeft: 28 }}>
+                    <label style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                      <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.1em', color: '#600812' }}>Letzte STK</span>
+                      <input type="date" value={deviceSheet.last_stk} onChange={e => setDeviceSheet({ ...deviceSheet, last_stk: e.target.value })}
+                        style={{ padding: '9px 10px', borderRadius: 8, border: '1.5px solid rgba(96,8,18,0.15)', background: 'var(--lbf-card)', fontSize: 14, color: 'var(--lbf-text)', fontFamily: 'inherit', outline: 'none' }} />
+                    </label>
+                    <label style={{ width: 80, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                      <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.1em', color: '#600812' }}>Intervall (Mon.)</span>
+                      <input type="number" min="1" max="120" value={deviceSheet.stk_interval_months} onChange={e => setDeviceSheet({ ...deviceSheet, stk_interval_months: Number(e.target.value) })}
+                        style={{ padding: '9px 10px', borderRadius: 8, border: '1.5px solid rgba(96,8,18,0.15)', background: 'var(--lbf-card)', fontSize: 14, color: 'var(--lbf-text)', fontFamily: 'inherit', outline: 'none' }} />
+                    </label>
+                  </div>
+                )}
+              </div>
+
+              {/* MTK */}
+              <div style={{ background: 'var(--warm-bg)', borderRadius: 10, padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
+                  <input type="checkbox" checked={deviceSheet.has_mtk} onChange={e => setDeviceSheet({ ...deviceSheet, has_mtk: e.target.checked })}
+                    style={{ width: 18, height: 18, accentColor: '#600812', cursor: 'pointer', flexShrink: 0 }} />
+                  <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--lbf-text)' }}>MTK (Messtechn. Kontrolle) erforderlich</span>
+                </label>
+                {deviceSheet.has_mtk && (
+                  <div style={{ display: 'flex', gap: 10, paddingLeft: 28 }}>
+                    <label style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                      <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.1em', color: '#600812' }}>Letzte MTK</span>
+                      <input type="date" value={deviceSheet.last_mtk} onChange={e => setDeviceSheet({ ...deviceSheet, last_mtk: e.target.value })}
+                        style={{ padding: '9px 10px', borderRadius: 8, border: '1.5px solid rgba(96,8,18,0.15)', background: 'var(--lbf-card)', fontSize: 14, color: 'var(--lbf-text)', fontFamily: 'inherit', outline: 'none' }} />
+                    </label>
+                    <label style={{ width: 80, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                      <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.1em', color: '#600812' }}>Intervall (Mon.)</span>
+                      <input type="number" min="1" max="120" value={deviceSheet.mtk_interval_months} onChange={e => setDeviceSheet({ ...deviceSheet, mtk_interval_months: Number(e.target.value) })}
+                        style={{ padding: '9px 10px', borderRadius: 8, border: '1.5px solid rgba(96,8,18,0.15)', background: 'var(--lbf-card)', fontSize: 14, color: 'var(--lbf-text)', fontFamily: 'inherit', outline: 'none' }} />
+                    </label>
+                  </div>
+                )}
+              </div>
+
               <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
                 <button onClick={() => setDeviceSheet(null)} style={{ flex: 1, padding: '13px', borderRadius: 10, border: '1px solid rgba(96,8,18,0.15)', background: 'none', fontSize: 15, fontWeight: 700, color: 'var(--warm-gray)', cursor: 'pointer', fontFamily: 'inherit' }}>Abbrechen</button>
                 <button onClick={saveDevice} style={{ flex: 2, padding: '13px', borderRadius: 10, border: 'none', background: '#600812', fontSize: 15, fontWeight: 700, color: '#fff', cursor: 'pointer', fontFamily: 'inherit' }}>
@@ -1027,6 +1230,50 @@ export default function MPG() {
             <div style={{ display: 'flex', gap: 10 }}>
               <button onClick={() => setResolveTarget(null)} style={{ flex: 1, padding: '13px', borderRadius: 10, border: '1px solid rgba(96,8,18,0.15)', background: 'none', fontSize: 15, fontWeight: 700, color: 'var(--warm-gray)', cursor: 'pointer', fontFamily: 'inherit' }}>Abbrechen</button>
               <button onClick={resolveDefect} style={{ flex: 2, padding: '13px', borderRadius: 10, border: 'none', background: '#16a34a', fontSize: 15, fontWeight: 700, color: '#fff', cursor: 'pointer', fontFamily: 'inherit' }}>Als behoben markieren</button>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* ── Confirm External Report Sheet ── */}
+      {confirmTarget && (
+        <>
+          <div onClick={() => setConfirmTarget(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.35)', zIndex: 200 }} />
+          <div style={{ position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 201, background: 'var(--lbf-card)', borderRadius: '20px 20px 0 0', padding: '20px 20px calc(24px + env(safe-area-inset-bottom))', boxShadow: '0 -4px 32px rgba(0,0,0,0.1)', maxHeight: '75vh', overflowY: 'auto', fontFamily: 'inherit' }}>
+            <div style={{ width: 36, height: 3, borderRadius: 99, background: 'rgba(96,8,18,0.2)', margin: '0 auto 20px' }} />
+            <div style={{ fontSize: 10, fontWeight: 700, color: '#d97706', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 4 }}>Meldung bestätigen</div>
+            <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 18, color: 'var(--lbf-text)', marginBottom: 8 }}>{confirmTarget.device_name}</div>
+            <div style={{ fontSize: 14, color: 'var(--lbf-text)', marginBottom: 4, lineHeight: 1.5 }}>{confirmTarget.description}</div>
+            <div style={{ fontSize: 12, color: 'var(--warm-gray)', fontStyle: 'italic', marginBottom: 16 }}>
+              Gemeldet von {confirmTarget.reporter_name || 'Anonym'} · {relativeDate(confirmTarget.created)}
+            </div>
+            <div style={{ background: 'rgba(127,29,29,0.06)', border: '0.5px solid rgba(127,29,29,0.15)', borderRadius: 10, padding: '12px 14px', marginBottom: 20, fontSize: 13, color: '#7f1d1d', fontStyle: 'italic' }}>
+              Gerät wird als <strong style={{ fontStyle: 'normal' }}>nicht einsatzbereit</strong> markiert und ein Defekt-Eintrag angelegt.
+            </div>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={() => setConfirmTarget(null)} style={{ flex: 1, padding: '13px', borderRadius: 10, border: '1px solid rgba(96,8,18,0.15)', background: 'none', fontSize: 15, fontWeight: 700, color: 'var(--warm-gray)', cursor: 'pointer', fontFamily: 'inherit' }}>Abbrechen</button>
+              <button onClick={confirmExternalReport} style={{ flex: 2, padding: '13px', borderRadius: 10, border: 'none', background: '#600812', fontSize: 15, fontWeight: 700, color: '#fff', cursor: 'pointer', fontFamily: 'inherit' }}>Bestätigen & Defekt anlegen</button>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* ── Reject External Report Sheet ── */}
+      {rejectTarget && (
+        <>
+          <div onClick={() => setRejectTarget(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.35)', zIndex: 200 }} />
+          <div style={{ position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 201, background: 'var(--lbf-card)', borderRadius: '20px 20px 0 0', padding: '20px 20px calc(24px + env(safe-area-inset-bottom))', boxShadow: '0 -4px 32px rgba(0,0,0,0.1)', maxHeight: '70vh', overflowY: 'auto', fontFamily: 'inherit' }}>
+            <div style={{ width: 36, height: 3, borderRadius: 99, background: 'rgba(96,8,18,0.2)', margin: '0 auto 20px' }} />
+            <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 18, color: 'var(--lbf-text)', marginBottom: 6 }}>Meldung ablehnen</div>
+            <div style={{ fontSize: 13, color: 'var(--warm-gray)', fontStyle: 'italic', marginBottom: 20 }}>{rejectTarget.device_name} · {rejectTarget.description}</div>
+            <label style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 16 }}>
+              <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.1em', color: '#600812' }}>Ablehnungsgrund (optional)</span>
+              <textarea value={rejectReason} onChange={e => setRejectReason(e.target.value)} placeholder="z.B. Falsches Gerät angegeben, kein tatsächlicher Defekt, …" rows={3}
+                style={{ padding: '11px 12px', borderRadius: 10, border: '1.5px solid rgba(96,8,18,0.15)', background: 'var(--warm-bg)', fontSize: 15, color: 'var(--lbf-text)', fontFamily: 'inherit', outline: 'none', resize: 'vertical' }} />
+            </label>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={() => setRejectTarget(null)} style={{ flex: 1, padding: '13px', borderRadius: 10, border: '1px solid rgba(96,8,18,0.15)', background: 'none', fontSize: 15, fontWeight: 700, color: 'var(--warm-gray)', cursor: 'pointer', fontFamily: 'inherit' }}>Abbrechen</button>
+              <button onClick={rejectExternalReport} style={{ flex: 2, padding: '13px', borderRadius: 10, border: 'none', background: '#dc2626', fontSize: 15, fontWeight: 700, color: '#fff', cursor: 'pointer', fontFamily: 'inherit' }}>Ablehnen</button>
             </div>
           </div>
         </>

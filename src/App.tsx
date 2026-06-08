@@ -25,6 +25,7 @@ import OrgPatienten from './pages/public/OrgPatienten'
 import OrgProduktausgabe from './pages/public/OrgProduktausgabe'
 import OrgCirs from './pages/public/OrgCirs'
 import OrgFormular from './pages/public/OrgFormular'
+import OrgDefektmeldung from './pages/public/OrgDefektmeldung'
 import PatientView from './pages/public/PatientView'
 import './styles/globals.css'
 import { applyTheme, getTheme } from './lib/theme'
@@ -77,6 +78,7 @@ function App() {
           <Route path="produktausgabe" element={<OrgProduktausgabe />} />
           <Route path="cirs" element={<OrgCirs />} />
           <Route path="formular/:templateId" element={<OrgFormular />} />
+          <Route path="defektmeldung" element={<OrgDefektmeldung />} />
         </Route>
       </Routes>
     </BrowserRouter>
