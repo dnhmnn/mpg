@@ -429,7 +429,7 @@ export default function Unitas() {
                     boxShadow: 'var(--lbf-shadow)',
                   }}>
                     <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 8 }}>Vorgänge</div>
-                    <div style={{ fontSize: 48, fontWeight: 800, color: '#d97706', lineHeight: 1 }}>
+                    <div style={{ fontSize: 48, fontWeight: 800, color: '#600812', lineHeight: 1 }}>
                       {openOutputs}
                     </div>
                     <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginTop: 6 }}>offen</div>
@@ -838,17 +838,21 @@ export default function Unitas() {
               </div>
               <div style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {([
-                  { value: 'light',  label: 'Hell',   icon: '☀️', desc: 'Helles Design' },
-                  { value: 'dark',   label: 'Dunkel', icon: '🌙', desc: 'Dunkles Design' },
-                  { value: 'system', label: 'System', icon: '⚙️', desc: 'Geräteeinstellung' },
-                  { value: 'retro',  label: 'Retro',  icon: '📟', desc: 'CRT Terminal' },
-                ] as { value: ThemeMode; label: string; icon: string; desc: string }[]).map(opt => (
+                  { value: 'light',  label: 'Hell',   desc: 'Helles Design',
+                    icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg> },
+                  { value: 'dark',   label: 'Dunkel', desc: 'Dunkles Design',
+                    icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg> },
+                  { value: 'system', label: 'System', desc: 'Geräteeinstellung',
+                    icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg> },
+                  { value: 'retro',  label: 'Retro',  desc: 'CRT Terminal',
+                    icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg> },
+                ] as { value: ThemeMode; label: string; icon: React.ReactNode; desc: string }[]).map(opt => (
                   <button key={opt.value} onClick={() => { setTheme(opt.value); setThemeMode(opt.value) }}
                     style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 12px', borderRadius: 10,
                       border: themeMode === opt.value ? '1.5px solid #600812' : '1px solid rgba(0,0,0,0.08)',
                       background: themeMode === opt.value ? 'rgba(96,8,18,0.04)' : 'transparent',
                       cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit', width: '100%' }}>
-                    <span style={{ fontSize: 18, lineHeight: 1 }}>{opt.icon}</span>
+                    <span style={{ lineHeight: 1, color: themeMode === opt.value ? '#600812' : 'var(--warm-gray)', flexShrink: 0 }}>{opt.icon}</span>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--text)' }}>{opt.label}</div>
                       <div style={{ fontSize: 12, fontStyle: 'italic', color: 'var(--warm-gray)', marginTop: 1 }}>{opt.desc}</div>
