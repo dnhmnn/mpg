@@ -248,6 +248,20 @@ interface KonzeptForm {
   verknuepfte_termine: string[]
 }
 
+function getPatternBg(pattern: string | null): { backgroundImage: string; backgroundSize?: string } | null {
+  if (!pattern) return null
+  const a = 'rgba(255,255,255,0.18)', b = 'rgba(255,255,255,0.09)'
+  switch (pattern) {
+    case 'diamante':   return { backgroundImage: `repeating-linear-gradient(45deg,${a} 0,${a} 1px,transparent 0,transparent 12px),repeating-linear-gradient(-45deg,${a} 0,${a} 1px,transparent 0,transparent 12px)` }
+    case 'venezia':    return { backgroundImage: `radial-gradient(circle,${a} 1.5px,transparent 1.5px)`, backgroundSize: '10px 10px' }
+    case 'marmo':      return { backgroundImage: `repeating-linear-gradient(67deg,transparent 0,transparent 8px,${b} 8px,${b} 10px,transparent 10px,transparent 20px,${a} 20px,${a} 21px,transparent 21px,transparent 32px)` }
+    case 'trama':      return { backgroundImage: `repeating-linear-gradient(0deg,${a} 0,${a} 1px,transparent 0,transparent 7px),repeating-linear-gradient(90deg,${a} 0,${a} 1px,transparent 0,transparent 7px)` }
+    case 'fiorentino': return { backgroundImage: `repeating-linear-gradient(60deg,${a} 0,${a} 1px,transparent 0,transparent 10px),repeating-linear-gradient(-60deg,${a} 0,${a} 1px,transparent 0,transparent 10px)` }
+    case 'capitone':   return { backgroundImage: `radial-gradient(circle,${a} 2px,transparent 2px),repeating-linear-gradient(45deg,${b} 0,${b} 1px,transparent 0,transparent 16px),repeating-linear-gradient(-45deg,${b} 0,${b} 1px,transparent 0,transparent 16px)`, backgroundSize: '16px 16px,auto,auto' }
+    default: return null
+  }
+}
+
 export default function Ausbildungen() {
   const { user, loading: authLoading, logout } = useAuth()
   
@@ -339,7 +353,7 @@ export default function Ausbildungen() {
   const [beitraege, setBeitraege] = useState<Lernbeitrag[]>([])
   const [beitraegeLoading, setBeitraegeLoading] = useState(false)
   const [showBeitragModal, setShowBeitragModal] = useState(false)
-  const [beitragForm, setBeitragForm] = useState<{ titel: string; tags: string; gepinnt: boolean; color: string }>({ titel: '', tags: '', gepinnt: false, color: '#600812' })
+  const [beitragForm, setBeitragForm] = useState<{ titel: string; tags: string; gepinnt: boolean; color: string; pattern: string | null }>({ titel: '', tags: '', gepinnt: false, color: '#600812', pattern: null })
   const [bookPages, setBookPages] = useState<EditorPage[]>([])
   const [bookPageIdx, setBookPageIdx] = useState(0)
   const [bookDir, setBookDir] = useState(1)
@@ -550,7 +564,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
     setBookPageIdx(0)
     setBookDir(1)
     setShowBlockPicker(false)
-    setBeitragForm({ titel: '', tags: '', gepinnt: false, color: '#600812' })
+    setBeitragForm({ titel: '', tags: '', gepinnt: false, color: '#600812', pattern: null })
   }
 
   async function saveBeitrag() {
@@ -582,7 +596,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
       const fd = new FormData()
       fd.append('typ', 'text')
       fd.append('titel', beitragForm.titel.trim())
-      fd.append('inhalt', JSON.stringify({ v: 2, color: beitragForm.color, pages: pagesData }))
+      fd.append('inhalt', JSON.stringify({ v: 2, color: beitragForm.color, pattern: beitragForm.pattern, pages: pagesData }))
       fd.append('gepinnt', String(beitragForm.gepinnt))
       fd.append('tags', JSON.stringify(tags))
       if (!editingBeitragId) {
@@ -610,10 +624,12 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
     setEditingBeitragId(b.id)
     let pages: EditorPage[] = []
     let bookColor = '#600812'
+    let bookPattern: string | null = null
     try {
       const parsed = JSON.parse(b.inhalt || '{}')
       if (parsed?.v === 2 && Array.isArray(parsed.pages)) {
         if (parsed.color) bookColor = parsed.color
+        if (parsed.pattern) bookPattern = parsed.pattern
         const bildArr = Array.isArray(b.bild) ? b.bild : (b.bild ? [b.bild] : [])
         pages = parsed.pages.map((p: any) => ({
           id: p.id || uid(),
@@ -639,7 +655,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
       if (b.typ === 'quiz') { const qd = b.quiz_daten; block.quizFrage = qd?.frage || ''; block.quizAntworten = ([...(qd?.antworten || []),'','',''].slice(0,4)) as [string,string,string,string]; block.quizRichtige = qd?.richtige ?? 0 }
       pages = [{ id: uid(), blocks: [block] }]
     }
-    setBeitragForm({ titel: b.titel, tags: tagsStr, gepinnt: b.gepinnt, color: bookColor })
+    setBeitragForm({ titel: b.titel, tags: tagsStr, gepinnt: b.gepinnt, color: bookColor, pattern: bookPattern })
     setBookPages(pages)
     setBookPageIdx(0)
     setBookDir(1)
@@ -1626,7 +1642,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
             </button>
           )}
           {viewMode === 'lernfeed' && (
-            <button onClick={() => { setBookPages([{ id: Math.random().toString(36).slice(2,9), blocks: [] }]); setBookPageIdx(0); setBookDir(1); setShowBlockPicker(false); setBeitragForm({ titel: '', tags: '', gepinnt: false, color: '#600812' }); setEditingBeitragId(null); setShowBeitragModal(true) }} style={addBtnStyle} title="Beitrag erstellen">
+            <button onClick={() => { setBookPages([{ id: Math.random().toString(36).slice(2,9), blocks: [] }]); setBookPageIdx(0); setBookDir(1); setShowBlockPicker(false); setBeitragForm({ titel: '', tags: '', gepinnt: false, color: '#600812', pattern: null }); setEditingBeitragId(null); setShowBeitragModal(true) }} style={addBtnStyle} title="Beitrag erstellen">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             </button>
           )}
@@ -2354,6 +2370,21 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                         style={{ width: 20, height: 20, borderRadius: '50%', border: 'none', background: c, cursor: 'pointer', flexShrink: 0, boxShadow: beitragForm.color === c ? `0 0 0 2px #fff, 0 0 0 4px ${c}` : '0 1px 3px rgba(0,0,0,0.2)' }} />
                     ))}
                   </div>
+                  {/* Musterauswahl */}
+                  <div style={{ display: 'flex', gap: 6, paddingBottom: 4, flexWrap: 'wrap' as const }}>
+                    {([null, 'diamante', 'venezia', 'marmo', 'trama', 'fiorentino', 'capitone'] as const).map(p => {
+                      const pat = getPatternBg(p)
+                      const sel = beitragForm.pattern === p
+                      return (
+                        <button key={String(p)} onClick={() => setBeitragForm(prev => ({ ...prev, pattern: p }))}
+                          title={p || 'Kein Muster'}
+                          style={{ width: 22, height: 28, borderRadius: 3, border: 'none', background: beitragForm.color, cursor: 'pointer', flexShrink: 0, position: 'relative' as const, overflow: 'hidden', boxShadow: sel ? `0 0 0 2px #fff, 0 0 0 4px ${beitragForm.color}` : '0 1px 3px rgba(0,0,0,0.2)' }}>
+                          {pat && <div style={{ position: 'absolute' as const, inset: 0, backgroundImage: pat.backgroundImage, backgroundSize: pat.backgroundSize || 'auto', pointerEvents: 'none' }} />}
+                          {!p && <div style={{ position: 'absolute' as const, inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><span style={{ color: 'rgba(255,255,255,0.55)', fontSize: 9, fontWeight: 700 }}>—</span></div>}
+                        </button>
+                      )
+                    })}
+                  </div>
                 </div>
               )}
               <div style={{ flex: 1, overflowY: 'auto', padding: '8px 20px 4px 26px' }}>
@@ -2386,6 +2417,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
             <div onClick={resetBeitragForm} style={{ position: 'fixed', inset: 0, background: 'rgba(20,10,6,0.8)', zIndex: 500 }} />
             <div style={{ position: 'fixed', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', width: 'min(calc(100vw - 32px), 420px)', height: 'min(88dvh, 620px)', zIndex: 501, background: '#fffef9', borderRadius: 3, boxShadow: '0 30px 90px rgba(0,0,0,0.5), -6px 0 18px rgba(0,0,0,0.2)', display: 'flex', flexDirection: 'column', overflow: 'hidden', animation: 'bookOpen 0.32s cubic-bezier(0.22,1,0.36,1)' }}>
               <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 9, zIndex: 10, pointerEvents: 'none', background: `linear-gradient(to right, ${beitragForm.color}, ${beitragForm.color}88 60%, transparent)` }} />
+              {beitragForm.pattern && (() => { const pp = getPatternBg(beitragForm.pattern); return pp ? <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 9, zIndex: 11, pointerEvents: 'none', backgroundImage: pp.backgroundImage, backgroundSize: pp.backgroundSize || 'auto' }} /> : null })()}
               <div style={{ position: 'absolute', left: 9, top: 0, bottom: 0, width: 22, zIndex: 10, pointerEvents: 'none', background: 'linear-gradient(to right, rgba(0,0,0,0.09), transparent)' }} />
               <div style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 12, zIndex: 10, pointerEvents: 'none', background: 'linear-gradient(to left, rgba(0,0,0,0.06), transparent)' }} />
               <div style={{ position: 'absolute', top: 10, right: 10, zIndex: 20 }}>

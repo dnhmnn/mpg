@@ -92,6 +92,20 @@ const statusConfig: Record<string, { label: string; bg: string; color: string }>
   fehlend:    { label: 'Gefehlt',    bg: '#fef3c7', color: '#92400e' },
 }
 
+function getPatternBg(pattern: string | null): { backgroundImage: string; backgroundSize?: string } | null {
+  if (!pattern) return null
+  const a = 'rgba(255,255,255,0.18)', b = 'rgba(255,255,255,0.09)'
+  switch (pattern) {
+    case 'diamante':   return { backgroundImage: `repeating-linear-gradient(45deg,${a} 0,${a} 1px,transparent 0,transparent 12px),repeating-linear-gradient(-45deg,${a} 0,${a} 1px,transparent 0,transparent 12px)` }
+    case 'venezia':    return { backgroundImage: `radial-gradient(circle,${a} 1.5px,transparent 1.5px)`, backgroundSize: '10px 10px' }
+    case 'marmo':      return { backgroundImage: `repeating-linear-gradient(67deg,transparent 0,transparent 8px,${b} 8px,${b} 10px,transparent 10px,transparent 20px,${a} 20px,${a} 21px,transparent 21px,transparent 32px)` }
+    case 'trama':      return { backgroundImage: `repeating-linear-gradient(0deg,${a} 0,${a} 1px,transparent 0,transparent 7px),repeating-linear-gradient(90deg,${a} 0,${a} 1px,transparent 0,transparent 7px)` }
+    case 'fiorentino': return { backgroundImage: `repeating-linear-gradient(60deg,${a} 0,${a} 1px,transparent 0,transparent 10px),repeating-linear-gradient(-60deg,${a} 0,${a} 1px,transparent 0,transparent 10px)` }
+    case 'capitone':   return { backgroundImage: `radial-gradient(circle,${a} 2px,transparent 2px),repeating-linear-gradient(45deg,${b} 0,${b} 1px,transparent 0,transparent 16px),repeating-linear-gradient(-45deg,${b} 0,${b} 1px,transparent 0,transparent 16px)`, backgroundSize: '16px 16px,auto,auto' }
+    default: return null
+  }
+}
+
 export default function Lernbar() {
   const { user, loading: authLoading } = useAuth()
   const navigate = useNavigate()
@@ -468,7 +482,8 @@ export default function Lernbar() {
             const bildFirstCard = Array.isArray(b.bild) ? b.bild[0] : b.bild
             const bildUrl = bildFirstCard ? `https://api.responda.systems/api/files/${b.collectionId}/${b.id}/${bildFirstCard}` : null
             let bookColor: string | null = null
-            try { const p = JSON.parse(b.inhalt || '{}'); if (p?.v === 2 && p.color) bookColor = p.color } catch {}
+            let bookPattern: string | null = null
+            try { const p = JSON.parse(b.inhalt || '{}'); if (p?.v === 2) { if (p.color) bookColor = p.color; if (p.pattern) bookPattern = p.pattern } } catch {}
             const cfg = bookColor
               ? (() => { const r = parseInt(bookColor.slice(1,3),16), g = parseInt(bookColor.slice(3,5),16), bv = parseInt(bookColor.slice(5,7),16); return { bg: `linear-gradient(165deg, ${bookColor} 0%, rgb(${Math.round(r*.55)},${Math.round(g*.55)},${Math.round(bv*.55)}) 100%)`, spine: 'rgba(0,0,0,0.3)', label: '' } })()
               : (COVER[b.typ] || COVER.text)
@@ -480,6 +495,7 @@ export default function Lernbar() {
                 boxShadow: '3px 5px 18px rgba(0,0,0,0.28), inset -3px 0 8px rgba(0,0,0,0.18)',
               }}>
                 <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 7, background: cfg.spine, zIndex: 3 }} />
+                {!bildUrl && bookPattern && (() => { const pp = getPatternBg(bookPattern); return pp ? <div style={{ position: 'absolute', inset: 0, backgroundImage: pp.backgroundImage, backgroundSize: pp.backgroundSize || 'auto', zIndex: 1, pointerEvents: 'none' }} /> : null })()}
                 {bildUrl && <img src={bildUrl} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />}
                 <div style={{ position: 'absolute', inset: 0, background: bildUrl ? 'linear-gradient(to top, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.05) 55%, transparent 100%)' : 'none', zIndex: 2 }} />
                 {b.gepinnt && (
@@ -763,9 +779,10 @@ export default function Lernbar() {
         // Detect v2 rich content format
         let richPages: { id: string; blocks: { id: string; type: string; text?: string; bildIdx?: number; bildExistingUrl?: string; videoUrl?: string; quizFrage?: string; quizAntworten?: string[]; quizRichtige?: number }[] }[] | null = null
         let readerColor: string | null = null
+        let readerPattern: string | null = null
         try {
           const parsed = JSON.parse(b.inhalt || '{}')
-          if (parsed?.v === 2 && Array.isArray(parsed.pages)) { richPages = parsed.pages; readerColor = parsed.color || null }
+          if (parsed?.v === 2 && Array.isArray(parsed.pages)) { richPages = parsed.pages; readerColor = parsed.color || null; readerPattern = parsed.pattern || null }
         } catch {}
         const accent = readerColor || ACCENT[b.typ] || '#600812'
         const bildArr = Array.isArray(b.bild) ? b.bild : (b.bild ? [b.bild] : [])
@@ -963,6 +980,7 @@ export default function Lernbar() {
               {/* Spine */}
               <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 9, zIndex: 10, pointerEvents: 'none',
                 background: `linear-gradient(to right, ${accent}, ${accent}88 60%, transparent)` }} />
+              {readerPattern && (() => { const pp = getPatternBg(readerPattern); return pp ? <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 9, zIndex: 11, pointerEvents: 'none', backgroundImage: pp.backgroundImage, backgroundSize: pp.backgroundSize || 'auto' }} /> : null })()}
               {/* Spine inner shadow */}
               <div style={{ position: 'absolute', left: 9, top: 0, bottom: 0, width: 22, zIndex: 10, pointerEvents: 'none',
                 background: 'linear-gradient(to right, rgba(0,0,0,0.09), transparent)' }} />
