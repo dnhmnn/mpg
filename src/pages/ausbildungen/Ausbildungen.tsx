@@ -596,9 +596,10 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
       const fd = new FormData()
       fd.append('typ', 'text')
       fd.append('titel', beitragForm.titel.trim())
-      fd.append('inhalt', JSON.stringify({ v: 2, color: beitragForm.color, pattern: beitragForm.pattern, pages: pagesData }))
+      fd.append('inhalt', JSON.stringify({ v: 2, color: beitragForm.color, pattern: beitragForm.pattern || undefined, pages: pagesData }))
       fd.append('gepinnt', String(beitragForm.gepinnt))
       fd.append('tags', JSON.stringify(tags))
+      fd.append('video_url', '')
       if (!editingBeitragId) {
         fd.append('organisation_id', user?.organization_id || '')
         fd.append('erstellt_von_id', user?.id || '')
