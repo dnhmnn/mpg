@@ -357,7 +357,7 @@ export default function Lernbar() {
                 <div style={{ fontWeight: 600, fontSize: 17, color: 'var(--lbf-text)', marginBottom: 18, lineHeight: 1.5 }}>{currentFrage.frage}</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
                   {antworten.map((a, idx) => {
-                    let bg = '#fff', border = '1.5px solid rgba(96,8,18,0.12)', color = 'var(--lbf-text)'
+                    let bg = 'var(--lbf-card)', border = '1.5px solid rgba(96,8,18,0.12)', color = 'var(--lbf-text)'
                     if (quizSubmitted) {
                       if (idx === richtige) { bg = '#f0fdf4'; border = '2px solid #16a34a'; color = '#166534' }
                       else if (idx === quizSelected) { bg = '#fef2f2'; border = '2px solid #600812'; color = '#600812' }
@@ -532,7 +532,7 @@ export default function Lernbar() {
               <div style={{ position: 'relative', marginBottom: 12 }}>
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--warm-gray)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
                 <input type="search" placeholder="Titel, Inhalt oder Tag suchen…" value={bibSearch} onChange={e => setBibSearch(e.target.value)}
-                  style={{ width: '100%', padding: '10px 14px 10px 36px', border: '1.5px solid rgba(96,8,18,0.15)', borderRadius: 10, background: '#fff', fontSize: 14, fontFamily: 'inherit', color: '#1a0e08', boxSizing: 'border-box', WebkitAppearance: 'none' }} />
+                  style={{ width: '100%', padding: '10px 14px 10px 36px', border: '1.5px solid rgba(96,8,18,0.15)', borderRadius: 10, background: 'var(--lbf-card)', fontSize: 14, fontFamily: 'inherit', color: 'var(--lbf-text)', boxSizing: 'border-box', WebkitAppearance: 'none' }} />
               </div>
 
               {/* Tag chips */}
@@ -820,10 +820,10 @@ export default function Lernbar() {
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '44px 32px', textAlign: 'center', position: 'relative' }}>
               <div style={{ width: 28, height: 3, borderRadius: 2, background: accent, marginBottom: 24 }} />
               <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.22em', color: accent, marginBottom: 18 }}>{typeLabel}</div>
-              <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 22, color: '#1a0e08', lineHeight: 1.3, marginBottom: 28 }}>{b.titel}</div>
+              <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 22, color: 'var(--lbf-text)', lineHeight: 1.3, marginBottom: 28 }}>{b.titel}</div>
               <div style={{ width: 40, height: 0.5, background: 'rgba(96,8,18,0.25)', marginBottom: 24 }} />
               <div style={{ width: 36, height: 36, borderRadius: '50%', background: accent, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, marginBottom: 10 }}>{initials}</div>
-              <div style={{ fontSize: 13, fontWeight: 700, color: '#1a0e08' }}>{b.erstellt_von_name || 'Responda'}</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--lbf-text)' }}>{b.erstellt_von_name || 'Responda'}</div>
               <div style={{ fontSize: 11, color: 'var(--warm-gray)', fontStyle: 'italic', marginTop: 3 }}>
                 {new Date(b.created).toLocaleDateString('de-DE', { day: '2-digit', month: 'long', year: 'numeric' })}
               </div>
@@ -852,17 +852,17 @@ export default function Lernbar() {
 
           if (id === 'content') return (
             <div style={{ flex: 1, overflowY: 'auto', padding: '28px 24px 16px' }}>
-              <div style={{ fontSize: 15, color: '#1a0e08', lineHeight: 1.85, whiteSpace: 'pre-wrap', fontFamily: "Georgia, 'Times New Roman', serif" }}>{typeof b.inhalt === 'string' ? b.inhalt : ''}</div>
+              <div style={{ fontSize: 15, color: 'var(--lbf-text)', lineHeight: 1.85, whiteSpace: 'pre-wrap', fontFamily: "Georgia, 'Times New Roman', serif" }}>{typeof b.inhalt === 'string' ? b.inhalt : ''}</div>
             </div>
           )
 
           if (id === 'quiz' && quiz) return (
             <div style={{ flex: 1, overflowY: 'auto', padding: '24px 20px 16px' }}>
               <div style={{ fontSize: 10, fontWeight: 700, color: accent, textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 14 }}>Frage</div>
-              <div style={{ fontSize: 17, fontWeight: 600, color: '#1a0e08', lineHeight: 1.55, marginBottom: 18 }}>{quiz.frage}</div>
+              <div style={{ fontSize: 17, fontWeight: 600, color: 'var(--lbf-text)', lineHeight: 1.55, marginBottom: 18 }}>{quiz.frage}</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
                 {quiz.antworten.map((a: string, i: number) => {
-                  let bg = '#faf9f7', border = '1.5px solid rgba(96,8,18,0.12)', col = '#1a0e08'
+                  let bg = 'var(--warm-bg)', border = '1.5px solid rgba(96,8,18,0.12)', col = 'var(--lbf-text)'
                   if (qs.submitted) {
                     if (i === quiz.richtige) { bg = '#f0fdf4'; border = '2px solid #16a34a'; col = '#166534' }
                     else if (i === qs.selected) { bg = '#fef2f2'; border = '2px solid #600812'; col = '#600812' }
@@ -879,7 +879,7 @@ export default function Lernbar() {
               {!qs.submitted ? (
                 <button disabled={qs.selected === null}
                   onClick={() => setFeedQuizState(prev => ({ ...prev, [b.id]: { ...prev[b.id], submitted: true } }))}
-                  style={{ marginTop: 14, width: '100%', padding: 14, borderRadius: 10, border: 'none', background: qs.selected === null ? '#f0ede8' : accent, color: qs.selected === null ? 'var(--warm-gray)' : '#fff', fontWeight: 700, fontSize: 15, cursor: qs.selected === null ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
+                  style={{ marginTop: 14, width: '100%', padding: 14, borderRadius: 10, border: 'none', background: qs.selected === null ? 'var(--warm-bg)' : accent, color: qs.selected === null ? 'var(--warm-gray)' : '#fff', fontWeight: 700, fontSize: 15, cursor: qs.selected === null ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
                   Antworten
                 </button>
               ) : (
@@ -916,7 +916,7 @@ export default function Lernbar() {
                 {richPage.blocks.map((block, bi) => (
                   <div key={block.id || bi}>
                     {block.type === 'text' && block.text && (
-                      <div dangerouslySetInnerHTML={{ __html: typeof block.text === 'string' ? block.text : '' }} style={{ fontSize: 15, color: '#1a0e08', lineHeight: 1.85, fontFamily: "Georgia, 'Times New Roman', serif" }} />
+                      <div dangerouslySetInnerHTML={{ __html: typeof block.text === 'string' ? block.text : '' }} style={{ fontSize: 15, color: 'var(--lbf-text)', lineHeight: 1.85, fontFamily: "Georgia, 'Times New Roman', serif" }} />
                     )}
                     {block.type === 'bild' && (() => {
                       let url: string | null = null
@@ -936,16 +936,16 @@ export default function Lernbar() {
                       return (
                         <div>
                           <div style={{ fontSize: 10, fontWeight: 700, color: accent, textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 10 }}>Quiz</div>
-                          <div style={{ fontSize: 16, fontWeight: 600, color: '#1a0e08', lineHeight: 1.5, marginBottom: 14 }}>{block.quizFrage}</div>
+                          <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--lbf-text)', lineHeight: 1.5, marginBottom: 14 }}>{block.quizFrage}</div>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                             {antworten.filter(a => a.trim()).map((a: string, i: number) => {
-                              let bg = '#faf9f7', border = '1.5px solid rgba(96,8,18,0.12)', col = '#1a0e08'
+                              let bg = 'var(--warm-bg)', border = '1.5px solid rgba(96,8,18,0.12)', col = 'var(--lbf-text)'
                               if (blockQs.submitted) { if (i === richtige) { bg = '#f0fdf4'; border = '2px solid #16a34a'; col = '#166534' } else if (i === blockQs.selected) { bg = '#fef2f2'; border = '2px solid #600812'; col = '#600812' } } else if (i === blockQs.selected) { bg = 'rgba(107,15,26,0.06)'; border = `2px solid ${accent}`; col = accent }
                               return <button key={i} disabled={blockQs.submitted} onClick={() => setFeedQuizState(prev => ({ ...prev, [`${b.id}-${block.id}`]: { selected: i, submitted: false } }))} style={{ padding: '10px 12px', borderRadius: 9, border, background: bg, color: col, fontWeight: i === blockQs.selected || (blockQs.submitted && i === richtige) ? 700 : 400, fontSize: 14, cursor: blockQs.submitted ? 'default' : 'pointer', textAlign: 'left', fontFamily: 'inherit' }}>{a}</button>
                             })}
                           </div>
                           {!blockQs.submitted ? (
-                            <button disabled={blockQs.selected === null} onClick={() => setFeedQuizState(prev => ({ ...prev, [`${b.id}-${block.id}`]: { ...prev[`${b.id}-${block.id}`], submitted: true } }))} style={{ marginTop: 12, width: '100%', padding: 12, borderRadius: 9, border: 'none', background: blockQs.selected === null ? '#f0ede8' : accent, color: blockQs.selected === null ? 'var(--warm-gray)' : '#fff', fontWeight: 700, fontSize: 14, cursor: blockQs.selected === null ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>Antworten</button>
+                            <button disabled={blockQs.selected === null} onClick={() => setFeedQuizState(prev => ({ ...prev, [`${b.id}-${block.id}`]: { ...prev[`${b.id}-${block.id}`], submitted: true } }))} style={{ marginTop: 12, width: '100%', padding: 12, borderRadius: 9, border: 'none', background: blockQs.selected === null ? 'var(--warm-bg)' : accent, color: blockQs.selected === null ? 'var(--warm-gray)' : '#fff', fontWeight: 700, fontSize: 14, cursor: blockQs.selected === null ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>Antworten</button>
                           ) : (
                             <div style={{ marginTop: 12, padding: '11px 14px', borderRadius: 9, textAlign: 'center', fontWeight: 700, fontSize: 13, background: blockQs.selected === richtige ? '#f0fdf4' : '#fef2f2', border: blockQs.selected === richtige ? '1px solid #bbf7d0' : '1px solid #fecaca', color: blockQs.selected === richtige ? '#166534' : '#600812' }}>
                               {blockQs.selected === richtige ? '✓ Richtig!' : '✗ Falsch — richtige Antwort ist markiert'}
@@ -974,7 +974,7 @@ export default function Lernbar() {
                 width: 'min(calc(100vw - 32px), 420px)',
                 height: 'min(88dvh, 660px)',
                 zIndex: 201,
-                background: '#fffef9',
+                background: 'var(--lbf-card)',
                 borderRadius: 3,
                 boxShadow: '0 30px 90px rgba(0,0,0,0.5), -6px 0 18px rgba(0,0,0,0.2)',
                 display: 'flex', flexDirection: 'column',
@@ -1006,7 +1006,7 @@ export default function Lernbar() {
               </div>
 
               {/* Bottom nav */}
-              <div style={{ flexShrink: 0, height: 52, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 14px', borderTop: '0.5px solid rgba(96,8,18,0.08)', background: '#fffef9', zIndex: 5 }}>
+              <div style={{ flexShrink: 0, height: 52, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 14px', borderTop: '0.5px solid rgba(96,8,18,0.08)', background: 'var(--lbf-card)', zIndex: 5 }}>
                 <button onClick={() => go(-1)} disabled={!canPrev}
                   style={{ width: 32, height: 32, borderRadius: '50%', border: 'none', background: canPrev ? 'rgba(96,8,18,0.07)' : 'transparent', color: canPrev ? accent : 'rgba(96,8,18,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: canPrev ? 'pointer' : 'default' }}>
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
