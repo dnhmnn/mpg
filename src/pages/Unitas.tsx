@@ -336,9 +336,9 @@ export default function Unitas() {
         paddingRight: 'max(20px, env(safe-area-inset-right))',
       } as React.CSSProperties}>
         <div style={{ maxWidth: 640, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 60 }}>
-          {/* Left: Responda logo circle */}
-          <div style={{ width: 34, height: 34, borderRadius: '50%', background: '#600812', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-            <img src="/logo.svg" alt="" width={18} height={18} style={{ filter: 'brightness(0) invert(1)', display: 'block' }} />
+          {/* Left: Responda logo */}
+          <div style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+            <img src="/logoklein.svg" alt="Responda" style={{ height: 34, width: 34, objectFit: 'contain' }} />
           </div>
           {/* Center: org + date */}
           <div style={{ flex: 1, textAlign: 'center', padding: '0 12px' }}>
