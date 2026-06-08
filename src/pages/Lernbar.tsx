@@ -54,7 +54,7 @@ interface ModulProgress {
 }
 interface Lernbeitrag {
   id: string; collectionId: string; typ: 'bild' | 'text' | 'video' | 'quiz'
-  titel: string; inhalt: string; bild?: string; video_url?: string
+  titel: string; inhalt: string; bild?: string | string[]; video_url?: string
   tags: string[] | string; organisation_id: string; erstellt_von_name: string
   gepinnt: boolean; quiz_daten?: string | { frage: string; antworten: string[]; richtige: number }
   created: string
@@ -465,7 +465,8 @@ export default function Lernbar() {
 
           const renderBook = (b: Lernbeitrag) => {
             const tags = parseTags(b.tags)
-            const bildUrl = b.bild ? `https://api.responda.systems/api/files/${b.collectionId}/${b.id}/${b.bild}` : null
+            const bildFirstCard = Array.isArray(b.bild) ? b.bild[0] : b.bild
+            const bildUrl = bildFirstCard ? `https://api.responda.systems/api/files/${b.collectionId}/${b.id}/${bildFirstCard}` : null
             const cfg = COVER[b.typ] || COVER.text
             return (
               <div key={b.id} onClick={() => setOpenBook(b)} style={{
@@ -747,7 +748,8 @@ export default function Lernbar() {
       {openBook && (() => {
         const b = openBook
         const tags = parseTags(b.tags)
-        const bildUrl = b.bild ? `https://api.responda.systems/api/files/${b.collectionId}/${b.id}/${b.bild}` : null
+        const bildFirst = Array.isArray(b.bild) ? b.bild[0] : b.bild
+        const bildUrl = bildFirst ? `https://api.responda.systems/api/files/${b.collectionId}/${b.id}/${bildFirst}` : null
         const qs = feedQuizState[b.id] || { selected: null, submitted: false }
         const quiz = parseQuiz(b.quiz_daten)
         const initials = (b.erstellt_von_name || 'R').split(' ').map((w: string) => w[0]).slice(0, 2).join('').toUpperCase()
@@ -755,13 +757,26 @@ export default function Lernbar() {
         const accent = ACCENT[b.typ] || '#600812'
         const typeLabel = b.typ === 'quiz' ? 'Quiz' : b.typ === 'video' ? 'Video' : b.typ === 'bild' ? 'Bild' : 'Text'
 
+        // Detect v2 rich content format
+        let richPages: { id: string; blocks: { id: string; type: string; text?: string; bildIdx?: number; bildExistingUrl?: string; videoUrl?: string; quizFrage?: string; quizAntworten?: string[]; quizRichtige?: number }[] }[] | null = null
+        try {
+          const parsed = JSON.parse(b.inhalt || '{}')
+          if (parsed?.v === 2 && Array.isArray(parsed.pages)) richPages = parsed.pages
+        } catch {}
+        const bildArr = Array.isArray(b.bild) ? b.bild : (b.bild ? [b.bild] : [])
+
         // Build page list
-        type PID = 'title' | 'media' | 'content' | 'quiz' | 'tags'
-        const pages: PID[] = ['title']
-        if ((b.typ === 'video' && b.video_url) || bildUrl) pages.push('media')
-        if (b.inhalt && b.typ !== 'quiz') pages.push('content')
-        if (b.typ === 'quiz' && quiz) pages.push('quiz')
-        if (tags.length > 0) pages.push('tags')
+        type PID = 'title' | 'media' | 'content' | 'quiz' | 'tags' | `rich-${number}`
+        let pages: PID[]
+        if (richPages) {
+          pages = ['title', ...richPages.map((_, i) => `rich-${i}` as PID), ...(tags.length > 0 ? ['tags' as PID] : [])]
+        } else {
+          pages = ['title']
+          if ((b.typ === 'video' && b.video_url) || bildUrl) pages.push('media')
+          if (b.inhalt && b.typ !== 'quiz') pages.push('content')
+          if (b.typ === 'quiz' && quiz) pages.push('quiz')
+          if (tags.length > 0) pages.push('tags')
+        }
         const total = pages.length
         const pid = pages[bookPage] ?? 'title'
         const canPrev = bookPage > 0
@@ -865,6 +880,58 @@ export default function Lernbar() {
               </div>
             </div>
           )
+          if (typeof id === 'string' && id.startsWith('rich-') && richPages) {
+            const pageIdx = parseInt(id.slice(5))
+            const richPage = richPages[pageIdx]
+            if (!richPage) return null
+            return (
+              <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px 12px 26px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+                {richPage.blocks.map((block, bi) => (
+                  <div key={block.id || bi}>
+                    {block.type === 'text' && block.text && (
+                      <div style={{ fontSize: 15, color: '#1a0e08', lineHeight: 1.85, whiteSpace: 'pre-wrap', fontFamily: "Georgia, 'Times New Roman', serif" }}>{block.text}</div>
+                    )}
+                    {block.type === 'bild' && (() => {
+                      let url: string | null = null
+                      if (block.bildIdx !== undefined && bildArr[block.bildIdx]) url = `https://api.responda.systems/api/files/${b.collectionId}/${b.id}/${bildArr[block.bildIdx]}`
+                      else if (block.bildExistingUrl) url = block.bildExistingUrl
+                      return url ? <img src={url} alt="" style={{ width: '100%', borderRadius: 8, display: 'block', maxHeight: 260, objectFit: 'cover' }} /> : null
+                    })()}
+                    {block.type === 'video' && block.videoUrl && (
+                      <div style={{ position: 'relative', paddingBottom: '56.25%', background: '#000', borderRadius: 8, overflow: 'hidden' }}>
+                        <iframe src={(() => { const yt = block.videoUrl!.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)/); return yt ? `https://www.youtube.com/embed/${yt[1]}?rel=0` : block.videoUrl! })()} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none' }} allowFullScreen />
+                      </div>
+                    )}
+                    {block.type === 'quiz' && block.quizFrage && (() => {
+                      const blockQs = feedQuizState[`${b.id}-${block.id}`] || { selected: null, submitted: false }
+                      const antworten = block.quizAntworten || []
+                      const richtige = block.quizRichtige ?? 0
+                      return (
+                        <div>
+                          <div style={{ fontSize: 10, fontWeight: 700, color: accent, textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 10 }}>Quiz</div>
+                          <div style={{ fontSize: 16, fontWeight: 600, color: '#1a0e08', lineHeight: 1.5, marginBottom: 14 }}>{block.quizFrage}</div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                            {antworten.filter(a => a.trim()).map((a: string, i: number) => {
+                              let bg = '#faf9f7', border = '1.5px solid rgba(96,8,18,0.12)', col = '#1a0e08'
+                              if (blockQs.submitted) { if (i === richtige) { bg = '#f0fdf4'; border = '2px solid #16a34a'; col = '#166534' } else if (i === blockQs.selected) { bg = '#fef2f2'; border = '2px solid #600812'; col = '#600812' } } else if (i === blockQs.selected) { bg = 'rgba(107,15,26,0.06)'; border = `2px solid ${accent}`; col = accent }
+                              return <button key={i} disabled={blockQs.submitted} onClick={() => setFeedQuizState(prev => ({ ...prev, [`${b.id}-${block.id}`]: { selected: i, submitted: false } }))} style={{ padding: '10px 12px', borderRadius: 9, border, background: bg, color: col, fontWeight: i === blockQs.selected || (blockQs.submitted && i === richtige) ? 700 : 400, fontSize: 14, cursor: blockQs.submitted ? 'default' : 'pointer', textAlign: 'left', fontFamily: 'inherit' }}>{a}</button>
+                            })}
+                          </div>
+                          {!blockQs.submitted ? (
+                            <button disabled={blockQs.selected === null} onClick={() => setFeedQuizState(prev => ({ ...prev, [`${b.id}-${block.id}`]: { ...prev[`${b.id}-${block.id}`], submitted: true } }))} style={{ marginTop: 12, width: '100%', padding: 12, borderRadius: 9, border: 'none', background: blockQs.selected === null ? '#f0ede8' : accent, color: blockQs.selected === null ? 'var(--warm-gray)' : '#fff', fontWeight: 700, fontSize: 14, cursor: blockQs.selected === null ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>Antworten</button>
+                          ) : (
+                            <div style={{ marginTop: 12, padding: '11px 14px', borderRadius: 9, textAlign: 'center', fontWeight: 700, fontSize: 13, background: blockQs.selected === richtige ? '#f0fdf4' : '#fef2f2', border: blockQs.selected === richtige ? '1px solid #bbf7d0' : '1px solid #fecaca', color: blockQs.selected === richtige ? '#166534' : '#600812' }}>
+                              {blockQs.selected === richtige ? '✓ Richtig!' : '✗ Falsch — richtige Antwort ist markiert'}
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })()}
+                  </div>
+                ))}
+              </div>
+            )
+          }
           return null
         }
 

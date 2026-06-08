@@ -96,13 +96,28 @@ interface TerminTeilnehmer {
   }
 }
 
+interface EditorBlock {
+  id: string
+  type: 'text' | 'bild' | 'video' | 'quiz'
+  text: string
+  imageFile: File | null
+  imagePreview: string | null
+  videoUrl: string
+  quizFrage: string
+  quizAntworten: [string, string, string, string]
+  quizRichtige: number
+}
+interface EditorPage {
+  id: string
+  blocks: EditorBlock[]
+}
 interface Lernbeitrag {
   id: string
   collectionId: string
   typ: 'bild' | 'text' | 'video' | 'quiz'
   titel: string
   inhalt: string
-  bild?: string
+  bild?: string | string[]
   video_url?: string
   tags: string[]
   organisation_id: string
@@ -324,24 +339,15 @@ export default function Ausbildungen() {
   const [beitraege, setBeitraege] = useState<Lernbeitrag[]>([])
   const [beitraegeLoading, setBeitraegeLoading] = useState(false)
   const [showBeitragModal, setShowBeitragModal] = useState(false)
-  const [beitragForm, setBeitragForm] = useState<{
-    typ: 'bild' | 'text' | 'video' | 'quiz'
-    titel: string
-    inhalt: string
-    video_url: string
-    tags: string
-    gepinnt: boolean
-    quiz_frage: string
-    quiz_antworten: string[]
-    quiz_richtige: number
-    bild_file: File | null
-  }>({ typ: 'text', titel: '', inhalt: '', video_url: '', tags: '', gepinnt: false, quiz_frage: '', quiz_antworten: ['', '', '', ''], quiz_richtige: 0, bild_file: null })
+  const [beitragForm, setBeitragForm] = useState<{ titel: string; tags: string; gepinnt: boolean }>({ titel: '', tags: '', gepinnt: false })
+  const [bookPages, setBookPages] = useState<EditorPage[]>([])
+  const [bookPageIdx, setBookPageIdx] = useState(0)
+  const [bookDir, setBookDir] = useState(1)
+  const [showBlockPicker, setShowBlockPicker] = useState(false)
   const [savingBeitrag, setSavingBeitrag] = useState(false)
   const [editingBeitragId, setEditingBeitragId] = useState<string | null>(null)
-  const [editorPage, setEditorPage] = useState(0)
-  const [editorDir, setEditorDir] = useState(1)
   const [generatingAIImage, setGeneratingAIImage] = useState(false)
-  const [aiImagePreview, setAiImagePreview] = useState<string | null>(null)
+  const [aiImageTargetBlock, setAiImageTargetBlock] = useState<string | null>(null)
   
 const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | 'konzepte' | 'jahresuebersicht' | 'archiv' | 'lernfeed'>('termine')
   
@@ -531,60 +537,65 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
     finally { setBeitraegeLoading(false) }
   }
 
+  function uid() { return Math.random().toString(36).slice(2, 9) }
+  function makeBlock(type: EditorBlock['type']): EditorBlock {
+    return { id: uid(), type, text: '', imageFile: null, imagePreview: null, videoUrl: '', quizFrage: '', quizAntworten: ['', '', '', ''], quizRichtige: 0 }
+  }
+  function makePage(): EditorPage { return { id: uid(), blocks: [] } }
+
   function resetBeitragForm() {
     setEditingBeitragId(null)
     setShowBeitragModal(false)
-    setEditorPage(0)
-    setEditorDir(1)
-    setBeitragForm({ typ: 'text', titel: '', inhalt: '', video_url: '', tags: '', gepinnt: false, quiz_frage: '', quiz_antworten: ['', '', '', ''], quiz_richtige: 0, bild_file: null })
-    setAiImagePreview(null)
+    setBookPages([])
+    setBookPageIdx(0)
+    setBookDir(1)
+    setShowBlockPicker(false)
+    setBeitragForm({ titel: '', tags: '', gepinnt: false })
   }
 
   async function saveBeitrag() {
     if (!beitragForm.titel.trim()) return
     setSavingBeitrag(true)
     try {
+      const imageFiles: File[] = []
+      const pagesData = bookPages.map(page => ({
+        id: page.id,
+        blocks: page.blocks.map(block => {
+          if (block.type === 'bild') {
+            if (block.imageFile) {
+              const idx = imageFiles.length
+              imageFiles.push(block.imageFile)
+              return { id: block.id, type: 'bild' as const, bildIdx: idx }
+            }
+            if (block.imagePreview && !block.imageFile) {
+              return { id: block.id, type: 'bild' as const, bildExistingUrl: block.imagePreview }
+            }
+            return { id: block.id, type: 'bild' as const }
+          }
+          if (block.type === 'text') return { id: block.id, type: 'text' as const, text: block.text }
+          if (block.type === 'video') return { id: block.id, type: 'video' as const, videoUrl: block.videoUrl }
+          if (block.type === 'quiz') return { id: block.id, type: 'quiz' as const, quizFrage: block.quizFrage, quizAntworten: block.quizAntworten, quizRichtige: block.quizRichtige }
+          return { id: block.id, type: block.type as any }
+        })
+      }))
       const tags = beitragForm.tags.split(',').map(t => t.trim()).filter(Boolean)
-      const data: Record<string, any> = {
-        typ: beitragForm.typ,
-        titel: beitragForm.titel.trim(),
-        inhalt: beitragForm.inhalt.trim(),
-        tags,
-        gepinnt: beitragForm.gepinnt,
-      }
+      const fd = new FormData()
+      fd.append('typ', 'text')
+      fd.append('titel', beitragForm.titel.trim())
+      fd.append('inhalt', JSON.stringify({ v: 2, pages: pagesData }))
+      fd.append('gepinnt', String(beitragForm.gepinnt))
+      fd.append('tags', JSON.stringify(tags))
       if (!editingBeitragId) {
-        data.organisation_id = user?.organization_id
-        data.erstellt_von_id = user?.id
-        data.erstellt_von_name = user?.name
+        fd.append('organisation_id', user?.organization_id || '')
+        fd.append('erstellt_von_id', user?.id || '')
+        fd.append('erstellt_von_name', user?.name || '')
       }
-      if (beitragForm.typ === 'video') data.video_url = beitragForm.video_url.trim()
-      if (beitragForm.typ === 'quiz') {
-        data.quiz_daten = {
-          frage: beitragForm.quiz_frage,
-          antworten: beitragForm.quiz_antworten.filter(a => a.trim()),
-          richtige: beitragForm.quiz_richtige
-        }
-      }
-
+      imageFiles.forEach(f => fd.append('bild', f))
       if (editingBeitragId) {
-        if (beitragForm.typ === 'bild' && beitragForm.bild_file) {
-          const fd = new FormData()
-          Object.entries(data).forEach(([k, v]) => fd.append(k, typeof v === 'object' ? JSON.stringify(v) : String(v)))
-          fd.append('bild', beitragForm.bild_file)
-          await pb.collection('lernbar_beitraege').update(editingBeitragId, fd)
-        } else {
-          await pb.collection('lernbar_beitraege').update(editingBeitragId, data)
-        }
+        await pb.collection('lernbar_beitraege').update(editingBeitragId, fd)
         showMessage('Beitrag aktualisiert', 'success')
       } else {
-        if (beitragForm.typ === 'bild' && beitragForm.bild_file) {
-          const fd = new FormData()
-          Object.entries(data).forEach(([k, v]) => fd.append(k, typeof v === 'object' ? JSON.stringify(v) : String(v)))
-          fd.append('bild', beitragForm.bild_file)
-          await pb.collection('lernbar_beitraege').create(fd)
-        } else {
-          await pb.collection('lernbar_beitraege').create(data)
-        }
+        await pb.collection('lernbar_beitraege').create(fd)
         showMessage('Beitrag erstellt', 'success')
       }
       resetBeitragForm()
@@ -595,25 +606,42 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
   }
 
   function openEditBeitrag(b: Lernbeitrag) {
-    const tags = Array.isArray(b.tags) ? b.tags.join(', ') : ''
-    const qd = b.quiz_daten
-    setBeitragForm({
-      typ: b.typ,
-      titel: b.titel,
-      inhalt: b.inhalt || '',
-      video_url: b.video_url || '',
-      tags,
-      gepinnt: b.gepinnt,
-      quiz_frage: qd?.frage || '',
-      quiz_antworten: [...(qd?.antworten || []), '', '', '', ''].slice(0, 4),
-      quiz_richtige: qd?.richtige ?? 0,
-      bild_file: null,
-    })
-    if (b.bild) setAiImagePreview(`https://api.responda.systems/api/files/${b.collectionId}/${b.id}/${b.bild}`)
-    else setAiImagePreview(null)
+    const tagsStr = Array.isArray(b.tags) ? b.tags.join(', ') : ''
+    setBeitragForm({ titel: b.titel, tags: tagsStr, gepinnt: b.gepinnt })
     setEditingBeitragId(b.id)
-    setEditorPage(0)
-    setEditorDir(1)
+    let pages: EditorPage[] = []
+    try {
+      const parsed = JSON.parse(b.inhalt || '{}')
+      if (parsed?.v === 2 && Array.isArray(parsed.pages)) {
+        const bildArr = Array.isArray(b.bild) ? b.bild : (b.bild ? [b.bild] : [])
+        pages = parsed.pages.map((p: any) => ({
+          id: p.id || uid(),
+          blocks: (p.blocks || []).map((blk: any): EditorBlock => {
+            if (blk.type === 'bild') {
+              let imgUrl: string | null = null
+              if (blk.bildIdx !== undefined && bildArr[blk.bildIdx]) imgUrl = `https://api.responda.systems/api/files/${b.collectionId}/${b.id}/${bildArr[blk.bildIdx]}`
+              else if (blk.bildExistingUrl) imgUrl = blk.bildExistingUrl
+              return { id: blk.id || uid(), type: 'bild', text: '', imageFile: null, imagePreview: imgUrl, videoUrl: '', quizFrage: '', quizAntworten: ['', '', '', ''], quizRichtige: 0 }
+            }
+            if (blk.type === 'video') return { id: blk.id || uid(), type: 'video', text: '', imageFile: null, imagePreview: null, videoUrl: blk.videoUrl || '', quizFrage: '', quizAntworten: ['', '', '', ''], quizRichtige: 0 }
+            if (blk.type === 'quiz') return { id: blk.id || uid(), type: 'quiz', text: '', imageFile: null, imagePreview: null, videoUrl: '', quizFrage: blk.quizFrage || '', quizAntworten: (blk.quizAntworten?.length === 4 ? blk.quizAntworten : ['', '', '', '']) as [string,string,string,string], quizRichtige: blk.quizRichtige ?? 0 }
+            return { id: blk.id || uid(), type: 'text', text: blk.text || '', imageFile: null, imagePreview: null, videoUrl: '', quizFrage: '', quizAntworten: ['', '', '', ''], quizRichtige: 0 }
+          })
+        }))
+      }
+    } catch {}
+    if (pages.length === 0) {
+      const block = makeBlock(b.typ)
+      if (b.typ === 'text') block.text = b.inhalt || ''
+      if (b.typ === 'bild') { const bf = Array.isArray(b.bild) ? b.bild[0] : b.bild; if (bf) block.imagePreview = `https://api.responda.systems/api/files/${b.collectionId}/${b.id}/${bf}` }
+      if (b.typ === 'video') block.videoUrl = b.video_url || ''
+      if (b.typ === 'quiz') { const qd = b.quiz_daten; block.quizFrage = qd?.frage || ''; block.quizAntworten = ([...(qd?.antworten || []),'','',''].slice(0,4)) as [string,string,string,string]; block.quizRichtige = qd?.richtige ?? 0 }
+      pages = [{ id: uid(), blocks: [block] }]
+    }
+    setBookPages(pages)
+    setBookPageIdx(0)
+    setBookDir(1)
+    setShowBlockPicker(false)
     setShowBeitragModal(true)
   }
 
@@ -628,22 +656,23 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
     }
   }
 
-  async function generateAIImage() {
+  async function generateAIImage(blockId: string) {
     if (!beitragForm.titel.trim()) { showMessage('Bitte zuerst einen Titel eingeben', 'error'); return }
+    setAiImageTargetBlock(blockId)
     setGeneratingAIImage(true)
     try {
-      const prompt = encodeURIComponent(`${beitragForm.titel} ${beitragForm.inhalt} Rettungsdienst Notfallmedizin training illustration`.trim())
+      const prompt = encodeURIComponent(`${beitragForm.titel} Rettungsdienst Notfallmedizin training illustration`.trim())
       const url = `https://image.pollinations.ai/prompt/${prompt}?width=1024&height=768&nologo=true&seed=${Date.now()}`
       const response = await fetch(url)
       if (!response.ok) throw new Error('Bildgenerierung fehlgeschlagen')
       const blob = await response.blob()
       const file = new File([blob], 'ki-bild.jpg', { type: 'image/jpeg' })
-      setBeitragForm(prev => ({ ...prev, bild_file: file }))
-      setAiImagePreview(URL.createObjectURL(blob))
+      setBookPages(prev => prev.map(p => ({ ...p, blocks: p.blocks.map(b => b.id === blockId ? { ...b, imageFile: file, imagePreview: URL.createObjectURL(blob) } : b) })))
     } catch(e: any) {
       showMessage('KI-Bild Fehler: ' + e.message, 'error')
     } finally {
       setGeneratingAIImage(false)
+      setAiImageTargetBlock(null)
     }
   }
 
@@ -1595,7 +1624,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
             </button>
           )}
           {viewMode === 'lernfeed' && (
-            <button onClick={() => { setEditorPage(0); setEditorDir(1); setShowBeitragModal(true) }} style={addBtnStyle} title="Beitrag erstellen">
+            <button onClick={() => { setBookPages([{ id: Math.random().toString(36).slice(2,9), blocks: [] }]); setBookPageIdx(0); setBookDir(1); setShowBlockPicker(false); setBeitragForm({ titel: '', tags: '', gepinnt: false }); setEditingBeitragId(null); setShowBeitragModal(true) }} style={addBtnStyle} title="Beitrag erstellen">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             </button>
           )}
@@ -2170,181 +2199,228 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
 
       {/* BEITRAG BUCH-EDITOR */}
       {showBeitragModal && (() => {
-        const ACCENT: Record<string, string> = { text: '#600812', bild: '#7c2d12', video: '#065f46', quiz: '#1e3a8a' }
-        const accent = ACCENT[beitragForm.typ] || '#600812'
-        const pages = ['cover', 'content', 'tags'] as const
-        type EP = 'cover' | 'content' | 'tags'
-        const pid: EP = pages[editorPage] ?? 'cover'
-        const canPrev = editorPage > 0
-        const canNext = editorPage < pages.length - 1
-        const goPage = (dir: 1 | -1) => { setEditorDir(dir); setEditorPage(p => Math.max(0, Math.min(pages.length - 1, p + dir))) }
+        const TOTAL_PAGES = bookPages.length + 1
+        const isTagsPage = bookPageIdx === bookPages.length
+        const isFirstPage = bookPageIdx === 0
+        const canPrev = bookPageIdx > 0
+        const canNext = bookPageIdx < TOTAL_PAGES - 1
+        const currentPage = isTagsPage ? null : bookPages[bookPageIdx]
+        const pageLabel = isTagsPage ? 'Tags' : bookPageIdx === 0 ? 'Titelseite' : `Seite ${bookPageIdx + 1}`
 
-        const renderPage = (p: EP) => {
-          if (p === 'cover') return (
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '16px 20px 12px 26px', gap: 14, overflowY: 'auto' }}>
-              {/* Type tabs */}
-              <div>
-                <div style={{ fontSize: 9, fontWeight: 700, color: accent, textTransform: 'uppercase' as const, letterSpacing: '0.2em', marginBottom: 8 }}>Typ</div>
-                <div style={{ display: 'flex', gap: 5 }}>
-                  {(['text','bild','video','quiz'] as const).map(t => (
-                    <button key={t} onClick={() => setBeitragForm(prev => ({ ...prev, typ: t }))}
-                      style={{ flex: 1, padding: '7px 4px', borderRadius: 7, border: beitragForm.typ === t ? `2px solid ${ACCENT[t]}` : '1.5px solid rgba(96,8,18,0.12)', background: beitragForm.typ === t ? 'rgba(96,8,18,0.06)' : 'transparent', color: beitragForm.typ === t ? ACCENT[t] : '#8a7a68', fontWeight: 700, fontSize: 10, cursor: 'pointer', fontFamily: 'inherit', textTransform: 'uppercase' as const, letterSpacing: '0.06em' }}>
-                      {t === 'bild' ? 'Bild' : t === 'quiz' ? 'Quiz' : t === 'video' ? 'Video' : 'Text'}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              {/* Title */}
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-                <div style={{ fontSize: 9, fontWeight: 700, color: accent, textTransform: 'uppercase' as const, letterSpacing: '0.2em', marginBottom: 8 }}>Titel *</div>
-                <textarea autoFocus value={beitragForm.titel} onChange={e => setBeitragForm(prev => ({ ...prev, titel: e.target.value }))} placeholder="Titel des Beitrags…"
-                  style={{ flex: 1, minHeight: 80, resize: 'none', border: 'none', outline: 'none', background: 'transparent', fontStyle: 'italic', fontWeight: 700, fontSize: 20, color: '#1a0e08', lineHeight: 1.3, fontFamily: "'Atkinson Hyperlegible', Inter, sans-serif", padding: 0, width: '100%' }} />
-              </div>
-              {/* Pin */}
-              <div style={{ borderTop: '0.5px solid rgba(96,8,18,0.1)', paddingTop: 10 }}>
-                <button onClick={() => setBeitragForm(prev => ({ ...prev, gepinnt: !prev.gepinnt }))}
-                  style={{ display: 'flex', alignItems: 'center', gap: 7, background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}>
-                  <div style={{ width: 18, height: 18, borderRadius: 4, border: `1.5px solid ${beitragForm.gepinnt ? accent : 'rgba(96,8,18,0.2)'}`, background: beitragForm.gepinnt ? accent : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    {beitragForm.gepinnt && <svg width="10" height="10" viewBox="0 0 24 24" fill="white"><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5v6h2v-6h5v-2l-2-2z"/></svg>}
-                  </div>
-                  <span style={{ fontSize: 12, color: beitragForm.gepinnt ? '#1a0e08' : '#8a7a68', fontWeight: beitragForm.gepinnt ? 700 : 400 }}>
-                    {beitragForm.gepinnt ? 'Angepinnt' : 'Anpinnen'}
-                  </span>
-                </button>
-              </div>
-            </div>
-          )
+        const goPage = (dir: 1 | -1) => {
+          const next = bookPageIdx + dir
+          if (next < 0 || next >= TOTAL_PAGES) return
+          setBookDir(dir); setBookPageIdx(next); setShowBlockPicker(false)
+        }
 
-          if (p === 'content') {
-            if (beitragForm.typ === 'text') return (
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '16px 20px 12px 26px' }}>
-                <div style={{ fontSize: 9, fontWeight: 700, color: accent, textTransform: 'uppercase' as const, letterSpacing: '0.2em', marginBottom: 10 }}>Inhalt</div>
-                <textarea value={beitragForm.inhalt} onChange={e => setBeitragForm(prev => ({ ...prev, inhalt: e.target.value }))} placeholder="Inhalt des Beitrags…"
-                  style={{ flex: 1, resize: 'none', border: 'none', outline: 'none', background: 'transparent', fontSize: 15, color: '#1a0e08', lineHeight: 1.8, fontFamily: "Georgia, 'Times New Roman', serif", padding: 0, width: '100%' }} />
-              </div>
-            )
-            if (beitragForm.typ === 'bild') return (
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                {aiImagePreview ? (
-                  <div style={{ flex: 1, position: 'relative', minHeight: 0 }}>
-                    <img src={aiImagePreview} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-                    <button type="button" onClick={() => { setBeitragForm(prev => ({ ...prev, bild_file: null })); setAiImagePreview(null) }}
-                      style={{ position: 'absolute', top: 10, right: 10, width: 28, height: 28, borderRadius: '50%', border: 'none', background: 'rgba(0,0,0,0.6)', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>×</button>
+        const addBlock = (type: EditorBlock['type']) => {
+          setShowBlockPicker(false)
+          const newBlock: EditorBlock = { id: Math.random().toString(36).slice(2,9), type, text: '', imageFile: null, imagePreview: null, videoUrl: '', quizFrage: '', quizAntworten: ['', '', '', ''], quizRichtige: 0 }
+          setBookPages(prev => {
+            const pages = [...prev]
+            const idx = Math.min(bookPageIdx, pages.length - 1)
+            if (idx < 0) return [{ id: Math.random().toString(36).slice(2,9), blocks: [newBlock] }]
+            pages[idx] = { ...pages[idx], blocks: [...pages[idx].blocks, newBlock] }
+            return pages
+          })
+        }
+
+        const removeBlock = (blockId: string) => {
+          setBookPages(prev => prev.map(p => ({ ...p, blocks: p.blocks.filter(b => b.id !== blockId) })))
+        }
+
+        const updateBlock = (blockId: string, updates: Partial<EditorBlock>) => {
+          setBookPages(prev => prev.map(p => ({ ...p, blocks: p.blocks.map(b => b.id === blockId ? { ...b, ...updates } : b) })))
+        }
+
+        const addPage = () => {
+          const newPage: EditorPage = { id: Math.random().toString(36).slice(2,9), blocks: [] }
+          setBookPages(prev => { const pages = [...prev]; pages.splice(bookPageIdx + 1, 0, newPage); return pages })
+          setBookDir(1); setBookPageIdx(bookPageIdx + 1)
+        }
+
+        const removePage = (idx: number) => {
+          if (bookPages.length <= 1) return
+          setBookPages(prev => prev.filter((_, i) => i !== idx))
+          setBookPageIdx(prev => Math.max(0, Math.min(prev, bookPages.length - 2)))
+        }
+
+        const renderBlock = (block: EditorBlock) => {
+          const isGenThis = generatingAIImage && aiImageTargetBlock === block.id
+          return (
+            <div key={block.id} style={{ marginBottom: 14, position: 'relative' }}>
+              <button onClick={() => removeBlock(block.id)}
+                style={{ position: 'absolute', top: 0, right: 0, zIndex: 5, width: 22, height: 22, borderRadius: '50%', border: 'none', background: 'rgba(96,8,18,0.08)', color: '#8a7a68', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, lineHeight: 1 }}>×</button>
+
+              {block.type === 'text' && <>
+                <div style={{ fontSize: 9, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.18em', marginBottom: 4 }}>Text</div>
+                <textarea value={block.text} onChange={e => updateBlock(block.id, { text: e.target.value })} placeholder="Text eingeben…"
+                  style={{ width: '100%', minHeight: 72, resize: 'none', border: 'none', borderBottom: '0.5px solid rgba(96,8,18,0.1)', outline: 'none', background: 'transparent', fontSize: 15, color: '#1a0e08', lineHeight: 1.85, fontFamily: "Georgia, 'Times New Roman', serif", padding: '0 26px 6px 0', boxSizing: 'border-box' as const }} />
+              </>}
+
+              {block.type === 'bild' && <div>
+                <div style={{ fontSize: 9, fontWeight: 700, color: '#7c2d12', textTransform: 'uppercase' as const, letterSpacing: '0.18em', marginBottom: 6 }}>Bild</div>
+                {block.imagePreview ? (
+                  <div style={{ position: 'relative', borderRadius: 8, overflow: 'hidden', marginRight: 26 }}>
+                    <img src={block.imagePreview} alt="" style={{ width: '100%', maxHeight: 180, objectFit: 'cover', display: 'block' }} />
+                    <button type="button" onClick={() => updateBlock(block.id, { imageFile: null, imagePreview: null })}
+                      style={{ position: 'absolute', top: 6, right: 6, width: 24, height: 24, borderRadius: '50%', border: 'none', background: 'rgba(0,0,0,0.6)', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, zIndex: 3 }}>×</button>
                   </div>
                 ) : (
-                  <div style={{ padding: '16px 20px 0 26px' }}>
-                    <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 110, border: '2px dashed rgba(96,8,18,0.2)', borderRadius: 10, cursor: 'pointer', gap: 8, background: 'rgba(96,8,18,0.02)' }}>
-                      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="rgba(96,8,18,0.3)" strokeWidth="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-                      <span style={{ fontSize: 12, color: '#8a7a68', fontStyle: 'italic' }}>Bild hochladen</span>
-                      <input type="file" accept="image/*" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0] || null; setBeitragForm(prev => ({ ...prev, bild_file: f })); setAiImagePreview(f ? URL.createObjectURL(f) : null) }} />
+                  <div style={{ marginRight: 26 }}>
+                    <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 72, border: '1.5px dashed rgba(96,8,18,0.18)', borderRadius: 8, cursor: 'pointer', gap: 5, background: 'rgba(96,8,18,0.02)' }}>
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(96,8,18,0.3)" strokeWidth="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                      <span style={{ fontSize: 11, color: '#8a7a68', fontStyle: 'italic' }}>Bild hochladen</span>
+                      <input type="file" accept="image/*" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) updateBlock(block.id, { imageFile: f, imagePreview: URL.createObjectURL(f) }) }} />
                     </label>
-                    <button type="button" onClick={generateAIImage} disabled={generatingAIImage || !beitragForm.titel.trim()}
-                      style={{ width: '100%', marginTop: 8, padding: '9px', borderRadius: 8, border: `1.5px solid ${accent}`, background: 'rgba(96,8,18,0.04)', color: accent, fontSize: 13, fontWeight: 600, cursor: generatingAIImage || !beitragForm.titel.trim() ? 'not-allowed' : 'pointer', fontFamily: 'inherit', opacity: !beitragForm.titel.trim() ? 0.5 : 1 }}>
-                      {generatingAIImage ? '✦ Generiere…' : '✦ KI-Bild generieren'}
+                    <button type="button" onClick={() => generateAIImage(block.id)} disabled={isGenThis || !beitragForm.titel.trim()}
+                      style={{ width: '100%', marginTop: 5, padding: '6px', borderRadius: 7, border: '1.5px solid rgba(96,8,18,0.18)', background: 'rgba(96,8,18,0.03)', color: '#600812', fontSize: 11, fontWeight: 600, cursor: isGenThis || !beitragForm.titel.trim() ? 'not-allowed' : 'pointer', fontFamily: 'inherit', opacity: !beitragForm.titel.trim() ? 0.5 : 1 }}>
+                      {isGenThis ? '✦ Generiere…' : '✦ KI-Bild'}
                     </button>
                   </div>
                 )}
-                <div style={{ padding: '10px 20px 8px 26px', borderTop: aiImagePreview ? '0.5px solid rgba(96,8,18,0.08)' : 'none', marginTop: aiImagePreview ? 0 : 8 }}>
-                  <textarea value={beitragForm.inhalt} onChange={e => setBeitragForm(prev => ({ ...prev, inhalt: e.target.value }))} placeholder="Beschreibung (optional)…" rows={3}
-                    style={{ width: '100%', resize: 'none', border: 'none', outline: 'none', background: 'transparent', fontSize: 14, color: '#1a0e08', lineHeight: 1.7, fontFamily: "Georgia, 'Times New Roman', serif", padding: 0 }} />
-                </div>
-              </div>
-            )
-            if (beitragForm.typ === 'video') return (
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '16px 20px 12px 26px' }}>
-                <div style={{ fontSize: 9, fontWeight: 700, color: accent, textTransform: 'uppercase' as const, letterSpacing: '0.2em', marginBottom: 10 }}>Video-URL</div>
-                <input value={beitragForm.video_url} onChange={e => setBeitragForm(prev => ({ ...prev, video_url: e.target.value }))} placeholder="https://youtube.com/watch?v=…"
-                  style={{ border: 'none', borderBottom: `1px solid rgba(96,8,18,0.15)`, outline: 'none', background: 'transparent', fontSize: 14, color: '#1a0e08', fontFamily: 'inherit', padding: '4px 0', width: '100%', marginBottom: 14 }} />
-                {beitragForm.video_url.trim() && (
-                  <div style={{ flex: 1, position: 'relative', background: '#000', borderRadius: 8, overflow: 'hidden', minHeight: 120 }}>
-                    <iframe src={(() => { const yt = beitragForm.video_url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)/); return yt ? `https://www.youtube.com/embed/${yt[1]}?rel=0` : beitragForm.video_url })()} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none' }} allowFullScreen />
+              </div>}
+
+              {block.type === 'video' && <div style={{ marginRight: 26 }}>
+                <div style={{ fontSize: 9, fontWeight: 700, color: '#065f46', textTransform: 'uppercase' as const, letterSpacing: '0.18em', marginBottom: 6 }}>Video</div>
+                <input value={block.videoUrl} onChange={e => updateBlock(block.id, { videoUrl: e.target.value })} placeholder="YouTube-URL…"
+                  style={{ width: '100%', border: 'none', borderBottom: '1px solid rgba(96,8,18,0.15)', outline: 'none', background: 'transparent', fontSize: 14, color: '#1a0e08', fontFamily: 'inherit', padding: '3px 0', marginBottom: 8, boxSizing: 'border-box' as const }} />
+                {block.videoUrl.trim() && (
+                  <div style={{ position: 'relative', paddingBottom: '50%', background: '#000', borderRadius: 6, overflow: 'hidden' }}>
+                    <iframe src={(() => { const yt = block.videoUrl.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)/); return yt ? `https://www.youtube.com/embed/${yt[1]}?rel=0` : block.videoUrl })()} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none' }} allowFullScreen />
                   </div>
                 )}
-              </div>
-            )
-            if (beitragForm.typ === 'quiz') return (
-              <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px 12px 26px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-                <div>
-                  <div style={{ fontSize: 9, fontWeight: 700, color: accent, textTransform: 'uppercase' as const, letterSpacing: '0.2em', marginBottom: 8 }}>Frage</div>
-                  <textarea value={beitragForm.quiz_frage} onChange={e => setBeitragForm(prev => ({ ...prev, quiz_frage: e.target.value }))} placeholder="Was ist zu tun bei…?" rows={3}
-                    style={{ width: '100%', resize: 'none', border: 'none', borderBottom: '0.5px solid rgba(96,8,18,0.12)', outline: 'none', background: 'transparent', fontSize: 16, fontWeight: 600, color: '#1a0e08', lineHeight: 1.55, fontFamily: 'inherit', padding: '0 0 8px' }} />
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {beitragForm.quiz_antworten.map((a, idx) => (
-                    <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <button onClick={() => setBeitragForm(prev => ({ ...prev, quiz_richtige: idx }))}
-                        style={{ width: 20, height: 20, borderRadius: '50%', border: `2px solid ${beitragForm.quiz_richtige === idx ? '#16a34a' : 'rgba(96,8,18,0.2)'}`, background: beitragForm.quiz_richtige === idx ? '#16a34a' : 'transparent', flexShrink: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        {beitragForm.quiz_richtige === idx && <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#fff' }} />}
+              </div>}
+
+              {block.type === 'quiz' && <div style={{ marginRight: 26 }}>
+                <div style={{ fontSize: 9, fontWeight: 700, color: '#1e3a8a', textTransform: 'uppercase' as const, letterSpacing: '0.18em', marginBottom: 6 }}>Quiz</div>
+                <textarea value={block.quizFrage} onChange={e => updateBlock(block.id, { quizFrage: e.target.value })} placeholder="Frage…" rows={2}
+                  style={{ width: '100%', resize: 'none', border: 'none', borderBottom: '0.5px solid rgba(96,8,18,0.12)', outline: 'none', background: 'transparent', fontSize: 15, fontWeight: 600, color: '#1a0e08', lineHeight: 1.4, fontFamily: 'inherit', padding: '0 0 5px', boxSizing: 'border-box' as const, marginBottom: 8 }} />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                  {block.quizAntworten.map((a, idx) => (
+                    <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                      <button onClick={() => updateBlock(block.id, { quizRichtige: idx })}
+                        style={{ width: 17, height: 17, borderRadius: '50%', border: `2px solid ${block.quizRichtige === idx ? '#16a34a' : 'rgba(96,8,18,0.2)'}`, background: block.quizRichtige === idx ? '#16a34a' : 'transparent', flexShrink: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        {block.quizRichtige === idx && <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#fff' }} />}
                       </button>
-                      <input value={a} onChange={e => { const arr = [...beitragForm.quiz_antworten]; arr[idx] = e.target.value; setBeitragForm(prev => ({ ...prev, quiz_antworten: arr })) }} placeholder={`Antwort ${idx + 1}…`}
-                        style={{ flex: 1, border: 'none', borderBottom: '0.5px solid rgba(96,8,18,0.1)', outline: 'none', background: 'transparent', fontSize: 14, color: '#1a0e08', fontFamily: 'inherit', padding: '4px 0' }} />
+                      <input value={a} onChange={e => { const arr = [...block.quizAntworten] as [string,string,string,string]; arr[idx] = e.target.value; updateBlock(block.id, { quizAntworten: arr }) }} placeholder={`Antwort ${idx + 1}…`}
+                        style={{ flex: 1, border: 'none', borderBottom: '0.5px solid rgba(96,8,18,0.08)', outline: 'none', background: 'transparent', fontSize: 13, color: '#1a0e08', fontFamily: 'inherit', padding: '3px 0' }} />
                     </div>
                   ))}
                 </div>
-              </div>
-            )
-          }
+              </div>}
+            </div>
+          )
+        }
 
-          if (p === 'tags') return (
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '16px 20px 12px 26px' }}>
-              <div style={{ fontSize: 9, fontWeight: 700, color: accent, textTransform: 'uppercase' as const, letterSpacing: '0.2em', marginBottom: 10 }}>
+        const renderPageContent = () => {
+          if (isTagsPage) return (
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '12px 20px 12px 26px' }}>
+              <div style={{ fontSize: 9, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.2em', marginBottom: 10 }}>
                 Tags <span style={{ fontWeight: 400, color: '#8a7a68', textTransform: 'none' as const, letterSpacing: 0, fontSize: 10 }}>(kommagetrennt)</span>
               </div>
-              <input value={beitragForm.tags} onChange={e => setBeitragForm(prev => ({ ...prev, tags: e.target.value }))} placeholder="XABCDE, Reanimation, Beatmung…"
-                style={{ border: 'none', borderBottom: `1px solid rgba(96,8,18,0.15)`, outline: 'none', background: 'transparent', fontSize: 14, color: '#1a0e08', fontFamily: 'inherit', padding: '4px 0', width: '100%', marginBottom: 14 }} />
+              <input value={beitragForm.tags} onChange={e => setBeitragForm(prev => ({ ...prev, tags: e.target.value }))} placeholder="Reanimation, XABCDE, Beatmung…"
+                style={{ border: 'none', borderBottom: '1px solid rgba(96,8,18,0.15)', outline: 'none', background: 'transparent', fontSize: 14, color: '#1a0e08', fontFamily: 'inherit', padding: '4px 0', width: '100%', marginBottom: 14 }} />
               {beitragForm.tags.split(',').map(t => t.trim()).filter(Boolean).length > 0 && (
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                   {beitragForm.tags.split(',').map(t => t.trim()).filter(Boolean).map(t => (
-                    <span key={t} style={{ fontSize: 12, fontStyle: 'italic', fontWeight: 700, color: accent, background: 'rgba(96,8,18,0.07)', borderRadius: 99, padding: '3px 10px' }}>#{t}</span>
+                    <span key={t} style={{ fontSize: 12, fontStyle: 'italic', fontWeight: 700, color: '#600812', background: 'rgba(96,8,18,0.07)', borderRadius: 99, padding: '3px 10px' }}>#{t}</span>
                   ))}
                 </div>
               )}
             </div>
           )
-          return null
+          return (
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+              {isFirstPage && (
+                <div style={{ padding: '10px 20px 0 26px', flexShrink: 0 }}>
+                  <textarea autoFocus value={beitragForm.titel} onChange={e => setBeitragForm(prev => ({ ...prev, titel: e.target.value }))} placeholder="Titel des Beitrags…" rows={2}
+                    style={{ width: '100%', resize: 'none', border: 'none', borderBottom: '0.5px solid rgba(96,8,18,0.12)', outline: 'none', background: 'transparent', fontStyle: 'italic', fontWeight: 700, fontSize: 19, color: '#1a0e08', lineHeight: 1.3, fontFamily: "'Atkinson Hyperlegible', Inter, sans-serif", padding: '0 0 8px', boxSizing: 'border-box' as const }} />
+                  <div style={{ paddingBottom: 8 }}>
+                    <button onClick={() => setBeitragForm(prev => ({ ...prev, gepinnt: !prev.gepinnt }))}
+                      style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}>
+                      <div style={{ width: 15, height: 15, borderRadius: 3, border: `1.5px solid ${beitragForm.gepinnt ? '#600812' : 'rgba(96,8,18,0.2)'}`, background: beitragForm.gepinnt ? '#600812' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        {beitragForm.gepinnt && <svg width="8" height="8" viewBox="0 0 24 24" fill="white"><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5v6h2v-6h5v-2l-2-2z"/></svg>}
+                      </div>
+                      <span style={{ fontSize: 11, color: beitragForm.gepinnt ? '#1a0e08' : '#8a7a68' }}>{beitragForm.gepinnt ? 'Angepinnt' : 'Anpinnen'}</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+              <div style={{ flex: 1, overflowY: 'auto', padding: '8px 20px 4px 26px' }}>
+                {currentPage && currentPage.blocks.map(block => renderBlock(block))}
+                {!showBlockPicker ? (
+                  <button onClick={() => setShowBlockPicker(true)}
+                    style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', padding: '4px 0 10px', color: '#8a7a68', fontFamily: 'inherit', fontSize: 12 }}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+                    Block hinzufügen
+                  </button>
+                ) : (
+                  <div style={{ display: 'flex', gap: 5, paddingBottom: 10, flexWrap: 'wrap' as const }}>
+                    {(['text', 'bild', 'video', 'quiz'] as const).map(t => (
+                      <button key={t} onClick={() => addBlock(t)}
+                        style={{ padding: '5px 11px', borderRadius: 20, border: '1.5px solid rgba(96,8,18,0.18)', background: 'rgba(96,8,18,0.04)', color: '#600812', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', textTransform: 'uppercase' as const, letterSpacing: '0.06em' }}>
+                        {t === 'bild' ? 'Bild' : t === 'quiz' ? 'Quiz' : t === 'video' ? 'Video' : 'Text'}
+                      </button>
+                    ))}
+                    <button onClick={() => setShowBlockPicker(false)}
+                      style={{ padding: '5px 11px', borderRadius: 20, border: '1.5px solid rgba(96,8,18,0.1)', background: 'transparent', color: '#8a7a68', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}>✕</button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )
         }
 
         return (
           <>
             <div onClick={resetBeitragForm} style={{ position: 'fixed', inset: 0, background: 'rgba(20,10,6,0.8)', zIndex: 500 }} />
-            <div style={{ position: 'fixed', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', width: 'min(calc(100vw - 32px), 420px)', height: 'min(88dvh, 600px)', zIndex: 501, background: '#fffef9', borderRadius: 3, boxShadow: '0 30px 90px rgba(0,0,0,0.5), -6px 0 18px rgba(0,0,0,0.2)', display: 'flex', flexDirection: 'column', overflow: 'hidden', animation: 'bookOpen 0.32s cubic-bezier(0.22,1,0.36,1)' }}>
-              {/* Spine + shadows */}
-              <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 9, zIndex: 10, pointerEvents: 'none', background: `linear-gradient(to right, ${accent}, ${accent}88 60%, transparent)` }} />
+            <div style={{ position: 'fixed', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', width: 'min(calc(100vw - 32px), 420px)', height: 'min(88dvh, 620px)', zIndex: 501, background: '#fffef9', borderRadius: 3, boxShadow: '0 30px 90px rgba(0,0,0,0.5), -6px 0 18px rgba(0,0,0,0.2)', display: 'flex', flexDirection: 'column', overflow: 'hidden', animation: 'bookOpen 0.32s cubic-bezier(0.22,1,0.36,1)' }}>
+              <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 9, zIndex: 10, pointerEvents: 'none', background: 'linear-gradient(to right, #600812, #60081288 60%, transparent)' }} />
               <div style={{ position: 'absolute', left: 9, top: 0, bottom: 0, width: 22, zIndex: 10, pointerEvents: 'none', background: 'linear-gradient(to right, rgba(0,0,0,0.09), transparent)' }} />
               <div style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 12, zIndex: 10, pointerEvents: 'none', background: 'linear-gradient(to left, rgba(0,0,0,0.06), transparent)' }} />
-              {/* Close */}
               <div style={{ position: 'absolute', top: 10, right: 10, zIndex: 20 }}>
                 <button onClick={resetBeitragForm} style={{ background: 'rgba(96,8,18,0.07)', border: 'none', borderRadius: '50%', width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#8a7a68' }}>
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                 </button>
               </div>
-              {/* Page label */}
-              <div style={{ paddingLeft: 26, paddingRight: 40, paddingTop: 12, flexShrink: 0, zIndex: 5 }}>
-                <div style={{ fontSize: 9, color: '#8a7a68', fontStyle: 'italic' }}>
-                  {pid === 'cover' ? 'Seite 1 — Titelblatt' : pid === 'content' ? 'Seite 2 — Inhalt' : 'Seite 3 — Tags'}
-                </div>
+              <div style={{ paddingLeft: 26, paddingRight: 40, paddingTop: 12, paddingBottom: 4, flexShrink: 0, zIndex: 5, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ fontSize: 9, color: '#8a7a68', fontStyle: 'italic' }}>{pageLabel}</div>
+                {!isFirstPage && !isTagsPage && bookPages.length > 1 && (
+                  <button onClick={() => removePage(bookPageIdx)}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 20px 0 0', color: 'rgba(96,8,18,0.3)', display: 'flex', alignItems: 'center' }}>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+                  </button>
+                )}
               </div>
-              {/* Animated page */}
-              <div key={`ep-${editorPage}`} style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', animation: `pageIn${editorDir >= 0 ? 'R' : 'L'} 0.2s ease-out` }}>
-                {renderPage(pid)}
+              <div key={`ep-${bookPageIdx}`} style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', animation: `pageIn${bookDir >= 0 ? 'R' : 'L'} 0.2s ease-out` }}>
+                {renderPageContent()}
               </div>
-              {/* Bottom nav */}
               <div style={{ flexShrink: 0, height: 52, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 10px', borderTop: '0.5px solid rgba(96,8,18,0.08)', background: '#fffef9', zIndex: 5 }}>
-                <button onClick={() => goPage(-1)} disabled={!canPrev} style={{ width: 32, height: 32, borderRadius: '50%', border: 'none', background: canPrev ? 'rgba(96,8,18,0.07)' : 'transparent', color: canPrev ? accent : 'rgba(96,8,18,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: canPrev ? 'pointer' : 'default' }}>
+                <button onClick={() => goPage(-1)} disabled={!canPrev}
+                  style={{ width: 32, height: 32, borderRadius: '50%', border: 'none', background: canPrev ? 'rgba(96,8,18,0.07)' : 'transparent', color: canPrev ? '#600812' : 'rgba(96,8,18,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: canPrev ? 'pointer' : 'default' }}>
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
                 </button>
                 <div style={{ display: 'flex', gap: 5, alignItems: 'center' }}>
-                  {pages.map((_, i) => (
-                    <div key={i} onClick={() => { setEditorDir(i > editorPage ? 1 : -1); setEditorPage(i) }}
-                      style={{ width: i === editorPage ? 20 : 6, height: 6, borderRadius: 3, background: i === editorPage ? accent : 'rgba(96,8,18,0.14)', cursor: 'pointer', transition: 'width 0.22s, background 0.22s' }} />
+                  {Array.from({ length: TOTAL_PAGES }).map((_, i) => (
+                    <div key={i} onClick={() => { setBookDir(i > bookPageIdx ? 1 : -1); setBookPageIdx(i); setShowBlockPicker(false) }}
+                      style={{ width: i === bookPageIdx ? 20 : 6, height: 6, borderRadius: 3, background: i === bookPageIdx ? '#600812' : 'rgba(96,8,18,0.14)', cursor: 'pointer', transition: 'width 0.22s, background 0.22s' }} />
                   ))}
+                  {!isTagsPage && (
+                    <button onClick={addPage}
+                      style={{ width: 22, height: 22, borderRadius: '50%', border: '1.5px solid rgba(96,8,18,0.2)', background: 'transparent', color: '#600812', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', marginLeft: 2 }}>
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    </button>
+                  )}
                 </div>
                 {canNext ? (
-                  <button onClick={() => goPage(1)} style={{ width: 32, height: 32, borderRadius: '50%', border: 'none', background: 'rgba(96,8,18,0.07)', color: accent, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                  <button onClick={() => goPage(1)}
+                    style={{ width: 32, height: 32, borderRadius: '50%', border: 'none', background: 'rgba(96,8,18,0.07)', color: '#600812', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg>
                   </button>
                 ) : (
-                  <button onClick={saveBeitrag} disabled={savingBeitrag || !beitragForm.titel.trim()} style={{ padding: '8px 14px', borderRadius: 8, border: 'none', background: savingBeitrag || !beitragForm.titel.trim() ? 'rgba(96,8,18,0.12)' : accent, color: '#fff', fontWeight: 700, fontSize: 13, cursor: savingBeitrag || !beitragForm.titel.trim() ? 'not-allowed' : 'pointer', fontFamily: 'inherit', opacity: !beitragForm.titel.trim() ? 0.6 : 1 }}>
+                  <button onClick={saveBeitrag} disabled={savingBeitrag || !beitragForm.titel.trim()}
+                    style={{ padding: '8px 14px', borderRadius: 8, border: 'none', background: savingBeitrag || !beitragForm.titel.trim() ? 'rgba(96,8,18,0.12)' : '#600812', color: '#fff', fontWeight: 700, fontSize: 13, cursor: savingBeitrag || !beitragForm.titel.trim() ? 'not-allowed' : 'pointer', fontFamily: 'inherit', opacity: !beitragForm.titel.trim() ? 0.6 : 1 }}>
                     {savingBeitrag ? 'Speichert…' : editingBeitragId ? 'Speichern' : 'Veröffentlichen'}
                   </button>
                 )}
