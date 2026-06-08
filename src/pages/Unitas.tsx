@@ -97,26 +97,18 @@ export default function Unitas() {
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null)
   const [themeMode, setThemeMode] = useState<ThemeMode>(getTheme())
 
-  const [greetingPhase, setGreetingPhase] = useState<'loading' | 'servus' | 'name' | 'exit' | 'done'>('loading')
+  const [showGreeting] = useState(() => {
+    const flag = sessionStorage.getItem('justLoggedIn')
+    if (flag) { sessionStorage.removeItem('justLoggedIn'); return true }
+    return false
+  })
+  const [greetingGone, setGreetingGone] = useState(false)
 
   useEffect(() => {
-    // Only start text animation once data has loaded
-    if (authLoading || loading) return
-    if (greetingPhase === 'loading') { setGreetingPhase('servus'); return }
-    if (greetingPhase === 'done') return
-    if (greetingPhase === 'servus') {
-      const t = setTimeout(() => setGreetingPhase('name'), 800)
-      return () => clearTimeout(t)
-    }
-    if (greetingPhase === 'name') {
-      const t = setTimeout(() => setGreetingPhase('exit'), 900)
-      return () => clearTimeout(t)
-    }
-    if (greetingPhase === 'exit') {
-      const t = setTimeout(() => setGreetingPhase('done'), 350)
-      return () => clearTimeout(t)
-    }
-  }, [greetingPhase, authLoading, loading])
+    if (!showGreeting) return
+    const t = setTimeout(() => setGreetingGone(true), 2400)
+    return () => clearTimeout(t)
+  }, [showGreeting])
 
   const initials = (name?: string) => {
     if (!name) return '?'
@@ -325,34 +317,12 @@ export default function Unitas() {
     <div style={{ minHeight: '100dvh', background: 'var(--warm-bg)', fontFamily: "'Atkinson Hyperlegible', -apple-system, sans-serif" }}>
 
       {/* ── Greeting overlay — dark red curtain ── */}
-      {greetingPhase !== 'done' && (
-        <div style={{
-          position: 'fixed', inset: 0, zIndex: 9999,
-          background: '#3d0408',
-          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6,
-          animation: greetingPhase === 'exit' ? 'greetOverlayOut 0.4s ease-in forwards' : 'none',
-          userSelect: 'none',
-        }}>
-          {greetingPhase === 'loading' ? (
-            <div style={{ width: 1, height: 36, background: 'rgba(253,232,216,0.25)', borderRadius: 1 }} />
-          ) : greetingPhase === 'servus' ? (
-            <div key="servus" style={{
-              fontSize: 15, fontStyle: 'italic', color: 'rgba(253,232,216,0.5)',
-              fontFamily: "'Atkinson Hyperlegible', -apple-system, sans-serif",
-              letterSpacing: '0.04em',
-              animation: 'greetNameIn 0.4s ease-out both',
-            }}>Servus,</div>
-          ) : (
-            <>
-              <div style={{ fontSize: 15, fontStyle: 'italic', color: 'rgba(253,232,216,0.5)', letterSpacing: '0.04em' }}>Servus,</div>
-              <div key="name" style={{
-                fontSize: 'clamp(48px, 13vw, 80px)', fontWeight: 700, fontStyle: 'italic', color: '#fde8d8',
-                letterSpacing: '-0.025em', lineHeight: 1, whiteSpace: 'nowrap',
-                fontFamily: "'Atkinson Hyperlegible', -apple-system, sans-serif",
-                animation: 'greetNameIn 0.45s ease-out both',
-              }}>{firstName}</div>
-            </>
-          )}
+      {showGreeting && !greetingGone && (
+        <div className="unitas-greeting-overlay">
+          <span style={{ fontSize: 15, fontStyle: 'italic', color: 'rgba(253,232,216,0.5)', letterSpacing: '0.04em', animation: 'greetNameSlide 0.5s ease-out both' }}>Servus,</span>
+          <span style={{ fontStyle: 'italic', fontWeight: 700, color: '#fde8d8', fontSize: 'clamp(48px,13vw,80px)', lineHeight: 1, animation: 'greetNameSlide 0.5s 0.12s ease-out both' }}>
+            {firstName}
+          </span>
         </div>
       )}
 
@@ -361,8 +331,10 @@ export default function Unitas() {
         background: 'var(--lbf-card)',
         borderBottom: '0.5px solid rgba(96,8,18,0.15)',
         position: 'sticky', top: 0, zIndex: 100,
-        padding: '0 20px',
-      }}>
+        paddingTop: 'env(safe-area-inset-top)',
+        paddingLeft: 'max(20px, env(safe-area-inset-left))',
+        paddingRight: 'max(20px, env(safe-area-inset-right))',
+      } as React.CSSProperties}>
         <div style={{ maxWidth: 640, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 60 }}>
           {/* Left: Responda logo circle */}
           <div style={{ width: 34, height: 34, borderRadius: '50%', background: '#600812', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -946,13 +918,13 @@ export default function Unitas() {
           from { transform: translateX(-50%) translateY(20px); opacity: 0; }
           to   { transform: translateX(-50%) translateY(0);    opacity: 1; }
         }
-        @keyframes greetNameIn {
-          from { opacity: 0; transform: translateY(16px); }
-          to   { opacity: 1; transform: none; }
-        }
-        @keyframes greetOverlayOut {
-          from { opacity: 1; }
-          to   { opacity: 0; }
+        @keyframes greetCurtainOut { 0%,60%{opacity:1} 100%{opacity:0} }
+        @keyframes greetNameSlide { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:none} }
+        .unitas-greeting-overlay {
+          position:fixed;inset:0;z-index:9999;background:#3d0408;
+          display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;
+          animation:greetCurtainOut 2.4s ease forwards;pointer-events:none;
+          font-family:'Atkinson Hyperlegible',-apple-system,sans-serif;
         }
         details > summary::-webkit-details-marker { display: none; }
         @media print {
