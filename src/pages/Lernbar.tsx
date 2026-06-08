@@ -92,6 +92,12 @@ const statusConfig: Record<string, { label: string; bg: string; color: string }>
   fehlend:    { label: 'Gefehlt',    bg: '#fef3c7', color: '#92400e' },
 }
 
+function parseInhalt(raw: any): Record<string, any> {
+  if (raw === null || raw === undefined) return {}
+  if (typeof raw === 'object') return raw
+  try { return JSON.parse(raw) } catch { return {} }
+}
+
 function getPatternBg(pattern: string | null): { backgroundImage: string; backgroundSize?: string } | null {
   if (!pattern) return null
   const a = 'rgba(255,255,255,0.18)', b = 'rgba(255,255,255,0.09)'
@@ -424,7 +430,8 @@ export default function Lernbar() {
     if (bibActiveTag && !tags.includes(bibActiveTag)) return false
     if (bibSearch.trim()) {
       const q = bibSearch.toLowerCase()
-      return b.titel.toLowerCase().includes(q) || (b.inhalt || '').toLowerCase().includes(q) || tags.some(t => t.toLowerCase().includes(q))
+      const inhaltText = typeof b.inhalt === 'string' ? b.inhalt : JSON.stringify(b.inhalt || '')
+      return b.titel.toLowerCase().includes(q) || inhaltText.toLowerCase().includes(q) || tags.some(t => t.toLowerCase().includes(q))
     }
     return true
   })
@@ -483,7 +490,7 @@ export default function Lernbar() {
             const bildUrl = bildFirstCard ? `https://api.responda.systems/api/files/${b.collectionId}/${b.id}/${bildFirstCard}` : null
             let bookColor: string | null = null
             let bookPattern: string | null = null
-            try { const p = JSON.parse(b.inhalt || '{}'); if (p?.v === 2) { if (p.color) bookColor = p.color; if (p.pattern) bookPattern = p.pattern } } catch {}
+            const bInhalt = parseInhalt(b.inhalt); if (bInhalt?.v === 2) { if (bInhalt.color) bookColor = bInhalt.color; if (bInhalt.pattern) bookPattern = bInhalt.pattern }
             const cfg = bookColor
               ? (() => { const r = parseInt(bookColor.slice(1,3),16), g = parseInt(bookColor.slice(3,5),16), bv = parseInt(bookColor.slice(5,7),16); return { bg: `linear-gradient(165deg, ${bookColor} 0%, rgb(${Math.round(r*.55)},${Math.round(g*.55)},${Math.round(bv*.55)}) 100%)`, spine: 'rgba(0,0,0,0.3)', label: '' } })()
               : (COVER[b.typ] || COVER.text)
@@ -780,10 +787,8 @@ export default function Lernbar() {
         let richPages: { id: string; blocks: { id: string; type: string; text?: string; bildIdx?: number; bildExistingUrl?: string; videoUrl?: string; quizFrage?: string; quizAntworten?: string[]; quizRichtige?: number }[] }[] | null = null
         let readerColor: string | null = null
         let readerPattern: string | null = null
-        try {
-          const parsed = JSON.parse(b.inhalt || '{}')
-          if (parsed?.v === 2 && Array.isArray(parsed.pages)) { richPages = parsed.pages; readerColor = parsed.color || null; readerPattern = parsed.pattern || null }
-        } catch {}
+        const rInhalt = parseInhalt(b.inhalt)
+        if (rInhalt?.v === 2 && Array.isArray(rInhalt.pages)) { richPages = rInhalt.pages; readerColor = rInhalt.color || null; readerPattern = rInhalt.pattern || null }
         const accent = readerColor || ACCENT[b.typ] || '#600812'
         const bildArr = Array.isArray(b.bild) ? b.bild : (b.bild ? [b.bild] : [])
 
@@ -847,7 +852,7 @@ export default function Lernbar() {
 
           if (id === 'content') return (
             <div style={{ flex: 1, overflowY: 'auto', padding: '28px 24px 16px' }}>
-              <div style={{ fontSize: 15, color: '#1a0e08', lineHeight: 1.85, whiteSpace: 'pre-wrap', fontFamily: "Georgia, 'Times New Roman', serif" }}>{b.inhalt}</div>
+              <div style={{ fontSize: 15, color: '#1a0e08', lineHeight: 1.85, whiteSpace: 'pre-wrap', fontFamily: "Georgia, 'Times New Roman', serif" }}>{typeof b.inhalt === 'string' ? b.inhalt : ''}</div>
             </div>
           )
 

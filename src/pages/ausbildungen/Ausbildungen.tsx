@@ -248,6 +248,12 @@ interface KonzeptForm {
   verknuepfte_termine: string[]
 }
 
+function parseInhalt(raw: any): Record<string, any> {
+  if (raw === null || raw === undefined) return {}
+  if (typeof raw === 'object') return raw
+  try { return JSON.parse(raw) } catch { return {} }
+}
+
 function getPatternBg(pattern: string | null): { backgroundImage: string; backgroundSize?: string } | null {
   if (!pattern) return null
   const a = 'rgba(255,255,255,0.18)', b = 'rgba(255,255,255,0.09)'
@@ -629,7 +635,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
     let bookColor = '#600812'
     let bookPattern: string | null = null
     try {
-      const parsed = JSON.parse(b.inhalt || '{}')
+      const parsed = parseInhalt(b.inhalt)
       if (parsed?.v === 2 && Array.isArray(parsed.pages)) {
         if (parsed.color) bookColor = parsed.color
         if (parsed.pattern) bookPattern = parsed.pattern
