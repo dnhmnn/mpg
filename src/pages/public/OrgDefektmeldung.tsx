@@ -1,43 +1,44 @@
 import { useState, useEffect } from 'react'
-import { useSearchParams } from 'react-router-dom'
-import { useOrg } from './OrgPublicLayout'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { pb } from '../../lib/pocketbase'
+import { useOrg } from './OrgPublicLayout'
+import { PubWrap, PubSendBar, PubHeader, inp, lbl, field, ta } from './pubStyles'
 
 type Severity = 'low' | 'medium' | 'high' | 'critical'
 
-interface DeviceSummary {
-  id: string
-  name: string
-  type: string
-  location: string
+interface DeviceSummary { id: string; name: string; type: string; location: string }
+
+const SEVERITY_CFG: Record<Severity, { label: string; desc: string; color: string; bg: string }> = {
+  low:      { label: 'Gering',   desc: 'Gerät noch nutzbar',          color: '#d97706', bg: 'rgba(217,119,6,0.08)'  },
+  medium:   { label: 'Mittel',   desc: 'Eingeschränkte Funktion',      color: '#ea580c', bg: 'rgba(234,88,12,0.08)'  },
+  high:     { label: 'Hoch',     desc: 'Nicht mehr einsatzbereit',     color: '#dc2626', bg: 'rgba(220,38,38,0.08)'  },
+  critical: { label: 'Kritisch', desc: 'Sicherheitsrelevanter Defekt', color: '#7f1d1d', bg: 'rgba(127,29,29,0.12)'  },
 }
 
-const SEVERITY_CFG: Record<Severity, { label: string; color: string; bg: string }> = {
-  low:      { label: 'Gering',   color: '#d97706', bg: 'rgba(217,119,6,0.08)'  },
-  medium:   { label: 'Mittel',   color: '#ea580c', bg: 'rgba(234,88,12,0.08)'  },
-  high:     { label: 'Hoch',     color: '#dc2626', bg: 'rgba(220,38,38,0.08)'  },
-  critical: { label: 'Kritisch', color: '#7f1d1d', bg: 'rgba(127,29,29,0.12)'  },
-}
-
-function pik(ch: React.ReactNode, sz = 20) {
+function Card({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <svg width={sz} height={sz} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">{ch}</svg>
+    <div style={{ background: '#fff', borderLeft: '3px solid #600812', borderRadius: 12, marginBottom: '.75rem', boxShadow: '0 1px 4px rgba(0,0,0,0.07)' }}>
+      <div style={{ padding: '.85rem 1rem', fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.12em', borderBottom: '0.5px solid rgba(96,8,18,0.08)' }}>
+        {title}
+      </div>
+      <div style={{ padding: '1rem' }}>{children}</div>
+    </div>
   )
 }
 
 export default function OrgDefektmeldung() {
-  const { org } = useOrg()
+  const { org, orgCode } = useOrg()
+  const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const preselectedId = searchParams.get('device') || ''
 
   const [devices, setDevices] = useState<DeviceSummary[]>([])
-  const [loadingDevices, setLoadingDevices] = useState(true)
   const [selectedId, setSelectedId] = useState(preselectedId)
   const [reporterName, setReporterName] = useState('')
   const [description, setDescription] = useState('')
   const [severity, setSeverity] = useState<Severity>('medium')
-  const [submitting, setSubmitting] = useState(false)
-  const [submitted, setSubmitted] = useState(false)
+  const [sending, setSending] = useState(false)
+  const [success, setSuccess] = useState(false)
   const [error, setError] = useState('')
 
   useEffect(() => {
@@ -45,16 +46,16 @@ export default function OrgDefektmeldung() {
       filter: `organization_id = "${org.id}"`,
       sort: 'name',
       fields: 'id,name,type,location',
-    }).then(r => { setDevices(r); setLoadingDevices(false) }).catch(() => setLoadingDevices(false))
+    }).then(setDevices).catch(() => {})
   }, [org.id])
 
   const selectedDevice = devices.find(d => d.id === selectedId)
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    if (!selectedId || !description.trim()) return
-    setSubmitting(true)
+  async function submit() {
+    if (!selectedId) { setError('Bitte ein Gerät auswählen.'); return }
+    if (!description.trim()) { setError('Bitte eine Beschreibung eingeben.'); return }
     setError('')
+    setSending(true)
     try {
       await pb.collection('mpg_defect_reports').create({
         device_id: selectedId,
@@ -65,150 +66,134 @@ export default function OrgDefektmeldung() {
         severity,
         status: 'pending',
       })
-      setSubmitted(true)
-    } catch {
-      setError('Fehler beim Senden. Bitte erneut versuchen.')
+      setSuccess(true)
+    } catch (e: any) {
+      setError('Fehler: ' + (e?.message || 'Unbekannter Fehler'))
     } finally {
-      setSubmitting(false)
+      setSending(false)
     }
   }
 
-  const baseStyle: React.CSSProperties = {
-    minHeight: '100dvh',
-    background: '#faf9f7',
-    fontFamily: "'Atkinson Hyperlegible', -apple-system, sans-serif",
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    padding: '0 0 calc(40px + env(safe-area-inset-bottom))',
+  function reset() {
+    setSuccess(false)
+    setDescription('')
+    setReporterName('')
+    setSeverity('medium')
+    setError('')
+    if (!preselectedId) setSelectedId('')
   }
 
-  const inputStyle: React.CSSProperties = {
-    width: '100%', padding: '12px 14px', borderRadius: 10,
-    border: '1.5px solid rgba(96,8,18,0.15)', background: '#fff',
-    fontSize: 15, color: '#1a0e08', fontFamily: 'inherit', outline: 'none',
-    boxSizing: 'border-box',
-  }
-
-  if (submitted) {
-    return (
-      <div style={{ ...baseStyle, justifyContent: 'center', padding: '40px 20px' }}>
-        <div style={{ maxWidth: 400, width: '100%', textAlign: 'center' }}>
-          <div style={{ width: 64, height: 64, borderRadius: '50%', background: '#16a34a', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', color: '#fff' }}>
-            {pik(<polyline points="20 6 9 17 4 12"/>, 28)}
-          </div>
-          <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 22, color: '#1a0e08', marginBottom: 8 }}>Meldung eingegangen</div>
-          <div style={{ fontSize: 14, color: '#8a7a68', fontStyle: 'italic', marginBottom: 24 }}>
-            Deine Defektmeldung für <strong style={{ fontStyle: 'normal', color: '#1a0e08' }}>{selectedDevice?.name}</strong> wurde übermittelt und wird geprüft.
-          </div>
-          <button
-            onClick={() => { setSubmitted(false); setDescription(''); setReporterName(''); setSeverity('medium'); if (!preselectedId) setSelectedId('') }}
-            style={{ padding: '12px 24px', borderRadius: 10, border: 'none', background: '#600812', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}
-          >
-            Neue Meldung
-          </button>
+  if (success) return (
+    <div style={{ minHeight: '100dvh', background: 'var(--warm-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
+      <div style={{ background: '#fff', borderLeft: '3px solid #16a34a', borderRadius: 12, padding: 32, textAlign: 'center', maxWidth: 400, width: '100%', boxShadow: '0 2px 16px rgba(0,0,0,0.07)' }}>
+        <div style={{ width: 52, height: 52, background: 'rgba(22,163,74,0.1)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
         </div>
+        <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 20, color: '#1a0e08', marginBottom: 8 }}>Meldung eingegangen</div>
+        <div style={{ fontStyle: 'italic', fontSize: 13, color: 'var(--warm-gray)', marginBottom: 24 }}>
+          Die Defektmeldung für <strong style={{ fontStyle: 'normal', color: '#1a0e08' }}>{selectedDevice?.name}</strong> wurde übermittelt und wird geprüft.
+        </div>
+        <button style={{ background: '#600812', color: '#fff', border: 'none', borderRadius: 10, padding: '12px 24px', fontWeight: 700, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit', letterSpacing: '0.02em' }} onClick={reset}>
+          Neue Meldung
+        </button>
       </div>
-    )
-  }
+    </div>
+  )
 
   return (
-    <div style={baseStyle}>
-      {/* Header */}
-      <div style={{ width: '100%', background: '#600812', padding: 'calc(env(safe-area-inset-top) + 24px) 24px 24px', textAlign: 'center' }}>
-        <div style={{ fontStyle: 'italic', fontSize: 12, color: 'rgba(253,232,216,0.7)', marginBottom: 4 }}>{org.org_name}</div>
-        <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 22, color: '#fde8d8', lineHeight: 1.25 }}>Defektmeldung</div>
-        <div style={{ fontStyle: 'italic', fontSize: 13, color: 'rgba(253,232,216,0.7)', marginTop: 8 }}>Medizinprodukt als defekt melden</div>
-      </div>
+    <div style={{ minHeight: '100dvh', background: 'var(--warm-bg)' }}>
+      <PubHeader title="Defektmeldung" onBack={() => navigate(`/${orgCode}`)} />
 
-      <form onSubmit={handleSubmit} noValidate style={{ width: '100%', maxWidth: 560, padding: '24px 20px 0', display: 'flex', flexDirection: 'column', gap: 20 }}>
+      <PubWrap>
+        {/* Org name */}
+        <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginBottom: '1rem' }}>{org.org_name}</div>
 
-        {/* Device selector */}
-        <label style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.12em', color: '#600812' }}>
-            Gerät *
-          </span>
-          {loadingDevices ? (
-            <div style={{ padding: '12px 14px', borderRadius: 10, border: '1.5px solid rgba(96,8,18,0.15)', background: '#fff', fontSize: 14, color: '#8a7a68', fontStyle: 'italic' }}>Geräteliste wird geladen…</div>
-          ) : devices.length === 0 ? (
-            <div style={{ padding: '12px 14px', borderRadius: 10, border: '1.5px solid rgba(96,8,18,0.15)', background: '#fff', fontSize: 14, color: '#8a7a68', fontStyle: 'italic' }}>Keine Geräte gefunden</div>
-          ) : (
-            <select value={selectedId} onChange={e => setSelectedId(e.target.value)} required style={{ ...inputStyle, appearance: 'none', WebkitAppearance: 'none' }}>
-              <option value="">– Gerät auswählen –</option>
-              {devices.map(d => (
-                <option key={d.id} value={d.id}>
-                  {d.name}{d.location ? ` (${d.location})` : ''} · {d.type}
-                </option>
-              ))}
-            </select>
-          )}
-        </label>
+        {/* Gerät */}
+        <Card title="Gerät *">
+          <label style={lbl}>
+            Medizinprodukt auswählen
+            {devices.length === 0 ? (
+              <div style={{ ...inp, marginTop: 6, color: 'var(--warm-gray)', fontStyle: 'italic' }}>Keine Geräte gefunden</div>
+            ) : (
+              <select
+                value={selectedId}
+                onChange={e => setSelectedId(e.target.value)}
+                style={{ ...inp, appearance: 'none', WebkitAppearance: 'none' }}
+              >
+                <option value="">– Gerät auswählen –</option>
+                {devices.map(d => (
+                  <option key={d.id} value={d.id}>
+                    {d.name}{d.location ? ` · ${d.location}` : ''} ({d.type})
+                  </option>
+                ))}
+              </select>
+            )}
+          </label>
+        </Card>
 
-        {/* Reporter name */}
-        <label style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.12em', color: '#600812' }}>
-            Dein Name (optional)
-          </span>
-          <input
-            type="text"
-            value={reporterName}
-            onChange={e => setReporterName(e.target.value)}
-            placeholder="Anonym"
-            style={inputStyle}
-          />
-        </label>
+        {/* Beschreibung */}
+        <Card title="Beschreibung">
+          <div style={field}>
+            <label style={lbl}>
+              Was ist defekt? *
+              <textarea
+                value={description}
+                onChange={e => setDescription(e.target.value)}
+                placeholder="Was genau ist defekt? Wie macht sich das Problem bemerkbar?"
+                rows={4}
+                style={ta}
+              />
+            </label>
+          </div>
+          <div style={field}>
+            <label style={lbl}>
+              Dein Name (optional)
+              <input
+                type="text"
+                value={reporterName}
+                onChange={e => setReporterName(e.target.value)}
+                placeholder="Anonym"
+                style={inp}
+              />
+            </label>
+          </div>
+        </Card>
 
-        {/* Description */}
-        <label style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.12em', color: '#600812' }}>
-            Beschreibung *
-          </span>
-          <textarea
-            value={description}
-            onChange={e => setDescription(e.target.value)}
-            required
-            rows={4}
-            placeholder="Was genau ist defekt? Wie macht sich das Problem bemerkbar?"
-            style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.5 }}
-          />
-        </label>
-
-        {/* Severity */}
-        <label style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.12em', color: '#600812' }}>
-            Schweregrad
-          </span>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+        {/* Schweregrad */}
+        <Card title="Schweregrad">
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
             {(Object.entries(SEVERITY_CFG) as [Severity, typeof SEVERITY_CFG[Severity]][]).map(([key, cfg]) => (
               <button
-                key={key} type="button"
+                key={key}
+                type="button"
                 onClick={() => setSeverity(key)}
-                style={{ padding: '12px', borderRadius: 10, border: `1.5px solid ${severity === key ? cfg.color : 'rgba(96,8,18,0.12)'}`, background: severity === key ? cfg.bg : 'transparent', cursor: 'pointer', fontFamily: 'inherit', fontSize: 14, fontWeight: 700, color: cfg.color }}
+                style={{
+                  padding: '12px 14px',
+                  borderRadius: 10,
+                  border: `1.5px solid ${severity === key ? cfg.color : 'rgba(96,8,18,0.12)'}`,
+                  background: severity === key ? cfg.bg : 'transparent',
+                  cursor: 'pointer',
+                  fontFamily: 'inherit',
+                  textAlign: 'left' as const,
+                }}
               >
-                {cfg.label}
+                <div style={{ fontWeight: 700, fontSize: 13, color: cfg.color }}>{cfg.label}</div>
+                <div style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--warm-gray)', marginTop: 2 }}>{cfg.desc}</div>
               </button>
             ))}
           </div>
-        </label>
+        </Card>
 
         {error && (
-          <div style={{ padding: '12px 14px', background: 'rgba(220,38,38,0.06)', border: '0.5px solid rgba(220,38,38,0.2)', borderRadius: 10, fontSize: 13, color: '#dc2626', fontStyle: 'italic' }}>
+          <div style={{ background: 'rgba(220,38,38,0.06)', border: '0.5px solid rgba(220,38,38,0.2)', borderRadius: 10, padding: '12px 14px', fontSize: 13, color: '#dc2626', fontStyle: 'italic', marginBottom: '.75rem' }}>
             {error}
           </div>
         )}
+      </PubWrap>
 
-        <button
-          type="submit"
-          disabled={submitting || !selectedId || !description.trim()}
-          style={{ width: '100%', padding: '15px', borderRadius: 12, border: 'none', background: (submitting || !selectedId || !description.trim()) ? 'rgba(96,8,18,0.35)' : '#600812', color: '#fff', fontSize: 16, fontWeight: 700, cursor: (submitting || !selectedId || !description.trim()) ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}
-        >
-          {submitting ? 'Wird gesendet…' : 'Defekt melden'}
-        </button>
-
-        <div style={{ textAlign: 'center', fontSize: 11, fontStyle: 'italic', color: '#8a7a68', opacity: 0.6 }}>
-          © 2025 Responda Systems
-        </div>
-      </form>
+      <PubSendBar onSubmit={submit} sending={sending} label="Defekt melden" small />
     </div>
   )
 }
