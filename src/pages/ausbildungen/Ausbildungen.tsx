@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import PocketBase from 'pocketbase'
 import StatusBar from '../../components/StatusBar'
 import { useAuth } from '../../hooks/useAuth'
@@ -246,6 +246,33 @@ interface KonzeptForm {
   wissensanhang_links: {titel: string, url: string}[]
   verknuepfte_module: string[]
   verknuepfte_termine: string[]
+}
+
+function TextBlockEditor({ initialText, onUpdate }: { initialText: string; onUpdate: (html: string) => void }) {
+  const ref = useRef<HTMLDivElement>(null)
+  useEffect(() => { if (ref.current) ref.current.innerHTML = initialText }, [])
+  const fmt = (cmd: string) => {
+    ref.current?.focus()
+    document.execCommand(cmd, false)
+    if (ref.current) onUpdate(ref.current.innerHTML)
+  }
+  return (
+    <>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 4 }}>
+        <div style={{ flex: 1, fontSize: 9, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.18em' }}>Text</div>
+        {[['B','bold'],['I','italic'],['U','underline']].map(([lbl, cmd]) => (
+          <button key={cmd} type="button" onMouseDown={e => { e.preventDefault(); fmt(cmd) }}
+            style={{ width: 22, height: 22, borderRadius: 4, border: '1px solid rgba(96,8,18,0.18)', background: 'rgba(96,8,18,0.03)', cursor: 'pointer', color: '#600812', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, fontFamily: 'inherit', fontSize: 12, fontWeight: lbl === 'B' ? 700 : 400, fontStyle: lbl === 'I' ? 'italic' : 'normal', textDecoration: lbl === 'U' ? 'underline' : 'none', flexShrink: 0 }}>
+            {lbl}
+          </button>
+        ))}
+      </div>
+      <div ref={ref} contentEditable suppressContentEditableWarning
+        onInput={() => { if (ref.current) onUpdate(ref.current.innerHTML) }}
+        style={{ width: '100%', minHeight: 72, outline: 'none', border: 'none', borderBottom: '0.5px solid rgba(96,8,18,0.1)', background: 'transparent', fontSize: 15, color: '#1a0e08', lineHeight: 1.85, fontFamily: "Georgia, 'Times New Roman', serif", padding: '0 0 6px 0', boxSizing: 'border-box' as const, wordBreak: 'break-word' } as React.CSSProperties}
+      />
+    </>
+  )
 }
 
 function parseInhalt(raw: any): Record<string, any> {
@@ -2279,11 +2306,9 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
               <button onClick={() => removeBlock(block.id)}
                 style={{ position: 'absolute', top: 0, right: 0, zIndex: 5, width: 22, height: 22, borderRadius: '50%', border: 'none', background: 'rgba(96,8,18,0.08)', color: '#8a7a68', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, lineHeight: 1 }}>×</button>
 
-              {block.type === 'text' && <>
-                <div style={{ fontSize: 9, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.18em', marginBottom: 4 }}>Text</div>
-                <textarea value={block.text} onChange={e => updateBlock(block.id, { text: e.target.value })} placeholder="Text eingeben…"
-                  style={{ width: '100%', minHeight: 72, resize: 'none', border: 'none', borderBottom: '0.5px solid rgba(96,8,18,0.1)', outline: 'none', background: 'transparent', fontSize: 15, color: '#1a0e08', lineHeight: 1.85, fontFamily: "Georgia, 'Times New Roman', serif", padding: '0 26px 6px 0', boxSizing: 'border-box' as const }} />
-              </>}
+              {block.type === 'text' && (
+                <TextBlockEditor key={block.id} initialText={block.text} onUpdate={html => updateBlock(block.id, { text: html })} />
+              )}
 
               {block.type === 'bild' && <div>
                 <div style={{ fontSize: 9, fontWeight: 700, color: '#7c2d12', textTransform: 'uppercase' as const, letterSpacing: '0.18em', marginBottom: 6 }}>Bild</div>

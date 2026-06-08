@@ -916,7 +916,7 @@ export default function Lernbar() {
                 {richPage.blocks.map((block, bi) => (
                   <div key={block.id || bi}>
                     {block.type === 'text' && block.text && (
-                      <div style={{ fontSize: 15, color: '#1a0e08', lineHeight: 1.85, whiteSpace: 'pre-wrap', fontFamily: "Georgia, 'Times New Roman', serif" }}>{block.text}</div>
+                      <div dangerouslySetInnerHTML={{ __html: typeof block.text === 'string' ? block.text : '' }} style={{ fontSize: 15, color: '#1a0e08', lineHeight: 1.85, fontFamily: "Georgia, 'Times New Roman', serif" }} />
                     )}
                     {block.type === 'bild' && (() => {
                       let url: string | null = null
