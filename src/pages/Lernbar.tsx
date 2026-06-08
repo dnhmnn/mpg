@@ -467,7 +467,11 @@ export default function Lernbar() {
             const tags = parseTags(b.tags)
             const bildFirstCard = Array.isArray(b.bild) ? b.bild[0] : b.bild
             const bildUrl = bildFirstCard ? `https://api.responda.systems/api/files/${b.collectionId}/${b.id}/${bildFirstCard}` : null
-            const cfg = COVER[b.typ] || COVER.text
+            let bookColor: string | null = null
+            try { const p = JSON.parse(b.inhalt || '{}'); if (p?.v === 2 && p.color) bookColor = p.color } catch {}
+            const cfg = bookColor
+              ? (() => { const r = parseInt(bookColor.slice(1,3),16), g = parseInt(bookColor.slice(3,5),16), bv = parseInt(bookColor.slice(5,7),16); return { bg: `linear-gradient(165deg, ${bookColor} 0%, rgb(${Math.round(r*.55)},${Math.round(g*.55)},${Math.round(bv*.55)}) 100%)`, spine: 'rgba(0,0,0,0.3)', label: '' } })()
+              : (COVER[b.typ] || COVER.text)
             return (
               <div key={b.id} onClick={() => setOpenBook(b)} style={{
                 cursor: 'pointer', borderRadius: 10, overflow: 'hidden',
@@ -754,15 +758,16 @@ export default function Lernbar() {
         const quiz = parseQuiz(b.quiz_daten)
         const initials = (b.erstellt_von_name || 'R').split(' ').map((w: string) => w[0]).slice(0, 2).join('').toUpperCase()
         const ACCENT: Record<string, string> = { text: '#600812', bild: '#7c2d12', video: '#065f46', quiz: '#1e3a8a' }
-        const accent = ACCENT[b.typ] || '#600812'
         const typeLabel = b.typ === 'quiz' ? 'Quiz' : b.typ === 'video' ? 'Video' : b.typ === 'bild' ? 'Bild' : 'Text'
 
         // Detect v2 rich content format
         let richPages: { id: string; blocks: { id: string; type: string; text?: string; bildIdx?: number; bildExistingUrl?: string; videoUrl?: string; quizFrage?: string; quizAntworten?: string[]; quizRichtige?: number }[] }[] | null = null
+        let readerColor: string | null = null
         try {
           const parsed = JSON.parse(b.inhalt || '{}')
-          if (parsed?.v === 2 && Array.isArray(parsed.pages)) richPages = parsed.pages
+          if (parsed?.v === 2 && Array.isArray(parsed.pages)) { richPages = parsed.pages; readerColor = parsed.color || null }
         } catch {}
+        const accent = readerColor || ACCENT[b.typ] || '#600812'
         const bildArr = Array.isArray(b.bild) ? b.bild : (b.bild ? [b.bild] : [])
 
         // Build page list

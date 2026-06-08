@@ -339,7 +339,7 @@ export default function Ausbildungen() {
   const [beitraege, setBeitraege] = useState<Lernbeitrag[]>([])
   const [beitraegeLoading, setBeitraegeLoading] = useState(false)
   const [showBeitragModal, setShowBeitragModal] = useState(false)
-  const [beitragForm, setBeitragForm] = useState<{ titel: string; tags: string; gepinnt: boolean }>({ titel: '', tags: '', gepinnt: false })
+  const [beitragForm, setBeitragForm] = useState<{ titel: string; tags: string; gepinnt: boolean; color: string }>({ titel: '', tags: '', gepinnt: false, color: '#600812' })
   const [bookPages, setBookPages] = useState<EditorPage[]>([])
   const [bookPageIdx, setBookPageIdx] = useState(0)
   const [bookDir, setBookDir] = useState(1)
@@ -550,7 +550,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
     setBookPageIdx(0)
     setBookDir(1)
     setShowBlockPicker(false)
-    setBeitragForm({ titel: '', tags: '', gepinnt: false })
+    setBeitragForm({ titel: '', tags: '', gepinnt: false, color: '#600812' })
   }
 
   async function saveBeitrag() {
@@ -582,7 +582,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
       const fd = new FormData()
       fd.append('typ', 'text')
       fd.append('titel', beitragForm.titel.trim())
-      fd.append('inhalt', JSON.stringify({ v: 2, pages: pagesData }))
+      fd.append('inhalt', JSON.stringify({ v: 2, color: beitragForm.color, pages: pagesData }))
       fd.append('gepinnt', String(beitragForm.gepinnt))
       fd.append('tags', JSON.stringify(tags))
       if (!editingBeitragId) {
@@ -607,12 +607,13 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
 
   function openEditBeitrag(b: Lernbeitrag) {
     const tagsStr = Array.isArray(b.tags) ? b.tags.join(', ') : ''
-    setBeitragForm({ titel: b.titel, tags: tagsStr, gepinnt: b.gepinnt })
     setEditingBeitragId(b.id)
     let pages: EditorPage[] = []
+    let bookColor = '#600812'
     try {
       const parsed = JSON.parse(b.inhalt || '{}')
       if (parsed?.v === 2 && Array.isArray(parsed.pages)) {
+        if (parsed.color) bookColor = parsed.color
         const bildArr = Array.isArray(b.bild) ? b.bild : (b.bild ? [b.bild] : [])
         pages = parsed.pages.map((p: any) => ({
           id: p.id || uid(),
@@ -638,6 +639,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
       if (b.typ === 'quiz') { const qd = b.quiz_daten; block.quizFrage = qd?.frage || ''; block.quizAntworten = ([...(qd?.antworten || []),'','',''].slice(0,4)) as [string,string,string,string]; block.quizRichtige = qd?.richtige ?? 0 }
       pages = [{ id: uid(), blocks: [block] }]
     }
+    setBeitragForm({ titel: b.titel, tags: tagsStr, gepinnt: b.gepinnt, color: bookColor })
     setBookPages(pages)
     setBookPageIdx(0)
     setBookDir(1)
@@ -1624,7 +1626,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
             </button>
           )}
           {viewMode === 'lernfeed' && (
-            <button onClick={() => { setBookPages([{ id: Math.random().toString(36).slice(2,9), blocks: [] }]); setBookPageIdx(0); setBookDir(1); setShowBlockPicker(false); setBeitragForm({ titel: '', tags: '', gepinnt: false }); setEditingBeitragId(null); setShowBeitragModal(true) }} style={addBtnStyle} title="Beitrag erstellen">
+            <button onClick={() => { setBookPages([{ id: Math.random().toString(36).slice(2,9), blocks: [] }]); setBookPageIdx(0); setBookDir(1); setShowBlockPicker(false); setBeitragForm({ titel: '', tags: '', gepinnt: false, color: '#600812' }); setEditingBeitragId(null); setShowBeitragModal(true) }} style={addBtnStyle} title="Beitrag erstellen">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             </button>
           )}
@@ -2336,14 +2338,21 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                 <div style={{ padding: '10px 20px 0 26px', flexShrink: 0 }}>
                   <textarea autoFocus value={beitragForm.titel} onChange={e => setBeitragForm(prev => ({ ...prev, titel: e.target.value }))} placeholder="Titel des Beitrags…" rows={2}
                     style={{ width: '100%', resize: 'none', border: 'none', borderBottom: '0.5px solid rgba(96,8,18,0.12)', outline: 'none', background: 'transparent', fontStyle: 'italic', fontWeight: 700, fontSize: 19, color: '#1a0e08', lineHeight: 1.3, fontFamily: "'Atkinson Hyperlegible', Inter, sans-serif", padding: '0 0 8px', boxSizing: 'border-box' as const }} />
-                  <div style={{ paddingBottom: 8 }}>
+                  <div style={{ paddingBottom: 6, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <button onClick={() => setBeitragForm(prev => ({ ...prev, gepinnt: !prev.gepinnt }))}
                       style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}>
-                      <div style={{ width: 15, height: 15, borderRadius: 3, border: `1.5px solid ${beitragForm.gepinnt ? '#600812' : 'rgba(96,8,18,0.2)'}`, background: beitragForm.gepinnt ? '#600812' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <div style={{ width: 15, height: 15, borderRadius: 3, border: `1.5px solid ${beitragForm.gepinnt ? beitragForm.color : 'rgba(96,8,18,0.2)'}`, background: beitragForm.gepinnt ? beitragForm.color : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                         {beitragForm.gepinnt && <svg width="8" height="8" viewBox="0 0 24 24" fill="white"><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5v6h2v-6h5v-2l-2-2z"/></svg>}
                       </div>
                       <span style={{ fontSize: 11, color: beitragForm.gepinnt ? '#1a0e08' : '#8a7a68' }}>{beitragForm.gepinnt ? 'Angepinnt' : 'Anpinnen'}</span>
                     </button>
+                  </div>
+                  {/* Farbauswahl */}
+                  <div style={{ display: 'flex', gap: 7, paddingBottom: 8, flexWrap: 'wrap' as const }}>
+                    {[['#600812','#3d0408'],['#1a0e08','#0a0503'],['#1e3a8a','#0f1e4a'],['#065f46','#033422'],['#7c2d12','#4a1a0a'],['#4a044e','#280229'],['#134e4a','#082b28'],['#713f12','#3d2209']].map(([c]) => (
+                      <button key={c} onClick={() => setBeitragForm(prev => ({ ...prev, color: c }))}
+                        style={{ width: 20, height: 20, borderRadius: '50%', border: 'none', background: c, cursor: 'pointer', flexShrink: 0, boxShadow: beitragForm.color === c ? `0 0 0 2px #fff, 0 0 0 4px ${c}` : '0 1px 3px rgba(0,0,0,0.2)' }} />
+                    ))}
                   </div>
                 </div>
               )}
@@ -2376,7 +2385,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
           <>
             <div onClick={resetBeitragForm} style={{ position: 'fixed', inset: 0, background: 'rgba(20,10,6,0.8)', zIndex: 500 }} />
             <div style={{ position: 'fixed', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', width: 'min(calc(100vw - 32px), 420px)', height: 'min(88dvh, 620px)', zIndex: 501, background: '#fffef9', borderRadius: 3, boxShadow: '0 30px 90px rgba(0,0,0,0.5), -6px 0 18px rgba(0,0,0,0.2)', display: 'flex', flexDirection: 'column', overflow: 'hidden', animation: 'bookOpen 0.32s cubic-bezier(0.22,1,0.36,1)' }}>
-              <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 9, zIndex: 10, pointerEvents: 'none', background: 'linear-gradient(to right, #600812, #60081288 60%, transparent)' }} />
+              <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 9, zIndex: 10, pointerEvents: 'none', background: `linear-gradient(to right, ${beitragForm.color}, ${beitragForm.color}88 60%, transparent)` }} />
               <div style={{ position: 'absolute', left: 9, top: 0, bottom: 0, width: 22, zIndex: 10, pointerEvents: 'none', background: 'linear-gradient(to right, rgba(0,0,0,0.09), transparent)' }} />
               <div style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 12, zIndex: 10, pointerEvents: 'none', background: 'linear-gradient(to left, rgba(0,0,0,0.06), transparent)' }} />
               <div style={{ position: 'absolute', top: 10, right: 10, zIndex: 20 }}>
