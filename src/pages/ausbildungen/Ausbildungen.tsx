@@ -615,7 +615,9 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
       resetBeitragForm()
       await loadBeitraege()
     } catch(e: any) {
-      showMessage('Fehler: ' + e.message, 'error')
+      const detail = e?.response?.data ? Object.entries(e.response.data).map(([k,v]: any) => `${k}: ${v?.message || JSON.stringify(v)}`).join('; ') : ''
+      showMessage(`Fehler (${e?.status || '?'}): ${e.message}${detail ? ' — ' + detail : ''}`, 'error')
+      console.error('saveBeitrag error', e?.status, e?.response)
     } finally { setSavingBeitrag(false) }
   }
 
