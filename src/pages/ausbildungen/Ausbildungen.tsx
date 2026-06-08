@@ -338,6 +338,8 @@ export default function Ausbildungen() {
   }>({ typ: 'text', titel: '', inhalt: '', video_url: '', tags: '', gepinnt: false, quiz_frage: '', quiz_antworten: ['', '', '', ''], quiz_richtige: 0, bild_file: null })
   const [savingBeitrag, setSavingBeitrag] = useState(false)
   const [editingBeitragId, setEditingBeitragId] = useState<string | null>(null)
+  const [editorPage, setEditorPage] = useState(0)
+  const [editorDir, setEditorDir] = useState(1)
   const [generatingAIImage, setGeneratingAIImage] = useState(false)
   const [aiImagePreview, setAiImagePreview] = useState<string | null>(null)
   
@@ -532,6 +534,8 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
   function resetBeitragForm() {
     setEditingBeitragId(null)
     setShowBeitragModal(false)
+    setEditorPage(0)
+    setEditorDir(1)
     setBeitragForm({ typ: 'text', titel: '', inhalt: '', video_url: '', tags: '', gepinnt: false, quiz_frage: '', quiz_antworten: ['', '', '', ''], quiz_richtige: 0, bild_file: null })
     setAiImagePreview(null)
   }
@@ -608,6 +612,8 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
     if (b.bild) setAiImagePreview(`https://api.responda.systems/api/files/${b.collectionId}/${b.id}/${b.bild}`)
     else setAiImagePreview(null)
     setEditingBeitragId(b.id)
+    setEditorPage(0)
+    setEditorDir(1)
     setShowBeitragModal(true)
   }
 
@@ -1589,7 +1595,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
             </button>
           )}
           {viewMode === 'lernfeed' && (
-            <button onClick={() => setShowBeitragModal(true)} style={addBtnStyle} title="Beitrag erstellen">
+            <button onClick={() => { setEditorPage(0); setEditorDir(1); setShowBeitragModal(true) }} style={addBtnStyle} title="Beitrag erstellen">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             </button>
           )}
@@ -2162,107 +2168,192 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
         </div>
       )}
 
-      {/* BEITRAG ERSTELLEN MODAL */}
-      {showBeitragModal && (
-        <div className="modal show" onClick={resetBeitragForm}>
-          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: 520 }}>
-            <h3>{editingBeitragId ? 'Beitrag bearbeiten' : 'Neuer Lernbeitrag'}</h3>
+      {/* BEITRAG BUCH-EDITOR */}
+      {showBeitragModal && (() => {
+        const ACCENT: Record<string, string> = { text: '#600812', bild: '#7c2d12', video: '#065f46', quiz: '#1e3a8a' }
+        const accent = ACCENT[beitragForm.typ] || '#600812'
+        const pages = ['cover', 'content', 'tags'] as const
+        type EP = 'cover' | 'content' | 'tags'
+        const pid: EP = pages[editorPage] ?? 'cover'
+        const canPrev = editorPage > 0
+        const canNext = editorPage < pages.length - 1
+        const goPage = (dir: 1 | -1) => { setEditorDir(dir); setEditorPage(p => Math.max(0, Math.min(pages.length - 1, p + dir))) }
 
-            {/* Typ-Auswahl */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginBottom: 20 }}>
-              {([
-                { key: 'text', label: '📝 Info', desc: 'Text' },
-                { key: 'bild', label: '📷 Post', desc: 'Bild+Text' },
-                { key: 'video', label: '▶ Video', desc: 'YouTube' },
-                { key: 'quiz', label: '❓ Quiz', desc: 'Frage' },
-              ] as const).map(t => (
-                <button key={t.key} onClick={() => setBeitragForm(prev => ({ ...prev, typ: t.key }))}
-                  style={{ padding: '10px 6px', borderRadius: 10, border: beitragForm.typ === t.key ? '2px solid var(--accent)' : '1.5px solid var(--border)', background: beitragForm.typ === t.key ? 'rgba(107,15,26,0.06)' : 'var(--bg-card)', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'center' }}>
-                  <div style={{ fontSize: 18, marginBottom: 2 }}>{t.label.split(' ')[0]}</div>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: beitragForm.typ === t.key ? 'var(--accent)' : 'var(--text-secondary)' }}>{t.desc}</div>
-                </button>
-              ))}
-            </div>
-
-            <div className="field">
-              <label>Titel *</label>
-              <input value={beitragForm.titel} onChange={e => setBeitragForm(prev => ({ ...prev, titel: e.target.value }))} placeholder="z.B. XABCDE Schema" />
-            </div>
-
-            {beitragForm.typ !== 'quiz' && (
-              <div className="field">
-                <label>{beitragForm.typ === 'bild' ? 'Beschreibung' : 'Inhalt'}</label>
-                <textarea value={beitragForm.inhalt} onChange={e => setBeitragForm(prev => ({ ...prev, inhalt: e.target.value }))} placeholder="Erklärender Text..." rows={4} style={{ width: '100%', resize: 'vertical', padding: '10px 12px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--bg-input)', color: 'var(--text)', fontFamily: 'inherit', fontSize: 14 }} />
-              </div>
-            )}
-
-            {beitragForm.typ === 'bild' && (
-              <div className="field">
-                <label>Bild</label>
-                <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-                  <label style={{ flex: 1, padding: '9px 12px', borderRadius: 8, border: '1.5px solid var(--border)', background: 'var(--bg-input)', color: 'var(--text-secondary)', fontSize: 13, cursor: 'pointer', textAlign: 'center', fontFamily: 'inherit' }}>
-                    Hochladen
-                    <input type="file" accept="image/*" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0] || null; setBeitragForm(prev => ({ ...prev, bild_file: f })); setAiImagePreview(f ? URL.createObjectURL(f) : null) }} />
-                  </label>
-                  <button type="button" onClick={generateAIImage} disabled={generatingAIImage || !beitragForm.titel.trim()}
-                    style={{ flex: 1, padding: '9px 12px', borderRadius: 8, border: '1.5px solid var(--accent)', background: generatingAIImage ? 'var(--bg-subtle)' : 'rgba(96,8,18,0.06)', color: 'var(--accent)', fontSize: 13, fontWeight: 600, cursor: generatingAIImage || !beitragForm.titel.trim() ? 'not-allowed' : 'pointer', fontFamily: 'inherit', opacity: !beitragForm.titel.trim() ? 0.5 : 1 }}>
-                    {generatingAIImage ? '✦ Generiere…' : '✦ KI-Bild'}
-                  </button>
+        const renderPage = (p: EP) => {
+          if (p === 'cover') return (
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '16px 20px 12px 26px', gap: 14, overflowY: 'auto' }}>
+              {/* Type tabs */}
+              <div>
+                <div style={{ fontSize: 9, fontWeight: 700, color: accent, textTransform: 'uppercase' as const, letterSpacing: '0.2em', marginBottom: 8 }}>Typ</div>
+                <div style={{ display: 'flex', gap: 5 }}>
+                  {(['text','bild','video','quiz'] as const).map(t => (
+                    <button key={t} onClick={() => setBeitragForm(prev => ({ ...prev, typ: t }))}
+                      style={{ flex: 1, padding: '7px 4px', borderRadius: 7, border: beitragForm.typ === t ? `2px solid ${ACCENT[t]}` : '1.5px solid rgba(96,8,18,0.12)', background: beitragForm.typ === t ? 'rgba(96,8,18,0.06)' : 'transparent', color: beitragForm.typ === t ? ACCENT[t] : '#8a7a68', fontWeight: 700, fontSize: 10, cursor: 'pointer', fontFamily: 'inherit', textTransform: 'uppercase' as const, letterSpacing: '0.06em' }}>
+                      {t === 'bild' ? 'Bild' : t === 'quiz' ? 'Quiz' : t === 'video' ? 'Video' : 'Text'}
+                    </button>
+                  ))}
                 </div>
-                {aiImagePreview && (
-                  <div style={{ position: 'relative' }}>
-                    <img src={aiImagePreview} alt="Vorschau" style={{ width: '100%', borderRadius: 10, display: 'block', maxHeight: 220, objectFit: 'cover' }} />
+              </div>
+              {/* Title */}
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                <div style={{ fontSize: 9, fontWeight: 700, color: accent, textTransform: 'uppercase' as const, letterSpacing: '0.2em', marginBottom: 8 }}>Titel *</div>
+                <textarea autoFocus value={beitragForm.titel} onChange={e => setBeitragForm(prev => ({ ...prev, titel: e.target.value }))} placeholder="Titel des Beitrags…"
+                  style={{ flex: 1, minHeight: 80, resize: 'none', border: 'none', outline: 'none', background: 'transparent', fontStyle: 'italic', fontWeight: 700, fontSize: 20, color: '#1a0e08', lineHeight: 1.3, fontFamily: "'Atkinson Hyperlegible', Inter, sans-serif", padding: 0, width: '100%' }} />
+              </div>
+              {/* Pin */}
+              <div style={{ borderTop: '0.5px solid rgba(96,8,18,0.1)', paddingTop: 10 }}>
+                <button onClick={() => setBeitragForm(prev => ({ ...prev, gepinnt: !prev.gepinnt }))}
+                  style={{ display: 'flex', alignItems: 'center', gap: 7, background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}>
+                  <div style={{ width: 18, height: 18, borderRadius: 4, border: `1.5px solid ${beitragForm.gepinnt ? accent : 'rgba(96,8,18,0.2)'}`, background: beitragForm.gepinnt ? accent : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    {beitragForm.gepinnt && <svg width="10" height="10" viewBox="0 0 24 24" fill="white"><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5v6h2v-6h5v-2l-2-2z"/></svg>}
+                  </div>
+                  <span style={{ fontSize: 12, color: beitragForm.gepinnt ? '#1a0e08' : '#8a7a68', fontWeight: beitragForm.gepinnt ? 700 : 400 }}>
+                    {beitragForm.gepinnt ? 'Angepinnt' : 'Anpinnen'}
+                  </span>
+                </button>
+              </div>
+            </div>
+          )
+
+          if (p === 'content') {
+            if (beitragForm.typ === 'text') return (
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '16px 20px 12px 26px' }}>
+                <div style={{ fontSize: 9, fontWeight: 700, color: accent, textTransform: 'uppercase' as const, letterSpacing: '0.2em', marginBottom: 10 }}>Inhalt</div>
+                <textarea value={beitragForm.inhalt} onChange={e => setBeitragForm(prev => ({ ...prev, inhalt: e.target.value }))} placeholder="Inhalt des Beitrags…"
+                  style={{ flex: 1, resize: 'none', border: 'none', outline: 'none', background: 'transparent', fontSize: 15, color: '#1a0e08', lineHeight: 1.8, fontFamily: "Georgia, 'Times New Roman', serif", padding: 0, width: '100%' }} />
+              </div>
+            )
+            if (beitragForm.typ === 'bild') return (
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                {aiImagePreview ? (
+                  <div style={{ flex: 1, position: 'relative', minHeight: 0 }}>
+                    <img src={aiImagePreview} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
                     <button type="button" onClick={() => { setBeitragForm(prev => ({ ...prev, bild_file: null })); setAiImagePreview(null) }}
-                      style={{ position: 'absolute', top: 8, right: 8, width: 26, height: 26, borderRadius: '50%', border: 'none', background: 'rgba(0,0,0,0.55)', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, lineHeight: 1 }}>×</button>
+                      style={{ position: 'absolute', top: 10, right: 10, width: 28, height: 28, borderRadius: '50%', border: 'none', background: 'rgba(0,0,0,0.6)', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>×</button>
+                  </div>
+                ) : (
+                  <div style={{ padding: '16px 20px 0 26px' }}>
+                    <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 110, border: '2px dashed rgba(96,8,18,0.2)', borderRadius: 10, cursor: 'pointer', gap: 8, background: 'rgba(96,8,18,0.02)' }}>
+                      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="rgba(96,8,18,0.3)" strokeWidth="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                      <span style={{ fontSize: 12, color: '#8a7a68', fontStyle: 'italic' }}>Bild hochladen</span>
+                      <input type="file" accept="image/*" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0] || null; setBeitragForm(prev => ({ ...prev, bild_file: f })); setAiImagePreview(f ? URL.createObjectURL(f) : null) }} />
+                    </label>
+                    <button type="button" onClick={generateAIImage} disabled={generatingAIImage || !beitragForm.titel.trim()}
+                      style={{ width: '100%', marginTop: 8, padding: '9px', borderRadius: 8, border: `1.5px solid ${accent}`, background: 'rgba(96,8,18,0.04)', color: accent, fontSize: 13, fontWeight: 600, cursor: generatingAIImage || !beitragForm.titel.trim() ? 'not-allowed' : 'pointer', fontFamily: 'inherit', opacity: !beitragForm.titel.trim() ? 0.5 : 1 }}>
+                      {generatingAIImage ? '✦ Generiere…' : '✦ KI-Bild generieren'}
+                    </button>
+                  </div>
+                )}
+                <div style={{ padding: '10px 20px 8px 26px', borderTop: aiImagePreview ? '0.5px solid rgba(96,8,18,0.08)' : 'none', marginTop: aiImagePreview ? 0 : 8 }}>
+                  <textarea value={beitragForm.inhalt} onChange={e => setBeitragForm(prev => ({ ...prev, inhalt: e.target.value }))} placeholder="Beschreibung (optional)…" rows={3}
+                    style={{ width: '100%', resize: 'none', border: 'none', outline: 'none', background: 'transparent', fontSize: 14, color: '#1a0e08', lineHeight: 1.7, fontFamily: "Georgia, 'Times New Roman', serif", padding: 0 }} />
+                </div>
+              </div>
+            )
+            if (beitragForm.typ === 'video') return (
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '16px 20px 12px 26px' }}>
+                <div style={{ fontSize: 9, fontWeight: 700, color: accent, textTransform: 'uppercase' as const, letterSpacing: '0.2em', marginBottom: 10 }}>Video-URL</div>
+                <input value={beitragForm.video_url} onChange={e => setBeitragForm(prev => ({ ...prev, video_url: e.target.value }))} placeholder="https://youtube.com/watch?v=…"
+                  style={{ border: 'none', borderBottom: `1px solid rgba(96,8,18,0.15)`, outline: 'none', background: 'transparent', fontSize: 14, color: '#1a0e08', fontFamily: 'inherit', padding: '4px 0', width: '100%', marginBottom: 14 }} />
+                {beitragForm.video_url.trim() && (
+                  <div style={{ flex: 1, position: 'relative', background: '#000', borderRadius: 8, overflow: 'hidden', minHeight: 120 }}>
+                    <iframe src={(() => { const yt = beitragForm.video_url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)/); return yt ? `https://www.youtube.com/embed/${yt[1]}?rel=0` : beitragForm.video_url })()} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none' }} allowFullScreen />
                   </div>
                 )}
               </div>
-            )}
-
-            {beitragForm.typ === 'video' && (
-              <div className="field">
-                <label>YouTube / Vimeo URL *</label>
-                <input value={beitragForm.video_url} onChange={e => setBeitragForm(prev => ({ ...prev, video_url: e.target.value }))} placeholder="https://youtube.com/watch?v=..." />
-              </div>
-            )}
-
-            {beitragForm.typ === 'quiz' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 16 }}>
-                <div className="field" style={{ margin: 0 }}>
-                  <label>Frage *</label>
-                  <input value={beitragForm.quiz_frage} onChange={e => setBeitragForm(prev => ({ ...prev, quiz_frage: e.target.value }))} placeholder="Was ist der erste Schritt bei XABCDE?" />
+            )
+            if (beitragForm.typ === 'quiz') return (
+              <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px 12px 26px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <div>
+                  <div style={{ fontSize: 9, fontWeight: 700, color: accent, textTransform: 'uppercase' as const, letterSpacing: '0.2em', marginBottom: 8 }}>Frage</div>
+                  <textarea value={beitragForm.quiz_frage} onChange={e => setBeitragForm(prev => ({ ...prev, quiz_frage: e.target.value }))} placeholder="Was ist zu tun bei…?" rows={3}
+                    style={{ width: '100%', resize: 'none', border: 'none', borderBottom: '0.5px solid rgba(96,8,18,0.12)', outline: 'none', background: 'transparent', fontSize: 16, fontWeight: 600, color: '#1a0e08', lineHeight: 1.55, fontFamily: 'inherit', padding: '0 0 8px' }} />
                 </div>
-                {beitragForm.quiz_antworten.map((a, idx) => (
-                  <div key={idx} className="field" style={{ margin: 0 }}>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <input type="radio" name="richtige" checked={beitragForm.quiz_richtige === idx} onChange={() => setBeitragForm(prev => ({ ...prev, quiz_richtige: idx }))} />
-                      Antwort {idx + 1} {beitragForm.quiz_richtige === idx && <span style={{ color: 'var(--accent)', fontSize: 11, fontWeight: 700 }}>✓ Richtig</span>}
-                    </label>
-                    <input value={a} onChange={e => { const arr = [...beitragForm.quiz_antworten]; arr[idx] = e.target.value; setBeitragForm(prev => ({ ...prev, quiz_antworten: arr })) }} placeholder={`Antwort ${idx + 1}...`} />
-                  </div>
-                ))}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {beitragForm.quiz_antworten.map((a, idx) => (
+                    <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <button onClick={() => setBeitragForm(prev => ({ ...prev, quiz_richtige: idx }))}
+                        style={{ width: 20, height: 20, borderRadius: '50%', border: `2px solid ${beitragForm.quiz_richtige === idx ? '#16a34a' : 'rgba(96,8,18,0.2)'}`, background: beitragForm.quiz_richtige === idx ? '#16a34a' : 'transparent', flexShrink: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        {beitragForm.quiz_richtige === idx && <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#fff' }} />}
+                      </button>
+                      <input value={a} onChange={e => { const arr = [...beitragForm.quiz_antworten]; arr[idx] = e.target.value; setBeitragForm(prev => ({ ...prev, quiz_antworten: arr })) }} placeholder={`Antwort ${idx + 1}…`}
+                        style={{ flex: 1, border: 'none', borderBottom: '0.5px solid rgba(96,8,18,0.1)', outline: 'none', background: 'transparent', fontSize: 14, color: '#1a0e08', fontFamily: 'inherit', padding: '4px 0' }} />
+                    </div>
+                  ))}
+                </div>
               </div>
-            )}
+            )
+          }
 
-            <div className="field">
-              <label>Tags (kommagetrennt)</label>
-              <input value={beitragForm.tags} onChange={e => setBeitragForm(prev => ({ ...prev, tags: e.target.value }))} placeholder="XABCDE, AMLS, Beatmung, Reanimation" />
+          if (p === 'tags') return (
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '16px 20px 12px 26px' }}>
+              <div style={{ fontSize: 9, fontWeight: 700, color: accent, textTransform: 'uppercase' as const, letterSpacing: '0.2em', marginBottom: 10 }}>
+                Tags <span style={{ fontWeight: 400, color: '#8a7a68', textTransform: 'none' as const, letterSpacing: 0, fontSize: 10 }}>(kommagetrennt)</span>
+              </div>
+              <input value={beitragForm.tags} onChange={e => setBeitragForm(prev => ({ ...prev, tags: e.target.value }))} placeholder="XABCDE, Reanimation, Beatmung…"
+                style={{ border: 'none', borderBottom: `1px solid rgba(96,8,18,0.15)`, outline: 'none', background: 'transparent', fontSize: 14, color: '#1a0e08', fontFamily: 'inherit', padding: '4px 0', width: '100%', marginBottom: 14 }} />
+              {beitragForm.tags.split(',').map(t => t.trim()).filter(Boolean).length > 0 && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {beitragForm.tags.split(',').map(t => t.trim()).filter(Boolean).map(t => (
+                    <span key={t} style={{ fontSize: 12, fontStyle: 'italic', fontWeight: 700, color: accent, background: 'rgba(96,8,18,0.07)', borderRadius: 99, padding: '3px 10px' }}>#{t}</span>
+                  ))}
+                </div>
+              )}
             </div>
+          )
+          return null
+        }
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
-              <input type="checkbox" id="gepinnt" checked={beitragForm.gepinnt} onChange={e => setBeitragForm(prev => ({ ...prev, gepinnt: e.target.checked }))} />
-              <label htmlFor="gepinnt" style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)', cursor: 'pointer' }}>Beitrag anpinnen (erscheint ganz oben)</label>
+        return (
+          <>
+            <div onClick={resetBeitragForm} style={{ position: 'fixed', inset: 0, background: 'rgba(20,10,6,0.8)', zIndex: 500 }} />
+            <div style={{ position: 'fixed', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', width: 'min(calc(100vw - 32px), 420px)', height: 'min(88dvh, 600px)', zIndex: 501, background: '#fffef9', borderRadius: 3, boxShadow: '0 30px 90px rgba(0,0,0,0.5), -6px 0 18px rgba(0,0,0,0.2)', display: 'flex', flexDirection: 'column', overflow: 'hidden', animation: 'bookOpen 0.32s cubic-bezier(0.22,1,0.36,1)' }}>
+              {/* Spine + shadows */}
+              <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 9, zIndex: 10, pointerEvents: 'none', background: `linear-gradient(to right, ${accent}, ${accent}88 60%, transparent)` }} />
+              <div style={{ position: 'absolute', left: 9, top: 0, bottom: 0, width: 22, zIndex: 10, pointerEvents: 'none', background: 'linear-gradient(to right, rgba(0,0,0,0.09), transparent)' }} />
+              <div style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 12, zIndex: 10, pointerEvents: 'none', background: 'linear-gradient(to left, rgba(0,0,0,0.06), transparent)' }} />
+              {/* Close */}
+              <div style={{ position: 'absolute', top: 10, right: 10, zIndex: 20 }}>
+                <button onClick={resetBeitragForm} style={{ background: 'rgba(96,8,18,0.07)', border: 'none', borderRadius: '50%', width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#8a7a68' }}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+              </div>
+              {/* Page label */}
+              <div style={{ paddingLeft: 26, paddingRight: 40, paddingTop: 12, flexShrink: 0, zIndex: 5 }}>
+                <div style={{ fontSize: 9, color: '#8a7a68', fontStyle: 'italic' }}>
+                  {pid === 'cover' ? 'Seite 1 — Titelblatt' : pid === 'content' ? 'Seite 2 — Inhalt' : 'Seite 3 — Tags'}
+                </div>
+              </div>
+              {/* Animated page */}
+              <div key={`ep-${editorPage}`} style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', animation: `pageIn${editorDir >= 0 ? 'R' : 'L'} 0.2s ease-out` }}>
+                {renderPage(pid)}
+              </div>
+              {/* Bottom nav */}
+              <div style={{ flexShrink: 0, height: 52, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 10px', borderTop: '0.5px solid rgba(96,8,18,0.08)', background: '#fffef9', zIndex: 5 }}>
+                <button onClick={() => goPage(-1)} disabled={!canPrev} style={{ width: 32, height: 32, borderRadius: '50%', border: 'none', background: canPrev ? 'rgba(96,8,18,0.07)' : 'transparent', color: canPrev ? accent : 'rgba(96,8,18,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: canPrev ? 'pointer' : 'default' }}>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+                </button>
+                <div style={{ display: 'flex', gap: 5, alignItems: 'center' }}>
+                  {pages.map((_, i) => (
+                    <div key={i} onClick={() => { setEditorDir(i > editorPage ? 1 : -1); setEditorPage(i) }}
+                      style={{ width: i === editorPage ? 20 : 6, height: 6, borderRadius: 3, background: i === editorPage ? accent : 'rgba(96,8,18,0.14)', cursor: 'pointer', transition: 'width 0.22s, background 0.22s' }} />
+                  ))}
+                </div>
+                {canNext ? (
+                  <button onClick={() => goPage(1)} style={{ width: 32, height: 32, borderRadius: '50%', border: 'none', background: 'rgba(96,8,18,0.07)', color: accent, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+                  </button>
+                ) : (
+                  <button onClick={saveBeitrag} disabled={savingBeitrag || !beitragForm.titel.trim()} style={{ padding: '8px 14px', borderRadius: 8, border: 'none', background: savingBeitrag || !beitragForm.titel.trim() ? 'rgba(96,8,18,0.12)' : accent, color: '#fff', fontWeight: 700, fontSize: 13, cursor: savingBeitrag || !beitragForm.titel.trim() ? 'not-allowed' : 'pointer', fontFamily: 'inherit', opacity: !beitragForm.titel.trim() ? 0.6 : 1 }}>
+                    {savingBeitrag ? 'Speichert…' : editingBeitragId ? 'Speichern' : 'Veröffentlichen'}
+                  </button>
+                )}
+              </div>
             </div>
-
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button className="btn" onClick={resetBeitragForm} style={{ flex: 1 }}>Abbrechen</button>
-              <button className="btn primary" onClick={saveBeitrag} disabled={savingBeitrag || !beitragForm.titel.trim()} style={{ flex: 1 }}>
-                {savingBeitrag ? 'Wird gespeichert…' : editingBeitragId ? 'Speichern' : 'Erstellen'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+            <style>{`@keyframes bookOpen{from{opacity:0;transform:translate(-50%,-50%) scale(0.9) perspective(800px) rotateY(-6deg)}to{opacity:1;transform:translate(-50%,-50%) scale(1) perspective(800px) rotateY(0)}}@keyframes pageInR{from{opacity:0;transform:translateX(28px)}to{opacity:1;transform:none}}@keyframes pageInL{from{opacity:0;transform:translateX(-28px)}to{opacity:1;transform:none}}`}</style>
+          </>
+        )
+      })()}
 
       {/* ADD/EDIT TERMIN MODAL */}
       {showAddTerminModal && (
