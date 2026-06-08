@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { pb } from '../lib/pocketbase'
@@ -109,6 +109,11 @@ export default function Lernbar() {
   const [bibSearch, setBibSearch] = useState('')
   const [bibActiveTag, setBibActiveTag] = useState<string | null>(null)
   const [openBook, setOpenBook] = useState<Lernbeitrag | null>(null)
+  const [bookPage, setBookPage] = useState(0)
+  const [bookDir, setBookDir] = useState(1)
+  const touchStartX = useRef(0)
+
+  useEffect(() => { setBookPage(0); setBookDir(1) }, [openBook?.id])
 
   // Module player
   const [playerProgress, setPlayerProgress] = useState<ModulProgress | null>(null)
@@ -738,7 +743,7 @@ export default function Lernbar() {
       <style>{`details > summary::-webkit-details-marker { display: none; }
 @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }`}</style>
 
-      {/* Open Book Sheet */}
+      {/* Book Reader */}
       {openBook && (() => {
         const b = openBook
         const tags = parseTags(b.tags)
@@ -746,112 +751,198 @@ export default function Lernbar() {
         const qs = feedQuizState[b.id] || { selected: null, submitted: false }
         const quiz = parseQuiz(b.quiz_daten)
         const initials = (b.erstellt_von_name || 'R').split(' ').map((w: string) => w[0]).slice(0, 2).join('').toUpperCase()
-        const COVER_COLORS: Record<string, string> = {
-          text: '#600812', bild: '#7c2d12', video: '#065f46', quiz: '#1e3a8a'
+        const ACCENT: Record<string, string> = { text: '#600812', bild: '#7c2d12', video: '#065f46', quiz: '#1e3a8a' }
+        const accent = ACCENT[b.typ] || '#600812'
+        const typeLabel = b.typ === 'quiz' ? 'Quiz' : b.typ === 'video' ? 'Video' : b.typ === 'bild' ? 'Bild' : 'Text'
+
+        // Build page list
+        type PID = 'title' | 'media' | 'content' | 'quiz' | 'tags'
+        const pages: PID[] = ['title']
+        if ((b.typ === 'video' && b.video_url) || bildUrl) pages.push('media')
+        if (b.inhalt && b.typ !== 'quiz') pages.push('content')
+        if (b.typ === 'quiz' && quiz) pages.push('quiz')
+        if (tags.length > 0) pages.push('tags')
+        const total = pages.length
+        const pid = pages[bookPage] ?? 'title'
+        const canPrev = bookPage > 0
+        const canNext = bookPage < total - 1
+
+        const go = (dir: 1 | -1) => {
+          const next = bookPage + dir
+          if (next < 0 || next >= total) return
+          setBookDir(dir); setBookPage(next)
         }
-        const accentColor = COVER_COLORS[b.typ] || '#600812'
+
+        const renderPage = (id: PID) => {
+          if (id === 'title') return (
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '44px 32px', textAlign: 'center', position: 'relative' }}>
+              <div style={{ width: 28, height: 3, borderRadius: 2, background: accent, marginBottom: 24 }} />
+              <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.22em', color: accent, marginBottom: 18 }}>{typeLabel}</div>
+              <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 22, color: '#1a0e08', lineHeight: 1.3, marginBottom: 28 }}>{b.titel}</div>
+              <div style={{ width: 40, height: 0.5, background: 'rgba(96,8,18,0.25)', marginBottom: 24 }} />
+              <div style={{ width: 36, height: 36, borderRadius: '50%', background: accent, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, marginBottom: 10 }}>{initials}</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: '#1a0e08' }}>{b.erstellt_von_name || 'Responda'}</div>
+              <div style={{ fontSize: 11, color: 'var(--warm-gray)', fontStyle: 'italic', marginTop: 3 }}>
+                {new Date(b.created).toLocaleDateString('de-DE', { day: '2-digit', month: 'long', year: 'numeric' })}
+              </div>
+              {total > 1 && (
+                <div style={{ position: 'absolute', bottom: 20, left: 0, right: 0, textAlign: 'center', fontSize: 11, color: 'var(--warm-gray)', fontStyle: 'italic', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+                  Weiter lesen
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+                </div>
+              )}
+            </div>
+          )
+
+          if (id === 'media') return (
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', background: '#000' }}>
+              {b.typ === 'video' && b.video_url ? (
+                <div style={{ flex: 1, display: 'flex', alignItems: 'center', padding: 16, background: '#0a0a0a' }}>
+                  <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0, width: '100%', overflow: 'hidden', borderRadius: 6 }}>
+                    <iframe src={getVideoEmbed(b.video_url)} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }} allowFullScreen allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" />
+                  </div>
+                </div>
+              ) : bildUrl ? (
+                <img src={bildUrl} alt={b.titel} style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }} />
+              ) : null}
+            </div>
+          )
+
+          if (id === 'content') return (
+            <div style={{ flex: 1, overflowY: 'auto', padding: '28px 24px 16px' }}>
+              <div style={{ fontSize: 15, color: '#1a0e08', lineHeight: 1.85, whiteSpace: 'pre-wrap', fontFamily: "Georgia, 'Times New Roman', serif" }}>{b.inhalt}</div>
+            </div>
+          )
+
+          if (id === 'quiz' && quiz) return (
+            <div style={{ flex: 1, overflowY: 'auto', padding: '24px 20px 16px' }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: accent, textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 14 }}>Frage</div>
+              <div style={{ fontSize: 17, fontWeight: 600, color: '#1a0e08', lineHeight: 1.55, marginBottom: 18 }}>{quiz.frage}</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
+                {quiz.antworten.map((a: string, i: number) => {
+                  let bg = '#faf9f7', border = '1.5px solid rgba(96,8,18,0.12)', col = '#1a0e08'
+                  if (qs.submitted) {
+                    if (i === quiz.richtige) { bg = '#f0fdf4'; border = '2px solid #16a34a'; col = '#166534' }
+                    else if (i === qs.selected) { bg = '#fef2f2'; border = '2px solid #600812'; col = '#600812' }
+                  } else if (i === qs.selected) { bg = 'rgba(107,15,26,0.06)'; border = `2px solid ${accent}`; col = accent }
+                  return (
+                    <button key={i} disabled={qs.submitted}
+                      onClick={() => setFeedQuizState(prev => ({ ...prev, [b.id]: { selected: i, submitted: false } }))}
+                      style={{ padding: '12px 14px', borderRadius: 10, border, background: bg, color: col, fontWeight: i === qs.selected || (qs.submitted && i === quiz.richtige) ? 700 : 400, fontSize: 14, cursor: qs.submitted ? 'default' : 'pointer', textAlign: 'left', fontFamily: 'inherit' }}>
+                      {a}
+                    </button>
+                  )
+                })}
+              </div>
+              {!qs.submitted ? (
+                <button disabled={qs.selected === null}
+                  onClick={() => setFeedQuizState(prev => ({ ...prev, [b.id]: { ...prev[b.id], submitted: true } }))}
+                  style={{ marginTop: 14, width: '100%', padding: 14, borderRadius: 10, border: 'none', background: qs.selected === null ? '#f0ede8' : accent, color: qs.selected === null ? 'var(--warm-gray)' : '#fff', fontWeight: 700, fontSize: 15, cursor: qs.selected === null ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
+                  Antworten
+                </button>
+              ) : (
+                <div style={{ marginTop: 14, padding: '13px 16px', borderRadius: 10, textAlign: 'center', fontWeight: 700, fontSize: 14, background: qs.selected === quiz.richtige ? '#f0fdf4' : '#fef2f2', border: qs.selected === quiz.richtige ? '1px solid #bbf7d0' : '1px solid #fecaca', color: qs.selected === quiz.richtige ? '#166534' : '#600812' }}>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                    {qs.selected === quiz.richtige
+                      ? <><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Richtig!</>
+                      : <><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Falsch — richtige Antwort ist markiert</>}
+                  </span>
+                </div>
+              )}
+            </div>
+          )
+
+          if (id === 'tags') return (
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 28px', textAlign: 'center' }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: accent, textTransform: 'uppercase' as const, letterSpacing: '0.2em', marginBottom: 20 }}>Themen</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center' }}>
+                {tags.map(t => (
+                  <button key={t} onClick={() => { setBibActiveTag(bibActiveTag === t ? null : t); setOpenBook(null) }}
+                    style={{ fontSize: 13, fontWeight: 700, fontStyle: 'italic', color: accent, background: 'rgba(96,8,18,0.07)', border: 'none', borderRadius: 99, padding: '7px 14px', cursor: 'pointer', fontFamily: 'inherit' }}>
+                    #{t}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )
+          return null
+        }
+
         return (
           <>
-            <div onClick={() => setOpenBook(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 200 }} />
-            <div style={{ position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 201, background: 'var(--lbf-card)', borderRadius: '20px 20px 0 0', maxHeight: '92dvh', display: 'flex', flexDirection: 'column', animation: 'slideUp 0.3s cubic-bezier(0.32,0.72,0,1)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
-              {/* Handle */}
-              <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0 0' }}>
-                <div style={{ width: 36, height: 4, borderRadius: 2, background: 'rgba(96,8,18,0.2)' }} />
-              </div>
-              {/* Header */}
-              <div style={{ padding: '10px 20px 14px', borderBottom: `0.5px solid rgba(96,8,18,0.12)`, display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-                <div style={{ width: 4, flexShrink: 0, alignSelf: 'stretch', borderRadius: 2, background: accentColor, marginTop: 2 }} />
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.18em', color: accentColor, marginBottom: 4 }}>
-                    {b.typ === 'quiz' ? 'Quiz' : b.typ === 'video' ? 'Video' : b.typ === 'bild' ? 'Bild' : 'Text'}
-                  </div>
-                  <div style={{ fontWeight: 700, fontStyle: 'italic', fontSize: 20, color: 'var(--lbf-text)', lineHeight: 1.25 }}>{b.titel}</div>
-                </div>
-                <button onClick={() => setOpenBook(null)} style={{ background: 'rgba(96,8,18,0.06)', border: 'none', borderRadius: '50%', width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0, color: 'var(--warm-gray)' }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            <div onClick={() => setOpenBook(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(20,10,6,0.8)', zIndex: 200 }} />
+            <div
+              onTouchStart={e => { touchStartX.current = e.touches[0].clientX }}
+              onTouchEnd={e => { const d = touchStartX.current - e.changedTouches[0].clientX; if (Math.abs(d) > 48) go(d > 0 ? 1 : -1) }}
+              style={{
+                position: 'fixed', left: '50%', top: '50%',
+                transform: 'translate(-50%, -50%)',
+                width: 'min(calc(100vw - 32px), 420px)',
+                height: 'min(88dvh, 660px)',
+                zIndex: 201,
+                background: '#fffef9',
+                borderRadius: 3,
+                boxShadow: '0 30px 90px rgba(0,0,0,0.5), -6px 0 18px rgba(0,0,0,0.2)',
+                display: 'flex', flexDirection: 'column',
+                overflow: 'hidden',
+                animation: 'bookOpen 0.32s cubic-bezier(0.22,1,0.36,1)',
+              }}>
+
+              {/* Spine */}
+              <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 9, zIndex: 10, pointerEvents: 'none',
+                background: `linear-gradient(to right, ${accent}, ${accent}88 60%, transparent)` }} />
+              {/* Spine inner shadow */}
+              <div style={{ position: 'absolute', left: 9, top: 0, bottom: 0, width: 22, zIndex: 10, pointerEvents: 'none',
+                background: 'linear-gradient(to right, rgba(0,0,0,0.09), transparent)' }} />
+              {/* Right edge shadow */}
+              <div style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 12, zIndex: 10, pointerEvents: 'none',
+                background: 'linear-gradient(to left, rgba(0,0,0,0.06), transparent)' }} />
+
+              {/* Close */}
+              <div style={{ position: 'absolute', top: 10, right: 10, zIndex: 20 }}>
+                <button onClick={() => setOpenBook(null)} style={{ background: 'rgba(96,8,18,0.07)', border: 'none', borderRadius: '50%', width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#8a7a68' }}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                 </button>
               </div>
 
-              {/* Scrollable content */}
-              <div style={{ flex: 1, overflowY: 'auto', padding: '20px 20px 32px' }}>
+              {/* Page content with slide animation */}
+              <div key={`${b.id}-${bookPage}`} style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', animation: `pageIn${bookDir >= 0 ? 'R' : 'L'} 0.2s ease-out` }}>
+                {renderPage(pid)}
+              </div>
 
-                {/* Video */}
-                {b.typ === 'video' && b.video_url && (
-                  <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0, background: '#000', borderRadius: 12, overflow: 'hidden', marginBottom: 20 }}>
-                    <iframe src={getVideoEmbed(b.video_url)} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }} allowFullScreen allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" />
-                  </div>
-                )}
-
-                {/* Image */}
-                {bildUrl && (
-                  <img src={bildUrl} alt={b.titel} style={{ width: '100%', display: 'block', borderRadius: 12, maxHeight: 340, objectFit: 'cover', marginBottom: 20 }} />
-                )}
-
-                {/* Text content */}
-                {b.inhalt && b.typ !== 'quiz' && (
-                  <div style={{ fontSize: 16, color: 'var(--lbf-text)', lineHeight: 1.75, whiteSpace: 'pre-wrap', marginBottom: 20 }}>{b.inhalt}</div>
-                )}
-
-                {/* Quiz */}
-                {b.typ === 'quiz' && quiz && (
-                  <div style={{ marginBottom: 20 }}>
-                    <div style={{ fontSize: 17, fontWeight: 600, color: 'var(--lbf-text)', lineHeight: 1.5, marginBottom: 16 }}>{quiz.frage}</div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                      {quiz.antworten.map((a: string, idx2: number) => {
-                        let bg = 'var(--warm-bg)', border = '1.5px solid rgba(96,8,18,0.12)', color = 'var(--lbf-text)'
-                        if (qs.submitted) {
-                          if (idx2 === quiz.richtige) { bg = '#f0fdf4'; border = '2px solid #16a34a'; color = '#166534' }
-                          else if (idx2 === qs.selected) { bg = '#fef2f2'; border = '2px solid #600812'; color = '#600812' }
-                        } else if (idx2 === qs.selected) { bg = 'rgba(107,15,26,0.06)'; border = '2px solid #600812'; color = '#600812' }
-                        return (
-                          <button key={idx2} disabled={qs.submitted}
-                            onClick={() => setFeedQuizState(prev => ({ ...prev, [b.id]: { selected: idx2, submitted: false } }))}
-                            style={{ padding: '13px 16px', borderRadius: 12, border, background: bg, color, fontWeight: idx2 === qs.selected || (qs.submitted && idx2 === quiz.richtige) ? 700 : 400, fontSize: 15, cursor: qs.submitted ? 'default' : 'pointer', textAlign: 'left', fontFamily: 'inherit' }}>
-                            {a}
-                          </button>
-                        )
-                      })}
-                    </div>
-                    {!qs.submitted ? (
-                      <button disabled={qs.selected === null}
-                        onClick={() => setFeedQuizState(prev => ({ ...prev, [b.id]: { ...prev[b.id], submitted: true } }))}
-                        style={{ marginTop: 12, width: '100%', padding: '14px', borderRadius: 12, border: 'none', background: qs.selected === null ? 'var(--warm-bg)' : '#600812', color: qs.selected === null ? 'var(--warm-gray)' : '#fff', fontWeight: 700, fontSize: 16, cursor: qs.selected === null ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
-                        Antworten
-                      </button>
-                    ) : (
-                      <div style={{ marginTop: 12, padding: '14px 16px', borderRadius: 12, textAlign: 'center', fontWeight: 700, background: qs.selected === quiz.richtige ? '#f0fdf4' : '#fef2f2', border: qs.selected === quiz.richtige ? '1px solid #bbf7d0' : '1px solid #fecaca', color: qs.selected === quiz.richtige ? '#166534' : '#600812' }}>
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                          {qs.selected === quiz.richtige
-                            ? <><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Richtig!</>
-                            : <><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Falsch — die richtige Antwort ist markiert</>}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Tags */}
-                {tags.length > 0 && (
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 20 }}>
-                    {tags.map(t => (
-                      <button key={t} onClick={() => { setBibActiveTag(bibActiveTag === t ? null : t); setOpenBook(null) }}
-                        style={{ fontSize: 12, fontWeight: 700, fontStyle: 'italic', color: '#600812', background: 'rgba(96,8,18,0.07)', border: 'none', borderRadius: 99, padding: '4px 10px', cursor: 'pointer', fontFamily: 'inherit' }}>
-                        #{t}
-                      </button>
-                    ))}
-                  </div>
-                )}
-
-                {/* Author / date */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingTop: 16, borderTop: '0.5px solid rgba(96,8,18,0.08)' }}>
-                  <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#600812', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, flexShrink: 0 }}>{initials}</div>
-                  <div>
-                    <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--lbf-text)' }}>{b.erstellt_von_name || 'Responda'}</div>
-                    <div style={{ fontSize: 11, color: 'var(--warm-gray)', fontStyle: 'italic' }}>{new Date(b.created).toLocaleDateString('de-DE', { day: '2-digit', month: 'long', year: 'numeric' })}</div>
-                  </div>
+              {/* Bottom nav */}
+              <div style={{ flexShrink: 0, height: 52, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 14px', borderTop: '0.5px solid rgba(96,8,18,0.08)', background: '#fffef9', zIndex: 5 }}>
+                <button onClick={() => go(-1)} disabled={!canPrev}
+                  style={{ width: 32, height: 32, borderRadius: '50%', border: 'none', background: canPrev ? 'rgba(96,8,18,0.07)' : 'transparent', color: canPrev ? accent : 'rgba(96,8,18,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: canPrev ? 'pointer' : 'default' }}>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+                </button>
+                <div style={{ display: 'flex', gap: 5, alignItems: 'center' }}>
+                  {pages.map((_, i) => (
+                    <div key={i} onClick={() => { setBookDir(i > bookPage ? 1 : -1); setBookPage(i) }}
+                      style={{ width: i === bookPage ? 20 : 6, height: 6, borderRadius: 3, background: i === bookPage ? accent : 'rgba(96,8,18,0.14)', cursor: 'pointer', transition: 'width 0.22s, background 0.22s' }} />
+                  ))}
                 </div>
+                <button onClick={() => go(1)} disabled={!canNext}
+                  style={{ width: 32, height: 32, borderRadius: '50%', border: 'none', background: canNext ? 'rgba(96,8,18,0.07)' : 'transparent', color: canNext ? accent : 'rgba(96,8,18,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: canNext ? 'pointer' : 'default' }}>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+                </button>
               </div>
             </div>
+
+            <style>{`
+              @keyframes bookOpen {
+                from { opacity: 0; transform: translate(-50%, -50%) scale(0.9) perspective(800px) rotateY(-6deg); }
+                to   { opacity: 1; transform: translate(-50%, -50%) scale(1) perspective(800px) rotateY(0deg); }
+              }
+              @keyframes pageInR {
+                from { opacity: 0; transform: translateX(28px); }
+                to   { opacity: 1; transform: none; }
+              }
+              @keyframes pageInL {
+                from { opacity: 0; transform: translateX(-28px); }
+                to   { opacity: 1; transform: none; }
+              }
+            `}</style>
           </>
         )
       })()}
