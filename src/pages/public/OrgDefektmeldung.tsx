@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { pb } from '../../lib/pocketbase'
 import { useOrg } from './OrgPublicLayout'
-import { PubWrap, PubSendBar, PubHeader, inp, lbl, field, ta } from './pubStyles'
+import { PubWrap, PubSendBar, inp, lbl, field, ta } from './pubStyles'
 
 type Severity = 'low' | 'medium' | 'high' | 'critical'
 
@@ -104,12 +104,19 @@ export default function OrgDefektmeldung() {
 
   return (
     <div style={{ minHeight: '100dvh', background: 'var(--warm-bg)' }}>
-      <PubHeader title="Defektmeldung" onBack={() => navigate(`/${orgCode}`)} />
+      <header style={{ position: 'sticky', top: 0, background: '#fff', borderBottom: '0.5px solid rgba(96,8,18,0.12)', zIndex: 100, paddingTop: 'env(safe-area-inset-top)', paddingLeft: 'max(20px, env(safe-area-inset-left))', paddingRight: 'max(20px, env(safe-area-inset-right))' }}>
+        <div style={{ height: 60, display: 'flex', alignItems: 'center', gap: 12 }}>
+          <button onClick={() => navigate(`/${orgCode}`)} style={{ display: 'flex', alignItems: 'center', background: 'none', border: 'none', color: '#600812', cursor: 'pointer', padding: 0, flexShrink: 0 }}>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#600812" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+          </button>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontWeight: 700, fontSize: 15, letterSpacing: '-0.01em', color: '#1a0e08' }}>Defektmeldung</div>
+            <div style={{ fontStyle: 'italic', fontSize: 11, color: 'var(--warm-gray)', marginTop: 1 }}>{org.org_name}</div>
+          </div>
+        </div>
+      </header>
 
       <PubWrap>
-        {/* Org name */}
-        <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginBottom: '1rem' }}>{org.org_name}</div>
-
         {/* Gerät */}
         <Card title="Gerät *">
           <label style={lbl}>
