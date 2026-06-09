@@ -56,14 +56,19 @@ interface Termin {
   end_datetime: string
   location: string
   dozent: string
+  dozent_id?: string
   max_teilnehmer: number
   status: 'geplant' | 'laufend' | 'abgeschlossen' | 'abgesagt'
   konzept_id?: string
   notizen?: string
   einladung_token?: string
+  lernkonzept?: string
+  dateien?: string | string[]
+  anhang?: string | string[]
   organization_id: string
   created: string
   updated: string
+  collectionId: string
 }
 
 interface Teilnehmer {
@@ -210,6 +215,7 @@ interface TerminForm {
   end_datetime: string
   location: string
   dozent: string
+  dozent_id?: string
   max_teilnehmer: number
   status: 'geplant' | 'laufend' | 'abgeschlossen' | 'abgesagt'
   konzept_id?: string
@@ -330,6 +336,7 @@ export default function Ausbildungen() {
     end_datetime: '',
     location: '',
     dozent: '',
+    dozent_id: '',
     max_teilnehmer: 20,
     status: 'geplant',
     konzept_id: '',
@@ -398,7 +405,9 @@ export default function Ausbildungen() {
   const [generatingAIImage, setGeneratingAIImage] = useState(false)
   const [aiImageTargetBlock, setAiImageTargetBlock] = useState<string | null>(null)
   
-const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | 'konzepte' | 'jahresuebersicht' | 'archiv' | 'lernfeed'>('termine')
+const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | 'konzepte' | 'jahresuebersicht' | 'archiv' | 'lernfeed' | 'dozent'>('termine')
+  const [presentationBeitrag, setPresentationBeitrag] = useState<Lernbeitrag | null>(null)
+  const [presentationSlide, setPresentationSlide] = useState(0)
   
   const [uploadFile, setUploadFile] = useState<File | null>(null)
   const [uploadTyp, setUploadTyp] = useState<'dozent' | 'teilnehmer'>('teilnehmer')
@@ -797,7 +806,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
   function openAddTermin() {
     setTerminForm({
       name: '', description: '', start_datetime: '', end_datetime: '',
-      location: '', dozent: '', max_teilnehmer: 20, status: 'geplant',
+      location: '', dozent: '', dozent_id: '', max_teilnehmer: 20, status: 'geplant',
       konzept_id: '', notizen: ''
     })
     setKonzeptSuggestions([])
@@ -813,6 +822,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
       end_datetime: formatDateForInput(termin.end_datetime),
       location: termin.location,
       dozent: termin.dozent,
+      dozent_id: termin.dozent_id || '',
       max_teilnehmer: termin.max_teilnehmer,
       status: termin.status,
       konzept_id: termin.konzept_id || '',
@@ -1702,12 +1712,13 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
             { key: 'jahresuebersicht' as const, label: 'Jahresplan', icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/></svg>, count: undefined },
             { key: 'archiv' as const, label: 'Archiv', icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="21,8 21,21 3,21 3,8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>, count: archivTermine.length },
             { key: 'lernfeed' as const, label: 'Lernfeed', icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 11a9 9 0 0 1 9 9"/><path d="M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1" fill="currentColor" stroke="none"/></svg>, count: undefined },
+            { key: 'dozent' as const, label: 'Dozent', icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>, count: undefined },
           ]).map(tab => (
             <button
               key={tab.key}
               onClick={() => {
                 setViewMode(tab.key)
-                if (tab.key === 'lernfeed') loadBeitraege()
+                if (tab.key === 'lernfeed' || tab.key === 'dozent') loadBeitraege()
               }}
               className="ausb-nav-btn"
               style={{
@@ -2292,6 +2303,165 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
         </div>
       )}
 
+      {/* DOZENT VIEW */}
+      {viewMode === 'dozent' && (() => {
+        const meineTermine = termine.filter(t =>
+          (t.dozent_id && t.dozent_id === user?.id) ||
+          (!t.dozent_id && t.dozent && t.dozent.trim().toLowerCase() === (user?.name || '').trim().toLowerCase())
+        ).sort((a, b) => new Date(a.start_datetime).getTime() - new Date(b.start_datetime).getTime())
+
+        function fmtDozentDate(str: string) {
+          const d = new Date(str)
+          if (isNaN(d.getTime())) return '–'
+          return d.toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' })
+        }
+        function fmtDozentTime(str: string) {
+          const d = new Date(str)
+          if (isNaN(d.getTime())) return ''
+          return d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })
+        }
+
+        const COVER_D: Record<string, { bg: string; spine: string }> = {
+          text: { bg: 'linear-gradient(165deg,#600812 0%,#3d0408 100%)', spine: 'rgba(0,0,0,0.3)' },
+          bild: { bg: 'linear-gradient(165deg,#7c2d12 0%,#431407 100%)', spine: 'rgba(0,0,0,0.3)' },
+          video: { bg: 'linear-gradient(165deg,#065f46 0%,#022c22 100%)', spine: 'rgba(0,0,0,0.3)' },
+          quiz: { bg: 'linear-gradient(165deg,#1e3a8a 0%,#0f172a 100%)', spine: 'rgba(0,0,0,0.3)' },
+        }
+
+        function renderBeitragsGrid(onPresent: (b: Lernbeitrag) => void) {
+          if (beitraege.length === 0) return (
+            <div style={{ color: 'var(--warm-gray)', fontStyle: 'italic', fontSize: 13, padding: '12px 0' }}>
+              Noch keine Lernbeiträge vorhanden.
+            </div>
+          )
+          return (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+              {beitraege.map(b => {
+                const bildArrD = Array.isArray(b.bild) ? b.bild : (b.bild ? [b.bild] : [])
+                const bInhD = parseInhalt(b.inhalt)
+                let bColorD: string | null = null
+                let bPatD: string | null = null
+                if (bInhD?.v === 2) { if (bInhD.color) bColorD = bInhD.color; if (bInhD.pattern) bPatD = bInhD.pattern }
+                const cfgD = bColorD
+                  ? (() => { const r = parseInt(bColorD!.slice(1,3),16), g = parseInt(bColorD!.slice(3,5),16), bv = parseInt(bColorD!.slice(5,7),16); return { bg: `linear-gradient(165deg,${bColorD} 0%,rgb(${Math.round(r*.55)},${Math.round(g*.55)},${Math.round(bv*.55)}) 100%)`, spine: 'rgba(0,0,0,0.3)' } })()
+                  : (COVER_D[b.typ] || COVER_D.text)
+                let bImgD: string | null = null
+                if (bInhD?.v === 2 && bInhD.cover_block_id && Array.isArray(bInhD.pages)) {
+                  outer: for (const page of bInhD.pages as any[]) {
+                    for (const blk of (page.blocks || []) as any[]) {
+                      if (blk.id === bInhD.cover_block_id && blk.type === 'bild') {
+                        if (blk.bildIdx !== undefined && bildArrD[blk.bildIdx]) bImgD = `https://api.responda.systems/api/files/${b.collectionId}/${b.id}/${bildArrD[blk.bildIdx]}`
+                        else if (blk.bildExistingUrl) bImgD = blk.bildExistingUrl
+                        break outer
+                      }
+                    }
+                  }
+                }
+                if (!bImgD && bildArrD[0]) bImgD = `https://api.responda.systems/api/files/${b.collectionId}/${b.id}/${bildArrD[0]}`
+                return (
+                  <div key={b.id}>
+                    <div style={{ cursor: 'pointer', borderRadius: 10, overflow: 'hidden', aspectRatio: '3/4', position: 'relative', background: bImgD ? '#1a0e08' : cfgD.bg, boxShadow: '3px 5px 16px rgba(0,0,0,0.25), inset -3px 0 8px rgba(0,0,0,0.18)', marginBottom: 6 }}
+                      onClick={() => onPresent(b)}>
+                      <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 7, background: cfgD.spine, zIndex: 3 }} />
+                      {!bImgD && bPatD && (() => { const pp = getPatternBg(bPatD); return pp ? <div style={{ position: 'absolute', inset: 0, backgroundImage: pp.backgroundImage, backgroundSize: pp.backgroundSize || 'auto', zIndex: 1, pointerEvents: 'none' }} /> : null })()}
+                      {bImgD && <img src={bImgD} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />}
+                      <div style={{ position: 'absolute', inset: 0, background: bImgD ? 'linear-gradient(to top,rgba(0,0,0,0.88) 0%,rgba(0,0,0,0.05) 55%,transparent 100%)' : 'none', zIndex: 2 }} />
+                      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '10px 10px 10px 16px', zIndex: 4 }}>
+                        <div style={{ fontWeight: 700, fontStyle: 'italic', fontSize: 11, color: '#fff', lineHeight: 1.3, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' as const } as React.CSSProperties}>{b.titel}</div>
+                      </div>
+                      <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 5, opacity: 0, transition: 'opacity 0.18s', background: 'rgba(0,0,0,0.4)' }}
+                        onMouseEnter={e => (e.currentTarget.style.opacity = '1')} onMouseLeave={e => (e.currentTarget.style.opacity = '0')}>
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="white" stroke="none"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                      </div>
+                    </div>
+                    <button onClick={() => onPresent(b)} style={{ width: '100%', padding: '5px 0', borderRadius: 7, border: 'none', background: '#600812', color: '#fff', fontWeight: 700, fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}>
+                      Präsentieren
+                    </button>
+                  </div>
+                )
+              })}
+            </div>
+          )
+        }
+
+        return (
+          <div style={{ maxWidth: 900, margin: '0 auto', padding: '20px max(16px, env(safe-area-inset-left)) calc(env(safe-area-inset-bottom) + 40px)' }}>
+
+            {/* Meine Termine */}
+            <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 14 }}>Meine Termine</div>
+            {meineTermine.length === 0 ? (
+              <div style={{ background: 'var(--lbf-card)', borderRadius: 12, padding: '24px 20px', color: 'var(--warm-gray)', fontStyle: 'italic', fontSize: 14, marginBottom: 32, textAlign: 'center' }}>
+                Keine Termine zugewiesen — trage dich als Dozent in einem Termin ein.
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginBottom: 36 }}>
+                {meineTermine.map(t => {
+                  const dateien: string[] = (() => { const d = t.dateien ?? t.anhang; return Array.isArray(d) ? d : (d ? [d as string] : []) })()
+                  const isPast = t.status === 'abgeschlossen'
+                  return (
+                    <div key={t.id} style={{ background: 'var(--lbf-card)', borderRadius: 14, boxShadow: '0 1px 5px rgba(0,0,0,0.08)', overflow: 'hidden', opacity: isPast ? 0.65 : 1 }}>
+                      <div style={{ height: 3, background: isPast ? 'rgba(139,113,90,0.3)' : '#600812' }} />
+                      <div style={{ padding: '16px 18px' }}>
+                        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 10 }}>
+                          <div>
+                            <div style={{ fontWeight: 700, fontSize: 17, color: 'var(--lbf-text)', fontStyle: 'italic' }}>{t.name}</div>
+                            <div style={{ fontSize: 12, color: 'var(--warm-gray)', fontStyle: 'italic', marginTop: 3 }}>
+                              {fmtDozentDate(t.start_datetime)}{t.end_datetime ? ` · ${fmtDozentTime(t.start_datetime)}–${fmtDozentTime(t.end_datetime)} Uhr` : t.start_datetime ? ` · ${fmtDozentTime(t.start_datetime)} Uhr` : ''}
+                              {t.location ? ` · ${t.location}` : ''}
+                            </div>
+                          </div>
+                          <span style={{ flexShrink: 0, padding: '3px 10px', borderRadius: 99, background: isPast ? 'rgba(139,113,90,0.1)' : 'rgba(96,8,18,0.07)', color: isPast ? 'var(--warm-gray)' : '#600812', fontWeight: 700, fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                            {t.status}
+                          </span>
+                        </div>
+                        {t.lernkonzept && (
+                          <div style={{ marginBottom: 12 }}>
+                            <div style={{ fontSize: 9, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 6 }}>Lernkonzept</div>
+                            <div style={{ background: 'var(--warm-bg)', borderRadius: 10, padding: '12px 14px', fontSize: 14, color: 'var(--lbf-text)', lineHeight: 1.7, whiteSpace: 'pre-wrap', borderLeft: '3px solid #600812' }}>{t.lernkonzept}</div>
+                          </div>
+                        )}
+                        {dateien.length > 0 && (
+                          <div style={{ marginBottom: 12 }}>
+                            <div style={{ fontSize: 9, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 8 }}>Unterlagen</div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                              {dateien.map((file, i) => {
+                                const fileUrl = `https://api.responda.systems/api/files/${t.collectionId}/${t.id}/${file}`
+                                const ext = file.split('.').pop()?.toLowerCase() ?? ''
+                                return (
+                                  <a key={i} href={fileUrl} target="_blank" rel="noreferrer"
+                                    style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: 'var(--warm-bg)', border: '1px solid rgba(96,8,18,0.1)', borderRadius: 10, textDecoration: 'none', color: 'var(--lbf-text)' }}>
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#600812" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                                    <span style={{ flex: 1, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{file}</span>
+                                    {ext && <span style={{ fontSize: 10, color: 'var(--warm-gray)', textTransform: 'uppercase' }}>{ext}</span>}
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--warm-gray)" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                  </a>
+                                )
+                              })}
+                            </div>
+                          </div>
+                        )}
+                        {t.description && (
+                          <div style={{ fontSize: 13, color: 'var(--warm-gray)', fontStyle: 'italic', lineHeight: 1.6 }}>{t.description}</div>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+
+            {/* Lernbeiträge präsentieren */}
+            <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 6 }}>Lernbeiträge präsentieren</div>
+            <p style={{ fontStyle: 'italic', color: 'var(--warm-gray)', fontSize: 12, margin: '0 0 16px' }}>
+              Wähle einen Beitrag und starte die Vollbild-Präsentation
+            </p>
+            {beitraegeLoading ? (
+              <div style={{ color: 'var(--warm-gray)', fontStyle: 'italic', fontSize: 13 }}>Lade…</div>
+            ) : renderBeitragsGrid(b => { setPresentationBeitrag(b); setPresentationSlide(0) })}
+          </div>
+        )
+      })()}
+
       {/* BEITRAG BUCH-EDITOR */}
       {showBeitragModal && (() => {
         const TOTAL_PAGES = bookPages.length + 1
@@ -2672,12 +2842,23 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
             
             <div className="field">
               <label>Dozent</label>
-              <input
-                type="text"
-                value={terminForm.dozent}
-                onChange={(e) => setTerminForm({ ...terminForm, dozent: e.target.value })}
-                placeholder="Name des Dozenten"
-              />
+              <select
+                value={terminForm.dozent_id || ''}
+                onChange={e => {
+                  const uid = e.target.value
+                  const u = allUsers.find((u: any) => u.id === uid)
+                  setTerminForm({ ...terminForm, dozent_id: uid, dozent: u ? u.name : '' })
+                }}
+                style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid rgba(96,8,18,0.2)', background: 'var(--lbf-card)', color: 'var(--lbf-text)', fontFamily: 'inherit', fontSize: 14 }}
+              >
+                <option value="">— Kein Dozent —</option>
+                {allUsers.map((u: any) => (
+                  <option key={u.id} value={u.id}>{u.name}</option>
+                ))}
+              </select>
+              {terminForm.dozent && (
+                <div style={{ fontSize: 12, color: 'var(--warm-gray)', marginTop: 4, fontStyle: 'italic' }}>{terminForm.dozent}</div>
+              )}
             </div>
             
             <div className="field">
@@ -5120,6 +5301,106 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
           }
         }
       `}</style>
+
+      {/* PRESENTATION MODE */}
+      {presentationBeitrag && (() => {
+        const pb2 = presentationBeitrag
+        const inhalt = parseInhalt(pb2.inhalt)
+        const bildArr = Array.isArray(pb2.bild) ? pb2.bild : (pb2.bild ? [pb2.bild] : [])
+        let slides: any[] = []
+        if (inhalt?.v === 2 && Array.isArray(inhalt.pages)) {
+          slides = inhalt.pages
+        } else if (pb2.inhalt) {
+          slides = [{ id: 'main', blocks: [{ id: 'b0', type: 'text', text: typeof pb2.inhalt === 'string' ? pb2.inhalt : '' }] }]
+        }
+        const total = slides.length
+        const slide = slides[presentationSlide] || slides[0]
+        const accent = inhalt?.color || '#600812'
+
+        const goSlide = (dir: 1 | -1) => {
+          setPresentationSlide(prev => Math.max(0, Math.min(total - 1, prev + dir)))
+        }
+
+        // Keyboard handler via ref
+        const handleKey = (e: React.KeyboardEvent) => {
+          if (e.key === 'ArrowRight' || e.key === 'ArrowDown') goSlide(1)
+          if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') goSlide(-1)
+          if (e.key === 'Escape') setPresentationBeitrag(null)
+        }
+
+        return (
+          <div
+            tabIndex={0} onKeyDown={handleKey}
+            ref={el => el?.focus()}
+            style={{ position: 'fixed', inset: 0, zIndex: 9999, background: '#0a0503', display: 'flex', flexDirection: 'column', outline: 'none', userSelect: 'none' }}
+          >
+            {/* Top bar */}
+            <div style={{ flexShrink: 0, height: 52, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px', borderBottom: '0.5px solid rgba(253,232,216,0.1)' }}>
+              <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 15, color: '#fde8d8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '60%' }}>{pb2.titel}</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                <span style={{ fontSize: 12, color: 'rgba(253,232,216,0.45)', fontStyle: 'italic' }}>{presentationSlide + 1} / {total}</span>
+                <button onClick={() => setPresentationBeitrag(null)}
+                  style={{ background: 'rgba(253,232,216,0.08)', border: 'none', borderRadius: 8, padding: '6px 12px', color: 'rgba(253,232,216,0.6)', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                  Beenden
+                </button>
+              </div>
+            </div>
+
+            {/* Slide content */}
+            <div style={{ flex: 1, overflowY: 'auto', padding: '32px max(40px, 8vw)', display: 'flex', flexDirection: 'column', gap: 20 }}>
+              {(slide?.blocks || []).map((block: any, bi: number) => (
+                <div key={block.id || bi}>
+                  {block.type === 'text' && block.text && (
+                    <div dangerouslySetInnerHTML={{ __html: block.text }}
+                      style={{ fontSize: 'clamp(16px, 2.2vw, 22px)', color: '#fde8d8', lineHeight: 1.8, fontFamily: "Georgia, 'Times New Roman', serif" }} />
+                  )}
+                  {block.type === 'bild' && (() => {
+                    let url: string | null = null
+                    if (block.bildIdx !== undefined && bildArr[block.bildIdx]) url = `https://api.responda.systems/api/files/${pb2.collectionId}/${pb2.id}/${bildArr[block.bildIdx]}`
+                    else if (block.bildExistingUrl) url = block.bildExistingUrl
+                    return url ? <img src={url} alt="" style={{ maxWidth: '100%', maxHeight: '60vh', objectFit: 'contain', borderRadius: 10, display: 'block', margin: '0 auto' }} /> : null
+                  })()}
+                  {block.type === 'video' && block.videoUrl && (
+                    <div style={{ position: 'relative', paddingBottom: '56.25%', borderRadius: 10, overflow: 'hidden' }}>
+                      <iframe src={(() => { const yt = block.videoUrl.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)/); return yt ? `https://www.youtube.com/embed/${yt[1]}?autoplay=0&rel=0` : block.videoUrl })()} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none' }} allowFullScreen />
+                    </div>
+                  )}
+                  {block.type === 'quiz' && block.quizFrage && (
+                    <div style={{ background: 'rgba(253,232,216,0.05)', borderRadius: 12, padding: '20px 24px', borderLeft: `3px solid ${accent}` }}>
+                      <div style={{ fontSize: 'clamp(15px, 2vw, 20px)', fontWeight: 600, color: '#fde8d8', marginBottom: 16, lineHeight: 1.5 }}>{block.quizFrage}</div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        {(block.quizAntworten || []).filter((a: string) => a.trim()).map((a: string, i: number) => (
+                          <div key={i} style={{ padding: '10px 14px', borderRadius: 8, border: '1px solid rgba(253,232,216,0.15)', background: 'rgba(253,232,216,0.04)', color: 'rgba(253,232,216,0.75)', fontSize: 15 }}>
+                            {a}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* Bottom navigation */}
+            <div style={{ flexShrink: 0, height: 64, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 24px', borderTop: '0.5px solid rgba(253,232,216,0.08)' }}>
+              <button onClick={() => goSlide(-1)} disabled={presentationSlide === 0}
+                style={{ width: 44, height: 44, borderRadius: '50%', border: 'none', background: presentationSlide > 0 ? 'rgba(253,232,216,0.1)' : 'transparent', color: presentationSlide > 0 ? '#fde8d8' : 'rgba(253,232,216,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: presentationSlide > 0 ? 'pointer' : 'default' }}>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+              </button>
+              <div style={{ display: 'flex', gap: 7, alignItems: 'center' }}>
+                {slides.map((_, i) => (
+                  <div key={i} onClick={() => setPresentationSlide(i)}
+                    style={{ width: i === presentationSlide ? 22 : 7, height: 7, borderRadius: 4, background: i === presentationSlide ? accent : 'rgba(253,232,216,0.2)', cursor: 'pointer', transition: 'width 0.22s, background 0.22s' }} />
+                ))}
+              </div>
+              <button onClick={() => goSlide(1)} disabled={presentationSlide >= total - 1}
+                style={{ width: 44, height: 44, borderRadius: '50%', border: 'none', background: presentationSlide < total - 1 ? 'rgba(253,232,216,0.1)' : 'transparent', color: presentationSlide < total - 1 ? '#fde8d8' : 'rgba(253,232,216,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: presentationSlide < total - 1 ? 'pointer' : 'default' }}>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+              </button>
+            </div>
+          </div>
+        )
+      })()}
     </div>
   )
 }
