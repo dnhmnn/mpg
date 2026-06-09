@@ -119,7 +119,7 @@ interface Lernbeitrag {
   inhalt: string
   bild?: string | string[]
   video_url?: string
-  dateien?: string[]
+  dateien?: string | string[]
   tags: string[]
   organisation_id: string
   erstellt_von_name: string
@@ -2401,7 +2401,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                   Dateien <span style={{ fontWeight: 400, color: '#8a7a68', textTransform: 'none' as const, letterSpacing: 0, fontSize: 10 }}>(PDF, Dokumente)</span>
                 </div>
                 {/* Existing files when editing */}
-                {editingBeitragId && (() => { const existing = beitraege.find(b => b.id === editingBeitragId)?.dateien || []; return existing.length > 0 ? (
+                {editingBeitragId && (() => { const rawD = beitraege.find(b => b.id === editingBeitragId)?.dateien; const existing: string[] = Array.isArray(rawD) ? rawD : (rawD ? [rawD as string] : []); return existing.length > 0 ? (
                   <div style={{ marginBottom: 8 }}>
                     {existing.map((f, i) => (
                       <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 0', fontSize: 12, color: '#8a7a68' }}>
