@@ -5442,17 +5442,17 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
         const COLORS = ['#600812','#3d0408','#1e3a8a','#065f46','#713f12','#1a1a2e','#0f0a07','#374151']
         const PATTERNS_P = ['diamante','venezia','marmo','trama','fiorentino','capitone'] as const
         return (
-          <div style={{ position: 'fixed', inset: 0, zIndex: 500, background: '#0f0806', display: 'flex', flexDirection: 'column', fontFamily: 'inherit' }}>
+          <div style={{ position: 'fixed', inset: 0, zIndex: 500, background: 'var(--warm-bg)', display: 'flex', flexDirection: 'column', fontFamily: 'inherit' }}>
             {/* Editor header */}
-            <div style={{ flexShrink: 0, height: 54, background: '#1a0e08', borderBottom: '0.5px solid rgba(253,232,216,0.1)', display: 'flex', alignItems: 'center', gap: 10, padding: '0 16px' }}>
-              <button onClick={() => setShowPraesentationEditor(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(253,232,216,0.6)', padding: 4, flexShrink: 0 }}>
+            <div style={{ flexShrink: 0, height: 54, background: '#fff', borderBottom: '0.5px solid rgba(96,8,18,0.12)', display: 'flex', alignItems: 'center', gap: 10, padding: '0 16px' }}>
+              <button onClick={() => setShowPraesentationEditor(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--warm-gray)', padding: 4, flexShrink: 0 }}>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6"/></svg>
               </button>
               <input value={praesentationTitel} onChange={e => setPraesentationTitel(e.target.value)} placeholder="Titel der Präsentation …"
-                style={{ flex: 1, background: 'rgba(253,232,216,0.07)', border: '1px solid rgba(253,232,216,0.12)', borderRadius: 8, padding: '6px 12px', color: '#fde8d8', fontSize: 14, fontStyle: 'italic', outline: 'none', fontFamily: 'inherit' }} />
+                style={{ flex: 1, background: 'var(--warm-bg)', border: '1px solid rgba(96,8,18,0.15)', borderRadius: 8, padding: '6px 12px', color: 'var(--lbf-text)', fontSize: 14, fontStyle: 'italic', outline: 'none', fontFamily: 'inherit' }} />
               <button onClick={() => { setShowPresentationMode(true); setPresentationModeSlideIdx(0) }}
-                style={{ padding: '7px 14px', borderRadius: 8, border: 'none', background: 'rgba(253,232,216,0.1)', color: '#fde8d8', fontWeight: 700, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginRight: 4, verticalAlign: 'middle' }}><polygon points="5 3 19 12 5 21 5 3" fill="currentColor" stroke="none"/></svg>
+                style={{ padding: '7px 14px', borderRadius: 8, border: '1px solid rgba(96,8,18,0.2)', background: 'transparent', color: '#600812', fontWeight: 700, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 5 }}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="5 3 19 12 5 21 5 3" fill="#600812" stroke="none"/></svg>
                 Präsentieren
               </button>
               <button onClick={savePraesentation} disabled={savingPraesentation || !praesentationTitel.trim()}
@@ -5463,29 +5463,29 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
 
             <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
               {/* Left: slide thumbnails */}
-              <div style={{ width: 130, background: '#0a0503', overflowY: 'auto', padding: '10px 8px', display: 'flex', flexDirection: 'column', gap: 6, flexShrink: 0 }}>
+              <div style={{ width: 130, background: '#fff', borderRight: '0.5px solid rgba(96,8,18,0.08)', overflowY: 'auto', padding: '10px 8px', display: 'flex', flexDirection: 'column', gap: 6, flexShrink: 0 }}>
                 {praesentationSlides.map((s, i) => {
                   const sPat = s.pattern ? getPatternBg(s.pattern) : null
                   return (
                     <div key={s.id} onClick={() => setCurrentSlideIdx(i)} style={{ position: 'relative', cursor: 'pointer' }}>
-                      <div style={{ aspectRatio: '16/9', background: s.bg, borderRadius: 5, border: i === currentSlideIdx ? '2px solid #600812' : '2px solid rgba(253,232,216,0.1)', overflow: 'hidden', position: 'relative' }}>
+                      <div style={{ aspectRatio: '16/9', background: s.bg, borderRadius: 5, border: i === currentSlideIdx ? '2px solid #600812' : '2px solid rgba(96,8,18,0.12)', overflow: 'hidden', position: 'relative' }}>
                         {s.imagePreview && <img src={s.imagePreview} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />}
                         {sPat && <div style={{ position: 'absolute', inset: 0, backgroundImage: sPat.backgroundImage, backgroundSize: sPat.backgroundSize || 'auto', zIndex: 1 }} />}
                         {s.title && <div style={{ position: 'absolute', bottom: 3, left: 4, right: 4, fontSize: 5.5, color: s.textColor || '#fff', fontStyle: 'italic', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', zIndex: 2 }}>{s.title}</div>}
-                        <div style={{ position: 'absolute', top: 2, left: 3, fontSize: 5.5, color: 'rgba(255,255,255,0.45)', zIndex: 2 }}>{i + 1}</div>
+                        <div style={{ position: 'absolute', top: 2, left: 3, fontSize: 5.5, color: 'rgba(255,255,255,0.55)', zIndex: 2 }}>{i + 1}</div>
                       </div>
                       {i === currentSlideIdx && (
-                        <button onClick={e => { e.stopPropagation(); deletePraesSlide(i) }} style={{ position: 'absolute', top: 2, right: 2, width: 14, height: 14, borderRadius: 3, background: 'rgba(220,38,38,0.8)', border: 'none', color: '#fff', fontSize: 9, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, zIndex: 3 }}>×</button>
+                        <button onClick={e => { e.stopPropagation(); deletePraesSlide(i) }} style={{ position: 'absolute', top: 2, right: 2, width: 14, height: 14, borderRadius: 3, background: 'rgba(220,38,38,0.85)', border: 'none', color: '#fff', fontSize: 9, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, zIndex: 3 }}>×</button>
                       )}
                     </div>
                   )
                 })}
-                <button onClick={addPraesSlide} style={{ width: '100%', padding: '6px 0', borderRadius: 6, border: '1px dashed rgba(253,232,216,0.2)', background: 'transparent', color: 'rgba(253,232,216,0.45)', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}>+ Folie</button>
+                <button onClick={addPraesSlide} style={{ width: '100%', padding: '6px 0', borderRadius: 6, border: '1px dashed rgba(96,8,18,0.25)', background: 'transparent', color: '#600812', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}>+ Folie</button>
               </div>
 
               {/* Center: slide canvas */}
-              <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, overflow: 'auto' }}>
-                <div style={{ width: '100%', maxWidth: 760, aspectRatio: '16/9', background: slide.bg, borderRadius: 10, position: 'relative', overflow: 'hidden', boxShadow: '0 8px 40px rgba(0,0,0,0.5)' }}>
+              <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, overflow: 'auto', background: 'var(--warm-bg)' }}>
+                <div style={{ width: '100%', maxWidth: 760, aspectRatio: '16/9', background: slide.bg, borderRadius: 10, position: 'relative', overflow: 'hidden', boxShadow: '0 4px 24px rgba(0,0,0,0.18)' }}>
                   {slide.imagePreview && <img src={slide.imagePreview} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', zIndex: 0 }} />}
                   {patBg && <div style={{ position: 'absolute', inset: 0, backgroundImage: patBg.backgroundImage, backgroundSize: patBg.backgroundSize || 'auto', zIndex: 1 }} />}
                   {slide.imagePreview && <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top,rgba(0,0,0,0.75) 0%,rgba(0,0,0,0.15) 60%,transparent 100%)', zIndex: 2 }} />}
@@ -5493,67 +5493,67 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                     {slide.layout !== 'blank' && (
                       <input value={slide.title || ''} onChange={e => updateSlideField(slide.id, { title: e.target.value })}
                         placeholder={slide.layout === 'title' ? 'Titel eingeben …' : 'Überschrift …'}
-                        style={{ background: 'transparent', border: 'none', outline: 'none', color: slide.textColor || '#fff', fontFamily: "'Atkinson Hyperlegible', sans-serif", fontSize: slide.layout === 'title' ? 'clamp(20px, 4.5vw, 52px)' : 'clamp(15px, 3vw, 34px)', fontWeight: 800, fontStyle: 'italic', textAlign: 'center', width: '100%', caretColor: '#fff', textShadow: slide.imagePreview ? '0 2px 8px rgba(0,0,0,0.5)' : 'none' } as React.CSSProperties} />
+                        style={{ background: 'transparent', border: 'none', outline: 'none', color: slide.textColor || '#fff', fontFamily: "'Atkinson Hyperlegible', sans-serif", fontSize: slide.layout === 'title' ? 'clamp(20px, 4.5vw, 52px)' : 'clamp(15px, 3vw, 34px)', fontWeight: 800, fontStyle: 'italic', textAlign: 'center', width: '100%', caretColor: slide.textColor || '#fff', textShadow: slide.imagePreview ? '0 2px 8px rgba(0,0,0,0.5)' : 'none' } as React.CSSProperties} />
                     )}
                     {(slide.layout === 'content' || slide.layout === 'blank') && (
                       <textarea value={slide.body || ''} onChange={e => updateSlideField(slide.id, { body: e.target.value })}
                         placeholder="Text eingeben …" rows={3}
-                        style={{ background: 'transparent', border: 'none', outline: 'none', color: slide.textColor || '#fff', fontFamily: "'Atkinson Hyperlegible', sans-serif", fontSize: 'clamp(12px, 1.8vw, 20px)', textAlign: 'center', width: '100%', resize: 'none', caretColor: '#fff', lineHeight: 1.65, opacity: 0.85, textShadow: slide.imagePreview ? '0 2px 6px rgba(0,0,0,0.5)' : 'none' } as React.CSSProperties} />
+                        style={{ background: 'transparent', border: 'none', outline: 'none', color: slide.textColor || '#fff', fontFamily: "'Atkinson Hyperlegible', sans-serif", fontSize: 'clamp(12px, 1.8vw, 20px)', textAlign: 'center', width: '100%', resize: 'none', caretColor: slide.textColor || '#fff', lineHeight: 1.65, opacity: 0.85, textShadow: slide.imagePreview ? '0 2px 6px rgba(0,0,0,0.5)' : 'none' } as React.CSSProperties} />
                     )}
                   </div>
                 </div>
               </div>
 
               {/* Right: properties */}
-              <div style={{ width: 190, background: '#0a0503', overflowY: 'auto', padding: '14px 12px', display: 'flex', flexDirection: 'column', gap: 16, flexShrink: 0 }}>
+              <div style={{ width: 190, background: '#fff', borderLeft: '0.5px solid rgba(96,8,18,0.08)', overflowY: 'auto', padding: '14px 12px', display: 'flex', flexDirection: 'column', gap: 16, flexShrink: 0 }}>
                 <div>
-                  <div style={{ fontSize: 8, fontWeight: 700, color: 'rgba(253,232,216,0.45)', textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: 8 }}>Hintergrund</div>
+                  <div style={{ fontSize: 8, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: 8 }}>Hintergrund</div>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 5 }}>
                     {COLORS.map(c => (
                       <button key={c} onClick={() => updateSlideField(slide.id, { bg: c })}
-                        style={{ width: '100%', aspectRatio: '1', borderRadius: 6, border: `2px solid ${slide.bg === c ? '#fff' : 'transparent'}`, background: c, cursor: 'pointer', padding: 0 }} />
+                        style={{ width: '100%', aspectRatio: '1', borderRadius: 6, border: `2px solid ${slide.bg === c ? '#600812' : 'rgba(96,8,18,0.12)'}`, background: c, cursor: 'pointer', padding: 0 }} />
                     ))}
                   </div>
                   <input type="color" value={slide.bg} onChange={e => updateSlideField(slide.id, { bg: e.target.value })}
-                    style={{ width: '100%', height: 28, borderRadius: 6, border: '1px solid rgba(253,232,216,0.1)', marginTop: 6, cursor: 'pointer', background: 'transparent' }} />
+                    style={{ width: '100%', height: 28, borderRadius: 6, border: '1px solid rgba(96,8,18,0.15)', marginTop: 6, cursor: 'pointer', background: 'transparent' }} />
                 </div>
                 <div>
-                  <div style={{ fontSize: 8, fontWeight: 700, color: 'rgba(253,232,216,0.45)', textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: 8 }}>Muster</div>
+                  <div style={{ fontSize: 8, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: 8 }}>Muster</div>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 4 }}>
                     <button onClick={() => updateSlideField(slide.id, { pattern: null })}
-                      style={{ aspectRatio: '1', borderRadius: 5, border: `2px solid ${!slide.pattern ? '#fff' : 'rgba(253,232,216,0.15)'}`, background: '#1a0e08', cursor: 'pointer', fontSize: 7, color: 'rgba(253,232,216,0.5)' }}>Kein</button>
+                      style={{ aspectRatio: '1', borderRadius: 5, border: `2px solid ${!slide.pattern ? '#600812' : 'rgba(96,8,18,0.12)'}`, background: 'var(--warm-bg)', cursor: 'pointer', fontSize: 7, color: 'var(--warm-gray)' }}>Kein</button>
                     {PATTERNS_P.map(pat => {
                       const pp = getPatternBg(pat)
                       return pp ? (
                         <button key={pat} onClick={() => updateSlideField(slide.id, { pattern: pat })}
-                          style={{ aspectRatio: '1', borderRadius: 5, border: `2px solid ${slide.pattern === pat ? '#fff' : 'rgba(253,232,216,0.15)'}`, background: slide.bg, backgroundImage: pp.backgroundImage, backgroundSize: pp.backgroundSize || 'auto', cursor: 'pointer' }} />
+                          style={{ aspectRatio: '1', borderRadius: 5, border: `2px solid ${slide.pattern === pat ? '#600812' : 'rgba(96,8,18,0.12)'}`, background: slide.bg, backgroundImage: pp.backgroundImage, backgroundSize: pp.backgroundSize || 'auto', cursor: 'pointer' }} />
                       ) : null
                     })}
                   </div>
                 </div>
                 <div>
-                  <div style={{ fontSize: 8, fontWeight: 700, color: 'rgba(253,232,216,0.45)', textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: 8 }}>Textfarbe</div>
+                  <div style={{ fontSize: 8, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: 8 }}>Textfarbe</div>
                   <div style={{ display: 'flex', gap: 5 }}>
                     {['#ffffff','#fde8d8','#1a0e08','#600812'].map(c => (
                       <button key={c} onClick={() => updateSlideField(slide.id, { textColor: c })}
-                        style={{ flex: 1, height: 26, borderRadius: 6, border: `2px solid ${slide.textColor === c ? (c === '#ffffff' ? '#600812' : '#fff') : 'transparent'}`, background: c, cursor: 'pointer', padding: 0 }} />
+                        style={{ flex: 1, height: 26, borderRadius: 6, border: `2px solid ${slide.textColor === c ? '#600812' : 'rgba(96,8,18,0.12)'}`, background: c, cursor: 'pointer', padding: 0 }} />
                     ))}
                   </div>
                 </div>
                 <div>
-                  <div style={{ fontSize: 8, fontWeight: 700, color: 'rgba(253,232,216,0.45)', textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: 8 }}>Layout</div>
+                  <div style={{ fontSize: 8, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: 8 }}>Layout</div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                     {(['title','content','image','blank'] as const).map(l => (
                       <button key={l} onClick={() => updateSlideField(slide.id, { layout: l })}
-                        style={{ padding: '5px 8px', borderRadius: 6, border: `1px solid ${slide.layout === l ? '#600812' : 'rgba(253,232,216,0.1)'}`, background: slide.layout === l ? 'rgba(96,8,18,0.4)' : 'transparent', color: slide.layout === l ? '#fde8d8' : 'rgba(253,232,216,0.45)', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>
+                        style={{ padding: '5px 8px', borderRadius: 6, border: `1px solid ${slide.layout === l ? '#600812' : 'rgba(96,8,18,0.12)'}`, background: slide.layout === l ? 'rgba(96,8,18,0.07)' : 'transparent', color: slide.layout === l ? '#600812' : 'var(--warm-gray)', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', fontWeight: slide.layout === l ? 700 : 400 }}>
                         {l === 'title' ? 'Titel' : l === 'content' ? 'Inhalt' : l === 'image' ? 'Bild' : 'Leer'}
                       </button>
                     ))}
                   </div>
                 </div>
                 <div>
-                  <div style={{ fontSize: 8, fontWeight: 700, color: 'rgba(253,232,216,0.45)', textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: 8 }}>Bild</div>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px', border: '1px dashed rgba(253,232,216,0.2)', borderRadius: 8, cursor: 'pointer', color: 'rgba(253,232,216,0.5)', fontSize: 11 }}>
+                  <div style={{ fontSize: 8, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: 8 }}>Bild</div>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px', border: '1px dashed rgba(96,8,18,0.25)', borderRadius: 8, cursor: 'pointer', color: '#600812', fontSize: 11 }}>
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
                     Bild hochladen
                     <input type="file" accept="image/*" style={{ display: 'none' }} onChange={e => {
