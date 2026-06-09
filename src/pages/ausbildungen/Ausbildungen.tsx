@@ -63,9 +63,12 @@ interface Termin {
   notizen?: string
   einladung_token?: string
   lernkonzept?: string
+  teilnehmer_info?: string
   dateien?: string | string[]
   anhang?: string | string[]
   dozent_todos?: string
+  co_dozenten?: string
+  dozent_aufgaben?: string
   organization_id: string
   created: string
   updated: string
@@ -409,10 +412,20 @@ export default function Ausbildungen() {
 const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | 'konzepte' | 'jahresuebersicht' | 'archiv' | 'lernfeed' | 'dozent'>('termine')
   const [presentationBeitrag, setPresentationBeitrag] = useState<Lernbeitrag | null>(null)
   const [presentationSlide, setPresentationSlide] = useState(0)
-  const [dozentTerminDetail, setDozentTerminDetail] = useState<Termin | null>(null)
+  const [terminDetailPage, setTerminDetailPage] = useState<Termin | null>(null)
   const [dozentTodos, setDozentTodos] = useState<{id: string; text: string; done: boolean}[]>([])
+  const [dozentAufgaben, setDozentAufgaben] = useState<{id: string; text: string; assignee_id?: string; assignee_name?: string; done: boolean}[]>([])
+  const [coDozenten, setCoDozenten] = useState<{user_id: string; name: string}[]>([])
   const [newTodoText, setNewTodoText] = useState('')
+  const [newAufgabeText, setNewAufgabeText] = useState('')
+  const [newAufgabeAssignee, setNewAufgabeAssignee] = useState('')
   const [uploadingDozentFile, setUploadingDozentFile] = useState(false)
+  const [uploadingTNFile, setUploadingTNFile] = useState(false)
+  const [terminDetailTab, setTerminDetailTab] = useState<'info' | 'anwesenheit' | 'dateien' | 'dozenten'>('info')
+  const [editingTNInfo, setEditingTNInfo] = useState(false)
+  const [tnInfoText, setTNInfoText] = useState('')
+  const [editingLernkonzept, setEditingLernkonzept] = useState(false)
+  const [lernkonzeptText, setLernkonzeptText] = useState('')
 
   const [uploadFile, setUploadFile] = useState<File | null>(null)
   const [uploadTyp, setUploadTyp] = useState<'dozent' | 'teilnehmer'>('teilnehmer')
@@ -600,61 +613,157 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
     finally { setBeitraegeLoading(false) }
   }
 
-  function openDozentDetail(t: Termin) {
+  function openTerminDetailPage(t: Termin) {
     let todos: {id: string; text: string; done: boolean}[] = []
     try { todos = t.dozent_todos ? JSON.parse(t.dozent_todos) : [] } catch { todos = [] }
+    let aufgaben: {id: string; text: string; assignee_id?: string; assignee_name?: string; done: boolean}[] = []
+    try { aufgaben = t.dozent_aufgaben ? JSON.parse(t.dozent_aufgaben) : [] } catch { aufgaben = [] }
+    let coDoz: {user_id: string; name: string}[] = []
+    try { coDoz = t.co_dozenten ? JSON.parse(t.co_dozenten) : [] } catch { coDoz = [] }
     setDozentTodos(todos)
+    setDozentAufgaben(aufgaben)
+    setCoDozenten(coDoz)
     setNewTodoText('')
-    setDozentTerminDetail(t)
+    setNewAufgabeText('')
+    setNewAufgabeAssignee('')
+    setTNInfoText(t.teilnehmer_info || '')
+    setLernkonzeptText(t.lernkonzept || '')
+    setEditingTNInfo(false)
+    setEditingLernkonzept(false)
+    setTerminDetailTab('info')
+    setTerminDetailPage(t)
+  }
+
+  async function saveTerminDetailField(terminId: string, fields: Record<string, any>) {
+    try { await pb.collection('ausbildungen_termine').update(terminId, fields) } catch { /* graceful if field not in PB */ }
+    setTermine(prev => prev.map(t => t.id === terminId ? { ...t, ...fields } : t))
+    setTerminDetailPage(prev => prev ? { ...prev, ...fields } : prev)
   }
 
   async function saveTodosToDb(terminId: string, todos: {id: string; text: string; done: boolean}[]) {
-    try {
-      const updated = await pb.collection('ausbildungen_termine').update(terminId, {
-        dozent_todos: JSON.stringify(todos)
-      })
-      setTermine(prev => prev.map(t => t.id === terminId ? { ...t, dozent_todos: JSON.stringify(todos) } : t))
-      setDozentTerminDetail(prev => prev ? { ...prev, dozent_todos: JSON.stringify(todos) } : prev)
-    } catch(e: any) { console.error('saveTodosToDb:', e) }
+    const payload = { dozent_todos: JSON.stringify(todos) }
+    try { await pb.collection('ausbildungen_termine').update(terminId, payload) } catch(e: any) { console.error('saveTodosToDb:', e) }
+    setTermine(prev => prev.map(t => t.id === terminId ? { ...t, ...payload } : t))
+    setTerminDetailPage(prev => prev ? { ...prev, ...payload } : prev)
   }
 
   async function addTodo() {
-    if (!newTodoText.trim() || !dozentTerminDetail) return
+    if (!newTodoText.trim() || !terminDetailPage) return
     const updated = [...dozentTodos, { id: Math.random().toString(36).slice(2, 9), text: newTodoText.trim(), done: false }]
     setDozentTodos(updated)
     setNewTodoText('')
-    await saveTodosToDb(dozentTerminDetail.id, updated)
+    await saveTodosToDb(terminDetailPage.id, updated)
   }
 
   async function toggleTodo(id: string) {
-    if (!dozentTerminDetail) return
+    if (!terminDetailPage) return
     const updated = dozentTodos.map(t => t.id === id ? { ...t, done: !t.done } : t)
     setDozentTodos(updated)
-    await saveTodosToDb(dozentTerminDetail.id, updated)
+    await saveTodosToDb(terminDetailPage.id, updated)
   }
 
   async function deleteTodo(id: string) {
-    if (!dozentTerminDetail) return
+    if (!terminDetailPage) return
     const updated = dozentTodos.filter(t => t.id !== id)
     setDozentTodos(updated)
-    await saveTodosToDb(dozentTerminDetail.id, updated)
+    await saveTodosToDb(terminDetailPage.id, updated)
+  }
+
+  async function saveDozentAufgabenToDb(terminId: string, aufgaben: {id: string; text: string; assignee_id?: string; assignee_name?: string; done: boolean}[]) {
+    const payload = { dozent_aufgaben: JSON.stringify(aufgaben) }
+    try { await pb.collection('ausbildungen_termine').update(terminId, payload) } catch {}
+    setTermine(prev => prev.map(t => t.id === terminId ? { ...t, ...payload } : t))
+    setTerminDetailPage(prev => prev ? { ...prev, ...payload } : prev)
+  }
+
+  async function addDozentAufgabe() {
+    if (!newAufgabeText.trim() || !terminDetailPage) return
+    const assignee = allUsers.find(u => u.id === newAufgabeAssignee)
+    const updated = [...dozentAufgaben, { id: Math.random().toString(36).slice(2,9), text: newAufgabeText.trim(), assignee_id: newAufgabeAssignee || undefined, assignee_name: assignee?.name || undefined, done: false }]
+    setDozentAufgaben(updated)
+    setNewAufgabeText('')
+    setNewAufgabeAssignee('')
+    await saveDozentAufgabenToDb(terminDetailPage.id, updated)
+  }
+
+  async function toggleDozentAufgabe(id: string) {
+    if (!terminDetailPage) return
+    const updated = dozentAufgaben.map(a => a.id === id ? { ...a, done: !a.done } : a)
+    setDozentAufgaben(updated)
+    await saveDozentAufgabenToDb(terminDetailPage.id, updated)
+  }
+
+  async function deleteDozentAufgabe(id: string) {
+    if (!terminDetailPage) return
+    const updated = dozentAufgaben.filter(a => a.id !== id)
+    setDozentAufgaben(updated)
+    await saveDozentAufgabenToDb(terminDetailPage.id, updated)
+  }
+
+  async function saveCoDozenten(terminId: string, coDoz: {user_id: string; name: string}[]) {
+    const payload = { co_dozenten: JSON.stringify(coDoz) }
+    try { await pb.collection('ausbildungen_termine').update(terminId, payload) } catch {}
+    setTermine(prev => prev.map(t => t.id === terminId ? { ...t, ...payload } : t))
+    setTerminDetailPage(prev => prev ? { ...prev, ...payload } : prev)
+  }
+
+  async function addCoDozent(userId: string, name: string) {
+    if (!terminDetailPage || coDozenten.some(c => c.user_id === userId)) return
+    const updated = [...coDozenten, { user_id: userId, name }]
+    setCoDozenten(updated)
+    await saveCoDozenten(terminDetailPage.id, updated)
+  }
+
+  async function removeCoDozent(userId: string) {
+    if (!terminDetailPage) return
+    const updated = coDozenten.filter(c => c.user_id !== userId)
+    setCoDozenten(updated)
+    await saveCoDozenten(terminDetailPage.id, updated)
+  }
+
+  async function toggleAnwesenheit(ttId: string, current: boolean) {
+    try {
+      await pb.collection('ausbildungen_termine_user').update(ttId, { anwesend: !current })
+      setTerminTeilnehmer(prev => prev.map(tt => tt.id === ttId ? { ...tt, anwesend: !current } : tt))
+    } catch(e: any) { showMessage('Fehler: ' + e.message, 'error') }
+  }
+
+  async function toggleRSVP(ttId: string, currentStatus: string) {
+    const newStatus = currentStatus === 'zugesagt' ? 'eingeladen' : 'zugesagt'
+    try {
+      await pb.collection('ausbildungen_termine_user').update(ttId, { status: newStatus })
+      setTerminTeilnehmer(prev => prev.map(tt => tt.id === ttId ? { ...tt, status: newStatus as any } : tt))
+    } catch(e: any) { showMessage('Fehler: ' + e.message, 'error') }
   }
 
   async function uploadDozentFile(file: File) {
-    if (!dozentTerminDetail) return
+    if (!terminDetailPage) return
     setUploadingDozentFile(true)
     try {
       const fd = new FormData()
       fd.append('+dateien', file)
-      const updated = await pb.collection('ausbildungen_termine').update(dozentTerminDetail.id, fd)
-      setTermine(prev => prev.map(t => t.id === dozentTerminDetail.id ? { ...t, dateien: updated.dateien } : t))
-      setDozentTerminDetail(prev => prev ? { ...prev, dateien: updated.dateien } : prev)
+      const updated = await pb.collection('ausbildungen_termine').update(terminDetailPage.id, fd)
+      setTermine(prev => prev.map(t => t.id === terminDetailPage.id ? { ...t, dateien: updated.dateien } : t))
+      setTerminDetailPage(prev => prev ? { ...prev, dateien: updated.dateien } : prev)
       showMessage('Datei hochgeladen', 'success')
     } catch(e: any) {
       showMessage('Fehler: ' + e.message, 'error')
-    } finally {
-      setUploadingDozentFile(false)
-    }
+    } finally { setUploadingDozentFile(false) }
+  }
+
+  async function uploadTNFile(file: File) {
+    if (!terminDetailPage) return
+    setUploadingTNFile(true)
+    try {
+      const fd = new FormData()
+      fd.append('+anhang', file)
+      const updated = await pb.collection('ausbildungen_termine').update(terminDetailPage.id, fd)
+      setTermine(prev => prev.map(t => t.id === terminDetailPage.id ? { ...t, anhang: updated.anhang } : t))
+      setTerminDetailPage(prev => prev ? { ...prev, anhang: updated.anhang } : prev)
+      showMessage('Datei hochgeladen', 'success')
+    } catch(e: any) {
+      showMessage('Fehler: ' + e.message, 'error')
+    } finally { setUploadingTNFile(false) }
   }
 
   function uid() { return Math.random().toString(36).slice(2, 9) }
@@ -2388,7 +2497,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                   try { todos = t.dozent_todos ? JSON.parse(t.dozent_todos) : [] } catch { todos = [] }
                   const doneTodos = todos.filter(td => td.done).length
                   return (
-                    <button key={t.id} onClick={() => openDozentDetail(t)}
+                    <button key={t.id} onClick={() => openTerminDetailPage(t)}
                       style={{ display: 'flex', alignItems: 'center', gap: 12, background: 'var(--lbf-card)', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.07)', border: 'none', cursor: 'pointer', padding: '14px 16px', textAlign: 'left', opacity: isPast ? 0.6 : 1, fontFamily: 'inherit' }}>
                       <div style={{ width: 4, alignSelf: 'stretch', borderRadius: 2, background: isPast ? 'rgba(139,113,90,0.3)' : '#600812', flexShrink: 0 }} />
                       <div style={{ flex: 1, minWidth: 0 }}>
@@ -2419,163 +2528,175 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
         )
       })()}
 
-      {/* DOZENT TERMIN DETAIL SHEET */}
-      {dozentTerminDetail && (() => {
-        const t = dozentTerminDetail
-        const dateien: string[] = (() => { const d = t.dateien ?? t.anhang; return Array.isArray(d) ? d : (d ? [d as string] : []) })()
+      {/* TERMIN DETAIL PAGE */}
+      {terminDetailPage && (() => {
+        const t = terminDetailPage
         const COVER_DS: Record<string, { bg: string; spine: string }> = {
           text: { bg: 'linear-gradient(165deg,#600812 0%,#3d0408 100%)', spine: 'rgba(0,0,0,0.3)' },
           bild: { bg: 'linear-gradient(165deg,#7c2d12 0%,#431407 100%)', spine: 'rgba(0,0,0,0.3)' },
           video: { bg: 'linear-gradient(165deg,#065f46 0%,#022c22 100%)', spine: 'rgba(0,0,0,0.3)' },
           quiz: { bg: 'linear-gradient(165deg,#1e3a8a 0%,#0f172a 100%)', spine: 'rgba(0,0,0,0.3)' },
         }
+        const dozentDateien: string[] = (() => { const d = t.dateien; return Array.isArray(d) ? d : (d ? [d as string] : []) })()
+        const tnDateien: string[] = (() => { const d = t.anhang; return Array.isArray(d) ? d : (d ? [d as string] : []) })()
+        const forThisTermin = terminTeilnehmer.filter(tt => tt.termin_id === t.id)
+        const anwesendCount = forThisTermin.filter(tt => tt.anwesend).length
+        const zugesagtCount = forThisTermin.filter(tt => tt.status === 'zugesagt').length
+        const isHauptdozent = t.dozent_id === user?.id || (!t.dozent_id && t.dozent?.trim().toLowerCase() === (user?.name || '').trim().toLowerCase())
+        const isAnyCoDozent = coDozenten.some(cd => cd.user_id === user?.id)
+        const isDozent = isHauptdozent || isAnyCoDozent
+        const dozentTeam = [
+          ...(t.dozent ? [{ user_id: t.dozent_id || '', name: t.dozent, isHaupt: true }] : []),
+          ...coDozenten.map(cd => ({ ...cd, isHaupt: false }))
+        ]
+        const availableUsersForCoDozent = allUsers.filter(u =>
+          u.id !== t.dozent_id && !coDozenten.some(cd => cd.user_id === u.id)
+        )
+
+        const TABS = [
+          { key: 'info', label: 'Info', icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg> },
+          { key: 'anwesenheit', label: 'Anwesenheit', icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><polyline points="16 11 18 13 22 9"/></svg> },
+          { key: 'dateien', label: 'Dateien', icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg> },
+          { key: 'dozenten', label: 'Dozenten', icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg> },
+        ] as const
+
         return (
-          <>
-            <div onClick={() => setDozentTerminDetail(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 300 }} />
-            <div style={{ position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 301, background: 'var(--warm-bg)', borderRadius: '20px 20px 0 0', maxHeight: '92dvh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-              {/* Handle + Header */}
-              <div style={{ padding: '12px 20px 10px', background: '#fff', borderBottom: '0.5px solid rgba(96,8,18,0.1)' }}>
-                <div style={{ width: 36, height: 4, borderRadius: 2, background: 'rgba(96,8,18,0.18)', margin: '0 auto 12px' }} />
-                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-                  <div>
-                    <div style={{ fontWeight: 700, fontStyle: 'italic', fontSize: 17, color: 'var(--lbf-text)' }}>{t.name}</div>
-                    <div style={{ fontSize: 11, color: 'var(--warm-gray)', fontStyle: 'italic', marginTop: 2 }}>
-                      {fmtDate(t.start_datetime)}{t.start_datetime ? ` · ${fmtTime(t.start_datetime)}` : ''}
-                      {t.location ? ` · ${t.location}` : ''}
-                    </div>
-                  </div>
-                  <button onClick={() => setDozentTerminDetail(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: 'var(--warm-gray)', flexShrink: 0 }}>
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                  </button>
+          <div style={{ position: 'fixed', inset: 0, zIndex: 350, background: 'var(--warm-bg)', display: 'flex', flexDirection: 'column', overscrollBehavior: 'none' }}>
+            {/* Header */}
+            <div style={{ background: '#fff', borderBottom: '0.5px solid rgba(96,8,18,0.12)', paddingTop: 'calc(env(safe-area-inset-top) + 8px)', paddingBottom: 12, paddingLeft: 'max(16px, env(safe-area-inset-left))', paddingRight: 'max(16px, env(safe-area-inset-right))', display: 'flex', alignItems: 'flex-start', gap: 12, flexShrink: 0 }}>
+              <button onClick={() => setTerminDetailPage(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px 2px', color: '#600812', marginTop: 2, flexShrink: 0 }}>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><polyline points="15 18 9 12 15 6"/></svg>
+              </button>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: 700, fontStyle: 'italic', fontSize: 17, color: 'var(--lbf-text)', lineHeight: 1.2 }}>{t.name}</div>
+                <div style={{ fontSize: 11, color: 'var(--warm-gray)', fontStyle: 'italic', marginTop: 2 }}>
+                  {fmtDate(t.start_datetime)}{t.end_datetime ? ` · ${fmtTime(t.start_datetime)}–${fmtTime(t.end_datetime)} Uhr` : t.start_datetime ? ` · ${fmtTime(t.start_datetime)} Uhr` : ''}
+                  {t.location ? ` · ${t.location}` : ''}
                 </div>
               </div>
+              <span style={{ flexShrink: 0, padding: '3px 9px', borderRadius: 99, background: t.status === 'abgeschlossen' ? 'rgba(139,113,90,0.1)' : t.status === 'abgesagt' ? 'rgba(220,38,38,0.08)' : 'rgba(96,8,18,0.07)', color: t.status === 'abgeschlossen' ? 'var(--warm-gray)' : t.status === 'abgesagt' ? '#dc2626' : '#600812', fontWeight: 700, fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{t.status}</span>
+            </div>
 
-              <div style={{ overflowY: 'auto', padding: '16px 20px calc(env(safe-area-inset-bottom) + 24px)' }}>
+            {/* Scrollable content */}
+            <div style={{ flex: 1, overflowY: 'auto', padding: '16px max(16px,env(safe-area-inset-left)) 20px' }}>
 
-                {/* Lernkonzept */}
-                {t.lernkonzept ? (
-                  <div style={{ marginBottom: 24 }}>
-                    <div style={{ fontSize: 9, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 8 }}>Lernkonzept</div>
-                    <div style={{ background: '#fff', borderRadius: 10, padding: '14px 16px', fontSize: 14, color: 'var(--lbf-text)', lineHeight: 1.75, whiteSpace: 'pre-wrap', borderLeft: '3px solid #600812', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>{t.lernkonzept}</div>
-                  </div>
-                ) : (
-                  <div style={{ marginBottom: 24 }}>
-                    <div style={{ fontSize: 9, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 8 }}>Lernkonzept</div>
-                    <div style={{ fontStyle: 'italic', color: 'var(--warm-gray)', fontSize: 13 }}>Kein Konzept hinterlegt.</div>
-                  </div>
-                )}
-
-                {/* Unterlagen */}
-                <div style={{ marginBottom: 24 }}>
-                  <div style={{ fontSize: 9, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 8 }}>Unterlagen</div>
-                  {dateien.length > 0 && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 10 }}>
-                      {dateien.map((file, i) => {
-                        const fileUrl = `https://api.responda.systems/api/files/${t.collectionId}/${t.id}/${file}`
-                        const ext = file.split('.').pop()?.toLowerCase() ?? ''
-                        return (
-                          <a key={i} href={fileUrl} target="_blank" rel="noreferrer"
-                            style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: '#fff', border: '1px solid rgba(96,8,18,0.1)', borderRadius: 10, textDecoration: 'none', color: 'var(--lbf-text)' }}>
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#600812" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                            <span style={{ flex: 1, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{file}</span>
-                            {ext && <span style={{ fontSize: 10, color: 'var(--warm-gray)', textTransform: 'uppercase' }}>{ext}</span>}
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--warm-gray)" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                          </a>
-                        )
-                      })}
-                    </div>
-                  )}
-                  <label style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', border: '1.5px dashed rgba(96,8,18,0.25)', borderRadius: 10, cursor: uploadingDozentFile ? 'default' : 'pointer', background: 'rgba(96,8,18,0.02)' }}>
-                    {uploadingDozentFile
-                      ? <span style={{ fontSize: 13, color: 'var(--warm-gray)', fontStyle: 'italic' }}>Lade hoch…</span>
-                      : <>
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#600812" strokeWidth="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
-                          <span style={{ fontSize: 13, color: '#600812', fontWeight: 600 }}>Datei hinzufügen</span>
-                          <span style={{ fontSize: 11, color: 'var(--warm-gray)' }}>PDF, PPT, DOCX …</span>
-                        </>
-                    }
-                    <input type="file" accept=".pdf,.ppt,.pptx,.doc,.docx,.xls,.xlsx,.key,.pages" style={{ display: 'none' }} disabled={uploadingDozentFile}
-                      onChange={e => { const f = e.target.files?.[0]; if (f) uploadDozentFile(f); e.target.value = '' }} />
-                  </label>
-                </div>
-
-                {/* To-Do Liste */}
-                <div style={{ marginBottom: 24 }}>
-                  <div style={{ fontSize: 9, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 8 }}>To-Do Liste</div>
-                  {dozentTodos.length > 0 && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 10 }}>
-                      {dozentTodos.map(td => (
-                        <div key={td.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: '#fff', borderRadius: 10, boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-                          <button onClick={() => toggleTodo(td.id)} style={{ width: 20, height: 20, borderRadius: 6, border: `2px solid ${td.done ? '#16a34a' : 'rgba(96,8,18,0.25)'}`, background: td.done ? '#16a34a' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0, flexShrink: 0 }}>
-                            {td.done && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>}
-                          </button>
-                          <span style={{ flex: 1, fontSize: 14, color: td.done ? 'var(--warm-gray)' : 'var(--lbf-text)', textDecoration: td.done ? 'line-through' : 'none', lineHeight: 1.4 }}>{td.text}</span>
-                          <button onClick={() => deleteTodo(td.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--warm-gray)', padding: 2, flexShrink: 0 }}>
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    <input value={newTodoText} onChange={e => setNewTodoText(e.target.value)}
-                      onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addTodo() } }}
-                      placeholder="Neue Aufgabe …"
-                      style={{ flex: 1, padding: '9px 12px', borderRadius: 10, border: '1px solid rgba(96,8,18,0.15)', background: '#fff', fontSize: 14, color: 'var(--lbf-text)', outline: 'none', fontFamily: 'inherit' }} />
-                    <button onClick={addTodo} disabled={!newTodoText.trim()}
-                      style={{ padding: '9px 16px', borderRadius: 10, border: 'none', background: newTodoText.trim() ? '#600812' : 'rgba(96,8,18,0.1)', color: newTodoText.trim() ? '#fff' : 'var(--warm-gray)', fontWeight: 700, fontSize: 13, cursor: newTodoText.trim() ? 'pointer' : 'default', fontFamily: 'inherit' }}>
-                      +
-                    </button>
-                  </div>
-                </div>
-
-                {/* Präsentation */}
+              {/* ── TAB: INFO ── */}
+              {terminDetailTab === 'info' && (
                 <div>
-                  <div style={{ fontSize: 9, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 6 }}>Präsentation starten</div>
-                  <p style={{ fontStyle: 'italic', color: 'var(--warm-gray)', fontSize: 12, margin: '0 0 14px' }}>Wähle einen Lernbeitrag für die Vollbild-Präsentation</p>
-                  {beitraegeLoading ? (
-                    <div style={{ color: 'var(--warm-gray)', fontStyle: 'italic', fontSize: 13 }}>Lade…</div>
-                  ) : beitraege.length === 0 ? (
-                    <div style={{ color: 'var(--warm-gray)', fontStyle: 'italic', fontSize: 13 }}>Noch keine Lernbeiträge vorhanden.</div>
+                  {/* Termin-Infos */}
+                  {t.description && (
+                    <div style={{ background: '#fff', borderRadius: 12, padding: '14px 16px', marginBottom: 14, boxShadow: '0 1px 4px rgba(0,0,0,0.06)', borderLeft: '3px solid rgba(96,8,18,0.15)' }}>
+                      <div style={{ fontSize: 9, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 6 }}>Beschreibung</div>
+                      <div style={{ fontSize: 14, color: 'var(--lbf-text)', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>{t.description}</div>
+                    </div>
+                  )}
+
+                  {/* Infos für Teilnehmer */}
+                  <div style={{ background: '#fff', borderRadius: 12, padding: '14px 16px', marginBottom: 14, boxShadow: '0 1px 4px rgba(0,0,0,0.06)', borderLeft: '3px solid #16a34a' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                      <div style={{ fontSize: 9, fontWeight: 700, color: '#16a34a', textTransform: 'uppercase', letterSpacing: '0.14em' }}>Infos für Teilnehmer</div>
+                      <button onClick={() => { setEditingTNInfo(!editingTNInfo); setTNInfoText(t.teilnehmer_info || '') }}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--warm-gray)', fontSize: 11, fontWeight: 600, padding: '2px 4px', fontFamily: 'inherit' }}>
+                        {editingTNInfo ? 'Abbrechen' : 'Bearbeiten'}
+                      </button>
+                    </div>
+                    {editingTNInfo ? (
+                      <>
+                        <textarea value={tnInfoText} onChange={e => setTNInfoText(e.target.value)} rows={4}
+                          style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid rgba(96,8,18,0.15)', background: 'var(--warm-bg)', fontSize: 14, color: 'var(--lbf-text)', outline: 'none', fontFamily: 'inherit', lineHeight: 1.65, resize: 'vertical', boxSizing: 'border-box' }} />
+                        <button onClick={async () => {
+                          try { await pb.collection('ausbildungen_termine').update(t.id, { teilnehmer_info: tnInfoText }) } catch {}
+                          setTermine(prev => prev.map(x => x.id === t.id ? { ...x, teilnehmer_info: tnInfoText } : x))
+                          setTerminDetailPage(prev => prev ? { ...prev, teilnehmer_info: tnInfoText } : prev)
+                          setEditingTNInfo(false)
+                          showMessage('Gespeichert', 'success')
+                        }} style={{ marginTop: 8, padding: '8px 20px', borderRadius: 8, border: 'none', background: '#600812', color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>
+                          Speichern
+                        </button>
+                      </>
+                    ) : (
+                      t.teilnehmer_info
+                        ? <div style={{ fontSize: 14, color: 'var(--lbf-text)', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>{t.teilnehmer_info}</div>
+                        : <div style={{ fontSize: 13, color: 'var(--warm-gray)', fontStyle: 'italic' }}>Noch keine Infos für Teilnehmer hinterlegt.</div>
+                    )}
+                  </div>
+
+                  {/* Lernkonzept / Infos für Dozenten */}
+                  <div style={{ background: '#fff', borderRadius: 12, padding: '14px 16px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', borderLeft: '3px solid #600812' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                      <div style={{ fontSize: 9, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em' }}>Lernkonzept / Dozenten-Info</div>
+                      <button onClick={() => { setEditingLernkonzept(!editingLernkonzept); setLernkonzeptText(t.lernkonzept || '') }}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--warm-gray)', fontSize: 11, fontWeight: 600, padding: '2px 4px', fontFamily: 'inherit' }}>
+                        {editingLernkonzept ? 'Abbrechen' : 'Bearbeiten'}
+                      </button>
+                    </div>
+                    {editingLernkonzept ? (
+                      <>
+                        <textarea value={lernkonzeptText} onChange={e => setLernkonzeptText(e.target.value)} rows={5}
+                          style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid rgba(96,8,18,0.15)', background: 'var(--warm-bg)', fontSize: 14, color: 'var(--lbf-text)', outline: 'none', fontFamily: 'inherit', lineHeight: 1.65, resize: 'vertical', boxSizing: 'border-box' }} />
+                        <button onClick={async () => {
+                          try { await pb.collection('ausbildungen_termine').update(t.id, { lernkonzept: lernkonzeptText }) } catch {}
+                          setTermine(prev => prev.map(x => x.id === t.id ? { ...x, lernkonzept: lernkonzeptText } : x))
+                          setTerminDetailPage(prev => prev ? { ...prev, lernkonzept: lernkonzeptText } : prev)
+                          setEditingLernkonzept(false)
+                          showMessage('Gespeichert', 'success')
+                        }} style={{ marginTop: 8, padding: '8px 20px', borderRadius: 8, border: 'none', background: '#600812', color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>
+                          Speichern
+                        </button>
+                      </>
+                    ) : (
+                      t.lernkonzept
+                        ? <div style={{ fontSize: 14, color: 'var(--lbf-text)', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>{t.lernkonzept}</div>
+                        : <div style={{ fontSize: 13, color: 'var(--warm-gray)', fontStyle: 'italic' }}>Noch kein Konzept hinterlegt.</div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* ── TAB: ANWESENHEIT ── */}
+              {terminDetailTab === 'anwesenheit' && (
+                <div>
+                  {/* Stats */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 20 }}>
+                    {[
+                      { label: 'Eingeladen', val: forThisTermin.length, color: '#600812' },
+                      { label: 'Zugesagt', val: zugesagtCount, color: '#d97706' },
+                      { label: 'Anwesend', val: anwesendCount, color: '#16a34a' },
+                    ].map(s => (
+                      <div key={s.label} style={{ background: '#fff', borderRadius: 10, padding: '12px 10px', textAlign: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
+                        <div style={{ fontSize: 28, fontWeight: 800, color: s.color, lineHeight: 1 }}>{s.val}</div>
+                        <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--warm-gray)', textTransform: 'uppercase', letterSpacing: '0.1em', marginTop: 4 }}>{s.label}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {forThisTermin.length === 0 ? (
+                    <div style={{ fontStyle: 'italic', color: 'var(--warm-gray)', fontSize: 13, textAlign: 'center', padding: '20px 0' }}>Keine Teilnehmer eingetragen.</div>
                   ) : (
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
-                      {beitraege.map(b => {
-                        const bildArrD = Array.isArray(b.bild) ? b.bild : (b.bild ? [b.bild] : [])
-                        const bInhD = parseInhalt(b.inhalt)
-                        let bColorD: string | null = null
-                        let bPatD: string | null = null
-                        if (bInhD?.v === 2) { if (bInhD.color) bColorD = bInhD.color; if (bInhD.pattern) bPatD = bInhD.pattern }
-                        const cfgD = bColorD
-                          ? (() => { const r = parseInt(bColorD!.slice(1,3),16), g = parseInt(bColorD!.slice(3,5),16), bv = parseInt(bColorD!.slice(5,7),16); return { bg: `linear-gradient(165deg,${bColorD} 0%,rgb(${Math.round(r*.55)},${Math.round(g*.55)},${Math.round(bv*.55)}) 100%)`, spine: 'rgba(0,0,0,0.3)' } })()
-                          : (COVER_DS[b.typ] || COVER_DS.text)
-                        let bImgD: string | null = null
-                        if (bInhD?.v === 2 && bInhD.cover_block_id && Array.isArray(bInhD.pages)) {
-                          outer: for (const page of bInhD.pages as any[]) {
-                            for (const blk of (page.blocks || []) as any[]) {
-                              if (blk.id === bInhD.cover_block_id && blk.type === 'bild') {
-                                if (blk.bildIdx !== undefined && bildArrD[blk.bildIdx]) bImgD = `https://api.responda.systems/api/files/${b.collectionId}/${b.id}/${bildArrD[blk.bildIdx]}`
-                                else if (blk.bildExistingUrl) bImgD = blk.bildExistingUrl
-                                break outer
-                              }
-                            }
-                          }
-                        }
-                        if (!bImgD && bildArrD[0]) bImgD = `https://api.responda.systems/api/files/${b.collectionId}/${b.id}/${bildArrD[0]}`
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      {forThisTermin.map(tt => {
+                        const tn = teilnehmer.find(x => x.id === tt.teilnehmer_id)
+                        const name = tn ? `${tn.vorname} ${tn.nachname}` : 'Unbekannt'
+                        const s = tt.status
+                        const statusColor = s === 'zugesagt' ? '#16a34a' : s === 'abgesagt' ? '#dc2626' : 'var(--warm-gray)'
                         return (
-                          <div key={b.id}>
-                            <div style={{ cursor: 'pointer', borderRadius: 8, overflow: 'hidden', aspectRatio: '3/4', position: 'relative', background: bImgD ? '#1a0e08' : cfgD.bg, boxShadow: '3px 5px 14px rgba(0,0,0,0.22), inset -3px 0 8px rgba(0,0,0,0.18)', marginBottom: 5 }}
-                              onClick={() => { setPresentationBeitrag(b); setPresentationSlide(0); setDozentTerminDetail(null) }}>
-                              <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 6, background: cfgD.spine, zIndex: 3 }} />
-                              {!bImgD && bPatD && (() => { const pp = getPatternBg(bPatD); return pp ? <div style={{ position: 'absolute', inset: 0, backgroundImage: pp.backgroundImage, backgroundSize: pp.backgroundSize || 'auto', zIndex: 1, pointerEvents: 'none' }} /> : null })()}
-                              {bImgD && <img src={bImgD} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />}
-                              <div style={{ position: 'absolute', inset: 0, background: bImgD ? 'linear-gradient(to top,rgba(0,0,0,0.88) 0%,rgba(0,0,0,0.05) 55%,transparent 100%)' : 'none', zIndex: 2 }} />
-                              <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '8px 8px 8px 12px', zIndex: 4 }}>
-                                <div style={{ fontWeight: 700, fontStyle: 'italic', fontSize: 10, color: '#fff', lineHeight: 1.3, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' as const } as React.CSSProperties}>{b.titel}</div>
-                              </div>
+                          <div key={tt.id} style={{ background: '#fff', borderRadius: 10, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+                            <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(96,8,18,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                              <span style={{ fontSize: 14, fontWeight: 700, color: '#600812', fontStyle: 'italic' }}>{name.charAt(0)}</span>
                             </div>
-                            <button onClick={() => { setPresentationBeitrag(b); setPresentationSlide(0); setDozentTerminDetail(null) }}
-                              style={{ width: '100%', padding: '5px 0', borderRadius: 6, border: 'none', background: '#600812', color: '#fff', fontWeight: 700, fontSize: 10, cursor: 'pointer', fontFamily: 'inherit' }}>
-                              Präsentieren
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ fontWeight: 700, fontStyle: 'italic', fontSize: 14, color: 'var(--lbf-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</div>
+                              <div style={{ fontSize: 10, color: statusColor, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: 1 }}>{s}</div>
+                            </div>
+                            {/* RSVP toggle */}
+                            <button onClick={() => toggleRSVP(tt.id, s)}
+                              style={{ padding: '5px 12px', borderRadius: 8, border: `1px solid ${s === 'zugesagt' ? '#16a34a' : 'rgba(96,8,18,0.15)'}`, background: s === 'zugesagt' ? 'rgba(22,163,74,0.08)' : '#fff', color: s === 'zugesagt' ? '#16a34a' : 'var(--warm-gray)', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
+                              {s === 'zugesagt' ? 'Zugesagt' : 'Zusagen'}
+                            </button>
+                            {/* Anwesend toggle */}
+                            <button onClick={() => toggleAnwesenheit(tt.id, tt.anwesend)}
+                              style={{ width: 32, height: 32, borderRadius: 8, border: `2px solid ${tt.anwesend ? '#16a34a' : 'rgba(96,8,18,0.2)'}`, background: tt.anwesend ? '#16a34a' : '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0, padding: 0 }}>
+                              {tt.anwesend && <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>}
                             </button>
                           </div>
                         )
@@ -2583,10 +2704,255 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                     </div>
                   )}
                 </div>
+              )}
 
-              </div>
+              {/* ── TAB: DATEIEN ── */}
+              {terminDetailTab === 'dateien' && (
+                <div>
+                  {/* Für Teilnehmer */}
+                  <div style={{ marginBottom: 24 }}>
+                    <div style={{ fontSize: 9, fontWeight: 700, color: '#16a34a', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 8 }}>Für Teilnehmer</div>
+                    {tnDateien.length > 0 && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 8 }}>
+                        {tnDateien.map((file, i) => {
+                          const ext = file.split('.').pop()?.toLowerCase() ?? ''
+                          return (
+                            <a key={i} href={`https://api.responda.systems/api/files/${t.collectionId}/${t.id}/${file}`} target="_blank" rel="noreferrer"
+                              style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: '#fff', border: '1px solid rgba(22,163,74,0.2)', borderRadius: 10, textDecoration: 'none', color: 'var(--lbf-text)' }}>
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                              <span style={{ flex: 1, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{file}</span>
+                              {ext && <span style={{ fontSize: 10, color: 'var(--warm-gray)', textTransform: 'uppercase' }}>{ext}</span>}
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--warm-gray)" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                            </a>
+                          )
+                        })}
+                      </div>
+                    )}
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', border: '1.5px dashed rgba(22,163,74,0.3)', borderRadius: 10, cursor: uploadingTNFile ? 'default' : 'pointer', background: 'rgba(22,163,74,0.02)' }}>
+                      {uploadingTNFile ? <span style={{ fontSize: 13, color: 'var(--warm-gray)', fontStyle: 'italic' }}>Lade hoch…</span>
+                        : <><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+                          <span style={{ fontSize: 13, color: '#16a34a', fontWeight: 600 }}>Datei für Teilnehmer</span><span style={{ fontSize: 11, color: 'var(--warm-gray)' }}>PDF, DOCX …</span></>
+                      }
+                      <input type="file" style={{ display: 'none' }} disabled={uploadingTNFile}
+                        onChange={e => { const f = e.target.files?.[0]; if (f) uploadTNFile(f); e.target.value = '' }} />
+                    </label>
+                  </div>
+
+                  {/* Für Dozenten */}
+                  <div>
+                    <div style={{ fontSize: 9, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 8 }}>Für Dozenten</div>
+                    {dozentDateien.length > 0 && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 8 }}>
+                        {dozentDateien.map((file, i) => {
+                          const ext = file.split('.').pop()?.toLowerCase() ?? ''
+                          return (
+                            <a key={i} href={`https://api.responda.systems/api/files/${t.collectionId}/${t.id}/${file}`} target="_blank" rel="noreferrer"
+                              style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: '#fff', border: '1px solid rgba(96,8,18,0.1)', borderRadius: 10, textDecoration: 'none', color: 'var(--lbf-text)' }}>
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#600812" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                              <span style={{ flex: 1, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{file}</span>
+                              {ext && <span style={{ fontSize: 10, color: 'var(--warm-gray)', textTransform: 'uppercase' }}>{ext}</span>}
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--warm-gray)" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                            </a>
+                          )
+                        })}
+                      </div>
+                    )}
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', border: '1.5px dashed rgba(96,8,18,0.25)', borderRadius: 10, cursor: uploadingDozentFile ? 'default' : 'pointer', background: 'rgba(96,8,18,0.02)' }}>
+                      {uploadingDozentFile ? <span style={{ fontSize: 13, color: 'var(--warm-gray)', fontStyle: 'italic' }}>Lade hoch…</span>
+                        : <><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#600812" strokeWidth="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+                          <span style={{ fontSize: 13, color: '#600812', fontWeight: 600 }}>Datei für Dozenten</span><span style={{ fontSize: 11, color: 'var(--warm-gray)' }}>PPT, PDF, DOCX …</span></>
+                      }
+                      <input type="file" accept=".pdf,.ppt,.pptx,.doc,.docx,.key,.pages" style={{ display: 'none' }} disabled={uploadingDozentFile}
+                        onChange={e => { const f = e.target.files?.[0]; if (f) uploadDozentFile(f); e.target.value = '' }} />
+                    </label>
+                  </div>
+                </div>
+              )}
+
+              {/* ── TAB: DOZENTEN ── */}
+              {terminDetailTab === 'dozenten' && (
+                <div>
+                  {/* Dozenten-Team */}
+                  <div style={{ marginBottom: 20 }}>
+                    <div style={{ fontSize: 9, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 10 }}>Dozenten-Team</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 12 }}>
+                      {dozentTeam.map((d, i) => (
+                        <div key={d.user_id || i} style={{ display: 'flex', alignItems: 'center', gap: 12, background: '#fff', borderRadius: 10, padding: '11px 14px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', borderLeft: `3px solid ${d.isHaupt ? '#600812' : 'rgba(96,8,18,0.2)'}` }}>
+                          <div style={{ width: 34, height: 34, borderRadius: '50%', background: d.isHaupt ? 'rgba(96,8,18,0.1)' : 'rgba(139,113,90,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                            <span style={{ fontSize: 13, fontWeight: 700, color: d.isHaupt ? '#600812' : 'var(--warm-gray)', fontStyle: 'italic' }}>{d.name?.charAt(0) || '?'}</span>
+                          </div>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontWeight: 700, fontStyle: 'italic', fontSize: 14, color: 'var(--lbf-text)' }}>{d.name}</div>
+                            <div style={{ fontSize: 10, color: d.isHaupt ? '#600812' : 'var(--warm-gray)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{d.isHaupt ? 'Hauptdozent' : 'Co-Dozent'}</div>
+                          </div>
+                          {!d.isHaupt && (
+                            <button onClick={() => removeCoDozent(d.user_id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--warm-gray)', padding: 4 }}>
+                              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                    {/* Invite Co-Dozent */}
+                    {availableUsersForCoDozent.length > 0 && (
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <select defaultValue="" onChange={e => { if (e.target.value) { const u = allUsers.find(x => x.id === e.target.value); if (u) addCoDozent(u.id, u.name); e.target.value = '' } }}
+                          style={{ flex: 1, padding: '9px 12px', borderRadius: 10, border: '1px solid rgba(96,8,18,0.15)', background: '#fff', fontSize: 13, color: 'var(--lbf-text)', outline: 'none', fontFamily: 'inherit', cursor: 'pointer' }}>
+                          <option value="">+ Co-Dozent einladen …</option>
+                          {availableUsersForCoDozent.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+                        </select>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Aufgaben aufteilen */}
+                  <div style={{ marginBottom: 20 }}>
+                    <div style={{ fontSize: 9, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 10 }}>Aufgaben aufteilen</div>
+                    {dozentAufgaben.length > 0 && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 10 }}>
+                        {dozentAufgaben.map(a => (
+                          <div key={a.id} style={{ background: '#fff', borderRadius: 10, padding: '11px 14px', display: 'flex', alignItems: 'flex-start', gap: 10, boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+                            <button onClick={() => toggleDozentAufgabe(a.id)} style={{ width: 20, height: 20, borderRadius: 6, border: `2px solid ${a.done ? '#16a34a' : 'rgba(96,8,18,0.25)'}`, background: a.done ? '#16a34a' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0, flexShrink: 0, marginTop: 2 }}>
+                              {a.done && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>}
+                            </button>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ fontSize: 14, color: a.done ? 'var(--warm-gray)' : 'var(--lbf-text)', textDecoration: a.done ? 'line-through' : 'none', lineHeight: 1.4 }}>{a.text}</div>
+                              {a.assignee_name && (
+                                <div style={{ fontSize: 10, color: '#600812', fontWeight: 700, marginTop: 3, display: 'flex', alignItems: 'center', gap: 4 }}>
+                                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                                  {a.assignee_name}
+                                </div>
+                              )}
+                            </div>
+                            <button onClick={() => deleteDozentAufgabe(a.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--warm-gray)', padding: 2, flexShrink: 0 }}>
+                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      <input value={newAufgabeText} onChange={e => setNewAufgabeText(e.target.value)}
+                        onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addDozentAufgabe() } }}
+                        placeholder="Neue Aufgabe beschreiben …"
+                        style={{ padding: '9px 12px', borderRadius: 10, border: '1px solid rgba(96,8,18,0.15)', background: '#fff', fontSize: 14, color: 'var(--lbf-text)', outline: 'none', fontFamily: 'inherit' }} />
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <select value={newAufgabeAssignee} onChange={e => setNewAufgabeAssignee(e.target.value)}
+                          style={{ flex: 1, padding: '9px 12px', borderRadius: 10, border: '1px solid rgba(96,8,18,0.15)', background: '#fff', fontSize: 13, color: 'var(--lbf-text)', outline: 'none', fontFamily: 'inherit', cursor: 'pointer' }}>
+                          <option value="">Zuständig: Kein</option>
+                          {dozentTeam.map((d, i) => <option key={d.user_id || i} value={d.user_id}>{d.name}</option>)}
+                        </select>
+                        <button onClick={addDozentAufgabe} disabled={!newAufgabeText.trim()}
+                          style={{ padding: '9px 18px', borderRadius: 10, border: 'none', background: newAufgabeText.trim() ? '#600812' : 'rgba(96,8,18,0.1)', color: newAufgabeText.trim() ? '#fff' : 'var(--warm-gray)', fontWeight: 700, fontSize: 13, cursor: newAufgabeText.trim() ? 'pointer' : 'default', fontFamily: 'inherit' }}>
+                          +
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Persönliche Checkliste */}
+                  <div>
+                    <div style={{ fontSize: 9, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 10 }}>Meine Checkliste</div>
+                    {dozentTodos.length > 0 && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 10 }}>
+                        {dozentTodos.map(td => (
+                          <div key={td.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: '#fff', borderRadius: 10, boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+                            <button onClick={() => toggleTodo(td.id)} style={{ width: 20, height: 20, borderRadius: 6, border: `2px solid ${td.done ? '#16a34a' : 'rgba(96,8,18,0.25)'}`, background: td.done ? '#16a34a' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0, flexShrink: 0 }}>
+                              {td.done && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>}
+                            </button>
+                            <span style={{ flex: 1, fontSize: 14, color: td.done ? 'var(--warm-gray)' : 'var(--lbf-text)', textDecoration: td.done ? 'line-through' : 'none' }}>{td.text}</span>
+                            <button onClick={() => deleteTodo(td.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--warm-gray)', padding: 2 }}>
+                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <input value={newTodoText} onChange={e => setNewTodoText(e.target.value)}
+                        onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addTodo() } }}
+                        placeholder="Persönlicher Punkt …"
+                        style={{ flex: 1, padding: '9px 12px', borderRadius: 10, border: '1px solid rgba(96,8,18,0.15)', background: '#fff', fontSize: 14, color: 'var(--lbf-text)', outline: 'none', fontFamily: 'inherit' }} />
+                      <button onClick={addTodo} disabled={!newTodoText.trim()}
+                        style={{ padding: '9px 16px', borderRadius: 10, border: 'none', background: newTodoText.trim() ? '#600812' : 'rgba(96,8,18,0.1)', color: newTodoText.trim() ? '#fff' : 'var(--warm-gray)', fontWeight: 700, fontSize: 13, cursor: newTodoText.trim() ? 'pointer' : 'default', fontFamily: 'inherit' }}>
+                        +
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Präsentation starten */}
+                  <div style={{ marginTop: 24 }}>
+                    <div style={{ fontSize: 9, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 6 }}>Präsentation starten</div>
+                    <p style={{ fontStyle: 'italic', color: 'var(--warm-gray)', fontSize: 12, margin: '0 0 14px' }}>Wähle einen Lernbeitrag für die Vollbild-Präsentation</p>
+                    {beitraegeLoading ? (
+                      <div style={{ color: 'var(--warm-gray)', fontStyle: 'italic', fontSize: 13 }}>Lade…</div>
+                    ) : beitraege.length === 0 ? (
+                      <div style={{ color: 'var(--warm-gray)', fontStyle: 'italic', fontSize: 13 }}>Noch keine Lernbeiträge vorhanden.</div>
+                    ) : (
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
+                        {beitraege.map(b => {
+                          const bildArrD = Array.isArray(b.bild) ? b.bild : (b.bild ? [b.bild] : [])
+                          const bInhD = parseInhalt(b.inhalt)
+                          let bColorD: string | null = null
+                          let bPatD: string | null = null
+                          if (bInhD?.v === 2) { if (bInhD.color) bColorD = bInhD.color; if (bInhD.pattern) bPatD = bInhD.pattern }
+                          const cfgD = bColorD
+                            ? (() => { const r2 = parseInt(bColorD!.slice(1,3),16), g2 = parseInt(bColorD!.slice(3,5),16), bv2 = parseInt(bColorD!.slice(5,7),16); return { bg: `linear-gradient(165deg,${bColorD} 0%,rgb(${Math.round(r2*.55)},${Math.round(g2*.55)},${Math.round(bv2*.55)}) 100%)`, spine: 'rgba(0,0,0,0.3)' } })()
+                            : (COVER_DS[b.typ] || COVER_DS.text)
+                          let bImgD: string | null = null
+                          if (bInhD?.v === 2 && bInhD.cover_block_id && Array.isArray(bInhD.pages)) {
+                            outer: for (const page of bInhD.pages as any[]) {
+                              for (const blk of (page.blocks || []) as any[]) {
+                                if (blk.id === bInhD.cover_block_id && blk.type === 'bild') {
+                                  if (blk.bildIdx !== undefined && bildArrD[blk.bildIdx]) bImgD = `https://api.responda.systems/api/files/${b.collectionId}/${b.id}/${bildArrD[blk.bildIdx]}`
+                                  else if (blk.bildExistingUrl) bImgD = blk.bildExistingUrl
+                                  break outer
+                                }
+                              }
+                            }
+                          }
+                          if (!bImgD && bildArrD[0]) bImgD = `https://api.responda.systems/api/files/${b.collectionId}/${b.id}/${bildArrD[0]}`
+                          return (
+                            <div key={b.id}>
+                              <div style={{ cursor: 'pointer', borderRadius: 8, overflow: 'hidden', aspectRatio: '3/4', position: 'relative', background: bImgD ? '#1a0e08' : cfgD.bg, boxShadow: '3px 5px 14px rgba(0,0,0,0.22), inset -3px 0 8px rgba(0,0,0,0.18)', marginBottom: 5 }}
+                                onClick={() => { setPresentationBeitrag(b); setPresentationSlide(0); setTerminDetailPage(null) }}>
+                                <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 6, background: cfgD.spine, zIndex: 3 }} />
+                                {!bImgD && bPatD && (() => { const pp = getPatternBg(bPatD); return pp ? <div style={{ position: 'absolute', inset: 0, backgroundImage: pp.backgroundImage, backgroundSize: pp.backgroundSize || 'auto', zIndex: 1, pointerEvents: 'none' }} /> : null })()}
+                                {bImgD && <img src={bImgD} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />}
+                                <div style={{ position: 'absolute', inset: 0, background: bImgD ? 'linear-gradient(to top,rgba(0,0,0,0.88) 0%,rgba(0,0,0,0.05) 55%,transparent 100%)' : 'none', zIndex: 2 }} />
+                                <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '8px 8px 8px 12px', zIndex: 4 }}>
+                                  <div style={{ fontWeight: 700, fontStyle: 'italic', fontSize: 10, color: '#fff', lineHeight: 1.3, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' as const } as React.CSSProperties}>{b.titel}</div>
+                                </div>
+                              </div>
+                              <button onClick={() => { setPresentationBeitrag(b); setPresentationSlide(0); setTerminDetailPage(null) }}
+                                style={{ width: '100%', padding: '5px 0', borderRadius: 6, border: 'none', background: '#600812', color: '#fff', fontWeight: 700, fontSize: 10, cursor: 'pointer', fontFamily: 'inherit' }}>
+                                Präsentieren
+                              </button>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
             </div>
-          </>
+
+            {/* Bottom tab bar */}
+            <div style={{ background: '#fff', borderTop: '0.5px solid rgba(96,8,18,0.12)', display: 'flex', paddingBottom: 'env(safe-area-inset-bottom)', flexShrink: 0 }}>
+              {TABS.map(tab => {
+                const active = terminDetailTab === tab.key
+                return (
+                  <button key={tab.key} onClick={() => setTerminDetailTab(tab.key as any)}
+                    style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, padding: '10px 4px 8px', border: 'none', background: 'none', cursor: 'pointer', borderTop: active ? '2px solid #600812' : '2px solid transparent', color: active ? '#600812' : 'var(--warm-gray)', fontFamily: 'inherit' }}>
+                    {tab.icon}
+                    <span style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{tab.label}</span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
         )
       })()}
 
