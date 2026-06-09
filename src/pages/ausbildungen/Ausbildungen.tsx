@@ -119,6 +119,7 @@ interface Lernbeitrag {
   inhalt: string
   bild?: string | string[]
   video_url?: string
+  dateien?: string[]
   tags: string[]
   organisation_id: string
   erstellt_von_name: string
@@ -393,6 +394,7 @@ export default function Ausbildungen() {
   const [showBlockPicker, setShowBlockPicker] = useState(false)
   const [savingBeitrag, setSavingBeitrag] = useState(false)
   const [editingBeitragId, setEditingBeitragId] = useState<string | null>(null)
+  const [pdfFiles, setPdfFiles] = useState<File[]>([])
   const [generatingAIImage, setGeneratingAIImage] = useState(false)
   const [aiImageTargetBlock, setAiImageTargetBlock] = useState<string | null>(null)
   
@@ -598,6 +600,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
     setBookDir(1)
     setShowBlockPicker(false)
     setBeitragForm({ titel: '', tags: '', gepinnt: false, color: '#600812', pattern: null })
+    setPdfFiles([])
   }
 
   async function saveBeitrag() {
@@ -639,6 +642,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
         fd.append('erstellt_von_name', user?.name || '')
       }
       imageFiles.forEach(f => fd.append('bild', f))
+      pdfFiles.forEach(f => fd.append('dateien', f))
       if (editingBeitragId) {
         await pb.collection('lernbar_beitraege').update(editingBeitragId, fd)
         showMessage('Beitrag aktualisiert', 'success')
@@ -2367,19 +2371,54 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
 
         const renderPageContent = () => {
           if (isTagsPage) return (
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '12px 20px 12px 26px' }}>
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '12px 20px 12px 26px', overflowY: 'auto' }}>
               <div style={{ fontSize: 9, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.2em', marginBottom: 10 }}>
                 Tags <span style={{ fontWeight: 400, color: '#8a7a68', textTransform: 'none' as const, letterSpacing: 0, fontSize: 10 }}>(kommagetrennt)</span>
               </div>
               <input value={beitragForm.tags} onChange={e => setBeitragForm(prev => ({ ...prev, tags: e.target.value }))} placeholder="Reanimation, XABCDE, Beatmung…"
                 style={{ border: 'none', borderBottom: '1px solid rgba(96,8,18,0.15)', outline: 'none', background: 'transparent', fontSize: 14, color: '#1a0e08', fontFamily: 'inherit', padding: '4px 0', width: '100%', marginBottom: 14 }} />
               {beitragForm.tags.split(',').map(t => t.trim()).filter(Boolean).length > 0 && (
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 14 }}>
                   {beitragForm.tags.split(',').map(t => t.trim()).filter(Boolean).map(t => (
                     <span key={t} style={{ fontSize: 12, fontStyle: 'italic', fontWeight: 700, color: '#600812', background: 'rgba(96,8,18,0.07)', borderRadius: 99, padding: '3px 10px' }}>#{t}</span>
                   ))}
                 </div>
               )}
+              {/* File attachments */}
+              <div style={{ borderTop: '0.5px solid rgba(96,8,18,0.1)', paddingTop: 14 }}>
+                <div style={{ fontSize: 9, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.2em', marginBottom: 10 }}>
+                  Dateien <span style={{ fontWeight: 400, color: '#8a7a68', textTransform: 'none' as const, letterSpacing: 0, fontSize: 10 }}>(PDF, Dokumente)</span>
+                </div>
+                {/* Existing files when editing */}
+                {editingBeitragId && (() => { const existing = beitraege.find(b => b.id === editingBeitragId)?.dateien || []; return existing.length > 0 ? (
+                  <div style={{ marginBottom: 8 }}>
+                    {existing.map((f, i) => (
+                      <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 0', fontSize: 12, color: '#8a7a68' }}>
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{f}</span>
+                        <span style={{ flexShrink: 0, fontSize: 10, color: 'rgba(139,113,90,0.6)' }}>vorhanden</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : null })()}
+                {/* Newly added files */}
+                {pdfFiles.map((f, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 0' }}>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#600812" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                    <span style={{ flex: 1, fontSize: 13, color: '#1a0e08', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{f.name}</span>
+                    <button onClick={() => setPdfFiles(prev => prev.filter((_, j) => j !== i))}
+                      style={{ flexShrink: 0, background: 'none', border: 'none', cursor: 'pointer', color: '#8a7a68', padding: 2, display: 'flex', alignItems: 'center' }}>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    </button>
+                  </div>
+                ))}
+                <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer', padding: '6px 0', marginTop: 4 }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#600812" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: '#600812', fontFamily: 'inherit' }}>Datei hinzufügen</span>
+                  <input type="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.png,.jpg,.jpeg" multiple style={{ display: 'none' }}
+                    onChange={e => { const files = Array.from(e.target.files || []); if (files.length) setPdfFiles(prev => [...prev, ...files]); e.target.value = '' }} />
+                </label>
+              </div>
             </div>
           )
           return (

@@ -55,6 +55,7 @@ interface ModulProgress {
 interface Lernbeitrag {
   id: string; collectionId: string; typ: 'bild' | 'text' | 'video' | 'quiz'
   titel: string; inhalt: string; bild?: string | string[]; video_url?: string
+  dateien?: string | string[]
   tags: string[] | string; organisation_id: string; erstellt_von_name: string
   gepinnt: boolean; quiz_daten?: string | { frage: string; antworten: string[]; richtige: number }
   created: string
@@ -788,18 +789,20 @@ export default function Lernbar() {
         if (rInhalt?.v === 2 && Array.isArray(rInhalt.pages)) { richPages = rInhalt.pages; readerColor = rInhalt.color || null; readerPattern = rInhalt.pattern || null }
         const accent = readerColor || ACCENT[b.typ] || '#600812'
         const bildArr = Array.isArray(b.bild) ? b.bild : (b.bild ? [b.bild] : [])
+        const dateienArr = Array.isArray(b.dateien) ? b.dateien : (b.dateien ? [b.dateien] : [])
 
         // Build page list
-        type PID = 'title' | 'media' | 'content' | 'quiz' | 'tags' | `rich-${number}`
+        type PID = 'title' | 'media' | 'content' | 'quiz' | 'tags' | 'dateien' | `rich-${number}`
         let pages: PID[]
         if (richPages) {
-          pages = ['title', ...richPages.map((_, i) => `rich-${i}` as PID), ...(tags.length > 0 ? ['tags' as PID] : [])]
+          pages = ['title', ...richPages.map((_, i) => `rich-${i}` as PID), ...(tags.length > 0 ? ['tags' as PID] : []), ...(dateienArr.length > 0 ? ['dateien' as PID] : [])]
         } else {
           pages = ['title']
           if ((b.typ === 'video' && b.video_url) || bildUrl) pages.push('media')
           if (b.inhalt && b.typ !== 'quiz') pages.push('content')
           if (b.typ === 'quiz' && quiz) pages.push('quiz')
           if (tags.length > 0) pages.push('tags')
+          if (dateienArr.length > 0) pages.push('dateien')
         }
         const total = pages.length
         const pid = pages[bookPage] ?? 'title'
@@ -904,6 +907,37 @@ export default function Lernbar() {
               </div>
             </div>
           )
+
+          if (id === 'dateien') return (
+            <div style={{ flex: 1, overflowY: 'auto', padding: '28px 24px 16px' }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: accent, textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 16 }}>Dateien</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {dateienArr.map((file, i) => {
+                  const fileUrl = `https://api.responda.systems/api/files/${b.collectionId}/${b.id}/${file}`
+                  const ext = file.split('.').pop()?.toLowerCase() ?? ''
+                  const isPdf = ext === 'pdf'
+                  return (
+                    <a key={i} href={fileUrl} target="_blank" rel="noreferrer"
+                      style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', background: 'var(--warm-bg)', border: '1px solid rgba(96,8,18,0.12)', borderRadius: 12, textDecoration: 'none', color: 'var(--lbf-text)' }}>
+                      <div style={{ width: 38, height: 38, borderRadius: 8, background: 'rgba(107,15,26,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        {isPdf ? (
+                          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#600812" strokeWidth="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/></svg>
+                        ) : (
+                          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#600812" strokeWidth="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                        )}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 600, fontSize: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{file}</div>
+                        {ext && <div style={{ fontSize: 11, color: 'var(--warm-gray)', textTransform: 'uppercase' as const, marginTop: 1 }}>{ext}</div>}
+                      </div>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--warm-gray)" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    </a>
+                  )
+                })}
+              </div>
+            </div>
+          )
+
           if (typeof id === 'string' && id.startsWith('rich-') && richPages) {
             const pageIdx = parseInt(id.slice(5))
             const richPage = richPages[pageIdx]
