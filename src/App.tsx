@@ -19,6 +19,7 @@ import Supervisor from './pages/Supervisor'
 import Einsaetze from './pages/Einsaetze'
 import Vorgaenge from './pages/Vorgaenge'
 import AVV from './pages/AVV'
+import Office from './pages/Office'
 import OrgPublicLayout from './pages/public/OrgPublicLayout'
 import OrgLanding from './pages/public/OrgLanding'
 import OrgPatienten from './pages/public/OrgPatienten'
@@ -72,6 +73,7 @@ function App() {
         <Route path="/einsaetze" element={<Einsaetze />} />
         <Route path="/vorgaenge" element={<Vorgaenge />} />
         <Route path="/avv" element={<AVV />} />
+        <Route path="/office" element={<Office />} />
         <Route path="/:orgCode" element={<OrgPublicLayout />}>
           <Route index element={<OrgLanding />} />
           <Route path="patienten" element={<OrgPatienten />} />

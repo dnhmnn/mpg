@@ -1,0 +1,15 @@
+version: '3.8'
+services:
+  euro-office:
+    image: ghcr.io/euro-office/documentserver:latest
+    restart: unless-stopped
+    ports:
+      - "8090:80"
+    environment:
+      - JWT_ENABLED=false
+    volumes:
+      - euro_office_data:/var/lib/onlyoffice
+      - euro_office_logs:/var/log/onlyoffice
+volumes:
+  euro_office_data:
+  euro_office_logs:
