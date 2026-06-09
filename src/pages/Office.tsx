@@ -260,6 +260,11 @@ export default function Office() {
               compactHeader: false, feedback: false, forcesave: true,
               help: false, plugins: false,
               uiTheme: 'theme-lbf',
+              logo: {
+                image: 'https://app.responda.systems/logoklein.svg',
+                imageDark: 'https://app.responda.systems/logoklein.svg',
+                url: 'https://app.responda.systems/office',
+              },
             },
           },
           events: {
