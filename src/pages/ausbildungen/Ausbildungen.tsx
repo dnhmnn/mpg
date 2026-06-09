@@ -65,6 +65,7 @@ interface Termin {
   lernkonzept?: string
   dateien?: string | string[]
   anhang?: string | string[]
+  dozent_todos?: string
   organization_id: string
   created: string
   updated: string
@@ -408,7 +409,11 @@ export default function Ausbildungen() {
 const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | 'konzepte' | 'jahresuebersicht' | 'archiv' | 'lernfeed' | 'dozent'>('termine')
   const [presentationBeitrag, setPresentationBeitrag] = useState<Lernbeitrag | null>(null)
   const [presentationSlide, setPresentationSlide] = useState(0)
-  
+  const [dozentTerminDetail, setDozentTerminDetail] = useState<Termin | null>(null)
+  const [dozentTodos, setDozentTodos] = useState<{id: string; text: string; done: boolean}[]>([])
+  const [newTodoText, setNewTodoText] = useState('')
+  const [uploadingDozentFile, setUploadingDozentFile] = useState(false)
+
   const [uploadFile, setUploadFile] = useState<File | null>(null)
   const [uploadTyp, setUploadTyp] = useState<'dozent' | 'teilnehmer'>('teilnehmer')
   const [uploadBeschreibung, setUploadBeschreibung] = useState('')
@@ -593,6 +598,63 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
       console.error('loadBeitraege Fehler:', e?.message, e?.data)
     }
     finally { setBeitraegeLoading(false) }
+  }
+
+  function openDozentDetail(t: Termin) {
+    let todos: {id: string; text: string; done: boolean}[] = []
+    try { todos = t.dozent_todos ? JSON.parse(t.dozent_todos) : [] } catch { todos = [] }
+    setDozentTodos(todos)
+    setNewTodoText('')
+    setDozentTerminDetail(t)
+  }
+
+  async function saveTodosToDb(terminId: string, todos: {id: string; text: string; done: boolean}[]) {
+    try {
+      const updated = await pb.collection('ausbildungen_termine').update(terminId, {
+        dozent_todos: JSON.stringify(todos)
+      })
+      setTermine(prev => prev.map(t => t.id === terminId ? { ...t, dozent_todos: JSON.stringify(todos) } : t))
+      setDozentTerminDetail(prev => prev ? { ...prev, dozent_todos: JSON.stringify(todos) } : prev)
+    } catch(e: any) { console.error('saveTodosToDb:', e) }
+  }
+
+  async function addTodo() {
+    if (!newTodoText.trim() || !dozentTerminDetail) return
+    const updated = [...dozentTodos, { id: Math.random().toString(36).slice(2, 9), text: newTodoText.trim(), done: false }]
+    setDozentTodos(updated)
+    setNewTodoText('')
+    await saveTodosToDb(dozentTerminDetail.id, updated)
+  }
+
+  async function toggleTodo(id: string) {
+    if (!dozentTerminDetail) return
+    const updated = dozentTodos.map(t => t.id === id ? { ...t, done: !t.done } : t)
+    setDozentTodos(updated)
+    await saveTodosToDb(dozentTerminDetail.id, updated)
+  }
+
+  async function deleteTodo(id: string) {
+    if (!dozentTerminDetail) return
+    const updated = dozentTodos.filter(t => t.id !== id)
+    setDozentTodos(updated)
+    await saveTodosToDb(dozentTerminDetail.id, updated)
+  }
+
+  async function uploadDozentFile(file: File) {
+    if (!dozentTerminDetail) return
+    setUploadingDozentFile(true)
+    try {
+      const fd = new FormData()
+      fd.append('+dateien', file)
+      const updated = await pb.collection('ausbildungen_termine').update(dozentTerminDetail.id, fd)
+      setTermine(prev => prev.map(t => t.id === dozentTerminDetail.id ? { ...t, dateien: updated.dateien } : t))
+      setDozentTerminDetail(prev => prev ? { ...prev, dateien: updated.dateien } : prev)
+      showMessage('Datei hochgeladen', 'success')
+    } catch(e: any) {
+      showMessage('Fehler: ' + e.message, 'error')
+    } finally {
+      setUploadingDozentFile(false)
+    }
   }
 
   function uid() { return Math.random().toString(36).slice(2, 9) }
@@ -2308,157 +2370,223 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
         const meineTermine = termine.filter(t =>
           (t.dozent_id && t.dozent_id === user?.id) ||
           (!t.dozent_id && t.dozent && t.dozent.trim().toLowerCase() === (user?.name || '').trim().toLowerCase())
-        ).sort((a, b) => new Date(a.start_datetime).getTime() - new Date(b.start_datetime).getTime())
+        ).sort((a, b) => parseDate(a.start_datetime).getTime() - parseDate(b.start_datetime).getTime())
 
-        function fmtDozentDate(str: string) {
-          const d = new Date(str)
-          if (isNaN(d.getTime())) return '–'
-          return d.toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' })
-        }
-        function fmtDozentTime(str: string) {
-          const d = new Date(str)
-          if (isNaN(d.getTime())) return ''
-          return d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })
-        }
+        return (
+          <div style={{ maxWidth: 900, margin: '0 auto', padding: '20px max(16px, env(safe-area-inset-left)) calc(env(safe-area-inset-bottom) + 40px)' }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 14 }}>Meine Termine</div>
+            {meineTermine.length === 0 ? (
+              <div style={{ background: 'var(--lbf-card)', borderRadius: 12, padding: '24px 20px', color: 'var(--warm-gray)', fontStyle: 'italic', fontSize: 14, textAlign: 'center' }}>
+                Keine Termine zugewiesen — trage dich als Dozent in einem Termin ein.
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {meineTermine.map(t => {
+                  const isPast = t.status === 'abgeschlossen'
+                  const dateien: string[] = (() => { const d = t.dateien ?? t.anhang; return Array.isArray(d) ? d : (d ? [d as string] : []) })()
+                  let todos: {id: string; text: string; done: boolean}[] = []
+                  try { todos = t.dozent_todos ? JSON.parse(t.dozent_todos) : [] } catch { todos = [] }
+                  const doneTodos = todos.filter(td => td.done).length
+                  return (
+                    <button key={t.id} onClick={() => openDozentDetail(t)}
+                      style={{ display: 'flex', alignItems: 'center', gap: 12, background: 'var(--lbf-card)', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.07)', border: 'none', cursor: 'pointer', padding: '14px 16px', textAlign: 'left', opacity: isPast ? 0.6 : 1, fontFamily: 'inherit' }}>
+                      <div style={{ width: 4, alignSelf: 'stretch', borderRadius: 2, background: isPast ? 'rgba(139,113,90,0.3)' : '#600812', flexShrink: 0 }} />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 700, fontStyle: 'italic', fontSize: 15, color: 'var(--lbf-text)', marginBottom: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.name}</div>
+                        <div style={{ fontSize: 11, color: 'var(--warm-gray)', fontStyle: 'italic' }}>
+                          {fmtDate(t.start_datetime)}{t.start_datetime ? ` · ${fmtTime(t.start_datetime)}` : ''}
+                          {t.location ? ` · ${t.location}` : ''}
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                        {todos.length > 0 && (
+                          <span style={{ fontSize: 10, color: doneTodos === todos.length ? '#16a34a' : 'var(--warm-gray)' }}>
+                            {doneTodos}/{todos.length}
+                          </span>
+                        )}
+                        {dateien.length > 0 && (
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--warm-gray)" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                        )}
+                        <span style={{ padding: '2px 8px', borderRadius: 99, background: isPast ? 'rgba(139,113,90,0.1)' : 'rgba(96,8,18,0.07)', color: isPast ? 'var(--warm-gray)' : '#600812', fontWeight: 700, fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{t.status}</span>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--warm-gray)" strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg>
+                      </div>
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        )
+      })()}
 
-        const COVER_D: Record<string, { bg: string; spine: string }> = {
+      {/* DOZENT TERMIN DETAIL SHEET */}
+      {dozentTerminDetail && (() => {
+        const t = dozentTerminDetail
+        const dateien: string[] = (() => { const d = t.dateien ?? t.anhang; return Array.isArray(d) ? d : (d ? [d as string] : []) })()
+        const COVER_DS: Record<string, { bg: string; spine: string }> = {
           text: { bg: 'linear-gradient(165deg,#600812 0%,#3d0408 100%)', spine: 'rgba(0,0,0,0.3)' },
           bild: { bg: 'linear-gradient(165deg,#7c2d12 0%,#431407 100%)', spine: 'rgba(0,0,0,0.3)' },
           video: { bg: 'linear-gradient(165deg,#065f46 0%,#022c22 100%)', spine: 'rgba(0,0,0,0.3)' },
           quiz: { bg: 'linear-gradient(165deg,#1e3a8a 0%,#0f172a 100%)', spine: 'rgba(0,0,0,0.3)' },
         }
-
-        function renderBeitragsGrid(onPresent: (b: Lernbeitrag) => void) {
-          if (beitraege.length === 0) return (
-            <div style={{ color: 'var(--warm-gray)', fontStyle: 'italic', fontSize: 13, padding: '12px 0' }}>
-              Noch keine Lernbeiträge vorhanden.
-            </div>
-          )
-          return (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
-              {beitraege.map(b => {
-                const bildArrD = Array.isArray(b.bild) ? b.bild : (b.bild ? [b.bild] : [])
-                const bInhD = parseInhalt(b.inhalt)
-                let bColorD: string | null = null
-                let bPatD: string | null = null
-                if (bInhD?.v === 2) { if (bInhD.color) bColorD = bInhD.color; if (bInhD.pattern) bPatD = bInhD.pattern }
-                const cfgD = bColorD
-                  ? (() => { const r = parseInt(bColorD!.slice(1,3),16), g = parseInt(bColorD!.slice(3,5),16), bv = parseInt(bColorD!.slice(5,7),16); return { bg: `linear-gradient(165deg,${bColorD} 0%,rgb(${Math.round(r*.55)},${Math.round(g*.55)},${Math.round(bv*.55)}) 100%)`, spine: 'rgba(0,0,0,0.3)' } })()
-                  : (COVER_D[b.typ] || COVER_D.text)
-                let bImgD: string | null = null
-                if (bInhD?.v === 2 && bInhD.cover_block_id && Array.isArray(bInhD.pages)) {
-                  outer: for (const page of bInhD.pages as any[]) {
-                    for (const blk of (page.blocks || []) as any[]) {
-                      if (blk.id === bInhD.cover_block_id && blk.type === 'bild') {
-                        if (blk.bildIdx !== undefined && bildArrD[blk.bildIdx]) bImgD = `https://api.responda.systems/api/files/${b.collectionId}/${b.id}/${bildArrD[blk.bildIdx]}`
-                        else if (blk.bildExistingUrl) bImgD = blk.bildExistingUrl
-                        break outer
-                      }
-                    }
-                  }
-                }
-                if (!bImgD && bildArrD[0]) bImgD = `https://api.responda.systems/api/files/${b.collectionId}/${b.id}/${bildArrD[0]}`
-                return (
-                  <div key={b.id}>
-                    <div style={{ cursor: 'pointer', borderRadius: 10, overflow: 'hidden', aspectRatio: '3/4', position: 'relative', background: bImgD ? '#1a0e08' : cfgD.bg, boxShadow: '3px 5px 16px rgba(0,0,0,0.25), inset -3px 0 8px rgba(0,0,0,0.18)', marginBottom: 6 }}
-                      onClick={() => onPresent(b)}>
-                      <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 7, background: cfgD.spine, zIndex: 3 }} />
-                      {!bImgD && bPatD && (() => { const pp = getPatternBg(bPatD); return pp ? <div style={{ position: 'absolute', inset: 0, backgroundImage: pp.backgroundImage, backgroundSize: pp.backgroundSize || 'auto', zIndex: 1, pointerEvents: 'none' }} /> : null })()}
-                      {bImgD && <img src={bImgD} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />}
-                      <div style={{ position: 'absolute', inset: 0, background: bImgD ? 'linear-gradient(to top,rgba(0,0,0,0.88) 0%,rgba(0,0,0,0.05) 55%,transparent 100%)' : 'none', zIndex: 2 }} />
-                      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '10px 10px 10px 16px', zIndex: 4 }}>
-                        <div style={{ fontWeight: 700, fontStyle: 'italic', fontSize: 11, color: '#fff', lineHeight: 1.3, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' as const } as React.CSSProperties}>{b.titel}</div>
-                      </div>
-                      <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 5, opacity: 0, transition: 'opacity 0.18s', background: 'rgba(0,0,0,0.4)' }}
-                        onMouseEnter={e => (e.currentTarget.style.opacity = '1')} onMouseLeave={e => (e.currentTarget.style.opacity = '0')}>
-                        <svg width="28" height="28" viewBox="0 0 24 24" fill="white" stroke="none"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-                      </div>
+        return (
+          <>
+            <div onClick={() => setDozentTerminDetail(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 300 }} />
+            <div style={{ position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 301, background: 'var(--warm-bg)', borderRadius: '20px 20px 0 0', maxHeight: '92dvh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+              {/* Handle + Header */}
+              <div style={{ padding: '12px 20px 10px', background: '#fff', borderBottom: '0.5px solid rgba(96,8,18,0.1)' }}>
+                <div style={{ width: 36, height: 4, borderRadius: 2, background: 'rgba(96,8,18,0.18)', margin: '0 auto 12px' }} />
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+                  <div>
+                    <div style={{ fontWeight: 700, fontStyle: 'italic', fontSize: 17, color: 'var(--lbf-text)' }}>{t.name}</div>
+                    <div style={{ fontSize: 11, color: 'var(--warm-gray)', fontStyle: 'italic', marginTop: 2 }}>
+                      {fmtDate(t.start_datetime)}{t.start_datetime ? ` · ${fmtTime(t.start_datetime)}` : ''}
+                      {t.location ? ` · ${t.location}` : ''}
                     </div>
-                    <button onClick={() => onPresent(b)} style={{ width: '100%', padding: '5px 0', borderRadius: 7, border: 'none', background: '#600812', color: '#fff', fontWeight: 700, fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}>
-                      Präsentieren
+                  </div>
+                  <button onClick={() => setDozentTerminDetail(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: 'var(--warm-gray)', flexShrink: 0 }}>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                  </button>
+                </div>
+              </div>
+
+              <div style={{ overflowY: 'auto', padding: '16px 20px calc(env(safe-area-inset-bottom) + 24px)' }}>
+
+                {/* Lernkonzept */}
+                {t.lernkonzept ? (
+                  <div style={{ marginBottom: 24 }}>
+                    <div style={{ fontSize: 9, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 8 }}>Lernkonzept</div>
+                    <div style={{ background: '#fff', borderRadius: 10, padding: '14px 16px', fontSize: 14, color: 'var(--lbf-text)', lineHeight: 1.75, whiteSpace: 'pre-wrap', borderLeft: '3px solid #600812', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>{t.lernkonzept}</div>
+                  </div>
+                ) : (
+                  <div style={{ marginBottom: 24 }}>
+                    <div style={{ fontSize: 9, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 8 }}>Lernkonzept</div>
+                    <div style={{ fontStyle: 'italic', color: 'var(--warm-gray)', fontSize: 13 }}>Kein Konzept hinterlegt.</div>
+                  </div>
+                )}
+
+                {/* Unterlagen */}
+                <div style={{ marginBottom: 24 }}>
+                  <div style={{ fontSize: 9, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 8 }}>Unterlagen</div>
+                  {dateien.length > 0 && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 10 }}>
+                      {dateien.map((file, i) => {
+                        const fileUrl = `https://api.responda.systems/api/files/${t.collectionId}/${t.id}/${file}`
+                        const ext = file.split('.').pop()?.toLowerCase() ?? ''
+                        return (
+                          <a key={i} href={fileUrl} target="_blank" rel="noreferrer"
+                            style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: '#fff', border: '1px solid rgba(96,8,18,0.1)', borderRadius: 10, textDecoration: 'none', color: 'var(--lbf-text)' }}>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#600812" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                            <span style={{ flex: 1, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{file}</span>
+                            {ext && <span style={{ fontSize: 10, color: 'var(--warm-gray)', textTransform: 'uppercase' }}>{ext}</span>}
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--warm-gray)" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                          </a>
+                        )
+                      })}
+                    </div>
+                  )}
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', border: '1.5px dashed rgba(96,8,18,0.25)', borderRadius: 10, cursor: uploadingDozentFile ? 'default' : 'pointer', background: 'rgba(96,8,18,0.02)' }}>
+                    {uploadingDozentFile
+                      ? <span style={{ fontSize: 13, color: 'var(--warm-gray)', fontStyle: 'italic' }}>Lade hoch…</span>
+                      : <>
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#600812" strokeWidth="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+                          <span style={{ fontSize: 13, color: '#600812', fontWeight: 600 }}>Datei hinzufügen</span>
+                          <span style={{ fontSize: 11, color: 'var(--warm-gray)' }}>PDF, PPT, DOCX …</span>
+                        </>
+                    }
+                    <input type="file" accept=".pdf,.ppt,.pptx,.doc,.docx,.xls,.xlsx,.key,.pages" style={{ display: 'none' }} disabled={uploadingDozentFile}
+                      onChange={e => { const f = e.target.files?.[0]; if (f) uploadDozentFile(f); e.target.value = '' }} />
+                  </label>
+                </div>
+
+                {/* To-Do Liste */}
+                <div style={{ marginBottom: 24 }}>
+                  <div style={{ fontSize: 9, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 8 }}>To-Do Liste</div>
+                  {dozentTodos.length > 0 && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 10 }}>
+                      {dozentTodos.map(td => (
+                        <div key={td.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: '#fff', borderRadius: 10, boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+                          <button onClick={() => toggleTodo(td.id)} style={{ width: 20, height: 20, borderRadius: 6, border: `2px solid ${td.done ? '#16a34a' : 'rgba(96,8,18,0.25)'}`, background: td.done ? '#16a34a' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0, flexShrink: 0 }}>
+                            {td.done && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>}
+                          </button>
+                          <span style={{ flex: 1, fontSize: 14, color: td.done ? 'var(--warm-gray)' : 'var(--lbf-text)', textDecoration: td.done ? 'line-through' : 'none', lineHeight: 1.4 }}>{td.text}</span>
+                          <button onClick={() => deleteTodo(td.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--warm-gray)', padding: 2, flexShrink: 0 }}>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <input value={newTodoText} onChange={e => setNewTodoText(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addTodo() } }}
+                      placeholder="Neue Aufgabe …"
+                      style={{ flex: 1, padding: '9px 12px', borderRadius: 10, border: '1px solid rgba(96,8,18,0.15)', background: '#fff', fontSize: 14, color: 'var(--lbf-text)', outline: 'none', fontFamily: 'inherit' }} />
+                    <button onClick={addTodo} disabled={!newTodoText.trim()}
+                      style={{ padding: '9px 16px', borderRadius: 10, border: 'none', background: newTodoText.trim() ? '#600812' : 'rgba(96,8,18,0.1)', color: newTodoText.trim() ? '#fff' : 'var(--warm-gray)', fontWeight: 700, fontSize: 13, cursor: newTodoText.trim() ? 'pointer' : 'default', fontFamily: 'inherit' }}>
+                      +
                     </button>
                   </div>
-                )
-              })}
-            </div>
-          )
-        }
+                </div>
 
-        return (
-          <div style={{ maxWidth: 900, margin: '0 auto', padding: '20px max(16px, env(safe-area-inset-left)) calc(env(safe-area-inset-bottom) + 40px)' }}>
-
-            {/* Meine Termine */}
-            <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 14 }}>Meine Termine</div>
-            {meineTermine.length === 0 ? (
-              <div style={{ background: 'var(--lbf-card)', borderRadius: 12, padding: '24px 20px', color: 'var(--warm-gray)', fontStyle: 'italic', fontSize: 14, marginBottom: 32, textAlign: 'center' }}>
-                Keine Termine zugewiesen — trage dich als Dozent in einem Termin ein.
-              </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginBottom: 36 }}>
-                {meineTermine.map(t => {
-                  const dateien: string[] = (() => { const d = t.dateien ?? t.anhang; return Array.isArray(d) ? d : (d ? [d as string] : []) })()
-                  const isPast = t.status === 'abgeschlossen'
-                  return (
-                    <div key={t.id} style={{ background: 'var(--lbf-card)', borderRadius: 14, boxShadow: '0 1px 5px rgba(0,0,0,0.08)', overflow: 'hidden', opacity: isPast ? 0.65 : 1 }}>
-                      <div style={{ height: 3, background: isPast ? 'rgba(139,113,90,0.3)' : '#600812' }} />
-                      <div style={{ padding: '16px 18px' }}>
-                        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 10 }}>
-                          <div>
-                            <div style={{ fontWeight: 700, fontSize: 17, color: 'var(--lbf-text)', fontStyle: 'italic' }}>{t.name}</div>
-                            <div style={{ fontSize: 12, color: 'var(--warm-gray)', fontStyle: 'italic', marginTop: 3 }}>
-                              {fmtDozentDate(t.start_datetime)}{t.end_datetime ? ` · ${fmtDozentTime(t.start_datetime)}–${fmtDozentTime(t.end_datetime)} Uhr` : t.start_datetime ? ` · ${fmtDozentTime(t.start_datetime)} Uhr` : ''}
-                              {t.location ? ` · ${t.location}` : ''}
+                {/* Präsentation */}
+                <div>
+                  <div style={{ fontSize: 9, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 6 }}>Präsentation starten</div>
+                  <p style={{ fontStyle: 'italic', color: 'var(--warm-gray)', fontSize: 12, margin: '0 0 14px' }}>Wähle einen Lernbeitrag für die Vollbild-Präsentation</p>
+                  {beitraegeLoading ? (
+                    <div style={{ color: 'var(--warm-gray)', fontStyle: 'italic', fontSize: 13 }}>Lade…</div>
+                  ) : beitraege.length === 0 ? (
+                    <div style={{ color: 'var(--warm-gray)', fontStyle: 'italic', fontSize: 13 }}>Noch keine Lernbeiträge vorhanden.</div>
+                  ) : (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
+                      {beitraege.map(b => {
+                        const bildArrD = Array.isArray(b.bild) ? b.bild : (b.bild ? [b.bild] : [])
+                        const bInhD = parseInhalt(b.inhalt)
+                        let bColorD: string | null = null
+                        let bPatD: string | null = null
+                        if (bInhD?.v === 2) { if (bInhD.color) bColorD = bInhD.color; if (bInhD.pattern) bPatD = bInhD.pattern }
+                        const cfgD = bColorD
+                          ? (() => { const r = parseInt(bColorD!.slice(1,3),16), g = parseInt(bColorD!.slice(3,5),16), bv = parseInt(bColorD!.slice(5,7),16); return { bg: `linear-gradient(165deg,${bColorD} 0%,rgb(${Math.round(r*.55)},${Math.round(g*.55)},${Math.round(bv*.55)}) 100%)`, spine: 'rgba(0,0,0,0.3)' } })()
+                          : (COVER_DS[b.typ] || COVER_DS.text)
+                        let bImgD: string | null = null
+                        if (bInhD?.v === 2 && bInhD.cover_block_id && Array.isArray(bInhD.pages)) {
+                          outer: for (const page of bInhD.pages as any[]) {
+                            for (const blk of (page.blocks || []) as any[]) {
+                              if (blk.id === bInhD.cover_block_id && blk.type === 'bild') {
+                                if (blk.bildIdx !== undefined && bildArrD[blk.bildIdx]) bImgD = `https://api.responda.systems/api/files/${b.collectionId}/${b.id}/${bildArrD[blk.bildIdx]}`
+                                else if (blk.bildExistingUrl) bImgD = blk.bildExistingUrl
+                                break outer
+                              }
+                            }
+                          }
+                        }
+                        if (!bImgD && bildArrD[0]) bImgD = `https://api.responda.systems/api/files/${b.collectionId}/${b.id}/${bildArrD[0]}`
+                        return (
+                          <div key={b.id}>
+                            <div style={{ cursor: 'pointer', borderRadius: 8, overflow: 'hidden', aspectRatio: '3/4', position: 'relative', background: bImgD ? '#1a0e08' : cfgD.bg, boxShadow: '3px 5px 14px rgba(0,0,0,0.22), inset -3px 0 8px rgba(0,0,0,0.18)', marginBottom: 5 }}
+                              onClick={() => { setPresentationBeitrag(b); setPresentationSlide(0); setDozentTerminDetail(null) }}>
+                              <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 6, background: cfgD.spine, zIndex: 3 }} />
+                              {!bImgD && bPatD && (() => { const pp = getPatternBg(bPatD); return pp ? <div style={{ position: 'absolute', inset: 0, backgroundImage: pp.backgroundImage, backgroundSize: pp.backgroundSize || 'auto', zIndex: 1, pointerEvents: 'none' }} /> : null })()}
+                              {bImgD && <img src={bImgD} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />}
+                              <div style={{ position: 'absolute', inset: 0, background: bImgD ? 'linear-gradient(to top,rgba(0,0,0,0.88) 0%,rgba(0,0,0,0.05) 55%,transparent 100%)' : 'none', zIndex: 2 }} />
+                              <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '8px 8px 8px 12px', zIndex: 4 }}>
+                                <div style={{ fontWeight: 700, fontStyle: 'italic', fontSize: 10, color: '#fff', lineHeight: 1.3, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' as const } as React.CSSProperties}>{b.titel}</div>
+                              </div>
                             </div>
+                            <button onClick={() => { setPresentationBeitrag(b); setPresentationSlide(0); setDozentTerminDetail(null) }}
+                              style={{ width: '100%', padding: '5px 0', borderRadius: 6, border: 'none', background: '#600812', color: '#fff', fontWeight: 700, fontSize: 10, cursor: 'pointer', fontFamily: 'inherit' }}>
+                              Präsentieren
+                            </button>
                           </div>
-                          <span style={{ flexShrink: 0, padding: '3px 10px', borderRadius: 99, background: isPast ? 'rgba(139,113,90,0.1)' : 'rgba(96,8,18,0.07)', color: isPast ? 'var(--warm-gray)' : '#600812', fontWeight: 700, fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                            {t.status}
-                          </span>
-                        </div>
-                        {t.lernkonzept && (
-                          <div style={{ marginBottom: 12 }}>
-                            <div style={{ fontSize: 9, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 6 }}>Lernkonzept</div>
-                            <div style={{ background: 'var(--warm-bg)', borderRadius: 10, padding: '12px 14px', fontSize: 14, color: 'var(--lbf-text)', lineHeight: 1.7, whiteSpace: 'pre-wrap', borderLeft: '3px solid #600812' }}>{t.lernkonzept}</div>
-                          </div>
-                        )}
-                        {dateien.length > 0 && (
-                          <div style={{ marginBottom: 12 }}>
-                            <div style={{ fontSize: 9, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 8 }}>Unterlagen</div>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                              {dateien.map((file, i) => {
-                                const fileUrl = `https://api.responda.systems/api/files/${t.collectionId}/${t.id}/${file}`
-                                const ext = file.split('.').pop()?.toLowerCase() ?? ''
-                                return (
-                                  <a key={i} href={fileUrl} target="_blank" rel="noreferrer"
-                                    style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: 'var(--warm-bg)', border: '1px solid rgba(96,8,18,0.1)', borderRadius: 10, textDecoration: 'none', color: 'var(--lbf-text)' }}>
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#600812" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                                    <span style={{ flex: 1, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{file}</span>
-                                    {ext && <span style={{ fontSize: 10, color: 'var(--warm-gray)', textTransform: 'uppercase' }}>{ext}</span>}
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--warm-gray)" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                                  </a>
-                                )
-                              })}
-                            </div>
-                          </div>
-                        )}
-                        {t.description && (
-                          <div style={{ fontSize: 13, color: 'var(--warm-gray)', fontStyle: 'italic', lineHeight: 1.6 }}>{t.description}</div>
-                        )}
-                      </div>
+                        )
+                      })}
                     </div>
-                  )
-                })}
-              </div>
-            )}
+                  )}
+                </div>
 
-            {/* Lernbeiträge präsentieren */}
-            <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 6 }}>Lernbeiträge präsentieren</div>
-            <p style={{ fontStyle: 'italic', color: 'var(--warm-gray)', fontSize: 12, margin: '0 0 16px' }}>
-              Wähle einen Beitrag und starte die Vollbild-Präsentation
-            </p>
-            {beitraegeLoading ? (
-              <div style={{ color: 'var(--warm-gray)', fontStyle: 'italic', fontSize: 13 }}>Lade…</div>
-            ) : renderBeitragsGrid(b => { setPresentationBeitrag(b); setPresentationSlide(0) })}
-          </div>
+              </div>
+            </div>
+          </>
         )
       })()}
 
