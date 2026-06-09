@@ -484,11 +484,28 @@ export default function Lernbar() {
 
           const renderBook = (b: Lernbeitrag) => {
             const tags = parseTags(b.tags)
-            const bildFirstCard = Array.isArray(b.bild) ? b.bild[0] : b.bild
-            const bildUrl = bildFirstCard ? `https://api.responda.systems/api/files/${b.collectionId}/${b.id}/${bildFirstCard}` : null
+            const bildArr2 = Array.isArray(b.bild) ? b.bild : (b.bild ? [b.bild] : [])
+            const bInhalt = parseInhalt(b.inhalt)
             let bookColor: string | null = null
             let bookPattern: string | null = null
-            const bInhalt = parseInhalt(b.inhalt); if (bInhalt?.v === 2) { if (bInhalt.color) bookColor = bInhalt.color; if (bInhalt.pattern) bookPattern = bInhalt.pattern }
+            if (bInhalt?.v === 2) { if (bInhalt.color) bookColor = bInhalt.color; if (bInhalt.pattern) bookPattern = bInhalt.pattern }
+            // Resolve cover image: prefer cover_block_id, else first bild
+            let bildUrl: string | null = null
+            if (bInhalt?.v === 2 && bInhalt.cover_block_id && Array.isArray(bInhalt.pages)) {
+              outer: for (const page of bInhalt.pages as any[]) {
+                for (const blk of (page.blocks || []) as any[]) {
+                  if (blk.id === bInhalt.cover_block_id && blk.type === 'bild') {
+                    if (blk.bildIdx !== undefined && bildArr2[blk.bildIdx]) bildUrl = `https://api.responda.systems/api/files/${b.collectionId}/${b.id}/${bildArr2[blk.bildIdx]}`
+                    else if (blk.bildExistingUrl) bildUrl = blk.bildExistingUrl
+                    break outer
+                  }
+                }
+              }
+            }
+            if (!bildUrl) {
+              const first = bildArr2[0]
+              if (first) bildUrl = `https://api.responda.systems/api/files/${b.collectionId}/${b.id}/${first}`
+            }
             const cfg = bookColor
               ? (() => { const r = parseInt(bookColor.slice(1,3),16), g = parseInt(bookColor.slice(3,5),16), bv = parseInt(bookColor.slice(5,7),16); return { bg: `linear-gradient(165deg, ${bookColor} 0%, rgb(${Math.round(r*.55)},${Math.round(g*.55)},${Math.round(bv*.55)}) 100%)`, spine: 'rgba(0,0,0,0.3)', label: '' } })()
               : (COVER[b.typ] || COVER.text)

@@ -387,7 +387,7 @@ export default function Ausbildungen() {
   const [beitraege, setBeitraege] = useState<Lernbeitrag[]>([])
   const [beitraegeLoading, setBeitraegeLoading] = useState(false)
   const [showBeitragModal, setShowBeitragModal] = useState(false)
-  const [beitragForm, setBeitragForm] = useState<{ titel: string; tags: string; gepinnt: boolean; color: string; pattern: string | null }>({ titel: '', tags: '', gepinnt: false, color: '#600812', pattern: null })
+  const [beitragForm, setBeitragForm] = useState<{ titel: string; tags: string; gepinnt: boolean; color: string; pattern: string | null; coverBlockId: string | null }>({ titel: '', tags: '', gepinnt: false, color: '#600812', pattern: null, coverBlockId: null })
   const [bookPages, setBookPages] = useState<EditorPage[]>([])
   const [bookPageIdx, setBookPageIdx] = useState(0)
   const [bookDir, setBookDir] = useState(1)
@@ -599,7 +599,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
     setBookPageIdx(0)
     setBookDir(1)
     setShowBlockPicker(false)
-    setBeitragForm({ titel: '', tags: '', gepinnt: false, color: '#600812', pattern: null })
+    setBeitragForm({ titel: '', tags: '', gepinnt: false, color: '#600812', pattern: null, coverBlockId: null })
     setPdfFiles([])
   }
 
@@ -632,7 +632,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
       const fd = new FormData()
       fd.append('typ', 'text')
       fd.append('titel', beitragForm.titel.trim())
-      fd.append('inhalt', JSON.stringify({ v: 2, color: beitragForm.color, pattern: beitragForm.pattern || undefined, pages: pagesData }))
+      fd.append('inhalt', JSON.stringify({ v: 2, color: beitragForm.color, pattern: beitragForm.pattern || undefined, cover_block_id: beitragForm.coverBlockId || undefined, pages: pagesData }))
       fd.append('gepinnt', String(beitragForm.gepinnt))
       fd.append('tags', JSON.stringify(tags))
       fd.append('video_url', '')
@@ -665,11 +665,13 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
     let pages: EditorPage[] = []
     let bookColor = '#600812'
     let bookPattern: string | null = null
+    let coverBlockId: string | null = null
     try {
       const parsed = parseInhalt(b.inhalt)
       if (parsed?.v === 2 && Array.isArray(parsed.pages)) {
         if (parsed.color) bookColor = parsed.color
         if (parsed.pattern) bookPattern = parsed.pattern
+        if (parsed.cover_block_id) coverBlockId = parsed.cover_block_id
         const bildArr = Array.isArray(b.bild) ? b.bild : (b.bild ? [b.bild] : [])
         pages = parsed.pages.map((p: any) => ({
           id: p.id || uid(),
@@ -695,7 +697,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
       if (b.typ === 'quiz') { const qd = b.quiz_daten; block.quizFrage = qd?.frage || ''; block.quizAntworten = ([...(qd?.antworten || []),'','',''].slice(0,4)) as [string,string,string,string]; block.quizRichtige = qd?.richtige ?? 0 }
       pages = [{ id: uid(), blocks: [block] }]
     }
-    setBeitragForm({ titel: b.titel, tags: tagsStr, gepinnt: b.gepinnt, color: bookColor, pattern: bookPattern })
+    setBeitragForm({ titel: b.titel, tags: tagsStr, gepinnt: b.gepinnt, color: bookColor, pattern: bookPattern, coverBlockId })
     setBookPages(pages)
     setBookPageIdx(0)
     setBookDir(1)
@@ -1682,7 +1684,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
             </button>
           )}
           {viewMode === 'lernfeed' && (
-            <button onClick={() => { setBookPages([{ id: Math.random().toString(36).slice(2,9), blocks: [] }]); setBookPageIdx(0); setBookDir(1); setShowBlockPicker(false); setBeitragForm({ titel: '', tags: '', gepinnt: false, color: '#600812', pattern: null }); setEditingBeitragId(null); setShowBeitragModal(true) }} style={addBtnStyle} title="Beitrag erstellen">
+            <button onClick={() => { setBookPages([{ id: Math.random().toString(36).slice(2,9), blocks: [] }]); setBookPageIdx(0); setBookDir(1); setShowBlockPicker(false); setBeitragForm({ titel: '', tags: '', gepinnt: false, color: '#600812', pattern: null, coverBlockId: null }); setEditingBeitragId(null); setShowBeitragModal(true) }} style={addBtnStyle} title="Beitrag erstellen">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             </button>
           )}
@@ -2315,7 +2317,16 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
               )}
 
               {block.type === 'bild' && <div>
-                <div style={{ fontSize: 9, fontWeight: 700, color: '#7c2d12', textTransform: 'uppercase' as const, letterSpacing: '0.18em', marginBottom: 6 }}>Bild</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                  <div style={{ fontSize: 9, fontWeight: 700, color: '#7c2d12', textTransform: 'uppercase' as const, letterSpacing: '0.18em' }}>Bild</div>
+                  {block.imagePreview && (
+                    <button onClick={() => setBeitragForm(prev => ({ ...prev, coverBlockId: prev.coverBlockId === block.id ? null : block.id }))}
+                      style={{ marginLeft: 'auto', marginRight: 26, display: 'flex', alignItems: 'center', gap: 4, background: beitragForm.coverBlockId === block.id ? beitragForm.color : 'rgba(96,8,18,0.06)', border: 'none', borderRadius: 99, padding: '3px 9px', cursor: 'pointer', fontFamily: 'inherit' }}>
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill={beitragForm.coverBlockId === block.id ? '#fff' : '#600812'} stroke="none"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                      <span style={{ fontSize: 10, fontWeight: 700, color: beitragForm.coverBlockId === block.id ? '#fff' : '#600812' }}>Titelbild</span>
+                    </button>
+                  )}
+                </div>
                 {block.imagePreview ? (
                   <div style={{ position: 'relative', borderRadius: 8, overflow: 'hidden', marginRight: 26 }}>
                     <img src={block.imagePreview} alt="" style={{ width: '100%', maxHeight: 180, objectFit: 'cover', display: 'block' }} />
