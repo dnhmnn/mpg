@@ -410,8 +410,6 @@ export default function Ausbildungen() {
   const [aiImageTargetBlock, setAiImageTargetBlock] = useState<string | null>(null)
   
 const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | 'konzepte' | 'jahresuebersicht' | 'archiv' | 'lernfeed' | 'dozent'>('termine')
-  const [presentationBeitrag, setPresentationBeitrag] = useState<Lernbeitrag | null>(null)
-  const [presentationSlide, setPresentationSlide] = useState(0)
   const [terminDetailPage, setTerminDetailPage] = useState<Termin | null>(null)
   const [dozentTodos, setDozentTodos] = useState<{id: string; text: string; done: boolean}[]>([])
   const [dozentAufgaben, setDozentAufgaben] = useState<{id: string; text: string; assignee_id?: string; assignee_name?: string; done: boolean}[]>([])
@@ -2880,60 +2878,6 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                     </div>
                   </div>
 
-                  {/* Präsentation starten */}
-                  <div style={{ marginTop: 24 }}>
-                    <div style={{ fontSize: 9, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 6 }}>Präsentation starten</div>
-                    <p style={{ fontStyle: 'italic', color: 'var(--warm-gray)', fontSize: 12, margin: '0 0 14px' }}>Wähle einen Lernbeitrag für die Vollbild-Präsentation</p>
-                    {beitraegeLoading ? (
-                      <div style={{ color: 'var(--warm-gray)', fontStyle: 'italic', fontSize: 13 }}>Lade…</div>
-                    ) : beitraege.length === 0 ? (
-                      <div style={{ color: 'var(--warm-gray)', fontStyle: 'italic', fontSize: 13 }}>Noch keine Lernbeiträge vorhanden.</div>
-                    ) : (
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
-                        {beitraege.map(b => {
-                          const bildArrD = Array.isArray(b.bild) ? b.bild : (b.bild ? [b.bild] : [])
-                          const bInhD = parseInhalt(b.inhalt)
-                          let bColorD: string | null = null
-                          let bPatD: string | null = null
-                          if (bInhD?.v === 2) { if (bInhD.color) bColorD = bInhD.color; if (bInhD.pattern) bPatD = bInhD.pattern }
-                          const cfgD = bColorD
-                            ? (() => { const r2 = parseInt(bColorD!.slice(1,3),16), g2 = parseInt(bColorD!.slice(3,5),16), bv2 = parseInt(bColorD!.slice(5,7),16); return { bg: `linear-gradient(165deg,${bColorD} 0%,rgb(${Math.round(r2*.55)},${Math.round(g2*.55)},${Math.round(bv2*.55)}) 100%)`, spine: 'rgba(0,0,0,0.3)' } })()
-                            : (COVER_DS[b.typ] || COVER_DS.text)
-                          let bImgD: string | null = null
-                          if (bInhD?.v === 2 && bInhD.cover_block_id && Array.isArray(bInhD.pages)) {
-                            outer: for (const page of bInhD.pages as any[]) {
-                              for (const blk of (page.blocks || []) as any[]) {
-                                if (blk.id === bInhD.cover_block_id && blk.type === 'bild') {
-                                  if (blk.bildIdx !== undefined && bildArrD[blk.bildIdx]) bImgD = `https://api.responda.systems/api/files/${b.collectionId}/${b.id}/${bildArrD[blk.bildIdx]}`
-                                  else if (blk.bildExistingUrl) bImgD = blk.bildExistingUrl
-                                  break outer
-                                }
-                              }
-                            }
-                          }
-                          if (!bImgD && bildArrD[0]) bImgD = `https://api.responda.systems/api/files/${b.collectionId}/${b.id}/${bildArrD[0]}`
-                          return (
-                            <div key={b.id}>
-                              <div style={{ cursor: 'pointer', borderRadius: 8, overflow: 'hidden', aspectRatio: '3/4', position: 'relative', background: bImgD ? '#1a0e08' : cfgD.bg, boxShadow: '3px 5px 14px rgba(0,0,0,0.22), inset -3px 0 8px rgba(0,0,0,0.18)', marginBottom: 5 }}
-                                onClick={() => { setPresentationBeitrag(b); setPresentationSlide(0); setTerminDetailPage(null) }}>
-                                <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 6, background: cfgD.spine, zIndex: 3 }} />
-                                {!bImgD && bPatD && (() => { const pp = getPatternBg(bPatD); return pp ? <div style={{ position: 'absolute', inset: 0, backgroundImage: pp.backgroundImage, backgroundSize: pp.backgroundSize || 'auto', zIndex: 1, pointerEvents: 'none' }} /> : null })()}
-                                {bImgD && <img src={bImgD} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />}
-                                <div style={{ position: 'absolute', inset: 0, background: bImgD ? 'linear-gradient(to top,rgba(0,0,0,0.88) 0%,rgba(0,0,0,0.05) 55%,transparent 100%)' : 'none', zIndex: 2 }} />
-                                <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '8px 8px 8px 12px', zIndex: 4 }}>
-                                  <div style={{ fontWeight: 700, fontStyle: 'italic', fontSize: 10, color: '#fff', lineHeight: 1.3, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' as const } as React.CSSProperties}>{b.titel}</div>
-                                </div>
-                              </div>
-                              <button onClick={() => { setPresentationBeitrag(b); setPresentationSlide(0); setTerminDetailPage(null) }}
-                                style={{ width: '100%', padding: '5px 0', borderRadius: 6, border: 'none', background: '#600812', color: '#fff', fontWeight: 700, fontSize: 10, cursor: 'pointer', fontFamily: 'inherit' }}>
-                                Präsentieren
-                              </button>
-                            </div>
-                          )
-                        })}
-                      </div>
-                    )}
-                  </div>
                 </div>
               )}
 
@@ -5796,105 +5740,6 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
         }
       `}</style>
 
-      {/* PRESENTATION MODE */}
-      {presentationBeitrag && (() => {
-        const pb2 = presentationBeitrag
-        const inhalt = parseInhalt(pb2.inhalt)
-        const bildArr = Array.isArray(pb2.bild) ? pb2.bild : (pb2.bild ? [pb2.bild] : [])
-        let slides: any[] = []
-        if (inhalt?.v === 2 && Array.isArray(inhalt.pages)) {
-          slides = inhalt.pages
-        } else if (pb2.inhalt) {
-          slides = [{ id: 'main', blocks: [{ id: 'b0', type: 'text', text: typeof pb2.inhalt === 'string' ? pb2.inhalt : '' }] }]
-        }
-        const total = slides.length
-        const slide = slides[presentationSlide] || slides[0]
-        const accent = inhalt?.color || '#600812'
-
-        const goSlide = (dir: 1 | -1) => {
-          setPresentationSlide(prev => Math.max(0, Math.min(total - 1, prev + dir)))
-        }
-
-        // Keyboard handler via ref
-        const handleKey = (e: React.KeyboardEvent) => {
-          if (e.key === 'ArrowRight' || e.key === 'ArrowDown') goSlide(1)
-          if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') goSlide(-1)
-          if (e.key === 'Escape') setPresentationBeitrag(null)
-        }
-
-        return (
-          <div
-            tabIndex={0} onKeyDown={handleKey}
-            ref={el => el?.focus()}
-            style={{ position: 'fixed', inset: 0, zIndex: 9999, background: '#0a0503', display: 'flex', flexDirection: 'column', outline: 'none', userSelect: 'none' }}
-          >
-            {/* Top bar */}
-            <div style={{ flexShrink: 0, height: 52, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px', borderBottom: '0.5px solid rgba(253,232,216,0.1)' }}>
-              <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 15, color: '#fde8d8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '60%' }}>{pb2.titel}</div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                <span style={{ fontSize: 12, color: 'rgba(253,232,216,0.45)', fontStyle: 'italic' }}>{presentationSlide + 1} / {total}</span>
-                <button onClick={() => setPresentationBeitrag(null)}
-                  style={{ background: 'rgba(253,232,216,0.08)', border: 'none', borderRadius: 8, padding: '6px 12px', color: 'rgba(253,232,216,0.6)', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
-                  Beenden
-                </button>
-              </div>
-            </div>
-
-            {/* Slide content */}
-            <div style={{ flex: 1, overflowY: 'auto', padding: '32px max(40px, 8vw)', display: 'flex', flexDirection: 'column', gap: 20 }}>
-              {(slide?.blocks || []).map((block: any, bi: number) => (
-                <div key={block.id || bi}>
-                  {block.type === 'text' && block.text && (
-                    <div dangerouslySetInnerHTML={{ __html: block.text }}
-                      style={{ fontSize: 'clamp(16px, 2.2vw, 22px)', color: '#fde8d8', lineHeight: 1.8, fontFamily: "Georgia, 'Times New Roman', serif" }} />
-                  )}
-                  {block.type === 'bild' && (() => {
-                    let url: string | null = null
-                    if (block.bildIdx !== undefined && bildArr[block.bildIdx]) url = `https://api.responda.systems/api/files/${pb2.collectionId}/${pb2.id}/${bildArr[block.bildIdx]}`
-                    else if (block.bildExistingUrl) url = block.bildExistingUrl
-                    return url ? <img src={url} alt="" style={{ maxWidth: '100%', maxHeight: '60vh', objectFit: 'contain', borderRadius: 10, display: 'block', margin: '0 auto' }} /> : null
-                  })()}
-                  {block.type === 'video' && block.videoUrl && (
-                    <div style={{ position: 'relative', paddingBottom: '56.25%', borderRadius: 10, overflow: 'hidden' }}>
-                      <iframe src={(() => { const yt = block.videoUrl.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)/); return yt ? `https://www.youtube.com/embed/${yt[1]}?autoplay=0&rel=0` : block.videoUrl })()} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none' }} allowFullScreen />
-                    </div>
-                  )}
-                  {block.type === 'quiz' && block.quizFrage && (
-                    <div style={{ background: 'rgba(253,232,216,0.05)', borderRadius: 12, padding: '20px 24px', borderLeft: `3px solid ${accent}` }}>
-                      <div style={{ fontSize: 'clamp(15px, 2vw, 20px)', fontWeight: 600, color: '#fde8d8', marginBottom: 16, lineHeight: 1.5 }}>{block.quizFrage}</div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                        {(block.quizAntworten || []).filter((a: string) => a.trim()).map((a: string, i: number) => (
-                          <div key={i} style={{ padding: '10px 14px', borderRadius: 8, border: '1px solid rgba(253,232,216,0.15)', background: 'rgba(253,232,216,0.04)', color: 'rgba(253,232,216,0.75)', fontSize: 15 }}>
-                            {a}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-
-            {/* Bottom navigation */}
-            <div style={{ flexShrink: 0, height: 64, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 24px', borderTop: '0.5px solid rgba(253,232,216,0.08)' }}>
-              <button onClick={() => goSlide(-1)} disabled={presentationSlide === 0}
-                style={{ width: 44, height: 44, borderRadius: '50%', border: 'none', background: presentationSlide > 0 ? 'rgba(253,232,216,0.1)' : 'transparent', color: presentationSlide > 0 ? '#fde8d8' : 'rgba(253,232,216,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: presentationSlide > 0 ? 'pointer' : 'default' }}>
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
-              </button>
-              <div style={{ display: 'flex', gap: 7, alignItems: 'center' }}>
-                {slides.map((_, i) => (
-                  <div key={i} onClick={() => setPresentationSlide(i)}
-                    style={{ width: i === presentationSlide ? 22 : 7, height: 7, borderRadius: 4, background: i === presentationSlide ? accent : 'rgba(253,232,216,0.2)', cursor: 'pointer', transition: 'width 0.22s, background 0.22s' }} />
-                ))}
-              </div>
-              <button onClick={() => goSlide(1)} disabled={presentationSlide >= total - 1}
-                style={{ width: 44, height: 44, borderRadius: '50%', border: 'none', background: presentationSlide < total - 1 ? 'rgba(253,232,216,0.1)' : 'transparent', color: presentationSlide < total - 1 ? '#fde8d8' : 'rgba(253,232,216,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: presentationSlide < total - 1 ? 'pointer' : 'default' }}>
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg>
-              </button>
-            </div>
-          </div>
-        )
-      })()}
     </div>
   )
 }
