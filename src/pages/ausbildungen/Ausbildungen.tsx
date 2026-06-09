@@ -2218,42 +2218,77 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
               <div style={{ fontWeight: 700, marginBottom: 6, color: 'var(--lbf-text)' }}>Noch keine Lernbeiträge</div>
               <div>Erstelle deinen ersten Beitrag mit dem + Button oben</div>
             </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {beitraege.map(b => (
-                <div key={b.id} style={{ background: 'var(--lbf-card)', border: `1px solid ${b.gepinnt ? '#600812' : 'rgba(96,8,18,0.1)'}`, borderRadius: 12, boxShadow: 'var(--lbf-shadow)', overflow: 'hidden' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px' }}>
-                    <div style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(96,8,18,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#600812" strokeWidth="2">
-                        {b.typ === 'video' ? <><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></> :
-                         b.typ === 'quiz' ? <><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></> :
-                         b.typ === 'bild' ? <><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></> :
-                         <><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></>}
-                      </svg>
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 15, color: 'var(--lbf-text)', display: 'flex', alignItems: 'center', gap: 8 }}>
-                        {b.titel}
-                        {b.gepinnt && <span style={{ fontSize: 10, fontWeight: 700, color: '#600812', background: 'var(--lbf-border-light)', borderRadius: 5, padding: '2px 6px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Angepinnt</span>}
+          ) : (() => {
+            const COVER_COLORS: Record<string, { bg: string; spine: string }> = {
+              text:  { bg: 'linear-gradient(165deg, #600812 0%, #3d0408 100%)', spine: 'rgba(0,0,0,0.3)' },
+              bild:  { bg: 'linear-gradient(165deg, #7c2d12 0%, #431407 100%)', spine: 'rgba(0,0,0,0.3)' },
+              video: { bg: 'linear-gradient(165deg, #065f46 0%, #022c22 100%)', spine: 'rgba(0,0,0,0.3)' },
+              quiz:  { bg: 'linear-gradient(165deg, #1e3a8a 0%, #0f172a 100%)', spine: 'rgba(0,0,0,0.3)' },
+            }
+            return (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }}>
+                {beitraege.map(b => {
+                  const bildArrC = Array.isArray(b.bild) ? b.bild : (b.bild ? [b.bild] : [])
+                  const bInhaltC = parseInhalt(b.inhalt)
+                  let bookColorC: string | null = null
+                  let bookPatternC: string | null = null
+                  if (bInhaltC?.v === 2) { if (bInhaltC.color) bookColorC = bInhaltC.color; if (bInhaltC.pattern) bookPatternC = bInhaltC.pattern }
+                  const cfgC = bookColorC
+                    ? (() => { const r = parseInt(bookColorC!.slice(1,3),16), g = parseInt(bookColorC!.slice(3,5),16), bv = parseInt(bookColorC!.slice(5,7),16); return { bg: `linear-gradient(165deg, ${bookColorC} 0%, rgb(${Math.round(r*.55)},${Math.round(g*.55)},${Math.round(bv*.55)}) 100%)`, spine: 'rgba(0,0,0,0.3)' } })()
+                    : (COVER_COLORS[b.typ] || COVER_COLORS.text)
+                  // Resolve cover image (same logic as Lernbar)
+                  let bildUrlC: string | null = null
+                  if (bInhaltC?.v === 2 && bInhaltC.cover_block_id && Array.isArray(bInhaltC.pages)) {
+                    outer: for (const page of bInhaltC.pages as any[]) {
+                      for (const blk of (page.blocks || []) as any[]) {
+                        if (blk.id === bInhaltC.cover_block_id && blk.type === 'bild') {
+                          if (blk.bildIdx !== undefined && bildArrC[blk.bildIdx]) bildUrlC = `https://api.responda.systems/api/files/${b.collectionId}/${b.id}/${bildArrC[blk.bildIdx]}`
+                          else if (blk.bildExistingUrl) bildUrlC = blk.bildExistingUrl
+                          break outer
+                        }
+                      }
+                    }
+                  }
+                  if (!bildUrlC && bildArrC[0]) bildUrlC = `https://api.responda.systems/api/files/${b.collectionId}/${b.id}/${bildArrC[0]}`
+                  const tags: string[] = (() => { try { const t = b.tags; return Array.isArray(t) ? t : JSON.parse(t as any) } catch { return [] } })()
+                  return (
+                    <div key={b.id}>
+                      {/* Book cover */}
+                      <div style={{ cursor: 'pointer', borderRadius: 10, overflow: 'hidden', aspectRatio: '3/4', position: 'relative', background: bildUrlC ? '#1a0e08' : cfgC.bg, boxShadow: '3px 5px 18px rgba(0,0,0,0.28), inset -3px 0 8px rgba(0,0,0,0.18)', marginBottom: 8 }}
+                        onClick={() => openEditBeitrag(b)}>
+                        <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 7, background: cfgC.spine, zIndex: 3 }} />
+                        {!bildUrlC && bookPatternC && (() => { const pp = getPatternBg(bookPatternC); return pp ? <div style={{ position: 'absolute', inset: 0, backgroundImage: pp.backgroundImage, backgroundSize: pp.backgroundSize || 'auto', zIndex: 1, pointerEvents: 'none' }} /> : null })()}
+                        {bildUrlC && <img src={bildUrlC} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />}
+                        <div style={{ position: 'absolute', inset: 0, background: bildUrlC ? 'linear-gradient(to top, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.05) 55%, transparent 100%)' : 'none', zIndex: 2 }} />
+                        {b.gepinnt && (
+                          <div style={{ position: 'absolute', top: 8, right: 8, zIndex: 4 }}>
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="rgba(253,232,216,0.9)"><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5v6h2v-6h5v-2l-2-2z"/></svg>
+                          </div>
+                        )}
+                        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '10px 10px 10px 16px', zIndex: 4 }}>
+                          <div style={{ fontWeight: 700, fontStyle: 'italic', fontSize: 12, color: '#fff', lineHeight: 1.3, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' as const } as React.CSSProperties}>{b.titel}</div>
+                          {tags.length > 0 && (
+                            <div style={{ fontSize: 8, color: 'rgba(255,255,255,0.4)', fontStyle: 'italic', marginTop: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {tags.slice(0, 2).map(t => `#${t}`).join(' ')}
+                            </div>
+                          )}
+                        </div>
                       </div>
-                      <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginTop: 2 }}>
-                        {b.typ.charAt(0).toUpperCase() + b.typ.slice(1)} · {new Date(b.created).toLocaleDateString('de-DE')}
-                        {(() => { try { const tags = JSON.parse(b.tags as any); return tags.length > 0 ? ` · ${tags.join(', ')}` : '' } catch { return '' } })()}
+                      {/* Actions */}
+                      <div style={{ display: 'flex', gap: 5 }}>
+                        <button onClick={() => openEditBeitrag(b)} style={{ flex: 1, padding: '5px 0', borderRadius: 7, border: '1px solid rgba(96,8,18,0.18)', background: 'rgba(96,8,18,0.04)', color: '#600812', fontWeight: 600, fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}>
+                          Bearbeiten
+                        </button>
+                        <button onClick={() => deleteBeitrag(b.id)} style={{ padding: '5px 8px', borderRadius: 7, border: '1px solid rgba(96,8,18,0.12)', background: 'none', color: 'var(--warm-gray)', cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center' }}>
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+                        </button>
                       </div>
                     </div>
-                    <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-                      <button onClick={() => openEditBeitrag(b)} style={{ background: 'rgba(96,8,18,0.06)', border: '1px solid rgba(96,8,18,0.15)', borderRadius: 8, padding: '6px 10px', cursor: 'pointer', color: '#600812', fontWeight: 600, fontSize: 12, fontFamily: 'inherit' }}>
-                        Bearbeiten
-                      </button>
-                      <button onClick={() => deleteBeitrag(b.id)} style={{ background: 'none', border: '1px solid rgba(96,8,18,0.15)', borderRadius: 8, padding: '6px 10px', cursor: 'pointer', color: '#600812', fontWeight: 600, fontSize: 12, fontFamily: 'inherit' }}>
-                        Löschen
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+                  )
+                })}
+              </div>
+            )
+          })()}
         </div>
       )}
 
