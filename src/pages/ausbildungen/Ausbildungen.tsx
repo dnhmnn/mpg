@@ -211,6 +211,31 @@ interface Ausbildungskonzept {
   created: string
 }
 
+interface PraesentationSlide {
+  id: string
+  layout: 'title' | 'content' | 'image' | 'blank'
+  bg: string
+  pattern?: string | null
+  title?: string
+  body?: string
+  textColor?: string
+  imageFile?: File | null
+  imagePreview?: string | null
+  imageExistingUrl?: string | null
+}
+
+interface Praesentation {
+  id: string
+  collectionId: string
+  titel: string
+  termin_id?: string
+  inhalt: string
+  bilder?: string | string[]
+  organization_id: string
+  created_by?: string
+  created: string
+}
+
 interface TerminForm {
   id?: string
   name: string
@@ -409,7 +434,7 @@ export default function Ausbildungen() {
   const [generatingAIImage, setGeneratingAIImage] = useState(false)
   const [aiImageTargetBlock, setAiImageTargetBlock] = useState<string | null>(null)
   
-const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | 'konzepte' | 'jahresuebersicht' | 'archiv' | 'lernfeed' | 'dozent'>('termine')
+const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | 'konzepte' | 'jahresuebersicht' | 'archiv' | 'lernfeed' | 'dozent' | 'praesentationen'>('termine')
   const [terminDetailPage, setTerminDetailPage] = useState<Termin | null>(null)
   const [dozentTodos, setDozentTodos] = useState<{id: string; text: string; done: boolean}[]>([])
   const [dozentAufgaben, setDozentAufgaben] = useState<{id: string; text: string; assignee_id?: string; assignee_name?: string; done: boolean}[]>([])
@@ -424,6 +449,19 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
   const [tnInfoText, setTNInfoText] = useState('')
   const [editingLernkonzept, setEditingLernkonzept] = useState(false)
   const [lernkonzeptText, setLernkonzeptText] = useState('')
+
+  const [praesentationen, setPraesentationen] = useState<Praesentation[]>([])
+  const [praesentationenLoading, setPraesentationenLoading] = useState(false)
+  const [showPraesentationEditor, setShowPraesentationEditor] = useState(false)
+  const [editingPraesentation, setEditingPraesentation] = useState<Praesentation | null>(null)
+  const [praesentationTitel, setPraesentationTitel] = useState('')
+  const [praesentationTerminId, setPraesentationTerminId] = useState('')
+  const [praesentationSlides, setPraesentationSlides] = useState<PraesentationSlide[]>([])
+  const [currentSlideIdx, setCurrentSlideIdx] = useState(0)
+  const [savingPraesentation, setSavingPraesentation] = useState(false)
+  const [showPresentationMode, setShowPresentationMode] = useState(false)
+  const [presentationModeSlideIdx, setPresentationModeSlideIdx] = useState(0)
+  const [pdfViewerUrl, setPdfViewerUrl] = useState<string | null>(null)
 
   const [uploadFile, setUploadFile] = useState<File | null>(null)
   const [uploadTyp, setUploadTyp] = useState<'dozent' | 'teilnehmer'>('teilnehmer')
@@ -442,6 +480,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
     if (user?.organization_id) {
       loadData()
       loadAllUsers()
+      loadPraesentationen()
     }
   }, [user])
 
@@ -762,6 +801,115 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
     } catch(e: any) {
       showMessage('Fehler: ' + e.message, 'error')
     } finally { setUploadingTNFile(false) }
+  }
+
+  async function loadPraesentationen() {
+    if (!user?.organization_id) return
+    setPraesentationenLoading(true)
+    try {
+      const records = await pb.collection('ausbildungen_praesentationen').getFullList({
+        filter: `organization_id = "${user.organization_id}"`,
+        sort: '-created',
+        requestKey: `loadPraes-${Date.now()}`
+      })
+      setPraesentationen(records as any)
+    } catch { /* collection may not exist yet */ }
+    finally { setPraesentationenLoading(false) }
+  }
+
+  function makePraesSlide(layout: PraesentationSlide['layout'] = 'title'): PraesentationSlide {
+    return { id: Math.random().toString(36).slice(2,9), layout, bg: '#600812', pattern: null, title: '', body: '', textColor: '#ffffff', imageFile: null, imagePreview: null, imageExistingUrl: null }
+  }
+
+  function openNewPraesentation() {
+    setPraesentationTitel('')
+    setPraesentationTerminId('')
+    setPraesentationSlides([makePraesSlide('title')])
+    setCurrentSlideIdx(0)
+    setEditingPraesentation(null)
+    setShowPraesentationEditor(true)
+  }
+
+  function openEditPraesentation(p: Praesentation) {
+    let slides: PraesentationSlide[] = []
+    try {
+      const parsed = JSON.parse(p.inhalt)
+      if (Array.isArray(parsed?.slides)) {
+        const bildArr: string[] = Array.isArray(p.bilder) ? p.bilder as string[] : (p.bilder ? [p.bilder as string] : [])
+        slides = parsed.slides.map((s: any) => {
+          const imgUrl = s.imageIdx !== undefined && bildArr[s.imageIdx]
+            ? `https://api.responda.systems/api/files/${p.collectionId}/${p.id}/${bildArr[s.imageIdx]}`
+            : s.imageExistingUrl || null
+          return { ...s, imageFile: null, imagePreview: imgUrl, imageExistingUrl: imgUrl }
+        })
+      }
+    } catch {}
+    if (slides.length === 0) slides = [makePraesSlide()]
+    setPraesentationTitel(p.titel)
+    setPraesentationTerminId(p.termin_id || '')
+    setPraesentationSlides(slides)
+    setCurrentSlideIdx(0)
+    setEditingPraesentation(p)
+    setShowPraesentationEditor(true)
+  }
+
+  async function savePraesentation() {
+    if (!praesentationTitel.trim() || !user?.organization_id) return
+    setSavingPraesentation(true)
+    try {
+      const imageFiles: File[] = []
+      const slidesData = praesentationSlides.map(s => {
+        if (s.imageFile) {
+          const idx = imageFiles.length
+          imageFiles.push(s.imageFile)
+          return { id: s.id, layout: s.layout, bg: s.bg, pattern: s.pattern, title: s.title, body: s.body, textColor: s.textColor, imageIdx: idx }
+        }
+        return { id: s.id, layout: s.layout, bg: s.bg, pattern: s.pattern, title: s.title, body: s.body, textColor: s.textColor, imageExistingUrl: s.imageExistingUrl || undefined }
+      })
+      const fd = new FormData()
+      fd.append('titel', praesentationTitel.trim())
+      if (praesentationTerminId) fd.append('termin_id', praesentationTerminId)
+      fd.append('inhalt', JSON.stringify({ v: 1, slides: slidesData }))
+      fd.append('organization_id', user.organization_id)
+      if (user.id) fd.append('created_by', user.id)
+      imageFiles.forEach(f => fd.append('bilder', f))
+      let result: any
+      if (editingPraesentation) {
+        result = await pb.collection('ausbildungen_praesentationen').update(editingPraesentation.id, fd)
+        setPraesentationen(prev => prev.map(p => p.id === editingPraesentation.id ? result : p))
+      } else {
+        result = await pb.collection('ausbildungen_praesentationen').create(fd)
+        setPraesentationen(prev => [result, ...prev])
+      }
+      setEditingPraesentation(result)
+      showMessage('Gespeichert', 'success')
+    } catch(e: any) { showMessage('Fehler: ' + e.message, 'error') }
+    finally { setSavingPraesentation(false) }
+  }
+
+  async function deletePraesentation(id: string) {
+    if (!confirm('Präsentation löschen?')) return
+    try {
+      await pb.collection('ausbildungen_praesentationen').delete(id)
+      setPraesentationen(prev => prev.filter(p => p.id !== id))
+      showMessage('Gelöscht', 'success')
+    } catch(e: any) { showMessage('Fehler: ' + e.message, 'error') }
+  }
+
+  function updateSlideField(slideId: string, updates: Partial<PraesentationSlide>) {
+    setPraesentationSlides(prev => prev.map(s => s.id === slideId ? { ...s, ...updates } : s))
+  }
+
+  function addPraesSlide() {
+    const newSlide = makePraesSlide('content')
+    setPraesentationSlides(prev => { const next = [...prev]; next.splice(currentSlideIdx + 1, 0, newSlide); return next })
+    setCurrentSlideIdx(prev => prev + 1)
+  }
+
+  function deletePraesSlide(idx: number) {
+    if (praesentationSlides.length <= 1) return
+    setPraesentationSlides(prev => prev.filter((_, i) => i !== idx))
+    setCurrentSlideIdx(prev => Math.min(prev, praesentationSlides.length - 2))
   }
 
   function uid() { return Math.random().toString(36).slice(2, 9) }
@@ -1867,6 +2015,11 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             </button>
           )}
+          {viewMode === 'praesentationen' && (
+            <button onClick={openNewPraesentation} style={addBtnStyle} title="Neue Präsentation">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            </button>
+          )}
         </div>
       </div>
 
@@ -1882,12 +2035,14 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
             { key: 'archiv' as const, label: 'Archiv', icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="21,8 21,21 3,21 3,8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>, count: archivTermine.length },
             { key: 'lernfeed' as const, label: 'Lernfeed', icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 11a9 9 0 0 1 9 9"/><path d="M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1" fill="currentColor" stroke="none"/></svg>, count: undefined },
             { key: 'dozent' as const, label: 'Dozent', icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>, count: undefined },
+            { key: 'praesentationen' as const, label: 'Folien', icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>, count: undefined },
           ]).map(tab => (
             <button
               key={tab.key}
               onClick={() => {
                 setViewMode(tab.key)
                 if (tab.key === 'lernfeed' || tab.key === 'dozent') loadBeitraege()
+                if (tab.key === 'praesentationen') loadPraesentationen()
               }}
               className="ausb-nav-btn"
               style={{
@@ -2472,6 +2627,54 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
         </div>
       )}
 
+      {/* PRAESENTATIONEN LIST VIEW */}
+      {viewMode === 'praesentationen' && (
+        <div style={{ maxWidth: 900, margin: '0 auto', padding: '20px max(16px, env(safe-area-inset-left)) calc(env(safe-area-inset-bottom) + 40px)' }}>
+          <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 14 }}>Präsentationen</div>
+          {praesentationenLoading ? (
+            <div style={{ color: 'var(--warm-gray)', fontStyle: 'italic', fontSize: 13 }}>Lade…</div>
+          ) : praesentationen.length === 0 ? (
+            <div style={{ background: 'var(--lbf-card)', borderRadius: 12, padding: '28px 20px', textAlign: 'center', color: 'var(--warm-gray)', fontStyle: 'italic', fontSize: 14 }}>
+              Noch keine Präsentationen — klicke auf + um eine zu erstellen.
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 14 }}>
+              {praesentationen.map(p => {
+                const parsed = parseInhalt(p.inhalt)
+                const firstSlide = parsed?.slides?.[0]
+                const slideCount = parsed?.slides?.length || 0
+                const bildArr: string[] = Array.isArray(p.bilder) ? p.bilder as string[] : (p.bilder ? [p.bilder as string] : [])
+                let coverImg: string | null = null
+                if (firstSlide?.imageIdx !== undefined && bildArr[firstSlide.imageIdx]) coverImg = `https://api.responda.systems/api/files/${p.collectionId}/${p.id}/${bildArr[firstSlide.imageIdx]}`
+                else if (firstSlide?.imageExistingUrl) coverImg = firstSlide.imageExistingUrl
+                const patBg = firstSlide?.pattern ? getPatternBg(firstSlide.pattern) : null
+                return (
+                  <div key={p.id} style={{ borderRadius: 12, overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', background: '#fff' }}>
+                    <div style={{ aspectRatio: '16/9', background: firstSlide?.bg || '#600812', position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      {coverImg && <img src={coverImg} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />}
+                      {patBg && <div style={{ position: 'absolute', inset: 0, backgroundImage: patBg.backgroundImage, backgroundSize: patBg.backgroundSize || 'auto', zIndex: 1 }} />}
+                      {coverImg && <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top,rgba(0,0,0,0.7) 0%,rgba(0,0,0,0.1) 60%,transparent 100%)', zIndex: 2 }} />}
+                      {firstSlide?.title && (
+                        <div style={{ color: firstSlide.textColor || '#fff', fontSize: 13, fontWeight: 700, fontStyle: 'italic', textAlign: 'center', padding: '0 14px', zIndex: 3, position: 'relative', lineHeight: 1.3 }}>{firstSlide.title}</div>
+                      )}
+                      <div style={{ position: 'absolute', top: 6, right: 8, fontSize: 9, color: 'rgba(255,255,255,0.55)', fontWeight: 600, zIndex: 3 }}>{slideCount} Folie{slideCount !== 1 ? 'n' : ''}</div>
+                    </div>
+                    <div style={{ padding: '10px 12px 12px' }}>
+                      <div style={{ fontWeight: 700, fontStyle: 'italic', fontSize: 14, color: 'var(--lbf-text)', marginBottom: 8, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.titel}</div>
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <button onClick={() => openEditPraesentation(p)} style={{ flex: 1, padding: '6px 0', borderRadius: 8, border: '1px solid rgba(96,8,18,0.2)', background: 'transparent', color: '#600812', fontWeight: 700, fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}>Bearbeiten</button>
+                        <button onClick={() => { openEditPraesentation(p); setTimeout(() => { setShowPresentationMode(true); setPresentationModeSlideIdx(0) }, 50) }} style={{ flex: 1, padding: '6px 0', borderRadius: 8, border: 'none', background: '#600812', color: '#fff', fontWeight: 700, fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}>Präsentieren</button>
+                        <button onClick={() => deletePraesentation(p.id)} style={{ width: 30, padding: '6px 0', borderRadius: 8, border: '1px solid rgba(96,8,18,0.15)', background: 'transparent', color: 'var(--warm-gray)', fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>×</button>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* DOZENT VIEW */}
       {viewMode === 'dozent' && (() => {
         const meineTermine = termine.filter(t =>
@@ -2721,6 +2924,12 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                               <span style={{ flex: 1, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{file}</span>
                               {ext && <span style={{ fontSize: 10, color: 'var(--warm-gray)', textTransform: 'uppercase' }}>{ext}</span>}
                               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--warm-gray)" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                              {ext === 'pdf' && (
+                                <button onClick={e => { e.preventDefault(); setPdfViewerUrl(`https://api.responda.systems/api/files/${t.collectionId}/${t.id}/${file}`) }}
+                                  style={{ background: '#600812', border: 'none', borderRadius: 6, padding: '3px 8px', color: '#fff', fontSize: 10, fontWeight: 700, cursor: 'pointer', flexShrink: 0, fontFamily: 'inherit' }}>
+                                  Vollbild
+                                </button>
+                              )}
                             </a>
                           )
                         })}
@@ -2750,6 +2959,12 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                               <span style={{ flex: 1, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{file}</span>
                               {ext && <span style={{ fontSize: 10, color: 'var(--warm-gray)', textTransform: 'uppercase' }}>{ext}</span>}
                               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--warm-gray)" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                              {ext === 'pdf' && (
+                                <button onClick={e => { e.preventDefault(); setPdfViewerUrl(`https://api.responda.systems/api/files/${t.collectionId}/${t.id}/${file}`) }}
+                                  style={{ background: '#600812', border: 'none', borderRadius: 6, padding: '3px 8px', color: '#fff', fontSize: 10, fontWeight: 700, cursor: 'pointer', flexShrink: 0, fontFamily: 'inherit' }}>
+                                  Vollbild
+                                </button>
+                              )}
                             </a>
                           )
                         })}
