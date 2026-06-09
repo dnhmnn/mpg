@@ -259,6 +259,7 @@ export default function Office() {
               autosave: true, chat: false, comments: true,
               compactHeader: true, feedback: false, forcesave: true,
               help: false, plugins: false,
+              uiTheme: 'theme-lbf',
             },
           },
           events: {
