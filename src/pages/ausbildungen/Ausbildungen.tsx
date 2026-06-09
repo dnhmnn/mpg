@@ -5410,6 +5410,215 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
         </div>
       )}
 
+      {/* PDF VIEWER */}
+      {pdfViewerUrl && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 600, background: '#111', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ flexShrink: 0, height: 52, background: '#1a0e08', borderBottom: '0.5px solid rgba(253,232,216,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px' }}>
+            <div style={{ fontStyle: 'italic', fontSize: 13, color: '#fde8d8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '70%' }}>{decodeURIComponent(pdfViewerUrl.split('/').pop() || '')}</div>
+            <button onClick={() => setPdfViewerUrl(null)} style={{ background: 'rgba(253,232,216,0.1)', border: 'none', borderRadius: 8, padding: '6px 14px', color: '#fde8d8', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Schließen</button>
+          </div>
+          <iframe src={pdfViewerUrl} style={{ flex: 1, border: 'none' }} title="PDF" />
+        </div>
+      )}
+
+      {/* PRAESENTATION EDITOR */}
+      {showPraesentationEditor && (() => {
+        const slide = praesentationSlides[currentSlideIdx]
+        if (!slide) return null
+        const patBg = slide.pattern ? getPatternBg(slide.pattern) : null
+        const COLORS = ['#600812','#3d0408','#1e3a8a','#065f46','#713f12','#1a1a2e','#0f0a07','#374151']
+        const PATTERNS_P = ['diamante','venezia','marmo','trama','fiorentino','capitone'] as const
+        return (
+          <div style={{ position: 'fixed', inset: 0, zIndex: 500, background: '#0f0806', display: 'flex', flexDirection: 'column', fontFamily: 'inherit' }}>
+            {/* Editor header */}
+            <div style={{ flexShrink: 0, height: 54, background: '#1a0e08', borderBottom: '0.5px solid rgba(253,232,216,0.1)', display: 'flex', alignItems: 'center', gap: 10, padding: '0 16px' }}>
+              <button onClick={() => setShowPraesentationEditor(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(253,232,216,0.6)', padding: 4, flexShrink: 0 }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6"/></svg>
+              </button>
+              <input value={praesentationTitel} onChange={e => setPraesentationTitel(e.target.value)} placeholder="Titel der Präsentation …"
+                style={{ flex: 1, background: 'rgba(253,232,216,0.07)', border: '1px solid rgba(253,232,216,0.12)', borderRadius: 8, padding: '6px 12px', color: '#fde8d8', fontSize: 14, fontStyle: 'italic', outline: 'none', fontFamily: 'inherit' }} />
+              <button onClick={() => { setShowPresentationMode(true); setPresentationModeSlideIdx(0) }}
+                style={{ padding: '7px 14px', borderRadius: 8, border: 'none', background: 'rgba(253,232,216,0.1)', color: '#fde8d8', fontWeight: 700, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginRight: 4, verticalAlign: 'middle' }}><polygon points="5 3 19 12 5 21 5 3" fill="currentColor" stroke="none"/></svg>
+                Präsentieren
+              </button>
+              <button onClick={savePraesentation} disabled={savingPraesentation || !praesentationTitel.trim()}
+                style={{ padding: '7px 16px', borderRadius: 8, border: 'none', background: praesentationTitel.trim() ? '#600812' : 'rgba(96,8,18,0.3)', color: '#fff', fontWeight: 700, fontSize: 12, cursor: praesentationTitel.trim() ? 'pointer' : 'default', fontFamily: 'inherit', flexShrink: 0 }}>
+                {savingPraesentation ? 'Speichert…' : 'Speichern'}
+              </button>
+            </div>
+
+            <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+              {/* Left: slide thumbnails */}
+              <div style={{ width: 130, background: '#0a0503', overflowY: 'auto', padding: '10px 8px', display: 'flex', flexDirection: 'column', gap: 6, flexShrink: 0 }}>
+                {praesentationSlides.map((s, i) => {
+                  const sPat = s.pattern ? getPatternBg(s.pattern) : null
+                  return (
+                    <div key={s.id} onClick={() => setCurrentSlideIdx(i)} style={{ position: 'relative', cursor: 'pointer' }}>
+                      <div style={{ aspectRatio: '16/9', background: s.bg, borderRadius: 5, border: i === currentSlideIdx ? '2px solid #600812' : '2px solid rgba(253,232,216,0.1)', overflow: 'hidden', position: 'relative' }}>
+                        {s.imagePreview && <img src={s.imagePreview} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />}
+                        {sPat && <div style={{ position: 'absolute', inset: 0, backgroundImage: sPat.backgroundImage, backgroundSize: sPat.backgroundSize || 'auto', zIndex: 1 }} />}
+                        {s.title && <div style={{ position: 'absolute', bottom: 3, left: 4, right: 4, fontSize: 5.5, color: s.textColor || '#fff', fontStyle: 'italic', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', zIndex: 2 }}>{s.title}</div>}
+                        <div style={{ position: 'absolute', top: 2, left: 3, fontSize: 5.5, color: 'rgba(255,255,255,0.45)', zIndex: 2 }}>{i + 1}</div>
+                      </div>
+                      {i === currentSlideIdx && (
+                        <button onClick={e => { e.stopPropagation(); deletePraesSlide(i) }} style={{ position: 'absolute', top: 2, right: 2, width: 14, height: 14, borderRadius: 3, background: 'rgba(220,38,38,0.8)', border: 'none', color: '#fff', fontSize: 9, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, zIndex: 3 }}>×</button>
+                      )}
+                    </div>
+                  )
+                })}
+                <button onClick={addPraesSlide} style={{ width: '100%', padding: '6px 0', borderRadius: 6, border: '1px dashed rgba(253,232,216,0.2)', background: 'transparent', color: 'rgba(253,232,216,0.45)', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}>+ Folie</button>
+              </div>
+
+              {/* Center: slide canvas */}
+              <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, overflow: 'auto' }}>
+                <div style={{ width: '100%', maxWidth: 760, aspectRatio: '16/9', background: slide.bg, borderRadius: 10, position: 'relative', overflow: 'hidden', boxShadow: '0 8px 40px rgba(0,0,0,0.5)' }}>
+                  {slide.imagePreview && <img src={slide.imagePreview} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', zIndex: 0 }} />}
+                  {patBg && <div style={{ position: 'absolute', inset: 0, backgroundImage: patBg.backgroundImage, backgroundSize: patBg.backgroundSize || 'auto', zIndex: 1 }} />}
+                  {slide.imagePreview && <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top,rgba(0,0,0,0.75) 0%,rgba(0,0,0,0.15) 60%,transparent 100%)', zIndex: 2 }} />}
+                  <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: slide.layout === 'blank' ? 'flex-start' : 'center', justifyContent: slide.layout === 'content' ? 'flex-end' : 'center', padding: slide.layout === 'content' ? '10% 8% 8%' : '8%', zIndex: 3, gap: 12 }}>
+                    {slide.layout !== 'blank' && (
+                      <input value={slide.title || ''} onChange={e => updateSlideField(slide.id, { title: e.target.value })}
+                        placeholder={slide.layout === 'title' ? 'Titel eingeben …' : 'Überschrift …'}
+                        style={{ background: 'transparent', border: 'none', outline: 'none', color: slide.textColor || '#fff', fontFamily: "'Atkinson Hyperlegible', sans-serif", fontSize: slide.layout === 'title' ? 'clamp(20px, 4.5vw, 52px)' : 'clamp(15px, 3vw, 34px)', fontWeight: 800, fontStyle: 'italic', textAlign: 'center', width: '100%', caretColor: '#fff', textShadow: slide.imagePreview ? '0 2px 8px rgba(0,0,0,0.5)' : 'none' } as React.CSSProperties} />
+                    )}
+                    {(slide.layout === 'content' || slide.layout === 'blank') && (
+                      <textarea value={slide.body || ''} onChange={e => updateSlideField(slide.id, { body: e.target.value })}
+                        placeholder="Text eingeben …" rows={3}
+                        style={{ background: 'transparent', border: 'none', outline: 'none', color: slide.textColor || '#fff', fontFamily: "'Atkinson Hyperlegible', sans-serif", fontSize: 'clamp(12px, 1.8vw, 20px)', textAlign: 'center', width: '100%', resize: 'none', caretColor: '#fff', lineHeight: 1.65, opacity: 0.85, textShadow: slide.imagePreview ? '0 2px 6px rgba(0,0,0,0.5)' : 'none' } as React.CSSProperties} />
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Right: properties */}
+              <div style={{ width: 190, background: '#0a0503', overflowY: 'auto', padding: '14px 12px', display: 'flex', flexDirection: 'column', gap: 16, flexShrink: 0 }}>
+                <div>
+                  <div style={{ fontSize: 8, fontWeight: 700, color: 'rgba(253,232,216,0.45)', textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: 8 }}>Hintergrund</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 5 }}>
+                    {COLORS.map(c => (
+                      <button key={c} onClick={() => updateSlideField(slide.id, { bg: c })}
+                        style={{ width: '100%', aspectRatio: '1', borderRadius: 6, border: `2px solid ${slide.bg === c ? '#fff' : 'transparent'}`, background: c, cursor: 'pointer', padding: 0 }} />
+                    ))}
+                  </div>
+                  <input type="color" value={slide.bg} onChange={e => updateSlideField(slide.id, { bg: e.target.value })}
+                    style={{ width: '100%', height: 28, borderRadius: 6, border: '1px solid rgba(253,232,216,0.1)', marginTop: 6, cursor: 'pointer', background: 'transparent' }} />
+                </div>
+                <div>
+                  <div style={{ fontSize: 8, fontWeight: 700, color: 'rgba(253,232,216,0.45)', textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: 8 }}>Muster</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 4 }}>
+                    <button onClick={() => updateSlideField(slide.id, { pattern: null })}
+                      style={{ aspectRatio: '1', borderRadius: 5, border: `2px solid ${!slide.pattern ? '#fff' : 'rgba(253,232,216,0.15)'}`, background: '#1a0e08', cursor: 'pointer', fontSize: 7, color: 'rgba(253,232,216,0.5)' }}>Kein</button>
+                    {PATTERNS_P.map(pat => {
+                      const pp = getPatternBg(pat)
+                      return pp ? (
+                        <button key={pat} onClick={() => updateSlideField(slide.id, { pattern: pat })}
+                          style={{ aspectRatio: '1', borderRadius: 5, border: `2px solid ${slide.pattern === pat ? '#fff' : 'rgba(253,232,216,0.15)'}`, background: slide.bg, backgroundImage: pp.backgroundImage, backgroundSize: pp.backgroundSize || 'auto', cursor: 'pointer' }} />
+                      ) : null
+                    })}
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 8, fontWeight: 700, color: 'rgba(253,232,216,0.45)', textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: 8 }}>Textfarbe</div>
+                  <div style={{ display: 'flex', gap: 5 }}>
+                    {['#ffffff','#fde8d8','#1a0e08','#600812'].map(c => (
+                      <button key={c} onClick={() => updateSlideField(slide.id, { textColor: c })}
+                        style={{ flex: 1, height: 26, borderRadius: 6, border: `2px solid ${slide.textColor === c ? (c === '#ffffff' ? '#600812' : '#fff') : 'transparent'}`, background: c, cursor: 'pointer', padding: 0 }} />
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 8, fontWeight: 700, color: 'rgba(253,232,216,0.45)', textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: 8 }}>Layout</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    {(['title','content','image','blank'] as const).map(l => (
+                      <button key={l} onClick={() => updateSlideField(slide.id, { layout: l })}
+                        style={{ padding: '5px 8px', borderRadius: 6, border: `1px solid ${slide.layout === l ? '#600812' : 'rgba(253,232,216,0.1)'}`, background: slide.layout === l ? 'rgba(96,8,18,0.4)' : 'transparent', color: slide.layout === l ? '#fde8d8' : 'rgba(253,232,216,0.45)', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>
+                        {l === 'title' ? 'Titel' : l === 'content' ? 'Inhalt' : l === 'image' ? 'Bild' : 'Leer'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 8, fontWeight: 700, color: 'rgba(253,232,216,0.45)', textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: 8 }}>Bild</div>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px', border: '1px dashed rgba(253,232,216,0.2)', borderRadius: 8, cursor: 'pointer', color: 'rgba(253,232,216,0.5)', fontSize: 11 }}>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                    Bild hochladen
+                    <input type="file" accept="image/*" style={{ display: 'none' }} onChange={e => {
+                      const f = e.target.files?.[0]
+                      if (!f) return
+                      const preview = URL.createObjectURL(f)
+                      updateSlideField(slide.id, { imageFile: f, imagePreview: preview, imageExistingUrl: null })
+                      e.target.value = ''
+                    }} />
+                  </label>
+                  {slide.imagePreview && (
+                    <button onClick={() => updateSlideField(slide.id, { imageFile: null, imagePreview: null, imageExistingUrl: null })}
+                      style={{ marginTop: 5, width: '100%', padding: '4px 0', borderRadius: 6, border: '1px solid rgba(220,38,38,0.3)', background: 'transparent', color: '#dc2626', fontSize: 10, cursor: 'pointer', fontFamily: 'inherit' }}>
+                      Bild entfernen
+                    </button>
+                  )}
+                </div>
+                {praesentationSlides.length > 1 && (
+                  <button onClick={() => deletePraesSlide(currentSlideIdx)}
+                    style={{ padding: '6px 0', borderRadius: 8, border: '1px solid rgba(220,38,38,0.25)', background: 'transparent', color: 'rgba(220,38,38,0.65)', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit', marginTop: 'auto' }}>
+                    Folie löschen
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        )
+      })()}
+
+      {/* PRESENTATION FULLSCREEN */}
+      {showPresentationMode && (() => {
+        const slide = praesentationSlides[presentationModeSlideIdx]
+        const total = praesentationSlides.length
+        if (!slide) return null
+        const pat = slide.pattern ? getPatternBg(slide.pattern) : null
+        const goSlide = (dir: 1 | -1) => setPresentationModeSlideIdx(p => Math.max(0, Math.min(total - 1, p + dir)))
+        return (
+          <div tabIndex={0} ref={el => el?.focus()} onKeyDown={e => {
+            if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ') goSlide(1)
+            if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') goSlide(-1)
+            if (e.key === 'Escape') setShowPresentationMode(false)
+          }} style={{ position: 'fixed', inset: 0, zIndex: 9000, background: '#000', outline: 'none', cursor: 'none' }}>
+            {/* Slide */}
+            <div style={{ width: '100%', height: '100%', background: slide.bg, position: 'relative', overflow: 'hidden' }}>
+              {slide.imagePreview && <img src={slide.imagePreview} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', zIndex: 0 }} />}
+              {pat && <div style={{ position: 'absolute', inset: 0, backgroundImage: pat.backgroundImage, backgroundSize: pat.backgroundSize || 'auto', zIndex: 1 }} />}
+              {slide.imagePreview && <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top,rgba(0,0,0,0.8) 0%,rgba(0,0,0,0.1) 55%,transparent 100%)', zIndex: 2 }} />}
+              <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: slide.layout === 'content' ? 'flex-end' : 'center', padding: slide.layout === 'content' ? '6vw 8vw 10vw' : '6vw 8vw', zIndex: 3, gap: '2vh' }}>
+                {slide.layout !== 'blank' && slide.title && (
+                  <div style={{ color: slide.textColor || '#fff', fontSize: 'clamp(28px, 5.5vw, 80px)', fontWeight: 800, fontStyle: 'italic', textAlign: 'center', lineHeight: 1.1, textShadow: slide.imagePreview ? '0 3px 16px rgba(0,0,0,0.6)' : 'none' }}>{slide.title}</div>
+                )}
+                {(slide.layout === 'content' || slide.layout === 'blank') && slide.body && (
+                  <div style={{ color: slide.textColor || '#fff', fontSize: 'clamp(16px, 2.2vw, 32px)', textAlign: 'center', lineHeight: 1.7, opacity: 0.88, maxWidth: '80vw', textShadow: slide.imagePreview ? '0 2px 10px rgba(0,0,0,0.5)' : 'none' }}>{slide.body}</div>
+                )}
+              </div>
+            </div>
+            {/* Controls overlay (visible on hover) */}
+            <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 70, background: 'linear-gradient(to top,rgba(0,0,0,0.7),transparent)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 20, zIndex: 10, cursor: 'auto' }}>
+              <button onClick={() => goSlide(-1)} disabled={presentationModeSlideIdx === 0}
+                style={{ width: 40, height: 40, borderRadius: '50%', border: 'none', background: presentationModeSlideIdx > 0 ? 'rgba(255,255,255,0.15)' : 'transparent', color: presentationModeSlideIdx > 0 ? '#fff' : 'rgba(255,255,255,0.2)', cursor: presentationModeSlideIdx > 0 ? 'pointer' : 'default', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+              </button>
+              <div style={{ display: 'flex', gap: 5, alignItems: 'center' }}>
+                {praesentationSlides.map((_, i) => (
+                  <div key={i} onClick={() => setPresentationModeSlideIdx(i)}
+                    style={{ width: i === presentationModeSlideIdx ? 22 : 6, height: 6, borderRadius: 3, background: i === presentationModeSlideIdx ? '#fff' : 'rgba(255,255,255,0.3)', cursor: 'pointer', transition: 'width 0.2s' }} />
+                ))}
+              </div>
+              <button onClick={() => goSlide(1)} disabled={presentationModeSlideIdx >= total - 1}
+                style={{ width: 40, height: 40, borderRadius: '50%', border: 'none', background: presentationModeSlideIdx < total - 1 ? 'rgba(255,255,255,0.15)' : 'transparent', color: presentationModeSlideIdx < total - 1 ? '#fff' : 'rgba(255,255,255,0.2)', cursor: presentationModeSlideIdx < total - 1 ? 'pointer' : 'default', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+              </button>
+              <button onClick={() => setShowPresentationMode(false)} style={{ padding: '6px 14px', borderRadius: 8, border: 'none', background: 'rgba(255,255,255,0.15)', color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Beenden</button>
+            </div>
+          </div>
+        )
+      })()}
+
       <style>{`
         .content {
           max-width: 1100px;
