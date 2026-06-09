@@ -70,6 +70,7 @@ interface Termin {
   co_dozenten?: string
   dozent_aufgaben?: string
   dateien_links?: string
+  anhang_links?: string
   organization_id: string
   created: string
   updated: string
@@ -445,11 +446,12 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
   const [newAufgabeAssignee, setNewAufgabeAssignee] = useState('')
   const [uploadingDozentFile, setUploadingDozentFile] = useState(false)
   const [uploadingTNFile, setUploadingTNFile] = useState(false)
-  const [showFilePicker, setShowFilePicker] = useState(false)
+  const [showFilePicker, setShowFilePicker] = useState<'dozent' | 'tn' | false>(false)
   const [filePickerItems, setFilePickerItems] = useState<{id: string; name: string; file: string; file_type?: string}[]>([])
   const [filePickerLoading, setFilePickerLoading] = useState(false)
   const [filePickerSearch, setFilePickerSearch] = useState('')
   const [dateienLinks, setDateienLinks] = useState<{id: string; name: string; file: string}[]>([])
+  const [anhangLinks, setAnhangLinks] = useState<{id: string; name: string; file: string}[]>([])
   const [terminDetailTab, setTerminDetailTab] = useState<'info' | 'anwesenheit' | 'dateien' | 'dozenten'>('info')
   const [editingTNInfo, setEditingTNInfo] = useState(false)
   const [tnInfoText, setTNInfoText] = useState('')
@@ -678,10 +680,13 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
     try { coDoz = t.co_dozenten ? JSON.parse(t.co_dozenten) : [] } catch { coDoz = [] }
     let links: {id: string; name: string; file: string}[] = []
     try { links = t.dateien_links ? JSON.parse(t.dateien_links) : [] } catch { links = [] }
+    let aLinks: {id: string; name: string; file: string}[] = []
+    try { aLinks = t.anhang_links ? JSON.parse(t.anhang_links) : [] } catch { aLinks = [] }
     setDozentTodos(todos)
     setDozentAufgaben(aufgaben)
     setCoDozenten(coDoz)
     setDateienLinks(links)
+    setAnhangLinks(aLinks)
     setNewTodoText('')
     setNewAufgabeText('')
     setNewAufgabeAssignee('')
@@ -855,6 +860,26 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
     setDateienLinks(updated)
     try {
       await pb.collection('ausbildungen_termine').update(terminDetailPage.id, { dateien_links: JSON.stringify(updated) })
+    } catch(e: any) { showMessage('Fehler: ' + e.message, 'error') }
+  }
+
+  async function linkTNFile(item: {id: string; name: string; file: string}) {
+    if (!terminDetailPage) return
+    if (anhangLinks.some(l => l.id === item.id)) { setShowFilePicker(false); return }
+    const updated = [...anhangLinks, { id: item.id, name: item.name, file: item.file }]
+    setAnhangLinks(updated)
+    setShowFilePicker(false)
+    try {
+      await pb.collection('ausbildungen_termine').update(terminDetailPage.id, { anhang_links: JSON.stringify(updated) })
+    } catch(e: any) { showMessage('Fehler: ' + e.message, 'error') }
+  }
+
+  async function unlinkTNFile(id: string) {
+    if (!terminDetailPage) return
+    const updated = anhangLinks.filter(l => l.id !== id)
+    setAnhangLinks(updated)
+    try {
+      await pb.collection('ausbildungen_termine').update(terminDetailPage.id, { anhang_links: JSON.stringify(updated) })
     } catch(e: any) { showMessage('Fehler: ' + e.message, 'error') }
   }
 
@@ -2968,7 +2993,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                   {/* Für Teilnehmer */}
                   <div style={{ marginBottom: 24 }}>
                     <div style={{ fontSize: 9, fontWeight: 700, color: '#16a34a', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 8 }}>Für Teilnehmer</div>
-                    {tnDateien.length > 0 && (
+                    {(tnDateien.length > 0 || anhangLinks.length > 0) && (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 8 }}>
                         {tnDateien.map((file, i) => {
                           const ext = file.split('.').pop()?.toLowerCase() ?? ''
@@ -2988,16 +3013,43 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                             </a>
                           )
                         })}
+                        {anhangLinks.map(link => {
+                          const ext = link.name.split('.').pop()?.toLowerCase() ?? ''
+                          const url = `${pb.baseUrl}/api/files/files/${link.id}/${link.file}?token=${pb.authStore.token}`
+                          return (
+                            <div key={link.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: '#fff', border: '1px solid rgba(22,163,74,0.2)', borderRadius: 10, color: 'var(--lbf-text)' }}>
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                              <a href={url} target="_blank" rel="noreferrer" style={{ flex: 1, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--lbf-text)', textDecoration: 'none' }}>{link.name}</a>
+                              <span style={{ fontSize: 10, color: 'var(--warm-gray)', textTransform: 'uppercase', flexShrink: 0 }}>{ext}</span>
+                              {ext === 'pdf' && (
+                                <button onClick={() => setPdfViewerUrl(url)}
+                                  style={{ background: '#600812', border: 'none', borderRadius: 6, padding: '3px 8px', color: '#fff', fontSize: 10, fontWeight: 700, cursor: 'pointer', flexShrink: 0, fontFamily: 'inherit' }}>
+                                  Vollbild
+                                </button>
+                              )}
+                              <button onClick={() => unlinkTNFile(link.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--warm-gray)', padding: 2, flexShrink: 0 }}>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                              </button>
+                            </div>
+                          )
+                        })}
                       </div>
                     )}
-                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', border: '1.5px dashed rgba(22,163,74,0.3)', borderRadius: 10, cursor: uploadingTNFile ? 'default' : 'pointer', background: 'rgba(22,163,74,0.02)' }}>
-                      {uploadingTNFile ? <span style={{ fontSize: 13, color: 'var(--warm-gray)', fontStyle: 'italic' }}>Lade hoch…</span>
-                        : <><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
-                          <span style={{ fontSize: 13, color: '#16a34a', fontWeight: 600 }}>Datei für Teilnehmer</span><span style={{ fontSize: 11, color: 'var(--warm-gray)' }}>PDF, DOCX …</span></>
-                      }
-                      <input type="file" style={{ display: 'none' }} disabled={uploadingTNFile}
-                        onChange={e => { const f = e.target.files?.[0]; if (f) uploadTNFile(f); e.target.value = '' }} />
-                    </label>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <label style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', border: '1.5px dashed rgba(22,163,74,0.3)', borderRadius: 10, cursor: uploadingTNFile ? 'default' : 'pointer', background: 'rgba(22,163,74,0.02)' }}>
+                        {uploadingTNFile ? <span style={{ fontSize: 13, color: 'var(--warm-gray)', fontStyle: 'italic' }}>Lade hoch…</span>
+                          : <><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+                            <span style={{ fontSize: 13, color: '#16a34a', fontWeight: 600 }}>Hochladen</span></>
+                        }
+                        <input type="file" style={{ display: 'none' }} disabled={uploadingTNFile}
+                          onChange={e => { const f = e.target.files?.[0]; if (f) uploadTNFile(f); e.target.value = '' }} />
+                      </label>
+                      <button onClick={() => { setShowFilePicker('tn'); loadFilePicker() }}
+                        style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '10px 14px', border: '1.5px dashed rgba(22,163,74,0.3)', borderRadius: 10, cursor: 'pointer', background: 'rgba(22,163,74,0.02)', color: '#16a34a', fontSize: 13, fontWeight: 600, fontFamily: 'inherit', whiteSpace: 'nowrap' }}>
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                        Aus Bibliothek
+                      </button>
+                    </div>
                   </div>
 
                   {/* Für Dozenten */}
@@ -3054,7 +3106,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                         <input type="file" accept=".pdf,.ppt,.pptx,.doc,.docx,.key,.pages" style={{ display: 'none' }} disabled={uploadingDozentFile}
                           onChange={e => { const f = e.target.files?.[0]; if (f) uploadDozentFile(f); e.target.value = '' }} />
                       </label>
-                      <button onClick={() => { setShowFilePicker(true); loadFilePicker() }}
+                      <button onClick={() => { setShowFilePicker('dozent'); loadFilePicker() }}
                         style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '10px 14px', border: '1.5px dashed rgba(96,8,18,0.25)', borderRadius: 10, cursor: 'pointer', background: 'rgba(96,8,18,0.02)', color: '#600812', fontSize: 13, fontWeight: 600, fontFamily: 'inherit', whiteSpace: 'nowrap' }}>
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
                         Aus Bibliothek
@@ -5494,6 +5546,9 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
 
       {/* FILE PICKER SHEET */}
       {showFilePicker && (() => {
+        const isTN = showFilePicker === 'tn'
+        const currentLinks = isTN ? anhangLinks : dateienLinks
+        const accentColor = isTN ? '#16a34a' : '#600812'
         const query = filePickerSearch.toLowerCase()
         const filtered = filePickerItems.filter(f => f.name.toLowerCase().includes(query))
         return (
@@ -5502,10 +5557,12 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
             <div style={{ position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 701, background: 'var(--warm-bg)', borderRadius: '20px 20px 0 0', maxHeight: '80dvh', display: 'flex', flexDirection: 'column', paddingBottom: 'env(safe-area-inset-bottom)' }}>
               <div style={{ flexShrink: 0, padding: '14px 16px 10px', borderBottom: '0.5px solid rgba(96,8,18,0.08)' }}>
                 <div style={{ width: 36, height: 4, borderRadius: 2, background: 'rgba(96,8,18,0.15)', margin: '0 auto 12px' }} />
-                <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 10 }}>Aus Bibliothek wählen</div>
+                <div style={{ fontSize: 10, fontWeight: 700, color: accentColor, textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 10 }}>
+                  Aus Bibliothek — {isTN ? 'Für Teilnehmer' : 'Für Dozenten'}
+                </div>
                 <input value={filePickerSearch} onChange={e => setFilePickerSearch(e.target.value)}
                   placeholder="Suchen …" autoFocus
-                  style={{ width: '100%', padding: '9px 12px', borderRadius: 10, border: '1px solid rgba(96,8,18,0.15)', background: '#fff', fontSize: 13, outline: 'none', fontFamily: 'inherit', color: 'var(--lbf-text)', boxSizing: 'border-box' }} />
+                  style={{ width: '100%', padding: '9px 12px', borderRadius: 10, border: `1px solid rgba(${isTN ? '22,163,74' : '96,8,18'},0.15)`, background: '#fff', fontSize: 13, outline: 'none', fontFamily: 'inherit', color: 'var(--lbf-text)', boxSizing: 'border-box' }} />
               </div>
               <div style={{ flex: 1, overflowY: 'auto', padding: '8px 16px 16px' }}>
                 {filePickerLoading ? (
@@ -5516,11 +5573,11 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                     {filtered.map(item => {
                       const ext = item.name.split('.').pop()?.toLowerCase() ?? ''
-                      const alreadyLinked = dateienLinks.some(l => l.id === item.id)
+                      const alreadyLinked = currentLinks.some(l => l.id === item.id)
                       return (
-                        <button key={item.id} onClick={() => linkDozentFile(item)} disabled={alreadyLinked}
-                          style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 13px', background: alreadyLinked ? 'rgba(96,8,18,0.04)' : '#fff', border: `1px solid ${alreadyLinked ? 'rgba(96,8,18,0.2)' : 'rgba(96,8,18,0.1)'}`, borderRadius: 10, cursor: alreadyLinked ? 'default' : 'pointer', textAlign: 'left', fontFamily: 'inherit', width: '100%' }}>
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={alreadyLinked ? '#16a34a' : '#600812'} strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                        <button key={item.id} onClick={() => isTN ? linkTNFile(item) : linkDozentFile(item)} disabled={alreadyLinked}
+                          style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 13px', background: alreadyLinked ? `rgba(${isTN ? '22,163,74' : '96,8,18'},0.04)` : '#fff', border: `1px solid rgba(${isTN ? '22,163,74' : '96,8,18'},${alreadyLinked ? '0.2' : '0.1'})`, borderRadius: 10, cursor: alreadyLinked ? 'default' : 'pointer', textAlign: 'left', fontFamily: 'inherit', width: '100%' }}>
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={alreadyLinked ? '#16a34a' : accentColor} strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
                           <span style={{ flex: 1, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--lbf-text)' }}>{item.name}</span>
                           <span style={{ fontSize: 10, color: 'var(--warm-gray)', textTransform: 'uppercase', flexShrink: 0 }}>{ext}</span>
                           {alreadyLinked && <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>}
