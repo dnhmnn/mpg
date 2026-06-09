@@ -257,7 +257,7 @@ export default function Office() {
             lang: 'de',
             customization: {
               autosave: true, chat: false, comments: true,
-              compactHeader: true, feedback: false, forcesave: true,
+              compactHeader: false, feedback: false, forcesave: true,
               help: false, plugins: false,
               uiTheme: 'theme-lbf',
             },
