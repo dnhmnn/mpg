@@ -484,6 +484,19 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
     }
   }, [user])
 
+  // Fullscreen when presentation mode opens/closes
+  useEffect(() => {
+    const el = document.documentElement as any
+    if (showPresentationMode) {
+      if (el.requestFullscreen) el.requestFullscreen().catch(() => {})
+      else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen()
+    } else {
+      const doc = document as any
+      if (doc.fullscreenElement && doc.exitFullscreen) doc.exitFullscreen().catch(() => {})
+      else if (doc.webkitFullscreenElement && doc.webkitExitFullscreen) doc.webkitExitFullscreen()
+    }
+  }, [showPresentationMode])
+
   if (authLoading) {
     return null
   }
@@ -5577,12 +5590,15 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
         if (!slide) return null
         const pat = slide.pattern ? getPatternBg(slide.pattern) : null
         const goSlide = (dir: 1 | -1) => setPresentationModeSlideIdx(p => Math.max(0, Math.min(total - 1, p + dir)))
+        let touchStartX = 0
         return (
           <div tabIndex={0} ref={el => el?.focus()} onKeyDown={e => {
             if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ') goSlide(1)
             if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') goSlide(-1)
             if (e.key === 'Escape') setShowPresentationMode(false)
-          }} style={{ position: 'fixed', inset: 0, zIndex: 9000, background: '#000', outline: 'none', cursor: 'none' }}>
+          }} onTouchStart={e => { touchStartX = e.touches[0].clientX }}
+          onTouchEnd={e => { const dx = e.changedTouches[0].clientX - touchStartX; if (Math.abs(dx) > 50) goSlide(dx < 0 ? 1 : -1) }}
+          style={{ position: 'fixed', inset: 0, zIndex: 9000, background: '#000', outline: 'none', cursor: 'none' }}>
             {/* Slide */}
             <div style={{ width: '100%', height: '100%', background: slide.bg, position: 'relative', overflow: 'hidden' }}>
               {slide.imagePreview && <img src={slide.imagePreview} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', zIndex: 0 }} />}
