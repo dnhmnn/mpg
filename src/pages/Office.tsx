@@ -168,8 +168,14 @@ export default function Office() {
             },
           },
           events: {
-            onReady: () => setEditorLoading(false),
-            onError: () => setEditorLoading(false),
+            onAppReady: () => setEditorLoading(false),
+            onDocumentReady: () => setEditorLoading(false),
+            onError: (event: unknown) => {
+              setEditorLoading(false)
+              const e = event as { data?: { errorDescription?: string } }
+              showMsg('Editor-Fehler: ' + (e?.data?.errorDescription || 'Unbekannter Fehler'), 'error')
+              setEditingFile(null)
+            },
           },
         })
       }
