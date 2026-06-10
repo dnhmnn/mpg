@@ -3250,15 +3250,31 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                     const einladungsText = generateEinladungsText(t)
                     const terminEinladungen = einladungen.filter(e => e.termin_id === t.id)
                     const unitasRSVPs = terminTeilnehmer.filter(tt => tt.termin_id === t.id)
-                    const zusagen = [
-                      ...terminEinladungen.filter(e => e.status === 'zusagen').map(e => e.name),
-                      ...unitasRSVPs.filter(tt => tt.status === 'zugesagt').map(tt => getTeilnehmerName(tt.teilnehmer_id)),
-                    ]
-                    const absagen = [
-                      ...terminEinladungen.filter(e => e.status === 'absagen').map(e => e.name),
-                      ...unitasRSVPs.filter(tt => tt.status === 'abgesagt' || tt.status === 'entschuldigt').map(tt => getTeilnehmerName(tt.teilnehmer_id)),
-                    ]
-                    const ausstehend = unitasRSVPs.filter(tt => tt.status === 'eingeladen').map(tt => getTeilnehmerName(tt.teilnehmer_id))
+                    // Rückmeldungen aus Link + Unitas zu einer Liste zusammenführen, dedupliziert pro Name
+                    const rsvpMap = new Map<string, { display: string, status: 'zugesagt' | 'abgesagt' | 'ausstehend' }>()
+                    function upsertRSVP(rawName: string, status: 'zugesagt' | 'abgesagt' | 'ausstehend') {
+                      const display = (rawName || '').trim()
+                      if (!display || display === 'Unbekannt') return
+                      const key = display.toLowerCase()
+                      const existing = rsvpMap.get(key)
+                      if (status === 'ausstehend') {
+                        if (!existing) rsvpMap.set(key, { display, status })
+                      } else {
+                        rsvpMap.set(key, { display, status })
+                      }
+                    }
+                    terminEinladungen.forEach(e => upsertRSVP(e.name, e.status === 'zusagen' ? 'zugesagt' : 'abgesagt'))
+                    unitasRSVPs.forEach(tt => {
+                      const name = getTeilnehmerName(tt.teilnehmer_id)
+                      const status = tt.status === 'zugesagt' ? 'zugesagt'
+                        : (tt.status === 'abgesagt' || tt.status === 'entschuldigt') ? 'abgesagt'
+                        : 'ausstehend'
+                      upsertRSVP(name, status)
+                    })
+                    const alleRueckmeldungen = [...rsvpMap.values()]
+                    const zusagen = alleRueckmeldungen.filter(r => r.status === 'zugesagt').map(r => r.display)
+                    const absagen = alleRueckmeldungen.filter(r => r.status === 'abgesagt').map(r => r.display)
+                    const ausstehend = alleRueckmeldungen.filter(r => r.status === 'ausstehend').map(r => r.display)
                     const rueckmeldungenGesamt = zusagen.length + absagen.length + ausstehend.length
                     return (
                       <div style={{ background: '#fff', borderRadius: 12, padding: '14px 16px', marginBottom: 14, boxShadow: '0 1px 4px rgba(0,0,0,0.06)', borderLeft: '3px solid #600812' }}>
