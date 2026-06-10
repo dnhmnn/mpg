@@ -125,6 +125,7 @@ interface TerminTeilnehmer {
   eingeladen_am: string
   eingeladen_via: 'email' | 'whatsapp' | 'persönlich' | 'telefon'
   anwesend: boolean
+  anwesenheit_status?: 'da' | 'krank' | 'entschuldigt' | 'fehlend' | ''
   notizen: string
   organization_id: string
   expand?: {
@@ -1038,10 +1039,11 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
     await saveCoDozenten(terminDetailPage.id, updated)
   }
 
-  async function toggleAnwesenheit(ttId: string, current: boolean) {
+  async function setAnwesenheitStatus(ttId: string, current: string | undefined, value: 'da' | 'krank' | 'entschuldigt' | 'fehlend') {
+    const newValue = current === value ? '' : value
     try {
-      await pb.collection('ausbildungen_termine_user').update(ttId, { anwesend: !current })
-      setTerminTeilnehmer(prev => prev.map(tt => tt.id === ttId ? { ...tt, anwesend: !current } : tt))
+      await pb.collection('ausbildungen_termine_user').update(ttId, { anwesenheit_status: newValue, anwesend: newValue === 'da' })
+      setTerminTeilnehmer(prev => prev.map(tt => tt.id === ttId ? { ...tt, anwesenheit_status: newValue as any, anwesend: newValue === 'da' } : tt))
     } catch(e: any) { showMessage('Fehler: ' + e.message, 'error') }
   }
 
@@ -3467,25 +3469,38 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                         const name = getTeilnehmerName(tt.teilnehmer_id)
                         const s = tt.status
                         const statusColor = s === 'zugesagt' ? '#16a34a' : s === 'abgesagt' ? '#dc2626' : 'var(--warm-gray)'
+                        const anw = tt.anwesenheit_status || ''
+                        const anwOptions: { value: 'da' | 'krank' | 'entschuldigt' | 'fehlend', label: string, color: string, bg: string }[] = [
+                          { value: 'da', label: 'Da', color: '#16a34a', bg: 'rgba(22,163,74,0.1)' },
+                          { value: 'krank', label: 'Krank', color: '#d97706', bg: 'rgba(217,119,6,0.1)' },
+                          { value: 'entschuldigt', label: 'Entschuldigt', color: 'var(--warm-gray)', bg: 'rgba(139,113,90,0.1)' },
+                          { value: 'fehlend', label: 'Fehlend', color: '#dc2626', bg: 'rgba(220,38,38,0.1)' },
+                        ]
                         return (
-                          <div key={tt.id} style={{ background: '#fff', borderRadius: 10, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-                            <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(96,8,18,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                              <span style={{ fontSize: 14, fontWeight: 700, color: '#600812', fontStyle: 'italic' }}>{name.charAt(0)}</span>
+                          <div key={tt.id} style={{ background: '#fff', borderRadius: 10, padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 10, boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                              <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(96,8,18,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                <span style={{ fontSize: 14, fontWeight: 700, color: '#600812', fontStyle: 'italic' }}>{name.charAt(0)}</span>
+                              </div>
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ fontWeight: 700, fontStyle: 'italic', fontSize: 14, color: 'var(--lbf-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</div>
+                                <div style={{ fontSize: 10, color: statusColor, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: 1 }}>{s}</div>
+                              </div>
+                              {/* RSVP toggle */}
+                              <button onClick={() => toggleRSVP(tt.id, s)}
+                                style={{ padding: '5px 12px', borderRadius: 8, border: `1px solid ${s === 'zugesagt' ? '#16a34a' : 'rgba(96,8,18,0.15)'}`, background: s === 'zugesagt' ? 'rgba(22,163,74,0.08)' : '#fff', color: s === 'zugesagt' ? '#16a34a' : 'var(--warm-gray)', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
+                                {s === 'zugesagt' ? 'Zugesagt' : 'Zusagen'}
+                              </button>
                             </div>
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                              <div style={{ fontWeight: 700, fontStyle: 'italic', fontSize: 14, color: 'var(--lbf-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</div>
-                              <div style={{ fontSize: 10, color: statusColor, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: 1 }}>{s}</div>
+                            {/* Anwesenheits-Status */}
+                            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                              {anwOptions.map(opt => (
+                                <button key={opt.value} onClick={() => setAnwesenheitStatus(tt.id, anw, opt.value)}
+                                  style={{ padding: '5px 12px', borderRadius: 8, border: `1px solid ${anw === opt.value ? opt.color : 'rgba(96,8,18,0.15)'}`, background: anw === opt.value ? opt.bg : '#fff', color: anw === opt.value ? opt.color : 'var(--warm-gray)', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                                  {opt.label}
+                                </button>
+                              ))}
                             </div>
-                            {/* RSVP toggle */}
-                            <button onClick={() => toggleRSVP(tt.id, s)}
-                              style={{ padding: '5px 12px', borderRadius: 8, border: `1px solid ${s === 'zugesagt' ? '#16a34a' : 'rgba(96,8,18,0.15)'}`, background: s === 'zugesagt' ? 'rgba(22,163,74,0.08)' : '#fff', color: s === 'zugesagt' ? '#16a34a' : 'var(--warm-gray)', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
-                              {s === 'zugesagt' ? 'Zugesagt' : 'Zusagen'}
-                            </button>
-                            {/* Anwesend toggle */}
-                            <button onClick={() => toggleAnwesenheit(tt.id, tt.anwesend)}
-                              style={{ width: 32, height: 32, borderRadius: 8, border: `2px solid ${tt.anwesend ? '#16a34a' : 'rgba(96,8,18,0.2)'}`, background: tt.anwesend ? '#16a34a' : '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0, padding: 0 }}>
-                              {tt.anwesend && <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>}
-                            </button>
                           </div>
                         )
                       })}
