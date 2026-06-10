@@ -681,6 +681,7 @@ export default function Ausbildungen() {
   
 const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | 'konzepte' | 'jahresuebersicht' | 'archiv' | 'lernfeed' | 'dozent' | 'praesentationen'>('termine')
   const [terminDetailPage, setTerminDetailPage] = useState<Termin | null>(null)
+  const [dozentTermineFilter, setDozentTermineFilter] = useState<'meine' | 'alle'>('meine')
   const [dozentTodos, setDozentTodos] = useState<{id: string; text: string; done: boolean}[]>([])
   const [dozentAufgaben, setDozentAufgaben] = useState<{id: string; text: string; assignee_id?: string; assignee_name?: string; done: boolean}[]>([])
   const [coDozenten, setCoDozenten] = useState<{user_id: string; name: string}[]>([])
@@ -3086,21 +3087,44 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
 
       {/* DOZENT VIEW */}
       {viewMode === 'dozent' && (() => {
-        const meineTermine = termine.filter(t =>
+        const isMyTermin = (t: Termin) =>
           (t.dozent_id && t.dozent_id === user?.id) ||
           (!t.dozent_id && t.dozent && t.dozent.trim().toLowerCase() === (user?.name || '').trim().toLowerCase())
-        ).sort((a, b) => parseDate(a.start_datetime).getTime() - parseDate(b.start_datetime).getTime())
+
+        const sortedTermine = [...termine].sort((a, b) => parseDate(a.start_datetime).getTime() - parseDate(b.start_datetime).getTime())
+        const meineTermine = sortedTermine.filter(isMyTermin)
+        const displayedTermine = dozentTermineFilter === 'alle' ? sortedTermine : meineTermine
 
         return (
           <div style={{ maxWidth: 900, margin: '0 auto', padding: '20px max(16px, env(safe-area-inset-left)) calc(env(safe-area-inset-bottom) + 40px)' }}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 14 }}>Meine Termine</div>
-            {meineTermine.length === 0 ? (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, flexWrap: 'wrap', gap: 10 }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em' }}>
+                {dozentTermineFilter === 'alle' ? 'Alle Termine' : 'Meine Termine'}
+              </div>
+              <div style={{ display: 'flex', background: '#fff', borderRadius: 99, boxShadow: '0 1px 4px rgba(0,0,0,0.06)', padding: 3 }}>
+                {([
+                  { key: 'meine', label: 'Meine Termine' },
+                  { key: 'alle', label: 'Alle Dozenten' },
+                ] as const).map(opt => (
+                  <button key={opt.key} onClick={() => setDozentTermineFilter(opt.key)} style={{
+                    border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+                    padding: '6px 14px', borderRadius: 99, fontSize: 11, fontWeight: 700,
+                    textTransform: 'uppercase', letterSpacing: '0.05em',
+                    background: dozentTermineFilter === opt.key ? '#600812' : 'transparent',
+                    color: dozentTermineFilter === opt.key ? '#fff' : 'var(--warm-gray)',
+                  }}>
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {displayedTermine.length === 0 ? (
               <div style={{ background: 'var(--lbf-card)', borderRadius: 12, padding: '24px 20px', color: 'var(--warm-gray)', fontStyle: 'italic', fontSize: 14, textAlign: 'center' }}>
-                Keine Termine zugewiesen — trage dich als Dozent in einem Termin ein.
+                {dozentTermineFilter === 'alle' ? 'Keine Termine vorhanden.' : 'Keine Termine zugewiesen — trage dich als Dozent in einem Termin ein.'}
               </div>
             ) : (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 12 }}>
-                {meineTermine.map(termin => {
+                {displayedTermine.map(termin => {
                   const teilnehmerCount = getTerminTeilnehmerCount(termin.id)
                   const dokumenteCount = getTerminDokumenteCount(termin.id)
                   const moduleCount = getTerminModuleCount(termin.id)
@@ -3114,6 +3138,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                   const month = isNaN(d.getTime()) ? '' : d.toLocaleDateString('de-DE', { month: 'short' }).toUpperCase()
                   const statusColor = terminStatusColor(termin.status)
                   const statusLabel = termin.status === 'geplant' ? 'Geplant' : termin.status === 'laufend' ? 'Laufend' : termin.status === 'abgeschlossen' ? 'Abgeschlossen' : 'Abgesagt'
+                  const showsForeignDozent = dozentTermineFilter === 'alle' && !isMyTermin(termin) && !!termin.dozent
                   return (
                     <div
                       key={termin.id}
@@ -3137,6 +3162,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                           </div>
                           {termin.location && <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)' }}>{termin.location}</div>}
                           {termin.start_datetime && <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)' }}>{fmtTime(termin.start_datetime)}{termin.end_datetime ? `–${fmtTime(termin.end_datetime)}` : ''} Uhr</div>}
+                          {showsForeignDozent && <div style={{ fontStyle: 'italic', fontSize: 12, color: '#600812' }}>Dozent: {termin.dozent}</div>}
                         </div>
                       </div>
                       {/* Bottom stats strip */}
