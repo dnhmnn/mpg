@@ -3206,6 +3206,9 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
         const forThisTermin = terminTeilnehmer.filter(tt => tt.termin_id === t.id)
         const anwesendCount = forThisTermin.filter(tt => tt.anwesend).length
         const zugesagtCount = forThisTermin.filter(tt => tt.status === 'zugesagt').length
+        // Personen, die nur per Einladungslink abgesagt haben (kein Unitas-Eintrag) → gelten als entschuldigt
+        const ttNamesLower = new Set(forThisTermin.map(tt => getTeilnehmerName(tt.teilnehmer_id).trim().toLowerCase()))
+        const linkAbsagen = einladungen.filter(e => e.termin_id === t.id && e.status === 'absagen' && !ttNamesLower.has((e.name || '').trim().toLowerCase()))
         const isHauptdozent = t.dozent_id === user?.id || (!t.dozent_id && t.dozent?.trim().toLowerCase() === (user?.name || '').trim().toLowerCase())
         const isAnyCoDozent = coDozenten.some(cd => cd.user_id === user?.id)
         const isDozent = isHauptdozent || isAnyCoDozent
@@ -3454,7 +3457,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                       { label: 'Zugesagt', val: zugesagtCount, color: '#d97706' },
                       { label: 'Anwesend', val: anwesendCount, color: '#16a34a' },
                       { label: 'Krank', val: forThisTermin.filter(tt => tt.anwesenheit_status === 'krank').length, color: '#d97706' },
-                      { label: 'Entschuldigt', val: forThisTermin.filter(tt => tt.anwesenheit_status === 'entschuldigt').length, color: 'var(--warm-gray)' },
+                      { label: 'Entschuldigt', val: forThisTermin.filter(tt => tt.anwesenheit_status === 'entschuldigt').length + linkAbsagen.length, color: 'var(--warm-gray)' },
                       { label: 'Fehlend', val: forThisTermin.filter(tt => tt.anwesenheit_status === 'fehlend').length, color: '#dc2626' },
                     ].map(s => (
                       <div key={s.label} style={{ background: '#fff', borderRadius: 10, padding: '12px 10px', textAlign: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
@@ -3464,7 +3467,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                     ))}
                   </div>
 
-                  {forThisTermin.length === 0 ? (
+                  {forThisTermin.length === 0 && linkAbsagen.length === 0 ? (
                     <div style={{ fontStyle: 'italic', color: 'var(--warm-gray)', fontSize: 13, textAlign: 'center', padding: '20px 0' }}>Keine Teilnehmer eingetragen.</div>
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -3507,6 +3510,22 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                           </div>
                         )
                       })}
+                      {linkAbsagen.map(e => (
+                        <div key={e.id} style={{ background: '#fff', borderRadius: 10, padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 10, boxShadow: '0 1px 3px rgba(0,0,0,0.05)', opacity: 0.75 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                            <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(96,8,18,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                              <span style={{ fontSize: 14, fontWeight: 700, color: '#600812', fontStyle: 'italic' }}>{(e.name || '?').charAt(0)}</span>
+                            </div>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ fontWeight: 700, fontStyle: 'italic', fontSize: 14, color: 'var(--lbf-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.name}</div>
+                              <div style={{ fontSize: 10, color: '#dc2626', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: 1 }}>abgesagt · per Einladungslink</div>
+                            </div>
+                          </div>
+                          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                            <span style={{ padding: '5px 12px', borderRadius: 8, border: '1px solid var(--warm-gray)', background: 'rgba(139,113,90,0.1)', color: 'var(--warm-gray)', fontSize: 11, fontWeight: 600 }}>Entschuldigt</span>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   )}
                 </div>
