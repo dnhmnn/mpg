@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { pb } from '../lib/pocketbase'
 import { useAuth } from '../hooks/useAuth'
+import { getTheme } from '../lib/theme'
 
 interface OfficeFile {
   id: string
@@ -37,6 +38,13 @@ function getDocColor(type: DocCategory | string): string {
 
 function getBorderColor(ext: string): string {
   return getDocColor(getDocType(ext))
+}
+
+function getOfficeUiTheme(): string {
+  const mode = getTheme()
+  const isDark = mode === 'dark' || mode === 'retro'
+    || (mode === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)
+  return isDark ? 'theme-lbf-dark' : 'theme-lbf'
 }
 
 function relativeTime(dateStr: string): string {
@@ -285,7 +293,7 @@ export default function Office() {
               autosave: true, chat: false, comments: true,
               compactHeader: false, feedback: false, forcesave: true,
               help: false, plugins: false,
-              uiTheme: 'theme-lbf',
+              uiTheme: getOfficeUiTheme(),
               logo: {
                 image: 'https://app.responda.systems/logoklein.svg',
                 imageDark: 'https://app.responda.systems/logoklein.svg',

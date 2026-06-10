@@ -1,0 +1,64 @@
+{
+  "id": "theme-lbf-dark",
+  "name": "La Bella Figura (Dark)",
+  "type": "dark",
+  "colors": {
+    "background-toolbar": "#1a130f",
+    "background-toolbar-additional": "#15100c",
+    "background-document": "#0f0a07",
+    "background-normal": "#1a130f",
+    "background-light": "#241a14",
+
+    "border-divider": "rgba(245,236,228,0.08)",
+    "border-regular-control": "rgba(245,236,228,0.12)",
+    "border-toolbar": "rgba(245,236,228,0.08)",
+    "border-preview-hover": "#600812",
+    "border-preview-select": "#a01020",
+
+    "highlight-button-hover": "rgba(96,8,18,0.35)",
+    "highlight-button-pressed": "#600812",
+    "highlight-button-pressed-hover": "#7a0a16",
+    "highlight-header-button-hover": "rgba(253,232,216,0.12)",
+    "highlight-header-button-pressed": "rgba(253,232,216,0.2)",
+
+    "icon-normal": "#c9b8a8",
+    "icon-normal-pressed": "#fde8d8",
+    "icon-disabled": "#5a4d42",
+    "icon-toolbar-header": "#fde8d8",
+    "icon-toolbar-header-active": "#ffffff",
+
+    "text-normal": "#f5ece4",
+    "text-normal-pressed": "#ffffff",
+    "text-secondary": "#9a8a78",
+    "text-link": "#e0a6ad",
+    "text-link-active": "#fde8d8",
+    "text-link-hover": "#f5ece4",
+    "text-toolbar-header": "#fde8d8",
+    "text-toolbar-header-active": "#ffffff",
+
+    "scroll-thumb": "#3d322a",
+    "scroll-thumb-hover": "#4a3d33",
+    "scroll-thumb-pressed": "#5a4a3e",
+    "scroll-track": "#1a130f",
+
+    "shadow": "rgba(0,0,0,0.45)",
+
+    "canvas-background": "#0f0a07",
+    "canvas-content-background": "#ffffff",
+    "canvas-page-border": "rgba(245,236,228,0.1)",
+    "canvas-scroll-thumb": "#3d322a",
+    "canvas-scroll-thumb-hover": "#4a3d33",
+    "canvas-scroll-thumb-pressed": "#5a4a3e",
+
+    "toolbar-header-document": "#600812",
+    "toolbar-header-spreadsheet": "#166534",
+    "toolbar-header-presentation": "#9a3412",
+    "toolbar-header-pdf": "#600812",
+    "toolbar-header-visio": "#600812",
+
+    "tab-background": "#1a130f",
+    "tab-border": "rgba(245,236,228,0.08)",
+    "tab-hover": "#241a14",
+    "tab-underline": "#600812"
+  }
+}
