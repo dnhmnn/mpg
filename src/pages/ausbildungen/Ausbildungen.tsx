@@ -3453,6 +3453,9 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                       { label: 'Eingeladen', val: forThisTermin.length, color: '#600812' },
                       { label: 'Zugesagt', val: zugesagtCount, color: '#d97706' },
                       { label: 'Anwesend', val: anwesendCount, color: '#16a34a' },
+                      { label: 'Krank', val: forThisTermin.filter(tt => tt.anwesenheit_status === 'krank').length, color: '#d97706' },
+                      { label: 'Entschuldigt', val: forThisTermin.filter(tt => tt.anwesenheit_status === 'entschuldigt').length, color: 'var(--warm-gray)' },
+                      { label: 'Fehlend', val: forThisTermin.filter(tt => tt.anwesenheit_status === 'fehlend').length, color: '#dc2626' },
                     ].map(s => (
                       <div key={s.label} style={{ background: '#fff', borderRadius: 10, padding: '12px 10px', textAlign: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
                         <div style={{ fontSize: 28, fontWeight: 800, color: s.color, lineHeight: 1 }}>{s.val}</div>
