@@ -24,6 +24,10 @@ const FILE_TYPE_STYLES: Record<string, { color: string; label: string }> = {
   odp: { color: '#ea580c', label: 'ODP' },
 }
 
+function getFileDisplayName(file: string, names: Record<string, string>): string {
+  return names[file] || file
+}
+
 // PocketBase stores dates as "2026-01-15 14:00:00.000Z" (space instead of T)
 // new Date() needs ISO format with T, so we normalize first
 function parseDate(str: string | null | undefined): Date {
@@ -90,6 +94,8 @@ interface Termin {
   dozent_aufgaben?: string
   dateien_links?: string
   anhang_links?: string
+  dateien_names?: string
+  anhang_names?: string
   organization_id: string
   created: string
   updated: string
@@ -404,7 +410,7 @@ function PdfThumbnail({ url, typeColor }: { url: string; typeColor: string }) {
   )
 }
 
-function FileCard({ name, ext, url, accent, onSchreibstube, onVollbild, onRemove }: {
+function FileCard({ name, ext, url, accent, onSchreibstube, onVollbild, onRemove, onRename }: {
   name: string
   ext: string
   url: string
@@ -412,8 +418,12 @@ function FileCard({ name, ext, url, accent, onSchreibstube, onVollbild, onRemove
   onSchreibstube?: () => void
   onVollbild?: () => void
   onRemove?: () => void
+  onRename?: (newName: string) => void
 }) {
   const [showChoice, setShowChoice] = useState(false)
+  const [showManage, setShowManage] = useState(false)
+  const [renaming, setRenaming] = useState(false)
+  const [renameValue, setRenameValue] = useState(name)
   const isImage = IMAGE_EXTS.includes(ext)
   const typeStyle = FILE_TYPE_STYLES[ext] || { color: 'var(--warm-gray)', label: ext ? ext.toUpperCase() : 'DATEI' }
 
@@ -428,11 +438,18 @@ function FileCard({ name, ext, url, accent, onSchreibstube, onVollbild, onRemove
     else openNormal()
   }
 
+  function openManage(e: React.MouseEvent) {
+    e.preventDefault()
+    setRenameValue(name)
+    setRenaming(false)
+    setShowManage(true)
+  }
+
   return (
     <div style={{ background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.07)', overflow: 'hidden', display: 'flex', flexDirection: 'column', borderTop: `3px solid ${accent}`, position: 'relative' }}>
-      {onRemove && (
-        <button onClick={onRemove} title="Entfernen" style={{ position: 'absolute', top: 6, right: 6, zIndex: 1, width: 22, height: 22, borderRadius: '50%', background: 'rgba(26,14,8,0.5)', border: 'none', cursor: 'pointer', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      {(onRemove || onRename) && (
+        <button onClick={openManage} title="Optionen" style={{ position: 'absolute', top: 6, right: 6, zIndex: 1, width: 22, height: 22, borderRadius: '50%', background: 'rgba(26,14,8,0.5)', border: 'none', cursor: 'pointer', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>
         </button>
       )}
       <a href={url} onClick={handleClick} style={{ display: 'block', aspectRatio: '4 / 3', position: 'relative', textDecoration: 'none', cursor: 'pointer', background: isImage ? `center / cover no-repeat url("${url}")` : 'rgba(96,8,18,0.03)' }}>
@@ -459,6 +476,96 @@ function FileCard({ name, ext, url, accent, onSchreibstube, onVollbild, onRemove
               </button>
               <button onClick={() => { setShowChoice(false); openNormal() }} style={{ background: '#fff', border: '1px solid rgba(96,8,18,0.2)', borderRadius: 8, padding: '10px 0', color: 'var(--lbf-text)', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
                 Normal öffnen
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+      {showManage && (
+        <>
+          <div onClick={() => setShowManage(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(26,14,8,0.45)', zIndex: 900 }} />
+          <div style={{ position: 'fixed', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', zIndex: 901, background: '#fff', borderRadius: 14, padding: 18, width: 'min(300px, 86vw)', boxShadow: '0 8px 30px rgba(0,0,0,0.25)' }}>
+            {renaming ? (
+              <>
+                <div style={{ fontSize: 12, color: 'var(--warm-gray)', marginBottom: 8 }}>Neuer Name</div>
+                <input
+                  value={renameValue}
+                  onChange={e => setRenameValue(e.target.value)}
+                  autoFocus
+                  style={{ width: '100%', boxSizing: 'border-box', padding: '8px 10px', borderRadius: 8, border: '1px solid rgba(96,8,18,0.2)', fontSize: 13, fontFamily: 'inherit', marginBottom: 14, color: 'var(--lbf-text)' }}
+                />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <button onClick={() => { const v = renameValue.trim(); if (v) onRename?.(v); setShowManage(false) }} style={{ background: accent, border: 'none', borderRadius: 8, padding: '10px 0', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                    Speichern
+                  </button>
+                  <button onClick={() => setRenaming(false)} style={{ background: '#fff', border: '1px solid rgba(96,8,18,0.2)', borderRadius: 8, padding: '10px 0', color: 'var(--lbf-text)', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                    Zurück
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div title={name} style={{ fontSize: 13, fontWeight: 700, fontStyle: 'italic', color: 'var(--lbf-text)', marginBottom: 16, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {onRename && (
+                    <button onClick={() => setRenaming(true)} style={{ background: '#fff', border: '1px solid rgba(96,8,18,0.2)', borderRadius: 8, padding: '10px 0', color: 'var(--lbf-text)', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                      Umbenennen
+                    </button>
+                  )}
+                  {onRemove && (
+                    <button onClick={() => { setShowManage(false); onRemove() }} style={{ background: '#fff', border: '1px solid rgba(220,38,38,0.25)', borderRadius: 8, padding: '10px 0', color: '#dc2626', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                      Löschen
+                    </button>
+                  )}
+                  <button onClick={() => setShowManage(false)} style={{ background: 'transparent', border: 'none', borderRadius: 8, padding: '8px 0', color: 'var(--warm-gray)', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>
+                    Abbrechen
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
+function AddFileCard({ accent, accentRgb, uploading, onUpload, onLibrary, accept }: {
+  accent: string
+  accentRgb: string
+  uploading: boolean
+  onUpload: (file: File) => void
+  onLibrary: () => void
+  accept?: string
+}) {
+  const [showChoice, setShowChoice] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  return (
+    <div style={{ position: 'relative' }}>
+      <div onClick={() => !uploading && setShowChoice(true)} style={{ aspectRatio: '4 / 3', borderRadius: 12, border: `1.5px dashed rgba(${accentRgb},0.3)`, background: `rgba(${accentRgb},0.02)`, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6, cursor: uploading ? 'default' : 'pointer' }}>
+        {uploading ? (
+          <span style={{ fontSize: 12, fontStyle: 'italic', color: 'var(--warm-gray)' }}>Lade hoch…</span>
+        ) : (
+          <>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={accent} strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            <span style={{ fontSize: 12, fontWeight: 700, color: accent }}>Hinzufügen</span>
+          </>
+        )}
+      </div>
+      <input ref={fileInputRef} type="file" accept={accept} style={{ display: 'none' }} disabled={uploading}
+        onChange={e => { const f = e.target.files?.[0]; if (f) onUpload(f); e.target.value = '' }} />
+      {showChoice && (
+        <>
+          <div onClick={() => setShowChoice(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(26,14,8,0.45)', zIndex: 900 }} />
+          <div style={{ position: 'fixed', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', zIndex: 901, background: '#fff', borderRadius: 14, padding: 18, width: 'min(300px, 86vw)', boxShadow: '0 8px 30px rgba(0,0,0,0.25)' }}>
+            <div style={{ fontSize: 13, fontWeight: 700, fontStyle: 'italic', color: 'var(--lbf-text)', marginBottom: 16 }}>Datei hinzufügen</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <button onClick={() => { setShowChoice(false); fileInputRef.current?.click() }} style={{ background: accent, border: 'none', borderRadius: 8, padding: '10px 0', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                Hochladen
+              </button>
+              <button onClick={() => { setShowChoice(false); onLibrary() }} style={{ background: '#fff', border: '1px solid rgba(96,8,18,0.2)', borderRadius: 8, padding: '10px 0', color: 'var(--lbf-text)', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                Aus Bibliothek
               </button>
             </div>
           </div>
@@ -588,6 +695,8 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
   const [filePickerSearch, setFilePickerSearch] = useState('')
   const [dateienLinks, setDateienLinks] = useState<{id: string; name: string; file: string}[]>([])
   const [anhangLinks, setAnhangLinks] = useState<{id: string; name: string; file: string}[]>([])
+  const [dateienNames, setDateienNames] = useState<Record<string, string>>({})
+  const [anhangNames, setAnhangNames] = useState<Record<string, string>>({})
   const [terminDetailTab, setTerminDetailTab] = useState<'info' | 'anwesenheit' | 'dateien' | 'dozenten'>('info')
   const [editingTNInfo, setEditingTNInfo] = useState(false)
   const [tnInfoText, setTNInfoText] = useState('')
@@ -818,11 +927,17 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
     try { links = t.dateien_links ? JSON.parse(t.dateien_links) : [] } catch { links = [] }
     let aLinks: {id: string; name: string; file: string}[] = []
     try { aLinks = t.anhang_links ? JSON.parse(t.anhang_links) : [] } catch { aLinks = [] }
+    let dNames: Record<string, string> = {}
+    try { dNames = t.dateien_names ? JSON.parse(t.dateien_names) : {} } catch { dNames = {} }
+    let aNames: Record<string, string> = {}
+    try { aNames = t.anhang_names ? JSON.parse(t.anhang_names) : {} } catch { aNames = {} }
     setDozentTodos(todos)
     setDozentAufgaben(aufgaben)
     setCoDozenten(coDoz)
     setDateienLinks(links)
     setAnhangLinks(aLinks)
+    setDateienNames(dNames)
+    setAnhangNames(aNames)
     setNewTodoText('')
     setNewAufgabeText('')
     setNewAufgabeAssignee('')
@@ -1016,6 +1131,82 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
     setAnhangLinks(updated)
     try {
       await pb.collection('ausbildungen_termine').update(terminDetailPage.id, { anhang_links: JSON.stringify(updated) })
+    } catch(e: any) { showMessage('Fehler: ' + e.message, 'error') }
+  }
+
+  async function removeDozentFile(file: string) {
+    if (!terminDetailPage) return
+    try {
+      const fd = new FormData()
+      fd.append('dateien-', file)
+      const updated = await pb.collection('ausbildungen_termine').update(terminDetailPage.id, fd)
+      setTermine(prev => prev.map(t => t.id === terminDetailPage.id ? { ...t, dateien: updated.dateien } : t))
+      setTerminDetailPage(prev => prev ? { ...prev, dateien: updated.dateien } : prev)
+      if (dateienNames[file]) {
+        const updatedNames = { ...dateienNames }
+        delete updatedNames[file]
+        setDateienNames(updatedNames)
+        await pb.collection('ausbildungen_termine').update(terminDetailPage.id, { dateien_names: JSON.stringify(updatedNames) })
+      }
+      showMessage('Datei gelöscht', 'success')
+    } catch(e: any) { showMessage('Fehler: ' + e.message, 'error') }
+  }
+
+  async function removeTNFile(file: string) {
+    if (!terminDetailPage) return
+    try {
+      const fd = new FormData()
+      fd.append('anhang-', file)
+      const updated = await pb.collection('ausbildungen_termine').update(terminDetailPage.id, fd)
+      setTermine(prev => prev.map(t => t.id === terminDetailPage.id ? { ...t, anhang: updated.anhang } : t))
+      setTerminDetailPage(prev => prev ? { ...prev, anhang: updated.anhang } : prev)
+      if (anhangNames[file]) {
+        const updatedNames = { ...anhangNames }
+        delete updatedNames[file]
+        setAnhangNames(updatedNames)
+        await pb.collection('ausbildungen_termine').update(terminDetailPage.id, { anhang_names: JSON.stringify(updatedNames) })
+      }
+      showMessage('Datei gelöscht', 'success')
+    } catch(e: any) { showMessage('Fehler: ' + e.message, 'error') }
+  }
+
+  async function renameDozentFile(file: string, newName: string) {
+    if (!terminDetailPage) return
+    const updated = { ...dateienNames, [file]: newName }
+    setDateienNames(updated)
+    try {
+      await pb.collection('ausbildungen_termine').update(terminDetailPage.id, { dateien_names: JSON.stringify(updated) })
+      showMessage('Datei umbenannt', 'success')
+    } catch(e: any) { showMessage('Fehler: ' + e.message, 'error') }
+  }
+
+  async function renameTNFile(file: string, newName: string) {
+    if (!terminDetailPage) return
+    const updated = { ...anhangNames, [file]: newName }
+    setAnhangNames(updated)
+    try {
+      await pb.collection('ausbildungen_termine').update(terminDetailPage.id, { anhang_names: JSON.stringify(updated) })
+      showMessage('Datei umbenannt', 'success')
+    } catch(e: any) { showMessage('Fehler: ' + e.message, 'error') }
+  }
+
+  async function renameDozentLink(id: string, newName: string) {
+    if (!terminDetailPage) return
+    const updated = dateienLinks.map(l => l.id === id ? { ...l, name: newName } : l)
+    setDateienLinks(updated)
+    try {
+      await pb.collection('ausbildungen_termine').update(terminDetailPage.id, { dateien_links: JSON.stringify(updated) })
+      showMessage('Datei umbenannt', 'success')
+    } catch(e: any) { showMessage('Fehler: ' + e.message, 'error') }
+  }
+
+  async function renameTNLink(id: string, newName: string) {
+    if (!terminDetailPage) return
+    const updated = anhangLinks.map(l => l.id === id ? { ...l, name: newName } : l)
+    setAnhangLinks(updated)
+    try {
+      await pb.collection('ausbildungen_termine').update(terminDetailPage.id, { anhang_links: JSON.stringify(updated) })
+      showMessage('Datei umbenannt', 'success')
     } catch(e: any) { showMessage('Fehler: ' + e.message, 'error') }
   }
 
@@ -3129,90 +3320,67 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                   {/* Für Teilnehmer */}
                   <div style={{ marginBottom: 24 }}>
                     <div style={{ fontSize: 9, fontWeight: 700, color: '#8a7a68', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 8 }}>Für Teilnehmer</div>
-                    {(tnDateien.length > 0 || anhangLinks.length > 0) && (
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: 10, marginBottom: 10 }}>
-                        {tnDateien.map((file, i) => {
-                          const ext = file.split('.').pop()?.toLowerCase() ?? ''
-                          const url = `https://api.responda.systems/api/files/${t.collectionId}/${t.id}/${file}`
-                          return (
-                            <FileCard key={`tn-${i}`} name={file} ext={ext} url={url} accent="#8a7a68"
-                              onSchreibstube={EDITABLE_EXTS.includes(ext) ? () => navigate(`/office?open=${t.id}&collection=ausbildungen_termine&field=anhang&index=${i}`) : undefined}
-                              onVollbild={ext === 'pdf' ? () => setPdfViewerUrl(url) : undefined}
-                            />
-                          )
-                        })}
-                        {anhangLinks.map(link => {
-                          const ext = link.name.split('.').pop()?.toLowerCase() ?? ''
-                          const url = `${pb.baseUrl}/api/files/files/${link.id}/${link.file}?token=${pb.authStore.token}`
-                          return (
-                            <FileCard key={link.id} name={link.name} ext={ext} url={url} accent="#8a7a68"
-                              onSchreibstube={EDITABLE_EXTS.includes(ext) ? () => navigate(`/office?open=${link.id}`) : undefined}
-                              onVollbild={ext === 'pdf' ? () => setPdfViewerUrl(url) : undefined}
-                              onRemove={() => unlinkTNFile(link.id)}
-                            />
-                          )
-                        })}
-                      </div>
-                    )}
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      <label style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', border: '1.5px dashed rgba(138,122,104,0.3)', borderRadius: 10, cursor: uploadingTNFile ? 'default' : 'pointer', background: 'rgba(138,122,104,0.02)' }}>
-                        {uploadingTNFile ? <span style={{ fontSize: 13, color: 'var(--warm-gray)', fontStyle: 'italic' }}>Lade hoch…</span>
-                          : <><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#8a7a68" strokeWidth="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
-                            <span style={{ fontSize: 13, color: '#8a7a68', fontWeight: 600 }}>Hochladen</span></>
-                        }
-                        <input type="file" style={{ display: 'none' }} disabled={uploadingTNFile}
-                          onChange={e => { const f = e.target.files?.[0]; if (f) uploadTNFile(f); e.target.value = '' }} />
-                      </label>
-                      <button onClick={() => { setShowFilePicker('tn'); loadFilePicker() }}
-                        style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '10px 14px', border: '1.5px dashed rgba(138,122,104,0.3)', borderRadius: 10, cursor: 'pointer', background: 'rgba(138,122,104,0.02)', color: '#8a7a68', fontSize: 13, fontWeight: 600, fontFamily: 'inherit', whiteSpace: 'nowrap' }}>
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
-                        Aus Bibliothek
-                      </button>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: 10 }}>
+                      {tnDateien.map((file, i) => {
+                        const ext = file.split('.').pop()?.toLowerCase() ?? ''
+                        const url = `https://api.responda.systems/api/files/${t.collectionId}/${t.id}/${file}`
+                        return (
+                          <FileCard key={`tn-${i}`} name={getFileDisplayName(file, anhangNames)} ext={ext} url={url} accent="#8a7a68"
+                            onSchreibstube={EDITABLE_EXTS.includes(ext) ? () => navigate(`/office?open=${t.id}&collection=ausbildungen_termine&field=anhang&index=${i}`) : undefined}
+                            onVollbild={ext === 'pdf' ? () => setPdfViewerUrl(url) : undefined}
+                            onRemove={() => removeTNFile(file)}
+                            onRename={newName => renameTNFile(file, newName)}
+                          />
+                        )
+                      })}
+                      {anhangLinks.map(link => {
+                        const ext = link.name.split('.').pop()?.toLowerCase() ?? ''
+                        const url = `${pb.baseUrl}/api/files/files/${link.id}/${link.file}?token=${pb.authStore.token}`
+                        return (
+                          <FileCard key={link.id} name={link.name} ext={ext} url={url} accent="#8a7a68"
+                            onSchreibstube={EDITABLE_EXTS.includes(ext) ? () => navigate(`/office?open=${link.id}`) : undefined}
+                            onVollbild={ext === 'pdf' ? () => setPdfViewerUrl(url) : undefined}
+                            onRemove={() => unlinkTNFile(link.id)}
+                            onRename={newName => renameTNLink(link.id, newName)}
+                          />
+                        )
+                      })}
+                      <AddFileCard accent="#8a7a68" accentRgb="138,122,104" uploading={uploadingTNFile}
+                        onUpload={uploadTNFile} onLibrary={() => { setShowFilePicker('tn'); loadFilePicker() }} />
                     </div>
                   </div>
 
                   {/* Für Dozenten */}
                   <div>
                     <div style={{ fontSize: 9, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 8 }}>Für Dozenten</div>
-                    {(dozentDateien.length > 0 || dateienLinks.length > 0) && (
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: 10, marginBottom: 10 }}>
-                        {dozentDateien.map((file, i) => {
-                          const ext = file.split('.').pop()?.toLowerCase() ?? ''
-                          const url = `https://api.responda.systems/api/files/${t.collectionId}/${t.id}/${file}`
-                          return (
-                            <FileCard key={`dz-${i}`} name={file} ext={ext} url={url} accent="#600812"
-                              onSchreibstube={EDITABLE_EXTS.includes(ext) ? () => navigate(`/office?open=${t.id}&collection=ausbildungen_termine&field=dateien&index=${i}`) : undefined}
-                              onVollbild={ext === 'pdf' ? () => setPdfViewerUrl(url) : undefined}
-                            />
-                          )
-                        })}
-                        {dateienLinks.map(link => {
-                          const ext = link.name.split('.').pop()?.toLowerCase() ?? ''
-                          const url = `${pb.baseUrl}/api/files/files/${link.id}/${link.file}?token=${pb.authStore.token}`
-                          return (
-                            <FileCard key={link.id} name={link.name} ext={ext} url={url} accent="#600812"
-                              onSchreibstube={EDITABLE_EXTS.includes(ext) ? () => navigate(`/office?open=${link.id}`) : undefined}
-                              onVollbild={ext === 'pdf' ? () => setPdfViewerUrl(url) : undefined}
-                              onRemove={() => unlinkDozentFile(link.id)}
-                            />
-                          )
-                        })}
-                      </div>
-                    )}
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      <label style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', border: '1.5px dashed rgba(96,8,18,0.25)', borderRadius: 10, cursor: uploadingDozentFile ? 'default' : 'pointer', background: 'rgba(96,8,18,0.02)' }}>
-                        {uploadingDozentFile ? <span style={{ fontSize: 13, color: 'var(--warm-gray)', fontStyle: 'italic' }}>Lade hoch…</span>
-                          : <><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#600812" strokeWidth="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
-                            <span style={{ fontSize: 13, color: '#600812', fontWeight: 600 }}>Hochladen</span></>
-                        }
-                        <input type="file" accept=".pdf,.ppt,.pptx,.doc,.docx,.key,.pages" style={{ display: 'none' }} disabled={uploadingDozentFile}
-                          onChange={e => { const f = e.target.files?.[0]; if (f) uploadDozentFile(f); e.target.value = '' }} />
-                      </label>
-                      <button onClick={() => { setShowFilePicker('dozent'); loadFilePicker() }}
-                        style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '10px 14px', border: '1.5px dashed rgba(96,8,18,0.25)', borderRadius: 10, cursor: 'pointer', background: 'rgba(96,8,18,0.02)', color: '#600812', fontSize: 13, fontWeight: 600, fontFamily: 'inherit', whiteSpace: 'nowrap' }}>
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
-                        Aus Bibliothek
-                      </button>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: 10 }}>
+                      {dozentDateien.map((file, i) => {
+                        const ext = file.split('.').pop()?.toLowerCase() ?? ''
+                        const url = `https://api.responda.systems/api/files/${t.collectionId}/${t.id}/${file}`
+                        return (
+                          <FileCard key={`dz-${i}`} name={getFileDisplayName(file, dateienNames)} ext={ext} url={url} accent="#600812"
+                            onSchreibstube={EDITABLE_EXTS.includes(ext) ? () => navigate(`/office?open=${t.id}&collection=ausbildungen_termine&field=dateien&index=${i}`) : undefined}
+                            onVollbild={ext === 'pdf' ? () => setPdfViewerUrl(url) : undefined}
+                            onRemove={() => removeDozentFile(file)}
+                            onRename={newName => renameDozentFile(file, newName)}
+                          />
+                        )
+                      })}
+                      {dateienLinks.map(link => {
+                        const ext = link.name.split('.').pop()?.toLowerCase() ?? ''
+                        const url = `${pb.baseUrl}/api/files/files/${link.id}/${link.file}?token=${pb.authStore.token}`
+                        return (
+                          <FileCard key={link.id} name={link.name} ext={ext} url={url} accent="#600812"
+                            onSchreibstube={EDITABLE_EXTS.includes(ext) ? () => navigate(`/office?open=${link.id}`) : undefined}
+                            onVollbild={ext === 'pdf' ? () => setPdfViewerUrl(url) : undefined}
+                            onRemove={() => unlinkDozentFile(link.id)}
+                            onRename={newName => renameDozentLink(link.id, newName)}
+                          />
+                        )
+                      })}
+                      <AddFileCard accent="#600812" accentRgb="96,8,18" uploading={uploadingDozentFile}
+                        accept=".pdf,.ppt,.pptx,.doc,.docx,.key,.pages"
+                        onUpload={uploadDozentFile} onLibrary={() => { setShowFilePicker('dozent'); loadFilePicker() }} />
                     </div>
                   </div>
                 </div>
