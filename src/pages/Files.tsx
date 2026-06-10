@@ -546,7 +546,7 @@ export default function Files() {
                 style={{ width: '100%', boxSizing: 'border-box', textAlign: 'center' }}
                 onClick={() => { navigate(`/office?open=${actionFile.id}`); setActionFile(null) }}
               >
-                In Office öffnen
+                In Schreibstube öffnen
               </button>
               <button
                 className="f-btn"

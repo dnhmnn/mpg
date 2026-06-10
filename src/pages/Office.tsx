@@ -346,7 +346,7 @@ export default function Office() {
             </svg>
           </button>
           <div style={{ flex: 1 }}>
-            <div style={{ fontWeight: 700, fontSize: 15, letterSpacing: '-0.01em', color: '#1a0e08' }}>Office</div>
+            <div style={{ fontWeight: 700, fontSize: 15, letterSpacing: '-0.01em', color: '#1a0e08' }}>Schreibstube</div>
             <div style={{ fontStyle: 'italic', fontSize: 11, color: 'var(--warm-gray)', marginTop: 1 }}>{today}</div>
           </div>
         </div>
@@ -435,7 +435,7 @@ export default function Office() {
               <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
               <polyline points="14 2 14 8 20 8"/>
             </svg>
-            <div style={{ fontWeight: 700, marginBottom: 6, color: '#1a0e08' }}>Keine Office-Dokumente</div>
+            <div style={{ fontWeight: 700, marginBottom: 6, color: '#1a0e08' }}>Keine Dokumente</div>
             <div style={{ fontStyle: 'italic', fontSize: 13 }}>Erstelle ein neues Dokument oder lade eines in der Dateien-App hoch.</div>
           </div>
         ) : (
