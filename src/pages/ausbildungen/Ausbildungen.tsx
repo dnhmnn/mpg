@@ -7,6 +7,22 @@ import { useAuth } from '../../hooks/useAuth'
 const pb = new PocketBase('https://api.responda.systems')
 
 const EDITABLE_EXTS = ['docx', 'doc', 'odt', 'rtf', 'txt', 'xlsx', 'xls', 'ods', 'csv', 'pptx', 'ppt', 'odp', 'pdf']
+const IMAGE_EXTS = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp']
+const FILE_TYPE_STYLES: Record<string, { color: string; label: string }> = {
+  pdf: { color: '#dc2626', label: 'PDF' },
+  doc: { color: '#2563eb', label: 'DOC' },
+  docx: { color: '#2563eb', label: 'DOC' },
+  odt: { color: '#2563eb', label: 'ODT' },
+  rtf: { color: '#2563eb', label: 'RTF' },
+  txt: { color: '#8a7a68', label: 'TXT' },
+  xls: { color: '#16a34a', label: 'XLS' },
+  xlsx: { color: '#16a34a', label: 'XLS' },
+  ods: { color: '#16a34a', label: 'ODS' },
+  csv: { color: '#16a34a', label: 'CSV' },
+  ppt: { color: '#ea580c', label: 'PPT' },
+  pptx: { color: '#ea580c', label: 'PPT' },
+  odp: { color: '#ea580c', label: 'ODP' },
+}
 
 // PocketBase stores dates as "2026-01-15 14:00:00.000Z" (space instead of T)
 // new Date() needs ISO format with T, so we normalize first
@@ -334,6 +350,56 @@ function getPatternBg(pattern: string | null): { backgroundImage: string; backgr
     case 'capitone':   return { backgroundImage: `radial-gradient(circle,${a} 2px,transparent 2px),repeating-linear-gradient(45deg,${b} 0,${b} 1px,transparent 0,transparent 16px),repeating-linear-gradient(-45deg,${b} 0,${b} 1px,transparent 0,transparent 16px)`, backgroundSize: '16px 16px,auto,auto' }
     default: return null
   }
+}
+
+function FileCard({ name, ext, url, accent, onSchreibstube, onVollbild, onRemove }: {
+  name: string
+  ext: string
+  url: string
+  accent: string
+  onSchreibstube?: () => void
+  onVollbild?: () => void
+  onRemove?: () => void
+}) {
+  const isImage = IMAGE_EXTS.includes(ext)
+  const typeStyle = FILE_TYPE_STYLES[ext] || { color: 'var(--warm-gray)', label: ext ? ext.toUpperCase() : 'DATEI' }
+  const showVollbild = ext === 'pdf' && !!onVollbild
+  const hasActions = !!onSchreibstube || showVollbild
+
+  return (
+    <div style={{ background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.07)', overflow: 'hidden', display: 'flex', flexDirection: 'column', borderTop: `3px solid ${accent}`, position: 'relative' }}>
+      {onRemove && (
+        <button onClick={onRemove} title="Entfernen" style={{ position: 'absolute', top: 6, right: 6, zIndex: 1, width: 22, height: 22, borderRadius: '50%', background: 'rgba(26,14,8,0.5)', border: 'none', cursor: 'pointer', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      )}
+      <a href={url} target="_blank" rel="noreferrer" style={{ display: 'block', aspectRatio: '4 / 3', position: 'relative', textDecoration: 'none', background: isImage ? `center / cover no-repeat url("${url}")` : 'rgba(96,8,18,0.03)' }}>
+        {!isImage && (
+          <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={typeStyle.color} strokeWidth="1.6"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            <span style={{ fontSize: 10, fontWeight: 700, color: typeStyle.color, letterSpacing: '0.06em' }}>{typeStyle.label}</span>
+          </div>
+        )}
+      </a>
+      <div style={{ padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: hasActions ? 6 : 0, flex: 1 }}>
+        <div title={name} style={{ fontSize: 12, color: 'var(--lbf-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</div>
+        {hasActions && (
+          <div style={{ display: 'flex', gap: 6, marginTop: 'auto' }}>
+            {onSchreibstube && (
+              <button onClick={onSchreibstube} style={{ flex: 1, background: '#fff', border: `1px solid ${accent}`, borderRadius: 6, padding: '4px 0', color: accent, fontSize: 10, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                Bearbeiten
+              </button>
+            )}
+            {showVollbild && (
+              <button onClick={onVollbild} style={{ flex: 1, background: accent, border: 'none', borderRadius: 6, padding: '4px 0', color: '#fff', fontSize: 10, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                Vollbild
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  )
 }
 
 export default function Ausbildungen() {
@@ -2998,55 +3064,26 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                   <div style={{ marginBottom: 24 }}>
                     <div style={{ fontSize: 9, fontWeight: 700, color: '#16a34a', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 8 }}>Für Teilnehmer</div>
                     {(tnDateien.length > 0 || anhangLinks.length > 0) && (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 8 }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: 10, marginBottom: 10 }}>
                         {tnDateien.map((file, i) => {
                           const ext = file.split('.').pop()?.toLowerCase() ?? ''
+                          const url = `https://api.responda.systems/api/files/${t.collectionId}/${t.id}/${file}`
                           return (
-                            <a key={i} href={`https://api.responda.systems/api/files/${t.collectionId}/${t.id}/${file}`} target="_blank" rel="noreferrer"
-                              style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: '#fff', border: '1px solid rgba(22,163,74,0.2)', borderRadius: 10, textDecoration: 'none', color: 'var(--lbf-text)' }}>
-                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                              <span style={{ flex: 1, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{file}</span>
-                              {ext && <span style={{ fontSize: 10, color: 'var(--warm-gray)', textTransform: 'uppercase' }}>{ext}</span>}
-                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--warm-gray)" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                              {EDITABLE_EXTS.includes(ext) && (
-                                <button onClick={e => { e.preventDefault(); navigate(`/office?open=${t.id}&collection=ausbildungen_termine&field=anhang&index=${i}`) }}
-                                  style={{ background: '#fff', border: '1px solid #600812', borderRadius: 6, padding: '3px 8px', color: '#600812', fontSize: 10, fontWeight: 700, cursor: 'pointer', flexShrink: 0, fontFamily: 'inherit' }}>
-                                  Schreibstube
-                                </button>
-                              )}
-                              {ext === 'pdf' && (
-                                <button onClick={e => { e.preventDefault(); setPdfViewerUrl(`https://api.responda.systems/api/files/${t.collectionId}/${t.id}/${file}`) }}
-                                  style={{ background: '#600812', border: 'none', borderRadius: 6, padding: '3px 8px', color: '#fff', fontSize: 10, fontWeight: 700, cursor: 'pointer', flexShrink: 0, fontFamily: 'inherit' }}>
-                                  Vollbild
-                                </button>
-                              )}
-                            </a>
+                            <FileCard key={`tn-${i}`} name={file} ext={ext} url={url} accent="#16a34a"
+                              onSchreibstube={EDITABLE_EXTS.includes(ext) ? () => navigate(`/office?open=${t.id}&collection=ausbildungen_termine&field=anhang&index=${i}`) : undefined}
+                              onVollbild={ext === 'pdf' ? () => setPdfViewerUrl(url) : undefined}
+                            />
                           )
                         })}
                         {anhangLinks.map(link => {
                           const ext = link.name.split('.').pop()?.toLowerCase() ?? ''
                           const url = `${pb.baseUrl}/api/files/files/${link.id}/${link.file}?token=${pb.authStore.token}`
                           return (
-                            <div key={link.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: '#fff', border: '1px solid rgba(22,163,74,0.2)', borderRadius: 10, color: 'var(--lbf-text)' }}>
-                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
-                              <a href={url} target="_blank" rel="noreferrer" style={{ flex: 1, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--lbf-text)', textDecoration: 'none' }}>{link.name}</a>
-                              <span style={{ fontSize: 10, color: 'var(--warm-gray)', textTransform: 'uppercase', flexShrink: 0 }}>{ext}</span>
-                              {EDITABLE_EXTS.includes(ext) && (
-                                <button onClick={() => navigate(`/office?open=${link.id}`)}
-                                  style={{ background: '#fff', border: '1px solid #600812', borderRadius: 6, padding: '3px 8px', color: '#600812', fontSize: 10, fontWeight: 700, cursor: 'pointer', flexShrink: 0, fontFamily: 'inherit' }}>
-                                  Schreibstube
-                                </button>
-                              )}
-                              {ext === 'pdf' && (
-                                <button onClick={() => setPdfViewerUrl(url)}
-                                  style={{ background: '#600812', border: 'none', borderRadius: 6, padding: '3px 8px', color: '#fff', fontSize: 10, fontWeight: 700, cursor: 'pointer', flexShrink: 0, fontFamily: 'inherit' }}>
-                                  Vollbild
-                                </button>
-                              )}
-                              <button onClick={() => unlinkTNFile(link.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--warm-gray)', padding: 2, flexShrink: 0 }}>
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                              </button>
-                            </div>
+                            <FileCard key={link.id} name={link.name} ext={ext} url={url} accent="#16a34a"
+                              onSchreibstube={EDITABLE_EXTS.includes(ext) ? () => navigate(`/office?open=${link.id}`) : undefined}
+                              onVollbild={ext === 'pdf' ? () => setPdfViewerUrl(url) : undefined}
+                              onRemove={() => unlinkTNFile(link.id)}
+                            />
                           )
                         })}
                       </div>
@@ -3072,55 +3109,26 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                   <div>
                     <div style={{ fontSize: 9, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 8 }}>Für Dozenten</div>
                     {(dozentDateien.length > 0 || dateienLinks.length > 0) && (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 8 }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: 10, marginBottom: 10 }}>
                         {dozentDateien.map((file, i) => {
                           const ext = file.split('.').pop()?.toLowerCase() ?? ''
+                          const url = `https://api.responda.systems/api/files/${t.collectionId}/${t.id}/${file}`
                           return (
-                            <a key={i} href={`https://api.responda.systems/api/files/${t.collectionId}/${t.id}/${file}`} target="_blank" rel="noreferrer"
-                              style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: '#fff', border: '1px solid rgba(96,8,18,0.1)', borderRadius: 10, textDecoration: 'none', color: 'var(--lbf-text)' }}>
-                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#600812" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                              <span style={{ flex: 1, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{file}</span>
-                              {ext && <span style={{ fontSize: 10, color: 'var(--warm-gray)', textTransform: 'uppercase' }}>{ext}</span>}
-                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--warm-gray)" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                              {EDITABLE_EXTS.includes(ext) && (
-                                <button onClick={e => { e.preventDefault(); navigate(`/office?open=${t.id}&collection=ausbildungen_termine&field=dateien&index=${i}`) }}
-                                  style={{ background: '#fff', border: '1px solid #600812', borderRadius: 6, padding: '3px 8px', color: '#600812', fontSize: 10, fontWeight: 700, cursor: 'pointer', flexShrink: 0, fontFamily: 'inherit' }}>
-                                  Schreibstube
-                                </button>
-                              )}
-                              {ext === 'pdf' && (
-                                <button onClick={e => { e.preventDefault(); setPdfViewerUrl(`https://api.responda.systems/api/files/${t.collectionId}/${t.id}/${file}`) }}
-                                  style={{ background: '#600812', border: 'none', borderRadius: 6, padding: '3px 8px', color: '#fff', fontSize: 10, fontWeight: 700, cursor: 'pointer', flexShrink: 0, fontFamily: 'inherit' }}>
-                                  Vollbild
-                                </button>
-                              )}
-                            </a>
+                            <FileCard key={`dz-${i}`} name={file} ext={ext} url={url} accent="#600812"
+                              onSchreibstube={EDITABLE_EXTS.includes(ext) ? () => navigate(`/office?open=${t.id}&collection=ausbildungen_termine&field=dateien&index=${i}`) : undefined}
+                              onVollbild={ext === 'pdf' ? () => setPdfViewerUrl(url) : undefined}
+                            />
                           )
                         })}
                         {dateienLinks.map(link => {
                           const ext = link.name.split('.').pop()?.toLowerCase() ?? ''
                           const url = `${pb.baseUrl}/api/files/files/${link.id}/${link.file}?token=${pb.authStore.token}`
                           return (
-                            <div key={link.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: '#fff', border: '1px solid rgba(96,8,18,0.1)', borderRadius: 10, color: 'var(--lbf-text)' }}>
-                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#600812" strokeWidth="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
-                              <a href={url} target="_blank" rel="noreferrer" style={{ flex: 1, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--lbf-text)', textDecoration: 'none' }}>{link.name}</a>
-                              {ext && <span style={{ fontSize: 10, color: 'var(--warm-gray)', textTransform: 'uppercase', flexShrink: 0 }}>{ext}</span>}
-                              {EDITABLE_EXTS.includes(ext) && (
-                                <button onClick={() => navigate(`/office?open=${link.id}`)}
-                                  style={{ background: '#fff', border: '1px solid #600812', borderRadius: 6, padding: '3px 8px', color: '#600812', fontSize: 10, fontWeight: 700, cursor: 'pointer', flexShrink: 0, fontFamily: 'inherit' }}>
-                                  Schreibstube
-                                </button>
-                              )}
-                              {ext === 'pdf' && (
-                                <button onClick={() => setPdfViewerUrl(url)}
-                                  style={{ background: '#600812', border: 'none', borderRadius: 6, padding: '3px 8px', color: '#fff', fontSize: 10, fontWeight: 700, cursor: 'pointer', flexShrink: 0, fontFamily: 'inherit' }}>
-                                  Vollbild
-                                </button>
-                              )}
-                              <button onClick={() => unlinkDozentFile(link.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--warm-gray)', padding: 2, flexShrink: 0 }}>
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                              </button>
-                            </div>
+                            <FileCard key={link.id} name={link.name} ext={ext} url={url} accent="#600812"
+                              onSchreibstube={EDITABLE_EXTS.includes(ext) ? () => navigate(`/office?open=${link.id}`) : undefined}
+                              onVollbild={ext === 'pdf' ? () => setPdfViewerUrl(url) : undefined}
+                              onRemove={() => unlinkDozentFile(link.id)}
+                            />
                           )
                         })}
                       </div>
