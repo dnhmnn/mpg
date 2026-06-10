@@ -2351,6 +2351,14 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
     return terminTeilnehmer.filter(tt => tt.termin_id === terminId).length
   }
 
+  function getTeilnehmerName(teilnehmerId: string): string {
+    const tn = teilnehmer.find(x => x.id === teilnehmerId)
+    if (tn) return `${tn.vorname} ${tn.nachname}`
+    const u = allUsers.find((u: any) => u.id === teilnehmerId)
+    if (u) return u.name || u.email || 'Unbekannt'
+    return 'Unbekannt'
+  }
+
   function getTerminDokumenteCount(terminId: string): number {
     return dokumente.filter(d => d.termin_id === terminId).length
   }
@@ -3241,8 +3249,17 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                   {(() => {
                     const einladungsText = generateEinladungsText(t)
                     const terminEinladungen = einladungen.filter(e => e.termin_id === t.id)
-                    const zusagen = terminEinladungen.filter(e => e.status === 'zusagen')
-                    const absagen = terminEinladungen.filter(e => e.status === 'absagen')
+                    const unitasRSVPs = terminTeilnehmer.filter(tt => tt.termin_id === t.id)
+                    const zusagen = [
+                      ...terminEinladungen.filter(e => e.status === 'zusagen').map(e => e.name),
+                      ...unitasRSVPs.filter(tt => tt.status === 'zugesagt').map(tt => getTeilnehmerName(tt.teilnehmer_id)),
+                    ]
+                    const absagen = [
+                      ...terminEinladungen.filter(e => e.status === 'absagen').map(e => e.name),
+                      ...unitasRSVPs.filter(tt => tt.status === 'abgesagt' || tt.status === 'entschuldigt').map(tt => getTeilnehmerName(tt.teilnehmer_id)),
+                    ]
+                    const ausstehend = unitasRSVPs.filter(tt => tt.status === 'eingeladen').map(tt => getTeilnehmerName(tt.teilnehmer_id))
+                    const rueckmeldungenGesamt = zusagen.length + absagen.length + ausstehend.length
                     return (
                       <div style={{ background: '#fff', borderRadius: 12, padding: '14px 16px', marginBottom: 14, boxShadow: '0 1px 4px rgba(0,0,0,0.06)', borderLeft: '3px solid #600812' }}>
                         <div style={{ fontSize: 9, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 8 }}>Teilnehmer &amp; Einladung</div>
@@ -3287,27 +3304,27 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                         })() : (
                           <button
                             onClick={() => generateEinladungsToken(t)}
-                            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 8, background: '#600812', border: 'none', color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', marginBottom: terminEinladungen.length > 0 ? 14 : 0 }}
+                            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 8, background: '#600812', border: 'none', color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', marginBottom: rueckmeldungenGesamt > 0 ? 14 : 0 }}
                           >
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
                             Einladungslink erstellen
                           </button>
                         )}
 
-                        {/* Rückmeldungen */}
-                        {terminEinladungen.length > 0 && (
+                        {/* Rückmeldungen — kombiniert aus Einladungslink + Unitas */}
+                        {rueckmeldungenGesamt > 0 && (
                           <div>
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
                               <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--warm-gray)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Rückmeldungen</div>
-                              <div style={{ fontSize: 12, color: 'var(--warm-gray)', fontStyle: 'italic' }}>{terminEinladungen.length} gesamt</div>
+                              <div style={{ fontSize: 12, color: 'var(--warm-gray)', fontStyle: 'italic' }}>{rueckmeldungenGesamt} gesamt</div>
                             </div>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                               {zusagen.length > 0 && (
                                 <div>
                                   <div style={{ fontSize: 11, fontWeight: 700, color: '#16a34a', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>Zugesagt ({zusagen.length})</div>
                                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                                    {zusagen.map(e => (
-                                      <span key={e.id} style={{ padding: '4px 10px', borderRadius: 20, background: '#dcfce7', color: '#166534', fontSize: 13, fontWeight: 500 }}>{e.name}</span>
+                                    {zusagen.map((name, i) => (
+                                      <span key={i} style={{ padding: '4px 10px', borderRadius: 20, background: '#dcfce7', color: '#166534', fontSize: 13, fontWeight: 500, fontStyle: 'italic' }}>{name}</span>
                                     ))}
                                   </div>
                                 </div>
@@ -3316,8 +3333,18 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                                 <div>
                                   <div style={{ fontSize: 11, fontWeight: 700, color: '#dc2626', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>Abgesagt ({absagen.length})</div>
                                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                                    {absagen.map(e => (
-                                      <span key={e.id} style={{ padding: '4px 10px', borderRadius: 20, background: '#fee2e2', color: '#991b1b', fontSize: 13, fontWeight: 500 }}>{e.name}</span>
+                                    {absagen.map((name, i) => (
+                                      <span key={i} style={{ padding: '4px 10px', borderRadius: 20, background: '#fee2e2', color: '#991b1b', fontSize: 13, fontWeight: 500, fontStyle: 'italic' }}>{name}</span>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                              {ausstehend.length > 0 && (
+                                <div>
+                                  <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--warm-gray)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>Ausstehend ({ausstehend.length})</div>
+                                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                                    {ausstehend.map((name, i) => (
+                                      <span key={i} style={{ padding: '4px 10px', borderRadius: 20, background: 'rgba(139,113,90,0.08)', color: 'var(--warm-gray)', fontSize: 13, fontWeight: 500, fontStyle: 'italic' }}>{name}</span>
                                     ))}
                                   </div>
                                 </div>
@@ -3421,8 +3448,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                       {forThisTermin.map(tt => {
-                        const tn = teilnehmer.find(x => x.id === tt.teilnehmer_id)
-                        const name = tn ? `${tn.vorname} ${tn.nachname}` : 'Unbekannt'
+                        const name = getTeilnehmerName(tt.teilnehmer_id)
                         const s = tt.status
                         const statusColor = s === 'zugesagt' ? '#16a34a' : s === 'abgesagt' ? '#dc2626' : 'var(--warm-gray)'
                         return (
