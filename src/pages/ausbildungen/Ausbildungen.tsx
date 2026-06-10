@@ -413,10 +413,20 @@ function FileCard({ name, ext, url, accent, onSchreibstube, onVollbild, onRemove
   onVollbild?: () => void
   onRemove?: () => void
 }) {
+  const [showChoice, setShowChoice] = useState(false)
   const isImage = IMAGE_EXTS.includes(ext)
   const typeStyle = FILE_TYPE_STYLES[ext] || { color: 'var(--warm-gray)', label: ext ? ext.toUpperCase() : 'DATEI' }
-  const showVollbild = ext === 'pdf' && !!onVollbild
-  const hasActions = !!onSchreibstube || showVollbild
+
+  function openNormal() {
+    if (ext === 'pdf' && onVollbild) onVollbild()
+    else window.open(url, '_blank', 'noopener')
+  }
+
+  function handleClick(e: React.MouseEvent) {
+    e.preventDefault()
+    if (onSchreibstube) setShowChoice(true)
+    else openNormal()
+  }
 
   return (
     <div style={{ background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.07)', overflow: 'hidden', display: 'flex', flexDirection: 'column', borderTop: `3px solid ${accent}`, position: 'relative' }}>
@@ -425,7 +435,7 @@ function FileCard({ name, ext, url, accent, onSchreibstube, onVollbild, onRemove
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
       )}
-      <a href={url} target="_blank" rel="noreferrer" style={{ display: 'block', aspectRatio: '4 / 3', position: 'relative', textDecoration: 'none', background: isImage ? `center / cover no-repeat url("${url}")` : 'rgba(96,8,18,0.03)' }}>
+      <a href={url} onClick={handleClick} style={{ display: 'block', aspectRatio: '4 / 3', position: 'relative', textDecoration: 'none', cursor: 'pointer', background: isImage ? `center / cover no-repeat url("${url}")` : 'rgba(96,8,18,0.03)' }}>
         {ext === 'pdf' && <PdfThumbnail url={url} typeColor={typeStyle.color} />}
         {!isImage && ext !== 'pdf' && (
           <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
@@ -434,23 +444,26 @@ function FileCard({ name, ext, url, accent, onSchreibstube, onVollbild, onRemove
           </div>
         )}
       </a>
-      <div style={{ padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: hasActions ? 6 : 0, flex: 1 }}>
+      <div style={{ padding: '8px 10px' }}>
         <div title={name} style={{ fontSize: 12, color: 'var(--lbf-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</div>
-        {hasActions && (
-          <div style={{ display: 'flex', gap: 6, marginTop: 'auto' }}>
-            {onSchreibstube && (
-              <button onClick={onSchreibstube} style={{ flex: 1, background: '#fff', border: `1px solid ${accent}`, borderRadius: 6, padding: '4px 0', color: accent, fontSize: 10, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
-                Bearbeiten
-              </button>
-            )}
-            {showVollbild && (
-              <button onClick={onVollbild} style={{ flex: 1, background: accent, border: 'none', borderRadius: 6, padding: '4px 0', color: '#fff', fontSize: 10, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
-                Vollbild
-              </button>
-            )}
-          </div>
-        )}
       </div>
+      {showChoice && (
+        <>
+          <div onClick={() => setShowChoice(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(26,14,8,0.45)', zIndex: 900 }} />
+          <div style={{ position: 'fixed', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', zIndex: 901, background: '#fff', borderRadius: 14, padding: 18, width: 'min(300px, 86vw)', boxShadow: '0 8px 30px rgba(0,0,0,0.25)' }}>
+            <div title={name} style={{ fontSize: 13, fontWeight: 700, fontStyle: 'italic', color: 'var(--lbf-text)', marginBottom: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</div>
+            <div style={{ fontSize: 12, color: 'var(--warm-gray)', marginBottom: 16 }}>Wie möchtest du die Datei öffnen?</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <button onClick={() => { setShowChoice(false); onSchreibstube?.() }} style={{ background: '#600812', border: 'none', borderRadius: 8, padding: '10px 0', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                In Schreibstube öffnen
+              </button>
+              <button onClick={() => { setShowChoice(false); openNormal() }} style={{ background: '#fff', border: '1px solid rgba(96,8,18,0.2)', borderRadius: 8, padding: '10px 0', color: 'var(--lbf-text)', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                Normal öffnen
+              </button>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   )
 }
@@ -3115,14 +3128,14 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                 <div>
                   {/* Für Teilnehmer */}
                   <div style={{ marginBottom: 24 }}>
-                    <div style={{ fontSize: 9, fontWeight: 700, color: '#d97706', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 8 }}>Für Teilnehmer</div>
+                    <div style={{ fontSize: 9, fontWeight: 700, color: '#8a7a68', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 8 }}>Für Teilnehmer</div>
                     {(tnDateien.length > 0 || anhangLinks.length > 0) && (
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: 10, marginBottom: 10 }}>
                         {tnDateien.map((file, i) => {
                           const ext = file.split('.').pop()?.toLowerCase() ?? ''
                           const url = `https://api.responda.systems/api/files/${t.collectionId}/${t.id}/${file}`
                           return (
-                            <FileCard key={`tn-${i}`} name={file} ext={ext} url={url} accent="#d97706"
+                            <FileCard key={`tn-${i}`} name={file} ext={ext} url={url} accent="#8a7a68"
                               onSchreibstube={EDITABLE_EXTS.includes(ext) ? () => navigate(`/office?open=${t.id}&collection=ausbildungen_termine&field=anhang&index=${i}`) : undefined}
                               onVollbild={ext === 'pdf' ? () => setPdfViewerUrl(url) : undefined}
                             />
@@ -3132,7 +3145,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                           const ext = link.name.split('.').pop()?.toLowerCase() ?? ''
                           const url = `${pb.baseUrl}/api/files/files/${link.id}/${link.file}?token=${pb.authStore.token}`
                           return (
-                            <FileCard key={link.id} name={link.name} ext={ext} url={url} accent="#d97706"
+                            <FileCard key={link.id} name={link.name} ext={ext} url={url} accent="#8a7a68"
                               onSchreibstube={EDITABLE_EXTS.includes(ext) ? () => navigate(`/office?open=${link.id}`) : undefined}
                               onVollbild={ext === 'pdf' ? () => setPdfViewerUrl(url) : undefined}
                               onRemove={() => unlinkTNFile(link.id)}
@@ -3142,16 +3155,16 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                       </div>
                     )}
                     <div style={{ display: 'flex', gap: 8 }}>
-                      <label style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', border: '1.5px dashed rgba(217,119,6,0.3)', borderRadius: 10, cursor: uploadingTNFile ? 'default' : 'pointer', background: 'rgba(217,119,6,0.02)' }}>
+                      <label style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', border: '1.5px dashed rgba(138,122,104,0.3)', borderRadius: 10, cursor: uploadingTNFile ? 'default' : 'pointer', background: 'rgba(138,122,104,0.02)' }}>
                         {uploadingTNFile ? <span style={{ fontSize: 13, color: 'var(--warm-gray)', fontStyle: 'italic' }}>Lade hoch…</span>
-                          : <><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
-                            <span style={{ fontSize: 13, color: '#d97706', fontWeight: 600 }}>Hochladen</span></>
+                          : <><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#8a7a68" strokeWidth="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+                            <span style={{ fontSize: 13, color: '#8a7a68', fontWeight: 600 }}>Hochladen</span></>
                         }
                         <input type="file" style={{ display: 'none' }} disabled={uploadingTNFile}
                           onChange={e => { const f = e.target.files?.[0]; if (f) uploadTNFile(f); e.target.value = '' }} />
                       </label>
                       <button onClick={() => { setShowFilePicker('tn'); loadFilePicker() }}
-                        style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '10px 14px', border: '1.5px dashed rgba(217,119,6,0.3)', borderRadius: 10, cursor: 'pointer', background: 'rgba(217,119,6,0.02)', color: '#d97706', fontSize: 13, fontWeight: 600, fontFamily: 'inherit', whiteSpace: 'nowrap' }}>
+                        style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '10px 14px', border: '1.5px dashed rgba(138,122,104,0.3)', borderRadius: 10, cursor: 'pointer', background: 'rgba(138,122,104,0.02)', color: '#8a7a68', fontSize: 13, fontWeight: 600, fontFamily: 'inherit', whiteSpace: 'nowrap' }}>
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
                         Aus Bibliothek
                       </button>
@@ -5653,7 +5666,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
       {showFilePicker && (() => {
         const isTN = showFilePicker === 'tn'
         const currentLinks = isTN ? anhangLinks : dateienLinks
-        const accentColor = isTN ? '#d97706' : '#600812'
+        const accentColor = isTN ? '#8a7a68' : '#600812'
         const query = filePickerSearch.toLowerCase()
         const filtered = filePickerItems.filter(f => f.name.toLowerCase().includes(query))
         return (
@@ -5667,7 +5680,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                 </div>
                 <input value={filePickerSearch} onChange={e => setFilePickerSearch(e.target.value)}
                   placeholder="Suchen …" autoFocus
-                  style={{ width: '100%', padding: '9px 12px', borderRadius: 10, border: `1px solid rgba(${isTN ? '217,119,6' : '96,8,18'},0.15)`, background: '#fff', fontSize: 13, outline: 'none', fontFamily: 'inherit', color: 'var(--lbf-text)', boxSizing: 'border-box' }} />
+                  style={{ width: '100%', padding: '9px 12px', borderRadius: 10, border: `1px solid rgba(${isTN ? '138,122,104' : '96,8,18'},0.15)`, background: '#fff', fontSize: 13, outline: 'none', fontFamily: 'inherit', color: 'var(--lbf-text)', boxSizing: 'border-box' }} />
               </div>
               <div style={{ flex: 1, overflowY: 'auto', padding: '8px 16px 16px' }}>
                 {filePickerLoading ? (
@@ -5681,7 +5694,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                       const alreadyLinked = currentLinks.some(l => l.id === item.id)
                       return (
                         <button key={item.id} onClick={() => isTN ? linkTNFile(item) : linkDozentFile(item)} disabled={alreadyLinked}
-                          style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 13px', background: alreadyLinked ? `rgba(${isTN ? '217,119,6' : '96,8,18'},0.04)` : '#fff', border: `1px solid rgba(${isTN ? '217,119,6' : '96,8,18'},${alreadyLinked ? '0.2' : '0.1'})`, borderRadius: 10, cursor: alreadyLinked ? 'default' : 'pointer', textAlign: 'left', fontFamily: 'inherit', width: '100%' }}>
+                          style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 13px', background: alreadyLinked ? `rgba(${isTN ? '138,122,104' : '96,8,18'},0.04)` : '#fff', border: `1px solid rgba(${isTN ? '138,122,104' : '96,8,18'},${alreadyLinked ? '0.2' : '0.1'})`, borderRadius: 10, cursor: alreadyLinked ? 'default' : 'pointer', textAlign: 'left', fontFamily: 'inherit', width: '100%' }}>
                           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={alreadyLinked ? '#16a34a' : accentColor} strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
                           <span style={{ flex: 1, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--lbf-text)' }}>{item.name}</span>
                           <span style={{ fontSize: 10, color: 'var(--warm-gray)', textTransform: 'uppercase', flexShrink: 0 }}>{ext}</span>
