@@ -14,6 +14,7 @@ interface OfficeFile {
   updated: string
   collectionId: string
   organization_id?: string
+  collection?: string
 }
 
 const EDITABLE_EXTS = ['docx', 'doc', 'odt', 'rtf', 'txt', 'xlsx', 'xls', 'ods', 'csv', 'pptx', 'ppt', 'odp', 'pdf']
@@ -176,7 +177,36 @@ export default function Office() {
 
   useEffect(() => {
     const openId = searchParams.get('open')
-    if (!openId || files.length === 0) return
+    if (!openId) return
+
+    const openCollection = searchParams.get('collection')
+    const openField = searchParams.get('field')
+
+    if (openCollection && openCollection !== 'files') {
+      pb.collection(openCollection).getOne<Record<string, unknown>>(openId).then(rec => {
+        const fileName = rec[openField || 'file'] as string | undefined
+        if (!fileName) {
+          showMsg('Datei nicht gefunden oder nicht editierbar.', 'error')
+          return
+        }
+        openFile({
+          id: rec.id as string,
+          name: (rec.name as string) || fileName,
+          file: fileName,
+          created: rec.created as string,
+          updated: (rec.updated as string) || (rec.created as string),
+          collectionId: rec.collectionId as string,
+          collection: openCollection,
+        })
+      }).catch(() => showMsg('Datei nicht gefunden oder nicht editierbar.', 'error'))
+      searchParams.delete('open')
+      searchParams.delete('collection')
+      searchParams.delete('field')
+      setSearchParams(searchParams, { replace: true })
+      return
+    }
+
+    if (files.length === 0) return
     const target = files.find(f => f.id === openId)
     if (target) {
       openFile(target)
@@ -269,7 +299,8 @@ export default function Office() {
     setEditorLoading(true)
 
     const ext = editingFile.file.split('.').pop()?.toLowerCase() || 'docx'
-    const fileUrl = `${pb.baseUrl}/api/files/files/${editingFile.id}/${editingFile.file}?token=${pb.authStore.token}`
+    const collectionName = editingFile.collection || 'files'
+    const fileUrl = `${pb.baseUrl}/api/files/${collectionName}/${editingFile.id}/${editingFile.file}?token=${pb.authStore.token}`
     const callbackUrl = `${pb.baseUrl}/api/office/callback?file_id=${editingFile.id}`
 
     const script = document.createElement('script')

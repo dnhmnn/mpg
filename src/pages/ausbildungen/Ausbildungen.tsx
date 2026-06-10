@@ -1,9 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
 import PocketBase from 'pocketbase'
 import StatusBar from '../../components/StatusBar'
 import { useAuth } from '../../hooks/useAuth'
 
 const pb = new PocketBase('https://api.responda.systems')
+
+const EDITABLE_EXTS = ['docx', 'doc', 'odt', 'rtf', 'txt', 'xlsx', 'xls', 'ods', 'csv', 'pptx', 'ppt', 'odp', 'pdf']
 
 // PocketBase stores dates as "2026-01-15 14:00:00.000Z" (space instead of T)
 // new Date() needs ISO format with T, so we normalize first
@@ -335,7 +338,8 @@ function getPatternBg(pattern: string | null): { backgroundImage: string; backgr
 
 export default function Ausbildungen() {
   const { user, loading: authLoading, logout } = useAuth()
-  
+  const navigate = useNavigate()
+
   const [termine, setTermine] = useState<Termin[]>([])
   const [teilnehmer, setTeilnehmer] = useState<Teilnehmer[]>([])
   const [terminTeilnehmer, setTerminTeilnehmer] = useState<TerminTeilnehmer[]>([])
@@ -4590,8 +4594,16 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                                     </div>
                                   </div>
                                   <div style={{display: 'flex', gap: '8px'}}>
+                                    {d.datei && EDITABLE_EXTS.includes(d.datei.split('.').pop()?.toLowerCase() || '') && (
+                                      <button
+                                        className="btn-small"
+                                        onClick={() => navigate(`/office?open=${d.id}&collection=ausbildungen_dokumente&field=datei`)}
+                                      >
+                                        In Schreibstube öffnen
+                                      </button>
+                                    )}
                                     {d.datei && (
-                                      <a 
+                                      <a
                                         href={pb.files.getUrl(d, d.datei)}
                                         target="_blank"
                                         rel="noopener noreferrer"
@@ -4601,7 +4613,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                                         Download
                                       </a>
                                     )}
-                                    <button 
+                                    <button
                                       className="btn-small danger"
                                       onClick={() => deleteDokument(d.id, d.name)}
                                     >
@@ -4643,8 +4655,16 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                                     </div>
                                   </div>
                                   <div style={{display: 'flex', gap: '8px'}}>
+                                    {d.datei && EDITABLE_EXTS.includes(d.datei.split('.').pop()?.toLowerCase() || '') && (
+                                      <button
+                                        className="btn-small"
+                                        onClick={() => navigate(`/office?open=${d.id}&collection=ausbildungen_dokumente&field=datei`)}
+                                      >
+                                        In Schreibstube öffnen
+                                      </button>
+                                    )}
                                     {d.datei && (
-                                      <a 
+                                      <a
                                         href={pb.files.getUrl(d, d.datei)}
                                         target="_blank"
                                         rel="noopener noreferrer"
@@ -4654,7 +4674,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                                         Download
                                       </a>
                                     )}
-                                    <button 
+                                    <button
                                       className="btn-small danger"
                                       onClick={() => deleteDokument(d.id, d.name)}
                                     >

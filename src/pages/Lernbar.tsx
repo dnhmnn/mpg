@@ -24,6 +24,8 @@ function toICSDate(str: string): string {
   if (isNaN(d.getTime())) return ''
   return d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z'
 }
+const EDITABLE_EXTS = ['docx', 'doc', 'odt', 'rtf', 'txt', 'xlsx', 'xls', 'ods', 'csv', 'pptx', 'ppt', 'odp', 'pdf']
+
 function getVideoEmbed(url: string): string {
   const yt = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)/)
   if (yt) return `https://www.youtube.com/embed/${yt[1]}?rel=0`
@@ -39,6 +41,10 @@ interface Termin {
   lernkonzept?: string
   dateien?: string[]
   anhang?: string[]
+}
+interface TerminDokument {
+  id: string; collectionId: string; termin_id: string; name: string
+  typ: 'dozent' | 'teilnehmer'; datei?: string; beschreibung?: string; created: string
 }
 interface TerminUser {
   id: string; termin_id: string; teilnehmer_id: string; status: string
@@ -119,6 +125,7 @@ export default function Lernbar() {
   const [tab, setTab] = useState<'bibliothek' | 'termine' | 'module'>('bibliothek')
 
   const [termine, setTermine] = useState<Termin[]>([])
+  const [terminDokumente, setTerminDokumente] = useState<TerminDokument[]>([])
   const [terminUser, setTerminUser] = useState<TerminUser[]>([])
   const [module, setModule] = useState<Modul[]>([])
   const [progress, setProgress] = useState<ModulProgress[]>([])
@@ -165,6 +172,13 @@ export default function Lernbar() {
           filter: terminIds.map(id => `id = "${id}"`).join(' || '), sort: 'start_datetime', requestKey: `lb-termine-${Date.now()}`
         })
         setTermine(tr as any)
+        try {
+          const dr = await pb.collection('ausbildungen_dokumente').getFullList({
+            filter: `typ = "teilnehmer" && (${terminIds.map(id => `termin_id = "${id}"`).join(' || ')})`,
+            requestKey: `lb-dokumente-${Date.now()}`
+          })
+          setTerminDokumente(dr as any)
+        } catch (e: any) { console.error('ausbildungen_dokumente Fehler:', e?.message) }
       }
       const pr = await pb.collection('ausbildungen_module_progress').getFullList({
         filter: `teilnehmer_id = "${user!.id}"`, requestKey: `lb-progress-${Date.now()}`
@@ -1207,7 +1221,42 @@ export default function Lernbar() {
                   </div>
                 )}
 
-                {!termin.description && !termin.lernkonzept && dateien.length === 0 && (
+                {/* Unterlagen */}
+                {terminDokumente.filter(d => d.termin_id === termin.id).length > 0 && (
+                  <div>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 8 }}>Unterlagen</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      {terminDokumente.filter(d => d.termin_id === termin.id).map(d => {
+                        const ext = d.datei?.split('.').pop()?.toLowerCase() ?? ''
+                        const downloadUrl = d.datei ? pb.files.getUrl(d, d.datei) : ''
+                        return (
+                          <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', background: 'var(--warm-bg)', border: '1px solid rgba(96,8,18,0.12)', borderRadius: 12, color: 'var(--lbf-text)' }}>
+                            <div style={{ width: 36, height: 36, borderRadius: 8, background: 'rgba(107,15,26,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#600812" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                            </div>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ fontWeight: 600, fontSize: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.name}</div>
+                              {d.beschreibung && <div style={{ fontSize: 12, color: 'var(--warm-gray)', fontStyle: 'italic', marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.beschreibung}</div>}
+                            </div>
+                            {d.datei && EDITABLE_EXTS.includes(ext) && (
+                              <button onClick={() => navigate(`/office?open=${d.id}&collection=ausbildungen_dokumente&field=datei`)}
+                                style={{ background: '#600812', border: 'none', borderRadius: 8, padding: '6px 10px', color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer', flexShrink: 0, fontFamily: 'inherit', whiteSpace: 'nowrap' }}>
+                                Öffnen
+                              </button>
+                            )}
+                            {downloadUrl && (
+                              <a href={downloadUrl} target="_blank" rel="noreferrer" style={{ flexShrink: 0, display: 'flex', alignItems: 'center', color: 'var(--warm-gray)' }}>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                              </a>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {!termin.description && !termin.lernkonzept && dateien.length === 0 && terminDokumente.filter(d => d.termin_id === termin.id).length === 0 && (
                   <div style={{ textAlign: 'center', color: 'var(--warm-gray)', padding: '20px 0', fontSize: 14 }}>
                     Keine weiteren Informationen hinterlegt
                   </div>
