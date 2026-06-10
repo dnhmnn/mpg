@@ -2361,6 +2361,13 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
     return 'Unbekannt'
   }
 
+  // Wer abgesagt/sich entschuldigt hat, gilt ohne expliziten Anwesenheits-Status automatisch als "entschuldigt"
+  function getAnwesenheitStatus(tt: TerminTeilnehmer): 'da' | 'krank' | 'entschuldigt' | 'fehlend' | '' {
+    if (tt.anwesenheit_status) return tt.anwesenheit_status
+    if (tt.status === 'abgesagt' || tt.status === 'entschuldigt') return 'entschuldigt'
+    return ''
+  }
+
   function getTerminDokumenteCount(terminId: string): number {
     return dokumente.filter(d => d.termin_id === terminId).length
   }
@@ -3456,9 +3463,9 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                       { label: 'Eingeladen', val: forThisTermin.length, color: '#600812' },
                       { label: 'Zugesagt', val: zugesagtCount, color: '#d97706' },
                       { label: 'Anwesend', val: anwesendCount, color: '#16a34a' },
-                      { label: 'Krank', val: forThisTermin.filter(tt => tt.anwesenheit_status === 'krank').length, color: '#d97706' },
-                      { label: 'Entschuldigt', val: forThisTermin.filter(tt => tt.anwesenheit_status === 'entschuldigt').length + linkAbsagen.length, color: 'var(--warm-gray)' },
-                      { label: 'Fehlend', val: forThisTermin.filter(tt => tt.anwesenheit_status === 'fehlend').length, color: '#dc2626' },
+                      { label: 'Krank', val: forThisTermin.filter(tt => getAnwesenheitStatus(tt) === 'krank').length, color: '#d97706' },
+                      { label: 'Entschuldigt', val: forThisTermin.filter(tt => getAnwesenheitStatus(tt) === 'entschuldigt').length + linkAbsagen.length, color: 'var(--warm-gray)' },
+                      { label: 'Fehlend', val: forThisTermin.filter(tt => getAnwesenheitStatus(tt) === 'fehlend').length, color: '#dc2626' },
                     ].map(s => (
                       <div key={s.label} style={{ background: '#fff', borderRadius: 10, padding: '12px 10px', textAlign: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
                         <div style={{ fontSize: 28, fontWeight: 800, color: s.color, lineHeight: 1 }}>{s.val}</div>
@@ -3475,7 +3482,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                         const name = getTeilnehmerName(tt.teilnehmer_id)
                         const s = tt.status
                         const statusColor = s === 'zugesagt' ? '#16a34a' : s === 'abgesagt' ? '#dc2626' : 'var(--warm-gray)'
-                        const anw = tt.anwesenheit_status || ''
+                        const anw = getAnwesenheitStatus(tt)
                         const anwOptions: { value: 'da' | 'krank' | 'entschuldigt' | 'fehlend', label: string, color: string, bg: string }[] = [
                           { value: 'da', label: 'Da', color: '#16a34a', bg: 'rgba(22,163,74,0.1)' },
                           { value: 'krank', label: 'Krank', color: '#d97706', bg: 'rgba(217,119,6,0.1)' },
