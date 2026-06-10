@@ -352,6 +352,58 @@ function getPatternBg(pattern: string | null): { backgroundImage: string; backgr
   }
 }
 
+function PdfThumbnail({ url, typeColor }: { url: string; typeColor: string }) {
+  const containerRef = useRef<HTMLDivElement>(null)
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const [loaded, setLoaded] = useState(false)
+  const [error, setError] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    const el = containerRef.current
+    if (!el) return
+    const observer = new IntersectionObserver(entries => {
+      if (!entries[0].isIntersecting) return
+      observer.disconnect()
+      ;(async () => {
+        try {
+          const pdfjs: any = await import('pdfjs-dist')
+          pdfjs.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).href
+          const doc = await pdfjs.getDocument(url).promise
+          const page = await doc.getPage(1)
+          const baseViewport = page.getViewport({ scale: 1 })
+          const targetWidth = (containerRef.current?.clientWidth || 160) * Math.min(window.devicePixelRatio || 1, 2)
+          const viewport = page.getViewport({ scale: targetWidth / baseViewport.width })
+          const canvas = canvasRef.current
+          if (!canvas || cancelled) return
+          canvas.width = viewport.width
+          canvas.height = viewport.height
+          const ctx = canvas.getContext('2d')
+          if (!ctx) return
+          await page.render({ canvasContext: ctx, viewport }).promise
+          if (!cancelled) setLoaded(true)
+        } catch {
+          if (!cancelled) setError(true)
+        }
+      })()
+    }, { rootMargin: '200px' })
+    observer.observe(el)
+    return () => { cancelled = true; observer.disconnect() }
+  }, [url])
+
+  return (
+    <div ref={containerRef} style={{ position: 'absolute', inset: 0 }}>
+      <canvas ref={canvasRef} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top', display: loaded ? 'block' : 'none' }} />
+      {!loaded && (
+        <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={typeColor} strokeWidth="1.6"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          {error && <span style={{ fontSize: 10, fontWeight: 700, color: typeColor, letterSpacing: '0.06em' }}>PDF</span>}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function FileCard({ name, ext, url, accent, onSchreibstube, onVollbild, onRemove }: {
   name: string
   ext: string
@@ -374,7 +426,8 @@ function FileCard({ name, ext, url, accent, onSchreibstube, onVollbild, onRemove
         </button>
       )}
       <a href={url} target="_blank" rel="noreferrer" style={{ display: 'block', aspectRatio: '4 / 3', position: 'relative', textDecoration: 'none', background: isImage ? `center / cover no-repeat url("${url}")` : 'rgba(96,8,18,0.03)' }}>
-        {!isImage && (
+        {ext === 'pdf' && <PdfThumbnail url={url} typeColor={typeStyle.color} />}
+        {!isImage && ext !== 'pdf' && (
           <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
             <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={typeStyle.color} strokeWidth="1.6"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
             <span style={{ fontSize: 10, fontWeight: 700, color: typeStyle.color, letterSpacing: '0.06em' }}>{typeStyle.label}</span>
@@ -3062,14 +3115,14 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                 <div>
                   {/* Für Teilnehmer */}
                   <div style={{ marginBottom: 24 }}>
-                    <div style={{ fontSize: 9, fontWeight: 700, color: '#16a34a', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 8 }}>Für Teilnehmer</div>
+                    <div style={{ fontSize: 9, fontWeight: 700, color: '#d97706', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 8 }}>Für Teilnehmer</div>
                     {(tnDateien.length > 0 || anhangLinks.length > 0) && (
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: 10, marginBottom: 10 }}>
                         {tnDateien.map((file, i) => {
                           const ext = file.split('.').pop()?.toLowerCase() ?? ''
                           const url = `https://api.responda.systems/api/files/${t.collectionId}/${t.id}/${file}`
                           return (
-                            <FileCard key={`tn-${i}`} name={file} ext={ext} url={url} accent="#16a34a"
+                            <FileCard key={`tn-${i}`} name={file} ext={ext} url={url} accent="#d97706"
                               onSchreibstube={EDITABLE_EXTS.includes(ext) ? () => navigate(`/office?open=${t.id}&collection=ausbildungen_termine&field=anhang&index=${i}`) : undefined}
                               onVollbild={ext === 'pdf' ? () => setPdfViewerUrl(url) : undefined}
                             />
@@ -3079,7 +3132,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                           const ext = link.name.split('.').pop()?.toLowerCase() ?? ''
                           const url = `${pb.baseUrl}/api/files/files/${link.id}/${link.file}?token=${pb.authStore.token}`
                           return (
-                            <FileCard key={link.id} name={link.name} ext={ext} url={url} accent="#16a34a"
+                            <FileCard key={link.id} name={link.name} ext={ext} url={url} accent="#d97706"
                               onSchreibstube={EDITABLE_EXTS.includes(ext) ? () => navigate(`/office?open=${link.id}`) : undefined}
                               onVollbild={ext === 'pdf' ? () => setPdfViewerUrl(url) : undefined}
                               onRemove={() => unlinkTNFile(link.id)}
@@ -3089,16 +3142,16 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                       </div>
                     )}
                     <div style={{ display: 'flex', gap: 8 }}>
-                      <label style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', border: '1.5px dashed rgba(22,163,74,0.3)', borderRadius: 10, cursor: uploadingTNFile ? 'default' : 'pointer', background: 'rgba(22,163,74,0.02)' }}>
+                      <label style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', border: '1.5px dashed rgba(217,119,6,0.3)', borderRadius: 10, cursor: uploadingTNFile ? 'default' : 'pointer', background: 'rgba(217,119,6,0.02)' }}>
                         {uploadingTNFile ? <span style={{ fontSize: 13, color: 'var(--warm-gray)', fontStyle: 'italic' }}>Lade hoch…</span>
-                          : <><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
-                            <span style={{ fontSize: 13, color: '#16a34a', fontWeight: 600 }}>Hochladen</span></>
+                          : <><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+                            <span style={{ fontSize: 13, color: '#d97706', fontWeight: 600 }}>Hochladen</span></>
                         }
                         <input type="file" style={{ display: 'none' }} disabled={uploadingTNFile}
                           onChange={e => { const f = e.target.files?.[0]; if (f) uploadTNFile(f); e.target.value = '' }} />
                       </label>
                       <button onClick={() => { setShowFilePicker('tn'); loadFilePicker() }}
-                        style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '10px 14px', border: '1.5px dashed rgba(22,163,74,0.3)', borderRadius: 10, cursor: 'pointer', background: 'rgba(22,163,74,0.02)', color: '#16a34a', fontSize: 13, fontWeight: 600, fontFamily: 'inherit', whiteSpace: 'nowrap' }}>
+                        style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '10px 14px', border: '1.5px dashed rgba(217,119,6,0.3)', borderRadius: 10, cursor: 'pointer', background: 'rgba(217,119,6,0.02)', color: '#d97706', fontSize: 13, fontWeight: 600, fontFamily: 'inherit', whiteSpace: 'nowrap' }}>
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
                         Aus Bibliothek
                       </button>
@@ -5600,7 +5653,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
       {showFilePicker && (() => {
         const isTN = showFilePicker === 'tn'
         const currentLinks = isTN ? anhangLinks : dateienLinks
-        const accentColor = isTN ? '#16a34a' : '#600812'
+        const accentColor = isTN ? '#d97706' : '#600812'
         const query = filePickerSearch.toLowerCase()
         const filtered = filePickerItems.filter(f => f.name.toLowerCase().includes(query))
         return (
@@ -5614,7 +5667,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                 </div>
                 <input value={filePickerSearch} onChange={e => setFilePickerSearch(e.target.value)}
                   placeholder="Suchen …" autoFocus
-                  style={{ width: '100%', padding: '9px 12px', borderRadius: 10, border: `1px solid rgba(${isTN ? '22,163,74' : '96,8,18'},0.15)`, background: '#fff', fontSize: 13, outline: 'none', fontFamily: 'inherit', color: 'var(--lbf-text)', boxSizing: 'border-box' }} />
+                  style={{ width: '100%', padding: '9px 12px', borderRadius: 10, border: `1px solid rgba(${isTN ? '217,119,6' : '96,8,18'},0.15)`, background: '#fff', fontSize: 13, outline: 'none', fontFamily: 'inherit', color: 'var(--lbf-text)', boxSizing: 'border-box' }} />
               </div>
               <div style={{ flex: 1, overflowY: 'auto', padding: '8px 16px 16px' }}>
                 {filePickerLoading ? (
@@ -5628,7 +5681,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                       const alreadyLinked = currentLinks.some(l => l.id === item.id)
                       return (
                         <button key={item.id} onClick={() => isTN ? linkTNFile(item) : linkDozentFile(item)} disabled={alreadyLinked}
-                          style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 13px', background: alreadyLinked ? `rgba(${isTN ? '22,163,74' : '96,8,18'},0.04)` : '#fff', border: `1px solid rgba(${isTN ? '22,163,74' : '96,8,18'},${alreadyLinked ? '0.2' : '0.1'})`, borderRadius: 10, cursor: alreadyLinked ? 'default' : 'pointer', textAlign: 'left', fontFamily: 'inherit', width: '100%' }}>
+                          style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 13px', background: alreadyLinked ? `rgba(${isTN ? '217,119,6' : '96,8,18'},0.04)` : '#fff', border: `1px solid rgba(${isTN ? '217,119,6' : '96,8,18'},${alreadyLinked ? '0.2' : '0.1'})`, borderRadius: 10, cursor: alreadyLinked ? 'default' : 'pointer', textAlign: 'left', fontFamily: 'inherit', width: '100%' }}>
                           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={alreadyLinked ? '#16a34a' : accentColor} strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
                           <span style={{ flex: 1, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--lbf-text)' }}>{item.name}</span>
                           <span style={{ fontSize: 10, color: 'var(--warm-gray)', textTransform: 'uppercase', flexShrink: 0 }}>{ext}</span>
