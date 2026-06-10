@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { pb } from '../lib/pocketbase'
 import { useAuth } from '../hooks/useAuth'
+
+const EDITABLE_EXTS = ['docx', 'doc', 'odt', 'rtf', 'txt', 'xlsx', 'xls', 'ods', 'csv', 'pptx', 'ppt', 'odp']
 
 interface FileItem {
   id: string
@@ -21,6 +23,7 @@ interface FolderPath {
 }
 
 export default function Files() {
+  const navigate = useNavigate()
   const { user, loading: authLoading, logout } = useAuth()
   
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null)
@@ -33,6 +36,7 @@ export default function Files() {
   const [showNewFolderModal, setShowNewFolderModal] = useState(false)
   const [showUploadModal, setShowUploadModal] = useState(false)
   const [showRenameModal, setShowRenameModal] = useState(false)
+  const [actionFile, setActionFile] = useState<FileItem | null>(null)
   
   const [folderName, setFolderName] = useState('')
   const [renameName, setRenameName] = useState('')
@@ -288,6 +292,21 @@ export default function Files() {
     return date.toLocaleDateString('de-DE')
   }
 
+  function isEditable(item: FileItem) {
+    const ext = item.name.split('.').pop()?.toLowerCase() || ''
+    return EDITABLE_EXTS.includes(ext)
+  }
+
+  function openItem(item: FileItem) {
+    if (item.is_folder) {
+      navigateToFolder(item.id, item.name)
+    } else if (isEditable(item)) {
+      setActionFile(item)
+    } else {
+      downloadFile(item.id)
+    }
+  }
+
   const filteredFiles = searchQuery 
     ? allFiles.filter(f => f.name.toLowerCase().includes(searchQuery.toLowerCase()))
     : allFiles
@@ -425,7 +444,7 @@ export default function Files() {
               return (
                 <div
                   key={item.id}
-                  onClick={() => item.is_folder ? navigateToFolder(item.id, item.name) : downloadFile(item.id)}
+                  onClick={() => openItem(item)}
                   style={{ background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.07)', borderLeft: `3px solid ${fileBorderColor(item)}`, padding: '12px 14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12 }}
                 >
                   <div style={{ width: 36, height: 36, borderRadius: 8, background: ic.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: ic.color }}>
@@ -511,6 +530,34 @@ export default function Files() {
             )}
             <div className="f-modal-actions">
               <button className="f-btn" onClick={() => { setShowUploadModal(false); setUploadProgress([]) }}>Schließen</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* DOKUMENT ÖFFNEN MODAL */}
+      {actionFile && (
+        <div className="f-modal-overlay" onClick={() => setActionFile(null)}>
+          <div className="f-modal" onClick={(e) => e.stopPropagation()}>
+            <h3 style={{ fontStyle: 'italic' }}>{actionFile.name}</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 12 }}>
+              <button
+                className="f-btn primary"
+                style={{ width: '100%', boxSizing: 'border-box', textAlign: 'center' }}
+                onClick={() => { navigate(`/office?open=${actionFile.id}`); setActionFile(null) }}
+              >
+                In Office öffnen
+              </button>
+              <button
+                className="f-btn"
+                style={{ width: '100%', boxSizing: 'border-box', textAlign: 'center' }}
+                onClick={() => { downloadFile(actionFile.id); setActionFile(null) }}
+              >
+                Herunterladen
+              </button>
+            </div>
+            <div className="f-modal-actions">
+              <button className="f-btn" onClick={() => setActionFile(null)}>Abbrechen</button>
             </div>
           </div>
         </div>

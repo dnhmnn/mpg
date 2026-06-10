@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { pb } from '../lib/pocketbase'
 import { useAuth } from '../hooks/useAuth'
 
@@ -127,6 +127,7 @@ function FileCard({ f, onClick }: { f: OfficeFile; onClick: () => void }) {
 
 export default function Office() {
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const { user, loading: authLoading } = useAuth()
 
   const [files, setFiles] = useState<OfficeFile[]>([])
@@ -153,6 +154,19 @@ export default function Office() {
     const saved = localStorage.getItem(RECENT_KEY)
     if (saved) setRecentIds(JSON.parse(saved))
   }, [])
+
+  useEffect(() => {
+    const openId = searchParams.get('open')
+    if (!openId || files.length === 0) return
+    const target = files.find(f => f.id === openId)
+    if (target) {
+      openFile(target)
+    } else {
+      showMsg('Datei nicht gefunden oder nicht editierbar.', 'error')
+    }
+    searchParams.delete('open')
+    setSearchParams(searchParams, { replace: true })
+  }, [files, searchParams])
 
   useEffect(() => {
     if (createType) {
