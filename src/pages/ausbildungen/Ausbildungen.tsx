@@ -947,6 +947,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
     setEditingLernkonzept(false)
     setTerminDetailTab('info')
     setTerminDetailPage(t)
+    loadEinladungenForTermin(t.id)
   }
 
   async function saveTerminDetailField(terminId: string, fields: Record<string, any>) {
@@ -1645,6 +1646,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
       }, { requestKey: `token-${Date.now()}` })
       await pb.collection('ausbildungen_termine').update(termin.id, { einladung_token: token }, { requestKey: `termin-token-${Date.now()}` })
       setSelectedTermin(prev => prev ? { ...prev, einladung_token: token } : prev)
+      setTerminDetailPage(prev => prev && prev.id === termin.id ? { ...prev, einladung_token: token } : prev)
       setTermine(prev => prev.map(t => t.id === termin.id ? { ...t, einladung_token: token } : t))
       showMessage('Einladungslink erstellt!', 'success')
       return token
@@ -3209,6 +3211,98 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
               {/* ── TAB: INFO ── */}
               {terminDetailTab === 'info' && (
                 <div>
+                  {/* Teilnehmer & Einladung */}
+                  {(() => {
+                    const einladungsText = generateEinladungsText(t)
+                    const terminEinladungen = einladungen.filter(e => e.termin_id === t.id)
+                    const zusagen = terminEinladungen.filter(e => e.status === 'zusagen')
+                    const absagen = terminEinladungen.filter(e => e.status === 'absagen')
+                    return (
+                      <div style={{ background: '#fff', borderRadius: 12, padding: '14px 16px', marginBottom: 14, boxShadow: '0 1px 4px rgba(0,0,0,0.06)', borderLeft: '3px solid #600812' }}>
+                        <div style={{ fontSize: 9, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 8 }}>Teilnehmer &amp; Einladung</div>
+                        <div style={{ fontSize: 14, color: 'var(--lbf-text)', marginBottom: 14 }}>
+                          <span style={{ fontWeight: 700 }}>{getTerminTeilnehmerCount(t.id)}</span> / {t.max_teilnehmer} Teilnehmer
+                        </div>
+
+                        {/* Einladungslink */}
+                        {t.einladung_token ? (() => {
+                          const invUrl = `${window.location.origin}/einladung/${t.einladung_token}`
+                          const invText = `${einladungsText}\n\nHier anmelden / absagen: ${invUrl}`
+                          return (
+                            <div style={{ marginBottom: 14 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                                <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--warm-gray)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Einladungslink</div>
+                                <button
+                                  onClick={() => { if (confirm('Neuen Link generieren? Der alte Link funktioniert dann nicht mehr.')) generateEinladungsToken(t) }}
+                                  style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: 'var(--warm-gray)', fontFamily: 'inherit', padding: 0, textDecoration: 'underline' }}
+                                >Neu generieren</button>
+                              </div>
+                              <div style={{ display: 'flex', gap: 8, alignItems: 'center', background: 'var(--warm-bg)', border: '1px solid rgba(96,8,18,0.12)', borderRadius: 8, padding: '8px 12px' }}>
+                                <span style={{ flex: 1, fontSize: 12, color: 'var(--lbf-text)', wordBreak: 'break-all' }}>{invUrl}</span>
+                                <button
+                                  onClick={() => { navigator.clipboard.writeText(invUrl); showMessage('Link kopiert!', 'success') }}
+                                  style={{ flexShrink: 0, padding: '4px 10px', borderRadius: 6, background: '#600812', border: 'none', color: '#fff', fontWeight: 700, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}
+                                >Kopieren</button>
+                              </div>
+                              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
+                                <a href={`https://wa.me/?text=${encodeURIComponent(invText)}`} target="_blank" rel="noreferrer"
+                                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 8, background: '#25d366', color: '#fff', fontWeight: 700, fontSize: 12, textDecoration: 'none' }}>
+                                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.123.554 4.118 1.528 5.85L0 24l6.335-1.508A11.955 11.955 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 0 1-5.006-1.371l-.359-.213-3.721.886.9-3.62-.234-.372A9.818 9.818 0 1 1 12 21.818z"/></svg>
+                                  WhatsApp
+                                </a>
+                                <a href={`mailto:?subject=${encodeURIComponent('Einladung: '+t.name)}&body=${encodeURIComponent(invText)}`}
+                                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 8, background: '#600812', color: '#fff', fontWeight: 700, fontSize: 12, textDecoration: 'none' }}>
+                                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                                  E-Mail
+                                </a>
+                              </div>
+                            </div>
+                          )
+                        })() : (
+                          <button
+                            onClick={() => generateEinladungsToken(t)}
+                            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 8, background: '#600812', border: 'none', color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', marginBottom: terminEinladungen.length > 0 ? 14 : 0 }}
+                          >
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                            Einladungslink erstellen
+                          </button>
+                        )}
+
+                        {/* Rückmeldungen */}
+                        {terminEinladungen.length > 0 && (
+                          <div>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                              <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--warm-gray)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Rückmeldungen</div>
+                              <div style={{ fontSize: 12, color: 'var(--warm-gray)', fontStyle: 'italic' }}>{terminEinladungen.length} gesamt</div>
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                              {zusagen.length > 0 && (
+                                <div>
+                                  <div style={{ fontSize: 11, fontWeight: 700, color: '#16a34a', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>Zugesagt ({zusagen.length})</div>
+                                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                                    {zusagen.map(e => (
+                                      <span key={e.id} style={{ padding: '4px 10px', borderRadius: 20, background: '#dcfce7', color: '#166534', fontSize: 13, fontWeight: 500 }}>{e.name}</span>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                              {absagen.length > 0 && (
+                                <div>
+                                  <div style={{ fontSize: 11, fontWeight: 700, color: '#dc2626', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>Abgesagt ({absagen.length})</div>
+                                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                                    {absagen.map(e => (
+                                      <span key={e.id} style={{ padding: '4px 10px', borderRadius: 20, background: '#fee2e2', color: '#991b1b', fontSize: 13, fontWeight: 500 }}>{e.name}</span>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })()}
+
                   {/* Termin-Infos */}
                   {t.description && (
                     <div style={{ background: '#fff', borderRadius: 12, padding: '14px 16px', marginBottom: 14, boxShadow: '0 1px 4px rgba(0,0,0,0.06)', borderLeft: '3px solid rgba(96,8,18,0.15)' }}>
