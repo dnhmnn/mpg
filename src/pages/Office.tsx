@@ -181,10 +181,12 @@ export default function Office() {
 
     const openCollection = searchParams.get('collection')
     const openField = searchParams.get('field')
+    const openIndex = searchParams.get('index')
 
     if (openCollection && openCollection !== 'files') {
       pb.collection(openCollection).getOne<Record<string, unknown>>(openId).then(rec => {
-        const fileName = rec[openField || 'file'] as string | undefined
+        const fieldVal = rec[openField || 'file']
+        const fileName = (Array.isArray(fieldVal) ? fieldVal[Number(openIndex || 0)] : fieldVal) as string | undefined
         if (!fileName) {
           showMsg('Datei nicht gefunden oder nicht editierbar.', 'error')
           return
@@ -202,6 +204,7 @@ export default function Office() {
       searchParams.delete('open')
       searchParams.delete('collection')
       searchParams.delete('field')
+      searchParams.delete('index')
       setSearchParams(searchParams, { replace: true })
       return
     }

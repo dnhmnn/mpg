@@ -3008,6 +3008,12 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                               <span style={{ flex: 1, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{file}</span>
                               {ext && <span style={{ fontSize: 10, color: 'var(--warm-gray)', textTransform: 'uppercase' }}>{ext}</span>}
                               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--warm-gray)" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                              {EDITABLE_EXTS.includes(ext) && (
+                                <button onClick={e => { e.preventDefault(); navigate(`/office?open=${t.id}&collection=ausbildungen_termine&field=anhang&index=${i}`) }}
+                                  style={{ background: '#fff', border: '1px solid #600812', borderRadius: 6, padding: '3px 8px', color: '#600812', fontSize: 10, fontWeight: 700, cursor: 'pointer', flexShrink: 0, fontFamily: 'inherit' }}>
+                                  Schreibstube
+                                </button>
+                              )}
                               {ext === 'pdf' && (
                                 <button onClick={e => { e.preventDefault(); setPdfViewerUrl(`https://api.responda.systems/api/files/${t.collectionId}/${t.id}/${file}`) }}
                                   style={{ background: '#600812', border: 'none', borderRadius: 6, padding: '3px 8px', color: '#fff', fontSize: 10, fontWeight: 700, cursor: 'pointer', flexShrink: 0, fontFamily: 'inherit' }}>
@@ -3025,6 +3031,12 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
                               <a href={url} target="_blank" rel="noreferrer" style={{ flex: 1, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--lbf-text)', textDecoration: 'none' }}>{link.name}</a>
                               <span style={{ fontSize: 10, color: 'var(--warm-gray)', textTransform: 'uppercase', flexShrink: 0 }}>{ext}</span>
+                              {EDITABLE_EXTS.includes(ext) && (
+                                <button onClick={() => navigate(`/office?open=${link.id}`)}
+                                  style={{ background: '#fff', border: '1px solid #600812', borderRadius: 6, padding: '3px 8px', color: '#600812', fontSize: 10, fontWeight: 700, cursor: 'pointer', flexShrink: 0, fontFamily: 'inherit' }}>
+                                  Schreibstube
+                                </button>
+                              )}
                               {ext === 'pdf' && (
                                 <button onClick={() => setPdfViewerUrl(url)}
                                   style={{ background: '#600812', border: 'none', borderRadius: 6, padding: '3px 8px', color: '#fff', fontSize: 10, fontWeight: 700, cursor: 'pointer', flexShrink: 0, fontFamily: 'inherit' }}>
@@ -3070,6 +3082,12 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                               <span style={{ flex: 1, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{file}</span>
                               {ext && <span style={{ fontSize: 10, color: 'var(--warm-gray)', textTransform: 'uppercase' }}>{ext}</span>}
                               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--warm-gray)" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                              {EDITABLE_EXTS.includes(ext) && (
+                                <button onClick={e => { e.preventDefault(); navigate(`/office?open=${t.id}&collection=ausbildungen_termine&field=dateien&index=${i}`) }}
+                                  style={{ background: '#fff', border: '1px solid #600812', borderRadius: 6, padding: '3px 8px', color: '#600812', fontSize: 10, fontWeight: 700, cursor: 'pointer', flexShrink: 0, fontFamily: 'inherit' }}>
+                                  Schreibstube
+                                </button>
+                              )}
                               {ext === 'pdf' && (
                                 <button onClick={e => { e.preventDefault(); setPdfViewerUrl(`https://api.responda.systems/api/files/${t.collectionId}/${t.id}/${file}`) }}
                                   style={{ background: '#600812', border: 'none', borderRadius: 6, padding: '3px 8px', color: '#fff', fontSize: 10, fontWeight: 700, cursor: 'pointer', flexShrink: 0, fontFamily: 'inherit' }}>
@@ -3087,6 +3105,12 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#600812" strokeWidth="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
                               <a href={url} target="_blank" rel="noreferrer" style={{ flex: 1, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--lbf-text)', textDecoration: 'none' }}>{link.name}</a>
                               {ext && <span style={{ fontSize: 10, color: 'var(--warm-gray)', textTransform: 'uppercase', flexShrink: 0 }}>{ext}</span>}
+                              {EDITABLE_EXTS.includes(ext) && (
+                                <button onClick={() => navigate(`/office?open=${link.id}`)}
+                                  style={{ background: '#fff', border: '1px solid #600812', borderRadius: 6, padding: '3px 8px', color: '#600812', fontSize: 10, fontWeight: 700, cursor: 'pointer', flexShrink: 0, fontFamily: 'inherit' }}>
+                                  Schreibstube
+                                </button>
+                              )}
                               {ext === 'pdf' && (
                                 <button onClick={() => setPdfViewerUrl(url)}
                                   style={{ background: '#600812', border: 'none', borderRadius: 6, padding: '3px 8px', color: '#fff', fontSize: 10, fontWeight: 700, cursor: 'pointer', flexShrink: 0, fontFamily: 'inherit' }}>
