@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { pb } from '../lib/pocketbase'
+import { ROLES } from '../lib/apps'
 import type { User } from '../types'
 
 export function useAuth() {
@@ -25,6 +26,21 @@ export function useAuth() {
         pb.authStore.clear()
         window.location.href = '/login?reason=disabled'
         return
+      }
+
+      if (userData && userData.permissions_migrated !== true) {
+        const template = ROLES[userData.role || 'benutzer']?.permissions || {}
+        const merged = {
+          ...template,
+          ...(userData.lernbar_access ? { lernbar: true } : {}),
+          ...(userData.permissions || {}),
+        }
+        try {
+          await pb.collection('users').update(userData.id, { permissions: merged, permissions_migrated: true })
+          userData = { ...userData, permissions: merged, permissions_migrated: true }
+        } catch (e) {
+          console.error('Permission migration failed:', e)
+        }
       }
 
       if (userData && userData.organization_id) {

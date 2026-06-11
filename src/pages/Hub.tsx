@@ -10,7 +10,7 @@ import AppsModal from '../components/AppsModal'
 import EditModal from '../components/EditModal'
 import WidgetsModal from '../components/WidgetsModal'
 import NotificationModal from '../components/NotificationModal'
-import { ALL_APPS, ROLES } from '../lib/apps'
+import { ALL_APPS } from '../lib/apps'
 import { pb } from '../lib/pocketbase'
 import type { App } from '../types'
 
@@ -151,11 +151,7 @@ export default function Hub() {
   function hasPermission(perm: string): boolean {
     if (!user) return false
     if (user.supervisor) return true
-    const perms = user.permissions || {}
-    const role = ROLES[user.role || 'benutzer']
-    if (perms[perm]) return true
-    if (role?.permissions[perm]) return true
-    if (perm === 'lernbar' && user.lernbar_access) return true
+    if (user.permissions?.[perm]) return true
     const tempPerms = (user as any).temp_permissions as Record<string, { until: string }> | undefined
     if (tempPerms?.[perm]?.until && new Date(tempPerms[perm].until).getTime() > Date.now()) return true
     return false

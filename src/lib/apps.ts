@@ -15,6 +15,9 @@ export const ALL_APPS: Record<string, App> = {
   settings:     { id: 'settings',     name: 'Einstellungen', icon: 'settings',   url: '#settings',                  permission: 'dashboard',           color: '#8a7a68', isInternal: true },
 }
 
+// Vorlagen zur Vorbefüllung der individuellen Rechte beim Anlegen/Ändern eines Benutzers.
+// Werden NICHT mehr für Laufzeit-Zugriffsprüfungen verwendet — einzig user.permissions
+// (+ supervisor + temp_permissions) entscheidet über den Zugriff (siehe hasPermission in Hub.tsx).
 export const ROLES: Record<string, { permissions: Record<string, boolean> }> = {
   mpg:       { permissions: { dashboard: true, einsaetze: true, lager: true, produktausgabe: true, lernbar: true, ausbildungen_manage: true, dokumente: true, patienten: true, dateien: true, chat: true, unitarii: true } },
   lager:     { permissions: { dashboard: true, lager: true, produktausgabe: true, dateien: true, chat: true } },

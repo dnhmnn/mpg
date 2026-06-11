@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { pb } from '../lib/pocketbase'
 import { useAuth } from '../hooks/useAuth'
+import { ROLES } from '../lib/apps'
 
 interface UUser {
   id: string
@@ -44,7 +45,7 @@ const PERM_LABELS: { key: string; label: string }[] = [
   { key: 'chat',               label: 'Chat' },
 ]
 
-const ROLES = ['benutzer', 'mpg', 'lager', 'ausbildung', 'qm', 'teilnehmer']
+const ROLE_NAMES = ['benutzer', 'mpg', 'lager', 'ausbildung', 'qm', 'teilnehmer']
 
 const EMPTY_PERMS = Object.fromEntries(PERM_LABELS.map(p => [p.key, false])) as Record<string, boolean>
 
@@ -352,7 +353,7 @@ export default function Unitarii() {
 
   if (authLoading) return null
 
-  if (!user?.supervisor && (user as any)?.role !== 'mpg') {
+  if (!user?.supervisor && !user?.permissions?.unitarii) {
     return (
       <div style={{ minHeight: '100vh', background: 'var(--warm-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 16 }}>
         <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 22, color: 'var(--lbf-text)' }}>Kein Zugriff</div>
@@ -512,9 +513,16 @@ export default function Unitarii() {
             <Field label="Telefon"><input type="tel" value={userForm.phone} onChange={e => setUserForm(p => ({ ...p, phone: e.target.value }))} placeholder="+49 …" style={INPUT} /></Field>
 
             <Field label="Rolle">
-              <select value={userForm.role} onChange={e => setUserForm(p => ({ ...p, role: e.target.value }))} style={INPUT}>
-                {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+              <select value={userForm.role} onChange={e => {
+                const role = e.target.value
+                const template = ROLES[role]?.permissions || {}
+                setUserForm(p => ({ ...p, role, permissions: { ...p.permissions, ...template } }))
+              }} style={INPUT}>
+                {ROLE_NAMES.map(r => <option key={r} value={r}>{r}</option>)}
               </select>
+              <div style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--warm-gray)', marginTop: 4 }}>
+                Setzt Standard-Rechte für diese Rolle — Häkchen unten danach individuell anpassbar.
+              </div>
             </Field>
 
             <div>
@@ -638,7 +646,7 @@ export default function Unitarii() {
             </Field>
             <Field label="Rolle">
               <select value={tempForm.role} onChange={e => setTempForm(p => ({ ...p, role: e.target.value }))} style={INPUT}>
-                {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+                {ROLE_NAMES.map(r => <option key={r} value={r}>{r}</option>)}
               </select>
             </Field>
             <div>

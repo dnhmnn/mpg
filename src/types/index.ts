@@ -14,6 +14,7 @@ export interface User {
   disabled?: boolean
   expires_at?: string
   temp_permissions?: Record<string, { until: string; granted_by?: string }>
+  permissions_migrated?: boolean
 }
 
 export interface Organization {
