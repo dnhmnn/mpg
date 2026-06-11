@@ -2553,9 +2553,19 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
               <div style={{ fontWeight: 700, marginBottom: 8, color: 'var(--lbf-text)', fontStyle: 'normal' }}>Keine Termine</div>
               <div>Erstelle deinen ersten Ausbildungstermin</div>
             </div>
-          ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 12 }}>
-              {filteredTermine.map(termin => {
+          ) : (() => {
+            // Chronologische Agenda statt Kachel-Raster: nach Monat gruppiert
+            const sortedTermine = [...filteredTermine].sort((a, b) => parseDate(a.start_datetime).getTime() - parseDate(b.start_datetime).getTime())
+            const monthGroups: { key: string; label: string; items: Termin[] }[] = []
+            sortedTermine.forEach(termin => {
+              const gd = parseDate(termin.start_datetime)
+              const key = isNaN(gd.getTime()) ? 'ohne' : `${gd.getFullYear()}-${gd.getMonth()}`
+              const label = isNaN(gd.getTime()) ? 'Ohne Datum' : gd.toLocaleDateString('de-DE', { month: 'long', year: 'numeric' }).toUpperCase()
+              let grp = monthGroups.find(x => x.key === key)
+              if (!grp) { grp = { key, label, items: [] }; monthGroups.push(grp) }
+              grp.items.push(termin)
+            })
+            const renderTerminCard = (termin: Termin) => {
                 const teilnehmerCount = getTerminTeilnehmerCount(termin.id)
                 const dokumenteCount = getTerminDokumenteCount(termin.id)
                 const moduleCount = getTerminModuleCount(termin.id)
@@ -2615,9 +2625,20 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                     </div>
                   </div>
                 )
-              })}
-            </div>
-          )
+            }
+            return (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+                {monthGroups.map(group => (
+                  <div key={group.key}>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 10 }}>{group.label}</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                      {group.items.map(renderTerminCard)}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )
+          })()
         )}
 
         {/* TEILNEHMER VIEW */}
