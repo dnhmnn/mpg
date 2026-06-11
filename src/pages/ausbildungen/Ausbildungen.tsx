@@ -1997,18 +1997,6 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
     }
   }
 
-  async function updateAnwesenheit(terminTeilnehmerId: string, anwesenheit: 'da' | 'krank' | 'entschuldigt' | 'fehlend' | '') {
-    try {
-      await pb.collection('ausbildungen_termine_user').update(terminTeilnehmerId, {
-        status: anwesenheit || 'eingeladen',
-        anwesend: anwesenheit === 'da'
-      })
-      await loadTerminTeilnehmer()
-    } catch(e: any) {
-      alert('Fehler: ' + e.message)
-    }
-  }
-
   // DOKUMENT FUNCTIONS
   async function uploadDokument() {
     if (!selectedTermin || !uploadFile) {
@@ -2571,7 +2559,6 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                 const teilnehmerCount = getTerminTeilnehmerCount(termin.id)
                 const dokumenteCount = getTerminDokumenteCount(termin.id)
                 const moduleCount = getTerminModuleCount(termin.id)
-                const anwesendCount = terminTeilnehmer.filter(tt => tt.termin_id === termin.id && tt.status === 'da').length
                 const d = parseDate(termin.start_datetime)
                 const weekday = isNaN(d.getTime()) ? '' : d.toLocaleDateString('de-DE', { weekday: 'short' }).toUpperCase()
                 const dayNum = isNaN(d.getTime()) ? '–' : d.getDate()
@@ -2606,7 +2593,6 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                     {/* Bottom stats strip */}
                     <div style={{ borderTop: '0.5px solid rgba(96,8,18,0.08)', background: 'rgba(250,249,247,0.8)', padding: '8px 14px', display: 'flex', gap: 14, fontSize: 12, color: 'var(--warm-gray)', fontWeight: 600, borderRadius: '0 0 12px 12px' }}>
                       <span>{teilnehmerCount}/{termin.max_teilnehmer} TN</span>
-                      {anwesendCount > 0 && <span style={{ color: '#16a34a' }}>{anwesendCount} Da</span>}
                       {dokumenteCount > 0 && <span>{dokumenteCount} Dok.</span>}
                       {moduleCount > 0 && <span>{moduleCount} Mod.</span>}
                     </div>
@@ -2676,25 +2662,6 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                     {t.email && <div>{t.email}</div>}
                     {t.telefon && <div>{t.telefon}</div>}
                   </div>
-
-                  {/* Persönliche Übersicht */}
-                  {(() => {
-                    const ttList = terminTeilnehmer.filter(tt => tt.teilnehmer_id === t.id && jahresTermine.some(jt => jt.id === tt.termin_id))
-                    const da = ttList.filter(tt => tt.status === 'da').length
-                    const prozent = jahresTermine.length > 0 ? Math.round((da / jahresTermine.length) * 100) : 0
-                    if (ttList.length === 0) return null
-                    return (
-                      <div style={{marginTop: '8px'}}>
-                        <div style={{display: 'flex', justifyContent: 'space-between', fontStyle: 'italic', fontSize: '12px', color: 'var(--warm-gray)', marginBottom: '4px'}}>
-                          <span>{da} / {jahresTermine.length} Termine besucht</span>
-                          <span style={{fontWeight: 700, color: prozent >= 80 ? '#16a34a' : prozent >= 50 ? '#d97706' : '#600812'}}>{prozent}%</span>
-                        </div>
-                        <div style={{background: 'rgba(96,8,18,0.06)', borderRadius: '4px', height: '4px'}}>
-                          <div style={{background: prozent >= 80 ? '#16a34a' : prozent >= 50 ? '#d97706' : '#600812', borderRadius: '4px', height: '4px', width: `${Math.min(prozent, 100)}%`}} />
-                        </div>
-                      </div>
-                    )
-                  })()}
 
                   {t.lernbar_zugang_aktiv && (
                     <div style={{ marginTop: 8 }}>
@@ -2953,8 +2920,6 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                       </div>
                       <div style={{display: 'flex', flexDirection: 'column', gap: '8px'}}>
                         {jahrTermine.map(termin => {
-                          const ttCount = terminTeilnehmer.filter(tt => tt.termin_id === termin.id).length
-                          const daCount = terminTeilnehmer.filter(tt => tt.termin_id === termin.id && tt.status === 'da').length
                           const d = parseDate(termin.start_datetime)
                           const weekday = d.toLocaleDateString('de-DE', { weekday: 'short' }).toUpperCase()
                           const dayNum = d.getDate()
@@ -2983,11 +2948,6 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                                   </div>
                                 </div>
                                 <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                                  {ttCount > 0 && (
-                                    <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)' }}>
-                                      <span style={{ color: '#16a34a', fontWeight: 700 }}>{daCount}</span> / {ttCount}
-                                    </div>
-                                  )}
                                   <div style={{ fontStyle: 'italic', fontSize: '11px', color: 'var(--warm-gray)' }}>
                                     {fmtTime(termin.start_datetime)} Uhr
                                   </div>
@@ -3188,7 +3148,6 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                   const teilnehmerCount = getTerminTeilnehmerCount(termin.id)
                   const dokumenteCount = getTerminDokumenteCount(termin.id)
                   const moduleCount = getTerminModuleCount(termin.id)
-                  const anwesendCount = terminTeilnehmer.filter(tt => tt.termin_id === termin.id && tt.status === 'da').length
                   let todos: {id: string; text: string; done: boolean}[] = []
                   try { todos = termin.dozent_todos ? JSON.parse(termin.dozent_todos) : [] } catch { todos = [] }
                   const doneTodos = todos.filter(td => td.done).length
@@ -3228,7 +3187,6 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                       {/* Bottom stats strip */}
                       <div style={{ borderTop: '0.5px solid rgba(96,8,18,0.08)', background: 'rgba(250,249,247,0.8)', padding: '8px 14px', display: 'flex', gap: 14, fontSize: 12, color: 'var(--warm-gray)', fontWeight: 600, borderRadius: '0 0 12px 12px', flexWrap: 'wrap' }}>
                         <span>{teilnehmerCount}/{termin.max_teilnehmer} TN</span>
-                        {anwesendCount > 0 && <span style={{ color: '#16a34a' }}>{anwesendCount} Da</span>}
                         {dokumenteCount > 0 && <span>{dokumenteCount} Dok.</span>}
                         {moduleCount > 0 && <span>{moduleCount} Mod.</span>}
                         {todos.length > 0 && <span style={{ color: doneTodos === todos.length ? '#16a34a' : 'var(--warm-gray)' }}>{doneTodos}/{todos.length} ToDo</span>}
@@ -4286,16 +4244,6 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
           const jahresTermineFiltered = termine
             .filter(tr => parseDate(tr.start_datetime).getFullYear() === jahr)
             .sort((a, b) => parseDate(a.start_datetime).getTime() - parseDate(b.start_datetime).getTime())
-          const ttFiltered = terminTeilnehmer.filter(tt =>
-            tt.teilnehmer_id === t.id && jahresTermineFiltered.some(tr => tr.id === tt.termin_id)
-          )
-          const da = ttFiltered.filter(tt => tt.status === 'da').length
-          const total = jahresTermineFiltered.length
-          const prozent = total > 0 ? Math.round((da / total) * 100) : 0
-          const ziel50 = da >= 2
-          const zielColor = prozent >= 80 ? '#16a34a' : prozent >= 50 ? '#d97706' : '#dc2626'
-          const barColor = prozent >= 80 ? '#22c55e' : prozent >= 50 ? '#eab308' : '#ef4444'
-
           const statusConfig: {[k:string]: {label:string, bg:string, color:string}} = {
             da:           {label: 'Da',           bg: '#dcfce7', color: '#166534'},
             krank:        {label: 'Krank',         bg: '#fef9c3', color: '#92400e'},
@@ -4308,16 +4256,9 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
 
           return (
             <div key={jahr} style={{marginBottom: isArchiv ? '24px' : '0'}}>
-              {/* Jahr-Header + Balken */}
-              <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '8px'}}>
+              {/* Jahr-Header */}
+              <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '14px'}}>
                 <div style={{fontWeight: 700, fontSize: '15px'}}>{jahr}</div>
-                <div style={{fontSize: '13px', color: zielColor, fontWeight: 700}}>{da}/{total} · {prozent}%</div>
-              </div>
-              <div style={{background: '#e2e8f0', borderRadius: '6px', height: '8px', marginBottom: '6px'}}>
-                <div style={{background: barColor, borderRadius: '6px', height: '8px', width: `${Math.min(prozent,100)}%`, transition: 'width 0.3s'}} />
-              </div>
-              <div style={{fontSize: '12px', color: ziel50 ? '#16a34a' : '#94a3b8', marginBottom: '14px'}}>
-                {ziel50 ? '✓ Mindestziel erreicht (≥ 2 Schulungen, ≥ 50%)' : '✗ Mindestziel nicht erreicht'}
               </div>
 
               {/* Termin-Liste */}
@@ -5062,25 +5003,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                     </button>
                   </div>
 
-                  {/* Statistik-Zeile */}
-                  {terminTeilnehmer.filter(tt => tt.termin_id === selectedTermin.id).length > 0 && (() => {
-                    const ttList = terminTeilnehmer.filter(tt => tt.termin_id === selectedTermin.id)
-                    const da = ttList.filter(tt => tt.status === 'da').length
-                    const krank = ttList.filter(tt => tt.status === 'krank').length
-                    const entschuldigt = ttList.filter(tt => tt.status === 'entschuldigt').length
-                    const fehlend = ttList.filter(tt => tt.status === 'fehlend').length
-                    return (
-                      <div style={{display: 'flex', gap: '16px', marginBottom: '16px', padding: '12px', background: 'var(--bg-subtle)', borderRadius: '8px', fontSize: '13px', flexWrap: 'wrap'}}>
-                        <span><strong>{ttList.length}</strong> Eingeladen</span>
-                        <span style={{color: '#16a34a'}}><strong>{da}</strong> Da</span>
-                        <span style={{color: '#d97706'}}><strong>{krank}</strong> Krank</span>
-                        <span style={{color: '#2563eb'}}><strong>{entschuldigt}</strong> Entschuldigt</span>
-                        <span style={{color: '#dc2626'}}><strong>{fehlend}</strong> Fehlend</span>
-                      </div>
-                    )
-                  })()}
-
-                  {/* Anwesenheitsliste */}
+                  {/* Teilnehmerliste */}
                   {terminTeilnehmer.filter(tt => tt.termin_id === selectedTermin.id).length === 0 ? (
                     <div className="empty-state">Noch keine Teilnehmer zugewiesen</div>
                   ) : (
@@ -5090,33 +5013,11 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                         .map(tt => {
                           const t = teilnehmer.find(teiln => teiln.id === tt.teilnehmer_id)
                           if (!t) return null
-                          const anw = tt.status as string
                           return (
                             <div key={tt.id} style={{display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', background: '#f9fafb', borderRadius: '8px', flexWrap: 'wrap'}}>
                               <div style={{flex: 1, minWidth: '120px'}}>
                                 <div style={{fontWeight: 600}}>{t.vorname} {t.nachname}</div>
                                 {t.ausbildung_typ && <div style={{fontSize: '12px', color: 'var(--text-secondary)'}}>{t.ausbildung_typ}</div>}
-                              </div>
-                              <div style={{display: 'flex', gap: '6px', flexWrap: 'wrap'}}>
-                                {(['da', 'krank', 'entschuldigt', 'fehlend'] as const).map(opt => {
-                                  const colors: Record<string, {bg: string, color: string, border: string}> = {
-                                    da:           {bg: anw === 'da'           ? '#dcfce7' : '#fff', color: anw === 'da'           ? '#166534' : '#64748b', border: anw === 'da'           ? '#22c55e' : 'rgba(0,0,0,0.12)'},
-                                    krank:        {bg: anw === 'krank'        ? '#fef9c3' : '#fff', color: anw === 'krank'        ? '#92400e' : '#64748b', border: anw === 'krank'        ? '#eab308' : 'rgba(0,0,0,0.12)'},
-                                    entschuldigt: {bg: anw === 'entschuldigt' ? '#dbeafe' : '#fff', color: anw === 'entschuldigt' ? '#1e40af' : '#64748b', border: anw === 'entschuldigt' ? '#3b82f6' : 'var(--border)'},
-                                    fehlend:      {bg: anw === 'fehlend'      ? '#fee2e2' : '#fff', color: anw === 'fehlend'      ? '#991b1b' : '#64748b', border: anw === 'fehlend'      ? '#ef4444' : 'rgba(0,0,0,0.12)'},
-                                  }
-                                  const c = colors[opt]
-                                  const labels: Record<string, string> = {da: 'Da', krank: 'Krank', entschuldigt: 'Entschuldigt', fehlend: 'Fehlend'}
-                                  return (
-                                    <button
-                                      key={opt}
-                                      onClick={() => updateAnwesenheit(tt.id, anw === opt ? '' : opt)}
-                                      style={{padding: '5px 10px', borderRadius: '6px', border: `1px solid ${c.border}`, background: c.bg, color: c.color, fontWeight: 600, fontSize: '12px', cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s'}}
-                                    >
-                                      {labels[opt]}
-                                    </button>
-                                  )
-                                })}
                               </div>
                               <button className="btn-small danger" onClick={() => removeTeilnehmerFromTermin(tt.id)}>✕</button>
                             </div>
