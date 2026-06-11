@@ -541,14 +541,15 @@ export default function SettingsPage({ user }: SettingsPageProps) {
   }
 
   const roleLabels: Record<string, string> = {
-    mpg: 'MPG', lager: 'Lager', ausbildung: 'Ausbildung', qm: 'QM', benutzer: 'Benutzer'
+    mpg: 'MPG', lager: 'Lager', ausbildung: 'Ausbildung', qm: 'QM', benutzer: 'Benutzer', teilnehmer: 'Teilnehmer'
   }
   const roleOptions = [
     { value: 'benutzer', label: 'Benutzer' },
     { value: 'lager', label: 'Lager' },
     { value: 'ausbildung', label: 'Ausbildung' },
     { value: 'qm', label: 'QM' },
-    { value: 'mpg', label: 'MPG' }
+    { value: 'mpg', label: 'MPG' },
+    { value: 'teilnehmer', label: 'Teilnehmer (Ausbildungen)' }
   ]
 
   const isMain = view === 'main'

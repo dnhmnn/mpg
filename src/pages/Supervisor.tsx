@@ -1331,6 +1331,7 @@ export default function Supervisor() {
                       <option value="lager">Lagerwart</option>
                       <option value="ausbildung">Ausbilder</option>
                       <option value="qm">Qualitätsmanagement</option>
+                      <option value="teilnehmer">Teilnehmer (Ausbildungen)</option>
                     </select>
                   </div>
                   {newUserMsg && (
@@ -1552,6 +1553,7 @@ export default function Supervisor() {
                 <option value="lager">Lagerwart</option>
                 <option value="ausbildung">Ausbilder</option>
                 <option value="qm">Qualitätsmanagement</option>
+                <option value="teilnehmer">Teilnehmer (Ausbildungen)</option>
               </select>
             </div>
 

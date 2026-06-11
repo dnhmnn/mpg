@@ -1055,6 +1055,15 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
     } catch(e: any) { showMessage('Fehler: ' + e.message, 'error') }
   }
 
+  async function removeEinladung(einladungId: string) {
+    if (!confirm('Link-Rückmeldung wirklich entfernen?')) return
+    try {
+      await pb.collection('ausbildungen_einladungen').delete(einladungId)
+      setEinladungen(prev => prev.filter(e => e.id !== einladungId))
+      showMessage('Rückmeldung entfernt', 'success')
+    } catch(e: any) { showMessage('Fehler: ' + e.message, 'error') }
+  }
+
   async function toggleRSVP(ttId: string, currentStatus: string) {
     const newStatus = currentStatus === 'zugesagt' ? 'eingeladen' : 'zugesagt'
     try {
@@ -3513,6 +3522,24 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                     {linkOnlyEinladungen.length !== einladungen.filter(e => e.termin_id === t.id).length && ` · ${linkOnlyEinladungen.length} ohne Unitas-Konto`}
                   </div>
 
+                  {/* Teilnehmer hinzufügen */}
+                  <div style={{ display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap' }}>
+                    <select
+                      value=""
+                      onChange={e => { if (e.target.value) addTeilnehmerToTermin(t.id, e.target.value) }}
+                      style={{ flex: 1, minWidth: 180, padding: '9px 10px', borderRadius: 10, border: '0.5px solid rgba(96,8,18,0.15)', background: '#fff', color: 'var(--lbf-text)', fontSize: 13, fontFamily: 'inherit' }}
+                    >
+                      <option value="">Teilnehmer hinzufügen…</option>
+                      {teilnehmer
+                        .filter(tn => !forThisTermin.some(tt => tt.teilnehmer_id === tn.id))
+                        .map(tn => <option key={tn.id} value={tn.id}>{tn.vorname} {tn.nachname}</option>)}
+                    </select>
+                    <button onClick={() => addAlleTeilnehmerToTermin(t.id)}
+                      style={{ padding: '9px 14px', borderRadius: 10, border: 'none', background: '#600812', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
+                      Alle hinzufügen
+                    </button>
+                  </div>
+
                   {forThisTermin.length === 0 && linkOnlyEinladungen.length === 0 ? (
                     <div style={{ fontStyle: 'italic', color: 'var(--warm-gray)', fontSize: 13, textAlign: 'center', padding: '20px 0' }}>Keine Teilnehmer eingetragen.</div>
                   ) : (
@@ -3545,6 +3572,10 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                                 style={{ padding: '5px 12px', borderRadius: 8, border: `1px solid ${s === 'zugesagt' ? '#16a34a' : 'rgba(96,8,18,0.15)'}`, background: s === 'zugesagt' ? 'rgba(22,163,74,0.08)' : '#fff', color: s === 'zugesagt' ? '#16a34a' : 'var(--warm-gray)', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
                                 {s === 'zugesagt' ? 'Zugesagt' : 'Zusagen'}
                               </button>
+                              <button onClick={() => removeTeilnehmerFromTermin(tt.id)} title="Vom Termin entfernen"
+                                style={{ background: 'none', border: 'none', color: 'var(--warm-gray)', cursor: 'pointer', padding: 4, flexShrink: 0, lineHeight: 0 }}>
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                              </button>
                             </div>
                             {/* Anwesenheits-Status */}
                             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
@@ -3573,6 +3604,10 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                                 <div style={{ fontWeight: 700, fontStyle: 'italic', fontSize: 14, color: 'var(--lbf-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.name}</div>
                                 <div style={{ fontSize: 10, color: statusColor, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: 1 }}>{statusLabel} · per Einladungslink</div>
                               </div>
+                              <button onClick={() => removeEinladung(e.id)} title="Rückmeldung entfernen"
+                                style={{ background: 'none', border: 'none', color: 'var(--warm-gray)', cursor: 'pointer', padding: 4, flexShrink: 0, lineHeight: 0 }}>
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                              </button>
                             </div>
                             {/* Anwesenheits-Status */}
                             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>

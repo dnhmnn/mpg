@@ -44,7 +44,7 @@ const PERM_LABELS: { key: string; label: string }[] = [
   { key: 'chat',               label: 'Chat' },
 ]
 
-const ROLES = ['benutzer', 'mpg', 'lager', 'ausbildung', 'qm']
+const ROLES = ['benutzer', 'mpg', 'lager', 'ausbildung', 'qm', 'teilnehmer']
 
 const EMPTY_PERMS = Object.fromEntries(PERM_LABELS.map(p => [p.key, false])) as Record<string, boolean>
 
