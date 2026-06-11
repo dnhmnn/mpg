@@ -32,7 +32,7 @@ function toICSDate(str: string): string {
 interface TokenRecord {
   id: string; token: string; termin_id: string; termin_name: string
   termin_datum: string; termin_end_datum?: string; termin_ort: string
-  termin_beschreibung: string
+  termin_beschreibung: string; organizations_id?: string
 }
 
 function CalendarButtons({ record }: { record: TokenRecord }) {
@@ -142,7 +142,8 @@ export default function Einladung() {
     setSubmitting(true)
     try {
       await pb.collection('ausbildungen_einladungen').create({
-        token, termin_id: record.termin_id, name: name.trim(), status
+        token, termin_id: record.termin_id, name: name.trim(), status,
+        organization_id: record.organizations_id
       }, { requestKey: `rsvp-${Date.now()}` })
       localStorage.setItem(`einladung_${token}`, status)
       setSubmitted(status)
