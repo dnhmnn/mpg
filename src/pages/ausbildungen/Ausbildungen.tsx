@@ -2370,10 +2370,29 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
     return 'Unbekannt'
   }
 
+  // Per-Link beantwortete Rückmeldung (ausbildungen_einladungen) für denselben Teilnehmer per Namensabgleich finden
+  function getLinkedEinladung(name: string, terminId: string) {
+    const key = (name || '').trim().toLowerCase()
+    if (!key) return undefined
+    return einladungen.find(e => e.termin_id === terminId && (e.name || '').trim().toLowerCase() === key)
+  }
+
+  // Effektiver RSVP-Status: eigener Unitas-Status, sonst (falls "eingeladen") die per Link eingegangene Rückmeldung
+  function getEffektivStatus(tt: TerminTeilnehmer): 'eingeladen' | 'zugesagt' | 'abgesagt' | 'entschuldigt' {
+    if (tt.status !== 'eingeladen') return tt.status
+    const linked = getLinkedEinladung(getTeilnehmerName(tt.teilnehmer_id), tt.termin_id)
+    if (linked?.status === 'zusagen') return 'zugesagt'
+    if (linked?.status === 'absagen') return 'abgesagt'
+    return tt.status
+  }
+
   // Wer abgesagt/sich entschuldigt hat, gilt ohne expliziten Anwesenheits-Status automatisch als "entschuldigt"
   function getAnwesenheitStatus(tt: TerminTeilnehmer): 'da' | 'krank' | 'entschuldigt' | 'fehlend' | '' {
     if (tt.anwesenheit_status) return tt.anwesenheit_status
-    if (tt.status === 'abgesagt' || tt.status === 'entschuldigt') return 'entschuldigt'
+    const eff = getEffektivStatus(tt)
+    if (eff === 'abgesagt' || eff === 'entschuldigt') return 'entschuldigt'
+    const linked = getLinkedEinladung(getTeilnehmerName(tt.teilnehmer_id), tt.termin_id)
+    if (linked?.anwesenheit_status) return linked.anwesenheit_status
     return ''
   }
 
@@ -3230,7 +3249,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
         const ttNamesLower = new Set(forThisTermin.map(tt => getTeilnehmerName(tt.teilnehmer_id).trim().toLowerCase()))
         const linkOnlyEinladungen = einladungen.filter(e => e.termin_id === t.id && !ttNamesLower.has((e.name || '').trim().toLowerCase()))
         const anwesendCount = forThisTermin.filter(tt => tt.anwesend).length + linkOnlyEinladungen.filter(e => getEinladungAnwesenheitStatus(e) === 'da').length
-        const zugesagtCount = forThisTermin.filter(tt => tt.status === 'zugesagt').length + linkOnlyEinladungen.filter(e => e.status === 'zusagen').length
+        const zugesagtCount = forThisTermin.filter(tt => getEffektivStatus(tt) === 'zugesagt').length + linkOnlyEinladungen.filter(e => e.status === 'zusagen').length
         const isHauptdozent = t.dozent_id === user?.id || (!t.dozent_id && t.dozent?.trim().toLowerCase() === (user?.name || '').trim().toLowerCase())
         const isAnyCoDozent = coDozenten.some(cd => cd.user_id === user?.id)
         const isDozent = isHauptdozent || isAnyCoDozent
@@ -3508,7 +3527,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                       return (<>
                       {forThisTermin.map(tt => {
                         const name = getTeilnehmerName(tt.teilnehmer_id)
-                        const s = tt.status
+                        const s = getEffektivStatus(tt)
                         const statusColor = s === 'zugesagt' ? '#16a34a' : s === 'abgesagt' ? '#dc2626' : 'var(--warm-gray)'
                         const anw = getAnwesenheitStatus(tt)
                         return (
@@ -3522,7 +3541,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                                 <div style={{ fontSize: 10, color: statusColor, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: 1 }}>{s}</div>
                               </div>
                               {/* RSVP toggle */}
-                              <button onClick={() => toggleRSVP(tt.id, s)}
+                              <button onClick={() => toggleRSVP(tt.id, tt.status)}
                                 style={{ padding: '5px 12px', borderRadius: 8, border: `1px solid ${s === 'zugesagt' ? '#16a34a' : 'rgba(96,8,18,0.15)'}`, background: s === 'zugesagt' ? 'rgba(22,163,74,0.08)' : '#fff', color: s === 'zugesagt' ? '#16a34a' : 'var(--warm-gray)', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
                                 {s === 'zugesagt' ? 'Zugesagt' : 'Zusagen'}
                               </button>
