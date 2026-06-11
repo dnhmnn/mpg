@@ -1686,8 +1686,9 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
         requestKey: `einladungen-${terminId}-${Date.now()}`
       })
       setEinladungen(res as any)
-    } catch {
-      // collection may not exist yet
+    } catch (e: any) {
+      setEinladungen([])
+      showMessage('Fehler beim Laden der Rückmeldungen: ' + (e?.message || e), 'error')
     }
   }
 
@@ -3486,6 +3487,11 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                         <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--warm-gray)', textTransform: 'uppercase', letterSpacing: '0.1em', marginTop: 4 }}>{s.label}</div>
                       </div>
                     ))}
+                  </div>
+
+                  <div style={{ fontStyle: 'italic', color: 'var(--warm-gray)', fontSize: 11, marginBottom: 14, textAlign: 'center' }}>
+                    {einladungen.filter(e => e.termin_id === t.id).length} Rückmeldung(en) über Einladungslink erhalten
+                    {linkOnlyEinladungen.length !== einladungen.filter(e => e.termin_id === t.id).length && ` · ${linkOnlyEinladungen.length} ohne Unitas-Konto`}
                   </div>
 
                   {forThisTermin.length === 0 && linkOnlyEinladungen.length === 0 ? (
