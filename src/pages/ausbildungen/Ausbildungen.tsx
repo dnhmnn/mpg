@@ -2823,9 +2823,9 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                             </td>
                             {jahresTermine.map(termin => {
                               const tt = terminTeilnehmer.find(tt => tt.termin_id === termin.id && tt.teilnehmer_id === t.id)
-                              const status = tt?.status as string | undefined
-                              if (status === 'da') daCount++
-                              const cfg = status ? anwesenheitsfarben[status] : null
+                              const anw = tt ? getAnwesenheitStatus(tt) : ''
+                              if (anw === 'da') daCount++
+                              const cfg = anw ? anwesenheitsfarben[anw] : null
                               return (
                                 <td key={termin.id} style={{padding: '10px 8px', textAlign: 'center', borderBottom: '1px solid rgba(96,8,18,0.06)'}}>
                                   {cfg ? (
@@ -2856,10 +2856,10 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                 <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '12px'}}>
                   {teilnehmer.map(t => {
                     const ttList = terminTeilnehmer.filter(tt => tt.teilnehmer_id === t.id && jahresTermine.some(jt => jt.id === tt.termin_id))
-                    const da = ttList.filter(tt => (tt.status as string) === 'da').length
-                    const krank = ttList.filter(tt => (tt.status as string) === 'krank').length
-                    const entschuldigt = ttList.filter(tt => (tt.status as string) === 'entschuldigt').length
-                    const fehlend = ttList.filter(tt => (tt.status as string) === 'fehlend').length
+                    const da = ttList.filter(tt => getAnwesenheitStatus(tt) === 'da').length
+                    const krank = ttList.filter(tt => getAnwesenheitStatus(tt) === 'krank').length
+                    const entschuldigt = ttList.filter(tt => getAnwesenheitStatus(tt) === 'entschuldigt').length
+                    const fehlend = ttList.filter(tt => getAnwesenheitStatus(tt) === 'fehlend').length
                     const prozent = jahresTermine.length > 0 ? Math.round((da / jahresTermine.length) * 100) : 0
                     const erreicht = prozent >= 80
                     return (
