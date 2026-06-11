@@ -2596,7 +2596,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                 return (
                   <div
                     key={termin.id}
-                    onClick={() => viewTerminDetail(termin)}
+                    onClick={() => openTerminDetailPage(termin)}
                     style={{ background: 'var(--lbf-card)', borderRadius: 12, boxShadow: 'var(--lbf-shadow)', borderLeft: `3px solid ${statusColor}`, cursor: 'pointer', position: 'relative', overflow: 'hidden' }}
                   >
                     <div style={{ display: 'flex', alignItems: 'stretch', padding: '12px 14px 10px' }}>
