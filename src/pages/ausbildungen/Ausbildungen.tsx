@@ -2592,6 +2592,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                 const isNext = termin.id === nextTerminId
                 const fillRatio = termin.max_teilnehmer > 0 ? teilnehmerCount / termin.max_teilnehmer : 0
                 const tnColor = fillRatio >= 1 ? '#16a34a' : fillRatio >= 0.5 ? '#d97706' : 'var(--warm-gray)'
+                const circleColor = termin.status === 'abgesagt' ? '#8a7a68' : statusColor
                 return (
                   <div
                     key={termin.id}
@@ -2600,10 +2601,10 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                   >
                     <div style={{ display: 'flex', alignItems: 'stretch', padding: '12px 14px 10px' }}>
                       {/* Left date column */}
-                      <div style={{ minWidth: 52, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', marginRight: 12, gap: 2, padding: '6px 4px', borderRadius: 10, background: statusBg }}>
-                        <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: statusColor }}>{weekday}</div>
-                        <div style={{ fontStyle: 'italic', fontWeight: 800, fontSize: 28, lineHeight: 1, color: statusColor }}>{dayNum}</div>
-                        <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: statusColor }}>{month}</div>
+                      <div style={{ minWidth: 52, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', marginRight: 12, gap: 4 }}>
+                        <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--warm-gray)' }}>{weekday}</div>
+                        <div style={{ width: 38, height: 38, borderRadius: '50%', background: circleColor, display: 'flex', alignItems: 'center', justifyContent: 'center', fontStyle: 'italic', fontWeight: 800, fontSize: 16, color: '#fde8d8', flexShrink: 0 }}>{dayNum}</div>
+                        <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--warm-gray)' }}>{month}</div>
                       </div>
                       {/* Right content */}
                       <div style={{ flex: 1, minWidth: 0, paddingRight: 28 }}>
@@ -2624,7 +2625,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                       </div>
                     </div>
                     {/* Bottom stats strip */}
-                    <div style={{ borderTop: '0.5px solid rgba(96,8,18,0.08)', background: 'rgba(250,249,247,0.8)', padding: '8px 14px', display: 'flex', gap: 14, fontSize: 12, fontWeight: 600 }}>
+                    <div style={{ borderTop: '0.5px solid rgba(138,122,104,0.15)', background: 'rgba(138,122,104,0.06)', padding: '8px 14px', display: 'flex', gap: 14, fontSize: 12, fontWeight: 600 }}>
                       <span style={{ color: tnColor }}>{teilnehmerCount}/{termin.max_teilnehmer} TN</span>
                       {dokumenteCount > 0 && <span style={{ color: 'var(--warm-gray)' }}>{dokumenteCount} Dok.</span>}
                       {moduleCount > 0 && <span style={{ color: 'var(--warm-gray)' }}>{moduleCount} Mod.</span>}
