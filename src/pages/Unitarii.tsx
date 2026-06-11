@@ -2,12 +2,13 @@ import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { pb } from '../lib/pocketbase'
 import { useAuth } from '../hooks/useAuth'
-import { PERM_LABELS, EMPTY_PERMS, getRoleTemplate } from '../lib/apps'
+import { PERM_LABELS, EMPTY_PERMS, getRoleTemplate, isPlaceholderEmail } from '../lib/apps'
 
 interface UUser {
   id: string
   name: string
   email: string
+  contact_email?: string
   phone?: string
   role?: string
   permissions?: Record<string, boolean>
@@ -777,6 +778,7 @@ function UserCard({ u, onClick, isSelf }: { u: UUser; onClick: () => void; isSel
     : expired ? 'ABGELAUFEN'
     : (expSoon ? `LÄUFT AB · ${fmtCountdown(u.expires_at!)}` : 'AKTIV')
   const statusColor = u.disabled || expired ? 'var(--warm-gray)' : (expSoon ? '#d97706' : '#16a34a')
+  const displayEmail = u.contact_email || (isPlaceholderEmail(u.email) ? '' : u.email)
 
   return (
     <div onClick={onClick} style={{
@@ -788,13 +790,13 @@ function UserCard({ u, onClick, isSelf }: { u: UUser; onClick: () => void; isSel
         width: 38, height: 38, borderRadius: '50%', background: '#600812',
         color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
         fontWeight: 700, fontSize: 15, flexShrink: 0,
-      }}>{(u.name || u.email || '?').charAt(0).toUpperCase()}</div>
+      }}>{(u.name || displayEmail || '?').charAt(0).toUpperCase()}</div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 16, color: 'var(--lbf-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.name || '—'}</div>
           {isSelf && <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--warm-gray)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>· du</span>}
         </div>
-        <div style={{ fontSize: 12, fontStyle: 'italic', color: 'var(--warm-gray)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.email}</div>
+        {displayEmail && <div style={{ fontSize: 12, fontStyle: 'italic', color: 'var(--warm-gray)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{displayEmail}</div>}
         <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginTop: 4, flexWrap: 'wrap' }}>
           {u.role && <span style={{ fontSize: 9, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.08em', padding: '2px 7px', background: 'rgba(96,8,18,0.06)', borderRadius: 4 }}>{u.role}</span>}
           {u.supervisor && <span style={{ fontSize: 9, fontWeight: 700, color: '#d97706', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Supervisor</span>}

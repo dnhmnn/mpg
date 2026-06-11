@@ -46,6 +46,12 @@ export const PERM_LABELS: { key: string; label: string }[] = [
 
 export const EMPTY_PERMS = Object.fromEntries(PERM_LABELS.map(p => [p.key, false])) as Record<string, boolean>
 
+// Erkennt automatisch generierte Platzhalter-E-Mails (z.B. für Teilnehmer ohne eigenen Account),
+// die nicht als "echte" Kontakt-E-Mail angezeigt werden sollen.
+export function isPlaceholderEmail(email?: string): boolean {
+  return !!email && email.endsWith('@kein-email.intern')
+}
+
 // Liefert die Rechte-Vorlage für eine Rolle: organisationsspezifische Anpassung
 // (organizations.role_permissions) falls vorhanden, sonst die globale ROLES-Vorlage.
 export function getRoleTemplate(role: string, org?: { role_permissions?: Record<string, Record<string, boolean>> } | null): Record<string, boolean> {
