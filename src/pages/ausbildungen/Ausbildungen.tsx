@@ -2435,6 +2435,14 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
     return '#600812'
   }
 
+  function terminStatusBg(status: string): string {
+    if (status === 'geplant') return 'rgba(96,8,18,0.07)'
+    if (status === 'laufend') return 'rgba(217,119,6,0.12)'
+    if (status === 'abgeschlossen') return 'rgba(22,163,74,0.1)'
+    if (status === 'abgesagt') return 'rgba(139,113,90,0.1)'
+    return 'rgba(96,8,18,0.07)'
+  }
+
   return (
     <div style={{ minHeight: '100dvh', background: 'var(--warm-bg)', fontFamily: "'Atkinson Hyperlegible', -apple-system, sans-serif" }}>
 
@@ -2565,6 +2573,11 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
               if (!grp) { grp = { key, label, items: [] }; monthGroups.push(grp) }
               grp.items.push(termin)
             })
+            const now = Date.now()
+            const nextTerminId = sortedTermine.find(termin => {
+              const td = parseDate(termin.start_datetime).getTime()
+              return !isNaN(td) && td >= now && termin.status !== 'abgesagt'
+            })?.id
             const renderTerminCard = (termin: Termin) => {
                 const teilnehmerCount = getTerminTeilnehmerCount(termin.id)
                 const dokumenteCount = getTerminDokumenteCount(termin.id)
@@ -2574,37 +2587,47 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                 const dayNum = isNaN(d.getTime()) ? '–' : d.getDate()
                 const month = isNaN(d.getTime()) ? '' : d.toLocaleDateString('de-DE', { month: 'short' }).toUpperCase()
                 const statusColor = terminStatusColor(termin.status)
+                const statusBg = terminStatusBg(termin.status)
                 const statusLabel = termin.status === 'geplant' ? 'Geplant' : termin.status === 'laufend' ? 'Laufend' : termin.status === 'abgeschlossen' ? 'Abgeschlossen' : 'Abgesagt'
+                const isNext = termin.id === nextTerminId
+                const fillRatio = termin.max_teilnehmer > 0 ? teilnehmerCount / termin.max_teilnehmer : 0
+                const tnColor = fillRatio >= 1 ? '#16a34a' : fillRatio >= 0.5 ? '#d97706' : 'var(--warm-gray)'
                 return (
                   <div
                     key={termin.id}
                     onClick={() => viewTerminDetail(termin)}
-                    style={{ background: 'var(--lbf-card)', borderRadius: 12, boxShadow: 'var(--lbf-shadow)', cursor: 'pointer', position: 'relative' }}
+                    style={{ background: 'var(--lbf-card)', borderRadius: 12, boxShadow: 'var(--lbf-shadow)', borderLeft: `3px solid ${statusColor}`, cursor: 'pointer', position: 'relative', overflow: 'hidden' }}
                   >
-                    {/* Status strip top */}
-                    <div style={{ height: 3, background: statusColor, borderRadius: '12px 12px 0 0' }} />
                     <div style={{ display: 'flex', alignItems: 'stretch', padding: '12px 14px 10px' }}>
                       {/* Left date column */}
-                      <div style={{ minWidth: 48, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', paddingRight: 12, borderRight: '0.5px solid rgba(96,8,18,0.1)', marginRight: 12, gap: 2, paddingTop: 2 }}>
-                        <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--warm-gray)' }}>{weekday}</div>
-                        <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 30, lineHeight: 1, color: statusColor }}>{dayNum}</div>
-                        <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--warm-gray)' }}>{month}</div>
+                      <div style={{ minWidth: 52, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', marginRight: 12, gap: 2, padding: '6px 4px', borderRadius: 10, background: statusBg }}>
+                        <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: statusColor }}>{weekday}</div>
+                        <div style={{ fontStyle: 'italic', fontWeight: 800, fontSize: 28, lineHeight: 1, color: statusColor }}>{dayNum}</div>
+                        <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: statusColor }}>{month}</div>
                       </div>
                       {/* Right content */}
                       <div style={{ flex: 1, minWidth: 0, paddingRight: 28 }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4, gap: 8 }}>
                           <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 15, color: 'var(--lbf-text)', lineHeight: 1.3 }}>{termin.name}</div>
-                          <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: statusColor, flexShrink: 0, marginLeft: 6 }}>{statusLabel}</span>
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
+                            {isNext && (
+                              <span style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#fde8d8', background: '#600812', padding: '2px 8px', borderRadius: 99 }}>Nächster</span>
+                            )}
+                            <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: statusColor, background: statusBg, padding: '2px 8px', borderRadius: 99, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                              {termin.status === 'laufend' && <span style={{ width: 6, height: 6, borderRadius: '50%', background: statusColor, animation: 'pulseDot 1.4s ease-in-out infinite' }} />}
+                              {statusLabel}
+                            </span>
+                          </div>
                         </div>
                         {termin.location && <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)' }}>{termin.location}</div>}
                         {termin.dozent && <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)' }}>{termin.dozent}</div>}
                       </div>
                     </div>
                     {/* Bottom stats strip */}
-                    <div style={{ borderTop: '0.5px solid rgba(96,8,18,0.08)', background: 'rgba(250,249,247,0.8)', padding: '8px 14px', display: 'flex', gap: 14, fontSize: 12, color: 'var(--warm-gray)', fontWeight: 600, borderRadius: '0 0 12px 12px' }}>
-                      <span>{teilnehmerCount}/{termin.max_teilnehmer} TN</span>
-                      {dokumenteCount > 0 && <span>{dokumenteCount} Dok.</span>}
-                      {moduleCount > 0 && <span>{moduleCount} Mod.</span>}
+                    <div style={{ borderTop: '0.5px solid rgba(96,8,18,0.08)', background: 'rgba(250,249,247,0.8)', padding: '8px 14px', display: 'flex', gap: 14, fontSize: 12, fontWeight: 600 }}>
+                      <span style={{ color: tnColor }}>{teilnehmerCount}/{termin.max_teilnehmer} TN</span>
+                      {dokumenteCount > 0 && <span style={{ color: 'var(--warm-gray)' }}>{dokumenteCount} Dok.</span>}
+                      {moduleCount > 0 && <span style={{ color: 'var(--warm-gray)' }}>{moduleCount} Mod.</span>}
                     </div>
                     {/* 3-dot menu */}
                     <button
@@ -6338,6 +6361,11 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
         @keyframes slideInRight {
           from { transform: translateX(120%); opacity: 0; }
           to   { transform: translateX(0);   opacity: 1; }
+        }
+
+        @keyframes pulseDot {
+          0%, 100% { opacity: 1; }
+          50%      { opacity: 0.35; }
         }
 
         .toast {
