@@ -3273,6 +3273,15 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
           u.id !== t.dozent_id && !coDozenten.some(cd => cd.user_id === u.id)
         )
 
+        const dDetail = parseDate(t.start_datetime)
+        const detailWeekday = isNaN(dDetail.getTime()) ? '' : dDetail.toLocaleDateString('de-DE', { weekday: 'short' }).toUpperCase()
+        const detailDayNum = isNaN(dDetail.getTime()) ? '–' : dDetail.getDate()
+        const detailMonth = isNaN(dDetail.getTime()) ? '' : dDetail.toLocaleDateString('de-DE', { month: 'short' }).toUpperCase()
+        const detailStatusColor = terminStatusColor(t.status)
+        const detailStatusBg = terminStatusBg(t.status)
+        const detailStatusLabel = t.status === 'geplant' ? 'Geplant' : t.status === 'laufend' ? 'Laufend' : t.status === 'abgeschlossen' ? 'Abgeschlossen' : 'Abgesagt'
+        const detailCircleColor = t.status === 'abgesagt' ? '#8a7a68' : detailStatusColor
+
         const TABS = [
           { key: 'info', label: 'Info', icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg> },
           { key: 'anwesenheit', label: 'Anwesenheit', icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><polyline points="16 11 18 13 22 9"/></svg> },
@@ -3283,18 +3292,31 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
         return (
           <div style={{ position: 'fixed', inset: 0, zIndex: 350, background: 'var(--warm-bg)', display: 'flex', flexDirection: 'column', overscrollBehavior: 'none' }}>
             {/* Header */}
-            <div style={{ background: '#fff', borderBottom: '0.5px solid rgba(96,8,18,0.12)', paddingTop: 'calc(env(safe-area-inset-top) + 8px)', paddingBottom: 12, paddingLeft: 'max(16px, env(safe-area-inset-left))', paddingRight: 'max(16px, env(safe-area-inset-right))', display: 'flex', alignItems: 'flex-start', gap: 12, flexShrink: 0 }}>
-              <button onClick={() => setTerminDetailPage(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px 2px', color: '#600812', marginTop: 2, flexShrink: 0 }}>
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><polyline points="15 18 9 12 15 6"/></svg>
-              </button>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontWeight: 700, fontStyle: 'italic', fontSize: 17, color: 'var(--lbf-text)', lineHeight: 1.2 }}>{t.name}</div>
-                <div style={{ fontSize: 11, color: 'var(--warm-gray)', fontStyle: 'italic', marginTop: 2 }}>
-                  {fmtDate(t.start_datetime)}{t.end_datetime ? ` · ${fmtTime(t.start_datetime)}–${fmtTime(t.end_datetime)} Uhr` : t.start_datetime ? ` · ${fmtTime(t.start_datetime)} Uhr` : ''}
-                  {t.location ? ` · ${t.location}` : ''}
+            <div style={{ background: '#fff', borderBottom: '0.5px solid rgba(96,8,18,0.12)', paddingTop: 'calc(env(safe-area-inset-top) + 8px)', paddingBottom: 14, paddingLeft: 'max(16px, env(safe-area-inset-left))', paddingRight: 'max(16px, env(safe-area-inset-right))', flexShrink: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', marginBottom: 10 }}>
+                <button onClick={() => setTerminDetailPage(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px 2px', color: '#600812', marginLeft: -2, flexShrink: 0 }}>
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><polyline points="15 18 9 12 15 6"/></svg>
+                </button>
+                <span style={{ marginLeft: 'auto', padding: '3px 9px', borderRadius: 99, background: detailStatusBg, color: detailStatusColor, fontWeight: 700, fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.06em', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                  {t.status === 'laufend' && <span style={{ width: 6, height: 6, borderRadius: '50%', background: detailStatusColor, animation: 'pulseDot 1.4s ease-in-out infinite' }} />}
+                  {detailStatusLabel}
+                </span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, flexShrink: 0 }}>
+                  <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--warm-gray)' }}>{detailWeekday}</div>
+                  <div style={{ width: 46, height: 46, borderRadius: '50%', background: detailCircleColor, display: 'flex', alignItems: 'center', justifyContent: 'center', fontStyle: 'italic', fontWeight: 800, fontSize: 19, color: '#fde8d8' }}>{detailDayNum}</div>
+                  <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--warm-gray)' }}>{detailMonth}</div>
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 700, fontStyle: 'italic', fontSize: 18, color: 'var(--lbf-text)', lineHeight: 1.25 }}>{t.name}</div>
+                  <div style={{ fontSize: 12, color: 'var(--warm-gray)', fontStyle: 'italic', marginTop: 3 }}>
+                    {t.start_datetime ? `${fmtTime(t.start_datetime)}${t.end_datetime ? `–${fmtTime(t.end_datetime)} Uhr` : ' Uhr'}` : ''}
+                    {t.location ? ` · ${t.location}` : ''}
+                  </div>
+                  {t.dozent && <div style={{ fontSize: 12, color: 'var(--warm-gray)', fontStyle: 'italic', marginTop: 1 }}>{t.dozent}</div>}
                 </div>
               </div>
-              <span style={{ flexShrink: 0, padding: '3px 9px', borderRadius: 99, background: t.status === 'abgeschlossen' ? 'rgba(139,113,90,0.1)' : t.status === 'abgesagt' ? 'rgba(220,38,38,0.08)' : 'rgba(96,8,18,0.07)', color: t.status === 'abgeschlossen' ? 'var(--warm-gray)' : t.status === 'abgesagt' ? '#dc2626' : '#600812', fontWeight: 700, fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{t.status}</span>
             </div>
 
             {/* Scrollable content */}
