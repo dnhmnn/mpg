@@ -24,6 +24,7 @@ export interface Organization {
   license_type?: string
   max_users?: number
   license_valid_until?: string
+  role_permissions?: Record<string, Record<string, boolean>>
 }
 
 export interface App {

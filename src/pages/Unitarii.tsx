@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { pb } from '../lib/pocketbase'
 import { useAuth } from '../hooks/useAuth'
-import { ROLES } from '../lib/apps'
+import { PERM_LABELS, EMPTY_PERMS, getRoleTemplate } from '../lib/apps'
 
 interface UUser {
   id: string
@@ -31,23 +31,7 @@ interface Neuigkeit {
   organisation_id?: string
 }
 
-const PERM_LABELS: { key: string; label: string }[] = [
-  { key: 'lernbar',            label: 'Unitas' },
-  { key: 'patienten',          label: 'Patienten' },
-  { key: 'einsaetze',          label: 'Einsätze' },
-  { key: 'dokumente',          label: 'Vorgänge' },
-  { key: 'lager',              label: 'Lager' },
-  { key: 'dateien',            label: 'Dateien' },
-  { key: 'qr',                 label: 'QR-Codes' },
-  { key: 'ausbildungen_manage',label: 'Ausbildungen' },
-  { key: 'unitarii',           label: 'Benutzerverwaltung' },
-  { key: 'dashboard',          label: 'MPG-Dashboard' },
-  { key: 'chat',               label: 'Chat' },
-]
-
 const ROLE_NAMES = ['benutzer', 'mpg', 'lager', 'ausbildung', 'qm', 'teilnehmer']
-
-const EMPTY_PERMS = Object.fromEntries(PERM_LABELS.map(p => [p.key, false])) as Record<string, boolean>
 
 // ── LBF styles ──
 const INPUT: React.CSSProperties = {
@@ -131,6 +115,12 @@ export default function Unitarii() {
   })
   const [savingTemp, setSavingTemp] = useState(false)
 
+  const [orgRolePerms, setOrgRolePerms] = useState<Record<string, Record<string, boolean>>>({})
+  const [rolesOpen, setRolesOpen] = useState(false)
+  const [templateRole, setTemplateRole] = useState('benutzer')
+  const [templateDraft, setTemplateDraft] = useState<Record<string, boolean>>({ ...EMPTY_PERMS })
+  const [savingTemplate, setSavingTemplate] = useState(false)
+
   useEffect(() => { if (user) loadAll() }, [user])
 
   function showMsg(text: string, type: 'success' | 'error' = 'success') {
@@ -140,8 +130,16 @@ export default function Unitarii() {
 
   async function loadAll() {
     setLoading(true)
-    try { await Promise.all([loadUsers(), loadNeuigkeiten()]) }
+    try { await Promise.all([loadUsers(), loadNeuigkeiten(), loadOrgRolePerms()]) }
     finally { setLoading(false) }
+  }
+
+  async function loadOrgRolePerms() {
+    if (!user?.organization_id) return
+    try {
+      const org = await pb.collection('organizations').getOne(user.organization_id)
+      setOrgRolePerms((org.role_permissions as any) || {})
+    } catch { /* field may not exist yet */ }
   }
 
   async function loadUsers() {
@@ -351,6 +349,33 @@ export default function Unitarii() {
     catch { showMsg('Kopieren fehlgeschlagen', 'error') }
   }
 
+  function openRoleTemplates() {
+    setTemplateRole('benutzer')
+    setTemplateDraft({ ...EMPTY_PERMS, ...getRoleTemplate('benutzer', { role_permissions: orgRolePerms }) })
+    setRolesOpen(true)
+  }
+
+  function selectTemplateRole(role: string) {
+    setTemplateRole(role)
+    setTemplateDraft({ ...EMPTY_PERMS, ...getRoleTemplate(role, { role_permissions: orgRolePerms }) })
+  }
+
+  function resetTemplateDraft() {
+    setTemplateDraft({ ...EMPTY_PERMS, ...getRoleTemplate(templateRole, null) })
+  }
+
+  async function saveRoleTemplate() {
+    if (!user?.organization_id) return
+    setSavingTemplate(true)
+    try {
+      const updated = { ...orgRolePerms, [templateRole]: { ...templateDraft } }
+      await pb.collection('organizations').update(user.organization_id, { role_permissions: updated })
+      setOrgRolePerms(updated)
+      showMsg('Rollen-Vorlage gespeichert')
+    } catch (e: any) { showMsg('Fehler: ' + e.message, 'error') }
+    finally { setSavingTemplate(false) }
+  }
+
   if (authLoading) return null
 
   if (!user?.supervisor && !user?.permissions?.unitarii) {
@@ -387,9 +412,14 @@ export default function Unitarii() {
             <div style={{ fontStyle: 'italic', fontSize: 11, color: 'var(--warm-gray)', marginTop: 1 }}>{user?.organization_name || 'Responda'}</div>
           </div>
           {tab === 'benutzer' && (
-            <button onClick={() => openEditUser()} title="Benutzer anlegen" style={{ width: 32, height: 32, borderRadius: 8, border: 'none', background: 'rgba(96,8,18,0.07)', color: '#600812', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            </button>
+            <>
+              <button onClick={openRoleTemplates} title="Rollen-Vorlagen verwalten" style={{ width: 32, height: 32, borderRadius: 8, border: 'none', background: 'rgba(96,8,18,0.07)', color: '#600812', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
+              </button>
+              <button onClick={() => openEditUser()} title="Benutzer anlegen" style={{ width: 32, height: 32, borderRadius: 8, border: 'none', background: 'rgba(96,8,18,0.07)', color: '#600812', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              </button>
+            </>
           )}
           {tab === 'neuigkeiten' && (
             <button onClick={() => openEditN()} title="Neue Neuigkeit" style={{ width: 32, height: 32, borderRadius: 8, border: 'none', background: 'rgba(96,8,18,0.07)', color: '#600812', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -515,7 +545,7 @@ export default function Unitarii() {
             <Field label="Rolle">
               <select value={userForm.role} onChange={e => {
                 const role = e.target.value
-                const template = ROLES[role]?.permissions || {}
+                const template = getRoleTemplate(role, { role_permissions: orgRolePerms })
                 setUserForm(p => ({ ...p, role, permissions: { ...p.permissions, ...template } }))
               }} style={INPUT}>
                 {ROLE_NAMES.map(r => <option key={r} value={r}>{r}</option>)}
@@ -606,6 +636,42 @@ export default function Unitarii() {
             )}
             <button onClick={saveUser} disabled={savingUser} style={{ ...BTN_PRIMARY, flex: 2, opacity: savingUser ? 0.5 : 1 }}>
               {savingUser ? 'Speichert…' : 'Speichern'}
+            </button>
+          </div>
+        </Sheet>
+      )}
+
+      {/* ── ROLLEN-VORLAGEN SHEET ── */}
+      {rolesOpen && (
+        <Sheet title="Rollen-Vorlagen" onClose={() => setRolesOpen(false)}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <div style={{ fontSize: 12, fontStyle: 'italic', color: 'var(--warm-gray)' }}>
+              Legt fest, welche Häkchen bei "Neuer Benutzer" für eine Rolle vorgeschlagen werden. Bestehende Benutzer sind davon nicht betroffen.
+            </div>
+
+            <Field label="Rolle">
+              <select value={templateRole} onChange={e => selectTemplateRole(e.target.value)} style={INPUT}>
+                {ROLE_NAMES.map(r => <option key={r} value={r}>{r}</option>)}
+              </select>
+            </Field>
+
+            <div>
+              <div style={LABEL}>Zugriffsrechte für Rolle "{templateRole}"</div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, padding: '10px 12px', background: 'var(--lbf-card)', borderRadius: 10, border: '0.5px solid rgba(96,8,18,0.1)' }}>
+                {PERM_LABELS.map(({ key, label }) => (
+                  <label key={key} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, color: 'var(--lbf-text)' }}>
+                    <input type="checkbox" checked={!!templateDraft[key]} onChange={e => setTemplateDraft(p => ({ ...p, [key]: e.target.checked }))} style={{ width: 16, height: 16, accentColor: '#600812' }} />
+                    {label}
+                  </label>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', gap: 8, marginTop: 18, paddingTop: 14, borderTop: '0.5px solid rgba(96,8,18,0.08)' }}>
+            <button onClick={resetTemplateDraft} style={BTN_SECONDARY}>Auf Standard zurücksetzen</button>
+            <button onClick={saveRoleTemplate} disabled={savingTemplate} style={{ ...BTN_PRIMARY, flex: 1, opacity: savingTemplate ? 0.5 : 1 }}>
+              {savingTemplate ? 'Speichert…' : 'Vorlage speichern'}
             </button>
           </div>
         </Sheet>

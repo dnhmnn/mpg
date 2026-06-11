@@ -30,6 +30,28 @@ export const DEFAULT_DOCK_PINS = ['einsaetze', 'patienten', 'ausbildungen', 'mpg
 export const MAX_DOCK_PINS = 6
 export const MAX_DOCK_RECENT = 5
 
+export const PERM_LABELS: { key: string; label: string }[] = [
+  { key: 'lernbar',            label: 'Unitas' },
+  { key: 'patienten',          label: 'Patienten' },
+  { key: 'einsaetze',          label: 'Einsätze' },
+  { key: 'dokumente',          label: 'Vorgänge' },
+  { key: 'lager',              label: 'Lager' },
+  { key: 'dateien',            label: 'Dateien' },
+  { key: 'qr',                 label: 'QR-Codes' },
+  { key: 'ausbildungen_manage',label: 'Ausbildungen' },
+  { key: 'unitarii',           label: 'Benutzerverwaltung' },
+  { key: 'dashboard',          label: 'MPG-Dashboard' },
+  { key: 'chat',               label: 'Chat' },
+]
+
+export const EMPTY_PERMS = Object.fromEntries(PERM_LABELS.map(p => [p.key, false])) as Record<string, boolean>
+
+// Liefert die Rechte-Vorlage für eine Rolle: organisationsspezifische Anpassung
+// (organizations.role_permissions) falls vorhanden, sonst die globale ROLES-Vorlage.
+export function getRoleTemplate(role: string, org?: { role_permissions?: Record<string, Record<string, boolean>> } | null): Record<string, boolean> {
+  return org?.role_permissions?.[role] ?? ROLES[role]?.permissions ?? {}
+}
+
 export function getDockPins(userId: string): string[] {
   try {
     const saved = localStorage.getItem(`dock_pins_${userId}`)

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { pb } from '../lib/pocketbase'
 import type { User } from '../types'
 import { getTheme, setTheme, type ThemeMode } from '../lib/theme'
-import { ALL_APPS, getDockPins, setDockPins, MAX_DOCK_PINS } from '../lib/apps'
+import { ALL_APPS, getDockPins, setDockPins, MAX_DOCK_PINS, PERM_LABELS, EMPTY_PERMS, getRoleTemplate } from '../lib/apps'
 import AppIcon from '../components/AppIcon'
 
 interface SettingsPageProps {
@@ -379,6 +379,7 @@ export default function SettingsPage({ user }: SettingsPageProps) {
   const [userFormEmail, setUserFormEmail] = useState('')
   const [userFormPassword, setUserFormPassword] = useState('')
   const [userFormRole, setUserFormRole] = useState('benutzer')
+  const [userFormPermissions, setUserFormPermissions] = useState<Record<string, boolean>>({ ...EMPTY_PERMS })
   const [userFormMsg, setUserFormMsg] = useState('')
   const [savingUser, setSavingUser] = useState(false)
 
@@ -395,7 +396,7 @@ export default function SettingsPage({ user }: SettingsPageProps) {
   }, [user])
 
   useEffect(() => {
-    if (view === 'users') loadUsers()
+    if (view === 'users') { loadUsers(); loadLicense() }
     if (view === 'license') loadLicense()
   }, [view])
 
@@ -469,6 +470,7 @@ export default function SettingsPage({ user }: SettingsPageProps) {
     setUserFormEmail('')
     setUserFormPassword('')
     setUserFormRole('benutzer')
+    setUserFormPermissions({ ...EMPTY_PERMS, ...getRoleTemplate('benutzer', license) })
     setUserFormMsg('')
     setShowUserModal(true)
   }
@@ -479,6 +481,7 @@ export default function SettingsPage({ user }: SettingsPageProps) {
     setUserFormEmail(u.email)
     setUserFormPassword('')
     setUserFormRole(u.role || 'benutzer')
+    setUserFormPermissions({ ...EMPTY_PERMS, ...(u.permissions || {}) })
     setUserFormMsg('')
     setShowUserModal(true)
   }
@@ -494,7 +497,7 @@ export default function SettingsPage({ user }: SettingsPageProps) {
     }
     try {
       if (editingUser) {
-        const updateData: any = { name: userFormName, role: userFormRole }
+        const updateData: any = { name: userFormName, role: userFormRole, permissions: userFormPermissions }
         if (userFormPassword) {
           updateData.password = userFormPassword
           updateData.passwordConfirm = userFormPassword
@@ -507,6 +510,8 @@ export default function SettingsPage({ user }: SettingsPageProps) {
           email: userFormEmail,
           name: userFormName,
           role: userFormRole,
+          permissions: userFormPermissions,
+          permissions_migrated: true,
           password: tempPassword,
           passwordConfirm: tempPassword,
           organization_id: user.organization_id
@@ -1068,7 +1073,12 @@ export default function SettingsPage({ user }: SettingsPageProps) {
                 <label>Rolle</label>
                 <select
                   value={userFormRole}
-                  onChange={(e) => setUserFormRole(e.target.value)}
+                  onChange={(e) => {
+                    const role = e.target.value
+                    const template = getRoleTemplate(role, license)
+                    setUserFormRole(role)
+                    setUserFormPermissions(p => ({ ...p, ...template }))
+                  }}
                   className="ios-field-select"
                 >
                   {roleOptions.map(opt => (
@@ -1077,6 +1087,27 @@ export default function SettingsPage({ user }: SettingsPageProps) {
                     </option>
                   ))}
                 </select>
+                <div style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--warm-gray)', marginTop: 4 }}>
+                  Setzt Standard-Rechte für diese Rolle — Häkchen unten danach individuell anpassbar.
+                </div>
+              </div>
+              <div style={{ marginBottom: 16 }}>
+                <div style={{ display: 'block', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: '#600812', marginBottom: 6 }}>
+                  Zugriffsrechte
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, padding: '10px 12px', background: 'var(--warm-bg)', borderRadius: 10, border: '0.5px solid rgba(96,8,18,0.1)' }}>
+                  {PERM_LABELS.map(({ key, label }) => (
+                    <label key={key} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, fontWeight: 400, textTransform: 'none', letterSpacing: 'normal', color: 'var(--lbf-text)' }}>
+                      <input
+                        type="checkbox"
+                        checked={!!userFormPermissions[key]}
+                        onChange={(e) => setUserFormPermissions(p => ({ ...p, [key]: e.target.checked }))}
+                        style={{ width: 16, height: 16, accentColor: '#600812' }}
+                      />
+                      {label}
+                    </label>
+                  ))}
+                </div>
               </div>
               {userFormMsg && (
                 <div style={{ marginTop: '12px', fontSize: '14px', color: userFormMsg.includes('✅') ? '#34c759' : '#ff3b30' }}>
