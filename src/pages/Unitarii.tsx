@@ -93,7 +93,7 @@ export default function Unitarii() {
   const [editingUser, setEditingUser] = useState<UUser | null>(null)
   const [editOpen, setEditOpen] = useState(false)
   const [userForm, setUserForm] = useState({
-    name: '', email: '', phone: '', password: '', role: 'benutzer',
+    name: '', email: '', contact_email: '', phone: '', password: '', role: 'benutzer',
     permissions: { ...EMPTY_PERMS },
     supervisor: false, disabled: false, expires_at: '',
     temp_permissions: {} as Record<string, { until: string; granted_by?: string }>,
@@ -174,14 +174,14 @@ export default function Unitarii() {
       }
     }
     setUserForm(u ? {
-      name: u.name || '', email: u.email || '', phone: u.phone || '',
+      name: u.name || '', email: u.email || '', contact_email: u.contact_email || '', phone: u.phone || '',
       password: '', role: u.role || 'benutzer',
       permissions: { ...EMPTY_PERMS, ...(u.permissions || {}) },
       supervisor: !!u.supervisor, disabled: !!u.disabled,
       expires_at: fmtDateTimeLocal(u.expires_at),
       temp_permissions: cleanTemp,
     } : {
-      name: '', email: '', phone: '', password: genPassword(),
+      name: '', email: '', contact_email: '', phone: '', password: genPassword(),
       role: 'benutzer', permissions: { ...EMPTY_PERMS },
       supervisor: false, disabled: false, expires_at: '',
       temp_permissions: {},
@@ -223,6 +223,7 @@ export default function Unitarii() {
       const expIso = userForm.expires_at ? new Date(userForm.expires_at).toISOString() : null
       const base: any = {
         name: userForm.name.trim(), email: userForm.email.trim(),
+        contact_email: userForm.contact_email.trim(),
         phone: userForm.phone.trim(), role: userForm.role,
         permissions: userForm.permissions, disabled: userForm.disabled,
         expires_at: expIso,
@@ -540,7 +541,21 @@ export default function Unitarii() {
         <Sheet title={editingUser ? 'Benutzer bearbeiten' : 'Neuer Benutzer'} onClose={() => setEditOpen(false)}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <Field label="Name *"><input value={userForm.name} onChange={e => setUserForm(p => ({ ...p, name: e.target.value }))} placeholder="Max Mustermann" style={INPUT} /></Field>
-            <Field label="E-Mail *"><input type="email" value={userForm.email} onChange={e => setUserForm(p => ({ ...p, email: e.target.value }))} placeholder="max@example.com" style={INPUT} /></Field>
+            {isPlaceholderEmail(userForm.email) ? (
+              <Field label="Kontakt-E-Mail">
+                <input type="email" value={userForm.contact_email} onChange={e => setUserForm(p => ({ ...p, contact_email: e.target.value }))} placeholder="max@example.com" style={INPUT} />
+                <div style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--warm-gray)', marginTop: 4 }}>
+                  Dieser Benutzer hat keinen eigenen Login (automatisch generierte Adresse) — hier kann eine Kontakt-E-Mail hinterlegt werden.
+                </div>
+              </Field>
+            ) : (
+              <>
+                <Field label="E-Mail *"><input type="email" value={userForm.email} onChange={e => setUserForm(p => ({ ...p, email: e.target.value }))} placeholder="max@example.com" style={INPUT} /></Field>
+                <Field label="Kontakt-E-Mail (optional, falls abweichend)">
+                  <input type="email" value={userForm.contact_email} onChange={e => setUserForm(p => ({ ...p, contact_email: e.target.value }))} placeholder="max@example.com" style={INPUT} />
+                </Field>
+              </>
+            )}
             <Field label="Telefon"><input type="tel" value={userForm.phone} onChange={e => setUserForm(p => ({ ...p, phone: e.target.value }))} placeholder="+49 …" style={INPUT} /></Field>
 
             <Field label="Rolle">
