@@ -680,9 +680,8 @@ export default function Ausbildungen() {
   const [generatingAIImage, setGeneratingAIImage] = useState(false)
   const [aiImageTargetBlock, setAiImageTargetBlock] = useState<string | null>(null)
   
-const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | 'konzepte' | 'jahresuebersicht' | 'archiv' | 'lernfeed' | 'dozent' | 'praesentationen'>('termine')
+const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | 'konzepte' | 'jahresuebersicht' | 'archiv' | 'lernfeed' | 'praesentationen'>('termine')
   const [terminDetailPage, setTerminDetailPage] = useState<Termin | null>(null)
-  const [dozentTermineFilter, setDozentTermineFilter] = useState<'meine' | 'alle'>('meine')
   const [dozentTodos, setDozentTodos] = useState<{id: string; text: string; done: boolean}[]>([])
   const [dozentAufgaben, setDozentAufgaben] = useState<{id: string; text: string; assignee_id?: string; assignee_name?: string; done: boolean}[]>([])
   const [coDozenten, setCoDozenten] = useState<{user_id: string; name: string}[]>([])
@@ -2500,14 +2499,13 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
             { key: 'jahresuebersicht' as const, label: 'Jahresplan', icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/></svg>, count: undefined },
             { key: 'archiv' as const, label: 'Archiv', icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="21,8 21,21 3,21 3,8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>, count: archivTermine.length },
             { key: 'lernfeed' as const, label: 'Lernfeed', icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 11a9 9 0 0 1 9 9"/><path d="M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1" fill="currentColor" stroke="none"/></svg>, count: undefined },
-            { key: 'dozent' as const, label: 'Dozent', icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>, count: undefined },
             { key: 'praesentationen' as const, label: 'Folien', icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>, count: undefined },
           ]).map(tab => (
             <button
               key={tab.key}
               onClick={() => {
                 setViewMode(tab.key)
-                if (tab.key === 'lernfeed' || tab.key === 'dozent') loadBeitraege()
+                if (tab.key === 'lernfeed') loadBeitraege()
                 if (tab.key === 'praesentationen') loadPraesentationen()
               }}
               className="ausb-nav-btn"
@@ -3149,101 +3147,6 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
           )}
         </div>
       )}
-
-      {/* DOZENT VIEW */}
-      {viewMode === 'dozent' && (() => {
-        const isMyTermin = (t: Termin) =>
-          (t.dozent_id && t.dozent_id === user?.id) ||
-          (!t.dozent_id && t.dozent && t.dozent.trim().toLowerCase() === (user?.name || '').trim().toLowerCase())
-
-        const sortedTermine = [...termine].sort((a, b) => parseDate(a.start_datetime).getTime() - parseDate(b.start_datetime).getTime())
-        const meineTermine = sortedTermine.filter(isMyTermin)
-        const displayedTermine = dozentTermineFilter === 'alle' ? sortedTermine : meineTermine
-
-        return (
-          <div style={{ maxWidth: 900, margin: '0 auto', padding: '20px max(16px, env(safe-area-inset-left)) calc(env(safe-area-inset-bottom) + 40px)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, flexWrap: 'wrap', gap: 10 }}>
-              <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em' }}>
-                {dozentTermineFilter === 'alle' ? 'Alle Termine' : 'Meine Termine'}
-              </div>
-              <div style={{ display: 'flex', background: '#fff', borderRadius: 99, boxShadow: '0 1px 4px rgba(0,0,0,0.06)', padding: 3 }}>
-                {([
-                  { key: 'meine', label: 'Meine Termine' },
-                  { key: 'alle', label: 'Alle Dozenten' },
-                ] as const).map(opt => (
-                  <button key={opt.key} onClick={() => setDozentTermineFilter(opt.key)} style={{
-                    border: 'none', cursor: 'pointer', fontFamily: 'inherit',
-                    padding: '6px 14px', borderRadius: 99, fontSize: 11, fontWeight: 700,
-                    textTransform: 'uppercase', letterSpacing: '0.05em',
-                    background: dozentTermineFilter === opt.key ? '#600812' : 'transparent',
-                    color: dozentTermineFilter === opt.key ? '#fff' : 'var(--warm-gray)',
-                  }}>
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-            {displayedTermine.length === 0 ? (
-              <div style={{ background: 'var(--lbf-card)', borderRadius: 12, padding: '24px 20px', color: 'var(--warm-gray)', fontStyle: 'italic', fontSize: 14, textAlign: 'center' }}>
-                {dozentTermineFilter === 'alle' ? 'Keine Termine vorhanden.' : 'Keine Termine zugewiesen — trage dich als Dozent in einem Termin ein.'}
-              </div>
-            ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 12 }}>
-                {displayedTermine.map(termin => {
-                  const teilnehmerCount = getTerminTeilnehmerCount(termin.id)
-                  const dokumenteCount = getTerminDokumenteCount(termin.id)
-                  const moduleCount = getTerminModuleCount(termin.id)
-                  let todos: {id: string; text: string; done: boolean}[] = []
-                  try { todos = termin.dozent_todos ? JSON.parse(termin.dozent_todos) : [] } catch { todos = [] }
-                  const doneTodos = todos.filter(td => td.done).length
-                  const d = parseDate(termin.start_datetime)
-                  const weekday = isNaN(d.getTime()) ? '' : d.toLocaleDateString('de-DE', { weekday: 'short' }).toUpperCase()
-                  const dayNum = isNaN(d.getTime()) ? '–' : d.getDate()
-                  const month = isNaN(d.getTime()) ? '' : d.toLocaleDateString('de-DE', { month: 'short' }).toUpperCase()
-                  const statusColor = terminStatusColor(termin.status)
-                  const statusLabel = termin.status === 'geplant' ? 'Geplant' : termin.status === 'laufend' ? 'Laufend' : termin.status === 'abgeschlossen' ? 'Abgeschlossen' : 'Abgesagt'
-                  const showsForeignDozent = dozentTermineFilter === 'alle' && !isMyTermin(termin) && !!termin.dozent
-                  return (
-                    <div
-                      key={termin.id}
-                      onClick={() => openTerminDetailPage(termin)}
-                      style={{ background: 'var(--lbf-card)', borderRadius: 12, boxShadow: 'var(--lbf-shadow)', cursor: 'pointer', position: 'relative' }}
-                    >
-                      {/* Status strip top */}
-                      <div style={{ height: 3, background: statusColor, borderRadius: '12px 12px 0 0' }} />
-                      <div style={{ display: 'flex', alignItems: 'stretch', padding: '12px 14px 10px' }}>
-                        {/* Left date column */}
-                        <div style={{ minWidth: 48, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', paddingRight: 12, borderRight: '0.5px solid rgba(96,8,18,0.1)', marginRight: 12, gap: 2, paddingTop: 2 }}>
-                          <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--warm-gray)' }}>{weekday}</div>
-                          <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 30, lineHeight: 1, color: statusColor }}>{dayNum}</div>
-                          <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--warm-gray)' }}>{month}</div>
-                        </div>
-                        {/* Right content */}
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
-                            <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 15, color: 'var(--lbf-text)', lineHeight: 1.3 }}>{termin.name}</div>
-                            <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: statusColor, flexShrink: 0, marginLeft: 6 }}>{statusLabel}</span>
-                          </div>
-                          {termin.location && <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)' }}>{termin.location}</div>}
-                          {termin.start_datetime && <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)' }}>{fmtTime(termin.start_datetime)}{termin.end_datetime ? `–${fmtTime(termin.end_datetime)}` : ''} Uhr</div>}
-                          {showsForeignDozent && <div style={{ fontStyle: 'italic', fontSize: 12, color: '#600812' }}>Dozent: {termin.dozent}</div>}
-                        </div>
-                      </div>
-                      {/* Bottom stats strip */}
-                      <div style={{ borderTop: '0.5px solid rgba(96,8,18,0.08)', background: 'rgba(250,249,247,0.8)', padding: '8px 14px', display: 'flex', gap: 14, fontSize: 12, color: 'var(--warm-gray)', fontWeight: 600, borderRadius: '0 0 12px 12px', flexWrap: 'wrap' }}>
-                        <span>{teilnehmerCount}/{termin.max_teilnehmer} TN</span>
-                        {dokumenteCount > 0 && <span>{dokumenteCount} Dok.</span>}
-                        {moduleCount > 0 && <span>{moduleCount} Mod.</span>}
-                        {todos.length > 0 && <span style={{ color: doneTodos === todos.length ? '#16a34a' : 'var(--warm-gray)' }}>{doneTodos}/{todos.length} ToDo</span>}
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            )}
-          </div>
-        )
-      })()}
 
       {/* TERMIN DETAIL PAGE */}
       {terminDetailPage && (() => {
