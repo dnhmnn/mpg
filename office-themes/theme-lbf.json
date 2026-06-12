@@ -1,0 +1,64 @@
+{
+  "id": "theme-lbf",
+  "name": "La Bella Figura",
+  "type": "light",
+  "colors": {
+    "background-toolbar": "#ffffff",
+    "background-toolbar-additional": "#faf9f7",
+    "background-document": "#e8e2d8",
+    "background-normal": "#ffffff",
+    "background-light": "#faf9f7",
+
+    "border-divider": "rgba(26,14,8,0.08)",
+    "border-regular-control": "rgba(26,14,8,0.12)",
+    "border-toolbar": "rgba(96,8,18,0.12)",
+    "border-preview-hover": "#600812",
+    "border-preview-select": "#a01020",
+
+    "highlight-button-hover": "rgba(96,8,18,0.08)",
+    "highlight-button-pressed": "#600812",
+    "highlight-button-pressed-hover": "#7a0a16",
+    "highlight-header-button-hover": "rgba(253,232,216,0.15)",
+    "highlight-header-button-pressed": "rgba(253,232,216,0.25)",
+
+    "icon-normal": "#5a4a3e",
+    "icon-normal-pressed": "#1a0e08",
+    "icon-disabled": "#c9bdb0",
+    "icon-toolbar-header": "#fde8d8",
+    "icon-toolbar-header-active": "#ffffff",
+
+    "text-normal": "#1a0e08",
+    "text-normal-pressed": "#000000",
+    "text-secondary": "#8a7a68",
+    "text-link": "#600812",
+    "text-link-active": "#3d0408",
+    "text-link-hover": "#a01020",
+    "text-toolbar-header": "#fde8d8",
+    "text-toolbar-header-active": "#ffffff",
+
+    "scroll-thumb": "#d8cfc4",
+    "scroll-thumb-hover": "#c9bdb0",
+    "scroll-thumb-pressed": "#b8aa9c",
+    "scroll-track": "#faf9f7",
+
+    "shadow": "rgba(26,14,8,0.15)",
+
+    "canvas-background": "#e8e2d8",
+    "canvas-content-background": "#ffffff",
+    "canvas-page-border": "rgba(26,14,8,0.1)",
+    "canvas-scroll-thumb": "#d8cfc4",
+    "canvas-scroll-thumb-hover": "#c9bdb0",
+    "canvas-scroll-thumb-pressed": "#b8aa9c",
+
+    "toolbar-header-document": "#600812",
+    "toolbar-header-spreadsheet": "#166534",
+    "toolbar-header-presentation": "#9a3412",
+    "toolbar-header-pdf": "#600812",
+    "toolbar-header-visio": "#600812",
+
+    "tab-background": "#ffffff",
+    "tab-border": "rgba(96,8,18,0.08)",
+    "tab-hover": "#faf9f7",
+    "tab-underline": "#600812"
+  }
+}
