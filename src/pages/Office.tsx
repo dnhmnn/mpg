@@ -329,8 +329,8 @@ export default function Office() {
               help: false, plugins: false,
               uiTheme: getOfficeUiTheme(),
               logo: {
-                image: 'https://app.responda.systems/logoklein.svg',
-                imageDark: 'https://app.responda.systems/logoklein.svg',
+                image: 'https://app.responda.systems/office-logo-color.svg',
+                imageDark: 'https://app.responda.systems/office-logo-header.svg',
                 url: 'https://app.responda.systems/office',
               },
             },
