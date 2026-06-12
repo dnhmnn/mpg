@@ -6,6 +6,9 @@ dist
 dist-ssr
 *.local
 
+# Capacitor: generierter Web-Build im iOS-Projekt (npx cap sync regeneriert ihn)
+ios/App/App/public
+
 # Logs
 logs
 *.log
