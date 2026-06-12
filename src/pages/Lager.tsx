@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
+import QRCode from 'qrcode'
+import type { IScannerControls } from '@zxing/browser'
 import { pb } from '../lib/pocketbase'
 import { useAuth } from '../hooks/useAuth'
 import StatusBar from '../components/StatusBar'
@@ -11,6 +13,11 @@ interface InventoryItem {
   min_stock: number
   location_min_stocks?: Record<string, number>
   notes?: string
+  barcode?: string
+  supplier?: string
+  supplier_item_no?: string
+  supplier_email?: string
+  order_url?: string
   organization_id: string
   created: string
 }
@@ -106,6 +113,63 @@ interface ProductOutput {
   }
 }
 
+// Payload-Präfix für selbst erzeugte QR-Etiketten (verweisen direkt auf die Artikel-ID)
+const QR_ITEM_PREFIX = 'lager:'
+
+const EMPTY_ITEM_FORM = {
+  name: '', unit: 'Stück', min_stock: 0,
+  barcode: '', supplier: '', supplier_item_no: '', supplier_email: '', order_url: ''
+}
+
+function BarcodeScanner({ onDetect, onError }: { onDetect: (code: string) => void; onError: (msg: string) => void }) {
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const onDetectRef = useRef(onDetect)
+  const onErrorRef = useRef(onError)
+  onDetectRef.current = onDetect
+  onErrorRef.current = onError
+
+  useEffect(() => {
+    let controls: IScannerControls | null = null
+    let stopped = false
+    let fired = false
+    // Decoder erst beim Öffnen der Kamera nachladen, hält das Haupt-Bundle unter dem PWA-Precache-Limit
+    import('@zxing/browser')
+      .then(({ BrowserMultiFormatReader }) => {
+        if (stopped) return undefined
+        const reader = new BrowserMultiFormatReader()
+        return reader.decodeFromConstraints(
+          { video: { facingMode: 'environment' } },
+          videoRef.current || undefined,
+          (result, _err, c) => {
+            if (result && !fired && !stopped) {
+              fired = true
+              c.stop()
+              onDetectRef.current(result.getText())
+            }
+          }
+        )
+      })
+      .then(c => {
+        if (!c) return
+        controls = c
+        if (stopped) c.stop()
+      })
+      .catch(() => {
+        if (!stopped) onErrorRef.current('Kamera nicht verfügbar — bitte Kamerazugriff im Browser erlauben.')
+      })
+    return () => { stopped = true; controls?.stop() }
+  }, [])
+
+  return (
+    <div style={{ position: 'relative' }}>
+      <video ref={videoRef} muted playsInline style={{ width: '100%', aspectRatio: '4 / 3', objectFit: 'cover', borderRadius: 12, background: '#000', display: 'block' }} />
+      <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
+        <div style={{ width: '70%', height: '45%', border: '2px solid rgba(253,232,216,0.9)', borderRadius: 12 }} />
+      </div>
+    </div>
+  )
+}
+
 export default function Lager() {
   const { user, loading: authLoading, logout } = useAuth()
 
@@ -143,13 +207,18 @@ export default function Lager() {
   const [buchungType, setBuchungType] = useState<'ein' | 'aus'>('ein')
   
   const [showAddItemModal, setShowAddItemModal] = useState(false)
-  
-  const [itemFormData, setItemFormData] = useState({
-    name: '',
-    unit: 'Stück',
-    min_stock: 0
-  })
+
+  const [itemFormData, setItemFormData] = useState({ ...EMPTY_ITEM_FORM })
   const [editingItemId, setEditingItemId] = useState<string | null>(null)
+
+  // Scanner & Bestellung state
+  const [showScanModal, setShowScanModal] = useState(false)
+  const [scanMode, setScanMode] = useState<'lookup' | 'form'>('lookup')
+  const [scanTeachCode, setScanTeachCode] = useState<string | null>(null)
+  const [scanTeachSearch, setScanTeachSearch] = useState('')
+  const [scanError, setScanError] = useState<string | null>(null)
+  const [showOrderModal, setShowOrderModal] = useState(false)
+  const [qrLabel, setQrLabel] = useState<{ item: InventoryItem; dataUrl: string } | null>(null)
   
   const [newLocationName, setNewLocationName] = useState('')
   
@@ -551,7 +620,7 @@ export default function Lager() {
       
       setShowAddItemModal(false)
       setEditingItemId(null)
-      setItemFormData({ name: '', unit: 'Stück', min_stock: 0 })
+      setItemFormData({ ...EMPTY_ITEM_FORM })
       await loadStock()
       
     } catch(e: any) {
@@ -626,6 +695,103 @@ export default function Lager() {
     } catch(e: any) {
       alert('Fehler: ' + e.message)
     }
+  }
+
+  // SCANNER & BESTELL-FUNKTIONEN
+  function openScanner(mode: 'lookup' | 'form') {
+    setScanMode(mode)
+    setScanTeachCode(null)
+    setScanTeachSearch('')
+    setScanError(null)
+    setShowScanModal(true)
+  }
+
+  function handleScanDetect(code: string) {
+    if (scanMode === 'form') {
+      setItemFormData(prev => ({ ...prev, barcode: code }))
+      setShowScanModal(false)
+      showMsg('✅ Code übernommen: ' + code, 'success')
+      return
+    }
+    const item = code.startsWith(QR_ITEM_PREFIX)
+      ? allItems.find(i => i.id === code.slice(QR_ITEM_PREFIX.length))
+      : allItems.find(i => i.barcode && i.barcode === code)
+    if (item) {
+      setShowScanModal(false)
+      const display = displayItems.find(d => d.id === item.id)
+        || { id: item.id, name: item.name, unit: item.unit, min_stock: getMinStock(item, currentLocationId), qty: 0, notes: item.notes, status: 'ok' as const }
+      openItemDetail(display)
+    } else {
+      setScanTeachCode(code)
+    }
+  }
+
+  async function assignBarcode(item: InventoryItem, code: string) {
+    try {
+      await pb.collection('inventory_items').update(item.id, { barcode: code })
+      setAllItems(prev => prev.map(i => i.id === item.id ? { ...i, barcode: code } : i))
+      setShowScanModal(false)
+      showMsg(`✅ Code mit „${item.name}" verknüpft!`, 'success')
+    } catch(e: any) {
+      alert('Fehler: ' + e.message)
+    }
+  }
+
+  function orderItem(item: InventoryItem, need?: number) {
+    if (item.order_url) {
+      window.open(item.order_url, '_blank', 'noopener')
+      return
+    }
+    if (!item.supplier_email) return
+    const itemNo = item.supplier_item_no ? ` (Art.-Nr. ${item.supplier_item_no})` : ''
+    const qtyPart = need && need > 0 ? `${need} ${item.unit || 'Stück'} ` : ''
+    const subject = encodeURIComponent(`Bestellung: ${item.name}${itemNo}`)
+    const body = encodeURIComponent(`Guten Tag,\n\nhiermit bestellen wir:\n\n• ${qtyPart}${item.name}${itemNo}\n\nMit freundlichen Grüßen\n${user?.name || ''}\n${user?.organization_name || ''}`)
+    window.location.href = `mailto:${item.supplier_email}?subject=${subject}&body=${body}`
+  }
+
+  function getOrderList() {
+    return displayItems
+      .filter(d => d.min_stock > 0 && d.qty < d.min_stock)
+      .map(d => ({ display: d, raw: allItems.find(i => i.id === d.id), need: d.min_stock - d.qty }))
+  }
+
+  function buildOrderMailBody(entries: Array<{ display: DisplayItem; raw?: InventoryItem; need: number }>) {
+    const lines = entries.map(e =>
+      `• ${e.need} ${e.display.unit || 'Stück'} ${e.display.name}${e.raw?.supplier_item_no ? ` (Art.-Nr. ${e.raw.supplier_item_no})` : ''}`
+    )
+    return `Guten Tag,\n\nhiermit bestellen wir:\n\n${lines.join('\n')}\n\nMit freundlichen Grüßen\n${user?.name || ''}\n${user?.organization_name || ''}`
+  }
+
+  async function copyOrderList() {
+    const text = getOrderList().map(e =>
+      `${e.need} ${e.display.unit || 'Stück'} — ${e.display.name}${e.raw?.supplier_item_no ? ` (Art.-Nr. ${e.raw.supplier_item_no})` : ''}${e.raw?.supplier ? ` — ${e.raw.supplier}` : ''}`
+    ).join('\n')
+    try {
+      await navigator.clipboard.writeText(text)
+      showMsg('✅ Bestellliste kopiert!', 'success')
+    } catch {
+      alert(text)
+    }
+  }
+
+  async function showQrLabel(item: InventoryItem) {
+    try {
+      const dataUrl = await QRCode.toDataURL(QR_ITEM_PREFIX + item.id, { width: 480, margin: 1, color: { dark: '#1a0e08', light: '#ffffff' } })
+      setQrLabel({ item, dataUrl })
+    } catch(e: any) {
+      alert('Fehler: ' + e.message)
+    }
+  }
+
+  function printQrLabel() {
+    if (!qrLabel) return
+    const w = window.open('', '_blank', 'width=420,height=520')
+    if (!w) return
+    w.document.write(`<html><head><title>${qrLabel.item.name}</title></head><body style="display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:sans-serif;margin:0;height:100vh;"><img src="${qrLabel.dataUrl}" style="width:280px;height:280px;" /><div style="font-size:18px;font-weight:700;margin-top:12px;text-align:center;">${qrLabel.item.name}</div></body></html>`)
+    w.document.close()
+    w.focus()
+    setTimeout(() => w.print(), 300)
   }
 
   // INVENTUR FUNKTIONEN
@@ -1188,6 +1354,14 @@ export default function Lager() {
 
       {/* ACTION TOOLBAR */}
       <div className="lager-actionbar">
+        <button className="lager-action-btn" onClick={() => openScanner('lookup')} title="Artikel scannen">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7V5a2 2 0 012-2h2"/><path d="M17 3h2a2 2 0 012 2v2"/><path d="M21 17v2a2 2 0 01-2 2h-2"/><path d="M7 21H5a2 2 0 01-2-2v-2"/><line x1="7" y1="12" x2="17" y2="12"/></svg>
+          <span className="lager-action-label">Scannen</span>
+        </button>
+        <button className="lager-action-btn" onClick={() => setShowOrderModal(true)} title="Bestellliste">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/></svg>
+          <span className="lager-action-label">Bestellen</span>
+        </button>
         <button className="lager-action-btn" style={{ position: 'relative' }} onClick={() => { loadProductOutputs(); setShowAusgabenModal(true) }} title="Produktausgaben">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8"/><path d="M10 12l2 2 4-4"/></svg>
           {ausgabenCount > 0 && <span className="lager-badge">{ausgabenCount}</span>}
@@ -1422,7 +1596,7 @@ export default function Lager() {
             <button
               className="lager-btn primary"
               style={{ width: '100%', marginBottom: 16 }}
-              onClick={() => { setItemFormData({ name: '', unit: 'Stück', min_stock: 0 }); setEditingItemId(null); setShowAddItemModal(true) }}
+              onClick={() => { setItemFormData({ ...EMPTY_ITEM_FORM }); setEditingItemId(null); setShowAddItemModal(true) }}
             >
               Neuen Artikel anlegen
             </button>
@@ -1434,10 +1608,15 @@ export default function Lager() {
                   <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', border: '1px solid rgba(96,8,18,0.1)', borderRadius: 8 }}>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--lbf-text)' }}>{item.name}</div>
-                      <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginTop: 2 }}>{item.unit || 'Stück'} · SOLL: {item.min_stock || 0}</div>
+                      <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginTop: 2 }}>
+                        {item.unit || 'Stück'} · SOLL: {item.min_stock || 0}
+                        {item.supplier ? ` · ${item.supplier}` : ''}
+                        {item.barcode ? ' · Code verknüpft' : ''}
+                      </div>
                     </div>
                     <div style={{ display: 'flex', gap: 8 }}>
-                      <button className="lager-btn" style={{ fontSize: 12, padding: '5px 10px' }} onClick={() => { setItemFormData({ name: item.name, unit: item.unit, min_stock: item.min_stock }); setEditingItemId(item.id); setShowAddItemModal(true) }}>Bearbeiten</button>
+                      <button className="lager-btn" style={{ fontSize: 12, padding: '5px 10px' }} onClick={() => showQrLabel(item)} title="QR-Etikett erzeugen">QR</button>
+                      <button className="lager-btn" style={{ fontSize: 12, padding: '5px 10px' }} onClick={() => { setItemFormData({ name: item.name, unit: item.unit, min_stock: item.min_stock, barcode: item.barcode || '', supplier: item.supplier || '', supplier_item_no: item.supplier_item_no || '', supplier_email: item.supplier_email || '', order_url: item.order_url || '' }); setEditingItemId(item.id); setShowAddItemModal(true) }}>Bearbeiten</button>
                       <button className="lager-btn" style={{ fontSize: 12, padding: '5px 10px', color: '#600812', borderColor: 'rgba(96,8,18,0.2)' }} onClick={() => deleteItem(item.id)}>Löschen</button>
                     </div>
                   </div>
@@ -1796,7 +1975,15 @@ export default function Lager() {
                 ))
               )}
             </div>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginTop: 16 }}>
+              {(() => {
+                const raw = allItems.find(i => i.id === detailItem.id)
+                return raw && (raw.order_url || raw.supplier_email) ? (
+                  <button className="lager-btn primary" onClick={() => orderItem(raw, Math.max(detailItem.min_stock - detailItem.qty, 0))}>
+                    Bestellen{raw.supplier ? ` · ${raw.supplier}` : ''}
+                  </button>
+                ) : <span />
+              })()}
               <button className="lager-btn" onClick={() => setShowItemDetailModal(false)}>Schließen</button>
             </div>
           </div>
@@ -1903,6 +2090,32 @@ export default function Lager() {
               <label style={{ fontSize: 11, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.1em' }}>Mindestbestand</label>
               <input className="lager-input" type="number" value={itemFormData.min_stock} onChange={(e) => setItemFormData({...itemFormData, min_stock: parseInt(e.target.value) || 0})} min="0" />
             </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14 }}>
+              <label style={{ fontSize: 11, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.1em' }}>Barcode / QR-Code</label>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <input className="lager-input" style={{ flex: 1 }} type="text" value={itemFormData.barcode} onChange={(e) => setItemFormData({...itemFormData, barcode: e.target.value})} placeholder="EAN scannen oder eintippen" />
+                <button className="lager-btn" onClick={() => openScanner('form')}>Scannen</button>
+              </div>
+            </div>
+            <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.14em', margin: '4px 0 10px' }}>Bestellung / Lieferant</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 14 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <label style={{ fontSize: 11, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.1em' }}>Lieferant</label>
+                <input className="lager-input" type="text" value={itemFormData.supplier} onChange={(e) => setItemFormData({...itemFormData, supplier: e.target.value})} placeholder="z.B. Söhngen" />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <label style={{ fontSize: 11, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.1em' }}>Artikel-Nr.</label>
+                <input className="lager-input" type="text" value={itemFormData.supplier_item_no} onChange={(e) => setItemFormData({...itemFormData, supplier_item_no: e.target.value})} placeholder="beim Lieferanten" />
+              </div>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14 }}>
+              <label style={{ fontSize: 11, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.1em' }}>Bestell-Link</label>
+              <input className="lager-input" type="url" value={itemFormData.order_url} onChange={(e) => setItemFormData({...itemFormData, order_url: e.target.value})} placeholder="https://shop.lieferant.de/artikel..." />
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14 }}>
+              <label style={{ fontSize: 11, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.1em' }}>Bestell-E-Mail</label>
+              <input className="lager-input" type="email" value={itemFormData.supplier_email} onChange={(e) => setItemFormData({...itemFormData, supplier_email: e.target.value})} placeholder="bestellung@lieferant.de" />
+            </div>
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
               <button className="lager-btn" onClick={() => setShowAddItemModal(false)}>Abbrechen</button>
               <button className="lager-btn primary" onClick={saveItem}>Speichern</button>
@@ -1910,6 +2123,128 @@ export default function Lager() {
           </div>
         </div>
       )}
+      {/* SCANNER MODAL */}
+      {showScanModal && (
+        <div className="lager-modal-overlay" onClick={() => setShowScanModal(false)}>
+          <div className="lager-modal" style={{ maxWidth: 480 }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 16 }}>
+              {scanMode === 'form' ? 'Code für Artikel scannen' : 'Artikel scannen'}
+            </div>
+            {scanError ? (
+              <div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#b91c1c', padding: 14, borderRadius: 10, fontSize: 13 }}>{scanError}</div>
+            ) : scanTeachCode ? (
+              <>
+                <div style={{ fontSize: 13, color: 'var(--lbf-text)' }}>Unbekannter Code:</div>
+                <div style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: 15, color: '#600812', margin: '4px 0 10px', wordBreak: 'break-all' as const }}>{scanTeachCode}</div>
+                <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginBottom: 10 }}>
+                  Einmal einem Artikel zuordnen — danach wird er bei jedem Scan automatisch erkannt.
+                </div>
+                <input className="lager-input" type="text" placeholder="Artikel suchen..." value={scanTeachSearch} onChange={e => setScanTeachSearch(e.target.value)} style={{ marginBottom: 8 }} />
+                <div style={{ maxHeight: 200, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 12 }}>
+                  {allItems.filter(i => !scanTeachSearch || i.name.toLowerCase().includes(scanTeachSearch.toLowerCase())).map(item => (
+                    <div key={item.id} onClick={() => assignBarcode(item, scanTeachCode)} style={{ padding: '9px 12px', border: '1px solid rgba(96,8,18,0.1)', borderRadius: 8, cursor: 'pointer', fontSize: 14, fontWeight: 600, color: 'var(--lbf-text)' }}>
+                      {item.name}
+                      {item.barcode && <span style={{ fontStyle: 'italic', fontWeight: 400, fontSize: 11, color: 'var(--warm-gray)', marginLeft: 6 }}>hat bereits einen Code</span>}
+                    </div>
+                  ))}
+                </div>
+                <button className="lager-btn primary" style={{ width: '100%' }} onClick={() => { setItemFormData({ ...EMPTY_ITEM_FORM, barcode: scanTeachCode }); setEditingItemId(null); setShowScanModal(false); setShowAddItemModal(true) }}>
+                  Neuen Artikel mit diesem Code anlegen
+                </button>
+              </>
+            ) : (
+              <>
+                <BarcodeScanner onDetect={handleScanDetect} onError={(m) => setScanError(m)} />
+                <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginTop: 10, textAlign: 'center' as const }}>
+                  QR-Etikett oder Barcode (EAN) vor die Kamera halten
+                </div>
+              </>
+            )}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 14 }}>
+              <button className="lager-btn" onClick={() => setShowScanModal(false)}>Schließen</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* BESTELLLISTE MODAL */}
+      {showOrderModal && (() => {
+        const entries = getOrderList()
+        const bySupplier = new Map<string, typeof entries>()
+        for (const e of entries) {
+          const key = e.raw?.supplier_email
+          if (key) {
+            if (!bySupplier.has(key)) bySupplier.set(key, [])
+            bySupplier.get(key)!.push(e)
+          }
+        }
+        return (
+          <div className="lager-modal-overlay" onClick={() => setShowOrderModal(false)}>
+            <div className="lager-modal" onClick={(e) => e.stopPropagation()}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 16 }}>
+                Bestellliste — {locations.find(l => l.id === currentLocationId)?.name || 'Lager'}
+              </div>
+              {entries.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: 24, color: 'var(--warm-gray)', fontStyle: 'italic' }}>Alles aufgefüllt — kein Artikel unter Mindestbestand.</div>
+              ) : (
+                <>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 320, overflowY: 'auto', marginBottom: 14 }}>
+                    {entries.map(e => (
+                      <div key={e.display.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, padding: '10px 12px', border: '1px solid rgba(96,8,18,0.1)', borderRadius: 8, borderLeft: '3px solid #d97706' }}>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--lbf-text)' }}>{e.display.name}</div>
+                          <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginTop: 2 }}>
+                            IST {e.display.qty} / SOLL {e.display.min_stock}
+                            {e.raw?.supplier ? ` · ${e.raw.supplier}` : ''}
+                            {e.raw?.supplier_item_no ? ` · Art.-Nr. ${e.raw.supplier_item_no}` : ''}
+                          </div>
+                        </div>
+                        <div style={{ fontWeight: 800, fontSize: 18, color: '#600812', whiteSpace: 'nowrap' as const }}>+{e.need}</div>
+                        {e.raw && (e.raw.order_url || e.raw.supplier_email) && (
+                          <button className="lager-btn" style={{ fontSize: 12, padding: '5px 10px' }} onClick={() => orderItem(e.raw!, e.need)}>Bestellen</button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {Array.from(bySupplier.entries()).map(([email, list]) => (
+                      <button key={email} className="lager-btn primary" onClick={() => {
+                        const subject = encodeURIComponent(`Bestellung ${user?.organization_name || ''}`.trim())
+                        window.location.href = `mailto:${email}?subject=${subject}&body=${encodeURIComponent(buildOrderMailBody(list))}`
+                      }}>
+                        Bestell-Mail an {list[0].raw?.supplier || email} ({list.length} Artikel)
+                      </button>
+                    ))}
+                    <button className="lager-btn" onClick={copyOrderList}>Liste kopieren</button>
+                  </div>
+                </>
+              )}
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 14 }}>
+                <button className="lager-btn" onClick={() => setShowOrderModal(false)}>Schließen</button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
+
+      {/* QR-ETIKETT MODAL */}
+      {qrLabel && (
+        <div className="lager-modal-overlay" onClick={() => setQrLabel(null)}>
+          <div className="lager-modal" style={{ maxWidth: 380 }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 16 }}>QR-Etikett</div>
+            <div style={{ textAlign: 'center' }}>
+              <img src={qrLabel.dataUrl} alt="QR-Code" style={{ width: 240, height: 240, borderRadius: 12, border: '1px solid rgba(96,8,18,0.1)', background: '#fff' }} />
+              <div style={{ fontWeight: 700, fontStyle: 'italic', fontSize: 17, color: 'var(--lbf-text)', marginTop: 10 }}>{qrLabel.item.name}</div>
+              <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginTop: 2 }}>Ausdrucken und auf Lagerplatz oder Karton kleben</div>
+            </div>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 16 }}>
+              <button className="lager-btn" onClick={() => setQrLabel(null)}>Schließen</button>
+              <button className="lager-btn primary" onClick={printQrLabel}>Drucken</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <style>{`
         @keyframes lagerToastIn {
           from { opacity: 0; transform: translateY(16px); }
