@@ -4,7 +4,7 @@ services:
     image: ghcr.io/euro-office/documentserver:latest
     restart: unless-stopped
     ports:
-      - "8090:80"
+      - "8091:80"
     environment:
       - JWT_ENABLED=false
     volumes:

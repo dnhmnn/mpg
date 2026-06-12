@@ -310,43 +310,47 @@ export default function Office() {
     script.src = `${OFFICE_URL}/web-apps/apps/api/documents/api.js`
     script.onload = () => {
       const w = window as unknown as { DocsAPI?: { DocEditor: new (id: string, config: unknown) => void } }
-      if (w.DocsAPI) {
-        new w.DocsAPI.DocEditor('office-editor-container', {
-          document: {
-            fileType: ext,
-            key: `${editingFile.id}_${new Date(editingFile.updated).getTime()}`,
-            title: editingFile.name,
-            url: fileUrl,
-          },
-          documentType: getDocType(ext),
-          editorConfig: {
-            callbackUrl,
-            user: { id: user?.id || '', name: user?.name || '' },
-            lang: 'de',
-            customization: {
-              autosave: true, chat: false, comments: true,
-              compactHeader: false, feedback: false, forcesave: true,
-              help: false, plugins: false,
-              uiTheme: getOfficeUiTheme(),
-              logo: {
-                image: 'https://app.responda.systems/office-logo-color.svg',
-                imageDark: 'https://app.responda.systems/office-logo-header.svg',
-                url: 'https://app.responda.systems/office',
-              },
-            },
-          },
-          events: {
-            onAppReady: () => setEditorLoading(false),
-            onDocumentReady: () => setEditorLoading(false),
-            onError: (event: unknown) => {
-              setEditorLoading(false)
-              const e = event as { data?: { errorDescription?: string } }
-              showMsg('Editor-Fehler: ' + (e?.data?.errorDescription || 'Unbekannter Fehler'), 'error')
-              setEditingFile(null)
-            },
-          },
-        })
+      if (!w.DocsAPI) {
+        setEditorLoading(false)
+        showMsg('Euro-Office Server nicht erreichbar. Prüfe VITE_OFFICE_URL.', 'error')
+        setEditingFile(null)
+        return
       }
+      new w.DocsAPI.DocEditor('office-editor-container', {
+        document: {
+          fileType: ext,
+          key: `${editingFile.id}_${new Date(editingFile.updated).getTime()}`,
+          title: editingFile.name,
+          url: fileUrl,
+        },
+        documentType: getDocType(ext),
+        editorConfig: {
+          callbackUrl,
+          user: { id: user?.id || '', name: user?.name || '' },
+          lang: 'de',
+          customization: {
+            autosave: true, chat: false, comments: true,
+            compactHeader: false, feedback: false, forcesave: true,
+            help: false, plugins: false,
+            uiTheme: getOfficeUiTheme(),
+            logo: {
+              image: 'https://app.responda.systems/office-logo-color.svg',
+              imageDark: 'https://app.responda.systems/office-logo-header.svg',
+              url: 'https://app.responda.systems/office',
+            },
+          },
+        },
+        events: {
+          onAppReady: () => setEditorLoading(false),
+          onDocumentReady: () => setEditorLoading(false),
+          onError: (event: unknown) => {
+            setEditorLoading(false)
+            const e = event as { data?: { errorDescription?: string } }
+            showMsg('Editor-Fehler: ' + (e?.data?.errorDescription || 'Unbekannter Fehler'), 'error')
+            setEditingFile(null)
+          },
+        },
+      })
     }
     script.onerror = () => {
       setEditorLoading(false)
