@@ -113,6 +113,28 @@ interface ProductOutput {
   }
 }
 
+// Fahrzeug-/Rucksack-Checks: Sollausstattung ("Packliste") und durchgeführte Prüfungen
+interface KitPosition { item_id: string; name: string; soll: number; unit?: string }
+interface Kit {
+  id: string
+  name: string
+  organization_id: string
+  positionen: KitPosition[]
+  created: string
+}
+interface KitCheckResult { item_id: string; name: string; soll: number; ist: number; status: 'ok' | 'fehlt' | 'abgelaufen' }
+interface KitCheck {
+  id: string
+  kit_id: string
+  kit_name: string
+  organization_id: string
+  user: string
+  status: 'ok' | 'maengel'
+  note?: string
+  results: KitCheckResult[]
+  created: string
+}
+
 // Payload-Präfix für selbst erzeugte QR-Etiketten (verweisen direkt auf die Artikel-ID)
 const QR_ITEM_PREFIX = 'lager:'
 
@@ -263,6 +285,19 @@ export default function Lager() {
 
   const [itemFormData, setItemFormData] = useState({ ...EMPTY_ITEM_FORM })
   const [editingItemId, setEditingItemId] = useState<string | null>(null)
+
+  // Fahrzeug-/Rucksack-Checks
+  const [showKitsModal, setShowKitsModal] = useState(false)
+  const [kits, setKits] = useState<Kit[]>([])
+  const [kitsLoading, setKitsLoading] = useState(false)
+  const [kitEditor, setKitEditor] = useState<{ id: string | null; name: string; positionen: KitPosition[] } | null>(null)
+  const [kitItemSearch, setKitItemSearch] = useState('')
+  const [runningKit, setRunningKit] = useState<Kit | null>(null)
+  const [checkResults, setCheckResults] = useState<KitCheckResult[]>([])
+  const [checkNote, setCheckNote] = useState('')
+  const [savingCheck, setSavingCheck] = useState(false)
+  const [kitHistory, setKitHistory] = useState<KitCheck[]>([])
+  const [historyKit, setHistoryKit] = useState<Kit | null>(null)
 
   // Scanner & Bestellung state
   const [showScanModal, setShowScanModal] = useState(false)
@@ -845,6 +880,125 @@ export default function Lager() {
     w.document.close()
     w.focus()
     setTimeout(() => w.print(), 300)
+  }
+
+  // FAHRZEUG-/RUCKSACK-CHECKS
+  async function loadKits() {
+    if (!user?.organization_id) return
+    setKitsLoading(true)
+    try {
+      const list = await pb.collection('inventory_kits').getFullList<Kit>({
+        filter: `organization_id = "${user.organization_id}"`,
+        sort: 'name',
+      })
+      setKits(list.map(k => ({ ...k, positionen: Array.isArray(k.positionen) ? k.positionen : [] })))
+    } catch (e: any) {
+      // Collection evtl. noch nicht angelegt
+      console.error('Error loading kits:', e)
+      setKits([])
+    } finally {
+      setKitsLoading(false)
+    }
+  }
+
+  async function saveKit() {
+    if (!kitEditor || !user?.organization_id) return
+    if (!kitEditor.name.trim()) { alert('Name erforderlich'); return }
+    try {
+      const data = {
+        name: kitEditor.name.trim(),
+        positionen: kitEditor.positionen,
+        organization_id: user.organization_id,
+      }
+      if (kitEditor.id) {
+        await pb.collection('inventory_kits').update(kitEditor.id, data)
+      } else {
+        await pb.collection('inventory_kits').create(data)
+      }
+      setKitEditor(null)
+      await loadKits()
+      showMsg('✅ Liste gespeichert!', 'success')
+    } catch (e: any) {
+      alert('Fehler: ' + (e?.data ? JSON.stringify(e.data) : e.message) + '\n\nFalls die Collection "inventory_kits" fehlt, bitte erst in PocketBase anlegen.')
+    }
+  }
+
+  async function deleteKit(kitId: string) {
+    if (!confirm('Diese Sollausstattung wirklich löschen?')) return
+    try {
+      await pb.collection('inventory_kits').delete(kitId)
+      await loadKits()
+      showMsg('✅ Liste gelöscht!', 'success')
+    } catch (e: any) {
+      alert('Fehler: ' + e.message)
+    }
+  }
+
+  // aktuelle Bestandsmenge eines Artikels am aktuellen Standort
+  function currentQtyOf(itemId: string): number {
+    const d = displayItems.find(i => i.id === itemId)
+    return d ? d.qty : 0
+  }
+  function isExpiredItem(itemId: string): boolean {
+    const d = displayItems.find(i => i.id === itemId)
+    return d?.status === 'exp'
+  }
+
+  function startKitCheck(kit: Kit) {
+    setRunningKit(kit)
+    setCheckNote('')
+    // Vorbefüllen mit dem aktuellen Bestand + automatischer Status-Einschätzung
+    setCheckResults(kit.positionen.map(p => {
+      const ist = currentQtyOf(p.item_id)
+      let status: KitCheckResult['status'] = 'ok'
+      if (ist < p.soll) status = 'fehlt'
+      else if (isExpiredItem(p.item_id)) status = 'abgelaufen'
+      return { item_id: p.item_id, name: p.name, soll: p.soll, ist, status }
+    }))
+  }
+
+  function setCheckStatus(itemId: string, status: KitCheckResult['status']) {
+    setCheckResults(prev => prev.map(r => r.item_id === itemId ? { ...r, status } : r))
+  }
+
+  async function saveKitCheck() {
+    if (!runningKit || !user?.organization_id) return
+    if (savingCheck) return
+    setSavingCheck(true)
+    try {
+      const hasMaengel = checkResults.some(r => r.status !== 'ok')
+      await pb.collection('inventory_kit_checks').create({
+        kit_id: runningKit.id,
+        kit_name: runningKit.name,
+        organization_id: user.organization_id,
+        user: user?.name || '',
+        status: hasMaengel ? 'maengel' : 'ok',
+        note: checkNote,
+        results: checkResults,
+      })
+      setRunningKit(null)
+      setCheckResults([])
+      showMsg(hasMaengel ? '⚠️ Check gespeichert — mit Mängeln' : '✅ Check gespeichert — alles vollständig', 'success')
+    } catch (e: any) {
+      alert('Fehler: ' + (e?.data ? JSON.stringify(e.data) : e.message) + '\n\nFalls die Collection "inventory_kit_checks" fehlt, bitte erst in PocketBase anlegen.')
+    } finally {
+      setSavingCheck(false)
+    }
+  }
+
+  async function openKitHistory(kit: Kit) {
+    setHistoryKit(kit)
+    setKitHistory([])
+    try {
+      const list = await pb.collection('inventory_kit_checks').getFullList<KitCheck>({
+        filter: `kit_id = "${kit.id}"`,
+        sort: '-created',
+        limit: 50,
+      })
+      setKitHistory(list)
+    } catch (e: any) {
+      console.error('Error loading kit history:', e)
+    }
   }
 
   // INVENTUR FUNKTIONEN
@@ -1452,6 +1606,10 @@ export default function Lager() {
         <button className="lager-action-btn" onClick={() => { loadAuditHistory(); loadOpenAudits(); setShowInventoryModal(true) }} title="Inventur">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/><path d="M9 12h6m-6 4h6"/></svg>
           <span className="lager-action-label">Inventur</span>
+        </button>
+        <button className="lager-action-btn" onClick={() => { loadKits(); setShowKitsModal(true) }} title="Fahrzeug- & Rucksack-Checks">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+          <span className="lager-action-label">Checks</span>
         </button>
       </div>
 
@@ -2293,6 +2451,171 @@ export default function Lager() {
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 16 }}>
               <button className="lager-btn" onClick={() => setQrLabel(null)}>Schließen</button>
               <button className="lager-btn primary" onClick={printQrLabel}>Drucken</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* FAHRZEUG-/RUCKSACK-CHECKS MODAL */}
+      {showKitsModal && (
+        <div className="lager-modal-overlay" onClick={() => setShowKitsModal(false)}>
+          <div className="lager-modal" onClick={(e) => e.stopPropagation()}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 4 }}>Fahrzeug- & Rucksack-Checks</div>
+            <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginBottom: 16 }}>Sollausstattung anlegen und auf Vollständigkeit prüfen</div>
+            <button className="lager-btn primary" style={{ width: '100%', marginBottom: 16 }} onClick={() => setKitEditor({ id: null, name: '', positionen: [] })}>
+              Neue Sollausstattung anlegen
+            </button>
+            {kitsLoading ? (
+              <div style={{ textAlign: 'center', padding: 24, color: 'var(--warm-gray)', fontStyle: 'italic' }}>Lade…</div>
+            ) : kits.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: 24, color: 'var(--warm-gray)', fontStyle: 'italic' }}>Noch keine Listen — lege z.B. „RTW 1 – Notfallrucksack" an.</div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 360, overflowY: 'auto' }}>
+                {kits.map(kit => (
+                  <div key={kit.id} style={{ border: '1px solid rgba(96,8,18,0.1)', borderRadius: 10, padding: '12px 14px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 700, fontStyle: 'italic', fontSize: 15, color: 'var(--lbf-text)' }}>{kit.name}</div>
+                        <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginTop: 2 }}>{kit.positionen.length} Positionen</div>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' as const }}>
+                      <button className="lager-btn primary" style={{ fontSize: 12, padding: '6px 12px' }} onClick={() => startKitCheck(kit)} disabled={kit.positionen.length === 0}>Prüfen</button>
+                      <button className="lager-btn" style={{ fontSize: 12, padding: '6px 12px' }} onClick={() => openKitHistory(kit)}>Verlauf</button>
+                      <button className="lager-btn" style={{ fontSize: 12, padding: '6px 12px' }} onClick={() => setKitEditor({ id: kit.id, name: kit.name, positionen: [...kit.positionen] })}>Bearbeiten</button>
+                      <button className="lager-btn" style={{ fontSize: 12, padding: '6px 12px', color: '#600812' }} onClick={() => deleteKit(kit.id)}>Löschen</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
+              <button className="lager-btn" onClick={() => setShowKitsModal(false)}>Schließen</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* KIT-EDITOR MODAL */}
+      {kitEditor && (
+        <div className="lager-modal-overlay" onClick={() => setKitEditor(null)}>
+          <div className="lager-modal" onClick={(e) => e.stopPropagation()}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 16 }}>
+              {kitEditor.id ? 'Sollausstattung bearbeiten' : 'Neue Sollausstattung'}
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14 }}>
+              <label style={{ fontSize: 11, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.1em' }}>Name *</label>
+              <input className="lager-input" type="text" value={kitEditor.name} onChange={(e) => setKitEditor({ ...kitEditor, name: e.target.value })} placeholder="z.B. RTW 1 – Notfallrucksack" />
+            </div>
+
+            <div style={{ fontSize: 11, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.1em', marginBottom: 6 }}>Positionen ({kitEditor.positionen.length})</div>
+            {kitEditor.positionen.length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 10, maxHeight: 220, overflowY: 'auto' }}>
+                {kitEditor.positionen.map(pos => (
+                  <div key={pos.item_id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', background: 'rgba(250,249,247,0.8)', borderRadius: 8 }}>
+                    <div style={{ flex: 1, fontSize: 14, color: 'var(--lbf-text)' }}>{pos.name}</div>
+                    <span style={{ fontSize: 11, color: 'var(--warm-gray)', fontStyle: 'italic' }}>Soll</span>
+                    <input className="lager-input" type="number" min="0" value={pos.soll} onChange={(e) => setKitEditor({ ...kitEditor, positionen: kitEditor.positionen.map(p => p.item_id === pos.item_id ? { ...p, soll: parseInt(e.target.value) || 0 } : p) })} style={{ width: 64, padding: '6px 8px' }} />
+                    <button className="lager-btn" style={{ fontSize: 12, padding: '5px 9px', color: '#600812' }} onClick={() => setKitEditor({ ...kitEditor, positionen: kitEditor.positionen.filter(p => p.item_id !== pos.item_id) })}>✕</button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <input className="lager-input" type="text" placeholder="Artikel zur Liste hinzufügen…" value={kitItemSearch} onChange={(e) => setKitItemSearch(e.target.value)} style={{ marginBottom: 6 }} />
+            {kitItemSearch && (
+              <div style={{ maxHeight: 160, overflowY: 'auto', border: '1px solid rgba(96,8,18,0.12)', borderRadius: 8, marginBottom: 12 }}>
+                {allItems.filter(i => i.name.toLowerCase().includes(kitItemSearch.toLowerCase()) && !kitEditor.positionen.some(p => p.item_id === i.id)).slice(0, 30).map(item => (
+                  <div key={item.id} onClick={() => { setKitEditor({ ...kitEditor, positionen: [...kitEditor.positionen, { item_id: item.id, name: item.name, soll: 1, unit: item.unit }] }); setKitItemSearch('') }}
+                    style={{ padding: '9px 12px', cursor: 'pointer', fontSize: 14, borderBottom: '0.5px solid rgba(96,8,18,0.06)', color: 'var(--lbf-text)' }}>
+                    {item.name}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 8 }}>
+              <button className="lager-btn" onClick={() => setKitEditor(null)}>Abbrechen</button>
+              <button className="lager-btn primary" onClick={saveKit}>Speichern</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* KIT-CHECK DURCHFÜHREN MODAL */}
+      {runningKit && (
+        <div className="lager-modal-overlay" onClick={() => setRunningKit(null)}>
+          <div className="lager-modal" onClick={(e) => e.stopPropagation()}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 2 }}>Check durchführen</div>
+            <div style={{ fontWeight: 700, fontStyle: 'italic', fontSize: 17, color: 'var(--lbf-text)', marginBottom: 4 }}>{runningKit.name}</div>
+            <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginBottom: 14 }}>
+              Vorbelegt aus dem aktuellen Bestand ({locations.find(l => l.id === currentLocationId)?.name || 'Lager'}). Status pro Position prüfen.
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 340, overflowY: 'auto', marginBottom: 14 }}>
+              {checkResults.map(r => (
+                <div key={r.item_id} style={{ padding: '10px 12px', border: '1px solid rgba(96,8,18,0.1)', borderRadius: 10, borderLeft: `3px solid ${r.status === 'ok' ? '#16a34a' : r.status === 'abgelaufen' ? '#d97706' : '#dc2626'}` }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
+                    <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--lbf-text)' }}>{r.name}</div>
+                    <div style={{ fontSize: 12, color: 'var(--warm-gray)', fontStyle: 'italic', whiteSpace: 'nowrap' as const }}>IST {r.ist} / SOLL {r.soll}</div>
+                  </div>
+                  <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
+                    {([['ok', 'Vollständig', '#16a34a'], ['fehlt', 'Fehlt', '#dc2626'], ['abgelaufen', 'Abgelaufen', '#d97706']] as const).map(([val, label, col]) => (
+                      <button key={val} onClick={() => setCheckStatus(r.item_id, val)}
+                        style={{ flex: 1, padding: '7px 4px', borderRadius: 8, border: `1.5px solid ${r.status === val ? col : 'rgba(96,8,18,0.15)'}`, background: r.status === val ? col : 'transparent', color: r.status === val ? '#fff' : 'var(--warm-gray)', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14 }}>
+              <label style={{ fontSize: 11, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.1em' }}>Bemerkung (optional)</label>
+              <input className="lager-input" type="text" value={checkNote} onChange={(e) => setCheckNote(e.target.value)} placeholder="z.B. Defibrillator-Elektroden nachbestellt" />
+            </div>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button className="lager-btn" onClick={() => setRunningKit(null)}>Abbrechen</button>
+              <button className="lager-btn primary" onClick={saveKitCheck} disabled={savingCheck}>{savingCheck ? 'Speichern…' : 'Check abschließen'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* KIT-VERLAUF MODAL */}
+      {historyKit && (
+        <div className="lager-modal-overlay" onClick={() => setHistoryKit(null)}>
+          <div className="lager-modal" onClick={(e) => e.stopPropagation()}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 2 }}>Prüf-Verlauf</div>
+            <div style={{ fontWeight: 700, fontStyle: 'italic', fontSize: 17, color: 'var(--lbf-text)', marginBottom: 14 }}>{historyKit.name}</div>
+            {kitHistory.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: 24, color: 'var(--warm-gray)', fontStyle: 'italic' }}>Noch keine Prüfungen.</div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 380, overflowY: 'auto' }}>
+                {kitHistory.map(check => {
+                  const maengel = check.results?.filter(r => r.status !== 'ok') || []
+                  return (
+                    <div key={check.id} style={{ padding: '10px 12px', border: '1px solid rgba(96,8,18,0.1)', borderRadius: 10, borderLeft: `3px solid ${check.status === 'ok' ? '#16a34a' : '#dc2626'}` }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontWeight: 700, fontSize: 13, color: check.status === 'ok' ? '#15803d' : '#b91c1c' }}>
+                          {check.status === 'ok' ? 'Vollständig' : `${maengel.length} Mängel`}
+                        </span>
+                        <span style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--warm-gray)' }}>
+                          {check.user} · {new Date(check.created).toLocaleDateString('de-DE')} {new Date(check.created).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      </div>
+                      {maengel.length > 0 && (
+                        <div style={{ marginTop: 6, fontSize: 12, color: 'var(--warm-gray)' }}>
+                          {maengel.map(m => `${m.name} (${m.status === 'fehlt' ? 'fehlt' : 'abgelaufen'})`).join(', ')}
+                        </div>
+                      )}
+                      {check.note && <div style={{ marginTop: 6, fontSize: 12, fontStyle: 'italic', color: 'var(--warm-gray)' }}>„{check.note}"</div>}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
+              <button className="lager-btn" onClick={() => setHistoryKit(null)}>Schließen</button>
             </div>
           </div>
         </div>
