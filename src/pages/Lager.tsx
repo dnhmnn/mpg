@@ -309,6 +309,11 @@ export default function Lager() {
   const [qrLabel, setQrLabel] = useState<{ item: InventoryItem; dataUrl: string } | null>(null)
   
   const [newLocationName, setNewLocationName] = useState('')
+
+  // Benachrichtigungs-Einstellungen (pro Nutzer)
+  const [alertPrefs, setAlertPrefs] = useState({ enabled: false, low: true, expired: true, expiring: true, leadDays: 30, email: '' })
+  const [savingAlerts, setSavingAlerts] = useState(false)
+  const [alertTestMsg, setAlertTestMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(null)
   
   // Log/Transaction state
   const [transactions, setTransactions] = useState<Transaction[]>([])
@@ -379,6 +384,18 @@ export default function Lager() {
       loadLocations()
       loadAusgabenCount()
       loadLagerSettings()
+      // Eigene Benachrichtigungs-Einstellungen übernehmen
+      const raw = (user as any).lager_alerts
+      let p: any = {}
+      try { p = typeof raw === 'string' ? JSON.parse(raw) : (raw || {}) } catch { p = {} }
+      setAlertPrefs({
+        enabled: p.enabled === true,
+        low: p.low !== false,
+        expired: p.expired !== false,
+        expiring: p.expiring !== false,
+        leadDays: typeof p.leadDays === 'number' && p.leadDays > 0 ? p.leadDays : 30,
+        email: p.email || '',
+      })
     }
   }, [user])
 
@@ -880,6 +897,42 @@ export default function Lager() {
     w.document.close()
     w.focus()
     setTimeout(() => w.print(), 300)
+  }
+
+  // BENACHRICHTIGUNGEN (pro Nutzer)
+  async function saveAlertPrefs() {
+    if (!user?.id) return
+    setSavingAlerts(true)
+    try {
+      await pb.collection('users').update(user.id, { lager_alerts: alertPrefs })
+      showMsg('✅ Benachrichtigungen gespeichert!', 'success')
+    } catch (e: any) {
+      alert('Fehler: ' + (e?.data ? JSON.stringify(e.data) : e.message) + '\n\nFalls das Feld "lager_alerts" (JSON) in der users-Collection fehlt, bitte erst in PocketBase anlegen.')
+    } finally {
+      setSavingAlerts(false)
+    }
+  }
+
+  async function testAlertEmail() {
+    if (!user?.organization_id) return
+    setAlertTestMsg(null)
+    try {
+      // Erst aktuelle Einstellungen speichern, damit der Test sie berücksichtigt
+      await pb.collection('users').update(user.id, { lager_alerts: alertPrefs })
+      const res = await pb.send(`/lager/alerts-test/${user.organization_id}?send=1`, { method: 'GET' }) as any
+      const total = (res.low?.length || 0) + (res.expired?.length || 0) + (res.expiring?.length || 0)
+      if (res.sendError) {
+        setAlertTestMsg({ text: 'E-Mail konnte nicht gesendet werden (SMTP?): ' + res.sendError, type: 'error' })
+      } else if (total === 0) {
+        setAlertTestMsg({ text: 'Aktuell keine Warnungen — es gäbe nichts zu melden. (Test-Mail nur bei vorhandenen Warnungen)', type: 'success' })
+      } else if (res.sent) {
+        setAlertTestMsg({ text: `✅ Test-Mail mit ${total} Warnung(en) an ${res.recipient} gesendet.`, type: 'success' })
+      } else {
+        setAlertTestMsg({ text: `${total} Warnung(en) gefunden, aber kein Versand.`, type: 'error' })
+      }
+    } catch (e: any) {
+      setAlertTestMsg({ text: 'Fehler: ' + (e?.message || 'Server nicht erreichbar — Hook installiert?'), type: 'error' })
+    }
   }
 
   // FAHRZEUG-/RUCKSACK-CHECKS
@@ -1854,12 +1907,63 @@ export default function Lager() {
                 </div>
               ))}
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 24 }}>
               <label style={{ fontSize: 11, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.1em' }}>Neuer Standort</label>
               <input className="lager-input" type="text" placeholder="Standort-Name" value={newLocationName} onChange={(e) => setNewLocationName(e.target.value)} />
               <button className="lager-btn primary" onClick={addLocation}>Standort hinzufügen</button>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+
+            {/* Meine Benachrichtigungen */}
+            <div style={{ borderTop: '0.5px solid rgba(96,8,18,0.12)', paddingTop: 18 }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 4 }}>Meine Benachrichtigungen</div>
+              <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginBottom: 14 }}>Täglicher E-Mail-Digest bei niedrigem Bestand oder ablaufenden Artikeln</div>
+
+              <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', marginBottom: 14 }}>
+                <input type="checkbox" checked={alertPrefs.enabled} onChange={(e) => setAlertPrefs(p => ({ ...p, enabled: e.target.checked }))} style={{ width: 18, height: 18, accentColor: '#600812' }} />
+                <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--lbf-text)' }}>E-Mail-Benachrichtigungen aktiv</span>
+              </label>
+
+              <div style={{ opacity: alertPrefs.enabled ? 1 : 0.5, pointerEvents: alertPrefs.enabled ? 'auto' : 'none' }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.1em', marginBottom: 8 }}>Welche Warnungen</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
+                  {([['low', 'Unter Mindestbestand'], ['expired', 'Abgelaufen'], ['expiring', 'Läuft bald ab']] as const).map(([key, label]) => (
+                    <label key={key} style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
+                      <input type="checkbox" checked={alertPrefs[key]} onChange={(e) => setAlertPrefs(p => ({ ...p, [key]: e.target.checked }))} style={{ width: 16, height: 16, accentColor: '#600812' }} />
+                      <span style={{ fontSize: 14, color: 'var(--lbf-text)' }}>{label}</span>
+                    </label>
+                  ))}
+                </div>
+
+                <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
+                  <div style={{ flex: '0 0 130px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <label style={{ fontSize: 11, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.1em' }}>Vorlaufzeit MHD</label>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <input className="lager-input" type="number" min="1" value={alertPrefs.leadDays} onChange={(e) => setAlertPrefs(p => ({ ...p, leadDays: parseInt(e.target.value) || 0 }))} style={{ width: 70 }} />
+                      <span style={{ fontSize: 13, color: 'var(--warm-gray)' }}>Tage</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 16 }}>
+                  <label style={{ fontSize: 11, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.1em' }}>Empfänger</label>
+                  <input className="lager-input" type="email" value={alertPrefs.email} onChange={(e) => setAlertPrefs(p => ({ ...p, email: e.target.value }))} placeholder={user?.email || 'deine@email.de'} />
+                  <span style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--warm-gray)' }}>Leer lassen = an deine eigene Adresse ({user?.email || '—'})</span>
+                </div>
+              </div>
+
+              {alertTestMsg && (
+                <div style={{ padding: '10px 14px', borderRadius: 8, fontSize: 13, marginBottom: 12, background: alertTestMsg.type === 'success' ? 'rgba(22,163,74,0.08)' : 'rgba(192,57,43,0.08)', color: alertTestMsg.type === 'success' ? '#15803d' : '#b91c1c' }}>
+                  {alertTestMsg.text}
+                </div>
+              )}
+
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button className="lager-btn" onClick={testAlertEmail} disabled={!alertPrefs.enabled}>Test-Mail senden</button>
+                <button className="lager-btn primary" onClick={saveAlertPrefs} disabled={savingAlerts}>{savingAlerts ? 'Speichern…' : 'Speichern'}</button>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 18 }}>
               <button className="lager-btn" onClick={() => setShowSettingsModal(false)}>Schließen</button>
             </div>
           </div>
