@@ -1,28 +1,50 @@
 // PocketBase hook: Lager-Benachrichtigungen  (PocketBase v0.23+ API)
 //
 // Pro-Nutzer konfigurierbarer täglicher E-Mail-Digest über Artikel unter
-// Mindestbestand sowie abgelaufene / bald ablaufende Artikel.
+// Mindestbestand sowie abgelaufene / bald ablaufende Artikel — im LBF-Design.
 //
 // Einstellungen liegen je Nutzer im users-Feld "lager_alerts" (JSON):
-//   {
-//     "enabled":  true,        // Benachrichtigungen an/aus (Opt-in)
-//     "low":      true,        // Warnung: unter Mindestbestand
-//     "expired":  true,        // Warnung: abgelaufen
-//     "expiring": true,        // Warnung: läuft bald ab
-//     "leadDays": 30,          // Vorlaufzeit MHD in Tagen
-//     "email":    ""           // optional abweichende Empfänger-Adresse
-//   }
+//   { "enabled":true, "low":true, "expired":true, "expiring":true, "leadDays":30, "email":"" }
 //
-// Aktiv, sobald in PocketBase SMTP konfiguriert ist (Settings -> Mail settings).
+// Aktiv, sobald SMTP konfiguriert ist (bei euch: Brevo-Relay).
 //
-// Manuell testen (als eingeloggter Nutzer der Organisation):
-//   GET /lager/alerts-test/{orgId}        -> zeigt nur die eigene Vorschau
-//   GET /lager/alerts-test/{orgId}?send=1 -> sendet die Test-Mail an dich
+// Testen (als eingeloggter Nutzer der Organisation):
+//   GET /lager/alerts-test/{orgId}?send=1
 //
-// HINWEIS (PocketBase-JSVM): Hook-Handler laufen isoliert ohne gemeinsamen
-// Scope — die Berechnung ist daher in beiden Handlern inline.
+// HINWEIS (PocketBase-JSVM): Handler laufen isoliert ohne gemeinsamen Scope —
+// der HTML-Builder ist daher in beiden Handlern inline.
 
 cronAdd("lager-daily-alerts", "0 7 * * *", () => {
+  function buildHtml(low, expired, expiring, lead) {
+    const section = (title, color, arr) => arr.length ? (
+      '<div style="margin-bottom:22px;">' +
+      '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.14em;color:#600812;margin-bottom:10px;">' + title + '</div>' +
+      '<div style="background:#faf9f7;border-left:3px solid ' + color + ';border-radius:8px;padding:4px 14px;">' +
+      arr.map(x => '<div style="font-size:14px;color:#1a0e08;padding:7px 0;border-bottom:1px solid rgba(96,8,18,0.05);">' + x + '</div>').join('') +
+      '</div></div>'
+    ) : ''
+    const body =
+      section('Unter Mindestbestand', '#600812', low) +
+      section('Abgelaufen', '#dc2626', expired) +
+      section('Läuft bald ab (' + lead + ' Tage)', '#d97706', expiring)
+    return '<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>' +
+      '<body style="background-color:#faf9f7;margin:0;padding:0;font-family:\'Atkinson Hyperlegible\',Georgia,serif;">' +
+      '<div style="max-width:600px;margin:0 auto;padding:40px 20px;">' +
+      '<div style="background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 2px 16px rgba(0,0,0,0.08);">' +
+      '<div style="background:#600812;padding:36px 36px 30px;text-align:center;">' +
+      '<div style="font-size:11px;font-weight:700;letter-spacing:0.22em;text-transform:uppercase;color:rgba(253,232,216,0.55);margin-bottom:8px;">Responda</div>' +
+      '<div style="font-size:24px;font-weight:700;font-style:italic;color:#fde8d8;line-height:1.2;">Bestandswarnungen</div>' +
+      '</div>' +
+      '<div style="padding:36px;">' +
+      '<div style="font-size:16px;color:#1a0e08;line-height:1.7;margin-bottom:24px;">Hallo,<br><br>folgende Artikel im Lager brauchen deine Aufmerksamkeit:</div>' +
+      body +
+      '<div style="height:1px;background:rgba(96,8,18,0.08);margin:28px 0;"></div>' +
+      '<div style="font-size:13px;font-style:italic;color:#8a7a68;line-height:1.65;">Du erhältst diese Nachricht, weil du Lager-Benachrichtigungen aktiviert hast. Ändern kannst du das in der Responda-App unter Lager &rarr; Einstellungen.</div>' +
+      '</div>' +
+      '<div style="background:#faf9f7;border-top:1px solid rgba(96,8,18,0.08);padding:20px 36px;text-align:center;font-size:12px;font-style:italic;color:#8a7a68;">Responda &middot; Einsatzbereit.</div>' +
+      '</div></div></body></html>'
+  }
+
   const orgs = $app.findRecordsByFilter("organizations", "id != ''", "", 1000, 0)
   for (const org of orgs) {
     try {
@@ -70,17 +92,12 @@ cronAdd("lager-daily-alerts", "0 7 * * *", () => {
         const email = (p.email && String(p.email).trim()) ? String(p.email).trim() : u.get("email")
         if (!email) continue
 
-        let html = "<h2>Responda Lager – Bestandswarnungen</h2>"
-        if (low.length)      html += "<h3>Unter Mindestbestand</h3><ul><li>" + low.join("</li><li>") + "</li></ul>"
-        if (expired.length)  html += "<h3>Abgelaufen</h3><ul><li>" + expired.join("</li><li>") + "</li></ul>"
-        if (expiring.length) html += "<h3>Läuft bald ab (" + lead + " Tage)</h3><ul><li>" + expiring.join("</li><li>") + "</li></ul>"
-
         try {
           client.send(new MailerMessage({
             from: { address: settings.meta.senderAddress, name: settings.meta.senderName },
             to: [{ address: email }],
             subject: "Responda Lager – Bestandswarnungen",
-            html: html,
+            html: buildHtml(low, expired, expiring, lead),
           }))
         } catch (err) { console.log("lager-alerts send error:", err.message) }
       }
@@ -89,6 +106,36 @@ cronAdd("lager-daily-alerts", "0 7 * * *", () => {
 })
 
 routerAdd("GET", "/lager/alerts-test/{orgId}", (e) => {
+  function buildHtml(low, expired, expiring, lead) {
+    const section = (title, color, arr) => arr.length ? (
+      '<div style="margin-bottom:22px;">' +
+      '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.14em;color:#600812;margin-bottom:10px;">' + title + '</div>' +
+      '<div style="background:#faf9f7;border-left:3px solid ' + color + ';border-radius:8px;padding:4px 14px;">' +
+      arr.map(x => '<div style="font-size:14px;color:#1a0e08;padding:7px 0;border-bottom:1px solid rgba(96,8,18,0.05);">' + x + '</div>').join('') +
+      '</div></div>'
+    ) : ''
+    const body =
+      section('Unter Mindestbestand', '#600812', low) +
+      section('Abgelaufen', '#dc2626', expired) +
+      section('Läuft bald ab (' + lead + ' Tage)', '#d97706', expiring)
+    return '<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>' +
+      '<body style="background-color:#faf9f7;margin:0;padding:0;font-family:\'Atkinson Hyperlegible\',Georgia,serif;">' +
+      '<div style="max-width:600px;margin:0 auto;padding:40px 20px;">' +
+      '<div style="background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 2px 16px rgba(0,0,0,0.08);">' +
+      '<div style="background:#600812;padding:36px 36px 30px;text-align:center;">' +
+      '<div style="font-size:11px;font-weight:700;letter-spacing:0.22em;text-transform:uppercase;color:rgba(253,232,216,0.55);margin-bottom:8px;">Responda</div>' +
+      '<div style="font-size:24px;font-weight:700;font-style:italic;color:#fde8d8;line-height:1.2;">Bestandswarnungen</div>' +
+      '</div>' +
+      '<div style="padding:36px;">' +
+      '<div style="font-size:16px;color:#1a0e08;line-height:1.7;margin-bottom:24px;">Hallo,<br><br>folgende Artikel im Lager brauchen deine Aufmerksamkeit:</div>' +
+      body +
+      '<div style="height:1px;background:rgba(96,8,18,0.08);margin:28px 0;"></div>' +
+      '<div style="font-size:13px;font-style:italic;color:#8a7a68;line-height:1.65;">Du erhältst diese Nachricht, weil du Lager-Benachrichtigungen aktiviert hast. Ändern kannst du das in der Responda-App unter Lager &rarr; Einstellungen.</div>' +
+      '</div>' +
+      '<div style="background:#faf9f7;border-top:1px solid rgba(96,8,18,0.08);padding:20px 36px;text-align:center;font-size:12px;font-style:italic;color:#8a7a68;">Responda &middot; Einsatzbereit.</div>' +
+      '</div></div></body></html>'
+  }
+
   const orgId = e.request.pathValue("orgId")
   const u = e.auth
   if (!u || u.get("organization_id") !== orgId) {
@@ -129,17 +176,13 @@ routerAdd("GET", "/lager/alerts-test/{orgId}", (e) => {
   const email = (p.email && String(p.email).trim()) ? String(p.email).trim() : u.get("email")
   let sent = 0, sendError = null
   if (doSend && (low.length || expiring.length || expired.length) && email) {
-    let html = "<h2>Responda Lager – Bestandswarnungen</h2>"
-    if (low.length)      html += "<h3>Unter Mindestbestand</h3><ul><li>" + low.join("</li><li>") + "</li></ul>"
-    if (expired.length)  html += "<h3>Abgelaufen</h3><ul><li>" + expired.join("</li><li>") + "</li></ul>"
-    if (expiring.length) html += "<h3>Läuft bald ab (" + lead + " Tage)</h3><ul><li>" + expiring.join("</li><li>") + "</li></ul>"
     const settings = $app.settings()
     try {
       $app.newMailClient().send(new MailerMessage({
         from: { address: settings.meta.senderAddress, name: settings.meta.senderName },
         to: [{ address: email }],
         subject: "Responda Lager – Bestandswarnungen (Test)",
-        html: html,
+        html: buildHtml(low, expired, expiring, lead),
       }))
       sent = 1
     } catch (err) { sendError = err.message }
