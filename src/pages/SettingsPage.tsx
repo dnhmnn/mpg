@@ -359,6 +359,7 @@ export default function SettingsPage({ user }: SettingsPageProps) {
 
   // Profile
   const [profileName, setProfileName] = useState('')
+  const [profileUsername, setProfileUsername] = useState('')
   const [profilePhone, setProfilePhone] = useState('')
   const [profileMsg, setProfileMsg] = useState('')
 
@@ -391,6 +392,7 @@ export default function SettingsPage({ user }: SettingsPageProps) {
   useEffect(() => {
     if (user) {
       setProfileName(user.name || '')
+      setProfileUsername(user.username || '')
       setProfilePhone(user.phone || '')
     }
   }, [user])
@@ -402,15 +404,22 @@ export default function SettingsPage({ user }: SettingsPageProps) {
 
   async function saveProfile() {
     if (!user) return
+    const uname = profileUsername.trim().toLowerCase()
+    if (uname && !/^[a-z0-9_.-]{3,32}$/.test(uname)) {
+      setProfileMsg('❌ Benutzername: 3–32 Zeichen, nur Buchstaben, Zahlen, _ . -')
+      return
+    }
     try {
       await pb.collection('users').update(user.id, {
         name: profileName,
+        username: uname || null,
         phone: profilePhone
       })
       setProfileMsg('✅ Profil gespeichert!')
       setTimeout(() => setProfileMsg(''), 3000)
     } catch (e: any) {
-      setProfileMsg('❌ Fehler: ' + e.message)
+      if (e?.data?.username) setProfileMsg('❌ Benutzername bereits vergeben')
+      else setProfileMsg('❌ Fehler: ' + e.message)
     }
   }
 
@@ -656,6 +665,20 @@ export default function SettingsPage({ user }: SettingsPageProps) {
             readOnly
             style={{ ...S.fieldInputReadonly, width: '100%' }}
           />
+        </div>
+        <div style={S.field}>
+          <div style={S.fieldLabel}>Benutzername</div>
+          <input
+            type="text"
+            value={profileUsername}
+            onChange={(e) => setProfileUsername(e.target.value.toLowerCase().replace(/\s/g, ''))}
+            placeholder="benutzername (optional)"
+            autoComplete="username"
+            style={{ ...S.fieldInput, width: '100%' }}
+          />
+          <div style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--warm-gray)', marginTop: 4 }}>
+            3–32 Zeichen, nur a–z, 0–9, _ . — damit kannst du dich statt mit E-Mail anmelden
+          </div>
         </div>
         <div style={S.field}>
           <div style={S.fieldLabel}>Name</div>
