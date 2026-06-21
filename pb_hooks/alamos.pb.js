@@ -1,36 +1,35 @@
-// PocketBase hook: Alamos FE2 Webhook-Empfang
+// PocketBase hook: Alamos FE2 Webhook-Empfang  (PocketBase v0.23+ API)
 //
 // Alamos (FE2) sendet bei Alarmierung einen HTTP-POST an:
 //   https://api.responda.systems/alamos/<organization_id>
 //
 // Dieser Hook legt daraus automatisch einen Einsatz in der Collection
 // "einsaetze" an. Die organization_id steckt im URL-Pfad, sodass jede
-// Organisation ihre eigene, fertig vorbereitete Webhook-URL kopieren kann
-// (siehe Alamos-Konfiguration in der Einsaetze-Seite).
+// Organisation ihre eigene, fertig vorbereitete Webhook-URL kopieren kann.
 //
 // Felder der Collection "einsaetze" (müssen existieren):
 //   unit (text), keyword (text), adresse (text), datum (date),
 //   status (select: aktiv/abgeschlossen/abgebrochen), organization_id (text/relation),
-//   alamos_id (text), karte_geojson (text), interne_vermerke (text)
+//   alamos_id (text)
 //
 // Der Body von Alamos ist frei konfigurierbar — daher akzeptieren wir mehrere
 // gängige Feldnamen (deutsch/englisch). Mindestens "unit" und "keyword" sollten
 // in Alamos aktiviert sein.
 
-routerAdd("POST", "/alamos/:orgId", (c) => {
-  const orgId = c.pathParam("orgId")
+routerAdd("POST", "/alamos/{orgId}", (e) => {
+  const orgId = e.request.pathValue("orgId")
   if (!orgId) {
-    return c.json(400, { success: false, error: "organization_id fehlt in der URL" })
+    return e.json(400, { success: false, error: "organization_id fehlt in der URL" })
   }
 
   // Organisation prüfen, damit falsch eingetragene URLs sofort auffallen
   try {
-    $app.dao().findRecordById("organizations", orgId)
-  } catch (e) {
-    return c.json(404, { success: false, error: "Unbekannte organization_id: " + orgId })
+    $app.findRecordById("organizations", orgId)
+  } catch (err) {
+    return e.json(404, { success: false, error: "Unbekannte organization_id: " + orgId })
   }
 
-  const body = $apis.requestInfo(c).data || {}
+  const body = e.requestInfo().body || {}
 
   // Feld-Mapping mit Aliassen (Alamos-Platzhalter sind frei benannt)
   const pick = (...keys) => {
@@ -64,21 +63,21 @@ routerAdd("POST", "/alamos/:orgId", (c) => {
   // Doppelte Alarme vermeiden: existiert dieser alamos_id für die Org schon?
   if (alamosId) {
     try {
-      const existing = $app.dao().findFirstRecordByFilter(
+      const existing = $app.findFirstRecordByFilter(
         "einsaetze",
         "organization_id = {:org} && alamos_id = {:aid}",
         { org: orgId, aid: alamosId }
       )
       if (existing) {
-        return c.json(200, { success: true, duplicate: true, id: existing.id })
+        return e.json(200, { success: true, duplicate: true, id: existing.id })
       }
-    } catch (e) {
+    } catch (err) {
       // kein Treffer -> normal weiter
     }
   }
 
   try {
-    const collection = $app.dao().findCollectionByNameOrId("einsaetze")
+    const collection = $app.findCollectionByNameOrId("einsaetze")
     const record = new Record(collection)
     record.set("unit", unit || "Unbekannt")
     record.set("keyword", keyword)
@@ -87,10 +86,10 @@ routerAdd("POST", "/alamos/:orgId", (c) => {
     record.set("status", "aktiv")
     record.set("organization_id", orgId)
     record.set("alamos_id", alamosId)
-    $app.dao().saveRecord(record)
-    return c.json(200, { success: true, id: record.id })
-  } catch (e) {
-    console.log("alamos webhook error:", e.message)
-    return c.json(500, { success: false, error: e.message })
+    $app.save(record)
+    return e.json(200, { success: true, id: record.id })
+  } catch (err) {
+    console.log("alamos webhook error:", err.message)
+    return e.json(500, { success: false, error: err.message })
   }
 })
