@@ -10,7 +10,7 @@ export default function Login() {
 
   const [step, setStep] = useState<'login' | 'mfa' | 'reset'>('login')
 
-  const [email, setEmail] = useState('')
+  const [identifier, setIdentifier] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -53,7 +53,7 @@ export default function Login() {
       setError('Zeitüberschreitung - Bitte versuche es erneut')
     }, 10000)
     try {
-      const authData = await pb.collection('users').authWithPassword(email, password)
+      const authData = await pb.collection('users').authWithPassword(identifier, password)
       clearTimeout(timeoutId)
       await finishLogin(authData.record)
     } catch (err: any) {
@@ -61,7 +61,7 @@ export default function Login() {
       const pendingMfaId = err.response?.mfaId
       if (pendingMfaId) {
         try {
-          const result = await (pb.collection('users') as any).requestOTP(email)
+          const result = await (pb.collection('users') as any).requestOTP(identifier)
           setMfaId(pendingMfaId)
           setOtpId(result.otpId)
           setStep('mfa')
@@ -171,9 +171,9 @@ export default function Login() {
 
             <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div>
-                <label style={{ display: 'block', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: '#600812', marginBottom: 6 }}>E-Mail</label>
-                <input className="l-input" type="email" value={email} onChange={e => setEmail(e.target.value)}
-                  placeholder="deine@email.de" required disabled={loading} />
+                <label style={{ display: 'block', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: '#600812', marginBottom: 6 }}>E-Mail oder Benutzername</label>
+                <input className="l-input" type="text" autoComplete="username" value={identifier} onChange={e => setIdentifier(e.target.value)}
+                  placeholder="email@beispiel.de oder benutzername" required disabled={loading} />
               </div>
               <div>
                 <label style={{ display: 'block', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: '#600812', marginBottom: 6 }}>Passwort</label>
@@ -203,7 +203,7 @@ export default function Login() {
               </button>
             </form>
 
-            <button onClick={() => { setStep('reset'); setResetEmail(email) }}
+            <button onClick={() => { setStep('reset'); setResetEmail(identifier.includes('@') ? identifier : '') }}
               style={{ display: 'block', margin: '18px auto 0', background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, fontStyle: 'italic', color: 'var(--warm-gray)', fontFamily: 'inherit' }}>
               Passwort vergessen?
             </button>
@@ -222,7 +222,7 @@ export default function Login() {
               <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.14em', color: '#600812', marginBottom: 6 }}>Sicherheit</div>
               <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 22, color: 'var(--lbf-text)', lineHeight: 1.2 }}>Code eingeben</div>
               <div style={{ fontStyle: 'italic', fontSize: 13, color: 'var(--warm-gray)', marginTop: 4 }}>
-                Wir haben einen Code an <span style={{ color: 'var(--lbf-text)', fontWeight: 700 }}>{email}</span> gesendet
+                Wir haben einen Code an deine hinterlegte E-Mail-Adresse gesendet
               </div>
             </div>
 
