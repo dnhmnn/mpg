@@ -123,22 +123,37 @@ const EMPTY_ITEM_FORM = {
 
 function BarcodeScanner({ onDetect, onError }: { onDetect: (code: string) => void; onError: (msg: string) => void }) {
   const videoRef = useRef<HTMLVideoElement>(null)
+  const controlsRef = useRef<IScannerControls | null>(null)
   const onDetectRef = useRef(onDetect)
   const onErrorRef = useRef(onError)
   onDetectRef.current = onDetect
   onErrorRef.current = onError
 
+  const [torchOn, setTorchOn] = useState(false)
+  const [torchAvailable, setTorchAvailable] = useState(false)
+  const [manualCode, setManualCode] = useState('')
+
   useEffect(() => {
-    let controls: IScannerControls | null = null
     let stopped = false
     let fired = false
-    // Decoder erst beim Öffnen der Kamera nachladen, hält das Haupt-Bundle unter dem PWA-Precache-Limit
-    import('@zxing/browser')
-      .then(({ BrowserMultiFormatReader }) => {
+    // Decoder + Formate erst beim Öffnen nachladen (hält das Haupt-Bundle klein)
+    Promise.all([import('@zxing/browser'), import('@zxing/library')])
+      .then(([{ BrowserMultiFormatReader }, { DecodeHintType, BarcodeFormat }]) => {
         if (stopped) return undefined
-        const reader = new BrowserMultiFormatReader()
+        // Nur die tatsächlich relevanten Formate -> schneller & treffsicherer
+        const hints = new Map()
+        hints.set(DecodeHintType.POSSIBLE_FORMATS, [
+          BarcodeFormat.EAN_13, BarcodeFormat.EAN_8,
+          BarcodeFormat.UPC_A, BarcodeFormat.UPC_E,
+          BarcodeFormat.CODE_128, BarcodeFormat.CODE_39,
+          BarcodeFormat.ITF, BarcodeFormat.CODABAR,
+          BarcodeFormat.QR_CODE, BarcodeFormat.DATA_MATRIX,
+        ])
+        hints.set(DecodeHintType.TRY_HARDER, true)
+        const reader = new BrowserMultiFormatReader(hints, { delayBetweenScanAttempts: 100 })
         return reader.decodeFromConstraints(
-          { video: { facingMode: 'environment' } },
+          // Hohe Auflösung -> dünne Barcode-Striche bleiben scharf
+          { video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } } },
           videoRef.current || undefined,
           (result, _err, c) => {
             if (result && !fired && !stopped) {
@@ -151,20 +166,58 @@ function BarcodeScanner({ onDetect, onError }: { onDetect: (code: string) => voi
       })
       .then(c => {
         if (!c) return
-        controls = c
-        if (stopped) c.stop()
+        controlsRef.current = c
+        if (stopped) { c.stop(); return }
+        try {
+          // Dauer-Autofokus aktivieren (best effort, je nach Gerät)
+          c.streamVideoConstraintsApply?.({ advanced: [{ focusMode: 'continuous' }] } as unknown as MediaTrackConstraints)
+          // Taschenlampe verfügbar?
+          const caps = c.streamVideoCapabilitiesGet?.((t) => [t]) as unknown as { torch?: boolean } | undefined
+          if (caps && caps.torch) setTorchAvailable(true)
+        } catch { /* optionale Features */ }
       })
       .catch(() => {
         if (!stopped) onErrorRef.current('Kamera nicht verfügbar — bitte Kamerazugriff im Browser erlauben.')
       })
-    return () => { stopped = true; controls?.stop() }
+    return () => { stopped = true; controlsRef.current?.stop() }
   }, [])
 
+  async function toggleTorch() {
+    try {
+      await controlsRef.current?.switchTorch?.(!torchOn)
+      setTorchOn(v => !v)
+    } catch { /* Torch wird nicht unterstützt */ }
+  }
+
   return (
-    <div style={{ position: 'relative' }}>
-      <video ref={videoRef} muted playsInline style={{ width: '100%', aspectRatio: '4 / 3', objectFit: 'cover', borderRadius: 12, background: '#000', display: 'block' }} />
-      <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
-        <div style={{ width: '70%', height: '45%', border: '2px solid rgba(253,232,216,0.9)', borderRadius: 12 }} />
+    <div>
+      <div style={{ position: 'relative' }}>
+        <video ref={videoRef} muted playsInline style={{ width: '100%', aspectRatio: '4 / 3', objectFit: 'cover', borderRadius: 12, background: '#000', display: 'block' }} />
+        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
+          <div style={{ width: '78%', height: '38%', border: '2px solid rgba(253,232,216,0.9)', borderRadius: 12, boxShadow: '0 0 0 9999px rgba(0,0,0,0.28)' }} />
+        </div>
+        {torchAvailable && (
+          <button type="button" onClick={toggleTorch} style={{ position: 'absolute', bottom: 10, right: 10, background: torchOn ? '#fde8d8' : 'rgba(26,14,8,0.6)', color: torchOn ? '#600812' : '#fde8d8', border: 'none', borderRadius: 999, padding: '7px 14px', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>
+            {torchOn ? 'Licht aus' : 'Licht an'}
+          </button>
+        )}
+      </div>
+      <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', margin: '10px 0 8px', textAlign: 'center' as const }}>
+        Barcode mittig in den Rahmen, Kamera ca. 10–15 cm entfernt
+      </div>
+      {/* Manuelle Eingabe als zuverlässiger Notnagel */}
+      <div style={{ display: 'flex', gap: 8 }}>
+        <input
+          className="lager-input"
+          style={{ flex: 1 }}
+          type="text"
+          inputMode="numeric"
+          placeholder="Code manuell eingeben"
+          value={manualCode}
+          onChange={e => setManualCode(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter' && manualCode.trim()) onDetectRef.current(manualCode.trim()) }}
+        />
+        <button className="lager-btn primary" disabled={!manualCode.trim()} onClick={() => manualCode.trim() && onDetectRef.current(manualCode.trim())}>OK</button>
       </div>
     </div>
   )
