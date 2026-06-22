@@ -150,9 +150,19 @@ export default function Einladung() {
     try {
       let saved: { id: string } | null = null
 
-      // 1. Bekannter Datensatz aus diesem Browser -> aktualisieren
+      // 0. Bevorzugt: serverseitiger Upsert-Hook (aktualisiert sicher, geräteübergreifend)
+      try {
+        const res = await pb.send('/einladung/respond', {
+          method: 'POST',
+          body: { token, name: trimmedName, status },
+          requestKey: `rsvp-hook-${Date.now()}`,
+        }) as { id?: string; success?: boolean }
+        if (res?.success && res.id) saved = { id: res.id }
+      } catch { saved = null }
+
+      // 1. Fallback (Hook nicht verfügbar): bekannter Datensatz aus diesem Browser -> aktualisieren
       const savedId = localStorage.getItem(`einladung_${token}_id`)
-      if (savedId) {
+      if (!saved && savedId) {
         try {
           saved = await pb.collection('ausbildungen_einladungen').update(savedId, payload, { requestKey: `rsvp-upd-${Date.now()}` })
         } catch { saved = null }
