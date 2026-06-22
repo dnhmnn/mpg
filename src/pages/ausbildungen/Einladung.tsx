@@ -119,6 +119,8 @@ export default function Einladung() {
   useEffect(() => {
     if (!token) { setError('Ungültiger Link.'); setLoading(false); return }
     const saved = localStorage.getItem(`einladung_${token}`)
+    const savedName = localStorage.getItem(`einladung_${token}_name`)
+    if (savedName) setName(savedName)
     if (saved === 'zusagen' || saved === 'absagen') setSubmitted(saved as 'zusagen' | 'absagen')
     loadToken()
   }, [token])
@@ -140,12 +142,41 @@ export default function Einladung() {
     if (!name.trim()) { alert('Bitte gib deinen Namen ein.'); return }
     if (!record || !token) return
     setSubmitting(true)
+    const trimmedName = name.trim()
+    const payload = {
+      token, termin_id: record.termin_id, name: trimmedName, status,
+      organization_id: record.organization_id,
+    }
     try {
-      await pb.collection('ausbildungen_einladungen').create({
-        token, termin_id: record.termin_id, name: name.trim(), status,
-        organization_id: record.organization_id
-      }, { requestKey: `rsvp-${Date.now()}` })
+      let saved: { id: string } | null = null
+
+      // 1. Bekannter Datensatz aus diesem Browser -> aktualisieren
+      const savedId = localStorage.getItem(`einladung_${token}_id`)
+      if (savedId) {
+        try {
+          saved = await pb.collection('ausbildungen_einladungen').update(savedId, payload, { requestKey: `rsvp-upd-${Date.now()}` })
+        } catch { saved = null }
+      }
+
+      // 2. Sonst: bestehende Antwort gleichen Namens für diesen Token suchen
+      if (!saved) {
+        try {
+          const existing = await pb.collection('ausbildungen_einladungen').getFirstListItem(
+            `token = "${token}" && name = "${trimmedName.replace(/"/g, '')}"`,
+            { requestKey: `rsvp-find-${Date.now()}` }
+          )
+          saved = await pb.collection('ausbildungen_einladungen').update(existing.id, payload, { requestKey: `rsvp-upd2-${Date.now()}` })
+        } catch { saved = null }
+      }
+
+      // 3. Sonst: neu anlegen
+      if (!saved) {
+        saved = await pb.collection('ausbildungen_einladungen').create(payload, { requestKey: `rsvp-${Date.now()}` })
+      }
+
       localStorage.setItem(`einladung_${token}`, status)
+      localStorage.setItem(`einladung_${token}_name`, trimmedName)
+      if (saved?.id) localStorage.setItem(`einladung_${token}_id`, saved.id)
       setSubmitted(status)
     } catch (e: any) {
       alert('Fehler: ' + e.message)
@@ -221,6 +252,20 @@ export default function Einladung() {
               </div>
             </div>
             {submitted === 'zusagen' && record && <CalendarButtons record={record} />}
+            <button
+              onClick={() => setSubmitted(null)}
+              style={{
+                width: '100%', padding: '12px', borderRadius: 12,
+                border: '1px solid var(--lbf-border)', background: 'transparent',
+                color: 'var(--warm-gray)', fontWeight: 700, fontSize: 14,
+                cursor: 'pointer', fontFamily: 'inherit',
+              }}
+            >
+              Antwort ändern
+            </button>
+            <div style={{ textAlign: 'center', fontSize: 12, fontStyle: 'italic', color: 'var(--warm-gray)', marginTop: -10 }}>
+              Du kannst deine Rückmeldung jederzeit anpassen.
+            </div>
           </div>
         </div>
       </div>
