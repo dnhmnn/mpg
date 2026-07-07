@@ -1,9 +1,12 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, lazy, Suspense } from 'react'
 import QRCode from 'qrcode'
 import type { IScannerControls } from '@zxing/browser'
 import { pb } from '../lib/pocketbase'
 import { useAuth } from '../hooks/useAuth'
 import StatusBar from '../components/StatusBar'
+
+// Recharts erst beim Öffnen der Statistik laden (eigener Chunk)
+const LagerStats = lazy(() => import('../components/LagerStats'))
 
 
 interface InventoryItem {
@@ -314,6 +317,9 @@ export default function Lager() {
   const [recallQuery, setRecallQuery] = useState('')
   const [recallResults, setRecallResults] = useState<StockItem[] | null>(null)
   const [recallLoading, setRecallLoading] = useState(false)
+
+  // Statistik
+  const [showStatsModal, setShowStatsModal] = useState(false)
 
   // Umlagerung zwischen Standorten
   const [showTransferModal, setShowTransferModal] = useState(false)
@@ -1824,6 +1830,10 @@ export default function Lager() {
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
           <span className="lager-action-label">Rückruf</span>
         </button>
+        <button className="lager-action-btn" onClick={() => setShowStatsModal(true)} title="Statistik & Auswertungen">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="4" y1="20" x2="20" y2="20"/><rect x="6" y="10" width="3" height="7" rx="0.5"/><rect x="11" y="5" width="3" height="12" rx="0.5"/><rect x="16" y="13" width="3" height="4" rx="0.5"/></svg>
+          <span className="lager-action-label">Statistik</span>
+        </button>
       </div>
 
       {/* TOAST */}
@@ -2930,6 +2940,22 @@ export default function Lager() {
             )}
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
               <button className="lager-btn" onClick={() => setHistoryKit(null)}>Schließen</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* STATISTIK MODAL */}
+      {showStatsModal && (
+        <div className="lager-modal-overlay" onClick={() => setShowStatsModal(false)}>
+          <div className="lager-modal" onClick={(e) => e.stopPropagation()}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 4 }}>Statistik</div>
+            <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginBottom: 16 }}>Verbrauch und Buchungen über alle Standorte (ohne Umlagerungen)</div>
+            <Suspense fallback={<div style={{ textAlign: 'center', padding: 32, color: 'var(--warm-gray)', fontStyle: 'italic' }}>Lade Statistik…</div>}>
+              {user?.organization_id && <LagerStats orgId={user.organization_id} items={allItems} />}
+            </Suspense>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
+              <button className="lager-btn" onClick={() => setShowStatsModal(false)}>Schließen</button>
             </div>
           </div>
         </div>
