@@ -307,6 +307,12 @@ export default function Lager() {
   const [scanError, setScanError] = useState<string | null>(null)
   const [showOrderModal, setShowOrderModal] = useState(false)
   const [qrLabel, setQrLabel] = useState<{ item: InventoryItem; dataUrl: string } | null>(null)
+
+  // Rückruf / Chargen-Suche
+  const [showRecallModal, setShowRecallModal] = useState(false)
+  const [recallQuery, setRecallQuery] = useState('')
+  const [recallResults, setRecallResults] = useState<StockItem[] | null>(null)
+  const [recallLoading, setRecallLoading] = useState(false)
   
   const [newLocationName, setNewLocationName] = useState('')
 
@@ -629,7 +635,7 @@ export default function Lager() {
     }
   }
 
-  async function adjustQty(itemId: string, delta: number, expiryParam?: string) {
+  async function adjustQty(itemId: string, delta: number, expiryParam?: string, batchParam?: string) {
     const item = displayItems.find(it => it.id === itemId)
     if (!item) return
 
@@ -646,20 +652,23 @@ export default function Lager() {
 
       if (delta > 0) {
         const expiry = expiryParam || null
+        const batch = (batchParam || '').trim()
         await pb.collection('inventory_stock').create({
           item_id: itemId,
           location_id: currentLocationId,
           quantity: delta,
           expiry_date: expiry || null,
+          batch: batch || null,
           organization_id: user?.organization_id
         })
-        
+
         await pb.collection('inventory_transactions').create({
           item_id: itemId,
           location_id: currentLocationId,
           type: 'einbuchung',
           quantity: delta,
           expiry_date: expiry || null,
+          note: batch ? `Charge ${batch}` : '',
           user: user?.email || user?.id,
           organization_id: user?.organization_id
         })
@@ -877,6 +886,47 @@ export default function Lager() {
       showMsg('✅ Bestellliste kopiert!', 'success')
     } catch {
       alert(text)
+    }
+  }
+
+  // RÜCKRUF / CHARGEN-SUCHE (über alle Standorte der Organisation)
+  async function searchRecall() {
+    const q = recallQuery.trim()
+    if (!q) { alert('Chargen-Nr. eingeben'); return }
+    setRecallLoading(true)
+    setRecallResults(null)
+    try {
+      const list = await pb.collection('inventory_stock').getFullList<StockItem>({
+        filter: `organization_id = "${user?.organization_id}" && batch ~ "${q.replace(/"/g, '')}"`,
+        sort: 'location_id',
+      })
+      setRecallResults(list)
+    } catch (e: any) {
+      alert('Fehler: ' + e.message)
+    } finally {
+      setRecallLoading(false)
+    }
+  }
+
+  async function recallStockEntry(s: StockItem) {
+    const itemName = allItems.find(i => i.id === s.item_id)?.name || 'Artikel'
+    if (!confirm(`${s.quantity}x „${itemName}" (Charge ${s.batch}) wegen Rückruf ausbuchen?`)) return
+    try {
+      await pb.collection('inventory_stock').delete(s.id)
+      await pb.collection('inventory_transactions').create({
+        item_id: s.item_id,
+        location_id: s.location_id,
+        type: 'ausbuchung',
+        quantity: -s.quantity,
+        note: `Rückruf Charge ${s.batch}`,
+        user: user?.email || user?.id,
+        organization_id: user?.organization_id,
+      })
+      setRecallResults(prev => prev ? prev.filter(x => x.id !== s.id) : prev)
+      await loadStock()
+      showMsg(`✅ Charge ${s.batch} ausgebucht (Rückruf)`, 'success')
+    } catch (e: any) {
+      alert('Fehler: ' + e.message)
     }
   }
 
@@ -1321,7 +1371,7 @@ export default function Lager() {
     setSavingBuchung(true)
     const delta = buchungType === 'ein' ? buchungQty : -buchungQty
     try {
-      await adjustQty(selectedBuchungItem, delta, buchungExpiry || undefined)
+      await adjustQty(selectedBuchungItem, delta, buchungExpiry || undefined, buchungType === 'ein' ? buchungBatch : undefined)
       setShowBuchungModal(false)
       setSelectedBuchungItem('')
       setBuchungQty(1)
@@ -1663,6 +1713,10 @@ export default function Lager() {
         <button className="lager-action-btn" onClick={() => { loadKits(); setShowKitsModal(true) }} title="Fahrzeug- & Rucksack-Checks">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
           <span className="lager-action-label">Checks</span>
+        </button>
+        <button className="lager-action-btn" onClick={() => { setRecallQuery(''); setRecallResults(null); setShowRecallModal(true) }} title="Rückruf: Charge suchen">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          <span className="lager-action-label">Rückruf</span>
         </button>
       </div>
 
@@ -2214,10 +2268,17 @@ export default function Lager() {
               <input className="lager-input" type="number" value={buchungQty || ''} onChange={(e) => setBuchungQty(Number(e.target.value))} min="1" />
             </div>
             {buchungType === 'ein' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14 }}>
-                <label style={{ fontSize: 11, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.1em' }}>Ablaufdatum (optional)</label>
-                <input className="lager-input" type="date" value={buchungExpiry} onChange={(e) => setBuchungExpiry(e.target.value)} />
-              </div>
+              <>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14 }}>
+                  <label style={{ fontSize: 11, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.1em' }}>Ablaufdatum (optional)</label>
+                  <input className="lager-input" type="date" value={buchungExpiry} onChange={(e) => setBuchungExpiry(e.target.value)} />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14 }}>
+                  <label style={{ fontSize: 11, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.1em' }}>Chargen-Nr. (optional)</label>
+                  <input className="lager-input" type="text" value={buchungBatch} onChange={(e) => setBuchungBatch(e.target.value)} placeholder="LOT / Charge vom Etikett" />
+                  <span style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--warm-gray)' }}>Ermöglicht bei Hersteller-Rückrufen die schnelle Suche, wo die Charge liegt.</span>
+                </div>
+              </>
             )}
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 8 }}>
               <button className="lager-btn" onClick={() => setShowBuchungModal(false)}>Abbrechen</button>
@@ -2266,6 +2327,25 @@ export default function Lager() {
               <input className="lager-input" type="date" value={detailExpiry} onChange={(e) => setDetailExpiry(e.target.value)} />
             </div>
             <button className="lager-btn primary" style={{ width: '100%', marginBottom: 20 }} onClick={saveItemDetail}>Speichern</button>
+
+            {detailStockEntries.length > 0 && (
+              <>
+                <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 10 }}>Bestände / Chargen</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 18 }}>
+                  {detailStockEntries.map(s => (
+                    <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', background: 'rgba(250,249,247,0.8)', borderRadius: 8, fontSize: 13 }}>
+                      <span style={{ fontWeight: 700, color: 'var(--lbf-text)', minWidth: 44 }}>{s.quantity} {detailItem.unit || 'Stk.'}</span>
+                      <span style={{ fontStyle: 'italic', color: s.batch ? '#600812' : 'var(--warm-gray)', fontWeight: s.batch ? 700 : 400 }}>
+                        {s.batch ? `Charge ${s.batch}` : 'ohne Charge'}
+                      </span>
+                      <span style={{ marginLeft: 'auto', fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)' }}>
+                        {s.expiry_date ? `MHD ${new Date(s.expiry_date).toLocaleDateString('de-DE')}` : ''}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
 
             <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 10 }}>Verlauf</div>
             <div style={{ maxHeight: 200, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -2720,6 +2800,68 @@ export default function Lager() {
             )}
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
               <button className="lager-btn" onClick={() => setHistoryKit(null)}>Schließen</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* RÜCKRUF / CHARGEN-SUCHE MODAL */}
+      {showRecallModal && (
+        <div className="lager-modal-overlay" onClick={() => setShowRecallModal(false)}>
+          <div className="lager-modal" onClick={(e) => e.stopPropagation()}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 4 }}>Rückruf — Chargen-Suche</div>
+            <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginBottom: 14 }}>
+              Findet eine Charge über alle Standorte der Organisation — z.B. bei einem Hersteller-Rückruf.
+            </div>
+            <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+              <input
+                className="lager-input"
+                style={{ flex: 1 }}
+                type="text"
+                placeholder="Chargen-Nr. / LOT eingeben…"
+                value={recallQuery}
+                onChange={e => setRecallQuery(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') searchRecall() }}
+              />
+              <button className="lager-btn primary" onClick={searchRecall} disabled={recallLoading}>{recallLoading ? 'Suche…' : 'Suchen'}</button>
+            </div>
+
+            {recallResults !== null && (
+              recallResults.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: 20, color: 'var(--warm-gray)', fontStyle: 'italic', background: 'rgba(22,163,74,0.05)', borderRadius: 10 }}>
+                  Keine Bestände mit dieser Charge — nichts betroffen. ✓
+                </div>
+              ) : (
+                <>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: '#b91c1c', marginBottom: 8 }}>
+                    {recallResults.length} betroffene(r) Bestand/Bestände gefunden:
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 340, overflowY: 'auto' }}>
+                    {recallResults.map(s => {
+                      const item = allItems.find(i => i.id === s.item_id)
+                      const loc = locations.find(l => l.id === s.location_id)
+                      return (
+                        <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', border: '1px solid rgba(220,38,38,0.25)', borderLeft: '3px solid #dc2626', borderRadius: 10 }}>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--lbf-text)' }}>{item?.name || 'Unbekannter Artikel'}</div>
+                            <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginTop: 2 }}>
+                              {s.quantity} {item?.unit || 'Stk.'} · {loc?.name || 'Standort?'} · Charge {s.batch}
+                              {s.expiry_date ? ` · MHD ${new Date(s.expiry_date).toLocaleDateString('de-DE')}` : ''}
+                            </div>
+                          </div>
+                          <button className="lager-btn" style={{ fontSize: 12, padding: '6px 10px', color: '#dc2626', borderColor: 'rgba(220,38,38,0.3)' }} onClick={() => recallStockEntry(s)}>
+                            Ausbuchen
+                          </button>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </>
+              )
+            )}
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
+              <button className="lager-btn" onClick={() => setShowRecallModal(false)}>Schließen</button>
             </div>
           </div>
         </div>
