@@ -2,7 +2,6 @@ import type { Patient, Nacherfassung } from './types'
 import { parsePayload, fmtDateTime } from './types'
 import { PubSection } from '../public/pubStyles'
 import ProtokollView from '../../components/ProtokollView'
-import { generateDiviPdf } from '../../lib/diviPdf'
 
 interface Props {
   doc: Patient | Nacherfassung
@@ -379,16 +378,6 @@ export default function DetailsModal({ doc, type, onClose, onEdit }: Props) {
               <button onClick={onEdit} title="Bearbeiten" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, background: '#c0392b', border: 'none', color: '#fff', fontWeight: 600, fontSize: 14, cursor: 'pointer', padding: '8px 10px', borderRadius: 8, fontFamily: 'inherit' }}>
                 {pik(<><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></>, 18)}
                 <span className="dm-edit-label">Bearbeiten</span>
-              </button>
-            )}
-            {isPatient && p && (
-              <button
-                onClick={() => generateDiviPdf(p).catch(e => alert('DIVI-PDF fehlgeschlagen: ' + (e?.message || e)))}
-                title="Als DIVI-6.0-Protokoll herunterladen"
-                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, background: 'transparent', border: '0.5px solid var(--border)', borderRadius: 8, color: 'var(--text)', cursor: 'pointer', padding: '8px 10px', fontFamily: 'inherit', fontWeight: 700, fontSize: 12 }}
-              >
-                {pik(<><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="12" x2="12" y2="18"/><polyline points="9 15 12 18 15 15"/></>, 18)}
-                DIVI
               </button>
             )}
             <button onClick={printDoc} title="Drucken / PDF" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'transparent', border: '0.5px solid var(--border)', borderRadius: 8, color: 'var(--text)', cursor: 'pointer', padding: '8px 10px', fontFamily: 'inherit' }}>
