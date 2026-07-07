@@ -14,6 +14,7 @@ const ALL_APPS: Record<string, App> = {
   mpg:          { id: 'mpg',          name: 'MPG',           icon: 'mpg',        url: '/mpg',                       permission: 'dashboard',           color: '#600812', isInternal: true },
   chat:         { id: 'chat',         name: 'Chat',          icon: 'chat',       url: '/chat',                      permission: 'chat',                color: '#3d5c6e', isInternal: true },
   office:       { id: 'office',       name: 'Schreibstube',  icon: 'file-text',  url: '/office',                    permission: 'dateien',             color: '#1e3a8a', isInternal: true },
+  notizen:      { id: 'notizen',      name: 'Notizen',       icon: 'note',       url: '/notizen',                   permission: 'notizen',             color: '#5c3800', isInternal: true },
   settings:     { id: 'settings',     name: 'Einstellungen', icon: 'settings',   url: '#settings',                  permission: 'dashboard',           color: '#8a7a68', isInternal: true },
 }
 

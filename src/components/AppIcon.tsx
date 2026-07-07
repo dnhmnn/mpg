@@ -121,6 +121,14 @@ const icons: Record<string, JSX.Element> = {
       <line x1="8" y1="17" x2="13" y2="17"/>
     </svg>
   ),
+  note: (
+    <svg viewBox="0 0 24 24" {...s}>
+      <path d="M4 4h16v11l-5 5H4V4z"/>
+      <polyline points="15 20 15 15 20 15"/>
+      <line x1="8" y1="9" x2="16" y2="9"/>
+      <line x1="8" y1="13" x2="12" y2="13"/>
+    </svg>
+  ),
 }
 
 export default function AppIcon({ icon }: AppIconProps) {

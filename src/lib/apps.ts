@@ -12,6 +12,7 @@ export const ALL_APPS: Record<string, App> = {
   unitarii:     { id: 'unitarii',     name: 'Benutzer',      icon: 'users',      url: '/unitarii',                  permission: 'unitarii',            color: '#3d0408', isInternal: true },
   mpg:          { id: 'mpg',          name: 'MPG',           icon: 'mpg',        url: '/mpg',                       permission: 'dashboard',           color: '#600812', isInternal: true },
   chat:         { id: 'chat',         name: 'Chat',          icon: 'chat',       url: '/chat',                      permission: 'chat',                color: '#3d5c6e', isInternal: true },
+  notizen:      { id: 'notizen',      name: 'Notizen',       icon: 'note',       url: '/notizen',                   permission: 'notizen',             color: '#5c3800', isInternal: true },
   settings:     { id: 'settings',     name: 'Einstellungen', icon: 'settings',   url: '#settings',                  permission: 'dashboard',           color: '#8a7a68', isInternal: true },
 }
 
@@ -19,7 +20,7 @@ export const ALL_APPS: Record<string, App> = {
 // Werden NICHT mehr für Laufzeit-Zugriffsprüfungen verwendet — einzig user.permissions
 // (+ supervisor + temp_permissions) entscheidet über den Zugriff (siehe hasPermission in Hub.tsx).
 export const ROLES: Record<string, { permissions: Record<string, boolean> }> = {
-  mpg:       { permissions: { dashboard: true, einsaetze: true, lager: true, produktausgabe: true, lernbar: true, ausbildungen_manage: true, dokumente: true, patienten: true, dateien: true, chat: true, unitarii: true } },
+  mpg:       { permissions: { dashboard: true, einsaetze: true, lager: true, produktausgabe: true, lernbar: true, ausbildungen_manage: true, dokumente: true, patienten: true, dateien: true, chat: true, unitarii: true, notizen: true } },
   lager:     { permissions: { dashboard: true, lager: true, produktausgabe: true, dateien: true, chat: true } },
   ausbildung:{ permissions: { dashboard: true, einsaetze: true, lernbar: true, ausbildungen_manage: true, patienten: true, dateien: true, chat: true } },
   qm:        { permissions: { dashboard: true, dokumente: true, dateien: true, chat: true } },
@@ -42,6 +43,7 @@ export const PERM_LABELS: { key: string; label: string }[] = [
   { key: 'unitarii',           label: 'Benutzerverwaltung' },
   { key: 'dashboard',          label: 'MPG-Dashboard' },
   { key: 'chat',               label: 'Chat' },
+  { key: 'notizen',            label: 'Notizen' },
 ]
 
 export const EMPTY_PERMS = Object.fromEntries(PERM_LABELS.map(p => [p.key, false])) as Record<string, boolean>
