@@ -305,6 +305,7 @@ export default function Lager() {
   const [scanTeachCode, setScanTeachCode] = useState<string | null>(null)
   const [scanTeachSearch, setScanTeachSearch] = useState('')
   const [scanError, setScanError] = useState<string | null>(null)
+  const [scanFoundItem, setScanFoundItem] = useState<InventoryItem | null>(null)
   const [showOrderModal, setShowOrderModal] = useState(false)
   const [qrLabel, setQrLabel] = useState<{ item: InventoryItem; dataUrl: string } | null>(null)
 
@@ -825,6 +826,7 @@ export default function Lager() {
     setScanTeachCode(null)
     setScanTeachSearch('')
     setScanError(null)
+    setScanFoundItem(null)
     setShowScanModal(true)
   }
 
@@ -839,13 +841,29 @@ export default function Lager() {
       ? allItems.find(i => i.id === code.slice(QR_ITEM_PREFIX.length))
       : allItems.find(i => i.barcode && i.barcode === code)
     if (item) {
-      setShowScanModal(false)
-      const display = displayItems.find(d => d.id === item.id)
-        || { id: item.id, name: item.name, unit: item.unit, min_stock: getMinStock(item, currentLocationId), qty: 0, notes: item.notes, status: 'ok' as const }
-      openItemDetail(display)
+      // Aktion wählen lassen (Wareneingang, Entnahme oder Details)
+      setScanFoundItem(item)
     } else {
       setScanTeachCode(code)
     }
+  }
+
+  function scanOpenDetail(item: InventoryItem) {
+    setShowScanModal(false)
+    const display = displayItems.find(d => d.id === item.id)
+      || { id: item.id, name: item.name, unit: item.unit, min_stock: getMinStock(item, currentLocationId), qty: 0, notes: item.notes, status: 'ok' as const }
+    openItemDetail(display)
+  }
+
+  function scanOpenBuchung(item: InventoryItem, type: 'ein' | 'aus') {
+    setShowScanModal(false)
+    setBuchungType(type)
+    setSelectedBuchungItem(item.id)
+    setBuchungSearch(item.name)
+    setBuchungQty(1)
+    setBuchungExpiry('')
+    setBuchungBatch('')
+    setShowBuchungModal(true)
   }
 
   async function assignBarcode(item: InventoryItem, code: string) {
@@ -2615,6 +2633,30 @@ export default function Lager() {
             </div>
             {scanError ? (
               <div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#b91c1c', padding: 14, borderRadius: 10, fontSize: 13 }}>{scanError}</div>
+            ) : scanFoundItem ? (
+              <>
+                <div style={{ textAlign: 'center', padding: '6px 0 14px' }}>
+                  <div style={{ fontWeight: 700, fontStyle: 'italic', fontSize: 18, color: 'var(--lbf-text)' }}>{scanFoundItem.name}</div>
+                  <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginTop: 3 }}>
+                    Bestand hier: {displayItems.find(d => d.id === scanFoundItem.id)?.qty ?? 0} {scanFoundItem.unit || 'Stk.'}
+                    {' · '}{locations.find(l => l.id === currentLocationId)?.name || 'Lager'}
+                  </div>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <button className="lager-btn primary" style={{ width: '100%', padding: '12px' }} onClick={() => scanOpenBuchung(scanFoundItem, 'ein')}>
+                    Einbuchen (Wareneingang)
+                  </button>
+                  <button className="lager-btn" style={{ width: '100%', padding: '12px' }} onClick={() => scanOpenBuchung(scanFoundItem, 'aus')}>
+                    Ausbuchen (Entnahme)
+                  </button>
+                  <button className="lager-btn" style={{ width: '100%', padding: '12px' }} onClick={() => scanOpenDetail(scanFoundItem)}>
+                    Details ansehen
+                  </button>
+                  <button className="lager-btn" style={{ width: '100%', padding: '12px', color: 'var(--warm-gray)' }} onClick={() => setScanFoundItem(null)}>
+                    Nächsten Artikel scannen
+                  </button>
+                </div>
+              </>
             ) : scanTeachCode ? (
               <>
                 <div style={{ fontSize: 13, color: 'var(--lbf-text)' }}>Unbekannter Code:</div>
