@@ -313,6 +313,14 @@ export default function Lager() {
   const [recallQuery, setRecallQuery] = useState('')
   const [recallResults, setRecallResults] = useState<StockItem[] | null>(null)
   const [recallLoading, setRecallLoading] = useState(false)
+
+  // Umlagerung zwischen Standorten
+  const [showTransferModal, setShowTransferModal] = useState(false)
+  const [transferItemId, setTransferItemId] = useState('')
+  const [transferSearch, setTransferSearch] = useState('')
+  const [transferQty, setTransferQty] = useState(1)
+  const [transferTargetId, setTransferTargetId] = useState('')
+  const [savingTransfer, setSavingTransfer] = useState(false)
   
   const [newLocationName, setNewLocationName] = useState('')
 
@@ -886,6 +894,82 @@ export default function Lager() {
       showMsg('✅ Bestellliste kopiert!', 'success')
     } catch {
       alert(text)
+    }
+  }
+
+  // UMLAGERUNG zwischen Standorten (Charge/MHD wandern mit, FIFO nach MHD)
+  async function transferStock() {
+    if (!transferItemId) { alert('Bitte Artikel auswählen'); return }
+    if (!transferTargetId || transferTargetId === currentLocationId) { alert('Bitte Ziel-Standort auswählen'); return }
+    if (transferQty <= 0) { alert('Menge muss größer 0 sein'); return }
+    if (savingTransfer) return
+
+    const item = displayItems.find(i => i.id === transferItemId)
+    if (!item || item.qty < transferQty) {
+      alert(`Nicht genügend Bestand am aktuellen Standort (verfügbar: ${item?.qty ?? 0})`)
+      return
+    }
+
+    setSavingTransfer(true)
+    try {
+      const sourceName = locations.find(l => l.id === currentLocationId)?.name || 'Quelle'
+      const targetName = locations.find(l => l.id === transferTargetId)?.name || 'Ziel'
+
+      const stockList = await pb.collection('inventory_stock').getFullList<StockItem>({
+        filter: `item_id = "${transferItemId}" && location_id = "${currentLocationId}"`,
+        sort: 'expiry_date'
+      })
+
+      let remaining = transferQty
+      for (const stock of stockList) {
+        if (remaining <= 0) break
+        const take = Math.min(stock.quantity, remaining)
+
+        // Quelle reduzieren
+        if (stock.quantity - take <= 0) {
+          await pb.collection('inventory_stock').delete(stock.id)
+        } else {
+          await pb.collection('inventory_stock').update(stock.id, { quantity: stock.quantity - take })
+        }
+
+        // Am Ziel anlegen — gleiche Charge + gleiches MHD bleiben erhalten
+        await pb.collection('inventory_stock').create({
+          item_id: transferItemId,
+          location_id: transferTargetId,
+          quantity: take,
+          expiry_date: stock.expiry_date || null,
+          batch: stock.batch || null,
+          organization_id: user?.organization_id,
+        })
+
+        remaining -= take
+      }
+
+      // Protokoll auf beiden Seiten
+      await pb.collection('inventory_transactions').create({
+        item_id: transferItemId, location_id: currentLocationId,
+        type: 'ausbuchung', quantity: -transferQty,
+        note: `Umlagerung → ${targetName}`,
+        user: user?.email || user?.id, organization_id: user?.organization_id,
+      })
+      await pb.collection('inventory_transactions').create({
+        item_id: transferItemId, location_id: transferTargetId,
+        type: 'einbuchung', quantity: transferQty,
+        note: `Umlagerung ← ${sourceName}`,
+        user: user?.email || user?.id, organization_id: user?.organization_id,
+      })
+
+      setShowTransferModal(false)
+      setTransferItemId('')
+      setTransferSearch('')
+      setTransferQty(1)
+      setTransferTargetId('')
+      await loadStock()
+      showMsg(`✅ ${transferQty} ${item.unit || 'Stück'} nach „${targetName}" umgelagert`, 'success')
+    } catch (e: any) {
+      alert('Fehler: ' + e.message)
+    } finally {
+      setSavingTransfer(false)
     }
   }
 
@@ -1713,6 +1797,10 @@ export default function Lager() {
         <button className="lager-action-btn" onClick={() => { loadKits(); setShowKitsModal(true) }} title="Fahrzeug- & Rucksack-Checks">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
           <span className="lager-action-label">Checks</span>
+        </button>
+        <button className="lager-action-btn" onClick={() => { setTransferItemId(''); setTransferSearch(''); setTransferQty(1); setTransferTargetId(''); setShowTransferModal(true) }} title="Umlagerung zwischen Standorten">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 014-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg>
+          <span className="lager-action-label">Umlagern</span>
         </button>
         <button className="lager-action-btn" onClick={() => { setRecallQuery(''); setRecallResults(null); setShowRecallModal(true) }} title="Rückruf: Charge suchen">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
@@ -2800,6 +2888,80 @@ export default function Lager() {
             )}
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
               <button className="lager-btn" onClick={() => setHistoryKit(null)}>Schließen</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* UMLAGERUNG MODAL */}
+      {showTransferModal && (
+        <div className="lager-modal-overlay" onClick={() => setShowTransferModal(false)}>
+          <div className="lager-modal" style={{ maxWidth: 480 }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 4 }}>Umlagerung</div>
+            <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginBottom: 14 }}>
+              Von „{locations.find(l => l.id === currentLocationId)?.name || 'aktuellem Standort'}" an einen anderen Standort — Charge und MHD wandern mit.
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14, position: 'relative' }}>
+              <label style={{ fontSize: 11, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.1em' }}>Artikel *</label>
+              <input
+                className="lager-input"
+                type="text"
+                placeholder="Artikel suchen..."
+                value={transferSearch}
+                onChange={e => { setTransferSearch(e.target.value); setTransferItemId('') }}
+              />
+              {transferSearch && !transferItemId && (
+                <div style={{ maxHeight: 180, overflowY: 'auto', border: '1px solid rgba(96,8,18,0.15)', borderRadius: 8, marginTop: 4, background: 'var(--lbf-card)', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
+                  {displayItems.filter(i => i.qty > 0 && i.name.toLowerCase().includes(transferSearch.toLowerCase())).map(item => (
+                    <div
+                      key={item.id}
+                      onClick={() => { setTransferItemId(item.id); setTransferSearch(item.name) }}
+                      style={{ padding: '9px 14px', cursor: 'pointer', fontSize: 14, borderBottom: '0.5px solid rgba(96,8,18,0.06)', color: 'var(--lbf-text)' }}
+                    >
+                      {item.name}
+                      <span style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginLeft: 6 }}>({item.qty} {item.unit || 'Stk.'} verfügbar)</span>
+                    </div>
+                  ))}
+                  {displayItems.filter(i => i.qty > 0 && i.name.toLowerCase().includes(transferSearch.toLowerCase())).length === 0 && (
+                    <div style={{ padding: '9px 14px', color: 'var(--warm-gray)', fontStyle: 'italic', fontSize: 13 }}>Kein Artikel mit Bestand gefunden</div>
+                  )}
+                </div>
+              )}
+              {transferItemId && (
+                <div style={{ fontSize: 12, color: '#16a34a', fontWeight: 600, marginTop: 2 }}>
+                  ✓ {displayItems.find(i => i.id === transferItemId)?.name} — {displayItems.find(i => i.id === transferItemId)?.qty} {displayItems.find(i => i.id === transferItemId)?.unit || 'Stk.'} verfügbar
+                </div>
+              )}
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '110px 1fr', gap: 10, marginBottom: 14 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <label style={{ fontSize: 11, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.1em' }}>Menge *</label>
+                <input className="lager-input" type="number" min="1" value={transferQty || ''} onChange={(e) => setTransferQty(Number(e.target.value))} />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <label style={{ fontSize: 11, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.1em' }}>Ziel-Standort *</label>
+                <select className="lager-input" value={transferTargetId} onChange={(e) => setTransferTargetId(e.target.value)} style={{ fontFamily: 'inherit' }}>
+                  <option value="">Bitte wählen…</option>
+                  {locations.filter(l => l.id !== currentLocationId).map(l => (
+                    <option key={l.id} value={l.id}>{l.name}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {locations.length <= 1 && (
+              <div style={{ padding: '10px 14px', background: 'rgba(217,119,6,0.08)', borderRadius: 8, fontSize: 13, color: '#92400e', marginBottom: 12 }}>
+                Es gibt nur einen Standort — lege in den Einstellungen weitere an, um umzulagern.
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 8 }}>
+              <button className="lager-btn" onClick={() => setShowTransferModal(false)}>Abbrechen</button>
+              <button className="lager-btn primary" onClick={transferStock} disabled={savingTransfer || !transferItemId || !transferTargetId}>
+                {savingTransfer ? 'Umlagern…' : 'Umlagern'}
+              </button>
             </div>
           </div>
         </div>
