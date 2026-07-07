@@ -21,6 +21,7 @@ interface InventoryItem {
   supplier_item_no?: string
   supplier_email?: string
   order_url?: string
+  auto_order?: boolean
   organization_id: string
   created: string
 }
@@ -143,7 +144,8 @@ const QR_ITEM_PREFIX = 'lager:'
 
 const EMPTY_ITEM_FORM = {
   name: '', unit: 'Stück', min_stock: 0,
-  barcode: '', supplier: '', supplier_item_no: '', supplier_email: '', order_url: ''
+  barcode: '', supplier: '', supplier_item_no: '', supplier_email: '', order_url: '',
+  auto_order: false,
 }
 
 function BarcodeScanner({ onDetect, onError }: { onDetect: (code: string) => void; onError: (msg: string) => void }) {
@@ -310,6 +312,8 @@ export default function Lager() {
   const [scanError, setScanError] = useState<string | null>(null)
   const [scanFoundItem, setScanFoundItem] = useState<InventoryItem | null>(null)
   const [showOrderModal, setShowOrderModal] = useState(false)
+  const [openOrders, setOpenOrders] = useState<{ id: string; item_id: string; created: string }[]>([])
+  const [sendingOrderTo, setSendingOrderTo] = useState<string | null>(null)
   const [qrLabel, setQrLabel] = useState<{ item: InventoryItem; dataUrl: string } | null>(null)
 
   // Rückruf / Chargen-Suche
@@ -687,6 +691,15 @@ export default function Lager() {
           user: user?.email || user?.id,
           organization_id: user?.organization_id
         })
+
+        // Offene Bestellung dieses Artikels als geliefert markieren (Wareneingang schließt den Bestell-Kreislauf)
+        try {
+          const openOrder = await pb.collection('inventory_orders').getFirstListItem(
+            `item_id = "${itemId}" && status = "bestellt" && organization_id = "${user?.organization_id}"`,
+            { requestKey: `ord-close-${Date.now()}` }
+          )
+          await pb.collection('inventory_orders').update(openOrder.id, { status: 'geliefert' })
+        } catch { /* keine offene Bestellung oder Collection fehlt */ }
         
       } else {
         let remaining = Math.abs(delta)
@@ -900,6 +913,53 @@ export default function Lager() {
     return displayItems
       .filter(d => d.min_stock > 0 && d.qty < d.min_stock)
       .map(d => ({ display: d, raw: allItems.find(i => i.id === d.id), need: d.min_stock - d.qty }))
+  }
+
+  // Offene Bestellungen laden (für "Bestellt am…"-Badges und Doppelbestellungs-Schutz)
+  async function loadOpenOrders() {
+    try {
+      const list = await pb.collection('inventory_orders').getFullList<{ id: string; item_id: string; created: string }>({
+        filter: `organization_id = "${user?.organization_id}" && status = "bestellt"`,
+        fields: 'id,item_id,created',
+        requestKey: `orders-${Date.now()}`,
+      })
+      setOpenOrders(list)
+    } catch {
+      setOpenOrders([]) // Collection evtl. noch nicht angelegt
+    }
+  }
+
+  // Bestell-Mail direkt über den Server (Brevo) an den Lieferanten senden
+  async function sendSupplierOrder(email: string, entries: Array<{ display: DisplayItem; raw?: InventoryItem; need: number }>) {
+    const supplierName = entries[0]?.raw?.supplier || email
+    if (!confirm(`Bestellung mit ${entries.length} Artikel(n) jetzt direkt an ${supplierName} senden?`)) return
+    setSendingOrderTo(email)
+    try {
+      const res = await pb.send('/lager/order', {
+        method: 'POST',
+        body: {
+          supplier_email: email,
+          items: entries.map(e => ({
+            item_id: e.display.id,
+            name: e.display.name,
+            qty: e.need,
+            unit: e.display.unit || 'Stück',
+            supplier_item_no: e.raw?.supplier_item_no || '',
+            supplier: e.raw?.supplier || '',
+          })),
+        },
+      }) as { success?: boolean; error?: string }
+      if (res?.success) {
+        showMsg(`✅ Bestellung an ${supplierName} gesendet!`, 'success')
+        await loadOpenOrders()
+      } else {
+        alert('Fehler: ' + (res?.error || 'Unbekannt'))
+      }
+    } catch (e: any) {
+      alert('Direktversand fehlgeschlagen: ' + (e?.message || e) + '\n\nIst der Hook lager-orders.pb.js auf dem Server installiert? Alternativ die Mail-App-Buttons nutzen.')
+    } finally {
+      setSendingOrderTo(null)
+    }
   }
 
   function buildOrderMailBody(entries: Array<{ display: DisplayItem; raw?: InventoryItem; need: number }>) {
@@ -1776,7 +1836,7 @@ export default function Lager() {
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7V5a2 2 0 012-2h2"/><path d="M17 3h2a2 2 0 012 2v2"/><path d="M21 17v2a2 2 0 01-2 2h-2"/><path d="M7 21H5a2 2 0 01-2-2v-2"/><line x1="7" y1="12" x2="17" y2="12"/></svg>
           <span className="lager-action-label">Scannen</span>
         </button>
-        <button className="lager-action-btn" onClick={() => setShowOrderModal(true)} title="Bestellliste">
+        <button className="lager-action-btn" onClick={() => { loadOpenOrders(); setShowOrderModal(true) }} title="Bestellliste">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/></svg>
           <span className="lager-action-label">Bestellen</span>
         </button>
@@ -2050,7 +2110,7 @@ export default function Lager() {
                     </div>
                     <div style={{ display: 'flex', gap: 8 }}>
                       <button className="lager-btn" style={{ fontSize: 12, padding: '5px 10px' }} onClick={() => showQrLabel(item)} title="QR-Etikett erzeugen">QR</button>
-                      <button className="lager-btn" style={{ fontSize: 12, padding: '5px 10px' }} onClick={() => { setItemFormData({ name: item.name, unit: item.unit, min_stock: item.min_stock, barcode: item.barcode || '', supplier: item.supplier || '', supplier_item_no: item.supplier_item_no || '', supplier_email: item.supplier_email || '', order_url: item.order_url || '' }); setEditingItemId(item.id); setShowAddItemModal(true) }}>Bearbeiten</button>
+                      <button className="lager-btn" style={{ fontSize: 12, padding: '5px 10px' }} onClick={() => { setItemFormData({ name: item.name, unit: item.unit, min_stock: item.min_stock, barcode: item.barcode || '', supplier: item.supplier || '', supplier_item_no: item.supplier_item_no || '', supplier_email: item.supplier_email || '', order_url: item.order_url || '', auto_order: !!item.auto_order }); setEditingItemId(item.id); setShowAddItemModal(true) }}>Bearbeiten</button>
                       <button className="lager-btn" style={{ fontSize: 12, padding: '5px 10px', color: '#600812', borderColor: 'rgba(96,8,18,0.2)' }} onClick={() => deleteItem(item.id)}>Löschen</button>
                     </div>
                   </div>
@@ -2627,6 +2687,13 @@ export default function Lager() {
               <label style={{ fontSize: 11, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.1em' }}>Bestell-E-Mail</label>
               <input className="lager-input" type="email" value={itemFormData.supplier_email} onChange={(e) => setItemFormData({...itemFormData, supplier_email: e.target.value})} placeholder="bestellung@lieferant.de" />
             </div>
+            <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer', marginBottom: 14, opacity: itemFormData.supplier_email ? 1 : 0.5 }}>
+              <input type="checkbox" checked={itemFormData.auto_order} disabled={!itemFormData.supplier_email} onChange={(e) => setItemFormData({...itemFormData, auto_order: e.target.checked})} style={{ width: 17, height: 17, accentColor: '#600812', marginTop: 1 }} />
+              <span>
+                <span style={{ fontWeight: 700, fontSize: 13, color: 'var(--lbf-text)', display: 'block' }}>Automatisch nachbestellen</span>
+                <span style={{ fontStyle: 'italic', fontSize: 11, color: 'var(--warm-gray)' }}>Bestellt täglich um 07:30 automatisch per E-Mail beim Lieferanten, wenn der Mindestbestand unterschritten ist (erfordert Bestell-E-Mail).</span>
+              </span>
+            </label>
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
               <button className="lager-btn" onClick={() => setShowAddItemModal(false)}>Abbrechen</button>
               <button className="lager-btn primary" onClick={saveItem}>Speichern</button>
@@ -2724,32 +2791,59 @@ export default function Lager() {
               ) : (
                 <>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 320, overflowY: 'auto', marginBottom: 14 }}>
-                    {entries.map(e => (
-                      <div key={e.display.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, padding: '10px 12px', border: '1px solid rgba(96,8,18,0.1)', borderRadius: 8, borderLeft: '3px solid #d97706' }}>
-                        <div style={{ flex: 1 }}>
-                          <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--lbf-text)' }}>{e.display.name}</div>
-                          <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginTop: 2 }}>
-                            IST {e.display.qty} / SOLL {e.display.min_stock}
-                            {e.raw?.supplier ? ` · ${e.raw.supplier}` : ''}
-                            {e.raw?.supplier_item_no ? ` · Art.-Nr. ${e.raw.supplier_item_no}` : ''}
+                    {entries.map(e => {
+                      const ord = openOrders.find(o => o.item_id === e.display.id)
+                      return (
+                        <div key={e.display.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, padding: '10px 12px', border: '1px solid rgba(96,8,18,0.1)', borderRadius: 8, borderLeft: `3px solid ${ord ? '#16a34a' : '#d97706'}` }}>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--lbf-text)' }}>{e.display.name}</div>
+                            <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginTop: 2 }}>
+                              IST {e.display.qty} / SOLL {e.display.min_stock}
+                              {e.raw?.supplier ? ` · ${e.raw.supplier}` : ''}
+                              {e.raw?.supplier_item_no ? ` · Art.-Nr. ${e.raw.supplier_item_no}` : ''}
+                            </div>
+                            {ord && (
+                              <div style={{ display: 'inline-block', marginTop: 4, fontSize: 11, fontWeight: 700, color: '#15803d', background: 'rgba(22,163,74,0.09)', borderRadius: 999, padding: '2px 9px' }}>
+                                Bestellt am {new Date(ord.created).toLocaleDateString('de-DE')}
+                              </div>
+                            )}
                           </div>
+                          <div style={{ fontWeight: 800, fontSize: 18, color: '#600812', whiteSpace: 'nowrap' as const }}>+{e.need}</div>
+                          {!ord && e.raw && (e.raw.order_url || e.raw.supplier_email) && (
+                            <button className="lager-btn" style={{ fontSize: 12, padding: '5px 10px' }} onClick={() => orderItem(e.raw!, e.need)}>Bestellen</button>
+                          )}
                         </div>
-                        <div style={{ fontWeight: 800, fontSize: 18, color: '#600812', whiteSpace: 'nowrap' as const }}>+{e.need}</div>
-                        {e.raw && (e.raw.order_url || e.raw.supplier_email) && (
-                          <button className="lager-btn" style={{ fontSize: 12, padding: '5px 10px' }} onClick={() => orderItem(e.raw!, e.need)}>Bestellen</button>
-                        )}
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    {Array.from(bySupplier.entries()).map(([email, list]) => (
-                      <button key={email} className="lager-btn primary" onClick={() => {
-                        const subject = encodeURIComponent(`Bestellung ${user?.organization_name || ''}`.trim())
-                        window.location.href = `mailto:${email}?subject=${subject}&body=${encodeURIComponent(buildOrderMailBody(list))}`
-                      }}>
-                        Bestell-Mail an {list[0].raw?.supplier || email} ({list.length} Artikel)
-                      </button>
-                    ))}
+                    {Array.from(bySupplier.entries()).map(([email, list]) => {
+                      const fresh = list.filter(e => !openOrders.some(o => o.item_id === e.display.id))
+                      return (
+                        <div key={email} style={{ display: 'flex', gap: 8 }}>
+                          <button
+                            className="lager-btn primary"
+                            style={{ flex: 1 }}
+                            disabled={sendingOrderTo === email || fresh.length === 0}
+                            onClick={() => sendSupplierOrder(email, fresh)}
+                            title={fresh.length === 0 ? 'Alles bereits bestellt' : `Direkt per E-Mail an ${email} senden`}
+                          >
+                            {sendingOrderTo === email ? 'Sende…' : fresh.length === 0 ? `${list[0].raw?.supplier || email}: alles bestellt ✓` : `Direkt bestellen bei ${list[0].raw?.supplier || email} (${fresh.length})`}
+                          </button>
+                          <button
+                            className="lager-btn"
+                            style={{ flexShrink: 0, padding: '9px 12px' }}
+                            title="Stattdessen eigene Mail-App öffnen"
+                            onClick={() => {
+                              const subject = encodeURIComponent(`Bestellung ${user?.organization_name || ''}`.trim())
+                              window.location.href = `mailto:${email}?subject=${subject}&body=${encodeURIComponent(buildOrderMailBody(list))}`
+                            }}
+                          >
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22 6 12 13 2 6"/></svg>
+                          </button>
+                        </div>
+                      )
+                    })}
                     <button className="lager-btn" onClick={copyOrderList}>Liste kopieren</button>
                   </div>
                 </>
