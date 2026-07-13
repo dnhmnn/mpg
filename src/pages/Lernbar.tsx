@@ -123,7 +123,7 @@ function getPatternBg(pattern: string | null): { backgroundImage: string; backgr
 export default function Lernbar() {
   const { user, loading: authLoading } = useAuth()
   const navigate = useNavigate()
-  const [tab, setTab] = useState<'bibliothek' | 'termine' | 'module' | 'assistent'>('bibliothek')
+  const [tab, setTab] = useState<'bibliothek' | 'termine' | 'module' | 'assistent'>('assistent')
 
   const [termine, setTermine] = useState<Termin[]>([])
   const [terminDokumente, setTerminDokumente] = useState<TerminDokument[]>([])
@@ -454,6 +454,11 @@ export default function Lernbar() {
 
   const BOTTOM_TABS = [
     {
+      id: 'assistent' as const, label: 'Assistent',
+      badge: 0,
+      icon: <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3l1.7 4.3L18 9l-4.3 1.7L12 15l-1.7-4.3L6 9l4.3-1.7L12 3z"/><path d="M19 14l.8 2.2L22 17l-2.2.8L19 20l-.8-2.2L16 17l2.2-.8L19 14z"/></svg>
+    },
+    {
       id: 'bibliothek' as const, label: 'Bibliothek',
       badge: 0,
       icon: <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
@@ -467,11 +472,6 @@ export default function Lernbar() {
       id: 'module' as const, label: 'Module',
       badge: progress.length - doneMods,
       icon: <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
-    },
-    {
-      id: 'assistent' as const, label: 'Assistent',
-      badge: 0,
-      icon: <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3l1.7 4.3L18 9l-4.3 1.7L12 15l-1.7-4.3L6 9l4.3-1.7L12 3z"/><path d="M19 14l.8 2.2L22 17l-2.2.8L19 20l-.8-2.2L16 17l2.2-.8L19 14z"/></svg>
     },
   ]
 
