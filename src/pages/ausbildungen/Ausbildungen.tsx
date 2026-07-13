@@ -679,6 +679,7 @@ export default function Ausbildungen() {
   const [pdfFiles, setPdfFiles] = useState<File[]>([])
   const [generatingAIImage, setGeneratingAIImage] = useState(false)
   const [aiImageTargetBlock, setAiImageTargetBlock] = useState<string | null>(null)
+  const [generatingBook, setGeneratingBook] = useState(false)
   
 const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | 'konzepte' | 'jahresuebersicht' | 'archiv' | 'lernfeed' | 'praesentationen'>('termine')
   const [terminDetailPage, setTerminDetailPage] = useState<Termin | null>(null)
@@ -1344,6 +1345,40 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
     return { id: uid(), type, text: '', imageFile: null, imagePreview: null, videoUrl: '', quizFrage: '', quizAntworten: ['', '', '', ''], quizRichtige: 0 }
   }
   function makePage(): EditorPage { return { id: uid(), blocks: [] } }
+
+  // Buch komplett per KI entwerfen (Mistral, serverseitig über /ki/generate-buch)
+  async function generateBookViaAi() {
+    const thema = beitragForm.titel.trim()
+    if (!thema) { showMessage('Bitte zuerst den Titel/das Thema eingeben', 'error'); return }
+    const hasContent = bookPages.some(p => p.blocks.length > 0)
+    if (hasContent && !confirm('Bestehende Seiten werden durch den KI-Entwurf ersetzt. Fortfahren?')) return
+    setGeneratingBook(true)
+    try {
+      const res = await pb.send('/ki/generate-buch', {
+        method: 'POST',
+        body: { thema, seiten: 4 },
+      }) as { success?: boolean; error?: string; buch?: { titel: string; tags: string[]; seiten: { blocks: ({ type: 'text'; text: string } | { type: 'quiz'; frage: string; antworten: string[]; richtige: number })[] }[] } }
+      if (!res?.success || !res.buch) { showMessage('KI-Entwurf fehlgeschlagen: ' + (res?.error || 'Unbekannt'), 'error'); return }
+      const pages: EditorPage[] = res.buch.seiten.map(s => ({
+        id: uid(),
+        blocks: s.blocks.map(b => b.type === 'text'
+          ? { ...makeBlock('text'), text: b.text }
+          : { ...makeBlock('quiz'), quizFrage: b.frage, quizAntworten: [b.antworten[0] || '', b.antworten[1] || '', b.antworten[2] || '', b.antworten[3] || ''] as [string, string, string, string], quizRichtige: b.richtige }),
+      }))
+      setBookPages(pages)
+      setBookPageIdx(0)
+      setBeitragForm(prev => ({
+        ...prev,
+        titel: res.buch!.titel || prev.titel,
+        tags: res.buch!.tags.length ? res.buch!.tags.join(', ') : prev.tags,
+      }))
+      showMessage('✅ KI-Entwurf erstellt — bitte fachlich prüfen und anpassen!', 'success')
+    } catch (e: any) {
+      showMessage('KI nicht erreichbar: ' + (e?.message || e), 'error')
+    } finally {
+      setGeneratingBook(false)
+    }
+  }
 
   function resetBeitragForm() {
     setEditingBeitragId(null)
@@ -3949,6 +3984,12 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                         {beitragForm.gepinnt && <svg width="8" height="8" viewBox="0 0 24 24" fill="white"><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5v6h2v-6h5v-2l-2-2z"/></svg>}
                       </div>
                       <span style={{ fontSize: 11, color: beitragForm.gepinnt ? '#1a0e08' : '#8a7a68' }}>{beitragForm.gepinnt ? 'Angepinnt' : 'Anpinnen'}</span>
+                    </button>
+                    <button onClick={generateBookViaAi} disabled={generatingBook || !beitragForm.titel.trim()}
+                      title="Erstellt aus dem Titel einen kompletten Buch-Entwurf (Seiten + Quiz) — danach fachlich prüfen"
+                      style={{ display: 'flex', alignItems: 'center', gap: 6, border: '1.5px solid rgba(96,8,18,0.18)', background: 'rgba(96,8,18,0.03)', color: '#600812', borderRadius: 8, padding: '6px 10px', fontSize: 11, fontWeight: 700, cursor: generatingBook || !beitragForm.titel.trim() ? 'not-allowed' : 'pointer', fontFamily: 'inherit', opacity: !beitragForm.titel.trim() ? 0.5 : 1 }}>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3l1.7 4.3L18 9l-4.3 1.7L12 15l-1.7-4.3L6 9l4.3-1.7L12 3z"/></svg>
+                      {generatingBook ? 'KI schreibt…' : 'Buch mit KI erstellen'}
                     </button>
                   </div>
                   {/* Farbauswahl */}

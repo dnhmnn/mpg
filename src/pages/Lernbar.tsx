@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { pb } from '../lib/pocketbase'
+import LernAssistent from '../components/LernAssistent'
 
 function parseDate(str: string | null | undefined): Date {
   if (!str) return new Date(NaN)
@@ -768,6 +769,9 @@ export default function Lernbar() {
           </div>
         )}
       </div>
+
+      {/* KI-Lern-Assistent */}
+      <LernAssistent />
 
       {/* Bottom Tab Bar */}
       <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 100, background: 'var(--lbf-card)', borderTop: '0.5px solid rgba(96,8,18,0.12)', display: 'flex', alignItems: 'stretch', paddingBottom: 'env(safe-area-inset-bottom)' }}>
