@@ -89,6 +89,13 @@ routerAdd("POST", "/lager/suggest-link", (e) => {
       if (uddg) { try { href = decodeURIComponent(uddg[1]) } catch (err) {} }
       push(href, m[2])
     }
+    // Fallback-Parser: beliebige uddg-Redirect-Links (Markup-Varianten von DDG)
+    if (!candidates.length && html) {
+      const re2 = /href="[^"]*uddg=([^&"]+)[^"]*"[^>]*>([\s\S]{3,150}?)<\/a>/g
+      while ((m = re2.exec(html)) && candidates.length < 10) {
+        try { push(decodeURIComponent(m[1]), m[2]) } catch (err) {}
+      }
+    }
     if (candidates.length) sources.push("ddg")
   }
 
@@ -107,6 +114,21 @@ routerAdd("POST", "/lager/suggest-link", (e) => {
       push(href, m[2] || m[4])
     }
     if (candidates.length) sources.push("ddg-lite")
+  }
+
+  // 4) Bing HTML (direkte Ergebnis-Links, Bing-eigene Redirects überspringen)
+  if (!candidates.length) {
+    let query = q
+    if (domain) query = "site:" + domain + " " + query
+    else if (supplier) query = supplier + " " + query + " kaufen"
+    const html = fetchText("https://www.bing.com/search?q=" + encodeURIComponent(query) + "&setlang=de")
+    const re = /<h2[^>]*>\s*<a[^>]+href="(https?:\/\/[^"]+)"[^>]*>([\s\S]*?)<\/a>/g
+    let m
+    while ((m = re.exec(html)) && candidates.length < 10) {
+      if (m[1].indexOf("bing.com") !== -1 || m[1].indexOf("microsoft.com") !== -1) continue
+      push(m[1], m[2])
+    }
+    if (candidates.length) sources.push("bing")
   }
 
   if (!candidates.length) {
