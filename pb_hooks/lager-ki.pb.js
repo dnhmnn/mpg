@@ -21,7 +21,7 @@ routerAdd("POST", "/lager/suggest-link", (e) => {
   const name = (body.name || "").toString().trim()
   const supplier = (body.supplier || "").toString().trim()
   const itemNo = (body.supplier_item_no || "").toString().trim()
-  const domain = (body.domain || "").toString().trim().replace(/^https?:\/\//, "").replace(/\/.*$/, "")
+  let domain = (body.domain || "").toString().trim().replace(/^https?:\/\//, "").replace(/\/.*$/, "")
   if (!name) return e.json(400, { success: false, error: "Artikelname erforderlich" })
 
   const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36"
@@ -42,6 +42,40 @@ routerAdd("POST", "/lager/suggest-link", (e) => {
   const sources = []
 
   const q = name + (itemNo ? " " + itemNo : "")
+
+  // 0) Keine Domain bekannt? -> Mistral nach der Shop-Domain des Lieferanten fragen
+  //    (mit Erreichbarkeits-Check, damit keine erfundene Domain durchrutscht)
+  let effDomain = domain
+  if (!effDomain && supplier && key) {
+    try {
+      const res = $http.send({
+        url: "https://api.mistral.ai/v1/chat/completions",
+        method: "POST",
+        headers: { "Authorization": "Bearer " + key, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "mistral-small-latest",
+          temperature: 0,
+          response_format: { type: "json_object" },
+          messages: [{ role: "user", content:
+            'Wie lautet die Domain des offiziellen deutschen Online-Shops des Anbieters/Händlers "' + supplier + '" ' +
+            "(Kontext: Sanitäts-, Medizin- oder Rettungsdienstbedarf)? " +
+            'Antworte NUR als JSON: {"domain": "shop.beispiel.de"} — oder {"domain": null}, wenn du es nicht sicher weißt. Keine erfundenen Domains.' }],
+        }),
+        timeout: 20,
+      })
+      const data = res.json || {}
+      const content = data.choices && data.choices[0] && data.choices[0].message ? data.choices[0].message.content : ""
+      const parsed = JSON.parse(content)
+      let d = (parsed.domain || "").toString().trim().replace(/^https?:\/\//, "").replace(/\/.*$/, "")
+      if (d) {
+        // Erreichbarkeit prüfen (sonst verwerfen)
+        if (fetchText("https://" + d)) effDomain = d
+        else if (fetchText("https://www." + d)) effDomain = "www." + d
+        if (effDomain) sources.push("domain-ki:" + effDomain)
+      }
+    } catch (err) { /* dann eben ohne Domain weiter */ }
+  }
+  domain = effDomain
 
   // 1) Shop-Suche direkt
   if (domain) {
