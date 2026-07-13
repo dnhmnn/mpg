@@ -2740,7 +2740,7 @@ export default function Lager() {
 
       {/* SHOP-PRODUKT-PICKER */}
       {shopPicker.open && (
-        <div className="lager-modal-overlay" style={{ zIndex: 400 }} onClick={() => setShopPicker(prev => ({ ...prev, open: false }))}>
+        <div className="lager-modal-overlay" style={{ zIndex: 1100 }} onClick={() => setShopPicker(prev => ({ ...prev, open: false }))}>
           <div className="lager-modal" onClick={(e) => e.stopPropagation()}>
             <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 4 }}>Produkt wählen</div>
             <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginBottom: 14 }}>
