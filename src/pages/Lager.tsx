@@ -948,10 +948,14 @@ export default function Lager() {
           supplier_item_no: itemFormData.supplier_item_no,
           domain,
         },
-      }) as { success?: boolean; url?: string | null; begruendung?: string; error?: string }
+      }) as { success?: boolean; url?: string | null; typ?: string; begruendung?: string; error?: string }
       if (res?.success && res.url) {
         setItemFormData(prev => ({ ...prev, order_url: res.url! }))
-        setAiHint(`✓ Vorschlag übernommen${res.begruendung ? ` — ${res.begruendung}` : ''}. Bitte Link kurz prüfen!`)
+        if (res.typ === 'shopsuche') {
+          setAiHint(`🔎 Shop-Such-Link eingesetzt — ${res.begruendung || 'im Browser öffnen und Produkt anklicken'}.`)
+        } else {
+          setAiHint(`✓ Vorschlag übernommen${res.begruendung ? ` — ${res.begruendung}` : ''}. Bitte Link kurz prüfen!`)
+        }
       } else if (res?.success) {
         setAiHint(res.begruendung || 'Kein passender Link gefunden — Artikelname/Lieferant präzisieren oder manuell eintragen.')
       } else {
@@ -2752,7 +2756,7 @@ export default function Lager() {
                 </button>
               </div>
               {aiHint && (
-                <span style={{ fontSize: 12, fontWeight: 600, color: aiHint.startsWith('✓') ? '#15803d' : '#b91c1c' }}>{aiHint}</span>
+                <span style={{ fontSize: 12, fontWeight: 600, color: (aiHint.startsWith('✓') || aiHint.startsWith('🔎')) ? '#15803d' : '#b91c1c' }}>{aiHint}</span>
               )}
               <span style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--warm-gray)' }}>
                 Tipp: Unterstützt der Shop Warenkorb-Links, landet der Artikel mit {'{menge}'} direkt im Warenkorb — z.B. Shopify: …/cart/VARIANTE:{'{menge}'} · WooCommerce: …/?add-to-cart=ID&quantity={'{menge}'}

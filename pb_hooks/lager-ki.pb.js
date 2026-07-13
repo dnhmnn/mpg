@@ -43,9 +43,23 @@ routerAdd("POST", "/lager/suggest-link", (e) => {
 
   const q = name + (itemNo ? " " + itemNo : "")
 
-  // 0) Keine Domain bekannt? -> Mistral nach der Shop-Domain des Lieferanten fragen
-  //    (mit Erreichbarkeits-Check, damit keine erfundene Domain durchrutscht)
-  let effDomain = domain
+  // Bekannte Lieferanten-Shops (mit Bot-Schutz -> serverseitige Suche nicht möglich,
+  // aber ein Such-Link öffnet im Browser des Nutzers die Trefferliste im Shop).
+  // searchTpl: {q} wird durch den Suchbegriff ersetzt.
+  const SHOPS = [
+    { match: ["wero"], domain: "www.wero.de", searchTpl: "https://www.wero.de/search?search={q}" },
+    { match: ["söhngen", "soehngen", "sohngen"], domain: "www.soehngen.de", searchTpl: "https://www.soehngen.de/search?search={q}" },
+  ]
+  const supLower = supplier.toLowerCase()
+  const knownShop = supplier ? SHOPS.find(s => s.match.some(m => supLower.indexOf(m) !== -1)) : null
+  const shopSearchLink = (dom) => {
+    const shop = SHOPS.find(s => s.domain === dom || (knownShop && knownShop.domain === dom))
+    const tpl = shop ? shop.searchTpl : ("https://" + dom + "/search?search={q}")
+    return tpl.replace("{q}", encodeURIComponent(q))
+  }
+
+  // 0) Keine Domain bekannt? -> aus bekanntem Lieferanten ableiten, sonst Mistral fragen
+  let effDomain = domain || (knownShop ? knownShop.domain : "")
   if (!effDomain && supplier && key) {
     try {
       const res = $http.send({
@@ -68,9 +82,10 @@ routerAdd("POST", "/lager/suggest-link", (e) => {
       const parsed = JSON.parse(content)
       let d = (parsed.domain || "").toString().trim().replace(/^https?:\/\//, "").replace(/\/.*$/, "")
       if (d) {
-        // Erreichbarkeit prüfen (sonst verwerfen)
-        if (fetchText("https://" + d)) effDomain = d
-        else if (fetchText("https://www." + d)) effDomain = "www." + d
+        // Existenz prüfen: jede HTTP-Antwort (auch 403 durch Bot-Schutz) = Domain ist echt.
+        const exists = (dom) => { try { $http.send({ url: "https://" + dom, method: "GET", headers: { "User-Agent": UA }, timeout: 12 }); return true } catch (err) { return false } }
+        if (exists(d)) effDomain = d
+        else if (exists("www." + d)) effDomain = "www." + d
         if (effDomain) sources.push("domain-ki:" + effDomain)
       }
     } catch (err) { /* dann eben ohne Domain weiter */ }
@@ -166,11 +181,19 @@ routerAdd("POST", "/lager/suggest-link", (e) => {
   }
 
   if (!candidates.length) {
+    // Shop bekannt (oder Domain vorhanden), aber serverseitig kein Treffer
+    // (Bot-Schutz blockt unseren Server). -> Such-Link zurückgeben, der im
+    // BROWSER des Nutzers die Trefferliste im Shop öffnet.
+    const linkDom = effDomain || (knownShop ? knownShop.domain : "")
+    if (linkDom) {
+      return e.json(200, {
+        success: true, url: shopSearchLink(linkDom), typ: "shopsuche", candidates: 0, sources: sources,
+        begruendung: "Öffnet die Shop-Suche im Browser — dort das Produkt anklicken (der Shop blockt automatische Server-Suche).",
+      })
+    }
     return e.json(200, {
       success: true, url: null, candidates: 0, sources: sources,
-      begruendung: domain
-        ? "Weder Shop-Suche noch Websuche lieferten Treffer — Shop-Domain korrekt?"
-        : "Websuche vom Server blockiert oder keine Treffer. Tipp: Shop-Startseite ins Bestell-Link-Feld einfügen und erneut suchen.",
+      begruendung: "Automatische Suche vom Server blockiert. Tipp: Shop-Startseite ins Bestell-Link-Feld einfügen und erneut suchen.",
     })
   }
 
