@@ -898,7 +898,10 @@ export default function Lager() {
 
   function orderItem(item: InventoryItem, need?: number) {
     if (item.order_url) {
-      window.open(item.order_url, '_blank', 'noopener')
+      // {menge}-Platzhalter -> Warenkorb-Deeplink mit der Bedarfsmenge öffnen
+      // (Shopify: /cart/VARIANTE:{menge} · WooCommerce: ?add-to-cart=ID&quantity={menge})
+      const qty = need && need > 0 ? need : 1
+      window.open(item.order_url.replace(/\{menge\}/gi, String(qty)), '_blank', 'noopener')
       return
     }
     if (!item.supplier_email) return
@@ -2682,6 +2685,9 @@ export default function Lager() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14 }}>
               <label style={{ fontSize: 11, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.1em' }}>Bestell-Link</label>
               <input className="lager-input" type="url" value={itemFormData.order_url} onChange={(e) => setItemFormData({...itemFormData, order_url: e.target.value})} placeholder="https://shop.lieferant.de/artikel..." />
+              <span style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--warm-gray)' }}>
+                Tipp: Unterstützt der Shop Warenkorb-Links, landet der Artikel mit {'{menge}'} direkt im Warenkorb — z.B. Shopify: …/cart/VARIANTE:{'{menge}'} · WooCommerce: …/?add-to-cart=ID&quantity={'{menge}'}
+              </span>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14 }}>
               <label style={{ fontSize: 11, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.1em' }}>Bestell-E-Mail</label>
