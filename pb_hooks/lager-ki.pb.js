@@ -15,8 +15,9 @@ routerAdd("POST", "/lager/suggest-link", (e) => {
   const u = e.auth
   if (!u) return e.json(403, { success: false, error: "Nicht berechtigt" })
 
+  // Ohne MISTRAL_API_KEY läuft die Auswahl heuristisch (bester Suchtreffer) —
+  // mit Key übernimmt Mistral die Auswahl.
   const key = $os.getenv("MISTRAL_API_KEY")
-  if (!key) return e.json(500, { success: false, error: "MISTRAL_API_KEY ist auf dem Server nicht gesetzt" })
 
   const body = e.requestInfo().body || {}
   const name = (body.name || "").toString().trim()
@@ -57,7 +58,27 @@ routerAdd("POST", "/lager/suggest-link", (e) => {
     return e.json(200, { success: true, url: null, begruendung: "Keine Suchtreffer gefunden.", candidates: 0 })
   }
 
-  // 2) Mistral wählt den passenden Treffer
+  // 2a) Ohne KI-Key: heuristische Auswahl des besten Treffers
+  if (!key) {
+    const tokens = name.toLowerCase().split(/\s+/).filter(t => t.length > 3)
+    let best = null
+    let bestScore = 0
+    for (const c of candidates) {
+      const hay = (c.url + " " + c.title).toLowerCase()
+      let score = 0
+      if (itemNo && hay.indexOf(itemNo.toLowerCase()) !== -1) score += 4
+      for (const t of tokens) if (hay.indexOf(t) !== -1) score += 1
+      if (domain && c.url.toLowerCase().indexOf(domain.toLowerCase()) !== -1) score += 2
+      if (/\.pdf($|\?)/i.test(c.url)) score -= 5
+      if (score > bestScore) { bestScore = score; best = c }
+    }
+    if (best && bestScore >= 1) {
+      return e.json(200, { success: true, url: best.url, begruendung: "Bester Suchtreffer (heuristisch, ohne KI)", candidates: candidates.length })
+    }
+    return e.json(200, { success: true, url: null, begruendung: "Kein eindeutiger Treffer — Artikelname präzisieren.", candidates: candidates.length })
+  }
+
+  // 2b) Mistral wählt den passenden Treffer
   const prompt =
     "Du hilfst einer Lagerverwaltung, den Bestell-Link für einen Artikel zu finden.\n" +
     "Artikel: " + name + (itemNo ? " (Artikelnr. " + itemNo + ")" : "") + "\n" +
