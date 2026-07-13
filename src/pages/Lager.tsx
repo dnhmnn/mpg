@@ -329,6 +329,9 @@ export default function Lager() {
   const [aiSearching, setAiSearching] = useState(false)
   const [aiHint, setAiHint] = useState('')
 
+  // Shop-Produkt-Picker
+  const [shopPicker, setShopPicker] = useState<{ open: boolean; loading: boolean; products: { name: string; url: string; price?: string }[]; error: string; searchUrl: string }>({ open: false, loading: false, products: [], error: '', searchUrl: '' })
+
   // Umlagerung zwischen Standorten
   const [showTransferModal, setShowTransferModal] = useState(false)
   const [transferItemId, setTransferItemId] = useState('')
@@ -922,6 +925,31 @@ export default function Lager() {
     return displayItems
       .filter(d => d.min_stock > 0 && d.qty < d.min_stock)
       .map(d => ({ display: d, raw: allItems.find(i => i.id === d.id), need: d.min_stock - d.qty }))
+  }
+
+  // Produkt-Picker: Shop-Trefferliste in Responda öffnen, Produkt antippen
+  async function openShopPicker() {
+    if (!itemFormData.name.trim()) { alert('Bitte zuerst den Artikelnamen eintragen.'); return }
+    setShopPicker({ open: true, loading: true, products: [], error: '', searchUrl: '' })
+    try {
+      let domain = ''
+      if (itemFormData.order_url.trim()) {
+        try { domain = new URL(itemFormData.order_url.trim().startsWith('http') ? itemFormData.order_url.trim() : 'https://' + itemFormData.order_url.trim()).host } catch { /* egal */ }
+      }
+      const res = await pb.send('/lager/shop-products', {
+        method: 'POST',
+        body: { name: itemFormData.name.trim(), supplier: itemFormData.supplier, domain },
+      }) as { success?: boolean; products?: { name: string; url: string; price?: string }[]; searchUrl?: string; error?: string; shop?: string }
+      setShopPicker({ open: true, loading: false, products: res?.products || [], error: res?.error || '', searchUrl: res?.searchUrl || '' })
+    } catch (e: any) {
+      setShopPicker({ open: true, loading: false, products: [], error: e?.message || 'Shop-Suche nicht erreichbar (Hook lager-shop.pb.js auf dem Server?)', searchUrl: '' })
+    }
+  }
+
+  function chooseShopProduct(url: string) {
+    setItemFormData(prev => ({ ...prev, order_url: url }))
+    setShopPicker(prev => ({ ...prev, open: false }))
+    setAiHint('✓ Produkt hinterlegt.')
   }
 
   // Bestell-Link per KI (Mistral, serverseitig) suchen lassen
@@ -2710,6 +2738,49 @@ export default function Lager() {
         </div>
       )}
 
+      {/* SHOP-PRODUKT-PICKER */}
+      {shopPicker.open && (
+        <div className="lager-modal-overlay" style={{ zIndex: 400 }} onClick={() => setShopPicker(prev => ({ ...prev, open: false }))}>
+          <div className="lager-modal" onClick={(e) => e.stopPropagation()}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 4 }}>Produkt wählen</div>
+            <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginBottom: 14 }}>
+              Treffer für „{itemFormData.name}"{itemFormData.supplier ? ` bei ${itemFormData.supplier}` : ''} — antippen, um es zu hinterlegen.
+            </div>
+
+            {shopPicker.loading ? (
+              <div style={{ textAlign: 'center', padding: 32, color: 'var(--warm-gray)', fontStyle: 'italic' }}>Suche im Shop…</div>
+            ) : shopPicker.products.length > 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 380, overflowY: 'auto' }}>
+                {shopPicker.products.map(p => (
+                  <button key={p.url} onClick={() => chooseShopProduct(p.url)}
+                    style={{ textAlign: 'left', display: 'flex', alignItems: 'center', gap: 10, padding: '11px 13px', border: '1px solid rgba(96,8,18,0.12)', borderRadius: 10, background: 'var(--lbf-card)', cursor: 'pointer', fontFamily: 'inherit' }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--lbf-text)', lineHeight: 1.35 }}>{p.name}</div>
+                      {p.price && <div style={{ fontStyle: 'italic', fontSize: 12, color: '#600812', fontWeight: 700, marginTop: 2 }}>{p.price}</div>}
+                    </div>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#600812" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><polyline points="9 6 15 12 9 18"/></svg>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div style={{ textAlign: 'center', padding: '20px 8px', color: 'var(--warm-gray)' }}>
+                <div style={{ fontStyle: 'italic', fontSize: 13, marginBottom: 12 }}>{shopPicker.error || 'Keine Produkte gefunden.'}</div>
+                {shopPicker.searchUrl && (
+                  <button className="lager-btn" onClick={() => window.open(shopPicker.searchUrl, '_blank', 'noopener')}>Suche im Browser öffnen</button>
+                )}
+              </div>
+            )}
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 16, gap: 8 }}>
+              {shopPicker.searchUrl && shopPicker.products.length > 0 ? (
+                <button className="lager-btn" style={{ fontSize: 12 }} onClick={() => window.open(shopPicker.searchUrl, '_blank', 'noopener')}>Alle im Shop ansehen</button>
+              ) : <span />}
+              <button className="lager-btn" onClick={() => setShopPicker(prev => ({ ...prev, open: false }))}>Schließen</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ADD ITEM MODAL */}
       {showAddItemModal && (
         <div className="lager-modal-overlay" onClick={() => setShowAddItemModal(false)}>
@@ -2749,10 +2820,13 @@ export default function Lager() {
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14 }}>
               <label style={{ fontSize: 11, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.1em' }}>Bestell-Link</label>
+              <input className="lager-input" style={{ width: '100%' }} type="url" value={itemFormData.order_url} onChange={(e) => setItemFormData({...itemFormData, order_url: e.target.value})} placeholder="https://shop.lieferant.de/artikel..." />
               <div style={{ display: 'flex', gap: 8 }}>
-                <input className="lager-input" style={{ flex: 1 }} type="url" value={itemFormData.order_url} onChange={(e) => setItemFormData({...itemFormData, order_url: e.target.value})} placeholder="https://shop.lieferant.de/artikel..." />
+                <button className="lager-btn primary" style={{ flex: 1 }} onClick={openShopPicker} title="Produkte im Shop des Lieferanten suchen und auswählen">
+                  🔎 Im Shop wählen
+                </button>
                 <button className="lager-btn" onClick={suggestLinkViaAi} disabled={aiSearching} title="Bestell-Link per KI im Netz suchen (Mistral, EU)">
-                  {aiSearching ? 'Sucht…' : 'Per KI suchen'}
+                  {aiSearching ? 'Sucht…' : 'Per KI'}
                 </button>
               </div>
               {aiHint && (
