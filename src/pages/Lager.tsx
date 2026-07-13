@@ -930,9 +930,13 @@ export default function Lager() {
     setAiSearching(true)
     setAiHint('')
     try {
-      // Shop-Domain aus einem anderen Artikel desselben Lieferanten ableiten (macht die Suche treffsicherer)
+      // Shop-Domain ableiten: aus dem Bestell-Link-Feld (falls dort eine URL/Domain steht)
+      // oder aus einem anderen Artikel desselben Lieferanten
       let domain = ''
-      if (itemFormData.supplier) {
+      if (itemFormData.order_url.trim()) {
+        try { domain = new URL(itemFormData.order_url.trim().startsWith('http') ? itemFormData.order_url.trim() : 'https://' + itemFormData.order_url.trim()).host } catch { /* egal */ }
+      }
+      if (!domain && itemFormData.supplier) {
         const sibling = allItems.find(i => i.supplier === itemFormData.supplier && i.order_url && i.id !== editingItemId)
         if (sibling?.order_url) { try { domain = new URL(sibling.order_url).host } catch { /* egal */ } }
       }
@@ -949,7 +953,7 @@ export default function Lager() {
         setItemFormData(prev => ({ ...prev, order_url: res.url! }))
         setAiHint(`✓ Vorschlag übernommen${res.begruendung ? ` — ${res.begruendung}` : ''}. Bitte Link kurz prüfen!`)
       } else if (res?.success) {
-        setAiHint('Kein passender Link gefunden — Artikelname/Lieferant präzisieren oder manuell eintragen.')
+        setAiHint(res.begruendung || 'Kein passender Link gefunden — Artikelname/Lieferant präzisieren oder manuell eintragen.')
       } else {
         setAiHint('Fehler: ' + (res?.error || 'Unbekannt'))
       }
