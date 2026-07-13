@@ -2758,6 +2758,17 @@ export default function Lager() {
               {aiHint && (
                 <span style={{ fontSize: 12, fontWeight: 600, color: (aiHint.startsWith('✓') || aiHint.startsWith('🔎')) ? '#15803d' : '#b91c1c' }}>{aiHint}</span>
               )}
+              {/(?:[?&](?:search|s|q|sSearch)=)|\/search\b/i.test(itemFormData.order_url) && (
+                <div style={{ background: 'rgba(96,8,18,0.04)', borderRadius: 10, padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <div style={{ fontSize: 12, color: 'var(--lbf-text)', lineHeight: 1.5 }}>
+                    <strong>So hinterlegst du den exakten Artikel:</strong><br />
+                    1. Shop-Suche öffnen &nbsp;2. richtiges Produkt anklicken &nbsp;3. Produkt-Link kopieren und hier oben einfügen.
+                  </div>
+                  <button className="lager-btn" style={{ alignSelf: 'flex-start' }} onClick={() => window.open(itemFormData.order_url, '_blank', 'noopener')}>
+                    🔎 Shop-Suche öffnen
+                  </button>
+                </div>
+              )}
               <span style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--warm-gray)' }}>
                 Tipp: Unterstützt der Shop Warenkorb-Links, landet der Artikel mit {'{menge}'} direkt im Warenkorb — z.B. Shopify: …/cart/VARIANTE:{'{menge}'} · WooCommerce: …/?add-to-cart=ID&quantity={'{menge}'}
               </span>
