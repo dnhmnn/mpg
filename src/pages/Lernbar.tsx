@@ -123,7 +123,7 @@ function getPatternBg(pattern: string | null): { backgroundImage: string; backgr
 export default function Lernbar() {
   const { user, loading: authLoading } = useAuth()
   const navigate = useNavigate()
-  const [tab, setTab] = useState<'bibliothek' | 'termine' | 'module'>('bibliothek')
+  const [tab, setTab] = useState<'bibliothek' | 'termine' | 'module' | 'assistent'>('bibliothek')
 
   const [termine, setTermine] = useState<Termin[]>([])
   const [terminDokumente, setTerminDokumente] = useState<TerminDokument[]>([])
@@ -468,6 +468,11 @@ export default function Lernbar() {
       badge: progress.length - doneMods,
       icon: <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
     },
+    {
+      id: 'assistent' as const, label: 'Assistent',
+      badge: 0,
+      icon: <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3l1.7 4.3L18 9l-4.3 1.7L12 15l-1.7-4.3L6 9l4.3-1.7L12 3z"/><path d="M19 14l.8 2.2L22 17l-2.2.8L19 20l-.8-2.2L16 17l2.2-.8L19 14z"/></svg>
+    },
   ]
 
   return (
@@ -486,7 +491,10 @@ export default function Lernbar() {
       </div>
 
       {/* Content */}
-      <div style={{ maxWidth: 600, margin: '0 auto', padding: tab === 'bibliothek' ? '14px 14px calc(84px + env(safe-area-inset-bottom))' : '20px 16px calc(84px + env(safe-area-inset-bottom))' }}>
+      <div style={{ maxWidth: 600, margin: '0 auto', padding: tab === 'assistent' ? 0 : tab === 'bibliothek' ? '14px 14px calc(84px + env(safe-area-inset-bottom))' : '20px 16px calc(84px + env(safe-area-inset-bottom))' }}>
+
+        {/* ── KI-ASSISTENT ── */}
+        {tab === 'assistent' && <LernAssistent />}
 
         {/* ── BIBLIOTHEK ── */}
         {tab === 'bibliothek' && (() => {
@@ -769,9 +777,6 @@ export default function Lernbar() {
           </div>
         )}
       </div>
-
-      {/* KI-Lern-Assistent */}
-      <LernAssistent />
 
       {/* Bottom Tab Bar */}
       <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 100, background: 'var(--lbf-card)', borderTop: '0.5px solid rgba(96,8,18,0.12)', display: 'flex', alignItems: 'stretch', paddingBottom: 'env(safe-area-inset-bottom)' }}>

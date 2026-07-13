@@ -1,8 +1,10 @@
 // PocketBase hook: KI-Assistenz (Mistral, EU)  (PocketBase v0.23+ API)
 //
-// 1. POST /ki/chat — Lern-Assistent für Einsatzkräfte (Lernbar/Unitas):
-//    beantwortet Fragen zu medizinischen und einsatztaktischen Themen zu
-//    Ausbildungs-/Lernzwecken. Body: { messages: [{ role, content }] }
+// 1. POST /ki/chat — Lern-Assistent für Einsatzkräfte (Lernbar/Unitas).
+//    RAG-lite: sucht zur Frage passende Fachartikel auf nerdfallmedizin.blog
+//    und notfallguru.de, gibt deren Text der KI als primäre Grundlage mit
+//    und liefert die verwendeten Quellen (Titel + URL) an den Client zurück.
+//    Body: { messages: [{ role, content }] }  ->  { antwort, quellen: [{titel,url}] }
 //
 // 2. POST /ki/generate-buch — entwirft ein Lernfeed-Buch (Seiten mit Text-
 //    und Quiz-Blöcken) zu einem Thema. Body: { thema, hinweise?, seiten? }
@@ -27,15 +29,86 @@ routerAdd("POST", "/ki/chat", (e) => {
   }
   if (!messages.length) return e.json(400, { success: false, error: "Keine Frage übermittelt" })
 
+  const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36"
+  const fetchText = (url, timeout) => {
+    try {
+      const res = $http.send({ url: url, method: "GET", headers: { "User-Agent": UA, "Accept-Language": "de-DE,de;q=0.9" }, timeout: timeout || 12 })
+      return res.body ? toString(res.body) : ""
+    } catch (err) { return "" }
+  }
+  const stripHtml = (html) => {
+    return html
+      .replace(/<script[\s\S]*?<\/script>/gi, " ")
+      .replace(/<style[\s\S]*?<\/style>/gi, " ")
+      .replace(/<nav[\s\S]*?<\/nav>/gi, " ")
+      .replace(/<header[\s\S]*?<\/header>/gi, " ")
+      .replace(/<footer[\s\S]*?<\/footer>/gi, " ")
+      .replace(/<[^>]+>/g, " ")
+      .replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#\d+;/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+  }
+
+  // Fachquellen zur letzten Nutzerfrage suchen
+  const frage = messages[messages.length - 1].content.slice(0, 200)
+  const DOMAINS = ["nerdfallmedizin.blog", "notfallguru.de"]
+  const quellen = []
+
+  for (const domain of DOMAINS) {
+    if (quellen.length >= 3) break
+    let hits = []
+    // 1) WordPress-REST-Suche (liefert saubere Titel+URLs)
+    try {
+      const res = $http.send({
+        url: "https://" + domain + "/wp-json/wp/v2/search?search=" + encodeURIComponent(frage) + "&per_page=3",
+        method: "GET", headers: { "User-Agent": UA }, timeout: 10,
+      })
+      if (Array.isArray(res.json)) {
+        hits = res.json.map(x => ({ titel: stripHtml((x.title || "").toString()), url: (x.url || "").toString() })).filter(h => h.url)
+      }
+    } catch (err) { /* keine WP-REST-API */ }
+    // 2) Fallback: HTML-Suchseite
+    if (!hits.length) {
+      const html = fetchText("https://" + domain + "/?s=" + encodeURIComponent(frage))
+      const re2 = new RegExp('<a[^>]+href="(https?://[^"]*' + domain.replace(/\./g, "\\.") + '[^"]*)"[^>]*>([\\s\\S]{4,120}?)</a>', "g")
+      let m
+      const seen = {}
+      while ((m = re2.exec(html)) && hits.length < 3) {
+        const url = m[1]
+        if (seen[url] || /\/(tag|category|author|page)\//.test(url) || url.indexOf("?s=") !== -1 || url.replace("https://", "").replace(domain, "").length < 4) continue
+        seen[url] = true
+        const titel = stripHtml(m[2])
+        if (titel.length > 3) hits.push({ titel: titel, url: url })
+      }
+    }
+    for (const h of hits.slice(0, 2)) {
+      if (quellen.length < 3 && !quellen.some(q => q.url === h.url)) quellen.push(h)
+    }
+  }
+
+  // Artikeltexte der Top-Quellen als Kontext laden
+  let kontext = ""
+  const genutzt = []
+  for (const q of quellen.slice(0, 2)) {
+    const text = stripHtml(fetchText(q.url)).slice(0, 2600)
+    if (text.length > 300) {
+      genutzt.push(q)
+      kontext += "\n\n### Quelle: " + q.titel + " (" + q.url + ")\n" + text
+    }
+  }
+
   const system =
     "Du bist der Lern-Assistent von Responda für Einsatzkräfte (Rettungsdienst, Feuerwehr, Sanitätsdienst). " +
     "Beantworte Fragen zu medizinischen, notfallmedizinischen und einsatztaktischen Themen auf Deutsch — " +
-    "klar strukturiert, fachlich korrekt, zu Lern- und Ausbildungszwecken. Orientiere dich an aktuellen " +
-    "Leitlinien (z.B. ERC) und nenne wo passend Merkhilfen/Schemata (ABCDE, SAMPLER, 4H/HITS ...). " +
+    "klar strukturiert, fachlich korrekt, zu Lern- und Ausbildungszwecken. " +
+    (kontext
+      ? "Dir liegen Auszüge aus Fachartikeln von Nerdfallmedizin und Notfallguru vor. Stütze deine Antwort PRIMÄR auf diese Auszüge; ergänze nur wo nötig mit Leitlinienwissen (z.B. ERC). "
+      : "Orientiere dich an aktuellen Leitlinien (z.B. ERC) und nenne wo passend Merkhilfen/Schemata (ABCDE, SAMPLER ...). ") +
     "WICHTIG: Deine Antworten dienen der Ausbildung und ersetzen weder (not-)ärztliche Entscheidungen noch " +
     "lokale SAA/Algorithmen oder Anweisungen des Ärztlichen Leiters. Weise bei heiklen Themen kurz darauf hin. " +
     "Fragen ohne Bezug zu Medizin, Rettungswesen oder Ausbildung lehnst du freundlich in einem Satz ab. " +
-    "Halte Antworten kompakt (max. ~300 Wörter), nutze Absätze und Aufzählungen."
+    "Halte Antworten kompakt (max. ~300 Wörter), nutze Absätze und Aufzählungen. Keine URLs im Text nennen — die Quellen werden separat angezeigt." +
+    (kontext ? "\n\nFACHARTIKEL-AUSZÜGE:" + kontext : "")
 
   try {
     const res = $http.send({
@@ -48,12 +121,12 @@ routerAdd("POST", "/ki/chat", (e) => {
         max_tokens: 900,
         messages: [{ role: "system", content: system }].concat(messages),
       }),
-      timeout: 45,
+      timeout: 60,
     })
     const data = res.json || {}
     const content = data.choices && data.choices[0] && data.choices[0].message ? data.choices[0].message.content : ""
     if (!content) return e.json(502, { success: false, error: "Leere KI-Antwort" + (data.message ? ": " + data.message : "") })
-    return e.json(200, { success: true, antwort: content })
+    return e.json(200, { success: true, antwort: content, quellen: genutzt })
   } catch (err) {
     return e.json(502, { success: false, error: "KI-Anfrage fehlgeschlagen: " + err.message })
   }
