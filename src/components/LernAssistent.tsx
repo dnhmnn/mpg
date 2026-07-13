@@ -1,8 +1,88 @@
 import { useState, useRef, useEffect } from 'react'
+import type { ReactNode } from 'react'
 import { pb } from '../lib/pocketbase'
 
 interface Quelle { titel: string; url: string }
 interface Msg { role: 'user' | 'assistant'; content: string; quellen?: Quelle[] }
+
+// ── Leichter Markdown-Renderer im LBF-Stil (fett, kursiv, Listen, Überschriften) ──
+function inlineMd(text: string, keyPrefix: string): ReactNode[] {
+  const out: ReactNode[] = []
+  const re = /\*\*(.+?)\*\*|\*(.+?)\*/g
+  let last = 0
+  let m: RegExpExecArray | null
+  let i = 0
+  while ((m = re.exec(text))) {
+    if (m.index > last) out.push(text.slice(last, m.index))
+    if (m[1] !== undefined) out.push(<strong key={`${keyPrefix}-b${i++}`} style={{ fontWeight: 700 }}>{m[1]}</strong>)
+    else out.push(<em key={`${keyPrefix}-i${i++}`}>{m[2]}</em>)
+    last = m.index + m[0].length
+  }
+  if (last < text.length) out.push(text.slice(last))
+  return out
+}
+
+function renderMd(content: string): ReactNode {
+  const lines = content.replace(/\r/g, '').split('\n')
+  const blocks: ReactNode[] = []
+  let para: string[] = []
+  let list: { ordered: boolean; items: string[] } | null = null
+  let key = 0
+
+  const flushPara = () => {
+    if (para.length) {
+      blocks.push(<p key={`p${key++}`} style={{ margin: '0 0 8px', lineHeight: 1.6 }}>{inlineMd(para.join(' '), `p${key}`)}</p>)
+      para = []
+    }
+  }
+  const flushList = () => {
+    if (list) {
+      const l = list
+      blocks.push(
+        <div key={`l${key++}`} style={{ margin: '0 0 8px', display: 'flex', flexDirection: 'column', gap: 4 }}>
+          {l.items.map((item, idx) => (
+            <div key={idx} style={{ display: 'flex', gap: 8, lineHeight: 1.55 }}>
+              <span style={{ color: '#600812', fontWeight: 700, flexShrink: 0, minWidth: l.ordered ? 16 : 'auto' }}>
+                {l.ordered ? `${idx + 1}.` : '–'}
+              </span>
+              <span>{inlineMd(item, `l${key}-${idx}`)}</span>
+            </div>
+          ))}
+        </div>
+      )
+      list = null
+    }
+  }
+
+  for (const raw of lines) {
+    const line = raw.trim()
+    const h = line.match(/^#{1,4}\s+(.*)/)
+    const ul = line.match(/^[-•*]\s+(.*)/)
+    const ol = line.match(/^\d+[.)]\s+(.*)/)
+    if (!line) { flushPara(); flushList(); continue }
+    if (h) {
+      flushPara(); flushList()
+      blocks.push(
+        <div key={`h${key++}`} style={{ fontSize: 11, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.12em', margin: '12px 0 6px' }}>
+          {h[1].replace(/\*\*/g, '')}
+        </div>
+      )
+    } else if (ul) {
+      flushPara()
+      if (!list || list.ordered) { flushList(); list = { ordered: false, items: [] } }
+      list.items.push(ul[1])
+    } else if (ol) {
+      flushPara()
+      if (!list || !list.ordered) { flushList(); list = { ordered: true, items: [] } }
+      list.items.push(ol[1])
+    } else {
+      flushList()
+      para.push(line)
+    }
+  }
+  flushPara(); flushList()
+  return <div style={{ marginBottom: -8 }}>{blocks}</div>
+}
 
 const VORSCHLAEGE = [
   'Erkläre mir das ABCDE-Schema',
@@ -96,9 +176,12 @@ export default function LernAssistent() {
               color: m.role === 'user' ? '#fde8d8' : 'var(--lbf-text)',
               borderRadius: m.role === 'user' ? '14px 14px 4px 14px' : '14px 14px 14px 4px',
               boxShadow: m.role === 'assistant' ? '0 1px 4px rgba(0,0,0,0.07)' : 'none',
-              padding: '10px 14px', fontSize: 14, lineHeight: 1.6, whiteSpace: 'pre-wrap',
+              borderLeft: m.role === 'assistant' ? '3px solid #600812' : 'none',
+              padding: m.role === 'assistant' ? '12px 16px' : '10px 14px',
+              fontSize: 14, lineHeight: 1.6,
+              whiteSpace: m.role === 'user' ? 'pre-wrap' : 'normal',
             }}>
-              {m.content}
+              {m.role === 'assistant' ? renderMd(m.content) : m.content}
             </div>
             {m.role === 'assistant' && (m.quellen?.length ?? 0) > 0 && (
               <div style={{ marginTop: 6, display: 'flex', flexDirection: 'column', gap: 4, paddingLeft: 4 }}>

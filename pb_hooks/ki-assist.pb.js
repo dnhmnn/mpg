@@ -107,7 +107,7 @@ routerAdd("POST", "/ki/chat", (e) => {
     "WICHTIG: Deine Antworten dienen der Ausbildung und ersetzen weder (not-)ärztliche Entscheidungen noch " +
     "lokale SAA/Algorithmen oder Anweisungen des Ärztlichen Leiters. Weise bei heiklen Themen kurz darauf hin. " +
     "Fragen ohne Bezug zu Medizin, Rettungswesen oder Ausbildung lehnst du freundlich in einem Satz ab. " +
-    "Halte Antworten kompakt (max. ~300 Wörter), nutze Absätze und Aufzählungen. Keine URLs im Text nennen — die Quellen werden separat angezeigt." +
+    "Halte Antworten kompakt (max. ~300 Wörter). Formatiere mit Markdown: kurze Zwischenüberschriften mit '### ', Aufzählungen mit '- ', Wichtiges **fett**. Keine URLs im Text nennen — die Quellen werden separat angezeigt." +
     (kontext ? "\n\nFACHARTIKEL-AUSZÜGE:" + kontext : "")
 
   try {
