@@ -918,6 +918,21 @@ export default function Lager() {
       .map(d => ({ display: d, raw: allItems.find(i => i.id === d.id), need: d.min_stock - d.qty }))
   }
 
+  // Kompletten Lieferanten-Bedarf als EINEN Shop-Warenkorb öffnen (Shopify-Format:
+  // alle Artikel haben order_url "https://shop.tld/cart/VARIANTE:{menge}" mit gleichem Host)
+  function buildSupplierCartUrl(entries: Array<{ display: DisplayItem; raw?: InventoryItem; need: number }>): string | null {
+    let host: string | null = null
+    const parts: string[] = []
+    for (const e of entries) {
+      const m = (e.raw?.order_url || '').match(/^(https?:\/\/[^/]+)\/cart\/(\d+):\{menge\}\/?$/i)
+      if (!m) return null
+      if (host === null) host = m[1]
+      else if (host !== m[1]) return null
+      parts.push(`${m[2]}:${e.need}`)
+    }
+    return host && parts.length ? `${host}/cart/${parts.join(',')}` : null
+  }
+
   // Offene Bestellungen laden (für "Bestellt am…"-Badges und Doppelbestellungs-Schutz)
   async function loadOpenOrders() {
     try {
@@ -2825,8 +2840,19 @@ export default function Lager() {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                     {Array.from(bySupplier.entries()).map(([email, list]) => {
                       const fresh = list.filter(e => !openOrders.some(o => o.item_id === e.display.id))
+                      const cartUrl = fresh.length > 0 ? buildSupplierCartUrl(fresh) : null
                       return (
                         <div key={email} style={{ display: 'flex', gap: 8 }}>
+                          {cartUrl && (
+                            <button
+                              className="lager-btn"
+                              style={{ flexShrink: 0, padding: '9px 12px' }}
+                              title={`Alle ${fresh.length} Artikel gesammelt in den Shop-Warenkorb legen`}
+                              onClick={() => window.open(cartUrl, '_blank', 'noopener')}
+                            >
+                              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/></svg>
+                            </button>
+                          )}
                           <button
                             className="lager-btn primary"
                             style={{ flex: 1 }}
