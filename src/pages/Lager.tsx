@@ -325,6 +325,10 @@ export default function Lager() {
   // Statistik
   const [showStatsModal, setShowStatsModal] = useState(false)
 
+  // KI-Link-Vorschlag
+  const [aiSearching, setAiSearching] = useState(false)
+  const [aiHint, setAiHint] = useState('')
+
   // Umlagerung zwischen Standorten
   const [showTransferModal, setShowTransferModal] = useState(false)
   const [transferItemId, setTransferItemId] = useState('')
@@ -434,6 +438,8 @@ export default function Lager() {
     const item = auditItems[auditIndex]
     if (item) { setAuditActual(item.actual_quantity || 0); setAuditChecked(item.checked || false) }
   }, [auditIndex, auditItems])
+
+  useEffect(() => { if (showAddItemModal) setAiHint('') }, [showAddItemModal])
 
   async function loadLocations() {
     try {
@@ -916,6 +922,42 @@ export default function Lager() {
     return displayItems
       .filter(d => d.min_stock > 0 && d.qty < d.min_stock)
       .map(d => ({ display: d, raw: allItems.find(i => i.id === d.id), need: d.min_stock - d.qty }))
+  }
+
+  // Bestell-Link per KI (Mistral, serverseitig) suchen lassen
+  async function suggestLinkViaAi() {
+    if (!itemFormData.name.trim()) { alert('Bitte zuerst den Artikelnamen eintragen.'); return }
+    setAiSearching(true)
+    setAiHint('')
+    try {
+      // Shop-Domain aus einem anderen Artikel desselben Lieferanten ableiten (macht die Suche treffsicherer)
+      let domain = ''
+      if (itemFormData.supplier) {
+        const sibling = allItems.find(i => i.supplier === itemFormData.supplier && i.order_url && i.id !== editingItemId)
+        if (sibling?.order_url) { try { domain = new URL(sibling.order_url).host } catch { /* egal */ } }
+      }
+      const res = await pb.send('/lager/suggest-link', {
+        method: 'POST',
+        body: {
+          name: itemFormData.name.trim(),
+          supplier: itemFormData.supplier,
+          supplier_item_no: itemFormData.supplier_item_no,
+          domain,
+        },
+      }) as { success?: boolean; url?: string | null; begruendung?: string; error?: string }
+      if (res?.success && res.url) {
+        setItemFormData(prev => ({ ...prev, order_url: res.url! }))
+        setAiHint(`✓ Vorschlag übernommen${res.begruendung ? ` — ${res.begruendung}` : ''}. Bitte Link kurz prüfen!`)
+      } else if (res?.success) {
+        setAiHint('Kein passender Link gefunden — Artikelname/Lieferant präzisieren oder manuell eintragen.')
+      } else {
+        setAiHint('Fehler: ' + (res?.error || 'Unbekannt'))
+      }
+    } catch (e: any) {
+      setAiHint('KI-Suche nicht verfügbar: ' + (e?.message || e) + ' (Hook lager-ki.pb.js + MISTRAL_API_KEY auf dem Server?)')
+    } finally {
+      setAiSearching(false)
+    }
   }
 
   // Kompletten Lieferanten-Bedarf als EINEN Shop-Warenkorb öffnen (Shopify-Format:
@@ -2699,7 +2741,15 @@ export default function Lager() {
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14 }}>
               <label style={{ fontSize: 11, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.1em' }}>Bestell-Link</label>
-              <input className="lager-input" type="url" value={itemFormData.order_url} onChange={(e) => setItemFormData({...itemFormData, order_url: e.target.value})} placeholder="https://shop.lieferant.de/artikel..." />
+              <div style={{ display: 'flex', gap: 8 }}>
+                <input className="lager-input" style={{ flex: 1 }} type="url" value={itemFormData.order_url} onChange={(e) => setItemFormData({...itemFormData, order_url: e.target.value})} placeholder="https://shop.lieferant.de/artikel..." />
+                <button className="lager-btn" onClick={suggestLinkViaAi} disabled={aiSearching} title="Bestell-Link per KI im Netz suchen (Mistral, EU)">
+                  {aiSearching ? 'Sucht…' : 'Per KI suchen'}
+                </button>
+              </div>
+              {aiHint && (
+                <span style={{ fontSize: 12, fontWeight: 600, color: aiHint.startsWith('✓') ? '#15803d' : '#b91c1c' }}>{aiHint}</span>
+              )}
               <span style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--warm-gray)' }}>
                 Tipp: Unterstützt der Shop Warenkorb-Links, landet der Artikel mit {'{menge}'} direkt im Warenkorb — z.B. Shopify: …/cart/VARIANTE:{'{menge}'} · WooCommerce: …/?add-to-cart=ID&quantity={'{menge}'}
               </span>
