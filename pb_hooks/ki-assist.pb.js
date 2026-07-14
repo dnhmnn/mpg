@@ -51,7 +51,7 @@ routerAdd("POST", "/ki/chat", (e) => {
 
   // Fachquellen zur letzten Nutzerfrage suchen
   const frage = messages[messages.length - 1].content.slice(0, 200)
-  const DOMAINS = ["nerdfallmedizin.blog", "notfallguru.de"]
+  const DOMAINS = ["nerdfallmedizin.blog", "notfallguru.de", "register.awmf.org"]
   const quellen = []
 
   for (const domain of DOMAINS) {
@@ -86,14 +86,49 @@ routerAdd("POST", "/ki/chat", (e) => {
     }
   }
 
-  // Artikeltexte der Top-Quellen als Kontext laden
+  // Abbildungen (echte EKGs/Schaubilder) aus dem Artikel-HTML ziehen
+  const extractImages = (html, baseUrl) => {
+    let origin = ""
+    try { const mm = baseUrl.match(/^(https?:\/\/[^/]+)/); origin = mm ? mm[1] : "" } catch (er) {}
+    const imgs = []
+    const seen = {}
+    const re = /<img\b[^>]*>/gi
+    let tag
+    while ((tag = re.exec(html)) && imgs.length < 4) {
+      const t = tag[0]
+      let src = ""
+      const s1 = t.match(/\ssrc="([^"]+)"/i)
+      const s2 = t.match(/\sdata-(?:src|lazy-src|original)="([^"]+)"/i)
+      const s3 = t.match(/\ssrcset="([^",\s]+)/i)
+      src = (s2 && s2[1]) || (s1 && s1[1]) || (s3 && s3[1]) || ""
+      if (!src) continue
+      if (src.startsWith("//")) src = "https:" + src
+      else if (src.startsWith("/")) src = origin + src
+      if (!/^https?:\/\//.test(src)) continue
+      if (!/\.(jpe?g|png|webp)(\?|$)/i.test(src)) continue
+      if (/logo|icon|avatar|sprite|placeholder|emoji|badge|favicon|spinner|loading|header|footer|banner|ad[-_]/i.test(src)) continue
+      if (seen[src]) continue
+      seen[src] = true
+      imgs.push(src)
+    }
+    return imgs
+  }
+
+  // Artikeltexte + Abbildungen der Top-Quellen laden
   let kontext = ""
   const genutzt = []
+  const bilder = []
   for (const q of quellen.slice(0, 2)) {
-    const text = stripHtml(fetchText(q.url)).slice(0, 2600)
+    const raw = fetchText(q.url)
+    const text = stripHtml(raw).slice(0, 2600)
     if (text.length > 300) {
       genutzt.push(q)
       kontext += "\n\n### Quelle: " + q.titel + " (" + q.url + ")\n" + text
+      for (const src of extractImages(raw, q.url)) {
+        if (bilder.length < 4 && !bilder.some(b => b.url === src)) {
+          bilder.push({ url: src, quelle: q.titel, quelleUrl: q.url })
+        }
+      }
     }
   }
 
@@ -126,7 +161,7 @@ routerAdd("POST", "/ki/chat", (e) => {
     const data = res.json || {}
     const content = data.choices && data.choices[0] && data.choices[0].message ? data.choices[0].message.content : ""
     if (!content) return e.json(502, { success: false, error: "Leere KI-Antwort" + (data.message ? ": " + data.message : "") })
-    return e.json(200, { success: true, antwort: content, quellen: genutzt })
+    return e.json(200, { success: true, antwort: content, quellen: genutzt, bilder: bilder })
   } catch (err) {
     return e.json(502, { success: false, error: "KI-Anfrage fehlgeschlagen: " + err.message })
   }

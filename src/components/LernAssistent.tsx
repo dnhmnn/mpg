@@ -3,7 +3,8 @@ import type { ReactNode } from 'react'
 import { pb } from '../lib/pocketbase'
 
 interface Quelle { titel: string; url: string }
-interface Msg { role: 'user' | 'assistant'; content: string; quellen?: Quelle[] }
+interface Bild { url: string; quelle: string; quelleUrl: string }
+interface Msg { role: 'user' | 'assistant'; content: string; quellen?: Quelle[]; bilder?: Bild[] }
 
 const VORSCHLAEGE = [
   'Erkläre mir das ABCDE-Schema',
@@ -127,9 +128,9 @@ export default function LernAssistent() {
       const res = await pb.send('/ki/chat', {
         method: 'POST',
         body: { messages: next.map(m => ({ role: m.role, content: m.content })) },
-      }) as { success?: boolean; antwort?: string; quellen?: Quelle[]; error?: string }
+      }) as { success?: boolean; antwort?: string; quellen?: Quelle[]; bilder?: Bild[]; error?: string }
       if (res?.success && res.antwort) {
-        setMessages(prev => [...prev, { role: 'assistant', content: res.antwort!, quellen: res.quellen || [] }])
+        setMessages(prev => [...prev, { role: 'assistant', content: res.antwort!, quellen: res.quellen || [], bilder: res.bilder || [] }])
       } else {
         setError(res?.error || 'Keine Antwort erhalten')
       }
@@ -196,6 +197,25 @@ export default function LernAssistent() {
               <div style={{ padding: '14px 18px 16px', fontSize: 14.5, color: 'var(--lbf-text)' }}>
                 {renderMd(m.content)}
               </div>
+              {(m.bilder?.length ?? 0) > 0 && (
+                <div style={{ borderTop: '0.5px solid rgba(96,8,18,0.08)', padding: '12px 18px 4px' }}>
+                  <div style={{ fontSize: 9, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.16em', marginBottom: 8 }}>Abbildungen aus den Quellen</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    {m.bilder!.map((b, bi) => (
+                      <a key={bi} href={b.quelleUrl} target="_blank" rel="noreferrer" style={{ textDecoration: 'none' }}>
+                        <img
+                          src={b.url}
+                          alt={b.quelle}
+                          loading="lazy"
+                          onError={(ev) => { const el = (ev.currentTarget.parentElement as HTMLElement); if (el) el.style.display = 'none' }}
+                          style={{ width: '100%', maxHeight: 300, objectFit: 'contain', borderRadius: 10, border: '0.5px solid rgba(96,8,18,0.12)', background: '#fff' }}
+                        />
+                        <div style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--warm-gray)', marginTop: 4 }}>Quelle: {b.quelle}</div>
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
               {(m.quellen?.length ?? 0) > 0 && (
                 <div style={{ borderTop: '0.5px solid rgba(96,8,18,0.08)', background: 'rgba(250,249,247,0.8)', padding: '10px 18px 12px' }}>
                   <div style={{ fontSize: 9, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.16em', marginBottom: 6 }}>Quellen</div>
