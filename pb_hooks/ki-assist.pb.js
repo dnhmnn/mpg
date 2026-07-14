@@ -64,7 +64,7 @@ routerAdd("POST", "/ki/chat", (e) => {
         method: "GET", headers: { "User-Agent": UA }, timeout: 10,
       })
       if (Array.isArray(res.json)) {
-        hits = res.json.map(x => ({ titel: stripHtml((x.title || "").toString()), url: (x.url || "").toString() })).filter(h => h.url)
+        hits = res.json.map(x => ({ titel: stripHtml((x.title || "").toString()), url: (x.url || "").toString(), id: x.id, domain: domain })).filter(h => h.url)
       }
     } catch (err) { /* keine WP-REST-API */ }
     // 2) Fallback: HTML-Suchseite
@@ -94,24 +94,34 @@ routerAdd("POST", "/ki/chat", (e) => {
     const seen = {}
     const re = /<img\b[^>]*>/gi
     let tag
-    while ((tag = re.exec(html)) && imgs.length < 4) {
+    while ((tag = re.exec(html)) && imgs.length < 6) {
       const t = tag[0]
       let src = ""
-      const s1 = t.match(/\ssrc="([^"]+)"/i)
-      const s2 = t.match(/\sdata-(?:src|lazy-src|original)="([^"]+)"/i)
-      const s3 = t.match(/\ssrcset="([^",\s]+)/i)
-      src = (s2 && s2[1]) || (s1 && s1[1]) || (s3 && s3[1]) || ""
+      // größte Auflösung aus srcset bevorzugen (letzter Eintrag), dann lazy-Attribute, dann src
+      const ss = t.match(/srcset="([^"]+)"/i)
+      if (ss) {
+        const parts = ss[1].split(",").map(x => x.trim().split(/\s+/)[0]).filter(Boolean)
+        if (parts.length) src = parts[parts.length - 1]
+      }
+      if (!src) { const m2 = t.match(/\sdata-(?:src|lazy-src|orig-file|large-file|original|srcset)="([^",\s]+)"/i); if (m2) src = m2[1] }
+      if (!src) { const m1 = t.match(/\ssrc="([^"]+)"/i); if (m1) src = m1[1] }
       if (!src) continue
       if (src.startsWith("//")) src = "https:" + src
       else if (src.startsWith("/")) src = origin + src
-      if (!/^https?:\/\//.test(src)) continue
-      if (!/\.(jpe?g|png|webp)(\?|$)/i.test(src)) continue
-      if (/logo|icon|avatar|sprite|placeholder|emoji|badge|favicon|spinner|loading|header|footer|banner|ad[-_]/i.test(src)) continue
+      if (!/^https?:\/\//.test(src) || /^data:/i.test(src)) continue
+      // Bild, wenn Bilddateiendung ODER klar aus dem Medienordner (WordPress-CDN oft ohne Endung)
+      const isImg = /\.(jpe?g|png|webp)(\?|$|&)/i.test(src) || /\/wp-content\/uploads\//i.test(src) || /\/(media|images?|bilder|uploads)\//i.test(src)
+      if (!isImg) continue
+      if (/logo|icon|avatar|sprite|placeholder|emoji|badge|favicon|spinner|loading|gravatar|1x1|pixel|blank\.|spacer/i.test(src)) continue
       if (seen[src]) continue
       seen[src] = true
       imgs.push(src)
     }
     return imgs
+  }
+
+  const addBild = (src, q) => {
+    if (src && bilder.length < 4 && !bilder.some(b => b.url === src)) bilder.push({ url: src, quelle: q.titel, quelleUrl: q.url })
   }
 
   // Artikeltexte + Abbildungen der Top-Quellen laden
@@ -124,11 +134,25 @@ routerAdd("POST", "/ki/chat", (e) => {
     if (text.length > 300) {
       genutzt.push(q)
       kontext += "\n\n### Quelle: " + q.titel + " (" + q.url + ")\n" + text
-      for (const src of extractImages(raw, q.url)) {
-        if (bilder.length < 4 && !bilder.some(b => b.url === src)) {
-          bilder.push({ url: src, quelle: q.titel, quelleUrl: q.url })
+    }
+    // Bevorzugt: WordPress-Media-Endpunkt (saubere Bild-URLs, keine Lazy-Load-Probleme)
+    if (q.id && q.domain) {
+      try {
+        const mres = $http.send({
+          url: "https://" + q.domain + "/wp-json/wp/v2/media?parent=" + q.id + "&media_type=image&per_page=4",
+          method: "GET", headers: { "User-Agent": UA }, timeout: 10,
+        })
+        if (Array.isArray(mres.json)) {
+          for (const md of mres.json) {
+            const su = md && md.source_url ? md.source_url.toString() : ""
+            if (su && !/logo|icon|avatar|placeholder|favicon/i.test(su)) addBild(su, q)
+          }
         }
-      }
+      } catch (er) { /* Media-API nicht verfügbar */ }
+    }
+    // Ergänzend: Bilder aus dem Artikel-HTML
+    if (text.length > 300) {
+      for (const src of extractImages(raw, q.url)) addBild(src, q)
     }
   }
 

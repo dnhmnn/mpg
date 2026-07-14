@@ -223,15 +223,19 @@ export default function LernAssistent() {
                   <div style={{ fontSize: 9, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.16em', marginBottom: 8 }}>Abbildungen aus den Quellen</div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                     {m.bilder!.map((b, bi) => (
-                      <a key={bi} href={b.quelleUrl} target="_blank" rel="noreferrer" style={{ textDecoration: 'none' }}>
+                      <a key={bi} href={b.quelleUrl} target="_blank" rel="noreferrer" style={{ textDecoration: 'none', display: 'block' }}>
                         <img
                           src={b.url}
                           alt={b.quelle}
                           loading="lazy"
-                          onError={(ev) => { const el = (ev.currentTarget.parentElement as HTMLElement); if (el) el.style.display = 'none' }}
+                          referrerPolicy="no-referrer"
+                          onError={(ev) => { ev.currentTarget.style.display = 'none' }}
                           style={{ width: '100%', maxHeight: 300, objectFit: 'contain', borderRadius: 10, border: '0.5px solid rgba(96,8,18,0.12)', background: '#fff' }}
                         />
-                        <div style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--warm-gray)', marginTop: 4 }}>Quelle: {b.quelle}</div>
+                        <div style={{ fontSize: 11, fontStyle: 'italic', color: '#600812', marginTop: 4, display: 'flex', alignItems: 'center', gap: 5 }}>
+                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0 }}><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                          Abbildung aus {b.quelle} — ansehen
+                        </div>
                       </a>
                     ))}
                   </div>
