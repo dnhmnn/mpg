@@ -7,6 +7,7 @@ import StatusBar from '../components/StatusBar'
 
 // Recharts erst beim Öffnen der Statistik laden (eigener Chunk)
 const LagerStats = lazy(() => import('../components/LagerStats'))
+const LagerAssistent = lazy(() => import('../components/LagerAssistent'))
 
 
 interface InventoryItem {
@@ -324,6 +325,9 @@ export default function Lager() {
 
   // Statistik
   const [showStatsModal, setShowStatsModal] = useState(false)
+
+  // Lager-KI-Assistent
+  const [showAssist, setShowAssist] = useState(false)
 
   // KI-Link-Vorschlag
   const [aiSearching, setAiSearching] = useState(false)
@@ -661,6 +665,15 @@ export default function Lager() {
     } catch(e: any) {
       console.error('Error loading transactions:', e)
     }
+  }
+
+  // KI-erkannte Buchungen ausführen (aus dem Lager-Assistenten)
+  async function executeAiBookings(buchungen: { item_id: string; type: 'ein' | 'aus'; menge: number; mhd: string; charge: string }[]) {
+    for (const b of buchungen) {
+      const delta = b.type === 'ein' ? b.menge : -b.menge
+      await adjustQty(b.item_id, delta, b.type === 'ein' ? (b.mhd || undefined) : undefined, b.type === 'ein' ? (b.charge || undefined) : undefined)
+    }
+    await loadStock()
   }
 
   async function adjustQty(itemId: string, delta: number, expiryParam?: string, batchParam?: string) {
@@ -1990,6 +2003,10 @@ export default function Lager() {
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="4" y1="20" x2="20" y2="20"/><rect x="6" y="10" width="3" height="7" rx="0.5"/><rect x="11" y="5" width="3" height="12" rx="0.5"/><rect x="16" y="13" width="3" height="4" rx="0.5"/></svg>
           <span className="lager-action-label">Statistik</span>
         </button>
+        <button className="lager-action-btn" onClick={() => setShowAssist(true)} title="Lager-Assistent (KI)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3l1.7 4.3L18 9l-4.3 1.7L12 15l-1.7-4.3L6 9l4.3-1.7L12 3z"/><path d="M19 14l.8 2.2L22 17l-2.2.8L19 20l-.8-2.2L16 17l2.2-.8L19 14z"/></svg>
+          <span className="lager-action-label">Assistent</span>
+        </button>
       </div>
 
       {/* TOAST */}
@@ -3228,6 +3245,13 @@ export default function Lager() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* LAGER-KI-ASSISTENT */}
+      {showAssist && (
+        <Suspense fallback={null}>
+          <LagerAssistent onClose={() => setShowAssist(false)} onExecuteBookings={executeAiBookings} />
+        </Suspense>
       )}
 
       {/* UMLAGERUNG MODAL */}
