@@ -33,20 +33,34 @@ function inlineMd(text: string, keyPrefix: string): ReactNode[] {
 function renderMd(content: string): ReactNode {
   const lines = content.replace(/\r/g, '').split('\n')
   const blocks: ReactNode[] = []
+  let kurz: ReactNode[] | null = null // sammelt die Kurzfassung in eine getönte Box
   let para: string[] = []
   let list: { ordered: boolean; items: string[] } | null = null
   let key = 0
 
+  const push = (node: ReactNode) => { (kurz || blocks).push(node) }
+  const closeKurz = () => {
+    if (kurz) {
+      blocks.push(
+        <div key={`k${key++}`} style={{ background: 'rgba(96,8,18,0.05)', border: '0.5px solid rgba(96,8,18,0.12)', borderRadius: 10, padding: '11px 14px', margin: '2px 0 14px' }}>
+          <div style={{ fontSize: 9, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.16em', marginBottom: 6 }}>Kurzfassung</div>
+          {kurz}
+        </div>
+      )
+      kurz = null
+    }
+  }
+
   const flushPara = () => {
     if (para.length) {
-      blocks.push(<p key={`p${key++}`} style={{ margin: '0 0 10px', lineHeight: 1.65 }}>{inlineMd(para.join(' '), `p${key}`)}</p>)
+      push(<p key={`p${key++}`} style={{ margin: '0 0 10px', lineHeight: 1.65 }}>{inlineMd(para.join(' '), `p${key}`)}</p>)
       para = []
     }
   }
   const flushList = () => {
     if (list) {
       const l = list
-      blocks.push(
+      push(
         <div key={`l${key++}`} style={{ margin: '2px 0 12px', display: 'flex', flexDirection: 'column', gap: 5 }}>
           {l.items.map((item, idx) => (
             <div key={idx} style={{ display: 'flex', gap: 9, lineHeight: 1.55 }}>
@@ -70,11 +84,18 @@ function renderMd(content: string): ReactNode {
     if (!line) { flushPara(); flushList(); continue }
     if (h) {
       flushPara(); flushList()
-      blocks.push(
-        <div key={`h${key++}`} style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', margin: '14px 0 7px' }}>
-          {h[1].replace(/\*\*/g, '')}
-        </div>
-      )
+      const titel = h[1].replace(/\*\*/g, '').trim()
+      const istKurz = /^kurzfassung/i.test(titel)
+      closeKurz()
+      if (istKurz) {
+        kurz = [] // folgende Blöcke landen in der Kurzfassungs-Box (mit eigenem Label)
+      } else {
+        push(
+          <div key={`h${key++}`} style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', margin: '14px 0 7px' }}>
+            {titel}
+          </div>
+        )
+      }
     } else if (ul) {
       flushPara()
       if (!list || list.ordered) { flushList(); list = { ordered: false, items: [] } }
@@ -88,7 +109,7 @@ function renderMd(content: string): ReactNode {
       para.push(line)
     }
   }
-  flushPara(); flushList()
+  flushPara(); flushList(); closeKurz()
   return <div style={{ marginBottom: -10 }}>{blocks}</div>
 }
 
