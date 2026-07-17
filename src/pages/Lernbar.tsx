@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { pb } from '../lib/pocketbase'
 import LernAssistent from '../components/LernAssistent'
+import EkgTrainer from '../components/EkgTrainer'
 
 function parseDate(str: string | null | undefined): Date {
   if (!str) return new Date(NaN)
@@ -123,7 +124,7 @@ function getPatternBg(pattern: string | null): { backgroundImage: string; backgr
 export default function Lernbar() {
   const { user, loading: authLoading } = useAuth()
   const navigate = useNavigate()
-  const [tab, setTab] = useState<'bibliothek' | 'termine' | 'module' | 'assistent'>('assistent')
+  const [tab, setTab] = useState<'bibliothek' | 'termine' | 'module' | 'assistent' | 'ekg'>('assistent')
 
   const [termine, setTermine] = useState<Termin[]>([])
   const [terminDokumente, setTerminDokumente] = useState<TerminDokument[]>([])
@@ -473,6 +474,11 @@ export default function Lernbar() {
       badge: progress.length - doneMods,
       icon: <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
     },
+    {
+      id: 'ekg' as const, label: 'EKG',
+      badge: 0,
+      icon: <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12h4l2-6 4 12 2-6h6"/></svg>
+    },
   ]
 
   return (
@@ -491,10 +497,13 @@ export default function Lernbar() {
       </div>
 
       {/* Content */}
-      <div style={{ maxWidth: 600, margin: '0 auto', padding: tab === 'assistent' ? 0 : tab === 'bibliothek' ? '14px 14px calc(84px + env(safe-area-inset-bottom))' : '20px 16px calc(84px + env(safe-area-inset-bottom))' }}>
+      <div style={{ maxWidth: 600, margin: '0 auto', padding: (tab === 'assistent' || tab === 'ekg') ? 0 : tab === 'bibliothek' ? '14px 14px calc(84px + env(safe-area-inset-bottom))' : '20px 16px calc(84px + env(safe-area-inset-bottom))' }}>
 
         {/* ── KI-ASSISTENT ── */}
         {tab === 'assistent' && <LernAssistent />}
+
+        {/* ── EKG-TRAINER ── */}
+        {tab === 'ekg' && user && <EkgTrainer user={user as any} showMessage={showMsg} />}
 
         {/* ── BIBLIOTHEK ── */}
         {tab === 'bibliothek' && (() => {
