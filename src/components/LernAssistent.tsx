@@ -4,7 +4,7 @@ import { pb } from '../lib/pocketbase'
 
 interface Quelle { titel: string; url: string }
 interface Bild { url: string; quelle: string; quelleUrl: string }
-interface Msg { role: 'user' | 'assistant'; content: string; quellen?: Quelle[]; bilder?: Bild[] }
+interface Msg { role: 'user' | 'assistant'; content: string; quellen?: Quelle[]; bilder?: Bild[]; debug?: unknown }
 
 const VORSCHLAEGE = [
   'Erkläre mir das ABCDE-Schema',
@@ -149,9 +149,9 @@ export default function LernAssistent() {
       const res = await pb.send('/ki/chat', {
         method: 'POST',
         body: { messages: next.map(m => ({ role: m.role, content: m.content })) },
-      }) as { success?: boolean; antwort?: string; quellen?: Quelle[]; bilder?: Bild[]; error?: string }
+      }) as { success?: boolean; antwort?: string; quellen?: Quelle[]; bilder?: Bild[]; debug?: unknown; error?: string }
       if (res?.success && res.antwort) {
-        setMessages(prev => [...prev, { role: 'assistant', content: res.antwort!, quellen: res.quellen || [], bilder: res.bilder || [] }])
+        setMessages(prev => [...prev, { role: 'assistant', content: res.antwort!, quellen: res.quellen || [], bilder: res.bilder || [], debug: res.debug }])
       } else {
         setError(res?.error || 'Keine Antwort erhalten')
       }
@@ -253,6 +253,12 @@ export default function LernAssistent() {
                     ))}
                   </div>
                 </div>
+              )}
+              {(m.bilder?.length ?? 0) === 0 && m.debug != null && (
+                <details style={{ borderTop: '0.5px solid rgba(96,8,18,0.08)', padding: '8px 18px 10px' }}>
+                  <summary style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--warm-gray)', cursor: 'pointer' }}>Warum keine Abbildung? (Diagnose)</summary>
+                  <pre style={{ fontSize: 10, color: 'var(--warm-gray)', whiteSpace: 'pre-wrap', wordBreak: 'break-all', marginTop: 6 }}>{JSON.stringify(m.debug, null, 1)}</pre>
+                </details>
               )}
             </div>
           </div>

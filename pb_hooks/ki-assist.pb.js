@@ -128,9 +128,11 @@ routerAdd("POST", "/ki/chat", (e) => {
   let kontext = ""
   const genutzt = []
   const bilder = []
+  const dbg = { key: !!key, suchtreffer: quellen.length, quellen: [] }
   for (const q of quellen.slice(0, 2)) {
     const raw = fetchText(q.url)
     const text = stripHtml(raw).slice(0, 2600)
+    const info = { url: q.url, hatId: !!q.id, textLen: text.length, mediaImgs: 0, htmlImgs: 0 }
     if (text.length > 300) {
       genutzt.push(q)
       kontext += "\n\n### Quelle: " + q.titel + " (" + q.url + ")\n" + text
@@ -145,16 +147,20 @@ routerAdd("POST", "/ki/chat", (e) => {
         if (Array.isArray(mres.json)) {
           for (const md of mres.json) {
             const su = md && md.source_url ? md.source_url.toString() : ""
-            if (su && !/logo|icon|avatar|placeholder|favicon/i.test(su)) addBild(su, q)
+            if (su && !/logo|icon|avatar|placeholder|favicon/i.test(su)) { addBild(su, q); info.mediaImgs++ }
           }
         }
       } catch (er) { /* Media-API nicht verfügbar */ }
     }
     // Ergänzend: Bilder aus dem Artikel-HTML
     if (text.length > 300) {
-      for (const src of extractImages(raw, q.url)) addBild(src, q)
+      const imgs = extractImages(raw, q.url)
+      info.htmlImgs = imgs.length
+      for (const src of imgs) addBild(src, q)
     }
+    dbg.quellen.push(info)
   }
+  dbg.bilder = bilder.length
 
   const system =
     "Du bist der Lern-Assistent von Responda für Einsatzkräfte (Rettungsdienst, Feuerwehr, Sanitätsdienst). " +
@@ -189,7 +195,7 @@ routerAdd("POST", "/ki/chat", (e) => {
     const data = res.json || {}
     const content = data.choices && data.choices[0] && data.choices[0].message ? data.choices[0].message.content : ""
     if (!content) return e.json(502, { success: false, error: "Leere KI-Antwort" + (data.message ? ": " + data.message : "") })
-    return e.json(200, { success: true, antwort: content, quellen: genutzt, bilder: bilder })
+    return e.json(200, { success: true, antwort: content, quellen: genutzt, bilder: bilder, debug: dbg })
   } catch (err) {
     return e.json(502, { success: false, error: "KI-Anfrage fehlgeschlagen: " + err.message })
   }
