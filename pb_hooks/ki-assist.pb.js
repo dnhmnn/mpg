@@ -53,23 +53,28 @@ routerAdd("POST", "/ki/chat", (e) => {
   const frage = messages[messages.length - 1].content.slice(0, 200)
   const DOMAINS = ["nerdfallmedizin.blog", "notfallguru.de", "register.awmf.org"]
   const quellen = []
+  const sucheDbg = []
 
   for (const domain of DOMAINS) {
     if (quellen.length >= 3) break
     let hits = []
+    const sd = { domain: domain, wpStatus: 0, wpHits: 0, htmlLen: 0, htmlHits: 0 }
     // 1) WordPress-REST-Suche (liefert saubere Titel+URLs)
     try {
       const res = $http.send({
         url: "https://" + domain + "/wp-json/wp/v2/search?search=" + encodeURIComponent(frage) + "&per_page=3",
         method: "GET", headers: { "User-Agent": UA }, timeout: 10,
       })
+      sd.wpStatus = res.statusCode || 0
       if (Array.isArray(res.json)) {
         hits = res.json.map(x => ({ titel: stripHtml((x.title || "").toString()), url: (x.url || "").toString(), id: x.id, domain: domain })).filter(h => h.url)
+        sd.wpHits = hits.length
       }
-    } catch (err) { /* keine WP-REST-API */ }
+    } catch (err) { sd.wpStatus = -1 }
     // 2) Fallback: HTML-Suchseite
     if (!hits.length) {
       const html = fetchText("https://" + domain + "/?s=" + encodeURIComponent(frage))
+      sd.htmlLen = html ? html.length : 0
       const re2 = new RegExp('<a[^>]+href="(https?://[^"]*' + domain.replace(/\./g, "\\.") + '[^"]*)"[^>]*>([\\s\\S]{4,120}?)</a>', "g")
       let m
       const seen = {}
@@ -80,7 +85,9 @@ routerAdd("POST", "/ki/chat", (e) => {
         const titel = stripHtml(m[2])
         if (titel.length > 3) hits.push({ titel: titel, url: url })
       }
+      sd.htmlHits = hits.length
     }
+    sucheDbg.push(sd)
     for (const h of hits.slice(0, 2)) {
       if (quellen.length < 3 && !quellen.some(q => q.url === h.url)) quellen.push(h)
     }
@@ -128,7 +135,7 @@ routerAdd("POST", "/ki/chat", (e) => {
   let kontext = ""
   const genutzt = []
   const bilder = []
-  const dbg = { key: !!key, suchtreffer: quellen.length, quellen: [] }
+  const dbg = { key: !!key, suchtreffer: quellen.length, suche: sucheDbg, quellen: [] }
   for (const q of quellen.slice(0, 2)) {
     const raw = fetchText(q.url)
     const text = stripHtml(raw).slice(0, 2600)
