@@ -76,7 +76,31 @@ routerAdd("POST", "/ki/chat", (e) => {
     }
   }
 
-  const dbg = { key: !!key, artikelGesamt: artikel.length, treffer: treffer.length, bilder: bilder.length }
+  // ── Passende AWMF-Leitlinien (kuratierte Metadaten, verlinkt aufs offizielle Register) ──
+  let awmfTreffer = []
+  try {
+    const awmf = require(`${__hooks}/awmf-leitlinien.js`).LEITLINIEN
+    const awmfScored = []
+    for (const l of awmf) {
+      const lt = l.titel.toLowerCase()
+      let score = 0
+      let tagHit = false
+      for (const t of tokens) {
+        if (l.tags.indexOf(t) !== -1) { score += 4; tagHit = true }
+        if (lt.indexOf(t) !== -1) score += 3
+      }
+      // Mindestens ein kuratiertes Schlagwort muss passen — Titelwörter allein
+      // (z.B. "beim Erwachsenen") erzeugen sonst falsche Treffer
+      if (tagHit) awmfScored.push({ l: l, score: score })
+    }
+    awmfScored.sort((x, y) => y.score - x.score)
+    awmfTreffer = awmfScored.slice(0, 3).map(s => s.l)
+    for (const l of awmfTreffer) {
+      quellen.push({ titel: "AWMF-Leitlinie: " + l.titel + " (" + l.nr + ")", url: "https://register.awmf.org/de/leitlinien/detail/" + l.nr })
+    }
+  } catch (err) {}
+
+  const dbg = { key: !!key, artikelGesamt: artikel.length, treffer: treffer.length, bilder: bilder.length, awmf: awmfTreffer.length }
 
   // Weiterführende Quellen — nur Verweise (Suchlinks), keine Inhalte kopiert
   const enc = encodeURIComponent
@@ -101,6 +125,11 @@ routerAdd("POST", "/ki/chat", (e) => {
     "Halte den ausführlichen Teil kompakt (insgesamt max. ~350 Wörter), Wichtiges **fett**. " +
     "Passende Abbildungen aus der Wissensbasis werden dem Nutzer AUTOMATISCH unterhalb deiner Antwort angezeigt. " +
     "Behaupte deshalb NIEMALS, dass du keine Bilder senden/zeigen kannst; verweise natürlich auf die Abbildungen unten, falls vorhanden." +
+    (awmfTreffer.length
+      ? "\n\nZur Frage passen diese AWMF-Leitlinien (werden dem Nutzer unten automatisch verlinkt): " +
+        awmfTreffer.map(l => l.titel + " (AWMF-Reg.-Nr. " + l.nr + ")").join("; ") + ". " +
+        "Beziehe dich, wo einschlägig, ausdrücklich auf sie (Name + Registernummer) und richte deine Aussagen an ihnen aus. Zitiere keine wörtlichen Passagen."
+      : "") +
     (kontext ? "\n\nWISSENSBASIS-AUSZÜGE:" + kontext : "")
 
   try {

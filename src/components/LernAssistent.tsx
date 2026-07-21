@@ -243,11 +243,16 @@ export default function LernAssistent() {
                 <div style={{ borderTop: '0.5px solid rgba(96,8,18,0.08)', background: 'rgba(250,249,247,0.8)', padding: '10px 18px 12px' }}>
                   <div style={{ fontSize: 9, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.16em', marginBottom: 6 }}>Quellen</div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-                    {m.quellen!.map(q => (
+                    {m.quellen!.map(q => q.url ? (
                       <a key={q.url} href={q.url} target="_blank" rel="noreferrer" style={{ fontSize: 12.5, fontStyle: 'italic', fontWeight: 600, color: '#600812', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 6 }}>
                         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0 }}><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
                         {q.titel || q.url.replace(/^https?:\/\//, '').slice(0, 60)}
                       </a>
+                    ) : (
+                      <span key={q.titel} style={{ fontSize: 12.5, fontStyle: 'italic', fontWeight: 600, color: '#600812', display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0 }}><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
+                        {q.titel}
+                      </span>
                     ))}
                   </div>
                 </div>
