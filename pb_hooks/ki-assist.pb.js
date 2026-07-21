@@ -78,6 +78,14 @@ routerAdd("POST", "/ki/chat", (e) => {
 
   const dbg = { key: !!key, artikelGesamt: artikel.length, treffer: treffer.length, bilder: bilder.length }
 
+  // Weiterführende Quellen — nur Verweise (Suchlinks), keine Inhalte kopiert
+  const enc = encodeURIComponent
+  const weiterlesen = [
+    { name: "Nerdfallmedizin", url: "https://www.google.com/search?q=" + enc("site:nerdfallmedizin.blog " + frage.slice(0, 120)) },
+    { name: "Notfallguru", url: "https://www.google.com/search?q=" + enc("site:notfallguru.de " + frage.slice(0, 120)) },
+    { name: "AWMF-Leitlinien", url: "https://www.google.com/search?q=" + enc("site:register.awmf.org " + frage.slice(0, 120)) },
+  ]
+
   const system =
     "Du bist der Lern-Assistent von Responda für Einsatzkräfte (Rettungsdienst, Feuerwehr, Sanitätsdienst). " +
     "Beantworte Fragen zu medizinischen, notfallmedizinischen und einsatztaktischen Themen auf Deutsch — " +
@@ -111,7 +119,7 @@ routerAdd("POST", "/ki/chat", (e) => {
     const data = res.json || {}
     const content = data.choices && data.choices[0] && data.choices[0].message ? data.choices[0].message.content : ""
     if (!content) return e.json(502, { success: false, error: "Leere KI-Antwort" + (data.message ? ": " + data.message : "") })
-    return e.json(200, { success: true, antwort: content, quellen: quellen, bilder: bilder, debug: dbg })
+    return e.json(200, { success: true, antwort: content, quellen: quellen, bilder: bilder, weiterlesen: weiterlesen, debug: dbg })
   } catch (err) {
     return e.json(502, { success: false, error: "KI-Anfrage fehlgeschlagen: " + err.message })
   }

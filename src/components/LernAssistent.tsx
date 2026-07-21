@@ -4,7 +4,8 @@ import { pb } from '../lib/pocketbase'
 
 interface Quelle { titel: string; url: string }
 interface Bild { url: string; quelle: string; quelleUrl: string }
-interface Msg { role: 'user' | 'assistant'; content: string; quellen?: Quelle[]; bilder?: Bild[]; debug?: unknown }
+interface Weiterlesen { name: string; url: string }
+interface Msg { role: 'user' | 'assistant'; content: string; quellen?: Quelle[]; bilder?: Bild[]; weiterlesen?: Weiterlesen[]; debug?: unknown }
 
 const VORSCHLAEGE = [
   'Erkläre mir das ABCDE-Schema',
@@ -149,9 +150,9 @@ export default function LernAssistent() {
       const res = await pb.send('/ki/chat', {
         method: 'POST',
         body: { messages: next.map(m => ({ role: m.role, content: m.content })) },
-      }) as { success?: boolean; antwort?: string; quellen?: Quelle[]; bilder?: Bild[]; debug?: unknown; error?: string }
+      }) as { success?: boolean; antwort?: string; quellen?: Quelle[]; bilder?: Bild[]; weiterlesen?: Weiterlesen[]; debug?: unknown; error?: string }
       if (res?.success && res.antwort) {
-        setMessages(prev => [...prev, { role: 'assistant', content: res.antwort!, quellen: res.quellen || [], bilder: res.bilder || [], debug: res.debug }])
+        setMessages(prev => [...prev, { role: 'assistant', content: res.antwort!, quellen: res.quellen || [], bilder: res.bilder || [], weiterlesen: res.weiterlesen || [], debug: res.debug }])
       } else {
         setError(res?.error || 'Keine Antwort erhalten')
       }
@@ -249,6 +250,20 @@ export default function LernAssistent() {
                       </a>
                     ))}
                   </div>
+                </div>
+              )}
+              {(m.weiterlesen?.length ?? 0) > 0 && (
+                <div style={{ borderTop: '0.5px solid rgba(96,8,18,0.08)', background: 'rgba(250,249,247,0.8)', padding: '10px 18px 12px' }}>
+                  <div style={{ fontSize: 9, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.16em', marginBottom: 6 }}>Weiterlesen bei</div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                    {m.weiterlesen!.map(w => (
+                      <a key={w.name} href={w.url} target="_blank" rel="noreferrer" style={{ fontSize: 12, fontStyle: 'italic', fontWeight: 700, color: '#600812', textDecoration: 'none', border: '0.5px solid rgba(96,8,18,0.2)', borderRadius: 999, padding: '4px 11px', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0 }}><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                        {w.name}
+                      </a>
+                    ))}
+                  </div>
+                  <div style={{ fontSize: 10, fontStyle: 'italic', color: 'var(--warm-gray)', marginTop: 7 }}>Externe Leitlinien &amp; Fachquellen — öffnet die passende Suche.</div>
                 </div>
               )}
               {(m.bilder?.length ?? 0) === 0 && m.debug != null && (
