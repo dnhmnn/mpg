@@ -128,6 +128,9 @@ routerAdd("POST", "/ki/chat", (e) => {
 // POST /ki/wissen-import — strukturiert einen hochgeladenen Textauszug (aus PDF/
 // Textdatei/ZIP, clientseitig extrahiert) automatisch zu fertigen Wissens-
 // einträgen. Nur Supervisor. Body: { dateiname, text } -> { eintraege: [{titel,inhalt,tags}] }
+// HINWEIS DSGVO: Der Freitext wird zur Strukturierung an Mistral (EU) gesendet.
+// Der Supervisor bestätigt clientseitig, dass das Material keine Patienten-/
+// Personendaten enthält (siehe Wissen.tsx). Nur zur Ausbildung gedachtes Fachmaterial.
 routerAdd("POST", "/ki/wissen-import", (e) => {
   const u = e.auth
   if (!u) return e.json(403, { success: false, error: "Nicht berechtigt" })
@@ -179,7 +182,7 @@ routerAdd("POST", "/ki/wissen-import", (e) => {
     for (const it of arr.slice(0, 6)) {
       const titel = (it && it.titel ? it.titel : "").toString().trim().slice(0, 200)
       const inhalt = (it && it.inhalt ? it.inhalt : "").toString().trim().slice(0, 6000)
-      if (!inhalt && !titel) continue
+      if (!inhalt) continue // Titel-ohne-Inhalt verwerfen — sonst leere Wissenseinträge
       let tags = []
       if (it && Array.isArray(it.tags)) tags = it.tags.map(t => (t || "").toString().trim().slice(0, 40)).filter(Boolean).slice(0, 6)
       eintraege.push({ titel: titel || dateiname, inhalt: inhalt, tags: tags })

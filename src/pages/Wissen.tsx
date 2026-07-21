@@ -80,20 +80,21 @@ function impStatusLabel(r: ImpRow): string {
 function unzipAsync(bytes: Uint8Array): Promise<Record<string, Uint8Array>> {
   return new Promise((resolve, reject) => unzip(bytes, (err, data) => (err ? reject(err) : resolve(data))))
 }
-async function pdfToText(bytes: Uint8Array): Promise<string> {
+async function pdfToText(bytes: Uint8Array): Promise<{ text: string; total: number; read: number }> {
   const pdfjs: any = await import('pdfjs-dist')
   pdfjs.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).href
   // getDocument transferiert den Buffer — deshalb eine Kopie übergeben
   const doc = await pdfjs.getDocument({ data: bytes.slice() }).promise
-  const pages = Math.min(doc.numPages, 120)
+  const total = doc.numPages
+  const read = Math.min(total, 120)
   let out = ''
-  for (let i = 1; i <= pages; i++) {
+  for (let i = 1; i <= read; i++) {
     const page = await doc.getPage(i)
     const tc = await page.getTextContent()
     out += tc.items.map((it: any) => (it && typeof it.str === 'string' ? it.str : '')).join(' ') + '\n\n'
   }
   try { await doc.destroy() } catch { /* egal */ }
-  return out
+  return { text: out, total, read }
 }
 function chunkText(text: string, size = 8000): string[] {
   const clean = text.replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim()
@@ -155,8 +156,11 @@ export default function Wissen() {
   const [impRows, setImpRows] = useState<ImpRow[]>([])
   const [impCreated, setImpCreated] = useState(0)
   const [dragOver, setDragOver] = useState(false)
+  const [impConfirm, setImpConfirm] = useState(false)
+  const [stopping, setStopping] = useState(false)
   const impEntriesRef = useRef<ImportEntry[]>([])
   const impFileRef = useRef<HTMLInputElement>(null)
+  const impCancelRef = useRef(false)
 
   useEffect(() => {
     if (!authLoading && user && !user.supervisor) navigate('/hub')
@@ -216,25 +220,39 @@ export default function Wissen() {
 
   // ── Import ──────────────────────────────────────────────────────────────
   function openImport() {
-    setImportOpen(true); setImporting(false); setImpStarted(false); setImpCreated(0); setImpRows([]); impEntriesRef.current = []
+    setImportOpen(true); setImporting(false); setImpStarted(false); setImpCreated(0); setImpRows([]); setImpConfirm(false); setStopping(false)
+    impEntriesRef.current = []; impCancelRef.current = false
   }
   async function onImportFiles(fileList: FileList | null) {
     if (!fileList || !fileList.length || importing) return
     const files = Array.from(fileList)
+    // Nach einem abgeschlossenen Lauf beginnt eine neue Auswahl frisch; davor wird angehängt
+    const prev = impStarted ? [] : impEntriesRef.current
     setImpStarted(false); setImpCreated(0)
-    setImpRows([{ name: 'Dateien werden gelesen…', kind: 'unsupported', status: 'lesen', info: '', created: 0 }])
-    let entries: ImportEntry[] = []
-    try { entries = await expandFiles(files) } catch { entries = [] }
+    if (!prev.length) setImpRows([{ name: 'Dateien werden gelesen…', kind: 'unsupported', status: 'lesen', info: '', created: 0 }])
+    let fresh: ImportEntry[] = []
+    try { fresh = await expandFiles(files) } catch { fresh = [] }
+    // an bestehende Auswahl anhängen, nach Name deduplizieren
+    const seen = new Set(prev.map(e => e.name))
+    const merged = [...prev]
+    let added = 0
+    for (const en of fresh) { if (!seen.has(en.name)) { seen.add(en.name); merged.push(en); added++ } }
     // Verwertbares zuerst, Nicht-Unterstütztes ans Ende
     const order: Record<EntryKind, number> = { pdf: 0, text: 0, image: 1, unsupported: 2 }
-    entries.sort((a, b) => order[a.kind] - order[b.kind])
-    impEntriesRef.current = entries
-    setImpRows(entries.map(en => ({
+    merged.sort((a, b) => order[a.kind] - order[b.kind])
+    impEntriesRef.current = merged
+    if (!merged.length) {
+      setImpRows([{ name: 'Keine verwertbaren Dateien gefunden', kind: 'unsupported', status: 'fehler', info: 'ZIP leer oder nur nicht unterstützte Dateien', created: 0 }])
+      return
+    }
+    setImpRows(merged.map(en => ({
       name: en.name, kind: en.kind,
       status: en.kind === 'unsupported' ? 'übersprungen' : 'warten',
       info: en.kind === 'unsupported' ? 'nicht unterstützt' : '', created: 0,
     })))
+    if (added === 0) showMsg('Keine neuen verwertbaren Dateien gefunden', 'error')
   }
+  function cancelImport() { impCancelRef.current = true; setStopping(true) }
   async function createWissenArticle(titel: string, inhalt: string, tags: string[], quelle: string, bild?: File) {
     const fd = new FormData()
     fd.append('titel', (titel || '').slice(0, 200))
@@ -249,52 +267,66 @@ export default function Wissen() {
     if (!user || importing) return
     const entries = impEntriesRef.current
     if (!entries.length) return
+    impCancelRef.current = false; setStopping(false)
     setImporting(true); setImpStarted(true)
     let total = 0
+    let cancelled = false
     const update = (i: number, patch: Partial<ImpRow>) => setImpRows(prev => prev.map((r, idx) => (idx === i ? { ...r, ...patch } : r)))
     for (let i = 0; i < entries.length; i++) {
+      if (impCancelRef.current) { cancelled = true; update(i, { status: 'übersprungen', info: 'abgebrochen' }); continue }
       const en = entries[i]
+      let made = 0
       try {
         if (en.kind === 'unsupported') { update(i, { status: 'übersprungen', info: 'nicht unterstützt' }); continue }
         if (en.kind === 'image') {
           update(i, { status: 'anlegen' })
           const bild = new File([en.bytes], en.name, { type: imgMime(en.name) })
           await createWissenArticle(niceTitle(en.name), '', [], en.name, bild)
-          total += 1; setImpCreated(total)
+          made = 1; total += 1; setImpCreated(total)
           update(i, { status: 'fertig', info: 'als Abbildung angelegt', created: 1 })
           continue
         }
         // pdf / text
         update(i, { status: 'lesen' })
-        const text = en.kind === 'pdf' ? await pdfToText(en.bytes) : new TextDecoder('utf-8', { fatal: false }).decode(en.bytes)
+        let text = ''; let pageNote = ''
+        if (en.kind === 'pdf') {
+          const r = await pdfToText(en.bytes)
+          text = r.text
+          if (r.total > r.read) pageNote = ' · nur erste ' + r.read + ' von ' + r.total + ' Seiten'
+        } else {
+          text = new TextDecoder('utf-8', { fatal: false }).decode(en.bytes)
+        }
         const chunks = chunkText(text)
         if (!chunks.length || text.trim().length < 40) {
           update(i, { status: 'übersprungen', info: en.kind === 'pdf' ? 'kein Text (evtl. Scan/Bild-PDF)' : 'kein Text' }); continue
         }
         update(i, { status: 'ki', info: chunks.length > 1 ? chunks.length + ' Abschnitte' : '' })
-        let made = 0
         for (const chunk of chunks) {
+          if (impCancelRef.current) break
           const res = await pb.send('/ki/wissen-import', { method: 'POST', body: { dateiname: en.name, text: chunk } }) as
             { success?: boolean; eintraege?: { titel: string; inhalt: string; tags: string[] }[]; error?: string }
           const list = res && res.success && Array.isArray(res.eintraege) ? res.eintraege : []
           for (const it of list) {
-            if (!it || (!(it.inhalt || '').trim() && !(it.titel || '').trim())) continue
+            if (!it || !(it.inhalt || '').trim()) continue
             update(i, { status: 'anlegen' })
             await createWissenArticle(it.titel, it.inhalt, it.tags || [], en.name)
             made += 1; total += 1; setImpCreated(total)
           }
         }
-        if (made === 0) update(i, { status: 'übersprungen', info: 'kein Fachinhalt erkannt' })
-        else update(i, { status: 'fertig', info: made + ' Eintrag' + (made === 1 ? '' : 'e'), created: made })
+        if (impCancelRef.current) { cancelled = true; update(i, { status: made > 0 ? 'fertig' : 'übersprungen', info: made > 0 ? made + ' angelegt (abgebrochen)' : 'abgebrochen', created: made }) }
+        else if (made === 0) update(i, { status: 'übersprungen', info: 'kein Fachinhalt erkannt' })
+        else update(i, { status: 'fertig', info: made + ' Eintrag' + (made === 1 ? '' : 'e') + pageNote, created: made })
       } catch (err: any) {
         const m = err?.message || (err?.data ? JSON.stringify(err.data) : '') || 'Fehler'
-        update(i, { status: 'fehler', info: String(m).slice(0, 140) })
+        update(i, { status: 'fehler', info: (made > 0 ? made + ' angelegt, dann ' : '') + String(m).slice(0, 120), created: made })
+      } finally {
+        entries[i].bytes = new Uint8Array() // Speicher je Datei freigeben
       }
     }
     setImporting(false)
     await load()
-    if (total > 0) showMsg('✅ ' + total + ' Wissenseintrag' + (total === 1 ? '' : 'e') + ' angelegt!')
-    else showMsg('Keine Einträge angelegt', 'error')
+    if (total > 0) showMsg('✅ ' + total + ' Wissenseintrag' + (total === 1 ? '' : 'e') + ' angelegt' + (cancelled ? ' (abgebrochen)' : '') + '!')
+    else showMsg(cancelled ? 'Import abgebrochen' : 'Keine Einträge angelegt', 'error')
   }
 
   async function del() {
@@ -341,7 +373,7 @@ export default function Wissen() {
 
       <div style={{ maxWidth: 780, margin: '0 auto', padding: '16px 16px 80px' }}>
         <div style={{ background: 'rgba(96,8,18,0.04)', borderRadius: 10, padding: '12px 14px', fontSize: 13, color: 'var(--lbf-text)', lineHeight: 1.55, marginBottom: 16 }}>
-          Alles hier ist die geprüfte Grundlage, aus der der Lern-Assistent antwortet. Je mehr saubere Artikel (mit Schlagwörtern und ggf. Bild), desto besser die Antworten.
+          Diese Wissensbasis ist die Grundlage, aus der der Lern-Assistent antwortet. Je mehr saubere, fachlich geprüfte Artikel (mit Schlagwörtern und ggf. Bild), desto besser die Antworten. Importierte Einträge bitte vor dem Verlassen darauf prüfen.
         </div>
 
         <input type="text" placeholder="Wissensbasis durchsuchen…" value={search} onChange={e => setSearch(e.target.value)}
@@ -459,20 +491,34 @@ export default function Wissen() {
             )}
 
             {impRows.length > 0 && (
-              <div style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--warm-gray)', marginBottom: 12, lineHeight: 1.45 }}>
-                Die KI strukturiert nur den hochgeladenen Text und erfindet nichts dazu — bitte die erzeugten Einträge trotzdem stichprobenartig prüfen. Lade nur Material hoch, das du verwenden darfst.
+              <div style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--warm-gray)', marginBottom: 10, lineHeight: 1.45 }}>
+                Die KI strukturiert den hochgeladenen Text — sie kann dabei Fehler machen. Bitte jeden erzeugten Eintrag prüfen, bevor du dich darauf verlässt. Lade nur Material hoch, das du verwenden darfst.
               </div>
+            )}
+
+            {impRows.length > 0 && !(impStarted && !importing) && (
+              <label style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 14, cursor: importing ? 'default' : 'pointer' }}>
+                <input type="checkbox" checked={impConfirm} disabled={importing} onChange={e => setImpConfirm(e.target.checked)}
+                  style={{ marginTop: 2, width: 16, height: 16, accentColor: '#600812', flexShrink: 0 }} />
+                <span style={{ fontSize: 12, color: 'var(--lbf-text)', lineHeight: 1.4 }}>
+                  Ich bestätige, dass die Dateien <b>keine Patienten- oder Personendaten</b> enthalten. Der Text wird zur Auswertung an Mistral (EU) gesendet.
+                </span>
+              </label>
             )}
 
             {/* Footer */}
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
               {importing && <span style={{ fontSize: 12, fontWeight: 700, color: '#600812' }}>{impCreated} angelegt…</span>}
-              {!importing && impStarted && <span style={{ fontSize: 12, fontWeight: 700, color: '#16a34a' }}>{impCreated} Einträge angelegt</span>}
+              {!importing && impStarted && <span style={{ fontSize: 12, fontWeight: 700, color: impCreated > 0 ? '#16a34a' : 'var(--warm-gray)' }}>{impCreated} Einträge angelegt</span>}
               <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
-                <button onClick={() => setImportOpen(false)} disabled={importing} style={{ border: '1px solid rgba(96,8,18,0.2)', background: 'transparent', color: 'var(--warm-gray)', borderRadius: 10, padding: '9px 16px', fontWeight: 700, fontSize: 13, cursor: importing ? 'not-allowed' : 'pointer', opacity: importing ? 0.6 : 1, fontFamily: 'inherit' }}>{impStarted && !importing ? 'Schließen' : 'Abbrechen'}</button>
+                {importing ? (
+                  <button onClick={cancelImport} disabled={stopping} style={{ border: '1px solid rgba(220,38,38,0.4)', background: 'transparent', color: '#dc2626', borderRadius: 10, padding: '9px 16px', fontWeight: 700, fontSize: 13, cursor: stopping ? 'default' : 'pointer', opacity: stopping ? 0.6 : 1, fontFamily: 'inherit' }}>{stopping ? 'Stoppt…' : 'Stopp'}</button>
+                ) : (
+                  <button onClick={() => setImportOpen(false)} style={{ border: '1px solid rgba(96,8,18,0.2)', background: 'transparent', color: 'var(--warm-gray)', borderRadius: 10, padding: '9px 16px', fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>{impStarted ? 'Schließen' : 'Abbrechen'}</button>
+                )}
                 {!(impStarted && !importing) && (
-                  <button onClick={runImport} disabled={importing || impRows.filter(r => r.kind !== 'unsupported').length === 0}
-                    style={{ border: 'none', background: '#600812', color: '#fff', borderRadius: 10, padding: '9px 18px', fontWeight: 700, fontSize: 13, cursor: (importing || impRows.filter(r => r.kind !== 'unsupported').length === 0) ? 'not-allowed' : 'pointer', opacity: (importing || impRows.filter(r => r.kind !== 'unsupported').length === 0) ? 0.6 : 1, fontFamily: 'inherit' }}>
+                  <button onClick={runImport} disabled={importing || !impConfirm || impRows.filter(r => r.kind !== 'unsupported').length === 0}
+                    style={{ border: 'none', background: '#600812', color: '#fff', borderRadius: 10, padding: '9px 18px', fontWeight: 700, fontSize: 13, cursor: (importing || !impConfirm || impRows.filter(r => r.kind !== 'unsupported').length === 0) ? 'not-allowed' : 'pointer', opacity: (importing || !impConfirm || impRows.filter(r => r.kind !== 'unsupported').length === 0) ? 0.6 : 1, fontFamily: 'inherit' }}>
                     {importing ? 'Wertet aus…' : 'Auswerten & anlegen'}
                   </button>
                 )}
