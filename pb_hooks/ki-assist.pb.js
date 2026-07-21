@@ -1,23 +1,26 @@
 // PocketBase hook: KI-Assistenz (Mistral, EU)  (PocketBase v0.23+ API)
 //
 // 1. POST /ki/chat — Lern-Assistent für Einsatzkräfte (Lernbar/Unitas).
-//    RAG-lite: sucht zur Frage passende Fachartikel auf nerdfallmedizin.blog
-//    und notfallguru.de, gibt deren Text der KI als primäre Grundlage mit
-//    und liefert die verwendeten Quellen (Titel + URL) an den Client zurück.
-//    Body: { messages: [{ role, content }] }  ->  { antwort, quellen: [{titel,url}] }
+//    Beantwortet Fragen PRIMÄR aus der EIGENEN, vom Supervisor gepflegten
+//    Wissensbasis (Collection "wissen") + passenden Abbildungen daraus.
+//    Body: { messages: [{ role, content }] }  ->  { antwort, quellen, bilder }
 //
 // 2. POST /ki/generate-buch — entwirft ein Lernfeed-Buch (Seiten mit Text-
-//    und Quiz-Blöcken) zu einem Thema. Body: { thema, hinweise?, seiten? }
+//    und Quiz-Blöcken) zu einem Thema.
 //
-// Beide benötigen MISTRAL_API_KEY (systemctl edit pocketbase ->
-// Environment=MISTRAL_API_KEY=...). Es werden keine Personen-/Patientendaten
-// an die KI übertragen — nur die Frage bzw. das Thema.
+// Benötigt MISTRAL_API_KEY. Keine Personen-/Patientendaten an die KI.
+//
+// Collection "wissen": titel (text), inhalt (text), tags (text/json),
+//   bild (file, optional), quelle (text), organization_id (text).
+
+const FILE_BASE = "https://api.responda.systems"
 
 routerAdd("POST", "/ki/chat", (e) => {
   const u = e.auth
   if (!u) return e.json(403, { success: false, error: "Nicht berechtigt" })
   const key = $os.getenv("MISTRAL_API_KEY")
   if (!key) return e.json(500, { success: false, error: "MISTRAL_API_KEY ist auf dem Server nicht gesetzt" })
+  const orgId = u.get("organization_id")
 
   const body = e.requestInfo().body || {}
   const raw = Array.isArray(body.messages) ? body.messages : []
@@ -29,162 +32,68 @@ routerAdd("POST", "/ki/chat", (e) => {
   }
   if (!messages.length) return e.json(400, { success: false, error: "Keine Frage übermittelt" })
 
-  const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36"
-  const fetchText = (url, timeout) => {
-    try {
-      const res = $http.send({ url: url, method: "GET", headers: { "User-Agent": UA, "Accept-Language": "de-DE,de;q=0.9" }, timeout: timeout || 12 })
-      return res.body ? toString(res.body) : ""
-    } catch (err) { return "" }
-  }
-  const stripHtml = (html) => {
-    return html
-      .replace(/<script[\s\S]*?<\/script>/gi, " ")
-      .replace(/<style[\s\S]*?<\/style>/gi, " ")
-      .replace(/<nav[\s\S]*?<\/nav>/gi, " ")
-      .replace(/<header[\s\S]*?<\/header>/gi, " ")
-      .replace(/<footer[\s\S]*?<\/footer>/gi, " ")
-      .replace(/<[^>]+>/g, " ")
-      .replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#\d+;/g, " ")
-      .replace(/\s+/g, " ")
-      .trim()
-  }
+  const frage = messages[messages.length - 1].content
 
-  // Fachquellen zur letzten Nutzerfrage suchen
-  const frage = messages[messages.length - 1].content.slice(0, 200)
-  const DOMAINS = ["nerdfallmedizin.blog", "notfallguru.de", "register.awmf.org"]
-  const quellen = []
-  const sucheDbg = []
+  // ── Wissensbasis der Organisation laden und zur Frage passende Artikel finden ──
+  let artikel = []
+  try { artikel = $app.findRecordsByFilter("wissen", "organization_id = {:o}", "-created", 1000, 0, { o: orgId }) } catch (err) {}
 
-  for (const domain of DOMAINS) {
-    if (quellen.length >= 3) break
-    let hits = []
-    const sd = { domain: domain, wpStatus: 0, wpHits: 0, htmlLen: 0, htmlHits: 0 }
-    // 1) WordPress-REST-Suche (liefert saubere Titel+URLs)
-    try {
-      const res = $http.send({
-        url: "https://" + domain + "/wp-json/wp/v2/search?search=" + encodeURIComponent(frage) + "&per_page=3",
-        method: "GET", headers: { "User-Agent": UA }, timeout: 10,
-      })
-      sd.wpStatus = res.statusCode || 0
-      if (Array.isArray(res.json)) {
-        hits = res.json.map(x => ({ titel: stripHtml((x.title || "").toString()), url: (x.url || "").toString(), id: x.id, domain: domain })).filter(h => h.url)
-        sd.wpHits = hits.length
-      }
-    } catch (err) { sd.wpStatus = -1 }
-    // 2) Fallback: HTML-Suchseite
-    if (!hits.length) {
-      const html = fetchText("https://" + domain + "/?s=" + encodeURIComponent(frage))
-      sd.htmlLen = html ? html.length : 0
-      const re2 = new RegExp('<a[^>]+href="(https?://[^"]*' + domain.replace(/\./g, "\\.") + '[^"]*)"[^>]*>([\\s\\S]{4,120}?)</a>', "g")
-      let m
-      const seen = {}
-      while ((m = re2.exec(html)) && hits.length < 3) {
-        const url = m[1]
-        if (seen[url] || /\/(tag|category|author|page)\//.test(url) || url.indexOf("?s=") !== -1 || url.replace("https://", "").replace(domain, "").length < 4) continue
-        seen[url] = true
-        const titel = stripHtml(m[2])
-        if (titel.length > 3) hits.push({ titel: titel, url: url })
-      }
-      sd.htmlHits = hits.length
+  const tokens = frage.toLowerCase().replace(/[^a-zäöüß0-9\s]/gi, " ").split(/\s+/).filter(t => t.length > 3)
+  const parseTags = (v) => {
+    try { if (typeof v === "string") { const p = JSON.parse(v); return Array.isArray(p) ? p : String(v).split(",") } return Array.isArray(v) ? v : [] } catch (err) { return String(v || "").split(",") }
+  }
+  const scored = []
+  for (const a of artikel) {
+    const titel = (a.get("titel") || "").toString().toLowerCase()
+    const inhalt = (a.get("inhalt") || "").toString().toLowerCase()
+    const tags = parseTags(a.get("tags")).map(t => String(t).toLowerCase()).join(" ")
+    let score = 0
+    for (const t of tokens) {
+      if (titel.indexOf(t) !== -1) score += 4
+      if (tags.indexOf(t) !== -1) score += 4
+      if (inhalt.indexOf(t) !== -1) score += 1
     }
-    sucheDbg.push(sd)
-    for (const h of hits.slice(0, 2)) {
-      if (quellen.length < 3 && !quellen.some(q => q.url === h.url)) quellen.push(h)
-    }
+    if (score > 0) scored.push({ a: a, score: score })
   }
+  scored.sort((x, y) => y.score - x.score)
+  const treffer = scored.slice(0, 3).map(s => s.a)
 
-  // Abbildungen (echte EKGs/Schaubilder) aus dem Artikel-HTML ziehen
-  const extractImages = (html, baseUrl) => {
-    let origin = ""
-    try { const mm = baseUrl.match(/^(https?:\/\/[^/]+)/); origin = mm ? mm[1] : "" } catch (er) {}
-    const imgs = []
-    const seen = {}
-    const re = /<img\b[^>]*>/gi
-    let tag
-    while ((tag = re.exec(html)) && imgs.length < 6) {
-      const t = tag[0]
-      let src = ""
-      // größte Auflösung aus srcset bevorzugen (letzter Eintrag), dann lazy-Attribute, dann src
-      const ss = t.match(/srcset="([^"]+)"/i)
-      if (ss) {
-        const parts = ss[1].split(",").map(x => x.trim().split(/\s+/)[0]).filter(Boolean)
-        if (parts.length) src = parts[parts.length - 1]
-      }
-      if (!src) { const m2 = t.match(/\sdata-(?:src|lazy-src|orig-file|large-file|original|srcset)="([^",\s]+)"/i); if (m2) src = m2[1] }
-      if (!src) { const m1 = t.match(/\ssrc="([^"]+)"/i); if (m1) src = m1[1] }
-      if (!src) continue
-      if (src.startsWith("//")) src = "https:" + src
-      else if (src.startsWith("/")) src = origin + src
-      if (!/^https?:\/\//.test(src) || /^data:/i.test(src)) continue
-      // Bild, wenn Bilddateiendung ODER klar aus dem Medienordner (WordPress-CDN oft ohne Endung)
-      const isImg = /\.(jpe?g|png|webp)(\?|$|&)/i.test(src) || /\/wp-content\/uploads\//i.test(src) || /\/(media|images?|bilder|uploads)\//i.test(src)
-      if (!isImg) continue
-      if (/logo|icon|avatar|sprite|placeholder|emoji|badge|favicon|spinner|loading|gravatar|1x1|pixel|blank\.|spacer/i.test(src)) continue
-      if (seen[src]) continue
-      seen[src] = true
-      imgs.push(src)
-    }
-    return imgs
-  }
-
-  const addBild = (src, q) => {
-    if (src && bilder.length < 4 && !bilder.some(b => b.url === src)) bilder.push({ url: src, quelle: q.titel, quelleUrl: q.url })
-  }
-
-  // Artikeltexte + Abbildungen der Top-Quellen laden
+  // Kontext + Abbildungen aus den Treffern
   let kontext = ""
-  const genutzt = []
+  const quellen = []
   const bilder = []
-  const dbg = { key: !!key, suchtreffer: quellen.length, suche: sucheDbg, quellen: [] }
-  for (const q of quellen.slice(0, 2)) {
-    const raw = fetchText(q.url)
-    const text = stripHtml(raw).slice(0, 2600)
-    const info = { url: q.url, hatId: !!q.id, textLen: text.length, mediaImgs: 0, htmlImgs: 0 }
-    if (text.length > 300) {
-      genutzt.push(q)
-      kontext += "\n\n### Quelle: " + q.titel + " (" + q.url + ")\n" + text
+  for (const a of treffer) {
+    const titel = (a.get("titel") || "Artikel").toString()
+    const inhalt = (a.get("inhalt") || "").toString().slice(0, 2800)
+    kontext += "\n\n### " + titel + "\n" + inhalt
+    const q = (a.get("quelle") || "").toString()
+    quellen.push({ titel: titel + (q ? " — " + q : ""), url: "" })
+    const bild = (a.get("bild") || "").toString()
+    if (bild) {
+      let path = ""
+      try { path = a.baseFilesPath() } catch (err) { path = "" }
+      if (path) bilder.push({ url: FILE_BASE + "/api/files/" + path + "/" + bild, quelle: titel, quelleUrl: "" })
     }
-    // Bevorzugt: WordPress-Media-Endpunkt (saubere Bild-URLs, keine Lazy-Load-Probleme)
-    if (q.id && q.domain) {
-      try {
-        const mres = $http.send({
-          url: "https://" + q.domain + "/wp-json/wp/v2/media?parent=" + q.id + "&media_type=image&per_page=4",
-          method: "GET", headers: { "User-Agent": UA }, timeout: 10,
-        })
-        if (Array.isArray(mres.json)) {
-          for (const md of mres.json) {
-            const su = md && md.source_url ? md.source_url.toString() : ""
-            if (su && !/logo|icon|avatar|placeholder|favicon/i.test(su)) { addBild(su, q); info.mediaImgs++ }
-          }
-        }
-      } catch (er) { /* Media-API nicht verfügbar */ }
-    }
-    // Ergänzend: Bilder aus dem Artikel-HTML
-    if (text.length > 300) {
-      const imgs = extractImages(raw, q.url)
-      info.htmlImgs = imgs.length
-      for (const src of imgs) addBild(src, q)
-    }
-    dbg.quellen.push(info)
   }
-  dbg.bilder = bilder.length
+
+  const dbg = { key: !!key, artikelGesamt: artikel.length, treffer: treffer.length, bilder: bilder.length }
 
   const system =
     "Du bist der Lern-Assistent von Responda für Einsatzkräfte (Rettungsdienst, Feuerwehr, Sanitätsdienst). " +
     "Beantworte Fragen zu medizinischen, notfallmedizinischen und einsatztaktischen Themen auf Deutsch — " +
     "klar strukturiert, fachlich korrekt, zu Lern- und Ausbildungszwecken. " +
     (kontext
-      ? "Dir liegen Auszüge aus Fachartikeln von Nerdfallmedizin und Notfallguru vor. Stütze deine Antwort PRIMÄR auf diese Auszüge; ergänze nur wo nötig mit Leitlinienwissen (z.B. ERC). "
-      : "Orientiere dich an aktuellen Leitlinien (z.B. ERC) und nenne wo passend Merkhilfen/Schemata (ABCDE, SAMPLER ...). ") +
+      ? "Dir liegen Auszüge aus der EIGENEN, geprüften Wissensbasis der Organisation vor. Stütze deine Antwort PRIMÄR auf diese Auszüge; ergänze nur wo nötig mit fundiertem Leitlinienwissen (z.B. ERC). "
+      : "In der Wissensbasis der Organisation gibt es zu dieser Frage (noch) keinen Eintrag. Beantworte die Frage aus fundiertem Leitlinienwissen (z.B. ERC) mit Merkschemata (ABCDE, SAMPLER ...) und weise am ENDE dezent in einem Satz darauf hin, dass dazu noch kein interner Wissenseintrag existiert. ") +
     "WICHTIG: Deine Antworten dienen der Ausbildung und ersetzen weder (not-)ärztliche Entscheidungen noch " +
     "lokale SAA/Algorithmen oder Anweisungen des Ärztlichen Leiters. Weise bei heiklen Themen kurz darauf hin. " +
     "Fragen ohne Bezug zu Medizin, Rettungswesen oder Ausbildung lehnst du freundlich in einem Satz ab. " +
     "Baue JEDE Antwort so auf: zuerst eine Überschrift '### Kurzfassung' mit 1-2 Sätzen Kernaussage, " +
     "danach eine Überschrift '### Ausführlich' mit der detaillierten Erklärung (Absätze, Aufzählungen mit '- ', weitere '### '-Unterüberschriften erlaubt). " +
-    "Halte den ausführlichen Teil kompakt (insgesamt max. ~350 Wörter), Wichtiges **fett**. Keine URLs im Text nennen — die Quellen werden separat angezeigt. " +
-    "WICHTIG: Passende Abbildungen aus den Quellen (z.B. Beispiel-EKGs, Schaubilder) werden dem Nutzer AUTOMATISCH unterhalb deiner Antwort angezeigt. " +
-    "Behaupte deshalb NIEMALS, dass du keine Bilder senden/zeigen kannst. Verweise stattdessen natürlich auf die Abbildungen unten (z.B. 'Im EKG unten siehst du ...') und beschreibe, worauf man achten soll." +
-    (kontext ? "\n\nFACHARTIKEL-AUSZÜGE:" + kontext : "")
+    "Halte den ausführlichen Teil kompakt (insgesamt max. ~350 Wörter), Wichtiges **fett**. " +
+    "Passende Abbildungen aus der Wissensbasis werden dem Nutzer AUTOMATISCH unterhalb deiner Antwort angezeigt. " +
+    "Behaupte deshalb NIEMALS, dass du keine Bilder senden/zeigen kannst; verweise natürlich auf die Abbildungen unten, falls vorhanden." +
+    (kontext ? "\n\nWISSENSBASIS-AUSZÜGE:" + kontext : "")
 
   try {
     const res = $http.send({
@@ -202,7 +111,7 @@ routerAdd("POST", "/ki/chat", (e) => {
     const data = res.json || {}
     const content = data.choices && data.choices[0] && data.choices[0].message ? data.choices[0].message.content : ""
     if (!content) return e.json(502, { success: false, error: "Leere KI-Antwort" + (data.message ? ": " + data.message : "") })
-    return e.json(200, { success: true, antwort: content, quellen: genutzt, bilder: bilder, debug: dbg })
+    return e.json(200, { success: true, antwort: content, quellen: quellen, bilder: bilder, debug: dbg })
   } catch (err) {
     return e.json(502, { success: false, error: "KI-Anfrage fehlgeschlagen: " + err.message })
   }
@@ -257,7 +166,6 @@ routerAdd("POST", "/ki/generate-buch", (e) => {
     if (!buch || !Array.isArray(buch.seiten) || !buch.seiten.length) {
       return e.json(502, { success: false, error: "KI lieferte keine Seiten" })
     }
-    // Struktur absichern
     const seitenClean = []
     for (const s of buch.seiten.slice(0, 10)) {
       const blocks = []

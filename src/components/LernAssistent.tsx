@@ -188,7 +188,7 @@ export default function LernAssistent() {
               Was möchtest du lernen?
             </div>
             <div style={{ fontStyle: 'italic', fontSize: 12.5, color: 'var(--warm-gray)', maxWidth: 340, margin: '0 auto 26px', lineHeight: 1.6 }}>
-              Antworten auf Basis von Nerdfallmedizin & Notfallguru — für Lernzwecke, ersetzt keine SAA oder ärztliche Entscheidung.
+              Antworten auf Basis eurer eigenen Wissensbasis — für Lernzwecke, ersetzt keine SAA oder ärztliche Entscheidung.
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxWidth: 400, margin: '0 auto' }}>
               {VORSCHLAEGE.map(v => (
@@ -220,23 +220,20 @@ export default function LernAssistent() {
               </div>
               {(m.bilder?.length ?? 0) > 0 && (
                 <div style={{ borderTop: '0.5px solid rgba(96,8,18,0.08)', padding: '12px 18px 4px' }}>
-                  <div style={{ fontSize: 9, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.16em', marginBottom: 8 }}>Abbildungen aus den Quellen</div>
+                  <div style={{ fontSize: 9, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.16em', marginBottom: 8 }}>Abbildungen aus eurer Wissensbasis</div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                     {m.bilder!.map((b, bi) => (
-                      <a key={bi} href={b.quelleUrl} target="_blank" rel="noreferrer" style={{ textDecoration: 'none', display: 'block' }}>
+                      <div key={bi}>
                         <img
                           src={b.url}
                           alt={b.quelle}
                           loading="lazy"
-                          referrerPolicy="no-referrer"
-                          onError={(ev) => { ev.currentTarget.style.display = 'none' }}
-                          style={{ width: '100%', maxHeight: 300, objectFit: 'contain', borderRadius: 10, border: '0.5px solid rgba(96,8,18,0.12)', background: '#fff' }}
+                          onError={(ev) => { const el = ev.currentTarget.parentElement as HTMLElement; if (el) el.style.display = 'none' }}
+                          style={{ width: '100%', maxHeight: 320, objectFit: 'contain', borderRadius: 10, border: '0.5px solid rgba(96,8,18,0.12)', background: '#fff', cursor: b.quelleUrl ? 'pointer' : 'default' }}
+                          onClick={() => { if (b.quelleUrl) window.open(b.quelleUrl, '_blank', 'noopener') }}
                         />
-                        <div style={{ fontSize: 11, fontStyle: 'italic', color: '#600812', marginTop: 4, display: 'flex', alignItems: 'center', gap: 5 }}>
-                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0 }}><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-                          Abbildung aus {b.quelle} — ansehen
-                        </div>
-                      </a>
+                        <div style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--warm-gray)', marginTop: 4 }}>{b.quelle}</div>
+                      </div>
                     ))}
                   </div>
                 </div>
@@ -269,7 +266,7 @@ export default function LernAssistent() {
             <div style={{ background: 'var(--lbf-card)', borderRadius: 14, boxShadow: '0 1px 4px rgba(0,0,0,0.07)', padding: '13px 16px', display: 'flex', alignItems: 'center', gap: 10 }}>
               <SparkleBadge size={22} />
               <span><span className="la-dot" /><span className="la-dot" /><span className="la-dot" /></span>
-              <span style={{ fontStyle: 'italic', fontSize: 12.5, color: 'var(--warm-gray)' }}>liest Nerdfallmedizin & Notfallguru…</span>
+              <span style={{ fontStyle: 'italic', fontSize: 12.5, color: 'var(--warm-gray)' }}>schaut in eure Wissensbasis…</span>
             </div>
           </div>
         )}
