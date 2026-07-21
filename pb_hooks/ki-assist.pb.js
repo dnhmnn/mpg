@@ -125,6 +125,71 @@ routerAdd("POST", "/ki/chat", (e) => {
   }
 }, $apis.requireAuth())
 
+// POST /ki/wissen-import — strukturiert einen hochgeladenen Textauszug (aus PDF/
+// Textdatei/ZIP, clientseitig extrahiert) automatisch zu fertigen Wissens-
+// einträgen. Nur Supervisor. Body: { dateiname, text } -> { eintraege: [{titel,inhalt,tags}] }
+routerAdd("POST", "/ki/wissen-import", (e) => {
+  const u = e.auth
+  if (!u) return e.json(403, { success: false, error: "Nicht berechtigt" })
+  if (!u.get("supervisor")) return e.json(403, { success: false, error: "Nur Supervisor darf die Wissensbasis importieren" })
+  const key = $os.getenv("MISTRAL_API_KEY")
+  if (!key) return e.json(500, { success: false, error: "MISTRAL_API_KEY ist auf dem Server nicht gesetzt" })
+
+  const body = e.requestInfo().body || {}
+  const dateiname = (body.dateiname || "Dokument").toString().slice(0, 200)
+  const text = (body.text || "").toString().slice(0, 14000)
+  if (text.trim().length < 40) return e.json(400, { success: false, error: "Zu wenig Text zum Auswerten" })
+
+  const prompt =
+    "Du strukturierst hochgeladenes Fachmaterial (Datei: \"" + dateiname + "\") für die geprüfte Wissensbasis " +
+    "einer Rettungsdienst-/Feuerwehr-/Sanitätsdienst-Organisation. Zerlege den folgenden Textauszug in 1 bis 6 " +
+    "in sich geschlossene Wissenseinträge (bei nur einem Thema genau 1 Eintrag).\n\n" +
+    "Regeln pro Eintrag:\n" +
+    "- titel: prägnant, ohne Nummerierung.\n" +
+    "- inhalt: klar gegliederter deutscher Fachtext. Beginne mit 1-2 Sätzen Kurzfassung, danach die Details " +
+    "(Absätze, Aufzählungen mit '- '). Verwende AUSSCHLIESSLICH Informationen, die im Textauszug stehen — " +
+    "nichts hinzuerfinden, nicht ausschmücken, keine externen Fakten ergänzen; Unklares oder Bruchstückhaftes weglassen.\n" +
+    "- tags: 3-6 kurze Schlagwörter in Kleinschreibung, an denen man den Eintrag zu einer Frage findet.\n" +
+    "- Lasse Kopf-/Fußzeilen, Seitenzahlen, Inhaltsverzeichnisse und personenbezogene Daten weg.\n" +
+    "Enthält der Auszug keinen verwertbaren Fachinhalt, gib {\"eintraege\":[]} zurück.\n\n" +
+    "Antworte AUSSCHLIESSLICH als JSON in exakt dieser Struktur:\n" +
+    '{"eintraege":[{"titel":"...","inhalt":"...","tags":["...","..."]}]}\n\n' +
+    "TEXTAUSZUG:\n" + text
+
+  try {
+    const res = $http.send({
+      url: "https://api.mistral.ai/v1/chat/completions",
+      method: "POST",
+      headers: { "Authorization": "Bearer " + key, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "mistral-medium-latest",
+        temperature: 0.2,
+        max_tokens: 4000,
+        response_format: { type: "json_object" },
+        messages: [{ role: "user", content: prompt }],
+      }),
+      timeout: 120,
+    })
+    const data = res.json || {}
+    const content = data.choices && data.choices[0] && data.choices[0].message ? data.choices[0].message.content : ""
+    let parsed
+    try { parsed = JSON.parse(content) } catch (err) { return e.json(502, { success: false, error: "KI-Antwort war kein gültiges JSON" }) }
+    const arr = parsed && Array.isArray(parsed.eintraege) ? parsed.eintraege : []
+    const eintraege = []
+    for (const it of arr.slice(0, 6)) {
+      const titel = (it && it.titel ? it.titel : "").toString().trim().slice(0, 200)
+      const inhalt = (it && it.inhalt ? it.inhalt : "").toString().trim().slice(0, 6000)
+      if (!inhalt && !titel) continue
+      let tags = []
+      if (it && Array.isArray(it.tags)) tags = it.tags.map(t => (t || "").toString().trim().slice(0, 40)).filter(Boolean).slice(0, 6)
+      eintraege.push({ titel: titel || dateiname, inhalt: inhalt, tags: tags })
+    }
+    return e.json(200, { success: true, eintraege: eintraege })
+  } catch (err) {
+    return e.json(502, { success: false, error: "KI-Anfrage fehlgeschlagen: " + err.message })
+  }
+}, $apis.requireAuth())
+
 routerAdd("POST", "/ki/generate-buch", (e) => {
   const u = e.auth
   if (!u) return e.json(403, { success: false, error: "Nicht berechtigt" })
