@@ -28,18 +28,22 @@ routerAdd("POST", "/einladung/respond", (e) => {
   const orgId = tok.get("organization_id")
 
   try {
-    // Bestehende Antwort gleichen Namens für diesen Token -> aktualisieren
+    // Bestehende Antwort gleichen Namens für diesen Token -> aktualisieren.
+    // Vergleich normalisiert (Groß-/Kleinschreibung, Mehrfach-Leerzeichen), damit
+    // "max mustermann" und "Max  Mustermann" nicht zwei Datensätze erzeugen.
     let rec = null
     try {
-      rec = $app.findFirstRecordByFilter(
-        "ausbildungen_einladungen",
-        "token = {:t} && name = {:n}",
-        { t: token, n: name }
-      )
+      const norm = name.toLowerCase().replace(/\s+/g, " ")
+      const existing = $app.findRecordsByFilter("ausbildungen_einladungen", "token = {:t}", "-updated", 200, 0, { t: token })
+      for (const r of existing) {
+        const rn = (r.get("name") || "").toString().trim().toLowerCase().replace(/\s+/g, " ")
+        if (rn === norm) { rec = r; break }
+      }
     } catch (err) { rec = null }
 
     if (rec) {
       rec.set("status", status)
+      rec.set("name", name)
       rec.set("termin_id", terminId)
       if (orgId) rec.set("organization_id", orgId)
       $app.save(rec)

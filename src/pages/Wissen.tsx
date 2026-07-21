@@ -280,7 +280,7 @@ export default function Wissen() {
         if (en.kind === 'unsupported') { update(i, { status: 'übersprungen', info: 'nicht unterstützt' }); continue }
         if (en.kind === 'image') {
           update(i, { status: 'anlegen' })
-          const bild = new File([en.bytes], en.name, { type: imgMime(en.name) })
+          const bild = new File([en.bytes.slice().buffer as ArrayBuffer], en.name, { type: imgMime(en.name) })
           await createWissenArticle(niceTitle(en.name), '', [], en.name, bild)
           made = 1; total += 1; setImpCreated(total)
           update(i, { status: 'fertig', info: 'als Abbildung angelegt', created: 1 })

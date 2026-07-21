@@ -128,6 +128,7 @@ interface TerminTeilnehmer {
   anwesenheit_status?: 'da' | 'krank' | 'entschuldigt' | 'fehlend' | ''
   notizen: string
   organization_id: string
+  updated?: string
   expand?: {
     teilnehmer_id?: Teilnehmer
   }
@@ -588,7 +589,7 @@ export default function Ausbildungen() {
   const [modulTermine, setModulTermine] = useState<ModulTermin[]>([])
   const [modulProgress, setModulProgress] = useState<ModulProgress[]>([])
   const [konzepte, setKonzepte] = useState<Ausbildungskonzept[]>([])
-  const [einladungen, setEinladungen] = useState<{id: string, termin_id: string, name: string, status: string, anwesenheit_status?: 'da' | 'krank' | 'entschuldigt' | 'fehlend' | ''}[]>([])
+  const [einladungen, setEinladungen] = useState<{id: string, termin_id: string, name: string, status: string, anwesenheit_status?: 'da' | 'krank' | 'entschuldigt' | 'fehlend' | '', teilnehmer_id?: string, updated?: string}[]>([])
 
   const [loading, setLoading] = useState(true)
   const [message, setMessage] = useState<{text: string, type: 'success' | 'error'} | null>(null)
@@ -1053,6 +1054,16 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
       await pb.collection('ausbildungen_einladungen').update(einladungId, { anwesenheit_status: newValue })
       setEinladungen(prev => prev.map(e => e.id === einladungId ? { ...e, anwesenheit_status: newValue as any } : e))
     } catch(e: any) { showMessage('Fehler: ' + e.message, 'error') }
+  }
+
+  // Link-Rückmeldung manuell einem Teilnehmer zuordnen (z.B. bei falsch/unvollständig
+  // geschriebenem Namen) — danach zählt die Rückmeldung für diesen Teilnehmer
+  async function assignEinladung(einladungId: string, teilnehmerId: string) {
+    try {
+      await pb.collection('ausbildungen_einladungen').update(einladungId, { teilnehmer_id: teilnehmerId })
+      setEinladungen(prev => prev.map(e => e.id === einladungId ? { ...e, teilnehmer_id: teilnehmerId } : e))
+      showMessage('Rückmeldung zugeordnet', 'success')
+    } catch(e: any) { showMessage('Fehler beim Zuordnen: ' + e.message + ' — existiert das Feld "teilnehmer_id" in der Collection ausbildungen_einladungen?', 'error') }
   }
 
   async function removeEinladung(einladungId: string) {
@@ -2401,19 +2412,44 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
     return 'Unbekannt'
   }
 
-  // Per-Link beantwortete Rückmeldung (ausbildungen_einladungen) für denselben Teilnehmer per Namensabgleich finden
-  function getLinkedEinladung(name: string, terminId: string) {
-    const key = (name || '').trim().toLowerCase()
-    if (!key) return undefined
-    return einladungen.find(e => e.termin_id === terminId && (e.name || '').trim().toLowerCase() === key)
+  function normName(s: string | undefined | null): string {
+    return (s || '').trim().toLowerCase().replace(/\s+/g, ' ')
   }
 
-  // Effektiver RSVP-Status: eigener Unitas-Status, sonst (falls "eingeladen") die per Link eingegangene Rückmeldung
+  // Rückmeldungen eines Termins, dedupliziert pro Person: gleicher Name (oder gleiche
+  // manuelle Zuordnung) → nur die NEUESTE Antwort zählt. So gewinnt bei "erst zugesagt,
+  // dann abgesagt" (oder umgekehrt) immer die letzte Rückmeldung.
+  function einladungenFuerTermin(terminId: string) {
+    const map = new Map<string, (typeof einladungen)[number]>()
+    for (const e of einladungen) {
+      if (e.termin_id !== terminId) continue
+      const key = e.teilnehmer_id ? 'tid:' + e.teilnehmer_id : 'name:' + normName(e.name)
+      const prev = map.get(key)
+      if (!prev || (e.updated || '') >= (prev.updated || '')) map.set(key, e)
+    }
+    return [...map.values()]
+  }
+
+  // Per-Link beantwortete Rückmeldung für denselben Teilnehmer finden:
+  // zuerst über die manuelle Zuordnung (teilnehmer_id), sonst per Namensabgleich
+  function getLinkedEinladung(teilnehmerId: string, name: string, terminId: string) {
+    const list = einladungenFuerTermin(terminId)
+    const byId = list.find(e => e.teilnehmer_id && e.teilnehmer_id === teilnehmerId)
+    if (byId) return byId
+    const key = normName(name)
+    if (!key) return undefined
+    return list.find(e => normName(e.name) === key)
+  }
+
+  // Effektiver RSVP-Status: die jeweils NEUERE Angabe gewinnt — sagt eine zugesagte
+  // Person später per Link ab (oder umgekehrt), zählt die Link-Rückmeldung
   function getEffektivStatus(tt: TerminTeilnehmer): 'eingeladen' | 'zugesagt' | 'abgesagt' | 'entschuldigt' {
-    if (tt.status !== 'eingeladen') return tt.status
-    const linked = getLinkedEinladung(getTeilnehmerName(tt.teilnehmer_id), tt.termin_id)
-    if (linked?.status === 'zusagen') return 'zugesagt'
-    if (linked?.status === 'absagen') return 'abgesagt'
+    const linked = getLinkedEinladung(tt.teilnehmer_id, getTeilnehmerName(tt.teilnehmer_id), tt.termin_id)
+    const linkStatus = linked?.status === 'zusagen' ? 'zugesagt' : linked?.status === 'absagen' ? 'abgesagt' : undefined
+    if (!linkStatus) return tt.status
+    if (tt.status === 'eingeladen') return linkStatus
+    // Beide haben einen Status → Zeitstempel entscheidet
+    if ((linked?.updated || '') >= (tt.updated || '')) return linkStatus
     return tt.status
   }
 
@@ -2422,7 +2458,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
     if (tt.anwesenheit_status) return tt.anwesenheit_status
     const eff = getEffektivStatus(tt)
     if (eff === 'abgesagt' || eff === 'entschuldigt') return 'entschuldigt'
-    const linked = getLinkedEinladung(getTeilnehmerName(tt.teilnehmer_id), tt.termin_id)
+    const linked = getLinkedEinladung(tt.teilnehmer_id, getTeilnehmerName(tt.teilnehmer_id), tt.termin_id)
     if (linked?.anwesenheit_status) return linked.anwesenheit_status
     return ''
   }
@@ -3195,10 +3231,15 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
         const dozentDateien: string[] = (() => { const d = t.dateien; return Array.isArray(d) ? d : (d ? [d as string] : []) })()
         const tnDateien: string[] = (() => { const d = t.anhang; return Array.isArray(d) ? d : (d ? [d as string] : []) })()
         const forThisTermin = terminTeilnehmer.filter(tt => tt.termin_id === t.id)
-        // Personen, die nur per Einladungslink reagiert haben (kein Unitas-Eintrag) → zusätzlich in Anwesenheit berücksichtigen
-        const ttNamesLower = new Set(forThisTermin.map(tt => getTeilnehmerName(tt.teilnehmer_id).trim().toLowerCase()))
-        const linkOnlyEinladungen = einladungen.filter(e => e.termin_id === t.id && !ttNamesLower.has((e.name || '').trim().toLowerCase()))
-        const anwesendCount = forThisTermin.filter(tt => tt.anwesend).length + linkOnlyEinladungen.filter(e => getEinladungAnwesenheitStatus(e) === 'da').length
+        // Link-Rückmeldungen: dedupliziert (neueste Antwort pro Person zählt)
+        const terminEinladungenDedup = einladungenFuerTermin(t.id)
+        // Personen, die nur per Einladungslink reagiert haben (kein Unitas-Eintrag und
+        // weder per Name noch per manueller Zuordnung einem Teilnehmer zugeordnet)
+        const ttIds = new Set(forThisTermin.map(tt => tt.teilnehmer_id))
+        const ttNamesLower = new Set(forThisTermin.map(tt => normName(getTeilnehmerName(tt.teilnehmer_id))))
+        const linkOnlyEinladungen = terminEinladungenDedup.filter(e =>
+          !(e.teilnehmer_id && ttIds.has(e.teilnehmer_id)) && !ttNamesLower.has(normName(e.name)))
+        const anwesendCount = forThisTermin.filter(tt => getAnwesenheitStatus(tt) === 'da').length + linkOnlyEinladungen.filter(e => getEinladungAnwesenheitStatus(e) === 'da').length
         const zugesagtCount = forThisTermin.filter(tt => getEffektivStatus(tt) === 'zugesagt').length + linkOnlyEinladungen.filter(e => e.status === 'zusagen').length
         const isHauptdozent = t.dozent_id === user?.id || (!t.dozent_id && t.dozent?.trim().toLowerCase() === (user?.name || '').trim().toLowerCase())
         const isAnyCoDozent = coDozenten.some(cd => cd.user_id === user?.id)
@@ -3266,29 +3307,27 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                   {/* Teilnehmer & Einladung */}
                   {(() => {
                     const einladungsText = generateEinladungsText(t)
-                    const terminEinladungen = einladungen.filter(e => e.termin_id === t.id)
                     const unitasRSVPs = terminTeilnehmer.filter(tt => tt.termin_id === t.id)
-                    // Rückmeldungen aus Link + Unitas zu einer Liste zusammenführen, dedupliziert pro Name
+                    // Rückmeldungen: Unitas-Teilnehmer über getEffektivStatus (neueste Angabe
+                    // gewinnt, Link-Antworten & Zuordnungen eingerechnet) + reine Link-Antworten
                     const rsvpMap = new Map<string, { display: string, status: 'zugesagt' | 'abgesagt' | 'ausstehend' }>()
-                    function upsertRSVP(rawName: string, status: 'zugesagt' | 'abgesagt' | 'ausstehend') {
-                      const display = (rawName || '').trim()
-                      if (!display || display === 'Unbekannt') return
-                      const key = display.toLowerCase()
-                      const existing = rsvpMap.get(key)
-                      if (status === 'ausstehend') {
-                        if (!existing) rsvpMap.set(key, { display, status })
-                      } else {
-                        rsvpMap.set(key, { display, status })
-                      }
-                    }
-                    terminEinladungen.forEach(e => upsertRSVP(e.name, e.status === 'zusagen' ? 'zugesagt' : 'abgesagt'))
                     unitasRSVPs.forEach(tt => {
-                      const name = getTeilnehmerName(tt.teilnehmer_id)
-                      const status = tt.status === 'zugesagt' ? 'zugesagt'
-                        : (tt.status === 'abgesagt' || tt.status === 'entschuldigt') ? 'abgesagt'
+                      const display = getTeilnehmerName(tt.teilnehmer_id).trim()
+                      if (!display || display === 'Unbekannt') return
+                      const eff = getEffektivStatus(tt)
+                      const status = eff === 'zugesagt' ? 'zugesagt'
+                        : (eff === 'abgesagt' || eff === 'entschuldigt') ? 'abgesagt'
                         : 'ausstehend'
-                      upsertRSVP(name, status)
+                      rsvpMap.set(normName(display), { display, status })
                     })
+                    const ttIdsInfo = new Set(unitasRSVPs.map(tt => tt.teilnehmer_id))
+                    einladungenFuerTermin(t.id)
+                      .filter(e => !(e.teilnehmer_id && ttIdsInfo.has(e.teilnehmer_id)) && !rsvpMap.has(normName(e.name)))
+                      .forEach(e => {
+                        const display = (e.name || '').trim()
+                        if (!display) return
+                        rsvpMap.set(normName(display), { display, status: e.status === 'zusagen' ? 'zugesagt' : 'abgesagt' })
+                      })
                     const alleRueckmeldungen = [...rsvpMap.values()]
                     const zusagen = alleRueckmeldungen.filter(r => r.status === 'zugesagt').map(r => r.display)
                     const absagen = alleRueckmeldungen.filter(r => r.status === 'abgesagt').map(r => r.display)
@@ -3481,8 +3520,8 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                   </div>
 
                   <div style={{ fontStyle: 'italic', color: 'var(--warm-gray)', fontSize: 11, marginBottom: 14, textAlign: 'center' }}>
-                    {einladungen.filter(e => e.termin_id === t.id).length} Rückmeldung(en) über Einladungslink erhalten
-                    {linkOnlyEinladungen.length !== einladungen.filter(e => e.termin_id === t.id).length && ` · ${linkOnlyEinladungen.length} ohne Unitas-Konto`}
+                    {terminEinladungenDedup.length} Rückmeldung(en) über Einladungslink erhalten
+                    {linkOnlyEinladungen.length !== terminEinladungenDedup.length && ` · ${linkOnlyEinladungen.length} ohne Unitas-Konto`}
                   </div>
 
                   {/* Teilnehmer hinzufügen */}
@@ -3567,6 +3606,15 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                                 <div style={{ fontWeight: 700, fontStyle: 'italic', fontSize: 14, color: 'var(--lbf-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.name}</div>
                                 <div style={{ fontSize: 10, color: statusColor, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: 1 }}>{statusLabel} · per Einladungslink</div>
                               </div>
+                              {/* Rückmeldung einem Teilnehmer zuordnen (bei falsch geschriebenem Namen) */}
+                              <select value="" onChange={ev => { if (ev.target.value) assignEinladung(e.id, ev.target.value) }}
+                                title="Diese Rückmeldung einem Teilnehmer zuordnen"
+                                style={{ maxWidth: 120, padding: '5px 6px', borderRadius: 8, border: '0.5px solid rgba(96,8,18,0.2)', background: '#fff', color: '#600812', fontSize: 11, fontWeight: 700, fontFamily: 'inherit', flexShrink: 0 }}>
+                                <option value="">Zuordnen…</option>
+                                {forThisTermin.map(tt => (
+                                  <option key={tt.teilnehmer_id} value={tt.teilnehmer_id}>{getTeilnehmerName(tt.teilnehmer_id)}</option>
+                                ))}
+                              </select>
                               <button onClick={() => removeEinladung(e.id)} title="Rückmeldung entfernen"
                                 style={{ background: 'none', border: 'none', color: 'var(--warm-gray)', cursor: 'pointer', padding: 4, flexShrink: 0, lineHeight: 0 }}>
                                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
@@ -4778,7 +4826,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
 
                     {/* Rückmeldungen */}
                     {(() => {
-                      const terminEinladungen = einladungen.filter(e => e.termin_id === selectedTermin.id)
+                      const terminEinladungen = einladungenFuerTermin(selectedTermin.id)
                       if (terminEinladungen.length === 0) return null
                       const zusagen = terminEinladungen.filter(e => e.status === 'zusagen')
                       const absagen = terminEinladungen.filter(e => e.status === 'absagen')
