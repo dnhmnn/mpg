@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { pb } from '../lib/pocketbase'
 import WissenArtikelView from './WissenArtikelView'
+import { WISSEN_KATEGORIEN, kategorieOrDefault } from '../lib/wissenKategorien'
 
 // Nachschlagewerk-Regal in der Lernbar-Bibliothek: Wissensbasis-Artikel als
 // helle Elfenbein-Bände mit rotem Rücken — bewusst anders als die dunklen
@@ -14,6 +15,7 @@ interface Artikel {
   tags: string | string[]
   bild?: string
   quelle?: string
+  kategorie?: string
   organization_id: string
   updated: string
 }
@@ -59,15 +61,15 @@ export default function WissenBibliothek({ organizationId, search, activeTag }: 
     })
   }, [artikel, search, activeTag])
 
+  const gruppen = useMemo(() =>
+    WISSEN_KATEGORIEN
+      .map(k => ({ name: k, items: filtered.filter(a => kategorieOrDefault(a.kategorie) === k) }))
+      .filter(g => g.items.length > 0),
+  [filtered])
+
   if (filtered.length === 0) return null
 
-  return (
-    <div style={{ marginBottom: 20 }}>
-      <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 10 }}>
-        Nachschlagewerk
-      </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
-        {filtered.map(a => {
+  const renderBand = (a: Artikel) => {
           const tags = parseTags(a.tags)
           const bild = fileUrl(a)
           return (
@@ -99,7 +101,26 @@ export default function WissenBibliothek({ organizationId, search, activeTag }: 
               </div>
             </div>
           )
-        })}
+  }
+
+  return (
+    <div style={{ marginBottom: 20 }}>
+      <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 10 }}>
+        Nachschlagewerk
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        {gruppen.map(g => (
+          <div key={g.name}>
+            {/* Fachgebiets-Überschrift — übergeordnete Struktur wie in einem Nachschlagewerk */}
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 8 }}>
+              <div style={{ fontStyle: 'italic', fontWeight: 800, fontSize: 14, color: 'var(--lbf-text)' }}>{g.name}</div>
+              <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--warm-gray)' }}>{g.items.length}</div>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+              {g.items.map(renderBand)}
+            </div>
+          </div>
+        ))}
       </div>
 
       {viewing && (

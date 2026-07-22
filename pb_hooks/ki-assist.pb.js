@@ -172,6 +172,14 @@ routerAdd("POST", "/ki/wissen-import", (e) => {
   const text = (body.text || "").toString().slice(0, 14000)
   if (text.trim().length < 40) return e.json(400, { success: false, error: "Zu wenig Text zum Auswerten" })
 
+  // Muss mit src/lib/wissenKategorien.ts übereinstimmen
+  const KATEGORIEN = [
+    "Notfallmedizin", "Kardiologie & EKG", "Atmung & Beatmung", "Trauma & Chirurgie",
+    "Neurologie", "Innere Medizin", "Pädiatrie", "Gynäkologie & Geburtshilfe",
+    "Psychiatrie & Krisenintervention", "Medikamente & Pharmakologie", "Anatomie & Physiologie",
+    "Hygiene & Recht", "Einsatztaktik & Organisation", "Geräte & Technik", "Sonstiges",
+  ]
+
   const prompt =
     "Du strukturierst hochgeladenes Fachmaterial (Datei: \"" + dateiname + "\") für die geprüfte Wissensbasis " +
     "einer Rettungsdienst-/Feuerwehr-/Sanitätsdienst-Organisation. Zerlege den folgenden Textauszug in 1 bis 6 " +
@@ -185,10 +193,11 @@ routerAdd("POST", "/ki/wissen-import", (e) => {
     "zentrale Merksätze als '!!! merke <Satz>'. Verwende AUSSCHLIESSLICH Informationen, die im Textauszug stehen — " +
     "nichts hinzuerfinden, nicht ausschmücken, keine externen Fakten ergänzen; Unklares oder Bruchstückhaftes weglassen.\n" +
     "- tags: 3-6 kurze Schlagwörter in Kleinschreibung, an denen man den Eintrag zu einer Frage findet.\n" +
+    "- kategorie: GENAU EINE aus dieser Liste (wörtlich übernehmen): " + KATEGORIEN.join(" | ") + ".\n" +
     "- Lasse Kopf-/Fußzeilen, Seitenzahlen, Inhaltsverzeichnisse und personenbezogene Daten weg.\n" +
     "Enthält der Auszug keinen verwertbaren Fachinhalt, gib {\"eintraege\":[]} zurück.\n\n" +
     "Antworte AUSSCHLIESSLICH als JSON in exakt dieser Struktur:\n" +
-    '{"eintraege":[{"titel":"...","inhalt":"...","tags":["...","..."]}]}\n\n' +
+    '{"eintraege":[{"titel":"...","inhalt":"...","tags":["...","..."],"kategorie":"..."}]}\n\n' +
     "TEXTAUSZUG:\n" + text
 
   try {
@@ -217,7 +226,9 @@ routerAdd("POST", "/ki/wissen-import", (e) => {
       if (!inhalt) continue // Titel-ohne-Inhalt verwerfen — sonst leere Wissenseinträge
       let tags = []
       if (it && Array.isArray(it.tags)) tags = it.tags.map(t => (t || "").toString().trim().slice(0, 40)).filter(Boolean).slice(0, 6)
-      eintraege.push({ titel: titel || dateiname, inhalt: inhalt, tags: tags })
+      let kategorie = (it && it.kategorie ? it.kategorie : "").toString().trim()
+      if (KATEGORIEN.indexOf(kategorie) === -1) kategorie = ""
+      eintraege.push({ titel: titel || dateiname, inhalt: inhalt, tags: tags, kategorie: kategorie })
     }
     return e.json(200, { success: true, eintraege: eintraege })
   } catch (err) {

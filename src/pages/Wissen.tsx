@@ -4,6 +4,7 @@ import { unzip } from 'fflate'
 import { pb } from '../lib/pocketbase'
 import { useAuth } from '../hooks/useAuth'
 import WissenArtikelView from '../components/WissenArtikelView'
+import { WISSEN_KATEGORIEN, kategorieOrDefault } from '../lib/wissenKategorien'
 
 interface Artikel {
   id: string
@@ -13,6 +14,7 @@ interface Artikel {
   tags: string | string[]
   bild?: string
   quelle?: string
+  kategorie?: string
   organization_id: string
   updated: string
 }
@@ -27,7 +29,7 @@ function parseTags(v: string | string[]): string[] {
   return String(v).split(',').map(t => t.trim()).filter(Boolean)
 }
 
-const EMPTY = { titel: '', inhalt: '', tags: '', quelle: '' }
+const EMPTY = { titel: '', inhalt: '', tags: '', quelle: '', kategorie: '' }
 
 // ── Datei-/ZIP-Import: clientseitige Text-Extraktion ──────────────────────────
 type EntryKind = 'pdf' | 'text' | 'image' | 'unsupported'
@@ -192,7 +194,7 @@ export default function Wissen() {
   }
   function openEdit(a: Artikel) {
     setEditingId(a.id)
-    setForm({ titel: a.titel, inhalt: a.inhalt, tags: parseTags(a.tags).join(', '), quelle: a.quelle || '' })
+    setForm({ titel: a.titel, inhalt: a.inhalt, tags: parseTags(a.tags).join(', '), quelle: a.quelle || '', kategorie: a.kategorie || '' })
     setFile(null); setPreview(fileUrl(a)); setRemoveBild(false); setEditorOpen(true)
   }
   function pickFile(f: File | undefined) { if (f) { setFile(f); setPreview(URL.createObjectURL(f)); setRemoveBild(false) } }
@@ -208,6 +210,7 @@ export default function Wissen() {
       fd.append('inhalt', form.inhalt)
       fd.append('tags', JSON.stringify(form.tags.split(',').map(t => t.trim()).filter(Boolean)))
       fd.append('quelle', form.quelle.trim())
+      fd.append('kategorie', form.kategorie)
       fd.append('organization_id', user.organization_id || '')
       if (file) fd.append('bild', file)
       else if (removeBild) fd.append('bild', '')
@@ -255,12 +258,13 @@ export default function Wissen() {
     if (added === 0) showMsg('Keine neuen verwertbaren Dateien gefunden', 'error')
   }
   function cancelImport() { impCancelRef.current = true; setStopping(true) }
-  async function createWissenArticle(titel: string, inhalt: string, tags: string[], quelle: string, bild?: File) {
+  async function createWissenArticle(titel: string, inhalt: string, tags: string[], quelle: string, bild?: File, kategorie?: string) {
     const fd = new FormData()
     fd.append('titel', (titel || '').slice(0, 200))
     fd.append('inhalt', inhalt || '')
     fd.append('tags', JSON.stringify((tags || []).slice(0, 8)))
     fd.append('quelle', ('Import: ' + quelle).slice(0, 200))
+    fd.append('kategorie', WISSEN_KATEGORIEN.includes((kategorie || '').trim()) ? (kategorie || '').trim() : '')
     fd.append('organization_id', user!.organization_id || '')
     if (bild) fd.append('bild', bild)
     await pb.collection('wissen').create(fd)
@@ -306,12 +310,12 @@ export default function Wissen() {
         for (const chunk of chunks) {
           if (impCancelRef.current) break
           const res = await pb.send('/ki/wissen-import', { method: 'POST', body: { dateiname: en.name, text: chunk } }) as
-            { success?: boolean; eintraege?: { titel: string; inhalt: string; tags: string[] }[]; error?: string }
+            { success?: boolean; eintraege?: { titel: string; inhalt: string; tags: string[]; kategorie?: string }[]; error?: string }
           const list = res && res.success && Array.isArray(res.eintraege) ? res.eintraege : []
           for (const it of list) {
             if (!it || !(it.inhalt || '').trim()) continue
             update(i, { status: 'anlegen' })
-            await createWissenArticle(it.titel, it.inhalt, it.tags || [], en.name)
+            await createWissenArticle(it.titel, it.inhalt, it.tags || [], en.name, undefined, it.kategorie)
             made += 1; total += 1; setImpCreated(total)
           }
         }
@@ -391,21 +395,33 @@ export default function Wissen() {
             <div style={{ fontStyle: 'italic', fontSize: 13, color: 'var(--warm-gray)' }}>{artikel.length === 0 ? 'Lege mit „Artikel" den ersten Wissenseintrag an.' : 'Suchbegriff anpassen.'}</div>
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {filtered.map(a => (
-              <div key={a.id} onClick={() => setViewing(a)} style={{ display: 'flex', gap: 12, background: 'var(--lbf-card)', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.06)', borderLeft: '3px solid #600812', padding: '12px 14px', cursor: 'pointer' }}>
-                {fileUrl(a) && <img src={fileUrl(a)} alt="" style={{ width: 54, height: 54, borderRadius: 8, objectFit: 'cover', flexShrink: 0, background: '#fff', border: '0.5px solid rgba(96,8,18,0.1)' }} />}
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 700, fontStyle: 'italic', fontSize: 15, color: 'var(--lbf-text)' }}>{a.titel || '(ohne Titel)'}</div>
-                  <div style={{ fontSize: 13, color: 'var(--warm-gray)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.inhalt.replace(/^#{2,3}\s+/gm, '').replace(/^!!!\s*\w+[:\s]*/gm, '').replace(/\*\*/g, '').replace(/\s+/g, ' ').trim()}</div>
-                  {parseTags(a.tags).length > 0 && (
-                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 6 }}>
-                      {parseTags(a.tags).slice(0, 6).map(t => <span key={t} style={{ fontStyle: 'italic', fontWeight: 700, color: '#600812', fontSize: 12 }}>#{t}</span>)}
-                    </div>
-                  )}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+            {WISSEN_KATEGORIEN
+              .map(k => ({ name: k, items: filtered.filter(a => kategorieOrDefault(a.kategorie) === k) }))
+              .filter(g => g.items.length > 0)
+              .map(g => (
+                <div key={g.name}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 8 }}>
+                    {g.name} <span style={{ color: 'var(--warm-gray)', letterSpacing: 0 }}>· {g.items.length}</span>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    {g.items.map(a => (
+                      <div key={a.id} onClick={() => setViewing(a)} style={{ display: 'flex', gap: 12, background: 'var(--lbf-card)', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.06)', borderLeft: '3px solid #600812', padding: '12px 14px', cursor: 'pointer' }}>
+                        {fileUrl(a) && <img src={fileUrl(a)} alt="" style={{ width: 54, height: 54, borderRadius: 8, objectFit: 'cover', flexShrink: 0, background: '#fff', border: '0.5px solid rgba(96,8,18,0.1)' }} />}
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontWeight: 700, fontStyle: 'italic', fontSize: 15, color: 'var(--lbf-text)' }}>{a.titel || '(ohne Titel)'}</div>
+                          <div style={{ fontSize: 13, color: 'var(--warm-gray)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.inhalt.replace(/^#{2,3}\s+/gm, '').replace(/^!!!\s*\w+[:\s]*/gm, '').replace(/\*\*/g, '').replace(/\s+/g, ' ').trim()}</div>
+                          {parseTags(a.tags).length > 0 && (
+                            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 6 }}>
+                              {parseTags(a.tags).slice(0, 6).map(t => <span key={t} style={{ fontStyle: 'italic', fontWeight: 700, color: '#600812', fontSize: 12 }}>#{t}</span>)}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
           </div>
         )}
       </div>
@@ -446,6 +462,14 @@ export default function Wissen() {
               Struktur wie im Nachschlagewerk: <b>## Abschnitt</b> = aufklappbares Kapitel · <b>!!! cave</b> = rote Warn-Box · <b>!!! merke</b> = Merke-Box · <b>!!! tipp</b> = Tipp-Box · <b>- </b> = Aufzählung · <b>**fett**</b>
             </div>
 
+            <div style={{ marginBottom: 12 }}>
+              <label style={{ fontSize: 11, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.1em', display: 'block', marginBottom: 5 }}>Fachgebiet</label>
+              <select value={form.kategorie} onChange={e => setForm({ ...form, kategorie: e.target.value })}
+                style={{ width: '100%', padding: '10px 12px', borderRadius: 9, border: '1px solid rgba(96,8,18,0.15)', background: 'var(--lbf-card)', color: 'var(--lbf-text)', fontSize: 14, fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box' }}>
+                <option value="">— Fachgebiet wählen —</option>
+                {WISSEN_KATEGORIEN.map(k => <option key={k} value={k}>{k}</option>)}
+              </select>
+            </div>
             <div style={{ marginBottom: 12 }}>
               <label style={{ fontSize: 11, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.1em', display: 'block', marginBottom: 5 }}>Schlagwörter (Komma-getrennt)</label>
               <input type="text" value={form.tags} onChange={e => setForm({ ...form, tags: e.target.value })} placeholder="EKG, Tachykardie, Rhythmus"
