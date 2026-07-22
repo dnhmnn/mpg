@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { unzip } from 'fflate'
 import { pb } from '../lib/pocketbase'
 import { useAuth } from '../hooks/useAuth'
+import WissenArtikelView from '../components/WissenArtikelView'
 
 interface Artikel {
   id: string
@@ -141,6 +142,7 @@ export default function Wissen() {
   const [search, setSearch] = useState('')
 
   const [editorOpen, setEditorOpen] = useState(false)
+  const [viewing, setViewing] = useState<Artikel | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [form, setForm] = useState({ ...EMPTY })
   const [file, setFile] = useState<File | null>(null)
@@ -391,11 +393,11 @@ export default function Wissen() {
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {filtered.map(a => (
-              <div key={a.id} onClick={() => openEdit(a)} style={{ display: 'flex', gap: 12, background: 'var(--lbf-card)', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.06)', borderLeft: '3px solid #600812', padding: '12px 14px', cursor: 'pointer' }}>
+              <div key={a.id} onClick={() => setViewing(a)} style={{ display: 'flex', gap: 12, background: 'var(--lbf-card)', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.06)', borderLeft: '3px solid #600812', padding: '12px 14px', cursor: 'pointer' }}>
                 {fileUrl(a) && <img src={fileUrl(a)} alt="" style={{ width: 54, height: 54, borderRadius: 8, objectFit: 'cover', flexShrink: 0, background: '#fff', border: '0.5px solid rgba(96,8,18,0.1)' }} />}
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontWeight: 700, fontStyle: 'italic', fontSize: 15, color: 'var(--lbf-text)' }}>{a.titel || '(ohne Titel)'}</div>
-                  <div style={{ fontSize: 13, color: 'var(--warm-gray)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.inhalt}</div>
+                  <div style={{ fontSize: 13, color: 'var(--warm-gray)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.inhalt.replace(/^#{2,3}\s+/gm, '').replace(/^!!!\s*\w+[:\s]*/gm, '').replace(/\*\*/g, '').replace(/\s+/g, ' ').trim()}</div>
                   {parseTags(a.tags).length > 0 && (
                     <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 6 }}>
                       {parseTags(a.tags).slice(0, 6).map(t => <span key={t} style={{ fontStyle: 'italic', fontWeight: 700, color: '#600812', fontSize: 12 }}>#{t}</span>)}
@@ -407,6 +409,19 @@ export default function Wissen() {
           </div>
         )}
       </div>
+
+      {/* Artikel-Leseansicht (Nachschlagewerk-Stil) */}
+      {viewing && (
+        <WissenArtikelView
+          titel={viewing.titel}
+          inhalt={viewing.inhalt}
+          tags={parseTags(viewing.tags)}
+          bildUrl={fileUrl(viewing) || undefined}
+          quelle={viewing.quelle || undefined}
+          onEdit={() => { const a = viewing; setViewing(null); openEdit(a) }}
+          onClose={() => setViewing(null)}
+        />
+      )}
 
       {/* Editor */}
       {editorOpen && (
@@ -425,8 +440,11 @@ export default function Wissen() {
             <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={e => pickFile(e.target.files?.[0])} />
 
             <label style={{ fontSize: 11, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.1em', display: 'block', marginBottom: 5 }}>Inhalt</label>
-            <textarea value={form.inhalt} onChange={e => setForm({ ...form, inhalt: e.target.value })} rows={9} placeholder="Der Fachtext, aus dem die KI antwortet…"
-              style={{ width: '100%', padding: '11px 13px', borderRadius: 9, border: '1px solid rgba(96,8,18,0.15)', background: 'var(--lbf-card)', color: 'var(--lbf-text)', fontSize: 14, lineHeight: 1.6, fontFamily: 'inherit', outline: 'none', resize: 'vertical', minHeight: 160, boxSizing: 'border-box', marginBottom: 12 }} />
+            <textarea value={form.inhalt} onChange={e => setForm({ ...form, inhalt: e.target.value })} rows={9} placeholder={'Der Fachtext, aus dem die KI antwortet…\n\n## Definition\n…\n\n## Therapie\n- Punkt 1\n\n!!! cave Wichtige Warnung'}
+              style={{ width: '100%', padding: '11px 13px', borderRadius: 9, border: '1px solid rgba(96,8,18,0.15)', background: 'var(--lbf-card)', color: 'var(--lbf-text)', fontSize: 14, lineHeight: 1.6, fontFamily: 'inherit', outline: 'none', resize: 'vertical', minHeight: 160, boxSizing: 'border-box', marginBottom: 4 }} />
+            <div style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--warm-gray)', marginBottom: 12, lineHeight: 1.5 }}>
+              Struktur wie im Nachschlagewerk: <b>## Abschnitt</b> = aufklappbares Kapitel · <b>!!! cave</b> = rote Warn-Box · <b>!!! merke</b> = Merke-Box · <b>!!! tipp</b> = Tipp-Box · <b>- </b> = Aufzählung · <b>**fett**</b>
+            </div>
 
             <div style={{ marginBottom: 12 }}>
               <label style={{ fontSize: 11, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.1em', display: 'block', marginBottom: 5 }}>Schlagwörter (Komma-getrennt)</label>

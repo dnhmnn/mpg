@@ -178,8 +178,11 @@ routerAdd("POST", "/ki/wissen-import", (e) => {
     "in sich geschlossene Wissenseinträge (bei nur einem Thema genau 1 Eintrag).\n\n" +
     "Regeln pro Eintrag:\n" +
     "- titel: prägnant, ohne Nummerierung.\n" +
-    "- inhalt: klar gegliederter deutscher Fachtext. Beginne mit 1-2 Sätzen Kurzfassung, danach die Details " +
-    "(Absätze, Aufzählungen mit '- '). Verwende AUSSCHLIESSLICH Informationen, die im Textauszug stehen — " +
+    "- inhalt: klar gegliederter deutscher Fachtext im Nachschlagewerk-Stil. Beginne mit 1-2 Sätzen Kurzfassung " +
+    "(ohne Überschrift), gliedere danach in Kapitel mit '## '-Überschriften (z.B. ## Definition, ## Ursachen, " +
+    "## Symptomatik, ## Diagnostik, ## Therapie / Vorgehen, ## Besonderheiten — nur Kapitel, die der Text hergibt; " +
+    "Absätze, Aufzählungen mit '- ', Wichtiges **fett**). Kritische Warnungen als eigene Zeile '!!! cave <Satz>', " +
+    "zentrale Merksätze als '!!! merke <Satz>'. Verwende AUSSCHLIESSLICH Informationen, die im Textauszug stehen — " +
     "nichts hinzuerfinden, nicht ausschmücken, keine externen Fakten ergänzen; Unklares oder Bruchstückhaftes weglassen.\n" +
     "- tags: 3-6 kurze Schlagwörter in Kleinschreibung, an denen man den Eintrag zu einer Frage findet.\n" +
     "- Lasse Kopf-/Fußzeilen, Seitenzahlen, Inhaltsverzeichnisse und personenbezogene Daten weg.\n" +
