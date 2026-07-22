@@ -125,7 +125,7 @@ function getPatternBg(pattern: string | null): { backgroundImage: string; backgr
 export default function Lernbar() {
   const { user, loading: authLoading } = useAuth()
   const navigate = useNavigate()
-  const [tab, setTab] = useState<'bibliothek' | 'termine' | 'module' | 'assistent' | 'ekg' | 'wissen'>('assistent')
+  const [tab, setTab] = useState<'bibliothek' | 'termine' | 'module' | 'assistent' | 'ekg'>('assistent')
 
   const [termine, setTermine] = useState<Termin[]>([])
   const [terminDokumente, setTerminDokumente] = useState<TerminDokument[]>([])
@@ -461,11 +461,6 @@ export default function Lernbar() {
       icon: <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3l1.7 4.3L18 9l-4.3 1.7L12 15l-1.7-4.3L6 9l4.3-1.7L12 3z"/><path d="M19 14l.8 2.2L22 17l-2.2.8L19 20l-.8-2.2L16 17l2.2-.8L19 14z"/></svg>
     },
     {
-      id: 'wissen' as const, label: 'Wissen',
-      badge: 0,
-      icon: <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
-    },
-    {
       id: 'bibliothek' as const, label: 'Bibliothek',
       badge: 0,
       icon: <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
@@ -507,9 +502,6 @@ export default function Lernbar() {
 
         {/* ── KI-ASSISTENT ── */}
         {tab === 'assistent' && <LernAssistent />}
-
-        {/* ── WISSEN (Nachschlagewerk) ── */}
-        {tab === 'wissen' && <WissenBibliothek organizationId={user?.organization_id || ''} />}
 
         {/* ── EKG-TRAINER ── */}
         {tab === 'ekg' && user && <EkgTrainer user={user as any} showMessage={showMsg} />}
@@ -603,6 +595,9 @@ export default function Lernbar() {
                 </div>
               )}
 
+              {/* Nachschlagewerk-Regal (Wissensbasis) — über dieselbe Suche/Tags gefiltert */}
+              <WissenBibliothek organizationId={user?.organization_id || ''} search={bibSearch} activeTag={bibActiveTag} />
+
               {filteredBeitraege.length === 0 && (
                 <div style={{ textAlign: 'center', color: 'var(--warm-gray)', padding: '64px 16px 24px', fontSize: 15, fontStyle: 'italic' }}>
                   <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="rgba(96,8,18,0.2)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block', margin: '0 auto 12px' }}><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
@@ -618,7 +613,7 @@ export default function Lernbar() {
               )}
               {regular.length > 0 && (
                 <>
-                  {pinned.length > 0 && <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 10 }}>Alle Beiträge</div>}
+                  <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 10 }}>{pinned.length > 0 ? 'Alle Beiträge' : 'Lernbücher'}</div>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>{regular.map(renderBook)}</div>
                 </>
               )}
