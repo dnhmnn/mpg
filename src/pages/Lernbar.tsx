@@ -4,6 +4,7 @@ import { useAuth } from '../hooks/useAuth'
 import { pb } from '../lib/pocketbase'
 import LernAssistent from '../components/LernAssistent'
 import EkgTrainer from '../components/EkgTrainer'
+import WissenBibliothek from '../components/WissenBibliothek'
 
 function parseDate(str: string | null | undefined): Date {
   if (!str) return new Date(NaN)
@@ -124,7 +125,7 @@ function getPatternBg(pattern: string | null): { backgroundImage: string; backgr
 export default function Lernbar() {
   const { user, loading: authLoading } = useAuth()
   const navigate = useNavigate()
-  const [tab, setTab] = useState<'bibliothek' | 'termine' | 'module' | 'assistent' | 'ekg'>('assistent')
+  const [tab, setTab] = useState<'bibliothek' | 'termine' | 'module' | 'assistent' | 'ekg' | 'wissen'>('assistent')
 
   const [termine, setTermine] = useState<Termin[]>([])
   const [terminDokumente, setTerminDokumente] = useState<TerminDokument[]>([])
@@ -460,6 +461,11 @@ export default function Lernbar() {
       icon: <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3l1.7 4.3L18 9l-4.3 1.7L12 15l-1.7-4.3L6 9l4.3-1.7L12 3z"/><path d="M19 14l.8 2.2L22 17l-2.2.8L19 20l-.8-2.2L16 17l2.2-.8L19 14z"/></svg>
     },
     {
+      id: 'wissen' as const, label: 'Wissen',
+      badge: 0,
+      icon: <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+    },
+    {
       id: 'bibliothek' as const, label: 'Bibliothek',
       badge: 0,
       icon: <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
@@ -501,6 +507,9 @@ export default function Lernbar() {
 
         {/* ── KI-ASSISTENT ── */}
         {tab === 'assistent' && <LernAssistent />}
+
+        {/* ── WISSEN (Nachschlagewerk) ── */}
+        {tab === 'wissen' && <WissenBibliothek organizationId={user?.organization_id || ''} />}
 
         {/* ── EKG-TRAINER ── */}
         {tab === 'ekg' && user && <EkgTrainer user={user as any} showMessage={showMsg} />}
