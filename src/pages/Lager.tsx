@@ -400,17 +400,10 @@ export default function Lager() {
   const [multiBuchungSearch, setMultiBuchungSearch] = useState('')
 
   // Controlled audit inputs
-  const [auditActual, setAuditActual] = useState(0)
-  const [auditChecked, setAuditChecked] = useState(true)
-
-  // Eingabefelder immer auf den AKTUELLEN Artikel setzen — vorher blieb der Wert
-  // des vorigen Artikels stehen und der Haken musste jedes Mal neu gesetzt werden
-  useEffect(() => {
-    const it = auditItems[auditIndex]
-    if (!it) return
-    setAuditActual(it.checked ? it.actual_quantity : it.expected_quantity)
-    setAuditChecked(true)
-  }, [auditIndex, auditItems])
+  // Checklisten-Inventur: gezählter Wert je Position (Standard = erwarteter Bestand)
+  const [auditRowValues, setAuditRowValues] = useState<Record<string, number>>({})
+  const [auditSearch, setAuditSearch] = useState('')
+  const [auditSaving, setAuditSaving] = useState<string | null>(null)
 
   // CSV Import state
   type ImportRow = {
@@ -452,11 +445,6 @@ export default function Lager() {
       loadStock()
     }
   }, [currentLocationId])
-
-  useEffect(() => {
-    const item = auditItems[auditIndex]
-    if (item) { setAuditActual(item.actual_quantity || 0); setAuditChecked(item.checked || false) }
-  }, [auditIndex, auditItems])
 
   useEffect(() => { if (showAddItemModal) setAiHint('') }, [showAddItemModal])
 
@@ -1423,6 +1411,8 @@ export default function Lager() {
     const locId = audit.location_id || currentLocationId || ''
     setAuditLocationId(locId)
     setCurrentAudit(audit)
+    setAuditRowValues({})
+    setAuditSearch('')
     await loadAuditItems(audit.id, locId)
     setInventoryTab('new')
   }
@@ -1579,6 +1569,8 @@ export default function Lager() {
 
       setAuditLocationId(locationId)
       setCurrentAudit(audit)
+      setAuditRowValues({})
+      setAuditSearch('')
       await loadAuditItems(audit.id, locationId)
       setAuditIndex(0)
       showMsg('✅ Inventur gestartet!', 'success')
@@ -1609,81 +1601,82 @@ export default function Lager() {
     }
   }
 
-  async function saveAuditItem(actual: number, checked: boolean) {
-    if (!currentAudit || auditIndex >= auditItems.length) return
+  // Bestandskorrektur bei Abweichung buchen (Stock anpassen + Korrektur-Transaktion)
+  async function applyAuditCorrection(auditItem: AuditItem, actual: number, locId: string) {
+    const diff = actual - auditItem.expected_quantity
+    if (diff === 0) return
 
-    const auditItem = auditItems[auditIndex]
-    const locId = auditLocationId || currentLocationId
+    const stockList = await pb.collection('inventory_stock').getFullList({
+      filter: `item_id = "${auditItem.item_id}" && location_id = "${locId}"`
+    })
 
-    try {
-      await pb.collection('inventory_audit_items').update(auditItem.id, {
-        actual_quantity: actual,
-        checked: checked
+    if (diff > 0) {
+      await pb.collection('inventory_stock').create({
+        item_id: auditItem.item_id,
+        location_id: locId,
+        quantity: diff,
+        organization_id: user?.organization_id
       })
-
-      if (checked && actual !== auditItem.expected_quantity) {
-        const diff = actual - auditItem.expected_quantity
-
-        const stockList = await pb.collection('inventory_stock').getFullList({
-          filter: `item_id = "${auditItem.item_id}" && location_id = "${locId}"`
-        })
-
-        if (diff > 0) {
-          await pb.collection('inventory_stock').create({
-            item_id: auditItem.item_id,
-            location_id: locId,
-            quantity: diff,
-            organization_id: user?.organization_id
-          })
-        } else if (diff < 0 && stockList.length > 0) {
-          let remaining = Math.abs(diff)
-          for (const stock of stockList) {
-            if (remaining <= 0) break
-
-            const take = Math.min(stock.quantity, remaining)
-            const newQty = stock.quantity - take
-
-            if (newQty <= 0) {
-              await pb.collection('inventory_stock').delete(stock.id)
-            } else {
-              await pb.collection('inventory_stock').update(stock.id, {
-                quantity: newQty
-              })
-            }
-
-            remaining -= take
-          }
-        }
-
-        await pb.collection('inventory_transactions').create({
-          item_id: auditItem.item_id,
-          location_id: locId,
-          type: 'korrektur',
-          quantity: diff,
-          note: `Inventur-Korrektur: ${auditItem.expected_quantity} → ${actual}`,
-          user: user?.email || user?.id,
-          organization_id: user?.organization_id
-        })
+    } else if (stockList.length > 0) {
+      let remaining = Math.abs(diff)
+      for (const stock of stockList) {
+        if (remaining <= 0) break
+        const take = Math.min(stock.quantity, remaining)
+        const newQty = stock.quantity - take
+        if (newQty <= 0) await pb.collection('inventory_stock').delete(stock.id)
+        else await pb.collection('inventory_stock').update(stock.id, { quantity: newQty })
+        remaining -= take
       }
+    }
 
+    await pb.collection('inventory_transactions').create({
+      item_id: auditItem.item_id,
+      location_id: locId,
+      type: 'korrektur',
+      quantity: diff,
+      note: `Inventur-Korrektur: ${auditItem.expected_quantity} → ${actual}`,
+      user: user?.email || user?.id,
+      organization_id: user?.organization_id
+    })
+  }
+
+  // Eine Position bestätigen (Checklisten-Zeile) — bei Abweichung wird sofort korrigiert
+  async function saveAuditRow(auditItem: AuditItem, actual: number) {
+    if (!currentAudit || auditSaving) return
+    const locId = auditLocationId || currentLocationId
+    if (!locId) return
+    setAuditSaving(auditItem.id)
+    try {
+      await pb.collection('inventory_audit_items').update(auditItem.id, { actual_quantity: actual, checked: true })
+      await applyAuditCorrection(auditItem, actual, locId)
       const updatedItems = await loadAuditItems(currentAudit.id, locId)
-      if (updatedItems.every(ai => ai.checked)) {
-        await finishInventur()
-      } else if (checked) {
-        const nextUnchecked = updatedItems.findIndex(ai => !ai.checked)
-        if (nextUnchecked >= 0) setAuditIndex(nextUnchecked)
-      } else {
-        // Ohne Haken übersprungen: zum NÄCHSTEN ungeprüften Artikel springen,
-        // nicht wieder auf denselben (sonst hängt man fest)
-        const offen = updatedItems.map((ai, idx) => ({ ai, idx })).filter(x => !x.ai.checked && x.ai.id !== auditItem.id)
-        if (offen.length) {
-          const danach = offen.find(x => x.idx > auditIndex)
-          setAuditIndex((danach || offen[0]).idx)
-        }
-      }
-      
+      if (updatedItems.length && updatedItems.every(ai => ai.checked)) await finishInventur()
     } catch(e: any) {
       alert('Fehler: ' + e.message)
+    } finally {
+      setAuditSaving(null)
+    }
+  }
+
+  // Alle noch offenen Positionen in einem Rutsch als "Bestand stimmt" bestätigen
+  async function confirmAllRemaining() {
+    if (!currentAudit || auditSaving) return
+    const locId = auditLocationId || currentLocationId
+    if (!locId) return
+    const rest = auditItems.filter(ai => !ai.checked)
+    if (rest.length === 0) return
+    if (!confirm(`${rest.length} übrige Artikel als "Bestand stimmt" bestätigen?\n\nEs werden keine Korrekturen gebucht — für Abweichungen die Artikel einzeln eintragen.`)) return
+    setAuditSaving('all')
+    try {
+      for (const ai of rest) {
+        await pb.collection('inventory_audit_items').update(ai.id, { actual_quantity: ai.expected_quantity, checked: true })
+      }
+      const updatedItems = await loadAuditItems(currentAudit.id, locId)
+      if (updatedItems.length && updatedItems.every(ai => ai.checked)) await finishInventur()
+    } catch(e: any) {
+      alert('Fehler: ' + e.message)
+    } finally {
+      setAuditSaving(null)
     }
   }
 
@@ -1699,6 +1692,8 @@ export default function Lager() {
       setAuditItems([])
       setAuditIndex(0)
       setAuditLocationId(null)
+      setAuditRowValues({})
+      setAuditSearch('')
       setInventoryTab('new')
       await loadAuditHistory()
       await loadOpenAudits()
@@ -2410,42 +2405,89 @@ export default function Lager() {
 
             {/* TAB: INVENTUR */}
             {inventoryTab === 'new' && (
-              currentAudit ? (
+              currentAudit ? (() => {
+                const geprueft = auditItems.filter(ai => ai.checked).length
+                const q = auditSearch.trim().toLowerCase()
+                const sichtbar = auditItems.filter(ai => !q || (ai.expand?.item_id?.name || '').toLowerCase().includes(q))
+                const offen = sichtbar.filter(ai => !ai.checked)
+                const erledigt = sichtbar.filter(ai => ai.checked)
+                return (
                 <div>
-                  <div style={{ background: 'rgba(250,249,247,0.8)', padding: 12, borderRadius: 8, marginBottom: 16, border: '1px solid rgba(96,8,18,0.1)' }}>
-                    <div style={{ fontWeight: 700, fontSize: 13, color: '#600812', marginBottom: 2 }}>
-                      {locations.find(l => l.id === auditLocationId)?.name || 'Lager'}
+                  {/* Kopf: Standort + Fortschrittsbalken */}
+                  <div style={{ background: 'rgba(250,249,247,0.8)', padding: 12, borderRadius: 8, marginBottom: 12, border: '1px solid rgba(96,8,18,0.1)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8 }}>
+                      <div style={{ fontWeight: 700, fontSize: 13, color: '#600812' }}>{locations.find(l => l.id === auditLocationId)?.name || 'Lager'}</div>
+                      <div style={{ fontSize: 12, color: 'var(--lbf-text)', fontWeight: 700 }}>{geprueft} / {auditItems.length}</div>
                     </div>
-                    <span style={{ fontSize: 13, color: 'var(--lbf-text)' }}><strong>Fortschritt:</strong> {auditItems.filter(ai => ai.checked).length} / {auditItems.length} geprüft</span>
+                    <div style={{ background: 'rgba(96,8,18,0.08)', borderRadius: 6, height: 6 }}>
+                      <div style={{ background: '#600812', borderRadius: 6, height: 6, width: `${auditItems.length ? Math.round(geprueft / auditItems.length * 100) : 0}%`, transition: 'width 0.25s' }} />
+                    </div>
                   </div>
-                  {auditIndex < auditItems.length && (
-                    <div>
-                      <div style={{ background: 'rgba(250,249,247,0.8)', padding: 16, borderRadius: 8, marginBottom: 16 }}>
-                        <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--lbf-text)', marginBottom: 6 }}>{auditIndex + 1}. {auditItems[auditIndex]?.expand?.item_id?.name}</div>
-                        <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginBottom: 10 }}>{auditItems[auditIndex]?.expand?.item_id?.unit || 'Stück'}</div>
-                        <div style={{ background: 'var(--lbf-card)', padding: 12, borderRadius: 8, marginBottom: 12 }}>
-                          <div style={{ fontSize: 11, color: 'var(--warm-gray)', marginBottom: 4 }}>Erwarteter Bestand (laut System):</div>
-                          <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--lbf-text)' }}>{auditItems[auditIndex]?.expected_quantity} {auditItems[auditIndex]?.expand?.item_id?.unit || 'Stück'}</div>
+
+                  {/* Suche + Sammelaktion */}
+                  <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+                    <input className="lager-input" type="search" placeholder="Artikel suchen…" value={auditSearch} onChange={e => setAuditSearch(e.target.value)} style={{ flex: 1 }} />
+                    {auditItems.some(ai => !ai.checked) && (
+                      <button className="lager-btn" disabled={auditSaving !== null} onClick={confirmAllRemaining} style={{ flexShrink: 0, whiteSpace: 'nowrap' as const }}>
+                        {auditSaving === 'all' ? 'Bestätigt…' : 'Rest stimmt ✓'}
+                      </button>
+                    )}
+                  </div>
+
+                  <div style={{ fontStyle: 'italic', fontSize: 11, color: 'var(--warm-gray)', marginBottom: 10 }}>
+                    Stimmt der Bestand, einfach ✓ antippen. Bei Abweichung erst die gezählte Menge eintragen — die Korrektur wird sofort gebucht.
+                  </div>
+
+                  {/* Offene Positionen */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 380, overflowY: 'auto' }}>
+                    {offen.map(ai => {
+                      const val = auditRowValues[ai.id] !== undefined ? auditRowValues[ai.id] : ai.expected_quantity
+                      const weicht = val !== ai.expected_quantity
+                      const busy = auditSaving === ai.id
+                      return (
+                        <div key={ai.id} style={{ background: 'rgba(250,249,247,0.8)', borderRadius: 10, padding: '10px 12px', borderLeft: `3px solid ${weicht ? '#d97706' : 'rgba(96,8,18,0.25)'}` }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--lbf-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ai.expand?.item_id?.name || 'Artikel'}</div>
+                              <div style={{ fontStyle: 'italic', fontSize: 11, color: 'var(--warm-gray)' }}>Erwartet: {ai.expected_quantity} {ai.expand?.item_id?.unit || 'Stück'}</div>
+                            </div>
+                            <input className="lager-input" type="number" min="0" value={val}
+                              onChange={e => setAuditRowValues(prev => ({ ...prev, [ai.id]: Number(e.target.value) }))}
+                              style={{ width: 72, textAlign: 'center', fontWeight: 700, padding: '8px 6px' }} />
+                            <button className="lager-btn primary" disabled={auditSaving !== null} onClick={() => saveAuditRow(ai, val)}
+                              style={{ flexShrink: 0, minWidth: 76, background: weicht ? '#d97706' : undefined, borderColor: weicht ? '#d97706' : undefined }}>
+                              {busy ? '…' : weicht ? `Buchen ${val - ai.expected_quantity > 0 ? '+' : ''}${val - ai.expected_quantity}` : '✓ Stimmt'}
+                            </button>
+                          </div>
                         </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 12 }}>
-                          <label style={{ fontSize: 11, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.1em' }}>Tatsächlicher Bestand (gezählt):</label>
-                          <input className="lager-input" type="number" value={auditActual} onChange={e => setAuditActual(Number(e.target.value))} min="0" style={{ fontSize: 18, fontWeight: 700 }} />
-                        </div>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, color: 'var(--lbf-text)' }}>
-                          <input type="checkbox" checked={auditChecked} onChange={e => setAuditChecked(e.target.checked)} />
-                          <span>Als geprüft markieren</span>
-                        </label>
-                      </div>
-                      <div style={{ display: 'flex', gap: 8, justifyContent: 'space-between' }}>
-                        <button className="lager-btn" onClick={() => setAuditIndex(Math.max(0, auditIndex - 1))} disabled={auditIndex === 0}>Zurück</button>
-                        <button className="lager-btn primary" onClick={() => saveAuditItem(auditActual, auditChecked)}>
-                          {auditIndex === auditItems.length - 1 ? 'Fertig' : 'Weiter'}
-                        </button>
-                      </div>
-                    </div>
-                  )}
+                      )
+                    })}
+                    {offen.length === 0 && q && (
+                      <div style={{ textAlign: 'center', padding: 14, color: 'var(--warm-gray)', fontStyle: 'italic', fontSize: 13 }}>Kein offener Artikel zu „{auditSearch}"</div>
+                    )}
+
+                    {/* Bereits geprüfte Positionen */}
+                    {erledigt.length > 0 && (
+                      <>
+                        <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--warm-gray)', textTransform: 'uppercase' as const, letterSpacing: '0.1em', marginTop: 6 }}>Geprüft</div>
+                        {erledigt.map(ai => {
+                          const diff = ai.actual_quantity - ai.expected_quantity
+                          return (
+                            <div key={ai.id} style={{ display: 'flex', alignItems: 'center', gap: 10, background: diff === 0 ? 'rgba(250,249,247,0.6)' : diff > 0 ? '#f0fdf4' : '#fef2f2', borderRadius: 10, padding: '8px 12px', opacity: 0.85 }}>
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" style={{ flexShrink: 0 }}><polyline points="20 6 9 17 4 12"/></svg>
+                              <div style={{ flex: 1, minWidth: 0, fontSize: 13, color: 'var(--lbf-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ai.expand?.item_id?.name || 'Artikel'}</div>
+                              <div style={{ fontSize: 12, fontWeight: 700, color: diff === 0 ? 'var(--warm-gray)' : diff > 0 ? '#16a34a' : '#600812', flexShrink: 0 }}>
+                                {ai.actual_quantity}{diff !== 0 && ` (${diff > 0 ? '+' : ''}${diff})`}
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </>
+                    )}
+                  </div>
                 </div>
-              ) : (
+                )
+              })() : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                   {locations.map(loc => {
                     const openAudit = openAudits.find(a => a.location_id === loc.id)
