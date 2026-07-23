@@ -364,9 +364,12 @@ export default function Lager() {
   const [openAudits, setOpenAudits] = useState<Audit[]>([])
   const [selectedHistoryAudit, setSelectedHistoryAudit] = useState<Audit | null>(null)
   const [historyAuditItems, setHistoryAuditItems] = useState<AuditItem[]>([])
-  const [inventurSchedule, setInventurSchedule] = useState<{interval: string}>(() => {
-    const saved = localStorage.getItem('lager_inventur_schedule')
-    return saved ? JSON.parse(saved) : { interval: 'monthly' }
+  // Intervall: global (interval) + je Standort überschreibbar (perLocation[locationId])
+  const [inventurSchedule, setInventurSchedule] = useState<{interval: string; perLocation: Record<string, string>}>(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem('lager_inventur_schedule') || '')
+      return { interval: saved.interval || 'monthly', perLocation: saved.perLocation || {} }
+    } catch { return { interval: 'monthly', perLocation: {} } }
   })
   
   // Buchung state
@@ -398,7 +401,16 @@ export default function Lager() {
 
   // Controlled audit inputs
   const [auditActual, setAuditActual] = useState(0)
-  const [auditChecked, setAuditChecked] = useState(false)
+  const [auditChecked, setAuditChecked] = useState(true)
+
+  // Eingabefelder immer auf den AKTUELLEN Artikel setzen — vorher blieb der Wert
+  // des vorigen Artikels stehen und der Haken musste jedes Mal neu gesetzt werden
+  useEffect(() => {
+    const it = auditItems[auditIndex]
+    if (!it) return
+    setAuditActual(it.checked ? it.actual_quantity : it.expected_quantity)
+    setAuditChecked(true)
+  }, [auditIndex, auditItems])
 
   // CSV Import state
   type ImportRow = {
@@ -1433,20 +1445,29 @@ export default function Lager() {
       const s = await pb.collection('lager_settings').getFirstListItem(
         `organization_id = "${user?.organization_id}"`
       )
-      if (s?.inventur_interval) setInventurSchedule({ interval: s.inventur_interval })
+      const raw = (s?.inventur_interval || '').toString()
+      if (!raw) return
+      // Neues Format: JSON {interval, perLocation}; Altbestand: einfacher Intervall-String
+      try {
+        const parsed = JSON.parse(raw)
+        setInventurSchedule({ interval: parsed.interval || 'monthly', perLocation: parsed.perLocation || {} })
+      } catch {
+        setInventurSchedule({ interval: raw, perLocation: {} })
+      }
     } catch { /* localStorage fallback stays */ }
   }
 
   async function saveSchedule() {
     localStorage.setItem('lager_inventur_schedule', JSON.stringify(inventurSchedule))
     try {
+      const payload = JSON.stringify(inventurSchedule)
       const existing = await pb.collection('lager_settings').getFullList({
         filter: `organization_id = "${user?.organization_id}"`
       })
       if (existing.length > 0) {
-        await pb.collection('lager_settings').update(existing[0].id, { inventur_interval: inventurSchedule.interval })
+        await pb.collection('lager_settings').update(existing[0].id, { inventur_interval: payload })
       } else {
-        await pb.collection('lager_settings').create({ organization_id: user?.organization_id, inventur_interval: inventurSchedule.interval })
+        await pb.collection('lager_settings').create({ organization_id: user?.organization_id, inventur_interval: payload })
       }
       showMsg('✅ Zeitplan gespeichert!', 'success')
     } catch (e: any) {
@@ -1454,25 +1475,72 @@ export default function Lager() {
     }
   }
 
+  // Effektives Intervall eines Standorts: eigener Wert, sonst der globale Standard
+  function intervalForLocation(locationId: string): string {
+    const own = inventurSchedule.perLocation[locationId]
+    return own && own !== 'default' ? own : inventurSchedule.interval
+  }
+
   function getNextDueDateForLocation(locationId: string): Date | null {
-    if (inventurSchedule.interval === 'disabled') return null
+    const interval = intervalForLocation(locationId)
+    if (interval === 'disabled') return null
     const lastAudit = auditHistory
       .filter(a => a.location_id === locationId)
       .sort((a, b) => new Date(b.audit_date).getTime() - new Date(a.audit_date).getTime())[0]
     if (!lastAudit) return null
     const next = new Date(lastAudit.audit_date)
-    if (inventurSchedule.interval === 'weekly')    next.setDate(next.getDate() + 7)
-    if (inventurSchedule.interval === 'monthly')   next.setMonth(next.getMonth() + 1)
-    if (inventurSchedule.interval === 'quarterly') next.setMonth(next.getMonth() + 3)
-    if (inventurSchedule.interval === 'biannual')  next.setMonth(next.getMonth() + 6)
-    if (inventurSchedule.interval === 'annual')    next.setFullYear(next.getFullYear() + 1)
+    if (interval === 'weekly')    next.setDate(next.getDate() + 7)
+    if (interval === 'monthly')   next.setMonth(next.getMonth() + 1)
+    if (interval === 'quarterly') next.setMonth(next.getMonth() + 3)
+    if (interval === 'biannual')  next.setMonth(next.getMonth() + 6)
+    if (interval === 'annual')    next.setFullYear(next.getFullYear() + 1)
     return next
+  }
+
+  // Offene Inventur verwerfen (keine Bestandsänderungen — nur Audit + Positionen löschen)
+  async function cancelAudit(audit: Audit) {
+    try {
+      const items = await pb.collection('inventory_audit_items').getFullList({ filter: `audit_id = "${audit.id}"` })
+      for (const it of items) await pb.collection('inventory_audit_items').delete(it.id)
+      await pb.collection('inventory_audits').delete(audit.id)
+      if (currentAudit?.id === audit.id) { setCurrentAudit(null); setAuditItems([]); setAuditIndex(0); setAuditLocationId(null) }
+      await loadOpenAudits()
+    } catch(e: any) { showMsg('Fehler: ' + e.message, 'error') }
+  }
+
+  // Inventur-Historie eines Standorts zurücksetzen — Fälligkeit beginnt danach von vorn.
+  // Bestände und Korrektur-Buchungen bleiben unangetastet.
+  async function resetInventurForLocation(locationId: string) {
+    const loc = locations.find(l => l.id === locationId)
+    if (!confirm(`Inventuren für "${loc?.name || 'Standort'}" wirklich zurücksetzen?\n\nAlle abgeschlossenen und offenen Inventuren dieses Standorts werden gelöscht (Bestände bleiben unverändert). Die nächste Inventur ist danach sofort fällig.`)) return
+    try {
+      const audits = await pb.collection('inventory_audits').getFullList<Audit>({
+        filter: `organization_id = "${user?.organization_id}" && location_id = "${locationId}"`
+      })
+      for (const a of audits) {
+        const items = await pb.collection('inventory_audit_items').getFullList({ filter: `audit_id = "${a.id}"` })
+        for (const it of items) await pb.collection('inventory_audit_items').delete(it.id)
+        await pb.collection('inventory_audits').delete(a.id)
+      }
+      if (currentAudit && auditLocationId === locationId) { setCurrentAudit(null); setAuditItems([]); setAuditIndex(0); setAuditLocationId(null) }
+      await loadAuditHistory()
+      await loadOpenAudits()
+      showMsg('✅ Inventuren zurückgesetzt', 'success')
+    } catch(e: any) { showMsg('Fehler: ' + e.message, 'error') }
   }
 
   async function startInventur(locationId: string) {
     if (!locationId) return
 
     try {
+      // "Neu starten": alte offene Inventur dieses Standorts erst verwerfen,
+      // sonst bleibt sie für immer als "Offen" hängen
+      const stale = openAudits.filter(a => a.location_id === locationId)
+      for (const a of stale) {
+        const items = await pb.collection('inventory_audit_items').getFullList({ filter: `audit_id = "${a.id}"` })
+        for (const it of items) await pb.collection('inventory_audit_items').delete(it.id)
+        await pb.collection('inventory_audits').delete(a.id)
+      }
       const [itemsList, stockData] = await Promise.all([
         pb.collection('inventory_items').getFullList<InventoryItem>({
           filter: `organization_id = "${user?.organization_id}"`,
@@ -1601,9 +1669,17 @@ export default function Lager() {
       const updatedItems = await loadAuditItems(currentAudit.id, locId)
       if (updatedItems.every(ai => ai.checked)) {
         await finishInventur()
-      } else {
+      } else if (checked) {
         const nextUnchecked = updatedItems.findIndex(ai => !ai.checked)
         if (nextUnchecked >= 0) setAuditIndex(nextUnchecked)
+      } else {
+        // Ohne Haken übersprungen: zum NÄCHSTEN ungeprüften Artikel springen,
+        // nicht wieder auf denselben (sonst hängt man fest)
+        const offen = updatedItems.map((ai, idx) => ({ ai, idx })).filter(x => !x.ai.checked && x.ai.id !== auditItem.id)
+        if (offen.length) {
+          const danach = offen.find(x => x.idx > auditIndex)
+          setAuditIndex((danach || offen[0]).idx)
+        }
       }
       
     } catch(e: any) {
@@ -2375,7 +2451,8 @@ export default function Lager() {
                     const openAudit = openAudits.find(a => a.location_id === loc.id)
                     const lastAudit = auditHistory.filter(a => a.location_id === loc.id).sort((a, b) => new Date(b.audit_date).getTime() - new Date(a.audit_date).getTime())[0]
                     const nextDue = getNextDueDateForLocation(loc.id)
-                    const neverAudited = !lastAudit && inventurSchedule.interval !== 'disabled'
+                    const locInterval = intervalForLocation(loc.id)
+                    const neverAudited = !lastAudit && locInterval !== 'disabled'
                     const isOverdue = neverAudited || (nextDue !== null && nextDue < new Date())
                     return (
                       <div key={loc.id} style={{ background: 'rgba(250,249,247,0.8)', borderRadius: 12, padding: 16, border: `1px solid ${isOverdue ? '#fecaca' : 'rgba(96,8,18,0.1)'}`, borderLeft: `4px solid ${isOverdue ? '#600812' : openAudit ? '#d97706' : 'var(--lbf-input-border)'}` }}>
@@ -2388,13 +2465,25 @@ export default function Lager() {
                         </div>
                         <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginBottom: 12, display: 'flex', flexDirection: 'column', gap: 2 }}>
                           <div>Letzte Inventur: {lastAudit ? `${new Date(lastAudit.audit_date).toLocaleDateString('de-DE')} · ${lastAudit.user}` : 'Noch nie durchgeführt'}</div>
-                          {inventurSchedule.interval !== 'disabled' && (
+                          {locInterval !== 'disabled' && (
                             <div style={{ color: isOverdue ? '#600812' : 'var(--warm-gray)' }}>Nächste fällig: {neverAudited ? 'Sofort' : nextDue?.toLocaleDateString('de-DE')}</div>
                           )}
                         </div>
-                        <div style={{ display: 'flex', gap: 8 }}>
+                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                           {openAudit && <button className="lager-btn primary" onClick={() => resumeAudit(openAudit)}>Weiterführen</button>}
                           <button className="lager-btn" onClick={() => startInventur(loc.id)}>{openAudit ? 'Neu starten' : 'Inventur starten'}</button>
+                          {openAudit && (
+                            <button className="lager-btn" style={{ color: '#dc2626', borderColor: 'rgba(220,38,38,0.35)' }}
+                              onClick={() => { if (confirm('Offene Inventur wirklich abbrechen? Bereits gebuchte Korrekturen bleiben bestehen.')) cancelAudit(openAudit) }}>
+                              Abbrechen
+                            </button>
+                          )}
+                          {(lastAudit || openAudit) && (
+                            <button className="lager-btn" style={{ color: 'var(--warm-gray)' }} title="Alle Inventuren dieses Standorts löschen — Fälligkeit beginnt von vorn"
+                              onClick={() => resetInventurForLocation(loc.id)}>
+                              Zurücksetzen
+                            </button>
+                          )}
                         </div>
                       </div>
                     )
@@ -2463,8 +2552,8 @@ export default function Lager() {
             {inventoryTab === 'schedule' && (
               <div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 16 }}>
-                  <label style={{ fontSize: 11, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.1em' }}>Inventur-Intervall (gilt für alle Standorte)</label>
-                  <select className="lager-input" value={inventurSchedule.interval} onChange={(e) => setInventurSchedule({ interval: e.target.value })}>
+                  <label style={{ fontSize: 11, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.1em' }}>Standard-Intervall (für Standorte ohne eigene Einstellung)</label>
+                  <select className="lager-input" value={inventurSchedule.interval} onChange={(e) => setInventurSchedule(prev => ({ ...prev, interval: e.target.value }))}>
                     <option value="disabled">Deaktiviert</option>
                     <option value="weekly">Wöchentlich</option>
                     <option value="monthly">Monatlich</option>
@@ -2473,32 +2562,51 @@ export default function Lager() {
                     <option value="annual">Jährlich</option>
                   </select>
                 </div>
-                {inventurSchedule.interval !== 'disabled' && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--lbf-text)', textTransform: 'uppercase' as const, letterSpacing: '0.1em' }}>Fälligkeiten je Standort:</div>
-                    {locations.map(loc => {
-                      const nextDue = getNextDueDateForLocation(loc.id)
-                      const lastAudit = auditHistory.filter(a => a.location_id === loc.id).sort((a, b) => new Date(b.audit_date).getTime() - new Date(a.audit_date).getTime())[0]
-                      const neverAudited = !lastAudit
-                      const isOverdue = neverAudited || (nextDue !== null && nextDue < new Date())
-                      return (
-                        <div key={loc.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', borderRadius: 8, background: isOverdue ? '#fef2f2' : '#f0fdf4', border: `1px solid ${isOverdue ? '#fecaca' : '#bbf7d0'}` }}>
-                          <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--lbf-text)' }}>{loc.name}</div>
-                          <div style={{ textAlign: 'right', fontSize: 12 }}>
-                            {neverAudited ? (
-                              <span style={{ color: '#600812', fontWeight: 700 }}>Noch nie – sofort fällig</span>
-                            ) : (
-                              <span style={{ color: isOverdue ? '#600812' : '#166534', fontWeight: 600 }}>
-                                {nextDue?.toLocaleDateString('de-DE')}
-                                {isOverdue && ' — Überfällig'}
-                              </span>
-                            )}
-                          </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--lbf-text)', textTransform: 'uppercase' as const, letterSpacing: '0.1em' }}>Intervall & Fälligkeit je Standort:</div>
+                  {locations.map(loc => {
+                    const nextDue = getNextDueDateForLocation(loc.id)
+                    const locInterval = intervalForLocation(loc.id)
+                    const lastAudit = auditHistory.filter(a => a.location_id === loc.id).sort((a, b) => new Date(b.audit_date).getTime() - new Date(a.audit_date).getTime())[0]
+                    const neverAudited = !lastAudit
+                    const isOverdue = locInterval !== 'disabled' && (neverAudited || (nextDue !== null && nextDue < new Date()))
+                    return (
+                      <div key={loc.id} style={{ padding: '10px 12px', borderRadius: 8, background: locInterval === 'disabled' ? 'rgba(250,249,247,0.8)' : isOverdue ? '#fef2f2' : '#f0fdf4', border: `1px solid ${locInterval === 'disabled' ? 'rgba(96,8,18,0.1)' : isOverdue ? '#fecaca' : '#bbf7d0'}` }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+                          <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--lbf-text)', flex: 1, minWidth: 0 }}>{loc.name}</div>
+                          <select className="lager-input" style={{ width: 'auto', fontSize: 12, padding: '6px 8px' }}
+                            value={inventurSchedule.perLocation[loc.id] || 'default'}
+                            onChange={(e) => setInventurSchedule(prev => {
+                              const perLocation = { ...prev.perLocation }
+                              if (e.target.value === 'default') delete perLocation[loc.id]
+                              else perLocation[loc.id] = e.target.value
+                              return { ...prev, perLocation }
+                            })}>
+                            <option value="default">Wie Standard</option>
+                            <option value="disabled">Deaktiviert</option>
+                            <option value="weekly">Wöchentlich</option>
+                            <option value="monthly">Monatlich</option>
+                            <option value="quarterly">Vierteljährlich</option>
+                            <option value="biannual">Halbjährlich</option>
+                            <option value="annual">Jährlich</option>
+                          </select>
                         </div>
-                      )
-                    })}
-                  </div>
-                )}
+                        <div style={{ textAlign: 'right', fontSize: 12 }}>
+                          {locInterval === 'disabled' ? (
+                            <span style={{ color: 'var(--warm-gray)', fontStyle: 'italic' }}>Keine automatische Fälligkeit</span>
+                          ) : neverAudited ? (
+                            <span style={{ color: '#600812', fontWeight: 700 }}>Noch nie – sofort fällig</span>
+                          ) : (
+                            <span style={{ color: isOverdue ? '#600812' : '#166534', fontWeight: 600 }}>
+                              {nextDue?.toLocaleDateString('de-DE')}
+                              {isOverdue && ' — Überfällig'}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
                 <button className="lager-btn primary" style={{ width: '100%' }} onClick={saveSchedule}>Speichern</button>
               </div>
             )}
