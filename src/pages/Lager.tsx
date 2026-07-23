@@ -359,6 +359,7 @@ export default function Lager() {
   const [currentAudit, setCurrentAudit] = useState<Audit | null>(null)
   const [auditItems, setAuditItems] = useState<AuditItem[]>([])
   const [auditIndex, setAuditIndex] = useState(0)
+  const [auditViewMode, setAuditViewMode] = useState<'liste' | 'einzeln'>('liste')
   const [auditLocationId, setAuditLocationId] = useState<string | null>(null)
   const [auditHistory, setAuditHistory] = useState<Audit[]>([])
   const [openAudits, setOpenAudits] = useState<Audit[]>([])
@@ -2483,6 +2484,46 @@ export default function Lager() {
                     </div>
                   </div>
 
+                  {/* Ansicht umschalten: Liste (alle auf einmal) oder Einzeln (durchklicken) */}
+                  <div style={{ display: 'flex', gap: 0, marginBottom: 12, background: 'rgba(96,8,18,0.06)', borderRadius: 8, padding: 3 }}>
+                    {(['liste', 'einzeln'] as const).map(m => (
+                      <button key={m} onClick={() => setAuditViewMode(m)}
+                        style={{ flex: 1, padding: '7px 0', border: 'none', borderRadius: 6, cursor: 'pointer', fontFamily: 'inherit', fontWeight: 700, fontSize: 12, background: auditViewMode === m ? '#fff' : 'transparent', color: auditViewMode === m ? '#600812' : 'var(--warm-gray)', boxShadow: auditViewMode === m ? '0 1px 3px rgba(0,0,0,0.1)' : 'none' }}>
+                        {m === 'liste' ? 'Liste' : 'Einzeln'}
+                      </button>
+                    ))}
+                  </div>
+
+                  {auditViewMode === 'einzeln' ? (() => {
+                    const cur = auditItems[Math.min(auditIndex, Math.max(0, auditItems.length - 1))]
+                    if (!cur) return <div style={{ textAlign: 'center', padding: 24, color: 'var(--warm-gray)', fontStyle: 'italic' }}>Keine Artikel.</div>
+                    const val = auditRowValues[cur.id] !== undefined ? auditRowValues[cur.id] : cur.expected_quantity
+                    const weicht = val !== cur.expected_quantity
+                    const busy = auditSaving === cur.id
+                    return (
+                      <div>
+                        <div style={{ textAlign: 'center', fontSize: 11, color: 'var(--warm-gray)', fontStyle: 'italic', marginBottom: 8 }}>Artikel {auditIndex + 1} von {auditItems.length}{cur.checked ? ' · bereits geprüft' : ''}</div>
+                        <div style={{ background: 'rgba(250,249,247,0.8)', borderRadius: 12, padding: 16, border: `1px solid ${weicht ? '#f2c088' : 'rgba(96,8,18,0.12)'}`, marginBottom: 12 }}>
+                          <div style={{ fontWeight: 700, fontSize: 16, color: 'var(--lbf-text)', marginBottom: 2 }}>{cur.expand?.item_id?.name || 'Artikel'}</div>
+                          <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginBottom: 14 }}>Erwartet: {cur.expected_quantity} {cur.expand?.item_id?.unit || 'Stück'}</div>
+                          <label style={{ fontSize: 11, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.1em', display: 'block', marginBottom: 6 }}>Gezählt</label>
+                          <input className="lager-input" type="number" min="0" value={val} autoFocus
+                            onChange={e => setAuditRowValues(prev => ({ ...prev, [cur.id]: Number(e.target.value) }))}
+                            style={{ fontSize: 20, fontWeight: 800, textAlign: 'center' }} />
+                          {weicht && <div style={{ textAlign: 'center', fontSize: 12, fontWeight: 700, color: '#d97706', marginTop: 8 }}>Abweichung {val - cur.expected_quantity > 0 ? '+' : ''}{val - cur.expected_quantity} — wird beim Bestätigen gebucht</div>}
+                        </div>
+                        <div style={{ display: 'flex', gap: 8 }}>
+                          <button className="lager-btn" disabled={auditIndex === 0} onClick={() => setAuditIndex(i => Math.max(0, i - 1))} style={{ flexShrink: 0 }}>Zurück</button>
+                          <button className="lager-btn" disabled={auditIndex >= auditItems.length - 1} onClick={() => setAuditIndex(i => Math.min(auditItems.length - 1, i + 1))} style={{ flexShrink: 0 }}>Überspringen</button>
+                          <button className="lager-btn primary" disabled={auditSaving !== null} onClick={async () => { await saveAuditRow(cur, val); setAuditIndex(i => Math.min(auditItems.length - 1, i + 1)) }}
+                            style={{ flex: 1, background: weicht ? '#d97706' : undefined, borderColor: weicht ? '#d97706' : undefined }}>
+                            {busy ? '…' : weicht ? `Buchen ${val - cur.expected_quantity > 0 ? '+' : ''}${val - cur.expected_quantity}` : '✓ Stimmt'}
+                          </button>
+                        </div>
+                      </div>
+                    )
+                  })() : (<>
+
                   {/* Suche + Sammelaktion */}
                   <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
                     <input className="lager-input" type="search" placeholder="Artikel suchen…" value={auditSearch} onChange={e => setAuditSearch(e.target.value)} style={{ flex: 1 }} />
@@ -2544,6 +2585,7 @@ export default function Lager() {
                       </>
                     )}
                   </div>
+                  </>)}
                 </div>
                 )
               })() : (
