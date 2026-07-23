@@ -3,17 +3,53 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { pb } from '../lib/pocketbase'
 
 interface TxRow { item_id: string; type: string; quantity: number; note?: string; created: string }
-interface Props { orgId: string; items: { id: string; name: string; unit?: string }[] }
+interface Props { orgId: string; items: { id: string; name: string; unit?: string }[]; onChanged?: () => void }
 
 // Validierte Chart-Farben (hell + dunkel geprüft): Ausbuchung Rot, Einbuchung Grün
 const RED = '#b91c1c'
 const GREEN = '#16a34a'
 const AXIS = { fontSize: 11, fill: 'var(--warm-gray)', fontFamily: 'inherit' }
 
-export default function LagerStats({ orgId, items }: Props) {
+interface TxRowId extends TxRow { id: string }
+
+export default function LagerStats({ orgId, items, onChanged }: Props) {
   const [months, setMonths] = useState(6)
   const [txns, setTxns] = useState<TxRow[] | null>(null)
   const [error, setError] = useState('')
+  const [resetting, setResetting] = useState(false)
+
+  // Buchungshistorie der Organisation löschen — Statistik & Verlauf werden geleert,
+  // die aktuellen Bestände (inventory_stock) bleiben unverändert.
+  async function resetBuchungen() {
+    if (resetting) return
+    if (!confirm('Alle Buchungen (Ein-/Ausbuchungen, Korrekturen) dieser Organisation löschen?\n\nDie Statistik und der Verlauf werden geleert. Die aktuellen Bestände bleiben unverändert. Das lässt sich NICHT rückgängig machen.')) return
+    if (!confirm('Wirklich sicher? Die komplette Buchungshistorie wird endgültig gelöscht.')) return
+    setResetting(true)
+    try {
+      let total = 0
+      // In Blöcken laden und löschen, bis nichts mehr übrig ist
+      // (getFullList kann viele Datensätze liefern — batchweise abarbeiten)
+      // eslint-disable-next-line no-constant-condition
+      while (true) {
+        const batch = await pb.collection('inventory_transactions').getList<TxRowId>(1, 200, {
+          filter: `organization_id = "${orgId}"`,
+          fields: 'id',
+          requestKey: `lager-reset-${Date.now()}`,
+        })
+        if (!batch.items.length) break
+        for (const t of batch.items) await pb.collection('inventory_transactions').delete(t.id)
+        total += batch.items.length
+        if (batch.items.length < 200) break
+      }
+      setTxns([])
+      onChanged?.()
+      alert(`${total} Buchung(en) gelöscht. Die Statistik ist zurückgesetzt.`)
+    } catch (e: any) {
+      alert('Fehler beim Zurücksetzen: ' + (e?.message || e))
+    } finally {
+      setResetting(false)
+    }
+  }
 
   useEffect(() => {
     let cancelled = false
@@ -142,6 +178,19 @@ export default function LagerStats({ orgId, items }: Props) {
             </div>
           )}
         </>
+      )}
+
+      {/* Zurücksetzen */}
+      {txns !== null && txns.length > 0 && (
+        <div style={{ marginTop: 24, paddingTop: 16, borderTop: '0.5px solid rgba(96,8,18,0.12)' }}>
+          <button onClick={resetBuchungen} disabled={resetting}
+            style={{ width: '100%', padding: '11px', borderRadius: 10, border: '1px solid rgba(220,38,38,0.35)', background: 'transparent', color: '#dc2626', fontWeight: 700, fontSize: 13, cursor: resetting ? 'default' : 'pointer', fontFamily: 'inherit', opacity: resetting ? 0.6 : 1 }}>
+            {resetting ? 'Wird zurückgesetzt…' : 'Buchungen zurücksetzen'}
+          </button>
+          <div style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--warm-gray)', marginTop: 6, textAlign: 'center' as const }}>
+            Löscht die komplette Buchungshistorie. Die aktuellen Bestände bleiben unverändert.
+          </div>
+        </div>
       )}
     </div>
   )

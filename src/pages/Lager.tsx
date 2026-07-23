@@ -377,6 +377,8 @@ export default function Lager() {
   const [buchungQty, setBuchungQty] = useState(1)
   const [buchungExpiry, setBuchungExpiry] = useState('')
   const [buchungBatch, setBuchungBatch] = useState('')
+  // Einbuchung mit mehreren Chargen/MHD in einem Vorgang (je Zeile ein Bestandssatz)
+  const [einChargen, setEinChargen] = useState<{ menge: number; mhd: string; charge: string }[]>([{ menge: 1, mhd: '', charge: '' }])
   const [buchungSearch, setBuchungSearch] = useState('')
   const [savingBuchung, setSavingBuchung] = useState(false)
 
@@ -917,6 +919,7 @@ export default function Lager() {
     setBuchungQty(1)
     setBuchungExpiry('')
     setBuchungBatch('')
+    setEinChargen([{ menge: 1, mhd: '', charge: '' }])
     setShowBuchungModal(true)
   }
 
@@ -1719,26 +1722,48 @@ export default function Lager() {
   }
 
   // BUCHUNG FUNKTIONEN
+  function resetBuchungFields() {
+    setSelectedBuchungItem('')
+    setBuchungQty(1)
+    setBuchungExpiry('')
+    setBuchungBatch('')
+    setBuchungSearch('')
+    setEinChargen([{ menge: 1, mhd: '', charge: '' }])
+  }
+
   async function saveBuchung() {
     if (!selectedBuchungItem || !currentLocationId) {
       alert('Bitte Artikel auswählen')
       return
     }
-    if (buchungQty <= 0) {
-      alert('Menge muss größer 0 sein')
+    if (savingBuchung) return
+
+    if (buchungType === 'ein') {
+      const rows = einChargen.filter(r => r.menge > 0)
+      if (rows.length === 0) { alert('Mindestens eine Menge größer 0 eingeben'); return }
+      setSavingBuchung(true)
+      try {
+        // Jede Charge/MHD als eigener Bestandssatz einbuchen
+        for (const r of rows) {
+          await adjustQty(selectedBuchungItem, r.menge, r.mhd || undefined, r.charge || undefined)
+        }
+        setShowBuchungModal(false)
+        resetBuchungFields()
+      } catch(e: any) {
+        alert('Fehler: ' + e.message)
+      } finally {
+        setSavingBuchung(false)
+      }
       return
     }
-    if (savingBuchung) return
+
+    // Ausbuchung (FIFO nach MHD, keine Charge)
+    if (buchungQty <= 0) { alert('Menge muss größer 0 sein'); return }
     setSavingBuchung(true)
-    const delta = buchungType === 'ein' ? buchungQty : -buchungQty
     try {
-      await adjustQty(selectedBuchungItem, delta, buchungExpiry || undefined, buchungType === 'ein' ? buchungBatch : undefined)
+      await adjustQty(selectedBuchungItem, -buchungQty)
       setShowBuchungModal(false)
-      setSelectedBuchungItem('')
-      setBuchungQty(1)
-      setBuchungExpiry('')
-      setBuchungBatch('')
-      setBuchungSearch('')
+      resetBuchungFields()
     } catch(e: any) {
       alert('Fehler: ' + e.message)
     } finally {
@@ -2067,11 +2092,11 @@ export default function Lager() {
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
           <span className="lager-action-label">Artikel</span>
         </button>
-        <button className="lager-action-btn" onClick={() => { setBuchungType('ein'); setBuchungSearch(''); setSelectedBuchungItem(''); setBuchungQty(1); setShowBuchungModal(true) }} title="Einbuchen">
+        <button className="lager-action-btn" onClick={() => { setBuchungType('ein'); setBuchungSearch(''); setSelectedBuchungItem(''); setBuchungQty(1); setEinChargen([{ menge: 1, mhd: '', charge: '' }]); setShowBuchungModal(true) }} title="Einbuchen">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           <span className="lager-action-label">Einbuchen</span>
         </button>
-        <button className="lager-action-btn" onClick={() => { setBuchungType('aus'); setBuchungSearch(''); setSelectedBuchungItem(''); setBuchungQty(1); setShowBuchungModal(true) }} title="Ausbuchen">
+        <button className="lager-action-btn" onClick={() => { setBuchungType('aus'); setBuchungSearch(''); setSelectedBuchungItem(''); setBuchungQty(1); setEinChargen([{ menge: 1, mhd: '', charge: '' }]); setShowBuchungModal(true) }} title="Ausbuchen">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="5" y1="12" x2="19" y2="12"/></svg>
           <span className="lager-action-label">Ausbuchen</span>
         </button>
@@ -2736,22 +2761,43 @@ export default function Lager() {
                 </div>
               )}
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14 }}>
-              <label style={{ fontSize: 11, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.1em' }}>Menge *</label>
-              <input className="lager-input" type="number" value={buchungQty || ''} onChange={(e) => setBuchungQty(Number(e.target.value))} min="1" />
-            </div>
-            {buchungType === 'ein' && (
-              <>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14 }}>
-                  <label style={{ fontSize: 11, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.1em' }}>Ablaufdatum (optional)</label>
-                  <input className="lager-input" type="date" value={buchungExpiry} onChange={(e) => setBuchungExpiry(e.target.value)} />
+            {buchungType === 'aus' ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14 }}>
+                <label style={{ fontSize: 11, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.1em' }}>Menge *</label>
+                <input className="lager-input" type="number" value={buchungQty || ''} onChange={(e) => setBuchungQty(Number(e.target.value))} min="1" />
+                <span style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--warm-gray)' }}>Wird zuerst von der Charge mit dem nächsten Ablaufdatum abgezogen (FIFO).</span>
+              </div>
+            ) : (
+              <div style={{ marginBottom: 14 }}>
+                <label style={{ fontSize: 11, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.1em', display: 'block', marginBottom: 4 }}>Mengen &amp; Chargen *</label>
+                <div style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--warm-gray)', marginBottom: 10 }}>Pro Charge/MHD eine Zeile — z.B. zwei Packungen mit unterschiedlichem LOT.</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {einChargen.map((r, idx) => (
+                    <div key={idx} style={{ background: 'rgba(250,249,247,0.8)', borderRadius: 10, padding: '10px 12px', border: '1px solid rgba(96,8,18,0.1)' }}>
+                      <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', marginBottom: 8 }}>
+                        <div style={{ flex: '0 0 82px' }}>
+                          <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.08em', marginBottom: 3 }}>Menge</div>
+                          <input className="lager-input" type="number" min="1" value={r.menge || ''} onChange={e => setEinChargen(prev => prev.map((x, i) => i === idx ? { ...x, menge: Number(e.target.value) } : x))} />
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.08em', marginBottom: 3 }}>MHD (optional)</div>
+                          <input className="lager-input" type="date" value={r.mhd} onChange={e => setEinChargen(prev => prev.map((x, i) => i === idx ? { ...x, mhd: e.target.value } : x))} />
+                        </div>
+                        {einChargen.length > 1 && (
+                          <button onClick={() => setEinChargen(prev => prev.filter((_, i) => i !== idx))} title="Charge entfernen"
+                            style={{ background: 'none', border: 'none', color: '#dc2626', cursor: 'pointer', padding: 6, lineHeight: 0, flexShrink: 0 }}>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                          </button>
+                        )}
+                      </div>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.08em', marginBottom: 3 }}>Chargen-Nr. (optional)</div>
+                      <input className="lager-input" type="text" value={r.charge} placeholder="LOT / Charge vom Etikett" onChange={e => setEinChargen(prev => prev.map((x, i) => i === idx ? { ...x, charge: e.target.value } : x))} />
+                    </div>
+                  ))}
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14 }}>
-                  <label style={{ fontSize: 11, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.1em' }}>Chargen-Nr. (optional)</label>
-                  <input className="lager-input" type="text" value={buchungBatch} onChange={(e) => setBuchungBatch(e.target.value)} placeholder="LOT / Charge vom Etikett" />
-                  <span style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--warm-gray)' }}>Ermöglicht bei Hersteller-Rückrufen die schnelle Suche, wo die Charge liegt.</span>
-                </div>
-              </>
+                <button className="lager-btn" style={{ marginTop: 10 }} onClick={() => setEinChargen(prev => [...prev, { menge: 1, mhd: '', charge: '' }])}>+ Weitere Charge</button>
+                <div style={{ fontSize: 12, color: 'var(--warm-gray)', marginTop: 10 }}>Gesamt: <strong style={{ color: 'var(--lbf-text)' }}>{einChargen.reduce((s, r) => s + (r.menge || 0), 0)}</strong> {allItems.find(i => i.id === selectedBuchungItem)?.unit || 'Stück'}</div>
+              </div>
             )}
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 8 }}>
               <button className="lager-btn" onClick={() => setShowBuchungModal(false)}>Abbrechen</button>
@@ -3464,7 +3510,7 @@ export default function Lager() {
             <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 4 }}>Statistik</div>
             <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginBottom: 16 }}>Verbrauch und Buchungen über alle Standorte (ohne Umlagerungen)</div>
             <Suspense fallback={<div style={{ textAlign: 'center', padding: 32, color: 'var(--warm-gray)', fontStyle: 'italic' }}>Lade Statistik…</div>}>
-              {user?.organization_id && <LagerStats orgId={user.organization_id} items={allItems} />}
+              {user?.organization_id && <LagerStats orgId={user.organization_id} items={allItems} onChanged={() => loadStock()} />}
             </Suspense>
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
               <button className="lager-btn" onClick={() => setShowStatsModal(false)}>Schließen</button>
