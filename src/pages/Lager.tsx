@@ -307,7 +307,7 @@ export default function Lager() {
 
   // Scanner & Bestellung state
   const [showScanModal, setShowScanModal] = useState(false)
-  const [scanMode, setScanMode] = useState<'lookup' | 'form'>('lookup')
+  const [scanMode, setScanMode] = useState<'lookup' | 'form' | 'assign'>('lookup')
   const [scanTeachCode, setScanTeachCode] = useState<string | null>(null)
   const [scanTeachSearch, setScanTeachSearch] = useState('')
   const [scanError, setScanError] = useState<string | null>(null)
@@ -385,6 +385,11 @@ export default function Lager() {
   const [detailItem, setDetailItem] = useState<DisplayItem | null>(null)
   const [detailTransactions, setDetailTransactions] = useState<Transaction[]>([])
   const [detailStockEntries, setDetailStockEntries] = useState<StockItem[]>([])
+  // Nachträgliche Chargen-/MHD-Pflege je Bestandszeile
+  const [stockEdit, setStockEdit] = useState<{ id: string; batch: string; expiry: string } | null>(null)
+  const [stockEditSaving, setStockEditSaving] = useState(false)
+  // Barcode direkt aus dem Artikel-Detail verknüpfen
+  const [scanAssignItem, setScanAssignItem] = useState<InventoryItem | null>(null)
   const [detailNote, setDetailNote] = useState('')
   const [detailSoll, setDetailSoll] = useState(0)
   const [detailExpiry, setDetailExpiry] = useState('')
@@ -862,8 +867,9 @@ export default function Lager() {
   }
 
   // SCANNER & BESTELL-FUNKTIONEN
-  function openScanner(mode: 'lookup' | 'form') {
-    setScanMode(mode)
+  function openScanner(mode: 'lookup' | 'form' | 'assign', assignItem?: InventoryItem) {
+    setScanMode(mode as any)
+    setScanAssignItem(mode === 'assign' ? (assignItem || null) : null)
     setScanTeachCode(null)
     setScanTeachSearch('')
     setScanError(null)
@@ -876,6 +882,13 @@ export default function Lager() {
       setItemFormData(prev => ({ ...prev, barcode: code }))
       setShowScanModal(false)
       showMsg('✅ Code übernommen: ' + code, 'success')
+      return
+    }
+    if ((scanMode as string) === 'assign' && scanAssignItem) {
+      // Code direkt mit dem gewählten Artikel verknüpfen (aus dem Artikel-Detail)
+      const owner = allItems.find(i => i.barcode && i.barcode === code && i.id !== scanAssignItem.id)
+      if (owner && !confirm(`Dieser Code ist bereits mit „${owner.name}" verknüpft.\nTrotzdem mit „${scanAssignItem.name}" verknüpfen?`)) return
+      assignBarcode(scanAssignItem, code)
       return
     }
     const item = code.startsWith(QR_ITEM_PREFIX)
@@ -1751,6 +1764,7 @@ export default function Lager() {
 
   async function openItemDetail(item: DisplayItem) {
     const rawItem = allItems.find(i => i.id === item.id)
+    setStockEdit(null)
     setDetailItem(item)
     setDetailNote(item.notes || '')
     setDetailSoll(rawItem ? getMinStock(rawItem, currentLocationId) : item.min_stock)
@@ -1777,6 +1791,26 @@ export default function Lager() {
       console.error('Error loading item detail:', e)
     } finally {
       setDetailLoadingData(false)
+    }
+  }
+
+  // Charge/MHD einer bestehenden Bestandszeile nachträglich setzen oder ändern
+  async function saveStockEdit() {
+    if (!stockEdit || stockEditSaving) return
+    setStockEditSaving(true)
+    try {
+      await pb.collection('inventory_stock').update(stockEdit.id, {
+        batch: stockEdit.batch.trim() || null,
+        expiry_date: stockEdit.expiry || null,
+      })
+      setStockEdit(null)
+      await reloadDetailStocks()
+      await loadStock()
+      showMsg('✅ Charge/MHD gespeichert', 'success')
+    } catch(e: any) {
+      alert('Fehler: ' + e.message)
+    } finally {
+      setStockEditSaving(false)
     }
   }
 
@@ -2767,20 +2801,62 @@ export default function Lager() {
             </div>
             <button className="lager-btn primary" style={{ width: '100%', marginBottom: 20 }} onClick={saveItemDetail}>Speichern</button>
 
+            {/* Barcode-Verknüpfung */}
+            {(() => {
+              const rawItem = allItems.find(i => i.id === detailItem.id)
+              return (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: 'rgba(250,249,247,0.8)', borderRadius: 8, marginBottom: 18 }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 2 }}>Barcode</div>
+                    <div style={{ fontSize: 12, fontFamily: rawItem?.barcode ? 'monospace' : 'inherit', fontStyle: rawItem?.barcode ? 'normal' : 'italic', color: rawItem?.barcode ? 'var(--lbf-text)' : 'var(--warm-gray)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>
+                      {rawItem?.barcode || 'Noch nicht verknüpft — Code scannen, dann bucht der Scanner direkt auf diesen Artikel.'}
+                    </div>
+                  </div>
+                  {rawItem && (
+                    <button className="lager-btn" style={{ flexShrink: 0, fontSize: 12 }} onClick={() => openScanner('assign', rawItem)}>
+                      {rawItem.barcode ? 'Neu scannen' : 'Scannen & verknüpfen'}
+                    </button>
+                  )}
+                </div>
+              )
+            })()}
+
             {detailStockEntries.length > 0 && (
               <>
-                <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 10 }}>Bestände / Chargen</div>
+                <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 4 }}>Bestände / Chargen</div>
+                <div style={{ fontStyle: 'italic', fontSize: 11, color: 'var(--warm-gray)', marginBottom: 8 }}>Stift antippen, um Charge und MHD nachzutragen oder zu ändern.</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 18 }}>
                   {detailStockEntries.map(s => (
-                    <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', background: 'rgba(250,249,247,0.8)', borderRadius: 8, fontSize: 13 }}>
-                      <span style={{ fontWeight: 700, color: 'var(--lbf-text)', minWidth: 44 }}>{s.quantity} {detailItem.unit || 'Stk.'}</span>
-                      <span style={{ fontStyle: 'italic', color: s.batch ? '#600812' : 'var(--warm-gray)', fontWeight: s.batch ? 700 : 400 }}>
-                        {s.batch ? `Charge ${s.batch}` : 'ohne Charge'}
-                      </span>
-                      <span style={{ marginLeft: 'auto', fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)' }}>
-                        {s.expiry_date ? `MHD ${new Date(s.expiry_date).toLocaleDateString('de-DE')}` : ''}
-                      </span>
-                    </div>
+                    stockEdit?.id === s.id ? (
+                      <div key={s.id} style={{ padding: '10px 12px', background: 'rgba(250,249,247,0.8)', borderRadius: 8, border: '1px solid rgba(96,8,18,0.2)' }}>
+                        <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--lbf-text)', marginBottom: 8 }}>{s.quantity} {detailItem.unit || 'Stk.'} bearbeiten</div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                          <input className="lager-input" type="text" placeholder="Chargen-Nr. / LOT (leer = ohne Charge)" value={stockEdit.batch}
+                            onChange={e => setStockEdit(prev => prev ? { ...prev, batch: e.target.value } : prev)} />
+                          <input className="lager-input" type="date" value={stockEdit.expiry}
+                            onChange={e => setStockEdit(prev => prev ? { ...prev, expiry: e.target.value } : prev)} />
+                          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                            <button className="lager-btn" onClick={() => setStockEdit(null)}>Abbrechen</button>
+                            <button className="lager-btn primary" disabled={stockEditSaving} onClick={saveStockEdit}>{stockEditSaving ? 'Speichert…' : 'Speichern'}</button>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', background: 'rgba(250,249,247,0.8)', borderRadius: 8, fontSize: 13 }}>
+                        <span style={{ fontWeight: 700, color: 'var(--lbf-text)', minWidth: 44 }}>{s.quantity} {detailItem.unit || 'Stk.'}</span>
+                        <span style={{ fontStyle: 'italic', color: s.batch ? '#600812' : 'var(--warm-gray)', fontWeight: s.batch ? 700 : 400 }}>
+                          {s.batch ? `Charge ${s.batch}` : 'ohne Charge'}
+                        </span>
+                        <span style={{ marginLeft: 'auto', fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)' }}>
+                          {s.expiry_date ? `MHD ${new Date(s.expiry_date).toLocaleDateString('de-DE')}` : ''}
+                        </span>
+                        <button title="Charge / MHD bearbeiten"
+                          onClick={() => setStockEdit({ id: s.id, batch: s.batch || '', expiry: s.expiry_date ? s.expiry_date.slice(0, 10) : '' })}
+                          style={{ background: 'none', border: 'none', color: '#600812', cursor: 'pointer', padding: 4, flexShrink: 0, lineHeight: 0 }}>
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+                        </button>
+                      </div>
+                    )
                   ))}
                 </div>
               </>
@@ -3037,7 +3113,7 @@ export default function Lager() {
         <div className="lager-modal-overlay" onClick={() => setShowScanModal(false)}>
           <div className="lager-modal" style={{ maxWidth: 480 }} onClick={(e) => e.stopPropagation()}>
             <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 16 }}>
-              {scanMode === 'form' ? 'Code für Artikel scannen' : 'Artikel scannen'}
+              {scanMode === 'form' ? 'Code für Artikel scannen' : scanMode === 'assign' ? `Code mit „${scanAssignItem?.name || 'Artikel'}" verknüpfen` : 'Artikel scannen'}
             </div>
             {scanError ? (
               <div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#b91c1c', padding: 14, borderRadius: 10, fontSize: 13 }}>{scanError}</div>
