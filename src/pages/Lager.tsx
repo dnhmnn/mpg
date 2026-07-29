@@ -23,6 +23,8 @@ interface InventoryItem {
   supplier_email?: string
   order_url?: string
   auto_order?: boolean
+  bedarf?: Record<string, number>
+  nicht_bestellen?: boolean
   organization_id: string
   created: string
 }
@@ -31,6 +33,12 @@ function getMinStock(item: InventoryItem, locationId: string | null): number {
   if (locationId && item.location_min_stocks?.[locationId] !== undefined)
     return item.location_min_stocks[locationId]
   return item.min_stock ?? 0
+}
+
+// Manuell angemeldeter Zusatzbedarf je Standort ("brauchen wir")
+function getBedarf(item: InventoryItem, locationId: string | null): number {
+  if (!locationId) return 0
+  return item.bedarf?.[locationId] || 0
 }
 
 interface StockItem {
@@ -313,6 +321,9 @@ export default function Lager() {
   const [scanError, setScanError] = useState<string | null>(null)
   const [scanFoundItem, setScanFoundItem] = useState<InventoryItem | null>(null)
   const [showOrderModal, setShowOrderModal] = useState(false)
+  const [bedarfSearch, setBedarfSearch] = useState('')
+  const [bedarfMenge, setBedarfMenge] = useState<Record<string, number>>({})
+  const [showExcluded, setShowExcluded] = useState(false)
   const [openOrders, setOpenOrders] = useState<{ id: string; item_id: string; created: string }[]>([])
   const [sendingOrderTo, setSendingOrderTo] = useState<string | null>(null)
   const [qrLabel, setQrLabel] = useState<{ item: InventoryItem; dataUrl: string } | null>(null)
@@ -951,10 +962,46 @@ export default function Lager() {
     window.location.href = `mailto:${item.supplier_email}?subject=${subject}&body=${body}`
   }
 
+  // Bestellliste = automatisch (unter Mindestbestand) + manuell angemeldeter Bedarf,
+  // ohne die als "nicht mehr bestellen" markierten Artikel
   function getOrderList() {
-    return displayItems
-      .filter(d => d.min_stock > 0 && d.qty < d.min_stock)
-      .map(d => ({ display: d, raw: allItems.find(i => i.id === d.id), need: d.min_stock - d.qty }))
+    const out: { display: DisplayItem; raw?: InventoryItem; need: number; autoNeed: number; manuell: number }[] = []
+    for (const d of displayItems) {
+      const raw = allItems.find(i => i.id === d.id)
+      if (raw?.nicht_bestellen) continue
+      const autoNeed = d.min_stock > 0 && d.qty < d.min_stock ? d.min_stock - d.qty : 0
+      const manuell = raw ? getBedarf(raw, currentLocationId) : 0
+      const need = autoNeed + manuell
+      if (need > 0) out.push({ display: d, raw, need, autoNeed, manuell })
+    }
+    return out
+  }
+
+  // Artikel manuell auf die Bestellliste setzen / Bedarf ändern (0 = wieder entfernen)
+  async function setBedarfForItem(itemId: string, menge: number) {
+    const item = allItems.find(i => i.id === itemId)
+    if (!item || !currentLocationId) return
+    const bedarf = { ...(item.bedarf || {}) }
+    if (menge > 0) bedarf[currentLocationId] = menge
+    else delete bedarf[currentLocationId]
+    try {
+      await pb.collection('inventory_items').update(itemId, { bedarf })
+      setAllItems(prev => prev.map(i => i.id === itemId ? { ...i, bedarf } : i))
+      showMsg(menge > 0 ? '✅ Auf die Bestellliste gesetzt' : 'Vom Bedarf entfernt', 'success')
+    } catch(e: any) {
+      showMsg('Fehler: ' + e.message + ' — existiert das Feld "bedarf" (JSON) in inventory_items?', 'error')
+    }
+  }
+
+  // "Wollen wir nicht mehr bestellen" — Artikel dauerhaft aus der Bestellliste nehmen
+  async function setNichtBestellen(itemId: string, value: boolean) {
+    try {
+      await pb.collection('inventory_items').update(itemId, { nicht_bestellen: value })
+      setAllItems(prev => prev.map(i => i.id === itemId ? { ...i, nicht_bestellen: value } : i))
+      showMsg(value ? 'Artikel wird nicht mehr bestellt' : '✅ Wieder in der Bestellliste', 'success')
+    } catch(e: any) {
+      showMsg('Fehler: ' + e.message + ' — existiert das Feld "nicht_bestellen" (Bool) in inventory_items?', 'error')
+    }
   }
 
   // Produkt-Picker: Shop-Trefferliste in Responda öffnen, Produkt antippen
@@ -2076,7 +2123,7 @@ export default function Lager() {
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7V5a2 2 0 012-2h2"/><path d="M17 3h2a2 2 0 012 2v2"/><path d="M21 17v2a2 2 0 01-2 2h-2"/><path d="M7 21H5a2 2 0 01-2-2v-2"/><line x1="7" y1="12" x2="17" y2="12"/></svg>
           <span className="lager-action-label">Scannen</span>
         </button>
-        <button className="lager-action-btn" onClick={() => { loadOpenOrders(); setShowOrderModal(true) }} title="Bestellliste">
+        <button className="lager-action-btn" onClick={() => { loadOpenOrders(); setBedarfSearch(''); setShowExcluded(false); setShowOrderModal(true) }} title="Bestellliste">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/></svg>
           <span className="lager-action-label">Bestellen</span>
         </button>
@@ -3281,6 +3328,43 @@ export default function Lager() {
               <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 16 }}>
                 Bestellliste — {locations.find(l => l.id === currentLocationId)?.name || 'Lager'}
               </div>
+              {/* Artikel manuell auf die Bestellliste setzen */}
+              <div style={{ background: 'rgba(250,249,247,0.8)', border: '1px solid rgba(96,8,18,0.1)', borderRadius: 10, padding: '10px 12px', marginBottom: 14 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.1em', marginBottom: 6 }}>Brauchen wir — Artikel hinzufügen</div>
+                <input className="lager-input" type="search" placeholder="Artikel suchen…" value={bedarfSearch} onChange={e => setBedarfSearch(e.target.value)} />
+                {bedarfSearch.trim() && (
+                  <div style={{ maxHeight: 170, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 6, marginTop: 8 }}>
+                    {allItems.filter(i => i.name.toLowerCase().includes(bedarfSearch.trim().toLowerCase())).slice(0, 20).map(item => {
+                      const menge = bedarfMenge[item.id] ?? 1
+                      const schonDrin = getBedarf(item, currentLocationId)
+                      return (
+                        <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 9px', background: 'var(--lbf-card)', borderRadius: 8, border: '1px solid rgba(96,8,18,0.08)' }}>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--lbf-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{item.name}</div>
+                            {schonDrin > 0 && <div style={{ fontSize: 11, fontStyle: 'italic', color: '#d97706' }}>bereits {schonDrin} angemeldet</div>}
+                            {item.nicht_bestellen && <div style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--warm-gray)' }}>steht auf „nicht bestellen"</div>}
+                          </div>
+                          <input className="lager-input" type="number" min="1" value={menge}
+                            onChange={e => setBedarfMenge(prev => ({ ...prev, [item.id]: Number(e.target.value) }))}
+                            style={{ width: 62, textAlign: 'center', padding: '6px 4px', fontWeight: 700 }} />
+                          <button className="lager-btn primary" style={{ fontSize: 12, padding: '6px 10px', flexShrink: 0 }}
+                            onClick={async () => {
+                              if (item.nicht_bestellen) await setNichtBestellen(item.id, false)
+                              await setBedarfForItem(item.id, schonDrin + (menge > 0 ? menge : 1))
+                              setBedarfSearch(''); setBedarfMenge(prev => ({ ...prev, [item.id]: 1 }))
+                            }}>
+                            + Bedarf
+                          </button>
+                        </div>
+                      )
+                    })}
+                    {allItems.filter(i => i.name.toLowerCase().includes(bedarfSearch.trim().toLowerCase())).length === 0 && (
+                      <div style={{ fontSize: 12, fontStyle: 'italic', color: 'var(--warm-gray)', padding: '6px 2px' }}>Kein Artikel gefunden — lege ihn zuerst im Lager an.</div>
+                    )}
+                  </div>
+                )}
+              </div>
+
               {entries.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: 24, color: 'var(--warm-gray)', fontStyle: 'italic' }}>Alles aufgefüllt — kein Artikel unter Mindestbestand.</div>
               ) : (
@@ -3289,11 +3373,15 @@ export default function Lager() {
                     {entries.map(e => {
                       const ord = openOrders.find(o => o.item_id === e.display.id)
                       return (
-                        <div key={e.display.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, padding: '10px 12px', border: '1px solid rgba(96,8,18,0.1)', borderRadius: 8, borderLeft: `3px solid ${ord ? '#16a34a' : '#d97706'}` }}>
-                          <div style={{ flex: 1 }}>
-                            <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--lbf-text)' }}>{e.display.name}</div>
+                        <div key={e.display.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, padding: '10px 12px', border: '1px solid rgba(96,8,18,0.1)', borderRadius: 8, borderLeft: `3px solid ${ord ? '#16a34a' : e.manuell > 0 && e.autoNeed === 0 ? '#600812' : '#d97706'}` }}>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--lbf-text)' }}>
+                              {e.display.name}
+                              {e.manuell > 0 && <span style={{ marginLeft: 6, fontSize: 10, fontWeight: 700, color: '#600812', background: 'rgba(96,8,18,0.08)', borderRadius: 999, padding: '2px 7px', textTransform: 'uppercase' as const }}>Bedarf</span>}
+                            </div>
                             <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginTop: 2 }}>
                               IST {e.display.qty} / SOLL {e.display.min_stock}
+                              {e.manuell > 0 && e.autoNeed > 0 ? ` · davon ${e.manuell} manuell` : ''}
                               {e.raw?.supplier ? ` · ${e.raw.supplier}` : ''}
                               {e.raw?.supplier_item_no ? ` · Art.-Nr. ${e.raw.supplier_item_no}` : ''}
                             </div>
@@ -3307,6 +3395,21 @@ export default function Lager() {
                           {!ord && e.raw && (e.raw.order_url || e.raw.supplier_email) && (
                             <button className="lager-btn" style={{ fontSize: 12, padding: '5px 10px' }} onClick={() => orderItem(e.raw!, e.need)}>Bestellen</button>
                           )}
+                          {e.manuell > 0 && (
+                            <button title="Manuellen Bedarf entfernen" onClick={() => setBedarfForItem(e.display.id, 0)}
+                              style={{ background: 'none', border: 'none', color: 'var(--warm-gray)', cursor: 'pointer', padding: 4, flexShrink: 0, lineHeight: 0 }}>
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                            </button>
+                          )}
+                          <button title="Diesen Artikel wollen wir nicht mehr bestellen"
+                            onClick={async () => {
+                              if (!confirm(`„${e.display.name}" nicht mehr bestellen?\n\nDer Artikel verschwindet aus der Bestellliste (auch wenn er unter Mindestbestand fällt). Rückgängig über „Nicht bestellen" unten.`)) return
+                              if (e.manuell > 0) await setBedarfForItem(e.display.id, 0)
+                              await setNichtBestellen(e.display.id, true)
+                            }}
+                            style={{ background: 'none', border: 'none', color: '#dc2626', cursor: 'pointer', padding: 4, flexShrink: 0, lineHeight: 0 }}>
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="4.9" y1="4.9" x2="19.1" y2="19.1"/></svg>
+                          </button>
                         </div>
                       )
                     })}
@@ -3354,6 +3457,32 @@ export default function Lager() {
                   </div>
                 </>
               )}
+
+              {/* Nicht mehr bestellen — ausgeschlossene Artikel */}
+              {(() => {
+                const excluded = allItems.filter(i => i.nicht_bestellen)
+                if (excluded.length === 0) return null
+                return (
+                  <div style={{ marginTop: 16, paddingTop: 12, borderTop: '0.5px solid rgba(96,8,18,0.12)' }}>
+                    <button onClick={() => setShowExcluded(v => !v)}
+                      style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: 'inherit', fontSize: 11, fontWeight: 700, color: 'var(--warm-gray)', textTransform: 'uppercase' as const, letterSpacing: '0.1em', display: 'flex', alignItems: 'center', gap: 6 }}>
+                      Nicht bestellen ({excluded.length})
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ transform: showExcluded ? 'rotate(180deg)' : 'none' }}><polyline points="6 9 12 15 18 9"/></svg>
+                    </button>
+                    {showExcluded && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 8 }}>
+                        {excluded.map(item => (
+                          <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 10px', background: 'rgba(250,249,247,0.8)', borderRadius: 8 }}>
+                            <div style={{ flex: 1, minWidth: 0, fontSize: 13, color: 'var(--warm-gray)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{item.name}</div>
+                            <button className="lager-btn" style={{ fontSize: 12, padding: '5px 10px', flexShrink: 0 }} onClick={() => setNichtBestellen(item.id, false)}>Wieder bestellen</button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )
+              })()}
+
               <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 14 }}>
                 <button className="lager-btn" onClick={() => setShowOrderModal(false)}>Schließen</button>
               </div>

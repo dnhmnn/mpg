@@ -99,6 +99,8 @@ cronAdd("lager-auto-order", "30 7 * * *", () => {
       // je Lieferant sammeln
       const bySupplier = {}
       for (const it of items) {
+        // Artikel, die als "nicht mehr bestellen" markiert sind, nie automatisch bestellen
+        if (it.get("nicht_bestellen")) continue
         const min = it.get("min_stock") || 0
         const email = (it.get("supplier_email") || "").trim()
         if (min <= 0 || !email) continue
