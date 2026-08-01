@@ -19,6 +19,7 @@
     "@zxing/library": "^0.22.0",
     "fflate": "^0.8.3",
     "html2canvas": "^1.4.1",
+    "idb": "^8.0.3",
     "pdfjs-dist": "^4.10.38",
     "pocketbase": "^0.27.0",
     "qrcode": "^1.5.4",

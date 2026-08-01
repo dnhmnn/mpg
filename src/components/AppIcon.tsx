@@ -3,6 +3,16 @@ import type { AppIconProps } from '../types'
 const s = { fill: 'none', stroke: 'currentColor', strokeWidth: 1.25, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const }
 
 const icons: Record<string, JSX.Element> = {
+  // EKS — Führungsstelle: Antenne mit Funkwellen
+  eks: (
+    <svg viewBox="0 0 24 24" {...s}>
+      <line x1="12" y1="9" x2="12" y2="21"/>
+      <path d="M8.5 9.5a5 5 0 017 0"/>
+      <path d="M5.5 6.5a9 9 0 0113 0"/>
+      <circle cx="12" cy="12.5" r="1.2" fill="currentColor" stroke="none"/>
+      <line x1="8" y1="21" x2="16" y2="21"/>
+    </svg>
+  ),
   siren: (
     <svg viewBox="0 0 24 24" {...s}>
       <path d="M12 3L2.5 19.5h19L12 3z"/>

@@ -10,13 +10,25 @@ export default defineConfig({
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
         runtimeCaching: [
+          // Reihenfolge zählt: Workbox nimmt die erste passende Regel.
+          // Realtime ist ein endloser SSE-Stream — der darf NIE in einen Cache-Handler.
+          {
+            urlPattern: /^https:\/\/api\.responda\.systems\/api\/realtime/i,
+            handler: 'NetworkOnly',
+          },
+          // EKS synchronisiert selbst über IndexedDB. Eine gecachte Antwort würde
+          // offline als Erfolg gewertet und den Sync-Stand verfälschen.
+          {
+            urlPattern: /^https:\/\/api\.responda\.systems\/api\/(batch|collections\/eks_)/i,
+            handler: 'NetworkOnly',
+          },
           {
             urlPattern: /^https:\/\/api\.responda\.systems\/.*/i,
             handler: 'NetworkFirst',
             options: {
               cacheName: 'api-cache',
               networkTimeoutSeconds: 5,
-              expiration: { maxEntries: 50, maxAgeSeconds: 24 * 60 * 60 },
+              expiration: { maxEntries: 300, maxAgeSeconds: 24 * 60 * 60 },
             },
           },
         ],

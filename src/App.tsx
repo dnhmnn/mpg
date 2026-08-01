@@ -23,6 +23,8 @@ import Office from './pages/Office'
 import Notizen from './pages/Notizen'
 import Wissen from './pages/Wissen'
 import WebsiteEditor from './pages/WebsiteEditor'
+import EKS from './pages/eks/EKS'
+import EksAuswahl from './pages/eks/EksAuswahl'
 import OrgPublicLayout from './pages/public/OrgPublicLayout'
 import OrgLanding from './pages/public/OrgLanding'
 import OrgPatienten from './pages/public/OrgPatienten'
@@ -82,6 +84,8 @@ function App() {
         <Route path="/notizen" element={<Notizen />} />
         <Route path="/wissen" element={<Wissen />} />
         <Route path="/website" element={<WebsiteEditor />} />
+        <Route path="/eks" element={<EksAuswahl />} />
+        <Route path="/eks/:einsatzId" element={<EKS />} />
         {isMarketingDomain ? (
           // Auf responda.systems sind einteilige Pfade Website-Unterseiten
           <Route path="/:slug" element={<Index />} />

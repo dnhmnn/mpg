@@ -149,6 +149,7 @@ Dark-Mode-Varianten sind ebenfalls gesetzt (`#0f0a07` / `#9a8a78`).
 | Lernbar | `src/pages/Lernbar.tsx` | Feed, Termine, Module |
 | Ausbildungen | `src/pages/ausbildungen/Ausbildungen.tsx` | Admin-Verwaltung Ausbildungen |
 | Patienten | `src/pages/patienten/Patienten.tsx` | Admin-Protokollverwaltung |
+| Responda EKS | `src/pages/eks/EKS.tsx` | Einsatzführung aus dem ELW: Atemschutzüberwachung, Einsatztagebuch, Kräfte/FMS, Abschnitte — **voll offline-fähig** (IndexedDB-Ereignislog, siehe `src/lib/eks/`) |
 
 ## PocketBase Collections (wichtigste)
 
@@ -160,6 +161,7 @@ Dark-Mode-Varianten sind ebenfalls gesetzt (`#0f0a07` / `#9a8a78`).
 | `ausbildungen_module` | Lernmodule |
 | `organizations` | Organisationen mit Logo |
 | `users` | User mit `organization_id`, `organization_name`, `organization_logo` |
+| `eks_events` | EKS-Ereignislog (anhängend, **unveränderlich** — Update/Delete gesperrt). ID wird vom Client vergeben (15× `[a-z0-9]`) |
 
 ---
 
