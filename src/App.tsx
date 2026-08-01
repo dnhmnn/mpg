@@ -22,6 +22,7 @@ import AVV from './pages/AVV'
 import Office from './pages/Office'
 import Notizen from './pages/Notizen'
 import Wissen from './pages/Wissen'
+import WebsiteEditor from './pages/WebsiteEditor'
 import OrgPublicLayout from './pages/public/OrgPublicLayout'
 import OrgLanding from './pages/public/OrgLanding'
 import OrgPatienten from './pages/public/OrgPatienten'
@@ -39,8 +40,10 @@ const isMarketingDomain =
   window.location.hostname === 'responda.systems' ||
   window.location.hostname === 'www.responda.systems'
 
-// On the marketing domain, only / shows the landing page — everything else redirects to the app
-if (isMarketingDomain && window.location.pathname !== '/') {
+// Auf der Marketing-Domain zeigt / die Startseite. Einteilige Pfade können eigene
+// Website-Unterseiten sein — die prüft LandingPage selbst und leitet sonst weiter.
+// Mehrteilige Pfade (App-Routen wie /protokoll/xyz) gehen direkt zur App.
+if (isMarketingDomain && window.location.pathname.replace(/^\/+|\/+$/g, '').includes('/')) {
   window.location.replace('https://app.responda.systems' + window.location.pathname + window.location.search)
 }
 
@@ -78,14 +81,20 @@ function App() {
         <Route path="/office" element={<Office />} />
         <Route path="/notizen" element={<Notizen />} />
         <Route path="/wissen" element={<Wissen />} />
-        <Route path="/:orgCode" element={<OrgPublicLayout />}>
-          <Route index element={<OrgLanding />} />
-          <Route path="patienten" element={<OrgPatienten />} />
-          <Route path="produktausgabe" element={<OrgProduktausgabe />} />
-          <Route path="cirs" element={<OrgCirs />} />
-          <Route path="formular/:templateId" element={<OrgFormular />} />
-          <Route path="defektmeldung" element={<OrgDefektmeldung />} />
-        </Route>
+        <Route path="/website" element={<WebsiteEditor />} />
+        {isMarketingDomain ? (
+          // Auf responda.systems sind einteilige Pfade Website-Unterseiten
+          <Route path="/:slug" element={<Index />} />
+        ) : (
+          <Route path="/:orgCode" element={<OrgPublicLayout />}>
+            <Route index element={<OrgLanding />} />
+            <Route path="patienten" element={<OrgPatienten />} />
+            <Route path="produktausgabe" element={<OrgProduktausgabe />} />
+            <Route path="cirs" element={<OrgCirs />} />
+            <Route path="formular/:templateId" element={<OrgFormular />} />
+            <Route path="defektmeldung" element={<OrgDefektmeldung />} />
+          </Route>
+        )}
       </Routes>
     </BrowserRouter>
   )

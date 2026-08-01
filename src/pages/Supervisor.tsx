@@ -621,6 +621,10 @@ export default function Supervisor() {
               {tab === 'orgs' ? 'Organisationsverwaltung' : tab === 'profil' ? 'Mein Profil' : tab === 'website' ? 'Website-Inhalt' : tab === 'kachel' ? 'Kachel-Generator' : 'Rechtliche Texte'}
             </div>
           </div>
+          <button onClick={() => navigate('/website')} title="Website-Editor (responda.systems)" style={{ display: 'flex', alignItems: 'center', gap: 6, border: '1px solid rgba(96,8,18,0.25)', borderRadius: 10, background: 'transparent', color: '#600812', padding: '8px 12px', fontWeight: 700, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+            Website
+          </button>
           <button onClick={() => navigate('/wissen')} title="Wissensbasis für den KI-Assistenten" style={{ display: 'flex', alignItems: 'center', gap: 6, border: 'none', borderRadius: 10, background: '#600812', color: '#fff', padding: '8px 13px', fontWeight: 700, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3l1.7 4.3L18 9l-4.3 1.7L12 15l-1.7-4.3L6 9l4.3-1.7L12 3z"/></svg>
             Wissen
