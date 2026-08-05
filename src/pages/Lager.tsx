@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, lazy, Suspense } from 'react'
 import QRCode from 'qrcode'
 import type { IScannerControls } from '@zxing/browser'
 import { pb } from '../lib/pocketbase'
+import { parseGs1, sameCode, beschreibeGs1, type Gs1Daten } from '../lib/gs1'
 import { useAuth } from '../hooks/useAuth'
 import StatusBar from '../components/StatusBar'
 
@@ -17,7 +18,8 @@ interface InventoryItem {
   min_stock: number
   location_min_stocks?: Record<string, number>
   notes?: string
-  barcode?: string
+  barcode?: string          // Altbestand — wird nur noch gelesen
+  barcodes?: string[]       // mehrere Codes je Artikel (verschiedene Hersteller)
   supplier?: string
   supplier_item_no?: string
   supplier_email?: string
@@ -27,6 +29,19 @@ interface InventoryItem {
   nicht_bestellen?: boolean
   organization_id: string
   created: string
+}
+
+/** Alle Codes eines Artikels — deckt Altbestand mit einzelnem `barcode` mit ab. */
+function getBarcodes(item: InventoryItem | undefined | null): string[] {
+  if (!item) return []
+  const liste = Array.isArray(item.barcodes) ? item.barcodes.filter(Boolean) : []
+  if (item.barcode && !liste.includes(item.barcode)) return [item.barcode, ...liste]
+  return liste
+}
+
+/** Findet den Artikel zu einem gescannten Code — GTIN-tolerant (EAN-13 ↔ GTIN-14). */
+function findByBarcode(items: InventoryItem[], code: string): InventoryItem | undefined {
+  return items.find(i => getBarcodes(i).some(b => sameCode(b, code)))
 }
 
 function getMinStock(item: InventoryItem, locationId: string | null): number {
@@ -76,6 +91,9 @@ interface Transaction {
   type: string
   quantity: number
   expiry_date?: string
+  batch?: string
+  einsatz?: string
+  stock_id?: string
   note?: string
   user: string
   created: string
@@ -332,6 +350,8 @@ export default function Lager() {
   const [showRecallModal, setShowRecallModal] = useState(false)
   const [recallQuery, setRecallQuery] = useState('')
   const [recallResults, setRecallResults] = useState<StockItem[] | null>(null)
+  // Bereits ausgegebene Ware derselben Charge — beantwortet "wo ist sie hin?"
+  const [recallAusgaben, setRecallAusgaben] = useState<Transaction[]>([])
   const [recallLoading, setRecallLoading] = useState(false)
 
   // Statistik
@@ -389,6 +409,7 @@ export default function Lager() {
   const [buchungQty, setBuchungQty] = useState(1)
   const [buchungExpiry, setBuchungExpiry] = useState('')
   const [buchungBatch, setBuchungBatch] = useState('')
+  const [buchungEinsatz, setBuchungEinsatz] = useState('')
   // Einbuchung mit mehreren Chargen/MHD in einem Vorgang (je Zeile ein Bestandssatz)
   const [einChargen, setEinChargen] = useState<{ menge: number; mhd: string; charge: string }[]>([{ menge: 1, mhd: '', charge: '' }])
   const [buchungSearch, setBuchungSearch] = useState('')
@@ -404,6 +425,8 @@ export default function Lager() {
   const [stockEditSaving, setStockEditSaving] = useState(false)
   // Barcode direkt aus dem Artikel-Detail verknüpfen
   const [scanAssignItem, setScanAssignItem] = useState<InventoryItem | null>(null)
+  // Aus einem GS1-DataMatrix gelesene Charge/MHD — belegt die Buchungsmaske vor
+  const [scanGs1, setScanGs1] = useState<Gs1Daten | null>(null)
   const [detailNote, setDetailNote] = useState('')
   const [detailSoll, setDetailSoll] = useState(0)
   const [detailExpiry, setDetailExpiry] = useState('')
@@ -702,7 +725,7 @@ export default function Lager() {
     await loadStock()
   }
 
-  async function adjustQty(itemId: string, delta: number, expiryParam?: string, batchParam?: string) {
+  async function adjustQty(itemId: string, delta: number, expiryParam?: string, batchParam?: string, einsatz?: string, bevorzugteStockId?: string) {
     const item = displayItems.find(it => it.id === itemId)
     if (!item) return
 
@@ -735,6 +758,7 @@ export default function Lager() {
           type: 'einbuchung',
           quantity: delta,
           expiry_date: expiry || null,
+          batch: batch || null,
           note: batch ? `Charge ${batch}` : '',
           user: user?.email || user?.id,
           organization_id: user?.organization_id
@@ -750,33 +774,57 @@ export default function Lager() {
         } catch { /* keine offene Bestellung oder Collection fehlt */ }
         
       } else {
+        // Chargen-Nachweis: JE entnommener Bestandszeile eine eigene Buchung.
+        // Vorher gab es nur eine Sammelbuchung ohne Charge — dadurch war bei einem
+        // Rückruf nicht nachvollziehbar, wohin die betroffene Charge gegangen ist.
         let remaining = Math.abs(delta)
-        
-        for (const stock of stockList) {
+        // Optional bevorzugte Charge zuerst, danach FIFO nach Ablaufdatum
+        const bevorzugt = stockList.filter(s => s.id === bevorzugteStockId)
+        const uebrige = stockList.filter(s => s.id !== bevorzugteStockId)
+        const reihenfolge = [...bevorzugt, ...uebrige]
+
+        for (const stock of reihenfolge) {
           if (remaining <= 0) break
-          
+
           const take = Math.min(stock.quantity, remaining)
           const newQty = stock.quantity - take
-          
+
           if (newQty <= 0) {
             await pb.collection('inventory_stock').delete(stock.id)
           } else {
-            await pb.collection('inventory_stock').update(stock.id, {
-              quantity: newQty
-            })
+            await pb.collection('inventory_stock').update(stock.id, { quantity: newQty })
           }
-          
+
+          await pb.collection('inventory_transactions').create({
+            item_id: itemId,
+            location_id: currentLocationId,
+            type: 'ausbuchung',
+            quantity: -take,
+            batch: stock.batch || null,
+            expiry_date: stock.expiry_date || null,
+            stock_id: stock.id,
+            einsatz: (einsatz || '').trim() || null,
+            note: [stock.batch ? `Charge ${stock.batch}` : null, einsatz ? `Einsatz ${einsatz}` : null].filter(Boolean).join(' · '),
+            user: user?.email || user?.id,
+            organization_id: user?.organization_id
+          })
+
           remaining -= take
         }
-        
-        await pb.collection('inventory_transactions').create({
-          item_id: itemId,
-          location_id: currentLocationId,
-          type: 'ausbuchung',
-          quantity: delta,
-          user: user?.email || user?.id,
-          organization_id: user?.organization_id
-        })
+
+        // Kein Bestand vorhanden (z.B. Korrektur ins Minus) — trotzdem protokollieren
+        if (remaining > 0) {
+          await pb.collection('inventory_transactions').create({
+            item_id: itemId,
+            location_id: currentLocationId,
+            type: 'ausbuchung',
+            quantity: -remaining,
+            einsatz: (einsatz || '').trim() || null,
+            note: 'ohne Chargenzuordnung',
+            user: user?.email || user?.id,
+            organization_id: user?.organization_id
+          })
+        }
       }
       
       await loadStock()
@@ -794,15 +842,23 @@ export default function Lager() {
     }
     
     try {
+      // Das Formularfeld `barcode` ist ein "Code hinzufügen"-Feld; gespeichert wird
+      // die Liste. Weitere Codes verwaltet man im Artikel-Detail.
+      const { barcode, ...rest } = itemFormData
+      const code = (barcode || '').trim()
+
       if (editingItemId) {
+        const bestehend = allItems.find(i => i.id === editingItemId)
+        const vorhanden = getBarcodes(bestehend)
+        const barcodes = code && !vorhanden.some(b => sameCode(b, code)) ? [...vorhanden, code] : vorhanden
         await pb.collection('inventory_items').update(editingItemId, {
-          ...itemFormData,
+          ...rest, barcodes, barcode: null,
           organization_id: user?.organization_id
         })
         showMsg('✅ Artikel aktualisiert!', 'success')
       } else {
         await pb.collection('inventory_items').create({
-          ...itemFormData,
+          ...rest, barcodes: code ? [code] : [],
           organization_id: user?.organization_id
         })
         showMsg('✅ Artikel angelegt!', 'success')
@@ -898,7 +954,12 @@ export default function Lager() {
     setShowScanModal(true)
   }
 
-  function handleScanDetect(code: string) {
+  function handleScanDetect(raw: string) {
+    // GS1-DataMatrix zuerst auswerten: ein Symbol trägt Artikelnummer, Charge und MHD
+    const gs1 = parseGs1(raw)
+    const code = gs1?.gtin || raw          // zum Verknüpfen/Suchen die GTIN nutzen, nicht den ganzen String
+    setScanGs1(gs1)
+
     if (scanMode === 'form') {
       setItemFormData(prev => ({ ...prev, barcode: code }))
       setShowScanModal(false)
@@ -906,15 +967,14 @@ export default function Lager() {
       return
     }
     if ((scanMode as string) === 'assign' && scanAssignItem) {
-      // Code direkt mit dem gewählten Artikel verknüpfen (aus dem Artikel-Detail)
-      const owner = allItems.find(i => i.barcode && i.barcode === code && i.id !== scanAssignItem.id)
-      if (owner && !confirm(`Dieser Code ist bereits mit „${owner.name}" verknüpft.\nTrotzdem mit „${scanAssignItem.name}" verknüpfen?`)) return
+      const owner = allItems.find(i => i.id !== scanAssignItem.id && getBarcodes(i).some(b => sameCode(b, code)))
+      if (owner && !confirm(`Dieser Code ist bereits mit „${owner.name}" verknüpft.\nTrotzdem auch mit „${scanAssignItem.name}" verknüpfen?`)) return
       assignBarcode(scanAssignItem, code)
       return
     }
-    const item = code.startsWith(QR_ITEM_PREFIX)
-      ? allItems.find(i => i.id === code.slice(QR_ITEM_PREFIX.length))
-      : allItems.find(i => i.barcode && i.barcode === code)
+    const item = raw.startsWith(QR_ITEM_PREFIX)
+      ? allItems.find(i => i.id === raw.slice(QR_ITEM_PREFIX.length))
+      : findByBarcode(allItems, code)
     if (item) {
       // Aktion wählen lassen (Wareneingang, Entnahme oder Details)
       setScanFoundItem(item)
@@ -938,19 +998,42 @@ export default function Lager() {
     setBuchungQty(1)
     setBuchungExpiry('')
     setBuchungBatch('')
-    setEinChargen([{ menge: 1, mhd: '', charge: '' }])
+    // Aus dem GS1-Code gelesene Charge und MHD übernehmen — spart das Abtippen
+    setEinChargen([{ menge: 1, mhd: scanGs1?.expiry || '', charge: scanGs1?.lot || '' }])
     setShowBuchungModal(true)
   }
 
+  /** Code ANHÄNGEN statt ersetzen — ein Artikel kann von mehreren Herstellern kommen. */
   async function assignBarcode(item: InventoryItem, code: string) {
     try {
-      await pb.collection('inventory_items').update(item.id, { barcode: code })
-      setAllItems(prev => prev.map(i => i.id === item.id ? { ...i, barcode: code } : i))
+      const vorhanden = getBarcodes(item)
+      if (vorhanden.some(b => sameCode(b, code))) {
+        setShowScanModal(false)
+        showMsg('Dieser Code ist bereits hinterlegt', 'error')
+        return
+      }
+      const neu = [...vorhanden, code]
+      await pb.collection('inventory_items').update(item.id, { barcodes: neu })
+      setAllItems(prev => prev.map(i => i.id === item.id ? { ...i, barcodes: neu } : i))
+      // Inventur-Zeilen halten ihre eigene Kopie über expand — sonst bleibt sie veraltet
+      setAuditItems(prev => prev.map(ai => ai.item_id === item.id && ai.expand?.item_id
+        ? { ...ai, expand: { ...ai.expand, item_id: { ...ai.expand.item_id, barcodes: neu } } } : ai))
       setShowScanModal(false)
-      showMsg(`✅ Code mit „${item.name}" verknüpft!`, 'success')
+      showMsg(`✅ Code mit „${item.name}" verknüpft (${neu.length} gesamt)`, 'success')
     } catch(e: any) {
       alert('Fehler: ' + e.message)
     }
+  }
+
+  async function removeBarcode(item: InventoryItem, code: string) {
+    try {
+      const neu = getBarcodes(item).filter(b => b !== code)
+      await pb.collection('inventory_items').update(item.id, { barcodes: neu, barcode: null })
+      setAllItems(prev => prev.map(i => i.id === item.id ? { ...i, barcodes: neu, barcode: undefined } : i))
+      setAuditItems(prev => prev.map(ai => ai.item_id === item.id && ai.expand?.item_id
+        ? { ...ai, expand: { ...ai.expand, item_id: { ...ai.expand.item_id, barcodes: neu, barcode: undefined } } } : ai))
+      showMsg('Code entfernt', 'success')
+    } catch(e: any) { showMsg('Fehler: ' + e.message, 'error') }
   }
 
   function orderItem(item: InventoryItem, need?: number) {
@@ -1244,11 +1327,22 @@ export default function Lager() {
     setRecallLoading(true)
     setRecallResults(null)
     try {
+      const sicher = q.replace(/"/g, '')
+      // Noch im Bestand …
       const list = await pb.collection('inventory_stock').getFullList<StockItem>({
-        filter: `organization_id = "${user?.organization_id}" && batch ~ "${q.replace(/"/g, '')}"`,
+        filter: `organization_id = "${user?.organization_id}" && batch ~ "${sicher}"`,
         sort: 'location_id',
       })
       setRecallResults(list)
+      // … und bereits ausgegeben. Das ist der eigentliche Zweck der Chargenführung:
+      // wohin ist die zurückgerufene Ware gegangen?
+      try {
+        const aus = await pb.collection('inventory_transactions').getFullList<Transaction>({
+          filter: `organization_id = "${user?.organization_id}" && batch ~ "${sicher}" && type = "ausbuchung"`,
+          sort: '-created',
+        })
+        setRecallAusgaben(aus)
+      } catch { setRecallAusgaben([]) }
     } catch (e: any) {
       alert('Fehler: ' + e.message)
     } finally {
@@ -1867,7 +1961,7 @@ export default function Lager() {
     try {
       const rec = await pb.collection('inventory_items').create({
         name: name.trim(), unit: unit.trim() || 'Stück', min_stock: 0,
-        barcode: barcode.trim() || null, organization_id: user?.organization_id,
+        barcodes: barcode.trim() ? [barcode.trim()] : [], organization_id: user?.organization_id,
       }) as any
       setAllItems(prev => [...prev, rec])
       await addItemToAudit(rec.id)
@@ -1927,6 +2021,7 @@ export default function Lager() {
     setBuchungQty(1)
     setBuchungExpiry('')
     setBuchungBatch('')
+    setBuchungEinsatz('')
     setBuchungSearch('')
     setEinChargen([{ menge: 1, mhd: '', charge: '' }])
   }
@@ -1961,7 +2056,7 @@ export default function Lager() {
     if (buchungQty <= 0) { alert('Menge muss größer 0 sein'); return }
     setSavingBuchung(true)
     try {
-      await adjustQty(selectedBuchungItem, -buchungQty)
+      await adjustQty(selectedBuchungItem, -buchungQty, undefined, undefined, buchungEinsatz)
       setShowBuchungModal(false)
       resetBuchungFields()
     } catch(e: any) {
@@ -2548,12 +2643,12 @@ export default function Lager() {
                       <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginTop: 2 }}>
                         {item.unit || 'Stück'} · SOLL: {item.min_stock || 0}
                         {item.supplier ? ` · ${item.supplier}` : ''}
-                        {item.barcode ? ' · Code verknüpft' : ''}
+                        {getBarcodes(item).length ? ` · ${getBarcodes(item).length} Code${getBarcodes(item).length > 1 ? 's' : ''}` : ''}
                       </div>
                     </div>
                     <div style={{ display: 'flex', gap: 8 }}>
                       <button className="lager-btn" style={{ fontSize: 12, padding: '5px 10px' }} onClick={() => showQrLabel(item)} title="QR-Etikett erzeugen">QR</button>
-                      <button className="lager-btn" style={{ fontSize: 12, padding: '5px 10px' }} onClick={() => { setItemFormData({ name: item.name, unit: item.unit, min_stock: item.min_stock, barcode: item.barcode || '', supplier: item.supplier || '', supplier_item_no: item.supplier_item_no || '', supplier_email: item.supplier_email || '', order_url: item.order_url || '', auto_order: !!item.auto_order }); setEditingItemId(item.id); setShowAddItemModal(true) }}>Bearbeiten</button>
+                      <button className="lager-btn" style={{ fontSize: 12, padding: '5px 10px' }} onClick={() => { setItemFormData({ name: item.name, unit: item.unit, min_stock: item.min_stock, barcode: '', supplier: item.supplier || '', supplier_item_no: item.supplier_item_no || '', supplier_email: item.supplier_email || '', order_url: item.order_url || '', auto_order: !!item.auto_order }); setEditingItemId(item.id); setShowAddItemModal(true) }}>Bearbeiten</button>
                       <button className="lager-btn" style={{ fontSize: 12, padding: '5px 10px', color: '#600812', borderColor: 'rgba(96,8,18,0.2)' }} onClick={() => deleteItem(item.id)}>Löschen</button>
                     </div>
                   </div>
@@ -2708,7 +2803,7 @@ export default function Lager() {
                               <div style={{ fontWeight: 700, fontSize: 16, color: 'var(--lbf-text)', marginBottom: 2 }}>{cur.expand?.item_id?.name || 'Artikel'}</div>
                               <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginBottom: 14 }}>
                                 Erwartet: {cur.expected_quantity} {cur.expand?.item_id?.unit || 'Stück'}
-                                {cur.expand?.item_id?.barcode ? ' · Code ✓' : ''}
+                                {getBarcodes(cur.expand?.item_id).length ? ' · Code ✓' : ''}
                               </div>
                             </div>
                             <button onClick={() => openAuditEdit(cur)} title="Artikel bearbeiten"
@@ -2766,7 +2861,7 @@ export default function Lager() {
                               <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--lbf-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ai.expand?.item_id?.name || 'Artikel'}</div>
                               <div style={{ fontStyle: 'italic', fontSize: 11, color: 'var(--warm-gray)' }}>
                                 Erwartet: {ai.expected_quantity} {ai.expand?.item_id?.unit || 'Stück'}
-                                {ai.expand?.item_id?.barcode ? ' · Code ✓' : ''}
+                                {getBarcodes(ai.expand?.item_id).length ? ' · Code ✓' : ''}
                               </div>
                             </div>
                             <button onClick={() => openAuditEdit(ai)} title="Artikel bearbeiten (Barcode, Charge, Stammdaten)"
@@ -3012,18 +3107,28 @@ export default function Lager() {
                 <button className="lager-btn primary" onClick={saveAuditItemStamm} style={{ alignSelf: 'flex-start' }}>Stammdaten speichern</button>
               </div>
 
-              {/* Barcode */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: 'rgba(250,249,247,0.8)', borderRadius: 8, margin: '14px 0' }}>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ ...lbl, marginBottom: 2 }}>Barcode</div>
-                  <div style={{ fontSize: 12, fontFamily: it?.barcode ? 'monospace' : 'inherit', fontStyle: it?.barcode ? 'normal' : 'italic', color: it?.barcode ? 'var(--lbf-text)' : 'var(--warm-gray)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>
-                    {it?.barcode || 'Noch nicht verknüpft'}
-                  </div>
+              {/* Barcodes — mehrere je Artikel (verschiedene Hersteller) */}
+              <div style={{ padding: '10px 12px', background: 'rgba(250,249,247,0.8)', borderRadius: 8, margin: '14px 0' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: getBarcodes(it).length ? 8 : 0 }}>
+                  <div style={{ ...lbl, marginBottom: 0, flex: 1 }}>Barcodes</div>
+                  {it && <button className="lager-btn" style={{ flexShrink: 0, fontSize: 12 }} onClick={() => openScanner('assign', it)}>+ Scannen</button>}
                 </div>
-                {it && (
-                  <button className="lager-btn" style={{ flexShrink: 0, fontSize: 12 }} onClick={() => openScanner('assign', it)}>
-                    {it.barcode ? 'Neu scannen' : 'Scannen'}
-                  </button>
+                {getBarcodes(it).length === 0 ? (
+                  <div style={{ fontSize: 12, fontStyle: 'italic', color: 'var(--warm-gray)' }}>Noch nicht verknüpft</div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    {getBarcodes(it).map(b => (
+                      <div key={b} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ flex: 1, fontSize: 12, fontFamily: 'monospace', color: 'var(--lbf-text)', overflow: 'hidden', textOverflow: 'ellipsis' }}>{b}</span>
+                        {it && (
+                          <button onClick={() => removeBarcode(it, b)} title="Code entfernen"
+                            style={{ background: 'none', border: 'none', color: 'var(--warm-gray)', cursor: 'pointer', padding: 2, lineHeight: 0 }}>
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 )}
               </div>
 
@@ -3158,7 +3263,10 @@ export default function Lager() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14 }}>
                 <label style={{ fontSize: 11, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.1em' }}>Menge *</label>
                 <input className="lager-input" type="number" value={buchungQty || ''} onChange={(e) => setBuchungQty(Number(e.target.value))} min="1" />
-                <span style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--warm-gray)' }}>Wird zuerst von der Charge mit dem nächsten Ablaufdatum abgezogen (FIFO).</span>
+                <span style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--warm-gray)' }}>Wird zuerst von der Charge mit dem nächsten Ablaufdatum abgezogen (FIFO). Die entnommene Charge wird protokolliert.</span>
+                <label style={{ fontSize: 11, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.1em', marginTop: 6 }}>Einsatz-Nr. (optional)</label>
+                <input className="lager-input" type="text" value={buchungEinsatz} onChange={(e) => setBuchungEinsatz(e.target.value)} placeholder="z.B. E-2026-0147" />
+                <span style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--warm-gray)' }}>Damit ist bei einem Rückruf nachvollziehbar, wohin die Charge gegangen ist.</span>
               </div>
             ) : (
               <div style={{ marginBottom: 14 }}>
@@ -3244,17 +3352,31 @@ export default function Lager() {
             {(() => {
               const rawItem = allItems.find(i => i.id === detailItem.id)
               return (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: 'rgba(250,249,247,0.8)', borderRadius: 8, marginBottom: 18 }}>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 2 }}>Barcode</div>
-                    <div style={{ fontSize: 12, fontFamily: rawItem?.barcode ? 'monospace' : 'inherit', fontStyle: rawItem?.barcode ? 'normal' : 'italic', color: rawItem?.barcode ? 'var(--lbf-text)' : 'var(--warm-gray)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>
-                      {rawItem?.barcode || 'Noch nicht verknüpft — Code scannen, dann bucht der Scanner direkt auf diesen Artikel.'}
-                    </div>
+                <div style={{ padding: '10px 12px', background: 'rgba(250,249,247,0.8)', borderRadius: 8, marginBottom: 18 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+                    <div style={{ flex: 1, fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.14em' }}>Barcodes</div>
+                    {rawItem && (
+                      <button className="lager-btn" style={{ flexShrink: 0, fontSize: 12 }} onClick={() => openScanner('assign', rawItem)}>+ Scannen</button>
+                    )}
                   </div>
-                  {rawItem && (
-                    <button className="lager-btn" style={{ flexShrink: 0, fontSize: 12 }} onClick={() => openScanner('assign', rawItem)}>
-                      {rawItem.barcode ? 'Neu scannen' : 'Scannen & verknüpfen'}
-                    </button>
+                  {getBarcodes(rawItem).length === 0 ? (
+                    <div style={{ fontSize: 12, fontStyle: 'italic', color: 'var(--warm-gray)' }}>
+                      Noch nicht verknüpft — Code scannen, dann bucht der Scanner direkt auf diesen Artikel. Mehrere Codes sind möglich, wenn der Artikel von verschiedenen Herstellern kommt.
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                      {getBarcodes(rawItem).map(b => (
+                        <div key={b} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <span style={{ flex: 1, fontSize: 12, fontFamily: 'monospace', color: 'var(--lbf-text)', overflow: 'hidden', textOverflow: 'ellipsis' }}>{b}</span>
+                          {rawItem && (
+                            <button onClick={() => removeBarcode(rawItem, b)} title="Code entfernen"
+                              style={{ background: 'none', border: 'none', color: 'var(--warm-gray)', cursor: 'pointer', padding: 2, lineHeight: 0 }}>
+                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
                   )}
                 </div>
               )
@@ -3582,6 +3704,14 @@ export default function Lager() {
               </>
             ) : scanTeachCode ? (
               <>
+                {scanGs1 && (
+                  <div style={{ background: 'rgba(22,163,74,0.08)', borderLeft: '3px solid #16a34a', borderRadius: '0 8px 8px 0', padding: '8px 11px', marginBottom: 10, fontSize: 12.5, color: 'var(--lbf-text)' }}>
+                    GS1-Code erkannt: {beschreibeGs1(scanGs1)}
+                    <span style={{ display: 'block', fontStyle: 'italic', color: 'var(--warm-gray)', marginTop: 2 }}>
+                      Charge und MHD werden beim Einbuchen automatisch übernommen.
+                    </span>
+                  </div>
+                )}
                 <div style={{ fontSize: 13, color: 'var(--lbf-text)' }}>Unbekannter Code:</div>
                 <div style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: 15, color: '#600812', margin: '4px 0 10px', wordBreak: 'break-all' as const }}>{scanTeachCode}</div>
                 <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginBottom: 10 }}>
@@ -3592,7 +3722,7 @@ export default function Lager() {
                   {allItems.filter(i => !scanTeachSearch || i.name.toLowerCase().includes(scanTeachSearch.toLowerCase())).map(item => (
                     <div key={item.id} onClick={() => assignBarcode(item, scanTeachCode)} style={{ padding: '9px 12px', border: '1px solid rgba(96,8,18,0.1)', borderRadius: 8, cursor: 'pointer', fontSize: 14, fontWeight: 600, color: 'var(--lbf-text)' }}>
                       {item.name}
-                      {item.barcode && <span style={{ fontStyle: 'italic', fontWeight: 400, fontSize: 11, color: 'var(--warm-gray)', marginLeft: 6 }}>hat bereits einen Code</span>}
+                      {getBarcodes(item).length > 0 && <span style={{ fontStyle: 'italic', fontWeight: 400, fontSize: 11, color: 'var(--warm-gray)', marginLeft: 6 }}>{getBarcodes(item).length} Code(s)</span>}
                     </div>
                   ))}
                 </div>
@@ -4128,6 +4258,42 @@ export default function Lager() {
                   </div>
                 </>
               )
+            )}
+
+            {/* Bereits ausgegeben — der eigentliche Zweck der Chargenführung */}
+            {recallResults !== null && (
+              <div style={{ marginTop: 18 }}>
+                <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 6 }}>
+                  Bereits ausgegeben
+                </div>
+                {recallAusgaben.length === 0 ? (
+                  <div style={{ fontSize: 12.5, fontStyle: 'italic', color: 'var(--warm-gray)' }}>
+                    Keine Ausgaben dieser Charge protokolliert.
+                    <span style={{ display: 'block', marginTop: 3 }}>
+                      Hinweis: Vor der Umstellung wurde die Charge beim Ausbuchen nicht mitgeschrieben —
+                      ältere Entnahmen erscheinen hier nicht.
+                    </span>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 220, overflowY: 'auto' }}>
+                    {recallAusgaben.map(t => {
+                      const item = allItems.find(i => i.id === t.item_id)
+                      const loc = locations.find(l => l.id === t.location_id)
+                      return (
+                        <div key={t.id} style={{ padding: '9px 12px', background: 'rgba(217,119,6,0.07)', borderLeft: '3px solid #d97706', borderRadius: '0 8px 8px 0' }}>
+                          <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--lbf-text)' }}>
+                            {Math.abs(t.quantity)} {item?.unit || 'Stk.'} · {item?.name || 'Artikel'}
+                          </div>
+                          <div style={{ fontStyle: 'italic', fontSize: 11.5, color: 'var(--warm-gray)', marginTop: 2 }}>
+                            {new Date(t.created).toLocaleString('de-DE')} · {loc?.name || 'Standort?'}
+                            {t.einsatz ? ` · Einsatz ${t.einsatz}` : ''} · {t.user}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
             )}
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
