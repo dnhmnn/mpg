@@ -423,6 +423,13 @@ export default function Lager() {
   const [auditRowValues, setAuditRowValues] = useState<Record<string, number>>({})
   const [auditSearch, setAuditSearch] = useState('')
   const [auditSaving, setAuditSaving] = useState<string | null>(null)
+  // Artikel direkt aus der Inventur bearbeiten
+  const [auditEdit, setAuditEdit] = useState<AuditItem | null>(null)
+  const [auditEditStocks, setAuditEditStocks] = useState<StockItem[]>([])
+  const [auditEditForm, setAuditEditForm] = useState({ name: '', unit: '', soll: 0 })
+  const [auditStockEdit, setAuditStockEdit] = useState<{ id: string; batch: string; expiry: string } | null>(null)
+  const [auditChargeDialog, setAuditChargeDialog] = useState<{ auditItem: AuditItem; actual: number; diff: number; stocks: StockItem[] } | null>(null)
+  const [auditAddOpen, setAuditAddOpen] = useState(false)
 
   // CSV Import state
   type ImportRow = {
@@ -1666,30 +1673,55 @@ export default function Lager() {
   }
 
   // Bestandskorrektur bei Abweichung buchen (Stock anpassen + Korrektur-Transaktion)
-  async function applyAuditCorrection(auditItem: AuditItem, actual: number, locId: string) {
+  // Chargenscharfe Korrektur: Mehrmengen bekommen eine Charge/MHD mit, Fehlmengen
+  // werden von der ausgewählten Charge abgezogen. Sonst wäre der Chargenbestand
+  // nach jeder Inventur wertlos — und damit die Rückruf-Suche.
+  async function applyAuditCorrection(
+    auditItem: AuditItem, actual: number, locId: string,
+    charge?: { batch?: string; expiry?: string; abzugVonStockId?: string },
+  ) {
     const diff = actual - auditItem.expected_quantity
     if (diff === 0) return
 
-    const stockList = await pb.collection('inventory_stock').getFullList({
-      filter: `item_id = "${auditItem.item_id}" && location_id = "${locId}"`
+    const stockList = await pb.collection('inventory_stock').getFullList<StockItem>({
+      filter: `item_id = "${auditItem.item_id}" && location_id = "${locId}"`,
+      sort: 'expiry_date',
     })
 
+    let notiz = `Inventur-Korrektur: ${auditItem.expected_quantity} → ${actual}`
+
     if (diff > 0) {
+      const batch = (charge?.batch || '').trim()
       await pb.collection('inventory_stock').create({
         item_id: auditItem.item_id,
         location_id: locId,
         quantity: diff,
-        organization_id: user?.organization_id
+        batch: batch || null,
+        expiry_date: charge?.expiry || null,
+        organization_id: user?.organization_id,
       })
+      if (batch) notiz += ` · Charge ${batch}`
     } else if (stockList.length > 0) {
       let remaining = Math.abs(diff)
-      for (const stock of stockList) {
+      // Gewählte Charge zuerst, danach die übrigen nach Ablaufdatum
+      const gewaehlt = stockList.filter(s => s.id === charge?.abzugVonStockId)
+      const rest = stockList.filter(s => s.id !== charge?.abzugVonStockId)
+      const reihenfolge = [...gewaehlt, ...rest]
+      let ausGewaehlter = 0
+      for (const stock of reihenfolge) {
         if (remaining <= 0) break
         const take = Math.min(stock.quantity, remaining)
         const newQty = stock.quantity - take
         if (newQty <= 0) await pb.collection('inventory_stock').delete(stock.id)
         else await pb.collection('inventory_stock').update(stock.id, { quantity: newQty })
+        if (stock.id === charge?.abzugVonStockId) ausGewaehlter = take
         remaining -= take
+      }
+      if (gewaehlt.length) {
+        const b = gewaehlt[0].batch || 'ohne Charge'
+        notiz += ausGewaehlter === Math.abs(diff)
+          ? ` · Charge ${b}`
+          : ` · ${ausGewaehlter} aus Charge ${b}, Rest aus weiteren`
       }
     }
 
@@ -1698,28 +1730,148 @@ export default function Lager() {
       location_id: locId,
       type: 'korrektur',
       quantity: diff,
-      note: `Inventur-Korrektur: ${auditItem.expected_quantity} → ${actual}`,
+      note: notiz,
       user: user?.email || user?.id,
       organization_id: user?.organization_id
     })
   }
 
-  // Eine Position bestätigen (Checklisten-Zeile) — bei Abweichung wird sofort korrigiert
+  // Bestandszeilen eines Artikels am INVENTUR-Standort laden.
+  // Bewusst eigene Funktion: reloadDetailStocks hängt fest an currentLocationId,
+  // die Inventur kann aber für einen anderen Standort laufen.
+  async function loadAuditStocks(itemId: string, locId: string): Promise<StockItem[]> {
+    try {
+      return await pb.collection('inventory_stock').getFullList<StockItem>({
+        filter: `item_id = "${itemId}" && location_id = "${locId}"`,
+        sort: 'expiry_date',
+      })
+    } catch { return [] }
+  }
+
+  // Bestätigen einer Position. Weicht die Zählung ab, wird zuerst die Charge geklärt.
   async function saveAuditRow(auditItem: AuditItem, actual: number) {
     if (!currentAudit || auditSaving) return
     const locId = auditLocationId || currentLocationId
     if (!locId) return
+    const diff = actual - auditItem.expected_quantity
+    if (diff !== 0) {
+      const stocks = await loadAuditStocks(auditItem.item_id, locId)
+      // Bei Fehlmenge ohne vorhandene Charge gibt es nichts zu wählen
+      if (!(diff < 0 && stocks.length === 0)) {
+        setAuditChargeDialog({ auditItem, actual, diff, stocks })
+        return
+      }
+    }
+    await buchePosition(auditItem, actual, locId)
+  }
+
+  async function buchePosition(auditItem: AuditItem, actual: number, locId: string, charge?: { batch?: string; expiry?: string; abzugVonStockId?: string }) {
+    if (!currentAudit) return
     setAuditSaving(auditItem.id)
     try {
       await pb.collection('inventory_audit_items').update(auditItem.id, { actual_quantity: actual, checked: true })
-      await applyAuditCorrection(auditItem, actual, locId)
+      await applyAuditCorrection(auditItem, actual, locId, charge)
       const updatedItems = await loadAuditItems(currentAudit.id, locId)
-      if (updatedItems.length && updatedItems.every(ai => ai.checked)) await finishInventur()
+      await loadStock()
+      if (updatedItems.length && updatedItems.every(ai => ai.checked)) {
+        setAuditEdit(null)          // offenes Bearbeiten-Fenster mitschließen
+        await finishInventur()
+      } else if (auditViewMode === 'einzeln') {
+        // Erst nach der tatsächlichen Buchung weiterspringen — nicht schon beim
+        // Öffnen des Chargen-Fensters
+        setAuditIndex(i => Math.min(updatedItems.length - 1, i + 1))
+      }
     } catch(e: any) {
       alert('Fehler: ' + e.message)
     } finally {
       setAuditSaving(null)
     }
+  }
+
+  // ── Artikel aus der Inventur heraus bearbeiten ────────────────────────────
+  async function openAuditEdit(ai: AuditItem) {
+    const locId = auditLocationId || currentLocationId
+    if (!locId) return
+    const it = ai.expand?.item_id
+    setAuditEdit(ai)
+    setAuditStockEdit(null)
+    setAuditEditForm({
+      name: it?.name || '', unit: it?.unit || 'Stück',
+      soll: it ? getMinStock(it, locId) : 0,
+    })
+    setAuditEditStocks(await loadAuditStocks(ai.item_id, locId))
+  }
+
+  /** Stammdaten speichern — Mindestbestand gilt für den INVENTUR-Standort. */
+  async function saveAuditItemStamm() {
+    if (!auditEdit) return
+    const locId = auditLocationId || currentLocationId
+    if (!locId) return
+    try {
+      const bestehend = allItems.find(i => i.id === auditEdit.item_id)
+      const locMins = { ...(bestehend?.location_min_stocks || {}), [locId]: auditEditForm.soll }
+      await pb.collection('inventory_items').update(auditEdit.item_id, {
+        name: auditEditForm.name.trim(),
+        unit: auditEditForm.unit.trim() || 'Stück',
+        min_stock: auditEditForm.soll,
+        location_min_stocks: locMins,
+      })
+      setAllItems(prev => prev.map(i => i.id === auditEdit.item_id
+        ? { ...i, name: auditEditForm.name.trim(), unit: auditEditForm.unit.trim() || 'Stück', min_stock: auditEditForm.soll, location_min_stocks: locMins }
+        : i))
+      if (currentAudit) await loadAuditItems(currentAudit.id, locId)   // Zeile war sonst veraltet
+      await loadStock()
+      showMsg('✅ Stammdaten gespeichert', 'success')
+    } catch(e: any) { showMsg('Fehler: ' + e.message, 'error') }
+  }
+
+  /** Charge/MHD einer einzelnen Bestandszeile — nie über alle Zeilen hinweg. */
+  async function saveAuditStockEdit() {
+    if (!auditStockEdit || !auditEdit) return
+    const locId = auditLocationId || currentLocationId
+    if (!locId) return
+    try {
+      await pb.collection('inventory_stock').update(auditStockEdit.id, {
+        batch: auditStockEdit.batch.trim() || null,
+        expiry_date: auditStockEdit.expiry || null,
+      })
+      setAuditStockEdit(null)
+      setAuditEditStocks(await loadAuditStocks(auditEdit.item_id, locId))
+      await loadStock()
+      showMsg('✅ Charge/MHD gespeichert', 'success')
+    } catch(e: any) { showMsg('Fehler: ' + e.message, 'error') }
+  }
+
+  /** Artikel nachträglich in die laufende Inventur aufnehmen. */
+  async function addItemToAudit(itemId: string) {
+    const locId = auditLocationId || currentLocationId
+    if (!currentAudit || !locId) return
+    if (auditItems.some(ai => ai.item_id === itemId)) { showMsg('Artikel ist bereits in der Liste', 'error'); return }
+    try {
+      const stocks = await loadAuditStocks(itemId, locId)
+      const bestand = stocks.reduce((s, st) => s + (st.quantity || 0), 0)
+      await pb.collection('inventory_audit_items').create({
+        audit_id: currentAudit.id, item_id: itemId, location_id: locId,
+        expected_quantity: bestand, actual_quantity: 0, checked: false,
+        organization_id: user?.organization_id,
+      })
+      await loadAuditItems(currentAudit.id, locId)
+      setAuditAddOpen(false)
+      showMsg('✅ Artikel zur Inventur hinzugefügt', 'success')
+    } catch(e: any) { showMsg('Fehler: ' + e.message, 'error') }
+  }
+
+  /** Neuen Artikel anlegen und sofort in die laufende Inventur aufnehmen. */
+  async function createItemInAudit(name: string, unit: string, barcode: string) {
+    if (!currentAudit) return
+    try {
+      const rec = await pb.collection('inventory_items').create({
+        name: name.trim(), unit: unit.trim() || 'Stück', min_stock: 0,
+        barcode: barcode.trim() || null, organization_id: user?.organization_id,
+      }) as any
+      setAllItems(prev => [...prev, rec])
+      await addItemToAudit(rec.id)
+    } catch(e: any) { showMsg('Fehler: ' + e.message, 'error') }
   }
 
   // Alle noch offenen Positionen in einem Rutsch als "Bestand stimmt" bestätigen
@@ -2551,8 +2703,19 @@ export default function Lager() {
                       <div>
                         <div style={{ textAlign: 'center', fontSize: 11, color: 'var(--warm-gray)', fontStyle: 'italic', marginBottom: 8 }}>Artikel {auditIndex + 1} von {auditItems.length}{cur.checked ? ' · bereits geprüft' : ''}</div>
                         <div style={{ background: 'rgba(250,249,247,0.8)', borderRadius: 12, padding: 16, border: `1px solid ${weicht ? '#f2c088' : 'rgba(96,8,18,0.12)'}`, marginBottom: 12 }}>
-                          <div style={{ fontWeight: 700, fontSize: 16, color: 'var(--lbf-text)', marginBottom: 2 }}>{cur.expand?.item_id?.name || 'Artikel'}</div>
-                          <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginBottom: 14 }}>Erwartet: {cur.expected_quantity} {cur.expand?.item_id?.unit || 'Stück'}</div>
+                          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ fontWeight: 700, fontSize: 16, color: 'var(--lbf-text)', marginBottom: 2 }}>{cur.expand?.item_id?.name || 'Artikel'}</div>
+                              <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginBottom: 14 }}>
+                                Erwartet: {cur.expected_quantity} {cur.expand?.item_id?.unit || 'Stück'}
+                                {cur.expand?.item_id?.barcode ? ' · Code ✓' : ''}
+                              </div>
+                            </div>
+                            <button onClick={() => openAuditEdit(cur)} title="Artikel bearbeiten"
+                              style={{ background: 'none', border: 'none', color: '#600812', cursor: 'pointer', padding: 4, flexShrink: 0, lineHeight: 0 }}>
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+                            </button>
+                          </div>
                           <label style={{ fontSize: 11, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.1em', display: 'block', marginBottom: 6 }}>Gezählt</label>
                           <input className="lager-input" type="number" min="0" value={val} autoFocus
                             onChange={e => setAuditRowValues(prev => ({ ...prev, [cur.id]: Number(e.target.value) }))}
@@ -2562,7 +2725,7 @@ export default function Lager() {
                         <div style={{ display: 'flex', gap: 8 }}>
                           <button className="lager-btn" disabled={auditIndex === 0} onClick={() => setAuditIndex(i => Math.max(0, i - 1))} style={{ flexShrink: 0 }}>Zurück</button>
                           <button className="lager-btn" disabled={auditIndex >= auditItems.length - 1} onClick={() => setAuditIndex(i => Math.min(auditItems.length - 1, i + 1))} style={{ flexShrink: 0 }}>Überspringen</button>
-                          <button className="lager-btn primary" disabled={auditSaving !== null} onClick={async () => { await saveAuditRow(cur, val); setAuditIndex(i => Math.min(auditItems.length - 1, i + 1)) }}
+                          <button className="lager-btn primary" disabled={auditSaving !== null} onClick={() => saveAuditRow(cur, val)}
                             style={{ flex: 1, background: weicht ? '#d97706' : undefined, borderColor: weicht ? '#d97706' : undefined }}>
                             {busy ? '…' : weicht ? `Buchen ${val - cur.expected_quantity > 0 ? '+' : ''}${val - cur.expected_quantity}` : '✓ Stimmt'}
                           </button>
@@ -2581,8 +2744,13 @@ export default function Lager() {
                     )}
                   </div>
 
-                  <div style={{ fontStyle: 'italic', fontSize: 11, color: 'var(--warm-gray)', marginBottom: 10 }}>
-                    Stimmt der Bestand, einfach ✓ antippen. Bei Abweichung erst die gezählte Menge eintragen — die Korrektur wird sofort gebucht.
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 10 }}>
+                    <div style={{ flex: 1, fontStyle: 'italic', fontSize: 11, color: 'var(--warm-gray)' }}>
+                      Stimmt der Bestand, einfach ✓ antippen. Über den Stift lassen sich Barcode, Charge und Stammdaten direkt pflegen.
+                    </div>
+                    <button className="lager-btn" onClick={() => setAuditAddOpen(true)} style={{ flexShrink: 0, whiteSpace: 'nowrap' as const, fontSize: 12, padding: '6px 10px' }}>
+                      + Artikel fehlt
+                    </button>
                   </div>
 
                   {/* Offene Positionen */}
@@ -2596,8 +2764,15 @@ export default function Lager() {
                           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                             <div style={{ flex: 1, minWidth: 0 }}>
                               <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--lbf-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ai.expand?.item_id?.name || 'Artikel'}</div>
-                              <div style={{ fontStyle: 'italic', fontSize: 11, color: 'var(--warm-gray)' }}>Erwartet: {ai.expected_quantity} {ai.expand?.item_id?.unit || 'Stück'}</div>
+                              <div style={{ fontStyle: 'italic', fontSize: 11, color: 'var(--warm-gray)' }}>
+                                Erwartet: {ai.expected_quantity} {ai.expand?.item_id?.unit || 'Stück'}
+                                {ai.expand?.item_id?.barcode ? ' · Code ✓' : ''}
+                              </div>
                             </div>
+                            <button onClick={() => openAuditEdit(ai)} title="Artikel bearbeiten (Barcode, Charge, Stammdaten)"
+                              style={{ background: 'none', border: 'none', color: '#600812', cursor: 'pointer', padding: 5, flexShrink: 0, lineHeight: 0 }}>
+                              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+                            </button>
                             <input className="lager-input" type="number" min="0" value={val}
                               onChange={e => setAuditRowValues(prev => ({ ...prev, [ai.id]: Number(e.target.value) }))}
                               style={{ width: 72, textAlign: 'center', fontWeight: 700, padding: '8px 6px' }} />
@@ -2806,6 +2981,135 @@ export default function Lager() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* ARTIKEL AUS DER INVENTUR BEARBEITEN */}
+      {auditEdit && (() => {
+        const it = allItems.find(i => i.id === auditEdit.item_id) || auditEdit.expand?.item_id
+        const locName = locations.find(l => l.id === (auditLocationId || currentLocationId))?.name || 'Standort'
+        return (
+          <div className="lager-modal-overlay" style={{ zIndex: 1100 }} onClick={e => { if (e.target === e.currentTarget) setAuditEdit(null) }}>
+            <div className="lager-modal">
+              <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 4 }}>Artikel bearbeiten</div>
+              <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginBottom: 16 }}>Änderungen gelten für {locName}</div>
+
+              {/* Stammdaten */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 8 }}>
+                <div>
+                  <label style={lbl}>Bezeichnung</label>
+                  <input className="lager-input" value={auditEditForm.name} onChange={e => setAuditEditForm(f => ({ ...f, name: e.target.value }))} />
+                </div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <div style={{ flex: 1 }}>
+                    <label style={lbl}>Einheit</label>
+                    <input className="lager-input" value={auditEditForm.unit} onChange={e => setAuditEditForm(f => ({ ...f, unit: e.target.value }))} />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <label style={lbl}>Mindestbestand</label>
+                    <input className="lager-input" type="number" min="0" value={auditEditForm.soll} onChange={e => setAuditEditForm(f => ({ ...f, soll: Number(e.target.value) }))} />
+                  </div>
+                </div>
+                <button className="lager-btn primary" onClick={saveAuditItemStamm} style={{ alignSelf: 'flex-start' }}>Stammdaten speichern</button>
+              </div>
+
+              {/* Barcode */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: 'rgba(250,249,247,0.8)', borderRadius: 8, margin: '14px 0' }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ ...lbl, marginBottom: 2 }}>Barcode</div>
+                  <div style={{ fontSize: 12, fontFamily: it?.barcode ? 'monospace' : 'inherit', fontStyle: it?.barcode ? 'normal' : 'italic', color: it?.barcode ? 'var(--lbf-text)' : 'var(--warm-gray)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>
+                    {it?.barcode || 'Noch nicht verknüpft'}
+                  </div>
+                </div>
+                {it && (
+                  <button className="lager-btn" style={{ flexShrink: 0, fontSize: 12 }} onClick={() => openScanner('assign', it)}>
+                    {it.barcode ? 'Neu scannen' : 'Scannen'}
+                  </button>
+                )}
+              </div>
+
+              {/* Bestände / Chargen am Inventur-Standort */}
+              <div style={{ ...lbl, marginBottom: 4 }}>Bestände / Chargen</div>
+              <div style={{ fontStyle: 'italic', fontSize: 11, color: 'var(--warm-gray)', marginBottom: 8 }}>Stift antippen, um Charge und MHD dieser Position nachzutragen.</div>
+              {auditEditStocks.length === 0 ? (
+                <div style={{ fontStyle: 'italic', fontSize: 12.5, color: 'var(--warm-gray)', padding: '8px 0' }}>Kein Bestand an diesem Standort.</div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {auditEditStocks.map(s => auditStockEdit?.id === s.id ? (
+                    <div key={s.id} style={{ padding: '10px 12px', background: 'rgba(250,249,247,0.8)', borderRadius: 8, border: '1px solid rgba(96,8,18,0.2)' }}>
+                      <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--lbf-text)', marginBottom: 8 }}>{s.quantity} {it?.unit || 'Stk.'} bearbeiten</div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        <input className="lager-input" type="text" placeholder="Chargen-Nr. / LOT (leer = ohne Charge)" value={auditStockEdit.batch}
+                          onChange={e => setAuditStockEdit(p => p ? { ...p, batch: e.target.value } : p)} />
+                        <input className="lager-input" type="date" value={auditStockEdit.expiry}
+                          onChange={e => setAuditStockEdit(p => p ? { ...p, expiry: e.target.value } : p)} />
+                        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                          <button className="lager-btn" onClick={() => setAuditStockEdit(null)}>Abbrechen</button>
+                          <button className="lager-btn primary" onClick={saveAuditStockEdit}>Speichern</button>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', background: 'rgba(250,249,247,0.8)', borderRadius: 8, fontSize: 13 }}>
+                      <span style={{ fontWeight: 700, color: 'var(--lbf-text)', minWidth: 44 }}>{s.quantity} {it?.unit || 'Stk.'}</span>
+                      <span style={{ fontStyle: 'italic', color: s.batch ? '#600812' : 'var(--warm-gray)', fontWeight: s.batch ? 700 : 400 }}>
+                        {s.batch ? `Charge ${s.batch}` : 'ohne Charge'}
+                      </span>
+                      <span style={{ marginLeft: 'auto', fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)' }}>
+                        {s.expiry_date ? `MHD ${new Date(s.expiry_date).toLocaleDateString('de-DE')}` : ''}
+                      </span>
+                      <button onClick={() => setAuditStockEdit({ id: s.id, batch: s.batch || '', expiry: s.expiry_date ? s.expiry_date.slice(0, 10) : '' })}
+                        style={{ background: 'none', border: 'none', color: '#600812', cursor: 'pointer', padding: 4, flexShrink: 0, lineHeight: 0 }}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 18 }}>
+                <button className="lager-btn" onClick={() => setAuditEdit(null)}>Fertig</button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
+
+      {/* CHARGE BEIM BUCHEN EINER ABWEICHUNG */}
+      {auditChargeDialog && (() => {
+        const d = auditChargeDialog
+        const locId = auditLocationId || currentLocationId || ''
+        const einheit = d.auditItem.expand?.item_id?.unit || 'Stk.'
+        return (
+          <div className="lager-modal-overlay" style={{ zIndex: 1100 }} onClick={e => { if (e.target === e.currentTarget) setAuditChargeDialog(null) }}>
+            <div className="lager-modal" style={{ maxWidth: 480 }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 4 }}>
+                {d.diff > 0 ? 'Mehrmenge einbuchen' : 'Fehlmenge abbuchen'}
+              </div>
+              <div style={{ fontSize: 14, color: 'var(--lbf-text)', marginBottom: 14 }}>
+                {d.auditItem.expand?.item_id?.name} · gezählt {d.actual} statt {d.auditItem.expected_quantity} →
+                <b style={{ color: d.diff > 0 ? '#16a34a' : '#dc2626' }}> {d.diff > 0 ? '+' : ''}{d.diff} {einheit}</b>
+              </div>
+
+              {d.diff > 0 ? (
+                <ChargeNeu stocks={d.stocks} onAbbrechen={() => setAuditChargeDialog(null)}
+                  onBuchen={async (batch, expiry) => { const x = d; setAuditChargeDialog(null); await buchePosition(x.auditItem, x.actual, locId, { batch, expiry }) }} />
+              ) : (
+                <ChargeAbzug stocks={d.stocks} menge={Math.abs(d.diff)} einheit={einheit} onAbbrechen={() => setAuditChargeDialog(null)}
+                  onBuchen={async (stockId) => { const x = d; setAuditChargeDialog(null); await buchePosition(x.auditItem, x.actual, locId, { abzugVonStockId: stockId }) }} />
+              )}
+            </div>
+          </div>
+        )
+      })()}
+
+      {/* ARTIKEL FEHLT IN DER LISTE */}
+      {auditAddOpen && (
+        <AuditAddModal
+          vorhandene={allItems.filter(i => !auditItems.some(ai => ai.item_id === i.id))}
+          onClose={() => setAuditAddOpen(false)}
+          onWaehlen={addItemToAudit}
+          onNeu={createItemInAudit}
+        />
       )}
 
       {/* BUCHUNG MODAL */}
@@ -4230,6 +4534,183 @@ export default function Lager() {
         </div>
       )}
 
+    </div>
+  )
+}
+
+// ── Hilfsbausteine für die Inventur-Bearbeitung ──────────────────────────────
+
+const lbl: React.CSSProperties = {
+  fontSize: 10, fontWeight: 700, color: '#600812',
+  textTransform: 'uppercase', letterSpacing: '0.1em', display: 'block', marginBottom: 4,
+}
+
+/** Mehrmenge: Charge/MHD erfassen — bei genau einer vorhandenen Charge vorbelegt. */
+function ChargeNeu({ stocks, onBuchen, onAbbrechen }: {
+  stocks: StockItem[]
+  onBuchen: (batch: string, expiry: string) => void
+  onAbbrechen: () => void
+}) {
+  const einzige = stocks.length === 1 ? stocks[0] : null
+  const [batch, setBatch] = useState(einzige?.batch || '')
+  const [expiry, setExpiry] = useState(einzige?.expiry_date ? einzige.expiry_date.slice(0, 10) : '')
+  return (
+    <>
+      {einzige && (einzige.batch || einzige.expiry_date) && (
+        <div style={{ fontSize: 12, fontStyle: 'italic', color: 'var(--warm-gray)', marginBottom: 10 }}>
+          Aus der vorhandenen Charge vorbelegt — anpassen, falls die Ware eine andere ist.
+        </div>
+      )}
+      <div style={{ marginBottom: 10 }}>
+        <label style={lbl}>Chargen-Nr. / LOT</label>
+        <input className="lager-input" value={batch} onChange={e => setBatch(e.target.value)} placeholder="leer lassen, wenn unbekannt" autoFocus />
+      </div>
+      <div style={{ marginBottom: 6 }}>
+        <label style={lbl}>Mindesthaltbarkeit</label>
+        <input className="lager-input" type="date" value={expiry} onChange={e => setExpiry(e.target.value)} />
+      </div>
+      <div style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--warm-gray)', marginBottom: 14 }}>
+        Ohne Charge lässt sich der Bestand später nicht über die Rückruf-Suche finden.
+      </div>
+      <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+        <button className="lager-btn" onClick={onAbbrechen}>Abbrechen</button>
+        <button className="lager-btn" onClick={() => onBuchen('', '')}>Ohne Charge</button>
+        <button className="lager-btn primary" onClick={() => onBuchen(batch, expiry)}>Buchen</button>
+      </div>
+    </>
+  )
+}
+
+/** Fehlmenge: aus welcher Charge wurde entnommen? Älteste ist vorbelegt. */
+function ChargeAbzug({ stocks, menge, einheit, onBuchen, onAbbrechen }: {
+  stocks: StockItem[]
+  menge: number
+  einheit: string
+  onBuchen: (stockId: string) => void
+  onAbbrechen: () => void
+}) {
+  const [gewaehlt, setGewaehlt] = useState(stocks[0]?.id || '')
+  const s = stocks.find(x => x.id === gewaehlt)
+  const reicht = (s?.quantity || 0) >= menge
+
+  return (
+    <>
+      <div style={{ ...lbl, marginBottom: 6 }}>Aus welcher Charge fehlt die Menge?</div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 260, overflowY: 'auto' }}>
+        {stocks.map(st => (
+          <label key={st.id} style={{
+            display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 8, cursor: 'pointer',
+            background: gewaehlt === st.id ? 'rgba(96,8,18,0.06)' : 'rgba(250,249,247,0.8)',
+            border: `1px solid ${gewaehlt === st.id ? '#600812' : 'transparent'}`,
+          }}>
+            <input type="radio" checked={gewaehlt === st.id} onChange={() => setGewaehlt(st.id)} style={{ accentColor: '#600812' }} />
+            <span style={{ fontWeight: 700, fontSize: 13, color: 'var(--lbf-text)', minWidth: 52 }}>{st.quantity} {einheit}</span>
+            <span style={{ fontStyle: 'italic', fontSize: 12.5, color: st.batch ? '#600812' : 'var(--warm-gray)', fontWeight: st.batch ? 700 : 400 }}>
+              {st.batch ? `Charge ${st.batch}` : 'ohne Charge'}
+            </span>
+            <span style={{ marginLeft: 'auto', fontStyle: 'italic', fontSize: 11.5, color: 'var(--warm-gray)' }}>
+              {st.expiry_date ? new Date(st.expiry_date).toLocaleDateString('de-DE') : ''}
+            </span>
+          </label>
+        ))}
+      </div>
+      {!reicht && s && (
+        <div style={{ background: 'rgba(217,119,6,0.1)', borderLeft: '3px solid #d97706', borderRadius: '0 8px 8px 0', padding: '9px 11px', marginTop: 10, fontSize: 12.5, color: 'var(--lbf-text)' }}>
+          Diese Charge hat nur {s.quantity} {einheit} — {s.quantity} werden von hier abgebucht, die restlichen {menge - s.quantity} aus den weiteren Chargen (nach Ablaufdatum).
+        </div>
+      )}
+      <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 16 }}>
+        <button className="lager-btn" onClick={onAbbrechen}>Abbrechen</button>
+        <button className="lager-btn primary" disabled={!gewaehlt} onClick={() => onBuchen(gewaehlt)}>Abbuchen</button>
+      </div>
+    </>
+  )
+}
+
+/** Artikel nachträglich in die laufende Inventur aufnehmen — vorhanden oder neu. */
+function AuditAddModal({ vorhandene, onClose, onWaehlen, onNeu }: {
+  vorhandene: InventoryItem[]
+  onClose: () => void
+  onWaehlen: (itemId: string) => void
+  onNeu: (name: string, unit: string, barcode: string) => void
+}) {
+  const [modus, setModus] = useState<'suchen' | 'neu'>('suchen')
+  const [suche, setSuche] = useState('')
+  const [name, setName] = useState('')
+  const [unit, setUnit] = useState('Stück')
+  const [barcode, setBarcode] = useState('')
+  const treffer = vorhandene.filter(i => !suche.trim() || i.name.toLowerCase().includes(suche.trim().toLowerCase())).slice(0, 30)
+
+  return (
+    <div className="lager-modal-overlay" style={{ zIndex: 1100 }} onClick={e => { if (e.target === e.currentTarget) onClose() }}>
+      <div className="lager-modal" style={{ maxWidth: 520 }}>
+        <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 4 }}>Artikel zur Inventur hinzufügen</div>
+        <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginBottom: 14 }}>
+          Für Ware, die im Regal steht, aber nicht in der Zählliste auftaucht.
+        </div>
+
+        <div style={{ display: 'flex', gap: 0, marginBottom: 14, background: 'rgba(96,8,18,0.06)', borderRadius: 8, padding: 3 }}>
+          {([['suchen', 'Vorhandener Artikel'], ['neu', 'Neu anlegen']] as const).map(([k, l]) => (
+            <button key={k} onClick={() => setModus(k)} style={{
+              flex: 1, padding: '7px 0', border: 'none', borderRadius: 6, cursor: 'pointer', fontFamily: 'inherit',
+              fontWeight: 700, fontSize: 12, background: modus === k ? '#fff' : 'transparent',
+              color: modus === k ? '#600812' : 'var(--warm-gray)',
+              boxShadow: modus === k ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+            }}>{l}</button>
+          ))}
+        </div>
+
+        {modus === 'suchen' ? (
+          <>
+            <input className="lager-input" type="search" placeholder="Artikel suchen…" value={suche} onChange={e => setSuche(e.target.value)} autoFocus />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 5, marginTop: 10, maxHeight: 300, overflowY: 'auto' }}>
+              {treffer.length === 0 ? (
+                <div style={{ fontStyle: 'italic', fontSize: 12.5, color: 'var(--warm-gray)', padding: '10px 2px' }}>
+                  Kein passender Artikel — über „Neu anlegen" erfassen.
+                </div>
+              ) : treffer.map(i => (
+                <div key={i.id} onClick={() => onWaehlen(i.id)} style={{
+                  padding: '9px 12px', border: '1px solid rgba(96,8,18,0.1)', borderRadius: 8, cursor: 'pointer',
+                  fontSize: 13.5, fontWeight: 600, color: 'var(--lbf-text)',
+                }}>
+                  {i.name}
+                  <span style={{ fontStyle: 'italic', fontWeight: 400, fontSize: 11.5, color: 'var(--warm-gray)', marginLeft: 6 }}>{i.unit}</span>
+                </div>
+              ))}
+            </div>
+          </>
+        ) : (
+          <>
+            <div style={{ marginBottom: 10 }}>
+              <label style={lbl}>Bezeichnung</label>
+              <input className="lager-input" value={name} onChange={e => setName(e.target.value)} autoFocus />
+            </div>
+            <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+              <div style={{ flex: 1 }}>
+                <label style={lbl}>Einheit</label>
+                <input className="lager-input" value={unit} onChange={e => setUnit(e.target.value)} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <label style={lbl}>Barcode (optional)</label>
+                <input className="lager-input" value={barcode} onChange={e => setBarcode(e.target.value)} placeholder="oder später scannen" />
+              </div>
+            </div>
+            <div style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--warm-gray)', marginBottom: 12 }}>
+              Der Artikel wird mit Bestand 0 aufgenommen — die gezählte Menge buchst du danach ganz normal als Abweichung.
+            </div>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button className="lager-btn" onClick={onClose}>Abbrechen</button>
+              <button className="lager-btn primary" disabled={!name.trim()} onClick={() => onNeu(name, unit, barcode)}>Anlegen &amp; aufnehmen</button>
+            </div>
+          </>
+        )}
+
+        {modus === 'suchen' && (
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 14 }}>
+            <button className="lager-btn" onClick={onClose}>Schließen</button>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
