@@ -3,6 +3,7 @@ import QRCode from 'qrcode'
 import type { IScannerControls } from '@zxing/browser'
 import { pb } from '../lib/pocketbase'
 import { parseGs1, sameCode, beschreibeGs1, type Gs1Daten } from '../lib/gs1'
+import { queueBuchung, queueCount, flushQueue, snapshotSet, snapshotGet, speicherSichern, type PendingBuchung } from '../lib/lagerOffline'
 import { useAuth } from '../hooks/useAuth'
 import StatusBar from '../components/StatusBar'
 
@@ -410,6 +411,10 @@ export default function Lager() {
   const [buchungExpiry, setBuchungExpiry] = useState('')
   const [buchungBatch, setBuchungBatch] = useState('')
   const [buchungEinsatz, setBuchungEinsatz] = useState('')
+  // Offline-Betrieb
+  const [istOnline, setIstOnline] = useState(navigator.onLine)
+  const [offlineOffen, setOfflineOffen] = useState(0)
+  const [offlineStand, setOfflineStand] = useState<number | null>(null)
   // Einbuchung mit mehreren Chargen/MHD in einem Vorgang (je Zeile ein Bestandssatz)
   const [einChargen, setEinChargen] = useState<{ menge: number; mhd: string; charge: string }[]>([{ menge: 1, mhd: '', charge: '' }])
   const [buchungSearch, setBuchungSearch] = useState('')
@@ -496,6 +501,83 @@ export default function Lager() {
   }, [currentLocationId])
 
   useEffect(() => { if (showAddItemModal) setAiHint('') }, [showAddItemModal])
+
+  // ── Offline-Betrieb ────────────────────────────────────────────────────────
+  // Die Warteschlange wird beim Wiederverbinden gegen den AKTUELLEN Serverstand
+  // ausgeführt, nicht gegen den, der beim Buchen galt.
+  async function synchronisiereOffline() {
+    if (!navigator.onLine) return
+    const offen = await queueCount()
+    if (offen === 0) { setOfflineOffen(0); return }
+    const { ok, fehler } = await flushQueue(async (b: PendingBuchung) => {
+      await buchePendingGegenServer(b)
+    })
+    setOfflineOffen(await queueCount())
+    await loadStock()
+    if (ok > 0) showMsg(`✅ ${ok} Offline-Buchung${ok === 1 ? '' : 'en'} übertragen${fehler ? `, ${fehler} fehlgeschlagen` : ''}`, fehler ? 'error' : 'success')
+  }
+
+  /** Führt eine gemerkte Buchung aus — dieselbe Logik wie online, nur ohne UI. */
+  async function buchePendingGegenServer(b: PendingBuchung) {
+    const stockList = await pb.collection('inventory_stock').getFullList<StockItem>({
+      filter: `item_id = "${b.item_id}" && location_id = "${b.location_id}"`,
+      sort: 'expiry_date',
+    })
+    if (b.delta > 0) {
+      await pb.collection('inventory_stock').create({
+        item_id: b.item_id, location_id: b.location_id, quantity: b.delta,
+        expiry_date: b.expiry || null, batch: (b.batch || '').trim() || null,
+        organization_id: user?.organization_id,
+      })
+      await pb.collection('inventory_transactions').create({
+        item_id: b.item_id, location_id: b.location_id, type: 'einbuchung', quantity: b.delta,
+        expiry_date: b.expiry || null, batch: (b.batch || '').trim() || null,
+        note: ['offline erfasst', b.batch ? `Charge ${b.batch}` : null].filter(Boolean).join(' · '),
+        user: user?.email || user?.id, organization_id: user?.organization_id,
+      })
+    } else {
+      let rest = Math.abs(b.delta)
+      for (const st of stockList) {
+        if (rest <= 0) break
+        const take = Math.min(st.quantity, rest)
+        const neuQ = st.quantity - take
+        if (neuQ <= 0) await pb.collection('inventory_stock').delete(st.id)
+        else await pb.collection('inventory_stock').update(st.id, { quantity: neuQ })
+        await pb.collection('inventory_transactions').create({
+          item_id: b.item_id, location_id: b.location_id, type: 'ausbuchung', quantity: -take,
+          batch: st.batch || null, expiry_date: st.expiry_date || null, stock_id: st.id,
+          einsatz: (b.einsatz || '').trim() || null,
+          note: ['offline erfasst', st.batch ? `Charge ${st.batch}` : null, b.einsatz ? `Einsatz ${b.einsatz}` : null].filter(Boolean).join(' · '),
+          user: user?.email || user?.id, organization_id: user?.organization_id,
+        })
+        rest -= take
+      }
+      if (rest > 0) {
+        // Der Bestand hat sich zwischenzeitlich geändert — ehrlich protokollieren
+        await pb.collection('inventory_transactions').create({
+          item_id: b.item_id, location_id: b.location_id, type: 'ausbuchung', quantity: -rest,
+          einsatz: (b.einsatz || '').trim() || null,
+          note: 'offline erfasst · ohne Chargenzuordnung (Bestand zwischenzeitlich verändert)',
+          user: user?.email || user?.id, organization_id: user?.organization_id,
+        })
+      }
+    }
+  }
+
+  useEffect(() => {
+    speicherSichern()
+    queueCount().then(setOfflineOffen)
+    const an = () => { setIstOnline(true); synchronisiereOffline() }
+    const aus = () => setIstOnline(false)
+    window.addEventListener('online', an)
+    window.addEventListener('offline', aus)
+    if (navigator.onLine) synchronisiereOffline()
+    return () => {
+      window.removeEventListener('online', an)
+      window.removeEventListener('offline', aus)
+    }
+  }, [currentLocationId])
+
 
   async function loadLocations() {
     try {
@@ -625,7 +707,22 @@ export default function Lager() {
 
   async function loadStock() {
     if (!currentLocationId) return
-    
+
+    // Offline: aus dem Zwischenspeicher anzeigen statt mit Fehler abzubrechen
+    if (!navigator.onLine) {
+      const snap = await snapshotGet(currentLocationId)
+      if (snap) {
+        setAllItems(snap.daten.items || [])
+        setDisplayItems(snap.daten.display || [])
+        setOfflineStand(snap.ts)
+        setError(null)
+      } else {
+        setError('Offline und noch kein Stand auf diesem Gerät gespeichert.')
+      }
+      setLoading(false)
+      return
+    }
+
     try {
       setLoading(true)
       setError(null)
@@ -674,10 +771,21 @@ export default function Lager() {
       }))
 
       setDisplayItems(items_list)
-      
+      // Für den Offline-Fall vorhalten
+      await snapshotSet(currentLocationId, { items, display: items_list })
+      setOfflineStand(null)
+
     } catch(e: any) {
       console.error('Error loading stock:', e)
-      setError('Fehler beim Laden: ' + e.message)
+      // Netzabbruch mitten im Betrieb: lieber den letzten Stand zeigen als nichts
+      const snap = await snapshotGet(currentLocationId)
+      if (snap) {
+        setAllItems(snap.daten.items || [])
+        setDisplayItems(snap.daten.display || [])
+        setOfflineStand(snap.ts)
+      } else {
+        setError('Fehler beim Laden: ' + e.message)
+      }
     } finally {
       setLoading(false)
     }
@@ -731,6 +839,20 @@ export default function Lager() {
 
     if (delta < 0 && item.qty + delta < 0) {
       alert('Nicht genügend Bestand')
+      return
+    }
+
+    // Offline: die ABSICHT merken statt zu scheitern. Sie wird beim Wiederverbinden
+    // gegen den dann aktuellen Bestand ausgeführt — dadurch addieren sich Buchungen
+    // mehrerer Geräte korrekt, statt sich zu überschreiben.
+    if (!navigator.onLine) {
+      await queueBuchung({
+        item_id: itemId, item_name: item.name, location_id: currentLocationId || '',
+        delta, expiry: expiryParam, batch: batchParam, einsatz,
+      })
+      setDisplayItems(prev => prev.map(d => d.id === itemId ? { ...d, qty: d.qty + delta } : d))
+      setOfflineOffen(await queueCount())
+      showMsg(`Offline gespeichert: ${delta > 0 ? '+' : ''}${delta} ${item.unit || 'Stück'}`, 'success')
       return
     }
 
@@ -2355,8 +2477,19 @@ export default function Lager() {
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#600812" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
           </a>
           <div style={{ flex: 1 }}>
-            <div style={{ fontWeight: 700, fontSize: 15, letterSpacing: '-0.01em', color: 'var(--lbf-text)' }}>Lager</div>
-            <div style={{ fontStyle: 'italic', fontSize: 11, color: 'var(--warm-gray)', marginTop: 1 }}>{user?.organization_name || 'Responda'}</div>
+            <div style={{ fontWeight: 700, fontSize: 15, letterSpacing: '-0.01em', color: 'var(--lbf-text)', display: 'flex', alignItems: 'center', gap: 8 }}>
+              Lager
+              {(!istOnline || offlineOffen > 0) && (
+                <span onClick={() => istOnline && synchronisiereOffline()} title={istOnline ? 'Jetzt übertragen' : 'Ohne Verbindung — Buchungen werden lokal gespeichert'}
+                  style={{ border: '1px solid #d97706', background: 'rgba(217,119,6,0.12)', color: '#d97706', borderRadius: 999, padding: '2px 9px', fontSize: 10.5, fontWeight: 700, cursor: istOnline ? 'pointer' : 'default', whiteSpace: 'nowrap' }}>
+                  {istOnline ? `${offlineOffen} zu übertragen` : `Offline${offlineOffen ? ` · ${offlineOffen}` : ''}`}
+                </span>
+              )}
+            </div>
+            <div style={{ fontStyle: 'italic', fontSize: 11, color: 'var(--warm-gray)', marginTop: 1 }}>
+              {user?.organization_name || 'Responda'}
+              {!istOnline && offlineStand !== null && ` · Stand ${new Date(offlineStand).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}`}
+            </div>
           </div>
           <button onClick={() => setShowSettingsModal(true)} style={{ width: 34, height: 34, border: 'none', borderRadius: 8, background: 'rgba(96,8,18,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#600812' }}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>

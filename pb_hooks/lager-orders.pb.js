@@ -94,18 +94,45 @@ cronAdd("lager-auto-order", "30 7 * * *", () => {
       if (!items.length) continue
       const stock = $app.findRecordsByFilter("inventory_stock", "organization_id = {:o}", "", 10000, 0, { o: orgId })
       const qty = {}
-      for (const s of stock) qty[s.get("item_id")] = (qty[s.get("item_id")] || 0) + (s.get("quantity") || 0)
+      const qtyByLoc = {}   // Bestand je Artikel UND Standort
+      for (const s of stock) {
+        const i = s.get("item_id"), l = s.get("location_id"), q = s.get("quantity") || 0
+        qty[i] = (qty[i] || 0) + q
+        if (!qtyByLoc[i]) qtyByLoc[i] = {}
+        qtyByLoc[i][l] = (qtyByLoc[i][l] || 0) + q
+      }
+
+      // Fehlmenge unter Berücksichtigung standortbezogener Mindestbestände.
+      // Vorher wurde nur der globale Mindestbestand gegen die Gesamtsumme geprüft —
+      // ein Engpass an einem einzelnen Standort loeste dadurch nie eine Bestellung aus.
+      function fehlmenge(it) {
+        const globalMin = it.get("min_stock") || 0
+        const gesamt = qty[it.id] || 0
+        let fehl = globalMin > 0 && gesamt < globalMin ? globalMin - gesamt : 0
+        let locMins = it.get("location_min_stocks")
+        if (typeof locMins === "string") { try { locMins = JSON.parse(locMins) } catch (e) { locMins = null } }
+        if (locMins && typeof locMins === "object") {
+          let summe = 0
+          for (const locId of Object.keys(locMins)) {
+            const min = locMins[locId] || 0
+            if (min <= 0) continue
+            const have = (qtyByLoc[it.id] && qtyByLoc[it.id][locId]) || 0
+            if (have < min) summe += min - have
+          }
+          if (summe > fehl) fehl = summe
+        }
+        return fehl
+      }
 
       // je Lieferant sammeln
       const bySupplier = {}
       for (const it of items) {
         // Artikel, die als "nicht mehr bestellen" markiert sind, nie automatisch bestellen
         if (it.get("nicht_bestellen")) continue
-        const min = it.get("min_stock") || 0
         const email = (it.get("supplier_email") || "").trim()
-        if (min <= 0 || !email) continue
-        const have = qty[it.id] || 0
-        if (have >= min) continue
+        if (!email) continue
+        const fehl = fehlmenge(it)
+        if (fehl <= 0) continue
         // schon offen bestellt? -> überspringen (Doppelbestellungs-Schutz)
         try {
           $app.findFirstRecordByFilter("inventory_orders", "item_id = {:i} && status = 'bestellt'", { i: it.id })
@@ -113,7 +140,7 @@ cronAdd("lager-auto-order", "30 7 * * *", () => {
         } catch (err) { /* keine offene Bestellung -> weiter */ }
         if (!bySupplier[email]) bySupplier[email] = []
         bySupplier[email].push({
-          item_id: it.id, name: it.get("name"), qty: min - have,
+          item_id: it.id, name: it.get("name"), qty: fehl,
           unit: it.get("unit") || "Stück",
           supplier_item_no: it.get("supplier_item_no") || "",
           supplier: it.get("supplier") || "",

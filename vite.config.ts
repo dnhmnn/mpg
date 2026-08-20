@@ -22,6 +22,13 @@ export default defineConfig({
             urlPattern: /^https:\/\/api\.responda\.systems\/api\/(batch|collections\/eks_)/i,
             handler: 'NetworkOnly',
           },
+          // Das Lager hält offline einen eigenen Zwischenspeicher. Eine gecachte
+          // Antwort würde als Erfolg gewertet und einen 24 Stunden alten Bestand
+          // als aktuell ausgeben.
+          {
+            urlPattern: /^https:\/\/api\.responda\.systems\/api\/collections\/inventory_/i,
+            handler: 'NetworkOnly',
+          },
           {
             urlPattern: /^https:\/\/api\.responda\.systems\/.*/i,
             handler: 'NetworkFirst',

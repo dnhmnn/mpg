@@ -25,10 +25,13 @@ cronAdd("lager-daily-alerts", "0 7 * * *", () => {
       if (!items.length) continue
       const stock = $app.findRecordsByFilter("inventory_stock", "organization_id = {:o}", "", 10000, 0, { o: orgId })
 
-      const qty = {}, exp = {}
+      const qty = {}, exp = {}, qtyByLoc = {}
       for (const s of stock) {
         const iid = s.get("item_id")
         qty[iid] = (qty[iid] || 0) + (s.get("quantity") || 0)
+        const lid = s.get("location_id")
+        if (!qtyByLoc[iid]) qtyByLoc[iid] = {}
+        qtyByLoc[iid][lid] = (qtyByLoc[iid][lid] || 0) + (s.get("quantity") || 0)
         const ed = s.get("expiry_date")
         if (ed) { const t = new Date(ed).getTime(); if (!exp[iid] || t < exp[iid]) exp[iid] = t }
       }
@@ -50,7 +53,26 @@ cronAdd("lager-daily-alerts", "0 7 * * *", () => {
         for (const it of items) {
           if (p.low !== false) {
             const min = it.get("min_stock") || 0, q = qty[it.id] || 0
-            if (min > 0 && q < min) low.push(it.get("name") + " (" + q + "/" + min + ")")
+            if (min > 0 && q < min) {
+              low.push(it.get("name") + " (" + q + "/" + min + ")")
+            } else {
+              // Standortbezogene Mindestbestände: ein Engpass an EINEM Standort
+              // ging bisher unter, weil nur die Gesamtsumme geprüft wurde.
+              let locMins = it.get("location_min_stocks")
+              if (typeof locMins === "string") { try { locMins = JSON.parse(locMins) } catch (e) { locMins = null } }
+              if (locMins && typeof locMins === "object") {
+                for (const locId of Object.keys(locMins)) {
+                  const lmin = locMins[locId] || 0
+                  if (lmin <= 0) continue
+                  const have = (qtyByLoc[it.id] && qtyByLoc[it.id][locId]) || 0
+                  if (have < lmin) {
+                    let lname = locId
+                    try { lname = $app.findRecordById("inventory_locations", locId).get("name") || locId } catch (e) { /* geloescht */ }
+                    low.push(it.get("name") + " — " + lname + " (" + have + "/" + lmin + ")")
+                  }
+                }
+              }
+            }
           }
           const t = exp[it.id]
           if (t) {
