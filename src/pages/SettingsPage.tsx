@@ -817,7 +817,6 @@ export default function SettingsPage({ user }: SettingsPageProps) {
               gap: '14px',
               padding: '14px 16px',
               borderRadius: '12px',
-              borderLeft: themeMode === opt.value ? '3px solid #600812' : '3px solid transparent',
               border: themeMode === opt.value ? '0.5px solid rgba(96,8,18,0.15)' : '0.5px solid rgba(96,8,18,0.08)',
               borderLeft: themeMode === opt.value ? '3px solid #600812' : '3px solid rgba(96,8,18,0.15)',
               background: themeMode === opt.value ? 'rgba(96,8,18,0.04)' : '#ffffff',

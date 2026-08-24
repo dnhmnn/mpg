@@ -33,7 +33,7 @@ export function useAuth() {
       if (!navigator.onLine) { hydrateOffline(); return }
 
       await pb.collection('users').authRefresh()
-      let userData = pb.authStore.model as User
+      let userData = pb.authStore.model as unknown as User
 
       const isExpired = userData?.expires_at && new Date(userData.expires_at).getTime() < Date.now()
       if (userData?.disabled || isExpired) {
@@ -95,7 +95,7 @@ export function useAuth() {
 
   // Offline-Start: gespeicherte Sitzung verwenden, Organisation aus dem Cache
   function hydrateOffline() {
-    const userData = pb.authStore.model as User | null
+    const userData = pb.authStore.model as unknown as User | null
     if (!userData) { window.location.href = '/login'; return }
     const isExpired = userData.expires_at && new Date(userData.expires_at).getTime() < Date.now()
     if (userData.disabled || isExpired) {

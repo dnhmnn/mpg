@@ -1,6 +1,21 @@
+# Der Build ist zugleich das letzte Prüfnetz vor der Veröffentlichung:
+# "verify" führt Typprüfung, Tests und Build aus. Schlägt eines fehl,
+# wird nicht veröffentlicht — statt eine Regression auf die Geräte der
+# Einsatzkräfte zu schieben.
 [build]
-  command = "npm run build"
+  command = "npm run verify"
   publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+# Pull Requests bekommen eine eigene Vorschau-Adresse, auf der sich eine
+# Änderung ausprobieren lässt, bevor sie auf die Produktivseite geht.
+[context.deploy-preview]
+  command = "npm run verify"
+
+[context.branch-deploy]
+  command = "npm run verify"
 
 [[redirects]]
   from = "/*"

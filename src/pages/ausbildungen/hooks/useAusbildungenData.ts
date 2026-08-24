@@ -40,7 +40,7 @@ export function useAusbildungenData(organizationId: string | undefined) {
   }
 
   async function loadTermine() {
-    const records = await pb.collection('ausbildungen_termine').getFullList({
+    const records = await pb.collection('ausbildungen_termine').getFullList<Termin>({
       filter: `organization_id = "${organizationId}"`,
       sort: '-start_datetime'
     })
@@ -48,7 +48,7 @@ export function useAusbildungenData(organizationId: string | undefined) {
   }
 
   async function loadTeilnehmer() {
-    const records = await pb.collection('ausbildungen_teilnehmer').getFullList({
+    const records = await pb.collection('ausbildungen_teilnehmer').getFullList<Teilnehmer>({
       filter: `organization_id = "${organizationId}"`,
       sort: 'nachname,vorname'
     })
@@ -56,7 +56,7 @@ export function useAusbildungenData(organizationId: string | undefined) {
   }
 
   async function loadTerminTeilnehmer() {
-    const records = await pb.collection('ausbildungen_termine_teilnehmer').getFullList({
+    const records = await pb.collection('ausbildungen_termine_teilnehmer').getFullList<TerminTeilnehmer>({
       filter: `organization_id = "${organizationId}"`,
       expand: 'teilnehmer_id'
     })
@@ -64,14 +64,14 @@ export function useAusbildungenData(organizationId: string | undefined) {
   }
 
   async function loadDokumente() {
-    const records = await pb.collection('ausbildungen_dokumente').getFullList({
+    const records = await pb.collection('ausbildungen_dokumente').getFullList<Dokument>({
       filter: `organization_id = "${organizationId}"`
     })
     setDokumente(records)
   }
 
   async function loadModule() {
-    const records = await pb.collection('ausbildungen_module').getFullList({
+    const records = await pb.collection('ausbildungen_module').getFullList<Modul>({
       filter: `organization_id = "${organizationId}"`,
       sort: '-created'
     })
@@ -79,7 +79,7 @@ export function useAusbildungenData(organizationId: string | undefined) {
   }
 
   async function loadModulTermine() {
-    const records = await pb.collection('ausbildungen_module_termine').getFullList({
+    const records = await pb.collection('ausbildungen_module_termine').getFullList<ModulTermin>({
       filter: `organization_id = "${organizationId}"`,
       expand: 'modul_id'
     })
@@ -87,7 +87,7 @@ export function useAusbildungenData(organizationId: string | undefined) {
   }
 
   async function loadModulProgress() {
-    const records = await pb.collection('ausbildungen_module_progress').getFullList({
+    const records = await pb.collection('ausbildungen_module_progress').getFullList<ModulProgress>({
       filter: `organization_id = "${organizationId}"`
     })
     setModulProgress(records)

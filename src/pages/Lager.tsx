@@ -587,7 +587,7 @@ export default function Lager() {
       })
       
       if (!locs.length) {
-        const defaultLoc = await pb.collection('inventory_locations').create({
+        const defaultLoc = await pb.collection('inventory_locations').create<Location>({
           name: 'Lager',
           icon: 'box',
           organization_id: user?.organization_id
@@ -1833,7 +1833,7 @@ export default function Lager() {
         qtyMap.set(s.item_id, (qtyMap.get(s.item_id) || 0) + (s.quantity || 0))
       }
 
-      const audit = await pb.collection('inventory_audits').create({
+      const audit = await pb.collection('inventory_audits').create<Audit>({
         audit_date: new Date().toISOString(),
         status: 'offen',
         user: user?.email || user?.name || user?.id,

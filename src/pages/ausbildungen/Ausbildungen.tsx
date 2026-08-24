@@ -782,7 +782,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
 
   async function loadTermine() {
     try {
-      const records = await pb.collection('ausbildungen_termine').getFullList({
+      const records = await pb.collection('ausbildungen_termine').getFullList<Termin>({
         filter: `organization_id = "${user?.organization_id}"`,
         sort: '-start_datetime',
         requestKey: `loadTermine-${Date.now()}`
@@ -823,7 +823,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
 
   async function loadTerminTeilnehmer() {
     try {
-      const records = await pb.collection('ausbildungen_termine_user').getFullList({
+      const records = await pb.collection('ausbildungen_termine_user').getFullList<TerminTeilnehmer>({
         sort: 'created',
         requestKey: `loadTerminTeilnehmer-${Date.now()}`
       })
@@ -835,7 +835,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
 
   async function loadDokumente() {
     try {
-      const records = await pb.collection('ausbildungen_dokumente').getFullList({
+      const records = await pb.collection('ausbildungen_dokumente').getFullList<Dokument>({
         filter: `organization_id = "${user?.organization_id}"`,
         sort: '-created',
         requestKey: `loadDokumente-${Date.now()}`
@@ -848,7 +848,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
 
   async function loadModule() {
     try {
-      const records = await pb.collection('ausbildungen_module').getFullList({
+      const records = await pb.collection('ausbildungen_module').getFullList<Modul>({
         filter: `organization_id = "${user?.organization_id}"`,
         sort: 'name',
         requestKey: `loadModule-${Date.now()}`
@@ -861,7 +861,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
 
   async function loadModulTermine() {
     try {
-      const records = await pb.collection('ausbildungen_module_termine').getFullList({
+      const records = await pb.collection('ausbildungen_module_termine').getFullList<ModulTermin>({
         expand: 'modul_id',
         sort: '-created',
         requestKey: `loadModulTermine-${Date.now()}`
@@ -874,7 +874,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
 
   async function loadModulProgress() {
     try {
-      const records = await pb.collection('ausbildungen_module_progress').getFullList({
+      const records = await pb.collection('ausbildungen_module_progress').getFullList<ModulProgress>({
         sort: 'created',
         requestKey: `loadModulProgress-${Date.now()}`
       })
@@ -886,7 +886,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
 
   async function loadKonzepte() {
     try {
-      const records = await pb.collection('ausbildungen_konzepte').getFullList({
+      const records = await pb.collection('ausbildungen_konzepte').getFullList<Ausbildungskonzept>({
         filter: `organization_id = "${user?.organization_id}"`,
         sort: '-created',
         requestKey: `loadKonzepte-${Date.now()}`

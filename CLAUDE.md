@@ -172,3 +172,29 @@ Dark-Mode-Varianten sind ebenfalls gesetzt (`#0f0a07` / `#9a8a78`).
 - Bounce-Animationen
 - Emojis in der UI
 - Verspielt wirkende Elemente jeder Art
+
+
+---
+
+## Prüfung vor dem Veröffentlichen
+
+Responda wird im Einsatz benutzt, und Netlify veröffentlicht jeden Push auf `main`
+direkt. Änderungen müssen deshalb durch das Prüfnetz:
+
+```bash
+npm run verify     # Typprüfung + Tests + Build — das, was auch die CI ausführt
+npm run typecheck  # nur Typen
+npm run test       # nur Tests (vitest)
+npm run test:watch # beim Entwickeln
+```
+
+- `npm run build` prüft die Typen mit. Der Bestand ist **fehlerfrei** — neue
+  Typfehler blockieren ab sofort den Build und damit die Veröffentlichung.
+- Sicherheitskritische Rechenteile haben Prüffälle, die in der CI laufen:
+  `src/lib/eks/atemschutz.ts` (FwDV 7) und `src/lib/gs1.ts` (DataMatrix).
+  Die Prüffälle stehen in `*selbsttest.ts` und sind auch in der App aufrufbar;
+  `src/lib/__tests__/` bindet sie an vitest an.
+- **Neue Rechenlogik bekommt Prüffälle** — besonders alles, woran im Einsatz eine
+  Entscheidung hängt.
+- `.github/workflows/pruefung.yml` prüft jeden Pull Request und jeden Push auf
+  `main`: Typen, Tests, Build und die Syntax der `pb_hooks`.

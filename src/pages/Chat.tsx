@@ -150,7 +150,7 @@ export default function Chat() {
       const msgs = await Promise.all(result.items.map(async m => {
         let text = '🔒'
         try { text = await decryptData(key, m.encrypted_content) } catch {}
-        return { ...m, sender_name: (m.expand as any)?.sender?.name || '?', decrypted: text } as Message
+        return { ...m, sender_name: (m.expand as any)?.sender?.name || '?', decrypted: text } as unknown as Message
       }))
       setMessages(msgs)
     } catch (e) { console.error(e) }
@@ -166,7 +166,7 @@ export default function Chat() {
           ...e.record,
           sender_name: e.record.expand?.sender?.name || '?',
           decrypted: text,
-        } as Message])
+        } as unknown as Message])
       }
     }, { expand: 'sender' }).then(u => { unsubRef.current = u })
   }
@@ -230,7 +230,7 @@ export default function Chat() {
           organization: user.organization_id,
         })
       }
-      const newCh: Channel = { ...channel, other_user_name: targetUser.name, members: [user.id, targetUser.id], is_direct: true }
+      const newCh: Channel = { ...channel, other_user_name: targetUser.name, members: [user.id, targetUser.id], is_direct: true } as unknown as Channel
       setChannels(prev => [newCh, ...prev])
       selectChannel(newCh)
     } catch (e) { console.error(e) }
