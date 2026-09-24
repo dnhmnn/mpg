@@ -22,6 +22,7 @@ import AVV from './pages/AVV'
 import OrgPublicLayout from './pages/public/OrgPublicLayout'
 import OrgLanding from './pages/public/OrgLanding'
 import OrgPatienten from './pages/public/OrgPatienten'
+import OrgSchnelldoku from './pages/public/OrgSchnelldoku'
 import OrgProduktausgabe from './pages/public/OrgProduktausgabe'
 import OrgCirs from './pages/public/OrgCirs'
 import OrgFormular from './pages/public/OrgFormular'
@@ -75,6 +76,7 @@ function App() {
         <Route path="/:orgCode" element={<OrgPublicLayout />}>
           <Route index element={<OrgLanding />} />
           <Route path="patienten" element={<OrgPatienten />} />
+          <Route path="schnelldoku" element={<OrgSchnelldoku />} />
           <Route path="produktausgabe" element={<OrgProduktausgabe />} />
           <Route path="cirs" element={<OrgCirs />} />
           <Route path="formular/:templateId" element={<OrgFormular />} />

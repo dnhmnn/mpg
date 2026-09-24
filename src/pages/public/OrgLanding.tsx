@@ -19,6 +19,18 @@ const STATIC_ITEMS = [
     ),
   },
   {
+    id: 'schnelldoku',
+    to: 'schnelldoku',
+    label: 'Schnelldokumentation',
+    desc: 'Diktieren statt tippen — wenn die Hand am Patienten ist',
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#600812" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="9" y="2" width="6" height="11" rx="3"/>
+        <path d="M5 10v1a7 7 0 0014 0v-1M12 18v4M8 22h8"/>
+      </svg>
+    ),
+  },
+  {
     id: 'produktausgabe',
     to: 'produktausgabe',
     label: 'Produktausgabe',
