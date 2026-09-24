@@ -31,3 +31,11 @@ lerna-debug.log*
 .env.local
 .env.production
 .claude/
+
+# iOS / Capacitor — Bauartefakte
+ios/App/App/public/
+ios/App/build/
+ios/App/App.xcodeproj/xcuserdata/
+ios/App/App.xcodeproj/project.xcworkspace/xcuserdata/
+DerivedData/
+*.xcuserstate

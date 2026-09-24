@@ -1,0 +1,98 @@
+# Bauauftrag für Codemagic — Responda für den App Store.
+#
+# WAS HIER PASSIERT:
+#   1. Abhängigkeiten holen (npm ci, damit der Bau reproduzierbar bleibt)
+#   2. Web-App bauen und nach ios/App/App/public übertragen (npx cap sync)
+#   3. Signieren mit dem App-Store-Connect-Schlüssel — Codemagic holt
+#      Zertifikat und Bereitstellungsprofil selbst
+#   4. .ipa bauen und nach TestFlight hochladen
+#
+# VORAUSSETZUNGEN, die in Codemagic hinterlegt sein müssen:
+#   - Eine Integration "App Store Connect" mit deinem API-Schlüssel
+#     (Issuer ID, Key ID, .p8-Datei). Der Name der Integration muss unten
+#     bei app_store_connect eingetragen sein.
+#   - Die App muss in App Store Connect angelegt sein, mit derselben
+#     Bundle-ID wie unten.
+
+workflows:
+  ios-appstore:
+    name: Responda — iOS für TestFlight
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+
+    environment:
+      vars:
+        BUNDLE_ID: "systems.responda.app"
+        XCODE_WORKSPACE: "ios/App/App.xcodeproj"
+        XCODE_SCHEME: "App"
+      node: 20
+      xcode: latest
+
+    # Name der App-Store-Connect-Integration aus den Codemagic-Einstellungen.
+    # Heißt sie bei dir anders, hier anpassen.
+    integrations:
+      app_store_connect: responda-asc
+
+    triggering:
+      events:
+        - tag
+      # Gebaut wird NUR auf einen Versionsstempel, nicht auf jeden Push.
+      # Ein Bau, der bei jeder Änderung nach TestFlight geht, verbrennt
+      # Prüfzeit und verwirrt die Tester.
+      tag_patterns:
+        - pattern: 'v*'
+          include: true
+
+    scripts:
+      - name: Abhängigkeiten
+        script: npm ci
+
+      - name: Prüffälle
+        # Bricht der Prüfstand, wird nicht ausgeliefert. Die App wird im
+        # Einsatz benutzt — ein roter Prüffall ist ein Grund anzuhalten.
+        script: npm test
+
+      - name: Web-App bauen
+        script: npm run build
+
+      - name: Nach iOS übertragen
+        script: npx cap sync ios
+
+      - name: Baunummer setzen
+        # Jede Auslieferung braucht eine höhere Nummer als die vorige, sonst
+        # nimmt App Store Connect sie nicht an. $BUILD_NUMBER zählt Codemagic
+        # je Bauauftrag selbst hoch — das genügt und braucht keine Abfrage.
+        script: |
+          cd ios/App
+          agvtool new-version -all "$BUILD_NUMBER"
+
+      - name: Signieren
+        script: |
+          keychain initialize
+          app-store-connect fetch-signing-files "$BUNDLE_ID" \
+            --type IOS_APP_STORE --create
+          keychain add-certificates
+          xcode-project use-profiles
+
+      - name: .ipa bauen
+        script: |
+          xcode-project build-ipa \
+            --project "$XCODE_WORKSPACE" \
+            --scheme "$XCODE_SCHEME"
+
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
+        # Erst nach eigener Prüfung in den Store — nicht automatisch.
+        submit_to_app_store: false
+      email:
+        recipients:
+          - heilmanndaniel47@icloud.com
+        notify:
+          success: true
+          failure: true

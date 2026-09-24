@@ -2,6 +2,28 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App'
 
+// Im nativen Bau KEIN Service Worker.
+//
+// Die PWA-Registrierung ist im Browser richtig, in der Capacitor-WebView aber
+// schädlich: dort liegen die Dateien ohnehin im Programmpaket, und nach einem
+// App-Update kann der Zwischenspeicher des Service Workers den alten Stand
+// ausliefern — die App zeigt dann trotz neuer Fassung das Alte.
+//
+// Nebenbei räumt das den api-cache mit, der Serverantworten 24 Stunden lang
+// aufbewahrt. Auf einem Gerät mit Patientendaten ist das nichts, was man
+// ungefragt liegen lassen will.
+declare global {
+  interface Window { Capacitor?: { isNativePlatform?: () => boolean } }
+}
+if (window.Capacitor?.isNativePlatform?.()) {
+  navigator.serviceWorker?.getRegistrations?.()
+    .then(rs => rs.forEach(r => r.unregister()))
+    .catch(() => {})
+  globalThis.caches?.keys?.()
+    .then(ks => ks.forEach(k => globalThis.caches.delete(k)))
+    .catch(() => {})
+}
+
 // Error Boundary Component
 class ErrorBoundary extends React.Component<
   { children: React.ReactNode },
