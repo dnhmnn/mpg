@@ -23,6 +23,7 @@ import OrgPublicLayout from './pages/public/OrgPublicLayout'
 import OrgLanding from './pages/public/OrgLanding'
 import OrgPatienten from './pages/public/OrgPatienten'
 import OrgSchnelldoku from './pages/public/OrgSchnelldoku'
+import Installieren from './pages/public/Installieren'
 import OrgProduktausgabe from './pages/public/OrgProduktausgabe'
 import OrgCirs from './pages/public/OrgCirs'
 import OrgFormular from './pages/public/OrgFormular'
@@ -68,6 +69,8 @@ function App() {
         <Route path="/patienten" element={<Patienten />} />
         <Route path="/protokoll/:patientId" element={<ProtokollBearbeiten />} />
         <Route path="/p/:code" element={<PatientView />} />
+        {/* Installationsseite — öffentlich, ohne Anmeldung */}
+        <Route path="/app" element={<Installieren />} />
         <Route path="/chat" element={<Chat />} />
         <Route path="/supervisor" element={<Supervisor />} />
         <Route path="/einsaetze" element={<Einsaetze />} />
