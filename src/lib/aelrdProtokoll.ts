@@ -23,3 +23,21 @@ export function aelrdDrucken(payload: Payload, kopf: Kopfdaten = {}): boolean {
   fenster.document.close()
   return true
 }
+
+/**
+ * Der leere Vordruck: derselbe Bogen ohne Einsatzdaten, zum Ausdrucken und
+ * handschriftlichen Ausfuellen. Die Organisation bleibt stehen, damit der
+ * Stapel im Fahrzeug schon beschriftet ist.
+ */
+export function aelrdVordruck(organisation = ''): string {
+  return aelrdHtml({}, { organisation, protokollNr: '', erstellt: '' })
+}
+
+/** Oeffnet den leeren Vordruck in einem neuen Fenster. false, wenn geblockt. */
+export function aelrdVordruckDrucken(organisation = ''): boolean {
+  const fenster = window.open('', '_blank', 'width=1000,height=750')
+  if (!fenster) return false
+  fenster.document.write(aelrdVordruck(organisation))
+  fenster.document.close()
+  return true
+}

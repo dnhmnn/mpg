@@ -4,6 +4,7 @@
 import {
   MASS,
   block,
+  schreibflaeche,
   escapeHtml,
   option,
   raster,
@@ -43,9 +44,9 @@ function mwPaar(p: Payload, a: string, b: string, titel: string, einheit: string
 
 function kopfzeile(k: Kopfdaten): string {
   return `<div class="kopf">
-    <span>Organisation: <b>${escapeHtml(k.organisation ?? '')}</b></span>
-    <span>Protokoll-Nr.: <b>${escapeHtml(k.protokollNr ?? '')}</b></span>
-    <span class="stempel">${escapeHtml(k.erstellt ?? '')}</span>
+    <span class="zeile">Organisation: <b>${escapeHtml(k.organisation ?? '')}</b></span>
+    <span class="zeile">Protokoll-Nr.: <b>${escapeHtml(k.protokollNr ?? '')}</b></span>
+    <span class="zeile">Datum / Uhrzeit: <b>${escapeHtml(k.erstellt ?? '')}</b></span>
   </div>`
 }
 
@@ -104,14 +105,13 @@ function medikation(p: Payload): string {
        <span class="md-k">${hak(p, 'keine_medikation', 'keine Medikation')}</span>
      </div>
      <div class="md-liste" style="height:${HOEHEN2.mdListe}pt">
-       ${zeilen
-         .map(
-           (z) =>
-             `<div class="md-z"><b>${escapeHtml(z.zeit ?? '')}</b><b>${escapeHtml(z.wirkstoff ?? '')}</b><b>${escapeHtml(
-               z.dosis ?? '',
-             )}</b><b>${escapeHtml(z.applikation ?? '')}</b></div>`,
-         )
-         .join('')}
+       ${schreibflaeche(
+         zeilen
+           .map((z) => [z.zeit, z.wirkstoff, z.dosis, z.applikation].filter(Boolean).join('   '))
+           .join('\n'),
+         13,
+         'md-f',
+       )}
      </div>
      <div class="md-lyse" style="height:${HOEHEN2.mdLyse}pt">
        <span class="bf-t">Lysetherapie</span>
@@ -289,7 +289,7 @@ function uebergabeBefund(p: Payload): string {
      </div>
      <div class="unt" style="height:${HOEHEN2.ubUntersuchung}pt">
        ${ueberschrift('Untersuchung Übergabe')}
-       <div class="frei gross">${escapeHtml(w(p, 'ub_untersuchung'))}</div>
+       ${schreibflaeche(w(p, 'ub_untersuchung'), 3, 'unt-f')}
      </div>`,
   )
 }
@@ -340,28 +340,24 @@ function neurologieUebergabe(p: Payload): string {
 function fussbloecke(p: Payload): string {
   return `${block(
     SEITE2.besonderheiten,
-    `<div class="fb"><span class="kl">Einsatzverlauf - Besonderheiten</span><div class="frei gross">${escapeHtml(
-      w(p, 'besonderheiten'),
-    )}</div></div>`,
+    `<div class="fb"><span class="kl">Einsatzverlauf - Besonderheiten</span>${schreibflaeche(w(p, 'besonderheiten'), 5, 'unt-f')}</div>`,
   )}
   ${block(
     SEITE2.wertsachen,
-    `<div class="fb"><span class="kl">Wertsachen</span><div class="frei gross"><b>${escapeHtml(
-      w(p, 'wertsachen'),
-    )}</b></div><div class="unterschrift"><span class="kl">Unterschrift</span></div></div>`,
+    `<div class="fb"><span class="kl">Wertsachen</span>${schreibflaeche(w(p, 'wertsachen'), 5, 'unt-f')}<div class="unterschrift"><span class="kl">Unterschrift</span></div></div>`,
   )}
   ${block(
     SEITE2.uebergabeAn,
     `<div class="fb">
-       <span class="kl">Übergabe an</span><div class="fb-w">${escapeHtml(w(p, 'uebergabe_an'))}</div>
-       <span class="kl">Übergabeort</span><div class="fb-w">${escapeHtml(w(p, 'uebergabeort'))}</div>
+       <span class="kl">Übergabe an</span><div class="fb-w linie">${escapeHtml(w(p, 'uebergabe_an'))}</div>
+       <span class="kl">Übergabeort</span><div class="fb-w linie">${escapeHtml(w(p, 'uebergabeort'))}</div>
      </div>`,
   )}
   ${block(
     SEITE2.bemerkungen,
     `<div class="fb">
-       <span class="kl">ÄLRD Delegationen</span><div class="frei">${escapeHtml(w(p, 'aelrd_delegationen'))}</div>
-       <span class="kl">Bemerkungen (z.B. Hausarzt)</span><div class="frei">${escapeHtml(w(p, 'bemerkungen'))}</div>
+       <span class="kl">ÄLRD Delegationen</span>${schreibflaeche(w(p, 'aelrd_delegationen'), 2, 'unt-f')}
+       <span class="kl">Bemerkungen (z.B. Hausarzt)</span>${schreibflaeche(w(p, 'bemerkungen'), 3, 'unt-f')}
        <div class="fb-naca"><span class="kl">NACA SCORE Übergabe:</span> <b>${escapeHtml(
          w(p, 'naca_uebergabe'),
        )}</b><span class="fb-nf">${hak(p, 'notarzt_nachgefordert', 'Notarzt nachgefordert')}</span></div>
@@ -380,6 +376,7 @@ export const STIL_SEITE2 = `
 
 .md-kopf{display:flex;justify-content:space-between;align-items:baseline;padding-right:4pt;overflow:hidden}
 .md-liste{padding:1pt 3pt;overflow:hidden}
+.md-f .inhalt{font-size:${MASS.beschriftung}pt;line-height:8.44pt;font-weight:bold}
 .md-z{display:flex;gap:6pt;font-size:${MASS.beschriftung}pt;line-height:1.5}
 .md-lyse{display:flex;align-items:flex-start;gap:4pt;padding:0.5pt 3pt;border-top:${MASS.linie}pt solid #000;overflow:hidden}
 .md-lz{margin-left:auto;text-align:right;font-size:${MASS.beschriftung}pt}
@@ -388,14 +385,17 @@ export const STIL_SEITE2 = `
 .re-l{flex:1 1 60%}
 .re-r{flex:1 1 40%}
 .re-z{display:flex;gap:4pt;font-size:${MASS.klein}pt;line-height:1.35}
+.re-z b{flex:1 1 auto;border-bottom:${MASS.linie}pt solid #000}
 
 .ma-kopf{display:flex;justify-content:space-between;align-items:baseline;padding-right:4pt;overflow:hidden}
 .ma-b{padding:0.5pt 3pt;border-top:${MASS.linie}pt solid #000;overflow:hidden}
 .ma-t{font-size:${MASS.beschriftung}pt;margin-top:0.5pt}
 .ma-u{display:flex;align-items:baseline;gap:3pt;margin-top:0.5pt}
-.ma-z{font-size:${MASS.klein}pt;line-height:1.4}
+.ma-z{font-size:${MASS.klein}pt;line-height:1.4;display:flex;gap:3pt;align-items:baseline}
+.ma-z b{flex:0 0 26pt;border-bottom:${MASS.linie}pt solid #000;min-height:6pt}
 .ma-w{display:flex;gap:3pt;margin-top:0.5pt}
-.ma-f{display:flex;flex-direction:column;flex:1 1 0;min-width:0;border-bottom:${MASS.linie}pt solid #000;font-size:${MASS.klein}pt}
+.ma-f{display:flex;flex-direction:column-reverse;flex:1 1 0;min-width:0;border-bottom:${MASS.linie}pt solid #000;font-size:${MASS.klein}pt}
+.ma-f b{min-height:7pt}
 .ma-zwei{display:flex;gap:4pt;height:100%}
 .ma-zwei > *{flex:1 1 0;min-width:0}
 .ma-pacer{border-left:${MASS.linie}pt solid #000;padding-left:3pt;flex:0 0 42%}
@@ -405,6 +405,8 @@ export const STIL_SEITE2 = `
 .nr-l{flex:1 1 auto;min-width:0}
 .fb{padding:1pt 3pt;height:100%;display:flex;flex-direction:column}
 .fb-w{font-size:${MASS.ueberschrift}pt;margin-bottom:3pt}
+.fb-w.linie{border-bottom:${MASS.linie}pt solid #000;min-height:11pt}
+.fb-fl{flex:1 1 auto;border-bottom:none}
 .fb-naca{margin-top:auto;display:flex;align-items:baseline;gap:4pt;font-size:${MASS.ueberschrift}pt}
 .fb-nf{margin-left:auto}
 .unterschrift{margin-top:auto;border-top:${MASS.linie}pt solid #000;text-align:center}

@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { AELRD_FELDER, aelrdFeld, aelrdPflichtfelder, ohneDiviEntsprechung, schluessel } from '../../katalog/aelrd'
 import { BLATT, escapeHtml, istGewaehlt } from '../aelrdDruck'
 import { HOEHEN, HOEHEN2, SEITE1, SEITE2 } from '../aelrdLayout'
-import { aelrdHtml } from '../aelrdProtokoll'
+import { aelrdHtml, aelrdVordruck } from '../aelrdProtokoll'
 import { feldFinden } from '../../katalog/divi'
 
 describe('Feldkatalog des ÄLRD-Bogens', () => {
@@ -189,3 +189,41 @@ describe('istGewaehlt', () => {
     expect(istGewaehlt(undefined, 'frei')).toBe(false)
   })
 })
+
+describe('Leerer Vordruck', () => {
+  it('traegt keine Einsatzdaten', () => {
+    const vordruck = aelrdVordruck()
+    const gefuellt = aelrdHtml({ name: 'Mustermann', einsatz_nr: '6951', notfallgeschehen: 'Meldebild' })
+    for (const wert of ['Mustermann', '6951', 'Meldebild']) {
+      expect(gefuellt).toContain(wert)
+      expect(vordruck).not.toContain(wert)
+    }
+  })
+
+  it('zeigt trotzdem den ganzen Bogen', () => {
+    const vordruck = aelrdVordruck()
+    expect(vordruck.match(/class="blatt"/g)?.length).toBe(2)
+    for (const ueberschrift of ['Erstbefund', 'Neurologie', 'Verletzungen', 'Maßnahmen', 'Übergabe']) {
+      expect(vordruck).toContain(ueberschrift)
+    }
+  })
+
+  it('laesst alle Kaestchen leer', () => {
+    expect(aelrdVordruck()).not.toContain('class="kreis an"')
+  })
+
+  it('gibt den Freitextfeldern Schreiblinien', () => {
+    // Ohne sie ist auf dem leeren Bogen nicht zu sehen, wohin geschrieben wird.
+    const vordruck = aelrdVordruck()
+    expect(vordruck).toContain('class="lz"')
+    expect((vordruck.match(/class="lz"/g) ?? []).length).toBeGreaterThan(30)
+  })
+
+  it('nimmt die Organisation auf, laesst Protokoll-Nr. und Datum aber frei', () => {
+    const vordruck = aelrdVordruck('BRK Ansbach')
+    expect(vordruck).toContain('BRK Ansbach')
+    expect(vordruck).toContain('Protokoll-Nr.:')
+    expect(vordruck).toContain('Datum / Uhrzeit:')
+  })
+})
+

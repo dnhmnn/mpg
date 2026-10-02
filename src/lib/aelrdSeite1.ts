@@ -7,6 +7,7 @@
 import {
   MASS,
   block,
+  schreibflaeche,
   escapeHtml,
   option,
   raster,
@@ -56,9 +57,9 @@ function mwPaar(p: Payload, idA: string, idB: string, titel: string, einheit: st
 
 function kopfzeile(k: Kopfdaten): string {
   return `<div class="kopf">
-    <span>Organisation: <b>${escapeHtml(k.organisation ?? '')}</b></span>
-    <span>Protokoll-Nr.: <b>${escapeHtml(k.protokollNr ?? '')}</b></span>
-    <span class="stempel">${escapeHtml(k.erstellt ?? '')}</span>
+    <span class="zeile">Organisation: <b>${escapeHtml(k.organisation ?? '')}</b></span>
+    <span class="zeile">Protokoll-Nr.: <b>${escapeHtml(k.protokollNr ?? '')}</b></span>
+    <span class="zeile">Datum / Uhrzeit: <b>${escapeHtml(k.erstellt ?? '')}</b></span>
   </div>`
 }
 
@@ -167,7 +168,7 @@ function notfallgeschehen(p: Payload): string {
          aelrdFeld('ersthelfermassnahmen')?.optionen?.find((o) => o.wert === p.ersthelfermassnahmen)?.text ?? '',
        )}</b></span>
      </div>
-     <div class="ng-text">${escapeHtml(w(p, 'notfallgeschehen'))}</div>
+     ${schreibflaeche(w(p, 'notfallgeschehen'), 24, 'ng-text')}
      <div class="ng-fuss">
        <span class="kl">AZ des Pat. vor Ereignis</span>
        <span class="ng-az">${escapeHtml(w(p, 'az_vor_ereignis'))}</span>
@@ -289,7 +290,7 @@ function neurologie(p: Payload): string {
 
      <div class="unt" style="height:${HOEHEN.nrUntersuchung}pt">
        ${ueberschrift('Untersuchung')}
-       <div class="frei gross">${escapeHtml(w(p, 'untersuchung'))}</div>
+       ${schreibflaeche(w(p, 'untersuchung'), 2, 'unt-f')}
      </div>
 
      <div class="bf psy" style="height:${HOEHEN.nrPsyche}pt">
@@ -406,40 +407,43 @@ export const STIL_SEITE1 = `
 .kl.rechts{display:block;text-align:right}
 .rm{height:11pt;border-bottom:${MASS.linie}pt solid #000}
 .sb{display:flex;justify-content:space-between;align-items:baseline;margin-top:2pt}
-.sb-g{font-weight:bold}
+.sb-g{font-weight:normal}
 .vm{padding:1pt 3pt}
 .zeiten{margin-top:1pt}
 
 .ng-kopf{display:flex;justify-content:space-between;align-items:baseline;padding-right:4pt}
 .ng-eh{font-size:${MASS.beschriftung}pt}
-.ng-text{font-size:7.4pt;white-space:pre-wrap;padding:2pt 4pt;line-height:1.35}
+.ng-text{margin:0 4pt;height:206pt;overflow:hidden}
+.ng-text .inhalt{font-size:7.4pt;line-height:8.44pt}
+.unt-f .inhalt{font-size:${MASS.beschriftung}pt;line-height:8.44pt}
 .ng-fuss{position:absolute;left:0;right:0;bottom:1pt;display:flex;align-items:baseline;gap:6pt;padding:0 4pt}
 .ng-az{font-size:${MASS.beschriftung}pt;font-weight:bold;flex:1 1 auto}
 
 .eb-kopf{display:flex;justify-content:space-between;align-items:baseline;padding-right:4pt;overflow:hidden}
 .eb-zp{display:inline-flex;align-items:baseline;gap:3pt}
-.eb-zw{font-size:9.6pt;font-weight:bold;border:${MASS.rahmen}pt solid #000;padding:0 4pt;min-width:48pt;display:inline-block;text-align:center}
+.eb-zw{display:inline-block;font-size:9.6pt;font-weight:bold;border:${MASS.rahmen}pt solid #000;padding:0 4pt;min-width:56pt;height:12pt;line-height:11pt;text-align:center;vertical-align:middle}
 .bf{display:flex;align-items:flex-start;gap:3pt;padding:0.3pt 2.5pt;border-top:${MASS.linie}pt solid #000;overflow:hidden}
 .bf-t{font-size:6.7pt;flex:0 0 40pt;line-height:1.1}
 .bf .rst{flex:1 1 auto}
 .bf-frei{padding:0 3pt;height:8pt;overflow:hidden}
-.frei{display:block;font-size:${MASS.beschriftung}pt;min-height:5pt;white-space:pre-wrap}
-.frei.gross{min-height:17pt}
+.frei{display:block;font-size:${MASS.beschriftung}pt;min-height:5pt;white-space:pre-wrap;border-bottom:${MASS.linie}pt solid #000}
+.frei.gross{min-height:17pt;border-bottom:none}
 .krsl{border-top:${MASS.linie}pt solid #000;overflow:hidden;display:flex;flex-direction:column}
 .krsl-o{display:flex;align-items:flex-start;gap:3pt;padding:0.3pt 2.5pt;flex:1 1 auto;min-height:0}
 .krsl-u{padding:0 2.5pt 0.5pt;border-top:${MASS.linie}pt solid #000;flex-shrink:0}
 .kr-l{flex:0 0 88pt}
 .kr-r{flex:1 1 auto;border-left:${MASS.linie}pt solid #000;padding-left:3pt}
 .kr-z{display:flex;gap:4pt;font-size:${MASS.beschriftung}pt;line-height:1.2}
+.kr-z b:first-of-type{flex:0 0 28pt;border-bottom:${MASS.linie}pt solid #000}
 .kr-rp{margin-left:auto}
 
 .mwi{border-top:${MASS.rahmen}pt solid #000;padding:0.6pt 2pt;overflow:hidden}
 .mw-reihe{display:flex;border-top:${MASS.linie}pt solid #000}
-.zelle-mw{flex:1 1 0;min-width:0;border-right:${MASS.linie}pt solid #000;padding:0 2pt;display:flex;flex-direction:column}
+.zelle-mw{flex:1 1 0;min-width:0;border-right:${MASS.linie}pt solid #000;padding:0 2pt;display:flex;flex-direction:column;line-height:1.05}
 .zelle-mw.breit{flex:1.6 1 0}
 .zelle-mw:last-child{border-right:none}
 .z-b{font-size:${MASS.klein}pt}
-.z-w{font-size:9.6pt;font-weight:bold;min-height:9.6pt;line-height:1.1}
+.z-w{font-size:9.6pt;font-weight:bold;min-height:9.6pt;line-height:1}
 .z-s{font-weight:normal;margin:0 2pt}
 .z-e{font-size:${MASS.klein}pt;text-align:right}
 
@@ -452,6 +456,7 @@ export const STIL_SEITE1 = `
 .pup{border-top:${MASS.rahmen}pt solid #000;padding:0.3pt 3pt;overflow:hidden}
 .pup-k,.pup-z{display:flex;gap:4pt}
 .pup-k > *,.pup-z > *{flex:1 1 0;font-size:${MASS.beschriftung}pt}
+.pup-z > span:not(.kl){border-bottom:${MASS.linie}pt solid #000;min-height:7pt}
 .pup-k .bf-t{flex:1 1 0}
 .pup-s{font-size:${MASS.beschriftung}pt;text-align:center}
 .auff{border-top:${MASS.rahmen}pt solid #000}
@@ -471,11 +476,15 @@ export const STIL_SEITE1 = `
 .vrl-links{flex:0 0 50%;border-right:${MASS.linie}pt solid #000;padding:0.6pt 3pt}
 .vrl-rechts{flex:1 1 auto;padding:0.6pt 3pt;min-width:0;overflow:hidden}
 .vrl-t{font-size:${MASS.beschriftung}pt;border-bottom:${MASS.linie}pt solid #000;display:inline-block;margin-bottom:0.5pt}
-.vrl-u{font-size:${MASS.beschriftung}pt;border-bottom:${MASS.linie}pt solid #000;display:inline-block;margin:1pt 0 0.5pt}
-.vrl-zeile{display:flex;justify-content:space-between;font-size:${MASS.beschriftung}pt;line-height:1.25}
+.vrl-u{font-size:${MASS.beschriftung}pt;border-bottom:${MASS.linie}pt solid #000;display:inline-block;margin:0.5pt 0 0.3pt}
+.vrl-zeile{display:flex;justify-content:space-between;gap:4pt;font-size:${MASS.beschriftung}pt;line-height:1.25}
+.vrl-zeile b{flex:1 1 auto;border-bottom:${MASS.linie}pt solid #000}
 .vbr{display:flex;gap:6pt;font-size:${MASS.beschriftung}pt}
-.vrl-herg{border-top:${MASS.linie}pt solid #000;padding:0.3pt 3pt;overflow:hidden}
-.sturz{display:flex;align-items:baseline;gap:4pt}
+.vbr b{display:inline-block;min-width:16pt;border-bottom:${MASS.linie}pt solid #000}
+.vrl-herg{border-top:${MASS.linie}pt solid #000;padding:0.2pt 3pt;overflow:hidden}
+.vrl-herg .vrl-u{margin:0 0 0.2pt}
+.vrl-herg .opt{line-height:1.05}
+.sturz{display:flex;align-items:center;gap:3pt;line-height:1}
 
 .naca{display:flex;align-items:baseline;gap:4pt;padding:3pt 4pt;font-size:${MASS.ueberschrift}pt}
 .news{font-size:${MASS.beschriftung}pt;padding:2pt 4pt}

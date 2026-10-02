@@ -14,7 +14,7 @@ import Unitas from './pages/Unitas'
 import Unitarii from './pages/Unitarii'
 import Patienten from './pages/patienten/Patienten'
 import ProtokollBearbeiten from './pages/ProtokollBearbeiten'
-import DiviProtokoll from './pages/patienten/DiviProtokoll'
+import AelrdProtokoll from './pages/patienten/AelrdProtokoll'
 import Chat from './pages/Chat'
 import Supervisor from './pages/Supervisor'
 import Einsaetze from './pages/Einsaetze'
@@ -69,7 +69,7 @@ function App() {
         <Route path="/unitarii" element={<Unitarii />} />
         <Route path="/patienten" element={<Patienten />} />
         <Route path="/protokoll/:patientId" element={<ProtokollBearbeiten />} />
-        <Route path="/protokoll-2" element={<DiviProtokoll />} />
+        <Route path="/protokoll-2" element={<AelrdProtokoll />} />
         <Route path="/p/:code" element={<PatientView />} />
         {/* Installationsseite — öffentlich, ohne Anmeldung */}
         <Route path="/app" element={<Installieren />} />

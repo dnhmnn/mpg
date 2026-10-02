@@ -152,13 +152,13 @@ body{font-family:Arial,Helvetica,sans-serif;color:#000;font-size:${MASS.option}p
 .ueb{font-size:${MASS.ueberschrift}pt;padding:0.6pt 3pt 0;letter-spacing:0.02em;line-height:1.15}
 
 /* Wert gross und fett, Beschriftung klein und rechts — das Kennzeichen des Bogens. */
-.wz{display:flex;align-items:baseline;justify-content:space-between;gap:3pt;padding:0.4pt 3pt;border-bottom:${MASS.linie}pt solid #000;line-height:1.15}
-.wz-w{font-weight:bold;min-height:9.4pt;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wz{display:flex;align-items:baseline;justify-content:space-between;gap:3pt;padding:0.2pt 3pt;border-bottom:${MASS.linie}pt solid #000;line-height:1.1}
+.wz-w{font-weight:bold;min-height:8.6pt;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .wz-b{font-size:${MASS.klein}pt;white-space:nowrap;flex-shrink:0}
 
 .wk{display:flex;align-items:center;gap:3pt;padding:0.3pt 2pt}
 .wk-b{font-size:${MASS.beschriftung}pt;width:52pt;flex-shrink:0}
-.wk-w{font-size:${MASS.beschriftung}pt;font-weight:bold;border:${MASS.rahmen}pt solid #000;padding:0.4pt 4pt;min-width:44pt;text-align:center;margin-left:auto}
+.wk-w{display:inline-block;font-size:${MASS.beschriftung}pt;font-weight:bold;border:${MASS.rahmen}pt solid #000;padding:0 4pt;min-width:48pt;height:8.4pt;line-height:7pt;text-align:center;margin-left:auto}
 
 .opt{display:inline-flex;align-items:center;gap:1.4pt;font-size:${MASS.option}pt;margin-right:4pt;white-space:nowrap;line-height:1.25}
 .kreis{display:inline-block;width:3.6pt;height:3.6pt;flex-shrink:0;border-radius:50%;border:${MASS.linie * 2}pt solid #000}
@@ -185,8 +185,33 @@ body{font-family:Arial,Helvetica,sans-serif;color:#000;font-size:${MASS.option}p
 .mw-w{font-size:${MASS.wertGross}pt;font-weight:bold;min-height:${MASS.wertGross}pt}
 .mw-e{font-size:${MASS.klein}pt}
 
-.kopf{position:absolute;left:24pt;top:4pt;width:529pt;display:flex;justify-content:space-between;align-items:baseline;font-size:${MASS.beschriftung}pt}
+.kopf{position:absolute;left:24pt;top:3pt;width:529pt;display:flex;justify-content:space-between;align-items:baseline;font-size:${MASS.beschriftung}pt;gap:8pt}
+.kopf .zeile{flex:1 1 0;display:flex;gap:3pt;align-items:baseline}
+.kopf .zeile b{flex:1 1 auto;border-bottom:${MASS.linie}pt solid #000;min-height:7pt}
 .kopf .stempel{font-size:8.9pt;font-weight:bold}
+/* Schreiblinien fuer den leeren Bogen. Echte Elemente statt eines Verlaufs:
+   Chromium skaliert Hintergrundverlaeufe beim PDF-Druck, Linien nicht. */
+.linien{position:relative}
+.linien > .lz{border-bottom:${MASS.linie}pt solid #999;height:8.44pt}
+.linien > .inhalt{position:absolute;left:0;right:0;top:0;padding:0 1pt;white-space:pre-wrap}
 .knopf{position:fixed;bottom:16px;right:16px;background:#600812;color:#fff;border:none;padding:10px 18px;border-radius:8px;font-size:13px;font-weight:bold;cursor:pointer;font-family:inherit;z-index:99}
-@media print{.knopf{display:none}}
+@media print{/* Schreiblinien fuer den leeren Bogen. Echte Elemente statt eines Verlaufs:
+   Chromium skaliert Hintergrundverlaeufe beim PDF-Druck, Linien nicht. */
+.linien{position:relative}
+.linien > .lz{border-bottom:${MASS.linie}pt solid #999;height:8.44pt}
+.linien > .inhalt{position:absolute;left:0;right:0;top:0;padding:0 1pt;white-space:pre-wrap}
+.knopf{display:none}}
 `
+
+/**
+ * Eine beschreibbare Fläche mit Schreiblinien. Auf dem leeren Bogen sieht man
+ * damit, wohin geschrieben wird; ist etwas eingetragen, steht es darüber und
+ * die Linien bleiben als Führung stehen.
+ *
+ * Echte Linienelemente statt eines Hintergrundverlaufs: Chromium skaliert
+ * Verläufe beim PDF-Druck, einzelne Linien nicht.
+ */
+export function schreibflaeche(text: string, zeilen: number, klasse = ''): string {
+  const linien = Array.from({ length: zeilen }, () => '<div class="lz"></div>').join('')
+  return `<div class="linien ${klasse}">${linien}<div class="inhalt">${escapeHtml(text)}</div></div>`
+}
