@@ -1,0 +1,161 @@
+// Ausdruck des Einsatzprotokolls im Layout des bayerischen ÄLRD-Bogens
+// (NIDA/medDV, "EINSATZPROTOKOLL - RD Bayern").
+//
+// Der Bogen ist kein freies Layout, sondern ein festes Raster: jeder Block
+// sitzt auf einer festen Position des A4-Blattes. Deshalb arbeitet dieses
+// Modul mit absoluten Punktkoordinaten statt mit Fluss-Layout — nur so
+// kommt der Ausdruck wirklich 1:1 heraus.
+//
+// Die Koordinaten stammen aus der Vermessung der Vorlage (A4, 595,32 x 841,92 pt).
+// Die Felder kommen aus dem DIVI-7.1-Katalog; wo der Bogen ein Feld zeigt,
+// das 7.1 anders nennt, steht die Zuordnung an der jeweiligen Stelle.
+
+import { feldFinden } from '../katalog/divi'
+
+export type Payload = Record<string, unknown>
+
+// ── Masse der Vorlage ────────────────────────────────────────────────────
+/** Blattmasse in Punkt. */
+export const BLATT = { breite: 595.32, hoehe: 841.92 }
+
+/** Gemessene Gestaltungswerte der Vorlage. */
+export const MASS = {
+  rahmen: 0.72,      // Hauptrahmen der Bloecke
+  linie: 0.24,       // feine Trennlinien
+  ueberschrift: 7.4, // Block-Ueberschrift
+  beschriftung: 5.5, // Feldbeschriftung
+  klein: 4.4,        // kleinste Beschriftung, meist rechts am Feld
+  option: 5.5,       // Optionstexte
+  wert: 8.9,         // eingetragener Wert, fett
+  wertGross: 10.3,   // hervorgehobener Wert, fett
+}
+
+export function escapeHtml(wert: unknown): string {
+  return String(wert ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+}
+
+/** Ist diese Option im Protokoll angekreuzt? */
+export function istGewaehlt(wert: unknown, option: string): boolean {
+  if (Array.isArray(wert)) return wert.map(String).includes(option)
+  return String(wert ?? '') === option
+}
+
+export type Kasten = { x: number; y: number; b: number; h: number }
+
+/** Ein Block auf fester Position. */
+export function block(kasten: Kasten, inhalt: string, randlos = false): string {
+  const rahmen = randlos ? 'none' : `${MASS.rahmen}pt solid #000`
+  return `<div class="blk" style="left:${kasten.x}pt;top:${kasten.y}pt;width:${kasten.b}pt;height:${kasten.h}pt;border:${rahmen}">${inhalt}</div>`
+}
+
+/** Block-Ueberschrift, wie auf dem Bogen: normal gesetzt, nicht fett. */
+export function ueberschrift(text: string): string {
+  return `<div class="ueb">${escapeHtml(text)}</div>`
+}
+
+/**
+ * Das Gestaltungsprinzip des Bogens: der eingetragene Wert steht gross und
+ * fett, seine Beschriftung klein und rechtsbuendig daneben. Leere Felder
+ * zeigen nur die Beschriftung — so wie der Bogen auch leer gedruckt wird.
+ */
+export function wertZeile(wert: unknown, beschriftung: string, gross = false): string {
+  const text = wert === undefined || wert === null || wert === '' ? '' : String(wert)
+  const groesse = gross ? MASS.wertGross : MASS.wert
+  return `<div class="wz"><span class="wz-w" style="font-size:${groesse}pt">${escapeHtml(text)}</span><span class="wz-b">${escapeHtml(beschriftung)}</span></div>`
+}
+
+/** Ein Wert in einem umrandeten Kaestchen mit Beschriftung darunter — die Zeitenleiste. */
+export function wertKasten(wert: unknown, beschriftung: string): string {
+  const text = wert === undefined || wert === null || wert === '' ? '' : String(wert)
+  return `<div class="wk"><span class="wk-b">${escapeHtml(beschriftung)}</span><span class="wk-w">${escapeHtml(text)}</span></div>`
+}
+
+/** Eine Option: runder Knopf fuer Einfachwahl, eckiges Kaestchen fuer Mehrfachwahl. */
+export function option(text: string, an: boolean, rund = true): string {
+  return `<span class="opt"><span class="${rund ? 'kreis' : 'eck'}${an ? ' an' : ''}"></span>${escapeHtml(text)}</span>`
+}
+
+/**
+ * Eine Optionsreihe aus einem Katalogfeld. Der Bogen zeigt immer alle
+ * Optionen — auch die nicht gewaehlten, sonst stuende im Protokoll eine
+ * andere Auswahl als vor Ort zur Wahl stand.
+ */
+export function optionen(feldId: string, payload: Payload, spalten = 0): string {
+  const feld = feldFinden(feldId)
+  if (!feld || !feld.optionen) return ''
+  const wert = payload[feldId]
+  const rund = feld.typ !== 'mehrfach'
+  const inhalt = feld.optionen.map((o) => option(o.text, istGewaehlt(wert, o.wert), rund)).join('')
+  const stil = spalten > 0 ? ` style="column-count:${spalten}"` : ''
+  return `<div class="opts"${stil}>${inhalt}</div>`
+}
+
+/** Beschriftete Optionsreihe: Beschriftung links, Optionen rechts daneben. */
+export function optionsZeile(beschriftung: string, feldId: string, payload: Payload, spalten = 0): string {
+  return `<div class="oz"><span class="oz-b">${escapeHtml(beschriftung)}</span><span class="oz-o">${optionen(feldId, payload, spalten)}</span></div>`
+}
+
+/** Die Schmerzskala des Bogens: eine Reihe verbundener Knoepfe von 0 bis 10. */
+export function schmerzskala(feldId: string, payload: Payload): string {
+  const wert = payload[feldId]
+  const knoepfe = Array.from({ length: 11 }, (_, i) =>
+    `<span class="sk-p${String(wert) === String(i) ? ' an' : ''}"></span>`,
+  ).join('')
+  return `<div class="sk">${knoepfe}<div class="sk-z"><span>0</span><span>5</span><span>10</span></div></div>`
+}
+
+/** Ein Messwert in der Werteleiste: grosse fette Zahl, Beschriftung darueber, Einheit dahinter. */
+export function messwert(beschriftung: string, wert: unknown, einheit: string): string {
+  const text = wert === undefined || wert === null || wert === '' ? '' : String(wert)
+  return `<div class="mw"><span class="mw-b">${escapeHtml(beschriftung)}</span><span class="mw-w">${escapeHtml(text)}</span><span class="mw-e">${escapeHtml(einheit)}</span></div>`
+}
+
+export const STIL = `
+*{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+html,body{background:#fff}
+body{font-family:Arial,Helvetica,sans-serif;color:#000}
+@page{size:A4 portrait;margin:0}
+.blatt{position:relative;width:${BLATT.breite}pt;height:${BLATT.hoehe}pt;overflow:hidden;background:#fff}
+.blatt + .blatt{page-break-before:always}
+.blk{position:absolute;overflow:hidden}
+.ueb{font-size:${MASS.ueberschrift}pt;padding:1pt 3pt 0;letter-spacing:0.02em}
+
+/* Wert gross und fett, Beschriftung klein und rechts — das Kennzeichen des Bogens. */
+.wz{display:flex;align-items:baseline;justify-content:space-between;gap:4pt;padding:1pt 3pt;border-bottom:${MASS.linie}pt solid #000}
+.wz-w{font-weight:bold;min-height:${MASS.wertGross}pt;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wz-b{font-size:${MASS.klein}pt;white-space:nowrap;flex-shrink:0}
+
+.wk{display:flex;align-items:center;gap:3pt;padding:0.5pt 2pt}
+.wk-b{font-size:${MASS.beschriftung}pt;width:52pt;flex-shrink:0}
+.wk-w{font-size:${MASS.beschriftung}pt;font-weight:bold;border:${MASS.rahmen}pt solid #000;padding:1pt 4pt;min-width:44pt;text-align:center}
+
+.opt{display:inline-flex;align-items:center;gap:2pt;font-size:${MASS.option}pt;margin-right:6pt;white-space:nowrap;line-height:1.5}
+.kreis{display:inline-block;width:4pt;height:4pt;border-radius:50%;border:${MASS.linie * 2}pt solid #000}
+.kreis.an{background:#000}
+.eck{display:inline-block;width:4pt;height:4pt;border:${MASS.linie * 2}pt solid #000}
+.eck.an{background:#000}
+.opts{padding:0.5pt 3pt}
+.oz{display:flex;align-items:baseline;gap:4pt;padding:0.5pt 3pt}
+.oz-b{font-size:${MASS.beschriftung}pt;flex-shrink:0}
+.oz-o{flex:1 1 auto;min-width:0}
+.oz-o .opts{padding:0}
+
+.sk{padding:1pt 3pt}
+.sk-p{display:inline-block;width:5pt;height:5pt;border-radius:50%;border:${MASS.linie * 2}pt solid #000;margin-right:3.4pt}
+.sk-p.an{background:#000}
+.sk-z{display:flex;justify-content:space-between;width:92pt;font-size:${MASS.klein}pt}
+
+.mw{display:inline-flex;flex-direction:column;align-items:flex-start;border-right:${MASS.linie}pt solid #000;padding:0.5pt 4pt;min-width:40pt}
+.mw-b{font-size:${MASS.klein}pt}
+.mw-w{font-size:${MASS.wertGross}pt;font-weight:bold;min-height:${MASS.wertGross}pt}
+.mw-e{font-size:${MASS.klein}pt}
+
+.kopf{position:absolute;left:24pt;top:4pt;width:529pt;display:flex;justify-content:space-between;align-items:baseline;font-size:${MASS.beschriftung}pt}
+.kopf .stempel{font-size:8.9pt;font-weight:bold}
+.knopf{position:fixed;bottom:16px;right:16px;background:#600812;color:#fff;border:none;padding:10px 18px;border-radius:8px;font-size:13px;font-weight:bold;cursor:pointer;font-family:inherit;z-index:99}
+@media print{.knopf{display:none}}
+`
