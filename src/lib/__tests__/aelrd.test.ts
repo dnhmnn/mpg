@@ -226,3 +226,19 @@ describe('Leerer Vordruck', () => {
   })
 })
 
+describe('Titel des Bogens', () => {
+  it('traegt den Produktnamen', () => {
+    expect(aelrdHtml({})).toContain('Einsatzprotokoll - Responda')
+  })
+
+  it('bleibt gleich, egal welche Organisation im Kopf steht', () => {
+    // Die Organisation steht in der Kopfzeile; der Titelbalken ist fest.
+    const a = aelrdHtml({}, { organisation: 'BRK Ansbach' })
+    const b = aelrdHtml({}, { organisation: 'Malteser' })
+    expect(a).toContain('Einsatzprotokoll - Responda')
+    expect(b).toContain('Einsatzprotokoll - Responda')
+    expect(a).toContain('BRK Ansbach')
+    expect(b).toContain('Malteser')
+  })
+})
+

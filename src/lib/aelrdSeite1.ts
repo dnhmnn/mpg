@@ -96,10 +96,10 @@ function person(p: Payload): string {
   )
 }
 
-function titel(k: Kopfdaten): string {
+function titel(): string {
   return block(
     SEITE1.titel,
-    `<div class="titel">Einsatzprotokoll${k.organisation ? ` — ${escapeHtml(k.organisation)}` : ''}</div>
+    `<div class="titel">Einsatzprotokoll - Responda</div>
      <div class="untertitel">In Anlehnung an das DIVI-Notfalleinsatzprotokoll 7.1</div>`,
     true,
   )
@@ -495,7 +495,7 @@ export function seite1(p: Payload, kopf: Kopfdaten): string {
     ${kopfzeile(kopf)}
     ${stammdaten(p)}
     ${person(p)}
-    ${titel(kopf)}
+    ${titel()}
     ${kennung(p)}
     ${einsatzdaten(p)}
     ${notfallgeschehen(p)}
