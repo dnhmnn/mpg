@@ -212,11 +212,10 @@ describe('Leerer Vordruck', () => {
     expect(aelrdVordruck()).not.toContain('class="kreis an"')
   })
 
-  it('gibt den Freitextfeldern Schreiblinien', () => {
-    // Ohne sie ist auf dem leeren Bogen nicht zu sehen, wohin geschrieben wird.
-    const vordruck = aelrdVordruck()
-    expect(vordruck).toContain('class="lz"')
-    expect((vordruck.match(/class="lz"/g) ?? []).length).toBeGreaterThan(30)
+  it('laesst die Freitextflaechen ohne Schreiblinien', () => {
+    // Der Vordruck zeigt diese Felder leer; der eingetragene Text soll auf
+    // dem Papier fuer sich stehen.
+    expect(aelrdVordruck()).not.toContain('border-bottom:0.24pt solid #999')
   })
 
   it('nimmt die Organisation auf, laesst Protokoll-Nr. und Datum aber frei', () => {

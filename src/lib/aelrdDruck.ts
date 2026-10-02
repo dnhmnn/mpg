@@ -187,29 +187,24 @@ body{font-family:Arial,Helvetica,sans-serif;color:#000;font-size:${MASS.option}p
 
 .kopf{position:absolute;left:24pt;top:3pt;width:529pt;display:flex;justify-content:space-between;align-items:baseline;font-size:${MASS.beschriftung}pt;gap:8pt}
 .kopf .zeile{flex:1 1 0;display:flex;gap:3pt;align-items:baseline}
-.kopf .zeile b{flex:1 1 auto;border-bottom:${MASS.linie}pt solid #000;min-height:7pt}
+.kopf .zeile b{flex:1 1 auto;min-height:7pt}
 .kopf .stempel{font-size:8.9pt;font-weight:bold}
-/* Schreiblinien fuer den leeren Bogen. Echte Elemente statt eines Verlaufs:
-   Chromium skaliert Hintergrundverlaeufe beim PDF-Druck, Linien nicht. */
+/* Freitextflaechen bleiben leer, wie auf dem Vordruck — keine Schreiblinien. */
 .linien{position:relative}
-.linien > .lz{border-bottom:${MASS.linie}pt solid #999;height:8.44pt}
+.linien > .lz{height:8.44pt}
 .linien > .inhalt{position:absolute;left:0;right:0;top:0;padding:0 1pt;white-space:pre-wrap}
 .knopf{position:fixed;bottom:16px;right:16px;background:#600812;color:#fff;border:none;padding:10px 18px;border-radius:8px;font-size:13px;font-weight:bold;cursor:pointer;font-family:inherit;z-index:99}
-@media print{/* Schreiblinien fuer den leeren Bogen. Echte Elemente statt eines Verlaufs:
-   Chromium skaliert Hintergrundverlaeufe beim PDF-Druck, Linien nicht. */
+@media print{/* Freitextflaechen bleiben leer, wie auf dem Vordruck — keine Schreiblinien. */
 .linien{position:relative}
-.linien > .lz{border-bottom:${MASS.linie}pt solid #999;height:8.44pt}
+.linien > .lz{height:8.44pt}
 .linien > .inhalt{position:absolute;left:0;right:0;top:0;padding:0 1pt;white-space:pre-wrap}
 .knopf{display:none}}
 `
 
 /**
- * Eine beschreibbare Fläche mit Schreiblinien. Auf dem leeren Bogen sieht man
- * damit, wohin geschrieben wird; ist etwas eingetragen, steht es darüber und
- * die Linien bleiben als Führung stehen.
- *
- * Echte Linienelemente statt eines Hintergrundverlaufs: Chromium skaliert
- * Verläufe beim PDF-Druck, einzelne Linien nicht.
+ * Eine beschreibbare Fläche. Sie hält die Zeilenhöhe des Bogens, bleibt aber
+ * ohne Linien — der Vordruck lässt diese Felder leer, und der eingetragene
+ * Text soll auf dem Papier für sich stehen.
  */
 export function schreibflaeche(text: string, zeilen: number, klasse = ''): string {
   const linien = Array.from({ length: zeilen }, () => '<div class="lz"></div>').join('')

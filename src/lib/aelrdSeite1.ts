@@ -426,15 +426,15 @@ export const STIL_SEITE1 = `
 .bf-t{font-size:6.7pt;flex:0 0 40pt;line-height:1.1}
 .bf .rst{flex:1 1 auto}
 .bf-frei{padding:0 3pt;height:8pt;overflow:hidden}
-.frei{display:block;font-size:${MASS.beschriftung}pt;min-height:5pt;white-space:pre-wrap;border-bottom:${MASS.linie}pt solid #000}
-.frei.gross{min-height:17pt;border-bottom:none}
+.frei{display:block;font-size:${MASS.beschriftung}pt;min-height:5pt;white-space:pre-wrap}
+.frei.gross{min-height:17pt}
 .krsl{border-top:${MASS.linie}pt solid #000;overflow:hidden;display:flex;flex-direction:column}
 .krsl-o{display:flex;align-items:flex-start;gap:3pt;padding:0.3pt 2.5pt;flex:1 1 auto;min-height:0}
 .krsl-u{padding:0 2.5pt 0.5pt;border-top:${MASS.linie}pt solid #000;flex-shrink:0}
 .kr-l{flex:0 0 88pt}
 .kr-r{flex:1 1 auto;border-left:${MASS.linie}pt solid #000;padding-left:3pt}
 .kr-z{display:flex;gap:4pt;font-size:${MASS.beschriftung}pt;line-height:1.2}
-.kr-z b:first-of-type{flex:0 0 28pt;border-bottom:${MASS.linie}pt solid #000}
+.kr-z b:first-of-type{flex:0 0 28pt}
 .kr-rp{margin-left:auto}
 
 .mwi{border-top:${MASS.rahmen}pt solid #000;padding:0.6pt 2pt;overflow:hidden}
@@ -456,7 +456,6 @@ export const STIL_SEITE1 = `
 .pup{border-top:${MASS.rahmen}pt solid #000;padding:0.3pt 3pt;overflow:hidden}
 .pup-k,.pup-z{display:flex;gap:4pt}
 .pup-k > *,.pup-z > *{flex:1 1 0;font-size:${MASS.beschriftung}pt}
-.pup-z > span:not(.kl){border-bottom:${MASS.linie}pt solid #000;min-height:7pt}
 .pup-k .bf-t{flex:1 1 0}
 .pup-s{font-size:${MASS.beschriftung}pt;text-align:center}
 .auff{border-top:${MASS.rahmen}pt solid #000}
@@ -478,7 +477,7 @@ export const STIL_SEITE1 = `
 .vrl-t{font-size:${MASS.beschriftung}pt;border-bottom:${MASS.linie}pt solid #000;display:inline-block;margin-bottom:0.5pt}
 .vrl-u{font-size:${MASS.beschriftung}pt;border-bottom:${MASS.linie}pt solid #000;display:inline-block;margin:0.5pt 0 0.3pt}
 .vrl-zeile{display:flex;justify-content:space-between;gap:4pt;font-size:${MASS.beschriftung}pt;line-height:1.25}
-.vrl-zeile b{flex:1 1 auto;border-bottom:${MASS.linie}pt solid #000}
+.vrl-zeile b{flex:1 1 auto}
 .vbr{display:flex;gap:6pt;font-size:${MASS.beschriftung}pt}
 .vbr b{display:inline-block;min-width:16pt;border-bottom:${MASS.linie}pt solid #000}
 .vrl-herg{border-top:${MASS.linie}pt solid #000;padding:0.2pt 3pt;overflow:hidden}

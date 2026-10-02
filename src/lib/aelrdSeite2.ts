@@ -385,16 +385,16 @@ export const STIL_SEITE2 = `
 .re-l{flex:1 1 60%}
 .re-r{flex:1 1 40%}
 .re-z{display:flex;gap:4pt;font-size:${MASS.klein}pt;line-height:1.35}
-.re-z b{flex:1 1 auto;border-bottom:${MASS.linie}pt solid #000}
+.re-z b{flex:1 1 auto}
 
 .ma-kopf{display:flex;justify-content:space-between;align-items:baseline;padding-right:4pt;overflow:hidden}
 .ma-b{padding:0.5pt 3pt;border-top:${MASS.linie}pt solid #000;overflow:hidden}
 .ma-t{font-size:${MASS.beschriftung}pt;margin-top:0.5pt}
 .ma-u{display:flex;align-items:baseline;gap:3pt;margin-top:0.5pt}
 .ma-z{font-size:${MASS.klein}pt;line-height:1.4;display:flex;gap:3pt;align-items:baseline}
-.ma-z b{flex:0 0 26pt;border-bottom:${MASS.linie}pt solid #000;min-height:6pt}
+.ma-z b{flex:0 0 26pt;min-height:6pt}
 .ma-w{display:flex;gap:3pt;margin-top:0.5pt}
-.ma-f{display:flex;flex-direction:column-reverse;flex:1 1 0;min-width:0;border-bottom:${MASS.linie}pt solid #000;font-size:${MASS.klein}pt}
+.ma-f{display:flex;flex-direction:column-reverse;flex:1 1 0;min-width:0;font-size:${MASS.klein}pt}
 .ma-f b{min-height:7pt}
 .ma-zwei{display:flex;gap:4pt;height:100%}
 .ma-zwei > *{flex:1 1 0;min-width:0}
@@ -405,7 +405,7 @@ export const STIL_SEITE2 = `
 .nr-l{flex:1 1 auto;min-width:0}
 .fb{padding:1pt 3pt;height:100%;display:flex;flex-direction:column}
 .fb-w{font-size:${MASS.ueberschrift}pt;margin-bottom:3pt}
-.fb-w.linie{border-bottom:${MASS.linie}pt solid #000;min-height:11pt}
+.fb-w.linie{min-height:11pt}
 .fb-fl{flex:1 1 auto;border-bottom:none}
 .fb-naca{margin-top:auto;display:flex;align-items:baseline;gap:4pt;font-size:${MASS.ueberschrift}pt}
 .fb-nf{margin-left:auto}
