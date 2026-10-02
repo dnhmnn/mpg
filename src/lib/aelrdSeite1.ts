@@ -436,8 +436,12 @@ export const STIL_SEITE1 = `
 .sb{display:flex;justify-content:space-between;align-items:baseline;margin-top:2pt}
 .sb-g{font-weight:normal}
 .vm{padding:1pt 3pt}
-.bes{margin-top:2pt;border-top:${MASS.linie}pt solid #000}
-.bes-t{font-size:${MASS.ueberschrift}pt;padding:1pt 3pt 0}
+.bes{margin-top:3pt;border-top:${MASS.linie}pt solid #000}
+.bes-t{font-size:${MASS.ueberschrift}pt;padding:2pt 3pt 1pt}
+/* Die Besatzung wird von Hand eingetragen — die Zeilen bekommen Luft,
+   der Platz darunter ist ohnehin frei. */
+.bes .wz{padding:2.5pt 3pt 0.4pt}
+.bes .wz-w{min-height:9.5pt}
 .zeiten{margin-top:1pt}
 
 .ng-kopf{display:flex;justify-content:space-between;align-items:baseline;padding-right:4pt}
