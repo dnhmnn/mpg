@@ -1,5 +1,12 @@
 import { describe, it, expect } from 'vitest'
-import { AELRD_FELDER, aelrdFeld, aelrdPflichtfelder, ohneDiviEntsprechung, schluessel } from '../../katalog/aelrd'
+import {
+  AELRD_ABSCHNITTE,
+  AELRD_FELDER,
+  aelrdFeld,
+  aelrdPflichtfelder,
+  ohneDiviEntsprechung,
+  schluessel,
+} from '../../katalog/aelrd'
 import { BLATT, escapeHtml, istGewaehlt } from '../aelrdDruck'
 import { HOEHEN, HOEHEN2, SEITE1, SEITE2 } from '../aelrdLayout'
 import { aelrdHtml, aelrdVordruck } from '../aelrdProtokoll'
@@ -302,6 +309,33 @@ describe('Normangabe', () => {
     const html = aelrdHtml({})
     expect(html).toContain('DIVI-Notfalleinsatzprotokoll 6.0')
     expect(html).not.toContain('DIVI-Notfalleinsatzprotokoll 7.1')
+  })
+})
+
+describe('Gliederung des Bogens', () => {
+  it('verweist nur auf Felder, die es gibt', () => {
+    for (const abschnitt of AELRD_ABSCHNITTE) {
+      const unbekannt = abschnitt.felder.filter((id) => !aelrdFeld(id))
+      expect({ abschnitt: abschnitt.id, unbekannt }).toEqual({ abschnitt: abschnitt.id, unbekannt: [] })
+    }
+  })
+
+  it('fuehrt jedes Feld genau einmal auf', () => {
+    const alle = AELRD_ABSCHNITTE.flatMap((a) => a.felder)
+    expect(alle.filter((id, i) => alle.indexOf(id) !== i)).toEqual([])
+  })
+
+  it('laesst kein Feld des Katalogs aus', () => {
+    // Ein Feld, das in keinem Abschnitt steht, waere in der Maske unsichtbar —
+    // und man merkte es erst, wenn es im Protokoll fehlt.
+    const erfasst = new Set(AELRD_ABSCHNITTE.flatMap((a) => a.felder))
+    const fehlen = AELRD_FELDER.map((f) => f.id).filter((id) => !erfasst.has(id))
+    expect(fehlen).toEqual([])
+  })
+
+  it('gibt jedem Abschnitt eine eindeutige ID', () => {
+    const ids = AELRD_ABSCHNITTE.map((a) => a.id)
+    expect(new Set(ids).size).toBe(ids.length)
   })
 })
 

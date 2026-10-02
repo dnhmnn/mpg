@@ -395,3 +395,184 @@ export const AELRD_FELDER2: AelrdFeld[] = [
 
 for (const f of AELRD_FELDER2) register.set(f.id, f)
 AELRD_FELDER.push(...AELRD_FELDER2)
+
+// ─────────────────────────────────────────────────────────────────────────
+// Gliederung
+// ─────────────────────────────────────────────────────────────────────────
+
+/**
+ * Die Blöcke des Bogens, in der Reihenfolge, in der sie auf dem Papier
+ * stehen. Die Maske folgt dieser Gliederung — wer den Bogen kennt, findet
+ * in der App alles an derselben Stelle.
+ */
+export type AelrdAbschnitt = {
+  id: string
+  titel: string
+  seite: 1 | 2
+  felder: string[]
+}
+
+export const AELRD_ABSCHNITTE: AelrdAbschnitt[] = [
+  {
+    id: 'stammdaten',
+    titel: 'Patienten-Stammdaten',
+    seite: 1,
+    felder: ['name', 'vorname', 'gebdatum', 'strasse', 'plz_ort', 'kasse', 'versnr',
+      'geschlecht', 'bmi', 'alter_wert', 'alter_einheit'],
+  },
+  {
+    id: 'kennung',
+    titel: 'Einsatzkennung',
+    seite: 1,
+    felder: ['einsatz_nr', 'leitstelle_nr', 'rufname', 'standort'],
+  },
+  {
+    id: 'einsatzdaten',
+    titel: 'Einsatztechnische Daten',
+    seite: 1,
+    felder: ['einsatz_datum', 'sondersignal', 'beteiligtes_rm', 'einsatzort_art',
+      'transport_von', 'transport_ziel', 'einsatz_art', 'versorgung', 'voranmeldung'],
+  },
+  {
+    id: 'besatzung',
+    titel: 'Besatzung',
+    seite: 1,
+    felder: ['mannschaft_tf', 'mannschaft_1', 'mannschaft_2', 'mannschaft_3'],
+  },
+  {
+    id: 'zeiten',
+    titel: 'Zeiten',
+    seite: 1,
+    felder: ['symptombeginn', 'symptombeginn_geschaetzt', 'kollaps_beobachtet',
+      'symptombeginn_ueber24h', 'zeit_alarm', 'zeit_ankunft_ort', 'zeit_ankunft_patient',
+      'zeit_abfahrt', 'zeit_uebergabe', 'zeit_einsatzbereit', 'zeit_ende'],
+  },
+  {
+    id: 'notfallgeschehen',
+    titel: 'Notfallgeschehen, Anamnese, Erstbefund, Vormedikation, Vorbehandlung',
+    seite: 1,
+    felder: ['notfallgeschehen', 'ersthelfermassnahmen', 'az_vor_ereignis', 'first_responder'],
+  },
+  {
+    id: 'erstbefund',
+    titel: 'Erstbefund',
+    seite: 1,
+    felder: ['erstbefund_zeitpunkt', 'atemwege', 'atmung', 'kreislauf',
+      'puls_regelmaessig', 'radialispuls', 'rekap_zeit', 'schockzeichen',
+      'kreislauf_auffaelligkeiten', 'haut', 'ekg', 'ekg_text'],
+  },
+  {
+    id: 'messwerte',
+    titel: 'Messwerte initial',
+    seite: 1,
+    felder: ['af', 'spo2', 'spo2_mit_o2', 'co_hb', 'hf', 'puls', 'etco2',
+      'nibp_sys', 'nibp_dia', 'ibp_sys', 'ibp_dia', 'bz', 'temp', 'temp_ort'],
+  },
+  {
+    id: 'neurologie',
+    titel: 'Neurologie',
+    seite: 1,
+    felder: ['neuro_ohne_befund', 'bewusstsein', 'gcs_augen', 'gcs_verbal', 'gcs_motorik',
+      'gcs_summe', 'pupillen_weite_re', 'pupillen_weite_li', 'pupillen_licht_re',
+      'pupillen_licht_li', 'neuro_auffaelligkeiten', 'schmerz',
+      'schmerz_nicht_beurteilbar', 'schmerz_tolerabel'],
+  },
+  {
+    id: 'untersuchung',
+    titel: 'Untersuchung und Psyche',
+    seite: 1,
+    felder: ['untersuchung', 'psyche'],
+  },
+  {
+    id: 'verletzungen',
+    titel: 'Verletzungen',
+    seite: 1,
+    felder: ['verletzung_zusammenhang', 'verletzungsmuster',
+      'verl_sht', 'verl_gesicht', 'verl_hws', 'verl_thorax', 'verl_abdomen',
+      'verl_bws_lws', 'verl_becken', 'verl_obere_extr', 'verl_untere_extr', 'verl_weichteile',
+      'unfallmechanismus', 'spezielle_traumata',
+      'verbrennung_1', 'verbrennung_2', 'verbrennung_3', 'unfallhergang', 'sturz'],
+  },
+  {
+    id: 'diagnosen',
+    titel: 'Erkrankungen und Score',
+    seite: 1,
+    felder: ['tracerdiagnose', 'fuehrende_diagnose', 'weitere_diagnosen', 'diagnosetext',
+      'naca_initial', 'news_score', 'roter_warnwert'],
+  },
+  {
+    id: 'verlauf',
+    titel: 'Verlaufsbeschreibung',
+    seite: 2,
+    felder: [],
+  },
+  {
+    id: 'medikation',
+    titel: 'Medikation',
+    seite: 2,
+    felder: ['keine_medikation', 'medikation', 'lysetherapie', 'lyse_zeitpunkt'],
+  },
+  {
+    id: 'reanimation',
+    titel: 'Reanimation / Tod / Todesfeststellung',
+    seite: 2,
+    felder: ['rea_situation', 'rea_ursache', 'tod_ursache', 'todesart', 'kollaps_durch',
+      'hdm_durch', 'defi1_durch', 'defi1_zeit', 'rosc_zeit', 'kh_aufnahme',
+      'leichenschau', 'todeszeitpunkt'],
+  },
+  {
+    id: 'zugaenge',
+    titel: 'Zugänge und Atemweg',
+    seite: 2,
+    felder: ['pvk_vorhanden', 'zugaenge', 'zugang_erschwert', 'atemweg_massnahme',
+      'intubation', 'tubus_groesse', 'o2_gabe'],
+  },
+  {
+    id: 'beatmung',
+    titel: 'Beatmung und Defibrillation',
+    seite: 2,
+    felder: ['beatmung_art', 'beatmung_fio2', 'beatmung_af', 'beatmung_amv',
+      'beatmung_peep', 'beatmung_pinsp', 'beatmung_mode', 'beatmung_art2',
+      'beatmung_flow', 'beatmung_manuell', 'defi_art', 'defi_joule_1', 'defi_gesamt',
+      'defi_joule_letzte', 'rosc_1', 'pacer_frequenz', 'pacer_intensitaet', 'pacer_mode'],
+  },
+  {
+    id: 'massnahmen',
+    titel: 'Weitere Maßnahmen',
+    seite: 2,
+    felder: ['rea_massnahme', 'aktive_kuehlung', 'lagerung', 'sonstige_massnahme',
+      'blutentnahme', 'waermeerhalt', 'erweitertes_monitoring', 'medizintechnik'],
+  },
+  {
+    id: 'uebergabe_befund',
+    titel: 'Übergabe — Befund',
+    seite: 2,
+    felder: ['ub_zeitpunkt', 'ub_atemwege', 'ub_atmung', 'ub_kreislauf',
+      'ub_puls_regelmaessig', 'ub_radialispuls', 'ub_rekap', 'ub_schockzeichen',
+      'ub_ekg', 'ub_psyche', 'ub_untersuchung'],
+  },
+  {
+    id: 'uebergabe_neuro',
+    titel: 'Übergabe — Neurologie und Messwerte',
+    seite: 2,
+    felder: ['ub_neuro_ohne_befund', 'ub_bewusstsein', 'ub_gcs_augen', 'ub_gcs_verbal',
+      'ub_gcs_motorik', 'ub_gcs_summe', 'ub_pupillen_weite_re', 'ub_pupillen_weite_li',
+      'ub_pupillen_licht_re', 'ub_pupillen_licht_li', 'ub_schmerz',
+      'ub_schmerz_nicht_beurteilbar', 'ub_schmerz_tolerabel',
+      'ub_af', 'ub_spo2', 'ub_spo2_mit_o2', 'ub_hf', 'ub_puls', 'ub_etco2',
+      'ub_nibp_sys', 'ub_nibp_dia', 'ub_ibp_sys', 'ub_ibp_dia', 'ub_bz', 'ub_temp'],
+  },
+  {
+    id: 'abschluss',
+    titel: 'Abschluss',
+    seite: 2,
+    felder: ['besonderheiten', 'wertsachen', 'uebergabe_an', 'uebergabeort',
+      'aelrd_delegationen', 'bemerkungen', 'naca_uebergabe', 'notarzt_nachgefordert',
+      'unterschrift'],
+  },
+]
+
+/** Alle Abschnitte einer Seite. */
+export function aelrdAbschnitte(seite: 1 | 2): AelrdAbschnitt[] {
+  return AELRD_ABSCHNITTE.filter((a) => a.seite === seite)
+}
