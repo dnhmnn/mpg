@@ -20,7 +20,7 @@ export const NEUE_FASSUNG: Fassung = 2
 
 export const FASSUNG_NAME: Record<Fassung, string> = {
   1: '1.0',
-  2: '2.0 (DIVI 6.0)',
+  2: '2.0 (DIVI 7.1)',
 }
 
 /**
