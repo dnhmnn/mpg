@@ -31,6 +31,26 @@ function w(p: Payload, id: string): string {
   return v === undefined || v === null ? '' : String(v)
 }
 
+/**
+ * Ein Besatzungsmitglied. Die App legt die Besatzung in zwei Formen ab:
+ * flach als mannschaft_tf / mannschaft_1 … und verschachtelt als
+ * mannschaft: { tf: { name }, m1: { name } … }. Aeltere Protokolle tragen
+ * nur die zweite; wer nur die flache liest, druckt sie leer.
+ */
+function besatzungsname(p: Payload, feldId: string, schluessel: string): string {
+  const flach = w(p, feldId)
+  if (flach) return flach
+  const verschachtelt = p.mannschaft
+  if (verschachtelt && typeof verschachtelt === 'object') {
+    const eintrag = (verschachtelt as Record<string, unknown>)[schluessel]
+    if (eintrag && typeof eintrag === 'object') {
+      const name = (eintrag as Record<string, unknown>).name
+      if (typeof name === 'string') return name
+    }
+  }
+  return ''
+}
+
 /** Ein einzelnes Kaestchen fuer ein Ja-Nein-Feld. */
 function hak(p: Payload, id: string, text?: string): string {
   return option(text ?? aelrdFeld(id)?.label ?? id, Boolean(p[id]), true)
@@ -130,6 +150,13 @@ function einsatzdaten(p: Payload): string {
          ${wertZeile(w(p, 'einsatz_art'), 'Einsatz-Art')}
          ${wertZeile(w(p, 'versorgung'), 'Versorgung')}
          <div class="vm">${hak(p, 'voranmeldung', 'Voranmeldung')}</div>
+         <div class="bes">
+           <div class="bes-t">Besatzung</div>
+           ${wertZeile(besatzungsname(p, 'mannschaft_tf', 'tf'), 'Teamführer')}
+           ${wertZeile(besatzungsname(p, 'mannschaft_1', 'm1'), '1. Mannschaft')}
+           ${wertZeile(besatzungsname(p, 'mannschaft_2', 'm2'), '2. Mannschaft')}
+           ${wertZeile(besatzungsname(p, 'mannschaft_3', 'm3'), '3. Mannschaft')}
+         </div>
        </div>
        <div class="ed-mitte">
          <div class="kl">Sondersignal</div>
@@ -409,6 +436,8 @@ export const STIL_SEITE1 = `
 .sb{display:flex;justify-content:space-between;align-items:baseline;margin-top:2pt}
 .sb-g{font-weight:normal}
 .vm{padding:1pt 3pt}
+.bes{margin-top:2pt;border-top:${MASS.linie}pt solid #000}
+.bes-t{font-size:${MASS.ueberschrift}pt;padding:1pt 3pt 0}
 .zeiten{margin-top:1pt}
 
 .ng-kopf{display:flex;justify-content:space-between;align-items:baseline;padding-right:4pt}

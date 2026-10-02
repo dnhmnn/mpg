@@ -242,3 +242,55 @@ describe('Titel des Bogens', () => {
   })
 })
 
+describe('Besatzung', () => {
+  it('steht unter den Einsatztechnischen Daten', () => {
+    const html = aelrdHtml({})
+    const block = html.slice(html.indexOf('Einsatztechnische Daten'), html.indexOf('Notfallgeschehen'))
+    for (const zeile of ['Besatzung', 'Teamführer', '1. Mannschaft', '2. Mannschaft', '3. Mannschaft']) {
+      expect(block).toContain(zeile)
+    }
+  })
+
+  it('druckt die flach abgelegte Besatzung', () => {
+    const html = aelrdHtml({
+      mannschaft_tf: 'Huber', mannschaft_1: 'Sailer', mannschaft_2: 'Weber', mannschaft_3: 'Meier',
+    })
+    for (const name of ['Huber', 'Sailer', 'Weber', 'Meier']) expect(html).toContain(name)
+  })
+
+  it('druckt auch die verschachtelt abgelegte Besatzung aelterer Protokolle', () => {
+    // Wer nur die flachen Felder liest, druckt diese Protokolle mit leerer
+    // Besatzung — obwohl die Namen in der Payload stehen.
+    const html = aelrdHtml({
+      mannschaft: {
+        tf: { id: '1', name: 'Huber' },
+        m1: { id: '2', name: 'Sailer' },
+        m2: { id: '3', name: 'Weber' },
+        m3: { id: '4', name: 'Meier' },
+      },
+    })
+    for (const name of ['Huber', 'Sailer', 'Weber', 'Meier']) expect(html).toContain(name)
+  })
+
+  it('bevorzugt das flache Feld, wenn beide Formen etwas tragen', () => {
+    const html = aelrdHtml({
+      mannschaft_tf: 'Neuer Wert',
+      mannschaft: { tf: { name: 'Alter Wert' } },
+    })
+    expect(html).toContain('Neuer Wert')
+    expect(html).not.toContain('Alter Wert')
+  })
+
+  it('kommt mit einer halb gefuellten Besatzung zurecht', () => {
+    const html = aelrdHtml({ mannschaft: { tf: { name: 'Huber' }, m2: null } })
+    expect(html).toContain('Huber')
+    expect(html.match(/class="blatt"/g)?.length).toBe(2)
+  })
+
+  it('bleibt im leeren Vordruck leer', () => {
+    const vordruck = aelrdVordruck()
+    expect(vordruck).toContain('Teamführer')
+    expect(vordruck).not.toContain('Huber')
+  })
+})
+

@@ -99,6 +99,15 @@ export const AELRD_FELDER: AelrdFeld[] = [
   { id: 'versorgung', label: 'Versorgung', typ: 'text' },
   { id: 'voranmeldung', label: 'Voranmeldung', typ: 'check', divi: 'voranmeldung' },
 
+  // ── Besatzung ─────────────────────────────────────────────────────────
+  // Die IDs sind die, unter denen die App die Besatzung seit jeher fuehrt.
+  // Aeltere Protokolle legen sie verschachtelt ab (mannschaft.tf.name);
+  // besatzung() in aelrdSeite1 liest beide Formen.
+  { id: 'mannschaft_tf', label: 'Teamführer', typ: 'text', divi: 'team' },
+  { id: 'mannschaft_1', label: '1. Mannschaft', typ: 'text' },
+  { id: 'mannschaft_2', label: '2. Mannschaft', typ: 'text' },
+  { id: 'mannschaft_3', label: '3. Mannschaft', typ: 'text' },
+
   // ── Symptom-Beginn und Zeiten ─────────────────────────────────────────
   { id: 'symptombeginn_geschaetzt', label: 'geschätzt', typ: 'check', divi: 'symptombeginn_art' },
   { id: 'kollaps_beobachtet', label: 'Kollaps beobachtet', typ: 'check', divi: 'kollaps_beobachtet' },
