@@ -61,7 +61,19 @@ export type Abschnitt = {
   id: string
   titel: string
   seite: 1 | 2
-  /** Reihenfolge innerhalb der Seite. */
+  /**
+   * Das Raster des Vordrucks. Der DIVI-Bogen ist in Baender (zeile) geteilt,
+   * jedes Band in nebeneinanderliegende Saeulen (spalte). Mehrere Abschnitte
+   * mit derselben zeile und spalte stehen untereinander, in der Reihenfolge
+   * von `ordnung`. `spanne` ist die Breite der Saeule in Zwoelfteln.
+   *
+   * Maske und Ausdruck lesen beide dieses Raster. Wer den Papierbogen kennt,
+   * findet in der App alles an derselben Stelle.
+   */
+  zeile: number
+  spalte: number
+  spanne: number
+  /** Reihenfolge innerhalb derselben Saeule, von oben nach unten. */
   ordnung: number
   gruppen: Gruppe[]
 }
@@ -102,6 +114,9 @@ const stammdaten: Abschnitt = {
   id: 'stammdaten',
   titel: 'Patienten-Stammdaten',
   seite: 1,
+  zeile: 1,
+  spalte: 1,
+  spanne: 5,
   ordnung: 1,
   gruppen: [
     {
@@ -160,28 +175,11 @@ const einsatzdaten: Abschnitt = {
   id: 'einsatzdaten',
   titel: 'Einsatztechnische Daten',
   seite: 1,
-  ordnung: 2,
+  zeile: 1,
+  spalte: 2,
+  spanne: 4,
+  ordnung: 1,
   gruppen: [
-    {
-      id: 'kennung',
-      felder: [
-        { id: 'einsatz_nr', label: 'Einsatz-Nr.', typ: 'text', breite: 4, pflicht: true },
-        { id: 'auftrags_nr', label: 'Pat.-/Auftrags-Nr.', typ: 'text', breite: 4 },
-        { id: 'pers_nr', label: 'Pers.-Nr.', typ: 'text', breite: 4 },
-        { id: 'standort', label: 'Standort', typ: 'text', breite: 6 },
-        { id: 'leitstelle', label: 'Leitstelle', typ: 'text', breite: 6, hinweis: 'KFZ-Kennzeichen' },
-        {
-          id: 'dokumentierend',
-          label: 'Dokumentierend',
-          typ: 'radio',
-          breite: 6,
-          optionen: [
-            { wert: 'arzt', text: '(Not-)Arzt' },
-            { wert: 'rettungsdienst', text: 'Rettungsdienst' },
-          ],
-        },
-      ],
-    },
     {
       id: 'rettungsmittel',
       titel: 'Rettungsmittel',
@@ -298,26 +296,6 @@ const einsatzdaten: Abschnitt = {
         },
       ],
     },
-    {
-      id: 'symptombeginn',
-      titel: 'Symptom-Beginn',
-      felder: [
-        { id: 'symptombeginn_zeit', label: 'Symptom-Beginn', typ: 'zeit', breite: 3 },
-        {
-          id: 'symptombeginn_art',
-          label: 'Angabe',
-          typ: 'radio',
-          breite: 3,
-          optionen: [
-            { wert: 'gesichert', text: 'gesichert' },
-            { wert: 'geschaetzt', text: 'geschätzt' },
-          ],
-        },
-        { id: 'symptombeginn_ueber24h', label: 'vor über 24 h', typ: 'check', breite: 2 },
-        { id: 'kollaps_beobachtet', label: 'Kollaps beobachtet', typ: 'check', breite: 2 },
-        { id: 'symptombeginn_unbekannt', label: 'Unbekannt', typ: 'check', breite: 2 },
-      ],
-    },
   ],
 }
 
@@ -325,7 +303,10 @@ const zeiten: Abschnitt = {
   id: 'zeiten',
   titel: 'Zeiten',
   seite: 1,
-  ordnung: 3,
+  zeile: 1,
+  spalte: 3,
+  spanne: 3,
+  ordnung: 2,
   gruppen: [
     {
       id: 'zeiten',
@@ -347,7 +328,10 @@ const zielklinik: Abschnitt = {
   id: 'zielklinik',
   titel: 'Transportziel',
   seite: 1,
-  ordnung: 4,
+  zeile: 1,
+  spalte: 2,
+  spanne: 4,
+  ordnung: 2,
   gruppen: [
     {
       id: 'ziel',
@@ -386,7 +370,10 @@ const mannschaft: Abschnitt = {
   id: 'mannschaft',
   titel: 'Besetzung',
   seite: 1,
-  ordnung: 5,
+  zeile: 1,
+  spalte: 2,
+  spanne: 4,
+  ordnung: 3,
   gruppen: [
     {
       id: 'besetzung',
@@ -394,47 +381,6 @@ const mannschaft: Abschnitt = {
         { id: 'notarzt', label: 'Notarzt', typ: 'text', breite: 12 },
         { id: 'assistenz', label: 'Assistenz', typ: 'text', breite: 12 },
         { id: 'team', label: 'Team', typ: 'text', breite: 12 },
-        {
-          id: 'arzt_status',
-          label: 'Arzt',
-          typ: 'radio',
-          breite: 4,
-          optionen: [
-            { wert: 'weiterbildung', text: 'Arzt in Weiterbildung' },
-            { wert: 'facharzt', text: 'Facharzt' },
-          ],
-        },
-        {
-          id: 'arzt_fach',
-          label: 'Fachrichtung',
-          typ: 'mehrfach',
-          breite: 8,
-          optionen: [
-            { wert: 'anaesthesie', text: 'Anästhesie' },
-            { wert: 'paediatrie', text: 'Pädiatrie' },
-            { wert: 'chirurgie', text: 'Chirurgie' },
-            { wert: 'neurologie', text: 'Neurologie' },
-            { wert: 'innere', text: 'Innere' },
-            { wert: 'allgemeinmedizin', text: 'Allg. Medizin' },
-            { wert: 'notfallmedizin', text: 'Notfallmed.' },
-            { wert: 'intensivmedizin', text: 'Intensivmed.' },
-            { wert: 'kanm', text: 'KANM' },
-            { wert: 'andere', text: 'Andere' },
-          ],
-        },
-        {
-          id: 'qualifikation_rd',
-          label: 'Qualifikation Rettungsdienst',
-          typ: 'radio',
-          breite: 8,
-          optionen: [
-            { wert: 'rett_ass', text: 'Rett.-Ass.' },
-            { wert: 'rett_san', text: 'Rett.-San.' },
-            { wert: 'notfallsan', text: 'Notfallsanitäter' },
-            { wert: 'int_pflege', text: '(Int.-)Pflege' },
-          ],
-        },
-        { id: 'fahrzeug', label: 'Standort / Rufname eigenes Fahrzeug', typ: 'text', breite: 12 },
       ],
     },
   ],
@@ -444,7 +390,10 @@ const notfallgeschehen: Abschnitt = {
   id: 'notfallgeschehen',
   titel: 'Notfallgeschehen, Anamnese, Erstbefund, Vormedikation, Vorbehandlung',
   seite: 1,
-  ordnung: 6,
+  zeile: 2,
+  spalte: 1,
+  spanne: 12,
+  ordnung: 1,
   gruppen: [
     {
       id: 'freitext',
@@ -537,7 +486,10 @@ const neurologie_erst: Abschnitt = {
   id: 'neurologie_erst',
   titel: 'Erste erhobene Befunde — Neurologie',
   seite: 1,
-  ordnung: 7,
+  zeile: 3,
+  spalte: 1,
+  spanne: 6,
+  ordnung: 1,
   gruppen: [
     {
       id: 'rahmen',
@@ -756,7 +708,10 @@ const messwerte_erst: Abschnitt = {
   id: 'messwerte_erst',
   titel: 'Erste erhobene Messwerte / allgemeine Befunde',
   seite: 1,
-  ordnung: 8,
+  zeile: 3,
+  spalte: 2,
+  spanne: 6,
+  ordnung: 1,
   gruppen: [
     {
       id: 'vitalwerte',
@@ -961,7 +916,10 @@ const erkrankungen: Abschnitt = {
   id: 'erkrankungen',
   titel: 'Erkrankungen',
   seite: 1,
-  ordnung: 9,
+  zeile: 4,
+  spalte: 1,
+  spanne: 6,
+  ordnung: 1,
   gruppen: [
     {
       id: 'rahmen',
@@ -1231,7 +1189,10 @@ const verletzungen: Abschnitt = {
   id: 'verletzungen',
   titel: 'Verletzungen',
   seite: 1,
-  ordnung: 10,
+  zeile: 4,
+  spalte: 2,
+  spanne: 6,
+  ordnung: 1,
   gruppen: [
     {
       id: 'rahmen',
@@ -1355,7 +1316,10 @@ const erstdiagnosen: Abschnitt = {
   id: 'erstdiagnosen',
   titel: 'Erstdiagnosen',
   seite: 1,
-  ordnung: 11,
+  zeile: 4,
+  spalte: 2,
+  spanne: 6,
+  ordnung: 2,
   gruppen: [
     {
       id: 'diagnosen',
@@ -1391,6 +1355,9 @@ const verlaufsprotokoll: Abschnitt = {
   id: 'verlaufsprotokoll',
   titel: 'Verlaufsprotokoll',
   seite: 2,
+  zeile: 1,
+  spalte: 1,
+  spanne: 8,
   ordnung: 1,
   gruppen: [
     {
@@ -1429,6 +1396,9 @@ const medikation: Abschnitt = {
   id: 'medikation',
   titel: 'Medikation',
   seite: 2,
+  zeile: 1,
+  spalte: 1,
+  spanne: 8,
   ordnung: 2,
   gruppen: [
     {
@@ -1475,7 +1445,10 @@ const massnahmen: Abschnitt = {
   id: 'massnahmen',
   titel: 'Maßnahmen',
   seite: 2,
-  ordnung: 3,
+  zeile: 1,
+  spalte: 2,
+  spanne: 4,
+  ordnung: 1,
   gruppen: [
     {
       id: 'zugaenge',
@@ -1788,7 +1761,10 @@ const reanimation: Abschnitt = {
   id: 'reanimation',
   titel: 'Reanimation / Tod / Todesfeststellung',
   seite: 2,
-  ordnung: 4,
+  zeile: 1,
+  spalte: 1,
+  spanne: 8,
+  ordnung: 3,
   gruppen: [
     {
       id: 'rea',
@@ -1935,7 +1911,10 @@ const uebergabebefund: Abschnitt = {
   id: 'uebergabebefund',
   titel: 'Übergabe — Befund bei Einsatzende',
   seite: 2,
-  ordnung: 5,
+  zeile: 2,
+  spalte: 1,
+  spanne: 12,
+  ordnung: 1,
   gruppen: [
     {
       id: 'rahmen',
@@ -2050,6 +2029,360 @@ const uebergabebefund: Abschnitt = {
         },
       ],
     },
+  ],
+}
+
+const einsatzverlauf: Abschnitt = {
+  id: 'einsatzverlauf',
+  titel: 'Einsatzverlauf — Besonderheiten',
+  seite: 2,
+  zeile: 3,
+  spalte: 1,
+  spanne: 4,
+  ordnung: 1,
+  gruppen: [
+    {
+      id: 'besonderheiten',
+      felder: [
+        {
+          id: 'besonderheiten',
+          label: 'Besonderheiten',
+          typ: 'mehrfach',
+          breite: 12,
+          optionen: [
+            { wert: 'kein_notarzt_verfuegbar', text: 'zeitnah ist kein Notarzt verfügbar' },
+            { wert: 'uebernahme_arztbesetzt', text: 'Übernahme aus arztbesetztem Rettungsmittel' },
+            { wert: 'uebergabe_arztbesetzt', text: 'Übergabe an arztbesetztes Rettungsmittel' },
+            { wert: 'transport_klinik', text: 'Transport in Klinik' },
+            { wert: 'naechste_klinik_nimmt_nicht_auf', text: 'nächste Klinik nimmt nicht auf' },
+            { wert: 'zwangsbelegung', text: 'Zwangsbelegung' },
+            { wert: 'zwangsunterbringung', text: 'Zwangsunterbringung' },
+            { wert: 'nur_untersuchung', text: 'nur Untersuchung und Behandlung' },
+            { wert: 'erschwerter_zugang', text: 'erschwerter Pat.-Zugang' },
+            { wert: 'techn_rettung', text: 'techn. Rettung' },
+            { wert: 'infektionstransport', text: 'Infektionstransport' },
+            { wert: 'infektionstransport_hoher_aufwand', text: '… mit hohem Aufwand' },
+            { wert: 'lna_am_einsatz', text: 'LNA am Einsatz' },
+            { wert: 'manv', text: 'MANV' },
+            { wert: 'mehrere_patienten', text: 'Behandlung mehrerer Patienten' },
+            { wert: 'abbruch_folgeeinsatz', text: 'Abbruch wegen Folgeeinsatz' },
+            { wert: 'gewalt_gegen_einsatzkraefte', text: 'Gewalt gegen Einsatzkräfte' },
+          ],
+        },
+      ],
+    },
+  ],
+}
+
+const transport: Abschnitt = {
+  id: 'transport',
+  titel: 'Patienten-Transport',
+  seite: 2,
+  zeile: 3,
+  spalte: 2,
+  spanne: 4,
+  ordnung: 1,
+  gruppen: [
+    {
+      id: 'kein_transport',
+      titel: 'kein Transport',
+      felder: [
+        {
+          id: 'kein_transport_grund',
+          label: 'kein Transport',
+          typ: 'radio',
+          breite: 12,
+          optionen: [
+            { wert: 'kein_patient', text: 'kein Patient' },
+            { wert: 'tod', text: 'Tod' },
+            { wert: 'ambulante_versorgung', text: 'ambulante Versorgung' },
+            { wert: 'transport_abgelehnt', text: 'Pat. lehnt Transport ab' },
+            { wert: 'therapieverzicht', text: 'Bewusster Therapieverzicht / -beschränkg.' },
+            { wert: 'verweis_amb_sektor', text: 'Verweis an amb. Sektor (HA, ÄBD etc.)' },
+            { wert: 'uebergabe_polizei', text: 'Patientenübergabe an Polizei' },
+            { wert: 'ausfall_rettungsmittel', text: 'Ausfall Rettungsmittel (Unfall, Defekt etc.)' },
+            { wert: 'rettungsmittel_nicht_geeignet', text: 'Rettungsmittel nicht geeignet' },
+            { wert: 'transport_durch_dritte', text: 'Transport durch Dritte (Taxi etc.)' },
+            { wert: 'sonstiger_transport', text: 'Sonstiger Transport' },
+          ],
+        },
+      ],
+    },
+    {
+      id: 'transport_durch',
+      titel: 'Transport durch',
+      felder: [
+        {
+          id: 'transport_durch',
+          label: 'Transport durch',
+          typ: 'radio',
+          breite: 12,
+          optionen: [
+            { wert: 'rtw', text: 'RTW' },
+            { wert: 'naw', text: 'NAW' },
+            { wert: 'ktw', text: 'KTW' },
+            { wert: 'rth_ith', text: 'RTH / ITH' },
+            { wert: 'n_ktw', text: 'N-KTW' },
+            { wert: 's_rtw', text: 'S-RTW' },
+            { wert: 'itw', text: 'ITW' },
+            { wert: 'sonstige', text: 'Sonstige' },
+          ],
+        },
+        { id: 'sondersignal', label: 'Transport mit Sondersignal', typ: 'check', breite: 12 },
+        {
+          id: 'transportbegleitung',
+          label: 'ärztliche Transportbegleitung durch',
+          typ: 'radio',
+          breite: 12,
+          optionen: [
+            { wert: 'keine', text: 'keine ärztliche Begleitung' },
+            { wert: 'notarzt', text: 'Notarzt (bodengebunden)' },
+            { wert: 'notarzt_rth', text: 'Notarzt RTH / ITH' },
+            { wert: 'klinik_arzt', text: 'Klinik-Arzt' },
+            { wert: 'niedergelassener_arzt', text: 'niedergel. Arzt' },
+            { wert: 'sonstiger_arzt', text: 'sonstiger Arzt' },
+          ],
+        },
+        { id: 'telenotarzt', label: 'Telenotarzt', typ: 'check', breite: 12 },
+        {
+          id: 'spezieller_einsatz',
+          label: 'Spezieller Einsatz',
+          typ: 'radio',
+          breite: 12,
+          optionen: [
+            { wert: 'intensivtransport', text: 'Intensivtransport' },
+            { wert: 'hilfeleistung', text: 'Hilfeleistung' },
+            { wert: 'personaltransport', text: 'Personaltransport' },
+            { wert: 'materialtransport', text: 'Materialtransport' },
+            { wert: 'unterstuetzung_anderes_rm', text: 'Unterstützung für anderes Rettungsmittel' },
+          ],
+        },
+      ],
+    },
+  ],
+}
+
+const uebergabe: Abschnitt = {
+  id: 'uebergabe',
+  titel: 'Übergabe',
+  seite: 2,
+  zeile: 3,
+  spalte: 1,
+  spanne: 4,
+  ordnung: 2,
+  gruppen: [
+    {
+      id: 'uebergabe',
+      felder: [
+        {
+          id: 'uebergabe_ziel',
+          label: 'Übergabe an',
+          typ: 'radio',
+          breite: 12,
+          optionen: [
+            { wert: 'keine', text: 'keine' },
+            { wert: 'hausarzt', text: 'Hausarzt / KV-Arzt vor Ort' },
+            { wert: 'einsatzstelle', text: 'Einsatzstelle' },
+            { wert: 'fachambulanz', text: 'Fachambulanz' },
+            { wert: 'op_direkt', text: 'OP direkt' },
+            { wert: 'zna', text: 'ZNA / INA / PINA' },
+            { wert: 'schockraum', text: 'Schockraum' },
+            { wert: 'inz_kinz', text: 'INZ / KINZ' },
+            { wert: 'stroke_unit', text: 'Stroke Unit' },
+            { wert: 'herzkatheterlabor', text: 'Herzkatheterlabor' },
+            { wert: 'cpu', text: 'CPU' },
+            { wert: 'intensivstation', text: 'Intensivstation' },
+            { wert: 'allgemeinstation', text: 'Allgemeinstation' },
+            { wert: 'ct_mr', text: 'CT / MR' },
+            { wert: 'praxis', text: 'Praxis' },
+            { wert: 'kv_bereitschaftspraxis', text: 'KV-Bereitschaftspraxis' },
+            { wert: 'kreisssaal', text: 'Kreißsaal' },
+            { wert: 'sonstige', text: 'Sonstige' },
+          ],
+        },
+        { id: 'uebergabe_ziel_text', label: 'Übergabe an — Freitext', typ: 'text', breite: 12 },
+        { id: 'uebergabe_verzoegert', label: 'Übergabe verzögert', typ: 'check', breite: 12 },
+        { id: 'uebergabe_name', label: 'Übergabe an (Name)', typ: 'text', breite: 12 },
+      ],
+    },
+  ],
+}
+
+const bemerkungen: Abschnitt = {
+  id: 'bemerkungen',
+  titel: 'Bemerkungen',
+  seite: 2,
+  zeile: 3,
+  spalte: 3,
+  spanne: 4,
+  ordnung: 2,
+  gruppen: [
+    {
+      id: 'bemerkungen',
+      felder: [
+        {
+          id: 'behandlungsgrenzen',
+          label: 'Behandlungsgrenzen',
+          typ: 'mehrfach',
+          breite: 12,
+          optionen: [
+            { wert: 'massnahmenverweigerung', text: 'Massnahmenverweigerung durch Patient' },
+            { wert: 'therapieverzicht', text: 'bewusster Therapieverzicht' },
+            { wert: 'kontraindikation', text: 'Indizierte Maßn. wg. Kontraindikation unterlassen' },
+          ],
+        },
+        {
+          id: 'bemerkungen',
+          label: 'Bemerkungen',
+          typ: 'langtext',
+          breite: 12,
+          hinweis: 'z. B. Verlauf, Hausarzt, Vormedikation, Telefonnummer der Angehörigen, Notkompetenz-Maßnahmen …',
+        },
+        { id: 'hausarzt', label: 'Hausarzt', typ: 'text', breite: 6 },
+        { id: 'angehoeriger', label: 'Angehöriger / Telefon', typ: 'text', breite: 6 },
+      ],
+    },
+    {
+      id: 'unterschrift',
+      felder: [
+        { id: 'ausfueller_name', label: 'Unterschrift Dokumentverantwortlicher', typ: 'text', breite: 8, pflicht: true, hinweis: 'Name zusätzlich in Druckschrift, ggf. Funktion, ggf. Rückruf-Telefon-Nr.' },
+        { id: 'ausfueller_zeit', label: 'Zeitpunkt', typ: 'zeit', breite: 4 },
+      ],
+    },
+  ],
+}
+
+const protokollkennung: Abschnitt = {
+  id: 'protokollkennung',
+  titel: 'Notfall-Einsatzprotokoll',
+  seite: 1,
+  zeile: 1,
+  spalte: 1,
+  spanne: 5,
+  ordnung: 2,
+  gruppen: [
+    {
+      id: 'kennung',
+      felder: [
+        { id: 'einsatz_nr', label: 'Einsatz-Nr.', typ: 'text', breite: 4, pflicht: true },
+        { id: 'auftrags_nr', label: 'Pat.-/Auftrags-Nr.', typ: 'text', breite: 4 },
+        { id: 'pers_nr', label: 'Pers.-Nr.', typ: 'text', breite: 4 },
+        { id: 'standort', label: 'Standort', typ: 'text', breite: 6 },
+        { id: 'leitstelle', label: 'Leitstelle', typ: 'text', breite: 6, hinweis: 'KFZ-Kennzeichen' },
+        {
+          id: 'dokumentierend',
+          label: 'Dokumentierend',
+          typ: 'radio',
+          breite: 6,
+          optionen: [
+            { wert: 'arzt', text: '(Not-)Arzt' },
+            { wert: 'rettungsdienst', text: 'Rettungsdienst' },
+          ],
+        },
+      ],
+    },
+  ],
+}
+
+const symptombeginn: Abschnitt = {
+  id: 'symptombeginn',
+  titel: 'Symptom-Beginn',
+  seite: 1,
+  zeile: 1,
+  spalte: 3,
+  spanne: 3,
+  ordnung: 1,
+  gruppen: [
+    {
+      id: 'symptombeginn',
+      titel: 'Symptom-Beginn',
+      felder: [
+        { id: 'symptombeginn_zeit', label: 'Symptom-Beginn', typ: 'zeit', breite: 3 },
+        {
+          id: 'symptombeginn_art',
+          label: 'Angabe',
+          typ: 'radio',
+          breite: 3,
+          optionen: [
+            { wert: 'gesichert', text: 'gesichert' },
+            { wert: 'geschaetzt', text: 'geschätzt' },
+          ],
+        },
+        { id: 'symptombeginn_ueber24h', label: 'vor über 24 h', typ: 'check', breite: 2 },
+        { id: 'kollaps_beobachtet', label: 'Kollaps beobachtet', typ: 'check', breite: 2 },
+        { id: 'symptombeginn_unbekannt', label: 'Unbekannt', typ: 'check', breite: 2 },
+      ],
+    },
+  ],
+}
+
+const qualifikation: Abschnitt = {
+  id: 'qualifikation',
+  titel: 'Qualifikation',
+  seite: 1,
+  zeile: 1,
+  spalte: 3,
+  spanne: 3,
+  ordnung: 3,
+  gruppen: [
+    {
+      id: 'qualifikation',
+      felder: [
+        {
+          id: 'arzt_status',
+          label: 'Arzt',
+          typ: 'radio',
+          breite: 4,
+          optionen: [
+            { wert: 'weiterbildung', text: 'Arzt in Weiterbildung' },
+            { wert: 'facharzt', text: 'Facharzt' },
+          ],
+        },
+        {
+          id: 'arzt_fach',
+          label: 'Fachrichtung',
+          typ: 'mehrfach',
+          breite: 8,
+          optionen: [
+            { wert: 'anaesthesie', text: 'Anästhesie' },
+            { wert: 'paediatrie', text: 'Pädiatrie' },
+            { wert: 'chirurgie', text: 'Chirurgie' },
+            { wert: 'neurologie', text: 'Neurologie' },
+            { wert: 'innere', text: 'Innere' },
+            { wert: 'allgemeinmedizin', text: 'Allg. Medizin' },
+            { wert: 'notfallmedizin', text: 'Notfallmed.' },
+            { wert: 'intensivmedizin', text: 'Intensivmed.' },
+            { wert: 'kanm', text: 'KANM' },
+            { wert: 'andere', text: 'Andere' },
+          ],
+        },
+        {
+          id: 'qualifikation_rd',
+          label: 'Qualifikation Rettungsdienst',
+          typ: 'radio',
+          breite: 8,
+          optionen: [
+            { wert: 'rett_ass', text: 'Rett.-Ass.' },
+            { wert: 'rett_san', text: 'Rett.-San.' },
+            { wert: 'notfallsan', text: 'Notfallsanitäter' },
+            { wert: 'int_pflege', text: '(Int.-)Pflege' },
+          ],
+        },
+        { id: 'fahrzeug', label: 'Standort / Rufname eigenes Fahrzeug', typ: 'text', breite: 12 },
+      ],
+    },
+  ],
+}
+
+const neurologie_ende: Abschnitt = {
+  id: 'neurologie_ende',
+  titel: 'Neurologie bei Einsatzende',
+  seite: 2,
+  zeile: 3,
+  spalte: 3,
+  spanne: 4,
+  ordnung: 1,
+  gruppen: [
     {
       id: 'neuro_ende',
       titel: 'Neurologie bei Einsatzende',
@@ -2182,218 +2515,13 @@ const uebergabebefund: Abschnitt = {
   ],
 }
 
-const einsatzverlauf: Abschnitt = {
-  id: 'einsatzverlauf',
-  titel: 'Einsatzverlauf — Besonderheiten',
-  seite: 2,
-  ordnung: 6,
-  gruppen: [
-    {
-      id: 'besonderheiten',
-      felder: [
-        {
-          id: 'besonderheiten',
-          label: 'Besonderheiten',
-          typ: 'mehrfach',
-          breite: 12,
-          optionen: [
-            { wert: 'kein_notarzt_verfuegbar', text: 'zeitnah ist kein Notarzt verfügbar' },
-            { wert: 'uebernahme_arztbesetzt', text: 'Übernahme aus arztbesetztem Rettungsmittel' },
-            { wert: 'uebergabe_arztbesetzt', text: 'Übergabe an arztbesetztes Rettungsmittel' },
-            { wert: 'transport_klinik', text: 'Transport in Klinik' },
-            { wert: 'naechste_klinik_nimmt_nicht_auf', text: 'nächste Klinik nimmt nicht auf' },
-            { wert: 'zwangsbelegung', text: 'Zwangsbelegung' },
-            { wert: 'zwangsunterbringung', text: 'Zwangsunterbringung' },
-            { wert: 'nur_untersuchung', text: 'nur Untersuchung und Behandlung' },
-            { wert: 'erschwerter_zugang', text: 'erschwerter Pat.-Zugang' },
-            { wert: 'techn_rettung', text: 'techn. Rettung' },
-            { wert: 'infektionstransport', text: 'Infektionstransport' },
-            { wert: 'infektionstransport_hoher_aufwand', text: '… mit hohem Aufwand' },
-            { wert: 'lna_am_einsatz', text: 'LNA am Einsatz' },
-            { wert: 'manv', text: 'MANV' },
-            { wert: 'mehrere_patienten', text: 'Behandlung mehrerer Patienten' },
-            { wert: 'abbruch_folgeeinsatz', text: 'Abbruch wegen Folgeeinsatz' },
-            { wert: 'gewalt_gegen_einsatzkraefte', text: 'Gewalt gegen Einsatzkräfte' },
-          ],
-        },
-      ],
-    },
-  ],
-}
-
-const transport: Abschnitt = {
-  id: 'transport',
-  titel: 'Patienten-Transport',
-  seite: 2,
-  ordnung: 7,
-  gruppen: [
-    {
-      id: 'kein_transport',
-      titel: 'kein Transport',
-      felder: [
-        {
-          id: 'kein_transport_grund',
-          label: 'kein Transport',
-          typ: 'radio',
-          breite: 12,
-          optionen: [
-            { wert: 'kein_patient', text: 'kein Patient' },
-            { wert: 'tod', text: 'Tod' },
-            { wert: 'ambulante_versorgung', text: 'ambulante Versorgung' },
-            { wert: 'transport_abgelehnt', text: 'Pat. lehnt Transport ab' },
-            { wert: 'therapieverzicht', text: 'Bewusster Therapieverzicht / -beschränkg.' },
-            { wert: 'verweis_amb_sektor', text: 'Verweis an amb. Sektor (HA, ÄBD etc.)' },
-            { wert: 'uebergabe_polizei', text: 'Patientenübergabe an Polizei' },
-            { wert: 'ausfall_rettungsmittel', text: 'Ausfall Rettungsmittel (Unfall, Defekt etc.)' },
-            { wert: 'rettungsmittel_nicht_geeignet', text: 'Rettungsmittel nicht geeignet' },
-            { wert: 'transport_durch_dritte', text: 'Transport durch Dritte (Taxi etc.)' },
-            { wert: 'sonstiger_transport', text: 'Sonstiger Transport' },
-          ],
-        },
-      ],
-    },
-    {
-      id: 'transport_durch',
-      titel: 'Transport durch',
-      felder: [
-        {
-          id: 'transport_durch',
-          label: 'Transport durch',
-          typ: 'radio',
-          breite: 12,
-          optionen: [
-            { wert: 'rtw', text: 'RTW' },
-            { wert: 'naw', text: 'NAW' },
-            { wert: 'ktw', text: 'KTW' },
-            { wert: 'rth_ith', text: 'RTH / ITH' },
-            { wert: 'n_ktw', text: 'N-KTW' },
-            { wert: 's_rtw', text: 'S-RTW' },
-            { wert: 'itw', text: 'ITW' },
-            { wert: 'sonstige', text: 'Sonstige' },
-          ],
-        },
-        { id: 'sondersignal', label: 'Transport mit Sondersignal', typ: 'check', breite: 12 },
-        {
-          id: 'transportbegleitung',
-          label: 'ärztliche Transportbegleitung durch',
-          typ: 'radio',
-          breite: 12,
-          optionen: [
-            { wert: 'keine', text: 'keine ärztliche Begleitung' },
-            { wert: 'notarzt', text: 'Notarzt (bodengebunden)' },
-            { wert: 'notarzt_rth', text: 'Notarzt RTH / ITH' },
-            { wert: 'klinik_arzt', text: 'Klinik-Arzt' },
-            { wert: 'niedergelassener_arzt', text: 'niedergel. Arzt' },
-            { wert: 'sonstiger_arzt', text: 'sonstiger Arzt' },
-          ],
-        },
-        { id: 'telenotarzt', label: 'Telenotarzt', typ: 'check', breite: 12 },
-        {
-          id: 'spezieller_einsatz',
-          label: 'Spezieller Einsatz',
-          typ: 'radio',
-          breite: 12,
-          optionen: [
-            { wert: 'intensivtransport', text: 'Intensivtransport' },
-            { wert: 'hilfeleistung', text: 'Hilfeleistung' },
-            { wert: 'personaltransport', text: 'Personaltransport' },
-            { wert: 'materialtransport', text: 'Materialtransport' },
-            { wert: 'unterstuetzung_anderes_rm', text: 'Unterstützung für anderes Rettungsmittel' },
-          ],
-        },
-      ],
-    },
-  ],
-}
-
-const uebergabe: Abschnitt = {
-  id: 'uebergabe',
-  titel: 'Übergabe',
-  seite: 2,
-  ordnung: 8,
-  gruppen: [
-    {
-      id: 'uebergabe',
-      felder: [
-        {
-          id: 'uebergabe_ziel',
-          label: 'Übergabe an',
-          typ: 'radio',
-          breite: 12,
-          optionen: [
-            { wert: 'keine', text: 'keine' },
-            { wert: 'hausarzt', text: 'Hausarzt / KV-Arzt vor Ort' },
-            { wert: 'einsatzstelle', text: 'Einsatzstelle' },
-            { wert: 'fachambulanz', text: 'Fachambulanz' },
-            { wert: 'op_direkt', text: 'OP direkt' },
-            { wert: 'zna', text: 'ZNA / INA / PINA' },
-            { wert: 'schockraum', text: 'Schockraum' },
-            { wert: 'inz_kinz', text: 'INZ / KINZ' },
-            { wert: 'stroke_unit', text: 'Stroke Unit' },
-            { wert: 'herzkatheterlabor', text: 'Herzkatheterlabor' },
-            { wert: 'cpu', text: 'CPU' },
-            { wert: 'intensivstation', text: 'Intensivstation' },
-            { wert: 'allgemeinstation', text: 'Allgemeinstation' },
-            { wert: 'ct_mr', text: 'CT / MR' },
-            { wert: 'praxis', text: 'Praxis' },
-            { wert: 'kv_bereitschaftspraxis', text: 'KV-Bereitschaftspraxis' },
-            { wert: 'kreisssaal', text: 'Kreißsaal' },
-            { wert: 'sonstige', text: 'Sonstige' },
-          ],
-        },
-        { id: 'uebergabe_ziel_text', label: 'Übergabe an — Freitext', typ: 'text', breite: 12 },
-        { id: 'uebergabe_verzoegert', label: 'Übergabe verzögert', typ: 'check', breite: 12 },
-        { id: 'uebergabe_name', label: 'Übergabe an (Name)', typ: 'text', breite: 12 },
-      ],
-    },
-  ],
-}
-
-const bemerkungen: Abschnitt = {
-  id: 'bemerkungen',
-  titel: 'Bemerkungen',
-  seite: 2,
-  ordnung: 9,
-  gruppen: [
-    {
-      id: 'bemerkungen',
-      felder: [
-        {
-          id: 'behandlungsgrenzen',
-          label: 'Behandlungsgrenzen',
-          typ: 'mehrfach',
-          breite: 12,
-          optionen: [
-            { wert: 'massnahmenverweigerung', text: 'Massnahmenverweigerung durch Patient' },
-            { wert: 'therapieverzicht', text: 'bewusster Therapieverzicht' },
-            { wert: 'kontraindikation', text: 'Indizierte Maßn. wg. Kontraindikation unterlassen' },
-          ],
-        },
-        {
-          id: 'bemerkungen',
-          label: 'Bemerkungen',
-          typ: 'langtext',
-          breite: 12,
-          hinweis: 'z. B. Verlauf, Hausarzt, Vormedikation, Telefonnummer der Angehörigen, Notkompetenz-Maßnahmen …',
-        },
-        { id: 'hausarzt', label: 'Hausarzt', typ: 'text', breite: 6 },
-        { id: 'angehoeriger', label: 'Angehöriger / Telefon', typ: 'text', breite: 6 },
-      ],
-    },
-    {
-      id: 'unterschrift',
-      felder: [
-        { id: 'ausfueller_name', label: 'Unterschrift Dokumentverantwortlicher', typ: 'text', breite: 8, pflicht: true, hinweis: 'Name zusätzlich in Druckschrift, ggf. Funktion, ggf. Rückruf-Telefon-Nr.' },
-        { id: 'ausfueller_zeit', label: 'Zeitpunkt', typ: 'zeit', breite: 4 },
-      ],
-    },
-  ],
-}
-
 export const DIVI_ABSCHNITTE: Abschnitt[] = [
   stammdaten,
+  protokollkennung,
   einsatzdaten,
+  symptombeginn,
   zeiten,
+  qualifikation,
   zielklinik,
   mannschaft,
   notfallgeschehen,
@@ -2407,6 +2535,7 @@ export const DIVI_ABSCHNITTE: Abschnitt[] = [
   massnahmen,
   reanimation,
   uebergabebefund,
+  neurologie_ende,
   einsatzverlauf,
   transport,
   uebergabe,
@@ -2418,7 +2547,45 @@ export const DIVI_VERSION = '7.1'
 
 /** Alle Abschnitte einer der beiden A4-Seiten, in Druckreihenfolge. */
 export function abschnitteDerSeite(seite: 1 | 2): Abschnitt[] {
-  return DIVI_ABSCHNITTE.filter((a) => a.seite === seite).sort((a, b) => a.ordnung - b.ordnung)
+  return DIVI_ABSCHNITTE.filter((a) => a.seite === seite).sort(
+    (a, b) => a.zeile - b.zeile || a.spalte - b.spalte || a.ordnung - b.ordnung,
+  )
+}
+
+/** Eine Saeule des Vordrucks: alles, was in einem Band untereinander steht. */
+export type Saeule = { spalte: number; spanne: number; abschnitte: Abschnitt[] }
+
+/** Ein Band des Vordrucks, von links nach rechts in Saeulen geteilt. */
+export type Band = { zeile: number; saeulen: Saeule[] }
+
+/**
+ * Das Raster einer Seite, so wie es auf dem Papier liegt: Baender von oben
+ * nach unten, darin Saeulen von links nach rechts, darin Abschnitte
+ * untereinander. Maske und Ausdruck bauen beide hierauf auf.
+ */
+export function rasterDerSeite(seite: 1 | 2): Band[] {
+  const baender = new Map<number, Map<number, Saeule>>()
+  for (const abschnitt of abschnitteDerSeite(seite)) {
+    let band = baender.get(abschnitt.zeile)
+    if (!band) {
+      band = new Map()
+      baender.set(abschnitt.zeile, band)
+    }
+    let saeule = band.get(abschnitt.spalte)
+    if (!saeule) {
+      saeule = { spalte: abschnitt.spalte, spanne: abschnitt.spanne, abschnitte: [] }
+      band.set(abschnitt.spalte, saeule)
+    }
+    saeule.abschnitte.push(abschnitt)
+  }
+  return [...baender.entries()]
+    .sort(([a], [b]) => a - b)
+    .map(([zeile, band]) => ({
+      zeile,
+      saeulen: [...band.values()]
+        .sort((a, b) => a.spalte - b.spalte)
+        .map((s) => ({ ...s, abschnitte: [...s.abschnitte].sort((a, b) => a.ordnung - b.ordnung) })),
+    }))
 }
 
 /** Jedes Feld des Katalogs, flach. */

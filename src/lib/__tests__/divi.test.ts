@@ -8,6 +8,7 @@ import {
   alleFelder,
   feldFinden,
   pflichtfelder,
+  rasterDerSeite,
   wertText,
 } from '../../katalog/divi'
 import { diviDruckHtml, escapeHtml, istGewaehlt } from '../diviDruck'
@@ -34,18 +35,86 @@ describe('Feldkatalog DIVI 7.1', () => {
     expect(abschnitteDerSeite(1).length + abschnitteDerSeite(2).length).toBe(DIVI_ABSCHNITTE.length)
   })
 
-  it('sortiert die Abschnitte einer Seite nach Ordnung', () => {
+  it('sortiert die Abschnitte einer Seite wie den Vordruck: Band, Saeule, dann von oben nach unten', () => {
     for (const seite of [1, 2] as const) {
-      const ordnungen = abschnitteDerSeite(seite).map((a) => a.ordnung)
-      expect(ordnungen).toEqual([...ordnungen].sort((a, b) => a - b))
+      const schluessel = abschnitteDerSeite(seite).map((a) => [a.zeile, a.spalte, a.ordnung])
+      const sortiert = [...schluessel].sort((a, b) => a[0] - b[0] || a[1] - b[1] || a[2] - b[2])
+      expect(schluessel).toEqual(sortiert)
     }
   })
 
-  it('gibt jedem Abschnitt eine eindeutige Ordnung je Seite', () => {
+  it('stapelt innerhalb einer Saeule ohne Gleichstand', () => {
     for (const seite of [1, 2] as const) {
-      const ordnungen = abschnitteDerSeite(seite).map((a) => a.ordnung)
-      expect(new Set(ordnungen).size).toBe(ordnungen.length)
+      for (const band of rasterDerSeite(seite)) {
+        for (const saeule of band.saeulen) {
+          const ordnungen = saeule.abschnitte.map((a) => a.ordnung)
+          expect({ seite, band: band.zeile, saeule: saeule.spalte, doppelt: ordnungen.filter((o, i) => ordnungen.indexOf(o) !== i) })
+            .toEqual({ seite, band: band.zeile, saeule: saeule.spalte, doppelt: [] })
+        }
+      }
     }
+  })
+
+  it('fuellt jedes Band genau aus — zwoelf Zwoelftel, keine Luecke, kein Ueberhang', () => {
+    for (const seite of [1, 2] as const) {
+      for (const band of rasterDerSeite(seite)) {
+        const summe = band.saeulen.reduce((s, sa) => s + sa.spanne, 0)
+        expect({ seite, band: band.zeile, summe }).toEqual({ seite, band: band.zeile, summe: 12 })
+      }
+    }
+  })
+
+  it('gibt allen Abschnitten derselben Saeule dieselbe Breite', () => {
+    for (const seite of [1, 2] as const) {
+      for (const band of rasterDerSeite(seite)) {
+        for (const saeule of band.saeulen) {
+          for (const abschnitt of saeule.abschnitte) {
+            expect({ abschnitt: abschnitt.id, spanne: abschnitt.spanne })
+              .toEqual({ abschnitt: abschnitt.id, spanne: saeule.spanne })
+          }
+        }
+      }
+    }
+  })
+
+  it('ordnet die Bloecke so an wie der Vordruck', () => {
+    // Vorderseite, oberstes Band: links die Stammdaten mit dem Protokollkopf,
+    // in der Mitte die Einsatzdaten mit Transportziel und Besetzung,
+    // rechts Symptom-Beginn, die Zeitenleiste und die Qualifikationen.
+    const [band1] = rasterDerSeite(1)
+    expect(band1.saeulen.map((s) => s.abschnitte.map((a) => a.id))).toEqual([
+      ['stammdaten', 'protokollkennung'],
+      ['einsatzdaten', 'zielklinik', 'mannschaft'],
+      ['symptombeginn', 'zeiten', 'qualifikation'],
+    ])
+  })
+
+  it('legt das Notfallgeschehen als durchgehendes Band unter das erste', () => {
+    const band2 = rasterDerSeite(1)[1]
+    expect(band2.saeulen).toHaveLength(1)
+    expect(band2.saeulen[0].abschnitte.map((a) => a.id)).toEqual(['notfallgeschehen'])
+  })
+
+  it('stellt Neurologie und Messwerte nebeneinander, wie auf dem Papier', () => {
+    const band3 = rasterDerSeite(1)[2]
+    expect(band3.saeulen.map((s) => s.abschnitte.map((a) => a.id))).toEqual([
+      ['neurologie_erst'],
+      ['messwerte_erst'],
+    ])
+  })
+
+  it('ordnet die Rueckseite wie den Vordruck', () => {
+    const [band1, band2, band3] = rasterDerSeite(2)
+    expect(band1.saeulen.map((s) => s.abschnitte.map((a) => a.id))).toEqual([
+      ['verlaufsprotokoll', 'medikation', 'reanimation'],
+      ['massnahmen'],
+    ])
+    expect(band2.saeulen[0].abschnitte.map((a) => a.id)).toEqual(['uebergabebefund'])
+    expect(band3.saeulen.map((s) => s.abschnitte.map((a) => a.id))).toEqual([
+      ['einsatzverlauf', 'uebergabe'],
+      ['transport'],
+      ['neurologie_ende', 'bemerkungen'],
+    ])
   })
 
   it('haelt die Optionswerte innerhalb eines Feldes auseinander', () => {
@@ -287,13 +356,27 @@ describe('Ausdruck', () => {
     expect(html).toContain('<td class="schmal">×</td>')
   })
 
-  it('setzt die Abschnitte in Spalten, wie der Vordruck', () => {
-    expect(diviDruckHtml({})).toContain('class="spalten"')
+  it('druckt das Raster des Vordrucks: Baender mit Saeulen', () => {
+    const html = diviDruckHtml({})
+    expect(html).toContain('class="band"')
+    expect(html).toContain('class="saeule s5"')
   })
 
-  it('gibt den Tabellen die ganze Blattbreite', () => {
+  it('setzt jeden Abschnitt in die Saeule, die der Vordruck ihm gibt', () => {
     const html = diviDruckHtml({})
-    expect(html).toContain('class="abschnitt breit"')
-    expect(html).toContain('.breit{column-span:all')
+    // Oberstes Band der Vorderseite: 5/12 Stammdaten, 4/12 Einsatzdaten, 3/12 Zeiten.
+    const ersterStart = html.indexOf('class="band"')
+    const erstesBand = html.slice(ersterStart, html.indexOf('class="band"', ersterStart + 1))
+    expect(erstesBand.match(/class="saeule s(\d+)"/g)).toEqual([
+      'class="saeule s5"',
+      'class="saeule s4"',
+      'class="saeule s3"',
+    ])
+  })
+
+  it('gibt den Tabellen der Rueckseite die breite Saeule', () => {
+    const html = diviDruckHtml({})
+    const rueckseite = html.slice(html.indexOf('Rückseite'))
+    expect(rueckseite).toContain('class="saeule s8"')
   })
 })

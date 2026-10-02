@@ -9,7 +9,7 @@ import {
   DIVI_VERSION,
   MEDIKATION_SPALTEN,
   VERLAUF_SPALTEN,
-  abschnitteDerSeite,
+  rasterDerSeite,
   type Abschnitt,
   type Feld,
   type Gruppe,
@@ -114,14 +114,27 @@ function gruppeHtml(gruppe: Gruppe, payload: Payload): string {
   return `${titel}<div class="raster">${gruppe.felder.map((f) => feldHtml(f, payload, gruppe.titel)).join('')}</div>`
 }
 
-/** Abschnitte mit Tabelle brauchen die ganze Blattbreite, nicht eine Spalte. */
-const UEBER_ALLE_SPALTEN = new Set(['verlaufsprotokoll', 'medikation'])
-
 function abschnittHtml(abschnitt: Abschnitt, payload: Payload): string {
-  const breit = UEBER_ALLE_SPALTEN.has(abschnitt.id) ? ' breit' : ''
-  return `<section class="abschnitt${breit}"><h2>${escapeHtml(abschnitt.titel)}</h2>${abschnitt.gruppen
+  return `<section class="abschnitt"><h2>${escapeHtml(abschnitt.titel)}</h2>${abschnitt.gruppen
     .map((g) => gruppeHtml(g, payload))
     .join('')}</section>`
+}
+
+/** Eine Seite als das Raster des Vordrucks: Baender, darin Saeulen. */
+function rasterHtml(seite: 1 | 2, payload: Payload): string {
+  return rasterDerSeite(seite)
+    .map(
+      (band) =>
+        `<div class="band">${band.saeulen
+          .map(
+            (saeule) =>
+              `<div class="saeule s${saeule.spanne}">${saeule.abschnitte
+                .map((a) => abschnittHtml(a, payload))
+                .join('')}</div>`,
+          )
+          .join('')}</div>`,
+    )
+    .join('')
 }
 
 const STIL = `
@@ -133,9 +146,10 @@ body{font-family:Arial,Helvetica,sans-serif;font-size:4.4pt;line-height:1.2;colo
 .kopf{display:flex;justify-content:space-between;align-items:center;border:0.8pt solid #000;padding:1.5pt 4pt;margin-bottom:1.5pt}
 .kopf .titel{font-size:7pt;font-weight:bold;letter-spacing:.5pt;text-transform:uppercase}
 .kopf .meta{font-size:4.4pt;color:#333}
-.spalten{column-count:3;column-gap:2.5mm;column-rule:0.3pt solid #ccc}
-.breit{column-span:all;margin-bottom:1.2pt}
-.abschnitt{border:0.4pt solid #666;margin-bottom:1.2pt;break-inside:avoid}
+.band{display:flex;align-items:stretch;gap:1.2pt;margin-bottom:1.2pt}
+.saeule{display:flex;flex-direction:column;gap:1.2pt;min-width:0}
+.s3{width:25%}.s4{width:33.333%}.s5{width:41.666%}.s6{width:50%}.s8{width:66.666%}.s12{width:100%}
+.abschnitt{border:0.4pt solid #666;break-inside:avoid}
 .abschnitt h2{font-size:4.6pt;font-weight:bold;text-transform:uppercase;letter-spacing:.3pt;background:#dcdcdc;border-bottom:0.4pt solid #888;padding:0.6pt 2pt}
 .gtitel{font-size:4.1pt;font-weight:bold;text-transform:uppercase;letter-spacing:.25pt;color:#333;padding:0.8pt 2pt 0;border-top:0.3pt dotted #bbb}
 .raster{padding:0.6pt 2pt 1.2pt}
@@ -180,7 +194,7 @@ export function diviDruckHtml(payload: Payload, kopf: Kopfdaten = {}): string {
         <div class="meta">Version ${DIVI_VERSION} · ${beschriftung} · Erstellt: ${escapeHtml(erstellt)}${org}</div>
         <div class="titel">Seite ${nr} / 2</div>
       </div>
-      <div class="spalten">${abschnitteDerSeite(nr).map((a) => abschnittHtml(a, payload)).join('')}</div>
+      ${rasterHtml(nr, payload)}
       <div class="fuss"><span>Empfehlung der DIVI — Notfall-Einsatzprotokoll Version ${DIVI_VERSION}</span><span>Seite ${nr} von 2</span></div>
     </div>`
 
