@@ -294,3 +294,14 @@ describe('Besatzung', () => {
   })
 })
 
+describe('Normangabe', () => {
+  it('nennt die Fassung, der die Felder wirklich folgen', () => {
+    // Die Feldlisten stammen vom ÄLRD-Bogen, und der folgt DIVI 6.0.
+    // Eine falsche Normangabe auf einem Einsatzprotokoll waere schlimmer
+    // als gar keine.
+    const html = aelrdHtml({})
+    expect(html).toContain('DIVI-Notfalleinsatzprotokoll 6.0')
+    expect(html).not.toContain('DIVI-Notfalleinsatzprotokoll 7.1')
+  })
+})
+

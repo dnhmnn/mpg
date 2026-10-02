@@ -120,7 +120,7 @@ function titel(): string {
   return block(
     SEITE1.titel,
     `<div class="titel">Einsatzprotokoll - Responda</div>
-     <div class="untertitel">In Anlehnung an das DIVI-Notfalleinsatzprotokoll 7.1</div>`,
+     <div class="untertitel">In Anlehnung an das DIVI-Notfalleinsatzprotokoll 6.0</div>`,
     true,
   )
 }

@@ -6,7 +6,9 @@
 //      umgerechnet — was dokumentiert wurde, bleibt, wie es dokumentiert
 //      wurde.
 //
-// 2.0  Nach DIVI-Notfallprotokoll 6.0 und dem Datensatz MIND 3.1.
+// 2.0  Nach dem bayerischen ÄLRD-Einsatzprotokoll (NIDA/medDV), das sich
+//      auf DIVI 6.0 und MIND 4.0 stützt. Layout und Feldlisten stammen aus
+//      dem gedruckten Bogen, nicht aus der Norm selbst.
 //
 // WARUM EIN FELD STATT EINER VERMUTUNG: Die Fassung wird im payload
 // mitgeschrieben, nicht aus dem Vorhandensein einzelner Felder erraten. Ein
@@ -20,7 +22,7 @@ export const NEUE_FASSUNG: Fassung = 2
 
 export const FASSUNG_NAME: Record<Fassung, string> = {
   1: '1.0',
-  2: '2.0 (DIVI 7.1)',
+  2: '2.0 (DIVI 6.0)',
 }
 
 /**
