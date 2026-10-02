@@ -1,24 +1,23 @@
-// Seite 1 des ÄLRD-Bogens: Einsatzdaten, Notfallgeschehen, Erstbefund, Diagnosen.
+// Seite 1 des ÄLRD-Bogens: Stammdaten, Einsatzdaten, Notfallgeschehen,
+// Erstbefund, Neurologie, Verletzungen, Diagnosen.
 //
-// Jeder Block sitzt auf seiner vermessenen Position aus aelrdLayout.
-// Die Inhalte kommen aus dem DIVI-7.1-Katalog.
+// Jeder Block sitzt auf seiner vermessenen Position aus aelrdLayout, jede
+// Optionsreihe steht so, wie sie auf dem Papier steht.
 
 import {
   MASS,
   block,
   escapeHtml,
-  istGewaehlt,
-  messwert,
   option,
-  optionen,
+  raster,
   schmerzskala,
   ueberschrift,
   wertKasten,
   wertZeile,
   type Payload,
 } from './aelrdDruck'
-import { SEITE1 } from './aelrdLayout'
-import { feldFinden } from '../katalog/divi'
+import { HOEHEN, SEITE1 } from './aelrdLayout'
+import { aelrdFeld } from '../katalog/aelrd'
 
 export type Kopfdaten = {
   organisation?: string
@@ -26,34 +25,40 @@ export type Kopfdaten = {
   erstellt?: string
 }
 
-function w(payload: Payload, id: string): string {
-  const v = payload[id]
+function w(p: Payload, id: string): string {
+  const v = p[id]
   return v === undefined || v === null ? '' : String(v)
 }
 
-/** Ein einzelner Optionsknopf aus einem Katalogfeld, fuer von Hand gesetzte Reihen. */
-function opt(payload: Payload, feldId: string, wert: string, text?: string): string {
-  const feld = feldFinden(feldId)
-  const beschriftung = text ?? feld?.optionen?.find((o) => o.wert === wert)?.text ?? wert
-  return option(beschriftung, istGewaehlt(payload[feldId], wert), feld?.typ !== 'mehrfach')
+/** Ein einzelnes Kaestchen fuer ein Ja-Nein-Feld. */
+function hak(p: Payload, id: string, text?: string): string {
+  return option(text ?? aelrdFeld(id)?.label ?? id, Boolean(p[id]), true)
 }
 
-/** Ein einzelnes Kaestchen fuer ein Ja-Nein-Feld des Katalogs. */
-function hak(payload: Payload, feldId: string, text?: string): string {
-  const feld = feldFinden(feldId)
-  return option(text ?? feld?.label ?? feldId, Boolean(payload[feldId]), true)
+/** Ein Messwertfeld der Werteleiste: Beschriftung oben, Wert gross, Einheit klein. */
+function mw(p: Payload, id: string, breit = false): string {
+  const feld = aelrdFeld(id)
+  return `<div class="zelle-mw${breit ? ' breit' : ''}">
+    <span class="z-b">${escapeHtml(feld?.label ?? id)}</span>
+    <span class="z-w">${escapeHtml(w(p, id))}</span>
+    <span class="z-e">${escapeHtml(feld?.einheit ?? '')}</span>
+  </div>`
 }
 
-/** Der Text der gewaehlten Option eines Katalogfeldes. */
-function gewaehlt(payload: Payload, feldId: string): string {
-  return feldFinden(feldId)?.optionen?.find((o) => o.wert === payload[feldId])?.text ?? ''
+/** Zwei Werte in einem Feld, durch Schraegstrich getrennt — NIBP und IBP. */
+function mwPaar(p: Payload, idA: string, idB: string, titel: string, einheit: string): string {
+  return `<div class="zelle-mw breit">
+    <span class="z-b">${escapeHtml(titel)}</span>
+    <span class="z-w">${escapeHtml(w(p, idA))}<span class="z-s">/</span>${escapeHtml(w(p, idB))}</span>
+    <span class="z-e">${escapeHtml(einheit)}</span>
+  </div>`
 }
 
-function kopfzeile(kopf: Kopfdaten): string {
+function kopfzeile(k: Kopfdaten): string {
   return `<div class="kopf">
-    <span>Organisation: <b>${escapeHtml(kopf.organisation ?? '')}</b></span>
-    <span>Protokoll-Nr.: <b>${escapeHtml(kopf.protokollNr ?? '')}</b></span>
-    <span class="stempel">${escapeHtml(kopf.erstellt ?? '')}</span>
+    <span>Organisation: <b>${escapeHtml(k.organisation ?? '')}</b></span>
+    <span>Protokoll-Nr.: <b>${escapeHtml(k.protokollNr ?? '')}</b></span>
+    <span class="stempel">${escapeHtml(k.erstellt ?? '')}</span>
   </div>`
 }
 
@@ -71,24 +76,29 @@ function stammdaten(p: Payload): string {
 }
 
 function person(p: Payload): string {
-  const alterEinheit = feldFinden('alter_einheit')
   return block(
     SEITE1.person,
-    `<div class="reihe">
-      <span class="rb">Geschlecht</span>
-      ${opt(p, 'geschlecht', 'maennlich')}${opt(p, 'geschlecht', 'weiblich')}${opt(p, 'geschlecht', 'divers')}
-      <span class="rb">BMI</span>
-      ${opt(p, 'bmi', 'bis40', '< 40')}${opt(p, 'bmi', 'ueber40', '> 40')}
-      <span class="rw">${escapeHtml(w(p, 'alter_wert'))}</span><span class="rb">Alter</span>
-      ${(alterEinheit?.optionen ?? []).map((o) => option(o.text, istGewaehlt(p.alter_einheit, o.wert), true)).join('')}
+    `<div class="drei">
+      <div class="zelle-g">
+        <div class="r"><span class="rb">Geschlecht</span>${raster('geschlecht', p, [['männlich']])}</div>
+        <div class="r">${raster('geschlecht', p, [['divers', 'weiblich']])}</div>
+      </div>
+      <div class="zelle-b">
+        <span class="rb">BMI</span>
+        <div class="bmi">${raster('bmi', p, [['< 40'], ['> 40']])}</div>
+      </div>
+      <div class="zelle-a">
+        <div class="r"><span class="rw">${escapeHtml(w(p, 'alter_wert'))}</span><span class="rb">Alter</span><span class="re">Jahre</span></div>
+        <div class="r">${raster('alter_einheit', p, [['1-7 Tg', '8-28 Tg']])}</div>
+      </div>
     </div>`,
   )
 }
 
-function titel(kopf: Kopfdaten): string {
+function titel(k: Kopfdaten): string {
   return block(
     SEITE1.titel,
-    `<div class="titel">Einsatzprotokoll${kopf.organisation ? ` — ${escapeHtml(kopf.organisation)}` : ''}</div>
+    `<div class="titel">Einsatzprotokoll${k.organisation ? ` — ${escapeHtml(k.organisation)}` : ''}</div>
      <div class="untertitel">In Anlehnung an das DIVI-Notfalleinsatzprotokoll 7.1</div>`,
     true,
   )
@@ -97,12 +107,12 @@ function titel(kopf: Kopfdaten): string {
 function kennung(p: Payload): string {
   return block(
     SEITE1.kennung,
-    `${wertZeile(w(p, 'einsatz_nr'), 'Einsatz-Nr.')}
+    `<div class="halb">${wertZeile(w(p, 'einsatz_nr'), 'Einsatz Nr.')}</div>
      <div class="zwei">
-       ${wertZeile(w(p, 'leitstelle'), 'Leitstellen-Nr.')}
-       ${wertZeile(w(p, 'fahrzeug'), 'Rufname')}
+       ${wertZeile(w(p, 'leitstelle_nr'), 'Leitst. Nr.')}
+       ${wertZeile(w(p, 'rufname'), 'Rufname')}
      </div>
-     ${wertZeile(w(p, 'standort'), 'Standort')}`,
+     ${wertZeile(w(p, 'standort'), 'Standort', true)}`,
   )
 }
 
@@ -113,25 +123,30 @@ function einsatzdaten(p: Payload): string {
      <div class="ed">
        <div class="ed-links">
          ${wertZeile(w(p, 'einsatz_datum'), 'Einsatz-Datum', true)}
-         ${wertZeile(gewaehlt(p, 'einsatzstelle'), 'Art des Einsatzortes')}
-         ${wertZeile(w(p, 'einsatz_strasse'), 'Einsatzort')}
-         ${wertZeile([w(p, 'einsatz_plz'), w(p, 'einsatz_ort')].filter(Boolean).join(' '), 'PLZ / Ort')}
+         ${wertZeile(w(p, 'einsatzort_art'), 'Art des Einsatzortes')}
+         ${wertZeile(w(p, 'transport_von'), 'Transport von')}
          ${wertZeile(w(p, 'transport_ziel'), 'Transportziel')}
-         ${wertZeile(gewaehlt(p, 'einsatz_art'), 'Einsatz-Art')}
-         ${wertZeile(gewaehlt(p, 'transportbegleitung'), 'Versorgung')}
-         <div class="vm">${hak(p, 'voranmeldung', 'Voranmeldung')}${optionen('voranmeldung_ressource', p)}</div>
+         ${wertZeile(w(p, 'einsatz_art'), 'Einsatz-Art')}
+         ${wertZeile(w(p, 'versorgung'), 'Versorgung')}
+         <div class="vm">${hak(p, 'voranmeldung', 'Voranmeldung')}</div>
+       </div>
+       <div class="ed-mitte">
+         <div class="kl">Sondersignal</div>
+         ${raster('sondersignal', p, [['Anfahrt'], ['Transport']])}
        </div>
        <div class="ed-rechts">
-         <div class="kl">Sondersignal</div>
-         ${opt(p, 'sondersignal_wann', 'anfahrt', 'Anfahrt')}${opt(p, 'sondersignal_wann', 'transport', 'Transport')}
-         <div class="kl" style="margin-top:4pt">Symptom-Beginn</div>
-         ${opt(p, 'symptombeginn_art', 'geschaetzt', 'geschätzt')}
+         <div class="kl rechts">beteiligtes RM</div>
+         <div class="rm">${escapeHtml(w(p, 'beteiligtes_rm'))}</div>
+         <div class="sb">
+           <span class="kl">Symptom-Beginn</span>
+           <span class="sb-g">${hak(p, 'symptombeginn_geschaetzt', 'geschätzt')}</span>
+         </div>
          ${hak(p, 'kollaps_beobachtet', 'Kollaps beobachtet')}
          ${hak(p, 'symptombeginn_ueber24h', 'vor > 24 Stunden')}
          <div class="zeiten">
-           ${wertKasten(w(p, 'symptombeginn_zeit'), 'Symptom-Beginn')}
+           ${wertKasten(w(p, 'symptombeginn'), '')}
            ${wertKasten(w(p, 'zeit_alarm'), 'Alarm')}
-           ${wertKasten(w(p, 'zeit_ankunft_einsatzort'), 'Ankunft (E.-Ort)')}
+           ${wertKasten(w(p, 'zeit_ankunft_ort'), 'Ankunft (E.-Ort)')}
            ${wertKasten(w(p, 'zeit_ankunft_patient'), 'Ankunft (Patient)')}
            ${wertKasten(w(p, 'zeit_abfahrt'), 'Abfahrt')}
            ${wertKasten(w(p, 'zeit_uebergabe'), 'Übergabe')}
@@ -144,66 +159,329 @@ function einsatzdaten(p: Payload): string {
 }
 
 function notfallgeschehen(p: Payload): string {
-  const az = gewaehlt(p, 'az_vor_ereignis')
   return block(
     SEITE1.notfallgeschehen,
     `<div class="ng-kopf">
        ${ueberschrift('Notfallgeschehen, Anamnese, Erstbefund, Vormedikation, Vorbehandlung')}
-       <span class="ng-eh">Ersthelfermaßnahmen (Laien) <b>${escapeHtml(gewaehlt(p, 'ersthelfermassnahmen'))}</b></span>
+       <span class="ng-eh">Ersthelfermaßnahmen (Laien) <b>${escapeHtml(
+         aelrdFeld('ersthelfermassnahmen')?.optionen?.find((o) => o.wert === p.ersthelfermassnahmen)?.text ?? '',
+       )}</b></span>
      </div>
      <div class="ng-text">${escapeHtml(w(p, 'notfallgeschehen'))}</div>
      <div class="ng-fuss">
        <span class="kl">AZ des Pat. vor Ereignis</span>
-       <span class="ng-az">${escapeHtml(az)}</span>
-       <span>${hak(p, 'first_responder_vor_ort', 'First Responder')}</span>
+       <span class="ng-az">${escapeHtml(w(p, 'az_vor_ereignis'))}</span>
+       <span>${hak(p, 'first_responder', 'First Responder')}</span>
+     </div>`,
+  )
+}
+
+function erstbefund(p: Payload): string {
+  return block(
+    SEITE1.erstbefund,
+    `<div class="eb-kopf" style="height:${HOEHEN.ebKopf}pt">
+       ${ueberschrift('Erstbefund')}
+       <span class="eb-zp"><span class="kl">Zeitpunkt</span><span class="eb-zw">${escapeHtml(w(p, 'erstbefund_zeitpunkt'))}</span></span>
+     </div>
+
+     <div class="bf" style="height:${HOEHEN.ebAtemwege}pt">
+       <span class="bf-t">Atemwege</span>
+       ${raster('atemwege', p, [
+         [null, 'frei', 'gefährdet', 'Stridor exsp.', null],
+         ['nicht untersucht', 'nicht beurteilbar', 'Stridor insp.', 'Atemwegsverlegung', null],
+       ])}
+     </div>
+
+     <div class="bf" style="height:${HOEHEN.ebAtmung}pt">
+       <span class="bf-t">Atmung</span>
+       ${raster('atmung', p, [
+         [null, 'unauffällig', 'Tachypnoe', 'Rasselgeräusche', 'Apnoe', null],
+         ['nicht untersucht', 'nicht beurteilbar', 'Bradypnoe', 'Schnappatmung', 'Spastik', null],
+         ['Belastungsdyspnoe', 'Ruhedyspnoe', 'Beatmung', 'Hyperventilation', 'Zyanose', 'Sonstige'],
+       ])}
+     </div>
+
+     <div class="krsl" style="height:${HOEHEN.ebKreislauf}pt">
+       <div class="krsl-o">
+         <span class="bf-t">Kreislauf</span>
+         <div class="kr-l">
+           ${raster('kreislauf', p, [[null, 'unauffällig'], ['nicht untersucht', 'Blutung']])}
+         </div>
+         <div class="kr-r">
+           <div class="kr-z"><span class="kl">Puls regelmäßig:</span><b>${escapeHtml(w(p, 'puls_regelmaessig'))}</b><b class="kr-rp">${escapeHtml(w(p, 'radialispuls'))}</b></div>
+           <div class="kr-z"><span class="kl">Rekap. Zeit:</span><b>${escapeHtml(w(p, 'rekap_zeit'))}</b><b class="kr-rp">${escapeHtml(w(p, 'schockzeichen'))}</b></div>
+         </div>
+       </div>
+       <div class="krsl-u"><span class="kl">path. Auffälligkeiten:</span><span class="frei">${escapeHtml(w(p, 'kreislauf_auffaelligkeiten'))}</span></div>
+     </div>
+
+     <div class="bf" style="height:${HOEHEN.ebHaut}pt">
+       <span class="bf-t">Haut</span>
+       ${raster('haut', p, [
+         [null, 'unauffällig', 'Oedeme', 'kaltschweißig', 'stehende Hautfalten'],
+         ['nicht untersucht', 'nicht beurteilbar', 'Dekubitus', 'Exantheme', 'Sonstige'],
+       ])}
+     </div>
+
+     <div class="bf" style="height:${HOEHEN.ebEkg - 8}pt">
+       <span class="bf-t">EKG</span>
+       ${raster('ekg', p, [['kein EKG', 'Sinusrhythmus', 'nicht beurteilbar']])}
+     </div>
+     <div class="bf-frei"><span class="frei">${escapeHtml(w(p, 'ekg_text'))}</span></div>
+
+     <div class="mwi" style="height:${HOEHEN.ebMesswerte}pt">
+       ${ueberschrift('Messwerte initial')}
+       <div class="mw-reihe">
+         ${mw(p, 'af')}${mw(p, 'spo2')}${mw(p, 'co_hb')}${mw(p, 'hf')}${mw(p, 'puls')}${mw(p, 'etco2')}
+       </div>
+       <div class="mw-reihe">
+         ${mwPaar(p, 'nibp_sys', 'nibp_dia', 'NIBP', 'mmHg')}
+         ${mwPaar(p, 'ibp_sys', 'ibp_dia', 'IBP', 'mmHg')}
+         ${mw(p, 'bz')}${mw(p, 'temp')}
+       </div>
+     </div>`,
+  )
+}
+
+function neurologie(p: Payload): string {
+  return block(
+    SEITE1.neurologie,
+    `<div class="nr-kopf" style="height:${HOEHEN.nrKopf}pt">
+       ${ueberschrift('Neurologie')}
+       ${hak(p, 'neuro_ohne_befund', 'ohne path. Befund')}
+       <div class="nr-bw">
+         <div><span class="kl">Bewusstsein:</span> <b>${escapeHtml(w(p, 'bewusstsein'))}</b></div>
+         <div class="gcs">
+           <span class="gz"><b>${escapeHtml(w(p, 'gcs_augen'))}</b><span class="kl">Augen</span></span>
+           <span class="gz"><b>${escapeHtml(w(p, 'gcs_verbal'))}</b><span class="kl">Verbal</span></span>
+           <span class="gz"><b>${escapeHtml(w(p, 'gcs_motorik'))}</b><span class="kl">Motorik</span></span>
+           <span class="gz"><b>${escapeHtml(w(p, 'gcs_summe'))}</b><span class="kl">Summe</span></span>
+           <span class="gcs-t">GCS</span>
+         </div>
+       </div>
+     </div>
+
+     <div class="pup" style="height:${HOEHEN.nrPupillen}pt">
+       <div class="pup-k"><span class="bf-t">Pupillenstatus</span><span class="pup-s">rechts</span><span class="pup-s">links</span></div>
+       <div class="pup-z"><span class="kl">Weite</span><span>${escapeHtml(w(p, 'pupillen_weite_re'))}</span><span>${escapeHtml(w(p, 'pupillen_weite_li'))}</span></div>
+       <div class="pup-z"><span class="kl">Lichtreaktion</span><span>${escapeHtml(w(p, 'pupillen_licht_re'))}</span><span>${escapeHtml(w(p, 'pupillen_licht_li'))}</span></div>
+     </div>
+
+     <div class="bf auff" style="height:${HOEHEN.nrAuffaelligkeiten}pt">
+       <span class="bf-t">Auffälligkeiten</span>
+       ${raster('neuro_auffaelligkeiten', p, [
+         ['keine', 'nicht untersucht', 'nicht beurteilbar', 'Gesichtslähmung'],
+         ['Kopfschmerzen', 'Gangunsicherheit / Schwindel', 'Herdblick', 'Motorik Arme'],
+         ['Demenz', 'Querschnittssymptomatik', 'Sensibilitätsstörung', 'Motorik Beine'],
+         ['Sehstörung', 'Babinski Zeichen', 'Übelkeit / Erbrechen', 'Sprachstörung'],
+         ['Meningismus', 'vorbestehende neurologische Defizite', 'Sonstige', null],
+       ])}
+     </div>
+
+     <div class="schm" style="height:${HOEHEN.nrSchmerzen}pt">
+       <span class="bf-t">Schmerzen</span>
+       ${schmerzskala('schmerz', p)}
+       <div class="schm-r">
+         ${hak(p, 'schmerz_nicht_beurteilbar', 'NRS nicht beurteilbar')}
+         <div class="schm-t"><b>${escapeHtml(w(p, 'schmerz_tolerabel'))}</b></div>
+       </div>
+     </div>
+
+     <div class="unt" style="height:${HOEHEN.nrUntersuchung}pt">
+       ${ueberschrift('Untersuchung')}
+       <div class="frei gross">${escapeHtml(w(p, 'untersuchung'))}</div>
+     </div>
+
+     <div class="bf psy" style="height:${HOEHEN.nrPsyche}pt">
+       <span class="bf-t">Psyche</span>
+       ${raster('psyche', p, [
+         [null, 'unauffällig', 'aggressiv', 'verwirrt', 'verlangsamt', 'suizidal'],
+         ['nicht untersucht', 'nicht beurteilbar', 'depressiv', 'erregt', 'euphorisch', 'Sonstige'],
+         [null, 'wahnhaft', 'ängstlich', 'motorisch unruhig', null, null],
+       ])}
+     </div>`,
+  )
+}
+
+function verletzungen(p: Payload): string {
+  return block(
+    SEITE1.verletzungen,
+    `<div class="vrl-kopf" style="height:${HOEHEN.vrKopf}pt">
+       <span class="bf-t">Verletzungen</span>
+       <div class="vrl-z">
+         <div><span class="kl">Zusammenhang mit</span> <b>${escapeHtml(w(p, 'verletzung_zusammenhang'))}</b></div>
+         <div><span class="kl">Verletzungsmuster</span> <b>${escapeHtml(w(p, 'verletzungsmuster'))}</b></div>
+       </div>
+     </div>
+     <div class="vrl-haupt" style="height:${HOEHEN.vrHaupt}pt">
+       <div class="vrl-links">
+         <div class="vrl-t">Lokalisation und Schweregrad</div>
+         ${[
+           ['verl_sht', 'SHT'],
+           ['verl_gesicht', 'Gesicht'],
+           ['verl_hws', 'HWS'],
+           ['verl_thorax', 'Thorax'],
+           ['verl_abdomen', 'Abdomen'],
+           ['verl_bws_lws', 'BWS / LWS'],
+           ['verl_becken', 'Becken'],
+           ['verl_obere_extr', 'obere Extr.'],
+           ['verl_untere_extr', 'untere Extr.'],
+           ['verl_weichteile', 'Weichteile'],
+         ]
+           .map(([id, text]) => `<div class="vrl-zeile"><span>${escapeHtml(text)}</span><b>${escapeHtml(w(p, id))}</b></div>`)
+           .join('')}
+       </div>
+       <div class="vrl-rechts">
+         <div class="vrl-t">Unfallursache</div>
+         <div class="vrl-u">Unfallmechanismus</div>
+         ${raster('unfallmechanismus', p, [['stumpf', 'penetrierend', 'nicht bekannt']])}
+         <div class="vrl-u">Spezielle Traumata</div>
+         ${raster('spezielle_traumata', p, [
+           ['Inhalationstrauma', 'Tauchunfall'],
+           ['Elektrounfall', 'sonstige (Strahlen, Barotrauma)'],
+           ['(beinahe-) Ertrinken', 'Verätzung'],
+         ])}
+         <div class="vrl-u">Verbrennung / Verbrühung</div>
+         <div class="vbr">
+           <span>I° <b>${escapeHtml(w(p, 'verbrennung_1'))}</b> %</span>
+           <span>II° <b>${escapeHtml(w(p, 'verbrennung_2'))}</b> %</span>
+           <span>III° <b>${escapeHtml(w(p, 'verbrennung_3'))}</b> %</span>
+         </div>
+       </div>
+     </div>
+     <div class="vrl-herg" style="height:${HOEHEN.vrHergang}pt">
+       <div class="vrl-u">Unfallhergang</div>
+       ${raster('unfallhergang', p, [
+         [null, 'Motorradfahrer', 'Fußgänger angefahren', 'Schlag', 'Explosion/Verpuffung'],
+         ['PKW-Insasse', 'Fahrrad', 'sonstiger Verkehrsunfall', 'Schuss', 'Verschüttung'],
+         ['LKW-Insasse', 'E-Bike / Pedelec', null, 'Stich', 'andere Unfallarten'],
+       ])}
+       <div class="sturz">
+         ${raster('unfallhergang', p, [['Bus-Insasse', 'E-Scooter']])}
+         <span class="kl">Sturz</span>
+         ${raster('sturz', p, [['ebenerdig', '< 3m', '>= 3m', 'nicht bekannt']])}
+       </div>
      </div>`,
   )
 }
 
 function naca(p: Payload): string {
-  const text = feldFinden('naca')?.optionen?.find((o) => o.wert === p.naca)
   return block(
     SEITE1.naca,
-    `<div class="naca"><span class="kl">NACA-Score initial</span><b>${escapeHtml(
-      text ? `${text.text} (${text.hinweis ?? ''})` : '',
-    )}</b></div>`,
+    `<div class="naca"><span class="kl">NACA SCORE initial</span><b>${escapeHtml(w(p, 'naca_initial'))}</b></div>`,
   )
 }
 
 function news(p: Payload): string {
   return block(
     SEITE1.news,
-    `<div class="news">NEWS2-Score: <b>${escapeHtml(w(p, 'news2'))}</b> &nbsp;·&nbsp; qSOFA: <b>${escapeHtml(
-      w(p, 'qsofa'),
+    `<div class="news"><b>NEWS Score (berechnet/manuell): ${escapeHtml(w(p, 'news_score'))} / Roter Warnwert: ${escapeHtml(
+      w(p, 'roter_warnwert'),
     )}</b></div>`,
   )
 }
 
-/** Zusatzstil, den nur Seite 1 braucht. */
 export const STIL_SEITE1 = `
-.reihe{display:flex;align-items:center;gap:3pt;padding:2pt 3pt;flex-wrap:wrap}
-.rb{font-size:${MASS.beschriftung}pt;margin-right:1pt}
-.rw{font-size:${MASS.wertGross}pt;font-weight:bold}
-.titel{font-size:${MASS.wertGross}pt;font-weight:bold;padding:2pt 3pt 0}
+.drei{display:flex;height:100%;align-items:flex-start}
+.drei .opt{line-height:1.25}
+.zelle-g{flex:0 0 77pt;border-right:${MASS.linie}pt solid #000;padding:0.6pt 3pt}
+.zelle-b{flex:0 0 64pt;border-right:${MASS.linie}pt solid #000;padding:0.6pt 3pt;display:flex;gap:3pt}
+.zelle-a{flex:1 1 auto;padding:0.6pt 3pt}
+.r{display:flex;align-items:baseline;gap:3pt;line-height:1.05}
+.rb{font-size:${MASS.beschriftung}pt}
+.re{font-size:${MASS.beschriftung}pt}
+.rw{font-size:8.2pt;font-weight:bold;line-height:1}
+.bmi .rst{row-gap:0}
+.titel{font-size:9.6pt;font-weight:bold;padding:1.5pt 3pt 0;line-height:1.15}
 .untertitel{font-size:${MASS.beschriftung}pt;padding:0 3pt}
+.halb{width:53%}
 .zwei{display:flex}
 .zwei > *{flex:1 1 50%}
-.ed{display:flex;height:calc(100% - 10pt)}
+
+.ed{display:flex;height:calc(100% - 9pt)}
 .ed-links{flex:1 1 auto;min-width:0;padding-right:2pt}
-.ed-rechts{width:128pt;flex-shrink:0;border-left:${MASS.linie}pt solid #000;padding:1pt 3pt}
-.kl{font-size:${MASS.klein}pt;display:block}
+.ed-mitte{width:46pt;flex-shrink:0;padding:1pt 2pt}
+.ed-rechts{width:112pt;flex-shrink:0;padding:0 2pt}
+.kl{font-size:${MASS.klein}pt}
+.kl.rechts{display:block;text-align:right}
+.rm{height:11pt;border-bottom:${MASS.linie}pt solid #000}
+.sb{display:flex;justify-content:space-between;align-items:baseline;margin-top:2pt}
+.sb-g{font-weight:bold}
 .vm{padding:1pt 3pt}
-.zeiten{margin-top:2pt}
+.zeiten{margin-top:1pt}
+
 .ng-kopf{display:flex;justify-content:space-between;align-items:baseline;padding-right:4pt}
 .ng-eh{font-size:${MASS.beschriftung}pt}
 .ng-text{font-size:7.4pt;white-space:pre-wrap;padding:2pt 4pt;line-height:1.35}
-.ng-fuss{position:absolute;left:0;right:0;bottom:1pt;display:flex;align-items:baseline;gap:6pt;padding:0 4pt;border-top:${MASS.linie}pt solid #000}
+.ng-fuss{position:absolute;left:0;right:0;bottom:1pt;display:flex;align-items:baseline;gap:6pt;padding:0 4pt}
 .ng-az{font-size:${MASS.beschriftung}pt;font-weight:bold;flex:1 1 auto}
-.naca{display:flex;align-items:baseline;gap:4pt;padding:4pt 4pt;font-size:${MASS.ueberschrift}pt}
+
+.eb-kopf{display:flex;justify-content:space-between;align-items:baseline;padding-right:4pt;overflow:hidden}
+.eb-zp{display:inline-flex;align-items:baseline;gap:3pt}
+.eb-zw{font-size:9.6pt;font-weight:bold;border:${MASS.rahmen}pt solid #000;padding:0 4pt;min-width:48pt;display:inline-block;text-align:center}
+.bf{display:flex;align-items:flex-start;gap:3pt;padding:0.3pt 2.5pt;border-top:${MASS.linie}pt solid #000;overflow:hidden}
+.bf-t{font-size:6.7pt;flex:0 0 40pt;line-height:1.1}
+.bf .rst{flex:1 1 auto}
+.bf-frei{padding:0 3pt;height:8pt;overflow:hidden}
+.frei{display:block;font-size:${MASS.beschriftung}pt;min-height:5pt;white-space:pre-wrap}
+.frei.gross{min-height:17pt}
+.krsl{border-top:${MASS.linie}pt solid #000;overflow:hidden;display:flex;flex-direction:column}
+.krsl-o{display:flex;align-items:flex-start;gap:3pt;padding:0.3pt 2.5pt;flex:1 1 auto;min-height:0}
+.krsl-u{padding:0 2.5pt 0.5pt;border-top:${MASS.linie}pt solid #000;flex-shrink:0}
+.kr-l{flex:0 0 88pt}
+.kr-r{flex:1 1 auto;border-left:${MASS.linie}pt solid #000;padding-left:3pt}
+.kr-z{display:flex;gap:4pt;font-size:${MASS.beschriftung}pt;line-height:1.2}
+.kr-rp{margin-left:auto}
+
+.mwi{border-top:${MASS.rahmen}pt solid #000;padding:0.6pt 2pt;overflow:hidden}
+.mw-reihe{display:flex;border-top:${MASS.linie}pt solid #000}
+.zelle-mw{flex:1 1 0;min-width:0;border-right:${MASS.linie}pt solid #000;padding:0 2pt;display:flex;flex-direction:column}
+.zelle-mw.breit{flex:1.6 1 0}
+.zelle-mw:last-child{border-right:none}
+.z-b{font-size:${MASS.klein}pt}
+.z-w{font-size:9.6pt;font-weight:bold;min-height:9.6pt;line-height:1.1}
+.z-s{font-weight:normal;margin:0 2pt}
+.z-e{font-size:${MASS.klein}pt;text-align:right}
+
+.nr-kopf{display:flex;align-items:flex-start;gap:4pt;padding:0.3pt 3pt;overflow:hidden}
+.nr-bw{margin-left:auto;border-left:${MASS.linie}pt solid #000;padding-left:4pt;min-width:112pt}
+.gcs{display:flex;gap:2pt;align-items:flex-end;margin-top:0}
+.gz{display:flex;flex-direction:column;align-items:center;min-width:20pt;border-bottom:${MASS.linie}pt solid #000}
+.gz b{font-size:${MASS.beschriftung}pt}
+.gcs-t{font-size:${MASS.ueberschrift}pt;margin-left:3pt}
+.pup{border-top:${MASS.rahmen}pt solid #000;padding:0.3pt 3pt;overflow:hidden}
+.pup-k,.pup-z{display:flex;gap:4pt}
+.pup-k > *,.pup-z > *{flex:1 1 0;font-size:${MASS.beschriftung}pt}
+.pup-k .bf-t{flex:1 1 0}
+.pup-s{font-size:${MASS.beschriftung}pt;text-align:center}
+.auff{border-top:${MASS.rahmen}pt solid #000}
+.auff .opt,.psy .opt,.vrl-rechts .opt,.vrl-herg .opt{font-size:4.7pt}
+.auff .bf-t,.psy .bf-t{flex:0 0 36pt}
+.auff .rst,.psy .rst{column-gap:1.5pt}
+.schm{display:flex;align-items:flex-start;gap:4pt;padding:0.3pt 3pt;border-top:${MASS.rahmen}pt solid #000;overflow:hidden}
+.schm-r{margin-left:auto;text-align:right}
+.schm-t{font-size:${MASS.beschriftung}pt}
+
+.unt{padding:0.3pt 3pt;border-top:${MASS.rahmen}pt solid #000;overflow:hidden}
+.psy{border-top:${MASS.rahmen}pt solid #000}
+.vrl{border-top:${MASS.rahmen}pt solid #000}
+.vrl-kopf{display:flex;gap:6pt;padding:0.3pt 3pt;overflow:hidden}
+.vrl-z{font-size:${MASS.beschriftung}pt;margin-left:auto;text-align:right}
+.vrl-haupt{display:flex;border-top:${MASS.linie}pt solid #000;overflow:hidden}
+.vrl-links{flex:0 0 50%;border-right:${MASS.linie}pt solid #000;padding:0.6pt 3pt}
+.vrl-rechts{flex:1 1 auto;padding:0.6pt 3pt;min-width:0;overflow:hidden}
+.vrl-t{font-size:${MASS.beschriftung}pt;border-bottom:${MASS.linie}pt solid #000;display:inline-block;margin-bottom:0.5pt}
+.vrl-u{font-size:${MASS.beschriftung}pt;border-bottom:${MASS.linie}pt solid #000;display:inline-block;margin:1pt 0 0.5pt}
+.vrl-zeile{display:flex;justify-content:space-between;font-size:${MASS.beschriftung}pt;line-height:1.25}
+.vbr{display:flex;gap:6pt;font-size:${MASS.beschriftung}pt}
+.vrl-herg{border-top:${MASS.linie}pt solid #000;padding:0.3pt 3pt;overflow:hidden}
+.sturz{display:flex;align-items:baseline;gap:4pt}
+
+.naca{display:flex;align-items:baseline;gap:4pt;padding:3pt 4pt;font-size:${MASS.ueberschrift}pt}
 .news{font-size:${MASS.beschriftung}pt;padding:2pt 4pt}
 `
 
-/** Seite 1 als Blatt. Erstbefund, Neurologie, Untersuchung und Erkrankungen folgen. */
+/** Seite 1 als Blatt. */
 export function seite1(p: Payload, kopf: Kopfdaten): string {
   return `<div class="blatt">
     ${kopfzeile(kopf)}
@@ -213,9 +491,10 @@ export function seite1(p: Payload, kopf: Kopfdaten): string {
     ${kennung(p)}
     ${einsatzdaten(p)}
     ${notfallgeschehen(p)}
+    ${erstbefund(p)}
+    ${neurologie(p)}
+    ${verletzungen(p)}
     ${naca(p)}
     ${news(p)}
   </div>`
 }
-
-export { schmerzskala, messwert }

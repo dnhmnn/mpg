@@ -10,7 +10,7 @@
 // Die Felder kommen aus dem DIVI-7.1-Katalog; wo der Bogen ein Feld zeigt,
 // das 7.1 anders nennt, steht die Zuordnung an der jeweiligen Stelle.
 
-import { feldFinden } from '../katalog/divi'
+import { aelrdFeld } from '../katalog/aelrd'
 
 export type Payload = Record<string, unknown>
 
@@ -23,11 +23,11 @@ export const MASS = {
   rahmen: 0.72,      // Hauptrahmen der Bloecke
   linie: 0.24,       // feine Trennlinien
   ueberschrift: 7.4, // Block-Ueberschrift
-  beschriftung: 5.5, // Feldbeschriftung
+  beschriftung: 5.2, // Feldbeschriftung
   klein: 4.4,        // kleinste Beschriftung, meist rechts am Feld
-  option: 5.5,       // Optionstexte
-  wert: 8.9,         // eingetragener Wert, fett
-  wertGross: 10.3,   // hervorgehobener Wert, fett
+  option: 5.2,       // Optionstexte
+  wert: 8.0,         // eingetragener Wert, fett
+  wertGross: 9.6,    // hervorgehobener Wert, fett
 }
 
 export function escapeHtml(wert: unknown): string {
@@ -84,19 +84,46 @@ export function option(text: string, an: boolean, rund = true): string {
  * Optionen — auch die nicht gewaehlten, sonst stuende im Protokoll eine
  * andere Auswahl als vor Ort zur Wahl stand.
  */
-export function optionen(feldId: string, payload: Payload, spalten = 0): string {
-  const feld = feldFinden(feldId)
+export function optionen(feldId: string, payload: Payload): string {
+  const feld = aelrdFeld(feldId)
   if (!feld || !feld.optionen) return ''
   const wert = payload[feldId]
   const rund = feld.typ !== 'mehrfach'
   const inhalt = feld.optionen.map((o) => option(o.text, istGewaehlt(wert, o.wert), rund)).join('')
-  const stil = spalten > 0 ? ` style="column-count:${spalten}"` : ''
-  return `<div class="opts"${stil}>${inhalt}</div>`
+  return `<div class="opts">${inhalt}</div>`
+}
+
+/**
+ * Ein Optionsraster, Reihe fuer Reihe wie auf dem Bogen. Die Reihen des
+ * Vordrucks sind nicht gleichmaessig gefuellt — manche beginnen erst in
+ * Spalte 2 —, deshalb werden sie hier ausgeschrieben statt umgebrochen.
+ * null laesst eine Rasterzelle frei.
+ */
+export function raster(feldId: string, payload: Payload, reihen: (string | null)[][]): string {
+  const feld = aelrdFeld(feldId)
+  if (!feld || !feld.optionen) return ''
+  const wert = payload[feldId]
+  const rund = feld.typ !== 'mehrfach'
+  const spalten = Math.max(...reihen.map((r) => r.length))
+  const zellen = reihen
+    .map((reihe) =>
+      reihe
+        .map((text) => {
+          if (text === null) return '<span class="zelle"></span>'
+          const o = feld.optionen?.find((k) => k.text === text)
+          if (!o) return `<span class="zelle">${escapeHtml(text)}</span>`
+          return `<span class="zelle">${option(o.text, istGewaehlt(wert, o.wert), rund)}</span>`
+        })
+        .join(''),
+    )
+    .join('')
+  return `<div class="rst" style="grid-template-columns:repeat(${spalten},auto)">${zellen}</div>`
 }
 
 /** Beschriftete Optionsreihe: Beschriftung links, Optionen rechts daneben. */
-export function optionsZeile(beschriftung: string, feldId: string, payload: Payload, spalten = 0): string {
-  return `<div class="oz"><span class="oz-b">${escapeHtml(beschriftung)}</span><span class="oz-o">${optionen(feldId, payload, spalten)}</span></div>`
+export function optionsZeile(beschriftung: string, feldId: string, payload: Payload, reihen?: (string | null)[][]): string {
+  const inhalt = reihen ? raster(feldId, payload, reihen) : optionen(feldId, payload)
+  return `<div class="oz"><span class="oz-b">${escapeHtml(beschriftung)}</span><span class="oz-o">${inhalt}</span></div>`
 }
 
 /** Die Schmerzskala des Bogens: eine Reihe verbundener Knoepfe von 0 bis 10. */
@@ -117,37 +144,41 @@ export function messwert(beschriftung: string, wert: unknown, einheit: string): 
 export const STIL = `
 *{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 html,body{background:#fff}
-body{font-family:Arial,Helvetica,sans-serif;color:#000}
+body{font-family:Arial,Helvetica,sans-serif;color:#000;font-size:${MASS.option}pt;line-height:1.25}
 @page{size:A4 portrait;margin:0}
 .blatt{position:relative;width:${BLATT.breite}pt;height:${BLATT.hoehe}pt;overflow:hidden;background:#fff}
 .blatt + .blatt{page-break-before:always}
 .blk{position:absolute;overflow:hidden}
-.ueb{font-size:${MASS.ueberschrift}pt;padding:1pt 3pt 0;letter-spacing:0.02em}
+.ueb{font-size:${MASS.ueberschrift}pt;padding:0.6pt 3pt 0;letter-spacing:0.02em;line-height:1.15}
 
 /* Wert gross und fett, Beschriftung klein und rechts — das Kennzeichen des Bogens. */
-.wz{display:flex;align-items:baseline;justify-content:space-between;gap:4pt;padding:1pt 3pt;border-bottom:${MASS.linie}pt solid #000}
-.wz-w{font-weight:bold;min-height:${MASS.wertGross}pt;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wz{display:flex;align-items:baseline;justify-content:space-between;gap:3pt;padding:0.4pt 3pt;border-bottom:${MASS.linie}pt solid #000;line-height:1.15}
+.wz-w{font-weight:bold;min-height:9.4pt;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .wz-b{font-size:${MASS.klein}pt;white-space:nowrap;flex-shrink:0}
 
-.wk{display:flex;align-items:center;gap:3pt;padding:0.5pt 2pt}
+.wk{display:flex;align-items:center;gap:3pt;padding:0.3pt 2pt}
 .wk-b{font-size:${MASS.beschriftung}pt;width:52pt;flex-shrink:0}
-.wk-w{font-size:${MASS.beschriftung}pt;font-weight:bold;border:${MASS.rahmen}pt solid #000;padding:1pt 4pt;min-width:44pt;text-align:center}
+.wk-w{font-size:${MASS.beschriftung}pt;font-weight:bold;border:${MASS.rahmen}pt solid #000;padding:0.4pt 4pt;min-width:44pt;text-align:center;margin-left:auto}
 
-.opt{display:inline-flex;align-items:center;gap:2pt;font-size:${MASS.option}pt;margin-right:6pt;white-space:nowrap;line-height:1.5}
-.kreis{display:inline-block;width:4pt;height:4pt;border-radius:50%;border:${MASS.linie * 2}pt solid #000}
+.opt{display:inline-flex;align-items:center;gap:1.4pt;font-size:${MASS.option}pt;margin-right:4pt;white-space:nowrap;line-height:1.25}
+.kreis{display:inline-block;width:3.6pt;height:3.6pt;flex-shrink:0;border-radius:50%;border:${MASS.linie * 2}pt solid #000}
 .kreis.an{background:#000}
-.eck{display:inline-block;width:4pt;height:4pt;border:${MASS.linie * 2}pt solid #000}
+.eck{display:inline-block;width:3.6pt;height:3.6pt;flex-shrink:0;border:${MASS.linie * 2}pt solid #000}
 .eck.an{background:#000}
 .opts{padding:0.5pt 3pt}
 .oz{display:flex;align-items:baseline;gap:4pt;padding:0.5pt 3pt}
 .oz-b{font-size:${MASS.beschriftung}pt;flex-shrink:0}
 .oz-o{flex:1 1 auto;min-width:0}
 .oz-o .opts{padding:0}
+.rst{display:grid;column-gap:2pt;row-gap:0;align-items:baseline;min-width:0}
+.zelle{display:flex;align-items:center;white-space:nowrap;min-width:0;overflow:hidden;line-height:1}
+.zelle{display:block;white-space:nowrap;min-width:0}
+.rst .opt{margin-right:0}
 
 .sk{padding:1pt 3pt}
-.sk-p{display:inline-block;width:5pt;height:5pt;border-radius:50%;border:${MASS.linie * 2}pt solid #000;margin-right:3.4pt}
+.sk-p{display:inline-block;width:4.4pt;height:4.4pt;border-radius:50%;border:${MASS.linie * 2}pt solid #000;margin-right:3pt}
 .sk-p.an{background:#000}
-.sk-z{display:flex;justify-content:space-between;width:92pt;font-size:${MASS.klein}pt}
+.sk-z{display:flex;justify-content:space-between;width:81pt;font-size:${MASS.klein}pt}
 
 .mw{display:inline-flex;flex-direction:column;align-items:flex-start;border-right:${MASS.linie}pt solid #000;padding:0.5pt 4pt;min-width:40pt}
 .mw-b{font-size:${MASS.klein}pt}
