@@ -1,14 +1,21 @@
 // Die Gesundheitskarte abfotografieren und das Aufgedruckte übernehmen.
 //
+// ZWEI WEGE, und der verlässlichere ist der erste:
+//
+// 1. DIE KAMERA-APP DES TELEFONS. Ein Dateifeld mit capture öffnet sie. Sie
+//    hat Autofokus, Makro und ihren eigenen Blitz — alles, was eine Vorschau
+//    im Browser nicht sicher kann. Für kleine Schrift auf einer glänzenden
+//    Karte ist das der Unterschied zwischen lesbar und nicht lesbar.
+//
+// 2. DIE VORSCHAU IM BROWSER. Schneller, aber abhängig davon, was das Gerät
+//    an getUserMedia und an Licht zulässt. Bleibt als Zweitweg.
+//
 // DAS BILD WIRD NICHT GESPEICHERT. Es lebt im Arbeitsspeicher, bis der Text
-// erkannt ist, und wird dann verworfen — es geht weder in das Protokoll noch
-// an einen Server. Die Texterkennung läuft auf dem Gerät; es verlässt kein
-// Versichertendatum das Telefon.
+// erkannt ist, und geht weder ins Protokoll noch an einen Server. Die
+// Texterkennung läuft auf dem Gerät.
 //
 // NICHTS WIRD UNGEFRAGT ÜBERNOMMEN. Was die Kamera gelesen hat, steht zum
-// Vergleichen da, und erst ein Tipp trägt es ins Formular. Eine verlesene
-// Ziffer in der Versichertennummer wäre sonst ein stiller Fehler, den
-// niemand mehr findet.
+// Vergleichen da, und erst ein Tipp trägt es ins Formular.
 
 import { useEffect, useRef, useState } from 'react'
 import { egkLesen, kvnrGueltig, type EgkDaten } from '../../../lib/egk'
@@ -18,16 +25,16 @@ const TEXT = '#1a0e08'
 const GRAU = 'var(--warm-gray)'
 const LINIE = 'rgba(96,8,18,0.14)'
 
-/** Die Texterkennung wird erst bei Bedarf geladen — sie ist mehrere Megabyte groß. */
 const TESSERACT_ESM = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.esm.min.js'
-/** Derselbe Code als klassisches Skript, falls der Modulweg versperrt ist. */
 const TESSERACT_UMD = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'
 
+type Stand = 'wahl' | 'kamera' | 'lesen' | 'fertig' | 'fehler'
 type Ziel = 'name' | 'vorname' | 'kasse'
-type Stand = 'kamera' | 'lesen' | 'fertig' | 'fehler'
 
 /** Das Seitenverhältnis einer Scheckkarte (ID-1): 85,6 × 54 mm. */
 const KARTE = 85.6 / 54
+/** Breiter muss das Bild für die Erkennung nicht sein; größer wird nur langsamer. */
+const MAX_BREITE = 2200
 
 type TesseractModul = {
   createWorker: (
@@ -40,7 +47,6 @@ type TesseractModul = {
   }>
 }
 
-/** Das klassische Skript nachladen, wenn der Modulweg nicht geht. */
 function umdLaden(): Promise<TesseractModul> {
   return new Promise((erfuellen, ablehnen) => {
     const vorhanden = (window as { Tesseract?: TesseractModul }).Tesseract
@@ -62,7 +68,7 @@ function umdLaden(): Promise<TesseractModul> {
  *
  * Der ESM-Build hat NUR einen Default-Export; `createWorker` ist dort kein
  * benannter Export. Dieser Griff daneben war der Fehler, mit dem die
- * Erkennung nie ansprang und es aussah, als läge es an der Karte.
+ * Erkennung nie ansprang.
  */
 async function tesseractHolen(): Promise<TesseractModul> {
   try {
@@ -79,7 +85,7 @@ async function tesseractHolen(): Promise<TesseractModul> {
 async function textErkennen(bild: HTMLCanvasElement, fortschritt: (p: number) => void): Promise<string> {
   const tesseract = await tesseractHolen()
   const worker = await tesseract.createWorker('deu', 1, {
-    logger: (m: { status: string; progress: number }) => {
+    logger: (m) => {
       if (m.status === 'recognizing text') fortschritt(m.progress)
     },
   })
@@ -91,33 +97,48 @@ async function textErkennen(bild: HTMLCanvasElement, fortschritt: (p: number) =>
   }
 }
 
-/** Den Ausschnitt der Karte aus dem Videobild holen und für die Erkennung aufbereiten. */
-function ausschnitt(video: HTMLVideoElement): HTMLCanvasElement {
-  const vb = video.videoWidth
-  const vh = video.videoHeight
-  // Derselbe Rahmen, den die Vorschau zeigt: 86 % der Breite, Kartenformat.
-  const breite = vb * 0.86
-  const hoehe = breite / KARTE
-  const x = (vb - breite) / 2
-  const y = (vh - hoehe) / 2
-
-  const c = document.createElement('canvas')
-  // Doppelt so groß: kleine Schrift erkennt Tesseract sonst schlecht.
-  c.width = Math.round(breite * 2)
-  c.height = Math.round(hoehe * 2)
-  const ctx = c.getContext('2d')!
-  ctx.drawImage(video, x, y, breite, hoehe, 0, 0, c.width, c.height)
-
-  // Graustufen mit kräftigerem Kontrast — die Karte ist bunt bedruckt.
+/** Graustufen mit kräftigerem Kontrast — die Karte ist bunt bedruckt. */
+function aufbereiten(c: HTMLCanvasElement): HTMLCanvasElement {
+  const ctx = c.getContext('2d')
+  if (!ctx) return c
   const bild = ctx.getImageData(0, 0, c.width, c.height)
   const d = bild.data
   for (let i = 0; i < d.length; i += 4) {
     const grau = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]
-    const stark = Math.max(0, Math.min(255, (grau - 128) * 1.6 + 128))
+    const stark = Math.max(0, Math.min(255, (grau - 128) * 1.5 + 128))
     d[i] = d[i + 1] = d[i + 2] = stark
   }
   ctx.putImageData(bild, 0, 0)
   return c
+}
+
+/** Ein aufgenommenes Foto auf eine für die Erkennung sinnvolle Größe bringen. */
+async function ausDatei(datei: File): Promise<HTMLCanvasElement> {
+  // imageOrientation dreht das Bild so, wie das Telefon es gehalten hat.
+  const bitmap = await createImageBitmap(datei, { imageOrientation: 'from-image' })
+  const faktor = Math.min(1, MAX_BREITE / Math.max(bitmap.width, bitmap.height))
+  const c = document.createElement('canvas')
+  c.width = Math.round(bitmap.width * faktor)
+  c.height = Math.round(bitmap.height * faktor)
+  c.getContext('2d')?.drawImage(bitmap, 0, 0, c.width, c.height)
+  bitmap.close()
+  return aufbereiten(c)
+}
+
+/** Den Ausschnitt der Karte aus dem laufenden Videobild holen. */
+function ausVideo(video: HTMLVideoElement): HTMLCanvasElement {
+  const vb = video.videoWidth
+  const vh = video.videoHeight
+  const breite = vb * 0.86
+  const hoehe = Math.min(breite / KARTE, vh)
+  const x = (vb - breite) / 2
+  const y = (vh - hoehe) / 2
+  const c = document.createElement('canvas')
+  // Doppelt so groß: kleine Schrift erkennt Tesseract sonst schlecht.
+  c.width = Math.round(Math.min(breite * 2, MAX_BREITE))
+  c.height = Math.round((c.width / breite) * hoehe)
+  c.getContext('2d')?.drawImage(video, x, y, breite, hoehe, 0, 0, c.width, c.height)
+  return aufbereiten(c)
 }
 
 function Reihe({ marke, wert, hinweis }: { marke: string; wert?: string; hinweis?: React.ReactNode }) {
@@ -132,41 +153,64 @@ function Reihe({ marke, wert, hinweis }: { marke: string; wert?: string; hinweis
   )
 }
 
+const knopfGross: React.CSSProperties = {
+  width: '100%', padding: '14px', borderRadius: 10, cursor: 'pointer',
+  fontFamily: 'inherit', fontSize: 13, fontWeight: 700,
+  textTransform: 'uppercase', letterSpacing: '0.07em',
+}
+
 export default function KartenScan({ onUebernehmen, onSchliessen }: {
   onUebernehmen: (werte: Record<string, string>) => void
   onSchliessen: () => void
 }) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const stromRef = useRef<MediaStream | null>(null)
-  const [stand, setStand] = useState<Stand>('kamera')
+  const dateiRef = useRef<HTMLInputElement>(null)
+  const [stand, setStand] = useState<Stand>('wahl')
   const [fehler, setFehler] = useState('')
   const [fortschritt, setFortschritt] = useState(0)
   const [daten, setDaten] = useState<EgkDaten | null>(null)
   const [rohtext, setRohtext] = useState('')
-  const [bereit, setBereit] = useState(false)
+  const [zuordnung, setZuordnung] = useState<Partial<Record<Ziel, string>>>({})
   const [lichtDa, setLichtDa] = useState(false)
   const [licht, setLicht] = useState(false)
-  const [zuordnung, setZuordnung] = useState<Partial<Record<Ziel, string>>>({})
+  const [lichtFehler, setLichtFehler] = useState('')
+  const [befund, setBefund] = useState<string[]>([])
+
+  const merken = (zeile: string) => setBefund((v) => [...v, zeile])
 
   function kameraAus() {
     stromRef.current?.getTracks().forEach((t) => t.stop())
     stromRef.current = null
-    setBereit(false)
     setLicht(false)
     setLichtDa(false)
   }
 
-  /** Das Licht der Kamera schalten, wo das Gerät es zulässt. */
+  /**
+   * Das Licht der Kamera schalten.
+   *
+   * Es wird nachgesehen, ob es wirklich an ist: manche Geräte melden die
+   * Fähigkeit, nehmen den Befehl entgegen und schalten trotzdem nichts.
+   * Dann soll dastehen, dass es nicht ging, statt dass der Knopf leuchtet.
+   */
   async function lichtSchalten(an: boolean) {
     const spur = stromRef.current?.getVideoTracks()[0]
-    if (!spur) return
+    if (!spur) {
+      setLichtFehler('Kein Kamerabild — Licht lässt sich nicht schalten.')
+      return
+    }
     try {
-      // `torch` steht nicht in der Typdefinition des Browsers, die Geräte
-      // kennen es trotzdem — deshalb der Umweg über unknown.
       await spur.applyConstraints({ advanced: [{ torch: an }] } as unknown as MediaTrackConstraints)
+      const jetzt = (spur.getSettings() as { torch?: boolean }).torch
+      if (an && jetzt === false) {
+        setLichtFehler('Das Gerät nimmt den Befehl an, schaltet das Licht aber nicht. Mit der Kamera-App des Telefons aufnehmen — dort geht der Blitz.')
+        setLicht(false)
+        return
+      }
+      setLichtFehler('')
       setLicht(an)
-    } catch {
-      setLichtDa(false)
+    } catch (f) {
+      setLichtFehler(`Licht nicht schaltbar (${(f as { name?: string })?.name ?? 'Fehler'}). Mit der Kamera-App des Telefons aufnehmen — dort geht der Blitz.`)
     }
   }
 
@@ -178,19 +222,18 @@ export default function KartenScan({ onUebernehmen, onSchliessen }: {
       stromRef.current = strom
       if (!videoRef.current) {
         strom.getTracks().forEach((t) => t.stop())
+        stromRef.current = null
         return
       }
       videoRef.current.srcObject = strom
-      // Safari startet nicht immer von allein, auch mit autoplay.
       await videoRef.current.play().catch(() => {})
-
-      // Licht gibt es nur, wo das Gerät es meldet — auf dem Rechner nie.
       const spur = strom.getVideoTracks()[0]
       const koennen = (spur?.getCapabilities?.() ?? {}) as { torch?: boolean }
       setLichtDa(Boolean(koennen.torch))
+      merken(`Kamera: ${spur?.label || 'ohne Namen'}, Licht gemeldet: ${koennen.torch ? 'ja' : 'nein'}`)
     } catch (f) {
-      setStand('fehler')
       const name = (f as { name?: string })?.name
+      setStand('fehler')
       setFehler(
         name === 'NotAllowedError'
           ? 'Der Browser hat die Kamera nicht freigegeben. In den Seiteneinstellungen die Kamera erlauben und neu laden.'
@@ -201,44 +244,56 @@ export default function KartenScan({ onUebernehmen, onSchliessen }: {
     }
   }
 
-  // Die Kamera läuft nur, solange das Bild gebraucht wird: beim Aufnehmen und
-  // beim Schließen wird sie ausgeschaltet, nicht erst beim Verlassen der Seite.
   useEffect(() => {
     if (stand !== 'kamera') return
     let abgebrochen = false
-    void kameraAn().then(() => { if (abgebrochen) kameraAus() })
+    void (async () => {
+      await kameraAn()
+      if (abgebrochen) kameraAus()
+    })()
     return () => { abgebrochen = true; kameraAus() }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stand])
 
-  async function ausloesen() {
-    const video = videoRef.current
-    if (!video || !video.videoWidth) {
-      // Bisher brach das hier stumm ab. Wer vor dem ersten Bild tippte,
-      // sah nichts passieren und hielt es für kaputt.
-      setStand('fehler')
-      setFehler('Die Kamera hat noch kein Bild geliefert. Einen Moment warten und erneut aufnehmen.')
-      return
-    }
-    const bild = ausschnitt(video)
-    kameraAus()
+  async function erkennen(bild: HTMLCanvasElement, woher: string) {
     setStand('lesen')
     setFortschritt(0)
+    merken(`${woher}: ${bild.width}×${bild.height} px`)
     try {
       const text = await textErkennen(bild, setFortschritt)
+      merken(`erkannt: ${text.replace(/\s+/g, ' ').trim().length} Zeichen`)
       setRohtext(text)
       setDaten(egkLesen(text))
       setStand('fertig')
     } catch (f) {
       setStand('fehler')
-      const grund = (f as { message?: string })?.message ?? 'unbekannt'
-      setFehler(
-        `Die Texterkennung lief nicht an: ${grund}. Sie wird beim ersten Mal aus dem Netz geholt — danach geht es auch ohne Empfang.`,
-      )
+      setFehler(`Die Texterkennung lief nicht an: ${(f as { message?: string })?.message ?? 'unbekannt'}.`)
     } finally {
-      // Das Bild wird nicht behalten.
       bild.width = 0
       bild.height = 0
+    }
+  }
+
+  async function ausVorschau() {
+    const video = videoRef.current
+    if (!video || !video.videoWidth) {
+      setFehler('Die Kamera hat noch kein Bild geliefert. Einen Moment warten und erneut aufnehmen — oder mit der Kamera-App des Telefons aufnehmen.')
+      setStand('fehler')
+      return
+    }
+    const bild = ausVideo(video)
+    kameraAus()
+    await erkennen(bild, 'Vorschaubild')
+  }
+
+  async function ausFoto(datei: File | undefined) {
+    if (!datei) return
+    try {
+      const bild = await ausDatei(datei)
+      await erkennen(bild, `Foto (${Math.round(datei.size / 1024)} kB)`)
+    } catch (f) {
+      setStand('fehler')
+      setFehler(`Das Foto ließ sich nicht öffnen: ${(f as { message?: string })?.message ?? 'unbekannt'}.`)
     }
   }
 
@@ -255,11 +310,16 @@ export default function KartenScan({ onUebernehmen, onSchliessen }: {
 
   const anzahl = (daten?.versnr ? 1 : 0) + (daten?.gebdatum ? 1 : 0) + Object.values(zuordnung).filter(Boolean).length
 
+  function schliessen() {
+    kameraAus()
+    onSchliessen()
+  }
+
   return (
     <div
       role="dialog" aria-label="Gesundheitskarte fotografieren"
       style={{ position: 'fixed', inset: 0, zIndex: 100, background: 'rgba(26,14,8,0.75)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}
-      onClick={(e) => { if (e.target === e.currentTarget) { kameraAus(); onSchliessen() } }}
+      onClick={(e) => { if (e.target === e.currentTarget) schliessen() }}
     >
       <div style={{ background: 'var(--warm-bg)', width: '100%', maxWidth: 560, maxHeight: '92vh', overflowY: 'auto', borderRadius: '16px 16px 0 0', padding: 14 }}>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 10 }}>
@@ -270,46 +330,74 @@ export default function KartenScan({ onUebernehmen, onSchliessen }: {
             </div>
             <div style={{ fontSize: 10, color: GRAU, opacity: 0.8 }}>Fassung {__BUILD__}</div>
           </div>
-          <button type="button" onClick={() => { kameraAus(); onSchliessen() }}
+          <button type="button" onClick={schliessen}
             style={{ background: 'transparent', border: 'none', color: GRAU, fontSize: 22, cursor: 'pointer', fontFamily: 'inherit', lineHeight: 1 }}>×</button>
         </div>
+
+        {/* Immer vorhanden, damit der Knopf das Feld sicher erreicht. */}
+        <input
+          ref={dateiRef} type="file" accept="image/*" capture="environment"
+          onChange={(e) => { void ausFoto(e.target.files?.[0]); e.target.value = '' }}
+          style={{ display: 'none' }}
+        />
+
+        {stand === 'wahl' ? (
+          <>
+            <button type="button" onClick={() => dateiRef.current?.click()}
+              style={{ ...knopfGross, background: ROT, border: 'none', color: '#fff', marginBottom: 8 }}>
+              Foto aufnehmen
+            </button>
+            <div style={{ fontSize: 11, fontStyle: 'italic', color: GRAU, textAlign: 'center', marginBottom: 14, lineHeight: 1.45 }}>
+              Öffnet die Kamera-App des Telefons — mit Autofokus und Blitz.
+              Das ist der verlässlichere Weg für die kleine Schrift auf der Karte.
+            </div>
+            <button type="button" onClick={() => setStand('kamera')}
+              style={{ ...knopfGross, background: 'transparent', border: `0.5px solid ${LINIE}`, color: GRAU }}>
+              Stattdessen Live-Kamera
+            </button>
+          </>
+        ) : null}
 
         {stand === 'kamera' ? (
           <>
             <div style={{ position: 'relative', borderRadius: 12, overflow: 'hidden', background: '#000' }}>
-              <video
-                ref={videoRef} autoPlay playsInline muted
-                onLoadedMetadata={() => setBereit(true)}
-                onCanPlay={() => setBereit(true)}
-                style={{ width: '100%', display: 'block' }}
-              />
+              <video ref={videoRef} autoPlay playsInline muted style={{ width: '100%', display: 'block', minHeight: 160 }} />
+              <div aria-hidden style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ width: '86%', aspectRatio: String(KARTE), border: '2px solid rgba(255,255,255,0.9)', borderRadius: 10, boxShadow: '0 0 0 2000px rgba(0,0,0,0.35)' }} />
+              </div>
               {lichtDa ? (
                 <button
-                  type="button" onClick={() => lichtSchalten(!licht)}
+                  type="button" onClick={() => void lichtSchalten(!licht)}
                   aria-label={licht ? 'Licht aus' : 'Licht an'}
                   style={{
-                    position: 'absolute', right: 10, top: 10, width: 44, height: 44,
-                    borderRadius: 22, cursor: 'pointer', fontFamily: 'inherit', fontSize: 19,
-                    background: licht ? '#fff' : 'rgba(0,0,0,0.45)',
+                    position: 'absolute', right: 10, top: 10, width: 46, height: 46,
+                    borderRadius: 23, cursor: 'pointer', fontFamily: 'inherit', fontSize: 20,
+                    background: licht ? '#fff' : 'rgba(0,0,0,0.5)',
                     color: licht ? ROT : '#fff',
                     border: '0.5px solid rgba(255,255,255,0.6)',
                   }}
                 >
-                  {licht ? '☀' : '☼'}
+                  ☼
                 </button>
               ) : null}
-              <div aria-hidden style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <div style={{ width: '86%', aspectRatio: String(KARTE), border: '2px solid rgba(255,255,255,0.9)', borderRadius: 10, boxShadow: '0 0 0 2000px rgba(0,0,0,0.35)' }} />
+            </div>
+
+            {lichtFehler ? (
+              <div style={{ margin: '8px 0 0', padding: '8px 10px', background: '#fff', borderLeft: '3px solid #d97706', borderRadius: 8, fontSize: 12, color: TEXT, lineHeight: 1.45 }}>
+                {lichtFehler}
               </div>
-            </div>
+            ) : null}
+
             <div style={{ fontSize: 12, fontStyle: 'italic', color: GRAU, textAlign: 'center', margin: '8px 0 10px' }}>
-              {bereit
-                ? 'Karte in den Rahmen legen, Schrift scharf stellen'
-                : 'Kamera startet…'}
+              Karte in den Rahmen legen, Schrift scharf stellen
             </div>
-            <button type="button" onClick={ausloesen} disabled={!bereit}
-              style={{ width: '100%', padding: '13px', background: bereit ? ROT : 'rgba(96,8,18,0.25)', border: 'none', borderRadius: 10, color: '#fff', fontFamily: 'inherit', fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', cursor: bereit ? 'pointer' : 'default' }}>
-              {bereit ? 'Aufnehmen' : 'Kamera startet…'}
+            <button type="button" onClick={() => void ausVorschau()}
+              style={{ ...knopfGross, background: ROT, border: 'none', color: '#fff', marginBottom: 8 }}>
+              Aufnehmen
+            </button>
+            <button type="button" onClick={() => { kameraAus(); dateiRef.current?.click() }}
+              style={{ ...knopfGross, background: 'transparent', border: `0.5px solid ${LINIE}`, color: GRAU }}>
+              Lieber mit der Kamera-App
             </button>
           </>
         ) : null}
@@ -321,15 +409,22 @@ export default function KartenScan({ onUebernehmen, onSchliessen }: {
               <div style={{ height: '100%', width: `${Math.round(fortschritt * 100)}%`, background: ROT, transition: 'width .2s' }} />
             </div>
             <div style={{ fontSize: 11, fontStyle: 'italic', color: GRAU, marginTop: 10 }}>
-              Beim ersten Mal wird die Texterkennung geladen, das dauert einen Moment.
+              Beim ersten Mal wird die Texterkennung geladen — das dauert eine Weile,
+              und der Balken bewegt sich erst danach.
             </div>
           </div>
         ) : null}
 
         {stand === 'fehler' ? (
-          <div style={{ padding: '14px 12px', background: '#fff', borderLeft: '3px solid #d97706', borderRadius: 8, fontSize: 13, color: TEXT, lineHeight: 1.5 }}>
-            {fehler}
-          </div>
+          <>
+            <div style={{ padding: '14px 12px', background: '#fff', borderLeft: '3px solid #d97706', borderRadius: 8, fontSize: 13, color: TEXT, lineHeight: 1.5, marginBottom: 10 }}>
+              {fehler}
+            </div>
+            <button type="button" onClick={() => { setFehler(''); setStand('wahl') }}
+              style={{ ...knopfGross, background: ROT, border: 'none', color: '#fff' }}>
+              Von vorn
+            </button>
+          </>
         ) : null}
 
         {stand === 'fertig' && daten ? (
@@ -378,28 +473,29 @@ export default function KartenScan({ onUebernehmen, onSchliessen }: {
             </div>
 
             <div style={{ display: 'flex', gap: 8 }}>
-              <button type="button" onClick={() => { setDaten(null); setZuordnung({}); setStand('kamera') }}
-                style={{ flex: 1, padding: '12px', background: 'transparent', border: `0.5px solid ${LINIE}`, borderRadius: 10, color: GRAU, fontFamily: 'inherit', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+              <button type="button" onClick={() => { setDaten(null); setZuordnung({}); setRohtext(''); setStand('wahl') }}
+                style={{ ...knopfGross, flex: 1, background: 'transparent', border: `0.5px solid ${LINIE}`, color: GRAU, textTransform: 'none', letterSpacing: 0, fontSize: 12 }}>
                 Neu aufnehmen
               </button>
               <button type="button" onClick={uebernehmen} disabled={anzahl === 0}
-                style={{ flex: 2, padding: '12px', background: anzahl === 0 ? 'rgba(96,8,18,0.25)' : ROT, border: 'none', borderRadius: 10, color: '#fff', fontFamily: 'inherit', fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', cursor: anzahl === 0 ? 'default' : 'pointer' }}>
+                style={{ ...knopfGross, flex: 2, background: anzahl === 0 ? 'rgba(96,8,18,0.25)' : ROT, border: 'none', color: '#fff', fontSize: 12, cursor: anzahl === 0 ? 'default' : 'pointer' }}>
                 {anzahl === 0 ? 'Nichts zu übernehmen' : `${anzahl} Angaben übernehmen`}
               </button>
             </div>
             <div style={{ fontSize: 11, fontStyle: 'italic', color: GRAU, textAlign: 'center', marginTop: 8 }}>
               Die Adresse steht nicht auf der Karte — sie liegt nur im Chip.
             </div>
-
-            {/* Wenn wenig erkannt wurde, hilft beim Melden nur, was die
-                Kamera wirklich gelesen hat. */}
-            <details style={{ marginTop: 8 }}>
-              <summary style={{ fontSize: 11, color: GRAU, cursor: 'pointer' }}>Erkannten Text anzeigen</summary>
-              <pre style={{ margin: '6px 0 0', padding: 10, background: '#fff', border: `0.5px solid ${LINIE}`, borderRadius: 8, fontSize: 11, lineHeight: 1.4, color: TEXT, whiteSpace: 'pre-wrap', wordBreak: 'break-word', maxHeight: 180, overflow: 'auto' }}>
-                {rohtext.trim() || 'Die Kamera hat keinen Text gelesen — Karte näher heran, mehr Licht, Schrift scharf stellen.'}
-              </pre>
-            </details>
           </>
+        ) : null}
+
+        {/* Was das Gerät gemeldet hat. Ohne das bleibt bei "geht nicht" nur Raten. */}
+        {stand !== 'wahl' && stand !== 'kamera' ? (
+          <details style={{ marginTop: 10 }}>
+            <summary style={{ fontSize: 11, color: GRAU, cursor: 'pointer' }}>Erkannten Text und Gerätemeldungen anzeigen</summary>
+            <pre style={{ margin: '6px 0 0', padding: 10, background: '#fff', border: `0.5px solid ${LINIE}`, borderRadius: 8, fontSize: 11, lineHeight: 1.4, color: TEXT, whiteSpace: 'pre-wrap', wordBreak: 'break-word', maxHeight: 220, overflow: 'auto' }}>
+              {[`Fassung ${__BUILD__}`, ...befund, '', rohtext.trim() || '(kein Text erkannt)'].join('\n')}
+            </pre>
+          </details>
         ) : null}
       </div>
     </div>
