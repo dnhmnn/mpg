@@ -84,3 +84,26 @@ describe('Übersetzung der alten Payload', () => {
     expect(offen).not.toContain('name')
   })
 })
+
+describe('Grenze der Übersetzung', () => {
+  it('ist für alte Protokolle gebaut — ein neues gehört nicht hindurch', () => {
+    // Ein Protokoll der Fassung 2.0 trägt bereits die Feldnamen des Bogens.
+    // Durch die Übersetzung geschickt verlöre es die Mehrzahl davon, weil
+    // sie weder gleichnamig noch umbenannt sind. Dieser Test hält fest,
+    // warum der Ausdruck 2.0-Protokolle direkt liest.
+    const neu = {
+      name: 'Mustermann', einsatz_datum: '2026-10-03', ub_hf: '90',
+      tracerdiagnose: 'Abdomen unklar', atemwege: 'frei', nibp_sys: '136',
+    }
+    const durch = aelrdAusPayload(neu)
+    const verloren = Object.keys(neu).filter((k) => !(k in durch))
+    expect(verloren.length).toBeGreaterThan(0)
+
+    // Direkt gedruckt bleibt dagegen alles stehen.
+    const html = aelrdHtml(neu)
+    for (const wert of ['Mustermann', '2026-10-03', '90', 'Abdomen unklar', '136']) {
+      expect(html).toContain(wert)
+    }
+  })
+})
+
