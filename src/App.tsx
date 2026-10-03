@@ -49,6 +49,10 @@ const AelrdProtokoll = lazy(() => import('./pages/patienten/AelrdProtokoll'))
 // vierhundert Optionen. Sie gehoert nicht ins Hauptbuendel.
 const NaepErfassung = lazy(() => import('./pages/patienten/NaepErfassung'))
 
+// Der neue Aufbau der Patientendokumentation, vorerst neben dem alten
+// Formular. Er zieht den Feldkatalog des Bogens nach sich.
+const Doku = lazy(() => import('./pages/public/doku/Doku'))
+
 applyTheme(getTheme())
 
 const isMarketingDomain =
@@ -109,6 +113,7 @@ function App() {
           <Route path="/:orgCode" element={<OrgPublicLayout />}>
             <Route index element={<OrgLanding />} />
             <Route path="patienten" element={<OrgPatienten />} />
+            <Route path="doku" element={<Suspense fallback={null}><Doku /></Suspense>} />
             <Route path="schnelldoku" element={<OrgSchnelldoku />} />
             <Route path="produktausgabe" element={<OrgProduktausgabe />} />
             <Route path="cirs" element={<OrgCirs />} />
