@@ -1,6 +1,5 @@
 import type { Patient, Nacherfassung } from './types'
 import { parsePayload, fmtDateTime } from './types'
-import { aelrdHtml } from '../../lib/aelrdProtokoll'
 import { istDivi } from '../../lib/protokoll'
 import { PubSection } from '../public/pubStyles'
 import ProtokollView from '../../components/ProtokollView'
@@ -64,7 +63,7 @@ function CatSection({ label, items }: { label: string; items: [boolean | undefin
 }
 
 export default function DetailsModal({ doc, type, onClose, onEdit }: Props) {
-  function printDoc() {
+  async function printDoc() {
     const w = window.open('', '_blank', 'width=1000,height=750')
     if (!w) return
 
@@ -80,6 +79,8 @@ export default function DetailsModal({ doc, type, onClose, onEdit }: Props) {
       // Fassung 1.0 bleibt beim gewachsenen Ausdruck — ein rechtlich
       // bedeutsames Dokument wird nicht nachtraeglich umgeformt.
       if (istDivi(p)) {
+        // Die Druckvorlagen sind gross und werden nur hier gebraucht.
+        const { aelrdHtml } = await import('../../lib/aelrdProtokoll')
         w.document.write(aelrdHtml(p as Record<string, unknown>))
         w.document.close()
         return

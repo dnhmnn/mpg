@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import Hub from './pages/Hub'
 import Login from './pages/Login'
@@ -14,7 +15,7 @@ import Unitas from './pages/Unitas'
 import Unitarii from './pages/Unitarii'
 import Patienten from './pages/patienten/Patienten'
 import ProtokollBearbeiten from './pages/ProtokollBearbeiten'
-import AelrdProtokoll from './pages/patienten/AelrdProtokoll'
+
 import Installieren from './pages/public/Installieren'
 import OrgSchnelldoku from './pages/public/OrgSchnelldoku'
 import Chat from './pages/Chat'
@@ -38,6 +39,11 @@ import OrgDefektmeldung from './pages/public/OrgDefektmeldung'
 import PatientView from './pages/public/PatientView'
 import './styles/globals.css'
 import { applyTheme, getTheme } from './lib/theme'
+
+// Die Protokollseite zieht Feldkatalog und Druckvorlagen nach sich.
+// Beides wird erst gebraucht, wenn jemand das Protokoll oeffnet — im
+// Hauptbuendel kostet es jeden Seitenaufruf mit, auch im Funkloch.
+const AelrdProtokoll = lazy(() => import('./pages/patienten/AelrdProtokoll'))
 
 applyTheme(getTheme())
 
@@ -78,7 +84,7 @@ function App() {
         <Route path="/unitarii" element={<Unitarii />} />
         <Route path="/patienten" element={<Patienten />} />
         <Route path="/protokoll/:patientId" element={<ProtokollBearbeiten />} />
-        <Route path="/protokoll-2" element={<AelrdProtokoll />} />
+        <Route path="/protokoll-2" element={<Suspense fallback={null}><AelrdProtokoll /></Suspense>} />
         <Route path="/p/:code" element={<PatientView />} />
         <Route path="/chat" element={<Chat />} />
         <Route path="/supervisor" element={<Supervisor />} />
