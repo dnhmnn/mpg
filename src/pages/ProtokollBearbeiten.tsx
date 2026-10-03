@@ -1,4 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
+import AelrdFelder from './public/AelrdFelder'
+import { AELRD_ERGAENZUNG } from './public/aelrdErgaenzung'
+import { payloadZusammenfuehren } from '../lib/payloadZusammenfuehren'
 import { useParams, useNavigate } from 'react-router-dom'
 import { pb } from '../lib/pocketbase'
 import { useAuth } from '../hooks/useAuth'
@@ -187,7 +190,10 @@ export default function ProtokollBearbeiten() {
     if (orig.tf_reopen) data.tf_reopen = orig.tf_reopen  // cleared in finish() for reopen
     if (orig.access_code) data.access_code = orig.access_code
     if (orig.access_code_created) data.access_code_created = orig.access_code_created
-    return data
+
+    // Auf dem bestehenden Protokoll aufbauen, nicht bei null anfangen:
+    // was dieses Formular nicht zeigt, wurde sonst beim Speichern geloescht.
+    return payloadZusammenfuehren(orig, data)
   }
 
   function computeTFChangedFields(newData: Record<string, unknown>): string[] {
@@ -300,6 +306,8 @@ export default function ProtokollBearbeiten() {
                 <label style={lbl}>Einsatzort / Adresse<input style={inp} name="einsatz_adresse" type="text" value={einsatzAdresse} onChange={e => setEinsatzAdresse(e.target.value)} /></label>
                 <label style={lbl}>Transportziel<input style={inp} name="transport_ziel" type="text" /></label>
               </div>
+            
+              <AelrdFelder ids={AELRD_ERGAENZUNG.einsatzdaten ?? []} werte={originalPayloadRef.current as Record<string, unknown>} />
             </PubSection>
 
             <PubSection title="Einsatz-Zeitstrahl" icon={pik(<><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></>)}>
@@ -315,6 +323,8 @@ export default function ProtokollBearbeiten() {
                   if (refS2.current)  refS2.current.value  = times.status2
                 }}
               />
+            
+              <AelrdFelder ids={AELRD_ERGAENZUNG.zeitstrahl ?? []} werte={originalPayloadRef.current as Record<string, unknown>} />
             </PubSection>
 
             <PubSection title="Pat-Stammdaten" icon={pik(<><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></>)}>
@@ -332,6 +342,8 @@ export default function ProtokollBearbeiten() {
                 <label style={lbl}>Hausarzt<input style={inp} name="hausarzt" type="text" /></label>
                 <label style={lbl}>Angehöriger<input style={inp} name="angehoeriger" type="text" /></label>
               </div>
+            
+              <AelrdFelder ids={AELRD_ERGAENZUNG.stammdaten ?? []} werte={originalPayloadRef.current as Record<string, unknown>} />
             </PubSection>
 
             <PubSection title="Notfallgeschehen / Anamnese" open icon={pik(<><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></>)}>
@@ -445,6 +457,8 @@ export default function ProtokollBearbeiten() {
                   </div>
                 )}
               </div>
+            
+              <AelrdFelder ids={AELRD_ERGAENZUNG.anamnese ?? []} werte={originalPayloadRef.current as Record<string, unknown>} />
             </PubSection>
 
             <PubSection title="NACA / Bewusstsein / Verdachtsdiagnose" open icon={pik(<><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></>)}>
@@ -494,6 +508,8 @@ export default function ProtokollBearbeiten() {
                 ))}
                 <label style={{ ...lbl, marginLeft: '.5rem' }}>Flow (l/min)<input style={{ ...inp, width: 100 }} name="o2_flow" type="number" step="0.5" /></label>
               </div>
+            
+              <AelrdFelder ids={AELRD_ERGAENZUNG.messwerte ?? []} werte={originalPayloadRef.current as Record<string, unknown>} />
             </PubSection>
 
             <PubSection title="Neurologie" icon={pik(<><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96-.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2z"/><path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96-.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 14.5 2z"/></>)}>
@@ -533,6 +549,8 @@ export default function ProtokollBearbeiten() {
                   </div>
                 ))}
               </div>
+            
+              <AelrdFelder ids={AELRD_ERGAENZUNG.neurologie ?? []} werte={originalPayloadRef.current as Record<string, unknown>} />
             </PubSection>
 
             <PubSection title="Rhythmus / EKG" icon={pik(<path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>)}>
@@ -545,6 +563,8 @@ export default function ProtokollBearbeiten() {
                 <label style={lbl}>Standort<input style={inp} name="ekg_standort" type="text" /></label>
                 <label style={lbl}>Pers-Nr.<input style={inp} name="ekg_persnr" type="text" /></label>
               </div>
+            
+              <AelrdFelder ids={AELRD_ERGAENZUNG.ekg ?? []} werte={originalPayloadRef.current as Record<string, unknown>} />
             </PubSection>
 
             <PubSection title="Haut / Psyche" icon={pik(<><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></>)}>
@@ -560,6 +580,8 @@ export default function ProtokollBearbeiten() {
                   <label key={n} style={pill}><input type="checkbox" name={n} /> {l}</label>
                 ))}
               </div>
+            
+              <AelrdFelder ids={AELRD_ERGAENZUNG.haut_psyche ?? []} werte={originalPayloadRef.current as Record<string, unknown>} />
             </PubSection>
 
             <PubSection title="Erstdiagnose / Diagnose-Kategorien" icon={pik(<><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></>)}>
@@ -582,6 +604,8 @@ export default function ProtokollBearbeiten() {
                   </div>
                 </div>
               ))}
+            
+              <AelrdFelder ids={AELRD_ERGAENZUNG.erstdiagnose ?? []} werte={originalPayloadRef.current as Record<string, unknown>} />
             </PubSection>
 
             <PubSection title="Verlauf" icon={pik(<><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></>)}>
@@ -648,6 +672,8 @@ export default function ProtokollBearbeiten() {
                   </div>
                 )
               })()}
+            
+              <AelrdFelder ids={AELRD_ERGAENZUNG.verlauf ?? []} werte={originalPayloadRef.current as Record<string, unknown>} />
             </PubSection>
 
             <PubSection title="Verletzungen / Trauma" icon={pik(<><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></>)}>
@@ -674,6 +700,8 @@ export default function ProtokollBearbeiten() {
                 <label style={lbl}>Sonstige Verletzungen<input style={inp} name="v_sonstige" type="text" /></label>
                 <div style={{ marginTop: '.5rem' }}><label style={lbl}>Freitext Verletzungen<textarea style={ta} name="verletz_text" /></label></div>
               </div>
+            
+              <AelrdFelder ids={AELRD_ERGAENZUNG.verletzungen ?? []} werte={originalPayloadRef.current as Record<string, unknown>} />
             </PubSection>
 
             <PubSection title="Atemwege / Lagerung / Immobilisation" icon={pik(<><path d="M9.59 4.59A2 2 0 1 1 11 8H2m10.59 11.41A2 2 0 1 0 14 16H2m15.73-8.27A2.5 2.5 0 1 1 19.5 12H2"/></>)}>
@@ -689,6 +717,8 @@ export default function ProtokollBearbeiten() {
               <div style={{ display: 'flex', flexWrap: 'wrap' }}>
                 {[['immo_hws','HWS-Orthese'],['immo_spineboard','Spineboard'],['immo_vakuum','Vakuummatratze']].map(([n,l]) => <label key={n} style={pill}><input type="checkbox" name={n} /> {l}</label>)}
               </div>
+            
+              <AelrdFelder ids={AELRD_ERGAENZUNG.atemwege ?? []} werte={originalPayloadRef.current as Record<string, unknown>} />
             </PubSection>
 
             <PubSection title="Beatmung / Defibrillation" icon={pik(<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>)}>
@@ -710,6 +740,8 @@ export default function ProtokollBearbeiten() {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(140px,1fr))', gap: '.5rem' }}>
                 {[['defi_zeitpunkt','Zeitpunkt 1. Defi'],['defi_rosc','ROSC'],['defi_anzahl','Anzahl'],['defi_energie','Energie (kJ)']].map(([n,l]) => <label key={n} style={lbl}>{l}<input style={inp} name={n} type="text" /></label>)}
               </div>
+            
+              <AelrdFelder ids={AELRD_ERGAENZUNG.beatmung ?? []} werte={originalPayloadRef.current as Record<string, unknown>} />
             </PubSection>
 
             <PubSection title="Zugang / Infusion / Medikamente" icon={pik(<path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/>)}>
@@ -738,6 +770,8 @@ export default function ProtokollBearbeiten() {
                 </table>
               </div>
               <button type="button" onClick={() => setMeds(ms => [...ms, { name:'',dose:'',unit:'',route:'',time:'',note:'' }])} style={{ marginTop: '.5rem', border: '0.5px solid var(--border-medium)', background: 'var(--bg-subtle)', padding: '.45rem .75rem', borderRadius: 10, cursor: 'pointer', fontWeight: 600, color: 'var(--accent)', fontSize: '.9rem', fontFamily: 'inherit' }}>+ Zeile hinzufügen</button>
+            
+              <AelrdFelder ids={AELRD_ERGAENZUNG.zugang ?? []} werte={originalPayloadRef.current as Record<string, unknown>} />
             </PubSection>
 
             <PubSection title="Reanimation" icon={pik(<><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></>)}>
@@ -751,6 +785,8 @@ export default function ProtokollBearbeiten() {
                 <label style={lbl}>Ende Reanimation<input style={inp} name="rean_ende" type="datetime-local" /></label>
                 <label style={lbl}>Defibrillationen<input style={inp} name="rean_defib" type="number" min={0} /></label>
               </div>
+            
+              <AelrdFelder ids={AELRD_ERGAENZUNG.reanimation ?? []} werte={originalPayloadRef.current as Record<string, unknown>} />
             </PubSection>
 
             <PubSection title="Übergabe / Besonderheiten" icon={pik(<><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></>)}>
@@ -762,6 +798,8 @@ export default function ProtokollBearbeiten() {
                 {[['ev_transportverweigerung','Transportverweigerung'],['ev_nur_untersuchung','Nur Untersuchung'],['ev_zwangseinweisung','Zwangseinweisung'],['ev_transport_sondersignal','Transport mit Sondersignal'],['ev_manv','MANV'],['ev_lna','LNA am Einsatz'],['ev_schwerlast','Schwerlasttransport']].map(([n,l]) => <label key={n} style={pill}><input type="checkbox" name={n} /> {l}</label>)}
               </div>
               <label style={lbl}>Bemerkungen<textarea style={ta} name="bemerkungen" /></label>
+            
+              <AelrdFelder ids={AELRD_ERGAENZUNG.uebergabe ?? []} werte={originalPayloadRef.current as Record<string, unknown>} />
             </PubSection>
 
             <PubSection title="Unterschrift" open icon={pik(<><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></>)}>
@@ -788,6 +826,8 @@ export default function ProtokollBearbeiten() {
                 </button>
               )}
               {!locked && <p style={{ fontSize: '.8rem', color: 'var(--text-secondary)', marginTop: '.5rem', textAlign: 'center' }}>{isReopenEdit ? 'Änderungen werden für den Admin grün markiert.' : 'Nach dem Abschließen kann das Protokoll nicht mehr bearbeitet werden.'}</p>}
+            
+              <AelrdFelder ids={AELRD_ERGAENZUNG.unterschrift ?? []} werte={originalPayloadRef.current as Record<string, unknown>} />
             </PubSection>
 
           </fieldset>

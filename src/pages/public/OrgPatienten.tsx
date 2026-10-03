@@ -6,6 +6,7 @@ import { PubHeader, PubWrap, PubSection, inp, sel, ta, field, lbl } from './pubS
 import AelrdFelder from './AelrdFelder'
 import { AELRD_ERGAENZUNG } from './aelrdErgaenzung'
 import { mehrfachZusammenfassen } from '../../lib/aelrdFormular'
+import { payloadZusammenfuehren } from '../../lib/payloadZusammenfuehren'
 import { NEUE_FASSUNG, mitFassung } from '../../lib/protokoll'
 import { DEFAULT_FORM_CONFIG, SECTION_STEP_MAP, type FormConfig, type CustomFieldDef } from './formSchema'
 import OrgPatientenMannschaft from './OrgPatientenMannschaft'
@@ -269,7 +270,10 @@ export default function OrgPatienten() {
     // Mehrfachauswahl steht im DOM als feld__option; erst hier wird daraus
     // wieder eine Liste. Und die Fassung wird mitgeschrieben, nicht spaeter
     // aus dem Vorhandensein einzelner Felder erraten.
-    return mitFassung(mehrfachZusammenfassen(data), NEUE_FASSUNG)
+    // Auf dem geladenen Entwurf aufbauen: ein Feld, das inzwischen
+    // ausgeblendet wurde, soll nicht verschwinden, nur weil es gerade
+    // nicht im DOM steht.
+    return mitFassung(payloadZusammenfuehren(entwurf ?? {}, mehrfachZusammenfassen(data)), NEUE_FASSUNG)
   }
 
   function saveLocal() {
