@@ -1,5 +1,7 @@
 import type { PatientPayload } from '../pages/patienten/types'
 import { PubSection, PubWrap, lbl, inp } from '../pages/public/pubStyles'
+import AelrdProtokollView from './AelrdProtokollView'
+import { istDivi } from '../lib/protokoll'
 
 const grid: React.CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))', gap: '.75rem' }
 const activePill: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', border: '0.5px solid transparent', borderRadius: 999, padding: '.2rem .6rem', background: 'var(--accent)', fontSize: '.9rem', margin: '2px', color: '#fff', fontWeight: 700 }
@@ -64,6 +66,12 @@ interface Props {
 }
 
 export default function ProtokollView({ payload, changedFields: cf, tfChangedFields: tf }: Props) {
+  // Fassung 2.0 wird aus dem Feldkatalog angezeigt — vollstaendig und ohne
+  // von Hand gepflegte Liste. Fassung 1.0 behaelt ihre gewachsene Ansicht.
+  if (istDivi(payload)) {
+    return <AelrdProtokollView payload={payload as Record<string, unknown>} changedFields={cf} tfChangedFields={tf} />
+  }
+
   const p = payload as any
   const mann = p.mannschaft || {}
   const meds = p.medications || []

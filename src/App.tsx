@@ -14,6 +14,9 @@ import Unitas from './pages/Unitas'
 import Unitarii from './pages/Unitarii'
 import Patienten from './pages/patienten/Patienten'
 import ProtokollBearbeiten from './pages/ProtokollBearbeiten'
+import AelrdProtokoll from './pages/patienten/AelrdProtokoll'
+import Installieren from './pages/public/Installieren'
+import OrgSchnelldoku from './pages/public/OrgSchnelldoku'
 import Chat from './pages/Chat'
 import Supervisor from './pages/Supervisor'
 import Einsaetze from './pages/Einsaetze'
@@ -62,6 +65,7 @@ function App() {
         <Route path="/" element={<Index />} />
         <Route path="/login" element={<Login />} />
         <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/app" element={<Installieren />} />
         <Route path="/hub" element={<Hub />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/ausbildungen" element={<Ausbildungen />} />
@@ -74,6 +78,7 @@ function App() {
         <Route path="/unitarii" element={<Unitarii />} />
         <Route path="/patienten" element={<Patienten />} />
         <Route path="/protokoll/:patientId" element={<ProtokollBearbeiten />} />
+        <Route path="/protokoll-2" element={<AelrdProtokoll />} />
         <Route path="/p/:code" element={<PatientView />} />
         <Route path="/chat" element={<Chat />} />
         <Route path="/supervisor" element={<Supervisor />} />
@@ -93,6 +98,7 @@ function App() {
           <Route path="/:orgCode" element={<OrgPublicLayout />}>
             <Route index element={<OrgLanding />} />
             <Route path="patienten" element={<OrgPatienten />} />
+            <Route path="schnelldoku" element={<OrgSchnelldoku />} />
             <Route path="produktausgabe" element={<OrgProduktausgabe />} />
             <Route path="cirs" element={<OrgCirs />} />
             <Route path="formular/:templateId" element={<OrgFormular />} />

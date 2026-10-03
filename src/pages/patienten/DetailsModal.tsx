@@ -1,5 +1,7 @@
 import type { Patient, Nacherfassung } from './types'
 import { parsePayload, fmtDateTime } from './types'
+import { aelrdHtml } from '../../lib/aelrdProtokoll'
+import { istDivi } from '../../lib/protokoll'
 import { PubSection } from '../public/pubStyles'
 import ProtokollView from '../../components/ProtokollView'
 
@@ -69,6 +71,19 @@ export default function DetailsModal({ doc, type, onClose, onEdit }: Props) {
     if (type === 'patient') {
       const pd = doc as Patient
       const p = parsePayload(pd.payload)
+
+      // Fassung 2.0 wird auf dem ÄLRD-Bogen gedruckt, und zwar ohne
+      // Uebersetzung: diese Protokolle tragen bereits die Feldnamen des
+      // Bogens. aelrdAusPayload ist fuer die alten Namen gebaut und wuerde
+      // hier die Mehrzahl der Felder verwerfen.
+      //
+      // Fassung 1.0 bleibt beim gewachsenen Ausdruck — ein rechtlich
+      // bedeutsames Dokument wird nicht nachtraeglich umgeformt.
+      if (istDivi(p)) {
+        w.document.write(aelrdHtml(p as Record<string, unknown>))
+        w.document.close()
+        return
+      }
       const pChf = new Set<string>(p._changed_fields || [])
       const pTfChf = new Set<string>(p._tf_changed_fields || [])
       const gcsTotal = (p.gcs_e || 0) + (p.gcs_v || 0) + (p.gcs_m || 0)

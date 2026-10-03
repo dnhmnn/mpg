@@ -1,0 +1,395 @@
+import { describe, it, expect } from 'vitest'
+import {
+  AELRD_ABSCHNITTE,
+  AELRD_FELDER,
+  aelrdFeld,
+  aelrdPflichtfelder,
+  ohneDiviEntsprechung,
+  schluessel,
+} from '../../katalog/aelrd'
+import { BLATT, escapeHtml, istGewaehlt } from '../aelrdDruck'
+import { HOEHEN, HOEHEN2, SEITE1, SEITE2 } from '../aelrdLayout'
+import { aelrdHtml, aelrdVordruck } from '../aelrdProtokoll'
+import { feldFinden } from '../../katalog/divi'
+
+describe('Feldkatalog des ÄLRD-Bogens', () => {
+  it('vergibt jede Feld-ID genau einmal', () => {
+    const ids = AELRD_FELDER.map((f) => f.id)
+    expect(ids.filter((id, i) => ids.indexOf(id) !== i)).toEqual([])
+  })
+
+  it('haelt die Optionswerte innerhalb eines Feldes auseinander', () => {
+    for (const f of AELRD_FELDER) {
+      if (!f.optionen) continue
+      const werte = f.optionen.map((o) => o.wert)
+      expect({ feld: f.id, doppelt: werte.filter((w, i) => werte.indexOf(w) !== i) })
+        .toEqual({ feld: f.id, doppelt: [] })
+    }
+  })
+
+  it('verweist nur auf Felder, die es in DIVI 7.1 wirklich gibt', () => {
+    // Ein toter Verweis waere schlimmer als gar keiner: er behauptet eine
+    // Zuordnung, die beim Uebertragen der Daten ins Leere laeuft.
+    for (const f of AELRD_FELDER) {
+      if (!f.divi) continue
+      expect({ feld: f.id, verweist_auf: f.divi, gefunden: Boolean(feldFinden(f.divi)) })
+        .toEqual({ feld: f.id, verweist_auf: f.divi, gefunden: true })
+    }
+  })
+
+  it('benennt die Felder, die der Bogen hat und DIVI 7.1 nicht', () => {
+    const offen = ohneDiviEntsprechung().map((f) => f.id)
+    // Der Bogen folgt DIVI 6.0 / MIND 4.0 und kennt Felder, die 7.1 nicht hat.
+    for (const id of ['co_hb', 'ibp_sys', 'tracerdiagnose', 'zeit_einsatzbereit', 'wertsachen']) {
+      expect(offen).toContain(id)
+    }
+  })
+
+  it('kennt die Pflichtfelder', () => {
+    const ids = aelrdPflichtfelder().map((f) => f.id)
+    for (const id of ['name', 'gebdatum', 'einsatz_nr', 'zeit_alarm', 'af', 'hf']) {
+      expect(ids).toContain(id)
+    }
+  })
+
+  it('macht aus Umlauten stabile Speicherwerte', () => {
+    expect(schluessel('unauffällig')).toBe('unauffaellig')
+    expect(schluessel('(beinahe-) Ertrinken')).toBe('beinahe_ertrinken')
+    expect(schluessel('> 2 Vers.')).toBe('ueber_2_vers')
+  })
+
+  it('unterscheidet Optionen, die sich nur im Vergleichszeichen unterscheiden', () => {
+    // Ohne Uebersetzung wuerden "< 40" und "> 40" beide zu "40" — BMI unter
+    // und ueber 40 waeren im gespeicherten Protokoll nicht mehr zu trennen.
+    expect(schluessel('< 40')).not.toBe(schluessel('> 40'))
+    expect(schluessel('< 3m')).not.toBe(schluessel('>= 3m'))
+  })
+
+  it('findet ein Feld anhand seiner ID', () => {
+    expect(aelrdFeld('naca_initial')?.label).toBe('NACA SCORE initial')
+    expect(aelrdFeld('gibtsnicht')).toBeUndefined()
+  })
+})
+
+describe('Raster des Bogens', () => {
+  it('bleibt mit jedem Block auf dem A4-Blatt', () => {
+    for (const [name, raum] of [...Object.entries(SEITE1), ...Object.entries(SEITE2)]) {
+      expect({ name, rechts: raum.x + raum.b <= BLATT.breite, unten: raum.y + raum.h <= BLATT.hoehe })
+        .toEqual({ name, rechts: true, unten: true })
+    }
+  })
+
+  it('summiert die Unterbloecke des Erstbefunds genau auf seine Rahmenhoehe', () => {
+    const summe =
+      HOEHEN.ebKopf + HOEHEN.ebAtemwege + HOEHEN.ebAtmung + HOEHEN.ebKreislauf +
+      HOEHEN.ebHaut + HOEHEN.ebEkg + HOEHEN.ebMesswerte
+    expect(Math.abs(summe - SEITE1.erstbefund.h)).toBeLessThan(1)
+  })
+
+  it('summiert die Unterbloecke der Neurologie genau auf ihre Rahmenhoehe', () => {
+    const summe =
+      HOEHEN.nrKopf + HOEHEN.nrPupillen + HOEHEN.nrAuffaelligkeiten +
+      HOEHEN.nrSchmerzen + HOEHEN.nrUntersuchung + HOEHEN.nrPsyche
+    expect(Math.abs(summe - SEITE1.neurologie.h)).toBeLessThan(1)
+  })
+
+  it('summiert die Unterbloecke des Uebergabe-Befundes auf seine Rahmenhoehe', () => {
+    const summe =
+      HOEHEN2.ubKopf + HOEHEN2.ubAtemwege + HOEHEN2.ubAtmung + HOEHEN2.ubKreislauf +
+      HOEHEN2.ubEkg + HOEHEN2.ubPsyche + HOEHEN2.ubUntersuchung
+    expect(Math.abs(summe - SEITE2.uebergabe.h)).toBeLessThan(1)
+  })
+
+  it('laesst die Bloecke einer Seite einander nicht ueberdecken', () => {
+    const paare = (bloecke: Record<string, { x: number; y: number; b: number; h: number }>) => {
+      const liste = Object.entries(bloecke).filter(([n]) => n !== 'titel')
+      const treffer: string[] = []
+      for (let i = 0; i < liste.length; i++) {
+        for (let k = i + 1; k < liste.length; k++) {
+          const [na, a] = liste[i]
+          const [nb, b] = liste[k]
+          const ueberlappt =
+            a.x < b.x + b.b - 1 && b.x < a.x + a.b - 1 &&
+            a.y < b.y + b.h - 1 && b.y < a.y + a.h - 1
+          if (ueberlappt) treffer.push(`${na} / ${nb}`)
+        }
+      }
+      return treffer
+    }
+    expect(paare(SEITE1)).toEqual([])
+    expect(paare(SEITE2)).toEqual([])
+  })
+})
+
+describe('Ausdruck', () => {
+  const beispiel = {
+    name: 'Mustermann', vorname: 'Erika', geschlecht: 'weiblich',
+    einsatz_nr: '6951', zeit_alarm: '02:47:00', af: 19, spo2: 97, hf: 99,
+    atemwege: 'frei', naca_initial: 'III (mäßige Störung)',
+  }
+
+  it('liefert genau zwei Blaetter', () => {
+    expect(aelrdHtml(beispiel).match(/class="blatt"/g)?.length).toBe(2)
+  })
+
+  it('setzt das Blatt auf A4 ohne Rand, weil der Bogen seinen eigenen mitbringt', () => {
+    const html = aelrdHtml(beispiel)
+    expect(html).toContain('size:A4 portrait')
+    expect(html).toContain('@page{size:A4 portrait;margin:0}')
+  })
+
+  it('setzt jeden Block auf seine vermessene Punktposition', () => {
+    const html = aelrdHtml(beispiel)
+    expect(html).toContain(`left:${SEITE1.stammdaten.x}pt;top:${SEITE1.stammdaten.y}pt`)
+    expect(html).toContain(`left:${SEITE2.massnahmen.x}pt;top:${SEITE2.massnahmen.y}pt`)
+  })
+
+  it('traegt die Werte ein', () => {
+    const html = aelrdHtml(beispiel)
+    expect(html).toContain('Mustermann')
+    expect(html).toContain('6951')
+  })
+
+  it('kreuzt gewaehlte Optionen an und laesst die uebrigen leer', () => {
+    const html = aelrdHtml(beispiel)
+    expect(html).toContain('<span class="kreis an"></span>frei')
+    expect(html).toContain('<span class="kreis"></span>gefährdet')
+  })
+
+  it('zeigt alle Optionen, auch die nicht gewaehlten', () => {
+    // Der Bogen ist gedruckt — er zeigt immer die ganze Auswahl, sonst stuende
+    // im Protokoll eine andere Auswahl als vor Ort zur Wahl stand.
+    const html = aelrdHtml({})
+    for (const o of aelrdFeld('atemwege')!.optionen!) {
+      expect(html).toContain(escapeHtml(o.text))
+    }
+  })
+
+  it('kommt mit einem leeren Protokoll zurecht', () => {
+    const html = aelrdHtml({})
+    expect(html.match(/class="blatt"/g)?.length).toBe(2)
+  })
+
+  it('ignoriert unbekannte Felder', () => {
+    const html = aelrdHtml({ irgendwas_altes: 'Wert', name: 'Test' })
+    expect(html).toContain('Test')
+    expect(html).not.toContain('irgendwas_altes')
+  })
+
+  it('maskiert HTML aus den Eingaben', () => {
+    const html = aelrdHtml({ name: '<script>alert(1)</script>' })
+    expect(html).not.toContain('<script>alert(1)</script>')
+    expect(html).toContain('&lt;script&gt;')
+  })
+
+  it('nimmt Organisation und Zeitpunkt in den Kopf auf', () => {
+    const html = aelrdHtml({}, { organisation: 'BRK Ansbach', erstellt: '02.10.2026 03:45' })
+    expect(html).toContain('BRK Ansbach')
+    expect(html).toContain('02.10.2026 03:45')
+  })
+})
+
+describe('istGewaehlt', () => {
+  it('erkennt einen einzelnen Wert und einen aus einer Liste', () => {
+    expect(istGewaehlt('frei', 'frei')).toBe(true)
+    expect(istGewaehlt(['a', 'b'], 'b')).toBe(true)
+    expect(istGewaehlt(undefined, 'frei')).toBe(false)
+  })
+})
+
+describe('Leerer Vordruck', () => {
+  it('traegt keine Einsatzdaten', () => {
+    const vordruck = aelrdVordruck()
+    const gefuellt = aelrdHtml({ name: 'Mustermann', einsatz_nr: '6951', notfallgeschehen: 'Meldebild' })
+    for (const wert of ['Mustermann', '6951', 'Meldebild']) {
+      expect(gefuellt).toContain(wert)
+      expect(vordruck).not.toContain(wert)
+    }
+  })
+
+  it('zeigt trotzdem den ganzen Bogen', () => {
+    const vordruck = aelrdVordruck()
+    expect(vordruck.match(/class="blatt"/g)?.length).toBe(2)
+    for (const ueberschrift of ['Erstbefund', 'Neurologie', 'Verletzungen', 'Maßnahmen', 'Übergabe']) {
+      expect(vordruck).toContain(ueberschrift)
+    }
+  })
+
+  it('laesst alle Kaestchen leer', () => {
+    expect(aelrdVordruck()).not.toContain('class="kreis an"')
+  })
+
+  it('laesst die Freitextflaechen ohne Schreiblinien', () => {
+    // Der Vordruck zeigt diese Felder leer; der eingetragene Text soll auf
+    // dem Papier fuer sich stehen.
+    expect(aelrdVordruck()).not.toContain('border-bottom:0.24pt solid #999')
+  })
+
+  it('nimmt die Organisation auf, laesst Protokoll-Nr. und Datum aber frei', () => {
+    const vordruck = aelrdVordruck('BRK Ansbach')
+    expect(vordruck).toContain('BRK Ansbach')
+    expect(vordruck).toContain('Protokoll-Nr.:')
+    expect(vordruck).toContain('Datum / Uhrzeit:')
+  })
+})
+
+describe('Titel des Bogens', () => {
+  it('traegt den Produktnamen', () => {
+    expect(aelrdHtml({})).toContain('Einsatzprotokoll - Responda')
+  })
+
+  it('bleibt gleich, egal welche Organisation im Kopf steht', () => {
+    // Die Organisation steht in der Kopfzeile; der Titelbalken ist fest.
+    const a = aelrdHtml({}, { organisation: 'BRK Ansbach' })
+    const b = aelrdHtml({}, { organisation: 'Malteser' })
+    expect(a).toContain('Einsatzprotokoll - Responda')
+    expect(b).toContain('Einsatzprotokoll - Responda')
+    expect(a).toContain('BRK Ansbach')
+    expect(b).toContain('Malteser')
+  })
+})
+
+describe('Besatzung', () => {
+  it('steht unter den Einsatztechnischen Daten', () => {
+    const html = aelrdHtml({})
+    const block = html.slice(html.indexOf('Einsatztechnische Daten'), html.indexOf('Notfallgeschehen'))
+    for (const zeile of ['Besatzung', 'Teamführer', '1. Mannschaft', '2. Mannschaft', '3. Mannschaft']) {
+      expect(block).toContain(zeile)
+    }
+  })
+
+  it('druckt die flach abgelegte Besatzung', () => {
+    const html = aelrdHtml({
+      mannschaft_tf: 'Huber', mannschaft_1: 'Sailer', mannschaft_2: 'Weber', mannschaft_3: 'Meier',
+    })
+    for (const name of ['Huber', 'Sailer', 'Weber', 'Meier']) expect(html).toContain(name)
+  })
+
+  it('druckt auch die verschachtelt abgelegte Besatzung aelterer Protokolle', () => {
+    // Wer nur die flachen Felder liest, druckt diese Protokolle mit leerer
+    // Besatzung — obwohl die Namen in der Payload stehen.
+    const html = aelrdHtml({
+      mannschaft: {
+        tf: { id: '1', name: 'Huber' },
+        m1: { id: '2', name: 'Sailer' },
+        m2: { id: '3', name: 'Weber' },
+        m3: { id: '4', name: 'Meier' },
+      },
+    })
+    for (const name of ['Huber', 'Sailer', 'Weber', 'Meier']) expect(html).toContain(name)
+  })
+
+  it('bevorzugt das flache Feld, wenn beide Formen etwas tragen', () => {
+    const html = aelrdHtml({
+      mannschaft_tf: 'Neuer Wert',
+      mannschaft: { tf: { name: 'Alter Wert' } },
+    })
+    expect(html).toContain('Neuer Wert')
+    expect(html).not.toContain('Alter Wert')
+  })
+
+  it('kommt mit einer halb gefuellten Besatzung zurecht', () => {
+    const html = aelrdHtml({ mannschaft: { tf: { name: 'Huber' }, m2: null } })
+    expect(html).toContain('Huber')
+    expect(html.match(/class="blatt"/g)?.length).toBe(2)
+  })
+
+  it('bleibt im leeren Vordruck leer', () => {
+    const vordruck = aelrdVordruck()
+    expect(vordruck).toContain('Teamführer')
+    expect(vordruck).not.toContain('Huber')
+  })
+})
+
+describe('Normangabe', () => {
+  it('nennt die Fassung, der die Felder wirklich folgen', () => {
+    // Die Feldlisten stammen vom ÄLRD-Bogen, und der folgt DIVI 6.0.
+    // Eine falsche Normangabe auf einem Einsatzprotokoll waere schlimmer
+    // als gar keine.
+    const html = aelrdHtml({})
+    expect(html).toContain('DIVI-Notfalleinsatzprotokoll 6.0')
+    expect(html).not.toContain('DIVI-Notfalleinsatzprotokoll 7.1')
+  })
+})
+
+describe('Gliederung des Bogens', () => {
+  it('verweist nur auf Felder, die es gibt', () => {
+    for (const abschnitt of AELRD_ABSCHNITTE) {
+      const unbekannt = abschnitt.felder.filter((id) => !aelrdFeld(id))
+      expect({ abschnitt: abschnitt.id, unbekannt }).toEqual({ abschnitt: abschnitt.id, unbekannt: [] })
+    }
+  })
+
+  it('fuehrt jedes Feld genau einmal auf', () => {
+    const alle = AELRD_ABSCHNITTE.flatMap((a) => a.felder)
+    expect(alle.filter((id, i) => alle.indexOf(id) !== i)).toEqual([])
+  })
+
+  it('laesst kein Feld des Katalogs aus', () => {
+    // Ein Feld, das in keinem Abschnitt steht, waere in der Maske unsichtbar —
+    // und man merkte es erst, wenn es im Protokoll fehlt.
+    const erfasst = new Set(AELRD_ABSCHNITTE.flatMap((a) => a.felder))
+    const fehlen = AELRD_FELDER.map((f) => f.id).filter((id) => !erfasst.has(id))
+    expect(fehlen).toEqual([])
+  })
+
+  it('gibt jedem Abschnitt eine eindeutige ID', () => {
+    const ids = AELRD_ABSCHNITTE.map((a) => a.id)
+    expect(new Set(ids).size).toBe(ids.length)
+  })
+})
+
+describe('Vollstaendigkeit des Ausdrucks', () => {
+  it('druckt jeden eingetragenen Wert — kein Feld faellt still unter den Tisch', () => {
+    // Der Erkrankungsblock war einmal im Layout definiert, aber nie
+    // gerendert: ein ganzer Rahmen des Bogens blieb leer, obwohl die Daten
+    // da waren. Dieser Test faengt so etwas.
+    const probe: Record<string, unknown> = {}
+    for (const f of AELRD_FELDER) {
+      if (f.typ === 'medikation' || f.typ === 'check' || f.optionen?.length) continue
+      // Skalen drucken Punkte, keinen Text — sie pruefen eigene Tests.
+      if (f.typ === 'skala') continue
+      probe[f.id] = `ZZ${f.id}ZZ`
+    }
+    const html = aelrdHtml(probe)
+    const fehlend = Object.keys(probe).filter((id) => !html.includes(`ZZ${id}ZZ`))
+    expect(fehlend).toEqual([])
+  })
+
+  it('markiert den gewaehlten Punkt der Schmerzskalen', () => {
+    const html = aelrdHtml({ schmerz: 5, ub_schmerz: 3 })
+    expect((html.match(/class="sk-p an"/g) ?? []).length).toBe(2)
+  })
+})
+
+describe('Mehrfachauswahl mit runden Knöpfen', () => {
+  it('erlaubt mehrere Optionen, wo sie sich fachlich nicht ausschliessen', () => {
+    // Ein Patient im Schock ist blass UND kaltschweissig; ein Schlaganfall
+    // zeigt Gesichtslaehmung UND Sprachstoerung zugleich.
+    for (const id of ['haut', 'neuro_auffaelligkeiten', 'atmung', 'psyche',
+      'erweitertes_monitoring', 'medizintechnik', 'spezielle_traumata']) {
+      expect({ feld: id, typ: aelrdFeld(id)?.typ }).toEqual({ feld: id, typ: 'mehrfach' })
+    }
+  })
+
+  it('laesst Einfachwahl, wo die Optionen einander ausschliessen', () => {
+    for (const id of ['geschlecht', 'bmi', 'unfallhergang', 'sturz', 'lysetherapie']) {
+      expect({ feld: id, typ: aelrdFeld(id)?.typ }).toEqual({ feld: id, typ: 'radio' })
+    }
+  })
+
+  it('zeichnet auch die Mehrfachwahl als runden Knopf, wie auf dem Papier', () => {
+    const html = aelrdHtml({ haut: ['unauffaellig', 'oedeme'] })
+    expect(html).not.toContain('class="eck')
+    expect(html).toContain('<span class="kreis an"></span>unauffällig')
+    expect(html).toContain('<span class="kreis an"></span>Oedeme')
+  })
+
+  it('fuellt mehrere Knoepfe desselben Feldes', () => {
+    const html = aelrdHtml({ neuro_auffaelligkeiten: ['gesichtslaehmung', 'sprachstoerung'] })
+    expect(html).toContain('<span class="kreis an"></span>Gesichtslähmung')
+    expect(html).toContain('<span class="kreis an"></span>Sprachstörung')
+    expect(html).toContain('<span class="kreis"></span>Herdblick')
+  })
+})
+
