@@ -156,11 +156,76 @@ export function namenszeilen(text: string): string[] {
   for (const roh of text.split('\n')) {
     let zeile = roh.replace(/\s+/g, ' ').trim()
     for (const muster of AUFSCHRIFTEN) zeile = zeile.replace(muster, ' ')
-    zeile = zeile.replace(/\s+/g, ' ').replace(/^[\s.,:;·|-]+|[\s.,:;·|-]+$/g, '').trim()
-    if (zeile.length < 2 || zeile.length > 40) continue
-    const buchstaben = (zeile.match(/[A-Za-zÄÖÜäöüß]/g) ?? []).length
-    if (buchstaben < zeile.length * 0.6) continue
-    if (!aus.includes(zeile)) aus.push(zeile)
+    // Zahlenblöcke heraustrennen: die Kamera legt gern Name und Geburtsdatum
+    // in eine Zeile, und "Mustermann 09.03.1958" fiele sonst ganz heraus.
+    for (const stueck of zeile.split(/\s{2,}|\b\d[\d.\-/]{3,}\b/)) {
+      const z = stueck.replace(/\s+/g, ' ').replace(/^[\s.,:;·|-]+|[\s.,:;·|-]+$/g, '').trim()
+      if (z.length < 2 || z.length > 40) continue
+      const buchstaben = (z.match(/[A-Za-zÄÖÜäöüß]/g) ?? []).length
+      if (buchstaben < z.length * 0.55) continue
+      if (!aus.includes(z)) aus.push(z)
+    }
+  }
+  return aus
+}
+
+// ── Welche Zeile ist was ───────────────────────────────────────────────────
+
+/** Die Aufschriften, hinter denen auf der Karte ein Wert steht. */
+const NACH_AUFSCHRIFT: [RegExp, 'vorname' | 'name' | 'kasse'][] = [
+  // Vorname zuerst prüfen: "Name" steckt als Wort in "Vorname".
+  [/^vorname[:\s]*$/i, 'vorname'],
+  [/^(familien|nach)?name[:\s]*$/i, 'name'],
+  [/^(kasse|krankenkasse|kostentr(ä|ae)ger)[:\s]*$/i, 'kasse'],
+]
+
+function brauchbar(zeile: string): boolean {
+  const z = zeile.trim()
+  if (z.length < 2 || z.length > 40) return false
+  if (NACH_AUFSCHRIFT.some(([m]) => m.test(z))) return false
+  const buchstaben = (z.match(/[A-Za-zÄÖÜäöüß]/g) ?? []).length
+  return buchstaben >= z.length * 0.55
+}
+
+/**
+ * Ein Vorschlag, welche Zeile Name, Vorname und Kasse ist.
+ *
+ * Zwei Wege, in dieser Reihenfolge:
+ *
+ * 1. ÜBER DIE AUFSCHRIFT. Steht auf der Karte "Vorname" und darunter ein
+ *    Wort, ist das der Vorname. Das ist belastbar, wo die Karte beschriftet
+ *    ist.
+ * 2. ÜBER DIE STELLUNG. Sonst gilt: ganz oben steht die Kasse, und die
+ *    beiden letzten brauchbaren Zeilen vor dem Geburtsdatum sind Nachname
+ *    und Vorname — in dieser Reihenfolge, so steht es auf der Karte.
+ *
+ * Der Vorschlag wird vorausgewählt, nicht stillschweigend übernommen: er
+ * steht angekreuzt da und lässt sich mit einem Tipp ändern.
+ */
+export function egkVorschlag(text: string): { name?: string; vorname?: string; kasse?: string } {
+  const zeilen = text.split('\n').map((z) => z.replace(/\s+/g, ' ').trim())
+  const aus: { name?: string; vorname?: string; kasse?: string } = {}
+
+  // 1. Über die Aufschrift.
+  for (let i = 0; i < zeilen.length; i++) {
+    const treffer = NACH_AUFSCHRIFT.find(([muster]) => muster.test(zeilen[i]))
+    if (!treffer) continue
+    const wert = zeilen.slice(i + 1).find((z) => z.length > 0 && brauchbar(z))
+    if (wert && !aus[treffer[1]]) aus[treffer[1]] = wert
+  }
+
+  // 2. Über die Stellung, für das, was noch fehlt.
+  const brauchbare = zeilen.filter(brauchbar)
+  if (!aus.kasse && brauchbare.length > 0) {
+    aus.kasse = namenszeilen(brauchbare[0])[0] ?? brauchbare[0]
+  }
+  if (!aus.name || !aus.vorname) {
+    const vorDatum = zeilen.findIndex((z) => /\b\d{1,2}[.\-/]\d{1,2}[.\-/]\d{4}\b/.test(z))
+    const davor = (vorDatum === -1 ? zeilen : zeilen.slice(0, vorDatum)).filter(brauchbar)
+    // Ohne die Kassenzeilen ganz oben.
+    const kandidaten = davor.filter((z) => z !== aus.kasse)
+    if (!aus.name && kandidaten.length >= 1) aus.name = kandidaten[kandidaten.length - (kandidaten.length >= 2 ? 2 : 1)]
+    if (!aus.vorname && kandidaten.length >= 2) aus.vorname = kandidaten[kandidaten.length - 1]
   }
   return aus
 }

@@ -4,6 +4,7 @@ import {
   egkLeer,
   egkLesen,
   egkSammeln,
+  egkVorschlag,
   geburtsdatumLesen,
   kassennummerLesen,
   kvnrGueltig,
@@ -270,5 +271,44 @@ describe('Sammeln aus mehreren Bildern', () => {
     expect(egkGenug({ versnr: gut, gebdatum: '1958-03-09', zeilen: [] })).toBe(true)
     // Ohne stimmige Prüfziffer wird weitergesucht.
     expect(egkGenug({ versnr: schlecht, gebdatum: '1958-03-09', zeilen: [] })).toBe(false)
+  })
+})
+
+describe('Vorschlag, welche Zeile was ist', () => {
+  it('folgt der Aufschrift, wo die Karte beschriftet ist', () => {
+    const v = egkVorschlag(AUS_DER_KAMERA)
+    expect(v.vorname).toBe('Heinz')
+    expect(v.name).toBe('Mustermann')
+    expect(v.kasse).toBe('AOK Bayern')
+  })
+
+  it('verwechselt Name und Vorname nicht', () => {
+    // "Name" steckt als Wort in "Vorname" — wer zuerst auf /name/ prüft,
+    // schreibt den Vornamen in das Feld Nachname.
+    const v = egkVorschlag('Vorname\nHeinz\nName\nMustermann\n09.03.1958')
+    expect(v.vorname).toBe('Heinz')
+    expect(v.name).toBe('Mustermann')
+  })
+
+  it('geht nach der Stellung, wenn die Karte keine Aufschriften zeigt', () => {
+    // Ganz oben die Kasse, davor dem Geburtsdatum Nachname und Vorname.
+    const v = egkVorschlag('TK\nMustermann\nHeinz\n09.03.1958\nK987654329')
+    expect(v.kasse).toBe('TK')
+    expect(v.name).toBe('Mustermann')
+    expect(v.vorname).toBe('Heinz')
+  })
+
+  it('nimmt keine Aufschrift als Wert', () => {
+    const v = egkVorschlag('Gesundheitskarte\nName\nVorname\n09.03.1958')
+    expect(v.name).not.toBe('Vorname')
+    expect(v.vorname).not.toBe('Name')
+  })
+
+  it('schlägt nichts vor, wo nichts ist', () => {
+    expect(egkVorschlag('123456\n80276001011234567890')).toEqual({})
+  })
+
+  it('trennt Name und Geburtsdatum, wenn die Kamera sie in eine Zeile legt', () => {
+    expect(namenszeilen('Mustermann 09.03.1958')).toContain('Mustermann')
   })
 })

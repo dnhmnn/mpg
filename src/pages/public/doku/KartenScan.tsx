@@ -18,7 +18,15 @@
 // Vergleichen da, und erst ein Tipp trägt es ins Formular.
 
 import { useEffect, useRef, useState } from 'react'
-import { egkGenug, egkLeer, egkLesen, egkSammeln, kvnrGueltig, type EgkDaten } from '../../../lib/egk'
+import {
+  egkGenug,
+  egkLeer,
+  egkLesen,
+  egkSammeln,
+  egkVorschlag,
+  kvnrGueltig,
+  type EgkDaten,
+} from '../../../lib/egk'
 
 const ROT = '#600812'
 const TEXT = '#1a0e08'
@@ -195,6 +203,8 @@ export default function KartenScan({ onUebernehmen, onSchliessen }: {
   const [daten, setDaten] = useState<EgkDaten | null>(null)
   const [rohtext, setRohtext] = useState('')
   const [zuordnung, setZuordnung] = useState<Partial<Record<Ziel, string>>>({})
+  /** Der längste bisher gelesene Text — daraus kommt der Vorschlag. */
+  const textRef = useRef('')
   const [lichtDa, setLichtDa] = useState(false)
   const [licht, setLicht] = useState(false)
   const [lichtFehler, setLichtFehler] = useState('')
@@ -311,7 +321,10 @@ export default function KartenScan({ onUebernehmen, onSchliessen }: {
     const bild = ausVideo(video)
     try {
       const { data } = await leser.recognize(bild)
-      return egkLesen(String(data?.text ?? ''))
+      const text = String(data?.text ?? '')
+      // Der ergiebigste Text gewinnt — aus ihm kommt später der Vorschlag.
+      if (text.trim().length > textRef.current.trim().length) textRef.current = text
+      return egkLesen(text)
     } finally {
       // Das Einzelbild wird sofort verworfen; es wird nie zu einer Datei.
       bild.width = 0
@@ -342,19 +355,21 @@ export default function KartenScan({ onUebernehmen, onSchliessen }: {
 
     let gesammelt = egkLeer()
     let durchgang = 0
+    // Nach Nummer und Datum noch ein paar Bilder weiterlesen: die Namen
+    // brauchen länger als die Muster, und wer zu früh aufhört, hat sie nicht.
+    let nachlauf = 0
     const bis = Date.now() + LIVE_HOECHSTDAUER_MS
     while (laeuftRef.current) {
       if (Date.now() > bis) {
         merken(`live aufgegeben nach ${durchgang} Bildern`)
         laeuftRef.current = false
         kameraAus()
-        setDaten(gesammelt)
         setAufgegeben(
           gesammelt.versnr
             ? 'Die Prüfziffer der gelesenen Nummer geht nicht auf. Bitte vergleichen und bei Bedarf von Hand berichtigen.'
             : 'Aus dem Kamerabild war nichts Verwertbares zu lesen. Mit mehr Licht erneut versuchen oder ein Foto aufnehmen.',
         )
-        setStand('fertig')
+        ergebnisZeigen(gesammelt, textRef.current)
         return
       }
       const neu = await einBildLesen()
@@ -363,17 +378,20 @@ export default function KartenScan({ onUebernehmen, onSchliessen }: {
         durchgang += 1
         gesammelt = egkSammeln(gesammelt, neu)
         setLiveDaten(gesammelt)
+        const genug = egkGenug(gesammelt)
+        if (genug) nachlauf += 1
         setLiveStand(
-          egkGenug(gesammelt)
-            ? 'Karte gelesen'
+          genug
+            ? 'Nummer steht — noch die Namen…'
             : `Lese… (${durchgang}. Bild${gesammelt.versnr ? ', Nummer erkannt' : ''})`,
         )
-        if (egkGenug(gesammelt)) {
-          merken(`live gelesen nach ${durchgang} Bildern`)
+        // Fertig, wenn auch Namenszeilen da sind — oder nach vier weiteren
+        // Bildern, damit eine Karte ohne lesbare Namen nicht ewig blockiert.
+        if (genug && (gesammelt.zeilen.length >= 2 || nachlauf >= 4)) {
+          merken(`live gelesen nach ${durchgang} Bildern, ${gesammelt.zeilen.length} Zeilen`)
           laeuftRef.current = false
           kameraAus()
-          setDaten(gesammelt)
-          setStand('fertig')
+          ergebnisZeigen(gesammelt, textRef.current)
           return
         }
       }
@@ -417,9 +435,8 @@ export default function KartenScan({ onUebernehmen, onSchliessen }: {
       const { data } = await leser.recognize(bild)
       const text = String(data?.text ?? '')
       merken(`erkannt: ${text.replace(/\s+/g, ' ').trim().length} Zeichen`)
-      setRohtext(text)
-      setDaten(egkLesen(text))
-      setStand('fertig')
+      textRef.current = text
+      ergebnisZeigen(egkLesen(text), text)
     } catch (f) {
       setStand('fehler')
       setFehler(`Die Texterkennung lief nicht an: ${(f as { message?: string })?.message ?? 'unbekannt'}.`)
@@ -436,8 +453,7 @@ export default function KartenScan({ onUebernehmen, onSchliessen }: {
   function liveUebernehmen() {
     liveAus()
     kameraAus()
-    setDaten(liveDaten)
-    setStand('fertig')
+    ergebnisZeigen(liveDaten, textRef.current)
   }
 
   async function ausFoto(datei: File | undefined) {
@@ -449,6 +465,22 @@ export default function KartenScan({ onUebernehmen, onSchliessen }: {
       setStand('fehler')
       setFehler(`Das Foto ließ sich nicht öffnen: ${(f as { message?: string })?.message ?? 'unbekannt'}.`)
     }
+  }
+
+  /**
+   * Das Ergebnis zeigen und gleich vorschlagen, welche Zeile was ist.
+   *
+   * Der Vorschlag steht angekreuzt da; wer ihn ändern will, tippt einmal.
+   * Bisher stand hier nur eine Liste, und wer sie nicht angetippt hat, bekam
+   * Name, Vorname und Kasse gar nicht ins Formular.
+   */
+  function ergebnisZeigen(d: EgkDaten, text: string) {
+    setDaten(d)
+    setRohtext(text)
+    const v = egkVorschlag(text)
+    const erlaubt = (z?: string) => (z && d.zeilen.includes(z) ? z : undefined)
+    setZuordnung({ name: erlaubt(v.name), vorname: erlaubt(v.vorname), kasse: erlaubt(v.kasse) })
+    setStand('fertig')
   }
 
   function uebernehmen() {
@@ -565,6 +597,10 @@ export default function KartenScan({ onUebernehmen, onSchliessen }: {
                 hinweis={liveDaten.versnr && kvnrGueltig(liveDaten.versnr) ? 'Prüfziffer passt' : undefined}
               />
               <Reihe marke="Geburtsdatum" wert={liveDaten.gebdatum} />
+              <Reihe
+                marke="Textzeilen"
+                wert={liveDaten.zeilen.length > 0 ? liveDaten.zeilen.slice(0, 3).join(' · ') : undefined}
+              />
             </div>
 
             <button type="button" onClick={liveUebernehmen}
@@ -623,10 +659,11 @@ export default function KartenScan({ onUebernehmen, onSchliessen }: {
 
             <div style={{ background: '#fff', borderRadius: 12, borderLeft: `3px solid ${ROT}`, padding: '11px 12px', marginBottom: 10 }}>
               <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: ROT, marginBottom: 2 }}>
-                Name zuordnen
+                Name und Kasse
               </div>
               <div style={{ fontSize: 11, fontStyle: 'italic', color: GRAU, marginBottom: 8 }}>
-                Welche Zeile was ist, steht auf jeder Karte woanders — deshalb wird es nicht geraten.
+                Vorgeschlagen nach der Aufschrift der Karte. Stimmt etwas nicht, einmal auf das
+                richtige Feld tippen.
               </div>
               {daten.zeilen.length === 0 ? (
                 <div style={{ fontSize: 13, fontStyle: 'italic', color: GRAU }}>Keine Textzeile erkannt.</div>
@@ -654,7 +691,7 @@ export default function KartenScan({ onUebernehmen, onSchliessen }: {
             </div>
 
             <div style={{ display: 'flex', gap: 8 }}>
-              <button type="button" onClick={() => { setDaten(null); setZuordnung({}); setRohtext(''); setAufgegeben(''); setStand('wahl') }}
+              <button type="button" onClick={() => { setDaten(null); setZuordnung({}); setRohtext(''); setAufgegeben(''); textRef.current = ''; setLiveDaten(egkLeer()); setStand('wahl') }}
                 style={{ ...knopfGross, flex: 1, background: 'transparent', border: `0.5px solid ${LINIE}`, color: GRAU, textTransform: 'none', letterSpacing: 0, fontSize: 12 }}>
                 Neu aufnehmen
               </button>
