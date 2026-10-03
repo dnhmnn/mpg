@@ -33,8 +33,14 @@ export default defineConfig({
           // dem Netz geholt. Danach liegt sie im Zwischenspeicher, damit sie
           // im Funkloch nicht fehlt. Sie ist unveraenderlich versioniert,
           // deshalb CacheFirst.
+          //
+          // Es sind drei Dinge an zwei Orten: die Bibliothek und der
+          // WASM-Kern unter npm/tesseract.js…, die Sprachdaten unter
+          // npm/@tesseract.js-data/deu. Ein Muster nur auf "npm/tesseract"
+          // trifft die Sprachdaten NICHT — dann laedt die Erkennung offline
+          // zwar, findet aber kein Deutsch.
           {
-            urlPattern: /^https:\/\/cdn\.jsdelivr\.net\/npm\/tesseract/i,
+            urlPattern: /^https:\/\/cdn\.jsdelivr\.net\/npm\/(@tesseract\.js-data|tesseract\.js)/i,
             handler: 'CacheFirst',
             options: {
               cacheName: 'texterkennung',

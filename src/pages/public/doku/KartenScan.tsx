@@ -27,9 +27,27 @@ type Stand = 'kamera' | 'lesen' | 'fertig' | 'fehler'
 /** Das Seitenverhältnis einer Scheckkarte (ID-1): 85,6 × 54 mm. */
 const KARTE = 85.6 / 54
 
+type TesseractModul = {
+  createWorker: (
+    sprache: string,
+    oem: number,
+    optionen: { logger: (m: { status: string; progress: number }) => void },
+  ) => Promise<{
+    recognize: (bild: HTMLCanvasElement) => Promise<{ data?: { text?: string } }>
+    terminate: () => Promise<void>
+  }>
+}
+
 async function textErkennen(bild: HTMLCanvasElement, fortschritt: (p: number) => void): Promise<string> {
-  const mod = await import(/* @vite-ignore */ TESSERACT)
-  const worker = await mod.createWorker('deu', 1, {
+  const geladen = (await import(/* @vite-ignore */ TESSERACT)) as { default?: TesseractModul } & Partial<TesseractModul>
+  // Der ESM-Build von tesseract.js hat nur einen Default-Export. Ohne diese
+  // Zeile ist createWorker undefined und die Erkennung startet nie — genau
+  // das war der Fehler, mit dem der Leser keine Karte erkannt hat.
+  const tesseract = geladen.default ?? (geladen as TesseractModul)
+  if (typeof tesseract?.createWorker !== 'function') {
+    throw new Error('tesseract.js ohne createWorker geladen')
+  }
+  const worker = await tesseract.createWorker('deu', 1, {
     logger: (m: { status: string; progress: number }) => {
       if (m.status === 'recognizing text') fortschritt(m.progress)
     },
@@ -93,6 +111,7 @@ export default function KartenScan({ onUebernehmen, onSchliessen }: {
   const [fehler, setFehler] = useState('')
   const [fortschritt, setFortschritt] = useState(0)
   const [daten, setDaten] = useState<EgkDaten | null>(null)
+  const [rohtext, setRohtext] = useState('')
   const [zuordnung, setZuordnung] = useState<Partial<Record<Ziel, string>>>({})
 
   function kameraAus() {
@@ -133,6 +152,7 @@ export default function KartenScan({ onUebernehmen, onSchliessen }: {
     setFortschritt(0)
     try {
       const text = await textErkennen(bild, setFortschritt)
+      setRohtext(text)
       setDaten(egkLesen(text))
       setStand('fertig')
     } catch {
@@ -270,6 +290,15 @@ export default function KartenScan({ onUebernehmen, onSchliessen }: {
             <div style={{ fontSize: 11, fontStyle: 'italic', color: GRAU, textAlign: 'center', marginTop: 8 }}>
               Die Adresse steht nicht auf der Karte — sie liegt nur im Chip.
             </div>
+
+            {/* Wenn wenig erkannt wurde, hilft beim Melden nur, was die
+                Kamera wirklich gelesen hat. */}
+            <details style={{ marginTop: 8 }}>
+              <summary style={{ fontSize: 11, color: GRAU, cursor: 'pointer' }}>Erkannten Text anzeigen</summary>
+              <pre style={{ margin: '6px 0 0', padding: 10, background: '#fff', border: `0.5px solid ${LINIE}`, borderRadius: 8, fontSize: 11, lineHeight: 1.4, color: TEXT, whiteSpace: 'pre-wrap', wordBreak: 'break-word', maxHeight: 180, overflow: 'auto' }}>
+                {rohtext.trim() || 'Die Kamera hat keinen Text gelesen — Karte näher heran, mehr Licht, Schrift scharf stellen.'}
+              </pre>
+            </details>
           </>
         ) : null}
       </div>
