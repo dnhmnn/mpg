@@ -72,6 +72,13 @@ const BREITE_FOTO = 1600
  * gezeigt, was da ist, und der Rest von Hand ergänzt.
  */
 const LIVE_HOECHSTDAUER_MS = 45_000
+/**
+ * Nach so vielen Bildern mit erkennbarer Vorderseite und keiner Spur einer
+ * Rückseite wird abgebrochen. Weiterzulesen bringt nichts: die Seite ändert
+ * sich nicht von allein, und bis zur Zeitgrenze zu warten hiesse eine halbe
+ * Minute Sackgasse, in der nur der Akku warm wird.
+ */
+const GEDULD_FALSCHE_SEITE = 8
 
 /** Was tesseract.js zurückgibt — Zeilen mit Rahmen und Zuversicht. */
 type TesseractZeile = {
@@ -246,6 +253,7 @@ export default function KartenScan({ onUebernehmen, onSchliessen }: {
   const [befund, setBefund] = useState<string[]>([])
   const [liveStand, setLiveStand] = useState('')
   const [aufgegeben, setAufgegeben] = useState('')
+  const [vorderseiteAnbieten, setVorderseiteAnbieten] = useState(false)
   const [liveDaten, setLiveDaten] = useState<EgkDaten>(egkLeer)
   const [liveEhic, setLiveEhic] = useState<EhicDaten>(ehicLeer)
   const leserRef = useRef<TesseractWorker | null>(null)
@@ -395,40 +403,65 @@ export default function KartenScan({ onUebernehmen, onSchliessen }: {
     let gesammelt = egkLeer()
     let hinten = ehicLeer()
     let durchgang = 0
-    // Nach der Nummer noch ein paar Bilder weiterlesen: der Name braucht
-    // länger als die Muster, und wer zu früh aufhört, hat ihn nicht.
-    let nachlauf = 0
+    /** Wie viele Bilder hintereinander die falsche Seite zeigten. */
+    let falscheSeite = 0
     const bis = Date.now() + LIVE_HOECHSTDAUER_MS
     while (laeuftRef.current) {
       if (Date.now() > bis) {
         merken(`live aufgegeben nach ${durchgang} Bildern`)
         laeuftRef.current = false
         kameraAus()
-        const vonHinten = hinten.felder.length >= 2
+
+        if (hinten.felder.length >= 2) {
+          setAufgegeben(
+            hinten.versnr && !kvnrGueltig(hinten.versnr)
+              ? 'Die Prüfziffer der gelesenen Nummer geht nicht auf. Bitte vergleichen und bei Bedarf von Hand berichtigen.'
+              : '',
+          )
+          ehicZeigen(hinten, textRef.current)
+          return
+        }
+
+        // Keine Rückseite gefunden. Was von der Vorderseite gelesen wurde,
+        // wird nicht untergeschoben, sondern ausdrücklich angeboten.
+        setVorderseiteAnbieten(Boolean(gesammelt.versnr || gesammelt.zeilen.length > 0))
         setAufgegeben(
-          vonHinten || gesammelt.versnr
-            ? (!kvnrGueltig((vonHinten ? hinten.versnr : gesammelt.versnr) ?? '')
-                ? 'Die Prüfziffer der gelesenen Nummer geht nicht auf. Bitte vergleichen und bei Bedarf von Hand berichtigen.'
-                : '')
-            : 'Aus dem Kamerabild war nichts Verwertbares zu lesen. Mit mehr Licht erneut versuchen oder ein Foto aufnehmen.',
+          gesammelt.versnr || gesammelt.zeilen.length > 0
+            ? 'Keine Rückseite erkannt. Gelesen wurde offenbar die Vorderseite — dort steht der Name ohne Beschriftung und muss geraten werden.'
+            : 'Aus dem Kamerabild war nichts Verwertbares zu lesen. Mit mehr Licht erneut versuchen, und die Seite mit den nummerierten Feldern zeigen.',
         )
-        if (vonHinten) ehicZeigen(hinten, textRef.current)
-        else ergebnisZeigen(gesammelt, textRef.current)
+        setStand('fehler')
+        setFehler('')
         return
       }
+
+      if (falscheSeite >= GEDULD_FALSCHE_SEITE && hinten.felder.length === 0) {
+        merken(`abgebrochen: ${falscheSeite} Bilder Vorderseite, keine Rückseite`)
+        laeuftRef.current = false
+        kameraAus()
+        setVorderseiteAnbieten(Boolean(gesammelt.versnr || gesammelt.zeilen.length > 0))
+        setAufgegeben(
+          'Das ist die Vorderseite. Erfasst wird die Rückseite — die Seite mit den nummerierten Feldern.',
+        )
+        setStand('fehler')
+        setFehler('')
+        return
+      }
+
       const neu = await einBildLesen()
       if (!laeuftRef.current) break
       if (neu) {
         durchgang += 1
 
-        // ── Die Rückseite, wenn sie im Bild ist ──────────────────────────
+        // ── Die Rückseite ───────────────────────────────────────────────
         if (neu.hinten) {
+          falscheSeite = 0
           hinten = ehicSammeln(hinten, neu.hinten)
           setLiveEhic(hinten)
           setLiveStand(
             ehicGenug(hinten)
               ? 'Rückseite gelesen'
-              : `Rückseite… (Felder ${hinten.felder.join(', ') || '–'})`,
+              : `Lese… (Felder ${hinten.felder.join(', ') || '–'})`,
           )
           if (ehicGenug(hinten)) {
             merken(`Rückseite gelesen nach ${durchgang} Bildern`)
@@ -441,24 +474,28 @@ export default function KartenScan({ onUebernehmen, onSchliessen }: {
           continue
         }
 
-        // ── Sonst die Vorderseite ────────────────────────────────────────
+        /*
+         * Die Vorderseite wird mitgelesen, aber nicht verwendet: erfasst wird
+         * die Rückseite. Wer versehentlich umdreht, soll das gesagt bekommen,
+         * statt ein schlechteres Ergebnis zu erhalten, das er für das richtige
+         * hält — auf der Vorderseite trägt der Name keine Beschriftung und
+         * muss geraten werden.
+         *
+         * Gesammelt wird sie trotzdem: Karten ohne Europäische
+         * Krankenversicherungskarte auf der Rückseite gibt es, und dann ist
+         * ein geratenes Ergebnis besser als keines. Angeboten wird es aber
+         * erst ausdrücklich, am Ende.
+         */
         gesammelt = egkSammeln(gesammelt, neu.vorne)
         setLiveDaten(gesammelt)
-        const genug = egkGenug(gesammelt)
-        if (genug) nachlauf += 1
+        falscheSeite += 1
         setLiveStand(
-          genug
-            ? 'Nummer steht — noch den Namen…'
-            : `Lese… (${durchgang}. Bild${gesammelt.versnr ? ', Nummer erkannt' : ''})`,
+          falscheSeite >= 3
+            ? 'Das sieht nach der Vorderseite aus — bitte umdrehen'
+            : `Lese… (${durchgang}. Bild)`,
         )
-        if (genug && (gesammelt.zeilen.length >= 1 || nachlauf >= 4)) {
-          merken(`Vorderseite gelesen nach ${durchgang} Bildern, ${gesammelt.zeilen.length} Zeilen`)
-          laeuftRef.current = false
-          kameraAus()
-          ergebnisZeigen(gesammelt, textRef.current)
-          return
-        }
       }
+
       // Kurz Luft lassen, damit die Oberfläche bedienbar bleibt.
       await new Promise((r) => setTimeout(r, 120))
     }
@@ -606,7 +643,7 @@ export default function KartenScan({ onUebernehmen, onSchliessen }: {
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 15, fontWeight: 700, color: TEXT }}>Gesundheitskarte</div>
             <div style={{ fontSize: 11, fontStyle: 'italic', color: GRAU }}>
-              Vorderseite · Erkennung auf dem Gerät, das Bild wird nicht gespeichert
+              Rückseite · Erkennung auf dem Gerät, das Bild wird nicht gespeichert
             </div>
             <div style={{ fontSize: 10, color: GRAU, opacity: 0.8 }}>Fassung {__BUILD__}</div>
           </div>
@@ -625,12 +662,12 @@ export default function KartenScan({ onUebernehmen, onSchliessen }: {
           <>
             <button type="button" onClick={() => { setLiveDaten(egkLeer()); setStand('live') }}
               style={{ ...knopfGross, background: ROT, border: 'none', color: '#fff', marginBottom: 8 }}>
-              Karte vor die Kamera halten
+              Rückseite vor die Kamera halten
             </button>
             <div style={{ fontSize: 11, fontStyle: 'italic', color: GRAU, textAlign: 'center', marginBottom: 14, lineHeight: 1.45 }}>
-              Vorder- oder Rückseite, beides geht. Die Rückseite ist die bessere:
-              dort stehen Familienname, Vornamen und Geburtsdatum in eigenen,
-              nummerierten Feldern — da wird nichts geraten.
+              Die Seite mit den nummerierten Feldern — der Europäischen
+              Krankenversicherungskarte. Dort stehen Familienname, Vornamen und
+              Geburtsdatum einzeln, da wird nichts geraten.
               Es entsteht kein Foto, also auch keines in der Galerie des Telefons.
             </div>
             <button type="button" onClick={() => dateiRef.current?.click()}
@@ -639,7 +676,8 @@ export default function KartenScan({ onUebernehmen, onSchliessen }: {
             </button>
             <div style={{ fontSize: 11, fontStyle: 'italic', color: GRAU, textAlign: 'center', marginTop: 8, lineHeight: 1.45 }}>
               Öffnet die Kamera-App mit Autofokus und Blitz — hilft bei
-              schwieriger Schrift, legt aber je nach Telefon ein Foto in der Galerie ab.
+              schwieriger Schrift, legt aber je nach Telefon ein Foto der Karte
+              in der Galerie ab.
             </div>
           </>
         ) : null}
@@ -680,7 +718,8 @@ export default function KartenScan({ onUebernehmen, onSchliessen }: {
               {liveStand || 'Kamera startet…'}
             </div>
             <div style={{ fontSize: 11, fontStyle: 'italic', color: GRAU, textAlign: 'center', marginBottom: 10 }}>
-              Es wird kein Foto gemacht — jedes Bild wird gelesen und sofort verworfen.
+              Rückseite zeigen. Es wird kein Foto gemacht — jedes Bild wird
+              gelesen und sofort verworfen.
             </div>
 
             {/* Was schon dasteht, während weitergelesen wird. */}
@@ -698,7 +737,7 @@ export default function KartenScan({ onUebernehmen, onSchliessen }: {
 
             <button type="button" onClick={liveUebernehmen}
               style={{ ...knopfGross, background: ROT, border: 'none', color: '#fff', marginBottom: 8 }}>
-              Übernehmen, was bisher da ist
+              Übernehmen, was bisher gelesen wurde
             </button>
             <button type="button" onClick={() => { liveAus(); kameraAus(); dateiRef.current?.click() }}
               style={{ ...knopfGross, background: 'transparent', border: `0.5px solid ${LINIE}`, color: GRAU }}>
@@ -723,9 +762,17 @@ export default function KartenScan({ onUebernehmen, onSchliessen }: {
         {stand === 'fehler' ? (
           <>
             <div style={{ padding: '14px 12px', background: '#fff', borderLeft: '3px solid #d97706', borderRadius: 8, fontSize: 13, color: TEXT, lineHeight: 1.5, marginBottom: 10 }}>
-              {fehler}
+              {fehler || aufgegeben}
             </div>
-            <button type="button" onClick={() => { setFehler(''); setStand('wahl') }}
+            {vorderseiteAnbieten ? (
+              <button
+                type="button"
+                onClick={() => { setVorderseiteAnbieten(false); setAufgegeben(''); ergebnisZeigen(liveDaten, textRef.current) }}
+                style={{ ...knopfGross, background: 'transparent', border: `0.5px solid ${ROT}`, color: ROT, marginBottom: 8, textTransform: 'none', letterSpacing: 0, fontSize: 12 }}>
+                Trotzdem von der Vorderseite übernehmen
+              </button>
+            ) : null}
+            <button type="button" onClick={() => { setFehler(''); setAufgegeben(''); setVorderseiteAnbieten(false); setStand('wahl') }}
               style={{ ...knopfGross, background: ROT, border: 'none', color: '#fff' }}>
               Von vorn
             </button>
@@ -813,7 +860,7 @@ export default function KartenScan({ onUebernehmen, onSchliessen }: {
               </button>
             </div>
             <div style={{ fontSize: 11, fontStyle: 'italic', color: GRAU, textAlign: 'center', marginTop: 8 }}>
-              Die Adresse steht nicht auf der Karte — sie liegt nur im Chip.
+              Die Adresse steht auf keiner der beiden Seiten — sie liegt nur im Chip.
             </div>
           </>
         ) : null}
