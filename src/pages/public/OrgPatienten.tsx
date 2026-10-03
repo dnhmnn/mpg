@@ -3,6 +3,10 @@ import { useNavigate } from 'react-router-dom'
 import { pb } from '../../lib/pocketbase'
 import { useOrg } from './OrgPublicLayout'
 import { PubHeader, PubWrap, PubSection, inp, sel, ta, field, lbl } from './pubStyles'
+import AelrdFelder from './AelrdFelder'
+import { AELRD_ERGAENZUNG } from './aelrdErgaenzung'
+import { mehrfachZusammenfassen } from '../../lib/aelrdFormular'
+import { NEUE_FASSUNG, mitFassung } from '../../lib/protokoll'
 import { DEFAULT_FORM_CONFIG, SECTION_STEP_MAP, type FormConfig, type CustomFieldDef } from './formSchema'
 import OrgPatientenMannschaft from './OrgPatientenMannschaft'
 import EinsatzTimeline from './EinsatzTimeline'
@@ -92,6 +96,10 @@ export default function OrgPatienten() {
   const [photos, setPhotos] = useState<string[]>([])
   const [gcs, setGcs] = useState({ e: 0, v: 0, m: 0 })
   const [sigUrl, setSigUrl] = useState('')
+  // Die ergaenzten Felder des Bogens sind uncontrolled; damit ein geladener
+  // Entwurf sie vorbelegt, braucht es seine Werte und einen key, der das
+  // Neurendern ausloest — defaultValue greift sonst nur beim ersten Rendern.
+  const [entwurf, setEntwurf] = useState<Record<string, unknown> | null>(null)
   const [draftId, setDraftId] = useState<string | null>(null)
   const [draftMannschaft, setDraftMannschaft] = useState<Record<string, { id: string; name: string } | null>>({})
   const [savedQrCode, setSavedQrCode] = useState('')
@@ -163,6 +171,7 @@ export default function OrgPatienten() {
     if (!raw) return
     try {
       const d = JSON.parse(raw)
+      setEntwurf(d)
       if (Array.isArray(d.medications))    setMeds(d.medications)
       if (Array.isArray(d.dauermedikation)) setDauerMeds(d.dauermedikation)
       if (Array.isArray(d.verlauf) && d.verlauf.length) setVerlauf(d.verlauf)
@@ -257,7 +266,10 @@ export default function OrgPatienten() {
       data.access_code = savedQrCode
       data.access_code_created = savedQrCreated
     }
-    return data
+    // Mehrfachauswahl steht im DOM als feld__option; erst hier wird daraus
+    // wieder eine Liste. Und die Fassung wird mitgeschrieben, nicht spaeter
+    // aus dem Vorhandensein einzelner Felder erraten.
+    return mitFassung(mehrfachZusammenfassen(data), NEUE_FASSUNG)
   }
 
   function saveLocal() {
@@ -292,6 +304,20 @@ export default function OrgPatienten() {
   }
 
   function renderCustomFields(sectionId: string) {
+    return (
+      <>
+        <AelrdFelder
+          key={entwurf ? 'entwurf' : 'leer'}
+          ids={AELRD_ERGAENZUNG[sectionId] ?? []}
+          hide={hide}
+          werte={entwurf ?? undefined}
+        />
+        {renderEigeneFelder(sectionId)}
+      </>
+    )
+  }
+
+  function renderEigeneFelder(sectionId: string) {
     return cfg.custom_fields
       .filter((f: CustomFieldDef) => f.sectionId === sectionId)
       .map((f: CustomFieldDef) => {

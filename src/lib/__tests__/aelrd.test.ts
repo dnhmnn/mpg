@@ -339,3 +339,26 @@ describe('Gliederung des Bogens', () => {
   })
 })
 
+describe('Vollstaendigkeit des Ausdrucks', () => {
+  it('druckt jeden eingetragenen Wert — kein Feld faellt still unter den Tisch', () => {
+    // Der Erkrankungsblock war einmal im Layout definiert, aber nie
+    // gerendert: ein ganzer Rahmen des Bogens blieb leer, obwohl die Daten
+    // da waren. Dieser Test faengt so etwas.
+    const probe: Record<string, unknown> = {}
+    for (const f of AELRD_FELDER) {
+      if (f.typ === 'medikation' || f.typ === 'check' || f.optionen?.length) continue
+      // Skalen drucken Punkte, keinen Text — sie pruefen eigene Tests.
+      if (f.typ === 'skala') continue
+      probe[f.id] = `ZZ${f.id}ZZ`
+    }
+    const html = aelrdHtml(probe)
+    const fehlend = Object.keys(probe).filter((id) => !html.includes(`ZZ${id}ZZ`))
+    expect(fehlend).toEqual([])
+  })
+
+  it('markiert den gewaehlten Punkt der Schmerzskalen', () => {
+    const html = aelrdHtml({ schmerz: 5, ub_schmerz: 3 })
+    expect((html.match(/class="sk-p an"/g) ?? []).length).toBe(2)
+  })
+})
+

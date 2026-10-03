@@ -262,6 +262,10 @@ function erstbefund(p: Payload): string {
        <div class="mw-reihe">
          ${mw(p, 'af')}${mw(p, 'spo2')}${mw(p, 'co_hb')}${mw(p, 'hf')}${mw(p, 'puls')}${mw(p, 'etco2')}
        </div>
+       <div class="mw-zusatz">
+         <span><span class="kl">mit O₂?</span> <b>${escapeHtml(w(p, 'spo2_mit_o2'))}</b></span>
+         <span><span class="kl">Messort Temp.</span> <b>${escapeHtml(w(p, 'temp_ort'))}</b></span>
+       </div>
        <div class="mw-reihe">
          ${mwPaar(p, 'nibp_sys', 'nibp_dia', 'NIBP', 'mmHg')}
          ${mwPaar(p, 'ibp_sys', 'ibp_dia', 'IBP', 'mmHg')}
@@ -393,6 +397,21 @@ function verletzungen(p: Payload): string {
   )
 }
 
+function erkrankungen(p: Payload): string {
+  return block(
+    SEITE1.erkrankungen,
+    `${ueberschrift('Erkrankungen')}
+     ${wertZeile(w(p, 'tracerdiagnose'), 'Tracerdiagnose')}
+     ${wertZeile(w(p, 'fuehrende_diagnose'), 'führende Diagnose')}
+     <div class="erk-frei"><span class="kl">weitere Diagnosen</span><span class="frei">${escapeHtml(
+       w(p, 'weitere_diagnosen'),
+     )}</span></div>
+     <div class="erk-frei"><span class="kl">Diagnosetext</span><span class="frei">${escapeHtml(
+       w(p, 'diagnosetext'),
+     )}</span></div>`,
+  )
+}
+
 function naca(p: Payload): string {
   return block(
     SEITE1.naca,
@@ -470,7 +489,9 @@ export const STIL_SEITE1 = `
 .kr-z b:first-of-type{flex:0 0 28pt}
 .kr-rp{margin-left:auto}
 
-.mwi{border-top:${MASS.rahmen}pt solid #000;padding:0.6pt 2pt;overflow:hidden}
+.mwi{border-top:${MASS.rahmen}pt solid #000;padding:0 2pt;overflow:hidden}
+.mwi .ueb{padding:0.3pt 1pt 0}
+.mw-zusatz{display:flex;gap:8pt;font-size:${MASS.klein}pt;padding:0 2pt;line-height:1}
 .mw-reihe{display:flex;border-top:${MASS.linie}pt solid #000}
 .zelle-mw{flex:1 1 0;min-width:0;border-right:${MASS.linie}pt solid #000;padding:0 2pt;display:flex;flex-direction:column;line-height:1.05}
 .zelle-mw.breit{flex:1.6 1 0}
@@ -518,6 +539,8 @@ export const STIL_SEITE1 = `
 .vrl-herg .opt{line-height:1.05}
 .sturz{display:flex;align-items:center;gap:3pt;line-height:1}
 
+.erk-frei{padding:1pt 3pt;border-top:${MASS.linie}pt solid #000}
+.erk-frei .frei{min-height:12pt}
 .naca{display:flex;align-items:baseline;gap:4pt;padding:3pt 4pt;font-size:${MASS.ueberschrift}pt}
 .news{font-size:${MASS.beschriftung}pt;padding:2pt 4pt}
 `
@@ -535,6 +558,7 @@ export function seite1(p: Payload, kopf: Kopfdaten): string {
     ${erstbefund(p)}
     ${neurologie(p)}
     ${verletzungen(p)}
+    ${erkrankungen(p)}
     ${naca(p)}
     ${news(p)}
   </div>`

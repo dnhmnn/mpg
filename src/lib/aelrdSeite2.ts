@@ -328,6 +328,8 @@ function neurologieUebergabe(p: Payload): string {
        <div class="mw-reihe">
          ${mw(p, 'ub_af', 'AF')}${mw(p, 'ub_spo2', 'SpO₂')}${mw(p, 'ub_hf', 'HF')}${mw(p, 'ub_puls', 'Puls')}${mw(p, 'ub_etco2', 'etCO₂')}
        </div>
+       <div class="mw-zusatz"><span><span class="kl">mit O₂?</span> <b>${escapeHtml(w(p, 'ub_spo2_mit_o2'))}</b></span>
+       </div>
        <div class="mw-reihe">
          ${mwPaar(p, 'ub_nibp_sys', 'ub_nibp_dia', 'NIBP', 'mmHg')}
          ${mwPaar(p, 'ub_ibp_sys', 'ub_ibp_dia', 'IBP', 'mmHg')}
@@ -344,7 +346,7 @@ function fussbloecke(p: Payload): string {
   )}
   ${block(
     SEITE2.wertsachen,
-    `<div class="fb"><span class="kl">Wertsachen</span>${schreibflaeche(w(p, 'wertsachen'), 5, 'unt-f')}<div class="unterschrift"><span class="kl">Unterschrift</span></div></div>`,
+    `<div class="fb"><span class="kl">Wertsachen</span>${schreibflaeche(w(p, 'wertsachen'), 5, 'unt-f')}<div class="unterschrift"><b>${escapeHtml(w(p, 'unterschrift'))}</b><span class="kl">Unterschrift</span></div></div>`,
   )}
   ${block(
     SEITE2.uebergabeAn,
@@ -410,6 +412,7 @@ export const STIL_SEITE2 = `
 .fb-naca{margin-top:auto;display:flex;align-items:baseline;gap:4pt;font-size:${MASS.ueberschrift}pt}
 .fb-nf{margin-left:auto}
 .unterschrift{margin-top:auto;border-top:${MASS.linie}pt solid #000;text-align:center}
+.unterschrift b{display:block;font-size:${MASS.ueberschrift}pt}
 `
 
 /** Seite 2 als Blatt. */
