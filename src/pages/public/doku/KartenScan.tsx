@@ -27,7 +27,7 @@ import {
   kvnrGueltig,
   type EgkDaten,
 } from '../../../lib/egk'
-import { zuordnen, type ErkannteZeile, type Zuordnung } from '../../../lib/egkLayout'
+import { aufbauBericht, zuordnen, type ErkannteZeile, type Zuordnung } from '../../../lib/egkLayout'
 
 const ROT = '#600812'
 const TEXT = '#1a0e08'
@@ -231,6 +231,7 @@ export default function KartenScan({ onUebernehmen, onSchliessen }: {
   const zeilenRef = useRef<ErkannteZeile[]>([])
   const [zuteilung, setZuteilung] = useState<Zuordnung>({ quelle: 'keine' })
   const [aendern, setAendern] = useState(false)
+  const [kopiert, setKopiert] = useState(false)
   const [lichtDa, setLichtDa] = useState(false)
   const [licht, setLicht] = useState(false)
   const [lichtFehler, setLichtFehler] = useState('')
@@ -766,14 +767,53 @@ export default function KartenScan({ onUebernehmen, onSchliessen }: {
           </>
         ) : null}
 
-        {/* Was das Gerät gemeldet hat. Ohne das bleibt bei "geht nicht" nur Raten. */}
+        {/*
+          Zwei Ansichten, und das ist Absicht.
+
+          Die erste zeigt den erkannten Text — die steht auf dem Gerät, damit
+          die Besatzung vergleichen kann, und bleibt dort.
+
+          Die zweite ist zum Verschicken: derselbe Aufbau, aber jeder
+          Buchstabe durch X und jede Ziffer durch 9 ersetzt. Daran lässt sich
+          die Zuordnung verbessern, ohne dass ein Name oder eine
+          Versichertennummer das Gerät verlässt.
+        */}
         {stand !== 'wahl' ? (
-          <details style={{ marginTop: 10 }}>
-            <summary style={{ fontSize: 11, color: GRAU, cursor: 'pointer' }}>Erkannten Text und Gerätemeldungen anzeigen</summary>
-            <pre style={{ margin: '6px 0 0', padding: 10, background: '#fff', border: `0.5px solid ${LINIE}`, borderRadius: 8, fontSize: 11, lineHeight: 1.4, color: TEXT, whiteSpace: 'pre-wrap', wordBreak: 'break-word', maxHeight: 220, overflow: 'auto' }}>
-              {[`Fassung ${__BUILD__}`, ...befund, '', rohtext.trim() || '(kein Text erkannt)'].join('\n')}
-            </pre>
-          </details>
+          <>
+            <details style={{ marginTop: 10 }}>
+              <summary style={{ fontSize: 11, color: GRAU, cursor: 'pointer' }}>Erkannten Text anzeigen</summary>
+              <pre style={{ margin: '6px 0 0', padding: 10, background: '#fff', border: `0.5px solid ${LINIE}`, borderRadius: 8, fontSize: 11, lineHeight: 1.4, color: TEXT, whiteSpace: 'pre-wrap', wordBreak: 'break-word', maxHeight: 220, overflow: 'auto' }}>
+                {[`Fassung ${__BUILD__}`, ...befund, '', rohtext.trim() || '(kein Text erkannt)'].join('\n')}
+              </pre>
+            </details>
+
+            <details style={{ marginTop: 6 }}>
+              <summary style={{ fontSize: 11, color: GRAU, cursor: 'pointer' }}>
+                Aufbau zum Melden — ohne Namen und Nummern
+              </summary>
+              <div style={{ fontSize: 11, fontStyle: 'italic', color: GRAU, margin: '6px 0' }}>
+                Buchstaben sind durch X ersetzt, Ziffern durch 9. Dieser Text enthält
+                keine Angaben zur Person und kann weitergegeben werden, um die
+                Erkennung zu verbessern.
+              </div>
+              <pre style={{ margin: 0, padding: 10, background: '#fff', border: `0.5px solid ${LINIE}`, borderRadius: 8, fontSize: 10.5, lineHeight: 1.45, color: TEXT, whiteSpace: 'pre', overflowX: 'auto', maxHeight: 220 }}>
+                {[`Fassung ${__BUILD__}`, aufbauBericht(zeilenRef.current, zuteilung)].join('\n')}
+              </pre>
+              <button
+                type="button"
+                onClick={() => {
+                  const text = [`Fassung ${__BUILD__}`, aufbauBericht(zeilenRef.current, zuteilung)].join('\n')
+                  void navigator.clipboard?.writeText(text).then(
+                    () => setKopiert(true),
+                    () => setKopiert(false),
+                  )
+                }}
+                style={{ marginTop: 8, padding: '8px 14px', background: '#fff', border: `0.5px solid ${ROT}`, borderRadius: 8, color: ROT, fontFamily: 'inherit', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}
+              >
+                {kopiert ? 'Kopiert' : 'Aufbau kopieren'}
+              </button>
+            </details>
+          </>
         ) : null}
       </div>
     </div>

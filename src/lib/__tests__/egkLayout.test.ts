@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { kassenname, namenZerlegen, zuordnen, type ErkannteZeile } from '../egkLayout'
+import { aufbauBericht, kassenname, maskieren, namenZerlegen, zuordnen, type ErkannteZeile } from '../egkLayout'
 
 /** Kurzschreibweise für eine erkannte Zeile. */
 const z = (text: string, x0: number, y0: number, h: number, confidence = 95): ErkannteZeile =>
@@ -173,5 +173,39 @@ describe('Die Kasse ist nie der Name', () => {
     expect(kassenname('AOK Bayern Gesundheitskarte')).toBe('AOK Bayern')
     expect(kassenname('AOK Bayern Gesund')).toBe('AOK Bayern')
     expect(kassenname('Gesundheitskarte')).toBeUndefined()
+  })
+})
+
+describe('Melden ohne etwas zu verraten', () => {
+  it('ersetzt Buchstaben durch X und Ziffern durch 9', () => {
+    expect(maskieren('Heinz Mustermann')).toBe('XXXXX XXXXXXXXXX')
+    expect(maskieren('108310400 K987654329')).toBe('999999999 X999999999')
+    expect(maskieren('09.03.1958')).toBe('99.99.9999')
+  })
+
+  it('lässt kein einziges Zeichen des Namens stehen', () => {
+    // Der Sinn der Maskierung steht und fällt damit.
+    const heikel = 'Dr. Änne Müller-Lüdenscheidt, geb. Gößwein'
+    const maskiert = maskieren(heikel)
+    expect(maskiert).not.toMatch(/[A-WYZa-zÄÖÜäöüß]/)
+    expect(maskiert.length).toBe(heikel.length)
+  })
+
+  it('behält Satzzeichen und Leerstellen, weil sie das Muster ausmachen', () => {
+    expect(maskieren('A-1 / B.2')).toBe('X-9 / X.9')
+  })
+
+  it('schreibt einen Bericht mit Lage und Rolle, aber ohne Inhalt', () => {
+    const b = aufbauBericht(ECHTE_EGK, zuordnen(ECHTE_EGK, { versnr: 'K987654329' }))
+    expect(b).toContain('Zeilen: 3')
+    expect(b).toContain('<- KASSE')
+    // Vorname und Familienname stehen auf der eGK in einer Zeile — der
+    // Bericht soll beide Rollen an dieser Zeile zeigen, nicht nur eine.
+    expect(b).toMatch(/<- (NAME\+VORNAME|VORNAME\+NAME)/)
+    expect(b).toMatch(/y=\s*690/)
+    // Nichts Identifizierendes darf durchkommen.
+    expect(b).not.toContain('Mustermann')
+    expect(b).not.toContain('Heinz')
+    expect(b).not.toContain('K987654329')
   })
 })

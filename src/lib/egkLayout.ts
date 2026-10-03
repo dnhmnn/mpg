@@ -281,3 +281,62 @@ export function zuordnen(rohZeilen: ErkannteZeile[], anker?: { gebdatum?: string
 
   return aus
 }
+
+// ── Melden, ohne etwas zu verraten ──────────────────────────────────────────
+//
+// Um die Zuordnung an einer echten Karte zu verbessern, braucht es den AUFBAU
+// der Karte: wo stehen die Zeilen, wie hoch sind sie, wie sicher war die
+// Erkennung, wie lang ist der Text. Der Text selbst wird dafür nicht
+// gebraucht — und er ist das Einzige, was zu einem Menschen gehört.
+//
+// Deshalb wird er ersetzt: jeder Buchstabe wird zu X, jede Ziffer zu 9.
+// Satzzeichen und Leerstellen bleiben, weil sie zum Muster gehören. Aus
+// "Heinz Mustermann" wird "XXXXX XXXXXXXXXX", aus "108310400 K987654329"
+// wird "999999999 X999999999" — das Muster bleibt lesbar, die Person nicht.
+
+/** Buchstaben zu X, Ziffern zu 9. Alles andere bleibt. */
+export function maskieren(text: string): string {
+  return text
+    .replace(/[0-9]/g, '9')
+    .replace(/[A-ZÄÖÜ]/g, 'X')
+    .replace(/[a-zäöüß]/g, 'X')
+}
+
+/**
+ * Ein Bericht über den Aufbau der gelesenen Karte, ohne ihren Inhalt.
+ *
+ * Er ist zum Verschicken gedacht: damit lässt sich die Zuordnung verbessern,
+ * ohne dass ein Name, eine Versichertennummer oder ein Geburtsdatum das
+ * Gerät verlässt.
+ */
+export function aufbauBericht(zeilen: ErkannteZeile[], zuordnung: Zuordnung): string {
+  const kopf = `Zeilen: ${zeilen.length}, Zuordnung über: ${zuordnung.quelle}`
+  const rollen = new Map<string, string>()
+  if (zuordnung.name) rollen.set(zuordnung.name, 'NAME')
+  if (zuordnung.vorname) rollen.set(zuordnung.vorname, 'VORNAME')
+  if (zuordnung.kasse) rollen.set(zuordnung.kasse, 'KASSE')
+
+  const reihen = zeilen
+    .slice()
+    .sort((a, b) => a.y0 - b.y0)
+    .map((z) => {
+      const t = sauber(z.text)
+      // Mehrere Rollen können aus derselben Zeile kommen — auf der eGK
+      // stehen Vorname und Familienname in einer.
+      const rolle = [...rollen.entries()]
+        .filter(([wert]) => t.includes(wert))
+        .map(([, r]) => r)
+        .join('+')
+      return [
+        `y=${String(Math.round(z.y0)).padStart(5)}`,
+        `x=${String(Math.round(z.x0)).padStart(5)}`,
+        `h=${String(Math.round(z.y1 - z.y0)).padStart(3)}`,
+        `k=${String(Math.round(z.confidence)).padStart(3)}`,
+        `len=${String(t.length).padStart(3)}`,
+        `${maskieren(t)}`,
+        rolle ? `  <- ${rolle}` : '',
+      ].join('  ')
+    })
+
+  return [kopf, ...reihen].join('\n')
+}
