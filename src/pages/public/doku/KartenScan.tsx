@@ -33,8 +33,19 @@ type Ziel = 'name' | 'vorname' | 'kasse'
 
 /** Das Seitenverhältnis einer Scheckkarte (ID-1): 85,6 × 54 mm. */
 const KARTE = 85.6 / 54
-/** Breiter muss das Bild für die Erkennung nicht sein; größer wird nur langsamer. */
-const MAX_BREITE = 2200
+/**
+ * Wie breit das Bild in die Erkennung geht.
+ *
+ * Gemessen an einer glänzenden, leicht unscharfen Testkarte: 2200 px
+ * brauchen 841 ms, 1200 px 480 ms, 700 px 343 ms — und gefunden wird in
+ * allen Fällen dasselbe. Hochskalieren bringt nichts, es verdoppelt nur die
+ * Arbeit: ein vergrößertes Bild enthält keine zusätzliche Information.
+ *
+ * Für das laufende Bild zählt die Geschwindigkeit, für das Foto die Reserve
+ * bei schwieriger Schrift.
+ */
+const BREITE_LIVE = 1200
+const BREITE_FOTO = 1600
 /**
  * Wann das Lesen aus dem laufenden Bild aufgibt.
  *
@@ -128,7 +139,7 @@ function aufbereiten(c: HTMLCanvasElement): HTMLCanvasElement {
 async function ausDatei(datei: File): Promise<HTMLCanvasElement> {
   // imageOrientation dreht das Bild so, wie das Telefon es gehalten hat.
   const bitmap = await createImageBitmap(datei, { imageOrientation: 'from-image' })
-  const faktor = Math.min(1, MAX_BREITE / Math.max(bitmap.width, bitmap.height))
+  const faktor = Math.min(1, BREITE_FOTO / Math.max(bitmap.width, bitmap.height))
   const c = document.createElement('canvas')
   c.width = Math.round(bitmap.width * faktor)
   c.height = Math.round(bitmap.height * faktor)
@@ -146,8 +157,8 @@ function ausVideo(video: HTMLVideoElement): HTMLCanvasElement {
   const x = (vb - breite) / 2
   const y = (vh - hoehe) / 2
   const c = document.createElement('canvas')
-  // Doppelt so groß: kleine Schrift erkennt Tesseract sonst schlecht.
-  c.width = Math.round(Math.min(breite * 2, MAX_BREITE))
+  // In der Größe des Kamerabildes, höchstens so breit wie nötig.
+  c.width = Math.round(Math.min(breite, BREITE_LIVE))
   c.height = Math.round((c.width / breite) * hoehe)
   c.getContext('2d')?.drawImage(video, x, y, breite, hoehe, 0, 0, c.width, c.height)
   return aufbereiten(c)
@@ -193,8 +204,30 @@ export default function KartenScan({ onUebernehmen, onSchliessen }: {
   const [liveDaten, setLiveDaten] = useState<EgkDaten>(egkLeer)
   const leserRef = useRef<TesseractWorker | null>(null)
   const laeuftRef = useRef(false)
+  /** Der Leser wird schon geholt, während noch gewählt wird. */
+  const vorratRef = useRef<Promise<TesseractWorker> | null>(null)
 
   const merken = (zeile: string) => setBefund((v) => [...v, zeile])
+
+  /**
+   * Den Leser besorgen — beim ersten Mal mit Laden, danach sofort.
+   *
+   * Das Laden beginnt schon, während die Besatzung noch wählt und die Karte
+   * hinhält. Diese Sekunden sind sonst Wartezeit.
+   */
+  function leserBesorgen(): Promise<TesseractWorker> {
+    if (!vorratRef.current) vorratRef.current = leserOeffnen(setFortschritt)
+    return vorratRef.current
+  }
+
+  // Sobald der Dialog offen ist, im Hintergrund laden.
+  useEffect(() => {
+    void leserBesorgen().catch(() => {
+      // Der Fehler wird dort gemeldet, wo jemand auf das Ergebnis wartet.
+      vorratRef.current = null
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   function kameraAus() {
     stromRef.current?.getTracks().forEach((t) => t.stop())
@@ -219,15 +252,17 @@ export default function KartenScan({ onUebernehmen, onSchliessen }: {
     try {
       await spur.applyConstraints({ advanced: [{ torch: an }] } as unknown as MediaTrackConstraints)
       const jetzt = (spur.getSettings() as { torch?: boolean }).torch
+      merken(`Licht ${an ? 'an' : 'aus'} geschaltet, Gerät meldet zurück: ${String(jetzt)}`)
       if (an && jetzt === false) {
-        setLichtFehler('Das Gerät nimmt den Befehl an, schaltet das Licht aber nicht. Mit der Kamera-App des Telefons aufnehmen — dort geht der Blitz.')
+        setLichtFehler('Das Gerät nimmt den Befehl an, schaltet das Licht aber nicht. Mit "Lieber ein Foto aufnehmen" geht der Blitz der Kamera-App.')
         setLicht(false)
         return
       }
       setLichtFehler('')
       setLicht(an)
     } catch (f) {
-      setLichtFehler(`Licht nicht schaltbar (${(f as { name?: string })?.name ?? 'Fehler'}). Mit der Kamera-App des Telefons aufnehmen — dort geht der Blitz.`)
+      merken(`Licht nicht schaltbar: ${(f as { name?: string })?.name ?? 'Fehler'}`)
+      setLichtFehler(`Dieses Gerät lässt das Licht aus dem Browser nicht schalten (${(f as { name?: string })?.name ?? 'Fehler'}). Mit "Lieber ein Foto aufnehmen" geht der Blitz der Kamera-App.`)
     }
   }
 
@@ -245,9 +280,16 @@ export default function KartenScan({ onUebernehmen, onSchliessen }: {
       videoRef.current.srcObject = strom
       await videoRef.current.play().catch(() => {})
       const spur = strom.getVideoTracks()[0]
-      const koennen = (spur?.getCapabilities?.() ?? {}) as { torch?: boolean }
-      setLichtDa(Boolean(koennen.torch))
-      merken(`Kamera: ${spur?.label || 'ohne Namen'}, Licht gemeldet: ${koennen.torch ? 'ja' : 'nein'}`)
+
+      // Erst nachsehen, wenn die Kamera wirklich läuft: manche Geräte melden
+      // ihre Fähigkeiten vorher nicht. Deshalb wird nach dem ersten Bild
+      // noch einmal gefragt.
+      const kannLicht = () =>
+        Boolean((spur?.getCapabilities?.() as { torch?: boolean } | undefined)?.torch)
+      setLichtDa(kannLicht())
+      window.setTimeout(() => { if (stromRef.current === strom && kannLicht()) setLichtDa(true) }, 900)
+
+      merken(`Kamera: ${spur?.label || 'ohne Namen'}, Licht gemeldet: ${kannLicht() ? 'ja' : 'nein'}`)
     } catch (f) {
       const name = (f as { name?: string })?.name
       setStand('fehler')
@@ -289,7 +331,7 @@ export default function KartenScan({ onUebernehmen, onSchliessen }: {
     laeuftRef.current = true
     setLiveStand('Texterkennung wird geladen…')
     try {
-      leserRef.current = await leserOeffnen(setFortschritt)
+      leserRef.current = await leserBesorgen()
     } catch (f) {
       laeuftRef.current = false
       setStand('fehler')
@@ -340,12 +382,17 @@ export default function KartenScan({ onUebernehmen, onSchliessen }: {
     }
   }
 
-  /** Das Lesen beenden und den Leser schließen. */
+  /** Das Lesen anhalten. Der Leser bleibt offen für den nächsten Versuch. */
   function liveAus() {
     laeuftRef.current = false
-    const leser = leserRef.current
     leserRef.current = null
-    void leser?.terminate().catch(() => {})
+  }
+
+  /** Beim Schließen des Dialogs wird der Leser wirklich beendet. */
+  function leserSchliessen() {
+    const vorrat = vorratRef.current
+    vorratRef.current = null
+    void vorrat?.then((l) => l.terminate()).catch(() => {})
   }
 
   useEffect(() => {
@@ -366,7 +413,7 @@ export default function KartenScan({ onUebernehmen, onSchliessen }: {
     merken(`${woher}: ${bild.width}×${bild.height} px`)
     let leser: TesseractWorker | null = null
     try {
-      leser = await leserOeffnen(setFortschritt)
+      leser = await leserBesorgen()
       const { data } = await leser.recognize(bild)
       const text = String(data?.text ?? '')
       merken(`erkannt: ${text.replace(/\s+/g, ' ').trim().length} Zeichen`)
@@ -377,7 +424,9 @@ export default function KartenScan({ onUebernehmen, onSchliessen }: {
       setStand('fehler')
       setFehler(`Die Texterkennung lief nicht an: ${(f as { message?: string })?.message ?? 'unbekannt'}.`)
     } finally {
-      await leser?.terminate().catch(() => {})
+      // Nicht schließen: derselbe Leser wird für den nächsten Versuch
+      // gebraucht, und ihn neu aufzumachen hieße neu zu laden.
+      void leser
       bild.width = 0
       bild.height = 0
     }
@@ -417,6 +466,7 @@ export default function KartenScan({ onUebernehmen, onSchliessen }: {
 
   function schliessen() {
     liveAus()
+    leserSchliessen()
     kameraAus()
     onSchliessen()
   }
@@ -476,7 +526,9 @@ export default function KartenScan({ onUebernehmen, onSchliessen }: {
               <div aria-hidden style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <div style={{ width: '86%', aspectRatio: String(KARTE), border: '2px solid rgba(255,255,255,0.9)', borderRadius: 10, boxShadow: '0 0 0 2000px rgba(0,0,0,0.35)' }} />
               </div>
-              {lichtDa ? (
+              {/* Auch ohne Meldung anbieten: manche Geräte können es, sagen
+                  es aber nicht. Geht es nicht, steht der Grund darunter. */}
+              {lichtDa || !lichtFehler ? (
                 <button
                   type="button" onClick={() => void lichtSchalten(!licht)}
                   aria-label={licht ? 'Licht aus' : 'Licht an'}
