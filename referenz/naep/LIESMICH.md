@@ -43,6 +43,36 @@ Erkrankungen.
 **"nicht untersucht" ist in der Norm keine Option**, sondern ein eigenes
 `<leer>`-Element am Abschnitt. Der Bogen führt es als Auswahlmöglichkeit.
 
+## Die Zuordnung Bogen → Norm
+
+`src/katalog/aelrdNaep.ts` ordnet jede Angabe des gedruckten Bogens einem Ort
+in der Norm zu — oder sagt, warum es keinen gibt. Stand heute:
+
+| | Angaben |
+|---|---|
+| gehen in die Norm | 217 |
+| bleiben im Responda-Anhang | 110 |
+| brauchen erst einen Umbau der Maske | 45 |
+
+**Der Anhang ist kein Streuverlust, sondern vier Blöcke.** Von den 110
+Einträgen entfallen 43 auf Dinge, die die Norm als Ganzes nicht führt: die
+Psyche bei der Übergabe (14), den Befundblock Kreislauf (12), die Neurologie
+bei der Übergabe (9) und den Befundblock Atemwege (8). Der Rest sind einzelne
+Optionen — Tachypnoe, Bradypnoe, CO-Hb, invasiver Druck, Tracerdiagnose.
+
+**Umbau** heißt: die Angabe gehört in die Norm, aber der Bogen hat die falsche
+Form. Meist ein Freitext, wo die Norm eine Auswahl führt (Bewusstsein,
+Pupillenweite, NACA), manchmal ein Haken, wo sie eine Bewertung je Gliedmaße
+verlangt. `umbauFelder()` gibt die Liste aus; sie ist die Arbeitsliste für den
+Umbau der Erfassungsmaske.
+
+**Erzwungene Vollständigkeit.** `src/lib/__tests__/aelrdNaep.test.ts` schlägt
+fehl, sobald ein Feld oder eine Option des Bogens keine Zuordnung hat, sobald
+eine Zuordnung auf ein Feld zeigt, das es nicht mehr gibt, und sobald ein Code
+in der Norm nicht existiert oder nicht zu der Auswahl gehört, unter der er
+steht. Es gibt keinen dritten Zustand neben "hat ein Ziel" und "gehört in den
+Anhang" — nichts kann stillschweigend liegenbleiben.
+
 ## Wo der Export an die Grenzen des Schemas stößt
 
 **Die strukturierten Blöcke sind ganz oder gar nicht.**
