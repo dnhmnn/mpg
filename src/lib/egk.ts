@@ -177,3 +177,47 @@ export function egkLesen(text: string, heute = new Date()): EgkDaten {
 
 /** Die Felder des Bogens, die aus der Karte gefüllt werden können. */
 export const EGK_FELDER = ['name', 'vorname', 'gebdatum', 'versnr', 'kasse'] as const
+
+// ── Mehrere Bilder zu einem Ergebnis ────────────────────────────────────────
+//
+// Beim Lesen aus dem laufenden Bild kommt nicht jedes Einzelbild vollständig
+// durch: in einem steht die Nummer scharf, im nächsten das Geburtsdatum.
+// Deshalb wird gesammelt statt ersetzt.
+
+/** Trägt ein neu gelesenes Bild in das bisher Gesammelte ein. */
+export function egkSammeln(bisher: EgkDaten, neu: EgkDaten): EgkDaten {
+  const zeilen = [...bisher.zeilen]
+  for (const z of neu.zeilen) if (!zeilen.includes(z)) zeilen.push(z)
+
+  // Eine Nummer mit stimmiger Prüfziffer schlägt eine ohne — sonst bleibt das
+  // erste, möglicherweise verlesene Ergebnis für immer stehen.
+  const besser =
+    neu.versnr !== undefined &&
+    (bisher.versnr === undefined ||
+      (kvnrGueltig(neu.versnr) && !kvnrGueltig(bisher.versnr)))
+
+  return {
+    versnr: besser ? neu.versnr : bisher.versnr,
+    gebdatum: bisher.gebdatum ?? neu.gebdatum,
+    kassennr: bisher.kassennr ?? neu.kassennr,
+    // Die Liste bleibt überschaubar, sonst wächst sie mit jedem Bild.
+    zeilen: zeilen.slice(0, 14),
+  }
+}
+
+/**
+ * Reicht das Gesammelte, um aufzuhören?
+ *
+ * Die Prüfziffer ist das verlässliche Zeichen: stimmt sie, ist die Nummer
+ * mit hoher Wahrscheinlichkeit richtig gelesen. Zusammen mit dem
+ * Geburtsdatum ist das genug, um die Kamera auszuschalten — die Namen werden
+ * ohnehin von Hand zugeordnet.
+ */
+export function egkGenug(d: EgkDaten): boolean {
+  return Boolean(d.versnr && kvnrGueltig(d.versnr) && d.gebdatum)
+}
+
+/** Ein leeres Sammelergebnis. */
+export function egkLeer(): EgkDaten {
+  return { zeilen: [] }
+}

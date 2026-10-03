@@ -1,6 +1,9 @@
 import { describe, it, expect } from 'vitest'
 import {
+  egkGenug,
+  egkLeer,
   egkLesen,
+  egkSammeln,
   geburtsdatumLesen,
   kassennummerLesen,
   kvnrGueltig,
@@ -223,5 +226,49 @@ describe('Alles zusammen', () => {
     expect(d.versnr).toBeUndefined()
     expect(d.gebdatum).toBeUndefined()
     expect(d.kassennr).toBeUndefined()
+  })
+})
+
+describe('Sammeln aus mehreren Bildern', () => {
+  // Nicht ausgedacht, sondern gerechnet: X11223344 ergibt die Prüfziffer 0.
+  const gut = mitPruefziffer('X11223344')
+  const schlecht = gut.slice(0, 9) + String((Number(gut[9]) + 3) % 10)
+
+  it('nimmt aus jedem Bild das, was dort stand', () => {
+    // Im ersten Bild ist die Nummer scharf, im zweiten das Geburtsdatum.
+    let d = egkLeer()
+    d = egkSammeln(d, egkLesen(gut, new Date('2026-10-03')))
+    d = egkSammeln(d, egkLesen('09.03.1958\nMustermann', new Date('2026-10-03')))
+    expect(d.versnr).toBe(gut)
+    expect(d.gebdatum).toBe('1958-03-09')
+    expect(d.zeilen).toContain('Mustermann')
+  })
+
+  it('ersetzt eine verlesene Nummer durch eine mit stimmiger Prüfziffer', () => {
+    expect(kvnrGueltig(schlecht)).toBe(false)
+    let d = egkSammeln(egkLeer(), { versnr: schlecht, zeilen: [] })
+    d = egkSammeln(d, { versnr: gut, zeilen: [] })
+    expect(d.versnr).toBe(gut)
+  })
+
+  it('behält eine stimmige Nummer, auch wenn später eine schlechte kommt', () => {
+    let d = egkSammeln(egkLeer(), { versnr: gut, zeilen: [] })
+    d = egkSammeln(d, { versnr: schlecht, zeilen: [] })
+    expect(d.versnr).toBe(gut)
+  })
+
+  it('sammelt Zeilen ohne Wiederholung und ohne Ende', () => {
+    let d = egkLeer()
+    for (let i = 0; i < 30; i++) d = egkSammeln(d, { zeilen: ['Mustermann', `Zeile ${i}`] })
+    expect(d.zeilen.filter((z) => z === 'Mustermann')).toHaveLength(1)
+    expect(d.zeilen.length).toBeLessThanOrEqual(14)
+  })
+
+  it('hört auf, wenn Nummer und Geburtsdatum stehen', () => {
+    expect(egkGenug({ zeilen: [] })).toBe(false)
+    expect(egkGenug({ versnr: gut, zeilen: [] })).toBe(false)
+    expect(egkGenug({ versnr: gut, gebdatum: '1958-03-09', zeilen: [] })).toBe(true)
+    // Ohne stimmige Prüfziffer wird weitergesucht.
+    expect(egkGenug({ versnr: schlecht, gebdatum: '1958-03-09', zeilen: [] })).toBe(false)
   })
 })
