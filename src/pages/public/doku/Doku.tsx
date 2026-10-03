@@ -11,13 +11,17 @@
 // VORSCHAU: Diese Seite speichert nichts. Sie zeigt den Aufbau, damit er
 // beurteilt werden kann, bevor er die Dokumentation ersetzt.
 
-import { useMemo, useState } from 'react'
+import { Suspense, lazy, useMemo, useState } from 'react'
 import { useOrg } from '../OrgPublicLayout'
 import { AELRD_ABSCHNITTE, aelrdFeld, type AelrdFeld } from '../../../katalog/aelrd'
 import { istSpiegelFeld } from '../../../katalog/aelrdSpiegel'
 import { ANLAESSE, abschnitteFuer, weitereAbschnitte } from '../../../katalog/anlass'
 import { normalbefund, uebergabeUebernehmen, uebernahmeUmfang } from '../../../katalog/uebernahme'
 import DokuFeld, { Rasterzelle, istRasterfeld, type Werte } from './DokuFeld'
+
+// Kamera und Texterkennung werden erst geladen, wenn jemand die Karte
+// fotografieren will — sie gehören nicht in den Weg der übrigen Erfassung.
+const KartenScan = lazy(() => import('./KartenScan'))
 
 const ROT = '#600812'
 const TEXT = '#1a0e08'
@@ -119,6 +123,7 @@ export default function Doku() {
   const [zu, setZu] = useState<string[]>([])
   const [alleZeigen, setAlleZeigen] = useState(false)
   const [suche, setSuche] = useState('')
+  const [kartenScan, setKartenScan] = useState(false)
 
   const setzen = (id: string, w: unknown) => setWerte((v) => ({ ...v, [id]: w }))
   const anlassUmschalten = (id: string) =>
@@ -141,6 +146,9 @@ export default function Doku() {
   // Die beiden Abkürzungen, die den größten Teil des Tippens sparen.
   const offeneUebernahme = uebernahmeUmfang(werte)
   const aktionFuer = (id: string): { text: string; onClick: () => void } | null => {
+    if (id === 'stammdaten') {
+      return { text: 'Gesundheitskarte fotografieren', onClick: () => setKartenScan(true) }
+    }
     if (id === 'erstbefund') {
       return {
         text: 'Normalbefund — alles unauffällig',
@@ -267,6 +275,26 @@ export default function Doku() {
           </button>
         ) : null}
       </main>
+
+      {kartenScan ? (
+        <Suspense fallback={null}>
+          <KartenScan
+            onSchliessen={() => setKartenScan(false)}
+            onUebernehmen={(ausDerKarte) => {
+              // Was schon im Formular steht, bleibt stehen: die Besatzung hat
+              // es eingetragen, die Kamera hat es nur gelesen.
+              setWerte((v) => {
+                const aus = { ...v }
+                for (const [id, wert] of Object.entries(ausDerKarte)) {
+                  if (!gefuellt(aus[id])) aus[id] = wert
+                }
+                return aus
+              })
+              setKartenScan(false)
+            }}
+          />
+        </Suspense>
+      ) : null}
     </div>
   )
 }

@@ -29,6 +29,28 @@ export default defineConfig({
             urlPattern: /^https:\/\/api\.responda\.systems\/api\/collections\/inventory_/i,
             handler: 'NetworkOnly',
           },
+          // Die Texterkennung der Gesundheitskarte wird beim ersten Mal aus
+          // dem Netz geholt. Danach liegt sie im Zwischenspeicher, damit sie
+          // im Funkloch nicht fehlt. Sie ist unveraenderlich versioniert,
+          // deshalb CacheFirst.
+          {
+            urlPattern: /^https:\/\/cdn\.jsdelivr\.net\/npm\/tesseract/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'texterkennung',
+              expiration: { maxEntries: 20, maxAgeSeconds: 180 * 24 * 60 * 60 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+          {
+            urlPattern: /^https:\/\/tessdata\.projectnaptha\.com\/.*/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'texterkennung',
+              expiration: { maxEntries: 20, maxAgeSeconds: 180 * 24 * 60 * 60 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
           {
             urlPattern: /^https:\/\/api\.responda\.systems\/.*/i,
             handler: 'NetworkFirst',
