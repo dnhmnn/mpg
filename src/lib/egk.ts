@@ -273,13 +273,17 @@ export function egkSammeln(bisher: EgkDaten, neu: EgkDaten): EgkDaten {
 /**
  * Reicht das Gesammelte, um aufzuhören?
  *
- * Die Prüfziffer ist das verlässliche Zeichen: stimmt sie, ist die Nummer
- * mit hoher Wahrscheinlichkeit richtig gelesen. Zusammen mit dem
- * Geburtsdatum ist das genug, um die Kamera auszuschalten — die Namen werden
- * ohnehin von Hand zugeordnet.
+ * Die Prüfziffer ist das verlässliche Zeichen und der einzige harte Anker
+ * auf der Karte: stimmt sie, ist die Nummer richtig gelesen.
+ *
+ * Das Geburtsdatum gehört ausdrücklich NICHT zur Bedingung. Nach der
+ * gematik-Spezifikation trägt die Vorderseite Lichtbild, Name, Kassenname,
+ * Institutionskennzeichen und Versichertennummer — ein Geburtsdatum ist dort
+ * nicht vorgeschrieben, und manche Karten drucken keines. Darauf zu warten
+ * hieße, bei diesen Karten immer in die Zeitgrenze zu laufen.
  */
 export function egkGenug(d: EgkDaten): boolean {
-  return Boolean(d.versnr && kvnrGueltig(d.versnr) && d.gebdatum)
+  return Boolean(d.versnr && kvnrGueltig(d.versnr))
 }
 
 /** Ein leeres Sammelergebnis. */

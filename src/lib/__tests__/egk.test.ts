@@ -265,12 +265,18 @@ describe('Sammeln aus mehreren Bildern', () => {
     expect(d.zeilen.length).toBeLessThanOrEqual(14)
   })
 
-  it('hört auf, wenn Nummer und Geburtsdatum stehen', () => {
+  it('hört auf, sobald die Prüfziffer aufgeht', () => {
     expect(egkGenug({ zeilen: [] })).toBe(false)
-    expect(egkGenug({ versnr: gut, zeilen: [] })).toBe(false)
-    expect(egkGenug({ versnr: gut, gebdatum: '1958-03-09', zeilen: [] })).toBe(true)
+    expect(egkGenug({ versnr: gut, zeilen: [] })).toBe(true)
     // Ohne stimmige Prüfziffer wird weitergesucht.
-    expect(egkGenug({ versnr: schlecht, gebdatum: '1958-03-09', zeilen: [] })).toBe(false)
+    expect(egkGenug({ versnr: schlecht, zeilen: [] })).toBe(false)
+  })
+
+  it('wartet nicht auf ein Geburtsdatum, das die Karte nicht tragen muss', () => {
+    // Die Vorderseite der eGK führt laut Spezifikation kein Geburtsdatum.
+    // Darauf zu warten hiesse, bei solchen Karten immer in die Zeitgrenze zu
+    // laufen — und dann eine Warnung zu zeigen, die nicht stimmt.
+    expect(egkGenug({ versnr: gut, zeilen: [] })).toBe(true)
   })
 })
 

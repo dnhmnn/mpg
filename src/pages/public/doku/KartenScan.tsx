@@ -27,6 +27,7 @@ import {
   kvnrGueltig,
   type EgkDaten,
 } from '../../../lib/egk'
+import { zuordnen, type ErkannteZeile, type Zuordnung } from '../../../lib/egkLayout'
 
 const ROT = '#600812'
 const TEXT = '#1a0e08'
@@ -64,9 +65,30 @@ const BREITE_FOTO = 1600
  */
 const LIVE_HOECHSTDAUER_MS = 45_000
 
+/** Was tesseract.js zurückgibt — Zeilen mit Rahmen und Zuversicht. */
+type TesseractZeile = {
+  text: string
+  confidence: number
+  bbox: { x0: number; y0: number; x1: number; y1: number }
+}
+
 type TesseractWorker = {
-  recognize: (bild: HTMLCanvasElement) => Promise<{ data?: { text?: string } }>
+  recognize: (bild: HTMLCanvasElement) => Promise<{
+    data?: { text?: string; lines?: TesseractZeile[] | null }
+  }>
   terminate: () => Promise<void>
+}
+
+/** Die Zeilen der Erkennung in die Form bringen, die die Zuordnung erwartet. */
+function zeilenVon(daten: { lines?: TesseractZeile[] | null } | undefined): ErkannteZeile[] {
+  return (daten?.lines ?? []).map((l) => ({
+    text: String(l.text ?? ''),
+    x0: l.bbox?.x0 ?? 0,
+    y0: l.bbox?.y0 ?? 0,
+    x1: l.bbox?.x1 ?? 0,
+    y1: l.bbox?.y1 ?? 0,
+    confidence: Number(l.confidence ?? 0),
+  }))
 }
 
 type TesseractModul = {
@@ -203,8 +225,12 @@ export default function KartenScan({ onUebernehmen, onSchliessen }: {
   const [daten, setDaten] = useState<EgkDaten | null>(null)
   const [rohtext, setRohtext] = useState('')
   const [zuordnung, setZuordnung] = useState<Partial<Record<Ziel, string>>>({})
-  /** Der längste bisher gelesene Text — daraus kommt der Vorschlag. */
+  /** Der ergiebigste bisher gelesene Text — daraus kommt die Zuordnung. */
   const textRef = useRef('')
+  /** Die Zeilen mit Rahmen aus demselben Bild. */
+  const zeilenRef = useRef<ErkannteZeile[]>([])
+  const [zuteilung, setZuteilung] = useState<Zuordnung>({ quelle: 'keine' })
+  const [aendern, setAendern] = useState(false)
   const [lichtDa, setLichtDa] = useState(false)
   const [licht, setLicht] = useState(false)
   const [lichtFehler, setLichtFehler] = useState('')
@@ -322,8 +348,11 @@ export default function KartenScan({ onUebernehmen, onSchliessen }: {
     try {
       const { data } = await leser.recognize(bild)
       const text = String(data?.text ?? '')
-      // Der ergiebigste Text gewinnt — aus ihm kommt später der Vorschlag.
-      if (text.trim().length > textRef.current.trim().length) textRef.current = text
+      // Das ergiebigste Bild gewinnt — aus seinen Zeilen kommt die Zuordnung.
+      if (text.trim().length > textRef.current.trim().length) {
+        textRef.current = text
+        zeilenRef.current = zeilenVon(data)
+      }
       return egkLesen(text)
     } finally {
       // Das Einzelbild wird sofort verworfen; es wird nie zu einer Datei.
@@ -364,10 +393,14 @@ export default function KartenScan({ onUebernehmen, onSchliessen }: {
         merken(`live aufgegeben nach ${durchgang} Bildern`)
         laeuftRef.current = false
         kameraAus()
+        // Drei Fälle, drei Meldungen — eine pauschale Warnung hatte schon
+        // "Prüfziffer geht nicht auf" neben "Prüfziffer passt" gestellt.
         setAufgegeben(
-          gesammelt.versnr
-            ? 'Die Prüfziffer der gelesenen Nummer geht nicht auf. Bitte vergleichen und bei Bedarf von Hand berichtigen.'
-            : 'Aus dem Kamerabild war nichts Verwertbares zu lesen. Mit mehr Licht erneut versuchen oder ein Foto aufnehmen.',
+          !gesammelt.versnr
+            ? 'Aus dem Kamerabild war nichts Verwertbares zu lesen. Mit mehr Licht erneut versuchen oder ein Foto aufnehmen.'
+            : !kvnrGueltig(gesammelt.versnr)
+              ? 'Die Prüfziffer der gelesenen Nummer geht nicht auf. Bitte vergleichen und bei Bedarf von Hand berichtigen.'
+              : '',
         )
         ergebnisZeigen(gesammelt, textRef.current)
         return
@@ -382,12 +415,12 @@ export default function KartenScan({ onUebernehmen, onSchliessen }: {
         if (genug) nachlauf += 1
         setLiveStand(
           genug
-            ? 'Nummer steht — noch die Namen…'
+            ? 'Nummer steht — noch den Namen…'
             : `Lese… (${durchgang}. Bild${gesammelt.versnr ? ', Nummer erkannt' : ''})`,
         )
         // Fertig, wenn auch Namenszeilen da sind — oder nach vier weiteren
         // Bildern, damit eine Karte ohne lesbare Namen nicht ewig blockiert.
-        if (genug && (gesammelt.zeilen.length >= 2 || nachlauf >= 4)) {
+        if (genug && (gesammelt.zeilen.length >= 1 || nachlauf >= 4)) {
           merken(`live gelesen nach ${durchgang} Bildern, ${gesammelt.zeilen.length} Zeilen`)
           laeuftRef.current = false
           kameraAus()
@@ -434,8 +467,10 @@ export default function KartenScan({ onUebernehmen, onSchliessen }: {
       leser = await leserBesorgen()
       const { data } = await leser.recognize(bild)
       const text = String(data?.text ?? '')
+      void 0
       merken(`erkannt: ${text.replace(/\s+/g, ' ').trim().length} Zeichen`)
       textRef.current = text
+      zeilenRef.current = zeilenVon(data)
       ergebnisZeigen(egkLesen(text), text)
     } catch (f) {
       setStand('fehler')
@@ -477,9 +512,17 @@ export default function KartenScan({ onUebernehmen, onSchliessen }: {
   function ergebnisZeigen(d: EgkDaten, text: string) {
     setDaten(d)
     setRohtext(text)
-    const v = egkVorschlag(text)
-    const erlaubt = (z?: string) => (z && d.zeilen.includes(z) ? z : undefined)
-    setZuordnung({ name: erlaubt(v.name), vorname: erlaubt(v.vorname), kasse: erlaubt(v.kasse) })
+    let a = zuordnen(zeilenRef.current, { gebdatum: d.gebdatum, versnr: d.versnr })
+    if (a.quelle === 'keine') {
+      // Ohne Zeilenrahmen — ältere Erkennung, oder nichts Verwertbares —
+      // bleibt der Weg über den reinen Text.
+      const v = egkVorschlag(text)
+      if (v.name || v.vorname || v.kasse) a = { ...v, quelle: 'stellung' }
+    }
+    setZuteilung(a)
+    setZuordnung({ name: a.name, vorname: a.vorname, kasse: a.kasse })
+    setAendern(false)
+    merken(`zugeordnet über ${a.quelle}: ${[a.name, a.vorname, a.kasse].filter(Boolean).join(' / ') || 'nichts'}`)
     setStand('fertig')
   }
 
@@ -657,41 +700,58 @@ export default function KartenScan({ onUebernehmen, onSchliessen }: {
               <Reihe marke="Kassennummer" wert={daten.kassennr} hinweis="wird nicht übernommen, nur zum Vergleichen" />
             </div>
 
-            <div style={{ background: '#fff', borderRadius: 12, borderLeft: `3px solid ${ROT}`, padding: '11px 12px', marginBottom: 10 }}>
-              <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: ROT, marginBottom: 2 }}>
-                Name und Kasse
-              </div>
-              <div style={{ fontSize: 11, fontStyle: 'italic', color: GRAU, marginBottom: 8 }}>
-                Vorgeschlagen nach der Aufschrift der Karte. Stimmt etwas nicht, einmal auf das
-                richtige Feld tippen.
-              </div>
-              {daten.zeilen.length === 0 ? (
-                <div style={{ fontSize: 13, fontStyle: 'italic', color: GRAU }}>Keine Textzeile erkannt.</div>
-              ) : (
-                daten.zeilen.map((zeile) => (
-                  <div key={zeile} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 0', borderBottom: '0.5px solid rgba(96,8,18,0.06)' }}>
-                    <span style={{ flex: 1, fontSize: 14, color: TEXT, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{zeile}</span>
-                    {(['name', 'vorname', 'kasse'] as Ziel[]).map((ziel) => (
-                      <button
-                        key={ziel} type="button" onClick={() => zielUmschalten(ziel, zeile)}
-                        style={{
-                          padding: '5px 9px', borderRadius: 999, cursor: 'pointer', fontFamily: 'inherit', fontSize: 11,
-                          background: zuordnung[ziel] === zeile ? ROT : '#fff',
-                          color: zuordnung[ziel] === zeile ? '#fff' : TEXT,
-                          border: `0.5px solid ${zuordnung[ziel] === zeile ? ROT : LINIE}`,
-                          fontWeight: zuordnung[ziel] === zeile ? 700 : 400,
-                        }}
-                      >
-                        {ziel === 'name' ? 'Name' : ziel === 'vorname' ? 'Vorname' : 'Kasse'}
-                      </button>
-                    ))}
-                  </div>
-                ))
-              )}
+            <div style={{ background: '#fff', borderRadius: 12, borderLeft: `3px solid ${ROT}`, padding: '4px 12px 10px', marginBottom: 10 }}>
+              <Reihe marke="Nachname" wert={zuordnung.name} />
+              <Reihe marke="Vorname" wert={zuordnung.vorname} />
+              <Reihe
+                marke="Kasse" wert={zuordnung.kasse}
+                hinweis={zuteilung.quelle === 'beschriftung'
+                  ? 'zugeordnet über die Beschriftung der Karte'
+                  : zuteilung.quelle === 'stellung'
+                    ? 'zugeordnet über die Stellung auf der Karte'
+                    : undefined}
+              />
+              {!aendern ? (
+                <button type="button" onClick={() => setAendern(true)}
+                  style={{ marginTop: 8, padding: 0, background: 'transparent', border: 'none', color: ROT, fontFamily: 'inherit', fontSize: 11, textDecoration: 'underline', cursor: 'pointer' }}>
+                  Stimmt etwas nicht? Zeile von Hand zuordnen
+                </button>
+              ) : null}
             </div>
 
+            {aendern ? (
+              <div style={{ background: '#fff', borderRadius: 12, borderLeft: `3px solid ${ROT}`, padding: '11px 12px', marginBottom: 10 }}>
+                <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: ROT, marginBottom: 8 }}>
+                  Von Hand zuordnen
+                </div>
+                {daten.zeilen.length === 0 ? (
+                  <div style={{ fontSize: 13, fontStyle: 'italic', color: GRAU }}>Keine Textzeile erkannt.</div>
+                ) : (
+                  daten.zeilen.map((zeile) => (
+                    <div key={zeile} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 0', borderBottom: '0.5px solid rgba(96,8,18,0.06)' }}>
+                      <span style={{ flex: 1, fontSize: 14, color: TEXT, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{zeile}</span>
+                      {(['name', 'vorname', 'kasse'] as Ziel[]).map((ziel) => (
+                        <button
+                          key={ziel} type="button" onClick={() => zielUmschalten(ziel, zeile)}
+                          style={{
+                            padding: '5px 9px', borderRadius: 999, cursor: 'pointer', fontFamily: 'inherit', fontSize: 11,
+                            background: zuordnung[ziel] === zeile ? ROT : '#fff',
+                            color: zuordnung[ziel] === zeile ? '#fff' : TEXT,
+                            border: `0.5px solid ${zuordnung[ziel] === zeile ? ROT : LINIE}`,
+                            fontWeight: zuordnung[ziel] === zeile ? 700 : 400,
+                          }}
+                        >
+                          {ziel === 'name' ? 'Name' : ziel === 'vorname' ? 'Vorname' : 'Kasse'}
+                        </button>
+                      ))}
+                    </div>
+                  ))
+                )}
+              </div>
+            ) : null}
+
             <div style={{ display: 'flex', gap: 8 }}>
-              <button type="button" onClick={() => { setDaten(null); setZuordnung({}); setRohtext(''); setAufgegeben(''); textRef.current = ''; setLiveDaten(egkLeer()); setStand('wahl') }}
+              <button type="button" onClick={() => { setDaten(null); setZuordnung({}); setRohtext(''); setAufgegeben(''); textRef.current = ''; zeilenRef.current = []; setLiveDaten(egkLeer()); setStand('wahl') }}
                 style={{ ...knopfGross, flex: 1, background: 'transparent', border: `0.5px solid ${LINIE}`, color: GRAU, textTransform: 'none', letterSpacing: 0, fontSize: 12 }}>
                 Neu aufnehmen
               </button>
