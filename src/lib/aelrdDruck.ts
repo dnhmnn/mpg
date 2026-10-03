@@ -88,8 +88,9 @@ export function optionen(feldId: string, payload: Payload): string {
   const feld = aelrdFeld(feldId)
   if (!feld || !feld.optionen) return ''
   const wert = payload[feldId]
-  const rund = feld.typ !== 'mehrfach'
-  const inhalt = feld.optionen.map((o) => option(o.text, istGewaehlt(wert, o.wert), rund)).join('')
+  // Der Bogen zeichnet durchweg runde Knoepfe, auch wo mehrere Optionen
+  // zugleich gelten duerfen. Die Form folgt dem Papier, nicht der Technik.
+  const inhalt = feld.optionen.map((o) => option(o.text, istGewaehlt(wert, o.wert), true)).join('')
   return `<div class="opts">${inhalt}</div>`
 }
 
@@ -103,7 +104,6 @@ export function raster(feldId: string, payload: Payload, reihen: (string | null)
   const feld = aelrdFeld(feldId)
   if (!feld || !feld.optionen) return ''
   const wert = payload[feldId]
-  const rund = feld.typ !== 'mehrfach'
   const spalten = Math.max(...reihen.map((r) => r.length))
   const zellen = reihen
     .map((reihe) =>
@@ -112,7 +112,7 @@ export function raster(feldId: string, payload: Payload, reihen: (string | null)
           if (text === null) return '<span class="zelle"></span>'
           const o = feld.optionen?.find((k) => k.text === text)
           if (!o) return `<span class="zelle">${escapeHtml(text)}</span>`
-          return `<span class="zelle">${option(o.text, istGewaehlt(wert, o.wert), rund)}</span>`
+          return `<span class="zelle">${option(o.text, istGewaehlt(wert, o.wert), true)}</span>`
         })
         .join(''),
     )

@@ -12,6 +12,7 @@
 // Vormedikation, Vorbehandlung" und ist genau dafür da.
 
 import type { Payload } from './aelrdDruck'
+import { aelrdFeld } from '../katalog/aelrd'
 
 /** Feldnamen, die in beiden Welten gleich heißen. */
 const GLEICH = [
@@ -157,10 +158,18 @@ function leer(wert: unknown): boolean {
   return wert === undefined || wert === null || wert === '' || wert === false
 }
 
-/** Die erste gesetzte Option einer Flag-Liste. */
-function ersteOption(payload: Payload, paare: Array<[string, string]>): string | undefined {
-  for (const [flag, option] of paare) if (payload[flag]) return option
-  return undefined
+/**
+ * Die gesetzten Optionen einer Flag-Liste.
+ *
+ * Bei Einfachwahl zaehlt der erste Treffer. Bei Mehrfachwahl muessen alle
+ * mit: die alte Payload fuehrt Haut, Atmung und Psyche als einzelne
+ * Schalter, von denen mehrere zugleich gesetzt sein koennen. Nur den ersten
+ * zu nehmen hiesse, blass UND kaltschweissig auf blass zu verkuerzen.
+ */
+function gesetzteOptionen(payload: Payload, feldId: string, paare: Array<[string, string]>): unknown {
+  const treffer = paare.filter(([flag]) => payload[flag]).map(([, option]) => option)
+  if (treffer.length === 0) return undefined
+  return aelrdFeld(feldId)?.typ === 'mehrfach' ? treffer : treffer[0]
 }
 
 /** Die Medikamentenliste in die Spalten des Bogens bringen. */
@@ -192,8 +201,8 @@ export function aelrdAusPayload(payload: Payload): Payload {
   }
 
   for (const [feld, paare] of Object.entries(FLAGS)) {
-    const treffer = ersteOption(payload, paare)
-    if (treffer && leer(aus[feld])) aus[feld] = treffer
+    const treffer = gesetzteOptionen(payload, feld, paare)
+    if (treffer !== undefined && leer(aus[feld])) aus[feld] = treffer
   }
 
   for (const [alt, neu] of Object.entries(VERLETZUNGEN)) {

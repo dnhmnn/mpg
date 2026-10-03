@@ -12,6 +12,13 @@
 //
 // ZUORDNUNG: Wo ein Feld in 7.1 eine Entsprechung hat, steht sie als
 // `divi`-Verweis daneben. Felder ohne Verweis gibt es in 7.1 nicht.
+//
+// EINFACH- ODER MEHRFACHWAHL: Der Bogen zeichnet durchweg runde Knoepfe,
+// die ueblicherweise Einfachwahl bedeuten. Fachlich schliessen sich viele
+// dieser Optionen aber nicht aus — ein Patient im Schock ist blass UND
+// kaltschweissig, ein Schlaganfall zeigt Gesichtslaehmung UND Sprach-
+// stoerung UND Armschwaeche zugleich. Solche Felder sind hier `mehrfach`;
+// gezeichnet werden sie weiterhin als runde Knoepfe, wie auf dem Papier.
 
 import type { Feld, Option } from './divi'
 
@@ -129,11 +136,11 @@ export const AELRD_FELDER: AelrdFeld[] = [
 
   // ── Erstbefund ────────────────────────────────────────────────────────
   { id: 'erstbefund_zeitpunkt', label: 'Zeitpunkt', typ: 'zeit', divi: 'neuro_zeitpunkt' },
-  radio('atemwege', 'Atemwege', [
+  mehrfach('atemwege', 'Atemwege', [
     'frei', 'gefährdet', 'Stridor exsp.',
     'nicht untersucht', 'nicht beurteilbar', 'Stridor insp.', 'Atemwegsverlegung',
   ]),
-  radio('atmung', 'Atmung', [
+  mehrfach('atmung', 'Atmung', [
     'unauffällig', 'Tachypnoe', 'Rasselgeräusche', 'Apnoe',
     'nicht untersucht', 'nicht beurteilbar', 'Bradypnoe', 'Schnappatmung', 'Spastik',
     'Belastungsdyspnoe', 'Ruhedyspnoe', 'Beatmung', 'Hyperventilation', 'Zyanose', 'Sonstige',
@@ -144,7 +151,7 @@ export const AELRD_FELDER: AelrdFeld[] = [
   { id: 'rekap_zeit', label: 'Rekap. Zeit:', typ: 'text', divi: 'rekap_zeit' },
   { id: 'schockzeichen', label: 'Schockzeichen', typ: 'text' },
   { id: 'kreislauf_auffaelligkeiten', label: 'path. Auffälligkeiten:', typ: 'langtext' },
-  radio('haut', 'Haut', [
+  mehrfach('haut', 'Haut', [
     'unauffällig', 'Oedeme', 'kaltschweißig', 'stehende Hautfalten',
     'nicht untersucht', 'nicht beurteilbar', 'Dekubitus', 'Exantheme', 'Sonstige',
   ], 'haut'),
@@ -178,7 +185,7 @@ export const AELRD_FELDER: AelrdFeld[] = [
   { id: 'pupillen_weite_li', label: 'Weite links', typ: 'text', divi: 'pupillenweite_links' },
   { id: 'pupillen_licht_re', label: 'Lichtreaktion rechts', typ: 'text', divi: 'lichtreaktion_rechts' },
   { id: 'pupillen_licht_li', label: 'Lichtreaktion links', typ: 'text', divi: 'lichtreaktion_links' },
-  radio('neuro_auffaelligkeiten', 'Auffälligkeiten', [
+  mehrfach('neuro_auffaelligkeiten', 'Auffälligkeiten', [
     'keine', 'nicht untersucht', 'nicht beurteilbar', 'Gesichtslähmung',
     'Kopfschmerzen', 'Gangunsicherheit / Schwindel', 'Herdblick', 'Motorik Arme',
     'Demenz', 'Querschnittssymptomatik', 'Sensibilitätsstörung', 'Motorik Beine',
@@ -191,7 +198,7 @@ export const AELRD_FELDER: AelrdFeld[] = [
 
   // ── Untersuchung und Psyche ───────────────────────────────────────────
   { id: 'untersuchung', label: 'Untersuchung', typ: 'langtext' },
-  radio('psyche', 'Psyche', [
+  mehrfach('psyche', 'Psyche', [
     'unauffällig', 'aggressiv', 'verwirrt', 'verlangsamt', 'suizidal',
     'nicht untersucht', 'nicht beurteilbar', 'depressiv', 'erregt', 'euphorisch', 'Sonstige',
     'wahnhaft', 'ängstlich', 'motorisch unruhig',
@@ -211,7 +218,7 @@ export const AELRD_FELDER: AelrdFeld[] = [
   { id: 'verl_untere_extr', label: 'untere Extr.', typ: 'text', divi: 'verl_untere_extremitaeten' },
   { id: 'verl_weichteile', label: 'Weichteile', typ: 'text', divi: 'verl_weichteile' },
   radio('unfallmechanismus', 'Unfallmechanismus', ['stumpf', 'penetrierend', 'nicht bekannt']),
-  radio('spezielle_traumata', 'Spezielle Traumata', [
+  mehrfach('spezielle_traumata', 'Spezielle Traumata', [
     'Inhalationstrauma', 'Tauchunfall',
     'Elektrounfall', 'sonstige (Strahlen, Barotrauma)',
     '(beinahe-) Ertrinken', 'Verätzung',
@@ -287,8 +294,8 @@ export const AELRD_FELDER2: AelrdFeld[] = [
   // ── Maßnahmen ─────────────────────────────────────────────────────────
   { id: 'pvk_vorhanden', label: 'PVK vorhanden', typ: 'check' },
   { id: 'zugaenge', label: 'Zugänge', typ: 'langtext', divi: 'zugang_art' },
-  radio('zugang_erschwert', 'Zugang erschwert', ['unmöglich', '> 2 Vers.', 'Verfahrenswechsel'], 'zugang_erschwert'),
-  radio('atemweg_massnahme', 'Atemweg', [
+  mehrfach('zugang_erschwert', 'Zugang erschwert', ['unmöglich', '> 2 Vers.', 'Verfahrenswechsel'], 'zugang_erschwert'),
+  mehrfach('atemweg_massnahme', 'Atemweg', [
     'Absaugen', '> 2 Intub.-Versuche',
     'Atemwege freimachen', 'Maskenbeatm. unmöglich',
     'Entlastungspunktion', 'Verfahrenswechsel',
@@ -314,17 +321,17 @@ export const AELRD_FELDER2: AelrdFeld[] = [
   { id: 'pacer_frequenz', label: 'Frequenz', typ: 'zahl' },
   { id: 'pacer_intensitaet', label: 'Intensität', typ: 'zahl' },
   { id: 'pacer_mode', label: 'Mode', typ: 'text' },
-  radio('rea_massnahme', 'Reanimation', ['Herzdruckmassage', 'Feedbacksystem', 'mechanische Thoraxkompression'], 'rea_erweitert'),
-  radio('aktive_kuehlung', 'Aktive Kühlung', ['Infusion', 'Kühlpackungen', 'technisch', 'andere']),
+  mehrfach('rea_massnahme', 'Reanimation', ['Herzdruckmassage', 'Feedbacksystem', 'mechanische Thoraxkompression'], 'rea_erweitert'),
+  mehrfach('aktive_kuehlung', 'Aktive Kühlung', ['Infusion', 'Kühlpackungen', 'technisch', 'andere']),
   { id: 'lagerung', label: 'Lagerungs- und Rettungstechnik', typ: 'langtext', divi: 'lagerung' },
-  radio('sonstige_massnahme', 'Sonstige', ['Thoraxdrainage /', 'Entlastungspunktion', 'Magensonde']),
+  mehrfach('sonstige_massnahme', 'Sonstige', ['Thoraxdrainage /', 'Entlastungspunktion', 'Magensonde']),
   radio('blutentnahme', 'Blutentnahme', ['venös', 'arteriell']),
   radio('waermeerhalt', 'Wärmeerhalt', ['passiv', 'aktiv'], 'lagerung'),
-  radio('erweitertes_monitoring', 'Erweitertes Monitoring', [
+  mehrfach('erweitertes_monitoring', 'Erweitertes Monitoring', [
     'kein erw. Monitoring', '12-Kanal EKG', 'invasiver RR', 'Kapnometrie', 'ZVD', 'ICP',
     '12-Kanal EKG vorhanden/durch Andere', 'sonstiges Monitoring',
   ], 'weitere_massnahmen'),
-  radio('medizintechnik', 'Medizintechnik', [
+  mehrfach('medizintechnik', 'Medizintechnik', [
     'keine Medizintechnik', 'Spritzenpumpe(n)', 'Ultraschall (Sono/Echo)', 'Notfallpacer',
     'Funk EKG Übermittlung', 'Videolaryngoskopie', 'Transportinkubator', 'ECMO',
     'mechanische Thoraxkompression', 'andere MedTech',
@@ -332,11 +339,11 @@ export const AELRD_FELDER2: AelrdFeld[] = [
 
   // ── Übergabe-Befund ───────────────────────────────────────────────────
   { id: 'ub_zeitpunkt', label: 'Zeitpunkt', typ: 'zeit', divi: 'ub_zeitpunkt' },
-  radio('ub_atemwege', 'Atemwege', [
+  mehrfach('ub_atemwege', 'Atemwege', [
     'frei', 'Stridor insp.', 'Stridor exsp.',
     'nicht untersucht', 'nicht beurteilbar', 'Atemwegsverlegung', 'gefährdet',
   ]),
-  radio('ub_atmung', 'Atmung', [
+  mehrfach('ub_atmung', 'Atmung', [
     'unauffällig', 'Spastik', 'Rasselgeräusche', 'Apnoe', 'Sonstige',
     'nicht untersucht', 'nicht beurteilbar', 'Ruhedyspnoe', 'Schnappatmung', 'Beatmung',
     'Belastungsdyspnoe', 'Tachypnoe', 'Zyanose', 'Hyperventilation', 'Bradypnoe',
@@ -347,7 +354,7 @@ export const AELRD_FELDER2: AelrdFeld[] = [
   { id: 'ub_rekap', label: 'Rekap. Zeit:', typ: 'text' },
   { id: 'ub_schockzeichen', label: 'Schockzeichen', typ: 'text' },
   radio('ub_ekg', 'EKG', ['kein EKG', 'Sinusrhythmus']),
-  radio('ub_psyche', 'Psyche', [
+  mehrfach('ub_psyche', 'Psyche', [
     'aggressiv', 'verwirrt', 'verlangsamt', 'suizidal', 'nicht beurteilbar',
     'unauffällig', 'depressiv', 'erregt', 'euphorisch', 'Sonstige', 'nicht untersucht',
     'wahnhaft', 'ängstlich', 'motorisch unruhig',

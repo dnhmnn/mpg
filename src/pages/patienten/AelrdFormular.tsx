@@ -97,7 +97,7 @@ function FeldEingabe({ feld, werte, setzen, gesperrt }: {
         <Beschriftung text={feld.label} hinweis={feld.hinweis} />
         <div>
           {feld.optionen.map((o) => (
-            <Kaestchen key={o.wert} text={o.text} an={istGewaehlt(wert, o.wert)} rund={!mehrfach}
+            <Kaestchen key={o.wert} text={o.text} an={istGewaehlt(wert, o.wert)} rund
               gesperrt={gesperrt}
               onClick={() => setzen(feld.id, umschalten(wert, o.wert, mehrfach))} />
           ))}

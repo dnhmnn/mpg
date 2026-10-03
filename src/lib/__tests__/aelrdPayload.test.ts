@@ -42,9 +42,22 @@ describe('Übersetzung der alten Payload', () => {
   })
 
   it('übersetzt gesetzte Flags in Optionen des Bogens', () => {
-    expect(aelrdAusPayload({ psy_aggr: true }).psyche).toBe('aggressiv')
+    expect(aelrdAusPayload({ psy_aggr: true }).psyche).toEqual(['aggressiv'])
     expect(aelrdAusPayload({ v_trauma_penetr: true }).unfallmechanismus).toBe('penetrierend')
     expect(aelrdAusPayload({ sr: true }).ekg).toBe('sinusrhythmus')
+  })
+
+  it('nimmt bei Mehrfachwahl alle gesetzten Flags mit', () => {
+    // Die alte Payload fuehrt Haut und Psyche als einzelne Schalter. Nur den
+    // ersten zu uebernehmen hiesse, blass UND kaltschweissig auf blass zu
+    // verkuerzen — beim Schock genau die Angabe, auf die es ankommt.
+    const aus = aelrdAusPayload({ haut_unauff: true, haut_oedeme: true, haut_dekubitus: true })
+    expect(aus.haut).toEqual(['unauffaellig', 'oedeme', 'dekubitus'])
+  })
+
+  it('bleibt bei Einfachwahl beim ersten Treffer', () => {
+    const aus = aelrdAusPayload({ v_trauma_stumpf: true, v_trauma_penetr: true })
+    expect(aus.unfallmechanismus).toBe('stumpf')
   })
 
   it('erfindet keine Option, wenn kein Flag gesetzt ist', () => {

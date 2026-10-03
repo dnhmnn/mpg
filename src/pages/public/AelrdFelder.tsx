@@ -44,16 +44,18 @@ function Optionen({ feld, werte }: { feld: AelrdFeld; werte?: Record<string, unk
           style={{
             display: 'inline-flex', alignItems: 'center', gap: 6,
             padding: '8px 12px', border: '1.5px solid rgba(96,8,18,0.15)',
-            borderRadius: mehrfach ? 8 : 18, background: '#fff',
+            borderRadius: 18, background: '#fff',
             fontSize: 14, color: '#1a0e08', cursor: 'pointer',
           }}
         >
+          {/* Mehrfachwahl braucht technisch Kästchen — gezeichnet wird
+              trotzdem der runde Knopf des Bogens. */}
           <input
             type={mehrfach ? 'checkbox' : 'radio'}
             name={mehrfach ? `${feld.id}__${o.wert}` : feld.id}
             value={mehrfach ? undefined : o.wert}
             defaultChecked={istGewaehlt(werte, feld.id, o.wert)}
-            style={{ accentColor: ROT, width: 16, height: 16 }}
+            style={{ accentColor: ROT, width: 16, height: 16, borderRadius: '50%' }}
           />
           {o.text}
         </label>

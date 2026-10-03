@@ -362,3 +362,34 @@ describe('Vollstaendigkeit des Ausdrucks', () => {
   })
 })
 
+describe('Mehrfachauswahl mit runden Knöpfen', () => {
+  it('erlaubt mehrere Optionen, wo sie sich fachlich nicht ausschliessen', () => {
+    // Ein Patient im Schock ist blass UND kaltschweissig; ein Schlaganfall
+    // zeigt Gesichtslaehmung UND Sprachstoerung zugleich.
+    for (const id of ['haut', 'neuro_auffaelligkeiten', 'atmung', 'psyche',
+      'erweitertes_monitoring', 'medizintechnik', 'spezielle_traumata']) {
+      expect({ feld: id, typ: aelrdFeld(id)?.typ }).toEqual({ feld: id, typ: 'mehrfach' })
+    }
+  })
+
+  it('laesst Einfachwahl, wo die Optionen einander ausschliessen', () => {
+    for (const id of ['geschlecht', 'bmi', 'unfallhergang', 'sturz', 'lysetherapie']) {
+      expect({ feld: id, typ: aelrdFeld(id)?.typ }).toEqual({ feld: id, typ: 'radio' })
+    }
+  })
+
+  it('zeichnet auch die Mehrfachwahl als runden Knopf, wie auf dem Papier', () => {
+    const html = aelrdHtml({ haut: ['unauffaellig', 'oedeme'] })
+    expect(html).not.toContain('class="eck')
+    expect(html).toContain('<span class="kreis an"></span>unauffällig')
+    expect(html).toContain('<span class="kreis an"></span>Oedeme')
+  })
+
+  it('fuellt mehrere Knoepfe desselben Feldes', () => {
+    const html = aelrdHtml({ neuro_auffaelligkeiten: ['gesichtslaehmung', 'sprachstoerung'] })
+    expect(html).toContain('<span class="kreis an"></span>Gesichtslähmung')
+    expect(html).toContain('<span class="kreis an"></span>Sprachstörung')
+    expect(html).toContain('<span class="kreis"></span>Herdblick')
+  })
+})
+
