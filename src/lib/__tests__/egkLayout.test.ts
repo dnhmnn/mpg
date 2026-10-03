@@ -209,3 +209,18 @@ describe('Melden ohne etwas zu verraten', () => {
     expect(b).not.toContain('K987654329')
   })
 })
+
+describe('Der Bericht und die Rückseite', () => {
+  it('lässt die Feldnummer der Rückseite stehen', () => {
+    // "3", "4", "5" sind Aufdruck des EU-Formulars, keine Angabe zur Person —
+    // und ohne sie ist dem Bericht nicht anzusehen, welches Feld gemeint war.
+    const b = aufbauBericht([
+      z('3 Name Mustermann', 38, 122, 19),
+      z('5 Geburtsdatum 09/03/1958', 38, 192, 19),
+    ], { quelle: 'rueckseite' })
+    expect(b).toContain('3 XXXX XXXXXXXXXX')
+    expect(b).toContain('5 XXXXXXXXXXXX 99/99/9999')
+    expect(b).not.toContain('Mustermann')
+    expect(b).not.toContain('1958')
+  })
+})

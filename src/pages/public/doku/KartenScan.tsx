@@ -28,6 +28,14 @@ import {
   type EgkDaten,
 } from '../../../lib/egk'
 import { aufbauBericht, zuordnen, type ErkannteZeile, type Zuordnung } from '../../../lib/egkLayout'
+import {
+  ehicGenug,
+  ehicLeer,
+  ehicLesen,
+  ehicSammeln,
+  istRueckseite,
+  type EhicDaten,
+} from '../../../lib/ehic'
 
 const ROT = '#600812'
 const TEXT = '#1a0e08'
@@ -239,6 +247,7 @@ export default function KartenScan({ onUebernehmen, onSchliessen }: {
   const [liveStand, setLiveStand] = useState('')
   const [aufgegeben, setAufgegeben] = useState('')
   const [liveDaten, setLiveDaten] = useState<EgkDaten>(egkLeer)
+  const [liveEhic, setLiveEhic] = useState<EhicDaten>(ehicLeer)
   const leserRef = useRef<TesseractWorker | null>(null)
   const laeuftRef = useRef(false)
   /** Der Leser wird schon geholt, während noch gewählt wird. */
@@ -340,8 +349,8 @@ export default function KartenScan({ onUebernehmen, onSchliessen }: {
     }
   }
 
-  /** Ein Einzelbild lesen und in das bisher Gesammelte eintragen. */
-  async function einBildLesen(): Promise<EgkDaten | null> {
+  /** Ein Einzelbild lesen. Welche Seite es zeigt, entscheidet der Inhalt. */
+  async function einBildLesen(): Promise<{ vorne: EgkDaten; hinten: EhicDaten | null } | null> {
     const video = videoRef.current
     const leser = leserRef.current
     if (!video || !video.videoWidth || !leser) return null
@@ -354,7 +363,7 @@ export default function KartenScan({ onUebernehmen, onSchliessen }: {
         textRef.current = text
         zeilenRef.current = zeilenVon(data)
       }
-      return egkLesen(text)
+      return { vorne: egkLesen(text), hinten: istRueckseite(text) ? ehicLesen(text) : null }
     } finally {
       // Das Einzelbild wird sofort verworfen; es wird nie zu einer Datei.
       bild.width = 0
@@ -384,9 +393,10 @@ export default function KartenScan({ onUebernehmen, onSchliessen }: {
     setLiveStand('Karte in den Rahmen halten')
 
     let gesammelt = egkLeer()
+    let hinten = ehicLeer()
     let durchgang = 0
-    // Nach Nummer und Datum noch ein paar Bilder weiterlesen: die Namen
-    // brauchen länger als die Muster, und wer zu früh aufhört, hat sie nicht.
+    // Nach der Nummer noch ein paar Bilder weiterlesen: der Name braucht
+    // länger als die Muster, und wer zu früh aufhört, hat ihn nicht.
     let nachlauf = 0
     const bis = Date.now() + LIVE_HOECHSTDAUER_MS
     while (laeuftRef.current) {
@@ -394,23 +404,45 @@ export default function KartenScan({ onUebernehmen, onSchliessen }: {
         merken(`live aufgegeben nach ${durchgang} Bildern`)
         laeuftRef.current = false
         kameraAus()
-        // Drei Fälle, drei Meldungen — eine pauschale Warnung hatte schon
-        // "Prüfziffer geht nicht auf" neben "Prüfziffer passt" gestellt.
+        const vonHinten = hinten.felder.length >= 2
         setAufgegeben(
-          !gesammelt.versnr
-            ? 'Aus dem Kamerabild war nichts Verwertbares zu lesen. Mit mehr Licht erneut versuchen oder ein Foto aufnehmen.'
-            : !kvnrGueltig(gesammelt.versnr)
-              ? 'Die Prüfziffer der gelesenen Nummer geht nicht auf. Bitte vergleichen und bei Bedarf von Hand berichtigen.'
-              : '',
+          vonHinten || gesammelt.versnr
+            ? (!kvnrGueltig((vonHinten ? hinten.versnr : gesammelt.versnr) ?? '')
+                ? 'Die Prüfziffer der gelesenen Nummer geht nicht auf. Bitte vergleichen und bei Bedarf von Hand berichtigen.'
+                : '')
+            : 'Aus dem Kamerabild war nichts Verwertbares zu lesen. Mit mehr Licht erneut versuchen oder ein Foto aufnehmen.',
         )
-        ergebnisZeigen(gesammelt, textRef.current)
+        if (vonHinten) ehicZeigen(hinten, textRef.current)
+        else ergebnisZeigen(gesammelt, textRef.current)
         return
       }
       const neu = await einBildLesen()
       if (!laeuftRef.current) break
       if (neu) {
         durchgang += 1
-        gesammelt = egkSammeln(gesammelt, neu)
+
+        // ── Die Rückseite, wenn sie im Bild ist ──────────────────────────
+        if (neu.hinten) {
+          hinten = ehicSammeln(hinten, neu.hinten)
+          setLiveEhic(hinten)
+          setLiveStand(
+            ehicGenug(hinten)
+              ? 'Rückseite gelesen'
+              : `Rückseite… (Felder ${hinten.felder.join(', ') || '–'})`,
+          )
+          if (ehicGenug(hinten)) {
+            merken(`Rückseite gelesen nach ${durchgang} Bildern`)
+            laeuftRef.current = false
+            kameraAus()
+            ehicZeigen(hinten, textRef.current)
+            return
+          }
+          await new Promise((r) => setTimeout(r, 120))
+          continue
+        }
+
+        // ── Sonst die Vorderseite ────────────────────────────────────────
+        gesammelt = egkSammeln(gesammelt, neu.vorne)
         setLiveDaten(gesammelt)
         const genug = egkGenug(gesammelt)
         if (genug) nachlauf += 1
@@ -419,10 +451,8 @@ export default function KartenScan({ onUebernehmen, onSchliessen }: {
             ? 'Nummer steht — noch den Namen…'
             : `Lese… (${durchgang}. Bild${gesammelt.versnr ? ', Nummer erkannt' : ''})`,
         )
-        // Fertig, wenn auch Namenszeilen da sind — oder nach vier weiteren
-        // Bildern, damit eine Karte ohne lesbare Namen nicht ewig blockiert.
         if (genug && (gesammelt.zeilen.length >= 1 || nachlauf >= 4)) {
-          merken(`live gelesen nach ${durchgang} Bildern, ${gesammelt.zeilen.length} Zeilen`)
+          merken(`Vorderseite gelesen nach ${durchgang} Bildern, ${gesammelt.zeilen.length} Zeilen`)
           laeuftRef.current = false
           kameraAus()
           ergebnisZeigen(gesammelt, textRef.current)
@@ -489,7 +519,8 @@ export default function KartenScan({ onUebernehmen, onSchliessen }: {
   function liveUebernehmen() {
     liveAus()
     kameraAus()
-    ergebnisZeigen(liveDaten, textRef.current)
+    if (liveEhic.felder.length >= 2) ehicZeigen(liveEhic, textRef.current)
+    else ergebnisZeigen(liveDaten, textRef.current)
   }
 
   async function ausFoto(datei: File | undefined) {
@@ -510,6 +541,23 @@ export default function KartenScan({ onUebernehmen, onSchliessen }: {
    * Bisher stand hier nur eine Liste, und wer sie nicht angetippt hat, bekam
    * Name, Vorname und Kasse gar nicht ins Formular.
    */
+  /**
+   * Die Rückseite anzeigen.
+   *
+   * Hier gibt es nichts zuzuordnen: Familienname, Vornamen und Geburtsdatum
+   * stehen in eigenen, nummerierten Feldern. Deshalb wird auch nichts
+   * geraten und nichts zur Auswahl gestellt.
+   */
+  function ehicZeigen(e: EhicDaten, text: string) {
+    setDaten({ versnr: e.versnr, gebdatum: e.gebdatum, kassennr: e.kassennr, zeilen: [] })
+    setRohtext(text)
+    setZuteilung({ name: e.name, vorname: e.vorname, kasse: e.kasse, quelle: 'rueckseite' })
+    setZuordnung({ name: e.name, vorname: e.vorname, kasse: e.kasse })
+    setAendern(false)
+    merken(`Rückseite gelesen, Felder ${e.felder.join(', ') || 'keine'}`)
+    setStand('fertig')
+  }
+
   function ergebnisZeigen(d: EgkDaten, text: string) {
     setDaten(d)
     setRohtext(text)
@@ -580,9 +628,10 @@ export default function KartenScan({ onUebernehmen, onSchliessen }: {
               Karte vor die Kamera halten
             </button>
             <div style={{ fontSize: 11, fontStyle: 'italic', color: GRAU, textAlign: 'center', marginBottom: 14, lineHeight: 1.45 }}>
-              Liest fortlaufend aus dem Kamerabild. Es entsteht kein Foto — kein
-              Bild der Karte landet in der Galerie des Telefons und damit auch in
-              keiner Cloud-Sicherung.
+              Vorder- oder Rückseite, beides geht. Die Rückseite ist die bessere:
+              dort stehen Familienname, Vornamen und Geburtsdatum in eigenen,
+              nummerierten Feldern — da wird nichts geraten.
+              Es entsteht kein Foto, also auch keines in der Galerie des Telefons.
             </div>
             <button type="button" onClick={() => dateiRef.current?.click()}
               style={{ ...knopfGross, background: 'transparent', border: `0.5px solid ${LINIE}`, color: GRAU }}>
@@ -637,14 +686,14 @@ export default function KartenScan({ onUebernehmen, onSchliessen }: {
             {/* Was schon dasteht, während weitergelesen wird. */}
             <div style={{ background: '#fff', borderRadius: 12, borderLeft: `3px solid ${ROT}`, padding: '4px 12px 8px', marginBottom: 10 }}>
               <Reihe
-                marke="Versicherten-Nr." wert={liveDaten.versnr}
-                hinweis={liveDaten.versnr && kvnrGueltig(liveDaten.versnr) ? 'Prüfziffer passt' : undefined}
+                marke="Versicherten-Nr." wert={liveEhic.versnr ?? liveDaten.versnr}
+                hinweis={(() => {
+                  const nr = liveEhic.versnr ?? liveDaten.versnr
+                  return nr && kvnrGueltig(nr) ? 'Prüfziffer passt' : undefined
+                })()}
               />
-              <Reihe marke="Geburtsdatum" wert={liveDaten.gebdatum} />
-              <Reihe
-                marke="Textzeilen"
-                wert={liveDaten.zeilen.length > 0 ? liveDaten.zeilen.slice(0, 3).join(' · ') : undefined}
-              />
+              <Reihe marke="Geburtsdatum" wert={liveEhic.gebdatum ?? liveDaten.gebdatum} />
+              <Reihe marke="Name" wert={[liveEhic.vorname, liveEhic.name].filter(Boolean).join(' ') || undefined} />
             </div>
 
             <button type="button" onClick={liveUebernehmen}
@@ -708,6 +757,8 @@ export default function KartenScan({ onUebernehmen, onSchliessen }: {
                 marke="Kasse" wert={zuordnung.kasse}
                 hinweis={zuteilung.quelle === 'beschriftung'
                   ? 'zugeordnet über die Beschriftung der Karte'
+                  : zuteilung.quelle === 'rueckseite'
+                    ? 'aus den nummerierten Feldern der Rückseite'
                   : zuteilung.quelle === 'stellung'
                     ? 'zugeordnet über die Stellung auf der Karte'
                     : undefined}
@@ -752,7 +803,7 @@ export default function KartenScan({ onUebernehmen, onSchliessen }: {
             ) : null}
 
             <div style={{ display: 'flex', gap: 8 }}>
-              <button type="button" onClick={() => { setDaten(null); setZuordnung({}); setRohtext(''); setAufgegeben(''); textRef.current = ''; zeilenRef.current = []; setLiveDaten(egkLeer()); setStand('wahl') }}
+              <button type="button" onClick={() => { setDaten(null); setZuordnung({}); setRohtext(''); setAufgegeben(''); textRef.current = ''; zeilenRef.current = []; setLiveDaten(egkLeer()); setLiveEhic(ehicLeer()); setStand('wahl') }}
                 style={{ ...knopfGross, flex: 1, background: 'transparent', border: `0.5px solid ${LINIE}`, color: GRAU, textTransform: 'none', letterSpacing: 0, fontSize: 12 }}>
                 Neu aufnehmen
               </button>

@@ -33,7 +33,7 @@ export type Zuordnung = {
   vorname?: string
   kasse?: string
   /** Woher die Zuordnung kommt — steht in der Oberfläche als Begründung. */
-  quelle: 'beschriftung' | 'stellung' | 'keine'
+  quelle: 'rueckseite' | 'beschriftung' | 'stellung' | 'keine'
 }
 
 /** Beschriftungen der Karte und das Feld, das darunter steht. */
@@ -327,13 +327,20 @@ export function aufbauBericht(zeilen: ErkannteZeile[], zuordnung: Zuordnung): st
         .filter(([wert]) => t.includes(wert))
         .map(([, r]) => r)
         .join('+')
+      // Die Feldnummer der Rückseite bleibt stehen: sie ist Aufdruck des
+      // Formulars, keine Angabe zur Person — und ohne sie ist dem Bericht
+      // nicht anzusehen, welches Feld gemeint war.
+      const feldnummer = t.match(/^([3-9])\s/)
+      const maskiert = feldnummer
+        ? feldnummer[1] + ' ' + maskieren(t.slice(2))
+        : maskieren(t)
       return [
         `y=${String(Math.round(z.y0)).padStart(5)}`,
         `x=${String(Math.round(z.x0)).padStart(5)}`,
         `h=${String(Math.round(z.y1 - z.y0)).padStart(3)}`,
         `k=${String(Math.round(z.confidence)).padStart(3)}`,
         `len=${String(t.length).padStart(3)}`,
-        `${maskieren(t)}`,
+        `${maskiert}`,
         rolle ? `  <- ${rolle}` : '',
       ].join('  ')
     })
