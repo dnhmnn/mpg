@@ -4,6 +4,7 @@
 // findet hier dieselben Blöcke in derselben Reihenfolge. Sie schreibt die
 // Feldnamen des Bogens — dieselben, die der Ausdruck liest.
 
+import { istSpiegelFeld, istSpiegelOption } from '../../katalog/aelrdSpiegel'
 import {
   AELRD_ABSCHNITTE,
   aelrdFeld,
@@ -92,11 +93,16 @@ function FeldEingabe({ feld, werte, setzen, gesperrt }: {
 
   if (feld.optionen && feld.optionen.length > 0) {
     const mehrfach = feld.typ === 'mehrfach'
+    // Eine Option, die dasselbe meint wie eine andere Stelle des Bogens,
+    // wird hier nicht angeboten — erfasst wird sie an ihrer Quelle, gedruckt
+    // an beiden Stellen.
+    const zuZeigen = feld.optionen.filter((o) => !istSpiegelOption(feld.id, o.wert))
+    if (zuZeigen.length === 0) return null
     return (
       <div style={{ marginBottom: 8 }}>
         <Beschriftung text={feld.label} hinweis={feld.hinweis} />
         <div>
-          {feld.optionen.map((o) => (
+          {zuZeigen.map((o) => (
             <Kaestchen key={o.wert} text={o.text} an={istGewaehlt(wert, o.wert)} rund
               gesperrt={gesperrt}
               onClick={() => setzen(feld.id, umschalten(wert, o.wert, mehrfach))} />
@@ -224,7 +230,12 @@ function MedikationTabelle({ werte, setzen, gesperrt }: {
 function AbschnittBlock({ abschnitt, werte, setzen, gesperrt }: {
   abschnitt: AelrdAbschnitt; werte: Werte; setzen: (id: string, w: unknown) => void; gesperrt?: boolean
 }) {
-  const felder = abschnitt.felder.map(aelrdFeld).filter(Boolean) as AelrdFeld[]
+  // Felder, die nur ein zweites Mal zeigen, was anderswo erfasst wird,
+  // erscheinen in der Maske nicht. Auf dem Papier bleiben beide Kästchen.
+  const felder = abschnitt.felder
+    .filter((id) => !istSpiegelFeld(id))
+    .map(aelrdFeld)
+    .filter(Boolean) as AelrdFeld[]
   if (felder.length === 0) return null
   return (
     <section

@@ -44,6 +44,12 @@ export type NaepZiel =
    * der Maske — bis dahin lässt sich das Feld nicht verlustfrei übermitteln.
    */
   | { art: 'umbau'; code: string; was: string }
+  /**
+   * Das zweite Kästchen des Bogens für eine Angabe, die anderswo erfasst
+   * wird. Es hat kein eigenes Ziel in der Norm, weil es keine eigene Angabe
+   * ist — siehe aelrdSpiegel.ts.
+   */
+  | { art: 'spiegel'; quelle: string }
   /** Die Norm kennt es nicht. Bleibt im Responda-Anhang. */
   | { art: 'anhang'; grund: string }
 
@@ -60,6 +66,7 @@ const sonst = (auswahl: string, code: string, hinweis?: string): NaepZiel =>
   ({ art: 'sonstiges', auswahl, code, hinweis })
 const geteilt = (ziele: NaepZiel[], hinweis?: string): NaepZiel => ({ art: 'geteilt', ziele, hinweis })
 const umbau = (code: string, was: string): NaepZiel => ({ art: 'umbau', code, was })
+const spiegel = (quelle: string): NaepZiel => ({ art: 'spiegel', quelle })
 const anhang = (grund: string): NaepZiel => ({ art: 'anhang', grund })
 
 export type AelrdNaepZuordnung = {
@@ -418,7 +425,7 @@ export const AELRD_NAEP: Record<string, AelrdNaepZuordnung> = {
       ueber_2_intub_versuche: frage('J7M', 'Die Norm führt die Zahl der Versuche als eigenes Feld J7T'),
       atemwege_freimachen: opt('J3Q', 'J4I'),
       maskenbeatm_unmoeglich: opt('J4W', 'J5H'),
-      entlastungspunktion: opt('JJV', 'JMG', 'Die Norm nennt es Nadeldekompression'),
+      entlastungspunktion: spiegel('sonstige_massnahme.entlastungspunktion'),
       verfahrenswechsel: anhang('Die Norm vermerkt den Verfahrenswechsel nur beim Zugang, nicht beim Atemweg'),
     },
   },
@@ -454,7 +461,7 @@ export const AELRD_NAEP: Record<string, AelrdNaepZuordnung> = {
   defi_joule_1: { feld: anhang('Die Norm führt nur die höchste Energie, nicht die des ersten Schocks') },
   defi_gesamt: { feld: wert('JDU') },
   defi_joule_letzte: { feld: wert('JE1', 'Die Norm meint die höchste Energie, der Bogen die des letzten Schocks') },
-  rosc_1: { feld: wert('JDN') },
+  rosc_1: { feld: spiegel('rosc_zeit') },
   pacer_frequenz: { feld: anhang('Die Norm vermerkt den externen Schrittmacher, ohne seine Einstellungen') },
   pacer_intensitaet: { feld: anhang('Die Norm vermerkt den externen Schrittmacher, ohne seine Einstellungen') },
   pacer_mode: { feld: anhang('Die Norm vermerkt den externen Schrittmacher, ohne seine Einstellungen') },
@@ -515,7 +522,7 @@ export const AELRD_NAEP: Record<string, AelrdNaepZuordnung> = {
       videolaryngoskopie: opt('J3Q', 'J80'),
       transportinkubator: opt('JH5', 'JI4'),
       ecmo: opt('JEF', 'JFF', 'Die Norm trennt VV-ECMO (JFF) und VA-ECMO (JFG)'),
-      mechanische_thoraxkompression: opt('JF0', 'JFE'),
+      mechanische_thoraxkompression: spiegel('rea_massnahme.mechanische_thoraxkompression'),
       andere_medtech: anhang('Die Auswahl der Norm hat kein Sonstiges-Feld'),
     },
   },
@@ -640,16 +647,23 @@ function alleZiele(): NaepZiel[] {
  * Wie viele Angaben des Bogens in der Norm ankommen, wie viele im Anhang
  * bleiben und wie viele erst umgebaut werden müssen.
  */
-export function aelrdNaepUmfang(): { norm: number; anhang: number; umbau: number } {
+export function aelrdNaepUmfang(): {
+  norm: number
+  anhang: number
+  umbau: number
+  spiegel: number
+} {
   let norm = 0
   let anhang = 0
   let umbau = 0
+  let spiegel = 0
   for (const z of alleZiele()) {
     if (z.art === 'anhang') anhang++
     else if (z.art === 'umbau') umbau++
+    else if (z.art === 'spiegel') spiegel++
     else norm++
   }
-  return { norm, anhang, umbau }
+  return { norm, anhang, umbau, spiegel }
 }
 
 /** Angaben des Bogens, die die Norm nicht kennt — der Responda-Anhang. */

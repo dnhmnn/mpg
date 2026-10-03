@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { AELRD_FELDER } from '../../katalog/aelrd'
+import { AELRD_SPIEGELUNGEN } from '../../katalog/aelrdSpiegel'
 import {
   AELRD_NAEP,
   aelrdNaepUmfang,
@@ -118,6 +119,20 @@ function pruefen(ziel: NaepZiel): string | null {
     return fehler.length > 0 ? fehler.join('; ') : null
   }
 
+  if (ziel.art === 'spiegel') {
+    // Ein Spiegel hat kein eigenes Ziel in der Norm. Er muss aber auf eine
+    // Angabe zeigen, die es gibt, und als Spiegelung erklärt sein.
+    const [id, option] = ziel.quelle.split('.')
+    const z = AELRD_NAEP[id]
+    if (!z) return `die Quelle ${id} gibt es nicht`
+    if (option ? !z.optionen?.[option] : !z.feld) return `${ziel.quelle} ist keine Angabe des Bogens`
+    const erklaert = AELRD_SPIEGELUNGEN.some(
+      (s) => (s.option ? `${s.quelle}.${s.option}` : s.quelle) === ziel.quelle,
+    )
+    if (!erklaert) return `die Spiegelung auf ${ziel.quelle} steht nicht in aelrdSpiegel.ts`
+    return null
+  }
+
   // umbau
   if (!alleCodes.has(ziel.code)) return `${ziel.code} gibt es in der Norm nicht`
   return null
@@ -195,17 +210,101 @@ describe('Zuordnung Bogen → Norm: jeder Code stimmt', () => {
   })
 })
 
+// ── Nichts wird zweimal erfasst ─────────────────────────────────────────────
+
+describe('Keine doppelte Erfassung', () => {
+  /** Jedes Ziel als Zeichenkette, damit sich Doppelungen zählen lassen. */
+  function schluessel(z: NaepZiel): string[] {
+    if (z.art === 'wert') return [z.code]
+    if (z.art === 'struktur') return [`${z.code}:${z.pfad}`]
+    if (z.art === 'option') return [`${z.auswahl}/${z.option}`]
+    if (z.art === 'leer') return [`leer ${z.ziel}/${z.code}`]
+    if (z.art === 'frage') return [`frage ${z.code}`]
+    if (z.art === 'sonstiges') return [`sonst ${z.auswahl}/${z.code}`]
+    if (z.art === 'geteilt') return z.ziele.flatMap(schluessel)
+    if (z.art === 'umbau') return [`umbau ${z.code}`]
+    return [] // spiegel und anhang haben kein Ziel in der Norm
+  }
+
+  /**
+   * Ziele, die mehr als eine Angabe des Bogens tragen dürfen — jede mit dem
+   * Grund, warum das keine Doppelerfassung ist. Steht ein Ziel nicht hier
+   * und wird trotzdem zweimal belegt, fragt der Bogen dasselbe zweimal, und
+   * eine der beiden Stellen gehört nach aelrdSpiegel.ts.
+   */
+  const ERLAUBT: Record<string, string> = {
+    BBP: 'Die vier Zeilen der Besatzung gehen in das eine Teamfeld der Norm',
+    A26: 'Der Alterswert und seine Einheit gehören zusammen',
+    BFZ: 'Die Norm hat für den Zeitpunkt des Übergabebefunds kein eigenes Feld',
+    'DM7/DME': 'Der Bogen trennt Stridor insp. und exsp., die Norm nicht',
+    'L8L/L8S': 'Der Bogen trennt Stridor insp. und exsp., die Norm nicht',
+    'DLM/DM0': 'Der Bogen trennt Belastungs- und Ruhedyspnoe, die Norm nicht',
+    'L80/L8E': 'Der Bogen trennt Belastungs- und Ruhedyspnoe, die Norm nicht',
+    'JH5/JHJ': 'Der Bogen trennt passiven und aktiven Wärmeerhalt, die Norm nicht',
+    'J2Y/J3C': 'Der Bogen trennt "unmöglich" und "Verfahrenswechsel", die Norm fasst zusammen',
+    'JJV/JK2': 'Der Bogen trennt selbst geschriebenes und fremdes 12-Kanal-EKG, die Norm nicht',
+    'umbau D5H': 'Arme und Beine sind verschiedene Gliedmaßen derselben Gruppe',
+    'umbau G07': 'Führende und weitere Diagnosen werden Einträge derselben Liste',
+  }
+
+  it('belegt kein Ziel der Norm zweimal, außer wo der Bogen feiner ist', () => {
+    const wer = new Map<string, string[]>()
+    for (const [id, z] of Object.entries(AELRD_NAEP)) {
+      const eintraege: [string, NaepZiel][] = []
+      if (z.feld) eintraege.push([id, z.feld])
+      for (const [k, ziel] of Object.entries(z.optionen ?? {})) eintraege.push([`${id}.${k}`, ziel])
+      for (const [name, ziel] of eintraege) {
+        for (const s of schluessel(ziel)) wer.set(s, [...(wer.get(s) ?? []), name])
+      }
+    }
+    const doppelt = [...wer].filter(([, v]) => v.length > 1)
+    const unerklaert = doppelt
+      .filter(([ziel]) => !ERLAUBT[ziel])
+      .map(([ziel, v]) => `${ziel} ← ${v.join(', ')}`)
+    expect(unerklaert).toEqual([])
+  })
+
+  it('führt keine Erlaubnis für ein Ziel, das gar nicht doppelt ist', () => {
+    // Sonst bliebe eine Erlaubnis stehen, nachdem die Doppelung weg ist, und
+    // deckte beim nächsten Mal eine echte zu.
+    const zaehler = new Map<string, number>()
+    for (const z of Object.values(AELRD_NAEP)) {
+      for (const ziel of [z.feld, ...Object.values(z.optionen ?? {})].filter(Boolean) as NaepZiel[]) {
+        for (const s of schluessel(ziel)) zaehler.set(s, (zaehler.get(s) ?? 0) + 1)
+      }
+    }
+    expect(Object.keys(ERLAUBT).filter((z) => (zaehler.get(z) ?? 0) < 2)).toEqual([])
+  })
+
+  it('erklärt jede Spiegelung und zeigt auf eine Angabe, die es gibt', () => {
+    const fehler: string[] = []
+    for (const s of AELRD_SPIEGELUNGEN) {
+      if (!s.grund.trim()) fehler.push(`${s.spiegel}: ohne Grund`)
+      const quelle = AELRD_NAEP[s.quelle]
+      const spiegelZiel = s.option
+        ? AELRD_NAEP[s.spiegel]?.optionen?.[s.option]
+        : AELRD_NAEP[s.spiegel]?.feld
+      if (!quelle) fehler.push(`${s.quelle}: gibt es nicht`)
+      if (spiegelZiel?.art !== 'spiegel') {
+        fehler.push(`${s.spiegel}${s.option ? '.' + s.option : ''}: in der Zuordnung nicht als Spiegel geführt`)
+      }
+    }
+    expect(fehler).toEqual([])
+  })
+})
+
 // ── Was die Zuordnung über den Bogen sagt ───────────────────────────────────
 
 describe('Umfang', () => {
   it('hat für jede Angabe des Bogens genau ein Ziel', () => {
-    const { norm, anhang, umbau } = aelrdNaepUmfang()
+    const { norm, anhang, umbau, spiegel } = aelrdNaepUmfang()
     // Kein Sollwert aus der Luft, sondern die Zahl, die der Bogen selbst
-    // vorgibt: ein Ziel je Feld ohne Optionen, eines je Option.
+    // vorgibt: ein Ziel je Feld ohne Optionen, eines je Option — auch die
+    // gespiegelten Kästchen zählen mit, sie haben nur kein eigenes Ziel.
     const erwartet =
       AELRD_FELDER.filter((f) => (f.optionen?.length ?? 0) === 0).length +
       AELRD_FELDER.reduce((n, f) => n + (f.optionen?.length ?? 0), 0)
-    expect(norm + anhang + umbau).toBe(erwartet)
+    expect(norm + anhang + umbau + spiegel).toBe(erwartet)
 
     // Ein Riegel gegen Abdriften: der Anhang darf nicht größer werden als
     // das, was in der Norm ankommt.

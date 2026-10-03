@@ -50,9 +50,10 @@ in der Norm zu — oder sagt, warum es keinen gibt. Stand heute:
 
 | | Angaben |
 |---|---|
-| gehen in die Norm | 217 |
+| gehen in die Norm | 214 |
 | bleiben im Responda-Anhang | 110 |
 | brauchen erst einen Umbau der Maske | 45 |
+| sind das zweite Kästchen derselben Angabe | 3 |
 
 **Der Anhang ist kein Streuverlust, sondern vier Blöcke.** Von den 110
 Einträgen entfallen 43 auf Dinge, die die Norm als Ganzes nicht führt: die
@@ -72,6 +73,25 @@ eine Zuordnung auf ein Feld zeigt, das es nicht mehr gibt, und sobald ein Code
 in der Norm nicht existiert oder nicht zu der Auswahl gehört, unter der er
 steht. Es gibt keinen dritten Zustand neben "hat ein Ziel" und "gehört in den
 Anhang" — nichts kann stillschweigend liegenbleiben.
+
+## Was der Bogen zweimal fragt
+
+Der amtliche Vordruck hat für drei Angaben zwei Kästchen: den ROSC-Zeitpunkt
+(im Reanimationsblock und bei den Defibrillationszeiten), die
+Entlastungspunktion (unter „Atemweg" und unter „Sonstige") und die mechanische
+Thoraxkompression (unter „Reanimation" und unter „Medizintechnik"). Wer ihn von
+Hand ausfüllt, schreibt denselben Wert zweimal hin.
+
+In der App wird jede dieser Angaben **einmal** erfasst. Beim Drucken füllt
+`spiegelAnwenden()` beide Kästchen aus derselben Quelle — das Papier sieht aus
+wie immer, die Daten gibt es nur einmal. Welche Seite die Quelle ist, steht in
+`src/katalog/aelrdSpiegel.ts`, jeweils mit Begründung.
+
+Ein Test hält das offen: er meldet jedes Ziel der Norm, das zwei Angaben des
+Bogens trägt, und verlangt dafür entweder eine erklärte Spiegelung oder einen
+benannten Grund (etwa, dass der Bogen Stridor insp. und exsp. trennt, wo die
+Norm nur „Stridor" kennt). Eine neue Doppelerfassung fällt damit beim ersten
+Testlauf auf, statt erst im Protokoll.
 
 ## Wo der Export an die Grenzen des Schemas stößt
 

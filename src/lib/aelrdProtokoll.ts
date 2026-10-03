@@ -3,10 +3,15 @@
 import { STIL, type Payload } from './aelrdDruck'
 import { STIL_SEITE1, seite1, type Kopfdaten } from './aelrdSeite1'
 import { STIL_SEITE2, seite2 } from './aelrdSeite2'
+import { spiegelAnwenden } from '../katalog/aelrdSpiegel'
 
 export type { Kopfdaten, Payload }
 
-export function aelrdHtml(payload: Payload, kopf: Kopfdaten = {}): string {
+export function aelrdHtml(roh: Payload, kopf: Kopfdaten = {}): string {
+  // Der amtliche Bogen hat für drei Angaben zwei Kästchen. Erfasst werden sie
+  // einmal; hier bekommen beide Kästchen denselben Wert, damit das Papier
+  // aussieht wie immer.
+  const payload = spiegelAnwenden(roh)
   return `<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"><title>Einsatzprotokoll</title>
 <style>${STIL}${STIL_SEITE1}${STIL_SEITE2}</style></head><body>
 ${seite1(payload, kopf)}

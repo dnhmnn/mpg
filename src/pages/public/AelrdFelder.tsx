@@ -10,6 +10,7 @@
 // Liste, bevor gespeichert wird.
 
 import { aelrdFeld, type AelrdFeld } from '../../katalog/aelrd'
+import { istSpiegelFeld, istSpiegelOption } from '../../katalog/aelrdSpiegel'
 import { field, inp, lbl, ta } from './pubStyles'
 
 const ROT = '#600812'
@@ -38,7 +39,7 @@ function Optionen({ feld, werte }: { feld: AelrdFeld; werte?: Record<string, unk
   const mehrfach = feld.typ === 'mehrfach'
   return (
     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 6 }}>
-      {(feld.optionen ?? []).map((o) => (
+      {(feld.optionen ?? []).filter((o) => !istSpiegelOption(feld.id, o.wert)).map((o) => (
         <label
           key={o.wert}
           style={{
@@ -154,6 +155,9 @@ export default function AelrdFelder({ ids, hide, werte }: Props) {
     <>
       {ids
         .filter((id) => !hide?.(id))
+        // Was nur ein zweites Kästchen desselben Werts ist, wird hier nicht
+        // noch einmal abgefragt.
+        .filter((id) => !istSpiegelFeld(id))
         .map((id) => aelrdFeld(id))
         .filter(Boolean)
         .map((feld) => (
