@@ -2,7 +2,15 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
+// Eine sichtbare Kennung der Fassung. Ohne sie laesst sich nicht
+// unterscheiden, ob eine Meldung aus einer alten, im Service Worker
+// festgehaltenen Fassung kommt oder aus der neuen.
+const BAUSTAND = new Date().toISOString().slice(0, 16).replace('T', ' ')
+
 export default defineConfig({
+  define: {
+    __BUILD__: JSON.stringify(BAUSTAND),
+  },
   plugins: [
     react(),
     VitePWA({

@@ -19,7 +19,9 @@ const GRAU = 'var(--warm-gray)'
 const LINIE = 'rgba(96,8,18,0.14)'
 
 /** Die Texterkennung wird erst bei Bedarf geladen — sie ist mehrere Megabyte groß. */
-const TESSERACT = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.esm.min.js'
+const TESSERACT_ESM = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.esm.min.js'
+/** Derselbe Code als klassisches Skript, falls der Modulweg versperrt ist. */
+const TESSERACT_UMD = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'
 
 type Ziel = 'name' | 'vorname' | 'kasse'
 type Stand = 'kamera' | 'lesen' | 'fertig' | 'fehler'
@@ -38,15 +40,44 @@ type TesseractModul = {
   }>
 }
 
-async function textErkennen(bild: HTMLCanvasElement, fortschritt: (p: number) => void): Promise<string> {
-  const geladen = (await import(/* @vite-ignore */ TESSERACT)) as { default?: TesseractModul } & Partial<TesseractModul>
-  // Der ESM-Build von tesseract.js hat nur einen Default-Export. Ohne diese
-  // Zeile ist createWorker undefined und die Erkennung startet nie — genau
-  // das war der Fehler, mit dem der Leser keine Karte erkannt hat.
-  const tesseract = geladen.default ?? (geladen as TesseractModul)
-  if (typeof tesseract?.createWorker !== 'function') {
-    throw new Error('tesseract.js ohne createWorker geladen')
+/** Das klassische Skript nachladen, wenn der Modulweg nicht geht. */
+function umdLaden(): Promise<TesseractModul> {
+  return new Promise((erfuellen, ablehnen) => {
+    const vorhanden = (window as { Tesseract?: TesseractModul }).Tesseract
+    if (vorhanden?.createWorker) return erfuellen(vorhanden)
+    const skript = document.createElement('script')
+    skript.src = TESSERACT_UMD
+    skript.onload = () => {
+      const t = (window as { Tesseract?: TesseractModul }).Tesseract
+      if (t?.createWorker) erfuellen(t)
+      else ablehnen(new Error('Skript geladen, aber ohne Tesseract'))
+    }
+    skript.onerror = () => ablehnen(new Error('Skript nicht erreichbar'))
+    document.head.appendChild(skript)
+  })
+}
+
+/**
+ * Die Bibliothek holen — erst als Modul, sonst als Skript.
+ *
+ * Der ESM-Build hat NUR einen Default-Export; `createWorker` ist dort kein
+ * benannter Export. Dieser Griff daneben war der Fehler, mit dem die
+ * Erkennung nie ansprang und es aussah, als läge es an der Karte.
+ */
+async function tesseractHolen(): Promise<TesseractModul> {
+  try {
+    const geladen = (await import(/* @vite-ignore */ TESSERACT_ESM)) as
+      { default?: TesseractModul } & Partial<TesseractModul>
+    const t = geladen.default ?? (geladen as TesseractModul)
+    if (typeof t?.createWorker === 'function') return t
+  } catch {
+    // Weiter mit dem Skriptweg.
   }
+  return umdLaden()
+}
+
+async function textErkennen(bild: HTMLCanvasElement, fortschritt: (p: number) => void): Promise<string> {
+  const tesseract = await tesseractHolen()
   const worker = await tesseract.createWorker('deu', 1, {
     logger: (m: { status: string; progress: number }) => {
       if (m.status === 'recognizing text') fortschritt(m.progress)
@@ -112,11 +143,31 @@ export default function KartenScan({ onUebernehmen, onSchliessen }: {
   const [fortschritt, setFortschritt] = useState(0)
   const [daten, setDaten] = useState<EgkDaten | null>(null)
   const [rohtext, setRohtext] = useState('')
+  const [bereit, setBereit] = useState(false)
+  const [lichtDa, setLichtDa] = useState(false)
+  const [licht, setLicht] = useState(false)
   const [zuordnung, setZuordnung] = useState<Partial<Record<Ziel, string>>>({})
 
   function kameraAus() {
     stromRef.current?.getTracks().forEach((t) => t.stop())
     stromRef.current = null
+    setBereit(false)
+    setLicht(false)
+    setLichtDa(false)
+  }
+
+  /** Das Licht der Kamera schalten, wo das Gerät es zulässt. */
+  async function lichtSchalten(an: boolean) {
+    const spur = stromRef.current?.getVideoTracks()[0]
+    if (!spur) return
+    try {
+      // `torch` steht nicht in der Typdefinition des Browsers, die Geräte
+      // kennen es trotzdem — deshalb der Umweg über unknown.
+      await spur.applyConstraints({ advanced: [{ torch: an }] } as unknown as MediaTrackConstraints)
+      setLicht(an)
+    } catch {
+      setLichtDa(false)
+    }
   }
 
   async function kameraAn() {
@@ -125,11 +176,28 @@ export default function KartenScan({ onUebernehmen, onSchliessen }: {
         video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 } },
       })
       stromRef.current = strom
-      if (videoRef.current) videoRef.current.srcObject = strom
-      else strom.getTracks().forEach((t) => t.stop())
-    } catch {
+      if (!videoRef.current) {
+        strom.getTracks().forEach((t) => t.stop())
+        return
+      }
+      videoRef.current.srcObject = strom
+      // Safari startet nicht immer von allein, auch mit autoplay.
+      await videoRef.current.play().catch(() => {})
+
+      // Licht gibt es nur, wo das Gerät es meldet — auf dem Rechner nie.
+      const spur = strom.getVideoTracks()[0]
+      const koennen = (spur?.getCapabilities?.() ?? {}) as { torch?: boolean }
+      setLichtDa(Boolean(koennen.torch))
+    } catch (f) {
       setStand('fehler')
-      setFehler('Keine Kamera verfügbar. Die Seite braucht die Kameraerlaubnis des Browsers.')
+      const name = (f as { name?: string })?.name
+      setFehler(
+        name === 'NotAllowedError'
+          ? 'Der Browser hat die Kamera nicht freigegeben. In den Seiteneinstellungen die Kamera erlauben und neu laden.'
+          : name === 'NotFoundError'
+            ? 'Dieses Gerät meldet keine Kamera.'
+            : `Die Kamera lässt sich nicht öffnen (${name ?? 'unbekannter Fehler'}). Die Seite muss über https geöffnet sein.`,
+      )
     }
   }
 
@@ -145,7 +213,13 @@ export default function KartenScan({ onUebernehmen, onSchliessen }: {
 
   async function ausloesen() {
     const video = videoRef.current
-    if (!video || !video.videoWidth) return
+    if (!video || !video.videoWidth) {
+      // Bisher brach das hier stumm ab. Wer vor dem ersten Bild tippte,
+      // sah nichts passieren und hielt es für kaputt.
+      setStand('fehler')
+      setFehler('Die Kamera hat noch kein Bild geliefert. Einen Moment warten und erneut aufnehmen.')
+      return
+    }
     const bild = ausschnitt(video)
     kameraAus()
     setStand('lesen')
@@ -155,9 +229,12 @@ export default function KartenScan({ onUebernehmen, onSchliessen }: {
       setRohtext(text)
       setDaten(egkLesen(text))
       setStand('fertig')
-    } catch {
+    } catch (f) {
       setStand('fehler')
-      setFehler('Die Texterkennung konnte nicht geladen werden. Sie wird beim ersten Mal aus dem Netz geholt — danach geht es auch ohne Empfang.')
+      const grund = (f as { message?: string })?.message ?? 'unbekannt'
+      setFehler(
+        `Die Texterkennung lief nicht an: ${grund}. Sie wird beim ersten Mal aus dem Netz geholt — danach geht es auch ohne Empfang.`,
+      )
     } finally {
       // Das Bild wird nicht behalten.
       bild.width = 0
@@ -191,6 +268,7 @@ export default function KartenScan({ onUebernehmen, onSchliessen }: {
             <div style={{ fontSize: 11, fontStyle: 'italic', color: GRAU }}>
               Vorderseite · Erkennung auf dem Gerät, das Bild wird nicht gespeichert
             </div>
+            <div style={{ fontSize: 10, color: GRAU, opacity: 0.8 }}>Fassung {__BUILD__}</div>
           </div>
           <button type="button" onClick={() => { kameraAus(); onSchliessen() }}
             style={{ background: 'transparent', border: 'none', color: GRAU, fontSize: 22, cursor: 'pointer', fontFamily: 'inherit', lineHeight: 1 }}>×</button>
@@ -199,17 +277,39 @@ export default function KartenScan({ onUebernehmen, onSchliessen }: {
         {stand === 'kamera' ? (
           <>
             <div style={{ position: 'relative', borderRadius: 12, overflow: 'hidden', background: '#000' }}>
-              <video ref={videoRef} autoPlay playsInline muted style={{ width: '100%', display: 'block' }} />
+              <video
+                ref={videoRef} autoPlay playsInline muted
+                onLoadedMetadata={() => setBereit(true)}
+                onCanPlay={() => setBereit(true)}
+                style={{ width: '100%', display: 'block' }}
+              />
+              {lichtDa ? (
+                <button
+                  type="button" onClick={() => lichtSchalten(!licht)}
+                  aria-label={licht ? 'Licht aus' : 'Licht an'}
+                  style={{
+                    position: 'absolute', right: 10, top: 10, width: 44, height: 44,
+                    borderRadius: 22, cursor: 'pointer', fontFamily: 'inherit', fontSize: 19,
+                    background: licht ? '#fff' : 'rgba(0,0,0,0.45)',
+                    color: licht ? ROT : '#fff',
+                    border: '0.5px solid rgba(255,255,255,0.6)',
+                  }}
+                >
+                  {licht ? '☀' : '☼'}
+                </button>
+              ) : null}
               <div aria-hidden style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <div style={{ width: '86%', aspectRatio: String(KARTE), border: '2px solid rgba(255,255,255,0.9)', borderRadius: 10, boxShadow: '0 0 0 2000px rgba(0,0,0,0.35)' }} />
               </div>
             </div>
             <div style={{ fontSize: 12, fontStyle: 'italic', color: GRAU, textAlign: 'center', margin: '8px 0 10px' }}>
-              Karte in den Rahmen legen, Schrift scharf stellen
+              {bereit
+                ? 'Karte in den Rahmen legen, Schrift scharf stellen'
+                : 'Kamera startet…'}
             </div>
-            <button type="button" onClick={ausloesen}
-              style={{ width: '100%', padding: '13px', background: ROT, border: 'none', borderRadius: 10, color: '#fff', fontFamily: 'inherit', fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', cursor: 'pointer' }}>
-              Aufnehmen
+            <button type="button" onClick={ausloesen} disabled={!bereit}
+              style={{ width: '100%', padding: '13px', background: bereit ? ROT : 'rgba(96,8,18,0.25)', border: 'none', borderRadius: 10, color: '#fff', fontFamily: 'inherit', fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', cursor: bereit ? 'pointer' : 'default' }}>
+              {bereit ? 'Aufnehmen' : 'Kamera startet…'}
             </button>
           </>
         ) : null}
