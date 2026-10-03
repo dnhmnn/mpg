@@ -415,6 +415,8 @@ AELRD_FELDER.push(...AELRD_FELDER2)
 export type AelrdAbschnitt = {
   id: string
   titel: string
+  /** Kurzform fuer die Reiter am Rand der Maske — hoechstens fuenf Zeichen. */
+  kurz: string
   seite: 1 | 2
   felder: string[]
 }
@@ -422,6 +424,7 @@ export type AelrdAbschnitt = {
 export const AELRD_ABSCHNITTE: AelrdAbschnitt[] = [
   {
     id: 'stammdaten',
+    kurz: 'PAT',
     titel: 'Patienten-Stammdaten',
     seite: 1,
     felder: ['name', 'vorname', 'gebdatum', 'strasse', 'plz_ort', 'kasse', 'versnr',
@@ -429,12 +432,14 @@ export const AELRD_ABSCHNITTE: AelrdAbschnitt[] = [
   },
   {
     id: 'kennung',
+    kurz: 'NR',
     titel: 'Einsatzkennung',
     seite: 1,
     felder: ['einsatz_nr', 'leitstelle_nr', 'rufname', 'standort'],
   },
   {
     id: 'einsatzdaten',
+    kurz: 'EINS',
     titel: 'Einsatztechnische Daten',
     seite: 1,
     felder: ['einsatz_datum', 'sondersignal', 'beteiligtes_rm', 'einsatzort_art',
@@ -442,12 +447,14 @@ export const AELRD_ABSCHNITTE: AelrdAbschnitt[] = [
   },
   {
     id: 'besatzung',
+    kurz: 'TEAM',
     titel: 'Besatzung',
     seite: 1,
     felder: ['mannschaft_tf', 'mannschaft_1', 'mannschaft_2', 'mannschaft_3'],
   },
   {
     id: 'zeiten',
+    kurz: 'ZEIT',
     titel: 'Zeiten',
     seite: 1,
     felder: ['symptombeginn', 'symptombeginn_geschaetzt', 'kollaps_beobachtet',
@@ -456,12 +463,14 @@ export const AELRD_ABSCHNITTE: AelrdAbschnitt[] = [
   },
   {
     id: 'notfallgeschehen',
+    kurz: 'ANAM',
     titel: 'Notfallgeschehen, Anamnese, Erstbefund, Vormedikation, Vorbehandlung',
     seite: 1,
     felder: ['notfallgeschehen', 'ersthelfermassnahmen', 'az_vor_ereignis', 'first_responder'],
   },
   {
     id: 'erstbefund',
+    kurz: 'BEF',
     titel: 'Erstbefund',
     seite: 1,
     felder: ['erstbefund_zeitpunkt', 'atemwege', 'atmung', 'kreislauf',
@@ -470,6 +479,7 @@ export const AELRD_ABSCHNITTE: AelrdAbschnitt[] = [
   },
   {
     id: 'messwerte',
+    kurz: 'VITAL',
     titel: 'Messwerte initial',
     seite: 1,
     felder: ['af', 'spo2', 'spo2_mit_o2', 'co_hb', 'hf', 'puls', 'etco2',
@@ -477,6 +487,7 @@ export const AELRD_ABSCHNITTE: AelrdAbschnitt[] = [
   },
   {
     id: 'neurologie',
+    kurz: 'NEURO',
     titel: 'Neurologie',
     seite: 1,
     felder: ['neuro_ohne_befund', 'bewusstsein', 'gcs_augen', 'gcs_verbal', 'gcs_motorik',
@@ -486,12 +497,14 @@ export const AELRD_ABSCHNITTE: AelrdAbschnitt[] = [
   },
   {
     id: 'untersuchung',
+    kurz: 'PSY',
     titel: 'Untersuchung und Psyche',
     seite: 1,
     felder: ['untersuchung', 'psyche'],
   },
   {
     id: 'verletzungen',
+    kurz: 'TRAU',
     titel: 'Verletzungen',
     seite: 1,
     felder: ['verletzung_zusammenhang', 'verletzungsmuster',
@@ -502,6 +515,7 @@ export const AELRD_ABSCHNITTE: AelrdAbschnitt[] = [
   },
   {
     id: 'diagnosen',
+    kurz: 'DIAG',
     titel: 'Erkrankungen und Score',
     seite: 1,
     felder: ['tracerdiagnose', 'fuehrende_diagnose', 'weitere_diagnosen', 'diagnosetext',
@@ -509,18 +523,21 @@ export const AELRD_ABSCHNITTE: AelrdAbschnitt[] = [
   },
   {
     id: 'verlauf',
+    kurz: 'VERL',
     titel: 'Verlaufsbeschreibung',
     seite: 2,
     felder: [],
   },
   {
     id: 'medikation',
+    kurz: 'MEDI',
     titel: 'Medikation',
     seite: 2,
     felder: ['keine_medikation', 'medikation', 'lysetherapie', 'lyse_zeitpunkt'],
   },
   {
     id: 'reanimation',
+    kurz: 'REA',
     titel: 'Reanimation / Tod / Todesfeststellung',
     seite: 2,
     felder: ['rea_situation', 'rea_ursache', 'tod_ursache', 'todesart', 'kollaps_durch',
@@ -529,6 +546,7 @@ export const AELRD_ABSCHNITTE: AelrdAbschnitt[] = [
   },
   {
     id: 'zugaenge',
+    kurz: 'ZUG',
     titel: 'Zugänge und Atemweg',
     seite: 2,
     felder: ['pvk_vorhanden', 'zugaenge', 'zugang_erschwert', 'atemweg_massnahme',
@@ -536,6 +554,7 @@ export const AELRD_ABSCHNITTE: AelrdAbschnitt[] = [
   },
   {
     id: 'beatmung',
+    kurz: 'BEAT',
     titel: 'Beatmung und Defibrillation',
     seite: 2,
     felder: ['beatmung_art', 'beatmung_fio2', 'beatmung_af', 'beatmung_amv',
@@ -545,6 +564,7 @@ export const AELRD_ABSCHNITTE: AelrdAbschnitt[] = [
   },
   {
     id: 'massnahmen',
+    kurz: 'MASS',
     titel: 'Weitere Maßnahmen',
     seite: 2,
     felder: ['rea_massnahme', 'aktive_kuehlung', 'lagerung', 'sonstige_massnahme',
@@ -552,6 +572,7 @@ export const AELRD_ABSCHNITTE: AelrdAbschnitt[] = [
   },
   {
     id: 'uebergabe_befund',
+    kurz: 'ÜB-B',
     titel: 'Übergabe — Befund',
     seite: 2,
     felder: ['ub_zeitpunkt', 'ub_atemwege', 'ub_atmung', 'ub_kreislauf',
@@ -560,6 +581,7 @@ export const AELRD_ABSCHNITTE: AelrdAbschnitt[] = [
   },
   {
     id: 'uebergabe_neuro',
+    kurz: 'ÜB-M',
     titel: 'Übergabe — Neurologie und Messwerte',
     seite: 2,
     felder: ['ub_neuro_ohne_befund', 'ub_bewusstsein', 'ub_gcs_augen', 'ub_gcs_verbal',
@@ -571,6 +593,7 @@ export const AELRD_ABSCHNITTE: AelrdAbschnitt[] = [
   },
   {
     id: 'abschluss',
+    kurz: 'ENDE',
     titel: 'Abschluss',
     seite: 2,
     felder: ['besonderheiten', 'wertsachen', 'uebergabe_an', 'uebergabeort',

@@ -18,6 +18,7 @@ import { istSpiegelFeld } from '../../../katalog/aelrdSpiegel'
 import { ANLAESSE, abschnitteFuer, weitereAbschnitte } from '../../../katalog/anlass'
 import { normalbefund, uebergabeUebernehmen, uebernahmeUmfang } from '../../../katalog/uebernahme'
 import DokuFeld, { Rasterzelle, istRasterfeld, type Werte } from './DokuFeld'
+import Reiter, { type ReiterStand } from './Reiter'
 
 // Kamera und Texterkennung werden erst geladen, wenn jemand die Karte
 // fotografieren will — sie gehören nicht in den Weg der übrigen Erfassung.
@@ -124,6 +125,7 @@ export default function Doku() {
   const [alleZeigen, setAlleZeigen] = useState(false)
   const [suche, setSuche] = useState('')
   const [kartenScan, setKartenScan] = useState(false)
+  const [aktiverBlock, setAktiverBlock] = useState('')
 
   const setzen = (id: string, w: unknown) => setWerte((v) => ({ ...v, [id]: w }))
   const anlassUmschalten = (id: string) =>
@@ -137,6 +139,30 @@ export default function Doku() {
     .map((id) => ({ id, titel: AELRD_ABSCHNITTE.find((a) => a.id === id)?.titel ?? id, felder: felderVon(id) }))
     .filter((b) => b.felder.length > 0)
 
+  // Was die Reiter am Rand zeigen: je Block, wie viele Pflichtfelder noch
+  // offen sind und wie viel überhaupt eingetragen wurde.
+  const staende: ReiterStand[] = bloecke.map((b) => {
+    const pflicht = b.felder.filter((f) => f.pflicht)
+    return {
+      id: b.id,
+      kurz: AELRD_ABSCHNITTE.find((a) => a.id === b.id)?.kurz ?? b.id.slice(0, 4).toUpperCase(),
+      titel: b.titel,
+      pflichtGesamt: pflicht.length,
+      pflichtOffen: pflicht.filter((f) => !gefuellt(werte[f.id])).length,
+      gefuellt: b.felder.filter((f) => gefuellt(werte[f.id])).length,
+    }
+  })
+
+  /** Einen Block aufklappen und hinspringen. */
+  function zumBlock(id: string) {
+    setZu((v) => v.filter((x) => x !== id))
+    setAktiverBlock(id)
+    // Erst nach dem Aufklappen springen, sonst steht die Höhe noch nicht fest.
+    window.requestAnimationFrame(() => {
+      document.getElementById(`doku-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    })
+  }
+
   // Fortschritt über den Hauptweg, nicht über den ganzen Bogen: was der
   // Anlass nicht verlangt, fehlt auch nicht.
   const imWeg = bloecke.flatMap((b) => b.felder)
@@ -147,7 +173,7 @@ export default function Doku() {
   const offeneUebernahme = uebernahmeUmfang(werte)
   const aktionFuer = (id: string): { text: string; onClick: () => void } | null => {
     if (id === 'stammdaten') {
-      return { text: 'Gesundheitskarte fotografieren', onClick: () => setKartenScan(true) }
+      return { text: 'Gesundheitskarte einlesen (Rückseite)', onClick: () => setKartenScan(true) }
     }
     if (id === 'erstbefund') {
       return {
@@ -194,7 +220,9 @@ export default function Doku() {
         </div>
       </header>
 
-      <main style={{ padding: '12px 14px', maxWidth: 760, margin: '0 auto' }}>
+      <main style={{ padding: '12px 14px 12px 0', maxWidth: 830, margin: '0 auto', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+        <Reiter staende={staende} aktiv={aktiverBlock} onWaehlen={zumBlock} />
+        <div style={{ flex: 1, minWidth: 0 }}>
         {/* Anlass ─ was der Einsatz ist, entscheidet, was gefragt wird. */}
         <section style={{ background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.07)', borderLeft: `3px solid ${ROT}`, padding: '11px 12px 8px', marginBottom: 10 }}>
           <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: ROT, marginBottom: 2 }}>
@@ -274,6 +302,7 @@ export default function Doku() {
             Nur die Blöcke zum Anlass
           </button>
         ) : null}
+        </div>
       </main>
 
       {kartenScan ? (
