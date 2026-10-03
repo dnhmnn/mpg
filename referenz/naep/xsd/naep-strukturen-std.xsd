@@ -1,0 +1,217 @@
+<?xml version="1.0"?>
+<xs:schema version="1.0"
+           xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:std="http://naep.divi.de/strukturen/std"
+           targetNamespace="http://naep.divi.de/strukturen/std"
+           elementFormDefault="qualified">
+    
+    <xs:complexType name="TypStrukturiertBase" abstract="true"/>
+    
+    <xs:complexType name="EinsatztechnischeDaten">
+        <xs:complexContent>
+            <xs:extension base="std:TypStrukturiertBase">
+                <xs:sequence>
+                    <xs:element name="EinsatzNr" type="std:TypText" minOccurs="0"/>
+                    <xs:element name="AuftrNr" type="std:TypText" minOccurs="0"/>
+                    <xs:element name="PatNr" type="std:TypText" minOccurs="0"/>
+                    <xs:element name="PersNr" type="std:TypText" minOccurs="0"/>
+                    <xs:element name="Standort" type="std:TypText" minOccurs="0"/>
+                    <xs:element name="LeitstelleKFZ" type="std:TypText" minOccurs="0"/>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+    
+    <xs:complexType name="PatStammdaten">
+        <xs:complexContent>
+            <xs:extension base="std:TypStrukturiertBase">
+                <xs:sequence>
+                    <xs:element name="Patient" type="std:TypPatient"/>
+                    <xs:element name="Adresse" type="std:Adresse"/>
+                    <xs:element name="Versicherung" type="std:TypVersicherung"/>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+    
+    <xs:complexType name="Einsatzort">
+        <xs:complexContent>
+            <xs:extension base="std:TypStrukturiertBase">
+                <xs:sequence>
+                    <xs:element name="Adresse" type="std:Adresse" minOccurs="0"/>
+                    <xs:element name="GPSKoordinate" minOccurs="0">
+                        <xs:complexType>
+                            <xs:attribute name="lat" type="std:TypBreitengrad"/>
+                            <xs:attribute name="lon" type="std:TypLaengengrad"/>
+                        </xs:complexType>
+                    </xs:element>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+
+    <xs:complexType name="Adresse">
+        <xs:complexContent>
+            <xs:extension base="std:TypStrukturiertBase">
+                <xs:sequence>
+                    <xs:element name="Strasse" type="std:TypText"/>
+                    <xs:element name="PLZ" type="std:TypPostleitzahl"/>
+                    <xs:element name="Ort" type="std:TypText"/>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+    
+    <xs:complexType name="Medikation">
+        <xs:complexContent>
+            <xs:extension base="std:TypStrukturiertBase">
+                <xs:sequence>
+                    <xs:element name="Einzeldosis" maxOccurs="unbounded">
+                        <xs:complexType>
+                            <xs:sequence>
+                                <xs:element name="Medikament" type="std:TypText" minOccurs="0"/>
+                                <xs:element name="Wirkstoff" type="std:TypText"/>
+                                <xs:element name="Menge" type="std:TypMenge" minOccurs="0"/>
+                                <xs:element name="Volumen" type="std:TypMenge" minOccurs="0"/>
+                                <xs:element name="Zeit" minOccurs="0">
+                                    <xs:complexType>
+                                        <xs:attribute name="start" type="std:TypZeit"/>
+                                        <xs:attribute name="ende" type="std:TypZeit"/>
+                                    </xs:complexType>
+                                </xs:element>
+                                <xs:element name="Applikation" type="std:TypCodeTerm" minOccurs="0"/>
+                                <xs:element name="ATC" type="std:TypATCCode" minOccurs="0"/>
+                            </xs:sequence>
+                        </xs:complexType>
+                    </xs:element>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+    
+    <xs:complexType name="TypCodeTerm">
+        <xs:attribute name="code" type="xs:string" use="required"/>
+        <xs:attribute name="term" type="xs:string" use="required"/>
+    </xs:complexType>
+    
+    <xs:complexType name="TypPatient">
+        <xs:sequence>
+            <xs:element name="Name" type="std:TypText"/>
+            <xs:element name="Vorname" type="std:TypText"/>
+            <xs:element name="GebDat" type="std:TypDatum"/>
+        </xs:sequence>
+        <xs:attribute name="pseudonym" type="std:TypJaNein" use="required"/>
+    </xs:complexType>
+
+    <xs:complexType name="Erstdiagnosen">
+        <xs:complexContent>
+            <xs:extension base="std:TypStrukturiertBase">
+                <xs:sequence>
+                    <xs:element name="Diagnose" type="std:TypICD10Diagnose" maxOccurs="unbounded"/>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+
+    <xs:complexType name="TypICD10Diagnose">
+        <xs:simpleContent>
+            <xs:extension base="xs:string">
+                <xs:attribute name="code" type="xs:string"/>
+            </xs:extension>
+        </xs:simpleContent>
+    </xs:complexType>
+    
+    <xs:complexType name="TypVersicherung">
+        <xs:sequence>
+            <xs:element name="Kasse">
+                <xs:complexType>
+                    <xs:simpleContent>
+                        <xs:extension base="std:TypText">
+                            <xs:attribute name="nr" type="std:TypText" use="required"/>
+                        </xs:extension>
+                    </xs:simpleContent>
+                </xs:complexType>
+            </xs:element>
+            <xs:element name="VersNr" type="std:TypText"/>
+        </xs:sequence>
+    </xs:complexType>
+    
+    <xs:simpleType name="TypPostleitzahl">
+        <xs:restriction base="xs:string">
+            <xs:pattern value="[0-9]{5}"/>
+        </xs:restriction>
+    </xs:simpleType>
+    
+    <xs:simpleType name="TypDatum">
+        <xs:restriction base="xs:date">
+            <xs:pattern value="([0-9]{4})-([0-9]{2})-([0-9]{2})"/>
+        </xs:restriction>
+    </xs:simpleType>
+    
+    <xs:simpleType name="TypZeit">
+        <xs:restriction base="xs:string">
+            <xs:pattern value="[0-2][0-9]:[0-5][0-9]"/>
+        </xs:restriction>
+    </xs:simpleType>
+    
+    <xs:simpleType name="TypAntwort">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="J"/>
+            <xs:enumeration value="N"/>
+            <xs:enumeration value="UB"/>
+        </xs:restriction>
+    </xs:simpleType>
+    
+    <xs:simpleType name="TypText">
+        <xs:restriction base="xs:token">
+            <xs:minLength value="1" />
+        </xs:restriction>
+    </xs:simpleType>
+    
+    <xs:simpleType name="TypATCCode">
+        <xs:restriction base="std:TypText">
+            <xs:minLength value="1" />
+            <xs:maxLength value="7" />
+        </xs:restriction>
+    </xs:simpleType>
+    
+    <xs:complexType name="TypMenge">
+        <xs:simpleContent>
+            <xs:extension base="xs:double">
+                <xs:attribute name="einheit" type="xs:string"/>
+            </xs:extension>
+        </xs:simpleContent>
+    </xs:complexType>
+    
+    <xs:simpleType name="TypJaNein">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="ja"/>
+            <xs:enumeration value="nein"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:simpleType name="TypBreitengrad">
+        <xs:annotation>
+            <xs:documentation>
+                WGS84 Datum
+            </xs:documentation>
+        </xs:annotation>
+        <xs:restriction base="xs:decimal">
+            <xs:minInclusive value="-90.0"/>
+            <xs:maxInclusive value="90.0"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:simpleType name="TypLaengengrad">
+        <xs:annotation>
+            <xs:documentation>
+                WGS84 Datum
+            </xs:documentation>
+        </xs:annotation>
+        <xs:restriction base="xs:decimal">
+            <xs:minInclusive value="-180.0"/>
+            <xs:maxExclusive value="180.0"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+</xs:schema>

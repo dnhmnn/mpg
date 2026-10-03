@@ -1,0 +1,1310 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<Metamodell xmlns="http://naep.divi.de/meta" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://naep.divi.de/meta ../xsd/naep-meta.xsd" schemaVersion="1.0" version="1.0">
+	<Protokoll version="V.6.0-1.00-NoVar-01012021" />
+	<Definitionen>
+		<Fragen>
+			<Antwort code="J" term="ja" />
+			<Antwort code="N" term="nein" />
+			<Antwort code="UB" term="unbekannt" />
+			<Typ name="j_opt" optional="ja">
+				<Antwort code="J" />
+			</Typ>
+			<Typ name="j-n" optional="nein">
+				<Antwort code="J" />
+				<Antwort code="N" />
+			</Typ>
+			<Typ name="j-n_opt" optional="ja">
+				<Antwort code="J" />
+				<Antwort code="N" />
+			</Typ>
+			<Typ name="j-n-ub" optional="nein">
+				<Antwort code="J" />
+				<Antwort code="N" />
+				<Antwort code="UB" />
+			</Typ>
+		</Fragen>
+	</Definitionen>
+	<Abschnitte>
+		<Abschnitt code="A01">
+			<Titel>
+				Patient - Stammdaten
+			</Titel>
+			<Formular>
+				<Struktur code="A08">
+					<xsi schemaLocation="http://naep.divi.de/strukturen/std naep-strukturen-std.xsd" type="PatStammdaten" />
+					<Zusatz typ="einfach">
+						<Auswahl code="A0F" term="Geschlecht" typ="einfach">
+							<leer code="A0M" term="unbekannt" />
+							<Option code="A0T" term="männlich" />
+							<Option code="A10" term="weiblich" />
+							<Option code="A11" term="divers" />
+						</Auswahl>
+						<Auswahl code="A17" term="BMI" typ="einfach">
+							<Option code="A1E" term="&lt;=40" />
+							<Option code="A1L" term="&gt;40" />
+						</Auswahl>
+						<oder code="A1S" term="Alter">
+							<leer code="A1Z" term="unbekannt" />
+							<Feld code="A26" einheit="Jahre" typ="Zahl" />
+							<Auswahl code="A2D" typ="einfach">
+								<Option code="A2K" term="1-7 Tage" />
+								<Option code="A2R" term="8-28 Tage" />
+							</Auswahl>
+						</oder>
+					</Zusatz>
+				</Struktur>
+			</Formular>
+		</Abschnitt>
+		<Abschnitt code="B01">
+			<Titel>
+				Einsatztechnische Daten
+			</Titel>
+			<Formular>
+				<Struktur code="B08">
+					<xsi schemaLocation="http://naep.divi.de/strukturen/std naep-strukturen-std.xsd" type="EinsatztechnischeDaten"/>
+				</Struktur>
+				<Feld code="B0F" term="Einsatz-Datum" typ="Datum" />
+				<Struktur code="B0M" term="Einsatz-Ort">
+					<xsi schemaLocation="http://naep.divi.de/strukturen/std naep-strukturen-std.xsd" type="Einsatzort"/>
+					<Zusatz typ="einfach">
+						<Auswahl code="B0T" typ="einfach">
+							<Option code="B10" term="Wohnung" />
+							<Option code="B17" term="Arztpraxis" />
+							<Option code="B1E" term="öff. Raum" />
+							<Option code="B1L" term="Bildungseinrichtung" />
+							<Option code="B1S" term="Altenheim" />
+							<Option code="B1Z" term="Krankenhaus" />
+							<Option code="B26" term="Straße" />
+							<Option code="B2D" term="Massenveranstaltung" />
+							<Option code="B2K" term="Arbeitsplatz" />
+							<Option code="B2R" term="Geburtshaus" />
+							<Option code="B2Y" term="Schule" />
+							<Option code="B35" term="Sportstätte" />
+							<Sonstiges code="B3C" term="Sonstige" />
+						</Auswahl>
+					</Zusatz>
+				</Struktur>
+				<Auswahl code="B3J" term="Einsatz-Art" typ="einfach">
+					<Option code="B3Q" term="Primäreinsatz" />
+					<Option code="B3X" term="Folgeeinsatz" />
+					<Option code="B44" term="Fehleinsatz">
+						<Zusatz typ="einfach">
+							<oder code="B4B">
+								<Auswahl code="B4I" typ="einfach">
+									<Option code="B4P" term="kein Patient" />
+									<Option code="B4W" term="Pat. bereits abtransportiert" />
+									<Option code="B53" term="abbestellt" />
+									<Option code="B5A" term="böswillige Alarmierung" />
+								</Auswahl>
+								<Auswahl code="B5H" term="Einsatzabbruch" typ="einfach">
+									<Option code="B5O" term="technische Gründe" />
+									<Option code="B5V" term="Wetter" />
+									<Sonstiges code="B62" term="Sonstige" />
+								</Auswahl>
+							</oder>
+						</Zusatz>
+					</Option>
+					<Option code="B69" term="Notarzt-Nachforderung" />
+					<Option code="B6G" term="Sekundäreinsatz z.B. Verlegung" />
+					<Option code="B6N" term="vorsorgliche Bereitstellung" />
+				</Auswahl>
+				<Feld code="B6U" term="Transportziel" typ="Text">
+					<Zusatz typ="einfach">
+						<Frage code="B71" term="Voranmeldung" typ="j_opt">
+							<wenn-ja>
+								<Auswahl code="B78" typ="einfach">
+									<Option code="B7F" term="Stroke Unit" />
+									<Option code="B7M" term="Herzkatheter" />
+									<Option code="B7T" term="Traumazentrum" />
+								</Auswahl>
+							</wenn-ja>
+						</Frage>
+					</Zusatz>
+				</Feld>
+				<Feld code="B80" term="Notarzt (Name)" typ="Text">
+					<Zusatz typ="einfach">
+						<Auswahl code="B87" term="Qualifikation" typ="einfach">
+							<Option code="B8E" term="Arzt in Weiterb." />
+							<Option code="B8L" term="Facharzt">
+								<Zusatz typ="einfach">
+									<Auswahl code="B8S" term="Qualifikation" typ="mehrfach">
+										<Option code="B8Z" term="Anästhesie" />
+										<Option code="B96" term="Chirurgie" />
+										<Option code="B9D" term="Innere" />
+										<Option code="B9K" term="Pädiatrie" />
+										<Option code="B9R" term="Neurologie" />
+										<Option code="B9Y" term="Allg. Medizin" />
+										<Option code="B9Z" term="Klinische Akutmedizin" />
+										<Option code="BA5" term="Zusatz Intensiv" />
+										<Option code="BAC" term="Andere" />
+									</Auswahl>
+								</Zusatz>
+							</Option>
+						</Auswahl>
+					</Zusatz>
+				</Feld>
+				<Feld code="BAJ" term="Assistenz" typ="Text">
+					<Zusatz typ="einfach">
+						<Auswahl code="BAQ" term="Höchste Qualifikation" typ="einfach">
+							<Option code="BAX" term="Rett.Ass." />
+							<Option code="BB4" term="Rett.San." />
+							<Option code="BBB" term="Notfalll San." />
+							<Option code="BBI" term="(Int.)Pfleg." />
+						</Auswahl>
+					</Zusatz>
+				</Feld>
+				<Feld code="BBP" term="RTW-Team" typ="Text" />
+				<Feld code="BBW" term="Rufname eigenes Fahrzeug" typ="Text">
+					<Hinweis>
+						als "eigenes Fahrzeug" wird hier das den Notarzt zubringende (nicht das den Patienten schlusendlich transportierende) Rettungsmitel dokumentiert
+					</Hinweis>
+				</Feld>
+				<Auswahl code="BC3" term="Beteiligte Rettungsmittel" typ="mehrfach">
+					<Option code="BCA" term="NEF">
+						<Zusatz typ="einfach">
+							<Frage code="BCH" term="Selbstfahrer" typ="j_opt" />
+						</Zusatz>
+					</Option>
+					<Option code="BCO" term="NAW" />
+					<Option code="BCV" term="RTW" />
+					<Option code="BD2" term="KTW" />
+					<Option code="BD9" term="RTH" />
+					<Option code="BDG" term="ITH" />
+					<Option code="BDN" term="Bergrettung" />
+					<Option code="TNA" term="TeleNA" />
+					<Option code="BDU" term="Wasserrettung" />
+					<Sonstiges code="BE1" term="Sonstige" />
+				</Auswahl>
+				<oder code="BE8">
+					<Feld code="BEF" term="Symptom-Beginn" typ="Zeit" />
+					<Frage code="BEM" term="vor über 24h" typ="j_opt" />
+				    <Frage code="BUK" term="unbekannt" typ="j_opt" />
+				</oder>
+				<Frage code="BET" term="Kollaps beobachtet" typ="j_opt" />
+				<Feld code="BF0" term="Alarm" typ="Zeit" />
+				<Feld code="BF7" term="Ankunft (Einsatzort)" typ="Zeit" />
+				<Feld code="BFE" term="Ankunft (am Pat.)" typ="Zeit">
+					<Zusatz typ="einfach">
+						<Frage code="BFL" term="vor Rettungsdienst" typ="j_opt" />
+					</Zusatz>
+				</Feld>
+				<Feld code="BFS" term="Abfahrt" typ="Zeit" />
+				<Feld code="BFZ" term="Übergabe" typ="Zeit" />
+				<Feld code="BG6" term="Einsatzbereit" typ="Zeit" />
+				<Feld code="BGD" term="Ende" typ="Zeit" />
+			</Formular>
+		</Abschnitt>
+		<Abschnitt code="C01">
+			<Titel>
+				Notfallgeschehen, Anamnese, Erstbefund, Vormedikation, Vorbehandlung
+			</Titel>
+			<Formular>
+				<Freitext code="C08" />
+				<Auswahl code="C0F" term="AZ des Pat. vor dem Ereignis (entspr. ASA)" typ="einfach">
+					<Option code="C0M" term="gesund" />
+					<Option code="C0T" term="leicht eingeschränkt" />
+					<Option code="C10" term="deutlich eingeschränkt" />
+					<Option code="C1E" term="akut lebensgefährdet" />
+					<Option code="C17" term="moribund" />
+				</Auswahl>
+				<Auswahl code="C30" term="Versorgungssituation">
+					<Option code="C31" term="unabhängig" />
+					<Option code="C32" term="Pflege zuhause" />
+					<Option code="C33" term="Pflege in Instutition" />
+				</Auswahl>
+				<Auswahl code="C40" term="Antikoagulanzienmedikation (vor dem Ereignis)" typ="mehrfach">
+					<Option code="C41" term="TZ-Aggregationshemmer" />
+					<Option code="C42" term="VitK-Antagonist" />
+					<Option code="C43" term="DOAK" />
+					<Option code="C44" term="Heparin" />
+					<Sonstiges code="C45" term="Sonstige" />
+				</Auswahl>
+				<Auswahl code="C1L" term="Ersthelfermaßnahmen (Laien)" typ="einfach">
+					<leer code="C1S" term="keine" />
+					<Option code="C1Z" term="suffizient" />
+					<Option code="C26" term="insuffizient" />
+				</Auswahl>
+				<Frage code="C2D" term="First Responder vor Ort" typ="j_opt">
+					<wenn-ja>
+						<Feld code="C2K" term="ggf. Uhrzeit des Eintreffens" typ="Zeit" />
+					</wenn-ja>
+				</Frage>
+				<!--
+				<Auswahl code="AUTO" term="First Responder">
+				<Option code="AUTO" term="vor Ort">
+				<Zusatz>
+				<Feld code="AUTO" term="ggf. Uhrzeit des Eintreffens" typ="Zeit"/>
+				</Zusatz>
+				</Option>
+				</Auswahl>
+				-->
+				<Frage code="C2R" term="Besiedelung mit multiresistenten Keimen (MRSA, MRSE, ESBL etc) vorbekannt" typ="j_opt">
+					<wenn-ja>
+						<Auswahl code="C2Y" typ="mehrfach">
+							<Option code="C35" term="abgedeckt" />
+							<Option code="C3C" term="offen" />
+						</Auswahl>
+					</wenn-ja>
+				</Frage>
+				<!--
+				<Auswahl code="AUTO">
+				<Option code="AUTO" term="Besiedelung mit multiresistenten Keimen (MRSA, MRSE, ESBL etc) vorbekannt">
+				<Zusatz>
+				<Auswahl code="AUTO" typ="mehrfach">
+				<Option code="AUTO" term="abgedeckt"/>
+				<Option code="AUTO" term="offen"/>
+				</Auswahl>
+				</Zusatz>
+				</Option>
+				</Auswahl>
+				-->
+			</Formular>
+		</Abschnitt>
+		<Abschnitt code="D01">
+			<Titel>
+				Erstbefunde
+			</Titel>
+			<Abschnitt code="D08">
+				<Titel>
+					Neurologie
+				</Titel>
+				<Formular>
+					<leer code="D0F" term="kein" />
+					<leer code="D0M" term="ohne path. Befund" />
+					<Feld code="D0T" term="Zeitpunkt" typ="Zeit" />
+					<Auswahl code="D10" term="Augen öffnen" typ="einfach">
+						<Option code="D17" numerisch="4" term="spontan" />
+						<Option code="D1E" numerisch="3" term="auf Geräusch" />
+						<Option code="D1L" numerisch="2" term="auf Druck" />
+						<Option code="D1S" numerisch="1" term="kein Augenöffnen" />
+					</Auswahl>
+					<Auswahl code="D1Z" term="beste verbale Reaktion" typ="einfach">
+						<Option code="D26" numerisch="5" term="konversationsfähig, orientiert" />
+						<Option code="D2D" numerisch="4" term="konversationsfähig, verwirrt" />
+						<Option code="D2K" numerisch="3" term="Wörter" />
+						<Option code="D2R" numerisch="2" term="Laute" />
+						<Option code="D2Y" numerisch="1" term="keine" />
+					</Auswahl>
+					<Auswahlgruppe code="D35" term="beste motorische Reaktion">
+						<Auswahl code="D3C" term="Arm, rechts" />
+						<Auswahl code="D3J" term="Arm, links" />
+						<Auswahl code="D3Q" term="Bein, rechts" />
+						<Auswahl code="D3X" term="Arm, rechts" />
+						<Optionen>
+							<Option code="D44" numerisch="6" term="folgt Aufforderung" />
+							<Option code="D4B" numerisch="5" term="lokalisiert" />
+							<Option code="D4I" numerisch="4" term="Beugt normal" />
+							<Option code="D4P" numerisch="3" term="Beugt abnormal" />
+							<Option code="D4W" numerisch="2" term="Streckt" />
+							<Option code="D53" numerisch="1" term="keine" />
+						</Optionen>
+					</Auswahlgruppe>
+					<Feld code="D5A" einheit="1" term="Glasgow Coma Scale" typ="Zahl">
+						<Hinweis>
+							Zur Summierung der GCS wird nur der Wert der Extremität mit der besten motorischen Reaktion verwendet siehe www.glasgowcomascale.org
+						</Hinweis>
+					</Feld>
+					<Auswahlgruppe code="D5H" term="Extremitätenbewegung">
+						<Auswahl code="D5O" term="Arm, rechts" />
+						<Auswahl code="D5V" term="Arm, links" />
+						<Auswahl code="D62" term="Bein, rechts" />
+						<Auswahl code="D69" term="Arm, rechts" />
+						<Optionen>
+							<Option code="D6G" numerisch="1" term="normal" />
+							<Option code="D6N" numerisch="2" term="leicht vermindert" />
+							<Option code="D6U" numerisch="3" term="stark vermindert" />
+						</Optionen>
+					</Auswahlgruppe>
+					<Auswahl code="D71" term="Bewusstseinslage" typ="einfach">
+						<leer code="D78" term="nicht beurteilbar" />
+						<Option code="D7F" term="wach" />
+						<Option code="D7M" term="getrübt">
+							<Zusatz typ="einfach">
+								<Auswahl code="D7T" typ="mehrfach">
+									<Option code="D80" term="Reaktion auf Ansprache" />
+									<Option code="D87" term="Reaktion auf Schmerzreiz" />
+								</Auswahl>
+							</Zusatz>
+						</Option>
+						<Option code="D8E" term="bewusstlos" />
+						<Option code="D8L" term="analgosediert / Narkose" />
+					</Auswahl>
+					<Auswahl code="D8S" term="Neurologische Auffälligkeiten" typ="mehrfach">
+						<leer code="D8Z" term="ohne path. Befund" />
+						<leer code="D96" term="nicht beurteilbar" />
+						<Option code="D9D" term="Seitenzeichen (Pupillen, periph. Motorik)" />
+						<Option code="D9K" term="kein Lächeln" />
+						<Option code="D9R" term="Sprachstörung" />
+						<Option code="D9Y" term="Sehstörung" />
+						<Option code="DA5" term="Demenz" />
+						<Option code="DAC" term="Querschnittssymptomatik" />
+						<Option code="DAJ" term="Babinski Zeichen" />
+						<Option code="DAQ" term="Meningismus" />
+						<Option code="DAX" term="vorbestehende neurologische Defizite" />
+						<Sonstiges code="DB4" term="Sonstige" />
+					</Auswahl>
+					<Auswahlgruppe code="DBB" term="Pupillenweite">
+						<Auswahl code="DBI" term="rechts" />
+						<Auswahl code="DBP" term="links" />
+						<Optionen>
+							<Option code="DBW" term="eng" />
+							<Option code="DC3" term="mittel" />
+							<Option code="DCA" term="weit" />
+							<Option code="DCH" term="entrundet" />
+						</Optionen>
+					</Auswahlgruppe>
+					<Auswahlgruppe code="DCO" term="Lichtreaktion">
+						<Auswahl code="DCV" term="rechts" />
+						<Auswahl code="DD2" term="links" />
+						<Optionen>
+							<Option code="DD9" term="prompt" />
+							<Option code="DDG" term="träge" />
+							<Option code="DDN" term="keine" />
+						</Optionen>
+					</Auswahlgruppe>
+				</Formular>
+			</Abschnitt>
+			<Abschnitt code="DDU">
+				<Titel>
+					Messwerte initial
+				</Titel>
+				<Formular>
+					<leer code="DE1" term="keine" />
+					<Feld code="DE8" einheit="1" max="10" min="0" term="Schmerzen" typ="Zahl" />
+					<Feld code="DEF" einheit="mmHg" max="300" min="0" term="RRsys" typ="Zahl" />
+					<Feld code="DEM" einheit="mmHg" max="300" min="0" term="RRdia" typ="Zahl" />
+					<Feld code="DET" einheit="1/min" max="300" min="0" term="Herzfrequenz" typ="Zahl">
+						<Zusatz typ="einfach">
+							<Auswahl code="DF0" typ="einfach">
+								<Option code="DF7" term="rhythmisch" />
+								<Option code="DFE" term="arrhythmisch" />
+							</Auswahl>
+						</Zusatz>
+					</Feld>
+					<oder code="DFL" term="Blutzucker">
+						<Feld code="DFS" einheit="mg/dl mmol/l" max="600" min="0" term="Wert" typ="Zahl" />
+						<Auswahl code="DFZ" term="Kategorie" typ="einfach">
+							<Option code="DG6" term="LOW" />
+							<Option code="DGD" term="HIGH" />
+						</Auswahl>
+					</oder>
+					<Feld code="DGK" einheit="1/min" max="60" min="0" term="Atemfrequenz" typ="Zahl" />
+					<Feld code="DGR" einheit="%" max="100" min="0" term="SpO2" typ="Zahl">
+						<Zusatz typ="einfach">
+							<Auswahl code="DGY" typ="einfach">
+								<Option code="DH5" term="bei Raumluft" />
+								<Option code="DHC" term="unter O2-Gabe" />
+							</Auswahl>
+						</Zusatz>
+					</Feld>
+					<Feld code="DHJ" einheit="°C" max="42.0" min="20.0" term="Temperatur" typ="Zahl" />
+					<Feld code="DHQ" einheit="mmHg" max="200" min="0" term="etCO2" typ="Zahl" />
+					<Feld code="DHS" term="qSOFA" typ="Zahl" min="0" max="3">
+                        <Hinweis>
+                            je 1 Punkt für GCS &lt; 15, AF &gt; 22, RRsys &lt;= 100mmHg
+                        </Hinweis>
+					</Feld>
+				</Formular>
+			</Abschnitt>
+			<Abschnitt code="DHX">
+				<Titel>
+					EKG
+				</Titel>
+				<Formular>
+					<leer code="DI4" term="kein EKG" />
+					<Auswahl code="DIB" typ="einfach">
+						<Option code="DII" term="Sinusrhythmus" />
+						<Option code="DIP" term="Abs. Arrhythmie" />
+						<Option code="DIW" term="AV-Block II°" />
+						<Option code="DJ3" term="AV-Block III°" />
+						<Option code="DJA" term="Schrittmacherrhythmus" />
+						<Option code="DJH" term="Kammerflimmern" />
+						<Option code="DJO" term="PEA / EMD" />
+						<Option code="DJV" term="Asystolie" />
+						<Zusatz typ="mehrfach">
+							<Auswahl code="DK2" typ="einfach">
+								<Option code="DK9" term="STEMI" />
+								<Option code="DKG" term="schmale QRS-Tachykardie" />
+								<Option code="DKN" term="breite QRS-Tachykardie" />
+								<Option code="DKU" term="SVES / VES monomorph" />
+								<Option code="DL1" term="VES polymorph" />
+							</Auswahl>
+						</Zusatz>
+					</Auswahl>
+				</Formular>
+			</Abschnitt>
+			<Abschnitt code="DL8">
+				<Titel>
+					Atmung
+				</Titel>
+				<Formular>
+					<leer code="DLF" term="nicht US" />
+					<Auswahl code="DLM" typ="einfach">
+						<Option code="DLT" term="unauffällig" />
+						<Option code="DM0" term="Dyspnoe">
+							<Zusatz typ="einfach">
+								<Auswahl code="DM7" typ="mehrfach">
+									<Option code="DME" term="Stridor" />
+									<Option code="DML" term="Zyanose" />
+									<Option code="DMS" term="Spastik" />
+									<Option code="DMZ" term="Hyperventilation" />
+									<Option code="DN6" term="Atemwegsverlegung" />
+									<Option code="DND" term="Rasselgeräusche" />
+								</Auswahl>
+							</Zusatz>
+						</Option>
+						<Option code="DNK" term="Schnappatmung" />
+						<Option code="DNR" term="Apnoe" />
+						<Option code="DNY" term="Beatmung" />
+						<Option code="DO5" term="sonstiges path. Atemmuster (Biot, Cheyne Stokes etc.)" />
+					</Auswahl>
+				</Formular>
+			</Abschnitt>
+			<Abschnitt code="DOC">
+				<Titel>
+					Haut
+				</Titel>
+				<Formular>
+					<leer code="DOJ" term="nicht US" />
+					<Auswahl code="DOQ" typ="einfach">
+						<Option code="DOX" term="unauffällig" />
+						<Option code="DP4" term="pathologisch">
+							<Zusatz typ="einfach">
+								<Auswahl code="DPB" typ="mehrfach">
+									<Option code="DPI" term="stehende Hautfalten" />
+									<Option code="DPP" term="Dekubitus" />
+									<Option code="DPW" term="Exanthem" />
+									<Option code="DQ3" term="Oedeme" />
+									<Option code="DQA" term="kaltschweißig" />
+								</Auswahl>
+							</Zusatz>
+						</Option>
+					</Auswahl>
+				</Formular>
+			</Abschnitt>
+			<Abschnitt code="DQH">
+				<Titel>
+					Psyche
+				</Titel>
+				<Formular>
+					<leer code="DQO" term="nicht US" />
+					<leer code="DQV" term="unauffällig" />
+					<leer code="DR2" term="nicht beurteilbar" />
+					<Auswahl code="DR9" typ="mehrfach">
+						<Option code="DRG" term="wahnhaft" />
+						<Option code="DRN" term="erregt" />
+						<Option code="DRU" term="depressiv" />
+						<Option code="DS1" term="verwirrt" />
+						<Option code="DS8" term="aggressiv" />
+						<Option code="DSF" term="ängstlich" />
+						<Option code="DSM" term="suizidal" />
+						<Option code="DST" term="verlangsamt/stuporös" />
+						<Option code="DT0" term="euphorisch" />
+						<Option code="DT7" term="motorisch unruhig" />
+					</Auswahl>
+				</Formular>
+			</Abschnitt>
+		</Abschnitt>
+		<Abschnitt code="E01">
+			<Titel>
+				Erkrankungen
+			</Titel>
+			<Formular>
+				<leer code="E08" term="keine" />
+				<Auswahl code="E0F" term="ZNS" typ="mehrfach">
+					<Option code="E0M" term="Schlaganfall, TIA, intrakranielle Blutung">
+						<Zusatz typ="einfach">
+							<Frage code="E0T" term="im Lysefenster" typ="j_opt" />
+						</Zusatz>
+					</Option>
+					<Option code="E10" term="Krampfanfall" />
+					<Option code="E17" term="Status epilepticus" />
+					<Option code="E1E" term="Meningitis / Encephalitis" />
+					<Option code="E1L" term="Synkope" />
+					<Sonstiges code="E1S" />
+				</Auswahl>
+				<Auswahl code="E1Z" term="Herz-Kreislauf" typ="mehrfach">
+					<Option code="E26" term="Akutes Koronarsyndrom" />
+					<Option code="E2D" term="STEMI">
+						<Zusatz typ="einfach">
+							<Auswahl code="E2K" typ="mehrfach">
+								<Option code="E2R" term="Vorderwand" />
+								<Option code="E2Y" term="Hinterwand" />
+							</Auswahl>
+						</Zusatz>
+					</Option>
+					<Option code="E35" term="Rhythmusstörung">
+						<Zusatz typ="einfach">
+							<Auswahl code="E3C" typ="mehrfach">
+								<Option code="E3J" term="tachykard" />
+								<Option code="E3Q" term="bradykard" />
+							</Auswahl>
+						</Zusatz>
+					</Option>
+					<Option code="E3X" term="Lungenembolie" />
+					<Option code="E44" term="orthostatische Fehlregulation" />
+					<Option code="E4B" term="Herzinsuffizienz" />
+					<Option code="E4I" term="Lungenödem" />
+					<Option code="E4P" term="hypertensiver Notfall / hypertensive Krise" />
+					<Option code="E4W" term="kardiogener Schock" />
+					<Option code="E53" term="Schrittmacher- / ICD-Fehlfunktion" />
+					<Sonstiges code="E5A" />
+				</Auswahl>
+				<Auswahl code="E5H" term="Atmung" typ="mehrfach">
+					<Option code="E5O" term="Asthma (Anfall)" />
+					<Option code="E5V" term="Status asthmaticus" />
+					<Option code="E62" term="COPD (ggf. Exazerbation)">
+						<Zusatz typ="einfach">
+							<Auswahl code="E69" typ="mehrfach">
+								<Option code="E6G" term="Heimbeatmung" />
+								<Option code="E6N" term="Heimsauerstoff" />
+							</Auswahl>
+						</Zusatz>
+					</Option>
+					<Option code="E6U" term="Pneumonie, Bronchitis" />
+					<Option code="E71" term="Hyperventilationssyndrom" />
+					<Option code="E78" term="Aspiration" />
+					<Option code="E7F" term="Haemoptysen" />
+					<Sonstiges code="E7M" />
+				</Auswahl>
+				<Auswahl code="E7T" term="Abdomen" typ="mehrfach">
+					<Option code="E80" term="Akutes Abdomen" />
+					<Option code="E87" term="GI-Blutung">
+						<Zusatz typ="einfach">
+							<Auswahl code="E8E" typ="mehrfach">
+								<Option code="E8L" term="obere" />
+								<Option code="E8S" term="untere" />
+							</Auswahl>
+						</Zusatz>
+					</Option>
+					<Option code="E8Z" term="Kolik (z.B. Niere, Galle)" />
+					<Option code="E96" term="Enteritis" />
+					<Sonstiges code="E9D" />
+				</Auswahl>
+				<Auswahl code="E9K" term="Psychiatrie" typ="mehrfach">
+					<Option code="E9R" term="Psychose, Manie, Erregungszustand" />
+					<Option code="E9Y" term="Angst, Depression" />
+					<Option code="EA5" term="Intoxikation">
+						<Zusatz typ="einfach">
+							<Auswahl code="EAC" typ="mehrfach">
+								<Option code="EAJ" term="akzidentell" />
+								<Option code="EAQ" term="Alkohol" />
+								<Option code="EAX" term="Drogen" />
+								<Option code="EB4" term="Medikamente" />
+								<Sonstiges code="EBB" />
+							</Auswahl>
+						</Zusatz>
+					</Option>
+					<Option code="EBI" term="Entzug, Delir" />
+					<Option code="EBP" term="Suizid(versuch)" />
+					<Option code="EBW" term="Psychosoziale Krise" />
+					<Sonstiges code="EC3" />
+				</Auswahl>
+				<Auswahl code="ECA" term="Stoffwechsel" typ="mehrfach">
+					<Option code="ECH" term="Hypoglykämie" />
+					<Option code="ECO" term="Hyperglykämie" />
+					<Option code="ECV" term="Exsiccose" />
+					<Option code="ED2" term="Urämie/ANV">
+						<Zusatz typ="einfach">
+							<Frage code="ED9" term="bek. Dialysepflichtig" typ="j_opt" />
+						</Zusatz>
+					</Option>
+					<Sonstiges code="EDG" />
+				</Auswahl>
+				<Auswahl code="EDN" term="Pädiatrie" typ="mehrfach">
+					<Option code="EDU" term="Fieberkrampf" />
+					<Option code="EE1" term="Pseudokrupp" />
+					<Option code="EE8" term="SIDS / Near-SIDS" />
+					<Sonstiges code="EEF" />
+				</Auswahl>
+				<Auswahl code="EEM" term="Gynäkologie" typ="mehrfach">
+					<Option code="EET" term="Schwangerschaft">
+						<Zusatz typ="einfach">
+							<Auswahl code="EF0" typ="einfach">
+								<Option code="EF7" term="drohende Geburt" />
+								<Option code="EFE" term="präklinische Geburt" />
+							</Auswahl>
+						</Zusatz>
+					</Option>
+					<Option code="EFL" term="(Prä-)Eklampsie" />
+					<Option code="EFS" term="vaginale Blutung" />
+					<Sonstiges code="EFZ" />
+				</Auswahl>
+				<Auswahl code="EG6" term="Sonstige" typ="mehrfach">
+					<Option code="EGD" term="anaphylakt. Reaktion">
+						<Zusatz typ="einfach">
+							<Auswahl code="EGK" typ="einfach">
+								<Option code="EGR" term="I-II°" />
+								<Option code="EGY" term="III-IV°" />
+							</Auswahl>
+						</Zusatz>
+					</Option>
+					<Option code="EH5" term="Hitzeerschöpfung, Hitzschlag" />
+					<Option code="EHC" term="Unterkühlung / Erfrierung" />
+					<Option code="EHJ" term="hochfieb. Infekt / Sepsis / sept. Schock" />
+					<Option code="EHCOV" term="CoViD-19 / -Verdacht" />
+					<Option code="EHQ" term="Influenza" />
+					<Option code="EHX" term="Hepatitis / HIV" />
+					<Option code="EI4" term="akute Lumbago" />
+					<Option code="EIB" term="Epistaxis" />
+					<Option code="EII" term="soziales Problem (ohne psych. Störung)" />
+					<Option code="EIP" term="medizinische Behandlungskomplikation" />
+					<Sonstiges code="EIW" />
+				</Auswahl>
+			</Formular>
+		</Abschnitt>
+		<Abschnitt code="F01">
+			<Titel>
+				Verletzungen
+			</Titel>
+			<Formular>
+				<leer code="F08" term="keine" />
+				<Frage code="F0F" term="Zusammenhang mit sportlicher Aktivität" typ="j-n_opt" />
+				<Frage code="F0M" term="Zusammenhang mit beruflicher Aktivität" typ="j-n_opt" />
+				<Auswahlgruppe code="F0T">
+					<Auswahl code="F10" term="Schädel-Hirn" />
+					<Auswahl code="F17" term="Gesicht" />
+					<Auswahl code="F1E" term="Hals" />
+					<Auswahl code="F1L" term="Thorax" />
+					<Auswahl code="F1S" term="Abdomen" />
+					<Auswahl code="F1Z" term="Wirbelsäule" />
+					<Auswahl code="F26" term="Becken" />
+					<Auswahl code="F2D" term="Obere Extremitäten" />
+					<Auswahl code="F2K" term="Untere Extremitäten" />
+					<Auswahl code="F2R" term="Weichteile" />
+					<Optionen>
+						<Option code="F2Y" term="leicht" />
+						<Option code="F35" term="mittel" />
+						<Option code="F3C" term="schwer" />
+						<Zusatz typ="einfach">
+							<Auswahl code="F3J" typ="einfach">
+								<Option code="F3Q" term="geschlossen" />
+								<Option code="F3X" term="offen" />
+							</Auswahl>
+						</Zusatz>
+					</Optionen>
+				</Auswahlgruppe>
+				<Frage code="F44" term="Polytrauma" typ="j_opt" />
+				<Auswahl code="F4B" term="Spezielle Traumen" typ="mehrfach">
+					<Option code="F4I" term="Verbrennung, Verbrühung">
+						<Zusatz typ="einfach">
+							<Feld code="F4P" einheit="%" max="100" min="0" term="1. Grades" typ="Zahl" />
+							<Feld code="F4W" einheit="%" max="100" min="0" term="2. Grades" typ="Zahl" />
+							<Feld code="F53" einheit="%" max="100" min="0" term="3. Grades" typ="Zahl" />
+							<Feld code="F5A" einheit="%" max="100" min="0" term="4. Grades" typ="Zahl" />
+						</Zusatz>
+					</Option>
+					<Option code="F5H" term="Verätzung" />
+					<Option code="F5O" term="Verschüttung" />
+					<Option code="F5V" term="Einklemmung" />
+					<Option code="F62" term="Inhalationstrauma" />
+					<Option code="F69" term="Elektrounfall" />
+					<Option code="F6G" term="Beinahe-Ertrinken" />
+					<Option code="F6N" term="Tauchunfall" />
+					<Option code="F6U" term="haemorrhagischer Schock" />
+					<Sonstiges code="F71" term="Sonstige" />
+				</Auswahl>
+				<Gruppe code="F78" term="Unfallmechanismus">
+					<Auswahl code="F7F" term="Trauma" typ="einfach">
+						<Option code="F7M" term="stumpf" />
+						<Option code="F7T" term="penetrierend" />
+					</Auswahl>
+					<Auswahl code="F80" term="Sturz" typ="einfach">
+						<Option code="F86" term="ebenerdig" />
+						<Option code="F87" term="&lt;3m" />
+						<Option code="F8E" term="&gt;3m" />
+					</Auswahl>
+				</Gruppe>
+				<Gruppe code="F8L" term="Unfallhergang">
+					<Auswahl code="F8S" term="Verkersteilnehmer" typ="einfach">
+						<Option code="F8Z" term="Fußgänger" />
+						<Option code="F9Z" term="E-Scooter" />
+						<Option code="F96" term="Fahrrad" />
+						<Option code="F97" term="E-Bike u.Ä." />
+						<Option code="F9D" term="Motorrad/Sozius" />
+						<Option code="F9H" term="PKW-Insasse" />
+						<Option code="F9K" term="LKW-Insasse" />
+						<Option code="F9L" term="Bus-Insasse" />
+					</Auswahl>
+					<Auswahl code="F9Y" term="Gewaltanwendung" typ="mehrfach">
+						<Option code="FA5" term="Schlag" />
+						<Option code="FAC" term="Stich" />
+						<Option code="FAJ" term="Schuss" />
+						<Option code="FAQ" term="Gewaltverbrechen" />
+						<Sonstiges code="FAX" term="Sonstige" />
+					</Auswahl>
+				</Gruppe>
+			</Formular>
+		</Abschnitt>
+		<Abschnitt code="G01">
+			<Titel>
+				Erstdiagnosen
+			</Titel>
+			<Formular>
+                <Struktur code="G07">
+                    <xsi schemaLocation="http://naep.divi.de/strukturen/std naep-strukturen-std.xsd" type="Erstdiagnosen" />
+                </Struktur>
+                <Freitext code="G08" />
+				<Auswahl code="G0F" term="NACA SCORE" typ="mehrfach">
+					<Option code="G0M" term="I (geringfügige Störung)" />
+					<Option code="G0T" term="II (leichte Störung)" />
+					<Option code="G10" term="III (mäßige Störung)" />
+					<Option code="G17" term="IV (Lebensgefahr nicht auszuschließen)" />
+					<Option code="G1E" term="V (akute Lebensgefahr)" />
+					<Option code="G1L" term="VI (Reanimation)" />
+					<Option code="G1S" term="VII (Tod)" />
+					<Sonstiges code="G1Z" term="Sonstige" />
+				</Auswahl>
+				<Frage code="G26" term="Palliative Situation" typ="j_opt" />
+			</Formular>
+		</Abschnitt>
+		<Abschnitt code="H01">
+			<Titel>
+				Verlaufsbeschreibung
+			</Titel>
+			<Verlauf code="H08">
+				<leer code="H0F" term="keine" />
+				<Reihe>
+					<Feld code="H0M" max="300" min="0" term="Zeitpunkt" typ="Zeit" />
+					<Feld code="H0T" einheit="1/min" max="300" min="0" term="Puls" typ="Zahl" />
+					<Feld code="H10" einheit="mmHg" max="300" min="0" term="RRsys" typ="Zahl" />
+					<Feld code="H17" einheit="mmHg" max="300" min="0" term="RRdia" typ="Zahl" />
+					<Auswahl code="H1E" typ="mehrfach">
+						<Option code="H1L" term="HDM" />
+						<Option code="H1S" term="Defibrillation" />
+						<Option code="H1Z" term="Transport" />
+						<Option code="H26" term="Intubation" />
+						<Option code="H2D" term="Suprarenin" />
+						<Option code="H2K" term="Amiodaron" />
+					</Auswahl>
+					<Feld code="H2R" einheit="l/min" max="30" min="0" term="O2" typ="Zahl" />
+					<Feld code="H2Y" einheit="%" max="100" min="0" term="SpO2" typ="Zahl" />
+					<Feld code="H35" einheit="mmHg" max="200" min="0" term="etCO2" typ="Zahl" />
+				</Reihe>
+			</Verlauf>
+		</Abschnitt>
+		<Abschnitt code="I01">
+			<Titel>
+				Medikation
+			</Titel>
+			<Formular>
+				<leer code="I08" term="keine Medikation" />
+				<Struktur code="I0F">
+					<xsi schemaLocation="http://naep.divi.de/strukturen/std naep-strukturen-std.xsd" type="Medikation" />
+				</Struktur>
+				<Auswahl code="I0M" term="Vorab-Intervention durch Rettungsdienst" typ="mehrfach">
+					<Option code="I0N" term="Maßnahmen" />
+					<Option code="I0O" term="Medikamente" />
+					<Zusatz typ="einfach">
+						<Freitext code="I0P" />
+					</Zusatz>
+				</Auswahl>
+				<Auswahl code="I2D" term="Lysetherapie" typ="einfach">
+					<Option code="I2K" term="vor Kreislaufstillstand" />
+					<Option code="I2R" term="während Kreislaufstillstand" />
+					<Option code="I2Y" term="nach ROSC" />
+					<Zusatz typ="einfach">
+						<Feld code="I35" term="Beginn" typ="Zeit" />
+					</Zusatz>
+				</Auswahl>
+			</Formular>
+		</Abschnitt>
+		<Abschnitt code="J01">
+			<Titel>
+				Massnahmen
+			</Titel>
+			<Abschnitt code="J08">
+				<Titel>
+					Zugänge
+				</Titel>
+				<Formular>
+					<Auswahl code="J0F" typ="mehrfach">
+						<Option code="J0M" term="peripherer Zugang">
+							<Zusatz typ="einfach">
+								<Frage code="J0T" term="bereits vorhanden" typ="j_opt" />
+								<Feld code="J10" term="Art / Ort / Größe" typ="Text" />
+								<Feld code="J17" einheit="1" max="9" min="1" term="Anzahl" typ="Zahl" />
+							</Zusatz>
+						</Option>
+						<Option code="J1E" term="intraossäre Punktion">
+							<Zusatz typ="einfach">
+                                <Frage code="J1N" term="bereits vorhanden" typ="j_opt" />
+                                <Feld code="J1L" term="Art / Ort / Größe" typ="Text"/>
+                                <Feld code="J1S" einheit="1" max="9" min="1" term="Anzahl" typ="Zahl"/>
+							</Zusatz>
+						</Option>
+						<Option code="J1Z" term="Transnasal-Applikator" />
+						<Option code="J26" term="Sonstige">
+							<Zusatz typ="einfach">
+								<Feld code="J2D" term="Art / Ort / Größe" typ="Text" />
+								<Feld code="J2K" einheit="1" max="9" min="1" term="Anzahl" typ="Zahl" />
+							</Zusatz>
+						</Option>
+						<Option code="J2R" term="Zugang erschwert">
+							<Zusatz typ="einfach">
+								<Auswahl code="J2Y" typ="einfach">
+									<Option code="J35" term="mehr als 2 Versuche" />
+									<Option code="J3C" term="Zugang unmöglich, Verfahrenswechsel" />
+								</Auswahl>
+							</Zusatz>
+						</Option>
+					</Auswahl>
+				</Formular>
+			</Abschnitt>
+			<Abschnitt code="J3J">
+				<Titel>
+					Atemweg
+				</Titel>
+				<Formular>
+					<Auswahl code="J3Q" typ="mehrfach">
+						<Option code="J3X" term="Sauerstoffgabe">
+							<Zusatz typ="einfach">
+								<Feld code="J44" einheit="l/min" typ="Zahl" />
+								<Frage code="J4B" term="als Präoxygenierung" typ="j_opt" />
+							</Zusatz>
+						</Option>
+						<Option code="J4I" term="Freimachen der Atemwege"/>
+                        <Option code="J4K" term="Absaugen" />
+                        <Option code="J4L" term="Absaugpumpe" />
+						<Option code="J4P" term="Masken-/Beutel-Beatmung">
+							<Zusatz typ="einfach">
+								<Auswahl code="J4W" typ="mehrfach">
+									<Option code="J53" term="kontrolliert" />
+									<Option code="J5A" term="unterstützend, Demand-Ventil" />
+									<Option code="J5H" term="nicht möglich" />
+								</Auswahl>
+							</Zusatz>
+						</Option>
+						<Option code="J5O" term="supraglottische Atemwegshilfe">
+							<Zusatz typ="einfach">
+								<Auswahl code="J5V" typ="einfach">
+									<Option code="J62" term="Larynxmaske" />
+									<Option code="J69" term="Larynxtubus" />
+									<Option code="J6G" term="Sonstige" />
+								</Auswahl>
+							</Zusatz>
+						</Option>
+						<Option code="J6N" term="endotracheale Intubation">
+							<Zusatz typ="einfach">
+								<Auswahl code="J6U" typ="einfach">
+									<Option code="J71" term="oral" />
+									<Option code="J78" term="nasal" />
+								</Auswahl>
+								<Feld code="J7F" einheit="mm" max="9.5" min="3.0" term="Größe" typ="Zahl" />
+								<Frage code="J7M" term="Intubation erschwert" typ="j_opt">
+									<wenn-ja>
+										<Feld code="J7T" einheit="1" max="10" min="1" term="Anzahl Versuche" typ="Zahl" />
+									</wenn-ja>
+								</Frage>
+							</Zusatz>
+						</Option>
+						<Option code="J80" term="Videolaryngoskop" />
+						<Option code="J81" term="Trachealkanülenwechsel" />
+						<Option code="J87" term="Koniotomie / chirurgischer Atemweg" />
+						<Sonstiges code="J8E" term="sonstiger Atemwegszugang" />
+					</Auswahl>
+				</Formular>
+			</Abschnitt>
+			<Abschnitt code="J8L">
+				<Titel>
+					Beatmung
+				</Titel>
+				<Formular>
+					<Auswahl code="J8S" typ="einfach">
+						<Option code="J8Z" term="manuell" />
+						<Option code="J96" term="maschinell">
+							<Zusatz typ="einfach">
+								<Auswahl code="J9D" typ="einfach">
+									<Option code="J9K" term="kontrolliert" />
+									<Option code="J9R" term="assistiert" />
+									<Option code="J9Y" term="NIV" />
+								</Auswahl>
+								<Feld code="JA5" einheit="%" max="100" min="21" term="FiO2" typ="Zahl" />
+								<Feld code="JAC" einheit="1/min" max="35" min="6" term="AF" typ="Zahl" />
+								<Feld code="JAJ" einheit="l/min" max="10.0" min="0.5" term="AMV" typ="Zahl" />
+								<Feld code="JAQ" einheit="mmHg" max="20" min="0" term="PEEP" typ="Zahl" />
+								<Feld code="JAX" einheit="mmHg" max="50" min="15" term="Pmax" typ="Zahl" />
+							</Zusatz>
+						</Option>
+                        <Option code="JAZ" term="Notfallnarkose" />
+					</Auswahl>
+				</Formular>
+			</Abschnitt>
+			<Abschnitt code="JB4">
+				<Titel>
+					Defibrillation
+				</Titel>
+				<Formular>
+					<Auswahl code="JBB" typ="mehrfach">
+						<Option code="JBI" term="AED">
+							<Zusatz typ="einfach">
+								<Auswahl code="JBP" term="Erstanwendung" typ="einfach">
+									<Option code="JBW" term="Laien" />
+									<Option code="JC3" term="First Responder" />
+									<Option code="JCA" term="Rettungsdienst" />
+									<Option code="JCH" term="Arzt" />
+								</Auswahl>
+							</Zusatz>
+						</Option>
+						<Option code="JCO" term="Defi">
+							<Zusatz typ="einfach">
+								<Auswahl code="JCV" typ="einfach">
+									<Option code="JD2" term="monophasisch" />
+									<Option code="JD9" term="biphasisch" />
+								</Auswahl>
+								<Feld code="JDG" term="1. Defibrillation" typ="Zeit" />
+								<Feld code="JDN" term="1. ROSC" typ="Zeit" />
+								<Feld code="JDU" einheit="1" term="Anzahl Defi insgesamt" typ="Zahl" />
+								<Feld code="JE1" einheit="Joule" term="Energie (max)" typ="Zahl" />
+							</Zusatz>
+						</Option>
+					</Auswahl>
+				</Formular>
+			</Abschnitt>
+			<Abschnitt code="JE8">
+				<Titel>
+					Reanimation
+				</Titel>
+				<Hinweis>
+					Ergänzende Angaben unter Abschnitt "Reanimation / Tod / Todesfeststellung"
+				</Hinweis>
+				<Formular>
+					<Auswahl code="JEF" typ="mehrfach">
+						<Option code="JEM" term="Herzdruckmassage">
+							<Zusatz typ="einfach">
+								<Feld code="JET" term="Beginn HDM" typ="Zeit" />
+								<Auswahl code="JF0" typ="einfach">
+									<Option code="JF7" term="Feedbacksystem" />
+									<Option code="JFE" term="mechanisches Thoraxkompressionssystem" />
+								</Auswahl>
+							</Zusatz>
+						</Option>
+						<Option code="JFF" term="VV-ECMO" />
+						<Option code="JFG" term="VA-ECMO" />
+						<Option code="JFH" term="REBOA" />
+						<Option code="JFL" term="Aktive Kühlung">
+							<Zusatz typ="einfach">
+								<Auswahl code="JFS" typ="einfach">
+									<Option code="JFZ" term="Infusion" />
+									<Option code="JG6" term="Kühlpackungen" />
+									<Option code="JGD" term="technisch" />
+								</Auswahl>
+							</Zusatz>
+						</Option>
+						<Option code="JGK" term="Vorab: Telefonanleitung zur Reanimation" />
+					</Auswahl>
+				</Formular>
+			</Abschnitt>
+			<Abschnitt code="JGR">
+				<Titel>
+					Sonstige
+				</Titel>
+				<Formular>
+					<Frage code="JGY" term="Spezielle Lagerung" typ="j_opt">
+						<wenn-ja>
+							<Auswahl code="JH5" typ="mehrfach">
+								<Option code="JHC" term="stabile Seitenlage" />
+								<Option code="JHJ" term="Wärmeerhalt" />
+								<Option code="JHQ" term="Zervikalstütze" />
+								<Option code="JHX" term="Schocklagerung" />
+								<Option code="JI4" term="Inkubator" />
+								<Option code="JIB" term="Vakuumschiene" />
+								<Option code="JII" term="Oberkörper Hochlagerung" />
+								<Option code="JIP" term="Vakuummatratze" />
+								<Option code="JIW" term="Flachlagerung" />
+								<Option code="JJ3" term="Schaufeltrage" />
+								<Option code="JJA" term="Sitzend" />
+								<Option code="JJH" term="Spineboard" />
+								<Sonstiges code="JJO" term="Sonstige" />
+							</Auswahl>
+						</wenn-ja>
+					</Frage>
+					<Auswahl code="JJV" typ="mehrfach">
+						<Option code="JK2" term="12-Kanal EKG" />
+						<Option code="JK9" term="Funkübermittlung" />
+						<Option code="JKG" term="externer Schrittmacher" />
+						<Option code="JKN" term="Spritzenpumpe(n)" />
+						<Option code="JKU" term="invasiver RR" />
+						<Option code="JL1" term="Kardioversion" />
+						<Option code="JLF" term="Verband" />
+						<Option code="JLM" term="Reposition" />
+						<Option code="JLT" term="Beckenschlinge" />
+						<Option code="JM7" term="Thoraxdrainage re." />
+						<Option code="JME" term="Thoraxdrainage li." />
+						<Option code="JMF" term="Throakotomie" />
+						<Option code="JMG" term="Nadeldekompression" />
+						<Option code="JML" term="Blasenkatheter" />
+						<Option code="JMS" term="Magensonde" />
+						<Option code="JMZ" term="Ultraschall" />
+						<Option code="JND" term="Entbindung" />
+						<Option code="JNK" term="Krisenintervention" />
+						<Option code="JNH" term="besondere Hygiene" />
+						<Option code="JN8" term="Tourniquet" />
+						<Option code="JN9" term="Haemostyptikum" />
+						<Option code="JNA" term="Thoraxverschlusspflaster" />
+					</Auswahl>
+					<Sonstiges code="JNR" term="Sonstiges" />
+				</Formular>
+			</Abschnitt>
+		</Abschnitt>
+		<Abschnitt code="K01">
+			<Titel>
+				Reanimation / Tod / Todesfeststellung
+			</Titel>
+			<Formular>
+				<Auswahl code="K08" typ="einfach">
+					<Option code="K0F" term="Reanimation">
+						<Zusatz typ="einfach">
+							<Auswahl code="K0M" typ="einfach">
+								<Option code="K0T" term="ROSC im Verlauf" />
+								<Option code="K10" term="niemals ROSC" />
+								<Option code="K17" term="erfolglos" />
+							</Auswahl>
+							<Auswahl code="K1E" term="Beginn Rea." typ="einfach">
+								<Option code="K1L" term="Ersthelfer" />
+								<Option code="K1S" term="First Responder" />
+								<Option code="K1Z" term="Rettungsdienst" />
+								<Option code="K26" term="Notarzt" />
+							</Auswahl>
+							<Auswahl code="K2D" term="KH-Aufnahme" typ="einfach">
+								<Option code="K2K" term="mit ROSC" />
+								<Option code="K2R" term="laufende Reanimation" />
+							</Auswahl>
+						</Zusatz>
+					</Option>
+					<Option code="K2Y" term="keine Reanimation">
+						<Zusatz typ="einfach">
+							<Auswahl code="K35" typ="einfach">
+								<Option code="K3C" term="nicht gewünscht / Patientenverfügung" />
+								<Option code="K3J" term="zu spät" />
+								<Option code="K3Q" term="aussichtslose Grunderkrankung" />
+								<Sonstiges code="K3X" term="Sonstige" />
+							</Auswahl>
+						</Zusatz>
+					</Option>
+				</Auswahl>
+				<Frage code="K44" term="Tod" typ="j_opt">
+					<wenn-ja>
+						<Frage code="K4B" term="Todesfeststellung" typ="j_opt">
+							<wenn-ja>
+								<Auswahl code="K4I" term="Todesart" typ="einfach">
+									<Option code="K4P" term="natürlich" />
+									<Option code="K4W" term="unklar" />
+									<Option code="K53" term="nicht natürlich" />
+								</Auswahl>
+							</wenn-ja>
+						</Frage>
+						<oder code="K5A">
+							<Feld code="K5H" term="Todeszeitpunkt" typ="Zeit" />
+							<Frage code="K5O" term="Todeszeitpunkt nicht bestimmbar" typ="j_opt" />
+						</oder>
+					</wenn-ja>
+				</Frage>
+			</Formular>
+		</Abschnitt>
+		<Abschnitt code="L01">
+			<Titel>
+				Übergabe
+			</Titel>
+			<Abschnitt code="L08">
+				<Titel>
+					Messwerte
+				</Titel>
+				<Formular>
+					<leer code="L0F" term="keine" />
+					<Feld code="L0M" einheit="1" max="10" min="0" term="Schmerzen" typ="Zahl" />
+					<Feld code="L0T" einheit="mmHg" max="300" min="0" term="RRsys" typ="Zahl" />
+					<Feld code="L10" einheit="mmHg" max="300" min="0" term="RRdia" typ="Zahl" />
+					<Feld code="L17" einheit="1/min" max="300" min="0" term="Herzfrequenz" typ="Zahl">
+						<Zusatz typ="einfach">
+							<Auswahl code="L1E" typ="einfach">
+								<Option code="L1L" term="rhythmisch" />
+								<Option code="L1S" term="arrhythmisch" />
+							</Auswahl>
+						</Zusatz>
+					</Feld>
+					<oder code="L1Z" term="Blutzucker">
+						<Feld code="L26" einheit="mg/dl mmol/l" max="600" min="0" term="Wert" typ="Zahl" />
+						<Auswahl code="L2D" term="Kategorie" typ="einfach">
+							<Option code="L2K" term="LOW" />
+							<Option code="L2R" term="HIGH" />
+						</Auswahl>
+					</oder>
+					<Feld code="L2Y" einheit="1/min" max="60" min="0" term="Atemfrequenz" typ="Zahl" />
+					<Feld code="L35" einheit="%" max="100" min="0" term="SpO2" typ="Zahl">
+						<Zusatz typ="einfach">
+							<Auswahl code="L3C" typ="einfach">
+								<Option code="L3J" term="bei Raumluft" />
+								<Option code="L3Q" term="unter O2-Gabe" />
+							</Auswahl>
+						</Zusatz>
+					</Feld>
+					<Feld code="L3X" einheit="°C" max="42.0" min="20.0" term="Temperatur" typ="Zahl" />
+					<Feld code="L44" einheit="mmHg" max="200" min="0" term="etCO2" typ="Zahl" />
+				</Formular>
+			</Abschnitt>
+			<Abschnitt code="L4B">
+				<Titel>
+					EKG
+				</Titel>
+				<Formular>
+					<leer code="L4I" term="kein EKG" />
+					<Auswahl code="L4P" typ="einfach">
+						<Option code="L4W" term="Sinusrhythmus" />
+						<Option code="L53" term="Abs. Arrhythmie" />
+						<Option code="L5A" term="AV-Block II°" />
+						<Option code="L5H" term="AV-Block III°" />
+						<Option code="L5O" term="Schrittmacherrhythmus" />
+						<Option code="L5V" term="Kammerflimmern" />
+						<Option code="L62" term="PEA / EMD" />
+						<Option code="L69" term="Asystolie" />
+						<Zusatz typ="mehrfach">
+							<Auswahl code="L6G" typ="einfach">
+								<Option code="L6N" term="STEMI" />
+								<Option code="L6U" term="schmale QRS-Tachykardie" />
+								<Option code="L71" term="breite QRS-Tachykardie" />
+								<Option code="L78" term="SVES / VES monomorph" />
+								<Option code="L7F" term="VES polymorph" />
+							</Auswahl>
+						</Zusatz>
+					</Auswahl>
+				</Formular>
+			</Abschnitt>
+			<Abschnitt code="L7M">
+				<Titel>
+					Atmung
+				</Titel>
+				<Formular>
+					<leer code="L7T" term="nicht untersucht" />
+					<Auswahl code="L80" typ="einfach">
+						<Option code="L87" term="unauffällig" />
+						<Option code="L8E" term="Dyspnoe">
+							<Zusatz typ="einfach">
+								<Auswahl code="L8L" typ="mehrfach">
+									<Option code="L8S" term="Stridor" />
+									<Option code="L8Z" term="Zyanose" />
+									<Option code="L96" term="Spastik" />
+									<Option code="L9D" term="Hyperventilation" />
+									<Option code="L9K" term="Atemwegsverlegung" />
+									<Option code="L9R" term="Rasselgeräusche" />
+								</Auswahl>
+							</Zusatz>
+						</Option>
+						<Option code="L9Y" term="Schnappatmung" />
+						<Option code="LA5" term="Apnoe" />
+						<Option code="LAC" term="Beatmung" />
+						<Option code="LAJ" term="sonstiges path. Atemmuster (Biot, Cheyne Stokes etc.)" />
+					</Auswahl>
+				</Formular>
+			</Abschnitt>
+			<Abschnitt code="LAQ">
+				<Titel>
+					Bewusstsein
+				</Titel>
+				<Formular>
+					<leer code="LAX" term="nicht untersucht" />
+					<Auswahl code="LB4" typ="einfach">
+						<leer code="LBB" term="nicht beurteilbar" />
+						<Option code="LBI" term="wach" />
+						<Option code="LBP" term="getrübt">
+							<Zusatz typ="einfach">
+								<Auswahl code="LBW" typ="mehrfach">
+									<Option code="LC3" term="Reaktion auf Ansprache" />
+									<Option code="LCA" term="Reaktion auf Schmerzreiz" />
+								</Auswahl>
+							</Zusatz>
+						</Option>
+						<Option code="LCH" term="bewusstlos" />
+						<Option code="LCO" term="analgosediert / Narkose" />
+					</Auswahl>
+				</Formular>
+			</Abschnitt>
+		</Abschnitt>
+		<Abschnitt code="M01">
+			<Titel>
+				Einsatzverlauf
+			</Titel>
+			<Abschnitt code="M08">
+				<Titel>
+					Besonderheiten
+				</Titel>
+				<Formular>
+					<Auswahl code="M0F" typ="einfach">
+						<Option code="M0M" term="Übernahme aus arztbesetztem Rettungsmittel" />
+						<Option code="M0T" term="Übergabe an arztbesetztes Rettungsmittel" />
+						<Option code="M10" term="Transport ins Krankenhaus">
+							<Zusatz typ="einfach">
+								<Auswahl code="M17" typ="mehrfach">
+									<Option code="M1E" term="mit Arzt" />
+									<Option code="M1L" term="RTH" />
+									<Option code="M1S" term="mindestens eine Klinik nimmt nicht auf" />
+									<Option code="M1Z" term="Zwangsbelegung" />
+									<Option code="M26" term="Zwangsunterbringung" />
+									<Option code="M28" term="Sondersignal" />
+								</Auswahl>
+							</Zusatz>
+						</Option>
+						<Option code="M2D" term="nur Untersuchung und Behandlung">
+							<Zusatz typ="einfach">
+								<Auswahl code="M2K" typ="einfach">
+									<Option code="M2R" term="Transportverweigerung" />
+									<Option code="M2Y" term="Patient nicht transportfähig" />
+									<Option code="M35" term="Therapieverzicht/-beschränkung bewusst" />
+								</Auswahl>
+							</Zusatz>
+						</Option>
+					</Auswahl>
+					<Auswahl code="M3C" typ="mehrfach">
+						<Option code="M3J" term="Erhöhter Hygieneaufwand" />
+						<Option code="M3Q" term="erschwerter Pat-Zugang" />
+						<Option code="M3X" term="techn. Rettung" />
+						<Option code="M44" term="Schwerlasttransport erforderlich" />
+						<Option code="M4B" term="LNA am Einsatz" />
+						<Option code="M4I" term="MANV" />
+						<Option code="M4P" term="Behandlung mehrerer Patienten" />
+					</Auswahl>
+				</Formular>
+			</Abschnitt>
+			<Abschnitt code="M4W">
+				<Titel>
+					Übergabe
+				</Titel>
+				<Formular>
+					<Auswahl code="M53" typ="einfach">
+						<leer code="M5A" term="keine" />
+						<Option code="M5H" term="Einsatzstelle" />
+						<Option code="M5O" term="ZNA / INA" />
+						<Option code="M5V" term="Stroke Unit" />
+						<Option code="M62" term="Intensivstation" />
+						<Option code="M69" term="OP direkt" />
+						<Option code="M6G" term="Praxis" />
+						<Option code="M6N" term="Hausarzt / KV-Arzt vor Ort" />
+						<Option code="M6U" term="Fachambulanz" />
+						<Option code="M71" term="Schockraum" />
+						<Option code="M78" term="Herzkatheterlabor" />
+						<Option code="M7F" term="CPU" />
+						<Option code="M7M" term="Allgemeinstation" />
+						<Sonstiges code="M7T" term="Sonstige" />
+						<Zusatz typ="einfach">
+							<Feld code="M80" term="Übergabe an (Name)" typ="Text" />
+						</Zusatz>
+					</Auswahl>
+				</Formular>
+			</Abschnitt>
+			<Abschnitt code="M87">
+				<Titel>
+					Bemerkungen
+				</Titel>
+				<Hinweis>
+					z.B. Verlauf, Hausarzt, Telefon-Nummer Angehörige, Notkompetenz-Massnahmen
+				</Hinweis>
+				<Formular>
+                    <Auswahl code="M88" typ="einfach">
+                        <Option code="M89" term="Massnahmenverweigerung (ggf. detailliert angeben)" />
+                    </Auswahl>
+					<Freitext code="M8E" />
+				</Formular>
+			</Abschnitt>
+		</Abschnitt>
+	</Abschnitte>
+</Metamodell>

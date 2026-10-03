@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<dt:naep xsi:schemaLocation="http://naep.divi.de/daten ../xsd/naep-daten.xsd http://naep.divi.de/strukturen/std ../xsd/naep-strukturen-std.xsd" schemaVersion="1.0" xmlns:std="http://naep.divi.de/strukturen/std" xmlns:dt="http://naep.divi.de/daten" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:d="http://naep.divi.de/dokument">
+    <dt:version protokoll="V.6.0-0.93-NoVar-130820" metamodell="1.0"/>
+    <dt:abschnitte>
+        <dt:abs c="A01">
+            <dt:nb/>
+        </dt:abs>
+        <dt:abs c="B01">
+            <dt:nb/>
+        </dt:abs>
+        <dt:abs c="C01">
+            <dt:nb/>
+        </dt:abs>
+        <dt:abs c="D01">
+            <dt:abs c="D08">
+                <dt:nb/>
+            </dt:abs>
+            <dt:abs c="DDU">
+                <dt:nb/>
+            </dt:abs>
+            <dt:abs c="DHX">
+                <dt:nb/>
+            </dt:abs>
+            <dt:abs c="DL8">
+                <dt:nb/>
+            </dt:abs>
+            <dt:abs c="DOC">
+                <dt:nb/>
+            </dt:abs>
+            <dt:abs c="DQH">
+                <dt:nb/>
+            </dt:abs>
+        </dt:abs>
+        <dt:abs c="E01">
+            <dt:nb/>
+        </dt:abs>
+        <dt:abs c="F01">
+            <dt:nb/>
+        </dt:abs>
+        <dt:abs c="G01">
+            <dt:nb/>
+        </dt:abs>
+        <dt:abs c="H01">
+            <dt:nb/>
+        </dt:abs>
+        <dt:abs c="I01">
+            <dt:nb/>
+        </dt:abs>
+        <dt:abs c="J01">
+            <dt:abs c="J08">
+                <dt:nb/>
+            </dt:abs>
+            <dt:abs c="J3J">
+                <dt:nb/>
+            </dt:abs>
+            <dt:abs c="J8L">
+                <dt:nb/>
+            </dt:abs>
+            <dt:abs c="JB4">
+                <dt:nb/>
+            </dt:abs>
+            <dt:abs c="JE8">
+                <dt:nb/>
+            </dt:abs>
+            <dt:abs c="JGR">
+                <dt:nb/>
+            </dt:abs>
+        </dt:abs>
+        <dt:abs c="K01">
+            <dt:nb/>
+        </dt:abs>
+        <dt:abs c="L01">
+            <dt:abs c="L08">
+                <dt:nb/>
+            </dt:abs>
+            <dt:abs c="L4B">
+                <dt:nb/>
+            </dt:abs>
+            <dt:abs c="L7M">
+                <dt:nb/>
+            </dt:abs>
+            <dt:abs c="LAQ">
+                <dt:nb/>
+            </dt:abs>
+        </dt:abs>
+        <dt:abs c="M01">
+            <dt:abs c="M08">
+                <dt:nb/>
+            </dt:abs>
+            <dt:abs c="M4W">
+                <dt:nb/>
+            </dt:abs>
+            <dt:abs c="M87">
+                <dt:nb/>
+            </dt:abs>
+        </dt:abs>
+    </dt:abschnitte>
+</dt:naep>

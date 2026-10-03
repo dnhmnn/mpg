@@ -1,0 +1,373 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<dt:naep xsi:schemaLocation="http://naep.divi.de/daten ../xsd/naep-daten.xsd http://naep.divi.de/strukturen/std ../xsd/naep-strukturen-std.xsd" schemaVersion="1.0" xmlns:std="http://naep.divi.de/strukturen/std" xmlns:dt="http://naep.divi.de/daten" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:d="http://naep.divi.de/dokument">
+    <dt:version protokoll="V.6.0-0.93-NoVar-130820" metamodell="1.0"/>
+    <dt:abschnitte>
+        <dt:abs c="A01">
+            <dt:dat>
+                <dt:str c="A08">
+                    <dt:e xsi:type="std:PatStammdaten">
+                        <std:Patient pseudonym="ja">
+                            <std:Name>Mustermann</std:Name>
+                            <std:Vorname>Heinz</std:Vorname>
+                            <std:GebDat>1970-10-10</std:GebDat>
+                        </std:Patient>
+                        <std:Adresse>
+                            <std:Strasse>Musterstr. 10</std:Strasse>
+                            <std:PLZ>11111</std:PLZ>
+                            <std:Ort>Musterstadt</std:Ort>
+                        </std:Adresse>
+                        <std:Versicherung>
+                            <std:Kasse nr="123456789">MUSTERKASSE</std:Kasse>
+                            <std:VersNr>987654321</std:VersNr>
+                        </std:Versicherung>
+                    </dt:e>
+                    <dt:sel a="A0F" o="A0T"/>
+                    <dt:sel a="A17" o="A1E"/>
+                    <dt:wrt f="A26" n="3" e="Jahre"/>
+                </dt:str>
+            </dt:dat>
+        </dt:abs>
+        <dt:abs c="B01">
+            <dt:dat>
+                <dt:str c="B08">
+                    <dt:e xsi:type="std:EinsatztechnischeDaten">
+                        <std:EinsatzNr>111111111</std:EinsatzNr>
+                        <std:PatNr>222222222</std:PatNr>
+                        <std:PersNr>3333333333</std:PersNr>
+                        <std:Standort>Musterstandort</std:Standort>
+                        <std:LeitstelleKFZ>MU</std:LeitstelleKFZ>
+                    </dt:e>
+                </dt:str>
+                <dt:wrt f="B0F" d="2015-10-20"/>
+                <dt:str c="B0M">
+                    <dt:e xsi:type="std:Einsatzort">
+                        <std:Adresse>
+                            <std:Strasse>Musterstr. 10</std:Strasse>
+                            <std:PLZ>11111</std:PLZ>
+                            <std:Ort>Musterstadt</std:Ort>
+                        </std:Adresse>
+                        <std:GPSKoordinate lat="49.0833448116434" lon="12.109150133579394"/>
+                    </dt:e>
+                    <dt:sel a="B0T" o="B10"/>
+                    <dt:sonst a="B0T" c="B3C" t="TEXT TEXT TEXT"/>
+                </dt:str>
+                <dt:sel a="B3J" o="B3Q"/>
+                <dt:wrt f="B6U" t="TEXT TEXT"/>
+                <dt:wrt f="B80" t="TEXT TEXT"/>
+                <dt:wrt f="BAJ" t="TEXT TEXT"/>
+                <dt:wrt f="BBP" t="TEXT TEXT"/>
+                <dt:wrt f="BBW" t="TEXT TEXT"/>
+                <dt:sel a="BC3" o="BCA"/>
+                <dt:sonst a="BC3" c="BE1" t="TEXT TEXT TEXT"/>
+                <dt:wrt f="BEF" z="13:00"/>
+                <dt:ant f="BET" w="J"/>
+                <dt:wrt f="BF0" z="13:00"/>
+                <dt:wrt f="BF7" z="13:00"/>
+                <dt:wrt f="BFE" z="13:00"/>
+                <dt:wrt f="BFS" z="13:00"/>
+                <dt:wrt f="BFZ" z="13:00"/>
+                <dt:wrt f="BG6" z="13:00"/>
+                <dt:wrt f="BGD" z="13:00"/>
+            </dt:dat>
+        </dt:abs>
+        <dt:abs c="C01">
+            <dt:dat>
+                <dt:txt c="C08">
+                    <dt:z>TEXT TEXT TEXT</dt:z>
+                    <dt:z>TEXT TEXT TEXT</dt:z>
+                    <dt:z>TEXT TEXT TEXT</dt:z>
+                    <dt:z>TEXT TEXT TEXT</dt:z>
+                </dt:txt>
+                <dt:sel a="C0F" o="C0M"/>
+                <dt:sel a="C1L" o="C1Z"/>
+                <dt:ant f="C2D" w="J"/>
+                <dt:wrt f="C2K" z="13:00"/>
+                <dt:ant f="C2R" w="J"/>
+                <dt:sel a="C2Y" o="C35"/>
+            </dt:dat>
+        </dt:abs>
+        <dt:abs c="D01">
+            <dt:abs c="D08">
+                <dt:dat>
+                    <dt:wrt f="D0T" z="13:00"/>
+                    <dt:sel a="D10" o="D17" n="4"/>
+                    <dt:sel a="D1Z" o="D26" n="5"/>
+                    <dt:sel a="D3C" o="D44" n="6"/>
+                    <dt:sel a="D3J" o="D44" n="6"/>
+                    <dt:sel a="D3Q" o="D44" n="6"/>
+                    <dt:sel a="D3X" o="D44" n="6"/>
+                    <dt:wrt f="D5A" n="3" e="1"/>
+                    <dt:sel a="D5O" o="D6G" n="1"/>
+                    <dt:sel a="D5V" o="D6G" n="1"/>
+                    <dt:sel a="D62" o="D6G" n="1"/>
+                    <dt:sel a="D69" o="D6G" n="1"/>
+                    <dt:sel a="D71" o="D7F"/>
+                    <dt:sel a="D8S" o="D9D"/>
+                    <dt:sonst a="D8S" c="DB4" t="TEXT TEXT TEXT"/>
+                    <dt:sel a="DBI" o="DBW"/>
+                    <dt:sel a="DBP" o="DBW"/>
+                    <dt:sel a="DCV" o="DD9"/>
+                    <dt:sel a="DD2" o="DD9"/>
+                </dt:dat>
+            </dt:abs>
+            <dt:abs c="DDU">
+                <dt:dat>
+                    <dt:wrt f="DE8" n="3" e="1"/>
+                    <dt:wrt f="DEF" n="3" e="mmHg"/>
+                    <dt:wrt f="DEM" n="3" e="mmHg"/>
+                    <dt:wrt f="DET" n="3" e="1/min"/>
+                    <dt:wrt f="DFS" n="3" e="mg/dl mmol/l"/>
+                    <dt:wrt f="DGK" n="3" e="1/min"/>
+                    <dt:wrt f="DGR" n="3" e="%"/>
+                    <dt:wrt f="DHJ" n="3" e="°C"/>
+                    <dt:wrt f="DHQ" n="3" e="mmHg"/>
+                </dt:dat>
+            </dt:abs>
+            <dt:abs c="DHX">
+                <dt:dat>
+                    <dt:sel a="DIB" o="DII"/>
+                    <dt:sel a="DK2" o="DK9"/>
+                </dt:dat>
+            </dt:abs>
+            <dt:abs c="DL8">
+                <dt:dat>
+                    <dt:sel a="DLM" o="DLT"/>
+                </dt:dat>
+            </dt:abs>
+            <dt:abs c="DOC">
+                <dt:dat>
+                    <dt:sel a="DOQ" o="DOX"/>
+                </dt:dat>
+            </dt:abs>
+            <dt:abs c="DQH">
+                <dt:dat>
+                    <dt:sel a="DR9" o="DRG"/>
+                </dt:dat>
+            </dt:abs>
+        </dt:abs>
+        <dt:abs c="E01">
+            <dt:dat>
+                <dt:sel a="E0F" o="E0M"/>
+                <dt:sonst a="E0F" c="E1S" t="TEXT TEXT TEXT"/>
+                <dt:sel a="E1Z" o="E26"/>
+                <dt:sonst a="E1Z" c="E5A" t="TEXT TEXT TEXT"/>
+                <dt:sel a="E5H" o="E5O"/>
+                <dt:sonst a="E5H" c="E7M" t="TEXT TEXT TEXT"/>
+                <dt:sel a="E7T" o="E80"/>
+                <dt:sonst a="E7T" c="E9D" t="TEXT TEXT TEXT"/>
+                <dt:sel a="E9K" o="E9R"/>
+                <dt:sonst a="E9K" c="EC3" t="TEXT TEXT TEXT"/>
+                <dt:sel a="ECA" o="ECH"/>
+                <dt:sonst a="ECA" c="EDG" t="TEXT TEXT TEXT"/>
+                <dt:sel a="EDN" o="EDU"/>
+                <dt:sonst a="EDN" c="EEF" t="TEXT TEXT TEXT"/>
+                <dt:sel a="EEM" o="EET"/>
+                <dt:sonst a="EEM" c="EFZ" t="TEXT TEXT TEXT"/>
+                <dt:sel a="EG6" o="EGD"/>
+                <dt:sonst a="EG6" c="EIW" t="TEXT TEXT TEXT"/>
+            </dt:dat>
+        </dt:abs>
+        <dt:abs c="F01">
+            <dt:dat>
+                <dt:ant f="F0F" w="J"/>
+                <dt:ant f="F0M" w="J"/>
+                <dt:sel a="F10" o="F2Y"/>
+                <dt:sel a="F17" o="F2Y"/>
+                <dt:sel a="F1E" o="F2Y"/>
+                <dt:sel a="F1L" o="F2Y"/>
+                <dt:sel a="F1S" o="F2Y"/>
+                <dt:sel a="F1Z" o="F2Y"/>
+                <dt:sel a="F26" o="F2Y"/>
+                <dt:sel a="F2D" o="F2Y"/>
+                <dt:sel a="F2K" o="F2Y"/>
+                <dt:sel a="F2R" o="F2Y"/>
+                <dt:ant f="F44" w="J"/>
+                <dt:sel a="F4B" o="F4I"/>
+                <dt:sonst a="F4B" c="F71" t="TEXT TEXT TEXT"/>
+                <dt:sel a="F7F" o="F7M"/>
+                <dt:sel a="F80" o="F87"/>
+                <dt:sel a="F8S" o="F8Z"/>
+                <dt:sonst a="F8S" c="F9R" t="TEXT TEXT TEXT"/>
+                <dt:sel a="F9Y" o="FA5"/>
+                <dt:sonst a="F9Y" c="FAX" t="TEXT TEXT TEXT"/>
+            </dt:dat>
+        </dt:abs>
+        <dt:abs c="G01">
+            <dt:dat>
+                <dt:str c="G07">
+                    <dt:e xsi:type="std:Erstdiagnosen">
+                        <std:Diagnose code="J18.9">Pneumonie</std:Diagnose>
+                    </dt:e>
+                </dt:str>
+                <dt:txt c="G08">
+                    <dt:z>TEXT TEXT TEXT</dt:z>
+                    <dt:z>TEXT TEXT TEXT</dt:z>
+                    <dt:z>TEXT TEXT TEXT</dt:z>
+                    <dt:z>TEXT TEXT TEXT</dt:z>
+                </dt:txt>
+                <dt:sel a="G0F" o="G0M"/>
+                <dt:sonst a="G0F" c="G1Z" t="TEXT TEXT TEXT"/>
+                <dt:ant f="G26" w="J"/>
+            </dt:dat>
+        </dt:abs>
+        <dt:abs c="H01">
+            <dt:ver c="H08">
+                <dt:r>
+                    <dt:sel a="H1E" o="H1L"/>
+                    <dt:wrt f="H0M" z="13:00"/>
+                    <dt:wrt f="H0T" n="3" e="1/min"/>
+                    <dt:wrt f="H10" n="3" e="mmHg"/>
+                    <dt:wrt f="H17" n="3" e="mmHg"/>
+                    <dt:wrt f="H2R" n="3" e="l/min"/>
+                    <dt:wrt f="H2Y" n="3" e="%"/>
+                    <dt:wrt f="H35" n="3" e="mmHg"/>
+                </dt:r>
+                <dt:r>
+                    <dt:sel a="H1E" o="H1L"/>
+                    <dt:wrt f="H0M" z="13:00"/>
+                    <dt:wrt f="H0T" n="3" e="1/min"/>
+                    <dt:wrt f="H10" n="3" e="mmHg"/>
+                    <dt:wrt f="H17" n="3" e="mmHg"/>
+                    <dt:wrt f="H2R" n="3" e="l/min"/>
+                    <dt:wrt f="H2Y" n="3" e="%"/>
+                    <dt:wrt f="H35" n="3" e="mmHg"/>
+                </dt:r>
+            </dt:ver>
+        </dt:abs>
+        <dt:abs c="I01">
+            <dt:dat>
+                <dt:str c="I0F">
+                    <dt:e xsi:type="std:Medikation">
+                        <std:Einzeldosis>
+                            <std:Medikament>Medi A</std:Medikament>
+                            <std:Wirkstoff>Wirkstoff B</std:Wirkstoff>
+                            <std:Menge einheit="mg">100</std:Menge>
+                            <std:Volumen einheit="ml">1000</std:Volumen>
+                            <std:Zeit start="10:15" ende="12:15"/>
+                            <std:Applikation code="ROA.01" term="i.v."/>
+                            <std:ATC>X01BB04</std:ATC>
+                        </std:Einzeldosis>
+                        <std:Einzeldosis>
+                            <std:Medikament>Medi D</std:Medikament>
+                            <std:Wirkstoff>Wirkstoff C</std:Wirkstoff>
+                            <std:Menge einheit="mg">200</std:Menge>
+                            <std:Volumen einheit="ml">500</std:Volumen>
+                            <std:Zeit start="13:15" ende="14:15"/>
+                            <std:Applikation code="ROA.01" term="i.v."/>
+                            <std:ATC>A01BB04</std:ATC>
+                        </std:Einzeldosis>
+                    </dt:e>
+                </dt:str>
+                <dt:sel a="I0M" o="I0T"/>
+                <dt:sonst a="I0M" c="I26" t="TEXT TEXT TEXT"/>
+                <dt:sel a="I2D" o="I2K"/>
+                <dt:wrt f="I35" z="13:00"/>
+            </dt:dat>
+        </dt:abs>
+        <dt:abs c="J01">
+            <dt:abs c="J08">
+                <dt:dat>
+                    <dt:sel a="J0F" o="J0M"/>
+                </dt:dat>
+            </dt:abs>
+            <dt:abs c="J3J">
+                <dt:dat>
+                    <dt:sel a="J3Q" o="J3X"/>
+                    <dt:sonst a="J3Q" c="J8E" t="TEXT TEXT TEXT"/>
+                </dt:dat>
+            </dt:abs>
+            <dt:abs c="J8L">
+                <dt:dat>
+                    <dt:sel a="J8S" o="J8Z"/>
+                </dt:dat>
+            </dt:abs>
+            <dt:abs c="JB4">
+                <dt:dat>
+                    <dt:sel a="JBB" o="JBI"/>
+                </dt:dat>
+            </dt:abs>
+            <dt:abs c="JE8">
+                <dt:dat>
+                    <dt:sel a="JEF" o="JEM"/>
+                </dt:dat>
+            </dt:abs>
+            <dt:abs c="JGR">
+                <dt:dat>
+                    <dt:ant f="JGY" w="J"/>
+                    <dt:sel a="JH5" o="JHC"/>
+                    <dt:sonst a="JH5" c="JJO" t="TEXT TEXT TEXT"/>
+                    <dt:sel a="JJV" o="JK2"/>
+                    <dt:sel a="JL8" o="JLF"/>
+                    <dt:sel a="JM0" o="JM7"/>
+                    <dt:sel a="JN6" o="JND"/>
+                    <dt:sonst c="JNR" t="TEXT TEXT TEXT"/>
+                </dt:dat>
+            </dt:abs>
+        </dt:abs>
+        <dt:abs c="K01">
+            <dt:dat>
+                <dt:sel a="K08" o="K0F"/>
+                <dt:ant f="K44" w="J"/>
+                <dt:ant f="K4B" w="J"/>
+                <dt:sel a="K4I" o="K4P"/>
+                <dt:wrt f="K5H" z="13:00"/>
+            </dt:dat>
+        </dt:abs>
+        <dt:abs c="L01">
+            <dt:abs c="L08">
+                <dt:dat>
+                    <dt:wrt f="L0M" n="3" e="1"/>
+                    <dt:wrt f="L0T" n="3" e="mmHg"/>
+                    <dt:wrt f="L10" n="3" e="mmHg"/>
+                    <dt:wrt f="L17" n="3" e="1/min"/>
+                    <dt:wrt f="L26" n="3" e="mg/dl mmol/l"/>
+                    <dt:wrt f="L2Y" n="3" e="1/min"/>
+                    <dt:wrt f="L35" n="3" e="%"/>
+                    <dt:wrt f="L3X" n="3" e="°C"/>
+                    <dt:wrt f="L44" n="3" e="mmHg"/>
+                </dt:dat>
+            </dt:abs>
+            <dt:abs c="L4B">
+                <dt:dat>
+                    <dt:sel a="L4P" o="L4W"/>
+                    <dt:sel a="L6G" o="L6N"/>
+                </dt:dat>
+            </dt:abs>
+            <dt:abs c="L7M">
+                <dt:dat>
+                    <dt:sel a="L80" o="L87"/>
+                </dt:dat>
+            </dt:abs>
+            <dt:abs c="LAQ">
+                <dt:dat>
+                    <dt:sel a="LB4" o="LBI"/>
+                </dt:dat>
+            </dt:abs>
+        </dt:abs>
+        <dt:abs c="M01">
+            <dt:abs c="M08">
+                <dt:dat>
+                    <dt:sel a="M0F" o="M0M"/>
+                    <dt:sel a="M3C" o="M3J"/>
+                </dt:dat>
+            </dt:abs>
+            <dt:abs c="M4W">
+                <dt:dat>
+                    <dt:sel a="M53" o="M5H"/>
+                    <dt:sonst a="M53" c="M7T" t="TEXT TEXT TEXT"/>
+                    <dt:wrt f="M80" t="TEXT TEXT"/>
+                </dt:dat>
+            </dt:abs>
+            <dt:abs c="M87">
+                <dt:dat>
+                    <dt:txt c="M8E">
+                        <dt:z>TEXT TEXT TEXT</dt:z>
+                        <dt:z>TEXT TEXT TEXT</dt:z>
+                        <dt:z>TEXT TEXT TEXT</dt:z>
+                        <dt:z>TEXT TEXT TEXT</dt:z>
+                    </dt:txt>
+                </dt:dat>
+            </dt:abs>
+        </dt:abs>
+    </dt:abschnitte>
+</dt:naep>

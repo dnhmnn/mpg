@@ -1,0 +1,289 @@
+<?xml version="1.0"?>
+<xs:schema version="1.0"
+           xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:d="http://naep.divi.de/dokument"
+           xmlns:std="http://naep.divi.de/strukturen/std"
+           xmlns:red="http://naep.divi.de/meta/redaktionell"
+           targetNamespace="http://naep.divi.de/dokument"
+           elementFormDefault="qualified">
+
+    <xs:import namespace="http://www.w3.org/XML/1998/namespace"
+               schemaLocation="http://www.w3.org/2001/03/xml.xsd"/>
+    <xs:import namespace="http://naep.divi.de/strukturen/std"
+               schemaLocation="naep-strukturen-std.xsd"/>
+    
+    <xs:element name="NAEP">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="Version" minOccurs="1" maxOccurs="1">
+                    <xs:complexType>
+                        <xs:attribute name="protokoll" type="xs:token" use="required"/>
+                        <xs:attribute name="metamodell" type="xs:token" use="required"/>
+                    </xs:complexType>
+                </xs:element>
+                <xs:element name="Abschnitte" minOccurs="1" maxOccurs="1">
+                    <xs:complexType>
+                        <xs:sequence>
+                            <xs:element ref="d:Abschnitt" minOccurs="1" maxOccurs="unbounded"/>
+                        </xs:sequence>
+                    </xs:complexType>
+                </xs:element>
+            </xs:sequence>
+            <xs:attribute name="schemaVersion" type="xs:token" use="required" fixed="1.0"/>
+        </xs:complexType>
+    </xs:element>
+    
+    <xs:element name="Abschnitt" type="d:TypAbschnitt"/>
+    
+    <xs:complexType name="TypAbschnitt">
+        <xs:sequence>
+            <xs:element name="Titel" type="xs:string" maxOccurs="1"/>
+            <xs:choice minOccurs="1" maxOccurs="1">
+                <xs:element name="nicht-bearbeitet"/>
+                <xs:sequence>
+                    <xs:group ref="d:GrAbschnitt" minOccurs="1" maxOccurs="1"/>
+                    <xs:element ref="d:Abschnitt" minOccurs="0" maxOccurs="unbounded"/>
+                </xs:sequence>
+                <xs:element ref="d:Abschnitt" minOccurs="1" maxOccurs="unbounded"/>
+            </xs:choice>
+        </xs:sequence>
+        <xs:attribute name="code" type="d:TypId" use="required"/>
+    </xs:complexType>
+    
+    <xs:group name="GrAbschnitt">
+        <xs:choice>
+            <xs:element name="Daten" type="d:TypDaten"/>
+            <xs:element name="Verlauf" type="d:TypVerlauf"/>
+            <xs:element name="leer" type="d:TypLeer"/>
+        </xs:choice>
+    </xs:group>
+    
+    <xs:complexType name="TypDaten">
+        <xs:sequence>
+            <xs:choice minOccurs="1" maxOccurs="1">
+                <xs:sequence>
+                    <xs:group ref="d:GrEingabe" minOccurs="1" maxOccurs="unbounded"/>
+                    <xs:element name="Sonstiges" type="d:TypSonstiges" minOccurs="0" maxOccurs="1"/>
+                </xs:sequence>
+                <xs:element name="Sonstiges" type="d:TypSonstiges" minOccurs="1" maxOccurs="1"/>
+            </xs:choice>
+        </xs:sequence>
+    </xs:complexType>
+    
+    <xs:complexType name="TypLeer">
+        <xs:attributeGroup ref="d:AGrCodeTerm"/>
+    </xs:complexType>
+    
+    <xs:complexType name="TypVerlauf">
+        <xs:sequence>
+            <xs:choice minOccurs="1" maxOccurs="1">
+                <xs:element name="leer" type="d:TypLeer"/>
+                <xs:sequence>
+                    <xs:element name="Reihe" minOccurs="1" maxOccurs="unbounded">
+                        <xs:complexType>
+                            <xs:sequence>
+                                <xs:group ref="d:GrEingabe" minOccurs="0" maxOccurs="unbounded"/>
+                                <xs:element name="Sonstiges" type="d:TypSonstiges" minOccurs="0" maxOccurs="1"/>
+                            </xs:sequence>
+                        </xs:complexType>
+                    </xs:element>
+                </xs:sequence>
+            </xs:choice>
+        </xs:sequence>
+        <xs:attributeGroup ref="d:AGrCode"/>
+    </xs:complexType>
+    
+    <xs:complexType name="TypFrage">
+        <xs:sequence>
+            <xs:element name="Antwort" minOccurs="1" maxOccurs="1">
+                <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                        <xs:enumeration value="J"/>
+                        <xs:enumeration value="N"/>
+                        <xs:enumeration value="UB"/>
+                    </xs:restriction>
+                </xs:simpleType>
+            </xs:element>
+            <xs:element name="Zusatz" type="d:TypZusatz" minOccurs="0" maxOccurs="1"/>
+        </xs:sequence>
+        <xs:attributeGroup ref="d:AGrCodeTerm"/>
+    </xs:complexType>
+    
+    <xs:group name="GrEingabe">
+        <xs:choice>
+            <xs:element name="Feld" type="d:TypFeld"/>
+            <xs:element name="Auswahl" type="d:TypAuswahl">
+                <xs:unique name="selektiert">
+                    <xs:selector xpath="d:selektiert"/>
+                    <xs:field xpath="@code"/>
+                </xs:unique>
+            </xs:element>
+            <xs:element name="Gruppe">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:choice minOccurs="1" maxOccurs="1">
+                            <xs:element name="leer" type="d:TypLeer" minOccurs="1" maxOccurs="1"/>
+                            <xs:sequence>
+                                <xs:group ref="d:GrEingabe" minOccurs="1" maxOccurs="unbounded"/>
+                            </xs:sequence>
+                        </xs:choice>
+                    </xs:sequence>
+                    <xs:attributeGroup ref="d:AGrCodeOptTerm"/>
+                </xs:complexType>
+            </xs:element>
+            <xs:element name="Frage" type="d:TypFrage"/>
+            <xs:element name="Freitext">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element name="Zeile" minOccurs="1" maxOccurs="unbounded"/>
+                    </xs:sequence>
+                    <xs:attributeGroup ref="d:AGrCode"/>
+                </xs:complexType>
+            </xs:element>
+            <xs:element name="strukturiert" type="d:TypStrukturiert"/>
+        </xs:choice>
+    </xs:group>
+    
+    <xs:complexType name="TypAuswahl">
+        <xs:sequence>
+            <xs:choice minOccurs="1" maxOccurs="1">
+                <xs:element name="leer" type="d:TypLeer" minOccurs="1" maxOccurs="1"/>
+                <xs:sequence>
+                    <xs:element name="selektiert" type="d:TypSelektiert" maxOccurs="unbounded"/>
+                    <xs:element name="Sonstiges" type="d:TypSonstiges" minOccurs="0" maxOccurs="1"/>
+                    <xs:element name="Zusatz" type="d:TypZusatz" minOccurs="0" maxOccurs="1"/>
+                </xs:sequence>
+                <xs:sequence>
+                    <xs:element name="Sonstiges" type="d:TypSonstiges" minOccurs="1" maxOccurs="1"/>
+                    <xs:element name="Zusatz" type="d:TypZusatz" minOccurs="0" maxOccurs="1"/>
+                </xs:sequence>
+            </xs:choice>
+        </xs:sequence>
+        <xs:attributeGroup ref="d:AGrCodeOptTerm"/>
+        <xs:attributeGroup ref="d:AGrAuswahlTyp"/>
+    </xs:complexType>
+    
+    <xs:complexType name="TypStrukturiert">
+        <xs:sequence>
+            <xs:element name="Daten" type="std:TypStrukturiertBase" minOccurs="1" maxOccurs="1"/>
+            <xs:element name="Zusatz" type="d:TypZusatz" minOccurs="0" maxOccurs="1"/>
+        </xs:sequence>
+        <xs:attributeGroup ref="d:AGrCodeOptTerm"/>
+    </xs:complexType>
+    
+    <xs:complexType name="TypZusatz">
+        <xs:sequence>
+            <xs:group ref="d:GrEingabe" minOccurs="1" maxOccurs="unbounded"/>
+        </xs:sequence>
+        <xs:attributeGroup ref="d:AGrAuswahlTyp"/>
+    </xs:complexType>
+    
+    <xs:attributeGroup name="AGrAuswahlTyp">
+        <xs:attribute name="typ" default="einfach">
+            <xs:simpleType>
+                <xs:restriction base="xs:string">
+                    <xs:enumeration value="einfach"/>
+                    <xs:enumeration value="mehrfach"/>
+                </xs:restriction>
+            </xs:simpleType>
+        </xs:attribute>
+    </xs:attributeGroup>
+    
+    <xs:attributeGroup name="AGrFrageTyp">
+        <xs:attribute name="typ" use="required">
+            <xs:simpleType>
+                <xs:restriction base="xs:string">
+                    <xs:enumeration value="j-n-ub"/>
+                    <xs:enumeration value="j-n"/>
+                </xs:restriction>
+            </xs:simpleType>
+        </xs:attribute>
+    </xs:attributeGroup>
+    
+    <xs:complexType name="TypSonstiges">
+        <xs:sequence>
+            <xs:element name="Text" type="std:TypText"/>                    
+        </xs:sequence>
+        <xs:attributeGroup ref="d:AGrCodeOptTerm"/>
+    </xs:complexType>
+    
+    <xs:complexType name="TypSelektiert">
+        <xs:sequence>
+            <xs:element name="Zusatz" type="d:TypZusatz" minOccurs="0" maxOccurs="1"/>
+        </xs:sequence>
+        <xs:attribute name="code" type="d:TypCode" use="required"/>
+        <xs:attribute name="term" type="std:TypText" use="required"/>
+        <xs:attribute name="numerisch" type="xs:integer" use="optional"/>
+    </xs:complexType>
+    
+    <xs:complexType name="TypFeld">
+        <xs:complexContent>
+            <xs:extension base="d:TypEingabe">
+                <xs:sequence>
+                    <xs:choice minOccurs="1" maxOccurs="1">
+                        <xs:element name="Zahl">
+                            <xs:complexType>
+                                <xs:simpleContent>
+                                    <xs:extension base="xs:decimal">
+                                        <xs:attribute name="einheit" type="std:TypText" use="required"/>
+                                    </xs:extension>
+                                </xs:simpleContent>
+                            </xs:complexType>
+                        </xs:element>
+                        <xs:element name="Datum" type="d:TypDatum"/>
+                        <xs:element name="Zeit" type="std:TypZeit"/>
+                        <xs:element name="Text" type="std:TypText"/>
+                    </xs:choice>
+                    <xs:element name="Zusatz" type="d:TypZusatz" minOccurs="0" maxOccurs="1"/>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+    
+    <xs:complexType name="TypEingabe">
+        <xs:sequence>
+            <xs:element name="Hinweis" minOccurs="0" maxOccurs="1"/>
+        </xs:sequence>
+        <xs:attributeGroup ref="d:AGrCodeOptTerm"/>
+    </xs:complexType>
+    
+    <xs:simpleType name="TypEinheit">
+        <xs:list itemType="xs:string">
+        </xs:list>
+    </xs:simpleType>
+    
+    <xs:simpleType name="TypDatum">
+        <xs:restriction base="xs:date">
+            <xs:pattern value="([0-9]{4})-([0-9]{2})-([0-9]{2})"/>
+        </xs:restriction>
+    </xs:simpleType>
+    
+    <xs:simpleType name="TypId">
+        <xs:restriction base="xs:ID">
+            <xs:minLength value="3"/>
+            <xs:maxLength value="6"/>
+        </xs:restriction>
+    </xs:simpleType>
+    
+    <xs:simpleType name="TypCode">
+        <xs:restriction base="xs:token">
+            <xs:minLength value="3"/>
+            <xs:maxLength value="6"/>
+        </xs:restriction>
+    </xs:simpleType>
+    
+    <xs:attributeGroup name="AGrCode">
+        <xs:attribute name="code" type="d:TypCode" use="required"/>
+    </xs:attributeGroup>
+    
+    <xs:attributeGroup name="AGrCodeTerm">
+        <xs:attributeGroup ref="d:AGrCode"/>
+        <xs:attribute name="term" type="std:TypText" use="required"/>
+    </xs:attributeGroup>
+    
+    <xs:attributeGroup name="AGrCodeOptTerm">
+        <xs:attributeGroup ref="d:AGrCode"/>
+        <xs:attribute name="term" type="std:TypText"/>
+    </xs:attributeGroup>
+    
+</xs:schema>

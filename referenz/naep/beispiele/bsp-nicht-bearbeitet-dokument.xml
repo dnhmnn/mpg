@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<d:NAEP xsi:schemaLocation="http://naep.divi.de/dokument ../xsd/naep-dokument.xsd http://naep.divi.de/strukturen/std ../xsd/naep-strukturen-std.xsd" schemaVersion="1.0" xmlns:std="http://naep.divi.de/strukturen/std" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:d="http://naep.divi.de/dokument">
+    <d:Version protokoll="V.6.0-0.93-NoVar-130820" metamodell="1.0"/>
+    <d:Abschnitte>
+        <d:Abschnitt code="A01">
+            <d:Titel>Patient - Stammdaten</d:Titel>
+            <d:nicht-bearbeitet/>
+        </d:Abschnitt>
+        <d:Abschnitt code="B01">
+            <d:Titel>Einsatztechnische Daten</d:Titel>
+            <d:nicht-bearbeitet/>
+        </d:Abschnitt>
+        <d:Abschnitt code="C01">
+            <d:Titel>Notfallgeschehen, Anamnese, Erstbefund, Vormedikation, Vorbehandlung</d:Titel>
+            <d:nicht-bearbeitet/>
+        </d:Abschnitt>
+        <d:Abschnitt code="D01">
+            <d:Titel>Erstbefunde</d:Titel>
+            <d:Abschnitt code="D08">
+                <d:Titel>Neurologie</d:Titel>
+                <d:nicht-bearbeitet/>
+            </d:Abschnitt>
+            <d:Abschnitt code="DDU">
+                <d:Titel>Messwerte initial</d:Titel>
+                <d:nicht-bearbeitet/>
+            </d:Abschnitt>
+            <d:Abschnitt code="DHX">
+                <d:Titel>EKG</d:Titel>
+                <d:nicht-bearbeitet/>
+            </d:Abschnitt>
+            <d:Abschnitt code="DL8">
+                <d:Titel>Atmung</d:Titel>
+                <d:nicht-bearbeitet/>
+            </d:Abschnitt>
+            <d:Abschnitt code="DOC">
+                <d:Titel>Haut</d:Titel>
+                <d:nicht-bearbeitet/>
+            </d:Abschnitt>
+            <d:Abschnitt code="DQH">
+                <d:Titel>Psyche</d:Titel>
+                <d:nicht-bearbeitet/>
+            </d:Abschnitt>
+        </d:Abschnitt>
+        <d:Abschnitt code="E01">
+            <d:Titel>Erkrankungen</d:Titel>
+            <d:nicht-bearbeitet/>
+        </d:Abschnitt>
+        <d:Abschnitt code="F01">
+            <d:Titel>Verletzungen</d:Titel>
+            <d:nicht-bearbeitet/>
+        </d:Abschnitt>
+        <d:Abschnitt code="G01">
+            <d:Titel>Erstdiagnosen</d:Titel>
+            <d:nicht-bearbeitet/>
+        </d:Abschnitt>
+        <d:Abschnitt code="H01">
+            <d:Titel>Verlaufsbeschreibung</d:Titel>
+            <d:nicht-bearbeitet/>
+        </d:Abschnitt>
+        <d:Abschnitt code="I01">
+            <d:Titel>Medikation</d:Titel>
+            <d:nicht-bearbeitet/>
+        </d:Abschnitt>
+        <d:Abschnitt code="J01">
+            <d:Titel>Massnahmen</d:Titel>
+            <d:Abschnitt code="J08">
+                <d:Titel>Zugänge</d:Titel>
+                <d:nicht-bearbeitet/>
+            </d:Abschnitt>
+            <d:Abschnitt code="J3J">
+                <d:Titel>Atemweg</d:Titel>
+                <d:nicht-bearbeitet/>
+            </d:Abschnitt>
+            <d:Abschnitt code="J8L">
+                <d:Titel>Beatmung</d:Titel>
+                <d:nicht-bearbeitet/>
+            </d:Abschnitt>
+            <d:Abschnitt code="JB4">
+                <d:Titel>Defibrillation</d:Titel>
+                <d:nicht-bearbeitet/>
+            </d:Abschnitt>
+            <d:Abschnitt code="JE8">
+                <d:Titel>Reanimation</d:Titel>
+                <d:nicht-bearbeitet/>
+            </d:Abschnitt>
+            <d:Abschnitt code="JGR">
+                <d:Titel>Sonstige</d:Titel>
+                <d:nicht-bearbeitet/>
+            </d:Abschnitt>
+        </d:Abschnitt>
+        <d:Abschnitt code="K01">
+            <d:Titel>Reanimation / Tod / Todesfeststellung</d:Titel>
+            <d:nicht-bearbeitet/>
+        </d:Abschnitt>
+        <d:Abschnitt code="L01">
+            <d:Titel>Übergabe</d:Titel>
+            <d:Abschnitt code="L08">
+                <d:Titel>Messwerte</d:Titel>
+                <d:nicht-bearbeitet/>
+            </d:Abschnitt>
+            <d:Abschnitt code="L4B">
+                <d:Titel>EKG</d:Titel>
+                <d:nicht-bearbeitet/>
+            </d:Abschnitt>
+            <d:Abschnitt code="L7M">
+                <d:Titel>Atmung</d:Titel>
+                <d:nicht-bearbeitet/>
+            </d:Abschnitt>
+            <d:Abschnitt code="LAQ">
+                <d:Titel>Bewusstsein</d:Titel>
+                <d:nicht-bearbeitet/>
+            </d:Abschnitt>
+        </d:Abschnitt>
+        <d:Abschnitt code="M01">
+            <d:Titel>Einsatzverlauf</d:Titel>
+            <d:Abschnitt code="M08">
+                <d:Titel>Besonderheiten</d:Titel>
+                <d:nicht-bearbeitet/>
+            </d:Abschnitt>
+            <d:Abschnitt code="M4W">
+                <d:Titel>Übergabe</d:Titel>
+                <d:nicht-bearbeitet/>
+            </d:Abschnitt>
+            <d:Abschnitt code="M87">
+                <d:Titel>Bemerkungen</d:Titel>
+                <d:nicht-bearbeitet/>
+            </d:Abschnitt>
+        </d:Abschnitt>
+    </d:Abschnitte>
+</d:NAEP>

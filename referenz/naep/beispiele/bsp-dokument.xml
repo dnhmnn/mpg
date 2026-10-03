@@ -1,0 +1,880 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<d:NAEP xsi:schemaLocation="http://naep.divi.de/dokument ../xsd/naep-dokument.xsd http://naep.divi.de/strukturen/std ../xsd/naep-strukturen-std.xsd" schemaVersion="1.0" xmlns:std="http://naep.divi.de/strukturen/std" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:d="http://naep.divi.de/dokument">
+    <d:Version protokoll="V.6.0-0.93-NoVar-130820" metamodell="1.0"/>
+    <d:Abschnitte>
+        <d:Abschnitt code="A01">
+            <d:Titel>Patient - Stammdaten</d:Titel>
+            <d:Daten>
+                <d:strukturiert code="A08">
+                    <d:Daten xsi:type="std:PatStammdaten">
+                        <std:Patient pseudonym="ja">
+                            <std:Name>Mustermann</std:Name>
+                            <std:Vorname>Heinz</std:Vorname>
+                            <std:GebDat>1970-10-10</std:GebDat>
+                        </std:Patient>
+                        <std:Adresse>
+                            <std:Strasse>Musterstr. 10</std:Strasse>
+                            <std:PLZ>11111</std:PLZ>
+                            <std:Ort>Musterstadt</std:Ort>
+                        </std:Adresse>
+                        <std:Versicherung>
+                            <std:Kasse nr="123456789">MUSTERKASSE</std:Kasse>
+                            <std:VersNr>987654321</std:VersNr>
+                        </std:Versicherung>
+                    </d:Daten>
+                    <d:Zusatz>
+                        <d:Auswahl code="A0F" term="Geschlecht">
+                            <d:selektiert code="A0T" term="männlich"/>
+                        </d:Auswahl>
+                        <d:Auswahl code="A17" term="BMI">
+                            <d:selektiert code="A1E" term="&lt;=40"/>
+                        </d:Auswahl>
+                        <d:Gruppe code="A1S" term="Alter">
+                            <d:Feld code="A26">
+                                <d:Zahl einheit="Jahre">3</d:Zahl>
+                            </d:Feld>
+                        </d:Gruppe>
+                    </d:Zusatz>
+                </d:strukturiert>
+            </d:Daten>
+        </d:Abschnitt>
+        <d:Abschnitt code="B01">
+            <d:Titel>Einsatztechnische Daten</d:Titel>
+            <d:Daten>
+                <d:strukturiert code="B08">
+                    <d:Daten xsi:type="std:EinsatztechnischeDaten">
+                        <std:EinsatzNr>111111111</std:EinsatzNr>
+                        <std:PatNr>222222222</std:PatNr>
+                        <std:PersNr>3333333333</std:PersNr>
+                        <std:Standort>Musterstandort</std:Standort>
+                        <std:LeitstelleKFZ>MU</std:LeitstelleKFZ>
+                    </d:Daten>
+                </d:strukturiert>
+                <d:Feld code="B0F" term="Einsatz-Datum">
+                    <d:Datum>2015-10-20</d:Datum>
+                </d:Feld>
+                <d:strukturiert code="B0M" term="Einsatz-Ort">
+                    <d:Daten xsi:type="std:Einsatzort">
+                        <std:Adresse>
+                            <std:Strasse>Musterstr. 10</std:Strasse>
+                            <std:PLZ>11111</std:PLZ>
+                            <std:Ort>Musterstadt</std:Ort>
+                        </std:Adresse>
+                        <std:GPSKoordinate lat="49.0833448116434" lon="12.109150133579394"/>
+                    </d:Daten>
+                    <d:Zusatz>
+                        <d:Auswahl code="B0T">
+                            <d:selektiert code="B10" term="Wohnung"/>
+                            <d:Sonstiges code="B3C" term="Sonstige">
+                                <d:Text>TEXT TEXT TEXT</d:Text>
+                            </d:Sonstiges>
+                        </d:Auswahl>
+                    </d:Zusatz>
+                </d:strukturiert>
+                <d:Auswahl code="B3J" term="Einsatz-Art">
+                    <d:selektiert code="B3Q" term="Primäreinsatz"/>
+                </d:Auswahl>
+                <d:Feld code="B6U" term="Transportziel">
+                    <d:Text>TEXT TEXT</d:Text>
+                </d:Feld>
+                <d:Feld code="B80" term="Notarzt (Name)">
+                    <d:Text>TEXT TEXT</d:Text>
+                </d:Feld>
+                <d:Feld code="BAJ" term="Assistenz">
+                    <d:Text>TEXT TEXT</d:Text>
+                </d:Feld>
+                <d:Feld code="BBP" term="RTW-Team">
+                    <d:Text>TEXT TEXT</d:Text>
+                </d:Feld>
+                <d:Feld code="BBW" term="Rufname eigenes Fahrzeug">
+                    <d:Text>TEXT TEXT</d:Text>
+                </d:Feld>
+                <d:Auswahl code="BC3" term="Beteiligte Rettungsmittel">
+                    <d:selektiert code="BCA" term="NEF">
+                        <d:Zusatz>
+                            <d:Frage code="BCH" term="Selbstfahrer">
+                                <d:Antwort>J</d:Antwort>
+                            </d:Frage>
+                        </d:Zusatz>
+                    </d:selektiert>
+                    <d:Sonstiges code="BE1" term="Sonstige">
+                        <d:Text>TEXT TEXT TEXT</d:Text>
+                    </d:Sonstiges>
+                </d:Auswahl>
+                <d:Gruppe code="BE8">
+                    <d:Feld code="BEF" term="Symptom-Beginn">
+                        <d:Zeit>13:00</d:Zeit>
+                    </d:Feld>
+                </d:Gruppe>
+                <d:Frage code="BET" term="Kollaps beobachtet">
+                    <d:Antwort>J</d:Antwort>
+                </d:Frage>
+                <d:Feld code="BF0" term="Alarm">
+                    <d:Zeit>13:00</d:Zeit>
+                </d:Feld>
+                <d:Feld code="BF7" term="Ankunft (Einsatzort)">
+                    <d:Zeit>13:00</d:Zeit>
+                </d:Feld>
+                <d:Feld code="BFE" term="Ankunft (am Pat.)">
+                    <d:Zeit>13:00</d:Zeit>
+                </d:Feld>
+                <d:Feld code="BFS" term="Abfahrt">
+                    <d:Zeit>13:00</d:Zeit>
+                </d:Feld>
+                <d:Feld code="BFZ" term="Übergabe">
+                    <d:Zeit>13:00</d:Zeit>
+                </d:Feld>
+                <d:Feld code="BG6" term="Einsatzbereit">
+                    <d:Zeit>13:00</d:Zeit>
+                </d:Feld>
+                <d:Feld code="BGD" term="Ende">
+                    <d:Zeit>13:00</d:Zeit>
+                </d:Feld>
+            </d:Daten>
+        </d:Abschnitt>
+        <d:Abschnitt code="C01">
+            <d:Titel>Notfallgeschehen, Anamnese, Erstbefund, Vormedikation, Vorbehandlung</d:Titel>
+            <d:Daten>
+                <d:Freitext code="C08">
+                    <d:Zeile>TEXT TEXT TEXT</d:Zeile>
+                    <d:Zeile>TEXT TEXT TEXT</d:Zeile>
+                    <d:Zeile>TEXT TEXT TEXT</d:Zeile>
+                    <d:Zeile>TEXT TEXT TEXT</d:Zeile>
+                </d:Freitext>
+                <d:Auswahl code="C0F" term="AZ des Pat. vor dem Ereignis">
+                    <d:selektiert code="C0M" term="gesund"/>
+                </d:Auswahl>
+                <d:Auswahl code="C1L" term="Ersthelfermaßnahmen (Laien)">
+                    <d:selektiert code="C1Z" term="suffizient"/>
+                </d:Auswahl>
+                <d:Frage code="C2D" term="First Responder vor Ort">
+                    <d:Antwort>J</d:Antwort>
+                    <d:Zusatz>
+                        <d:Feld code="C2K" term="ggf. Uhrzeit des Eintreffens">
+                            <d:Zeit>13:00</d:Zeit>
+                        </d:Feld>
+                    </d:Zusatz>
+                </d:Frage>
+                
+                <d:Frage code="C2R" term="Besiedelung mit multiresistenten Keimen (MRSA, MRSE, ESBL etc) vorbekannt">
+                    <d:Antwort>J</d:Antwort>
+                    <d:Zusatz>
+                        <d:Auswahl code="C2Y">
+                            <d:selektiert code="C35" term="abgedeckt"/>
+                        </d:Auswahl>
+                    </d:Zusatz>
+                </d:Frage>
+                
+            </d:Daten>
+        </d:Abschnitt>
+        <d:Abschnitt code="D01">
+            <d:Titel>Erstbefunde</d:Titel>
+            <d:Abschnitt code="D08">
+                <d:Titel>Neurologie</d:Titel>
+                <d:Daten>
+                    
+                    
+                    <d:Feld code="D0T" term="Zeitpunkt">
+                        <d:Zeit>13:00</d:Zeit>
+                    </d:Feld>
+                    <d:Auswahl code="D10" term="Augen öffnen">
+                        <d:selektiert code="D17" numerisch="4" term="spontan"/>
+                    </d:Auswahl>
+                    <d:Auswahl code="D1Z" term="beste verbale Reaktion">
+                        <d:selektiert code="D26" numerisch="5" term="konversationsfähig, orientiert"/>
+                    </d:Auswahl>
+                    <d:Gruppe code="D35" term="beste motorische Reaktion">
+                        <d:Auswahl code="D3C" term="Arm, rechts">
+                            <d:selektiert code="D44" numerisch="6" term="folgt Aufforderung"/>
+                        </d:Auswahl>
+                        <d:Auswahl code="D3J" term="Arm, links">
+                            <d:selektiert code="D44" numerisch="6" term="folgt Aufforderung"/>
+                        </d:Auswahl>
+                        <d:Auswahl code="D3Q" term="Bein, rechts">
+                            <d:selektiert code="D44" numerisch="6" term="folgt Aufforderung"/>
+                        </d:Auswahl>
+                        <d:Auswahl code="D3X" term="Arm, rechts">
+                            <d:selektiert code="D44" numerisch="6" term="folgt Aufforderung"/>
+                        </d:Auswahl>
+                    </d:Gruppe>
+                    <d:Feld code="D5A" term="Glasgow Coma Scale">
+                        <d:Zahl einheit="1">3</d:Zahl>
+                    </d:Feld>
+                    <d:Gruppe code="D5H" term="Extremitätenbewegung">
+                        <d:Auswahl code="D5O" term="Arm, rechts">
+                            <d:selektiert code="D6G" numerisch="1" term="normal"/>
+                        </d:Auswahl>
+                        <d:Auswahl code="D5V" term="Arm, links">
+                            <d:selektiert code="D6G" numerisch="1" term="normal"/>
+                        </d:Auswahl>
+                        <d:Auswahl code="D62" term="Bein, rechts">
+                            <d:selektiert code="D6G" numerisch="1" term="normal"/>
+                        </d:Auswahl>
+                        <d:Auswahl code="D69" term="Arm, rechts">
+                            <d:selektiert code="D6G" numerisch="1" term="normal"/>
+                        </d:Auswahl>
+                    </d:Gruppe>
+                    <d:Auswahl code="D71" term="Bewusstseinslage">
+                        <d:selektiert code="D7F" term="wach"/>
+                    </d:Auswahl>
+                    <d:Auswahl code="D8S" term="Neurologische Auffälligkeiten">
+                        <d:selektiert code="D9D" term="Seitenzeichen (Pupillen, periph. Motorik)"/>
+                        <d:Sonstiges code="DB4" term="Sonstige">
+                            <d:Text>TEXT TEXT TEXT</d:Text>
+                        </d:Sonstiges>
+                    </d:Auswahl>
+                    <d:Gruppe code="DBB" term="Pupillenweite">
+                        <d:Auswahl code="DBI" term="rechts">
+                            <d:selektiert code="DBW" term="eng"/>
+                        </d:Auswahl>
+                        <d:Auswahl code="DBP" term="links">
+                            <d:selektiert code="DBW" term="eng"/>
+                        </d:Auswahl>
+                    </d:Gruppe>
+                    <d:Gruppe code="DCO" term="Lichtreaktion">
+                        <d:Auswahl code="DCV" term="rechts">
+                            <d:selektiert code="DD9" term="prompt"/>
+                        </d:Auswahl>
+                        <d:Auswahl code="DD2" term="links">
+                            <d:selektiert code="DD9" term="prompt"/>
+                        </d:Auswahl>
+                    </d:Gruppe>
+                </d:Daten>
+            </d:Abschnitt>
+            <d:Abschnitt code="DDU">
+                <d:Titel>Messwerte initial</d:Titel>
+                <d:Daten>
+                    
+                    <d:Feld code="DE8" term="Schmerzen">
+                        <d:Zahl einheit="1">3</d:Zahl>
+                    </d:Feld>
+                    <d:Feld code="DEF" term="RRsys">
+                        <d:Zahl einheit="mmHg">3</d:Zahl>
+                    </d:Feld>
+                    <d:Feld code="DEM" term="RRdia">
+                        <d:Zahl einheit="mmHg">3</d:Zahl>
+                    </d:Feld>
+                    <d:Feld code="DET" term="Herzfrequenz">
+                        <d:Zahl einheit="1/min">3</d:Zahl>
+                    </d:Feld>
+                    <d:Gruppe code="DFL" term="Blutzucker">
+                        <d:Feld code="DFS" term="Wert">
+                            <d:Zahl einheit="mg/dl mmol/l">3</d:Zahl>
+                        </d:Feld>
+                    </d:Gruppe>
+                    <d:Feld code="DGK" term="Atemfrequenz">
+                        <d:Zahl einheit="1/min">3</d:Zahl>
+                    </d:Feld>
+                    <d:Feld code="DGR" term="SpO2">
+                        <d:Zahl einheit="%">3</d:Zahl>
+                    </d:Feld>
+                    <d:Feld code="DHJ" term="Temperatur">
+                        <d:Zahl einheit="°C">3</d:Zahl>
+                    </d:Feld>
+                    <d:Feld code="DHQ" term="etCO2">
+                        <d:Zahl einheit="mmHg">3</d:Zahl>
+                    </d:Feld>
+                </d:Daten>
+            </d:Abschnitt>
+            <d:Abschnitt code="DHX">
+                <d:Titel>EKG</d:Titel>
+                <d:Daten>
+                    
+                    <d:Auswahl code="DIB">
+                        <d:selektiert code="DII" term="Sinusrhythmus"/>
+                        <d:Zusatz>
+                            <d:Auswahl code="DK2">
+                                <d:selektiert code="DK9" term="STEMI"/>
+                            </d:Auswahl>
+                        </d:Zusatz>
+                    </d:Auswahl>
+                </d:Daten>
+            </d:Abschnitt>
+            <d:Abschnitt code="DL8">
+                <d:Titel>Atmung</d:Titel>
+                <d:Daten>
+                    
+                    <d:Auswahl code="DLM">
+                        <d:selektiert code="DLT" term="unauffällig"/>
+                    </d:Auswahl>
+                </d:Daten>
+            </d:Abschnitt>
+            <d:Abschnitt code="DOC">
+                <d:Titel>Haut</d:Titel>
+                <d:Daten>
+                    
+                    <d:Auswahl code="DOQ">
+                        <d:selektiert code="DOX" term="unauffällig"/>
+                    </d:Auswahl>
+                </d:Daten>
+            </d:Abschnitt>
+            <d:Abschnitt code="DQH">
+                <d:Titel>Psyche</d:Titel>
+                <d:Daten>
+                    
+                    
+                    
+                    <d:Auswahl code="DR9">
+                        <d:selektiert code="DRG" term="wahnhaft"/>
+                    </d:Auswahl>
+                </d:Daten>
+            </d:Abschnitt>
+        </d:Abschnitt>
+        <d:Abschnitt code="E01">
+            <d:Titel>Erkrankungen</d:Titel>
+            <d:Daten>
+                
+                <d:Auswahl code="E0F" term="ZNS">
+                    <d:selektiert code="E0M" term="Schlaganfall, TIA, intrakranielle Blutung">
+                        <d:Zusatz>
+                            <d:Frage code="E0T" term="im Lysefenster">
+                                <d:Antwort>J</d:Antwort>
+                            </d:Frage>
+                        </d:Zusatz>
+                    </d:selektiert>
+                    <d:Sonstiges code="E1S">
+                        <d:Text>TEXT TEXT TEXT</d:Text>
+                    </d:Sonstiges>
+                </d:Auswahl>
+                <d:Auswahl code="E1Z" term="Herz-Kreislauf">
+                    <d:selektiert code="E26" term="Akutes Koronarsyndrom"/>
+                    <d:Sonstiges code="E5A">
+                        <d:Text>TEXT TEXT TEXT</d:Text>
+                    </d:Sonstiges>
+                </d:Auswahl>
+                <d:Auswahl code="E5H" term="Atmung">
+                    <d:selektiert code="E5O" term="Asthma (Anfall)"/>
+                    <d:Sonstiges code="E7M">
+                        <d:Text>TEXT TEXT TEXT</d:Text>
+                    </d:Sonstiges>
+                </d:Auswahl>
+                <d:Auswahl code="E7T" term="Abdomen">
+                    <d:selektiert code="E80" term="Akutes Abdomen"/>
+                    <d:Sonstiges code="E9D">
+                        <d:Text>TEXT TEXT TEXT</d:Text>
+                    </d:Sonstiges>
+                </d:Auswahl>
+                <d:Auswahl code="E9K" term="Psychiatrie">
+                    <d:selektiert code="E9R" term="Psychose, Manie, Erregungszustand"/>
+                    <d:Sonstiges code="EC3">
+                        <d:Text>TEXT TEXT TEXT</d:Text>
+                    </d:Sonstiges>
+                </d:Auswahl>
+                <d:Auswahl code="ECA" term="Stoffwechsel">
+                    <d:selektiert code="ECH" term="Hypoglykämie"/>
+                    <d:Sonstiges code="EDG">
+                        <d:Text>TEXT TEXT TEXT</d:Text>
+                    </d:Sonstiges>
+                </d:Auswahl>
+                <d:Auswahl code="EDN" term="Pädiatrie">
+                    <d:selektiert code="EDU" term="Fieberkrampf"/>
+                    <d:Sonstiges code="EEF">
+                        <d:Text>TEXT TEXT TEXT</d:Text>
+                    </d:Sonstiges>
+                </d:Auswahl>
+                <d:Auswahl code="EEM" term="Gynäkologie">
+                    <d:selektiert code="EET" term="Schwangerschaft">
+                        <d:Zusatz>
+                            <d:Auswahl code="EF0">
+                                <d:selektiert code="EF7" term="drohende Geburt"/>
+                            </d:Auswahl>
+                        </d:Zusatz>
+                    </d:selektiert>
+                    <d:Sonstiges code="EFZ">
+                        <d:Text>TEXT TEXT TEXT</d:Text>
+                    </d:Sonstiges>
+                </d:Auswahl>
+                <d:Auswahl code="EG6" term="Sonstige">
+                    <d:selektiert code="EGD" term="anaphylakt. Reaktion">
+                        <d:Zusatz>
+                            <d:Auswahl code="EGK">
+                                <d:selektiert code="EGR" term="I-II°"/>
+                            </d:Auswahl>
+                        </d:Zusatz>
+                    </d:selektiert>
+                    <d:Sonstiges code="EIW">
+                        <d:Text>TEXT TEXT TEXT</d:Text>
+                    </d:Sonstiges>
+                </d:Auswahl>
+            </d:Daten>
+        </d:Abschnitt>
+        <d:Abschnitt code="F01">
+            <d:Titel>Verletzungen</d:Titel>
+            <d:Daten>
+                
+                <d:Frage code="F0F" term="Zusammenhang mit sportlicher Aktivität">
+                    <d:Antwort>J</d:Antwort>
+                </d:Frage>
+                <d:Frage code="F0M" term="Zusammenhang mit beruflicher Aktivität">
+                    <d:Antwort>J</d:Antwort>
+                </d:Frage>
+                <d:Gruppe code="F0T">
+                    <d:Auswahl code="F10" term="Schädel-Hirn">
+                        <d:selektiert code="F2Y" term="leicht"/>
+                    </d:Auswahl>
+                    <d:Auswahl code="F17" term="Gesicht">
+                        <d:selektiert code="F2Y" term="leicht"/>
+                    </d:Auswahl>
+                    <d:Auswahl code="F1E" term="Hals">
+                        <d:selektiert code="F2Y" term="leicht"/>
+                    </d:Auswahl>
+                    <d:Auswahl code="F1L" term="Thorax">
+                        <d:selektiert code="F2Y" term="leicht"/>
+                    </d:Auswahl>
+                    <d:Auswahl code="F1S" term="Abdomen">
+                        <d:selektiert code="F2Y" term="leicht"/>
+                    </d:Auswahl>
+                    <d:Auswahl code="F1Z" term="Wirbelsäule">
+                        <d:selektiert code="F2Y" term="leicht"/>
+                    </d:Auswahl>
+                    <d:Auswahl code="F26" term="Becken">
+                        <d:selektiert code="F2Y" term="leicht"/>
+                    </d:Auswahl>
+                    <d:Auswahl code="F2D" term="Obere Extremitäten">
+                        <d:selektiert code="F2Y" term="leicht"/>
+                    </d:Auswahl>
+                    <d:Auswahl code="F2K" term="Untere Extremitäten">
+                        <d:selektiert code="F2Y" term="leicht"/>
+                    </d:Auswahl>
+                    <d:Auswahl code="F2R" term="Weichteile">
+                        <d:selektiert code="F2Y" term="leicht"/>
+                    </d:Auswahl>
+                </d:Gruppe>
+                <d:Frage code="F44" term="Polytrauma">
+                    <d:Antwort>J</d:Antwort>
+                </d:Frage>
+                <d:Auswahl code="F4B" term="Spezielle Traumen">
+                    <d:selektiert code="F4I" term="Verbrennung, Verbrühung">
+                        <d:Zusatz>
+                            <d:Feld code="F4P" term="1. Grades">
+                                <d:Zahl einheit="%">3</d:Zahl>
+                            </d:Feld>
+                            <d:Feld code="F4W" term="2. Grades">
+                                <d:Zahl einheit="%">3</d:Zahl>
+                            </d:Feld>
+                            <d:Feld code="F53" term="3. Grades">
+                                <d:Zahl einheit="%">3</d:Zahl>
+                            </d:Feld>
+                            <d:Feld code="F5A" term="4. Grades">
+                                <d:Zahl einheit="%">3</d:Zahl>
+                            </d:Feld>
+                        </d:Zusatz>
+                    </d:selektiert>
+                    <d:Sonstiges code="F71" term="Sonstige">
+                        <d:Text>TEXT TEXT TEXT</d:Text>
+                    </d:Sonstiges>
+                </d:Auswahl>
+                <d:Gruppe code="F78" term="Unfallmechanismus">
+                    <d:Auswahl code="F7F" term="Trauma">
+                        <d:selektiert code="F7M" term="stumpf"/>
+                    </d:Auswahl>
+                    <d:Auswahl code="F80" term="Sturz">
+                        <d:selektiert code="F87" term="&lt;3m"/>
+                    </d:Auswahl>
+                </d:Gruppe>
+                <d:Gruppe code="F8L" term="Unfallhergang">
+                    <d:Auswahl code="F8S" term="Patient beteiligt als">
+                        <d:selektiert code="F8Z" term="Fußgänger"/>
+                        <d:Sonstiges code="F9R" term="Sonstige">
+                            <d:Text>TEXT TEXT TEXT</d:Text>
+                        </d:Sonstiges>
+                    </d:Auswahl>
+                    <d:Auswahl code="F9Y" term="Gewaltanwendung">
+                        <d:selektiert code="FA5" term="Schlag"/>
+                        <d:Sonstiges code="FAX" term="Sonstige">
+                            <d:Text>TEXT TEXT TEXT</d:Text>
+                        </d:Sonstiges>
+                    </d:Auswahl>
+                </d:Gruppe>
+            </d:Daten>
+        </d:Abschnitt>
+        <d:Abschnitt code="G01">
+            <d:Titel>Erstdiagnosen</d:Titel>
+            <d:Daten>
+                <d:strukturiert code="G07">
+                    <d:Daten xsi:type="std:Erstdiagnosen">
+                        <std:Diagnose code="J18.9">Pneumonie</std:Diagnose>
+                    </d:Daten>
+                </d:strukturiert>
+                <d:Freitext code="G08">
+                    <d:Zeile>TEXT TEXT TEXT</d:Zeile>
+                    <d:Zeile>TEXT TEXT TEXT</d:Zeile>
+                    <d:Zeile>TEXT TEXT TEXT</d:Zeile>
+                    <d:Zeile>TEXT TEXT TEXT</d:Zeile>
+                </d:Freitext>
+                <d:Auswahl code="G0F" term="NACA SCORE">
+                    <d:selektiert code="G0M" term="I (geringfügige Störung)"/>
+                    <d:Sonstiges code="G1Z" term="Sonstige">
+                        <d:Text>TEXT TEXT TEXT</d:Text>
+                    </d:Sonstiges>
+                </d:Auswahl>
+                <d:Frage code="G26" term="Palliative Situation">
+                    <d:Antwort>J</d:Antwort>
+                </d:Frage>
+            </d:Daten>
+        </d:Abschnitt>
+        <d:Abschnitt code="H01">
+            <d:Titel>Verlaufsbeschreibung</d:Titel>
+            <d:Verlauf code="H08">
+                <d:Reihe>
+                    <d:Feld code="H0M" term="Zeitpunkt">
+                        <d:Zeit>13:00</d:Zeit>
+                    </d:Feld>
+                    <d:Feld code="H0T" term="Puls">
+                        <d:Zahl einheit="1/min">3</d:Zahl>
+                    </d:Feld>
+                    <d:Feld code="H10" term="RRsys">
+                        <d:Zahl einheit="mmHg">3</d:Zahl>
+                    </d:Feld>
+                    <d:Feld code="H17" term="RRdia">
+                        <d:Zahl einheit="mmHg">3</d:Zahl>
+                    </d:Feld>
+                    <d:Auswahl code="H1E">
+                        <d:selektiert code="H1L" term="HDM"/>
+                    </d:Auswahl>
+                    <d:Feld code="H2R" term="O2">
+                        <d:Zahl einheit="l/min">3</d:Zahl>
+                    </d:Feld>
+                    <d:Feld code="H2Y" term="SpO2">
+                        <d:Zahl einheit="%">3</d:Zahl>
+                    </d:Feld>
+                    <d:Feld code="H35" term="etCO2">
+                        <d:Zahl einheit="mmHg">3</d:Zahl>
+                    </d:Feld>
+                </d:Reihe>
+                <d:Reihe>
+                    <d:Feld code="H0M" term="Zeitpunkt">
+                        <d:Zeit>13:00</d:Zeit>
+                    </d:Feld>
+                    <d:Feld code="H0T" term="Puls">
+                        <d:Zahl einheit="1/min">3</d:Zahl>
+                    </d:Feld>
+                    <d:Feld code="H10" term="RRsys">
+                        <d:Zahl einheit="mmHg">3</d:Zahl>
+                    </d:Feld>
+                    <d:Feld code="H17" term="RRdia">
+                        <d:Zahl einheit="mmHg">3</d:Zahl>
+                    </d:Feld>
+                    <d:Auswahl code="H1E">
+                        <d:selektiert code="H1L" term="HDM"/>
+                    </d:Auswahl>
+                    <d:Feld code="H2R" term="O2">
+                        <d:Zahl einheit="l/min">3</d:Zahl>
+                    </d:Feld>
+                    <d:Feld code="H2Y" term="SpO2">
+                        <d:Zahl einheit="%">3</d:Zahl>
+                    </d:Feld>
+                    <d:Feld code="H35" term="etCO2">
+                        <d:Zahl einheit="mmHg">3</d:Zahl>
+                    </d:Feld>
+                </d:Reihe>
+            </d:Verlauf>
+        </d:Abschnitt>
+        <d:Abschnitt code="I01">
+            <d:Titel>Medikation</d:Titel>
+            <d:Daten>
+                
+                <d:strukturiert code="I0F">
+                    <d:Daten xsi:type="std:Medikation">
+                        <std:Einzeldosis>
+                            <std:Medikament>Medi A</std:Medikament>
+                            <std:Wirkstoff>Wirkstoff B</std:Wirkstoff>
+                            <std:Menge einheit="mg">100</std:Menge>
+                            <std:Volumen einheit="ml">1000</std:Volumen>
+                            <std:Zeit start="10:15" ende="12:15"/>
+                            <std:Applikation code="ROA.01" term="i.v."/>
+                            <std:ATC>X01BB04</std:ATC>
+                        </std:Einzeldosis>
+                        <std:Einzeldosis>
+                            <std:Medikament>Medi D</std:Medikament>
+                            <std:Wirkstoff>Wirkstoff C</std:Wirkstoff>
+                            <std:Menge einheit="mg">200</std:Menge>
+                            <std:Volumen einheit="ml">500</std:Volumen>
+                            <std:Zeit start="13:15" ende="14:15"/>
+                            <std:Applikation code="ROA.01" term="i.v."/>
+                            <std:ATC>A01BB04</std:ATC>
+                        </std:Einzeldosis>
+                    </d:Daten>
+                </d:strukturiert>
+                <d:Auswahl code="I0M" term="Vorab-Gabe durch Rettungsdienst (Notkompetenz)">
+                    <d:selektiert code="I0T" term="Adrenalin"/>
+                    <d:Sonstiges code="I26" term="Sonstige">
+                        <d:Text>TEXT TEXT TEXT</d:Text>
+                    </d:Sonstiges>
+                </d:Auswahl>
+                <d:Auswahl code="I2D" term="Lysetherapie">
+                    <d:selektiert code="I2K" term="vor Kreislaufstillstand"/>
+                    <d:Zusatz>
+                        <d:Feld code="I35" term="Beginn">
+                            <d:Zeit>13:00</d:Zeit>
+                        </d:Feld>
+                    </d:Zusatz>
+                </d:Auswahl>
+            </d:Daten>
+        </d:Abschnitt>
+        <d:Abschnitt code="J01">
+            <d:Titel>Massnahmen</d:Titel>
+            <d:Abschnitt code="J08">
+                <d:Titel>Zugänge</d:Titel>
+                <d:Daten>
+                    <d:Auswahl code="J0F">
+                        <d:selektiert code="J0M" term="peripherer Zugang">
+                            <d:Zusatz>
+                                <d:Frage code="J0T" term="bereits vorhanden">
+                                    <d:Antwort>J</d:Antwort>
+                                </d:Frage>
+                                <d:Feld code="J10" term="Art / Ort / Größe">
+                                    <d:Text>TEXT TEXT</d:Text>
+                                </d:Feld>
+                                <d:Feld code="J17" term="Anzahl">
+                                    <d:Zahl einheit="1">3</d:Zahl>
+                                </d:Feld>
+                            </d:Zusatz>
+                        </d:selektiert>
+                    </d:Auswahl>
+                </d:Daten>
+            </d:Abschnitt>
+            <d:Abschnitt code="J3J">
+                <d:Titel>Atemweg</d:Titel>
+                <d:Daten>
+                    <d:Auswahl code="J3Q">
+                        <d:selektiert code="J3X" term="Sauerstoffgabe">
+                            <d:Zusatz>
+                                <d:Feld code="J44">
+                                    <d:Zahl einheit="l/min">3</d:Zahl>
+                                </d:Feld>
+                                <d:Frage code="J4B" term="als Präoxygenierung">
+                                    <d:Antwort>J</d:Antwort>
+                                </d:Frage>
+                            </d:Zusatz>
+                        </d:selektiert>
+                        <d:Sonstiges code="J8E" term="sonstiger Atemwegszugang">
+                            <d:Text>TEXT TEXT TEXT</d:Text>
+                        </d:Sonstiges>
+                    </d:Auswahl>
+                </d:Daten>
+            </d:Abschnitt>
+            <d:Abschnitt code="J8L">
+                <d:Titel>Beatmung</d:Titel>
+                <d:Daten>
+                    <d:Auswahl code="J8S">
+                        <d:selektiert code="J8Z" term="manuell"/>
+                    </d:Auswahl>
+                </d:Daten>
+            </d:Abschnitt>
+            <d:Abschnitt code="JB4">
+                <d:Titel>Defibrillation</d:Titel>
+                <d:Daten>
+                    <d:Auswahl code="JBB">
+                        <d:selektiert code="JBI" term="AED">
+                            <d:Zusatz>
+                                <d:Auswahl code="JBP" term="Erstanwendung">
+                                    <d:selektiert code="JBW" term="Laien"/>
+                                </d:Auswahl>
+                            </d:Zusatz>
+                        </d:selektiert>
+                    </d:Auswahl>
+                </d:Daten>
+            </d:Abschnitt>
+            <d:Abschnitt code="JE8">
+                <d:Titel>Reanimation</d:Titel>
+                
+                <d:Daten>
+                    <d:Auswahl code="JEF">
+                        <d:selektiert code="JEM" term="Herzdruckmassage">
+                            <d:Zusatz>
+                                <d:Feld code="JET" term="Beginn HDM">
+                                    <d:Zeit>13:00</d:Zeit>
+                                </d:Feld>
+                                <d:Auswahl code="JF0">
+                                    <d:selektiert code="JF7" term="Feedbacksystem"/>
+                                </d:Auswahl>
+                            </d:Zusatz>
+                        </d:selektiert>
+                    </d:Auswahl>
+                </d:Daten>
+            </d:Abschnitt>
+            <d:Abschnitt code="JGR">
+                <d:Titel>Sonstige</d:Titel>
+                <d:Daten>
+                    <d:Frage code="JGY" term="Spezielle Lagerung">
+                        <d:Antwort>J</d:Antwort>
+                        <d:Zusatz>
+                            <d:Auswahl code="JH5">
+                                <d:selektiert code="JHC" term="stabile Seitenlage"/>
+                                <d:Sonstiges code="JJO" term="Sonstige">
+                                    <d:Text>TEXT TEXT TEXT</d:Text>
+                                </d:Sonstiges>
+                            </d:Auswahl>
+                        </d:Zusatz>
+                    </d:Frage>
+                    <d:Auswahl code="JJV">
+                        <d:selektiert code="JK2" term="12-Kanal EKG"/>
+                    </d:Auswahl>
+                    <d:Auswahl code="JL8">
+                        <d:selektiert code="JLF" term="Verband"/>
+                    </d:Auswahl>
+                    <d:Auswahl code="JM0">
+                        <d:selektiert code="JM7" term="Thoraxdrainage re."/>
+                    </d:Auswahl>
+                    <d:Auswahl code="JN6">
+                        <d:selektiert code="JND" term="Entbindung"/>
+                    </d:Auswahl>
+                    <d:Sonstiges code="JNR" term="Sonstiges">
+                        <d:Text>TEXT TEXT TEXT</d:Text>
+                    </d:Sonstiges>
+                </d:Daten>
+            </d:Abschnitt>
+        </d:Abschnitt>
+        <d:Abschnitt code="K01">
+            <d:Titel>Reanimation / Tod / Todesfeststellung</d:Titel>
+            <d:Daten>
+                <d:Auswahl code="K08">
+                    <d:selektiert code="K0F" term="Reanimation">
+                        <d:Zusatz>
+                            <d:Auswahl code="K0M">
+                                <d:selektiert code="K0T" term="ROSC im Verlauf"/>
+                            </d:Auswahl>
+                            <d:Auswahl code="K1E" term="Beginn Rea.">
+                                <d:selektiert code="K1L" term="Ersthelfer"/>
+                            </d:Auswahl>
+                            <d:Auswahl code="K2D" term="KH-Aufnahme">
+                                <d:selektiert code="K2K" term="mit ROSC"/>
+                            </d:Auswahl>
+                        </d:Zusatz>
+                    </d:selektiert>
+                </d:Auswahl>
+                <d:Frage code="K44" term="Tod">
+                    <d:Antwort>J</d:Antwort>
+                    <d:Zusatz>
+                        <d:Frage code="K4B" term="Todesfeststellung">
+                            <d:Antwort>J</d:Antwort>
+                            <d:Zusatz>
+                                <d:Auswahl code="K4I" term="Todesart">
+                                    <d:selektiert code="K4P" term="natürlich"/>
+                                </d:Auswahl>
+                            </d:Zusatz>
+                        </d:Frage>
+                        <d:Gruppe code="K5A">
+                            <d:Feld code="K5H" term="Todeszeitpunkt">
+                                <d:Zeit>13:00</d:Zeit>
+                            </d:Feld>
+                        </d:Gruppe>
+                    </d:Zusatz>
+                </d:Frage>
+            </d:Daten>
+        </d:Abschnitt>
+        <d:Abschnitt code="L01">
+            <d:Titel>Übergabe</d:Titel>
+            <d:Abschnitt code="L08">
+                <d:Titel>Messwerte</d:Titel>
+                <d:Daten>
+                    
+                    <d:Feld code="L0M" term="Schmerzen">
+                        <d:Zahl einheit="1">3</d:Zahl>
+                    </d:Feld>
+                    <d:Feld code="L0T" term="RRsys">
+                        <d:Zahl einheit="mmHg">3</d:Zahl>
+                    </d:Feld>
+                    <d:Feld code="L10" term="RRdia">
+                        <d:Zahl einheit="mmHg">3</d:Zahl>
+                    </d:Feld>
+                    <d:Feld code="L17" term="Herzfrequenz">
+                        <d:Zahl einheit="1/min">3</d:Zahl>
+                    </d:Feld>
+                    <d:Gruppe code="L1Z" term="Blutzucker">
+                        <d:Feld code="L26" term="Wert">
+                            <d:Zahl einheit="mg/dl mmol/l">3</d:Zahl>
+                        </d:Feld>
+                    </d:Gruppe>
+                    <d:Feld code="L2Y" term="Atemfrequenz">
+                        <d:Zahl einheit="1/min">3</d:Zahl>
+                    </d:Feld>
+                    <d:Feld code="L35" term="SpO2">
+                        <d:Zahl einheit="%">3</d:Zahl>
+                    </d:Feld>
+                    <d:Feld code="L3X" term="Temperatur">
+                        <d:Zahl einheit="°C">3</d:Zahl>
+                    </d:Feld>
+                    <d:Feld code="L44" term="etCO2">
+                        <d:Zahl einheit="mmHg">3</d:Zahl>
+                    </d:Feld>
+                </d:Daten>
+            </d:Abschnitt>
+            <d:Abschnitt code="L4B">
+                <d:Titel>EKG</d:Titel>
+                <d:Daten>
+                    
+                    <d:Auswahl code="L4P">
+                        <d:selektiert code="L4W" term="Sinusrhythmus"/>
+                        <d:Zusatz>
+                            <d:Auswahl code="L6G">
+                                <d:selektiert code="L6N" term="STEMI"/>
+                            </d:Auswahl>
+                        </d:Zusatz>
+                    </d:Auswahl>
+                </d:Daten>
+            </d:Abschnitt>
+            <d:Abschnitt code="L7M">
+                <d:Titel>Atmung</d:Titel>
+                <d:Daten>
+                    
+                    <d:Auswahl code="L80">
+                        <d:selektiert code="L87" term="unauffällig"/>
+                    </d:Auswahl>
+                </d:Daten>
+            </d:Abschnitt>
+            <d:Abschnitt code="LAQ">
+                <d:Titel>Bewusstsein</d:Titel>
+                <d:Daten>
+                    
+                    <d:Auswahl code="LB4">
+                        <d:selektiert code="LBI" term="wach"/>
+                    </d:Auswahl>
+                </d:Daten>
+            </d:Abschnitt>
+        </d:Abschnitt>
+        <d:Abschnitt code="M01">
+            <d:Titel>Einsatzverlauf</d:Titel>
+            <d:Abschnitt code="M08">
+                <d:Titel>Besonderheiten</d:Titel>
+                <d:Daten>
+                    <d:Auswahl code="M0F">
+                        <d:selektiert code="M0M" term="Übernahme aus arztbesetztem Rettungsmittel"/>
+                    </d:Auswahl>
+                    <d:Auswahl code="M3C">
+                        <d:selektiert code="M3J" term="Erhöhter Hygieneaufwand"/>
+                    </d:Auswahl>
+                </d:Daten>
+            </d:Abschnitt>
+            <d:Abschnitt code="M4W">
+                <d:Titel>Übergabe</d:Titel>
+                <d:Daten>
+                    <d:Auswahl code="M53">
+                        <d:selektiert code="M5H" term="Einsatzstelle"/>
+                        <d:Sonstiges code="M7T" term="Sonstige">
+                            <d:Text>TEXT TEXT TEXT</d:Text>
+                        </d:Sonstiges>
+                        <d:Zusatz>
+                            <d:Feld code="M80" term="Übergabe an (Name)">
+                                <d:Text>TEXT TEXT</d:Text>
+                            </d:Feld>
+                        </d:Zusatz>
+                    </d:Auswahl>
+                </d:Daten>
+            </d:Abschnitt>
+            <d:Abschnitt code="M87">
+                <d:Titel>Bemerkungen</d:Titel>
+                
+                <d:Daten>
+                    <d:Freitext code="M8E">
+                        <d:Zeile>TEXT TEXT TEXT</d:Zeile>
+                        <d:Zeile>TEXT TEXT TEXT</d:Zeile>
+                        <d:Zeile>TEXT TEXT TEXT</d:Zeile>
+                        <d:Zeile>TEXT TEXT TEXT</d:Zeile>
+                    </d:Freitext>
+                </d:Daten>
+            </d:Abschnitt>
+        </d:Abschnitt>
+    </d:Abschnitte>
+</d:NAEP>
