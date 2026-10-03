@@ -45,6 +45,10 @@ import { applyTheme, getTheme } from './lib/theme'
 // Hauptbuendel kostet es jeden Seitenaufruf mit, auch im Funkloch.
 const AelrdProtokoll = lazy(() => import('./pages/patienten/AelrdProtokoll'))
 
+// Die normtreue Maske zieht den ganzen DIVI-Katalog nach sich — über
+// vierhundert Optionen. Sie gehoert nicht ins Hauptbuendel.
+const NaepErfassung = lazy(() => import('./pages/patienten/NaepErfassung'))
+
 applyTheme(getTheme())
 
 const isMarketingDomain =
@@ -85,6 +89,7 @@ function App() {
         <Route path="/patienten" element={<Patienten />} />
         <Route path="/protokoll/:patientId" element={<ProtokollBearbeiten />} />
         <Route path="/protokoll-2" element={<Suspense fallback={null}><AelrdProtokoll /></Suspense>} />
+        <Route path="/datensatz" element={<Suspense fallback={null}><NaepErfassung /></Suspense>} />
         <Route path="/p/:code" element={<PatientView />} />
         <Route path="/chat" element={<Chat />} />
         <Route path="/supervisor" element={<Supervisor />} />
