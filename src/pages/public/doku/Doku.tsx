@@ -24,6 +24,9 @@ import Reiter, { type ReiterStand } from './Reiter'
 // fotografieren will — sie gehören nicht in den Weg der übrigen Erfassung.
 const KartenScan = lazy(() => import('./KartenScan'))
 
+// Die Druckansicht zieht beide Seitenvorlagen nach sich — erst beim Öffnen.
+const PdfAnsicht = lazy(() => import('./PdfAnsicht'))
+
 const ROT = '#600812'
 const TEXT = '#1a0e08'
 const GRAU = 'var(--warm-gray)'
@@ -126,6 +129,7 @@ export default function Doku() {
   const [suche, setSuche] = useState('')
   const [kartenScan, setKartenScan] = useState(false)
   const [aktiverBlock, setAktiverBlock] = useState('')
+  const [pdfOffen, setPdfOffen] = useState(false)
 
   const setzen = (id: string, w: unknown) => setWerte((v) => ({ ...v, [id]: w }))
   const anlassUmschalten = (id: string) =>
@@ -214,6 +218,24 @@ export default function Doku() {
           <span style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#d97706', border: '0.5px solid #fde047', background: '#fffbeb', borderRadius: 999, padding: '3px 8px' }}>
             Vorschau
           </span>
+
+          {/* Das Protokoll ansehen, wie es gedruckt aussieht. */}
+          <button
+            type="button" onClick={() => setPdfOffen(true)}
+            aria-label="Protokoll als PDF ansehen" title="Protokoll als PDF ansehen"
+            style={{
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+              width: 38, height: 38, flexShrink: 0, borderRadius: 19,
+              background: '#fff', border: `0.5px solid ${LINIE}`, color: ROT,
+              cursor: 'pointer', fontFamily: 'inherit', padding: 0,
+            }}
+          >
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <circle cx="11" cy="11" r="7" />
+              <path d="M20 20l-4.3-4.3" />
+            </svg>
+          </button>
         </div>
         <div style={{ height: 3, background: 'rgba(96,8,18,0.08)', borderRadius: 2, marginTop: 7, overflow: 'hidden' }}>
           <div style={{ height: '100%', width: `${imWeg.length ? (fertig / imWeg.length) * 100 : 0}%`, background: ROT, transition: 'width .2s' }} />
@@ -304,6 +326,16 @@ export default function Doku() {
         ) : null}
         </div>
       </main>
+
+      {pdfOffen ? (
+        <Suspense fallback={null}>
+          <PdfAnsicht
+            werte={werte}
+            organisation={org.org_name}
+            onSchliessen={() => setPdfOffen(false)}
+          />
+        </Suspense>
+      ) : null}
 
       {kartenScan ? (
         <Suspense fallback={null}>
