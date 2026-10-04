@@ -224,7 +224,7 @@ export default function Doku() {
    * eines Zettels zum nächsten — durchgeklickt wird Schritt für Schritt.
    */
   const stationen = bloecke.flatMap((b) =>
-    b.teile.length > 1
+    b.gruppen && b.teile.length > 1
       ? b.teile.map((t) => ({ zettel: b.id, teil: t.id }))
       : [{ zettel: b.id, teil: '' }],
   )
@@ -236,7 +236,11 @@ export default function Doku() {
    * Es gibt kein "Alle": durchgeklickt wird bewusst, Schritt für Schritt.
    * Wer alles auf einmal sehen will, nimmt die Lupe.
    */
-  const schritte: ReiterStand[] = (aktuell?.teile ?? []).map((t) => {
+  // Die zweite Reihe gibt es nur, wo ein Zettel einem Schema folgt — derzeit
+  // allein der Erstbefund mit xABCDE. Die uebrigen zeigen ihre Abschnitte
+  // untereinander, wie bisher.
+  const schrittweise = Boolean(aktuell?.gruppen)
+  const schritte: ReiterStand[] = (schrittweise ? aktuell?.teile ?? [] : []).map((t) => {
     const pflicht = t.felder.filter((f) => f.pflicht)
     return {
       id: t.id,
@@ -259,9 +263,9 @@ export default function Doku() {
     setAktiverTeil(s.teil)
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
-  const teileZumZeigen = (aktuell?.teile ?? []).filter(
-    (t) => schritte.length <= 1 || t.id === gezeigterTeil,
-  )
+  const teileZumZeigen = schrittweise
+    ? (aktuell?.teile ?? []).filter((t) => schritte.length <= 1 || t.id === gezeigterTeil)
+    : aktuell?.teile ?? []
 
   // Fortschritt über alle Felder, die der Bogen führt.
   const imWeg = bloecke.flatMap((b) => b.felder)
@@ -375,7 +379,8 @@ export default function Doku() {
           <>
             <Block
               id={aktuell.id} titel={aktuell.titel} teile={teileZumZeigen}
-              zeigeSchritt={schritte.length > 1} felder={aktuell.felder}
+              zeigeSchritt={schritte.length > 1 || teileZumZeigen.length > 1}
+              felder={aktuell.felder}
               werte={werte} setzen={setzen} aktion={aktionFuer(aktuell.id)}
             />
 

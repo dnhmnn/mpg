@@ -74,7 +74,8 @@ export default function Reiter({ staende, aktiv, onWaehlen, beschriftung, schmal
             key={r.id} type="button" onClick={() => onWaehlen(r.id)}
             title={`${r.titel}${r.pflichtGesamt > 0 ? ` — ${r.pflichtOffen} von ${r.pflichtGesamt} Pflichtfeldern offen` : ''}`}
             style={{
-              display: 'block', width: schmal ? 38 : 46, marginBottom: 3, padding: '7px 4px 6px',
+              display: 'block', width: schmal ? 28 : 46, marginBottom: 3,
+              padding: schmal ? '8px 3px 7px' : '7px 4px 6px',
               // Links bündig, rechts gerundet: der Zettel ragt aus dem Rand.
               borderRadius: '0 9px 9px 0',
               background: istAktiv ? ROT : f.grund,
@@ -82,20 +83,22 @@ export default function Reiter({ staende, aktiv, onWaehlen, beschriftung, schmal
               border: `0.5px solid ${istAktiv ? ROT : 'rgba(96,8,18,0.12)'}`,
               borderLeft: `4px solid ${istAktiv ? '#fff' : f.rand}`,
               boxShadow: istAktiv ? 'none' : '1px 1px 3px rgba(0,0,0,0.06)',
-              fontFamily: 'inherit', fontSize: 8.5, fontWeight: 700,
-              letterSpacing: '0.02em', cursor: 'pointer', textAlign: 'left',
-              lineHeight: 1.15,
+              fontFamily: 'inherit', fontSize: schmal ? 11 : 8.5, fontWeight: 700,
+              letterSpacing: schmal ? 0 : '0.02em', cursor: 'pointer',
+              textAlign: schmal ? 'center' : 'left', lineHeight: 1.15,
             }}
           >
             {r.kurz}
-            <span style={{
+            {/* In der schmalen Reihe traegt die Farbe die Aussage; eine
+                Zahl daneben passte nicht und waere ohnehin kaum zu lesen. */}
+            {schmal ? null : <span style={{
               display: 'block', marginTop: 2, fontSize: 8, fontWeight: 400, fontStyle: 'italic',
               color: istAktiv ? 'rgba(255,255,255,0.8)' : GRAU,
             }}>
               {r.pflichtGesamt > 0
                 ? (r.pflichtOffen > 0 ? `${r.pflichtOffen} offen` : 'fertig')
                 : (r.gefuellt > 0 ? `${r.gefuellt}` : '–')}
-            </span>
+            </span>}
           </button>
         )
       })}
