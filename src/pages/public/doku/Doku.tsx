@@ -4,9 +4,9 @@
 // knapp 30.000 Pixeln Scrollhöhe — gemessen auf einem Telefon. Ein Einsatz
 // braucht davon selten ein Drittel, aber jeder muss an allem vorbei.
 //
-// Hier entscheidet der Anlass, was im Weg steht. Alles andere bleibt einen
-// Tipp entfernt, und die Reihenfolge bleibt die des Papierbogens: wer ihn
-// kennt, findet alles an derselben Stelle.
+// Hier steht ein Block zur Zeit, gewechselt wird über die Zettel am linken
+// Rand. Ihre Farbe sagt, wo noch Pflichtfelder offen sind. Die Reihenfolge
+// ist die des Papierbogens: wer ihn kennt, findet alles an derselben Stelle.
 //
 // VORSCHAU: Diese Seite speichert nichts. Sie zeigt den Aufbau, damit er
 // beurteilt werden kann, bevor er die Dokumentation ersetzt.
@@ -15,7 +15,6 @@ import { Suspense, lazy, useMemo, useState } from 'react'
 import { useOrg } from '../OrgPublicLayout'
 import { AELRD_ABSCHNITTE, aelrdFeld, type AelrdFeld } from '../../../katalog/aelrd'
 import { istSpiegelFeld } from '../../../katalog/aelrdSpiegel'
-import { ANLAESSE, abschnitteFuer, weitereAbschnitte } from '../../../katalog/anlass'
 import { normalbefund, uebergabeUebernehmen, uebernahmeUmfang } from '../../../katalog/uebernahme'
 import DokuFeld, { Rasterzelle, istRasterfeld, type Werte } from './DokuFeld'
 import Reiter, { type ReiterStand } from './Reiter'
@@ -125,29 +124,26 @@ function Block({ id, titel, felder, werte, setzen, aktion }: {
 
 export default function Doku() {
   const { org } = useOrg()
-  const [anlaesse, setAnlaesse] = useState<string[]>([])
   const [werte, setWerte] = useState<Werte>({})
-  const [alleZeigen, setAlleZeigen] = useState(false)
   const [suche, setSuche] = useState('')
   const [kartenScan, setKartenScan] = useState(false)
   /**
    * Ein Block zur Zeit. Gewechselt wird über die Reiter am Rand, nicht durch
    * Scrollen: wer dokumentiert, soll die Stelle ansteuern, nicht suchen.
    */
-  const [aktiverBlock, setAktiverBlock] = useState('anlass')
+  const [aktiverBlock, setAktiverBlock] = useState('stammdaten')
   const [pdfOffen, setPdfOffen] = useState(false)
 
   const setzen = (id: string, w: unknown) => setWerte((v) => ({ ...v, [id]: w }))
-  const anlassUmschalten = (id: string) =>
-    setAnlaesse((v) => (v.includes(id) ? v.filter((x) => x !== id) : [...v, id]))
-
-  const hauptweg = useMemo(() => abschnitteFuer(anlaesse), [anlaesse])
-  const weitere = useMemo(() => weitereAbschnitte(anlaesse), [anlaesse])
-
-  const zuZeigen = alleZeigen ? AELRD_ABSCHNITTE.map((a) => a.id) : hauptweg
-  const bloecke = zuZeigen
-    .map((id) => ({ id, titel: AELRD_ABSCHNITTE.find((a) => a.id === id)?.titel ?? id, felder: felderVon(id) }))
-    .filter((b) => b.felder.length > 0)
+  // Alle Blöcke des Bogens, in seiner Reihenfolge. Was keine Felder hat,
+  // bekommt auch keinen Reiter.
+  const bloecke = useMemo(
+    () =>
+      AELRD_ABSCHNITTE
+        .map((a) => ({ id: a.id, titel: a.titel, felder: felderVon(a.id) }))
+        .filter((b) => b.felder.length > 0),
+    [],
+  )
 
   // Was die Reiter am Rand zeigen: je Block, wie viele Pflichtfelder noch
   // offen sind und wie viel überhaupt eingetragen wurde.
@@ -163,33 +159,19 @@ export default function Doku() {
     }
   })
 
-  /**
-   * Der Anlass bekommt einen eigenen Reiter, damit im Hauptbereich immer
-   * genau eine Sache steht.
-   */
-  const anlassStand: ReiterStand = {
-    id: 'anlass',
-    kurz: 'ANL',
-    titel: 'Anlass und Suche',
-    pflichtGesamt: 0,
-    pflichtOffen: 0,
-    gefuellt: anlaesse.length,
-  }
-
   /** Den Reiter wechseln. */
   function zumBlock(id: string) {
     setAktiverBlock(id)
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
-  const reihenfolge = [anlassStand.id, ...staende.map((r) => r.id)]
+  const reihenfolge = staende.map((r) => r.id)
   const stelle = reihenfolge.indexOf(aktiverBlock)
   const voriger = stelle > 0 ? reihenfolge[stelle - 1] : undefined
   const naechster = stelle >= 0 && stelle < reihenfolge.length - 1 ? reihenfolge[stelle + 1] : undefined
   const aktuell = bloecke.find((b) => b.id === aktiverBlock)
 
-  // Fortschritt über den Hauptweg, nicht über den ganzen Bogen: was der
-  // Anlass nicht verlangt, fehlt auch nicht.
+  // Fortschritt über alle Felder, die der Bogen führt.
   const imWeg = bloecke.flatMap((b) => b.felder)
   const fertig = imWeg.filter((f) => gefuellt(werte[f.id])).length
   const pflichtOffen = imWeg.filter((f) => f.pflicht && !gefuellt(werte[f.id]))
@@ -264,41 +246,10 @@ export default function Doku() {
       </header>
 
       <main style={{ padding: '12px 14px 12px 0', maxWidth: 830, margin: '0 auto', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-        <Reiter staende={[anlassStand, ...staende]} aktiv={aktiverBlock} onWaehlen={zumBlock} />
+        <Reiter staende={staende} aktiv={aktiverBlock} onWaehlen={zumBlock} />
         <div style={{ flex: 1, minWidth: 0 }}>
-        {aktiverBlock === 'anlass' ? (
-          <>
-        {/* Anlass ─ was der Einsatz ist, entscheidet, was gefragt wird. */}
-        <section style={{ background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.07)', borderLeft: `3px solid ${ROT}`, padding: '11px 12px 8px', marginBottom: 10 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: ROT, marginBottom: 2 }}>
-            Anlass
-          </div>
-          <div style={{ fontSize: 11, fontStyle: 'italic', color: GRAU, marginBottom: 8 }}>
-            Mehrfachauswahl. Er blendet nur aus — alles bleibt erreichbar.
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(148px,1fr))', gap: 7 }}>
-            {ANLAESSE.map((a) => {
-              const an = anlaesse.includes(a.id)
-              return (
-                <button
-                  key={a.id} type="button" onClick={() => anlassUmschalten(a.id)}
-                  style={{
-                    textAlign: 'left', padding: '9px 11px', borderRadius: 10,
-                    background: an ? ROT : '#fff', color: an ? '#fff' : TEXT,
-                    border: `0.5px solid ${an ? ROT : LINIE}`, cursor: 'pointer', fontFamily: 'inherit',
-                  }}
-                >
-                  <div style={{ fontSize: 14, fontWeight: 700 }}>{a.titel}</div>
-                  <div style={{ fontSize: 10.5, fontStyle: 'italic', color: an ? 'rgba(255,255,255,0.75)' : GRAU, marginTop: 1, lineHeight: 1.3 }}>
-                    {a.beispiel}
-                  </div>
-                </button>
-              )
-            })}
-          </div>
-        </section>
-
-        {/* Suche ─ der Ausweg, wenn ein Feld nicht im Hauptweg steht. */}
+        {/* Die Suche bleibt immer sichtbar: sie ist der Weg zu einem Feld,
+            dessen Block man nicht im Kopf hat. */}
         <div style={{ marginBottom: 10 }}>
           <input
             type="search" value={suche} onChange={(e) => setSuche(e.target.value)}
@@ -310,9 +261,8 @@ export default function Doku() {
               {treffer.map(({ feld, abschnitt }) => (
                 <button
                   key={feld.id} type="button"
-                  // Die Suche wechselt den Reiter — und blendet den Block ein,
-                  // falls er nicht zum gewählten Anlass gehört.
-                  onClick={() => { setAlleZeigen(true); setSuche(''); zumBlock(abschnitt.id) }}
+                  // Die Suche wechselt den Reiter.
+                  onClick={() => { setSuche(''); zumBlock(abschnitt.id) }}
                   style={{ display: 'flex', width: '100%', justifyContent: 'space-between', gap: 10, padding: '9px 11px', borderBottom: '0.5px solid rgba(96,8,18,0.06)', border: 'none', background: 'transparent', color: TEXT, textAlign: 'left', fontSize: 13, fontFamily: 'inherit', cursor: 'pointer' }}
                 >
                   <span>{feld.label}</span>
@@ -323,25 +273,7 @@ export default function Doku() {
           ) : null}
         </div>
 
-            {!alleZeigen && weitere.length > 0 ? (
-              <button
-                type="button" onClick={() => setAlleZeigen(true)}
-                style={{ width: '100%', padding: '11px 12px', background: '#fff', border: `0.5px solid ${LINIE}`, borderRadius: 12, color: ROT, fontFamily: 'inherit', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', cursor: 'pointer' }}
-              >
-                {weitere.length} weitere Blöcke zeigen
-              </button>
-            ) : null}
-
-            {alleZeigen ? (
-              <button
-                type="button" onClick={() => setAlleZeigen(false)}
-                style={{ width: '100%', padding: '11px 12px', background: 'transparent', border: `0.5px solid ${LINIE}`, borderRadius: 12, color: GRAU, fontFamily: 'inherit', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', cursor: 'pointer' }}
-              >
-                Nur die Blöcke zum Anlass
-              </button>
-            ) : null}
-          </>
-        ) : aktuell ? (
+            {aktuell ? (
           <>
             <Block
               id={aktuell.id} titel={aktuell.titel} felder={aktuell.felder}
@@ -368,7 +300,7 @@ export default function Doku() {
           </>
         ) : (
           <div style={{ padding: '30px 12px', textAlign: 'center', fontSize: 13, fontStyle: 'italic', color: GRAU }}>
-            Dieser Block gehört nicht zum gewählten Anlass.
+            Dieser Block führt keine Felder.
           </div>
         )}
         </div>
