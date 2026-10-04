@@ -19,6 +19,7 @@ import { ANLAESSE, abschnitteFuer, weitereAbschnitte } from '../../../katalog/an
 import { normalbefund, uebergabeUebernehmen, uebernahmeUmfang } from '../../../katalog/uebernahme'
 import DokuFeld, { Rasterzelle, istRasterfeld, type Werte } from './DokuFeld'
 import Reiter, { type ReiterStand } from './Reiter'
+import Unterschrift from './Unterschrift'
 
 // Kamera und Texterkennung werden erst geladen, wenn jemand die Karte
 // fotografieren will — sie gehören nicht in den Weg der übrigen Erfassung.
@@ -59,14 +60,12 @@ function inBloecke(felder: AelrdFeld[]): { raster: boolean; felder: AelrdFeld[] 
   return aus
 }
 
-function Block({ id, titel, felder, werte, setzen, offen, umschalten, aktion }: {
+function Block({ id, titel, felder, werte, setzen, aktion }: {
   id: string
   titel: string
   felder: AelrdFeld[]
   werte: Werte
   setzen: (id: string, w: unknown) => void
-  offen: boolean
-  umschalten: () => void
   /** Eine Abkürzung, die diesen Block auf einmal füllt. */
   aktion?: { text: string; onClick: () => void } | null
 }) {
@@ -76,21 +75,16 @@ function Block({ id, titel, felder, werte, setzen, offen, umschalten, aktion }: 
       id={`doku-${id}`}
       style={{ background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.07)', borderLeft: `3px solid ${ROT}`, overflow: 'hidden', marginBottom: 10, scrollMarginTop: 108 }}
     >
-      <button
-        type="button" onClick={umschalten}
-        style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 8, padding: '11px 12px', background: 'transparent', border: 'none', borderBottom: offen ? `0.5px solid ${LINIE}` : 'none', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit' }}
-      >
-        <span style={{ flex: 1, fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: ROT }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, padding: '11px 12px', borderBottom: `0.5px solid ${LINIE}` }}>
+        <h2 style={{ flex: 1, margin: 0, fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: ROT }}>
           {titel}
-        </span>
+        </h2>
         <span style={{ fontSize: 11, fontStyle: 'italic', color: ausgefuellt > 0 ? ROT : GRAU }}>
           {ausgefuellt > 0 ? `${ausgefuellt}/${felder.length}` : `${felder.length}`}
         </span>
-        <span aria-hidden style={{ color: GRAU, fontSize: 12, transform: offen ? 'rotate(90deg)' : 'none', transition: 'transform .15s' }}>›</span>
-      </button>
+      </div>
 
-      {offen ? (
-        <div style={{ padding: '10px 12px 12px' }}>
+      <div style={{ padding: '10px 12px 12px' }}>
           {aktion ? (
             <button
               type="button" onClick={aktion.onClick}
@@ -109,13 +103,22 @@ function Block({ id, titel, felder, werte, setzen, offen, umschalten, aktion }: 
             ) : (
               <div key={i}>
                 {gruppe.felder.map((f) => (
-                  <DokuFeld key={f.id} feld={f} werte={werte} setzen={setzen} />
+                  <div key={f.id}>
+                    <DokuFeld feld={f} werte={werte} setzen={setzen} />
+                    {/* Die Fläche zum Unterschreiben gehört an das Feld, das
+                        sie trägt — nicht ans Ende des Blocks. */}
+                    {f.id === 'unterschrift' ? (
+                      <Unterschrift
+                        wert={String(werte.signature ?? '')}
+                        onChange={(d) => setzen('signature', d)}
+                      />
+                    ) : null}
+                  </div>
                 ))}
               </div>
             ),
           )}
-        </div>
-      ) : null}
+      </div>
     </section>
   )
 }
@@ -124,11 +127,14 @@ export default function Doku() {
   const { org } = useOrg()
   const [anlaesse, setAnlaesse] = useState<string[]>([])
   const [werte, setWerte] = useState<Werte>({})
-  const [zu, setZu] = useState<string[]>([])
   const [alleZeigen, setAlleZeigen] = useState(false)
   const [suche, setSuche] = useState('')
   const [kartenScan, setKartenScan] = useState(false)
-  const [aktiverBlock, setAktiverBlock] = useState('')
+  /**
+   * Ein Block zur Zeit. Gewechselt wird über die Reiter am Rand, nicht durch
+   * Scrollen: wer dokumentiert, soll die Stelle ansteuern, nicht suchen.
+   */
+  const [aktiverBlock, setAktiverBlock] = useState('anlass')
   const [pdfOffen, setPdfOffen] = useState(false)
 
   const setzen = (id: string, w: unknown) => setWerte((v) => ({ ...v, [id]: w }))
@@ -157,15 +163,30 @@ export default function Doku() {
     }
   })
 
-  /** Einen Block aufklappen und hinspringen. */
-  function zumBlock(id: string) {
-    setZu((v) => v.filter((x) => x !== id))
-    setAktiverBlock(id)
-    // Erst nach dem Aufklappen springen, sonst steht die Höhe noch nicht fest.
-    window.requestAnimationFrame(() => {
-      document.getElementById(`doku-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    })
+  /**
+   * Der Anlass bekommt einen eigenen Reiter, damit im Hauptbereich immer
+   * genau eine Sache steht.
+   */
+  const anlassStand: ReiterStand = {
+    id: 'anlass',
+    kurz: 'ANL',
+    titel: 'Anlass und Suche',
+    pflichtGesamt: 0,
+    pflichtOffen: 0,
+    gefuellt: anlaesse.length,
   }
+
+  /** Den Reiter wechseln. */
+  function zumBlock(id: string) {
+    setAktiverBlock(id)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  const reihenfolge = [anlassStand.id, ...staende.map((r) => r.id)]
+  const stelle = reihenfolge.indexOf(aktiverBlock)
+  const voriger = stelle > 0 ? reihenfolge[stelle - 1] : undefined
+  const naechster = stelle >= 0 && stelle < reihenfolge.length - 1 ? reihenfolge[stelle + 1] : undefined
+  const aktuell = bloecke.find((b) => b.id === aktiverBlock)
 
   // Fortschritt über den Hauptweg, nicht über den ganzen Bogen: was der
   // Anlass nicht verlangt, fehlt auch nicht.
@@ -243,8 +264,10 @@ export default function Doku() {
       </header>
 
       <main style={{ padding: '12px 14px 12px 0', maxWidth: 830, margin: '0 auto', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-        <Reiter staende={staende} aktiv={aktiverBlock} onWaehlen={zumBlock} />
+        <Reiter staende={[anlassStand, ...staende]} aktiv={aktiverBlock} onWaehlen={zumBlock} />
         <div style={{ flex: 1, minWidth: 0 }}>
+        {aktiverBlock === 'anlass' ? (
+          <>
         {/* Anlass ─ was der Einsatz ist, entscheidet, was gefragt wird. */}
         <section style={{ background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.07)', borderLeft: `3px solid ${ROT}`, padding: '11px 12px 8px', marginBottom: 10 }}>
           <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: ROT, marginBottom: 2 }}>
@@ -285,45 +308,69 @@ export default function Doku() {
           {treffer.length > 0 ? (
             <div style={{ background: '#fff', border: `0.5px solid ${LINIE}`, borderRadius: 10, marginTop: 6, overflow: 'hidden' }}>
               {treffer.map(({ feld, abschnitt }) => (
-                <a
-                  key={feld.id} href={`#doku-${abschnitt.id}`}
-                  onClick={() => { setAlleZeigen(true); setZu((v) => v.filter((x) => x !== abschnitt.id)); setSuche('') }}
-                  style={{ display: 'flex', justifyContent: 'space-between', gap: 10, padding: '8px 11px', borderBottom: '0.5px solid rgba(96,8,18,0.06)', color: TEXT, textDecoration: 'none', fontSize: 13 }}
+                <button
+                  key={feld.id} type="button"
+                  // Die Suche wechselt den Reiter — und blendet den Block ein,
+                  // falls er nicht zum gewählten Anlass gehört.
+                  onClick={() => { setAlleZeigen(true); setSuche(''); zumBlock(abschnitt.id) }}
+                  style={{ display: 'flex', width: '100%', justifyContent: 'space-between', gap: 10, padding: '9px 11px', borderBottom: '0.5px solid rgba(96,8,18,0.06)', border: 'none', background: 'transparent', color: TEXT, textAlign: 'left', fontSize: 13, fontFamily: 'inherit', cursor: 'pointer' }}
                 >
                   <span>{feld.label}</span>
                   <span style={{ fontSize: 11, fontStyle: 'italic', color: GRAU, textAlign: 'right' }}>{abschnitt.titel}</span>
-                </a>
+                </button>
               ))}
             </div>
           ) : null}
         </div>
 
-        {bloecke.map((b) => (
-          <Block
-            key={b.id} id={b.id} titel={b.titel} felder={b.felder} werte={werte} setzen={setzen}
-            aktion={aktionFuer(b.id)}
-            offen={!zu.includes(b.id)}
-            umschalten={() => setZu((v) => (v.includes(b.id) ? v.filter((x) => x !== b.id) : [...v, b.id]))}
-          />
-        ))}
+            {!alleZeigen && weitere.length > 0 ? (
+              <button
+                type="button" onClick={() => setAlleZeigen(true)}
+                style={{ width: '100%', padding: '11px 12px', background: '#fff', border: `0.5px solid ${LINIE}`, borderRadius: 12, color: ROT, fontFamily: 'inherit', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', cursor: 'pointer' }}
+              >
+                {weitere.length} weitere Blöcke zeigen
+              </button>
+            ) : null}
 
-        {!alleZeigen && weitere.length > 0 ? (
-          <button
-            type="button" onClick={() => setAlleZeigen(true)}
-            style={{ width: '100%', padding: '11px 12px', background: '#fff', border: `0.5px solid ${LINIE}`, borderRadius: 12, color: ROT, fontFamily: 'inherit', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', cursor: 'pointer' }}
-          >
-            {weitere.length} weitere Blöcke zeigen
-          </button>
-        ) : null}
+            {alleZeigen ? (
+              <button
+                type="button" onClick={() => setAlleZeigen(false)}
+                style={{ width: '100%', padding: '11px 12px', background: 'transparent', border: `0.5px solid ${LINIE}`, borderRadius: 12, color: GRAU, fontFamily: 'inherit', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', cursor: 'pointer' }}
+              >
+                Nur die Blöcke zum Anlass
+              </button>
+            ) : null}
+          </>
+        ) : aktuell ? (
+          <>
+            <Block
+              id={aktuell.id} titel={aktuell.titel} felder={aktuell.felder}
+              werte={werte} setzen={setzen} aktion={aktionFuer(aktuell.id)}
+            />
 
-        {alleZeigen ? (
-          <button
-            type="button" onClick={() => setAlleZeigen(false)}
-            style={{ width: '100%', padding: '11px 12px', background: 'transparent', border: `0.5px solid ${LINIE}`, borderRadius: 12, color: GRAU, fontFamily: 'inherit', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', cursor: 'pointer' }}
-          >
-            Nur die Blöcke zum Anlass
-          </button>
-        ) : null}
+            {/* Weiter von Zettel zu Zettel, ohne an den Rand greifen zu müssen. */}
+            <div style={{ display: 'flex', gap: 8, marginTop: 2 }}>
+              <button
+                type="button" disabled={!voriger}
+                onClick={() => voriger && zumBlock(voriger)}
+                style={{ flex: 1, padding: '11px 12px', background: 'transparent', border: `0.5px solid ${LINIE}`, borderRadius: 12, color: voriger ? GRAU : 'transparent', fontFamily: 'inherit', fontSize: 11, fontWeight: 700, cursor: voriger ? 'pointer' : 'default' }}
+              >
+                ‹ Zurück
+              </button>
+              <button
+                type="button" disabled={!naechster}
+                onClick={() => naechster && zumBlock(naechster)}
+                style={{ flex: 2, padding: '11px 12px', background: naechster ? ROT : 'rgba(96,8,18,0.2)', border: 'none', borderRadius: 12, color: '#fff', fontFamily: 'inherit', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', cursor: naechster ? 'pointer' : 'default' }}
+              >
+                Weiter ›
+              </button>
+            </div>
+          </>
+        ) : (
+          <div style={{ padding: '30px 12px', textAlign: 'center', fontSize: 13, fontStyle: 'italic', color: GRAU }}>
+            Dieser Block gehört nicht zum gewählten Anlass.
+          </div>
+        )}
         </div>
       </main>
 

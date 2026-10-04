@@ -339,6 +339,19 @@ function neurologieUebergabe(p: Payload): string {
   )
 }
 
+/**
+ * Die gezeichnete Unterschrift als Bild über der Linie.
+ *
+ * Nur echte Bild-Datenadressen werden übernommen. Alles andere kommt nicht
+ * ins Dokument: der Wert stammt aus der Payload, und was von dort in HTML
+ * geschrieben wird, muss geprüft sein.
+ */
+function unterschriftBild(p: Payload): string {
+  const roh = typeof p.signature === 'string' ? p.signature : ''
+  if (!/^data:image\/(png|jpeg);base64,[A-Za-z0-9+/=]+$/.test(roh)) return '<div class="sig-raum"></div>'
+  return `<div class="sig-raum"><img src="${roh}" alt=""></div>`
+}
+
 function fussbloecke(p: Payload): string {
   return `${block(
     SEITE2.besonderheiten,
@@ -346,7 +359,7 @@ function fussbloecke(p: Payload): string {
   )}
   ${block(
     SEITE2.wertsachen,
-    `<div class="fb"><span class="kl">Wertsachen</span>${schreibflaeche(w(p, 'wertsachen'), 5, 'unt-f')}<div class="unterschrift"><b>${escapeHtml(w(p, 'unterschrift'))}</b><span class="kl">Unterschrift</span></div></div>`,
+    `<div class="fb"><span class="kl">Wertsachen</span>${schreibflaeche(w(p, 'wertsachen'), 5, 'unt-f')}${unterschriftBild(p)}<div class="unterschrift"><b>${escapeHtml(w(p, 'unterschrift'))}</b><span class="kl">Unterschrift</span></div></div>`,
   )}
   ${block(
     SEITE2.uebergabeAn,
@@ -411,7 +424,9 @@ export const STIL_SEITE2 = `
 .fb-fl{flex:1 1 auto;border-bottom:none}
 .fb-naca{margin-top:auto;display:flex;align-items:baseline;gap:4pt;font-size:${MASS.ueberschrift}pt}
 .fb-nf{margin-left:auto}
-.unterschrift{margin-top:auto;border-top:${MASS.linie}pt solid #000;text-align:center}
+.sig-raum{margin-top:auto;text-align:center;line-height:0}
+.sig-raum img{max-width:100%;max-height:26pt;object-fit:contain}
+.unterschrift{border-top:${MASS.linie}pt solid #000;text-align:center}
 .unterschrift b{display:block;font-size:${MASS.ueberschrift}pt}
 `
 
