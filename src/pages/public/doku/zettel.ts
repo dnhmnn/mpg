@@ -73,14 +73,17 @@ export const ZETTEL: Zettel[] = [
           'neuro_ohne_befund', 'bewusstsein',
           'gcs_augen', 'gcs_verbal', 'gcs_motorik', 'gcs_summe',
           'pupillen_weite_re', 'pupillen_weite_li', 'pupillen_licht_re', 'pupillen_licht_li',
-          'neuro_auffaelligkeiten', 'schmerz', 'schmerz_nicht_beurteilbar', 'schmerz_tolerabel',
+          'neuro_auffaelligkeiten',
           'psyche',
         ],
       },
       {
         kennung: 'E',
-        titel: 'Entkleiden, Verletzungen, Umgebung',
+        titel: 'Entkleiden, Schmerz, Verletzungen',
         felder: [
+          // Der Schmerz stand im Abschnitt Neurologie des Bogens und war
+          // deshalb zuerst bei D. Erhoben wird er beim Entkleiden.
+          'schmerz', 'schmerz_nicht_beurteilbar', 'schmerz_tolerabel',
           'untersuchung',
           'verletzung_zusammenhang', 'verletzungsmuster',
           'verl_sht', 'verl_gesicht', 'verl_hws', 'verl_thorax', 'verl_abdomen',

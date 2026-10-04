@@ -69,7 +69,7 @@ describe('Was die Zettel tragen', () => {
     // Der Erstbefund ist nach xABCDE gegliedert, nicht nach den Abschnitten.
     expect(befund.teile.map((t) => t.titel)).toEqual([
       'Zeitpunkt', 'Kritische Blutung', 'Atemwege', 'Atmung', 'Kreislauf',
-      'Neurologie und Psyche', 'Entkleiden, Verletzungen, Umgebung',
+      'Neurologie und Psyche', 'Entkleiden, Schmerz, Verletzungen',
     ])
   })
 
@@ -121,5 +121,10 @@ describe('Der Erstbefund nach xABCDE', () => {
     expect(feld('D')).toContain('psyche')
     expect(feld('E')).toContain('verl_thorax')
     expect(feld('E')).toContain('sturz')
+    // Der Schmerz steht bei E, nicht bei D — er wird beim Entkleiden erhoben.
+    expect(feld('E')).toContain('schmerz')
+    expect(feld('D')).not.toContain('schmerz')
+    expect(feld('E')).toContain('schmerz_nicht_beurteilbar')
+    expect(feld('E')).toContain('schmerz_tolerabel')
   })
 })
