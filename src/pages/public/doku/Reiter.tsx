@@ -48,13 +48,23 @@ const FARBE: Record<Ampel, { rand: string; grund: string; schrift: string }> = {
   leer: { rand: 'rgba(96,8,18,0.12)', grund: '#fff', schrift: GRAU },
 }
 
-export default function Reiter({ staende, aktiv, onWaehlen, beschriftung, schmal }: {
+export default function Reiter({ staende, aktiv, onWaehlen, beschriftung, schmal, ueberlagernd }: {
   staende: ReiterStand[]
   aktiv?: string
   onWaehlen: (id: string) => void
   beschriftung?: string
   /** Die zweite Reihe: schmaler, weil dort nur Buchstaben stehen. */
   schmal?: boolean
+  /**
+   * Über den Inhalt ragen statt Platz zu nehmen.
+   *
+   * Die Leiste bekommt keine Breite im Satz; ihre Zettel ragen nach rechts
+   * über die Kante des Kastens. Dadurch bleiben die Felder genauso breit wie
+   * ohne die zweite Reihe. Damit nichts darunter verschwindet, liegen sie
+   * leicht durchscheinend auf und sind nach links verschoben, sodass sie
+   * fast nur den Rand des Kastens überdecken.
+   */
+  ueberlagernd?: boolean
 }) {
   return (
     <nav
@@ -62,7 +72,12 @@ export default function Reiter({ staende, aktiv, onWaehlen, beschriftung, schmal
       style={{
         position: 'sticky', top: 74, alignSelf: 'flex-start',
         maxHeight: 'calc(100vh - 90px)', overflowY: 'auto', overflowX: 'hidden',
-        flexShrink: 0, paddingRight: 2,
+        flexShrink: 0, paddingRight: ueberlagernd ? 0 : 2,
+        // Auch der Abstand im Satz muss weg, sonst kostet die Leiste trotz
+        // Breite null noch die Lücke zum Kasten.
+        ...(ueberlagernd
+          ? { width: 0, marginRight: -10, overflowX: 'visible' as const, zIndex: 8 }
+          : {}),
       }}
     >
       {staende.map((r) => {
@@ -76,6 +91,9 @@ export default function Reiter({ staende, aktiv, onWaehlen, beschriftung, schmal
             style={{
               display: 'block', width: schmal ? 28 : 46, marginBottom: 3,
               padding: schmal ? '8px 3px 7px' : '7px 4px 6px',
+              // Nach links gerückt: so liegt der Zettel fast nur auf dem Rand
+              // des Kastens, nicht auf seinem Inhalt.
+              ...(ueberlagernd ? { marginLeft: -14, opacity: istAktiv ? 1 : 0.9 } : {}),
               // Links bündig, rechts gerundet: der Zettel ragt aus dem Rand.
               borderRadius: '0 9px 9px 0',
               background: istAktiv ? ROT : f.grund,

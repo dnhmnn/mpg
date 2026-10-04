@@ -346,7 +346,7 @@ export default function Doku() {
         {schritte.length > 1 ? (
           <Reiter
             staende={schritte} aktiv={gezeigterTeil} onWaehlen={zumSchritt}
-            beschriftung={`Schritte: ${aktuell?.titel ?? ''}`} schmal
+            beschriftung={`Schritte: ${aktuell?.titel ?? ''}`} schmal ueberlagernd
           />
         ) : null}
         <div style={{ flex: 1, minWidth: 0 }}>
