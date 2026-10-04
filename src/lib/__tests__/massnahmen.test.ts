@@ -218,3 +218,58 @@ describe('Die rechtliche Begründung einer Maßnahme', () => {
     expect(massnahmenLesen(w)[0].grund).toBe('notstand')
   })
 })
+
+describe('Die Begründungen auf dem Bogen', () => {
+  const del = (w: Record<string, unknown>) => w.aelrd_delegationen
+
+  it('schreibt jede Maßnahme, die keine Basismaßnahme ist, in die ÄLRD-Delegationen', () => {
+    let w = massnahmeEintragen({}, { zeit: '08:50', kategorie: 'medizintechnik', art: 'ecmo', grund: 'notsang_2a' })
+    w = massnahmeEintragen(w, { zeit: '09:10', kategorie: 'zugaenge', art: 'intraossäre Punktion', grund: 'delegiert' })
+    expect(del(w)).toBe('08:50 ECMO (§ 2a NotSanG) · 09:10 intraossäre Punktion (delegiert)')
+  })
+
+  it('lässt die Basismaßnahme draußen — sie ist keine Delegation', () => {
+    const w = massnahmeEintragen({}, { zeit: '08:42', kategorie: 'lagerung', art: 'Vakuummatratze', grund: 'basis' })
+    expect(del(w)).toBeUndefined()
+  })
+
+  it('schreibt nichts, solange die Begründung fehlt, und trägt sie nach', () => {
+    let w = ein({}, 'medizintechnik', 'ecmo')
+    expect(del(w)).toBeUndefined()
+    w = massnahmeGrundSetzen(w, massnahmenLesen(w)[0].id, 'notstand')
+    expect(del(w)).toBe('08:42 ECMO (§ 34 StGB)')
+  })
+
+  it('ersetzt die Zeile, wenn die Begründung sich ändert, statt sie zu verdoppeln', () => {
+    let w = massnahmeEintragen({}, { zeit: '08:50', kategorie: 'medizintechnik', art: 'ecmo', grund: 'notstand' })
+    const id = massnahmenLesen(w)[0].id
+    w = massnahmeGrundSetzen(w, id, 'notsang_2a')
+    expect(del(w)).toBe('08:50 ECMO (§ 2a NotSanG)')
+    // Auf Basismaßnahme umgestellt: die Zeile gehört nicht mehr dorthin.
+    w = massnahmeGrundSetzen(w, id, 'basis')
+    expect(del(w)).toBe('')
+  })
+
+  it('nimmt die Zeile mit dem gestrichenen Eintrag zurück', () => {
+    let w = massnahmeEintragen({}, { zeit: '08:50', kategorie: 'medizintechnik', art: 'ecmo', grund: 'delegiert' })
+    w = massnahmeEintragen(w, { zeit: '09:10', kategorie: 'medizintechnik', art: 'notfallpacer', grund: 'delegiert' })
+    w = massnahmeStreichen(w, massnahmenLesen(w)[0].id)
+    expect(del(w)).toBe('09:10 Notfallpacer (delegiert)')
+  })
+
+  it('lässt getippten Text stehen', () => {
+    // Eine telefonische Anordnung, die nicht im Verlauf steht, muss bleiben.
+    let w: Record<string, unknown> = { aelrd_delegationen: 'Fentanyl nach Rücksprache ÄLRD' }
+    w = massnahmeEintragen(w, { zeit: '08:50', kategorie: 'medizintechnik', art: 'ecmo', grund: 'delegiert' })
+    expect(del(w)).toBe('Fentanyl nach Rücksprache ÄLRD · 08:50 ECMO (delegiert)')
+    w = massnahmeStreichen(w, massnahmenLesen(w)[0].id)
+    expect(del(w)).toBe('Fentanyl nach Rücksprache ÄLRD')
+  })
+
+  it('steht so im Ausdruck, wo der Bogen die Delegationen führt', () => {
+    const w = massnahmeEintragen({}, { zeit: '08:50', kategorie: 'medizintechnik', art: 'ecmo', grund: 'notsang_2a' })
+    const html = aelrdHtml(w)
+    expect(html).toContain('ÄLRD Delegationen')
+    expect(html).toContain('08:50 ECMO (§ 2a NotSanG)')
+  })
+})

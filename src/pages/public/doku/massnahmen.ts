@@ -11,6 +11,11 @@
 // Was der Vordruck nicht führt, ist eine Zeitspalte für die Kreuz-Kategorien.
 // Dort steht die Uhrzeit also nur in der Erfassung und im Datensatz, nicht
 // auf dem Papier.
+//
+// Die rechtliche Begründung hat dagegen eine Stelle auf dem Bogen: das Feld
+// "ÄLRD Delegationen" im Abschluss. Dorthin schreibt sich jede Maßnahme, die
+// keine Basismaßnahme ist — mit Uhrzeit und Grund. Von Hand getippter Text
+// bleibt dabei stehen, nur die eigenen Zeilen werden nachgezogen.
 
 import { aelrdFeld } from '../../../katalog/aelrd'
 import { artText, massnahmeKategorie, rechtsgrund } from '../../../katalog/massnahmenArten'
@@ -119,6 +124,34 @@ function nachziehen(werte: Werte, kategorie: string, eintraege: Massnahme[], ent
   return { ...werte, [kategorie]: neu.art }
 }
 
+/** Das Feld des Bogens, das die Begründungen aufnimmt. */
+const DELEGATIONEN = 'aelrd_delegationen'
+
+/**
+ * Die Zeilen der ÄLRD-Delegationen nachziehen.
+ *
+ * Gelöscht wird nur, was zu einem bekannten Eintrag gehört — erkannt an
+ * Uhrzeit und Maßnahme, unabhängig von der Begründung, damit eine geänderte
+ * Begründung ihre alte Zeile ersetzt und nicht neben ihr steht. Alles andere
+ * hat jemand getippt und bleibt.
+ */
+function delegationenNachziehen(werte: Werte, eintraege: Massnahme[], entfernt?: Massnahme): Werte {
+  const bekannt = entfernt ? [...eintraege, entfernt] : eintraege
+  const alt = typeof werte[DELEGATIONEN] === 'string' ? (werte[DELEGATIONEN] as string) : ''
+  const fremd = alt
+    .split(TRENNER)
+    .map((t) => t.trim())
+    .filter(Boolean)
+    .filter((teil) => !bekannt.some((m) => teil === zeileMitGrund(m) || teil.startsWith(zeile(m))))
+  // Die Basismaßnahme ist keine Delegation und gehört nicht in das Feld.
+  const eigene = eintraege
+    .filter((m) => m.grund && m.grund !== 'basis')
+    .map((m) => zeileMitGrund(m))
+  const neu = [...fremd, ...eigene].join(TRENNER)
+  if (neu === alt) return werte
+  return { ...werte, [DELEGATIONEN]: neu }
+}
+
 /** Fortlaufende Kennung, die auch ohne crypto.randomUUID eindeutig bleibt. */
 function kennung(vorhanden: Massnahme[]): string {
   let n = vorhanden.length + 1
@@ -141,7 +174,10 @@ export function massnahmeEintragen(
     ...(eingabe.grund && rechtsgrund(eingabe.grund) ? { grund: eingabe.grund } : {}),
   }
   const eintraege = [...vorhanden, neu]
-  return nachziehen({ ...werte, massnahmen: eintraege }, eingabe.kategorie, eintraege)
+  return delegationenNachziehen(
+    nachziehen({ ...werte, massnahmen: eintraege }, eingabe.kategorie, eintraege),
+    eintraege,
+  )
 }
 
 /** Einen Eintrag streichen — und das Feld des Bogens mit ihm. */
@@ -150,7 +186,11 @@ export function massnahmeStreichen(werte: Werte, id: string): Werte {
   const weg = vorhanden.find((e) => e.id === id)
   if (!weg) return werte
   const eintraege = vorhanden.filter((e) => e.id !== id)
-  return nachziehen({ ...werte, massnahmen: eintraege }, weg.kategorie, eintraege, weg)
+  return delegationenNachziehen(
+    nachziehen({ ...werte, massnahmen: eintraege }, weg.kategorie, eintraege, weg),
+    eintraege,
+    weg,
+  )
 }
 
 /** Die Begründung eines Eintrags nachtragen oder richtigstellen. */
@@ -158,15 +198,13 @@ export function massnahmeGrundSetzen(werte: Werte, id: string, grund: string): W
   if (grund && !rechtsgrund(grund)) return werte
   const vorhanden = massnahmenLesen(werte)
   if (!vorhanden.some((e) => e.id === id)) return werte
-  return {
-    ...werte,
-    massnahmen: vorhanden.map((e) => {
-      if (e.id !== id) return e
-      const ohne = { ...e }
-      delete ohne.grund
-      return grund ? { ...ohne, grund } : ohne
-    }),
-  }
+  const eintraege = vorhanden.map((e) => {
+    if (e.id !== id) return e
+    const ohne = { ...e }
+    delete ohne.grund
+    return grund ? { ...ohne, grund } : ohne
+  })
+  return delegationenNachziehen({ ...werte, massnahmen: eintraege }, eintraege)
 }
 
 /** Einträge, deren rechtliche Begründung noch fehlt. */
