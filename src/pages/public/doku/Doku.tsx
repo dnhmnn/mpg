@@ -137,7 +137,14 @@ function Block({ id, titel, teile, zeigeSchritt, felder, werte, setzen, aktion }
               ) : null}
               {inBloecke(teil.felder).map((gruppe, i) =>
                 gruppe.raster ? (
-                  <div key={i} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(96px,1fr))', gap: 8, marginBottom: 12 }}>
+                  <div key={i} style={{
+                      display: 'grid',
+                      // Neunzig statt sechsundneunzig: mit der zweiten Zettelreihe ist der
+                      // Kasten zwanzig Pixel schmaler, und bei sechsundneunzig fiel das
+                      // Raster dort von drei auf zwei Spalten. Eine dreistellige Zahl
+                      // braucht bei Schriftgroesse 19 rund zweiunddreissig Pixel, dazu
+                      // Innenrand und die Einheit am rechten Rand.
+                      gridTemplateColumns: 'repeat(auto-fit,minmax(90px,1fr))', gap: 8, marginBottom: 12 }}>
                     {gruppe.felder.map((f) => (
                       <Rasterzelle key={f.id} feld={f} werte={werte} setzen={setzen} />
                     ))}

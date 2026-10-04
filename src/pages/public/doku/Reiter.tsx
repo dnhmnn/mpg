@@ -86,8 +86,15 @@ export default function Reiter({ staende, aktiv, onWaehlen, beschriftung, schmal
                *
                * Scrollen braucht sie ohnehin nicht: es sind sieben Schritte.
                */
-              width: 0,
-              marginRight: -10,
+              /*
+               * Gerade so viel Breite, dass die Zettel frei liegen.
+               *
+               * Sie sind zwanzig Pixel breit und ragen drei nach links über
+               * die Leiste hinaus; es bleiben also zehn, die der Kasten
+               * abgibt. Er wird dadurch von 348 auf 330 Pixel schmaler —
+               * die Zettel liegen dafür neben ihm statt auf ihm.
+               */
+              width: 10,
               paddingRight: 0,
               // Etwas tiefer anfangen, damit die runde obere Ecke des
               // Kastens frei bleibt — sonst sieht er links eckig aus.
@@ -126,11 +133,10 @@ export default function Reiter({ staende, aktiv, onWaehlen, beschriftung, schmal
                * die Kästen schaut, verdeckt den ersten Buchstaben jeder
                * Beschriftung — genau das ist mir passiert.
                *
-               * Mit zwanzig Pixeln Breite und -5 beginnt der Zettel sieben
-               * Pixel hinter der ersten Reihe und endet genau dort, wo die
-               * Beschriftungen anfangen.
+               * Mit -3 beginnt der Zettel sieben Pixel hinter der ersten
+               * Reihe und endet drei Pixel vor dem Kasten.
                */
-              ...(ueberlagernd ? { marginLeft: -5, opacity: istAktiv ? 1 : 0.9 } : {}),
+              ...(ueberlagernd ? { marginLeft: -3 } : {}),
               /*
                * Am Bildschirmrand: links bündig, rechts gerundet — der
                * Zettel ragt aus dem Rand heraus.
