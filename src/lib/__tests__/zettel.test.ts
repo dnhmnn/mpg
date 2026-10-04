@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { ZETTEL, zettelMitFeldern } from '../../pages/public/doku/zettel'
+import { ZETTEL, felderAusAbschnitten, zettelMitFeldern } from '../../pages/public/doku/zettel'
 import { AELRD_ABSCHNITTE, aelrdFeld } from '../../katalog/aelrd'
 import { istSpiegelFeld } from '../../katalog/aelrdSpiegel'
 
@@ -66,13 +66,60 @@ describe('Was die Zettel tragen', () => {
 
   it('gibt zusammengelegten Zetteln ihre Teile zum Beschriften', () => {
     const befund = zettel.find((z) => z.id === 'befund')!
+    // Der Erstbefund ist nach xABCDE gegliedert, nicht nach den Abschnitten.
     expect(befund.teile.map((t) => t.titel)).toEqual([
-      'Erstbefund', 'Neurologie', 'Untersuchung und Psyche', 'Verletzungen',
+      'Zeitpunkt', 'Kritische Blutung', 'Atemwege', 'Atmung', 'Kreislauf',
+      'Neurologie und Psyche', 'Entkleiden, Verletzungen, Umgebung',
     ])
   })
 
   it('lässt Zettel ohne Felder weg', () => {
     // Die Verlaufsbeschreibung ist auf dem Papier das Kurvenblatt.
     expect(zettel.map((z) => z.id)).not.toContain('verlauf')
+  })
+})
+
+describe('Der Erstbefund nach xABCDE', () => {
+  const befund = ZETTEL.find((z) => z.id === 'befund')!
+  const gruppen = befund.gruppen!
+
+  it('geht die Schritte in der Reihenfolge des Schemas', () => {
+    expect(gruppen.map((g) => g.kennung)).toEqual(['', 'x', 'A', 'B', 'C', 'D', 'E'])
+  })
+
+  it('beginnt mit der kritischen Blutung, vor dem Atemweg', () => {
+    const x = gruppen.findIndex((g) => g.kennung === 'x')
+    const a = gruppen.findIndex((g) => g.kennung === 'A')
+    expect(x).toBeLessThan(a)
+    // Der Bogen führt keine eigene Angabe dafür — die Option "Blutung" steckt
+    // im Kreislauf-Feld, und genau das steht hier als x-Schritt.
+    expect(gruppen[x].felder).toEqual(['kreislauf'])
+    expect(aelrdFeld('kreislauf')?.optionen?.some((o) => o.text === 'Blutung')).toBe(true)
+  })
+
+  it('verliert kein Feld und führt keines doppelt', () => {
+    // Die Umgliederung ordnet nur um. Ein Feld, das dabei herausfällt, wäre
+    // im Formular nicht mehr erreichbar.
+    const ausSchema = gruppen.flatMap((g) => g.felder)
+    const ausBogen = felderAusAbschnitten(befund)
+    expect([...ausSchema].sort()).toEqual([...ausBogen].sort())
+    expect(ausSchema.length).toBe(new Set(ausSchema).size)
+  })
+
+  it('nennt nur Felder, die es im Bogen gibt', () => {
+    const unbekannt = gruppen.flatMap((g) => g.felder).filter((id) => !aelrdFeld(id))
+    expect(unbekannt).toEqual([])
+  })
+
+  it('ordnet die Organsysteme ihren Buchstaben zu', () => {
+    const feld = (k: string) => gruppen.find((g) => g.kennung === k)!.felder
+    expect(feld('A')).toContain('atemwege')
+    expect(feld('B')).toContain('atmung')
+    expect(feld('C')).toContain('ekg')
+    expect(feld('C')).toContain('rekap_zeit')
+    expect(feld('D')).toContain('gcs_summe')
+    expect(feld('D')).toContain('psyche')
+    expect(feld('E')).toContain('verl_thorax')
+    expect(feld('E')).toContain('sturz')
   })
 })

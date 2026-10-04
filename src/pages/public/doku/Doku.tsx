@@ -108,11 +108,23 @@ function Block({ id, titel, teile, felder, werte, setzen, aktion }: {
                   // fünfzig Feldern verliert man sonst, wo man gerade ist.
                   position: 'sticky', top: 62, zIndex: 5,
                   background: '#fff', margin: '10px -12px 7px', padding: '7px 12px 5px',
-                  fontSize: 9.5, fontWeight: 700, textTransform: 'uppercase',
-                  letterSpacing: '0.12em', color: ROT,
+                  display: 'flex', alignItems: 'baseline', gap: 8,
                   borderBottom: `0.5px solid ${LINIE}`,
                 }}>
-                  {teil.titel}
+                  {teil.kennung ? (
+                    // Der Buchstabe des Schemas, groß genug zum Abarbeiten.
+                    <span style={{
+                      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                      width: 22, height: 22, flexShrink: 0, borderRadius: 11,
+                      background: ROT, color: '#fff',
+                      fontSize: 12, fontWeight: 800, lineHeight: 1,
+                    }}>
+                      {teil.kennung}
+                    </span>
+                  ) : null}
+                  <span style={{ fontSize: 9.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: ROT }}>
+                    {teil.titel}
+                  </span>
                 </div>
               ) : null}
               {inBloecke(teil.felder).map((gruppe, i) =>
@@ -126,7 +138,12 @@ function Block({ id, titel, teile, felder, werte, setzen, aktion }: {
                   <div key={i}>
                     {gruppe.felder.map((f) => (
                       <div key={f.id}>
-                        <DokuFeld feld={f} werte={werte} setzen={setzen} />
+                        <DokuFeld
+                          feld={f} werte={werte} setzen={setzen}
+                          // Trägt die Überschrift den Namen schon, wird er
+                          // am Feld weggelassen.
+                          ohneBeschriftung={Boolean(teil.kennung) && teil.felder.length === 1}
+                        />
                         {/* Die Fläche zum Unterschreiben gehört an das Feld,
                             das sie trägt — nicht ans Ende des Blocks. */}
                         {f.id === 'unterschrift' ? (

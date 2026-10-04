@@ -147,8 +147,16 @@ export function Rasterzelle({ feld, werte, setzen }: {
   )
 }
 
-export default function DokuFeld({ feld, werte, setzen }: {
-  feld: AelrdFeld; werte: Werte; setzen: (id: string, w: unknown) => void
+export default function DokuFeld({ feld, werte, setzen, ohneBeschriftung }: {
+  feld: AelrdFeld
+  werte: Werte
+  setzen: (id: string, w: unknown) => void
+  /**
+   * Die Beschriftung weglassen, weil die Überschrift darüber sie schon trägt.
+   * Unter "x — Kritische Blutung" noch einmal "Kreislauf" zu schreiben sagt
+   * nichts und kostet eine Zeile.
+   */
+  ohneBeschriftung?: boolean
 }) {
   const wert = werte[feld.id]
 
@@ -165,7 +173,7 @@ export default function DokuFeld({ feld, werte, setzen }: {
     const bis = feld.max ?? 10
     return (
       <div style={{ marginBottom: 10 }}>
-        <Marke text={feld.label} hinweis={`${von}–${bis}`} />
+        {ohneBeschriftung ? null : <Marke text={feld.label} hinweis={`${von}–${bis}`} />}
         <div>
           {Array.from({ length: bis - von + 1 }, (_, i) => von + i).map((n) => (
             <Knopf key={n} text={String(n)} klein an={String(wert ?? '') === String(n)}
@@ -188,7 +196,7 @@ export default function DokuFeld({ feld, werte, setzen }: {
     const mehrfach = feld.typ === 'mehrfach'
     return (
       <div style={{ marginBottom: 10 }}>
-        <Marke text={feld.label} hinweis={ausNorm ? 'nach DIVI' : undefined} />
+        {ohneBeschriftung ? null : <Marke text={feld.label} hinweis={ausNorm ? 'nach DIVI' : undefined} />}
         <div>
           {optionen.map((o) => (
             <Knopf key={o.wert} text={o.text} an={gewaehlt(wert, o.wert)}
@@ -202,7 +210,7 @@ export default function DokuFeld({ feld, werte, setzen }: {
   if (feld.typ === 'langtext') {
     return (
       <div style={{ marginBottom: 10 }}>
-        <Marke text={feld.label} />
+        {ohneBeschriftung ? null : <Marke text={feld.label} />}
         <textarea name={feld.id} rows={3}
           value={String(wert ?? '')} onChange={(e) => setzen(feld.id, e.target.value)}
           style={{ ...eingabe, resize: 'vertical', lineHeight: 1.45 }} />
@@ -213,7 +221,7 @@ export default function DokuFeld({ feld, werte, setzen }: {
   const typ = feld.typ === 'zeit' ? 'time' : feld.typ === 'datum' ? 'date' : feld.typ === 'zahl' ? 'number' : 'text'
   return (
     <div style={{ marginBottom: 10 }}>
-      <Marke text={feld.label} hinweis={feld.einheit} />
+      {ohneBeschriftung ? null : <Marke text={feld.label} hinweis={feld.einheit} />}
       <input name={feld.id} type={typ}
         inputMode={feld.typ === 'zahl' ? 'decimal' : undefined}
         value={String(wert ?? '')} onChange={(e) => setzen(feld.id, e.target.value)}
