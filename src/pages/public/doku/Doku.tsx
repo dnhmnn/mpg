@@ -341,15 +341,9 @@ export default function Doku() {
         </div>
       </header>
 
-      <main style={{ padding: '12px 14px 12px 0', maxWidth: 830, margin: '0 auto', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-        <Reiter staende={staende} aktiv={aktiverBlock} onWaehlen={zumBlock} />
-        {schritte.length > 1 ? (
-          <Reiter
-            staende={schritte} aktiv={gezeigterTeil} onWaehlen={zumSchritt}
-            beschriftung={`Schritte: ${aktuell?.titel ?? ''}`} schmal ueberlagernd
-          />
-        ) : null}
-        <div style={{ flex: 1, minWidth: 0 }}>
+      {/* Die Suche steht über beiden Leisten, nicht neben ihnen: sonst läge
+          der oberste Schrittzettel auf ihr und verdeckte den Anfang. */}
+      <div style={{ padding: '12px 14px 0', maxWidth: 830, margin: '0 auto' }}>
         {/* Die Suche bleibt immer sichtbar: sie ist der Weg zu einem Feld,
             dessen Block man nicht im Kopf hat. */}
         <div style={{ marginBottom: 10 }}>
@@ -374,8 +368,18 @@ export default function Doku() {
             </div>
           ) : null}
         </div>
+      </div>
 
-            {aktuell ? (
+      <main style={{ padding: '10px 14px 12px 0', maxWidth: 830, margin: '0 auto', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+        <Reiter staende={staende} aktiv={aktiverBlock} onWaehlen={zumBlock} />
+        {schritte.length > 1 ? (
+          <Reiter
+            staende={schritte} aktiv={gezeigterTeil} onWaehlen={zumSchritt}
+            beschriftung={`Schritte: ${aktuell?.titel ?? ''}`} schmal ueberlagernd
+          />
+        ) : null}
+        <div style={{ flex: 1, minWidth: 0 }}>
+        {aktuell ? (
           <>
             <Block
               id={aktuell.id} titel={aktuell.titel} teile={teileZumZeigen}

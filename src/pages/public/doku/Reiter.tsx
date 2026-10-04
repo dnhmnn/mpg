@@ -71,13 +71,33 @@ export default function Reiter({ staende, aktiv, onWaehlen, beschriftung, schmal
       aria-label={beschriftung ?? 'Blöcke des Protokolls'}
       style={{
         position: 'sticky', top: 74, alignSelf: 'flex-start',
-        maxHeight: 'calc(100vh - 90px)', overflowY: 'auto', overflowX: 'hidden',
-        flexShrink: 0, paddingRight: ueberlagernd ? 0 : 2,
-        // Auch der Abstand im Satz muss weg, sonst kostet die Leiste trotz
-        // Breite null noch die Lücke zum Kasten.
+        flexShrink: 0,
         ...(ueberlagernd
-          ? { width: 0, marginRight: -10, overflowX: 'visible' as const, zIndex: 8 }
-          : {}),
+          ? {
+              /*
+               * Die ueberlagernde Leiste darf KEIN Scrollbehaelter sein.
+               *
+               * `overflow-y: auto` zusammen mit `overflow-x: visible` macht
+               * CSS stillschweigend zu `auto` in beiden Richtungen — und
+               * dann wird alles weggeschnitten, was ueber die null Pixel
+               * Breite hinausragt. Also genau die Zettel. Sie standen im
+               * Satz an der richtigen Stelle und wurden trotzdem nicht
+               * gemalt; eine Messung der Rechtecke merkt davon nichts.
+               *
+               * Scrollen braucht sie ohnehin nicht: es sind sieben Schritte.
+               */
+              width: 0,
+              marginRight: -10,
+              paddingRight: 0,
+              overflow: 'visible' as const,
+              zIndex: 8,
+            }
+          : {
+              maxHeight: 'calc(100vh - 90px)',
+              overflowY: 'auto' as const,
+              overflowX: 'hidden' as const,
+              paddingRight: 2,
+            }),
       }}
     >
       {staende.map((r) => {
