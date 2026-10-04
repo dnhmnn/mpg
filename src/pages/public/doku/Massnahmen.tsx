@@ -1,11 +1,14 @@
-// Maßnahmen eintragen: Uhrzeit, Art, Ausführung — in dieser Reihenfolge.
+// Maßnahmen eintragen: Uhrzeit, Art, Ausführung, Begründung — in dieser
+// Reihenfolge, und die Begründung schließt ab.
 //
 // Die Uhrzeit steht vorweg und zeigt die aktuelle an. Wer sie so lässt, tippt
 // nichts; wer nachträgt, überschreibt sie. Nach jedem Eintrag geht sie zurück
 // auf die aktuelle Zeit, denn der nächste Griff ist meist der nächste Moment.
 //
-// Die Ausführung wird mit einem Tippen eingetragen — kein zweiter Knopf
-// dahinter. Ein Griff im Fahrzeug ist einer zu viel.
+// Die rechtliche Begründung kommt zuletzt und trägt damit ein: sie ist eine
+// Aussage über die Maßnahme, die man erst trifft, wenn die Maßnahme dasteht.
+// Wer sie im Moment nicht treffen kann, trägt mit "später" ein — die Liste
+// sagt dann, dass sie fehlt. Blockiert wird am Patienten nichts.
 
 import { useState } from 'react'
 import {
@@ -29,17 +32,10 @@ export default function Massnahmen({ werte, setWerte }: {
   const [zeit, setZeit] = useState('')
   const [kategorie, setKategorie] = useState('')
   const [frei, setFrei] = useState('')
-  /**
-   * Die Begründung bleibt stehen, bis sie geändert wird.
-   *
-   * In einem Einsatz ist das meiste auf demselben Weg zulässig. Sie bei jedem
-   * Eintrag neu zu wählen wäre ein Griff, der fast immer derselbe ist.
-   */
-  const [grund, setGrund] = useState('')
+  /** Die gewählte Ausführung — eingetragen wird sie erst mit der Begründung. */
+  const [art, setArt] = useState('')
   /** Für welchen Eintrag die Begründung gerade nachgetragen wird. */
   const [nachtragen, setNachtragen] = useState('')
-  /** Die Begründung zum Ändern aufgeklappt. */
-  const [grundOffen, setGrundOffen] = useState(false)
   const kat = massnahmeKategorie(kategorie)
   const eintraege = massnahmenAbsteigend(werte)
   const offen = ohneGrund(werte)
@@ -47,11 +43,13 @@ export default function Massnahmen({ werte, setWerte }: {
   // Leer heißt "jetzt": die Zeit des Eintragens, nicht die des Öffnens.
   const gezeigteZeit = zeit || jetztZeit()
 
-  function eintragen(art: string) {
+  /** Die Begründung schließt den Eintrag ab — leer heißt "später". */
+  function eintragen(grund: string) {
     if (!kategorie || !art.trim()) return
     setWerte((v) => massnahmeEintragen(v, { zeit: gezeigteZeit, kategorie, art, grund }))
     setZeit('')
     setFrei('')
+    setArt('')
     // Zurück zur Auswahl: der nächste Griff ist meist eine andere Art, und
     // der Eintrag soll in der Liste zu sehen sein, nicht hinter der Liste
     // der Ausführungen, die ihn gerade erzeugt hat.
@@ -101,7 +99,7 @@ export default function Massnahmen({ werte, setWerte }: {
          */}
         {kat ? (
           <button
-            type="button" onClick={() => { setKategorie(''); setFrei('') }}
+            type="button" onClick={() => { setKategorie(''); setFrei(''); setArt('') }}
             style={{
               display: 'flex', alignItems: 'center', gap: 7, width: '100%', marginBottom: 10,
               padding: '8px 11px', background: 'rgba(96,8,18,0.05)',
@@ -118,65 +116,25 @@ export default function Massnahmen({ werte, setWerte }: {
             {MASSNAHMEN_KATEGORIEN.map((k) => (
               <Knopf
                 key={k.id} text={k.titel} an={false}
-                onClick={() => { setKategorie(k.id); setFrei('') }}
+                onClick={() => { setKategorie(k.id); setFrei(''); setArt('') }}
               />
             ))}
           </div>
         )}
 
-        {/* 3. Die rechtliche Begründung — sie gehört zur Maßnahme, nicht zum
-               Einsatz, und bleibt für die nächsten Einträge stehen. */}
-        {kat ? (
-          grund && !grundOffen ? (
-            // Steht sie, genügt eine Zeile: sie gilt ohnehin weiter.
-            <button
-              type="button" onClick={() => setGrundOffen(true)}
-              style={{
-                display: 'flex', alignItems: 'baseline', gap: 6, width: '100%', marginBottom: 10,
-                padding: 0, background: 'none', border: 'none',
-                fontFamily: 'inherit', textAlign: 'left', cursor: 'pointer',
-              }}
-            >
-              <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: GRAU }}>
-                Begründung
-              </span>
-              <span style={{ flex: 1, fontSize: 12, fontWeight: 700, color: ROT }}>
-                {rechtsgrund(grund)?.text}
-              </span>
-              <span style={{ fontSize: 11, fontStyle: 'italic', color: GRAU }}>ändern</span>
-            </button>
-          ) : (
-            <div style={{ marginBottom: 10 }}>
-              <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: GRAU, marginBottom: 4 }}>
-                Rechtliche Begründung
-              </div>
-              <div>
-                {RECHTSGRUENDE.map((r) => (
-                  <Knopf
-                    key={r.wert} text={r.text} klein an={r.wert === grund}
-                    onClick={() => {
-                      setGrund(r.wert === grund ? '' : r.wert)
-                      setGrundOffen(false)
-                    }}
-                  />
-                ))}
-              </div>
-            </div>
-          )
-        ) : null}
-
-        {/* 4. Die Ausführung */}
+        {/* 3. Die Ausführung — sie wählt aus, eingetragen wird mit der
+               Begründung darunter. */}
         {kat ? (
           <div>
             <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: GRAU, marginBottom: 4 }}>
               Ausführung
-              <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0, fontStyle: 'italic', marginLeft: 5 }}>
-                antippen trägt um {gezeigteZeit} ein
-              </span>
             </div>
             <div>
               {kat.arten.map((a) => (
-                <Knopf key={a.wert} text={a.text} an={false} klein onClick={() => eintragen(a.wert)} />
+                <Knopf
+                  key={a.wert} text={a.text} klein an={a.wert === art}
+                  onClick={() => setArt(a.wert === art ? '' : a.wert)}
+                />
               ))}
             </div>
             {/* Wo der Bogen eine Schreiblinie führt, muss auch etwas
@@ -184,19 +142,38 @@ export default function Massnahmen({ werte, setWerte }: {
             {kat.frei ? (
               <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
                 <input
-                  type="text" value={frei} onChange={(e) => setFrei(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); eintragen(frei) } }}
+                  type="text" value={frei}
+                  onChange={(e) => { setFrei(e.target.value); setArt(e.target.value) }}
                   placeholder="oder eigenen Text"
-                  style={{ flex: 1, minWidth: 0, padding: '8px 10px', background: '#fff', border: `0.5px solid ${LINIE}`, borderRadius: 8, fontFamily: 'inherit', fontSize: 16, color: TEXT, boxSizing: 'border-box' }}
+                  style={{ flex: 1, minWidth: 0, padding: '8px 10px', background: '#fff', border: `0.5px solid ${art && art === frei ? ROT : LINIE}`, borderRadius: 8, fontFamily: 'inherit', fontSize: 16, color: TEXT, boxSizing: 'border-box' }}
                 />
-                <button
-                  type="button" onClick={() => eintragen(frei)} disabled={!frei.trim()}
-                  style={{ padding: '8px 14px', background: frei.trim() ? ROT : 'rgba(96,8,18,0.15)', border: 'none', borderRadius: 8, color: '#fff', fontFamily: 'inherit', fontSize: 13, fontWeight: 700, cursor: frei.trim() ? 'pointer' : 'default' }}
-                >
-                  Eintragen
-                </button>
               </div>
             ) : null}
+          </div>
+        ) : null}
+
+        {/* 4. Die rechtliche Begründung — der abschließende Griff. */}
+        {kat && art.trim() ? (
+          <div style={{ marginTop: 12, paddingTop: 10, borderTop: `0.5px solid ${LINIE}` }}>
+            <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: ROT, marginBottom: 4 }}>
+              Rechtliche Begründung
+              <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0, fontStyle: 'italic', marginLeft: 5, color: GRAU }}>
+                trägt {kat.frei ? art.trim() : artText(kategorie, art)} um {gezeigteZeit} ein
+              </span>
+            </div>
+            <div>
+              {RECHTSGRUENDE.map((r) => (
+                <Knopf key={r.wert} text={r.text} klein an={false} onClick={() => eintragen(r.wert)} />
+              ))}
+            </div>
+            {/* Wer sie jetzt nicht treffen kann, soll die Maßnahme trotzdem
+                festhalten können — die Liste mahnt sie dann an. */}
+            <button
+              type="button" onClick={() => eintragen('')}
+              style={{ marginTop: 2, padding: '7px 0', background: 'none', border: 'none', color: GRAU, fontFamily: 'inherit', fontSize: 12, fontStyle: 'italic', cursor: 'pointer' }}
+            >
+              später nachtragen
+            </button>
           </div>
         ) : null}
 
