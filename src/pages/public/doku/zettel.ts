@@ -32,6 +32,8 @@ export type ZettelGruppe = {
   /** Der Buchstabe des Schemas: x, A, B, C, D, E. */
   kennung: string
   titel: string
+  /** Kurzzeichen für die Leiste, wenn der Buchstabe fehlt. */
+  kurz?: string
   /** Feld-Kennungen des Bogens, in der Reihenfolge der Abarbeitung. */
   felder: string[]
 }
@@ -47,7 +49,7 @@ export const ZETTEL: Zettel[] = [
     titel: 'Erstbefund nach xABCDE',
     abschnitte: ['erstbefund', 'neurologie', 'untersuchung', 'verletzungen'],
     gruppen: [
-      { kennung: '', titel: 'Zeitpunkt', felder: ['erstbefund_zeitpunkt'] },
+      { kennung: '', kurz: 'Z', titel: 'Zeitpunkt', felder: ['erstbefund_zeitpunkt'] },
       {
         // Der Bogen führt keine eigene Angabe "kritische Blutung". Was er
         // führt, ist die Option "Blutung" im Kreislauf-Feld — und genau die
@@ -145,8 +147,9 @@ export function zettelMitFeldern(): (Zettel & { teile: ZettelTeil[]; felder: Ael
             id: `${z.id}-${g.kennung || g.titel}`,
             titel: g.titel,
             kennung: g.kennung,
-            // Der Buchstabe ist das Kurzzeichen; der Zeitpunkt vorweg hat keinen.
-            kurz: g.kennung || g.titel.slice(0, 4),
+            // Der Buchstabe ist das Kurzzeichen; der Zeitpunkt vorweg hat
+            // keinen und bekommt ein eigenes, damit die Leiste schmal bleibt.
+            kurz: g.kennung || g.kurz || g.titel.slice(0, 1),
             felder: g.felder.map(aelrdFeld).filter(Boolean) as AelrdFeld[],
           }))
           .filter((t) => t.felder.length > 0)

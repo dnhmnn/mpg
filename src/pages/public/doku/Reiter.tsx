@@ -109,11 +109,25 @@ export default function Reiter({ staende, aktiv, onWaehlen, beschriftung, schmal
             key={r.id} type="button" onClick={() => onWaehlen(r.id)}
             title={`${r.titel}${r.pflichtGesamt > 0 ? ` — ${r.pflichtOffen} von ${r.pflichtGesamt} Pflichtfeldern offen` : ''}`}
             style={{
-              display: 'block', width: schmal ? 28 : 46, marginBottom: 3,
-              padding: schmal ? '8px 3px 7px' : '7px 4px 6px',
-              // Nach links gerückt: so liegt der Zettel fast nur auf dem Rand
-              // des Kastens, nicht auf seinem Inhalt.
-              ...(ueberlagernd ? { marginLeft: -14, opacity: istAktiv ? 1 : 0.9 } : {}),
+              display: 'block', width: schmal ? 20 : 46, marginBottom: 3,
+              padding: schmal ? '8px 1px 7px' : '7px 4px 6px',
+              /*
+               * Die Lage quer zur Leiste.
+               *
+               * Links muss Luft zur ersten Reihe bleiben — sonst kleben die
+               * beiden aneinander. Rechts darf der Zettel auf den Rand des
+               * Kastens ragen, aber nicht auf die Schrift in den Feldern.
+               * Die Schrift in den Feldern ist dabei die engere Grenze als
+               * die Felder selbst: Eingabekästen haben einen Innenrand von
+               * zehn Pixeln, die Beschriftungen darüber keinen. Wer nur auf
+               * die Kästen schaut, verdeckt den ersten Buchstaben jeder
+               * Beschriftung — genau das ist mir passiert.
+               *
+               * Mit zwanzig Pixeln Breite und -5 beginnt der Zettel sieben
+               * Pixel hinter der ersten Reihe und endet genau dort, wo die
+               * Beschriftungen anfangen.
+               */
+              ...(ueberlagernd ? { marginLeft: -5, opacity: istAktiv ? 1 : 0.9 } : {}),
               // Links bündig, rechts gerundet: der Zettel ragt aus dem Rand.
               borderRadius: '0 9px 9px 0',
               background: istAktiv ? ROT : f.grund,
