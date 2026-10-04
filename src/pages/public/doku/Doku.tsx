@@ -60,70 +60,19 @@ function inBloecke(felder: AelrdFeld[]): { raster: boolean; felder: AelrdFeld[] 
   return aus
 }
 
-/**
- * Der Umschalter oben im Zettel — dieselbe Idee wie die Zettel am Rand, nur
- * eine Ebene tiefer.
- *
- * Der Erstbefund hat siebenundvierzig Felder; sie am Stück zu zeigen heisst,
- * durch viereinhalb Bildschirmhöhen zu scrollen. Mit den Schritten des
- * Schemas als Knöpfe steht immer genau ein Schritt da, und die Farbe sagt,
- * wo noch ein Pflichtfeld offen ist.
- */
-function TeilUmschalter({ teile, werte, aktiv, onWaehlen }: {
-  teile: ZettelTeil[]
-  werte: Werte
-  aktiv: string
-  onWaehlen: (id: string) => void
-}) {
-  const FARBE: Record<string, string> = {
-    offen: '#dc2626',
-    fertig: '#16a34a',
-    angefasst: 'rgba(96,8,18,0.45)',
-    leer: 'rgba(96,8,18,0.12)',
-  }
-  return (
-    <div style={{
-      position: 'sticky', top: 62, zIndex: 6, background: '#fff',
-      margin: '0 -12px 10px', padding: '8px 12px',
-      borderBottom: `0.5px solid ${LINIE}`,
-      display: 'flex', gap: 5, flexWrap: 'wrap',
-    }}>
-      {[{ id: 'alle', kurz: 'Alle' }, ...teile].map((t) => {
-        const an = aktiv === t.id
-        const teil = teile.find((x) => x.id === t.id)
-        const rand = teil
-          ? FARBE[ampel({
-              id: teil.id, kurz: teil.kurz, titel: teil.titel,
-              pflichtGesamt: teil.felder.filter((f) => f.pflicht).length,
-              pflichtOffen: teil.felder.filter((f) => f.pflicht && !gefuellt(werte[f.id])).length,
-              gefuellt: teil.felder.filter((f) => gefuellt(werte[f.id])).length,
-            })]
-          : 'transparent'
-        return (
-          <button
-            key={t.id} type="button" onClick={() => onWaehlen(t.id)}
-            title={teil?.titel ?? 'Alle Schritte'}
-            style={{
-              minWidth: 32, padding: '6px 10px', borderRadius: 8, cursor: 'pointer',
-              background: an ? ROT : '#fff', color: an ? '#fff' : TEXT,
-              border: `0.5px solid ${an ? ROT : LINIE}`,
-              borderBottom: `3px solid ${an ? ROT : rand}`,
-              fontFamily: 'inherit', fontSize: 12, fontWeight: 700, lineHeight: 1.1,
-            }}
-          >
-            {t.kurz}
-          </button>
-        )
-      })}
-    </div>
-  )
-}
-
-function Block({ id, titel, teile, felder, werte, setzen, aktion }: {
+function Block({ id, titel, teile, zeigeSchritt, felder, werte, setzen, aktion }: {
   id: string
   titel: string
   /** Die Abschnitte des Bogens, die auf diesem Zettel zusammenstehen. */
   teile: ZettelTeil[]
+  /**
+   * Die Überschrift des Schrittes zeigen.
+   *
+   * Gezeigt wird immer nur ein Schritt, `teile` hat also einen Eintrag — an
+   * seiner Länge lässt sich nicht mehr ablesen, ob der Zettel mehrere hat.
+   * Ohne die Überschrift stünde der Buchstabe nirgends.
+   */
+  zeigeSchritt: boolean
   felder: AelrdFeld[]
   werte: Werte
   setzen: (id: string, w: unknown) => void
@@ -131,12 +80,6 @@ function Block({ id, titel, teile, felder, werte, setzen, aktion }: {
   aktion?: { text: string; onClick: () => void } | null
 }) {
   const ausgefuellt = felder.filter((f) => gefuellt(werte[f.id])).length
-  // Beim Wechsel des Zettels wieder beim ersten Schritt anfangen.
-  const [aktiverTeil, setAktiverTeil] = useState(teile[0]?.id ?? 'alle')
-  useEffect(() => { setAktiverTeil(teile[0]?.id ?? 'alle') }, [id, teile])
-  const zuZeigen = teile.length > 1 && aktiverTeil !== 'alle'
-    ? teile.filter((t) => t.id === aktiverTeil)
-    : teile
   return (
     <section
       id={`doku-${id}`}
@@ -163,19 +106,15 @@ function Block({ id, titel, teile, felder, werte, setzen, aktion }: {
               {aktion.text}
             </button>
           ) : null}
-          {teile.length > 1 ? (
-            <TeilUmschalter teile={teile} werte={werte} aktiv={aktiverTeil} onWaehlen={setAktiverTeil} />
-          ) : null}
-
-          {/* Stehen mehrere Abschnitte auf einem Zettel, bekommt jeder seine
-              Zwischenüberschrift — sonst laufen sie ineinander. */}
-          {zuZeigen.map((teil) => (
+          {/* Gezeigt wird immer genau ein Schritt; welcher, entscheidet die
+              zweite Zettelreihe am Rand. */}
+          {teile.map((teil) => (
             <div key={teil.id} style={{ marginBottom: 4 }}>
-              {teile.length > 1 ? (
+              {zeigeSchritt ? (
                 <div style={{
                   // Bleibt beim Scrollen stehen: auf einem Zettel mit fast
                   // fünfzig Feldern verliert man sonst, wo man gerade ist.
-                  position: 'sticky', top: 105, zIndex: 5,
+                  position: 'sticky', top: 62, zIndex: 5,
                   background: '#fff', margin: '10px -12px 7px', padding: '7px 12px 5px',
                   display: 'flex', alignItems: 'baseline', gap: 8,
                   borderBottom: `0.5px solid ${LINIE}`,
@@ -244,6 +183,8 @@ export default function Doku() {
    */
   const [aktiverBlock, setAktiverBlock] = useState('patient')
   const [pdfOffen, setPdfOffen] = useState(false)
+  /** Welcher Schritt des aktiven Zettels gezeigt wird. */
+  const [aktiverTeil, setAktiverTeil] = useState('')
 
   const setzen = (id: string, w: unknown) => setWerte((v) => ({ ...v, [id]: w }))
   // Die Zettel, wie sie in zettel.ts gebündelt sind.
@@ -263,17 +204,64 @@ export default function Doku() {
     }
   })
 
-  /** Den Reiter wechseln. */
+  /** Den Zettel wechseln — und beim ersten Schritt darin anfangen. */
   function zumBlock(id: string) {
     setAktiverBlock(id)
+    setAktiverTeil('')
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
-  const reihenfolge = staende.map((r) => r.id)
-  const stelle = reihenfolge.indexOf(aktiverBlock)
-  const voriger = stelle > 0 ? reihenfolge[stelle - 1] : undefined
-  const naechster = stelle >= 0 && stelle < reihenfolge.length - 1 ? reihenfolge[stelle + 1] : undefined
+  /** Einen Schritt innerhalb des Zettels wechseln. */
+  function zumSchritt(id: string) {
+    setAktiverTeil(id)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  /**
+   * Alle Stationen der Reihe nach: jeder Zettel mit seinen Schritten.
+   *
+   * "Zurück" und "Weiter" gehen damit durch die Schritte und erst am Ende
+   * eines Zettels zum nächsten — durchgeklickt wird Schritt für Schritt.
+   */
+  const stationen = bloecke.flatMap((b) =>
+    b.teile.length > 1
+      ? b.teile.map((t) => ({ zettel: b.id, teil: t.id }))
+      : [{ zettel: b.id, teil: '' }],
+  )
   const aktuell = bloecke.find((b) => b.id === aktiverBlock)
+
+  /**
+   * Die Schritte des aktiven Zettels als zweite Reihe.
+   *
+   * Es gibt kein "Alle": durchgeklickt wird bewusst, Schritt für Schritt.
+   * Wer alles auf einmal sehen will, nimmt die Lupe.
+   */
+  const schritte: ReiterStand[] = (aktuell?.teile ?? []).map((t) => {
+    const pflicht = t.felder.filter((f) => f.pflicht)
+    return {
+      id: t.id,
+      kurz: t.kurz,
+      titel: t.titel,
+      pflichtGesamt: pflicht.length,
+      pflichtOffen: pflicht.filter((f) => !gefuellt(werte[f.id])).length,
+      gefuellt: t.felder.filter((f) => gefuellt(werte[f.id])).length,
+    }
+  })
+  const gezeigterTeil = schritte.some((s) => s.id === aktiverTeil) ? aktiverTeil : schritte[0]?.id ?? ''
+  const hier = stationen.findIndex(
+    (s) => s.zettel === aktiverBlock && (s.teil === gezeigterTeil || s.teil === ''),
+  )
+  const voriger = hier > 0 ? stationen[hier - 1] : undefined
+  const naechster = hier >= 0 && hier < stationen.length - 1 ? stationen[hier + 1] : undefined
+
+  function zuStation(s: { zettel: string; teil: string }) {
+    setAktiverBlock(s.zettel)
+    setAktiverTeil(s.teil)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+  const teileZumZeigen = (aktuell?.teile ?? []).filter(
+    (t) => schritte.length <= 1 || t.id === gezeigterTeil,
+  )
 
   // Fortschritt über alle Felder, die der Bogen führt.
   const imWeg = bloecke.flatMap((b) => b.felder)
@@ -351,6 +339,12 @@ export default function Doku() {
 
       <main style={{ padding: '12px 14px 12px 0', maxWidth: 830, margin: '0 auto', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
         <Reiter staende={staende} aktiv={aktiverBlock} onWaehlen={zumBlock} />
+        {schritte.length > 1 ? (
+          <Reiter
+            staende={schritte} aktiv={gezeigterTeil} onWaehlen={zumSchritt}
+            beschriftung={`Schritte: ${aktuell?.titel ?? ''}`} schmal
+          />
+        ) : null}
         <div style={{ flex: 1, minWidth: 0 }}>
         {/* Die Suche bleibt immer sichtbar: sie ist der Weg zu einem Feld,
             dessen Block man nicht im Kopf hat. */}
@@ -380,7 +374,8 @@ export default function Doku() {
             {aktuell ? (
           <>
             <Block
-              id={aktuell.id} titel={aktuell.titel} teile={aktuell.teile} felder={aktuell.felder}
+              id={aktuell.id} titel={aktuell.titel} teile={teileZumZeigen}
+              zeigeSchritt={schritte.length > 1} felder={aktuell.felder}
               werte={werte} setzen={setzen} aktion={aktionFuer(aktuell.id)}
             />
 
@@ -388,14 +383,14 @@ export default function Doku() {
             <div style={{ display: 'flex', gap: 8, marginTop: 2 }}>
               <button
                 type="button" disabled={!voriger}
-                onClick={() => voriger && zumBlock(voriger)}
+                onClick={() => voriger && zuStation(voriger)}
                 style={{ flex: 1, padding: '11px 12px', background: 'transparent', border: `0.5px solid ${LINIE}`, borderRadius: 12, color: voriger ? GRAU : 'transparent', fontFamily: 'inherit', fontSize: 11, fontWeight: 700, cursor: voriger ? 'pointer' : 'default' }}
               >
                 ‹ Zurück
               </button>
               <button
                 type="button" disabled={!naechster}
-                onClick={() => naechster && zumBlock(naechster)}
+                onClick={() => naechster && zuStation(naechster)}
                 style={{ flex: 2, padding: '11px 12px', background: naechster ? ROT : 'rgba(96,8,18,0.2)', border: 'none', borderRadius: 12, color: '#fff', fontFamily: 'inherit', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', cursor: naechster ? 'pointer' : 'default' }}
               >
                 Weiter ›

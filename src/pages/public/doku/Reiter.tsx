@@ -48,14 +48,17 @@ const FARBE: Record<Ampel, { rand: string; grund: string; schrift: string }> = {
   leer: { rand: 'rgba(96,8,18,0.12)', grund: '#fff', schrift: GRAU },
 }
 
-export default function Reiter({ staende, aktiv, onWaehlen }: {
+export default function Reiter({ staende, aktiv, onWaehlen, beschriftung, schmal }: {
   staende: ReiterStand[]
   aktiv?: string
   onWaehlen: (id: string) => void
+  beschriftung?: string
+  /** Die zweite Reihe: schmaler, weil dort nur Buchstaben stehen. */
+  schmal?: boolean
 }) {
   return (
     <nav
-      aria-label="Blöcke des Protokolls"
+      aria-label={beschriftung ?? 'Blöcke des Protokolls'}
       style={{
         position: 'sticky', top: 74, alignSelf: 'flex-start',
         maxHeight: 'calc(100vh - 90px)', overflowY: 'auto', overflowX: 'hidden',
@@ -71,7 +74,7 @@ export default function Reiter({ staende, aktiv, onWaehlen }: {
             key={r.id} type="button" onClick={() => onWaehlen(r.id)}
             title={`${r.titel}${r.pflichtGesamt > 0 ? ` — ${r.pflichtOffen} von ${r.pflichtGesamt} Pflichtfeldern offen` : ''}`}
             style={{
-              display: 'block', width: 46, marginBottom: 3, padding: '7px 4px 6px',
+              display: 'block', width: schmal ? 38 : 46, marginBottom: 3, padding: '7px 4px 6px',
               // Links bündig, rechts gerundet: der Zettel ragt aus dem Rand.
               borderRadius: '0 9px 9px 0',
               background: istAktiv ? ROT : f.grund,
