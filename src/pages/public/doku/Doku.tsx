@@ -20,6 +20,8 @@ import DokuFeld, { Rasterzelle, istRasterfeld, type Werte } from './DokuFeld'
 import Reiter, { ampel, type ReiterStand } from './Reiter'
 import { zettelMitFeldern, type ZettelTeil } from './zettel'
 import Unterschrift from './Unterschrift'
+import Besatzung from './Besatzung'
+import { besatzungSetzen, type Besetzung, type Posten } from './besatzung'
 
 // Kamera und Texterkennung werden erst geladen, wenn jemand die Karte
 // fotografieren will — sie gehören nicht in den Weg der übrigen Erfassung.
@@ -60,7 +62,7 @@ function inBloecke(felder: AelrdFeld[]): { raster: boolean; felder: AelrdFeld[] 
   return aus
 }
 
-function Block({ id, titel, teile, zeigeSchritt, felder, werte, setzen, aktion }: {
+function Block({ id, titel, teile, zeigeSchritt, felder, werte, setzen, aktion, ersatz }: {
   id: string
   titel: string
   /** Die Abschnitte des Bogens, die auf diesem Zettel zusammenstehen. */
@@ -78,6 +80,13 @@ function Block({ id, titel, teile, zeigeSchritt, felder, werte, setzen, aktion }
   setzen: (id: string, w: unknown) => void
   /** Eine Abkürzung, die diesen Block auf einmal füllt. */
   aktion?: { text: string; onClick: () => void } | null
+  /**
+   * Teile, die statt ihrer Felder eine eigene Maske zeigen.
+   *
+   * Die Besatzung ist mehr als vier Namen: an ihr hängt, wer das Protokoll
+   * später wiederfindet. Vier Textfelder könnten das nicht leisten.
+   */
+  ersatz?: Record<string, React.ReactNode>
 }) {
   const ausgefuellt = felder.filter((f) => gefuellt(werte[f.id])).length
   return (
@@ -135,7 +144,7 @@ function Block({ id, titel, teile, zeigeSchritt, felder, werte, setzen, aktion }
                   </span>
                 </div>
               ) : null}
-              {inBloecke(teil.felder).map((gruppe, i) =>
+              {ersatz?.[teil.id] ?? inBloecke(teil.felder).map((gruppe, i) =>
                 gruppe.raster ? (
                   <div key={i} style={{
                       display: 'grid',
@@ -194,6 +203,15 @@ export default function Doku() {
   const [aktiverTeil, setAktiverTeil] = useState('')
 
   const setzen = (id: string, w: unknown) => setWerte((v) => ({ ...v, [id]: w }))
+  /**
+   * Einen Posten der Besatzung besetzen.
+   *
+   * Geschrieben werden zwei Dinge auf einmal — der Name für den Bogen und die
+   * Benutzerkennung für die Einsicht in Unitas. Deshalb geht das nicht über
+   * `setzen`, das nur ein Feld kennt.
+   */
+  const besetzen = (pos: Posten['pos'], person: Besetzung | null) =>
+    setWerte((v) => besatzungSetzen(v, pos, person))
   // Die Zettel, wie sie in zettel.ts gebündelt sind.
   const bloecke = useMemo(() => zettelMitFeldern(), [])
 
@@ -300,6 +318,19 @@ export default function Doku() {
     return null
   }
 
+  /**
+   * Zu welchem Zettel ein Abschnitt des Bogens gehört.
+   *
+   * Die Suche kennt nur Abschnitte; Zettel bündeln aber mehrere davon. Ohne
+   * diese Zuordnung landete ein Treffer aus dem zweiten Abschnitt eines
+   * Zettels auf einem Reiter, den es nicht gibt — die Seite blieb leer.
+   */
+  const zettelVonAbschnitt = useMemo(() => {
+    const zu: Record<string, string> = {}
+    for (const z of bloecke) for (const a of z.abschnitte) zu[a] = z.id
+    return zu
+  }, [bloecke])
+
   const treffer = useMemo(() => {
     const s = suche.trim().toLowerCase()
     if (s.length < 2) return []
@@ -365,7 +396,7 @@ export default function Doku() {
                 <button
                   key={feld.id} type="button"
                   // Die Suche wechselt den Reiter.
-                  onClick={() => { setSuche(''); zumBlock(abschnitt.id) }}
+                  onClick={() => { setSuche(''); zumBlock(zettelVonAbschnitt[abschnitt.id] ?? abschnitt.id) }}
                   style={{ display: 'flex', width: '100%', justifyContent: 'space-between', gap: 10, padding: '9px 11px', borderBottom: '0.5px solid rgba(96,8,18,0.06)', border: 'none', background: 'transparent', color: TEXT, textAlign: 'left', fontSize: 13, fontFamily: 'inherit', cursor: 'pointer' }}
                 >
                   <span>{feld.label}</span>
@@ -393,6 +424,9 @@ export default function Doku() {
               zeigeSchritt={schritte.length > 1 || teileZumZeigen.length > 1}
               felder={aktuell.felder}
               werte={werte} setzen={setzen} aktion={aktionFuer(aktuell.id)}
+              ersatz={{
+                besatzung: <Besatzung orgId={org.id} werte={werte} onSetzen={besetzen} />,
+              }}
             />
 
             {/* Weiter von Zettel zu Zettel, ohne an den Rand greifen zu müssen. */}
