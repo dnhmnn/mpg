@@ -28,20 +28,23 @@ export const ZETTEL: Zettel[] = [
   {
     id: 'befund',
     kurz: 'BEF',
-    titel: 'Erstbefund, Neurologie und Psyche',
-    abschnitte: ['erstbefund', 'neurologie', 'untersuchung'],
+    titel: 'Erstbefund, Neurologie, Psyche und Verletzungen',
+    abschnitte: ['erstbefund', 'neurologie', 'untersuchung', 'verletzungen'],
   },
   { id: 'messwerte', kurz: 'VITAL', titel: 'Messwerte initial', abschnitte: ['messwerte'] },
-  { id: 'verletzungen', kurz: 'TRAU', titel: 'Verletzungen', abschnitte: ['verletzungen'] },
   { id: 'diagnosen', kurz: 'DIAG', titel: 'Erkrankungen und Score', abschnitte: ['diagnosen'] },
-  { id: 'medikation', kurz: 'MEDI', titel: 'Medikation', abschnitte: ['medikation'] },
-  { id: 'reanimation', kurz: 'REA', titel: 'Reanimation, Tod, Todesfeststellung', abschnitte: ['reanimation'] },
-  { id: 'zugaenge', kurz: 'ZUG', titel: 'Zugänge und Atemweg', abschnitte: ['zugaenge'] },
-  { id: 'beatmung', kurz: 'BEAT', titel: 'Beatmung und Defibrillation', abschnitte: ['beatmung'] },
-  { id: 'massnahmen', kurz: 'MASS', titel: 'Weitere Maßnahmen', abschnitte: ['massnahmen'] },
-  { id: 'uebergabe_befund', kurz: 'ÜB-B', titel: 'Übergabe — Befund', abschnitte: ['uebergabe_befund'] },
-  { id: 'uebergabe_neuro', kurz: 'ÜB-M', titel: 'Übergabe — Neurologie und Messwerte', abschnitte: ['uebergabe_neuro'] },
-  { id: 'abschluss', kurz: 'ENDE', titel: 'Abschluss', abschnitte: ['abschluss'] },
+  {
+    id: 'massnahmen',
+    kurz: 'MASS',
+    titel: 'Maßnahmen, Medikation, Beatmung',
+    abschnitte: ['medikation', 'reanimation', 'zugaenge', 'beatmung', 'massnahmen'],
+  },
+  {
+    id: 'uebergabe',
+    kurz: 'ÜBER',
+    titel: 'Übergabe und Abschluss',
+    abschnitte: ['uebergabe_befund', 'uebergabe_neuro', 'abschluss'],
+  },
 ]
 
 /** Ein Abschnitt des Bogens mit seinen Feldern, für die Zwischenüberschrift. */

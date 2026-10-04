@@ -75,7 +75,10 @@ function Block({ id, titel, teile, felder, werte, setzen, aktion }: {
   return (
     <section
       id={`doku-${id}`}
-      style={{ background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.07)', borderLeft: `3px solid ${ROT}`, overflow: 'hidden', marginBottom: 10, scrollMarginTop: 108 }}
+      // `overflow: clip` statt `hidden`: beides schneidet an den runden Ecken
+      // ab, aber `hidden` macht den Block zum Scrollbehälter und setzt damit
+      // die mitlaufenden Zwischenüberschriften außer Kraft.
+      style={{ background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.07)', borderLeft: `3px solid ${ROT}`, overflow: 'clip', marginBottom: 10, scrollMarginTop: 108 }}
     >
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, padding: '11px 12px', borderBottom: `0.5px solid ${LINIE}` }}>
         <h2 style={{ flex: 1, margin: 0, fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: ROT }}>
@@ -100,7 +103,15 @@ function Block({ id, titel, teile, felder, werte, setzen, aktion }: {
           {teile.map((teil) => (
             <div key={teil.id} style={{ marginBottom: 4 }}>
               {teile.length > 1 ? (
-                <div style={{ fontSize: 9.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: GRAU, margin: '10px 0 7px', paddingBottom: 4, borderBottom: `0.5px solid ${LINIE}` }}>
+                <div style={{
+                  // Bleibt beim Scrollen stehen: auf einem Zettel mit fast
+                  // fünfzig Feldern verliert man sonst, wo man gerade ist.
+                  position: 'sticky', top: 62, zIndex: 5,
+                  background: '#fff', margin: '10px -12px 7px', padding: '7px 12px 5px',
+                  fontSize: 9.5, fontWeight: 700, textTransform: 'uppercase',
+                  letterSpacing: '0.12em', color: ROT,
+                  borderBottom: `0.5px solid ${LINIE}`,
+                }}>
                   {teil.titel}
                 </div>
               ) : null}
@@ -195,7 +206,7 @@ export default function Doku() {
         onClick: () => setWerte((v) => ({ ...normalbefund(), ...v })),
       }
     }
-    if ((id === 'uebergabe_befund' || id === 'uebergabe_neuro') && offeneUebernahme > 0) {
+    if (id === 'uebergabe' && offeneUebernahme > 0) {
       return {
         text: `Erstbefund übernehmen (${offeneUebernahme} Angaben)`,
         onClick: () => setWerte((v) => uebergabeUebernehmen(v)),

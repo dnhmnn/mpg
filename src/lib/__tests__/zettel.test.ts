@@ -59,13 +59,15 @@ describe('Was die Zettel tragen', () => {
     const teile = (id: string) => zettel.find((z) => z.id === id)?.abschnitte
     expect(teile('patient')).toEqual(['stammdaten', 'kennung'])
     expect(teile('einsatz')).toEqual(['einsatzdaten', 'besatzung'])
-    expect(teile('befund')).toEqual(['erstbefund', 'neurologie', 'untersuchung'])
+    expect(teile('befund')).toEqual(['erstbefund', 'neurologie', 'untersuchung', 'verletzungen'])
+    expect(teile('massnahmen')).toEqual(['medikation', 'reanimation', 'zugaenge', 'beatmung', 'massnahmen'])
+    expect(teile('uebergabe')).toEqual(['uebergabe_befund', 'uebergabe_neuro', 'abschluss'])
   })
 
   it('gibt zusammengelegten Zetteln ihre Teile zum Beschriften', () => {
     const befund = zettel.find((z) => z.id === 'befund')!
     expect(befund.teile.map((t) => t.titel)).toEqual([
-      'Erstbefund', 'Neurologie', 'Untersuchung und Psyche',
+      'Erstbefund', 'Neurologie', 'Untersuchung und Psyche', 'Verletzungen',
     ])
   })
 
