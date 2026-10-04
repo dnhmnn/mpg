@@ -29,6 +29,8 @@ export type Zettel = {
 }
 
 export type ZettelGruppe = {
+  /** Eigene Kennung des Teils, wo eine Maske ihn füllt. */
+  id?: string
   /** Der Buchstabe des Schemas: x, A, B, C, D, E. */
   kennung: string
   titel: string
@@ -108,6 +110,65 @@ export const ZETTEL: Zettel[] = [
     kurz: 'MASS',
     titel: 'Maßnahmen, Medikation, Beatmung',
     abschnitte: ['medikation', 'reanimation', 'zugaenge', 'beatmung', 'massnahmen'],
+    /*
+     * Fünf Abschnitte des Bogens stehen hier zusammen — untereinander waren
+     * das über zweihundert Zeilen, durch die man zu dem einen Feld scrollt,
+     * das man braucht. Deshalb dieselben Schritte wie beim Erstbefund: einer
+     * zur Zeit, gewechselt über die zweite Zettelreihe.
+     *
+     * Der Verlauf steht vorne: er ist der Weg, über den die meisten
+     * Maßnahmen hereinkommen. Die Reanimation holt sich ihre eigene Angabe
+     * aus dem Abschnitt "Weitere Maßnahmen" dazu — auf dem Papier steht sie
+     * dort, abgearbeitet wird sie bei der Reanimation.
+     */
+    gruppen: [
+      {
+        id: 'massnahmen-verlauf',
+        kennung: '',
+        kurz: 'V',
+        titel: 'Maßnahmen im Verlauf',
+        // Die Felder, die die Maske schreibt. Sie zählen hier mit, auch wenn
+        // sie nicht einzeln dastehen.
+        felder: ['zugaenge', 'medizintechnik', 'erweitertes_monitoring', 'lagerung',
+          'aktive_kuehlung', 'waermeerhalt', 'blutentnahme', 'sonstige_massnahme'],
+      },
+      {
+        id: 'massnahmen-medikation',
+        kennung: '',
+        kurz: 'M',
+        titel: 'Medikation',
+        felder: ['keine_medikation', 'medikation', 'lysetherapie', 'lyse_zeitpunkt'],
+      },
+      {
+        id: 'massnahmen-reanimation',
+        kennung: '',
+        kurz: 'R',
+        titel: 'Reanimation, Tod, Todesfeststellung',
+        felder: ['rea_massnahme', 'rea_situation', 'rea_ursache', 'tod_ursache', 'todesart',
+          'kollaps_durch', 'hdm_durch', 'defi1_durch', 'defi1_zeit', 'rosc_zeit',
+          'kh_aufnahme', 'leichenschau', 'todeszeitpunkt'],
+      },
+      {
+        id: 'massnahmen-zugaenge',
+        kennung: '',
+        kurz: 'Z',
+        titel: 'Zugänge und Atemweg',
+        felder: ['pvk_vorhanden', 'zugang_erschwert', 'atemweg_massnahme',
+          'intubation', 'tubus_groesse', 'o2_gabe'],
+      },
+      {
+        id: 'massnahmen-beatmung',
+        kennung: '',
+        kurz: 'B',
+        titel: 'Beatmung und Defibrillation',
+        felder: ['beatmung_art', 'beatmung_fio2', 'beatmung_af', 'beatmung_amv',
+          'beatmung_peep', 'beatmung_pinsp', 'beatmung_mode', 'beatmung_art2',
+          'beatmung_flow', 'beatmung_manuell', 'defi_art', 'defi_joule_1', 'defi_gesamt',
+          // Der 1. ROSC wird bei der Reanimation erhoben (rosc_zeit) und auf
+          // dem Bogen nur noch einmal bei der Defibrillation gedruckt.
+          'defi_joule_letzte', 'pacer_frequenz', 'pacer_intensitaet', 'pacer_mode'],
+      },
+    ],
   },
   {
     id: 'uebergabe',
@@ -148,7 +209,7 @@ export function zettelMitFeldern(): (Zettel & { teile: ZettelTeil[]; felder: Ael
     const teile: ZettelTeil[] = z.gruppen
       ? z.gruppen
           .map((g) => ({
-            id: `${z.id}-${g.kennung || g.titel}`,
+            id: g.id ?? `${z.id}-${g.kennung || g.titel}`,
             titel: g.titel,
             kennung: g.kennung,
             // Der Buchstabe ist das Kurzzeichen; der Zeitpunkt vorweg hat

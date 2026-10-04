@@ -53,24 +53,8 @@ export default function Massnahmen({ werte, setWerte }: {
   }
 
   return (
-    <section
-      style={{ background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.07)', borderLeft: `3px solid ${ROT}`, overflow: 'clip', marginBottom: 10 }}
-    >
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, padding: '11px 12px', borderBottom: `0.5px solid ${LINIE}` }}>
-        <h2 style={{ flex: 1, margin: 0, fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: ROT }}>
-          Maßnahmen im Verlauf
-        </h2>
-        <span style={{ fontSize: 11, fontStyle: 'italic', color: eintraege.length > 0 ? ROT : GRAU }}>
-          {eintraege.length > 0 ? `${eintraege.length}` : 'keine'}
-        </span>
-        {offen.length > 0 ? (
-          <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#b45309', border: '0.5px solid #fde047', background: '#fffbeb', borderRadius: 999, padding: '2px 7px' }}>
-            {offen.length}× ohne Begründung
-          </span>
-        ) : null}
-      </div>
-
-      <div style={{ padding: '10px 12px 12px' }}>
+    <div>
+      <div>
         {/* 1. Die Uhrzeit */}
         <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, marginBottom: 12 }}>
           <label style={{ display: 'block' }}>
@@ -171,6 +155,16 @@ export default function Massnahmen({ werte, setWerte }: {
         {/* Was schon eingetragen ist — neueste zuerst. */}
         {eintraege.length > 0 ? (
           <div style={{ marginTop: 14, borderTop: `0.5px solid ${LINIE}`, paddingTop: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 2 }}>
+              <span style={{ flex: 1, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: GRAU }}>
+                {eintraege.length === 1 ? 'Ein Eintrag' : `${eintraege.length} Einträge`}
+              </span>
+              {offen.length > 0 ? (
+                <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#b45309', border: '0.5px solid #fde047', background: '#fffbeb', borderRadius: 999, padding: '2px 7px' }}>
+                  {offen.length}× ohne Begründung
+                </span>
+              ) : null}
+            </div>
             {eintraege.map((m) => (
               <div key={m.id} style={{ display: 'flex', alignItems: 'baseline', gap: 9, padding: '6px 0', borderBottom: '0.5px solid rgba(96,8,18,0.06)' }}>
                 <span style={{ fontSize: 15, fontWeight: 700, color: ROT, fontVariantNumeric: 'tabular-nums', flexShrink: 0 }}>
@@ -222,6 +216,6 @@ export default function Massnahmen({ werte, setWerte }: {
           </div>
         ) : null}
       </div>
-    </section>
+    </div>
   )
 }

@@ -439,11 +439,6 @@ export default function Doku() {
         <div style={{ flex: 1, minWidth: 0 }}>
         {aktuell ? (
           <>
-            {/* Die Maßnahmen stehen über dem Zettel: erst die Uhrzeit, dann
-                die Art — und erst darunter, was der Bogen sonst fragt. */}
-            {aktuell.id === 'massnahmen' ? (
-              <Massnahmen werte={werte} setWerte={setWerte} />
-            ) : null}
             <Block
               id={aktuell.id} titel={aktuell.titel} teile={teileZumZeigen}
               zeigeSchritt={schritte.length > 1 || teileZumZeigen.length > 1}
@@ -451,6 +446,9 @@ export default function Doku() {
               werte={werte} setzen={setzen} aktion={aktionFuer(aktuell.id)}
               ersatz={{
                 besatzung: <Besatzung orgId={org.id} werte={werte} onSetzen={besetzen} />,
+                // Der Verlauf ist ein eigener Schritt des Maßnahmen-Zettels,
+                // nicht eine Karte darüber: sonst stünde er auf jedem Schritt.
+                'massnahmen-verlauf': <Massnahmen werte={werte} setWerte={setWerte} />,
               }}
               uebernommen={uebernommeneFelder}
             />
