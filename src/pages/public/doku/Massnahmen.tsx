@@ -8,10 +8,13 @@
 // dahinter. Ein Griff im Fahrzeug ist einer zu viel.
 
 import { useState } from 'react'
-import { MASSNAHMEN_KATEGORIEN, artText, massnahmeKategorie } from '../../../katalog/massnahmenArten'
+import {
+  MASSNAHMEN_KATEGORIEN, RECHTSGRUENDE, artText, massnahmeKategorie, rechtsgrund,
+} from '../../../katalog/massnahmenArten'
 import { Knopf, type Werte } from './DokuFeld'
 import {
-  jetztZeit, massnahmeEintragen, massnahmeStreichen, massnahmenAbsteigend,
+  jetztZeit, massnahmeEintragen, massnahmeGrundSetzen, massnahmeStreichen,
+  massnahmenAbsteigend, ohneGrund,
 } from './massnahmen'
 
 const ROT = '#600812'
@@ -26,15 +29,25 @@ export default function Massnahmen({ werte, setWerte }: {
   const [zeit, setZeit] = useState('')
   const [kategorie, setKategorie] = useState('')
   const [frei, setFrei] = useState('')
+  /**
+   * Die Begründung bleibt stehen, bis sie geändert wird.
+   *
+   * In einem Einsatz ist das meiste auf demselben Weg zulässig. Sie bei jedem
+   * Eintrag neu zu wählen wäre ein Griff, der fast immer derselbe ist.
+   */
+  const [grund, setGrund] = useState('')
+  /** Für welchen Eintrag die Begründung gerade nachgetragen wird. */
+  const [nachtragen, setNachtragen] = useState('')
   const kat = massnahmeKategorie(kategorie)
   const eintraege = massnahmenAbsteigend(werte)
+  const offen = ohneGrund(werte)
 
   // Leer heißt "jetzt": die Zeit des Eintragens, nicht die des Öffnens.
   const gezeigteZeit = zeit || jetztZeit()
 
   function eintragen(art: string) {
     if (!kategorie || !art.trim()) return
-    setWerte((v) => massnahmeEintragen(v, { zeit: gezeigteZeit, kategorie, art }))
+    setWerte((v) => massnahmeEintragen(v, { zeit: gezeigteZeit, kategorie, art, grund }))
     setZeit('')
     setFrei('')
   }
@@ -50,6 +63,11 @@ export default function Massnahmen({ werte, setWerte }: {
         <span style={{ fontSize: 11, fontStyle: 'italic', color: eintraege.length > 0 ? ROT : GRAU }}>
           {eintraege.length > 0 ? `${eintraege.length}` : 'keine'}
         </span>
+        {offen.length > 0 ? (
+          <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#b45309', border: '0.5px solid #fde047', background: '#fffbeb', borderRadius: 999, padding: '2px 7px' }}>
+            {offen.length}× ohne Begründung
+          </span>
+        ) : null}
       </div>
 
       <div style={{ padding: '10px 12px 12px' }}>
@@ -92,7 +110,30 @@ export default function Massnahmen({ werte, setWerte }: {
           ))}
         </div>
 
-        {/* 3. Die Ausführung */}
+        {/* 3. Die rechtliche Begründung — sie gehört zur Maßnahme, nicht zum
+               Einsatz, und bleibt für die nächsten Einträge stehen. */}
+        {kat ? (
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: GRAU, marginBottom: 4 }}>
+              Rechtliche Begründung
+              {grund ? (
+                <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0, fontStyle: 'italic', marginLeft: 5 }}>
+                  gilt für die nächsten Einträge
+                </span>
+              ) : null}
+            </div>
+            <div>
+              {RECHTSGRUENDE.map((r) => (
+                <Knopf
+                  key={r.wert} text={r.text} klein an={r.wert === grund}
+                  onClick={() => setGrund(r.wert === grund ? '' : r.wert)}
+                />
+              ))}
+            </div>
+          </div>
+        ) : null}
+
+        {/* 4. Die Ausführung */}
         {kat ? (
           <div>
             <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: ROT, marginBottom: 4 }}>
@@ -142,6 +183,32 @@ export default function Massnahmen({ werte, setWerte }: {
                   <span style={{ display: 'block', fontSize: 11, fontStyle: 'italic', color: GRAU }}>
                     {massnahmeKategorie(m.kategorie)?.titel ?? m.kategorie}
                   </span>
+                  {/* Die Begründung — angetippt lässt sie sich ändern, und
+                      fehlt sie, sagt die Zeile das statt zu schweigen. */}
+                  {nachtragen === m.id ? (
+                    <span style={{ display: 'block', marginTop: 3 }}>
+                      {RECHTSGRUENDE.map((r) => (
+                        <Knopf
+                          key={r.wert} text={r.text} klein an={r.wert === m.grund}
+                          onClick={() => {
+                            setWerte((v) => massnahmeGrundSetzen(v, m.id, r.wert === m.grund ? '' : r.wert))
+                            setNachtragen('')
+                          }}
+                        />
+                      ))}
+                    </span>
+                  ) : (
+                    <button
+                      type="button" onClick={() => setNachtragen(m.id)}
+                      style={{
+                        display: 'block', marginTop: 2, padding: 0, background: 'none', border: 'none',
+                        fontFamily: 'inherit', fontSize: 11, fontWeight: 700, cursor: 'pointer',
+                        color: m.grund ? ROT : '#b45309', textAlign: 'left',
+                      }}
+                    >
+                      {m.grund ? rechtsgrund(m.grund)?.text : 'Rechtliche Begründung fehlt'}
+                    </button>
+                  )}
                 </span>
                 <button
                   type="button" onClick={() => setWerte((v) => massnahmeStreichen(v, m.id))}

@@ -70,3 +70,30 @@ export function artText(kategorie: string, wert: string): string {
   const k = massnahmeKategorie(kategorie)
   return k?.arten.find((a) => a.wert === wert)?.text ?? wert
 }
+
+/**
+ * Die rechtliche Begründung einer Maßnahme.
+ *
+ * Vier Wege, auf denen eine Maßnahme zulässig ist — und die Begründung gehört
+ * zur Maßnahme, nicht zum Einsatz: derselbe Einsatz kann eine Basismaßnahme,
+ * eine vor Ort delegierte und eine nach § 2a NotSanG erbrachte enthalten.
+ *
+ * Die Reihenfolge ist die vom Alltag her: das meiste ist Basismaßnahme.
+ */
+export type Rechtsgrund = {
+  wert: string
+  text: string
+  /** Kurzform für die Liste und die Zeile auf dem Bogen. */
+  kurz: string
+}
+
+export const RECHTSGRUENDE: Rechtsgrund[] = [
+  { wert: 'basis', text: 'Basismaßnahme', kurz: 'Basis' },
+  { wert: 'delegiert', text: 'delegiert vor Ort', kurz: 'delegiert' },
+  { wert: 'notstand', text: 'gerechtfertigter Notstand', kurz: '§ 34 StGB' },
+  { wert: 'notsang_2a', text: 'NotSanG § 2a', kurz: '§ 2a NotSanG' },
+]
+
+export function rechtsgrund(wert: string): Rechtsgrund | undefined {
+  return RECHTSGRUENDE.find((r) => r.wert === wert)
+}

@@ -1,10 +1,10 @@
 import { describe, it, expect } from 'vitest'
 import {
-  jetztZeit, massnahmeEintragen, massnahmeStreichen, massnahmenLesen,
-  massnahmenAbsteigend, zeile,
+  jetztZeit, massnahmeEintragen, massnahmeGrundSetzen, massnahmeStreichen,
+  massnahmenLesen, massnahmenAbsteigend, ohneGrund, zeile, zeileMitGrund,
 } from '../../pages/public/doku/massnahmen'
 import {
-  MASSNAHMEN_FELDER, MASSNAHMEN_KATEGORIEN, massnahmeKategorie,
+  MASSNAHMEN_FELDER, MASSNAHMEN_KATEGORIEN, RECHTSGRUENDE, massnahmeKategorie, rechtsgrund,
 } from '../../katalog/massnahmenArten'
 import { AELRD_ABSCHNITTE, aelrdFeld } from '../../katalog/aelrd'
 import { istSpiegelOption } from '../../katalog/aelrdSpiegel'
@@ -155,5 +155,66 @@ describe('Maßnahmen im Verlauf', () => {
   it('beschreibt einen Eintrag mit Uhrzeit und Klartext', () => {
     expect(zeile({ id: 'm1', zeit: '08:42', kategorie: 'medizintechnik', art: 'ecmo' })).toBe('08:42 ECMO')
     expect(zeile({ id: 'm2', zeit: '', kategorie: 'zugaenge', art: 'peripherer Zugang' })).toBe('peripherer Zugang')
+  })
+})
+
+describe('Die rechtliche Begründung einer Maßnahme', () => {
+  it('kennt die vier Wege, auf denen eine Maßnahme zulässig ist', () => {
+    expect(RECHTSGRUENDE.map((r) => r.text)).toEqual([
+      'Basismaßnahme', 'delegiert vor Ort', 'gerechtfertigter Notstand', 'NotSanG § 2a',
+    ])
+    for (const r of RECHTSGRUENDE) expect(rechtsgrund(r.wert)).toBe(r)
+  })
+
+  it('hängt am Eintrag, nicht am Einsatz', () => {
+    // Derselbe Einsatz: eine Basismaßnahme und eine nach § 2a.
+    let w = massnahmeEintragen({}, { zeit: '08:42', kategorie: 'lagerung', art: 'Vakuummatratze', grund: 'basis' })
+    w = massnahmeEintragen(w, { zeit: '08:50', kategorie: 'medizintechnik', art: 'spritzenpumpe_n', grund: 'notsang_2a' })
+    expect(massnahmenLesen(w).map((m) => m.grund)).toEqual(['basis', 'notsang_2a'])
+  })
+
+  it('lässt einen Eintrag auch ohne Begründung zu und sagt, dass sie fehlt', () => {
+    // Am Patienten wird versorgt, nicht sortiert — nachtragen muss gehen.
+    const w = ein({}, 'medizintechnik', 'ecmo')
+    expect(massnahmenLesen(w)[0].grund).toBeUndefined()
+    expect(ohneGrund(w)).toHaveLength(1)
+  })
+
+  it('trägt die Begründung nach und stellt sie richtig', () => {
+    let w = ein({}, 'medizintechnik', 'ecmo')
+    const id = massnahmenLesen(w)[0].id
+    w = massnahmeGrundSetzen(w, id, 'delegiert')
+    expect(massnahmenLesen(w)[0].grund).toBe('delegiert')
+    expect(ohneGrund(w)).toEqual([])
+    w = massnahmeGrundSetzen(w, id, 'notstand')
+    expect(massnahmenLesen(w)[0].grund).toBe('notstand')
+    // Leer heißt: wieder offen, nicht "keine Begründung nötig".
+    w = massnahmeGrundSetzen(w, id, '')
+    expect(massnahmenLesen(w)[0].grund).toBeUndefined()
+    expect(ohneGrund(w)).toHaveLength(1)
+  })
+
+  it('nimmt keine erfundene Begründung an', () => {
+    const w = massnahmeEintragen({}, { zeit: '08:42', kategorie: 'medizintechnik', art: 'ecmo', grund: 'weil_schon' })
+    expect(massnahmenLesen(w)[0].grund).toBeUndefined()
+    const id = massnahmenLesen(w)[0].id
+    expect(massnahmeGrundSetzen(w, id, 'weil_schon')).toBe(w)
+    expect(massnahmeGrundSetzen(w, 'gibtsnicht', 'basis')).toBe(w)
+  })
+
+  it('benennt in der Zeile nur, was vom Regelfall abweicht', () => {
+    const m = { id: 'm1', zeit: '08:42', kategorie: 'medizintechnik', art: 'ecmo' }
+    expect(zeileMitGrund({ ...m, grund: 'basis' })).toBe('08:42 ECMO')
+    expect(zeileMitGrund({ ...m, grund: 'notsang_2a' })).toBe('08:42 ECMO (§ 2a NotSanG)')
+    expect(zeileMitGrund({ ...m, grund: 'delegiert' })).toBe('08:42 ECMO (delegiert)')
+    expect(zeileMitGrund(m)).toBe('08:42 ECMO')
+  })
+
+  it('lässt die Begründung beim Streichen eines anderen Eintrags stehen', () => {
+    let w = massnahmeEintragen({}, { zeit: '08:42', kategorie: 'medizintechnik', art: 'ecmo', grund: 'notstand' })
+    w = massnahmeEintragen(w, { zeit: '08:50', kategorie: 'medizintechnik', art: 'notfallpacer', grund: 'basis' })
+    w = massnahmeStreichen(w, massnahmenLesen(w)[1].id)
+    expect(massnahmenLesen(w)).toHaveLength(1)
+    expect(massnahmenLesen(w)[0].grund).toBe('notstand')
   })
 })

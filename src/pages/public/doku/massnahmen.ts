@@ -13,7 +13,7 @@
 // auf dem Papier.
 
 import { aelrdFeld } from '../../../katalog/aelrd'
-import { artText, massnahmeKategorie } from '../../../katalog/massnahmenArten'
+import { artText, massnahmeKategorie, rechtsgrund } from '../../../katalog/massnahmenArten'
 import type { Werte } from './DokuFeld'
 
 export type Massnahme = {
@@ -25,6 +25,14 @@ export type Massnahme = {
   kategorie: string
   /** Der Wert der Art; bei Schreiblinien der getippte Text. */
   art: string
+  /**
+   * Die rechtliche Begründung — Basismaßnahme, delegiert, Notstand, § 2a.
+   *
+   * Sie kann fehlen: ein Eintrag soll nicht am Rechtsweg scheitern, während
+   * der Patient versorgt wird. Die Liste zeigt dann, dass sie nachzutragen
+   * ist, und lässt sie dort setzen.
+   */
+  grund?: string
 }
 
 /** Trennzeichen der Schreiblinie auf dem Bogen. */
@@ -49,6 +57,17 @@ export function massnahmenLesen(werte: Werte): Massnahme[] {
 export function zeile(m: Massnahme): string {
   const text = massnahmeKategorie(m.kategorie)?.frei ? m.art : artText(m.kategorie, m.art)
   return [m.zeit, text].filter(Boolean).join(' ').trim()
+}
+
+/**
+ * Wie ein Eintrag mit seiner Begründung dasteht.
+ *
+ * Die Basismaßnahme bleibt unbenannt: sie ist der Regelfall und stünde
+ * hundertmal da, ohne etwas zu sagen.
+ */
+export function zeileMitGrund(m: Massnahme): string {
+  const grund = m.grund && m.grund !== 'basis' ? rechtsgrund(m.grund)?.kurz : ''
+  return grund ? `${zeile(m)} (${grund})` : zeile(m)
 }
 
 /**
@@ -111,13 +130,16 @@ function kennung(vorhanden: Massnahme[]): string {
 /** Eine Maßnahme eintragen — in den Verlauf und in das Feld des Bogens. */
 export function massnahmeEintragen(
   werte: Werte,
-  eingabe: { zeit: string; kategorie: string; art: string },
+  eingabe: { zeit: string; kategorie: string; art: string; grund?: string },
 ): Werte {
   const kat = massnahmeKategorie(eingabe.kategorie)
   const art = eingabe.art.trim()
   if (!kat || !art) return werte
   const vorhanden = massnahmenLesen(werte)
-  const neu: Massnahme = { id: kennung(vorhanden), zeit: eingabe.zeit, kategorie: eingabe.kategorie, art }
+  const neu: Massnahme = {
+    id: kennung(vorhanden), zeit: eingabe.zeit, kategorie: eingabe.kategorie, art,
+    ...(eingabe.grund && rechtsgrund(eingabe.grund) ? { grund: eingabe.grund } : {}),
+  }
   const eintraege = [...vorhanden, neu]
   return nachziehen({ ...werte, massnahmen: eintraege }, eingabe.kategorie, eintraege)
 }
@@ -129,6 +151,27 @@ export function massnahmeStreichen(werte: Werte, id: string): Werte {
   if (!weg) return werte
   const eintraege = vorhanden.filter((e) => e.id !== id)
   return nachziehen({ ...werte, massnahmen: eintraege }, weg.kategorie, eintraege, weg)
+}
+
+/** Die Begründung eines Eintrags nachtragen oder richtigstellen. */
+export function massnahmeGrundSetzen(werte: Werte, id: string, grund: string): Werte {
+  if (grund && !rechtsgrund(grund)) return werte
+  const vorhanden = massnahmenLesen(werte)
+  if (!vorhanden.some((e) => e.id === id)) return werte
+  return {
+    ...werte,
+    massnahmen: vorhanden.map((e) => {
+      if (e.id !== id) return e
+      const ohne = { ...e }
+      delete ohne.grund
+      return grund ? { ...ohne, grund } : ohne
+    }),
+  }
+}
+
+/** Einträge, deren rechtliche Begründung noch fehlt. */
+export function ohneGrund(werte: Werte): Massnahme[] {
+  return massnahmenLesen(werte).filter((m) => !m.grund)
 }
 
 /** Die Einträge, neueste zuerst — so wird eine Liste gelesen. */
