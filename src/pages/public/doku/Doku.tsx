@@ -304,6 +304,11 @@ export default function Doku() {
       return { text: 'Gesundheitskarte einlesen (Rückseite)', onClick: () => setKartenScan(true) }
     }
     if (id === 'befund') {
+      // Der Normalbefund füllt den ganzen Zettel, nicht den Schritt. Beim
+      // Zeitpunkt steht er darum richtig — er geht dem Schema voraus. Über
+      // "x" oder "B" sagte derselbe Knopf etwas anderes, als er tut, und
+      // wiederholte sich auf jedem der sechs Schritte.
+      if (teileZumZeigen.some((t) => t.kennung)) return null
       return {
         text: 'Normalbefund — alles unauffällig',
         onClick: () => setWerte((v) => ({ ...normalbefund(), ...v })),
