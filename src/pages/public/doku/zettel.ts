@@ -65,7 +65,7 @@ export const ZETTEL: Zettel[] = [
         titel: 'Kreislauf',
         felder: [
           'puls_regelmaessig', 'radialispuls', 'rekap_zeit', 'schockzeichen',
-          'kreislauf_auffaelligkeiten', 'haut', 'ekg', 'ekg_text',
+          'kreislauf_auffaelligkeiten', 'ekg', 'ekg_text',
         ],
       },
       {
@@ -83,6 +83,10 @@ export const ZETTEL: Zettel[] = [
         kennung: 'E',
         titel: 'Entkleiden, Schmerz, Verletzungen',
         felder: [
+          // Die Haut stand zuerst bei C — Rekap-Zeit und Blässe gehören zum
+          // Kreislauf. Gesehen wird sie aber erst, wenn der Patient entkleidet
+          // ist, und dann vollständig: Ödeme, Dekubitus, Exantheme.
+          'haut',
           // Der Schmerz stand im Abschnitt Neurologie des Bogens und war
           // deshalb zuerst bei D. Erhoben wird er beim Entkleiden.
           'schmerz', 'schmerz_nicht_beurteilbar', 'schmerz_tolerabel',
