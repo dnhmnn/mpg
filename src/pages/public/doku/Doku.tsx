@@ -21,6 +21,8 @@ import Reiter, { ampel, type ReiterStand } from './Reiter'
 import { zettelMitFeldern, type ZettelTeil } from './zettel'
 import Unterschrift from './Unterschrift'
 import Besatzung from './Besatzung'
+import Massnahmen from './Massnahmen'
+import { MASSNAHMEN_FELDER } from '../../../katalog/massnahmenArten'
 import { besatzungSetzen, type Besetzung, type Posten } from './besatzung'
 
 // Kamera und Texterkennung werden erst geladen, wenn jemand die Karte
@@ -62,7 +64,7 @@ function inBloecke(felder: AelrdFeld[]): { raster: boolean; felder: AelrdFeld[] 
   return aus
 }
 
-function Block({ id, titel, teile, zeigeSchritt, felder, werte, setzen, aktion, ersatz }: {
+function Block({ id, titel, teile, zeigeSchritt, felder, werte, setzen, aktion, ersatz, uebernommen }: {
   id: string
   titel: string
   /** Die Abschnitte des Bogens, die auf diesem Zettel zusammenstehen. */
@@ -87,6 +89,13 @@ function Block({ id, titel, teile, zeigeSchritt, felder, werte, setzen, aktion, 
    * später wiederfindet. Vier Textfelder könnten das nicht leisten.
    */
   ersatz?: Record<string, React.ReactNode>
+  /**
+   * Felder, die eine eigene Maske über dem Block führt.
+   *
+   * Sie zählen weiter zum Block — die Maske schreibt sie ja —, erscheinen
+   * aber nicht noch einmal einzeln.
+   */
+  uebernommen?: Set<string>
 }) {
   const ausgefuellt = felder.filter((f) => gefuellt(werte[f.id])).length
   return (
@@ -117,7 +126,11 @@ function Block({ id, titel, teile, zeigeSchritt, felder, werte, setzen, aktion, 
           ) : null}
           {/* Gezeigt wird immer genau ein Schritt; welcher, entscheidet die
               zweite Zettelreihe am Rand. */}
-          {teile.map((teil) => (
+          {teile
+            // Ein Teil, dessen Felder alle an eine eigene Maske gegangen
+            // sind, hinterließe sonst eine Überschrift ohne Inhalt.
+            .filter((teil) => ersatz?.[teil.id] || teil.felder.some((f) => !uebernommen?.has(f.id)))
+            .map((teil) => (
             <div key={teil.id} style={{ marginBottom: 4 }}>
               {zeigeSchritt ? (
                 <div style={{
@@ -144,7 +157,7 @@ function Block({ id, titel, teile, zeigeSchritt, felder, werte, setzen, aktion, 
                   </span>
                 </div>
               ) : null}
-              {ersatz?.[teil.id] ?? inBloecke(teil.felder).map((gruppe, i) =>
+              {ersatz?.[teil.id] ?? inBloecke(teil.felder.filter((f) => !uebernommen?.has(f.id))).map((gruppe, i) =>
                 gruppe.raster ? (
                   <div key={i} style={{
                       display: 'grid',
@@ -203,6 +216,8 @@ export default function Doku() {
   const [aktiverTeil, setAktiverTeil] = useState('')
 
   const setzen = (id: string, w: unknown) => setWerte((v) => ({ ...v, [id]: w }))
+  /** Die Felder, die die Maßnahmen-Maske schreibt — sie stehen dort, nicht einzeln. */
+  const uebernommeneFelder = useMemo(() => new Set(MASSNAHMEN_FELDER), [])
   /**
    * Einen Posten der Besatzung besetzen.
    *
@@ -424,6 +439,11 @@ export default function Doku() {
         <div style={{ flex: 1, minWidth: 0 }}>
         {aktuell ? (
           <>
+            {/* Die Maßnahmen stehen über dem Zettel: erst die Uhrzeit, dann
+                die Art — und erst darunter, was der Bogen sonst fragt. */}
+            {aktuell.id === 'massnahmen' ? (
+              <Massnahmen werte={werte} setWerte={setWerte} />
+            ) : null}
             <Block
               id={aktuell.id} titel={aktuell.titel} teile={teileZumZeigen}
               zeigeSchritt={schritte.length > 1 || teileZumZeigen.length > 1}
@@ -432,6 +452,7 @@ export default function Doku() {
               ersatz={{
                 besatzung: <Besatzung orgId={org.id} werte={werte} onSetzen={besetzen} />,
               }}
+              uebernommen={uebernommeneFelder}
             />
 
             {/* Weiter von Zettel zu Zettel, ohne an den Rand greifen zu müssen. */}
