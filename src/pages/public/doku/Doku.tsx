@@ -11,13 +11,13 @@
 // VORSCHAU: Diese Seite speichert nichts. Sie zeigt den Aufbau, damit er
 // beurteilt werden kann, bevor er die Dokumentation ersetzt.
 
-import { Suspense, lazy, useMemo, useState } from 'react'
+import { Suspense, lazy, useEffect, useMemo, useState } from 'react'
 import { useOrg } from '../OrgPublicLayout'
 import { AELRD_ABSCHNITTE, aelrdFeld, type AelrdFeld } from '../../../katalog/aelrd'
 import { istSpiegelFeld } from '../../../katalog/aelrdSpiegel'
 import { normalbefund, uebergabeUebernehmen, uebernahmeUmfang } from '../../../katalog/uebernahme'
 import DokuFeld, { Rasterzelle, istRasterfeld, type Werte } from './DokuFeld'
-import Reiter, { type ReiterStand } from './Reiter'
+import Reiter, { ampel, type ReiterStand } from './Reiter'
 import { zettelMitFeldern, type ZettelTeil } from './zettel'
 import Unterschrift from './Unterschrift'
 
@@ -60,6 +60,65 @@ function inBloecke(felder: AelrdFeld[]): { raster: boolean; felder: AelrdFeld[] 
   return aus
 }
 
+/**
+ * Der Umschalter oben im Zettel — dieselbe Idee wie die Zettel am Rand, nur
+ * eine Ebene tiefer.
+ *
+ * Der Erstbefund hat siebenundvierzig Felder; sie am Stück zu zeigen heisst,
+ * durch viereinhalb Bildschirmhöhen zu scrollen. Mit den Schritten des
+ * Schemas als Knöpfe steht immer genau ein Schritt da, und die Farbe sagt,
+ * wo noch ein Pflichtfeld offen ist.
+ */
+function TeilUmschalter({ teile, werte, aktiv, onWaehlen }: {
+  teile: ZettelTeil[]
+  werte: Werte
+  aktiv: string
+  onWaehlen: (id: string) => void
+}) {
+  const FARBE: Record<string, string> = {
+    offen: '#dc2626',
+    fertig: '#16a34a',
+    angefasst: 'rgba(96,8,18,0.45)',
+    leer: 'rgba(96,8,18,0.12)',
+  }
+  return (
+    <div style={{
+      position: 'sticky', top: 62, zIndex: 6, background: '#fff',
+      margin: '0 -12px 10px', padding: '8px 12px',
+      borderBottom: `0.5px solid ${LINIE}`,
+      display: 'flex', gap: 5, flexWrap: 'wrap',
+    }}>
+      {[{ id: 'alle', kurz: 'Alle' }, ...teile].map((t) => {
+        const an = aktiv === t.id
+        const teil = teile.find((x) => x.id === t.id)
+        const rand = teil
+          ? FARBE[ampel({
+              id: teil.id, kurz: teil.kurz, titel: teil.titel,
+              pflichtGesamt: teil.felder.filter((f) => f.pflicht).length,
+              pflichtOffen: teil.felder.filter((f) => f.pflicht && !gefuellt(werte[f.id])).length,
+              gefuellt: teil.felder.filter((f) => gefuellt(werte[f.id])).length,
+            })]
+          : 'transparent'
+        return (
+          <button
+            key={t.id} type="button" onClick={() => onWaehlen(t.id)}
+            title={teil?.titel ?? 'Alle Schritte'}
+            style={{
+              minWidth: 32, padding: '6px 10px', borderRadius: 8, cursor: 'pointer',
+              background: an ? ROT : '#fff', color: an ? '#fff' : TEXT,
+              border: `0.5px solid ${an ? ROT : LINIE}`,
+              borderBottom: `3px solid ${an ? ROT : rand}`,
+              fontFamily: 'inherit', fontSize: 12, fontWeight: 700, lineHeight: 1.1,
+            }}
+          >
+            {t.kurz}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
 function Block({ id, titel, teile, felder, werte, setzen, aktion }: {
   id: string
   titel: string
@@ -72,6 +131,12 @@ function Block({ id, titel, teile, felder, werte, setzen, aktion }: {
   aktion?: { text: string; onClick: () => void } | null
 }) {
   const ausgefuellt = felder.filter((f) => gefuellt(werte[f.id])).length
+  // Beim Wechsel des Zettels wieder beim ersten Schritt anfangen.
+  const [aktiverTeil, setAktiverTeil] = useState(teile[0]?.id ?? 'alle')
+  useEffect(() => { setAktiverTeil(teile[0]?.id ?? 'alle') }, [id, teile])
+  const zuZeigen = teile.length > 1 && aktiverTeil !== 'alle'
+    ? teile.filter((t) => t.id === aktiverTeil)
+    : teile
   return (
     <section
       id={`doku-${id}`}
@@ -98,15 +163,19 @@ function Block({ id, titel, teile, felder, werte, setzen, aktion }: {
               {aktion.text}
             </button>
           ) : null}
-          {/* Stehen mehrere Abschnitte des Bogens auf einem Zettel, bekommt
-              jeder seine Zwischenüberschrift — sonst laufen sie ineinander. */}
-          {teile.map((teil) => (
+          {teile.length > 1 ? (
+            <TeilUmschalter teile={teile} werte={werte} aktiv={aktiverTeil} onWaehlen={setAktiverTeil} />
+          ) : null}
+
+          {/* Stehen mehrere Abschnitte auf einem Zettel, bekommt jeder seine
+              Zwischenüberschrift — sonst laufen sie ineinander. */}
+          {zuZeigen.map((teil) => (
             <div key={teil.id} style={{ marginBottom: 4 }}>
               {teile.length > 1 ? (
                 <div style={{
                   // Bleibt beim Scrollen stehen: auf einem Zettel mit fast
                   // fünfzig Feldern verliert man sonst, wo man gerade ist.
-                  position: 'sticky', top: 62, zIndex: 5,
+                  position: 'sticky', top: 105, zIndex: 5,
                   background: '#fff', margin: '10px -12px 7px', padding: '7px 12px 5px',
                   display: 'flex', alignItems: 'baseline', gap: 8,
                   borderBottom: `0.5px solid ${LINIE}`,

@@ -111,8 +111,16 @@ export const ZETTEL: Zettel[] = [
   },
 ]
 
-/** Ein Teil eines Zettels mit seinen Feldern, für die Zwischenüberschrift. */
-export type ZettelTeil = { id: string; titel: string; kennung?: string; felder: AelrdFeld[] }
+/** Ein Teil eines Zettels mit seinen Feldern. */
+export type ZettelTeil = {
+  id: string
+  titel: string
+  /** Der Buchstabe des Schemas, falls es einem folgt. */
+  kennung?: string
+  /** Kurzzeichen für den Umschalter oben im Zettel. */
+  kurz: string
+  felder: AelrdFeld[]
+}
 
 function felderVon(abschnittId: string): AelrdFeld[] {
   const a = AELRD_ABSCHNITTE.find((x) => x.id === abschnittId)
@@ -137,6 +145,8 @@ export function zettelMitFeldern(): (Zettel & { teile: ZettelTeil[]; felder: Ael
             id: `${z.id}-${g.kennung || g.titel}`,
             titel: g.titel,
             kennung: g.kennung,
+            // Der Buchstabe ist das Kurzzeichen; der Zeitpunkt vorweg hat keinen.
+            kurz: g.kennung || g.titel.slice(0, 4),
             felder: g.felder.map(aelrdFeld).filter(Boolean) as AelrdFeld[],
           }))
           .filter((t) => t.felder.length > 0)
@@ -144,6 +154,8 @@ export function zettelMitFeldern(): (Zettel & { teile: ZettelTeil[]; felder: Ael
           .map((id) => ({
             id,
             titel: AELRD_ABSCHNITTE.find((a) => a.id === id)?.titel ?? id,
+            // Das Kurzzeichen des Abschnitts gibt es im Katalog bereits.
+            kurz: AELRD_ABSCHNITTE.find((a) => a.id === id)?.kurz ?? id.slice(0, 4).toUpperCase(),
             felder: felderVon(id),
           }))
           .filter((t) => t.felder.length > 0)
