@@ -18,6 +18,7 @@ import { istSpiegelFeld } from '../../../katalog/aelrdSpiegel'
 import { normalbefund, uebergabeUebernehmen, uebernahmeUmfang } from '../../../katalog/uebernahme'
 import DokuFeld, { Rasterzelle, istRasterfeld, type Werte } from './DokuFeld'
 import Reiter, { type ReiterStand } from './Reiter'
+import { zettelMitFeldern, type ZettelTeil } from './zettel'
 import Unterschrift from './Unterschrift'
 
 // Kamera und Texterkennung werden erst geladen, wenn jemand die Karte
@@ -59,9 +60,11 @@ function inBloecke(felder: AelrdFeld[]): { raster: boolean; felder: AelrdFeld[] 
   return aus
 }
 
-function Block({ id, titel, felder, werte, setzen, aktion }: {
+function Block({ id, titel, teile, felder, werte, setzen, aktion }: {
   id: string
   titel: string
+  /** Die Abschnitte des Bogens, die auf diesem Zettel zusammenstehen. */
+  teile: ZettelTeil[]
   felder: AelrdFeld[]
   werte: Werte
   setzen: (id: string, w: unknown) => void
@@ -92,31 +95,42 @@ function Block({ id, titel, felder, werte, setzen, aktion }: {
               {aktion.text}
             </button>
           ) : null}
-          {inBloecke(felder).map((gruppe, i) =>
-            gruppe.raster ? (
-              <div key={i} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(96px,1fr))', gap: 8, marginBottom: 12 }}>
-                {gruppe.felder.map((f) => (
-                  <Rasterzelle key={f.id} feld={f} werte={werte} setzen={setzen} />
-                ))}
-              </div>
-            ) : (
-              <div key={i}>
-                {gruppe.felder.map((f) => (
-                  <div key={f.id}>
-                    <DokuFeld feld={f} werte={werte} setzen={setzen} />
-                    {/* Die Fläche zum Unterschreiben gehört an das Feld, das
-                        sie trägt — nicht ans Ende des Blocks. */}
-                    {f.id === 'unterschrift' ? (
-                      <Unterschrift
-                        wert={String(werte.signature ?? '')}
-                        onChange={(d) => setzen('signature', d)}
-                      />
-                    ) : null}
+          {/* Stehen mehrere Abschnitte des Bogens auf einem Zettel, bekommt
+              jeder seine Zwischenüberschrift — sonst laufen sie ineinander. */}
+          {teile.map((teil) => (
+            <div key={teil.id} style={{ marginBottom: 4 }}>
+              {teile.length > 1 ? (
+                <div style={{ fontSize: 9.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: GRAU, margin: '10px 0 7px', paddingBottom: 4, borderBottom: `0.5px solid ${LINIE}` }}>
+                  {teil.titel}
+                </div>
+              ) : null}
+              {inBloecke(teil.felder).map((gruppe, i) =>
+                gruppe.raster ? (
+                  <div key={i} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(96px,1fr))', gap: 8, marginBottom: 12 }}>
+                    {gruppe.felder.map((f) => (
+                      <Rasterzelle key={f.id} feld={f} werte={werte} setzen={setzen} />
+                    ))}
                   </div>
-                ))}
-              </div>
-            ),
-          )}
+                ) : (
+                  <div key={i}>
+                    {gruppe.felder.map((f) => (
+                      <div key={f.id}>
+                        <DokuFeld feld={f} werte={werte} setzen={setzen} />
+                        {/* Die Fläche zum Unterschreiben gehört an das Feld,
+                            das sie trägt — nicht ans Ende des Blocks. */}
+                        {f.id === 'unterschrift' ? (
+                          <Unterschrift
+                            wert={String(werte.signature ?? '')}
+                            onChange={(d) => setzen('signature', d)}
+                          />
+                        ) : null}
+                      </div>
+                    ))}
+                  </div>
+                ),
+              )}
+            </div>
+          ))}
       </div>
     </section>
   )
@@ -131,19 +145,12 @@ export default function Doku() {
    * Ein Block zur Zeit. Gewechselt wird über die Reiter am Rand, nicht durch
    * Scrollen: wer dokumentiert, soll die Stelle ansteuern, nicht suchen.
    */
-  const [aktiverBlock, setAktiverBlock] = useState('stammdaten')
+  const [aktiverBlock, setAktiverBlock] = useState('patient')
   const [pdfOffen, setPdfOffen] = useState(false)
 
   const setzen = (id: string, w: unknown) => setWerte((v) => ({ ...v, [id]: w }))
-  // Alle Blöcke des Bogens, in seiner Reihenfolge. Was keine Felder hat,
-  // bekommt auch keinen Reiter.
-  const bloecke = useMemo(
-    () =>
-      AELRD_ABSCHNITTE
-        .map((a) => ({ id: a.id, titel: a.titel, felder: felderVon(a.id) }))
-        .filter((b) => b.felder.length > 0),
-    [],
-  )
+  // Die Zettel, wie sie in zettel.ts gebündelt sind.
+  const bloecke = useMemo(() => zettelMitFeldern(), [])
 
   // Was die Reiter am Rand zeigen: je Block, wie viele Pflichtfelder noch
   // offen sind und wie viel überhaupt eingetragen wurde.
@@ -151,7 +158,7 @@ export default function Doku() {
     const pflicht = b.felder.filter((f) => f.pflicht)
     return {
       id: b.id,
-      kurz: AELRD_ABSCHNITTE.find((a) => a.id === b.id)?.kurz ?? b.id.slice(0, 4).toUpperCase(),
+      kurz: b.kurz,
       titel: b.titel,
       pflichtGesamt: pflicht.length,
       pflichtOffen: pflicht.filter((f) => !gefuellt(werte[f.id])).length,
@@ -179,10 +186,10 @@ export default function Doku() {
   // Die beiden Abkürzungen, die den größten Teil des Tippens sparen.
   const offeneUebernahme = uebernahmeUmfang(werte)
   const aktionFuer = (id: string): { text: string; onClick: () => void } | null => {
-    if (id === 'stammdaten') {
+    if (id === 'patient') {
       return { text: 'Gesundheitskarte einlesen (Rückseite)', onClick: () => setKartenScan(true) }
     }
-    if (id === 'erstbefund') {
+    if (id === 'befund') {
       return {
         text: 'Normalbefund — alles unauffällig',
         onClick: () => setWerte((v) => ({ ...normalbefund(), ...v })),
@@ -276,7 +283,7 @@ export default function Doku() {
             {aktuell ? (
           <>
             <Block
-              id={aktuell.id} titel={aktuell.titel} felder={aktuell.felder}
+              id={aktuell.id} titel={aktuell.titel} teile={aktuell.teile} felder={aktuell.felder}
               werte={werte} setzen={setzen} aktion={aktionFuer(aktuell.id)}
             />
 
