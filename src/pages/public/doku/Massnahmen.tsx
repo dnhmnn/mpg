@@ -38,6 +38,8 @@ export default function Massnahmen({ werte, setWerte }: {
   const [grund, setGrund] = useState('')
   /** Für welchen Eintrag die Begründung gerade nachgetragen wird. */
   const [nachtragen, setNachtragen] = useState('')
+  /** Die Begründung zum Ändern aufgeklappt. */
+  const [grundOffen, setGrundOffen] = useState(false)
   const kat = massnahmeKategorie(kategorie)
   const eintraege = massnahmenAbsteigend(werte)
   const offen = ohneGrund(werte)
@@ -50,6 +52,10 @@ export default function Massnahmen({ werte, setWerte }: {
     setWerte((v) => massnahmeEintragen(v, { zeit: gezeigteZeit, kategorie, art, grund }))
     setZeit('')
     setFrei('')
+    // Zurück zur Auswahl: der nächste Griff ist meist eine andere Art, und
+    // der Eintrag soll in der Liste zu sehen sein, nicht hinter der Liste
+    // der Ausführungen, die ihn gerade erzeugt hat.
+    setKategorie('')
   }
 
   return (
@@ -85,44 +91,86 @@ export default function Massnahmen({ werte, setWerte }: {
         <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: GRAU, marginBottom: 4 }}>
           Art der Maßnahme
         </div>
-        <div style={{ marginBottom: kategorie ? 12 : 2 }}>
-          {MASSNAHMEN_KATEGORIEN.map((k) => (
-            <Knopf
-              key={k.id} text={k.titel} an={k.id === kategorie}
-              onClick={() => { setKategorie(k.id === kategorie ? '' : k.id); setFrei('') }}
-            />
-          ))}
-        </div>
+        {/*
+         * Ist eine Art gewählt, treten die anderen sieben ab.
+         *
+         * Sie stehen zu lassen kostete zweihundert Pixel, und die
+         * Ausführungen — das, was man jetzt antippen will — rutschten damit
+         * an den unteren Rand des Bildschirms. Statt ihrer steht eine Zeile
+         * mit der gewählten Art; sie führt zurück zur Auswahl.
+         */}
+        {kat ? (
+          <button
+            type="button" onClick={() => { setKategorie(''); setFrei('') }}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 7, width: '100%', marginBottom: 10,
+              padding: '8px 11px', background: 'rgba(96,8,18,0.05)',
+              border: `0.5px solid ${LINIE}`, borderRadius: 8,
+              fontFamily: 'inherit', textAlign: 'left', cursor: 'pointer',
+            }}
+          >
+            <span style={{ fontSize: 15, fontWeight: 700, color: ROT, lineHeight: 1 }}>‹</span>
+            <span style={{ flex: 1, fontSize: 13, fontWeight: 700, color: ROT }}>{kat.titel}</span>
+            <span style={{ fontSize: 11, fontStyle: 'italic', color: GRAU }}>andere Art</span>
+          </button>
+        ) : (
+          <div style={{ marginBottom: 2 }}>
+            {MASSNAHMEN_KATEGORIEN.map((k) => (
+              <Knopf
+                key={k.id} text={k.titel} an={false}
+                onClick={() => { setKategorie(k.id); setFrei('') }}
+              />
+            ))}
+          </div>
+        )}
 
         {/* 3. Die rechtliche Begründung — sie gehört zur Maßnahme, nicht zum
                Einsatz, und bleibt für die nächsten Einträge stehen. */}
         {kat ? (
-          <div style={{ marginBottom: 12 }}>
-            <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: GRAU, marginBottom: 4 }}>
-              Rechtliche Begründung
-              {grund ? (
-                <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0, fontStyle: 'italic', marginLeft: 5 }}>
-                  gilt für die nächsten Einträge
-                </span>
-              ) : null}
+          grund && !grundOffen ? (
+            // Steht sie, genügt eine Zeile: sie gilt ohnehin weiter.
+            <button
+              type="button" onClick={() => setGrundOffen(true)}
+              style={{
+                display: 'flex', alignItems: 'baseline', gap: 6, width: '100%', marginBottom: 10,
+                padding: 0, background: 'none', border: 'none',
+                fontFamily: 'inherit', textAlign: 'left', cursor: 'pointer',
+              }}
+            >
+              <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: GRAU }}>
+                Begründung
+              </span>
+              <span style={{ flex: 1, fontSize: 12, fontWeight: 700, color: ROT }}>
+                {rechtsgrund(grund)?.text}
+              </span>
+              <span style={{ fontSize: 11, fontStyle: 'italic', color: GRAU }}>ändern</span>
+            </button>
+          ) : (
+            <div style={{ marginBottom: 10 }}>
+              <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: GRAU, marginBottom: 4 }}>
+                Rechtliche Begründung
+              </div>
+              <div>
+                {RECHTSGRUENDE.map((r) => (
+                  <Knopf
+                    key={r.wert} text={r.text} klein an={r.wert === grund}
+                    onClick={() => {
+                      setGrund(r.wert === grund ? '' : r.wert)
+                      setGrundOffen(false)
+                    }}
+                  />
+                ))}
+              </div>
             </div>
-            <div>
-              {RECHTSGRUENDE.map((r) => (
-                <Knopf
-                  key={r.wert} text={r.text} klein an={r.wert === grund}
-                  onClick={() => setGrund(r.wert === grund ? '' : r.wert)}
-                />
-              ))}
-            </div>
-          </div>
+          )
         ) : null}
 
         {/* 4. Die Ausführung */}
         {kat ? (
           <div>
-            <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: ROT, marginBottom: 4 }}>
-              {kat.titel}
-              <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0, fontStyle: 'italic', marginLeft: 5, color: GRAU }}>
+            <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: GRAU, marginBottom: 4 }}>
+              Ausführung
+              <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0, fontStyle: 'italic', marginLeft: 5 }}>
                 antippen trägt um {gezeigteZeit} ein
               </span>
             </div>
