@@ -89,6 +89,9 @@ export default function Reiter({ staende, aktiv, onWaehlen, beschriftung, schmal
               width: 0,
               marginRight: -10,
               paddingRight: 0,
+              // Etwas tiefer anfangen, damit die runde obere Ecke des
+              // Kastens frei bleibt — sonst sieht er links eckig aus.
+              marginTop: 16,
               overflow: 'visible' as const,
               zIndex: 8,
             }
@@ -128,8 +131,15 @@ export default function Reiter({ staende, aktiv, onWaehlen, beschriftung, schmal
                * Beschriftungen anfangen.
                */
               ...(ueberlagernd ? { marginLeft: -5, opacity: istAktiv ? 1 : 0.9 } : {}),
-              // Links bündig, rechts gerundet: der Zettel ragt aus dem Rand.
-              borderRadius: '0 9px 9px 0',
+              /*
+               * Am Bildschirmrand: links bündig, rechts gerundet — der
+               * Zettel ragt aus dem Rand heraus.
+               *
+               * Aufliegend: rundum gerundet, denn er ragt aus nichts heraus,
+               * sondern liegt auf dem Kasten. Links eckig sähe dort aus wie
+               * abgeschnitten.
+               */
+              borderRadius: ueberlagernd ? 9 : '0 9px 9px 0',
               background: istAktiv ? ROT : f.grund,
               color: istAktiv ? '#fff' : f.schrift,
               border: `0.5px solid ${istAktiv ? ROT : 'rgba(96,8,18,0.12)'}`,
