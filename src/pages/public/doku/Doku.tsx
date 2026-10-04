@@ -60,19 +60,84 @@ function inBloecke(felder: AelrdFeld[]): { raster: boolean; felder: AelrdFeld[] 
   return aus
 }
 
-function Block({ id, titel, teile, zeigeSchritt, felder, werte, setzen, aktion }: {
+/**
+ * Die Schritte des Schemas im Kasten selbst, als Reihe von Zeichen.
+ *
+ * Der gerade bearbeitete Schritt steht voll da, die anderen verblassen — sie
+ * sind noch zu sehen und anzutippen, drängen sich aber nicht auf. Die Farbe
+ * des Rings bleibt dabei kräftig: ein offenes Pflichtfeld soll auch dann
+ * auffallen, wenn der Schritt gerade nicht an der Reihe ist.
+ *
+ * So kostet die Schrittwahl keine Breite am Rand — auf einem Telefon sind
+ * achtundzwanzig Pixel spürbar.
+ */
+function Schrittleiste({ teile, werte, aktiv, onWaehlen }: {
+  teile: ZettelTeil[]
+  werte: Werte
+  aktiv: string
+  onWaehlen: (id: string) => void
+}) {
+  const RING: Record<string, string> = {
+    offen: '#dc2626',
+    fertig: '#16a34a',
+    angefasst: 'rgba(96,8,18,0.4)',
+    leer: 'rgba(96,8,18,0.14)',
+  }
+  const jetzt = teile.find((t) => t.id === aktiv)
+  return (
+    <div style={{
+      position: 'sticky', top: 62, zIndex: 6, background: '#fff',
+      margin: '0 -12px 10px', padding: '9px 12px 8px',
+      borderBottom: `0.5px solid ${LINIE}`,
+    }}>
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+        {teile.map((t) => {
+          const an = t.id === aktiv
+          const pflicht = t.felder.filter((f) => f.pflicht)
+          const stand = ampel({
+            id: t.id, kurz: t.kurz, titel: t.titel,
+            pflichtGesamt: pflicht.length,
+            pflichtOffen: pflicht.filter((f) => !gefuellt(werte[f.id])).length,
+            gefuellt: t.felder.filter((f) => gefuellt(werte[f.id])).length,
+          })
+          return (
+            <button
+              key={t.id} type="button" onClick={() => onWaehlen(t.id)} title={t.titel}
+              style={{
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                minWidth: 30, height: 30, padding: '0 7px', borderRadius: 15,
+                background: an ? ROT : '#fff',
+                color: an ? '#fff' : TEXT,
+                border: `2px solid ${an ? ROT : RING[stand]}`,
+                // Nur das Zeichen verblasst, der Ring bleibt kräftig.
+                opacity: an ? 1 : 0.55,
+                fontFamily: 'inherit', fontSize: 13, fontWeight: 800, lineHeight: 1,
+                cursor: 'pointer',
+              }}
+            >
+              {t.kurz}
+            </button>
+          )
+        })}
+      </div>
+      {jetzt ? (
+        <div style={{ marginTop: 7, fontSize: 9.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: ROT }}>
+          {jetzt.kennung ? `${jetzt.kennung} — ` : ''}{jetzt.titel}
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
+function Block({ id, titel, teile, schrittweise, aktiverTeil, onSchritt, felder, werte, setzen, aktion }: {
   id: string
   titel: string
   /** Die Abschnitte des Bogens, die auf diesem Zettel zusammenstehen. */
   teile: ZettelTeil[]
-  /**
-   * Die Überschrift des Schrittes zeigen.
-   *
-   * Gezeigt wird immer nur ein Schritt, `teile` hat also einen Eintrag — an
-   * seiner Länge lässt sich nicht mehr ablesen, ob der Zettel mehrere hat.
-   * Ohne die Überschrift stünde der Buchstabe nirgends.
-   */
-  zeigeSchritt: boolean
+  /** Die Schritte im Kasten zur Wahl stellen statt alle untereinander. */
+  schrittweise: boolean
+  aktiverTeil: string
+  onSchritt: (id: string) => void
   felder: AelrdFeld[]
   werte: Werte
   setzen: (id: string, w: unknown) => void
@@ -106,11 +171,13 @@ function Block({ id, titel, teile, zeigeSchritt, felder, werte, setzen, aktion }
               {aktion.text}
             </button>
           ) : null}
-          {/* Gezeigt wird immer genau ein Schritt; welcher, entscheidet die
-              zweite Zettelreihe am Rand. */}
-          {teile.map((teil) => (
+          {schrittweise ? (
+            <Schrittleiste teile={teile} werte={werte} aktiv={aktiverTeil} onWaehlen={onSchritt} />
+          ) : null}
+
+          {(schrittweise ? teile.filter((t) => t.id === aktiverTeil) : teile).map((teil) => (
             <div key={teil.id} style={{ marginBottom: 4 }}>
-              {zeigeSchritt ? (
+              {!schrittweise && teile.length > 1 ? (
                 <div style={{
                   // Bleibt beim Scrollen stehen: auf einem Zettel mit fast
                   // fünfzig Feldern verliert man sonst, wo man gerade ist.
@@ -214,7 +281,6 @@ export default function Doku() {
   /** Einen Schritt innerhalb des Zettels wechseln. */
   function zumSchritt(id: string) {
     setAktiverTeil(id)
-    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   /**
@@ -263,9 +329,6 @@ export default function Doku() {
     setAktiverTeil(s.teil)
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
-  const teileZumZeigen = schrittweise
-    ? (aktuell?.teile ?? []).filter((t) => schritte.length <= 1 || t.id === gezeigterTeil)
-    : aktuell?.teile ?? []
 
   // Fortschritt über alle Felder, die der Bogen führt.
   const imWeg = bloecke.flatMap((b) => b.felder)
@@ -343,12 +406,6 @@ export default function Doku() {
 
       <main style={{ padding: '12px 14px 12px 0', maxWidth: 830, margin: '0 auto', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
         <Reiter staende={staende} aktiv={aktiverBlock} onWaehlen={zumBlock} />
-        {schritte.length > 1 ? (
-          <Reiter
-            staende={schritte} aktiv={gezeigterTeil} onWaehlen={zumSchritt}
-            beschriftung={`Schritte: ${aktuell?.titel ?? ''}`} schmal
-          />
-        ) : null}
         <div style={{ flex: 1, minWidth: 0 }}>
         {/* Die Suche bleibt immer sichtbar: sie ist der Weg zu einem Feld,
             dessen Block man nicht im Kopf hat. */}
@@ -378,8 +435,9 @@ export default function Doku() {
             {aktuell ? (
           <>
             <Block
-              id={aktuell.id} titel={aktuell.titel} teile={teileZumZeigen}
-              zeigeSchritt={schritte.length > 1 || teileZumZeigen.length > 1}
+              id={aktuell.id} titel={aktuell.titel} teile={aktuell.teile}
+              schrittweise={schrittweise && aktuell.teile.length > 1}
+              aktiverTeil={gezeigterTeil} onSchritt={zumSchritt}
               felder={aktuell.felder}
               werte={werte} setzen={setzen} aktion={aktionFuer(aktuell.id)}
             />
