@@ -36,7 +36,14 @@ export type Verlaufswert = {
 
 export type Gitter = {
   id: 'spo2' | 'af' | 'hf'
-  hoehe: number
+  /**
+   * Der Anteil an der Höhe, die der Kasten für die Gitter übrig lässt.
+   *
+   * Feste Höhen standen hier einmal — und ließen vierzig Prozent des Kastens
+   * leer. Die Vorlage füllt ihn ganz aus, also rechnet der Ausdruck die Höhen
+   * aus dem Kasten. Die Verhältnisse sind die der Vorlage.
+   */
+  anteil: number
   /** Beschriftung links, von oben nach unten — auf den Linien der Vorlage. */
   skala: { text: string; wert: number }[]
   /** Rechte Beschriftung, wo der Bogen eine zweite Skala führt. */
@@ -58,21 +65,21 @@ export type Gitter = {
 export const GITTER: Gitter[] = [
   {
     id: 'spo2',
-    hoehe: 26,
+    anteil: 26 / 192,
     von: 70,
     bis: 100,
     skala: [{ text: '90 →', wert: 90 }, { text: '80 →', wert: 80 }],
   },
   {
     id: 'af',
-    hoehe: 34,
+    anteil: 34 / 192,
     von: 0,
     bis: 30,
     skala: [{ text: '20 →', wert: 20 }, { text: '10 →', wert: 10 }],
   },
   {
     id: 'hf',
-    hoehe: 132,
+    anteil: 132 / 192,
     von: 0,
     bis: 300,
     vonRechts: 0,
@@ -106,12 +113,15 @@ export function gitterVon(id: string): Gitter | undefined {
 }
 
 /**
- * Die Höhe im Gitter, auf der ein Wert steht — 0 oben, `hoehe` unten.
+ * Wo ein Wert im Gitter steht — 0 ganz oben, 1 ganz unten.
+ *
+ * Ein Anteil statt einer Höhe: wie hoch das Gitter gedruckt wird, entscheidet
+ * der Kasten des Bogens, nicht der Katalog.
  *
  * Werte außerhalb der Skala geben nichts zurück: sie an den Rand zu kleben
  * hieße, eine Messung zu zeigen, die so nicht gemacht wurde.
  */
-export function hoeheImGitter(wertId: string, zahl: number): number | null {
+export function anteilImGitter(wertId: string, zahl: number): number | null {
   const w = verlaufswert(wertId)
   const g = w && gitterVon(w.gitter)
   if (!w || !g) return null
@@ -120,7 +130,7 @@ export function hoeheImGitter(wertId: string, zahl: number): number | null {
   const von = rechts ? g.vonRechts! : g.von
   const bis = rechts ? g.bisRechts! : g.bis
   if (!Number.isFinite(zahl) || zahl < von || zahl > bis) return null
-  return ((bis - zahl) / (bis - von)) * g.hoehe
+  return hoeheAnteil(g, zahl, rechts)
 }
 
 /** Der Anteil von oben, auf dem ein Wert im Gitter steht — 0 oben, 1 unten. */

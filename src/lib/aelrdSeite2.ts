@@ -15,7 +15,7 @@ import {
 } from './aelrdDruck'
 import { HOEHEN2, SEITE2 } from './aelrdLayout'
 import { aelrdFeld } from '../katalog/aelrd'
-import { GITTER, VERLAUFSWERTE, hoeheAnteil, hoeheImGitter, type Gitter } from '../katalog/verlaufswerte'
+import { GITTER, VERLAUFSWERTE, anteilImGitter, hoeheAnteil, type Gitter } from '../katalog/verlaufswerte'
 import type { Kopfdaten } from './aelrdSeite1'
 
 /** Der Wortlaut eines Feldes — bei Auswahlen der Optionstext, nicht der Schluessel. */
@@ -96,8 +96,20 @@ function druckzeichen(x: number, oben: number, unten: number, farbe: string): st
   ].join('')
 }
 
+/**
+ * Was im Kasten der Verlaufsbeschreibung neben den Gittern noch Platz
+ * braucht — gemessen am gedruckten Blatt, in Bildpunkten wie die Gitter.
+ */
+const VERLAUF_KOPF = 12.2      // die Überschrift
+const VERLAUF_ZEITACHSE = 8    // die Zeile mit den Uhrzeiten
+const VERLAUF_POLSTER = 4      // je Reihe 0,5 pt oben und unten
+
 function verlaufsblatt(p: Payload): string {
   const zeilen = Array.isArray(p.verlauf) ? (p.verlauf as Payload[]) : []
+  // Die Gitter füllen den Kasten aus. Seine Höhe steht in Punkt, gezeichnet
+  // wird in Bildpunkten — drei Punkt sind vier Bildpunkte.
+  const frei = (SEITE2.verlauf.h * 4) / 3 - VERLAUF_KOPF - VERLAUF_ZEITACHSE - VERLAUF_POLSTER
+  const hoeheVon = (g: Gitter) => Math.round(frei * g.anteil * 10) / 10
   const spalten = Math.max(zeilen.length, 18)
   /** Die Mitte der Spalte i, in Prozent der Gitterbreite. */
   const mitte = (i: number) => ((i + 0.5) / spalten) * 100
@@ -105,7 +117,7 @@ function verlaufsblatt(p: Payload): string {
   const werteVon = (z: Payload): Record<string, unknown> =>
     z.werte && typeof z.werte === 'object' ? (z.werte as Record<string, unknown>) : z
 
-  const punkte = (gitterId: string): string => {
+  const punkte = (gitterId: string, hoehe: number): string => {
     const aus: string[] = []
     zeilen.forEach((z, i) => {
       const w = werteVon(z)
@@ -114,14 +126,15 @@ function verlaufsblatt(p: Payload): string {
         if (v.gitter !== gitterId) continue
         const roh = String(w[v.id] ?? '').replace(',', '.').trim()
         if (roh === '') continue
-        const y = hoeheImGitter(v.id, Number(roh))
-        if (y === null) continue
+        const anteil = anteilImGitter(v.id, Number(roh))
+        if (anteil === null) continue
+        const y = anteil * hoehe
         if (v.zeichen === 'druck') {
           // Der systolische Wert traegt die Hantel; ohne diastolischen bleibt
           // sie eine Spitze.
           if (v.id !== 'rr_sys') continue
-          const unten = hoeheImGitter('rr_dia', Number(String(w.rr_dia ?? '').replace(',', '.')))
-          aus.push(druckzeichen(x, y, unten ?? y, v.farbe))
+          const untenAnteil = anteilImGitter('rr_dia', Number(String(w.rr_dia ?? '').replace(',', '.')))
+          aus.push(druckzeichen(x, y, untenAnteil === null ? y : untenAnteil * hoehe, v.farbe))
           continue
         }
         // Die Stufenlinie wird nicht Punkt fuer Punkt gezeichnet, sondern
@@ -138,15 +151,15 @@ function verlaufsblatt(p: Payload): string {
    * naechste sie aendert. Ein Punkt wuerde behaupten, dazwischen sei nichts
    * gegeben worden.
    */
-  const stufenlinie = (gitterId: string): string => {
+  const stufenlinie = (gitterId: string, hoehe: number): string => {
     const v = VERLAUFSWERTE.find((x) => x.zeichen === 'stufe' && x.gitter === gitterId)
     if (!v) return ''
     const stellen: { x: number; y: number }[] = []
     zeilen.forEach((z, i) => {
       const roh = String(werteVon(z)[v.id] ?? '').replace(',', '.').trim()
       if (roh === '') return
-      const y = hoeheImGitter(v.id, Number(roh))
-      if (y !== null) stellen.push({ x: mitte(i), y })
+      const anteil = anteilImGitter(v.id, Number(roh))
+      if (anteil !== null) stellen.push({ x: mitte(i), y: anteil * hoehe })
     })
     if (stellen.length === 0) return ''
     const d: string[] = [`M${stellen[0].x.toFixed(2)} ${stellen[0].y.toFixed(2)}`]
@@ -161,7 +174,7 @@ function verlaufsblatt(p: Payload): string {
   }
 
   const gitter = (g: Gitter) => {
-    const hoehe = g.hoehe
+    const hoehe = hoeheVon(g)
     const senkrecht = Array.from({ length: spalten + 1 }, (_, i) =>
       `<line x1="${(i / spalten) * 100}%" y1="0" x2="${(i / spalten) * 100}%" y2="${hoehe}" />`,
     ).join('')
@@ -179,7 +192,7 @@ function verlaufsblatt(p: Payload): string {
       <div class="dg-s">${beschriftung(g.skala, false)}</div>
       <svg class="dg-g" viewBox="0 0 100 ${hoehe}" preserveAspectRatio="none" height="${hoehe}">
         <g stroke="#000" stroke-width="0.12">${senkrecht}${waagrecht}</g>
-        ${stufenlinie(g.id)}${punkte(g.id)}
+        ${stufenlinie(g.id, hoehe)}${punkte(g.id, hoehe)}
       </svg>
       ${g.skalaRechts ? `<div class="dg-s dg-r">${beschriftung(g.skalaRechts, true)}</div>` : ''}
     </div>`

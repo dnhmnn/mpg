@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   spaltentext, verlaufEintragen, verlaufLesen, verlaufSortiert, verlaufStreichen, zahl,
 } from '../../pages/public/doku/verlauf'
-import { GITTER, VERLAUFSWERTE, hoeheAnteil, hoeheImGitter } from '../../katalog/verlaufswerte'
+import { GITTER, VERLAUFSWERTE, anteilImGitter, hoeheAnteil } from '../../katalog/verlaufswerte'
 import { aelrdHtml } from '../aelrdProtokoll'
 
 const spalte = (zeit: string, werte: Record<string, string>) => ({ zeit, werte })
@@ -23,22 +23,31 @@ describe('Die Skalen des Kurvenblatts', () => {
     }
   })
 
-  it('rechnet einen Messwert auf seine Höhe im Gitter', () => {
-    // Das Kreislauf-Gitter geht von 0 bis 300 über 132 Punkte.
-    expect(hoeheImGitter('hf', 300)).toBe(0)
-    expect(hoeheImGitter('hf', 0)).toBe(132)
-    expect(hoeheImGitter('hf', 150)).toBe(66)
+  it('rechnet einen Messwert auf seinen Platz im Gitter', () => {
+    // Ein Anteil, keine Höhe: wie hoch gedruckt wird, entscheidet der Kasten.
+    expect(anteilImGitter('hf', 300)).toBe(0)
+    expect(anteilImGitter('hf', 0)).toBe(1)
+    expect(anteilImGitter('hf', 150)).toBe(0.5)
     // CO₂ liest die rechte Skala: 0 bis 60.
-    expect(hoeheImGitter('etco2', 60)).toBe(0)
-    expect(hoeheImGitter('etco2', 30)).toBe(66)
+    expect(anteilImGitter('etco2', 60)).toBe(0)
+    expect(anteilImGitter('etco2', 30)).toBe(0.5)
+  })
+
+  it('teilt die Höhe des Kastens unter den drei Gittern auf', () => {
+    // Die Vorlage füllt den Kasten ganz aus; feste Höhen ließen ihn zu
+    // vierzig Prozent leer.
+    const summe = GITTER.reduce((n, g) => n + g.anteil, 0)
+    expect(Math.abs(summe - 1)).toBeLessThan(0.0001)
+    // Die Verhältnisse der Vorlage: das Kreislauf-Gitter ist das größte.
+    expect(GITTER.find((g) => g.id === 'hf')!.anteil).toBeGreaterThan(0.6)
   })
 
   it('zeichnet nichts, was außerhalb der Skala liegt', () => {
     // Ein Wert an den Rand geklebt wäre eine Messung, die es nicht gab.
-    expect(hoeheImGitter('spo2', 60)).toBeNull()
-    expect(hoeheImGitter('hf', 400)).toBeNull()
-    expect(hoeheImGitter('hf', Number.NaN)).toBeNull()
-    expect(hoeheImGitter('gibtsnicht', 50)).toBeNull()
+    expect(anteilImGitter('spo2', 60)).toBeNull()
+    expect(anteilImGitter('hf', 400)).toBeNull()
+    expect(anteilImGitter('hf', Number.NaN)).toBeNull()
+    expect(anteilImGitter('gibtsnicht', 50)).toBeNull()
   })
 
   it('gibt jedem Messwert ein Gitter und ein Zeichen', () => {
