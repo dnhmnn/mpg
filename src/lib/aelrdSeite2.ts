@@ -15,6 +15,7 @@ import {
 } from './aelrdDruck'
 import { HOEHEN2, SEITE2 } from './aelrdLayout'
 import { aelrdFeld } from '../katalog/aelrd'
+import { GITTER, VERLAUFSWERTE, hoeheAnteil, hoeheImGitter, type Gitter } from '../katalog/verlaufswerte'
 import type { Kopfdaten } from './aelrdSeite1'
 
 /** Der Wortlaut eines Feldes — bei Auswahlen der Optionstext, nicht der Schluessel. */
@@ -54,44 +55,157 @@ function kopfzeile(k: Kopfdaten): string {
 /**
  * Das Kurvenblatt. Der Bogen hat drei uebereinanderliegende Gitter mit
  * eigenen Skalen; die Messwerte des Verlaufs werden als Punkte eingetragen.
+ *
+ * Die Zeichen sind die der Vorlage: Fuenfeck fuer SpO2, Sechseck fuer die
+ * Atemfrequenz, gefuellte Kuppel fuer die Herzfrequenz, offene fuer den Puls,
+ * Hantel fuer den Blutdruck. Welcher Wert auf welche Hoehe gehoert, rechnet
+ * hoeheImGitter aus den Skalen der Vorlage.
  */
+function zeichen(art: string, x: number, y: number, farbe: string): string {
+  const voll = art.endsWith('_voll')
+  const fuellung = voll ? farbe : 'none'
+  const strich = `stroke="${farbe}" stroke-width="0.5" fill="${fuellung}"`
+  // Die Zeichen sind in der Breite gestaucht, weil das Gitter auf 100 Einheiten
+  // gerechnet wird, in der Hoehe aber auf Punkte: ein Kreis waere ein Strich.
+  const b = 1.1
+  const h = 2.2
+  if (art.startsWith('fuenfeck')) {
+    const punkte = [[0, -h], [b, -h * 0.2], [b * 0.6, h * 0.8], [-b * 0.6, h * 0.8], [-b, -h * 0.2]]
+      .map(([dx, dy]) => `${(x + dx).toFixed(2)},${(y + dy).toFixed(2)}`).join(' ')
+    return `<polygon points="${punkte}" ${strich} />`
+  }
+  if (art.startsWith('sechseck')) {
+    const punkte = [[0, -h], [b, -h * 0.5], [b, h * 0.5], [0, h], [-b, h * 0.5], [-b, -h * 0.5]]
+      .map(([dx, dy]) => `${(x + dx).toFixed(2)},${(y + dy).toFixed(2)}`).join(' ')
+    return `<polygon points="${punkte}" ${strich} />`
+  }
+  if (art.startsWith('kuppel')) {
+    return `<path d="M${(x - b).toFixed(2)} ${y.toFixed(2)} A ${b} ${h} 0 0 1 ${(x + b).toFixed(2)} ${y.toFixed(2)} Z" ${strich} />`
+  }
+  return ''
+}
+
+/** Der Blutdruck: zwei Spitzen, durch einen Strich verbunden. */
+function druckzeichen(x: number, oben: number, unten: number, farbe: string): string {
+  const b = 1.1
+  const strich = `stroke="${farbe}" stroke-width="0.5" fill="none"`
+  return [
+    `<line x1="${x.toFixed(2)}" y1="${oben.toFixed(2)}" x2="${x.toFixed(2)}" y2="${unten.toFixed(2)}" ${strich} />`,
+    `<path d="M${(x - b).toFixed(2)} ${(oben - 2.4).toFixed(2)} L${x.toFixed(2)} ${oben.toFixed(2)} L${(x + b).toFixed(2)} ${(oben - 2.4).toFixed(2)}" ${strich} />`,
+    `<path d="M${(x - b).toFixed(2)} ${(unten + 2.4).toFixed(2)} L${x.toFixed(2)} ${unten.toFixed(2)} L${(x + b).toFixed(2)} ${(unten + 2.4).toFixed(2)}" ${strich} />`,
+  ].join('')
+}
+
 function verlaufsblatt(p: Payload): string {
   const zeilen = Array.isArray(p.verlauf) ? (p.verlauf as Payload[]) : []
   const spalten = Math.max(zeilen.length, 18)
+  /** Die Mitte der Spalte i, in Prozent der Gitterbreite. */
+  const mitte = (i: number) => ((i + 0.5) / spalten) * 100
 
-  const gitter = (hoehe: number, skala: string[]) => {
+  const werteVon = (z: Payload): Record<string, unknown> =>
+    z.werte && typeof z.werte === 'object' ? (z.werte as Record<string, unknown>) : z
+
+  const punkte = (gitterId: string): string => {
+    const aus: string[] = []
+    zeilen.forEach((z, i) => {
+      const w = werteVon(z)
+      const x = mitte(i)
+      for (const v of VERLAUFSWERTE) {
+        if (v.gitter !== gitterId) continue
+        const roh = String(w[v.id] ?? '').replace(',', '.').trim()
+        if (roh === '') continue
+        const y = hoeheImGitter(v.id, Number(roh))
+        if (y === null) continue
+        if (v.zeichen === 'druck') {
+          // Der systolische Wert traegt die Hantel; ohne diastolischen bleibt
+          // sie eine Spitze.
+          if (v.id !== 'rr_sys') continue
+          const unten = hoeheImGitter('rr_dia', Number(String(w.rr_dia ?? '').replace(',', '.')))
+          aus.push(druckzeichen(x, y, unten ?? y, v.farbe))
+          continue
+        }
+        // Die Stufenlinie wird nicht Punkt fuer Punkt gezeichnet, sondern
+        // als Ganzes — siehe stufenlinie().
+        if (v.zeichen === 'stufe') continue
+        aus.push(zeichen(v.zeichen, x, y, v.farbe))
+      }
+    })
+    return aus.join('')
+  }
+
+  /**
+   * Die O2-Gabe als Stufenlinie: sie gilt ab der Messung weiter, bis die
+   * naechste sie aendert. Ein Punkt wuerde behaupten, dazwischen sei nichts
+   * gegeben worden.
+   */
+  const stufenlinie = (gitterId: string): string => {
+    const v = VERLAUFSWERTE.find((x) => x.zeichen === 'stufe' && x.gitter === gitterId)
+    if (!v) return ''
+    const stellen: { x: number; y: number }[] = []
+    zeilen.forEach((z, i) => {
+      const roh = String(werteVon(z)[v.id] ?? '').replace(',', '.').trim()
+      if (roh === '') return
+      const y = hoeheImGitter(v.id, Number(roh))
+      if (y !== null) stellen.push({ x: mitte(i), y })
+    })
+    if (stellen.length === 0) return ''
+    const d: string[] = [`M${stellen[0].x.toFixed(2)} ${stellen[0].y.toFixed(2)}`]
+    for (let i = 1; i < stellen.length; i += 1) {
+      d.push(`L${stellen[i].x.toFixed(2)} ${stellen[i - 1].y.toFixed(2)}`)
+      d.push(`L${stellen[i].x.toFixed(2)} ${stellen[i].y.toFixed(2)}`)
+    }
+    // Der letzte Wert gilt bis zur naechsten Spalte weiter.
+    const letzte = stellen[stellen.length - 1]
+    d.push(`L${Math.min(100, letzte.x + (100 / spalten) / 2).toFixed(2)} ${letzte.y.toFixed(2)}`)
+    return `<path d="${d.join(' ')}" stroke="${v.farbe}" stroke-width="0.5" fill="none" />`
+  }
+
+  const gitter = (g: Gitter) => {
+    const hoehe = g.hoehe
     const senkrecht = Array.from({ length: spalten + 1 }, (_, i) =>
       `<line x1="${(i / spalten) * 100}%" y1="0" x2="${(i / spalten) * 100}%" y2="${hoehe}" />`,
     ).join('')
     const waagrecht = Array.from({ length: 7 }, (_, i) =>
       `<line x1="0" y1="${(i / 6) * hoehe}" x2="100%" y2="${(i / 6) * hoehe}" />`,
     ).join('')
+    // Die Pfeile stehen auf den Linien, zu denen sie gehoeren — sonst waere
+    // nicht abzulesen, welche Hoehe welchen Wert meint.
+    const beschriftung = (liste: { text: string; wert: number }[], rechts: boolean) =>
+      liste.map((s) => {
+        const y = hoeheAnteil(g, s.wert, rechts)
+        return `<span style="top:${(y * 100).toFixed(2)}%">${escapeHtml(s.text)}</span>`
+      }).join('')
     return `<div class="dg">
-      <div class="dg-s">${skala.map((t) => `<span>${escapeHtml(t)}</span>`).join('')}</div>
+      <div class="dg-s">${beschriftung(g.skala, false)}</div>
       <svg class="dg-g" viewBox="0 0 100 ${hoehe}" preserveAspectRatio="none" height="${hoehe}">
         <g stroke="#000" stroke-width="0.12">${senkrecht}${waagrecht}</g>
+        ${stufenlinie(g.id)}${punkte(g.id)}
       </svg>
+      ${g.skalaRechts ? `<div class="dg-s dg-r">${beschriftung(g.skalaRechts, true)}</div>` : ''}
     </div>`
   }
 
   const zeitachse = zeilen.length
-    ? `<div class="dg-z">${zeilen.map((z) => `<span>${escapeHtml(z.zeit ?? '')}</span>`).join('')}</div>`
+    ? `<div class="dg-z">${zeilen.map((z, i) =>
+        `<span style="left:${mitte(i).toFixed(2)}%">${escapeHtml(String(z.zeit ?? ''))}</span>`).join('')}</div>`
     : '<div class="dg-z"></div>'
+
+  const g = (id: string) => GITTER.find((x) => x.id === id)!
 
   return block(
     SEITE2.verlauf,
     `${ueberschrift('Verlaufsbeschreibung')}
      <div class="vb">
        <div class="vb-l"><span>SpO₂</span></div>
-       ${gitter(26, ['90 →', '80 →'])}
+       ${gitter(g('spo2'))}
      </div>
      <div class="vb">
        <div class="vb-l"><span>AF</span><span>O₂ Gabe</span><span>CO Hb</span></div>
-       ${gitter(34, ['20 →', '10 →'])}
+       ${gitter(g('af'))}
      </div>
      <div class="vb gross">
        <div class="vb-l"><span>HF</span><span>Puls</span><span>RR</span><span>Defi</span><span>CO₂</span><span>Transp. T-T</span><span>Intub. ↓</span><span>Extub. ↑</span></div>
-       ${gitter(132, ['250 →', '200 →', '150 →', '100 →', '50 →'])}
+       ${gitter(g('hf'))}
      </div>
      ${zeitachse}`,
   )
@@ -386,9 +500,13 @@ export const STIL_SEITE2 = `
 .vb-l{flex:0 0 40pt;display:flex;flex-direction:column;font-size:${MASS.klein}pt;line-height:1.3}
 .vb.gross .vb-l{justify-content:space-between}
 .dg{flex:1 1 auto;display:flex;gap:2pt;min-width:0}
-.dg-s{flex:0 0 22pt;display:flex;flex-direction:column;justify-content:space-between;font-size:${MASS.klein}pt;text-align:right}
+.dg-s{flex:0 0 22pt;position:relative;font-size:${MASS.klein}pt;text-align:right}
+.dg-s span{position:absolute;right:0;transform:translateY(-50%);white-space:nowrap}
+.dg-r{flex:0 0 14pt;text-align:left}
+.dg-r span{right:auto;left:0}
 .dg-g{flex:1 1 auto;width:100%}
-.dg-z{display:flex;justify-content:space-between;padding:0 3pt 0 64pt;font-size:${MASS.klein}pt}
+.dg-z{position:relative;height:6pt;margin:0 17pt 0 64pt;font-size:${MASS.klein}pt}
+.dg-z span{position:absolute;transform:translateX(-50%);white-space:nowrap}
 
 .md-kopf{display:flex;justify-content:space-between;align-items:baseline;padding-right:4pt;overflow:hidden}
 .md-liste{padding:1pt 3pt;overflow:hidden}

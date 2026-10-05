@@ -31,8 +31,13 @@ describe('Die Gliederung der Zettel', () => {
     // Der Zettel steht an der Stelle seines ersten Abschnitts; die Folge der
     // Zettel darf die Folge des Bogens nicht umkehren.
     const stelle = (id: string) => AELRD_ABSCHNITTE.findIndex((a) => a.id === id)
-    const ersten = ZETTEL.map((z) => stelle(z.abschnitte[0]))
+    // Wer bewusst woanders steht, nennt seinen Grund — und wird hier nicht
+    // mitgezählt. Alle übrigen halten die Reihenfolge des Bogens.
+    const ersten = ZETTEL.filter((z) => !z.ausserDerReihe).map((z) => stelle(z.abschnitte[0]))
     expect(ersten).toEqual([...ersten].sort((a, b) => a - b))
+    for (const z of ZETTEL.filter((x) => x.ausserDerReihe)) {
+      expect(z.ausserDerReihe!.length, `${z.id} steht ohne Grund außer der Reihe`).toBeGreaterThan(20)
+    }
   })
 
   it('hat eindeutige Kennungen und kurze Kurzzeichen', () => {
@@ -73,9 +78,13 @@ describe('Was die Zettel tragen', () => {
     ])
   })
 
-  it('lässt Zettel ohne Felder weg', () => {
-    // Die Verlaufsbeschreibung ist auf dem Papier das Kurvenblatt.
-    expect(zettel.map((z) => z.id)).not.toContain('verlauf')
+  it('lässt Zettel ohne Felder und ohne eigene Maske weg', () => {
+    // Die Verlaufsbeschreibung führt keine Felder des Bogens — sie ist das
+    // Kurvenblatt. Sie hat dafür eine eigene Maske und bleibt deshalb.
+    const verlauf = zettel.find((z) => z.id === 'verlauf')
+    expect(verlauf?.maske).toBe(true)
+    expect(verlauf?.felder).toEqual([])
+    expect(zettel.filter((z) => z.felder.length === 0 && !z.maske)).toEqual([])
   })
 })
 

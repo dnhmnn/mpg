@@ -22,6 +22,7 @@ import { zettelMitFeldern, type ZettelTeil } from './zettel'
 import Unterschrift from './Unterschrift'
 import Besatzung from './Besatzung'
 import Massnahmen from './Massnahmen'
+import Verlauf from './Verlauf'
 import Tracerdiagnose, { FuehrendeDiagnose } from './Tracerdiagnose'
 import { diagnoseSetzen, gruppeSetzen, gruppeVormerken } from './diagnose'
 import { MASSNAHMEN_FELDER } from '../../../katalog/massnahmenArten'
@@ -460,6 +461,9 @@ export default function Doku() {
                 // Der Verlauf ist ein eigener Schritt des Maßnahmen-Zettels,
                 // nicht eine Karte darüber: sonst stünde er auf jedem Schritt.
                 'massnahmen-verlauf': <Massnahmen werte={werte} setWerte={setWerte} />,
+                // Das Kurvenblatt: der Zettel führt keine Felder des Bogens,
+                // sondern die Spalten des Verlaufs.
+                verlauf: <Verlauf werte={werte} setWerte={setWerte} />,
               }}
               uebernommen={uebernommeneFelder}
               ersatzFeld={{

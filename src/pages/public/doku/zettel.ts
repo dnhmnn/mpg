@@ -19,6 +19,20 @@ export type Zettel = {
   /** Die Blöcke des Bogens, die hier zusammenstehen. */
   abschnitte: string[]
   /**
+   * Warum dieser Zettel nicht an der Stelle des Papiers steht.
+   *
+   * Die Reihenfolge ist sonst die des Bogens; eine Ausnahme braucht einen
+   * Grund, den ein Test einfordert.
+   */
+  ausserDerReihe?: string
+  /**
+   * Der Zettel führt keine Felder des Bogens, sondern eine eigene Maske.
+   *
+   * Sonst fiele er heraus — die Verlaufsbeschreibung ist auf dem Papier das
+   * Kurvenblatt und hat keine einzelnen Felder.
+   */
+  maske?: boolean
+  /**
    * Eine eigene Gliederung statt der Abschnitte des Bogens.
    *
    * Der Erstbefund steht auf dem Papier nach Organsystemen; abgearbeitet wird
@@ -171,6 +185,17 @@ export const ZETTEL: Zettel[] = [
     ],
   },
   {
+    id: 'verlauf',
+    kurz: 'VERL',
+    titel: 'Verlauf der Messwerte',
+    abschnitte: ['verlauf'],
+    maske: true,
+    ausserDerReihe:
+      'Auf dem Papier steht das Kurvenblatt oben auf Seite 2. Geschrieben wird '
+      + 'es aber während des Einsatzes, nach den Maßnahmen — und dort steht es '
+      + 'deshalb auch in der Maske.',
+  },
+  {
     id: 'uebergabe',
     kurz: 'ÜBER',
     titel: 'Übergabe und Abschluss',
@@ -226,9 +251,11 @@ export function zettelMitFeldern(): (Zettel & { teile: ZettelTeil[]; felder: Ael
             kurz: AELRD_ABSCHNITTE.find((a) => a.id === id)?.kurz ?? id.slice(0, 4).toUpperCase(),
             felder: felderVon(id),
           }))
-          .filter((t) => t.felder.length > 0)
+          // Ein Teil ohne Felder bleibt, wenn der Zettel eine eigene Maske
+          // trägt — sonst gäbe es nichts, woran sie hängen könnte.
+          .filter((t) => t.felder.length > 0 || z.maske)
     return { ...z, teile, felder: teile.flatMap((t) => t.felder) }
-  }).filter((z) => z.felder.length > 0)
+  }).filter((z) => z.felder.length > 0 || z.maske)
 }
 
 /** Die Felder, die ein Zettel aus den Abschnitten des Bogens mitbringt. */
