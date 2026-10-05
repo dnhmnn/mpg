@@ -24,6 +24,7 @@ import Besatzung from './Besatzung'
 import Massnahmen from './Massnahmen'
 import Verlauf from './Verlauf'
 import Adresse from './Adresse'
+import Zeitstrahl from './Zeitstrahl'
 import { adresseSetzen } from './adresse'
 import Tracerdiagnose, { FuehrendeDiagnose } from './Tracerdiagnose'
 import { diagnoseSetzen, gruppeSetzen, gruppeVormerken } from './diagnose'
@@ -69,7 +70,7 @@ function inBloecke(felder: AelrdFeld[]): { raster: boolean; felder: AelrdFeld[] 
   return aus
 }
 
-function Block({ id, titel, teile, zeigeSchritt, felder, werte, setzen, aktion, ersatz, ersatzFeld, uebernommen }: {
+function Block({ id, titel, teile, zeigeSchritt, felder, werte, setzen, aktion, ersatz, ersatzFeld, vorweg, uebernommen }: {
   id: string
   titel: string
   /** Die Abschnitte des Bogens, die auf diesem Zettel zusammenstehen. */
@@ -101,6 +102,8 @@ function Block({ id, titel, teile, zeigeSchritt, felder, werte, setzen, aktion, 
    * aber aus Gruppen. Das Feld bleibt dasselbe, nur die Bedienung nicht.
    */
   ersatzFeld?: Record<string, React.ReactNode>
+  /** Masken, die über den Feldern eines Teils stehen. */
+  vorweg?: Record<string, React.ReactNode>
   /**
    * Felder, die eine eigene Maske über dem Block führt.
    *
@@ -169,6 +172,7 @@ function Block({ id, titel, teile, zeigeSchritt, felder, werte, setzen, aktion, 
                   </span>
                 </div>
               ) : null}
+              {vorweg?.[teil.id] ?? null}
               {ersatz?.[teil.id] ?? inBloecke(teil.felder.filter((f) => !uebernommen?.has(f.id))).map((gruppe, i) =>
                 gruppe.raster ? (
                   <div key={i} style={{
@@ -468,6 +472,11 @@ export default function Doku() {
                 verlauf: <Verlauf werte={werte} setWerte={setWerte} />,
               }}
               uebernommen={uebernommeneFelder}
+              vorweg={{
+                // Der Zeitstrahl rechnet die Kette der Statuszeiten und
+                // bietet sie den Feldern darunter an.
+                zeiten: <Zeitstrahl werte={werte} setWerte={setWerte} />,
+              }}
               ersatzFeld={{
                 // Der Bogen führt je eine Schreiblinie; getippt wird in drei
                 // Feldern, wie im alten Formular.
