@@ -8,32 +8,25 @@
 // Leere Felder bleiben leer. Wer nur SpO₂ und HF misst, trägt zwei Zahlen ein
 // und nicht neun — eine Spalte mit zwei Punkten ist eine richtige Spalte.
 
-import { VERLAUFSWERTE } from '../../../katalog/verlaufswerte'
+import {
+  VERLAUFSWERTE, eingetrageneSpalten, fehlendeZeitpunkte, kurvenspalten,
+  type Herkunft, type Verlaufsspalte,
+} from '../../../katalog/verlaufswerte'
 import type { Werte } from './DokuFeld'
 
-export type Verlaufsspalte = {
-  id: string
-  /** HH:MM */
-  zeit: string
-  /** Messwerte als Text, wie sie eingegeben wurden. */
-  werte: Record<string, string>
-}
+export type { Herkunft, Verlaufsspalte }
 
+/** Die Spalten, die im Verlauf eingetragen wurden — ohne Erstbefund und Übergabe. */
 export function verlaufLesen(werte: Werte): Verlaufsspalte[] {
-  const v = werte.verlauf
-  if (!Array.isArray(v)) return []
-  return v
-    .filter((e): e is Verlaufsspalte =>
-      Boolean(e) && typeof e === 'object'
-      && typeof (e as Verlaufsspalte).id === 'string'
-      && typeof (e as Verlaufsspalte).zeit === 'string',
-    )
-    .map((e) => ({ ...e, werte: e.werte && typeof e.werte === 'object' ? e.werte : {} }))
+  return eingetrageneSpalten(werte)
 }
 
-/** Die Spalten in der Reihenfolge der Uhr — so steht das Kurvenblatt. */
+/**
+ * Alles, was auf der Kurve steht — Verlauf, Erstbefund und Übergabe, nach der
+ * Uhr geordnet.
+ */
 export function verlaufSortiert(werte: Werte): Verlaufsspalte[] {
-  return [...verlaufLesen(werte)].sort((a, b) => a.zeit.localeCompare(b.zeit))
+  return kurvenspalten(werte)
 }
 
 function kennung(vorhanden: Verlaufsspalte[]): string {
@@ -86,3 +79,6 @@ export function spaltentext(spalte: Verlaufsspalte): string {
     .map((v) => `${v.label} ${spalte.werte[v.id]}`)
     .join(' · ')
 }
+
+/** Erstbefund oder Übergabe mit Messwerten, aber ohne Zeitpunkt. */
+export { fehlendeZeitpunkte }

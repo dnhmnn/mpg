@@ -14,7 +14,7 @@ import {
   jetztZeit,
 } from './massnahmen'
 import {
-  spaltentext, verlaufEintragen, verlaufSortiert, verlaufStreichen,
+  fehlendeZeitpunkte, spaltentext, verlaufEintragen, verlaufSortiert, verlaufStreichen,
 } from './verlauf'
 
 const ROT = '#600812'
@@ -36,6 +36,7 @@ export default function Verlauf({ werte, setWerte }: {
   const [eingabe, setEingabe] = useState<Record<string, string>>({})
   const gezeigteZeit = zeit || jetztZeit()
   const spalten = verlaufSortiert(werte)
+  const ohneZeit = fehlendeZeitpunkte(werte)
   const etwasDa = VERLAUFSWERTE.some((v) => String(eingabe[v.id] ?? '').trim() !== '')
 
   function eintragen() {
@@ -123,27 +124,51 @@ export default function Verlauf({ werte, setWerte }: {
         Um {gezeigteZeit} eintragen
       </button>
 
+      {ohneZeit.length > 0 ? (
+        <div style={{ marginTop: 10, padding: '8px 10px', background: '#fffbeb', border: '0.5px solid #fde047', borderRadius: 8, fontSize: 12, fontStyle: 'italic', color: '#854d0e', lineHeight: 1.45 }}>
+          {ohneZeit.join(' und ')} {ohneZeit.length === 1 ? 'hat' : 'haben'} Messwerte, aber keinen Zeitpunkt —
+          {ohneZeit.length === 1 ? ' er steht' : ' sie stehen'} deshalb nicht auf der Kurve.
+        </div>
+      ) : null}
+
       {/* Die Spalten des Kurvenblatts, in der Reihenfolge der Uhr. */}
       {spalten.length > 0 ? (
         <div style={{ marginTop: 14, borderTop: `0.5px solid ${LINIE}`, paddingTop: 8 }}>
           <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: GRAU, marginBottom: 2 }}>
             {spalten.length === 1 ? 'Eine Messung' : `${spalten.length} Messungen`}
+            <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0, fontStyle: 'italic', marginLeft: 5 }}>
+              auf dem Kurvenblatt
+            </span>
           </div>
           {spalten.map((s) => (
             <div key={s.id} style={{ display: 'flex', alignItems: 'baseline', gap: 9, padding: '6px 0', borderBottom: '0.5px solid rgba(96,8,18,0.06)' }}>
               <span style={{ fontSize: 15, fontWeight: 700, color: ROT, fontVariantNumeric: 'tabular-nums', flexShrink: 0 }}>
                 {s.zeit || '--:--'}
               </span>
-              <span style={{ flex: 1, minWidth: 0, fontSize: 13, fontStyle: 'italic', color: TEXT, lineHeight: 1.4 }}>
-                {spaltentext(s)}
+              <span style={{ flex: 1, minWidth: 0 }}>
+                <span style={{ display: 'block', fontSize: 13, fontStyle: 'italic', color: TEXT, lineHeight: 1.4 }}>
+                  {spaltentext(s)}
+                </span>
+                {/* Erstbefund und Übergabe stehen in ihren eigenen Blöcken;
+                    hier sind sie nur zu sehen, damit niemand sie ein zweites
+                    Mal einträgt. */}
+                {s.quelle ? (
+                  <span style={{ display: 'block', fontSize: 11, fontStyle: 'italic', color: GRAU }}>
+                    aus {s.titel ?? s.quelle} — dort geändert
+                  </span>
+                ) : null}
               </span>
-              <button
-                type="button" onClick={() => setWerte((v) => verlaufStreichen(v, s.id))}
-                aria-label={`Messung ${s.zeit} streichen`}
-                style={{ background: 'none', border: 'none', color: GRAU, fontSize: 19, lineHeight: 1, padding: '0 3px', cursor: 'pointer', fontFamily: 'inherit' }}
-              >
-                ×
-              </button>
+              {s.quelle ? (
+                <span style={{ fontSize: 19, lineHeight: 1, padding: '0 3px', color: 'transparent' }} aria-hidden>×</span>
+              ) : (
+                <button
+                  type="button" onClick={() => setWerte((v) => verlaufStreichen(v, s.id))}
+                  aria-label={`Messung ${s.zeit} streichen`}
+                  style={{ background: 'none', border: 'none', color: GRAU, fontSize: 19, lineHeight: 1, padding: '0 3px', cursor: 'pointer', fontFamily: 'inherit' }}
+                >
+                  ×
+                </button>
+              )}
             </div>
           ))}
         </div>

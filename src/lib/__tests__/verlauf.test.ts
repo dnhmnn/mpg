@@ -4,7 +4,8 @@ import {
 } from '../../pages/public/doku/verlauf'
 import {
   GITTER, SCHRITTE, SPALTEN, VERLAUFSWERTE,
-  anteilImGitter, hoeheAnteil, minuten, stelle, uhrzeit, zeitachse,
+  anteilImGitter, fehlendeZeitpunkte, hoeheAnteil, kurvenspalten, minuten,
+  spaltenAusFeldern, stelle, uhrzeit, zeitachse,
 } from '../../katalog/verlaufswerte'
 import { aelrdHtml } from '../aelrdProtokoll'
 
@@ -231,5 +232,75 @@ describe('Die Zeitachse des Kurvenblatts', () => {
     expect(SPALTEN).toBe(36)
     expect(GITTER.find((g) => g.id === 'hf')!.zeilen).toBe(12)
     expect(GITTER.find((g) => g.id === 'spo2')!.zeilen).toBe(6)
+  })
+})
+
+describe('Erstbefund und Übergabe auf derselben Kurve', () => {
+  const befund = {
+    erstbefund_zeitpunkt: '13:20',
+    spo2: '92', af: '22', hf: '110', puls: '108', nibp_sys: '160', nibp_dia: '95',
+    etco2: '30', co_hb: '3', o2_gabe: '4',
+  }
+  const uebergabe = {
+    ub_zeitpunkt: '14:30',
+    ub_spo2: '98', ub_af: '14', ub_hf: '78', ub_puls: '78',
+    ub_nibp_sys: '125', ub_nibp_dia: '80', ub_etco2: '36',
+  }
+
+  it('liest den Erstbefund als eigene Spalte', () => {
+    const s = spaltenAusFeldern(befund)
+    expect(s).toHaveLength(1)
+    expect(s[0].zeit).toBe('13:20')
+    expect(s[0].quelle).toBe('erstbefund')
+    expect(s[0].werte).toEqual({
+      spo2: '92', af: '22', o2: '4', cohb: '3', hf: '110', puls: '108',
+      rr_sys: '160', rr_dia: '95', etco2: '30',
+    })
+  })
+
+  it('liest die Übergabe als eigene Spalte', () => {
+    const s = spaltenAusFeldern(uebergabe)
+    expect(s[0].quelle).toBe('uebergabe')
+    expect(s[0].werte.hf).toBe('78')
+    expect(s[0].werte.rr_sys).toBe('125')
+  })
+
+  it('stellt alle drei Quellen nach der Uhr auf eine Achse', () => {
+    let w: Record<string, unknown> = { ...befund, ...uebergabe }
+    w = verlaufEintragen(w, spalte('13:50', { hf: '92' }))
+    const alle = kurvenspalten(w)
+    expect(alle.map((s) => [s.zeit, s.quelle ?? 'verlauf'])).toEqual([
+      ['13:20', 'erstbefund'], ['13:50', 'verlauf'], ['14:30', 'uebergabe'],
+    ])
+  })
+
+  it('lässt eine Quelle ohne Zeitpunkt weg und sagt es', () => {
+    // Ein Punkt ohne Uhrzeit hätte keine Stelle; ihn an den Rand zu setzen
+    // wäre erfunden.
+    const ohneZeit = { ...befund, erstbefund_zeitpunkt: '' }
+    expect(spaltenAusFeldern(ohneZeit)).toEqual([])
+    expect(fehlendeZeitpunkte(ohneZeit)).toEqual(['Erstbefund'])
+    expect(fehlendeZeitpunkte({ ...befund, ...uebergabe })).toEqual([])
+  })
+
+  it('macht aus einem Zeitpunkt ohne Messwerte keine leere Spalte', () => {
+    expect(spaltenAusFeldern({ erstbefund_zeitpunkt: '13:20' })).toEqual([])
+    expect(fehlendeZeitpunkte({ erstbefund_zeitpunkt: '' })).toEqual([])
+  })
+
+  it('zählt sie nicht zum eingetragenen Verlauf', () => {
+    // Sie stehen in ihren eigenen Blöcken; wer sie hier streichen könnte,
+    // würde den Erstbefund löschen.
+    const w = { ...befund }
+    expect(verlaufLesen(w)).toEqual([])
+    expect(verlaufStreichen(w, 'erstbefund')).toBe(w)
+  })
+
+  it('zeichnet sie mit auf das Kurvenblatt', () => {
+    const html = aelrdHtml({ ...befund, ...uebergabe })
+    // Die Achse umfasst beide Zeitpunkte.
+    expect(html).toContain('13:15')
+    expect(html).toContain('14:30')
+    expect(html).toContain('<polygon')
   })
 })

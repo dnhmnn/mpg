@@ -222,3 +222,118 @@ export function stelle(achse: Zeitachse, zeit: string): number | null {
   if (anteil < 0 || anteil > 1) return null
   return anteil * 100
 }
+
+/**
+ * Erstbefund und Übergabe gehören auf dieselbe Kurve.
+ *
+ * Der Bogen erhebt dieselben Messwerte dreimal: beim Antreffen, im Verlauf
+ * und bei der Übergabe. Nur den Verlauf zu zeichnen hieße, den ersten und den
+ * letzten Punkt wegzulassen — und gerade die beiden sagen am meisten.
+ *
+ * Eingetragen werden sie nicht; sie stehen schon in ihren Feldern. Sie werden
+ * gelesen und mitgezeichnet, und zwar auf ihrem eigenen Zeitpunkt.
+ */
+export type Herkunft = 'verlauf' | 'erstbefund' | 'uebergabe'
+
+/** Welches Feld des Bogens welchen Wert der Kurve trägt. */
+const AUS_FELDERN: { quelle: Herkunft; zeit: string; titel: string; felder: Record<string, string> }[] = [
+  {
+    quelle: 'erstbefund',
+    zeit: 'erstbefund_zeitpunkt',
+    titel: 'Erstbefund',
+    felder: {
+      spo2: 'spo2', af: 'af', o2: 'o2_gabe', cohb: 'co_hb', hf: 'hf', puls: 'puls',
+      rr_sys: 'nibp_sys', rr_dia: 'nibp_dia', etco2: 'etco2',
+    },
+  },
+  {
+    quelle: 'uebergabe',
+    zeit: 'ub_zeitpunkt',
+    titel: 'Übergabe',
+    felder: {
+      spo2: 'ub_spo2', af: 'ub_af', hf: 'ub_hf', puls: 'ub_puls',
+      rr_sys: 'ub_nibp_sys', rr_dia: 'ub_nibp_dia', etco2: 'ub_etco2',
+    },
+  },
+]
+
+
+export type Verlaufsspalte = {
+  id: string
+  /** HH:MM */
+  zeit: string
+  /** Messwerte als Text, wie sie eingegeben wurden. */
+  werte: Record<string, string>
+  /** Woher die Spalte kommt. Ohne Angabe: im Verlauf eingetragen. */
+  quelle?: Herkunft
+  /** Die Überschrift, unter der sie im Bogen steht. */
+  titel?: string
+}
+
+/** Eine Zahl, wie sie eingegeben wurde — mit Komma oder Punkt. */
+function alsZahl(text: unknown): number | null {
+  const t = String(text ?? '').replace(',', '.').trim()
+  if (t === '') return null
+  const n = Number(t)
+  return Number.isFinite(n) ? n : null
+}
+
+/**
+ * Die Spalten aus Erstbefund und Übergabe — gelesen, nicht eingetragen.
+ *
+ * Ohne Zeitpunkt gibt es keine Spalte: ein Punkt ohne Uhrzeit hätte auf dem
+ * Kurvenblatt keine Stelle, und ihn an den Rand zu setzen wäre erfunden.
+ */
+export function spaltenAusFeldern(werte: Record<string, unknown>): Verlaufsspalte[] {
+  const aus: Verlaufsspalte[] = []
+  for (const q of AUS_FELDERN) {
+    const zeit = typeof werte[q.zeit] === 'string' ? (werte[q.zeit] as string).trim() : ''
+    if (!zeit) continue
+    const gelesen: Record<string, string> = {}
+    for (const [ziel, feld] of Object.entries(q.felder)) {
+      const t = String(werte[feld] ?? '').trim()
+      if (t !== '' && alsZahl(t) !== null) gelesen[ziel] = t
+    }
+    if (Object.keys(gelesen).length === 0) continue
+    aus.push({ id: q.quelle, zeit, werte: gelesen, quelle: q.quelle, titel: q.titel })
+  }
+  return aus
+}
+
+/** Die Spalten, die im Verlauf eingetragen wurden. */
+export function eingetrageneSpalten(werte: Record<string, unknown>): Verlaufsspalte[] {
+  const v = werte.verlauf
+  if (!Array.isArray(v)) return []
+  return v
+    .filter((e): e is Verlaufsspalte =>
+      Boolean(e) && typeof e === 'object'
+      && typeof (e as Verlaufsspalte).id === 'string'
+      && typeof (e as Verlaufsspalte).zeit === 'string',
+    )
+    .map((e) => ({ ...e, werte: e.werte && typeof e.werte === 'object' ? e.werte : {} }))
+}
+
+/** Alles, was auf der Kurve steht: Verlauf, Erstbefund und Übergabe. */
+export function kurvenspalten(werte: Record<string, unknown>): Verlaufsspalte[] {
+  return [...eingetrageneSpalten(werte), ...spaltenAusFeldern(werte)]
+    .sort((a, b) => a.zeit.localeCompare(b.zeit))
+}
+
+
+
+/**
+ * Erstbefund oder Übergabe, die Messwerte führen, aber keinen Zeitpunkt.
+ *
+ * Sie fehlen damit auf der Kurve. Das stillschweigend zu tun hieße, ein
+ * Blatt zu drucken, auf dem der erste Befund schlicht nicht vorkommt.
+ */
+export function fehlendeZeitpunkte(werte: Record<string, unknown>): string[] {
+  const aus: string[] = []
+  for (const q of AUS_FELDERN) {
+    const zeit = typeof werte[q.zeit] === 'string' ? (werte[q.zeit] as string).trim() : ''
+    if (zeit) continue
+    const hatWerte = Object.values(q.felder).some((feld) => alsZahl(werte[feld]) !== null)
+    if (hatWerte) aus.push(q.titel)
+  }
+  return aus
+}

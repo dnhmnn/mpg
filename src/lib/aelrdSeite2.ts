@@ -17,7 +17,7 @@ import { HOEHEN2, SEITE2 } from './aelrdLayout'
 import { aelrdFeld } from '../katalog/aelrd'
 import {
   GITTER, SPALTEN, SPALTEN_JE_BESCHRIFTUNG, VERLAUFSWERTE,
-  anteilImGitter, hoeheAnteil, stelle, uhrzeit, zeitachse, type Gitter,
+  anteilImGitter, hoeheAnteil, kurvenspalten, stelle, uhrzeit, zeitachse, type Gitter,
 } from '../katalog/verlaufswerte'
 import type { Kopfdaten } from './aelrdSeite1'
 
@@ -108,7 +108,9 @@ const VERLAUF_ZEITACHSE = 8    // die Zeile mit den Uhrzeiten
 const VERLAUF_POLSTER = 4      // je Reihe 0,5 pt oben und unten
 
 function verlaufsblatt(p: Payload): string {
-  const zeilen = Array.isArray(p.verlauf) ? (p.verlauf as Payload[]) : []
+  // Auf der Kurve steht nicht nur der Verlauf: Erstbefund und Übergabe
+  // erheben dieselben Werte und gehören auf dieselbe Achse.
+  const zeilen = kurvenspalten(p) as unknown as Payload[]
   // Die Gitter füllen den Kasten aus. Seine Höhe steht in Punkt, gezeichnet
   // wird in Bildpunkten — drei Punkt sind vier Bildpunkte.
   const frei = (SEITE2.verlauf.h * 4) / 3 - VERLAUF_KOPF - VERLAUF_ZEITACHSE - VERLAUF_POLSTER
