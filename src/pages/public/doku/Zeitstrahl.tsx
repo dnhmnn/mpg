@@ -37,9 +37,10 @@ function Feld({ titel, hinweis, children }: { titel: string; hinweis?: string; c
   )
 }
 
-export default function Zeitstrahl({ werte, setWerte }: {
+export default function Zeitstrahl({ werte, setWerte, setzen }: {
   werte: Werte
   setWerte: (f: (v: Werte) => Werte) => void
+  setzen: (id: string, wert: unknown) => void
 }) {
   const karte = useRef<HTMLDivElement>(null)
   const leaflet = useRef<any>(null)
@@ -53,7 +54,10 @@ export default function Zeitstrahl({ werte, setWerte }: {
   const [strecke, setStrecke] = useState<number | null>(null)
   const [laeuft, setLaeuft] = useState(false)
   const [meldung, setMeldung] = useState('')
-  const [kartenBereit, setKartenBereit] = useState(false)
+  /** Was gezeichnet werden soll, sobald der Kasten seine Höhe hat. */
+  const [zuZeichnen, setZuZeichnen] = useState<
+    { von: Koordinate; nach: Koordinate; verlauf: unknown } | null
+  >(null)
 
   const alarm = String(werte.zeit_alarm ?? '')
   const strahl: Strahl = { alarm, ausruecken, fahrt, versorgung }
@@ -61,6 +65,55 @@ export default function Zeitstrahl({ werte, setWerte }: {
   const offen = offeneUebernahme(werte, strahl)
 
   useEffect(() => () => { leaflet.current?.remove?.(); leaflet.current = null }, [])
+
+  /*
+   * Gezeichnet wird erst, nachdem der Kasten gerendert ist.
+   *
+   * Leaflet misst seinen Behälter beim Anlegen. Entstand die Karte im noch
+   * null Pixel hohen Kasten, blieb sie leer — und der Knopf sah aus, als
+   * täte er nichts. Deshalb erst die Höhe, dann die Karte, und am Ende ein
+   * invalidateSize(), damit Leaflet neu misst.
+   */
+  useEffect(() => {
+    if (!zuZeichnen) return
+    let abgebrochen = false
+    void (async () => {
+      let L: any
+      try {
+        L = await karteLaden()
+      } catch {
+        setMeldung((m) => m || 'Die Karte ließ sich nicht laden — die Fahrzeit steht trotzdem.')
+        return
+      }
+      if (abgebrochen || !karte.current) return
+      const { von, nach, verlauf } = zuZeichnen
+      if (!leaflet.current) {
+        leaflet.current = L.map(karte.current, { scrollWheelZoom: false })
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '© OpenStreetMap', maxZoom: 19,
+        }).addTo(leaflet.current)
+      }
+      const map = leaflet.current
+      if (ebene.current) map.removeLayer(ebene.current)
+      const gruppe = L.layerGroup()
+      L.geoJSON(verlauf, { style: { color: ROT, weight: 4, opacity: 0.85 } }).addTo(gruppe)
+      const punkt = (farbe: string) => L.divIcon({
+        html: `<div style="width:12px;height:12px;background:${farbe};border-radius:50%;border:2.5px solid #fff"></div>`,
+        className: '', iconSize: [12, 12], iconAnchor: [6, 6],
+      })
+      L.marker([von.breite, von.laenge], { icon: punkt(ROT) }).addTo(gruppe)
+      L.marker([nach.breite, nach.laenge], { icon: punkt('#16a34a') }).addTo(gruppe)
+      gruppe.addTo(map)
+      ebene.current = gruppe
+      map.invalidateSize()
+      const rand = 0.015
+      map.fitBounds([
+        [Math.min(von.breite, nach.breite) - rand, Math.min(von.laenge, nach.laenge) - rand],
+        [Math.max(von.breite, nach.breite) + rand, Math.max(von.laenge, nach.laenge) + rand],
+      ], { padding: [20, 20] })
+    })()
+    return () => { abgebrochen = true }
+  }, [zuZeichnen])
 
   /** Leaflet erst holen, wenn es gebraucht wird — und nur einmal. */
   async function karteLaden(): Promise<any> {
@@ -78,40 +131,6 @@ export default function Zeitstrahl({ werte, setWerte }: {
       document.head.appendChild(js)
     })
     return (window as any).L
-  }
-
-  async function zeichnen(von: Koordinate, nach: Koordinate, verlauf: unknown) {
-    let L: any
-    try {
-      L = await karteLaden()
-    } catch {
-      return // ohne Karte ist die Zeit trotzdem gerechnet
-    }
-    if (!karte.current) return
-    if (!leaflet.current) {
-      leaflet.current = L.map(karte.current, { scrollWheelZoom: false, attributionControl: true })
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap', maxZoom: 19,
-      }).addTo(leaflet.current)
-      setKartenBereit(true)
-    }
-    const map = leaflet.current
-    if (ebene.current) map.removeLayer(ebene.current)
-    const gruppe = L.layerGroup()
-    L.geoJSON(verlauf, { style: { color: ROT, weight: 4, opacity: 0.85 } }).addTo(gruppe)
-    const punkt = (farbe: string) => L.divIcon({
-      html: `<div style="width:12px;height:12px;background:${farbe};border-radius:50%;border:2.5px solid #fff"></div>`,
-      className: '', iconSize: [12, 12], iconAnchor: [6, 6],
-    })
-    L.marker([von.breite, von.laenge], { icon: punkt(ROT) }).addTo(gruppe)
-    L.marker([nach.breite, nach.laenge], { icon: punkt('#16a34a') }).addTo(gruppe)
-    gruppe.addTo(map)
-    ebene.current = gruppe
-    const rand = 0.015
-    map.fitBounds([
-      [Math.min(von.breite, nach.breite) - rand, Math.min(von.laenge, nach.laenge) - rand],
-      [Math.max(von.breite, nach.breite) + rand, Math.max(von.laenge, nach.laenge) + rand],
-    ], { padding: [20, 20] })
   }
 
   async function routeBerechnen() {
@@ -132,7 +151,7 @@ export default function Zeitstrahl({ werte, setWerte }: {
       if (!s) { setMeldung('Dorthin ließ sich keine Route rechnen.'); return }
       setFahrt(fahrminuten(s.sekunden))
       setStrecke(s.meter)
-      void zeichnen(von, nach, s.verlauf)
+      setZuZeichnen({ von, nach, verlauf: s.verlauf })
     } catch (e) {
       setMeldung(e instanceof OhneNetz
         ? 'Kein Netz — die Fahrzeit lässt sich von Hand eintragen.'
@@ -205,40 +224,53 @@ export default function Zeitstrahl({ werte, setWerte }: {
       ) : null}
 
       {/* Die Karte entsteht erst mit der ersten Route. */}
-      <div
-        ref={karte}
-        style={{
-          height: kartenBereit ? 180 : 0, marginBottom: kartenBereit ? 10 : 0,
-          borderRadius: 10, overflow: 'hidden', border: kartenBereit ? `0.5px solid ${LINIE}` : 'none',
-        }}
-      />
+      {strecke !== null ? (
+        <div
+          ref={karte}
+          style={{ height: 180, marginBottom: 10, borderRadius: 10, overflow: 'hidden', border: `0.5px solid ${LINIE}` }}
+        />
+      ) : null}
 
-      {/* Die Kette */}
+      {/* Die Kette — und zugleich die Zeiten des Protokolls. Was hier steht,
+          steht im Bogen; was leer ist, zeigt blass, was die Rechnung sagt. */}
       <div style={{ border: `0.5px solid ${LINIE}`, borderRadius: 10, overflow: 'hidden' }}>
-        {halte.map((h, i) => (
-          <div key={h.id} style={{
-            display: 'flex', alignItems: 'center', gap: 9, padding: '7px 10px',
-            borderBottom: i < halte.length - 1 ? '0.5px solid rgba(96,8,18,0.06)' : 'none',
-            background: h.zeit ? '#fff' : 'rgba(250,249,247,0.7)',
-          }}>
-            <span style={{
-              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-              width: 22, height: 22, flexShrink: 0, borderRadius: 11,
-              background: h.zeit ? ROT : 'transparent',
-              border: h.zeit ? 'none' : `1px solid ${LINIE}`,
-              color: h.zeit ? '#fff' : GRAU, fontSize: 11, fontWeight: 800,
+        {halte.map((h, i) => {
+          const steht = String(werte[h.feld] ?? '')
+          return (
+            <div key={h.id} style={{
+              display: 'flex', alignItems: 'center', gap: 9, padding: '6px 10px',
+              borderBottom: i < halte.length - 1 ? '0.5px solid rgba(96,8,18,0.06)' : 'none',
+              background: steht ? '#fff' : 'rgba(250,249,247,0.7)',
             }}>
-              {h.marke}
-            </span>
-            <span style={{ flex: 1, minWidth: 0 }}>
-              <span style={{ display: 'block', fontSize: 13, fontWeight: 700, color: TEXT }}>{h.titel}</span>
-              <span style={{ display: 'block', fontSize: 11, fontStyle: 'italic', color: GRAU }}>{h.unter}</span>
-            </span>
-            <span style={{ fontSize: 15, fontWeight: 700, color: h.zeit ? ROT : GRAU, fontVariantNumeric: 'tabular-nums' }}>
-              {h.zeit || '--:--'}
-            </span>
-          </div>
-        ))}
+              <span style={{
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                width: 22, height: 22, flexShrink: 0, borderRadius: 11,
+                background: steht ? ROT : 'transparent',
+                border: steht ? 'none' : `1px solid ${LINIE}`,
+                color: steht ? '#fff' : GRAU, fontSize: 11, fontWeight: 800,
+              }}>
+                {h.marke}
+              </span>
+              <span style={{ flex: 1, minWidth: 0 }}>
+                <span style={{ display: 'block', fontSize: 13, fontWeight: 700, color: TEXT }}>{h.titel}</span>
+                <span style={{ display: 'block', fontSize: 11, fontStyle: 'italic', color: GRAU }}>
+                  {h.unter}
+                  {!steht && h.zeit ? ` · gerechnet ${h.zeit}` : ''}
+                </span>
+              </span>
+              <input
+                type="time" name={h.feld} value={steht}
+                onChange={(e) => setzen(h.feld, e.target.value)}
+                style={{
+                  width: 96, flexShrink: 0, padding: '6px 8px', background: '#fff',
+                  border: `1px solid ${steht ? ROT : LINIE}`, borderRadius: 8,
+                  fontFamily: 'inherit', fontSize: 16, fontWeight: 700,
+                  color: steht ? ROT : GRAU, boxSizing: 'border-box',
+                }}
+              />
+            </div>
+          )
+        })}
       </div>
 
       <button
@@ -251,11 +283,11 @@ export default function Zeitstrahl({ werte, setWerte }: {
           textTransform: 'uppercase', letterSpacing: '0.06em', cursor: offen > 0 ? 'pointer' : 'default',
         }}
       >
-        {offen > 0 ? `${offen} Zeiten übernehmen` : 'Zeiten stehen'}
+        {offen > 0 ? `${offen} gerechnete Zeiten eintragen` : 'Alle Zeiten eingetragen'}
       </button>
       <div style={{ fontSize: 11, fontStyle: 'italic', color: GRAU, marginTop: 4, lineHeight: 1.45 }}>
-        Übernommen wird nur, wo noch nichts steht — eine eingetragene Zeit ist
-        gemessen, eine gerechnete geschätzt.
+        Eingetragen wird nur, wo noch nichts steht — eine eingetragene Zeit ist
+        gemessen, eine gerechnete geschätzt. Jede lässt sich überschreiben.
       </div>
     </div>
   )

@@ -29,6 +29,7 @@ import { adresseSetzen } from './adresse'
 import Tracerdiagnose, { FuehrendeDiagnose } from './Tracerdiagnose'
 import { diagnoseSetzen, gruppeSetzen, gruppeVormerken } from './diagnose'
 import { MASSNAHMEN_FELDER } from '../../../katalog/massnahmenArten'
+import { zeitstrahlFelder } from './zeitstrahl'
 import { besatzungSetzen, type Besetzung, type Posten } from './besatzung'
 
 // Kamera und Texterkennung werden erst geladen, wenn jemand die Karte
@@ -235,7 +236,12 @@ export default function Doku() {
 
   const setzen = (id: string, w: unknown) => setWerte((v) => ({ ...v, [id]: w }))
   /** Die Felder, die die Maßnahmen-Maske schreibt — sie stehen dort, nicht einzeln. */
-  const uebernommeneFelder = useMemo(() => new Set(MASSNAHMEN_FELDER), [])
+  const uebernommeneFelder = useMemo(
+    // Der Zeitstrahl führt die Zeiten selbst; darunter stünden sie ein
+    // zweites Mal.
+    () => new Set([...MASSNAHMEN_FELDER, ...zeitstrahlFelder()]),
+    [],
+  )
   /**
    * Einen Posten der Besatzung besetzen.
    *
@@ -475,7 +481,7 @@ export default function Doku() {
               vorweg={{
                 // Der Zeitstrahl rechnet die Kette der Statuszeiten und
                 // bietet sie den Feldern darunter an.
-                zeiten: <Zeitstrahl werte={werte} setWerte={setWerte} />,
+                zeiten: <Zeitstrahl werte={werte} setWerte={setWerte} setzen={setzen} />,
               }}
               ersatzFeld={{
                 // Der Bogen führt je eine Schreiblinie; getippt wird in drei

@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import {
-  kette, offeneUebernahme, uebertragbar, zeitenUebernehmen,
+  kette, offeneUebernahme, uebertragbar, zeitenUebernehmen, zeitstrahlFelder,
 } from '../../pages/public/doku/zeitstrahl'
+import { AELRD_ABSCHNITTE } from '../../katalog/aelrd'
 import { dauerText, fahrminuten, streckeText } from '../osrm'
 import { aelrdFeld } from '../../katalog/aelrd'
 
@@ -13,21 +14,25 @@ describe('Der Einsatz-Zeitstrahl', () => {
     const z = kette(strahl())
     expect(z.map((h) => [h.titel, h.zeit])).toEqual([
       ['Alarm', '13:02'],
-      ['Status 3', '13:05'],   // + 3 Ausrücken
-      ['Status 4', '13:13'],   // + 8 Fahrt
-      ['Übergabe', '13:28'],   // + 15 Versorgung
-      ['Status 1', '13:28'],   // wieder frei mit der Übergabe
-      ['Status 2', '13:36'],   // + 8 Rückfahrt
+      ['Status 3', '13:05'],        // + 3 Ausrücken
+      ['Status 4', '13:13'],        // + 8 Fahrt
+      // Zwei Zeiten des Bogens, die keine Rechnung ergibt — sie werden
+      // eingetragen, nicht errechnet.
+      ['Ankunft Patient', ''],
+      ['Abfahrt', ''],
+      ['Übergabe', '13:28'],        // + 15 Versorgung
+      ['Status 1', '13:28'],        // wieder frei mit der Übergabe
+      ['Status 2', '13:36'],        // + 8 Rückfahrt
     ])
   })
 
   it('lässt alles offen, solange die Fahrzeit fehlt', () => {
     const z = kette(strahl({ fahrt: null }))
-    expect(z.map((h) => h.zeit)).toEqual(['13:02', '13:05', '', '', '', ''])
+    expect(z.map((h) => h.zeit)).toEqual(['13:02', '13:05', '', '', '', '', '', ''])
   })
 
   it('kommt ohne Alarmzeit nicht ins Rechnen', () => {
-    expect(kette(strahl({ alarm: '' })).map((h) => h.zeit)).toEqual(['', '', '', '', '', ''])
+    expect(kette(strahl({ alarm: '' })).map((h) => h.zeit)).toEqual(['', '', '', '', '', '', '', ''])
   })
 
   it('rechnet über Mitternacht weiter', () => {
@@ -45,6 +50,8 @@ describe('Der Einsatz-Zeitstrahl', () => {
 
   it('bietet alle Halte außer dem Alarm zur Übernahme an', () => {
     // Die Alarmzeit ist der Anker; sie wird nicht aus sich selbst gesetzt.
+    // Ankunft Patient und Abfahrt stehen in der Kette, haben aber keine
+    // gerechnete Zeit — zu übernehmen gibt es dort nichts.
     expect(uebertragbar(strahl()).map((h) => h.id))
       .toEqual(['status3', 'status4', 'uebergabe', 'status1', 'status2'])
   })
@@ -86,5 +93,20 @@ describe('Fahrzeit und Strecke in Worten', () => {
   it('sagt Strecken, wie man sie sagt', () => {
     expect(streckeText(640)).toBe('640 m')
     expect(streckeText(8400)).toBe('8,4 km')
+  })
+})
+
+describe('Der Zeitstrahl führt die Zeiten des Bogens', () => {
+  it('deckt jede Statuszeit des Abschnitts ab', () => {
+    // Was der Strahl führt, steht darunter nicht noch einmal. Käme eine Zeit
+    // dazu, die er nicht kennt, wäre sie nur im Strahl nicht erreichbar —
+    // dieser Fall soll auffallen.
+    const imBogen = AELRD_ABSCHNITTE.find((a) => a.id === 'zeiten')!.felder
+      .filter((f) => f.startsWith('zeit_'))
+    expect([...zeitstrahlFelder()].sort()).toEqual([...imBogen].sort())
+  })
+
+  it('lässt den Symptom-Beginn in Ruhe — er ist keine Einsatzzeit', () => {
+    expect(zeitstrahlFelder()).not.toContain('symptombeginn')
   })
 })

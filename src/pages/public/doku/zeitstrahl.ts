@@ -70,6 +70,18 @@ export function kette(z: Zeitstrahl): Halt[] {
       id: 'status4', marke: '4', titel: 'Status 4', unter: 'Am Einsatzort',
       zeit: nach(bisStatus4), feld: 'zeit_ankunft_ort', bisNaechster: `${z.versorgung} min`,
     },
+    // Zwei Zeiten, die der Bogen führt und die Kette nicht rechnen kann: wann
+    // der Patient erreicht war und wann es vom Einsatzort fortging. Sie
+    // stehen hier, damit alle Zeiten an einer Stelle stehen — gerechnet wird
+    // nichts für sie, eingetragen schon.
+    {
+      id: 'ankunft_patient', marke: '·', titel: 'Ankunft Patient', unter: 'Patient erreicht',
+      zeit: '', feld: 'zeit_ankunft_patient',
+    },
+    {
+      id: 'abfahrt', marke: '·', titel: 'Abfahrt', unter: 'Vom Einsatzort',
+      zeit: '', feld: 'zeit_abfahrt',
+    },
     {
       id: 'uebergabe', marke: '✓', titel: 'Übergabe', unter: 'Patient übergeben',
       zeit: nach(bisUebergabe), feld: 'zeit_uebergabe',
@@ -83,6 +95,11 @@ export function kette(z: Zeitstrahl): Halt[] {
       zeit: nach(bisStatus2), feld: 'zeit_ende',
     },
   ]
+}
+
+/** Die Felder des Bogens, die der Zeitstrahl führt — sie stehen nicht noch einmal. */
+export function zeitstrahlFelder(): string[] {
+  return kette({ alarm: '', ausruecken: 0, fahrt: null, versorgung: 0 }).map((h) => h.feld)
 }
 
 /** Die Halte, die eine Zeit haben und sie in ein Feld des Bogens tragen können. */
