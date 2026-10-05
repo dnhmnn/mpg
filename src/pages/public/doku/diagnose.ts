@@ -49,6 +49,19 @@ export function diagnoseSetzen(werte: Werte, diagnose: string): Werte {
   return aus
 }
 
+/**
+ * Die Gruppe eintragen, sobald sie gewählt ist — noch vor der Diagnose.
+ *
+ * Wer die Organgruppe antippt, hat sie damit gesagt; sie in der führenden
+ * Diagnose noch einmal auszuwählen wäre dieselbe Angabe zweimal. Eigenes
+ * bleibt auch hier stehen.
+ */
+export function gruppeVormerken(werte: Werte, gruppe: string): Werte {
+  const steht = text(werte, GRUPPE)
+  if (steht && !istGruppenname(steht)) return werte
+  return { ...werte, [GRUPPE]: gruppe.trim() }
+}
+
 /** Die Gruppe allein setzen — etwa zu einer Diagnose, die nicht in der Liste steht. */
 export function gruppeSetzen(werte: Werte, gruppe: string): Werte {
   return { ...werte, [GRUPPE]: gruppe.trim() }

@@ -23,9 +23,16 @@ const TEXT = '#1a0e08'
 const GRAU = 'var(--warm-gray)'
 const LINIE = 'rgba(96,8,18,0.14)'
 
-export default function Tracerdiagnose({ wert, onChange }: {
+export default function Tracerdiagnose({ wert, onChange, onGruppe }: {
   wert: string
   onChange: (w: string) => void
+  /**
+   * Die gewählte Organgruppe — sie gilt schon, bevor die Diagnose steht.
+   *
+   * Sie wandert damit sofort in die führende Diagnose, statt dort ein
+   * zweites Mal gewählt werden zu müssen.
+   */
+  onGruppe?: (titel: string) => void
 }) {
   const [gruppe, setGruppe] = useState('')
   const [frei, setFrei] = useState('')
@@ -101,7 +108,10 @@ export default function Tracerdiagnose({ wert, onChange }: {
       ) : (
         <div>
           {TRACER_GRUPPEN.map((x) => (
-            <Knopf key={x.code} text={x.titel} an={false} onClick={() => setGruppe(x.code)} />
+            <Knopf
+              key={x.code} text={x.titel} an={false}
+              onClick={() => { setGruppe(x.code); onGruppe?.(x.titel) }}
+            />
           ))}
         </div>
       )}

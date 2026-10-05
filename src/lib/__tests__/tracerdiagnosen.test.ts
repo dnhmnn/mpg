@@ -4,7 +4,9 @@ import { naepAbschnitt } from '../../katalog/naep'
 import { aelrdFeld } from '../../katalog/aelrd'
 import { AELRD_NAEP } from '../../katalog/aelrdNaep'
 import { aelrdHtml } from '../aelrdProtokoll'
-import { diagnoseSetzen, gruppeSetzen, istGruppenname } from '../../pages/public/doku/diagnose'
+import {
+  diagnoseSetzen, gruppeSetzen, gruppeVormerken, istGruppenname,
+} from '../../pages/public/doku/diagnose'
 
 describe('Die Diagnosen zur Auswahl', () => {
   it('kommt aus dem Abschnitt Erkrankungen der Norm, nicht aus einer zweiten Liste', () => {
@@ -122,5 +124,33 @@ describe('Tracerdiagnose und führende Diagnose zusammen', () => {
     const html = aelrdHtml(diagnoseSetzen({}, 'Lungenembolie'))
     expect(html).toContain('Lungenembolie')
     expect(html).toContain('Herz-Kreislauf')
+  })
+})
+
+describe('Die Gruppe gilt schon vor der Diagnose', () => {
+  it('steht als führende Diagnose, sobald sie gewählt ist', () => {
+    // Nur die Organgruppe angetippt, noch keine Diagnose.
+    const w = gruppeVormerken({}, 'Herz-Kreislauf')
+    expect(w.fuehrende_diagnose).toBe('Herz-Kreislauf')
+    expect(w.tracerdiagnose).toBeUndefined()
+  })
+
+  it('wird von der nächsten Gruppe ersetzt', () => {
+    let w = gruppeVormerken({}, 'Herz-Kreislauf')
+    w = gruppeVormerken(w, 'Atmung')
+    expect(w.fuehrende_diagnose).toBe('Atmung')
+  })
+
+  it('bleibt stehen, wenn danach eigener Text als Diagnose kommt', () => {
+    // Genau der Fall, für den es gedacht ist: Gruppe bekannt, Diagnose nicht.
+    let w = gruppeVormerken({}, 'Abdomen')
+    w = diagnoseSetzen(w, 'Abdomen unklar')
+    expect(w.fuehrende_diagnose).toBe('Abdomen')
+    expect(w.tracerdiagnose).toBe('Abdomen unklar')
+  })
+
+  it('überschreibt auch hier nichts von Hand Geschriebenes', () => {
+    const w = gruppeVormerken({ fuehrende_diagnose: 'Vorderwandinfarkt' }, 'Herz-Kreislauf')
+    expect(w.fuehrende_diagnose).toBe('Vorderwandinfarkt')
   })
 })
