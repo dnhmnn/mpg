@@ -15,7 +15,10 @@ import {
 } from './aelrdDruck'
 import { HOEHEN2, SEITE2 } from './aelrdLayout'
 import { aelrdFeld } from '../katalog/aelrd'
-import { GITTER, VERLAUFSWERTE, anteilImGitter, hoeheAnteil, type Gitter } from '../katalog/verlaufswerte'
+import {
+  GITTER, SPALTEN, SPALTEN_JE_BESCHRIFTUNG, VERLAUFSWERTE,
+  anteilImGitter, hoeheAnteil, stelle, uhrzeit, zeitachse, type Gitter,
+} from '../katalog/verlaufswerte'
 import type { Kopfdaten } from './aelrdSeite1'
 
 /** Der Wortlaut eines Feldes — bei Auswahlen der Optionstext, nicht der Schluessel. */
@@ -110,18 +113,21 @@ function verlaufsblatt(p: Payload): string {
   // wird in Bildpunkten — drei Punkt sind vier Bildpunkte.
   const frei = (SEITE2.verlauf.h * 4) / 3 - VERLAUF_KOPF - VERLAUF_ZEITACHSE - VERLAUF_POLSTER
   const hoeheVon = (g: Gitter) => Math.round(frei * g.anteil * 10) / 10
-  const spalten = Math.max(zeilen.length, 18)
-  /** Die Mitte der Spalte i, in Prozent der Gitterbreite. */
-  const mitte = (i: number) => ((i + 0.5) / spalten) * 100
+  // Die Achse steht fest, bevor der erste Punkt gezeichnet wird: die Punkte
+  // sitzen auf ihrer Uhrzeit, nicht in der Reihenfolge der Eingabe.
+  const achse = zeitachse(zeilen.map((z) => String(z.zeit ?? '')))
+  const stelleVon = (z: Payload): number | null =>
+    achse ? stelle(achse, String(z.zeit ?? '')) : null
 
   const werteVon = (z: Payload): Record<string, unknown> =>
     z.werte && typeof z.werte === 'object' ? (z.werte as Record<string, unknown>) : z
 
   const punkte = (gitterId: string, hoehe: number): string => {
     const aus: string[] = []
-    zeilen.forEach((z, i) => {
+    zeilen.forEach((z) => {
       const w = werteVon(z)
-      const x = mitte(i)
+      const x = stelleVon(z)
+      if (x === null) return
       for (const v of VERLAUFSWERTE) {
         if (v.gitter !== gitterId) continue
         const roh = String(w[v.id] ?? '').replace(',', '.').trim()
@@ -155,31 +161,36 @@ function verlaufsblatt(p: Payload): string {
     const v = VERLAUFSWERTE.find((x) => x.zeichen === 'stufe' && x.gitter === gitterId)
     if (!v) return ''
     const stellen: { x: number; y: number }[] = []
-    zeilen.forEach((z, i) => {
+    zeilen.forEach((z) => {
       const roh = String(werteVon(z)[v.id] ?? '').replace(',', '.').trim()
-      if (roh === '') return
+      const x = stelleVon(z)
+      if (roh === '' || x === null) return
       const anteil = anteilImGitter(v.id, Number(roh))
-      if (anteil !== null) stellen.push({ x: mitte(i), y: anteil * hoehe })
+      if (anteil !== null) stellen.push({ x, y: anteil * hoehe })
     })
+    stellen.sort((a, b) => a.x - b.x)
     if (stellen.length === 0) return ''
     const d: string[] = [`M${stellen[0].x.toFixed(2)} ${stellen[0].y.toFixed(2)}`]
     for (let i = 1; i < stellen.length; i += 1) {
       d.push(`L${stellen[i].x.toFixed(2)} ${stellen[i - 1].y.toFixed(2)}`)
       d.push(`L${stellen[i].x.toFixed(2)} ${stellen[i].y.toFixed(2)}`)
     }
-    // Der letzte Wert gilt bis zur naechsten Spalte weiter.
+    // Der letzte Wert gilt noch ein Feld weiter.
     const letzte = stellen[stellen.length - 1]
-    d.push(`L${Math.min(100, letzte.x + (100 / spalten) / 2).toFixed(2)} ${letzte.y.toFixed(2)}`)
+    d.push(`L${Math.min(100, letzte.x + 100 / SPALTEN).toFixed(2)} ${letzte.y.toFixed(2)}`)
     return `<path d="${d.join(' ')}" stroke="${v.farbe}" stroke-width="0.5" fill="none" />`
   }
 
   const gitter = (g: Gitter) => {
     const hoehe = hoeheVon(g)
-    const senkrecht = Array.from({ length: spalten + 1 }, (_, i) =>
-      `<line x1="${(i / spalten) * 100}%" y1="0" x2="${(i / spalten) * 100}%" y2="${hoehe}" />`,
+    // Das feine Netz der Vorlage: sechsunddreissig Felder breit, und in der
+    // Hoehe so viele, wie das Gitter fuehrt — beim Kreislauf liegt zwischen
+    // zwei beschrifteten Linien noch eine.
+    const senkrecht = Array.from({ length: SPALTEN + 1 }, (_, i) =>
+      `<line x1="${((i / SPALTEN) * 100).toFixed(3)}%" y1="0" x2="${((i / SPALTEN) * 100).toFixed(3)}%" y2="${hoehe}" />`,
     ).join('')
-    const waagrecht = Array.from({ length: 7 }, (_, i) =>
-      `<line x1="0" y1="${(i / 6) * hoehe}" x2="100%" y2="${(i / 6) * hoehe}" />`,
+    const waagrecht = Array.from({ length: g.zeilen + 1 }, (_, i) =>
+      `<line x1="0" y1="${((i / g.zeilen) * hoehe).toFixed(2)}" x2="100%" y2="${((i / g.zeilen) * hoehe).toFixed(2)}" />`,
     ).join('')
     // Die Pfeile stehen auf den Linien, zu denen sie gehoeren — sonst waere
     // nicht abzulesen, welche Hoehe welchen Wert meint.
@@ -198,9 +209,17 @@ function verlaufsblatt(p: Payload): string {
     </div>`
   }
 
-  const zeitachse = zeilen.length
-    ? `<div class="dg-z">${zeilen.map((z, i) =>
-        `<span style="left:${mitte(i).toFixed(2)}%">${escapeHtml(String(z.zeit ?? ''))}</span>`).join('')}</div>`
+  // Unter dem Gitter steht alle sechs Felder eine Uhrzeit — wie auf der
+  // Vorlage, und unabhaengig davon, wann gemessen wurde.
+  const achsenbeschriftung = achse
+    ? `<div class="dg-z">${Array.from(
+        { length: Math.floor(SPALTEN / SPALTEN_JE_BESCHRIFTUNG) + 1 },
+        (_, i) => {
+          const feld = i * SPALTEN_JE_BESCHRIFTUNG
+          const text = uhrzeit(achse.start + feld * achse.schritt)
+          return `<span style="left:${((feld / SPALTEN) * 100).toFixed(2)}%">${escapeHtml(text)}</span>`
+        },
+      ).join('')}</div>`
     : '<div class="dg-z"></div>'
 
   const g = (id: string) => GITTER.find((x) => x.id === id)!
@@ -220,7 +239,7 @@ function verlaufsblatt(p: Payload): string {
        <div class="vb-l"><span>HF</span><span>Puls</span><span>RR</span><span>Defi</span><span>CO₂</span><span>Transp. T-T</span><span>Intub. ↓</span><span>Extub. ↑</span></div>
        ${gitter(g('hf'))}
      </div>
-     ${zeitachse}`,
+     ${achsenbeschriftung}`,
   )
 }
 

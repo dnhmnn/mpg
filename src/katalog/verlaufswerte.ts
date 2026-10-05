@@ -37,6 +37,14 @@ export type Verlaufswert = {
 export type Gitter = {
   id: 'spo2' | 'af' | 'hf'
   /**
+   * Die Felder in der Höhe.
+   *
+   * Die Vorlage hat ein feines Netz: zwischen zwei beschrifteten Linien liegt
+   * noch eine. Beim Kreislauf sind das zwölf Felder zu je 25, bei den oberen
+   * beiden sechs zu je fünf.
+   */
+  zeilen: number
+  /**
    * Der Anteil an der Höhe, die der Kasten für die Gitter übrig lässt.
    *
    * Feste Höhen standen hier einmal — und ließen vierzig Prozent des Kastens
@@ -66,6 +74,7 @@ export const GITTER: Gitter[] = [
   {
     id: 'spo2',
     anteil: 26 / 192,
+    zeilen: 6,
     von: 70,
     bis: 100,
     skala: [{ text: '90 →', wert: 90 }, { text: '80 →', wert: 80 }],
@@ -73,6 +82,7 @@ export const GITTER: Gitter[] = [
   {
     id: 'af',
     anteil: 34 / 192,
+    zeilen: 6,
     von: 0,
     bis: 30,
     skala: [{ text: '20 →', wert: 20 }, { text: '10 →', wert: 10 }],
@@ -80,6 +90,7 @@ export const GITTER: Gitter[] = [
   {
     id: 'hf',
     anteil: 132 / 192,
+    zeilen: 12,
     von: 0,
     bis: 300,
     vonRechts: 0,
@@ -138,4 +149,76 @@ export function hoeheAnteil(g: Gitter, wert: number, rechts = false): number {
   const von = rechts ? g.vonRechts ?? g.von : g.von
   const bis = rechts ? g.bisRechts ?? g.bis : g.bis
   return (bis - wert) / (bis - von)
+}
+
+/**
+ * Die Zeitachse des Kurvenblatts.
+ *
+ * Die Vorlage hat ein festes Netz und schreibt die Uhrzeiten darunter — alle
+ * sechs Felder eine. Die Punkte sitzen also auf ihrer Uhrzeit, nicht in der
+ * Reihenfolge der Eingabe: zwei Messungen im Abstand von einer Minute stehen
+ * nebeneinander, zwei im Abstand einer Stunde weit auseinander.
+ */
+export const SPALTEN = 36
+
+/** Alle wieviel Felder eine Uhrzeit unter dem Gitter steht. */
+export const SPALTEN_JE_BESCHRIFTUNG = 6
+
+/** Die Schritte, aus denen die Achse ihren wählt — Minuten je Feld. */
+export const SCHRITTE = [2.5, 5, 10, 15, 30]
+
+export type Zeitachse = {
+  /** Minute des Tages, auf der das Gitter links beginnt. */
+  start: number
+  /** Minuten je Feld. */
+  schritt: number
+}
+
+/** Minuten des Tages aus "HH:MM"; null, wenn es keine Uhrzeit ist. */
+export function minuten(zeit: string): number | null {
+  const t = /^(\d{1,2}):(\d{2})$/.exec(zeit.trim())
+  if (!t) return null
+  const h = Number(t[1])
+  const m = Number(t[2])
+  if (h > 23 || m > 59) return null
+  return h * 60 + m
+}
+
+/** "HH:MM" aus Minuten des Tages — über Mitternacht hinaus zählt es weiter. */
+export function uhrzeit(min: number): string {
+  const m = ((Math.round(min) % 1440) + 1440) % 1440
+  return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`
+}
+
+/**
+ * Die Achse zu einer Reihe von Uhrzeiten.
+ *
+ * Sie beginnt auf der Viertelstunde vor der ersten Messung und wählt den
+ * kleinsten Schritt, in dem alle Messungen auf das Blatt passen. Reicht auch
+ * der größte nicht, bleibt es beim größten — dann stehen die spätesten
+ * Messungen am rechten Rand, statt dass das Gitter die Zeit verfälscht.
+ */
+export function zeitachse(zeiten: string[]): Zeitachse | null {
+  const werte = zeiten.map(minuten).filter((m): m is number => m !== null)
+  if (werte.length === 0) return null
+  const erste = Math.min(...werte)
+  const letzte = Math.max(...werte)
+  const viertel = Math.floor(erste / 15) * 15
+  const waehlen = (von: number) => {
+    const spanne = letzte - von
+    return SCHRITTE.find((s) => spanne <= s * SPALTEN) ?? SCHRITTE[SCHRITTE.length - 1]
+  }
+  // Ein Vorlauf, wenn die erste Messung sonst auf dem linken Rand säße: ihr
+  // Zeichen wäre halb abgeschnitten, und das Blatt begänne mitten im Einsatz.
+  const start = erste - viertel < 2 * waehlen(viertel) ? viertel - 15 : viertel
+  return { start, schritt: waehlen(start) }
+}
+
+/** Wo eine Uhrzeit auf der Achse steht — in Prozent der Gitterbreite. */
+export function stelle(achse: Zeitachse, zeit: string): number | null {
+  const m = minuten(zeit)
+  if (m === null) return null
+  const anteil = (m - achse.start) / (achse.schritt * SPALTEN)
+  if (anteil < 0 || anteil > 1) return null
+  return anteil * 100
 }

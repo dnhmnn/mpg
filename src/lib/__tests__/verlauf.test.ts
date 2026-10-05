@@ -2,7 +2,10 @@ import { describe, it, expect } from 'vitest'
 import {
   spaltentext, verlaufEintragen, verlaufLesen, verlaufSortiert, verlaufStreichen, zahl,
 } from '../../pages/public/doku/verlauf'
-import { GITTER, VERLAUFSWERTE, anteilImGitter, hoeheAnteil } from '../../katalog/verlaufswerte'
+import {
+  GITTER, SCHRITTE, SPALTEN, VERLAUFSWERTE,
+  anteilImGitter, hoeheAnteil, minuten, stelle, uhrzeit, zeitachse,
+} from '../../katalog/verlaufswerte'
 import { aelrdHtml } from '../aelrdProtokoll'
 
 const spalte = (zeit: string, werte: Record<string, string>) => ({ zeit, werte })
@@ -146,5 +149,87 @@ describe('Der Verlauf im Ausdruck', () => {
     const leer = aelrdHtml({})
     expect(leer).toContain('Verlaufsbeschreibung')
     expect(leer).not.toContain('<polygon')
+  })
+})
+
+describe('Die Zeitachse des Kurvenblatts', () => {
+  it('liest und schreibt Uhrzeiten', () => {
+    expect(minuten('13:30')).toBe(810)
+    expect(minuten('00:00')).toBe(0)
+    expect(minuten('9:05')).toBe(545)
+    expect(minuten('25:00')).toBeNull()
+    expect(minuten('13:70')).toBeNull()
+    expect(minuten('halb zwei')).toBeNull()
+    expect(uhrzeit(810)).toBe('13:30')
+    expect(uhrzeit(0)).toBe('00:00')
+    // Über Mitternacht hinaus zählt es weiter — Einsätze enden nicht um 24 Uhr.
+    expect(uhrzeit(1450)).toBe('00:10')
+  })
+
+  it('beginnt auf einer Viertelstunde', () => {
+    expect(zeitachse(['13:37', '14:02'])?.start).toBe(13 * 60 + 30)
+  })
+
+  it('lässt der ersten Messung einen Vorlauf, wenn sie auf dem Rand säße', () => {
+    // Genau auf der Viertelstunde gemessen: ohne Vorlauf wäre das Zeichen
+    // halb abgeschnitten, und das Blatt begänne mitten im Einsatz.
+    expect(zeitachse(['13:30', '14:15'])?.start).toBe(13 * 60 + 15)
+  })
+
+  it('wählt den kleinsten Schritt, in dem alles aufs Blatt passt', () => {
+    // 36 Felder: bei 2,5 Minuten je Feld sind das 90 Minuten.
+    expect(zeitachse(['13:20', '14:00'])?.schritt).toBe(2.5)
+    expect(zeitachse(['13:20', '15:30'])?.schritt).toBe(5)
+    expect(zeitachse(['13:20', '18:00'])?.schritt).toBe(10)
+  })
+
+  it('behält den größten Schritt, wenn auch er nicht reicht', () => {
+    // Lieber die spätesten Messungen am Rand als ein Gitter, das die Zeit
+    // verfälscht.
+    const a = zeitachse(['08:00', '23:00'])!
+    expect(a.schritt).toBe(SCHRITTE[SCHRITTE.length - 1])
+  })
+
+  it('setzt eine Messung auf ihre Uhrzeit, nicht auf ihre Nummer', () => {
+    const a = zeitachse(['13:30', '13:35', '14:30'])!
+    // Start 13:15, Schritt 2,5 — 36 Felder sind 90 Minuten.
+    expect(stelle(a, '13:15')).toBe(0)
+    expect(stelle(a, '14:00')).toBeCloseTo(50, 5)
+    expect(stelle(a, '14:45')).toBe(100)
+    // Zwei Messungen fünf Minuten auseinander stehen zwei Felder auseinander.
+    const links = stelle(a, '13:30')!
+    const rechts = stelle(a, '13:35')!
+    expect(rechts - links).toBeCloseTo((5 / 90) * 100, 5)
+  })
+
+  it('zeichnet nichts außerhalb des Blattes', () => {
+    const a = zeitachse(['13:30'])!
+    expect(stelle(a, '12:00')).toBeNull()
+    expect(stelle(a, '20:00')).toBeNull()
+    expect(stelle(a, 'keine Zeit')).toBeNull()
+  })
+
+  it('hat ohne Messung keine Achse', () => {
+    expect(zeitachse([])).toBeNull()
+    expect(zeitachse(['', 'kaputt'])).toBeNull()
+  })
+
+  it('schreibt die Uhrzeiten alle sechs Felder unter das Gitter', () => {
+    let w: Record<string, unknown> = {}
+    w = verlaufEintragen(w, spalte('13:30', { hf: '96' }))
+    w = verlaufEintragen(w, spalte('14:15', { hf: '80' }))
+    const html = aelrdHtml(w)
+    // Start 13:15, Schritt 2,5 — also alle 15 Minuten eine Beschriftung.
+    for (const t of ['13:15', '13:30', '13:45', '14:00', '14:15', '14:30', '14:45']) {
+      expect(html, `${t} fehlt auf der Achse`).toContain(t)
+    }
+  })
+
+  it('zieht das feine Netz der Vorlage', () => {
+    // Sechsunddreißig Felder in der Breite, und beim Kreislauf zwölf in der
+    // Höhe — zwischen zwei beschrifteten Linien liegt noch eine.
+    expect(SPALTEN).toBe(36)
+    expect(GITTER.find((g) => g.id === 'hf')!.zeilen).toBe(12)
+    expect(GITTER.find((g) => g.id === 'spo2')!.zeilen).toBe(6)
   })
 })
