@@ -376,7 +376,11 @@ export const AELRD_NAEP: Record<string, AelrdNaepZuordnung> = {
 
   // ── Erkrankungen und Score ────────────────────────────────────────────
   tracerdiagnose: { feld: anhang('Die Tracerdiagnose ist eine Kennzahl der bayerischen ÄLRD, nicht der Norm') },
-  fuehrende_diagnose: { feld: umbau('G07', 'Freitext wird zum ersten Eintrag der Erstdiagnosen mit ICD-10') },
+  // Die Maske traegt hier die Organgruppe ein (ZNS, Herz-Kreislauf, …) und in
+  // der Tracerdiagnose die Diagnose daraus. Beides zusammen ist in der Norm
+  // ein Eintrag des Abschnitts Erkrankungen: die Gruppe ist die Auswahl, die
+  // Diagnose ihre Option. Der Umbau ist damit die Uebersetzung dieses Paars.
+  fuehrende_diagnose: { feld: umbau('G07', 'Organgruppe der Erkrankungen (E01); mit der Tracerdiagnose zusammen ein Eintrag der Erstdiagnosen') },
   weitere_diagnosen: { feld: umbau('G07', 'Freitext wird zu weiteren Einträgen der Erstdiagnosen mit ICD-10') },
   diagnosetext: { feld: wert('G08') },
   naca_initial: { feld: umbau('G0F', 'Freitext wird zur Auswahl NACA I bis VII') },

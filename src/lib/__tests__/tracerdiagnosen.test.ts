@@ -4,6 +4,7 @@ import { naepAbschnitt } from '../../katalog/naep'
 import { aelrdFeld } from '../../katalog/aelrd'
 import { AELRD_NAEP } from '../../katalog/aelrdNaep'
 import { aelrdHtml } from '../aelrdProtokoll'
+import { diagnoseSetzen, gruppeSetzen, istGruppenname } from '../../pages/public/doku/diagnose'
 
 describe('Die Diagnosen zur Auswahl', () => {
   it('kommt aus dem Abschnitt Erkrankungen der Norm, nicht aus einer zweiten Liste', () => {
@@ -64,5 +65,62 @@ describe('Die Diagnosen zur Auswahl', () => {
     // Würde das hier stillschweigend zu einem Normfeld, stünde im Datensatz
     // eine Erstdiagnose, die niemand so gestellt hat.
     expect(AELRD_NAEP.tracerdiagnose.feld.art).toBe('anhang')
+  })
+})
+
+describe('Tracerdiagnose und führende Diagnose zusammen', () => {
+  it('trägt die Gruppe als führende Diagnose ein', () => {
+    const w = diagnoseSetzen({}, 'STEMI')
+    expect(w.tracerdiagnose).toBe('STEMI')
+    expect(w.fuehrende_diagnose).toBe('Herz-Kreislauf')
+  })
+
+  it('zieht die Gruppe nach, wenn die Diagnose wechselt', () => {
+    let w = diagnoseSetzen({}, 'STEMI')
+    w = diagnoseSetzen(w, 'Asthma (Anfall)')
+    expect(w.fuehrende_diagnose).toBe('Atmung')
+    expect(w.tracerdiagnose).toBe('Asthma (Anfall)')
+  })
+
+  it('überschreibt keine von Hand geschriebene führende Diagnose', () => {
+    // Wer dort etwas Eigenes stehen hat, hat es gemeint.
+    const w = diagnoseSetzen({ fuehrende_diagnose: 'Vorderwandinfarkt, Killip II' }, 'STEMI')
+    expect(w.fuehrende_diagnose).toBe('Vorderwandinfarkt, Killip II')
+    expect(w.tracerdiagnose).toBe('STEMI')
+  })
+
+  it('räumt die Gruppe mit der Diagnose, aber nur die eigene', () => {
+    let w = diagnoseSetzen({}, 'STEMI')
+    w = diagnoseSetzen(w, '')
+    expect(w.tracerdiagnose).toBe('')
+    expect(w.fuehrende_diagnose).toBe('')
+
+    // Von Hand geschrieben: bleibt stehen, auch wenn die Diagnose geht.
+    let eigen = diagnoseSetzen({ fuehrende_diagnose: 'eigene Angabe' }, 'STEMI')
+    eigen = diagnoseSetzen(eigen, '')
+    expect(eigen.fuehrende_diagnose).toBe('eigene Angabe')
+  })
+
+  it('lässt die Gruppe zu einer Diagnose außerhalb der Liste von Hand setzen', () => {
+    let w = diagnoseSetzen({}, 'Abdomen unklar')
+    expect(w.fuehrende_diagnose).toBeUndefined()
+    w = gruppeSetzen(w, 'Abdomen')
+    expect(w.fuehrende_diagnose).toBe('Abdomen')
+    expect(istGruppenname('Abdomen')).toBe(true)
+    expect(istGruppenname('Abdomen unklar')).toBe(false)
+  })
+
+  it('tauscht eine Gruppe gegen die neue aus, statt sie zu behalten', () => {
+    // Gruppe von Hand gesetzt, dann eine Diagnose gewählt: die Gruppe der
+    // Diagnose gilt, sonst stünde ein Paar da, das nicht zusammengehört.
+    let w = gruppeSetzen({}, 'Abdomen')
+    w = diagnoseSetzen(w, 'Hypoglykämie')
+    expect(w.fuehrende_diagnose).toBe('Stoffwechsel')
+  })
+
+  it('druckt beide Zeilen des Bogens', () => {
+    const html = aelrdHtml(diagnoseSetzen({}, 'Lungenembolie'))
+    expect(html).toContain('Lungenembolie')
+    expect(html).toContain('Herz-Kreislauf')
   })
 })

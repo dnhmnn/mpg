@@ -22,7 +22,8 @@ import { zettelMitFeldern, type ZettelTeil } from './zettel'
 import Unterschrift from './Unterschrift'
 import Besatzung from './Besatzung'
 import Massnahmen from './Massnahmen'
-import Tracerdiagnose from './Tracerdiagnose'
+import Tracerdiagnose, { FuehrendeDiagnose } from './Tracerdiagnose'
+import { diagnoseSetzen, gruppeSetzen } from './diagnose'
 import { MASSNAHMEN_FELDER } from '../../../katalog/massnahmenArten'
 import { besatzungSetzen, type Besetzung, type Posten } from './besatzung'
 
@@ -465,7 +466,15 @@ export default function Doku() {
                 tracerdiagnose: (
                   <Tracerdiagnose
                     wert={String(werte.tracerdiagnose ?? '')}
-                    onChange={(w) => setzen('tracerdiagnose', w)}
+                    // Setzt die Gruppe in der führenden Diagnose mit, solange
+                    // dort nichts Eigenes steht.
+                    onChange={(w) => setWerte((v) => diagnoseSetzen(v, w))}
+                  />
+                ),
+                fuehrende_diagnose: (
+                  <FuehrendeDiagnose
+                    wert={String(werte.fuehrende_diagnose ?? '')}
+                    onChange={(w) => setWerte((v) => gruppeSetzen(v, w))}
                   />
                 ),
               }}
