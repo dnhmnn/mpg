@@ -16,7 +16,7 @@ import { useOrg } from '../OrgPublicLayout'
 import { AELRD_ABSCHNITTE, aelrdFeld, type AelrdFeld } from '../../../katalog/aelrd'
 import { istSpiegelFeld } from '../../../katalog/aelrdSpiegel'
 import { normalbefund, uebergabeUebernehmen, uebernahmeUmfang } from '../../../katalog/uebernahme'
-import DokuFeld, { Rasterzelle, istRasterfeld, type Werte } from './DokuFeld'
+import DokuFeld, { Rasterzelle, gefuellt, istRasterfeld, type Werte } from './DokuFeld'
 import Reiter, { ampel, type ReiterStand } from './Reiter'
 import { zettelMitFeldern, type ZettelTeil } from './zettel'
 import Unterschrift from './Unterschrift'
@@ -55,12 +55,6 @@ function felderVon(abschnittId: string): AelrdFeld[] {
     .filter((id) => !istSpiegelFeld(id))
     .map(aelrdFeld)
     .filter(Boolean) as AelrdFeld[]
-}
-
-function gefuellt(w: unknown): boolean {
-  if (w === undefined || w === null || w === '' || w === false) return false
-  if (Array.isArray(w)) return w.length > 0
-  return true
 }
 
 /**

@@ -62,6 +62,13 @@ export function bewerten(id: string, roh: unknown): 'gut' | 'warn' | 'kritisch' 
 }
 
 /** Felder, die im Zahlenraster stehen statt in einer eigenen Zeile. */
+/** Ob in einem Feld etwas steht — dieselbe Regel wie im Fortschritt der Seite. */
+export function gefuellt(w: unknown): boolean {
+  if (w === undefined || w === null || w === '' || w === false) return false
+  if (Array.isArray(w)) return w.length > 0
+  return true
+}
+
 export function istRasterfeld(f: AelrdFeld): boolean {
   return f.typ === 'zahl' && !f.optionen
 }
@@ -83,10 +90,22 @@ const eingabe: React.CSSProperties = {
   fontFamily: 'inherit', fontSize: 16, color: TEXT, boxSizing: 'border-box',
 }
 
-function Marke({ text, hinweis }: { text: string; hinweis?: string }) {
+/** Rot, solange ein Pflichtfeld leer ist. */
+const OFFEN = '#b91c1c'
+
+function Marke({ text, hinweis, pflicht, offen }: {
+  text: string; hinweis?: string; pflicht?: boolean; offen?: boolean
+}) {
   return (
-    <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: GRAU, marginBottom: 4 }}>
+    <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: offen ? OFFEN : GRAU, marginBottom: 4 }}>
       {text}
+      {/*
+       * Der Stern steht am Feld, nicht in einer Legende: wer dokumentiert,
+       * liest keine Legende. Rot heißt offen, grau heißt erfüllt — der Stern
+       * verschwindet nicht, sonst wüsste man hinterher nicht mehr, dass es
+       * eine Pflichtangabe war.
+       */}
+      {pflicht ? <span style={{ color: offen ? OFFEN : GRAU, marginLeft: 3 }}>*</span> : null}
       {hinweis ? <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0, fontStyle: 'italic', marginLeft: 5 }}>{hinweis}</span> : null}
     </div>
   )
@@ -119,10 +138,12 @@ export function Rasterzelle({ feld, werte, setzen }: {
   const wert = werte[feld.id]
   const stand = bewerten(feld.id, wert)
   const farbe = stand ? AMPEL[stand] : null
+  const offen = Boolean(feld.pflicht) && !gefuellt(wert)
   return (
     <label style={{ display: 'block' }}>
-      <span style={{ display: 'block', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: GRAU, marginBottom: 3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+      <span style={{ display: 'block', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: offen ? OFFEN : GRAU, marginBottom: 3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
         {feld.label}
+        {feld.pflicht ? <span style={{ marginLeft: 3 }}>*</span> : null}
       </span>
       <span style={{ position: 'relative', display: 'block' }}>
         <input
@@ -133,8 +154,8 @@ export function Rasterzelle({ feld, werte, setzen }: {
           style={{
             ...eingabe, padding: '8px 30px 8px 9px', fontSize: 19, fontWeight: 600,
             textAlign: 'left',
-            border: `1px solid ${farbe ? farbe.rand : LINIE}`,
-            background: farbe ? farbe.grund : '#fff',
+            border: `1px solid ${farbe ? farbe.rand : offen ? OFFEN : LINIE}`,
+            background: farbe ? farbe.grund : offen ? '#fef2f2' : '#fff',
           }}
         />
         {feld.einheit ? (
@@ -159,6 +180,7 @@ export default function DokuFeld({ feld, werte, setzen, ohneBeschriftung }: {
   ohneBeschriftung?: boolean
 }) {
   const wert = werte[feld.id]
+  const offen = Boolean(feld.pflicht) && !gefuellt(wert)
 
   if (feld.typ === 'check') {
     return (
@@ -173,7 +195,7 @@ export default function DokuFeld({ feld, werte, setzen, ohneBeschriftung }: {
     const bis = feld.max ?? 10
     return (
       <div style={{ marginBottom: 10 }}>
-        {ohneBeschriftung ? null : <Marke text={feld.label} hinweis={`${von}–${bis}`} />}
+        {ohneBeschriftung ? null : <Marke text={feld.label} hinweis={`${von}–${bis}`} pflicht={feld.pflicht} offen={offen} />}
         <div>
           {Array.from({ length: bis - von + 1 }, (_, i) => von + i).map((n) => (
             <Knopf key={n} text={String(n)} klein an={String(wert ?? '') === String(n)}
@@ -196,7 +218,7 @@ export default function DokuFeld({ feld, werte, setzen, ohneBeschriftung }: {
     const mehrfach = feld.typ === 'mehrfach'
     return (
       <div style={{ marginBottom: 10 }}>
-        {ohneBeschriftung ? null : <Marke text={feld.label} hinweis={ausNorm ? 'nach DIVI' : undefined} />}
+        {ohneBeschriftung ? null : <Marke text={feld.label} hinweis={ausNorm ? 'nach DIVI' : undefined} pflicht={feld.pflicht} offen={offen} />}
         <div>
           {optionen.map((o) => (
             <Knopf key={o.wert} text={o.text} an={gewaehlt(wert, o.wert)}
@@ -210,10 +232,10 @@ export default function DokuFeld({ feld, werte, setzen, ohneBeschriftung }: {
   if (feld.typ === 'langtext') {
     return (
       <div style={{ marginBottom: 10 }}>
-        {ohneBeschriftung ? null : <Marke text={feld.label} />}
+        {ohneBeschriftung ? null : <Marke text={feld.label} pflicht={feld.pflicht} offen={offen} />}
         <textarea name={feld.id} rows={3}
           value={String(wert ?? '')} onChange={(e) => setzen(feld.id, e.target.value)}
-          style={{ ...eingabe, resize: 'vertical', lineHeight: 1.45 }} />
+          style={{ ...eingabe, resize: 'vertical', lineHeight: 1.45, border: `0.5px solid ${offen ? OFFEN : LINIE}`, background: offen ? '#fef2f2' : '#fff' }} />
       </div>
     )
   }
@@ -221,11 +243,11 @@ export default function DokuFeld({ feld, werte, setzen, ohneBeschriftung }: {
   const typ = feld.typ === 'zeit' ? 'time' : feld.typ === 'datum' ? 'date' : feld.typ === 'zahl' ? 'number' : 'text'
   return (
     <div style={{ marginBottom: 10 }}>
-      {ohneBeschriftung ? null : <Marke text={feld.label} hinweis={feld.einheit} />}
+      {ohneBeschriftung ? null : <Marke text={feld.label} hinweis={feld.einheit} pflicht={feld.pflicht} offen={offen} />}
       <input name={feld.id} type={typ}
         inputMode={feld.typ === 'zahl' ? 'decimal' : undefined}
         value={String(wert ?? '')} onChange={(e) => setzen(feld.id, e.target.value)}
-        style={eingabe} />
+        style={{ ...eingabe, border: `0.5px solid ${offen ? OFFEN : LINIE}`, background: offen ? '#fef2f2' : '#fff' }} />
     </div>
   )
 }

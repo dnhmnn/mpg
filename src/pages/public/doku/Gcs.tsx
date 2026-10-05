@@ -38,6 +38,10 @@ export default function Gcs({ werte, setWerte, vorsatz = '' }: {
   const summeFeld = gcsSummeFeld(vorsatz)
   const imProtokoll = skalen.map((s) => zahl(werte[s.feld]))
   const summeImProtokoll = zahl(werte[summeFeld])
+  // Die Summe ist auf dem Bogen eine Pflichtangabe; das steht am Knopf, nicht
+  // in einer Legende.
+  const pflicht = Boolean(aelrdFeld(summeFeld)?.pflicht)
+  const fehlt = pflicht && summeImProtokoll === null
 
   function oeffnen() {
     // Was schon dasteht, steht beim Öffnen gewählt da.
@@ -65,14 +69,16 @@ export default function Gcs({ werte, setWerte, vorsatz = '' }: {
 
   return (
     <div style={{ marginBottom: 10 }}>
-      <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: GRAU, marginBottom: 4 }}>
+      <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: fehlt ? '#b91c1c' : GRAU, marginBottom: 4 }}>
         Glasgow Coma Scale
+        {pflicht ? <span style={{ marginLeft: 3 }}>*</span> : null}
       </div>
       <button
         type="button" onClick={oeffnen}
         style={{
           display: 'flex', alignItems: 'center', gap: 10, width: '100%',
-          padding: '10px 12px', background: '#fff', border: `0.5px solid ${LINIE}`,
+          padding: '10px 12px', background: fehlt ? '#fef2f2' : '#fff',
+          border: `0.5px solid ${fehlt ? '#b91c1c' : LINIE}`,
           borderRadius: 10, fontFamily: 'inherit', textAlign: 'left', cursor: 'pointer',
         }}
       >

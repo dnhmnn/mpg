@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import { ampel, type ReiterStand } from '../../pages/public/doku/Reiter'
-import { AELRD_ABSCHNITTE, aelrdFeld } from '../../katalog/aelrd'
+import { AELRD_ABSCHNITTE, AELRD_FELDER, aelrdFeld } from '../../katalog/aelrd'
+import { gefuellt } from '../../pages/public/doku/DokuFeld'
+import { zettelMitFeldern } from '../../pages/public/doku/zettel'
 import { istSpiegelFeld } from '../../katalog/aelrdSpiegel'
 
 const stand = (p: Partial<ReiterStand>): ReiterStand =>
@@ -56,5 +58,39 @@ describe('Pflichtfelder im Bogen', () => {
     expect(mitPflicht.map((a) => a.id)).toEqual([
       'stammdaten', 'kennung', 'einsatzdaten', 'zeiten', 'notfallgeschehen', 'messwerte', 'neurologie',
     ])
+  })
+})
+
+describe('Pflichtfelder sind am Feld zu erkennen', () => {
+  it('führt der Bogen vierzehn davon', () => {
+    // Ändert sich die Zahl, soll es auffallen: jedes Pflichtfeld bekommt in
+    // der Maske einen Stern, und jedes trägt zur Ampel der Zettel bei.
+    const pflicht = AELRD_FELDER.filter((f) => f.pflicht)
+    expect(pflicht.map((f) => f.id)).toEqual([
+      'name', 'gebdatum', 'einsatz_nr', 'einsatz_datum',
+      'zeit_alarm', 'zeit_ankunft_ort', 'zeit_uebergabe',
+      'notfallgeschehen', 'af', 'spo2', 'hf', 'nibp_sys', 'gcs_summe', 'schmerz',
+    ])
+  })
+
+  it('verteilt sie über die Zettel, die sie führen', () => {
+    // Ein Pflichtfeld auf einem Zettel, den es nicht gibt, wäre nie zu
+    // erfüllen — und die Ampel bliebe für immer rot.
+    const aufZetteln = new Set(zettelMitFeldern().flatMap((z) => z.felder).map((f) => f.id))
+    for (const f of AELRD_FELDER.filter((x) => x.pflicht)) {
+      expect(aufZetteln.has(f.id), `${f.id} steht auf keinem Zettel`).toBe(true)
+    }
+  })
+
+  it('gilt leer für jede Art von Feld gleich', () => {
+    // Dieselbe Regel entscheidet über Stern, Ampel und Fortschritt.
+    expect(gefuellt('')).toBe(false)
+    expect(gefuellt(undefined)).toBe(false)
+    expect(gefuellt(false)).toBe(false)
+    expect(gefuellt([])).toBe(false)
+    expect(gefuellt('0')).toBe(true)
+    expect(gefuellt(0)).toBe(true)
+    expect(gefuellt(true)).toBe(true)
+    expect(gefuellt(['unauffaellig'])).toBe(true)
   })
 })
