@@ -147,9 +147,13 @@ export const AELRD_FELDER: AelrdFeld[] = [
   ], 'atmung'),
   radio('kreislauf', 'Kreislauf', ['unauffällig', 'nicht untersucht', 'Blutung']),
   { id: 'puls_regelmaessig', label: 'Puls regelmäßig:', typ: 'text', divi: 'hf_rhythmus' },
-  { id: 'radialispuls', label: 'Radialispuls tastbar', typ: 'text' },
-  { id: 'rekap_zeit', label: 'Rekap. Zeit:', typ: 'text', divi: 'rekap_zeit' },
-  { id: 'schockzeichen', label: 'Schockzeichen', typ: 'text' },
+  // Drei Fragen, die der Bogen als Schreiblinie fuehrt und die doch nur eine
+  // Antwort kennen. Die Norm hat fuer sie keine Liste — sie fuehrt den
+  // Kreislaufblock des Bogens gar nicht —, deshalb stehen die Optionen hier
+  // und sind so kurz, dass sie auf die gedruckte Linie passen.
+  radio('radialispuls', 'Radialispuls tastbar', ['ja', 'nein']),
+  radio('rekap_zeit', 'Rekap. Zeit:', ['< 2 s', '> 2 s'], 'rekap_zeit'),
+  radio('schockzeichen', 'Schockzeichen', ['ja', 'nein']),
   { id: 'kreislauf_auffaelligkeiten', label: 'path. Auffälligkeiten:', typ: 'langtext' },
   mehrfach('haut', 'Haut', [
     'unauffällig', 'Oedeme', 'kaltschweißig', 'stehende Hautfalten',
@@ -172,7 +176,12 @@ export const AELRD_FELDER: AelrdFeld[] = [
   { id: 'ibp_dia', label: 'IBP diastolisch', typ: 'zahl', einheit: 'mmHg' },
   { id: 'bz', label: 'BZ', typ: 'zahl', einheit: 'mg/dl', divi: 'bz', min: 0, max: 1000 },
   { id: 'temp', label: 'Temp.', typ: 'zahl', einheit: '°C', divi: 'temp', min: 20, max: 45 },
-  { id: 'temp_ort', label: 'Messort Temperatur', typ: 'text' },
+  // Der Messort entscheidet darueber, wie die Temperatur zu lesen ist: eine
+  // axillaer gemessene liegt unter der koerperkerntemperatur. Getippt wurde
+  // er deshalb selten; angetippt steht er da.
+  radio('temp_ort', 'Messort Temperatur', [
+    'aurikulär', 'oral', 'rektal', 'axillär', 'inguinal', 'ösophageal', 'vesikal', 'Stirn',
+  ]),
 
   // ── Neurologie ────────────────────────────────────────────────────────
   { id: 'neuro_ohne_befund', label: 'ohne path. Befund', typ: 'check', divi: 'neuro_ohne_befund' },
@@ -350,9 +359,9 @@ export const AELRD_FELDER2: AelrdFeld[] = [
   ], 'ub_atmung'),
   radio('ub_kreislauf', 'Kreislauf', ['unauffällig', 'nicht untersucht']),
   { id: 'ub_puls_regelmaessig', label: 'Puls regelmäßig:', typ: 'text' },
-  { id: 'ub_radialispuls', label: 'Radialispuls tastbar', typ: 'text' },
-  { id: 'ub_rekap', label: 'Rekap. Zeit:', typ: 'text' },
-  { id: 'ub_schockzeichen', label: 'Schockzeichen', typ: 'text' },
+  radio('ub_radialispuls', 'Radialispuls tastbar', ['ja', 'nein']),
+  radio('ub_rekap', 'Rekap. Zeit:', ['< 2 s', '> 2 s']),
+  radio('ub_schockzeichen', 'Schockzeichen', ['ja', 'nein']),
   radio('ub_ekg', 'EKG', ['kein EKG', 'Sinusrhythmus']),
   mehrfach('ub_psyche', 'Psyche', [
     'aggressiv', 'verwirrt', 'verlangsamt', 'suizidal', 'nicht beurteilbar',

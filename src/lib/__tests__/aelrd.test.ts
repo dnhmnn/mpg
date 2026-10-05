@@ -7,7 +7,7 @@ import {
   ohneDiviEntsprechung,
   schluessel,
 } from '../../katalog/aelrd'
-import { BLATT, escapeHtml, istGewaehlt } from '../aelrdDruck'
+import { BLATT, escapeHtml, istGewaehlt, wortlaut } from '../aelrdDruck'
 import { HOEHEN, HOEHEN2, SEITE1, SEITE2 } from '../aelrdLayout'
 import { aelrdHtml, aelrdVordruck } from '../aelrdProtokoll'
 import { feldFinden } from '../../katalog/divi'
@@ -393,3 +393,73 @@ describe('Mehrfachauswahl mit runden Knöpfen', () => {
   })
 })
 
+
+describe('Fragen mit genau einer Antwort', () => {
+  it('lässt den Kreislaufblock antippen statt tippen', () => {
+    // Drei Fragen, die der Bogen als Schreiblinie führt und die doch nur
+    // eine Antwort kennen. Als Freitext blieben sie im Fahrzeug leer.
+    const texte = (id: string) => aelrdFeld(id)?.optionen?.map((o) => o.text)
+    expect(aelrdFeld('radialispuls')?.typ).toBe('radio')
+    expect(texte('radialispuls')).toEqual(['ja', 'nein'])
+    expect(texte('schockzeichen')).toEqual(['ja', 'nein'])
+    expect(texte('rekap_zeit')).toEqual(['< 2 s', '> 2 s'])
+  })
+
+  it('unterscheidet unter und über zwei Sekunden auch im Speicherwert', () => {
+    // Würden beide zu "2_s", stünde im Protokoll nicht mehr, was gemessen war.
+    const werte = aelrdFeld('rekap_zeit')?.optionen?.map((o) => o.wert)
+    expect(werte).toEqual(['unter_2_s', 'ueber_2_s'])
+  })
+
+  it('stellt die Übergabe dieselben Fragen gleich', () => {
+    // Die Übernahme trägt die Werte von hier nach dort; wäre eine Seite
+    // Freitext und die andere Auswahl, käme dort ein Wert an, den die Maske
+    // nicht anbietet.
+    for (const [ub, quelle] of [['ub_radialispuls', 'radialispuls'],
+      ['ub_schockzeichen', 'schockzeichen'], ['ub_rekap', 'rekap_zeit']]) {
+      expect(aelrdFeld(ub)?.optionen?.map((o) => o.wert))
+        .toEqual(aelrdFeld(quelle)?.optionen?.map((o) => o.wert))
+    }
+  })
+
+  it('bietet den Messort der Temperatur zum Antippen an', () => {
+    const texte = aelrdFeld('temp_ort')?.optionen?.map((o) => o.text)
+    expect(texte).toContain('aurikulär')
+    expect(texte).toContain('rektal')
+    expect(texte).toContain('axillär')
+    expect(texte?.length).toBe(8)
+  })
+})
+
+describe('Der Wortlaut im Ausdruck', () => {
+  it('druckt den Optionstext, nicht den Speicherwert', () => {
+    // "unter_2_s" ist der Schlüssel, "< 2 s" steht auf dem Papier. Vor dieser
+    // Weiche stand der Schlüssel im fertigen Protokoll.
+    expect(wortlaut({ rekap_zeit: 'unter_2_s' }, 'rekap_zeit')).toBe('< 2 s')
+    expect(wortlaut({ temp_ort: 'aurikulaer' }, 'temp_ort')).toBe('aurikulär')
+    expect(wortlaut({ radialispuls: 'ja' }, 'radialispuls')).toBe('ja')
+  })
+
+  it('lässt Felder ohne Auswahl unberührt', () => {
+    expect(wortlaut({ tracerdiagnose: 'STEMI' }, 'tracerdiagnose')).toBe('STEMI')
+    expect(wortlaut({ hf: 80 }, 'hf')).toBe('80')
+    expect(wortlaut({}, 'hf')).toBe('')
+  })
+
+  it('nennt bei einer Mehrfachauswahl jeden gewählten Wortlaut', () => {
+    expect(wortlaut({ haut: ['unauffaellig', 'oedeme'] }, 'haut')).toBe('unauffällig, Oedeme')
+  })
+
+  it('gibt einen unbekannten Wert unverändert zurück statt ihn zu verschlucken', () => {
+    // Werte aus älteren Protokollen, die als Freitext entstanden sind.
+    expect(wortlaut({ rekap_zeit: 'prompt' }, 'rekap_zeit')).toBe('prompt')
+  })
+
+  it('steht so im fertigen Protokoll', () => {
+    const html = aelrdHtml({ rekap_zeit: 'unter_2_s', temp_ort: 'aurikulaer', schockzeichen: 'nein' })
+    expect(html).toContain('&lt; 2 s')
+    expect(html).toContain('aurikulär')
+    expect(html).not.toContain('unter_2_s')
+    expect(html).not.toContain('aurikulaer')
+  })
+})

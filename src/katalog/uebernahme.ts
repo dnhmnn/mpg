@@ -83,6 +83,12 @@ const UNAUFFAELLIG: Record<string, string[]> = {
   haut: ['unauffällig'],
   psyche: ['unauffällig'],
   ekg: ['Sinusrhythmus'],
+  // Was "Kreislauf unauffällig" am Kreislauf heißt, steht auf dem Bogen in
+  // drei eigenen Angaben. Sie leer zu lassen, während daneben "unauffällig"
+  // steht, wäre ein halber Befund.
+  radialispuls: ['ja'],
+  rekap_zeit: ['< 2 s'],
+  schockzeichen: ['nein'],
 }
 
 /**

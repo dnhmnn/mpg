@@ -78,6 +78,7 @@ export type AelrdNaepZuordnung = {
 
 const KEIN_ATEMWEGSBLOCK = 'Die Norm hat keinen Befundblock Atemwege; sie führt nur die Atmung'
 const KEIN_KREISLAUFBLOCK = 'Die Norm hat keinen Befundblock Kreislauf'
+const KEIN_MESSORT = 'Die Norm führt den Messort der Temperatur nicht'
 const KEINE_UB_NEURO = 'Die Norm erhebt bei der Übergabe nur das Bewusstsein, keine Neurologie'
 
 export const AELRD_NAEP: Record<string, AelrdNaepZuordnung> = {
@@ -212,9 +213,17 @@ export const AELRD_NAEP: Record<string, AelrdNaepZuordnung> = {
     },
   },
   puls_regelmaessig: { feld: umbau('DF0', 'Freitext wird zur Auswahl rhythmisch / arrhythmisch') },
-  radialispuls: { feld: anhang(KEIN_KREISLAUFBLOCK) },
-  rekap_zeit: { feld: anhang(KEIN_KREISLAUFBLOCK) },
-  schockzeichen: { feld: anhang(KEIN_KREISLAUFBLOCK) },
+  // Die drei Fragen des Kreislaufblocks sind seit der Umstellung auf Knoepfe
+  // Auswahlen; die Norm fuehrt sie weiterhin nicht, auch nicht ihre Optionen.
+  radialispuls: {
+    optionen: { ja: anhang(KEIN_KREISLAUFBLOCK), nein: anhang(KEIN_KREISLAUFBLOCK) },
+  },
+  rekap_zeit: {
+    optionen: { unter_2_s: anhang(KEIN_KREISLAUFBLOCK), ueber_2_s: anhang(KEIN_KREISLAUFBLOCK) },
+  },
+  schockzeichen: {
+    optionen: { ja: anhang(KEIN_KREISLAUFBLOCK), nein: anhang(KEIN_KREISLAUFBLOCK) },
+  },
   kreislauf_auffaelligkeiten: { feld: anhang(KEIN_KREISLAUFBLOCK) },
   haut: {
     optionen: {
@@ -252,7 +261,18 @@ export const AELRD_NAEP: Record<string, AelrdNaepZuordnung> = {
   ibp_dia: { feld: anhang('Die Norm unterscheidet nicht invasiv und nicht invasiv gemessenen Druck') },
   bz: { feld: wert('DFS') },
   temp: { feld: wert('DHJ') },
-  temp_ort: { feld: anhang('Die Norm führt den Messort der Temperatur nicht') },
+  temp_ort: {
+    optionen: {
+      aurikulaer: anhang(KEIN_MESSORT),
+      oral: anhang(KEIN_MESSORT),
+      rektal: anhang(KEIN_MESSORT),
+      axillaer: anhang(KEIN_MESSORT),
+      inguinal: anhang(KEIN_MESSORT),
+      oesophageal: anhang(KEIN_MESSORT),
+      vesikal: anhang(KEIN_MESSORT),
+      stirn: anhang(KEIN_MESSORT),
+    },
+  },
 
   // ── Neurologie ────────────────────────────────────────────────────────
   neuro_ohne_befund: { feld: leer('D08', 'D0M') },
@@ -570,9 +590,15 @@ export const AELRD_NAEP: Record<string, AelrdNaepZuordnung> = {
     },
   },
   ub_puls_regelmaessig: { feld: umbau('L1E', 'Freitext wird zur Auswahl rhythmisch / arrhythmisch') },
-  ub_radialispuls: { feld: anhang(KEIN_KREISLAUFBLOCK) },
-  ub_rekap: { feld: anhang(KEIN_KREISLAUFBLOCK) },
-  ub_schockzeichen: { feld: anhang(KEIN_KREISLAUFBLOCK) },
+  ub_radialispuls: {
+    optionen: { ja: anhang(KEIN_KREISLAUFBLOCK), nein: anhang(KEIN_KREISLAUFBLOCK) },
+  },
+  ub_rekap: {
+    optionen: { unter_2_s: anhang(KEIN_KREISLAUFBLOCK), ueber_2_s: anhang(KEIN_KREISLAUFBLOCK) },
+  },
+  ub_schockzeichen: {
+    optionen: { ja: anhang(KEIN_KREISLAUFBLOCK), nein: anhang(KEIN_KREISLAUFBLOCK) },
+  },
   ub_ekg: {
     optionen: {
       kein_ekg: leer('L4B', 'L4I'),

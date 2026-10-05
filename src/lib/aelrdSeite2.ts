@@ -10,15 +10,16 @@ import {
   raster,
   schmerzskala,
   ueberschrift,
+  wortlaut,
   type Payload,
 } from './aelrdDruck'
 import { HOEHEN2, SEITE2 } from './aelrdLayout'
 import { aelrdFeld } from '../katalog/aelrd'
 import type { Kopfdaten } from './aelrdSeite1'
 
+/** Der Wortlaut eines Feldes — bei Auswahlen der Optionstext, nicht der Schluessel. */
 function w(p: Payload, id: string): string {
-  const v = p[id]
-  return v === undefined || v === null ? '' : String(v)
+  return wortlaut(p, id)
 }
 
 function hak(p: Payload, id: string, text?: string): string {

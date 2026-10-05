@@ -15,6 +15,7 @@ import {
   ueberschrift,
   wertKasten,
   wertZeile,
+  wortlaut,
   type Payload,
 } from './aelrdDruck'
 import { HOEHEN, SEITE1 } from './aelrdLayout'
@@ -26,9 +27,9 @@ export type Kopfdaten = {
   erstellt?: string
 }
 
+/** Der Wortlaut eines Feldes — bei Auswahlen der Optionstext, nicht der Schluessel. */
 function w(p: Payload, id: string): string {
-  const v = p[id]
-  return v === undefined || v === null ? '' : String(v)
+  return wortlaut(p, id)
 }
 
 /**

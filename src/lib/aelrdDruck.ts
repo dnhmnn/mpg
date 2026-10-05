@@ -62,6 +62,25 @@ export function ueberschrift(text: string): string {
  * fett, seine Beschriftung klein und rechtsbuendig daneben. Leere Felder
  * zeigen nur die Beschriftung — so wie der Bogen auch leer gedruckt wird.
  */
+/**
+ * Der Wert eines Feldes, wie er auf dem Papier zu lesen ist.
+ *
+ * Gespeichert wird bei einer Auswahl ihr Schluessel — "unter_2_s",
+ * "aurikulaer" —, gedruckt gehoert der Wortlaut hin: "< 2 s", "aurikulär".
+ * Wo der Bogen eine Schreiblinie fuehrt und die Maske Knoepfe anbietet,
+ * faellt das sonst erst am fertigen Protokoll auf.
+ */
+export function wortlaut(p: Payload, id: string): string {
+  const v = p[id]
+  if (v === undefined || v === null) return ''
+  const optionen = aelrdFeld(id)?.optionen
+  if (!optionen) return String(v)
+  const text = (einzeln: unknown) =>
+    optionen.find((o) => o.wert === String(einzeln))?.text ?? String(einzeln)
+  if (Array.isArray(v)) return v.map(text).join(', ')
+  return text(v)
+}
+
 export function wertZeile(wert: unknown, beschriftung: string, gross = false): string {
   const text = wert === undefined || wert === null || wert === '' ? '' : String(wert)
   const groesse = gross ? MASS.wertGross : MASS.wert
