@@ -24,12 +24,14 @@ import Besatzung from './Besatzung'
 import Massnahmen from './Massnahmen'
 import Verlauf from './Verlauf'
 import Adresse from './Adresse'
+import Gcs from './Gcs'
 import Zeitstrahl from './Zeitstrahl'
 import { adresseSetzen } from './adresse'
 import Tracerdiagnose, { FuehrendeDiagnose } from './Tracerdiagnose'
 import { diagnoseSetzen, gruppeSetzen, gruppeVormerken } from './diagnose'
 import { MASSNAHMEN_FELDER } from '../../../katalog/massnahmenArten'
 import { zeitstrahlFelder } from './zeitstrahl'
+import { GCS_FELDER, GCS_SKALEN } from '../../../katalog/gcs'
 import { besatzungSetzen, type Besetzung, type Posten } from './besatzung'
 
 // Kamera und Texterkennung werden erst geladen, wenn jemand die Karte
@@ -59,11 +61,20 @@ function gefuellt(w: unknown): boolean {
   return true
 }
 
-/** Aufeinanderfolgende Zahlenfelder zu einem Raster zusammenfassen. */
-function inBloecke(felder: AelrdFeld[]): { raster: boolean; felder: AelrdFeld[] }[] {
+/**
+ * Aufeinanderfolgende Zahlenfelder zu einem Raster zusammenfassen.
+ *
+ * `imRaster` entscheidet, was ins Raster darf. Ein Feld mit eigener Maske
+ * gehört nicht hinein — sonst stünde dort die nackte Zahl, und die Maske
+ * käme nie zum Zug.
+ */
+function inBloecke(
+  felder: AelrdFeld[],
+  imRaster: (f: AelrdFeld) => boolean = istRasterfeld,
+): { raster: boolean; felder: AelrdFeld[] }[] {
   const aus: { raster: boolean; felder: AelrdFeld[] }[] = []
   for (const f of felder) {
-    const r = istRasterfeld(f)
+    const r = imRaster(f)
     const letzter = aus[aus.length - 1]
     if (letzter && letzter.raster === r) letzter.felder.push(f)
     else aus.push({ raster: r, felder: [f] })
@@ -175,7 +186,10 @@ function Block({ id, titel, teile, zeigeSchritt, felder, werte, setzen, aktion, 
                 </div>
               ) : null}
               {vorweg?.[teil.id] ?? null}
-              {ersatz?.[teil.id] ?? inBloecke(teil.felder.filter((f) => !uebernommen?.has(f.id))).map((gruppe, i) =>
+              {ersatz?.[teil.id] ?? inBloecke(
+                teil.felder.filter((f) => !uebernommen?.has(f.id)),
+                (f) => istRasterfeld(f) && !ersatzFeld?.[f.id],
+              ).map((gruppe, i) =>
                 gruppe.raster ? (
                   <div key={i} style={{
                       display: 'grid',
@@ -240,7 +254,12 @@ export default function Doku() {
   const uebernommeneFelder = useMemo(
     // Der Zeitstrahl führt die Zeiten selbst; darunter stünden sie ein
     // zweites Mal.
-    () => new Set([...MASSNAHMEN_FELDER, ...zeitstrahlFelder()]),
+    // Das GCS-Schema führt seine vier Felder selbst; einzeln stünden dort
+    // vier Zahlen ohne die Antworten, zu denen sie gehören.
+    () => new Set([
+      ...MASSNAHMEN_FELDER, ...zeitstrahlFelder(),
+      ...GCS_FELDER.filter((f) => f !== GCS_SKALEN[0].feld),
+    ]),
     [],
   )
   /**
@@ -485,6 +504,8 @@ export default function Doku() {
                 zeiten: <Zeitstrahl werte={werte} setWerte={setWerte} setzen={setzen} />,
               }}
               ersatzFeld={{
+                // Das Schema steht an der Stelle des ersten GCS-Feldes.
+                [GCS_SKALEN[0].feld]: <Gcs werte={werte} setWerte={setWerte} />,
                 // Der Bogen führt je eine Schreiblinie; getippt wird in drei
                 // Feldern, wie im alten Formular.
                 transport_von: (
