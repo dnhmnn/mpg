@@ -25,6 +25,7 @@ import Massnahmen from './Massnahmen'
 import Verlauf from './Verlauf'
 import Adresse from './Adresse'
 import Gcs from './Gcs'
+import Pupillen from './Pupillen'
 import Zeitstrahl from './Zeitstrahl'
 import { adresseSetzen } from './adresse'
 import Tracerdiagnose, { FuehrendeDiagnose } from './Tracerdiagnose'
@@ -32,6 +33,7 @@ import { diagnoseSetzen, gruppeSetzen, gruppeVormerken } from './diagnose'
 import { MASSNAHMEN_FELDER } from '../../../katalog/massnahmenArten'
 import { zeitstrahlFelder } from './zeitstrahl'
 import { GCS_FELDER, GCS_SKALEN } from '../../../katalog/gcs'
+import { PUPILLEN_FELDER } from '../../../katalog/pupillen'
 import { besatzungSetzen, type Besetzung, type Posten } from './besatzung'
 
 // Kamera und Texterkennung werden erst geladen, wenn jemand die Karte
@@ -259,6 +261,7 @@ export default function Doku() {
     () => new Set([
       ...MASSNAHMEN_FELDER, ...zeitstrahlFelder(),
       ...GCS_FELDER.filter((f) => f !== GCS_SKALEN[0].feld),
+      ...PUPILLEN_FELDER.slice(1),
     ]),
     [],
   )
@@ -506,6 +509,9 @@ export default function Doku() {
               ersatzFeld={{
                 // Das Schema steht an der Stelle des ersten GCS-Feldes.
                 [GCS_SKALEN[0].feld]: <Gcs werte={werte} setWerte={setWerte} />,
+                // Der Pupillenstatus steht an der Stelle des ersten seiner
+                // vier Felder.
+                [PUPILLEN_FELDER[0]]: <Pupillen werte={werte} setWerte={setWerte} />,
                 // Der Bogen führt je eine Schreiblinie; getippt wird in drei
                 // Feldern, wie im alten Formular.
                 transport_von: (
