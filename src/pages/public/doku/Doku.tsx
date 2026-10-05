@@ -22,6 +22,7 @@ import { zettelMitFeldern, type ZettelTeil } from './zettel'
 import Unterschrift from './Unterschrift'
 import Besatzung from './Besatzung'
 import Massnahmen from './Massnahmen'
+import Tracerdiagnose from './Tracerdiagnose'
 import { MASSNAHMEN_FELDER } from '../../../katalog/massnahmenArten'
 import { besatzungSetzen, type Besetzung, type Posten } from './besatzung'
 
@@ -64,7 +65,7 @@ function inBloecke(felder: AelrdFeld[]): { raster: boolean; felder: AelrdFeld[] 
   return aus
 }
 
-function Block({ id, titel, teile, zeigeSchritt, felder, werte, setzen, aktion, ersatz, uebernommen }: {
+function Block({ id, titel, teile, zeigeSchritt, felder, werte, setzen, aktion, ersatz, ersatzFeld, uebernommen }: {
   id: string
   titel: string
   /** Die Abschnitte des Bogens, die auf diesem Zettel zusammenstehen. */
@@ -89,6 +90,13 @@ function Block({ id, titel, teile, zeigeSchritt, felder, werte, setzen, aktion, 
    * später wiederfindet. Vier Textfelder könnten das nicht leisten.
    */
   ersatz?: Record<string, React.ReactNode>
+  /**
+   * Einzelne Felder, die eine eigene Maske zeigen.
+   *
+   * Der Bogen führt die Tracerdiagnose als Schreiblinie; gewählt wird sie
+   * aber aus Gruppen. Das Feld bleibt dasselbe, nur die Bedienung nicht.
+   */
+  ersatzFeld?: Record<string, React.ReactNode>
   /**
    * Felder, die eine eigene Maske über dem Block führt.
    *
@@ -175,12 +183,14 @@ function Block({ id, titel, teile, zeigeSchritt, felder, werte, setzen, aktion, 
                   <div key={i}>
                     {gruppe.felder.map((f) => (
                       <div key={f.id}>
-                        <DokuFeld
-                          feld={f} werte={werte} setzen={setzen}
-                          // Trägt die Überschrift den Namen schon, wird er
-                          // am Feld weggelassen.
-                          ohneBeschriftung={Boolean(teil.kennung) && teil.felder.length === 1}
-                        />
+                        {ersatzFeld?.[f.id] ?? (
+                          <DokuFeld
+                            feld={f} werte={werte} setzen={setzen}
+                            // Trägt die Überschrift den Namen schon, wird er
+                            // am Feld weggelassen.
+                            ohneBeschriftung={Boolean(teil.kennung) && teil.felder.length === 1}
+                          />
+                        )}
                         {/* Die Fläche zum Unterschreiben gehört an das Feld,
                             das sie trägt — nicht ans Ende des Blocks. */}
                         {f.id === 'unterschrift' ? (
@@ -451,6 +461,14 @@ export default function Doku() {
                 'massnahmen-verlauf': <Massnahmen werte={werte} setWerte={setWerte} />,
               }}
               uebernommen={uebernommeneFelder}
+              ersatzFeld={{
+                tracerdiagnose: (
+                  <Tracerdiagnose
+                    wert={String(werte.tracerdiagnose ?? '')}
+                    onChange={(w) => setzen('tracerdiagnose', w)}
+                  />
+                ),
+              }}
             />
 
             {/* Weiter von Zettel zu Zettel, ohne an den Rand greifen zu müssen. */}
