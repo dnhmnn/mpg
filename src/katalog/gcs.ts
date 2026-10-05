@@ -30,17 +30,35 @@ function skala(code: string, feld: string, titel: string): GcsSkala {
   return { feld, titel, stufen }
 }
 
-export const GCS_SKALEN: GcsSkala[] = [
-  skala('D10', 'gcs_augen', 'Augen öffnen'),
-  skala('D1Z', 'gcs_verbal', 'Beste verbale Reaktion'),
-  skala('D35', 'gcs_motorik', 'Beste motorische Reaktion'),
-]
+/**
+ * Die drei Skalen für einen Erhebungszeitpunkt.
+ *
+ * Der Bogen erhebt die GCS zweimal: beim Erstbefund und bei der Übergabe.
+ * Dieselbe Skala, andere Felder — `vorsatz` ist 'ub_' für die Übergabe.
+ */
+export function gcsSkalen(vorsatz = ''): GcsSkala[] {
+  return [
+    skala('D10', `${vorsatz}gcs_augen`, 'Augen öffnen'),
+    skala('D1Z', `${vorsatz}gcs_verbal`, 'Beste verbale Reaktion'),
+    skala('D35', `${vorsatz}gcs_motorik`, 'Beste motorische Reaktion'),
+  ]
+}
+
+export const GCS_SKALEN: GcsSkala[] = gcsSkalen()
 
 /** Das Feld, in dem die Summe steht. */
 export const GCS_SUMME = 'gcs_summe'
 
+export function gcsSummeFeld(vorsatz = ''): string {
+  return `${vorsatz}gcs_summe`
+}
+
 /** Alle Felder, die das Schema führt. */
-export const GCS_FELDER = [...GCS_SKALEN.map((s) => s.feld), GCS_SUMME]
+export function gcsFelder(vorsatz = ''): string[] {
+  return [...gcsSkalen(vorsatz).map((s) => s.feld), gcsSummeFeld(vorsatz)]
+}
+
+export const GCS_FELDER = gcsFelder()
 
 /**
  * Die Summe aus den drei Teilen.

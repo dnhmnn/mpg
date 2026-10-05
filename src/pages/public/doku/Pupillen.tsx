@@ -10,7 +10,7 @@
 
 import { useState } from 'react'
 import {
-  PUPILLEN_FELDER, PUPILLEN_FRAGEN, pupillenLeer, pupillenText, seitengleich,
+  pupillenFelder, pupillenFragen, pupillenLeer, pupillenText, seitengleich,
 } from '../../../katalog/pupillen'
 import type { Werte } from './DokuFeld'
 
@@ -19,27 +19,31 @@ const TEXT = '#1a0e08'
 const GRAU = 'var(--warm-gray)'
 const LINIE = 'rgba(96,8,18,0.14)'
 
-export default function Pupillen({ werte, setWerte }: {
+export default function Pupillen({ werte, setWerte, vorsatz = '' }: {
   werte: Werte
   setWerte: (f: (v: Werte) => Werte) => void
+  /** 'ub_' für die Übergabe — dieselben Fragen, andere Felder. */
+  vorsatz?: string
 }) {
   const [offen, setOffen] = useState(false)
   const [wahl, setWahl] = useState<Record<string, string>>({})
   const [gekoppelt, setGekoppelt] = useState(true)
 
-  const befund = pupillenText(werte)
+  const fragen = pupillenFragen(vorsatz)
+  const felder = pupillenFelder(vorsatz)
+  const befund = pupillenText(werte, vorsatz)
 
   function oeffnen() {
     const start: Record<string, string> = {}
-    for (const f of PUPILLEN_FELDER) start[f] = String(werte[f] ?? '')
+    for (const f of felder) start[f] = String(werte[f] ?? '')
     setWahl(start)
     // Was dasteht, entscheidet über den Schalter: ein Seitenunterschied
     // wird nicht beim Öffnen weggebügelt.
-    setGekoppelt(pupillenLeer(werte) || seitengleich(werte))
+    setGekoppelt(pupillenLeer(werte, vorsatz) || seitengleich(werte, vorsatz))
     setOffen(true)
   }
 
-  function waehlen(frage: typeof PUPILLEN_FRAGEN[number], seite: 'rechts' | 'links', wert: string) {
+  function waehlen(frage: typeof fragen[number], seite: 'rechts' | 'links', wert: string) {
     setWahl((w) => {
       const aus = { ...w }
       const feld = frage[seite]
@@ -53,13 +57,13 @@ export default function Pupillen({ werte, setWerte }: {
   function uebernehmen() {
     setWerte((v) => {
       const aus = { ...v }
-      for (const f of PUPILLEN_FELDER) aus[f] = wahl[f] ?? ''
+      for (const f of felder) aus[f] = wahl[f] ?? ''
       return aus
     })
     setOffen(false)
   }
 
-  const vorschau = pupillenText(wahl)
+  const vorschau = pupillenText(wahl, vorsatz)
 
   return (
     <div style={{ marginBottom: 10 }}>
@@ -78,7 +82,7 @@ export default function Pupillen({ werte, setWerte }: {
             Lesen sagen. */}
         <span style={{ display: 'inline-flex', gap: 5, flexShrink: 0 }}>
           {(['rechts', 'links'] as const).map((seite) => {
-            const weite = String(werte[PUPILLEN_FRAGEN[0][seite]] ?? '')
+            const weite = String(werte[fragen[0][seite]] ?? '')
             const gross = weite === 'weit' ? 15 : weite === 'eng' ? 6 : weite === '' ? 9 : 11
             return (
               <span key={seite} style={{
@@ -151,7 +155,7 @@ export default function Pupillen({ werte, setWerte }: {
               </span>
             </button>
 
-            {PUPILLEN_FRAGEN.map((frage) => (
+            {fragen.map((frage) => (
               <div key={frage.id} style={{ marginBottom: 14 }}>
                 <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: ROT, marginBottom: 5 }}>
                   {frage.titel}

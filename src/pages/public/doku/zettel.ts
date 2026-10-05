@@ -237,8 +237,63 @@ export const ZETTEL: Zettel[] = [
   {
     id: 'uebergabe',
     kurz: 'ÜBER',
-    titel: 'Übergabe und Abschluss',
-    abschnitte: ['uebergabe_befund', 'uebergabe_neuro', 'abschluss'],
+    titel: 'Übergabe-Befund nach xABCDE',
+    abschnitte: ['uebergabe_befund', 'uebergabe_neuro'],
+    /*
+     * Derselbe Befund wie beim Antreffen, dieselbe Reihenfolge.
+     *
+     * Der Bogen stellt ihn anders — erst Atemwege bis EKG, dann in einem
+     * zweiten Kasten Neurologie und Messwerte. Abgearbeitet wird er aber
+     * nach demselben Schema wie der Erstbefund, und wer ihn zweimal am Tag
+     * erhebt, soll ihn nicht zweimal anders suchen.
+     */
+    gruppen: [
+      { kennung: '', kurz: 'Z', titel: 'Zeitpunkt', felder: ['ub_zeitpunkt'] },
+      { kennung: 'x', titel: 'Kritische Blutung', felder: ['ub_kreislauf'] },
+      { kennung: 'A', titel: 'Atemwege', felder: ['ub_atemwege'] },
+      { kennung: 'B', titel: 'Atmung', felder: ['ub_atmung'] },
+      {
+        kennung: 'C',
+        titel: 'Kreislauf',
+        felder: ['ub_puls_regelmaessig', 'ub_radialispuls', 'ub_rekap', 'ub_schockzeichen', 'ub_ekg'],
+      },
+      {
+        kennung: 'D',
+        titel: 'Neurologie und Psyche',
+        felder: [
+          'ub_neuro_ohne_befund', 'ub_bewusstsein',
+          'ub_gcs_augen', 'ub_gcs_verbal', 'ub_gcs_motorik', 'ub_gcs_summe',
+          'ub_pupillen_weite_re', 'ub_pupillen_weite_li',
+          'ub_pupillen_licht_re', 'ub_pupillen_licht_li',
+          'ub_psyche',
+        ],
+      },
+      {
+        kennung: 'E',
+        titel: 'Entkleiden, Schmerz, Untersuchung',
+        felder: [
+          'ub_schmerz', 'ub_schmerz_nicht_beurteilbar', 'ub_schmerz_tolerabel',
+          'ub_untersuchung',
+        ],
+      },
+      {
+        // Beim Erstbefund stehen die Messwerte auf einem eigenen Zettel. Hier
+        // gehören sie an das Ende desselben.
+        kennung: '',
+        kurz: 'M',
+        titel: 'Messwerte bei Übergabe',
+        felder: [
+          'ub_af', 'ub_spo2', 'ub_spo2_mit_o2', 'ub_hf', 'ub_puls', 'ub_etco2',
+          'ub_nibp_sys', 'ub_nibp_dia', 'ub_ibp_sys', 'ub_ibp_dia', 'ub_bz', 'ub_temp',
+        ],
+      },
+    ],
+  },
+  {
+    id: 'abschluss',
+    kurz: 'ENDE',
+    titel: 'Abschluss',
+    abschnitte: ['abschluss'],
   },
 ]
 

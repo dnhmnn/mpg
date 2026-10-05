@@ -66,7 +66,10 @@ describe('Was die Zettel tragen', () => {
     expect(teile('einsatz')).toEqual(['einsatzdaten', 'besatzung'])
     expect(teile('befund')).toEqual(['erstbefund', 'neurologie', 'untersuchung', 'verletzungen'])
     expect(teile('massnahmen')).toEqual(['medikation', 'reanimation', 'zugaenge', 'beatmung', 'massnahmen'])
-    expect(teile('uebergabe')).toEqual(['uebergabe_befund', 'uebergabe_neuro', 'abschluss'])
+    // Übergabe-Befund und Abschluss stehen wieder getrennt: der eine ist ein
+    // Befund nach xABCDE, der andere Unterschrift und Papierkram.
+    expect(teile('uebergabe')).toEqual(['uebergabe_befund', 'uebergabe_neuro'])
+    expect(teile('abschluss')).toEqual(['abschluss'])
   })
 
   it('gibt zusammengelegten Zetteln ihre Teile zum Beschriften', () => {
@@ -166,5 +169,43 @@ describe('Der Symptom-Beginn gehört zur Anamnese', () => {
     const ausBogen = [...felderAusAbschnitten(ZETTEL.find((z) => z.id === 'zeiten')!),
       ...felderAusAbschnitten(ZETTEL.find((z) => z.id === 'anamnese')!)].sort()
     expect(ausZettel).toEqual(ausBogen)
+  })
+})
+
+describe('Der Übergabe-Befund nach xABCDE', () => {
+  const ueber = ZETTEL.find((z) => z.id === 'uebergabe')!
+  const befund = ZETTEL.find((z) => z.id === 'befund')!
+
+  it('geht dieselben Schritte wie der Erstbefund', () => {
+    // Wer denselben Befund zweimal am Tag erhebt, soll ihn nicht zweimal
+    // anders suchen. Die Messwerte stehen beim Erstbefund auf einem eigenen
+    // Zettel und hier am Ende desselben.
+    expect(ueber.gruppen!.map((g) => g.kennung || g.kurz))
+      .toEqual([...befund.gruppen!.map((g) => g.kennung || g.kurz), 'M'])
+  })
+
+  it('stellt in jedem Schritt die Entsprechung des Erstbefunds', () => {
+    const paare: [string, string][] = [['x', 'ub_kreislauf'], ['A', 'ub_atemwege'], ['B', 'ub_atmung']]
+    for (const [kennung, feld] of paare) {
+      expect(ueber.gruppen!.find((g) => g.kennung === kennung)?.felder).toEqual([feld])
+    }
+    // Was der Erstbefund bei C und D führt, führt die Übergabe auch — soweit
+    // der Bogen es dort erhebt.
+    const c = ueber.gruppen!.find((g) => g.kennung === 'C')!.felder
+    expect(c).toContain('ub_radialispuls')
+    expect(c).toContain('ub_ekg')
+    const d = ueber.gruppen!.find((g) => g.kennung === 'D')!.felder
+    expect(d).toContain('ub_gcs_summe')
+    expect(d).toContain('ub_psyche')
+  })
+
+  it('verliert kein Feld und führt keines doppelt', () => {
+    const ausSchema = ueber.gruppen!.flatMap((g) => g.felder)
+    expect([...ausSchema].sort()).toEqual([...felderAusAbschnitten(ueber)].sort())
+    expect(ausSchema.length).toBe(new Set(ausSchema).size)
+  })
+
+  it('nennt nur Felder, die es im Bogen gibt', () => {
+    expect(ueber.gruppen!.flatMap((g) => g.felder).filter((id) => !aelrdFeld(id))).toEqual([])
   })
 })

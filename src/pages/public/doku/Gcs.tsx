@@ -10,7 +10,7 @@
 
 import { useState } from 'react'
 import { aelrdFeld } from '../../../katalog/aelrd'
-import { GCS_SKALEN, GCS_SUMME, gcsSchwere, gcsSumme } from '../../../katalog/gcs'
+import { gcsFelder, gcsSkalen, gcsSchwere, gcsSumme, gcsSummeFeld } from '../../../katalog/gcs'
 import type { Werte } from './DokuFeld'
 
 const ROT = '#600812'
@@ -25,35 +25,39 @@ function zahl(w: unknown): number | null {
   return Number.isFinite(n) ? n : null
 }
 
-export default function Gcs({ werte, setWerte }: {
+export default function Gcs({ werte, setWerte, vorsatz = '' }: {
   werte: Werte
   setWerte: (f: (v: Werte) => Werte) => void
+  /** 'ub_' für die Übergabe — dieselbe Skala, andere Felder. */
+  vorsatz?: string
 }) {
   const [offen, setOffen] = useState(false)
   const [wahl, setWahl] = useState<Record<string, number | null>>({})
 
-  const imProtokoll = GCS_SKALEN.map((s) => zahl(werte[s.feld]))
-  const summeImProtokoll = zahl(werte[GCS_SUMME])
+  const skalen = gcsSkalen(vorsatz)
+  const summeFeld = gcsSummeFeld(vorsatz)
+  const imProtokoll = skalen.map((s) => zahl(werte[s.feld]))
+  const summeImProtokoll = zahl(werte[summeFeld])
 
   function oeffnen() {
     // Was schon dasteht, steht beim Öffnen gewählt da.
     const start: Record<string, number | null> = {}
-    GCS_SKALEN.forEach((s, i) => { start[s.feld] = imProtokoll[i] })
+    skalen.forEach((s, i) => { start[s.feld] = imProtokoll[i] })
     setWahl(start)
     setOffen(true)
   }
 
-  const gewaehlt = GCS_SKALEN.map((s) => wahl[s.feld] ?? null)
+  const gewaehlt = skalen.map((s) => wahl[s.feld] ?? null)
   const summe = gcsSumme(gewaehlt)
 
   function uebernehmen() {
     setWerte((v) => {
       const aus = { ...v }
-      GCS_SKALEN.forEach((s) => {
+      skalen.forEach((s) => {
         const p = wahl[s.feld]
         aus[s.feld] = p === null || p === undefined ? '' : String(p)
       })
-      aus[GCS_SUMME] = summe === null ? '' : String(summe)
+      aus[summeFeld] = summe === null ? '' : String(summe)
       return aus
     })
     setOffen(false)
@@ -83,7 +87,7 @@ export default function Gcs({ werte, setWerte }: {
             {imProtokoll.some((p) => p !== null)
               // Die kurzen Namen des Bogens: Augen, Verbal, Motorik — die
               // Überschriften der Norm beginnen zweimal mit "Beste".
-              ? GCS_SKALEN.map((s, i) => `${aelrdFeld(s.feld)?.label ?? s.titel} ${imProtokoll[i] ?? '–'}`).join(' · ')
+              ? skalen.map((s, i) => `${aelrdFeld(s.feld)?.label ?? s.titel} ${imProtokoll[i] ?? '–'}`).join(' · ')
               : 'Schema öffnen, Antworten wählen'}
           </span>
         </span>
@@ -123,7 +127,7 @@ export default function Gcs({ werte, setWerte }: {
           </header>
 
           <div style={{ flex: 1, overflowY: 'auto', padding: '10px 12px 16px', maxWidth: 560, width: '100%', margin: '0 auto', boxSizing: 'border-box' }}>
-            {GCS_SKALEN.map((s) => (
+            {skalen.map((s) => (
               <div key={s.feld} style={{ marginBottom: 14 }}>
                 <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: ROT, marginBottom: 5 }}>
                   {s.titel}

@@ -32,8 +32,8 @@ import Tracerdiagnose, { FuehrendeDiagnose } from './Tracerdiagnose'
 import { diagnoseSetzen, gruppeSetzen, gruppeVormerken } from './diagnose'
 import { MASSNAHMEN_FELDER } from '../../../katalog/massnahmenArten'
 import { zeitstrahlFelder } from './zeitstrahl'
-import { GCS_FELDER, GCS_SKALEN } from '../../../katalog/gcs'
-import { PUPILLEN_FELDER } from '../../../katalog/pupillen'
+import { gcsFelder, gcsSkalen } from '../../../katalog/gcs'
+import { pupillenFelder } from '../../../katalog/pupillen'
 import { besatzungSetzen, type Besetzung, type Posten } from './besatzung'
 
 // Kamera und Texterkennung werden erst geladen, wenn jemand die Karte
@@ -260,8 +260,12 @@ export default function Doku() {
     // vier Zahlen ohne die Antworten, zu denen sie gehören.
     () => new Set([
       ...MASSNAHMEN_FELDER, ...zeitstrahlFelder(),
-      ...GCS_FELDER.filter((f) => f !== GCS_SKALEN[0].feld),
-      ...PUPILLEN_FELDER.slice(1),
+      // Erstbefund und Übergabe führen beide GCS und Pupillen; die Masken
+      // stehen jeweils an der Stelle des ersten Feldes, der Rest entfällt.
+      ...['', 'ub_'].flatMap((v) => [
+        ...gcsFelder(v).filter((f) => f !== gcsSkalen(v)[0].feld),
+        ...pupillenFelder(v).slice(1),
+      ]),
     ]),
     [],
   )
@@ -508,10 +512,13 @@ export default function Doku() {
               }}
               ersatzFeld={{
                 // Das Schema steht an der Stelle des ersten GCS-Feldes.
-                [GCS_SKALEN[0].feld]: <Gcs werte={werte} setWerte={setWerte} />,
+                [gcsSkalen()[0].feld]: <Gcs werte={werte} setWerte={setWerte} />,
                 // Der Pupillenstatus steht an der Stelle des ersten seiner
                 // vier Felder.
-                [PUPILLEN_FELDER[0]]: <Pupillen werte={werte} setWerte={setWerte} />,
+                [pupillenFelder()[0]]: <Pupillen werte={werte} setWerte={setWerte} />,
+                // Dieselben Masken für die Übergabe.
+                [gcsSkalen('ub_')[0].feld]: <Gcs werte={werte} setWerte={setWerte} vorsatz="ub_" />,
+                [pupillenFelder('ub_')[0]]: <Pupillen werte={werte} setWerte={setWerte} vorsatz="ub_" />,
                 // Der Bogen führt je eine Schreiblinie; getippt wird in drei
                 // Feldern, wie im alten Formular.
                 transport_von: (
