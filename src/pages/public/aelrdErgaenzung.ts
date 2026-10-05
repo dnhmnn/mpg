@@ -18,7 +18,8 @@ export const AELRD_ERGAENZUNG: Record<string, string[]> = {
 
   zeitstrahl: [
     'symptombeginn', 'symptombeginn_geschaetzt', 'kollaps_beobachtet',
-    'symptombeginn_ueber24h', 'zeit_ankunft_patient', 'zeit_einsatzbereit', 'zeit_ende',
+    'symptombeginn_ueber24h', 'zeit_uebernahme', 'zeit_ankunft_patient',
+    'zeit_einsatzbereit', 'zeit_ende',
   ],
 
   anamnese: ['ersthelfermassnahmen', 'az_vor_ereignis', 'first_responder'],

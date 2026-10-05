@@ -175,6 +175,7 @@ function einsatzdaten(p: Payload): string {
          <div class="zeiten">
            ${wertKasten(w(p, 'symptombeginn'), '')}
            ${wertKasten(w(p, 'zeit_alarm'), 'Alarm')}
+           ${wertKasten(w(p, 'zeit_uebernahme'), 'Einsatzübernahme')}
            ${wertKasten(w(p, 'zeit_ankunft_ort'), 'Ankunft (E.-Ort)')}
            ${wertKasten(w(p, 'zeit_ankunft_patient'), 'Ankunft (Patient)')}
            ${wertKasten(w(p, 'zeit_abfahrt'), 'Abfahrt')}

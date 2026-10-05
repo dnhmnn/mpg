@@ -121,6 +121,10 @@ export const AELRD_FELDER: AelrdFeld[] = [
   { id: 'symptombeginn_ueber24h', label: 'vor > 24 Stunden', typ: 'check', divi: 'symptombeginn_ueber24h' },
   { id: 'symptombeginn', label: 'Symptom-Beginn', typ: 'datum', divi: 'symptombeginn_zeit' },
   { id: 'zeit_alarm', label: 'Alarm', typ: 'zeit', divi: 'zeit_alarm', pflicht: true },
+  // Der Moment, in dem die Besatzung den Einsatz uebernimmt und ausrueckt —
+  // im Funk der Status 3. Weder der Bogen noch die Norm fuehren ihn; im
+  // Einsatz ist er die Zeit, nach der am haeufigsten gefragt wird.
+  { id: 'zeit_uebernahme', label: 'Einsatzübernahme (Status 3)', typ: 'zeit' },
   { id: 'zeit_ankunft_ort', label: 'Ankunft (E.-Ort)', typ: 'zeit', divi: 'zeit_ankunft_einsatzort', pflicht: true },
   { id: 'zeit_ankunft_patient', label: 'Ankunft (Patient)', typ: 'zeit', divi: 'zeit_ankunft_patient' },
   { id: 'zeit_abfahrt', label: 'Abfahrt', typ: 'zeit', divi: 'zeit_abfahrt' },
@@ -467,8 +471,9 @@ export const AELRD_ABSCHNITTE: AelrdAbschnitt[] = [
     titel: 'Zeiten',
     seite: 1,
     felder: ['symptombeginn', 'symptombeginn_geschaetzt', 'kollaps_beobachtet',
-      'symptombeginn_ueber24h', 'zeit_alarm', 'zeit_ankunft_ort', 'zeit_ankunft_patient',
-      'zeit_abfahrt', 'zeit_uebergabe', 'zeit_einsatzbereit', 'zeit_ende'],
+      'symptombeginn_ueber24h', 'zeit_alarm', 'zeit_uebernahme', 'zeit_ankunft_ort',
+      'zeit_ankunft_patient', 'zeit_abfahrt', 'zeit_uebergabe', 'zeit_einsatzbereit',
+      'zeit_ende'],
   },
   {
     id: 'notfallgeschehen',

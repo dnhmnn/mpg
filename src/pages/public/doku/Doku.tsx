@@ -23,6 +23,8 @@ import Unterschrift from './Unterschrift'
 import Besatzung from './Besatzung'
 import Massnahmen from './Massnahmen'
 import Verlauf from './Verlauf'
+import Adresse from './Adresse'
+import { adresseSetzen } from './adresse'
 import Tracerdiagnose, { FuehrendeDiagnose } from './Tracerdiagnose'
 import { diagnoseSetzen, gruppeSetzen, gruppeVormerken } from './diagnose'
 import { MASSNAHMEN_FELDER } from '../../../katalog/massnahmenArten'
@@ -467,6 +469,20 @@ export default function Doku() {
               }}
               uebernommen={uebernommeneFelder}
               ersatzFeld={{
+                // Der Bogen führt je eine Schreiblinie; getippt wird in drei
+                // Feldern, wie im alten Formular.
+                transport_von: (
+                  <Adresse
+                    feld="transport_von" label="Transport von — Abfahrtsadresse" werte={werte}
+                    onSetzen={(teil, w) => setWerte((v) => adresseSetzen(v, 'transport_von', teil, w))}
+                  />
+                ),
+                transport_ziel: (
+                  <Adresse
+                    feld="transport_ziel" label="Transportziel — Adresse" werte={werte}
+                    onSetzen={(teil, w) => setWerte((v) => adresseSetzen(v, 'transport_ziel', teil, w))}
+                  />
+                ),
                 tracerdiagnose: (
                   <Tracerdiagnose
                     wert={String(werte.tracerdiagnose ?? '')}

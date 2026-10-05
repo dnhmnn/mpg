@@ -153,6 +153,9 @@ export const AELRD_NAEP: Record<string, AelrdNaepZuordnung> = {
   kollaps_beobachtet: { feld: frage('BET') },
   symptombeginn_ueber24h: { feld: frage('BEM') },
   symptombeginn: { feld: wert('BEF', 'Die Norm führt nur die Uhrzeit, der Bogen ein Datum') },
+  zeit_uebernahme: {
+    feld: anhang('Weder Bogen noch Norm führen die Einsatzübernahme (Status 3)'),
+  },
   zeit_alarm: { feld: wert('BF0') },
   zeit_ankunft_ort: { feld: wert('BF7') },
   zeit_ankunft_patient: { feld: wert('BFE') },
