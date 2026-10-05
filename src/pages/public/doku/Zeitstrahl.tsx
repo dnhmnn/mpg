@@ -255,8 +255,25 @@ export default function Zeitstrahl({ werte, setWerte, setzen }: {
                 <span style={{ display: 'block', fontSize: 13, fontWeight: 700, color: TEXT }}>{h.titel}</span>
                 <span style={{ display: 'block', fontSize: 11, fontStyle: 'italic', color: GRAU }}>
                   {h.unter}
-                  {!steht && h.zeit ? ` · gerechnet ${h.zeit}` : ''}
                 </span>
+                {/*
+                 * Die gerechnete Zeit bleibt sichtbar, auch wenn schon eine
+                 * steht — sonst sähe man nie, wie weit die Rechnung daneben
+                 * lag. Angetippt setzt sie die Zeile; was man selbst getippt
+                 * hat, verschwindet nur auf diesen Griff hin.
+                 */}
+                {h.zeit && h.zeit !== steht ? (
+                  <button
+                    type="button" onClick={() => setzen(h.feld, h.zeit)}
+                    style={{
+                      display: 'block', marginTop: 1, padding: 0, background: 'none', border: 'none',
+                      fontFamily: 'inherit', fontSize: 11, fontStyle: 'italic', color: ROT,
+                      textAlign: 'left', cursor: 'pointer',
+                    }}
+                  >
+                    gerechnet {h.zeit}{steht ? ' übernehmen' : ''}
+                  </button>
+                ) : null}
               </span>
               <input
                 type="time" name={h.feld} value={steht}
