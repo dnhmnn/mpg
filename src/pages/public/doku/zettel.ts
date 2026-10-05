@@ -57,8 +57,47 @@ export type ZettelGruppe = {
 export const ZETTEL: Zettel[] = [
   { id: 'patient', kurz: 'PAT', titel: 'Patient und Einsatznummer', abschnitte: ['stammdaten', 'kennung'] },
   { id: 'einsatz', kurz: 'EINS', titel: 'Einsatz und Besatzung', abschnitte: ['einsatzdaten', 'besatzung'] },
-  { id: 'zeiten', kurz: 'ZEIT', titel: 'Zeiten', abschnitte: ['zeiten'] },
-  { id: 'anamnese', kurz: 'ANAM', titel: 'Notfallgeschehen und Anamnese', abschnitte: ['notfallgeschehen'] },
+  {
+    id: 'zeiten',
+    kurz: 'ZEIT',
+    titel: 'Zeiten',
+    abschnitte: ['zeiten'],
+    /*
+     * Der Abschnitt des Bogens führt neben den Einsatzzeiten auch den
+     * Symptom-Beginn. Der gehört aber zur Anamnese: er beschreibt den
+     * Patienten, nicht den Einsatz, und wird mit ihm erhoben. Hier bleiben
+     * die Zeiten, die der Zeitstrahl führt.
+     */
+    gruppen: [
+      {
+        id: 'zeiten',
+        kennung: '',
+        kurz: 'ZEIT',
+        titel: 'Zeiten',
+        felder: ['zeit_alarm', 'zeit_uebernahme', 'zeit_ankunft_ort', 'zeit_ankunft_patient',
+          'zeit_abfahrt', 'zeit_uebergabe', 'zeit_einsatzbereit', 'zeit_ende'],
+      },
+    ],
+  },
+  {
+    id: 'anamnese',
+    kurz: 'ANAM',
+    titel: 'Notfallgeschehen und Anamnese',
+    abschnitte: ['notfallgeschehen'],
+    gruppen: [
+      {
+        id: 'notfallgeschehen',
+        kennung: '',
+        kurz: 'ANAM',
+        titel: 'Notfallgeschehen und Anamnese',
+        // Der Symptom-Beginn steht hinter dem Allgemeinzustand vor dem
+        // Ereignis: beides wird im selben Gespräch erfragt.
+        felder: ['notfallgeschehen', 'ersthelfermassnahmen', 'az_vor_ereignis',
+          'symptombeginn', 'symptombeginn_geschaetzt', 'kollaps_beobachtet',
+          'symptombeginn_ueber24h', 'first_responder'],
+      },
+    ],
+  },
   {
     id: 'befund',
     kurz: 'BEF',

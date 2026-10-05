@@ -145,7 +145,8 @@ function Block({ id, titel, teile, zeigeSchritt, felder, werte, setzen, aktion, 
           {teile
             // Ein Teil, dessen Felder alle an eine eigene Maske gegangen
             // sind, hinterließe sonst eine Überschrift ohne Inhalt.
-            .filter((teil) => ersatz?.[teil.id] || teil.felder.some((f) => !uebernommen?.has(f.id)))
+            .filter((teil) => ersatz?.[teil.id] || vorweg?.[teil.id]
+              || teil.felder.some((f) => !uebernommen?.has(f.id)))
             .map((teil) => (
             <div key={teil.id} style={{ marginBottom: 4 }}>
               {zeigeSchritt ? (

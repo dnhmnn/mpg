@@ -137,3 +137,34 @@ describe('Der Erstbefund nach xABCDE', () => {
     expect(feld('E')).toContain('schmerz_tolerabel')
   })
 })
+
+describe('Der Symptom-Beginn gehört zur Anamnese', () => {
+  const zettel = zettelMitFeldern()
+  const felder = (id: string) => zettel.find((z) => z.id === id)?.felder.map((f) => f.id) ?? []
+
+  it('steht bei der Anamnese, nicht bei den Einsatzzeiten', () => {
+    // Er beschreibt den Patienten, nicht den Einsatz, und wird im selben
+    // Gespräch erfragt wie der Allgemeinzustand vor dem Ereignis.
+    for (const f of ['symptombeginn', 'symptombeginn_geschaetzt', 'kollaps_beobachtet', 'symptombeginn_ueber24h']) {
+      expect(felder('anamnese'), `${f} fehlt bei der Anamnese`).toContain(f)
+      expect(felder('zeiten'), `${f} steht noch bei den Zeiten`).not.toContain(f)
+    }
+  })
+
+  it('steht hinter dem Allgemeinzustand vor dem Ereignis', () => {
+    const a = felder('anamnese')
+    expect(a.indexOf('symptombeginn')).toBe(a.indexOf('az_vor_ereignis') + 1)
+  })
+
+  it('lässt beim Zeiten-Zettel nur die Einsatzzeiten', () => {
+    expect(felder('zeiten').every((f) => f.startsWith('zeit_'))).toBe(true)
+  })
+
+  it('verliert dabei kein Feld des Abschnitts', () => {
+    // Die Umgliederung ordnet um, sie nimmt nichts weg.
+    const ausZettel = [...felder('zeiten'), ...felder('anamnese')].sort()
+    const ausBogen = [...felderAusAbschnitten(ZETTEL.find((z) => z.id === 'zeiten')!),
+      ...felderAusAbschnitten(ZETTEL.find((z) => z.id === 'anamnese')!)].sort()
+    expect(ausZettel).toEqual(ausBogen)
+  })
+})
