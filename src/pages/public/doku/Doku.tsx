@@ -17,6 +17,9 @@ import { AELRD_ABSCHNITTE, aelrdFeld, type AelrdFeld } from '../../../katalog/ae
 import { istSpiegelFeld } from '../../../katalog/aelrdSpiegel'
 import { normalbefund, uebergabeUebernehmen, uebernahmeUmfang } from '../../../katalog/uebernahme'
 import DokuFeld, { Rasterzelle, gefuellt, istRasterfeld, type Werte } from './DokuFeld'
+import {
+  entwurfLesen, entwurfSchreiben, entwurfVerwerfen, standText,
+} from './entwurf'
 import Reiter, { ampel, type ReiterStand } from './Reiter'
 import { zettelMitFeldern, type ZettelTeil } from './zettel'
 import Unterschrift from './Unterschrift'
@@ -232,8 +235,21 @@ function Block({ id, titel, teile, zeigeSchritt, felder, werte, setzen, aktion, 
 }
 
 export default function Doku() {
-  const { org } = useOrg()
-  const [werte, setWerte] = useState<Werte>({})
+  const { org, orgCode } = useOrg()
+  /*
+   * Der Entwurf aus dem Gerät wird gleich beim Aufbau gelesen, nicht in einem
+   * Effekt: sonst stünde die Maske einen Augenblick leer da, und ein Tippen
+   * in dieser Lücke ginge gegen den leeren Stand.
+   */
+  const [werte, setWerte] = useState<Werte>(
+    () => entwurfLesen(window.localStorage, orgCode)?.werte ?? {},
+  )
+  /** Der Stand des wiederhergestellten Entwurfs — bis er weggetippt wird. */
+  const [wiederhergestellt, setWiederhergestellt] = useState(
+    () => entwurfLesen(window.localStorage, orgCode)?.stand ?? '',
+  )
+  /** Wenn das Gerät nichts behalten will, muss die Maske es sagen. */
+  const [sichertNicht, setSichertNicht] = useState(false)
   const [suche, setSuche] = useState('')
   const [kartenScan, setKartenScan] = useState(false)
   /**
@@ -244,6 +260,18 @@ export default function Doku() {
   const [pdfOffen, setPdfOffen] = useState(false)
   /** Welcher Schritt des aktiven Zettels gezeigt wird. */
   const [aktiverTeil, setAktiverTeil] = useState('')
+
+  /*
+   * Nach jeder Änderung in den Speicher des Geräts — kurz verzögert, damit
+   * beim Tippen nicht jeder Buchstabe schreibt.
+   */
+  useEffect(() => {
+    const uhr = setTimeout(() => {
+      const ging = entwurfSchreiben(window.localStorage, orgCode, werte)
+      setSichertNicht(!ging)
+    }, 400)
+    return () => clearTimeout(uhr)
+  }, [werte, orgCode])
 
   const setzen = (id: string, w: unknown) => setWerte((v) => ({ ...v, [id]: w }))
   /** Die Felder, die die Maßnahmen-Maske schreibt — sie stehen dort, nicht einzeln. */
@@ -455,7 +483,38 @@ export default function Doku() {
             placeholder="Feld suchen, z. B. Pupillen"
             style={{ width: '100%', padding: '9px 11px', background: '#fff', border: `0.5px solid ${LINIE}`, borderRadius: 999, fontFamily: 'inherit', fontSize: 14, color: TEXT, boxSizing: 'border-box' }}
           />
-          {treffer.length > 0 ? (
+          {/* Was das Gerät behalten hat — sichtbar, nicht heimlich. */}
+        {wiederhergestellt ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, padding: '8px 11px', background: '#fff', border: `0.5px solid ${LINIE}`, borderRadius: 10 }}>
+            <span style={{ flex: 1, fontSize: 12, fontStyle: 'italic', color: TEXT, lineHeight: 1.4 }}>
+              Entwurf von diesem Gerät wiederhergestellt — Stand {standText(wiederhergestellt)}.
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                entwurfVerwerfen(window.localStorage, orgCode)
+                setWerte({})
+                setWiederhergestellt('')
+              }}
+              style={{ background: 'none', border: 'none', color: ROT, fontFamily: 'inherit', fontSize: 12, fontWeight: 700, cursor: 'pointer', padding: 0 }}
+            >
+              verwerfen
+            </button>
+            <button
+              type="button" onClick={() => setWiederhergestellt('')} aria-label="Hinweis schließen"
+              style={{ background: 'none', border: 'none', color: GRAU, fontSize: 18, lineHeight: 1, padding: '0 2px', cursor: 'pointer', fontFamily: 'inherit' }}
+            >
+              ×
+            </button>
+          </div>
+        ) : null}
+        {sichertNicht ? (
+          <div style={{ marginBottom: 10, padding: '8px 11px', background: '#fffbeb', border: '0.5px solid #fde047', borderRadius: 10, fontSize: 12, fontStyle: 'italic', color: '#854d0e', lineHeight: 1.45 }}>
+            Dieses Gerät behält nichts — bei einem Neuladen wäre die Eingabe weg.
+            Privates Fenster oder abgeschaltete Website-Daten?
+          </div>
+        ) : null}
+        {treffer.length > 0 ? (
             <div style={{ background: '#fff', border: `0.5px solid ${LINIE}`, borderRadius: 10, marginTop: 6, overflow: 'hidden' }}>
               {treffer.map(({ feld, abschnitt }) => (
                 <button
