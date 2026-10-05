@@ -42,6 +42,8 @@ export default function Massnahmen({ werte, setWerte }: {
 
   // Leer heißt "jetzt": die Zeit des Eintragens, nicht die des Öffnens.
   const gezeigteZeit = zeit || jetztZeit()
+  /** Die gewählte Ausführung im Klartext — leer, solange keine steht. */
+  const gewaehlteArt = art.trim() ? (kat?.frei ? art.trim() : artText(kategorie, art)) : ''
 
   /** Die Begründung schließt den Eintrag ab — leer heißt "später". */
   function eintragen(grund: string) {
@@ -123,42 +125,64 @@ export default function Massnahmen({ werte, setWerte }: {
         )}
 
         {/* 3. Die Ausführung — sie wählt aus, eingetragen wird mit der
-               Begründung darunter. */}
+               Begründung darunter. Steht sie, treten die übrigen ab: sonst
+               lägen die Begründung auf y=695 und "später" auf y=808 eines
+               844 Pixel hohen Bildschirms, also beide am Rand. */}
         {kat ? (
-          <div>
-            <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: GRAU, marginBottom: 4 }}>
-              Ausführung
-            </div>
+          gewaehlteArt ? (
+            <button
+              type="button" onClick={() => { setArt(''); setFrei('') }}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 7, width: '100%',
+                padding: '8px 11px', background: ROT,
+                border: `0.5px solid ${ROT}`, borderRadius: 8,
+                fontFamily: 'inherit', textAlign: 'left', cursor: 'pointer',
+              }}
+            >
+              <span style={{ fontSize: 15, fontWeight: 700, color: 'rgba(255,255,255,0.7)', lineHeight: 1 }}>‹</span>
+              <span style={{ flex: 1, fontSize: 14, fontWeight: 700, color: '#fff' }}>{gewaehlteArt}</span>
+              <span style={{ fontSize: 11, fontStyle: 'italic', color: 'rgba(255,255,255,0.75)' }}>andere</span>
+            </button>
+          ) : (
             <div>
-              {kat.arten.map((a) => (
-                <Knopf
-                  key={a.wert} text={a.text} klein an={a.wert === art}
-                  onClick={() => setArt(a.wert === art ? '' : a.wert)}
-                />
-              ))}
-            </div>
-            {/* Wo der Bogen eine Schreiblinie führt, muss auch etwas
-                Ungelistetes eingetragen werden können. */}
-            {kat.frei ? (
-              <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
-                <input
-                  type="text" value={frei}
-                  onChange={(e) => { setFrei(e.target.value); setArt(e.target.value) }}
-                  placeholder="oder eigenen Text"
-                  style={{ flex: 1, minWidth: 0, padding: '8px 10px', background: '#fff', border: `0.5px solid ${art && art === frei ? ROT : LINIE}`, borderRadius: 8, fontFamily: 'inherit', fontSize: 16, color: TEXT, boxSizing: 'border-box' }}
-                />
+              <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: GRAU, marginBottom: 4 }}>
+                Ausführung
               </div>
-            ) : null}
-          </div>
+              <div>
+                {kat.arten.map((a) => (
+                  <Knopf key={a.wert} text={a.text} klein an={false} onClick={() => setArt(a.wert)} />
+                ))}
+              </div>
+              {/* Wo der Bogen eine Schreiblinie führt, muss auch etwas
+                  Ungelistetes eingetragen werden können. */}
+              {kat.frei ? (
+                <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
+                  <input
+                    type="text" value={frei}
+                    onChange={(e) => setFrei(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); setArt(frei) } }}
+                    placeholder="oder eigenen Text"
+                    style={{ flex: 1, minWidth: 0, padding: '8px 10px', background: '#fff', border: `0.5px solid ${LINIE}`, borderRadius: 8, fontFamily: 'inherit', fontSize: 16, color: TEXT, boxSizing: 'border-box' }}
+                  />
+                  <button
+                    type="button" onClick={() => setArt(frei)} disabled={!frei.trim()}
+                    style={{ padding: '8px 14px', background: frei.trim() ? ROT : 'rgba(96,8,18,0.15)', border: 'none', borderRadius: 8, color: '#fff', fontFamily: 'inherit', fontSize: 13, fontWeight: 700, cursor: frei.trim() ? 'pointer' : 'default' }}
+                  >
+                    Übernehmen
+                  </button>
+                </div>
+              ) : null}
+            </div>
+          )
         ) : null}
 
         {/* 4. Die rechtliche Begründung — der abschließende Griff. */}
-        {kat && art.trim() ? (
-          <div style={{ marginTop: 12, paddingTop: 10, borderTop: `0.5px solid ${LINIE}` }}>
+        {kat && gewaehlteArt ? (
+          <div style={{ marginTop: 10 }}>
             <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: ROT, marginBottom: 4 }}>
               Rechtliche Begründung
               <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0, fontStyle: 'italic', marginLeft: 5, color: GRAU }}>
-                trägt {kat.frei ? art.trim() : artText(kategorie, art)} um {gezeigteZeit} ein
+                trägt um {gezeigteZeit} ein
               </span>
             </div>
             <div>
