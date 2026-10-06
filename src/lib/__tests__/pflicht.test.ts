@@ -36,8 +36,11 @@ describe('Was ein Protokoll verlangt', () => {
     expect(o).not.toContain('spo2')
     expect(o).not.toContain('gcs_summe')
     expect(o).not.toContain('zeit_ankunft_ort')
-    // Was bleibt, hängt nicht am Patienten.
-    expect(o).toEqual(['einsatz_nr', 'einsatz_datum', 'zeit_alarm', 'mannschaft_tf', 'notfallgeschehen'])
+    // Was bleibt, hängt nicht am Patienten — auch ein Fehleinsatz wird
+    // unterschrieben.
+    expect(o).toEqual([
+      'einsatz_nr', 'einsatz_datum', 'zeit_alarm', 'mannschaft_tf', 'notfallgeschehen', 'unterschrift',
+    ])
   })
 
   it('kennt die Einsatzarten, auf die es sich beruft', () => {
@@ -95,5 +98,41 @@ describe('Was ein Protokoll verlangt', () => {
     expect(karte.get('notfallgeschehen')?.stufe).toBe('pflicht')
     expect(karte.get('name')?.stufe).toBe('erwartet')
     expect(karte.has('zeit_uebergabe')).toBe(false)
+  })
+})
+
+describe('Maßnahmen, Reanimation und Übergabe', () => {
+  it('verlangt die Medikation — oder die Angabe, dass keine gegeben wurde', () => {
+    const p = { einsatz_art: 'Primäreinsatz' }
+    expect(offen(p)).toContain('medikation')
+    expect(offen({ ...p, keine_medikation: true })).not.toContain('medikation')
+  })
+
+  it('fragt die Reanimationssituation erst, wenn reanimiert wurde', () => {
+    // Für einen verstauchten Knöchel wäre sie eine Pflicht ohne Gegenstand.
+    const p = { einsatz_art: 'Primäreinsatz' }
+    expect(offen(p)).not.toContain('rea_situation')
+    expect(offen({ ...p, rea_massnahme: ['herzdruckmassage'] })).toContain('rea_situation')
+    expect(offen({ ...p, rosc_zeit: '08:42' })).toContain('rea_situation')
+  })
+
+  it('verlangt bei der Übergabe dasselbe wie beim Erstbefund', () => {
+    const transport = { einsatz_art: 'Primäreinsatz', transport_ziel: 'Klinikum' }
+    const ueber = offen(transport).filter((f) => f.startsWith('ub_'))
+    const erst = offen({ einsatz_art: 'Primäreinsatz' })
+    // Jede Angabe des Erstbefunds, die es bei der Übergabe gibt, wird dort
+    // auch verlangt. (Die Haut führt der Bogen bei der Übergabe nicht.)
+    for (const f of erst) {
+      const ub = f === 'rekap_zeit' ? 'ub_rekap' : `ub_${f}`
+      if (!aelrdFeld(ub)) continue
+      expect(ueber, `${ub} fehlt bei der Übergabe`).toContain(ub)
+    }
+  })
+
+  it('verlangt die Unterschrift unter jedem Protokoll', () => {
+    expect(offen({ einsatz_art: 'Fehleinsatz' })).toContain('unterschrift')
+    // Die gezeichnete erfüllt sie.
+    expect(offen({ einsatz_art: 'Fehleinsatz', signature: 'data:image/png;base64,x' }))
+      .not.toContain('unterschrift')
   })
 })

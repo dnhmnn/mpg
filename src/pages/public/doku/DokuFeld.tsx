@@ -126,8 +126,16 @@ function Marke({ text, hinweis, stand }: {
   )
 }
 
-export function Knopf({ text, an, onClick, klein }: {
+export function Knopf({ text, an, onClick, klein, offen }: {
   text: string; an: boolean; onClick: () => void; klein?: boolean
+  /**
+   * Eine Pflichtangabe, die hinter diesem Knopf noch aussteht.
+   *
+   * Wo eine Maske die Felder übernimmt — die Maßnahmen etwa —, trägt kein
+   * Feld mehr einen Stern. Dann muss ihn der Knopf tragen, sonst ist die
+   * Pflicht unsichtbar.
+   */
+  offen?: boolean
 }) {
   return (
     <button
@@ -135,13 +143,15 @@ export function Knopf({ text, an, onClick, klein }: {
       style={{
         padding: klein ? '7px 10px' : '8px 12px', margin: '0 5px 5px 0',
         minHeight: klein ? 32 : 36,
-        background: an ? ROT : '#fff', color: an ? '#fff' : TEXT,
-        border: `0.5px solid ${an ? ROT : LINIE}`, borderRadius: 999,
-        fontFamily: 'inherit', fontSize: klein ? 13 : 14, fontWeight: an ? 700 : 400,
+        background: an ? ROT : offen ? '#fef2f2' : '#fff', color: an ? '#fff' : TEXT,
+        border: `${offen && !an ? 1 : 0.5}px solid ${an ? ROT : offen ? '#b91c1c' : LINIE}`,
+        borderRadius: 999,
+        fontFamily: 'inherit', fontSize: klein ? 13 : 14, fontWeight: an || offen ? 700 : 400,
         cursor: 'pointer', lineHeight: 1.2,
       }}
     >
       {text}
+      {offen && !an ? <span style={{ color: '#b91c1c', marginLeft: 3 }}>*</span> : null}
     </button>
   )
 }

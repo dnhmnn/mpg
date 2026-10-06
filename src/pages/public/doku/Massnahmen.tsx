@@ -15,6 +15,7 @@ import {
   MASSNAHMEN_KATEGORIEN, RECHTSGRUENDE, artText, massnahmeKategorie, rechtsgrund,
 } from '../../../katalog/massnahmenArten'
 import { Knopf, type Werte } from './DokuFeld'
+import { pflichtKarte } from '../../../katalog/pflicht'
 import {
   besetztePosten, durchName, jetztZeit, massnahmeEintragen, massnahmeGrundSetzen,
   massnahmeStreichen, massnahmenAbsteigend, ohneGrund,
@@ -48,6 +49,9 @@ export default function Massnahmen({ werte, setWerte }: {
   const eintraege = massnahmenAbsteigend(werte)
   const offen = ohneGrund(werte)
   const mannschaft = besetztePosten(werte)
+  // Die Felder hinter den Arten tragen keinen Stern mehr — die Maske hat sie
+  // übernommen. Also trägt ihn die Art.
+  const verlangt = pflichtKarte(werte)
 
   // Leer heißt "jetzt": die Zeit des Eintragens, nicht die des Öffnens.
   const gezeigteZeit = zeit || jetztZeit()
@@ -120,17 +124,26 @@ export default function Massnahmen({ werte, setWerte }: {
             }}
           >
             <span style={{ fontSize: 15, fontWeight: 700, color: ROT, lineHeight: 1 }}>‹</span>
-            <span style={{ flex: 1, fontSize: 13, fontWeight: 700, color: ROT }}>{kat.titel}</span>
+            <span style={{ flex: 1, fontSize: 13, fontWeight: 700, color: ROT }}>
+              {kat.titel}
+              {verlangt.get(kat.id) && !verlangt.get(kat.id)!.erfuellt ? (
+                <span style={{ color: '#b91c1c', marginLeft: 3 }}>*</span>
+              ) : null}
+            </span>
             <span style={{ fontSize: 11, fontStyle: 'italic', color: GRAU }}>andere Art</span>
           </button>
         ) : (
           <div style={{ marginBottom: 2 }}>
-            {MASSNAHMEN_KATEGORIEN.map((k) => (
-              <Knopf
-                key={k.id} text={k.titel} an={false}
-                onClick={() => { setKategorie(k.id); setFrei(''); setArt('') }}
-              />
-            ))}
+            {MASSNAHMEN_KATEGORIEN.map((k) => {
+              const stand = verlangt.get(k.id)
+              return (
+                <Knopf
+                  key={k.id} text={k.titel} an={false}
+                  offen={Boolean(stand) && !stand!.erfuellt}
+                  onClick={() => { setKategorie(k.id); setFrei(''); setArt('') }}
+                />
+              )
+            })}
           </div>
         )}
 

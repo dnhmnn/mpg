@@ -63,6 +63,18 @@ export function transportiert(p: Record<string, unknown>): boolean {
   return gefuellt(p.transport_ziel) || gefuellt(p.zeit_uebergabe) || gefuellt(p.uebergabe_an)
 }
 
+/**
+ * Ob reanimiert wurde.
+ *
+ * Die Reanimationssituation für jeden verstauchten Knöchel zu verlangen wäre
+ * eine Pflicht ohne Gegenstand. Gefragt wird sie, sobald irgendetwas aus dem
+ * Reanimationsblock dasteht.
+ */
+export function reanimiert(p: Record<string, unknown>): boolean {
+  return ['rea_massnahme', 'hdm_durch', 'defi1_zeit', 'rosc_zeit', 'todeszeitpunkt', 'kollaps_durch']
+    .some((f) => gefuellt(p[f]))
+}
+
 export const REGELN: Regel[] = [
   // ── Immer ───────────────────────────────────────────────────────────────
   {
@@ -164,6 +176,15 @@ export const REGELN: Regel[] = [
   { feld: 'medizintechnik', stufe: 'pflicht', wenn: patientVersorgt, grund: 'Medizintechnik — oder "keine Medizintechnik"' },
   { feld: 'erweitertes_monitoring', stufe: 'pflicht', wenn: patientVersorgt, grund: 'Erweitertes Monitoring — oder "kein erw. Monitoring"' },
   { feld: 'lagerung', stufe: 'pflicht', wenn: patientVersorgt, grund: 'Lagerungs- und Rettungstechnik' },
+  {
+    feld: 'medikation', stufe: 'pflicht', wenn: patientVersorgt,
+    erfuelltDurch: ['keine_medikation'],
+    grund: 'Medikation — oder "keine Medikation"',
+  },
+  {
+    feld: 'rea_situation', stufe: 'pflicht', wenn: reanimiert,
+    grund: 'Die Reanimationssituation',
+  },
 
   // ── Wenn transportiert wurde ────────────────────────────────────────────
   {
@@ -183,7 +204,8 @@ export const REGELN: Regel[] = [
     grund: 'Wo übergeben wurde',
   },
   {
-    feld: 'unterschrift', stufe: 'pflicht', wenn: transportiert,
+    // Auch ein Fehleinsatz wird unterschrieben.
+    feld: 'unterschrift', stufe: 'pflicht',
     erfuelltDurch: ['signature'],
     grund: 'Die Unterschrift schließt das Protokoll ab',
   },
@@ -221,6 +243,16 @@ export const REGELN: Regel[] = [
   {
     feld: 'ub_pupillen_licht_re', stufe: 'pflicht', wenn: transportiert,
     erfuelltDurch: ['ub_pupillen_licht_li'], grund: 'Lichtreaktion bei Übergabe',
+  },
+  {
+    feld: 'ub_gcs_summe', stufe: 'pflicht', wenn: transportiert,
+    erfuelltDurch: ['ub_bewusstsein'],
+    grund: 'Bewusstseinszustand bei Übergabe — als GCS oder Bewusstseinslage',
+  },
+  {
+    feld: 'ub_schmerz', stufe: 'pflicht', wenn: transportiert,
+    erfuelltDurch: ['ub_schmerz_nicht_beurteilbar'],
+    grund: 'Schmerz bei Übergabe — oder dass er nicht beurteilbar war',
   },
 
   // ── Erwartet, nie erzwungen ─────────────────────────────────────────────
