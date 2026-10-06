@@ -8,11 +8,13 @@
 // Rand. Ihre Farbe sagt, wo noch Pflichtfelder offen sind. Die Reihenfolge
 // ist die des Papierbogens: wer ihn kennt, findet alles an derselben Stelle.
 //
-// VORSCHAU: Diese Seite speichert nichts. Sie zeigt den Aufbau, damit er
-// beurteilt werden kann, bevor er die Dokumentation ersetzt.
+// Abgesendet wird am Ende des letzten Zettels. Was dabei entsteht, ist
+// derselbe Datensatz, den das alte Formular anlegt — Unitas und der Ausdruck
+// lesen ihn ohne Änderung.
 
 import { Suspense, lazy, useEffect, useMemo, useState } from 'react'
 import { useOrg } from '../OrgPublicLayout'
+import { pb } from '../../../lib/pocketbase'
 import { AELRD_ABSCHNITTE, aelrdFeld, type AelrdFeld } from '../../../katalog/aelrd'
 import { istSpiegelFeld } from '../../../katalog/aelrdSpiegel'
 import { offeneErwartung, offenePflicht, pflichtKarte, type Stand } from '../../../katalog/pflicht'
@@ -29,6 +31,8 @@ import Massnahmen from './Massnahmen'
 import Verlauf from './Verlauf'
 import Adresse from './Adresse'
 import Gcs from './Gcs'
+import Absenden from './Absenden'
+import { warteschlange, warteschlangeLeeren } from './absenden'
 import Pupillen from './Pupillen'
 import Zeitstrahl from './Zeitstrahl'
 import { adresseSetzen } from './adresse'
@@ -261,6 +265,8 @@ export default function Doku() {
   )
   /** Wenn das Gerät nichts behalten will, muss die Maske es sagen. */
   const [sichertNicht, setSichertNicht] = useState(false)
+  /** Nach dem Absenden: die Nummer, oder leer, wenn es in der Warteschlange liegt. */
+  const [gesendet, setGesendet] = useState<{ nummer: string; offline: boolean } | null>(null)
   const [suche, setSuche] = useState('')
   const [kartenScan, setKartenScan] = useState(false)
   /**
@@ -290,6 +296,19 @@ export default function Doku() {
    * die Liste bei jeder Änderung neu bestimmt, nicht einmal festgeschrieben.
    */
   const verlangt = useMemo(() => pflichtKarte(werte), [werte])
+
+  /*
+   * Was ohne Netz liegen geblieben ist, geht beim nächsten Öffnen raus —
+   * gleichgültig, in welcher der beiden Masken es entstanden ist.
+   */
+  useEffect(() => {
+    if (!navigator.onLine) return
+    const liegend = warteschlange(window.localStorage, orgCode)
+    if (liegend.length === 0) return
+    Promise.all(liegend.map(({ type, ...satz }) => pb.collection('patients').create(satz)))
+      .then(() => warteschlangeLeeren(window.localStorage, orgCode))
+      .catch(() => { /* bleibt liegen, nächster Versuch beim nächsten Öffnen */ })
+  }, [orgCode])
 
   const setzen = (id: string, w: unknown) => setWerte((v) => ({ ...v, [id]: w }))
   /** Die Felder, die die Maßnahmen-Maske schreibt — sie stehen dort, nicht einzeln. */
@@ -465,10 +484,6 @@ export default function Doku() {
               {pflichtOffen.length === 0 && erwartungOffen.length > 0 ? ` · ${erwartungOffen.length} erwartet` : ''}
             </div>
           </div>
-          <span style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#d97706', border: '0.5px solid #fde047', background: '#fffbeb', borderRadius: 999, padding: '3px 8px' }}>
-            Vorschau
-          </span>
-
           {/* Das Protokoll ansehen, wie es gedruckt aussieht. */}
           <button
             type="button" onClick={() => setPdfOffen(true)}
@@ -627,6 +642,18 @@ export default function Doku() {
               }}
             />
 
+            {aktuell.id === 'abschluss' ? (
+              <Absenden
+                werte={werte} orgId={org.id} orgCode={orgCode}
+                onSpringen={zumBlock}
+                onGesendet={(nummer, offline) => {
+                  entwurfVerwerfen(window.localStorage, orgCode)
+                  setWiederhergestellt('')
+                  setGesendet({ nummer, offline })
+                }}
+              />
+            ) : null}
+
             {/* Weiter von Zettel zu Zettel, ohne an den Rand greifen zu müssen. */}
             <div style={{ display: 'flex', gap: 8, marginTop: 2 }}>
               <button
@@ -652,6 +679,35 @@ export default function Doku() {
         )}
         </div>
       </main>
+
+      {gesendet ? (
+        <div
+          role="dialog" aria-label="Protokoll abgesendet"
+          style={{ position: 'fixed', inset: 0, zIndex: 95, background: 'var(--warm-bg)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 24, textAlign: 'center' }}
+        >
+          <div style={{ fontSize: 44, fontWeight: 800, color: ROT, lineHeight: 1 }}>✓</div>
+          <div style={{ fontSize: 17, fontStyle: 'italic', fontWeight: 700, color: TEXT, marginTop: 12 }}>
+            {gesendet.offline ? 'Auf dem Gerät gesichert' : 'Protokoll abgesendet'}
+          </div>
+          <div style={{ fontSize: 13, fontStyle: 'italic', color: GRAU, marginTop: 6, maxWidth: 320, lineHeight: 1.5 }}>
+            {gesendet.offline
+              ? 'Ohne Netz — es geht beim nächsten Öffnen mit Verbindung raus.'
+              : 'Es steht jetzt in Unitas, bei der eingetragenen Besatzung.'}
+          </div>
+          {gesendet.nummer ? (
+            <div style={{ fontSize: 15, fontWeight: 700, color: ROT, marginTop: 10, fontVariantNumeric: 'tabular-nums' }}>
+              {gesendet.nummer}
+            </div>
+          ) : null}
+          <button
+            type="button"
+            onClick={() => { setWerte({}); setGesendet(null); zumBlock('patient') }}
+            style={{ marginTop: 22, padding: '13px 22px', background: ROT, border: 'none', borderRadius: 12, color: '#fff', fontFamily: 'inherit', fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', cursor: 'pointer' }}
+          >
+            Neues Protokoll
+          </button>
+        </div>
+      ) : null}
 
       {pdfOffen ? (
         <Suspense fallback={null}>

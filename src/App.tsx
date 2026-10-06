@@ -112,8 +112,17 @@ function App() {
         ) : (
           <Route path="/:orgCode" element={<OrgPublicLayout />}>
             <Route index element={<OrgLanding />} />
-            <Route path="patienten" element={<OrgPatienten />} />
+            {/*
+              * Die Patientendokumentation ist die neue Maske. Sie liegt auf
+              * dem bisherigen Pfad, damit gedruckte Links und Lesezeichen
+              * weiter stimmen; /doku bleibt als zweiter Name bestehen.
+              *
+              * Das alte Formular ist unter /patienten-alt erreichbar — es
+              * bleibt, bis die neue Maske im Dienst bestanden hat.
+              */}
+            <Route path="patienten" element={<Suspense fallback={null}><Doku /></Suspense>} />
             <Route path="doku" element={<Suspense fallback={null}><Doku /></Suspense>} />
+            <Route path="patienten-alt" element={<OrgPatienten />} />
             <Route path="schnelldoku" element={<OrgSchnelldoku />} />
             <Route path="produktausgabe" element={<OrgProduktausgabe />} />
             <Route path="cirs" element={<OrgCirs />} />
