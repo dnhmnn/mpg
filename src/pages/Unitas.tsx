@@ -1,9 +1,17 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react'
 import PocketBase from 'pocketbase'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { getTheme, setTheme, type ThemeMode } from '../lib/theme'
-import DokuProtokollView from '../components/DokuProtokollView'
+/*
+ * Erst laden, wenn jemand ein Protokoll ansieht.
+ *
+ * Die Ansicht zieht den Katalog des Bogens und das DIVI-Metamodell nach sich.
+ * Fest eingebunden wuchs der Hauptbrocken damit über zwei Megabyte — und der
+ * Service Worker legt nichts mehr in den Vorrat, was darüber liegt. Dann ist
+ * die App offline nicht mehr vollständig.
+ */
+const DokuProtokollView = lazy(() => import('../components/DokuProtokollView'))
 
 const pb = new PocketBase('https://api.responda.systems')
 
@@ -961,7 +969,7 @@ export default function Unitas() {
               </button>
             </header>
             <div style={{ flex: 1, overflowY: 'auto', padding: '10px 12px 24px' }}>
-              <DokuProtokollView payload={pl} />
+              <Suspense fallback={null}><DokuProtokollView payload={pl} /></Suspense>
             </div>
           </div>
         )
