@@ -11,7 +11,7 @@ import {
   OhneNetz, NOMINATIM_PAUSE_MS, adresseSuchen, dauerText, fahrminuten, fahrstrecke,
   streckeText, type Koordinate,
 } from '../../../lib/osrm'
-import { aelrdFeld } from '../../../katalog/aelrd'
+import { pflichtKarte } from '../../../katalog/pflicht'
 import type { Werte } from './DokuFeld'
 import { kette, offeneUebernahme, zeitenUebernehmen, type Zeitstrahl as Strahl } from './zeitstrahl'
 
@@ -64,6 +64,7 @@ export default function Zeitstrahl({ werte, setWerte, setzen }: {
   const strahl: Strahl = { alarm, ausruecken, fahrt, versorgung }
   const halte = kette(strahl)
   const offen = offeneUebernahme(werte, strahl)
+  const verlangt = pflichtKarte(werte)
 
   useEffect(() => () => { leaflet.current?.remove?.(); leaflet.current = null }, [])
 
@@ -252,15 +253,16 @@ export default function Zeitstrahl({ werte, setWerte, setzen }: {
       <div style={{ border: `0.5px solid ${LINIE}`, borderRadius: 10, overflow: 'hidden' }}>
         {halte.map((h, i) => {
           const steht = String(werte[h.feld] ?? '')
-          // Der Bogen verlangt Alarm, Ankunft und Übergabe; die Alarmzeit
-          // trägt obendrein die ganze Kette.
-          const pflicht = Boolean(aelrdFeld(h.feld)?.pflicht)
-          const fehlt = pflicht && !steht
+          // Was verlangt wird, hängt am Protokoll: beim Fehleinsatz gibt
+          // es keine Übergabe, also auch keine Pflicht dazu.
+          const stand = verlangt.get(h.feld)
+          const pflicht = stand?.stufe === 'pflicht'
+          const fehlt = Boolean(stand) && !stand!.erfuellt
           return (
             <div key={h.id} style={{
               display: 'flex', alignItems: 'center', gap: 9, padding: '6px 10px',
               borderBottom: i < halte.length - 1 ? '0.5px solid rgba(96,8,18,0.06)' : 'none',
-              background: fehlt ? '#fef2f2' : steht ? '#fff' : 'rgba(250,249,247,0.7)',
+              background: fehlt ? (stand!.stufe === 'pflicht' ? '#fef2f2' : '#fffbeb') : steht ? '#fff' : 'rgba(250,249,247,0.7)',
             }}>
               <span style={{
                 display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
@@ -274,12 +276,12 @@ export default function Zeitstrahl({ werte, setWerte, setzen }: {
               <span style={{ flex: 1, minWidth: 0 }}>
                 <span style={{ display: 'block', fontSize: 13, fontWeight: 700, color: TEXT }}>
                   {h.titel}
-                  {pflicht ? (
-                    <span style={{ color: fehlt ? '#b91c1c' : GRAU, fontWeight: 700, marginLeft: 4 }}>*</span>
+                  {pflicht || stand ? (
+                    <span style={{ color: fehlt ? (stand!.stufe === 'pflicht' ? '#b91c1c' : '#b45309') : GRAU, fontWeight: 700, marginLeft: 4 }}>*</span>
                   ) : null}
                 </span>
-                <span style={{ display: 'block', fontSize: 11, fontStyle: 'italic', color: fehlt ? '#b91c1c' : GRAU }}>
-                  {h.id === 'alarm' && fehlt ? 'Pflicht — ohne sie rechnet die Kette nicht' : fehlt ? 'Pflichtangabe' : h.unter}
+                <span style={{ display: 'block', fontSize: 11, fontStyle: 'italic', color: fehlt ? (stand!.stufe === 'pflicht' ? '#b91c1c' : '#b45309') : GRAU }}>
+                  {fehlt ? stand!.grund : h.unter}
                 </span>
                 {/*
                  * Die gerechnete Zeit bleibt sichtbar, auch wenn schon eine
@@ -305,7 +307,7 @@ export default function Zeitstrahl({ werte, setWerte, setzen }: {
                 onChange={(e) => setzen(h.feld, e.target.value)}
                 style={{
                   width: 96, flexShrink: 0, padding: '6px 8px', background: '#fff',
-                  border: `1px solid ${fehlt ? '#b91c1c' : steht ? ROT : LINIE}`, borderRadius: 8,
+                  border: `1px solid ${fehlt ? (stand!.stufe === 'pflicht' ? '#b91c1c' : '#b45309') : steht ? ROT : LINIE}`, borderRadius: 8,
                   fontFamily: 'inherit', fontSize: 16, fontWeight: 700,
                   color: steht ? ROT : GRAU, boxSizing: 'border-box',
                 }}

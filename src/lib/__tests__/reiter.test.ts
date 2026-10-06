@@ -3,6 +3,7 @@ import { ampel, type ReiterStand } from '../../pages/public/doku/Reiter'
 import { AELRD_ABSCHNITTE, AELRD_FELDER, aelrdFeld } from '../../katalog/aelrd'
 import { gefuellt } from '../../pages/public/doku/DokuFeld'
 import { zettelMitFeldern } from '../../pages/public/doku/zettel'
+import { REGELN } from '../../katalog/pflicht'
 import { istSpiegelFeld } from '../../katalog/aelrdSpiegel'
 
 const stand = (p: Partial<ReiterStand>): ReiterStand =>
@@ -62,9 +63,11 @@ describe('Pflichtfelder im Bogen', () => {
 })
 
 describe('Pflichtfelder sind am Feld zu erkennen', () => {
-  it('führt der Bogen vierzehn davon', () => {
-    // Ändert sich die Zahl, soll es auffallen: jedes Pflichtfeld bekommt in
-    // der Maske einen Stern, und jedes trägt zur Ampel der Zettel bei.
+  it('markiert der Bogen selbst vierzehn', () => {
+    // Das ist die Markierung des PAPIERS. Was die Maske verlangt, steht in
+    // katalog/pflicht.ts und hängt am Einsatz — beim Fehleinsatz etwa fällt
+    // die halbe Liste weg. Diese vierzehn bleiben hier stehen, damit eine
+    // Änderung am Bogen auffällt.
     const pflicht = AELRD_FELDER.filter((f) => f.pflicht)
     expect(pflicht.map((f) => f.id)).toEqual([
       'name', 'gebdatum', 'einsatz_nr', 'einsatz_datum',
@@ -73,12 +76,12 @@ describe('Pflichtfelder sind am Feld zu erkennen', () => {
     ])
   })
 
-  it('verteilt sie über die Zettel, die sie führen', () => {
-    // Ein Pflichtfeld auf einem Zettel, den es nicht gibt, wäre nie zu
+  it('verteilt alles Verlangte über die Zettel, die es führen', () => {
+    // Eine Pflichtangabe auf einem Zettel, den es nicht gibt, wäre nie zu
     // erfüllen — und die Ampel bliebe für immer rot.
     const aufZetteln = new Set(zettelMitFeldern().flatMap((z) => z.felder).map((f) => f.id))
-    for (const f of AELRD_FELDER.filter((x) => x.pflicht)) {
-      expect(aufZetteln.has(f.id), `${f.id} steht auf keinem Zettel`).toBe(true)
+    for (const r of REGELN) {
+      expect(aufZetteln.has(r.feld), `${r.feld} steht auf keinem Zettel`).toBe(true)
     }
   })
 

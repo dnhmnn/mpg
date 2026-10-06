@@ -10,6 +10,7 @@
 
 import { useState } from 'react'
 import { aelrdFeld } from '../../../katalog/aelrd'
+import { pflichtKarte } from '../../../katalog/pflicht'
 import { gcsFelder, gcsSkalen, gcsSchwere, gcsSumme, gcsSummeFeld } from '../../../katalog/gcs'
 import type { Werte } from './DokuFeld'
 
@@ -38,10 +39,11 @@ export default function Gcs({ werte, setWerte, vorsatz = '' }: {
   const summeFeld = gcsSummeFeld(vorsatz)
   const imProtokoll = skalen.map((s) => zahl(werte[s.feld]))
   const summeImProtokoll = zahl(werte[summeFeld])
-  // Die Summe ist auf dem Bogen eine Pflichtangabe; das steht am Knopf, nicht
-  // in einer Legende.
-  const pflicht = Boolean(aelrdFeld(summeFeld)?.pflicht)
-  const fehlt = pflicht && summeImProtokoll === null
+  // Verlangt wird die Summe, solange ein Patient versorgt wurde — und sie
+  // gilt auch als erfüllt, wenn stattdessen die Bewusstseinslage dasteht.
+  const stand = pflichtKarte(werte).get(summeFeld)
+  const pflicht = Boolean(stand)
+  const fehlt = Boolean(stand) && !stand!.erfuellt
 
   function oeffnen() {
     // Was schon dasteht, steht beim Öffnen gewählt da.

@@ -15,6 +15,7 @@ import { Suspense, lazy, useEffect, useMemo, useState } from 'react'
 import { useOrg } from '../OrgPublicLayout'
 import { AELRD_ABSCHNITTE, aelrdFeld, type AelrdFeld } from '../../../katalog/aelrd'
 import { istSpiegelFeld } from '../../../katalog/aelrdSpiegel'
+import { offeneErwartung, offenePflicht, pflichtKarte, type Stand } from '../../../katalog/pflicht'
 import { normalbefund, uebergabeUebernehmen, uebernahmeUmfang } from '../../../katalog/uebernahme'
 import DokuFeld, { Rasterzelle, gefuellt, istRasterfeld, type Werte } from './DokuFeld'
 import {
@@ -81,7 +82,7 @@ function inBloecke(
   return aus
 }
 
-function Block({ id, titel, teile, zeigeSchritt, felder, werte, setzen, aktion, ersatz, ersatzFeld, vorweg, uebernommen }: {
+function Block({ id, titel, teile, zeigeSchritt, felder, werte, setzen, aktion, ersatz, ersatzFeld, vorweg, uebernommen, verlangt }: {
   id: string
   titel: string
   /** Die Abschnitte des Bogens, die auf diesem Zettel zusammenstehen. */
@@ -122,6 +123,8 @@ function Block({ id, titel, teile, zeigeSchritt, felder, werte, setzen, aktion, 
    * aber nicht noch einmal einzeln.
    */
   uebernommen?: Set<string>
+  /** Welche Angaben dieses Protokoll gerade verlangt. */
+  verlangt?: Map<string, Stand>
 }) {
   const ausgefuellt = felder.filter((f) => gefuellt(werte[f.id])).length
   return (
@@ -199,7 +202,7 @@ function Block({ id, titel, teile, zeigeSchritt, felder, werte, setzen, aktion, 
                       // Innenrand und die Einheit am rechten Rand.
                       gridTemplateColumns: 'repeat(auto-fit,minmax(90px,1fr))', gap: 8, marginBottom: 12 }}>
                     {gruppe.felder.map((f) => (
-                      <Rasterzelle key={f.id} feld={f} werte={werte} setzen={setzen} />
+                      <Rasterzelle key={f.id} feld={f} werte={werte} setzen={setzen} stand={verlangt?.get(f.id)} />
                     ))}
                   </div>
                 ) : (
@@ -208,7 +211,7 @@ function Block({ id, titel, teile, zeigeSchritt, felder, werte, setzen, aktion, 
                       <div key={f.id}>
                         {ersatzFeld?.[f.id] ?? (
                           <DokuFeld
-                            feld={f} werte={werte} setzen={setzen}
+                            feld={f} werte={werte} setzen={setzen} stand={verlangt?.get(f.id)}
                             // Trägt die Überschrift den Namen schon, wird er
                             // am Feld weggelassen.
                             ohneBeschriftung={Boolean(teil.kennung) && teil.felder.length === 1}
@@ -273,6 +276,13 @@ export default function Doku() {
     return () => clearTimeout(uhr)
   }, [werte, orgCode])
 
+  /*
+   * Was dieses Protokoll verlangt, hängt an ihm selbst: ein Fehleinsatz
+   * braucht keine Vitalwerte, ein Transport eine Übergabezeit. Deshalb wird
+   * die Liste bei jeder Änderung neu bestimmt, nicht einmal festgeschrieben.
+   */
+  const verlangt = useMemo(() => pflichtKarte(werte), [werte])
+
   const setzen = (id: string, w: unknown) => setWerte((v) => ({ ...v, [id]: w }))
   /** Die Felder, die die Maßnahmen-Maske schreibt — sie stehen dort, nicht einzeln. */
   const uebernommeneFelder = useMemo(
@@ -306,13 +316,13 @@ export default function Doku() {
   // Was die Reiter am Rand zeigen: je Block, wie viele Pflichtfelder noch
   // offen sind und wie viel überhaupt eingetragen wurde.
   const staende: ReiterStand[] = bloecke.map((b) => {
-    const pflicht = b.felder.filter((f) => f.pflicht)
+    const pflicht = b.felder.filter((f) => verlangt.get(f.id)?.stufe === 'pflicht')
     return {
       id: b.id,
       kurz: b.kurz,
       titel: b.titel,
       pflichtGesamt: pflicht.length,
-      pflichtOffen: pflicht.filter((f) => !gefuellt(werte[f.id])).length,
+      pflichtOffen: pflicht.filter((f) => !verlangt.get(f.id)?.erfuellt).length,
       gefuellt: b.felder.filter((f) => gefuellt(werte[f.id])).length,
     }
   })
@@ -354,13 +364,13 @@ export default function Doku() {
   // untereinander, wie bisher.
   const schrittweise = Boolean(aktuell?.gruppen)
   const schritte: ReiterStand[] = (schrittweise ? aktuell?.teile ?? [] : []).map((t) => {
-    const pflicht = t.felder.filter((f) => f.pflicht)
+    const pflicht = t.felder.filter((f) => verlangt.get(f.id)?.stufe === 'pflicht')
     return {
       id: t.id,
       kurz: t.kurz,
       titel: t.titel,
       pflichtGesamt: pflicht.length,
-      pflichtOffen: pflicht.filter((f) => !gefuellt(werte[f.id])).length,
+      pflichtOffen: pflicht.filter((f) => !verlangt.get(f.id)?.erfuellt).length,
       gefuellt: t.felder.filter((f) => gefuellt(werte[f.id])).length,
     }
   })
@@ -383,7 +393,8 @@ export default function Doku() {
   // Fortschritt über alle Felder, die der Bogen führt.
   const imWeg = bloecke.flatMap((b) => b.felder)
   const fertig = imWeg.filter((f) => gefuellt(werte[f.id])).length
-  const pflichtOffen = imWeg.filter((f) => f.pflicht && !gefuellt(werte[f.id]))
+  const pflichtOffen = offenePflicht(werte)
+  const erwartungOffen = offeneErwartung(werte)
 
   // Die beiden Abkürzungen, die den größten Teil des Tippens sparen.
   const offeneUebernahme = uebernahmeUmfang(werte)
@@ -442,7 +453,8 @@ export default function Doku() {
             <div style={{ fontSize: 15, fontWeight: 700, color: TEXT }}>Patientendokumentation</div>
             <div style={{ fontSize: 11, fontStyle: 'italic', color: GRAU, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {org.org_name} · {fertig} von {imWeg.length} Feldern
-              {pflichtOffen.length > 0 ? ` · ${pflichtOffen.length} Pflichtfelder offen` : ''}
+              {pflichtOffen.length > 0 ? ` · ${pflichtOffen.length} Pflichtangaben offen` : ''}
+              {pflichtOffen.length === 0 && erwartungOffen.length > 0 ? ` · ${erwartungOffen.length} erwartet` : ''}
             </div>
           </div>
           <span style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#d97706', border: '0.5px solid #fde047', background: '#fffbeb', borderRadius: 999, padding: '3px 8px' }}>
@@ -558,6 +570,7 @@ export default function Doku() {
                 verlauf: <Verlauf werte={werte} setWerte={setWerte} />,
               }}
               uebernommen={uebernommeneFelder}
+              verlangt={verlangt}
               vorweg={{
                 // Der Zeitstrahl rechnet die Kette der Statuszeiten und
                 // bietet sie den Feldern darunter an.
