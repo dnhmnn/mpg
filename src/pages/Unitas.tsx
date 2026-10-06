@@ -593,7 +593,7 @@ export default function Unitas() {
                           )}
                           {reopenActive && isTF ? (
                             <>
-                              <button onClick={() => navigate(`/protokoll/${p.id}`)} style={{ background: '#16a34a', color: '#fff', border: 'none', borderRadius: 7, padding: '6px 13px', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>Nachbearbeiten</button>
+                              <button onClick={() => navigate(`/protokoll/${p.id}`)} style={{ background: '#16a34a', color: '#fff', border: 'none', borderRadius: 7, padding: '6px 13px', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>Ändern</button>
                               <button onClick={async () => {
                                 try {
                                   const newPayload = { ...p.payload }

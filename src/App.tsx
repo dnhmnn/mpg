@@ -15,6 +15,7 @@ import Unitas from './pages/Unitas'
 import Unitarii from './pages/Unitarii'
 import Patienten from './pages/patienten/Patienten'
 import ProtokollBearbeiten from './pages/ProtokollBearbeiten'
+import ProtokollMaske from './pages/ProtokollMaske'
 
 import Installieren from './pages/public/Installieren'
 import OrgSchnelldoku from './pages/public/OrgSchnelldoku'
@@ -91,7 +92,13 @@ function App() {
         <Route path="/unitas" element={<Unitas />} />
         <Route path="/unitarii" element={<Unitarii />} />
         <Route path="/patienten" element={<Patienten />} />
-        <Route path="/protokoll/:patientId" element={<ProtokollBearbeiten />} />
+        {/*
+          * Die neue Maske, auch für Angemeldete: ein Protokoll wird überall
+          * gleich erfasst und gleich geändert. Das alte Formular bleibt unter
+          * /protokoll-alt/:patientId erreichbar.
+          */}
+        <Route path="/protokoll/:patientId" element={<ProtokollMaske />} />
+        <Route path="/protokoll-alt/:patientId" element={<ProtokollBearbeiten />} />
         <Route path="/protokoll-2" element={<Suspense fallback={null}><AelrdProtokoll /></Suspense>} />
         <Route path="/datensatz" element={<Suspense fallback={null}><NaepErfassung /></Suspense>} />
         <Route path="/p/:code" element={<PatientView />} />

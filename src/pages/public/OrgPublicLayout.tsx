@@ -13,6 +13,20 @@ export interface Organization {
 
 interface OrgCtx { org: Organization; orgCode: string }
 const OrgContext = createContext<OrgCtx | null>(null)
+
+/**
+ * Die Organisation von außen setzen.
+ *
+ * Die öffentliche Maske holt sie aus dem Pfad (/<org-code>/…). In der
+ * angemeldeten App steht sie am Benutzer — dieselbe Maske soll dort ohne
+ * Umweg über den Pfad laufen, deshalb lässt sich der Zusammenhang auch
+ * direkt stellen.
+ */
+export function OrgKontext({ org, orgCode, children }: {
+  org: Organization; orgCode: string; children: React.ReactNode
+}) {
+  return <OrgContext.Provider value={{ org, orgCode }}>{children}</OrgContext.Provider>
+}
 export function useOrg() {
   const c = useContext(OrgContext)
   if (!c) throw new Error('useOrg outside OrgPublicLayout')
