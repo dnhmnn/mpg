@@ -1,58 +1,70 @@
 import { lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
-import Hub from './pages/Hub'
 import Login from './pages/Login'
 import Index from './pages/Index'
-import ResetPassword from './pages/ResetPassword'
-import SettingsPage from './pages/SettingsPage'
-import Ausbildungen from './pages/ausbildungen/Ausbildungen'
-import Einladung from './pages/ausbildungen/Einladung'
-import Files from './pages/Files'
-import Lager from './pages/Lager'
-import MPG from './pages/MPG'
-import Lernbar from './pages/Lernbar'
-import Unitas from './pages/Unitas'
-import Unitarii from './pages/Unitarii'
-import Patienten from './pages/patienten/Patienten'
-import ProtokollBearbeiten from './pages/ProtokollBearbeiten'
-import ProtokollMaske from './pages/ProtokollMaske'
 
-import Installieren from './pages/public/Installieren'
-import OrgSchnelldoku from './pages/public/OrgSchnelldoku'
-import Chat from './pages/Chat'
-import Supervisor from './pages/Supervisor'
-import Einsaetze from './pages/Einsaetze'
-import Vorgaenge from './pages/Vorgaenge'
-import AVV from './pages/AVV'
-import Office from './pages/Office'
-import Notizen from './pages/Notizen'
-import Wissen from './pages/Wissen'
-import WebsiteEditor from './pages/WebsiteEditor'
-import EKS from './pages/eks/EKS'
-import EksAuswahl from './pages/eks/EksAuswahl'
-import OrgPublicLayout from './pages/public/OrgPublicLayout'
-import OrgLanding from './pages/public/OrgLanding'
-import OrgPatienten from './pages/public/OrgPatienten'
-import OrgProduktausgabe from './pages/public/OrgProduktausgabe'
-import OrgCirs from './pages/public/OrgCirs'
-import OrgFormular from './pages/public/OrgFormular'
-import OrgDefektmeldung from './pages/public/OrgDefektmeldung'
-import PatientView from './pages/public/PatientView'
 import './styles/globals.css'
 import { applyTheme, getTheme } from './lib/theme'
+
+/*
+ * Jede Seite wird erst geladen, wenn sie gebraucht wird.
+ *
+ * Fest eingebunden lagen vierunddreißig Seiten in einem einzigen Brocken:
+ * zwei Megabyte, die jedes Telefon beim ersten Öffnen zieht, auch wenn es
+ * nur das Protokoll ausfüllen will. Und über zwei Megabyte legt der Service
+ * Worker nichts mehr in den Vorrat — der Build brach daran ab.
+ *
+ * Anmeldung und Startseite bleiben fest: sie sind der erste Schirm, und
+ * ein zweiter Rundweg wäre dort zu sehen.
+ */
+const Hub = lazy(() => import('./pages/Hub'))
+const ResetPassword = lazy(() => import('./pages/ResetPassword'))
+const SettingsPage = lazy(() => import('./pages/SettingsPage'))
+const Ausbildungen = lazy(() => import('./pages/ausbildungen/Ausbildungen'))
+const Einladung = lazy(() => import('./pages/ausbildungen/Einladung'))
+const Files = lazy(() => import('./pages/Files'))
+const Lager = lazy(() => import('./pages/Lager'))
+const MPG = lazy(() => import('./pages/MPG'))
+const Lernbar = lazy(() => import('./pages/Lernbar'))
+const Unitas = lazy(() => import('./pages/Unitas'))
+const Unitarii = lazy(() => import('./pages/Unitarii'))
+const Patienten = lazy(() => import('./pages/patienten/Patienten'))
+const ProtokollBearbeiten = lazy(() => import('./pages/ProtokollBearbeiten'))
+const ProtokollMaske = lazy(() => import('./pages/ProtokollMaske'))
+const Installieren = lazy(() => import('./pages/public/Installieren'))
+const OrgSchnelldoku = lazy(() => import('./pages/public/OrgSchnelldoku'))
+const Chat = lazy(() => import('./pages/Chat'))
+const Supervisor = lazy(() => import('./pages/Supervisor'))
+const Einsaetze = lazy(() => import('./pages/Einsaetze'))
+const Vorgaenge = lazy(() => import('./pages/Vorgaenge'))
+const AVV = lazy(() => import('./pages/AVV'))
+const Office = lazy(() => import('./pages/Office'))
+const Notizen = lazy(() => import('./pages/Notizen'))
+const Wissen = lazy(() => import('./pages/Wissen'))
+const WebsiteEditor = lazy(() => import('./pages/WebsiteEditor'))
+const EKS = lazy(() => import('./pages/eks/EKS'))
+const EksAuswahl = lazy(() => import('./pages/eks/EksAuswahl'))
+const OrgPublicLayout = lazy(() => import('./pages/public/OrgPublicLayout'))
+const OrgLanding = lazy(() => import('./pages/public/OrgLanding'))
+const OrgPatienten = lazy(() => import('./pages/public/OrgPatienten'))
+const OrgProduktausgabe = lazy(() => import('./pages/public/OrgProduktausgabe'))
+const OrgCirs = lazy(() => import('./pages/public/OrgCirs'))
+const OrgFormular = lazy(() => import('./pages/public/OrgFormular'))
+const OrgDefektmeldung = lazy(() => import('./pages/public/OrgDefektmeldung'))
+const PatientView = lazy(() => import('./pages/public/PatientView'))
+const AelrdProtokoll = lazy(() => import('./pages/patienten/AelrdProtokoll'))
+const NaepErfassung = lazy(() => import('./pages/patienten/NaepErfassung'))
+const Doku = lazy(() => import('./pages/public/doku/Doku'))
 
 // Die Protokollseite zieht Feldkatalog und Druckvorlagen nach sich.
 // Beides wird erst gebraucht, wenn jemand das Protokoll oeffnet — im
 // Hauptbuendel kostet es jeden Seitenaufruf mit, auch im Funkloch.
-const AelrdProtokoll = lazy(() => import('./pages/patienten/AelrdProtokoll'))
 
 // Die normtreue Maske zieht den ganzen DIVI-Katalog nach sich — über
 // vierhundert Optionen. Sie gehoert nicht ins Hauptbuendel.
-const NaepErfassung = lazy(() => import('./pages/patienten/NaepErfassung'))
 
 // Der neue Aufbau der Patientendokumentation, vorerst neben dem alten
 // Formular. Er zieht den Feldkatalog des Bogens nach sich.
-const Doku = lazy(() => import('./pages/public/doku/Doku'))
 
 applyTheme(getTheme())
 
@@ -76,6 +88,7 @@ if (isMarketingDomain) {
 function App() {
   return (
     <BrowserRouter>
+      <Suspense fallback={<div style={{ minHeight: '100vh', background: 'var(--warm-bg)' }} />}>
       <Routes>
         <Route path="/" element={<Index />} />
         <Route path="/login" element={<Login />} />
@@ -138,6 +151,7 @@ function App() {
           </Route>
         )}
       </Routes>
+      </Suspense>
     </BrowserRouter>
   )
 }
