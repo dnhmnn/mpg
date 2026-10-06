@@ -3,6 +3,7 @@ import { parsePayload, fmtDateTime } from './types'
 import { istDivi } from '../../lib/protokoll'
 import { PubSection } from '../public/pubStyles'
 import ProtokollView from '../../components/ProtokollView'
+import DokuProtokollView from '../../components/DokuProtokollView'
 
 interface Props {
   doc: Patient | Nacherfassung
@@ -408,7 +409,9 @@ export default function DetailsModal({ doc, type, onClose, onEdit }: Props) {
 
         {/* ── PATIENTENDOKU ── */}
         {isPatient && p && (
-          <ProtokollView payload={p} changedFields={chf} tfChangedFields={tfchf} />
+          <div style={{ background: 'var(--warm-bg)', padding: '10px 0', borderRadius: 12 }}>
+            <DokuProtokollView payload={p as Record<string, unknown>} />
+          </div>
         )}
 
         {/* ── NACHERFASSUNG ── */}

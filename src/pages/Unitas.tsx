@@ -3,6 +3,7 @@ import PocketBase from 'pocketbase'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { getTheme, setTheme, type ThemeMode } from '../lib/theme'
+import DokuProtokollView from '../components/DokuProtokollView'
 
 const pb = new PocketBase('https://api.responda.systems')
 
@@ -118,6 +119,8 @@ export default function Unitas() {
 
   // Stellungnahme-Modal
   const [snModal, setSnModal] = useState<PatientRecord | null>(null)
+  /** Das ganze Protokoll ansehen — in der Gliederung der Maske. */
+  const [protokollModal, setProtokollModal] = useState<PatientRecord | null>(null)
   const [snAntworten, setSnAntworten] = useState<Record<string, string>>({})
   const [snSending, setSnSending] = useState<Record<string, boolean>>({})
 
@@ -516,6 +519,7 @@ export default function Unitas() {
                               <button onClick={() => navigate(`/protokoll/${p.id}`)} style={{ background: '#600812', color: '#fff', border: 'none', borderRadius: 7, padding: '6px 13px', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>Bearbeiten</button>
                             </>
                           )}
+                          <button onClick={() => setProtokollModal(p)} style={{ background: 'transparent', color: '#600812', border: '1px solid rgba(96,8,18,0.3)', borderRadius: 7, padding: '6px 13px', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>Protokoll</button>
                           {!canEdit && (
                             <button onClick={() => navigate(`/protokoll/${p.id}`)} style={{ background: 'transparent', color: '#600812', border: '1px solid rgba(96,8,18,0.3)', borderRadius: 7, padding: '6px 13px', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>Ansehen</button>
                           )}
@@ -934,6 +938,35 @@ export default function Unitas() {
       `}</style>
 
       {/* Stellungnahme-Modal */}
+      {protokollModal && (() => {
+        const pl = (protokollModal.payload || {}) as Record<string, unknown>
+        const name = [pl.vorname, pl.name].filter(Boolean).join(' ') || protokollModal.title || 'Protokoll'
+        return (
+          <div
+            role="dialog" aria-label="Protokoll"
+            style={{ position: 'fixed', inset: 0, zIndex: 95, background: 'var(--warm-bg)', display: 'flex', flexDirection: 'column' }}
+          >
+            <header style={{ flexShrink: 0, background: '#fff', borderBottom: '0.5px solid rgba(96,8,18,0.12)', padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 15, fontWeight: 700, fontStyle: 'italic', color: 'var(--text)' }}>{name}</div>
+                <div style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--warm-gray)' }}>
+                  {new Date(protokollModal.created).toLocaleString('de-DE')} · so, wie es erfasst wurde
+                </div>
+              </div>
+              <button
+                type="button" onClick={() => setProtokollModal(null)} aria-label="Schließen"
+                style={{ background: 'none', border: 'none', color: 'var(--warm-gray)', fontSize: 26, lineHeight: 1, padding: '0 4px', cursor: 'pointer', fontFamily: 'inherit' }}
+              >
+                ×
+              </button>
+            </header>
+            <div style={{ flex: 1, overflowY: 'auto', padding: '10px 12px 24px' }}>
+              <DokuProtokollView payload={pl} />
+            </div>
+          </div>
+        )
+      })()}
+
       {snModal && (() => {
         const pl = snModal.payload || {}
         const rqs: any[] = Array.isArray(pl.rueckfragen) ? pl.rueckfragen : []

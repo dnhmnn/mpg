@@ -7,6 +7,7 @@ import SignModal from './SignModal'
 import NachModal from './NachModal'
 import DetailsModal from './DetailsModal'
 import ProtokollView from '../../components/ProtokollView'
+import DokuProtokollView from '../../components/DokuProtokollView'
 import type { Patient, Nacherfassung, PatientPayload, NachForm } from './types'
 import { EMPTY_PAYLOAD, EMPTY_NACH, parsePayload, fmtDate } from './types'
 
@@ -1245,7 +1246,11 @@ export default function Patienten() {
                 </button>
               </div>
               <div style={{ overflowY: 'auto', flex: 1 }}>
-                <ProtokollView payload={pl} changedFields={cf} tfChangedFields={tf} />
+                {/* In der Gliederung der Maske — damit alle dasselbe Feld
+                    an derselben Stelle suchen. */}
+                <div style={{ background: 'var(--warm-bg)', padding: '10px 12px' }}>
+                  <DokuProtokollView payload={pl as unknown as Record<string, unknown>} />
+                </div>
               </div>
             </div>
           </>
