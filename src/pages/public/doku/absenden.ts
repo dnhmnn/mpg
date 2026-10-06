@@ -12,6 +12,16 @@
 import type { Werte } from './DokuFeld'
 import { offenePflicht, offeneErwartung, type Stand } from '../../../katalog/pflicht'
 
+/**
+ * Wie lange der Teamführer nach dem Absenden noch ändern darf.
+ *
+ * Bisher musste ein Beauftragter dafür eine Nachbearbeitung freigeben. Das
+ * dreht die Verantwortung um: wer dokumentiert hat, merkt selbst am ehesten,
+ * dass etwas fehlt — und zwar in den Stunden danach, nicht Tage später auf
+ * Zuruf. Danach ist das Protokoll eingereicht.
+ */
+export const FRIST_MS = 24 * 60 * 60 * 1000
+
 export type Datensatz = {
   title: string
   payload: Werte
@@ -39,8 +49,34 @@ export function titel(werte: Werte): string {
   return nr ? `Patientendoku: Einsatz ${nr}` : 'Patientendoku: ohne Namen'
 }
 
-export function datensatz(werte: Werte, organisationId: string): Datensatz {
-  return { title: titel(werte), payload: werte, status: 'offen', organization_id: organisationId }
+export function datensatz(werte: Werte, organisationId: string, jetzt = new Date()): Datensatz {
+  const payload: Werte = {
+    ...werte,
+    // Die Frist steht im Protokoll, nicht nur im Kopf: der Server schließt
+    // danach selbst ab, und jede Maske kann ablesen, woran sie ist.
+    frist: new Date(jetzt.getTime() + FRIST_MS).toISOString(),
+    abgesendet: jetzt.toISOString(),
+  }
+  return { title: titel(werte), payload, status: 'offen', organization_id: organisationId }
+}
+
+/** Ob die Änderungsfrist noch läuft. */
+export function fristLaeuft(payload: Werte, jetzt = new Date()): boolean {
+  const frist = typeof payload.frist === 'string' ? Date.parse(payload.frist) : NaN
+  if (!Number.isFinite(frist)) return true // ohne Frist: noch nicht abgesendet
+  return frist > jetzt.getTime()
+}
+
+/** Was von der Frist übrig ist, in Worten. */
+export function fristText(payload: Werte, jetzt = new Date()): string {
+  const frist = typeof payload.frist === 'string' ? Date.parse(payload.frist) : NaN
+  if (!Number.isFinite(frist)) return ''
+  const rest = frist - jetzt.getTime()
+  if (rest <= 0) return 'abgelaufen'
+  const stunden = Math.floor(rest / 3_600_000)
+  if (stunden >= 1) return `noch ${stunden} Stunde${stunden === 1 ? '' : 'n'}`
+  const minuten = Math.max(1, Math.floor(rest / 60_000))
+  return `noch ${minuten} Minute${minuten === 1 ? '' : 'n'}`
 }
 
 /** Was dem Absenden im Weg steht, und was nur fehlt. */

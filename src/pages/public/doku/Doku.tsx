@@ -32,7 +32,7 @@ import Verlauf from './Verlauf'
 import Adresse from './Adresse'
 import Gcs from './Gcs'
 import Absenden from './Absenden'
-import { warteschlange, warteschlangeLeeren } from './absenden'
+import { fristLaeuft, fristText, warteschlange, warteschlangeLeeren } from './absenden'
 import Pupillen from './Pupillen'
 import Zeitstrahl from './Zeitstrahl'
 import { adresseSetzen } from './adresse'
@@ -267,6 +267,14 @@ export default function Doku() {
   const [sichertNicht, setSichertNicht] = useState(false)
   /** Nach dem Absenden: die Nummer, oder leer, wenn es in der Warteschlange liegt. */
   const [gesendet, setGesendet] = useState<{ nummer: string; offline: boolean } | null>(null)
+  /**
+   * Ein schon abgesendetes Protokoll, das in seiner Frist geändert wird.
+   *
+   * Unitas verweist mit ?id= hierher. Ohne Kennung entsteht ein neues.
+   */
+  const [protokollId, setProtokollId] = useState('')
+  const [laedt, setLaedt] = useState(false)
+  const [ladefehler, setLadefehler] = useState('')
   const [suche, setSuche] = useState('')
   const [kartenScan, setKartenScan] = useState(false)
   /**
@@ -309,6 +317,26 @@ export default function Doku() {
       .then(() => warteschlangeLeeren(window.localStorage, orgCode))
       .catch(() => { /* bleibt liegen, nächster Versuch beim nächsten Öffnen */ })
   }, [orgCode])
+
+  /*
+   * Mit ?id= wird ein bestehendes Protokoll geöffnet — in seiner Frist. Der
+   * Entwurf im Gerät gilt dann nicht: er gehört zum zuletzt Angefangenen,
+   * nicht zu diesem.
+   */
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get('id') ?? ''
+    if (!id) return
+    setProtokollId(id)
+    setLaedt(true)
+    pb.collection('patients').getOne(id)
+      .then((rec) => {
+        const p = typeof rec.payload === 'string' ? JSON.parse(rec.payload) : (rec.payload ?? {})
+        setWerte(p as Werte)
+        setWiederhergestellt('')
+      })
+      .catch(() => setLadefehler('Dieses Protokoll ließ sich nicht öffnen.'))
+      .finally(() => setLaedt(false))
+  }, [])
 
   const setzen = (id: string, w: unknown) => setWerte((v) => ({ ...v, [id]: w }))
   /** Die Felder, die die Maßnahmen-Maske schreibt — sie stehen dort, nicht einzeln. */
@@ -480,6 +508,7 @@ export default function Doku() {
             <div style={{ fontSize: 15, fontWeight: 700, color: TEXT }}>Patientendokumentation</div>
             <div style={{ fontSize: 11, fontStyle: 'italic', color: GRAU, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {org.org_name} · {fertig} von {imWeg.length} Feldern
+              {protokollId ? ` · ${fristLaeuft(werte) ? `Änderungsfrist ${fristText(werte)}` : 'Frist abgelaufen'}` : ''}
               {pflichtOffen.length > 0 ? ` · ${pflichtOffen.length} Pflichtangaben offen` : ''}
               {pflichtOffen.length === 0 && erwartungOffen.length > 0 ? ` · ${erwartungOffen.length} erwartet` : ''}
             </div>
@@ -541,6 +570,22 @@ export default function Doku() {
             >
               ×
             </button>
+          </div>
+        ) : null}
+        {laedt ? (
+          <div style={{ marginBottom: 10, padding: '8px 11px', background: '#fff', border: `0.5px solid ${LINIE}`, borderRadius: 10, fontSize: 12, fontStyle: 'italic', color: GRAU }}>
+            Protokoll wird geladen …
+          </div>
+        ) : null}
+        {ladefehler ? (
+          <div style={{ marginBottom: 10, padding: '8px 11px', background: '#fef2f2', border: '0.5px solid #fca5a5', borderRadius: 10, fontSize: 12, fontStyle: 'italic', color: '#991b1b' }}>
+            {ladefehler}
+          </div>
+        ) : null}
+        {protokollId && !fristLaeuft(werte) ? (
+          <div style={{ marginBottom: 10, padding: '8px 11px', background: '#fffbeb', border: '0.5px solid #fde047', borderRadius: 10, fontSize: 12, fontStyle: 'italic', color: '#854d0e', lineHeight: 1.45 }}>
+            Die Änderungsfrist ist abgelaufen — das Protokoll ist eingereicht.
+            Änderungen gehen von hier nicht mehr hinaus.
           </div>
         ) : null}
         {sichertNicht ? (
@@ -644,7 +689,7 @@ export default function Doku() {
 
             {aktuell.id === 'abschluss' ? (
               <Absenden
-                werte={werte} orgId={org.id} orgCode={orgCode}
+                werte={werte} orgId={org.id} orgCode={orgCode} protokollId={protokollId}
                 onSpringen={zumBlock}
                 onGesendet={(nummer, offline) => {
                   entwurfVerwerfen(window.localStorage, orgCode)

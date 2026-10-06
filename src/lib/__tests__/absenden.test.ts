@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import {
-  datensatz, inWarteschlange, protokollnummer, pruefen, titel,
-  warteschlange, warteschlangeLeeren, warteschlangeSchluessel, type Speicher,
+  FRIST_MS, datensatz, fristLaeuft, fristText, inWarteschlange, protokollnummer,
+  pruefen, titel, warteschlange, warteschlangeLeeren, warteschlangeSchluessel,
+  type Speicher,
 } from '../../pages/public/doku/absenden'
 
 function speicher(): Speicher & { inhalt: Map<string, string> } {
@@ -25,12 +26,10 @@ describe('Das Protokoll absenden', () => {
     // Unitas und der Ausdruck lesen ihn ohne Änderung — deshalb dieselbe
     // Form: Titel, payload, Status "offen", Organisation.
     const d = datensatz({ vorname: 'Erika', name: 'Mustermann', hf: '80' }, 'org1')
-    expect(d).toEqual({
-      title: 'Patientendoku: Erika Mustermann',
-      payload: { vorname: 'Erika', name: 'Mustermann', hf: '80' },
-      status: 'offen',
-      organization_id: 'org1',
-    })
+    expect(d.title).toBe('Patientendoku: Erika Mustermann')
+    expect(d.status).toBe('offen')
+    expect(d.organization_id).toBe('org1')
+    expect(d.payload).toMatchObject({ vorname: 'Erika', name: 'Mustermann', hf: '80' })
   })
 
   it('findet auch ohne Namen eine Überschrift', () => {
@@ -85,5 +84,39 @@ describe('Das Protokoll absenden', () => {
 
   it('gibt eine Nummer, die man vorlesen kann', () => {
     expect(protokollnummer('abcdefghijkl', 2026)).toBe('PAT-2026-abcdefgh')
+  })
+})
+
+describe('Die Änderungsfrist nach dem Absenden', () => {
+  const jetzt = new Date('2026-10-06T13:00:00Z')
+
+  it('legt sie mit dem Absenden fest — einen Tag', () => {
+    // Bisher musste ein Beauftragter eine Nachbearbeitung freigeben. Wer
+    // dokumentiert hat, merkt selbst am ehesten, dass etwas fehlt.
+    const d = datensatz({ name: 'Mustermann' }, 'org1', jetzt)
+    expect(d.payload.frist).toBe('2026-10-07T13:00:00.000Z')
+    expect(d.payload.abgesendet).toBe('2026-10-06T13:00:00.000Z')
+    expect(Date.parse(String(d.payload.frist)) - jetzt.getTime()).toBe(FRIST_MS)
+  })
+
+  it('sagt, ob sie noch läuft', () => {
+    const p = datensatz({}, 'org1', jetzt).payload
+    expect(fristLaeuft(p, new Date('2026-10-07T12:59:00Z'))).toBe(true)
+    expect(fristLaeuft(p, new Date('2026-10-07T13:00:01Z'))).toBe(false)
+  })
+
+  it('hält ein noch nicht abgesendetes Protokoll für änderbar', () => {
+    // Ohne Frist ist nichts abgesendet — und dann steht auch nichts offen.
+    expect(fristLaeuft({})).toBe(true)
+    expect(fristLaeuft({ frist: 'kein Datum' })).toBe(true)
+  })
+
+  it('sagt die Restzeit in Worten', () => {
+    const p = datensatz({}, 'org1', jetzt).payload
+    expect(fristText(p, jetzt)).toBe('noch 24 Stunden')
+    expect(fristText(p, new Date('2026-10-07T12:00:00Z'))).toBe('noch 1 Stunde')
+    expect(fristText(p, new Date('2026-10-07T12:45:00Z'))).toBe('noch 15 Minuten')
+    expect(fristText(p, new Date('2026-10-07T14:00:00Z'))).toBe('abgelaufen')
+    expect(fristText({})).toBe('')
   })
 })

@@ -8,7 +8,7 @@ import { useState } from 'react'
 import { pb } from '../../../lib/pocketbase'
 import { aelrdFeld } from '../../../katalog/aelrd'
 import type { Werte } from './DokuFeld'
-import { datensatz, inWarteschlange, protokollnummer, pruefen } from './absenden'
+import { datensatz, fristLaeuft, fristText, inWarteschlange, protokollnummer, pruefen } from './absenden'
 import { zettelMitFeldern } from './zettel'
 
 const ROT = '#600812'
@@ -24,10 +24,12 @@ function zettelVon(feldId: string): { id: string; titel: string } | null {
   return null
 }
 
-export default function Absenden({ werte, orgId, orgCode, onGesendet, onSpringen }: {
+export default function Absenden({ werte, orgId, orgCode, protokollId, onGesendet, onSpringen }: {
   werte: Werte
   orgId: string
   orgCode: string
+  /** Gesetzt, wenn ein schon abgesendetes Protokoll geändert wird. */
+  protokollId?: string
   onGesendet: (nummer: string, offline: boolean) => void
   onSpringen: (zettelId: string) => void
 }) {
@@ -35,11 +37,18 @@ export default function Absenden({ werte, orgId, orgCode, onGesendet, onSpringen
   const [meldung, setMeldung] = useState('')
   const { haelt, fehlt } = pruefen(werte)
 
+  const aendert = Boolean(protokollId)
+  const inFrist = aendert ? fristLaeuft(werte) : true
+
   async function absenden() {
-    if (haelt.length > 0) return
+    if (haelt.length > 0 || !inFrist) return
     setSendet(true)
     setMeldung('')
-    const satz = datensatz(werte, orgId)
+    // Beim Ändern bleibt die Frist, wie sie ist — sonst verlängerte jede
+    // Änderung sie um einen weiteren Tag.
+    const satz = aendert
+      ? { ...datensatz(werte, orgId), payload: werte }
+      : datensatz(werte, orgId)
     if (!navigator.onLine) {
       const ging = inWarteschlange(window.localStorage, orgCode, satz)
       setSendet(false)
@@ -48,7 +57,9 @@ export default function Absenden({ werte, orgId, orgCode, onGesendet, onSpringen
       return
     }
     try {
-      const rec = await pb.collection('patients').create(satz)
+      const rec = aendert
+        ? await pb.collection('patients').update(protokollId!, { title: satz.title, payload: satz.payload })
+        : await pb.collection('patients').create(satz)
       onGesendet(protokollnummer(String(rec.id)), false)
     } catch (e) {
       // Nicht verloren: in die Warteschlange, und die Maske sagt es.
@@ -129,20 +140,28 @@ export default function Absenden({ werte, orgId, orgCode, onGesendet, onSpringen
         ) : null}
 
         <button
-          type="button" onClick={absenden} disabled={haelt.length > 0 || sendet}
+          type="button" onClick={absenden} disabled={haelt.length > 0 || sendet || !inFrist}
           style={{
             width: '100%', padding: '13px 12px', border: 'none', borderRadius: 12,
-            background: haelt.length > 0 ? 'rgba(96,8,18,0.15)' : ROT, color: '#fff',
+            background: haelt.length > 0 || !inFrist ? 'rgba(96,8,18,0.15)' : ROT, color: '#fff',
             fontFamily: 'inherit', fontSize: 12, fontWeight: 700,
             textTransform: 'uppercase', letterSpacing: '0.06em',
-            cursor: haelt.length > 0 || sendet ? 'default' : 'pointer',
+            cursor: haelt.length > 0 || sendet || !inFrist ? 'default' : 'pointer',
           }}
         >
-          {sendet ? 'Sendet …' : haelt.length > 0 ? 'Noch nicht vollständig' : 'Protokoll absenden'}
+          {sendet ? 'Sendet …'
+            : haelt.length > 0 ? 'Noch nicht vollständig'
+            : !inFrist ? 'Frist abgelaufen'
+            : aendert ? 'Änderungen übernehmen' : 'Protokoll absenden'}
         </button>
         <div style={{ fontSize: 11, fontStyle: 'italic', color: GRAU, marginTop: 6, lineHeight: 1.45 }}>
-          Abgesendet steht es in Unitas — bei der Besatzung, die oben eingetragen ist.
-          Ohne Netz wartet es auf dem Gerät und geht beim nächsten Öffnen raus.
+          {aendert
+            ? inFrist
+              ? `Änderungsfrist ${fristText(werte)} — danach ist das Protokoll eingereicht.`
+              : 'Die Frist ist abgelaufen; das Protokoll ist eingereicht.'
+            : 'Abgesendet steht es in Unitas — bei der Besatzung, die oben eingetragen ist. '
+              + 'Danach bleibt einen Tag Zeit, es zu ändern. '
+              + 'Ohne Netz wartet es auf dem Gerät und geht beim nächsten Öffnen raus.'}
         </div>
       </div>
     </section>
