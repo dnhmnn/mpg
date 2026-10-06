@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
-  jetztZeit, massnahmeEintragen, massnahmeGrundSetzen, massnahmeStreichen,
-  massnahmenLesen, massnahmenAbsteigend, ohneGrund, zeile, zeileMitGrund,
+  besetztePosten, durchName, jetztZeit, massnahmeEintragen, massnahmeGrundSetzen,
+  massnahmeStreichen, massnahmenLesen, massnahmenAbsteigend, ohneGrund, zeile, zeileMitGrund,
 } from '../../pages/public/doku/massnahmen'
 import {
   MASSNAHMEN_FELDER, MASSNAHMEN_KATEGORIEN, RECHTSGRUENDE, massnahmeKategorie, rechtsgrund,
@@ -271,5 +271,58 @@ describe('Die Begründungen auf dem Bogen', () => {
     const html = aelrdHtml(w)
     expect(html).toContain('ÄLRD Delegationen')
     expect(html).toContain('08:50 ECMO (§ 2a NotSanG)')
+  })
+})
+
+describe('Wer die Maßnahme durchgeführt hat', () => {
+  const mitMannschaft = {
+    mannschaft_tf: 'A. Berger', mannschaft_1: 'B. Costa',
+    mannschaft: { tf: { id: 'u1', name: 'A. Berger' }, m1: { id: 'u2', name: 'B. Costa' } },
+  }
+
+  it('bietet nur die Posten an, die besetzt sind', () => {
+    expect(besetztePosten(mitMannschaft).map((p) => p.pos)).toEqual(['tf', 'm1'])
+    expect(besetztePosten({})).toEqual([])
+  })
+
+  it('hält fest, wer gehandelt hat', () => {
+    const w = massnahmeEintragen(mitMannschaft, {
+      zeit: '08:50', kategorie: 'medizintechnik', art: 'ecmo', grund: 'notsang_2a', durch: 'tf',
+    })
+    expect(massnahmenLesen(w)[0].durch).toBe('tf')
+    expect(durchName(w, massnahmenLesen(w)[0])).toBe('A. Berger')
+  })
+
+  it('nimmt keinen Posten an, den es nicht gibt', () => {
+    const w = massnahmeEintragen(mitMannschaft, {
+      zeit: '08:50', kategorie: 'medizintechnik', art: 'ecmo', grund: 'notsang_2a', durch: 'm9',
+    })
+    expect(massnahmenLesen(w)[0].durch).toBeUndefined()
+  })
+
+  it('nennt ihn in den ÄLRD-Delegationen', () => {
+    // Wer delegiert, im Notstand oder nach § 2a handelt, tut das persönlich —
+    // und genau dort steht es auf dem Bogen.
+    const w = massnahmeEintragen(mitMannschaft, {
+      zeit: '08:50', kategorie: 'medizintechnik', art: 'ecmo', grund: 'notsang_2a', durch: 'tf',
+    })
+    expect(w.aelrd_delegationen).toBe('08:50 ECMO (§ 2a NotSanG, A. Berger)')
+  })
+
+  it('nimmt ihn mit dem Eintrag wieder zurück', () => {
+    let w = massnahmeEintragen(mitMannschaft, {
+      zeit: '08:50', kategorie: 'medizintechnik', art: 'ecmo', grund: 'delegiert', durch: 'm1',
+    })
+    w = massnahmeStreichen(w, massnahmenLesen(w)[0].id)
+    expect(w.aelrd_delegationen).toBe('')
+  })
+
+  it('verlangt ihn bei der Basismaßnahme nicht', () => {
+    // Sie ist keine persönliche Entscheidung, sondern der Regelfall.
+    const w = massnahmeEintragen(mitMannschaft, {
+      zeit: '08:42', kategorie: 'lagerung', art: 'Vakuummatratze', grund: 'basis',
+    })
+    expect(massnahmenLesen(w)[0].durch).toBeUndefined()
+    expect(w.aelrd_delegationen).toBeUndefined()
   })
 })

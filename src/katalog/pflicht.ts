@@ -21,6 +21,15 @@
 
 export type Stufe = 'pflicht' | 'erwartet'
 
+/**
+ * Schlüssel des Protokolls, die kein Feld des Bogens sind.
+ *
+ * Die gezeichnete Unterschrift liegt als Bild unter `signature` und erfüllt
+ * die Unterschriftszeile des Bogens. Die Liste steht hier, damit der Prüffall
+ * sie kennt und nicht jeder Tippfehler als Ausnahme durchgeht.
+ */
+export const ZUSATZSCHLUESSEL = ['signature']
+
 export type Regel = {
   feld: string
   stufe: Stufe
@@ -111,6 +120,51 @@ export const REGELN: Regel[] = [
     grund: 'Der Blutdruck ist nicht immer messbar, gehört aber dazu, wo er es ist',
   },
 
+  // ── Erstbefund: was erhoben wurde, gehört hin ───────────────────────────
+  // Jede dieser Angaben ist mit einem Griff zu erfüllen — die meisten führen
+  // eine Antwort wie "unauffällig" oder "nicht untersucht". Leer zu bleiben
+  // heißt dagegen: niemand weiß, ob danach gesehen wurde.
+  { feld: 'kreislauf', stufe: 'pflicht', wenn: patientVersorgt, grund: 'Kreislauf — auch die kritische Blutung steht hier' },
+  { feld: 'atemwege', stufe: 'pflicht', wenn: patientVersorgt, grund: 'Atemwege' },
+  { feld: 'atmung', stufe: 'pflicht', wenn: patientVersorgt, grund: 'Atmung' },
+  { feld: 'puls_regelmaessig', stufe: 'pflicht', wenn: patientVersorgt, grund: 'Rhythmisch oder arrhythmisch' },
+  { feld: 'radialispuls', stufe: 'pflicht', wenn: patientVersorgt, grund: 'Radialispuls tastbar' },
+  { feld: 'rekap_zeit', stufe: 'pflicht', wenn: patientVersorgt, grund: 'Rekapillarisierungszeit' },
+  { feld: 'schockzeichen', stufe: 'pflicht', wenn: patientVersorgt, grund: 'Schockzeichen' },
+  {
+    feld: 'neuro_ohne_befund', stufe: 'pflicht', wenn: patientVersorgt,
+    erfuelltDurch: ['neuro_auffaelligkeiten'],
+    grund: 'Neurologie — ohne path. Befund oder die Auffälligkeit',
+  },
+  { feld: 'bewusstsein', stufe: 'pflicht', wenn: patientVersorgt, grund: 'Bewusstseinslage' },
+  {
+    feld: 'pupillen_weite_re', stufe: 'pflicht', wenn: patientVersorgt,
+    erfuelltDurch: ['pupillen_weite_li'], grund: 'Pupillenweite',
+  },
+  {
+    feld: 'pupillen_licht_re', stufe: 'pflicht', wenn: patientVersorgt,
+    erfuelltDurch: ['pupillen_licht_li'], grund: 'Lichtreaktion',
+  },
+  { feld: 'haut', stufe: 'pflicht', wenn: patientVersorgt, grund: 'Haut' },
+
+  // ── Messwerte ───────────────────────────────────────────────────────────
+  { feld: 'af', stufe: 'pflicht', wenn: patientVersorgt, grund: 'Atemfrequenz' },
+  { feld: 'puls', stufe: 'pflicht', wenn: patientVersorgt, grund: 'Puls' },
+  { feld: 'nibp_dia', stufe: 'pflicht', wenn: patientVersorgt, grund: 'Blutdruck diastolisch' },
+  { feld: 'bz', stufe: 'pflicht', wenn: patientVersorgt, grund: 'Blutzucker' },
+  { feld: 'temp', stufe: 'pflicht', wenn: patientVersorgt, grund: 'Temperatur' },
+
+  // ── Diagnose ────────────────────────────────────────────────────────────
+  { feld: 'tracerdiagnose', stufe: 'pflicht', wenn: patientVersorgt, grund: 'Tracerdiagnose' },
+  { feld: 'diagnosetext', stufe: 'pflicht', wenn: patientVersorgt, grund: 'Diagnosetext' },
+
+  // ── Maßnahmen ───────────────────────────────────────────────────────────
+  // Alle drei führen eine Antwort für "nichts davon" — leer heißt deshalb
+  // nicht "nichts gemacht", sondern "nicht dokumentiert".
+  { feld: 'medizintechnik', stufe: 'pflicht', wenn: patientVersorgt, grund: 'Medizintechnik — oder "keine Medizintechnik"' },
+  { feld: 'erweitertes_monitoring', stufe: 'pflicht', wenn: patientVersorgt, grund: 'Erweitertes Monitoring — oder "kein erw. Monitoring"' },
+  { feld: 'lagerung', stufe: 'pflicht', wenn: patientVersorgt, grund: 'Lagerungs- und Rettungstechnik' },
+
   // ── Wenn transportiert wurde ────────────────────────────────────────────
   {
     feld: 'zeit_uebergabe', stufe: 'pflicht', wenn: transportiert,
@@ -121,8 +175,52 @@ export const REGELN: Regel[] = [
     grund: 'Wohin transportiert wurde',
   },
   {
-    feld: 'uebergabe_an', stufe: 'erwartet', wenn: transportiert,
+    feld: 'uebergabe_an', stufe: 'pflicht', wenn: transportiert,
     grund: 'An wen übergeben wurde',
+  },
+  {
+    feld: 'uebergabeort', stufe: 'pflicht', wenn: transportiert,
+    grund: 'Wo übergeben wurde',
+  },
+  {
+    feld: 'unterschrift', stufe: 'pflicht', wenn: transportiert,
+    erfuelltDurch: ['signature'],
+    grund: 'Die Unterschrift schließt das Protokoll ab',
+  },
+
+  // ── Übergabe-Befund: derselbe Befund wie beim Antreffen ─────────────────
+  // Er wird erhoben, weil sich etwas geändert haben kann — und gerade die
+  // Veränderung ist die Aussage.
+  ...([
+    ['ub_atemwege', 'Atemwege bei Übergabe'],
+    ['ub_atmung', 'Atmung bei Übergabe'],
+    ['ub_kreislauf', 'Kreislauf bei Übergabe'],
+    ['ub_puls_regelmaessig', 'Rhythmisch oder arrhythmisch bei Übergabe'],
+    ['ub_radialispuls', 'Radialispuls bei Übergabe'],
+    ['ub_rekap', 'Rekapillarisierungszeit bei Übergabe'],
+    ['ub_schockzeichen', 'Schockzeichen bei Übergabe'],
+    ['ub_bewusstsein', 'Bewusstseinslage bei Übergabe'],
+    ['ub_af', 'Atemfrequenz bei Übergabe'],
+    ['ub_spo2', 'Sättigung bei Übergabe'],
+    ['ub_hf', 'Herzfrequenz bei Übergabe'],
+    ['ub_puls', 'Puls bei Übergabe'],
+    ['ub_nibp_sys', 'Blutdruck systolisch bei Übergabe'],
+    ['ub_nibp_dia', 'Blutdruck diastolisch bei Übergabe'],
+    ['ub_bz', 'Blutzucker bei Übergabe'],
+    ['ub_temp', 'Temperatur bei Übergabe'],
+  ] as const).map(([feld, grund]): Regel => ({ feld, stufe: 'pflicht', wenn: transportiert, grund })),
+  {
+    feld: 'ub_neuro_ohne_befund', stufe: 'pflicht', wenn: transportiert,
+    erfuelltDurch: ['ub_bewusstsein'],
+    grund: 'Neurologie bei Übergabe',
+  },
+  {
+    feld: 'ub_pupillen_weite_re', stufe: 'pflicht', wenn: transportiert,
+    erfuelltDurch: ['ub_pupillen_weite_li'], grund: 'Pupillenweite bei Übergabe',
+  },
+  {
+    feld: 'ub_pupillen_licht_re', stufe: 'pflicht', wenn: transportiert,
+    erfuelltDurch: ['ub_pupillen_licht_li'], grund: 'Lichtreaktion bei Übergabe',
   },
 
   // ── Erwartet, nie erzwungen ─────────────────────────────────────────────

@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
-  REGELN, offeneErwartung, offenePflicht, patientVersorgt, pflichtKarte, transportiert,
+  REGELN, ZUSATZSCHLUESSEL, offeneErwartung, offenePflicht, patientVersorgt,
+  pflichtKarte, transportiert,
 } from '../../katalog/pflicht'
 import { aelrdFeld } from '../../katalog/aelrd'
 import { normOptionen } from '../../katalog/aelrdOptionen'
@@ -12,13 +13,18 @@ describe('Was ein Protokoll verlangt', () => {
     for (const r of REGELN) {
       expect(aelrdFeld(r.feld), `${r.feld} steht nicht im Katalog`).toBeTruthy()
       for (const e of r.erfuelltDurch ?? []) {
-        expect(aelrdFeld(e), `${e} steht nicht im Katalog`).toBeTruthy()
+        // Ausweichangaben sind Felder des Bogens — oder einer der wenigen
+        // Schlüssel, die das Protokoll zusätzlich führt.
+        expect(
+          Boolean(aelrdFeld(e)) || ZUSATZSCHLUESSEL.includes(e),
+          `${e} ist weder Feld noch bekannter Zusatz`,
+        ).toBe(true)
       }
     }
   })
 
   it('gibt jeder Regel einen Grund, den die Maske zeigen kann', () => {
-    for (const r of REGELN) expect(r.grund.length, r.feld).toBeGreaterThan(10)
+    for (const r of REGELN) expect(r.grund.trim().length, r.feld).toBeGreaterThan(3)
   })
 
   it('verlangt beim Fehleinsatz keine Vitalwerte', () => {

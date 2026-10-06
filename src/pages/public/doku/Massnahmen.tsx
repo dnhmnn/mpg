@@ -16,8 +16,8 @@ import {
 } from '../../../katalog/massnahmenArten'
 import { Knopf, type Werte } from './DokuFeld'
 import {
-  jetztZeit, massnahmeEintragen, massnahmeGrundSetzen, massnahmeStreichen,
-  massnahmenAbsteigend, ohneGrund,
+  besetztePosten, durchName, jetztZeit, massnahmeEintragen, massnahmeGrundSetzen,
+  massnahmeStreichen, massnahmenAbsteigend, ohneGrund,
 } from './massnahmen'
 
 const ROT = '#600812'
@@ -36,9 +36,18 @@ export default function Massnahmen({ werte, setWerte }: {
   const [art, setArt] = useState('')
   /** Für welchen Eintrag die Begründung gerade nachgetragen wird. */
   const [nachtragen, setNachtragen] = useState('')
+  /**
+   * Die gewählte Begründung, solange noch gefragt wird, wer gehandelt hat.
+   *
+   * Eine Basismaßnahme trägt sich sofort ein; alles andere ist eine
+   * persönliche Entscheidung, und dann gehört in das Protokoll, wer sie
+   * getroffen hat.
+   */
+  const [offenerGrund, setOffenerGrund] = useState('')
   const kat = massnahmeKategorie(kategorie)
   const eintraege = massnahmenAbsteigend(werte)
   const offen = ohneGrund(werte)
+  const mannschaft = besetztePosten(werte)
 
   // Leer heißt "jetzt": die Zeit des Eintragens, nicht die des Öffnens.
   const gezeigteZeit = zeit || jetztZeit()
@@ -46,12 +55,13 @@ export default function Massnahmen({ werte, setWerte }: {
   const gewaehlteArt = art.trim() ? (kat?.frei ? art.trim() : artText(kategorie, art)) : ''
 
   /** Die Begründung schließt den Eintrag ab — leer heißt "später". */
-  function eintragen(grund: string) {
+  function eintragen(grund: string, durch = '') {
     if (!kategorie || !art.trim()) return
-    setWerte((v) => massnahmeEintragen(v, { zeit: gezeigteZeit, kategorie, art, grund }))
+    setWerte((v) => massnahmeEintragen(v, { zeit: gezeigteZeit, kategorie, art, grund, durch }))
     setZeit('')
     setFrei('')
     setArt('')
+    setOffenerGrund('')
     // Zurück zur Auswahl: der nächste Griff ist meist eine andere Art, und
     // der Eintrag soll in der Liste zu sehen sein, nicht hinter der Liste
     // der Ausführungen, die ihn gerade erzeugt hat.
@@ -131,7 +141,7 @@ export default function Massnahmen({ werte, setWerte }: {
         {kat ? (
           gewaehlteArt ? (
             <button
-              type="button" onClick={() => { setArt(''); setFrei('') }}
+              type="button" onClick={() => { setArt(''); setFrei(''); setOffenerGrund('') }}
               style={{
                 display: 'flex', alignItems: 'center', gap: 7, width: '100%',
                 padding: '8px 11px', background: ROT,
@@ -187,7 +197,15 @@ export default function Massnahmen({ werte, setWerte }: {
             </div>
             <div>
               {RECHTSGRUENDE.map((r) => (
-                <Knopf key={r.wert} text={r.text} klein an={false} onClick={() => eintragen(r.wert)} />
+                <Knopf
+                  key={r.wert} text={r.text} klein an={r.wert === offenerGrund}
+                  onClick={() => {
+                    // Basismaßnahme trägt sich sofort ein; sonst wird erst
+                    // gefragt, wer gehandelt hat.
+                    if (r.wert === 'basis') eintragen(r.wert)
+                    else setOffenerGrund(r.wert === offenerGrund ? '' : r.wert)
+                  }}
+                />
               ))}
             </div>
             {/* Wer sie jetzt nicht treffen kann, soll die Maßnahme trotzdem
@@ -198,6 +216,36 @@ export default function Massnahmen({ werte, setWerte }: {
             >
               später nachtragen
             </button>
+
+            {/* 5. Wer gehandelt hat — nur, wo es keine Basismaßnahme ist. */}
+            {offenerGrund ? (
+              <div style={{ marginTop: 10, paddingTop: 10, borderTop: `0.5px solid ${LINIE}` }}>
+                <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: ROT, marginBottom: 4 }}>
+                  Durchgeführt von
+                  <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0, fontStyle: 'italic', marginLeft: 5, color: GRAU }}>
+                    trägt ein
+                  </span>
+                </div>
+                {mannschaft.length > 0 ? (
+                  <div>
+                    {mannschaft.map((m) => (
+                      <Knopf key={m.pos} text={m.name} klein an={false} onClick={() => eintragen(offenerGrund, m.pos)} />
+                    ))}
+                  </div>
+                ) : (
+                  <div style={{ fontSize: 12, fontStyle: 'italic', color: GRAU, lineHeight: 1.45, marginBottom: 6 }}>
+                    Noch niemand auf dem Zettel EINS eingetragen — ohne Besatzung
+                    lässt sich niemand benennen.
+                  </div>
+                )}
+                <button
+                  type="button" onClick={() => eintragen(offenerGrund)}
+                  style={{ marginTop: 2, padding: '7px 0', background: 'none', border: 'none', color: GRAU, fontFamily: 'inherit', fontSize: 12, fontStyle: 'italic', cursor: 'pointer' }}
+                >
+                  ohne Angabe eintragen
+                </button>
+              </div>
+            ) : null}
           </div>
         ) : null}
 
@@ -225,6 +273,7 @@ export default function Massnahmen({ werte, setWerte }: {
                   </span>
                   <span style={{ display: 'block', fontSize: 11, fontStyle: 'italic', color: GRAU }}>
                     {massnahmeKategorie(m.kategorie)?.titel ?? m.kategorie}
+                    {durchName(werte, m) ? ` · durch ${durchName(werte, m)}` : ''}
                   </span>
                   {/* Die Begründung — angetippt lässt sie sich ändern, und
                       fehlt sie, sagt die Zeile das statt zu schweigen. */}

@@ -19,6 +19,7 @@
 
 import { aelrdFeld } from '../../../katalog/aelrd'
 import { artText, massnahmeKategorie, rechtsgrund } from '../../../katalog/massnahmenArten'
+import { POSTEN, besatzungLesen } from './besatzung'
 import type { Werte } from './DokuFeld'
 
 export type Massnahme = {
@@ -38,6 +39,14 @@ export type Massnahme = {
    * ist, und lässt sie dort setzen.
    */
   grund?: string
+  /**
+   * Wer sie durchgeführt hat — der Schlüssel des Postens (tf, m1, m2, m3).
+   *
+   * Nur dort gefragt, wo es keine Basismaßnahme ist: wer delegiert, im
+   * Notstand oder nach § 2a handelt, tut das persönlich, und das Protokoll
+   * soll sagen, wer.
+   */
+  durch?: string
 }
 
 /** Trennzeichen der Schreiblinie auf dem Bogen. */
@@ -70,9 +79,24 @@ export function zeile(m: Massnahme): string {
  * Die Basismaßnahme bleibt unbenannt: sie ist der Regelfall und stünde
  * hundertmal da, ohne etwas zu sagen.
  */
-export function zeileMitGrund(m: Massnahme): string {
+export function zeileMitGrund(m: Massnahme, name = ''): string {
   const grund = m.grund && m.grund !== 'basis' ? rechtsgrund(m.grund)?.kurz : ''
-  return grund ? `${zeile(m)} (${grund})` : zeile(m)
+  const klammer = [grund, name.trim()].filter(Boolean).join(', ')
+  return klammer ? `${zeile(m)} (${klammer})` : zeile(m)
+}
+
+/** Der Name dessen, der die Maßnahme durchgeführt hat. */
+export function durchName(werte: Werte, m: Massnahme): string {
+  if (!m.durch) return ''
+  return besatzungLesen(werte)[m.durch]?.name ?? ''
+}
+
+/** Die Posten, die besetzt sind — zur Auswahl, wer gehandelt hat. */
+export function besetztePosten(werte: Werte): { pos: string; name: string }[] {
+  const besetzt = besatzungLesen(werte)
+  return POSTEN
+    .map((p) => ({ pos: p.pos as string, name: besetzt[p.pos]?.name ?? '' }))
+    .filter((p) => p.name !== '')
 }
 
 /**
@@ -136,17 +160,18 @@ const DELEGATIONEN = 'aelrd_delegationen'
  * hat jemand getippt und bleibt.
  */
 function delegationenNachziehen(werte: Werte, eintraege: Massnahme[], entfernt?: Massnahme): Werte {
+  const mitNamen = (m: Massnahme) => zeileMitGrund(m, durchName(werte, m))
   const bekannt = entfernt ? [...eintraege, entfernt] : eintraege
   const alt = typeof werte[DELEGATIONEN] === 'string' ? (werte[DELEGATIONEN] as string) : ''
   const fremd = alt
     .split(TRENNER)
     .map((t) => t.trim())
     .filter(Boolean)
-    .filter((teil) => !bekannt.some((m) => teil === zeileMitGrund(m) || teil.startsWith(zeile(m))))
+    .filter((teil) => !bekannt.some((m) => teil === mitNamen(m) || teil.startsWith(zeile(m))))
   // Die Basismaßnahme ist keine Delegation und gehört nicht in das Feld.
   const eigene = eintraege
     .filter((m) => m.grund && m.grund !== 'basis')
-    .map((m) => zeileMitGrund(m))
+    .map((m) => mitNamen(m))
   const neu = [...fremd, ...eigene].join(TRENNER)
   if (neu === alt) return werte
   return { ...werte, [DELEGATIONEN]: neu }
@@ -163,7 +188,7 @@ function kennung(vorhanden: Massnahme[]): string {
 /** Eine Maßnahme eintragen — in den Verlauf und in das Feld des Bogens. */
 export function massnahmeEintragen(
   werte: Werte,
-  eingabe: { zeit: string; kategorie: string; art: string; grund?: string },
+  eingabe: { zeit: string; kategorie: string; art: string; grund?: string; durch?: string },
 ): Werte {
   const kat = massnahmeKategorie(eingabe.kategorie)
   const art = eingabe.art.trim()
@@ -172,6 +197,7 @@ export function massnahmeEintragen(
   const neu: Massnahme = {
     id: kennung(vorhanden), zeit: eingabe.zeit, kategorie: eingabe.kategorie, art,
     ...(eingabe.grund && rechtsgrund(eingabe.grund) ? { grund: eingabe.grund } : {}),
+    ...(eingabe.durch && POSTEN.some((p) => p.pos === eingabe.durch) ? { durch: eingabe.durch } : {}),
   }
   const eintraege = [...vorhanden, neu]
   return delegationenNachziehen(
