@@ -212,9 +212,17 @@ function Block({ id, titel, teile, zeigeSchritt, felder, werte, setzen, aktion, 
                         {ersatzFeld?.[f.id] ?? (
                           <DokuFeld
                             feld={f} werte={werte} setzen={setzen} stand={verlangt?.get(f.id)}
-                            // Trägt die Überschrift den Namen schon, wird er
-                            // am Feld weggelassen.
-                            ohneBeschriftung={Boolean(teil.kennung) && teil.felder.length === 1}
+                            /*
+                             * Trägt die Überschrift den Namen schon, wird er am
+                             * Feld weggelassen — aber nur, solange dort nichts
+                             * aussteht. Der Stern braucht eine Zeile, auf der
+                             * er sitzen kann; ohne sie war die Pflicht bei x,
+                             * A und B unsichtbar.
+                             */
+                            ohneBeschriftung={
+                              Boolean(teil.kennung) && teil.felder.length === 1
+                              && !(verlangt?.get(f.id) && !verlangt.get(f.id)!.erfuellt)
+                            }
                           />
                         )}
                         {/* Die Fläche zum Unterschreiben gehört an das Feld,

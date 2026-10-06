@@ -9,6 +9,7 @@
 // gewählt, steht die Antwort auf beiden Seiten.
 
 import { useState } from 'react'
+import { pflichtKarte } from '../../../katalog/pflicht'
 import {
   pupillenFelder, pupillenFragen, pupillenLeer, pupillenText, seitengleich,
 } from '../../../katalog/pupillen'
@@ -32,6 +33,11 @@ export default function Pupillen({ werte, setWerte, vorsatz = '' }: {
   const fragen = pupillenFragen(vorsatz)
   const felder = pupillenFelder(vorsatz)
   const befund = pupillenText(werte, vorsatz)
+  // Verlangt wird der Status über das erste seiner Felder; die Maske führt
+  // alle vier, also trägt sie auch den Stern.
+  const karte = pflichtKarte(werte)
+  const stand = fragen.map((f) => karte.get(f.rechts)).find(Boolean)
+  const fehlt = Boolean(stand) && !stand!.erfuellt
 
   function oeffnen() {
     const start: Record<string, string> = {}
@@ -67,14 +73,16 @@ export default function Pupillen({ werte, setWerte, vorsatz = '' }: {
 
   return (
     <div style={{ marginBottom: 10 }}>
-      <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: GRAU, marginBottom: 4 }}>
+      <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: fehlt ? '#b91c1c' : GRAU, marginBottom: 4 }}>
         Pupillen
+        {stand ? <span style={{ marginLeft: 3 }}>*</span> : null}
       </div>
       <button
         type="button" onClick={oeffnen}
         style={{
           display: 'flex', alignItems: 'center', gap: 10, width: '100%',
-          padding: '10px 12px', background: '#fff', border: `0.5px solid ${LINIE}`,
+          padding: '10px 12px', background: fehlt ? '#fef2f2' : '#fff',
+          border: `0.5px solid ${fehlt ? '#b91c1c' : LINIE}`,
           borderRadius: 10, fontFamily: 'inherit', textAlign: 'left', cursor: 'pointer',
         }}
       >

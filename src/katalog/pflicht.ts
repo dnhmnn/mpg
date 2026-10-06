@@ -58,9 +58,24 @@ export function patientVersorgt(p: Record<string, unknown>): boolean {
   return !OHNE_PATIENT.includes(art)
 }
 
-/** Ob transportiert wurde — daran hängt die Übergabe. */
+/** Ob transportiert wurde — am Transportziel oder an der Übergabe zu erkennen. */
 export function transportiert(p: Record<string, unknown>): boolean {
   return gefuellt(p.transport_ziel) || gefuellt(p.zeit_uebergabe) || gefuellt(p.uebergabe_an)
+}
+
+/**
+ * Ob eine Übergabe zu dokumentieren ist.
+ *
+ * Daran hingen die Angaben der Übergabe zuerst am Transportziel — und das
+ * steht erst da, wenn es jemand eingetragen hat. Bis dahin war der ganze
+ * Übergabe-Zettel unmarkiert: man sah erst, was verlangt wird, nachdem man
+ * es schon getan hatte.
+ *
+ * Ein versorgter Patient wird übergeben; das ist der Regelfall. Der Bogen
+ * führt keine Angabe "kein Transport" — gäbe es eine, stünde sie hier.
+ */
+export function uebergeben(p: Record<string, unknown>): boolean {
+  return patientVersorgt(p)
 }
 
 /**
@@ -188,19 +203,19 @@ export const REGELN: Regel[] = [
 
   // ── Wenn transportiert wurde ────────────────────────────────────────────
   {
-    feld: 'zeit_uebergabe', stufe: 'pflicht', wenn: transportiert,
+    feld: 'zeit_uebergabe', stufe: 'pflicht', wenn: uebergeben,
     grund: 'Nach einem Transport gehört die Übergabezeit ins Protokoll',
   },
   {
-    feld: 'transport_ziel', stufe: 'pflicht', wenn: transportiert,
+    feld: 'transport_ziel', stufe: 'pflicht', wenn: uebergeben,
     grund: 'Wohin transportiert wurde',
   },
   {
-    feld: 'uebergabe_an', stufe: 'pflicht', wenn: transportiert,
+    feld: 'uebergabe_an', stufe: 'pflicht', wenn: uebergeben,
     grund: 'An wen übergeben wurde',
   },
   {
-    feld: 'uebergabeort', stufe: 'pflicht', wenn: transportiert,
+    feld: 'uebergabeort', stufe: 'pflicht', wenn: uebergeben,
     grund: 'Wo übergeben wurde',
   },
   {
@@ -230,27 +245,27 @@ export const REGELN: Regel[] = [
     ['ub_nibp_dia', 'Blutdruck diastolisch bei Übergabe'],
     ['ub_bz', 'Blutzucker bei Übergabe'],
     ['ub_temp', 'Temperatur bei Übergabe'],
-  ] as const).map(([feld, grund]): Regel => ({ feld, stufe: 'pflicht', wenn: transportiert, grund })),
+  ] as const).map(([feld, grund]): Regel => ({ feld, stufe: 'pflicht', wenn: uebergeben, grund })),
   {
-    feld: 'ub_neuro_ohne_befund', stufe: 'pflicht', wenn: transportiert,
+    feld: 'ub_neuro_ohne_befund', stufe: 'pflicht', wenn: uebergeben,
     erfuelltDurch: ['ub_bewusstsein'],
     grund: 'Neurologie bei Übergabe',
   },
   {
-    feld: 'ub_pupillen_weite_re', stufe: 'pflicht', wenn: transportiert,
+    feld: 'ub_pupillen_weite_re', stufe: 'pflicht', wenn: uebergeben,
     erfuelltDurch: ['ub_pupillen_weite_li'], grund: 'Pupillenweite bei Übergabe',
   },
   {
-    feld: 'ub_pupillen_licht_re', stufe: 'pflicht', wenn: transportiert,
+    feld: 'ub_pupillen_licht_re', stufe: 'pflicht', wenn: uebergeben,
     erfuelltDurch: ['ub_pupillen_licht_li'], grund: 'Lichtreaktion bei Übergabe',
   },
   {
-    feld: 'ub_gcs_summe', stufe: 'pflicht', wenn: transportiert,
+    feld: 'ub_gcs_summe', stufe: 'pflicht', wenn: uebergeben,
     erfuelltDurch: ['ub_bewusstsein'],
     grund: 'Bewusstseinszustand bei Übergabe — als GCS oder Bewusstseinslage',
   },
   {
-    feld: 'ub_schmerz', stufe: 'pflicht', wenn: transportiert,
+    feld: 'ub_schmerz', stufe: 'pflicht', wenn: uebergeben,
     erfuelltDurch: ['ub_schmerz_nicht_beurteilbar'],
     grund: 'Schmerz bei Übergabe — oder dass er nicht beurteilbar war',
   },

@@ -210,9 +210,14 @@ export default function DokuFeld({ feld, werte, setzen, ohneBeschriftung, stand 
   const farbe = standFarbe(stand)
 
   if (feld.typ === 'check') {
+    // Ein Haken hat keine Beschriftung, auf der ein Stern sitzen könnte —
+    // also trägt ihn der Knopf.
     return (
       <div style={{ marginBottom: 6 }}>
-        <Knopf text={feld.label} an={Boolean(wert)} onClick={() => setzen(feld.id, !wert)} />
+        <Knopf
+          text={feld.label} an={Boolean(wert)} offen={Boolean(farbe)}
+          onClick={() => setzen(feld.id, !wert)}
+        />
       </div>
     )
   }

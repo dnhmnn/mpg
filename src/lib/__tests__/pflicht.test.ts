@@ -50,10 +50,16 @@ describe('Was ein Protokoll verlangt', () => {
     expect(arten).toContain('vorsorgliche Bereitstellung')
   })
 
-  it('verlangt die Übergabezeit erst, wenn transportiert wurde', () => {
+  it('verlangt die Übergabe, sobald ein Patient versorgt wurde', () => {
+    // Zuerst hing sie am Transportziel — und das steht erst da, wenn es
+    // jemand eingetragen hat. Bis dahin war der ganze Übergabe-Zettel
+    // unmarkiert: man sah erst, was verlangt wird, nachdem man es getan hatte.
     expect(transportiert({})).toBe(false)
-    expect(offen({ einsatz_art: 'Primäreinsatz' })).not.toContain('zeit_uebergabe')
-    expect(offen({ einsatz_art: 'Primäreinsatz', transport_ziel: 'Klinikum' })).toContain('zeit_uebergabe')
+    expect(offen({ einsatz_art: 'Primäreinsatz' })).toContain('zeit_uebergabe')
+    expect(offen({ einsatz_art: 'Primäreinsatz' })).toContain('ub_atemwege')
+    // Ohne Patient bleibt die Übergabe draußen.
+    expect(offen({ einsatz_art: 'Fehleinsatz' })).not.toContain('zeit_uebergabe')
+    expect(offen({ einsatz_art: 'Fehleinsatz' }).filter((f) => f.startsWith('ub_'))).toEqual([])
   })
 
   it('lässt den Schmerz durch die Angabe erfüllen, dass er nicht beurteilbar war', () => {
@@ -85,8 +91,7 @@ describe('Was ein Protokoll verlangt', () => {
   })
 
   it('zieht die Pflicht zurück, sobald der Fall sie nicht mehr trägt', () => {
-    const mitTransport = { einsatz_art: 'Primäreinsatz', transport_ziel: 'Klinikum' }
-    expect(offen(mitTransport)).toContain('zeit_uebergabe')
+    expect(offen({ einsatz_art: 'Primäreinsatz' })).toContain('zeit_uebergabe')
     // Fehleinsatz nachgetragen: der Transport ist keiner mehr.
     expect(offen({ einsatz_art: 'Fehleinsatz' })).not.toContain('zeit_uebergabe')
   })
@@ -97,7 +102,11 @@ describe('Was ein Protokoll verlangt', () => {
     expect(karte.get('notfallgeschehen')?.erfuellt).toBe(false)
     expect(karte.get('notfallgeschehen')?.stufe).toBe('pflicht')
     expect(karte.get('name')?.stufe).toBe('erwartet')
-    expect(karte.has('zeit_uebergabe')).toBe(false)
+    // Ein Primäreinsatz führt zur Übergabe — sie steht also auf der Karte,
+    // nur eben noch unerfüllt.
+    expect(karte.get('zeit_uebergabe')?.erfuellt).toBe(false)
+    // Ohne Patient steht sie gar nicht drauf.
+    expect(pflichtKarte({ einsatz_art: 'Fehleinsatz' }).has('zeit_uebergabe')).toBe(false)
   })
 })
 
@@ -117,8 +126,7 @@ describe('Maßnahmen, Reanimation und Übergabe', () => {
   })
 
   it('verlangt bei der Übergabe dasselbe wie beim Erstbefund', () => {
-    const transport = { einsatz_art: 'Primäreinsatz', transport_ziel: 'Klinikum' }
-    const ueber = offen(transport).filter((f) => f.startsWith('ub_'))
+    const ueber = offen({ einsatz_art: 'Primäreinsatz' }).filter((f) => f.startsWith('ub_'))
     const erst = offen({ einsatz_art: 'Primäreinsatz' })
     // Jede Angabe des Erstbefunds, die es bei der Übergabe gibt, wird dort
     // auch verlangt. (Die Haut führt der Bogen bei der Übergabe nicht.)
