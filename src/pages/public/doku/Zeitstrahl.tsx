@@ -281,7 +281,7 @@ export default function Zeitstrahl({ werte, setWerte, setzen }: {
                   ) : null}
                 </span>
                 <span style={{ display: 'block', fontSize: 11, fontStyle: 'italic', color: fehlt ? (stand!.stufe === 'pflicht' ? '#b91c1c' : '#b45309') : GRAU }}>
-                  {fehlt ? stand!.grund : h.unter}
+                  {h.unter}
                 </span>
                 {/*
                  * Die gerechnete Zeit bleibt sichtbar, auch wenn schon eine

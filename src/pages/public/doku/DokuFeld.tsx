@@ -106,7 +106,6 @@ function Marke({ text, hinweis, stand }: {
 }) {
   const farbe = standFarbe(stand)
   const pflicht = Boolean(stand)
-  const offen = Boolean(farbe)
   return (
     <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: farbe ?? GRAU, marginBottom: 4 }}>
       {text}
@@ -117,13 +116,10 @@ function Marke({ text, hinweis, stand }: {
        * eine Pflichtangabe war.
        */}
       {pflicht ? <span style={{ color: farbe ?? GRAU, marginLeft: 3 }}>*</span> : null}
-      {/* Steht die Angabe aus, sagt die Zeile warum — rot allein sagt nur,
-          dass etwas fehlt, nicht was es soll. */}
-      {offen && stand ? (
-        <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0, fontStyle: 'italic', marginLeft: 5 }}>
-          {stand.grund}
-        </span>
-      ) : hinweis ? (
+      {/* Der Grund der Regel steht nicht am Feld — er macht die Zeile lang
+          und sagt dem, der den Bogen kennt, nichts Neues. Gebraucht wird er
+          beim Absenden, wenn eine Angabe wirklich fehlt. */}
+      {hinweis ? (
         <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0, fontStyle: 'italic', marginLeft: 5 }}>{hinweis}</span>
       ) : null}
     </div>
