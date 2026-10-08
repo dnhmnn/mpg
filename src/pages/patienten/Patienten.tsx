@@ -558,7 +558,7 @@ export default function Patienten() {
         .pat-card-type {
           font-size: 10px;
           font-weight: 700;
-          color: #600812;
+          color: var(--lbf-akzent);
           text-transform: uppercase;
           letter-spacing: 0.14em;
           margin-bottom: 5px;
@@ -585,8 +585,10 @@ export default function Patienten() {
           display: flex;
           gap: 6px;
           align-items: center;
-          border-top: 0.5px solid rgba(96,8,18,0.08);
-          background: rgba(250,249,247,0.8);
+          border-top: 0.5px solid var(--lbf-border-light);
+          /* Im Dunkelmodus blieb dieser Streifen hell — unter einer dunklen
+             Karte, mit dunklen Knöpfen darauf. */
+          background: var(--lbf-fuss);
           padding: 8px 12px;
           flex-wrap: wrap;
         }
@@ -596,11 +598,11 @@ export default function Patienten() {
         .pat-hinweis {
           margin-top: 9px;
           padding: 6px 10px;
-          background: rgba(96,8,18,0.05);
+          background: var(--lbf-akzent-weich);
           border-radius: 8px;
           font-style: italic;
           font-size: 12px;
-          color: #600812;
+          color: var(--lbf-akzent);
           line-height: 1.45;
         }
 
@@ -658,7 +660,7 @@ export default function Patienten() {
         .pat-year-header {
           font-size: 10px;
           font-weight: 700;
-          color: #600812;
+          color: var(--lbf-akzent);
           text-transform: uppercase;
           letter-spacing: 0.14em;
           padding: 10px 0 8px;
@@ -842,7 +844,7 @@ export default function Patienten() {
               {/* Freigegeben — ready for admin action */}
               {freigegebenPatients.length > 0 && (
                 <>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 12 }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 12 }}>
                     Freigegeben – Gegenzeichnung möglich ({freigegebenPatients.length})
                   </div>
                   <div className="pat-grid" style={{ marginBottom: 28 }}>
@@ -914,7 +916,7 @@ export default function Patienten() {
               {/* Offen — not yet released by TF */}
               {patients.length > 0 && (
                 <>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 12 }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 12 }}>
                     Noch nicht freigegeben ({patients.length})
                   </div>
                   <div className="pat-grid">

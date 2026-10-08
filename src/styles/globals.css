@@ -98,6 +98,12 @@
   --lbf-input-bg: #ffffff;
   --lbf-input-border: rgba(96,8,18,0.15);
   --lbf-shadow: 0 1px 4px rgba(0,0,0,0.07);
+  /* Der Primärakzent als Token. Hart verdrahtet war er im Dunkelmodus fast
+     unlesbar: #600812 auf #1c1008 ist dunkelrot auf fast schwarz. */
+  --lbf-akzent: #600812;
+  --lbf-akzent-weich: rgba(96,8,18,0.05);
+  /* Der Streifen unter der Karte, in dem die Handlungen stehen. */
+  --lbf-fuss: rgba(250,249,247,0.8);
 
   /* Backgrounds */
   --bg: #ffffff;
@@ -145,6 +151,9 @@
   --lbf-input-bg: #1c1008;
   --lbf-input-border: rgba(253,200,160,0.15);
   --lbf-shadow: 0 1px 4px rgba(0,0,0,0.4);
+  --lbf-akzent: #f0a4a0;
+  --lbf-akzent-weich: rgba(240,164,160,0.08);
+  --lbf-fuss: rgba(253,200,160,0.04);
 
   --bg: #000000;
   --bg-app: #1c1c1e;
@@ -186,6 +195,9 @@
   --lbf-input-bg: #001a02;
   --lbf-input-border: rgba(0,255,65,0.25);
   --lbf-shadow: 0 1px 4px rgba(0,0,0,0.5);
+  --lbf-akzent: #00ff41;
+  --lbf-akzent-weich: rgba(0,255,65,0.08);
+  --lbf-fuss: rgba(0,255,65,0.04);
 
   --bg: #080c08;
   --bg-app: #080c08;
@@ -254,6 +266,9 @@
     --lbf-input-bg: #1c1008;
     --lbf-input-border: rgba(253,200,160,0.15);
     --lbf-shadow: 0 1px 4px rgba(0,0,0,0.4);
+  --lbf-akzent: #f0a4a0;
+  --lbf-akzent-weich: rgba(240,164,160,0.08);
+  --lbf-fuss: rgba(253,200,160,0.04);
 
     --bg: #000000;
     --bg-app: #1c1c1e;
