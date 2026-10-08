@@ -24,7 +24,7 @@ import {
   entwurfLesen, entwurfSchreiben, entwurfVerwerfen, standText,
 } from './entwurf'
 import Reiter, { ampel, type ReiterStand } from './Reiter'
-import { zettelMitFeldern, type ZettelTeil } from './zettel'
+import { zettelMitFeldern, zettelVon, type ZettelTeil } from './zettel'
 import Unterschrift from './Unterschrift'
 import Besatzung from './Besatzung'
 import Massnahmen from './Massnahmen'
@@ -43,6 +43,7 @@ import { zeitstrahlFelder } from './zeitstrahl'
 import { gcsFelder, gcsSkalen } from '../../../katalog/gcs'
 import { pupillenFelder } from '../../../katalog/pupillen'
 import { besatzungSetzen, type Besetzung, type Posten } from './besatzung'
+import { Feldrahmen } from './Markierung'
 
 // Kamera und Texterkennung werden erst geladen, wenn jemand die Karte
 // fotografieren will — sie gehören nicht in den Weg der übrigen Erfassung.
@@ -86,7 +87,7 @@ function inBloecke(
   return aus
 }
 
-function Block({ id, titel, teile, zeigeSchritt, felder, werte, setzen, aktion, ersatz, ersatzFeld, vorweg, uebernommen, verlangt }: {
+function Block({ id, titel, teile, zeigeSchritt, felder, werte, setzen, aktion, ersatz, ersatzFeld, vorweg, uebernommen, verlangt, rahmen }: {
   id: string
   titel: string
   /** Die Abschnitte des Bogens, die auf diesem Zettel zusammenstehen. */
@@ -129,7 +130,16 @@ function Block({ id, titel, teile, zeigeSchritt, felder, werte, setzen, aktion, 
   uebernommen?: Set<string>
   /** Welche Angaben dieses Protokoll gerade verlangt. */
   verlangt?: Map<string, Stand>
+  /**
+   * Was um ein Feld herum steht.
+   *
+   * Beim Stellen einer Rückfrage legt sich darüber eine Klickfläche, beim
+   * Lesen der Rückfrage eine Markierung. Der Block muss davon nur wissen, wo
+   * ein Feld anfängt und aufhört.
+   */
+  rahmen?: (feldId: string, inhalt: React.ReactNode) => React.ReactNode
 }) {
+  const umfassen = rahmen ?? ((_id: string, inhalt: React.ReactNode) => inhalt)
   const ausgefuellt = felder.filter((f) => gefuellt(werte[f.id])).length
   return (
     <section
@@ -206,14 +216,16 @@ function Block({ id, titel, teile, zeigeSchritt, felder, werte, setzen, aktion, 
                       // Innenrand und die Einheit am rechten Rand.
                       gridTemplateColumns: 'repeat(auto-fit,minmax(90px,1fr))', gap: 8, marginBottom: 12 }}>
                     {gruppe.felder.map((f) => (
-                      <Rasterzelle key={f.id} feld={f} werte={werte} setzen={setzen} stand={verlangt?.get(f.id)} />
+                      <div key={f.id}>
+                        {umfassen(f.id, <Rasterzelle feld={f} werte={werte} setzen={setzen} stand={verlangt?.get(f.id)} />)}
+                      </div>
                     ))}
                   </div>
                 ) : (
                   <div key={i}>
                     {gruppe.felder.map((f) => (
                       <div key={f.id}>
-                        {ersatzFeld?.[f.id] ?? (
+                        {umfassen(f.id, ersatzFeld?.[f.id] ?? (
                           <DokuFeld
                             feld={f} werte={werte} setzen={setzen} stand={verlangt?.get(f.id)}
                             /*
@@ -228,7 +240,7 @@ function Block({ id, titel, teile, zeigeSchritt, felder, werte, setzen, aktion, 
                               && !(verlangt?.get(f.id) && !verlangt.get(f.id)!.erfuellt)
                             }
                           />
-                        )}
+                        ))}
                         {/* Die Fläche zum Unterschreiben gehört an das Feld,
                             das sie trägt — nicht ans Ende des Blocks. */}
                         {f.id === 'unterschrift' ? (
@@ -249,7 +261,10 @@ function Block({ id, titel, teile, zeigeSchritt, felder, werte, setzen, aktion, 
   )
 }
 
-export default function Doku({ protokollId: ausProps, nurLesen = false }: {
+export default function Doku({
+  protokollId: ausProps, nurLesen: nichtSchreiben = false,
+  markieren = false, markiert = [], onMarkieren, hervorgehoben = [],
+}: {
   /** Ein bestehendes Protokoll — sonst steht die Kennung in ?id=. */
   protokollId?: string
   /**
@@ -261,7 +276,22 @@ export default function Doku({ protokollId: ausProps, nurLesen = false }: {
    * schaut jemand hinein.
    */
   nurLesen?: boolean
+  /**
+   * Felder anklicken, statt sie auszufüllen.
+   *
+   * So stellt der Beauftragte seine Rückfrage: er tippt die Stellen an, die
+   * er nicht nachvollziehen kann. Geschrieben wird dabei nichts.
+   */
+  markieren?: boolean
+  /** Die bereits angetippten Felder. */
+  markiert?: string[]
+  onMarkieren?: (feldId: string) => void
+  /** Felder, zu denen eine Rückfrage offen ist — beim Lesen hervorgehoben. */
+  hervorgehoben?: string[]
 } = {}) {
+  /* Wer markiert, liest: ein Protokoll wird durch eine Rückfrage nicht
+     geändert. */
+  const nurLesen = nichtSchreiben || markieren
   const { org, orgCode } = useOrg()
   /*
    * Der Entwurf aus dem Gerät wird gleich beim Aufbau gelesen, nicht in einem
@@ -398,6 +428,24 @@ export default function Doku({ protokollId: ausProps, nurLesen = false }: {
       gefuellt: b.felder.filter((f) => gefuellt(werte[f.id])).length,
     }
   })
+
+  /*
+   * Was um ein Feld herum steht: die Klickfläche beim Stellen einer
+   * Rückfrage, die Markierung beim Lesen. Beides geht über dieselbe Stelle,
+   * damit beide Seiten dieselbe Maske sehen.
+   */
+  const rahmen = markieren || hervorgehoben.length > 0
+    ? (feldId: string, inhalt: React.ReactNode) => (
+        <Feldrahmen
+          markiert={markieren ? markiert.includes(feldId) : hervorgehoben.includes(feldId)}
+          anklickbar={markieren}
+          beschriftung={aelrdFeld(feldId)?.label}
+          onKlick={() => onMarkieren?.(feldId)}
+        >
+          {inhalt}
+        </Feldrahmen>
+      )
+    : undefined
 
   /** Den Zettel wechseln — und beim ersten Schritt darin anfangen. */
   function zumBlock(id: string) {
@@ -565,6 +613,39 @@ export default function Doku({ protokollId: ausProps, nurLesen = false }: {
             placeholder="Feld suchen, z. B. Pupillen"
             style={{ width: '100%', padding: '9px 11px', background: '#fff', border: `0.5px solid ${LINIE}`, borderRadius: 999, fontFamily: 'inherit', fontSize: 14, color: TEXT, boxSizing: 'border-box' }}
           />
+          {/* Beim Stellen einer Rückfrage: was das Antippen bedeutet. Ohne
+              diesen Satz sieht der Beauftragte nur ein Protokoll, das sich
+              nicht ausfüllen lässt. */}
+        {markieren ? (
+          <div style={{ marginBottom: 10, padding: '8px 11px', background: '#fff', border: `0.5px solid ${ROT}`, borderRadius: 10, fontSize: 12, fontStyle: 'italic', color: TEXT, lineHeight: 1.45 }}>
+            Tippen Sie die Felder an, um die es geht.
+            {markiert.length > 0 ? (
+              <span style={{ fontWeight: 700, color: ROT }}>{` ${markiert.length} angetippt.`}</span>
+            ) : null}
+          </div>
+        ) : null}
+        {/* Beim Lesen: zu welchen Feldern gefragt wurde — mit dem Weg dorthin,
+            denn sie stehen auf verschiedenen Zetteln. */}
+        {!markieren && hervorgehoben.length > 0 ? (
+          <div style={{ marginBottom: 10, padding: '8px 11px', background: '#fff', border: `0.5px solid ${ROT}`, borderRadius: 10 }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: ROT, textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 6 }}>
+              Rückfrage zu
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+              {hervorgehoben.map((f) => {
+                const z = zettelVon(f)
+                return (
+                  <button
+                    key={f} type="button" disabled={!z} onClick={() => z && zumBlock(z.id)}
+                    style={{ padding: '5px 9px', background: 'rgba(96,8,18,0.05)', border: `0.5px solid ${LINIE}`, borderRadius: 999, color: ROT, fontFamily: 'inherit', fontSize: 11, fontWeight: 700, fontStyle: 'italic', cursor: z ? 'pointer' : 'default' }}
+                  >
+                    {aelrdFeld(f)?.label ?? f}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        ) : null}
           {/* Was das Gerät behalten hat — sichtbar, nicht heimlich. */}
         {wiederhergestellt ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, padding: '8px 11px', background: '#fff', border: `0.5px solid ${LINIE}`, borderRadius: 10 }}>
@@ -657,6 +738,7 @@ export default function Doku({ protokollId: ausProps, nurLesen = false }: {
               }}
               uebernommen={uebernommeneFelder}
               verlangt={verlangt}
+              rahmen={rahmen}
               vorweg={{
                 // Der Zeitstrahl rechnet die Kette der Statuszeiten und
                 // bietet sie den Feldern darunter an.

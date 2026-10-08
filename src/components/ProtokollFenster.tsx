@@ -23,14 +23,26 @@ const LINIE = 'rgba(96,8,18,0.12)'
  * Die Patientenverwaltung bringt ihr eigenes Fenster mit; dort wird nur der
  * Inhalt gebraucht.
  */
-export function ProtokollInhalt({ patientId }: { patientId: string }) {
+export function ProtokollInhalt({ patientId, markieren, markiert, onMarkieren, hervorgehoben }: {
+  patientId: string
+  /** Felder antippen, um danach zu fragen — statt sie auszufüllen. */
+  markieren?: boolean
+  markiert?: string[]
+  onMarkieren?: (feldId: string) => void
+  /** Felder, zu denen eine Rückfrage offen ist. */
+  hervorgehoben?: string[]
+}) {
   const { org, fehler } = useOrganisation()
   if (fehler) return <p style={{ padding: 24, color: GRAU, fontStyle: 'italic' }}>{fehler}</p>
   if (!org) return <p style={{ padding: 24, color: GRAU, fontStyle: 'italic' }}>Lade …</p>
   return (
     <OrgKontext org={org} orgCode={org.org_code}>
       <Suspense fallback={null}>
-        <Doku protokollId={patientId} nurLesen />
+        <Doku
+          protokollId={patientId} nurLesen
+          markieren={markieren} markiert={markiert} onMarkieren={onMarkieren}
+          hervorgehoben={hervorgehoben}
+        />
       </Suspense>
     </OrgKontext>
   )

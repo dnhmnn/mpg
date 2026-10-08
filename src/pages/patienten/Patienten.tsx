@@ -8,17 +8,10 @@ import NachModal from './NachModal'
 import DetailsModal from './DetailsModal'
 import ProtokollView from '../../components/ProtokollView'
 const ProtokollInhalt = lazy(() => import('../../components/ProtokollFenster').then((m) => ({ default: m.ProtokollInhalt })))
+const RueckfrageFenster = lazy(() => import('../../components/RueckfrageFenster'))
 import type { Patient, Nacherfassung, PatientPayload, NachForm } from './types'
 import { EMPTY_PAYLOAD, EMPTY_NACH, parsePayload, fmtDate } from './types'
-
-function fmtReopenRemaining(expiresAt: string): string {
-  const ms = new Date(expiresAt).getTime() - Date.now()
-  if (ms <= 0) return 'abgelaufen'
-  const totalMin = Math.floor(ms / 60000)
-  const h = Math.floor(totalMin / 60)
-  const min = totalMin % 60
-  return h > 0 ? `noch ${h}h ${min}min` : `noch ${min}min`
-}
+import { archivHindernis, offeneRueckfragen } from '../public/doku/rueckfrage'
 
 type Tab = 'patienten' | 'nach' | 'archiv' | 'audit' | 'qrcodes'
 
@@ -54,8 +47,8 @@ export default function Patienten() {
   const [accessLogs, setAccessLogs] = useState<AccessLogEntry[]>([])
   const [activeTab, setActiveTab] = useState<Tab>('patienten')
 
-  const [reopenModal, setReopenModal] = useState<Patient | null>(null)
-  const [reopenHours, setReopenHours] = useState(24)
+  /** Das Protokoll, zu dem gerade eine Rückfrage gestellt wird. */
+  const [rueckfrageModal, setRueckfrageModal] = useState<Patient | null>(null)
 
   const [protokollSheet, setProtokollSheet] = useState<Patient | null>(null)
   const [mannschaftModal, setMannschaftModal] = useState<Patient | null>(null)
@@ -280,34 +273,14 @@ export default function Patienten() {
     }
   }
 
-  async function reopenForTF(patient: Patient, hours: number) {
-    const now = new Date()
-    const expires = new Date(now.getTime() + hours * 3600 * 1000)
-    const adminName = (user as any)?.name || user?.email || 'Admin'
-    const sysRQ = {
-      id: Date.now().toString(),
-      frage: `Protokoll wurde am ${now.toLocaleString('de-DE')} für ${hours} Stunden zur Weiterbearbeitung an den Teamleiter gesendet (durch ${adminName}).`,
-      created_by: 'System',
-      status: 'beantwortet' as const,
-      created: now.toISOString(),
-    }
-    const pl = parsePayload((patient as any).payload)
-    const existingRQs = pl.rueckfragen || []
-    try {
-      await pb.collection('patients').update(patient.id, {
-        payload: {
-          ...pl,
-          tf_reopen: { opened_at: now.toISOString(), expires_at: expires.toISOString(), opened_by: adminName },
-          rueckfragen: [...existingRQs, sysRQ],
-        }
-      })
-      flash(`Protokoll für ${hours}h zur Nachbearbeitung geöffnet`, 'success')
-      setReopenModal(null)
-      await loadOpenData()
-    } catch (e: any) {
-      flash('Fehler: ' + e.message, 'error')
-    }
-  }
+  /*
+   * Die Nachbearbeitung gibt es nicht mehr.
+   *
+   * Ein Protokoll noch einmal zum Schreiben zu öffnen hieß, das im Einsatz
+   * Dokumentierte nachträglich zu ändern. Stattdessen stellt der Beauftragte
+   * eine Rückfrage und der Teamführer nimmt dazu Stellung — das Protokoll
+   * bleibt, wie es war, die Erklärung steht daneben.
+   */
 
   async function searchMannschaft(role: string, text: string) {
     setMannSearch(prev => ({ ...prev, [role]: text }))
@@ -880,11 +853,13 @@ export default function Patienten() {
                       const displayName = patName || crew || pat.title || 'Unbekannt'
                       const rqs: any[] = Array.isArray((pat as any).payload?.rueckfragen) ? (pat as any).payload.rueckfragen : []
                       const sns: any[] = Array.isArray((pat as any).payload?.stellungnahmen) ? (pat as any).payload.stellungnahmen : []
-                      const openRQ = rqs.filter((r: any) => r.status === 'offen').length
-                      const canSign = openRQ === 0
+                      // Vermerke des Systems zählen nicht: sie verlangen keine
+                      // Stellungnahme und halten das Archivieren nicht auf.
+                      const offeneRQ = offeneRueckfragen((pat as any).payload)
+                      const openRQ = offeneRQ.length
+                      const hindernis = archivHindernis((pat as any).payload)
+                      const canSign = !hindernis
                       const changedCount = ((pat as any).payload?._changed_fields || []).length
-                      const hasTFReopen = !!(pat as any).payload?.tf_reopen
-                      const reopenActive = hasTFReopen && new Date((pat as any).payload.tf_reopen.expires_at) > new Date()
                       const tfChangedCount = ((pat as any).payload?._tf_changed_fields || []).length
                       const accentColor = openRQ > 0 ? '#f59e0b' : '#16a34a'
                       return (
@@ -907,16 +882,11 @@ export default function Patienten() {
                               </div>
                             )}
 
-                            {/* Nachbearbeitung */}
-                            {reopenActive && (
-                              <div style={{ marginTop: 8, padding: '6px 10px', background: 'rgba(96,8,18,0.05)', borderRadius: 8, display: 'flex', gap: 6, alignItems: 'center' }}>
-                                <span style={{ fontStyle: 'italic', fontSize: 12, fontWeight: 700, color: '#600812' }}>TF Nachbearbeitung läuft</span>
-                                <span style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)' }}>· {fmtReopenRemaining((pat as any).payload.tf_reopen.expires_at)}</span>
-                              </div>
-                            )}
-                            {hasTFReopen && !reopenActive && (
-                              <div style={{ marginTop: 8, padding: '5px 10px', background: 'rgba(139,113,90,0.08)', borderRadius: 8 }}>
-                                <span style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', fontWeight: 600 }}>Nachbearbeitung abgelaufen</span>
+                            {/* Woran das Archivieren hängt — nicht erst beim
+                                Klick auf den gesperrten Knopf. */}
+                            {hindernis && (
+                              <div style={{ marginTop: 8, padding: '6px 10px', background: 'rgba(96,8,18,0.05)', borderRadius: 8 }}>
+                                <span style={{ fontStyle: 'italic', fontSize: 12, color: '#600812' }}>{hindernis}</span>
                               </div>
                             )}
                           </div>
@@ -926,12 +896,12 @@ export default function Patienten() {
                             <button className="pat-btn" onClick={() => setProtokollSheet(pat)}>Ansehen</button>
                             <button className="pat-btn" onClick={() => openEdit(pat)}>Bearbeiten</button>
                             {openRQ > 0 && <button className="pat-btn" onClick={() => { setStellungnahmePat(pat); setShowStellungnahme(true) }}>Anfragen ({openRQ})</button>}
-                            <button className="pat-btn" onClick={() => setReopenModal(pat)}>Nachbearbeit.</button>
+                            <button className="pat-btn" onClick={() => setRueckfrageModal(pat)}>Rückfrage</button>
                             <div style={{ flex: 1 }} />
                             <button
                               style={{ background: canSign ? '#600812' : 'var(--lbf-border-light)', color: canSign ? '#fff' : 'var(--warm-gray)', border: 'none', borderRadius: 8, padding: '7px 14px', fontWeight: 700, fontSize: 12, cursor: canSign ? 'pointer' : 'not-allowed', fontFamily: 'inherit', letterSpacing: '0.04em' }}
                               onClick={() => canSign && openEdit(pat)}
-                              title={!canSign ? `Erst alle ${openRQ} offenen Rückfragen beantworten` : ''}
+                              title={hindernis}
                             >
                               Gegenzeichnen
                             </button>
@@ -1333,42 +1303,22 @@ export default function Patienten() {
         )
       })()}
 
-      {/* Wiedereröffnen Modal */}
-      {reopenModal && (() => {
-        const pl = parsePayload((reopenModal as any).payload)
-        const patName = [pl.name, pl.vorname].filter(Boolean).join(' ') || reopenModal.title || 'Unbekannt'
+      {/* Rückfrage stellen — links das Wort, rechts das Protokoll */}
+      {rueckfrageModal && (() => {
+        const pl = parsePayload((rueckfrageModal as any).payload)
+        const patName = [pl.name, pl.vorname].filter(Boolean).join(' ') || rueckfrageModal.title || 'Unbekannt'
         return (
-          <div style={{ position: 'fixed', inset: 0, background: 'rgba(26,14,8,0.45)', zIndex: 3100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-            <div style={{ background: 'var(--lbf-card)', borderRadius: 14, width: '100%', maxWidth: 420, padding: '24px', boxShadow: '0 16px 48px rgba(0,0,0,0.2)', border: '0.5px solid rgba(96,8,18,0.1)' }}>
-              <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 8 }}>Zur Nachbearbeitung öffnen</div>
-              <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 17, color: 'var(--lbf-text)', marginBottom: 20 }}>{patName}</div>
-              <div style={{ marginBottom: 16 }}>
-                <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 6 }}>Dauer (Stunden)</label>
-                <input
-                  type="number"
-                  min={1}
-                  max={72}
-                  value={reopenHours}
-                  onChange={e => setReopenHours(Math.max(1, Math.min(72, Number(e.target.value))))}
-                  style={{ width: '100%', padding: '9px 12px', border: '0.5px solid rgba(96,8,18,0.2)', borderRadius: 8, fontSize: 16, fontFamily: 'inherit', boxSizing: 'border-box' as const, background: 'var(--warm-bg)', color: 'var(--lbf-text)', outline: 'none' }}
-                />
-                <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginTop: 6 }}>
-                  Der Teamleiter hat {reopenHours} Stunden Zeit zur Nachbearbeitung. Ein System-Eintrag wird automatisch erstellt.
-                </div>
-              </div>
-              <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-                <button onClick={() => setReopenModal(null)} className="pat-btn">
-                  Abbrechen
-                </button>
-                <button
-                  onClick={() => reopenForTF(reopenModal, reopenHours)}
-                  style={{ padding: '9px 18px', background: '#600812', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', letterSpacing: '0.04em' }}
-                >
-                  Öffnen
-                </button>
-              </div>
-            </div>
-          </div>
+          <Suspense fallback={null}>
+            <RueckfrageFenster
+              patientId={rueckfrageModal.id}
+              titel={patName}
+              payload={((rueckfrageModal as any).payload ?? {}) as Record<string, unknown>}
+              rolle="fragen"
+              name={(user as any)?.name || user?.email || 'Beauftragter'}
+              onGeschrieben={() => { loadOpenData(); flash('Rückfrage gesendet', 'success') }}
+              onSchliessen={() => setRueckfrageModal(null)}
+            />
+          </Suspense>
         )
       })()}
 

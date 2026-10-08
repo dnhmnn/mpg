@@ -79,6 +79,26 @@ export function fristText(payload: Werte, jetzt = new Date()): string {
   return `noch ${minuten} Minute${minuten === 1 ? '' : 'n'}`
 }
 
+/**
+ * Wann die Änderungsfrist eines Protokolls abläuft, als Zeitpunkt.
+ *
+ * Die Frist steht seit dem Umbau in der Nutzlast, vom Absenden an gerechnet.
+ * Protokolle von vorher führen sie nicht — für sie gilt, wie bisher in
+ * Unitas, ein Tag ab dem Anlegen. Ohne diesen Rückfall wäre ein altes
+ * Protokoll entweder für immer oder nie änderbar.
+ */
+export function fristEnde(payload: Werte, angelegt: string): number {
+  const frist = typeof payload.frist === 'string' ? Date.parse(payload.frist) : NaN
+  if (Number.isFinite(frist)) return frist
+  const an = Date.parse(angelegt)
+  return Number.isFinite(an) ? an + FRIST_MS : 0
+}
+
+/** Was von der Frist übrig ist, in Worten — auch für ältere Protokolle. */
+export function fristRestText(payload: Werte, angelegt: string, jetzt = new Date()): string {
+  return fristText({ frist: new Date(fristEnde(payload, angelegt)).toISOString() }, jetzt)
+}
+
 /** Was dem Absenden im Weg steht, und was nur fehlt. */
 export function pruefen(werte: Werte): { haelt: Stand[]; fehlt: Stand[] } {
   return { haelt: offenePflicht(werte), fehlt: offeneErwartung(werte) }

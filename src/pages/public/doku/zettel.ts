@@ -356,3 +356,16 @@ export function zettelMitFeldern(): (Zettel & { teile: ZettelTeil[]; felder: Ael
 export function felderAusAbschnitten(z: Zettel): string[] {
   return z.abschnitte.flatMap((id) => felderVon(id)).map((f) => f.id)
 }
+
+/**
+ * Auf welchem Zettel ein Feld steht — für den Sprung dorthin.
+ *
+ * Wer ein Feld sucht (eine offene Pflicht, eine Rückfrage), braucht nicht das
+ * Feld, sondern den Weg: welchen Zettel er aufschlagen muss.
+ */
+export function zettelVon(feldId: string): { id: string; titel: string } | null {
+  for (const z of zettelMitFeldern()) {
+    if (z.felder.some((f) => f.id === feldId)) return { id: z.id, titel: z.titel }
+  }
+  return null
+}

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
-  FRIST_MS, datensatz, fristLaeuft, fristText, inWarteschlange, protokollnummer,
+  FRIST_MS, datensatz, fristEnde, fristLaeuft, fristRestText, fristText, inWarteschlange, protokollnummer,
   pruefen, titel, warteschlange, warteschlangeLeeren, warteschlangeSchluessel,
   type Speicher,
 } from '../../pages/public/doku/absenden'
@@ -118,5 +118,25 @@ describe('Die Änderungsfrist nach dem Absenden', () => {
     expect(fristText(p, new Date('2026-10-07T12:45:00Z'))).toBe('noch 15 Minuten')
     expect(fristText(p, new Date('2026-10-07T14:00:00Z'))).toBe('abgelaufen')
     expect(fristText({})).toBe('')
+  })
+})
+
+describe('Frist älterer Protokolle', () => {
+  const EIN_TAG = 86_400_000
+
+  it('gilt vom Absenden an, wenn sie in der Nutzlast steht', () => {
+    const payload = { frist: '2026-03-05T10:00:00.000Z' }
+    expect(fristEnde(payload, '2026-03-01T00:00:00.000Z')).toBe(Date.parse('2026-03-05T10:00:00.000Z'))
+  })
+
+  it('fällt sonst auf einen Tag ab dem Anlegen zurück', () => {
+    const angelegt = '2026-03-04T08:00:00.000Z'
+    expect(fristEnde({}, angelegt)).toBe(Date.parse(angelegt) + EIN_TAG)
+    expect(fristRestText({}, angelegt, new Date('2026-03-04T20:00:00.000Z'))).toBe('noch 12 Stunden')
+    expect(fristRestText({}, angelegt, new Date('2026-03-06T00:00:00.000Z'))).toBe('abgelaufen')
+  })
+
+  it('ist abgelaufen, wenn nicht einmal das Anlegen lesbar ist', () => {
+    expect(fristEnde({}, 'kein Datum')).toBe(0)
   })
 })

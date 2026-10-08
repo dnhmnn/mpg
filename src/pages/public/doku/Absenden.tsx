@@ -9,20 +9,12 @@ import { pb } from '../../../lib/pocketbase'
 import { aelrdFeld } from '../../../katalog/aelrd'
 import type { Werte } from './DokuFeld'
 import { datensatz, fristLaeuft, fristText, inWarteschlange, protokollnummer, pruefen } from './absenden'
-import { zettelMitFeldern } from './zettel'
+import { zettelVon } from './zettel'
 
 const ROT = '#600812'
 const TEXT = '#1a0e08'
 const GRAU = 'var(--warm-gray)'
 const LINIE = 'rgba(96,8,18,0.14)'
-
-/** Auf welchem Zettel ein Feld steht — für den Sprung dorthin. */
-function zettelVon(feldId: string): { id: string; titel: string } | null {
-  for (const z of zettelMitFeldern()) {
-    if (z.felder.some((f) => f.id === feldId)) return { id: z.id, titel: z.titel }
-  }
-  return null
-}
 
 export default function Absenden({ werte, orgId, orgCode, protokollId, onGesendet, onSpringen }: {
   werte: Werte
