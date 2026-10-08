@@ -4,15 +4,7 @@ import { parsePayload, fmtDateTime } from './types'
 import { istDivi } from '../../lib/protokoll'
 import { PubSection } from '../public/pubStyles'
 import ProtokollView from '../../components/ProtokollView'
-/*
- * Erst laden, wenn jemand ein Protokoll ansieht.
- *
- * Die Ansicht zieht den Katalog des Bogens und das DIVI-Metamodell nach sich.
- * Fest eingebunden wuchs der Hauptbrocken damit über zwei Megabyte — und der
- * Service Worker legt nichts mehr in den Vorrat, was darüber liegt. Dann ist
- * die App offline nicht mehr vollständig.
- */
-const DokuProtokollView = lazy(() => import('../../components/DokuProtokollView'))
+const ProtokollInhalt = lazy(() => import('../../components/ProtokollFenster').then((m) => ({ default: m.ProtokollInhalt })))
 
 interface Props {
   doc: Patient | Nacherfassung
@@ -418,8 +410,8 @@ export default function DetailsModal({ doc, type, onClose, onEdit }: Props) {
 
         {/* ── PATIENTENDOKU ── */}
         {isPatient && p && (
-          <div style={{ background: 'var(--warm-bg)', padding: '10px 0', borderRadius: 12 }}>
-            <Suspense fallback={null}><DokuProtokollView payload={p as Record<string, unknown>} /></Suspense>
+          <div style={{ background: 'var(--warm-bg)', borderRadius: 12, overflow: 'hidden' }}>
+            <Suspense fallback={null}><ProtokollInhalt patientId={doc.id} /></Suspense>
           </div>
         )}
 

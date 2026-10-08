@@ -249,19 +249,33 @@ function Block({ id, titel, teile, zeigeSchritt, felder, werte, setzen, aktion, 
   )
 }
 
-export default function Doku() {
+export default function Doku({ protokollId: ausProps, nurLesen = false }: {
+  /** Ein bestehendes Protokoll — sonst steht die Kennung in ?id=. */
+  protokollId?: string
+  /**
+   * Nur ansehen.
+   *
+   * Dann ist es dieselbe Maske, nur dass nichts geschrieben wird: kein
+   * Eintrag, kein Entwurf, kein Absenden. Durchblättern geht weiter — die
+   * Zettel, die Schritte und die Lupe bleiben bedienbar, denn genau dafür
+   * schaut jemand hinein.
+   */
+  nurLesen?: boolean
+} = {}) {
   const { org, orgCode } = useOrg()
   /*
    * Der Entwurf aus dem Gerät wird gleich beim Aufbau gelesen, nicht in einem
    * Effekt: sonst stünde die Maske einen Augenblick leer da, und ein Tippen
    * in dieser Lücke ginge gegen den leeren Stand.
    */
-  const [werte, setWerte] = useState<Werte>(
-    () => entwurfLesen(window.localStorage, orgCode)?.werte ?? {},
+  const [werte, setWerteRoh] = useState<Werte>(
+    () => (nurLesen || ausProps ? {} : entwurfLesen(window.localStorage, orgCode)?.werte ?? {}),
   )
+  /** Beim Ansehen schreibt niemand — der Weg dorthin ist schlicht zu. */
+  const setWerte: typeof setWerteRoh = nurLesen ? () => {} : setWerteRoh
   /** Der Stand des wiederhergestellten Entwurfs — bis er weggetippt wird. */
   const [wiederhergestellt, setWiederhergestellt] = useState(
-    () => entwurfLesen(window.localStorage, orgCode)?.stand ?? '',
+    () => (nurLesen || ausProps ? '' : entwurfLesen(window.localStorage, orgCode)?.stand ?? ''),
   )
   /** Wenn das Gerät nichts behalten will, muss die Maske es sagen. */
   const [sichertNicht, setSichertNicht] = useState(false)
@@ -291,12 +305,15 @@ export default function Doku() {
    * beim Tippen nicht jeder Buchstabe schreibt.
    */
   useEffect(() => {
+    // Beim Ansehen entsteht kein Entwurf: sonst überschriebe ein Blick in ein
+    // fremdes Protokoll das eigene angefangene.
+    if (nurLesen || ausProps) return
     const uhr = setTimeout(() => {
       const ging = entwurfSchreiben(window.localStorage, orgCode, werte)
       setSichertNicht(!ging)
     }, 400)
     return () => clearTimeout(uhr)
-  }, [werte, orgCode])
+  }, [werte, orgCode, nurLesen, ausProps])
 
   /*
    * Was dieses Protokoll verlangt, hängt an ihm selbst: ein Fehleinsatz
@@ -310,13 +327,13 @@ export default function Doku() {
    * gleichgültig, in welcher der beiden Masken es entstanden ist.
    */
   useEffect(() => {
-    if (!navigator.onLine) return
+    if (nurLesen || !navigator.onLine) return
     const liegend = warteschlange(window.localStorage, orgCode)
     if (liegend.length === 0) return
     Promise.all(liegend.map(({ type, ...satz }) => pb.collection('patients').create(satz)))
       .then(() => warteschlangeLeeren(window.localStorage, orgCode))
       .catch(() => { /* bleibt liegen, nächster Versuch beim nächsten Öffnen */ })
-  }, [orgCode])
+  }, [orgCode, nurLesen])
 
   /*
    * Mit ?id= wird ein bestehendes Protokoll geöffnet — in seiner Frist. Der
@@ -324,19 +341,19 @@ export default function Doku() {
    * nicht zu diesem.
    */
   useEffect(() => {
-    const id = new URLSearchParams(window.location.search).get('id') ?? ''
+    const id = ausProps || (new URLSearchParams(window.location.search).get('id') ?? '')
     if (!id) return
     setProtokollId(id)
     setLaedt(true)
     pb.collection('patients').getOne(id)
       .then((rec) => {
         const p = typeof rec.payload === 'string' ? JSON.parse(rec.payload) : (rec.payload ?? {})
-        setWerte(p as Werte)
+        setWerteRoh(p as Werte)
         setWiederhergestellt('')
       })
       .catch(() => setLadefehler('Dieses Protokoll ließ sich nicht öffnen.'))
       .finally(() => setLaedt(false))
-  }, [])
+  }, [ausProps])
 
   const setzen = (id: string, w: unknown) => setWerte((v) => ({ ...v, [id]: w }))
   /** Die Felder, die die Maßnahmen-Maske schreibt — sie stehen dort, nicht einzeln. */
@@ -508,7 +525,8 @@ export default function Doku() {
             <div style={{ fontSize: 15, fontWeight: 700, color: TEXT }}>Patientendokumentation</div>
             <div style={{ fontSize: 11, fontStyle: 'italic', color: GRAU, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {org.org_name} · {fertig} von {imWeg.length} Feldern
-              {protokollId ? ` · ${fristLaeuft(werte) ? `Änderungsfrist ${fristText(werte)}` : 'Frist abgelaufen'}` : ''}
+              {nurLesen ? ' · nur ansehen' : ''}
+              {protokollId && !nurLesen ? ` · ${fristLaeuft(werte) ? `Änderungsfrist ${fristText(werte)}` : 'Frist abgelaufen'}` : ''}
               {pflichtOffen.length > 0 ? ` · ${pflichtOffen.length} Pflichtangaben offen` : ''}
               {pflichtOffen.length === 0 && erwartungOffen.length > 0 ? ` · ${erwartungOffen.length} erwartet` : ''}
             </div>
@@ -620,7 +638,7 @@ export default function Doku() {
             beschriftung={`Schritte: ${aktuell?.titel ?? ''}`} schmal ueberlagernd
           />
         ) : null}
-        <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ flex: 1, minWidth: 0, pointerEvents: nurLesen ? 'none' : undefined }}>
         {aktuell ? (
           <>
             <Block
@@ -687,7 +705,7 @@ export default function Doku() {
               }}
             />
 
-            {aktuell.id === 'abschluss' ? (
+            {aktuell.id === 'abschluss' && !nurLesen ? (
               <Absenden
                 werte={werte} orgId={org.id} orgCode={orgCode} protokollId={protokollId}
                 onSpringen={zumBlock}

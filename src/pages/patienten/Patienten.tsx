@@ -7,15 +7,7 @@ import SignModal from './SignModal'
 import NachModal from './NachModal'
 import DetailsModal from './DetailsModal'
 import ProtokollView from '../../components/ProtokollView'
-/*
- * Erst laden, wenn jemand ein Protokoll ansieht.
- *
- * Die Ansicht zieht den Katalog des Bogens und das DIVI-Metamodell nach sich.
- * Fest eingebunden wuchs der Hauptbrocken damit über zwei Megabyte — und der
- * Service Worker legt nichts mehr in den Vorrat, was darüber liegt. Dann ist
- * die App offline nicht mehr vollständig.
- */
-const DokuProtokollView = lazy(() => import('../../components/DokuProtokollView'))
+const ProtokollInhalt = lazy(() => import('../../components/ProtokollFenster').then((m) => ({ default: m.ProtokollInhalt })))
 import type { Patient, Nacherfassung, PatientPayload, NachForm } from './types'
 import { EMPTY_PAYLOAD, EMPTY_NACH, parsePayload, fmtDate } from './types'
 
@@ -1254,11 +1246,11 @@ export default function Patienten() {
                 </button>
               </div>
               <div style={{ overflowY: 'auto', flex: 1 }}>
-                {/* In der Gliederung der Maske — damit alle dasselbe Feld
-                    an derselben Stelle suchen. */}
-                <div style={{ background: 'var(--warm-bg)', padding: '10px 12px' }}>
-                  <Suspense fallback={null}><DokuProtokollView payload={pl as unknown as Record<string, unknown>} /></Suspense>
-                </div>
+                {/* Die Maske selbst, nur lesend — damit alle dasselbe sehen
+                    wie der, der sie ausgefüllt hat. */}
+                <Suspense fallback={null}>
+                  <ProtokollInhalt patientId={protokollSheet.id} />
+                </Suspense>
               </div>
             </div>
           </>

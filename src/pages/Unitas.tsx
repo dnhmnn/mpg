@@ -3,15 +3,7 @@ import PocketBase from 'pocketbase'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { getTheme, setTheme, type ThemeMode } from '../lib/theme'
-/*
- * Erst laden, wenn jemand ein Protokoll ansieht.
- *
- * Die Ansicht zieht den Katalog des Bogens und das DIVI-Metamodell nach sich.
- * Fest eingebunden wuchs der Hauptbrocken damit über zwei Megabyte — und der
- * Service Worker legt nichts mehr in den Vorrat, was darüber liegt. Dann ist
- * die App offline nicht mehr vollständig.
- */
-const DokuProtokollView = lazy(() => import('../components/DokuProtokollView'))
+const ProtokollFenster = lazy(() => import('../components/ProtokollFenster'))
 
 const pb = new PocketBase('https://api.responda.systems')
 
@@ -529,7 +521,7 @@ export default function Unitas() {
                           )}
                           <button onClick={() => setProtokollModal(p)} style={{ background: 'transparent', color: '#600812', border: '1px solid rgba(96,8,18,0.3)', borderRadius: 7, padding: '6px 13px', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>Protokoll</button>
                           {!canEdit && (
-                            <button onClick={() => navigate(`/protokoll/${p.id}`)} style={{ background: 'transparent', color: '#600812', border: '1px solid rgba(96,8,18,0.3)', borderRadius: 7, padding: '6px 13px', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>Ansehen</button>
+                            <button onClick={() => setProtokollModal(p)} style={{ background: 'transparent', color: '#600812', border: '1px solid rgba(96,8,18,0.3)', borderRadius: 7, padding: '6px 13px', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>Ansehen</button>
                           )}
                         </div>
                       </div>
@@ -613,7 +605,7 @@ export default function Unitas() {
                               }} style={{ background: 'transparent', color: '#16a34a', border: '1px solid #16a34a', borderRadius: 7, padding: '6px 13px', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>Abschließen</button>
                             </>
                           ) : (
-                            <button onClick={() => navigate(`/protokoll/${p.id}`)} style={{ background: 'transparent', color: '#600812', border: '1px solid rgba(96,8,18,0.3)', borderRadius: 7, padding: '6px 13px', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>Ansehen</button>
+                            <button onClick={() => setProtokollModal(p)} style={{ background: 'transparent', color: '#600812', border: '1px solid rgba(96,8,18,0.3)', borderRadius: 7, padding: '6px 13px', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>Ansehen</button>
                           )}
                         </div>
                       </div>
@@ -677,7 +669,7 @@ export default function Unitas() {
                               Stellungnahme
                             </button>
                           )}
-                          <button onClick={() => navigate(`/protokoll/${p.id}`)} style={{ background: 'transparent', color: '#600812', border: '1px solid rgba(96,8,18,0.3)', borderRadius: 7, padding: '6px 13px', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>Ansehen</button>
+                          <button onClick={() => setProtokollModal(p)} style={{ background: 'transparent', color: '#600812', border: '1px solid rgba(96,8,18,0.3)', borderRadius: 7, padding: '6px 13px', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>Ansehen</button>
                         </div>
                       </div>
                     )
@@ -950,28 +942,12 @@ export default function Unitas() {
         const pl = (protokollModal.payload || {}) as Record<string, unknown>
         const name = [pl.vorname, pl.name].filter(Boolean).join(' ') || protokollModal.title || 'Protokoll'
         return (
-          <div
-            role="dialog" aria-label="Protokoll"
-            style={{ position: 'fixed', inset: 0, zIndex: 95, background: 'var(--warm-bg)', display: 'flex', flexDirection: 'column' }}
-          >
-            <header style={{ flexShrink: 0, background: '#fff', borderBottom: '0.5px solid rgba(96,8,18,0.12)', padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 15, fontWeight: 700, fontStyle: 'italic', color: 'var(--text)' }}>{name}</div>
-                <div style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--warm-gray)' }}>
-                  {new Date(protokollModal.created).toLocaleString('de-DE')} · so, wie es erfasst wurde
-                </div>
-              </div>
-              <button
-                type="button" onClick={() => setProtokollModal(null)} aria-label="Schließen"
-                style={{ background: 'none', border: 'none', color: 'var(--warm-gray)', fontSize: 26, lineHeight: 1, padding: '0 4px', cursor: 'pointer', fontFamily: 'inherit' }}
-              >
-                ×
-              </button>
-            </header>
-            <div style={{ flex: 1, overflowY: 'auto', padding: '10px 12px 24px' }}>
-              <Suspense fallback={null}><DokuProtokollView payload={pl} /></Suspense>
-            </div>
-          </div>
+          <Suspense fallback={null}>
+            <ProtokollFenster
+              patientId={protokollModal.id} titel={name}
+              onSchliessen={() => setProtokollModal(null)}
+            />
+          </Suspense>
         )
       })()}
 
