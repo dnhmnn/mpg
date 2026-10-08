@@ -12,6 +12,7 @@
 // Vier Knöpfe sind schneller und ergeben einen Wert, den der DIVI-Export
 // später übernehmen kann.
 
+import { useEffect, useRef } from 'react'
 import type { AelrdFeld } from '../../../katalog/aelrd'
 import type { Stand } from '../../../katalog/pflicht'
 import { normOptionen } from '../../../katalog/aelrdOptionen'
@@ -193,6 +194,47 @@ export function Rasterzelle({ feld, werte, setzen, stand }: {
   )
 }
 
+/**
+ * Ein Freitextfeld, das mit seinem Inhalt wächst.
+ *
+ * Drei Zeilen mit Rollbalken darin reichen nicht: beim Ansehen ist die Maske
+ * stillgelegt, der Balken ließe sich nicht bedienen — ein langer
+ * Anamnesetext wäre schlicht abgeschnitten. Beim Ausfüllen hilft es
+ * genauso, denn getippt wird sonst in einem Guckloch.
+ */
+function Langtext({ feld, wert, setzen, rand, grund }: {
+  feld: AelrdFeld
+  wert: unknown
+  setzen: (id: string, w: unknown) => void
+  rand: string
+  grund: string
+}) {
+  const feldRef = useRef<HTMLTextAreaElement>(null)
+  useEffect(() => {
+    const el = feldRef.current
+    if (!el) return
+    // Erst zurücksetzen, sonst wüchse die Höhe nur und schrumpfte nie.
+    el.style.height = 'auto'
+    // Der Rahmen zählt mit: das Feld rechnet in Rahmenmaßen (border-box),
+    // scrollHeight kennt ihn nicht. Ohne ihn fehlte die letzte Zeile um
+    // zwei Pixel.
+    el.style.height = `${el.scrollHeight + el.offsetHeight - el.clientHeight}px`
+  }, [wert])
+  return (
+    <textarea
+      ref={feldRef} name={feld.id} rows={3}
+      value={String(wert ?? '')} onChange={(e) => setzen(feld.id, e.target.value)}
+      style={{
+        ...eingabe, lineHeight: 1.45,
+        // Kein eigener Rollbalken und kein Ziehen am Rand: das Feld hat
+        // immer die Höhe seines Inhalts.
+        resize: 'none', overflow: 'hidden',
+        border: `0.5px solid ${rand}`, background: grund,
+      }}
+    />
+  )
+}
+
 export default function DokuFeld({ feld, werte, setzen, ohneBeschriftung, stand }: {
   feld: AelrdFeld
   werte: Werte
@@ -265,9 +307,11 @@ export default function DokuFeld({ feld, werte, setzen, ohneBeschriftung, stand 
     return (
       <div style={{ marginBottom: 10 }}>
         {ohneBeschriftung ? null : <Marke text={feld.label} stand={stand} />}
-        <textarea name={feld.id} rows={3}
-          value={String(wert ?? '')} onChange={(e) => setzen(feld.id, e.target.value)}
-          style={{ ...eingabe, resize: 'vertical', lineHeight: 1.45, border: `0.5px solid ${farbe ?? LINIE}`, background: farbe === OFFEN ? '#fef2f2' : farbe === ERWARTET ? '#fffbeb' : '#fff' }} />
+        <Langtext
+          feld={feld} wert={wert} setzen={setzen}
+          rand={farbe ?? LINIE}
+          grund={farbe === OFFEN ? '#fef2f2' : farbe === ERWARTET ? '#fffbeb' : '#fff'}
+        />
       </div>
     )
   }

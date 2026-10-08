@@ -519,6 +519,16 @@ export default function Doku({
   // Die beiden Abkürzungen, die den größten Teil des Tippens sparen.
   const offeneUebernahme = uebernahmeUmfang(werte)
   const aktionFuer = (id: string): { text: string; onClick: () => void } | null => {
+    /*
+     * Beim Ansehen gibt es keine Abkürzungen.
+     *
+     * Sie füllen den Zettel, und gefüllt wird hier nichts. Der Kartenscan
+     * wäre sogar mehr als ein Knopf ohne Wirkung: er lädt die Texterkennung
+     * nach und legt ihre Sprachdaten auf dem Gerät ab. Der stillgelegte
+     * Kasten hält nur Maus und Finger ab — mit der Tastatur war der Knopf
+     * weiter erreichbar, und der Dialog hängt außerhalb der Sperre.
+     */
+    if (nurLesen) return null
     if (id === 'patient') {
       return { text: 'Gesundheitskarte einlesen (Rückseite)', onClick: () => setKartenScan(true) }
     }
@@ -864,7 +874,7 @@ export default function Doku({
         </Suspense>
       ) : null}
 
-      {kartenScan ? (
+      {kartenScan && !nurLesen ? (
         <Suspense fallback={null}>
           <KartenScan
             onSchliessen={() => setKartenScan(false)}
