@@ -11,7 +11,8 @@ const ProtokollInhalt = lazy(() => import('../../components/ProtokollFenster').t
 const RueckfrageFenster = lazy(() => import('../../components/RueckfrageFenster'))
 import type { Patient, Nacherfassung, PatientPayload, NachForm } from './types'
 import { EMPTY_PAYLOAD, EMPTY_NACH, parsePayload, fmtDate } from './types'
-import { archivHindernis, offeneRueckfragen } from '../public/doku/rueckfrage'
+import { archivHindernis, offeneRueckfragen, rueckfragen } from '../public/doku/rueckfrage'
+import { fristEnde, fristRestText } from '../public/doku/absenden'
 
 type Tab = 'patienten' | 'nach' | 'archiv' | 'audit' | 'qrcodes'
 
@@ -72,8 +73,8 @@ export default function Patienten() {
   const [detailsDoc, setDetailsDoc] = useState<Patient | Nacherfassung | null>(null)
   const [detailsType, setDetailsType] = useState<'patient' | 'nach'>('patient')
 
-  const [showStellungnahme, setShowStellungnahme] = useState(false)
-  const [stellungnahmePat, setStellungnahmePat] = useState<Patient | null>(null)
+  /** Ein archiviertes Protokoll zum Nachlesen des Vorgangs. */
+  const [nachlesen, setNachlesen] = useState<Patient | null>(null)
 
   const [msg, setMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(null)
   const [dataLoading, setDataLoading] = useState(true)
@@ -197,15 +198,19 @@ export default function Patienten() {
     setNachForm(f => ({ ...f, [key]: value }))
   }
 
-  async function openEdit(pat: Patient) {
-    const doc = await pb.collection('patients').getOne(pat.id)
-    setCurrentPatient(doc as unknown as Patient)
-    const parsed = parsePayload((doc as any).payload)
-    setPayload(parsed)
-    setOriginalPayload(parsed)
-    setShowEdit(true)
-    auditLog('bearbeitet', pat.id, 'patient', [parsed.name, parsed.vorname].filter(Boolean).join(' ') || pat.title || 'Unbekannt')
-  }
+  /*
+   * Der Beauftragte bearbeitet das Protokoll nicht mehr.
+   *
+   * Der alte Admin-Bogen führt andere Felder als die Maske, in der heute
+   * dokumentiert wird — er zeigte für ein neues Protokoll leere Zeilen und
+   * schrieb beim Weiterklicken eine Nutzlast darüber. Der Weg von der Karte
+   * dorthin ist deshalb zu; vom Protokoll zur Unterschrift geht es jetzt
+   * direkt. Was unklar ist, wird gefragt, nicht geändert.
+   *
+   * Erreichbar bleibt der Bogen allein über die Detailansicht (dort setzt
+   * `openDetails` den Stand) — für die Ausnahmen, die er noch kann, etwa den
+   * Zugangscode des Patienten.
+   */
 
   async function saveOnly(localPayload: PatientPayload) {
     if (!currentPatient) return
@@ -450,7 +455,7 @@ export default function Patienten() {
           font-weight: 700;
           font-size: 13px;
           box-shadow: 0 4px 16px rgba(0,0,0,0.12);
-          animation: slideInRight 0.25s cubic-bezier(0.34,1.56,0.64,1) both;
+          animation: slideInRight 0.2s ease-out both;
           max-width: 320px;
           font-family: inherit;
           letter-spacing: 0.02em;
@@ -505,19 +510,6 @@ export default function Patienten() {
           text-transform: uppercase;
           letter-spacing: 0.08em;
         }
-        .pat-tab-btn.primary {
-          background: #600812;
-          color: #fff;
-          border-bottom-color: transparent;
-          border-radius: 8px;
-          margin: auto 4px auto auto;
-          padding: 0 14px;
-          height: 32px;
-          gap: 0;
-          flex-direction: row;
-          align-self: center;
-        }
-        .pat-tab-btn.primary:hover { opacity: 0.88; }
 
         .pat-content {
           max-width: 1100px;
@@ -536,22 +528,32 @@ export default function Patienten() {
         }
 
         .pat-card {
-          background: #fff;
+          /* Der Kartengrund kommt aus dem Token, sonst bleibt die Karte im
+             Dunkelmodus weiss. */
+          background: var(--lbf-card);
           border-radius: 12px;
           border-left: 3px solid transparent;
-          box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+          box-shadow: var(--lbf-shadow);
           position: relative;
           cursor: default;
           overflow: hidden;
+          /* Im Raster werden die Karten auf eine Hoehe gestreckt. Ohne diese
+             zwei Zeilen blieb der Fussbereich dort stehen, wo der Text endet,
+             und darunter stand ein weisser Rest. */
+          display: flex;
+          flex-direction: column;
         }
         .pat-card-body {
           padding: 14px 16px 12px 14px;
+          flex: 1;
         }
         .pat-card.offen         { border-left-color: #600812; }
+        .pat-card.freigegeben   { border-left-color: #16a34a; }
+        /* Eine offene Rueckfrage haelt das Protokoll auf — der Balken sagt es. */
+        .pat-card.rueckfrage    { border-left-color: #d97706; }
         .pat-card.nach          { border-left-color: #600812; }
         .pat-card.archiviert    { border-left-color: rgba(139,113,90,0.4); }
         .pat-card.old           { border-left-color: #d97706; }
-        .pat-card.abgeschlossen { border-left-color: #d97706; }
 
         .pat-card-type {
           font-size: 10px;
@@ -566,7 +568,7 @@ export default function Patienten() {
           font-weight: 700;
           font-size: 17px;
           margin-bottom: 5px;
-          color: #1a0e08;
+          color: var(--lbf-text);
           line-height: 1.3;
           overflow: hidden;
           text-overflow: ellipsis;
@@ -589,6 +591,19 @@ export default function Patienten() {
           flex-wrap: wrap;
         }
 
+        /* Was einer Handlung entgegensteht, steht auf der Karte — nicht erst
+           als Titel am gesperrten Knopf. */
+        .pat-hinweis {
+          margin-top: 9px;
+          padding: 6px 10px;
+          background: rgba(96,8,18,0.05);
+          border-radius: 8px;
+          font-style: italic;
+          font-size: 12px;
+          color: #600812;
+          line-height: 1.45;
+        }
+
         .pat-badge {
           display: inline-flex;
           align-items: center;
@@ -601,11 +616,9 @@ export default function Patienten() {
           flex-shrink: 0;
           font-style: italic;
         }
-        .pat-badge.offen         { background: rgba(96,8,18,0.07); color: #600812; }
         .pat-badge.nach          { background: rgba(96,8,18,0.07); color: #600812; }
         .pat-badge.archiviert    { background: rgba(139,113,90,0.1); color: #8a7a68; }
         .pat-badge.old-warn      { background: rgba(217,119,6,0.1); color: #d97706; }
-        .pat-badge.abgeschlossen { background: rgba(217,119,6,0.1); color: #d97706; }
 
         .pat-btn {
           font-size: 12px;
@@ -614,15 +627,24 @@ export default function Patienten() {
           border: 1px solid rgba(96,8,18,0.15);
           border-radius: 8px;
           cursor: pointer;
-          background: #faf9f7;
-          color: #1a0e08;
+          background: var(--warm-bg);
+          color: var(--lbf-text);
           transition: background 0.12s;
           flex-shrink: 0;
           font-family: inherit;
           letter-spacing: 0.02em;
         }
         .pat-btn:hover { background: rgba(96,8,18,0.06); }
-        .pat-btn.danger { background: #fff0f0; border-color: rgba(192,57,43,0.3); color: #c0392b; }
+        /* Die eine Handlung, auf die eine Karte hinauslaeuft. */
+        .pat-btn.haupt { background: #600812; border-color: #600812; color: #fff; }
+        .pat-btn.haupt:hover { background: #4a0610; }
+        .pat-btn:disabled, .pat-btn.haupt:disabled {
+          background: rgba(96,8,18,0.04);
+          border-color: rgba(96,8,18,0.08);
+          color: var(--warm-gray);
+          cursor: not-allowed;
+        }
+        .pat-btn.danger { background: #fff0f0; border-color: rgba(220,38,38,0.3); color: #dc2626; }
         .pat-btn.danger:hover { background: #fde8e8; }
 
         .pat-empty {
@@ -706,27 +728,6 @@ export default function Patienten() {
           font-weight: 700;
         }
 
-        .fab {
-          position: fixed;
-          bottom: calc(24px + env(safe-area-inset-bottom));
-          right: 20px;
-          width: 52px;
-          height: 52px;
-          border-radius: 26px;
-          background: #600812;
-          color: #fff;
-          border: none;
-          font-size: 26px;
-          cursor: pointer;
-          box-shadow: 0 4px 16px rgba(96,8,18,0.35);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          z-index: 500;
-          transition: transform 0.15s, opacity 0.15s;
-        }
-        .fab:hover { opacity: 0.88; }
-        .fab:active { transform: scale(0.94); }
       `}</style>
 
       {/* ── MASTHEAD ── */}
@@ -841,7 +842,7 @@ export default function Patienten() {
               {/* Freigegeben — ready for admin action */}
               {freigegebenPatients.length > 0 && (
                 <>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: '#16a34a', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 12 }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 12 }}>
                     Freigegeben – Gegenzeichnung möglich ({freigegebenPatients.length})
                   </div>
                   <div className="pat-grid" style={{ marginBottom: 28 }}>
@@ -860,48 +861,46 @@ export default function Patienten() {
                       const hindernis = archivHindernis((pat as any).payload)
                       const canSign = !hindernis
                       const changedCount = ((pat as any).payload?._changed_fields || []).length
-                      const tfChangedCount = ((pat as any).payload?._tf_changed_fields || []).length
-                      const accentColor = openRQ > 0 ? '#f59e0b' : '#16a34a'
                       return (
-                        <div key={pat.id} style={{ background: 'var(--lbf-card)', borderRadius: 12, boxShadow: 'var(--lbf-shadow)', position: 'relative', overflow: 'hidden' }}>
-                          <div style={{ height: 3, background: accentColor, borderRadius: '12px 12px 0 0' }} />
-                          <div style={{ padding: '12px 16px 10px' }}>
-                            <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.14em', color: accentColor, marginBottom: 6 }}>
-                              PROTOKOLL FREIGEGEBEN{openRQ > 0 ? ` · ${openRQ} Rückfrage${openRQ !== 1 ? 'n' : ''}` : ''}
+                        /*
+                         * Dieselbe Karte wie überall auf dieser Seite: weiß,
+                         * Radius 12, weicher Schatten, links ein 3px-Balken in
+                         * der Statusfarbe. Vorher trug sie den Status als
+                         * Streifen oben — und weil die Karte schon rundet und
+                         * beschneidet, blieben an seinen Ecken weiße Keile
+                         * stehen. Ein kleiner Balken links genügt.
+                         */
+                        <div key={pat.id} className={`pat-card ${openRQ > 0 ? 'rueckfrage' : 'freigegeben'}`}>
+                          <div className="pat-card-body">
+                            {openRQ > 0 ? (
+                              <div className="pat-card-type">{`${openRQ} Rückfrage${openRQ !== 1 ? 'n' : ''} offen`}</div>
+                            ) : null}
+                            <div className="pat-card-name">{displayName}</div>
+                            <div className="pat-card-meta">
+                              {crew ? <>{crew}<br /></> : null}
+                              {fmtDate(pat.created)}
+                              {sns.length > 0 ? ` · ${sns.length} Stellungnahme${sns.length !== 1 ? 'n' : ''}` : ''}
+                              {changedCount > 0 ? ` · ${changedCount} Änderung${changedCount !== 1 ? 'en' : ''}` : ''}
                             </div>
-                            <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 17, color: 'var(--lbf-text)', marginBottom: 4 }}>{displayName}</div>
-                            {crew && <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)' }}>{crew}</div>}
-                            <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginTop: 2 }}>{fmtDate(pat.created)}</div>
-
-                            {/* change indicators */}
-                            {(changedCount > 0 || tfChangedCount > 0 || sns.length > 0) && (
-                              <div style={{ display: 'flex', gap: 10, marginTop: 8, flexWrap: 'wrap' }}>
-                                {changedCount > 0 && <span style={{ fontStyle: 'italic', fontSize: 11, fontWeight: 700, color: '#d97706' }}>{changedCount} Admin-Änd.</span>}
-                                {tfChangedCount > 0 && <span style={{ fontStyle: 'italic', fontSize: 11, fontWeight: 700, color: '#16a34a' }}>{tfChangedCount} TF-Nachbearb.</span>}
-                                {sns.length > 0 && <span style={{ fontStyle: 'italic', fontSize: 11, fontWeight: 700, color: '#600812' }}>{sns.length} Stellungnahme{sns.length !== 1 ? 'n' : ''}</span>}
-                              </div>
-                            )}
-
-                            {/* Woran das Archivieren hängt — nicht erst beim
-                                Klick auf den gesperrten Knopf. */}
-                            {hindernis && (
-                              <div style={{ marginTop: 8, padding: '6px 10px', background: 'rgba(96,8,18,0.05)', borderRadius: 8 }}>
-                                <span style={{ fontStyle: 'italic', fontSize: 12, color: '#600812' }}>{hindernis}</span>
-                              </div>
-                            )}
+                            {hindernis ? <div className="pat-hinweis">{hindernis}</div> : null}
                           </div>
-
-                          {/* Action footer */}
-                          <div style={{ borderTop: '0.5px solid rgba(96,8,18,0.08)', background: 'rgba(250,249,247,0.8)', padding: '8px 12px', display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+                          <div className="pat-card-footer">
                             <button className="pat-btn" onClick={() => setProtokollSheet(pat)}>Ansehen</button>
-                            <button className="pat-btn" onClick={() => openEdit(pat)}>Bearbeiten</button>
-                            {openRQ > 0 && <button className="pat-btn" onClick={() => { setStellungnahmePat(pat); setShowStellungnahme(true) }}>Anfragen ({openRQ})</button>}
-                            <button className="pat-btn" onClick={() => setRueckfrageModal(pat)}>Rückfrage</button>
+                            <button className="pat-btn" onClick={() => setRueckfrageModal(pat)}>
+                              {openRQ > 0 ? `Rückfrage (${openRQ})` : 'Rückfrage'}
+                            </button>
                             <div style={{ flex: 1 }} />
+                            {/*
+                              * Gegenzeichnen führt jetzt direkt zur Unterschrift.
+                              * Vorher ging der Weg über den alten Admin-Bogen —
+                              * der zeigt für ein Protokoll aus der neuen Maske
+                              * leere Felder und schrieb beim Weiterklicken eine
+                              * Nutzlast samt Audit-Eintrag "bearbeitet", obwohl
+                              * niemand etwas geändert hat.
+                              */}
                             <button
-                              style={{ background: canSign ? '#600812' : 'var(--lbf-border-light)', color: canSign ? '#fff' : 'var(--warm-gray)', border: 'none', borderRadius: 8, padding: '7px 14px', fontWeight: 700, fontSize: 12, cursor: canSign ? 'pointer' : 'not-allowed', fontFamily: 'inherit', letterSpacing: '0.04em' }}
-                              onClick={() => canSign && openEdit(pat)}
-                              title={hindernis}
+                              className="pat-btn haupt" disabled={!canSign} title={hindernis}
+                              onClick={() => { if (canSign) { setCurrentPatient(pat); setShowSign(true) } }}
                             >
                               Gegenzeichnen
                             </button>
@@ -915,7 +914,7 @@ export default function Patienten() {
               {/* Offen — not yet released by TF */}
               {patients.length > 0 && (
                 <>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--warm-gray)', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 12 }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 12 }}>
                     Noch nicht freigegeben ({patients.length})
                   </div>
                   <div className="pat-grid">
@@ -925,25 +924,18 @@ export default function Patienten() {
                       const m = (pat as any).payload?.mannschaft || {}
                       const crew = ['tf','m1','m2','m3'].map((k: string) => m[k]?.name).filter(Boolean).join(', ')
                       const displayName = patName || crew || pat.title || 'Unbekannt'
-                      const ageMs = Date.now() - new Date(pat.created).getTime()
-                      const hoursLeft = Math.max(0, Math.ceil(24 - ageMs / 3600000))
+                      // Dieselbe Frist wie in Unitas: sie steht im Protokoll,
+                      // ältere zählen ab dem Anlegen.
+                      const restMs = fristEnde((pat as any).payload || {}, pat.created) - Date.now()
+                      const frist = fristRestText((pat as any).payload || {}, pat.created)
                       return (
-                        <div key={pat.id} className="pat-card offen" style={{ opacity: 0.85 }}>
+                        <div key={pat.id} className="pat-card offen">
                           <div className="pat-card-body">
-                            <div className="pat-card-type">Protokoll</div>
                             <div className="pat-card-name">{displayName}</div>
                             <div className="pat-card-meta">
-                              {crew ? `Mannschaft: ${crew}` : null}
-                              {crew ? <br /> : null}
+                              {crew ? <>{crew}<br /></> : null}
                               {fmtDate(pat.created)}
-                            </div>
-                            <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
-                              <span style={{ fontStyle: 'italic', fontSize: 11, fontWeight: 700, color: 'var(--warm-gray)' }}>
-                                Noch nicht freigegeben
-                              </span>
-                              <span style={{ fontStyle: 'italic', fontSize: 11, color: 'var(--warm-gray)' }}>
-                                {hoursLeft > 0 ? `· noch ${hoursLeft}h` : '· Freigabe ausstehend'}
-                              </span>
+                              {restMs > 0 ? ` · beim Teamführer, ${frist}` : ' · Freigabe ausstehend'}
                             </div>
                           </div>
                           <div className="pat-card-footer">
@@ -1037,6 +1029,7 @@ export default function Patienten() {
                     <div className="pat-grid">
                       {items.map(item => {
                         const archSns: any[] = item.type === 'patient' ? (Array.isArray((item.orig as any).payload?.stellungnahmen) ? (item.orig as any).payload.stellungnahmen : []) : []
+                        const archRqs = rueckfragen((item.orig as any).payload)
                         return (
                           <div key={item.id} className={`pat-card ${item.isOld ? 'old' : 'archiviert'}`}>
                             <div className="pat-card-body">
@@ -1061,9 +1054,11 @@ export default function Patienten() {
                               <span className="pat-badge archiviert">archiviert</span>
                               {item.isOld && <span className="pat-badge old-warn">Frist überschritten</span>}
                               <div style={{ flex: 1 }} />
-                              {archSns.length > 0 && (
-                                <button className="pat-btn" onClick={() => { setStellungnahmePat(item.orig as Patient); setShowStellungnahme(true) }}>
-                                  Stellungnahmen
+                              {archRqs.length > 0 && (
+                                // Dasselbe Fenster wie beim Fragen, nur lesend:
+                                // im Archiv gibt es nichts mehr zu fragen.
+                                <button className="pat-btn" onClick={() => setNachlesen(item.orig as Patient)}>
+                                  Rückfragen
                                 </button>
                               )}
                               <button className="pat-btn" onClick={() => openDetails(item.id, item.type)}>Ansehen</button>
@@ -1322,147 +1317,22 @@ export default function Patienten() {
         )
       })()}
 
-      {/* Stellungnahmen-Modal */}
-      {showStellungnahme && stellungnahmePat && (() => {
-        // Use fresh data from subscribed state so Unitas answers appear immediately
-        const freshPat = freigegebenPatients.find(p => p.id === stellungnahmePat.id)
-          || archivedPatients.find(p => p.id === stellungnahmePat.id)
-          || stellungnahmePat
-        const pl = parsePayload((freshPat as any).payload)
-        const rqs: any[] = Array.isArray(pl.rueckfragen) ? pl.rueckfragen : []
-        const sns: any[] = Array.isArray(pl.stellungnahmen) ? pl.stellungnahmen : []
-        const patName = [pl.vorname, pl.name].filter(Boolean).join(' ') || freshPat.title || 'Unbekannt'
-        const einsatzInfo = [pl.einsatz_nr && `Einsatz-Nr. ${pl.einsatz_nr}`, pl.einsatz_art, pl.einsatz_adresse].filter(Boolean).join(' · ')
-        const m = (pl.mannschaft || {}) as Record<string, { name?: string } | null>
-        const crew = ['tf','m1','m2','m3'].map(k => m[k]?.name).filter(Boolean).join(', ')
-        const isArchived = (freshPat as any).status === 'archiviert'
-        const printStellungnahmen = () => {
-          const esc = (s: any) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] || c))
-          const rqHtml = rqs.map((rq: any, i: number) => {
-            const sn = sns.find((s: any) => s.rueckfrage_id === rq.id)
-            return `
-              <div class="rq">
-                <div class="rq-head">Rückfrage #${i + 1}${rq.created_by ? ` <span class="meta">— ${esc(rq.created_by)}</span>` : ''}</div>
-                <div class="rq-body">${esc(rq.frage)}</div>
-                ${sn
-                  ? `<div class="sn-label">Stellungnahme (${new Date(sn.created).toLocaleString('de-DE')}):</div><div class="sn-body">${esc(sn.text)}</div>`
-                  : `<div class="sn-empty">Keine Stellungnahme eingegangen.</div>`
-                }
-              </div>
-            `
-          }).join('')
-          const w = window.open('', '_blank', 'width=900,height=1100')
-          if (!w) { alert('Bitte Popups erlauben, um drucken zu können.'); return }
-          w.document.write(`<!DOCTYPE html>
-<html lang="de"><head><meta charset="utf-8"><title>Stellungnahmen — ${esc(patName)}</title>
-<style>
-  *{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-  body{font-family:'Atkinson Hyperlegible','Helvetica Neue',Arial,sans-serif;color:#1a0e08;padding:32px;background:#fff;line-height:1.5}
-  h1{font-size:20px;margin-bottom:12px;color:#600812;letter-spacing:-0.01em}
-  .meta-row{font-size:13px;margin-bottom:4px}
-  .meta-row strong{display:inline-block;min-width:100px;color:#600812;font-weight:700}
-  hr{border:none;border-top:0.5px solid rgba(96,8,18,0.2);margin:16px 0 20px}
-  .rq{margin-bottom:20px;page-break-inside:avoid;border-left:3px solid #600812;padding-left:12px}
-  .rq-head{font-weight:700;font-size:14px;color:#1a0e08;margin-bottom:6px}
-  .rq-head .meta{font-style:italic;color:#8a7a68;font-weight:400;font-size:12px}
-  .rq-body{font-size:13px;margin-bottom:10px;color:#1a0e08}
-  .sn-label{font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:0.08em;color:#16a34a;margin-bottom:4px}
-  .sn-body{font-size:13px;background:rgba(22,163,74,0.06);border-left:2px solid #16a34a;padding:8px 12px;border-radius:4px;color:#1a0e08}
-  .sn-empty{font-size:13px;font-style:italic;color:#8a7a68}
-  .print-btn{position:fixed;bottom:24px;right:24px;background:#600812;color:#fff;border:none;padding:12px 22px;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,0.15);font-family:inherit}
-  @media print{.print-btn{display:none}}
-</style></head>
-<body>
-<h1>Stellungnahmen zum Einsatz</h1>
-<div class="meta-row"><strong>Patient:</strong> ${esc(patName)}</div>
-${einsatzInfo ? `<div class="meta-row"><strong>Einsatz:</strong> ${esc(einsatzInfo)}</div>` : ''}
-${pl.zeit_einsatz ? `<div class="meta-row"><strong>Alarmzeit:</strong> ${esc(pl.zeit_einsatz)}</div>` : ''}
-${crew ? `<div class="meta-row"><strong>Mannschaft:</strong> ${esc(crew)}</div>` : ''}
-<hr>
-${rqHtml || '<div style="font-style:italic;color:#8a7a68">Keine Rückfragen vorhanden.</div>'}
-<button class="print-btn" onclick="window.print()">Drucken / PDF</button>
-</body></html>`)
-          w.document.close()
-        }
+      {/* Den Vorgang eines archivierten Protokolls nachlesen — dasselbe
+          Fenster wie beim Fragen, nur ohne Schreibfeld. */}
+      {nachlesen && (() => {
+        const pl = parsePayload((nachlesen as any).payload)
+        const patName = [pl.name, pl.vorname].filter(Boolean).join(' ') || nachlesen.title || 'Unbekannt'
         return (
-          <>
-            <div style={{ position: 'fixed', inset: 0, background: 'rgba(26,14,8,0.45)', zIndex: 3000, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '16px 20px' }}>
-              <div style={{ background: 'var(--lbf-card)', borderRadius: 14, width: '100%', maxWidth: 560, maxHeight: '85vh', overflowY: 'auto', boxShadow: '0 16px 48px rgba(0,0,0,0.2)', border: '0.5px solid rgba(96,8,18,0.1)' }}>
-                <div style={{ padding: '16px 20px 12px', borderBottom: '0.5px solid rgba(96,8,18,0.12)', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', position: 'sticky', top: 0, background: 'var(--lbf-card)', zIndex: 1 }}>
-                  <div>
-                    <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 6 }}>Rückfragen &amp; Stellungnahmen</div>
-                    <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 17, color: 'var(--lbf-text)' }}>{patName}</div>
-                    {einsatzInfo && <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginTop: 2 }}>{einsatzInfo}</div>}
-                    {crew && <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginTop: 1 }}>Mannschaft: {crew}</div>}
-                  </div>
-                  <button
-                    onClick={() => setShowStellungnahme(false)}
-                    style={{ background: 'rgba(96,8,18,0.06)', border: 'none', borderRadius: 8, width: 30, height: 30, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#600812', flexShrink: 0, marginTop: 2 }}
-                  >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                      <line x1="18" y1="6" x2="6" y2="18"/>
-                      <line x1="6" y1="6" x2="18" y2="18"/>
-                    </svg>
-                  </button>
-                </div>
-                <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-                  {rqs.length === 0 && (
-                    <div style={{ fontStyle: 'italic', fontSize: 14, color: 'var(--warm-gray)', textAlign: 'center', padding: '24px 0' }}>Keine Rückfragen vorhanden.</div>
-                  )}
-                  {rqs.map((rq: any, i: number) => {
-                    const sn = sns.find((s: any) => s.rueckfrage_id === rq.id)
-                    return (
-                      <div key={rq.id} style={{ background: 'var(--lbf-card)', border: `0.5px solid ${sn ? 'rgba(22,163,74,0.3)' : 'var(--lbf-input-border)'}`, borderLeft: `3px solid ${sn ? '#16a34a' : '#600812'}`, borderRadius: 10, overflow: 'hidden' }}>
-                        <div style={{ background: sn ? 'rgba(22,163,74,0.05)' : 'rgba(96,8,18,0.04)', padding: '8px 14px', borderBottom: `0.5px solid ${sn ? 'rgba(22,163,74,0.2)' : 'rgba(96,8,18,0.1)'}`, display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <span style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 13, color: 'var(--lbf-text)' }}>Rückfrage #{i + 1}</span>
-                          <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 4, background: sn ? 'rgba(22,163,74,0.12)' : 'var(--lbf-border-light)', color: sn ? '#16a34a' : '#600812', marginLeft: 'auto', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                            {sn ? 'Beantwortet' : 'Offen'}
-                          </span>
-                          <span style={{ fontStyle: 'italic', fontSize: 11, color: 'var(--warm-gray)' }}>{new Date(rq.created).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</span>
-                        </div>
-                        <div style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-                          <div style={{ fontSize: 13, background: 'rgba(250,249,247,0.8)', borderRadius: 8, padding: '8px 10px', lineHeight: 1.5, color: 'var(--lbf-text)' }}>
-                            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--warm-gray)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 4 }}>{rq.created_by ? `${rq.created_by} fragt:` : 'Frage:'}</div>
-                            {rq.frage}
-                          </div>
-                          {sn ? (
-                            <div style={{ fontSize: 13, background: 'rgba(22,163,74,0.06)', borderRadius: 8, padding: '8px 10px', border: '0.5px solid rgba(22,163,74,0.2)', lineHeight: 1.5, color: 'var(--lbf-text)' }}>
-                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                                <span style={{ fontSize: 10, fontWeight: 700, color: '#16a34a', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Stellungnahme des Teamleiters:</span>
-                                <span style={{ fontStyle: 'italic', fontSize: 11, color: 'var(--warm-gray)' }}>{new Date(sn.created).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</span>
-                              </div>
-                              {sn.text}
-                            </div>
-                          ) : (
-                            <div style={{ fontStyle: 'italic', fontSize: 13, color: 'var(--warm-gray)', padding: '4px 0' }}>Noch keine Stellungnahme eingegangen.</div>
-                          )}
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-                <div style={{ padding: '10px 20px 16px', borderTop: '0.5px solid rgba(96,8,18,0.08)', background: 'rgba(250,249,247,0.8)', display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                  <button
-                    onClick={printStellungnahmen}
-                    className="pat-btn"
-                  >
-                    Drucken / PDF
-                  </button>
-                  {!isArchived && (
-                    <button
-                      onClick={() => { setShowStellungnahme(false); openDetails(stellungnahmePat.id, 'patient') }}
-                      style={{ padding: '8px 16px', background: '#600812', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit', letterSpacing: '0.04em' }}
-                    >
-                      Protokoll bearbeiten
-                    </button>
-                  )}
-                  <button onClick={() => setShowStellungnahme(false)} className="pat-btn">
-                    Schließen
-                  </button>
-                </div>
-              </div>
-            </div>
-          </>
+          <Suspense fallback={null}>
+            <RueckfrageFenster
+              patientId={nachlesen.id}
+              titel={patName}
+              payload={((nachlesen as any).payload ?? {}) as Record<string, unknown>}
+              rolle="lesen"
+              name={(user as any)?.name || user?.email}
+              onSchliessen={() => setNachlesen(null)}
+            />
+          </Suspense>
         )
       })()}
     </>
