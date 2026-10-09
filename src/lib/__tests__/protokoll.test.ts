@@ -87,3 +87,19 @@ describe('Protokolle aus der neuen Maske ohne Fassungsangabe', () => {
     expect(fassungLesen({ hf: '80', nibp_sys: '120', gcs_summe: '15', notfallgeschehen: 'x' })).toBe(1)
   })
 })
+
+describe('Nutzlast als Zeichenkette', () => {
+  it('wird gelesen wie ein Objekt', () => {
+    expect(fassungLesen(JSON.stringify({ protokoll_version: 2 }))).toBe(2)
+    expect(fassungLesen(JSON.stringify({ abgesendet: '2026-03-04T09:12:00.000Z' }))).toBe(2)
+    expect(fassungLesen(JSON.stringify({ name: 'Huber', rr_sys: '140' }))).toBe(1)
+    expect(istDivi(JSON.stringify({ protokoll_version: 2 }))).toBe(true)
+  })
+
+  it('gilt als alte Fassung, wenn sie kein JSON ist', () => {
+    expect(fassungLesen('kaputt')).toBe(1)
+    expect(fassungLesen('')).toBe(1)
+    expect(fassungLesen('null')).toBe(1)
+    expect(fassungLesen('42')).toBe(1)
+  })
+})

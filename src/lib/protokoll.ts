@@ -41,6 +41,16 @@ export const FASSUNG_NAME: Record<Fassung, string> = {
  * leeres Protokoll sähe sonst aus wie die andere Fassung.
  */
 export function fassungLesen(payload: unknown): Fassung {
+  /*
+   * Die Nutzlast kommt manchmal als Zeichenkette an — PocketBase liefert
+   * JSON-Spalten je nach Weg als Text, und das Projekt rechnet an sieben
+   * Stellen damit, bis hinunter in den Server-Hook. Wer das hier nicht
+   * mitliest, hält ein neues Protokoll für ein altes und zeigt es im
+   * falschen Bogen: leer.
+   */
+  if (typeof payload === 'string') {
+    try { return fassungLesen(JSON.parse(payload)) } catch { return 1 }
+  }
   if (!payload || typeof payload !== 'object') return 1
   const p = payload as Record<string, unknown>
   const v = p.protokoll_version

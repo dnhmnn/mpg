@@ -814,7 +814,13 @@ export default function Doku({
               }}
             />
 
-            {aktuell.id === 'abschluss' && !nurLesen ? (
+            {/*
+              * Abgesendet wird nur gegen einen Stand, der wirklich geladen
+              * ist. Schlug das Laden fehl, stünden in der Maske die Werte
+              * des zuletzt angefangenen Entwurfs dieses Geräts — und das
+              * Absenden schriebe sie über ein fremdes Protokoll.
+              */}
+            {aktuell.id === 'abschluss' && !nurLesen && !laedt && !ladefehler ? (
               <Absenden
                 werte={werte} orgId={org.id} orgCode={orgCode} protokollId={protokollId}
                 onSpringen={zumBlock}

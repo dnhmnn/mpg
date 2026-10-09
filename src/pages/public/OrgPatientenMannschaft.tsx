@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { mitFassung, NEUE_FASSUNG } from '../../lib/protokoll'
 import { pb } from '../../lib/pocketbase'
 import { inp, lbl } from './pubStyles'
 
@@ -204,7 +205,10 @@ export default function OrgPatientenMannschaft({
       } else {
         const rec = await pb.collection('patients').create({
           title: `Entwurf – ${new Date().toLocaleDateString('de-DE')}`,
-          payload: { mannschaft },
+          // Die Fassung des Formulars, das diesen Entwurf später füllt —
+          // sonst bliebe ein liegengebliebener Entwurf in der falschen
+          // Ansicht hängen.
+          payload: mitFassung({ mannschaft }, NEUE_FASSUNG),
           status: 'offen',
           organization_id: orgId,
         })

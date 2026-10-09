@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState } from 'react'
+import { mitFassung, NEUE_FASSUNG } from '../../lib/protokoll'
 import { useNavigate } from 'react-router-dom'
 import { pb } from '../../lib/pocketbase'
 import { useOrg } from './OrgPublicLayout'
@@ -69,7 +70,7 @@ export default function OrgSchnelldoku() {
 
       // Dieselben Feldnamen wie die volle Doku — damit ein Schnellprotokoll
       // später dort geöffnet und ergänzt werden kann, statt daneben zu liegen.
-      const payload: Record<string, unknown> = {
+      const payload: Record<string, unknown> = mitFassung({
         schnelldoku: true,
         name: unbekannt ? 'unbekannt' : name.trim(),
         vorname: unbekannt ? '' : vorname.trim(),
@@ -84,7 +85,10 @@ export default function OrgSchnelldoku() {
         // Was das Diktat nicht übernehmen konnte, bleibt sichtbar — sonst
         // verschwindet es zwischen Erfassung und Protokoll.
         diktat_verworfen: ergebnis.verworfen.map(v => `${FELDNAME[v.feld] || v.feld}: „${v.quelle}" — ${v.grund}`),
-      }
+      // Dieselben Feldnamen heißen dieselbe Fassung: sonst gilt das
+      // Schnellprotokoll als altes und wird im alten Bogen gezeigt, wo
+      // keines seiner Felder vorkommt.
+      }, NEUE_FASSUNG)
 
       const rec = await pb.collection('patients').create({
         title: `Schnelldoku: ${payload.vorname || ''} ${payload.name}`.trim(),
