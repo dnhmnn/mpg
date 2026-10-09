@@ -129,7 +129,7 @@ function titel(): string {
 function kennung(p: Payload): string {
   return block(
     SEITE1.kennung,
-    `<div class="zwei">${wertZeile(w(p, 'einsatz_nr'), 'Einsatz Nr.')}${wertZeile(w(p, 'auftrag_ils'), 'Auftrags-Nr. ILS')}</div>
+    `<div class="zwei">${wertZeile(w(p, 'einsatz_nr'), 'Einsatz Nr.')}${wertZeile(w(p, 'auftrags_nr'), 'Auftrags-Nr. ILS')}</div>
      <div class="zwei">
        ${wertZeile(w(p, 'leitstelle_nr'), 'Leitst. Nr.')}
        ${wertZeile(w(p, 'rufname'), 'Rufname')}

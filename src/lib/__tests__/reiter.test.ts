@@ -70,7 +70,7 @@ describe('Pflichtfelder sind am Feld zu erkennen', () => {
     // Änderung am Bogen auffällt.
     const pflicht = AELRD_FELDER.filter((f) => f.pflicht)
     expect(pflicht.map((f) => f.id)).toEqual([
-      'name', 'gebdatum', 'einsatz_nr', 'auftrag_ils', 'einsatz_datum',
+      'name', 'gebdatum', 'einsatz_nr', 'auftrags_nr', 'einsatz_datum',
       'zeit_alarm', 'zeit_ankunft_ort', 'zeit_uebergabe',
       'notfallgeschehen', 'af', 'spo2', 'hf', 'nibp_sys', 'gcs_summe', 'schmerz',
     ])

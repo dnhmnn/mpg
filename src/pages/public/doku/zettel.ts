@@ -290,6 +290,12 @@ export const ZETTEL: Zettel[] = [
     ],
   },
   {
+    id: 'evm',
+    kurz: 'EVM',
+    titel: 'EVM — Aufklärung und Einwilligung',
+    abschnitte: ['evm'],
+  },
+  {
     id: 'abschluss',
     kurz: 'ENDE',
     titel: 'Abschluss',

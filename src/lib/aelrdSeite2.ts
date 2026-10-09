@@ -15,6 +15,7 @@ import {
 } from './aelrdDruck'
 import { HOEHEN2, SEITE2 } from './aelrdLayout'
 import { aelrdFeld } from '../katalog/aelrd'
+import { evmText } from './aelrdEvm'
 import {
   GITTER, SPALTEN, SPALTEN_JE_BESCHRIFTUNG, VERLAUFSWERTE,
   anteilImGitter, hoeheAnteil, kurvenspalten, stelle, uhrzeit, zeitachse, type Gitter,
@@ -521,7 +522,7 @@ function fussbloecke(p: Payload): string {
   ${block(
     SEITE2.bemerkungen,
     `<div class="fb">
-       <span class="kl">ÄLRD Delegationen</span>${schreibflaeche(w(p, 'aelrd_delegationen'), 2, 'unt-f')}
+       <span class="kl">ÄLRD Delegationen</span>${schreibflaeche([w(p, 'aelrd_delegationen'), evmText(p)].filter(Boolean).join(' · '), 2, 'unt-f')}
        <span class="kl">Bemerkungen (z.B. Hausarzt)</span>${schreibflaeche(w(p, 'bemerkungen'), 3, 'unt-f')}
        <div class="fb-naca"><span class="kl">NACA SCORE Übergabe:</span> <b>${escapeHtml(
          w(p, 'naca_uebergabe'),

@@ -93,7 +93,7 @@ export const AELRD_FELDER: AelrdFeld[] = [
   { id: 'einsatz_nr', label: 'Einsatz Nr.', typ: 'text', divi: 'einsatz_nr', pflicht: true },
   // Die Auftragsnummer der Leitstelle. Sie ist nicht dasselbe wie die
   // Einsatznummer des Protokolls, und nur sie ordnet den Vorgang der Leitstelle zu.
-  { id: 'auftrag_ils', label: 'Auftragsnummer ILS', typ: 'text', pflicht: true },
+  { id: 'auftrags_nr', label: 'Auftragsnummer ILS', typ: 'text', divi: 'auftrags_nr', pflicht: true },
   { id: 'leitstelle_nr', label: 'Leitst. Nr.', typ: 'text', divi: 'leitstelle' },
   { id: 'rufname', label: 'Rufname', typ: 'text', divi: 'fahrzeug' },
   { id: 'standort', label: 'Standort', typ: 'text', divi: 'standort' },
@@ -415,6 +415,21 @@ export const AELRD_FELDER2: AelrdFeld[] = [
   { id: 'naca_uebergabe', label: 'NACA SCORE Übergabe', typ: 'text' },
   { id: 'notarzt_nachgefordert', label: 'Notarzt nachgefordert', typ: 'check' },
   { id: 'unterschrift', label: 'Unterschrift', typ: 'text', divi: 'ausfueller_name' },
+  // ── Aufklärung und Einwilligung (EVM) ────────────────────────────────
+  // Die Norm kennt beides nicht. Der Bogen führt es als Rechtsdokumentation
+  // der Maßnahmen; gedruckt wird es unter "ÄLRD Delegationen".
+  radio('evm_aufgeklaert', 'Patient aufgeklärt über alle Maßnahmen', ['ja', 'nein']),
+  { id: 'evm_aufklaerung_zeit', label: 'Uhrzeit der Aufklärung', typ: 'zeit' },
+  {
+    id: 'evm_einwilligung', label: 'Einwilligung', typ: 'radio',
+    optionen: [
+      { wert: 'alle', text: 'Patient willigt in alle Maßnahmen ein' },
+      { wert: 'nur_folgende', text: 'Patient willigt nur in folgende Maßnahmen ein' },
+      { wert: 'mutmasslich', text: 'mutmaßliche Einwilligung des Patienten gem. § 630d; 677 BGB' },
+    ],
+  },
+  { id: 'evm_einwilligung_folgende', label: 'Nur folgende Maßnahmen (Auflistung)', typ: 'langtext' },
+  { id: 'evm_einwilligung_zeit', label: 'Uhrzeit der Einwilligung', typ: 'zeit' },
 ]
 
 for (const f of AELRD_FELDER2) register.set(f.id, f)
@@ -452,7 +467,7 @@ export const AELRD_ABSCHNITTE: AelrdAbschnitt[] = [
     kurz: 'NR',
     titel: 'Einsatzkennung',
     seite: 1,
-    felder: ['einsatz_nr', 'auftrag_ils', 'leitstelle_nr', 'rufname', 'standort'],
+    felder: ['einsatz_nr', 'auftrags_nr', 'leitstelle_nr', 'rufname', 'standort'],
   },
   {
     id: 'einsatzdaten',
@@ -608,6 +623,14 @@ export const AELRD_ABSCHNITTE: AelrdAbschnitt[] = [
       'ub_schmerz_nicht_beurteilbar', 'ub_schmerz_tolerabel',
       'ub_af', 'ub_spo2', 'ub_spo2_mit_o2', 'ub_hf', 'ub_puls', 'ub_etco2',
       'ub_nibp_sys', 'ub_nibp_dia', 'ub_ibp_sys', 'ub_ibp_dia', 'ub_bz', 'ub_temp'],
+  },
+  {
+    id: 'evm',
+    kurz: 'EVM',
+    titel: 'Aufklärung und Einwilligung',
+    seite: 2,
+    felder: ['evm_aufgeklaert', 'evm_aufklaerung_zeit', 'evm_einwilligung',
+      'evm_einwilligung_folgende', 'evm_einwilligung_zeit'],
   },
   {
     id: 'abschluss',

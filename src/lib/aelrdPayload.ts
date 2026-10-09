@@ -17,7 +17,7 @@ import { aelrdFeld } from '../katalog/aelrd'
 /** Feldnamen, die in beiden Welten gleich heißen. */
 const GLEICH = [
   'name', 'vorname', 'gebdatum', 'strasse', 'plz_ort', 'kasse', 'versnr',
-  'einsatz_nr', 'rufname', 'standort', 'transport_ziel', 'einsatz_art',
+  'einsatz_nr', 'auftrags_nr', 'rufname', 'standort', 'transport_ziel', 'einsatz_art',
   'zeit_uebergabe', 'notfallgeschehen', 'bewusstsein',
   'mannschaft_tf', 'mannschaft_1', 'mannschaft_2', 'mannschaft_3', 'mannschaft',
   'hf', 'spo2', 'af', 'temp', 'etco2', 'schmerz',

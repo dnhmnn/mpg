@@ -29,9 +29,9 @@ describe('Was die Maske führt — und damit jeder zu sehen bekommt', () => {
     expect(befund.teile.map((t) => t.kennung || t.kurz)).toEqual(['Z', 'x', 'A', 'B', 'C', 'D', 'E'])
   })
 
-  it('führt dieselben elf Zettel wie die Maske', () => {
+  it('führt dieselben zwölf Zettel wie die Maske', () => {
     expect(zettel.map((z) => z.kurz)).toEqual([
-      'PAT', 'EINS', 'ZEIT', 'ANAM', 'BEF', 'VITAL', 'DIAG', 'MASS', 'VERL', 'ÜBER', 'ENDE',
+      'PAT', 'EINS', 'ZEIT', 'ANAM', 'BEF', 'VITAL', 'DIAG', 'MASS', 'VERL', 'ÜBER', 'EVM', 'ENDE',
     ])
   })
 

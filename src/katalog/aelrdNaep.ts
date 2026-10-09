@@ -120,7 +120,12 @@ export const AELRD_NAEP: Record<string, AelrdNaepZuordnung> = {
 
   // ── Einsatzkennung ────────────────────────────────────────────────────
   einsatz_nr: { feld: str('B08', 'EinsatzNr') },
-  auftrag_ils: { feld: anhang('Die Norm führt die Auftragsnummer der Leitstelle nicht — nur die Einsatznummer') },
+  auftrags_nr: { feld: anhang('Die Norm führt die Auftragsnummer der Leitstelle nicht — nur die Einsatznummer') },
+  evm_aufgeklaert: { optionen: { ja: anhang('Die Norm kennt weder Aufklärung noch Einwilligung — der Bogen führt es als Rechtsdokumentation der Maßnahmen'), nein: anhang('Die Norm kennt weder Aufklärung noch Einwilligung — der Bogen führt es als Rechtsdokumentation der Maßnahmen') } },
+  evm_aufklaerung_zeit: { feld: anhang('Die Norm kennt weder Aufklärung noch Einwilligung — der Bogen führt es als Rechtsdokumentation der Maßnahmen') },
+  evm_einwilligung: { optionen: { alle: anhang('Die Norm kennt weder Aufklärung noch Einwilligung — der Bogen führt es als Rechtsdokumentation der Maßnahmen'), nur_folgende: anhang('Die Norm kennt weder Aufklärung noch Einwilligung — der Bogen führt es als Rechtsdokumentation der Maßnahmen'), mutmasslich: anhang('Die Norm kennt weder Aufklärung noch Einwilligung — der Bogen führt es als Rechtsdokumentation der Maßnahmen') } },
+  evm_einwilligung_folgende: { feld: anhang('Die Norm kennt weder Aufklärung noch Einwilligung — der Bogen führt es als Rechtsdokumentation der Maßnahmen') },
+  evm_einwilligung_zeit: { feld: anhang('Die Norm kennt weder Aufklärung noch Einwilligung — der Bogen führt es als Rechtsdokumentation der Maßnahmen') },
   leitstelle_nr: { feld: str('B08', 'LeitstelleKFZ', 'Die Norm meint hier das KFZ-Kennzeichen der Leitstelle') },
   rufname: { feld: wert('BBW') },
   standort: { feld: str('B08', 'Standort') },

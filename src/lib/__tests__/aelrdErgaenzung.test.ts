@@ -8,7 +8,7 @@ import { SECTION_STEP_MAP } from '../../pages/public/formSchema'
 function schonErreichbar(): Set<string> {
   const alt: Record<string, unknown> = {}
   for (const f of ['name', 'vorname', 'gebdatum', 'strasse', 'plz_ort', 'kasse', 'versnr',
-    'einsatz_nr', 'rufname', 'transport_ziel', 'einsatz_art', 'zeit_einsatz',
+    'einsatz_nr', 'auftrags_nr', 'rufname', 'transport_ziel', 'einsatz_art', 'zeit_einsatz',
     'zeit_eintreffen', 'zeit_transport', 'zeit_uebergabe', 'notfallgeschehen',
     'bewusstsein', 'mannschaft_tf', 'hf', 'spo2', 'af', 'temp', 'etco2', 'schmerz',
     'rr_sys', 'rr_dia', 'bz_mg', 'naca', 'erstdiagnose_text', 'pw_r', 'pw_l',

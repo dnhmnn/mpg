@@ -99,7 +99,7 @@ export const REGELN: Regel[] = [
   {
     // Nur die Auftragsnummer der Leitstelle ordnet den Vorgang zu; die
     // Einsatznummer des Protokolls allein tut das nicht.
-    feld: 'auftrag_ils', stufe: 'pflicht',
+    feld: 'auftrags_nr', stufe: 'pflicht',
     grund: 'Die Auftragsnummer der Leitstelle ordnet das Protokoll dem Einsatz zu',
   },
   {
@@ -284,6 +284,28 @@ export const REGELN: Regel[] = [
   {
     feld: 'gebdatum', stufe: 'erwartet',
     grund: 'Wo das Alter bekannt ist, gehört es ins Protokoll',
+  },
+  // Aufklärung und Einwilligung — die rechtliche Dokumentation der Maßnahmen.
+  {
+    feld: 'evm_aufgeklaert', stufe: 'pflicht', wenn: patientVersorgt,
+    grund: 'Ob der Patient über die Maßnahmen aufgeklärt wurde',
+  },
+  {
+    feld: 'evm_aufklaerung_zeit', stufe: 'pflicht', wenn: patientVersorgt,
+    grund: 'Wann die Aufklärung erfolgte',
+  },
+  {
+    feld: 'evm_einwilligung', stufe: 'pflicht', wenn: patientVersorgt,
+    grund: 'In welche Maßnahmen der Patient eingewilligt hat — oder warum sie mutmaßlich ist',
+  },
+  {
+    feld: 'evm_einwilligung_folgende', stufe: 'pflicht',
+    wenn: (p) => p.evm_einwilligung === 'nur_folgende',
+    grund: 'Welche Maßnahmen der Patient ausdrücklich erlaubt hat',
+  },
+  {
+    feld: 'evm_einwilligung_zeit', stufe: 'pflicht', wenn: patientVersorgt,
+    grund: 'Wann die Einwilligung erfolgte',
   },
   {
     feld: 'naca_uebergabe', stufe: 'erwartet', wenn: patientVersorgt,

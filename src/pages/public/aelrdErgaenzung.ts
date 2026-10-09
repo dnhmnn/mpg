@@ -10,7 +10,7 @@ export const AELRD_ERGAENZUNG: Record<string, string[]> = {
   stammdaten: ['geschlecht', 'bmi', 'alter_wert', 'alter_einheit'],
 
   einsatzdaten: [
-    'einsatz_datum', 'auftrag_ils', 'leitstelle_nr', 'sondersignal',
+    'einsatz_datum', 'leitstelle_nr', 'sondersignal',
     'beteiligtes_rm', 'einsatzort_art', 'versorgung', 'voranmeldung',
   ],
 
@@ -78,6 +78,8 @@ export const AELRD_ERGAENZUNG: Record<string, string[]> = {
     'ub_af', 'ub_spo2', 'ub_spo2_mit_o2', 'ub_hf', 'ub_puls', 'ub_etco2',
     'ub_nibp_sys', 'ub_nibp_dia', 'ub_ibp_sys', 'ub_ibp_dia', 'ub_bz', 'ub_temp',
     'besonderheiten', 'wertsachen', 'aelrd_delegationen',
+    'evm_aufgeklaert', 'evm_aufklaerung_zeit', 'evm_einwilligung',
+    'evm_einwilligung_folgende', 'evm_einwilligung_zeit',
     'naca_uebergabe', 'notarzt_nachgefordert',
   ],
 

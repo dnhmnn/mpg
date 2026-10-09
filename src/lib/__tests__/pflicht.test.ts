@@ -39,7 +39,7 @@ describe('Was ein Protokoll verlangt', () => {
     // Was bleibt, hängt nicht am Patienten — auch ein Fehleinsatz wird
     // unterschrieben.
     expect(o).toEqual([
-      'einsatz_nr', 'auftrag_ils', 'einsatz_datum', 'zeit_alarm', 'mannschaft_tf', 'notfallgeschehen', 'unterschrift',
+      'einsatz_nr', 'auftrags_nr', 'einsatz_datum', 'zeit_alarm', 'mannschaft_tf', 'notfallgeschehen', 'unterschrift',
     ])
   })
 
