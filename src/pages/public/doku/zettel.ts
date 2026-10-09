@@ -162,7 +162,7 @@ export const ZETTEL: Zettel[] = [
     id: 'massnahmen',
     kurz: 'MASS',
     titel: 'Maßnahmen, Medikation, Beatmung',
-    abschnitte: ['medikation', 'reanimation', 'zugaenge', 'beatmung', 'massnahmen'],
+    abschnitte: ['medikation', 'reanimation', 'zugaenge', 'beatmung', 'massnahmen', 'evm'],
     /*
      * Fünf Abschnitte des Bogens stehen hier zusammen — untereinander waren
      * das über zweihundert Zeilen, durch die man zu dem einen Feld scrollt,
@@ -220,6 +220,16 @@ export const ZETTEL: Zettel[] = [
           // Der 1. ROSC wird bei der Reanimation erhoben (rosc_zeit) und auf
           // dem Bogen nur noch einmal bei der Defibrillation gedruckt.
           'defi_joule_letzte', 'pacer_frequenz', 'pacer_intensitaet', 'pacer_mode'],
+      },
+      {
+        // Die Rechtsdokumentation der Maßnahmen steht nach allen Maßnahmen,
+        // die sie begründet — also als letzter Schritt dieses Zettels.
+        id: 'massnahmen-einwilligung',
+        kennung: '',
+        kurz: 'E',
+        titel: 'Aufklärung und Einwilligung (EVM)',
+        felder: ['evm_aufgeklaert', 'evm_aufklaerung_zeit', 'evm_einwilligung',
+          'evm_einwilligung_folgende', 'evm_einwilligung_zeit'],
       },
     ],
   },
@@ -288,12 +298,6 @@ export const ZETTEL: Zettel[] = [
         ],
       },
     ],
-  },
-  {
-    id: 'evm',
-    kurz: 'EVM',
-    titel: 'EVM — Aufklärung und Einwilligung',
-    abschnitte: ['evm'],
   },
   {
     id: 'abschluss',

@@ -65,7 +65,7 @@ describe('Was die Zettel tragen', () => {
     expect(teile('patient')).toEqual(['stammdaten', 'kennung'])
     expect(teile('einsatz')).toEqual(['einsatzdaten', 'besatzung'])
     expect(teile('befund')).toEqual(['erstbefund', 'neurologie', 'untersuchung', 'verletzungen'])
-    expect(teile('massnahmen')).toEqual(['medikation', 'reanimation', 'zugaenge', 'beatmung', 'massnahmen'])
+    expect(teile('massnahmen')).toEqual(['medikation', 'reanimation', 'zugaenge', 'beatmung', 'massnahmen', 'evm'])
     // Übergabe-Befund und Abschluss stehen wieder getrennt: der eine ist ein
     // Befund nach xABCDE, der andere Unterschrift und Papierkram.
     expect(teile('uebergabe')).toEqual(['uebergabe_befund', 'uebergabe_neuro'])
