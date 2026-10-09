@@ -111,7 +111,8 @@
   /* Der Grund der ganzen Seite (html, #root). */
   --lbf-seite: #ffffff;
   /* Rückmeldungen — Fläche und Schrift. Hell die bisherigen Werte, dunkel
-     getönte Flächen mit heller Schrift statt greller weißer Kästen. */
+     getönte Flächen mit heller Schrift statt greller weißer Kästen. Die
+     Flächen sind deckend: ein Toast über Inhalt ließe sonst durchscheinen. */
   --lbf-ok-grund: #f0fdf4;
   --lbf-ok-text: #166534;
   --lbf-warn-grund: #fffbeb;
@@ -172,11 +173,11 @@
   --lbf-fuss: rgba(253,200,160,0.04);
   --lbf-akzent-grund: #8a1c28;
   --lbf-seite: #0f0a07;
-  --lbf-ok-grund: rgba(22,163,74,0.14);
+  --lbf-ok-grund: #1b2511;
   --lbf-ok-text: #86efac;
-  --lbf-warn-grund: rgba(217,119,6,0.16);
+  --lbf-warn-grund: #3a2008;
   --lbf-warn-text: #fcd34d;
-  --lbf-fehler-grund: rgba(220,38,38,0.16);
+  --lbf-fehler-grund: #3b140d;
   --lbf-fehler-text: #fca5a5;
   color-scheme: dark;
 
@@ -225,11 +226,11 @@
   --lbf-fuss: rgba(0,255,65,0.04);
   --lbf-akzent-grund: #00661a;
   --lbf-seite: #080c08;
-  --lbf-ok-grund: rgba(0,255,65,0.1);
+  --lbf-ok-grund: #002c07;
   --lbf-ok-text: #00ff41;
-  --lbf-warn-grund: rgba(255,212,0,0.12);
+  --lbf-warn-grund: #1f2b00;
   --lbf-warn-text: #ffd400;
-  --lbf-fehler-grund: rgba(255,80,80,0.14);
+  --lbf-fehler-grund: #241c0b;
   --lbf-fehler-text: #ff6b6b;
   color-scheme: dark;
 
@@ -305,11 +306,11 @@
   --lbf-fuss: rgba(253,200,160,0.04);
   --lbf-akzent-grund: #8a1c28;
   --lbf-seite: #0f0a07;
-  --lbf-ok-grund: rgba(22,163,74,0.14);
+  --lbf-ok-grund: #1b2511;
   --lbf-ok-text: #86efac;
-  --lbf-warn-grund: rgba(217,119,6,0.16);
+  --lbf-warn-grund: #3a2008;
   --lbf-warn-text: #fcd34d;
-  --lbf-fehler-grund: rgba(220,38,38,0.16);
+  --lbf-fehler-grund: #3b140d;
   --lbf-fehler-text: #fca5a5;
   color-scheme: dark;
 
