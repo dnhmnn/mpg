@@ -1,10 +1,16 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, lazy, Suspense } from 'react'
 import { useParams } from 'react-router-dom'
 import { pb } from '../../lib/pocketbase'
 import { parsePayload } from '../patienten/types'
 import type { PatientPayload } from '../patienten/types'
 import { PubWrap } from './pubStyles'
 import ProtokollView from '../../components/ProtokollView'
+import { istDivi } from '../../lib/protokoll'
+import type { Organization } from './OrgPublicLayout'
+
+const ProtokollInhaltFuerOrg = lazy(() =>
+  import('../../components/ProtokollFenster').then((m) => ({ default: m.ProtokollInhaltFuerOrg })),
+)
 
 const pik = (ch: React.ReactNode, sz = 18) => (
   <svg width={sz} height={sz} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>{ch}</svg>
@@ -31,6 +37,8 @@ export default function PatientView() {
   const [expiry, setExpiry] = useState<Date | null>(null)
   const [recId, setRecId] = useState('')
   const [orgId, setOrgId] = useState('')
+  /** Die Organisation des Protokolls — die Maske zeigt ihren Namen im Kopf. */
+  const [org, setOrg] = useState<Organization | null>(null)
   const [dobInput, setDobInput] = useState('')
   const [dobError, setDobError] = useState('')
   const [attemptsLeft, setAttemptsLeft] = useState(MAX_ATTEMPTS)
@@ -60,6 +68,17 @@ export default function PatientView() {
       const expires = new Date(created.getTime() + 24 * 60 * 60 * 1000)
       if (new Date() > expires) { await logAccess('expired', payload, rec.id, rec.organization_id); setStatus('expired'); return }
       setP(payload); setExpiry(expires); setRecId(rec.id); setOrgId(rec.organization_id || '')
+      // Ohne Anmeldung, wie die öffentliche Maske es auch tut. Schlägt es
+      // fehl, fehlt nur der Name im Kopf — der Zugang bleibt offen.
+      const ersatz = { id: rec.organization_id || '', org_code: '', org_name: '' } as Organization
+      if (rec.organization_id) {
+        pb.collection('organizations').getOne<Organization>(rec.organization_id)
+          .then(setOrg).catch(() => setOrg(ersatz))
+      } else {
+        // Ohne Organisation am Datensatz fehlt nur der Name im Kopf. Darauf
+        // zu warten hieße, den Zugang nie zu öffnen.
+        setOrg(ersatz)
+      }
       if (!payload.gebdatum) { await logAccess('granted', payload, rec.id, rec.organization_id); setStatus('valid') }
       else { setAttemptsLeft(MAX_ATTEMPTS - getAttempts(c)); setStatus('auth') }
     } catch (e: any) {
@@ -108,6 +127,27 @@ export default function PatientView() {
 
   const changedFields = new Set<string>((p as any)._changed_fields || [])
   const tfChangedFields = new Set<string>((p as any)._tf_changed_fields || [])
+
+  /*
+   * Protokolle nach dem ÄLRD-Bogen zeigt dieselbe Maske, in der sie erfasst
+   * wurden — nur fängt sie hier mit der Druckansicht an: wer den Code
+   * bekommt, will den Bogen lesen, nicht durch Zettel blättern. Das Formular
+   * dahinter steht über die Lupe oben rechts offen.
+   *
+   * Die älteren Protokolle tragen andere Feldnamen und bleiben bei ihrer
+   * gewachsenen Ansicht.
+   */
+  if (istDivi(p)) {
+    if (!org) return centerCard(<><div style={{ fontSize: 13, color: '#6b7280' }}>Protokoll wird geladen …</div></>)
+    return (
+      <Suspense fallback={null}>
+        <ProtokollInhaltFuerOrg
+          org={org} patientId={recId} payload={p} pdfZuerst
+          hinweis={`Lese-Zugang${expiry ? ` · gültig bis ${expiry.toLocaleString('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}` : ''}`}
+        />
+      </Suspense>
+    )
+  }
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>

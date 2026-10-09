@@ -3,7 +3,6 @@ import type { Patient, Nacherfassung } from './types'
 import { parsePayload, fmtDateTime } from './types'
 import { istDivi } from '../../lib/protokoll'
 import { PubSection } from '../public/pubStyles'
-import ProtokollView from '../../components/ProtokollView'
 const ProtokollInhalt = lazy(() => import('../../components/ProtokollFenster').then((m) => ({ default: m.ProtokollInhalt })))
 
 interface Props {
@@ -411,7 +410,9 @@ export default function DetailsModal({ doc, type, onClose, onEdit }: Props) {
         {/* ── PATIENTENDOKU ── */}
         {isPatient && p && (
           <div style={{ background: 'var(--warm-bg)', borderRadius: 12, overflow: 'hidden' }}>
-            <Suspense fallback={null}><ProtokollInhalt patientId={doc.id} /></Suspense>
+            {/* Die Fassung entscheidet: der ÄLRD-Bogen in seiner Maske, das
+                gewachsene Protokoll in seiner. */}
+            <Suspense fallback={null}><ProtokollInhalt patientId={doc.id} payload={p} /></Suspense>
           </div>
         )}
 

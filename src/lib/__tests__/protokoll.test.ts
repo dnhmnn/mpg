@@ -57,3 +57,33 @@ describe('Fassung schreiben', () => {
     expect(FASSUNG_NAME[2]).toContain('DIVI')
   })
 })
+
+/**
+ * Die neue Maske schrieb die Fassung eine Zeit lang nicht mit. Ihre
+ * Protokolle sind daran zu erkennen, dass `datensatz()` beim Absenden einen
+ * Zeitstempel setzt, den sonst niemand schreibt.
+ */
+describe('Protokolle aus der neuen Maske ohne Fassungsangabe', () => {
+  it('gelten als 2.0, wenn sie den Absendestempel tragen', () => {
+    expect(fassungLesen({ abgesendet: '2026-03-04T09:12:00.000Z', hf: '80' })).toBe(2)
+    expect(istDivi({ abgesendet: '2026-03-04T09:12:00.000Z' })).toBe(true)
+  })
+
+  it('bleiben 1.0 ohne ihn', () => {
+    expect(fassungLesen({ hf: '80', frist: '2026-03-05T09:12:00.000Z' })).toBe(1)
+    expect(fassungLesen({ abgesendet: '' })).toBe(1)
+    expect(fassungLesen({ abgesendet: 12345 })).toBe(1)
+  })
+
+  it('lassen sich von einer ausdrücklichen Angabe nicht überstimmen', () => {
+    // Ein altes Protokoll, das später einmal durch die neue Maske lief, trägt
+    // beides. Die ausdrückliche Angabe gilt.
+    expect(fassungLesen({ protokoll_version: 1, abgesendet: '2026-03-04T09:12:00.000Z' })).toBe(1)
+    expect(fassungLesen({ protokoll_version: '1', abgesendet: '2026-03-04T09:12:00.000Z' })).toBe(1)
+  })
+
+  it('leitet die Fassung aus keinem Feld des Bogens ab', () => {
+    // Sonst sähe ein halb leeres Protokoll aus wie die andere Fassung.
+    expect(fassungLesen({ hf: '80', nibp_sys: '120', gcs_summe: '15', notfallgeschehen: 'x' })).toBe(1)
+  })
+})

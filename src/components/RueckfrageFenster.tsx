@@ -351,6 +351,7 @@ export default function RueckfrageFenster({ patientId, titel, payload: anfang, r
           <Suspense fallback={null}>
             <ProtokollInhalt
               patientId={patientId}
+              payload={payload}
               markieren={rolle === 'fragen'}
               markiert={markiert}
               onMarkieren={umschalten}

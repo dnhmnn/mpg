@@ -894,7 +894,7 @@ export default function Unitas() {
         return (
           <Suspense fallback={null}>
             <ProtokollFenster
-              patientId={protokollModal.id} titel={name}
+              patientId={protokollModal.id} payload={pl} titel={name}
               onSchliessen={() => setProtokollModal(null)}
             />
           </Suspense>

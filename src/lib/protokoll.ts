@@ -29,14 +29,25 @@ export const FASSUNG_NAME: Record<Fassung, string> = {
  * Die Fassung eines Protokolls.
  *
  * Fehlt die Angabe, ist es 1.0 — alle Datensätze von vor der Einführung
- * tragen sie nicht. Das ist der einzige richtige Rückfall: neuere Protokolle
- * schreiben sie immer mit.
+ * tragen sie nicht.
+ *
+ * EINE AUSNAHME, und zwar keine Vermutung: Die neue Maske schrieb die
+ * Fassung eine Zeit lang nicht mit. Ihre Protokolle tragen aber `abgesendet`,
+ * einen Zeitstempel, den genau eine Stelle setzt — `datensatz()` beim
+ * Absenden (siehe pages/public/doku/absenden.ts). Das ist kein Feld des
+ * Bogens, sondern eine Herkunftsangabe: steht sie da, kam das Protokoll aus
+ * der neuen Maske und trägt die Feldnamen des ÄLRD-Bogens. Geraten wird
+ * weiterhin nichts — aus Inhalten wird die Fassung nie abgeleitet, ein halb
+ * leeres Protokoll sähe sonst aus wie die andere Fassung.
  */
 export function fassungLesen(payload: unknown): Fassung {
   if (!payload || typeof payload !== 'object') return 1
-  const v = (payload as Record<string, unknown>).protokoll_version
+  const p = payload as Record<string, unknown>
+  const v = p.protokoll_version
   const n = typeof v === 'string' ? Number(v) : v
-  return n === 2 ? 2 : 1
+  if (n === 2) return 2
+  if (n === 1) return 1
+  return typeof p.abgesendet === 'string' && p.abgesendet !== '' ? 2 : 1
 }
 
 /** Ist das ein Protokoll nach DIVI? */

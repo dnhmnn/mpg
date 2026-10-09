@@ -1216,7 +1216,7 @@ export default function Patienten() {
                 {/* Die Maske selbst, nur lesend — damit alle dasselbe sehen
                     wie der, der sie ausgefüllt hat. */}
                 <Suspense fallback={null}>
-                  <ProtokollInhalt patientId={protokollSheet.id} />
+                  <ProtokollInhalt patientId={protokollSheet.id} payload={(protokollSheet as any).payload} />
                 </Suspense>
               </div>
             </div>

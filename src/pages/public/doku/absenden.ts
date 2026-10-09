@@ -10,6 +10,7 @@
 // abgeschickt — von welcher der beiden Masken, ist gleichgültig.
 
 import type { Werte } from './DokuFeld'
+import { mitFassung, NEUE_FASSUNG } from '../../../lib/protokoll'
 import { offenePflicht, offeneErwartung, type Stand } from '../../../katalog/pflicht'
 
 /**
@@ -50,13 +51,17 @@ export function titel(werte: Werte): string {
 }
 
 export function datensatz(werte: Werte, organisationId: string, jetzt = new Date()): Datensatz {
-  const payload: Werte = {
+  // Die Fassung gehört in den Datensatz: an ihr liest jede Ansicht ab, ob das
+  // Protokoll die Feldnamen des ÄLRD-Bogens trägt oder die des gewachsenen
+  // eigenen. Ohne sie galt jedes Protokoll aus dieser Maske als altes und
+  // wurde im Archiv in der alten Ansicht gezeigt — dort stand es leer.
+  const payload: Werte = mitFassung({
     ...werte,
     // Die Frist steht im Protokoll, nicht nur im Kopf: der Server schließt
     // danach selbst ab, und jede Maske kann ablesen, woran sie ist.
     frist: new Date(jetzt.getTime() + FRIST_MS).toISOString(),
     abgesendet: jetzt.toISOString(),
-  }
+  }, NEUE_FASSUNG)
   return { title: titel(werte), payload, status: 'offen', organization_id: organisationId }
 }
 

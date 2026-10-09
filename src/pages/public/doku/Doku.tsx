@@ -263,7 +263,7 @@ function Block({ id, titel, teile, zeigeSchritt, felder, werte, setzen, aktion, 
 
 export default function Doku({
   protokollId: ausProps, nurLesen: nichtSchreiben = false,
-  markieren = false, markiert = [], onMarkieren, hervorgehoben = [],
+  markieren = false, markiert = [], onMarkieren, hervorgehoben = [], pdfZuerst = false, hinweis = '',
 }: {
   /** Ein bestehendes Protokoll — sonst steht die Kennung in ?id=. */
   protokollId?: string
@@ -288,6 +288,22 @@ export default function Doku({
   onMarkieren?: (feldId: string) => void
   /** Felder, zu denen eine Rückfrage offen ist — beim Lesen hervorgehoben. */
   hervorgehoben?: string[]
+  /**
+   * Mit der Druckansicht beginnen statt mit der Maske.
+   *
+   * Wer das Protokoll nur gezeigt bekommt, will den Bogen sehen — so wie er
+   * auf Papier aussieht. Das Formular dahinter bleibt über die Lupe oben
+   * rechts erreichbar.
+   */
+  pdfZuerst?: boolean
+  /**
+   * Ein Satz, der zum Zugang gehört, nicht zum Protokoll.
+   *
+   * Beim Zugangscode des Patienten etwa: bis wann er gilt. Er steht in
+   * beiden Köpfen — der Maske und der Druckansicht —, denn die Druckansicht
+   * füllt den Bildschirm, und sonst stünde er hinter ihr.
+   */
+  hinweis?: string
 } = {}) {
   /* Wer markiert, liest: ein Protokoll wird durch eine Rückfrage nicht
      geändert. */
@@ -326,7 +342,7 @@ export default function Doku({
    * Scrollen: wer dokumentiert, soll die Stelle ansteuern, nicht suchen.
    */
   const [aktiverBlock, setAktiverBlock] = useState('patient')
-  const [pdfOffen, setPdfOffen] = useState(false)
+  const [pdfOffen, setPdfOffen] = useState(pdfZuerst)
   /** Welcher Schritt des aktiven Zettels gezeigt wird. */
   const [aktiverTeil, setAktiverTeil] = useState('')
 
@@ -587,6 +603,7 @@ export default function Doku({
               {protokollId && !nurLesen ? ` · ${fristLaeuft(werte) ? `Änderungsfrist ${fristText(werte)}` : 'Frist abgelaufen'}` : ''}
               {pflichtOffen.length > 0 ? ` · ${pflichtOffen.length} Pflichtangaben offen` : ''}
               {pflichtOffen.length === 0 && erwartungOffen.length > 0 ? ` · ${erwartungOffen.length} erwartet` : ''}
+              {hinweis ? ` · ${hinweis}` : ''}
             </div>
           </div>
           {/* Das Protokoll ansehen, wie es gedruckt aussieht. */}
@@ -867,6 +884,8 @@ export default function Doku({
       {pdfOffen ? (
         <Suspense fallback={null}>
           <PdfAnsicht
+            zumFormular={pdfZuerst}
+            hinweis={hinweis}
             werte={werte}
             organisation={org.org_name}
             onSchliessen={() => setPdfOffen(false)}

@@ -4,6 +4,7 @@ import {
   pruefen, titel, warteschlange, warteschlangeLeeren, warteschlangeSchluessel,
   type Speicher,
 } from '../../pages/public/doku/absenden'
+import { istDivi } from '../protokoll'
 
 function speicher(): Speicher & { inhalt: Map<string, string> } {
   const inhalt = new Map<string, string>()
@@ -138,5 +139,19 @@ describe('Frist älterer Protokolle', () => {
 
   it('ist abgelaufen, wenn nicht einmal das Anlegen lesbar ist', () => {
     expect(fristEnde({}, 'kein Datum')).toBe(0)
+  })
+})
+
+describe('Die Fassung im Datensatz', () => {
+  it('steht in jeder abgesendeten Nutzlast', () => {
+    const d = datensatz({ name: 'Mustermann' }, 'org1', new Date('2026-03-04T09:12:00.000Z'))
+    expect(d.payload.protokoll_version).toBe(2)
+    expect(istDivi(d.payload)).toBe(true)
+  })
+
+  it('ändert an den eingetragenen Werten nichts', () => {
+    const d = datensatz({ name: 'Mustermann', hf: '120' }, 'org1')
+    expect(d.payload.name).toBe('Mustermann')
+    expect(d.payload.hf).toBe('120')
   })
 })
